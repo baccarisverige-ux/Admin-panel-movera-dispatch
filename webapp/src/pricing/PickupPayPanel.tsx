@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { AlertTriangle, Car, Copy, Info, Layers, Route, Wallet } from "lucide-react";
+import { Fragment, useState } from "react";
+import { AlertTriangle, Car, Copy, Info, Layers, Plus, Route, Trash2, Wallet } from "lucide-react";
 import { market, type MarketId } from "../markets/markets";
 import { NumberField } from "./NumberField";
-import { PICKUP_DISPLAYS, PICKUP_OFFERS, pickupPayFor, pickupSplit, type PickupPay, type PickupRate } from "./pickupPay";
+import { PICKUP_DISPLAYS, PICKUP_OFFERS, addPickupRange, pickupPayFor, pickupSplit, rangeLabel, removePickupRange, updatePickupRange, type PickupPay, type PickupRange, type PickupRate } from "./pickupPay";
 import { currencySymbol, fromSek, inputStep, money, quoteRide, type CategoryDef, type Problem, type ZoneBook } from "./zonePricing";
 
 type Props = {
@@ -27,6 +27,71 @@ function Switch({ label, checked, disabled, onChange }: { label: string; checked
       <input type="checkbox" role="switch" aria-label={label} checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
       <span aria-hidden="true"><i /></span>
     </label>
+  );
+}
+
+type RangesProps = {
+  categoryLabel: string;
+  rate: PickupRate;
+  old: PickupRate | undefined;
+  symbol: string;
+  step: number;
+  locked: boolean;
+  bad: Set<string>;
+  pathPrefix: string;
+  onChange: (ranges: PickupRange[]) => void;
+};
+
+/** A category's pickup-distance ranges: from (read-only), to or "and above", per km, per minute. */
+function PickupRanges({ categoryLabel, rate, old, symbol, step, locked, bad, pathPrefix, onChange }: RangesProps) {
+  const ranges = rate.ranges ?? [];
+  const add = (
+    <button data-command="admin.pricing.edit" type="button" className="dash-btn small ghost" disabled={locked} onClick={() => onChange(addPickupRange(rate))}>
+      <Plus size={14} aria-hidden="true" /> Add range
+    </button>
+  );
+  if (!ranges.length) {
+    return (
+      <div className="pp-ranges empty" role="group" aria-label={`${categoryLabel} pickup ranges`}>
+        <small>One rate for every pickup distance. Add ranges to pay a different rate by distance.</small>
+        {add}
+      </div>
+    );
+  }
+  return (
+    <div className="pp-ranges" role="group" aria-label={`${categoryLabel} pickup ranges`}>
+      <div className="pp-range head" aria-hidden="true">
+        <span>From</span><span>To</span><span>Per km</span><span>Per minute</span><span />
+      </div>
+      {ranges.map((range, index) => {
+        const was = old?.ranges?.[index];
+        const last = index === ranges.length - 1;
+        const at = `${pathPrefix}.ranges.${index}`;
+        const name = `${categoryLabel} range ${index + 1}`;
+        return (
+          <div key={index} className="pp-range" data-testid={`${pathPrefix}-range-${index}`}>
+            <span className={bad.has(`${at}.fromKm`) ? "pp-range-from invalid" : "pp-range-from"} aria-label={`${name} from`}>{range.fromKm > 0 ? `> ${range.fromKm}` : "0"} km</span>
+            <span className="pp-range-to">
+              {range.toKm === null ? (
+                <span className="pp-range-open">and above</span>
+              ) : (
+                <NumberField label={`${name} to km`} value={range.toKm} unit="km" step={0.1} disabled={locked} changed={range.toKm !== was?.toKm} invalid={bad.has(`${at}.toKm`)} onChange={(toKm) => onChange(updatePickupRange(ranges, index, { toKm }))} />
+              )}
+              {last ? (
+                <label className="pp-range-above">
+                  <input type="checkbox" aria-label={`${name} and above`} checked={range.toKm === null} disabled={locked} onChange={(event) => onChange(updatePickupRange(ranges, index, { toKm: event.target.checked ? null : range.fromKm + 10 }))} />
+                  and above
+                </label>
+              ) : null}
+            </span>
+            <NumberField className="pp-unit" label={`${name} per km`} value={range.krPerKm} unit={`${symbol}/km`} step={step} disabled={locked} changed={range.krPerKm !== was?.krPerKm} invalid={bad.has(`${at}.krPerKm`)} onChange={(krPerKm) => onChange(updatePickupRange(ranges, index, { krPerKm }))} />
+            <NumberField className="pp-unit" label={`${name} per minute`} value={range.krPerMinute} unit={`${symbol}/min`} step={step} disabled={locked} changed={range.krPerMinute !== was?.krPerMinute} invalid={bad.has(`${at}.krPerMinute`)} onChange={(krPerMinute) => onChange(updatePickupRange(ranges, index, { krPerMinute }))} />
+            <button data-command="admin.pricing.edit" type="button" className="icon-ghost danger" aria-label={`Delete ${name} (${rangeLabel(range)})`} disabled={locked} onClick={() => onChange(removePickupRange(ranges, index))}><Trash2 size={14} aria-hidden="true" /></button>
+          </div>
+        );
+      })}
+      {add}
+    </div>
   );
 }
 
@@ -65,6 +130,7 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
   const exampleCategory = categories.find((category) => category.id === exampleId) ?? firstOn;
   const rate = exampleCategory ? pay.rates[exampleCategory.id] : undefined;
   const pickup = pickupPayFor(rate, exampleKm, exampleMin);
+  const exampleRange = pickup.rangeIndex === null ? undefined : rate?.ranges?.[pickup.rangeIndex];
   const quote = exampleCategory ? quoteRide(book, { categoryId: exampleCategory.id, ...SAMPLE_TRIP, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 }) : null;
   const split = quote && !quote.error ? pickupSplit(quote.total, quote.driverGets, pickup.total) : null;
   const pickupLine = `incl. ${money(pickup.total, currency)} pickup · ${short(exampleKm)} km · ${short(exampleMin)} min`;
@@ -111,12 +177,15 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
                     if (!item) return null;
                     const off = !item.enabled;
                     const locked = !canEdit || off;
+                    const ranged = Boolean(item.ranges?.length);
+                    const single = ranged ? "Paid by the ranges below" : undefined;
                     return (
-                      <tr key={category.id} className={off ? "off" : undefined}>
+                      <Fragment key={category.id}>
+                      <tr className={off ? "off pp-cat" : "pp-cat"}>
                         <th scope="row">{category.label}</th>
                         <td><Switch label={`${category.label} pickup pay`} checked={item.enabled} disabled={!canEdit} onChange={(enabled) => setRate(category.id, { enabled })} /></td>
-                        <td><NumberField className="pp-unit" label={`${category.label} pickup per km`} value={item.perKm} unit={`${symbol}/km`} step={inputStep(currency)} disabled={locked} changed={item.perKm !== old?.perKm} invalid={bad.has(`pickup.${category.id}.perKm`)} onChange={(perKm) => setRate(category.id, { perKm })} /></td>
-                        <td><NumberField className="pp-unit" label={`${category.label} pickup per minute`} value={item.perMin} unit={`${symbol}/min`} step={inputStep(currency)} disabled={locked} changed={item.perMin !== old?.perMin} invalid={bad.has(`pickup.${category.id}.perMin`)} onChange={(perMin) => setRate(category.id, { perMin })} /></td>
+                        <td><NumberField className="pp-unit" label={`${category.label} pickup per km`} value={item.perKm} unit={`${symbol}/km`} step={inputStep(currency)} disabled={locked || ranged} title={single} changed={item.perKm !== old?.perKm} invalid={bad.has(`pickup.${category.id}.perKm`)} onChange={(perKm) => setRate(category.id, { perKm })} /></td>
+                        <td><NumberField className="pp-unit" label={`${category.label} pickup per minute`} value={item.perMin} unit={`${symbol}/min`} step={inputStep(currency)} disabled={locked || ranged} title={single} changed={item.perMin !== old?.perMin} invalid={bad.has(`pickup.${category.id}.perMin`)} onChange={(perMin) => setRate(category.id, { perMin })} /></td>
                         <td>
                           <span className="pp-free">
                             <Switch label={`${category.label} free first km`} checked={item.freeKmOn} disabled={locked} onChange={(freeKmOn) => setRate(category.id, { freeKmOn })} />
@@ -130,12 +199,19 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
                           </span>
                         </td>
                       </tr>
+                      <tr className={off ? "off pp-ranges-row" : "pp-ranges-row"}>
+                        <td colSpan={6}>
+                          <PickupRanges categoryLabel={category.label} rate={item} old={old} symbol={symbol} step={inputStep(currency)} locked={locked} bad={bad} pathPrefix={`pickup.${category.id}`} onChange={(ranges) => setRate(category.id, { ranges })} />
+                        </td>
+                      </tr>
+                      </Fragment>
                     );
                   })}
                 </tbody>
               </table>
             </div>
             <p className="fine-print">The free part is not paid. Turn either one, both or none on. There is no cap.</p>
+            <p className="fine-print">With ranges, the whole pickup is paid at the rate of the range its km falls into (exactly 10 km is in 0–10). Ranges go up with no gaps; only the last can be "and above", and longer pickups than a closed last range use the last range.</p>
           </div>
 
           <div className="pp-section">
@@ -215,8 +291,9 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
             <div className="pp-receipt">
               {rate?.enabled ? (
                 <dl className="pp-lines">
-                  <div><dt>({short(exampleKm)}{pickup.freeKm ? ` − ${short(pickup.freeKm)} free` : ""}) km × {num(rate.perKm)}</dt><dd>{money(pickup.kmPay, currency)}</dd></div>
-                  <div><dt>({short(exampleMin)}{pickup.freeMin ? ` − ${short(pickup.freeMin)} free` : ""}) min × {num(rate.perMin)}</dt><dd>{money(pickup.minPay, currency)}</dd></div>
+                  {exampleRange ? <div data-testid="pickup-example-range"><dt>Range</dt><dd>{rangeLabel(exampleRange)}</dd></div> : null}
+                  <div><dt>({short(exampleKm)}{pickup.freeKm ? ` − ${short(pickup.freeKm)} free` : ""}) km × {num(pickup.perKm)}</dt><dd>{money(pickup.kmPay, currency)}</dd></div>
+                  <div><dt>({short(exampleMin)}{pickup.freeMin ? ` − ${short(pickup.freeMin)} free` : ""}) min × {num(pickup.perMin)}</dt><dd>{money(pickup.minPay, currency)}</dd></div>
                 </dl>
               ) : <p className="pp-muted">Pickup pay is off for {exampleCategory?.label}.</p>}
               <dl className="pp-lines total">

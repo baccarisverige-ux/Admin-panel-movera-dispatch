@@ -572,3 +572,20 @@
 .pp-table th[scope="row"] { font-size: 13px; color: var(--text); background: transparent; text-transform: none; letter-spacing: 0; }
 .pp-table thead th { background: transparent; text-transform: none; letter-spacing: 0; }
 .pp-table-wrap, .pp-layout .mini-switch { position: relative; }
+
+/* Pickup pay ranges, under each category */
+.pp-table tr.pp-cat > * { border-bottom: 0; }
+.pp-table tr.pp-ranges-row > td { padding: 0 8px 12px; white-space: normal; }
+.pp-ranges { display: grid; gap: 6px; justify-items: start; margin-left: 4px; padding: 10px 12px; border-radius: 12px; background: #f8f9fb; border: 1px solid var(--line); }
+.pp-ranges.empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 6px 6px 6px 12px; background: transparent; border-style: dashed; }
+.pp-ranges.empty small { font-size: 12px; color: var(--muted); }
+.pp-range { display: grid; grid-template-columns: 70px 190px 130px 130px 32px; gap: 8px; align-items: center; }
+.pp-range.head span { font-size: 11px; font-weight: 600; color: var(--muted); }
+.pp-range-from { font-size: 13px; font-weight: 600; color: var(--dash-ink-2); font-variant-numeric: tabular-nums; }
+.pp-range-from.invalid { color: var(--status-critical); }
+.pp-range-to { display: inline-flex; align-items: center; gap: 10px; min-height: 34px; }
+.pp-range-open { font-size: 13px; font-weight: 600; color: var(--text); padding: 0 4px; }
+.pp-range-above { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dash-ink-2); cursor: pointer; }
+.pp-table .pp-range .num-field input { width: 100%; }
+.pp-table .pp-range-to .num-field input { width: 80px; }
+.pp-table tr.off .pp-ranges { opacity: .6; }
