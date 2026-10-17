@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createFixtureAdminApi, type CommandInput } from "../api/create.ts";
 import { rulesFile, emptyDispatchBook } from "../dispatch/rules.ts";
 import {
+  RIDE_CHECK_SETTINGS_DEFAULT,
   RIDE_CHECK_SETTINGS_KEY,
   distanceKm,
   emptyRideCheckSettings,
@@ -15,10 +16,10 @@ import {
   type RideCheckSettings,
 } from "./rideCheckSettings.ts";
 
-test("defaults are 3 km and 5 min", () => {
+test("defaults are 3 km and 2 min", () => {
   const value = emptyRideCheckSettings();
   assert.equal(value.finishFarFromDropoffKm, 3);
-  assert.equal(value.longStopMinutes, 5);
+  assert.equal(value.longStopMinutes, 2);
   assert.deepEqual(rideCheckSettingsIssues(value), []);
 });
 
@@ -44,7 +45,7 @@ test("save bumps the revision and refuses values that are not valid", () => {
 test("stored values: missing or broken fall back to the defaults", () => {
   assert.deepEqual(normalizeRideCheckSettings(undefined), emptyRideCheckSettings());
   assert.deepEqual(normalizeRideCheckSettings({ draftRev: 4, finishFarFromDropoffKm: 7, longStopMinutes: 12 }), { draftRev: 4, finishFarFromDropoffKm: 7, longStopMinutes: 12 });
-  assert.deepEqual(normalizeRideCheckSettings({ draftRev: 3, finishFarFromDropoffKm: 0, longStopMinutes: "9" }), { draftRev: 3, finishFarFromDropoffKm: 3, longStopMinutes: 5 });
+  assert.deepEqual(normalizeRideCheckSettings({ draftRev: 3, finishFarFromDropoffKm: 0, longStopMinutes: "9" }), { draftRev: 3, finishFarFromDropoffKm: 3, longStopMinutes: 2 });
 });
 
 test("the trigger engine uses the thresholds", () => {
@@ -75,6 +76,18 @@ test("the trigger engine uses the thresholds", () => {
   assert.equal(rideCheckFor({ kind: "stop", minutes: 30 }, settings, { farOn: true, stopOn: false }), null);
 });
 
+test("with the defaults: a stop over 2 min mid-trip, a finish over 3 km from the drop-off", () => {
+  const defaults = RIDE_CHECK_SETTINGS_DEFAULT;
+  assert.equal(rideCheckFor({ kind: "stop", minutes: 2 }, defaults), null, "exactly 2 min does not start it");
+  assert.deepEqual(rideCheckFor({ kind: "stop", minutes: 2.5 }, defaults)?.trigger, "stop");
+  assert.deepEqual(rideCheckFor({ kind: "stop", minutes: 3 }, defaults), { trigger: "stop", value: 3 });
+  assert.equal(rideCheckFor({ kind: "stop", minutes: 3, plannedStop: true }, defaults), null);
+  assert.equal(rideCheckFor({ kind: "stop", minutes: 3, inTraffic: true }, defaults), null);
+  const dropoff = { lat: 59.3326, lng: 18.0649 };
+  assert.equal(rideCheckFor({ kind: "finish", at: { lat: 59.3326 + 0.02, lng: 18.0649 }, dropoff }, defaults), null, "about 2.2 km");
+  assert.equal(rideCheckFor({ kind: "finish", at: { lat: 59.3326 + 0.04, lng: 18.0649 }, dropoff }, defaults)?.trigger, "far", "about 4.4 km");
+});
+
 test("the rules file gives the apps the shared thresholds", () => {
   assert.deepEqual(rulesFile(emptyDispatchBook(), "SE", "now", { finishFarFromDropoffKm: 4, longStopMinutes: 8 }).rideCheckThresholds, { finishFarFromDropoffKm: 4, longStopMinutes: 8 });
 });
@@ -84,7 +97,7 @@ test("one shared store: a save from any entry point is what every reader gets", 
   await api.reset();
   const all = { zones: "all" as const, market: "SE-STO" as const };
   const command = async (value: RideCheckSettings, extra: Partial<CommandInput> = {}) =>
-    api.command({ action: "admin.rideCheck.settings", targetId: "ride check settings", sliceKey: RIDE_CHECK_SETTINGS_KEY, value, expectedSliceRev: 1, actorId: "erik", actorRole: "safety", actorScope: all, reason: "Test", before: "3 km, 5 min", after: "5 km, 10 min", idempotencyKey: crypto.randomUUID(), expectedRev: await api.revision(), ...extra });
+    api.command({ action: "admin.rideCheck.settings", targetId: "ride check settings", sliceKey: RIDE_CHECK_SETTINGS_KEY, value, expectedSliceRev: 1, actorId: "erik", actorRole: "safety", actorScope: all, reason: "Test", before: "3 km, 2 min", after: "5 km, 10 min", idempotencyKey: crypto.randomUUID(), expectedRev: await api.revision(), ...extra });
   const next = saveRideCheckSettings(emptyRideCheckSettings(), { finishFarFromDropoffKm: 5, longStopMinutes: 10 }).value;
   await assert.rejects(command(next, { actorId: "daniel", actorRole: "dispatcher" }), "a dispatcher cannot change them");
   await command(next);

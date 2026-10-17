@@ -177,7 +177,7 @@ assert(changeLines(liveRules(rcBook, "Z001"), draftRules(rcBook, "Z001")).length
 const rcPreset: Preset = { id: "P-check", name: "Old", note: "", builtIn: false, values: rcOld as unknown as Preset["values"] };
 assert(applyPreset(zoneDefault("Z003"), rcPreset, "SE").rideCheck.longerPct === 50, "an old preset gets Ride check");
 assert(rulesFile(rcBook, "SE", "now").zones[0].rules.rideCheck.farOn && rulesFile(rcBook, "SE", "now").glossary.rideCheck.includes("finishFarFromDropoffKm"), "the rules file has Ride check");
-assert(JSON.stringify(rulesFile(rcBook, "SE", "now").rideCheckThresholds) === JSON.stringify({ finishFarFromDropoffKm: 3, longStopMinutes: 5 }), "the rules file has the default shared thresholds");
+assert(JSON.stringify(rulesFile(rcBook, "SE", "now").rideCheckThresholds) === JSON.stringify({ finishFarFromDropoffKm: 3, longStopMinutes: 2 }), "the rules file has the default shared thresholds");
 assert(JSON.stringify(rulesFile(rcBook, "SE", "now", { finishFarFromDropoffKm: 5, longStopMinutes: 10 }).rideCheckThresholds) === JSON.stringify({ finishFarFromDropoffKm: 5, longStopMinutes: 10 }), "the rules file has the admin-set thresholds");
 
 // Reservations: who gets them, the Home popup, Exclusive, Radar trips and what happens when a driver cancels.
