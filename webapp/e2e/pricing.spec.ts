@@ -55,6 +55,19 @@ test("pickup pay is set per category, paid by Movera, and published with the zon
   // No free part: 4.2 × 3 + 9 × 1 = 21.60
   await expect(example.getByTestId("pickup-pay-total")).toHaveText("21,60 kr");
 
+  // Pay by distance: 0–10 km at 3/km, then >10 km and above at 4/km. 4.2 km falls in 0–10.
+  await page.getByRole("group", { name: "Comfort pickup ranges" }).getByRole("button", { name: "Add range" }).click();
+  await expect(page.getByLabel("Comfort pickup per km")).toBeDisabled();
+  await page.getByRole("group", { name: "Comfort pickup ranges" }).getByRole("button", { name: "Add range" }).click();
+  await page.getByLabel("Comfort range 2 per km").fill("4");
+  await expect(example.getByTestId("pickup-example-range")).toContainText("0–10 km");
+  await expect(example.getByTestId("pickup-pay-total")).toHaveText("21,60 kr");
+  await example.getByLabel("Example pickup km").fill("12");
+  // 12 km is in >10 and above: 12 × 4 + 9 × 1 = 57
+  await expect(example.getByTestId("pickup-example-range")).toContainText(">10 km and above");
+  await expect(example.getByTestId("pickup-pay-total")).toHaveText("57,00 kr");
+  await example.getByLabel("Example pickup km").fill("4.2");
+
   await page.getByRole("radio", { name: "Fare + pickup line" }).click();
   await expect(page.getByTestId("offer-breakdown")).toContainText("incl. 21,60 kr pickup · 4.2 km · 9 min");
   await toggle("Pickup pay for Radar trips");
@@ -65,4 +78,5 @@ test("pickup pay is set per category, paid by Movera, and published with the zon
   await expect(page.getByText(/Published as pricing revision/)).toBeVisible();
   await page.getByRole("tab", { name: "History" }).click();
   await expect(page.getByText(/Pickup pay for Radar trips turned off/).first()).toBeVisible();
+  await expect(page.getByText(/Comfort · pickup ranges one rate → 0–10 km 3\/km 1\/min, >10 km and above 4\/km 1\/min/).first()).toBeVisible();
 });
