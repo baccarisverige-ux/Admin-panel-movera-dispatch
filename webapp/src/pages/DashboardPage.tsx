@@ -46,6 +46,7 @@ import { candidatesFor, rideRequests, riderCounts, type RideRequest } from "../d
 import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
 import { useAlertSignals, type Signal } from "../dashboard/useAlertSignals";
+import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import { ActivityFeed, AirportCard, BoostCard, InsightsCard, LiveStamp, LiveTag, SoundToggle, SupplyDemandCard, type ActivityItem, type DriverRank } from "../dashboard/Widgets";
 import { CATEGORIES } from "../domain/contract";
 import { statusLabel } from "../domain/labels";
@@ -667,6 +668,7 @@ export function DashboardPage() {
             </section>
           </div>
           <ActivityFeed items={activity} format={activityTime} />
+          {can(role, "trips.read") || can(role, "safety.edit") ? <div className="dash-ridecheck"><RideCheckSettingsCard where="dashboard" /></div> : null}
         </>
       ) : null}
 

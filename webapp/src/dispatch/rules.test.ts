@@ -148,37 +148,37 @@ assert(changeLines(base, { ...base, autoOffline: { on: true, after: 8 } })[0] ==
 
 // Ride check: four triggers, each on or off, with their numbers.
 const rcDefault = base.rideCheck;
-assert(rcDefault.farOn && rcDefault.farM === 500 && rcDefault.stopOn && rcDefault.stopMin === 4, "by default dropped far away from 500 m and a long stop from 4 min");
+assert(rcDefault.farOn && rcDefault.stopOn && !("farM" in rcDefault) && !("stopMin" in rcDefault), "far from drop-off and long stop are on; their numbers are shared by every zone");
 assert(rcDefault.routeOn && rcDefault.routeKm === 2 && rcDefault.longerOn && rcDefault.longerPct === 50 && rcDefault.crashOn, "by default 2 km off the route, 50% longer, and possible crash on");
 const withRc = (patch: Partial<ZoneDispatch["rideCheck"]>): ZoneDispatch => ({ ...base, rideCheck: { ...rcDefault, ...patch } });
 const rcIssues = (patch: Partial<ZoneDispatch["rideCheck"]>) => zoneIssues(withRc(patch)).filter((line) => line.startsWith("Ride check:"));
-assert(rcIssues({ farM: 50 })[0] === "Ride check: dropped far away must be 100 to 5000 m from the drop-off.", "dropped far away has a limit");
-assert(rcIssues({ stopMin: 0 })[0] === "Ride check: a long stop must be 1 to 30 minutes.", "long stop has a limit");
 assert(rcIssues({ routeKm: 25 })[0] === "Ride check: off the route must be 0.5 to 20 km.", "off the route has a limit");
 assert(rcIssues({ longerPct: 5 })[0] === "Ride check: longer than expected must be 10 to 300%.", "longer than expected has a limit");
-assert(rcIssues({ farOn: false, farM: 0, stopOn: false, stopMin: 99, routeOn: false, routeKm: 0, longerOn: false, longerPct: 0 }).length === 0, "a trigger that is off is not checked");
-assert(rcIssues({ farM: Number.NaN }).length === 1, "an empty number is not valid");
-const rcLines = changeLines(base, withRc({ stopMin: 6, crashOn: false, farM: 800 }));
-assert(rcLines.includes("Long stop from (min): 4 → 6"), "change line for the long stop");
+assert(rcIssues({ farOn: false, stopOn: false, routeOn: false, routeKm: 0, longerOn: false, longerPct: 0 }).length === 0, "a trigger that is off is not checked");
+assert(rcIssues({ routeKm: Number.NaN }).length === 1, "an empty number is not valid");
+const rcLines = changeLines(base, withRc({ stopOn: false, crashOn: false, routeKm: 3 }));
+assert(rcLines.includes("Ride check on an unexpected long stop: on → off"), "change line for the long stop");
 assert(rcLines.includes("Ride check on a possible crash: on → off"), "change line for possible crash");
-assert(rcLines.includes("Dropped far away from (m): 500 → 800"), "change line for dropped far away");
-assert(copyParts(withRc({ stopMin: 9 }), zoneDefault("Z002"), ["safety"]).rideCheck.stopMin === 9, "copying the Safety tab copies Ride check");
-assert(copyParts(withRc({ stopMin: 9 }), zoneDefault("Z002"), ["modes"]).rideCheck.stopMin === 4, "other tabs leave Ride check alone");
-assert(BUILT_IN_PRESETS.every((preset) => zoneIssues(applyPreset(zoneDefault("Z001"), preset, "SE")).length === 0 && applyPreset(zoneDefault("Z001"), preset, "SE").rideCheck.farM === 500), "built-in presets stay valid and carry Ride check");
+assert(rcLines.includes("Off the route from (km): 2 → 3"), "change line for off the route");
+assert(copyParts(withRc({ routeKm: 9 }), zoneDefault("Z002"), ["safety"]).rideCheck.routeKm === 9, "copying the Safety tab copies Ride check");
+assert(copyParts(withRc({ routeKm: 9 }), zoneDefault("Z002"), ["modes"]).rideCheck.routeKm === 2, "other tabs leave Ride check alone");
+assert(BUILT_IN_PRESETS.every((preset) => zoneIssues(applyPreset(zoneDefault("Z001"), preset, "SE")).length === 0 && applyPreset(zoneDefault("Z001"), preset, "SE").rideCheck.longerPct === 50), "built-in presets stay valid and carry Ride check");
 // Saves from before Ride check get the defaults; broken values fall back, the rest is kept.
 const { rideCheck: _rc, ...rcOld } = base;
 void _rc;
 const rcBook = normalizeDispatchBook(JSON.parse(JSON.stringify({
   ...emptyDispatchBook(),
-  live: { Z001: rcOld, Z002: { ...base, rideCheck: { stopMin: 7, farOn: "yes", routeKm: null } } },
+  live: { Z001: rcOld, Z002: { ...base, rideCheck: { stopMin: 7, longerPct: 70, farOn: "yes", routeKm: null } } },
 })));
 assert(JSON.stringify(liveRules(rcBook, "Z001").rideCheck) === JSON.stringify(rcDefault) && zoneIssues(liveRules(rcBook, "Z001")).length === 0, "old live rules get Ride check");
 const rcPartial = liveRules(rcBook, "Z002").rideCheck;
-assert(rcPartial.stopMin === 7 && rcPartial.farOn === true && rcPartial.routeKm === 2 && rcPartial.longerPct === 50, "a part-saved Ride check keeps its values and fills the rest");
+assert(rcPartial.longerPct === 70 && rcPartial.farOn === true && rcPartial.routeKm === 2 && !("stopMin" in rcPartial), "a part-saved Ride check keeps its values, fills the rest and drops the old per-zone numbers");
 assert(changeLines(liveRules(rcBook, "Z001"), draftRules(rcBook, "Z001")).length === 0, "old rules without Ride check do not show as changed");
 const rcPreset: Preset = { id: "P-check", name: "Old", note: "", builtIn: false, values: rcOld as unknown as Preset["values"] };
 assert(applyPreset(zoneDefault("Z003"), rcPreset, "SE").rideCheck.longerPct === 50, "an old preset gets Ride check");
-assert(rulesFile(rcBook, "SE", "now").zones[0].rules.rideCheck.farM === 500 && rulesFile(rcBook, "SE", "now").glossary.rideCheck.includes("farM"), "the rules file has Ride check");
+assert(rulesFile(rcBook, "SE", "now").zones[0].rules.rideCheck.farOn && rulesFile(rcBook, "SE", "now").glossary.rideCheck.includes("finishFarFromDropoffKm"), "the rules file has Ride check");
+assert(JSON.stringify(rulesFile(rcBook, "SE", "now").rideCheckThresholds) === JSON.stringify({ finishFarFromDropoffKm: 3, longStopMinutes: 5 }), "the rules file has the default shared thresholds");
+assert(JSON.stringify(rulesFile(rcBook, "SE", "now", { finishFarFromDropoffKm: 5, longStopMinutes: 10 }).rideCheckThresholds) === JSON.stringify({ finishFarFromDropoffKm: 5, longStopMinutes: 10 }), "the rules file has the admin-set thresholds");
 
 // Reservations: who gets them, the Home popup, Exclusive, Radar trips and what happens when a driver cancels.
 const resv = base.reservation;

@@ -1,4 +1,5 @@
 import { RideCheckCard } from "./RideCheckCard";
+import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import {
@@ -408,6 +409,7 @@ function Safety({ zone, onChange, disabled, country, countryName }: Props) {
         <Row label="Women-only rides" help="A female rider can ask for a female driver." on={safety.womenOnly} disabled={disabled} onToggle={(womenOnly) => set({ womenOnly })} />
       </Card>
       <RideCheckCard zone={zone} onChange={onChange} disabled={disabled} />
+      <div id="rc-triggers"><RideCheckSettingsCard where="rules" /></div>
     </div>
   );
 }
