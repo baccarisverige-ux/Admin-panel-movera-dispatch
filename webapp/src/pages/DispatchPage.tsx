@@ -25,6 +25,7 @@ import { Approvals, HistoryView } from "../dispatch/HistoryView";
 import { LiveView } from "../dispatch/LiveView";
 import { RulesView } from "../dispatch/RulesView";
 import { TestView } from "../dispatch/TestView";
+import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
 import {
   countryLines, DISPATCH_KEY, draftCountry, draftRules, emptyDispatchBook, liveCountry, liveRules, normalizeDispatchBook, pendingChanges, publish, rulesFile, saveDraft, TABS,
   type CountryDispatch, type DispatchBook, type TabId, type ZoneDispatch,
@@ -54,6 +55,7 @@ export function DispatchPage() {
   const view: View = VIEWS.some((item) => item.id === params.get("view")) ? (params.get("view") as View) : "rules";
   const tab: TabId = TABS.some((item) => item.id === params.get("tab")) ? (params.get("tab") as TabId) : "modes";
   const slice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
+  const rideCheck = useRideCheckSettings();
   const book = useMemo(() => normalizeDispatchBook(slice.value), [slice.value]);
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const pricingSlice = useSlice<PricingStore>(PRICING_KEY, emptyPricingStore());
@@ -141,7 +143,7 @@ export function DispatchPage() {
   }
 
   function downloadRules() {
-    const file = rulesFile(book, country, new Date().toISOString());
+    const file = rulesFile(book, country, new Date().toISOString(), rideCheck.settings);
     const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

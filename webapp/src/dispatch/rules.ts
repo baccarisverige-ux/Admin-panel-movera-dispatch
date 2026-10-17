@@ -1,5 +1,6 @@
 import { market, MARKETS, zoneById, type MarketId, type MarketZone } from "../markets/markets.ts";
 import { currencySymbol, fromSek } from "../pricing/zonePricing.ts";
+import { RIDE_CHECK_SETTINGS_DEFAULT, rideCheckThresholds, type RideCheckThresholds } from "../safety/rideCheckSettings.ts";
 import {
   CANCEL_RATE_LIMIT_DEFAULT, EXCLUSIVE_REASONS as EXCLUSIVE_REASON_LIST, LANGS as LANG_LIST, WAIT_FIELDS as WAIT_FIELD_LIST, cancelReasonsFor, exclusiveReasonList, cancelReasonIssues, cancelReasonLines, cancelReasonsDefault, completeCancelReasons, completeExclusiveReasons, completeOfferCard,
   completePickupWait, exclusiveReasonIssues, exclusiveReasonsDefault, offerCardDefault, pickupWaitDefault, pickupWaitIssues,
@@ -199,12 +200,11 @@ export type Factor = { id: FactorId; on: boolean; weight: number };
 /**
  * Ride check: when the driver and rider apps show "Is everything OK?". Each trigger can be off.
  * Off the route has two parts: km away from the route, or the trip that much longer than expected.
+ * The far-from-drop-off km and the long-stop minutes are shared by every zone (safety/rideCheckSettings).
  */
 export type RideCheckRules = {
   farOn: boolean;
-  farM: number;
   stopOn: boolean;
-  stopMin: number;
   routeOn: boolean;
   routeKm: number;
   longerOn: boolean;
@@ -214,14 +214,12 @@ export type RideCheckRules = {
 
 /** Lowest and highest value for each Ride check number, used by the fields and the checks. */
 export const RIDE_CHECK_LIMITS = {
-  farM: { min: 100, max: 5000 },
-  stopMin: { min: 1, max: 30 },
   routeKm: { min: 0.5, max: 20 },
   longerPct: { min: 10, max: 300 },
 } as const;
 
 export function rideCheckDefault(): RideCheckRules {
-  return { farOn: true, farM: 500, stopOn: true, stopMin: 4, routeOn: true, routeKm: 2, longerOn: true, longerPct: 50, crashOn: true };
+  return { farOn: true, stopOn: true, routeOn: true, routeKm: 2, longerOn: true, longerPct: 50, crashOn: true };
 }
 
 export type ZoneDispatch = {
@@ -597,8 +595,6 @@ export function completeRideCheck(base: RideCheckRules, stored: unknown): RideCh
 export function rideCheckIssues(check: RideCheckRules): string[] {
   const issues: string[] = [];
   const out = (value: number, limit: { min: number; max: number }) => !Number.isFinite(value) || value < limit.min || value > limit.max;
-  if (check.farOn && out(check.farM, RIDE_CHECK_LIMITS.farM)) issues.push(`Ride check: dropped far away must be ${RIDE_CHECK_LIMITS.farM.min} to ${RIDE_CHECK_LIMITS.farM.max} m from the drop-off.`);
-  if (check.stopOn && out(check.stopMin, RIDE_CHECK_LIMITS.stopMin)) issues.push(`Ride check: a long stop must be ${RIDE_CHECK_LIMITS.stopMin.min} to ${RIDE_CHECK_LIMITS.stopMin.max} minutes.`);
   if (check.routeOn && out(check.routeKm, RIDE_CHECK_LIMITS.routeKm)) issues.push(`Ride check: off the route must be ${RIDE_CHECK_LIMITS.routeKm.min} to ${RIDE_CHECK_LIMITS.routeKm.max} km.`);
   if (check.longerOn && out(check.longerPct, RIDE_CHECK_LIMITS.longerPct)) issues.push(`Ride check: longer than expected must be ${RIDE_CHECK_LIMITS.longerPct.min} to ${RIDE_CHECK_LIMITS.longerPct.max}%.`);
   return issues;
@@ -873,8 +869,8 @@ export function modeLabel(mode: OfferMode | "none"): string {
 
 /** Readable labels for the settings, used in change lists and the history. */
 const LABELS: Record<string, string> = {
-  "rideCheck.farOn": "Ride check when dropped far away", "rideCheck.farM": "Dropped far away from (m)",
-  "rideCheck.stopOn": "Ride check on a long stop", "rideCheck.stopMin": "Long stop from (min)",
+  "rideCheck.farOn": "Ride check when finished far from drop-off",
+  "rideCheck.stopOn": "Ride check on an unexpected long stop",
   "rideCheck.routeOn": "Ride check off the route", "rideCheck.routeKm": "Off the route from (km)",
   "rideCheck.longerOn": "Ride check when longer than expected", "rideCheck.longerPct": "Longer than expected from (%)",
   "rideCheck.crashOn": "Ride check on a possible crash",
@@ -1404,16 +1400,18 @@ export function cancelDecision(record: CancelRecord, zone: ZoneDispatch): { fee:
 }
 
 /** Everything the backend needs, in one file: the live rules per zone, country rules, events and groups. */
-export function rulesFile(book: DispatchBook, country: MarketId, at: string) {
+export function rulesFile(book: DispatchBook, country: MarketId, at: string, thresholds: RideCheckThresholds = RIDE_CHECK_SETTINGS_DEFAULT) {
   const info = market(country);
   return {
     format: "movera.dispatch.rules",
     version: 1,
     exportedAt: at,
     revision: book.draftRev,
+    /** Ride check numbers shared by every zone (admin Ride check triggers). */
+    rideCheckThresholds: rideCheckThresholds(thresholds),
     country: { id: country, name: info.name, currency: info.currency, timeZone: info.timeZone, ...liveCountry(book, country) },
     glossary: {
-      rideCheck: "When the driver and rider apps show \"Is everything OK?\". farM: the trip ended this many metres from the drop-off. stopMin: no movement this many minutes mid-trip, not at a planned stop and not in traffic. routeKm: this many km off the route; longerPct: the trip this much longer than expected. crashOn: a very hard stop or impact opens the card at once with Call 112 on top. Each part works only when its switch is on.",
+      rideCheck: "When the driver and rider apps show \"Is everything OK?\". farOn: the driver tapped Finish more than rideCheckThresholds.finishFarFromDropoffKm km from the drop-off; the card opens right after finish. stopOn: no movement for more than rideCheckThresholds.longStopMinutes minutes mid-trip, not at a planned stop and not in traffic. The two numbers are the same for every zone. routeKm: this many km off the route; longerPct: the trip this much longer than expected. crashOn: a very hard stop or impact opens the card at once with Call 112 on top. Each part works only when its switch is on.",
       radar: "One request shown to the N nearest suitable drivers at once. The first to accept gets it.",
       exclusive: "One request offered to one driver at a time, best first, for a few seconds each.",
       busy: "Waiting requests divided by free online drivers in the zone.",

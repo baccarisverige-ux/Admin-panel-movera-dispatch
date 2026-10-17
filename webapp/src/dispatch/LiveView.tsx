@@ -6,6 +6,7 @@ import type { LiveDriver, LiveState } from "../dashboard/live";
 import type { Candidate, RideRequest } from "../dashboard/riders";
 import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
+import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import { MapPanel } from "./maps";
 import { DISPATCH_KEY, modeLabel, modeNow, requestControl, type DispatchBook, type ZoneDispatch } from "./rules";
 
@@ -148,6 +149,8 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
           })}
         </ul>
       </section>
+
+      <RideCheckSettingsCard where="dispatch" />
 
       <MapPanel title={`Live map · ${market.name}`} note={<span className="dx-legend"><i className="free" /> Free <i className="pickup" /> To pickup <i className="trip" /> On trip <i className="rider" /> Rider waiting</span>}>
         <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} renderAssign={canControl ? (request) => <AssignControls request={request} candidates={candidatesOf(request)} onDone={onNotice} /> : undefined} />

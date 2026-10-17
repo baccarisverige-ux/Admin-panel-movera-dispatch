@@ -554,3 +554,8 @@ body.dx-no-scroll { overflow: hidden; }
   .dx-reason { grid-template-columns: minmax(0, 1fr); }
   .dx-reason-tools { justify-content: flex-start; }
 }
+
+/* Ride check triggers: one shared editor on the Dashboard, Dispatch → Live and Dispatch → Rules → Safety. */
+.rc-settings-save { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 4px; padding: 12px 0 0; border-top: 1px solid var(--line); }
+.rc-settings-error { color: #c63c3c; }
+.dash-ridecheck { margin-top: 16px; }

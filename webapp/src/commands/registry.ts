@@ -376,6 +376,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.incident.report", label: "Download an incident report", reason: false, permission: "incidents.read" },
   { id: "admin.rideCheck.open", label: "Open a ride check alert", reason: false, permission: "trips.read" },
   { id: "admin.rideCheck.view", label: "Ride check log view", reason: false, permission: "incidents.read" },
+  { id: "admin.rideCheck.settings", label: "Save Ride check triggers", reason: true, permission: "safety.edit" },
   { id: "admin.risk.view", label: "Risk view", reason: false, permission: "safety.edit" },
   { id: "admin.risk.rules", label: "Save fraud rules", reason: true, permission: "safety.edit" },
   { id: "admin.risk.review", label: "Review a flagged person", reason: true, permission: "safety.edit" },

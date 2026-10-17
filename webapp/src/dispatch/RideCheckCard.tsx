@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { Card, Num, Row } from "./fields";
+import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
 import { RIDE_CHECK_LIMITS, type RideCheckRules, type ZoneDispatch } from "./rules";
 
 /** Dispatch › Safety: when the driver and rider apps ask "Is everything OK?". Each trigger on or off, with its number. */
@@ -9,13 +10,15 @@ export function RideCheckCard({ zone, onChange, disabled }: { zone: ZoneDispatch
   const setCheck = (patch: Partial<RideCheckRules>) => onChange({ ...zone, rideCheck: { ...check, ...patch } });
   const anyOn = check.farOn || check.stopOn || check.routeOn || check.longerOn || check.crashOn;
   const L = RIDE_CHECK_LIMITS;
+  const { settings } = useRideCheckSettings();
+  const shared = <a href="#rc-triggers">Same for every zone</a>;
   return (
     <Card title="Ride check" tone="green" icon={<ShieldCheck size={18} />} help={'The driver and rider apps ask "Is everything OK?" when a trip looks wrong. Accident, Someone hurt or I feel unsafe sends you an alert.'} off={!anyOn}>
-      <Row label="Dropped far away" help="The trip ended far from the drop-off." on={check.farOn} disabled={disabled} onToggle={(farOn) => setCheck({ farOn })}>
-        <Num label="Dropped far away from" before="more than" value={check.farM} unit="m" step={50} min={L.farM.min} max={L.farM.max} disabled={disabled} onChange={(farM) => setCheck({ farM })} />
+      <Row label="Finished far from drop-off" help="The driver taps Finish far from the drop-off. Ride check starts right after finish." on={check.farOn} disabled={disabled} onToggle={(farOn) => setCheck({ farOn })}>
+        <span className="dx-limit-link" data-testid="ride-check-far">More than {settings.finishFarFromDropoffKm} km · {shared}</span>
       </Row>
-      <Row label="Long stop" help="No movement mid-trip, not at a planned stop and not in traffic." on={check.stopOn} disabled={disabled} onToggle={(stopOn) => setCheck({ stopOn })}>
-        <Num label="Long stop from" before="for" value={check.stopMin} unit="min" min={L.stopMin.min} max={L.stopMin.max} disabled={disabled} onChange={(stopMin) => setCheck({ stopMin })} />
+      <Row label="Unexpected long stop" help="No movement mid-trip, not at a planned stop and not in traffic." on={check.stopOn} disabled={disabled} onToggle={(stopOn) => setCheck({ stopOn })}>
+        <span className="dx-limit-link" data-testid="ride-check-stop">More than {settings.longStopMinutes} min · {shared}</span>
       </Row>
       <Row label="Off the route" help="The car is far from the planned route." on={check.routeOn} disabled={disabled} onToggle={(routeOn) => setCheck({ routeOn })}>
         <Num label="Off the route from" before="more than" value={check.routeKm} unit="km" step={0.5} min={L.routeKm.min} max={L.routeKm.max} disabled={disabled} onChange={(routeKm) => setCheck({ routeKm })} />

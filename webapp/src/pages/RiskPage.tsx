@@ -12,6 +12,8 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { zoneAllowed } from "../markets/scope";
 import { Cards } from "../reports/ui";
 import { ACTIONS, RISK_KEY, RULES, emptyRiskOps, flagged, normalizeRiskOps, people, preview, review, ruleChanges, ruleError, saveRules, type Decision, type RiskOps, type Rule } from "../safety/risk";
+import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
+import type { RideCheckThresholds } from "../safety/rideCheckSettings";
 import { agentName } from "../trips/TripParts";
 import { CommandButton } from "../ui/CommandButton";
 
@@ -26,10 +28,10 @@ const NUMBERS: { key: keyof SafetyPolicy; label: string; title: string; help: st
 ];
 
 /** What Ride check asks on in a zone, in one line. Set in Dispatch → Safety. */
-function rideCheckLine(check: RideCheckRules): string {
+function rideCheckLine(check: RideCheckRules, shared: RideCheckThresholds): string {
   const on = [
-    check.farOn ? `dropped ${check.farM} m away` : "",
-    check.stopOn ? `${check.stopMin} min stop` : "",
+    check.farOn ? `finished over ${shared.finishFarFromDropoffKm} km from drop-off` : "",
+    check.stopOn ? `stop over ${shared.longStopMinutes} min` : "",
     check.routeOn ? `${check.routeKm} km off the route` : "",
     check.longerOn ? `${check.longerPct}% longer` : "",
     check.crashOn ? "possible crash" : "",
@@ -100,6 +102,7 @@ function SafetyRules({ editable }: { editable: boolean }) {
   const policy = draft ?? store.value.policies[id] ?? DEFAULT_SAFETY;
   const error = validateSafety(policy);
   const dispatchBook = normalizeDispatchBook(dispatch.value);
+  const rideCheckShared = useRideCheckSettings();
   const rest = liveCountry(dispatchBook, scope.market.id).rest;
   useDirtyWarning(Boolean(draft));
   return (
@@ -119,7 +122,7 @@ function SafetyRules({ editable }: { editable: boolean }) {
         {id ? (
           <div className="op-rest rc-risk">
             <ListChecks size={16} aria-hidden="true" />
-            <span><b>Ride check (Dispatch)</b><small>{rideCheckLine(liveRules(dispatchBook, id).rideCheck)}</small></span>
+            <span><b>Ride check (Dispatch)</b><small>{rideCheckLine(liveRules(dispatchBook, id).rideCheck, rideCheckShared.settings)}</small></span>
             <Link className="dash-btn small ghost" to={`/dispatch?zone=${id}&tab=safety`}>Ride check settings</Link>
           </div>
         ) : null}
