@@ -76,6 +76,7 @@ test("Ride check triggers: one shared setting edited from Dispatch Safety, Dispa
   await page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Unexpected long stop").fill("8");
   await page.getByRole("region", { name: "Ride check triggers" }).getByRole("button", { name: "Save" }).click();
   await confirm(page);
+  await expect(page.getByRole("region", { name: "Ride check triggers" })).toContainText("Everything is saved");
 
   await page.goto("/?tab=work");
   await expect(page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Finished far from drop-off")).toHaveValue("5");
