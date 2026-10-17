@@ -18,7 +18,7 @@ export type RideCheckSettings = {
 
 export type RideCheckThresholds = Pick<RideCheckSettings, "finishFarFromDropoffKm" | "longStopMinutes">;
 
-export const RIDE_CHECK_SETTINGS_DEFAULT: Readonly<RideCheckThresholds> = { finishFarFromDropoffKm: 3, longStopMinutes: 5 };
+export const RIDE_CHECK_SETTINGS_DEFAULT: Readonly<RideCheckThresholds> = { finishFarFromDropoffKm: 3, longStopMinutes: 2 };
 
 export function emptyRideCheckSettings(): RideCheckSettings {
   return { draftRev: 1, ...RIDE_CHECK_SETTINGS_DEFAULT };
