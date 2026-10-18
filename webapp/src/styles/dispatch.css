@@ -166,6 +166,8 @@ body.dx-no-scroll { overflow: hidden; }
 .dx-resv.off { opacity: .6; }
 .dx-note.dx-resv-tie { flex-wrap: nowrap; align-items: flex-start; }
 .dx-resv-tie svg { flex: none; margin-top: 1px; }
+.dx-note.dx-trip-note { flex-wrap: nowrap; align-items: flex-start; }
+.dx-trip-note svg { flex: none; margin-top: 2px; }
 .dx-resv-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .dx-resv-pick > small { font-size: 12px; color: var(--dash-ink-2); }
 .dx-resv-flow { list-style: none; margin: 4px 0 0; padding: 0; display: grid; }

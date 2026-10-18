@@ -11,6 +11,7 @@ import type { MarketId } from "../markets/markets";
 import { BonusAreaMap } from "../drivers/BonusAreaMap";
 import { Card, Check, Choice, Num, Row, Switch } from "./fields";
 import { ReservationSettings } from "./ReservationSettings";
+import { DestinationSettings } from "./DestinationSettings";
 import { CancelRateCard, OfferCardSettings } from "./OfferSettings";
 import { PickupWaitCard, type WaitBaseRow } from "./PickupWaitCard";
 import type { PickupWait } from "./offers";
@@ -59,6 +60,7 @@ export function ZoneSettings(props: Props) {
   if (tab === "waiting") return <Waiting {...props} />;
   if (tab === "rides") return <Rides {...props} />;
   if (tab === "drivers") return <Drivers {...props} />;
+  if (tab === "destination") return <DestinationSettings zone={props.zone} onChange={props.onChange} disabled={props.disabled} zoneName={props.zoneName} />;
   if (tab === "safety") return <Safety {...props} />;
   return <Alerts {...props} />;
 }
