@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, ArrowLeft, Bell, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bell, Flag, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
 import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { Modal } from "../ui/Modal";
@@ -39,7 +39,7 @@ type Props = {
   waitBasesOf: (zoneId: string) => WaitBaseRow[];
 };
 
-const TAB_ICON: Record<TabId, typeof Radar> = { modes: Radar, reservations: CalendarClock, best: Star, waiting: Smartphone, rides: MapPin, drivers: Users, safety: Shield, alerts: Bell };
+const TAB_ICON: Record<TabId, typeof Radar> = { modes: Radar, reservations: CalendarClock, best: Star, waiting: Smartphone, rides: MapPin, drivers: Users, destination: Flag, safety: Shield, alerts: Bell };
 
 function ModeBadge({ zone, paused }: { zone: ZoneDispatch; paused: boolean }) {
   if (paused) return <span className="dx-mode-tag paused"><Pause size={10} aria-hidden="true" /> Paused</span>;

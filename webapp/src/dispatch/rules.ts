@@ -6,6 +6,10 @@ import {
   completePickupWait, exclusiveReasonIssues, exclusiveReasonsDefault, offerCardDefault, pickupWaitDefault, pickupWaitIssues,
   type CancelReasonBook, type ExclusiveReason, type ExclusiveReasonId, type OfferCardDetails, type PickupWait,
 } from "./offers.ts";
+import {
+  TRIP_RULE_LABELS, completeDestinationMode, completeNextTrips, destinationModeDefault, destinationModeForDriverApp, destinationModeIssues, nextTripsDefault, nextTripsForDriverApp, nextTripsIssues,
+  type DestinationModeRules, type NextTripRules,
+} from "./tripRules.ts";
 
 /** Dispatch rules: how a ride request finds its driver. One set per zone, plus country rules, events and driver groups. */
 
@@ -16,7 +20,7 @@ export type FactorId = "eta" | "rating" | "acceptance" | "cancel" | "idle" | "fi
 export type ExtraId = "child_seat" | "pet" | "wheelchair" | "luggage" | "long_trip";
 export type WaitKind = "raise_price" | "upgrade" | "alert_admin" | "keep_waiting" | "busy";
 export type AlertId = "long_wait" | "few_drivers" | "no_driver";
-export type TabId = "modes" | "reservations" | "best" | "waiting" | "rides" | "drivers" | "safety" | "alerts";
+export type TabId = "modes" | "reservations" | "best" | "waiting" | "rides" | "drivers" | "destination" | "safety" | "alerts";
 
 export const TABS: { id: TabId; label: string }[] = [
   { id: "modes", label: "Modes" },
@@ -25,6 +29,7 @@ export const TABS: { id: TabId; label: string }[] = [
   { id: "waiting", label: "Rider waiting" },
   { id: "rides", label: "Rides & stops" },
   { id: "drivers", label: "Drivers" },
+  { id: "destination", label: "Destination & next trips" },
   { id: "safety", label: "Safety" },
   { id: "alerts", label: "Alerts" },
 ];
@@ -256,6 +261,10 @@ export type ZoneDispatch = {
   stops: { on: boolean; max: number; freeWaitMin: number; perMin: number; perStop: number; changeDuring: boolean; driverCanRefuse: boolean };
   airport: { on: boolean; order: "fifo" | "best"; maxQueueMin: number; queueAreas: { id: string; name: string; ring: [number, number][] }[] };
   goingHome: { on: boolean; perDay: number; maxOffDeg: number };
+  /** R13-9: Destination mode, each part on or off with its own number. */
+  destinationMode: DestinationModeRules;
+  /** R13-18: when next-trip offers (Exclusive and Exclusive reservations only) start during a trip. */
+  nextTrips: NextTripRules;
   fairness: { idleBoost: boolean; idlePoints: number; hourCap: boolean; hourRides: number; skipPause: boolean; skips: number; pauseMin: number };
   decline: { on: boolean; countsAcceptance: boolean; pauseAfter: number; pauseMin: number; longTripFree: boolean; farPickupFree: boolean; farPickupKm: number };
   /** maxCancel: drivers over the country's cancel rate limit (CountryDispatch.cancelRateLimitPct) get no requests in this zone. */
@@ -410,6 +419,8 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     stops: { on: true, max: 3, freeWaitMin: 3, perMin: 0, perStop: 0, changeDuring: true, driverCanRefuse: true },
     airport: { on: airport, order: "fifo", maxQueueMin: 120, queueAreas: [] },
     goingHome: { on: true, perDay: 2, maxOffDeg: 45 },
+    destinationMode: destinationModeDefault(),
+    nextTrips: nextTripsDefault(),
     fairness: { idleBoost: true, idlePoints: 10, hourCap: false, hourRides: 4, skipPause: true, skips: 3, pauseMin: 5 },
     decline: { on: true, countsAcceptance: true, pauseAfter: 3, pauseMin: 5, longTripFree: true, farPickupFree: true, farPickupKm: 5 },
     safety: { minRating: true, ratingBelow: 4.3, maxCancel: true, doNotMatch: true, womenOnly: true },
@@ -628,6 +639,8 @@ function complete(zoneId: string, stored: Partial<ZoneDispatch> | undefined): Zo
   merged.pickupWait = completePickupWait(base.pickupWait, stored.pickupWait);
   merged.reservation = completeReservation(base.reservation, stored.reservation);
   merged.rideCheck = completeRideCheck(base.rideCheck, stored.rideCheck);
+  merged.destinationMode = completeDestinationMode(stored.destinationMode);
+  merged.nextTrips = completeNextTrips(stored.nextTrips);
   return { ...(merged as ZoneDispatch), zoneId };
 }
 
@@ -688,6 +701,7 @@ export function zoneIssues(zone: ZoneDispatch): string[] {
   if (zone.longTripKm < 10 || zone.longTripKm > 500) issues.push("Long trip must be 10 to 500 km.");
   if (zone.safety.minRating && (zone.safety.ratingBelow < 1 || zone.safety.ratingBelow > 5)) issues.push("Safety: lowest rating must be 1 to 5.");
   issues.push(...rideCheckIssues(zone.rideCheck));
+  issues.push(...destinationModeIssues(zone.destinationMode), ...nextTripsIssues(zone.nextTrips));
   if (zone.alerts.some((alert) => alert.on && !alert.panel && !alert.email && !alert.sms)) issues.push("Alerts: each alert that is on needs a place to show (panel, email or SMS).");
   return issues;
 }
@@ -923,6 +937,9 @@ for (const [rule, words] of [["farPickup", "Far pickup"], ["rideTypes.scheduled"
   if (rule !== "farPickup") LABELS[`pickupWait.${rule}.on`] = `${words} rule`;
 }
 
+/** Labels for Destination mode and next trips (Round 13). */
+Object.assign(LABELS, TRIP_RULE_LABELS);
+
 /** Labels for the reservation settings in Dispatch › Reservations. */
 Object.assign(LABELS, {
   "reservation.listGroupId": "Driver group for Scheduled rides", "reservation.homePopupTo": "Home popup goes to",
@@ -1133,6 +1150,7 @@ const PART_KEYS: Record<TabId, (keyof ZoneDispatch)[]> = {
   waiting: ["waiting"],
   rides: ["extras", "longTripKm", "stops", "driverCancel", "riderCancel", "airport", "pickupWait"],
   drivers: ["goingHome", "fairness", "decline", "autoOffline"],
+  destination: ["destinationMode", "nextTrips"],
   safety: ["safety", "rideCheck"],
   alerts: ["alerts"],
 };
@@ -1423,6 +1441,8 @@ export function rulesFile(book: DispatchBook, country: MarketId, at: string, thr
       hiddenComesBackMin: "A trip the driver hid with × in the Live list can come back after this many minutes if nobody took it and it is still in Radar. It never counts against the driver.",
       exclusiveWhileDriving: "While driving a rider the driver gets Exclusive offers only (at most count at a time), never Radar trips.",
       pickupWait: "Waiting at pickup. Free wait, price per minute and the no-show fee come from Pricing per category (one source). noShowAfterMin: from then the driver can cancel for no-show. Then rideTypes (scheduled, airport, event; a scheduled ride's free wait is the reservation policy's included waiting) and farPickup (pickups over farPickupKm). A later rule wins where it sets a value; null = same as before. driverShareWaitPct and driverShareNoShowPct: the driver's part of the waiting money and the no-show fee.",
+      destinationMode: "driverApp.destinationMode[zoneId]: enabled = the whole Destination mode. timeLimitOn/timeLimitHours: how long a destination stays active. dailyLimitOn/destinationsPerDay: destinations one driver can set per day. corridorOn/corridorKm: a trip qualifies when its drop-off is within corridorKm of the driver's road route to the destination AND the trip brings the driver closer. focusFinalDestinationOn: trips ending near the destination; focusOnTheWayOn: trips along the route; focus = both, final, onTheWay or none. A part whose switch is off has no limit.",
+      nextTrips: "driverApp.nextTrips[zoneId]: while driving a rider only Exclusive offers and Exclusive reservations come as next trips (offerTypes), never Radar cards, and only on the way to the final drop-off, never while heading to a stop or before pickup. Offers start within withinKmOfDropoff km (withinKmOfDropoffOn) or withinMinutesOfDropoff minutes (withinMinutesOfDropoffOn) of the final drop-off, whichever comes first (startWhen either); both off = the whole last leg (startWhen wholeLastLeg). A destination the driver sets during a trip uses destinationMode. The demo keeps today's next-trip behaviour (no limits).",
       driverApp: "driverApp has the same values in the driver app's shapes: exclusiveReasons per zone as a list, and cancelReasons per language with English filled in where a language is empty.",
       countryRules: "country.rest: work and rest hours, warnings warnFirstMin and warnLastMin before the limit, blockOnline at the limit. country.cancelRateLimitPct: the cancel rate drivers should stay under, never shown to drivers (they see a rule text). It is the only cancel rate number: in zones where safety.maxCancel is on, drivers over it get no requests. Only normal-trip cancels count, without pause or fee; reasons with counts=false never count. country.cancelReasons: per group and language (en, sv, fr, ar); an empty language uses English.",
       reservationWho: "listTo group = only the drivers of the saved group listGroupId (groups below). homePopupTo: list = the same drivers as the list, zone = every online driver in the zone. popupClosedExclusive: a driver who closed the Home popup with × can get it back as an Exclusive if nobody took it.",
@@ -1445,6 +1465,8 @@ export function rulesFile(book: DispatchBook, country: MarketId, at: string, thr
     driverApp: {
       exclusiveReasons: Object.fromEntries(info.zones.map((zone) => [zone.id, exclusiveReasonList(liveRules(book, zone.id).exclusiveReasons)])),
       cancelReasons: Object.fromEntries(LANG_LIST.map((lang) => [lang.id, cancelReasonsFor(liveCountry(book, country).cancelReasons, lang.id)])),
+      destinationMode: Object.fromEntries(info.zones.map((zone) => [zone.id, destinationModeForDriverApp(liveRules(book, zone.id).destinationMode)])),
+      nextTrips: Object.fromEntries(info.zones.map((zone) => [zone.id, nextTripsForDriverApp(liveRules(book, zone.id).nextTrips)])),
     },
   };
 }
