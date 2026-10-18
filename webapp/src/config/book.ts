@@ -2,7 +2,7 @@ export type Lang = "sv" | "en";
 export type AppId = "rider" | "driver";
 export type PlatformId = "ios" | "android";
 export type ConfigStatus = "draft" | "in_review" | "approved";
-export type ReasonGroup = "driver_before" | "driver_during" | "rider_finding" | "rider_support";
+export type ReasonGroup = "driver_before" | "driver_during" | "driver_next" | "rider_finding" | "rider_support";
 export type FeatureKey = "reservations" | "wallet";
 export type OverrideLevel = "market" | "zone" | "category" | "app" | "platform" | "appVersion" | "cohort";
 
@@ -113,6 +113,7 @@ export const DRIVER_SWITCHES: FeatureSwitch[] = [
 export const REASON_GROUPS: { id: ReasonGroup; label: string }[] = [
   { id: "driver_before", label: "Driver before pickup" },
   { id: "driver_during", label: "Driver during trip" },
+  { id: "driver_next", label: "Driver next trip" },
   { id: "rider_finding", label: "Rider while finding" },
   { id: "rider_support", label: "Rider support and receipt" },
 ];
@@ -132,6 +133,12 @@ export const REASONS: ReasonText[] = [
   { id: "rider_behavior", group: "driver_during", sv: "Resenärens beteende", en: "Rider behavior" },
   { id: "trip_or_destination_issue", group: "driver_during", sv: "Resa eller destination", en: "Trip or destination issue" },
   { id: "other_on_trip", group: "driver_during", sv: "Annan orsak", en: "Other reason" },
+  { id: "next_trip_current_running_late", group: "driver_next", sv: "Nuvarande resa tar längre tid", en: "Current trip is taking longer" },
+  { id: "next_trip_pickup_too_far", group: "driver_next", sv: "För långt till upphämtningen", en: "Too far from the pickup" },
+  { id: "next_trip_rider_requested", group: "driver_next", sv: "Resenären bad mig avboka", en: "Rider asked me to cancel" },
+  { id: "next_trip_vehicle_issue", group: "driver_next", sv: "Problem med bilen", en: "Problem with the car" },
+  { id: "next_trip_driver_emergency", group: "driver_next", sv: "Personligt nödläge", en: "Personal emergency" },
+  { id: "next_trip_other", group: "driver_next", sv: "Annan orsak", en: "Other reason" },
   { id: "wait_too_long", group: "rider_finding", sv: "Väntan var för lång", en: "Wait was too long" },
   { id: "plans_changed", group: "rider_finding", sv: "Planerna ändrades", en: "Plans changed" },
   { id: "requested_by_mistake", group: "rider_finding", sv: "Bokade av misstag", en: "Requested by mistake" },
@@ -213,7 +220,7 @@ export function normalizeConfig(raw: Partial<ConfigBook> | null | undefined): Co
     features: { ...base.draft.features, ...incoming?.features, luxury: false },
     switches: incoming?.switches?.length ? incoming.switches : base.draft.switches,
     updates: incoming?.updates?.length === 4 ? incoming.updates : base.draft.updates,
-    reasons: incoming?.reasons && incoming.reasons.length >= base.draft.reasons.length ? incoming.reasons : base.draft.reasons,
+    reasons: incoming?.reasons?.length ? [...incoming.reasons, ...base.draft.reasons.filter((reason) => !incoming.reasons!.some((item) => item.id === reason.id))] : base.draft.reasons,
     booking: { ...base.draft.booking, ...incoming?.booking },
     environment: { ...base.draft.environment, ...incoming?.environment },
     versions: { ...base.draft.versions, ...incoming?.versions },
