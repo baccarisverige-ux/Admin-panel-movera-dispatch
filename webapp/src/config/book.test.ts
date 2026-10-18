@@ -106,7 +106,7 @@ const stops = setMaxStops(emptyConfig(), 2, "nora");
 assert(configDiff(stops.published, stops.draft).some((line) => line.includes("Max stops 3 → 2")), "max stops");
 const fresh = emptyConfig();
 assert(fresh.draft.switches.length === 13, "both apps");
-assert(fresh.draft.reasons.length === 29, "reasons");
+assert(fresh.draft.reasons.length === 35, "reasons");
 assert(fresh.draft.updates.length === 4, "platforms");
 assert(!fresh.draft.switches.some((item) => item.id === "luxury"), "no luxury switch");
 assert(fresh.draft.booking.maxStops === 3, "three stops");

@@ -236,7 +236,7 @@ export function driverNoShowShare(terms: Pick<WaitTerms, "noShowFee" | "driverSh
 
 /* ---------- Q21: cancel reasons, per country and language ---------- */
 
-export type CancelGroupId = "driverBeforeTrip" | "driverDuringTrip" | "scheduled" | "rider";
+export type CancelGroupId = "driverBeforeTrip" | "driverDuringTrip" | "driverNextTrip" | "scheduled" | "rider";
 export type LangId = "en" | "sv" | "fr" | "ar";
 export type Texts = Partial<Record<LangId, string>>;
 export type CancelReason = { code: string; title: Texts; subtitle: Texts; counts: boolean };
@@ -252,6 +252,7 @@ export const LANGS: { id: LangId; label: string; rtl?: boolean }[] = [
 export const CANCEL_GROUPS: { id: CancelGroupId; label: string; help: string; subtitles: boolean }[] = [
   { id: "driverBeforeTrip", label: "Driver, before the trip", help: "After accepting, before the rider is in the car.", subtitles: true },
   { id: "driverDuringTrip", label: "Driver, during the trip", help: "Ending a trip early with the rider in the car.", subtitles: true },
+  { id: "driverNextTrip", label: "Driver, next trip", help: "Cancelling the secured next trip while on a trip. The current trip goes on, the next goes back to dispatch.", subtitles: true },
   { id: "scheduled", label: "Driver, scheduled rides", help: "Cancelling an accepted scheduled ride.", subtitles: false },
   { id: "rider", label: "Rider", help: "What the rider app asks when the rider cancels.", subtitles: false },
 ];
@@ -282,6 +283,14 @@ export function cancelReasonsDefault(): CancelReasonBook {
         reason("rider_behavior", "Rider behavior", "The rider’s behavior requires the trip to end"),
         reason("trip_or_destination_issue", "Trip or destination issue", "A trip detail or destination problem prevents continuing"),
         reason("other_on_trip", "Other reason", "Another issue requires the trip to end early"),
+      ],
+      driverNextTrip: [
+        reason("next_trip_current_running_late", "Current trip is taking longer", "You can’t reach the next pickup in time"),
+        reason("next_trip_pickup_too_far", "Too far from the pickup", "The next pickup is further than expected"),
+        reason("next_trip_rider_requested", "Rider asked me to cancel", "The next rider doesn’t want the trip"),
+        reason("next_trip_vehicle_issue", "Problem with the car", "Your car can’t make the next trip", false),
+        reason("next_trip_driver_emergency", "Personal emergency", "Something urgent came up"),
+        reason("next_trip_other", "Other reason", "Something else stops the next trip"),
       ],
       scheduled: [
         reason("scheduled_cannot_make_time", "I can no longer make the pickup time"),
