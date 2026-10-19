@@ -335,7 +335,7 @@ assert(r3Change.includes("Scheduled rides go to: all drivers in the zone → a d
 assert(r3Change.includes("Driver group for Scheduled rides: none → G-airport"), "change line for the group");
 assert(r3Change.includes("Home popup goes to: same drivers as the list → all drivers in the zone"), "change line for the popup audience");
 assert(r3Change.includes("Closed popup comes back as Exclusive: on → off"), "change line for the closed popup");
-assert(r3Change.includes("Reservations, Economy: free cancel minutes before pickup: 60 → 120") && r3Change.includes("Highest fare raise: 500 → 300"), "change lines for cancels and the raise");
+assert(r3Change.includes("Reservations, Movera: free cancel minutes before pickup: 60 → 120") && r3Change.includes("Highest fare raise: 500 → 300"), "change lines for cancels and the raise");
 assert(r3Change.includes("Airport rides: be online before: 60 → 90"), "change line per kind of ride");
 
 // Saves from before Round 3 get the new settings from the defaults.

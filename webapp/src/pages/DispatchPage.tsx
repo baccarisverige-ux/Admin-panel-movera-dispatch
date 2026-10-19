@@ -143,7 +143,7 @@ export function DispatchPage() {
   }
 
   function downloadRules() {
-    const file = rulesFile(book, country, new Date().toISOString(), rideCheck.settings);
+    const file = rulesFile(book, country, new Date().toISOString(), rideCheck.settings, activeCategories(pricing).map(({ id, label }) => ({ id, label })));
     const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -160,6 +160,11 @@ export function DispatchPage() {
   const say = (text: string) => setNotice(text);
   const commissionOf = (id: string) => zoneBook(pricing, id).commission.economy ?? 20;
   const sampleFareOf = (id: string) => reservationFareMinor({ zoneId: id, category: "economy" }).minor / market.minorUnits;
+  /** The car types Pricing offers in a zone (not deleted, switched on there), the same list as waiting at pickup. */
+  const feeCategoriesOf = (id: string) => {
+    const prices = zoneBook(pricing, id).prices;
+    return activeCategories(pricing).filter((category) => prices[category.id]?.enabled).map(({ id: categoryId, label }) => ({ id: categoryId, label }));
+  };
   const waitBasesOf = (id: string) => {
     const prices = zoneBook(pricing, id).prices;
     return activeCategories(pricing).filter((category) => prices[category.id]?.enabled).map((category) => ({ id: category.id, label: category.label, base: { freeWaitMin: prices[category.id].freeWaitMin, perMin: prices[category.id].waitPerMin, noShowFee: prices[category.id].noShowFee } }));
@@ -274,13 +279,14 @@ export function DispatchPage() {
           commissionOf={commissionOf}
           sampleFareOf={sampleFareOf}
           waitBasesOf={waitBasesOf}
+          feeCategoriesOf={feeCategoriesOf}
         />
       ) : null}
       {!slice.loading && view === "live" ? <LiveView book={book} market={market} zones={zones} drivers={live.filter((driver) => zones.some((zone) => zone.id === driver.zoneId))} requests={requests} candidatesOf={candidatesOf} rulesOf={liveOf} busyOf={busyOf} hhmm={hhmm} canControl={canControl} agentId={agent?.id ?? ""} withScope={(path) => path} onNotice={say} sharedAlerts={ownAlerts ? undefined : <DispatchAlerts zoneIds={zones.map((zone) => zone.id)} />} /> : null}
       {!slice.loading && view === "test" ? <TestView market={market} zones={zones} zoneId={zoneId || zones[0]?.id || ""} onZone={(id) => go({ zone: id })} draftOf={rulesOf} liveOf={liveOf} countryDraft={countryRules} countryLive={liveCountry(book, country)} controlOf={(id) => book.control[id]} factsFor={factsFor} busyOf={busyOf} hhmm={hhmm} hasChanges={changes.length > 0 || countryChanged.length > 0} events={book.events.filter((event) => event.country === country)} /> : null}
       {!slice.loading && view === "events" ? <EventsView book={book} market={market} drivers={countryLive.map((driver) => ({ id: driver.id, name: driver.name, zoneName: driver.zoneName }))} canEdit={canEditRole} canBonus={Boolean(agent && can(agent.role, "drivers.bonuses"))} onNotice={say} /> : null}
       {!slice.loading && view === "reasons" ? <CancelReasonsView market={market} country={countryRules} onCountry={(next) => setWorkingCountry((current) => ({ ...current, [country]: next }))} canEdit={canEditRole} /> : null}
-      {!slice.loading && view === "cancels" ? <CancelView book={book} market={market} records={records} rulesOf={liveOf} canDecide={canControl} agentId={agent?.id ?? ""} money={money} onNotice={say} /> : null}
+      {!slice.loading && view === "cancels" ? <CancelView book={book} market={market} records={records} categories={activeCategories(pricing)} rulesOf={liveOf} canDecide={canControl} agentId={agent?.id ?? ""} money={money} onNotice={say} /> : null}
       {!slice.loading && view === "history" ? <HistoryView book={book} market={market} agentId={agent?.id ?? ""} canEdit={canEditRole} canApprove={canApprove} rulesOf={liveOf} onNotice={say} /> : null}
     </div>
   );

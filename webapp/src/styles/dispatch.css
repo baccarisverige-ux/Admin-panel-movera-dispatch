@@ -587,3 +587,7 @@ body.dx-no-scroll { overflow: hidden; }
   .dx-fee-table td::before { content: attr(data-label); font-size: 11px; font-weight: 700; color: var(--muted); }
   .dx-fee-table td.dx-fee-na { display: none; }
 }
+.dx-fee-tabs { margin: 0; max-width: 100%; flex-wrap: wrap; }
+.dx-fee-tabs button { display: inline-flex; align-items: center; gap: 5px; }
+.dx-fee-example { margin: 2px 0 0; font-size: 12.5px; color: var(--dash-ink-2); }
+.dx-note .dash-btn { margin-left: auto; }
