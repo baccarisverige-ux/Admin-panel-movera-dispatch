@@ -6,7 +6,7 @@ import { emptySafety, useAudit, useDrivers, useRecords, useSlice, useTrips, type
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { demoShift } from "../dashboard/scheduled";
-import { formatOre } from "../domain/contract";
+import { formatMoney as formatTripMoney } from "../domain/money";
 import { statusLabel } from "../domain/labels";
 import { MapPanel } from "../dispatch/maps";
 import { reasonText as cancelReasonLabel } from "../dispatch/offers";
@@ -125,7 +125,7 @@ export function TripPage() {
   const country = countryOf(trip.zoneId);
   const place = market(country);
   const money = (minor: number) => formatMoney(minor, country);
-  const legacyMoney = (ore: number) => (country === "SE" ? formatOre(ore) : formatMoney(ore, country));
+  const legacyMoney = (minor: number) => formatTripMoney({ amountMinor: minor, currency: place.currency });
   const driver = drivers.data?.find((item) => item.id === trip.driverId);
   const vehicle = vehicles.data?.find((item) => item.driverId === trip.driverId);
   const fare = fareBreakdown(trip);
@@ -528,8 +528,8 @@ export function TripPage() {
                   entityState={trip.status}
                   scope={trip.zoneId}
                   collection="trips"
-                  before={formatOre(trip.fareOre ?? 0)}
-                  after={formatOre(fareAttempt.trip.fareOre)}
+                  before={legacyMoney(trip.fareOre ?? 0)}
+                  after={legacyMoney(fareAttempt.trip.fareOre)}
                   patch={{ fareOre: fareAttempt.trip.fareOre }}
                 >
                   Apply fare adjustment

@@ -12,6 +12,7 @@ import { can, type AgentScope, type Role } from "../auth/permissions.ts";
 import { commandById } from "../commands/registry.ts";
 import { catalogFor, type CatalogEntry } from "../data/catalog.ts";
 import { CURRENCY, TIME_ZONE, nextStatus, type TripCommand } from "../domain/contract.ts";
+import { isCurrency, type CurrencyCode } from "../domain/money.ts";
 import {
   addAudit,
   findHit,
@@ -67,7 +68,8 @@ export type CommandResult = {
 export type AdminApi = {
   kind: "fixture" | "http";
   demo: boolean;
-  ready: () => Promise<{ currency: typeof CURRENCY; timeZone: typeof TIME_ZONE; demo: boolean }>;
+  /** The default market's currency and time zone. Any contract currency is accepted (SE, FR and TN markets). */
+  ready: () => Promise<{ currency: CurrencyCode; timeZone: string; demo: boolean }>;
   page: (pageId: string) => Promise<PageResult>;
   list: (name: string, scope: ZoneScope) => Promise<DemoRecord[]>;
   search: (query: string, scope: ZoneScope) => Promise<{ kind: string; id: string; label: string; path: string }[]>;
@@ -661,10 +663,10 @@ export function createHttpAdminApi(baseUrl = ""): AdminApi {
 
     async ready() {
       const body = (await apiRequest(baseUrl, "/ready")) as { currency?: string; timeZone?: string };
-      if (body.currency !== CURRENCY || body.timeZone !== TIME_ZONE) {
-        throw new Error("The ready payload is not Stockholm SEK.");
+      if (!isCurrency(body.currency) || typeof body.timeZone !== "string" || !body.timeZone.includes("/")) {
+        throw new Error("The ready payload needs a contract currency (SEK, EUR or TND) and an IANA time zone.");
       }
-      return { currency: CURRENCY, timeZone: TIME_ZONE, demo: false };
+      return { currency: body.currency, timeZone: body.timeZone, demo: false };
     },
 
     async page(pageId) {
