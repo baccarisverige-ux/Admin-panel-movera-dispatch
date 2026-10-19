@@ -44,6 +44,7 @@ import {
   copyInto,
   currencyOf,
   emptyPricingStore,
+  largePriceChanges,
   normalizeStore,
   publishZones,
   stopManualSurges,
@@ -129,6 +130,8 @@ export function PricingPage() {
   const problems = validateZoneBook(book, store.categories);
   const dirty = Object.values(drafts).filter((draft) => JSON.stringify(draft) !== JSON.stringify(zoneBook(store, draft.zoneId)));
   const dirtyProblems = dirty.flatMap((draft) => validateZoneBook(draft, store.categories).map((problem) => ({ ...problem, zoneId: draft.zoneId })));
+  // A price moving more than 50 % from its published value asks "Are you sure?" in the publish dialog (A-O3).
+  const largeChanges = dirty.flatMap((draft) => largePriceChanges(zoneBook(store, draft.zoneId), draft, store.categories, zoneById(draft.zoneId)?.name ?? draft.zoneId));
   // Typed values that are not numbers or are over a field's maximum stay in their box until fixed (UI-05, UI-10).
   const fieldErrors = useFieldErrors();
   // Leaving Pricing with unpublished changes asks first, like Content, Messages and Team (UI-09).
@@ -387,7 +390,7 @@ export function PricingPage() {
             <small>{fieldErrors.first ?? (dirtyProblems.length ? dirtyProblems[0].message : `${publish.changes.length} change${publish.changes.length === 1 ? "" : "s"} · riders see them after you publish`)}</small>
           </div>
           <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice("Changes discarded."); }}>Discard</button>
-          <CommandButton command="admin.pricing.publish" className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} onDone={() => { setDrafts({}); setNotice(`Published as pricing revision ${publish.store.draftRev}.`); }}>
+          <CommandButton command="admin.pricing.publish" className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(`Published as pricing revision ${publish.store.draftRev}.`); }}>
             <Save size={15} aria-hidden="true" /> Publish changes
           </CommandButton>
         </div>

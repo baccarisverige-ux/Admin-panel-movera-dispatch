@@ -138,7 +138,9 @@ export function TripPage() {
   const completeWhy = completeBlock(trip.status);
   // Admin cancel reasons: contract admin_* codes, texts from Dispatch › Cancel reasons (the one editor).
   const adminReasons = liveCountry(normalizeDispatchBook(dispatchSlice.value), country).cancelReasons.groups.admin;
-  const cancelReasonCode = cancelCode || adminReasons[0]?.code || "admin_other";
+  // No cancel reason is preselected: the admin picks one before Cancel trip is enabled (A-O1).
+  const cancelReasonCode = adminReasons.some((item) => item.code === cancelCode) ? cancelCode : "";
+  const cancelPick = cancelWhy ? null : cancelReasonCode ? null : "Choose a cancel reason first.";
   const fareAttempt = adjustFare(asTrip(trip), Number(farePercent));
   const adjustWhy = adjustBlock(trip.status) ?? fareAttempt.error ?? null;
   const waitingValue = waitingInput === "" ? fare.waitingMin : Number(waitingInput);
@@ -373,6 +375,7 @@ export function TripPage() {
               <label>
                 Cancel reason
                 <select aria-label="Cancel reason" value={cancelReasonCode} onChange={(event) => setCancelCode(event.target.value)} disabled={Boolean(cancelWhy)}>
+                  <option value="" disabled>Choose a reason</option>
                   {adminReasons.map((item) => <option key={item.code} value={item.code}>{cancelReasonLabel(item.title, "en") || item.code}</option>)}
                 </select>
               </label>
@@ -389,6 +392,8 @@ export function TripPage() {
                   before={trip.status}
                   after="cancelled_by_admin"
                   patch={{ status: "cancelled_by_admin", previousStatus: trip.status, cancelReasonCode }}
+                  disabled={Boolean(cancelPick)}
+                  title={cancelPick ?? undefined}
                   storeReason
                 >
                   Cancel trip

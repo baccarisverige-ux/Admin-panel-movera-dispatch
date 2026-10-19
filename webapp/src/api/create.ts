@@ -13,7 +13,7 @@ import { emptySafety, safetyAction, validateSafety, type SafetyBook } from "../s
 import { can, type AgentScope, type Role } from "../auth/permissions.ts";
 import { commandById } from "../commands/registry.ts";
 import { catalogFor, type CatalogEntry } from "../data/catalog.ts";
-import { CURRENCY, TIME_ZONE, nextStatus, type TripCommand } from "../domain/contract.ts";
+import { CURRENCY, TIME_ZONE, isCancelReasonCode, nextStatus, type TripCommand } from "../domain/contract.ts";
 import { isCurrency, type CurrencyCode } from "../domain/money.ts";
 import {
   addAudit,
@@ -27,7 +27,7 @@ import {
   writeFault,
   type Fault,
 } from "./demoStore.ts";
-import { ApiError, apiRequest, classifyStatus } from "./httpClient.ts";
+import { ApiError, apiRequest, classifyStatus, type ApiErrorBody } from "./httpClient.ts";
 import type { ApprovalRow, AuditRow, DemoDb, DemoRecord, InboxItem, OperationRow, ZoneScope } from "./seed.ts";
 
 export type ApiEnv = {
@@ -206,7 +206,7 @@ function cacheRejection(status: number): boolean {
 }
 
 function replayOperation(db: DemoDb, operation: OperationRow): CommandResult {
-  if (operation.status === "rejected") throw new ApiError(operation.httpStatus, operation.message);
+  if (operation.status === "rejected") throw new ApiError(operation.httpStatus, operation.message, operation.code ? { code: operation.code } : {});
   return {
     message: operation.message,
     db,
@@ -225,6 +225,7 @@ function rememberRejected(
   status: number,
   message: string,
   cache: boolean,
+  code?: ApiErrorBody["code"],
 ): DemoDb {
   let next = addAudit(
     db,
@@ -252,6 +253,7 @@ function rememberRejected(
     status: "rejected",
     httpStatus: status,
     message,
+    ...(code ? { code } : {}),
     rev: next.rev,
     at: new Date().toISOString(),
   };
@@ -330,10 +332,15 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       const cached = db.operations[operationKey(actorId, idempotencyKey)];
       if (cached) return replayOperation(db, cached);
 
-      const reject = (status: number, message: string, cache = cacheRejection(status)): never => {
-        db = rememberRejected(db, { ...raw, actorId }, resolvedScope, idempotencyKey, operationId, status, message, cache);
-        throw new ApiError(status, message);
+      // Errors carry the contract codes (X8): a stale version is 409 version_mismatch and a command the current
+      // status does not allow is 409 invalid_transition, both with the current record as the projection.
+      const reject = (status: number, message: string, cache = cacheRejection(status), body: Partial<ApiErrorBody> = {}): never => {
+        db = rememberRejected(db, { ...raw, actorId }, resolvedScope, idempotencyKey, operationId, status, message, cache, body.code);
+        throw new ApiError(status, message, { retryable: false, ...body });
       };
+      const projection = () => targetRecord(db, raw.targetId, raw.collection) ?? undefined;
+      const stale = (message: string, current: unknown): never => reject(409, message, false, { code: "version_mismatch", projection: current });
+      const notAllowed = (message: string): never => reject(409, message, false, { code: "invalid_transition", projection: projection() });
 
       if (!spec) reject(422, `Unknown action ${raw.action}.`);
       const actionSpec = spec!;
@@ -365,25 +372,32 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         };
       }
 
-      if (expectedRev !== db.rev) reject(409, "Someone else changed this. Reload and review the newest version.");
+      if (expectedRev !== db.rev) stale("Someone else changed this. Reload and review the newest version.", raw.sliceKey ? db.slices[raw.sliceKey] : projection());
       if (raw.sliceKey && raw.expectedSliceRev !== undefined) {
         const currentSlice = db.slices[raw.sliceKey] as { draftRev?: unknown } | undefined;
         const currentDraftRev = typeof currentSlice?.draftRev === "number" ? currentSlice.draftRev : 1;
         if (currentDraftRev !== raw.expectedSliceRev) {
-          reject(409, "Someone else changed this configuration draft. Reload and review the newest draft.");
+          stale("Someone else changed this configuration draft. Reload and review the newest draft.", currentSlice);
         }
       }
-      if (actionSpec.allowedStates && resolvedState && !actionSpec.allowedStates.includes(resolvedState)) {
-        reject(422, `${actionSpec.label} is not allowed while the record is ${resolvedState}.`);
-      }
+      // The lifecycle table decides first (X8): an admin trip command the trip's status does not allow is
+      // invalid_transition, not a validation error from the action's own state list.
       const lifecycle = raw.collection === "trips" ? TRIP_LIFECYCLE[raw.action] : undefined;
       if (lifecycle) {
         // The server derives the next status from the shared table; the client's patch cannot pick it.
         const to = resolvedState ? nextStatus(resolvedState, lifecycle, "admin") : null;
-        if (!to) reject(409, `invalid_transition: ${actionSpec.label} is not allowed while the trip is ${resolvedState ?? "unknown"}.`);
+        if (!to) notAllowed(`${actionSpec.label} is not allowed while the trip is ${resolvedState ?? "unknown"}.`);
         raw = { ...raw, patch: { ...(raw.patch ?? {}), status: to } };
       } else if (raw.collection === "trips" && raw.patch && "status" in raw.patch) {
-        reject(422, `${actionSpec.label} cannot change the trip status.`);
+        reject(422, `${actionSpec.label} cannot change the trip status.`, undefined, { code: "invalid_request" });
+      }
+      if (actionSpec.allowedStates && resolvedState && !actionSpec.allowedStates.includes(resolvedState)) {
+        notAllowed(`${actionSpec.label} is not allowed while the record is ${resolvedState}.`);
+      }
+      // An admin cancel carries an admin_* reason code (contract cancelReasons per actor); a rider's or driver's code is refused.
+      if (raw.action === "admin.trip.cancel") {
+        const code = raw.patch?.cancelReasonCode;
+        if (typeof code !== "string" || !isCancelReasonCode(code, "admin")) reject(422, "Choose an admin cancel reason.", undefined, { code: "invalid_request" });
       }
 
       if (raw.action.startsWith("admin.safety.")) {
@@ -501,6 +515,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
           injectedStatus,
           injectedStatus === 409 ? "This record changed. The newest version is still here." : classifyStatus(injectedStatus),
           !transient && cacheRejection(injectedStatus),
+          injectedStatus === 409 ? { code: "version_mismatch", projection: raw.sliceKey ? db.slices[raw.sliceKey] : projection() } : { retryable: transient },
         );
       }
 
@@ -508,7 +523,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       if (actionSpec.approvalThresholdMinor && !stored) reject(404, "The record to refund was not found.");
       if (stored && stored.amountMinor >= actionSpec.approvalThresholdMinor![stored.currency]) {
         if (db.approvals.some((item) => item.status === "pending" && item.action === raw.action && item.targetId === raw.targetId)) {
-          reject(409, "A request for this is already waiting for a second admin.");
+          reject(409, "A request for this is already waiting for a second admin.", false, { code: "conflict" });
         }
         const approval: ApprovalRow = {
           id: `approval-${db.approvals.length + 1}`,
@@ -579,7 +594,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
           if (!foundPayment) reject(404, "Payment for this approval was not found.");
           const payment = foundPayment!;
           if (payment.status !== "captured") {
-            reject(409, `Payment changed to ${payment.status}. Reload before deciding the approval.`);
+            reject(409, `Payment changed to ${payment.status}. Reload before deciding the approval.`, false, { code: "invalid_transition", projection: payment });
           }
           db = {
             ...db,
@@ -608,7 +623,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
           const foundTrip = db.trips.find((item) => item.id === approval.targetId);
           if (!foundTrip) reject(404, "Trip for this approval was not found.");
           const trip = foundTrip!;
-          if (trip.kind === "refunded") reject(409, "This trip is already refunded. Reload before deciding the approval.");
+          if (trip.kind === "refunded") reject(409, "This trip is already refunded. Reload before deciding the approval.", false, { code: "invalid_transition", projection: trip });
           db = { ...db, trips: db.trips.map((item) => (item.id === trip.id ? { ...item, kind: "refunded" } : item)) };
           db = addAudit(
             db,

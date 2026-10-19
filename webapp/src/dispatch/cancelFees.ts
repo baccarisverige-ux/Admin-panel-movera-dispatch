@@ -1,5 +1,5 @@
 import { market, type MarketId } from "../markets/markets.ts";
-import { BUILT_IN_CATEGORIES, fromSek } from "../pricing/zonePricing.ts";
+import { BUILT_IN_CATEGORIES, fromSek, isLargePriceChange } from "../pricing/zonePricing.ts";
 
 /**
  * Rider cancel fees, per zone and per car type, with two rule sets:
@@ -171,4 +171,29 @@ export function riderSeesLine(kind: CancelFeeKind, row: CancelFeeRow, fare: numb
     : row.min !== null ? `at least ${money(row.min)}`
     : row.max !== null ? `at most ${money(row.max)}` : `of ${money(fare)}`;
   return { line, detail: `(${row.value}%${row.min !== null || row.max !== null ? ", " : " "}${limits})` };
+}
+
+/**
+ * Cancel fees that move more than 50 % up or down from the published table (A-O3), one line each, so Save and
+ * Publish can ask "Are you sure?". A fee whose type changed (fixed to % or back) has nothing to compare and is not listed.
+ */
+export function largeCancelFeeChanges(published: CancelFeeTable, next: CancelFeeTable, categories: readonly FeeCategory[], where: string, symbol: string): string[] {
+  const lines: string[] = [];
+  const text = (value: number) => String(Number(value.toFixed(3)));
+  for (const { id, label } of categories) {
+    const before = feeRow(published, id);
+    const after = feeRow(next, id);
+    if (before.type !== after.type) continue;
+    const unit = after.type === "fixed" ? symbol : "%";
+    const pct = (a: number, b: number) => (a === 0 ? "new fee" : `${b > a ? "+" : "−"}${Math.round((Math.abs(b - a) / a) * 100)}%`);
+    if (isLargePriceChange(before.value, after.value)) lines.push(`${where}, ${label}: fee ${text(before.value)} → ${text(after.value)} ${unit} (${pct(before.value, after.value)})`);
+    if (after.type === "percent") {
+      for (const key of ["min", "max"] as const) {
+        const a = before[key];
+        const b = after[key];
+        if (a !== null && b !== null && isLargePriceChange(a, b)) lines.push(`${where}, ${label}: ${key === "min" ? "lowest" : "highest"} fee ${text(a)} → ${text(b)} ${symbol} (${pct(a, b)})`);
+      }
+    }
+  }
+  return lines;
 }

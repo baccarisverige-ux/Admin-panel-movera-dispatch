@@ -8,6 +8,8 @@ import {
   defaultZoneBook,
   editCategory,
   emptyPricingStore,
+  isLargePriceChange,
+  largePriceChanges,
   normalizeStore,
   PRICE_ROWS,
   priceMax,
@@ -163,3 +165,35 @@ console.log("zone pricing ok");
   for (const id of ["Z001", "ARN", "FR-PC", "TN-TC"]) assert(validateZoneBook(zoneBook(store, id), store.categories).length === 0, `default prices in ${id} stay valid`);
 }
 console.log("pricing bounds ok");
+
+// A-O2: a 0 base fare is refused (owner decision), so it cannot be published.
+{
+  const zero = structuredClone(norrmalm);
+  zero.prices.economy.base = 0;
+  assert(validateZoneBook(zero, store.categories).some((problem) => problem.path === "prices.economy.base" && problem.message.includes("above 0")), "a 0 base fare is refused");
+  const small = structuredClone(norrmalm);
+  small.prices.economy.base = 1;
+  assert(!validateZoneBook(small, store.categories).some((problem) => problem.path === "prices.economy.base"), "a 1 kr base fare is still allowed");
+  const freeStop = structuredClone(norrmalm);
+  freeStop.prices.economy.extraStopFee = 0;
+  assert(!validateZoneBook(freeStop, store.categories).some((problem) => problem.path === "prices.economy.extraStopFee"), "other price fields may still be 0");
+}
+
+// A-O3: a price change of more than 50 % up or down from the published value is listed for "Are you sure?".
+{
+  assert(isLargePriceChange(100, 151) && isLargePriceChange(100, 49) && !isLargePriceChange(100, 150) && !isLargePriceChange(100, 50) && !isLargePriceChange(100, 100), "the limit is more than 50 % either way");
+  assert(isLargePriceChange(0, 5) && !isLargePriceChange(0, 0), "any rise from a published 0 is large");
+  const published = zoneBook(store, "Z001");
+  assert(largePriceChanges(published, structuredClone(published), store.categories).length === 0, "no change, nothing to confirm");
+  const draft = structuredClone(published);
+  draft.prices.economy.base = published.prices.economy.base * 2;
+  draft.prices.economy.perKm = published.prices.economy.perKm * 1.2;
+  draft.fees.reservationFee = published.fees.reservationFee / 4;
+  draft.prices.economy.freeWaitMin = published.prices.economy.freeWaitMin * 3;
+  const lines = largePriceChanges(published, draft, store.categories, "Norrmalm");
+  assert(lines.some((line) => line.startsWith("Norrmalm · Movera Base fare") && line.includes("+100%")), `a doubled base fare is listed: ${lines.join(" | ")}`);
+  assert(lines.some((line) => line.startsWith("Norrmalm · Reservation fee") && line.includes("−75%")), "a fee cut by 75 % is listed");
+  assert(!lines.some((line) => line.includes("Price per km")), "a 20 % change is not listed");
+  assert(!lines.some((line) => line.includes("Free waiting")), "free waiting minutes are not a price");
+}
+console.log("price checks ok");

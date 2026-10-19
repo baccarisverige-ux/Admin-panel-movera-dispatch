@@ -3,7 +3,8 @@ import { cancelReasonsDefault } from "../dispatch/offers.ts";
 /**
  * Reasons offered in the confirm dialog of a command. Each command family gets its own list, so the audit
  * says why something happened ("Charged twice", "Planned price change") instead of one document-review list
- * for everything. The first reason is the preselected one. "Other" asks for a short text.
+ * for everything. "Other" asks for a short text. Cancel and refund dialogs start with no reason chosen
+ * (mustChooseReason); every other dialog preselects the first reason.
  */
 export const OTHER_REASON = "Other";
 
@@ -102,12 +103,28 @@ export function reasonFamily(commandId: string): ReasonFamily {
   return RULES.find(([, pattern]) => pattern.test(commandId))?.[0] ?? "generic";
 }
 
+/**
+ * Cancel and refund dialogs (and other cancels, such as a campaign or a category) start with no reason
+ * selected, and Confirm stays disabled until the admin picks one (A-O1, owner decision). The audit then never
+ * keeps a reason nobody chose.
+ */
+export function mustChooseReason(commandId: string): boolean {
+  const family = reasonFamily(commandId);
+  return family === "cancel" || family === "refund" || (/[cC]ancel/.test(commandId) && commandId !== "admin.confirm.cancel");
+}
+
+/** The reason a dialog opens with: none for cancel and refund dialogs, else the first of the list. */
+export function initialReason(commandId: string): string {
+  return mustChooseReason(commandId) ? "" : reasonsFor(commandId)[0] ?? "";
+}
+
 export function reasonsFor(commandId: string): readonly string[] {
   return LISTS[reasonFamily(commandId)];
 }
 
 /** What is written to the audit: the chosen reason, or "Other: <text>". Empty when "Other" has no text yet. */
 export function auditReason(chosen: string, otherText: string): string {
+  if (!chosen.trim()) return "";
   if (chosen !== OTHER_REASON) return chosen;
   const text = otherText.trim();
   return text ? `${OTHER_REASON}: ${text}` : "";

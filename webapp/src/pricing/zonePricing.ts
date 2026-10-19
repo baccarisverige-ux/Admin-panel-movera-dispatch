@@ -393,6 +393,8 @@ export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDe
       const value = price[row.field];
       const max = priceMax(row.field, currency);
       if (!Number.isFinite(value) || value < 0) add(`prices.${category.id}.${row.field}`, `${category.label}: ${row.label} must be 0 or more.`);
+      // A-O2 (owner decision): every ride starts at a real price, so a 0 base fare is refused.
+      else if (row.field === "base" && value === 0) add(`prices.${category.id}.base`, `${category.label}: Base fare must be above 0.`);
       else if (value > max && row.field !== "appFeePct" && row.field !== "freeWaitMin") add(`prices.${category.id}.${row.field}`, `${category.label}: ${row.label} can be at most ${short(max)} ${currencySymbol(currency)}.`);
     }
     if (price.maximum && price.minimum > price.maximum) add(`prices.${category.id}.minimum`, `${category.label}: minimum fare is higher than the maximum fare.`);
@@ -438,6 +440,52 @@ export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDe
     if (item.multiplier < SLIDER_MIN || item.multiplier > SLIDER_MAX) add(`scheduled.${item.id}`, "Scheduled surge must be between ×1 and ×6.");
   }
   return problems;
+}
+
+/** A price change above this share of the published value (up or down) asks "Are you sure?" first (A-O3). */
+export const LARGE_PRICE_CHANGE = 0.5;
+
+/**
+ * True when a price moves more than 50 % up or down from its published value. From a published 0 any rise
+ * counts as large (there is no percentage to compare against).
+ */
+export function isLargePriceChange(before: number, after: number, limit = LARGE_PRICE_CHANGE): boolean {
+  if (!Number.isFinite(before) || !Number.isFinite(after) || before === after) return false;
+  if (before === 0) return after > 0;
+  return Math.abs(after - before) / Math.abs(before) > limit;
+}
+
+function changeText(label: string, before: number, after: number, unit: string): string {
+  const pct = before === 0 ? "new price" : `${after > before ? "+" : "−"}${Math.round((Math.abs(after - before) / before) * 100)}%`;
+  return `${label}: ${short(before)} → ${short(after)} ${unit} (${pct})`;
+}
+
+/**
+ * Price fields of a zone that change by more than 50 % from the published zone: the price table (not the
+ * free waiting minutes), the zone fees and fixed routes that exist in both. New categories or routes have no
+ * published value and are not listed.
+ */
+export function largePriceChanges(published: ZoneBook, draft: ZoneBook, categories: readonly CategoryDef[], zoneName = ""): string[] {
+  const where = zoneName ? `${zoneName} · ` : "";
+  const money = currencySymbol(currencyOf(draft.zoneId));
+  const lines: string[] = [];
+  for (const category of categories.filter((item) => !item.archived)) {
+    const before = published.prices[category.id];
+    const after = draft.prices[category.id];
+    if (!before || !after) continue;
+    for (const row of PRICE_ROWS) {
+      if (row.field === "freeWaitMin") continue;
+      if (isLargePriceChange(before[row.field], after[row.field])) lines.push(changeText(`${where}${category.label} ${row.label}`, before[row.field], after[row.field], row.unit === "pct" ? "%" : money));
+    }
+  }
+  for (const [key, label] of [["airportPickup", "Airport pickup fee"], ["airportDropoff", "Airport drop-off fee"], ["reservationFee", "Reservation fee"], ["cleaningFee", "Cleaning fee"]] as const) {
+    if (isLargePriceChange(published.fees[key], draft.fees[key])) lines.push(changeText(`${where}${label}`, published.fees[key], draft.fees[key], money));
+  }
+  for (const route of draft.routes) {
+    const before = published.routes.find((item) => item.id === route.id);
+    if (before && isLargePriceChange(before.price, route.price)) lines.push(changeText(`${where}Fixed route ${route.from} → ${route.to}`, before.price, route.price, money));
+  }
+  return lines;
 }
 
 function short(value: number): string {
