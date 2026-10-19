@@ -25,11 +25,12 @@ import {
   type PayoutOps,
   type Schedule,
 } from "./runs";
+import type { CurrencyCode } from "../domain/money";
 
 const agentName = (id: string) => AGENTS.find((item) => item.id === id)?.name ?? id;
 
 /** The run at the top: total, drivers, next date, approval by a second admin, and the bank file. */
-export function RunCard({ run, rows, ops, country, next, money, fileRows, startedBy, currency }: { run: string; rows: readonly DemoRecord[]; ops: PayoutOps; country: MarketId; next: string; money: (minor: number) => string; fileRows: FileRow[]; startedBy: string; currency: string }) {
+export function RunCard({ run, rows, ops, country, next, money, fileRows, startedBy, currency }: { run: string; rows: readonly DemoRecord[]; ops: PayoutOps; country: MarketId; next: string; money: (minor: number) => string; fileRows: FileRow[]; startedBy: string; currency: CurrencyCode }) {
   const { agent } = useSession();
   const sched = ops.schedules[country];
   const total = rows.reduce((sum, row) => sum + (row.fareOre ?? 0), 0);

@@ -1,3 +1,4 @@
+import type { CurrencyCode } from "../domain/money.ts";
 import { CANCEL_OK, COMPLETE_OK, FARE_ADJUST_OK, NO_SHOW_OK, OFFER_OK, REASSIGN_OK, REFUND_TRIP_OK, WAITING_OK } from "../trips/rules.ts";
 
 export type CommandSpec = {
@@ -18,8 +19,22 @@ export type ActionSpec = CommandSpec & {
   versioned: boolean;
   audit: "always" | "none";
   allowedStates?: readonly string[];
-  approvalThresholdOre?: number;
+  /** A second authorised agent must approve when the amount (minor units) is at or over the threshold of its currency. */
+  approvalThresholdMinor?: Readonly<Record<CurrencyCode, number>>;
+  /** The only store slices and collection fields this command may write. Anything else in a request is refused. */
+  writes: WriteSpec;
 };
+
+export type WriteSpec = {
+  slices: readonly string[];
+  collections: Readonly<Record<string, readonly string[]>>;
+};
+
+/**
+ * Refunds at or over this amount need a second admin. 200 kr was the original rule; the other
+ * currencies use about the same value in round numbers: 20 € and 60 DT (TND has 1000 millimes).
+ */
+export const REFUND_APPROVAL_MINOR: Readonly<Record<CurrencyCode, number>> = { SEK: 20_000, EUR: 2_000, TND: 60_000 };
 
 const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.shell.menu", label: "Open menu", reason: false, permission: "overview.read" },
@@ -480,6 +495,7 @@ const ALLOWED_STATES: Record<string, readonly string[]> = {
   "admin.reservation.return": ["waiting", "booked", "assigned"],
   "admin.reservation.cancel": ["waiting", "booked", "assigned"],
   "admin.reservation.noShow": ["waiting", "booked", "assigned"],
+  "admin.payment.refund": ["captured"],
 };
 
 const DESTRUCTIVE = new Set([
@@ -524,6 +540,126 @@ const DESTRUCTIVE = new Set([
   "admin.drivers.bonusStop",
 ]);
 
+/**
+ * Which commands may write each store slice. "admin.rider.*" is every command of that domain;
+ * a trailing "*" after a name ("admin.drivers.bonus*") matches the commands that start with it.
+ * The fixture server refuses a slice that is not listed for the command (a trip note cannot replace "finance").
+ */
+export const SLICE_WRITERS: Readonly<Record<string, readonly string[]>> = {
+  alertOps: ["admin.alerts.*"],
+  campaignOps: ["admin.campaign.*"],
+  config: ["admin.config.*"],
+  confirmOps: ["admin.inbox.value"],
+  contentOps: ["admin.content.extra"],
+  dispatchRules: ["admin.dispatch.*"],
+  driverBonus: ["admin.drivers.bonus*"],
+  driverNotices: ["admin.driverNotices.*"],
+  driverOps: ["admin.driver.*", "admin.driverOps.save", "admin.vehicle.update", "admin.vehicle.reviewRegistration"],
+  driverTexts: ["admin.content.driverTexts"],
+  finance: [
+    "admin.payment.approveBank",
+    "admin.payment.issueVoucher",
+    "admin.payment.markPaid",
+    "admin.payment.reconcile",
+    "admin.payment.rejectBank",
+    "admin.payment.savePolicy",
+    "admin.payment.voidVoucher",
+  ],
+  fleetOwnerOps: ["admin.fleetOwner.*"],
+  gateAOps: ["admin.gateA.record"],
+  growthOps: ["admin.growthOps.*"],
+  handoverOps: ["admin.shift.*"],
+  incidentOps: ["admin.incident.*"],
+  messageOps: ["admin.campaigns.*"],
+  onboardingRules: ["admin.onboarding.*"],
+  panelOps: ["admin.panel.*"],
+  paymentOps: ["admin.payment.dispute", "admin.payment.retry", "admin.payment.rules"],
+  payoutOps: ["admin.payout.*"],
+  promoOps: ["admin.promo.*"],
+  reportOps: ["admin.report.export"],
+  reportSettings: ["admin.reports.*"],
+  reservationOps: ["admin.reservation.*"],
+  reviewOps: ["admin.review.*"],
+  rideCheckOps: ["admin.rideCheck.open"],
+  rideCheckSettings: ["admin.rideCheck.settings"],
+  riderCare: ["admin.rider.*", "admin.riders.*"],
+  riderOps: ["admin.rider.*"],
+  riskOps: ["admin.risk.*"],
+  safetyOps: ["admin.safety.*", "admin.safetyOps.save"],
+  scheduledAccess: ["admin.driver.scheduledAccess"],
+  studioOps: ["admin.studio.*"],
+  supportDesk: ["admin.ticket.*"],
+  supportOps: ["admin.support.*", "admin.supportOps.save"],
+  taxRules: ["admin.tax.rules"],
+  teamOps: ["admin.team.*"],
+  tripOps: ["admin.trip.*"],
+  vehicleRules: ["admin.vehicle.photo", "admin.vehicle.rules"],
+  zonePricing: ["admin.pricing.*"],
+};
+
+const STATUS = ["status"] as const;
+const TRIP_END = ["status", "previousStatus", "cancelReasonCode", "notes"] as const;
+
+/**
+ * The record fields each command may patch, by collection. A status change only goes through the command
+ * made for it (and its allowedStates): a driver note cannot activate a driver.
+ */
+export const COLLECTION_WRITES: Readonly<Record<string, Readonly<Record<string, readonly string[]>>>> = {
+  "admin.driver.activate": { drivers: STATUS },
+  "admin.driver.onHold": { drivers: STATUS },
+  "admin.driver.suspend": { drivers: STATUS },
+  "admin.driver.reactivate": { drivers: STATUS },
+  "admin.fleetOwner.activate": { fleetOwners: STATUS },
+  "admin.fleetOwner.onHold": { fleetOwners: STATUS },
+  "admin.rider.activate": { riders: STATUS },
+  "admin.rider.hold": { riders: STATUS },
+  "admin.rider.block": { riders: STATUS },
+  "admin.rider.unblock": { riders: STATUS },
+  "admin.rider.signOut": { riders: STATUS },
+  "admin.rider.privacy": { riders: STATUS },
+  "admin.rider.credit": { riders: ["fareOre"] },
+  "admin.reservation.answer": { reservations: ["driverId", "status"] },
+  "admin.reservation.unassign": { reservations: ["driverId", "status"] },
+  "admin.reservation.cancel": { reservations: ["status", "notes"] },
+  "admin.reservation.noShow": { reservations: ["status", "notes"] },
+  "admin.safety.take": { incidents: STATUS },
+  "admin.safety.contact": { incidents: STATUS },
+  "admin.safety.resolve": { incidents: STATUS },
+  "admin.trip.adjust": { trips: ["fareOre"] },
+  "admin.trip.cancel": { trips: TRIP_END },
+  "admin.trip.complete": { trips: ["status", "previousStatus"] },
+  "admin.trip.noShow": { trips: TRIP_END },
+  "admin.trip.offer": { trips: ["driverId", "status"] },
+  "admin.trip.reassign": { trips: ["driverId", "status", "previousStatus"] },
+  "admin.trip.refund": { trips: ["kind", "notes"] },
+  "admin.trip.waiting": { trips: ["waitingMin"] },
+  "admin.vehicle.activate": { vehicles: STATUS },
+  "admin.vehicle.hold": { vehicles: STATUS },
+  "admin.vehicle.link": { vehicles: ["driverId", "name"] },
+  "admin.vehicle.reviewRegistration": { vehicles: STATUS },
+  "admin.vehicle.update": { vehicles: ["status", "fleetId"] },
+  "admin.payment.refund": { payments: STATUS },
+};
+
+function matches(pattern: string, id: string): boolean {
+  if (pattern.endsWith(".*")) return id.startsWith(pattern.slice(0, -1));
+  if (pattern.endsWith("*")) return id.startsWith(pattern.slice(0, -1));
+  return pattern === id;
+}
+
+function writesFor(id: string): WriteSpec {
+  return {
+    slices: Object.keys(SLICE_WRITERS).filter((slice) => SLICE_WRITERS[slice]!.some((pattern) => matches(pattern, id))),
+    collections: COLLECTION_WRITES[id] ?? {},
+  };
+}
+
+const APPROVAL_THRESHOLDS: Readonly<Record<string, Readonly<Record<CurrencyCode, number>>>> = {
+  "admin.payment.refund": REFUND_APPROVAL_MINOR,
+  "admin.trip.refund": REFUND_APPROVAL_MINOR,
+  "admin.audit.refund250": REFUND_APPROVAL_MINOR,
+};
+
 const GLOBAL_DOMAINS = new Set(["shell", "auth", "design", "handover", "table", "card", "modal", "tabs", "ui", "doc", "confirm"]);
 const ZONE_DOMAINS = new Set(["zone", "config", "pricing", "dispatch", "live"]);
 
@@ -545,10 +681,8 @@ function enrich(command: CommandSpec): ActionSpec {
     versioned: !GLOBAL_DOMAINS.has(domain),
     audit: GLOBAL_DOMAINS.has(domain) ? "none" : "always",
     allowedStates: ALLOWED_STATES[command.id],
-    approvalThresholdOre:
-      command.id === "admin.payment.refund" || command.id === "admin.audit.refund250"
-        ? 20_000
-        : undefined,
+    approvalThresholdMinor: APPROVAL_THRESHOLDS[command.id],
+    writes: writesFor(command.id),
   };
 }
 

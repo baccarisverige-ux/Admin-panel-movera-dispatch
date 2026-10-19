@@ -7,6 +7,8 @@ import { emptyStudio, changeStudio, studioSlot, type StudioBook } from "../conte
 import { emptyCampaigns, changeCampaign, type CampaignBook } from "../messages/ops.ts";
 import { emptySupport, supportChange, ticketOps, type SupportBook } from "../support/ops.ts";
 import { AGENTS, canUseZone } from "../auth/permissions.ts";
+import { sessionAgent } from "../auth/sessionStore.ts";
+import { marketOfZone } from "../markets/markets.ts";
 import { emptySafety, safetyAction, validateSafety, type SafetyBook } from "../safety/ops.ts";
 import { can, type AgentScope, type Role } from "../auth/permissions.ts";
 import { commandById } from "../commands/registry.ts";
@@ -40,16 +42,19 @@ export type CommandInput = {
   action: string;
   targetId: string;
   reason: string;
-  actorId: string;
+  /**
+   * Who the client thinks is signed in. The server never trusts it: it takes the actor (id, role, scope)
+   * from the session and refuses a request sent for someone else (for example from a tab signed in earlier).
+   */
+  actorId?: string;
   before: string;
   after: string;
-  actorRole?: Role;
-  actorScope?: AgentScope;
   scope?: string;
   idempotencyKey?: string;
   expectedRev?: number;
   expectedSliceRev?: number;
   entityState?: string;
+  /** Ignored for money commands with an approval threshold: the server reads the amount from the stored record. */
   amountOre?: number;
   sliceKey?: string;
   value?: unknown;
@@ -87,7 +92,6 @@ export type AdminApi = {
 };
 
 const DEMO_DELAY_MS = 200;
-const DEFAULT_SCOPE: AgentScope = { zones: "all", market: "SE-STO" };
 
 const TARGET_COLLECTIONS = [
   "drivers",
@@ -137,6 +141,9 @@ function targetRecord(db: DemoDb, targetId: string, collection?: string): DemoRe
 }
 
 function resolveTargetScope(db: DemoDb, input: CommandInput): string {
+  // An approval is in the zone of the record it acts on (it is in no collection itself).
+  const approval = input.action.startsWith("admin.approval.") ? db.approvals.find((item) => item.id === input.targetId) : undefined;
+  if (approval) return targetRecord(db, approval.targetId)?.zoneId ?? "all";
   const record = targetRecord(db, input.targetId, input.collection);
   if (record?.zoneId) return record.zoneId;
   if (db.zones.some((zone) => zone.id === input.targetId)) return input.targetId;
@@ -145,8 +152,9 @@ function resolveTargetScope(db: DemoDb, input: CommandInput): string {
 
 function resolveTargetState(db: DemoDb, input: CommandInput): string | undefined {
   const record = targetRecord(db, input.targetId, input.collection);
-  // A trip's state is the stored one, never what the client says it saw.
-  if (input.collection === "trips" && record?.status) return record.status;
+  // A trip's or payment's state is the stored one, never what the client says it saw.
+  const stored = input.collection === "trips" || input.collection === "payments" || /^admin\.(trip|payment)\./.test(input.action);
+  if (stored && record?.status) return record.status;
   return input.entityState ?? record?.status;
 }
 
@@ -158,6 +166,21 @@ const TRIP_LIFECYCLE: Record<string, TripCommand> = {
   "admin.trip.noShow": "no_show",
   "admin.trip.complete": "complete",
 };
+
+/**
+ * The amount a money command moves, from the stored record, never from the request (C-03).
+ * A payment or trip refund is always a full refund, so the amount is the stored fare.
+ */
+function storedAmount(db: DemoDb, input: CommandInput): { amountMinor: number; currency: CurrencyCode } | null {
+  const record =
+    input.action === "admin.payment.refund" ? db.payments.find((row) => row.id === input.targetId)
+      : input.action === "admin.trip.refund" ? db.trips.find((row) => row.id === input.targetId)
+        : undefined;
+  if (record) return { amountMinor: record.fareOre ?? 0, currency: marketOfZone(record.zoneId)?.currency ?? CURRENCY };
+  // The Audit page's demo refund buttons have no record; their amount is the button's own (SEK).
+  if (input.action.startsWith("admin.audit.")) return { amountMinor: input.amountOre ?? 0, currency: CURRENCY };
+  return null;
+}
 
 function scopeAllowed(actorScope: AgentScope, scope: string): boolean {
   if (!scope || scope === "all") return true;
@@ -177,6 +200,11 @@ function rejectionResult(status: number): AuditRow["result"] {
   return "rejected";
 }
 
+/** Conflicts and state refusals can change once the record changes, so a retry must be checked again, not replayed. */
+function cacheRejection(status: number): boolean {
+  return status !== 409 && status !== 422;
+}
+
 function replayOperation(db: DemoDb, operation: OperationRow): CommandResult {
   if (operation.status === "rejected") throw new ApiError(operation.httpStatus, operation.message);
   return {
@@ -190,7 +218,7 @@ function replayOperation(db: DemoDb, operation: OperationRow): CommandResult {
 
 function rememberRejected(
   db: DemoDb,
-  input: CommandInput,
+  input: CommandInput & { actorId: string },
   resolvedScope: string,
   idempotencyKey: string,
   operationId: string,
@@ -237,6 +265,19 @@ function rememberRejected(
   return saveDb(next);
 }
 
+/**
+ * The in-browser demo server. It stands in for the real Admin API, so every check here is one the real
+ * backend must repeat on its side (the browser can change anything sent from it):
+ * - identity: actor id, role and scope from the session (the backend: from its token), never from the body;
+ * - permission and scope: the actor's role allows the action, and the record's zone is in the actor's scope;
+ * - writes: only the slice and record fields the action declares (registry `writes`); the backend should also
+ *   rebuild slice contents from the command rather than store the client's computed book;
+ * - state: the stored state, not the one the client says it saw (trips, payments);
+ * - money: amounts from the stored record, the second-admin threshold per currency, and an approver who may
+ *   do the action itself in that zone and is not the requester;
+ * - idempotency: one effect per (actor, key); conflicts and state refusals are checked again on retry.
+ * Not done here yet: reads (readSlice/list/audit) still trust the read context the client passes.
+ */
 export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
   return {
     kind: "fixture",
@@ -271,19 +312,26 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
 
       let db = loadDb();
       const spec = commandById(raw.action);
-      const actorRole = raw.actorRole ?? "super";
-      const actorScope = raw.actorScope ?? DEFAULT_SCOPE;
+      // Identity comes from the signed-in session, never from the request (C-05). The real backend takes it from its token.
+      const agent = sessionAgent();
+      const pureUi = Boolean(spec && !spec.versioned && spec.audit === "none");
+      if (!agent && !pureUi) throw new ApiError(401, "Sign in again.");
+      if (agent && raw.actorId && raw.actorId !== agent.id) throw new ApiError(403, "You are signed in as someone else now. Reload the page.");
+      const actorId = agent?.id ?? "signed-out";
+      const actorRole: Role = agent?.role ?? "viewer";
+      const actorScope: AgentScope = agent?.scope ?? { zones: [], market: "SE-STO" };
+      raw = { ...raw, actorId };
       const idempotencyKey = raw.idempotencyKey ?? `direct-${db.rev}-${raw.action}-${raw.targetId}`;
       const expectedRev = raw.expectedRev ?? db.rev;
       const resolvedScope = resolveTargetScope(db, raw);
       const resolvedState = resolveTargetState(db, raw);
-      const operationId = makeOperationId(raw.actorId, idempotencyKey);
+      const operationId = makeOperationId(actorId, idempotencyKey);
 
-      const cached = db.operations[operationKey(raw.actorId, idempotencyKey)];
+      const cached = db.operations[operationKey(actorId, idempotencyKey)];
       if (cached) return replayOperation(db, cached);
 
-      const reject = (status: number, message: string, cache = true): never => {
-        db = rememberRejected(db, raw, resolvedScope, idempotencyKey, operationId, status, message, cache);
+      const reject = (status: number, message: string, cache = cacheRejection(status)): never => {
+        db = rememberRejected(db, { ...raw, actorId }, resolvedScope, idempotencyKey, operationId, status, message, cache);
         throw new ApiError(status, message);
       };
 
@@ -293,6 +341,19 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       if (!can(actorRole, actionSpec.permission)) reject(403, "Your role cannot do that.");
       if (!scopeAllowed(actorScope, resolvedScope)) reject(403, "That record is outside your active scope.");
       if (actionSpec.reason && !raw.reason.trim()) reject(422, "A reason is required.");
+
+      // A command writes only the slice and collection fields it declares in the registry (C-04).
+      // The real backend must do the same, and also rebuild slice contents from the command instead of
+      // accepting the client's computed book as it is (only safety, support, campaign, studio, growth,
+      // report and gate evidence are rebuilt here so far).
+      if (raw.sliceKey && !actionSpec.writes.slices.includes(raw.sliceKey)) reject(403, `${actionSpec.label}: this action cannot change ${raw.sliceKey}.`);
+      // (A patch without a collection is never written; growth redeem uses it as a parameter.)
+      if (raw.collection) {
+        const fields = actionSpec.writes.collections[raw.collection];
+        if (!fields) reject(403, `${actionSpec.label}: this action cannot change ${raw.collection}.`);
+        const extra = Object.keys(raw.patch ?? {}).filter((field) => !fields!.includes(field));
+        if (extra.length) reject(403, `${actionSpec.label}: this action cannot change ${extra.join(", ")}.`);
+      }
 
       if (!actionSpec.versioned && actionSpec.audit === "none") {
         return {
@@ -332,7 +393,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         const proposed = raw.value as SafetyBook | undefined;
         const text = proposed?.incidents[raw.targetId]?.events.at(-1)?.text ?? "";
         const kind = raw.action.split(".").at(-1) as "take" | "contact" | "resolve";
-        const result = safetyAction(book, incident!, raw.actorId, kind, text);
+        const result = safetyAction(book, incident!, actorId, kind, text);
         if (result.error) reject(422, result.error);
         raw = { ...raw, sliceKey: "safetyOps", value: result.book, collection: "incidents", patch: { status: result.status } };
       }
@@ -356,10 +417,10 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         const line = ops?.messages.at(-1);
         const owner = kind === "assign" ? ops?.owner ?? undefined : undefined;
         if (owner && !AGENTS.some(a => a.id === owner && a.active && can(a.role, "support.reply") && canUseZone(a, row!.zoneId))) reject(422, "Agent is not eligible for this ticket.");
-        const text = kind === "draft" ? proposed?.drafts[`${raw.actorId}:${raw.targetId}`] ?? "" : line?.text ?? "";
+        const text = kind === "draft" ? proposed?.drafts[`${actorId}:${raw.targetId}`] ?? "" : line?.text ?? "";
         const current = ticketOps(book,row!);
         if (kind === "metadata" && (!ops || !["normal", "urgent"].includes(ops.priority) || !["sv", "en"].includes(ops.language))) reject(422, "Invalid ticket metadata.");
-        const result = supportChange(book,row!,raw.actorId,kind,text,line?.id ?? idempotencyKey,owner,line?.attachment,kind === "metadata" ? { ...current, priority: ops!.priority, language: ops!.language, tags: ops!.tags } : undefined);
+        const result = supportChange(book,row!,actorId,kind,text,line?.id ?? idempotencyKey,owner,line?.attachment,kind === "metadata" ? { ...current, priority: ops!.priority, language: ops!.language, tags: ops!.tags } : undefined);
         if (result.error) reject(422,result.error);
         raw = { ...raw, sliceKey: "supportOps", value: result.book };
       }
@@ -370,7 +431,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         const campaign = proposed?.campaigns.find(c => c.id === raw.targetId);
         if (!campaign || !db.zones.some(z => z.id === campaign.zone) || !scopeAllowed(actorScope,campaign.zone)) reject(422,"Invalid campaign audience.");
         const action = raw.action.split(".").at(-1) as "save" | "test" | "publish" | "cancel" | "refresh";
-        const result = changeCampaign(book,campaign!,action,raw.actorId,campaign!.app === "rider" ? db.riders : db.drivers);
+        const result = changeCampaign(book,campaign!,action,actorId,campaign!.app === "rider" ? db.riders : db.drivers);
         if (result.error) reject(422,result.error);
         raw = { ...raw, sliceKey: "campaignOps", value: result.book };
       }
@@ -381,7 +442,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         const proposed = raw.value as StudioBook | undefined;
         const action = raw.action.split(".").at(-1) as "save" | "publish" | "rollback";
         const draft = proposed?.slots[raw.targetId]?.draft ?? studioSlot(book,raw.targetId).draft;
-        const result = changeStudio(book,raw.targetId,draft,action,raw.actorId);
+        const result = changeStudio(book,raw.targetId,draft,action,actorId);
         if (result.error) reject(422,result.error);
         raw = { ...raw, sliceKey: "studioOps", value: result.book };
       }
@@ -405,7 +466,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
           const review = growthReviews(db.trips).find(r=>r.id===raw.targetId);
           const decision = proposed?.moderation[raw.targetId]?.at(-1);
           if (!review || !decision || !scopeAllowed(actorScope,review.zone)) reject(422,"Invalid review.");
-          result = moderateGrowth(book,raw.targetId,decision!.hidden,decision!.reason,raw.actorId);
+          result = moderateGrowth(book,raw.targetId,decision!.hidden,decision!.reason,actorId);
         }
         if (result.error) reject(422,result.error);
         raw = { ...raw, sliceKey: "growthOps", value: result.book };
@@ -415,10 +476,10 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         const book = (db.slices.reportOps ?? emptyReports()) as ReportsBook;
         const proposed = raw.value as ReportsBook | undefined;
         const job = proposed?.jobs[0];
-        if (!job || job.actor !== raw.actorId) reject(422,"Invalid export request.");
+        if (!job || job.actor !== actorId) reject(422,"Invalid export request.");
         const visible = db.trips.filter(r=>scopeAllowed(actorScope,r.zoneId) && (!raw.scope || raw.scope === "all" || r.zoneId === raw.scope));
         if (job!.filter.zone && !scopeAllowed(actorScope,job!.filter.zone)) reject(403,"Report zone is outside your scope.");
-        const result = reportExport(book,visible,job!.filter,raw.actorId,job!.id);
+        const result = reportExport(book,visible,job!.filter,actorId,job!.id);
         if (result.error) reject(422,result.error);
         raw = { ...raw, sliceKey: "reportOps", value: result.book };
       }
@@ -428,7 +489,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         const book=(db.slices.gateAOps??emptyGateA()) as GateBook;
         const entry=(raw.value as GateBook | undefined)?.evidence.at(-1);
         if(!entry)reject(422,"Evidence is required.");
-        const result=recordGateA(book,{...entry!,actor:raw.actorId,at:new Date().toISOString()});
+        const result=recordGateA(book,{...entry!,actor:actorId,at:new Date().toISOString()});
         if(result.error)reject(422,result.error);
         raw={...raw,sliceKey:"gateAOps",value:result.book};
       }
@@ -439,17 +500,23 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         reject(
           injectedStatus,
           injectedStatus === 409 ? "This record changed. The newest version is still here." : classifyStatus(injectedStatus),
-          !transient,
+          !transient && cacheRejection(injectedStatus),
         );
       }
 
-      if (actionSpec.approvalThresholdOre && (raw.amountOre ?? 0) >= actionSpec.approvalThresholdOre) {
+      const stored = actionSpec.approvalThresholdMinor ? storedAmount(db, raw) : null;
+      if (actionSpec.approvalThresholdMinor && !stored) reject(404, "The record to refund was not found.");
+      if (stored && stored.amountMinor >= actionSpec.approvalThresholdMinor![stored.currency]) {
+        if (db.approvals.some((item) => item.status === "pending" && item.action === raw.action && item.targetId === raw.targetId)) {
+          reject(409, "A request for this is already waiting for a second admin.");
+        }
         const approval: ApprovalRow = {
           id: `approval-${db.approvals.length + 1}`,
           action: raw.action,
           targetId: raw.targetId,
-          requestedBy: raw.actorId,
-          amountOre: raw.amountOre ?? 0,
+          requestedBy: actorId,
+          amountOre: stored.amountMinor,
+          currency: stored.currency,
           reason: raw.reason,
           status: "pending",
         };
@@ -457,7 +524,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         let next: DemoDb = { ...db, approvals: [approval, ...db.approvals] };
         next = addAudit(next, {
           operationId,
-          actorId: raw.actorId,
+          actorId: actorId,
           action: raw.action,
           targetId: raw.targetId,
           scope: resolvedScope,
@@ -482,7 +549,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
           ...next,
           operations: {
             ...next.operations,
-            [operationKey(raw.actorId, idempotencyKey)]: operation,
+            [operationKey(actorId, idempotencyKey)]: operation,
           },
         });
 
@@ -500,7 +567,11 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         if (!foundApproval) reject(404, "Approval was not found.");
         const approval = foundApproval!;
         if (approval.status !== "pending") reject(422, `Approval is already ${approval.status}.`);
-        if (approval.requestedBy === raw.actorId) reject(403, "A second authorised agent must decide this action.");
+        if (approval.requestedBy === actorId) reject(403, "A second authorised agent must decide this action.");
+        // The decider must be allowed to do the action itself, in the record's zone (C-02). The zone check
+        // already ran above: an approval resolves to the zone of the record it acts on.
+        const decided = commandById(approval.action);
+        if (!decided || !can(actorRole, decided.permission)) reject(403, "Your role cannot do this action, so it cannot approve it.");
 
         const approved = raw.action === "admin.approval.approve";
         if (approved && approval.action === "admin.payment.refund") {
@@ -520,11 +591,34 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
             db,
             {
               operationId: `${operationId}-approved-action`,
-              actorId: raw.actorId,
+              actorId: actorId,
               action: approval.action,
               targetId: approval.targetId,
               scope: payment.zoneId,
               before: "captured",
+              after: "refunded",
+              reason: `Approved request from ${approval.requestedBy}: ${approval.reason}`,
+              result: "committed",
+            },
+            false,
+          );
+        }
+
+        if (approved && approval.action === "admin.trip.refund") {
+          const foundTrip = db.trips.find((item) => item.id === approval.targetId);
+          if (!foundTrip) reject(404, "Trip for this approval was not found.");
+          const trip = foundTrip!;
+          if (trip.kind === "refunded") reject(409, "This trip is already refunded. Reload before deciding the approval.");
+          db = { ...db, trips: db.trips.map((item) => (item.id === trip.id ? { ...item, kind: "refunded" } : item)) };
+          db = addAudit(
+            db,
+            {
+              operationId: `${operationId}-approved-action`,
+              actorId,
+              action: approval.action,
+              targetId: approval.targetId,
+              scope: trip.zoneId,
+              before: String(trip.kind ?? ""),
               after: "refunded",
               reason: `Approved request from ${approval.requestedBy}: ${approval.reason}`,
               result: "committed",
@@ -540,7 +634,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
               ? {
                   ...item,
                   status: approved ? "approved" : "rejected",
-                  decidedBy: raw.actorId,
+                  decidedBy: actorId,
                   decidedAt: new Date().toISOString(),
                   decisionReason: raw.reason,
                 }
@@ -569,7 +663,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
 
       db = addAudit(db, {
         operationId,
-        actorId: raw.actorId,
+        actorId: actorId,
         action: raw.action,
         targetId: raw.targetId,
         scope: resolvedScope,
@@ -594,7 +688,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         ...db,
         operations: {
           ...db.operations,
-          [operationKey(raw.actorId, idempotencyKey)]: operation,
+          [operationKey(actorId, idempotencyKey)]: operation,
         },
       });
 

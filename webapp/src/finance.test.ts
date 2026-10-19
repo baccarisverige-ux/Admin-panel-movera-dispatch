@@ -58,4 +58,10 @@ assert(scheduleLine(sched) === "Every Monday at 08:00" && scheduleError({ ...sch
 assert(bankReady({ driverId: "D1", clearing: "", account: "", iban: "", bic: "", status: "in_review", reviewedBy: "", reviewedAt: "", note: "" }, null, null)?.includes("not approved"), "bank must be approved for the file");
 assert(bankFile([{ id: "PO1", driver: "Maja; Lind", iban: "SE45 5000", bic: "ESSESESS", amount: 125_000, reference: "Movera payout PO1" }], "SEK").split("\n")[1] === 'PO1;"Maja; Lind";SE455000;ESSESESS;1250.00;SEK;Movera payout PO1', "bank file line");
 
+// C-01: TND has 3 decimals; 125 500 millimes is 125.500 DT, not 1255.00.
+assert(bankFile([{ id: "PO9", driver: "Amel", iban: "TN59 1000", bic: "BIATTNTT", amount: 125_500, reference: "r" }], "TND").split("\n")[1] === "PO9;Amel;TN591000;BIATTNTT;125.500;TND;r", "TND bank file uses 3 decimals");
+assert(bankFile([{ id: "PO8", driver: "Luc", iban: "FR76", bic: "BNPAFRPP", amount: 4_205, reference: "r" }], "EUR").split("\n")[1].includes(";42.05;EUR;"), "EUR bank file uses 2 decimals");
+// C-13: a driver name typed in the driver app cannot become a spreadsheet formula.
+assert(bankFile([{ id: "PO9", driver: '=HYPERLINK("http://x","x")', iban: "SE45", bic: "ESSESESS", amount: 100, reference: "@SUM(1)" }], "SEK").split("\n")[1] === `PO9;"'=HYPERLINK(""http://x"",""x"")";SE45;ESSESESS;1.00;SEK;'@SUM(1)`, "bank file guards formulas");
+
 console.log("finance ok");

@@ -17,7 +17,9 @@ import {
   type PaymentMethod,
 } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
-import { CATEGORIES, formatOre } from "../domain/contract";
+import { CATEGORIES } from "../domain/contract";
+import { formatMoney, formatZoneMoney, marketIdOfZone } from "../markets/markets";
+import { useMarketScope } from "../markets/useMarketScope";
 import { accountOk, bicOk, clearingBank, ibanOk } from "../payments/ledger";
 import { CommandButton } from "../ui/CommandButton";
 import { PaymentsDesk } from "../payments/PaymentsDesk";
@@ -45,6 +47,12 @@ export function PaymentsPage() {
   const financeStore = useSlice<FinanceBook>("finance", defaultFinanceBook());
   const finance = useMemo(() => normalizeFinanceBook(financeStore.value), [financeStore.value]);
   const rows = payments.data ?? [];
+  // Totals only add up amounts of one currency: the country chosen in the top bar.
+  const { country } = useMarketScope();
+  const money = (minor: number) => formatMoney(minor, country);
+  const inCountry = (row: { zoneId: string }) => marketIdOfZone(row.zoneId) === country;
+  const riderZone = (riderId: string) => (riders.data ?? []).find((rider) => rider.id === riderId.trim())?.zoneId;
+  const voucherMoney = (minor: number, riderId: string) => formatZoneMoney(minor, riderZone(riderId), country);
 
   const [zone, setZone] = useState("Z001");
   const [category, setCategory] = useState("economy");
@@ -66,15 +74,16 @@ export function PaymentsPage() {
   const policyDirty = JSON.stringify(shownPolicy) !== JSON.stringify(persistedPolicy);
   const policyNext = savePaymentPolicy(finance, context, shownPolicy);
 
-  const captured = rows.filter((row) => row.status === "captured").reduce((sum, row) => sum + (row.fareOre ?? 0), 0);
-  const failed = rows.filter((row) => row.status === "failed").length;
+  const countryRows = rows.filter(inCountry);
+  const captured = countryRows.filter((row) => row.status === "captured").reduce((sum, row) => sum + (row.fareOre ?? 0), 0);
+  const failed = countryRows.filter((row) => row.status === "failed").length;
   const refundedOre =
-    (refunds.data ?? []).reduce((sum, row) => sum + (row.fareOre ?? 0), 0) +
-    rows.filter((row) => row.status === "refunded").reduce((sum, row) => sum + (row.fareOre ?? 0), 0);
-  const payoutOre = (payouts.data ?? []).reduce((sum, row) => sum + (row.fareOre ?? 0), 0);
-  const seededWalletOre = (wallet.data ?? []).reduce((sum, row) => sum + (row.fareOre ?? 0), 0);
+    (refunds.data ?? []).filter(inCountry).reduce((sum, row) => sum + (row.fareOre ?? 0), 0) +
+    countryRows.filter((row) => row.status === "refunded").reduce((sum, row) => sum + (row.fareOre ?? 0), 0);
+  const payoutOre = (payouts.data ?? []).filter(inCountry).reduce((sum, row) => sum + (row.fareOre ?? 0), 0);
+  const seededWalletOre = (wallet.data ?? []).filter(inCountry).reduce((sum, row) => sum + (row.fareOre ?? 0), 0);
   const voucherWalletOre = finance.vouchers
-    .filter((item) => item.status === "posted")
+    .filter((item) => item.status === "posted" && marketIdOfZone(riderZone(item.riderId), country) === country)
     .reduce((sum, item) => sum + item.amountOre, 0);
   const walletOre = seededWalletOre + voucherWalletOre;
   const bankName = clearingBank(clearing);
@@ -118,7 +127,7 @@ export function PaymentsPage() {
         <div className="dx-head-text">
           <h2>Payments</h2>
           <p data-testid="payment-count">
-            {rows.length} payments in the demo ledger. Amounts are SEK. Wallet vouchers are constrained to 100, 200 and 500 kr. Finance revision {finance.draftRev}.
+            {rows.length} payments in the demo ledger. Amounts are in each record's own currency; totals are for the chosen country. Wallet vouchers are constrained to 100, 200 and 500 kr. Finance revision {finance.draftRev}.
           </p>
         </div>
       </header>
@@ -201,11 +210,11 @@ export function PaymentsPage() {
           <p>Balances are ledger-derived. No operator can type a balance directly.</p>
           <ul aria-label="Wallet ledger">
             {(wallet.data ?? []).slice(0, 12).map((row) => (
-              <li key={row.id}>{row.name} · {formatOre(row.fareOre ?? 0)} · {row.status}</li>
+              <li key={row.id}>{row.name} · {formatZoneMoney(row.fareOre ?? 0, row.zoneId)} · {row.status}</li>
             ))}
             {finance.vouchers.map((item) => (
               <li key={item.id}>
-                {item.id} · {item.riderId} · {formatOre(item.amountOre)} · {item.status} · {item.reason}
+                {item.id} · {item.riderId} · {voucherMoney(item.amountOre, item.riderId)} · {item.status} · {item.reason}
                 {item.status === "posted" ? (
                   <CommandButton
                     command="admin.payment.voidVoucher"
@@ -236,7 +245,7 @@ export function PaymentsPage() {
             <label>
               Amount
               <select aria-label="Voucher amount" value={voucherAmountOre} onChange={(event) => setVoucherAmountOre(Number(event.target.value))}>
-                {WALLET_TOP_UPS_ORE.map((amount) => <option key={amount} value={amount}>{formatOre(amount)}</option>)}
+                {WALLET_TOP_UPS_ORE.map((amount) => <option key={amount} value={amount}>{voucherMoney(amount, voucherRider)}</option>)}
               </select>
             </label>
             <label>
@@ -251,13 +260,13 @@ export function PaymentsPage() {
             targetId={`voucher-${voucherRider}`}
             confirmTarget={false}
             before={`${finance.vouchers.length} vouchers`}
-            after={`${voucherRider} +${formatOre(voucherAmountOre)}`}
+            after={`${voucherRider} +${voucherMoney(voucherAmountOre, voucherRider)}`}
             expectedSliceRev={finance.draftRev}
             sliceKey="finance"
             value={voucher.book}
             disabled={Boolean(voucherError)}
             title={voucherError}
-            onDone={() => setNotice(`Wallet voucher ${formatOre(voucherAmountOre)} posted for ${voucherRider}.`)}
+            onDone={() => setNotice(`Wallet voucher ${voucherMoney(voucherAmountOre, voucherRider)} posted for ${voucherRider}.`)}
           >
             Issue wallet voucher
           </CommandButton>
@@ -265,8 +274,8 @@ export function PaymentsPage() {
 
         <article className="panel" data-testid="reconciliation">
           <h3>Reconciliation</h3>
-          <p>Captured {formatOre(captured)}. Failed count {failed}. Refunded {formatOre(refundedOre)}. Payouts {formatOre(payoutOre)}. Wallet ledger {formatOre(walletOre)}.</p>
-          <p>Current settlement difference {formatOre(captured - refundedOre - payoutOre)}.</p>
+          <p>Captured {money(captured)}. Failed count {failed}. Refunded {money(refundedOre)}. Payouts {money(payoutOre)}. Wallet ledger {money(walletOre)}.</p>
+          <p>Current settlement difference {money(captured - refundedOre - payoutOre)}.</p>
           <label>
             Reconciliation note
             <input aria-label="Reconciliation note" value={reconciliationNote} onChange={(event) => setReconciliationNote(event.target.value)} />
@@ -278,7 +287,7 @@ export function PaymentsPage() {
             targetId={`reconciliation-${finance.reconciliations.length + 1}`}
             confirmTarget={false}
             before={`${finance.reconciliations.length} runs`}
-            after={reconciliation.run ? `difference ${formatOre(reconciliation.run.differenceOre)}` : "reconciliation"}
+            after={reconciliation.run ? `difference ${money(reconciliation.run.differenceOre)}` : "reconciliation"}
             expectedSliceRev={finance.draftRev}
             sliceKey="finance"
             value={reconciliation.book}
@@ -289,7 +298,7 @@ export function PaymentsPage() {
           {finance.reconciliations.length === 0 ? <p className="state-line">No saved reconciliation run.</p> : (
             <ol aria-label="Reconciliation history" className="version-list">
               {finance.reconciliations.map((item) => (
-                <li key={item.id}>{item.id} · {item.at} · {item.actorId} · difference {formatOre(item.differenceOre)} · {item.note}</li>
+                <li key={item.id}>{item.id} · {item.at} · {item.actorId} · difference {money(item.differenceOre)} · {item.note}</li>
               ))}
             </ol>
           )}

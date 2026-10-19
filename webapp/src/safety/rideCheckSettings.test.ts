@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createFixtureAdminApi, type CommandInput } from "../api/create.ts";
+import { signedInFixture } from "../api/fixtureSession.ts";
 import { rulesFile, emptyDispatchBook } from "../dispatch/rules.ts";
 import {
   RIDE_CHECK_SETTINGS_DEFAULT,
@@ -93,13 +94,12 @@ test("the rules file gives the apps the shared thresholds", () => {
 });
 
 test("one shared store: a save from any entry point is what every reader gets", async () => {
-  const api = createFixtureAdminApi(0);
+  const api = signedInFixture(createFixtureAdminApi(0));
   await api.reset();
-  const all = { zones: "all" as const, market: "SE-STO" as const };
   const command = async (value: RideCheckSettings, extra: Partial<CommandInput> = {}) =>
-    api.command({ action: "admin.rideCheck.settings", targetId: "ride check settings", sliceKey: RIDE_CHECK_SETTINGS_KEY, value, expectedSliceRev: 1, actorId: "erik", actorRole: "safety", actorScope: all, reason: "Test", before: "3 km, 2 min", after: "5 km, 10 min", idempotencyKey: crypto.randomUUID(), expectedRev: await api.revision(), ...extra });
+    api.command({ action: "admin.rideCheck.settings", targetId: "ride check settings", sliceKey: RIDE_CHECK_SETTINGS_KEY, value, expectedSliceRev: 1, actorId: "erik", reason: "Test", before: "3 km, 2 min", after: "5 km, 10 min", idempotencyKey: crypto.randomUUID(), expectedRev: await api.revision(), ...extra });
   const next = saveRideCheckSettings(emptyRideCheckSettings(), { finishFarFromDropoffKm: 5, longStopMinutes: 10 }).value;
-  await assert.rejects(command(next, { actorId: "daniel", actorRole: "dispatcher" }), "a dispatcher cannot change them");
+  await assert.rejects(command(next, { actorId: "daniel" }), "a dispatcher cannot change them");
   await command(next);
   const read = normalizeRideCheckSettings(await api.readSlice(RIDE_CHECK_SETTINGS_KEY, emptyRideCheckSettings()));
   assert.deepEqual(read, { draftRev: 2, finishFarFromDropoffKm: 5, longStopMinutes: 10 });

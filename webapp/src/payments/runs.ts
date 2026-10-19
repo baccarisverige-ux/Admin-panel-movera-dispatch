@@ -1,6 +1,8 @@
 import type { DemoRecord } from "../api/seed.ts";
 import { MARKETS, market, marketOfZone, type MarketId } from "../markets/markets.ts";
 import type { BankReview } from "./finance.ts";
+import { toMajorString, type CurrencyCode } from "../domain/money.ts";
+import { csvCell } from "../reports/csv.ts";
 
 /**
  * Payout runs: when drivers get paid in each country, instant cash-out, holds with a reason,
@@ -161,9 +163,10 @@ export function approveRun(ops: PayoutOps, run: string, by: string, at: string, 
 export type FileRow = { id: string; driver: string; iban: string; bic: string; amount: number; reference: string };
 
 /** The bank file: one line per payout that can be paid (bank approved, not held, not failed). */
-export function bankFile(rows: readonly FileRow[], currency: string): string {
+export function bankFile(rows: readonly FileRow[], currency: CurrencyCode): string {
   const head = "payout_id;driver;iban;bic;amount;currency;reference";
-  const lines = rows.map((row) => [row.id, row.driver, row.iban.replace(/\s/g, ""), row.bic, (row.amount / 100).toFixed(2), currency, row.reference].map((cell) => (/[;"\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell)).join(";"));
+  // The amount uses the currency's own decimals (TND has 3). Text cells go through the CSV formula guard.
+  const lines = rows.map((row) => [csvCell(row.id), csvCell(row.driver), csvCell(row.iban.replace(/\s/g, "")), csvCell(row.bic), toMajorString({ amountMinor: row.amount, currency }), currency, csvCell(row.reference)].join(";"));
   return [head, ...lines].join("\n");
 }
 

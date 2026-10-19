@@ -11,7 +11,8 @@ type Props = {
   onToggleRoute?: () => void;
   routeLink?: string;
   onWaybill: () => void;
-  tripLink: string;
+  /** null when the viewer cannot open the trip. */
+  tripLink: string | null;
 };
 
 /** The driver's current trip: phase, ETA, pickup and drop-off, rider, fare and the next pickup. */
@@ -56,7 +57,7 @@ export function TripCard({ trip, locale, timeZone, routeShown, onToggleRoute, ro
         ) : null}
         {routeLink ? <Link className="dash-btn small ghost" to={routeLink}><Navigation size={14} aria-hidden="true" />See route on map</Link> : null}
         <button type="button" data-command="admin.ui.quickAction" className="dash-btn small ghost" onClick={onWaybill}><FileText size={14} aria-hidden="true" />Waybill</button>
-        <Link className="dash-btn small ghost" to={tripLink}>Open trip</Link>
+        {tripLink ? <Link className="dash-btn small ghost" to={tripLink}>Open trip</Link> : null}
       </div>
     </section>
   );

@@ -103,7 +103,15 @@ const DETAILS: { pattern: RegExp; id: string }[] = [
   { pattern: /^\/vehicles\/[^/]+$/, id: "vehicles" },
   { pattern: /^\/payouts\/[^/]+$/, id: "payouts" },
   { pattern: /^\/payments\/[^/]+$/, id: "payments" },
+  { pattern: /^\/team\/[^/]+$/, id: "team" },
 ];
+
+/** Routes that only redirect somewhere else; every other route must resolve to a page (and its permission). */
+export const REDIRECT_PATHS: readonly string[] = ["/users"];
+
+export function isRedirectPath(pathname: string): boolean {
+  return REDIRECT_PATHS.includes(pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname);
+}
 
 export function menuItem(id: string): MenuItem | undefined {
   return MENU.find((item) => item.id === id);

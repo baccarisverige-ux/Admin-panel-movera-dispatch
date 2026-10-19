@@ -27,7 +27,7 @@ test("R10 payment policy voucher and reconciliation persist", async ({ page }) =
   await page.getByLabel("Voucher reason").fill("Service recovery");
   await page.getByRole("button", { name: "Issue wallet voucher" }).click();
   await confirm(page);
-  await expect(page.getByText(/Wallet voucher 200,00 kr posted for R0001/)).toBeVisible();
+  await expect(page.getByText(/Wallet voucher 200,00\skr posted for R0001/)).toBeVisible();
   await expect(page.getByRole("list", { name: "Wallet ledger" })).toContainText("WV-1 · R0001 · 200,00 kr · posted");
 
   await page.getByLabel("Reconciliation note").fill("R10 daily close");
@@ -81,11 +81,16 @@ test("R10 large refund requires and executes a second-agent decision", async ({ 
   await expect(row).toContainText("250,00 kr");
   await expect(row.getByRole("button", { name: "Approve" })).toBeDisabled();
 
+  // Ops can decide approvals but cannot refund, so it cannot approve a refund (C-02).
+  const ops = await page.context().newPage();
+  await session(ops, "lena");
+  await ops.goto("/audit");
+  const opsRow = ops.getByRole("heading", { level: 3, name: "Pending approvals" }).locator("..").getByRole("row", { name: /PAY0200/ });
+  await expect(opsRow.getByRole("button", { name: "Approve" })).toBeDisabled();
+  await ops.close();
+
   const reviewer = await page.context().newPage();
-  await reviewer.addInitScript(() => {
-    localStorage.setItem("movera-admin-session", "lena");
-    localStorage.setItem("movera-admin-activity", String(Date.now()));
-  });
+  await session(reviewer, "nora");
   await reviewer.goto("/audit");
   const decisionPanel = reviewer.getByRole("heading", { level: 3, name: "Pending approvals" }).locator("..");
   const decisionRow = decisionPanel.getByRole("row", { name: /PAY0200/ });

@@ -1,6 +1,6 @@
 import type { DemoRecord, TripRecord } from "../api/seed.ts";
 import { ZONES } from "../api/seed.ts";
-import { CATEGORIES, TRIP_STATUSES, formatOre, type TripStatus } from "../domain/contract.ts";
+import { CATEGORIES, TRIP_STATUSES, type TripStatus } from "../domain/contract.ts";
 import { statusLabel } from "../domain/labels.ts";
 import { formatMoney } from "../domain/money.ts";
 import { market, marketOfZone } from "../markets/markets.ts";
@@ -431,4 +431,4 @@ export function countTrips(trips: readonly DemoRecord[], status: string): number
   return trips.filter((trip) => trip.status === status).length;
 }
 
-export { formatOre, statusLabel, TRIP_STATUSES };
+export { statusLabel, TRIP_STATUSES };

@@ -128,6 +128,8 @@ const rows = historyRows(solved.book);
 assert(rows[0].takenBy === "nora" && rows[0].solvedBy === "lena" && rows[0].note === "Assigned Per by hand", "history keeps both names");
 assert(rows[0].solveMin === 14, "minutes to solve");
 assert(historyCsv(rows).split("\n")[1].includes("Assigned Per by hand"), "CSV");
+const evil = historyCsv([{ ...rows[0], title: "=cmd|' /C calc'!A0", note: "@SUM(1)" }]).split("\n")[1];
+assert(evil.startsWith("'=cmd") && evil.endsWith(",'@SUM(1)"), "C-13: history CSV guards formulas in titles and notes");
 assert(numbers(rows).byAdmin[0].admin === "lena", "numbers by admin");
 assert(weeklySummary(rows, now, () => "Wait")[0].startsWith("1 alert solved"), "weekly summary");
 assert(entityKey("few_drivers:Z001:2026-10-12") === "few_drivers:Z001", "same problem across days");

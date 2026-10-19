@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
 import { AppShell } from "./layout/AppShell";
-import { menuItem, pageForPath, type MenuItem } from "./nav";
+import { isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
 import { AuditPage } from "./pages/AuditPage";
 import { ComingPage } from "./pages/ComingPage";
 import { ChatPage } from "./pages/ChatPage";
@@ -115,8 +115,10 @@ function NoAccess() {
   );
 }
 
-function Shell({ page, children, forceNoAccess = false }: { page: MenuItem | undefined; children: ReactNode; forceNoAccess?: boolean }) {
+function Shell({ page, children, forceNoAccess = false, redirect = false }: { page: MenuItem | undefined; children: ReactNode; forceNoAccess?: boolean; redirect?: boolean }) {
   const { agent } = useSession();
+  // Default deny: a route with no page entry (and so no permission) never renders its screen.
+  const denied = forceNoAccess || (page && agent && !can(agent.role, page.permission));
   const shown: MenuItem = page ?? {
     id: "not-found",
     path: "/404",
@@ -128,7 +130,7 @@ function Shell({ page, children, forceNoAccess = false }: { page: MenuItem | und
   return (
     <AppShell page={shown}>
       <section className="page active" data-page={shown.id}>
-        {forceNoAccess || (page && agent && !can(agent.role, page.permission)) ? <NoAccess /> : children}
+        {denied ? <NoAccess /> : page || redirect ? children : <NotFound />}
       </section>
     </AppShell>
   );
@@ -142,7 +144,7 @@ function Authed() {
   const scope = new URLSearchParams(location.search).get("scope");
   const scopeDenied = Boolean(agent && scope && !canUseZone(agent, scope));
   return (
-    <Shell page={page} forceNoAccess={scopeDenied}>
+    <Shell page={page} forceNoAccess={scopeDenied} redirect={isRedirectPath(location.pathname)}>
       <Routes>
         <Route index element={<Screen id="dashboard" />} />
         <Route path="reports" element={<Screen id="reports" />} />

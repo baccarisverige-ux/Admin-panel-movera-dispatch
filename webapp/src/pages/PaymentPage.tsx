@@ -6,11 +6,9 @@ import { useSession } from "../auth/SessionContext";
 import { formatMoney, market } from "../markets/markets";
 import { METHOD_LABELS, PAY_OPS_KEY, emptyPayOps, factsOf, normalizePayOps, paySplit, refundLimitMinor, retryPlan, type PayOps } from "../payments/desk";
 import { Cards } from "../reports/ui";
-import { formatOre } from "../domain/contract";
+import { REFUND_APPROVAL_MINOR } from "../commands/registry";
 import { statusLabel } from "../domain/labels";
 import { paymentTimeline, refundRows } from "../payments/ledger";
-
-const REFUND_LIMIT_ORE = 20_000;
 
 export function PaymentPage() {
   const { id = "" } = useParams();
@@ -39,12 +37,14 @@ export function PaymentPage() {
 
   const payment = row;
   const amount = payment.fareOre ?? 0;
-  const needsSecond = amount >= REFUND_LIMIT_ORE && payment.status === "captured";
-  const pendingApproval = (approvals.data ?? []).find((item) => item.targetId === payment.id && item.action === "admin.payment.refund" && item.status === "pending");
   const ops = normalizePayOps(opsSlice.value);
   const facts = factsOf(payment, riders.data ?? [], trips.data ?? [], ops, now);
-  const split = paySplit(amount, facts.country);
   const money = (minor: number) => formatMoney(minor, facts.country);
+  // The second-admin threshold is per currency (200 kr, 20 €, 60 DT); the server applies the same table.
+  const threshold = REFUND_APPROVAL_MINOR[market(facts.country).currency];
+  const needsSecond = amount >= threshold && payment.status === "captured";
+  const pendingApproval = (approvals.data ?? []).find((item) => item.targetId === payment.id && item.action === "admin.payment.refund" && item.status === "pending");
+  const split = paySplit(amount, facts.country);
   const plan = payment.status === "failed" ? retryPlan(payment, facts, ops, now) : null;
   const limit = agent ? refundLimitMinor(agent.role, facts.country, ops) : 0;
   const overLimit = limit !== null && amount > limit && payment.status === "captured";
@@ -58,7 +58,6 @@ export function PaymentPage() {
           ? `Over your refund limit of ${money(limit ?? 0)}. Ask a finance admin.`
           : null;
   const matches = refundRows(payments.data ?? [], payment.id);
-  const operationKey = `refund-${payment.id}`;
 
   function refund() {
     if (blocked) return;
@@ -70,7 +69,6 @@ export function PaymentPage() {
       after: needsSecond ? "pending approval" : "refunded",
       patch: { status: "refunded" },
       amountOre: amount,
-      idempotencyKey: operationKey,
     });
   }
 
@@ -80,7 +78,7 @@ export function PaymentPage() {
         <button data-command="admin.payment.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/payments"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
         <div className="dx-head-text">
           <h2>Payment {payment.id}</h2>
-          <p>{statusLabel(payment.status)} · {formatOre(amount)} · {payment.zoneId}</p>
+          <p>{statusLabel(payment.status)} · {money(amount)} · {payment.zoneId}</p>
         </div>
         <Link className="dash-btn small ghost" to="/payments">Back to payments</Link>
       </header>
@@ -121,7 +119,7 @@ export function PaymentPage() {
         <h3>Refund</h3>
         <p data-testid="refund-block">
           {blocked ?? (needsSecond
-            ? "Refund request is allowed. Because it is 200 kr or more, the payment stays captured until a second authorised agent approves it."
+            ? `Refund request is allowed. Because it is ${money(threshold)} or more, the payment stays captured until a second authorised agent approves it.`
             : "Refund is allowed. A double click still writes one ledger row.")}
         </p>
         <p data-testid="refund-count">{matches.length}</p>
@@ -149,7 +147,7 @@ export function PaymentPage() {
 
         {pendingApproval ? <p><Link to="/audit">Open approval queue</Link></p> : null}
         {commands.message ? <p className="state-line">{commands.message}</p> : null}
-        <p className="fn-help">{limit === null ? "You have no refund limit." : `Your refund limit is ${money(limit)}. Refunds of 200 kr or more also need a second admin.`}</p>
+        <p className="fn-help">{limit === null ? "You have no refund limit." : `Your refund limit is ${money(limit)}. Refunds of ${money(threshold)} or more also need a second admin.`}</p>
       </article>
     </div>
   );

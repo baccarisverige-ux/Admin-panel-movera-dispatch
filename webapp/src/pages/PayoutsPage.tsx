@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { formatZoneMoney } from "../markets/markets";
+import { REFUND_APPROVAL_MINOR } from "../commands/registry";
 import { useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import {
@@ -15,7 +17,6 @@ import {
   type FinanceBook,
 } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
-import { formatOre } from "../domain/contract";
 import { CommandButton } from "../ui/CommandButton";
 import { DataTable } from "../ui/DataTable";
 import { can } from "../auth/permissions";
@@ -107,7 +108,7 @@ export function PayoutsPage() {
         <div className="dx-head-text">
           <h2>Payouts</h2>
           <p>
-            Weekly payouts. Wallet vouchers are 100, 200 and 500 kr. Refunds of 200 kr or more need a second authorised agent.
+            Weekly payouts. Wallet vouchers are 100, 200 and 500 kr. Refunds of {money(REFUND_APPROVAL_MINOR[scope.market.currency])} or more need a second authorised agent.
             Demo rows {rows.length}. Finance revision {finance.draftRev}.
           </p>
         </div>
@@ -126,7 +127,7 @@ export function PayoutsPage() {
         rows={rows.map((row) => {
           const payout = payoutState(finance, row);
           const review = bankReview(finance, row.driverId ?? "");
-          return [row.id, row.name, row.driverId ?? "", formatOre(row.fareOre ?? 0), failedOf(ops, row) ? "failed" : payout.status, review.status, holdOf(ops, row.id) ? "On hold" : "–"];
+          return [row.id, row.name, row.driverId ?? "", formatZoneMoney(row.fareOre ?? 0, row.zoneId), failedOf(ops, row) ? "failed" : payout.status, review.status, holdOf(ops, row.id) ? "On hold" : "–"];
         })}
         onRow={(index) => {
           const id = rows[index]?.id;
@@ -142,7 +143,7 @@ export function PayoutsPage() {
       <article className="panel fn-panel" data-testid="payout-detail">
         <h3>{selected.id}</h3>
         <p>
-          {selected.driverId} · {formatOre(selected.fareOre ?? 0)} · payout {state.status}. Bank {bank.status}.
+          {selected.driverId} · {formatZoneMoney(selected.fareOre ?? 0, selected.zoneId)} · payout {state.status}. Bank {bank.status}.
           {state.paidAt ? ` Paid ${state.paidAt} by ${state.paidBy}.` : ""}
         </p>
 
@@ -221,7 +222,6 @@ export function PayoutsPage() {
             targetId={selected.id}
             confirmTarget={false}
             scope={selected.zoneId}
-            idempotencyKey={operationKey}
             before={state.status}
             after="paid"
             expectedSliceRev={finance.draftRev}

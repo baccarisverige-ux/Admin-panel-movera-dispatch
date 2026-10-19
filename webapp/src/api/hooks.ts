@@ -196,9 +196,8 @@ export function useCommands() {
         action: id,
         targetId,
         reason: extra.reason ?? "No person affected",
-        actorId: extra.actorId ?? session.agent?.id ?? "signed-out",
-        actorRole: extra.actorRole ?? session.agent?.role ?? "super",
-        actorScope: extra.actorScope ?? session.agent?.scope ?? { zones: "all", market: "SE-STO" },
+        // Sent so the server can refuse a stale tab; the server takes the actor from the session, not from here.
+        actorId: session.agent?.id,
         scope: extra.scope ?? params.get("scope") ?? "all",
         idempotencyKey,
         expectedRev,

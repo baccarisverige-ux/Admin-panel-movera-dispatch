@@ -93,3 +93,32 @@ test("drivers on a trip move along their route and carry trip details and a wayb
   const free = live.find((row) => row.state === "free");
   if (free) assert.equal(liveTrip(free, { trips: [], reservations: [], vehicles: [], fleets: [], riders: [] }, NOW), null, "a free driver has no trip");
 });
+
+test("UI-06: roles without rider, driver or trip access get counts, not names or links", async () => {
+  const { dashboardAccess, maskBookings, maskDrivers, maskRequests, maskRiders, maskRides, maskTrip, HIDDEN_DRIVER, HIDDEN_RIDER } = await import("./access.ts");
+  const { rideRequests } = await import("./riders.ts");
+  const { liveTrip } = await import("./liveTrip.ts");
+  const seed = createSeed();
+  for (const role of ["content", "finance", "config"] as const) {
+    const access = dashboardAccess(role);
+    assert.equal(access.drivers, false, `${role} cannot open drivers`);
+    assert.equal(access.trips, false, `${role} cannot open trips`);
+  }
+  const content = dashboardAccess("content");
+  const drivers = maskDrivers(seed.drivers, content);
+  assert.ok(drivers.every((row) => row.name === HIDDEN_DRIVER && !row.phone), "no driver names or phones");
+  assert.equal(drivers.length, seed.drivers.length, "the counts stay");
+  const riders = maskRiders(seed.riders, content);
+  const trips = maskBookings(seed.trips, content);
+  const requests = maskRequests(rideRequests(trips, riders, () => true), content);
+  assert.ok(requests.every((row) => row.rider === HIDDEN_RIDER && row.riderId === null), "waiting riders have no name and no link");
+  const rides = maskRides(scheduledRides(maskBookings(seed.reservations, content), drivers, NOW), content);
+  assert.ok(rides.every((ride) => ride.rider === HIDDEN_RIDER && (ride.driver === null || ride.driver === HIDDEN_DRIVER)), "scheduled rides hide both names");
+  const busy = liveDrivers(seed.drivers, seed.vehicles, seed.trips, seed.incidents, 0).find((row) => row.tripId);
+  if (busy) {
+    const trip = maskTrip(liveTrip(busy, { trips: seed.trips, reservations: seed.reservations, vehicles: seed.vehicles, fleets: seed.fleets, riders: seed.riders }, NOW), content);
+    if (trip) assert.ok(trip.rider === HIDDEN_RIDER && trip.riderId === null && !trip.riderPhone && trip.waybill.driver === HIDDEN_DRIVER, "the live trip card and waybill hide people");
+  }
+  const ops = dashboardAccess("ops");
+  assert.deepEqual(maskRiders(seed.riders, ops), seed.riders, "ops still sees names");
+});

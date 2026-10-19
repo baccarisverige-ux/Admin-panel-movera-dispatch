@@ -11,4 +11,12 @@ export default tseslint.config(
       globals: { ...globals.browser, ...globals.node },
     },
   },
+  {
+    // formatOre prints every amount as SEK with 2 decimals; screens use the record's own currency.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/**/*.test.ts", "src/domain/contract.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", { selector: "ImportSpecifier[imported.name='formatOre']", message: "formatOre is SEK only. Use formatMoney / formatZoneMoney from markets/markets." }],
+    },
+  },
 );

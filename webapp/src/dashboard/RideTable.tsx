@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { useDashboardAccess } from "./access";
 import { AlertTriangle } from "lucide-react";
 import { statusLabel } from "../domain/labels";
 import type { ScheduledRide } from "./scheduled";
@@ -15,6 +16,7 @@ type Props = {
 
 /** Scheduled rides, soonest first for upcoming and newest first for past. */
 export function RideTable({ rides, now, upcoming, timeFormat, dayFormat, money, withScope }: Props) {
+  const access = useDashboardAccess();
   return (
     <div className="table-scroll">
       <table className="ride-table">
@@ -35,7 +37,7 @@ export function RideTable({ rides, now, upcoming, timeFormat, dayFormat, money, 
                 <td>{ride.driver ?? (ride.status === "cancelled" || ride.status === "no_show" ? "—" : <span className={ride.warning === "red" ? "no-driver red" : "no-driver"}><AlertTriangle size={13} aria-hidden="true" /> Unassigned</span>)}</td>
                 <td><span className={`ride-status s-${ride.status}`}>{statusLabel(ride.status)}</span></td>
                 <td className="num">{money(ride.fareMinor)}{ride.estimated ? <small> est.</small> : null}</td>
-                <td><Link className="link-action" to={withScope(`/reservations/${ride.id}`)}>{open ? "Assign" : "Open"}</Link></td>
+                <td>{access.trips ? <Link className="link-action" to={withScope(`/reservations/${ride.id}`)}>{open ? "Assign" : "Open"}</Link> : null}</td>
               </tr>
             );
           })}
