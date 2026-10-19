@@ -1,4 +1,5 @@
 import { TRIP_STATUSES, type TripStatus } from "../domain/contract.ts";
+import type { CurrencyCode } from "../domain/money.ts";
 
 /** The demo rotates trips through the 18 pre-v0.3 statuses so every seeded trip id keeps its state (no cancelled_by_system in the seed). */
 const SEED_TRIP_STATUSES = TRIP_STATUSES.filter((status) => status !== "cancelled_by_system");
@@ -88,7 +89,10 @@ export type ApprovalRow = {
   action: string;
   targetId: string;
   requestedBy: string;
+  /** Minor units of `currency` (öre, cents or millimes); the server reads it from the stored record. */
   amountOre: number;
+  /** Missing on approvals saved before currencies were stored: those are SEK. */
+  currency?: CurrencyCode;
   reason: string;
   status: "pending" | "approved" | "rejected";
   decidedBy?: string;

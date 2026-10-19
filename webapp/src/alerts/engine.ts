@@ -1,4 +1,5 @@
 import type { Role } from "../auth/permissions.ts";
+import { csvCell } from "../reports/csv.ts";
 
 /** Alerts: one list of everything that needs an admin, with levels, who gets it, and who works on it. */
 
@@ -572,8 +573,8 @@ export function numbers(rows: readonly HistoryRow[]): Numbers {
 }
 
 function cell(value: string | number): string {
-  const text = String(value);
-  return /[",\n;]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  // Numbers stay as they are; text (titles, notes, admin names) goes through the formula guard.
+  return typeof value === "number" ? String(value) : csvCell(value);
 }
 
 export function historyCsv(rows: readonly HistoryRow[]): string {

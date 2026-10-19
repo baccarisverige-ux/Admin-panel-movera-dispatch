@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useDashboardAccess } from "./access";
 import { Link } from "react-router";
 import { Activity, AlertTriangle, Bell, BellOff, Plane, Star, TrendingUp, XCircle, Zap } from "lucide-react";
 import { driverCode } from "../fleet/codes";
@@ -196,6 +197,7 @@ export function InsightsCard({ tab, onTab, top, cancel, rating, periodLabel, top
 }
 
 function Rank({ title, icon, rows, value, warn = false }: { title: string; icon: ReactNode; rows: DriverRank[]; value: (row: DriverRank) => string; warn?: boolean }) {
+  const access = useDashboardAccess();
   return (
     <div className="rank">
       <h4>{icon}{title}</h4>
@@ -203,7 +205,7 @@ function Rank({ title, icon, rows, value, warn = false }: { title: string; icon:
         <ol>
           {rows.map((row) => (
             <li key={row.id}>
-              <Link to={`/drivers/${row.id}`}>{row.name}</Link>
+              {access.drivers ? <Link to={`/drivers/${row.id}`}>{row.name}</Link> : <span>{row.name}</span>}
               <small>{driverCode(row)}</small>
               <strong className={warn ? "warn" : undefined}>{value(row)}</strong>
             </li>

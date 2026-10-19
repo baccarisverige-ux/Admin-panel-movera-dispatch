@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import { formatCurrencyMoney } from "../markets/markets";
 import { Link, useNavigate } from "react-router";
 import { ArrowLeft, Download, Search } from "lucide-react";
-import { formatOre } from "../domain/contract";
 import { useSession } from "../auth/SessionContext";
+import { can } from "../auth/permissions";
+import { commandById } from "../commands/registry";
 import { useApprovals, useAudit, useRevision } from "../api/hooks";
 import { EMPTY_FILTERS, RESULT_LABEL, areaOf, auditCounts, auditCsv, changeOf, filterAudit, type AuditFilters } from "../platform/audit";
 import { logExport } from "../reports/activityLog";
@@ -20,6 +22,13 @@ export function AuditPage() {
   const revision = useRevision();
   const rows = useMemo(() => audit.data ?? [], [audit.data]);
   const pending = (approvals.data ?? []).filter((item) => item.status === "pending");
+  // The server refuses the requester and anyone whose role cannot do the action itself; say so on the button.
+  const decideBlock = (item: { action: string; requestedBy: string }, verb: "approve" | "decide") =>
+    item.requestedBy === agent?.id
+      ? `The requester cannot ${verb} their own action.`
+      : agent && !can(agent.role, commandById(item.action)?.permission ?? "*")
+        ? `Your role cannot do this action, so it cannot ${verb} it.`
+        : undefined;
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
   const [limit, setLimit] = useState(PAGE);
   const [open, setOpen] = useState<string | null>(null);
@@ -89,12 +98,12 @@ export function AuditPage() {
               item.action,
               item.targetId,
               item.requestedBy,
-              formatOre(item.amountOre),
+              formatCurrencyMoney(item.amountOre, item.currency),
               item.reason,
               item.status,
               <div className="actions" key={`${item.id}-decision`}>
-                <CommandButton command="admin.approval.approve" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={item.requestedBy === agent?.id} title={item.requestedBy === agent?.id ? "The requester cannot approve their own action." : undefined}>Approve</CommandButton>
-                <CommandButton command="admin.approval.reject" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={item.requestedBy === agent?.id} title={item.requestedBy === agent?.id ? "The requester cannot decide their own action." : undefined}>Reject</CommandButton>
+                <CommandButton command="admin.approval.approve" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={Boolean(decideBlock(item, "approve"))} title={decideBlock(item, "approve")}>Approve</CommandButton>
+                <CommandButton command="admin.approval.reject" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={Boolean(decideBlock(item, "decide"))} title={decideBlock(item, "decide")}>Reject</CommandButton>
               </div>,
             ])}
           />

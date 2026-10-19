@@ -403,8 +403,8 @@ export function scheduleLine(schedule: Schedule): string {
 export function csvOf(head: readonly string[], rows: readonly (string | number)[][]): string {
   const cell = (value: string | number) => {
     const text = String(value);
-    const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
-    return /[",\n;]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+    const safe = /^[=+\-@\t\r]/.test(text) || /^[=+\-@]/.test(text.trimStart()) ? `'${text}` : text;
+    return /[",\n\r;]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
   };
   return [head, ...rows].map((line) => line.map(cell).join(",")).join("\n");
 }

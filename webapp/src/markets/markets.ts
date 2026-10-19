@@ -142,6 +142,26 @@ export function parseZoneList(value: string | null | undefined): string[] {
   return Array.from(new Set(value.split(",").map((item) => item.trim()).filter(Boolean)));
 }
 
+/** The market of a record's zone, or `fallback` when the zone is not known. */
+export function marketIdOfZone(zoneId: string | null | undefined, fallback: MarketId = DEFAULT_MARKET): MarketId {
+  return (zoneId ? marketOfZone(zoneId)?.id : undefined) ?? fallback;
+}
+
+/** The market that uses this currency (each market has its own). */
+export function marketOfCurrency(currency: Market["currency"]): MarketId {
+  return MARKETS.find((item) => item.currency === currency)?.id ?? DEFAULT_MARKET;
+}
+
+/** Money of a record in its own zone's currency: a Tunis payment shows in DT with 3 decimals, not in kr. */
+export function formatZoneMoney(minor: number, zoneId: string | null | undefined, fallback: MarketId = DEFAULT_MARKET): string {
+  return formatMoney(minor, marketIdOfZone(zoneId, fallback));
+}
+
+/** Money in a given currency (approvals store their currency; older ones without it are SEK). */
+export function formatCurrencyMoney(minor: number, currency: Market["currency"] = "SEK"): string {
+  return formatMoney(minor, marketOfCurrency(currency));
+}
+
 /** Format an amount held in minor units in the market's currency. */
 export function formatMoney(minor: number, id: MarketId, options: { compact?: boolean } = {}): string {
   const item = market(id);

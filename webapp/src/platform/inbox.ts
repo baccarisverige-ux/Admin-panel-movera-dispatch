@@ -1,4 +1,5 @@
 import type { ApprovalRow } from "../api/seed.ts";
+import type { CurrencyCode } from "../domain/money.ts";
 import type { OpenValue } from "../config/confirm.ts";
 
 /**
@@ -40,12 +41,12 @@ export function inboxItems(input: {
   values: readonly OpenValue[];
   decisions: ConfirmOps["values"];
   me: string;
-  money: (minor: number) => string;
+  money: (minor: number, currency: CurrencyCode) => string;
 }): InboxItem[] {
   const money = input.approvals.filter((row) => row.status === "pending").map((row) => ({
     id: row.id,
     kind: "money" as const,
-    title: `${areaLabel(row.action)}: ${input.money(row.amountOre)} for ${row.targetId}`,
+    title: `${areaLabel(row.action)}: ${input.money(row.amountOre, row.currency ?? "SEK")} for ${row.targetId}`,
     detail: row.reason || row.action,
     by: row.requestedBy,
     mine: row.requestedBy === input.me,

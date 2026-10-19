@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useDashboardAccess } from "./access";
 import { Link } from "react-router";
 import { Clock, UserRound, X } from "lucide-react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
@@ -152,6 +153,7 @@ function geo(drivers: LiveDriver[], hidden: Set<LiveState>) {
 
 /** Live drivers on a MapLibre map, coloured by state; click a driver for details. */
 export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, renderAssign, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false }: Props) {
+  const access = useDashboardAccess();
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const latest = useRef({ drivers, hidden, requests, showRequests, balance, showBalance, bonusAreas, bonusShown });
@@ -444,7 +446,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
             <div><dt>Pickup zone</dt><dd>{request.zoneName}</dd></div>
             <div><dt>Category</dt><dd>{request.categoryLabel}</dd></div>
             <div><dt>Waiting</dt><dd><Clock size={12} aria-hidden="true" /> {request.waitingMin} min</dd></div>
-            <div><dt>Trip</dt><dd><Link to={withScope(`/trips/${request.tripId}`)}>{request.tripId}</Link></dd></div>
+            <div><dt>Trip</dt><dd>{access.trips ? <Link to={withScope(`/trips/${request.tripId}`)}>{request.tripId}</Link> : request.tripId}</dd></div>
           </dl>
           {renderAssign ? renderAssign(request) : null}
         </aside>

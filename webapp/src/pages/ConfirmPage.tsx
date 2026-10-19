@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { formatCurrencyMoney } from "../markets/markets";
+import { commandById } from "../commands/registry";
 import { Link, useNavigate } from "react-router";
 import { ArrowLeft, Banknote, CheckCircle2, ClipboardList, Settings2 } from "lucide-react";
 import { emptyConfig, normalizeConfig, useApprovals, useSlice, type ConfigBook } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { OPEN_VALUES } from "../config/confirm";
-import { formatOre } from "../domain/contract";
 import { CONFIRM_OPS_KEY, decisionError, emptyConfirmOps, inboxItems, normalizeConfirmOps, type ConfirmOps, type InboxKind } from "../platform/inbox";
 import { Cards } from "../reports/ui";
 import { CommandButton } from "../ui/CommandButton";
@@ -26,8 +27,13 @@ export function ConfirmPage() {
   const [notice, setNotice] = useState("");
   const me = agent?.id ?? "";
   const canDecide = Boolean(agent && can(agent.role, "approval.decide"));
+  // A decider must also be allowed to do the action itself (the server checks it too).
+  const canDo = (approvalId: string) => {
+    const action = (approvals.data ?? []).find((row) => row.id === approvalId)?.action;
+    return Boolean(agent && action && can(agent.role, commandById(action)?.permission ?? "*"));
+  };
   const canConfirm = Boolean(agent && can(agent.role, "settings.publish"));
-  const items = inboxItems({ approvals: approvals.data ?? [], config, values: OPEN_VALUES, decisions: ops.values, me, money: formatOre });
+  const items = inboxItems({ approvals: approvals.data ?? [], config, values: OPEN_VALUES, decisions: ops.values, me, money: formatCurrencyMoney });
   const work = items.filter((item) => item.kind !== "value");
   const shown = (kind === "all" ? work : items.filter((item) => item.kind === kind));
   const confirmed = OPEN_VALUES.filter((item) => ops.values[item.id]).length;
@@ -78,8 +84,8 @@ export function ConfirmPage() {
                 <span className="actions">
                   {item.kind === "money" ? (
                     <>
-                      <CommandButton command="admin.approval.approve" className="dash-btn small" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={item.mine || !canDecide} title={item.mine ? "The requester cannot approve their own action." : undefined}>Approve</CommandButton>
-                      <CommandButton command="admin.approval.reject" className="dash-btn small ghost" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={item.mine || !canDecide} title={item.mine ? "The requester cannot decide their own action." : undefined}>Reject</CommandButton>
+                      <CommandButton command="admin.approval.approve" className="dash-btn small" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={item.mine || !canDecide || !canDo(item.id)} title={item.mine ? "The requester cannot approve their own action." : !canDo(item.id) ? "Your role cannot do this action, so it cannot approve it." : undefined}>Approve</CommandButton>
+                      <CommandButton command="admin.approval.reject" className="dash-btn small ghost" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={item.mine || !canDecide || !canDo(item.id)} title={item.mine ? "The requester cannot decide their own action." : !canDo(item.id) ? "Your role cannot do this action, so it cannot decide it." : undefined}>Reject</CommandButton>
                     </>
                   ) : null}
                   {item.kind === "value" ? <button data-command="admin.inbox.view" type="button" className="dash-btn small" disabled={!canConfirm} onClick={() => { start(item.id, OPEN_VALUES.find((row) => row.id === item.id)?.today ?? ""); document.getElementById(`value-${item.id}`)?.scrollIntoView({ block: "center" }); }}>Confirm</button> : null}

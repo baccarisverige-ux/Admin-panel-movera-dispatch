@@ -42,6 +42,7 @@ import { liveTrip } from "../dashboard/liveTrip";
 import { PeriodPicker } from "../dashboard/PeriodPicker";
 import { parsePeriod, periodParams, periodWindow, type Period } from "../dashboard/period";
 import { RideTable } from "../dashboard/RideTable";
+import { DashboardAccessContext, HIDDEN_DRIVER, dashboardAccess, maskBookings, maskDrivers, maskRequests, maskRiders, maskTrip } from "../dashboard/access";
 import { candidatesFor, rideRequests, riderCounts, type RideRequest } from "../dashboard/riders";
 import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
@@ -182,6 +183,12 @@ export function DashboardPage() {
   const bonuses = useRecords("bonuses", undefined, { refetchMs: SLOW_MS });
   const fleets = useRecords("fleets");
   const audit = useAudit(LIVE_MS);
+  // Names, phones and links follow the viewer's own read permissions (UI-06); counts and money stay.
+  const access = useMemo(() => dashboardAccess(role), [role]);
+  const driverRows = useMemo(() => maskDrivers(drivers.data ?? [], access), [drivers.data, access]);
+  const riderRows = useMemo(() => maskRiders(riders.data ?? [], access), [riders.data, access]);
+  const tripRows = useMemo(() => maskBookings(trips.data ?? [], access), [trips.data, access]);
+  const reservationRows = useMemo(() => maskBookings(reservations.data ?? [], access), [reservations.data, access]);
   const approvals = useApprovals(LIVE_MS);
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const bonusSlice = useSlice<BonusBook>(BONUS_KEY, emptyBonusBook());
@@ -232,20 +239,20 @@ export function DashboardPage() {
   const number = new Intl.NumberFormat(market.locale);
 
   const live = useMemo(
-    () => liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], tick),
-    [drivers.data, vehicles.data, trips.data, incidents.data, tick],
+    () => liveDrivers(driverRows, vehicles.data ?? [], tripRows, incidents.data ?? [], tick),
+    [driverRows, vehicles.data, tripRows, incidents.data, tick],
   );
   const liveCounts = countStates(live);
   const onlineIds = useMemo(() => new Set(live.map((driver) => driver.id)), [live]);
   const allowedCategories = (driverId: string) => {
-    const record = (drivers.data ?? []).find((row) => row.id === driverId);
+    const record = (driverRows).find((row) => row.id === driverId);
     if (!record) return [];
     const ops = driverOps(driverStore.value, { id: record.id, name: record.name, fleetId: record.fleetId, status: record.status, kind: record.kind });
     return CATEGORIES.filter((category) => ops.categories[category.id]).map((category) => category.id);
   };
   // Offers only count when they went to a driver who could really take them.
-  const requests = useMemo(() => rideRequests(trips.data ?? [], riders.data ?? [], (driverId) => onlineIds.has(driverId)), [trips.data, riders.data, onlineIds]);
-  const riderStats = riderCounts(requests, live, riders.data ?? []);
+  const requests = useMemo(() => maskRequests(rideRequests(tripRows, riderRows, (driverId) => onlineIds.has(driverId)), access), [tripRows, riderRows, onlineIds, access]);
+  const riderStats = riderCounts(requests, live, riderRows);
   const candidatesOf = (request: RideRequest) => candidatesFor(request, live, allowedCategories);
   const balance = useMemo(() => supplyDemand(country, scope.zones, requests, live), [country, scope.zones, requests, live]);
   const pricingSlice = useSlice<unknown>(SLICE_KEY, emptyPricingStore());
@@ -259,7 +266,7 @@ export function DashboardPage() {
   );
 
   const shift = demoShift(now, api.demo);
-  const rides = useMemo(() => scheduledRides(reservations.data ?? [], drivers.data ?? [], now, shift), [reservations.data, drivers.data, now, shift]);
+  const rides = useMemo(() => scheduledRides(reservationRows, driverRows, now, shift), [reservationRows, driverRows, now, shift]);
   const counts = rideCounts(rides, now);
   const inPeriod = rides.filter((ride) => ride.pickupAt >= span.start && ride.pickupAt < span.end);
   const periodCounts = {
@@ -273,13 +280,14 @@ export function DashboardPage() {
   // Ride check incidents have their own red banner; the SOS counts stay SOS only.
   const sos = (incidents.data ?? []).filter((row) => row.status === "queued" && row.kind !== "ride_check");
   const openTickets = (tickets.data ?? []).filter((row) => row.status === "open");
-  const pendingDrivers = (drivers.data ?? []).filter((row) => row.status === "pending");
+  const pendingDrivers = (driverRows).filter((row) => row.status === "pending");
   const scheduledPayouts = (payouts.data ?? []).filter((row) => row.status === "scheduled");
   const failures = openFailures(payments.data ?? []);
   const refundApprovals = (approvals.data ?? []).filter((row) => row.status === "pending" && row.action.includes("refund"));
   const urgentRides = rides.filter((ride) => ride.warning === "red");
   const longWaits = requests.filter((request) => request.waitingMin > 5 && request.status === "searching");
-  const driverName = (id: string | null | undefined) => (drivers.data ?? []).find((row) => row.id === id)?.name ?? null;
+  // SOS responders (incidents.read) need the driver's name even without drivers.read.
+  const driverName = (id: string | null | undefined) => (can(role, "incidents.read") ? drivers.data ?? [] : driverRows).find((row) => row.id === id)?.name ?? null;
 
   const signals: Signal[] = [
     ...(can(role, "incidents.read") ? sos.map((row) => ({ id: `sos:${row.id}`, title: "New SOS", body: `${driverName(row.driverId) ?? row.name} needs help (${row.id})`, urgent: true })) : []),
@@ -357,7 +365,7 @@ export function DashboardPage() {
   const weekSpan = useMemo(() => periodWindow({ kind: "week" }, reportNow, market.timeZone, market.locale), [reportNow, market]);
   const ranking = useMemo(() => {
     if (tab !== "insights") return null;
-    const active = (drivers.data ?? []).filter((row) => row.status === "active");
+    const active = (driverRows).filter((row) => row.status === "active");
     const rank = (span: typeof rankSpan): DriverRank[] => active.map((row) => {
       const ops = driverOps(driverStore.value, { id: row.id, name: row.name, fleetId: row.fleetId, status: row.status, kind: row.kind });
       const perf = driverPerformance({ id: row.id, zoneId: row.zoneId, status: row.status, stars: ops.ratings.stars, acceptancePct: ops.ratings.acceptancePct, cancellationPct: ops.ratings.cancellationPct }, span, false).current;
@@ -376,7 +384,7 @@ export function DashboardPage() {
       busiest: [...rows].sort((a, b) => b.trips - a.trips).slice(0, 5),
       cancelling: [...rows].sort((a, b) => b.cancellationPct - a.cancellationPct).slice(0, 5),
     };
-  }, [tab, drivers.data, driverStore.value, rankSpan, shownSpan, weekSpan]);
+  }, [tab, driverRows, driverStore.value, rankSpan, shownSpan, weekSpan]);
 
   const activity: ActivityItem[] = [
     ...(audit.data ?? []).slice(0, 20).map((row) => ({
@@ -386,9 +394,9 @@ export function DashboardPage() {
       text: `${commandById(row.action)?.label ?? row.action} · ${row.targetId}${row.result !== "committed" ? ` (${row.result.replace("_", " ")})` : ""}`,
       system: false,
     })),
-    ...sos.map((row) => ({ id: `sys-sos-${row.id}`, at: now - 3 * 60_000, who: "System", text: `SOS raised by ${driverName(row.driverId) ?? row.name}`, link: withScope("/incidents"), system: true })),
+    ...sos.map((row) => ({ id: `sys-sos-${row.id}`, at: now - 3 * 60_000, who: "System", text: `SOS raised by ${can(role, "incidents.read") ? driverName(row.driverId) ?? row.name : HIDDEN_DRIVER}`, link: can(role, "incidents.read") ? withScope("/incidents") : undefined, system: true })),
     ...longWaits.slice(0, 4).map((request) => ({ id: `sys-wait-${request.tripId}`, at: now - request.waitingMin * 60_000, who: "System", text: `${request.rider} started waiting for a driver in ${request.zoneName}`, system: true })),
-    ...live.filter((driver) => driver.state === "stale").slice(0, 3).map((driver) => ({ id: `sys-gps-${driver.id}`, at: now - driver.lastSeenMin * 60_000, who: "System", text: `${driver.name} lost GPS signal`, link: withScope(`/drivers/${driver.id}`), system: true })),
+    ...live.filter((driver) => driver.state === "stale").slice(0, 3).map((driver) => ({ id: `sys-gps-${driver.id}`, at: now - driver.lastSeenMin * 60_000, who: "System", text: `${driver.name} lost GPS signal`, link: access.drivers ? withScope(`/drivers/${driver.id}`) : undefined, system: true })),
   ].sort((a, b) => b.at - a.at);
   const activityTime = (at: number) => {
     const minutes = Math.round((now - at) / 60_000);
@@ -396,6 +404,7 @@ export function DashboardPage() {
   };
 
   return (
+    <DashboardAccessContext.Provider value={access}>
     <div className="dash" data-testid="dashboard">
       <div className="dash-head">
         <div>
@@ -569,9 +578,10 @@ export function DashboardPage() {
                 hidden={hidden}
                 withScope={withScope}
                 focusId={params.get("focus")}
-                tripFor={(driver) => liveTrip(driver, { trips: trips.data ?? [], reservations: reservations.data ?? [], vehicles: vehicles.data ?? [], fleets: fleets.data ?? [], riders: riders.data ?? [] }, now, shift)}
+                tripFor={(driver) => maskTrip(liveTrip(driver, { trips: tripRows, reservations: reservationRows, vehicles: vehicles.data ?? [], fleets: fleets.data ?? [], riders: riderRows }, now, shift), access)}
                 infoFor={(driverId) => {
-                  const record = (drivers.data ?? []).find((row) => row.id === driverId);
+                  if (!access.drivers) return null;
+                  const record = (driverRows).find((row) => row.id === driverId);
                   if (!record) return null;
                   const ops = driverOps(driverStore.value, { id: record.id, name: record.name, fleetId: record.fleetId, status: record.status, kind: record.kind });
                   const today = driverPerformance({ id: record.id, zoneId: record.zoneId, status: record.status, stars: ops.ratings.stars, acceptancePct: ops.ratings.acceptancePct, cancellationPct: ops.ratings.cancellationPct }, periodWindow({ kind: "today" }, now, market.timeZone, market.locale), false).current;
@@ -698,6 +708,7 @@ export function DashboardPage() {
         </div>
       ) : null}
     </div>
+    </DashboardAccessContext.Provider>
   );
 }
 

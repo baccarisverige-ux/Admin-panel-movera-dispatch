@@ -1,4 +1,5 @@
 import { createFixtureAdminApi } from "./create.ts";
+import { signedInFixture } from "./fixtureSession.ts";
 import { PHONE, PLATE, TRIP_ID, createSeed } from "./seed.ts";
 import { statusLabel } from "../domain/labels.ts";
 import { marketOfZone, marketZoneIds } from "../markets/markets.ts";
@@ -50,7 +51,7 @@ const r2 = seed.riders.find((rider) => rider.id === "R0002");
 assert(r1 && r2 && r1.phone !== r2.phone, "R0001 and R0002 must not share a phone");
 assert(r1?.phone === PHONE, "R0001 keeps the known demo phone");
 
-const api = createFixtureAdminApi(0);
+const api = signedInFixture(createFixtureAdminApi(0));
 await api.reset();
 const plate = await api.search(PLATE, null);
 assert(plate.some((hit) => hit.path.startsWith("/vehicles/")), "plate search");
@@ -83,8 +84,6 @@ const first = await api.command({
   targetId: "R0001",
   reason: "Safety review",
   actorId: "nora",
-  actorRole: "super",
-  actorScope: { zones: "all", market: "SE-STO" },
   scope: "Z001",
   idempotencyKey: "block-r1",
   expectedRev: rev,
@@ -99,8 +98,6 @@ const replay = await api.command({
   targetId: "R0001",
   reason: "Safety review",
   actorId: "nora",
-  actorRole: "super",
-  actorScope: { zones: "all", market: "SE-STO" },
   scope: "Z001",
   idempotencyKey: "block-r1",
   expectedRev: rev,
@@ -119,8 +116,6 @@ await api.command({
   targetId: "R0002",
   reason: "Safety review",
   actorId: "nora",
-  actorRole: "super",
-  actorScope: { zones: "all", market: "SE-STO" },
   scope: "Z002",
   idempotencyKey: "stale-r2",
   expectedRev: rev,
@@ -137,8 +132,6 @@ await api.command({
   targetId: "PAY0001",
   reason: "Safety review",
   actorId: "maja",
-  actorRole: "support",
-  actorScope: { zones: ["Z001"], market: "SE-STO" },
   scope: "Z001",
   idempotencyKey: "support-refund",
   expectedRev: deniedRev,
@@ -156,8 +149,6 @@ const pending = await api.command({
   targetId: "RF-LARGE",
   reason: "Safety review",
   actorId: "astrid",
-  actorRole: "finance",
-  actorScope: { zones: "all", market: "SE-STO" },
   scope: "all",
   idempotencyKey: "large-refund",
   expectedRev: approvalRev,

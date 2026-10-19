@@ -107,4 +107,6 @@ assert(scheduleIssues(schedule).length === 0 && scheduleIssues({ ...schedule, to
 assert(scheduleLine(schedule) === "Every Monday at 08:00: last week's Money as PDF to 2 addresses", "schedule in words");
 assert(csvOf(["a"], [["=SUM(A1)"]]) === "a\n'=SUM(A1)", "CSV guards formulas");
 
+assert(csvOf(["a"], [["\t=SUM(A1)"]]) === "a\n'\t=SUM(A1)", "CSV guards a tab before a formula");
+
 console.log("reports engine ok");
