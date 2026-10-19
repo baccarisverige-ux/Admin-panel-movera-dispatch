@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { formatMoney } from "./money.ts";
+
+export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
 export const CONTRACT_VERSION = "0.3.0" as const;
@@ -187,6 +190,7 @@ export const PAYMENT_METHODS = [
   "wallet",
 ] as const;
 
+/** @deprecated The admin is multi-market: use the zone's market currency and `Money` (domain/money.ts). Default market only. */
 export const CURRENCY = "SEK" as const;
 export const TIME_ZONE = "Europe/Stockholm" as const;
 
@@ -195,10 +199,7 @@ export function kronorToOre(kronor: number): number {
   return Math.round(kronor * 100);
 }
 
+/** @deprecated SEK only. Use `formatMoney({ amountMinor, currency })`. Kept with its exact old output ("1234,50 kr", no grouping). */
 export function formatOre(ore: number): string {
-  const sign = ore < 0 ? "-" : "";
-  const abs = Math.abs(ore);
-  const whole = Math.floor(abs / 100);
-  const frac = String(abs % 100).padStart(2, "0");
-  return `${sign}${whole},${frac} kr`;
+  return formatMoney({ amountMinor: ore, currency: "SEK" }, "sv-SE", { grouping: false });
 }

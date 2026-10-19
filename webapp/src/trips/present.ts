@@ -2,6 +2,8 @@ import type { DemoRecord, TripRecord } from "../api/seed.ts";
 import { ZONES } from "../api/seed.ts";
 import { CATEGORIES, TRIP_STATUSES, formatOre, type TripStatus } from "../domain/contract.ts";
 import { statusLabel } from "../domain/labels.ts";
+import { formatMoney } from "../domain/money.ts";
+import { market, marketOfZone } from "../markets/markets.ts";
 import { canAdjustFare, canComplete, canNoShow, canOffer, canReassign, canRefundTrip, canSetWaiting, cancelTrip, eligibleDrivers, type OfferDriver, type Trip } from "./rules.ts";
 import { STEP_MS, startedAt, tripIndex } from "./clock.ts";
 
@@ -228,7 +230,7 @@ export function waybill(trip: DemoRecord, driverName: string, plate: string) {
     tripId: trip.id,
     status: statusLabel(trip.status),
     issuedAt: stockholmLabel(startedAt(trip.id)),
-    fare: formatOre(fareBreakdown(trip).chargedOre),
+    fare: formatMoney({ amountMinor: fareBreakdown(trip).chargedOre, currency: (marketOfZone(trip.zoneId) ?? market("SE")).currency }),
     service: category.label,
     riderName: trip.name,
     pickup: stops[0]?.label ?? "",
