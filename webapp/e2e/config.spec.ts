@@ -33,9 +33,12 @@ test("configuration draft is saved, approved by a second agent, published and ro
   await page.getByLabel("Rider app").fill("1.1.0");
   await expect(page.getByRole("list", { name: "Configuration diff" })).toContainText("Rider app 1.0.0 → 1.1.0");
 
-  await page.getByLabel("wait_too_long Swedish").fill("");
-  await expect(page.getByText(/Missing translation: wait_too_long/)).toBeVisible();
-  await page.getByLabel("wait_too_long Swedish").fill("Väntan var för lång");
+  // Cancel reasons are edited only in Dispatch › Cancel reasons; Config keeps the support reasons.
+  await expect(page.getByTestId("config-reasons-moved").getByRole("link", { name: "Dispatch › Cancel reasons" })).toHaveAttribute("href", "/dispatch?view=reasons");
+  await expect(page.getByLabel("wait_too_long Swedish")).toHaveCount(0);
+  await page.getByLabel("charged_twice Swedish").fill("");
+  await expect(page.getByText(/Missing translation: charged_twice/)).toBeVisible();
+  await page.getByLabel("charged_twice Swedish").fill("Drog två gånger");
 
   await page.getByRole("checkbox", { name: "Reservations in this zone" }).uncheck();
   await expect(page.getByRole("list", { name: "Configuration diff" })).toContainText("op-norrmalm");
