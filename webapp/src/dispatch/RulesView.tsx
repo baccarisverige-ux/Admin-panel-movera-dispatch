@@ -175,6 +175,15 @@ export function RulesView(props: Props) {
               commissionPct={props.commissionOf(zone.id)}
               sampleFare={props.sampleFareOf(zone.id)}
               waitBases={props.waitBasesOf(zone.id)}
+              otherZones={zones.filter((item) => item.id !== zone.id && canEdit(item.id)).map((item) => ({ id: item.id, name: item.name }))}
+              onCopyCancelFees={(kind, table, ids) => {
+                const copy = () => JSON.parse(JSON.stringify(table)) as typeof table;
+                for (const id of ids) {
+                  const target = rulesOf(id);
+                  onRules(id, kind === "live" ? { ...target, riderCancel: { ...target.riderCancel, fees: copy() } } : { ...target, reservation: { ...target.reservation, riderFees: copy() } });
+                }
+                props.onNotice(`${kind === "live" ? "Live trip" : "Reservation"} cancel fees copied from ${zone.name} to ${ids.length} zone${ids.length === 1 ? "" : "s"}. Not live yet.`);
+              }}
               onWaitAllZones={(pickupWait) => {
                 const targets = zones.filter((item) => canEdit(item.id));
                 for (const item of targets) onRules(item.id, { ...rulesOf(item.id), pickupWait: JSON.parse(JSON.stringify(pickupWait)) as typeof pickupWait });
@@ -188,7 +197,7 @@ export function RulesView(props: Props) {
               <button data-command="admin.dispatch.view" type="button" role="tab" aria-selected={shownPhone === "rider"} className={shownPhone === "rider" ? "active" : undefined} onClick={() => setPhone("rider")}>Rider app</button>
             </div>
             {tab === "reservations"
-              ? (shownPhone === "driver" ? <ReservationDriverPreview zone={rules} money={money} country={market.id} /> : <ReservationRiderPreview zone={rules} money={money} />)
+              ? (shownPhone === "driver" ? <ReservationDriverPreview zone={rules} money={money} country={market.id} /> : <ReservationRiderPreview zone={rules} money={money} country={market.id} fare={props.sampleFareOf(zone.id)} />)
               : shownPhone === "driver" ? <DriverOfferPreview zone={rules} money={money} country={market.id} commissionPct={props.commissionOf(zone.id)} /> : <RiderWaitingPreview zone={rules} />}
           </aside>
         </div>

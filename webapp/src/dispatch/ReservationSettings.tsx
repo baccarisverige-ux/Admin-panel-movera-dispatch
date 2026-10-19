@@ -6,8 +6,10 @@ import { Card, Choice, Num, Row, Switch } from "./fields";
 import { ReservationTimelinePreview, spanLabel } from "./Previews";
 import { BookingPolicyCard } from "./BookingPolicy";
 import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
+import { CancelFeeTable } from "./CancelFeeTable";
+import type { CancelFeeKind, CancelFeeTable as FeeTable } from "./cancelFees";
 import {
-  HOME_POPUP_TO, leaveNowBeforeMin, raiseCap, raiseSplit, RESERVATION_CANCEL_TO, RESERVATION_LIST_TO, RIDE_TYPES, RIDER_FREE_CANCEL_MAX_MIN, smartGapMin,
+  HOME_POPUP_TO, leaveNowBeforeMin, raiseCap, raiseSplit, RESERVATION_CANCEL_TO, RESERVATION_LIST_TO, RIDE_TYPES, smartGapMin,
   type DriverGroup, type ReservationRules, type RideTypeId, type RideTypeRule, type ZoneDispatch,
 } from "./rules";
 
@@ -23,6 +25,8 @@ type Props = {
   /** Movera's commission in this zone for a normal ride, from Pricing, and a sample booked-ride fare. */
   commissionPct: number;
   sampleFare: number;
+  otherZones: { id: string; name: string }[];
+  onCopyCancelFees: (kind: CancelFeeKind, table: FeeTable, zoneIds: string[]) => void;
 };
 
 /** "07:40" plus some minutes, for the worked examples. */
@@ -34,7 +38,7 @@ function clock(startMin: number, plusMin: number): string {
 const SAMPLE_PICKUP = 7 * 60 + 40;
 
 /** Dispatch › Reservations: everything about rides booked for later, in one place. */
-export function ReservationSettings({ zone, onChange, disabled, symbol, money, countryId, countryName, groups, commissionPct, sampleFare }: Props) {
+export function ReservationSettings({ zone, onChange, disabled, symbol, money, countryId, countryName, groups, commissionPct, sampleFare, otherZones, onCopyCancelFees }: Props) {
   const resv = zone.reservation;
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   const setResv = (patch: Partial<ReservationRules>) => set({ reservation: { ...resv, ...patch } });
@@ -139,12 +143,11 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
       </Card>
 
       <Card title="Cancels" tone="red" icon={<UserX size={18} />} help="Drivers never pay a fee when they cancel. Every driver cancel counts in the driver's cancel rate." off={!resv.on}>
-        <Row label="Riders cancel for free until" help="After that the rider pays the late cancel fee.">
-          <Num label="Rider free cancel, minutes before pickup" value={resv.freeCancelMinutesBeforePickup} unit="min before pickup" min={0} max={RIDER_FREE_CANCEL_MAX_MIN} disabled={off} onChange={(freeCancelMinutesBeforePickup) => setResv({ freeCancelMinutesBeforePickup: Math.round(freeCancelMinutesBeforePickup) })} />
-        </Row>
-        <Row label="Rider's late cancel fee" help="Paid by the rider for a cancel after the free time.">
-          <Num label="Rider late cancel fee" value={resv.lateCancelFee} unit={symbol} step={0.5} min={0} max={1000} disabled={off} onChange={(lateCancelFee) => setResv({ lateCancelFee })} />
-        </Row>
+        <div className="dx-sub">
+          <b><CalendarClock size={13} aria-hidden="true" /> Rider late cancel fee · booked rides and Exclusive reservations</b>
+          <small>Per car type. The rider cancels for free until this long before the pickup time. After that the late cancel fee applies.</small>
+          <CancelFeeTable kind="reservation" table={resv.riderFees} onChange={(riderFees) => setResv({ riderFees })} disabled={off} symbol={symbol} money={money} countryId={countryId} otherZones={otherZones} onCopyToZones={(ids) => onCopyCancelFees("reservation", resv.riderFees, ids)} />
+        </div>
         <Row label="A driver's late cancel" help="A driver cancel this close to pickup is a late cancel. The driver still pays nothing.">
           <Num label="Driver late cancel, hours before pickup" before="under" value={resv.driverLateCancelHours} unit="h before pickup" step={0.5} min={0.5} max={72} disabled={off} onChange={(driverLateCancelHours) => setResv({ driverLateCancelHours })} />
         </Row>

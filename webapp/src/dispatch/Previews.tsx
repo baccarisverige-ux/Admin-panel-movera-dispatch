@@ -3,6 +3,7 @@ import { AlertTriangle, CalendarClock, Car, Clock, Flag, Home, List, MapPin, Nav
 import { exclusiveReasonText } from "./offers";
 import type { MarketId } from "../markets/markets";
 import { Choice } from "./fields";
+import { riderSeesLine } from "./cancelFees";
 import {
   EXTRAS, homePopupSkippedBelowMin, leaveNowBeforeMin, RESERVATION_STEP_LABEL, reservationTimeline, stepAfterDriverCancel, WAIT_KINDS,
   type DriverGroup, type OfferMode, type ReservationTimelineStep, type ZoneDispatch,
@@ -290,10 +291,9 @@ export function ReservationDriverPreview({ zone, money, country }: { zone: ZoneD
 }
 
 /** The rider's booked ride: the driver right after accepting, and the free cancel time. */
-export function ReservationRiderPreview({ zone, money }: { zone: ZoneDispatch; money: (value: number) => string }) {
+export function ReservationRiderPreview({ zone, money, country, fare }: { zone: ZoneDispatch; money: (value: number) => string; country: MarketId; fare: number }) {
   const resv = zone.reservation;
-  const freeUntil = 7 * 60 + 40 - resv.freeCancelMinutesBeforePickup;
-  const at = `${String(Math.floor(((freeUntil % 1440) + 1440) % 1440 / 60)).padStart(2, "0")}:${String(((freeUntil % 60) + 60) % 60).padStart(2, "0")}`;
+  const cancel = riderSeesLine("reservation", resv.riderFees.economy, fare, country, money, 7 * 60 + 40);
   return (
     <figure className="dp-phone dx-phone" aria-label="Rider reservation preview">
       <div className="dp-screen dx-rider">
@@ -316,7 +316,7 @@ export function ReservationRiderPreview({ zone, money }: { zone: ZoneDispatch; m
               <p>You see your driver's name, photo and car when they head to the pickup.</p>
             </>
           )}
-          <span className="dx-rider-cancel">Free cancel until {at}{resv.lateCancelFee > 0 ? ` · then ${money(resv.lateCancelFee)}` : ""}</span>
+          <span className="dx-rider-cancel">{cancel.line.replace(" · no fee after", "")}</span>
         </div>
       </div>
       <figcaption>Rider app · booked ride</figcaption>

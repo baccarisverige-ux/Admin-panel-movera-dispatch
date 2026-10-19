@@ -1,5 +1,10 @@
 import { market, MARKETS, zoneById, type MarketId, type MarketZone } from "../markets/markets.ts";
 import { currencySymbol, fromSek } from "../pricing/zonePricing.ts";
+import type { FareCategoryId } from "../data/catalog.ts";
+import {
+  CANCEL_FEE_CATEGORIES, RESERVATION_FREE_MAX_MIN, cancelFeeAmount, cancelFeeDefaults, cancelFeeIssues, completeCancelFees, legacyCancelFees,
+  type CancelFeeKind, type CancelFeeTable, type CancelFeeType,
+} from "./cancelFees.ts";
 import { RIDE_CHECK_SETTINGS_DEFAULT, rideCheckThresholds, type RideCheckThresholds } from "../safety/rideCheckSettings.ts";
 import {
   CANCEL_RATE_LIMIT_DEFAULT, EXCLUSIVE_REASONS as EXCLUSIVE_REASON_LIST, LANGS as LANG_LIST, WAIT_FIELDS as WAIT_FIELD_LIST, cancelReasonsFor, exclusiveReasonList, cancelReasonIssues, cancelReasonLines, cancelReasonsDefault, completeCancelReasons, completeExclusiveReasons, completeOfferCard,
@@ -106,18 +111,31 @@ export const RIDE_TYPES: { id: RideTypeId; label: string; help: string }[] = [
 /** Highest fare raise for a ride nobody takes, in Sweden. Other countries get the same value in their own money. */
 export const RAISE_CAP_SEK = 500;
 /** Longest free-cancel window the rider app accepts: one week. */
-export const RIDER_FREE_CANCEL_MAX_MIN = 7 * 24 * 60;
+export const RIDER_FREE_CANCEL_MAX_MIN = RESERVATION_FREE_MAX_MIN;
 
-/** The rider app's scheduled-ride rules, as GET /api/v1/rider/scheduled-rides/rules answers them. */
-export type RiderScheduledRules = { freeCancelMinutesBeforePickup: number; lateCancelFeeMinor: number; currency: string; showDriverOnAccept: boolean };
+/** One car type's late cancel rule for the rider app. feeMinor for a fixed fee, feePct (with optional min/max) for a % of the price. */
+export type RiderCancelFeeRule = { freeCancelMinutesBeforePickup: number; feeType: CancelFeeType; feeMinor: number | null; feePct: number | null; minFeeMinor: number | null; maxFeeMinor: number | null };
 
-export function riderScheduledRules(resv: Pick<ReservationRules, "freeCancelMinutesBeforePickup" | "lateCancelFee" | "showDriverOnAccept">, country: MarketId): RiderScheduledRules {
+/**
+ * The rider app's scheduled-ride rules, as GET /api/v1/rider/scheduled-rides/rules answers them.
+ * byCategory has the rule per car type. The top-level free time and fee are the Economy row, for older rider apps (a % fee gives its lowest fee, or 0).
+ */
+export type RiderScheduledRules = { freeCancelMinutesBeforePickup: number; lateCancelFeeMinor: number; currency: string; showDriverOnAccept: boolean; byCategory: Record<FareCategoryId, RiderCancelFeeRule> };
+
+export function riderScheduledRules(resv: Pick<ReservationRules, "riderFees" | "showDriverOnAccept">, country: MarketId): RiderScheduledRules {
   const info = market(country);
+  const minor = (value: number | null) => (value === null ? null : Math.round(value * info.minorUnits));
+  const economy = resv.riderFees.economy;
   return {
-    freeCancelMinutesBeforePickup: resv.freeCancelMinutesBeforePickup,
-    lateCancelFeeMinor: Math.round(resv.lateCancelFee * info.minorUnits),
+    freeCancelMinutesBeforePickup: economy.freeMin,
+    lateCancelFeeMinor: minor(economy.type === "fixed" ? economy.value : economy.min ?? 0) ?? 0,
     currency: info.currency,
     showDriverOnAccept: resv.showDriverOnAccept,
+    byCategory: Object.fromEntries(CANCEL_FEE_CATEGORIES.map(({ id }) => {
+      const row = resv.riderFees[id];
+      const fixed = row.type === "fixed";
+      return [id, { freeCancelMinutesBeforePickup: row.freeMin, feeType: row.type, feeMinor: fixed ? minor(row.value) : null, feePct: fixed ? null : row.value, minFeeMinor: fixed ? null : minor(row.min), maxFeeMinor: fixed ? null : minor(row.max) }];
+    })) as Record<FareCategoryId, RiderCancelFeeRule>,
   };
 }
 
@@ -177,11 +195,11 @@ export type ReservationRules = {
   /** Be online before, spare minutes and reminders, per kind of ride. */
   types: Record<RideTypeId, RideTypeRule>;
   /**
-   * Cancels. Drivers never pay. Riders cancel for free until this many minutes before pickup, then pay lateCancelFee
-   * (major units of the zone's money). The rider app reads these as GET /api/v1/rider/scheduled-rides/rules, see riderScheduledRules.
+   * Cancels. Drivers never pay. Per car type, riders cancel for free until freeMin minutes before pickup, then pay the late
+   * cancel fee: fixed (major units of the zone's money) or % of the price with an optional min and max. The same rules hold for
+   * Exclusive reservations. The rider app reads these as GET /api/v1/rider/scheduled-rides/rules, see riderScheduledRules.
    */
-  freeCancelMinutesBeforePickup: number;
-  lateCancelFee: number;
+  riderFees: CancelFeeTable;
   /** A driver cancel with less than this many hours to pickup is a late cancel. */
   driverLateCancelHours: number;
   /** latePauseAfter late cancels within latePeriodDays: no scheduled rides for latePauseDays. */
@@ -255,7 +273,8 @@ export type ZoneDispatch = {
   favourite: { on: boolean; maxKm: number; waitSec: number };
   waiting: WaitStep[];
   driverCancel: { on: boolean; commissionCutPct: number };
-  riderCancel: { on: boolean; freeMin: number; closerPct: number; fee: number; priority: boolean; priorityMin: number };
+  /** Live trips (Radar and live Exclusive): the smart check, and per car type free minutes after accept, then the fee. */
+  riderCancel: { on: boolean; closerPct: number; priority: boolean; priorityMin: number; fees: CancelFeeTable };
   extras: { id: ExtraId; on: boolean; badge: boolean }[];
   longTripKm: number;
   stops: { on: boolean; max: number; freeWaitMin: number; perMin: number; perStop: number; changeDuring: boolean; driverCanRefuse: boolean };
@@ -390,7 +409,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
       listGroupId: "", homePopupTo: "list", popupClosedExclusive: true,
       hideClashing: true, leaveNow: true, lateWarn: true, lateBackupAfterMin: 5, towardPickup: true, towardPickupBeforeMin: 60,
       types: rideTypesDefault(),
-      freeCancelMinutesBeforePickup: 60, lateCancelFee: 0, driverLateCancelHours: 1,
+      riderFees: cancelFeeDefaults("reservation"), driverLateCancelHours: 1,
       latePause: true, latePauseAfter: 2, latePeriodDays: 7, latePauseDays: 7,
       showDriverOnAccept: true,
       raiseFare: true, raiseMax: RAISE_CAP_SEK,
@@ -413,7 +432,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     favourite: { on: true, maxKm: 4, waitSec: 15 },
     waiting: waitingDefault(),
     driverCancel: { on: true, commissionCutPct: 5 },
-    riderCancel: { on: true, freeMin: 2, closerPct: 25, fee: 0, priority: true, priorityMin: 10 },
+    riderCancel: { on: true, closerPct: 25, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live") },
     extras: EXTRAS.map((extra) => ({ id: extra.id, on: true, badge: true })),
     longTripKm: 50,
     stops: { on: true, max: 3, freeWaitMin: 3, perMin: 0, perStop: 0, changeDuring: true, driverCanRefuse: true },
@@ -433,7 +452,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
   };
 }
 
-/** Money defaults per country, in major units, for the fees the rider pays. */
+/** Money defaults per country, in major units, for the fees the rider pays. fee is the one cancel fee older saves started from. */
 export function feeDefaults(country: MarketId): { fee: number; perMin: number; perStop: number } {
   if (country === "FR") return { fee: 5, perMin: 0.5, perStop: 1 };
   if (country === "TN") return { fee: 3, perMin: 0.3, perStop: 1 };
@@ -447,9 +466,9 @@ export function zoneDefault(zoneId: string): ZoneDispatch {
   const money = feeDefaults(country);
   return {
     ...base,
-    riderCancel: { ...base.riderCancel, fee: money.fee },
+    riderCancel: { ...base.riderCancel, fees: cancelFeeDefaults("live", country) },
     stops: { ...base.stops, perMin: money.perMin, perStop: money.perStop },
-    reservation: { ...base.reservation, lateCancelFee: money.fee, raiseMax: raiseCap(country) },
+    reservation: { ...base.reservation, riderFees: cancelFeeDefaults("reservation", country), raiseMax: raiseCap(country) },
     pickupWait: pickupWaitDefault(country),
   };
 }
@@ -564,10 +583,16 @@ export function normalizeDispatchBook(value: unknown): DispatchBook {
  * Reservation settings from an older save: new settings come from the defaults, unknown choices fall back.
  * Saves from before the Radar step get a Radar time that fits under their own Exclusive and search times, so they stay valid.
  */
-export function completeReservation(base: ReservationRules, stored: unknown): ReservationRules {
+export function completeReservation(base: ReservationRules, stored: unknown, legacyFee = 0): ReservationRules {
   if (!stored || typeof stored !== "object" || Array.isArray(stored)) return { ...base };
-  const raw = stored as Partial<ReservationRules>;
-  const next: ReservationRules = { ...base, ...raw };
+  const raw = stored as Partial<ReservationRules> & { freeCancelMinutesBeforePickup?: unknown; lateCancelFee?: unknown };
+  const next = { ...base, ...raw } as ReservationRules & { freeCancelMinutesBeforePickup?: unknown; lateCancelFee?: unknown };
+  // Saves from before cancel fees per car type had one free time and one late cancel fee: every car type gets them.
+  next.riderFees = completeCancelFees(raw.riderFees, raw.riderFees === undefined && (raw.freeCancelMinutesBeforePickup !== undefined || raw.lateCancelFee !== undefined)
+    ? legacyCancelFees(typeof raw.freeCancelMinutesBeforePickup === "number" ? raw.freeCancelMinutesBeforePickup : 60, typeof raw.lateCancelFee === "number" ? raw.lateCancelFee : legacyFee)
+    : base.riderFees);
+  delete next.freeCancelMinutesBeforePickup;
+  delete next.lateCancelFee;
   if (!RESERVATION_LIST_TO.some((item) => item.id === next.listTo)) next.listTo = base.listTo;
   if (!RESERVATION_CANCEL_TO.some((item) => item.id === next.onDriverCancel)) next.onDriverCancel = base.onDriverCancel;
   if (!HOME_POPUP_TO.some((item) => item.id === next.homePopupTo)) next.homePopupTo = base.homePopupTo;
@@ -637,7 +662,17 @@ function complete(zoneId: string, stored: Partial<ZoneDispatch> | undefined): Zo
   merged.offerCard = completeOfferCard(stored.offerCard);
   merged.exclusiveReasons = completeExclusiveReasons(stored.exclusiveReasons);
   merged.pickupWait = completePickupWait(base.pickupWait, stored.pickupWait);
-  merged.reservation = completeReservation(base.reservation, stored.reservation);
+  const legacyFee = feeDefaults(countryOfZone(zoneId)).fee;
+  merged.reservation = completeReservation(base.reservation, stored.reservation, legacyFee);
+  // Live cancel fees per car type. Older saves had one free time (freeMin) and one fixed fee for every car type.
+  const oldCancel = (stored.riderCancel ?? {}) as Record<string, unknown>;
+  const riderCancel = { ...(merged.riderCancel as Record<string, unknown>) };
+  delete riderCancel.freeMin;
+  delete riderCancel.fee;
+  riderCancel.fees = completeCancelFees(oldCancel.fees, oldCancel.fees === undefined && (oldCancel.freeMin !== undefined || oldCancel.fee !== undefined)
+    ? legacyCancelFees(typeof oldCancel.freeMin === "number" ? oldCancel.freeMin : 2, typeof oldCancel.fee === "number" ? oldCancel.fee : legacyFee)
+    : base.riderCancel.fees);
+  merged.riderCancel = riderCancel;
   merged.rideCheck = completeRideCheck(base.rideCheck, stored.rideCheck);
   merged.destinationMode = completeDestinationMode(stored.destinationMode);
   merged.nextTrips = completeNextTrips(stored.nextTrips);
@@ -697,6 +732,7 @@ export function zoneIssues(zone: ZoneDispatch): string[] {
   issues.push(...reservationIssues(zone.reservation, zone.zoneId));
   if (zone.driverCancel.on && (zone.driverCancel.commissionCutPct < 0 || zone.driverCancel.commissionCutPct > 30)) issues.push("Driver cancels: lower commission must be 0 to 30%.");
   if (zone.riderCancel.on && (zone.riderCancel.closerPct < 5 || zone.riderCancel.closerPct > 100)) issues.push("Rider cancels: \"came closer\" must be 5 to 100%.");
+  if (zone.riderCancel.on) issues.push(...cancelFeeIssues(zone.riderCancel.fees, "live"));
   if (zone.stops.on && (zone.stops.max < 1 || zone.stops.max > 5)) issues.push("Stops: max stops must be 1 to 5.");
   if (zone.longTripKm < 10 || zone.longTripKm > 500) issues.push("Long trip must be 10 to 500 km.");
   if (zone.safety.minRating && (zone.safety.ratingBelow < 1 || zone.safety.ratingBelow > 5)) issues.push("Safety: lowest rating must be 1 to 5.");
@@ -733,8 +769,7 @@ function reservationIssues(resv: ReservationRules, zoneId: string): string[] {
     if (rule.remindFirstMin < 1 || rule.remindFirstMin > 1440 || rule.remindLastMin < 1 || rule.remindLastMin > 1440) issues.push(`Reservations, ${type.label}: reminders must be 1 to 1440 minutes before pickup.`);
     else if (rule.remindFirstMin <= rule.remindLastMin) issues.push(`Reservations, ${type.label}: the first reminder must come before the second (a larger number of minutes).`);
   }
-  if (!Number.isInteger(resv.freeCancelMinutesBeforePickup) || resv.freeCancelMinutesBeforePickup < 0 || resv.freeCancelMinutesBeforePickup > RIDER_FREE_CANCEL_MAX_MIN) issues.push("Reservations: free cancel for riders must end 0 to 10080 minutes (7 days) before pickup, in whole minutes.");
-  if (resv.lateCancelFee < 0 || resv.lateCancelFee > 1000) issues.push("Reservations: the rider's late cancel fee must be 0 to 1000.");
+  issues.push(...cancelFeeIssues(resv.riderFees, "reservation"));
   if (resv.driverLateCancelHours < 0.5 || resv.driverLateCancelHours > 72) issues.push("Reservations: a driver's late cancel must be set 0.5 to 72 hours before pickup.");
   if (resv.latePause && (resv.latePauseAfter < 1 || resv.latePauseAfter > 20)) issues.push("Reservations: the pause must come after 1 to 20 late cancels.");
   if (resv.latePause && (resv.latePeriodDays < 1 || resv.latePeriodDays > 90)) issues.push("Reservations: late cancels must be counted over 1 to 90 days.");
@@ -905,7 +940,7 @@ const LABELS: Record<string, string> = {
   "finishing.radar": "Finishing nearby on Radar", "finishing.exclusive": "Finishing nearby on Exclusive", "finishing.withinMin": "Finishing within minutes", "finishing.withinKm": "Finishing within km",
   "favourite.on": "Favourite drivers", "favourite.maxKm": "Favourite max distance", "favourite.waitSec": "Wait for favourite",
   waiting: "Rider waiting steps", "driverCancel.on": "Driver cancels: search again", "driverCancel.commissionCutPct": "Lower commission after a driver cancel",
-  "riderCancel.on": "Smart cancel check", "riderCancel.freeMin": "Free cancel minutes", "riderCancel.closerPct": "Came closer by", "riderCancel.fee": "Cancel fee",
+  "riderCancel.on": "Smart cancel check", "riderCancel.closerPct": "Came closer by",
   "riderCancel.priority": "Priority after rider cancel", "riderCancel.priorityMin": "Priority minutes",
   extras: "Special requests", longTripKm: "Long trip from", "stops.on": "Stops", "stops.max": "Max stops", "stops.freeWaitMin": "Free wait per stop",
   "stops.perMin": "Wait price per minute", "stops.perStop": "Fee per stop", "stops.changeDuring": "Change during the trip", "stops.driverCanRefuse": "Driver can refuse changes",
@@ -946,12 +981,19 @@ Object.assign(LABELS, {
   "reservation.popupClosedExclusive": "Closed popup comes back as Exclusive", "reservation.hideClashing": "Clashing rides leave the list",
   "reservation.leaveNow": "Leave now", "reservation.lateWarn": "Late warning, then backup", "reservation.lateBackupAfterMin": "Backup driver after the late warning",
   "reservation.towardPickup": "Trips toward the pickup before the ride", "reservation.towardPickupBeforeMin": "Trips toward the pickup from",
-  "reservation.freeCancelMinutesBeforePickup": "Rider free cancel, minutes before pickup", "reservation.lateCancelFee": "Rider late cancel fee",
   "reservation.driverLateCancelHours": "Driver late cancel, hours before pickup", "reservation.latePause": "Pause after late cancels",
   "reservation.latePauseAfter": "Late cancels before a pause", "reservation.latePeriodDays": "Late cancels counted over days", "reservation.latePauseDays": "Scheduled rides paused for days",
   "reservation.showDriverOnAccept": "Rider sees the driver at once", "reservation.raiseFare": "Raise the driver's fare", "reservation.raiseMax": "Highest fare raise",
   "reservation.assignAcceptSec": "Time to accept a ride assigned by Movera",
 });
+
+/** Labels for the rider cancel fees per car type: "Live trips, Comfort: fee", "Reservations, Premium: highest fee". */
+const FEE_FIELDS = { freeMin: "free cancel minutes", type: "fee type", value: "fee", min: "lowest fee", max: "highest fee" } as const;
+for (const [path, words] of [["riderCancel.fees", "Live trips"], ["reservation.riderFees", "Reservations"]] as const) {
+  for (const category of CANCEL_FEE_CATEGORIES) {
+    for (const [field, label] of Object.entries(FEE_FIELDS)) LABELS[`${path}.${category.id}.${field}`] = `${words}, ${category.label}: ${field === "freeMin" && path === "reservation.riderFees" ? "free cancel minutes before pickup" : label}`;
+  }
+}
 
 const RIDE_TYPE_FIELDS: Record<keyof RideTypeRule, string> = { onlineBeforeMin: "be online before", spareMin: "spare minutes", remindFirstMin: "first reminder", remindLastMin: "second reminder" };
 for (const type of RIDE_TYPES) {
@@ -981,7 +1023,8 @@ const PATH_WORDS: Record<string, Record<string, string>> = {
 function show(raw: string | undefined, path = ""): string {
   if (raw === undefined) return "";
   const value = JSON.parse(raw) as unknown;
-  if (value === null) return "same as the zone";
+  if (value === null) return /\.riderFees\.|\.fees\./.test(path) ? "none" : "same as the zone";
+  if (/\.(riderFees|fees)\.\w+\.type$/.test(path) && typeof value === "string") return value === "percent" ? "% of price" : "fixed";
   if (typeof value === "string" && PATH_WORDS[path]?.[value]) return PATH_WORDS[path][value];
   if (value === true) return "on";
   if (value === false) return "off";
@@ -1169,9 +1212,9 @@ export function applyPreset(zone: ZoneDispatch, preset: Preset, country: MarketI
     ...values,
     zoneId: zone.zoneId,
     // Built-in presets carry no money, so fees stay in the country's currency.
-    riderCancel: preset.builtIn ? { ...values.riderCancel, fee: money.fee } : values.riderCancel,
+    riderCancel: preset.builtIn ? { ...values.riderCancel, fees: cancelFeeDefaults("live", country) } : values.riderCancel,
     stops: preset.builtIn ? { ...values.stops, perMin: money.perMin, perStop: money.perStop } : values.stops,
-    reservation: preset.builtIn ? { ...values.reservation, lateCancelFee: money.fee, raiseMax: raiseCap(country) } : values.reservation,
+    reservation: preset.builtIn ? { ...values.reservation, riderFees: cancelFeeDefaults("reservation", country), raiseMax: raiseCap(country) } : values.reservation,
   };
 }
 
@@ -1406,15 +1449,29 @@ export type CancelRecord = {
   atCancel: { km: number; etaMin: number };
   path: [number, number][];
   pickup: [number, number];
+  /** The trip's car type and price (major units of the zone's money), for the fee of that car type. */
+  category: FareCategoryId;
+  fare: number;
 };
 
-/** The automatic fee decision for a rider cancel, and the reason in words. */
-export function cancelDecision(record: CancelRecord, zone: ZoneDispatch): { fee: boolean; why: string; closerPct: number } {
+/**
+ * The rider's cancel fee for one trip in a zone: live (Radar and live Exclusive) or reservation (booked rides, Exclusive
+ * reservations too), by car type. A % fee is of the trip price, rounded to the zone's money and kept between its min and max.
+ */
+export function riderCancelFee(zone: ZoneDispatch, kind: CancelFeeKind, category: FareCategoryId, fare: number): number {
+  const table = kind === "live" ? zone.riderCancel.fees : zone.reservation.riderFees;
+  return cancelFeeAmount(table[category], fare, countryOfZone(zone.zoneId));
+}
+
+/** The automatic fee decision for a rider cancel, the fee for the trip's car type, and the reason in words. */
+export function cancelDecision(record: CancelRecord, zone: ZoneDispatch): { fee: boolean; why: string; closerPct: number; amount: number; freeMin: number } {
   const closerPct = record.atAccept.km > 0 ? Math.round(((record.atAccept.km - record.atCancel.km) / record.atAccept.km) * 100) : 0;
-  if (!zone.riderCancel.on) return { fee: false, why: "The smart cancel check is off in this zone.", closerPct };
-  if (record.minutesAfterAccept < zone.riderCancel.freeMin) return { fee: false, why: `Cancelled ${record.minutesAfterAccept} min after accept, inside the free ${zone.riderCancel.freeMin} min.`, closerPct };
-  if (closerPct >= zone.riderCancel.closerPct) return { fee: true, why: `The driver came ${closerPct}% closer (${record.atAccept.km} → ${record.atCancel.km} km). Fee applies.`, closerPct };
-  return { fee: false, why: `The driver came only ${Math.max(0, closerPct)}% closer (needs ${zone.riderCancel.closerPct}%). No fee.`, closerPct };
+  const freeMin = zone.riderCancel.fees[record.category].freeMin;
+  const amount = riderCancelFee(zone, "live", record.category, record.fare);
+  if (!zone.riderCancel.on) return { fee: false, why: "The smart cancel check is off in this zone.", closerPct, amount, freeMin };
+  if (record.minutesAfterAccept < freeMin) return { fee: false, why: `Cancelled ${record.minutesAfterAccept} min after accept, inside the free ${freeMin} min.`, closerPct, amount, freeMin };
+  if (closerPct >= zone.riderCancel.closerPct) return { fee: true, why: `The driver came ${closerPct}% closer (${record.atAccept.km} → ${record.atCancel.km} km). Fee applies.`, closerPct, amount, freeMin };
+  return { fee: false, why: `The driver came only ${Math.max(0, closerPct)}% closer (needs ${zone.riderCancel.closerPct}%). No fee.`, closerPct, amount, freeMin };
 }
 
 /** Everything the backend needs, in one file: the live rules per zone, country rules, events and groups. */
@@ -1449,10 +1506,11 @@ export function rulesFile(book: DispatchBook, country: MarketId, at: string, thr
       smartGap: "A driver cannot hold two scheduled rides whose times are the same or close. Gap = the first ride's trip time + the drive to the next pickup + types[kind].spareMin. With hideClashing, once a driver takes one, the rides that do not fit leave that driver's list (they still see them all before taking one).",
       leaveNow: "leaveNow: at live drive time to the pickup + types[kind].spareMin before pickup, the ride lands on the driver's screen as the active trip with Head to pickup. lateWarn: not moving toward the pickup after that, an island warning at once, then after lateBackupAfterMin an admin alert and the backup driver. towardPickup: from towardPickupBeforeMin before pickup, offers head toward the scheduled pickup, each checked with the smart gap.",
       rideTypes: "types: normal, airport, long (over longTripKm), premium (Comfort and Premium) and event, each with onlineBeforeMin, spareMin and two reminders (remindFirstMin, remindLastMin) before pickup.",
-      reservationCancels: "Drivers never pay. Riders cancel for free until freeCancelMinutesBeforePickup before pickup, then pay lateCancelFee (country money, major units). A driver cancel under driverLateCancelHours before pickup is a late cancel; latePauseAfter late cancels in latePeriodDays = no scheduled rides for latePauseDays. Every driver cancel counts in the cancel rate.",
+      riderCancelFees: "Rider cancel fees per car type (economy, comfort, premium, xl), two sets. riderCancel.fees = live trips (Radar and live Exclusive): free for freeMin minutes after the driver accepts. reservation.riderFees = booked rides, Exclusive reservations too: free until freeMin minutes before pickup. Then the fee: type fixed = value in country money (major units); type percent = value % of the trip price, rounded to the country's money step, then kept between min and max (major units, null = no limit).",
+      reservationCancels: "Drivers never pay. Riders cancel for free and then pay the late cancel fee by car type, see riderCancelFees. A driver cancel under driverLateCancelHours before pickup is a late cancel; latePauseAfter late cancels in latePeriodDays = no scheduled rides for latePauseDays. Every driver cancel counts in the cancel rate.",
       showDriverOnAccept: "true = the rider sees the driver's name, photo and car as soon as a driver accepts, and the new driver if it changes.",
       raiseFare: "No driver near pickup: an admin can raise the driver's fare up to raiseMax (country money, never over 500 kr or the same value in local money). It is paid from Movera's commission; the admin sees when it goes beyond it. The rider pays the same.",
-      riderApp: "riderApp[zoneId] is what the rider app reads at GET /api/v1/rider/scheduled-rides/rules: {freeCancelMinutesBeforePickup, lateCancelFeeMinor, currency, showDriverOnAccept}.",
+      riderApp: "riderApp[zoneId] is what the rider app reads at GET /api/v1/rider/scheduled-rides/rules: {freeCancelMinutesBeforePickup, lateCancelFeeMinor, currency, showDriverOnAccept, byCategory}. byCategory[car type] = {freeCancelMinutesBeforePickup, feeType fixed|percent, feeMinor, feePct, minFeeMinor, maxFeeMinor} (minor units, null = not used). The top-level free time and fee are the Economy row, for older rider apps.",
       assignAccept: "An admin gives the ride to one driver: it comes like an Exclusive, labelled Assigned by Movera, with assignAcceptSec seconds to accept. Not accepted: the admin sees it and picks someone else.",
       reservation: "A ride booked for later. Nobody took it yet: first in Scheduled rides (for listTo drivers), then also the Home popup homePopupAfterMin minutes after booking, then Exclusive exclusiveBeforeMin minutes before pickup, then also Radar trips radarBeforeMin minutes before pickup (never labelled Exclusive there). When a driver takes it, it leaves every other driver's app at once.",
       reservationCancel: "onDriverCancel: where it goes back when the driver who took it cancels. byTime = the step the time says; list = Scheduled rides, the Home popup waits again from the cancel; home or exclusive = that step at once. A step closer to pickup always wins.",
