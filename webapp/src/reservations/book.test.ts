@@ -18,6 +18,10 @@ import {
   saveReservationPolicy,
   scheduleReturnRide,
   stockholmLocalToIso,
+  timeZoneCity,
+  zonedLabel,
+  zonedLocalToIso,
+  zonedLocalValue,
 } from "./book.ts";
 import type { DemoRecord } from "../api/seed.ts";
 
@@ -141,3 +145,14 @@ console.log("reservations ok");
 
 import { reservationClosed } from "./book.ts";
 if (!reservationClosed("no_show") || !reservationClosed("cancelled") || reservationClosed("assigned")) throw new Error("no-show is a closed reservation status");
+
+// C-11: times use the zone's own time zone. Tunis is UTC+1 all year; Stockholm is UTC+2 in summer.
+assert(zonedLabel("2026-10-05T16:35:00.000Z", "Africa/Tunis").endsWith("17:35"), "a Tunis pickup shows Tunis time");
+assert(zonedLabel("2026-10-05T16:35:00.000Z", "Europe/Stockholm").endsWith("18:35"), "a Stockholm pickup shows Stockholm time");
+assert(zonedLocalToIso("2026-10-06T18:00", "Africa/Tunis").iso === "2026-10-06T17:00:00.000Z", "a return typed in Tunis local time is stored as 17:00Z, not an hour early");
+assert(zonedLocalToIso("2026-10-06T18:00", "Europe/Paris").iso === "2026-10-06T16:00:00.000Z", "Paris summer time is UTC+2");
+assert(zonedLocalToIso("2026-03-29T02:30", "Europe/Paris").error?.includes("Paris local time does not exist"), "the Paris spring gap is named after Paris");
+assert(!zonedLocalToIso("2026-03-29T02:30", "Africa/Tunis").error && !zonedLocalToIso("2026-10-25T02:30", "Africa/Tunis").ambiguous, "Tunis has no DST gap or repeated hour");
+assert(zonedLocalValue("2026-10-06T17:00:00.000Z", "Africa/Tunis") === "2026-10-06T18:00", "the return box shows Tunis local time");
+assert(timeZoneCity("Africa/Tunis") === "Tunis", "the city name comes from the zone");
+console.log("zoned time ok");

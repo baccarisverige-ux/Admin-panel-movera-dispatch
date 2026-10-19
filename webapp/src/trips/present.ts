@@ -59,8 +59,10 @@ export function stockholmDate(iso: string): string {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 }
 
-export function stockholmLabel(iso: string): string {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+/** A time shown in the trip zone's own time zone and date style (Stockholm, Paris or Tunis). */
+export function zoneTimeLabel(iso: string, zoneId: string): string {
+  const place = marketOfZone(zoneId) ?? market("SE");
+  return new Intl.DateTimeFormat(place.locale, { timeZone: place.timeZone, dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 }
 
 export type StopPoint = { label: string; lat: number; lng: number; kind: "pickup" | "stop" | "dropoff" };
@@ -229,7 +231,7 @@ export function waybill(trip: DemoRecord, driverName: string, plate: string) {
   return {
     tripId: trip.id,
     status: statusLabel(trip.status),
-    issuedAt: stockholmLabel(startedAt(trip.id)),
+    issuedAt: zoneTimeLabel(startedAt(trip.id), trip.zoneId),
     fare: formatMoney({ amountMinor: fareBreakdown(trip).chargedOre, currency: (marketOfZone(trip.zoneId) ?? market("SE")).currency }),
     service: category.label,
     riderName: trip.name,

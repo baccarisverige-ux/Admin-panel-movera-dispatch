@@ -4,7 +4,7 @@ import { useCommands } from "../api/hooks";
 import type { CommandResult } from "../api/create";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
-import { ACTION_REASONS } from "../domain/labels";
+import { OTHER_REASON, auditReason, reasonsFor } from "../commands/reasons";
 import { commandById } from "../commands/registry";
 
 type CommandButtonProps = {
@@ -31,6 +31,8 @@ type CommandButtonProps = {
   confirmTarget?: boolean;
   storeReason?: boolean;
   onDone?: (result?: CommandResult) => void;
+  /** Also render a retry button. It is enabled only after an attempt that did not commit (unknown or rejected), re-sends with the same reason, and reuses the operation key when the outcome is unknown. */
+  retryLabel?: string;
   children: ReactNode;
   "aria-label"?: string;
 };
@@ -59,6 +61,7 @@ export function CommandButton({
   confirmTarget = true,
   storeReason,
   onDone,
+  retryLabel,
   children,
   "aria-label": ariaLabel,
 }: CommandButtonProps) {
@@ -67,27 +70,41 @@ export function CommandButton({
   const spec = commandById(command);
   const denied = Boolean(spec && session.agent && !can(session.agent.role, spec.permission));
   const disabledReason = !spec ? "Action is not registered." : denied ? "Your role cannot perform this action." : undefined;
+  const reasons = reasonsFor(command);
   const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState(ACTION_REASONS[0]);
+  const [reason, setReason] = useState<string>(reasons[0]);
+  const [otherText, setOtherText] = useState("");
   const [typed, setTyped] = useState("");
+  const [lastReason, setLastReason] = useState("");
   const mustType = confirmTarget ? (targetId ?? "") : "";
   const dialogRoot=useDialogFocus(open,()=>setOpen(false));
-  const confirmed = mustType.length === 0 || typed === mustType;
+  const chosen = auditReason(reason, otherText);
+  const confirmed = (mustType.length === 0 || typed === mustType) && chosen.length > 0;
+  const blocked = disabled || commands.busy || commands.phase === "submitting" || !spec || denied;
 
-  function fire(chosen: string) {
+  // Every opening starts clean: no half-typed id or reason carried over from a cancelled dialog.
+  function openDialog() {
+    setReason(reasons[0]);
+    setOtherText("");
+    setTyped("");
+    setOpen(true);
+  }
+
+  function fire(why: string) {
     if (!session.agent && command === "admin.auth.pickAgent") {
       onDone?.();
       return;
     }
+    setLastReason(why);
     void commands.run(command, {
-      reason: chosen,
+      reason: why,
       targetId,
       before,
       after,
       entityState,
       amountOre,
       collection,
-      patch: patch ? { ...patch, ...(storeReason ? { notes: chosen } : {}) } : undefined,
+      patch: patch ? { ...patch, ...(storeReason ? { notes: why } : {}) } : undefined,
       scope,
       expectedRev,
       expectedSliceRev,
@@ -106,17 +123,29 @@ export function CommandButton({
         className={className}
         type={type}
         aria-label={ariaLabel}
-        disabled={disabled || commands.busy || commands.phase === "submitting" || !spec || denied}
+        disabled={blocked}
         title={title ?? disabledReason}
         onClick={(event) => {
           event.currentTarget.focus();
           if (!spec) return;
-          if (spec.reason) setOpen(true);
+          if (spec.reason) openDialog();
           else fire("No person affected");
         }}
       >
         {children}
       </button>
+      {retryLabel ? (
+        <button
+          data-command={command}
+          className="secondary-btn"
+          type="button"
+          disabled={blocked || !lastReason || (commands.phase !== "unknown" && commands.phase !== "rejected")}
+          title={title ?? disabledReason ?? (commands.phase === "unknown" || commands.phase === "rejected" ? undefined : "Nothing to retry.")}
+          onClick={() => fire(lastReason)}
+        >
+          {retryLabel}
+        </button>
+      ) : null}
       {commands.message ? <p className="state-line">{commands.message}</p> : null}
       {open ? (
         <div ref={dialogRoot} tabIndex={-1} className="modal open" role="dialog" aria-modal="true" aria-label={spec?.label}>
@@ -130,19 +159,25 @@ export function CommandButton({
                 onValidationError?.(validationError);
                 return;
               }
-              fire(reason);
+              fire(chosen);
             }}
           >
             <h3>{spec?.label}</h3>
             <p>This acts on {targetId ?? spec?.label}.</p>
             <label>
               Reason
-              <select aria-label="Reason" value={reason} onChange={(event) => setReason(event.target.value as typeof reason)}>
-                {ACTION_REASONS.map((item) => (
+              <select aria-label="Reason" value={reason} onChange={(event) => setReason(event.target.value)}>
+                {reasons.map((item) => (
                   <option key={item}>{item}</option>
                 ))}
               </select>
             </label>
+            {reason === OTHER_REASON ? (
+              <label>
+                Describe the reason
+                <input aria-label="Describe the reason" value={otherText} maxLength={200} required onChange={(event) => setOtherText(event.target.value)} />
+              </label>
+            ) : null}
             {mustType ? (
               <label>
                 Type {mustType} to confirm

@@ -9,6 +9,7 @@ import {
   type Driver,
   type Vehicle,
 } from "./gate.ts";
+import { NOTE_MAX } from "../domain/labels.ts";
 
 export type DriverDocumentReview = {
   id: DocId;
@@ -336,7 +337,7 @@ export function setDriverNote(book: DriverOpsBook, driver: DriverSeed, note: str
   const current = driverOps(book, driver);
   const updated: DriverOps = {
     ...current,
-    note: note.trim(),
+    note: note.trim().slice(0, NOTE_MAX),
     activity: [`Private note updated by ${actorId}`, ...current.activity].slice(0, 30),
   };
   return { ...nextBook(book), drivers: { ...book.drivers, [driver.id]: updated } };

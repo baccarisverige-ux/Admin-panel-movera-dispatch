@@ -28,7 +28,7 @@ export function AlertBell() {
   useEffect(() => {
     if (!open) return;
     const close = (event: MouseEvent) => { if (box.current && !box.current.contains(event.target as Node)) setOpen(false); };
-    const key = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    const key = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); setOpen(false); } };
     document.addEventListener("mousedown", close);
     document.addEventListener("keydown", key);
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", key); };

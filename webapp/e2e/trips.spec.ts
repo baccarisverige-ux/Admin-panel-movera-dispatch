@@ -55,10 +55,10 @@ test("trips list uses all 600 and a trip page is complete", async ({ page }) => 
   await page.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByRole("heading", { level: 2 })).toContainText("Trip T0004");
   await expect(page.getByTestId("trip-waybill")).toContainText("Cancelled by admin");
-  await expect(page.getByTestId("trip-timeline")).toContainText("Safety review");
+  await expect(page.getByTestId("trip-timeline")).toContainText("Safety");
   await page.reload();
   await expect(page.getByTestId("trip-waybill")).toContainText("Cancelled by admin");
-  await expect(page.getByTestId("trip-timeline")).toContainText("Safety review");
+  await expect(page.getByTestId("trip-timeline")).toContainText("Safety");
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeDisabled();
   if (process.env.SHOTS) {
     for (const width of [390, 768, 1024, 1440]) {

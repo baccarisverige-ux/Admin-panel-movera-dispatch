@@ -2,7 +2,7 @@ import { Plus, Route, Trash2 } from "lucide-react";
 import { useState } from "react";
 import type { MarketId } from "../markets/markets";
 import { NumberField } from "./NumberField";
-import { currencySymbol, inputStep, money, roundingOptions, type CategoryDef, type FixedRoute, type Problem, type ZoneBook, type ZoneFees } from "./zonePricing";
+import { currencySymbol, feeMax, inputStep, money, roundingOptions, routeMax, type CategoryDef, type FixedRoute, type Problem, type ZoneBook, type ZoneFees } from "./zonePricing";
 
 type FeesProps = {
   zoneName: string;
@@ -40,7 +40,7 @@ export function FeesPanel({ zoneName, airport, currency, book, published, proble
             <strong>{row.label}</strong>
             <small>{row.hint}</small>
           </div>
-          <NumberField label={row.label} value={book.fees[row.key]} unit={symbol} step={inputStep(currency)} disabled={!canEdit} changed={book.fees[row.key] !== published.fees[row.key]} invalid={bad.has(`fees.${row.key}`)} onChange={(value) => onChange({ [row.key]: value })} />
+          <NumberField label={row.label} value={book.fees[row.key]} unit={symbol} step={inputStep(currency)} max={feeMax(row.key, currency)} disabled={!canEdit} changed={book.fees[row.key] !== published.fees[row.key]} invalid={bad.has(`fees.${row.key}`)} onChange={(value) => onChange({ [row.key]: value })} />
           {row.key.startsWith("airport") && !airport && book.fees[row.key] > 0 ? <small className="fee-note">{zoneName} is not an airport zone, so this only applies to rides to or from an airport.</small> : null}
         </div>
       ))}
@@ -114,7 +114,7 @@ export function FixedRoutes({ currency, categories, routes, problems, canEdit, z
               <select aria-label="Route category" value={route.categoryId} disabled={!canEdit} onChange={(event) => patch(route.id, { categoryId: event.target.value })}>
                 {categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
               </select>
-              <NumberField label="Route price" value={route.price} unit={currencySymbol(currency)} step={inputStep(currency)} disabled={!canEdit} onChange={(value) => patch(route.id, { price: value })} />
+              <NumberField label="Route price" value={route.price} unit={currencySymbol(currency)} step={inputStep(currency)} max={routeMax(currency)} disabled={!canEdit} onChange={(value) => patch(route.id, { price: value })} />
               <button data-command="admin.pricing.edit" type="button" className="icon-ghost" aria-label={`Remove route ${route.from} to ${route.to}`} disabled={!canEdit} onClick={() => onChange(routes.filter((item) => item.id !== route.id))}><Trash2 size={15} aria-hidden="true" /></button>
             </li>
           ))}

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   Banknote,
@@ -14,6 +14,7 @@ import {
   Map,
   MapPinned,
   Menu,
+  X,
   MessageSquare,
   MessagesSquare,
   Palette,
@@ -127,6 +128,40 @@ function ShellInner({ page, children }: AppShellProps) {
   if (params.get("scope")) keep.set("scope", params.get("scope")!);
   const keepSearch = keep.size ? `?${keep.toString()}` : "";
 
+  // Phone menu (UI-08): Escape, a tap outside or the close button closes it; focus goes into it and back to the toggle.
+  const menuButton = useRef<HTMLButtonElement>(null);
+  // The topbar sticks on phones too (UI-07); its height feeds scroll-padding-top so anything scrolled into
+  // view (links to #sections, focus, "scroll to") lands below it instead of under it.
+  const topbar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const node = topbar.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() => root.style.setProperty("--topbar-h", `${node.offsetHeight}px`));
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--topbar-h");
+    };
+  }, []);
+  const menuClose = useRef<HTMLButtonElement>(null);
+  function closeMenu() {
+    setMenuOpen(false);
+    menuButton.current?.focus();
+  }
+  useEffect(() => {
+    if (!menuOpen) return;
+    menuClose.current?.focus();
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      setMenuOpen(false);
+      menuButton.current?.focus();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -141,10 +176,14 @@ function ShellInner({ page, children }: AppShellProps) {
   return (
     <div className="app-shell">
       <a className="skip-link" href="#content">Skip to content</a>
-      <aside className={menuOpen ? "sidebar open" : "sidebar"}>
+      {menuOpen ? <div className="sidebar-backdrop" aria-hidden="true" onClick={closeMenu} /> : null}
+      <aside id="main-menu" className={menuOpen ? "sidebar open" : "sidebar"}>
         <div className="brand">
           <div className="brand-mark">M</div>
           <span>Movera Admin</span>
+          <button ref={menuClose} data-command="admin.shell.menu" type="button" className="icon-btn sidebar-close" aria-label="Close menu" onClick={closeMenu}>
+            <X size={18} aria-hidden="true" />
+          </button>
         </div>
         <nav className="nav" aria-label="Main">
           {groups.map((group) => (
@@ -171,10 +210,10 @@ function ShellInner({ page, children }: AppShellProps) {
         </nav>
       </aside>
       <section className="workspace">
-        <header className="topbar">
-          <CommandButton command="admin.shell.menu" className="icon-btn mobile-menu" type="button" aria-label="Open menu" onDone={() => setMenuOpen((open) => !open)}>
+        <header ref={topbar} className="topbar">
+          <button ref={menuButton} data-command="admin.shell.menu" className="icon-btn mobile-menu" type="button" aria-label="Open menu" aria-expanded={menuOpen} aria-controls="main-menu" onClick={() => setMenuOpen((open) => !open)}>
             <Menu size={18} aria-hidden="true" />
-          </CommandButton>
+          </button>
           <div>
             <h1>{page.label}</h1>
             <p className="crumb">{page.group}</p>

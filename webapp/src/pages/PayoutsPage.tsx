@@ -47,7 +47,8 @@ export function PayoutsPage() {
   const financeStore = useSlice<FinanceBook>("finance", defaultFinanceBook());
   const finance = useMemo(() => normalizeFinanceBook(financeStore.value), [financeStore.value]);
   const rows = payouts.data ?? [];
-  const [selectedId, setSelectedId] = useState("PO1");
+  // A payout detail link (/payouts?payout=PO3) opens that payout.
+  const [selectedId, setSelectedId] = useState(() => params.get("payout") ?? "PO1");
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0];
   const [bankDraft, setBankDraft] = useState<BankReview | null>(null);
   const [bankNote, setBankNote] = useState("Verified account holder");

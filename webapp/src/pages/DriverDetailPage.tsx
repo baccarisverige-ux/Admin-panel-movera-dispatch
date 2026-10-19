@@ -29,7 +29,7 @@ import {
   type DriverOpsBook,
 } from "../drivers/ops";
 import { CATEGORIES as CATEGORY_INFO } from "../domain/contract";
-import { statusLabel } from "../domain/labels";
+import { NOTE_MAX, statusLabel } from "../domain/labels";
 import { countHealth, docHealth } from "../fleet/documents";
 import { useDocWarnDays } from "../drivers/useDocWarnDays";
 import { driverPerformance, performanceWarning } from "../fleet/performance";
@@ -566,7 +566,7 @@ export function DriverDetailPage() {
           <p className="fd-note">{ops.note || "No private note stored yet."}</p>
           <label className="fd-textarea">
             Private internal note
-            <textarea value={privateNote} onChange={(event) => setPrivateNote(event.target.value)} />
+            <textarea value={privateNote} maxLength={NOTE_MAX} onChange={(event) => setPrivateNote(event.target.value)} />
           </label>
           <CommandButton
             command="admin.driver.note"

@@ -73,6 +73,8 @@ test("R10 large refund requires and executes a second-agent decision", async ({ 
   await expect(page.getByRole("button", { name: "Request refund approval" })).toBeEnabled();
 
   await page.getByRole("button", { name: "Request refund approval" }).click();
+  await page.locator(".modal.open").getByLabel("Type PAY0200 to confirm").fill("PAY0200");
+  await confirm(page);
   await expect(page.getByText(/Pending approval/)).toBeVisible();
 
   await page.goto("/audit");

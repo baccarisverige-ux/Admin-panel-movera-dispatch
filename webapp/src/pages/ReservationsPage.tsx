@@ -6,12 +6,13 @@ import {
   normalizeReservationBook,
   reservationOps,
   reservationWarning,
-  stockholmLabel,
+  zonedLabel,
   useRecords,
   useSlice,
   type ReservationBook,
 } from "../api/hooks";
 import { DataTable } from "../ui/DataTable";
+import { market, marketOfZone } from "../markets/markets";
 import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
 
 const VIEWS = [
@@ -23,6 +24,8 @@ const VIEWS = [
   { id: "cancelled", label: "Cancelled" },
   { id: "no_show", label: "No-show" },
 ] as const;
+
+const timeZoneOf = (zoneId: string) => (marketOfZone(zoneId) ?? market("SE")).timeZone;
 
 export function ReservationsPage() {
   const navigate = useNavigate();
@@ -55,7 +58,7 @@ export function ReservationsPage() {
           <h2>Reservations</h2>
           <p>
             {reservations.isLoading || store.loading ? "Loading reservations." : `${rows.length} reservations in this view.`}
-            {" "}Pickup times display in Europe/Stockholm. Each booking keeps its policy snapshot after policy changes or cancellation.
+            {" "}Pickup times display in each zone's local time. Each booking keeps its policy snapshot after policy changes or cancellation.
           </p>
         </div>
       </div>
@@ -100,8 +103,8 @@ export function ReservationsPage() {
           return [
             record.id,
             record.name,
-            stockholmLabel(ops.pickupAt),
-            ops.returnPickupAt ? stockholmLabel(ops.returnPickupAt) : "—",
+            zonedLabel(ops.pickupAt, timeZoneOf(record.zoneId)),
+            ops.returnPickupAt ? zonedLabel(ops.returnPickupAt, timeZoneOf(record.zoneId)) : "—",
             ops.category ?? "economy",
             record.driverId ?? "Unassigned",
             record.status,

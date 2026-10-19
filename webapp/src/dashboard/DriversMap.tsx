@@ -16,6 +16,7 @@ import type { SurgeStyle } from "../pricing/surgeGeo";
 import { installSurgeLayers, updateSurgeLayers } from "../pricing/surgeLayers";
 import { along, type LatLng } from "./route";
 import { WaybillDialog } from "./TripCard";
+import { useEscape } from "../ui/useEscape";
 
 const STYLE = {
   version: 8 as const,
@@ -364,6 +365,8 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
   const request = requestId ? requests.find((item) => item.tripId === requestId) ?? null : null;
   const trip = selected && tripFor ? tripFor(selected) : null;
   const info = selected && infoFor ? infoFor(selected.id) : null;
+  // Escape closes the rider panel like its close button (the driver panel handles its own).
+  useEscape(() => setRequestId(null), Boolean(request && !selected));
 
   // Draw or clear the selected driver's route and its A / B / next pins.
   const routeKey = selected && trip && routeShown ? `${selected.id}:${selected.progress.toFixed(3)}:${trip.next?.id ?? ""}` : "";

@@ -342,7 +342,10 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(trial.getByRole("status")).toContainText("beyond Movera's commission");
   await none.getByLabel("Highest fare raise").fill("900");
   await none.getByLabel("Highest fare raise").blur();
-  await expect(none.getByLabel("Highest fare raise")).toHaveValue("500");
+  // Over the limit stays as typed and is marked, instead of silently becoming 500 (UI-10).
+  await expect(none.getByLabel("Highest fare raise")).toHaveValue("900");
+  await expect(none.getByLabel("Highest fare raise")).toHaveAttribute("aria-invalid", "true");
+  await expect(none.locator(".num-field-error")).toContainText("Max 500");
   await none.getByLabel("Highest fare raise").fill("300");
 
   await page.getByRole("region", { name: "Movera gives a ride to a driver" }).getByLabel("Time to accept a ride assigned by Movera").fill("90");
@@ -424,7 +427,10 @@ test("offer card details, Exclusive reasons, hidden Radar trips and going offlin
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toHaveCount(0);
   await page.getByLabel("Offline after offers not accepted").fill("150");
   await page.getByLabel("Offline after offers not accepted").blur();
-  await expect(page.getByLabel("Offline after offers not accepted")).toHaveValue("99");
+  await expect(page.getByLabel("Offline after offers not accepted")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText(/^Max 99\b/)).toBeVisible();
+  await page.getByLabel("Offline after offers not accepted").fill("99");
+  await expect(page.getByLabel("Offline after offers not accepted")).not.toHaveAttribute("aria-invalid", "true");
 
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();

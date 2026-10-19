@@ -123,3 +123,6 @@ export const ACTION_REASONS = [
   "Cut off",
   "Other",
 ] as const;
+
+/** Longest private note on a driver or rider, in characters (UI-13). */
+export const NOTE_MAX = 2000;

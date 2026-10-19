@@ -168,7 +168,7 @@ function Authed() {
         <Route path="payments" element={<Screen id="payments" />} />
         <Route path="payments/:id" element={<PaymentPage />} />
         <Route path="payouts" element={<Screen id="payouts" />} />
-        <Route path="payouts/:id" element={<RecordPage label="Payout" list="/payouts" />} />
+        <Route path="payouts/:id" element={<RecordPage kind="payouts" label="Payout" list="/payouts" />} />
         <Route path="zones" element={<Screen id="zones" />} />
         <Route path="zones/:zoneId" element={<ZoneDetailPage />} />
         <Route path="pricing" element={<Screen id="pricing" />} />
@@ -176,7 +176,7 @@ function Authed() {
         <Route path="tickets/:id" element={<SupportPage />} />
         <Route path="chat" element={<Screen id="chat" />} />
         <Route path="incidents" element={<Screen id="incidents" />} />
-        <Route path="incidents/:id" element={<RecordPage label="Incident" list="/incidents" />} />
+        <Route path="incidents/:id" element={<RecordPage kind="incidents" label="Incident" list="/incidents" />} />
         <Route path="risk" element={<Screen id="risk" />} />
         <Route path="messages" element={<Screen id="messages" />} />
         <Route path="content" element={<Screen id="content" />} />

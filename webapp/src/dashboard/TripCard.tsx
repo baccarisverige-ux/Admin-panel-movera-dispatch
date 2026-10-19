@@ -68,9 +68,10 @@ export function WaybillDialog({ waybill, onClose }: { waybill: Waybill; onClose:
   const card = useRef<HTMLDivElement>(null);
   useEffect(() => {
     card.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // On document, so it runs before the driver panel's window listener and only the waybill closes.
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); onClose(); } };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
   const rows: [string, string][] = [
     ["Waybill number", waybill.number],

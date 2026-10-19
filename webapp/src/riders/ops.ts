@@ -1,3 +1,5 @@
+import { NOTE_MAX } from "../domain/labels.ts";
+
 export type RiderPrivacyState = "none" | "new" | "processing" | "done";
 
 export type RiderWalletEntry = {
@@ -173,7 +175,7 @@ export function setRiderNote(book: RiderOpsBook, rider: RiderSeed, note: string,
   const current = riderOps(book, rider);
   return withRider(book, rider, {
     ...current,
-    privateNote: note.trim(),
+    privateNote: note.trim().slice(0, NOTE_MAX),
     activity: activity(current, `Private note updated by ${actorId}`),
   });
 }

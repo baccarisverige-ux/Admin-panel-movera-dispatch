@@ -62,6 +62,8 @@ book = setDriverCategory(book, independent, "premium", true, "lena");
 assert(driverOps(book, independent).categories.premium, "category eligibility can be enabled");
 book = setDriverNote(book, independent, "Call after 14:00", "lena");
 assert(driverOps(book, independent).note === "Call after 14:00", "private note persists");
+// UI-13: a pasted 3000-character note is capped at 2000 characters.
+assert(driverOps(setDriverNote(book, independent, "x".repeat(3000), "lena"), independent).note.length === 2000, "private note is capped at 2000 characters");
 
 const badVehicleBook = updateVehicleOps(book, vehicleSeed, { category: "xl", seats: 4 });
 assert(driverActivationIssue(badVehicleBook, independent, vehicleOps(badVehicleBook, vehicleSeed))?.includes("6 seats"), "vehicle rule blocks activation");

@@ -1290,6 +1290,11 @@ fieldset input[type=checkbox] {
   display:none
 }
 
+.sidebar-close,
+.sidebar-backdrop {
+  display:none
+}
+
 @media(max-width:1180px) {
   .fare-grid {
     grid-template-columns:repeat(3,1fr)
@@ -1306,8 +1311,13 @@ fieldset input[type=checkbox] {
 }
 
 @media(max-width:900px) {
-  html, body {
-    overflow-x: hidden
+  /* Clip sideways overflow on the shell, not on html/body: hidden on body made body the scroll container,
+     so the sticky topbar scrolled away (UI-07), and clipping the root also clips the phone viewport. */
+  .app-shell {
+    overflow-x: clip
+  }
+  html {
+    scroll-padding-top:var(--topbar-h, 0px)
   }
   .sidebar {
     transform:translateX(-100%);
@@ -1315,6 +1325,22 @@ fieldset input[type=checkbox] {
   }
   .sidebar.open {
     transform:translateX(0)
+  }
+  .sidebar-backdrop {
+    display:block;
+    position:fixed;
+    inset:0;
+    z-index:29;
+    background:rgba(16,24,32,.32)
+  }
+  .sidebar-close {
+    display:grid;
+    margin-left:auto;
+    width:34px;
+    height:34px;
+    background:transparent;
+    border-color:rgba(255,255,255,.18);
+    color:#fff
   }
   .workspace {
     margin-left:0

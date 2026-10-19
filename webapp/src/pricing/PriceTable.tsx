@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { NumberField } from "./NumberField";
-import { PRICE_ROWS, currencySymbol, inputStep, type CategoryDef, type CategoryPrice, type PriceField, type Problem, type ZoneBook } from "./zonePricing";
+import { PRICE_ROWS, currencySymbol, inputStep, priceMax, type CategoryDef, type CategoryPrice, type PriceField, type Problem, type ZoneBook } from "./zonePricing";
 import type { MarketId } from "../markets/markets";
 
 type Props = {
@@ -83,7 +83,7 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
                           value={price[field]}
                           unit={unitOf(row.unit)}
                           step={row.unit === "money" ? inputStep(currency) : 1}
-                          max={row.unit === "pct" ? 100 : undefined}
+                          max={priceMax(field, currency)}
                           disabled={!canEdit}
                           changed={changed}
                           invalid={bad.has(`prices.${category.id}.${field}`)}

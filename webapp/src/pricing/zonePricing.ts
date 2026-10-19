@@ -206,6 +206,38 @@ export function roundMoney(value: number, id: MarketId): number {
   return roundTo(value, CURRENCY[id].step);
 }
 
+/**
+ * Sanity maxima (UI-05), in Swedish kronor and converted like the default prices (about 95 € or 300 DT for
+ * a 1 000 kr base fare). They are about 20 to 35 times the default Movera prices, so no real price is
+ * blocked, but a typo such as 100 000 kr cannot be published.
+ */
+const PRICE_MAX_SEK: Record<Exclude<PriceField, "freeWaitMin" | "appFeePct">, number> = {
+  base: 1_000, perKm: 100, perMin: 50, waitPerMin: 50, stopWaitPerMin: 50, noShowFee: 1_000,
+  extraStopFee: 500, babySeatFee: 500, childSeatFee: 500, minimum: 2_000, maximum: 50_000,
+};
+const FEE_MAX_SEK = { airportPickup: 1_000, airportDropoff: 1_000, reservationFee: 1_000, cleaningFee: 2_000 } as const;
+const ROUTE_MAX_SEK = 20_000;
+const TIP_MAX_SEK = 1_000;
+
+/** Highest value a price row accepts in a market: money rows by currency, app fee 50 %, free waiting 30 min. */
+export function priceMax(field: PriceField, id: MarketId): number {
+  if (field === "appFeePct") return 50;
+  if (field === "freeWaitMin") return 30;
+  return fromSek(PRICE_MAX_SEK[field], id);
+}
+
+export function feeMax(key: keyof typeof FEE_MAX_SEK, id: MarketId): number {
+  return fromSek(FEE_MAX_SEK[key], id);
+}
+
+export function routeMax(id: MarketId): number {
+  return fromSek(ROUTE_MAX_SEK, id);
+}
+
+export function tipMax(id: MarketId): number {
+  return fromSek(TIP_MAX_SEK, id);
+}
+
 export function currencySymbol(id: MarketId): string {
   return { SE: "kr", FR: "€", TN: "DT" }[id];
 }
@@ -353,12 +385,15 @@ const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDef[]): Problem[] {
   const problems: Problem[] = [];
   const add = (path: string, message: string) => problems.push({ path, message });
+  const currency = currencyOf(book.zoneId);
   for (const category of categories.filter((item) => !item.archived)) {
     const price = book.prices[category.id];
     if (!price) continue;
     for (const row of PRICE_ROWS) {
       const value = price[row.field];
+      const max = priceMax(row.field, currency);
       if (!Number.isFinite(value) || value < 0) add(`prices.${category.id}.${row.field}`, `${category.label}: ${row.label} must be 0 or more.`);
+      else if (value > max && row.field !== "appFeePct" && row.field !== "freeWaitMin") add(`prices.${category.id}.${row.field}`, `${category.label}: ${row.label} can be at most ${short(max)} ${currencySymbol(currency)}.`);
     }
     if (price.maximum && price.minimum > price.maximum) add(`prices.${category.id}.minimum`, `${category.label}: minimum fare is higher than the maximum fare.`);
     if (price.appFeePct > 50) add(`prices.${category.id}.appFeePct`, `${category.label}: app fee can be at most 50%.`);
@@ -370,11 +405,14 @@ export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDe
   if (book.fleetCommissionPct < 0 || book.fleetCommissionPct > 30) add("commission.fleet", "Fleet owner share must be between 0 and 30%.");
   for (const [key, value] of Object.entries(book.fees)) {
     if (typeof value === "number" && (!Number.isFinite(value) || value < 0)) add(`fees.${key}`, "Fees must be 0 or more.");
+    else if (key in FEE_MAX_SEK && typeof value === "number" && value > feeMax(key as keyof typeof FEE_MAX_SEK, currency)) add(`fees.${key}`, `Fees can be at most ${short(feeMax(key as keyof typeof FEE_MAX_SEK, currency))} ${currencySymbol(currency)}.`);
   }
   if (!book.fees.tips.length || book.fees.tips.some((tip) => !Number.isFinite(tip) || tip <= 0)) add("fees.tips", "Tip presets need at least one amount above 0.");
+  else if (book.fees.tips.some((tip) => tip > tipMax(currency))) add("fees.tips", `Tip presets can be at most ${short(tipMax(currency))} ${currencySymbol(currency)}.`);
   for (const route of book.routes) {
     if (!route.from.trim() || !route.to.trim()) add(`routes.${route.id}`, "A fixed route needs a from and a to place.");
     if (!(route.price > 0)) add(`routes.${route.id}`, `Fixed route ${route.from} → ${route.to} needs a price above 0.`);
+    else if (route.price > routeMax(currency)) add(`routes.${route.id}`, `Fixed route ${route.from} → ${route.to} can cost at most ${short(routeMax(currency))} ${currencySymbol(currency)}.`);
   }
   const smart = book.smart;
   if (!TIME.test(smart.activeFrom) || !TIME.test(smart.activeTo)) add("smart.active", "Active hours must be like 06:00.");
