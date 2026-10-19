@@ -11,7 +11,7 @@ import { emptySafety, safetyAction, validateSafety, type SafetyBook } from "../s
 import { can, type AgentScope, type Role } from "../auth/permissions.ts";
 import { commandById } from "../commands/registry.ts";
 import { catalogFor, type CatalogEntry } from "../data/catalog.ts";
-import { CURRENCY, TIME_ZONE } from "../domain/contract.ts";
+import { CURRENCY, TIME_ZONE, nextStatus, type TripCommand } from "../domain/contract.ts";
 import {
   addAudit,
   findHit,
@@ -142,8 +142,20 @@ function resolveTargetScope(db: DemoDb, input: CommandInput): string {
 }
 
 function resolveTargetState(db: DemoDb, input: CommandInput): string | undefined {
-  return input.entityState ?? targetRecord(db, input.targetId, input.collection)?.status;
+  const record = targetRecord(db, input.targetId, input.collection);
+  // A trip's state is the stored one, never what the client says it saw.
+  if (input.collection === "trips" && record?.status) return record.status;
+  return input.entityState ?? record?.status;
 }
+
+/** Admin trip commands that move the lifecycle, by their contract command (contract.json#transitions, actor admin). */
+const TRIP_LIFECYCLE: Record<string, TripCommand> = {
+  "admin.trip.cancel": "cancel",
+  "admin.trip.offer": "assign",
+  "admin.trip.reassign": "reassign",
+  "admin.trip.noShow": "no_show",
+  "admin.trip.complete": "complete",
+};
 
 function scopeAllowed(actorScope: AgentScope, scope: string): boolean {
   if (!scope || scope === "all") return true;
@@ -300,6 +312,15 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       }
       if (actionSpec.allowedStates && resolvedState && !actionSpec.allowedStates.includes(resolvedState)) {
         reject(422, `${actionSpec.label} is not allowed while the record is ${resolvedState}.`);
+      }
+      const lifecycle = raw.collection === "trips" ? TRIP_LIFECYCLE[raw.action] : undefined;
+      if (lifecycle) {
+        // The server derives the next status from the shared table; the client's patch cannot pick it.
+        const to = resolvedState ? nextStatus(resolvedState, lifecycle, "admin") : null;
+        if (!to) reject(409, `invalid_transition: ${actionSpec.label} is not allowed while the trip is ${resolvedState ?? "unknown"}.`);
+        raw = { ...raw, patch: { ...(raw.patch ?? {}), status: to } };
+      } else if (raw.collection === "trips" && raw.patch && "status" in raw.patch) {
+        reject(422, `${actionSpec.label} cannot change the trip status.`);
       }
 
       if (raw.action.startsWith("admin.safety.")) {

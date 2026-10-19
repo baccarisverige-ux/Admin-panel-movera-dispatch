@@ -6,6 +6,7 @@ import { useSession } from "../auth/SessionContext.tsx";
 import { commandById } from "../commands/registry.ts";
 import { useAdminApi } from "./AdminApiContext.tsx";
 import type { CommandInput } from "./create.ts";
+import type { TripRecord } from "./seed.ts";
 import { useMarketScope } from "../markets/useMarketScope.ts";
 import { parseZoneList } from "../markets/markets.ts";
 
@@ -62,7 +63,8 @@ export function useRiders(scope: string | null) {
 }
 
 export function useTrips(scope: string | null) {
-  return useRecords("trips", scope);
+  const query = useRecords("trips", scope);
+  return { ...query, data: query.data as TripRecord[] | undefined };
 }
 
 export function useSearch(query: string) {

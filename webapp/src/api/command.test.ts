@@ -285,4 +285,19 @@ await api.setFault("none");
 const recovered = await api.command(transientInput);
 assert(recovered.status === "committed", "same idempotency key can safely retry after pre-commit transient failure");
 
+// Trip lifecycle commands follow the shared transition table on the server side, not the client's patch or claimed state.
+const lifeTrips = await api.list("trips", null);
+const accepted = lifeTrips.find((trip) => trip.status === "accepted")!;
+const finished = lifeTrips.find((trip) => trip.status === "completed")!;
+const onTrip = lifeTrips.find((trip) => trip.status === "in_trip")!;
+const tripCommand = (action: string, targetId: string, key: string, patch: Record<string, string | null>, entityState?: string) =>
+  api.revision().then((rev) => api.command({ action, targetId, reason: "Ops check", actorId: "lena", actorRole: "ops", actorScope: ALL, idempotencyKey: key, expectedRev: rev, collection: "trips", patch, entityState, before: "", after: "" }));
+await tripCommand("admin.trip.reassign", accepted.id, "reassign-1", { driverId: null, status: "accepted" });
+assert((await api.list("trips", null)).find((trip) => trip.id === accepted.id)!.status === "searching", "reassign lands in searching whatever the client patch says");
+await tripCommand("admin.trip.offer", accepted.id, "assign-1", { driverId: "D0003" });
+assert((await api.list("trips", null)).find((trip) => trip.id === accepted.id)!.status === "offered", "assign lands in offered; the driver still accepts");
+await expectStatus(tripCommand("admin.trip.cancel", finished.id, "cancel-lie", { status: "cancelled_by_admin" }, "searching"), 422, "a client-claimed state cannot unlock a terminal trip");
+await expectStatus(tripCommand("admin.trip.adjust", onTrip.id, "status-sneak", { status: "completed" }), 422, "a non-lifecycle command cannot change the status");
+assert((await api.list("trips", null)).find((trip) => trip.id === onTrip.id)!.status === "in_trip", "status unchanged after the refused sneak");
+
 console.log("generic command engine ok");

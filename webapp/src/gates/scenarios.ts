@@ -18,7 +18,7 @@ export function chapter16(): ScenarioResult[] {
 
   const apps = APPS.map((app) => `${app.name} ${app.sha.slice(0, 7)}`).join(" and ");
   const sameStatuses = tripContractMatchesApps();
-  sim("T01", false, sameStatuses ? `${apps} are live frontends and use the same 18 trip statuses. They do not share a trip id with this admin.` : "Trip statuses do not match the apps.");
+  sim("T01", false, sameStatuses ? `${apps} are live frontends and use the same 19 trip statuses (contract v0.3.0). They do not share a trip id with this admin.` : "Trip statuses do not match the apps.");
   sim("T02", false, "The admin refuses a finished trip. The driver frontend has a cancelled-by-Movera sheet. There is no shared trip, so the fee is not proven in both apps.");
   sim("T03", false, "Two drivers claiming the same trip is not simulated.");
   sim("T04", false, `${apps} exist. Resume after background was not run on them.`);
