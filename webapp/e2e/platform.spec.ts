@@ -62,6 +62,18 @@ test("team: limits and sign-in safety each have switches and are kept", async ({
   await expect(page.getByRole("switch", { name: "2-step code for Viewer / analyst on" })).not.toBeChecked();
 });
 
+test("team: saved settings that nothing applies yet say so (C-12)", async ({ page }) => {
+  await session(page);
+  for (const tab of ["roles", "limits", "security"]) {
+    await page.goto(`/team?tab=${tab}`);
+    await expect(page.getByTestId("not-enforced")).toHaveCount(1);
+    await expect(page.getByTestId("not-enforced")).toContainText("Not enforced yet.");
+  }
+  await page.goto("/team/maja");
+  await expect(page.getByRole("heading", { name: "Maja Holm", level: 2 })).toBeVisible();
+  await expect(page.getByTestId("not-enforced")).toContainText("Not enforced yet. The custom role, the 2-step setting and the idle time are saved for the backend.");
+});
+
 test("audit: search, filters, details with who and before/after, and export", async ({ page }) => {
   await session(page);
   await page.goto("/settings");

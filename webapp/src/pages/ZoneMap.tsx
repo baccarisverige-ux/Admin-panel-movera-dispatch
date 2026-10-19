@@ -143,7 +143,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
     zoneStore.ensureCountry(country);
   }, [country]);
 
-  function useTool(spec: ToolSpec) {
+  function applyTool(spec: ToolSpec) {
     if (spec.needsZone && !selected && !wizard) {
       zoneStore.notify("Pick a zone on the map or in the list first.");
       return;
@@ -169,7 +169,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
         return;
       }
       const spec = TOOLS.find((item) => item.key === key);
-      if (spec) useTool(spec);
+      if (spec) applyTool(spec);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -229,7 +229,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
                 aria-label={spec.label}
                 title={`${spec.label} (${spec.key})`}
                 disabled={!canEdit && spec.tool !== "render" && spec.target !== "measure"}
-                onClick={() => useTool(spec)}
+                onClick={() => applyTool(spec)}
               >
                 {spec.icon}
                 <span>{spec.label}</span>

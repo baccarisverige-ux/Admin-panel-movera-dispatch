@@ -61,7 +61,7 @@ export function TripsPage() {
   const [peekId, setPeekId] = useState<string | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [notice, setNotice] = useState("");
-  const rows = trips.data ?? [];
+  const rows = useMemo(() => trips.data ?? [], [trips.data]);
   const zones = useMemo(() => [...new Set(rows.map((trip) => trip.zoneId))], [rows]);
   const driverNames = useMemo(() => new Map((drivers.data ?? []).map((row) => [row.id, row.name])), [drivers.data]);
 
