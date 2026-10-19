@@ -3,6 +3,7 @@ import { Calculator, X } from "lucide-react";
 import type { MarketId } from "../markets/markets";
 import { NumberField } from "./NumberField";
 import { SurgeSlider } from "./SurgeSlider";
+import { useEscape } from "../ui/useEscape";
 import { money, quoteRide, type CategoryDef, type QuoteInput, type ZoneBook } from "./zonePricing";
 
 type Props = {
@@ -22,6 +23,7 @@ export function TestRide({ zoneName, currency, categories, book, liveSurge, draf
     categoryId: enabled[0]?.id ?? "economy", km: 8, minutes: 18, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, childSeats: 0,
     airportPickup: false, airportDropoff: false, reservation: false, surge: liveSurge, fixedRouteId: null,
   });
+  useEscape(onClose);
   const set = (patch: Partial<QuoteInput>) => setInput((current) => ({ ...current, ...patch }));
   const quote = quoteRide(book, input);
   const routes = book.routes.filter((route) => route.categoryId === input.categoryId);

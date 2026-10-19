@@ -188,7 +188,9 @@
 .fd-compose { display: flex; gap: 8px; align-items: flex-end; }
 .fd-compose textarea { flex: 1; min-height: 46px; resize: vertical; border-radius: 12px; }
 
-.fd-note { padding: 12px 14px; border-radius: 12px; background: #fffbe8; border: 1px solid #f3e3a3; font-size: 14px; }
+.fd-note { padding: 12px 14px; border-radius: 12px; background: #fffbe8; border: 1px solid #f3e3a3; font-size: 14px; overflow-wrap: anywhere; }
+/* Long unbroken notes (a pasted link) wrap instead of running off the card (UI-13). */
+.fd-note-text, .fd-timeline li { overflow-wrap: anywhere; }
 .fd-textarea { display: grid; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
 .fd-textarea textarea { min-height: 90px; }
 .fd-timeline { list-style: none; margin: 0 0 14px; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 8px; font-size: 13px; }

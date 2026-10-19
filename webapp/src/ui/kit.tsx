@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { can, type Role } from "../auth/permissions";
 import { CommandButton } from "./CommandButton";
+import { useDialogFocus } from "./useDialogFocus";
 
 export function StatusDot({ tone, children }: { tone: "green" | "amber" | "red" | "muted"; children: ReactNode }) {
   return (
@@ -135,24 +136,24 @@ export function DocumentViewer() {
   );
 }
 
-export function ConfirmDialog({
-  open,
-  record,
-  reasons,
-  typed,
-  onConfirm,
-  onClose,
-}: {
+type ConfirmDialogProps = {
   open: boolean;
   record: string;
   reasons: string[];
   typed: string;
   onConfirm: (reason: string) => void;
   onClose: () => void;
-}) {
+};
+
+/** Mounted only while open, so every opening starts with an empty typed id and the first reason. */
+export function ConfirmDialog(props: ConfirmDialogProps) {
+  return props.open ? <ConfirmDialogCard {...props} /> : null;
+}
+
+function ConfirmDialogCard({ record, reasons, typed, onConfirm, onClose }: ConfirmDialogProps) {
   const [reason, setReason] = useState(reasons[0] ?? "Other");
   const [text, setText] = useState("");
-  if (!open) return null;
+  const root = useDialogFocus(true, onClose);
   const confirmed = typed.length === 0 || text === typed;
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -160,7 +161,7 @@ export function ConfirmDialog({
     onConfirm(reason);
   }
   return (
-    <div className="modal open" role="presentation">
+    <div ref={root} tabIndex={-1} className="modal open" role="presentation">
       <form className="modal-card" role="dialog" aria-modal="true" aria-label="Confirm" onSubmit={submit}>
         <h3>Confirm</h3>
         <p>This acts on {record}.</p>

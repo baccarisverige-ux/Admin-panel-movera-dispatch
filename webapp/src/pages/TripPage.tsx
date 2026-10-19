@@ -50,10 +50,10 @@ import {
   reassignBlock,
   riderIdFor,
   startedAt,
-  stockholmLabel,
   timelineOf,
   waitingBlock,
   waybill,
+  zoneTimeLabel,
 } from "../trips/present";
 import { AdminActions, ChatCalls, Section, SplitView, Waiting, agentName, entryLine } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
@@ -205,7 +205,7 @@ export function TripPage() {
           <h2>Trip {trip.id}</h2>
           <p>
             <StatusDot tone={tone}>{statusLabel(trip.status)}</StatusDot>
-            {" "}{trip.name} · {zone?.name ?? trip.zoneId} · {categoryOf(trip.id).label} · {stockholmLabel(startedAt(trip.id))}
+            {" "}{trip.name} · {zone?.name ?? trip.zoneId} · {categoryOf(trip.id).label} · {zoneTimeLabel(startedAt(trip.id), trip.zoneId)}
             {flagged ? <span className="op-status problem"><Flag size={11} aria-hidden="true" /> Flagged</span> : null}
           </p>
         </div>
@@ -585,7 +585,7 @@ export function TripPage() {
         {entries.length ? (
           <ul className="op-history" aria-label="Admin work on this trip">
             {entries.map((entry) => (
-              <li key={entry.id}><time>{stockholmLabel(entry.at)}</time><b>{agentName(entry.actorId)}</b><span>{entryLine(entry, money)}</span></li>
+              <li key={entry.id}><time>{zoneTimeLabel(entry.at, trip.zoneId)}</time><b>{agentName(entry.actorId)}</b><span>{entryLine(entry, money)}</span></li>
             ))}
           </ul>
         ) : null}

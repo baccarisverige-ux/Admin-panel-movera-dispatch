@@ -13,9 +13,10 @@ import {
   reservationOps,
   reservationWarning,
   scheduleReturnRide,
-  stockholmLabel,
-  stockholmLocalToIso,
-  stockholmLocalValue,
+  timeZoneCity,
+  zonedLabel,
+  zonedLocalToIso,
+  zonedLocalValue,
   touchReservation,
   unassignReservation,
   useAudit,
@@ -123,9 +124,12 @@ export function ReservationDetailPage() {
   const cancelPrepared = touchReservation(book, record, agent?.id ?? "", "Reservation cancelled");
   const noShowPrepared = touchReservation(book, record, agent?.id ?? "", "Rider did not show up");
 
-  const shownReturnLocal = returnLocal || (ops.returnPickupAt ? stockholmLocalValue(ops.returnPickupAt) : "");
+  // Times are shown and typed in the reservation zone's own time zone (Tunis has no DST and is UTC+1).
+  const timeZone = market(country).timeZone;
+  const city = timeZoneCity(timeZone);
+  const shownReturnLocal = returnLocal || (ops.returnPickupAt ? zonedLocalValue(ops.returnPickupAt, timeZone) : "");
   const parsedReturn = shownReturnLocal
-    ? stockholmLocalToIso(shownReturnLocal, returnDisambiguation)
+    ? zonedLocalToIso(shownReturnLocal, timeZone, returnDisambiguation)
     : { iso: undefined, error: undefined, ambiguous: false };
   const returnPrepared = scheduleReturnRide(book, record, parsedReturn.iso ?? null, agent?.id ?? "");
   const removeReturnPrepared = scheduleReturnRide(book, record, null, agent?.id ?? "");
@@ -151,8 +155,8 @@ export function ReservationDetailPage() {
       <div className="split">
         <article className="panel" data-testid="reservation-summary">
           <h3>Schedule</h3>
-          <p>Pickup {stockholmLabel(ops.pickupAt)} · Europe/Stockholm.</p>
-          <p>Return {ops.returnPickupAt ? stockholmLabel(ops.returnPickupAt) : "Not scheduled"}.</p>
+          <p>Pickup {zonedLabel(ops.pickupAt, timeZone)} · {timeZone}.</p>
+          <p>Return {ops.returnPickupAt ? zonedLabel(ops.returnPickupAt, timeZone) : "Not scheduled"}.</p>
           <p>Driver {record.driverId ?? "Unassigned"}.</p>
           <p>
             Rider {rider ? <Link to={`/riders/${rider.id}`}>{rider.name}</Link> : record.name}
@@ -393,7 +397,7 @@ export function ReservationDetailPage() {
 
       <article className="panel" data-testid="reservation-return">
         <h3>Return ride</h3>
-        <p>Return scheduling is stored as an absolute instant and displayed in Europe/Stockholm.</p>
+        <p>Return scheduling is stored as an absolute instant and displayed in {timeZone}.</p>
         <div className="field-grid">
           <label>
             Return pickup
@@ -419,7 +423,7 @@ export function ReservationDetailPage() {
           </label>
         </div>
         {parsedReturn.error ? <p className="state-line">{parsedReturn.error}</p> : null}
-        {parsedReturn.ambiguous ? <p className="state-line">This Stockholm local time occurs twice because the DST clock moves back. Choose which occurrence is intended.</p> : null}
+        {parsedReturn.ambiguous ? <p className="state-line">This {city} local time occurs twice because the DST clock moves back. Choose which occurrence is intended.</p> : null}
         <div className="actions">
           <CommandButton
             command="admin.reservation.return"
@@ -438,7 +442,7 @@ export function ReservationDetailPage() {
             title={parsedReturn.error ?? returnPrepared.error}
             onDone={() => {
               setReturnLocal("");
-              setNotice("Return ride saved with Stockholm DST validation.");
+              setNotice(`Return ride saved with ${city} DST validation.`);
             }}
           >
             Save return ride

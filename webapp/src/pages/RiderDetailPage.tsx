@@ -60,6 +60,7 @@ import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, waitText } from "../riders/ui";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
+import { NOTE_MAX } from "../domain/labels";
 import { SensitiveValue } from "../ui/SensitiveValue";
 import { TabPanel, Tabs } from "../ui/Tabs";
 
@@ -525,8 +526,8 @@ export function RiderDetailPage() {
             </section>
             <section className="fd-box">
               <h3>Private note</h3>
-              <p>{ops.privateNote || "No private note."}</p>
-              <textarea aria-label="Private internal note" rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
+              <p className="fd-note-text">{ops.privateNote || "No private note."}</p>
+              <textarea aria-label="Private internal note" rows={3} value={note} maxLength={NOTE_MAX} onChange={(event) => setNote(event.target.value)} />
               <CommandButton command="admin.rider.note" className="dash-btn small" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={ops.privateNote || "empty"} after={note || "empty"} expectedSliceRev={book.draftRev} sliceKey="riderOps" value={setRiderNote(book, seed, note, me)} disabled={!note.trim()} onDone={() => { setNotice("Private rider note saved."); setNote(""); }}>Save private note</CommandButton>
               {ops.accountReason ? <p className="fine">Latest account reason: {ops.accountReason}</p> : null}
             </section>

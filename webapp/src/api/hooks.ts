@@ -23,7 +23,7 @@ export type { BankAccount, PaymentMethod, Payout } from "../payments/book.ts";
 export { bankReview, bankValidation, defaultBankReview, defaultFinanceBook, defaultMethodPolicy, issueWalletVoucher, markPayoutPaid, normalizeFinanceBook, paymentPolicy, paymentPolicyKey, payoutState, reviewBank, runReconciliation, savePaymentPolicy, voidWalletVoucher, WALLET_TOP_UPS_ORE } from "../payments/finance.ts";
 export type { BankReview, FinanceBook, PaymentPolicyContext, PayoutState, ReconciliationInput, ReconciliationRun, WalletVoucher } from "../payments/finance.ts";
 export { answerAsk, askDriver, currentAsk, notAccepted, raiseFare } from "../reservations/book.ts";
-export { assignReservation, cancelReservation, emptyReservationBook, needsDriverSoon, normalizeReservationBook, recordReservationContact, recordReservationOffer, reservationCandidates, reservationOps, reservationWarning, saveReservationPolicy, scheduleReturnRide, stockholmLabel, stockholmLocalToIso, stockholmLocalValue, touchReservation, unassignReservation, DEFAULT_RESERVATION_POLICY, GIVE_UP_MINUTES } from "../reservations/book.ts";
+export { assignReservation, cancelReservation, emptyReservationBook, needsDriverSoon, normalizeReservationBook, recordReservationContact, recordReservationOffer, reservationCandidates, reservationOps, reservationWarning, saveReservationPolicy, scheduleReturnRide, stockholmLabel, stockholmLocalToIso, stockholmLocalValue, timeZoneCity, touchReservation, zonedLabel, zonedLocalToIso, zonedLocalValue, unassignReservation, DEFAULT_RESERVATION_POLICY, GIVE_UP_MINUTES } from "../reservations/book.ts";
 export type { AskState, Reservation, ReservationAsk, ReservationBook, ReservationContact, ReservationOffer, ReservationOps, ReservationPolicy, ReservationRaise, ReservationStatus } from "../reservations/book.ts";
 export { averageStars, BONUSES, hideReview } from "../growth/book.ts";
 export type { Review } from "../growth/book.ts";
@@ -34,6 +34,29 @@ export type { ConfigBook, EffectiveContext, FeatureKey, OverrideLevel, OverrideR
 export { activeScheduledBoost, defaultPricingBook, enabledCategoryIds, normalizePricingBook, pricingDiff, removeBoostSchedule, restorePricingVersion, saveBoostSchedule, savePriceZone, validateZonePrice } from "../pricing/book.ts";
 export type { BoostSchedule, PricingBook, PricingSnapshot } from "../pricing/book.ts";
 
+/**
+ * The store revision each query's data was read at (C-10). A command sends the oldest revision among the
+ * queries on screen, so a screen that shows data from before someone else's change gets a 409 instead of
+ * silently overwriting it. After any command every query is read again, so the next try is up to date.
+ */
+const readAt = new Map<string, number>();
+
+async function readTracked<T>(api: { revision: () => Promise<number> }, key: readonly unknown[], read: () => Promise<T>): Promise<T> {
+  const rev = await api.revision().catch(() => undefined);
+  const data = await read();
+  if (rev !== undefined) readAt.set(JSON.stringify(key), rev);
+  return data;
+}
+
+function screenRevision(client: ReturnType<typeof useQueryClient>): number | undefined {
+  const revs = client
+    .getQueryCache()
+    .findAll({ type: "active" })
+    .map((query) => readAt.get(JSON.stringify(query.queryKey)))
+    .filter((rev): rev is number => rev !== undefined);
+  return revs.length ? Math.min(...revs) : undefined;
+}
+
 /** `refetchMs` keeps live screens up to date by reloading on a timer. */
 export function useRecords(name: string, scope?: string | null, options: { refetchMs?: number } = {}) {
   const api = useAdminApi();
@@ -41,9 +64,10 @@ export function useRecords(name: string, scope?: string | null, options: { refet
   const resolved = useMarketScope(scope);
   const scopeDenied = resolved.denied;
   const effectiveScope = resolved.effective;
+  const queryKey = ["records", name, JSON.stringify(effectiveScope), session.agent?.id ?? "signed-out"];
   const query = useQuery({
-    queryKey: ["records", name, JSON.stringify(effectiveScope), session.agent?.id ?? "signed-out"],
-    queryFn: () => api.list(name, effectiveScope),
+    queryKey,
+    queryFn: () => readTracked(api, queryKey, () => api.list(name, effectiveScope)),
     refetchInterval: options.refetchMs,
   });
   return { ...query, scopeDenied, effectiveScope };
@@ -97,12 +121,12 @@ export function useRevision() {
 
 export function useAudit(refetchMs?: number) {
   const api = useAdminApi();
-  return useQuery({ queryKey: ["audit"], queryFn: () => api.audit(), refetchInterval: refetchMs });
+  return useQuery({ queryKey: ["audit"], queryFn: () => readTracked(api, ["audit"], () => api.audit()), refetchInterval: refetchMs });
 }
 
 export function useApprovals(refetchMs?: number) {
   const api = useAdminApi();
-  return useQuery({ queryKey: ["approvals"], queryFn: () => api.approvals(), refetchInterval: refetchMs });
+  return useQuery({ queryKey: ["approvals"], queryFn: () => readTracked(api, ["approvals"], () => api.approvals()), refetchInterval: refetchMs });
 }
 
 type Attempt = {
@@ -181,7 +205,7 @@ export function useCommands() {
     ]);
     const retry = phase === "unknown" && lastAttempt.current?.fingerprint === fingerprint;
     const idempotencyKey = extra.idempotencyKey ?? (retry ? lastAttempt.current!.idempotencyKey : newIdempotencyKey(id));
-    const expectedRev = extra.expectedRev ?? (retry ? lastAttempt.current!.expectedRev : await api.revision());
+    const expectedRev = extra.expectedRev ?? (retry ? lastAttempt.current!.expectedRev : screenRevision(client) ?? (await api.revision()));
     lastAttempt.current = { fingerprint, idempotencyKey, expectedRev };
 
     let unknown = false;
@@ -254,7 +278,8 @@ export function useSlice<T>(key: string, fallback: T, options: { enabled?: boole
   const [params]=useSearchParams();
   const requested=params.get("scope");
   const scope=agent ? { ...agent.scope, zones: requested ? canUseZone(agent,requested) ? parseZoneList(requested) : ["__scope-denied__"] : agent.scope.zones } : undefined;
-  const query = useQuery({ queryKey: ["slice", key, agent?.id, JSON.stringify(scope)], queryFn: () => api.readSlice(key, fallback, agent && scope ? { actorId:agent.id,role:agent.role,scope } : undefined), enabled:Boolean(agent) && options.enabled !== false });
+  const queryKey = ["slice", key, agent?.id, JSON.stringify(scope)];
+  const query = useQuery({ queryKey, queryFn: () => readTracked(api, queryKey, () => api.readSlice(key, fallback, agent && scope ? { actorId:agent.id,role:agent.role,scope } : undefined)), enabled:Boolean(agent) && options.enabled !== false });
   const command = useCommand(`admin.${key}.save`);
   return {
     value: query.data ?? fallback,

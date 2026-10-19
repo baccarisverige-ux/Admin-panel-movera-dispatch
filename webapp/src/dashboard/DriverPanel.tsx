@@ -7,6 +7,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { LIVE_STATES, type LiveDriver } from "./live";
 import type { LiveTrip } from "./liveTrip";
 import { TripCard } from "./TripCard";
+import { useEscape } from "../ui/useEscape";
 
 export type DriverInfo = {
   phone: string;
@@ -41,6 +42,7 @@ type Props = {
 /** Everything about a driver on the live map: who they are, what they are doing, and what to do next. */
 export function DriverPanel({ driver, color, info, trip, locale, timeZone, routeShown, following, onToggleRoute, onToggleFollow, onWaybill, onClose, withScope }: Props) {
   const access = useDashboardAccess();
+  useEscape(onClose);
   const state = LIVE_STATES.find((item) => item.id === driver.state)?.label ?? driver.state;
   return (
     <aside className="driver-panel" role="dialog" aria-label={`Driver ${driver.name}`}>

@@ -38,6 +38,8 @@ assert(riderOps(book, rider).privacy === "done", "privacy reaches done");
 
 book = setRiderNote(book, rider, "VIP airport rider", "maja");
 assert(riderOps(book, rider).privateNote === "VIP airport rider", "private note persists");
+// UI-13: a pasted 3000-character note is capped at 2000 characters.
+assert(riderOps(setRiderNote(book, rider, "x".repeat(3000), "lena"), rider).privateNote.length === 2000, "private note is capped at 2000 characters");
 
 const promo = addRiderPromotion(book, rider, "welcome20", "Welcome 20", "lena");
 assert(!promo.error, "promotion can be added");

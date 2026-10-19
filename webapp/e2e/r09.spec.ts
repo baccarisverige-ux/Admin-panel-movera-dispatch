@@ -65,12 +65,17 @@ test("R9 prices, fees and commission are drafted, published per zone and persist
 test("R9 a wrong value blocks publishing and points at the field", async ({ page }) => {
   await session(page);
   await page.goto("/pricing?zone=Z001");
-  await page.getByLabel("Norrmalm Premium Minimum fare").fill("9000");
+  await page.getByLabel("Norrmalm Premium Maximum fare").fill("50");
   const bar = page.getByRole("region", { name: "Unpublished changes" });
   await expect(bar).toContainText("Premium: minimum fare is higher than the maximum fare.");
   await expect(bar.getByRole("button", { name: "Publish changes" })).toBeDisabled();
   await expect(page.getByLabel("Norrmalm Premium Minimum fare")).toHaveAttribute("aria-invalid", "true");
+  // A value over the field's maximum stays in the box, marked, and also blocks publishing (UI-05).
+  await page.getByLabel("Norrmalm Premium Minimum fare").fill("9000");
+  await expect(bar).toContainText("Max 2000 kr.");
+  await expect(bar.getByRole("button", { name: "Publish changes" })).toBeDisabled();
   await bar.getByRole("button", { name: "Discard" }).click();
+  await expect(page.getByLabel("Norrmalm Premium Maximum fare")).toHaveValue("2700");
   await expect(page.getByLabel("Norrmalm Premium Minimum fare")).toHaveValue("88");
 });
 

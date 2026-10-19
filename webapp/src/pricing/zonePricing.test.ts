@@ -10,6 +10,7 @@ import {
   emptyPricingStore,
   normalizeStore,
   PRICE_ROWS,
+  priceMax,
   publishZones,
   quoteRide,
   restoreCategory,
@@ -145,3 +146,20 @@ assert(surgeTimeline(zoneBook(surged.store, "Z003"), surged.store.surgeLog, Date
 assert(normalizeStore({ version: 1 }).draftRev === 1 && normalizeStore(null).categories.length === 8, "older data falls back safely");
 assert(defaultZoneBook("Z001").fees.tollsPassThrough, "Sweden adds congestion tax by default");
 console.log("zone pricing ok");
+
+// UI-05: money fields have sane maxima per currency, so a typo cannot be published.
+{
+  const base = structuredClone(norrmalm);
+  base.prices.economy.base = 100_000;
+  assert(validateZoneBook(base, store.categories).some((problem) => problem.path === "prices.economy.base" && problem.message.includes("at most 1000 kr")), "a 100 000 kr base fare is refused");
+  const tn = structuredClone(tunis);
+  tn.prices.economy.base = 301;
+  assert(validateZoneBook(tn, store.categories).some((problem) => problem.path === "prices.economy.base" && problem.message.includes("300 DT")), "the cap is in dinars in Tunisia");
+  const fee = structuredClone(norrmalm);
+  fee.fees.cleaningFee = 2_001;
+  fee.fees.tips = [10, 5_000];
+  assert(validateZoneBook(fee, store.categories).some((problem) => problem.path === "fees.cleaningFee") && validateZoneBook(fee, store.categories).some((problem) => problem.path === "fees.tips"), "fees and tips have maxima too");
+  assert(priceMax("base", "SE") === 1_000 && priceMax("base", "FR") === 95 && priceMax("base", "TN") === 300 && priceMax("maximum", "SE") === 50_000, "base fare caps: 1 000 kr, 95 €, 300 DT");
+  for (const id of ["Z001", "ARN", "FR-PC", "TN-TC"]) assert(validateZoneBook(zoneBook(store, id), store.categories).length === 0, `default prices in ${id} stay valid`);
+}
+console.log("pricing bounds ok");

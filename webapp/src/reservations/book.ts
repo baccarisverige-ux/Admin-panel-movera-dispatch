@@ -449,38 +449,78 @@ export function saveReservationPolicy(
   };
 }
 
-const STOCKHOLM = new Intl.DateTimeFormat("sv-SE", {
-  timeZone: "Europe/Stockholm",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
+const STOCKHOLM_TZ = "Europe/Stockholm";
+const FORMATS = new Map<string, Intl.DateTimeFormat>();
 
-export function stockholmLocalValue(iso: string): string {
-  const parts = Object.fromEntries(STOCKHOLM.formatToParts(new Date(iso)).map((item) => [item.type, item.value]));
+function zoneFormat(timeZone: string): Intl.DateTimeFormat {
+  let format = FORMATS.get(timeZone);
+  if (!format) {
+    format = new Intl.DateTimeFormat("sv-SE", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    FORMATS.set(timeZone, format);
+  }
+  return format;
+}
+
+/** "Stockholm" for Europe/Stockholm, "Tunis" for Africa/Tunis: the city part of the zone name. */
+export function timeZoneCity(timeZone: string): string {
+  return (timeZone.split("/").at(-1) ?? timeZone).replaceAll("_", " ");
+}
+
+/** The wall-clock time of an instant in a zone, as a datetime-local value (YYYY-MM-DDTHH:mm). */
+export function zonedLocalValue(iso: string, timeZone: string): string {
+  const parts = Object.fromEntries(zoneFormat(timeZone).formatToParts(new Date(iso)).map((item) => [item.type, item.value]));
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
+export function zonedLabel(iso: string, timeZone: string): string {
+  return zoneFormat(timeZone).format(new Date(iso)).replace(" ", " · ");
+}
+
+/** Minutes the zone is ahead of UTC at an instant. */
+function offsetMinutes(ms: number, timeZone: string): number {
+  const local = zonedLocalValue(new Date(ms).toISOString(), timeZone);
+  const [date, time] = local.split("T");
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  return Math.round((Date.UTC(year, month - 1, day, hour, minute) - Math.floor(ms / 60_000) * 60_000) / 60_000);
+}
+
+/**
+ * The instant a wall-clock time in a zone stands for. A time skipped by a DST change is an error; a time
+ * that happens twice (clocks going back) is `ambiguous`, and `disambiguation` picks the occurrence.
+ */
+export function zonedLocalToIso(
+  local: string,
+  timeZone: string,
+  disambiguation: "earlier" | "later" = "earlier",
+): { iso?: string; error?: string; ambiguous?: boolean } {
+  const city = timeZoneCity(timeZone);
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
+  if (!match) return { error: `Use a valid local ${city} date and time.` };
+  const [, year, month, day, hour, minute] = match;
+  const naive = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+  // The zone's offsets a day either side cover both sides of any DST change on that day.
+  const offsets = new Set([offsetMinutes(naive - 86_400_000, timeZone), offsetMinutes(naive, timeZone), offsetMinutes(naive + 86_400_000, timeZone)]);
+  const candidates = Array.from(offsets)
+    .map((offset) => new Date(naive - offset * 60_000).toISOString())
+    .filter((iso, index, all) => zonedLocalValue(iso, timeZone) === local && all.indexOf(iso) === index)
+    .sort();
+  if (candidates.length === 0) return { error: `That ${city} local time does not exist because of the DST clock change.` };
+  const iso = disambiguation === "later" ? candidates[candidates.length - 1] : candidates[0];
+  return { iso, ambiguous: candidates.length > 1 };
+}
+
+export function stockholmLocalValue(iso: string): string {
+  return zonedLocalValue(iso, STOCKHOLM_TZ);
+}
+
 export function stockholmLabel(iso: string): string {
-  return STOCKHOLM.format(new Date(iso)).replace(" ", " · ");
+  return zonedLabel(iso, STOCKHOLM_TZ);
 }
 
 export function stockholmLocalToIso(
   local: string,
   disambiguation: "earlier" | "later" = "earlier",
 ): { iso?: string; error?: string; ambiguous?: boolean } {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
-  if (!match) return { error: "Use a valid local Stockholm date and time." };
-  const [, year, month, day, hour, minute] = match;
-  const naive = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
-  const candidates = [60, 120]
-    .map((offsetMinutes) => new Date(naive - offsetMinutes * 60_000).toISOString())
-    .filter((iso, index, all) => stockholmLocalValue(iso) === local && all.indexOf(iso) === index)
-    .sort();
-  if (candidates.length === 0) return { error: "That Stockholm local time does not exist because of the DST clock change." };
-  const iso = disambiguation === "later" ? candidates[candidates.length - 1] : candidates[0];
-  return { iso, ambiguous: candidates.length > 1 };
+  return zonedLocalToIso(local, STOCKHOLM_TZ, disambiguation);
 }

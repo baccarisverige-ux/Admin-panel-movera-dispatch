@@ -7,6 +7,7 @@ import { Card, Choice, Num, Row } from "../dispatch/fields";
 import { market, type MarketId } from "../markets/markets";
 import { logExport } from "../reports/activityLog";
 import { CommandButton } from "../ui/CommandButton";
+import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import {
   PAYOUT_OPS_KEY,
   WEEKDAYS,
@@ -96,6 +97,7 @@ export function PayoutLines({ record, fleet, ops, country, money, onNotice, cash
 /** The schedule per country: when, instant cash-out, approval and the fleet owner part. */
 export function ScheduleView({ ops, country, editable }: { ops: PayoutOps; country: MarketId; editable: boolean }) {
   const [draft, setDraft] = useState<Schedule | null>(null);
+  const fieldErrors = useFieldErrors();
   const saved = ops.schedules[country];
   const current = draft ?? saved;
   const dirty = Boolean(draft) && JSON.stringify(draft) !== JSON.stringify(saved);
@@ -103,6 +105,7 @@ export function ScheduleView({ ops, country, editable }: { ops: PayoutOps; count
   const symbol = { SE: "kr", FR: "€", TN: "DT" }[country];
   const patch = (next: Partial<Schedule>) => setDraft({ ...current, ...next });
   return (
+    <FieldErrorScope value={fieldErrors.report}>
     <div className="fn-settings">
       {!editable ? <p className="dx-readonly">Only admins who approve money can change the schedule.</p> : null}
       <fieldset className="fn-fieldset" disabled={!editable}>
@@ -137,11 +140,12 @@ export function ScheduleView({ ops, country, editable }: { ops: PayoutOps; count
       </fieldset>
       {editable ? (
         <div className="dx-publish">
-          <span className="dx-publish-text"><b>{dirty ? "Changes not saved" : "Everything is saved"}</b><small>{error ?? "Applies from the next run."}</small></span>
+          <span className="dx-publish-text"><b>{dirty ? "Changes not saved" : "Everything is saved"}</b><small>{fieldErrors.first ?? error ?? "Applies from the next run."}</small></span>
           <button data-command="admin.payout.view" type="button" className="dash-btn small ghost" disabled={!dirty} onClick={() => setDraft(null)}>Undo changes</button>
-          <CommandButton command="admin.payout.schedule" className="dash-btn small" targetId={`payout schedule ${country}`} scope="all" confirmTarget={false} before={scheduleLine(saved)} after={scheduleLine(current)} sliceKey={PAYOUT_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, schedules: { ...ops.schedules, [country]: current } }} expectedSliceRev={ops.draftRev} disabled={!dirty || Boolean(error)} onDone={() => setDraft(null)}>Save schedule</CommandButton>
+          <CommandButton command="admin.payout.schedule" className="dash-btn small" targetId={`payout schedule ${country}`} scope="all" confirmTarget={false} before={scheduleLine(saved)} after={scheduleLine(current)} sliceKey={PAYOUT_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, schedules: { ...ops.schedules, [country]: current } }} expectedSliceRev={ops.draftRev} disabled={!dirty || Boolean(error) || fieldErrors.count > 0} title={fieldErrors.first ?? error ?? undefined} onDone={() => setDraft(null)}>Save schedule</CommandButton>
         </div>
       ) : null}
     </div>
+    </FieldErrorScope>
   );
 }

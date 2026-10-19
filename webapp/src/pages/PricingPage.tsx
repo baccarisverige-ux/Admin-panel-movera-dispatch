@@ -57,7 +57,9 @@ import {
   type ZoneBook,
 } from "../pricing/zonePricing";
 import { CommandButton } from "../ui/CommandButton";
+import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { Flag } from "../ui/Flag";
+import { useDirtyWarning } from "../ui/useDirtyWarning";
 
 const TABS = [
   { id: "prices", label: "Prices", icon: CircleDollarSign },
@@ -101,6 +103,8 @@ export function PricingPage() {
   const [testOpen, setTestOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState<false | CopyPart[]>(false);
   const [catsOpen, setCatsOpen] = useState(false);
+  // Discard remounts the editors, so text still marked invalid in a box goes back to the published value too.
+  const [editorKey, setEditorKey] = useState(0);
   const surgeMap = useSurgePref("pricing", { shown: true, style: "zones" });
   const now = useNow(15_000);
   const minute = Math.floor(now / 60_000) * 60_000;
@@ -125,6 +129,10 @@ export function PricingPage() {
   const problems = validateZoneBook(book, store.categories);
   const dirty = Object.values(drafts).filter((draft) => JSON.stringify(draft) !== JSON.stringify(zoneBook(store, draft.zoneId)));
   const dirtyProblems = dirty.flatMap((draft) => validateZoneBook(draft, store.categories).map((problem) => ({ ...problem, zoneId: draft.zoneId })));
+  // Typed values that are not numbers or are over a field's maximum stay in their box until fixed (UI-05, UI-10).
+  const fieldErrors = useFieldErrors();
+  // Leaving Pricing with unpublished changes asks first, like Content, Messages and Team (UI-09).
+  useDirtyWarning(dirty.length > 0);
   const at = new Date(now).toISOString();
   const publish = agent ? publishZones(store, drafts, agent.id, "Pricing update", at) : { store, error: "Sign in again.", changes: [] };
   const undo = agent ? undoLastPublish(store, agent.id, at) : { store, error: "Sign in again." };
@@ -172,6 +180,7 @@ export function PricingPage() {
   const currentSurge = surgeOf(zoneId);
 
   return (
+    <FieldErrorScope value={fieldErrors.report}>
     <div className="pricing">
       <header className="pricing-hero">
         <div className="pricing-title">
@@ -255,7 +264,7 @@ export function PricingPage() {
       </div>
 
       <div className={testOpen ? "pricing-body with-test" : "pricing-body"}>
-        <div className="pricing-main">
+        <div className="pricing-main" key={editorKey}>
           {tab === "prices" ? (
             <>
               <section className="dash-card" aria-labelledby="prices-title">
@@ -375,10 +384,10 @@ export function PricingPage() {
           <span className="draft-dot" aria-hidden="true" />
           <div className="draft-text">
             <strong>Unpublished changes in {dirty.map((draft) => zoneById(draft.zoneId)?.name ?? draft.zoneId).join(", ")}</strong>
-            <small>{dirtyProblems.length ? dirtyProblems[0].message : `${publish.changes.length} change${publish.changes.length === 1 ? "" : "s"} · riders see them after you publish`}</small>
+            <small>{fieldErrors.first ?? (dirtyProblems.length ? dirtyProblems[0].message : `${publish.changes.length} change${publish.changes.length === 1 ? "" : "s"} · riders see them after you publish`)}</small>
           </div>
-          <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setNotice("Changes discarded."); }}>Discard</button>
-          <CommandButton command="admin.pricing.publish" className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0} title={publish.error ?? dirtyProblems[0]?.message} onDone={() => { setDrafts({}); setNotice(`Published as pricing revision ${publish.store.draftRev}.`); }}>
+          <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice("Changes discarded."); }}>Discard</button>
+          <CommandButton command="admin.pricing.publish" className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} onDone={() => { setDrafts({}); setNotice(`Published as pricing revision ${publish.store.draftRev}.`); }}>
             <Save size={15} aria-hidden="true" /> Publish changes
           </CommandButton>
         </div>
@@ -404,5 +413,6 @@ export function PricingPage() {
       ) : null}
       {catsOpen ? <CategoryManager store={store} usageOf={usageOf} agentId={agent?.id ?? null} canEdit={canPublish} locale={market.locale} onClose={() => setCatsOpen(false)} onNotice={setNotice} /> : null}
     </div>
+    </FieldErrorScope>
   );
 }

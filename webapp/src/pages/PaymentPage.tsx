@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft, Gavel, RefreshCcw } from "lucide-react";
-import { useApprovals, useCommands, useRecords, useSlice } from "../api/hooks";
+import { useApprovals, useRecords, useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { formatMoney, market } from "../markets/markets";
 import { METHOD_LABELS, PAY_OPS_KEY, emptyPayOps, factsOf, normalizePayOps, paySplit, refundLimitMinor, retryPlan, type PayOps } from "../payments/desk";
@@ -9,12 +9,12 @@ import { Cards } from "../reports/ui";
 import { REFUND_APPROVAL_MINOR } from "../commands/registry";
 import { statusLabel } from "../domain/labels";
 import { paymentTimeline, refundRows } from "../payments/ledger";
+import { CommandButton } from "../ui/CommandButton";
 
 export function PaymentPage() {
   const { id = "" } = useParams();
   const payments = useRecords("payments", null);
   const approvals = useApprovals();
-  const commands = useCommands();
   const navigate = useNavigate();
   const { agent } = useSession();
   const riders = useRecords("riders", null);
@@ -58,19 +58,6 @@ export function PaymentPage() {
           ? `Over your refund limit of ${money(limit ?? 0)}. Ask a finance admin.`
           : null;
   const matches = refundRows(payments.data ?? [], payment.id);
-
-  function refund() {
-    if (blocked) return;
-    void commands.run("admin.payment.refund", {
-      reason: "Safety review",
-      targetId: payment.id,
-      collection: "payments",
-      before: payment.status,
-      after: needsSecond ? "pending approval" : "refunded",
-      patch: { status: "refunded" },
-      amountOre: amount,
-    });
-  }
 
   return (
     <div className="dx-page fn-page pm-page">
@@ -124,29 +111,26 @@ export function PaymentPage() {
         </p>
         <p data-testid="refund-count">{matches.length}</p>
 
-        <button
-          data-command="admin.payment.refund"
+        {/* The refund asks for a reason and the payment id like every other money action; "Retry refund" only
+            becomes available when the last attempt did not commit, and re-sends with the same reason (C-15, UI-04). */}
+        <CommandButton
+          command="admin.payment.refund"
           className="primary-btn"
-          type="button"
-          disabled={Boolean(blocked) || commands.phase === "submitting"}
+          targetId={payment.id}
+          scope={payment.zoneId}
+          collection="payments"
+          before={payment.status}
+          after={needsSecond ? "pending approval" : "refunded"}
+          patch={{ status: "refunded" }}
+          amountOre={amount}
+          disabled={Boolean(blocked)}
           title={blocked ?? (needsSecond ? "Request second-agent approval" : "Refund this payment")}
-          onClick={refund}
+          retryLabel="Retry refund"
         >
           {needsSecond ? "Request refund approval" : "Refund payment"}
-        </button>
-
-        <button
-          data-command="admin.payment.refund"
-          className="secondary-btn"
-          type="button"
-          disabled={commands.phase === "submitting" || Boolean(pendingApproval)}
-          onClick={refund}
-        >
-          Retry refund
-        </button>
+        </CommandButton>
 
         {pendingApproval ? <p><Link to="/audit">Open approval queue</Link></p> : null}
-        {commands.message ? <p className="state-line">{commands.message}</p> : null}
         <p className="fn-help">{limit === null ? "You have no refund limit." : `Your refund limit is ${money(limit)}. Refunds of ${money(threshold)} or more also need a second admin.`}</p>
       </article>
     </div>

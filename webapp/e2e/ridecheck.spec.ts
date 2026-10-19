@@ -32,10 +32,12 @@ test("Dispatch › Safety: Ride check triggers with their numbers, limits and ch
   await expect(card.getByLabel("Longer than expected from")).toHaveValue("50");
   await expect(card.getByLabel("Possible crash on")).toBeChecked();
 
-  // The box keeps the number inside its limits (0.5 to 20 km).
+  // A number outside its limits (0.5 to 20 km) stays as typed and is marked with the limit (UI-10).
   await card.getByLabel("Off the route from").fill("45");
   await card.getByLabel("Off the route from").blur();
-  await expect(card.getByLabel("Off the route from")).toHaveValue("20");
+  await expect(card.getByLabel("Off the route from")).toHaveValue("45");
+  await expect(card.getByLabel("Off the route from")).toHaveAttribute("aria-invalid", "true");
+  await expect(card.locator(".num-field-error")).toContainText("Max 20");
   await card.getByLabel("Off the route from").fill("3");
   await card.getByLabel("Possible crash on").uncheck();
   const bar = page.getByRole("region", { name: "Publish" });

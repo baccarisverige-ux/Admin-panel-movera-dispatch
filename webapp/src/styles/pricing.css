@@ -591,3 +591,4 @@
 .pp-table .pp-range .num-field input { width: 100%; }
 .pp-table .pp-range-to .num-field input { width: 80px; }
 .pp-table tr.off .pp-ranges { opacity: .6; }
+.num-field-error { display: block; flex-basis: 100%; margin-top: 3px; font-size: 11px; line-height: 1.3; color: var(--status-critical); white-space: normal; }
