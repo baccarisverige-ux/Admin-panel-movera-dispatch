@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   AlertTriangle,
   BadgePercent,
@@ -89,6 +89,7 @@ function useNow(stepMs: number): number {
 
 export function PricingPage() {
   const { agent } = useSession();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { market, country, zones: scopedZones } = useMarketScope();
   const role = agent?.role ?? "viewer";
@@ -274,6 +275,10 @@ export function PricingPage() {
                   problems={problems}
                   canEdit={canPublish}
                   onChange={(categoryId, patch: Partial<CategoryPrice>) => update((draft) => { draft.prices[categoryId] = { ...draft.prices[categoryId], ...patch }; })}
+                  onOpenCancelFees={can(role, "trips.read") ? () => {
+                    if (dirty.length && !window.confirm("Your price changes are not published and will be lost. Open Rider cancel fees in Dispatch?")) return;
+                    navigate(`/dispatch?zone=${encodeURIComponent(zoneId)}&tab=rides#dx-rider-cancel-fees`);
+                  } : undefined}
                 />
               </section>
               <section className="dash-card" aria-labelledby="routes-title">

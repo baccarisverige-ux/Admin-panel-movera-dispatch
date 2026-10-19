@@ -12,10 +12,12 @@ type Props = {
   problems: Problem[];
   canEdit: boolean;
   onChange: (categoryId: string, patch: Partial<CategoryPrice>) => void;
+  /** Rider cancel fees are not set here: they live in Dispatch › Rides & stops › Rider cancel fees. Left out when the admin cannot open Dispatch. */
+  onOpenCancelFees?: () => void;
 };
 
 /** Rows are price items, columns are categories; every cell edits one value for this zone. */
-export function PriceTable({ zoneName, currency, categories, book, published, problems, canEdit, onChange }: Props) {
+export function PriceTable({ zoneName, currency, categories, book, published, problems, canEdit, onChange, onOpenCancelFees }: Props) {
   const bad = new Set(problems.map((problem) => problem.path));
   const groups = Array.from(new Set(PRICE_ROWS.map((row) => row.group)));
   const symbol = currencySymbol(currency);
@@ -52,6 +54,16 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
               <tr className="group-row">
                 <th scope="rowgroup" colSpan={categories.length + 1}>{group}</th>
               </tr>
+              {group === "Cancellation" ? (
+                <tr className="note-row">
+                  <td colSpan={categories.length + 1}>
+                    <p className="price-note" data-testid="rider-cancel-fees-pointer">
+                      <span>Rider cancel fees are set in Dispatch › Rides &amp; stops › Rider cancel fees.</span>
+                      {onOpenCancelFees ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={onOpenCancelFees}>Open Rider cancel fees</button> : null}
+                    </p>
+                  </td>
+                </tr>
+              ) : null}
               {PRICE_ROWS.filter((row) => row.group === group).map((row) => (
                 <tr key={row.field}>
                   <th scope="row">

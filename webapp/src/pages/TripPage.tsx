@@ -10,7 +10,7 @@ import { formatMoney as formatTripMoney } from "../domain/money";
 import { statusLabel } from "../domain/labels";
 import { MapPanel } from "../dispatch/maps";
 import { reasonText as cancelReasonLabel } from "../dispatch/offers";
-import { DISPATCH_KEY, emptyDispatchBook, liveCountry, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
+import { DISPATCH_KEY, emptyDispatchBook, liveCountry, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
 import { formatMoney, market, zoneById } from "../markets/markets";
 import { emptyPricingStore, normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY } from "../pricing/zonePricing";
 import { Cards } from "../reports/ui";
@@ -148,7 +148,7 @@ export function TripPage() {
   const tripAudits = (audit.data ?? []).filter((item) => item.targetId === trip.id).slice(0, 20);
   const tone = trip.status.includes("cancel") || trip.status === "failed" ? "red" : trip.status === "completed" ? "green" : "amber";
   const store = normalizeStore(pricing.value);
-  const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries);
+  const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees);
   const chat = chatOf(trip);
   const calls = callsOf(trip);
   const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })));

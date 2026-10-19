@@ -2,6 +2,7 @@ import type { DemoRecord } from "../api/seed.ts";
 import type { Role } from "../auth/permissions.ts";
 import { lengthKm, tripRoute, type LatLng } from "../dashboard/route.ts";
 import { CATEGORIES } from "../domain/contract.ts";
+import { cancelFeeAmount, cancelFeeDefaults, feeRow, type CancelFeeTable } from "../dispatch/cancelFees.ts";
 import { market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import type { ZoneBook } from "../pricing/zonePricing.ts";
 import { categoryOf, fareBreakdown, startedAt, timelineOf, tripIndex } from "./present.ts";
@@ -130,7 +131,11 @@ export type MoneySplit = {
   moveraKeeps: number;
 };
 
-export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: boolean, entries: readonly Entry[]): MoneySplit {
+/**
+ * `liveCancelFees`: the zone's Live trips table from Dispatch › Rider cancel fees (the one place rider cancel fees are set).
+ * Left out, the country's default table is used.
+ */
+export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: boolean, entries: readonly Entry[], liveCancelFees?: CancelFeeTable): MoneySplit {
   const country = countryOf(trip.zoneId);
   const minor = market(country).minorUnits;
   const index = tripIndex(trip.id);
@@ -143,7 +148,8 @@ export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: bo
   if (group === "searching") state = "estimate";
   else if (group === "live") state = "estimate";
   else if (group === "cancelled" || trip.status === "no_show") {
-    const fee = trip.status === "no_show" ? prices?.noShowFee ?? 0 : trip.status === "cancelled_by_rider" && index % 3 === 0 ? prices?.cancelFee ?? 0 : 0;
+    const riderFee = () => cancelFeeAmount(feeRow(liveCancelFees ?? cancelFeeDefaults("live", country), category), fare / minor, country);
+    const fee = trip.status === "no_show" ? prices?.noShowFee ?? 0 : trip.status === "cancelled_by_rider" && index % 3 === 0 ? riderFee() : 0;
     price = Math.round(fee * minor);
     state = price > 0 ? "cancel_fee" : "none";
   } else if (trip.status === "failed") {

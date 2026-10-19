@@ -59,6 +59,16 @@ book = policySave.book;
 assert(book.currentPolicy.version === "res-3", "policy save creates a new version");
 assert(reservationOps(book, record).policy.version === "res-1", "old booking still points at res-1");
 assert(reservationOps(book, record).policy.bookingHorizonDays === 5, "old booking values remain immutable");
+// "Free cancel after accept" is gone from the policy (Rider cancel fees in Dispatch has it). Older saves with it still open.
+assert(!("freeCancelAfterAcceptMinutes" in DEFAULT_RESERVATION_POLICY), "the policy has no free cancel time");
+const oldPolicySave = normalizeReservationBook({
+  draftRev: 4,
+  currentPolicy: { ...DEFAULT_RESERVATION_POLICY, version: "res-4", freeCancelAfterAcceptMinutes: 3 },
+  policies: { "res-4": { ...DEFAULT_RESERVATION_POLICY, version: "res-4", freeCancelAfterAcceptMinutes: 3 } },
+  reservations: {},
+});
+assert(oldPolicySave.currentPolicy.version === "res-4" && !("freeCancelAfterAcceptMinutes" in oldPolicySave.currentPolicy) && !("freeCancelAfterAcceptMinutes" in oldPolicySave.policies["res-4"]), "an older policy with free cancel after accept still opens, without it");
+assert(!saveReservationPolicy(oldPolicySave, oldPolicySave.currentPolicy).error, "and saves");
 
 const giveUpRecord: DemoRecord = { ...record, id: "B022", pickupAt: "2026-10-06T10:04:00.000Z", policyVersion: "res-2" };
 const giveUpOps = reservationOps(book, giveUpRecord);

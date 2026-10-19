@@ -9,6 +9,7 @@ import {
   editCategory,
   emptyPricingStore,
   normalizeStore,
+  PRICE_ROWS,
   publishZones,
   quoteRide,
   restoreCategory,
@@ -101,6 +102,11 @@ assert(quote.driverGets === 256.62, `driver gets 80% of 320.78, got ${quote.driv
 assert(norrmalm.prices.economy.waitPerMin === 12.26 && norrmalm.prices.premium.waitPerMin === 16.9 && norrmalm.prices.comfort.waitPerMin === 12.26, "waiting per minute");
 assert(norrmalm.prices.economy.noShowFee === 65 && norrmalm.prices.premium.noShowFee === 65, "no-show fee");
 assert(norrmalm.prices.economy.freeWaitMin === 2 && norrmalm.prices.premium.freeWaitMin === 5 && norrmalm.prices.xl.freeWaitMin === 3, "free wait");
+// The rider's free cancel time and cancel fee are set in Dispatch › Rider cancel fees only. Older saves that still have them open fine.
+assert(!PRICE_ROWS.some((row) => ["cancelFee", "freeCancelMin"].includes(row.field)) && PRICE_ROWS.some((row) => row.field === "noShowFee" && row.group === "Cancellation"), "no rider cancel fee in Pricing; the no-show fee stays");
+const oldSave = normalizeStore({ ...emptyPricingStore(), zones: { Z001: { ...defaultZoneBook("Z001"), prices: { economy: { ...norrmalm.prices.economy, cancelFee: 40, freeCancelMin: 2 } } } } });
+const reopened = zoneBook(oldSave, "Z001").prices.economy as Record<string, unknown>;
+assert(!("cancelFee" in reopened) && !("freeCancelMin" in reopened) && reopened.noShowFee === 65 && reopened.base === norrmalm.prices.economy.base, "an older save with the cancel fields still opens, without them");
 const surgedQuote = quoteRide(norrmalm, { ...input, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, surge: 1.5 });
 assert(surgedQuote.lines.some((line) => line.kind === "surge" && line.amount === 114.5), "surge applies to the trip part");
 assert(quoteRide(norrmalm, { ...input, km: 0.5, minutes: 1, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0 }).lines.some((line) => line.kind === "limit"), "minimum fare applies");

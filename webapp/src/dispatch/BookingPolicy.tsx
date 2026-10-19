@@ -10,7 +10,7 @@ const RESERVATION_OPS_KEY = "reservationOps";
 
 /**
  * The reservation policy for every zone: how far ahead riders can book, when a ride without a driver needs attention,
- * included waiting and free cancel after accept. Each save is a new version; booked rides keep the version they were booked with.
+ * and included waiting. Rider free cancel and cancel fees are in Rides & stops › Rider cancel fees. Each save is a new version; booked rides keep the version they were booked with.
  */
 export function BookingPolicyCard() {
   const { agent } = useSession();
@@ -38,9 +38,6 @@ export function BookingPolicyCard() {
         </Row>
         <Row label="Included waiting" help="Free waiting at the pickup for a booked ride.">
           <Num label="Included waiting" value={policy.includedWaitingMinutes} unit="min" min={0} max={60} disabled={off} onChange={(includedWaitingMinutes) => patch({ includedWaitingMinutes })} />
-        </Row>
-        <Row label="Free cancel after accept" help="The rider can also cancel for free this long after a driver accepts.">
-          <Num label="Free cancel after accept" value={policy.freeCancelAfterAcceptMinutes} unit="min" min={0} max={30} disabled={off} onChange={(freeCancelAfterAcceptMinutes) => patch({ freeCancelAfterAcceptMinutes })} />
         </Row>
         {draft && prepared.error ? <p className="dx-issues" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {prepared.error}</p> : null}
         {notice ? <p className="dx-note" role="status">{notice}</p> : null}

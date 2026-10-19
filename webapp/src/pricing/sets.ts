@@ -32,7 +32,6 @@ export type ZonePrice = {
   adjustMin: number;
   adjustMax: number;
   adjustStep: number;
-  cancelFee: number;
   reservationFee: number;
   bookingFee: number;
   airportFee: number;
@@ -76,7 +75,6 @@ function zonePrice(zoneId: string, zoneName: string): ZonePrice {
     adjustMin: 65,
     adjustMax: 180,
     adjustStep: 5,
-    cancelFee: 50,
     reservationFee: 25,
     bookingFee: 0,
     airportFee: zoneId === "ARN" || zoneId === "BMA" ? 40 : 0,
