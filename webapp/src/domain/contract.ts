@@ -102,6 +102,7 @@ export const TRANSITIONS: readonly Transition[] = [
   { command: "end_early", actor: "rider", from: ["rider_onboard", "in_trip", "approaching_dropoff"], to: "cancelled_by_rider" },
   { command: "cancel", actor: "driver", from: ["accepted", "driver_to_pickup", "arrived"], to: "searching", when: "live" },
   { command: "cancel", actor: "driver", from: ["accepted"], to: "requested", when: "scheduled" },
+  { command: "cancel", actor: "driver", from: ["driver_to_pickup", "arrived"], to: "searching", when: "scheduled" },
   { command: "cancel", actor: "driver", from: ["rider_onboard", "in_trip", "approaching_dropoff"], to: "cancelled_by_driver" },
   { command: "no_show", actor: "driver", from: ["arrived"], to: "no_show" },
   { command: "no_show", actor: "admin", from: ["arrived", "accepted", "driver_to_pickup"], to: "no_show" },
