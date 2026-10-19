@@ -1,16 +1,11 @@
-import { advance, testSend } from "./book.ts";
+import { advance } from "./book.ts";
 import { NOTICE_KINDS, deliveryLine, driverAppNotices, emptyDriverNoticeBook, inQuiet, isOnlineNow, limitOf, noticeChanges, noticeIssues, noticeText, normalizeDriverNoticeBook, sendNotice, targetDrivers } from "./driverNotices.ts";
 
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
 };
 
-const people = [
-  { id: "R1", app: "rider" as const, zone: "Norrmalm" },
-  { id: "R2", app: "rider" as const, zone: "Solna" },
-  { id: "D1", app: "driver" as const, zone: "Norrmalm" },
-];
-assert(testSend({ app: "rider", zone: "Norrmalm" }, people).join() === "R1", "only the chosen audience");
+// The test-send audience moved to messages/ops.test.ts (C-21).
 const message = advance({ id: "M1", audience: { app: "rider", zone: "Norrmalm" }, body: "Hello", status: "accepted" }, "sent");
 assert(message.status === "sent", "sent is separate from accepted");
 assert(advance(message, "delivered").status === "delivered", "delivered");

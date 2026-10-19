@@ -323,6 +323,8 @@ const conflictInput = { action: "admin.rider.block", targetId: "R0001", reason: 
 await expectStatus(api.command({ ...conflictInput, expectedRev: await api.revision() }), 409, "injected conflict", "version_mismatch");
 await api.setFault("none");
 assert((await api.command({ ...conflictInput, expectedRev: await api.revision() })).status === "committed", "the retry after a conflict is checked again, not replayed");
+// Moved from the old riders/book.ts test (C-21): a block needs a reason (above) and then sticks.
+assert((await api.list("riders", null)).find((row) => row.id === "R0001")?.status === "blocked", "block sticks");
 
 await api.reset();
 const transientRev = await api.revision();
