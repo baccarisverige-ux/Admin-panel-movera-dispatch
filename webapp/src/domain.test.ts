@@ -5,8 +5,8 @@ const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
 };
 
-assert(TRIP_STATUSES.length === 18, "18 trip statuses");
-assert(new Set(TRIP_STATUSES).size === 18, "trip statuses are unique");
+assert(TRIP_STATUSES.length === 19, "19 trip statuses (contract v0.3.0)");
+assert(new Set(TRIP_STATUSES).size === 19, "trip statuses are unique");
 assert(tripStatusSchema.parse("cancelled_by_admin") === "cancelled_by_admin", "admin cancel status");
 assert(CATEGORIES.length === 7, "7 categories");
 assert(CATEGORIES[0]?.label === "Movera", "economy alias is Movera");

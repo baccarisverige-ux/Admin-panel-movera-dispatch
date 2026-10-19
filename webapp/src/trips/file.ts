@@ -28,7 +28,7 @@ export const GROUPS: { id: TripGroup; label: string; help: string }[] = [
 
 const LIVE = ["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"];
 const SEARCHING = ["draft", "quoted", "requested", "searching", "offered"];
-const CANCELLED = ["cancelled_by_rider", "cancelled_by_driver", "cancelled_by_admin", "expired"];
+const CANCELLED = ["cancelled_by_rider", "cancelled_by_driver", "cancelled_by_admin", "cancelled_by_system", "expired"];
 
 export function groupOf(status: string): Exclude<TripGroup, "all" | "flagged"> {
   if (LIVE.includes(status)) return "live";
@@ -48,7 +48,7 @@ function hash(text: string): number {
   return value >>> 0;
 }
 
-export type TripRecord = DemoRecord;
+export type { TripRecord } from "../api/seed.ts";
 
 /* ------------------------------------------------------------------ route */
 

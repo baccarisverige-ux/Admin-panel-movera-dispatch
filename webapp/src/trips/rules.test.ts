@@ -1,6 +1,8 @@
-import { TRIP_STATUSES } from "../domain/contract.ts";
+import { TRIP_STATUSES, isTerminal } from "../domain/contract.ts";
 import {
   CANCEL_OK,
+  COMPLETE_OK,
+  NO_SHOW_OK,
   FARE_ADJUST_OK,
   OFFER_OK,
   REASSIGN_OK,
@@ -14,6 +16,8 @@ import {
   canRefundTrip,
   canSetWaiting,
   cancelTrip,
+  completeTrip,
+  markNoShow,
   eligibleDrivers,
   offerTrip,
   reassign,
@@ -49,9 +53,20 @@ assert(cancelTrip(trip, "Rider asked").trip.status === "cancelled_by_admin", "ad
 assert(eligibleDrivers(trip, drivers).map((driver) => driver.id).join() === "D3", "only an eligible active driver");
 assert(offerTrip({ ...trip, status: "searching", driverId: null }, drivers[2]!, drivers).trip.status === "offered", "searching trip can be offered");
 assert(offerTrip(trip, drivers[2]!, drivers).error?.includes("no longer"), "accepted trip cannot be newly offered");
-assert(reassign(trip, drivers[1]!, drivers).error?.includes("not eligible"), "suspended driver refused");
-assert(reassign(trip, drivers[2]!, drivers).trip.driverId === "D3", "reassign sticks");
-assert(reassign({ ...trip, status: "searching" }, drivers[2]!, drivers).error?.includes("no longer"), "searching is offer, not reassign");
+assert(reassign(trip).trip.status === "searching" && reassign(trip).trip.driverId === null, "reassign sends the trip back to dispatch, no driver");
+assert(reassign({ ...trip, status: "searching" }).error?.includes("no longer"), "searching is offer, not reassign");
+const back = reassign(trip).trip;
+assert(offerTrip(back, drivers[2]!, drivers).trip.status === "offered" && offerTrip(back, drivers[2]!, drivers).trip.driverId === "D3", "after reassign the admin offers it; the driver still has to accept");
+assert(offerTrip({ ...back, status: "offered", driverId: "D1" }, drivers[1]!, drivers).error?.includes("not eligible"), "suspended driver refused");
+
+// The contract gaps the old hand lists had: cancel while the driver is on the way or the rider is onboard.
+for (const status of ["requested", "offered", "driver_to_pickup", "rider_onboard", "approaching_dropoff"] as const) assert(canCancel(status), `admin can cancel in ${status}`);
+for (const status of TRIP_STATUSES) assert(canCancel(status) === !isTerminal(status), `cancel = every non-terminal status (${status})`);
+assert(NO_SHOW_OK.join() === "accepted,driver_to_pickup,arrived" && markNoShow({ ...trip, status: "arrived" }, "Rider never came").trip.status === "no_show", "admin no-show");
+assert(markNoShow({ ...trip, status: "in_trip" }, "x").error?.includes("not allowed") && markNoShow({ ...trip, status: "arrived" }, " ").error === "A reason is required.", "no-show gated");
+assert(COMPLETE_OK.join() === "rider_onboard,in_trip,approaching_dropoff" && completeTrip({ ...trip, status: "in_trip" }, "Driver app crashed").trip.status === "completed", "admin completes a stuck trip");
+assert(completeTrip(trip, "x").error?.includes("rider is in the car"), "cannot complete before pickup");
+assert(!REFUND_TRIP_OK.includes("expired") && REFUND_TRIP_OK.includes("cancelled_by_system") && REFUND_TRIP_OK.every(isTerminal), "refund: terminal statuses except expired");
 assert(adjustFare(trip, 40).error?.includes("15%"), "fare cap");
 assert(adjustFare(trip, 10).trip.fareOre === 16390, "ten percent");
 assert(adjustFare(trip, 10).trip.ruleVersion === "price-3", "rule version kept");

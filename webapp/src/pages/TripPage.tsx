@@ -6,12 +6,13 @@ import { emptySafety, useAudit, useDrivers, useRecords, useSlice, useTrips, type
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { demoShift } from "../dashboard/scheduled";
-import { formatOre } from "../domain/contract";
+import { formatMoney as formatTripMoney } from "../domain/money";
 import { statusLabel } from "../domain/labels";
 import { MapPanel } from "../dispatch/maps";
+import { reasonText as cancelReasonLabel } from "../dispatch/offers";
+import { DISPATCH_KEY, emptyDispatchBook, liveCountry, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
 import { formatMoney, market, zoneById } from "../markets/markets";
 import { emptyPricingStore, normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY } from "../pricing/zonePricing";
-import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook } from "../dispatch/rules";
 import { Cards } from "../reports/ui";
 import { INCIDENT_OPS_KEY, caseOf, emptyIncidentOps, normalizeIncidentOps, type IncidentOps } from "../safety/cases";
 import { answerLabel, asRideChecks, followText, isRed, reasonText, shiftOf, shifted, triggerLabel } from "../safety/rideCheck";
@@ -37,7 +38,9 @@ import {
   cancelReason,
   cancelledBy,
   categoryOf,
+  completeBlock,
   fareBreakdown,
+  noShowBlock,
   offerBlock,
   offersFor,
   paymentOf,
@@ -83,7 +86,7 @@ export function TripPage() {
   const audit = useAudit();
   const opsSlice = useSlice<TripOps>(TRIP_OPS_KEY, emptyTripOps(), { enabled: can(role, "trips.read") });
   const pricing = useSlice<unknown>(PRICING_KEY, emptyPricingStore());
-  const dispatch = useSlice<unknown>(DISPATCH_KEY, emptyDispatchBook());
+  const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
   const ops = normalizeTripOps(opsSlice.value);
   const api = useAdminApi();
   const canSafety = can(role, "incidents.read");
@@ -97,6 +100,7 @@ export function TripPage() {
   const [waitingInput, setWaitingInput] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [notice, setNotice] = useState("");
+  const [cancelCode, setCancelCode] = useState("");
 
   const eligible = useMemo(
     () => (trip ? offersFor(trip, drivers.data ?? [], vehicles.data ?? []) : []),
@@ -121,7 +125,7 @@ export function TripPage() {
   const country = countryOf(trip.zoneId);
   const place = market(country);
   const money = (minor: number) => formatMoney(minor, country);
-  const legacyMoney = (ore: number) => (country === "SE" ? formatOre(ore) : formatMoney(ore, country));
+  const legacyMoney = (minor: number) => formatTripMoney({ amountMinor: minor, currency: place.currency });
   const driver = drivers.data?.find((item) => item.id === trip.driverId);
   const vehicle = vehicles.data?.find((item) => item.driverId === trip.driverId);
   const fare = fareBreakdown(trip);
@@ -129,7 +133,12 @@ export function TripPage() {
   const payment = paymentOf(trip);
   const cancelWhy = cancelBlock(trip.status);
   const offerWhy = offerBlock(trip.status) ?? (eligible.length === 0 ? "No eligible driver with an eligible matching vehicle is free for this category." : null);
-  const reassignWhy = reassignBlock(trip.status) ?? (eligible.length === 0 ? "No eligible driver with an eligible matching vehicle is free for this category." : null);
+  const reassignWhy = reassignBlock(trip.status);
+  const noShowWhy = noShowBlock(trip.status);
+  const completeWhy = completeBlock(trip.status);
+  // Admin cancel reasons: contract admin_* codes, texts from Dispatch › Cancel reasons (the one editor).
+  const adminReasons = liveCountry(normalizeDispatchBook(dispatchSlice.value), country).cancelReasons.groups.admin;
+  const cancelReasonCode = cancelCode || adminReasons[0]?.code || "admin_other";
   const fareAttempt = adjustFare(asTrip(trip), Number(farePercent));
   const adjustWhy = adjustBlock(trip.status) ?? fareAttempt.error ?? null;
   const waitingValue = waitingInput === "" ? fare.waitingMin : Number(waitingInput);
@@ -139,7 +148,7 @@ export function TripPage() {
   const tripAudits = (audit.data ?? []).filter((item) => item.targetId === trip.id).slice(0, 20);
   const tone = trip.status.includes("cancel") || trip.status === "failed" ? "red" : trip.status === "completed" ? "green" : "amber";
   const store = normalizeStore(pricing.value);
-  const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatch.value), trip.zoneId).riderCancel.fees);
+  const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees);
   const chat = chatOf(trip);
   const calls = callsOf(trip);
   const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })));
@@ -232,7 +241,7 @@ export function TripPage() {
               <li key={`${event.at}-${index}`} className={event.tone}><time>{time(event.at)}</time><i aria-hidden="true" /><span>{event.text}{event.link ? <> · <Link to={event.link.to}>{event.link.label}</Link></> : null}</span></li>
             ))}
           </ol>
-          <p className="op-help">Who cancelled: {cancelledBy(trip.status)}. Reason: {cancelReason(trip)}.</p>
+          <p className="op-help">Who cancelled: {cancelledBy(trip.status)}. Reason: {cancelReason(trip)}{trip.cancelReasonCode ? ` (${trip.cancelReasonCode})` : ""}.</p>
         </Section>
 
         <Section id="people" title="People and car" icon={<Users size={16} />} aside={allowed && !revealed ? reveal : revealed ? <span className="dx-tag"><Eye size={11} aria-hidden="true" /> Shown, logged in Reports</span> : null}>
@@ -357,10 +366,16 @@ export function TripPage() {
         <AdminActions trip={trip} ops={ops} split={split} money={money} country={country} riderId={riderId} onNotice={setNotice} />
         {ops.settings.actions.price || ops.settings.actions.refund ? (
           <div className="op-live">
-            <h4 className="op-sub">Live trip controls <small>cancel, offer, reassign, fare, waiting time and full refund</small></h4>
+            <h4 className="op-sub">Live trip controls <small>cancel, offer, reassign, no-show, complete, fare, waiting time and full refund</small></h4>
             <div className="op-live-body" data-testid="trip-actions">
 
               <p data-testid="cancel-block">{cancelWhy ?? "Cancel is allowed in this state."}</p>
+              <label>
+                Cancel reason
+                <select aria-label="Cancel reason" value={cancelReasonCode} onChange={(event) => setCancelCode(event.target.value)} disabled={Boolean(cancelWhy)}>
+                  {adminReasons.map((item) => <option key={item.code} value={item.code}>{cancelReasonLabel(item.title, "en") || item.code}</option>)}
+                </select>
+              </label>
               {cancelWhy ? (
                 <button data-command="admin.trip.cancel" className="secondary-btn" type="button" disabled title={cancelWhy}>Cancel trip</button>
               ) : (
@@ -373,7 +388,7 @@ export function TripPage() {
                   collection="trips"
                   before={trip.status}
                   after="cancelled_by_admin"
-                  patch={{ status: "cancelled_by_admin", previousStatus: trip.status }}
+                  patch={{ status: "cancelled_by_admin", previousStatus: trip.status, cancelReasonCode }}
                   storeReason
                 >
                   Cancel trip
@@ -386,7 +401,7 @@ export function TripPage() {
                   aria-label="Eligible driver"
                   value={chosen}
                   onChange={(event) => setDriverId(event.target.value)}
-                  disabled={eligible.length === 0 || (!!offerWhy && !!reassignWhy)}
+                  disabled={eligible.length === 0 || !!offerWhy}
                 >
                   {eligible.length === 0 ? <option value="">No eligible driver</option> : null}
                   {eligible.map((item) => (
@@ -395,7 +410,7 @@ export function TripPage() {
                 </select>
               </label>
 
-              <p data-testid="offer-block">{offerWhy ?? "Offer is allowed in this state."}</p>
+              <p data-testid="offer-block">{offerWhy ?? "Offer is allowed in this state. The driver gets an Assigned by Movera offer and still has to accept."}</p>
               {offerWhy ? (
                 <button data-command="admin.trip.offer" className="secondary-btn" type="button" disabled title={offerWhy}>Offer to driver</button>
               ) : (
@@ -415,7 +430,7 @@ export function TripPage() {
                 </CommandButton>
               )}
 
-              <p data-testid="reassign-block">{reassignWhy ?? "Reassign is allowed in this state."}</p>
+              <p data-testid="reassign-block">{reassignWhy ?? "Reassign takes the trip off its driver and sends it back to dispatch (searching). Then offer it to a driver."}</p>
               {reassignWhy ? (
                 <button data-command="admin.trip.reassign" className="secondary-btn" type="button" disabled title={reassignWhy}>Reassign</button>
               ) : (
@@ -428,10 +443,49 @@ export function TripPage() {
                   scope={trip.zoneId}
                   collection="trips"
                   before={trip.driverId ?? "none"}
-                  after={chosen}
-                  patch={{ driverId: chosen, status: "accepted" }}
+                  after="searching"
+                  patch={{ driverId: null, status: "searching", previousStatus: trip.status }}
                 >
                   Reassign
+                </CommandButton>
+              )}
+
+              <p data-testid="noshow-block">{noShowWhy ?? "No-show ends the trip as no_show. The no-show fee follows the zone's waiting rules."}</p>
+              {noShowWhy ? (
+                <button data-command="admin.trip.noShow" className="secondary-btn" type="button" disabled title={noShowWhy}>Mark rider no-show</button>
+              ) : (
+                <CommandButton
+                  command="admin.trip.noShow"
+                  className="secondary-btn"
+                  targetId={trip.id}
+                  entityState={trip.status}
+                  scope={trip.zoneId}
+                  collection="trips"
+                  before={trip.status}
+                  after="no_show"
+                  patch={{ status: "no_show", previousStatus: trip.status, cancelReasonCode: "rider_no_show" }}
+                  storeReason
+                >
+                  Mark rider no-show
+                </CommandButton>
+              )}
+
+              <p data-testid="complete-block">{completeWhy ?? "Complete ends a stuck trip as completed with the current fare."}</p>
+              {completeWhy ? (
+                <button data-command="admin.trip.complete" className="secondary-btn" type="button" disabled title={completeWhy}>Complete trip</button>
+              ) : (
+                <CommandButton
+                  command="admin.trip.complete"
+                  className="secondary-btn"
+                  targetId={trip.id}
+                  entityState={trip.status}
+                  scope={trip.zoneId}
+                  collection="trips"
+                  before={trip.status}
+                  after="completed"
+                  patch={{ status: "completed", previousStatus: trip.status }}
+                >
+                  Complete trip
                 </CommandButton>
               )}
 
@@ -474,8 +528,8 @@ export function TripPage() {
                   entityState={trip.status}
                   scope={trip.zoneId}
                   collection="trips"
-                  before={formatOre(trip.fareOre ?? 0)}
-                  after={formatOre(fareAttempt.trip.fareOre)}
+                  before={legacyMoney(trip.fareOre ?? 0)}
+                  after={legacyMoney(fareAttempt.trip.fareOre)}
                   patch={{ fareOre: fareAttempt.trip.fareOre }}
                 >
                   Apply fare adjustment

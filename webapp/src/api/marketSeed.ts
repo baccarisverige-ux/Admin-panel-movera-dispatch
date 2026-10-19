@@ -1,4 +1,7 @@
 import { TRIP_STATUSES } from "../domain/contract.ts";
+
+/** The demo rotates trips through the 18 pre-v0.3 statuses so every seeded trip id keeps its state (no cancelled_by_system in the seed). */
+const SEED_TRIP_STATUSES = TRIP_STATUSES.filter((status) => status !== "cancelled_by_system");
 import { market, type MarketId } from "../markets/markets.ts";
 import type { DemoRecord } from "./seed.ts";
 import { sosDriverId } from "./presence.ts";
@@ -160,7 +163,7 @@ function countryRows(id: Exclude<MarketId, "SE">, offset: number, now: string, s
     name: riders[index % riders.length].name,
     phone: riders[index % riders.length].phone,
     zoneId: zoneAt(index),
-    status: TRIP_STATUSES[index % TRIP_STATUSES.length],
+    status: SEED_TRIP_STATUSES[index % SEED_TRIP_STATUSES.length],
     driverId: index % 4 === 0 ? null : drivers[index % drivers.length].id,
     fareOre: fareBase + (mix(index) % 40) * fareStep,
     createdAt: new Date(nowMs - (index % 30) * 86_400_000 - (mix(index) % 960) * 60_000).toISOString(),

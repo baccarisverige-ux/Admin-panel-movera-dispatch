@@ -236,7 +236,9 @@ export function driverNoShowShare(terms: Pick<WaitTerms, "noShowFee" | "driverSh
 
 /* ---------- Q21: cancel reasons, per country and language ---------- */
 
-export type CancelGroupId = "driverBeforeTrip" | "driverDuringTrip" | "driverNextTrip" | "scheduled" | "rider";
+export type CancelGroupId = "driverBeforeTrip" | "driverDuringTrip" | "driverNextTrip" | "scheduled" | "rider" | "admin" | "system";
+/** Groups the driver app reads. `admin` and `system` are for the admin and the backend only. */
+export const DRIVER_CANCEL_GROUPS = ["driverBeforeTrip", "driverDuringTrip", "driverNextTrip", "scheduled", "rider"] as const satisfies readonly CancelGroupId[];
 export type LangId = "en" | "sv" | "fr" | "ar";
 export type Texts = Partial<Record<LangId, string>>;
 export type CancelReason = { code: string; title: Texts; subtitle: Texts; counts: boolean };
@@ -249,12 +251,18 @@ export const LANGS: { id: LangId; label: string; rtl?: boolean }[] = [
   { id: "ar", label: "Arabic", rtl: true },
 ];
 
-export const CANCEL_GROUPS: { id: CancelGroupId; label: string; help: string; subtitles: boolean }[] = [
+/**
+ * Dispatch › Cancel reasons is the one editor of cancel reasons. Codes follow contract.json#cancelReasons
+ * (see domain/contract.ts CANCEL_REASON_CODES); `fixed` groups keep exactly the contract codes, only texts change.
+ */
+export const CANCEL_GROUPS: { id: CancelGroupId; label: string; help: string; subtitles: boolean; fixed?: boolean }[] = [
   { id: "driverBeforeTrip", label: "Driver, before the trip", help: "After accepting, before the rider is in the car.", subtitles: true },
   { id: "driverDuringTrip", label: "Driver, during the trip", help: "Ending a trip early with the rider in the car.", subtitles: true },
   { id: "driverNextTrip", label: "Driver, next trip", help: "Cancelling the secured next trip while on a trip. The current trip goes on, the next goes back to dispatch.", subtitles: true },
   { id: "scheduled", label: "Driver, scheduled rides", help: "Cancelling an accepted scheduled ride.", subtitles: false },
   { id: "rider", label: "Rider", help: "What the rider app asks when the rider cancels.", subtitles: false },
+  { id: "admin", label: "Admin", help: "What an admin picks when cancelling a trip from Trips. The codes are fixed by the shared contract.", subtitles: false, fixed: true },
+  { id: "system", label: "System", help: "Shown when Movera cancels a trip by itself (no driver, payment failed, zone closed). The codes are fixed by the shared contract.", subtitles: false, fixed: true },
 ];
 
 export const CANCEL_TITLE_MAX = 60;
@@ -310,6 +318,20 @@ export function cancelReasonsDefault(): CancelReasonBook {
         reason("plans_changed", "Plans changed"),
         reason("something_else", "Something else"),
       ],
+      admin: [
+        reason("admin_safety", "Safety"),
+        reason("admin_fraud", "Fraud or misuse"),
+        reason("admin_rider_request", "The rider asked support"),
+        reason("admin_driver_request", "The driver asked support"),
+        reason("admin_operational", "Operational problem"),
+        reason("admin_other", "Other reason"),
+      ],
+      system: [
+        reason("system_no_driver", "No driver found"),
+        reason("system_payment_failed", "Payment failed"),
+        reason("system_zone_closed", "Zone closed"),
+        reason("system_error", "Technical error"),
+      ],
     },
   };
 }
@@ -337,7 +359,11 @@ export function completeCancelReasons(stored: unknown): CancelReasonBook {
   const groups = { ...base.groups };
   for (const group of CANCEL_GROUPS) {
     const list = raw.groups?.[group.id];
-    if (Array.isArray(list)) groups[group.id] = list.map((item) => completeReason(item)).filter((item): item is CancelReason => Boolean(item));
+    if (!Array.isArray(list)) continue;
+    if (group.fixed) {
+      // Contract codes only, in the default order; stored texts are kept.
+      groups[group.id] = base.groups[group.id].map((fallback) => completeReason(list.find((item) => (item as Partial<CancelReason> | null)?.code === fallback.code), fallback) ?? fallback);
+    } else groups[group.id] = list.map((item) => completeReason(item)).filter((item): item is CancelReason => Boolean(item));
   }
   return { groups, noShow: completeReason(raw.noShow, base.noShow) ?? base.noShow };
 }
@@ -400,7 +426,7 @@ export function cancelReasonLines(before: CancelReasonBook, after: CancelReasonB
 /** The list the driver app reads for one language (CancelReasons): empty texts fall back to English. */
 export function cancelReasonsFor(book: CancelReasonBook, lang: LangId) {
   const one = (item: CancelReason) => ({ code: item.code, title: reasonText(item.title, lang), subtitle: reasonText(item.subtitle, lang), counts: item.counts });
-  return { language: lang, noShow: one(book.noShow), groups: Object.fromEntries(CANCEL_GROUPS.map((group) => [group.id, book.groups[group.id].map(one)])) as Record<CancelGroupId, ReturnType<typeof one>[]> };
+  return { language: lang, noShow: one(book.noShow), groups: Object.fromEntries(DRIVER_CANCEL_GROUPS.map((id) => [id, book.groups[id].map(one)])) as Record<(typeof DRIVER_CANCEL_GROUPS)[number], ReturnType<typeof one>[]> };
 }
 
 /* ---------- Q22: cancel rate ---------- */

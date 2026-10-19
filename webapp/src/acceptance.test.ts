@@ -1,3 +1,4 @@
+import type { TripStatus } from "./domain/contract.ts";
 import { readFileSync } from "node:fs";
 import { can } from "./auth/permissions.ts";
 import { runCommand, emptyDb } from "./commands/run.ts";
@@ -19,7 +20,7 @@ const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
 };
 
-const trip = { id: "T1", status: "completed", category: "economy" as const, fareOre: 1000, ruleVersion: "price-3", driverId: "D1" };
+const trip = { id: "T1", status: "completed" as TripStatus, category: "economy" as const, fareOre: 1000, ruleVersion: "price-3", driverId: "D1" };
 assert(cancelTrip(trip, "no").error, "A01 finished trip cannot be cancelled");
 assert(cancelTrip({ ...trip, status: "searching" }, "rider asked").trip.status === "cancelled_by_admin", "A02 searching can be cancelled");
 

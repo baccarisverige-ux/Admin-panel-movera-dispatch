@@ -186,7 +186,7 @@ export function TripsPage() {
         <label className="op-field">
           <span>Trip status</span>
           <select aria-label="Trip status" value={status} onChange={(event) => set({ status: event.target.value })}>
-            <option value="all">All 18 statuses</option>
+            <option value="all">All {TRIP_STATUSES.length} statuses</option>
             {TRIP_STATUSES.map((code) => <option key={code} value={code}>{statusLabel(code)}</option>)}
           </select>
         </label>

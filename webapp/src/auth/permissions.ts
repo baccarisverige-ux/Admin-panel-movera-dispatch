@@ -67,17 +67,18 @@ const OVERVIEW = ["overview.read"] as const;
 
 export const ROLE_PERMISSIONS: Record<Role, readonly string[]> = {
   viewer: [...OVERVIEW, "trips.read", "drivers.read", "riders.read", "zones.read"],
-  support: [...OVERVIEW, "trips.read", "riders.read", "riders.viewSensitive", "support.reply"],
-  dispatcher: [...OVERVIEW, "trips.read", "trips.intervene", "drivers.read", "drivers.viewSensitive", "zones.read"],
+  support: [...OVERVIEW, "trips.read", "trips.annotate", "riders.read", "riders.viewSensitive", "support.reply"],
+  dispatcher: [...OVERVIEW, "trips.read", "trips.annotate", "trips.intervene", "drivers.read", "drivers.viewSensitive", "zones.read"],
   compliance: [...OVERVIEW, "drivers.read", "drivers.viewSensitive", "drivers.activate", "documents.approve", "vehicles.edit", "zones.read"],
-  finance: [...OVERVIEW, "riders.read", "finance.read", "payments.refund", "audit.read", "approval.decide"],
-  safety: [...OVERVIEW, "trips.read", "riders.read", "riders.viewSensitive", "incidents.read", "safety.edit"],
+  finance: [...OVERVIEW, "riders.read", "finance.read", "finance.edit", "payments.refund", "audit.read", "approval.decide"],
+  safety: [...OVERVIEW, "trips.read", "trips.annotate", "riders.read", "riders.viewSensitive", "incidents.read", "safety.edit"],
   content: [...OVERVIEW, "settings.read", "settings.edit"],
   config: [...OVERVIEW, "zones.read", "zones.edit", "zones.publish", "settings.read", "settings.edit", "settings.publish", "audit.read", "approval.decide"],
   fleet: [...OVERVIEW, "drivers.read", "drivers.viewSensitive", "documents.approve", "vehicles.edit", "zones.read"],
   ops: [
     ...OVERVIEW,
     "trips.read",
+    "trips.annotate",
     "trips.intervene",
     "drivers.read",
     "drivers.viewSensitive",

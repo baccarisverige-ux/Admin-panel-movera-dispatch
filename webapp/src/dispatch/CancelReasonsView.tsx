@@ -61,7 +61,7 @@ export function CancelReasonsView({ market, country, onCountry, canEdit }: Props
             <Card key={group.id} title={group.label} tone={group.id === "rider" ? "pink" : group.id === "scheduled" ? "orange" : "blue"} icon={<UserX size={18} />} help={group.help}>
               <ul className="dx-reason-list" aria-label={`${group.label} reasons`}>
                 {group.id === "driverBeforeTrip" ? row(book.noShow, (noShow) => setBook({ ...book, noShow }), true, null, "after the no-show time, always offered") : null}
-                {list.map((item, index) => row(item, (next) => setGroup(group.id, list.map((entry) => (entry.code === item.code ? next : entry))), group.subtitles, (
+                {list.map((item, index) => row(item, (next) => setGroup(group.id, list.map((entry) => (entry.code === item.code ? next : entry))), group.subtitles, group.fixed ? null : (
                   <span>
                     <button data-command="admin.dispatch.edit" type="button" className="icon-ghost" aria-label={`Move ${item.title.en || item.code} up`} disabled={disabled || index === 0} onClick={() => move(index, -1)}><ArrowUp size={14} aria-hidden="true" /></button>
                     <button data-command="admin.dispatch.edit" type="button" className="icon-ghost" aria-label={`Move ${item.title.en || item.code} down`} disabled={disabled || index === list.length - 1} onClick={() => move(index, 1)}><ArrowDown size={14} aria-hidden="true" /></button>
@@ -69,7 +69,7 @@ export function CancelReasonsView({ market, country, onCountry, canEdit }: Props
                   </span>
                 )))}
               </ul>
-              <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled} onClick={() => setGroup(group.id, [...list, { code: `${group.id === "rider" ? "rider" : "driver"}_custom_${Date.now().toString(36)}`, title: {}, subtitle: {}, counts: true }])}><Plus size={13} aria-hidden="true" /> Add a reason</button>
+              {group.fixed ? null : <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled} onClick={() => setGroup(group.id, [...list, { code: `${group.id === "rider" ? "rider" : "driver"}_custom_${Date.now().toString(36)}`, title: {}, subtitle: {}, counts: true }])}><Plus size={13} aria-hidden="true" /> Add a reason</button>}
             </Card>
           );
         })}

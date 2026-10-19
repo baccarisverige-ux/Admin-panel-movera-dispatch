@@ -1,8 +1,10 @@
-import type { DemoRecord } from "../api/seed.ts";
+import type { DemoRecord, TripRecord } from "../api/seed.ts";
 import { ZONES } from "../api/seed.ts";
 import { CATEGORIES, TRIP_STATUSES, formatOre, type TripStatus } from "../domain/contract.ts";
 import { statusLabel } from "../domain/labels.ts";
-import { canAdjustFare, canOffer, canReassign, canRefundTrip, canSetWaiting, cancelTrip, eligibleDrivers, type OfferDriver, type Trip } from "./rules.ts";
+import { formatMoney } from "../domain/money.ts";
+import { market, marketOfZone } from "../markets/markets.ts";
+import { canAdjustFare, canComplete, canNoShow, canOffer, canReassign, canRefundTrip, canSetWaiting, cancelTrip, eligibleDrivers, type OfferDriver, type Trip } from "./rules.ts";
 import { STEP_MS, startedAt, tripIndex } from "./clock.ts";
 
 export { startedAt, tripIndex };
@@ -90,6 +92,7 @@ function terminalBaseStatus(trip: DemoRecord): TripStatus {
   if (trip.status === "cancelled_by_rider") return "searching";
   if (trip.status === "cancelled_by_driver") return "accepted";
   if (trip.status === "cancelled_by_admin") return "arrived";
+  if (trip.status === "cancelled_by_system") return "requested";
   if (trip.status === "no_show") return "arrived";
   if (trip.status === "expired") return "searching";
   if (trip.status === "failed") return "in_trip";
@@ -152,6 +155,7 @@ export function cancelledBy(status: string): string {
   if (status === "cancelled_by_rider") return "Rider";
   if (status === "cancelled_by_driver") return "Driver";
   if (status === "cancelled_by_admin") return "Admin";
+  if (status === "cancelled_by_system") return "System";
   if (status === "no_show") return "No-show";
   return "Not cancelled";
 }
@@ -168,10 +172,10 @@ export function riderIdFor(trip: DemoRecord): string {
   return `R${String((tripIndex(trip.id) % 250) + 1).padStart(4, "0")}`;
 }
 
-export function asTrip(trip: DemoRecord): Trip {
+export function asTrip(trip: DemoRecord | TripRecord): Trip {
   return {
     id: trip.id,
-    status: trip.status,
+    status: trip.status as TripStatus,
     category: categoryOf(trip.id).id,
     fareOre: trip.fareOre ?? 0,
     ruleVersion: fareBreakdown(trip).ruleVersion,
@@ -180,16 +184,24 @@ export function asTrip(trip: DemoRecord): Trip {
 }
 
 export function cancelBlock(status: string): string | null {
-  const error = cancelTrip({ id: "x", status, category: "economy", fareOre: 1, ruleVersion: "v", driverId: null }, "check").error;
+  const error = cancelTrip({ id: "x", status: status as TripStatus, category: "economy", fareOre: 1, ruleVersion: "v", driverId: null }, "check").error;
   return error && error !== "A reason is required." ? error : null;
 }
 
 export function offerBlock(status: string): string | null {
-  return canOffer(status) ? null : "Offer is only available while the trip is requested or searching.";
+  return canOffer(status) ? null : "Offer is only available while the trip is requested, searching or offered. The driver still has to accept.";
 }
 
 export function reassignBlock(status: string): string | null {
-  return canReassign(status) ? null : "Reassign is only available after acceptance and before rider pickup.";
+  return canReassign(status) ? null : "Reassign is only available from an offer until the driver has arrived, before the rider is in the car.";
+}
+
+export function noShowBlock(status: string): string | null {
+  return canNoShow(status) ? null : "No-show is only available once a driver has accepted and before the rider is in the car.";
+}
+
+export function completeBlock(status: string): string | null {
+  return canComplete(status) ? null : "Complete is only available once the rider is in the car.";
 }
 
 export function adjustBlock(status: string): string | null {
@@ -218,7 +230,7 @@ export function waybill(trip: DemoRecord, driverName: string, plate: string) {
     tripId: trip.id,
     status: statusLabel(trip.status),
     issuedAt: stockholmLabel(startedAt(trip.id)),
-    fare: formatOre(fareBreakdown(trip).chargedOre),
+    fare: formatMoney({ amountMinor: fareBreakdown(trip).chargedOre, currency: (marketOfZone(trip.zoneId) ?? market("SE")).currency }),
     service: category.label,
     riderName: trip.name,
     pickup: stops[0]?.label ?? "",

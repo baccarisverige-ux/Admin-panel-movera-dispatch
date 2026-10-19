@@ -18,7 +18,7 @@ export const APPS = [
   },
 ] as const;
 
-/** Wire names from both apps' TripStatusWire at the SHAs above. */
+/** Wire names both apps must ship: the shared contract v0.3.0 (contracts/contract.json#tripStatus.values). */
 export const APP_TRIP_WIRE = [
   "draft",
   "quoted",
@@ -35,6 +35,7 @@ export const APP_TRIP_WIRE = [
   "cancelled_by_rider",
   "cancelled_by_driver",
   "cancelled_by_admin",
+  "cancelled_by_system",
   "no_show",
   "expired",
   "failed",

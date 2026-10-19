@@ -1,4 +1,7 @@
-import { TRIP_STATUSES } from "../domain/contract.ts";
+import { TRIP_STATUSES, type TripStatus } from "../domain/contract.ts";
+
+/** The demo rotates trips through the 18 pre-v0.3 statuses so every seeded trip id keeps its state (no cancelled_by_system in the seed). */
+const SEED_TRIP_STATUSES = TRIP_STATUSES.filter((status) => status !== "cancelled_by_system");
 import { MARKETS } from "../markets/markets.ts";
 import type { RideCheck } from "../safety/rideCheck.ts";
 import { marketRows } from "./marketSeed.ts";
@@ -44,6 +47,14 @@ export type DemoRecord = {
   orgNumber?: string;
   ownerId?: string;
   joinedAt?: string;
+};
+
+/** A trip row: a DemoRecord whose status is a contract TripStatus. */
+export type TripRecord = Omit<DemoRecord, "status" | "previousStatus"> & {
+  status: TripStatus;
+  previousStatus?: TripStatus;
+  /** contract.json#cancelReasons code of the last cancel (admin_* when an admin cancelled). */
+  cancelReasonCode?: string;
 };
 
 export type AuditRow = {
@@ -218,7 +229,7 @@ export function createSeed(now = SEED_NOW): DemoDb {
     name: riders[index % riders.length].name,
     phone: riders[index % riders.length].phone,
     zoneId: zoneId(index),
-    status: TRIP_STATUSES[index % TRIP_STATUSES.length],
+    status: SEED_TRIP_STATUSES[index % SEED_TRIP_STATUSES.length],
     driverId: index % 4 === 0 ? null : drivers[index % drivers.length].id,
     fareOre: 4900 + (index % 40) * 100,
     createdAt: new Date(Date.parse(now) - (index % 30) * 86400000).toISOString(),

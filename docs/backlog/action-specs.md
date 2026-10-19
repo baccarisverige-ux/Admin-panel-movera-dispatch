@@ -25,8 +25,11 @@ Currency is SEK in öre. Time zone is Europe/Stockholm. Ids match the apps (`tri
 | admin.rider.block | Block or unblock a rider | riders.edit | P7 | Reason is required and audited. |
 | admin.rider.signOut | Sign a rider out of all devices | riders.edit | P7 | Session list is cleared in the simulation. |
 | admin.rider.privacy | Open a privacy request | privacy.edit | P7 | Request moves new → processing → done. |
-| admin.trip.cancel | Cancel a trip as admin | trips.edit | P8 | Allowed during search, accepted, arrived, in_trip. Finished trip stays disabled. |
-| admin.trip.reassign | Reassign to an eligible driver | trips.edit | P8 | Ineligible drivers are not offered. |
+| admin.trip.cancel | Cancel a trip as admin, with an admin_* reason code | trips.intervene | P8 | Allowed in every non-terminal status (contract v0.3.0 transitions). Terminal trips stay disabled. |
+| admin.trip.offer | Offer to one eligible driver (assign) | trips.intervene | P8 | requested, searching, offered → offered. The driver still accepts. Ineligible drivers are not offered. |
+| admin.trip.reassign | Take the trip off its driver | trips.intervene | P8 | offered … arrived → searching (back to dispatch); then offer it. |
+| admin.trip.noShow | Mark the rider no-show | trips.intervene | P8 | accepted, driver_to_pickup, arrived → no_show. |
+| admin.trip.complete | Complete a stuck trip | trips.intervene | P8 | rider_onboard, in_trip, approaching_dropoff → completed. |
 | admin.trip.adjust | Adjust a fare inside the allowed percent | trips.adjust | P8 | Rule version is shown on the receipt. |
 | admin.dispatch.save | Save dispatch rules for one zone | dispatch.edit | P8 | Offer window 8.5 s and radar 30 km are editable. |
 | admin.price.save | Save a price set | pricing.edit | P9 | Quote preview uses the same formula as the rider. |
