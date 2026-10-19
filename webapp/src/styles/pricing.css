@@ -105,7 +105,7 @@
 .num-field input:disabled { background: #f7f8f8; color: var(--dash-ink-2); }
 
 /* Price table */
-.price-table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; }
+.price-table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; container-type: inline-size; }
 .price-table-wrap:focus-visible { outline: 2px solid var(--dash-blue); }
 .price-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
 .price-table th, .price-table td { padding: 7px 10px; border-bottom: 1px solid #f0f2f3; text-align: left; vertical-align: middle; }
@@ -122,7 +122,9 @@
 .price-table .group-row th {
   position: sticky; left: 0; background: linear-gradient(90deg, #f3f6fb, #fff); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #4c5a75; padding: 8px 12px;
 }
-.price-table tbody tr:not(.group-row):hover td, .price-table tbody tr:not(.group-row):hover th[scope="row"] { background: #fafbff; }
+.price-table tbody tr:not(.group-row):not(.note-row):hover td, .price-table tbody tr:not(.group-row):not(.note-row):hover th[scope="row"] { background: #fafbff; }
+.price-table .note-row td { padding: 8px 12px; }
+.price-table .price-note { position: sticky; left: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; max-width: min(560px, calc(100cqi - 24px)); white-space: normal; font-size: 12px; color: var(--muted); }
 
 /* Switches */
 .mini-switch { display: inline-flex !important; flex-direction: row !important; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--dash-ink-2); cursor: pointer; }

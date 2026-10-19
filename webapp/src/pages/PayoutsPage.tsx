@@ -26,6 +26,7 @@ import { PAYOUT_OPS_KEY, bankReady, countryOfPayout, emptyPayoutOps, failedOf, h
 import { emptyPricingStore, normalizeStore, SLICE_KEY as PRICING_KEY, zoneBook, type PricingStore } from "../pricing/zonePricing";
 import { cashOwed } from "../trips/cash";
 import { TRIP_OPS_KEY, countryOf, emptyTripOps, moneySplit, normalizeTripOps, type TripOps } from "../trips/file";
+import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook } from "../dispatch/rules";
 
 export function PayoutsPage() {
   const { agent } = useSession();
@@ -39,6 +40,7 @@ export function PayoutsPage() {
   const payouts = useRecords("payouts", null);
   const trips = useRecords("trips", null);
   const pricingSlice = useSlice<PricingStore>(PRICING_KEY, emptyPricingStore());
+  const dispatchSlice = useSlice<unknown>(DISPATCH_KEY, emptyDispatchBook());
   // Trip changes (refunds, fare changes) need trips access; without it the cash owed uses the trips as charged.
   const tripOpsSlice = useSlice<TripOps>(TRIP_OPS_KEY, emptyTripOps(), { enabled: Boolean(agent && can(agent.role, "trips.read")) });
   const financeStore = useSlice<FinanceBook>("finance", defaultFinanceBook());
@@ -68,7 +70,8 @@ export function PayoutsPage() {
   const selectedFleet = Boolean((drivers.data ?? []).find((row) => row.id === selected.driverId)?.fleetId);
   const pricingStore = normalizeStore(pricingSlice.value);
   const tripEntries = normalizeTripOps(tripOpsSlice.value).entries;
-  const selectedCash = cashOwed(trips.data ?? [], driverId, (trip) => moneySplit(trip, zoneBook(pricingStore, trip.zoneId), selectedFleet, tripEntries), (trip) => countryOf(trip.zoneId));
+  const dispatchBook = normalizeDispatchBook(dispatchSlice.value);
+  const selectedCash = cashOwed(trips.data ?? [], driverId, (trip) => moneySplit(trip, zoneBook(pricingStore, trip.zoneId), selectedFleet, tripEntries, liveRules(dispatchBook, trip.zoneId).riderCancel.fees), (trip) => countryOf(trip.zoneId));
   const persistedBank = bankReview(finance, driverId);
   const bank = bankDraft?.driverId === driverId ? bankDraft : persistedBank;
   const state = payoutState(finance, selected);

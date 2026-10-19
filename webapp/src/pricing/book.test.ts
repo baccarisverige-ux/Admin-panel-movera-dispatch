@@ -71,4 +71,7 @@ assert(!restored.error, "historical pricing revision restores");
 assert(restored.book.draftRev === 5, "restore creates a new revision");
 assert(restored.book.book.zones.find((zone) => zone.zoneId === "Z001")?.rates.economy.perKm === 20, "restored rate matches snapshot");
 
+const oldZones = normalizePricingBook({ zones: book.book.zones.map((zone) => ({ ...zone, cancelFee: 50 })) });
+assert(oldZones.book.zones.every((zone) => !("cancelFee" in zone)) && !validateZonePrice(oldZones.book.zones[0]!), "an older save with a zone cancel fee still opens, without it");
+
 console.log("pricing book ok");

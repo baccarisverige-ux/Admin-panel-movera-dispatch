@@ -80,3 +80,20 @@ test("pickup pay is set per category, paid by Movera, and published with the zon
   await expect(page.getByText(/Pickup pay for Radar trips turned off/).first()).toBeVisible();
   await expect(page.getByText(/Comfort · pickup ranges one rate → 0–10 km 3\/km 1\/min, >10 km and above 4\/km 1\/min/).first()).toBeVisible();
 });
+
+test("rider cancel fees are not set in Pricing: the Cancellation group points to Dispatch › Rider cancel fees", async ({ page }) => {
+  await signIn(page);
+  await page.getByRole("link", { name: "Pricing", exact: true }).click();
+  const prices = page.getByRole("region", { name: "Prices in Norrmalm" });
+  await expect(prices.getByLabel("Norrmalm Movera No-show fee")).toBeVisible();
+  await expect(prices.getByText("Rider free cancellation window")).toHaveCount(0);
+  await expect(prices.getByText("Cancellation fee (after the window)")).toHaveCount(0);
+  const pointer = page.getByTestId("rider-cancel-fees-pointer");
+  await expect(pointer).toContainText("Rider cancel fees are set in Dispatch › Rides & stops › Rider cancel fees.");
+  await pointer.getByRole("button", { name: "Open Rider cancel fees" }).click();
+  await expect(page).toHaveURL(/\/dispatch\?zone=Z001&tab=rides/);
+  await expect(page.getByRole("tab", { name: "Rides & stops" })).toHaveAttribute("aria-selected", "true");
+  const card = page.getByRole("region", { name: "Rider cancel fees" });
+  await expect(card).toBeInViewport();
+  await expect(card.getByRole("group", { name: "Live trips cancel fees" })).toBeVisible();
+});

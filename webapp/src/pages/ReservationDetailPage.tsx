@@ -168,7 +168,6 @@ export function ReservationDetailPage() {
             <li>Assignment lead {ops.policy.assignmentLeadMinutes} min</li>
             <li>Give-up {ops.policy.giveUpMinutes} min</li>
             <li>Included waiting {ops.policy.includedWaitingMinutes} min</li>
-            <li>Free cancel after accept {ops.policy.freeCancelAfterAcceptMinutes} min</li>
           </ul>
           <p className="state-line">This snapshot does not change when the current reservation policy is updated.</p>
         </article>

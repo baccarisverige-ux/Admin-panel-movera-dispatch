@@ -4,6 +4,7 @@ import { caseOf, clocks, defaultIncidentSettings, emptyIncidentOps, lateText, se
 import { defaultRules, emptyRiskOps, flagged, people, preview, review, ruleError } from "./safety/risk.ts";
 import { emptyHandoverOps, handOver, markRead, unread } from "./handover/shift.ts";
 import { defaultZoneBook } from "./pricing/zonePricing.ts";
+import { tripIndex } from "./trips/present.ts";
 import { emptySafety } from "./safety/ops.ts";
 
 const assert = (ok: unknown, message: string) => {
@@ -23,6 +24,12 @@ assert(split.commission === Math.round((split.ridePrice * split.commissionPct) /
 const fleetSplit = moneySplit(done, { ...book, fleetCommissionPct: 10 }, true, []);
 assert(fleetSplit.fleet > 0 && fleetSplit.driverGets < split.driverGets, "fleet owner share comes from the driver's part");
 assert(moneySplit(trip("T0013", "failed"), book, false, []).state === "none", "a failed trip moves no money");
+// A rider's late cancel fee comes from Dispatch › Rider cancel fees (Live trips), not from Pricing.
+const lateId = Array.from({ length: 30 }, (_, n) => `T${String(n + 1).padStart(4, "0")}`).find((id) => tripIndex(id) % 3 === 0)!;
+const lateCancel = trip(lateId, "cancelled_by_rider");
+const ownTable = { economy: { freeMin: 2, type: "fixed" as const, value: 20, min: null, max: null } };
+assert(moneySplit(lateCancel, book, false, [], ownTable).state === "cancel_fee" && moneySplit(lateCancel, book, false, [], ownTable).price === 2_000, "the zone's live cancel fee is what the rider paid");
+assert(moneySplit(lateCancel, book, false, []).state === "cancel_fee" && moneySplit(lateCancel, book, false, []).price > 0, "without a table, the default live cancel fees apply");
 assert(/rue|avenue|place|quai|boulevard/.test(routeOf(trip("T1001", "completed", { zoneId: "FR-OCE" })).stops[0].label), "French trips get French streets");
 assert(callSummary([{ at: "", from: "driver", seconds: 30, answered: true }]).startsWith("Driver called the rider once"), "call summary");
 assert(canSeePrivate("support", emptyTripOps().settings) && !canSeePrivate("viewer", emptyTripOps().settings), "support sees private data, viewer does not");

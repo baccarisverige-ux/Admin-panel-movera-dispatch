@@ -37,7 +37,9 @@ test("reservation settings live in Dispatch › Reservations; the Reservations p
   await expect(policy.getByLabel("Assignment lead")).toHaveValue("30");
   await expect(policy.getByLabel("Give-up time")).toHaveValue("5");
   await expect(policy.getByLabel("Included waiting")).toHaveValue("5");
-  await expect(policy.getByLabel("Free cancel after accept")).toHaveValue("2");
+  // Rider free cancel and fees are only in Rides & stops › Rider cancel fees, not in the policy.
+  await expect(policy.getByLabel("Free cancel after accept")).toHaveCount(0);
+  await expect(policy).not.toContainText("Free cancel");
 });
 
 test("no driver near pickup: raise the driver's fare from Movera's commission, never over the cap", async ({ page }) => {

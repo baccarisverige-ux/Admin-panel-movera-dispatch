@@ -25,8 +25,6 @@ export type CategoryPrice = {
   freeWaitMin: number;
   waitPerMin: number;
   stopWaitPerMin: number;
-  cancelFee: number;
-  freeCancelMin: number;
   noShowFee: number;
   extraStopFee: number;
   babySeatFee: number;
@@ -154,8 +152,6 @@ export const PRICE_ROWS: { field: PriceField; label: string; unit: "money" | "mi
   { field: "freeWaitMin", label: "Free waiting at pickup", unit: "min", group: "Waiting" },
   { field: "waitPerMin", label: "Waiting after free time, per min", unit: "money", group: "Waiting" },
   { field: "stopWaitPerMin", label: "Waiting at a stop, per min", unit: "money", group: "Waiting" },
-  { field: "freeCancelMin", label: "Rider free cancellation window", unit: "min", group: "Cancellation" },
-  { field: "cancelFee", label: "Cancellation fee (after the window)", unit: "money", group: "Cancellation" },
   { field: "noShowFee", label: "No-show fee", unit: "money", group: "Cancellation" },
   { field: "extraStopFee", label: "Extra stop fee", unit: "money", group: "Extras" },
   { field: "babySeatFee", label: "Baby seat fee", unit: "money", group: "Extras" },
@@ -216,7 +212,7 @@ export function currencySymbol(id: MarketId): string {
 
 const SEK_BASE: Omit<CategoryPrice, "enabled"> = {
   base: 29, perKm: 12, perMin: 4, freeWaitMin: 2, waitPerMin: 5, stopWaitPerMin: 5,
-  cancelFee: 40, freeCancelMin: 2, noShowFee: 50, extraStopFee: 15,
+  noShowFee: 50, extraStopFee: 15,
   babySeatFee: 30, childSeatFee: 30, minimum: 49, maximum: 1500, appFeePct: 10,
 };
 
@@ -227,7 +223,7 @@ const NO_SHOW_FEE_SEK = 65;
 
 const CATEGORY_LIFT: Record<string, number> = { economy: 1, comfort: 1.25, premium: 1.8, priority: 1.35, xl: 1.5, electric: 1.1, pet: 1.15, child_seat: 1.2 };
 
-const MONEY_FIELDS: PriceField[] = ["base", "perKm", "perMin", "waitPerMin", "stopWaitPerMin", "cancelFee", "noShowFee", "extraStopFee", "babySeatFee", "childSeatFee", "minimum", "maximum"];
+const MONEY_FIELDS: PriceField[] = ["base", "perKm", "perMin", "waitPerMin", "stopWaitPerMin", "noShowFee", "extraStopFee", "babySeatFee", "childSeatFee", "minimum", "maximum"];
 
 export function defaultCategoryPrice(categoryId: string, id: MarketId, airport = false): CategoryPrice {
   const lift = CATEGORY_LIFT[categoryId] ?? 1;
@@ -242,7 +238,6 @@ export function defaultCategoryPrice(categoryId: string, id: MarketId, airport =
   const waitSek = categoryId === "premium" ? WAIT_PER_MIN_PREMIUM_SEK : WAIT_PER_MIN_SEK;
   price.waitPerMin = id === "SE" ? waitSek : roundTo(waitSek * factor, step);
   price.noShowFee = id === "SE" ? NO_SHOW_FEE_SEK : roundTo(NO_SHOW_FEE_SEK * factor, step);
-  price.freeCancelMin = categoryId === "premium" ? 3 : 2;
   price.appFeePct = categoryId === "premium" ? 12 : 10;
   return price;
 }
@@ -330,8 +325,11 @@ function completeBook(book: ZoneBook, categories: readonly CategoryDef[]): ZoneB
   };
 }
 
-/** Fields older data may still carry. The rider "Long pickup fee" is gone: drivers get pickup pay from Movera instead. */
-const RETIRED_PRICE_FIELDS = ["longPickupFee"];
+/**
+ * Fields older data may still carry. The rider "Long pickup fee" is gone: drivers get pickup pay from Movera instead.
+ * The rider free cancellation window and cancellation fee moved to Dispatch › Rides & stops › Rider cancel fees.
+ */
+const RETIRED_PRICE_FIELDS = ["longPickupFee", "cancelFee", "freeCancelMin"];
 
 function withoutRetiredFields(price: CategoryPrice): CategoryPrice {
   const copy: Record<string, unknown> = { ...price };
@@ -365,7 +363,6 @@ export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDe
     if (price.maximum && price.minimum > price.maximum) add(`prices.${category.id}.minimum`, `${category.label}: minimum fare is higher than the maximum fare.`);
     if (price.appFeePct > 50) add(`prices.${category.id}.appFeePct`, `${category.label}: app fee can be at most 50%.`);
     if (price.freeWaitMin > 30) add(`prices.${category.id}.freeWaitMin`, `${category.label}: free waiting can be at most 30 min.`);
-    if (price.freeCancelMin > 30) add(`prices.${category.id}.freeCancelMin`, `${category.label}: free cancellation window can be at most 30 min.`);
     const commission = book.commission[category.id];
     if (!Number.isFinite(commission) || commission < 0 || commission > 60) add(`commission.${category.id}`, `${category.label}: commission must be between 0 and 60%.`);
   }

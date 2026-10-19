@@ -5,7 +5,7 @@ The field is built and saved in configuration. The number below is the default u
 | Topic | Default in the demo | Why it is open |
 | --- | --- | --- |
 | Quote validity | 2 minutes | Rider app has not confirmed the window. |
-| Free cancellation window | 2 minutes after accept | Fee after that is a product choice. |
+| Free cancellation window | Set per zone and car type in Dispatch › Rides & stops › Rider cancel fees | The fee after it is set in the same card. |
 | Reservation give-up | 5 minutes | Driver app timer must match. |
 | Included reservation waiting | 5 minutes | Extra waiting price is a price-set field. |
 | Booking horizon | 7 days | May differ by zone. |

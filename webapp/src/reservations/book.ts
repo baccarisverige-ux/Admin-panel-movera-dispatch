@@ -13,7 +13,6 @@ export type ReservationPolicy = {
   assignmentLeadMinutes: number;
   giveUpMinutes: number;
   includedWaitingMinutes: number;
-  freeCancelAfterAcceptMinutes: number;
 };
 
 export type Reservation = {
@@ -86,7 +85,6 @@ export const DEFAULT_RESERVATION_POLICY: ReservationPolicy = {
   assignmentLeadMinutes: 30,
   giveUpMinutes: GIVE_UP_MINUTES,
   includedWaitingMinutes: 5,
-  freeCancelAfterAcceptMinutes: 2,
 };
 
 export const LEGACY_RESERVATION_POLICY: ReservationPolicy = {
@@ -95,7 +93,6 @@ export const LEGACY_RESERVATION_POLICY: ReservationPolicy = {
   assignmentLeadMinutes: 45,
   giveUpMinutes: 5,
   includedWaitingMinutes: 5,
-  freeCancelAfterAcceptMinutes: 0,
 };
 
 export function emptyReservationBook(): ReservationBook {
@@ -110,21 +107,35 @@ export function emptyReservationBook(): ReservationBook {
   };
 }
 
+/**
+ * Fields older policies may still carry. "Free cancel after accept" is gone: the rider's free cancel time and fee are set
+ * per zone and car type in Dispatch › Rides & stops › Rider cancel fees (reservations count it before pickup).
+ */
+const RETIRED_POLICY_FIELDS = ["freeCancelAfterAcceptMinutes"];
+
+function withoutRetiredFields<T extends object>(policy: T): T {
+  const copy = { ...policy } as Record<string, unknown>;
+  for (const field of RETIRED_POLICY_FIELDS) delete copy[field];
+  return copy as T;
+}
+
 export function normalizeReservationBook(value: unknown): ReservationBook {
   if (!value || typeof value !== "object") return emptyReservationBook();
   const raw = value as Partial<ReservationBook>;
-  const currentPolicy = raw.currentPolicy ? { ...DEFAULT_RESERVATION_POLICY, ...raw.currentPolicy } : { ...DEFAULT_RESERVATION_POLICY };
+  const currentPolicy = withoutRetiredFields(raw.currentPolicy ? { ...DEFAULT_RESERVATION_POLICY, ...raw.currentPolicy } : { ...DEFAULT_RESERVATION_POLICY });
+  const reservations = raw.reservations && typeof raw.reservations === "object" ? structuredClone(raw.reservations) : {};
+  for (const ops of Object.values(reservations)) if (ops && typeof ops === "object" && ops.policy && typeof ops.policy === "object") ops.policy = withoutRetiredFields(ops.policy);
   return {
     draftRev: typeof raw.draftRev === "number" && raw.draftRev > 0 ? raw.draftRev : 1,
     currentPolicy,
     policies: raw.policies && typeof raw.policies === "object"
-      ? structuredClone(raw.policies)
+      ? Object.fromEntries(Object.entries(structuredClone(raw.policies)).map(([version, policy]) => [version, policy && typeof policy === "object" ? withoutRetiredFields(policy) : policy]))
       : {
           [LEGACY_RESERVATION_POLICY.version]: { ...LEGACY_RESERVATION_POLICY },
           [DEFAULT_RESERVATION_POLICY.version]: { ...DEFAULT_RESERVATION_POLICY },
           [currentPolicy.version]: { ...currentPolicy },
         },
-    reservations: raw.reservations && typeof raw.reservations === "object" ? structuredClone(raw.reservations) : {},
+    reservations,
   };
 }
 
@@ -416,7 +427,6 @@ export function saveReservationPolicy(
     ["Assignment lead", next.assignmentLeadMinutes, 5, 240],
     ["Give-up time", next.giveUpMinutes, 1, 60],
     ["Included waiting", next.includedWaitingMinutes, 0, 60],
-    ["Free-cancel window", next.freeCancelAfterAcceptMinutes, 0, 30],
   ];
   for (const [label, value, min, max] of integers) {
     if (!Number.isInteger(value) || value < min || value > max) {

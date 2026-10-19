@@ -41,11 +41,18 @@ function defaultZone(zoneId: string): ZonePrice {
   return structuredClone(defaults.find((zone) => zone.zoneId === zoneId) ?? defaults[0]!);
 }
 
+/** Older saves had a zone-wide rider "cancelFee". Rider cancel fees are set in Dispatch › Rider cancel fees only. */
+function withoutRetired(value: ZonePrice): ZonePrice {
+  const copy = { ...value } as ZonePrice & { cancelFee?: unknown };
+  delete copy.cancelFee;
+  return copy;
+}
+
 function normalizeZone(value: ZonePrice): ZonePrice {
   const fallback = defaultZone(value.zoneId);
   return {
     ...fallback,
-    ...value,
+    ...withoutRetired(value),
     rates: Object.fromEntries(
       CATEGORY_IDS.map((id) => [id, { ...fallback.rates[id], ...(value.rates?.[id] ?? {}) }]),
     ) as ZonePrice["rates"],
@@ -129,7 +136,6 @@ export function validateZonePrice(zone: ZonePrice): string | null {
   if (!(zone.quoteSeconds >= 15 && zone.quoteSeconds <= 900)) return "Quote validity must be between 15 and 900 seconds.";
 
   for (const [label, value] of [
-    ["Cancellation fee", zone.cancelFee],
     ["Reservation fee", zone.reservationFee],
     ["Booking fee", zone.bookingFee],
     ["Airport fee", zone.airportFee],

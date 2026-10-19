@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router";
 import { AlertTriangle, ArrowLeft, Bell, Flag, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
 import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
@@ -56,6 +57,13 @@ export function RulesView(props: Props) {
   const [presetOpen, setPresetOpen] = useState(false);
   const [phone, setPhone] = useState<"auto" | "driver" | "rider">("auto");
   const [feeTab, setFeeTab] = useState<CancelFeeKind>("live");
+  const { hash } = useLocation();
+  // Pricing links here (#dx-rider-cancel-fees): show the Rider cancel fees card once it is on screen.
+  useEffect(() => {
+    if (hash !== "#dx-rider-cancel-fees" || tab !== "rides" || !zoneId) return;
+    const timer = window.setTimeout(() => document.getElementById("dx-rider-cancel-fees")?.scrollIntoView({ block: "start" }), 50);
+    return () => window.clearTimeout(timer);
+  }, [hash, tab, zoneId]);
   const zone = zones.find((item) => item.id === zoneId) ?? null;
   const groups = Array.from(new Set(zones.map((item) => (item.kind === "airport" ? "Airports" : item.city)))).map((label) => ({ label, zones: zones.filter((item) => (item.kind === "airport" ? "Airports" : item.city) === label) }));
 

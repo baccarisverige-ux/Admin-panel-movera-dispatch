@@ -11,6 +11,7 @@ import { statusLabel } from "../domain/labels";
 import { MapPanel } from "../dispatch/maps";
 import { formatMoney, market, zoneById } from "../markets/markets";
 import { emptyPricingStore, normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY } from "../pricing/zonePricing";
+import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook } from "../dispatch/rules";
 import { Cards } from "../reports/ui";
 import { INCIDENT_OPS_KEY, caseOf, emptyIncidentOps, normalizeIncidentOps, type IncidentOps } from "../safety/cases";
 import { answerLabel, asRideChecks, followText, isRed, reasonText, shiftOf, shifted, triggerLabel } from "../safety/rideCheck";
@@ -82,6 +83,7 @@ export function TripPage() {
   const audit = useAudit();
   const opsSlice = useSlice<TripOps>(TRIP_OPS_KEY, emptyTripOps(), { enabled: can(role, "trips.read") });
   const pricing = useSlice<unknown>(PRICING_KEY, emptyPricingStore());
+  const dispatch = useSlice<unknown>(DISPATCH_KEY, emptyDispatchBook());
   const ops = normalizeTripOps(opsSlice.value);
   const api = useAdminApi();
   const canSafety = can(role, "incidents.read");
@@ -137,7 +139,7 @@ export function TripPage() {
   const tripAudits = (audit.data ?? []).filter((item) => item.targetId === trip.id).slice(0, 20);
   const tone = trip.status.includes("cancel") || trip.status === "failed" ? "red" : trip.status === "completed" ? "green" : "amber";
   const store = normalizeStore(pricing.value);
-  const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries);
+  const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatch.value), trip.zoneId).riderCancel.fees);
   const chat = chatOf(trip);
   const calls = callsOf(trip);
   const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })));
