@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 /**
  * Escape closes a non-modal panel (Test a ride, the dashboard driver and rider panels). It listens on window,
@@ -7,10 +7,12 @@ import { useEffect, useRef } from "react";
  */
 export function useEscape(onClose: () => void, enabled = true) {
   const close = useRef(onClose);
-  useEffect(() => {
+  useLayoutEffect(() => {
     close.current = onClose;
   }, [onClose]);
-  useEffect(() => {
+  // Layout effect: the listener is in place before the panel is painted, so an Escape pressed the moment it
+  // appears is not missed.
+  useLayoutEffect(() => {
     if (!enabled) return;
     function onKey(event: KeyboardEvent) {
       if (event.key !== "Escape" || event.defaultPrevented) return;
