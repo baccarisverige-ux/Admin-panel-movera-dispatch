@@ -1,0 +1,929 @@
+{
+  "version": 8,
+  "publishedAt": "2026-10-19T08:00:00Z",
+  "zoneId": "TN-TC",
+  "currency": "TND",
+  "timeZone": "Africa/Tunis",
+  "catalog": {
+    "categories": [
+      {
+        "id": "economy",
+        "label": "Movera",
+        "seats": 4,
+        "sort": 1,
+        "line": "Everyday ride"
+      },
+      {
+        "id": "comfort",
+        "label": "Comfort",
+        "seats": 4,
+        "sort": 2,
+        "line": "Newer cars, more room"
+      },
+      {
+        "id": "premium",
+        "label": "Premium",
+        "seats": 4,
+        "sort": 3,
+        "line": "High-end cars, top drivers"
+      },
+      {
+        "id": "priority",
+        "label": "Priority",
+        "seats": 4,
+        "sort": 4,
+        "line": "Faster pickup"
+      },
+      {
+        "id": "xl",
+        "label": "XL",
+        "seats": 6,
+        "sort": 5,
+        "line": "Up to 6 seats"
+      },
+      {
+        "id": "electric",
+        "label": "Electric",
+        "seats": 4,
+        "sort": 6,
+        "line": "Fully electric car"
+      },
+      {
+        "id": "pet",
+        "label": "Pet",
+        "seats": 4,
+        "sort": 7,
+        "line": "Your pet rides with you"
+      },
+      {
+        "id": "child_seat",
+        "label": "Child Seat",
+        "seats": 4,
+        "sort": 8,
+        "line": "Car with a baby or child seat"
+      }
+    ]
+  },
+  "features": {
+    "scheduledRides": true,
+    "performance": true,
+    "showRating": true,
+    "showAcceptance": true,
+    "showCancellation": true
+  },
+  "offers": {
+    "radarSeconds": 15,
+    "exclusiveSeconds": 15,
+    "radarOn": true,
+    "exclusiveOn": true,
+    "assignAcceptSeconds": 30,
+    "offerCard": {
+      "netFare": false,
+      "pickupAddress": true,
+      "dropoffAreaOnly": false,
+      "stops": true,
+      "riderRating": true,
+      "tripMinutesKm": true,
+      "pickupDistance": true,
+      "badges": true
+    },
+    "exclusiveReasons": [
+      {
+        "id": "best-match",
+        "text": "Best match",
+        "on": true
+      },
+      {
+        "id": "favourite",
+        "text": "Rider's favourite",
+        "on": true
+      },
+      {
+        "id": "finishing-nearby",
+        "text": "Finishing nearby",
+        "on": true
+      },
+      {
+        "id": "airport-queue",
+        "text": "Airport queue",
+        "on": true
+      },
+      {
+        "id": "pickup-soon",
+        "text": "Pickup soon",
+        "on": true
+      },
+      {
+        "id": "nearby",
+        "text": "Only for you · nearby",
+        "on": true
+      }
+    ],
+    "autoOffline": {
+      "on": true,
+      "missedExclusive": 5,
+      "hiddenComesBackMin": 2
+    },
+    "radarApp": {
+      "fullOn": true,
+      "full": 8,
+      "popupOn": true,
+      "popup": 2
+    },
+    "exclusiveWhileDriving": {
+      "on": true,
+      "count": 1
+    }
+  },
+  "pickupPay": {
+    "perKm": {
+      "amountMinor": 750,
+      "currency": "TND"
+    },
+    "perMin": {
+      "amountMinor": 240,
+      "currency": "TND"
+    },
+    "freeKm": 1,
+    "freeMin": 2,
+    "ranges": [],
+    "display": "total",
+    "offers": {
+      "radar": true,
+      "exclusive": true,
+      "exclusiveReservation": true,
+      "assigned": true,
+      "nextTrip": true
+    },
+    "byCategory": {
+      "economy": {
+        "enabled": true,
+        "perKm": {
+          "amountMinor": 750,
+          "currency": "TND"
+        },
+        "perMin": {
+          "amountMinor": 240,
+          "currency": "TND"
+        },
+        "freeKm": 1,
+        "freeMin": 2,
+        "ranges": []
+      },
+      "comfort": {
+        "enabled": true,
+        "perKm": {
+          "amountMinor": 900,
+          "currency": "TND"
+        },
+        "perMin": {
+          "amountMinor": 300,
+          "currency": "TND"
+        },
+        "freeKm": 1,
+        "freeMin": 2,
+        "ranges": []
+      },
+      "premium": {
+        "enabled": true,
+        "perKm": {
+          "amountMinor": 1200,
+          "currency": "TND"
+        },
+        "perMin": {
+          "amountMinor": 450,
+          "currency": "TND"
+        },
+        "freeKm": 1,
+        "freeMin": 2,
+        "ranges": []
+      },
+      "priority": {
+        "enabled": true,
+        "perKm": {
+          "amountMinor": 1050,
+          "currency": "TND"
+        },
+        "perMin": {
+          "amountMinor": 360,
+          "currency": "TND"
+        },
+        "freeKm": 1,
+        "freeMin": 2,
+        "ranges": []
+      },
+      "xl": {
+        "enabled": true,
+        "perKm": {
+          "amountMinor": 1050,
+          "currency": "TND"
+        },
+        "perMin": {
+          "amountMinor": 360,
+          "currency": "TND"
+        },
+        "freeKm": 1,
+        "freeMin": 2,
+        "ranges": []
+      },
+      "electric": {
+        "enabled": true,
+        "perKm": {
+          "amountMinor": 900,
+          "currency": "TND"
+        },
+        "perMin": {
+          "amountMinor": 300,
+          "currency": "TND"
+        },
+        "freeKm": 1,
+        "freeMin": 2,
+        "ranges": []
+      },
+      "pet": {
+        "enabled": true,
+        "perKm": {
+          "amountMinor": 900,
+          "currency": "TND"
+        },
+        "perMin": {
+          "amountMinor": 300,
+          "currency": "TND"
+        },
+        "freeKm": 1,
+        "freeMin": 2,
+        "ranges": []
+      },
+      "child_seat": {
+        "enabled": true,
+        "perKm": {
+          "amountMinor": 900,
+          "currency": "TND"
+        },
+        "perMin": {
+          "amountMinor": 300,
+          "currency": "TND"
+        },
+        "freeKm": 1,
+        "freeMin": 2,
+        "ranges": []
+      }
+    }
+  },
+  "cancelFees": {
+    "live": {
+      "economy": {
+        "freeMin": 2,
+        "type": "fixed",
+        "value": 10500,
+        "min": null,
+        "max": null
+      },
+      "comfort": {
+        "freeMin": 2,
+        "type": "fixed",
+        "value": 13500,
+        "min": null,
+        "max": null
+      },
+      "premium": {
+        "freeMin": 3,
+        "type": "percent",
+        "value": 15,
+        "min": {
+          "amountMinor": 15000,
+          "currency": "TND"
+        },
+        "max": {
+          "amountMinor": 45000,
+          "currency": "TND"
+        }
+      },
+      "priority": {
+        "freeMin": 2,
+        "type": "fixed",
+        "value": 10500,
+        "min": null,
+        "max": null
+      },
+      "xl": {
+        "freeMin": 3,
+        "type": "percent",
+        "value": 15,
+        "min": {
+          "amountMinor": 15000,
+          "currency": "TND"
+        },
+        "max": {
+          "amountMinor": 45000,
+          "currency": "TND"
+        }
+      },
+      "electric": {
+        "freeMin": 2,
+        "type": "fixed",
+        "value": 10500,
+        "min": null,
+        "max": null
+      },
+      "pet": {
+        "freeMin": 2,
+        "type": "fixed",
+        "value": 10500,
+        "min": null,
+        "max": null
+      },
+      "child_seat": {
+        "freeMin": 2,
+        "type": "fixed",
+        "value": 10500,
+        "min": null,
+        "max": null
+      }
+    },
+    "reservation": {
+      "economy": {
+        "freeMin": 60,
+        "type": "fixed",
+        "value": 15000,
+        "min": null,
+        "max": null
+      },
+      "comfort": {
+        "freeMin": 60,
+        "type": "fixed",
+        "value": 18000,
+        "min": null,
+        "max": null
+      },
+      "premium": {
+        "freeMin": 120,
+        "type": "percent",
+        "value": 25,
+        "min": {
+          "amountMinor": 24000,
+          "currency": "TND"
+        },
+        "max": {
+          "amountMinor": 90000,
+          "currency": "TND"
+        }
+      },
+      "priority": {
+        "freeMin": 60,
+        "type": "fixed",
+        "value": 15000,
+        "min": null,
+        "max": null
+      },
+      "xl": {
+        "freeMin": 120,
+        "type": "percent",
+        "value": 25,
+        "min": {
+          "amountMinor": 24000,
+          "currency": "TND"
+        },
+        "max": {
+          "amountMinor": 90000,
+          "currency": "TND"
+        }
+      },
+      "electric": {
+        "freeMin": 60,
+        "type": "fixed",
+        "value": 15000,
+        "min": null,
+        "max": null
+      },
+      "pet": {
+        "freeMin": 60,
+        "type": "fixed",
+        "value": 15000,
+        "min": null,
+        "max": null
+      },
+      "child_seat": {
+        "freeMin": 60,
+        "type": "fixed",
+        "value": 15000,
+        "min": null,
+        "max": null
+      }
+    }
+  },
+  "waiting": {
+    "freeWaitMin": 2,
+    "perMin": {
+      "amountMinor": 3700,
+      "currency": "TND"
+    },
+    "noShowAfterMin": 5,
+    "noShowFee": {
+      "amountMinor": 19500,
+      "currency": "TND"
+    },
+    "driverSharePct": 80,
+    "driverShareWaitPct": 100,
+    "byCategory": {
+      "economy": {
+        "freeWaitMin": 2,
+        "perMin": {
+          "amountMinor": 3700,
+          "currency": "TND"
+        },
+        "noShowAfterMin": 5,
+        "noShowFee": {
+          "amountMinor": 19500,
+          "currency": "TND"
+        }
+      },
+      "comfort": {
+        "freeWaitMin": 2,
+        "perMin": {
+          "amountMinor": 3700,
+          "currency": "TND"
+        },
+        "noShowAfterMin": 5,
+        "noShowFee": {
+          "amountMinor": 19500,
+          "currency": "TND"
+        }
+      },
+      "premium": {
+        "freeWaitMin": 5,
+        "perMin": {
+          "amountMinor": 5100,
+          "currency": "TND"
+        },
+        "noShowAfterMin": 5,
+        "noShowFee": {
+          "amountMinor": 19500,
+          "currency": "TND"
+        }
+      },
+      "priority": {
+        "freeWaitMin": 2,
+        "perMin": {
+          "amountMinor": 3700,
+          "currency": "TND"
+        },
+        "noShowAfterMin": 5,
+        "noShowFee": {
+          "amountMinor": 19500,
+          "currency": "TND"
+        }
+      },
+      "xl": {
+        "freeWaitMin": 3,
+        "perMin": {
+          "amountMinor": 3700,
+          "currency": "TND"
+        },
+        "noShowAfterMin": 5,
+        "noShowFee": {
+          "amountMinor": 19500,
+          "currency": "TND"
+        }
+      },
+      "electric": {
+        "freeWaitMin": 2,
+        "perMin": {
+          "amountMinor": 3700,
+          "currency": "TND"
+        },
+        "noShowAfterMin": 5,
+        "noShowFee": {
+          "amountMinor": 19500,
+          "currency": "TND"
+        }
+      },
+      "pet": {
+        "freeWaitMin": 2,
+        "perMin": {
+          "amountMinor": 3700,
+          "currency": "TND"
+        },
+        "noShowAfterMin": 5,
+        "noShowFee": {
+          "amountMinor": 19500,
+          "currency": "TND"
+        }
+      },
+      "child_seat": {
+        "freeWaitMin": 2,
+        "perMin": {
+          "amountMinor": 3700,
+          "currency": "TND"
+        },
+        "noShowAfterMin": 5,
+        "noShowFee": {
+          "amountMinor": 19500,
+          "currency": "TND"
+        }
+      }
+    },
+    "farPickup": {
+      "on": true,
+      "km": 5,
+      "freeWaitMin": 1,
+      "perMin": null,
+      "noShowAfterMin": null,
+      "noShowFee": {
+        "amountMinor": 25500,
+        "currency": "TND"
+      }
+    },
+    "rideTypes": {
+      "scheduled": {
+        "on": true,
+        "freeWaitMin": 5,
+        "perMin": null,
+        "noShowAfterMin": null,
+        "noShowFee": null
+      },
+      "airport": {
+        "on": true,
+        "freeWaitMin": 15,
+        "perMin": null,
+        "noShowAfterMin": 20,
+        "noShowFee": null
+      },
+      "event": {
+        "on": true,
+        "freeWaitMin": 3,
+        "perMin": null,
+        "noShowAfterMin": null,
+        "noShowFee": null
+      }
+    }
+  },
+  "destinationMode": {
+    "perDay": 2,
+    "enabled": true,
+    "timeLimitOn": true,
+    "timeLimitHours": 2,
+    "dailyLimitOn": true,
+    "destinationsPerDay": 2,
+    "corridorOn": true,
+    "corridorKm": 5,
+    "focusFinalDestinationOn": true,
+    "focusOnTheWayOn": true,
+    "focus": "both"
+  },
+  "nextTrips": {
+    "on": true,
+    "offerTypes": [
+      "exclusive",
+      "exclusiveReservation"
+    ],
+    "radarOffers": false,
+    "onlyOnTheWayToFinalDropoff": true,
+    "withinKmOfDropoffOn": true,
+    "withinKmOfDropoff": 5,
+    "withinMinutesOfDropoffOn": true,
+    "withinMinutesOfDropoff": 10,
+    "startWhen": "either"
+  },
+  "cancelReasons": {
+    "driverBeforeTrip": [
+      "rider_requested_cancel",
+      "rider_not_at_pickup",
+      "unsafe_pickup",
+      "vehicle_issue_before_start",
+      "driver_emergency_before_start",
+      "other_before_start"
+    ],
+    "driverDuringTrip": [
+      "rider_requested_early_end",
+      "safety_concern_on_trip",
+      "vehicle_issue_on_trip",
+      "accident_or_road_emergency",
+      "rider_behavior",
+      "trip_or_destination_issue",
+      "other_on_trip"
+    ],
+    "driverNextTrip": [
+      "next_trip_current_running_late",
+      "next_trip_pickup_too_far",
+      "next_trip_rider_requested",
+      "next_trip_vehicle_issue",
+      "next_trip_driver_emergency",
+      "next_trip_other"
+    ],
+    "scheduled": [
+      "scheduled_cannot_make_time",
+      "scheduled_vehicle_issue",
+      "scheduled_personal_emergency",
+      "scheduled_pickup_too_far",
+      "scheduled_trip_details",
+      "scheduled_other"
+    ],
+    "noShow": [
+      "rider_no_show"
+    ]
+  },
+  "drivingLimits": {
+    "maxHoursPerDay": 12,
+    "restMinutes": 360,
+    "on": true,
+    "warnFirstMin": 30,
+    "warnLastMin": 10,
+    "blockOnline": true
+  },
+  "rideCheck": {
+    "stopMinutes": 2,
+    "offRouteKm": 2,
+    "finishFarFromDropoffKm": 3,
+    "farOn": true,
+    "stopOn": true,
+    "routeOn": true,
+    "longerOn": true,
+    "longerPct": 50,
+    "crashOn": true
+  },
+  "texts": {
+    "byLanguage": {
+      "en": {
+        "cancelReason.rider_no_show": "Rider did not arrive",
+        "cancelReason.rider_no_show.subtitle": "The no-show time has passed and the rider is not here",
+        "cancelReason.rider_requested_cancel": "Rider asked to cancel",
+        "cancelReason.rider_requested_cancel.subtitle": "The rider doesn’t want to continue",
+        "cancelReason.rider_not_at_pickup": "Rider not at pickup",
+        "cancelReason.rider_not_at_pickup.subtitle": "You arrived but couldn’t find the rider",
+        "cancelReason.unsafe_pickup": "Pickup unsafe",
+        "cancelReason.unsafe_pickup.subtitle": "You can’t stop there safely",
+        "cancelReason.vehicle_issue_before_start": "Vehicle problem",
+        "cancelReason.vehicle_issue_before_start.subtitle": "Your car can’t make the trip",
+        "cancelReason.driver_emergency_before_start": "Personal emergency",
+        "cancelReason.driver_emergency_before_start.subtitle": "Something urgent came up",
+        "cancelReason.other_before_start": "Other reason",
+        "cancelReason.other_before_start.subtitle": "Something else stops this pickup",
+        "cancelReason.rider_requested_early_end": "Rider asked to end the trip",
+        "cancelReason.rider_requested_early_end.subtitle": "The rider wants to leave before the destination",
+        "cancelReason.safety_concern_on_trip": "Safety concern",
+        "cancelReason.safety_concern_on_trip.subtitle": "Continuing the trip may be unsafe",
+        "cancelReason.vehicle_issue_on_trip": "Vehicle problem",
+        "cancelReason.vehicle_issue_on_trip.subtitle": "A vehicle issue makes it unsafe to continue",
+        "cancelReason.accident_or_road_emergency": "Accident or road emergency",
+        "cancelReason.accident_or_road_emergency.subtitle": "An incident or emergency prevents continuing",
+        "cancelReason.rider_behavior": "Rider behavior",
+        "cancelReason.rider_behavior.subtitle": "The rider’s behavior requires the trip to end",
+        "cancelReason.trip_or_destination_issue": "Trip or destination issue",
+        "cancelReason.trip_or_destination_issue.subtitle": "A trip detail or destination problem prevents continuing",
+        "cancelReason.other_on_trip": "Other reason",
+        "cancelReason.other_on_trip.subtitle": "Another issue requires the trip to end early",
+        "cancelReason.next_trip_current_running_late": "Current trip is taking longer",
+        "cancelReason.next_trip_current_running_late.subtitle": "You can’t reach the next pickup in time",
+        "cancelReason.next_trip_pickup_too_far": "Too far from the pickup",
+        "cancelReason.next_trip_pickup_too_far.subtitle": "The next pickup is further than expected",
+        "cancelReason.next_trip_rider_requested": "Rider asked me to cancel",
+        "cancelReason.next_trip_rider_requested.subtitle": "The next rider doesn’t want the trip",
+        "cancelReason.next_trip_vehicle_issue": "Problem with the car",
+        "cancelReason.next_trip_vehicle_issue.subtitle": "Your car can’t make the next trip",
+        "cancelReason.next_trip_driver_emergency": "Personal emergency",
+        "cancelReason.next_trip_driver_emergency.subtitle": "Something urgent came up",
+        "cancelReason.next_trip_other": "Other reason",
+        "cancelReason.next_trip_other.subtitle": "Something else stops the next trip",
+        "cancelReason.scheduled_cannot_make_time": "I can no longer make the pickup time",
+        "cancelReason.scheduled_vehicle_issue": "Vehicle issue",
+        "cancelReason.scheduled_personal_emergency": "Personal emergency",
+        "cancelReason.scheduled_pickup_too_far": "Pickup is too far from me",
+        "cancelReason.scheduled_trip_details": "Trip details no longer work for me",
+        "cancelReason.scheduled_other": "Other reason"
+      },
+      "sv": {
+        "cancelReason.rider_no_show": "Rider did not arrive",
+        "cancelReason.rider_no_show.subtitle": "The no-show time has passed and the rider is not here",
+        "cancelReason.rider_requested_cancel": "Rider asked to cancel",
+        "cancelReason.rider_requested_cancel.subtitle": "The rider doesn’t want to continue",
+        "cancelReason.rider_not_at_pickup": "Rider not at pickup",
+        "cancelReason.rider_not_at_pickup.subtitle": "You arrived but couldn’t find the rider",
+        "cancelReason.unsafe_pickup": "Pickup unsafe",
+        "cancelReason.unsafe_pickup.subtitle": "You can’t stop there safely",
+        "cancelReason.vehicle_issue_before_start": "Vehicle problem",
+        "cancelReason.vehicle_issue_before_start.subtitle": "Your car can’t make the trip",
+        "cancelReason.driver_emergency_before_start": "Personal emergency",
+        "cancelReason.driver_emergency_before_start.subtitle": "Something urgent came up",
+        "cancelReason.other_before_start": "Other reason",
+        "cancelReason.other_before_start.subtitle": "Something else stops this pickup",
+        "cancelReason.rider_requested_early_end": "Rider asked to end the trip",
+        "cancelReason.rider_requested_early_end.subtitle": "The rider wants to leave before the destination",
+        "cancelReason.safety_concern_on_trip": "Safety concern",
+        "cancelReason.safety_concern_on_trip.subtitle": "Continuing the trip may be unsafe",
+        "cancelReason.vehicle_issue_on_trip": "Vehicle problem",
+        "cancelReason.vehicle_issue_on_trip.subtitle": "A vehicle issue makes it unsafe to continue",
+        "cancelReason.accident_or_road_emergency": "Accident or road emergency",
+        "cancelReason.accident_or_road_emergency.subtitle": "An incident or emergency prevents continuing",
+        "cancelReason.rider_behavior": "Rider behavior",
+        "cancelReason.rider_behavior.subtitle": "The rider’s behavior requires the trip to end",
+        "cancelReason.trip_or_destination_issue": "Trip or destination issue",
+        "cancelReason.trip_or_destination_issue.subtitle": "A trip detail or destination problem prevents continuing",
+        "cancelReason.other_on_trip": "Other reason",
+        "cancelReason.other_on_trip.subtitle": "Another issue requires the trip to end early",
+        "cancelReason.next_trip_current_running_late": "Current trip is taking longer",
+        "cancelReason.next_trip_current_running_late.subtitle": "You can’t reach the next pickup in time",
+        "cancelReason.next_trip_pickup_too_far": "Too far from the pickup",
+        "cancelReason.next_trip_pickup_too_far.subtitle": "The next pickup is further than expected",
+        "cancelReason.next_trip_rider_requested": "Rider asked me to cancel",
+        "cancelReason.next_trip_rider_requested.subtitle": "The next rider doesn’t want the trip",
+        "cancelReason.next_trip_vehicle_issue": "Problem with the car",
+        "cancelReason.next_trip_vehicle_issue.subtitle": "Your car can’t make the next trip",
+        "cancelReason.next_trip_driver_emergency": "Personal emergency",
+        "cancelReason.next_trip_driver_emergency.subtitle": "Something urgent came up",
+        "cancelReason.next_trip_other": "Other reason",
+        "cancelReason.next_trip_other.subtitle": "Something else stops the next trip",
+        "cancelReason.scheduled_cannot_make_time": "I can no longer make the pickup time",
+        "cancelReason.scheduled_vehicle_issue": "Vehicle issue",
+        "cancelReason.scheduled_personal_emergency": "Personal emergency",
+        "cancelReason.scheduled_pickup_too_far": "Pickup is too far from me",
+        "cancelReason.scheduled_trip_details": "Trip details no longer work for me",
+        "cancelReason.scheduled_other": "Other reason"
+      },
+      "fr": {
+        "cancelReason.rider_no_show": "Rider did not arrive",
+        "cancelReason.rider_no_show.subtitle": "The no-show time has passed and the rider is not here",
+        "cancelReason.rider_requested_cancel": "Rider asked to cancel",
+        "cancelReason.rider_requested_cancel.subtitle": "The rider doesn’t want to continue",
+        "cancelReason.rider_not_at_pickup": "Rider not at pickup",
+        "cancelReason.rider_not_at_pickup.subtitle": "You arrived but couldn’t find the rider",
+        "cancelReason.unsafe_pickup": "Pickup unsafe",
+        "cancelReason.unsafe_pickup.subtitle": "You can’t stop there safely",
+        "cancelReason.vehicle_issue_before_start": "Vehicle problem",
+        "cancelReason.vehicle_issue_before_start.subtitle": "Your car can’t make the trip",
+        "cancelReason.driver_emergency_before_start": "Personal emergency",
+        "cancelReason.driver_emergency_before_start.subtitle": "Something urgent came up",
+        "cancelReason.other_before_start": "Other reason",
+        "cancelReason.other_before_start.subtitle": "Something else stops this pickup",
+        "cancelReason.rider_requested_early_end": "Rider asked to end the trip",
+        "cancelReason.rider_requested_early_end.subtitle": "The rider wants to leave before the destination",
+        "cancelReason.safety_concern_on_trip": "Safety concern",
+        "cancelReason.safety_concern_on_trip.subtitle": "Continuing the trip may be unsafe",
+        "cancelReason.vehicle_issue_on_trip": "Vehicle problem",
+        "cancelReason.vehicle_issue_on_trip.subtitle": "A vehicle issue makes it unsafe to continue",
+        "cancelReason.accident_or_road_emergency": "Accident or road emergency",
+        "cancelReason.accident_or_road_emergency.subtitle": "An incident or emergency prevents continuing",
+        "cancelReason.rider_behavior": "Rider behavior",
+        "cancelReason.rider_behavior.subtitle": "The rider’s behavior requires the trip to end",
+        "cancelReason.trip_or_destination_issue": "Trip or destination issue",
+        "cancelReason.trip_or_destination_issue.subtitle": "A trip detail or destination problem prevents continuing",
+        "cancelReason.other_on_trip": "Other reason",
+        "cancelReason.other_on_trip.subtitle": "Another issue requires the trip to end early",
+        "cancelReason.next_trip_current_running_late": "Current trip is taking longer",
+        "cancelReason.next_trip_current_running_late.subtitle": "You can’t reach the next pickup in time",
+        "cancelReason.next_trip_pickup_too_far": "Too far from the pickup",
+        "cancelReason.next_trip_pickup_too_far.subtitle": "The next pickup is further than expected",
+        "cancelReason.next_trip_rider_requested": "Rider asked me to cancel",
+        "cancelReason.next_trip_rider_requested.subtitle": "The next rider doesn’t want the trip",
+        "cancelReason.next_trip_vehicle_issue": "Problem with the car",
+        "cancelReason.next_trip_vehicle_issue.subtitle": "Your car can’t make the next trip",
+        "cancelReason.next_trip_driver_emergency": "Personal emergency",
+        "cancelReason.next_trip_driver_emergency.subtitle": "Something urgent came up",
+        "cancelReason.next_trip_other": "Other reason",
+        "cancelReason.next_trip_other.subtitle": "Something else stops the next trip",
+        "cancelReason.scheduled_cannot_make_time": "I can no longer make the pickup time",
+        "cancelReason.scheduled_vehicle_issue": "Vehicle issue",
+        "cancelReason.scheduled_personal_emergency": "Personal emergency",
+        "cancelReason.scheduled_pickup_too_far": "Pickup is too far from me",
+        "cancelReason.scheduled_trip_details": "Trip details no longer work for me",
+        "cancelReason.scheduled_other": "Other reason"
+      },
+      "ar": {
+        "cancelReason.rider_no_show": "Rider did not arrive",
+        "cancelReason.rider_no_show.subtitle": "The no-show time has passed and the rider is not here",
+        "cancelReason.rider_requested_cancel": "Rider asked to cancel",
+        "cancelReason.rider_requested_cancel.subtitle": "The rider doesn’t want to continue",
+        "cancelReason.rider_not_at_pickup": "Rider not at pickup",
+        "cancelReason.rider_not_at_pickup.subtitle": "You arrived but couldn’t find the rider",
+        "cancelReason.unsafe_pickup": "Pickup unsafe",
+        "cancelReason.unsafe_pickup.subtitle": "You can’t stop there safely",
+        "cancelReason.vehicle_issue_before_start": "Vehicle problem",
+        "cancelReason.vehicle_issue_before_start.subtitle": "Your car can’t make the trip",
+        "cancelReason.driver_emergency_before_start": "Personal emergency",
+        "cancelReason.driver_emergency_before_start.subtitle": "Something urgent came up",
+        "cancelReason.other_before_start": "Other reason",
+        "cancelReason.other_before_start.subtitle": "Something else stops this pickup",
+        "cancelReason.rider_requested_early_end": "Rider asked to end the trip",
+        "cancelReason.rider_requested_early_end.subtitle": "The rider wants to leave before the destination",
+        "cancelReason.safety_concern_on_trip": "Safety concern",
+        "cancelReason.safety_concern_on_trip.subtitle": "Continuing the trip may be unsafe",
+        "cancelReason.vehicle_issue_on_trip": "Vehicle problem",
+        "cancelReason.vehicle_issue_on_trip.subtitle": "A vehicle issue makes it unsafe to continue",
+        "cancelReason.accident_or_road_emergency": "Accident or road emergency",
+        "cancelReason.accident_or_road_emergency.subtitle": "An incident or emergency prevents continuing",
+        "cancelReason.rider_behavior": "Rider behavior",
+        "cancelReason.rider_behavior.subtitle": "The rider’s behavior requires the trip to end",
+        "cancelReason.trip_or_destination_issue": "Trip or destination issue",
+        "cancelReason.trip_or_destination_issue.subtitle": "A trip detail or destination problem prevents continuing",
+        "cancelReason.other_on_trip": "Other reason",
+        "cancelReason.other_on_trip.subtitle": "Another issue requires the trip to end early",
+        "cancelReason.next_trip_current_running_late": "Current trip is taking longer",
+        "cancelReason.next_trip_current_running_late.subtitle": "You can’t reach the next pickup in time",
+        "cancelReason.next_trip_pickup_too_far": "Too far from the pickup",
+        "cancelReason.next_trip_pickup_too_far.subtitle": "The next pickup is further than expected",
+        "cancelReason.next_trip_rider_requested": "Rider asked me to cancel",
+        "cancelReason.next_trip_rider_requested.subtitle": "The next rider doesn’t want the trip",
+        "cancelReason.next_trip_vehicle_issue": "Problem with the car",
+        "cancelReason.next_trip_vehicle_issue.subtitle": "Your car can’t make the next trip",
+        "cancelReason.next_trip_driver_emergency": "Personal emergency",
+        "cancelReason.next_trip_driver_emergency.subtitle": "Something urgent came up",
+        "cancelReason.next_trip_other": "Other reason",
+        "cancelReason.next_trip_other.subtitle": "Something else stops the next trip",
+        "cancelReason.scheduled_cannot_make_time": "I can no longer make the pickup time",
+        "cancelReason.scheduled_vehicle_issue": "Vehicle issue",
+        "cancelReason.scheduled_personal_emergency": "Personal emergency",
+        "cancelReason.scheduled_pickup_too_far": "Pickup is too far from me",
+        "cancelReason.scheduled_trip_details": "Trip details no longer work for me",
+        "cancelReason.scheduled_other": "Other reason"
+      }
+    }
+  },
+  "notices": {
+    "off": [],
+    "island": {
+      "newScheduledRide": true,
+      "exclusiveOffer": true,
+      "scheduledReminder": true,
+      "leaveNow": true,
+      "highDemand": true,
+      "event": true,
+      "documentExpiring": true,
+      "documentApproved": true,
+      "restOver": true,
+      "scheduledPaused": true,
+      "payoutSent": true,
+      "bonusProgress": true
+    },
+    "offline": {
+      "newScheduledRide": true,
+      "exclusiveOffer": true,
+      "scheduledReminder": true,
+      "leaveNow": true,
+      "highDemand": true,
+      "event": true,
+      "documentExpiring": true,
+      "documentApproved": true,
+      "restOver": true,
+      "scheduledPaused": true,
+      "payoutSent": true,
+      "bonusProgress": true
+    },
+    "texts": {
+      "en": {},
+      "sv": {},
+      "fr": {},
+      "ar": {}
+    },
+    "limits": {
+      "promoPerDay": 2,
+      "quiet": {
+        "from": "23:00",
+        "to": "07:00"
+      },
+      "alwaysThrough": [
+        "newScheduledRide",
+        "exclusiveOffer",
+        "scheduledReminder",
+        "leaveNow"
+      ]
+    }
+  },
+  "appUpdate": {
+    "minimumVersion": "1.0.0",
+    "latestVersion": "1.0.0",
+    "byPlatform": {
+      "ios": {
+        "enabled": true,
+        "minimumVersion": "1.0.0",
+        "latestVersion": "1.0.0",
+        "mandatory": false,
+        "title": "Update Movera",
+        "message": "A new version of Movera is available.",
+        "actionLabel": "Update",
+        "dismissLabel": "Later",
+        "updateUrl": "https://apps.apple.com"
+      },
+      "android": {
+        "enabled": true,
+        "minimumVersion": "1.0.0",
+        "latestVersion": "1.0.0",
+        "mandatory": false,
+        "title": "Update Movera",
+        "message": "A new version of Movera is available.",
+        "actionLabel": "Update",
+        "dismissLabel": "Later",
+        "updateUrl": "https://play.google.com"
+      }
+    }
+  },
+  "sourceRevisions": {
+    "dispatch": 1,
+    "pricing": 1,
+    "config": 1,
+    "finance": 1,
+    "reservations": 1,
+    "rideCheck": 1,
+    "driverTexts": 1,
+    "driverNotices": 1
+  }
+}

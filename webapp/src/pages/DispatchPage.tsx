@@ -26,6 +26,10 @@ import { LiveView } from "../dispatch/LiveView";
 import { RulesView } from "../dispatch/RulesView";
 import { TestView } from "../dispatch/TestView";
 import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
+import { RIDE_CHECK_SETTINGS_KEY } from "../safety/rideCheckSettings";
+import { appConfigFileName, appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs";
+import { DRIVER_TEXTS_KEY } from "../content/driverTexts";
+import { DRIVER_NOTICES_KEY } from "../messages/driverNotices";
 import {
   countryLines, DISPATCH_KEY, draftCountry, draftRules, emptyDispatchBook, liveCountry, liveRules, normalizeDispatchBook, pendingChanges, publish, rulesFile, saveDraft, TABS,
   type CountryDispatch, type DispatchBook, type TabId, type ZoneDispatch,
@@ -63,6 +67,16 @@ export function DispatchPage() {
   const drivers = useRecords("drivers", undefined, { refetchMs: 10_000 });
   const trips = useRecords("trips", undefined, { refetchMs: 10_000 });
   const vehicles = useRecords("vehicles");
+  // The app config documents read these too; until all are loaded the download waits, so it never exports defaults by mistake.
+  const appSources = {
+    config: useSlice<unknown>("config", null),
+    finance: useSlice<unknown>("finance", null),
+    reservations: useSlice<unknown>("reservationOps", null),
+    driverTexts: useSlice<unknown>(DRIVER_TEXTS_KEY, null),
+    driverNotices: useSlice<unknown>(DRIVER_NOTICES_KEY, null),
+    rideCheck: useSlice<unknown>(RIDE_CHECK_SETTINGS_KEY, null),
+  };
+  const appSourcesReady = !slice.loading && !pricingSlice.loading && !slice.error && !pricingSlice.error && Object.values(appSources).every((source) => !source.loading && !source.error);
   const incidents = useRecords("incidents");
   const riders = useRecords("riders");
   const [working, setWorking] = useState<Record<string, ZoneDispatch>>({});
@@ -142,19 +156,39 @@ export function DispatchPage() {
     else navigate("/");
   }
 
-  function downloadRules() {
-    const file = rulesFile(book, country, new Date().toISOString(), rideCheck.settings, activeCategories(pricing).map(({ id, label }) => ({ id, label })));
-    const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
+  function downloadJson(name: string, value: unknown) {
+    const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `movera-dispatch-rules-${country}-rev${book.draftRev}.json`;
+    link.download = name;
     document.body.append(link);
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function downloadRules() {
+    const file = rulesFile(book, country, new Date().toISOString(), rideCheck.settings, activeCategories(pricing).map(({ id, label }) => ({ id, label })));
+    downloadJson(`movera-dispatch-rules-${country}-rev${book.draftRev}.json`, file);
     logExport(agent?.id, `Dispatch rules file ${country}`);
     setNotice(`Rules file downloaded: every zone in ${market.name}, revision ${book.draftRev}.`);
+  }
+
+  /** RiderAppConfig / DriverAppConfig (contract §6) for the open zone, from the live (published) settings. */
+  function downloadAppConfig(app: "rider" | "driver") {
+    if (!zoneId) return;
+    const state = appConfigState({
+      now: new Date().toISOString(),
+      dispatch: slice.value,
+      pricing: pricingSlice.value,
+      ...Object.fromEntries(Object.entries(appSources).map(([key, source]) => [key, source.value])),
+    });
+    const doc = app === "rider" ? riderAppConfig(zoneId, state) : driverAppConfig(zoneId, state);
+    downloadJson(appConfigFileName(app, doc), doc);
+    const name = zoneById(zoneId)?.name ?? zoneId;
+    logExport(agent?.id, `${app === "rider" ? "Rider" : "Driver"} app config ${zoneId}`);
+    setNotice(`${app === "rider" ? "RiderAppConfig" : "DriverAppConfig"} downloaded for ${name}, version ${doc.version}. Live settings only; drafts are not in it.`);
   }
 
   const say = (text: string) => setNotice(text);
@@ -180,6 +214,12 @@ export function DispatchPage() {
           <p>How ride requests find a driver: Radar, Exclusive and reservations, with rules for every zone.</p>
         </div>
         <button data-command="admin.dispatch.rulesFile" type="button" className="dash-btn ghost" onClick={downloadRules} title="All live rules in one file for the backend team"><Download size={15} aria-hidden="true" /> Rules file</button>
+        {zoneId ? (
+          <>
+            <button data-command="admin.dispatch.appConfig" type="button" className="dash-btn ghost" onClick={() => downloadAppConfig("rider")} disabled={!appSourcesReady} title={appSourcesReady ? "RiderAppConfig JSON for this zone, as the rider app reads it" : "Loading the settings the rider app config is made from"}><Download size={15} aria-hidden="true" /> Rider app config</button>
+            <button data-command="admin.dispatch.appConfig" type="button" className="dash-btn ghost" onClick={() => downloadAppConfig("driver")} disabled={!appSourcesReady} title={appSourcesReady ? "DriverAppConfig JSON for this zone, as the driver app reads it" : "Loading the settings the driver app config is made from"}><Download size={15} aria-hidden="true" /> Driver app config</button>
+          </>
+        ) : null}
       </header>
 
       <div className="dash-tabs dx-views" role="tablist" aria-label="Dispatch sections">

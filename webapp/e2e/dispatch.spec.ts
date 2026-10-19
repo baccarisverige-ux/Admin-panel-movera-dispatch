@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 async function session(page: Page, agentId = "nora") {
@@ -180,6 +181,37 @@ test("test a ride during an event uses the event's rules", async ({ page }) => {
   await page.goto("/dispatch?view=test&zone=Z007");
   await page.getByLabel("Test time").selectOption({ label: "During Concert at Friends Arena" });
   await expect(page.getByRole("region", { name: "Test result" })).toContainText("Event Concert at Friends Arena: Radar with 12 drivers.");
+});
+
+test("a zone's RiderAppConfig and DriverAppConfig download next to the rules file, in minor units", async ({ page }) => {
+  await session(page);
+  await page.goto("/dispatch");
+  await expect(page.getByRole("button", { name: "Rider app config" })).toHaveCount(0);
+  await page.goto("/dispatch?zone=Z001");
+  const read = async (name: string) => {
+    const button = page.getByRole("button", { name });
+    await expect(button).toBeEnabled();
+    const download = page.waitForEvent("download");
+    await button.click();
+    const file = await download;
+    const path = await file.path();
+    return { name: file.suggestedFilename(), doc: JSON.parse(readFileSync(path, "utf8")) };
+  };
+  const rider = await read("Rider app config");
+  expect(rider.name).toMatch(/^movera-rider-app-config-Z001-v\d+\.json$/);
+  expect(rider.doc).toMatchObject({ zoneId: "Z001", currency: "SEK", timeZone: "Europe/Stockholm", booking: { maxStops: 3 } });
+  expect(rider.doc.cancelFees.live.economy).toEqual({ freeMin: 2, type: "fixed", value: 3500, min: null, max: null });
+  expect(rider.doc.catalog.categories.map((item: { id: string }) => item.id)).toContain("economy");
+  await expect(page.getByRole("status").filter({ hasText: "RiderAppConfig downloaded for Norrmalm" })).toBeVisible();
+  const driver = await read("Driver app config");
+  expect(driver.name).toMatch(/^movera-driver-app-config-Z001-v\d+\.json$/);
+  expect(driver.doc.waiting).toMatchObject({ noShowAfterMin: 5, driverSharePct: 80, noShowFee: { amountMinor: 6500, currency: "SEK" } });
+  expect(driver.doc.offers).toMatchObject({ radarSeconds: 15, exclusiveSeconds: 15 });
+
+  await page.goto("/dispatch?country=TN&zone=TN-TC");
+  const tn = await read("Rider app config");
+  expect(tn.doc.currency).toBe("TND");
+  expect(tn.doc.cancelFees.live.economy.value).toBe(10500);
 });
 
 test("rules file, other countries, read-only roles and phones", async ({ page }) => {
@@ -583,7 +615,7 @@ test("rider cancel fees per car type: live trips and reservations, % with min an
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toContainText("Rider cancels, Comfort: the lowest fee must not be more than the highest.");
   await live.getByLabel("Live trips Comfort lowest fee").fill("");
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toHaveCount(0);
-  await expect(live.getByLabel("Live trips: rider sees")).toContainText("then 38 kr (15%, at most 150 kr)");
+  await expect(live.getByLabel("Live trips: rider sees")).toContainText("then 37,5 kr (15%, at most 150 kr)"); // X4: 15% of 250 kr, whole öre like the apps (was rounded to 38 kr)
   await live.getByRole("button", { name: "Same for all car types" }).click();
   await live.getByRole("group", { name: /use one car type's rule for all/ }).getByRole("button", { name: "Movera" }).click();
   await expect(live.getByLabel("Live trips Comfort fee", { exact: true })).toHaveValue("35");
