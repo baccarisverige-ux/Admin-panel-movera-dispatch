@@ -205,6 +205,11 @@ export function fromSek(amountSek: number, id: MarketId): number {
   return roundTo(amountSek * factor, step);
 }
 
+/** A major-unit amount rounded to the market's natural money step (1 kr, 0.05 €, 0.1 DT), like the default prices. */
+export function roundMoney(value: number, id: MarketId): number {
+  return roundTo(value, CURRENCY[id].step);
+}
+
 export function currencySymbol(id: MarketId): string {
   return { SE: "kr", FR: "€", TN: "DT" }[id];
 }

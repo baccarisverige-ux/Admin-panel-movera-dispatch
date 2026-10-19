@@ -2,7 +2,9 @@ import { useState } from "react";
 import { ArrowRight, Ban, CheckCircle2, ChevronDown, ChevronUp, Coins, Scale } from "lucide-react";
 import type { Market } from "../markets/markets";
 import { zoneById } from "../markets/markets";
+import { FARE_CATEGORIES } from "../data/catalog";
 import { CommandButton } from "../ui/CommandButton";
+import type { CancelFeeRow } from "./cancelFees";
 import { cancelDecision, DISPATCH_KEY, type CancelRecord, type DispatchBook, type ZoneDispatch } from "./rules";
 
 /** The driver's route from accept to cancel, as a small drawing: start, end and the pickup. */
@@ -35,6 +37,13 @@ function RouteSketch({ record }: { record: CancelRecord }) {
   );
 }
 
+/** "45 kr" for a fixed fee, "15% of 420 kr = 63 kr (50–150 kr)" for a % fee. */
+function feeRule(row: CancelFeeRow, fare: number, money: (value: number) => string): string {
+  if (row.type === "fixed") return `${money(row.value)} fixed`;
+  const limits = [row.min !== null ? `at least ${money(row.min)}` : "", row.max !== null ? `at most ${money(row.max)}` : ""].filter(Boolean).join(", ");
+  return `${row.value}% of the ${money(fare)} trip${limits ? `, ${limits}` : ""}`;
+}
+
 type Props = {
   book: DispatchBook;
   market: Market;
@@ -65,8 +74,8 @@ export function CancelView({ book, market, records, rulesOf, canDecide, agentId,
             return (
               <li key={record.id} className={fee ? "dx-cancel fee" : "dx-cancel"}>
                 <button data-command="admin.dispatch.view" type="button" className="dx-cancel-head" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : record.id)}>
-                  <span className={fee ? "dx-verdict fee" : "dx-verdict"}>{fee ? <Coins size={14} aria-hidden="true" /> : <Ban size={14} aria-hidden="true" />} {fee ? `Fee ${money(rules.riderCancel.fee)}` : "No fee"}</span>
-                  <span className="dx-cancel-who"><b>{record.rider}</b><small>Driver {record.driver} · {zoneById(record.zoneId)?.name ?? record.zoneId} · {time(record.cancelledAt)} · {record.tripId}</small></span>
+                  <span className={fee ? "dx-verdict fee" : "dx-verdict"}>{fee ? <Coins size={14} aria-hidden="true" /> : <Ban size={14} aria-hidden="true" />} {fee ? `Fee ${money(auto.amount)}` : "No fee"}</span>
+                  <span className="dx-cancel-who"><b>{record.rider}</b><small>{FARE_CATEGORIES.find((item) => item.id === record.category)?.label ?? record.category} · Driver {record.driver} · {zoneById(record.zoneId)?.name ?? record.zoneId} · {time(record.cancelledAt)} · {record.tripId}</small></span>
                   {manual ? <span className="dx-tag mine">Changed by {manual.by}</span> : <span className="dx-tag">Automatic</span>}
                   {expanded ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
                 </button>
@@ -76,7 +85,8 @@ export function CancelView({ book, market, records, rulesOf, canDecide, agentId,
                     <dl className="dx-cancel-facts">
                       <div><dt>When the driver accepted</dt><dd>{time(record.acceptedAt)} · {record.atAccept.km} km · {record.atAccept.etaMin} min away</dd></div>
                       <div><dt>When the rider cancelled</dt><dd>{time(record.cancelledAt)} · {record.atCancel.km} km · {record.atCancel.etaMin} min away</dd></div>
-                      <div><dt>Time after accept</dt><dd>{record.minutesAfterAccept} min (free: {rules.riderCancel.freeMin} min)</dd></div>
+                      <div><dt>Time after accept</dt><dd>{record.minutesAfterAccept} min (free: {auto.freeMin} min)</dd></div>
+                      <div><dt>Fee for this car type</dt><dd>{feeRule(rules.riderCancel.fees[record.category], record.fare, money)}</dd></div>
                       <div><dt>Came closer</dt><dd>{Math.max(0, auto.closerPct)}% (fee from {rules.riderCancel.closerPct}%)</dd></div>
                       <div className="wide"><dt>Automatic decision</dt><dd>{auto.fee ? <CheckCircle2 size={13} aria-hidden="true" /> : <Ban size={13} aria-hidden="true" />} {auto.why}</dd></div>
                     </dl>

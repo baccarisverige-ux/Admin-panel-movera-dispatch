@@ -14,6 +14,8 @@ import { ReservationSettings } from "./ReservationSettings";
 import { DestinationSettings } from "./DestinationSettings";
 import { CancelRateCard, OfferCardSettings } from "./OfferSettings";
 import { PickupWaitCard, type WaitBaseRow } from "./PickupWaitCard";
+import { CancelFeeTable } from "./CancelFeeTable";
+import type { CancelFeeKind, CancelFeeTable as FeeTable } from "./cancelFees";
 import type { PickupWait } from "./offers";
 import {
   ALERTS, EXTRAS, FACTORS, modeLabel, WAIT_KINDS,
@@ -50,12 +52,15 @@ type Props = {
   /** Waiting at pickup per category, from Pricing for this zone. */
   waitBases: WaitBaseRow[];
   onWaitAllZones: (pickupWait: PickupWait) => number;
+  /** Other zones of the country this admin can change, and copying one cancel fee table to them. */
+  otherZones: { id: string; name: string }[];
+  onCopyCancelFees: (kind: CancelFeeKind, table: FeeTable, zoneIds: string[]) => void;
 };
 
 export function ZoneSettings(props: Props) {
   const { tab } = props;
   if (tab === "modes") return <Modes {...props} />;
-  if (tab === "reservations") return <ReservationSettings zone={props.zone} onChange={props.onChange} disabled={props.disabled} symbol={props.symbol} money={props.money} countryId={props.countryId} countryName={props.countryName} groups={props.groups} commissionPct={props.commissionPct} sampleFare={props.sampleFare} />;
+  if (tab === "reservations") return <ReservationSettings zone={props.zone} onChange={props.onChange} disabled={props.disabled} symbol={props.symbol} money={props.money} countryId={props.countryId} countryName={props.countryName} groups={props.groups} commissionPct={props.commissionPct} sampleFare={props.sampleFare} otherZones={props.otherZones} onCopyCancelFees={props.onCopyCancelFees} />;
   if (tab === "best") return <Best {...props} />;
   if (tab === "waiting") return <Waiting {...props} />;
   if (tab === "rides") return <Rides {...props} />;
@@ -279,7 +284,7 @@ function Waiting({ zone, onChange, disabled }: Props) {
   );
 }
 
-function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName, money, waitBases, onWaitAllZones }: Props) {
+function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName, money, waitBases, onWaitAllZones, otherZones, onCopyCancelFees }: Props) {
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   return (
     <div className="dx-cards">
@@ -314,9 +319,12 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
       </Card>
 
       <Card title="Rider cancels: smart check" tone="green" icon={<Shield size={18} />} help="The system compares the driver's distance to the rider when they accepted and when the rider cancelled." off={!zone.riderCancel.on} aside={<Switch label="Smart cancel check" on={zone.riderCancel.on} disabled={disabled} onChange={(on) => set({ riderCancel: { ...zone.riderCancel, on } })} />}>
-        <Row label="Free cancel" help="No fee inside these minutes after accept."><Num label="Free cancel minutes" value={zone.riderCancel.freeMin} unit="min" min={0} max={15} disabled={disabled || !zone.riderCancel.on} onChange={(freeMin) => set({ riderCancel: { ...zone.riderCancel, freeMin } })} /></Row>
+        <div className="dx-sub">
+          <b><Zap size={13} aria-hidden="true" /> Live trips cancel fee · Radar and Exclusive now</b>
+          <small>Per car type. The rider cancels for free for a few minutes after a driver accepts. After that the fee applies, paid to the driver.</small>
+          <CancelFeeTable kind="live" table={zone.riderCancel.fees} onChange={(fees) => set({ riderCancel: { ...zone.riderCancel, fees } })} disabled={disabled || !zone.riderCancel.on} symbol={symbol} money={money} countryId={countryId} otherZones={otherZones} onCopyToZones={(ids) => onCopyCancelFees("live", zone.riderCancel.fees, ids)} />
+        </div>
         <Row label="Fee when the driver came closer by at least" help="If the driver did not move or went away, no fee."><Num label="Came closer by" value={zone.riderCancel.closerPct} unit="%" min={5} max={100} disabled={disabled || !zone.riderCancel.on} onChange={(closerPct) => set({ riderCancel: { ...zone.riderCancel, closerPct } })} /></Row>
-        <Row label="Cancel fee" help="Paid to the driver."><Num label="Cancel fee" value={zone.riderCancel.fee} unit={symbol} step={0.5} min={0} max={1000} disabled={disabled || !zone.riderCancel.on} onChange={(fee) => set({ riderCancel: { ...zone.riderCancel, fee } })} /></Row>
         <Row label="Driver gets the next nearby request first" on={zone.riderCancel.priority} disabled={disabled || !zone.riderCancel.on} onToggle={(priority) => set({ riderCancel: { ...zone.riderCancel, priority } })}>
           <Num label="Priority minutes" value={zone.riderCancel.priorityMin} unit="min" min={1} max={60} disabled={disabled} onChange={(priorityMin) => set({ riderCancel: { ...zone.riderCancel, priorityMin } })} />
         </Row>
