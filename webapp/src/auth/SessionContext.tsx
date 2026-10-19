@@ -45,7 +45,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       events.forEach((name) => window.removeEventListener(name, mark));
       window.clearInterval(timer);
     };
-  }, [agent]);
+  }, [agent, queryClient]);
 
   const value = useMemo<SessionValue>(
     () => ({

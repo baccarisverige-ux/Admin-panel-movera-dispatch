@@ -9,6 +9,11 @@ import { PERMISSION_GROUPS, TEAM_OPS_KEY, emptyTeamOps, limitError, newRole, nor
 
 const ROLES = Object.keys(ROLE_LABELS) as Role[];
 
+/** Team settings that are saved but not yet applied anywhere: say so next to the setting. */
+export function NotEnforced({ children }: { children: string }) {
+  return <p className="pl-help" role="note" data-testid="not-enforced"><b>Not enforced yet.</b> {children}</p>;
+}
+
 export function useTeamOps() {
   const slice = useSlice<TeamOps>(TEAM_OPS_KEY, emptyTeamOps());
   return { slice, ops: normalizeTeamOps(slice.value) };
@@ -59,7 +64,7 @@ export function RolesView({ editable, by, onNotice }: { editable: boolean; by: s
             <button data-command="admin.team.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>Close</button>
           </div>
         ) : null}
-        <p className="pl-help">Custom roles are saved here. The backend applies them when it signs an admin in; in the demo an admin keeps the permissions of their built-in role.</p>
+        <NotEnforced>Custom roles are saved here. The backend applies them when it signs an admin in; in the demo an admin keeps the permissions of their built-in role.</NotEnforced>
       </Card>
     </div>
   );
@@ -81,6 +86,7 @@ export function LimitsView({ editable, currency, onNotice }: { editable: boolean
       <Row label="Wallet credit to one rider" on={value.credit.on} onToggle={(on) => patch({ credit: { ...value.credit, on } })} disabled={!editable}><Num label="Credit limit" value={value.credit.max} unit={currency} min={1} disabled={!editable || !value.credit.on} onChange={(max) => patch({ credit: { ...value.credit, max } })} /></Row>
       <Row label="Second admin above" help="Off: no second admin is needed for this role." on={value.secondAbove.on} onToggle={(on) => patch({ secondAbove: { ...value.secondAbove, on } })} disabled={!editable}><Num label="Second admin above" value={value.secondAbove.amount} unit={currency} disabled={!editable || !value.secondAbove.on} onChange={(amount) => patch({ secondAbove: { ...value.secondAbove, amount } })} /></Row>
       {error ? <p role="alert" className="pl-warn">{error}</p> : null}
+      <NotEnforced>These limits are saved for the backend. Refunds and wallet credits do not check them yet.</NotEnforced>
       <div className="actions">
         <CommandButton command="admin.team.limits" confirmTarget={false} className="dash-btn small" sliceKey={TEAM_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, limits: { ...ops.limits, [role]: value } }} expectedSliceRev={ops.draftRev} targetId={role} disabled={!editable || !draft || Boolean(error) || slice.loading} onDone={() => { setDraft(null); onNotice(`Limits for ${ROLE_LABELS[role]} saved.`); }}>Save limits</CommandButton>
         {draft ? <button data-command="admin.team.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>Undo changes</button> : null}
@@ -110,7 +116,7 @@ export function SecurityView({ editable, onNotice }: { editable: boolean; onNoti
         <CommandButton command="admin.team.security" confirmTarget={false} className="dash-btn small" sliceKey={TEAM_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, security: value }} expectedSliceRev={ops.draftRev} targetId="sign-in" disabled={!editable || !draft || Boolean(error) || slice.loading} onDone={() => { setDraft(null); onNotice("Sign-in safety saved."); }}>Save sign-in safety</CommandButton>
         {draft ? <button data-command="admin.team.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>Undo changes</button> : null}
       </div>
-      <p className="pl-help">Saved here for the backend. The demo sign-in always asks for the code and signs out after 15 minutes.</p>
+      <NotEnforced>Saved here for the backend. The demo sign-in always asks for the code and signs out after 15 minutes.</NotEnforced>
     </Card>
   );
 }

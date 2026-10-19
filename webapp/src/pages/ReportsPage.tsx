@@ -43,7 +43,7 @@ export function ReportsPage() {
     return () => globalThis.clearInterval(timer);
   }, []);
   const now = useMemo(() => Math.ceil(Date.now() / 60_000) * 60_000, [tick, tab, params.get("admin")]);
-  const access = agent?.scope ?? { zones: "all" as const };
+  const access = useMemo(() => agent?.scope ?? { zones: "all" as const }, [agent?.scope]);
   const zones = useMemo(() => market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id))), [market, access, scope.zones]);
   const window = useMemo(() => compareWindow(periodWindow(period, now, market.timeZone, market.locale), compare), [period.kind, period.on, period.from, period.to, now, market, compare]);
   const slice = useSlice<ReportSettings>(REPORT_SETTINGS_KEY, emptyReportSettings());

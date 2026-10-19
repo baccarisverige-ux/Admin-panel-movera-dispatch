@@ -1,53 +1,59 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
 import { AppShell } from "./layout/AppShell";
 import { isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
-import { AuditPage } from "./pages/AuditPage";
-import { ComingPage } from "./pages/ComingPage";
-import { ChatPage } from "./pages/ChatPage";
-import { ConfigPage } from "./pages/ConfigPage";
-import { ConfirmPage } from "./pages/ConfirmPage";
-import { ContentPage } from "./pages/ContentPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { DispatchPage } from "./pages/DispatchPage";
-import { AlertsPage } from "./pages/AlertsPage";
-import { DesignPage } from "./pages/DesignPage";
-import { DriverDetailPage } from "./pages/DriverDetailPage";
-import { DriversPage } from "./pages/DriversPage";
-import { FleetPage } from "./pages/FleetPage";
-import { FleetOwnerDetailPage } from "./pages/FleetOwnerDetailPage";
-import { FleetOwnersPage } from "./pages/FleetOwnersPage";
-import { GatesPage } from "./pages/GatesPage";
-import { PromotionsPage } from "./pages/PromotionsPage";
-import { ReviewsPage } from "./pages/ReviewsPage";
-import { HandoverPage } from "./pages/HandoverPage";
 import { LoginPage } from "./pages/LoginPage";
-import { LivePage } from "./pages/LivePage";
-import { MessagesPage } from "./pages/MessagesPage";
-import { OnboardingPage } from "./pages/OnboardingPage";
-import { PaymentsPage } from "./pages/PaymentsPage";
-import { PaymentPage } from "./pages/PaymentPage";
-import { PayoutsPage } from "./pages/PayoutsPage";
-import { PricingPage } from "./pages/PricingPage";
-import { RecordPage } from "./pages/RecordPage";
-import { ReportsPage } from "./pages/ReportsPage";
-import { ReservationDetailPage } from "./pages/ReservationDetailPage";
-import { ReservationsPage } from "./pages/ReservationsPage";
-import { RiderDetailPage } from "./pages/RiderDetailPage";
-import { RidersPage } from "./pages/RidersPage";
-import { RiskPage } from "./pages/RiskPage";
-import { SafetyPage } from "./pages/SafetyPage";
-import { SupportPage } from "./pages/SupportPage";
-import { SystemPage } from "./pages/SystemPage";
-import { TeamPage } from "./pages/TeamPage";
-import { TripsPage } from "./pages/TripsPage";
-import { TripPage } from "./pages/TripPage";
-import { AdminPage } from "./pages/AdminPage";
-import { VehicleDetailPage } from "./pages/VehicleDetailPage";
-import { ZoneDetailPage } from "./pages/ZoneDetailPage";
-import { ZonesPage } from "./pages/ZonesPage";
+
+// Pages load on first visit, so the sign-in screen and the shell do not wait for every page and map library.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- same constraint as React.lazy itself
+function lazyPage<M extends Record<K, ComponentType<any>>, K extends keyof M & string>(load: () => Promise<M>, name: K): LazyExoticComponent<M[K]> {
+  return lazy(() => load().then((module) => ({ default: module[name] })));
+}
+const AuditPage = lazyPage(() => import("./pages/AuditPage"), "AuditPage");
+const ComingPage = lazyPage(() => import("./pages/ComingPage"), "ComingPage");
+const ChatPage = lazyPage(() => import("./pages/ChatPage"), "ChatPage");
+const ConfigPage = lazyPage(() => import("./pages/ConfigPage"), "ConfigPage");
+const ConfirmPage = lazyPage(() => import("./pages/ConfirmPage"), "ConfirmPage");
+const ContentPage = lazyPage(() => import("./pages/ContentPage"), "ContentPage");
+const DashboardPage = lazyPage(() => import("./pages/DashboardPage"), "DashboardPage");
+const DispatchPage = lazyPage(() => import("./pages/DispatchPage"), "DispatchPage");
+const AlertsPage = lazyPage(() => import("./pages/AlertsPage"), "AlertsPage");
+const DesignPage = lazyPage(() => import("./pages/DesignPage"), "DesignPage");
+const DriverDetailPage = lazyPage(() => import("./pages/DriverDetailPage"), "DriverDetailPage");
+const DriversPage = lazyPage(() => import("./pages/DriversPage"), "DriversPage");
+const FleetPage = lazyPage(() => import("./pages/FleetPage"), "FleetPage");
+const FleetOwnerDetailPage = lazyPage(() => import("./pages/FleetOwnerDetailPage"), "FleetOwnerDetailPage");
+const FleetOwnersPage = lazyPage(() => import("./pages/FleetOwnersPage"), "FleetOwnersPage");
+const GatesPage = lazyPage(() => import("./pages/GatesPage"), "GatesPage");
+const PromotionsPage = lazyPage(() => import("./pages/PromotionsPage"), "PromotionsPage");
+const ReviewsPage = lazyPage(() => import("./pages/ReviewsPage"), "ReviewsPage");
+const HandoverPage = lazyPage(() => import("./pages/HandoverPage"), "HandoverPage");
+const LivePage = lazyPage(() => import("./pages/LivePage"), "LivePage");
+const MessagesPage = lazyPage(() => import("./pages/MessagesPage"), "MessagesPage");
+const OnboardingPage = lazyPage(() => import("./pages/OnboardingPage"), "OnboardingPage");
+const PaymentsPage = lazyPage(() => import("./pages/PaymentsPage"), "PaymentsPage");
+const PaymentPage = lazyPage(() => import("./pages/PaymentPage"), "PaymentPage");
+const PayoutsPage = lazyPage(() => import("./pages/PayoutsPage"), "PayoutsPage");
+const PricingPage = lazyPage(() => import("./pages/PricingPage"), "PricingPage");
+const RecordPage = lazyPage(() => import("./pages/RecordPage"), "RecordPage");
+const ReportsPage = lazyPage(() => import("./pages/ReportsPage"), "ReportsPage");
+const ReservationDetailPage = lazyPage(() => import("./pages/ReservationDetailPage"), "ReservationDetailPage");
+const ReservationsPage = lazyPage(() => import("./pages/ReservationsPage"), "ReservationsPage");
+const RiderDetailPage = lazyPage(() => import("./pages/RiderDetailPage"), "RiderDetailPage");
+const RidersPage = lazyPage(() => import("./pages/RidersPage"), "RidersPage");
+const RiskPage = lazyPage(() => import("./pages/RiskPage"), "RiskPage");
+const SafetyPage = lazyPage(() => import("./pages/SafetyPage"), "SafetyPage");
+const SupportPage = lazyPage(() => import("./pages/SupportPage"), "SupportPage");
+const SystemPage = lazyPage(() => import("./pages/SystemPage"), "SystemPage");
+const TeamPage = lazyPage(() => import("./pages/TeamPage"), "TeamPage");
+const TripsPage = lazyPage(() => import("./pages/TripsPage"), "TripsPage");
+const TripPage = lazyPage(() => import("./pages/TripPage"), "TripPage");
+const AdminPage = lazyPage(() => import("./pages/AdminPage"), "AdminPage");
+const VehicleDetailPage = lazyPage(() => import("./pages/VehicleDetailPage"), "VehicleDetailPage");
+const ZoneDetailPage = lazyPage(() => import("./pages/ZoneDetailPage"), "ZoneDetailPage");
+const ZonesPage = lazyPage(() => import("./pages/ZonesPage"), "ZonesPage");
 
 function Screen({ id }: { id: string }) {
   const item = menuItem(id);
@@ -130,7 +136,7 @@ function Shell({ page, children, forceNoAccess = false, redirect = false }: { pa
   return (
     <AppShell page={shown}>
       <section className="page active" data-page={shown.id}>
-        {denied ? <NoAccess /> : page || redirect ? children : <NotFound />}
+        {denied ? <NoAccess /> : page || redirect ? <Suspense fallback={<p className="state-line">Loading.</p>}>{children}</Suspense> : <NotFound />}
       </section>
     </AppShell>
   );

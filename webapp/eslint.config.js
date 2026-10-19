@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
   { ignores: ["dist/**"] },
@@ -9,6 +10,15 @@ export default tseslint.config(
   {
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
+    },
+  },
+  {
+    // Classic hook rules only; the React Compiler rules in the plugin's "recommended" preset are not adopted.
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
     },
   },
   {

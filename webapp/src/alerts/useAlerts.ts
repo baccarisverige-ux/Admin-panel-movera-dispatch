@@ -69,7 +69,7 @@ export function useAlerts() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const access = agent?.scope ?? { zones: "all" as const };
+  const access = useMemo(() => agent?.scope ?? { zones: "all" as const }, [agent?.scope]);
   const zones = useMemo(() => market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id))), [market, access, scope.zones]);
   const money = (major: number) => `${new Intl.NumberFormat(market.locale, { maximumFractionDigits: 2 }).format(major)} ${SYMBOL[market.id]}`;
 

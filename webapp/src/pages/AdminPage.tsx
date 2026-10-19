@@ -7,7 +7,7 @@ import { useSession } from "../auth/SessionContext";
 import { Card } from "../dispatch/fields";
 import { RESULT_LABEL, changeOf } from "../platform/audit";
 import { PERMISSION_GROUPS, TEAM_OPS_KEY, permissionsOf, placeOf } from "../platform/team";
-import { useTeamOps } from "../platform/TeamParts";
+import { NotEnforced, useTeamOps } from "../platform/TeamParts";
 import { CommandButton } from "../ui/CommandButton";
 
 /** One admin: who they are, what their role lets them do, where they work, and what they did lately. */
@@ -60,6 +60,7 @@ export function AdminPage() {
             <CommandButton command="admin.team.assign" confirmTarget={false} className="dash-btn small" sliceKey={TEAM_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, assigned: nextAssigned }} expectedSliceRev={ops.draftRev} targetId={agent.id} disabled={!editable || custom === null || slice.loading} onDone={() => { setCustom(null); setNotice(assigned ? `${agent.name} now has ${customRole?.name ?? "the custom role"}.` : `${agent.name} uses ${ROLE_LABELS[agent.role]} again.`); }}>Save role</CommandButton>
           </div>
           <p className="pl-help"><KeyRound size={12} aria-hidden="true" /> 2-step code {ops.security.twoStep[agent.role] ? "on" : "off"} for this role. Sign out after {ops.security.idle.on ? `${ops.security.idle.minutes} min idle` : "never"}.</p>
+          <NotEnforced>{`The custom role, the 2-step setting and the idle time are saved for the backend. In the demo ${agent.name} keeps the permissions of ${ROLE_LABELS[agent.role]}, always gets the code and is signed out after 15 minutes.`}</NotEnforced>
         </Card>
         <Card title="Can do" icon={<KeyRound size={15} />} tone="green" help={`${allowed.length} permissions.`}>
           <div className="pl-can">
