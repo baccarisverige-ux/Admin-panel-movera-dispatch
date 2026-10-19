@@ -15,13 +15,15 @@ test("seed defaults per zone and car type, in the country's money", () => {
   assert.deepEqual(zoneIssues(zone), []);
 });
 
-test("fee: fixed, or % of the price rounded to the money step and kept between min and max", () => {
+test("fee: fixed, or % of the price rounded half-up to a whole minor unit and kept between min and max", () => {
   const pct: CancelFeeRow = { freeMin: 120, type: "percent", value: 25, min: 80, max: 300 };
   assert.equal(cancelFeeAmount(pct, 420, "SE"), 105);
   assert.equal(cancelFeeAmount(pct, 200, "SE"), 80, "never under min");
   assert.equal(cancelFeeAmount(pct, 2000, "SE"), 300, "never over max");
-  assert.equal(cancelFeeAmount({ ...pct, min: null, max: null }, 101, "SE"), 25, "25.25 kr rounds to whole kronor");
-  assert.equal(cancelFeeAmount({ ...pct, value: 15, min: null, max: null }, 33.3, "FR"), 5, "4.995 € rounds to 0.05 €");
+  assert.equal(cancelFeeAmount({ ...pct, min: null, max: null }, 101, "SE"), 25.25, "X4: 25.25 kr stays 25.25 kr (whole öre), not 25 kr");
+  assert.equal(cancelFeeAmount({ ...pct, value: 15, min: null, max: null }, 33.3, "FR"), 5, "4.995 € rounds half-up to 5.00 €");
+  assert.equal(cancelFeeAmount({ ...pct, value: 15, min: null, max: null }, 123.45, "SE"), 18.52, "X4: 15% of 123.45 kr is 18.52 kr like the apps (was 19 kr)");
+  assert.equal(cancelFeeAmount({ ...pct, value: 15, min: null, max: null }, 12.345, "TN"), 1.852, "TND rounds to a whole millime");
   assert.equal(cancelFeeAmount({ freeMin: 2, type: "fixed", value: 45, min: 80, max: 90 }, 1000, "SE"), 45, "min and max only count for a %");
   const zone = zoneDefault("Z001");
   assert.equal(riderCancelFee(zone, "live", "premium", 420), 63);

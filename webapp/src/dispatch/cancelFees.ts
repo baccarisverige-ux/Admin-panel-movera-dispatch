@@ -1,5 +1,5 @@
-import type { MarketId } from "../markets/markets.ts";
-import { BUILT_IN_CATEGORIES, fromSek, roundMoney } from "../pricing/zonePricing.ts";
+import { market, type MarketId } from "../markets/markets.ts";
+import { BUILT_IN_CATEGORIES, fromSek } from "../pricing/zonePricing.ts";
 
 /**
  * Rider cancel fees, per zone and per car type, with two rule sets:
@@ -104,10 +104,14 @@ export function completeCancelFees(stored: unknown, fallback: CancelFeeTable): C
   return Object.fromEntries(ids.map((id) => [id, completeRow(raw[id], fallback[id] ?? economy)]));
 }
 
-/** The fee for one trip: fixed, or % of the trip price rounded like the rest of the app, kept between min and max. */
+/**
+ * The fee for one trip: fixed, or % of the trip price kept between min and max. Like the apps (contracts/fixtures/cancel_fees.json),
+ * a % fee is rounded half-up to a whole minor unit (öre, cent, millime) before the clamp, not to the display step.
+ */
 export function cancelFeeAmount(row: CancelFeeRow, fare: number, country: MarketId): number {
   if (row.type === "fixed") return Math.max(0, row.value);
-  let amount = roundMoney((Math.max(0, fare) * row.value) / 100, country);
+  const minor = market(country).minorUnits;
+  let amount = Math.round((Math.round(Math.max(0, fare) * minor) * row.value) / 100) / minor;
   if (row.min !== null) amount = Math.max(amount, row.min);
   if (row.max !== null) amount = Math.min(amount, row.max);
   return Math.max(0, amount);

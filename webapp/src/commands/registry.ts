@@ -359,6 +359,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.dispatch.send", label: "Send a waiting ride to drivers", reason: true, permission: "trips.intervene" },
   { id: "admin.dispatch.cancelCheck", label: "Change a cancel fee decision", reason: true, permission: "trips.intervene" },
   { id: "admin.dispatch.rulesFile", label: "Download the dispatch rules file", reason: false, permission: "trips.read" },
+  { id: "admin.dispatch.appConfig", label: "Download a zone's rider or driver app config", reason: false, permission: "trips.read" },
   { id: "admin.vehicle.view", label: "Vehicles view", reason: false, permission: "drivers.read" },
   { id: "admin.vehicle.photo", label: "Review a vehicle photo", reason: false, permission: "vehicles.edit" },
   { id: "admin.vehicle.rules", label: "Save vehicle rules", reason: true, permission: "vehicles.edit" },
