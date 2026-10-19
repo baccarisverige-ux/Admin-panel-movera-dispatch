@@ -9,7 +9,8 @@ async function signIn(page: Page) {
   await expect(page.getByRole("link", { name: "Trips" })).toBeVisible();
 }
 
-const ALLOWED = new Set(["T0004", "T0006", "T0008", "T0010"]);
+// Contract v0.3.0: an admin can cancel every non-terminal status. T0001–T0011 are draft … approaching_dropoff in the seed.
+const ALLOWED = new Set(["T0001", "T0002", "T0003", "T0004", "T0005", "T0006", "T0007", "T0008", "T0009", "T0010", "T0011"]);
 
 test("trips list uses all 600 and a trip page is complete", async ({ page }) => {
   test.setTimeout(90_000);

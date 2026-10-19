@@ -27,6 +27,7 @@ export const PERMISSION_GROUPS: { label: string; items: { id: string; label: str
     { id: "drivers.viewSensitive", label: "See driver phone and papers" },
   ] },
   { label: "Act", items: [
+    { id: "trips.annotate", label: "Note, flag and open cases on trips" },
     { id: "trips.intervene", label: "Change or cancel trips" },
     { id: "support.reply", label: "Answer support" },
     { id: "safety.edit", label: "Handle safety" },
@@ -38,6 +39,7 @@ export const PERMISSION_GROUPS: { label: string; items: { id: string; label: str
     { id: "vehicles.edit", label: "Change vehicles" },
     { id: "alerts.manage", label: "Manage alerts" },
     { id: "payments.refund", label: "Give money back" },
+    { id: "finance.edit", label: "Change payments, payouts and wallets" },
   ] },
   { label: "Change the setup", items: [
     { id: "zones.edit", label: "Edit zones" },

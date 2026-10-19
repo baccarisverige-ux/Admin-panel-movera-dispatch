@@ -540,27 +540,35 @@ function ConfigAll() {
 
       <article className="panel">
         <h3>Reasons</h3>
-        {REASON_GROUPS.map((group) => (
-          <details key={group.id} open>
-            <summary>{group.label}</summary>
-            {book.draft.reasons.filter((reason) => reason.group === group.id).map((reason) => (
-              <div className="field-grid" key={reason.id}>
-                <label>
-                  {reason.id} Swedish
-                  <input value={reason.sv} onChange={(event) => agent && edit(
-                    (current) => setReason(current, reason.id, "sv", event.target.value, agent.id),
-                  )} />
-                </label>
-                <label>
-                  {reason.id} English
-                  <input value={reason.en} onChange={(event) => agent && edit(
-                    (current) => setReason(current, reason.id, "en", event.target.value, agent.id),
-                  )} />
-                </label>
-              </div>
-            ))}
-          </details>
-        ))}
+        <p className="op-help" data-testid="config-reasons-moved">
+          Cancel reasons are edited in one place: <Link to="/dispatch?view=reasons">Dispatch › Cancel reasons</Link>. The cancel groups below are kept read-only for reference.
+        </p>
+        {REASON_GROUPS.map((group) => {
+          const editable = group.id === "rider_support";
+          return (
+            <details key={group.id} open={editable}>
+              <summary>{group.label}{editable ? "" : " (read-only, edit in Dispatch)"}</summary>
+              {book.draft.reasons.filter((reason) => reason.group === group.id).map((reason) => editable ? (
+                <div className="field-grid" key={reason.id}>
+                  <label>
+                    {reason.id} Swedish
+                    <input value={reason.sv} onChange={(event) => agent && edit(
+                      (current) => setReason(current, reason.id, "sv", event.target.value, agent.id),
+                    )} />
+                  </label>
+                  <label>
+                    {reason.id} English
+                    <input value={reason.en} onChange={(event) => agent && edit(
+                      (current) => setReason(current, reason.id, "en", event.target.value, agent.id),
+                    )} />
+                  </label>
+                </div>
+              ) : (
+                <p className="op-help" key={reason.id}><code>{reason.id}</code> · {reason.en} · {reason.sv}</p>
+              ))}
+            </details>
+          );
+        })}
       </article>
 
       <article className="panel">

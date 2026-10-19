@@ -1,3 +1,4 @@
+import type { TripStatus } from "../domain/contract.ts";
 import { emptyDb, runCommand } from "../commands/run.ts";
 import { blankDocuments, setAccount, type Driver } from "../drivers/gate.ts";
 import { quoteRide } from "../pricing/quote.ts";
@@ -26,7 +27,7 @@ function sampleDriver(): Driver {
   return { id: "D1", name: "Erik Lind", fleet: false, status: "active", documents: blankDocuments(), vehicle: { year: 2022, seats: 4, fuel: "electric", category: "electric" } };
 }
 
-function trip(status: string): Trip {
+function trip(status: TripStatus): Trip {
   return { id: "T100", status, category: "economy", fareOre: 14900, ruleVersion: "price-3", driverId: status === "searching" ? null : "D1" };
 }
 
@@ -36,7 +37,7 @@ export function frontendGateC(): FrontendScenario[] {
   const add = (id: string, pass: boolean, note: string) => rows.push({ id, pass, note });
 
   const quote = quoteRide("economy", 5, 10);
-  let live = { ...trip("accepted"), fareOre: quote.kronor * 100, ruleVersion: quote.ruleVersion, status: "completed" };
+  let live: Trip = { ...trip("accepted"), fareOre: quote.kronor * 100, ruleVersion: quote.ruleVersion, status: "completed" };
   const done = surfaces(live);
   add("T01", sameTrip(done) && done.rider.status === "completed", `Shared trip ${done.admin.tripId} is completed on the admin, rider and driver views. ${quote.ruleVersion}.`);
 
@@ -47,7 +48,7 @@ export function frontendGateC(): FrontendScenario[] {
     cancelOk &&= !result.error && sameTrip(views) && views.rider.status === "cancelled_by_admin" && views.rider.reason === views.driver.reason && views.rider.feeOre === null;
   }
   const blocked = cancelTrip(trip("completed"), "Too late");
-  add("T02", cancelOk && Boolean(blocked.error), "Searching, accepted, arrived and in_trip cancel with the same reason on all three views. A completed trip is refused. No cancel fee exists in this domain, so the fee is empty on every view.");
+  add("T02", cancelOk && Boolean(blocked.error), "Every non-terminal status (contract v0.3.0) cancels with the same reason on all three views. A completed trip is refused. No cancel fee exists in this domain, so the fee is empty on every view.");
 
   let offer: { status: string; driverId: string | null; charges: string[] } = { status: "offered", driverId: null, charges: [] };
   const claim = (driverId: string, key: string) => {
