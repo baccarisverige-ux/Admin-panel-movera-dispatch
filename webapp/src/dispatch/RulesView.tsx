@@ -6,6 +6,7 @@ import { Modal } from "../ui/Modal";
 import { beforeAfter, zoneResults } from "./demo";
 import { ZoneSettings } from "./ZoneSettings";
 import type { WaitBaseRow } from "./PickupWaitCard";
+import type { CancelFeeKind, FeeCategory } from "./cancelFees";
 import { DriverOfferPreview, ReservationDriverPreview, ReservationRiderPreview, RiderWaitingPreview } from "./Previews";
 import {
   applyPreset, BUILT_IN_PRESETS, copyParts, DISPATCH_KEY, liveRules, mainMode, modeLabel, modeNow, presetFrom, TABS, zoneIssues,
@@ -37,6 +38,8 @@ type Props = {
   sampleFareOf: (zoneId: string) => number;
   /** Waiting at pickup per category, from Pricing. */
   waitBasesOf: (zoneId: string) => WaitBaseRow[];
+  /** The car types Pricing lists for a zone, for the rider cancel fees. */
+  feeCategoriesOf: (zoneId: string) => FeeCategory[];
 };
 
 const TAB_ICON: Record<TabId, typeof Radar> = { modes: Radar, reservations: CalendarClock, best: Star, waiting: Smartphone, rides: MapPin, drivers: Users, destination: Flag, safety: Shield, alerts: Bell };
@@ -52,6 +55,7 @@ export function RulesView(props: Props) {
   const [copyOpen, setCopyOpen] = useState(false);
   const [presetOpen, setPresetOpen] = useState(false);
   const [phone, setPhone] = useState<"auto" | "driver" | "rider">("auto");
+  const [feeTab, setFeeTab] = useState<CancelFeeKind>("live");
   const zone = zones.find((item) => item.id === zoneId) ?? null;
   const groups = Array.from(new Set(zones.map((item) => (item.kind === "airport" ? "Airports" : item.city)))).map((label) => ({ label, zones: zones.filter((item) => (item.kind === "airport" ? "Airports" : item.city) === label) }));
 
@@ -74,7 +78,7 @@ export function RulesView(props: Props) {
                       <ModeBadge zone={rules} paused={paused} />
                       {changed.has(item.id) ? <span className="dx-dot changed" title="Changed, not live yet">Changed</span> : null}
                       {waiting ? <span className="dx-dot waiting" title="Waiting for a second admin">Waiting</span> : null}
-                      {zoneIssues(rules).length ? <AlertTriangle size={13} className="dx-warn" aria-label="Has a problem" /> : null}
+                      {zoneIssues(rules, props.feeCategoriesOf(item.id)).length ? <AlertTriangle size={13} className="dx-warn" aria-label="Has a problem" /> : null}
                     </span>
                   </button>
                 </li>
@@ -100,7 +104,7 @@ export function RulesView(props: Props) {
   }
 
   const rules = rulesOf(zone.id);
-  const issues = zoneIssues(rules);
+  const issues = zoneIssues(rules, props.feeCategoriesOf(zone.id));
   const editable = canEdit(zone.id);
   const busy = busyOf(zone.id);
   const now = modeNow(rules, book.control[zone.id], busy, hhmm);
@@ -176,6 +180,14 @@ export function RulesView(props: Props) {
               sampleFare={props.sampleFareOf(zone.id)}
               waitBases={props.waitBasesOf(zone.id)}
               otherZones={zones.filter((item) => item.id !== zone.id && canEdit(item.id)).map((item) => ({ id: item.id, name: item.name }))}
+              feeCategories={props.feeCategoriesOf(zone.id)}
+              feeTab={feeTab}
+              onFeeTab={setFeeTab}
+              onOpenCancelFees={(kind) => {
+                setFeeTab(kind);
+                onTab("rides");
+                window.setTimeout(() => document.getElementById("dx-rider-cancel-fees")?.scrollIntoView({ block: "start", behavior: "smooth" }), 50);
+              }}
               onCopyCancelFees={(kind, table, ids) => {
                 const copy = () => JSON.parse(JSON.stringify(table)) as typeof table;
                 for (const id of ids) {

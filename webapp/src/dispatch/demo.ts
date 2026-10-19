@@ -1,6 +1,5 @@
 import type { LiveDriver } from "../dashboard/live.ts";
 import { zoneById, type MarketId } from "../markets/markets.ts";
-import { FARE_CATEGORIES } from "../data/catalog.ts";
 import { fromSek } from "../pricing/zonePricing.ts";
 import { distanceKm, EXTRAS, type CancelRecord, type DriverFacts, type ExtraId, type Version, type ZoneDispatch } from "./rules.ts";
 
@@ -127,8 +126,8 @@ export function cancelRecords(country: MarketId, zones: readonly { id: string; n
       atCancel: { km: endKm, etaMin: Math.max(1, Math.round((endKm / 24) * 60)) },
       path,
       pickup,
-      category: FARE_CATEGORIES[index % FARE_CATEGORIES.length].id,
-      fare: fromSek([180, 260, 420, 340][index % 4], country),
+      category: ["economy", "comfort", "premium", "xl", "economy", "priority", "electric", "xl"][index % 8],
+      fare: fromSek([180, 260, 420, 340, 200, 240, 210, 360][index % 8], country),
     };
   });
 }

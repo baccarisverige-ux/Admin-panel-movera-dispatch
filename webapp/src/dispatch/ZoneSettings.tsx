@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import {
   ArrowDown, ArrowUp, Baby, Bell, Clock, Gauge, Heart, Home, Layers, ListOrdered, Luggage, Mail, MapPin, MessageSquare,
   MonitorSmartphone, Moon, Power, PawPrint, Plane, Plus, Radar, Route, Scale, Shield, ShieldAlert, Smartphone, Sparkles, Star, Target, Timer, Trash2,
-  TrendingUp, UserCheck, UserX, Users, Accessibility, Zap,
+  TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins,
 } from "lucide-react";
 import type { MarketId } from "../markets/markets";
 import { BonusAreaMap } from "../drivers/BonusAreaMap";
@@ -14,8 +14,8 @@ import { ReservationSettings } from "./ReservationSettings";
 import { DestinationSettings } from "./DestinationSettings";
 import { CancelRateCard, OfferCardSettings } from "./OfferSettings";
 import { PickupWaitCard, type WaitBaseRow } from "./PickupWaitCard";
-import { CancelFeeTable } from "./CancelFeeTable";
-import type { CancelFeeKind, CancelFeeTable as FeeTable } from "./cancelFees";
+import { RiderCancelFeesCard } from "./CancelFeeTable";
+import type { CancelFeeKind, CancelFeeTable as FeeTable, FeeCategory } from "./cancelFees";
 import type { PickupWait } from "./offers";
 import {
   ALERTS, EXTRAS, FACTORS, modeLabel, WAIT_KINDS,
@@ -55,12 +55,18 @@ type Props = {
   /** Other zones of the country this admin can change, and copying one cancel fee table to them. */
   otherZones: { id: string; name: string }[];
   onCopyCancelFees: (kind: CancelFeeKind, table: FeeTable, zoneIds: string[]) => void;
+  /** The car types Pricing lists for this zone. */
+  feeCategories: FeeCategory[];
+  /** Which tab of Rider cancel fees is open, and opening it from another tab. */
+  feeTab: CancelFeeKind;
+  onFeeTab: (tab: CancelFeeKind) => void;
+  onOpenCancelFees: (tab: CancelFeeKind) => void;
 };
 
 export function ZoneSettings(props: Props) {
   const { tab } = props;
   if (tab === "modes") return <Modes {...props} />;
-  if (tab === "reservations") return <ReservationSettings zone={props.zone} onChange={props.onChange} disabled={props.disabled} symbol={props.symbol} money={props.money} countryId={props.countryId} countryName={props.countryName} groups={props.groups} commissionPct={props.commissionPct} sampleFare={props.sampleFare} otherZones={props.otherZones} onCopyCancelFees={props.onCopyCancelFees} />;
+  if (tab === "reservations") return <ReservationSettings zone={props.zone} onChange={props.onChange} disabled={props.disabled} symbol={props.symbol} money={props.money} countryId={props.countryId} countryName={props.countryName} groups={props.groups} commissionPct={props.commissionPct} sampleFare={props.sampleFare} onOpenCancelFees={() => props.onOpenCancelFees("reservation")} />;
   if (tab === "best") return <Best {...props} />;
   if (tab === "waiting") return <Waiting {...props} />;
   if (tab === "rides") return <Rides {...props} />;
@@ -284,7 +290,7 @@ function Waiting({ zone, onChange, disabled }: Props) {
   );
 }
 
-function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName, money, waitBases, onWaitAllZones, otherZones, onCopyCancelFees }: Props) {
+function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName, money, waitBases, onWaitAllZones, otherZones, onCopyCancelFees, feeCategories, feeTab, onFeeTab }: Props) {
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   return (
     <div className="dx-cards">
@@ -319,17 +325,15 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
       </Card>
 
       <Card title="Rider cancels: smart check" tone="green" icon={<Shield size={18} />} help="The system compares the driver's distance to the rider when they accepted and when the rider cancelled." off={!zone.riderCancel.on} aside={<Switch label="Smart cancel check" on={zone.riderCancel.on} disabled={disabled} onChange={(on) => set({ riderCancel: { ...zone.riderCancel, on } })} />}>
-        <div className="dx-sub">
-          <b><Zap size={13} aria-hidden="true" /> Live trips cancel fee · Radar and Exclusive now</b>
-          <small>Per car type. The rider cancels for free for a few minutes after a driver accepts. After that the fee applies, paid to the driver.</small>
-          <CancelFeeTable kind="live" table={zone.riderCancel.fees} onChange={(fees) => set({ riderCancel: { ...zone.riderCancel, fees } })} disabled={disabled || !zone.riderCancel.on} symbol={symbol} money={money} countryId={countryId} otherZones={otherZones} onCopyToZones={(ids) => onCopyCancelFees("live", zone.riderCancel.fees, ids)} />
-        </div>
+        <p className="dx-note"><Coins size={13} aria-hidden="true" /> Free minutes and fees per car type: see Rider cancel fees ↓</p>
         <Row label="Fee when the driver came closer by at least" help="If the driver did not move or went away, no fee."><Num label="Came closer by" value={zone.riderCancel.closerPct} unit="%" min={5} max={100} disabled={disabled || !zone.riderCancel.on} onChange={(closerPct) => set({ riderCancel: { ...zone.riderCancel, closerPct } })} /></Row>
         <Row label="Driver gets the next nearby request first" on={zone.riderCancel.priority} disabled={disabled || !zone.riderCancel.on} onToggle={(priority) => set({ riderCancel: { ...zone.riderCancel, priority } })}>
           <Num label="Priority minutes" value={zone.riderCancel.priorityMin} unit="min" min={1} max={60} disabled={disabled} onChange={(priorityMin) => set({ riderCancel: { ...zone.riderCancel, priorityMin } })} />
         </Row>
         <p className="dx-note"><UserCheck size={13} aria-hidden="true" /> Every decision is saved with the driver's route, so you can check it by hand in Cancel checks.</p>
       </Card>
+
+      <RiderCancelFeesCard zone={zone} onChange={onChange} disabled={disabled} symbol={symbol} money={money} countryId={countryId} otherZones={otherZones} onCopyCancelFees={onCopyCancelFees} categories={feeCategories} tab={feeTab} onTab={onFeeTab} />
 
       <Card title="Airport queue" tone="pink" icon={<Plane size={18} />} help={airport ? "Drivers wait in a queue at the airport." : "Use this when the zone has a waiting area, like an airport or a station."} off={!zone.airport.on} aside={<Switch label="Airport queue" on={zone.airport.on} disabled={disabled} onChange={(on) => set({ airport: { ...zone.airport, on } })} />}>
         <Row label="Who gets the ride">

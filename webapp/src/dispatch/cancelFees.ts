@@ -1,6 +1,5 @@
-import { FARE_CATEGORIES, type FareCategoryId } from "../data/catalog.ts";
 import type { MarketId } from "../markets/markets.ts";
-import { fromSek, roundMoney } from "../pricing/zonePricing.ts";
+import { BUILT_IN_CATEGORIES, fromSek, roundMoney } from "../pricing/zonePricing.ts";
 
 /**
  * Rider cancel fees, per zone and per car type, with two rule sets:
@@ -16,9 +15,18 @@ export type CancelFeeType = "fixed" | "percent";
  * min and max (major units, null = none) only count for a % fee.
  */
 export type CancelFeeRow = { freeMin: number; type: CancelFeeType; value: number; min: number | null; max: number | null };
-export type CancelFeeTable = Record<FareCategoryId, CancelFeeRow>;
+/**
+ * Rows by car type id (Pricing's category ids). A car type without a row uses the table's Economy row (or its first row)
+ * until the admin changes it; rows of car types that were deleted in Pricing stay stored but are never shown or used.
+ */
+export type CancelFeeTable = Record<string, CancelFeeRow>;
+/** A car type as Pricing lists it. */
+export type FeeCategory = { id: string; label: string };
 
-export const CANCEL_FEE_CATEGORIES = FARE_CATEGORIES;
+/** Pricing's built-in car types, for places that do not read the Pricing list (rules checks, the rules file). */
+export const DEFAULT_FEE_CATEGORIES: FeeCategory[] = BUILT_IN_CATEGORIES.filter((item) => !item.archived).map(({ id, label }) => ({ id, label }));
+/** The car types with their own starting rule; any other car type starts as a copy of Economy. */
+const SEEDED = ["economy", "comfort", "premium", "xl"] as const;
 /** Longest free-cancel window the rider app accepts for a reservation: one week. */
 export const RESERVATION_FREE_MAX_MIN = 7 * 24 * 60;
 export const CANCEL_FEE_LIMITS = {
@@ -29,7 +37,7 @@ export const CANCEL_FEE_LIMITS = {
 } as const;
 
 /** The starting rules in Sweden; other countries get the same amounts in their own money. */
-const SEK_DEFAULTS: Record<CancelFeeKind, CancelFeeTable> = {
+const SEK_DEFAULTS: Record<CancelFeeKind, Record<(typeof SEEDED)[number], CancelFeeRow>> = {
   live: {
     economy: { freeMin: 2, type: "fixed", value: 35, min: null, max: null },
     comfort: { freeMin: 2, type: "fixed", value: 45, min: null, max: null },
@@ -46,7 +54,7 @@ const SEK_DEFAULTS: Record<CancelFeeKind, CancelFeeTable> = {
 
 export function cancelFeeDefaults(kind: CancelFeeKind, country: MarketId = "SE"): CancelFeeTable {
   const money = (value: number | null) => (value === null ? null : fromSek(value, country));
-  return Object.fromEntries(CANCEL_FEE_CATEGORIES.map(({ id }) => {
+  return Object.fromEntries(SEEDED.map((id) => {
     const row = SEK_DEFAULTS[kind][id];
     return [id, { ...row, value: row.type === "fixed" ? fromSek(row.value, country) : row.value, min: money(row.min), max: money(row.max) }];
   })) as CancelFeeTable;
@@ -54,26 +62,46 @@ export function cancelFeeDefaults(kind: CancelFeeKind, country: MarketId = "SE")
 
 /** Older saves had one free time and one fixed fee for every car type: each row gets them. */
 export function legacyCancelFees(freeMin: number, fee: number): CancelFeeTable {
-  return Object.fromEntries(CANCEL_FEE_CATEGORIES.map(({ id }) => [id, { freeMin, type: "fixed", value: fee, min: null, max: null }])) as CancelFeeTable;
+  return Object.fromEntries(SEEDED.map((id) => [id, { freeMin, type: "fixed", value: fee, min: null, max: null }])) as CancelFeeTable;
+}
+
+const FREE_ROW: CancelFeeRow = { freeMin: 0, type: "fixed", value: 0, min: null, max: null };
+
+/** The rule for one car type: its own row, else a copy of the table's Economy row, else its first row. */
+export function feeRow(table: CancelFeeTable, categoryId: string): CancelFeeRow {
+  const own = Object.prototype.hasOwnProperty.call(table, categoryId) ? table[categoryId] : undefined;
+  return { ...(own ?? table.economy ?? Object.values(table)[0] ?? FREE_ROW) };
+}
+
+/** One row per listed car type, each filled with feeRow. */
+export function feeRows(table: CancelFeeTable, categories: readonly FeeCategory[]): CancelFeeTable {
+  return Object.fromEntries(categories.map(({ id }) => [id, feeRow(table, id)]));
 }
 
 const isNum = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
-/** A table from a save: missing car types or broken values come from the fallback, row by row. */
+function completeRow(stored: unknown, base: CancelFeeRow): CancelFeeRow {
+  const own = stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, unknown> : {};
+  const optional = (value: unknown, otherwise: number | null) => (value === null ? null : isNum(value) ? value : otherwise);
+  return {
+    freeMin: isNum(own.freeMin) ? own.freeMin : base.freeMin,
+    type: own.type === "fixed" || own.type === "percent" ? own.type : base.type,
+    value: isNum(own.value) ? own.value : base.value,
+    min: optional(own.min, base.min),
+    max: optional(own.max, base.max),
+  };
+}
+
+/**
+ * A table from a save: missing or broken values come from the fallback, row by row. Rows of any car type are kept;
+ * one the fallback does not know is completed from the (stored) Economy row.
+ */
 export function completeCancelFees(stored: unknown, fallback: CancelFeeTable): CancelFeeTable {
   const raw = stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, unknown> : {};
-  return Object.fromEntries(CANCEL_FEE_CATEGORIES.map(({ id }) => {
-    const base = fallback[id];
-    const own = raw[id] && typeof raw[id] === "object" && !Array.isArray(raw[id]) ? raw[id] as Record<string, unknown> : {};
-    const optional = (value: unknown, otherwise: number | null) => (value === null ? null : isNum(value) ? value : otherwise);
-    return [id, {
-      freeMin: isNum(own.freeMin) ? own.freeMin : base.freeMin,
-      type: own.type === "fixed" || own.type === "percent" ? own.type : base.type,
-      value: isNum(own.value) ? own.value : base.value,
-      min: optional(own.min, base.min),
-      max: optional(own.max, base.max),
-    }];
-  })) as CancelFeeTable;
+  const isRow = (id: string) => Boolean(raw[id]) && typeof raw[id] === "object" && !Array.isArray(raw[id]);
+  const ids = [...Object.keys(fallback), ...Object.keys(raw).filter((id) => !(id in fallback) && isRow(id))];
+  const economy = completeRow(raw.economy, feeRow(fallback, "economy"));
+  return Object.fromEntries(ids.map((id) => [id, completeRow(raw[id], fallback[id] ?? economy)]));
 }
 
 /** The fee for one trip: fixed, or % of the trip price rounded like the rest of the app, kept between min and max. */
@@ -85,18 +113,23 @@ export function cancelFeeAmount(row: CancelFeeRow, fare: number, country: Market
   return Math.max(0, amount);
 }
 
-/** Every row the same as one of them ("Same for all car types"). */
-export function sameForAll(table: CancelFeeTable, from: FareCategoryId): CancelFeeTable {
-  return Object.fromEntries(CANCEL_FEE_CATEGORIES.map(({ id }) => [id, { ...table[from] }])) as CancelFeeTable;
+/** Every listed car type gets the same rule as one of them ("Same for all car types"). Other stored rows stay. */
+export function sameForAll(table: CancelFeeTable, from: string, categories: readonly FeeCategory[]): CancelFeeTable {
+  const row = feeRow(table, from);
+  return { ...table, ...Object.fromEntries(categories.map(({ id }) => [id, { ...row }])) };
 }
 
 /** Problems that stop a save, one line per car type and problem. */
-export function cancelFeeIssues(table: CancelFeeTable, kind: CancelFeeKind): string[] {
+export function cancelFeeIssues(table: CancelFeeTable, kind: CancelFeeKind, categories: readonly FeeCategory[] = DEFAULT_FEE_CATEGORIES): string[] {
   const issues: string[] = [];
   const prefix = kind === "live" ? "Rider cancels" : "Reservations";
   const freeMax = kind === "live" ? CANCEL_FEE_LIMITS.liveFreeMax : CANCEL_FEE_LIMITS.reservationFreeMax;
-  for (const { id, label } of CANCEL_FEE_CATEGORIES) {
-    const row = table[id];
+  // A car type without its own row uses Economy's, so its problems show once, under Economy (or the first such car type).
+  const own = (id: string) => Object.prototype.hasOwnProperty.call(table, id);
+  const fallbackShown = categories.some(({ id }) => id === "economy" && own(id));
+  const firstCopy = categories.find(({ id }) => !own(id));
+  for (const { id, label } of categories.filter((item) => own(item.id) || (!fallbackShown && item.id === firstCopy?.id))) {
+    const row = feeRow(table, id);
     const where = `${prefix}, ${label}`;
     if (kind === "live" && (!isNum(row.freeMin) || row.freeMin < 0 || row.freeMin > freeMax)) issues.push(`${where}: free cancel must be 0 to ${freeMax} minutes after the driver accepts.`);
     if (kind === "reservation" && (!Number.isInteger(row.freeMin) || row.freeMin < 0 || row.freeMin > freeMax)) issues.push(`${where}: free cancel must end 0 to ${freeMax} minutes (7 days) before pickup, in whole minutes.`);
