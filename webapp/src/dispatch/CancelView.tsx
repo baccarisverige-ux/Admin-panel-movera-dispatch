@@ -2,9 +2,8 @@ import { useState } from "react";
 import { ArrowRight, Ban, CheckCircle2, ChevronDown, ChevronUp, Coins, Scale } from "lucide-react";
 import type { Market } from "../markets/markets";
 import { zoneById } from "../markets/markets";
-import { FARE_CATEGORIES } from "../data/catalog";
 import { CommandButton } from "../ui/CommandButton";
-import type { CancelFeeRow } from "./cancelFees";
+import { feeRow, type CancelFeeRow, type FeeCategory } from "./cancelFees";
 import { cancelDecision, DISPATCH_KEY, type CancelRecord, type DispatchBook, type ZoneDispatch } from "./rules";
 
 /** The driver's route from accept to cancel, as a small drawing: start, end and the pickup. */
@@ -46,6 +45,8 @@ function feeRule(row: CancelFeeRow, fare: number, money: (value: number) => stri
 
 type Props = {
   book: DispatchBook;
+  /** Pricing's car types, for the trip's car type name. */
+  categories: FeeCategory[];
   market: Market;
   records: CancelRecord[];
   rulesOf: (zoneId: string) => ZoneDispatch;
@@ -55,7 +56,7 @@ type Props = {
   onNotice: (text: string) => void;
 };
 
-export function CancelView({ book, market, records, rulesOf, canDecide, agentId, money, onNotice }: Props) {
+export function CancelView({ book, categories, market, records, rulesOf, canDecide, agentId, money, onNotice }: Props) {
   const [open, setOpen] = useState<string | null>(records[0]?.id ?? null);
   const time = (iso: string) => new Intl.DateTimeFormat(market.locale, { timeZone: market.timeZone, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
   return (
@@ -75,7 +76,7 @@ export function CancelView({ book, market, records, rulesOf, canDecide, agentId,
               <li key={record.id} className={fee ? "dx-cancel fee" : "dx-cancel"}>
                 <button data-command="admin.dispatch.view" type="button" className="dx-cancel-head" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : record.id)}>
                   <span className={fee ? "dx-verdict fee" : "dx-verdict"}>{fee ? <Coins size={14} aria-hidden="true" /> : <Ban size={14} aria-hidden="true" />} {fee ? `Fee ${money(auto.amount)}` : "No fee"}</span>
-                  <span className="dx-cancel-who"><b>{record.rider}</b><small>{FARE_CATEGORIES.find((item) => item.id === record.category)?.label ?? record.category} · Driver {record.driver} · {zoneById(record.zoneId)?.name ?? record.zoneId} · {time(record.cancelledAt)} · {record.tripId}</small></span>
+                  <span className="dx-cancel-who"><b>{record.rider}</b><small>{categories.find((item) => item.id === record.category)?.label ?? record.category} · Driver {record.driver} · {zoneById(record.zoneId)?.name ?? record.zoneId} · {time(record.cancelledAt)} · {record.tripId}</small></span>
                   {manual ? <span className="dx-tag mine">Changed by {manual.by}</span> : <span className="dx-tag">Automatic</span>}
                   {expanded ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
                 </button>
@@ -86,7 +87,7 @@ export function CancelView({ book, market, records, rulesOf, canDecide, agentId,
                       <div><dt>When the driver accepted</dt><dd>{time(record.acceptedAt)} · {record.atAccept.km} km · {record.atAccept.etaMin} min away</dd></div>
                       <div><dt>When the rider cancelled</dt><dd>{time(record.cancelledAt)} · {record.atCancel.km} km · {record.atCancel.etaMin} min away</dd></div>
                       <div><dt>Time after accept</dt><dd>{record.minutesAfterAccept} min (free: {auto.freeMin} min)</dd></div>
-                      <div><dt>Fee for this car type</dt><dd>{feeRule(rules.riderCancel.fees[record.category], record.fare, money)}</dd></div>
+                      <div><dt>Fee for this car type</dt><dd>{feeRule(feeRow(rules.riderCancel.fees, record.category), record.fare, money)}</dd></div>
                       <div><dt>Came closer</dt><dd>{Math.max(0, auto.closerPct)}% (fee from {rules.riderCancel.closerPct}%)</dd></div>
                       <div className="wide"><dt>Automatic decision</dt><dd>{auto.fee ? <CheckCircle2 size={13} aria-hidden="true" /> : <Ban size={13} aria-hidden="true" />} {auto.why}</dd></div>
                     </dl>

@@ -1,13 +1,13 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { Copy, Eye, Layers } from "lucide-react";
-import type { FareCategoryId } from "../data/catalog";
+import { CalendarClock, Coins, Copy, Eye, Layers, Zap } from "lucide-react";
 import type { MarketId } from "../markets/markets";
 import { fromSek } from "../pricing/zonePricing";
 import { Modal } from "../ui/Modal";
-import { Choice, Num } from "./fields";
+import { Card, Choice, Num } from "./fields";
+import type { ZoneDispatch } from "./rules";
 import {
-  CANCEL_FEE_CATEGORIES, CANCEL_FEE_LIMITS, cancelFeeDefaults, riderSeesLine, sameForAll,
-  type CancelFeeKind, type CancelFeeRow, type CancelFeeTable, type CancelFeeType,
+  CANCEL_FEE_LIMITS, cancelFeeDefaults, feeRow, feeRows, riderSeesLine, sameForAll,
+  type CancelFeeKind, type CancelFeeRow, type CancelFeeTable, type CancelFeeType, type FeeCategory,
 } from "./cancelFees";
 
 const FEE_TYPES: { id: CancelFeeType; label: string }[] = [
@@ -15,7 +15,7 @@ const FEE_TYPES: { id: CancelFeeType; label: string }[] = [
   { id: "percent", label: "% of price" },
 ];
 
-const KIND_WORDS: Record<CancelFeeKind, { name: string; free: string; unit: string; max: number; sampleSek: number; sampleCategory: FareCategoryId }> = {
+const KIND_WORDS: Record<CancelFeeKind, { name: string; free: string; unit: string; max: number; sampleSek: number; sampleCategory: string }> = {
   live: { name: "Live trips", free: "Free cancel", unit: "min after accept", max: CANCEL_FEE_LIMITS.liveFreeMax, sampleSek: 250, sampleCategory: "comfort" },
   reservation: { name: "Reservations", free: "Free cancel until", unit: "min before pickup", max: CANCEL_FEE_LIMITS.reservationFreeMax, sampleSek: 420, sampleCategory: "premium" },
 };
@@ -62,25 +62,30 @@ type Props = {
   countryId: MarketId;
   /** Other zones this admin can change, for "Copy to other zones…". */
   otherZones: { id: string; name: string }[];
-  onCopyToZones: (zoneIds: string[]) => void;
+  /** The table with a row for every listed car type, copied as it is shown. */
+  onCopyToZones: (zoneIds: string[], table: CancelFeeTable) => void;
+  /** The car types Pricing lists for this zone, in Pricing's order and with its names. */
+  categories: FeeCategory[];
 };
 
 /** Rider cancel fees per car type for one zone: free minutes, then a fixed fee or a % of the price with an optional min and max. */
-export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money, countryId, otherZones, onCopyToZones }: Props) {
+export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money, countryId, otherZones, onCopyToZones, categories }: Props) {
   const words = KIND_WORDS[kind];
   const [sameOpen, setSameOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const [ids, setIds] = useState<string[]>([]);
-  const [sample, setSample] = useState<FareCategoryId>(words.sampleCategory);
+  const [picked, setSample] = useState(words.sampleCategory);
+  const sample = categories.some((item) => item.id === picked) ? picked : categories[0]?.id ?? "economy";
   const [fare, setFare] = useState(() => fromSek(words.sampleSek, countryId));
-  const setRow = (id: FareCategoryId, patch: Partial<CancelFeeRow>) => onChange({ ...table, [id]: { ...table[id], ...patch } });
-  const setType = (id: FareCategoryId, type: CancelFeeType) => {
-    if (type === table[id].type) return;
+  const setRow = (id: string, patch: Partial<CancelFeeRow>) => onChange({ ...table, [id]: { ...feeRow(table, id), ...patch } });
+  const setType = (id: string, type: CancelFeeType) => {
+    const row = feeRow(table, id);
+    if (type === row.type) return;
     const start = cancelFeeDefaults(kind, countryId)[type === "percent" ? "premium" : "economy"];
-    setRow(id, type === "percent" ? { type, value: start.value, min: table[id].min ?? start.min, max: table[id].max ?? start.max } : { type, value: start.value });
+    setRow(id, type === "percent" ? { type, value: start.value, min: row.min ?? start.min, max: row.max ?? start.max } : { type, value: start.value });
   };
-  const seen = riderSeesLine(kind, table[sample], fare, countryId, money);
-  const sampleLabel = CANCEL_FEE_CATEGORIES.find((item) => item.id === sample)?.label ?? sample;
+  const seen = riderSeesLine(kind, feeRow(table, sample), fare, countryId, money);
+  const sampleLabel = categories.find((item) => item.id === sample)?.label ?? sample;
   return (
     <div className="dx-fees" role="group" aria-label={`${words.name} cancel fees`}>
       <table className="dx-fee-table" aria-label={`${words.name} cancel fees per car type`}>
@@ -88,8 +93,8 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
           <tr><th scope="col">Car type</th><th scope="col">{words.free}</th><th scope="col">Fee type</th><th scope="col">Fee</th><th scope="col">Min</th><th scope="col">Max</th></tr>
         </thead>
         <tbody>
-          {CANCEL_FEE_CATEGORIES.map(({ id, label }) => {
-            const row = table[id];
+          {categories.map(({ id, label }) => {
+            const row = feeRow(table, id);
             const percent = row.type === "percent";
             const name = `${words.name} ${label}`;
             return (
@@ -118,8 +123,8 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
       {sameOpen ? (
         <div className="dx-fee-same" role="group" aria-label={`${words.name}: use one car type's rule for all`}>
           <small>Use the rule of</small>
-          {CANCEL_FEE_CATEGORIES.map(({ id, label }) => (
-            <button data-command="admin.dispatch.edit" key={id} type="button" className="dash-btn small ghost" onClick={() => { onChange(sameForAll(table, id)); setSameOpen(false); }}>{label}</button>
+          {categories.map(({ id, label }) => (
+            <button data-command="admin.dispatch.edit" key={id} type="button" className="dash-btn small ghost" onClick={() => { onChange(sameForAll(table, id, categories)); setSameOpen(false); }}>{label}</button>
           ))}
           <small>for every car type.</small>
         </div>
@@ -127,8 +132,8 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
       <div className="dx-fee-sees" aria-label={`${words.name}: rider sees`}>
         <span className="dx-fee-sample">
           <Eye size={13} aria-hidden="true" /> Rider sees
-          <select className="dx-select" aria-label={`${words.name} preview car type`} value={sample} onChange={(event) => setSample(event.target.value as FareCategoryId)}>
-            {CANCEL_FEE_CATEGORIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+          <select className="dx-select" aria-label={`${words.name} preview car type`} value={sample} onChange={(event) => setSample(event.target.value)}>
+            {categories.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
           <Num label={`${words.name} preview trip price`} before="trip" value={fare} unit={symbol} step={1} min={0} max={100000} onChange={setFare} />
           {kind === "reservation" ? <small>pickup 14:00</small> : null}
@@ -146,9 +151,63 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
         </div>
         <div className="dx-modal-actions">
           <button data-command="admin.dispatch.edit" type="button" className="dash-btn ghost" onClick={() => setCopyOpen(false)}>Cancel</button>
-          <button data-command="admin.dispatch.edit" type="button" className="dash-btn" disabled={!ids.length} onClick={() => { onCopyToZones(ids); setCopyOpen(false); }}>Copy to {ids.length} zone{ids.length === 1 ? "" : "s"}</button>
+          <button data-command="admin.dispatch.edit" type="button" className="dash-btn" disabled={!ids.length} onClick={() => { onCopyToZones(ids, { ...table, ...feeRows(table, categories) }); setCopyOpen(false); }}>Copy to {ids.length} zone{ids.length === 1 ? "" : "s"}</button>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+type CardProps = {
+  zone: ZoneDispatch;
+  onChange: (next: ZoneDispatch) => void;
+  disabled: boolean;
+  symbol: string;
+  money: (value: number) => string;
+  countryId: MarketId;
+  otherZones: { id: string; name: string }[];
+  onCopyCancelFees: (kind: CancelFeeKind, table: CancelFeeTable, zoneIds: string[]) => void;
+  categories: FeeCategory[];
+  tab: CancelFeeKind;
+  onTab: (tab: CancelFeeKind) => void;
+};
+
+const FEE_TABS: { id: CancelFeeKind; label: string; example: string }[] = [
+  { id: "live", label: "Live trips", example: "Booked now (Radar, Exclusive): free for a few minutes after the driver accepts, then the fee." },
+  { id: "reservation", label: "Reservations", example: "Booked for later (also Exclusive reservations): free until a set time before pickup, then the late fee." },
+];
+
+/** One place for the rider's cancel fees in a zone: live trips and reservations, each per car type. */
+export function RiderCancelFeesCard({ zone, onChange, disabled, symbol, money, countryId, otherZones, onCopyCancelFees, categories, tab, onTab }: CardProps) {
+  const live = tab === "live";
+  const off = live ? !zone.riderCancel.on : !zone.reservation.on;
+  const current = FEE_TABS.find((item) => item.id === tab) ?? FEE_TABS[0];
+  return (
+    <div id="dx-rider-cancel-fees">
+      <Card title="Rider cancel fees" tone="green" icon={<Coins size={18} />} help="Set per car type. Live trips and reservations have their own rules.">
+        <div className="ra-switch dx-fee-tabs" role="tablist" aria-label="Rider cancel fees for">
+          {FEE_TABS.map((item) => (
+            <button data-command="admin.dispatch.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => onTab(item.id)}>
+              {item.id === "live" ? <Zap size={12} aria-hidden="true" /> : <CalendarClock size={12} aria-hidden="true" />} {item.label}
+            </button>
+          ))}
+        </div>
+        <p className="dx-fee-example" role="tabpanel" aria-label={current.label}>{current.example}</p>
+        {off ? <p className="dx-note warn">{live ? "The smart cancel check is off in this zone (Rider cancels: smart check), so live trips have no cancel fee." : "Reservations are off in this zone."}</p> : null}
+        <CancelFeeTable
+          key={tab}
+          kind={tab}
+          table={live ? zone.riderCancel.fees : zone.reservation.riderFees}
+          onChange={(table) => onChange(live ? { ...zone, riderCancel: { ...zone.riderCancel, fees: table } } : { ...zone, reservation: { ...zone.reservation, riderFees: table } })}
+          disabled={disabled || off}
+          symbol={symbol}
+          money={money}
+          countryId={countryId}
+          otherZones={otherZones}
+          onCopyToZones={(ids, table) => onCopyCancelFees(tab, table, ids)}
+          categories={categories}
+        />
+      </Card>
     </div>
   );
 }
