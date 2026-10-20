@@ -13,8 +13,11 @@ const ops = emptyPayOps();
 
 // Payments
 const facts = factsOf(pay("PAY0002", "captured"), riders, [], ops, now);
-assert(facts.country === "SE" && facts.riderId === "R0001" && ["card", "swish", "apple", "klarna", "google"].includes(facts.method), "a Swedish payment has a Swedish method and a rider");
-assert(factsOf(pay("PAY1001", "captured", 1000, "FR-OCE"), [], [], ops, now).method !== "swish", "no Swish in France");
+assert(facts.country === "SE" && facts.riderId === "R0001" && ["card", "apple", "google", "cash"].includes(facts.method), "a Swedish payment has one of the four methods and a rider");
+for (const zone of ["Z001", "FR-OCE", "TN-TC"]) for (let index = 0; index < 40; index += 1) {
+  const method: string = factsOf(pay(`PAY${2000 + index}`, "captured", 1000, zone), [], [], ops, now).method;
+  assert(!["swish", "klarna", "paypal"].includes(method), `Q7 FINAL: no Swish, Klarna or PayPal (${zone})`);
+}
 const split = paySplit(10_000, "SE");
 assert(split.driver + split.movera === split.price && split.commission === 2000, "who gets what adds up");
 const failedRecord = pay("PAY0001", "failed");

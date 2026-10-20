@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import {
   ArrowDown, ArrowUp, Baby, Bell, Clock, Gauge, Heart, Home, Layers, ListOrdered, Luggage, Mail, MapPin, MessageSquare,
   MonitorSmartphone, Moon, Power, PawPrint, Plane, Plus, Radar, Route, Scale, Shield, ShieldAlert, Smartphone, Sparkles, Star, Target, Timer, Trash2,
-  TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins,
+  TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins, Move,
 } from "lucide-react";
 import type { MarketId } from "../markets/markets";
 import { BonusAreaMap } from "../drivers/BonusAreaMap";
@@ -18,7 +18,7 @@ import { RiderCancelFeesCard } from "./CancelFeeTable";
 import type { CancelFeeKind, CancelFeeTable as FeeTable, FeeCategory } from "./cancelFees";
 import type { PickupWait } from "./offers";
 import {
-  ALERTS, EXTRAS, FACTORS, modeLabel, WAIT_KINDS,
+  ALERTS, EXTRAS, FACTORS, modeLabel, PICKUP_MOVE_MAX_METERS, WAIT_KINDS,
   type CountryDispatch, type DriverGroup, type ExtraId, type OfferMode, type TabId, type WaitKind, type WaitStep, type ZoneDispatch,
 } from "./rules";
 
@@ -290,11 +290,11 @@ function Waiting({ zone, onChange, disabled }: Props) {
   );
 }
 
-function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName, money, waitBases, onWaitAllZones, otherZones, onCopyCancelFees, feeCategories, feeTab, onFeeTab }: Props) {
+function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName, money, waitBases, onWaitAllZones, otherZones, onCopyCancelFees, feeCategories, feeTab, onFeeTab, country, onCountry, countryName }: Props) {
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   return (
     <div className="dx-cards">
-      <PickupWaitCard zone={zone} onChange={onChange} disabled={disabled} symbol={symbol} money={money} countryId={countryId} waitBases={waitBases} onAllZones={onWaitAllZones} />
+      <PickupWaitCard zone={zone} onChange={onChange} disabled={disabled} symbol={symbol} money={money} countryId={countryId} waitBases={waitBases} onAllZones={onWaitAllZones} country={country} onCountry={onCountry} countryName={countryName} />
 
       <Card title="Special requests" tone="purple" icon={<ListOrdered size={18} />} help="Only drivers who have it get the request. The badge shows on the driver's offer and in the rider app.">
         {zone.extras.map((extra) => {
@@ -316,6 +316,12 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         <Row label="Extra fee per stop" help="0 means no fee."><Num label="Fee per stop" value={zone.stops.perStop} unit={symbol} step={0.5} min={0} max={500} disabled={disabled || !zone.stops.on} onChange={(perStop) => set({ stops: { ...zone.stops, perStop } })} /></Row>
         <Row label="Rider can change the destination or add a stop during the trip" on={zone.stops.changeDuring} disabled={disabled || !zone.stops.on} onToggle={(changeDuring) => set({ stops: { ...zone.stops, changeDuring } })} />
         <Row label="Driver can accept or refuse the change" on={zone.stops.driverCanRefuse} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} onToggle={(driverCanRefuse) => set({ stops: { ...zone.stops, driverCanRefuse } })} />
+      </Card>
+
+      <Card title="Pickup move after accept" tone="purple" icon={<Move size={18} />} help="After a driver accepts, the rider can move the pickup point a little. A bigger move means cancel and book again. The driver is told about every move. The rider and driver apps read this.">
+        <Row label="Rider can move the pickup up to" help={`0 means the pickup cannot move after accept. At most ${PICKUP_MOVE_MAX_METERS} m.`}>
+          <Num label="Pickup move limit" before="up to" value={zone.pickupMove.maxMeters} unit="m" step={50} min={0} max={PICKUP_MOVE_MAX_METERS} disabled={disabled} onChange={(maxMeters) => set({ pickupMove: { maxMeters: Math.round(maxMeters) } })} />
+        </Row>
       </Card>
 
       <Card title="Driver cancels after accepting" tone="orange" icon={<UserX size={18} />} help="It only counts in the driver's cancel rate, and the ride searches again." off={!zone.driverCancel.on} aside={<Switch label="Search again" on={zone.driverCancel.on} disabled={disabled} onChange={(on) => set({ driverCancel: { ...zone.driverCancel, on } })} />}>

@@ -1,5 +1,5 @@
 import {
-  cancelReasonsDefault, cancelReasonsFor, completeCancelReasons, driverNoShowShare, exclusiveReasonList, exclusiveReasonText, pickupTerms,
+  cancelReasonsDefault, cancelReasonsFor, completeCancelReasons, completePickupWait, driverNoShowShare, exclusiveReasonList, exclusiveReasonText, pickupTerms,
 } from "./offers.ts";
 import {
   approve,
@@ -380,23 +380,37 @@ assert(a2Change.includes("Hidden Radar trip comes back after: 2 → 5") && a2Cha
 
 // Waiting at pickup: Pricing's values per category, then ride type, then distance.
 const wait = base.pickupWait;
-assert(wait.noShowAfterMin === 5 && wait.driverShareWaitPct === 100 && wait.driverShareNoShowPct === 80 && wait.farPickupKm === 5 && wait.farPickup.noShowFee === 85 && wait.farPickup.freeWaitMin === 1, "waiting defaults like the driver app");
+assert(wait.farPickupKm === 5 && wait.farPickup.noShowFee === 85 && wait.farPickup.freeWaitMin === 1, "waiting defaults like the driver app");
+assert(!("noShowAfterMin" in wait) && !("driverShareWaitPct" in wait) && !("driverShareNoShowPct" in wait), "Q41/Q43/Q44: no zone no-show time and no zone shares");
+assert(!("noShowAfterMin" in completePickupWait(wait, { ...wait, noShowAfterMin: 9, driverShareWaitPct: 50 })), "an older save's zone no-show time is dropped");
+assert(countryDefault("SE").noShowDriverSharePct === 80 && countryDefault("TN").noShowDriverSharePct === 80, "Q44: the driver gets 80% of the no-show fee by default, per country");
 assert(zoneDefault("FR-PC").pickupWait.farPickup.noShowFee === 8.05 && zoneDefault("TN-TC").pickupWait.farPickup.noShowFee === 25.5, "the far-pickup fee is in the country's money");
 const pricingBase = { freeWaitMin: 2, perMin: 5, noShowFee: 50 };
-const normalTerms = pickupTerms(pricingBase, wait, { type: "normal", pickupKm: 2, includedWaitingMin: 5 });
-assert(normalTerms.freeWaitMin === 2 && normalTerms.perMin === 5 && normalTerms.noShowAfterMin === 5 && normalTerms.noShowFee === 50 && normalTerms.rule === "", "a normal pickup uses Pricing's values");
+const at = (type: "normal" | "airport" | "scheduled" | "event", pickupKm: number, includedWaitingMin = 5, noShowDriverSharePct = 80) => ({ type, pickupKm, includedWaitingMin, noShowDriverSharePct });
+const normalTerms = pickupTerms(pricingBase, wait, at("normal", 2));
+assert(normalTerms.freeWaitMin === 2 && normalTerms.perMin === 5 && normalTerms.noShowAfterMin === 2 && normalTerms.noShowFee === 50 && normalTerms.rule === "", "a normal pickup uses Pricing's values; no-show when the free wait ends (Q41)");
+assert(normalTerms.driverShareWaitPct === 100, "Q43: the waiting money is all the driver's");
 assert(driverNoShowShare(normalTerms) === 40, "the driver gets 80% of the no-show fee");
-const airportTerms = pickupTerms(pricingBase, wait, { type: "airport", pickupKm: 2, includedWaitingMin: 5 });
+assert(driverNoShowShare(pickupTerms(pricingBase, wait, at("normal", 2, 5, 60))) === 30, "Q44: the country's share is used");
+const airportTerms = pickupTerms(pricingBase, wait, at("airport", 2));
 assert(airportTerms.freeWaitMin === 15 && airportTerms.noShowAfterMin === 20 && airportTerms.perMin === 5 && airportTerms.rule === "Airport pickup", "an airport pickup waits longer");
-assert(pickupTerms(pricingBase, wait, { type: "scheduled", pickupKm: 2, includedWaitingMin: 7 }).freeWaitMin === 7, "a scheduled ride's free wait is the reservation policy's included waiting");
-const farAirport = pickupTerms(pricingBase, wait, { type: "airport", pickupKm: 9, includedWaitingMin: 5 });
+assert(pickupTerms(pricingBase, wait, at("scheduled", 2, 7)).freeWaitMin === 7, "a scheduled ride's free wait is the reservation policy's included waiting");
+const farAirport = pickupTerms(pricingBase, wait, at("airport", 9));
 assert(farAirport.freeWaitMin === 1 && farAirport.noShowFee === 85 && farAirport.noShowAfterMin === 20 && farAirport.rule === "Airport pickup · Pickup over 5 km", "the distance rule comes last and wins where it sets a value");
-assert(pickupTerms(pricingBase, { ...wait, farPickupOn: false }, { type: "normal", pickupKm: 9, includedWaitingMin: 5 }).freeWaitMin === 2, "the far rule can be off");
-assert(zoneIssues({ ...base, pickupWait: { ...wait, driverShareNoShowPct: 120 } }).includes("Waiting at pickup: the driver's share must be 0 to 100%."), "shares are 0 to 100%");
+assert(pickupTerms(pricingBase, { ...wait, farPickupOn: false }, at("normal", 9)).freeWaitMin === 2, "the far rule can be off");
+assert(countryIssues({ ...countryDefault("SE"), noShowDriverSharePct: 120 }).includes("The driver's share of the no-show fee must be 0 to 100%."), "shares are 0 to 100%");
+assert(countryLines(countryDefault("SE"), { ...countryDefault("SE"), noShowDriverSharePct: 70 }).includes("Driver's share of the no-show fee: 80% → 70%"), "a change line for the no-show share");
 assert(zoneIssues({ ...base, pickupWait: { ...wait, rideTypes: { ...wait.rideTypes, airport: { ...wait.rideTypes.airport, noShowAfterMin: 10 } } } }).includes("Waiting at pickup, airport pickup: no-show must come after the free wait."), "no-show comes after the free wait");
-const waitChange = changeLines(base, { ...base, pickupWait: { ...wait, noShowAfterMin: 6, farPickup: { ...wait.farPickup, perMin: 8 }, rideTypes: { ...wait.rideTypes, event: { ...wait.rideTypes.event, freeWaitMin: null } } } });
-assert(waitChange.includes("No-show after: 5 → 6") && waitChange.includes("Far pickup: price per minute: same as the zone → 8") && waitChange.includes("Event pickup: free wait: 3 → same as the zone"), "change lines for waiting at pickup");
-assert(copyParts({ ...base, pickupWait: { ...wait, noShowAfterMin: 9 } }, zoneDefault("Z002"), ["rides"]).pickupWait.noShowAfterMin === 9, "waiting copies with Rides & stops");
+const waitChange = changeLines(base, { ...base, pickupWait: { ...wait, farPickupKm: 6, farPickup: { ...wait.farPickup, perMin: 8 }, rideTypes: { ...wait.rideTypes, event: { ...wait.rideTypes.event, freeWaitMin: null } } } });
+assert(waitChange.includes("Far pickup from: 5 → 6") && waitChange.includes("Far pickup: price per minute: same as the zone → 8") && waitChange.includes("Event pickup: free wait: 3 → same as the zone"), "change lines for waiting at pickup");
+assert(copyParts({ ...base, pickupWait: { ...wait, farPickupKm: 9 } }, zoneDefault("Z002"), ["rides"]).pickupWait.farPickupKm === 9, "waiting copies with Rides & stops");
+
+// Q39/Q40: max stops 3 and the pickup move limit 500 m per zone, in Dispatch.
+assert(base.stops.max === 3 && base.pickupMove.maxMeters === 500, "Q39/Q40 defaults");
+assert(zoneIssues({ ...base, pickupMove: { maxMeters: 6000 } }).some((issue) => issue.startsWith("Pickup move after accept")), "the pickup move limit has a maximum");
+assert(changeLines(base, { ...base, pickupMove: { maxMeters: 300 } }).includes("Pickup move after accept (m): 500 → 300"), "a change line for the pickup move limit");
+assert(liveRules(emptyDispatchBook(), "Z001").pickupMove.maxMeters === 500, "an older save without the setting gets 500 m");
+assert(copyParts({ ...base, pickupMove: { maxMeters: 250 } }, zoneDefault("Z002"), ["rides"]).pickupMove.maxMeters === 250, "the pickup move limit copies with Rides & stops");
 
 // Country rules: driving limit warnings, cancel rate, cancel reasons.
 const se = countryDefault("SE");

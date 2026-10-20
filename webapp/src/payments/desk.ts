@@ -12,11 +12,12 @@ import { failureCause, failureHandled } from "./failures.ts";
 
 export const PAY_OPS_KEY = "paymentOps";
 
-export const METHOD_LABELS: Record<PaymentMethod, string> = { card: "Card", swish: "Swish", klarna: "Klarna", apple: "Apple Pay", google: "Google Pay", paypal: "PayPal", cash: "Cash", wallet: "Wallet" };
+export const METHOD_LABELS: Record<PaymentMethod, string> = { card: "Card", apple: "Apple Pay", google: "Google Pay", cash: "Cash", wallet: "Wallet" };
 
 const COUNTRY_METHODS: Record<MarketId, PaymentMethod[]> = {
-  SE: ["card", "card", "swish", "swish", "apple", "klarna", "google"],
-  FR: ["card", "card", "card", "apple", "google", "paypal"],
+  // Q7 FINAL: the same methods in every country (no Swish, Klarna or PayPal).
+  SE: ["card", "card", "card", "apple", "apple", "google", "cash"],
+  FR: ["card", "card", "card", "apple", "google", "cash"],
   TN: ["card", "cash", "cash", "wallet", "card"],
 };
 

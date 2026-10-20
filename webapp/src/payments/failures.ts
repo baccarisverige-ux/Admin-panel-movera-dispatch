@@ -3,7 +3,7 @@ import type { DemoRecord } from "../api/seed.ts";
 /** Why a ride payment failed, and whether it is the rider's problem or Movera's. */
 export type FailureCause = { kind: "rider" | "system"; reason: string };
 
-const RIDER_REASONS = ["Card declined", "Not enough money", "Card expired", "Bank asked for verification", "Swish payment rejected"];
+const RIDER_REASONS = ["Card declined", "Not enough money", "Card expired", "Bank asked for verification", "Apple Pay payment rejected"];
 const SYSTEM_REASONS = ["Payment provider timeout", "Payment provider unavailable", "Technical error"];
 
 function hash(text: string): number {

@@ -11,6 +11,7 @@ export const ELSEWHERE: { label: string; what: string; path: string; section: st
   { section: "Rides", label: "Dispatch rules", what: "Who gets a ride first, offer time, search radius", path: "/dispatch?view=rules" },
   { section: "Rides", label: "Trip settings", what: "What admins may change on a trip, call masking", path: "/trips?view=settings" },
   { section: "Rides", label: "Pricing", what: "Prices, fees and surge per zone", path: "/pricing" },
+  { section: "Rides", label: "Tips & limits", what: "Tips, raise-offer steps, promo cap and driver bonus limit per country", path: "/pricing?tab=extras" },
   { section: "Rides", label: "Zones", what: "Where Movera drives, and what each zone allows", path: "/zones" },
   { section: "Safety", label: "Incident settings", what: "Levels and time limits", path: "/incidents?view=settings" },
   { section: "Safety", label: "Risk rules", what: "Safety and fraud rules", path: "/risk?tab=safety" },

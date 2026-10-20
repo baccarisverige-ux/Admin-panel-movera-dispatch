@@ -105,7 +105,7 @@ export function frontendGateC(): FrontendScenario[] {
   const views = [liveQuote(5, 12), liveQuote(5, 12), liveQuote(5, 12), liveQuote(5, 12)];
   add("T06", views.every((item) => item.minor === preview.minor && item.ruleVersion === preview.ruleVersion) && preview.minor > 0, `Admin, rider, driver and receipt all show ${preview.label} at ${preview.ruleVersion}.`);
 
-  const methods = { card: true, swish: true, klarna: true, apple: true, google: true, paypal: true, cash: false, wallet: true } as Record<PaymentMethod, boolean>;
+  const methods = { card: true, apple: true, google: true, cash: false, wallet: true } as Record<PaymentMethod, boolean>;
   add("T07", !canStartCheckout(methods, "cash") && existingAuthContinues({ id: "C", method: "cash", state: "authorized" }, methods), "New cash checkout is refused. The existing authorisation continues.");
 
   // The refund key is checked against the fixture server in api/refund.test.ts (one effect per key); it is async, so not run here.

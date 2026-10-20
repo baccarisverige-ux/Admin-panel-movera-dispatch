@@ -306,7 +306,8 @@ test("zone page: launch checklist, settings, prices in the country's money, ride
   await expect(page.getByLabel("Launch checklist")).toContainText("Ready to go live");
   await page.getByRole("tab", { name: "Settings" }).click();
   await page.locator(".zd-chips").filter({ hasText: "Payment methods" }).locator("label").first().click();
-  for (let index = 0; index < 7; index += 1) await page.locator(".zd-chips").filter({ hasText: "Payment methods" }).locator("label.on").first().click();
+  // Q7 FINAL: five methods (card, Apple Pay, Google Pay, cash, wallet); switch them all off.
+  for (let index = 0; index < 4; index += 1) await page.locator(".zd-chips").filter({ hasText: "Payment methods" }).locator("label.on").first().click();
   await expect(page.getByLabel("Launch checklist")).toContainText("Not ready to go live");
   await page.getByRole("tab", { name: "Prices and fees" }).click();
   await expect(page.locator(".num-field").filter({ has: page.getByLabel("Zone fee") })).toContainText("kr");

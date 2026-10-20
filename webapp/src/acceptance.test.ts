@@ -43,7 +43,7 @@ const quote = quoteRide(book, { categoryId: "economy", km: 10, minutes: 20, wait
 const ride = price.base + price.perKm * 10 + price.perMin * 20;
 assert(!quote.error && quote.total === roundTo(ride * (1 + price.appFeePct / 100), book.fees.rounding) && quote.lines.filter((line) => line.kind === "trip").reduce((sum, line) => sum + line.amount, 0) === ride, "A04 quote matches");
 
-const methods = { card: true, swish: true, klarna: true, apple: true, google: true, paypal: true, cash: false, wallet: true } as Record<PaymentMethod, boolean>;
+const methods = { card: true, apple: true, google: true, cash: false, wallet: true } as Record<PaymentMethod, boolean>;
 assert(!canStartCheckout(methods, "cash"), "A05 new cash checkout refused");
 assert(existingAuthContinues({ id: "C", method: "cash", state: "authorized" }, methods), "A06 existing auth continues");
 

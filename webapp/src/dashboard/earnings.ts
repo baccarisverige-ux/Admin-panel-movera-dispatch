@@ -58,8 +58,8 @@ const CATEGORY_SHARE: [string, string, number][] = [
 ];
 
 const METHOD_SHARE: Record<MarketId, [string, string, number][]> = {
-  SE: [["card", "Card", 0.42], ["swish", "Swish", 0.3], ["apple", "Apple Pay", 0.12], ["wallet", "Wallet", 0.07], ["klarna", "Klarna", 0.06], ["google", "Google Pay", 0.03]],
-  FR: [["card", "Card", 0.55], ["apple", "Apple Pay", 0.2], ["google", "Google Pay", 0.1], ["paypal", "PayPal", 0.08], ["wallet", "Wallet", 0.05], ["cash", "Cash", 0.02]],
+  SE: [["card", "Card", 0.55], ["apple", "Apple Pay", 0.22], ["google", "Google Pay", 0.1], ["wallet", "Wallet", 0.07], ["cash", "Cash", 0.06]],
+  FR: [["card", "Card", 0.58], ["apple", "Apple Pay", 0.22], ["google", "Google Pay", 0.12], ["wallet", "Wallet", 0.05], ["cash", "Cash", 0.03]],
   TN: [["cash", "Cash", 0.48], ["card", "Card", 0.35], ["wallet", "Wallet", 0.17]],
 };
 

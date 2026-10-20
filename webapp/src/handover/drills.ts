@@ -9,7 +9,7 @@ import { assignReservation, needsDriverSoon, type Reservation } from "../reserva
 
 export type DrillResult = { id: string; pass: boolean; steps: string[] };
 
-const CASH_OFF = { card: true, swish: true, klarna: true, apple: true, google: true, paypal: true, cash: false, wallet: true } as Record<PaymentMethod, boolean>;
+const CASH_OFF = { card: true, apple: true, google: true, cash: false, wallet: true } as Record<PaymentMethod, boolean>;
 
 function driver(): Driver {
   return {

@@ -91,11 +91,13 @@ export type ConfigBook = {
   scheduled: ScheduledConfig[];
 };
 
+/** Switches that are gone: Swish is not a payment method any more (Q7 FINAL). */
+const RETIRED_SWITCHES = new Set(["swish"]);
+
 export const RIDER_SWITCHES: FeatureSwitch[] = [
   { id: "cash", app: "rider", label: "Cash", on: true },
   { id: "applePay", app: "rider", label: "Apple Pay", on: true },
   { id: "googlePay", app: "rider", label: "Google Pay", on: true },
-  { id: "swish", app: "rider", label: "Swish", on: true },
   { id: "scheduled", app: "rider", label: "Scheduled rides", on: true },
   { id: "wallet", app: "rider", label: "Wallet", on: true },
   { id: "pin", app: "rider", label: "PIN", on: true },
@@ -218,7 +220,8 @@ export function normalizeConfig(raw: Partial<ConfigBook> | null | undefined): Co
     ...base.draft,
     ...incoming,
     features: { ...base.draft.features, ...incoming?.features, luxury: false },
-    switches: incoming?.switches?.length ? incoming.switches : base.draft.switches,
+    // Owner Q7 FINAL: no Swish anywhere; older saves drop the switch.
+    switches: incoming?.switches?.length ? incoming.switches.filter((item) => !RETIRED_SWITCHES.has(item.id)) : base.draft.switches,
     updates: incoming?.updates?.length === 4 ? incoming.updates : base.draft.updates,
     reasons: incoming?.reasons?.length ? [...incoming.reasons, ...base.draft.reasons.filter((reason) => !incoming.reasons!.some((item) => item.id === reason.id))] : base.draft.reasons,
     booking: { ...base.draft.booking, ...incoming?.booking },

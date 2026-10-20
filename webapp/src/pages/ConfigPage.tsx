@@ -38,6 +38,7 @@ import { coreZones, stockholmZones } from "../zones/releases";
 import { CommandButton } from "../ui/CommandButton";
 import { useDirtyWarning } from "../ui/useDirtyWarning";
 import { RefundPolicyPanel } from "../payments/RefundPolicyPanel";
+import { CountryAppsPanel } from "../config/CountryAppsPanel";
 import { can } from "../auth/permissions";
 
 const LEVELS: OverrideLevel[] = ["market", "zone", "category", "app", "platform", "appVersion", "cohort"];
@@ -88,10 +89,15 @@ function sameBook(a: ConfigBook, b: ConfigBook): boolean {
 
 /** Switches Dispatch owns (Q26, X18): scheduled rides. Shown read-only here, with a link to the real setting. */
 const DISPATCH_SWITCHES = new Set(["scheduled", "bookLater", "scheduledRides"]);
+/** Payment method switches (Q7 FINAL): one setting per country in "Payment methods and languages per country" below. */
+const PAYMENT_SWITCHES = new Set(["cash", "applePay", "googlePay"]);
 
 function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: boolean }; onChange: (on: boolean) => void }) {
   if (DISPATCH_SWITCHES.has(item.id)) {
     return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{item.label}: set per zone in Dispatch › Reservations. <Link to="/dispatch?tab=reservations">Edit in Dispatch</Link></p>;
+  }
+  if (PAYMENT_SWITCHES.has(item.id)) {
+    return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{item.label}: set per country in Payment methods and languages. <a href="#country-apps" onClick={(event) => { event.preventDefault(); document.getElementById("country-apps")?.scrollIntoView({ block: "start" }); }}>Edit per country</a></p>;
   }
   return (
     <label className="check-row">
@@ -136,11 +142,12 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
 
   const dirty = !sameBook(book, base);
   const [refundDirty, setRefundDirty] = useState(false);
-  useDirtyWarning(dirty || refundDirty);
+  const [countryDirty, setCountryDirty] = useState(false);
+  useDirtyWarning(dirty || refundDirty || countryDirty);
   useEffect(() => {
-    onDirty?.(dirty || refundDirty);
+    onDirty?.(dirty || refundDirty || countryDirty);
     return () => onDirty?.(false);
-  }, [dirty, refundDirty, onDirty]);
+  }, [dirty, refundDirty, countryDirty, onDirty]);
   const missing = missingTranslations(book.draft.reasons);
   const staff = useRecords("staff", null);
   const diff = configDiff(book.published, book.draft);
@@ -175,7 +182,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
           <h2>Configuration</h2>
           <p>
             Published version {book.rev}. Config revision {book.draftRev}. Status {book.status}. Rider {book.published.versions.rider}.
-            Driver {book.published.versions.driver}. Staff {staff.data?.length ?? "…"}. Languages: Swedish and English.
+            Driver {book.published.versions.driver}. Staff {staff.data?.length ?? "…"}. Languages: English, French and Swedish (default per country below).
           </p>
         </div>
         <Link to="/confirm">Open to confirm</Link>
@@ -190,6 +197,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       </p>
 
       <RefundPolicyPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setRefundDirty} />
+
+      <CountryAppsPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setCountryDirty} />
 
       <article className="panel" data-testid="config-impact">
         <h3>Impact preview</h3>

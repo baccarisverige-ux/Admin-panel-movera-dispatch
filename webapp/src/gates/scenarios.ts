@@ -23,7 +23,7 @@ export function chapter16(): ScenarioResult[] {
   sim("T04", false, `${apps} exist. Resume after background was not run on them.`);
   sim("T05", false, "The driver frontend exists. Suspension across a restart was not run on it.");
   sim("T06", false, "The admin preview matches the rider formula. The driver offer and the receipt are not connected.");
-  const methods = { card: true, swish: true, klarna: true, apple: true, google: true, paypal: true, cash: false, wallet: true } as Record<PaymentMethod, boolean>;
+  const methods = { card: true, apple: true, google: true, cash: false, wallet: true } as Record<PaymentMethod, boolean>;
   sim("T07", !canStartCheckout(methods, "cash") && existingAuthContinues({ id: "C", method: "cash", state: "authorized" }, methods), "New cash checkout refused. Existing authorisation continues.");
   sim("T08", false, "A repeated refund key is one effect. Tip and payout retries are not all wired.");
   sim("T09", false, "Cancel keeps the policy version in the reservation book. Daylight-saving was not exercised, so this scenario is not passed.");

@@ -1,3 +1,4 @@
+import { METHOD_LABELS } from "../payments/desk";
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
@@ -174,7 +175,7 @@ export function PaymentsPage() {
                   setNotice(`${method} will be ${event.target.checked ? "on" : "off"} for new checkouts in ${zone}, ${category}, ${platform} after saving.`);
                 }}
               />
-              {method}
+              {METHOD_LABELS[method]}{method === "wallet" ? " (one balance per currency)" : ""}
             </label>
           ))}
         </div>

@@ -25,7 +25,10 @@ test("configuration draft is saved, approved by a second agent, published and ro
   await page.getByRole("link", { name: "Settings", exact: true }).click();
 
   await expect(page.getByRole("heading", { name: "Configuration" })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Apple Pay" })).toBeChecked();
+  // Q7 FINAL: payment methods are one setting per country; the old switches point there, and Swish is gone.
+  await expect(page.getByTestId("config-switch-moved-applePay")).toContainText("Edit per country");
+  await expect(page.getByRole("checkbox", { name: "Sweden Apple Pay" })).toBeChecked();
+  await expect(page.getByText("Swish", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("checkbox", { name: "Show rating" })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Luxury" })).toHaveCount(0);
   // Q26 / X18: max stops and scheduled rides are set in Dispatch; Settings shows where, read-only.
