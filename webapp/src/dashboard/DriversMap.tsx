@@ -55,6 +55,8 @@ type Props = {
   /** Open a waiting rider from outside the map (the Live riders list). */
   focusRequest?: { id: string; nonce: number } | null;
   renderAssign?: (request: RideRequest) => ReactNode;
+  /** Called when the admin clicks a waiting rider on the map (Dispatch: opens the assign panel, Q13). */
+  onRequestOpen?: (tripId: string) => void;
   /** Supply vs demand per zone, drawn as coloured circles when shown. */
   balance?: ZoneBalance[];
   showBalance?: boolean;
@@ -153,7 +155,7 @@ function geo(drivers: LiveDriver[], hidden: Set<LiveState>) {
 }
 
 /** Live drivers on a MapLibre map, coloured by state; click a driver for details. */
-export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, renderAssign, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false }: Props) {
+export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, renderAssign, onRequestOpen, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false }: Props) {
   const access = useDashboardAccess();
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -168,6 +170,8 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
   const [waybillOpen, setWaybillOpen] = useState(false);
   const surgeClick = useRef(onSurgeZone);
   surgeClick.current = onSurgeZone;
+  const requestOpen = useRef(onRequestOpen);
+  requestOpen.current = onRequestOpen;
   const pins = useRef<maplibregl.Marker[]>([]);
   latest.current = { drivers, hidden, requests, showRequests, balance, showBalance, bonusAreas, bonusShown };
 
@@ -244,6 +248,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
         if (typeof id === "string") {
           setSelectedId(null);
           setRequestId(id);
+          requestOpen.current?.(id);
         }
       });
       map.on("mouseenter", "requests", () => { map.getCanvas().style.cursor = "pointer"; });

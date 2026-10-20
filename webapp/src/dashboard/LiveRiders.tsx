@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Clock, MapPin, Radar, UserRound, Users } from "lucide-react";
 import { driverCode } from "../fleet/codes";
 import { CommandButton } from "../ui/CommandButton";
+import { NearbyButton } from "../dispatch/AssignPanel";
 import type { Candidate, RideRequest, RiderCounts } from "./riders";
 
 type AssignProps = {
@@ -38,6 +39,7 @@ export function AssignControls({ request, candidates, onDone }: AssignProps) {
   );
   return (
     <div className="assign">
+      <NearbyButton tripId={request.tripId} rider={request.rider} className="dash-btn small" />
       {offer(best, "Driver radar", "dash-btn small", best ? `Offer to the nearest free driver who can drive ${request.categoryLabel}: ${best.driver.name}, ${best.km} km` : "")}
       <label className="assign-pick">
         <span className="sr-only">Choose a driver for {request.rider}</span>

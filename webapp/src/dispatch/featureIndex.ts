@@ -68,6 +68,11 @@ export const FEATURE_INDEX: readonly FeatureEntry[] = [
   { id: "dispatch-alerts", phrase: "When the admin gets an alert", section: "Dispatch › Alerts", ...rules("alerts", "When the admin gets an alert") },
   // Dispatch views
   { id: "live", phrase: "Live: requests, drivers and assigning", section: "Dispatch › Live", ...view("live") },
+  // Round 3 assign tool (Q13–Q18): opened from a waiting rider on the live map, the Trips list or a Trip page.
+  { id: "assign-tool", phrase: "Assign tool: nearby drivers and direct assign", section: "Dispatch › Live", keywords: "assign rider exclusive offer nearby active drivers radius 5 7 10 km custom whole zone neighbours lock accepted", ...view("live") },
+  { id: "radar-groups", phrase: "Radar groups of up to 10 drivers", section: "Dispatch › Live", keywords: "send to radar group countdown repeat again zone timer", ...view("live") },
+  { id: "radar-group-timer", phrase: "Radar group timer (the zone's radar time)", section: "Dispatch › Modes", keywords: "countdown seconds radar group assign", ...rules("modes", "Radar") },
+  { id: "add-money-driver", phrase: "Add money for driver (Movera pays)", section: "Dispatch › Live", keywords: "driver bonus extra money priority badge commission trip limit", ...view("live") },
   { id: "test", phrase: "Test a ride before publishing", section: "Dispatch › Test a ride", ...view("test") },
   { id: "events", phrase: "Events and driver groups", section: "Dispatch › Events & groups", ...view("events") },
   { id: "cancel-checks", phrase: "Cancel checks: decide disputed cancels", section: "Dispatch › Cancel checks", ...view("cancels") },

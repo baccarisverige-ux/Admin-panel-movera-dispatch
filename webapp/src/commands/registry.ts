@@ -238,6 +238,10 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.trip.adjust", label: "Adjust fare", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.waiting", label: "Change waiting time", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.offer", label: "Offer to driver", reason: true, permission: "trips.intervene" },
+  // Assign tool (owner Q13–Q18, contract §3.1): direct assign (exclusive offer), radar groups, money for the driver.
+  { id: "admin.trip.assign", label: "Assign to a driver (exclusive offer)", reason: true, permission: "trips.intervene" },
+  { id: "admin.trip.radarGroup", label: "Send to a radar group", reason: false, permission: "trips.intervene" },
+  { id: "admin.trip.driverBonus", label: "Add money for driver", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.noShow", label: "Mark rider no-show", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.complete", label: "Complete trip", reason: true, permission: "trips.intervene" },
   { id: "admin.rider.block", label: "Block rider", reason: true, permission: "riders.block" },
@@ -475,6 +479,9 @@ const ALLOWED_STATES: Record<string, readonly string[]> = {
   // Trip lifecycle commands: allowed states come from the shared transition table (trips/rules.ts → contract.json).
   "admin.trip.cancel": CANCEL_OK,
   "admin.trip.offer": OFFER_OK,
+  "admin.trip.assign": OFFER_OK,
+  "admin.trip.radarGroup": OFFER_OK,
+  "admin.trip.driverBonus": OFFER_OK,
   "admin.trip.reassign": REASSIGN_OK,
   "admin.trip.noShow": NO_SHOW_OK,
   "admin.trip.complete": COMPLETE_OK,
@@ -549,6 +556,8 @@ const DESTRUCTIVE = new Set([
  * The fixture server refuses a slice that is not listed for the command (a trip note cannot replace "finance").
  */
 export const SLICE_WRITERS: Readonly<Record<string, readonly string[]>> = {
+  // The server rebuilds this slice from the command's parameters (api/dispatchSim.ts), never from the client.
+  adminDispatch: ["admin.trip.assign", "admin.trip.radarGroup", "admin.trip.driverBonus"],
   alertOps: ["admin.alerts.*"],
   campaignOps: ["admin.campaign.*"],
   config: ["admin.config.*"],
@@ -636,6 +645,8 @@ export const COLLECTION_WRITES: Readonly<Record<string, Readonly<Record<string, 
   "admin.trip.complete": { trips: ["status", "previousStatus"] },
   "admin.trip.noShow": { trips: TRIP_END },
   "admin.trip.offer": { trips: ["driverId", "status"] },
+  "admin.trip.assign": { trips: STATUS },
+  "admin.trip.radarGroup": { trips: STATUS },
   "admin.trip.reassign": { trips: ["driverId", "status", "previousStatus"] },
   "admin.trip.refund": { trips: ["kind", "notes"] },
   "admin.trip.waiting": { trips: ["waitingMin"] },

@@ -1,5 +1,5 @@
 import { logExport } from "../reports/activityLog";
-import { useMemo, useState, type ReactNode } from "react";
+import { isValidElement, useMemo, useState, type ReactNode } from "react";
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table";
 import { statusLabel, statusPresentation } from "../domain/labels";
 import { toCsv } from "../reports/csv";
@@ -7,12 +7,22 @@ import { StatusDot } from "./kit";
 import { CommandButton } from "./CommandButton";
 import { useSession } from "../auth/SessionContext";
 
-function textOf(cell: ReactNode): string {
+/** A cell drawn as `node` (a button, a link…) that still searches, sorts and exports as `text`. */
+export type RichCell = { text: string; node: ReactNode };
+export type TableCell = ReactNode | RichCell;
+
+function isRich(cell: TableCell): cell is RichCell {
+  return Boolean(cell) && typeof cell === "object" && !isValidElement(cell) && "node" in (cell as object) && "text" in (cell as object);
+}
+
+function textOf(cell: TableCell): string {
+  if (isRich(cell)) return cell.text;
   if (typeof cell === "string" || typeof cell === "number") return statusLabel(String(cell));
   return "";
 }
 
-function renderCell(value: ReactNode): ReactNode {
+function renderCell(value: TableCell): ReactNode {
+  if (isRich(value)) return value.node;
   if (typeof value !== "string" && typeof value !== "number") return value;
   const raw = String(value);
   const status = statusPresentation(raw);
@@ -23,13 +33,13 @@ function renderCell(value: ReactNode): ReactNode {
 type Row = {
   id: string;
   sourceIndex: number;
-  cells: ReactNode[];
+  cells: TableCell[];
   text: string[];
 };
 
 type DataTableProps = {
   head: string[];
-  rows: ReactNode[][];
+  rows: TableCell[][];
   rowIds?: string[];
   className?: string;
   state?: "ready" | "loading" | "error";
@@ -37,7 +47,7 @@ type DataTableProps = {
   onRow?: (index: number) => void;
 };
 
-function stableRows(rows: ReactNode[][], rowIds?: string[]): Row[] {
+function stableRows(rows: TableCell[][], rowIds?: string[]): Row[] {
   const seen = new Map<string, number>();
   return rows.map((cells, sourceIndex) => {
     const text = cells.map((cell) => textOf(cell));

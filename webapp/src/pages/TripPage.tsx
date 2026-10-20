@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Banknote, Car, Clock3, Coins, Eye, FileText, Flag, History, ListOrdered, Lock, MapPinned, MessagesSquare, Radar, Route as RouteIcon, ShieldCheck, Star, Users, Wrench } from "lucide-react";
 import { useAdminApi } from "../api/AdminApiContext";
 import { emptySafety, useAudit, useDrivers, useRecords, useSlice, useTrips, type SafetyBook } from "../api/hooks";
@@ -62,12 +62,15 @@ import { cashFigures, isCashTrip } from "../trips/cash";
 import { offerLog, timelineOffers } from "../trips/offerLog";
 import { adjustFare, waitingMinutes } from "../trips/rules";
 import { CommandButton } from "../ui/CommandButton";
+import { DriverBonusBox, NearbyButton, OffersSection, useTripOffers } from "../dispatch/AssignPanel";
+import { canAssign as canAssignTrip, isLocked } from "../dispatch/assign";
 import { StatusDot } from "../ui/kit";
 
 type TimelineEvent = { at: string; text: string; tone: "status" | "good" | "muted" | "call" | "check" | "alert"; link?: { to: string; label: string } };
 
 const SECTIONS = [
   ["timeline", "Timeline"],
+  ["assign", "Assign"],
   ["route", "Route"],
   ["fare", "Money"],
   ["chat", "Chat and calls"],
@@ -75,6 +78,16 @@ const SECTIONS = [
   ["actions", "Actions"],
   ["history", "Who did what"],
 ] as const;
+
+/** A clock for the admin offer countdowns. */
+function useNow(): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return now;
+}
 
 export function TripPage() {
   const { tripId = "" } = useParams();
@@ -96,6 +109,8 @@ export function TripPage() {
   const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: canSafety });
   const incidentOps = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: canSafety });
   const trip = trips.data?.find((item) => item.id === tripId);
+  const dispatchOffers = useTripOffers(tripId, can(role, "trips.read"));
+  const clock = useNow();
   const [driverId, setDriverId] = useState("");
   const [farePercent, setFarePercent] = useState("10");
   const [waitingInput, setWaitingInput] = useState("");
@@ -139,7 +154,7 @@ export function TripPage() {
   const tripAudits = (audit.data ?? []).filter((item) => item.targetId === trip.id).slice(0, 20);
   const tone = trip.status.includes("cancel") || trip.status === "failed" ? "red" : trip.status === "completed" ? "green" : "amber";
   const store = normalizeStore(pricing.value);
-  const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees);
+  const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees, dispatchOffers.data?.bonusMinor ?? 0);
   const chat = chatOf(trip);
   const calls = callsOf(trip);
   const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })));
@@ -240,6 +255,7 @@ export function TripPage() {
             <div className="op-person rider">
               <small>Rider</small>
               <Link to={`/riders/${riderId}`}><b>{trip.name}</b></Link>
+              {canAssignTrip(trip.status) && can(role, "trips.intervene") ? <NearbyButton tripId={trip.id} rider={trip.name} className="dash-btn small" /> : null}
               <span>{allowed ? phone(trip.phone) : <><Lock size={11} aria-hidden="true" /> Number hidden</>}</span>
             </div>
             <div className="op-person driver">
@@ -271,6 +287,19 @@ export function TripPage() {
           </ol>
         ) : <p className="dx-calm">No offer was sent for this trip.</p>}
         <p className="op-help">One line per step: Scheduled rides, Home popup, Exclusive (to whom and the answer), Radar (how many saw it), who tried to take it, who won and who got “No longer available”.</p>
+      </Section>
+
+      <Section id="assign" title="Assign a driver" icon={<Radar size={16} />} testId="trip-assign" wide>
+        {isLocked(trip.status) && dispatchOffers.data?.lockedTo ? (
+          <p className="as-locked" role="status"><Lock size={14} aria-hidden="true" /> Assigned to <b>{dispatchOffers.data.lockedTo.driverName}</b>. The assignment is locked.</p>
+        ) : canAssignTrip(trip.status) ? (
+          <p className="op-help">
+            The rider sees “Searching”. See the active drivers near the pickup to send an exclusive offer to one, or a radar group of up to 10.
+            {can(role, "trips.intervene") ? <> <NearbyButton tripId={trip.id} rider={trip.name} /></> : null}
+          </p>
+        ) : <p className="dx-calm">Assigning is open only while the trip is requested, searching or offered.</p>}
+        {dispatchOffers.data && canAssignTrip(trip.status) ? <DriverBonusBox trip={{ id: trip.id, zoneId: trip.zoneId, status: trip.status }} view={dispatchOffers.data} canAct={can(role, "trips.intervene")} onDone={(text) => { setNotice(text); void dispatchOffers.refetch(); }} /> : null}
+        {dispatchOffers.data?.offers.length ? <OffersSection view={dispatchOffers.data} now={clock} /> : null}
       </Section>
 
       <Section id="route" title="Route" icon={<RouteIcon size={16} />} testId="trip-route" wide>
