@@ -8,6 +8,7 @@ import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import { MapPanel } from "./maps";
+import { RiderAssignName, useAssignPanel } from "./AssignPanel";
 import { DISPATCH_KEY, modeLabel, modeNow, requestControl, type DispatchBook, type ZoneDispatch } from "./rules";
 
 type Props = {
@@ -75,6 +76,7 @@ function RequestActions({ request, book, zones, groups, candidates, canControl, 
 }
 
 export function LiveView({ book, market, zones, drivers, requests, candidatesOf, rulesOf, busyOf, hhmm, canControl, agentId, withScope, onNotice, sharedAlerts }: Props) {
+  const assignPanel = useAssignPanel();
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const ids = new Set(zones.map((zone) => zone.id));
@@ -153,7 +155,7 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
       <RideCheckSettingsCard where="dispatch" />
 
       <MapPanel title={`Live map · ${market.name}`} note={<span className="dx-legend"><i className="free" /> Free <i className="pickup" /> To pickup <i className="trip" /> On trip <i className="rider" /> Rider waiting</span>}>
-        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} renderAssign={canControl ? (request) => <AssignControls request={request} candidates={candidatesOf(request)} onDone={onNotice} /> : undefined} />
+        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} onRequestOpen={canControl ? assignPanel.open : undefined} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} renderAssign={canControl ? (request) => <AssignControls request={request} candidates={candidatesOf(request)} onDone={onNotice} /> : undefined} />
       </MapPanel>
 
       <section className="dash-card" aria-labelledby="dx-waiting-title">
@@ -164,7 +166,7 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
               <li key={request.tripId} id={`dx-req-${request.tripId}`} className={request.waitingMin >= 5 ? "long" : undefined}>
                 <div className="dx-waiting-head">
                   <span className="dx-avatar"><UserRound size={16} aria-hidden="true" /></span>
-                  <span><b>{request.rider}</b><small>{request.zoneName} · {request.categoryLabel} · {request.tripId}</small></span>
+                  <span><b>{canControl ? <RiderAssignName tripId={request.tripId} rider={request.rider} /> : request.rider}</b><small>{request.zoneName} · {request.categoryLabel} · {request.tripId}</small></span>
                   <span className={request.waitingMin >= 5 ? "dx-wait-chip long" : "dx-wait-chip"}><Clock size={11} aria-hidden="true" /> {request.waitingMin} min</span>
                   <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => setFocus({ id: request.tripId, nonce: Date.now() })}>See on map</button>
                   {canControl && !handled.has(request.tripId) ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small" aria-expanded={openId === request.tripId} onClick={() => setOpenId(openId === request.tripId ? null : request.tripId)}>{openId === request.tripId ? "Close" : "Handle"}</button> : null}
@@ -175,7 +177,7 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
             ))}
           </ul>
         )}
-        <p className="fine-print">Assign by hand offers the ride to that driver now. Send to a group: the first driver in the group to accept takes it.</p>
+        <p className="fine-print">Click a rider (on the map or here) to see the active drivers near the pickup: send an exclusive offer to one, or a radar group of up to 10, again and again until one accepts. Assign by hand offers the ride to that driver now. Send to a group: the first driver in the group to accept takes it.</p>
       </section>
     </div>
   );

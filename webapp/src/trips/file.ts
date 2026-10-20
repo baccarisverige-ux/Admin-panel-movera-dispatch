@@ -130,13 +130,15 @@ export type MoneySplit = {
   riderPaid: number;
   driverGets: number;
   moveraKeeps: number;
+  /** "Add money for driver" (Q16): paid by Movera from its commission, possibly beyond it; never by the rider. */
+  driverBonus: number;
 };
 
 /**
  * `liveCancelFees`: the zone's Live trips table from Dispatch › Rider cancel fees (the one place rider cancel fees are set).
  * Left out, the country's default table is used.
  */
-export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: boolean, entries: readonly Entry[], liveCancelFees?: CancelFeeTable): MoneySplit {
+export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: boolean, entries: readonly Entry[], liveCancelFees?: CancelFeeTable, driverBonusMinor = 0): MoneySplit {
   const country = countryOf(trip.zoneId);
   const minor = market(country).minorUnits;
   const index = tripIndex(trip.id);
@@ -173,7 +175,9 @@ export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: bo
   const driverRide = ridePrice - commission + payChange;
   const fleet = Math.round((driverRide * fleetPct) / 100);
   const riderPaid = price - promo + tip - refunded;
-  const driverGets = driverRide - fleet + tip;
+  // The bonus goes to the driver whole (no fleet share) and only when the ride happens; Movera pays it.
+  const driverBonus = state === "charged" || state === "estimate" ? Math.max(0, Math.round(driverBonusMinor)) : 0;
+  const driverGets = driverRide - fleet + tip + driverBonus;
   return {
     country,
     state,
@@ -193,6 +197,7 @@ export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: bo
     riderPaid,
     driverGets,
     moveraKeeps: riderPaid - driverGets - fleet,
+    driverBonus,
   };
 }
 

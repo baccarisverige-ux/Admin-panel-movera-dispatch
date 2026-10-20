@@ -16,6 +16,8 @@ import { RouteMap } from "../trips/RouteMap";
 import { TripSettingsView } from "../trips/TripSettings";
 import { CommandButton } from "../ui/CommandButton";
 import { DataTable } from "../ui/DataTable";
+import { RiderAssignName } from "../dispatch/AssignPanel";
+import { canAssign as canAssignTrip } from "../dispatch/assign";
 import { Modal } from "../ui/Modal";
 
 const PAYMENTS: PaymentState[] = ["pending", "authorized", "captured", "failed", "refunded"];
@@ -104,6 +106,7 @@ export function TripsPage() {
   const peek = filtered.find((trip) => trip.id === peekId) ?? null;
   const views = ops.views.filter((item) => item.country === country && (item.by === agent?.id || item.shared));
   const isSuper = Boolean(agent && can(agent.role, "team.read"));
+  const canIntervene = Boolean(agent && can(agent.role, "trips.intervene"));
   const hasFilters = FILTER_KEYS.some((key) => params.get(key));
 
   // Two quick changes in a row never undo each other.
@@ -252,7 +255,8 @@ export function TripsPage() {
           rowIds={filtered.map((trip) => trip.id)}
           rows={filtered.map((trip) => [
             trip.id,
-            trip.name,
+            // Q13: a waiting rider's name opens the assign panel.
+            canAssignTrip(trip.status) && canIntervene ? { text: trip.name, node: <RiderAssignName tripId={trip.id} rider={trip.name} /> } : trip.name,
             trip.driverId ? driverNames.get(trip.driverId) ?? "Driver" : "No driver yet",
             trip.status,
             zoneById(trip.zoneId)?.name ?? trip.zoneId,

@@ -28,6 +28,9 @@ export const ROLLBACK_REASONS = ["Fix a mistake", "Change caused problems", "Pub
 
 export const TRIP_MONEY_REASONS = ["Wrong route or distance", "Waiting time was wrong", "Rider complaint", "Driver complaint", "Payment problem", OTHER_REASON] as const;
 
+/** "Add money for driver" (Q16): why Movera pays the driver extra on a ride nobody takes. */
+export const BONUS_REASONS = ["No driver is taking the ride", "The rider has waited long", "Hard pickup or long way to it", "Busy time or bad weather", OTHER_REASON] as const;
+
 export const DISPATCH_REASONS = ["Rider asked support", "Driver asked support", "Driver not moving", "Better driver nearby", "Operational problem", OTHER_REASON] as const;
 
 export const CASE_REASONS = ["Rider contacted support", "Driver contacted support", "Safety follow-up", "Quality check", OTHER_REASON] as const;
@@ -52,6 +55,7 @@ export type ReasonFamily =
   | "reinstate"
   | "rollback"
   | "tripMoney"
+  | "bonus"
   | "dispatch"
   | "case"
   | "people"
@@ -70,6 +74,7 @@ const LISTS: Record<ReasonFamily, readonly string[]> = {
   reinstate: REINSTATE_REASONS,
   rollback: ROLLBACK_REASONS,
   tripMoney: TRIP_MONEY_REASONS,
+  bonus: BONUS_REASONS,
   dispatch: DISPATCH_REASONS,
   case: CASE_REASONS,
   people: PEOPLE_REASONS,
@@ -94,8 +99,9 @@ const RULES: [ReasonFamily, RegExp][] = [
   ["suspend", /\.(suspend|onHold|hold|block|ban|deactivate|signOut|stopLive)$/],
   ["reinstate", /\.(activate|reactivate|unblock)$/],
   ["rollback", /\.(rollback|undo|restore|restoreVersion|restoreCategory|voidVoucher)$|^admin\.campaign\.cancel$/],
+  ["bonus", /^admin\.trip\.driverBonus$/],
   ["tripMoney", /^admin\.trip\.(adjust|waiting|pay|decide|complete)$|^admin\.reservation\.raise$|^admin\.(payout|payment)\.(retry|dispute)$/],
-  ["dispatch", /^admin\.(trip\.(offer|reassign)|reservation\.(assign|offer|unassign|answer|return)|dispatch\.send)$/],
+  ["dispatch", /^admin\.(trip\.(offer|reassign|assign|radarGroup)|reservation\.(assign|offer|unassign|answer|return)|dispatch\.send)$/],
   ["case", /^admin\.(safety|support|ticket|incident)\.|^admin\.trip\.(flag|openCase)$|^admin\.reservation\.contact$|^admin\.risk\.review$/],
   ["message", /^admin\.(thread\.send|driverNotices\.send|riders\.(bulkMessage|promoSend))$|^admin\.campaign\.(test|publish)$/],
   ["change", /^admin\.(pricing|config|zone|dispatch|studio|content|campaigns?|promo|riders|drivers|growthOps|tax|alerts|vehicle|onboarding|review|payment|payout|reservation|rideCheck|shift|safetyOps|supportOps|driverOps|driverNotices|risk|incident|trip)\./],

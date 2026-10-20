@@ -49,6 +49,8 @@ type CommandButtonProps = {
   reasonLabel?: string;
   /** Also offer an optional note in the same dialog; it is added to the audit reason. */
   optionalNote?: boolean;
+  /** What the dialog says it will do, instead of "This acts on <target>" (for example "Send an exclusive offer to Erik"). */
+  summary?: ReactNode;
   children: ReactNode;
   "aria-label"?: string;
 };
@@ -83,6 +85,7 @@ export function CommandButton({
   reasonField,
   reasonLabel = "Reason",
   optionalNote = false,
+  summary,
   children,
   "aria-label": ariaLabel,
 }: CommandButtonProps) {
@@ -197,7 +200,7 @@ export function CommandButton({
             }}
           >
             <h3>{spec?.label}</h3>
-            <p>This acts on {targetId ?? spec?.label}.</p>
+            <p>{summary ?? <>This acts on {targetId ?? spec?.label}.</>}</p>
             {askSure ? (
               <div className="state-line" role="alert" data-testid="large-change-warning">
                 <strong>Are you sure?</strong> {largeChanges!.length === 1 ? "This value changes" : "These values change"} by more than 50% from the published value:

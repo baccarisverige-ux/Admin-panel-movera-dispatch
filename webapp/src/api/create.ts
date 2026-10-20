@@ -31,6 +31,8 @@ import { ApiError, apiRequest, classifyStatus, type ApiErrorBody } from "./httpC
 import { COUNTRY_SETTINGS_KEY, normalizeCountrySettingsBook, saveCountrySettings } from "../config/countrySettings.ts";
 import { REFUND_POLICY_KEY, needsSecondAdminIn, normalizeRefundPolicy, parseRefundAbove, saveRefundPolicy, type RefundPolicy } from "../payments/refundPolicy.ts";
 import type { ApprovalRow, AuditRow, DemoDb, DemoRecord, InboxItem, OperationRow, ZoneScope } from "./seed.ts";
+import { advanceDemoDispatch, dispatchBook, dispatchCommand, nearbyFor, tripOffersView, type NearbyDriverList, type TripOffersView } from "./dispatchSim.ts";
+import { ADMIN_DISPATCH_KEY, NEARBY_SCOPES, radiusIssue, type DispatchEvent, type NearbyQuery } from "../dispatch/assign.ts";
 
 export type ApiEnv = {
   PROD: boolean;
@@ -91,6 +93,12 @@ export type AdminApi = {
   inbox: () => Promise<InboxItem[]>;
   freshness: () => Promise<string>;
   readSlice: <T>(key: string, fallback: T, context?: ReadContext) => Promise<T>;
+  /** GET /admin/trips/{id}/offers: the admin offers of a trip, its radar groups, the lock and the driver bonus. */
+  tripOffers: (tripId: string) => Promise<TripOffersView>;
+  /** GET /admin/trips/{id}/nearby-drivers?scope&radiusKm: active drivers near the pickup. */
+  nearbyDrivers: (tripId: string, query: NearbyQuery) => Promise<NearbyDriverList>;
+  /** GET /admin/dispatch/stream (JSON page): dispatch events after a sequence number. */
+  dispatchEvents: (after: number) => Promise<{ items: DispatchEvent[]; last: number }>;
 };
 
 const DEMO_DELAY_MS = 200;
@@ -164,6 +172,8 @@ function resolveTargetState(db: DemoDb, input: CommandInput): string | undefined
 const TRIP_LIFECYCLE: Record<string, TripCommand> = {
   "admin.trip.cancel": "cancel",
   "admin.trip.offer": "assign",
+  "admin.trip.assign": "assign",
+  "admin.trip.radarGroup": "assign",
   "admin.trip.reassign": "reassign",
   "admin.trip.noShow": "no_show",
   "admin.trip.complete": "complete",
@@ -269,6 +279,21 @@ function rememberRejected(
   return saveDb(next);
 }
 
+/** The assign tool commands (contract §3.1): the server builds their effect from the parameters. */
+const ASSIGN_ACTIONS = new Set(["admin.trip.assign", "admin.trip.radarGroup", "admin.trip.driverBonus"]);
+
+/** A dispatch read: the signed-in admin may read trips in the trip's zone. Returns the trip, with the demo moved forward. */
+function dispatchRead(tripId: string): { db: DemoDb; trip: DemoRecord } {
+  const agent = sessionAgent();
+  if (!agent) throw new ApiError(401, "Sign in again.");
+  if (!can(agent.role, "trips.read")) throw new ApiError(403, "Your role cannot do that.");
+  const db = advanceDemoDispatch(loadDb());
+  const trip = db.trips.find((row) => row.id === tripId);
+  if (!trip) throw new ApiError(404, "Trip not found.", { code: "not_found" });
+  if (!scopeAllowed(agent.scope, trip.zoneId)) throw new ApiError(403, "That record is outside your active scope.");
+  return { db, trip };
+}
+
 /**
  * The in-browser demo server. It stands in for the real Admin API, so every check here is one the real
  * backend must repeat on its side (the browser can change anything sent from it):
@@ -302,7 +327,7 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       await pause(delayMs, fault);
       const status = faultStatus(fault);
       if (status !== null) throw new ApiError(status, classifyStatus(status));
-      return rowsFor(loadDb(), name, scope, fault);
+      return rowsFor(name === "trips" ? advanceDemoDispatch(loadDb()) : loadDb(), name, scope, fault);
     },
 
     async search(query, scope) {
@@ -314,7 +339,8 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       const fault = readFault();
       await pause(delayMs, fault);
 
-      let db = loadDb();
+      // Driver answers to admin offers that came in meanwhile are stored first, so the lock is checked on the newest state.
+      let db = advanceDemoDispatch(loadDb());
       const spec = commandById(raw.action);
       // Identity comes from the signed-in session, never from the request (C-05). The real backend takes it from its token.
       const agent = sessionAgent();
@@ -517,6 +543,19 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         const result = saveCountrySettings(current, raw.value, raw.action === "admin.pricing.saveCountry" ? "pricing" : "settings");
         if (result.error) reject(422, result.error);
         raw = { ...raw, sliceKey: COUNTRY_SETTINGS_KEY, value: result.book };
+      }
+
+      if (ASSIGN_ACTIONS.has(raw.action)) {
+        // Assign tool (Q13–Q18): rebuilt here from the command's parameters; the client's book is never stored.
+        const trip = db.trips.find((row) => row.id === raw.targetId);
+        if (!trip) reject(404, "Trip not found.", undefined, { code: "not_found" });
+        const result = dispatchCommand(db, trip!, raw.action, raw.value, actorId, new Date().toISOString());
+        if (result.error) {
+          if (result.code === "invalid_transition") notAllowed(result.error);
+          reject(400, result.error, undefined, { code: "invalid_request" });
+        }
+        const to = raw.action === "admin.trip.driverBonus" ? null : nextStatus(trip!.status, "assign", "admin");
+        raw = { ...raw, sliceKey: ADMIN_DISPATCH_KEY, value: result.book, ...(to ? { collection: "trips", patch: { status: to } } : { collection: undefined, patch: undefined }) };
       }
 
       if (raw.action === "admin.gateA.record") {
@@ -781,8 +820,42 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       if (fault === "empty") return fallback;
       const status = faultStatus(fault);
       if (status !== null) throw new ApiError(status, classifyStatus(status));
-      const value = loadDb().slices[key];
-      return scopedSlice(key,(value ?? fallback) as typeof fallback,loadDb(),context);
+      const db = key === ADMIN_DISPATCH_KEY ? advanceDemoDispatch(loadDb()) : loadDb();
+      const value = key === ADMIN_DISPATCH_KEY ? dispatchBook(db) : db.slices[key];
+      return scopedSlice(key,(value ?? fallback) as typeof fallback,db,context);
+    },
+
+    async tripOffers(tripId) {
+      const fault = readFault();
+      await pause(Math.min(delayMs, 60), fault);
+      const status = faultStatus(fault);
+      if (status !== null) throw new ApiError(status, classifyStatus(status));
+      const { db, trip } = dispatchRead(tripId);
+      return tripOffersView(db, trip);
+    },
+
+    async nearbyDrivers(tripId, query) {
+      const fault = readFault();
+      await pause(Math.min(delayMs, 60), fault);
+      const status = faultStatus(fault);
+      if (status !== null) throw new ApiError(status, classifyStatus(status));
+      if (!(NEARBY_SCOPES as readonly string[]).includes(query.scope)) throw new ApiError(400, "Unknown nearby scope.", { code: "invalid_request" });
+      if (query.scope === "radius") {
+        const issue = radiusIssue(query.radiusKm ?? Number.NaN);
+        if (issue) throw new ApiError(400, issue, { code: "invalid_request" });
+      }
+      const { db, trip } = dispatchRead(tripId);
+      return nearbyFor(db, trip, query);
+    },
+
+    async dispatchEvents(after) {
+      const agent = sessionAgent();
+      if (!agent) throw new ApiError(401, "Sign in again.");
+      if (!can(agent.role, "trips.read")) throw new ApiError(403, "Your role cannot do that.");
+      const db = advanceDemoDispatch(loadDb());
+      const book = dispatchBook(db);
+      const zoneOf = new Map(db.trips.map((row) => [row.id, row.zoneId]));
+      return { items: book.events.filter((event) => event.sequence > after && scopeAllowed(agent.scope, zoneOf.get(event.tripId) ?? "")), last: book.seq };
     },
   };
 }
@@ -817,6 +890,9 @@ export function createHttpAdminApi(baseUrl = ""): AdminApi {
     inbox: async () => unsupported(),
     freshness: async () => unsupported(),
     readSlice: async () => unsupported(),
+    tripOffers: async () => unsupported(),
+    nearbyDrivers: async () => unsupported(),
+    dispatchEvents: async () => unsupported(),
   };
 }
 

@@ -57,9 +57,11 @@ export function SplitView({ split, money }: { split: MoneySplit; money: (minor: 
         <div className="total"><dt>Rider paid</dt><dd>{money(split.riderPaid)}</dd></div>
         <div className="sep"><dt>Movera commission {split.commissionPct}%</dt><dd>{money(split.commission)}</dd></div>
         {split.payChange ? <div className={split.payChange > 0 ? "plus" : "minus"}><dt>Pay change by an admin</dt><dd>{split.payChange > 0 ? "+ " : "− "}{money(Math.abs(split.payChange))}</dd></div> : null}
+        {split.driverBonus ? <div className="plus" data-testid="split-driver-bonus"><dt>Money added for the driver (paid by Movera)</dt><dd>+ {money(split.driverBonus)}</dd></div> : null}
         <div className="driver"><dt><i aria-hidden="true" /> Driver gets</dt><dd>{money(split.driverGets)}</dd></div>
         {split.fleet ? <div className="fleet"><dt><i aria-hidden="true" /> Fleet owner gets {split.fleetPct}%</dt><dd>{money(split.fleet)}</dd></div> : null}
         <div className="movera"><dt><i aria-hidden="true" /> Movera keeps</dt><dd>{money(split.moveraKeeps)}</dd></div>
+        {split.driverBonus && split.moveraKeeps < 0 ? <div className="minus" data-testid="split-beyond-commission"><dt>Movera pays beyond its commission</dt><dd>{money(-split.moveraKeeps)}</dd></div> : null}
         <div className="vat"><dt>VAT included ({Math.round(split.vatRate * 100)}%, to confirm)</dt><dd>{money(split.vat)}</dd></div>
       </dl>
     </div>

@@ -1,4 +1,5 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
+import { AssignPanelProvider } from "./dispatch/AssignPanel";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
@@ -129,9 +130,11 @@ function Shell({ page, children, forceNoAccess = false, redirect = false }: { pa
   };
   return (
     <AppShell page={shown}>
-      <section className="page active" data-page={shown.id}>
-        {denied ? <NoAccess /> : page || redirect ? <Suspense fallback={<p className="state-line">Loading.</p>}>{children}</Suspense> : <NotFound />}
-      </section>
+      <AssignPanelProvider>
+        <section className="page active" data-page={shown.id}>
+          {denied ? <NoAccess /> : page || redirect ? <Suspense fallback={<p className="state-line">Loading.</p>}>{children}</Suspense> : <NotFound />}
+        </section>
+      </AssignPanelProvider>
     </AppShell>
   );
 }
