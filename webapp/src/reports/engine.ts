@@ -216,7 +216,7 @@ export type WorkEvent = { id: string; at: string; actorId: string; kind: WorkKin
 const DOMAIN_LABEL: Record<string, string> = {
   dispatch: "Dispatch", alerts: "Alerts", zone: "Zones", pricing: "Pricing", drivers: "Drivers", driver: "Drivers", rider: "Riders", riders: "Riders",
   trip: "Trips", reservation: "Reservations", payment: "Payments", payout: "Payouts", safety: "Safety", support: "Support", content: "Content",
-  config: "Settings", team: "Team", vehicle: "Vehicles", fleetOwner: "Fleet owners", report: "Reports", live: "Dispatch", growth: "Promotions",
+  config: "Settings", team: "Team", profile: "Profile", vehicle: "Vehicles", fleetOwner: "Fleet owners", report: "Reports", live: "Dispatch", growth: "Promotions",
 };
 
 export function sectionOf(action: string): string {

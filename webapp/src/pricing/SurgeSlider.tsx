@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from "react";
 import { AlertTriangle } from "lucide-react";
 import { sliderColor } from "./surge";
 import { HIGH_SURGE, SLIDER_MAX, SLIDER_MIN } from "./zonePricing";
+import { trn, trx } from "../i18n";
 
 type Props = {
   label: string;
@@ -33,7 +34,7 @@ export function SurgeSlider({ label, value, onChange, disabled = false, min = SL
   return (
     <div className={compact ? "surge-slider compact" : "surge-slider"} style={{ "--slider-color": color, "--slider-fill": `${fill}%` } as CSSProperties}>
       <div className="surge-slider-head">
-        <span>{label}</span>
+        <span>{trx(label)}</span>
         <output aria-live="polite">×{shown.toFixed(1)}</output>
       </div>
       <input
@@ -61,9 +62,9 @@ export function SurgeSlider({ label, value, onChange, disabled = false, min = SL
       {pending !== null ? (
         <div className="surge-high" role="alert">
           <AlertTriangle size={14} aria-hidden="true" />
-          <span>×{pending.toFixed(1)} is a high surge. Riders pay {pending.toFixed(1)} times the normal trip price.</span>
-          <button data-command="admin.pricing.edit" type="button" className="dash-btn small" onClick={() => { setBefore(pending); setPending(null); }}>Keep ×{pending.toFixed(1)}</button>
-          <button data-command="admin.pricing.edit" type="button" className="dash-btn small ghost" onClick={() => { onChange(Math.max(min, HIGH_SURGE)); setBefore(Math.max(min, HIGH_SURGE)); setPending(null); }}>Back to ×{Math.max(min, HIGH_SURGE).toFixed(1)}</button>
+          <span>{trn("×{0} is a high surge. Riders pay {1} times the normal trip price.", pending.toFixed(1), pending.toFixed(1))}</span>
+          <button data-command="admin.pricing.edit" type="button" className="dash-btn small" onClick={() => { setBefore(pending); setPending(null); }}>{trn("Keep ×{0}", pending.toFixed(1))}</button>
+          <button data-command="admin.pricing.edit" type="button" className="dash-btn small ghost" onClick={() => { onChange(Math.max(min, HIGH_SURGE)); setBefore(Math.max(min, HIGH_SURGE)); setPending(null); }}>{trn("Back to ×{0}", Math.max(min, HIGH_SURGE).toFixed(1))}</button>
         </div>
       ) : null}
     </div>

@@ -47,6 +47,9 @@ import { MENU, MENU_GROUPS, type MenuItem, type NavIcon } from "../nav";
 import { CommandButton } from "../ui/CommandButton";
 import { useMarketScope } from "../markets/useMarketScope";
 import { MarketBar } from "./MarketBar";
+import { tr, trn, trx, uiLocale } from "../i18n";
+import { ProfileMenu } from "../i18n/ProfileMenu";
+import { COUNTRY_LABEL } from "../i18n/countries";
 
 const ICONS: Record<NavIcon, typeof Menu> = {
   LayoutDashboard,
@@ -123,7 +126,7 @@ function ShellInner({ page, children }: AppShellProps) {
     return () => clearInterval(timer);
   }, []);
   const marketScope = useMarketScope();
-  const localTime = new Intl.DateTimeFormat(marketScope.market.locale, { dateStyle: "medium", timeStyle: "short", hourCycle: "h23", timeZone: marketScope.market.timeZone }).format(clock);
+  const localTime = new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeStyle: "short", hourCycle: "h23", timeZone: marketScope.market.timeZone }).format(clock);
   const keep = new URLSearchParams();
   if (params.get("country") || params.get("scope")) keep.set("country", marketScope.country);
   if (params.get("scope")) keep.set("scope", params.get("scope")!);
@@ -200,20 +203,20 @@ function ShellInner({ page, children }: AppShellProps) {
 
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#content">Skip to content</a>
+      <a className="skip-link" href="#content">{tr("Skip to content")}</a>
       {menuOpen ? <div className="sidebar-backdrop" aria-hidden="true" onClick={closeMenu} /> : null}
       <aside id="main-menu" className={menuOpen ? "sidebar open" : "sidebar"}>
         <div className="brand">
           <div className="brand-mark">M</div>
-          <span>Movera Admin</span>
-          <button ref={menuClose} data-command="admin.shell.menu" type="button" className="icon-btn sidebar-close" aria-label="Close menu" onClick={closeMenu}>
+          <span>{tr("Movera Admin")}</span>
+          <button ref={menuClose} data-command="admin.shell.menu" type="button" className="icon-btn sidebar-close" aria-label={tr("Close menu")} onClick={closeMenu}>
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-        <nav className="nav" aria-label="Main">
+        <nav className="nav" aria-label={tr("Main")}>
           {groups.map((group) => (
             <div key={group} className="nav-group">
-              <p className="nav-group-label">{group}</p>
+              <p className="nav-group-label">{trx(group)}</p>
               {visible
                 .filter((item) => item.group === group)
                 .map((item) => {
@@ -226,7 +229,7 @@ function ShellInner({ page, children }: AppShellProps) {
                       onClick={() => setMenuOpen(false)}
                     >
                       <Icon className="nav-icon" size={16} aria-hidden="true" />
-                      <span>{item.label}</span>
+                      <span>{trx(item.label)}</span>
                     </Link>
                   );
                 })}
@@ -236,72 +239,69 @@ function ShellInner({ page, children }: AppShellProps) {
       </aside>
       <section className="workspace">
         <header ref={topbar} className="topbar">
-          <button ref={menuButton} data-command="admin.shell.menu" className="icon-btn mobile-menu" type="button" aria-label="Open menu" aria-expanded={menuOpen} aria-controls="main-menu" onClick={() => setMenuOpen((open) => !open)}>
+          <button ref={menuButton} data-command="admin.shell.menu" className="icon-btn mobile-menu" type="button" aria-label={tr("Open menu")} aria-expanded={menuOpen} aria-controls="main-menu" onClick={() => setMenuOpen((open) => !open)}>
             <Menu size={18} aria-hidden="true" />
           </button>
           <div>
-            <h1>{page.label}</h1>
-            <p className="crumb">{page.group}</p>
+            <h1>{trx(page.label)}</h1>
+            <p className="crumb">{trx(page.group)}</p>
           </div>
           <div className="topbar-actions">
             <MarketBar />
-            <CommandButton command="admin.shell.search" className="secondary-btn" type="button" onDone={() => setSearchOpen(true)}>Search</CommandButton>
+            <CommandButton command="admin.shell.search" className="secondary-btn" type="button" onDone={() => setSearchOpen(true)}>{tr("Search")}</CommandButton>
             <AlertBell />
-            {inboxOn ? <span className="topbar-inbox"><CommandButton command="admin.shell.inbox" className="secondary-btn" type="button" aria-label="Inbox" onDone={() => setInboxOpen((open) => !open)}>Inbox</CommandButton></span> : null}
+            {inboxOn ? <span className="topbar-inbox"><CommandButton command="admin.shell.inbox" className="secondary-btn" type="button" aria-label={tr("Inbox")} onDone={() => setInboxOpen((open) => !open)}>{tr("Inbox")}</CommandButton></span> : null}
             {/* Q24 / UI-17: at 1280 px and on phones the bar keeps Search, the bell and the profile; the rest is in "⋯". */}
             <div ref={moreRoot} className="topbar-more-wrap">
-              <button ref={moreButton} data-command="admin.shell.menu" type="button" className="icon-btn topbar-more" aria-label="More options" aria-haspopup="true" aria-expanded={moreOpen} aria-controls="topbar-more" onClick={() => setMoreOpen((open) => !open)}>
+              <button ref={moreButton} data-command="admin.shell.menu" type="button" className="icon-btn topbar-more" aria-label={tr("More options")} aria-haspopup="true" aria-expanded={moreOpen} aria-controls="topbar-more" onClick={() => setMoreOpen((open) => !open)}>
                 <MoreHorizontal size={18} aria-hidden="true" />
               </button>
               {moreOpen ? (
-                <div id="topbar-more" className="topbar-more-menu" role="group" aria-label="More options">
+                <div id="topbar-more" className="topbar-more-menu" role="group" aria-label={tr("More options")}>
                   <MarketBar />
-                  {inboxOn ? <CommandButton command="admin.shell.inbox" className="secondary-btn" type="button" aria-label="Inbox" onDone={() => { setInboxOpen((open) => !open); setMoreOpen(false); }}>Inbox</CommandButton> : null}
-                  <p className="topbar-more-meta">{agent?.name ?? "Signed out"} · {marketScope.market.name} · {localTime} · {env} · {agent?.role ?? "signed out"}</p>
-                  <CommandButton command="admin.shell.signOut" className="link-action" type="button" onDone={signOut}>Sign out</CommandButton>
+                  {inboxOn ? <CommandButton command="admin.shell.inbox" className="secondary-btn" type="button" aria-label={tr("Inbox")} onDone={() => { setInboxOpen((open) => !open); setMoreOpen(false); }}>{tr("Inbox")}</CommandButton> : null}
+                  <p className="topbar-more-meta">{agent?.name ?? tr("Signed out")} · {trx(COUNTRY_LABEL[marketScope.market.id])} · {localTime} · {env} · {agent?.role ?? tr("signed out")}</p>
+                  <CommandButton command="admin.shell.signOut" className="link-action" type="button" onDone={signOut}>{tr("Sign out")}</CommandButton>
                 </div>
               ) : null}
             </div>
             <div className="admin-profile">
-              <div className="avatar">{agent ? agent.name.slice(0, 2).toUpperCase() : "AD"}</div>
+              <ProfileMenu initials={agent ? agent.name.slice(0, 2).toUpperCase() : "AD"} />
               <div>
-                <strong>{agent?.name ?? "Signed out"}</strong>
-                <span className="profile-meta">{marketScope.market.name} · {localTime} · {env} · {agent?.role ?? "signed out"}</span>
+                <strong>{agent?.name ?? tr("Signed out")}</strong>
+                <span className="profile-meta">{trx(COUNTRY_LABEL[marketScope.market.id])} · {localTime} · {env} · {agent?.role ?? tr("signed out")}</span>
               </div>
-              <span className="profile-signout"><CommandButton command="admin.shell.signOut" className="link-action" type="button" onDone={signOut}>Sign out</CommandButton></span>
+              <span className="profile-signout"><CommandButton command="admin.shell.signOut" className="link-action" type="button" onDone={signOut}>{tr("Sign out")}</CommandButton></span>
             </div>
           </div>
         </header>
         <RideCheckBanner />
-        {scopeDenied ? <p className="state-line">No access to scope {scope}. Choose an allowed zone.</p> : null}
+        {scopeDenied ? <p className="state-line">{trn("No access to scope {0}. Choose an allowed zone.", scope)}</p> : null}
         {searchOpen ? (
           <div className="panel">
-            <label>
-              Search
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Plate, trip or phone" />
-            </label>
+            <label>{trn("Search{0}", <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tr("Plate, trip or phone")} />)}</label>
             <ul>
               {(found.data ?? []).map((hit) => (
                 <li key={`${hit.kind}-${hit.id}`}>
-                  <CommandButton command="admin.shell.openHit" className="link-action" type="button" onDone={() => { setSearchOpen(false); navigate(hit.path); }}>{hit.kind}: {hit.label}</CommandButton>
+                  <CommandButton command="admin.shell.openHit" className="link-action" type="button" onDone={() => { setSearchOpen(false); navigate(hit.path); }}>{hit.kind}: {trx(hit.label)}</CommandButton>
                 </li>
               ))}
             </ul>
-            <CommandButton command="admin.shell.closeSearch" className="secondary-btn" type="button" onDone={() => setSearchOpen(false)}>Close</CommandButton>
+            <CommandButton command="admin.shell.closeSearch" className="secondary-btn" type="button" onDone={() => setSearchOpen(false)}>{tr("Close")}</CommandButton>
           </div>
         ) : null}
         {inboxOpen && inboxOn ? (
           <div className="panel">
-            <h3>Inbox</h3>
+            <h3>{tr("Inbox")}</h3>
             <ul>
               {(inbox.data ?? []).map((item) => (
-                <li key={item.id}><Link to={item.path} onClick={() => setInboxOpen(false)}>{item.title}</Link></li>
+                <li key={item.id}><Link to={item.path} onClick={() => setInboxOpen(false)}>{trx(item.title)}</Link></li>
               ))}
             </ul>
           </div>
         ) : null}
         <main id="content" tabIndex={-1} className="content">{children}</main>
-        <footer className="build-footer">Demo data · {env} · {buildLabel()}</footer>
+        <footer className="build-footer">{trn("Demo data · {0} · {1}", env, buildLabel())}</footer>
       </section>
     </div>
   );

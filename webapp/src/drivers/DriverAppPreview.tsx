@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Car, ChevronRight, Clock, Flame, Info, MapPin, MessageSquare } from "lucide-react";
 import { maxPerDriver, ruleLines, rewardLine, timeLine, type DriverBonus } from "./bonus";
+import { tr, trn } from "../i18n";
 
 /** How the bonus looks in the driver app: the map with the glowing area, and the bonus card with progress. */
 export function DriverAppPreview({ bonus, money, categoryName, done = 1 }: { bonus: DriverBonus; money: (value: number) => string; categoryName: (id: string) => string; done?: number }) {
@@ -34,10 +35,10 @@ export function DriverAppPreview({ bonus, money, categoryName, done = 1 }: { bon
   }
 
   return (
-    <figure className="dp-phone" aria-label="Driver app preview">
-      <div className="ra-switch" role="tablist" aria-label="Driver app screen">
-        <button data-command="admin.drivers.bonusForm" type="button" role="tab" aria-selected={screen === "map"} className={screen === "map" ? "active" : undefined} onClick={() => setScreen("map")}>Map</button>
-        <button data-command="admin.drivers.bonusForm" type="button" role="tab" aria-selected={screen === "details"} className={screen === "details" ? "active" : undefined} onClick={() => setScreen("details")}>Bonus details</button>
+    <figure className="dp-phone" aria-label={tr("Driver app preview")}>
+      <div className="ra-switch" role="tablist" aria-label={tr("Driver app screen")}>
+        <button data-command="admin.drivers.bonusForm" type="button" role="tab" aria-selected={screen === "map"} className={screen === "map" ? "active" : undefined} onClick={() => setScreen("map")}>{tr("Map")}</button>
+        <button data-command="admin.drivers.bonusForm" type="button" role="tab" aria-selected={screen === "details"} className={screen === "details" ? "active" : undefined} onClick={() => setScreen("details")}>{tr("Bonus details")}</button>
       </div>
       <div className="dp-screen">
         <div className="dp-status"><span>9:41</span><span className="ra-notch" aria-hidden="true" /><span>5G</span></div>
@@ -64,43 +65,43 @@ export function DriverAppPreview({ bonus, money, categoryName, done = 1 }: { bon
               <Car x={car.x - 7} y={car.y - 7} width={14} height={14} color="#fff" />
             </svg>
             {bonus.kind === "area" && bonus.areas[0] ? <span className="dp-map-tag"><Flame size={11} aria-hidden="true" /> {bonus.areas[0].name}</span> : null}
-            {bonus.note.trim() ? <span className="dp-map-note" aria-label="Message on the map"><MessageSquare size={11} aria-hidden="true" /> {bonus.note}</span> : null}
-            <div className="dp-card" aria-label="Bonus card">
+            {bonus.note.trim() ? <span className="dp-map-note" aria-label={tr("Message on the map")}><MessageSquare size={11} aria-hidden="true" /> {bonus.note}</span> : null}
+            <div className="dp-card" aria-label={tr("Bonus card")}>
               <span className="dp-card-icon"><Flame size={16} aria-hidden="true" /></span>
               <span className="dp-card-text">
-                <b>{bonus.name || "Bonus"}</b>
+                <b>{bonus.name || tr("Bonus")}</b>
                 <small>{rewardLine(bonus, money)}</small>
                 <small><Clock size={10} aria-hidden="true" /> {timeLine(bonus)}</small>
               </span>
               <ChevronRight size={14} aria-hidden="true" />
               {target ? (
-                <span className="dp-progress" aria-label={`${shown} of ${target} rides`}>
+                <span className="dp-progress" aria-label={tr("{0} of {1} rides", [shown, target])}>
                   <i style={{ width: `${(shown / target) * 100}%` }} />
-                  <em>{shown} of {target} rides</em>
+                  <em>{trn("{0} of {1} rides", shown, target)}</em>
                 </span>
               ) : (
-                <span className="dp-progress plain"><em>{done} ride{done === 1 ? "" : "s"} counted so far</em></span>
+                <span className="dp-progress plain"><em>{trn("{0} ride{1} counted so far", done, done === 1 ? "" : tr("s"))}</em></span>
               )}
             </div>
           </>
         ) : (
           <div className="dp-details">
             <span className="dp-card-icon big"><Flame size={20} aria-hidden="true" /></span>
-            <b>{bonus.name || "Bonus"}</b>
+            <b>{bonus.name || tr("Bonus")}</b>
             <p className="dp-reward">{rewardLine(bonus, money)}</p>
-            {bonus.note.trim() ? <p className="dp-note" aria-label="Message from Movera"><MessageSquare size={12} aria-hidden="true" /> {bonus.note}</p> : null}
+            {bonus.note.trim() ? <p className="dp-note" aria-label={tr("Message from Movera")}><MessageSquare size={12} aria-hidden="true" /> {bonus.note}</p> : null}
             <p><Clock size={12} aria-hidden="true" /> {timeLine(bonus)}</p>
-            {bonus.kind === "area" ? <p><MapPin size={12} aria-hidden="true" /> {bonus.areas.map((area) => area.name).join(", ") || "Draw an area"}</p> : null}
-            {most !== null ? <p className="dp-most">You can earn up to {money(most)}</p> : null}
-            <h5>How it works</h5>
+            {bonus.kind === "area" ? <p><MapPin size={12} aria-hidden="true" /> {bonus.areas.map((area) => area.name).join(", ") || tr("Draw an area")}</p> : null}
+            {most !== null ? <p className="dp-most">{trn("You can earn up to {0}", money(most))}</p> : null}
+            <h5>{tr("How it works")}</h5>
             <ul>
-              {rules.length ? rules.map((line) => <li key={line}>{line}</li>) : <li>Just drive in the time window.</li>}
+              {rules.length ? rules.map((line) => <li key={line}>{line}</li>) : <li>{tr("Just drive in the time window.")}</li>}
             </ul>
-            <small className="dp-foot"><Info size={11} aria-hidden="true" /> Paid with your weekly payout.</small>
+            <small className="dp-foot">{trn("{0} Paid with your weekly payout.", <Info size={11} aria-hidden="true" />)}</small>
           </div>
         )}
       </div>
-      <figcaption>{screen === "map" ? "Driver app · map with the bonus" : "Driver app · bonus details"}</figcaption>
+      <figcaption>{screen === "map" ? tr("Driver app · map with the bonus") : tr("Driver app · bonus details")}</figcaption>
     </figure>
   );
 }

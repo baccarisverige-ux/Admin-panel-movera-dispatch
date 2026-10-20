@@ -9,10 +9,11 @@ import {
   CANCEL_FEE_LIMITS, cancelFeeDefaults, feeRow, feeRows, riderSeesLine, sameForAll,
   type CancelFeeKind, type CancelFeeRow, type CancelFeeTable, type CancelFeeType, type FeeCategory,
 } from "./cancelFees";
+import { tr, trn, trx } from "../i18n";
 
 const FEE_TYPES: { id: CancelFeeType; label: string }[] = [
-  { id: "fixed", label: "Fixed" },
-  { id: "percent", label: "% of price" },
+  { id: "fixed", get label() { return tr("Fixed"); } },
+  { id: "percent", get label() { return tr("% of price"); } },
 ];
 
 const KIND_WORDS: Record<CancelFeeKind, { name: string; free: string; unit: string; max: number; sampleSek: number; sampleCategory: string }> = {
@@ -35,7 +36,7 @@ function OptionalMoney({ label, value, unit, disabled, onChange }: { label: stri
           inputMode="decimal"
           aria-label={label}
           aria-invalid={invalid || undefined}
-          placeholder="none"
+          placeholder={tr("none")}
           value={text}
           disabled={disabled}
           onChange={(event) => {
@@ -87,10 +88,10 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
   const seen = riderSeesLine(kind, feeRow(table, sample), fare, countryId, money);
   const sampleLabel = categories.find((item) => item.id === sample)?.label ?? sample;
   return (
-    <div className="dx-fees" role="group" aria-label={`${words.name} cancel fees`}>
-      <table className="dx-fee-table" aria-label={`${words.name} cancel fees per car type`}>
+    <div className="dx-fees" role="group" aria-label={tr("{0} cancel fees", [words.name])}>
+      <table className="dx-fee-table" aria-label={tr("{0} cancel fees per car type", [words.name])}>
         <thead>
-          <tr><th scope="col">Car type</th><th scope="col">{words.free}</th><th scope="col">Fee type</th><th scope="col">Fee</th><th scope="col">Min</th><th scope="col">Max</th></tr>
+          <tr><th scope="col">{tr("Car type")}</th><th scope="col">{words.free}</th><th scope="col">{tr("Fee type")}</th><th scope="col">{tr("Fee")}</th><th scope="col">{tr("Min")}</th><th scope="col">{tr("Max")}</th></tr>
         </thead>
         <tbody>
           {categories.map(({ id, label }) => {
@@ -99,49 +100,44 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
             const name = `${words.name} ${label}`;
             return (
               <tr key={id}>
-                <th scope="row">{label}</th>
+                <th scope="row">{trx(label)}</th>
                 <td data-label={words.free}>
-                  <Num label={`${name} free cancel minutes`} value={row.freeMin} unit={words.unit} min={0} max={words.max} disabled={disabled} onChange={(freeMin) => setRow(id, { freeMin: kind === "reservation" ? Math.round(freeMin) : freeMin })} />
+                  <Num label={tr("{0} free cancel minutes", [name])} value={row.freeMin} unit={words.unit} min={0} max={words.max} disabled={disabled} onChange={(freeMin) => setRow(id, { freeMin: kind === "reservation" ? Math.round(freeMin) : freeMin })} />
                 </td>
                 <td data-label="Fee type">
-                  <Choice label={`${name} fee type`} value={row.type} options={FEE_TYPES} disabled={disabled} onChange={(type) => setType(id, type)} />
+                  <Choice label={tr("{0} fee type", [name])} value={row.type} options={FEE_TYPES} disabled={disabled} onChange={(type) => setType(id, type)} />
                 </td>
                 <td data-label="Fee">
-                  <Num label={`${name} fee`} value={row.value} unit={percent ? "%" : symbol} step={percent ? 1 : 0.5} min={0} max={percent ? CANCEL_FEE_LIMITS.pctMax : CANCEL_FEE_LIMITS.fixedMax} disabled={disabled} onChange={(value) => setRow(id, { value })} />
+                  <Num label={tr("{0} fee", [name])} value={row.value} unit={percent ? "%" : symbol} step={percent ? 1 : 0.5} min={0} max={percent ? CANCEL_FEE_LIMITS.pctMax : CANCEL_FEE_LIMITS.fixedMax} disabled={disabled} onChange={(value) => setRow(id, { value })} />
                 </td>
-                <td data-label="Min" className={percent ? undefined : "dx-fee-na"}>{percent ? <OptionalMoney label={`${name} lowest fee`} value={row.min} unit={symbol} disabled={disabled} onChange={(min) => setRow(id, { min })} /> : <span className="dx-fee-none" aria-label="No min for a fixed fee">—</span>}</td>
-                <td data-label="Max" className={percent ? undefined : "dx-fee-na"}>{percent ? <OptionalMoney label={`${name} highest fee`} value={row.max} unit={symbol} disabled={disabled} onChange={(max) => setRow(id, { max })} /> : <span className="dx-fee-none" aria-label="No max for a fixed fee">—</span>}</td>
+                <td data-label="Min" className={percent ? undefined : "dx-fee-na"}>{percent ? <OptionalMoney label={tr("{0} lowest fee", [name])} value={row.min} unit={symbol} disabled={disabled} onChange={(min) => setRow(id, { min })} /> : <span className="dx-fee-none" aria-label={tr("No min for a fixed fee")}>—</span>}</td>
+                <td data-label="Max" className={percent ? undefined : "dx-fee-na"}>{percent ? <OptionalMoney label={tr("{0} highest fee", [name])} value={row.max} unit={symbol} disabled={disabled} onChange={(max) => setRow(id, { max })} /> : <span className="dx-fee-none" aria-label={tr("No max for a fixed fee")}>—</span>}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
       <div className="dx-fee-actions">
-        <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" aria-expanded={sameOpen} disabled={disabled} onClick={() => setSameOpen(!sameOpen)}><Layers size={13} aria-hidden="true" /> Same for all car types</button>
-        <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled || !otherZones.length} onClick={() => { setIds([]); setCopyOpen(true); }}><Copy size={13} aria-hidden="true" /> Copy to other zones…</button>
+        <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" aria-expanded={sameOpen} disabled={disabled} onClick={() => setSameOpen(!sameOpen)}>{trn("{0} Same for all car types", <Layers size={13} aria-hidden="true" />)}</button>
+        <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled || !otherZones.length} onClick={() => { setIds([]); setCopyOpen(true); }}>{trn("{0} Copy to other zones…", <Copy size={13} aria-hidden="true" />)}</button>
       </div>
       {sameOpen ? (
-        <div className="dx-fee-same" role="group" aria-label={`${words.name}: use one car type's rule for all`}>
-          <small>Use the rule of</small>
+        <div className="dx-fee-same" role="group" aria-label={tr("{0}: use one car type's rule for all", [words.name])}>
+          <small>{tr("Use the rule of")}</small>
           {categories.map(({ id, label }) => (
-            <button data-command="admin.dispatch.edit" key={id} type="button" className="dash-btn small ghost" onClick={() => { onChange(sameForAll(table, id, categories)); setSameOpen(false); }}>{label}</button>
+            <button data-command="admin.dispatch.edit" key={id} type="button" className="dash-btn small ghost" onClick={() => { onChange(sameForAll(table, id, categories)); setSameOpen(false); }}>{trx(label)}</button>
           ))}
-          <small>for every car type.</small>
+          <small>{tr("for every car type.")}</small>
         </div>
       ) : null}
-      <div className="dx-fee-sees" aria-label={`${words.name}: rider sees`}>
-        <span className="dx-fee-sample">
-          <Eye size={13} aria-hidden="true" /> Rider sees
-          <select className="dx-select" aria-label={`${words.name} preview car type`} value={sample} onChange={(event) => setSample(event.target.value)}>
-            {categories.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-          </select>
-          <Num label={`${words.name} preview trip price`} before="trip" value={fare} unit={symbol} step={1} min={0} max={100000} onChange={setFare} />
-          {kind === "reservation" ? <small>pickup 14:00</small> : null}
-        </span>
-        <p role="status"><span className="sr-only">{sampleLabel}: </span><b>{seen.line}</b>{seen.detail ? <> {seen.detail}</> : null}</p>
+      <div className="dx-fee-sees" aria-label={tr("{0}: rider sees", [words.name])}>
+        <span className="dx-fee-sample">{trn("{0} Rider sees{1}{2}{3}", <Eye size={13} aria-hidden="true" />, <select className="dx-select" aria-label={tr("{0} preview car type", [words.name])} value={sample} onChange={(event) => setSample(event.target.value)}>
+            {categories.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
+          </select>, <Num label={tr("{0} preview trip price", [words.name])} before="trip" value={fare} unit={symbol} step={1} min={0} max={100000} onChange={setFare} />, kind === "reservation" ? <small>{tr("pickup 14:00")}</small> : null)}</span>
+        <p role="status"><span className="sr-only">{sampleLabel}: </span><b>{trx(seen.line)}</b>{seen.detail ? <> {trx(seen.detail)}</> : null}</p>
       </div>
-      <Modal open={copyOpen} title={`Copy ${words.name.toLowerCase()} cancel fees`} onClose={() => setCopyOpen(false)}>
-        <p className="dx-modal-help">The zones you pick get this table, every car type. Nothing goes live until you publish.</p>
+      <Modal open={copyOpen} title={tr("Copy {0} cancel fees", [words.name.toLowerCase()])} onClose={() => setCopyOpen(false)}>
+        <p className="dx-modal-help">{tr("The zones you pick get this table, every car type. Nothing goes live until you publish.")}</p>
         <div className="zn-chips">
           {otherZones.map((zone) => (
             <label key={zone.id} className={ids.includes(zone.id) ? "check-chip on" : "check-chip"}>
@@ -150,8 +146,8 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
           ))}
         </div>
         <div className="dx-modal-actions">
-          <button data-command="admin.dispatch.edit" type="button" className="dash-btn ghost" onClick={() => setCopyOpen(false)}>Cancel</button>
-          <button data-command="admin.dispatch.edit" type="button" className="dash-btn" disabled={!ids.length} onClick={() => { onCopyToZones(ids, { ...table, ...feeRows(table, categories) }); setCopyOpen(false); }}>Copy to {ids.length} zone{ids.length === 1 ? "" : "s"}</button>
+          <button data-command="admin.dispatch.edit" type="button" className="dash-btn ghost" onClick={() => setCopyOpen(false)}>{tr("Cancel")}</button>
+          <button data-command="admin.dispatch.edit" type="button" className="dash-btn" disabled={!ids.length} onClick={() => { onCopyToZones(ids, { ...table, ...feeRows(table, categories) }); setCopyOpen(false); }}>{trn("Copy to {0} zone{1}", ids.length, ids.length === 1 ? "" : tr("s"))}</button>
         </div>
       </Modal>
     </div>
@@ -173,8 +169,8 @@ type CardProps = {
 };
 
 const FEE_TABS: { id: CancelFeeKind; label: string; example: string }[] = [
-  { id: "live", label: "Live trips", example: "Booked now (Radar, Exclusive): free for a few minutes after the driver accepts, then the fee." },
-  { id: "reservation", label: "Reservations", example: "Booked for later (also Exclusive reservations): free until a set time before pickup, then the late fee." },
+  { id: "live", get label() { return tr("Live trips"); }, example: "Booked now (Radar, Exclusive): free for a few minutes after the driver accepts, then the fee." },
+  { id: "reservation", get label() { return tr("Reservations"); }, example: "Booked for later (also Exclusive reservations): free until a set time before pickup, then the late fee." },
 ];
 
 /** One place for the rider's cancel fees in a zone: live trips and reservations, each per car type. */
@@ -184,16 +180,16 @@ export function RiderCancelFeesCard({ zone, onChange, disabled, symbol, money, c
   const current = FEE_TABS.find((item) => item.id === tab) ?? FEE_TABS[0];
   return (
     <div id="dx-rider-cancel-fees">
-      <Card title="Rider cancel fees" tone="green" icon={<Coins size={18} />} help="Set per car type. Live trips and reservations have their own rules.">
-        <div className="ra-switch dx-fee-tabs" role="tablist" aria-label="Rider cancel fees for">
+      <Card title={tr("Rider cancel fees")} tone="green" icon={<Coins size={18} />} help={tr("Set per car type. Live trips and reservations have their own rules.")}>
+        <div className="ra-switch dx-fee-tabs" role="tablist" aria-label={tr("Rider cancel fees for")}>
           {FEE_TABS.map((item) => (
             <button data-command="admin.dispatch.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => onTab(item.id)}>
-              {item.id === "live" ? <Zap size={12} aria-hidden="true" /> : <CalendarClock size={12} aria-hidden="true" />} {item.label}
+              {item.id === "live" ? <Zap size={12} aria-hidden="true" /> : <CalendarClock size={12} aria-hidden="true" />} {trx(item.label)}
             </button>
           ))}
         </div>
-        <p className="dx-fee-example" role="tabpanel" aria-label={current.label}>{current.example}</p>
-        {off ? <p className="dx-note warn">{live ? "The smart cancel check is off in this zone (Rider cancels: smart check), so live trips have no cancel fee." : "Reservations are off in this zone."}</p> : null}
+        <p className="dx-fee-example" role="tabpanel" aria-label={trx(current.label)}>{current.example}</p>
+        {off ? <p className="dx-note warn">{live ? tr("The smart cancel check is off in this zone (Rider cancels: smart check), so live trips have no cancel fee.") : tr("Reservations are off in this zone.")}</p> : null}
         <CancelFeeTable
           key={tab}
           kind={tab}

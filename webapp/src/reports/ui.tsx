@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Info, Lightbulb, TrendingDown, TrendingUp } from "lucide-react";
 import { change, type Card, type Format, type Note } from "./engine";
+import { tr, trx } from "../i18n";
 
 export type Fmt = (value: number, format: Format) => string;
 
@@ -8,21 +9,21 @@ export type Fmt = (value: number, format: Format) => string;
 export function Cards({ cards, fmt, compareLabel, compare }: { cards: readonly Card[]; fmt: Fmt; compareLabel: string; compare: boolean }) {
   const [open, setOpen] = useState<string | null>(null);
   return (
-    <section className="rp-cards" aria-label="Numbers">
+    <section className="rp-cards" aria-label={tr("Numbers")}>
       {cards.map((card) => {
         const diff = compare ? change(card.value, card.previous) : null;
         const good = diff === null ? null : card.goodDown ? diff <= 0 : diff >= 0;
         return (
           <div key={card.id} className="rp-card">
             <span className="rp-card-head">
-              <small>{card.label}</small>
-              <button data-command="admin.reports.view" type="button" className="rp-info" aria-label={`What is ${card.label}?`} aria-expanded={open === card.id} onClick={() => setOpen(open === card.id ? null : card.id)}><Info size={12} aria-hidden="true" /></button>
+              <small>{trx(card.label)}</small>
+              <button data-command="admin.reports.view" type="button" className="rp-info" aria-label={tr("What is {0}?", [trx(card.label)])} aria-expanded={open === card.id} onClick={() => setOpen(open === card.id ? null : card.id)}><Info size={12} aria-hidden="true" /></button>
             </span>
             <b>{fmt(card.value, card.format)}</b>
             {diff !== null ? (
               <span className={good ? "rp-change good" : "rp-change bad"}>{diff >= 0 ? <TrendingUp size={11} aria-hidden="true" /> : <TrendingDown size={11} aria-hidden="true" />} {diff > 0 ? "+" : ""}{diff}% <em>{compareLabel}</em></span>
-            ) : <span className="rp-change none">{!compare ? "" : card.previous === null ? "Right now" : "No earlier number"}</span>}
-            {open === card.id ? <p className="rp-card-info" role="note">{card.info}</p> : null}
+            ) : <span className="rp-change none">{!compare ? "" : card.previous === null ? tr("Right now") : tr("No earlier number")}</span>}
+            {open === card.id ? <p className="rp-card-info" role="note">{trx(card.info)}</p> : null}
           </div>
         );
       })}
@@ -33,7 +34,7 @@ export function Cards({ cards, fmt, compareLabel, compare }: { cards: readonly C
 export function Notes({ notes }: { notes: readonly Note[] }) {
   if (!notes.length) return null;
   return (
-    <ul className="rp-notes" aria-label="What changed">
+    <ul className="rp-notes" aria-label={tr("What changed")}>
       {notes.slice(0, 4).map((note) => (
         <li key={note.text} className={note.tone}><Lightbulb size={13} aria-hidden="true" /> {note.text}</li>
       ))}
@@ -44,7 +45,7 @@ export function Notes({ notes }: { notes: readonly Note[] }) {
 export function Panel({ title, icon, children, aside, wide = false }: { title: string; icon: ReactNode; children: ReactNode; aside?: ReactNode; wide?: boolean }) {
   return (
     <section className={wide ? "dash-card rp-panel wide" : "dash-card rp-panel"} aria-label={title}>
-      <div className="card-head"><h3>{icon} {title}</h3>{aside}</div>
+      <div className="card-head"><h3>{icon} {trx(title)}</h3>{aside}</div>
       {children}
     </section>
   );
@@ -57,10 +58,10 @@ export function Bars({ rows, format }: { rows: readonly { label: string; value: 
     <ul className="rp-bars">
       {rows.map((row) => (
         <li key={row.label}>
-          <span className="rp-bar-label">{row.label}</span>
+          <span className="rp-bar-label">{trx(row.label)}</span>
           <span className="rp-bar-track"><i style={{ width: `${(row.value / max) * 100}%` }} /></span>
           <b>{format(row.value)}</b>
-          {row.hint ? <small>{row.hint}</small> : null}
+          {row.hint ? <small>{trx(row.hint)}</small> : null}
         </li>
       ))}
     </ul>
@@ -72,7 +73,7 @@ export function HourBars({ rows }: { rows: readonly { hour: number; trips: numbe
   const max = Math.max(...rows.map((row) => row.trips), 1);
   const peak = rows.reduce((best, row) => (row.trips > best.trips ? row : best), rows[0] ?? { hour: 0, trips: 0 });
   return (
-    <div className="rp-hours" role="img" aria-label={`Busiest hour ${String(peak.hour).padStart(2, "0")}:00`}>
+    <div className="rp-hours" role="img" aria-label={tr("Busiest hour {0}:00", [String(peak.hour).padStart(2, "0")])}>
       {rows.map((row) => (
         <span key={row.hour} className={row.hour === peak.hour ? "peak" : undefined} title={`${String(row.hour).padStart(2, "0")}:00 · ${row.trips}`}>
           <i style={{ height: `${(row.trips / max) * 100}%` }} />
@@ -105,7 +106,7 @@ export function SortTable<T>({ label, columns, rows, rowKey, initial, limit = 50
             {columns.map((item) => (
               <th key={item.id} className={item.numeric ? "num" : undefined} aria-sort={item.id === sort.id ? (sort.desc ? "descending" : "ascending") : "none"}>
                 <button data-command="admin.reports.view" type="button" onClick={() => setSort({ id: item.id, desc: item.id === sort.id ? !sort.desc : true })}>
-                  {item.label} {item.id === sort.id ? (sort.desc ? <ChevronDown size={11} aria-hidden="true" /> : <ChevronUp size={11} aria-hidden="true" />) : null}
+                  {trx(item.label)} {item.id === sort.id ? (sort.desc ? <ChevronDown size={11} aria-hidden="true" /> : <ChevronUp size={11} aria-hidden="true" />) : null}
                 </button>
               </th>
             ))}
@@ -117,10 +118,10 @@ export function SortTable<T>({ label, columns, rows, rowKey, initial, limit = 50
               {columns.map((item) => <td key={item.id} className={item.numeric ? "num" : undefined}>{item.show ? item.show(row) : item.value(row)}</td>)}
             </tr>
           ))}
-          {shown.length === 0 ? <tr><td colSpan={columns.length} className="rp-empty">Nothing in this period.</td></tr> : null}
+          {shown.length === 0 ? <tr><td colSpan={columns.length} className="rp-empty">{tr("Nothing in this period.")}</td></tr> : null}
         </tbody>
       </table>
-      {sorted.length > limit ? <button data-command="admin.reports.view" type="button" className="dash-btn small ghost" onClick={() => setAll((value) => !value)}>{all ? "Show fewer" : `Show all ${sorted.length}`}</button> : null}
+      {sorted.length > limit ? <button data-command="admin.reports.view" type="button" className="dash-btn small ghost" onClick={() => setAll((value) => !value)}>{all ? tr("Show fewer") : tr("Show all {0}", [sorted.length])}</button> : null}
     </div>
   );
 }

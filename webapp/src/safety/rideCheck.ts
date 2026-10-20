@@ -1,3 +1,4 @@
+import { tr, trx } from "../i18n/core.ts";
 /**
  * Ride check: the "Is everything OK?" card the driver and rider apps show when a trip looks wrong.
  * The apps send every check with both answers. Tapping a red row (accident, someone hurt, I feel
@@ -107,19 +108,19 @@ export function distanceText(metres: number): string {
 /** The reason line the card shows, e.g. "Stopped for 4 min · Odenplan". */
 export function reasonText(check: Pick<RideCheck, "trigger" | "value" | "place">): string {
   const at = check.place ? ` · ${check.place}` : "";
-  if (check.trigger === "far") return `Trip ended ${distanceText(check.value)} from the drop-off${at}`;
-  if (check.trigger === "stop") return `Stopped for ${check.value} min${at}`;
-  if (check.trigger === "route") return `${check.value} km off the route${at}`;
-  if (check.trigger === "longer") return `Trip ${check.value}% longer than expected${at}`;
-  return `Very hard stop${at}`;
+  if (check.trigger === "far") return tr("Trip ended {0} from the drop-off", [distanceText(check.value)]) + at;
+  if (check.trigger === "stop") return tr("Stopped for {0} min", [check.value]) + at;
+  if (check.trigger === "route") return tr("{0} km off the route", [check.value]) + at;
+  if (check.trigger === "longer") return tr("Trip {0}% longer than expected", [check.value]) + at;
+  return tr("Very hard stop") + at;
 }
 
 export function choiceLabel(who: Person, choice: ChoiceId): string {
-  return CHOICES[choice]?.[who] ?? choice;
+  return trx(CHOICES[choice]?.[who] ?? choice);
 }
 
 export function answerLabel(who: Person, answer: Answer | null): string {
-  return answer ? choiceLabel(who, answer.choice) : "No answer yet";
+  return answer ? choiceLabel(who, answer.choice) : tr("No answer yet");
 }
 
 export function isRed(answer: Answer | null): boolean {
@@ -137,7 +138,7 @@ export function worrying(follow: FollowUp): boolean {
 }
 
 export function followText(follow: FollowUp): string {
-  return `${QUESTIONS[follow.q] ?? follow.q} ${follow.a}`;
+  return `${trx(QUESTIONS[follow.q] ?? follow.q)} ${trx(follow.a)}`;
 }
 
 export function answerKind(answer: Answer | null): Outcome {
@@ -183,8 +184,8 @@ export function worries(check: Pick<RideCheck, "driver" | "rider">): { who: Pers
 /** The alert's first line, e.g. "Accident or collision (driver)". */
 export function alertTitle(check: Pick<RideCheck, "driver" | "rider">): string {
   const first = alertBy(check);
-  if (!first) return "Ride check";
-  return `${choiceLabel(first.who, first.answer.choice)} (${first.who})`;
+  if (!first) return tr("Ride check");
+  return `${choiceLabel(first.who, first.answer.choice)} (${trx(first.who)})`;
 }
 
 /* ------------------------------------------------------------------ demo clock */

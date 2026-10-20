@@ -4,6 +4,7 @@ import { isLargePriceChange } from "../pricing/zonePricing";
 import { CommandButton } from "../ui/CommandButton";
 import { DEFAULT_REFUND_ABOVE, REFUND_ABOVE_MAX, REFUND_POLICY_KEY, refundPolicyError } from "./refundPolicy";
 import { useRefundPolicy } from "./useRefundPolicy";
+import { tr, trn, trSentences } from "../i18n";
 
 const SYMBOL: Record<MarketId, string> = { SE: "kr", FR: "€", TN: "DT" };
 
@@ -30,25 +31,22 @@ export function RefundPolicyPanel({ editable, onDirty }: { editable: boolean; on
   }, [dirty, onDirty]);
   return (
     <article className="panel" id="refunds" data-testid="refund-policy">
-      <h3>Refunds: second admin</h3>
-      <p className="state-line">A refund, or a driver pay change, above this amount waits for a second admin. One limit per country, used by Payments, Trips, Riders and the server. Defaults: above {DEFAULT_REFUND_ABOVE.SE} kr, {DEFAULT_REFUND_ABOVE.FR} € and {DEFAULT_REFUND_ABOVE.TN} DT.</p>
+      <h3>{tr("Refunds: second admin")}</h3>
+      <p className="state-line">{trn("A refund, or a driver pay change, above this amount waits for a second admin. One limit per country, used by Payments, Trips, Riders and the server. Defaults: above {0} kr, {1} € and {2} DT.", DEFAULT_REFUND_ABOVE.SE, DEFAULT_REFUND_ABOVE.FR, DEFAULT_REFUND_ABOVE.TN)}</p>
       <div className="field-grid">
         {MARKETS.map((item) => (
-          <label key={item.id}>
-            {item.name}: second admin above ({SYMBOL[item.id]})
-            <input
-              aria-label={`${item.name} second admin above`}
+          <label key={item.id}>{trn("{0}: second admin above ({1}){2}", item.name, SYMBOL[item.id], <input
+              aria-label={tr("{0} second admin above", [item.name])}
               inputMode="decimal"
               value={shown[item.id]}
               disabled={!editable || loading}
               max={REFUND_ABOVE_MAX[item.id]}
               onChange={(event) => setDraft({ ...shown, [item.id]: event.target.value })}
-            />
-          </label>
+            />)}</label>
         ))}
       </div>
-      {error ? <p className="pl-warn" role="alert">{error}</p> : null}
-      {notice ? <p className="state-line" role="status">{notice}</p> : null}
+      {error ? <p className="pl-warn" role="alert">{trSentences(error)}</p> : null}
+      {notice ? <p className="state-line" role="status">{trSentences(notice)}</p> : null}
       <div className="actions">
         <CommandButton
           command="admin.refundPolicy.save"
@@ -61,13 +59,11 @@ export function RefundPolicyPanel({ editable, onDirty }: { editable: boolean; on
           value={{ draftRev: policy.draftRev + 1, aboveMajor: values }}
           expectedSliceRev={policy.draftRev}
           disabled={!editable || !dirty || Boolean(error)}
-          title={!editable ? "Your role cannot change this." : !dirty ? "No unsaved change." : error ?? undefined}
+          title={!editable ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : error ?? undefined}
           largeChanges={large}
           onDone={() => { setDraft(null); setNotice("Refund limits saved. They apply at once."); }}
-        >
-          Save refund limits
-        </CommandButton>
-        <button data-command="admin.card.action" type="button" className="secondary-btn" disabled={!draft} onClick={() => setDraft(null)}>Discard</button>
+        >{tr("Save refund limits")}</CommandButton>
+        <button data-command="admin.card.action" type="button" className="secondary-btn" disabled={!draft} onClick={() => setDraft(null)}>{tr("Discard")}</button>
       </div>
     </article>
   );

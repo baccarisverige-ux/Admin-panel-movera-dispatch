@@ -1,3 +1,5 @@
+import { trx } from "../i18n/core.ts";
+
 /**
  * Display words for record statuses. Trip statuses are the contract names in readable form (Q35, X15), the
  * same words the rider and driver apps use: "driver_to_pickup" is "Driver to pickup", "in_trip" is "In trip".
@@ -108,8 +110,9 @@ const STATUS_TONES: Record<string, StatusTone> = {
   conflict: "red",
 };
 
+/** The readable status word in the admin's language (round 4); an unknown code is shown with spaces. */
 export function statusLabel(code: string): string {
-  return STATUS_LABELS[code] ?? code.replaceAll("_", " ");
+  return trx(STATUS_LABELS[code] ?? code.replaceAll("_", " "));
 }
 
 export function statusPresentation(code: string): { label: string; tone: StatusTone } | null {

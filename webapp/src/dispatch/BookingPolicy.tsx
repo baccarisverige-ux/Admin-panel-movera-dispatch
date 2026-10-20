@@ -5,6 +5,7 @@ import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { CommandButton } from "../ui/CommandButton";
 import { Card, Num, Row } from "./fields";
+import { tr, trn, trSentences } from "../i18n";
 
 const RESERVATION_OPS_KEY = "reservationOps";
 
@@ -26,24 +27,24 @@ export function BookingPolicyCard() {
   const nextVersion = prepared.error ? null : prepared.book.currentPolicy.version;
   return (
     <div data-testid="reservation-policy">
-      <Card title={`Reservation policy · all zones · ${book.currentPolicy.version}`} tone="green" icon={<ScrollText size={18} />} help="Saved on its own as a new version. Rides already booked keep the version they were booked with.">
-        <Row label="Book up to" help="How far ahead a rider can book.">
-          <Num label="Booking horizon" value={policy.bookingHorizonDays} unit="days ahead" min={1} max={30} disabled={off} onChange={(bookingHorizonDays) => patch({ bookingHorizonDays })} />
+      <Card title={tr("Reservation policy · all zones · {0}", [book.currentPolicy.version])} tone="green" icon={<ScrollText size={18} />} help={tr("Saved on its own as a new version. Rides already booked keep the version they were booked with.")}>
+        <Row label={tr("Book up to")} help={tr("How far ahead a rider can book.")}>
+          <Num label={tr("Booking horizon")} value={policy.bookingHorizonDays} unit="days ahead" min={1} max={30} disabled={off} onChange={(bookingHorizonDays) => patch({ bookingHorizonDays })} />
         </Row>
-        <Row label="Assignment lead" help="A ride with no driver this close to pickup needs attention.">
-          <Num label="Assignment lead" value={policy.assignmentLeadMinutes} unit="min before" min={5} max={240} disabled={off} onChange={(assignmentLeadMinutes) => patch({ assignmentLeadMinutes })} />
+        <Row label={tr("Assignment lead")} help={tr("A ride with no driver this close to pickup needs attention.")}>
+          <Num label={tr("Assignment lead")} value={policy.assignmentLeadMinutes} unit="min before" min={5} max={240} disabled={off} onChange={(assignmentLeadMinutes) => patch({ assignmentLeadMinutes })} />
         </Row>
-        <Row label="Give-up time" help="Still no driver this close to pickup: the ride is given up.">
-          <Num label="Give-up time" value={policy.giveUpMinutes} unit="min before" min={1} max={60} disabled={off} onChange={(giveUpMinutes) => patch({ giveUpMinutes })} />
+        <Row label={tr("Give-up time")} help={tr("Still no driver this close to pickup: the ride is given up.")}>
+          <Num label={tr("Give-up time")} value={policy.giveUpMinutes} unit="min before" min={1} max={60} disabled={off} onChange={(giveUpMinutes) => patch({ giveUpMinutes })} />
         </Row>
-        <Row label="Included waiting" help="Free waiting at the pickup for a booked ride.">
-          <Num label="Included waiting" value={policy.includedWaitingMinutes} unit="min" min={0} max={60} disabled={off} onChange={(includedWaitingMinutes) => patch({ includedWaitingMinutes })} />
+        <Row label={tr("Included waiting")} help={tr("Free waiting at the pickup for a booked ride.")}>
+          <Num label={tr("Included waiting")} value={policy.includedWaitingMinutes} unit="min" min={0} max={60} disabled={off} onChange={(includedWaitingMinutes) => patch({ includedWaitingMinutes })} />
         </Row>
-        {draft && prepared.error ? <p className="dx-issues" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {prepared.error}</p> : null}
-        {notice ? <p className="dx-note" role="status">{notice}</p> : null}
-        {!canEdit ? <p className="dx-note">You can view the policy. Only roles that handle trips can change it.</p> : null}
+        {draft && prepared.error ? <p className="dx-issues" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {trSentences(prepared.error)}</p> : null}
+        {notice ? <p className="dx-note" role="status">{trSentences(notice)}</p> : null}
+        {!canEdit ? <p className="dx-note">{tr("You can view the policy. Only roles that handle trips can change it.")}</p> : null}
         <div className="dx-modal-actions">
-          {draft ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}><Undo2 size={13} aria-hidden="true" /> Discard policy changes</button> : null}
+          {draft ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{trn("{0} Discard policy changes", <Undo2 size={13} aria-hidden="true" />)}</button> : null}
           <CommandButton
             command="admin.reservation.savePolicy"
             className="dash-btn small"
@@ -57,14 +58,12 @@ export function BookingPolicyCard() {
             sliceKey={RESERVATION_OPS_KEY}
             value={prepared.book}
             disabled={!canEdit || !draft || Boolean(prepared.error)}
-            title={prepared.error ?? (!draft ? "No unsaved policy change." : undefined)}
+            title={prepared.error ?? (!draft ? tr("No unsaved policy change.") : undefined)}
             onDone={() => {
               setDraft(null);
               setNotice(`Reservation policy saved as ${nextVersion}. Rides already booked keep their own version.`);
             }}
-          >
-            Save reservation policy
-          </CommandButton>
+          >{tr("Save reservation policy")}</CommandButton>
         </div>
       </Card>
     </div>

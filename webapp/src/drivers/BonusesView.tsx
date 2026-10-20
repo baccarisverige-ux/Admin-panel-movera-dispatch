@@ -8,6 +8,7 @@ import { DriverAppPreview } from "./DriverAppPreview";
 import { bonusSummary } from "./bonusDemo";
 import { clearBonusPrefill, takeBonusPrefill } from "../dispatch/prefill";
 import { BONUS_KEY, bonusState, emptyBonusBook, newBonus, normalizeBonusBook, rewardLine, setBonusStatus, timeLine, type BonusBook, type DriverBonus } from "./bonus";
+import { tr, trn, trx, trSentences } from "../i18n";
 
 const STATE_LABEL = { live: "Live now", today: "Later today", done: "Done for today", scheduled: "Next days", paused: "Off", ended: "Ended" } as const;
 type Filter = "all" | "rides" | "area" | "ended";
@@ -63,7 +64,7 @@ export function BonusesView({ country, drivers, fleets, agentId, canEdit }: { co
   const paid = [...summaries.values()].reduce((sum, item) => sum + item.paid, 0);
   const reached = [...summaries.values()].reduce((sum, item) => sum + item.reached, 0);
 
-  if (slice.loading) return <p className="state-line">Loading bonuses.</p>;
+  if (slice.loading) return <p className="state-line">{tr("Loading bonuses.")}</p>;
 
   if (editing) {
     return (
@@ -75,39 +76,39 @@ export function BonusesView({ country, drivers, fleets, agentId, canEdit }: { co
 
   return (
     <div className="db-view">
-      <section className="db-kpis" aria-label="Bonuses at a glance">
-        <div className="zn-kpi"><Radio size={18} aria-hidden="true" /><span><b>{live}</b><small>Live now</small></span></div>
-        <div className="zn-kpi"><Flame size={18} aria-hidden="true" /><span><b>{running}</b><small>Bonuses running</small></span></div>
-        <div className="zn-kpi"><Users size={18} aria-hidden="true" /><span><b>{reached}</b><small>Drivers reached a bonus today</small></span></div>
-        <div className="zn-kpi"><Wallet size={18} aria-hidden="true" /><span><b>{money(paid)}</b><small>Earned by drivers today</small></span></div>
+      <section className="db-kpis" aria-label={tr("Bonuses at a glance")}>
+        <div className="zn-kpi"><Radio size={18} aria-hidden="true" /><span><b>{live}</b><small>{tr("Live now")}</small></span></div>
+        <div className="zn-kpi"><Flame size={18} aria-hidden="true" /><span><b>{running}</b><small>{tr("Bonuses running")}</small></span></div>
+        <div className="zn-kpi"><Users size={18} aria-hidden="true" /><span><b>{reached}</b><small>{tr("Drivers reached a bonus today")}</small></span></div>
+        <div className="zn-kpi"><Wallet size={18} aria-hidden="true" /><span><b>{money(paid)}</b><small>{tr("Earned by drivers today")}</small></span></div>
       </section>
 
       <div className="db-new">
         <button data-command="admin.drivers.bonusCreate" type="button" className="db-new-tile" disabled={!canEdit} onClick={() => setEditing(newBonus("rides", country, agentId ?? "", now))}>
           <span className="db-new-icon"><Zap size={20} aria-hidden="true" /></span>
-          <span><b>New ride bonus</b><small>Do 3 rides from 07 to 09, earn {money({ SE: 150, FR: 15, TN: 20 }[country])}</small></span>
+          <span><b>{tr("New ride bonus")}</b><small>{trn("Do 3 rides from 07 to 09, earn {0}", money({ SE: 150, FR: 15, TN: 20 }[country]))}</small></span>
           <Plus size={18} aria-hidden="true" />
         </button>
         <button data-command="admin.drivers.bonusCreate" type="button" className="db-new-tile area" disabled={!canEdit} onClick={() => setEditing(newBonus("area", country, agentId ?? "", now))}>
           <span className="db-new-icon"><MapPinned size={20} aria-hidden="true" /></span>
-          <span><b>New area bonus</b><small>Draw an area on the map, set the time and reward</small></span>
+          <span><b>{tr("New area bonus")}</b><small>{tr("Draw an area on the map, set the time and reward")}</small></span>
           <Plus size={18} aria-hidden="true" />
         </button>
       </div>
 
-      {notice || slice.message ? <p className="pricing-notice" role="status">{notice} {slice.message}</p> : null}
+      {notice || slice.message ? <p className="pricing-notice" role="status">{trSentences(notice)} {trSentences(slice.message)}</p> : null}
 
       <section className="dash-card" aria-labelledby="bonus-list-title">
         <div className="card-head">
-          <h3 id="bonus-list-title"><Trophy size={16} aria-hidden="true" /> Driver bonuses in {info.name}</h3>
-          <div className="zn-filters" role="group" aria-label="Filter bonuses">
+          <h3 id="bonus-list-title">{trn("{0} Driver bonuses in {1}", <Trophy size={16} aria-hidden="true" />, info.name)}</h3>
+          <div className="zn-filters" role="group" aria-label={tr("Filter bonuses")}>
             {([["all", "Running"], ["rides", "Ride bonuses"], ["area", "Area bonuses"], ["ended", "Ended"]] as const).map(([id, label]) => (
-              <button data-command="admin.drivers.view" key={id} type="button" aria-pressed={filter === id} className={filter === id ? "zn-chip on" : "zn-chip"} onClick={() => setFilter(id)}>{label}</button>
+              <button data-command="admin.drivers.view" key={id} type="button" aria-pressed={filter === id} className={filter === id ? "zn-chip on" : "zn-chip"} onClick={() => setFilter(id)}>{trx(label)}</button>
             ))}
           </div>
         </div>
-        {shown.length === 0 ? <p className="zn-empty">No bonus here yet in {info.name}. Start one above.</p> : (
-          <ul className="db-list" aria-label="Driver bonuses">
+        {shown.length === 0 ? <p className="zn-empty">{trn("No bonus here yet in {0}. Start one above.", info.name)}</p> : (
+          <ul className="db-list" aria-label={tr("Driver bonuses")}>
             {shown.map((bonus) => {
               const state = states.get(bonus.id) ?? "scheduled";
               const sum = summaries.get(bonus.id);
@@ -119,40 +120,40 @@ export function BonusesView({ country, drivers, fleets, agentId, canEdit }: { co
                     <AreaThumb bonus={bonus} />
                     <div className="db-item-text">
                       <span className="db-item-tags">
-                        <span className={bonus.kind === "area" ? "db-tag area" : "db-tag"}>{bonus.kind === "area" ? "Area bonus" : "Ride bonus"}</span>
-                        <span className={`db-state ${state}`}>{state === "live" ? <i aria-hidden="true" /> : null}{STATE_LABEL[state]}</span>
+                        <span className={bonus.kind === "area" ? "db-tag area" : "db-tag"}>{bonus.kind === "area" ? tr("Area bonus") : tr("Ride bonus")}</span>
+                        <span className={`db-state ${state}`}>{state === "live" ? <i aria-hidden="true" /> : null}{trx(STATE_LABEL[state])}</span>
                       </span>
                       <b>{bonus.name}</b>
                       <span className="db-item-line">{rewardLine(bonus, money)}</span>
                       {bonus.note ? <span className="db-item-note">“{bonus.note}”</span> : null}
-                      <small>{timeLine(bonus)} · {bonus.from}{bonus.until ? ` – ${bonus.until}` : " onwards"}{bonus.kind === "area" ? ` · ${bonus.areas.map((area) => area.name).join(", ")}` : bonus.zones.length ? ` · ${bonus.zones.length} zones` : " · all zones"}</small>
+                      <small>{timeLine(bonus)} · {bonus.from}{bonus.until ? ` – ${bonus.until}` : tr(" onwards")}{bonus.kind === "area" ? ` · ${bonus.areas.map((area) => area.name).join(", ")}` : bonus.zones.length ? tr(" · {0} zones", [bonus.zones.length]) : tr(" · all zones")}</small>
                     </div>
                     <div className="db-item-actions">
                       {state !== "ended" ? (
                         <CommandButton command="admin.drivers.bonusToggle" className={on ? "surge-toggle on" : "surge-toggle"} targetId={bonus.name} confirmTarget={false} scope="all" before={bonus.status} after={on ? "paused" : "active"} expectedSliceRev={book.draftRev} sliceKey={BONUS_KEY} value={setBonusStatus(book, bonus.id, on ? "paused" : "active")} disabled={!canEdit} aria-label={`${bonus.name} ${on ? "on" : "off"}`} onDone={() => setNotice(`Bonus ${bonus.name} switched ${on ? "off" : "on"}.`)}>
-                          {on ? "On" : "Off"} <span className="switch" aria-hidden="true"><i /></span>
+                          {on ? tr("On") : tr("Off")} <span className="switch" aria-hidden="true"><i /></span>
                         </CommandButton>
                       ) : null}
-                      {state !== "ended" ? <button data-command="admin.drivers.bonusEdit" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => setEditing(bonus)}><Pencil size={13} aria-hidden="true" /> Edit</button> : null}
-                      <button data-command="admin.drivers.bonusCreate" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => setEditing({ ...bonus, id: "", name: `${bonus.name} copy`, status: "active" })}><Copy size={13} aria-hidden="true" /> Copy</button>
-                      <button data-command="admin.drivers.bonusForm" type="button" className="dash-btn small ghost" aria-pressed={previewId === bonus.id} onClick={() => setPreviewId(previewId === bonus.id ? null : bonus.id)}>{previewId === bonus.id ? "Hide driver app" : "See in driver app"}</button>
+                      {state !== "ended" ? <button data-command="admin.drivers.bonusEdit" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => setEditing(bonus)}>{trn("{0} Edit", <Pencil size={13} aria-hidden="true" />)}</button> : null}
+                      <button data-command="admin.drivers.bonusCreate" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => setEditing({ ...bonus, id: "", name: `${bonus.name} copy`, status: "active" })}>{trn("{0} Copy", <Copy size={13} aria-hidden="true" />)}</button>
+                      <button data-command="admin.drivers.bonusForm" type="button" className="dash-btn small ghost" aria-pressed={previewId === bonus.id} onClick={() => setPreviewId(previewId === bonus.id ? null : bonus.id)}>{previewId === bonus.id ? tr("Hide driver app") : tr("See in driver app")}</button>
                     </div>
                   </div>
                   {sum ? (
-                    <dl className="db-stats" aria-label={`${bonus.name} today`}>
-                      <div><dt>Drivers in it</dt><dd>{sum.drivers}</dd></div>
-                      <div><dt>Started today</dt><dd>{sum.started}</dd></div>
-                      <div><dt>Reached it</dt><dd>{sum.reached}</dd></div>
-                      <div><dt>Blocked by rules</dt><dd>{sum.blocked}</dd></div>
-                      <div><dt>Earned today</dt><dd>{money(sum.paid)}</dd></div>
-                      {used !== null ? <span className="rd-budget" aria-label={`${Math.round(used)}% of budget used`}><i style={{ width: `${used}%` }} /></span> : null}
+                    <dl className="db-stats" aria-label={tr("{0} today", [bonus.name])}>
+                      <div><dt>{tr("Drivers in it")}</dt><dd>{sum.drivers}</dd></div>
+                      <div><dt>{tr("Started today")}</dt><dd>{sum.started}</dd></div>
+                      <div><dt>{tr("Reached it")}</dt><dd>{sum.reached}</dd></div>
+                      <div><dt>{tr("Blocked by rules")}</dt><dd>{sum.blocked}</dd></div>
+                      <div><dt>{tr("Earned today")}</dt><dd>{money(sum.paid)}</dd></div>
+                      {used !== null ? <span className="rd-budget" aria-label={tr("{0}% of budget used", [Math.round(used)])}><i style={{ width: `${used}%` }} /></span> : null}
                     </dl>
                   ) : null}
                   {previewId === bonus.id ? <div className="db-item-preview"><DriverAppPreview bonus={bonus} money={money} categoryName={categoryName} done={Math.max(1, Math.round((sum?.rows[0]?.result.counted ?? 1)))} /></div> : null}
                   <footer className="db-item-foot">
-                    <small>Made by {bonus.createdBy}{bonus.editedBy ? ` · changed by ${bonus.editedBy}` : ""}{bonus.budget ? ` · budget ${money(bonus.budget)}` : " · no budget"}</small>
+                    <small>{trn("Made by {0}{1}{2}", bonus.createdBy, bonus.editedBy ? tr(" · changed by {0}", [bonus.editedBy]) : "", bonus.budget ? tr(" · budget {0}", [money(bonus.budget)]) : tr(" · no budget"))}</small>
                     {state !== "ended" ? (
-                      <CommandButton command="admin.drivers.bonusStop" className="dash-btn small ghost" targetId={bonus.name} confirmTarget={false} scope="all" before={bonus.status} after="ended" expectedSliceRev={book.draftRev} sliceKey={BONUS_KEY} value={setBonusStatus(book, bonus.id, "ended")} disabled={!canEdit} onDone={() => setNotice(`Bonus ${bonus.name} ended.`)}>End bonus</CommandButton>
+                      <CommandButton command="admin.drivers.bonusStop" className="dash-btn small ghost" targetId={bonus.name} confirmTarget={false} scope="all" before={bonus.status} after="ended" expectedSliceRev={book.draftRev} sliceKey={BONUS_KEY} value={setBonusStatus(book, bonus.id, "ended")} disabled={!canEdit} onDone={() => setNotice(`Bonus ${bonus.name} ended.`)}>{tr("End bonus")}</CommandButton>
                     ) : null}
                   </footer>
                 </li>

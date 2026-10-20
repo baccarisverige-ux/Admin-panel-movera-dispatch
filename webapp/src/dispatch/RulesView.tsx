@@ -13,6 +13,7 @@ import {
   applyPreset, BUILT_IN_PRESETS, copyParts, DISPATCH_KEY, liveRules, mainMode, modeLabel, modeNow, presetFrom, TABS, zoneIssues,
   type CountryDispatch, type DispatchBook, type TabId, type ZoneDispatch,
 } from "./rules";
+import { tr, trn, trx } from "../i18n";
 
 type Props = {
   book: DispatchBook;
@@ -46,9 +47,9 @@ type Props = {
 const TAB_ICON: Record<TabId, typeof Radar> = { modes: Radar, reservations: CalendarClock, best: Star, waiting: Smartphone, rides: MapPin, drivers: Users, destination: Flag, safety: Shield, alerts: Bell };
 
 function ModeBadge({ zone, paused }: { zone: ZoneDispatch; paused: boolean }) {
-  if (paused) return <span className="dx-mode-tag paused"><Pause size={10} aria-hidden="true" /> Paused</span>;
+  if (paused) return <span className="dx-mode-tag paused">{trn("{0} Paused", <Pause size={10} aria-hidden="true" />)}</span>;
   const mode = mainMode(zone);
-  return <span className={`dx-mode-tag ${mode}`}>{mode === "auto" ? <><Gauge size={10} aria-hidden="true" /> Automatic</> : mode === "radar" ? <><Radar size={10} aria-hidden="true" /> Radar</> : <><Target size={10} aria-hidden="true" /> Exclusive</>}</span>;
+  return <span className={`dx-mode-tag ${mode}`}>{mode === "auto" ? <>{trn("{0} Automatic", <Gauge size={10} aria-hidden="true" />)}</> : mode === "radar" ? <>{trn("{0} Radar", <Radar size={10} aria-hidden="true" />)}</> : <>{trn("{0} Exclusive", <Target size={10} aria-hidden="true" />)}</>}</span>;
 }
 
 export function RulesView(props: Props) {
@@ -68,11 +69,11 @@ export function RulesView(props: Props) {
   const groups = Array.from(new Set(zones.map((item) => (item.kind === "airport" ? "Airports" : item.city)))).map((label) => ({ label, zones: zones.filter((item) => (item.kind === "airport" ? "Airports" : item.city) === label) }));
 
   const rail = (
-    <nav className={zone ? "dx-rail has-zone" : "dx-rail"} aria-label="Zones">
-      <p className="dx-rail-help">Pick a zone to see and change its dispatch rules.</p>
+    <nav className={zone ? "dx-rail has-zone" : "dx-rail"} aria-label={tr("Zones")}>
+      <p className="dx-rail-help">{tr("Pick a zone to see and change its dispatch rules.")}</p>
       {groups.map((group) => (
         <div key={group.label} className="dx-rail-group">
-          <h4>{group.label === "Airports" ? <Plane size={12} aria-hidden="true" /> : <MapPin size={12} aria-hidden="true" />} {group.label}</h4>
+          <h4>{group.label === "Airports" ? <Plane size={12} aria-hidden="true" /> : <MapPin size={12} aria-hidden="true" />} {trx(group.label)}</h4>
           <ul>
             {group.zones.map((item) => {
               const rules = rulesOf(item.id);
@@ -84,9 +85,9 @@ export function RulesView(props: Props) {
                     <span className="dx-rail-name"><b>{item.name}</b><code>{item.id}</code></span>
                     <span className="dx-rail-tags">
                       <ModeBadge zone={rules} paused={paused} />
-                      {changed.has(item.id) ? <span className="dx-dot changed" title="Changed, not live yet">Changed</span> : null}
-                      {waiting ? <span className="dx-dot waiting" title="Waiting for a second admin">Waiting</span> : null}
-                      {zoneIssues(rules, props.feeCategoriesOf(item.id)).length ? <AlertTriangle size={13} className="dx-warn" aria-label="Has a problem" /> : null}
+                      {changed.has(item.id) ? <span className="dx-dot changed" title={tr("Changed, not live yet")}>{tr("Changed")}</span> : null}
+                      {waiting ? <span className="dx-dot waiting" title={tr("Waiting for a second admin")}>{tr("Waiting")}</span> : null}
+                      {zoneIssues(rules, props.feeCategoriesOf(item.id)).length ? <AlertTriangle size={13} className="dx-warn" aria-label={tr("Has a problem")} /> : null}
                     </span>
                   </button>
                 </li>
@@ -104,8 +105,8 @@ export function RulesView(props: Props) {
         {rail}
         <div className="dx-zone dx-zone-empty">
           <Layers size={34} aria-hidden="true" />
-          <b>Pick a zone on the left</b>
-          <p>{tab === "reservations" ? "Each zone has its own reservation rules. The reservation policy for all zones is there too." : "Each zone has its own rules: Radar, Exclusive, reservations, the best driver, what the rider sees while waiting, and more."}</p>
+          <b>{tr("Pick a zone on the left")}</b>
+          <p>{tab === "reservations" ? tr("Each zone has its own reservation rules. The reservation policy for all zones is there too.") : tr("Each zone has its own rules: Radar, Exclusive, reservations, the best driver, what the rider sees while waiting, and more.")}</p>
         </div>
       </div>
     );
@@ -130,45 +131,43 @@ export function RulesView(props: Props) {
   return (
     <div className="dx-rules">
       {rail}
-      <div className="dx-zone" aria-label={`${zone.name} rules`}>
+      <div className="dx-zone" aria-label={tr("{0} rules", [zone.name])}>
         <header className="dx-zone-head">
-          <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost dx-back-zones" onClick={() => onZone(null)}><ArrowLeft size={14} aria-hidden="true" /> All zones</button>
+          <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost dx-back-zones" onClick={() => onZone(null)}>{trn("{0} All zones", <ArrowLeft size={14} aria-hidden="true" />)}</button>
           <div className="dx-zone-title">
             <h3>{zone.name} <code>{zone.id}</code></h3>
-            <p>{zone.kind === "airport" ? "Airport" : zone.city} · New requests now: <b>{now.mode ? modeLabel(now.mode) : "none"}</b> · {now.why}</p>
+            <p>{trn("{0} · New requests now: {1} · {2}", zone.kind === "airport" ? tr("Airport") : zone.city, <b>{now.mode ? modeLabel(now.mode) : tr("none")}</b>, trx(now.why))}</p>
           </div>
           <div className="dx-zone-actions">
-            <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setPresetOpen(true)}><Wand2 size={14} aria-hidden="true" /> Presets</button>
-            <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setCopyOpen(true)}><Copy size={14} aria-hidden="true" /> Copy to other zones</button>
+            <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setPresetOpen(true)}>{trn("{0} Presets", <Wand2 size={14} aria-hidden="true" />)}</button>
+            <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setCopyOpen(true)}>{trn("{0} Copy to other zones", <Copy size={14} aria-hidden="true" />)}</button>
           </div>
         </header>
 
-        <section className="dx-results" aria-label={`${zone.name} results today`}>
-          <div><Timer size={15} aria-hidden="true" /><span><b>{results.findSec} s</b><small>Time to find a driver</small></span>{changed.has(zone.id) ? delta(results.findSec, preview.findSec, true) : null}</div>
-          <div><CheckCircle2 size={15} aria-hidden="true" /><span><b>{results.acceptedPct}%</b><small>Requests accepted</small></span>{changed.has(zone.id) ? delta(results.acceptedPct, preview.acceptedPct, false) : null}</div>
-          <div className="warn"><AlertTriangle size={15} aria-hidden="true" /><span><b>{results.noDriverPct}%</b><small>No driver found</small></span>{changed.has(zone.id) ? delta(results.noDriverPct, preview.noDriverPct, true) : null}</div>
-          <div><Clock size={15} aria-hidden="true" /><span><b>{results.pickupMin} min</b><small>Average pickup time</small></span>{changed.has(zone.id) ? delta(results.pickupMin, preview.pickupMin, true) : null}</div>
-          <div><Radar size={15} aria-hidden="true" /><span><b>{results.radarPct}% · {results.exclusivePct}%</b><small>Accepted on Radar · Exclusive</small></span></div>
+        <section className="dx-results" aria-label={tr("{0} results today", [zone.name])}>
+          <div><Timer size={15} aria-hidden="true" /><span><b>{trn("{0} s", results.findSec)}</b><small>{tr("Time to find a driver")}</small></span>{changed.has(zone.id) ? delta(results.findSec, preview.findSec, true) : null}</div>
+          <div><CheckCircle2 size={15} aria-hidden="true" /><span><b>{results.acceptedPct}%</b><small>{tr("Requests accepted")}</small></span>{changed.has(zone.id) ? delta(results.acceptedPct, preview.acceptedPct, false) : null}</div>
+          <div className="warn"><AlertTriangle size={15} aria-hidden="true" /><span><b>{results.noDriverPct}%</b><small>{tr("No driver found")}</small></span>{changed.has(zone.id) ? delta(results.noDriverPct, preview.noDriverPct, true) : null}</div>
+          <div><Clock size={15} aria-hidden="true" /><span><b>{trn("{0} min", results.pickupMin)}</b><small>{tr("Average pickup time")}</small></span>{changed.has(zone.id) ? delta(results.pickupMin, preview.pickupMin, true) : null}</div>
+          <div><Radar size={15} aria-hidden="true" /><span><b>{results.radarPct}% · {results.exclusivePct}%</b><small>{tr("Accepted on Radar · Exclusive")}</small></span></div>
           {compare ? (
-            <p className="dx-compare" aria-label="Before and after the last publish">
-              Last publish {compare.at.slice(0, 16).replace("T", " ")}: time to find a driver {compare.before.findSec} s → <b>{compare.after.findSec} s</b>, no driver {compare.before.noDriverPct}% → <b>{compare.after.noDriverPct}%</b>
-            </p>
+            <p className="dx-compare" aria-label={tr("Before and after the last publish")}>{trn("Last publish {0}: time to find a driver {1} s → {2}, no driver {3}% → {4}", compare.at.slice(0, 16).replace("T", " "), compare.before.findSec, <b>{trn("{0} s", compare.after.findSec)}</b>, compare.before.noDriverPct, <b>{compare.after.noDriverPct}%</b>)}</p>
           ) : null}
-          {changed.has(zone.id) ? <p className="dx-compare soft">Small arrows show the expected effect of your changes.</p> : null}
+          {changed.has(zone.id) ? <p className="dx-compare soft">{tr("Small arrows show the expected effect of your changes.")}</p> : null}
         </section>
 
-        <div className="dx-tabs" role="tablist" aria-label="Zone settings">
+        <div className="dx-tabs" role="tablist" aria-label={tr("Zone settings")}>
           {TABS.map((item) => {
             const Icon = TAB_ICON[item.id];
-            return <button data-command="admin.dispatch.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => onTab(item.id)}><Icon size={14} aria-hidden="true" /> {item.label}</button>;
+            return <button data-command="admin.dispatch.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => onTab(item.id)}><Icon size={14} aria-hidden="true" /> {trx(item.label)}</button>;
           })}
         </div>
 
-        {!editable ? <p className="dx-readonly" role="status">You can view these rules. Only Super admin and Operations can change dispatch in their own zones.</p> : null}
+        {!editable ? <p className="dx-readonly" role="status">{tr("You can view these rules. Only Super admin and Operations can change dispatch in their own zones.")}</p> : null}
         {issues.length ? <ul className="dx-issues" role="alert">{issues.map((line) => <li key={line}><AlertTriangle size={13} aria-hidden="true" /> {line}</li>)}</ul> : null}
 
         <div className="dx-zone-body">
-          <div className="dx-zone-main" role="tabpanel" aria-label={TABS.find((item) => item.id === tab)?.label}>
+          <div className="dx-zone-main" role="tabpanel" aria-label={trx(TABS.find((item) => item.id === tab)?.label)}>
             <ZoneSettings
               tab={tab}
               zone={rules}
@@ -211,10 +210,10 @@ export function RulesView(props: Props) {
               }}
             />
           </div>
-          <aside className="dx-zone-side" aria-label="Phone preview">
-            <div className="ra-switch" role="tablist" aria-label="Which phone">
-              <button data-command="admin.dispatch.view" type="button" role="tab" aria-selected={shownPhone === "driver"} className={shownPhone === "driver" ? "active" : undefined} onClick={() => setPhone("driver")}>Driver app</button>
-              <button data-command="admin.dispatch.view" type="button" role="tab" aria-selected={shownPhone === "rider"} className={shownPhone === "rider" ? "active" : undefined} onClick={() => setPhone("rider")}>Rider app</button>
+          <aside className="dx-zone-side" aria-label={tr("Phone preview")}>
+            <div className="ra-switch" role="tablist" aria-label={tr("Which phone")}>
+              <button data-command="admin.dispatch.view" type="button" role="tab" aria-selected={shownPhone === "driver"} className={shownPhone === "driver" ? "active" : undefined} onClick={() => setPhone("driver")}>{tr("Driver app")}</button>
+              <button data-command="admin.dispatch.view" type="button" role="tab" aria-selected={shownPhone === "rider"} className={shownPhone === "rider" ? "active" : undefined} onClick={() => setPhone("rider")}>{tr("Rider app")}</button>
             </div>
             {tab === "reservations"
               ? (shownPhone === "driver" ? <ReservationDriverPreview zone={rules} money={money} country={market.id} /> : <ReservationRiderPreview zone={rules} money={money} country={market.id} fare={props.sampleFareOf(zone.id)} />)
@@ -242,9 +241,9 @@ function CopyDialog({ open, onClose, from, zones, onApply }: { open: boolean; on
   const [parts, setParts] = useState<TabId[]>(TABS.map((item) => item.id));
   void from;
   return (
-    <Modal open={open} title="Copy to other zones" onClose={onClose}>
-      <p className="dx-modal-help">Pick the zones and the parts to copy. The other zones get the same settings. Nothing goes live until you publish.</p>
-      <h5 className="dx-modal-h">Zones</h5>
+    <Modal open={open} title={tr("Copy to other zones")} onClose={onClose}>
+      <p className="dx-modal-help">{tr("Pick the zones and the parts to copy. The other zones get the same settings. Nothing goes live until you publish.")}</p>
+      <h5 className="dx-modal-h">{tr("Zones")}</h5>
       <div className="zn-chips">
         {zones.map((zone) => (
           <label key={zone.id} className={ids.includes(zone.id) ? "check-chip on" : "check-chip"}>
@@ -252,17 +251,17 @@ function CopyDialog({ open, onClose, from, zones, onApply }: { open: boolean; on
           </label>
         ))}
       </div>
-      <h5 className="dx-modal-h">Parts</h5>
+      <h5 className="dx-modal-h">{tr("Parts")}</h5>
       <div className="zn-chips">
         {TABS.map((item) => (
           <label key={item.id} className={parts.includes(item.id) ? "check-chip on" : "check-chip"}>
-            <input type="checkbox" checked={parts.includes(item.id)} onChange={() => setParts(parts.includes(item.id) ? parts.filter((id) => id !== item.id) : [...parts, item.id])} />{item.label}
+            <input type="checkbox" checked={parts.includes(item.id)} onChange={() => setParts(parts.includes(item.id) ? parts.filter((id) => id !== item.id) : [...parts, item.id])} />{trx(item.label)}
           </label>
         ))}
       </div>
       <div className="dx-modal-actions">
-        <button data-command="admin.dispatch.edit" type="button" className="dash-btn ghost" onClick={onClose}>Cancel</button>
-        <button data-command="admin.dispatch.edit" type="button" className="dash-btn" disabled={!ids.length || !parts.length} onClick={() => { onApply(ids, parts); setIds([]); }}>Copy to {ids.length} zone{ids.length === 1 ? "" : "s"}</button>
+        <button data-command="admin.dispatch.edit" type="button" className="dash-btn ghost" onClick={onClose}>{tr("Cancel")}</button>
+        <button data-command="admin.dispatch.edit" type="button" className="dash-btn" disabled={!ids.length || !parts.length} onClick={() => { onApply(ids, parts); setIds([]); }}>{trn("Copy to {0} zone{1}", ids.length, ids.length === 1 ? "" : tr("s"))}</button>
       </div>
     </Modal>
   );
@@ -273,23 +272,21 @@ function PresetDialog({ open, onClose, book, zone, zoneName, countryId, agentId,
   const presets = [...BUILT_IN_PRESETS, ...book.presets];
   const saved = presetFrom(zone, name.trim(), `P-${book.draftRev + 1}`);
   return (
-    <Modal open={open} title="Presets" onClose={onClose}>
-      <p className="dx-modal-help">Start from a ready-made set of rules. It replaces the settings of {zoneName}; nothing goes live until you publish.</p>
-      <ul className="dx-presets" aria-label="Presets">
+    <Modal open={open} title={tr("Presets")} onClose={onClose}>
+      <p className="dx-modal-help">{trn("Start from a ready-made set of rules. It replaces the settings of {0}; nothing goes live until you publish.", zoneName)}</p>
+      <ul className="dx-presets" aria-label={tr("Presets")}>
         {presets.map((preset) => (
           <li key={preset.id}>
             <span><b>{preset.name}</b><small>{preset.note}</small></span>
-            {preset.builtIn ? <span className="dx-tag">Ready-made</span> : <span className="dx-tag mine">Yours</span>}
-            <button data-command="admin.dispatch.edit" type="button" className="dash-btn small" onClick={() => onUse(applyPreset(zone, preset, countryId), preset.name)}>Use</button>
+            {preset.builtIn ? <span className="dx-tag">{tr("Ready-made")}</span> : <span className="dx-tag mine">{tr("Yours")}</span>}
+            <button data-command="admin.dispatch.edit" type="button" className="dash-btn small" onClick={() => onUse(applyPreset(zone, preset, countryId), preset.name)}>{tr("Use")}</button>
           </li>
         ))}
       </ul>
-      <h5 className="dx-modal-h">Save {zoneName}'s settings as a preset</h5>
+      <h5 className="dx-modal-h">{trn("Save {0}'s settings as a preset", zoneName)}</h5>
       <div className="dx-modal-row">
-        <label className="field">Preset name<input aria-label="Preset name" value={name} maxLength={40} onChange={(event) => setName(event.target.value)} placeholder="For example Weekend nights" /></label>
-        <CommandButton command="admin.dispatch.preset" className="dash-btn" targetId={name.trim() || "preset"} confirmTarget={false} scope="all" before={`${book.presets.length} presets`} after={`${book.presets.length + 1} presets`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={{ ...book, draftRev: book.draftRev + 1, presets: [...book.presets, { ...saved, note: `${saved.note} by ${agentId}` }] }} disabled={!name.trim() || presets.some((item) => item.name.toLowerCase() === name.trim().toLowerCase())} onDone={() => { onSaved(name.trim()); setName(""); }}>
-          Save preset
-        </CommandButton>
+        <label className="field">{trn("Preset name{0}", <input aria-label={tr("Preset name")} value={name} maxLength={40} onChange={(event) => setName(event.target.value)} placeholder={tr("For example Weekend nights")} />)}</label>
+        <CommandButton command="admin.dispatch.preset" className="dash-btn" targetId={name.trim() || "preset"} confirmTarget={false} scope="all" before={`${book.presets.length} presets`} after={`${book.presets.length + 1} presets`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={{ ...book, draftRev: book.draftRev + 1, presets: [...book.presets, { ...saved, note: `${saved.note} by ${agentId}` }] }} disabled={!name.trim() || presets.some((item) => item.name.toLowerCase() === name.trim().toLowerCase())} onDone={() => { onSaved(name.trim()); setName(""); }}>{tr("Save preset")}</CommandButton>
       </div>
     </Modal>
   );

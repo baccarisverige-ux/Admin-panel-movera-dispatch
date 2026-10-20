@@ -6,6 +6,7 @@ import { toCsv } from "../reports/csv";
 import { StatusDot } from "./kit";
 import { CommandButton } from "./CommandButton";
 import { useSession } from "../auth/SessionContext";
+import { tr, trn, trx } from "../i18n";
 
 /** A cell drawn as `node` (a button, a link…) that still searches, sorts and exports as `text`. */
 export type RichCell = { text: string; node: ReactNode };
@@ -27,7 +28,7 @@ function renderCell(value: TableCell): ReactNode {
   const raw = String(value);
   const status = statusPresentation(raw);
   if (!status) return statusLabel(raw);
-  return <StatusDot tone={status.tone}>{status.label}</StatusDot>;
+  return <StatusDot tone={status.tone}>{trx(status.label)}</StatusDot>;
 }
 
 type Row = {
@@ -100,12 +101,10 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
   const visible = sorted.slice(safePage * 25, safePage * 25 + 25);
   const csv = toCsv([head, ...data.map((row) => row.text)]);
 
-  if (state === "loading") return <p className="state-line">Loading.</p>;
+  if (state === "loading") return <p className="state-line">{tr("Loading.")}</p>;
   if (state === "error") {
     return (
-      <p className="state-line">
-        Could not load. <CommandButton command="admin.table.retry" className="link-action" type="button" onDone={onRetry}>Retry</CommandButton>
-      </p>
+      <p className="state-line">{trn("Could not load. {0}", <CommandButton command="admin.table.retry" className="link-action" type="button" onDone={onRetry}>{tr("Retry")}</CommandButton>)}</p>
     );
   }
 
@@ -115,22 +114,22 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
         <input
           className="table-search"
           value={query}
-          placeholder="Search"
-          aria-label="Search this table"
+          placeholder={tr("Search")}
+          aria-label={tr("Search this table")}
           onChange={(event) => {
             setQuery(event.target.value);
             setPage(0);
           }}
         />
-        <CommandButton command="admin.table.filter" className="secondary-btn" type="button" onDone={() => { if (query.trim()) { setChips((current) => [...current, query.trim()]); setQuery(""); } }}>Add filter</CommandButton>
-        <a className="secondary-btn" href={`data:text/csv,${encodeURIComponent(csv)}`} download="movera.csv" onClick={() => logExport(agent?.id, "Table (CSV)")}>Export CSV</a>
+        <CommandButton command="admin.table.filter" className="secondary-btn" type="button" onDone={() => { if (query.trim()) { setChips((current) => [...current, query.trim()]); setQuery(""); } }}>{tr("Add filter")}</CommandButton>
+        <a className="secondary-btn" href={`data:text/csv,${encodeURIComponent(csv)}`} download="movera.csv" onClick={() => logExport(agent?.id, "Table (CSV)")}>{tr("Export CSV")}</a>
       </div>
       <div className="actions">
         {chips.map((chip) => (
           <CommandButton command="admin.table.clearFilter" key={chip} className="secondary-btn" type="button" onDone={() => setChips((current) => current.filter((item) => item !== chip))}>{chip} ×</CommandButton>
         ))}
       </div>
-      {visible.length === 0 ? <p className="state-line">Nothing to show.</p> : (
+      {visible.length === 0 ? <p className="state-line">{tr("Nothing to show.")}</p> : (
         <table className={className}>
           <thead>
             {table.getHeaderGroups().map((group) => (
@@ -140,7 +139,7 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
                     <CommandButton command="admin.table.sort" className="link-action" type="button" onDone={() => header.column.getToggleSortingHandler()?.(new MouseEvent("click") as never)}>{String(header.column.columnDef.header)}</CommandButton>
                   </th>
                 ))}
-                <th>Row</th>
+                <th>{tr("Row")}</th>
               </tr>
             ))}
           </thead>
@@ -151,9 +150,9 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
                   <td key={`${row.id}-${index}`}>{renderCell(cell)}</td>
                 ))}
                 <td>
-                  <CommandButton command="admin.table.menu" className="link-action" type="button" onDone={() => setMenu(menu === row.id ? null : row.id)}>Menu</CommandButton>
+                  <CommandButton command="admin.table.menu" className="link-action" type="button" onDone={() => setMenu(menu === row.id ? null : row.id)}>{tr("Menu")}</CommandButton>
                   {menu === row.id ? (
-                    <CommandButton command="admin.table.open" className="link-action" type="button" onDone={() => onRow?.(row.original.sourceIndex)}>Open</CommandButton>
+                    <CommandButton command="admin.table.open" className="link-action" type="button" onDone={() => onRow?.(row.original.sourceIndex)}>{tr("Open")}</CommandButton>
                   ) : null}
                 </td>
               </tr>
@@ -161,11 +160,7 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
           </tbody>
         </table>
       )}
-      <p className="state-line">
-        {sorted.length} rows · page {safePage + 1} of {pageCount}
-        <CommandButton command="admin.table.previous" className="link-action" type="button" disabled={safePage === 0} onDone={() => setPage(safePage - 1)}>Previous</CommandButton>
-        <CommandButton command="admin.table.next" className="link-action" type="button" disabled={safePage >= pageCount - 1} onDone={() => setPage(safePage + 1)}>Next</CommandButton>
-      </p>
+      <p className="state-line">{trn("{0} rows · page {1} of {2}{3}{4}", sorted.length, safePage + 1, pageCount, <CommandButton command="admin.table.previous" className="link-action" type="button" disabled={safePage === 0} onDone={() => setPage(safePage - 1)}>{tr("Previous")}</CommandButton>, <CommandButton command="admin.table.next" className="link-action" type="button" disabled={safePage >= pageCount - 1} onDone={() => setPage(safePage + 1)}>{tr("Next")}</CommandButton>)}</p>
     </div>
   );
 }

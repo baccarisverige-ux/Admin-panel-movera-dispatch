@@ -7,6 +7,8 @@ import { AppShell } from "./layout/AppShell";
 import { isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundRecord } from "./ui/NotFoundRecord";
+import { I18nProvider } from "./i18n/I18nProvider";
+import { tr, trx } from "./i18n";
 
 // Pages load on first visit, so the sign-in screen and the shell do not wait for every page and map library.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same constraint as React.lazy itself
@@ -60,7 +62,7 @@ const ZonesPage = lazyPage(() => import("./pages/ZonesPage"), "ZonesPage");
 function Screen({ id }: { id: string }) {
   const item = menuItem(id);
   if (!item) return <NotFound />;
-  if (item.coming) return <ComingPage title={item.label} order={item.coming} />;
+  if (item.coming) return <ComingPage title={trx(item.label)} order={item.coming} />;
   if (id === "audit") return <AuditPage />;
   if (id === "settings") return <ConfigPage />;
   if (id === "confirm") return <ConfirmPage />;
@@ -93,7 +95,7 @@ function Screen({ id }: { id: string }) {
   if (id === "alerts") return <AlertsPage />;
   if (id === "team") return <TeamPage />;
   if (id === "system") return <SystemPage />;
-  return <ComingPage title={item.label} order="a later work order" />;
+  return <ComingPage title={trx(item.label)} order="a later work order" />;
 }
 
 export function routerBasename(): string {
@@ -109,8 +111,8 @@ function NoAccess() {
   return (
     <div className="page-heading">
       <div>
-        <h2>No access</h2>
-        <p>Your role cannot open this page. The attempt is refused here, not hidden as an empty screen.</p>
+        <h2>{tr("No access")}</h2>
+        <p>{tr("Your role cannot open this page. The attempt is refused here, not hidden as an empty screen.")}</p>
       </div>
     </div>
   );
@@ -123,7 +125,7 @@ function Shell({ page, children, forceNoAccess = false, redirect = false }: { pa
   const shown: MenuItem = page ?? {
     id: "not-found",
     path: "/404",
-    label: "Page not found",
+    label: tr("Page not found"),
     group: "Overview",
     permission: "overview.read",
     icon: "LayoutDashboard",
@@ -132,7 +134,7 @@ function Shell({ page, children, forceNoAccess = false, redirect = false }: { pa
     <AppShell page={shown}>
       <AssignPanelProvider>
         <section className="page active" data-page={shown.id}>
-          {denied ? <NoAccess /> : page || redirect ? <Suspense fallback={<p className="state-line">Loading.</p>}>{children}</Suspense> : <NotFound />}
+          {denied ? <NoAccess /> : page || redirect ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>{children}</Suspense> : <NotFound />}
         </section>
       </AssignPanelProvider>
     </AppShell>
@@ -171,7 +173,7 @@ function Authed() {
         <Route path="payments" element={<Screen id="payments" />} />
         <Route path="payments/:id" element={<PaymentPage />} />
         <Route path="payouts" element={<Screen id="payouts" />} />
-        <Route path="payouts/:id" element={<RecordPage kind="payouts" label="Payout" list="/payouts" />} />
+        <Route path="payouts/:id" element={<RecordPage kind="payouts" label={tr("Payout")} list="/payouts" />} />
         <Route path="zones" element={<Screen id="zones" />} />
         <Route path="zones/:zoneId" element={<ZoneDetailPage />} />
         <Route path="pricing" element={<Screen id="pricing" />} />
@@ -179,7 +181,7 @@ function Authed() {
         <Route path="tickets/:id" element={<SupportPage />} />
         <Route path="chat" element={<Screen id="chat" />} />
         <Route path="incidents" element={<Screen id="incidents" />} />
-        <Route path="incidents/:id" element={<RecordPage kind="incidents" label="Incident" list="/incidents" />} />
+        <Route path="incidents/:id" element={<RecordPage kind="incidents" label={tr("Incident")} list="/incidents" />} />
         <Route path="risk" element={<Screen id="risk" />} />
         <Route path="messages" element={<Screen id="messages" />} />
         <Route path="content" element={<Screen id="content" />} />
@@ -204,7 +206,9 @@ export function App() {
   return (
     <BrowserRouter basename={routerBasename()}>
       <SessionProvider>
-        <Authed />
+        <I18nProvider>
+          <Authed />
+        </I18nProvider>
       </SessionProvider>
     </BrowserRouter>
   );

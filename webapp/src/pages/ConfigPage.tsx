@@ -40,6 +40,7 @@ import { useDirtyWarning } from "../ui/useDirtyWarning";
 import { RefundPolicyPanel } from "../payments/RefundPolicyPanel";
 import { CountryAppsPanel } from "../config/CountryAppsPanel";
 import { can } from "../auth/permissions";
+import { tr, trn, trx, trSentences } from "../i18n";
 
 const LEVELS: OverrideLevel[] = ["market", "zone", "category", "app", "platform", "appVersion", "cohort"];
 
@@ -58,18 +59,18 @@ function defaultTarget(level: OverrideLevel, zoneId: string, book: ConfigBook): 
 }
 
 function targetOptions(level: OverrideLevel, book: ConfigBook): { value: string; label: string }[] {
-  if (level === "market") return [{ value: "SE-STO", label: "Stockholm market" }];
+  if (level === "market") return [{ value: "SE-STO", label: tr("Stockholm market") }];
   if (level === "zone") return coreZones(stockholmZones()).map((zone) => ({ value: zone.id, label: zone.name }));
   if (level === "category") return CATEGORIES.map((item) => ({ value: item.id, label: item.label }));
-  if (level === "app") return [{ value: "rider", label: "Rider" }, { value: "driver", label: "Driver" }];
-  if (level === "platform") return [{ value: "ios", label: "iOS" }, { value: "android", label: "Android" }];
+  if (level === "app") return [{ value: "rider", label: tr("Rider") }, { value: "driver", label: tr("Driver") }];
+  if (level === "platform") return [{ value: "ios", label: tr("iOS") }, { value: "android", label: tr("Android") }];
   if (level === "appVersion") {
     return [
       { value: book.draft.versions.rider, label: `Rider ${book.draft.versions.rider}` },
       { value: book.draft.versions.driver, label: `Driver ${book.draft.versions.driver}` },
     ];
   }
-  return [{ value: "beta", label: "beta" }, { value: "staff", label: "staff" }, { value: "new-riders", label: "new-riders" }];
+  return [{ value: "beta", label: tr("beta") }, { value: "staff", label: tr("staff") }, { value: "new-riders", label: tr("new-riders") }];
 }
 
 function isoFromLocal(value: string): string | null {
@@ -94,15 +95,15 @@ const PAYMENT_SWITCHES = new Set(["cash", "applePay", "googlePay"]);
 
 function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: boolean }; onChange: (on: boolean) => void }) {
   if (DISPATCH_SWITCHES.has(item.id)) {
-    return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{item.label}: set per zone in Dispatch › Reservations. <Link to="/dispatch?tab=reservations">Edit in Dispatch</Link></p>;
+    return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{trn("{0}: set per zone in Dispatch › Reservations. {1}", trx(item.label), <Link to="/dispatch?tab=reservations">{tr("Edit in Dispatch")}</Link>)}</p>;
   }
   if (PAYMENT_SWITCHES.has(item.id)) {
-    return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{item.label}: set per country in Payment methods and languages. <a href="#country-apps" onClick={(event) => { event.preventDefault(); document.getElementById("country-apps")?.scrollIntoView({ block: "start" }); }}>Edit per country</a></p>;
+    return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{trn("{0}: set per country in Payment methods and languages. {1}", trx(item.label), <a href="#country-apps" onClick={(event) => { event.preventDefault(); document.getElementById("country-apps")?.scrollIntoView({ block: "start" }); }}>{tr("Edit per country")}</a>)}</p>;
   }
   return (
     <label className="check-row">
       <input type="checkbox" checked={item.on} onChange={(event) => onChange(event.target.checked)} />
-      {item.label}
+      {trx(item.label)}
     </label>
   );
 }
@@ -112,7 +113,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
   const store = useSlice<ConfigBook>("config", emptyConfig());
   const persisted = useMemo(() => normalizeConfig(store.value), [store.value]);
   const [book, setBook] = useState<ConfigBook>(() => emptyConfig());
-  const [notice, setNotice] = useState("Draft is not live.");
+  const [notice, setNotice] = useState(tr("Draft is not live."));
   const [zoneId, setZoneId] = useState("op-norrmalm");
   const [featureKey, setFeatureKey] = useState<FeatureKey>("wallet");
   const [level, setLevel] = useState<OverrideLevel>("market");
@@ -173,27 +174,24 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
   const publication = agent ? publishConfig(book, agent.id, new Date().toISOString()) : null;
   const rollback = agent ? rollbackConfig(book, agent.id, new Date().toISOString()) : book;
 
-  if (store.loading) return <p className="state-line">Loading configuration.</p>;
+  if (store.loading) return <p className="state-line">{tr("Loading configuration.")}</p>;
 
   return (
     <div className="pl-settings-all">
       <div className="page-heading">
         <div>
-          <h2>Configuration</h2>
-          <p>
-            Published version {book.rev}. Config revision {book.draftRev}. Status {book.status}. Rider {book.published.versions.rider}.
-            Driver {book.published.versions.driver}. Staff {staff.data?.length ?? "…"}. Languages: English, French and Swedish (default per country below).
-          </p>
+          <h2>{tr("Configuration")}</h2>
+          <p>{trn("Published version {0}. Config revision {1}. Status {2}. Rider {3}. Driver {4}. Staff {5}. Languages: English, French and Swedish (default per country below).", book.rev, book.draftRev, book.status, book.published.versions.rider, book.published.versions.driver, staff.data?.length ?? "…")}</p>
         </div>
-        <Link to="/confirm">Open to confirm</Link>
+        <Link to="/confirm">{tr("Open to confirm")}</Link>
       </div>
 
       <p className="state-line" data-config-dirty={dirty ? "yes" : "no"}>
-        {notice}
+        {trSentences(notice)}
         {store.message ? ` ${store.message}` : ""}
-        {missing.length > 0 ? ` Missing translation: ${missing.join(", ")}.` : ""}
-        {dirty ? " Unsaved changes." : " Saved draft."}
-        {lifecycleDue && !dirty ? " A scheduled change is due: it is shown here and is stored with the next save." : ""}
+        {missing.length > 0 ? tr(" Missing translation: {0}.", [missing.join(", ")]) : ""}
+        {dirty ? tr(" Unsaved changes.") : tr(" Saved draft.")}
+        {lifecycleDue && !dirty ? tr(" A scheduled change is due: it is shown here and is stored with the next save.") : ""}
       </p>
 
       <RefundPolicyPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setRefundDirty} />
@@ -201,28 +199,26 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       <CountryAppsPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setCountryDirty} />
 
       <article className="panel" data-testid="config-impact">
-        <h3>Impact preview</h3>
+        <h3>{tr("Impact preview")}</h3>
         <div className="field-grid">
-          <label>Changed items<input readOnly value={preview.changed} /></label>
-          <label>Affected scopes<input readOnly value={preview.scopes.join(", ")} /></label>
-          <label>Scheduled for<input readOnly value={preview.scheduledFor ?? "Now after approval"} /></label>
-          <label>Expires at<input readOnly value={preview.expiresAt ?? "No expiry"} /></label>
+          <label>{trn("Changed items{0}", <input readOnly value={preview.changed} />)}</label>
+          <label>{trn("Affected scopes{0}", <input readOnly value={preview.scopes.join(", ")} />)}</label>
+          <label>{trn("Scheduled for{0}", <input readOnly value={preview.scheduledFor ?? "Now after approval"} />)}</label>
+          <label>{trn("Expires at{0}", <input readOnly value={preview.expiresAt ?? "No expiry"} />)}</label>
         </div>
-        <p className="state-line" data-impact-scopes>
-          Affected scopes: {preview.scopes.join(", ")}.
-        </p>
+        <p className="state-line" data-impact-scopes>{trn("Affected scopes: {0}.", preview.scopes.join(", "))}</p>
         <p className="state-line">
           {preview.missingTranslations.length
-            ? `Publish blocked: missing ${preview.missingTranslations.join(", ")}.`
-            : "Translation coverage is complete."}
+            ? tr("Publish blocked: missing {0}.", [preview.missingTranslations.join(", ")])
+            : tr("Translation coverage is complete.")}
         </p>
-        <ul aria-label="Configuration diff">
-          {diff.length === 0 ? <li>No unpublished changes.</li> : diff.map((line) => <li key={line}>{line}</li>)}
+        <ul aria-label={tr("Configuration diff")}>
+          {diff.length === 0 ? <li>{tr("No unpublished changes.")}</li> : diff.map((line) => <li key={line}>{line}</li>)}
         </ul>
       </article>
 
       <article className="panel">
-        <h3>Draft controls</h3>
+        <h3>{tr("Draft controls")}</h3>
         <div className="actions">
           <CommandButton
             command="admin.config.save"
@@ -233,14 +229,12 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             before={`config ${persisted.draftRev}`}
             after={`config ${book.draftRev}`}
             disabled={!dirty}
-            title={dirty ? undefined : "No unsaved configuration changes."}
+            title={dirty ? undefined : tr("No unsaved configuration changes.")}
             expectedSliceRev={persisted.draftRev}
             sliceKey="config"
             value={book}
             onDone={() => setNotice("Draft saved through AdminApi.")}
-          >
-            Save draft
-          </CommandButton>
+          >{tr("Save draft")}</CommandButton>
           <button
             data-command="admin.card.action"
             className="secondary-btn"
@@ -250,93 +244,71 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
               setBook(base);
               setNotice("Unsaved draft changes discarded.");
             }}
-          >
-            Discard unsaved
-          </button>
+          >{tr("Discard unsaved")}</button>
         </div>
       </article>
 
       <article className="panel">
-        <h3>Features</h3>
-        <p className="state-line">Rider app</p>
+        <h3>{tr("Features")}</h3>
+        <p className="state-line">{tr("Rider app")}</p>
         {book.draft.switches.filter((item) => item.app === "rider").map((item) => <SwitchRow key={item.id} item={item} onChange={(on) => agent && edit((current) => setSwitch(current, item.id, on, agent.id))} />)}
-        <p className="state-line">Driver app</p>
+        <p className="state-line">{tr("Driver app")}</p>
         {book.draft.switches.filter((item) => item.app === "driver").map((item) => <SwitchRow key={item.id} item={item} onChange={(on) => agent && edit((current) => setSwitch(current, item.id, on, agent.id))} />)}
       </article>
 
       <article className="panel">
-        <h3>App versions and lifecycle</h3>
+        <h3>{tr("App versions and lifecycle")}</h3>
         <div className="field-grid">
-          <label>
-            Rider app
-            <input
+          <label>{trn("Rider app{0}", <input
               value={book.draft.versions.rider}
               onChange={(event) => {
                 if (!agent) return;
                 edit((current) => setAppVersion(current, "rider", event.target.value, agent.id));
                 setContext((current) => ({ ...current, appVersion: event.target.value }));
               }}
-            />
-          </label>
-          <label>
-            Driver app
-            <input
+            />)}</label>
+          <label>{trn("Driver app{0}", <input
               value={book.draft.versions.driver}
               onChange={(event) => agent && edit(
                 (current) => setAppVersion(current, "driver", event.target.value, agent.id),
               )}
-            />
-          </label>
+            />)}</label>
 
           {book.draft.updates.map((item) => {
             const name = platformName(item.app, item.platform);
             return (
               <div key={`${item.app}-${item.platform}`}>
-                <label>
-                  {name} minimum
-                  <input
+                <label>{trn("{0} minimum{1}", name, <input
                     value={item.minimumVersion}
                     onChange={(event) => agent && edit(
                       (current) => setAppUpdate(current, item.app, item.platform, { minimumVersion: event.target.value }, agent.id),
                     )}
-                  />
-                </label>
-                <label>
-                  {name} latest
-                  <input
+                  />)}</label>
+                <label>{trn("{0} latest{1}", name, <input
                     value={item.latestVersion}
                     onChange={(event) => agent && edit(
                       (current) => setAppUpdate(current, item.app, item.platform, { latestVersion: event.target.value }, agent.id),
                     )}
-                  />
-                </label>
-                <label>
-                  {name} message
-                  <input
+                  />)}</label>
+                <label>{trn("{0} message{1}", name, <input
                     value={item.message}
                     onChange={(event) => agent && edit(
                       (current) => setAppUpdate(current, item.app, item.platform, { message: event.target.value }, agent.id),
                     )}
-                  />
-                </label>
-                <label className="check-row">
-                  <input
+                  />)}</label>
+                <label className="check-row">{trn("{0}{1} mandatory", <input
                     type="checkbox"
                     checked={item.mandatory}
                     onChange={(event) => agent && edit(
                       (current) => setAppUpdate(current, item.app, item.platform, { mandatory: event.target.checked }, agent.id),
                     )}
-                  />
-                  {name} mandatory
-                </label>
+                  />, name)}</label>
               </div>
             );
           })}
 
-          <label>
-            Publish schedule
-            <input
-              aria-label="Publish schedule"
+          <label>{trn("Publish schedule{0}", <input
+              aria-label={tr("Publish schedule")}
               type="datetime-local"
               value={localFromIso(book.draft.scheduleAt)}
               onChange={(event) => {
@@ -344,12 +316,9 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
                 const scheduleAt = isoFromLocal(event.target.value);
                 edit((current) => setSchedule(current, scheduleAt, agent.id));
               }}
-            />
-          </label>
-          <label>
-            Expiry
-            <input
-              aria-label="Configuration expiry"
+            />)}</label>
+          <label>{trn("Expiry{0}", <input
+              aria-label={tr("Configuration expiry")}
               type="datetime-local"
               value={localFromIso(book.draft.expiresAt)}
               onChange={(event) => {
@@ -357,49 +326,29 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
                 const expiresAt = isoFromLocal(event.target.value);
                 edit((current) => setExpiry(current, expiresAt, agent.id));
               }}
-            />
-          </label>
+            />)}</label>
         </div>
       </article>
 
       <article className="panel">
-        <h3>Advanced precedence overrides</h3>
-        <p className="state-line">Winning order: global → market → zone → category → app → platform → app version → cohort.</p>
+        <h3>{tr("Advanced precedence overrides")}</h3>
+        <p className="state-line">{tr("Winning order: global → market → zone → category → app → platform → app version → cohort.")}</p>
         <div className="field-grid">
-          <label>
-            Feature
-            <select aria-label="Override feature" value={featureKey} onChange={(event) => setFeatureKey(event.target.value as FeatureKey)}>
-              <option value="wallet">Wallet</option>
-            </select>
-          </label>
-          <label>
-            Level
-            <select aria-label="Override level" value={level} onChange={(event) => changeLevel(event.target.value as OverrideLevel)}>
+          <label>{trn("Feature{0}", <select aria-label={tr("Override feature")} value={featureKey} onChange={(event) => setFeatureKey(event.target.value as FeatureKey)}>
+              <option value="wallet">{tr("Wallet")}</option>
+            </select>)}</label>
+          <label>{trn("Level{0}", <select aria-label={tr("Override level")} value={level} onChange={(event) => changeLevel(event.target.value as OverrideLevel)}>
               {LEVELS.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
-          <label>
-            Target
-            <input aria-label="Override target" list="override-target-options" value={target} onChange={(event) => setTarget(event.target.value)} />
-            <datalist id="override-target-options">
-              {options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </datalist>
-          </label>
-          <label>
-            Value
-            <select aria-label="Override value" value={overrideValue ? "on" : "off"} onChange={(event) => setOverrideValue(event.target.value === "on")}>
-              <option value="on">On</option>
-              <option value="off">Off</option>
-            </select>
-          </label>
-          <label>
-            Starts at
-            <input aria-label="Override starts at" type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} />
-          </label>
-          <label>
-            Expires at
-            <input aria-label="Override expires at" type="datetime-local" value={ruleExpiresAt} onChange={(event) => setRuleExpiresAt(event.target.value)} />
-          </label>
+            </select>)}</label>
+          <label>{trn("Target{0}{1}", <input aria-label={tr("Override target")} list="override-target-options" value={target} onChange={(event) => setTarget(event.target.value)} />, <datalist id="override-target-options">
+              {options.map((item) => <option key={item.value} value={item.value}>{trx(item.label)}</option>)}
+            </datalist>)}</label>
+          <label>{trn("Value{0}", <select aria-label={tr("Override value")} value={overrideValue ? "on" : "off"} onChange={(event) => setOverrideValue(event.target.value === "on")}>
+              <option value="on">{tr("On")}</option>
+              <option value="off">{tr("Off")}</option>
+            </select>)}</label>
+          <label>{trn("Starts at{0}", <input aria-label={tr("Override starts at")} type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} />)}</label>
+          <label>{trn("Expires at{0}", <input aria-label={tr("Override expires at")} type="datetime-local" value={ruleExpiresAt} onChange={(event) => setRuleExpiresAt(event.target.value)} />)}</label>
         </div>
 
         <button
@@ -420,19 +369,17 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             }, agent.id));
             setNotice(`Override ${id} added to the unsaved draft.`);
           }}
-        >
-          Add or replace override
-        </button>
+        >{tr("Add or replace override")}</button>
 
         {book.draft.overrides.length === 0 ? (
-          <p className="state-line">No advanced overrides in this draft.</p>
+          <p className="state-line">{tr("No advanced overrides in this draft.")}</p>
         ) : (
-          <ul className="version-list" aria-label="Advanced overrides">
+          <ul className="version-list" aria-label={tr("Advanced overrides")}>
             {book.draft.overrides.map((rule) => (
               <li key={rule.id}>
-                <strong>{rule.key}</strong> · {rule.level}:{rule.target} · {rule.value ? "on" : "off"}
-                {rule.startsAt ? ` · starts ${rule.startsAt}` : ""}
-                {rule.expiresAt ? ` · expires ${rule.expiresAt}` : ""}
+                <strong>{rule.key}</strong> · {rule.level}:{rule.target} · {rule.value ? tr("on") : tr("off")}
+                {rule.startsAt ? tr(" · starts {0}", [rule.startsAt]) : ""}
+                {rule.expiresAt ? tr(" · expires {0}", [rule.expiresAt]) : ""}
                 {" "}
                 <button
                   data-command="admin.card.action"
@@ -443,9 +390,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
                     edit((current) => removeOverride(current, rule.id, agent.id));
                     setNotice(`Override ${rule.id} removed from the unsaved draft.`);
                   }}
-                >
-                  Remove
-                </button>
+                >{tr("Remove")}</button>
               </li>
             ))}
           </ul>
@@ -453,61 +398,34 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       </article>
 
       <article className="panel">
-        <h3>Effective value viewer</h3>
+        <h3>{tr("Effective value viewer")}</h3>
         <div className="field-grid">
-          <label>
-            Preview market
-            <input value={context.market ?? ""} onChange={(event) => setContext((current) => ({ ...current, market: event.target.value }))} />
-          </label>
-          <label>
-            Preview zone
-            <select value={context.zoneId ?? ""} onChange={(event) => setContext((current) => ({ ...current, zoneId: event.target.value }))}>
+          <label>{trn("Preview market{0}", <input value={context.market ?? ""} onChange={(event) => setContext((current) => ({ ...current, market: event.target.value }))} />)}</label>
+          <label>{trn("Preview zone{0}", <select value={context.zoneId ?? ""} onChange={(event) => setContext((current) => ({ ...current, zoneId: event.target.value }))}>
               {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
-            </select>
-          </label>
-          <label>
-            Preview category
-            <select value={context.category ?? "economy"} onChange={(event) => setContext((current) => ({ ...current, category: event.target.value }))}>
-              {CATEGORIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-            </select>
-          </label>
-          <label>
-            Preview app
-            <select aria-label="Preview app" value={context.app ?? "rider"} onChange={(event) => setContext((current) => ({ ...current, app: event.target.value as "rider" | "driver" }))}>
-              <option value="rider">Rider</option>
-              <option value="driver">Driver</option>
-            </select>
-          </label>
-          <label>
-            Preview platform
-            <select value={context.platform ?? "ios"} onChange={(event) => setContext((current) => ({ ...current, platform: event.target.value as "ios" | "android" }))}>
-              <option value="ios">iOS</option>
-              <option value="android">Android</option>
-            </select>
-          </label>
-          <label>
-            Preview app version
-            <input value={context.appVersion ?? ""} onChange={(event) => setContext((current) => ({ ...current, appVersion: event.target.value }))} />
-          </label>
-          <label>
-            Preview cohort
-            <input value={context.cohort ?? ""} onChange={(event) => setContext((current) => ({ ...current, cohort: event.target.value }))} />
-          </label>
+            </select>)}</label>
+          <label>{trn("Preview category{0}", <select value={context.category ?? "economy"} onChange={(event) => setContext((current) => ({ ...current, category: event.target.value }))}>
+              {CATEGORIES.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
+            </select>)}</label>
+          <label>{trn("Preview app{0}", <select aria-label={tr("Preview app")} value={context.app ?? "rider"} onChange={(event) => setContext((current) => ({ ...current, app: event.target.value as "rider" | "driver" }))}>
+              <option value="rider">{tr("Rider")}</option>
+              <option value="driver">{tr("Driver")}</option>
+            </select>)}</label>
+          <label>{trn("Preview platform{0}", <select value={context.platform ?? "ios"} onChange={(event) => setContext((current) => ({ ...current, platform: event.target.value as "ios" | "android" }))}>
+              <option value="ios">{tr("iOS")}</option>
+              <option value="android">{tr("Android")}</option>
+            </select>)}</label>
+          <label>{trn("Preview app version{0}", <input value={context.appVersion ?? ""} onChange={(event) => setContext((current) => ({ ...current, appVersion: event.target.value }))} />)}</label>
+          <label>{trn("Preview cohort{0}", <input value={context.cohort ?? ""} onChange={(event) => setContext((current) => ({ ...current, cohort: event.target.value }))} />)}</label>
         </div>
-        <p className="state-line" data-effective={reservations.level}>
-          Effective reservations: {reservations.value}. Winning level: {reservations.level}. {reservations.chain.join(" · ")}
-        </p>
-        <p className="state-line" data-testid="effective-precedence" data-effective-wallet={wallet.level}>
-          Effective wallet: {wallet.value}. Winning level: {wallet.level}. {wallet.chain.join(" · ")}
-        </p>
+        <p className="state-line" data-effective={reservations.level}>{trn("Effective reservations: {0}. Winning level: {1}. {2}", reservations.value, reservations.level, reservations.chain.join(" · "))}</p>
+        <p className="state-line" data-testid="effective-precedence" data-effective-wallet={wallet.level}>{trn("Effective wallet: {0}. Winning level: {1}. {2}", wallet.value, wallet.level, wallet.chain.join(" · "))}</p>
       </article>
 
       <article className="panel">
-        <h3>Legacy per-zone feature switches</h3>
-        <label>
-          Zone override
-          <select
-            aria-label="Zone override"
+        <h3>{tr("Legacy per-zone feature switches")}</h3>
+        <label>{trn("Zone override{0}", <select
+            aria-label={tr("Zone override")}
             value={zoneId}
             onChange={(event) => {
               setZoneId(event.target.value);
@@ -515,48 +433,34 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             }}
           >
             {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
-          </select>
-        </label>
+          </select>)}</label>
         {/* Q26 / X18: scheduled rides are set per zone in Dispatch; shown here read-only. */}
-        <p className="op-help" data-testid="config-reservations-moved">
-          Reservations per zone: set in Dispatch. <Link to="/dispatch?tab=reservations">Edit in Dispatch</Link>
-        </p>
-        <label className="check-row">
-          <input
+        <p className="op-help" data-testid="config-reservations-moved">{trn("Reservations per zone: set in Dispatch. {0}", <Link to="/dispatch?tab=reservations">{tr("Edit in Dispatch")}</Link>)}</p>
+        <label className="check-row">{trn("{0}Wallet in this zone", <input
             type="checkbox"
             checked={legacyOverride.wallet ?? book.draft.features.wallet}
             onChange={(event) => agent && edit(
               (current) => setZoneOverride(current, zoneId, "wallet", event.target.checked, agent.id),
             )}
-          />
-          Wallet in this zone
-        </label>
+          />)}</label>
       </article>
 
       <article className="panel">
-        <h3>Reasons</h3>
-        <p className="op-help" data-testid="config-reasons-moved">
-          Cancel reasons are edited in one place: <Link to="/dispatch?view=reasons">Dispatch › Cancel reasons</Link>. The cancel groups below are kept read-only for reference.
-        </p>
+        <h3>{tr("Reasons")}</h3>
+        <p className="op-help" data-testid="config-reasons-moved">{trn("Cancel reasons are edited in one place: {0}. The cancel groups below are kept read-only for reference.", <Link to="/dispatch?view=reasons">{tr("Dispatch › Cancel reasons")}</Link>)}</p>
         {REASON_GROUPS.map((group) => {
           const editable = group.id === "rider_support";
           return (
             <details key={group.id} open={editable}>
-              <summary>{group.label}{editable ? "" : " (read-only, edit in Dispatch)"}</summary>
+              <summary>{trx(group.label)}{editable ? "" : tr(" (read-only, edit in Dispatch)")}</summary>
               {book.draft.reasons.filter((reason) => reason.group === group.id).map((reason) => editable ? (
                 <div className="field-grid" key={reason.id}>
-                  <label>
-                    {reason.id} Swedish
-                    <input value={reason.sv} onChange={(event) => agent && edit(
+                  <label>{trn("{0} Swedish{1}", reason.id, <input value={reason.sv} onChange={(event) => agent && edit(
                       (current) => setReason(current, reason.id, "sv", event.target.value, agent.id),
-                    )} />
-                  </label>
-                  <label>
-                    {reason.id} English
-                    <input value={reason.en} onChange={(event) => agent && edit(
+                    )} />)}</label>
+                  <label>{trn("{0} English{1}", reason.id, <input value={reason.en} onChange={(event) => agent && edit(
                       (current) => setReason(current, reason.id, "en", event.target.value, agent.id),
-                    )} />
-                  </label>
+                    )} />)}</label>
                 </div>
               ) : (
                 <p className="op-help" key={reason.id}><code>{reason.id}</code> · {reason.en} · {reason.sv}</p>
@@ -567,15 +471,13 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       </article>
 
       <article className="panel">
-        <h3>Booking rules</h3>
+        <h3>{tr("Booking rules")}</h3>
         {/* Q26 / X18: max stops is set per zone in Dispatch › Rides & stops (the value the apps get). */}
-        <p className="op-help" data-testid="config-stops-moved">
-          Max stops: set per zone in Dispatch › Rides &amp; stops. <Link to="/dispatch?tab=rides">Edit in Dispatch</Link>
-        </p>
+        <p className="op-help" data-testid="config-stops-moved">{trn("Max stops: set per zone in Dispatch › Rides & stops. {0}", <Link to="/dispatch?tab=rides">{tr("Edit in Dispatch")}</Link>)}</p>
       </article>
 
       <article className="panel">
-        <h3>Environment (test only)</h3>
+        <h3>{tr("Environment (test only)")}</h3>
         {([
           ["simulatedArrival", "Simulated arrival (test only)"],
           ["skipActivation", "Skip activation (test only)"],
@@ -590,42 +492,35 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
                 (current) => setEnvironment(current, key, event.target.checked, agent.id),
               )}
             />
-            {label}
+            {trx(label)}
           </label>
         ))}
       </article>
 
       <article className="panel">
-        <h3>Scheduled versions</h3>
+        <h3>{tr("Scheduled versions")}</h3>
         {book.scheduled.length === 0 ? (
-          <p className="state-line">No scheduled configuration.</p>
+          <p className="state-line">{tr("No scheduled configuration.")}</p>
         ) : (
-          <ol className="version-list" aria-label="Scheduled configuration">
+          <ol className="version-list" aria-label={tr("Scheduled configuration")}>
             {book.scheduled.map((item) => (
-              <li key={item.rev}>
-                Version {item.rev} · effective {item.effectiveAt} · expires {item.expiresAt ?? "never"} · by {item.actorId}
-              </li>
+              <li key={item.rev}>{trn("Version {0} · effective {1} · expires {2} · by {3}", item.rev, item.effectiveAt, item.expiresAt ?? tr("never"), item.actorId)}</li>
             ))}
           </ol>
         )}
       </article>
 
       <article className="panel">
-        <h3>Publish history</h3>
-        <ol aria-label="Publish history">
-          {book.publications.length === 0 ? <li>No publishes yet.</li> : book.publications.map((item, index) => (
-            <li key={`${item.rev}-${item.kind ?? "publish"}-${index}`}>
-              Version {item.rev} · {item.kind ?? "publish"} by {item.actorId}
-              {item.effectiveAt ? ` · effective ${item.effectiveAt}` : ""}
-              {item.expiresAt ? ` · expires ${item.expiresAt}` : ""}
-              {item.diff.length ? `: ${item.diff.join("; ")}` : ": no diff"}
-            </li>
+        <h3>{tr("Publish history")}</h3>
+        <ol aria-label={tr("Publish history")}>
+          {book.publications.length === 0 ? <li>{tr("No publishes yet.")}</li> : book.publications.map((item, index) => (
+            <li key={`${item.rev}-${item.kind ?? "publish"}-${index}`}>{trn("Version {0} · {1} by {2}{3}{4}{5}", item.rev, item.kind ?? tr("publish"), item.actorId, item.effectiveAt ? tr(" · effective {0}", [item.effectiveAt]) : "", item.expiresAt ? tr(" · expires {0}", [item.expiresAt]) : "", item.diff.length ? `: ${item.diff.join("; ")}` : tr(": no diff"))}</li>
           ))}
         </ol>
       </article>
 
       <article className="panel">
-        <h3>Review and publish</h3>
+        <h3>{tr("Review and publish")}</h3>
         <div className="actions">
           <CommandButton
             command="admin.config.review"
@@ -636,7 +531,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             before={book.status}
             after="in_review"
             disabled={dirty || !review || !!review.error}
-            title={dirty ? "Save the draft first." : review?.error}
+            title={dirty ? tr("Save the draft first.") : review?.error}
             expectedSliceRev={persisted.draftRev}
             sliceKey="config"
             value={review?.book}
@@ -645,9 +540,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
               setBook(review.book);
               setNotice("Sent for approval.");
             }}
-          >
-            Send for approval
-          </CommandButton>
+          >{tr("Send for approval")}</CommandButton>
 
           <CommandButton
             command="admin.config.approve"
@@ -658,7 +551,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             before={book.status}
             after="approved"
             disabled={dirty || !approval || !!approval.error}
-            title={dirty ? "Save the draft first." : approval?.error}
+            title={dirty ? tr("Save the draft first.") : approval?.error}
             expectedSliceRev={persisted.draftRev}
             sliceKey="config"
             value={approval?.book}
@@ -667,9 +560,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
               setBook(approval.book);
               setNotice("Approved. A second agent can publish.");
             }}
-          >
-            Approve
-          </CommandButton>
+          >{tr("Approve")}</CommandButton>
 
           <CommandButton
             command="admin.config.publish"
@@ -680,7 +571,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             before={book.status}
             after={book.draft.scheduleAt ? "scheduled" : "published"}
             disabled={dirty || !publication || !!publication.error}
-            title={dirty ? "Save the draft first." : publication?.error}
+            title={dirty ? tr("Save the draft first.") : publication?.error}
             expectedSliceRev={persisted.draftRev}
             sliceKey="config"
             value={publication?.book}
@@ -693,9 +584,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
                   : `Published version ${publication.book.rev}.`,
               );
             }}
-          >
-            Publish
-          </CommandButton>
+          >{tr("Publish")}</CommandButton>
 
           <CommandButton
             command="admin.config.rollback"
@@ -706,7 +595,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             before={`version ${book.rev}`}
             after="previous snapshot as new version"
             disabled={dirty || book.history.length < 2}
-            title={dirty ? "Discard or save unsaved changes first." : book.history.length < 2 ? "No previous published version exists." : undefined}
+            title={dirty ? tr("Discard or save unsaved changes first.") : book.history.length < 2 ? tr("No previous published version exists.") : undefined}
             expectedSliceRev={persisted.draftRev}
             sliceKey="config"
             value={rollback}
@@ -714,9 +603,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
               setBook(rollback);
               setNotice(`Rolled back as version ${rollback.rev}.`);
             }}
-          >
-            Roll back
-          </CommandButton>
+          >{tr("Roll back")}</CommandButton>
 
           <CommandButton
             command="admin.config.save"
@@ -727,7 +614,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             before={`config ${persisted.draftRev}`}
             after={`config ${base.draftRev}`}
             disabled={dirty || !lifecycleDue}
-            title={dirty ? "Save or discard unsaved changes first." : lifecycleDue ? undefined : "No schedule or expiry is due."}
+            title={dirty ? tr("Save or discard unsaved changes first.") : lifecycleDue ? undefined : tr("No schedule or expiry is due.")}
             expectedSliceRev={persisted.draftRev}
             sliceKey="config"
             value={base}
@@ -735,9 +622,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
               setBook(base);
               setNotice("Due schedule or expiry applied.");
             }}
-          >
-            Apply due schedule / expiry
-          </CommandButton>
+          >{tr("Apply due schedule / expiry")}</CommandButton>
         </div>
       </article>
     </div>
@@ -746,10 +631,10 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
 
 type SettingsTab = "all" | "compare" | "elsewhere" | "panel";
 const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
-  { id: "all", label: "All settings" },
-  { id: "compare", label: "Compare versions" },
-  { id: "elsewhere", label: "Settings in other sections" },
-  { id: "panel", label: "Admin panel" },
+  { id: "all", get label() { return tr("All settings"); } },
+  { id: "compare", get label() { return tr("Compare versions"); } },
+  { id: "elsewhere", get label() { return tr("Settings in other sections"); } },
+  { id: "panel", get label() { return tr("Admin panel"); } },
 ];
 
 export function ConfigPage() {
@@ -776,12 +661,12 @@ export function ConfigPage() {
   return (
     <div className="dx-page pl-page">
       <div className="pl-top">
-        <button data-command="admin.panel.view" type="button" className="dash-btn ghost dx-back" onClick={() => { if (!leave()) return; if (globalThis.history.length > 1) navigate(-1); else navigate("/"); }}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
-        <div className="dash-tabs dx-views" role="tablist" aria-label="Settings sections">
-          {SETTINGS_TABS.map((item) => <button data-command="admin.panel.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => selectTab(item.id)}>{item.label}</button>)}
+        <button data-command="admin.panel.view" type="button" className="dash-btn ghost dx-back" onClick={() => { if (!leave()) return; if (globalThis.history.length > 1) navigate(-1); else navigate("/"); }}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
+        <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Settings sections")}>
+          {SETTINGS_TABS.map((item) => <button data-command="admin.panel.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => selectTab(item.id)}>{trx(item.label)}</button>)}
         </div>
       </div>
-      {notice ? <p role="status" className="pl-status">{notice}</p> : null}
+      {notice ? <p role="status" className="pl-status">{trSentences(notice)}</p> : null}
       {tab === "all" ? <><FindSetting onPick={jump} /><ConfigAll onDirty={setUnsaved} /></> : null}
       {tab === "compare" ? <CompareVersions /> : null}
       {tab === "elsewhere" ? <SettingsElsewhere /> : null}

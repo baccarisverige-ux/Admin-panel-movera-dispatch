@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { CalendarDays, CalendarRange } from "lucide-react";
 import type { Period, PeriodKind } from "./period";
+import { tr, trn, trx } from "../i18n";
 
 const PRESETS: { id: PeriodKind; label: string }[] = [
-  { id: "today", label: "Today" },
-  { id: "week", label: "Week" },
-  { id: "month", label: "Month" },
-  { id: "year", label: "Year" },
+  { id: "today", get label() { return tr("Today"); } },
+  { id: "week", get label() { return tr("Week"); } },
+  { id: "month", get label() { return tr("Month"); } },
+  { id: "year", get label() { return tr("Year"); } },
 ];
 
 type Props = { period: Period; today: string; onChange: (period: Period) => void };
@@ -20,7 +21,7 @@ export function PeriodPicker({ period, today, onChange }: Props) {
 
   return (
     <div className="period-picker">
-      <div className="segmented" role="radiogroup" aria-label="Period">
+      <div className="segmented" role="radiogroup" aria-label={tr("Period")}>
         {PRESETS.map((preset) => (
           <button data-command="admin.ui.period"
             key={preset.id}
@@ -33,13 +34,13 @@ export function PeriodPicker({ period, today, onChange }: Props) {
               onChange({ kind: preset.id });
             }}
           >
-            {preset.label}
+            {trx(preset.label)}
           </button>
         ))}
       </div>
       <label className={period.kind === "date" ? "date-chip active" : "date-chip"}>
         <CalendarDays size={15} aria-hidden="true" />
-        <span className="sr-only">Pick a date</span>
+        <span className="sr-only">{tr("Pick a date")}</span>
         <input
           type="date"
           value={period.kind === "date" ? period.on : ""}
@@ -51,10 +52,7 @@ export function PeriodPicker({ period, today, onChange }: Props) {
           }}
         />
       </label>
-      <button data-command="admin.ui.period" type="button" className={period.kind === "range" || rangeOpen ? "date-chip active" : "date-chip"} aria-expanded={rangeOpen} onClick={() => setRangeOpen((open) => !open)}>
-        <CalendarRange size={15} aria-hidden="true" />
-        Range
-      </button>
+      <button data-command="admin.ui.period" type="button" className={period.kind === "range" || rangeOpen ? "date-chip active" : "date-chip"} aria-expanded={rangeOpen} onClick={() => setRangeOpen((open) => !open)}>{trn("{0}Range", <CalendarRange size={15} aria-hidden="true" />)}</button>
       {rangeOpen ? (
         <form
           className="range-form"
@@ -63,9 +61,9 @@ export function PeriodPicker({ period, today, onChange }: Props) {
             if (!rangeError) onChange({ kind: "range", from, to });
           }}
         >
-          <label>From<input type="date" value={from} onChange={(event) => setFrom(event.target.value)} required /></label>
-          <label>To<input type="date" value={to} onChange={(event) => setTo(event.target.value)} required /></label>
-          <button data-command="admin.ui.period" type="submit" className="dash-btn small" disabled={Boolean(rangeError)}>Apply</button>
+          <label>{trn("From{0}", <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} required />)}</label>
+          <label>{trn("To{0}", <input type="date" value={to} onChange={(event) => setTo(event.target.value)} required />)}</label>
+          <button data-command="admin.ui.period" type="submit" className="dash-btn small" disabled={Boolean(rangeError)}>{tr("Apply")}</button>
           {rangeError ? <p role="alert">{rangeError}</p> : null}
         </form>
       ) : null}

@@ -3,6 +3,7 @@ import { History, RotateCcw } from "lucide-react";
 import { CommandButton } from "../ui/CommandButton";
 import { largeStoreChanges, restoreRevision, SLICE_KEY, type PricingStore } from "./zonePricing";
 import { zoneById } from "../markets/markets";
+import { tr, trn, uiLocale } from "../i18n";
 
 type Props = {
   store: PricingStore;
@@ -15,22 +16,18 @@ type Props = {
 };
 
 /** Every publish as a revision, newest first. Restoring adds a new revision; nothing is rewritten. */
-export function HistoryPanel({ store, zoneId, agentId, canEdit, locale, timeZone, onRestored }: Props) {
+export function HistoryPanel({ store, zoneId, agentId, canEdit, timeZone, onRestored }: Props) {
   const [onlyZone, setOnlyZone] = useState(true);
-  const format = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone });
+  const format = new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeStyle: "short", timeZone });
   const rows = store.history.filter((item) => !onlyZone || item.zoneIds.includes(zoneId));
   return (
     <>
       <div className="history-head">
-        <label className="mini-switch">
-          <input type="checkbox" checked={onlyZone} onChange={(event) => setOnlyZone(event.target.checked)} aria-label={`Only ${zoneById(zoneId)?.name ?? zoneId}`} />
-          <span aria-hidden="true"><i /></span>
-          Only {zoneById(zoneId)?.name ?? zoneId}
-        </label>
-        <small>Current pricing revision {store.draftRev}</small>
+        <label className="mini-switch">{trn("{0}{1}Only {2}", <input type="checkbox" checked={onlyZone} onChange={(event) => setOnlyZone(event.target.checked)} aria-label={tr("Only {0}", [zoneById(zoneId)?.name ?? zoneId])} />, <span aria-hidden="true"><i /></span>, zoneById(zoneId)?.name ?? zoneId)}</label>
+        <small>{trn("Current pricing revision {0}", store.draftRev)}</small>
       </div>
-      {rows.length === 0 ? <p className="state-line">No published change yet. Prices are the Movera defaults.</p> : (
-        <ol className="history-list" aria-label="Pricing history">
+      {rows.length === 0 ? <p className="state-line">{tr("No published change yet. Prices are the Movera defaults.")}</p> : (
+        <ol className="history-list" aria-label={tr("Pricing history")}>
           {rows.map((revision) => {
             const restore = agentId ? restoreRevision(store, revision.rev, agentId, new Date().toISOString()) : { store, error: "Sign in again." };
             const live = revision.rev === store.history[0]?.rev;
@@ -39,13 +36,13 @@ export function HistoryPanel({ store, zoneId, agentId, canEdit, locale, timeZone
                 <div className="history-dot" aria-hidden="true"><History size={14} /></div>
                 <div className="history-body">
                   <div className="history-title">
-                    <strong>Revision {revision.rev}</strong>
-                    {live ? <span className="badge-live">Live now</span> : null}
+                    <strong>{trn("Revision {0}", revision.rev)}</strong>
+                    {live ? <span className="badge-live">{tr("Live now")}</span> : null}
                     <small>{format.format(Date.parse(revision.at))} · {revision.actorId} · {revision.reason}</small>
                   </div>
                   <ul className="change-list">
                     {revision.changes.slice(0, 8).map((line) => <li key={line}>{line}</li>)}
-                    {revision.changes.length > 8 ? <li className="more">+{revision.changes.length - 8} more changes</li> : null}
+                    {revision.changes.length > 8 ? <li className="more">{trn("+{0} more changes", revision.changes.length - 8)}</li> : null}
                   </ul>
                 </div>
                 {!live ? (
@@ -64,9 +61,7 @@ export function HistoryPanel({ store, zoneId, agentId, canEdit, locale, timeZone
                     title={restore.error}
                     largeChanges={restore.error ? undefined : largeStoreChanges(store, restore.store)}
                     onDone={() => onRestored(`Pricing revision ${revision.rev} restored as revision ${restore.store.draftRev}.`)}
-                  >
-                    <RotateCcw size={13} aria-hidden="true" /> Restore
-                  </CommandButton>
+                  >{trn("{0} Restore", <RotateCcw size={13} aria-hidden="true" />)}</CommandButton>
                 ) : null}
               </li>
             );

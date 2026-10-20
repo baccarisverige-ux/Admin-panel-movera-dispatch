@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { can, type Role } from "../auth/permissions";
 import { CommandButton } from "./CommandButton";
 import { useDialogFocus } from "./useDialogFocus";
+import { tr, trn, trx } from "../i18n";
 
 export function StatusDot({ tone, children }: { tone: "green" | "amber" | "red" | "muted"; children: ReactNode }) {
   return (
@@ -22,18 +23,16 @@ export function DateTime({ iso }: { iso: string }) {
 
 export function Duration({ seconds }: { seconds: number }) {
   const minutes = Math.floor(seconds / 60);
-  return <span>{minutes} min {seconds % 60} s</span>;
+  return <span>{trn("{0} min {1} s", minutes, seconds % 60)}</span>;
 }
 
 export function EmptyState({ title }: { title: string }) {
-  return <p className="state-line">{title}</p>;
+  return <p className="state-line">{trx(title)}</p>;
 }
 
 export function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
-    <p className="state-line">
-      Something failed. <CommandButton command="admin.ui.retry" className="link-action" type="button" onDone={onRetry}>Retry</CommandButton>
-    </p>
+    <p className="state-line">{trn("Something failed. {0}", <CommandButton command="admin.ui.retry" className="link-action" type="button" onDone={onRetry}>{tr("Retry")}</CommandButton>)}</p>
   );
 }
 
@@ -41,8 +40,8 @@ export function NoAccess() {
   return (
     <div className="page-heading">
       <div>
-        <h2>No access</h2>
-        <p>Your role cannot open this page.</p>
+        <h2>{tr("No access")}</h2>
+        <p>{tr("Your role cannot open this page.")}</p>
       </div>
     </div>
   );
@@ -68,7 +67,7 @@ export function Timeline({ items }: { items: { at: string; text: string }[] }) {
 export function PhonePreview({ app, children }: { app: "rider" | "driver"; children: ReactNode }) {
   return (
     <div className={`phone-preview ${app}`}>
-      <strong>{app === "rider" ? "Rider" : "Driver"}</strong>
+      <strong>{app === "rider" ? tr("Rider") : tr("Driver")}</strong>
       <div>{children}</div>
     </div>
   );
@@ -77,8 +76,8 @@ export function PhonePreview({ app, children }: { app: "rider" | "driver"; child
 export function DiffView({ before, after }: { before: string; after: string }) {
   return (
     <div className="diff-view">
-      <p>Before: {before}</p>
-      <p>After: {after}</p>
+      <p>{trn("Before: {0}", before)}</p>
+      <p>{trn("After: {0}", after)}</p>
     </div>
   );
 }
@@ -91,8 +90,8 @@ export function Drawer({ open, title, onClose, children }: { open: boolean; titl
   if (!open) return null;
   return (
     <aside className="drawer" role="dialog" aria-label={title}>
-      <CommandButton command="admin.ui.drawerClose" className="link-action" type="button" onDone={onClose}>Close</CommandButton>
-      <h3>{title}</h3>
+      <CommandButton command="admin.ui.drawerClose" className="link-action" type="button" onDone={onClose}>{tr("Close")}</CommandButton>
+      <h3>{trx(title)}</h3>
       {children}
     </aside>
   );
@@ -102,7 +101,7 @@ export function DetailLayout({ title, status, actions, tabs, children }: { title
   return (
     <article className="panel">
       <header className="detail-head">
-        <h2>{title}</h2>
+        <h2>{trx(title)}</h2>
         {status}
         {actions}
       </header>
@@ -121,16 +120,16 @@ export function DocumentViewer() {
   return (
     <div className="doc-viewer">
       <div className="actions">
-        <CommandButton command="admin.doc.image" className="secondary-btn" type="button" onDone={() => setKind("image")}>Image</CommandButton>
+        <CommandButton command="admin.doc.image" className="secondary-btn" type="button" onDone={() => setKind("image")}>{tr("Image")}</CommandButton>
         <CommandButton command="admin.doc.pdf" className="secondary-btn" type="button" onDone={() => setKind("pdf")}>PDF</CommandButton>
-        <CommandButton command="admin.doc.zoomIn" className="secondary-btn" type="button" onDone={() => setZoom((value) => Math.min(2, value + 0.25))}>Zoom in</CommandButton>
-        <CommandButton command="admin.doc.zoomOut" className="secondary-btn" type="button" onDone={() => setZoom((value) => Math.max(0.5, value - 0.25))}>Zoom out</CommandButton>
-        <CommandButton command="admin.doc.rotate" className="secondary-btn" type="button" onDone={() => setTurn((value) => value + 1)}>Rotate</CommandButton>
+        <CommandButton command="admin.doc.zoomIn" className="secondary-btn" type="button" onDone={() => setZoom((value) => Math.min(2, value + 0.25))}>{tr("Zoom in")}</CommandButton>
+        <CommandButton command="admin.doc.zoomOut" className="secondary-btn" type="button" onDone={() => setZoom((value) => Math.max(0.5, value - 0.25))}>{tr("Zoom out")}</CommandButton>
+        <CommandButton command="admin.doc.rotate" className="secondary-btn" type="button" onDone={() => setTurn((value) => value + 1)}>{tr("Rotate")}</CommandButton>
       </div>
       {kind === "image" ? (
-        <img src={`${base}license.png`} alt="Taxi driver license" style={style} />
+        <img src={`${base}license.png`} alt={tr("Taxi driver license")} style={style} />
       ) : (
-        <iframe title="Taxi driver license PDF" src={`${base}license.pdf`} style={{ ...style, width: 280, height: 360, border: 0 }} />
+        <iframe title={tr("Taxi driver license PDF")} src={`${base}license.pdf`} style={{ ...style, width: 280, height: 360, border: 0 }} />
       )}
     </div>
   );
@@ -162,25 +161,19 @@ function ConfirmDialogCard({ record, reasons, typed, onConfirm, onClose }: Confi
   }
   return (
     <div ref={root} tabIndex={-1} className="modal open" role="presentation">
-      <form className="modal-card" role="dialog" aria-modal="true" aria-label="Confirm" onSubmit={submit}>
-        <h3>Confirm</h3>
-        <p>This acts on {record}.</p>
-        <label>
-          Reason
-          <select value={reason} onChange={(event) => setReason(event.target.value)}>
+      <form className="modal-card" role="dialog" aria-modal="true" aria-label={tr("Confirm")} onSubmit={submit}>
+        <h3>{tr("Confirm")}</h3>
+        <p>{trn("This acts on {0}.", record)}</p>
+        <label>{trn("Reason{0}", <select value={reason} onChange={(event) => setReason(event.target.value)}>
             {reasons.map((item) => (
               <option key={item}>{item}</option>
             ))}
-          </select>
-        </label>
+          </select>)}</label>
         {typed ? (
-          <label>
-            Type {typed} to confirm
-            <input value={text} onChange={(event) => setText(event.target.value)} />
-          </label>
+          <label>{trn("Type {0} to confirm{1}", typed, <input value={text} onChange={(event) => setText(event.target.value)} />)}</label>
         ) : null}
-        <CommandButton command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!confirmed}>Confirm</CommandButton>
-        <CommandButton command="admin.confirm.cancel" className="secondary-btn" type="button" onDone={onClose}>Cancel</CommandButton>
+        <CommandButton command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!confirmed}>{tr("Confirm")}</CommandButton>
+        <CommandButton command="admin.confirm.cancel" className="secondary-btn" type="button" onDone={onClose}>{tr("Cancel")}</CommandButton>
       </form>
     </div>
   );

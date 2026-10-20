@@ -23,6 +23,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { NumberField } from "./NumberField";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
+import { tr, trn, trx } from "../i18n";
 
 /** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
 export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus"] as const;
@@ -49,8 +50,8 @@ function AmountList({ title, help, item, prefix, plus, list, saved, max, country
   return (
     <div className="fee-card cx-list" role="group" aria-label={title}>
       <div>
-        <strong>{title}</strong>
-        <small>{help} Up to {MAX_AMOUNTS} amounts, each at most {money(max, country)}.</small>
+        <strong>{trx(title)}</strong>
+        <small>{trn("{0} Up to {1} amounts, each at most {2}.", help, MAX_AMOUNTS, money(max, country))}</small>
       </div>
       <ul className="cx-amounts">
         {list.map((entry, index) => {
@@ -60,19 +61,17 @@ function AmountList({ title, help, item, prefix, plus, list, saved, max, country
               <span className="cx-index" aria-hidden="true">{index + 1}</span>
               <NumberField label={`${item} ${index + 1}`} value={entry.amount} unit={symbol} step={moneyStep(country)} max={max} disabled={!canEdit} changed={!before || before.amount !== entry.amount} onChange={(amount) => set(entry.id, { amount })} />
               <label className="mini-switch">
-                <input type="checkbox" aria-label={`${item} ${index + 1} active`} checked={entry.enabled} disabled={!canEdit} onChange={(event) => set(entry.id, { enabled: event.target.checked })} />
+                <input type="checkbox" aria-label={tr("{0} {1} active", [item, index + 1])} checked={entry.enabled} disabled={!canEdit} onChange={(event) => set(entry.id, { enabled: event.target.checked })} />
                 <span aria-hidden="true"><i /></span>
-                {entry.enabled ? "Active" : "Off"}
+                {entry.enabled ? tr("Active") : tr("Off")}
               </label>
             </li>
           );
         })}
       </ul>
-      <button data-command="admin.pricing.edit" type="button" className="link-action" disabled={!canEdit || list.length >= MAX_AMOUNTS} onClick={() => onChange(addAmount(list, prefix, country))}>
-        <Plus size={13} aria-hidden="true" /> Add an amount
-      </button>
-      <div className="tip-preview" aria-label={`${title} the rider sees`}>
-        {active.length ? active.map((entry) => <span key={entry.id}>{plus ? "+" : ""}{money(entry.amount, country)}</span>) : <small>None active: the rider sees no buttons.</small>}
+      <button data-command="admin.pricing.edit" type="button" className="link-action" disabled={!canEdit || list.length >= MAX_AMOUNTS} onClick={() => onChange(addAmount(list, prefix, country))}>{trn("{0} Add an amount", <Plus size={13} aria-hidden="true" />)}</button>
+      <div className="tip-preview" aria-label={tr("{0} the rider sees", [title])}>
+        {active.length ? active.map((entry) => <span key={entry.id}>{plus ? "+" : ""}{money(entry.amount, country)}</span>) : <small>{tr("None active: the rider sees no buttons.")}</small>}
       </div>
     </div>
   );
@@ -121,49 +120,49 @@ export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotic
     return () => window.clearTimeout(timer);
   }, [section, loading]);
 
-  if (loading) return <p className="state-line">Loading the country settings.</p>;
+  if (loading) return <p className="state-line">{tr("Loading the country settings.")}</p>;
 
   return (
     <FieldErrorScope value={fieldErrors.report}>
       <section className="dash-card" aria-labelledby="extras-title" data-testid="pricing-extras">
         <div className="card-head">
-          <h3 id="extras-title"><HandHeart size={16} aria-hidden="true" /> Tips &amp; limits · all of {name}</h3>
-          <span className="fine-print">One setting per country, in {symbol}. Saved with Save, not with Publish.</span>
+          <h3 id="extras-title">{trn("{0} Tips & limits · all of {1}", <HandHeart size={16} aria-hidden="true" />, name)}</h3>
+          <span className="fine-print">{trn("One setting per country, in {0}. Saved with Save, not with Publish.", symbol)}</span>
         </div>
         <div className="fee-grid">
           <div id="extras-tips" className="cx-anchor">
-            <AmountList title="Tips" help="Buttons the rider sees after the ride." item="Tip" prefix="tip" list={shown.tips} saved={saved.tips} max={tipMax(country)} country={country} canEdit={canEdit} onChange={(tips) => edit({ tips })} />
+            <AmountList title={tr("Tips")} help={tr("Buttons the rider sees after the ride.")} item="Tip" prefix="tip" list={shown.tips} saved={saved.tips} max={tipMax(country)} country={country} canEdit={canEdit} onChange={(tips) => edit({ tips })} />
           </div>
           <div id="extras-raise-steps" className="cx-anchor">
-            <AmountList title="Raise-offer quick steps" help="Quick “+” buttons while the rider waits for a driver." item="Raise step" prefix="raise" plus list={shown.raiseSteps} saved={saved.raiseSteps} max={raiseStepMax(country)} country={country} canEdit={canEdit} onChange={(raiseSteps) => edit({ raiseSteps })} />
+            <AmountList title={tr("Raise-offer quick steps")} help={tr("Quick “+” buttons while the rider waits for a driver.")} item="Raise step" prefix="raise" plus list={shown.raiseSteps} saved={saved.raiseSteps} max={raiseStepMax(country)} country={country} canEdit={canEdit} onChange={(raiseSteps) => edit({ raiseSteps })} />
           </div>
           <div id="extras-promo-cap" className="cx-anchor">
             <div className="fee-card">
               <div>
-                <strong><Gift size={14} aria-hidden="true" /> Promo cap</strong>
-                <small>The highest promo discount on one ride, shown to the rider in {symbol}. At most {money(promoCapMax(country), country)}.</small>
+                <strong>{trn("{0} Promo cap", <Gift size={14} aria-hidden="true" />)}</strong>
+                <small>{trn("The highest promo discount on one ride, shown to the rider in {0}. At most {1}.", symbol, money(promoCapMax(country), country))}</small>
               </div>
               <label className="mini-switch big">
-                <input type="checkbox" aria-label="Cap promo discounts" checked={shown.promoCap !== null} disabled={!canEdit} onChange={(event) => edit({ promoCap: event.target.checked ? saved.promoCap ?? fromSek(100, country) : null })} />
+                <input type="checkbox" aria-label={tr("Cap promo discounts")} checked={shown.promoCap !== null} disabled={!canEdit} onChange={(event) => edit({ promoCap: event.target.checked ? saved.promoCap ?? fromSek(100, country) : null })} />
                 <span aria-hidden="true"><i /></span>
-                {shown.promoCap === null ? "No cap" : "Capped"}
+                {shown.promoCap === null ? tr("No cap") : tr("Capped")}
               </label>
-              {shown.promoCap !== null ? <NumberField label="Promo cap" value={shown.promoCap} unit={symbol} step={moneyStep(country)} max={promoCapMax(country)} disabled={!canEdit} changed={shown.promoCap !== saved.promoCap} onChange={(promoCap) => edit({ promoCap })} /> : null}
+              {shown.promoCap !== null ? <NumberField label={tr("Promo cap")} value={shown.promoCap} unit={symbol} step={moneyStep(country)} max={promoCapMax(country)} disabled={!canEdit} changed={shown.promoCap !== saved.promoCap} onChange={(promoCap) => edit({ promoCap })} /> : null}
             </div>
           </div>
           <div id="extras-driver-bonus" className="cx-anchor">
             <div className="fee-card">
               <div>
-                <strong><BadgeDollarSign size={14} aria-hidden="true" /> Driver bonus limit</strong>
-                <small>The most an admin can add to one trip for the driver. Movera pays it; the rider never does. Above it the admin sees “adjust the limit in Pricing”.</small>
+                <strong>{trn("{0} Driver bonus limit", <BadgeDollarSign size={14} aria-hidden="true" />)}</strong>
+                <small>{tr("The most an admin can add to one trip for the driver. Movera pays it; the rider never does. Above it the admin sees “adjust the limit in Pricing”.")}</small>
               </div>
-              <NumberField label="Driver bonus limit" value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
-              <small data-testid="driver-bonus-hard-max"><TrendingUp size={12} aria-hidden="true" /> Hard max {money(hardMax, country)}: the limit can never be higher.</small>
+              <NumberField label={tr("Driver bonus limit")} value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
+              <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
           </div>
         </div>
         {issues.length ? <p className="pl-warn" role="alert">{issues[0]}</p> : null}
-        {dirty && !issues.length ? <ul className="cx-lines" aria-label="Unsaved changes">{lines.map((line) => <li key={line}>{line}</li>)}</ul> : null}
+        {dirty && !issues.length ? <ul className="cx-lines" aria-label={tr("Unsaved changes")}>{lines.map((line) => <li key={line}>{line}</li>)}</ul> : null}
         <div className="actions">
           <CommandButton
             command="admin.pricing.saveCountry"
@@ -177,13 +176,11 @@ export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotic
             value={{ ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
             expectedSliceRev={book.draftRev}
             disabled={!canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
-            title={!canEdit ? "Your role cannot change this." : !dirty ? "No unsaved change." : fieldErrors.first ?? issues[0]}
+            title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}
             largeChanges={large}
-            onDone={() => { setDraft(null); onNotice(`Tips & limits saved for ${name}. The rider and driver apps get them with the next app config.`); }}
-          >
-            <Save size={15} aria-hidden="true" /> Save tips &amp; limits
-          </CommandButton>
-          <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" disabled={!draft} onClick={() => setDraft(null)}>Discard</button>
+            onDone={() => { setDraft(null); onNotice(tr("Tips & limits saved for {0}. The rider and driver apps get them with the next app config.", [name])); }}
+          >{trn("{0} Save tips & limits", <Save size={15} aria-hidden="true" />)}</CommandButton>
+          <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" disabled={!draft} onClick={() => setDraft(null)}>{tr("Discard")}</button>
         </div>
       </section>
     </FieldErrorScope>

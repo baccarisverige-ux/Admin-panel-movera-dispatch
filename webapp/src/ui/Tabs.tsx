@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { tr, trx } from "../i18n";
 
 export type TabItem = {
   id: string;
@@ -29,7 +30,7 @@ export function Tabs({ tabs, activeId, onChange }: TabsProps) {
   }
 
   return (
-    <div className="tabs" role="tablist" aria-label="Record sections">
+    <div className="tabs" role="tablist" aria-label={tr("Record sections")}>
       {items.map((tab) => (
         <button
           data-command="admin.tabs.select"
@@ -49,7 +50,7 @@ export function Tabs({ tabs, activeId, onChange }: TabsProps) {
           data-tab={tab.id}
           onClick={() => selectTab(tab.id)}
         >
-          {tab.label}
+          {trx(tab.label)}
         </button>
       ))}
     </div>

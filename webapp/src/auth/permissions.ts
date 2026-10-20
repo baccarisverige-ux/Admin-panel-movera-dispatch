@@ -1,5 +1,6 @@
 import { MENU } from "../nav.ts";
 import type { MarketId } from "../markets/markets.ts";
+import type { AppLanguage } from "../config/zoneDefaults.ts";
 import { parseZoneList } from "../markets/markets.ts";
 import { zoneAllowed } from "../markets/scope.ts";
 
@@ -34,6 +35,8 @@ export type Agent = {
   active: boolean;
   presence: "online" | "away";
   scope: AgentScope;
+  /** The admin's own panel language from their profile (round 4); missing means the default of their country. */
+  language?: AppLanguage;
 };
 
 export const DEMO_PASSWORD = "movera";

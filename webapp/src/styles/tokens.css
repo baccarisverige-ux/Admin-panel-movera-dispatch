@@ -1564,3 +1564,18 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
   .topbar .admin-profile > div:nth-child(2) { display: none; }
   .topbar .crumb { display: none; }
 }
+
+/* Round 4: the admin's profile (avatar in the top bar) with the panel language. */
+.profile-wrap { position: relative; display: inline-flex; }
+.profile-btn { border: 0; cursor: pointer; padding: 0; font: inherit; font-size: 12px; font-weight: 700; }
+.profile-btn:focus-visible { outline: 2px solid var(--accent, #2563eb); outline-offset: 2px; }
+.profile-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 45; display: grid; gap: 10px; width: min(320px, calc(100vw - 28px)); padding: 14px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(16, 24, 32, .16); text-align: left; }
+.profile-menu h3 { margin: 0; font-size: 14px; }
+.profile-menu-who, .profile-menu-help { margin: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.profile-menu-who b { color: inherit; font-size: 13px; }
+.profile-menu-field { display: grid; gap: 4px; font-size: 12px; font-weight: 600; }
+.profile-menu-field select { width: 100%; min-width: 0; }
+.profile-menu .primary-btn { justify-self: start; }
+@media (max-width: 620px) {
+  .profile-menu { position: fixed; right: 14px; left: 14px; top: calc(var(--topbar-h, 64px) + 4px); width: auto; }
+}

@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { SeriesPoint } from "./earnings";
+import { tr, trn, trx } from "../i18n";
 
 type Props = {
   points: SeriesPoint[];
@@ -72,7 +73,7 @@ export function EarningsChart({ points, format, formatAxis, compareLabel }: Prop
         width={width}
         height={HEIGHT}
         role="img"
-        aria-label={`Gross bookings per period, ${compareLabel}. Use the arrow keys to read values.`}
+        aria-label={tr("Gross bookings per period, {0}. Use the arrow keys to read values.", [compareLabel])}
         tabIndex={0}
         onPointerMove={(event) => pick(event.clientX)}
         onPointerLeave={() => setActive(null)}
@@ -96,7 +97,7 @@ export function EarningsChart({ points, format, formatAxis, compareLabel }: Prop
           </g>
         ))}
         {points.map((item, index) => (index % geometry.labelEvery === 0 ? (
-          <text key={item.at} x={geometry.x(index)} y={HEIGHT - 8} textAnchor="middle" className="viz-axis">{item.label}</text>
+          <text key={item.at} x={geometry.x(index)} y={HEIGHT - 8} textAnchor="middle" className="viz-axis">{trx(item.label)}</text>
         ) : null))}
         {geometry.previous ? <path d={geometry.previous} className="viz-previous" /> : null}
         {geometry.area ? <path d={geometry.area} fill={`url(#${gradient})`} /> : null}
@@ -110,22 +111,22 @@ export function EarningsChart({ points, format, formatAxis, compareLabel }: Prop
       </svg>
       {point ? (
         <div className="viz-tooltip" style={{ left: tipLeft }} role="status">
-          <span className="viz-tip-title">{point.label}</span>
-          <span className="viz-tip-row"><i className="key current" /><strong>{Number.isFinite(point.current) ? format(point.current) : "—"}</strong> This period</span>
-          <span className="viz-tip-row"><i className="key previous" /><strong>{point.previous === null ? "—" : format(point.previous)}</strong> Before</span>
+          <span className="viz-tip-title">{trx(point.label)}</span>
+          <span className="viz-tip-row">{trn("{0}{1} This period", <i className="key current" />, <strong>{Number.isFinite(point.current) ? format(point.current) : "—"}</strong>)}</span>
+          <span className="viz-tip-row">{trn("{0}{1} Before", <i className="key previous" />, <strong>{point.previous === null ? "—" : format(point.previous)}</strong>)}</span>
         </div>
       ) : null}
       <div className="viz-legend" aria-hidden="true">
-        <span><i className="key current" />This period</span>
+        <span>{trn("{0}This period", <i className="key current" />)}</span>
         <span><i className="key previous" />{compareLabel.replace(/^vs /, "")}</span>
       </div>
       <div className="sr-only">
       <table>
-        <caption>Gross bookings by period</caption>
-        <thead><tr><th>Period</th><th>This period</th><th>Before</th></tr></thead>
+        <caption>{tr("Gross bookings by period")}</caption>
+        <thead><tr><th>{tr("Period")}</th><th>{tr("This period")}</th><th>{tr("Before")}</th></tr></thead>
         <tbody>
           {points.map((item) => (
-            <tr key={item.at}><td>{item.label}</td><td>{Number.isFinite(item.current) ? format(item.current) : "—"}</td><td>{item.previous === null ? "—" : format(item.previous)}</td></tr>
+            <tr key={item.at}><td>{trx(item.label)}</td><td>{Number.isFinite(item.current) ? format(item.current) : "—"}</td><td>{item.previous === null ? "—" : format(item.previous)}</td></tr>
           ))}
         </tbody>
       </table>

@@ -6,6 +6,7 @@ import type { ZoneSurge } from "./surge";
 import type { SurgeStyle } from "./surgeGeo";
 import { installSurgeLayers, surgePitch, updateSurgeLayers } from "./surgeLayers";
 import { SurgeControls, SurgeLegend } from "./SurgeControls";
+import { tr } from "../i18n";
 
 const STYLE = {
   version: 8 as const,
@@ -81,8 +82,8 @@ export function SurgeMap({ market, rows, selectedId, onSelect, shown, style, onS
   if (failed) {
     return (
       <div className="map-fallback">
-        <p>The map needs WebGL, which this browser has turned off. Surge by zone:</p>
-        <ul>{rows.map((row) => <li key={row.zoneId}>{row.name} · {row.multiplier > 1 ? `×${row.multiplier.toFixed(1)} (${row.source})` : "no surge"}</li>)}</ul>
+        <p>{tr("The map needs WebGL, which this browser has turned off. Surge by zone:")}</p>
+        <ul>{rows.map((row) => <li key={row.zoneId}>{row.name} · {row.multiplier > 1 ? `×${row.multiplier.toFixed(1)} (${row.source})` : tr("no surge")}</li>)}</ul>
       </div>
     );
   }

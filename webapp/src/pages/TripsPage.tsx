@@ -19,6 +19,7 @@ import { DataTable } from "../ui/DataTable";
 import { RiderAssignName } from "../dispatch/AssignPanel";
 import { canAssign as canAssignTrip } from "../dispatch/assign";
 import { Modal } from "../ui/Modal";
+import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 
 const PAYMENTS: PaymentState[] = ["pending", "authorized", "captured", "failed", "refunded"];
 
@@ -70,7 +71,7 @@ export function TripsPage() {
   // Everything the list needs per trip, worked out once. Date and money formatters are made once, not per row.
   const facts = useMemo(() => {
     const dayFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit", day: "2-digit" });
-    const whenFormat = new Intl.DateTimeFormat(scope.market.locale, { timeZone: scope.market.timeZone, dateStyle: "short", timeStyle: "short" });
+    const whenFormat = new Intl.DateTimeFormat(uiLocale(), { timeZone: scope.market.timeZone, dateStyle: "short", timeStyle: "short" });
     const priceFormat = new Intl.NumberFormat(scope.market.locale, { style: "currency", currency: scope.market.currency });
     return new Map(rows.map((trip) => {
       const started = new Date(startedAt(trip.id));
@@ -135,10 +136,10 @@ export function TripsPage() {
     return (
       <div className="dx-page op-page">
         <header className="dx-head">
-          <button data-command="admin.trip.view" type="button" className="dash-btn ghost dx-back" onClick={() => set({ view: null })}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+          <button data-command="admin.trip.view" type="button" className="dash-btn ghost dx-back" onClick={() => set({ view: null })}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
           <div className="dx-head-text">
-            <h2>Trip settings</h2>
-            <p>Who sees phone numbers and chats, which actions admins have, and when money needs a second admin.</p>
+            <h2>{tr("Trip settings")}</h2>
+            <p>{tr("Who sees phone numbers and chats, which actions admins have, and when money needs a second admin.")}</p>
           </div>
         </header>
         <TripSettingsView ops={ops} rev={slice.value.draftRev ?? 1} loading={slice.loading} editable={isSuper} />
@@ -149,89 +150,89 @@ export function TripsPage() {
   return (
     <div className="dx-page op-page">
       <header className="dx-head">
-        <button data-command="admin.trip.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.trip.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
         <div className="dx-head-text">
-          <h2>Trips</h2>
+          <h2>{tr("Trips")}</h2>
           <p data-testid="trip-count">
-            {trips.isLoading ? "Loading trips." : `${rows.length} trips in demo data, ${filtered.length} match the filters, ${statusCount} statuses in this view.`}
+            {trips.isLoading ? tr("Loading trips.") : tr("{0} trips in demo data, {1} match the filters, {2} statuses in this view.", [rows.length, filtered.length, statusCount])}
           </p>
         </div>
-        {isSuper ? <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "settings" })}><Settings2 size={14} aria-hidden="true" /> Settings</button> : null}
+        {isSuper ? <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "settings" })}>{trn("{0} Settings", <Settings2 size={14} aria-hidden="true" />)}</button> : null}
       </header>
 
       <Cards
         compare={false}
         compareLabel=""
-        fmt={(value, format) => (format === "money" ? money(value) : format === "pct" ? `${value}%` : new Intl.NumberFormat(scope.market.locale).format(value))}
+        fmt={(value, format) => (format === "money" ? money(value) : format === "pct" ? `${value}%` : new Intl.NumberFormat(uiLocale()).format(value))}
         cards={[
-          { id: "count", label: "Trips", value: stats.total, previous: null, format: "count", info: "Trips that match the filters below." },
-          { id: "live", label: "On the road now", value: stats.live, previous: null, format: "count", info: "A driver is on the way, waiting or driving." },
-          { id: "done", label: "Completed", value: stats.total ? Math.round((stats.completed / stats.total) * 100) : 0, previous: null, format: "pct", info: "Completed trips ÷ all trips in this list." },
-          { id: "cancel", label: "Cancelled", value: stats.total ? Math.round((stats.cancelled / stats.total) * 100) : 0, previous: null, format: "pct", info: "Cancelled or expired ÷ all trips in this list.", goodDown: true },
-          { id: "avg", label: "Average price", value: stats.avgPrice, previous: null, format: "money", info: "What riders paid on average for completed trips, before tips." },
-          { id: "taken", label: "Riders paid", value: stats.taken, previous: null, format: "money", info: "All completed trips together, before tips and refunds." },
+          { id: "count", label: tr("Trips"), value: stats.total, previous: null, format: "count", info: tr("Trips that match the filters below.") },
+          { id: "live", label: tr("On the road now"), value: stats.live, previous: null, format: "count", info: tr("A driver is on the way, waiting or driving.") },
+          { id: "done", label: tr("Completed"), value: stats.total ? Math.round((stats.completed / stats.total) * 100) : 0, previous: null, format: "pct", info: tr("Completed trips ÷ all trips in this list.") },
+          { id: "cancel", label: tr("Cancelled"), value: stats.total ? Math.round((stats.cancelled / stats.total) * 100) : 0, previous: null, format: "pct", info: tr("Cancelled or expired ÷ all trips in this list."), goodDown: true },
+          { id: "avg", label: tr("Average price"), value: stats.avgPrice, previous: null, format: "money", info: tr("What riders paid on average for completed trips, before tips.") },
+          { id: "taken", label: tr("Riders paid"), value: stats.taken, previous: null, format: "money", info: tr("All completed trips together, before tips and refunds.") },
         ]}
       />
 
-      <nav className="op-groups" aria-label="Trip groups">
+      <nav className="op-groups" aria-label={tr("Trip groups")}>
         {GROUPS.map((item) => {
           const count = base.filter((trip) => inGroup(trip, item.id)).length;
           return (
-            <button data-command="admin.trip.view" key={item.id} type="button" title={item.help} className={`op-group ${GROUP_TONE[item.id]}${group === item.id ? " active" : ""}`} aria-pressed={group === item.id} onClick={() => set({ group: item.id })}>
+            <button data-command="admin.trip.view" key={item.id} type="button" title={trx(item.help)} className={`op-group ${GROUP_TONE[item.id]}${group === item.id ? " active" : ""}`} aria-pressed={group === item.id} onClick={() => set({ group: item.id })}>
               <span className="op-group-icon" aria-hidden="true">{GROUP_ICON[item.id]}</span>
-              <span className="op-group-text"><b>{item.label}</b><small>{count}</small></span>
+              <span className="op-group-text"><b>{trx(item.label)}</b><small>{count}</small></span>
             </button>
           );
         })}
       </nav>
 
-      <section className="rp-bar op-filters" aria-label="Trip filters">
+      <section className="rp-bar op-filters" aria-label={tr("Trip filters")}>
         <label className="op-field">
-          <span>Trip status</span>
-          <select aria-label="Trip status" value={status} onChange={(event) => set({ status: event.target.value })}>
-            <option value="all">All {TRIP_STATUSES.length} statuses</option>
+          <span>{tr("Trip status")}</span>
+          <select aria-label={tr("Trip status")} value={status} onChange={(event) => set({ status: event.target.value })}>
+            <option value="all">{trn("All {0} statuses", TRIP_STATUSES.length)}</option>
             {TRIP_STATUSES.map((code) => <option key={code} value={code}>{statusLabel(code)}</option>)}
           </select>
         </label>
         <label className="op-field">
-          <span>Zone</span>
-          <select aria-label="Trip zone" value={zone} onChange={(event) => set({ zone: event.target.value })}>
-            <option value="all">All zones</option>
+          <span>{tr("Zone")}</span>
+          <select aria-label={tr("Trip zone")} value={zone} onChange={(event) => set({ zone: event.target.value })}>
+            <option value="all">{tr("All zones")}</option>
             {zones.map((id) => <option key={id} value={id}>{zoneById(id)?.name ?? id}</option>)}
           </select>
         </label>
         <label className="op-field">
-          <span>Category</span>
-          <select aria-label="Trip category" value={category} onChange={(event) => set({ category: event.target.value })}>
-            <option value="all">All categories</option>
-            {CATEGORIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+          <span>{tr("Category")}</span>
+          <select aria-label={tr("Trip category")} value={category} onChange={(event) => set({ category: event.target.value })}>
+            <option value="all">{tr("All categories")}</option>
+            {CATEGORIES.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
           </select>
         </label>
         <label className="op-field">
-          <span>Payment</span>
-          <select aria-label="Payment state" value={payment} onChange={(event) => set({ payment: event.target.value })}>
-            <option value="all">All payment states</option>
+          <span>{tr("Payment")}</span>
+          <select aria-label={tr("Payment state")} value={payment} onChange={(event) => set({ payment: event.target.value })}>
+            <option value="all">{tr("All payment states")}</option>
             {PAYMENTS.map((item) => <option key={item} value={item}>{statusLabel(item)}</option>)}
           </select>
         </label>
         <label className="op-field">
-          <span>Driver</span>
-          <select aria-label="Trip driver" value={driverId} onChange={(event) => set({ driver: event.target.value })}>
-            <option value="all">All drivers</option>
+          <span>{tr("Driver")}</span>
+          <select aria-label={tr("Trip driver")} value={driverId} onChange={(event) => set({ driver: event.target.value })}>
+            <option value="all">{tr("All drivers")}</option>
             {(drivers.data ?? []).map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
           </select>
         </label>
         <label className="op-field">
-          <span>From</span>
-          <input aria-label="From date" type="date" value={from} onChange={(event) => { setDates({ ...dates, from: event.target.value }); set({ from: event.target.value }); }} />
+          <span>{tr("From")}</span>
+          <input aria-label={tr("From date")} type="date" value={from} onChange={(event) => { setDates({ ...dates, from: event.target.value }); set({ from: event.target.value }); }} />
         </label>
         <label className="op-field">
-          <span>To</span>
-          <input aria-label="To date" type="date" value={to} onChange={(event) => { setDates({ ...dates, to: event.target.value }); set({ to: event.target.value }); }} />
+          <span>{tr("To")}</span>
+          <input aria-label={tr("To date")} type="date" value={to} onChange={(event) => { setDates({ ...dates, to: event.target.value }); set({ to: event.target.value }); }} />
         </label>
         <span className="rp-bar-actions">
           {views.length ? (
-            <select aria-label="Saved trip views" value="" onChange={(event) => {
+            <select aria-label={tr("Saved trip views")} value="" onChange={(event) => {
               const chosen = views.find((item) => item.id === event.target.value);
               if (!chosen) return;
               const next = new URLSearchParams(chosen.query);
@@ -239,19 +240,19 @@ export function TripsPage() {
               setParams(next, { replace: true });
               setNotice(`View ${chosen.name} opened.`);
             }}>
-              <option value="">Saved views…</option>
-              {views.map((item) => <option key={item.id} value={item.id}>{item.name}{item.shared && item.by !== agent?.id ? " (shared)" : ""}</option>)}
+              <option value="">{tr("Saved views…")}</option>
+              {views.map((item) => <option key={item.id} value={item.id}>{item.name}{item.shared && item.by !== agent?.id ? tr(" (shared)") : ""}</option>)}
             </select>
           ) : null}
-          {hasFilters ? <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={() => { const next = new URLSearchParams(params); for (const key of FILTER_KEYS) next.delete(key); setParams(next, { replace: true }); }}>Clear filters</button> : null}
-          <button data-command="admin.trip.saveView" type="button" className="dash-btn small ghost" disabled={!hasFilters} title={hasFilters ? undefined : "Choose a filter first."} onClick={() => setSaveOpen(true)}><Bookmark size={13} aria-hidden="true" /> Save view</button>
+          {hasFilters ? <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={() => { const next = new URLSearchParams(params); for (const key of FILTER_KEYS) next.delete(key); setParams(next, { replace: true }); }}>{tr("Clear filters")}</button> : null}
+          <button data-command="admin.trip.saveView" type="button" className="dash-btn small ghost" disabled={!hasFilters} title={hasFilters ? undefined : tr("Choose a filter first.")} onClick={() => setSaveOpen(true)}>{trn("{0} Save view", <Bookmark size={13} aria-hidden="true" />)}</button>
         </span>
       </section>
-      {notice ? <p className="dx-note" role="status">{notice}</p> : null}
+      {notice ? <p className="dx-note" role="status">{trSentences(notice)}</p> : null}
 
       <div className={peek ? "op-list-grid with-peek" : "op-list-grid"}>
         <DataTable
-          head={["Trip", "Rider", "Driver", "Status", "Zone", "Category", "Price", "Payment", "When", "Quick look"]}
+          head={[tr("Trip"), tr("Rider"), tr("Driver"), tr("Status"), tr("Zone"), tr("Category"), tr("Price"), tr("Payment"), tr("When"), tr("Quick look")]}
           rowIds={filtered.map((trip) => trip.id)}
           rows={filtered.map((trip) => [
             trip.id,
@@ -264,7 +265,7 @@ export function TripsPage() {
             fact(trip).price,
             statusLabel(fact(trip).payment),
             fact(trip).when,
-            <button key="peek" data-command="admin.trip.view" type="button" className="dash-btn small ghost op-peek-btn" aria-label={`Quick look at ${trip.id}`} onClick={(event) => { event.stopPropagation(); setPeekId(peekId === trip.id ? null : trip.id); }}><Eye size={13} aria-hidden="true" /> Look</button>,
+            <button key="peek" data-command="admin.trip.view" type="button" className="dash-btn small ghost op-peek-btn" aria-label={tr("Quick look at {0}", [trip.id])} onClick={(event) => { event.stopPropagation(); setPeekId(peekId === trip.id ? null : trip.id); }}>{trn("{0} Look", <Eye size={13} aria-hidden="true" />)}</button>,
           ])}
           state={trips.isLoading ? "loading" : trips.isError ? "error" : "ready"}
           onRetry={() => void trips.refetch()}
@@ -284,27 +285,27 @@ export function TripsPage() {
 function Peek({ trip, driverName, money, flagged, onClose }: { trip: DemoRecord; driverName: string; money: (minor: number) => string; flagged: boolean; onClose: () => void }) {
   const route = useMemo(() => routeOf(trip), [trip]);
   return (
-    <aside className="op-peek" aria-label={`Quick look at ${trip.id}`}>
+    <aside className="op-peek" aria-label={tr("Quick look at {0}", [trip.id])}>
       <header>
         <span>
           <b>{trip.id}</b> <span className={`op-status ${groupOf(trip.status)}`}>{statusLabel(trip.status)}</span>
-          {flagged ? <span className="op-status problem"><Flag size={11} aria-hidden="true" /> Flagged</span> : null}
+          {flagged ? <span className="op-status problem">{trn("{0} Flagged", <Flag size={11} aria-hidden="true" />)}</span> : null}
         </span>
-        <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={onClose}>Close</button>
+        <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={onClose}>{tr("Close")}</button>
       </header>
-      <p className="op-peek-people">{trip.name} → {driverName || "no driver yet"}</p>
-      <MapPanel title="Route">
-        <RouteMap key={trip.id} stops={route.stops} path={route.path} label={`Route of ${trip.id}`} />
+      <p className="op-peek-people">{trip.name} → {driverName || tr("no driver yet")}</p>
+      <MapPanel title={tr("Route")}>
+        <RouteMap key={trip.id} stops={route.stops} path={route.path} label={tr("Route of {0}", [trip.id])} />
       </MapPanel>
       <ol className="op-stops">
-        {route.stops.map((stop, index) => <li key={`${stop.kind}-${index}`} className={stop.kind}><i aria-hidden="true" />{stop.label}</li>)}
+        {route.stops.map((stop, index) => <li key={`${stop.kind}-${index}`} className={stop.kind}><i aria-hidden="true" />{trx(stop.label)}</li>)}
       </ol>
       <dl className="op-facts">
-        <div><dt>Distance</dt><dd>{route.km} km</dd></div>
-        <div><dt>Time</dt><dd>{route.minutes} min</dd></div>
-        <div><dt>Price</dt><dd>{groupOf(trip.status) === "completed" ? money(fareBreakdown(trip).chargedOre) : "–"}</dd></div>
+        <div><dt>{tr("Distance")}</dt><dd>{trn("{0} km", route.km)}</dd></div>
+        <div><dt>{tr("Time")}</dt><dd>{trn("{0} min", route.minutes)}</dd></div>
+        <div><dt>{tr("Price")}</dt><dd>{groupOf(trip.status) === "completed" ? money(fareBreakdown(trip).chargedOre) : "–"}</dd></div>
       </dl>
-      <Link className="dash-btn small" to={`/trips/${trip.id}`}>Open the full trip</Link>
+      <Link className="dash-btn small" to={`/trips/${trip.id}`}>{tr("Open the full trip")}</Link>
     </aside>
   );
 }
@@ -314,14 +315,14 @@ function SaveViewDialog({ open, onClose, ops, query, country, by, onSaved }: { o
   const [shared, setShared] = useState(false);
   const result = saveView(ops, { name, by, shared, country, query });
   return (
-    <Modal open={open} title="Save this view" onClose={onClose}>
+    <Modal open={open} title={tr("Save this view")} onClose={onClose}>
       <div className="op-form">
-        <label className="op-field"><span>View name</span><input aria-label="View name" value={name} onChange={(event) => setName(event.target.value)} placeholder="For example: Failed payments this week" /></label>
-        <label className="op-check"><input type="checkbox" checked={shared} onChange={(event) => setShared(event.target.checked)} /> Share with other admins</label>
-        {result.error && name ? <p className="dx-warn">{result.error}</p> : null}
+        <label className="op-field"><span>{tr("View name")}</span><input aria-label={tr("View name")} value={name} onChange={(event) => setName(event.target.value)} placeholder={tr("For example: Failed payments this week")} /></label>
+        <label className="op-check">{trn("{0} Share with other admins", <input type="checkbox" checked={shared} onChange={(event) => setShared(event.target.checked)} />)}</label>
+        {result.error && name ? <p className="dx-warn">{trSentences(result.error)}</p> : null}
         <div className="op-form-actions">
-          <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={onClose}>Cancel</button>
-          <CommandButton command="admin.trip.saveView" className="dash-btn small" sliceKey={TRIP_OPS_KEY} value={result.ops} expectedSliceRev={ops.draftRev} confirmTarget={false} disabled={Boolean(result.error)} onDone={() => { onSaved(name.trim()); setName(""); setShared(false); onClose(); }}>Save view</CommandButton>
+          <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={onClose}>{tr("Cancel")}</button>
+          <CommandButton command="admin.trip.saveView" className="dash-btn small" sliceKey={TRIP_OPS_KEY} value={result.ops} expectedSliceRev={ops.draftRev} confirmTarget={false} disabled={Boolean(result.error)} onDone={() => { onSaved(name.trim()); setName(""); setShared(false); onClose(); }}>{tr("Save view")}</CommandButton>
         </div>
       </div>
     </Modal>

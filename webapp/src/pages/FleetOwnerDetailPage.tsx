@@ -33,6 +33,7 @@ import { AccountChip, Avatar, ContactActions, DocSummary, DocumentsTable, Field,
 import { formatMoney, market as marketById, marketOfZone, zoneById } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { TabPanel, Tabs } from "../ui/Tabs";
+import { uiLocale } from "../i18n";
 
 const TABS = ["Overview", "Fleets", "Documents", "Performance", "Earnings", "Messages", "Notes", "Activity"];
 const TEMPLATES = [
@@ -69,7 +70,7 @@ export function FleetOwnerDetailPage() {
   const country = owner ? marketOfZone(owner.zoneId)?.id ?? "SE" : "SE";
   const market = marketById(country);
   const periodSearch = params.toString();
-  const span = useMemo(() => periodWindow(parsePeriodOr(new URLSearchParams(periodSearch), { kind: "month" }), now, market.timeZone, market.locale), [periodSearch, now, market]);
+  const span = useMemo(() => periodWindow(parsePeriodOr(new URLSearchParams(periodSearch), { kind: "month" }), now, market.timeZone, uiLocale()), [periodSearch, now, market]);
   const period = parsePeriodOr(params, { kind: "month" });
 
   const ownFleets = useMemo(() => (fleets.data ?? []).filter((fleet) => fleet.ownerId === ownerId), [fleets.data, ownerId]);

@@ -17,6 +17,7 @@ import {
 } from "./countrySettings";
 import { useCountrySettings } from "./useCountrySettings";
 import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage } from "./zoneDefaults";
+import { tr, trn, trx, trSentences } from "../i18n";
 
 /**
  * Settings › Payment methods and languages per country: Cash, Card, Apple Pay and Google Pay (owner Q7 FINAL, no Swish,
@@ -45,15 +46,15 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
 
   return (
     <article className="panel" id="country-apps" data-testid="country-apps">
-      <h3>Payment methods and languages per country</h3>
-      <p className="state-line">What the rider can pay with, and the language each app starts in. The same four methods are offered in every country; untick one to turn it off there. The wallet stays: one balance per currency, used first (Features › Wallet).</p>
+      <h3>{tr("Payment methods and languages per country")}</h3>
+      <p className="state-line">{tr("What the rider can pay with, and the language each app starts in. The same four methods are offered in every country; untick one to turn it off there. The wallet stays: one balance per currency, used first (Features › Wallet).")}</p>
       <div className="table-wrap">
-      <table className="cx-country-table" aria-label="Payment methods and languages per country">
+      <table className="cx-country-table" aria-label={tr("Payment methods and languages per country")}>
         <thead>
           <tr>
-            <th scope="col">Country</th>
-            {ZONE_PAYMENT_METHODS.map((method) => <th key={method} scope="col">{PAYMENT_METHOD_LABEL[method]}</th>)}
-            {APP_IDS.map((app) => <th key={app} scope="col">{APP_LABEL[app]} language</th>)}
+            <th scope="col">{tr("Country")}</th>
+            {ZONE_PAYMENT_METHODS.map((method) => <th key={method} scope="col">{trx(PAYMENT_METHOD_LABEL[method])}</th>)}
+            {APP_IDS.map((app) => <th key={app} scope="col">{trn("{0} language", trx(APP_LABEL[app]))}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -69,8 +70,8 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
                 ))}
                 {APP_IDS.map((app) => (
                   <td key={app}>
-                    <select aria-label={`${item.name} ${app} language`} value={settings.languages[app]} disabled={!editable || loading} onChange={(event) => edit(item.id, { languages: { ...settings.languages, [app]: event.target.value as AppLanguage } })}>
-                      {APP_LANGUAGES.map((lang) => <option key={lang} value={lang}>{lang.toUpperCase()} · {LANGUAGE_LABEL[lang]}</option>)}
+                    <select aria-label={tr("{0} {1} language", [item.name, app])} value={settings.languages[app]} disabled={!editable || loading} onChange={(event) => edit(item.id, { languages: { ...settings.languages, [app]: event.target.value as AppLanguage } })}>
+                      {APP_LANGUAGES.map((lang) => <option key={lang} value={lang}>{lang.toUpperCase()} · {trx(LANGUAGE_LABEL[lang])}</option>)}
                     </select>
                   </td>
                 ))}
@@ -81,8 +82,8 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
       </table>
       </div>
       {issues.length ? <p className="pl-warn" role="alert">{issues[0]}</p> : null}
-      {dirty && !issues.length ? <ul className="cx-lines" aria-label="Unsaved payment and language changes">{lines.map((line) => <li key={line}>{line}</li>)}</ul> : null}
-      {notice ? <p className="state-line" role="status">{notice}</p> : null}
+      {dirty && !issues.length ? <ul className="cx-lines" aria-label={tr("Unsaved payment and language changes")}>{lines.map((line) => <li key={line}>{line}</li>)}</ul> : null}
+      {notice ? <p className="state-line" role="status">{trSentences(notice)}</p> : null}
       <div className="actions">
         <CommandButton
           command="admin.config.saveCountry"
@@ -95,12 +96,10 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
           value={{ ...shown, draftRev: book.draftRev + 1 }}
           expectedSliceRev={book.draftRev}
           disabled={!editable || !dirty || issues.length > 0}
-          title={!editable ? "Your role cannot change this." : !dirty ? "No unsaved change." : issues[0]}
+          title={!editable ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : issues[0]}
           onDone={() => { setDraft(null); setNotice("Payment methods and languages saved. The apps get them with the next app config."); }}
-        >
-          Save payment methods and languages
-        </CommandButton>
-        <button data-command="admin.card.action" type="button" className="secondary-btn" disabled={!draft} onClick={() => setDraft(null)}>Discard</button>
+        >{tr("Save payment methods and languages")}</CommandButton>
+        <button data-command="admin.card.action" type="button" className="secondary-btn" disabled={!draft} onClick={() => setDraft(null)}>{tr("Discard")}</button>
       </div>
     </article>
   );

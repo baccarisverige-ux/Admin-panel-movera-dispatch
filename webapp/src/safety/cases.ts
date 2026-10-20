@@ -2,6 +2,7 @@ import type { DemoRecord } from "../api/seed.ts";
 import type { LatLng } from "../dashboard/route.ts";
 import { market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import type { IncidentEvent, SafetyBook } from "./ops.ts";
+import { tr } from "../i18n/core.ts";
 
 /**
  * Incidents as cases: a level, time limits per level, where the people are, the linked trip
@@ -185,8 +186,8 @@ export function clocks(item: Case, settings: IncidentSettings, now: number): { t
 export function lateText(item: Case, settings: IncidentSettings, now: number): string | null {
   if (!settings.lateAlerts || item.state === "solved") return null;
   const time = clocks(item, settings, now);
-  if (item.state === "new" && time.take.late) return `not taken after ${time.take.minutes} min (limit ${time.take.limit})`;
-  if (item.state === "taken" && time.solve.late) return `not solved after ${time.solve.minutes} min (limit ${time.solve.limit})`;
+  if (item.state === "new" && time.take.late) return tr("not taken after {0} min (limit {1})", [time.take.minutes, time.take.limit]);
+  if (item.state === "taken" && time.solve.late) return tr("not solved after {0} min (limit {1})", [time.solve.minutes, time.solve.limit]);
   return null;
 }
 

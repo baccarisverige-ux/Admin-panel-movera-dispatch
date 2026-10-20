@@ -429,6 +429,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.ui.mapClose", label: "Close driver details", reason: false, permission: "overview.read" },
   { id: "admin.ui.dashboardTab", label: "Switch dashboard tab", reason: false, permission: "overview.read" },
   { id: "admin.ui.alertSound", label: "Alert sound and notifications", reason: false, permission: "overview.read" },
+  // Round 4: each admin's own panel language, saved per admin and logged in My activity.
+  { id: "admin.profile.language", label: "Change my panel language", reason: false, permission: "overview.read" },
 ];
 
 
@@ -470,6 +472,7 @@ const OWNER_BY_DOMAIN: Record<string, string> = {
   live: "Dispatch",
   alerts: "Operations",
   reports: "Overview",
+  profile: "Platform",
 };
 
 const ALLOWED_STATES: Record<string, readonly string[]> = {

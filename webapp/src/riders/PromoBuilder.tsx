@@ -9,22 +9,23 @@ import { pickAudience, type RiderRow, type SegmentId } from "./segments";
 import { CURRENCY_SYMBOL, money, PromoTicketCard } from "./ui";
 import { CARD_IMAGES, RiderAppPreview, imageUrl } from "./RiderAppPreview";
 import { useCategoryPrices } from "./useCategoryPrices";
+import { tr, trn, trx, trSentences } from "../i18n";
 
 const CATEGORIES = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet", "child_seat"];
 const QUICK: { id: SegmentId; label: string }[] = [
-  { id: "new", label: "New riders" },
-  { id: "top", label: "Top riders" },
-  { id: "loyal", label: "Loyal riders" },
-  { id: "inactive", label: "Inactive" },
-  { id: "all", label: "Everyone" },
+  { id: "new", get label() { return tr("New riders"); } },
+  { id: "top", get label() { return tr("Top riders"); } },
+  { id: "loyal", get label() { return tr("Loyal riders"); } },
+  { id: "inactive", get label() { return tr("Inactive"); } },
+  { id: "all", get label() { return tr("Everyone"); } },
 ];
 
 type Mode = "pick" | "random" | "newest" | "code";
 const MODES: { id: Mode; label: string; hint: string; icon: typeof Users }[] = [
-  { id: "pick", label: "Riders I pick", hint: "A group or riders by name", icon: ListChecks },
-  { id: "random", label: "Random riders", hint: "Type how many", icon: Dices },
-  { id: "newest", label: "Newest riders", hint: "The last ones who joined", icon: UserPlus },
-  { id: "code", label: "Anyone with the code", hint: "Riders type it in the app", icon: KeyRound },
+  { id: "pick", get label() { return tr("Riders I pick"); }, get hint() { return tr("A group or riders by name"); }, icon: ListChecks },
+  { id: "random", get label() { return tr("Random riders"); }, get hint() { return tr("Type how many"); }, icon: Dices },
+  { id: "newest", get label() { return tr("Newest riders"); }, get hint() { return tr("The last ones who joined"); }, icon: UserPlus },
+  { id: "code", get label() { return tr("Anyone with the code"); }, get hint() { return tr("Riders type it in the app"); }, icon: KeyRound },
 ];
 
 type Props = {
@@ -113,38 +114,38 @@ export function PromoBuilder({ country, care, agentId, canEdit, rows, preselecte
     <div className={single ? "rd-builder single" : "rd-builder"}>
       <div className="rd-builder-form">
         <div className="rd-builder-head">
-          <h3>{single ? "New promotion for this rider" : "New group promotion"}</h3>
-          {onClose ? <button data-command="admin.confirm.cancel" type="button" className="icon-ghost" aria-label="Close promotion" onClick={onClose}><X size={16} aria-hidden="true" /></button> : null}
+          <h3>{single ? tr("New promotion for this rider") : tr("New group promotion")}</h3>
+          {onClose ? <button data-command="admin.confirm.cancel" type="button" className="icon-ghost" aria-label={tr("Close promotion")} onClick={onClose}><X size={16} aria-hidden="true" /></button> : null}
         </div>
         <div className="rd-form-grid">
-          <label className="field">Code<input aria-label="Promotion code" value={code} maxLength={16} onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="SPRING30" /></label>
-          <label className="field">Title riders see<input aria-label="Promotion title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Thank you for riding" /></label>
+          <label className="field">{trn("Code{0}", <input aria-label={tr("Promotion code")} value={code} maxLength={16} onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="SPRING30" />)}</label>
+          <label className="field">{trn("Title riders see{0}", <input aria-label={tr("Promotion title")} value={title} onChange={(event) => setTitle(event.target.value)} placeholder={tr("Thank you for riding")} />)}</label>
         </div>
-        <div className="rd-kind" role="radiogroup" aria-label="Discount type">
-          <button data-command="admin.ui.quickAction" type="button" role="radio" aria-checked={kind === "percent"} className={kind === "percent" ? "active" : undefined} onClick={() => setKind("percent")}>% off</button>
-          <button data-command="admin.ui.quickAction" type="button" role="radio" aria-checked={kind === "fixed"} className={kind === "fixed" ? "active" : undefined} onClick={() => setKind("fixed")}>Fixed amount off</button>
+        <div className="rd-kind" role="radiogroup" aria-label={tr("Discount type")}>
+          <button data-command="admin.ui.quickAction" type="button" role="radio" aria-checked={kind === "percent"} className={kind === "percent" ? "active" : undefined} onClick={() => setKind("percent")}>{tr("% off")}</button>
+          <button data-command="admin.ui.quickAction" type="button" role="radio" aria-checked={kind === "fixed"} className={kind === "fixed" ? "active" : undefined} onClick={() => setKind("fixed")}>{tr("Fixed amount off")}</button>
         </div>
         <div className="rd-form-grid four">
-          <label className="field">{kind === "percent" ? "Discount" : "Amount off"}<NumberField label="Promotion discount" value={value} unit={kind === "percent" ? "%" : symbol} max={kind === "percent" ? 100 : undefined} onChange={setValue} /></label>
-          <label className="field">For the next<NumberField label="Promotion rides" value={rides} unit="rides" max={100} onChange={(next) => setRides(Math.round(next))} /></label>
-          {kind === "percent" ? <label className="field">Max per ride<NumberField label="Promotion max per ride" value={maxPerRide} unit={symbol} onChange={setMaxPerRide} /></label> : null}
-          <label className="field">Min fare<NumberField label="Promotion min fare" value={minFare} unit={symbol} onChange={setMinFare} /></label>
-          <label className="field">Starts<input type="date" aria-label="Promotion starts" value={from} onChange={(event) => setFrom(event.target.value)} /></label>
-          <label className="field">Ends<input type="date" aria-label="Promotion ends" value={to} onChange={(event) => setTo(event.target.value)} /></label>
-          <label className="field">Budget (optional)<NumberField label="Promotion budget" value={budget} unit={symbol} onChange={setBudget} /></label>
+          <label className="field">{kind === "percent" ? tr("Discount") : tr("Amount off")}<NumberField label={tr("Promotion discount")} value={value} unit={kind === "percent" ? "%" : symbol} max={kind === "percent" ? 100 : undefined} onChange={setValue} /></label>
+          <label className="field">{trn("For the next{0}", <NumberField label={tr("Promotion rides")} value={rides} unit="rides" max={100} onChange={(next) => setRides(Math.round(next))} />)}</label>
+          {kind === "percent" ? <label className="field">{trn("Max per ride{0}", <NumberField label={tr("Promotion max per ride")} value={maxPerRide} unit={symbol} onChange={setMaxPerRide} />)}</label> : null}
+          <label className="field">{trn("Min fare{0}", <NumberField label={tr("Promotion min fare")} value={minFare} unit={symbol} onChange={setMinFare} />)}</label>
+          <label className="field">{trn("Starts{0}", <input type="date" aria-label={tr("Promotion starts")} value={from} onChange={(event) => setFrom(event.target.value)} />)}</label>
+          <label className="field">{trn("Ends{0}", <input type="date" aria-label={tr("Promotion ends")} value={to} onChange={(event) => setTo(event.target.value)} />)}</label>
+          <label className="field">{trn("Budget (optional){0}", <NumberField label={tr("Promotion budget")} value={budget} unit={symbol} onChange={setBudget} />)}</label>
         </div>
         <fieldset className="rd-chips rd-pictures">
-          <legend>Picture on the promotion</legend>
+          <legend>{tr("Picture on the promotion")}</legend>
           {CARD_IMAGES.map((item) => (
             <label key={item.id} className={image === item.id ? "rd-pic on" : "rd-pic"}>
-              <input type="radio" name="promo-picture" aria-label={`Picture ${item.label}`} checked={image === item.id} onChange={() => setImage(item.id)} />
+              <input type="radio" name="promo-picture" aria-label={tr("Picture {0}", [trx(item.label)])} checked={image === item.id} onChange={() => setImage(item.id)} />
               <span className="rd-pic-thumb" style={imageUrl(item.id) ? { backgroundImage: `url(${imageUrl(item.id)})` } : undefined} aria-hidden="true" />
-              {item.label}
+              {trx(item.label)}
             </label>
           ))}
         </fieldset>
         <fieldset className="rd-chips">
-          <legend>Categories <small>(none = all)</small></legend>
+          <legend>{trn("Categories {0}", <small>{tr("(none = all)")}</small>)}</legend>
           {CATEGORIES.map((id) => (
             <label key={id} className={categories.includes(id) ? "check-chip on" : "check-chip"}>
               <input type="checkbox" checked={categories.includes(id)} onChange={() => setCategories(toggle(categories, id))} />{categoryName(id)}
@@ -152,7 +153,7 @@ export function PromoBuilder({ country, care, agentId, canEdit, rows, preselecte
           ))}
         </fieldset>
         <fieldset className="rd-chips">
-          <legend>Zones in {market(country).name} <small>(none = all)</small></legend>
+          <legend>{trn("Zones in {0} {1}", market(country).name, <small>{tr("(none = all)")}</small>)}</legend>
           {market(country).zones.map((zone) => (
             <label key={zone.id} className={zones.includes(zone.id) ? "check-chip on" : "check-chip"}>
               <input type="checkbox" checked={zones.includes(zone.id)} onChange={() => setZones(toggle(zones, zone.id))} />{zone.name}
@@ -165,53 +166,51 @@ export function PromoBuilder({ country, care, agentId, canEdit, rows, preselecte
         <RiderAppPreview promo={draft} prices={prices.rows} zoneName={prices.zoneName} />
         <PromoTicketCard ticket={{ ...draft, status: "active" }} locale={market(country).locale} />
         <dl className="rd-cost">
-          <div><dt>{mode === "code" ? "Can use it" : "Riders"}</dt><dd>{promoReach(draft)}</dd></div>
-          <div><dt>Most it can cost</dt><dd>{money(Math.round(maxCost(draft) * market(country).minorUnits), country)}</dd></div>
-          <div><dt>Budget</dt><dd>{budget > 0 ? money(budget * market(country).minorUnits, country) : "No limit"}</dd></div>
+          <div><dt>{mode === "code" ? tr("Can use it") : tr("Riders")}</dt><dd>{promoReach(draft)}</dd></div>
+          <div><dt>{tr("Most it can cost")}</dt><dd>{money(Math.round(maxCost(draft) * market(country).minorUnits), country)}</dd></div>
+          <div><dt>{tr("Budget")}</dt><dd>{budget > 0 ? money(budget * market(country).minorUnits, country) : tr("No limit")}</dd></div>
         </dl>
-        {error ? <p className="rd-form-error" role="alert">{error}</p> : null}
-        <CommandButton command="admin.riders.promoCreate" className="dash-btn publish" targetId={draft.code || "promotion"} confirmTarget={false} scope="all" before="none" after={`${draft.code} for ${picked.size} riders`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={created.care} disabled={!canEdit || Boolean(error) || Boolean(created.error)} title={error ?? created.error} onDone={() => onCreated(mode === "code" ? `Promotion ${draft.code} ready: up to ${maxUses} riders can use the code.` : `Promotion ${draft.code} given to ${picked.size} rider${picked.size === 1 ? "" : "s"}.`, mode === "code" ? created.ticket?.id : undefined)}>
-          <Sparkles size={15} aria-hidden="true" /> Give promotion
-        </CommandButton>
+        {error ? <p className="rd-form-error" role="alert">{trSentences(error)}</p> : null}
+        <CommandButton command="admin.riders.promoCreate" className="dash-btn publish" targetId={draft.code || "promotion"} confirmTarget={false} scope="all" before="none" after={`${draft.code} for ${picked.size} riders`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={created.care} disabled={!canEdit || Boolean(error) || Boolean(created.error)} title={error ?? created.error} onDone={() => onCreated(mode === "code" ? `Promotion ${draft.code} ready: up to ${maxUses} riders can use the code.` : `Promotion ${draft.code} given to ${picked.size} rider${picked.size === 1 ? "" : "s"}.`, mode === "code" ? created.ticket?.id : undefined)}>{trn("{0} Give promotion", <Sparkles size={15} aria-hidden="true" />)}</CommandButton>
       </div>
 
       {!single ? (
         <div className="rd-audience">
-          <h4><Users size={15} aria-hidden="true" /> Who gets it{mode === "code" ? "" : ` · ${picked.size} selected`}</h4>
-          <div className="rd-modes" role="radiogroup" aria-label="Who gets it">
+          <h4>{trn("{0} Who gets it{1}", <Users size={15} aria-hidden="true" />, mode === "code" ? "" : tr(" · {0} selected", [picked.size]))}</h4>
+          <div className="rd-modes" role="radiogroup" aria-label={tr("Who gets it")}>
             {MODES.map((item) => (
               <button data-command="admin.riders.select" key={item.id} type="button" role="radio" aria-checked={mode === item.id} className={mode === item.id ? "rd-mode on" : "rd-mode"} onClick={() => chooseMode(item.id)}>
                 <item.icon size={16} aria-hidden="true" />
-                <span><b>{item.label}</b><small>{item.hint}</small></span>
+                <span><b>{trx(item.label)}</b><small>{trx(item.hint)}</small></span>
               </button>
             ))}
           </div>
           {mode === "pick" ? (
-            <div className="rd-quick" role="group" aria-label="Quick groups">
-              {QUICK.map((item) => <button data-command="admin.riders.select" key={item.id} type="button" className={group === item.label ? "check-chip on" : "check-chip"} onClick={() => quickPick(item.id, item.label)}>{item.label}</button>)}
-              <button data-command="admin.riders.select" type="button" className="check-chip" onClick={() => { setPicked(new Set()); setGroup(""); }}>Clear</button>
+            <div className="rd-quick" role="group" aria-label={tr("Quick groups")}>
+              {QUICK.map((item) => <button data-command="admin.riders.select" key={item.id} type="button" className={group === item.label ? "check-chip on" : "check-chip"} onClick={() => quickPick(item.id, item.label)}>{trx(item.label)}</button>)}
+              <button data-command="admin.riders.select" type="button" className="check-chip" onClick={() => { setPicked(new Set()); setGroup(""); }}>{tr("Clear")}</button>
             </div>
           ) : null}
           {mode === "random" || mode === "newest" ? (
             <div className="rd-mode-row">
-              <label className="field">How many riders<NumberField label="How many riders" value={count} unit="riders" max={10000} onChange={(value) => { const next = Math.max(1, Math.round(value)); setCount(next); pickMany(mode, next, seed); }} /></label>
-              {mode === "random" ? <button data-command="admin.riders.select" type="button" className="dash-btn small ghost" onClick={() => { setSeed(seed + 1); pickMany(mode, count, seed + 1); }}><Dices size={13} aria-hidden="true" /> Pick others</button> : null}
-              <small className="fine">{mode === "random" ? "Picked by chance among riders who are not blocked." : "The riders who joined last."} You can still untick riders below.</small>
+              <label className="field">{trn("How many riders{0}", <NumberField label={tr("How many riders")} value={count} unit="riders" max={10000} onChange={(value) => { const next = Math.max(1, Math.round(value)); setCount(next); pickMany(mode, next, seed); }} />)}</label>
+              {mode === "random" ? <button data-command="admin.riders.select" type="button" className="dash-btn small ghost" onClick={() => { setSeed(seed + 1); pickMany(mode, count, seed + 1); }}>{trn("{0} Pick others", <Dices size={13} aria-hidden="true" />)}</button> : null}
+              <small className="fine">{trn("{0} You can still untick riders below.", mode === "random" ? tr("Picked by chance among riders who are not blocked.") : tr("The riders who joined last."))}</small>
             </div>
           ) : null}
           {mode === "code" ? (
             <div className="rd-mode-row">
-              <label className="field">How many riders can use it<NumberField label="Code uses" value={maxUses} unit="riders" max={100000} onChange={(value) => setMaxUses(Math.max(1, Math.round(value)))} /></label>
-              <small className="fine">No list: riders type the code in the app (Account, then Vouchers). Each rider can use it once. Send it after: push, SMS, email, popup or a flyer.</small>
+              <label className="field">{trn("How many riders can use it{0}", <NumberField label={tr("Code uses")} value={maxUses} unit="riders" max={100000} onChange={(value) => setMaxUses(Math.max(1, Math.round(value)))} />)}</label>
+              <small className="fine">{tr("No list: riders type the code in the app (Account, then Vouchers). Each rider can use it once. Send it after: push, SMS, email, popup or a flyer.")}</small>
             </div>
           ) : null}
           {mode === "code" ? null : <>
-          <label className="rd-search small"><Search size={14} aria-hidden="true" /><input aria-label="Find riders for the promotion" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find by name or code" /></label>
-          <ul className="rd-audience-list" aria-label="Riders for the promotion">
+          <label className="rd-search small"><Search size={14} aria-hidden="true" /><input aria-label={tr("Find riders for the promotion")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tr("Find by name or code")} /></label>
+          <ul className="rd-audience-list" aria-label={tr("Riders for the promotion")}>
             {shown.map((row) => (
               <li key={row.rider.id} className={picked.has(row.rider.id) ? "on" : undefined}>
                 <label>
-                  <input type="checkbox" aria-label={`Give promotion to ${row.rider.name}`} checked={picked.has(row.rider.id)} disabled={row.segments.has("blocked")} onChange={() => {
+                  <input type="checkbox" aria-label={tr("Give promotion to {0}", [row.rider.name])} checked={picked.has(row.rider.id)} disabled={row.segments.has("blocked")} onChange={() => {
                     setPicked((current) => {
                       const next = new Set(current);
                       if (next.has(row.rider.id)) next.delete(row.rider.id);
@@ -221,15 +220,15 @@ export function PromoBuilder({ country, care, agentId, canEdit, rows, preselecte
                     setGroup("Picked riders");
                   }} />
                   <span className="rd-aud-name">{row.rider.name}<small>{row.profile.code}</small></span>
-                  {row.isNew ? <span className="rd-badge new"><Sparkles size={11} aria-hidden="true" />New</span> : null}
-                  {row.segments.has("top") ? <span className="rd-badge top"><Crown size={11} aria-hidden="true" />Top</span> : null}
-                  <span className="rd-aud-num"><b>{row.profile.completed}</b> rides</span>
+                  {row.isNew ? <span className="rd-badge new">{trn("{0}New", <Sparkles size={11} aria-hidden="true" />)}</span> : null}
+                  {row.segments.has("top") ? <span className="rd-badge top">{trn("{0}Top", <Crown size={11} aria-hidden="true" />)}</span> : null}
+                  <span className="rd-aud-num">{trn("{0} rides", <b>{row.profile.completed}</b>)}</span>
                   <span className="rd-aud-num">{money(row.profile.spentMinor, row.profile.country, true)}</span>
                 </label>
               </li>
             ))}
           </ul>
-          {rows.length > shown.length ? <small className="fine">Showing {shown.length} of {rows.length}. Use a quick group or search to reach the rest.</small> : null}
+          {rows.length > shown.length ? <small className="fine">{trn("Showing {0} of {1}. Use a quick group or search to reach the rest.", shown.length, rows.length)}</small> : null}
           </>}
         </div>
       ) : null}

@@ -7,6 +7,7 @@ import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { OTHER_REASON, auditReason, initialReason, mustChooseReason, reasonsFor } from "../commands/reasons";
 import { commandById } from "../commands/registry";
+import { tr, trn, trSentences, trx } from "../i18n";
 
 type CommandButtonProps = {
   command: string;
@@ -43,7 +44,7 @@ type CommandButtonProps = {
    * The dialog's reason list as codes with their texts (Q27: the trip cancel reason codes). None is preselected;
    * the chosen code goes into the patch under `reasonField`, and its text is the audit reason.
    */
-  reasonChoices?: readonly { value: string; label: string }[];
+  reasonChoices?: readonly { value: string; label: string; audit?: string }[];
   reasonField?: string;
   /** The label of the reason list ("Reason" by default). */
   reasonLabel?: string;
@@ -107,7 +108,9 @@ export function CommandButton({
   const askSure = Boolean(largeChanges && largeChanges.length);
   const mustType = confirmTarget ? (targetId ?? "") : "";
   const dialogRoot=useDialogFocus(open,()=>setOpen(false));
-  const codeLabel = reasonChoices?.find((item) => item.value === reason)?.label ?? "";
+  // The audit keeps the reason in English (audit data is never translated); the list shows the admin's language.
+  const codeChoice = reasonChoices?.find((item) => item.value === reason);
+  const codeLabel = codeChoice ? codeChoice.audit ?? codeChoice.label : "";
   const chosen = coded ? (codeLabel ? [codeLabel, note.trim()].filter(Boolean).join(" · ") : "") : [auditReason(reason, otherText), optionalNote ? note.trim() : ""].filter(Boolean).join(" · ");
   const confirmed = (mustType.length === 0 || typed === mustType) && chosen.length > 0 && (!askSure || sure);
   // While any command runs, every command button waits (C-16, Q31): disabled, with a spinner and "Please wait".
@@ -160,7 +163,7 @@ export function CommandButton({
         aria-label={ariaLabel}
         disabled={blocked}
         aria-busy={waiting || undefined}
-        title={waiting && !disabled ? "Please wait: another action is still running." : title ?? disabledReason}
+        title={waiting && !disabled ? tr("Please wait: another action is still running.") : title ?? disabledReason}
         onClick={(event) => {
           event.currentTarget.focus();
           if (!spec) return;
@@ -169,7 +172,7 @@ export function CommandButton({
         }}
       >
         {children}
-        {waiting && !disabled ? <span className="cmd-wait" data-testid="command-wait"><Loader2 size={13} className="cmd-spin" aria-hidden="true" /> Please wait</span> : null}
+        {waiting && !disabled ? <span className="cmd-wait" data-testid="command-wait">{trn("{0} Please wait", <Loader2 size={13} className="cmd-spin" aria-hidden="true" />)}</span> : null}
       </button>
       {retryLabel ? (
         <button
@@ -177,15 +180,15 @@ export function CommandButton({
           className="secondary-btn"
           type="button"
           disabled={blocked || !lastReason || commands.phase !== "rejected"}
-          title={title ?? disabledReason ?? (commands.phase === "rejected" ? undefined : "Nothing to retry.")}
+          title={title ?? disabledReason ?? (commands.phase === "rejected" ? undefined : tr("Nothing to retry."))}
           onClick={() => fire(lastReason)}
         >
           {retryLabel}
         </button>
       ) : null}
-      {commands.message ? <p className="state-line" role={commands.phase === "checking" ? "status" : undefined}>{commands.message}</p> : null}
+      {commands.message ? <p className="state-line" role={commands.phase === "checking" ? "status" : undefined}>{trSentences(commands.message)}</p> : null}
       {open ? (
-        <div ref={dialogRoot} tabIndex={-1} className="modal open" role="dialog" aria-modal="true" aria-label={spec?.label}>
+        <div ref={dialogRoot} tabIndex={-1} className="modal open" role="dialog" aria-modal="true" aria-label={spec ? trx(spec.label) : undefined}>
           <form
             className="modal-card"
             onSubmit={(event) => {
@@ -199,53 +202,39 @@ export function CommandButton({
               fire(chosen, coded ? reason : undefined);
             }}
           >
-            <h3>{spec?.label}</h3>
-            <p>{summary ?? <>This acts on {targetId ?? spec?.label}.</>}</p>
+            <h3>{spec ? trx(spec.label) : null}</h3>
+            <p>{summary ?? <>{trn("This acts on {0}.", targetId ?? (spec ? trx(spec.label) : ""))}</>}</p>
             {askSure ? (
-              <div className="state-line" role="alert" data-testid="large-change-warning">
-                <strong>Are you sure?</strong> {largeChanges!.length === 1 ? "This value changes" : "These values change"} by more than 50% from the published value:
-                <ul>
+              <div className="state-line" role="alert" data-testid="large-change-warning">{trn("{0} {1} by more than 50% from the published value:{2}", <strong>{tr("Are you sure?")}</strong>, largeChanges!.length === 1 ? tr("This value changes") : tr("These values change"), <ul>
                   {largeChanges!.slice(0, 8).map((line) => <li key={line}>{line}</li>)}
-                  {largeChanges!.length > 8 ? <li>and {largeChanges!.length - 8} more</li> : null}
-                </ul>
-              </div>
+                  {largeChanges!.length > 8 ? <li>{trn("and {0} more", largeChanges!.length - 8)}</li> : null}
+                </ul>)}</div>
             ) : null}
             <label>
               {reasonLabel}
               <select aria-label={reasonLabel} value={reason} required={choose} onChange={(event) => setReason(event.target.value)}>
-                {choose ? <option value="" disabled>Choose a reason</option> : null}
+                {choose ? <option value="" disabled>{tr("Choose a reason")}</option> : null}
                 {reasonChoices
-                  ? reasonChoices.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)
+                  ? reasonChoices.map((item) => <option key={item.value} value={item.value}>{trx(item.label)}</option>)
                   : reasons.map((item) => (
-                    <option key={item}>{item}</option>
+                    <option key={item} value={item}>{trx(item)}</option>
                   ))}
               </select>
             </label>
             {coded || optionalNote ? (
-              <label>
-                Note (optional)
-                <input aria-label="Note (optional)" value={note} maxLength={200} onChange={(event) => setNote(event.target.value)} placeholder="Anything the next admin should know" />
-              </label>
+              <label>{trn("Note (optional){0}", <input aria-label={tr("Note (optional)")} value={note} maxLength={200} onChange={(event) => setNote(event.target.value)} placeholder={tr("Anything the next admin should know")} />)}</label>
             ) : null}
             {!coded && reason === OTHER_REASON ? (
-              <label>
-                Describe the reason
-                <input aria-label="Describe the reason" value={otherText} maxLength={200} required onChange={(event) => setOtherText(event.target.value)} />
-              </label>
+              <label>{trn("Describe the reason{0}", <input aria-label={tr("Describe the reason")} value={otherText} maxLength={200} required onChange={(event) => setOtherText(event.target.value)} />)}</label>
             ) : null}
             {mustType ? (
-              <label>
-                Type {mustType} to confirm
-                <input value={typed} onChange={(event) => setTyped(event.target.value)} />
-              </label>
+              <label>{trn("Type {0} to confirm{1}", mustType, <input value={typed} onChange={(event) => setTyped(event.target.value)} />)}</label>
             ) : null}
             {askSure ? (
-              <label className="check-row">
-                <input type="checkbox" checked={sure} onChange={(event) => setSure(event.target.checked)} /> Yes, I'm sure
-              </label>
+              <label className="check-row">{trn("{0} Yes, I'm sure", <input type="checkbox" checked={sure} onChange={(event) => setSure(event.target.checked)} />)}</label>
             ) : null}
-            <button data-command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!confirmed}>Confirm</button>
-            <button data-command="admin.confirm.cancel" className="secondary-btn" type="button" onClick={() => setOpen(false)}>Cancel</button>
+            <button data-command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!confirmed}>{tr("Confirm")}</button>
+            <button data-command="admin.confirm.cancel" className="secondary-btn" type="button" onClick={() => setOpen(false)}>{tr("Cancel")}</button>
           </form>
         </div>
       ) : null}

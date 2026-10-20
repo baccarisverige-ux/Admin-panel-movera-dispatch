@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { NumberField } from "./NumberField";
 import { PRICE_ROWS, currencySymbol, inputStep, priceMax, type CategoryDef, type CategoryPrice, type PriceField, type Problem, type ZoneBook } from "./zonePricing";
 import type { MarketId } from "../markets/markets";
+import { tr, trn, trx } from "../i18n";
 
 type Props = {
   zoneName: string;
@@ -23,25 +24,25 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
   const symbol = currencySymbol(currency);
   const unitOf = (unit: "money" | "min" | "pct") => (unit === "money" ? symbol : unit === "min" ? "min" : "%");
   return (
-    <div className="price-table-wrap" role="region" aria-label={`Prices in ${zoneName}`} tabIndex={0}>
+    <div className="price-table-wrap" role="region" aria-label={tr("Prices in {0}", [zoneName])} tabIndex={0}>
       <table className="price-table">
-        <caption className="sr-only">Prices per category in {zoneName}, in {symbol}, VAT included</caption>
+        <caption className="sr-only">{trn("Prices per category in {0}, in {1}, VAT included", zoneName, symbol)}</caption>
         <thead>
           <tr>
             <th scope="col" className="corner">
-              <span>Price item</span>
-              <small>All prices include VAT</small>
+              <span>{tr("Price item")}</span>
+              <small>{tr("All prices include VAT")}</small>
             </th>
             {categories.map((category) => {
               const enabled = book.prices[category.id]?.enabled ?? false;
               return (
                 <th scope="col" key={category.id} className={enabled ? "cat-head" : "cat-head off"}>
-                  <strong>{category.label}</strong>
-                  <small>{category.line}</small>
+                  <strong>{trx(category.label)}</strong>
+                  <small>{trx(category.line)}</small>
                   <label className="mini-switch">
-                    <input type="checkbox" aria-label={`${category.label} available in ${zoneName}`} checked={enabled} disabled={!canEdit} onChange={(event) => onChange(category.id, { enabled: event.target.checked })} />
+                    <input type="checkbox" aria-label={tr("{0} available in {1}", [trx(category.label), zoneName])} checked={enabled} disabled={!canEdit} onChange={(event) => onChange(category.id, { enabled: event.target.checked })} />
                     <span aria-hidden="true"><i /></span>
-                    {enabled ? "On" : "Off"}
+                    {enabled ? tr("On") : tr("Off")}
                   </label>
                 </th>
               );
@@ -58,8 +59,8 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
                 <tr className="note-row">
                   <td colSpan={categories.length + 1}>
                     <p className="price-note" data-testid="rider-cancel-fees-pointer">
-                      <span>Rider cancel fees are set in Dispatch › Rides &amp; stops › Rider cancel fees.</span>
-                      {onOpenCancelFees ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={onOpenCancelFees}>Open Rider cancel fees</button> : null}
+                      <span>{tr("Rider cancel fees are set in Dispatch › Rides & stops › Rider cancel fees.")}</span>
+                      {onOpenCancelFees ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={onOpenCancelFees}>{tr("Open Rider cancel fees")}</button> : null}
                     </p>
                   </td>
                 </tr>
@@ -67,8 +68,8 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
               {PRICE_ROWS.filter((row) => row.group === group).map((row) => (
                 <tr key={row.field}>
                   <th scope="row">
-                    <span>{row.label}</span>
-                    {row.hint ? <small>{row.hint}</small> : null}
+                    <span>{trx(row.label)}</span>
+                    {row.hint ? <small>{trx(row.hint)}</small> : null}
                   </th>
                   {categories.map((category) => {
                     const price = book.prices[category.id];
@@ -87,7 +88,7 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
                           disabled={!canEdit}
                           changed={changed}
                           invalid={bad.has(`prices.${category.id}.${field}`)}
-                          title={changed && before ? `Published: ${before[field]}` : undefined}
+                          title={changed && before ? tr("Published: {0}", [before[field]]) : undefined}
                           onChange={(value) => onChange(category.id, { [field]: value })}
                         />
                       </td>

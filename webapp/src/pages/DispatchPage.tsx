@@ -39,15 +39,16 @@ import {
   countryLines, DISPATCH_KEY, draftCountry, draftRules, emptyDispatchBook, liveCountry, liveRules, normalizeDispatchBook, pendingChanges, publish, rulesFile, saveDraft, TABS,
   type CountryDispatch, type DispatchBook, type TabId, type ZoneDispatch,
 } from "../dispatch/rules";
+import { tr, trn, trx, uiLocale, trSentences } from "../i18n";
 
 const VIEWS = [
-  { id: "rules", label: "Rules", icon: ScrollText },
-  { id: "live", label: "Live", icon: Radio },
-  { id: "test", label: "Test a ride", icon: FlaskConical },
-  { id: "events", label: "Events & groups", icon: CalendarDays },
-  { id: "cancels", label: "Cancel checks", icon: Scale },
-  { id: "reasons", label: "Cancel reasons", icon: ListX },
-  { id: "history", label: "History", icon: History },
+  { id: "rules", get label() { return tr("Rules"); }, icon: ScrollText },
+  { id: "live", get label() { return tr("Live"); }, icon: Radio },
+  { id: "test", get label() { return tr("Test a ride"); }, icon: FlaskConical },
+  { id: "events", get label() { return tr("Events & groups"); }, icon: CalendarDays },
+  { id: "cancels", get label() { return tr("Cancel checks"); }, icon: Scale },
+  { id: "reasons", get label() { return tr("Cancel reasons"); }, icon: ListX },
+  { id: "history", get label() { return tr("History"); }, icon: History },
 ] as const;
 
 /** Views opened from a header button rather than a tab. */
@@ -104,7 +105,7 @@ export function DispatchPage() {
   const card = params.get("card");
   useEffect(() => {
     if (!card || slice.loading) return;
-    const node = [...document.querySelectorAll<HTMLElement>("section.dx-card")].find((item) => item.getAttribute("aria-label") === card);
+    const node = [...document.querySelectorAll<HTMLElement>("section.dx-card")].find((item) => item.getAttribute("aria-label") === trx(card));
     if (!node) return;
     node.scrollIntoView({ block: "start" });
     node.classList.add("pl-flash");
@@ -122,7 +123,7 @@ export function DispatchPage() {
   const canEdit = useCallback((id: string) => canEditRole && Boolean(agent && (agent.scope.zones === "all" || agent.scope.zones.includes(id))), [canEditRole, agent]);
   const symbol = SYMBOL[country];
   const money = (value: number) => `${new Intl.NumberFormat(market.locale, { maximumFractionDigits: 2 }).format(value)} ${symbol}`;
-  const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: market.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(now));
+  const hhmm = new Intl.DateTimeFormat(uiLocale(), { timeZone: market.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(now));
 
   const rulesOf = useCallback((id: string) => working[id] ?? draftRules(book, id), [working, book]);
   const liveOf = useCallback((id: string) => liveRules(book, id), [book]);
@@ -242,30 +243,30 @@ export function DispatchPage() {
   return (
     <div className="dx-page">
       <header className="dx-head">
-        <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost dx-back" onClick={back} aria-label="Go back"><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost dx-back" onClick={back} aria-label={tr("Go back")}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
         <div className="dx-head-text">
-          <h2>Dispatch in {market.name}</h2>
-          <p>How ride requests find a driver: Radar, Exclusive and reservations, with rules for every zone.</p>
+          <h2>{trn("Dispatch in {0}", trx(market.name))}</h2>
+          <p>{tr("How ride requests find a driver: Radar, Exclusive and reservations, with rules for every zone.")}</p>
         </div>
-        <button data-command="admin.dispatch.view" type="button" className={view === "features" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "features"} onClick={() => go({ view: view === "features" ? null : "features" })} title="Every setting and feature, with a search"><ListTree size={15} aria-hidden="true" /> All features</button>
-        <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate("/pricing?tab=extras&section=tips")} title="Tips and raise-offer quick steps per country, in Pricing"><HandHeart size={15} aria-hidden="true" /> Tips &amp; raise steps</button>
-        <button data-command="admin.dispatch.view" type="button" className={view === "activity" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "activity"} onClick={() => go({ view: view === "activity" ? null : "activity" })} title="Everything you did, this session and earlier, with done or failed"><UserRoundCheck size={15} aria-hidden="true" /> My activity</button>
-        <button data-command="admin.dispatch.rulesFile" type="button" className="dash-btn ghost" onClick={downloadRules} title="All live rules in one file for the backend team"><Download size={15} aria-hidden="true" /> Rules file</button>
+        <button data-command="admin.dispatch.view" type="button" className={view === "features" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "features"} onClick={() => go({ view: view === "features" ? null : "features" })} title={tr("Every setting and feature, with a search")}>{trn("{0} All features", <ListTree size={15} aria-hidden="true" />)}</button>
+        <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate("/pricing?tab=extras&section=tips")} title={tr("Tips and raise-offer quick steps per country, in Pricing")}>{trn("{0} Tips & raise steps", <HandHeart size={15} aria-hidden="true" />)}</button>
+        <button data-command="admin.dispatch.view" type="button" className={view === "activity" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "activity"} onClick={() => go({ view: view === "activity" ? null : "activity" })} title={tr("Everything you did, this session and earlier, with done or failed")}>{trn("{0} My activity", <UserRoundCheck size={15} aria-hidden="true" />)}</button>
+        <button data-command="admin.dispatch.rulesFile" type="button" className="dash-btn ghost" onClick={downloadRules} title={tr("All live rules in one file for the backend team")}>{trn("{0} Rules file", <Download size={15} aria-hidden="true" />)}</button>
         {zoneId ? (
           <>
-            <button data-command="admin.dispatch.appConfig" type="button" className="dash-btn ghost" onClick={() => downloadAppConfig("rider")} disabled={!appSourcesReady} title={appSourcesReady ? "RiderAppConfig JSON for this zone, as the rider app reads it" : "Loading the settings the rider app config is made from"}><Download size={15} aria-hidden="true" /> Rider app config</button>
-            <button data-command="admin.dispatch.appConfig" type="button" className="dash-btn ghost" onClick={() => downloadAppConfig("driver")} disabled={!appSourcesReady} title={appSourcesReady ? "DriverAppConfig JSON for this zone, as the driver app reads it" : "Loading the settings the driver app config is made from"}><Download size={15} aria-hidden="true" /> Driver app config</button>
+            <button data-command="admin.dispatch.appConfig" type="button" className="dash-btn ghost" onClick={() => downloadAppConfig("rider")} disabled={!appSourcesReady} title={appSourcesReady ? tr("RiderAppConfig JSON for this zone, as the rider app reads it") : tr("Loading the settings the rider app config is made from")}>{trn("{0} Rider app config", <Download size={15} aria-hidden="true" />)}</button>
+            <button data-command="admin.dispatch.appConfig" type="button" className="dash-btn ghost" onClick={() => downloadAppConfig("driver")} disabled={!appSourcesReady} title={appSourcesReady ? tr("DriverAppConfig JSON for this zone, as the driver app reads it") : tr("Loading the settings the driver app config is made from")}>{trn("{0} Driver app config", <Download size={15} aria-hidden="true" />)}</button>
           </>
         ) : null}
       </header>
 
-      <div className="dash-tabs dx-views" role="tablist" aria-label="Dispatch sections">
+      <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Dispatch sections")}>
         {VIEWS.map((item) => {
           const Icon = item.icon;
           const count = item.id === "history" ? book.approvals.length : 0;
           return (
             <button data-command="admin.dispatch.view" key={item.id} type="button" role="tab" aria-selected={view === item.id} className={view === item.id ? "active" : undefined} onClick={() => go({ view: item.id === "rules" ? null : item.id })}>
-              <Icon size={15} aria-hidden="true" /> {item.label}{count ? <span className="tab-count">{count}</span> : null}
+              <Icon size={15} aria-hidden="true" /> {trx(item.label)}{count ? <span className="tab-count">{count}</span> : null}
             </button>
           );
         })}
@@ -274,30 +275,28 @@ export function DispatchPage() {
       {view !== "history" ? <Approvals book={book} agentId={agent?.id ?? ""} canApprove={canApprove} onNotice={say} compact /> : null}
 
       {view === "rules" || view === "test" || view === "reasons" ? (
-        <section className={changes.length || countryChanged.length ? "dx-publish has-changes" : "dx-publish"} aria-label="Publish">
+        <section className={changes.length || countryChanged.length ? "dx-publish has-changes" : "dx-publish"} aria-label={tr("Publish")}>
           <div className="dx-publish-text">
             {changes.length || countryChanged.length ? (
               <>
-                <b>{lineCount} change{lineCount === 1 ? "" : "s"} not live yet</b>
-                <small>{[...changes.map((change) => zoneById(change.zoneId)?.name ?? change.zoneId), ...(countryChanged.length ? [`${market.name} rules`] : [])].join(", ")}{unsaved ? " · not saved" : " · saved as a draft"}</small>
+                <b>{trn("{0} change{1} not live yet", lineCount, lineCount === 1 ? "" : tr("s"))}</b>
+                <small>{[...changes.map((change) => zoneById(change.zoneId)?.name ?? change.zoneId), ...(countryChanged.length ? [`${market.name} rules`] : [])].join(", ")}{unsaved ? tr(" · not saved") : tr(" · saved as a draft")}</small>
               </>
             ) : (
               <>
-                <b>Everything is live</b>
-                <small>Change a rule, then publish it now or save it as a draft and test it first.</small>
+                <b>{tr("Everything is live")}</b>
+                <small>{tr("Change a rule, then publish it now or save it as a draft and test it first.")}</small>
               </>
             )}
           </div>
           {changes.length || countryChanged.length ? (
             <div className="dx-publish-actions">
-              <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" aria-expanded={showChanges} onClick={() => setShowChanges((value) => !value)}>{showChanges ? "Hide changes" : "See changes"}</button>
-              {unsaved ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => { setWorking({}); setWorkingCountry({}); setNotice("Unsaved changes were thrown away."); }}><Undo2 size={13} aria-hidden="true" /> Discard</button> : null}
+              <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" aria-expanded={showChanges} onClick={() => setShowChanges((value) => !value)}>{showChanges ? tr("Hide changes") : tr("See changes")}</button>
+              {unsaved ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => { setWorking({}); setWorkingCountry({}); setNotice("Unsaved changes were thrown away."); }}>{trn("{0} Discard", <Undo2 size={13} aria-hidden="true" />)}</button> : null}
               {unsaved ? (
-                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole} largeChanges={largeDraftChanges} onDone={() => { setWorking({}); setWorkingCountry({}); setNotice("Draft saved. Nothing is live yet. Test it in Test a ride, then publish."); }}>
-                  <Save size={13} aria-hidden="true" /> Save draft
-                </CommandButton>
+                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole} largeChanges={largeDraftChanges} onDone={() => { setWorking({}); setWorkingCountry({}); setNotice("Draft saved. Nothing is live yet. Test it in Test a ride, then publish."); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
               ) : null}
-              {view !== "test" ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => go({ view: "test" })}><FlaskConical size={13} aria-hidden="true" /> Test it</button> : null}
+              {view !== "test" ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => go({ view: "test" })}>{trn("{0} Test it", <FlaskConical size={13} aria-hidden="true" />)}</button> : null}
               <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error)} title={published.error} largeChanges={largeChanges} onDone={() => {
                 const liveNames = published.live.map((id) => zoneById(id)?.name ?? id);
                 const waitNames = published.waiting.map((id) => zoneById(id)?.name ?? id);
@@ -306,31 +305,29 @@ export function DispatchPage() {
                 setNote("");
                 setShowChanges(false);
                 setNotice([liveNames.length || countryChanged.length ? `Live now${liveNames.length ? `: ${liveNames.join(", ")}` : ` in ${market.name}`}.` : "", waitNames.length ? `Waiting for a second admin: ${waitNames.join(", ")}.` : ""].filter(Boolean).join(" "));
-              }}>
-                <Send size={13} aria-hidden="true" /> Publish now
-              </CommandButton>
+              }}>{trn("{0} Publish now", <Send size={13} aria-hidden="true" />)}</CommandButton>
             </div>
           ) : null}
           {showChanges && (changes.length || countryChanged.length) ? (
             <div className="dx-changes">
-              <ul aria-label="Changes not live yet">
+              <ul aria-label={tr("Changes not live yet")}>
                 {changes.map((change) => (
                   <li key={change.zoneId}>
-                    <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>{change.big ? <span className="dx-dot waiting">Needs a second admin</span> : null}
+                    <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>{change.big ? <span className="dx-dot waiting">{tr("Needs a second admin")}</span> : null}
                     <ul>{change.lines.map((line) => <li key={line}>{line}</li>)}</ul>
                   </li>
                 ))}
-                {countryChanged.length ? <li><b>{market.name}</b><ul>{countryChanged.map((line) => <li key={line}>{line}</li>)}</ul></li> : null}
+                {countryChanged.length ? <li><b>{trx(market.name)}</b><ul>{countryChanged.map((line) => <li key={line}>{line}</li>)}</ul></li> : null}
               </ul>
-              <label className="field">Note for the history (optional)<input aria-label="Publish note" maxLength={120} value={note} onChange={(event) => setNote(event.target.value)} placeholder="For example More drivers on the radar for Friday nights" /></label>
+              <label className="field">{trn("Note for the history (optional){0}", <input aria-label={tr("Publish note")} maxLength={120} value={note} onChange={(event) => setNote(event.target.value)} placeholder={tr("For example More drivers on the radar for Friday nights")} />)}</label>
             </div>
           ) : null}
-          {published.error && (changes.length || countryChanged.length) ? <p className="dx-publish-error" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {published.error}</p> : null}
+          {published.error && (changes.length || countryChanged.length) ? <p className="dx-publish-error" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {trSentences(published.error)}</p> : null}
         </section>
       ) : null}
 
-      {notice || slice.message ? <p className="pricing-notice" role="status">{notice} {slice.message}</p> : null}
-      {slice.loading ? <p className="state-line">Loading dispatch rules.</p> : null}
+      {notice || slice.message ? <p className="pricing-notice" role="status">{trSentences(notice)} {trSentences(slice.message)}</p> : null}
+      {slice.loading ? <p className="state-line">{tr("Loading dispatch rules.")}</p> : null}
 
       {!slice.loading && view === "rules" ? (
         <RulesView
