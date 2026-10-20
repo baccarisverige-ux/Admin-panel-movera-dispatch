@@ -7,6 +7,8 @@ import { MARKETS, zoneById, zoneGroups, type MarketId } from "../markets/markets
 import { allowedCountries, zoneAllowed } from "../markets/scope";
 import { rememberCountry, useMarketScope } from "../markets/useMarketScope";
 import { Flag } from "../ui/Flag";
+import { tr, trn, trx } from "../i18n";
+import { COUNTRY_LABEL } from "../i18n/countries";
 
 /** Top-bar country switch followed by the zone picker for that country. */
 export function MarketBar() {
@@ -66,14 +68,14 @@ export function MarketBar() {
 
   const groups = zoneGroups(scope.country, (zoneId) => zoneAllowed(access, zoneId));
   const label = scope.zones.length === 0
-    ? "All zones"
+    ? tr("All zones")
     : scope.zones.length === 1
       ? zoneById(scope.zones[0])?.name ?? scope.zones[0]
-      : `${scope.zones.length} zones`;
+      : tr("{0} zones", [scope.zones.length]);
 
   return (
     <div className="market-bar">
-      <div className="country-switch" role="radiogroup" aria-label="Country">
+      <div className="country-switch" role="radiogroup" aria-label={tr("Country")}>
         {MARKETS.filter((item) => countries.includes(item.id)).map((item) => (
           <button data-command="admin.ui.country"
             key={item.id}
@@ -85,25 +87,22 @@ export function MarketBar() {
             title={`${item.name} · ${item.currency}`}
           >
             <Flag id={item.id} />
-            <span className="country-name">{item.name}</span>
+            <span className="country-name">{trx(COUNTRY_LABEL[item.id])}</span>
           </button>
         ))}
       </div>
       <div className="zone-picker" ref={popover}>
-        <button data-command="admin.ui.zones" type="button" className="zone-trigger" aria-haspopup="true" aria-expanded={open} aria-label={`Zones: ${label}`} onClick={() => setOpen((value) => !value)}>
+        <button data-command="admin.ui.zones" type="button" className="zone-trigger" aria-haspopup="true" aria-expanded={open} aria-label={tr("Zones: {0}", [label])} onClick={() => setOpen((value) => !value)}>
           <MapPinned size={15} aria-hidden="true" />
-          <span>{label}</span>
+          <span>{trx(label)}</span>
           <ChevronDown size={14} aria-hidden="true" />
         </button>
         {open ? (
-          <div className="zone-menu" role="group" aria-label={`Zones in ${scope.market.name}`}>
-            <button data-command="admin.ui.zones" type="button" className={scope.zones.length ? "zone-option" : "zone-option checked"} onClick={() => setZones([])}>
-              <span className="zone-check">{scope.zones.length ? null : <Check size={13} aria-hidden="true" />}</span>
-              All zones in {scope.market.name}
-            </button>
+          <div className="zone-menu" role="group" aria-label={tr("Zones in {0}", [trx(COUNTRY_LABEL[scope.market.id])])}>
+            <button data-command="admin.ui.zones" type="button" className={scope.zones.length ? "zone-option" : "zone-option checked"} onClick={() => setZones([])}>{trn("{0}All zones in {1}", <span className="zone-check">{scope.zones.length ? null : <Check size={13} aria-hidden="true" />}</span>, trx(COUNTRY_LABEL[scope.market.id]))}</button>
             {groups.map((group) => (
               <div key={group.label} className="zone-group">
-                <p>{group.label}</p>
+                <p>{trx(group.label)}</p>
                 {group.zones.map((zone) => {
                   const checked = scope.zones.includes(zone.id);
                   return (

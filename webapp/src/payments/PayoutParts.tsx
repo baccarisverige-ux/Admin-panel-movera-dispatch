@@ -27,6 +27,7 @@ import {
   type Schedule,
 } from "./runs";
 import type { CurrencyCode } from "../domain/money";
+import { tr, trn, trx } from "../i18n";
 
 const agentName = (id: string) => AGENTS.find((item) => item.id === id)?.name ?? id;
 
@@ -53,17 +54,17 @@ export function RunCard({ run, rows, ops, country, next, money, fileRows, starte
     logExport(agent?.id, `Payout bank file ${country} (${fileRows.length} payouts)`);
   }
   return (
-    <section className="po-run" aria-label="Next payout run">
+    <section className="po-run" aria-label={tr("Next payout run")}>
       <span className="po-run-icon" aria-hidden="true"><CalendarClock size={26} /></span>
       <span className="po-run-text">
-        <b>Next run {next}</b>
-        <small>{scheduleLine(sched)} · {rows.length} payouts · {money(total)}{held ? ` · ${held} on hold` : ""}{failed ? ` · ${failed} failed` : ""}</small>
-        <small>{needs ? (approved ? `Approved by ${agentName(approved.by)}` : `Over ${money(sched.approvalOverMajor * market(country).minorUnits)}: a second admin must approve the run.`) : "Small enough to go without a second admin."}</small>
+        <b>{trn("Next run {0}", next)}</b>
+        <small>{trn("{0} · {1} payouts · {2}{3}{4}", scheduleLine(sched), rows.length, money(total), held ? tr(" · {0} on hold", [held]) : "", failed ? tr(" · {0} failed", [failed]) : "")}</small>
+        <small>{needs ? (approved ? tr("Approved by {0}", [agentName(approved.by)]) : tr("Over {0}: a second admin must approve the run.", [money(sched.approvalOverMajor * market(country).minorUnits)])) : tr("Small enough to go without a second admin.")}</small>
       </span>
       {needs && !approved ? (
-        <CommandButton command="admin.payout.approveRun" className="dash-btn small" sliceKey={PAYOUT_OPS_KEY} value={approve.ops} expectedSliceRev={ops.draftRev} targetId={run} confirmTarget={false} before="waiting" after="approved" disabled={Boolean(approve.error) || !(agent && can(agent.role, "approval.decide"))} title={approve.error}><CheckCheck size={13} aria-hidden="true" /> Approve run</CommandButton>
+        <CommandButton command="admin.payout.approveRun" className="dash-btn small" sliceKey={PAYOUT_OPS_KEY} value={approve.ops} expectedSliceRev={ops.draftRev} targetId={run} confirmTarget={false} before="waiting" after="approved" disabled={Boolean(approve.error) || !(agent && can(agent.role, "approval.decide"))} title={approve.error}>{trn("{0} Approve run", <CheckCheck size={13} aria-hidden="true" />)}</CommandButton>
       ) : null}
-      <button data-command="admin.payout.bankFile" type="button" className="dash-btn small ghost" disabled={!fileRows.length || (needs && !approved)} title={needs && !approved ? "Approve the run first." : !fileRows.length ? "No payout is ready." : undefined} onClick={download}><FileDown size={13} aria-hidden="true" /> Bank file ({fileRows.length})</button>
+      <button data-command="admin.payout.bankFile" type="button" className="dash-btn small ghost" disabled={!fileRows.length || (needs && !approved)} title={needs && !approved ? tr("Approve the run first.") : !fileRows.length ? tr("No payout is ready.") : undefined} onClick={download}>{trn("{0} Bank file ({1})", <FileDown size={13} aria-hidden="true" />, fileRows.length)}</button>
     </section>
   );
 }
@@ -78,17 +79,17 @@ export function PayoutLines({ record, fleet, ops, country, money, onNotice, cash
   const failed = failedOf(ops, record);
   const next = setHold(ops, record.id, !hold, hold ? "Released" : reason, agent?.id ?? "", new Date().toISOString());
   return (
-    <section className="fn-section po-lines" aria-label="Line by line">
-      <h3><Hand size={16} aria-hidden="true" /> {record.id} line by line {instant ? <span className="dx-tag"><Zap size={11} aria-hidden="true" /> Instant cash-out</span> : null}</h3>
+    <section className="fn-section po-lines" aria-label={tr("Line by line")}>
+      <h3>{trn("{0} {1} line by line {2}", <Hand size={16} aria-hidden="true" />, record.id, instant ? <span className="dx-tag">{trn("{0} Instant cash-out", <Zap size={11} aria-hidden="true" />)}</span> : null)}</h3>
       <ul className="po-line-list">
-        {lines.map((line) => <li key={line.label} className={line.kind} title={line.help}><span>{line.label}</span><b>{line.kind === "minus" ? `− ${money(Math.abs(line.minor))}` : money(line.minor)}</b></li>)}
+        {lines.map((line) => <li key={line.label} className={line.kind} title={trx(line.help)}><span>{trx(line.label)}</span><b>{line.kind === "minus" ? `− ${money(Math.abs(line.minor))}` : money(line.minor)}</b></li>)}
       </ul>
-      {hold ? <p className="fn-warn"><PauseCircle size={14} aria-hidden="true" /> On hold by {agentName(hold.by)}: {hold.reason}</p> : null}
+      {hold ? <p className="fn-warn">{trn("{0} On hold by {1}: {2}", <PauseCircle size={14} aria-hidden="true" />, agentName(hold.by), hold.reason)}</p> : null}
       {failed ? <p className="fn-warn"><RefreshCcw size={14} aria-hidden="true" /> {failed}</p> : null}
       <div className="po-hold">
-        {!hold ? <input aria-label="Hold reason" value={reason} placeholder="Why hold this payout?" onChange={(event) => setReason(event.target.value)} /> : null}
-        <CommandButton command="admin.payout.hold" className={hold ? "dash-btn small" : "dash-btn small danger-ghost"} sliceKey={PAYOUT_OPS_KEY} value={next.ops} expectedSliceRev={ops.draftRev} targetId={record.id} confirmTarget={false} before={hold ? "held" : "free"} after={hold ? "released" : "held"} disabled={Boolean(next.error)} title={next.error} onDone={() => { setReason(""); onNotice(hold ? "Payout released." : "Payout on hold."); }}>{hold ? "Release payout" : "Hold payout"}</CommandButton>
-        {failed ? <CommandButton command="admin.payout.retry" className="dash-btn small" sliceKey={PAYOUT_OPS_KEY} value={retryPayout(ops, record.id, agent?.id ?? "", new Date().toISOString())} expectedSliceRev={ops.draftRev} targetId={record.id} confirmTarget={false} before="failed" after="retried" disabled={!sched.retryFailed} title={sched.retryFailed ? undefined : "Retries are off in the schedule."} onDone={() => onNotice("Payout sent again.")}><RefreshCcw size={13} aria-hidden="true" /> Retry payout</CommandButton> : null}
+        {!hold ? <input aria-label={tr("Hold reason")} value={reason} placeholder={tr("Why hold this payout?")} onChange={(event) => setReason(event.target.value)} /> : null}
+        <CommandButton command="admin.payout.hold" className={hold ? "dash-btn small" : "dash-btn small danger-ghost"} sliceKey={PAYOUT_OPS_KEY} value={next.ops} expectedSliceRev={ops.draftRev} targetId={record.id} confirmTarget={false} before={hold ? "held" : "free"} after={hold ? "released" : "held"} disabled={Boolean(next.error)} title={next.error} onDone={() => { setReason(""); onNotice(hold ? tr("Payout released.") : tr("Payout on hold.")); }}>{hold ? tr("Release payout") : tr("Hold payout")}</CommandButton>
+        {failed ? <CommandButton command="admin.payout.retry" className="dash-btn small" sliceKey={PAYOUT_OPS_KEY} value={retryPayout(ops, record.id, agent?.id ?? "", new Date().toISOString())} expectedSliceRev={ops.draftRev} targetId={record.id} confirmTarget={false} before="failed" after="retried" disabled={!sched.retryFailed} title={sched.retryFailed ? undefined : tr("Retries are off in the schedule.")} onDone={() => onNotice(tr("Payout sent again."))}>{trn("{0} Retry payout", <RefreshCcw size={13} aria-hidden="true" />)}</CommandButton> : null}
       </div>
     </section>
   );
@@ -107,42 +108,42 @@ export function ScheduleView({ ops, country, editable }: { ops: PayoutOps; count
   return (
     <FieldErrorScope value={fieldErrors.report}>
     <div className="fn-settings">
-      {!editable ? <p className="dx-readonly">Only admins who approve money can change the schedule.</p> : null}
+      {!editable ? <p className="dx-readonly">{tr("Only admins who approve money can change the schedule.")}</p> : null}
       <fieldset className="fn-fieldset" disabled={!editable}>
-        <Card title="When drivers get paid" icon={<CalendarClock size={18} />} tone="blue" help={scheduleLine(current)}>
-          <Row label="How often">
-            <Choice label="Payout frequency" value={current.every} options={[{ id: "weekly", label: "Every week" }, { id: "daily", label: "Every day" }]} onChange={(every) => patch({ every })} />
+        <Card title={tr("When drivers get paid")} icon={<CalendarClock size={18} />} tone="blue" help={scheduleLine(current)}>
+          <Row label={tr("How often")}>
+            <Choice label={tr("Payout frequency")} value={current.every} options={[{ id: "weekly", label: tr("Every week") }, { id: "daily", label: tr("Every day") }]} onChange={(every) => patch({ every })} />
           </Row>
           {current.every === "weekly" ? (
-            <Row label="Day">
-              <select aria-label="Payout day" value={current.weekday} onChange={(event) => patch({ weekday: Number(event.target.value) })}>{WEEKDAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}</select>
+            <Row label={tr("Day")}>
+              <select aria-label={tr("Payout day")} value={current.weekday} onChange={(event) => patch({ weekday: Number(event.target.value) })}>{WEEKDAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}</select>
             </Row>
           ) : null}
-          <Row label="Time" help="In the country's time.">
-            <input aria-label="Payout time" type="time" value={current.time} onChange={(event) => patch({ time: event.target.value })} />
+          <Row label={tr("Time")} help={tr("In the country's time.")}>
+            <input aria-label={tr("Payout time")} type="time" value={current.time} onChange={(event) => patch({ time: event.target.value })} />
           </Row>
-          <Row label="Retry failed payouts" help="Admins can send a payout again after the bank returned it." on={current.retryFailed} onToggle={(on) => patch({ retryFailed: on })} />
+          <Row label={tr("Retry failed payouts")} help={tr("Admins can send a payout again after the bank returned it.")} on={current.retryFailed} onToggle={(on) => patch({ retryFailed: on })} />
         </Card>
-        <Card title="Instant cash-out" icon={<Zap size={18} />} tone="orange" help="Drivers can take their money before the run, for a fee.">
-          <Row label="Instant cash-out" on={current.instant.on} onToggle={(on) => patch({ instant: { ...current.instant, on } })}>
-            <Num label="Cash-out fee" before="Fee" value={current.instant.feePct} unit="%" step={0.1} max={10} onChange={(value) => patch({ instant: { ...current.instant, feePct: value } })} />
-            <Num label="Smallest cash-out" before="From" value={current.instant.minMajor} unit={symbol} onChange={(value) => patch({ instant: { ...current.instant, minMajor: value } })} />
+        <Card title={tr("Instant cash-out")} icon={<Zap size={18} />} tone="orange" help={tr("Drivers can take their money before the run, for a fee.")}>
+          <Row label={tr("Instant cash-out")} on={current.instant.on} onToggle={(on) => patch({ instant: { ...current.instant, on } })}>
+            <Num label={tr("Cash-out fee")} before="Fee" value={current.instant.feePct} unit="%" step={0.1} max={10} onChange={(value) => patch({ instant: { ...current.instant, feePct: value } })} />
+            <Num label={tr("Smallest cash-out")} before="From" value={current.instant.minMajor} unit={symbol} onChange={(value) => patch({ instant: { ...current.instant, minMajor: value } })} />
           </Row>
         </Card>
-        <Card title="Checks" icon={<CheckCheck size={18} />} tone="green">
-          <Row label="Second admin for big runs" help="A run above this total waits until another admin approves it.">
-            <Num label="Approval over" before="Over" value={current.approvalOverMajor} unit={symbol} onChange={(value) => patch({ approvalOverMajor: value })} />
+        <Card title={tr("Checks")} icon={<CheckCheck size={18} />} tone="green">
+          <Row label={tr("Second admin for big runs")} help={tr("A run above this total waits until another admin approves it.")}>
+            <Num label={tr("Approval over")} before="Over" value={current.approvalOverMajor} unit={symbol} onChange={(value) => patch({ approvalOverMajor: value })} />
           </Row>
-          <Row label="Fleet owner part" help="What a fleet owner gets from their drivers' rides, after commission.">
-            <Num label="Fleet owner part" value={current.fleetPct} unit="%" max={50} onChange={(value) => patch({ fleetPct: value })} />
+          <Row label={tr("Fleet owner part")} help={tr("What a fleet owner gets from their drivers' rides, after commission.")}>
+            <Num label={tr("Fleet owner part")} value={current.fleetPct} unit="%" max={50} onChange={(value) => patch({ fleetPct: value })} />
           </Row>
         </Card>
       </fieldset>
       {editable ? (
         <div className="dx-publish">
-          <span className="dx-publish-text"><b>{dirty ? "Changes not saved" : "Everything is saved"}</b><small>{fieldErrors.first ?? error ?? "Applies from the next run."}</small></span>
-          <button data-command="admin.payout.view" type="button" className="dash-btn small ghost" disabled={!dirty} onClick={() => setDraft(null)}>Undo changes</button>
-          <CommandButton command="admin.payout.schedule" className="dash-btn small" targetId={`payout schedule ${country}`} scope="all" confirmTarget={false} before={scheduleLine(saved)} after={scheduleLine(current)} sliceKey={PAYOUT_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, schedules: { ...ops.schedules, [country]: current } }} expectedSliceRev={ops.draftRev} disabled={!dirty || Boolean(error) || fieldErrors.count > 0} title={fieldErrors.first ?? error ?? undefined} onDone={() => setDraft(null)}>Save schedule</CommandButton>
+          <span className="dx-publish-text"><b>{dirty ? tr("Changes not saved") : tr("Everything is saved")}</b><small>{fieldErrors.first ?? error ?? tr("Applies from the next run.")}</small></span>
+          <button data-command="admin.payout.view" type="button" className="dash-btn small ghost" disabled={!dirty} onClick={() => setDraft(null)}>{tr("Undo changes")}</button>
+          <CommandButton command="admin.payout.schedule" className="dash-btn small" targetId={`payout schedule ${country}`} scope="all" confirmTarget={false} before={scheduleLine(saved)} after={scheduleLine(current)} sliceKey={PAYOUT_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, schedules: { ...ops.schedules, [country]: current } }} expectedSliceRev={ops.draftRev} disabled={!dirty || Boolean(error) || fieldErrors.count > 0} title={fieldErrors.first ?? error ?? undefined} onDone={() => setDraft(null)}>{tr("Save schedule")}</CommandButton>
         </div>
       ) : null}
     </div>

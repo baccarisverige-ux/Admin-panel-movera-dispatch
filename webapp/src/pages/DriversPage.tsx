@@ -19,16 +19,17 @@ import { CATEGORIES } from "../domain/contract";
 import { formatMoney, marketOfZone, zoneById } from "../markets/markets";
 import { useMarketScope } from "../markets/useMarketScope";
 import { DataTable } from "../ui/DataTable";
+import { tr, trn, trx, uiLocale } from "../i18n";
 
 const VIEWS = [
-  { id: "all", label: "All" },
-  { id: "online", label: "Online now" },
-  { id: "active", label: "Active" },
-  { id: "on_hold", label: "On hold" },
-  { id: "pending", label: "Pending" },
-  { id: "suspended", label: "Suspended" },
-  { id: "expiring", label: "Documents expiring" },
-  { id: "invalid", label: "Documents missing" },
+  { id: "all", get label() { return tr("All"); } },
+  { id: "online", get label() { return tr("Online now"); } },
+  { id: "active", get label() { return tr("Active"); } },
+  { id: "on_hold", get label() { return tr("On hold"); } },
+  { id: "pending", get label() { return tr("Pending"); } },
+  { id: "suspended", get label() { return tr("Suspended"); } },
+  { id: "expiring", get label() { return tr("Documents expiring"); } },
+  { id: "invalid", get label() { return tr("Documents missing"); } },
 ] as const;
 
 type View = (typeof VIEWS)[number]["id"];
@@ -49,7 +50,7 @@ export function DriversPage() {
   const [view, setView] = useState<View>("all");
   const [type, setType] = useState("all");
   const [now] = useState(() => Date.now());
-  const month = useMemo(() => periodWindow({ kind: "month" }, now, scope.market.timeZone, scope.market.locale), [now, scope.market]);
+  const month = useMemo(() => periodWindow({ kind: "month" }, now, scope.market.timeZone, uiLocale()), [now, scope.market]);
 
   const presence = useMemo(() => new Map(liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0).map((row) => [row.id, row.state as Presence])), [drivers.data, vehicles.data, trips.data, incidents.data]);
 
@@ -111,9 +112,9 @@ export function DriversPage() {
   }
 
   const tabs = (
-    <div className="dash-tabs" role="tablist" aria-label="Drivers sections">
-      <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "drivers"} className={tab === "drivers" ? "active" : undefined} onClick={() => go("drivers")}><Users size={15} aria-hidden="true" /> Drivers</button>
-      <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "bonuses"} className={tab === "bonuses" ? "active" : undefined} onClick={() => go("bonuses")}><Flame size={15} aria-hidden="true" /> Bonuses</button>
+    <div className="dash-tabs" role="tablist" aria-label={tr("Drivers sections")}>
+      <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "drivers"} className={tab === "drivers" ? "active" : undefined} onClick={() => go("drivers")}>{trn("{0} Drivers", <Users size={15} aria-hidden="true" />)}</button>
+      <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "bonuses"} className={tab === "bonuses" ? "active" : undefined} onClick={() => go("bonuses")}>{trn("{0} Bonuses", <Flame size={15} aria-hidden="true" />)}</button>
     </div>
   );
 
@@ -122,8 +123,8 @@ export function DriversPage() {
       <div className="fd-page">
         <div className="fd-head">
           <div>
-            <h2>Drivers</h2>
-            <p>Bonuses drivers see in the driver app: ride bonuses and area bonuses on the map, in {scope.market.name}.</p>
+            <h2>{tr("Drivers")}</h2>
+            <p>{trn("Bonuses drivers see in the driver app: ride bonuses and area bonuses on the map, in {0}.", trx(scope.market.name))}</p>
           </div>
         </div>
         {tabs}
@@ -137,36 +138,36 @@ export function DriversPage() {
     <div className="fd-page">
       <div className="fd-head">
         <div>
-          <h2>Drivers</h2>
-          <p>{drivers.isLoading ? "Loading drivers." : `${rows.length} in ${VIEWS.find((item) => item.id === view)?.label}.`} Open a driver to see every detail, document, performance and earnings. Numbers are for {month.label}.</p>
+          <h2>{tr("Drivers")}</h2>
+          <p>{trn("{0} Open a driver to see every detail, document, performance and earnings. Numbers are for {1}.", drivers.isLoading ? tr("Loading drivers.") : tr("{0} in {1}.", [rows.length, trx(VIEWS.find((item) => item.id === view)?.label)]), trx(month.label))}</p>
         </div>
       </div>
 
       {tabs}
 
-      <section className="fd-cards" aria-label="Driver summary">
-        <SummaryCard icon={<Users size={18} />} tone="blue" label="All drivers" value={counts.all} />
-        <SummaryCard icon={<UserCheck size={18} />} tone="green" label="Active" value={counts.active} hint={`${counts.online} online now`} />
-        <SummaryCard icon={<PauseCircle size={18} />} tone="amber" label="On hold" value={counts.on_hold} />
-        <SummaryCard icon={<CalendarClock size={18} />} tone="violet" label="Pending approval" value={counts.pending} />
-        <SummaryCard icon={<AlertTriangle size={18} />} tone="orange" label="Documents expiring" value={counts.expiring} />
-        <SummaryCard icon={<Car size={18} />} tone="red" label="Documents missing or wrong" value={counts.invalid} />
+      <section className="fd-cards" aria-label={tr("Driver summary")}>
+        <SummaryCard icon={<Users size={18} />} tone="blue" label={tr("All drivers")} value={counts.all} />
+        <SummaryCard icon={<UserCheck size={18} />} tone="green" label={tr("Active")} value={counts.active} hint={tr("{0} online now", [counts.online])} />
+        <SummaryCard icon={<PauseCircle size={18} />} tone="amber" label={tr("On hold")} value={counts.on_hold} />
+        <SummaryCard icon={<CalendarClock size={18} />} tone="violet" label={tr("Pending approval")} value={counts.pending} />
+        <SummaryCard icon={<AlertTriangle size={18} />} tone="orange" label={tr("Documents expiring")} value={counts.expiring} />
+        <SummaryCard icon={<Car size={18} />} tone="red" label={tr("Documents missing or wrong")} value={counts.invalid} />
       </section>
 
       <div className="fd-toolbar">
-        <div className="fd-views" role="group" aria-label="Driver views">
+        <div className="fd-views" role="group" aria-label={tr("Driver views")}>
           {VIEWS.map((item) => (
-            <button key={item.id} type="button" data-command="admin.table.filter" className={view === item.id ? "fd-view active" : "fd-view"} aria-pressed={view === item.id} aria-label={item.label} onClick={() => setView(item.id)}>
-              {item.label}<span>{counts[item.id]}</span>
+            <button key={item.id} type="button" data-command="admin.table.filter" className={view === item.id ? "fd-view active" : "fd-view"} aria-pressed={view === item.id} aria-label={trx(item.label)} onClick={() => setView(item.id)}>
+              {trx(item.label)}<span>{counts[item.id]}</span>
             </button>
           ))}
         </div>
         <label className="fd-select">
-          <span>Type</span>
+          <span>{tr("Type")}</span>
           <select value={type} onChange={(event) => setType(event.target.value)}>
-            <option value="all">All drivers</option>
-            <option value="independent">Independent</option>
-            <option value="fleet">In a fleet</option>
+            <option value="all">{tr("All drivers")}</option>
+            <option value="independent">{tr("Independent")}</option>
+            <option value="fleet">{tr("In a fleet")}</option>
             {fleetOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
         </label>
@@ -174,7 +175,7 @@ export function DriversPage() {
 
       <DataTable
         className="fd-table"
-        head={["Code", "Name", "Online", "Type", "Status", "Zone", "Vehicle", "Categories", "Documents", "Rating", "Trips", "Cancel %", "Earnings", "Contact"]}
+        head={[tr("Code"), tr("Name"), tr("Online"), tr("Type"), tr("Status"), tr("Zone"), tr("Vehicle"), tr("Categories"), tr("Documents"), tr("Rating"), tr("Trips"), tr("Cancel %"), tr("Earnings"), tr("Contact")]}
         rowIds={rows.map((row) => row.driver.id)}
         rows={rows.map(({ driver, counts: docCounts, total, perf, car, fleet, cats, code, online }) => [
           code,
@@ -217,9 +218,9 @@ function SummaryCard({ icon, tone, label, value, hint }: { icon: ReactNode; tone
   return (
     <article className={`fd-card tone-${tone}`}>
       <span className="fd-card-icon" aria-hidden="true">{icon}</span>
-      <span className="fd-card-label">{label}</span>
+      <span className="fd-card-label">{trx(label)}</span>
       <strong>{value}</strong>
-      {hint ? <small className="fd-card-hint">{hint}</small> : null}
+      {hint ? <small className="fd-card-hint">{trx(hint)}</small> : null}
     </article>
   );
 }

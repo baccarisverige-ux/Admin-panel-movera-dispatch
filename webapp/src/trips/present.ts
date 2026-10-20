@@ -6,6 +6,7 @@ import { formatMoney } from "../domain/money.ts";
 import { market, marketOfZone } from "../markets/markets.ts";
 import { canAdjustFare, canComplete, canNoShow, canOffer, canReassign, canRefundTrip, canSetWaiting, cancelTrip, eligibleDrivers, type OfferDriver, type Trip } from "./rules.ts";
 import { STEP_MS, startedAt, tripIndex } from "./clock.ts";
+import { tr, uiLocale } from "../i18n/core.ts";
 
 export { startedAt, tripIndex };
 
@@ -62,7 +63,7 @@ export function stockholmDate(iso: string): string {
 /** A time shown in the trip zone's own time zone and date style (Stockholm, Paris or Tunis). */
 export function zoneTimeLabel(iso: string, zoneId: string): string {
   const place = marketOfZone(zoneId) ?? market("SE");
-  return new Intl.DateTimeFormat(place.locale, { timeZone: place.timeZone, dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+  return new Intl.DateTimeFormat(uiLocale(), { timeZone: place.timeZone, dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 }
 
 export type StopPoint = { label: string; lat: number; lng: number; kind: "pickup" | "stop" | "dropoff" };
@@ -154,7 +155,7 @@ export function pinVerified(id: string): "Yes" | "No" {
  */
 export function ratingLabel(trip: DemoRecord): string {
   const endedEarly = trip.status === "cancelled_by_rider" && (RIDER_ONBOARD_STATUSES as readonly string[]).includes(trip.previousStatus ?? "");
-  if (!ratingAllowed("rider", trip.status, endedEarly ? "end_early" : undefined)) return "Not rated yet";
+  if (!ratingAllowed("rider", trip.status, endedEarly ? "end_early" : undefined)) return tr("Not rated yet");
   return `${3 + (tripIndex(trip.id) % 3)} of 5`;
 }
 
@@ -164,7 +165,7 @@ export function cancelledBy(status: string): string {
   if (status === "cancelled_by_admin") return "Admin";
   if (status === "cancelled_by_system") return "System";
   if (status === "no_show") return "No-show";
-  return "Not cancelled";
+  return tr("Not cancelled");
 }
 
 export function cancelReason(trip: DemoRecord): string {
@@ -172,7 +173,7 @@ export function cancelReason(trip: DemoRecord): string {
   if (trip.status.startsWith("cancelled") || trip.status === "no_show") {
     return ["Rider changed plans", "Could not reach the pickup", "Safety review", "Rider did not arrive"][tripIndex(trip.id) % 4];
   }
-  return "Not cancelled";
+  return tr("Not cancelled");
 }
 
 export function riderIdFor(trip: DemoRecord): string {
@@ -196,37 +197,37 @@ export function cancelBlock(status: string): string | null {
 }
 
 export function offerBlock(status: string): string | null {
-  return canOffer(status) ? null : "Offer is only available while the trip is requested, searching or offered. The driver still has to accept.";
+  return canOffer(status) ? null : tr("Offer is only available while the trip is requested, searching or offered. The driver still has to accept.");
 }
 
 export function reassignBlock(status: string): string | null {
-  return canReassign(status) ? null : "Reassign is only available from an offer until the driver has arrived, before the rider is in the car.";
+  return canReassign(status) ? null : tr("Reassign is only available from an offer until the driver has arrived, before the rider is in the car.");
 }
 
 export function noShowBlock(status: string): string | null {
-  return canNoShow(status) ? null : "No-show is only available once a driver has accepted and before the rider is in the car.";
+  return canNoShow(status) ? null : tr("No-show is only available once a driver has accepted and before the rider is in the car.");
 }
 
 export function completeBlock(status: string): string | null {
-  return canComplete(status) ? null : "Complete is only available once the rider is in the car.";
+  return canComplete(status) ? null : tr("Complete is only available once the rider is in the car.");
 }
 
 export function adjustBlock(status: string): string | null {
   return canAdjustFare(status)
     ? null
-    : `Fare adjustment is not allowed while the trip is ${status}.`;
+    : tr("Fare adjustment is not allowed while the trip is {0}.", [statusLabel(status).toLowerCase()]);
 }
 
 export function waitingBlock(status: string): string | null {
   return canSetWaiting(status)
     ? null
-    : `Waiting time cannot be changed while the trip is ${status}.`;
+    : tr("Waiting time cannot be changed while the trip is {0}.", [statusLabel(status).toLowerCase()]);
 }
 
 export function refundBlock(payment: PaymentState, status = "completed"): string | null {
-  if (!canRefundTrip(status)) return "Refund is only available after the trip reaches a refundable terminal state.";
-  if (payment === "refunded") return "This payment is already refunded.";
-  if (payment !== "captured") return "Refund is only available after the payment is captured.";
+  if (!canRefundTrip(status)) return tr("Refund is only available after the trip reaches a refundable terminal state.");
+  if (payment === "refunded") return tr("This payment is already refunded.");
+  if (payment !== "captured") return tr("Refund is only available after the payment is captured.");
   return null;
 }
 

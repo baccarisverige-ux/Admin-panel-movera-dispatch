@@ -19,6 +19,7 @@ import { failureCause, failureHandled } from "../payments/failures";
 import { useRidersData } from "../riders/useRidersData";
 import { RIDE_CHECK_KEY, alertBy, alertTitle, asRideChecks, emptyRideCheckOps, followText, normalizeRideCheckOps, reasonText, shiftOf, shifted, worries, type RideCheckOps } from "../safety/rideCheck";
 import { ALERTS_KEY, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
+import { tr } from "../i18n/core.ts";
 
 const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
 
@@ -104,7 +105,7 @@ export function useAlerts() {
           incidentId: row.id,
           zoneId: check.zoneId,
           status: row.status,
-          title: `Ride check: ${alertTitle(check)}`,
+          title: tr("Ride check: {0}", [alertTitle(check)]),
           detail: [...(said.length ? said : [reasonText(check)]), zoneName(check.zoneId), check.tripId].join(" · "),
           since: shifted(first.answer.at, shiftOf(check, opened, shift)),
         }];

@@ -12,6 +12,7 @@ import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { statusLabel } from "../domain/labels";
 import { paymentTimeline, refundRows } from "../payments/ledger";
 import { CommandButton } from "../ui/CommandButton";
+import { tr, trn, trx } from "../i18n";
 
 export function PaymentPage() {
   const { id = "" } = useParams();
@@ -25,7 +26,7 @@ export function PaymentPage() {
   const { policy: refundPolicy } = useRefundPolicy();
   const [now] = useState(() => Date.now());
   const row = payments.data?.find((item) => item.id === id);
-  if (payments.isLoading) return <p className="state-line">Loading payment.</p>;
+  if (payments.isLoading) return <p className="state-line">{tr("Loading payment.")}</p>;
   if (!row) {
     return <NotFoundRecord kind="Payment" id={id} list="/payments" listLabel="payments" />;
   }
@@ -57,12 +58,12 @@ export function PaymentPage() {
   return (
     <div className="dx-page fn-page pm-page">
       <header className="dx-head">
-        <button data-command="admin.payment.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/payments"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.payment.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/payments"))}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
         <div className="dx-head-text">
-          <h2>Payment {payment.id}</h2>
+          <h2>{trn("Payment {0}", payment.id)}</h2>
           <p>{statusLabel(payment.status)} · {money(amount)} · {payment.zoneId}</p>
         </div>
-        <Link className="dash-btn small ghost" to="/payments">Back to payments</Link>
+        <Link className="dash-btn small ghost" to="/payments">{tr("Back to payments")}</Link>
       </header>
 
       <Cards
@@ -70,39 +71,39 @@ export function PaymentPage() {
         compareLabel=""
         fmt={(value) => money(value)}
         cards={[
-          { id: "driver", label: "Driver gets", value: split.driver, previous: null, format: "money", info: "The price minus Movera's commission." },
-          { id: "movera", label: "Movera keeps", value: split.movera, previous: null, format: "money", info: "Commission (20% until the price book is linked)." },
-          { id: "vat", label: `VAT inside (${Math.round(split.vatRate * 100)}%)`, value: split.vat, previous: null, format: "money", info: "VAT included in the price. Rates are placeholders to confirm." },
+          { id: "driver", label: tr("Driver gets"), value: split.driver, previous: null, format: "money", info: tr("The price minus Movera's commission.") },
+          { id: "movera", label: tr("Movera keeps"), value: split.movera, previous: null, format: "money", info: tr("Commission (20% until the price book is linked).") },
+          { id: "vat", label: `VAT inside (${Math.round(split.vatRate * 100)}%)`, value: split.vat, previous: null, format: "money", info: tr("VAT included in the price. Rates are placeholders to confirm.") },
         ]}
       />
 
-      <section className="fn-section pm-facts" aria-label="Payment details">
+      <section className="fn-section pm-facts" aria-label={tr("Payment details")}>
         <dl className="fn-facts">
-          <div><dt>Method</dt><dd>{METHOD_LABELS[facts.method]}</dd></div>
-          <div><dt>Rider</dt><dd>{facts.riderId ? <Link to={`/riders/${facts.riderId}`}>{facts.riderName}</Link> : facts.riderName}</dd></div>
-          <div><dt>Trip</dt><dd>{facts.tripId ? <Link to={`/trips/${facts.tripId}`}>{facts.tripId}</Link> : "–"}</dd></div>
+          <div><dt>{tr("Method")}</dt><dd>{trx(METHOD_LABELS[facts.method])}</dd></div>
+          <div><dt>{tr("Rider")}</dt><dd>{facts.riderId ? <Link to={`/riders/${facts.riderId}`}>{facts.riderName}</Link> : facts.riderName}</dd></div>
+          <div><dt>{tr("Trip")}</dt><dd>{facts.tripId ? <Link to={`/trips/${facts.tripId}`}>{facts.tripId}</Link> : "–"}</dd></div>
         </dl>
-        <div className="pm-split" role="img" aria-label={`Driver ${Math.round((split.driver / Math.max(split.price, 1)) * 100)}%, Movera ${Math.round((split.movera / Math.max(split.price, 1)) * 100)}%`}>
+        <div className="pm-split" role="img" aria-label={tr("Driver {0}%, Movera {1}%", [Math.round((split.driver / Math.max(split.price, 1)) * 100), Math.round((split.movera / Math.max(split.price, 1)) * 100)])}>
           <i className="driver" style={{ width: `${(split.driver / Math.max(split.price, 1)) * 100}%` }} />
           <i className="movera" style={{ width: `${(split.movera / Math.max(split.price, 1)) * 100}%` }} />
         </div>
-        {plan ? <p className="fn-warn"><RefreshCcw size={14} aria-hidden="true" /> {plan.cause.kind === "system" ? "Our side" : "Rider's side"}: {plan.cause.reason}. Tried {plan.tries} of {plan.max}. {plan.nextAt ? `Next try ${new Intl.DateTimeFormat(market(facts.country).locale, { timeZone: market(facts.country).timeZone, dateStyle: "short", timeStyle: "short" }).format(new Date(plan.nextAt))}.` : "No more automatic tries."} <Link to="/payments?tab=failed">Failed and retries</Link></p> : null}
-        {facts.dispute ? <p className="fn-warn"><Gavel size={14} aria-hidden="true" /> Dispute: {facts.dispute.reason}. Answer by {facts.dispute.deadline}. <Link to="/payments?tab=disputes">Disputes</Link></p> : null}
+        {plan ? <p className="fn-warn">{trn("{0} {1}: {2}. Tried {3} of {4}. {5} {6}", <RefreshCcw size={14} aria-hidden="true" />, plan.cause.kind === "system" ? tr("Our side") : tr("Rider's side"), plan.cause.reason, plan.tries, plan.max, plan.nextAt ? tr("Next try {0}.", [new Intl.DateTimeFormat(market(facts.country).locale, { timeZone: market(facts.country).timeZone, dateStyle: "short", timeStyle: "short" }).format(new Date(plan.nextAt))]) : tr("No more automatic tries."), <Link to="/payments?tab=failed">{tr("Failed and retries")}</Link>)}</p> : null}
+        {facts.dispute ? <p className="fn-warn">{trn("{0} Dispute: {1}. Answer by {2}. {3}", <Gavel size={14} aria-hidden="true" />, facts.dispute.reason, facts.dispute.deadline, <Link to="/payments?tab=disputes">{tr("Disputes")}</Link>)}</p> : null}
       </section>
 
       <article className="panel fn-panel" data-testid="payment-timeline">
-        <h3>Timeline</h3>
+        <h3>{tr("Timeline")}</h3>
         <ol className="version-list">
           {paymentTimeline(payment.status).map((step) => <li key={step}>{step}</li>)}
         </ol>
       </article>
 
       <article className="panel fn-panel">
-        <h3>Refund</h3>
+        <h3>{tr("Refund")}</h3>
         <p data-testid="refund-block">
           {blocked ?? (needsSecond
-            ? `Refund request is allowed. Because it is ${money(threshold)} or more, the payment stays captured until a second authorised agent approves it.`
-            : "Refund is allowed. A double click still writes one ledger row.")}
+            ? tr("Refund request is allowed. Because it is {0} or more, the payment stays captured until a second authorised agent approves it.", [money(threshold)])
+            : tr("Refund is allowed. A double click still writes one ledger row."))}
         </p>
         <p data-testid="refund-count">{matches.length}</p>
 
@@ -119,14 +120,14 @@ export function PaymentPage() {
           patch={{ status: "refunded" }}
           amountOre={amount}
           disabled={Boolean(blocked)}
-          title={blocked ?? (needsSecond ? "Request second-agent approval" : "Refund this payment")}
-          retryLabel="Retry refund"
+          title={blocked ?? (needsSecond ? tr("Request second-agent approval") : tr("Refund this payment"))}
+          retryLabel={tr("Retry refund")}
         >
-          {needsSecond ? "Request refund approval" : "Refund payment"}
+          {needsSecond ? tr("Request refund approval") : tr("Refund payment")}
         </CommandButton>
 
-        {pendingApproval ? <p><Link to="/audit">Open approval queue</Link></p> : null}
-        <p className="fn-help">{limit === null ? "You have no refund limit." : `Your refund limit is ${money(limit)}.`} Refunds above {money(threshold)} also need a second admin (<Link to="/settings#refunds">set in Settings</Link>).</p>
+        {pendingApproval ? <p><Link to="/audit">{tr("Open approval queue")}</Link></p> : null}
+        <p className="fn-help">{trn("{0} Refunds above {1} also need a second admin ({2}).", limit === null ? tr("You have no refund limit.") : tr("Your refund limit is {0}.", [money(limit)]), money(threshold), <Link to="/settings#refunds">{tr("set in Settings")}</Link>)}</p>
       </article>
     </div>
   );

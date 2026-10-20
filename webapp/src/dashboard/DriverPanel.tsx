@@ -8,6 +8,7 @@ import { LIVE_STATES, type LiveDriver } from "./live";
 import type { LiveTrip } from "./liveTrip";
 import { TripCard } from "./TripCard";
 import { useEscape } from "../ui/useEscape";
+import { tr, trn, trx } from "../i18n";
 
 export type DriverInfo = {
   phone: string;
@@ -45,21 +46,21 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
   useEscape(onClose);
   const state = LIVE_STATES.find((item) => item.id === driver.state)?.label ?? driver.state;
   return (
-    <aside className="driver-panel" role="dialog" aria-label={`Driver ${driver.name}`}>
+    <aside className="driver-panel" role="dialog" aria-label={tr("Driver {0}", [driver.name])}>
       <div className="driver-panel-head">
         <Avatar name={driver.name} size={48} />
         <div className="driver-panel-title">
           <strong>{driver.name}</strong>
           <small className="map-popup-code">{driverCode(driver)}</small>
-          <span className="map-popup-state"><i style={{ background: color }} />{state}{driver.lastSeenMin ? ` · last GPS ${driver.lastSeenMin} min ago` : " · live"}</span>
+          <span className="map-popup-state"><i style={{ background: color }} />{state}{driver.lastSeenMin ? tr(" · last GPS {0} min ago", [driver.lastSeenMin]) : tr(" · live")}</span>
         </div>
-        <button data-command="admin.ui.mapClose" type="button" className="map-popup-close" aria-label="Close" onClick={onClose}><X size={14} /></button>
+        <button data-command="admin.ui.mapClose" type="button" className="map-popup-close" aria-label={tr("Close")} onClick={onClose}><X size={14} /></button>
       </div>
 
-      {driver.state === "sos" ? <p className="driver-panel-sos"><Siren size={15} aria-hidden="true" /> SOS raised on this trip. <Link to={withScope("/incidents")}>Open incidents</Link></p> : null}
+      {driver.state === "sos" ? <p className="driver-panel-sos">{trn("{0} SOS raised on this trip. {1}", <Siren size={15} aria-hidden="true" />, <Link to={withScope("/incidents")}>{tr("Open incidents")}</Link>)}</p> : null}
 
       <div className="driver-panel-actions">
-        {access.drivers ? <Link className="dash-btn small" to={withScope(`/drivers/${driver.id}`)}><UserRound size={14} aria-hidden="true" />Open driver</Link> : null}
+        {access.drivers ? <Link className="dash-btn small" to={withScope(`/drivers/${driver.id}`)}>{trn("{0}Open driver", <UserRound size={14} aria-hidden="true" />)}</Link> : null}
         {info ? (
           <CommandButton
             command="admin.driver.call"
@@ -71,28 +72,26 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
             before="idle"
             after="call started"
             onDone={() => { window.location.href = `tel:${info.phone.replace(/[^+\d]/g, "")}`; }}
-          >
-            <Phone size={14} aria-hidden="true" />Call
-          </CommandButton>
+          >{trn("{0}Call", <Phone size={14} aria-hidden="true" />)}</CommandButton>
         ) : null}
-        {access.drivers ? <Link className="dash-btn small ghost" to={`/drivers/${driver.id}?tab=messages`}><MessageSquare size={14} aria-hidden="true" />Message</Link> : null}
+        {access.drivers ? <Link className="dash-btn small ghost" to={`/drivers/${driver.id}?tab=messages`}>{trn("{0}Message", <MessageSquare size={14} aria-hidden="true" />)}</Link> : null}
         <button type="button" data-command="admin.ui.mapLayer" className={following ? "dash-btn small" : "dash-btn small ghost"} aria-pressed={following} onClick={onToggleFollow}>
-          <Crosshair size={14} aria-hidden="true" />{following ? "Following live" : "Follow live"}
+          <Crosshair size={14} aria-hidden="true" />{following ? tr("Following live") : tr("Follow live")}
         </button>
       </div>
 
       <dl className="driver-panel-facts">
-        <div><dt>Zone</dt><dd>{driver.zoneName}</dd></div>
-        <div><dt>Vehicle</dt><dd>{driver.vehicle ?? "—"}{driver.plate ? ` · ${driver.plate}` : ""}</dd></div>
+        <div><dt>{tr("Zone")}</dt><dd>{driver.zoneName}</dd></div>
+        <div><dt>{tr("Vehicle")}</dt><dd>{driver.vehicle ?? "—"}{driver.plate ? ` · ${driver.plate}` : ""}</dd></div>
         {info ? (
           <>
-            <div><dt>Rating</dt><dd><Star size={12} aria-hidden="true" /> {info.rating.toFixed(2)}</dd></div>
-            <div><dt>Account</dt><dd>{info.account}</dd></div>
-            <div><dt>Works for</dt><dd>{info.fleet ?? "Independent"}</dd></div>
-            <div><dt>Acceptance · cancel</dt><dd>{info.acceptancePct}% · {info.cancellationPct}%</dd></div>
-            <div><dt>Today</dt><dd>{info.todayTrips} trips · {info.todayNet}</dd></div>
-            <div><dt>Online today</dt><dd>{info.onlineHours} h</dd></div>
-            <div className="wide"><dt>Can drive</dt><dd className="cat-list">{info.categories.length ? info.categories.map((label) => <span key={label} className="cat-chip">{label}</span>) : "No category allowed"}</dd></div>
+            <div><dt>{tr("Rating")}</dt><dd><Star size={12} aria-hidden="true" /> {info.rating.toFixed(2)}</dd></div>
+            <div><dt>{tr("Account")}</dt><dd>{info.account}</dd></div>
+            <div><dt>{tr("Works for")}</dt><dd>{info.fleet ?? tr("Independent")}</dd></div>
+            <div><dt>{tr("Acceptance · cancel")}</dt><dd>{info.acceptancePct}% · {info.cancellationPct}%</dd></div>
+            <div><dt>{tr("Today")}</dt><dd>{trn("{0} trips · {1}", info.todayTrips, info.todayNet)}</dd></div>
+            <div><dt>{tr("Online today")}</dt><dd>{trn("{0} h", info.onlineHours)}</dd></div>
+            <div className="wide"><dt>{tr("Can drive")}</dt><dd className="cat-list">{info.categories.length ? info.categories.map((label) => <span key={label} className="cat-chip">{trx(label)}</span>) : tr("No category allowed")}</dd></div>
           </>
         ) : null}
       </dl>
@@ -108,7 +107,7 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
           tripLink={!access.trips ? null : withScope(trip.tripId.startsWith("T-") ? `/drivers/${driver.id}?tab=trips` : `/trips/${trip.tripId}`)}
         />
       ) : (
-        <p className="trip-none">{driver.state === "free" ? "Free and waiting for a ride request." : driver.state === "stale" ? "No GPS signal right now. The last known position is shown." : "No trip right now."}</p>
+        <p className="trip-none">{driver.state === "free" ? tr("Free and waiting for a ride request.") : driver.state === "stale" ? tr("No GPS signal right now. The last known position is shown.") : tr("No trip right now.")}</p>
       )}
     </aside>
   );

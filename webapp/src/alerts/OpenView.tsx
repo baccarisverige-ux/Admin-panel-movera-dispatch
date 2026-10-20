@@ -5,14 +5,15 @@ import { CommandButton } from "../ui/CommandButton";
 import { useAlertsData } from "./AlertsContext";
 import { AlertActions, agentName, StatusLine } from "./AlertActions";
 import { ALERTS_KEY, GROUPS, kindDef, LEVELS, unmuteKind, type GroupId, type Level, type OpenAlert } from "./engine";
+import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 
 export function ago(since: number, now: number): string {
   const min = Math.max(0, Math.round((now - since) / 60_000));
-  if (min < 1) return "just now";
-  if (min < 60) return `${min} min ago`;
+  if (min < 1) return tr("just now");
+  if (min < 60) return tr("{0} min ago", [min]);
   const hours = Math.floor(min / 60);
-  if (hours < 48) return `${hours} h ago`;
-  return `${Math.floor(hours / 24)} days ago`;
+  if (hours < 48) return tr("{0} h ago", [hours]);
+  return tr("{0} days ago", [Math.floor(hours / 24)]);
 }
 
 export const LEVEL_ICON = { critical: AlertOctagon, important: AlertTriangle, info: Info } as const;
@@ -41,63 +42,61 @@ export function OpenView() {
   });
   const current = list.find((alert) => alert.id === selected) ?? null;
   const counters: { id: Quick; label: string; count: number }[] = [
-    { id: "critical", label: "Critical", count: data.counts.critical },
-    { id: "important", label: "Important", count: data.counts.important },
-    { id: "info", label: "Info", count: data.counts.info },
-    { id: "mine", label: "Mine", count: data.counts.mine },
-    { id: "new", label: "Not taken", count: data.counts.notTaken },
+    { id: "critical", label: tr("Critical"), count: data.counts.critical },
+    { id: "important", label: tr("Important"), count: data.counts.important },
+    { id: "info", label: tr("Info"), count: data.counts.info },
+    { id: "mine", label: tr("Mine"), count: data.counts.mine },
+    { id: "new", label: tr("Not taken"), count: data.counts.notTaken },
   ];
   const mutedKinds = Object.entries(data.book.mutes).filter(([, mute]) => Date.parse(mute.until) > data.now);
 
   return (
     <div className="al-open">
-      <section className="al-counters" aria-label="Alerts at a glance">
+      <section className="al-counters" aria-label={tr("Alerts at a glance")}>
         {counters.map((item) => (
           <button data-command="admin.alerts.view" key={item.id} type="button" aria-pressed={quick === item.id} className={`al-counter ${item.id}${quick === item.id ? " on" : ""}`} onClick={() => setQuick(quick === item.id ? "all" : item.id)}>
-            <b>{item.count}</b><span>{item.label}</span>
+            <b>{item.count}</b><span>{trx(item.label)}</span>
           </button>
         ))}
       </section>
 
-      <div className="al-filters" role="group" aria-label="Filter alerts">
-        <select aria-label="Kind" value={group} onChange={(event) => setGroup(event.target.value as GroupId | "all")}>
-          <option value="all">All kinds</option>
-          {GROUPS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+      <div className="al-filters" role="group" aria-label={tr("Filter alerts")}>
+        <select aria-label={tr("Kind")} value={group} onChange={(event) => setGroup(event.target.value as GroupId | "all")}>
+          <option value="all">{tr("All kinds")}</option>
+          {GROUPS.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
         </select>
-        <select aria-label="Zone" value={zone} onChange={(event) => setZone(event.target.value)}>
-          <option value="all">All zones</option>
+        <select aria-label={tr("Zone")} value={zone} onChange={(event) => setZone(event.target.value)}>
+          <option value="all">{tr("All zones")}</option>
           {data.zones.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
-        <span className="dx-choice" role="radiogroup" aria-label="Show">
+        <span className="dx-choice" role="radiogroup" aria-label={tr("Show")}>
           {([["open", "Open"], ["snoozed", "Snoozed"], ["muted", "Muted"]] as const).map(([id, label]) => (
-            <label key={id} className={state === id ? "on" : undefined}><input type="radio" name="al-state" checked={state === id} onChange={() => setState(id)} />{label}</label>
+            <label key={id} className={state === id ? "on" : undefined}><input type="radio" name="al-state" checked={state === id} onChange={() => setState(id)} />{trx(label)}</label>
           ))}
         </span>
-        {quick !== "all" || group !== "all" || zone !== "all" ? <button data-command="admin.alerts.view" type="button" className="dash-btn small ghost" onClick={() => { setQuick("all"); setGroup("all"); setZone("all"); }}><X size={13} aria-hidden="true" /> Clear filters</button> : null}
+        {quick !== "all" || group !== "all" || zone !== "all" ? <button data-command="admin.alerts.view" type="button" className="dash-btn small ghost" onClick={() => { setQuick("all"); setGroup("all"); setZone("all"); }}>{trn("{0} Clear filters", <X size={13} aria-hidden="true" />)}</button> : null}
       </div>
 
       {mutedKinds.length ? (
-        <p className="al-muted-line"><BellOff size={13} aria-hidden="true" /> Muted: {mutedKinds.map(([kind, mute]) => (
-          <span key={kind}>{kindDef(kind as OpenAlert["kind"])?.label ?? kind} until {new Date(mute.until).toTimeString().slice(0, 5)} by {agentName(mute.by)}
-            <CommandButton command="admin.alerts.mute" className="link-action" targetId={kind} confirmTarget={false} scope="all" before="muted" after="on" expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={unmuteKind(data.book, kind as OpenAlert["kind"])} onDone={() => setNotice("Alerts of that kind show again.")}>Unmute</CommandButton>
-          </span>
-        ))}</p>
+        <p className="al-muted-line">{trn("{0} Muted: {1}", <BellOff size={13} aria-hidden="true" />, mutedKinds.map(([kind, mute]) => (
+          <span key={kind}>{trn("{0} until {1} by {2}{3}", trx(kindDef(kind as OpenAlert["kind"])?.label) ?? kind, new Date(mute.until).toTimeString().slice(0, 5), agentName(mute.by), <CommandButton command="admin.alerts.mute" className="link-action" targetId={kind} confirmTarget={false} scope="all" before="muted" after="on" expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={unmuteKind(data.book, kind as OpenAlert["kind"])} onDone={() => setNotice("Alerts of that kind show again.")}>{tr("Unmute")}</CommandButton>)}</span>
+        )))}</p>
       ) : null}
-      {notice ? <p className="pricing-notice" role="status">{notice}</p> : null}
+      {notice ? <p className="pricing-notice" role="status">{trSentences(notice)}</p> : null}
 
       <div className={current ? "al-work has-detail" : "al-work"}>
-        <ul className="al-list" aria-label="Alerts">
-          {list.length === 0 ? <li className="al-empty">{state === "open" ? "Nothing here. Good work." : state === "snoozed" ? "No snoozed alert." : "No muted alert."}</li> : list.map((alert) => {
+        <ul className="al-list" aria-label={tr("Alerts")}>
+          {list.length === 0 ? <li className="al-empty">{state === "open" ? tr("Nothing here. Good work.") : state === "snoozed" ? tr("No snoozed alert.") : tr("No muted alert.")}</li> : list.map((alert) => {
             const Icon = LEVEL_ICON[alert.level];
             return (
               <li key={alert.id} className={`al-row ${alert.level}${alert.id === selected ? " on" : ""}`}>
                 <button data-command="admin.alerts.view" type="button" className="al-row-main" aria-pressed={alert.id === selected} onClick={() => setSelected(alert.id === selected ? null : alert.id)}>
                   <span className="al-level" aria-hidden="true"><Icon size={16} /></span>
                   <span className="al-row-text">
-                    <b>{alert.title}</b>
+                    <b>{trx(alert.title)}</b>
                     <small>
-                      <span className="al-tag">{GROUPS.find((item) => item.id === alert.group)?.label}</span>
-                      {alert.detail ? <span>{alert.detail}</span> : null}
+                      <span className="al-tag">{trx(GROUPS.find((item) => item.id === alert.group)?.label)}</span>
+                      {alert.detail ? <span>{trx(alert.detail)}</span> : null}
                       <span><Clock size={11} aria-hidden="true" /> {ago(alert.since, data.now)}</span>
                     </small>
                     <StatusLine alert={alert} />
@@ -123,30 +122,30 @@ function Detail({ alert, onClose, onNotice }: { alert: OpenAlert; onClose: () =>
   const events = alert.incidentId
     ? sosEvents.map((event) => ({ at: event.at, by: event.actor, text: event.kind === "take" ? "Working on it" : event.kind === "resolve" ? `Solved: ${event.text}` : event.text }))
     : (alert.record?.events ?? []).map((event) => ({ at: event.at, by: event.by, text: event.kind === "take" ? "Working on it" : event.kind === "done" ? `Solved: ${event.text}` : event.text }));
-  const time = (iso: string | number) => new Intl.DateTimeFormat(data.market.locale, { timeZone: data.market.timeZone, hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" }).format(new Date(iso));
+  const time = (iso: string | number) => new Intl.DateTimeFormat(uiLocale(), { timeZone: data.market.timeZone, hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" }).format(new Date(iso));
   return (
-    <aside className={`al-detail ${alert.level}`} aria-label="Alert details">
+    <aside className={`al-detail ${alert.level}`} aria-label={tr("Alert details")}>
       <header>
         <span className="al-level" aria-hidden="true"><Icon size={18} /></span>
-        <span className="al-detail-title"><small>{level.label} · {def?.label ?? "Your rule"}</small><b>{alert.title}</b></span>
-        <button data-command="admin.alerts.view" type="button" className="icon-ghost" aria-label="Close details" onClick={onClose}><X size={15} aria-hidden="true" /></button>
+        <span className="al-detail-title"><small>{trx(level.label)} · {trx(def?.label) ?? tr("Your rule")}</small><b>{trx(alert.title)}</b></span>
+        <button data-command="admin.alerts.view" type="button" className="icon-ghost" aria-label={tr("Close details")} onClick={onClose}><X size={15} aria-hidden="true" /></button>
       </header>
       <dl className="al-facts">
-        {alert.detail ? <div><dt>Details</dt><dd>{alert.detail}</dd></div> : null}
-        <div><dt>Zone</dt><dd><MapPin size={12} aria-hidden="true" /> {data.zones.find((zone) => zone.id === alert.zoneId)?.name ?? "Whole country"}</dd></div>
-        <div><dt>Started</dt><dd><Clock size={12} aria-hidden="true" /> {time(alert.since)} · {ago(alert.since, data.now)}</dd></div>
-        <div><dt>Now</dt><dd><StatusLine alert={alert} /></dd></div>
+        {alert.detail ? <div><dt>{tr("Details")}</dt><dd>{trx(alert.detail)}</dd></div> : null}
+        <div><dt>{tr("Zone")}</dt><dd><MapPin size={12} aria-hidden="true" /> {data.zones.find((zone) => zone.id === alert.zoneId)?.name ?? tr("Whole country")}</dd></div>
+        <div><dt>{tr("Started")}</dt><dd><Clock size={12} aria-hidden="true" /> {time(alert.since)} · {ago(alert.since, data.now)}</dd></div>
+        <div><dt>{tr("Now")}</dt><dd><StatusLine alert={alert} /></dd></div>
       </dl>
-      <h4>Timeline</h4>
-      <ol className="al-timeline" aria-label="Timeline">
-        <li><span className="al-tl-dot start" /><span><b>Alert started</b><small>{time(alert.since)}</small></span></li>
+      <h4>{tr("Timeline")}</h4>
+      <ol className="al-timeline" aria-label={tr("Timeline")}>
+        <li><span className="al-tl-dot start" /><span><b>{tr("Alert started")}</b><small>{time(alert.since)}</small></span></li>
         {events.map((event, index) => (
           <li key={`${event.at}-${index}`}><span className="al-tl-dot" /><span><b><UserRound size={11} aria-hidden="true" /> {agentName(event.by)}: {event.text}</b><small>{time(event.at)}</small></span></li>
         ))}
-        {!events.length ? <li className="al-tl-wait"><span className="al-tl-dot wait" /><span><b><Hand size={11} aria-hidden="true" /> Waiting for someone to take it</b></span></li> : null}
+        {!events.length ? <li className="al-tl-wait"><span className="al-tl-dot wait" /><span><b>{trn("{0} Waiting for someone to take it", <Hand size={11} aria-hidden="true" />)}</b></span></li> : null}
       </ol>
       <AlertActions alert={alert} onDone={onNotice} />
-      {def?.help ? <p className="al-help">{def.help}</p> : null}
+      {def?.help ? <p className="al-help">{trx(def.help)}</p> : null}
     </aside>
   );
 }

@@ -1,4 +1,5 @@
 import { addLocalDays, dayStart, localDay, localParts, startOfLocalDay, zonedTime } from "./time.ts";
+import { tr } from "../i18n/core.ts";
 
 export type PeriodKind = "today" | "week" | "month" | "year" | "date" | "range";
 export type Period = { kind: PeriodKind; on?: string; from?: string; to?: string };
@@ -66,22 +67,22 @@ export function periodWindow(period: Period, nowMs: number, timeZone: string, lo
   };
   if (period.kind === "week") {
     const start = startOfLocalDay(nowMs, timeZone, -p.weekday);
-    return capped(start, startOfLocalDay(start + HOUR, timeZone, 7), startOfLocalDay(start + HOUR, timeZone, -7), "day", "This week", "vs same time last week");
+    return capped(start, startOfLocalDay(start + HOUR, timeZone, 7), startOfLocalDay(start + HOUR, timeZone, -7), "day", tr("This week"), tr("vs same time last week"));
   }
   if (period.kind === "month") {
     const start = zonedTime(p.year, p.month, 1, 0, timeZone);
     const next = zonedTime(p.month === 12 ? p.year + 1 : p.year, p.month === 12 ? 1 : p.month + 1, 1, 0, timeZone);
     const prev = zonedTime(p.month === 1 ? p.year - 1 : p.year, p.month === 1 ? 12 : p.month - 1, 1, 0, timeZone);
-    return capped(start, next, prev, "day", new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone }).format(nowMs), "vs same time last month");
+    return capped(start, next, prev, "day", new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone }).format(nowMs), tr("vs same time last month"));
   }
   if (period.kind === "year") {
     const start = zonedTime(p.year, 1, 1, 0, timeZone);
-    return capped(start, zonedTime(p.year + 1, 1, 1, 0, timeZone), zonedTime(p.year - 1, 1, 1, 0, timeZone), "month", String(p.year), "vs same time last year");
+    return capped(start, zonedTime(p.year + 1, 1, 1, 0, timeZone), zonedTime(p.year - 1, 1, 1, 0, timeZone), "month", String(p.year), tr("vs same time last year"));
   }
   if (period.kind === "date" && period.on) {
     const start = dayStart(period.on, timeZone);
     const spanEnd = dayStart(addLocalDays(period.on, 1), timeZone);
-    return capped(start, spanEnd, dayStart(addLocalDays(period.on, -1), timeZone), "hour", dayFormat.format(start + HOUR), "vs the day before");
+    return capped(start, spanEnd, dayStart(addLocalDays(period.on, -1), timeZone), "hour", dayFormat.format(start + HOUR), tr("vs the day before"));
   }
   if (period.kind === "range" && period.from && period.to) {
     const start = dayStart(period.from, timeZone);
@@ -90,7 +91,7 @@ export function periodWindow(period: Period, nowMs: number, timeZone: string, lo
     const prevStart = dayStart(addLocalDays(period.from, -days), timeZone);
     return capped(start, spanEnd, prevStart, bucketFor(spanEnd - start), `${dayFormat.format(start + HOUR)} – ${dayFormat.format(spanEnd - HOUR)}`, `vs the ${days} days before`);
   }
-  return capped(today, startOfLocalDay(today + HOUR, timeZone, 1), startOfLocalDay(today + HOUR, timeZone, -1), "hour", "Today", "vs same time yesterday");
+  return capped(today, startOfLocalDay(today + HOUR, timeZone, 1), startOfLocalDay(today + HOUR, timeZone, -1), "hour", tr("Today"), tr("vs same time yesterday"));
 }
 
 /** Bucket start instants from `start` up to (not including) `end`, on local calendar boundaries. */

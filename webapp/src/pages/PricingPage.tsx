@@ -64,15 +64,16 @@ import { CommandButton } from "../ui/CommandButton";
 import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { Flag } from "../ui/Flag";
 import { useDirtyWarning } from "../ui/useDirtyWarning";
+import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 
 const TABS = [
-  { id: "prices", label: "Prices", icon: CircleDollarSign },
-  { id: "fees", label: "Fees", icon: Receipt },
-  { id: "surge", label: "Surge", icon: Zap },
-  { id: "commission", label: "Commission", icon: BadgePercent },
-  { id: "pickup", label: "Pickup pay", icon: HandCoins },
-  { id: "extras", label: "Tips & limits", icon: HandHeart },
-  { id: "history", label: "History", icon: History },
+  { id: "prices", get label() { return tr("Prices"); }, icon: CircleDollarSign },
+  { id: "fees", get label() { return tr("Fees"); }, icon: Receipt },
+  { id: "surge", get label() { return tr("Surge"); }, icon: Zap },
+  { id: "commission", get label() { return tr("Commission"); }, icon: BadgePercent },
+  { id: "pickup", get label() { return tr("Pickup pay"); }, icon: HandCoins },
+  { id: "extras", get label() { return tr("Tips & limits"); }, icon: HandHeart },
+  { id: "history", get label() { return tr("History"); }, icon: History },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
@@ -183,7 +184,7 @@ export function PricingPage() {
     };
   }
 
-  if (slice.loading) return <p className="state-line">Loading pricing.</p>;
+  if (slice.loading) return <p className="state-line">{tr("Loading pricing.")}</p>;
 
   const changedCount = dirty.length;
   const currentSurge = surgeOf(zoneId);
@@ -193,26 +194,24 @@ export function PricingPage() {
     <div className="pricing">
       <header className="pricing-hero">
         <div className="pricing-title">
-          <h2>Pricing</h2>
-          <p>
-            <Flag id={country} /> {market.name} · prices in {market.currency}, VAT included · revision {store.draftRev}
-          </p>
+          <h2>{tr("Pricing")}</h2>
+          <p>{trn("{0} {1} · prices in {2}, VAT included · revision {3}", <Flag id={country} />, trx(market.name), market.currency, store.draftRev)}</p>
         </div>
         <div className="pricing-zone-now">
-          <span className="eyebrow">Editing zone</span>
+          <span className="eyebrow">{tr("Editing zone")}</span>
           <strong>{zone?.kind === "airport" ? <Plane size={16} aria-hidden="true" /> : null}{zone?.name ?? zoneId}</strong>
-          <small>{lastRevision ? `v${published.version} · published ${new Intl.DateTimeFormat(market.locale, { dateStyle: "medium", timeStyle: "short", timeZone: market.timeZone }).format(Date.parse(lastRevision.at))} by ${lastRevision.actorId}` : "v1 · Movera default prices"}</small>
+          <small>{lastRevision ? tr("v{0} · published {1} by {2}", [published.version, new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeStyle: "short", timeZone: market.timeZone }).format(Date.parse(lastRevision.at)), lastRevision.actorId]) : tr("v1 · Movera default prices")}</small>
         </div>
         {currentSurge ? (
           <button data-command="admin.pricing.tab" type="button" className={`hero-surge lvl-${currentSurge.level}`} onClick={() => go({ tab: "surge" })}>
             <Zap size={15} aria-hidden="true" />
             <b>×{currentSurge.multiplier.toFixed(1)}</b>
-            <span>{currentSurge.source === "off" ? "No surge" : `${currentSurge.source} surge`}</span>
+            <span>{currentSurge.source === "off" ? tr("No surge") : tr("{0} surge", [currentSurge.source])}</span>
           </button>
         ) : null}
       </header>
 
-      <nav className="zone-rail" aria-label="Zones">
+      <nav className="zone-rail" aria-label={tr("Zones")}>
         {zones.map((item) => {
           const surge = surgeOf(item.id);
           const hasDraft = dirty.some((draft) => draft.zoneId === item.id);
@@ -221,51 +220,51 @@ export function PricingPage() {
               {item.kind === "airport" ? <Plane size={13} aria-hidden="true" /> : <i style={{ background: LEVEL_COLOR[surge?.level ?? "none"] }} aria-hidden="true" />}
               <span>{item.name}</span>
               {surge && surge.multiplier > 1 ? <b>×{surge.multiplier.toFixed(1)}</b> : null}
-              {hasDraft ? <em title="Unpublished changes">edited</em> : null}
+              {hasDraft ? <em title={tr("Unpublished changes")}>{tr("edited")}</em> : null}
             </button>
           );
         })}
       </nav>
 
-      <section className="pricing-actions" aria-label="Quick actions">
+      <section className="pricing-actions" aria-label={tr("Quick actions")}>
         <button data-command="admin.pricing.startSurge" type="button" className="quick-tile surge" disabled={!canPublish} onClick={() => { go({ tab: "surge" }); window.setTimeout(() => document.getElementById("manual-title")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80); }}>
-          <Zap size={18} aria-hidden="true" /><span><b>Start surge</b><small>Manual, in {zone?.name}</small></span>
+          <Zap size={18} aria-hidden="true" /><span><b>{tr("Start surge")}</b><small>{trn("Manual, in {0}", zone?.name)}</small></span>
         </button>
         <CommandButton command="admin.pricing.stopAllSurges" className="quick-tile stop" targetId={market.id} confirmTarget={false} scope="all" before={`${stopAll.stopped.length} manual surges`} after="none" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={stopAll.store} disabled={!canPublish || Boolean(stopAll.error)} title={stopAll.error} onDone={() => setNotice(`Stopped ${stopAll.stopped.length} manual surge${stopAll.stopped.length === 1 ? "" : "s"} in ${market.name}.`)}>
-          <Square size={18} aria-hidden="true" /><span><b>Stop all surges</b><small>{stopAll.stopped.length ? `${stopAll.stopped.length} manual running` : "None running"}</small></span>
+          <Square size={18} aria-hidden="true" /><span><b>{tr("Stop all surges")}</b><small>{stopAll.stopped.length ? tr("{0} manual running", [stopAll.stopped.length]) : tr("None running")}</small></span>
         </CommandButton>
         <button data-command="admin.pricing.copyZones" type="button" className="quick-tile" disabled={!canPublish} onClick={() => setCopyOpen(["prices", "fees"])}>
-          <Copy size={18} aria-hidden="true" /><span><b>Copy to zones</b><small>As drafts to review</small></span>
+          <Copy size={18} aria-hidden="true" /><span><b>{tr("Copy to zones")}</b><small>{tr("As drafts to review")}</small></span>
         </button>
         <button data-command="admin.pricing.testRide" type="button" className="quick-tile" onClick={() => setTestOpen((open) => !open)}>
-          <Calculator size={18} aria-hidden="true" /><span><b>Test a ride</b><small>See the price</small></span>
+          <Calculator size={18} aria-hidden="true" /><span><b>{tr("Test a ride")}</b><small>{tr("See the price")}</small></span>
         </button>
         <button data-command="admin.pricing.addCategory" type="button" className="quick-tile" onClick={() => setCatsOpen(true)}>
-          <Tags size={18} aria-hidden="true" /><span><b>Categories</b><small>{categories.length} active</small></span>
+          <Tags size={18} aria-hidden="true" /><span><b>{tr("Categories")}</b><small>{trn("{0} active", categories.length)}</small></span>
         </button>
         <CommandButton command="admin.pricing.undo" className="quick-tile" targetId={`pricing-rev-${store.history[0]?.rev ?? 0}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after="undo last publish" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={undo.store} disabled={!canPublish || Boolean(undo.error)} title={undo.error} largeChanges={undo.error ? undefined : largeStoreChanges(store, undo.store)} onDone={() => setNotice(`Revision ${store.history[0]?.rev} undone.`)}>
-          <Undo2 size={18} aria-hidden="true" /><span><b>Undo last publish</b><small>{store.history[0] ? `Revision ${store.history[0].rev}` : "Nothing yet"}</small></span>
+          <Undo2 size={18} aria-hidden="true" /><span><b>{tr("Undo last publish")}</b><small>{store.history[0] ? tr("Revision {0}", [store.history[0].rev]) : tr("Nothing yet")}</small></span>
         </CommandButton>
       </section>
 
       {alerts.length ? (
         <button data-command="admin.pricing.tab" type="button" className="pricing-alert-bar" onClick={() => go({ tab: "surge" })}>
           <AlertTriangle size={16} aria-hidden="true" />
-          <b>{alerts.length} surge alert{alerts.length === 1 ? "" : "s"}</b>
-          <span>{alerts[0].title}{alerts.length > 1 ? ` and ${alerts.length - 1} more` : ""}</span>
+          <b>{trn("{0} surge alert{1}", alerts.length, alerts.length === 1 ? "" : tr("s"))}</b>
+          <span>{trx(alerts[0].title)}{alerts.length > 1 ? tr(" and {0} more", [alerts.length - 1]) : ""}</span>
         </button>
       ) : null}
 
-      {notice || slice.message ? <p className="pricing-notice" role="status">{notice} {slice.message}</p> : null}
-      {!canPublish ? <p className="pricing-notice readonly" role="note">Your role is read-only for pricing. You can look and test rides, not change prices.</p> : null}
+      {notice || slice.message ? <p className="pricing-notice" role="status">{trSentences(notice)} {trSentences(slice.message)}</p> : null}
+      {!canPublish ? <p className="pricing-notice readonly" role="note">{tr("Your role is read-only for pricing. You can look and test rides, not change prices.")}</p> : null}
 
-      <div className="dash-tabs pricing-tabs" role="tablist" aria-label="Pricing sections">
+      <div className="dash-tabs pricing-tabs" role="tablist" aria-label={tr("Pricing sections")}>
         {TABS.map((item) => {
           const Icon = item.icon;
           return (
             <button data-command="admin.pricing.tab" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => go({ tab: item.id })}>
               <Icon size={15} aria-hidden="true" />
-              {item.label}
+              {trx(item.label)}
               {item.id === "surge" && alerts.length ? <span className="tab-count">{alerts.length}</span> : null}
             </button>
           );
@@ -278,10 +277,10 @@ export function PricingPage() {
             <>
               <section className="dash-card" aria-labelledby="prices-title">
                 <div className="card-head">
-                  <h3 id="prices-title"><CircleDollarSign size={16} aria-hidden="true" /> Prices · {zone?.name}</h3>
+                  <h3 id="prices-title">{trn("{0} Prices · {1}", <CircleDollarSign size={16} aria-hidden="true" />, zone?.name)}</h3>
                   <span className="card-head-tools">
-                    <span className="legend-chip changed">Changed, not published</span>
-                    <button data-command="admin.pricing.addCategory" type="button" className="link-action" onClick={() => setCatsOpen(true)}>Manage categories</button>
+                    <span className="legend-chip changed">{tr("Changed, not published")}</span>
+                    <button data-command="admin.pricing.addCategory" type="button" className="link-action" onClick={() => setCatsOpen(true)}>{tr("Manage categories")}</button>
                   </span>
                 </div>
                 <PriceTable
@@ -301,8 +300,8 @@ export function PricingPage() {
               </section>
               <section className="dash-card" aria-labelledby="routes-title">
                 <div className="card-head">
-                  <h3 id="routes-title"><Route size={16} aria-hidden="true" /> Fixed-price routes</h3>
-                  <span className="fine-print">A flat price instead of km and min</span>
+                  <h3 id="routes-title">{trn("{0} Fixed-price routes", <Route size={16} aria-hidden="true" />)}</h3>
+                  <span className="fine-print">{tr("A flat price instead of km and min")}</span>
                 </div>
                 <FixedRoutes currency={currency} categories={categories} routes={book.routes} problems={problems} canEdit={canPublish} zoneId={zoneId} onChange={(routes) => update((draft) => { draft.routes = routes; })} />
               </section>
@@ -312,8 +311,8 @@ export function PricingPage() {
           {tab === "fees" ? (
             <section className="dash-card" aria-labelledby="fees-title">
               <div className="card-head">
-                <h3 id="fees-title"><Receipt size={16} aria-hidden="true" /> Fees · {zone?.name}</h3>
-                <span className="fine-print">Same for every category</span>
+                <h3 id="fees-title">{trn("{0} Fees · {1}", <Receipt size={16} aria-hidden="true" />, zone?.name)}</h3>
+                <span className="fine-print">{tr("Same for every category")}</span>
               </div>
               <FeesPanel zoneName={zone?.name ?? zoneId} airport={zone?.kind === "airport"} currency={currency} book={book} published={published} problems={problems} canEdit={canPublish} onChange={(patch) => update((draft) => { draft.fees = { ...draft.fees, ...patch }; })} />
             </section>
@@ -344,8 +343,8 @@ export function PricingPage() {
           {tab === "commission" ? (
             <section className="dash-card" aria-labelledby="commission-title">
               <div className="card-head">
-                <h3 id="commission-title"><BadgePercent size={16} aria-hidden="true" /> Commission · {zone?.name}</h3>
-                <span className="fine-print">What Movera keeps from the trip price</span>
+                <h3 id="commission-title">{trn("{0} Commission · {1}", <BadgePercent size={16} aria-hidden="true" />, zone?.name)}</h3>
+                <span className="fine-print">{tr("What Movera keeps from the trip price")}</span>
               </div>
               <CommissionPanel zoneName={zone?.name ?? zoneId} currency={currency} categories={categories} book={book} published={published} problems={problems} canEdit={canPublish} onCommission={(id, value) => update((draft) => { draft.commission[id] = value; })} onFleet={(value) => update((draft) => { draft.fleetCommissionPct = value; })} />
             </section>
@@ -380,8 +379,8 @@ export function PricingPage() {
           {tab === "history" ? (
             <section className="dash-card" aria-labelledby="history-title">
               <div className="card-head">
-                <h3 id="history-title"><History size={16} aria-hidden="true" /> History</h3>
-                <span className="fine-print">Every publish, newest first</span>
+                <h3 id="history-title">{trn("{0} History", <History size={16} aria-hidden="true" />)}</h3>
+                <span className="fine-print">{tr("Every publish, newest first")}</span>
               </div>
               <HistoryPanel store={store} zoneId={zoneId} agentId={agent?.id ?? null} canEdit={canPublish} locale={market.locale} timeZone={market.timeZone} onRestored={(message) => { setDrafts({}); setNotice(message); }} />
             </section>
@@ -391,16 +390,14 @@ export function PricingPage() {
       </div>
 
       {changedCount ? (
-        <div className="draft-bar" role="region" aria-label="Unpublished changes">
+        <div className="draft-bar" role="region" aria-label={tr("Unpublished changes")}>
           <span className="draft-dot" aria-hidden="true" />
           <div className="draft-text">
-            <strong>Unpublished changes in {dirty.map((draft) => zoneById(draft.zoneId)?.name ?? draft.zoneId).join(", ")}</strong>
-            <small>{fieldErrors.first ?? (dirtyProblems.length ? dirtyProblems[0].message : `${publish.changes.length} change${publish.changes.length === 1 ? "" : "s"} · riders see them after you publish`)}</small>
+            <strong>{trn("Unpublished changes in {0}", dirty.map((draft) => zoneById(draft.zoneId)?.name ?? draft.zoneId).join(", "))}</strong>
+            <small>{fieldErrors.first ?? (dirtyProblems.length ? dirtyProblems[0].message : tr("{0} change{1} · riders see them after you publish", [publish.changes.length, publish.changes.length === 1 ? "" : "s"]))}</small>
           </div>
-          <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice("Changes discarded."); }}>Discard</button>
-          <CommandButton command="admin.pricing.publish" className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(`Published as pricing revision ${publish.store.draftRev}.`); }}>
-            <Save size={15} aria-hidden="true" /> Publish changes
-          </CommandButton>
+          <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice("Changes discarded."); }}>{tr("Discard")}</button>
+          <CommandButton command="admin.pricing.publish" className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(`Published as pricing revision ${publish.store.draftRev}.`); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
         </div>
       ) : null}
 

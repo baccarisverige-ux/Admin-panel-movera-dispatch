@@ -8,6 +8,7 @@ import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import { activityPoints, ZONE_COLOR, type ZoneShape } from "../zones/releases";
 import { zoneDrawModes } from "../zones/drawModes";
 import type { DrawTool, ZoneFocus, ZoneLayers } from "../zones/bookStore";
+import { tr } from "../i18n";
 
 export type DrawMode = DrawTool;
 
@@ -731,14 +732,14 @@ function MapLibreCanvas({ zones, selectedId, mode, layers, focus, selectionNonce
   return <>
     <div ref={host} className="live-map" hidden={mapUnavailable} />
     {tapping && !mapUnavailable ? (
-      <div className="zc-drawbar" role="group" aria-label="Drawing">
+      <div className="zc-drawbar" role="group" aria-label={tr("Drawing")}>
         <span className="zc-draw-hint">{TAP_HINT[mode]?.(draft.length)}</span>
-        {multi ? <button data-command="admin.zone.undo" type="button" className="zc-draw-btn" disabled={!draft.length} onClick={() => updateDraft(draft.slice(0, -1))}>Undo point</button> : null}
-        {multi ? <button data-command="admin.zone.save" type="button" className="zc-draw-btn finish" disabled={!canFinish()} onClick={() => finishDraft(draftRef.current)}>Finish</button> : null}
-        <button data-command="admin.zone.cancel" type="button" className="zc-draw-btn" onClick={() => { updateDraft([]); cancelRef.current?.(); }}>Cancel</button>
+        {multi ? <button data-command="admin.zone.undo" type="button" className="zc-draw-btn" disabled={!draft.length} onClick={() => updateDraft(draft.slice(0, -1))}>{tr("Undo point")}</button> : null}
+        {multi ? <button data-command="admin.zone.save" type="button" className="zc-draw-btn finish" disabled={!canFinish()} onClick={() => finishDraft(draftRef.current)}>{tr("Finish")}</button> : null}
+        <button data-command="admin.zone.cancel" type="button" className="zc-draw-btn" onClick={() => { updateDraft([]); cancelRef.current?.(); }}>{tr("Cancel")}</button>
       </div>
     ) : null}
-    {mapUnavailable ? <p role="status">Map unavailable. WebGL graphics could not initialize. The lists and settings remain available.</p> : null}
+    {mapUnavailable ? <p role="status">{tr("Map unavailable. WebGL graphics could not initialize. The lists and settings remain available.")}</p> : null}
   </>;
 }
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { DemandPoint } from "./demand";
+import { trn, uiLocale } from "../i18n";
 
 type Props = { points: DemandPoint[]; surge: number[]; locale: string; timeZone: string };
 
@@ -9,7 +10,7 @@ const PAD = { left: 34, right: 12, top: 14, bottom: 52 };
 const BAND = 26;
 
 /** Ride requests against free online drivers over the last hours, with the surge level as a band below. */
-export function DemandChart({ points, surge, locale, timeZone }: Props) {
+export function DemandChart({ points, surge, timeZone }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   if (points.length < 2) return null;
   const max = Math.max(4, ...points.map((point) => Math.max(point.requests, point.free)));
@@ -19,7 +20,7 @@ export function DemandChart({ points, surge, locale, timeZone }: Props) {
   const y = (value: number) => PAD.top + plotH - (value / top) * plotH;
   const path = (key: "requests" | "free") => points.map((point, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(point[key]).toFixed(1)}`).join(" ");
   const area = `${path("requests")} L${x(points.length - 1)},${y(0)} L${x(0)},${y(0)} Z`;
-  const time = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
+  const time = new Intl.DateTimeFormat(uiLocale(), { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
   const bandY = H - PAD.bottom + 22;
   const maxSurge = Math.max(2, ...surge);
   const active = hover ?? points.length - 1;
@@ -28,10 +29,10 @@ export function DemandChart({ points, surge, locale, timeZone }: Props) {
   return (
     <figure className="demand-chart">
       <div className="demand-legend" aria-hidden="true">
-        <span><i className="req" />Ride requests</span>
-        <span><i className="free" />Free online drivers</span>
-        <span><i className="srg" />Surge</span>
-        <b>{time.format(point.at)} · {point.requests} requests · {point.free} free drivers · ×{(surge[active] ?? 1).toFixed(1)}</b>
+        <span>{trn("{0}Ride requests", <i className="req" />)}</span>
+        <span>{trn("{0}Free online drivers", <i className="free" />)}</span>
+        <span>{trn("{0}Surge", <i className="srg" />)}</span>
+        <b>{trn("{0} · {1} requests · {2} free drivers · ×{3}", time.format(point.at), point.requests, point.free, (surge[active] ?? 1).toFixed(1))}</b>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} onMouseLeave={() => setHover(null)}>
         <defs>

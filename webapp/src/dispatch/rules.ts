@@ -15,6 +15,7 @@ import {
   TRIP_RULE_LABELS, completeDestinationMode, completeNextTrips, destinationModeDefault, destinationModeForDriverApp, destinationModeIssues, nextTripsDefault, nextTripsForDriverApp, nextTripsIssues,
   type DestinationModeRules, type NextTripRules,
 } from "./tripRules.ts";
+import { tr, trx } from "../i18n/core.ts";
 
 /** Dispatch rules: how a ride request finds its driver. One set per zone, plus country rules, events and driver groups. */
 
@@ -1266,17 +1267,17 @@ export function inTime(rule: Pick<TimeRule, "from" | "to">, hhmm: string): boole
 
 /** Which mode a new request uses right now, and why. */
 export function modeNow(zone: ZoneDispatch, control: Control | undefined, busy: number, hhmm: string): { mode: OfferMode | null; why: string } {
-  if (control?.paused) return { mode: null, why: "Dispatch is paused in this zone." };
-  if (control?.mode) return { mode: control.mode, why: `An admin switched this zone to ${modeLabel(control.mode)}.` };
+  if (control?.paused) return { mode: null, why: tr("Dispatch is paused in this zone.") };
+  if (control?.mode) return { mode: control.mode, why: tr("An admin switched this zone to {0}.", [trx(modeLabel(control.mode))]) };
   const timed = zone.choose.times.find((rule) => rule.on && zone[rule.mode].on && inTime(rule, hhmm));
-  if (timed) return { mode: timed.mode, why: `Time rule ${timed.from}–${timed.to} uses ${modeLabel(timed.mode)}.` };
+  if (timed) return { mode: timed.mode, why: tr("Time rule {0}–{1} uses {2}.", [timed.from, timed.to, trx(modeLabel(timed.mode))]) };
   if (zone.choose.how === "auto" && zone.radar.on && zone.exclusive.on) {
     return busy >= zone.choose.radarAbove
-      ? { mode: "radar", why: `Busy: ${busy.toFixed(1)} requests per free driver (Radar from ${zone.choose.radarAbove}).` }
-      : { mode: "exclusive", why: `Calm: ${busy.toFixed(1)} requests per free driver (Radar from ${zone.choose.radarAbove}).` };
+      ? { mode: "radar", why: tr("Busy: {0} requests per free driver (Radar from {1}).", [busy.toFixed(1), zone.choose.radarAbove]) }
+      : { mode: "exclusive", why: tr("Calm: {0} requests per free driver (Radar from {1}).", [busy.toFixed(1), zone.choose.radarAbove]) };
   }
   const main = zone[zone.choose.main].on ? zone.choose.main : zone.radar.on ? "radar" : zone.exclusive.on ? "exclusive" : null;
-  return main ? { mode: main, why: `Main mode is ${modeLabel(main)}.` } : { mode: null, why: "No mode is on." };
+  return main ? { mode: main, why: tr("Main mode is {0}.", [trx(modeLabel(main))]) } : { mode: null, why: tr("No mode is on.") };
 }
 
 export function insideRing(point: [number, number], ring: readonly [number, number][]): boolean {
@@ -1496,10 +1497,10 @@ export function cancelDecision(record: CancelRecord, zone: ZoneDispatch): { fee:
   const closerPct = record.atAccept.km > 0 ? Math.round(((record.atAccept.km - record.atCancel.km) / record.atAccept.km) * 100) : 0;
   const freeMin = feeRow(zone.riderCancel.fees, record.category).freeMin;
   const amount = riderCancelFee(zone, "live", record.category, record.fare);
-  if (!zone.riderCancel.on) return { fee: false, why: "The smart cancel check is off in this zone.", closerPct, amount, freeMin };
-  if (record.minutesAfterAccept < freeMin) return { fee: false, why: `Cancelled ${record.minutesAfterAccept} min after accept, inside the free ${freeMin} min.`, closerPct, amount, freeMin };
-  if (closerPct >= zone.riderCancel.closerPct) return { fee: true, why: `The driver came ${closerPct}% closer (${record.atAccept.km} → ${record.atCancel.km} km). Fee applies.`, closerPct, amount, freeMin };
-  return { fee: false, why: `The driver came only ${Math.max(0, closerPct)}% closer (needs ${zone.riderCancel.closerPct}%). No fee.`, closerPct, amount, freeMin };
+  if (!zone.riderCancel.on) return { fee: false, why: tr("The smart cancel check is off in this zone."), closerPct, amount, freeMin };
+  if (record.minutesAfterAccept < freeMin) return { fee: false, why: tr("Cancelled {0} min after accept, inside the free {1} min.", [record.minutesAfterAccept, freeMin]), closerPct, amount, freeMin };
+  if (closerPct >= zone.riderCancel.closerPct) return { fee: true, why: tr("The driver came {0}% closer ({1} → {2} km). Fee applies.", [closerPct, record.atAccept.km, record.atCancel.km]), closerPct, amount, freeMin };
+  return { fee: false, why: tr("The driver came only {0}% closer (needs {1}%). No fee.", [Math.max(0, closerPct), zone.riderCancel.closerPct]), closerPct, amount, freeMin };
 }
 
 /** Everything the backend needs, in one file: the live rules per zone, country rules, events and groups. */

@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { useFieldErrorReport } from "../ui/fieldErrors";
 import { numberInputError, parseNumberInput } from "./numberInput";
+import { trSentences } from "../i18n";
 
 type Props = {
   value: number;
@@ -59,7 +60,7 @@ export function NumberField({ value, onChange, label, unit, step = 1, min = 0, m
         />
         {unit ? <i aria-hidden="true">{unit}</i> : null}
       </span>
-      {error ? <small id={errorId} className="num-field-error" role="status">{error}</small> : null}
+      {error ? <small id={errorId} className="num-field-error" role="status">{trSentences(error)}</small> : null}
     </>
   );
 }

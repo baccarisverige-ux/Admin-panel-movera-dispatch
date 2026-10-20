@@ -58,35 +58,36 @@ import {
 import { CommandButton } from "../ui/CommandButton";
 import { mapProviderLabel, ZoneCanvas, type MapOverlays } from "./ZoneCanvas";
 import { ZoneWizard, type WizardOverlay } from "./ZoneWizard";
+import { tr, trn, trx, trSentences } from "../i18n";
 
 type ToolSpec = { tool: DrawTool; target?: DrawTarget; label: string; key: string; icon: ReactNode; needsZone?: boolean };
 
 const TOOLS: ToolSpec[] = [
-  { tool: "render", label: "Move map", key: "V", icon: <Hand size={17} /> },
-  { tool: "polygon", label: "Draw shape", key: "P", icon: <Pentagon size={17} />, needsZone: true },
-  { tool: "rectangle", label: "Rectangle", key: "R", icon: <Square size={17} />, needsZone: true },
-  { tool: "circle", label: "Circle", key: "C", icon: <Circle size={17} />, needsZone: true },
-  { tool: "freehand", label: "Free hand", key: "F", icon: <PenLine size={17} />, needsZone: true },
-  { tool: "select", label: "Edit points", key: "E", icon: <Spline size={17} />, needsZone: true },
-  { tool: "hole", label: "Cut hole", key: "H", icon: <Scissors size={17} />, needsZone: true },
-  { tool: "point", label: "Pickup point", key: "K", icon: <Crosshair size={17} />, needsZone: true },
-  { tool: "line", target: "nostop", label: "No-stop street", key: "L", icon: <Ban size={17} />, needsZone: true },
-  { tool: "line", target: "measure", label: "Measure", key: "M", icon: <Ruler size={17} /> },
+  { tool: "render", get label() { return tr("Move map"); }, key: "V", icon: <Hand size={17} /> },
+  { tool: "polygon", get label() { return tr("Draw shape"); }, key: "P", icon: <Pentagon size={17} />, needsZone: true },
+  { tool: "rectangle", get label() { return tr("Rectangle"); }, key: "R", icon: <Square size={17} />, needsZone: true },
+  { tool: "circle", get label() { return tr("Circle"); }, key: "C", icon: <Circle size={17} />, needsZone: true },
+  { tool: "freehand", get label() { return tr("Free hand"); }, key: "F", icon: <PenLine size={17} />, needsZone: true },
+  { tool: "select", get label() { return tr("Edit points"); }, key: "E", icon: <Spline size={17} />, needsZone: true },
+  { tool: "hole", get label() { return tr("Cut hole"); }, key: "H", icon: <Scissors size={17} />, needsZone: true },
+  { tool: "point", get label() { return tr("Pickup point"); }, key: "K", icon: <Crosshair size={17} />, needsZone: true },
+  { tool: "line", target: "nostop", get label() { return tr("No-stop street"); }, key: "L", icon: <Ban size={17} />, needsZone: true },
+  { tool: "line", target: "measure", get label() { return tr("Measure"); }, key: "M", icon: <Ruler size={17} /> },
 ];
 
 const LAYERS: { id: keyof ZoneLayers; label: string }[] = [
-  { id: "drivers", label: "Online drivers" },
-  { id: "trips", label: "Trips" },
-  { id: "requests", label: "Open requests" },
-  { id: "demandHour", label: "Demand · last hour" },
-  { id: "demand7d", label: "Demand · 7 days" },
-  { id: "pickups", label: "Pickup points" },
-  { id: "queue", label: "Airport queues" },
-  { id: "boosts", label: "Boosts" },
-  { id: "events", label: "Events" },
-  { id: "districts", label: "Districts" },
-  { id: "gaps", label: "Gaps (no zone)" },
-  { id: "before", label: "Published shape" },
+  { id: "drivers", get label() { return tr("Online drivers"); } },
+  { id: "trips", get label() { return tr("Trips"); } },
+  { id: "requests", get label() { return tr("Open requests"); } },
+  { id: "demandHour", get label() { return tr("Demand · last hour"); } },
+  { id: "demand7d", get label() { return tr("Demand · 7 days"); } },
+  { id: "pickups", get label() { return tr("Pickup points"); } },
+  { id: "queue", get label() { return tr("Airport queues"); } },
+  { id: "boosts", get label() { return tr("Boosts"); } },
+  { id: "events", get label() { return tr("Events"); } },
+  { id: "districts", get label() { return tr("Districts"); } },
+  { id: "gaps", get label() { return tr("Gaps (no zone)"); } },
+  { id: "before", get label() { return tr("Published shape"); } },
 ];
 
 const HINT: Partial<Record<DrawTool, string>> = {
@@ -97,7 +98,7 @@ const HINT: Partial<Record<DrawTool, string>> = {
   select: "Drag the points. Click a middle point to add one.",
   hole: "Draw the part to cut out, inside the zone.",
   point: "Click where riders get picked up.",
-  line: "Click along the street. Press Enter to finish.",
+  get line() { return tr("Click along the street. Press Enter to finish."); },
 };
 
 export function statusTone(status: string): string {
@@ -201,16 +202,16 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
   const status = selected ? zoneStatus(selected, ui.book) : "";
 
   return (
-    <section className="zn-workspace" aria-label="Zone map">
+    <section className="zn-workspace" aria-label={tr("Zone map")}>
       <div className="zn-map-card">
         <div className="zn-map-top">
           <form className="zn-search" role="search" onSubmit={(event) => { event.preventDefault(); zoneStore.search(query); }}>
             <Search size={15} aria-hidden="true" />
-            <input aria-label="Search the map" list="zn-places" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search an address or place" />
+            <input aria-label={tr("Search the map")} list="zn-places" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tr("Search an address or place")} />
             <datalist id="zn-places">{PLACES.filter((place) => cityById(place.city)?.country === country).map((place) => <option key={place.name} value={place.name} />)}</datalist>
-            <button data-command="admin.zone.search" type="submit" className="dash-btn small">Go</button>
+            <button data-command="admin.zone.search" type="submit" className="dash-btn small">{tr("Go")}</button>
           </form>
-          <div className="zn-city-jump" role="group" aria-label="Go to city">
+          <div className="zn-city-jump" role="group" aria-label={tr("Go to city")}>
             {cities.map((city) => (
               <button data-command="admin.zone.search" key={city.id} type="button" className="zn-chip" onClick={() => zoneStore.focusOn(city.center[0], city.center[1], `Moved to ${city.name}.`)}>{city.name}</button>
             ))}
@@ -218,7 +219,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
         </div>
 
         <div className="zn-map-wrap">
-          <div className="zn-toolbar" role="toolbar" aria-label="Drawing tools">
+          <div className="zn-toolbar" role="toolbar" aria-label={tr("Drawing tools")}>
             {TOOLS.map((spec) => (
               <button
                 key={`${spec.tool}-${spec.target ?? ""}`}
@@ -237,8 +238,8 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
               </button>
             ))}
             <i className="zn-tool-sep" aria-hidden="true" />
-            <button data-command="admin.zone.undo" type="button" className="zn-tool" aria-label="Undo" title="Undo (Z)" disabled={ui.past.length === 0} onClick={() => zoneStore.undo()}><Undo2 size={17} /><span>Undo</span><kbd>Z</kbd></button>
-            <button data-command="admin.zone.redo" type="button" className="zn-tool" aria-label="Redo" title="Redo (Shift Z)" disabled={ui.future.length === 0} onClick={() => zoneStore.redo()}><Redo2 size={17} /><span>Redo</span><kbd>⇧Z</kbd></button>
+            <button data-command="admin.zone.undo" type="button" className="zn-tool" aria-label={tr("Undo")} title={tr("Undo (Z)")} disabled={ui.past.length === 0} onClick={() => zoneStore.undo()}><Undo2 size={17} /><span>{tr("Undo")}</span><kbd>Z</kbd></button>
+            <button data-command="admin.zone.redo" type="button" className="zn-tool" aria-label={tr("Redo")} title={tr("Redo (Shift Z)")} disabled={ui.future.length === 0} onClick={() => zoneStore.redo()}><Redo2 size={17} /><span>{tr("Redo")}</span><kbd>⇧Z</kbd></button>
           </div>
 
           <ZoneCanvas
@@ -279,49 +280,49 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
           />
 
           <div className="zn-map-corner">
-            <div className="zn-basemap" role="group" aria-label="Map style">
-              <button data-command="admin.zone.basemap" type="button" aria-pressed={!ui.layers.satellite} className={!ui.layers.satellite ? "on" : undefined} onClick={() => { if (ui.layers.satellite) zoneStore.toggleLayer("satellite"); }}><MapIcon size={14} aria-hidden="true" /> Streets</button>
-              <button data-command="admin.zone.basemap" type="button" aria-pressed={ui.layers.satellite} className={ui.layers.satellite ? "on" : undefined} onClick={() => { if (!ui.layers.satellite) zoneStore.toggleLayer("satellite"); }}><Satellite size={14} aria-hidden="true" /> Satellite</button>
+            <div className="zn-basemap" role="group" aria-label={tr("Map style")}>
+              <button data-command="admin.zone.basemap" type="button" aria-pressed={!ui.layers.satellite} className={!ui.layers.satellite ? "on" : undefined} onClick={() => { if (ui.layers.satellite) zoneStore.toggleLayer("satellite"); }}>{trn("{0} Streets", <MapIcon size={14} aria-hidden="true" />)}</button>
+              <button data-command="admin.zone.basemap" type="button" aria-pressed={ui.layers.satellite} className={ui.layers.satellite ? "on" : undefined} onClick={() => { if (!ui.layers.satellite) zoneStore.toggleLayer("satellite"); }}>{trn("{0} Satellite", <Satellite size={14} aria-hidden="true" />)}</button>
             </div>
-            <button data-command="admin.zone.layer" type="button" className={layersOpen ? "zn-layers-btn on" : "zn-layers-btn"} aria-expanded={layersOpen} onClick={() => setLayersOpen(!layersOpen)}><Layers size={15} aria-hidden="true" /> Layers</button>
+            <button data-command="admin.zone.layer" type="button" className={layersOpen ? "zn-layers-btn on" : "zn-layers-btn"} aria-expanded={layersOpen} onClick={() => setLayersOpen(!layersOpen)}>{trn("{0} Layers", <Layers size={15} aria-hidden="true" />)}</button>
             {layersOpen ? (
-              <div className="zn-layers" role="group" aria-label="Map layers">
+              <div className="zn-layers" role="group" aria-label={tr("Map layers")}>
                 {LAYERS.map((layer) => (
                   <label key={layer.id} className={ui.layers[layer.id] ? "zn-layer on" : "zn-layer"}>
                     <input type="checkbox" checked={ui.layers[layer.id]} onChange={() => zoneStore.toggleLayer(layer.id)} />
-                    {layer.label}
+                    {trx(layer.label)}
                   </label>
                 ))}
               </div>
             ) : null}
           </div>
 
-          <p className="zn-map-notice" role="status" aria-live="polite">{ui.notice}</p>
+          <p className="zn-map-notice" role="status" aria-live="polite">{trSentences(ui.notice)}</p>
         </div>
 
         <div className="zn-map-foot">
-          <ul className="zone-legend" aria-label="Zone colors">
+          <ul className="zone-legend" aria-label={tr("Zone colors")}>
             {ZONE_TYPES.filter((type) => type.id !== "pickup").map((type) => (
-              <li key={type.id}><i className="zone-swatch" style={{ background: ZONE_COLOR[type.id] }} />{type.label}</li>
+              <li key={type.id}><i className="zone-swatch" style={{ background: ZONE_COLOR[type.id] }} />{trx(type.label)}</li>
             ))}
           </ul>
           <div className="zn-io">
-            <button data-command="admin.zone.import" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => document.getElementById("zone-import")?.click()}><Upload size={13} aria-hidden="true" /> Import GeoJSON</button>
+            <button data-command="admin.zone.import" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => document.getElementById("zone-import")?.click()}>{trn("{0} Import GeoJSON", <Upload size={13} aria-hidden="true" />)}</button>
             <input id="zone-import" hidden type="file" accept="application/geo+json,application/json,.geojson,.json" onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (!file || !agent) return;
               void file.text().then((raw) => zoneStore.importGeo(raw, agent.id));
             }} />
-            <button data-command="admin.zone.importKml" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => document.getElementById("zone-kml-import")?.click()}><Upload size={13} aria-hidden="true" /> Import KML</button>
+            <button data-command="admin.zone.importKml" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => document.getElementById("zone-kml-import")?.click()}>{trn("{0} Import KML", <Upload size={13} aria-hidden="true" />)}</button>
             <input id="zone-kml-import" hidden type="file" accept=".kml,application/vnd.google-earth.kml+xml,application/xml,text/xml" onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (!file || !agent) return;
               void file.text().then((raw) => zoneStore.importKml(raw, agent.id));
             }} />
-            <button data-command="admin.zone.export" type="button" className="dash-btn small ghost" onClick={exportGeo}><Download size={13} aria-hidden="true" /> Export GeoJSON</button>
-            <small className="fine">Map: {mapProviderLabel()} · drawing: Terra Draw</small>
+            <button data-command="admin.zone.export" type="button" className="dash-btn small ghost" onClick={exportGeo}>{trn("{0} Export GeoJSON", <Download size={13} aria-hidden="true" />)}</button>
+            <small className="fine">{trn("Map: {0} · drawing: Terra Draw", mapProviderLabel())}</small>
           </div>
         </div>
       </div>
@@ -330,66 +331,64 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
         {wizard ? (
           <ZoneWizard country={country} startCity={wizard.city} onClose={() => { zoneStore.clearSketch(); setWizardOverlay({}); onWizard(null); }} onOverlay={setWizardOverlay} />
         ) : selected ? (
-          <div className="zn-panel" aria-label={`Selected zone ${displayName(selected)}`}>
+          <div className="zn-panel" aria-label={tr("Selected zone {0}", [displayName(selected)])}>
             <div className="zn-sel-head" style={{ ["--zc" as string]: selected.color || ZONE_COLOR[selected.kind] }}>
               <span className="zn-sel-type"><i />{zoneTypeLabel(selected.kind)}</span>
               <h3>{displayName(selected)}</h3>
               <p><b>{selected.code}</b> · <span className={`zn-status ${statusTone(status)}`}>{status}</span></p>
             </div>
             <dl className="zn-sel-stats">
-              <div><dt>Area</dt><dd>{zoneAreaKm(selected).toFixed(2)} km²</dd></div>
-              <div><dt>Size</dt><dd>{size.width.toFixed(1)} × {size.height.toFixed(1)} km</dd></div>
-              <div><dt><Car size={12} aria-hidden="true" /> Drivers</dt><dd>{health?.drivers ?? 0}</dd></div>
-              <div><dt><Users size={12} aria-hidden="true" /> Requests</dt><dd>{health?.requests ?? 0}</dd></div>
+              <div><dt>{tr("Area")}</dt><dd>{trn("{0} km²", zoneAreaKm(selected).toFixed(2))}</dd></div>
+              <div><dt>{tr("Size")}</dt><dd>{trn("{0} × {1} km", size.width.toFixed(1), size.height.toFixed(1))}</dd></div>
+              <div><dt>{trn("{0} Drivers", <Car size={12} aria-hidden="true" />)}</dt><dd>{health?.drivers ?? 0}</dd></div>
+              <div><dt>{trn("{0} Requests", <Users size={12} aria-hidden="true" />)}</dt><dd>{health?.requests ?? 0}</dd></div>
             </dl>
-            {health?.alert ? <p className={`zn-alert ${health.tone}`}><AlertTriangle size={14} aria-hidden="true" /> {health.alert}</p> : null}
+            {health?.alert ? <p className={`zn-alert ${health.tone}`}><AlertTriangle size={14} aria-hidden="true" /> {trx(health.alert)}</p> : null}
             <div className="zn-sel-actions">
-              <Link className="dash-btn small" to={`/zones/${selected.id}`}><ExternalLink size={13} aria-hidden="true" /> Open zone page</Link>
-              <CommandButton command="admin.zone.rotate" className="dash-btn small ghost" type="button" disabled={!canEdit || selected.kind === "pickup"} onDone={() => { if (agent) zoneStore.rotate(selected.id, 15, agent.id); }}><RotateCw size={13} aria-hidden="true" /> Rotate 15°</CommandButton>
-              <CommandButton command="admin.zone.split" className="dash-btn small ghost" type="button" disabled={!canEdit || selected.kind === "pickup"} onDone={() => { if (agent) zoneStore.split(selected.id, agent.id); }}><SquareSplitHorizontal size={13} aria-hidden="true" /> Split in two</CommandButton>
-              <CommandButton command="admin.zone.archive" className="dash-btn small ghost" type="button" disabled={!canEdit || selected.archived} onDone={() => { if (agent) zoneStore.archive(selected.id, agent.id); }}><Archive size={13} aria-hidden="true" /> Archive</CommandButton>
-              <CommandButton command="admin.zone.delete" className="dash-btn small danger-ghost" type="button" targetId={selected.code} disabled={!canEdit} onDone={() => { if (agent) zoneStore.remove(selected.id, agent.id); }}><Trash2 size={13} aria-hidden="true" /> Delete</CommandButton>
+              <Link className="dash-btn small" to={`/zones/${selected.id}`}>{trn("{0} Open zone page", <ExternalLink size={13} aria-hidden="true" />)}</Link>
+              <CommandButton command="admin.zone.rotate" className="dash-btn small ghost" type="button" disabled={!canEdit || selected.kind === "pickup"} onDone={() => { if (agent) zoneStore.rotate(selected.id, 15, agent.id); }}>{trn("{0} Rotate 15°", <RotateCw size={13} aria-hidden="true" />)}</CommandButton>
+              <CommandButton command="admin.zone.split" className="dash-btn small ghost" type="button" disabled={!canEdit || selected.kind === "pickup"} onDone={() => { if (agent) zoneStore.split(selected.id, agent.id); }}>{trn("{0} Split in two", <SquareSplitHorizontal size={13} aria-hidden="true" />)}</CommandButton>
+              <CommandButton command="admin.zone.archive" className="dash-btn small ghost" type="button" disabled={!canEdit || selected.archived} onDone={() => { if (agent) zoneStore.archive(selected.id, agent.id); }}>{trn("{0} Archive", <Archive size={13} aria-hidden="true" />)}</CommandButton>
+              <CommandButton command="admin.zone.delete" className="dash-btn small danger-ghost" type="button" targetId={selected.code} disabled={!canEdit} onDone={() => { if (agent) zoneStore.remove(selected.id, agent.id); }}>{trn("{0} Delete", <Trash2 size={13} aria-hidden="true" />)}</CommandButton>
             </div>
             {mergeOptions.length ? (
               <div className="zn-merge">
-                <label className="field">Join with
-                  <select aria-label="Merge source" value={mergeSource} onChange={(event) => setMergeSource(event.target.value)}>
-                    <option value="">Pick a zone</option>
+                <label className="field">{trn("Join with{0}", <select aria-label={tr("Merge source")} value={mergeSource} onChange={(event) => setMergeSource(event.target.value)}>
+                    <option value="">{tr("Pick a zone")}</option>
                     {mergeOptions.map((zone) => <option key={zone.id} value={zone.id}>{displayName(zone)}</option>)}
-                  </select>
-                </label>
-                <CommandButton command="admin.zone.merge" className="dash-btn small ghost" type="button" disabled={!canEdit || !mergeSource} onDone={() => { if (agent && mergeSource) { zoneStore.merge(selected.id, mergeSource, agent.id); setMergeSource(""); } }}><Merge size={13} aria-hidden="true" /> Join</CommandButton>
+                  </select>)}</label>
+                <CommandButton command="admin.zone.merge" className="dash-btn small ghost" type="button" disabled={!canEdit || !mergeSource} onDone={() => { if (agent && mergeSource) { zoneStore.merge(selected.id, mergeSource, agent.id); setMergeSource(""); } }}>{trn("{0} Join", <Merge size={13} aria-hidden="true" />)}</CommandButton>
               </div>
             ) : null}
 
-            <div className="zn-checks" aria-label="Checks for this zone">
-              <h4>Checks</h4>
-              {selectedIssues.length === 0 ? <p className="zn-ok"><CircleCheck size={14} aria-hidden="true" /> All good. No overlap, no crossing lines.</p> : (
+            <div className="zn-checks" aria-label={tr("Checks for this zone")}>
+              <h4>{tr("Checks")}</h4>
+              {selectedIssues.length === 0 ? <p className="zn-ok">{trn("{0} All good. No overlap, no crossing lines.", <CircleCheck size={14} aria-hidden="true" />)}</p> : (
                 <ul>
-                  {selectedIssues.map((issue) => <li key={issue.message} className={issue.level}><AlertTriangle size={13} aria-hidden="true" /> {issue.message}</li>)}
+                  {selectedIssues.map((issue) => <li key={issue.message} className={issue.level}><AlertTriangle size={13} aria-hidden="true" /> {trSentences(issue.message)}</li>)}
                 </ul>
               )}
-              <p className="fine" data-holes={selected.holes.length} data-pickups={selected.pickups.length}>Holes: {selected.holes.length} · Pickup points: {selected.pickups.length} · No-stop streets: {selected.noStopLines.length}</p>
+              <p className="fine" data-holes={selected.holes.length} data-pickups={selected.pickups.length}>{trn("Holes: {0} · Pickup points: {1} · No-stop streets: {2}", selected.holes.length, selected.pickups.length, selected.noStopLines.length)}</p>
             </div>
 
             <details className="zn-more">
-              <summary>Test a point</summary>
-              <label className="field">Latitude, longitude<input aria-label="Test a point" value={probe} onChange={(event) => setProbe(event.target.value)} placeholder={`${(cities[0]?.center ?? [0, 0]).join(", ")}`} /></label>
-              {hits === null ? <small className="fine">Type a point to see which zone and rules apply.</small> : hits.length === 0 ? <p className="zn-alert bad">That point is in no zone.</p> : (
-                <ol className="zn-hits" aria-label="Effective zone rules">
+              <summary>{tr("Test a point")}</summary>
+              <label className="field">{trn("Latitude, longitude{0}", <input aria-label={tr("Test a point")} value={probe} onChange={(event) => setProbe(event.target.value)} placeholder={`${(cities[0]?.center ?? [0, 0]).join(", ")}`} />)}</label>
+              {hits === null ? <small className="fine">{tr("Type a point to see which zone and rules apply.")}</small> : hits.length === 0 ? <p className="zn-alert bad">{tr("That point is in no zone.")}</p> : (
+                <ol className="zn-hits" aria-label={tr("Effective zone rules")}>
                   {hits.map((zone) => <li key={zone.id}><b>{displayName(zone)}</b><small>{zoneRuleSummary(zone)}</small></li>)}
                 </ol>
               )}
             </details>
             {priorities.length ? (
               <details className="zn-more">
-                <summary>Which rule wins when zones overlap</summary>
-                <ol className="zn-priority" aria-label="Zone overlap priority">
+                <summary>{tr("Which rule wins when zones overlap")}</summary>
+                <ol className="zn-priority" aria-label={tr("Zone overlap priority")}>
                   {priorities.map((zone, index) => (
                     <li key={zone.id}>
                       <i style={{ background: zone.color || ZONE_COLOR[zone.kind] }} />
                       <span>{displayName(zone)}<small>{zoneTypeLabel(zone.kind)}</small></span>
-                      <button data-command="admin.zone.priority" type="button" className="icon-ghost" aria-label={`Move ${zone.name} up`} disabled={!canEdit || index === 0} onClick={() => {
+                      <button data-command="admin.zone.priority" type="button" className="icon-ghost" aria-label={tr("Move {0} up", [zone.name])} disabled={!canEdit || index === 0} onClick={() => {
                         if (!agent) return;
                         const ids = priorities.map((item) => item.id);
                         [ids[index - 1], ids[index]] = [ids[index]!, ids[index - 1]!];
@@ -403,8 +402,8 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
           </div>
         ) : (
           <div className="zn-panel empty">
-            <h3>No zone picked</h3>
-            <p>Click a zone on the map or in the list, or make a new one.</p>
+            <h3>{tr("No zone picked")}</h3>
+            <p>{tr("Click a zone on the map or in the list, or make a new one.")}</p>
           </div>
         )}
       </aside>

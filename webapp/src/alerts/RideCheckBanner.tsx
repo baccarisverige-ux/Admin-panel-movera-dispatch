@@ -7,6 +7,7 @@ import { useAlertsData } from "./AlertsContext";
 import { inQuiet } from "./engine";
 import { OpenRideCheck } from "./OpenRideCheck";
 import { ago } from "./OpenView";
+import { tr, trn, uiLocale, trx } from "../i18n";
 
 const HEARD_KEY = "movera-admin-ridecheck-heard";
 
@@ -33,7 +34,7 @@ export function RideCheckBanner() {
   const data = useAlertsData();
   const { agent } = useSession();
   const list = data.rideCheck.unopened;
-  const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: data.market.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(data.now));
+  const hhmm = new Intl.DateTimeFormat(uiLocale(), { timeZone: data.market.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(data.now));
   const quiet = inQuiet(data.book.personal[agent?.id ?? ""]?.quiet, hhmm);
   const channels = data.book.settings.channels;
   const loud = list.filter((alert) => channels[alert.level].sound).map((alert) => alert.id).join(",");
@@ -51,18 +52,18 @@ export function RideCheckBanner() {
   if (!list.length) return null;
   const shown = list.slice(0, 3);
   return (
-    <section className="rc-banner" aria-label="Ride check alert">
+    <section className="rc-banner" aria-label={tr("Ride check alert")}>
       {shown.map((alert) => (
         <div key={alert.id} className="rc-banner-row">
           <span className="rc-banner-icon" aria-hidden="true"><ShieldAlert size={18} /></span>
           <span className="rc-banner-text">
-            <b>{alert.title}</b>
-            <small>{alert.detail} · {ago(alert.since, data.now)}</small>
+            <b>{trx(alert.title)}</b>
+            <small>{trx(alert.detail)} · {ago(alert.since, data.now)}</small>
           </span>
-          <OpenRideCheck alert={alert} label="Open ride check" className="rc-banner-btn" />
+          <OpenRideCheck alert={alert} label={tr("Open ride check")} className="rc-banner-btn" />
         </div>
       ))}
-      {list.length > shown.length ? <p className="rc-banner-more">{list.length - shown.length} more ride check alert{list.length - shown.length === 1 ? "" : "s"}. <Link to="/alerts">See all alerts</Link></p> : null}
+      {list.length > shown.length ? <p className="rc-banner-more">{trn("{0} more ride check alert{1}. {2}", list.length - shown.length, list.length - shown.length === 1 ? "" : tr("s"), <Link to="/alerts">{tr("See all alerts")}</Link>)}</p> : null}
     </section>
   );
 }

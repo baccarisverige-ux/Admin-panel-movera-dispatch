@@ -5,6 +5,7 @@ import { driverCode } from "../fleet/codes.ts";
 import { formatMoney, market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import type { LiveDriver } from "./live.ts";
 import { lengthKm, type LatLng } from "./route.ts";
+import { uiLocale } from "../i18n/core.ts";
 
 /** What the admin sees about a driver's current trip, its waybill and the next pickup. */
 
@@ -88,7 +89,7 @@ export function liveTrip(
 ): LiveTrip | null {
   if (!driver.route) return null;
   const id = marketOfZone(driver.zoneId)?.id ?? "SE";
-  const { locale, timeZone } = market(id);
+  const { timeZone } = market(id);
   const zone = zoneById(driver.zoneId);
   const zoneName = zone?.name ?? driver.zoneId;
   const seed = hash(driver.id);
@@ -110,8 +111,8 @@ export function liveTrip(
   const fareMinor = trip?.fareOre ?? 0;
   const fare = formatMoney(fareMinor || Math.round(tripKm * (id === "SE" ? 2_400 : id === "FR" ? 210 : 1_300) + (id === "SE" ? 6_000 : id === "FR" ? 450 : 2_500)), id);
   const startedAtMs = nowMs - Math.round((phase === "to_pickup" ? driver.progress * 6 : 6 + driver.progress * (tripKm / SPEED_KMH) * 60) * 60_000);
-  const time = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
-  const dateTime = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", hourCycle: "h23", timeZone });
+  const time = new Intl.DateTimeFormat(uiLocale(), { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
+  const dateTime = new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeStyle: "short", hourCycle: "h23", timeZone });
 
   const reservation = records.reservations
     .filter((row) => row.driverId === driver.id && row.pickupAt && row.status === "assigned")

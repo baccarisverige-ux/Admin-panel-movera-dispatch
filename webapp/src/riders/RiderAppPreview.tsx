@@ -4,15 +4,16 @@ import { formatMoney, market, type MarketId } from "../markets/markets";
 import { promoPrice, type PromoTicket } from "./care";
 import type { CategoryPrice } from "./useCategoryPrices";
 import { CURRENCY_SYMBOL } from "./ui";
+import { tr, trn, trx } from "../i18n";
 
 /** Pictures the rider app already ships, used as the promotion's thumbnail. */
 export const CARD_IMAGES: { id: string; label: string; file: string | null }[] = [
-  { id: "gradient", label: "Movera colours", file: null },
-  { id: "comfort", label: "Comfort ride", file: "movera_comfort_ride.webp" },
-  { id: "airport", label: "Airport", file: "movera_airport_premium.webp" },
-  { id: "events", label: "Events", file: "movera_events_premium.webp" },
-  { id: "business", label: "Work", file: "movera_business_premium.webp" },
-  { id: "outings", label: "Outings", file: "movera_outings_premium.webp" },
+  { id: "gradient", get label() { return tr("Movera colours"); }, file: null },
+  { id: "comfort", get label() { return tr("Comfort ride"); }, file: "movera_comfort_ride.webp" },
+  { id: "airport", get label() { return tr("Airport"); }, file: "movera_airport_premium.webp" },
+  { id: "events", get label() { return tr("Events"); }, file: "movera_events_premium.webp" },
+  { id: "business", get label() { return tr("Work"); }, file: "movera_business_premium.webp" },
+  { id: "outings", get label() { return tr("Outings"); }, file: "movera_outings_premium.webp" },
 ];
 
 export function imageUrl(id: string | undefined): string | null {
@@ -44,11 +45,11 @@ export function RiderAppPreview({ promo, prices = [], zoneName = "", off = false
   const deal = promo.kind === "percent" ? `${promo.value}%` : `${promo.value} ${CURRENCY_SYMBOL[country]}`;
   const covered = prices.filter((row) => promoPrice(row.price, row.id, promo).applies).length;
   return (
-    <figure className="ra-phone" aria-label="How riders see the promotion">
-      <div className="ra-switch" role="tablist" aria-label="Rider app screen">
-        <button data-command="admin.ui.quickAction" type="button" role="tab" aria-selected={screen === "home"} className={screen === "home" ? "active" : undefined} onClick={() => setScreen("home")}>Home</button>
-        <button data-command="admin.ui.quickAction" type="button" role="tab" aria-selected={screen === "ride"} className={screen === "ride" ? "active" : undefined} onClick={() => setScreen("ride")}>Choose ride</button>
-        {popup ? <button data-command="admin.ui.quickAction" type="button" role="tab" aria-selected={screen === "popup"} className={screen === "popup" ? "active" : undefined} onClick={() => setScreen("popup")}>Popup</button> : null}
+    <figure className="ra-phone" aria-label={tr("How riders see the promotion")}>
+      <div className="ra-switch" role="tablist" aria-label={tr("Rider app screen")}>
+        <button data-command="admin.ui.quickAction" type="button" role="tab" aria-selected={screen === "home"} className={screen === "home" ? "active" : undefined} onClick={() => setScreen("home")}>{tr("Home")}</button>
+        <button data-command="admin.ui.quickAction" type="button" role="tab" aria-selected={screen === "ride"} className={screen === "ride" ? "active" : undefined} onClick={() => setScreen("ride")}>{tr("Choose ride")}</button>
+        {popup ? <button data-command="admin.ui.quickAction" type="button" role="tab" aria-selected={screen === "popup"} className={screen === "popup" ? "active" : undefined} onClick={() => setScreen("popup")}>{tr("Popup")}</button> : null}
       </div>
       <div className="ra-screen">
         <div className="ra-status"><span>9:41</span><span className="ra-notch" aria-hidden="true" /><span>5G</span></div>
@@ -57,16 +58,16 @@ export function RiderAppPreview({ promo, prices = [], zoneName = "", off = false
             <div className="ra-map dim" aria-hidden="true">
               <i className="ra-road r1" /><i className="ra-road r2" /><i className="ra-road r3" /><i className="ra-road r4" />
             </div>
-            <div className="ra-popup" role="group" aria-label="Popup in the rider app">
+            <div className="ra-popup" role="group" aria-label={tr("Popup in the rider app")}>
               <span className="ra-popup-close" aria-hidden="true"><X size={12} /></span>
               <div className={url ? "ra-popup-art photo" : "ra-popup-art"} style={url ? { backgroundImage: `url(${url})` } : undefined}>
-                <strong>{deal}</strong><span>off</span>
+                <strong>{deal}</strong><span>{tr("off")}</span>
               </div>
-              <b>{promo.title || "Movera offer"}</b>
+              <b>{promo.title || tr("Movera offer")}</b>
               <span>{promoSubtitle(promo)}</span>
               {promo.code ? <em className="ra-popup-code">{promo.code}</em> : null}
-              <span className="ra-popup-btn">Use it now</span>
-              <small>Maybe later</small>
+              <span className="ra-popup-btn">{tr("Use it now")}</span>
+              <small>{tr("Maybe later")}</small>
             </div>
           </>
         ) : screen === "home" ? (
@@ -77,10 +78,10 @@ export function RiderAppPreview({ promo, prices = [], zoneName = "", off = false
             </div>
             <div className="ra-sheet">
               {off ? null : (
-                <div className="ra-promo-tab" aria-label="Promotion in the rider app">
+                <div className="ra-promo-tab" aria-label={tr("Promotion in the rider app")}>
                   <span className={url ? "ra-promo-icon photo" : "ra-promo-icon"} style={url ? { backgroundImage: `url(${url})` } : undefined}><Gift size={13} aria-hidden="true" /></span>
                   <span className="ra-promo-text">
-                    <strong>{deal} off · {promo.title || "Movera offer"}</strong>
+                    <strong>{trn("{0} off · {1}", deal, promo.title || tr("Movera offer"))}</strong>
                     <span>{promoSubtitle(promo)}</span>
                   </span>
                   <ChevronRight size={14} aria-hidden="true" />
@@ -88,31 +89,31 @@ export function RiderAppPreview({ promo, prices = [], zoneName = "", off = false
               )}
               <span className="ra-grabber" aria-hidden="true" />
               <div className="ra-where">
-                <span className="ra-where-main"><Search size={14} aria-hidden="true" />Where to?</span>
-                <span className="ra-later"><Clock size={11} aria-hidden="true" />Later</span>
+                <span className="ra-where-main">{trn("{0}Where to?", <Search size={14} aria-hidden="true" />)}</span>
+                <span className="ra-later">{trn("{0}Later", <Clock size={11} aria-hidden="true" />)}</span>
               </div>
               <nav className="ra-nav" aria-hidden="true">
-                <span className="on"><Map size={15} />Map</span>
-                <span><CreditCard size={15} />Payment</span>
-                <span><CalendarClock size={15} />Schedule ride</span>
-                <span><UserRound size={15} />Account</span>
+                <span className="on">{trn("{0}Map", <Map size={15} />)}</span>
+                <span>{trn("{0}Payment", <CreditCard size={15} />)}</span>
+                <span>{trn("{0}Schedule ride", <CalendarClock size={15} />)}</span>
+                <span>{trn("{0}Account", <UserRound size={15} />)}</span>
               </nav>
             </div>
           </>
         ) : (
           <div className="ra-ride">
             <div className="ra-route">
-              <span><i className="dot a" />Current location</span>
-              <span><MapPin size={11} aria-hidden="true" />{zoneName || "Destination"} · 8 km</span>
+              <span>{trn("{0}Current location", <i className="dot a" />)}</span>
+              <span>{trn("{0}{1} · 8 km", <MapPin size={11} aria-hidden="true" />, zoneName || tr("Destination"))}</span>
             </div>
-            {off ? null : <div className="ra-ride-banner"><Gift size={12} aria-hidden="true" />{deal} off applied on {covered} categor{covered === 1 ? "y" : "ies"}</div>}
-            <ul className="ra-cats" aria-label="Categories with prices">
+            {off ? null : <div className="ra-ride-banner">{trn("{0}{1} off applied on {2} categor{3}", <Gift size={12} aria-hidden="true" />, deal, covered, covered === 1 ? tr("y") : tr("ies"))}</div>}
+            <ul className="ra-cats" aria-label={tr("Categories with prices")}>
               {prices.map((row, index) => {
                 const result = off ? { applies: false, discount: 0, newPrice: row.price } : promoPrice(row.price, row.id, promo);
                 return (
                   <li key={row.id} className={index === 0 ? "on" : undefined}>
                     <span className="ra-cat-car" aria-hidden="true"><Car size={18} /></span>
-                    <span className="ra-cat-name"><b>{row.label}</b><small><Users size={9} aria-hidden="true" />{row.seats} · {3 + (index % 5)} min</small></span>
+                    <span className="ra-cat-name"><b>{trx(row.label)}</b><small>{trn("{0}{1} · {2} min", <Users size={9} aria-hidden="true" />, row.seats, 3 + (index % 5))}</small></span>
                     <span className="ra-cat-price">
                       {result.applies ? <s>{money(row.price, country)}</s> : null}
                       <b className={result.applies ? "deal" : undefined}>{money(result.newPrice, country)}</b>
@@ -121,11 +122,11 @@ export function RiderAppPreview({ promo, prices = [], zoneName = "", off = false
                 );
               })}
             </ul>
-            <div className="ra-choose">Choose {prices[0]?.label ?? "ride"}</div>
+            <div className="ra-choose">{trn("Choose {0}", trx(prices[0]?.label) ?? tr("ride"))}</div>
           </div>
         )}
       </div>
-      <figcaption>{off ? "Promotion is off: riders do not see it." : screen === "popup" ? "Popup · shows once when the rider opens the app" : screen === "home" ? "Home · sheet down, promotion on top" : `Choose ride · sample 8 km trip in ${zoneName}`}</figcaption>
+      <figcaption>{off ? tr("Promotion is off: riders do not see it.") : screen === "popup" ? tr("Popup · shows once when the rider opens the app") : screen === "home" ? tr("Home · sheet down, promotion on top") : tr("Choose ride · sample 8 km trip in {0}", [zoneName])}</figcaption>
     </figure>
   );
 }

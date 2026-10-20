@@ -1,5 +1,6 @@
 import type { Role } from "../auth/permissions.ts";
 import { csvCell } from "../reports/csv.ts";
+import { tr, trx } from "../i18n/core.ts";
 
 /** Alerts: one list of everything that needs an admin, with levels, who gets it, and who works on it. */
 
@@ -270,7 +271,7 @@ export function computeAlerts(facts: Facts, settings: AlertSettings, rules: read
     for (const row of facts.incidents.filter((item) => item.kind !== "ride_check" && (item.status === "queued" || item.status === "taken") && inZones.has(item.zoneId))) {
       const minutes = row.takenAt ? Math.round((facts.now - Date.parse(row.takenAt)) / 60_000) : 0;
       const slow = row.status === "taken" && k("sos_slow").on && levelFor(minutes, k("sos_slow").limits, "up");
-      push({ id: `sos:${row.id}`, kind: "sos", level: k("sos").level, title: slow ? `SOS from ${row.who} not solved after ${minutes} min` : row.late ? `SOS from ${row.who} ${row.late}` : `SOS from ${row.who}`, detail: `${zoneName(row.zoneId)} · ${row.id}`, zoneId: row.zoneId, since: row.createdAt ? Date.parse(row.createdAt) : row.takenAt ? Date.parse(row.takenAt) - 2 * 60_000 : seeded(row.id, 8), incidentId: row.id });
+      push({ id: `sos:${row.id}`, kind: "sos", level: k("sos").level, title: slow ? tr("SOS from {0} not solved after {1} min", [row.who, minutes]) : row.late ? tr("SOS from {0} {1}", [row.who, row.late]) : tr("SOS from {0}", [row.who]), detail: `${zoneName(row.zoneId)} · ${row.id}`, zoneId: row.zoneId, since: row.createdAt ? Date.parse(row.createdAt) : row.takenAt ? Date.parse(row.takenAt) - 2 * 60_000 : seeded(row.id, 8), incidentId: row.id });
     }
   }
 
@@ -287,69 +288,69 @@ export function computeAlerts(facts: Facts, settings: AlertSettings, rules: read
     if (k("long_wait").on && limits.long_wait.on) {
       for (const request of waiting) {
         const level = levelFor(request.waitingMin, { info: null, important: limits.long_wait.limit, critical: k("long_wait").limits.critical }, "up");
-        if (level) push({ id: `long_wait:${request.tripId}`, kind: "long_wait", level, title: `${request.rider} has waited ${request.waitingMin} min`, detail: `${zone.name} · ${request.tripId}`, zoneId: zone.id, since: ago(request.waitingMin) });
+        if (level) push({ id: `long_wait:${request.tripId}`, kind: "long_wait", level, title: tr("{0} has waited {1} min", [request.rider, request.waitingMin]), detail: `${zone.name} · ${request.tripId}`, zoneId: zone.id, since: ago(request.waitingMin) });
       }
     }
     const free = facts.freeByZone[zone.id] ?? 0;
     if (k("few_drivers").on && limits.few_drivers.on && free <= limits.few_drivers.limit) {
-      push({ id: `few_drivers:${zone.id}:${facts.day}`, kind: "few_drivers", level: k("few_drivers").level, title: `Only ${free} free driver${free === 1 ? "" : "s"} in ${zone.name}`, detail: `Limit ${limits.few_drivers.limit} (Dispatch)`, zoneId: zone.id, since: seeded(`few:${zone.id}`, 30) });
+      push({ id: `few_drivers:${zone.id}:${facts.day}`, kind: "few_drivers", level: k("few_drivers").level, title: free === 1 ? tr("Only 1 free driver in {0}", [zone.name]) : tr("Only {0} free drivers in {1}", [free, zone.name]), detail: tr("Limit {0} (Dispatch)", [limits.few_drivers.limit]), zoneId: zone.id, since: seeded(`few:${zone.id}`, 30) });
     }
     if (k("no_driver").on && limits.no_driver.on && waiting.length >= limits.no_driver.limit) {
-      push({ id: `no_driver:${zone.id}:${facts.day}`, kind: "no_driver", level: k("no_driver").level, title: `${waiting.length} requests without a driver in ${zone.name}`, detail: `Limit ${limits.no_driver.limit} (Dispatch)`, zoneId: zone.id, since: seeded(`nod:${zone.id}`, 20) });
+      push({ id: `no_driver:${zone.id}:${facts.day}`, kind: "no_driver", level: k("no_driver").level, title: tr("{0} requests without a driver in {1}", [waiting.length, zone.name]), detail: tr("Limit {0} (Dispatch)", [limits.no_driver.limit]), zoneId: zone.id, since: seeded(`nod:${zone.id}`, 20) });
     }
   }
 
   if (k("late_reservation").on) {
     for (const ride of facts.lateRides.filter((item) => inZones.has(item.zoneId))) {
       const level = levelFor(ride.minutesLeft, k("late_reservation").limits, "down");
-      if (level) push({ id: `late_reservation:${ride.id}`, kind: "late_reservation", level, title: `${ride.rider}'s booked ride in ${ride.minutesLeft} min has no driver`, detail: `${zoneName(ride.zoneId)} · ${ride.id}`, zoneId: ride.zoneId, since: seeded(ride.id, 40), path: `/reservations/${ride.id}` });
+      if (level) push({ id: `late_reservation:${ride.id}`, kind: "late_reservation", level, title: tr("{0}'s booked ride in {1} min has no driver", [ride.rider, ride.minutesLeft]), detail: `${zoneName(ride.zoneId)} · ${ride.id}`, zoneId: ride.zoneId, since: seeded(ride.id, 40), path: `/reservations/${ride.id}` });
     }
   }
   if (k("doc_expiring").on) {
     for (const doc of facts.documents.filter((item) => inZones.has(item.zoneId))) {
       const level = levelFor(doc.days, k("doc_expiring").limits, "down");
-      if (level) push({ id: `doc_expiring:${doc.driverId}:${doc.doc}`, kind: "doc_expiring", level, title: doc.days <= 0 ? `${doc.driver}: ${doc.doc} has expired` : `${doc.driver}: ${doc.doc} expires in ${doc.days} day${doc.days === 1 ? "" : "s"}`, detail: zoneName(doc.zoneId), zoneId: doc.zoneId, since: seeded(`${doc.driverId}${doc.doc}`, 600), path: `/drivers/${doc.driverId}` });
+      if (level) push({ id: `doc_expiring:${doc.driverId}:${doc.doc}`, kind: "doc_expiring", level, title: doc.days <= 0 ? tr("{0}: {1} has expired", [doc.driver, trx(doc.doc)]) : doc.days === 1 ? tr("{0}: {1} expires in 1 day", [doc.driver, trx(doc.doc)]) : tr("{0}: {1} expires in {2} days", [doc.driver, trx(doc.doc), doc.days]), detail: zoneName(doc.zoneId), zoneId: doc.zoneId, since: seeded(`${doc.driverId}${doc.doc}`, 600), path: `/drivers/${doc.driverId}` });
     }
   }
   if (k("low_rating").on) {
     for (const row of facts.ratings.filter((item) => inZones.has(item.zoneId))) {
       const level = levelFor(row.rating, k("low_rating").limits, "down");
-      if (level) push({ id: `low_rating:${row.driverId}`, kind: "low_rating", level, title: `${row.driver} has a ${row.rating.toFixed(1)} rating`, detail: zoneName(row.zoneId), zoneId: row.zoneId, since: seeded(`r${row.driverId}`, 600), path: `/drivers/${row.driverId}` });
+      if (level) push({ id: `low_rating:${row.driverId}`, kind: "low_rating", level, title: tr("{0} has a {1} rating", [row.driver, row.rating.toFixed(1)]), detail: zoneName(row.zoneId), zoneId: row.zoneId, since: seeded(`r${row.driverId}`, 600), path: `/drivers/${row.driverId}` });
     }
   }
   if (k("auto_offline").on) {
     for (const row of facts.offline.filter((item) => inZones.has(item.zoneId))) {
-      push({ id: `auto_offline:${row.driverId}:${facts.day}`, kind: "auto_offline", level: k("auto_offline").level, title: `${row.driver} went offline after ${row.count} offers not accepted`, detail: zoneName(row.zoneId), zoneId: row.zoneId, since: seeded(`o${row.driverId}`, 120), path: `/drivers/${row.driverId}` });
+      push({ id: `auto_offline:${row.driverId}:${facts.day}`, kind: "auto_offline", level: k("auto_offline").level, title: tr("{0} went offline after {1} offers not accepted", [row.driver, row.count]), detail: zoneName(row.zoneId), zoneId: row.zoneId, since: seeded(`o${row.driverId}`, 120), path: `/drivers/${row.driverId}` });
     }
   }
   if (k("payment_failed").on) {
     for (const row of facts.payments.filter((item) => inZones.has(item.zoneId))) {
-      push({ id: `payment_failed:${row.id}`, kind: "payment_failed", level: row.system ? "critical" : k("payment_failed").level, title: `${row.rider === "Card" ? "A card" : `${row.rider}'s`} payment of ${facts.money(row.amount)} failed`, detail: `${row.reason} · ${row.id}`, zoneId: row.zoneId, since: seeded(row.id, 180), path: `/payments/${row.id}` });
+      push({ id: `payment_failed:${row.id}`, kind: "payment_failed", level: row.system ? "critical" : k("payment_failed").level, title: row.rider === "Card" ? tr("A card payment of {0} failed", [facts.money(row.amount)]) : tr("{0}'s payment of {1} failed", [row.rider, facts.money(row.amount)]), detail: `${trx(row.reason)} · ${row.id}`, zoneId: row.zoneId, since: seeded(row.id, 180), path: `/payments/${row.id}` });
     }
   }
   if (k("refund_approval").on) {
-    for (const row of facts.refunds) push({ id: `refund_approval:${row.id}`, kind: "refund_approval", level: k("refund_approval").level, title: row.title || "A refund waits for approval", detail: row.id, zoneId: null, since: seeded(row.id, 240) });
+    for (const row of facts.refunds) push({ id: `refund_approval:${row.id}`, kind: "refund_approval", level: k("refund_approval").level, title: row.title || tr("A refund waits for approval"), detail: row.id, zoneId: null, since: seeded(row.id, 240) });
   }
   if (k("payout_big").on) {
     for (const row of facts.payouts.filter((item) => inZones.has(item.zoneId))) {
       const level = levelFor(row.amount, k("payout_big").limits, "up");
-      if (level) push({ id: `payout_big:${row.id}`, kind: "payout_big", level, title: `${row.driver}'s payout is ${facts.money(row.amount)}`, detail: row.id, zoneId: row.zoneId, since: seeded(row.id, 600), path: `/payouts/${row.id}` });
+      if (level) push({ id: `payout_big:${row.id}`, kind: "payout_big", level, title: tr("{0}'s payout is {1}", [row.driver, facts.money(row.amount)]), detail: row.id, zoneId: row.zoneId, since: seeded(row.id, 600), path: `/payouts/${row.id}` });
     }
   }
   if (k("rider_fraud").on) {
-    for (const row of facts.riders.filter((item) => item.flags.length)) push({ id: `rider_fraud:${row.id}`, kind: "rider_fraud", level: k("rider_fraud").level, title: `${row.name}: ${row.flags[0]}`, detail: row.flags.length > 1 ? `+${row.flags.length - 1} more signs` : "", zoneId: null, since: seeded(`f${row.id}`, 900), path: `/riders/${row.id}` });
+    for (const row of facts.riders.filter((item) => item.flags.length)) push({ id: `rider_fraud:${row.id}`, kind: "rider_fraud", level: k("rider_fraud").level, title: `${row.name}: ${trx(row.flags[0])}`, detail: row.flags.length > 1 ? tr("+{0} more signs", [row.flags.length - 1]) : "", zoneId: null, since: seeded(`f${row.id}`, 900), path: `/riders/${row.id}` });
   }
   if (k("rider_cancels").on) {
     for (const row of facts.riders.filter((item) => item.rides >= 5)) {
       const level = levelFor(row.cancelRate, k("rider_cancels").limits, "up");
-      if (level) push({ id: `rider_cancels:${row.id}`, kind: "rider_cancels", level, title: `${row.name} cancels ${row.cancelRate}% of rides`, detail: `${row.rides} rides`, zoneId: null, since: seeded(`c${row.id}`, 900), path: `/riders/${row.id}` });
+      if (level) push({ id: `rider_cancels:${row.id}`, kind: "rider_cancels", level, title: tr("{0} cancels {1}% of rides", [row.name, row.cancelRate]), detail: tr("{0} rides", [row.rides]), zoneId: null, since: seeded(`c${row.id}`, 900), path: `/riders/${row.id}` });
     }
   }
   if (k("ticket_open").on) {
-    for (const row of facts.tickets.filter((item) => inZones.has(item.zoneId))) push({ id: `ticket_open:${row.id}`, kind: "ticket_open", level: k("ticket_open").level, title: `Support ticket from ${row.name}`, detail: `${zoneName(row.zoneId)} · ${row.id}`, zoneId: row.zoneId, since: seeded(row.id, 300), path: `/tickets/${row.id}` });
+    for (const row of facts.tickets.filter((item) => inZones.has(item.zoneId))) push({ id: `ticket_open:${row.id}`, kind: "ticket_open", level: k("ticket_open").level, title: tr("Support ticket from {0}", [row.name]), detail: `${zoneName(row.zoneId)} · ${row.id}`, zoneId: row.zoneId, since: seeded(row.id, 300), path: `/tickets/${row.id}` });
   }
   if (k("system_health").on) {
-    for (const row of facts.system.filter((item) => item.state !== "ok")) push({ id: `system_health:${row.id}:${facts.day}`, kind: "system_health", level: row.state === "down" ? "critical" : "important", title: `${row.name} is ${row.state === "down" ? "down" : "slow"}`, detail: row.detail, zoneId: null, since: seeded(row.id, 25) });
+    for (const row of facts.system.filter((item) => item.state !== "ok")) push({ id: `system_health:${row.id}:${facts.day}`, kind: "system_health", level: row.state === "down" ? "critical" : "important", title: row.state === "down" ? tr("{0} is down", [row.name]) : tr("{0} is slow", [row.name]), detail: row.detail, zoneId: null, since: seeded(row.id, 25) });
   }
 
   for (const rule of rules.filter((item) => item.on)) {
@@ -357,7 +358,7 @@ export function computeAlerts(facts: Facts, settings: AlertSettings, rules: read
       const value = metricValue(facts, rule.metric, zone.id);
       if (rule.op === "above" ? value > rule.value : value < rule.value) {
         const unit = METRICS.find((item) => item.id === rule.metric)?.unit ?? "";
-        push({ id: `rule:${rule.id}:${zone.id}:${facts.day}`, kind: "rule", level: rule.level, title: `${rule.name}: ${value} ${unit} in ${zone.name}`, detail: `Your rule: ${METRICS.find((item) => item.id === rule.metric)?.label} ${rule.op} ${rule.value} for ${rule.forMin} min`, zoneId: zone.id, since: seeded(`${rule.id}${zone.id}`, 30), ruleId: rule.id, path: "/alerts?view=rules" });
+        push({ id: `rule:${rule.id}:${zone.id}:${facts.day}`, kind: "rule", level: rule.level, title: tr("{0}: {1} {2} in {3}", [rule.name, value, trx(unit), zone.name]), detail: tr("Your rule: {0} {1} {2} for {3} min", [trx(METRICS.find((item) => item.id === rule.metric)?.label), trx(rule.op), rule.value, rule.forMin]), zoneId: zone.id, since: seeded(`${rule.id}${zone.id}`, 30), ruleId: rule.id, path: "/alerts?view=rules" });
       }
     }
   }

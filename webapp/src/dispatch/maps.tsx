@@ -4,6 +4,7 @@ import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Market } from "../markets/markets";
 import type { Ranked } from "./rules";
+import { tr, trn, trx } from "../i18n";
 
 /** A map card with "Hide map" and "Full screen". Esc or Back leaves full screen. */
 export function MapPanel({ title, tools, children, note }: { title: string; tools?: ReactNode; children: ReactNode; note?: ReactNode }) {
@@ -24,23 +25,23 @@ export function MapPanel({ title, tools, children, note }: { title: string; tool
   return (
     <section className={full ? "dx-map-panel full" : "dx-map-panel"} aria-label={title}>
       <header className="dx-map-head">
-        {full ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => setFull(false)}><ArrowLeft size={14} aria-hidden="true" /> Back</button> : null}
-        <b>{title}</b>
+        {full ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => setFull(false)}>{trn("{0} Back", <ArrowLeft size={14} aria-hidden="true" />)}</button> : null}
+        <b>{trx(title)}</b>
         <span className="dx-map-tools">
           {tools}
           {!full ? (
             <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" aria-pressed={hidden} onClick={() => setHidden((value) => !value)}>
-              {hidden ? <><Eye size={14} aria-hidden="true" /> Show map</> : <><EyeOff size={14} aria-hidden="true" /> Hide map</>}
+              {hidden ? <>{trn("{0} Show map", <Eye size={14} aria-hidden="true" />)}</> : <>{trn("{0} Hide map", <EyeOff size={14} aria-hidden="true" />)}</>}
             </button>
           ) : null}
           {!hidden ? (
             <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => setFull((value) => !value)}>
-              {full ? <><Minimize2 size={14} aria-hidden="true" /> Exit full screen</> : <><Maximize2 size={14} aria-hidden="true" /> Full screen</>}
+              {full ? <>{trn("{0} Exit full screen", <Minimize2 size={14} aria-hidden="true" />)}</> : <>{trn("{0} Full screen", <Maximize2 size={14} aria-hidden="true" />)}</>}
             </button>
           ) : null}
         </span>
       </header>
-      {hidden ? <p className="dx-map-hidden">The map is hidden. Everything else still works.</p> : <div className="dx-map-body">{children}</div>}
+      {hidden ? <p className="dx-map-hidden">{tr("The map is hidden. Everything else still works.")}</p> : <div className="dx-map-body">{children}</div>}
       {note && !hidden ? <div className="dx-map-note">{note}</div> : null}
     </section>
   );
@@ -66,7 +67,7 @@ function data(pickup: [number, number] | null, ranked: readonly Ranked[], steps:
   if (pickup) {
     steps.forEach((km, index) => features.push({ type: "Feature", properties: { kind: "ring", label: `${km} km`, step: index }, geometry: { type: "Polygon", coordinates: [circle(pickup, km)] } }));
     ranked.slice(0, highlight).filter((row) => !row.out).forEach((row) => features.push({ type: "Feature", properties: { kind: "line" }, geometry: { type: "LineString", coordinates: [[row.driver.lng, row.driver.lat], [pickup[1], pickup[0]]] } }));
-    features.push({ type: "Feature", properties: { kind: "pickup", label: "Pickup" }, geometry: { type: "Point", coordinates: [pickup[1], pickup[0]] } });
+    features.push({ type: "Feature", properties: { kind: "pickup", label: tr("Pickup") }, geometry: { type: "Point", coordinates: [pickup[1], pickup[0]] } });
   }
   let place = 0;
   for (const row of ranked) {
@@ -155,6 +156,6 @@ export function TestMap({ market, pickup, ranked, steps, highlight, onPick }: { 
     });
   }, [ready, ranked, highlight]);
 
-  if (failed) return <p className="dx-map-hidden">The map needs WebGL, which this browser has turned off. Pick a place in the list instead.</p>;
+  if (failed) return <p className="dx-map-hidden">{tr("The map needs WebGL, which this browser has turned off. Pick a place in the list instead.")}</p>;
   return <div ref={host} className="dx-test-map" data-testid="dispatch-test-map" />;
 }

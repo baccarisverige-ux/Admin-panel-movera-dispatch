@@ -26,7 +26,8 @@ test("Q40: every Dispatch card named in the list exists, so a click lands on it"
   const sources = readdirSync(dir).filter((name) => name.endsWith(".tsx")).map((name) => readFileSync(`${dir}${name}`, "utf8")).join("\n");
   for (const entry of FEATURE_INDEX) {
     if ("path" in entry || !entry.dispatch.card) continue;
-    assert.ok(sources.includes(`Card title="${entry.dispatch.card}"`), `${entry.id}: card "${entry.dispatch.card}" exists`);
+    // The card titles are translated (round 4): the English text is the key of tr().
+    assert.ok(sources.includes(`Card title={tr(${JSON.stringify(entry.dispatch.card)})}`), `${entry.id}: card "${entry.dispatch.card}" exists`);
   }
 });
 

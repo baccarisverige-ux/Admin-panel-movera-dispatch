@@ -19,6 +19,7 @@ import { AlertsTab, DispatchTab, DriversTab, MoneyTab, OverviewTab, RidersTab, R
 import { TripExport } from "../reports/TripExport";
 import { WorkTab } from "../reports/WorkTab";
 import { CareTab, FleetsTab, PromosTab, SurgeTab, TaxesTab, ZonesTab } from "../reports/ExtraTabs";
+import { uiLocale } from "../i18n";
 
 const COMPARES: { id: Compare; label: string }[] = [
   { id: "previous", label: "vs the period before" },
@@ -45,7 +46,7 @@ export function ReportsPage() {
   const now = useMemo(() => Math.ceil(Date.now() / 60_000) * 60_000, [tick, tab, params.get("admin")]);
   const access = useMemo(() => agent?.scope ?? { zones: "all" as const }, [agent?.scope]);
   const zones = useMemo(() => market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id))), [market, access, scope.zones]);
-  const window = useMemo(() => compareWindow(periodWindow(period, now, market.timeZone, market.locale), compare), [period.kind, period.on, period.from, period.to, now, market, compare]);
+  const window = useMemo(() => compareWindow(periodWindow(period, now, market.timeZone, uiLocale()), compare), [period.kind, period.on, period.from, period.to, now, market, compare]);
   const slice = useSlice<ReportSettings>(REPORT_SETTINGS_KEY, emptyReportSettings());
   const settings = normalizeReportSettings(slice.value);
   const drivers = useRecords("drivers");

@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_GOOGLE_MAPS_KEY?: string;
   readonly VITE_DATA?: string;
   readonly VITE_ADMIN_API?: string;
+  /** Replaces every admin's country default language (en, fr or sv); the e2e suite sets en. */
+  readonly VITE_ADMIN_LANGUAGE?: string;
 }
 
 interface MoveraMapHandle {

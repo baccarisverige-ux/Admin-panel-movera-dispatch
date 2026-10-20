@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { NumberField } from "../pricing/NumberField";
+import { tr, trx } from "../i18n";
 
 /** Small building blocks for the dispatch settings, so every tab looks and works the same. */
 
@@ -8,7 +9,7 @@ export function Card({ title, icon, help, tone = "blue", aside, children, off = 
     <section className={off ? `dx-card ${tone} off` : `dx-card ${tone}`} aria-label={title}>
       <header className="dx-card-head">
         <span className="dx-card-icon" aria-hidden="true">{icon}</span>
-        <span className="dx-card-title"><b>{title}</b>{help ? <small>{help}</small> : null}</span>
+        <span className="dx-card-title"><b>{trx(title)}</b>{help ? <small>{trx(help)}</small> : null}</span>
         {aside}
       </header>
       <div className="dx-card-body">{children}</div>
@@ -19,10 +20,10 @@ export function Card({ title, icon, help, tone = "blue", aside, children, off = 
 /** An on/off switch. The accessible name is "<label> on". */
 export function Switch({ label, on, onChange, disabled }: { label: string; on: boolean; onChange: (next: boolean) => void; disabled?: boolean }) {
   return (
-    <label className={on ? "dx-switch on" : "dx-switch"} title={on ? "On" : "Off"}>
-      <input type="checkbox" role="switch" aria-label={`${label} on`} checked={on} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
+    <label className={on ? "dx-switch on" : "dx-switch"} title={on ? tr("On") : tr("Off")}>
+      <input type="checkbox" role="switch" aria-label={tr("{0} on", [label])} checked={on} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
       <span className="dx-switch-track" aria-hidden="true"><i /></span>
-      <span className="dx-switch-text">{on ? "On" : "Off"}</span>
+      <span className="dx-switch-text">{on ? tr("On") : tr("Off")}</span>
     </label>
   );
 }
@@ -32,7 +33,7 @@ export function Row({ label, help, on, onToggle, disabled, children }: { label: 
   const off = on === false;
   return (
     <div className={off ? "dx-row off" : "dx-row"}>
-      <span className="dx-row-text"><b>{label}</b>{help ? <small>{help}</small> : null}</span>
+      <span className="dx-row-text"><b>{trx(label)}</b>{help ? <small>{trx(help)}</small> : null}</span>
       <span className="dx-row-values">
         {children && !off ? children : null}
         {onToggle ? <Switch label={label} on={Boolean(on)} onChange={onToggle} disabled={disabled} /> : null}
@@ -55,9 +56,9 @@ export function Choice<T extends string>({ label, value, options, onChange, disa
   return (
     <span className="dx-choice" role="radiogroup" aria-label={label}>
       {options.map((option) => (
-        <label key={option.id} className={option.id === value ? "on" : undefined} title={option.hint}>
+        <label key={option.id} className={option.id === value ? "on" : undefined} title={trx(option.hint)}>
           <input type="radio" name={label} checked={option.id === value} disabled={disabled} onChange={() => onChange(option.id)} />
-          {option.label}
+          {trx(option.label)}
         </label>
       ))}
     </span>
@@ -67,7 +68,7 @@ export function Choice<T extends string>({ label, value, options, onChange, disa
 export function Check({ label, on, onChange, disabled }: { label: string; on: boolean; onChange: (next: boolean) => void; disabled?: boolean }) {
   return (
     <label className={on ? "check-chip on" : "check-chip"}>
-      <input type="checkbox" checked={on} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />{label}
+      <input type="checkbox" checked={on} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />{trx(label)}
     </label>
   );
 }

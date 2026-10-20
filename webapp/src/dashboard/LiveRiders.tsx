@@ -5,6 +5,7 @@ import { driverCode } from "../fleet/codes";
 import { CommandButton } from "../ui/CommandButton";
 import { NearbyButton } from "../dispatch/AssignPanel";
 import type { Candidate, RideRequest, RiderCounts } from "./riders";
+import { tr, trn, trx } from "../i18n";
 
 type AssignProps = {
   request: RideRequest;
@@ -31,10 +32,10 @@ export function AssignControls({ request, candidates, onDone }: AssignProps) {
       after={target ? `offered to ${target.driver.id}` : "offered"}
       patch={target ? { driverId: target.driver.id, status: "offered" } : undefined}
       disabled={!target}
-      title={target ? title : "No free driver nearby"}
+      title={target ? title : tr("No free driver nearby")}
       onDone={() => target && onDone(`${request.rider}'s ride offered to ${target.driver.name} (${driverCode(target.driver)}), about ${target.etaMin} min away.`)}
     >
-      {label}
+      {trx(label)}
     </CommandButton>
   );
   return (
@@ -42,13 +43,11 @@ export function AssignControls({ request, candidates, onDone }: AssignProps) {
       <NearbyButton tripId={request.tripId} rider={request.rider} className="dash-btn small" />
       {offer(best, "Driver radar", "dash-btn small", best ? `Offer to the nearest free driver who can drive ${request.categoryLabel}: ${best.driver.name}, ${best.km} km` : "")}
       <label className="assign-pick">
-        <span className="sr-only">Choose a driver for {request.rider}</span>
+        <span className="sr-only">{trn("Choose a driver for {0}", request.rider)}</span>
         <select value={pick?.driver.id ?? ""} onChange={(event) => setChosen(event.target.value)} disabled={candidates.length === 0}>
-          {candidates.length === 0 ? <option value="">No free driver nearby</option> : null}
+          {candidates.length === 0 ? <option value="">{tr("No free driver nearby")}</option> : null}
           {candidates.slice(0, 10).map((item) => (
-            <option key={item.driver.id} value={item.driver.id}>
-              {item.driver.name} · {item.km} km · {item.etaMin} min{item.categoryOk ? "" : ` · cannot drive ${request.categoryLabel}`}
-            </option>
+            <option key={item.driver.id} value={item.driver.id}>{trn("{0} · {1} km · {2} min{3}", item.driver.name, item.km, item.etaMin, item.categoryOk ? "" : tr(" · cannot drive {0}", [request.categoryLabel]))}</option>
           ))}
         </select>
       </label>
@@ -70,17 +69,17 @@ export function LiveRiders({ counts, requests, candidatesOf, onLocate, canAssign
   return (
     <section className="dash-card live-riders" aria-labelledby="live-riders-title">
       <div className="card-head">
-        <h3 id="live-riders-title"><Users size={16} aria-hidden="true" /> Live riders</h3>
+        <h3 id="live-riders-title">{trn("{0} Live riders", <Users size={16} aria-hidden="true" />)}</h3>
       </div>
       <div className="rider-counters">
-        <span><strong>{counts.online}</strong> In the app now</span>
-        <span><strong>{counts.onTrip}</strong> On a trip</span>
-        <span><strong>{counts.beingPickedUp}</strong> Driver on the way</span>
-        <span className={counts.waiting ? "warn" : undefined}><strong>{counts.waiting}</strong> Looking for a driver</span>
-        <span className={counts.longWait ? "danger" : undefined}><strong>{counts.longWait}</strong> Waiting over 5 min</span>
+        <span>{trn("{0} In the app now", <strong>{counts.online}</strong>)}</span>
+        <span>{trn("{0} On a trip", <strong>{counts.onTrip}</strong>)}</span>
+        <span>{trn("{0} Driver on the way", <strong>{counts.beingPickedUp}</strong>)}</span>
+        <span className={counts.waiting ? "warn" : undefined}>{trn("{0} Looking for a driver", <strong>{counts.waiting}</strong>)}</span>
+        <span className={counts.longWait ? "danger" : undefined}>{trn("{0} Waiting over 5 min", <strong>{counts.longWait}</strong>)}</span>
       </div>
-      {requests.length === 0 ? <p className="state-line">Nobody is waiting for a driver right now.</p> : (
-        <ul className="request-list" aria-label="Riders looking for a driver">
+      {requests.length === 0 ? <p className="state-line">{tr("Nobody is waiting for a driver right now.")}</p> : (
+        <ul className="request-list" aria-label={tr("Riders looking for a driver")}>
           {requests.slice(0, 8).map((request) => {
             const candidates = candidatesOf(request);
             const nearest = candidates[0];
@@ -94,16 +93,16 @@ export function LiveRiders({ counts, requests, candidatesOf, onLocate, canAssign
                   </div>
                 </div>
                 <span className="fd-chip">{request.categoryLabel}</span>
-                <span className={request.waitingMin > 5 ? "request-wait long" : "request-wait"}><Clock size={13} aria-hidden="true" />{request.waitingMin} min</span>
-                <span className="request-status">{request.status === "offered" ? `Offered to ${request.offeredTo}` : nearest ? `Nearest: ${nearest.driver.name} · ${nearest.etaMin} min` : "No free driver nearby"}</span>
-                <button type="button" data-command="admin.live.focus" className="fd-icon-btn" aria-label={`Show ${request.rider} on the map`} title="Show on the map" onClick={() => onLocate(request.tripId)}><MapPin size={15} aria-hidden="true" /></button>
+                <span className={request.waitingMin > 5 ? "request-wait long" : "request-wait"}>{trn("{0}{1} min", <Clock size={13} aria-hidden="true" />, request.waitingMin)}</span>
+                <span className="request-status">{request.status === "offered" ? tr("Offered to {0}", [request.offeredTo]) : nearest ? tr("Nearest: {0} · {1} min", [nearest.driver.name, nearest.etaMin]) : tr("No free driver nearby")}</span>
+                <button type="button" data-command="admin.live.focus" className="fd-icon-btn" aria-label={tr("Show {0} on the map", [request.rider])} title={tr("Show on the map")} onClick={() => onLocate(request.tripId)}><MapPin size={15} aria-hidden="true" /></button>
                 {canAssign ? <AssignControls request={request} candidates={candidates} onDone={onAssigned} /> : null}
               </li>
             );
           })}
         </ul>
       )}
-      <p className="fine-print"><Radar size={12} aria-hidden="true" /> Driver radar offers the ride to the nearest free driver who is allowed to drive the requested category.</p>
+      <p className="fine-print">{trn("{0} Driver radar offers the ride to the nearest free driver who is allowed to drive the requested category.", <Radar size={12} aria-hidden="true" />)}</p>
     </section>
   );
 }

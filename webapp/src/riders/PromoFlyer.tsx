@@ -4,6 +4,7 @@ import { Download, Printer } from "lucide-react";
 import type { PromoTicket } from "./care";
 import { categoryName } from "./profile";
 import { CURRENCY_SYMBOL } from "./ui";
+import { tr, trn } from "../i18n";
 
 type FlyerPromo = Pick<PromoTicket, "code" | "title" | "kind" | "value" | "rides" | "maxPerRide" | "validFrom" | "validTo" | "country" | "categories">;
 
@@ -102,17 +103,15 @@ export function PromoFlyer({ promo, locale }: { promo: FlyerPromo; locale: strin
 
   return (
     <div className="rd-flyer">
-      <img className="rd-flyer-img" src={src} alt={`Flyer for ${promo.code}`} />
+      <img className="rd-flyer-img" src={src} alt={tr("Flyer for {0}", [promo.code])} />
       <div className="rd-flyer-side">
-        <label className="field">QR code opens
-          <input aria-label="QR code link" value={link} onChange={(event) => setLink(event.target.value)} />
-        </label>
-        <small className="fine">Riders scan it with the phone camera. Use the app link or your web page.</small>
+        <label className="field">{trn("QR code opens{0}", <input aria-label={tr("QR code link")} value={link} onChange={(event) => setLink(event.target.value)} />)}</label>
+        <small className="fine">{tr("Riders scan it with the phone camera. Use the app link or your web page.")}</small>
         <div className="cat-actions">
-          <button data-command="admin.riders.flyer" type="button" className="dash-btn" onClick={print}><Printer size={14} aria-hidden="true" /> Print</button>
-          <button data-command="admin.riders.flyer" type="button" className="dash-btn ghost" onClick={download}><Download size={14} aria-hidden="true" /> Download picture</button>
+          <button data-command="admin.riders.flyer" type="button" className="dash-btn" onClick={print}>{trn("{0} Print", <Printer size={14} aria-hidden="true" />)}</button>
+          <button data-command="admin.riders.flyer" type="button" className="dash-btn ghost" onClick={download}>{trn("{0} Download picture", <Download size={14} aria-hidden="true" />)}</button>
         </div>
-        <small className="fine">A5 size. Print it, put it in cars, at the airport or share the picture on social media.</small>
+        <small className="fine">{tr("A5 size. Print it, put it in cars, at the airport or share the picture on social media.")}</small>
       </div>
     </div>
   );

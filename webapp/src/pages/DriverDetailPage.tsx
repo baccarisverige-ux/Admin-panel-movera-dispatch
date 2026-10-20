@@ -44,6 +44,7 @@ import { formatMoney, market as marketById, marketOfZone, zoneById } from "../ma
 import { CommandButton } from "../ui/CommandButton";
 import { SensitiveValue } from "../ui/SensitiveValue";
 import { TabPanel, Tabs } from "../ui/Tabs";
+import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 
 const TABS = ["Overview", "Documents", "Performance", "Earnings", "Trips", "Vehicles", "Messages", "Notes", "Activity"];
 const CATEGORIES: Vehicle["category"][] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
@@ -88,9 +89,9 @@ export function DriverDetailPage() {
   const country = driver ? marketOfZone(driver.zoneId)?.id ?? "SE" : "SE";
   const market = marketById(country);
   const periodSearch = params.toString();
-  const span = useMemo(() => periodWindow(parsePeriodOr(new URLSearchParams(periodSearch), { kind: "month" }), now, market.timeZone, market.locale), [periodSearch, now, market]);
+  const span = useMemo(() => periodWindow(parsePeriodOr(new URLSearchParams(periodSearch), { kind: "month" }), now, market.timeZone, uiLocale()), [periodSearch, now, market]);
 
-  if (drivers.isLoading || vehicles.isLoading || store.loading) return <p className="state-line">Loading driver.</p>;
+  if (drivers.isLoading || vehicles.isLoading || store.loading) return <p className="state-line">{tr("Loading driver.")}</p>;
   if (!driver) {
     return <NotFoundRecord kind="Driver" id={driverId} list="/drivers" listLabel="drivers" />;
   }
@@ -98,9 +99,9 @@ export function DriverDetailPage() {
     return (
       <div className="page-heading">
         <div>
-          <h2>No access</h2>
-          <p>This driver belongs to another fleet partner.</p>
-          <Link to="/drivers">Back to drivers</Link>
+          <h2>{tr("No access")}</h2>
+          <p>{tr("This driver belongs to another fleet partner.")}</p>
+          <Link to="/drivers">{tr("Back to drivers")}</Link>
         </div>
       </div>
     );
@@ -119,7 +120,7 @@ export function DriverDetailPage() {
   const driverAudits = (audit.data ?? []).filter((item) => item.targetId === driver.id).slice(0, 20);
   const money = (minor: number) => formatMoney(minor, country);
   const compact = (minor: number) => formatMoney(minor, country, { compact: true });
-  const dateFormat = new Intl.DateTimeFormat(market.locale, { dateStyle: "medium", timeZone: market.timeZone });
+  const dateFormat = new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeZone: market.timeZone });
 
   const docIds = DRIVER_DOCUMENTS as readonly DocId[];
   const docRows: DocRow[] = docIds.map((id) => ({ ...ops.documents[id], exempt: Boolean(driver.fleetId && id === "company_registration") }));
@@ -133,7 +134,7 @@ export function DriverDetailPage() {
   const report = driverPerformance(profile, span);
   const perf = report.current;
   const prev = report.previous;
-  const sinceMonth = driverPerformance(profile, periodWindow({ kind: "month" }, now, market.timeZone, market.locale), false).current;
+  const sinceMonth = driverPerformance(profile, periodWindow({ kind: "month" }, now, market.timeZone, uiLocale()), false).current;
   const email = `${driver.name.toLowerCase().normalize("NFD").replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, ".")}@${country === "SE" ? "mail.se" : country === "FR" ? "mail.fr" : "mail.tn"}`;
   const seed = Number(driver.id.replace(/\D/g, "")) || 1;
   const joined = driver.joinedAt ?? new Date(Date.parse("2026-10-05T00:00:00Z") - (60 + (seed * 37) % 800) * 86_400_000).toISOString();
@@ -142,7 +143,7 @@ export function DriverDetailPage() {
   const code = driverCode(driver);
   const mapTo = live ? `/?country=${country}&focus=${driver.id}` : null;
   const current = live ? liveTrip(live, { trips: trips.data ?? [], reservations: reservations.data ?? [], vehicles: vehicles.data ?? [], fleets: fleets.data ?? [], riders: riders.data ?? [] }, now, demoShift(now, api.demo)) : null;
-  const lastOnline = live ? "Online now" : driver.status === "active" ? (seed % 3 === 0 ? "Online now" : `${5 + (seed % 50)} min ago`) : driver.status === "pending" ? "Never" : `${7 + (seed % 9)} days ago`;
+  const lastOnline = live ? tr("Online now") : driver.status === "active" ? (seed % 3 === 0 ? tr("Online now") : tr("{0} min ago", [5 + (seed % 50)])) : driver.status === "pending" ? tr("Never") : tr("{0} days ago", [7 + (seed % 9)]);
 
   function selectTab(id: string) {
     setTab(id);
@@ -179,7 +180,7 @@ export function DriverDetailPage() {
         setAccountNote("");
       }}
     >
-      {label}
+      {trx(label)}
     </CommandButton>
   );
 
@@ -209,9 +210,9 @@ export function DriverDetailPage() {
 
   return (
     <div className="fd-page fd-profile">
-      <Link className="fd-back" to={{ pathname: "/drivers", search: params.get("country") ? `?country=${params.get("country")}` : "" }}><ArrowLeft size={15} aria-hidden="true" /> Back to drivers</Link>
+      <Link className="fd-back" to={{ pathname: "/drivers", search: params.get("country") ? `?country=${params.get("country")}` : "" }}>{trn("{0} Back to drivers", <ArrowLeft size={15} aria-hidden="true" />)}</Link>
 
-      <section className="fd-hero" aria-label="Driver">
+      <section className="fd-hero" aria-label={tr("Driver")}>
         <div className="fd-hero-main">
           <Avatar name={driver.name} size={76} />
           <div className="fd-hero-title">
@@ -222,16 +223,16 @@ export function DriverDetailPage() {
               <span className="fd-chip code"><Hash size={13} aria-hidden="true" />{code}</span>
               {fleet ? (
                 <Link className="fd-chip fleet" to={`/fleets/${fleet.ownerId ?? ""}`}><Building2 size={13} aria-hidden="true" />{fleet.name}</Link>
-              ) : <span className="fd-chip">Independent driver</span>}
+              ) : <span className="fd-chip">{tr("Independent driver")}</span>}
               <span className="fd-chip"><Star size={13} aria-hidden="true" />{ops.ratings.stars.toFixed(2)}</span>
               <DocSummary counts={health} total={required.length} />
             </div>
-            <p className="fd-sub">{driver.id} · {statusLabel(driver.status)} · {zoneById(driver.zoneId)?.name ?? driver.zoneId}, {market.name}</p>
+            <p className="fd-sub">{driver.id} · {statusLabel(driver.status)} · {zoneById(driver.zoneId)?.name ?? driver.zoneId}, {trx(market.name)}</p>
           </div>
           <div className="fd-hero-actions">
             <label className="fd-reason">
-              <span>Reason shown to the driver</span>
-              <input value={accountNote} onChange={(event) => setAccountNote(event.target.value)} placeholder="For example: insurance expired" />
+              <span>{tr("Reason shown to the driver")}</span>
+              <input value={accountNote} onChange={(event) => setAccountNote(event.target.value)} placeholder={tr("For example: insurance expired")} />
             </label>
             <div className="fd-action-row">
               {accountAction("admin.driver.activate", "active", "Activate", Boolean(activationIssue) || driver.status === "active", allGreen && driver.status !== "active" ? "" : "ghost")}
@@ -250,37 +251,35 @@ export function DriverDetailPage() {
                 before="idle"
                 after="call started"
                 onDone={() => { window.location.href = `tel:${driver.phone.replace(/[^+\d]/g, "")}`; }}
-              >
-                <Phone size={15} aria-hidden="true" />Call
-              </CommandButton>
-              <button type="button" data-command="admin.ui.dashboardTab" className="dash-btn ghost" onClick={() => selectTab("messages")}><MessageSquare size={15} aria-hidden="true" />Message</button>
-              {mapTo ? <Link className="dash-btn ghost" to={mapTo}><MapPin size={15} aria-hidden="true" />See on map</Link> : <span className="dash-btn ghost off" title="The driver is offline"><MapPin size={15} aria-hidden="true" />Offline</span>}
-              <button type="button" data-command="admin.ui.dashboardTab" className="dash-btn ghost" onClick={() => selectTab("notes")}><StickyNote size={15} aria-hidden="true" />Note</button>
+              >{trn("{0}Call", <Phone size={15} aria-hidden="true" />)}</CommandButton>
+              <button type="button" data-command="admin.ui.dashboardTab" className="dash-btn ghost" onClick={() => selectTab("messages")}>{trn("{0}Message", <MessageSquare size={15} aria-hidden="true" />)}</button>
+              {mapTo ? <Link className="dash-btn ghost" to={mapTo}>{trn("{0}See on map", <MapPin size={15} aria-hidden="true" />)}</Link> : <span className="dash-btn ghost off" title={tr("The driver is offline")}>{trn("{0}Offline", <MapPin size={15} aria-hidden="true" />)}</span>}
+              <button type="button" data-command="admin.ui.dashboardTab" className="dash-btn ghost" onClick={() => selectTab("notes")}>{trn("{0}Note", <StickyNote size={15} aria-hidden="true" />)}</button>
             </div>
           </div>
         </div>
         <dl className="fd-facts">
-          <Field label="Driver code"><Hash size={13} aria-hidden="true" /> {code}</Field>
-          <Field label="Phone"><Phone size={13} aria-hidden="true" /> <SensitiveValue value={driver.phone} permission="drivers.viewSensitive" command="admin.driver.revealSensitive" targetId={driver.id} label="Phone" /></Field>
-          <Field label="Email"><Mail size={13} aria-hidden="true" /> {email}</Field>
-          <Field label="Zone">{zoneById(driver.zoneId)?.name ?? driver.zoneId}</Field>
-          <Field label="Vehicle"><Car size={13} aria-hidden="true" /> {carRecord ? `${carRecord.make ?? ""} ${carRecord.model ?? ""} · ${carRecord.plate ?? carRecord.id}` : "No vehicle linked"}</Field>
-          <Field label="Payouts go to">{fleet ? `${fleet.name} (fleet)` : `The driver · bank •••• ${ops.bank.last4}`}</Field>
-          <Field label="Joined">{dateFormat.format(Date.parse(joined))}</Field>
-          <Field label="Last online">{lastOnline}</Field>
+          <Field label={tr("Driver code")}><Hash size={13} aria-hidden="true" /> {code}</Field>
+          <Field label={tr("Phone")}><Phone size={13} aria-hidden="true" /> <SensitiveValue value={driver.phone} permission="drivers.viewSensitive" command="admin.driver.revealSensitive" targetId={driver.id} label={tr("Phone")} /></Field>
+          <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> {email}</Field>
+          <Field label={tr("Zone")}>{zoneById(driver.zoneId)?.name ?? driver.zoneId}</Field>
+          <Field label={tr("Vehicle")}><Car size={13} aria-hidden="true" /> {carRecord ? `${carRecord.make ?? ""} ${carRecord.model ?? ""} · ${carRecord.plate ?? carRecord.id}` : tr("No vehicle linked")}</Field>
+          <Field label={tr("Payouts go to")}>{fleet ? tr("{0} (fleet)", [fleet.name]) : tr("The driver · bank •••• {0}", [ops.bank.last4])}</Field>
+          <Field label={tr("Joined")}>{dateFormat.format(Date.parse(joined))}</Field>
+          <Field label={tr("Last online")}>{lastOnline}</Field>
 
         </dl>
       </section>
 
-      {notice || store.message ? <p className="fd-notice" role="status">{notice} {store.message}</p> : null}
+      {notice || store.message ? <p className="fd-notice" role="status">{trSentences(notice)} {trSentences(store.message)}</p> : null}
       {driver.status === "active" && health.invalid ? (
-        <p className="fd-banner red"><AlertTriangle size={16} aria-hidden="true" /> {health.invalid} document{health.invalid > 1 ? "s are" : " is"} missing, wrong or expired. Consider putting the account on hold.</p>
+        <p className="fd-banner red">{trn("{0} {1} document{2} missing, wrong or expired. Consider putting the account on hold.", <AlertTriangle size={16} aria-hidden="true" />, health.invalid, health.invalid > 1 ? tr("s are") : tr(" is"))}</p>
       ) : driver.status !== "active" && allGreen && !activationIssue ? (
-        <p className="fd-banner green"><CheckCircle2 size={16} aria-hidden="true" /> All documents are valid. The account can be activated.</p>
+        <p className="fd-banner green">{trn("{0} All documents are valid. The account can be activated.", <CheckCircle2 size={16} aria-hidden="true" />)}</p>
       ) : activationIssue && driver.status !== "active" ? (
-        <p className="fd-banner amber"><AlertTriangle size={16} aria-hidden="true" /> Activation check: {activationIssue}</p>
+        <p className="fd-banner amber">{trn("{0} Activation check: {1}", <AlertTriangle size={16} aria-hidden="true" />, activationIssue)}</p>
       ) : null}
-      {ops.accountReason ? <p className="fd-sub">Latest account reason: {ops.accountReason}</p> : null}
+      {ops.accountReason ? <p className="fd-sub">{trn("Latest account reason: {0}", ops.accountReason)}</p> : null}
 
       <Tabs tabs={TABS} activeId={tab} onChange={selectTab} />
       <div className="fd-panel">
@@ -288,9 +287,9 @@ export function DriverDetailPage() {
           <section className="fd-box fd-cats" aria-labelledby="cats-title">
             <div className="fd-section-head">
               <div>
-                <h3 id="cats-title">Categories this driver can drive</h3>
-                <p>Switch each category on or off. Ride offers only come in for categories that are on{car ? "" : ", and a vehicle must be linked"}.</p>
-                <p className="fd-sub">The driver sees only these in the app and can switch some of them off, for example drive Comfort but not Movera. Offers follow the driver's choice. The driver can never switch on a category that is off here.</p>
+                <h3 id="cats-title">{tr("Categories this driver can drive")}</h3>
+                <p>{trn("Switch each category on or off. Ride offers only come in for categories that are on{0}.", car ? "" : tr(", and a vehicle must be linked"))}</p>
+                <p className="fd-sub">{tr("The driver sees only these in the app and can switch some of them off, for example drive Comfort but not Movera. Offers follow the driver's choice. The driver can never switch on a category that is off here.")}</p>
               </div>
             </div>
             <div className="cat-grid">
@@ -315,9 +314,9 @@ export function DriverDetailPage() {
                     aria-label={`${info?.label ?? category}: ${enabled ? "on, turn off" : "off, turn on"}`}
                     onDone={() => setNotice(`${info?.label ?? category} ${enabled ? "turned off" : "turned on"} for ${driver.name}.`)}
                   >
-                    <span className="cat-name">{info?.label ?? category}</span>
+                    <span className="cat-name">{trx(info?.label) ?? category}</span>
                     <span className="cat-switch" aria-hidden="true"><i /></span>
-                    <small>{info?.seats ?? 4} seats{fits ? "" : " · vehicle does not fit"}</small>
+                    <small>{trn("{0} seats{1}", info?.seats ?? 4, fits ? "" : tr(" · vehicle does not fit"))}</small>
                   </CommandButton>
                 );
               })}
@@ -326,7 +325,7 @@ export function DriverDetailPage() {
           <ScheduledAccessCard driverId={driver.id} />
           {current ? (
             <div className="fd-current">
-              <h3>Current trip</h3>
+              <h3>{tr("Current trip")}</h3>
               <TripCard
                 trip={current}
                 locale={market.locale}
@@ -340,32 +339,32 @@ export function DriverDetailPage() {
           {waybillOpen && current ? <WaybillDialog waybill={current.waybill} onClose={() => setWaybillOpen(false)} /> : null}
           <div className="fd-grid-2">
             <section className="fd-box">
-              <h3>Documents</h3>
+              <h3>{tr("Documents")}</h3>
               <div className="fd-health-big">
-                <span className="h-valid"><strong>{health.valid}</strong>Valid</span>
-                <span className="h-expiring"><strong>{health.expiring}</strong>Expiring</span>
-                <span className="h-invalid"><strong>{health.invalid}</strong>Missing or wrong</span>
-                <span className="h-review"><strong>{health.review}</strong>Waiting review</span>
+                <span className="h-valid">{trn("{0}Valid", <strong>{health.valid}</strong>)}</span>
+                <span className="h-expiring">{trn("{0}Expiring", <strong>{health.expiring}</strong>)}</span>
+                <span className="h-invalid">{trn("{0}Missing or wrong", <strong>{health.invalid}</strong>)}</span>
+                <span className="h-review">{trn("{0}Waiting review", <strong>{health.review}</strong>)}</span>
               </div>
               <ul className="fd-mini-docs">
                 {required.filter((row) => docHealth(row, now, warnDays).health !== "valid").map((row) => {
                   const state = docHealth(row, now, warnDays);
-                  return <li key={row.id} className={`h-${state.health}`}><i aria-hidden="true" />{row.id.replaceAll("_", " ")} · {state.label}</li>;
+                  return <li key={row.id} className={`h-${state.health}`}><i aria-hidden="true" />{row.id.replaceAll("_", " ")} · {trx(state.label)}</li>;
                 })}
               </ul>
-              <button type="button" data-command="admin.ui.dashboardTab" className="link-action" onClick={() => selectTab("documents")}>Open documents →</button>
+              <button type="button" data-command="admin.ui.dashboardTab" className="link-action" onClick={() => selectTab("documents")}>{tr("Open documents →")}</button>
             </section>
             <section className="fd-box">
-              <h3>This month</h3>
+              <h3>{tr("This month")}</h3>
               <div className="fd-stats compact">
-                <Stat label="Rating" value={sinceMonth.rating ? sinceMonth.rating.toFixed(2) : "—"} warn={performanceWarning("rating", sinceMonth.rating)} />
-                <Stat label="Trips" value={String(sinceMonth.trips)} />
-                <Stat label="Acceptance" value={`${ops.ratings.acceptancePct}%`} warn={performanceWarning("acceptancePct", ops.ratings.acceptancePct)} />
-                <Stat label="Cancel rate" value={`${ops.ratings.cancellationPct}%`} warn={performanceWarning("cancellationPct", ops.ratings.cancellationPct)} />
-                <Stat label="Online" value={`${sinceMonth.onlineHours} h`} />
-                <Stat label="Net earnings" value={compact(sinceMonth.netMinor)} />
+                <Stat label={tr("Rating")} value={sinceMonth.rating ? sinceMonth.rating.toFixed(2) : "—"} warn={performanceWarning("rating", sinceMonth.rating)} />
+                <Stat label={tr("Trips")} value={String(sinceMonth.trips)} />
+                <Stat label={tr("Acceptance")} value={`${ops.ratings.acceptancePct}%`} warn={performanceWarning("acceptancePct", ops.ratings.acceptancePct)} />
+                <Stat label={tr("Cancel rate")} value={`${ops.ratings.cancellationPct}%`} warn={performanceWarning("cancellationPct", ops.ratings.cancellationPct)} />
+                <Stat label={tr("Online")} value={`${sinceMonth.onlineHours} h`} />
+                <Stat label={tr("Net earnings")} value={compact(sinceMonth.netMinor)} />
               </div>
-              <button type="button" data-command="admin.ui.dashboardTab" className="link-action" onClick={() => selectTab("performance")}>Open performance →</button>
+              <button type="button" data-command="admin.ui.dashboardTab" className="link-action" onClick={() => selectTab("performance")}>{tr("Open performance →")}</button>
             </section>
           </div>
         </TabPanel>
@@ -373,9 +372,9 @@ export function DriverDetailPage() {
         <TabPanel id="documents" activeId={tab}>
           <div className="fd-section-head">
             <div>
-              <h3>Documents</h3>
-              <p>Set each document on its own and write its expiry date. Documents expiring within 30 days turn orange automatically.</p>
-              <div className="fd-legend"><HealthPill health="valid">Valid</HealthPill><HealthPill health="expiring">Expires soon</HealthPill><HealthPill health="invalid">Missing, wrong or expired</HealthPill><HealthPill health="review">Waiting review</HealthPill></div>
+              <h3>{tr("Documents")}</h3>
+              <p>{tr("Set each document on its own and write its expiry date. Documents expiring within 30 days turn orange automatically.")}</p>
+              <div className="fd-legend"><HealthPill health="valid">{tr("Valid")}</HealthPill><HealthPill health="expiring">{tr("Expires soon")}</HealthPill><HealthPill health="invalid">{tr("Missing, wrong or expired")}</HealthPill><HealthPill health="review">{tr("Waiting review")}</HealthPill></div>
             </div>
             <CommandButton
               command="admin.driver.approveAll"
@@ -391,12 +390,10 @@ export function DriverDetailPage() {
               value={approveRequiredDocuments(store.value, driverSeed, agent?.id ?? "")}
               disabled={allGreen || !canReview}
               onDone={() => setNotice("All remaining documents approved.")}
-            >
-              Approve all remaining
-            </CommandButton>
+            >{tr("Approve all remaining")}</CommandButton>
           </div>
           <DocumentsTable
-            label="Driver documents"
+            label={tr("Driver documents")}
             rows={docRows}
             nowMs={now}
             warnDays={warnDays}
@@ -412,28 +409,28 @@ export function DriverDetailPage() {
 
         <TabPanel id="performance" activeId={tab}>
           <div className="fd-section-head">
-            <div><h3>Performance</h3><p>{span.label} · {span.compareLabel}</p></div>
+            <div><h3>{tr("Performance")}</h3><p>{trx(span.label)} · {span.compareLabel}</p></div>
             <PeriodPicker key={`${period.kind}${period.on ?? ""}${period.from ?? ""}`} period={period} today={localDay(now, market.timeZone)} onChange={(next) => setParams(periodParams(next, params))} />
           </div>
           <div className="fd-stats">
-            <Stat label="Rating" value={perf.rating ? perf.rating.toFixed(2) : "—"} delta={change(perf.rating, prev.rating)} warn={performanceWarning("rating", perf.rating)} hint={`${perf.ratings} ratings`} />
-            <Stat label="Completed trips" value={String(perf.trips)} delta={change(perf.trips, prev.trips)} />
-            <Stat label="Acceptance rate" value={`${perf.acceptancePct}%`} warn={performanceWarning("acceptancePct", perf.acceptancePct)} />
-            <Stat label="Cancellation rate" value={`${perf.cancellationPct}%`} inverse warn={performanceWarning("cancellationPct", perf.cancellationPct)} />
-            <Stat label="Rider no-shows" value={String(perf.noShows)} delta={change(perf.noShows, prev.noShows)} inverse />
-            <Stat label="Online hours" value={`${perf.onlineHours} h`} delta={change(perf.onlineHours, prev.onlineHours)} />
-            <Stat label="Time on trips" value={`${perf.utilisationPct}%`} />
-            <Stat label="Average pickup" value={`${perf.avgPickupMin} min`} delta={change(perf.avgPickupMin, prev.avgPickupMin)} inverse />
-            <Stat label="Distance" value={`${new Intl.NumberFormat(market.locale).format(perf.distanceKm)} km`} delta={change(perf.distanceKm, prev.distanceKm)} />
-            <Stat label="Complaints" value={String(perf.complaints)} delta={change(perf.complaints, prev.complaints)} inverse />
+            <Stat label={tr("Rating")} value={perf.rating ? perf.rating.toFixed(2) : "—"} delta={change(perf.rating, prev.rating)} warn={performanceWarning("rating", perf.rating)} hint={tr("{0} ratings", [perf.ratings])} />
+            <Stat label={tr("Completed trips")} value={String(perf.trips)} delta={change(perf.trips, prev.trips)} />
+            <Stat label={tr("Acceptance rate")} value={`${perf.acceptancePct}%`} warn={performanceWarning("acceptancePct", perf.acceptancePct)} />
+            <Stat label={tr("Cancellation rate")} value={`${perf.cancellationPct}%`} inverse warn={performanceWarning("cancellationPct", perf.cancellationPct)} />
+            <Stat label={tr("Rider no-shows")} value={String(perf.noShows)} delta={change(perf.noShows, prev.noShows)} inverse />
+            <Stat label={tr("Online hours")} value={`${perf.onlineHours} h`} delta={change(perf.onlineHours, prev.onlineHours)} />
+            <Stat label={tr("Time on trips")} value={`${perf.utilisationPct}%`} />
+            <Stat label={tr("Average pickup")} value={`${perf.avgPickupMin} min`} delta={change(perf.avgPickupMin, prev.avgPickupMin)} inverse />
+            <Stat label={tr("Distance")} value={`${new Intl.NumberFormat(uiLocale()).format(perf.distanceKm)} km`} delta={change(perf.distanceKm, prev.distanceKm)} />
+            <Stat label={tr("Complaints")} value={String(perf.complaints)} delta={change(perf.complaints, prev.complaints)} inverse />
           </div>
           <section className="fd-box">
-            <h3>Latest reviews</h3>
-            {reviews.length === 0 ? <p className="state-line">No reviews yet.</p> : (
+            <h3>{tr("Latest reviews")}</h3>
+            {reviews.length === 0 ? <p className="state-line">{tr("No reviews yet.")}</p> : (
               <ul className="fd-reviews">
                 {reviews.map((review) => (
                   <li key={review.id}>
-                    <span className="fd-stars" role="img" aria-label={`${review.stars} stars`}>{[1, 2, 3, 4, 5].map((index) => <Star key={index} size={14} aria-hidden="true" className={index <= review.stars ? "on" : undefined} />)}</span>
+                    <span className="fd-stars" role="img" aria-label={tr("{0} stars", [review.stars])}>{[1, 2, 3, 4, 5].map((index) => <Star key={index} size={14} aria-hidden="true" className={index <= review.stars ? "on" : undefined} />)}</span>
                     <p>{review.text}</p>
                     <small>{review.rider} · <Link to={`/trips/${review.id}`}>{review.id}</Link></small>
                   </li>
@@ -445,38 +442,38 @@ export function DriverDetailPage() {
 
         <TabPanel id="earnings" activeId={tab}>
           <div className="fd-section-head">
-            <div><h3>Earnings</h3><p>{span.label} · {fleet ? `paid to ${fleet.name}` : "paid to the driver"}</p></div>
+            <div><h3>{tr("Earnings")}</h3><p>{trx(span.label)} · {fleet ? tr("paid to {0}", [fleet.name]) : tr("paid to the driver")}</p></div>
             <div className="fd-head-tools">
               <PeriodPicker key={`e${period.kind}${period.on ?? ""}${period.from ?? ""}`} period={period} today={localDay(now, market.timeZone)} onChange={(next) => setParams(periodParams(next, params))} />
-              <a className="dash-btn ghost" onClick={() => logExport(agent?.id, `Statement of ${driver.name}`)} download={`movera-${driver.id}-statement.csv`} href={`data:text/csv;charset=utf-8,${encodeURIComponent(statement)}`}>Download statement</a>
+              <a className="dash-btn ghost" onClick={() => logExport(agent?.id, `Statement of ${driver.name}`)} download={`movera-${driver.id}-statement.csv`} href={`data:text/csv;charset=utf-8,${encodeURIComponent(statement)}`}>{tr("Download statement")}</a>
             </div>
           </div>
           <div className="fd-earn">
             <dl className="fd-ledger">
-              <div><dt>Gross fares</dt><dd>{money(perf.grossMinor)}</dd></div>
-              <div><dt>Movera commission <small>20% placeholder</small></dt><dd>−{money(perf.commissionMinor)}</dd></div>
-              <div><dt>Tips</dt><dd>+{money(perf.tipsMinor)}</dd></div>
-              <div><dt>Bonuses</dt><dd>+{money(perf.bonusMinor)}</dd></div>
-              <div><dt>Adjustments and refunds</dt><dd>{money(perf.adjustmentsMinor)}</dd></div>
-              <div className="total"><dt>Net earnings</dt><dd>{money(perf.netMinor)}</dd></div>
-              <div><dt>Per trip · per online hour</dt><dd>{perf.trips ? money(perf.netMinor / perf.trips) : "—"} · {perf.onlineHours ? money(perf.netMinor / perf.onlineHours) : "—"}</dd></div>
+              <div><dt>{tr("Gross fares")}</dt><dd>{money(perf.grossMinor)}</dd></div>
+              <div><dt>{trn("Movera commission {0}", <small>{tr("20% placeholder")}</small>)}</dt><dd>−{money(perf.commissionMinor)}</dd></div>
+              <div><dt>{tr("Tips")}</dt><dd>+{money(perf.tipsMinor)}</dd></div>
+              <div><dt>{tr("Bonuses")}</dt><dd>+{money(perf.bonusMinor)}</dd></div>
+              <div><dt>{tr("Adjustments and refunds")}</dt><dd>{money(perf.adjustmentsMinor)}</dd></div>
+              <div className="total"><dt>{tr("Net earnings")}</dt><dd>{money(perf.netMinor)}</dd></div>
+              <div><dt>{tr("Per trip · per online hour")}</dt><dd>{perf.trips ? money(perf.netMinor / perf.trips) : "—"} · {perf.onlineHours ? money(perf.netMinor / perf.onlineHours) : "—"}</dd></div>
             </dl>
             <div className="fd-box">
-              <h3>Net earnings</h3>
+              <h3>{tr("Net earnings")}</h3>
               <EarningsChart points={report.series} format={money} formatAxis={compact} compareLabel={span.compareLabel} />
             </div>
           </div>
           <div className="fd-grid-2">
             <section className="fd-box">
-              <h3>Payouts</h3>
-              {pay.length === 0 ? <p className="state-line">{fleet ? `Payouts are made to ${fleet.name}.` : "No payout yet."}</p> : (
+              <h3>{tr("Payouts")}</h3>
+              {pay.length === 0 ? <p className="state-line">{fleet ? tr("Payouts are made to {0}.", [fleet.name]) : tr("No payout yet.")}</p> : (
                 <ul className="fd-list">{pay.map((item) => <li key={item.id}><Link to={`/payouts/${item.id}`}>{item.name}</Link><span>{money(item.fareOre ?? 0)}</span><span className={`fd-chip s-${item.status}`}>{statusLabel(item.status)}</span></li>)}</ul>
               )}
             </section>
             <section className="fd-box">
-              <h3>Bank account</h3>
+              <h3>{tr("Bank account")}</h3>
               <p>{ops.bank.holder} · •••• {ops.bank.last4} · <strong>{statusLabel(ops.bank.status)}</strong></p>
-              {ops.bank.note ? <p className="state-line">Review note: {ops.bank.note}</p> : null}
+              {ops.bank.note ? <p className="state-line">{trn("Review note: {0}", ops.bank.note)}</p> : null}
               <div className="fd-action-row">
                 {(["approved", "rejected", "in_review"] as const).map((status) => (
                   <CommandButton
@@ -504,8 +501,8 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="trips" activeId={tab}>
-          <h3>Trips</h3>
-          <p className="fd-sub">{jobs.length} trips in the demo records.</p>
+          <h3>{tr("Trips")}</h3>
+          <p className="fd-sub">{trn("{0} trips in the demo records.", jobs.length)}</p>
           <ul className="fd-list">
             {jobs.slice(0, 20).map((trip) => (
               <li key={trip.id}>
@@ -520,21 +517,21 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="vehicles" activeId={tab}>
-          <h3>Vehicles</h3>
-          {cars.length === 0 ? <p>No vehicle linked. Activation remains blocked.</p> : cars.map((record) => {
+          <h3>{tr("Vehicles")}</h3>
+          {cars.length === 0 ? <p>{tr("No vehicle linked. Activation remains blocked.")}</p> : cars.map((record) => {
             const vehicle = vehicleOps(store.value, record);
             return (
               <div key={record.id} className="fd-vehicle">
                 <Car size={22} aria-hidden="true" />
                 <div>
                   <Link to={`/vehicles/${record.id}`}><strong>{record.plate ?? record.id}</strong></Link>
-                  <p>{record.make ?? "Vehicle"} {record.model ?? ""} · {vehicle.year} · {vehicle.seats} seats · {vehicle.fuel} · {vehicle.category}</p>
-                  <small>Inspection until {vehicle.inspectionExpiresAt} · insurance until {vehicle.insuranceExpiresAt} · {statusLabel(record.status)}</small>
+                  <p>{trn("{0} {1} · {2} · {3} seats · {4} · {5}", record.make ?? tr("Vehicle"), record.model ?? "", vehicle.year, vehicle.seats, vehicle.fuel, vehicle.category)}</p>
+                  <small>{trn("Inspection until {0} · insurance until {1} · {2}", vehicle.inspectionExpiresAt, vehicle.insuranceExpiresAt, statusLabel(record.status))}</small>
                 </div>
               </div>
             );
           })}
-          <p className="fd-sub">Which categories this driver may drive is set on the Overview tab.</p>
+          <p className="fd-sub">{tr("Which categories this driver may drive is set on the Overview tab.")}</p>
         </TabPanel>
 
         <TabPanel id="messages" activeId={tab}>
@@ -555,12 +552,9 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="notes" activeId={tab}>
-          <h3>Private notes</h3>
-          <p className="fd-note">{ops.note || "No private note stored yet."}</p>
-          <label className="fd-textarea">
-            Private internal note
-            <textarea value={privateNote} maxLength={NOTE_MAX} onChange={(event) => setPrivateNote(event.target.value)} />
-          </label>
+          <h3>{tr("Private notes")}</h3>
+          <p className="fd-note">{ops.note || tr("No private note stored yet.")}</p>
+          <label className="fd-textarea">{trn("Private internal note{0}", <textarea value={privateNote} maxLength={NOTE_MAX} onChange={(event) => setPrivateNote(event.target.value)} />)}</label>
           <CommandButton
             command="admin.driver.note"
             className="dash-btn"
@@ -578,27 +572,25 @@ export function DriverDetailPage() {
               setNotice("Private driver note saved.");
               setPrivateNote("");
             }}
-          >
-            Save private note
-          </CommandButton>
+          >{tr("Save private note")}</CommandButton>
         </TabPanel>
 
         <TabPanel id="activity" activeId={tab}>
           <div className="fd-grid-2">
             <section className="fd-box">
-              <h3>History</h3>
+              <h3>{tr("History")}</h3>
               <ul className="fd-timeline">{ops.activity.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul>
             </section>
             <section className="fd-box">
-              <h3>Audited actions</h3>
-              {driverAudits.length === 0 ? <p className="state-line">No audited action on this driver yet.</p> : (
+              <h3>{tr("Audited actions")}</h3>
+              {driverAudits.length === 0 ? <p className="state-line">{tr("No audited action on this driver yet.")}</p> : (
                 <ul className="fd-timeline">{driverAudits.map((item) => <li key={item.id}>{item.at.slice(0, 16).replace("T", " ")} · {item.action} · {item.result} · {item.actorId}</li>)}</ul>
               )}
-              <h3>Support and safety</h3>
+              <h3>{tr("Support and safety")}</h3>
               <ul className="fd-timeline">
                 {(tickets.data ?? []).filter((item) => item.name === driver.name).map((ticket) => <li key={ticket.id}><Link to={`/tickets/${ticket.id}`}>{ticket.id}</Link> · {statusLabel(ticket.status)}</li>)}
                 {(incidents.data ?? []).filter((item) => item.name === driver.name).map((incident) => <li key={incident.id}><Link to={`/incidents/${incident.id}`}>{incident.id}</Link> · {statusLabel(incident.status)}</li>)}
-                <li><Link to="/support">Open support queue</Link> · <Link to="/incidents">Open incident center</Link></li>
+                <li><Link to="/support">{tr("Open support queue")}</Link> · <Link to="/incidents">{tr("Open incident center")}</Link></li>
               </ul>
             </section>
           </div>

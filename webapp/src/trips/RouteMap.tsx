@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { LatLng } from "../dashboard/route";
+import { tr } from "../i18n";
 
 export type MapStop = { kind: "pickup" | "stop" | "dropoff"; label: string; at: LatLng };
 export type MapPoint = { id: string; label: string; at: LatLng; tone: "rider" | "driver" | "alert" };
@@ -71,6 +72,6 @@ export function RouteMap({ stops, path, approach = [], points = [], label }: { s
     if (ready && source) source.setData(geo(stops, path, approach, points));
   }, [ready, stops, path, approach, points]);
 
-  if (failed) return <p className="dx-map-hidden">The map needs WebGL, which this browser has turned off. The stops are listed below.</p>;
+  if (failed) return <p className="dx-map-hidden">{tr("The map needs WebGL, which this browser has turned off. The stops are listed below.")}</p>;
   return <div ref={host} className="op-map" role="img" aria-label={label} />;
 }

@@ -17,6 +17,7 @@ import { installSurgeLayers, updateSurgeLayers } from "../pricing/surgeLayers";
 import { along, type LatLng } from "./route";
 import { WaybillDialog } from "./TripCard";
 import { useEscape } from "../ui/useEscape";
+import { tr, trn, trx } from "../i18n";
 
 const STYLE = {
   version: 8 as const,
@@ -413,8 +414,8 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
   if (failed) {
     return (
       <div className="map-fallback">
-        <p>The map needs WebGL, which this browser has turned off. Drivers online:</p>
-        <ul>{drivers.slice(0, 12).map((driver) => <li key={driver.id}>{driver.name} · {driver.zoneName} · {LIVE_STATES.find((state) => state.id === driver.state)?.label}</li>)}</ul>
+        <p>{tr("The map needs WebGL, which this browser has turned off. Drivers online:")}</p>
+        <ul>{drivers.slice(0, 12).map((driver) => <li key={driver.id}>{driver.name} · {driver.zoneName} · {trx(LIVE_STATES.find((state) => state.id === driver.state)?.label)}</li>)}</ul>
       </div>
     );
   }
@@ -440,21 +441,21 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
         />
       ) : null}
       {request && !selected ? (
-        <aside className="driver-panel" role="dialog" aria-label={`Rider ${request.rider}`}>
+        <aside className="driver-panel" role="dialog" aria-label={tr("Rider {0}", [request.rider])}>
           <div className="driver-panel-head">
             <span className="request-avatar"><UserRound size={22} aria-hidden="true" /></span>
             <div className="driver-panel-title">
               {request.riderId ? <Link to={`/riders/${request.riderId}`}><strong>{request.rider}</strong></Link> : <strong>{request.rider}</strong>}
               <small className="map-popup-code">{request.tripId}</small>
-              <span className="map-popup-state"><i style={{ background: request.waitingMin > 5 ? "#d03b3b" : "#d55181" }} />{request.status === "offered" ? `Offered to ${request.offeredTo}` : "Looking for a driver"}</span>
+              <span className="map-popup-state"><i style={{ background: request.waitingMin > 5 ? "#d03b3b" : "#d55181" }} />{request.status === "offered" ? tr("Offered to {0}", [request.offeredTo]) : tr("Looking for a driver")}</span>
             </div>
-            <button data-command="admin.ui.mapClose" type="button" className="map-popup-close" aria-label="Close" onClick={() => setRequestId(null)}><X size={14} /></button>
+            <button data-command="admin.ui.mapClose" type="button" className="map-popup-close" aria-label={tr("Close")} onClick={() => setRequestId(null)}><X size={14} /></button>
           </div>
           <dl className="driver-panel-facts">
-            <div><dt>Pickup zone</dt><dd>{request.zoneName}</dd></div>
-            <div><dt>Category</dt><dd>{request.categoryLabel}</dd></div>
-            <div><dt>Waiting</dt><dd><Clock size={12} aria-hidden="true" /> {request.waitingMin} min</dd></div>
-            <div><dt>Trip</dt><dd>{access.trips ? <Link to={withScope(`/trips/${request.tripId}`)}>{request.tripId}</Link> : request.tripId}</dd></div>
+            <div><dt>{tr("Pickup zone")}</dt><dd>{request.zoneName}</dd></div>
+            <div><dt>{tr("Category")}</dt><dd>{request.categoryLabel}</dd></div>
+            <div><dt>{tr("Waiting")}</dt><dd>{trn("{0} {1} min", <Clock size={12} aria-hidden="true" />, request.waitingMin)}</dd></div>
+            <div><dt>{tr("Trip")}</dt><dd>{access.trips ? <Link to={withScope(`/trips/${request.tripId}`)}>{request.tripId}</Link> : request.tripId}</dd></div>
           </dl>
           {renderAssign ? renderAssign(request) : null}
         </aside>

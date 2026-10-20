@@ -65,6 +65,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { DriverBonusBox, NearbyButton, OffersSection, useTripOffers } from "../dispatch/AssignPanel";
 import { canAssign as canAssignTrip, isLocked } from "../dispatch/assign";
 import { StatusDot } from "../ui/kit";
+import { currentLanguage, tr, trn, uiLocale, trx, trSentences } from "../i18n";
 
 type TimelineEvent = { at: string; text: string; tone: "status" | "good" | "muted" | "call" | "check" | "alert"; link?: { to: string; label: string } };
 
@@ -124,7 +125,7 @@ export function TripPage() {
   const route = useMemo(() => (trip ? routeOf(trip) : null), [trip]);
   const chosen = driverId || eligible[0]?.id || "";
 
-  if (trips.isLoading || drivers.isLoading || vehicles.isLoading) return <p className="state-line">Loading trip.</p>;
+  if (trips.isLoading || drivers.isLoading || vehicles.isLoading) return <p className="state-line">{tr("Loading trip.")}</p>;
   if (!trip || !route) {
     return <NotFoundRecord kind="Trip" id={tripId} list="/trips" listLabel="trips" />;
   }
@@ -165,8 +166,8 @@ export function TripPage() {
   const flagged = isFlagged(ops, trip.id);
   const riderId = riderIdFor(trip);
   const zone = zoneById(trip.zoneId);
-  const time = (iso: string) => new Intl.DateTimeFormat(place.locale, { timeZone: place.timeZone, timeStyle: "short" }).format(new Date(iso));
-  const timeSec = (iso: string) => new Intl.DateTimeFormat(place.locale, { timeZone: place.timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(iso));
+  const time = (iso: string) => new Intl.DateTimeFormat(uiLocale(), { timeZone: place.timeZone, timeStyle: "short" }).format(new Date(iso));
+  const timeSec = (iso: string) => new Intl.DateTimeFormat(uiLocale(), { timeZone: place.timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(iso));
   const cashTrip = isCashTrip(trip, country);
   const cash = cashTrip ? cashFigures(split) : null;
 
@@ -197,34 +198,34 @@ export function TripPage() {
   ].sort((a, b) => a.at.localeCompare(b.at));
 
   const reveal = ops.settings.reasonToShow ? (
-    <CommandButton command="admin.trip.revealSensitive" className="dash-btn small" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="hidden" after="shown" onDone={() => setRevealed(true)}><Eye size={13} aria-hidden="true" /> Show numbers and messages</CommandButton>
+    <CommandButton command="admin.trip.revealSensitive" className="dash-btn small" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="hidden" after="shown" onDone={() => setRevealed(true)}>{trn("{0} Show numbers and messages", <Eye size={13} aria-hidden="true" />)}</CommandButton>
   ) : (
-    <CommandButton command="admin.trip.revealSensitiveQuick" className="dash-btn small" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="hidden" after="shown" onDone={() => setRevealed(true)}><Eye size={13} aria-hidden="true" /> Show numbers and messages</CommandButton>
+    <CommandButton command="admin.trip.revealSensitiveQuick" className="dash-btn small" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="hidden" after="shown" onDone={() => setRevealed(true)}>{trn("{0} Show numbers and messages", <Eye size={13} aria-hidden="true" />)}</CommandButton>
   );
   const phone = (value: string) => (revealed ? value : maskPhone(value));
 
   return (
     <div className="dx-page op-page op-trip">
       <header className="dx-head">
-        <button data-command="admin.trip.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/trips"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.trip.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/trips"))}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
         <div className="dx-head-text">
-          <h2>Trip {trip.id}</h2>
+          <h2>{trn("Trip {0}", trip.id)}</h2>
           <p>
             <StatusDot tone={tone}>{statusLabel(trip.status)}</StatusDot>
-            {" "}{trip.name} · {zone?.name ?? trip.zoneId} · {categoryOf(trip.id).label} · {zoneTimeLabel(startedAt(trip.id), trip.zoneId)}
-            {flagged ? <span className="op-status problem"><Flag size={11} aria-hidden="true" /> Flagged</span> : null}
+            {" "}{trip.name} · {zone?.name ?? trip.zoneId} · {trx(categoryOf(trip.id).label)} · {zoneTimeLabel(startedAt(trip.id), trip.zoneId)}
+            {flagged ? <span className="op-status problem">{trn("{0} Flagged", <Flag size={11} aria-hidden="true" />)}</span> : null}
           </p>
         </div>
-        <Link className="dash-btn small ghost" to="/trips">All trips</Link>
+        <Link className="dash-btn small ghost" to="/trips">{tr("All trips")}</Link>
       </header>
 
-      <nav className="op-jump" aria-label="Trip sections">
+      <nav className="op-jump" aria-label={tr("Trip sections")}>
         {SECTIONS.map(([id, label]) => (
-          <button key={id} data-command="admin.tabs.select" type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "smooth" })}>{label}</button>
+          <button key={id} data-command="admin.tabs.select" type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "smooth" })}>{trx(label)}</button>
         ))}
       </nav>
 
-      {notice ? <p className="dx-note" role="status">{notice}</p> : null}
+      {notice ? <p className="dx-note" role="status">{trSentences(notice)}</p> : null}
       <Waiting trip={trip} ops={ops} money={money} onNotice={setNotice} />
 
       <Cards
@@ -232,131 +233,128 @@ export function TripPage() {
         compareLabel=""
         fmt={(value, format) => (format === "money" ? money(value) : format === "min" ? `${value} min` : String(value))}
         cards={[
-          { id: "paid", label: split.state === "estimate" ? "Rider pays (estimate)" : "Rider paid", value: split.riderPaid, previous: null, format: "money", info: "The trip price, minus promotions and refunds, plus the tip." },
-          { id: "driver", label: "Driver gets", value: split.driverGets, previous: null, format: "money", info: "The ride price minus Movera's commission (and the fleet owner's share), plus the tip." },
-          { id: "movera", label: "Movera keeps", value: split.moveraKeeps, previous: null, format: "money", info: "Commission and app fee, minus promotions and refunds Movera paid." },
-          { id: "km", label: "Distance, km", value: route.km, previous: null, format: "count", info: "Distance charged, in km." },
-          { id: "min", label: "Ride time", value: route.minutes, previous: null, format: "min", info: "Minutes from pickup to drop-off." },
+          { id: "paid", label: split.state === "estimate" ? tr("Rider pays (estimate)") : tr("Rider paid"), value: split.riderPaid, previous: null, format: "money", info: tr("The trip price, minus promotions and refunds, plus the tip.") },
+          { id: "driver", label: tr("Driver gets"), value: split.driverGets, previous: null, format: "money", info: tr("The ride price minus Movera's commission (and the fleet owner's share), plus the tip.") },
+          { id: "movera", label: tr("Movera keeps"), value: split.moveraKeeps, previous: null, format: "money", info: tr("Commission and app fee, minus promotions and refunds Movera paid.") },
+          { id: "km", label: tr("Distance, km"), value: route.km, previous: null, format: "count", info: tr("Distance charged, in km.") },
+          { id: "min", label: tr("Ride time"), value: route.minutes, previous: null, format: "min", info: tr("Minutes from pickup to drop-off.") },
         ]}
       />
 
       <div className="op-trip-grid">
-        <Section id="timeline" title="Timeline" icon={<Clock3 size={16} />} testId="trip-timeline">
+        <Section id="timeline" title={tr("Timeline")} icon={<Clock3 size={16} />} testId="trip-timeline">
           <ol className="op-timeline">
             {events.map((event, index) => (
-              <li key={`${event.at}-${index}`} className={event.tone}><time>{time(event.at)}</time><i aria-hidden="true" /><span>{event.text}{event.link ? <> · <Link to={event.link.to}>{event.link.label}</Link></> : null}</span></li>
+              <li key={`${event.at}-${index}`} className={event.tone}><time>{time(event.at)}</time><i aria-hidden="true" /><span>{event.text}{event.link ? <> · <Link to={event.link.to}>{trx(event.link.label)}</Link></> : null}</span></li>
             ))}
           </ol>
-          <p className="op-help">Who cancelled: {cancelledBy(trip.status)}. Reason: {cancelReason(trip)}{trip.cancelReasonCode ? ` (${trip.cancelReasonCode})` : ""}.</p>
+          <p className="op-help">{trn("Who cancelled: {0}. Reason: {1}{2}.", cancelledBy(trip.status), cancelReason(trip), trip.cancelReasonCode ? ` (${trip.cancelReasonCode})` : "")}</p>
         </Section>
 
-        <Section id="people" title="People and car" icon={<Users size={16} />} aside={allowed && !revealed ? reveal : revealed ? <span className="dx-tag"><Eye size={11} aria-hidden="true" /> Shown, logged in Reports</span> : null}>
+        <Section id="people" title={tr("People and car")} icon={<Users size={16} />} aside={allowed && !revealed ? reveal : revealed ? <span className="dx-tag">{trn("{0} Shown, logged in Reports", <Eye size={11} aria-hidden="true" />)}</span> : null}>
           <div className="op-people">
             <div className="op-person rider">
-              <small>Rider</small>
+              <small>{tr("Rider")}</small>
               <Link to={`/riders/${riderId}`}><b>{trip.name}</b></Link>
               {canAssignTrip(trip.status) && can(role, "trips.intervene") ? <NearbyButton tripId={trip.id} rider={trip.name} className="dash-btn small" /> : null}
-              <span>{allowed ? phone(trip.phone) : <><Lock size={11} aria-hidden="true" /> Number hidden</>}</span>
+              <span>{allowed ? phone(trip.phone) : <>{trn("{0} Number hidden", <Lock size={11} aria-hidden="true" />)}</>}</span>
             </div>
             <div className="op-person driver">
-              <small>Driver</small>
-              {driver ? <Link to={`/drivers/${driver.id}`}><b>{driver.name}</b></Link> : <b>Not assigned</b>}
-              <span>{driver ? (allowed ? phone(driver.phone) : <><Lock size={11} aria-hidden="true" /> Number hidden</>) : "–"}</span>
+              <small>{tr("Driver")}</small>
+              {driver ? <Link to={`/drivers/${driver.id}`}><b>{driver.name}</b></Link> : <b>{tr("Not assigned")}</b>}
+              <span>{driver ? (allowed ? phone(driver.phone) : <>{trn("{0} Number hidden", <Lock size={11} aria-hidden="true" />)}</>) : "–"}</span>
             </div>
           </div>
           <div className="op-facts-list">
-            <p>Driver {driver ? <><Link to={`/drivers/${driver.id}`}>{driver.name}</Link> · {driver.id}</> : "Unassigned"}</p>
-            <p><Car size={13} aria-hidden="true" /> Vehicle {vehicle ? `${vehicle.plate} · ${vehicle.make ?? ""} ${vehicle.model ?? ""}` : "Unassigned"}</p>
-            <p data-testid="trip-payment"><Banknote size={13} aria-hidden="true" /> Payment {statusLabel(payment)} · {cashTrip ? "Cash" : "In the app"}</p>
-            <p data-testid="trip-rating"><Star size={13} aria-hidden="true" /> Rating {ratingLabel(trip)}</p>
-            <p data-testid="trip-pin">PIN verified {pinVerified(trip.id)}</p>
+            <p>{trn("Driver {0}", driver ? <><Link to={`/drivers/${driver.id}`}>{driver.name}</Link> · {driver.id}</> : tr("Unassigned"))}</p>
+            <p>{trn("{0} Vehicle {1}", <Car size={13} aria-hidden="true" />, vehicle ? `${vehicle.plate} · ${vehicle.make ?? ""} ${vehicle.model ?? ""}` : tr("Unassigned"))}</p>
+            <p data-testid="trip-payment">{trn("{0} Payment {1} · {2}", <Banknote size={13} aria-hidden="true" />, statusLabel(payment), cashTrip ? tr("Cash") : tr("In the app"))}</p>
+            <p data-testid="trip-rating">{trn("{0} Rating {1}", <Star size={13} aria-hidden="true" />, ratingLabel(trip))}</p>
+            <p data-testid="trip-pin">{trn("PIN verified {0}", pinVerified(trip.id))}</p>
           </div>
         </Section>
       </div>
 
-      <Section id="offers" title="Offer log" icon={<Radar size={16} />} testId="trip-offer-log" wide>
+      <Section id="offers" title={tr("Offer log")} icon={<Radar size={16} />} testId="trip-offer-log" wide>
         {offerSteps.length ? (
-          <ol className="op-offer-log" aria-label="Offer log">
+          <ol className="op-offer-log" aria-label={tr("Offer log")}>
             {offerSteps.map((step, index) => (
               <li key={`${step.at}-${index}`} className={step.kind}>
                 <time>{timeSec(step.at)}</time>
-                <b>{step.title}</b>
-                <span>{step.detail}</span>
+                <b>{trx(step.title)}</b>
+                <span>{trx(step.detail)}</span>
               </li>
             ))}
           </ol>
-        ) : <p className="dx-calm">No offer was sent for this trip.</p>}
-        <p className="op-help">One line per step: Scheduled rides, Home popup, Exclusive (to whom and the answer), Radar (how many saw it), who tried to take it, who won and who got “No longer available”.</p>
+        ) : <p className="dx-calm">{tr("No offer was sent for this trip.")}</p>}
+        <p className="op-help">{tr("One line per step: Scheduled rides, Home popup, Exclusive (to whom and the answer), Radar (how many saw it), who tried to take it, who won and who got “No longer available”.")}</p>
       </Section>
 
-      <Section id="assign" title="Assign a driver" icon={<Radar size={16} />} testId="trip-assign" wide>
+      <Section id="assign" title={tr("Assign a driver")} icon={<Radar size={16} />} testId="trip-assign" wide>
         {isLocked(trip.status) && dispatchOffers.data?.lockedTo ? (
-          <p className="as-locked" role="status"><Lock size={14} aria-hidden="true" /> Assigned to <b>{dispatchOffers.data.lockedTo.driverName}</b>. The assignment is locked.</p>
+          <p className="as-locked" role="status">{trn("{0} Assigned to {1}. The assignment is locked.", <Lock size={14} aria-hidden="true" />, <b>{dispatchOffers.data.lockedTo.driverName}</b>)}</p>
         ) : canAssignTrip(trip.status) ? (
-          <p className="op-help">
-            The rider sees “Searching”. See the active drivers near the pickup to send an exclusive offer to one, or a radar group of up to 10.
-            {can(role, "trips.intervene") ? <> <NearbyButton tripId={trip.id} rider={trip.name} /></> : null}
-          </p>
-        ) : <p className="dx-calm">Assigning is open only while the trip is requested, searching or offered.</p>}
+          <p className="op-help">{trn("The rider sees “Searching”. See the active drivers near the pickup to send an exclusive offer to one, or a radar group of up to 10.{0}", can(role, "trips.intervene") ? <> <NearbyButton tripId={trip.id} rider={trip.name} /></> : null)}</p>
+        ) : <p className="dx-calm">{tr("Assigning is open only while the trip is requested, searching or offered.")}</p>}
         {dispatchOffers.data && canAssignTrip(trip.status) ? <DriverBonusBox trip={{ id: trip.id, zoneId: trip.zoneId, status: trip.status }} view={dispatchOffers.data} canAct={can(role, "trips.intervene")} onDone={(text) => { setNotice(text); void dispatchOffers.refetch(); }} /> : null}
         {dispatchOffers.data?.offers.length ? <OffersSection view={dispatchOffers.data} now={clock} /> : null}
       </Section>
 
-      <Section id="route" title="Route" icon={<RouteIcon size={16} />} testId="trip-route" wide>
+      <Section id="route" title={tr("Route")} icon={<RouteIcon size={16} />} testId="trip-route" wide>
         <div className="op-route-grid">
-          <MapPanel title="Map" note={<span className="op-legend"><i className="ride" /> Ride <i className="approach" /> Driver to pickup <i className="pickup" /> Pickup <i className="stop" /> Stop <i className="dropoff" /> Drop-off</span>}>
-            <RouteMap stops={route.stops} path={route.path} approach={trip.driverId ? route.approach : []} label={`Route of trip ${trip.id}`} />
+          <MapPanel title={tr("Map")} note={<span className="op-legend">{trn("{0} Ride {1} Driver to pickup {2} Pickup {3} Stop {4} Drop-off", <i className="ride" />, <i className="approach" />, <i className="pickup" />, <i className="stop" />, <i className="dropoff" />)}</span>}>
+            <RouteMap stops={route.stops} path={route.path} approach={trip.driverId ? route.approach : []} label={tr("Route of trip {0}", [trip.id])} />
           </MapPanel>
           <div>
             <ol className="op-stops" data-testid="trip-stops">
               {route.stops.map((stop, index) => (
-                <li key={`${stop.kind}-${index}`} className={stop.kind}><i aria-hidden="true" />{stop.kind === "pickup" ? "Pickup" : stop.kind === "dropoff" ? "Drop-off" : "Stop"} · {stop.label}</li>
+                <li key={`${stop.kind}-${index}`} className={stop.kind}><i aria-hidden="true" />{stop.kind === "pickup" ? tr("Pickup") : stop.kind === "dropoff" ? tr("Drop-off") : tr("Stop")} · {trx(stop.label)}</li>
               ))}
             </ol>
             <dl className="op-facts">
-              <div><dt>Distance</dt><dd>{route.km} km</dd></div>
-              <div><dt>Ride time</dt><dd>{route.minutes} min</dd></div>
-              <div><dt>Stops</dt><dd>{route.stops.length - 2}</dd></div>
+              <div><dt>{tr("Distance")}</dt><dd>{trn("{0} km", route.km)}</dd></div>
+              <div><dt>{tr("Ride time")}</dt><dd>{trn("{0} min", route.minutes)}</dd></div>
+              <div><dt>{tr("Stops")}</dt><dd>{route.stops.length - 2}</dd></div>
             </dl>
           </div>
         </div>
       </Section>
 
       <div className="op-trip-grid">
-        <Section id="fare" title={`How the price was made · rule ${fare.ruleVersion}`} icon={<ListOrdered size={16} />} testId="trip-fare">
+        <Section id="fare" title={tr("How the price was made · rule {0}", [fare.ruleVersion])} icon={<ListOrdered size={16} />} testId="trip-fare">
           <ul className="op-lines">
-            <li><span>Pickup</span><b>{legacyMoney(fare.pickupOre)}</b></li>
-            <li><span>{fare.km} km × {legacyMoney(fare.perKmOre)}</span><b>{legacyMoney(fare.km * fare.perKmOre)}</b></li>
-            <li><span>{fare.minutes} min × {legacyMoney(fare.perMinOre)}</span><b>{legacyMoney(fare.minutes * fare.perMinOre)}</b></li>
-            <li><span>Waiting time charged: {fare.waitingMin} min · {legacyMoney(fare.waitingOre)}</span></li>
-            <li><span>{fare.appliedMin ? `Minimum ${legacyMoney(fare.minimumOre)} applied` : "Minimum not applied"}</span></li>
-            <li className="total"><span>Charged {legacyMoney(fare.chargedOre)}</span></li>
+            <li><span>{tr("Pickup")}</span><b>{legacyMoney(fare.pickupOre)}</b></li>
+            <li><span>{trn("{0} km × {1}", fare.km, legacyMoney(fare.perKmOre))}</span><b>{legacyMoney(fare.km * fare.perKmOre)}</b></li>
+            <li><span>{trn("{0} min × {1}", fare.minutes, legacyMoney(fare.perMinOre))}</span><b>{legacyMoney(fare.minutes * fare.perMinOre)}</b></li>
+            <li><span>{trn("Waiting time charged: {0} min · {1}", fare.waitingMin, legacyMoney(fare.waitingOre))}</span></li>
+            <li><span>{fare.appliedMin ? tr("Minimum {0} applied", [legacyMoney(fare.minimumOre)]) : tr("Minimum not applied")}</span></li>
+            <li className="total"><span>{trn("Charged {0}", legacyMoney(fare.chargedOre))}</span></li>
           </ul>
         </Section>
-        <Section id="split" title="Who gets what" icon={<Banknote size={16} />}>
+        <Section id="split" title={tr("Who gets what")} icon={<Banknote size={16} />}>
           <SplitView split={split} money={money} />
           {cashTrip ? (
             <div className="op-cash" data-testid="trip-cash">
-              <b><Coins size={13} aria-hidden="true" /> Cash trip</b>
+              <b>{trn("{0} Cash trip", <Coins size={13} aria-hidden="true" />)}</b>
               {cash ? (
                 <>
                   <dl className="op-split-lines">
-                    <div><dt>Cash collected by driver</dt><dd>{money(cash.collected)}</dd></div>
-                    <div className="minus"><dt>Owed to Movera</dt><dd>{money(cash.owed)}</dd></div>
+                    <div><dt>{tr("Cash collected by driver")}</dt><dd>{money(cash.collected)}</dd></div>
+                    <div className="minus"><dt>{tr("Owed to Movera")}</dt><dd>{money(cash.owed)}</dd></div>
                   </dl>
-                  <p className="op-help">The owed amount is taken from the driver's next payout. <Link to="/payouts">Payouts</Link></p>
+                  <p className="op-help">{trn("The owed amount is taken from the driver's next payout. {0}", <Link to="/payouts">{tr("Payouts")}</Link>)}</p>
                 </>
-              ) : <p className="op-help">The driver collects the fare in cash at the drop-off.</p>}
+              ) : <p className="op-help">{tr("The driver collects the fare in cash at the drop-off.")}</p>}
             </div>
           ) : null}
         </Section>
       </div>
 
-      <Section id="chat" title="Chat and calls" icon={<MessagesSquare size={16} />} wide>
+      <Section id="chat" title={tr("Chat and calls")} icon={<MessagesSquare size={16} />} wide>
         <ChatCalls chat={chat} calls={calls} revealed={revealed} allowed={allowed} reveal={reveal} country={country} riderName={trip.name} driverName={driver?.name ?? "The driver"} />
       </Section>
 
-      <Section id="waybill" title="Waybill" icon={<FileText size={16} />} testId="trip-waybill" wide>
+      <Section id="waybill" title={tr("Waybill")} icon={<FileText size={16} />} testId="trip-waybill" wide>
         <dl className="waybill op-waybill">
           {Object.entries({
             "Trip": sheet.tripId,
@@ -374,24 +372,24 @@ export function TripPage() {
             "Passenger capacity": sheet.seats,
           }).map(([label, value]) => (
             <div key={label}>
-              <dt>{label}</dt>
+              <dt>{trx(label)}</dt>
               <dd>{value}</dd>
             </div>
           ))}
         </dl>
       </Section>
 
-      <Section id="actions" title="Actions" icon={<Wrench size={16} />} wide>
-        <h4 className="op-sub">Admin actions</h4>
+      <Section id="actions" title={tr("Actions")} icon={<Wrench size={16} />} wide>
+        <h4 className="op-sub">{tr("Admin actions")}</h4>
         <AdminActions trip={trip} ops={ops} split={split} money={money} country={country} riderId={riderId} onNotice={setNotice} />
         {ops.settings.actions.price || ops.settings.actions.refund ? (
           <div className="op-live">
-            <h4 className="op-sub">Live trip controls <small>cancel, offer, reassign, no-show, complete, fare, waiting time and full refund</small></h4>
+            <h4 className="op-sub">{trn("Live trip controls {0}", <small>{tr("cancel, offer, reassign, no-show, complete, fare, waiting time and full refund")}</small>)}</h4>
             <div className="op-live-body" data-testid="trip-actions">
 
-              <p data-testid="cancel-block">{cancelWhy ?? "Cancel is allowed in this state."}</p>
+              <p data-testid="cancel-block">{cancelWhy ?? tr("Cancel is allowed in this state.")}</p>
               {cancelWhy ? (
-                <button data-command="admin.trip.cancel" className="secondary-btn" type="button" disabled title={cancelWhy}>Cancel trip</button>
+                <button data-command="admin.trip.cancel" className="secondary-btn" type="button" disabled title={cancelWhy}>{tr("Cancel trip")}</button>
               ) : (
                 // Q27: one dialog, the cancel reason code (none preselected, A-O1) and an optional note.
                 <CommandButton
@@ -405,33 +403,28 @@ export function TripPage() {
                   before={trip.status}
                   after="cancelled_by_admin"
                   patch={{ status: "cancelled_by_admin", previousStatus: trip.status }}
-                  reasonChoices={adminReasons.map((item) => ({ value: item.code, label: cancelReasonLabel(item.title, "en") || item.code }))}
+                  reasonChoices={adminReasons.map((item) => ({ value: item.code, label: cancelReasonLabel(item.title, currentLanguage()) || cancelReasonLabel(item.title, "en") || item.code, audit: cancelReasonLabel(item.title, "en") || item.code }))}
                   reasonField="cancelReasonCode"
-                  reasonLabel="Cancel reason"
+                  reasonLabel={tr("Cancel reason")}
                   storeReason
-                >
-                  Cancel trip
-                </CommandButton>
+                >{tr("Cancel trip")}</CommandButton>
               )}
 
-              <label>
-                Eligible driver
-                <select
-                  aria-label="Eligible driver"
+              <label>{trn("Eligible driver{0}", <select
+                  aria-label={tr("Eligible driver")}
                   value={chosen}
                   onChange={(event) => setDriverId(event.target.value)}
                   disabled={eligible.length === 0 || !!offerWhy}
                 >
-                  {eligible.length === 0 ? <option value="">No eligible driver</option> : null}
+                  {eligible.length === 0 ? <option value="">{tr("No eligible driver")}</option> : null}
                   {eligible.map((item) => (
                     <option key={item.id} value={item.id}>{item.name} · {item.id}</option>
                   ))}
-                </select>
-              </label>
+                </select>)}</label>
 
-              <p data-testid="offer-block">{offerWhy ?? "Offer is allowed in this state. The driver gets an Assigned by Movera offer and still has to accept."}</p>
+              <p data-testid="offer-block">{offerWhy ?? tr("Offer is allowed in this state. The driver gets an Assigned by Movera offer and still has to accept.")}</p>
               {offerWhy ? (
-                <button data-command="admin.trip.offer" className="secondary-btn" type="button" disabled title={offerWhy}>Offer to driver</button>
+                <button data-command="admin.trip.offer" className="secondary-btn" type="button" disabled title={offerWhy}>{tr("Offer to driver")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.offer"
@@ -444,14 +437,12 @@ export function TripPage() {
                   before={trip.status}
                   after={`offered to ${chosen}`}
                   patch={{ driverId: chosen, status: "offered" }}
-                >
-                  Offer to driver
-                </CommandButton>
+                >{tr("Offer to driver")}</CommandButton>
               )}
 
-              <p data-testid="reassign-block">{reassignWhy ?? "Reassign takes the trip off its driver and sends it back to dispatch (searching). Then offer it to a driver."}</p>
+              <p data-testid="reassign-block">{reassignWhy ?? tr("Reassign takes the trip off its driver and sends it back to dispatch (searching). Then offer it to a driver.")}</p>
               {reassignWhy ? (
-                <button data-command="admin.trip.reassign" className="secondary-btn" type="button" disabled title={reassignWhy}>Reassign</button>
+                <button data-command="admin.trip.reassign" className="secondary-btn" type="button" disabled title={reassignWhy}>{tr("Reassign")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.reassign"
@@ -464,14 +455,12 @@ export function TripPage() {
                   before={trip.driverId ?? "none"}
                   after="searching"
                   patch={{ driverId: null, status: "searching", previousStatus: trip.status }}
-                >
-                  Reassign
-                </CommandButton>
+                >{tr("Reassign")}</CommandButton>
               )}
 
-              <p data-testid="noshow-block">{noShowWhy ?? "No-show ends the trip as no_show. The no-show fee follows the zone's waiting rules."}</p>
+              <p data-testid="noshow-block">{noShowWhy ?? tr("No-show ends the trip as no_show. The no-show fee follows the zone's waiting rules.")}</p>
               {noShowWhy ? (
-                <button data-command="admin.trip.noShow" className="secondary-btn" type="button" disabled title={noShowWhy}>Mark rider no-show</button>
+                <button data-command="admin.trip.noShow" className="secondary-btn" type="button" disabled title={noShowWhy}>{tr("Mark rider no-show")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.noShow"
@@ -484,14 +473,12 @@ export function TripPage() {
                   after="no_show"
                   patch={{ status: "no_show", previousStatus: trip.status, cancelReasonCode: "rider_no_show" }}
                   storeReason
-                >
-                  Mark rider no-show
-                </CommandButton>
+                >{tr("Mark rider no-show")}</CommandButton>
               )}
 
-              <p data-testid="complete-block">{completeWhy ?? "Complete ends a stuck trip as completed with the current fare."}</p>
+              <p data-testid="complete-block">{completeWhy ?? tr("Complete ends a stuck trip as completed with the current fare.")}</p>
               {completeWhy ? (
-                <button data-command="admin.trip.complete" className="secondary-btn" type="button" disabled title={completeWhy}>Complete trip</button>
+                <button data-command="admin.trip.complete" className="secondary-btn" type="button" disabled title={completeWhy}>{tr("Complete trip")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.complete"
@@ -503,41 +490,33 @@ export function TripPage() {
                   before={trip.status}
                   after="completed"
                   patch={{ status: "completed", previousStatus: trip.status }}
-                >
-                  Complete trip
-                </CommandButton>
+                >{tr("Complete trip")}</CommandButton>
               )}
 
               <div className="field-grid">
-                <label>
-                  Fare adjustment (%)
-                  <input
-                    aria-label="Fare adjustment percent"
+                <label>{trn("Fare adjustment (%){0}", <input
+                    aria-label={tr("Fare adjustment percent")}
                     type="number"
                     min="-15"
                     max="15"
                     step="1"
                     value={farePercent}
                     onChange={(event) => setFarePercent(event.target.value)}
-                  />
-                </label>
-                <label>
-                  Waiting minutes
-                  <input
-                    aria-label="Waiting minutes"
+                  />)}</label>
+                <label>{trn("Waiting minutes{0}", <input
+                    aria-label={tr("Waiting minutes")}
                     type="number"
                     min="0"
                     max="120"
                     step="1"
                     value={waitingInput === "" ? String(fare.waitingMin) : waitingInput}
                     onChange={(event) => setWaitingInput(event.target.value)}
-                  />
-                </label>
+                  />)}</label>
               </div>
 
-              <p data-testid="adjust-block">{adjustWhy ?? "Fare can be adjusted by up to ±15% in this state."}</p>
+              <p data-testid="adjust-block">{adjustWhy ?? tr("Fare can be adjusted by up to ±15% in this state.")}</p>
               {adjustWhy ? (
-                <button data-command="admin.trip.adjust" className="secondary-btn" type="button" disabled title={adjustWhy}>Apply fare adjustment</button>
+                <button data-command="admin.trip.adjust" className="secondary-btn" type="button" disabled title={adjustWhy}>{tr("Apply fare adjustment")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.adjust"
@@ -550,14 +529,12 @@ export function TripPage() {
                   before={legacyMoney(trip.fareOre ?? 0)}
                   after={legacyMoney(fareAttempt.trip.fareOre)}
                   patch={{ fareOre: fareAttempt.trip.fareOre }}
-                >
-                  Apply fare adjustment
-                </CommandButton>
+                >{tr("Apply fare adjustment")}</CommandButton>
               )}
 
-              <p data-testid="waiting-block">{waitingWhy ?? "Waiting time can be corrected in this state."}</p>
+              <p data-testid="waiting-block">{waitingWhy ?? tr("Waiting time can be corrected in this state.")}</p>
               {waitingWhy ? (
-                <button data-command="admin.trip.waiting" className="secondary-btn" type="button" disabled title={waitingWhy}>Save waiting time</button>
+                <button data-command="admin.trip.waiting" className="secondary-btn" type="button" disabled title={waitingWhy}>{tr("Save waiting time")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.waiting"
@@ -571,14 +548,12 @@ export function TripPage() {
                   after={`${waitingAttempt.minutes} min`}
                   patch={{ waitingMin: waitingAttempt.minutes }}
                   onDone={() => setWaitingInput("")}
-                >
-                  Save waiting time
-                </CommandButton>
+                >{tr("Save waiting time")}</CommandButton>
               )}
 
-              <p data-testid="refund-block">{refundWhy ?? "Refund is allowed. The captured terminal payment can be returned."}</p>
+              <p data-testid="refund-block">{refundWhy ?? tr("Refund is allowed. The captured terminal payment can be returned.")}</p>
               {refundWhy ? (
-                <button data-command="admin.trip.refund" className="secondary-btn" type="button" disabled title={refundWhy}>Refund</button>
+                <button data-command="admin.trip.refund" className="secondary-btn" type="button" disabled title={refundWhy}>{tr("Refund")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.refund"
@@ -591,34 +566,32 @@ export function TripPage() {
                   after="refunded"
                   patch={{ kind: "refunded" }}
                   storeReason
-                >
-                  Refund
-                </CommandButton>
+                >{tr("Refund")}</CommandButton>
               )}
             </div>
           </div>
         ) : null}
       </Section>
 
-      <Section id="history" title="Who did what" icon={<History size={16} />} wide>
+      <Section id="history" title={tr("Who did what")} icon={<History size={16} />} wide>
         {entries.length ? (
-          <ul className="op-history" aria-label="Admin work on this trip">
+          <ul className="op-history" aria-label={tr("Admin work on this trip")}>
             {entries.map((entry) => (
               <li key={entry.id}><time>{zoneTimeLabel(entry.at, trip.zoneId)}</time><b>{agentName(entry.actorId)}</b><span>{entryLine(entry, money)}</span></li>
             ))}
           </ul>
         ) : null}
-        <h4 className="op-sub"><ShieldCheck size={13} aria-hidden="true" /> Intervention audit</h4>
+        <h4 className="op-sub">{trn("{0} Intervention audit", <ShieldCheck size={13} aria-hidden="true" />)}</h4>
         {tripAudits.length === 0 ? (
-          <p className="state-line">No audited admin intervention on this trip yet.</p>
+          <p className="state-line">{tr("No audited admin intervention on this trip yet.")}</p>
         ) : (
-          <ul aria-label="Trip intervention audit" className="op-history">
+          <ul aria-label={tr("Trip intervention audit")} className="op-history">
             {tripAudits.map((item) => (
               <li key={item.id}><time>{item.at}</time><b>{agentName(item.actorId)}</b><span>{item.action} · {item.result} · {item.actorId} · {item.reason}</span></li>
             ))}
           </ul>
         )}
-        <p className="op-help"><MapPinned size={12} aria-hidden="true" /> Every action here is also in Reports → Admin work, with the admin's name.</p>
+        <p className="op-help">{trn("{0} Every action here is also in Reports → Admin work, with the admin's name.", <MapPinned size={12} aria-hidden="true" />)}</p>
       </Section>
     </div>
   );
