@@ -9,6 +9,8 @@ import type { CommandInput } from "./create.ts";
 import type { TripRecord } from "./seed.ts";
 import { useMarketScope } from "../markets/useMarketScope.ts";
 import { parseZoneList } from "../markets/markets.ts";
+import { ApiError } from "./httpClient.ts";
+import { BUSY_MESSAGE, CHECKING_MESSAGE, UNREACHABLE_MESSAGE, outcomeOf, queryTouched, touchedBy } from "./commandFlow.ts";
 
 export { markPaid, PAYMENT_METHODS, setMethod } from "../payments/book.ts";
 export type { BankAccount, PaymentMethod, Payout } from "../payments/book.ts";
@@ -25,7 +27,8 @@ export type { BoostSchedule, PricingBook, PricingSnapshot } from "../pricing/boo
 /**
  * The store revision each query's data was read at (C-10). A command sends the oldest revision among the
  * queries on screen, so a screen that shows data from before someone else's change gets a 409 instead of
- * silently overwriting it. After any command every query is read again, so the next try is up to date.
+ * silently overwriting it. After a command the reads it can have changed are read again, and the others are
+ * moved to the new revision when it was the only change (C-18), so the next try is up to date.
  */
 const readAt = new Map<string, number>();
 
@@ -117,6 +120,8 @@ export function useApprovals(refetchMs?: number) {
   return useQuery({ queryKey: ["approvals"], queryFn: () => readTracked(api, ["approvals"], () => api.approvals()), refetchInterval: refetchMs });
 }
 
+export type CommandPhase = "idle" | "submitting" | "checking" | "committed" | "rejected" | "pending_approval";
+
 type Attempt = {
   fingerprint: string;
   idempotencyKey: string;
@@ -154,13 +159,35 @@ export function useCommands() {
   const lock = useRef(false);
   const busy = useSyncExternalStore(subscribeGlobalCommand, globalCommandSnapshot, globalCommandSnapshot);
   const lastAttempt = useRef<Attempt | null>(null);
-  const [phase, setPhase] = useState<"idle" | "submitting" | "unknown" | "committed" | "rejected" | "pending_approval">("idle");
+  /** The last attempt's outcome is not known for sure, so a retry must reuse its operation key. */
+  const retrySameKey = useRef(false);
+  const [phase, setPhase] = useState<CommandPhase>("idle");
   const [message, setMessage] = useState("");
+
+  /** Read again only what the command can have changed (C-18); the rest is moved to the new revision. */
+  async function refresh(spec: ReturnType<typeof commandById>, extra: Partial<CommandInput>, expectedRev: number, rev: number | undefined) {
+    const touched = touchedBy(spec, extra);
+    // Exactly one change since the screen's revision means it was this command: untouched reads are still current.
+    const onlyThis = rev !== undefined && rev === expectedRev + 1;
+    if (!onlyThis) {
+      await client.invalidateQueries();
+      return;
+    }
+    for (const query of client.getQueryCache().findAll()) {
+      const key = JSON.stringify(query.queryKey);
+      if (!queryTouched(query.queryKey, touched) && readAt.get(key) === expectedRev) readAt.set(key, rev);
+    }
+    await client.invalidateQueries({ predicate: (query) => queryTouched(query.queryKey, touched) });
+  }
 
   async function run(id: string, extra: Partial<CommandInput> = {}) {
     const spec = commandById(id);
     if (!spec) throw new Error(`Unknown command ${id}`);
-    if (lock.current || globalCommandBusy) return undefined;
+    if (lock.current || globalCommandBusy) {
+      // Never drop a click silently (C-16): the buttons are disabled meanwhile, and this says why.
+      setMessage(BUSY_MESSAGE);
+      return undefined;
+    }
     const publicPick = id === "admin.auth.pickAgent";
     if (!session.agent && !publicPick) {
       setPhase("rejected");
@@ -191,17 +218,34 @@ export function useCommands() {
       extra.scope ?? params.get("scope") ?? "all",
       extra.patch ?? null,
     ]);
-    const retry = phase === "unknown" && lastAttempt.current?.fingerprint === fingerprint;
+    const retry = retrySameKey.current && lastAttempt.current?.fingerprint === fingerprint;
     const idempotencyKey = extra.idempotencyKey ?? (retry ? lastAttempt.current!.idempotencyKey : newIdempotencyKey(id));
     const expectedRev = extra.expectedRev ?? (retry ? lastAttempt.current!.expectedRev : screenRevision(client) ?? (await api.revision()));
     lastAttempt.current = { fingerprint, idempotencyKey, expectedRev };
+    retrySameKey.current = false;
 
-    let unknown = false;
+    // A slow answer shows "Checking…" (C-14), never a final "Unknown": the answer, or a re-check of the server, settles it.
+    let slow = false;
     const timer = setTimeout(() => {
-      unknown = true;
-      setPhase("unknown");
-      setMessage("Unknown. Check the audit before trying again. A retry will reuse the same operation key.");
+      slow = true;
+      setPhase("checking");
+      setMessage(CHECKING_MESSAGE);
     }, 900);
+    const actorId = session.agent?.id ?? "signed-out";
+
+    /** Asks the server what happened to this operation key. */
+    async function recheck(fallback: string) {
+      try {
+        const outcome = outcomeOf(await api.operation(idempotencyKey, actorId), fallback);
+        setPhase(outcome.phase);
+        setMessage(outcome.message);
+        retrySameKey.current = outcome.retrySameKey;
+      } catch {
+        setPhase("rejected");
+        setMessage(UNREACHABLE_MESSAGE);
+        retrySameKey.current = true;
+      }
+    }
 
     try {
       const result = await api.command({
@@ -224,19 +268,22 @@ export function useCommands() {
         patch: extra.patch,
       });
       clearTimeout(timer);
-      if (!unknown) {
+      if (slow) await recheck(result.message);
+      else {
         setPhase(result.status);
         setMessage(result.message);
-        lastAttempt.current = null;
       }
-      await client.invalidateQueries();
+      await refresh(spec, extra, expectedRev, result.rev);
       return result;
     } catch (error) {
       clearTimeout(timer);
-      if (!unknown) {
+      const text = error instanceof Error ? error.message : "Rejected";
+      // A lost connection or a busy server says nothing about whether the command ran: ask the server.
+      const unsure = error instanceof ApiError ? error.status === 0 || error.status === 429 || error.status >= 500 : !(error instanceof Error);
+      if (unsure) await recheck(text);
+      else {
         setPhase("rejected");
-        setMessage(error instanceof Error ? error.message : "Rejected");
-        lastAttempt.current = null;
+        setMessage(text);
       }
       await client.invalidateQueries();
       return undefined;

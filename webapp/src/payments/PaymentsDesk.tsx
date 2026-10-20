@@ -216,7 +216,7 @@ function Rules({ ops, country, editable }: { ops: PayOps; country: "SE" | "FR" |
             <Num label="Owing after days" before="After" value={current.owing.afterDays} unit="days" onChange={(value) => patch({ owing: { ...current.owing, afterDays: value } })} />
           </Row>
         </Card>
-        <Card title="Refund limit per role" icon={<Undo2 size={18} />} tone="green" help="The biggest refund each role can give alone. Above it, a second admin approves. The Super admin has no limit.">
+        <Card title="Refund limit per role" icon={<Undo2 size={18} />} tone="green" help="The biggest refund each role can give at all; above it, a role with a higher limit must do it. The Super admin has no limit. When a refund needs a second admin is one limit per country in Settings.">
           {LIMIT_ROLES.map((role) => (
             <Row key={role} label={ROLE_LABELS[role]}>
               <Num label={`${ROLE_LABELS[role]} refund limit`} value={current.refundLimit[role] ?? 0} unit={symbol} onChange={(value) => patch({ refundLimit: { ...current.refundLimit, [role]: value } })} />

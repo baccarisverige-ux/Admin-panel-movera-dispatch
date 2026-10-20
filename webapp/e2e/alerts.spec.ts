@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
+/** Q24: at 1280 px and below the country picker, Inbox and Sign out are in the top bar's "⋯" menu. */
+async function topbarMore(page: Page) {
+  const more = page.getByRole("button", { name: "More options", exact: true });
+  if ((await more.isVisible()) && (await more.getAttribute("aria-expanded")) !== "true") await more.click();
+}
+
 async function session(page: Page, agentId = "nora") {
   await page.addInitScript((id) => {
     if (!sessionStorage.getItem("al-test-session")) {
@@ -115,6 +121,7 @@ test("settings: older alert parts are off, Inbox comes back when switched on, le
   await page.getByRole("region", { name: "Save settings" }).getByRole("button", { name: "Save settings" }).click();
   await confirm(page);
   await expect(page.getByText("Alert settings saved.")).toBeVisible();
+  await topbarMore(page);
   await expect(page.getByRole("button", { name: "Inbox", exact: true })).toBeVisible();
 
   await page.getByRole("tab", { name: "Open" }).click();

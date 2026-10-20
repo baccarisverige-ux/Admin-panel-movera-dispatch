@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { formatZoneMoney } from "../markets/markets";
-import { REFUND_APPROVAL_MINOR } from "../commands/registry";
+import { refundAboveMinor } from "../payments/refundPolicy";
+import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import {
@@ -34,6 +35,7 @@ export function PayoutsPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const scope = useMarketScope();
+  const { policy: refundPolicy } = useRefundPolicy();
   const drivers = useRecords("drivers", null);
   const opsSlice = useSlice<PayoutOps>(PAYOUT_OPS_KEY, emptyPayoutOps());
   const ops = normalizePayoutOps(opsSlice.value);
@@ -109,7 +111,7 @@ export function PayoutsPage() {
         <div className="dx-head-text">
           <h2>Payouts</h2>
           <p>
-            Weekly payouts. Wallet vouchers are 100, 200 and 500 kr. Refunds of {money(REFUND_APPROVAL_MINOR[scope.market.currency])} or more need a second authorised agent.
+            Weekly payouts. Wallet vouchers are 100, 200 and 500 kr. Refunds above {money(refundAboveMinor(refundPolicy, scope.market.id))} need a second authorised agent.
             Demo rows {rows.length}. Finance revision {finance.draftRev}.
           </p>
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useParams } from "react-router";
 import {
   answerAsk,
@@ -67,15 +68,7 @@ export function ReservationDetailPage() {
     return <p className="state-line">Loading reservation.</p>;
   }
   if (!record) {
-    return (
-      <div className="page-heading">
-        <div>
-          <h2>Reservation not found</h2>
-          <p>The reservation is outside your active scope or does not exist.</p>
-          <Link to="/reservations">Back to reservations</Link>
-        </div>
-      </div>
-    );
+    return <NotFoundRecord kind="Reservation" id={id} list="/reservations" listLabel="reservations" />;
   }
 
   const ops = reservationOps(book, record);

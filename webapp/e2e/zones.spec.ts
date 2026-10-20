@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
+/** Q24: at 1280 px and below the country picker, Inbox and Sign out are in the top bar's "⋯" menu. */
+async function topbarMore(page: Page) {
+  const more = page.getByRole("button", { name: "More options", exact: true });
+  if ((await more.isVisible()) && (await more.getAttribute("aria-expanded")) !== "true") await more.click();
+}
+
 async function signIn(page: Page, email = "nora@movera.se") {
   await page.goto("/");
   await page.getByLabel("Email").fill(email);
@@ -82,12 +88,14 @@ test("zones follow the country bar, with drawing tools, layers and cities", asyn
   await expect(panel(page)).toContainText("Stockholm · Norrmalm");
   await mapReady(page);
 
+  await topbarMore(page);
   await page.getByRole("radio", { name: "France" }).click();
   await expect(page).toHaveURL(/country=FR/);
   await expect(page.getByRole("article", { name: "Paris zones" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Show Paris · Paris Centre on the map" })).toBeVisible();
   await expect(page.getByRole("article", { name: "Stockholm zones" })).toHaveCount(0);
   await expect(panel(page)).toContainText("Paris · ");
+  await topbarMore(page);
   await page.getByRole("radio", { name: "Tunisia" }).click();
   await expect(page.getByRole("button", { name: "Show Tunis · Tunis-Carthage on the map" })).toBeVisible();
   expect(errors, errors.join("\n")).toEqual([]);
@@ -148,6 +156,7 @@ test("A05 draw Östermalm, cut a hole, add Arlanda pickups, review, publish, rel
   await page.getByRole("button", { name: "Send for review" }).click();
   await confirm(page);
   await expect(notice(page)).toContainText("In review. A different agent can publish.");
+  await topbarMore(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.getByRole("button", { name: "Lena Berg · ops" }).click();
   await expect(page.getByLabel("Email")).toHaveValue("lena@movera.se");

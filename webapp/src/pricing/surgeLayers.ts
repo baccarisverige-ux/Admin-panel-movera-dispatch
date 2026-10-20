@@ -64,7 +64,18 @@ function pillElement(row: ZoneSurge, selected: boolean, onZone?: (zoneId: string
   element.dataset.command = "admin.pricing.zone";
   element.className = `surge-pill lvl-${row.level}${selected ? " selected" : ""}${row.source === "smart" ? " smart" : ""}`;
   const icon = row.source === "manual" ? BOLT : row.source === "scheduled" ? CLOCK : "";
-  element.innerHTML = `${icon}<b>${row.multiplier > 1 ? `×${row.multiplier.toFixed(1)}` : "×1.0"}</b><span>${row.name}</span>`;
+  // C-27: the zone name and numbers go in as text, never as HTML (names will come from the zone editor and the
+  // API). Only the fixed icon markup of this file is parsed.
+  if (icon) {
+    const holder = document.createElement("template");
+    holder.innerHTML = icon;
+    element.append(holder.content);
+  }
+  const level = document.createElement("b");
+  level.textContent = row.multiplier > 1 ? `×${row.multiplier.toFixed(1)}` : "×1.0";
+  const name = document.createElement("span");
+  name.textContent = row.name;
+  element.append(level, name);
   element.setAttribute("aria-label", `${row.name}: ${row.multiplier > 1 ? `surge ×${row.multiplier.toFixed(1)}, ${row.source}` : "no surge"}`);
   element.addEventListener("click", (event) => {
     event.stopPropagation();

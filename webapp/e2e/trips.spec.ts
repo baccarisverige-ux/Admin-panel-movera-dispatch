@@ -44,14 +44,18 @@ test("trips list uses all 600 and a trip page is complete", async ({ page }) => 
     const button = page.getByRole("button", { name: "Cancel trip" });
     await expect(button).toBeVisible();
     if (ALLOWED.has(id)) {
-      // A-O1: no cancel reason is preselected; Cancel trip waits for one.
-      await expect(page.getByLabel("Cancel reason")).toHaveValue("");
-      await expect(button).toBeDisabled();
-      await page.getByLabel("Cancel reason").selectOption({ index: 1 });
+      // Q27: one dialog with the cancel reason code and an optional note. A-O1: no reason is preselected.
       await expect(button).toBeEnabled();
+      await button.click();
+      const modal = page.locator(".modal.open");
+      await expect(modal.getByLabel("Cancel reason")).toHaveValue("");
+      await expect(modal.getByLabel("Note (optional)")).toBeVisible();
+      await expect(modal.getByRole("button", { name: "Confirm" })).toBeDisabled();
+      await modal.getByLabel("Cancel reason").selectOption({ index: 1 });
+      await expect(modal.getByRole("button", { name: "Confirm" })).toBeEnabled();
+      await modal.getByRole("button", { name: "Cancel", exact: true }).click();
     } else {
-      // Refused by the trip's status, not only by the missing reason: the reason list is locked too.
-      await expect(page.getByLabel("Cancel reason")).toBeDisabled();
+      // Refused by the trip's status.
       await expect(button).toBeDisabled();
     }
   }
@@ -59,10 +63,12 @@ test("trips list uses all 600 and a trip page is complete", async ({ page }) => 
   await page.goto("/trips/T0012");
   await expect(page.getByTestId("cancel-block")).toContainText("completed");
   await page.goto("/trips/T0004");
-  await page.getByLabel("Cancel reason").selectOption("admin_safety");
   await page.getByRole("button", { name: "Cancel trip" }).click();
-  await page.getByLabel("Reason", { exact: true }).selectOption("Safety");
-  await page.getByLabel("Type T0004 to confirm").fill("T0004");
+  // Only one dialog opens: the reason code and the optional note.
+  await expect(page.locator(".modal.open")).toHaveCount(1);
+  await expect(page.getByLabel("Reason", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Cancel reason").selectOption("admin_safety");
+  await page.getByLabel("Note (optional)").fill("Rider called about the driver");
   await page.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByRole("heading", { level: 2 })).toContainText("Trip T0004");
   await expect(page.getByTestId("trip-waybill")).toContainText("Cancelled by admin");
@@ -70,7 +76,7 @@ test("trips list uses all 600 and a trip page is complete", async ({ page }) => 
   await page.reload();
   await expect(page.getByTestId("trip-waybill")).toContainText("Cancelled by admin");
   await expect(page.getByTestId("trip-timeline")).toContainText("Safety");
-  await expect(page.getByLabel("Cancel reason")).toBeDisabled();
+  await expect(page.getByTestId("trip-timeline")).toContainText("Rider called about the driver");
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeDisabled();
   if (process.env.SHOTS) {
     for (const width of [390, 768, 1024, 1440]) {

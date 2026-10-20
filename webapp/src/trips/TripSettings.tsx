@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Banknote, EyeOff, ListChecks } from "lucide-react";
 import { ROLE_LABELS, type Role } from "../auth/permissions";
-import { Card, Check, Num, Row } from "../dispatch/fields";
+import { Link } from "react-router";
+import { Card, Check, Row } from "../dispatch/fields";
+import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { MARKETS } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { ACTIONS, PRIVATE_BASE, TRIP_OPS_KEY, saveSettings, type TripOps, type TripSettings } from "./file";
@@ -11,6 +13,7 @@ const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
 /** Super admin only: who sees private trip data, which actions exist, and the money limits. */
 export function TripSettingsView({ ops, rev, loading, editable }: { ops: TripOps; rev: number; loading: boolean; editable: boolean }) {
   const [draft, setDraft] = useState<TripSettings | null>(null);
+  const { policy: refundPolicy } = useRefundPolicy();
   const settings = draft ?? ops.settings;
   const dirty = Boolean(draft) && JSON.stringify(draft) !== JSON.stringify(ops.settings);
   const result = saveSettings(ops, settings);
@@ -20,7 +23,6 @@ export function TripSettingsView({ ops, rev, loading, editable }: { ops: TripOps
     ...others.filter((role) => settings.extraRoles.includes(role) !== ops.settings.extraRoles.includes(role)).map((role) => `${ROLE_LABELS[role]}: ${settings.extraRoles.includes(role) ? "can see" : "cannot see"} numbers and chats`),
     ...(settings.reasonToShow !== ops.settings.reasonToShow ? [`Reason before showing: ${settings.reasonToShow ? "on" : "off"}`] : []),
     ...ACTIONS.filter((item) => settings.actions[item.id] !== ops.settings.actions[item.id]).map((item) => `${item.label}: ${settings.actions[item.id] ? "on" : "off"}`),
-    ...MARKETS.filter((item) => settings.approvalOver[item.id] !== ops.settings.approvalOver[item.id]).map((item) => `${item.name} approval limit: ${ops.settings.approvalOver[item.id]} → ${settings.approvalOver[item.id]} ${SYMBOL[item.id]}`),
   ];
 
   return (
@@ -41,12 +43,13 @@ export function TripSettingsView({ ops, rev, loading, editable }: { ops: TripOps
         <Card title="Actions on a trip" icon={<ListChecks size={18} />} tone="blue" help="Turn an action off and its button is gone from every trip page. Everything done is logged with the admin's name.">
           {ACTIONS.map((item) => <Row key={item.id} label={item.label} help={item.help} on={settings.actions[item.id]} onToggle={(on) => patch({ actions: { ...settings.actions, [item.id]: on } })} />)}
         </Card>
-        <Card title="Second admin for big amounts" icon={<Banknote size={18} />} tone="green" help="Refunds and driver pay changes above the amount wait until another admin approves them.">
+        <Card title="Second admin for big amounts" icon={<Banknote size={18} />} tone="green" help="Refunds and driver pay changes above the amount wait until another admin approves them. One limit per country, the same everywhere (Q25).">
           {MARKETS.map((item) => (
-            <Row key={item.id} label={item.name} help={`In ${item.currency}. 0 means every amount needs a second admin.`}>
-              <Num label={`${item.name} approval limit`} value={settings.approvalOver[item.id]} unit={SYMBOL[item.id]} onChange={(value) => patch({ approvalOver: { ...settings.approvalOver, [item.id]: value } })} />
+            <Row key={item.id} label={item.name} help={`In ${item.currency}.`}>
+              <span className="dx-tag" data-testid={`trip-second-admin-${item.id}`}>Above {refundPolicy.aboveMajor[item.id]} {SYMBOL[item.id]}</span>
             </Row>
           ))}
+          <p className="dx-readonly"><Link to="/settings#refunds">Edit in Settings</Link></p>
         </Card>
       </fieldset>
       {editable ? (

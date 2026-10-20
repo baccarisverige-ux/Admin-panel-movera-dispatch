@@ -1,3 +1,7 @@
+/**
+ * Display words for record statuses. Trip statuses are the contract names in readable form (Q35, X15), the
+ * same words the rider and driver apps use: "driver_to_pickup" is "Driver to pickup", "in_trip" is "In trip".
+ */
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   quoted: "Quoted",
@@ -8,7 +12,7 @@ const STATUS_LABELS: Record<string, string> = {
   driver_to_pickup: "Driver to pickup",
   arrived: "Arrived",
   rider_onboard: "Rider onboard",
-  in_trip: "On a trip",
+  in_trip: "In trip",
   approaching_dropoff: "Approaching drop-off",
   completed: "Completed",
   cancelled_by_rider: "Cancelled by rider",

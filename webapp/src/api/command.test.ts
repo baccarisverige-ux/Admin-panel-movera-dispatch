@@ -175,7 +175,7 @@ await expectStatus(
 
 await api.reset();
 const approvalRev = await api.revision();
-// C-03: the amount comes from the stored payment (250 kr), not from the request, which says 50 kr.
+// C-03: the amount comes from the stored payment (600 kr), not from the request, which says 50 kr.
 const large = await api.command({
   action: "admin.payment.refund",
   targetId: "PAY0200",
@@ -194,7 +194,7 @@ assert((await api.approvals()).filter((row) => row.targetId === "PAY0200" && row
 const paymentAfterApprovalRequest = (await api.list("payments", null)).find((row) => row.id === "PAY0200");
 assert(paymentAfterApprovalRequest?.status === "captured", "pending approval does not mutate the payment");
 const pendingApproval = (await api.approvals()).find((row) => row.targetId === "PAY0200" && row.status === "pending");
-assert(pendingApproval?.amountOre === 25_000 && pendingApproval.currency === "SEK", "the approval holds the stored amount and its currency");
+assert(pendingApproval?.amountOre === 60_000 && pendingApproval.currency === "SEK", "the approval holds the stored amount and its currency");
 assert(pendingApproval, "pending approval can be decided");
 
 const requesterDecisionRev = await api.revision();
@@ -240,7 +240,7 @@ const rejectRequest = await api.command({
   patch: { status: "refunded" },
   before: "captured",
   after: "refunded",
-  amountOre: 25_000,
+  amountOre: 60_000,
 });
 assert(rejectRequest.status === "pending_approval", "second large refund also waits for approval");
 const rejectApproval = (await api.approvals()).find((row) => row.targetId === "PAY0200" && row.status === "pending");
@@ -273,15 +273,17 @@ await api.reset();
 const noAmount = await requestAgain("refund-without-amount");
 assert(noAmount.status === "pending_approval", "a refund with no amount is not a 0 kr refund");
 
-// C-08: the threshold follows the payment's currency: 58,10 € needs a second admin (over 20 €) ...
+// C-08 / Q25: the limit follows the payment's country: 58,10 € needs a second admin (over the default 50 €) ...
 const refundOf = async (targetId: string, key: string) =>
   api.command({ action: "admin.payment.refund", targetId, reason: "Charged twice", actorId: "nora", idempotencyKey: key, expectedRev: await api.revision(), collection: "payments", patch: { status: "refunded" }, before: "captured", after: "refunded" });
 assert((await refundOf("PAY1002", "fr-refund")).status === "pending_approval", "a 58,10 € refund needs a second admin");
-// ... and 29,050 DT does not (under 60 DT); with the flat 20 000 minor-unit rule it did (20 DT).
+// ... and 29,050 DT does not (under 150 DT); with the flat 20 000 minor-unit rule it did (20 DT).
 assert((await refundOf("PAY2002", "tn-refund")).status === "committed", "a 29,050 DT refund commits");
 assert((await api.approvals()).find((row) => row.targetId === "PAY1002")?.currency === "EUR", "the approval stores the currency");
 
-// C-03: a full trip refund over the threshold waits for a second admin too, and approving it refunds the trip.
+// C-03: a full trip refund over the limit waits for a second admin too, and approving it refunds the trip.
+// Q25: the limit is the Settings value; with France at 40 €, a 45,50 € trip refund is over it.
+await api.command({ action: "admin.refundPolicy.save", targetId: "refund limits", reason: "Planned change", actorId: "nora", idempotencyKey: "policy-fr-40", expectedRev: await api.revision(), sliceKey: "refundPolicy", value: { draftRev: 2, aboveMajor: { SE: 500, FR: 40, TN: 150 } }, before: "", after: "" });
 const tripRefund = await api.command({ action: "admin.trip.refund", targetId: "T1013", reason: "Charged twice", actorId: "nora", idempotencyKey: "trip-refund", expectedRev: await api.revision(), collection: "trips", patch: { kind: "refunded" }, before: "", after: "refunded" });
 assert(tripRefund.status === "pending_approval", "a 45,50 € trip refund needs a second admin");
 assert((await api.list("trips", null)).find((row) => row.id === "T1013")?.kind !== "refunded", "the trip is not refunded before approval");

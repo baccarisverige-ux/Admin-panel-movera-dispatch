@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft, Gavel, RefreshCcw } from "lucide-react";
 import { useApprovals, useRecords, useSlice } from "../api/hooks";
@@ -6,7 +7,8 @@ import { useSession } from "../auth/SessionContext";
 import { formatMoney, market } from "../markets/markets";
 import { METHOD_LABELS, PAY_OPS_KEY, emptyPayOps, factsOf, normalizePayOps, paySplit, refundLimitMinor, retryPlan, type PayOps } from "../payments/desk";
 import { Cards } from "../reports/ui";
-import { REFUND_APPROVAL_MINOR } from "../commands/registry";
+import { needsSecondAdmin, refundAboveMinor } from "../payments/refundPolicy";
+import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { statusLabel } from "../domain/labels";
 import { paymentTimeline, refundRows } from "../payments/ledger";
 import { CommandButton } from "../ui/CommandButton";
@@ -20,19 +22,12 @@ export function PaymentPage() {
   const riders = useRecords("riders", null);
   const trips = useRecords("trips", null);
   const opsSlice = useSlice<PayOps>(PAY_OPS_KEY, emptyPayOps());
+  const { policy: refundPolicy } = useRefundPolicy();
   const [now] = useState(() => Date.now());
   const row = payments.data?.find((item) => item.id === id);
   if (payments.isLoading) return <p className="state-line">Loading payment.</p>;
   if (!row) {
-    return (
-      <div className="page-heading">
-        <div>
-          <h2>Payment {id}</h2>
-          <p>That payment is not in the demo ledger.</p>
-          <Link to="/payments">Back to payments</Link>
-        </div>
-      </div>
-    );
+    return <NotFoundRecord kind="Payment" id={id} list="/payments" listLabel="payments" />;
   }
 
   const payment = row;
@@ -40,9 +35,9 @@ export function PaymentPage() {
   const ops = normalizePayOps(opsSlice.value);
   const facts = factsOf(payment, riders.data ?? [], trips.data ?? [], ops, now);
   const money = (minor: number) => formatMoney(minor, facts.country);
-  // The second-admin threshold is per currency (200 kr, 20 €, 60 DT); the server applies the same table.
-  const threshold = REFUND_APPROVAL_MINOR[market(facts.country).currency];
-  const needsSecond = amount >= threshold && payment.status === "captured";
+  // Q25: the one second-admin rule from Settings, per country (default above 500 kr, 50 €, 150 DT); the server applies the same setting.
+  const threshold = refundAboveMinor(refundPolicy, facts.country);
+  const needsSecond = needsSecondAdmin(refundPolicy, facts.country, amount) && payment.status === "captured";
   const pendingApproval = (approvals.data ?? []).find((item) => item.targetId === payment.id && item.action === "admin.payment.refund" && item.status === "pending");
   const split = paySplit(amount, facts.country);
   const plan = payment.status === "failed" ? retryPlan(payment, facts, ops, now) : null;
@@ -131,7 +126,7 @@ export function PaymentPage() {
         </CommandButton>
 
         {pendingApproval ? <p><Link to="/audit">Open approval queue</Link></p> : null}
-        <p className="fn-help">{limit === null ? "You have no refund limit." : `Your refund limit is ${money(limit)}. Refunds of ${money(threshold)} or more also need a second admin.`}</p>
+        <p className="fn-help">{limit === null ? "You have no refund limit." : `Your refund limit is ${money(limit)}.`} Refunds above {money(threshold)} also need a second admin (<Link to="/settings#refunds">set in Settings</Link>).</p>
       </article>
     </div>
   );

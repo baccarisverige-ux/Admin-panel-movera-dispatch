@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft, BarChart3, History, KeyRound, ShieldCheck } from "lucide-react";
 import { useAudit } from "../api/hooks";
@@ -22,12 +23,7 @@ export function AdminPage() {
   const [notice, setNotice] = useState("");
   const editable = Boolean(session.agent && can(session.agent.role, "team.edit"));
   if (!agent) {
-    return (
-      <div className="dx-page pl-page">
-        <button data-command="admin.team.view" type="button" className="dash-btn ghost dx-back" onClick={() => navigate("/team")}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
-        <p className="dx-calm">No admin with that id.</p>
-      </div>
-    );
+    return <NotFoundRecord kind="Admin" id={adminId} list="/team" listLabel="the team" />;
   }
   const assigned = custom ?? ops.assigned[agent.id] ?? "";
   const customRole = ops.customRoles.find((item) => item.id === assigned);

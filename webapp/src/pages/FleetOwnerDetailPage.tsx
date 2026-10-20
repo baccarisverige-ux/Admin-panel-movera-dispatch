@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Building2, Car, Hash, Mail, MessageSquare, Phone, StickyNote, Users } from "lucide-react";
 import { useAudit, useRecords, useSlice } from "../api/hooks";
@@ -86,15 +87,7 @@ export function FleetOwnerDetailPage() {
 
   if (owners.isLoading || store.loading) return <p className="state-line">Loading fleet owner.</p>;
   if (!owner) {
-    return (
-      <div className="page-heading">
-        <div>
-          <h2>Fleet owner not found</h2>
-          <p>The owner is outside your active scope or does not exist.</p>
-          <Link to="/fleets">Back to fleet owners</Link>
-        </div>
-      </div>
-    );
+    return <NotFoundRecord kind="Fleet owner" id={ownerId} list="/fleets" listLabel="fleet owners" />;
   }
 
   const role = agent?.role ?? "viewer";

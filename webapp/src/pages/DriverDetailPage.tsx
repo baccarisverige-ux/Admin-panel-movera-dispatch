@@ -1,4 +1,5 @@
 import { logExport } from "../reports/activityLog";
+import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
@@ -91,15 +92,7 @@ export function DriverDetailPage() {
 
   if (drivers.isLoading || vehicles.isLoading || store.loading) return <p className="state-line">Loading driver.</p>;
   if (!driver) {
-    return (
-      <div className="page-heading">
-        <div>
-          <h2>Driver not found</h2>
-          <p>The driver is outside your active scope or does not exist.</p>
-          <Link to="/drivers">Back to drivers</Link>
-        </div>
-      </div>
-    );
+    return <NotFoundRecord kind="Driver" id={driverId} list="/drivers" listLabel="drivers" />;
   }
   if (agent?.scope.fleetPartnerId && driver.fleetId !== agent.scope.fleetPartnerId) {
     return (

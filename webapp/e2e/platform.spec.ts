@@ -99,7 +99,7 @@ test("audit: search, filters, details with who and before/after, and export", as
 test("to confirm: a money approval shows in the inbox and a product value is confirmed", async ({ page }) => {
   await session(page);
   await page.goto("/audit");
-  await page.getByRole("button", { name: "Refund 250 kr" }).click();
+  await page.getByRole("button", { name: "Refund 600 kr" }).click();
   const modal = page.locator(".modal.open").last();
   await modal.getByLabel("Type RF-LARGE to confirm").fill("RF-LARGE");
   await modal.getByLabel("Reason", { exact: true }).selectOption("Charged twice");
@@ -108,7 +108,7 @@ test("to confirm: a money approval shows in the inbox and a product value is con
   await page.goto("/confirm");
   await expect(page.getByRole("heading", { level: 2, name: "To confirm" })).toBeVisible();
   const inbox = page.getByRole("list", { name: "Inbox" });
-  await expect(inbox).toContainText("250,00 kr for RF-LARGE");
+  await expect(inbox).toContainText("600,00 kr for RF-LARGE");
   await expect(inbox.getByRole("button", { name: "Approve" }).first()).toBeDisabled();
   await page.getByRole("button", { name: "Confirm quote" }).click();
   await page.getByLabel("Value to confirm").fill("90 seconds");

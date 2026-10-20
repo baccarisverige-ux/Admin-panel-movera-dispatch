@@ -169,10 +169,12 @@ function featureOn(base: Common, key: "reservations" | "wallet", zoneId: string,
   return effectiveValue(base.config, key, featureContext(zoneId, base.info.id, app, now)).value === "on";
 }
 
-/** One flag per app (contract §5): the config feature with its overrides, the app's own switch, and Dispatch › Reservations on. */
-function scheduledRides(base: Common, zoneId: string, app: AppId, now: string): boolean {
-  const own = app === "rider" ? switchOn(base, "rider", "scheduled") && switchOn(base, "rider", "bookLater") : switchOn(base, "driver", "scheduledRides");
-  return featureOn(base, "reservations", zoneId, app, now) && own && base.zone.reservation.on;
+/**
+ * One flag per app (contract §5), owned by Dispatch › Reservations (Q26, X18). The old Settings switches
+ * (Scheduled rides, Book later, Reservations row, per-zone Reservations) are read-only and no longer decide it.
+ */
+function scheduledRides(base: Common): boolean {
+  return base.zone.reservation.on;
 }
 
 function waitingFor(base: Common, categoryId: string) {
@@ -254,7 +256,7 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     ...header(zoneId, state, base),
     catalog: catalog(base),
     features: {
-      scheduledRides: scheduledRides(base, zoneId, "rider", state.now),
+      scheduledRides: scheduledRides(base),
       wallet: switchOn(base, "rider", "wallet") && featureOn(base, "wallet", zoneId, "rider", state.now),
       pin: switchOn(base, "rider", "pin"),
       shareTrip: switchOn(base, "rider", "shareTrip"),
@@ -320,7 +322,7 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     ...header(zoneId, state, base),
     catalog: catalog(base),
     features: {
-      scheduledRides: scheduledRides(base, zoneId, "driver", state.now),
+      scheduledRides: scheduledRides(base),
       performance: ["showRating", "showAcceptance", "showCancellation"].some((id) => switchOn(base, "driver", id)),
       showRating: switchOn(base, "driver", "showRating"),
       showAcceptance: switchOn(base, "driver", "showAcceptance"),

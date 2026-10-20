@@ -1,5 +1,6 @@
 import { useDialogFocus } from "./useDialogFocus";
 import { useState, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import { useCommands } from "../api/hooks";
 import type { CommandResult } from "../api/create";
 import { can } from "../auth/permissions";
@@ -38,6 +39,16 @@ type CommandButtonProps = {
    * keeps Confirm disabled until "Yes, I'm sure" is ticked.
    */
   largeChanges?: readonly string[];
+  /**
+   * The dialog's reason list as codes with their texts (Q27: the trip cancel reason codes). None is preselected;
+   * the chosen code goes into the patch under `reasonField`, and its text is the audit reason.
+   */
+  reasonChoices?: readonly { value: string; label: string }[];
+  reasonField?: string;
+  /** The label of the reason list ("Reason" by default). */
+  reasonLabel?: string;
+  /** Also offer an optional note in the same dialog; it is added to the audit reason. */
+  optionalNote?: boolean;
   children: ReactNode;
   "aria-label"?: string;
 };
@@ -68,6 +79,10 @@ export function CommandButton({
   onDone,
   retryLabel,
   largeChanges,
+  reasonChoices,
+  reasonField,
+  reasonLabel = "Reason",
+  optionalNote = false,
   children,
   "aria-label": ariaLabel,
 }: CommandButtonProps) {
@@ -77,31 +92,37 @@ export function CommandButton({
   const denied = Boolean(spec && session.agent && !can(session.agent.role, spec.permission));
   const disabledReason = !spec ? "Action is not registered." : denied ? "Your role cannot perform this action." : undefined;
   const reasons = reasonsFor(command);
-  const choose = mustChooseReason(command);
+  const coded = Boolean(reasonChoices);
+  const choose = coded || mustChooseReason(command);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>(() => initialReason(command));
   const [otherText, setOtherText] = useState("");
   const [typed, setTyped] = useState("");
   const [lastReason, setLastReason] = useState("");
   const [sure, setSure] = useState(false);
+  const [note, setNote] = useState("");
   const askSure = Boolean(largeChanges && largeChanges.length);
   const mustType = confirmTarget ? (targetId ?? "") : "";
   const dialogRoot=useDialogFocus(open,()=>setOpen(false));
-  const chosen = auditReason(reason, otherText);
+  const codeLabel = reasonChoices?.find((item) => item.value === reason)?.label ?? "";
+  const chosen = coded ? (codeLabel ? [codeLabel, note.trim()].filter(Boolean).join(" · ") : "") : [auditReason(reason, otherText), optionalNote ? note.trim() : ""].filter(Boolean).join(" · ");
   const confirmed = (mustType.length === 0 || typed === mustType) && chosen.length > 0 && (!askSure || sure);
-  const blocked = disabled || commands.busy || commands.phase === "submitting" || !spec || denied;
+  // While any command runs, every command button waits (C-16, Q31): disabled, with a spinner and "Please wait".
+  const waiting = commands.busy || commands.phase === "submitting";
+  const blocked = disabled || waiting || !spec || denied;
 
   // Every opening starts clean: no half-typed id or reason carried over from a cancelled dialog.
   // Cancel and refund dialogs open with no reason, so Confirm waits until one is picked (A-O1).
   function openDialog() {
-    setReason(initialReason(command));
+    setReason(coded ? "" : initialReason(command));
+    setNote("");
     setOtherText("");
     setTyped("");
     setSure(false);
     setOpen(true);
   }
 
-  function fire(why: string) {
+  function fire(why: string, code?: string) {
     if (!session.agent && command === "admin.auth.pickAgent") {
       onDone?.();
       return;
@@ -115,7 +136,7 @@ export function CommandButton({
       entityState,
       amountOre,
       collection,
-      patch: patch ? { ...patch, ...(storeReason ? { notes: why } : {}) } : undefined,
+      patch: patch ? { ...patch, ...(storeReason ? { notes: why } : {}), ...(reasonField && code ? { [reasonField]: code } : {}) } : undefined,
       scope,
       expectedRev,
       expectedSliceRev,
@@ -135,7 +156,8 @@ export function CommandButton({
         type={type}
         aria-label={ariaLabel}
         disabled={blocked}
-        title={title ?? disabledReason}
+        aria-busy={waiting || undefined}
+        title={waiting && !disabled ? "Please wait: another action is still running." : title ?? disabledReason}
         onClick={(event) => {
           event.currentTarget.focus();
           if (!spec) return;
@@ -144,20 +166,21 @@ export function CommandButton({
         }}
       >
         {children}
+        {waiting && !disabled ? <span className="cmd-wait" data-testid="command-wait"><Loader2 size={13} className="cmd-spin" aria-hidden="true" /> Please wait</span> : null}
       </button>
       {retryLabel ? (
         <button
           data-command={command}
           className="secondary-btn"
           type="button"
-          disabled={blocked || !lastReason || (commands.phase !== "unknown" && commands.phase !== "rejected")}
-          title={title ?? disabledReason ?? (commands.phase === "unknown" || commands.phase === "rejected" ? undefined : "Nothing to retry.")}
+          disabled={blocked || !lastReason || commands.phase !== "rejected"}
+          title={title ?? disabledReason ?? (commands.phase === "rejected" ? undefined : "Nothing to retry.")}
           onClick={() => fire(lastReason)}
         >
           {retryLabel}
         </button>
       ) : null}
-      {commands.message ? <p className="state-line">{commands.message}</p> : null}
+      {commands.message ? <p className="state-line" role={commands.phase === "checking" ? "status" : undefined}>{commands.message}</p> : null}
       {open ? (
         <div ref={dialogRoot} tabIndex={-1} className="modal open" role="dialog" aria-modal="true" aria-label={spec?.label}>
           <form
@@ -170,14 +193,14 @@ export function CommandButton({
                 onValidationError?.(validationError);
                 return;
               }
-              fire(chosen);
+              fire(chosen, coded ? reason : undefined);
             }}
           >
             <h3>{spec?.label}</h3>
             <p>This acts on {targetId ?? spec?.label}.</p>
             {askSure ? (
               <div className="state-line" role="alert" data-testid="large-change-warning">
-                <strong>Are you sure?</strong> {largeChanges!.length === 1 ? "This price changes" : "These prices change"} by more than 50% from the published value:
+                <strong>Are you sure?</strong> {largeChanges!.length === 1 ? "This value changes" : "These values change"} by more than 50% from the published value:
                 <ul>
                   {largeChanges!.slice(0, 8).map((line) => <li key={line}>{line}</li>)}
                   {largeChanges!.length > 8 ? <li>and {largeChanges!.length - 8} more</li> : null}
@@ -185,15 +208,23 @@ export function CommandButton({
               </div>
             ) : null}
             <label>
-              Reason
-              <select aria-label="Reason" value={reason} required={choose} onChange={(event) => setReason(event.target.value)}>
+              {reasonLabel}
+              <select aria-label={reasonLabel} value={reason} required={choose} onChange={(event) => setReason(event.target.value)}>
                 {choose ? <option value="" disabled>Choose a reason</option> : null}
-                {reasons.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
+                {reasonChoices
+                  ? reasonChoices.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)
+                  : reasons.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
               </select>
             </label>
-            {reason === OTHER_REASON ? (
+            {coded || optionalNote ? (
+              <label>
+                Note (optional)
+                <input aria-label="Note (optional)" value={note} maxLength={200} onChange={(event) => setNote(event.target.value)} placeholder="Anything the next admin should know" />
+              </label>
+            ) : null}
+            {!coded && reason === OTHER_REASON ? (
               <label>
                 Describe the reason
                 <input aria-label="Describe the reason" value={otherText} maxLength={200} required onChange={(event) => setOtherText(event.target.value)} />

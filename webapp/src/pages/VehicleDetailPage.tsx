@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useNavigate, useParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Banknote, Camera, CarFront, CheckCircle2, FileText, ListChecks, XCircle } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
@@ -64,15 +65,7 @@ export function VehicleDetailPage() {
 
   if (vehicles.isLoading || drivers.isLoading || fleets.isLoading || store.loading) return <p className="state-line">Loading vehicle.</p>;
   if (!record || !profile) {
-    return (
-      <div className="page-heading">
-        <div>
-          <h2>Vehicle not found</h2>
-          <p>This vehicle is not in your active scope.</p>
-          <Link to="/vehicles">Back to vehicles</Link>
-        </div>
-      </div>
-    );
+    return <NotFoundRecord kind="Vehicle" id={id} list="/vehicles" listLabel="vehicles" />;
   }
   if (agent?.scope.fleetPartnerId && record.fleetId !== agent.scope.fleetPartnerId) {
     return (

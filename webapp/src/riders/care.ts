@@ -1,4 +1,5 @@
 import { market, type MarketId } from "../markets/markets.ts";
+import { defaultRefundPolicy, needsSecondAdmin, type RefundPolicy } from "../payments/refundPolicy.ts";
 import { countryOf, hash, type Booking, type RiderProfile, type RiderRecord } from "./profile.ts";
 
 /**
@@ -110,7 +111,6 @@ export type RiderCare = {
 
 const DAY = 86_400_000;
 export const CREDIT_MAX: Record<MarketId, number> = { SE: 500, FR: 50, TN: 150 };
-export const REFUND_APPROVAL: Record<MarketId, number> = { SE: 500, FR: 50, TN: 150 };
 
 export function emptyRiderCare(): RiderCare {
   return {
@@ -261,7 +261,8 @@ export function addCredit(care: RiderCare, rider: RiderRecord, amount: number, r
   return { care: bump(care, { credits: [credit, ...care.credits] }) };
 }
 
-export function requestRefund(care: RiderCare, rider: RiderRecord, booking: Booking | undefined, amount: number, destination: RefundDestination, reason: string, by: string, now: number): { care: RiderCare; error?: string; needsApproval: boolean } {
+/** `policy` is the one second-admin rule from Settings (Q25); the defaults apply until it is loaded. */
+export function requestRefund(care: RiderCare, rider: RiderRecord, booking: Booking | undefined, amount: number, destination: RefundDestination, reason: string, by: string, now: number, policy: RefundPolicy = defaultRefundPolicy()): { care: RiderCare; error?: string; needsApproval: boolean } {
   const country = countryOf(rider);
   if (!booking) return { care, error: "Pick the ride to refund.", needsApproval: false };
   const paid = toMajor(booking.fareMinor, country);
@@ -269,7 +270,7 @@ export function requestRefund(care: RiderCare, rider: RiderRecord, booking: Book
   if (!(amount > 0)) return { care, error: "Enter an amount above 0.", needsApproval: false };
   if (amount + already > paid + 0.001) return { care, error: `The rider paid ${paid.toFixed(market(country).minorUnits === 1000 ? 3 : 2)} for this ride${already ? `, ${already} already refunded` : ""}.`, needsApproval: false };
   if (!reason.trim()) return { care, error: "Write why the rider is refunded.", needsApproval: false };
-  const needsApproval = amount > REFUND_APPROVAL[country];
+  const needsApproval = needsSecondAdmin(policy, country, toMinor(amount, country));
   const refund: Refund = { id: `RF-${rider.id}-${care.refunds.length + 1}`, riderId: rider.id, bookingId: booking.id, amount, currency: country, destination, reason: reason.trim(), status: needsApproval ? "waiting" : "sent", by, at: new Date(now).toISOString(), decidedBy: null };
   return { care: bump(care, { refunds: [refund, ...care.refunds] }), needsApproval };
 }

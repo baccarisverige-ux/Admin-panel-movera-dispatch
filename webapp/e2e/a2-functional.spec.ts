@@ -220,7 +220,6 @@ test("UI-13: a long unbroken note is capped and wraps inside its card", async ({
 test("C-10: a screen loaded before someone else's change gets a conflict instead of overwriting it", async ({ page }) => {
   await session(page);
   await page.goto("/trips/T0004");
-  await page.getByLabel("Cancel reason").selectOption("admin_operational");
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeEnabled();
 
   // Another admin, in another tab, commits a change after this screen was read.
@@ -234,16 +233,14 @@ test("C-10: a screen loaded before someone else's change gets a conflict instead
   await other.close();
 
   await page.getByRole("button", { name: "Cancel trip" }).click();
-  await dialog(page).getByLabel("Type T0004 to confirm").fill("T0004");
-  await dialog(page).getByLabel("Reason", { exact: true }).selectOption({ index: 1 });
+  await dialog(page).getByLabel("Cancel reason").selectOption("admin_operational");
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText(/Someone else changed this/).first()).toBeVisible();
   await expect(page.getByTestId("trip-waybill")).not.toContainText("Cancelled by admin");
 
   // The conflict reloaded the screen, so the next try goes through.
   await page.getByRole("button", { name: "Cancel trip" }).click();
-  await dialog(page).getByLabel("Type T0004 to confirm").fill("T0004");
-  await dialog(page).getByLabel("Reason", { exact: true }).selectOption({ index: 1 });
+  await dialog(page).getByLabel("Cancel reason").selectOption("admin_operational");
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByTestId("trip-waybill")).toContainText("Cancelled by admin");
 });

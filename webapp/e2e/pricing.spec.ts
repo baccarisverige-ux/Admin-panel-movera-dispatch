@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
+/** Q24: at 1280 px and below the country picker, Inbox and Sign out are in the top bar's "⋯" menu. */
+async function topbarMore(page: Page) {
+  const more = page.getByRole("button", { name: "More options", exact: true });
+  if ((await more.isVisible()) && (await more.getAttribute("aria-expanded")) !== "true") await more.click();
+}
+
 async function signIn(page: Page) {
   await page.goto("/");
   await page.getByLabel("Email").fill("nora@movera.se");
@@ -24,6 +30,7 @@ test("test a ride follows the zone price list, in each country's currency", asyn
   await quote.getByLabel("Quote baby seats").fill("1");
   await expect(page.getByTestId("quote-lines")).toContainText("1 baby seat");
 
+  await topbarMore(page);
   await page.getByRole("radio", { name: "France" }).click();
   await expect(page.getByText(/prices in EUR, VAT included/)).toBeVisible();
   await expect(page.getByLabel("Paris Centre Movera Price per km")).toHaveValue("1.15");

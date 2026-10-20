@@ -73,7 +73,7 @@ test("R10 payout requires reviewed bank and stays paid once", async ({ page }) =
 test("R10 large refund requires and executes a second-agent decision", async ({ page }) => {
   await session(page);
   await page.goto("/payments/PAY0200");
-  await expect(page.getByText("250,00 kr")).toBeVisible();
+  await expect(page.getByText("600,00 kr")).toBeVisible();
   await expect(page.getByRole("button", { name: "Request refund approval" })).toBeEnabled();
 
   await page.getByRole("button", { name: "Request refund approval" }).click();
@@ -84,7 +84,7 @@ test("R10 large refund requires and executes a second-agent decision", async ({ 
   await page.goto("/audit");
   const approvalsPanel = page.getByRole("heading", { level: 3, name: "Pending approvals" }).locator("..");
   const row = approvalsPanel.getByRole("row", { name: /PAY0200/ });
-  await expect(row).toContainText("250,00 kr");
+  await expect(row).toContainText("600,00 kr");
   await expect(row.getByRole("button", { name: "Approve" })).toBeDisabled();
 
   // Ops can decide approvals but cannot refund, so it cannot approve a refund (C-02).

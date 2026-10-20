@@ -49,6 +49,7 @@ import {
   publishZones,
   stopManualSurges,
   undoLastPublish,
+  largeStoreChanges,
   validateZoneBook,
   zoneBook,
   zoneLive,
@@ -237,7 +238,7 @@ export function PricingPage() {
         <button data-command="admin.pricing.addCategory" type="button" className="quick-tile" onClick={() => setCatsOpen(true)}>
           <Tags size={18} aria-hidden="true" /><span><b>Categories</b><small>{categories.length} active</small></span>
         </button>
-        <CommandButton command="admin.pricing.undo" className="quick-tile" targetId={`pricing-rev-${store.history[0]?.rev ?? 0}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after="undo last publish" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={undo.store} disabled={!canPublish || Boolean(undo.error)} title={undo.error} onDone={() => setNotice(`Revision ${store.history[0]?.rev} undone.`)}>
+        <CommandButton command="admin.pricing.undo" className="quick-tile" targetId={`pricing-rev-${store.history[0]?.rev ?? 0}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after="undo last publish" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={undo.store} disabled={!canPublish || Boolean(undo.error)} title={undo.error} largeChanges={undo.error ? undefined : largeStoreChanges(store, undo.store)} onDone={() => setNotice(`Revision ${store.history[0]?.rev} undone.`)}>
           <Undo2 size={18} aria-hidden="true" /><span><b>Undo last publish</b><small>{store.history[0] ? `Revision ${store.history[0].rev}` : "Nothing yet"}</small></span>
         </CommandButton>
       </section>

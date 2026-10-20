@@ -86,6 +86,8 @@ const RULES: [ReasonFamily, RegExp][] = [
   ["people", /^admin\.team\./],
   ["document", /^admin\.(driver|fleetOwner|vehicle|payment|rider)\.(review|approveAll|requestInfo|reviewRegistration|bankReview|approveBank|rejectBank|identity|update)$/],
   ["approval", /^admin\.approval\.|^admin\.(dispatch|config)\.(approve|decline)$|^admin\.payout\.approveRun$/],
+  // Saving the refund limits in Settings is a settings change, not a refund.
+  ["change", /^admin\.refundPolicy\./],
   ["refund", /[rR]efund|\.credit$|walletCredit|issueVoucher/],
   ["paid", /\.markPaid$/],
   ["cancel", /^admin\.(trip|reservation)\.(cancel|noShow)$/],

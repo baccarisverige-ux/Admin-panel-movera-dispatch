@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from "react-router";
+import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useMemo, useState } from "react";
 import { ArrowLeft, Banknote, Car, Clock3, Coins, Eye, FileText, Flag, History, ListOrdered, Lock, MapPinned, MessagesSquare, Radar, Route as RouteIcon, ShieldCheck, Star, Users, Wrench } from "lucide-react";
 import { useAdminApi } from "../api/AdminApiContext";
@@ -100,7 +101,6 @@ export function TripPage() {
   const [waitingInput, setWaitingInput] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [notice, setNotice] = useState("");
-  const [cancelCode, setCancelCode] = useState("");
 
   const eligible = useMemo(
     () => (trip ? offersFor(trip, drivers.data ?? [], vehicles.data ?? []) : []),
@@ -111,15 +111,7 @@ export function TripPage() {
 
   if (trips.isLoading || drivers.isLoading || vehicles.isLoading) return <p className="state-line">Loading trip.</p>;
   if (!trip || !route) {
-    return (
-      <div className="page-heading">
-        <div>
-          <h2>Trip {tripId}</h2>
-          <p>That trip is not in the demo data or is outside your active scope.</p>
-          <Link to="/trips">Back to trips</Link>
-        </div>
-      </div>
-    );
+    return <NotFoundRecord kind="Trip" id={tripId} list="/trips" listLabel="trips" />;
   }
 
   const country = countryOf(trip.zoneId);
@@ -138,9 +130,6 @@ export function TripPage() {
   const completeWhy = completeBlock(trip.status);
   // Admin cancel reasons: contract admin_* codes, texts from Dispatch › Cancel reasons (the one editor).
   const adminReasons = liveCountry(normalizeDispatchBook(dispatchSlice.value), country).cancelReasons.groups.admin;
-  // No cancel reason is preselected: the admin picks one before Cancel trip is enabled (A-O1).
-  const cancelReasonCode = adminReasons.some((item) => item.code === cancelCode) ? cancelCode : "";
-  const cancelPick = cancelWhy ? null : cancelReasonCode ? null : "Choose a cancel reason first.";
   const fareAttempt = adjustFare(asTrip(trip), Number(farePercent));
   const adjustWhy = adjustBlock(trip.status) ?? fareAttempt.error ?? null;
   const waitingValue = waitingInput === "" ? fare.waitingMin : Number(waitingInput);
@@ -372,28 +361,24 @@ export function TripPage() {
             <div className="op-live-body" data-testid="trip-actions">
 
               <p data-testid="cancel-block">{cancelWhy ?? "Cancel is allowed in this state."}</p>
-              <label>
-                Cancel reason
-                <select aria-label="Cancel reason" value={cancelReasonCode} onChange={(event) => setCancelCode(event.target.value)} disabled={Boolean(cancelWhy)}>
-                  <option value="" disabled>Choose a reason</option>
-                  {adminReasons.map((item) => <option key={item.code} value={item.code}>{cancelReasonLabel(item.title, "en") || item.code}</option>)}
-                </select>
-              </label>
               {cancelWhy ? (
                 <button data-command="admin.trip.cancel" className="secondary-btn" type="button" disabled title={cancelWhy}>Cancel trip</button>
               ) : (
+                // Q27: one dialog, the cancel reason code (none preselected, A-O1) and an optional note.
                 <CommandButton
                   command="admin.trip.cancel"
                   className="secondary-btn"
                   targetId={trip.id}
+                  confirmTarget={false}
                   entityState={trip.status}
                   scope={trip.zoneId}
                   collection="trips"
                   before={trip.status}
                   after="cancelled_by_admin"
-                  patch={{ status: "cancelled_by_admin", previousStatus: trip.status, cancelReasonCode }}
-                  disabled={Boolean(cancelPick)}
-                  title={cancelPick ?? undefined}
+                  patch={{ status: "cancelled_by_admin", previousStatus: trip.status }}
+                  reasonChoices={adminReasons.map((item) => ({ value: item.code, label: cancelReasonLabel(item.title, "en") || item.code }))}
+                  reasonField="cancelReasonCode"
+                  reasonLabel="Cancel reason"
                   storeReason
                 >
                   Cancel trip

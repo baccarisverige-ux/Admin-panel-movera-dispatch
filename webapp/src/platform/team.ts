@@ -57,7 +57,8 @@ export const PERMISSION_GROUPS: { label: string; items: { id: string; label: str
 export const PERMISSIONS = PERMISSION_GROUPS.flatMap((group) => group.items);
 
 export type CustomRole = { id: string; name: string; base: Role; permissions: string[]; createdBy: string; createdAt: string };
-export type RoleLimit = { refund: { on: boolean; max: number }; credit: { on: boolean; max: number }; secondAbove: { on: boolean; amount: number } };
+/** The second-admin rule is not here: it is one limit per country in Settings (Q25, payments/refundPolicy.ts). */
+export type RoleLimit = { refund: { on: boolean; max: number }; credit: { on: boolean; max: number } };
 export type Security = { twoStep: Record<Role, boolean>; idle: { on: boolean; minutes: number } };
 export type TeamOps = { draftRev: number; customRoles: CustomRole[]; limits: Record<Role, RoleLimit>; security: Security; assigned: Record<string, string> };
 
@@ -70,7 +71,7 @@ export function permissionsOf(role: Role): string[] {
 
 function limit(role: Role): RoleLimit {
   const money = role === "super" || role === "finance" || role === "ops";
-  return { refund: { on: money, max: role === "super" ? 5000 : 1000 }, credit: { on: money || role === "support", max: role === "support" ? 100 : 500 }, secondAbove: { on: true, amount: 200 } };
+  return { refund: { on: money, max: role === "super" ? 5000 : 1000 }, credit: { on: money || role === "support", max: role === "support" ? 100 : 500 } };
 }
 
 export function emptyTeamOps(): TeamOps {
@@ -130,7 +131,6 @@ export function roleChanges(role: CustomRole): { added: string[]; removed: strin
 
 export function limitError(value: RoleLimit): string | null {
   if ((value.refund.on && value.refund.max <= 0) || (value.credit.on && value.credit.max <= 0)) return "Limits must be more than zero.";
-  if (value.secondAbove.on && value.secondAbove.amount < 0) return "The second-admin amount must be zero or more.";
   return null;
 }
 

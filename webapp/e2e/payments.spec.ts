@@ -29,8 +29,17 @@ test("a timed-out double click still refunds once", async ({ page }) => {
   await expect(modal.getByLabel("Reason", { exact: true })).toHaveValue("");
   await expect(modal.getByRole("button", { name: "Confirm" })).toBeDisabled();
   await modal.getByLabel("Reason", { exact: true }).selectOption("Charged twice");
+  // C-14: record every status line shown, so the short "Checking…" step is seen however fast it passes.
+  await page.evaluate(() => {
+    const seen: string[] = ((window as unknown as { __lines: string[] }).__lines = []);
+    new MutationObserver(() => document.querySelectorAll(".state-line").forEach((node) => { const text = node.textContent ?? ""; if (!seen.includes(text)) seen.push(text); })).observe(document.body, { subtree: true, childList: true, characterData: true });
+  });
   await modal.getByRole("button", { name: "Confirm" }).dblclick();
-  await expect(page.getByText("Unknown. Check the audit before trying again.")).toBeVisible();
+  // A slow command says "Checking…", re-checks the server, then shows Done: it never stays on "Unknown".
+  await expect(page.getByText(/^Done\. Saved in demo\./)).toBeVisible();
+  const lines = await page.evaluate(() => (window as unknown as { __lines: string[] }).__lines);
+  expect(lines.some((line) => line.startsWith("Checking…"))).toBe(true);
+  expect(lines.some((line) => /Unknown/.test(line))).toBe(false);
   await expect(page.getByTestId("payment-timeline")).toContainText("Refunded");
   await expect(page.getByTestId("refund-count")).toHaveText("1");
   // Nothing is left to retry once the refund went through.

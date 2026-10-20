@@ -6,6 +6,7 @@ import { emptyHandoverOps, handOver, markRead, unread } from "./handover/shift.t
 import { defaultZoneBook } from "./pricing/zonePricing.ts";
 import { tripIndex } from "./trips/present.ts";
 import { emptySafety } from "./safety/ops.ts";
+import { defaultRefundPolicy } from "./payments/refundPolicy.ts";
 
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
@@ -38,7 +39,7 @@ assert(maskPhone("+46 70 123 45 67") === "•••• 4567", "masked phone");
 const ops = emptyTripOps();
 assert(addEntry(ops, { tripId: "T0012", kind: "refund", text: "", amountMinor: 20_000 }, "nora", "2026-10-12T10:00:00Z", split).error === "That is more than the rider paid.", "refund up to what was paid");
 assert(addEntry(ops, { tripId: "T0012", kind: "note", text: " " }, "nora", "2026-10-12T10:00:00Z").error, "a note needs text");
-assert(needsApproval("pay", 60_000, "SE", ops.settings) && !needsApproval("pay", 10_000, "SE", ops.settings), "big pay changes need a second admin");
+assert(needsApproval("pay", 60_000, "SE", defaultRefundPolicy()) && !needsApproval("pay", 10_000, "SE", defaultRefundPolicy()), "big pay changes need a second admin");
 const asked = withStatus(addEntry(ops, { tripId: "T0012", kind: "pay", text: "", amountMinor: 60_000 }, "nora", "2026-10-12T10:00:00Z", split), true);
 assert(asked.entry.status === "waiting", "waits for a second admin");
 assert(decide(asked.ops, asked.entry.id, "nora", true, "2026-10-12T10:05:00Z").error === "A second admin must decide.", "not the same admin");

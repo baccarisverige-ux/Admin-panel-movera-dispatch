@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useParams, useSearchParams } from "react-router";
 import {
   AlertTriangle,
@@ -23,6 +24,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useAudit, useSlice } from "../api/hooks";
+import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { AccountChip, Avatar, ContactActions, MessagesPanel, Stat } from "../fleet/ui";
@@ -32,7 +34,6 @@ import { BookingHistory } from "../riders/BookingHistory";
 import {
   CARE_KEY,
   CREDIT_MAX,
-  REFUND_APPROVAL,
   REPLY_TEMPLATES,
   addCredit,
   addLostItem,
@@ -91,6 +92,7 @@ export function RiderDetailPage() {
   const data = useRidersData("month", null);
   const audit = useAudit();
   const opsSlice = useSlice<RiderOpsBook>("riderOps", emptyRiderOpsBook());
+  const { policy: refundPolicy } = useRefundPolicy();
   const [notice, setNotice] = useState("");
   const [reason, setReason] = useState("");
   const [creditAmount, setCreditAmount] = useState(100);
@@ -115,12 +117,7 @@ export function RiderDetailPage() {
 
   if (data.loading) return <p className="state-line">Loading rider.</p>;
   if (!row) {
-    return (
-      <div className="fd-page">
-        <div className="fd-head"><div><h2>Rider not found</h2><p>The rider is outside your active country or zones, or does not exist.</p></div></div>
-        <Link className="fd-back" to="/riders"><ArrowLeft size={15} aria-hidden="true" /> Back to riders</Link>
-      </div>
-    );
+    return <NotFoundRecord kind="Rider" id={riderId} list="/riders" listLabel="riders" />;
   }
 
   const { rider, profile } = row;
@@ -154,7 +151,7 @@ export function RiderDetailPage() {
   const usedThisMonth = creditedThisMonth(care, rider.id, now);
   const refundRide = paidBookings.find((booking) => booking.id === refundId);
   const refundLeft = refundRide ? toMajor(refundRide.fareMinor, country) - refunded(refundRide.id) : 0;
-  const refund = requestRefund(care, rider, refundRide, refundAmount, refundTo, refundReason, me, now);
+  const refund = requestRefund(care, rider, refundRide, refundAmount, refundTo, refundReason, me, now, refundPolicy);
   const lostNext = addLostItem(care, rider.id, lostItem, lostRide, me, now);
   const mergeNext = merge(care, rider.id, mergeInto.trim().toUpperCase());
 
@@ -365,7 +362,7 @@ export function RiderDetailPage() {
                   </button>
                 ))}
               </div>
-              {refund.error && refundRide && refundReason ? <p className="rd-form-error">{refund.error}</p> : <small className="fine">Refunds above {REFUND_APPROVAL[country]} {symbol} need a second admin to approve.</small>}
+              {refund.error && refundRide && refundReason ? <p className="rd-form-error">{refund.error}</p> : <small className="fine">Refunds above {refundPolicy.aboveMajor[country]} {symbol} need a second admin to approve (<Link to="/settings#refunds">set in Settings</Link>).</small>}
               <CommandButton command="admin.rider.refund" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(refundAmount * place.minorUnits)} before={refundRide?.id ?? ""} after={`${refundAmount} ${symbol} to ${refundTo}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={refund.care} disabled={!can(role, "finance.read") || Boolean(refund.error)} title={refund.error} onDone={() => { setNotice(refund.needsApproval ? `Refund of ${refundAmount} ${symbol} is waiting for a second admin to approve.` : `Refunded ${refundAmount} ${symbol} to the rider's ${DESTINATIONS.find((item) => item.id === refundTo)?.label.toLowerCase()}.`); setRefundReason(""); setRefundId(""); }}>
                 <RotateCcw size={14} aria-hidden="true" /> Refund {refundAmount ? `${refundAmount} ${symbol}` : ""}
               </CommandButton>

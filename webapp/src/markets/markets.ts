@@ -1,3 +1,4 @@
+import { formatMoney as formatMinor } from "../domain/money.ts";
 /** Countries Movera operates in, with their cities and zones. Sweden keeps the original zone ids. */
 
 export type MarketId = "SE" | "FR" | "TN";
@@ -162,16 +163,13 @@ export function formatCurrencyMoney(minor: number, currency: Market["currency"] 
   return formatMoney(minor, marketOfCurrency(currency));
 }
 
-/** Format an amount held in minor units in the market's currency. */
+/** Format an amount held in minor units in the market's currency, with the one formatter (C-23). */
 export function formatMoney(minor: number, id: MarketId, options: { compact?: boolean } = {}): string {
   const item = market(id);
-  const major = minor / item.minorUnits;
-  const digits = options.compact ? 0 : item.minorUnits === 1000 ? 3 : 2;
-  return new Intl.NumberFormat(item.locale, {
-    style: "currency",
-    currency: item.currency,
-    notation: options.compact && Math.abs(major) >= 10_000 ? "compact" : "standard",
-    minimumFractionDigits: options.compact ? 0 : digits,
-    maximumFractionDigits: options.compact ? (Math.abs(major) >= 10_000 ? 1 : 0) : digits,
-  }).format(major);
+  return formatMinor({ amountMinor: Math.round(minor), currency: item.currency }, item.locale, options);
+}
+
+/** The local time zone of a record's zone (Stockholm, Paris or Tunis), for dates shown on that record. */
+export function zoneTimeZone(zoneId: string | null | undefined, fallback: MarketId = DEFAULT_MARKET): string {
+  return market(marketIdOfZone(zoneId, fallback)).timeZone;
 }

@@ -4,7 +4,7 @@ import { ApiError } from "./httpClient.ts";
 
 /**
  * The refund rules of the old commands/run.ts test (C-21), run against the live fixture server:
- * one effect per key, a second admin from 200 kr, no self-approval, stale versions refused, no second payment.
+ * one effect per key, a second admin above 500 kr, no self-approval, stale versions refused, no second payment.
  */
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
@@ -39,7 +39,7 @@ const refund = async (over: Partial<CommandInput>): Promise<CommandInput> => ({
 const payment = async (id: string) => (await api.list("payments", null)).find((row) => row.id === id);
 const audits = async (operationId: string) => (await api.audit()).filter((row) => row.operationId === operationId);
 
-// 250 kr waits for a second admin.
+// 600 kr waits for a second admin (the default limit is above 500 kr, Q25).
 const first = await api.command(await refund({}));
 assert(first.status === "pending_approval", "large refund waits");
 const rev = await api.revision();
@@ -63,8 +63,21 @@ const before = await api.revision();
 await refused(api.command(await refund({ idempotencyKey: "k5", actorId: "nora" })), 409, "invalid_transition", "retry does not pay twice");
 assert((await api.revision()) === before, "rev unchanged when already refunded");
 
-// Under 200 kr commits at once.
+// Under the limit commits at once.
 const small = await api.command(await refund({ idempotencyKey: "s", targetId: "PAY0002" }));
-assert(small.status === "committed" && (await payment("PAY0002"))?.status === "refunded", "under 200 kr commits immediately");
+assert(small.status === "committed" && (await payment("PAY0002"))?.status === "refunded", "under 500 kr commits immediately");
+
+// Q25 / C-22: the one rule is the Settings value per country, and the server reads it from there.
+const savePolicy = async (aboveMajor: Record<string, number>, key: string) =>
+  api.command({ action: "admin.refundPolicy.save", targetId: "refund limits", reason: "Planned change", actorId: "nora", idempotencyKey: key, expectedRev: await api.revision(), sliceKey: "refundPolicy", value: { draftRev: 2, aboveMajor }, before: "", after: "" });
+await refused(savePolicy({ SE: -1, FR: 50, TN: 150 }, "p-bad"), 422, "invalid_request", "a negative limit is refused");
+await refused(api.command({ action: "admin.refundPolicy.save", targetId: "refund limits", reason: "Planned change", actorId: "astrid", idempotencyKey: "p-role", expectedRev: await api.revision(), sliceKey: "refundPolicy", value: { aboveMajor: { SE: 1, FR: 1, TN: 1 } }, before: "", after: "" }), 403, "forbidden", "finance cannot change the Settings limit");
+await savePolicy({ SE: 50, FR: 50, TN: 150 }, "p-low");
+const lowered = await api.command(await refund({ idempotencyKey: "after-policy", targetId: "PAY0005" }));
+assert(lowered.status === "pending_approval", "with the Settings limit at 50 kr, a 100 kr refund waits for a second admin");
+// Exactly at the limit is not above it.
+await savePolicy({ SE: 101.2, FR: 50, TN: 150 }, "p-edge");
+const atLimit = await api.command(await refund({ idempotencyKey: "at-limit", targetId: "PAY0013" }));
+assert(atLimit.status === "committed", `a refund at or under the limit commits (got ${atLimit.status})`);
 
 console.log("refund flow ok");

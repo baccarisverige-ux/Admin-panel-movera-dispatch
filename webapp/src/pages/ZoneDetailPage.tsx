@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useParams, useSearchParams } from "react-router";
 import {
   ArrowLeft,
@@ -182,15 +183,8 @@ export function ZoneDetailPage() {
   }
 
   if (!zone) {
-    return (
-      <div className="zones">
-        <section className="zn-panel empty">
-          <h3>Zone not found</h3>
-          <p>It is not in the draft. It may be deleted. Undo or roll back brings it back.</p>
-          <Link className="dash-btn small" to="/zones"><ArrowLeft size={13} aria-hidden="true" /> Back to zones</Link>
-        </section>
-      </div>
-    );
+    // A deleted zone comes back with Undo or a roll back on the Zones page.
+    return <NotFoundRecord kind="Zone" id={zoneId} list="/zones" listLabel="zones" />;
   }
 
   const issues = validateZones(ui.book.draft);

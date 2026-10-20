@@ -1528,3 +1528,39 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
   .topbar .admin-profile > div:nth-child(2) { display: flex; flex-direction: column; flex: 1; min-width: 0; }
   .admin-profile span { overflow-wrap: anywhere; }
 }
+
+/* A command button while another command runs (C-16): disabled, with a spinner and "Please wait". */
+.cmd-wait { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-size: .85em; font-weight: 500; opacity: .85; white-space: nowrap; }
+.cmd-spin { animation: cmd-spin 1s linear infinite; }
+@keyframes cmd-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cmd-spin { animation: none; } }
+
+/* The one "Not found" page of every detail address (Q23). */
+.not-found .not-found-search { margin: 12px 0 8px; max-width: 420px; }
+.not-found .not-found-hits { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.not-found .not-found-hits small { color: var(--muted, #667085); margin-left: 6px; }
+.not-found .not-found-back { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; }
+
+/* Q24 / UI-17: at 1280 px and on phones the top bar keeps Search, the alerts bell and the profile;
+   the country and zone picker, Inbox, the time line and Sign out move into the "⋯" menu. */
+.topbar-inbox, .profile-signout { display: contents; }
+.topbar-more-wrap { position: relative; display: none; }
+.topbar-more-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; display: grid; gap: 10px; min-width: 300px; max-width: calc(100vw - 28px); padding: 12px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(16, 24, 32, .16); }
+.topbar-more-menu .market-bar { width: 100%; flex-wrap: wrap; }
+.topbar-more-meta { margin: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.topbar-more-menu .link-action { justify-self: start; }
+@media (max-width: 1280px) {
+  .topbar-actions > .market-bar, .topbar-inbox, .topbar .admin-profile .profile-meta, .topbar .admin-profile .profile-signout { display: none; }
+  .topbar-more-wrap { display: inline-flex; }
+  .topbar { height: auto; min-height: 64px; flex-wrap: nowrap; gap: 8px; padding: 10px 14px; }
+  .topbar > div:not(.topbar-actions) { flex: 1 1 auto; min-width: 0; }
+  .topbar h1, .topbar .crumb { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-actions { width: auto; flex: 0 0 auto; flex-wrap: nowrap; gap: 8px; }
+  .topbar .admin-profile { display: flex; width: auto; flex-wrap: nowrap; }
+  .topbar .admin-profile > div:nth-child(2) { display: flex; flex: 0 1 auto; min-width: 0; }
+  .topbar .admin-profile strong { white-space: nowrap; }
+}
+@media (max-width: 620px) {
+  .topbar .admin-profile > div:nth-child(2) { display: none; }
+  .topbar .crumb { display: none; }
+}
