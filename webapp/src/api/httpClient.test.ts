@@ -42,7 +42,7 @@ const stale = await apiRequest("https://staging.example", "/admin/trips/T1/cance
 assert(stale instanceof ApiError && stale.code === "version_mismatch" && stale.requestId === "req-9" && stale.retryable === false && stale.message === "Trip changed", "the error body is parsed");
 assert(stale instanceof ApiError && JSON.stringify(stale.projection) === JSON.stringify(projection), "409 keeps the current projection for a rebase");
 const sent = seen as Headers | null;
-assert(sent?.get("Idempotency-Key") === "cancel-T1-0000000001" && sent.get("X-Api-Version") === "0.3" && (sent.get("X-Request-Id") ?? "").length > 0, "mutation headers");
+assert(sent?.get("Idempotency-Key") === "cancel-T1-0000000001" && sent.get("X-Api-Version") === "0.4" && (sent.get("X-Request-Id") ?? "").length > 0, "mutation headers");
 
 let getHeaders: Headers | null = null;
 await apiRequest("https://staging.example", "/admin/trips/T1", { requestId: "req-get-1" }, async (_url, init) => {
@@ -50,7 +50,7 @@ await apiRequest("https://staging.example", "/admin/trips/T1", { requestId: "req
   return { ok: true, status: 200, json: async () => ({}) };
 });
 const read = getHeaders as Headers | null;
-assert(read?.get("X-Request-Id") === "req-get-1" && read.get("Idempotency-Key") === null && read.get("X-Api-Version") === "0.3", "reads carry the request id and version, no idempotency key");
+assert(read?.get("X-Request-Id") === "req-get-1" && read.get("Idempotency-Key") === null && read.get("X-Api-Version") === "0.4", "reads carry the request id and version, no idempotency key");
 
 let generated = "";
 await apiRequest("https://staging.example", "/admin/trips/T1/no-show", { method: "POST" }, async (_url, init) => {

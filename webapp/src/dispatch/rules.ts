@@ -393,7 +393,8 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     radar: { on: true, drivers: airport ? 8 : 5, seconds: 15, then: "widen_then_exclusive" },
     exclusive: { on: true, seconds: 15, drivers: 3, then: "widen_then_radar" },
     radarApp: { fullOn: true, full: 8, popupOn: true, popup: 2 },
-    autoOffline: { on: true, after: 5 },
+    // Owner Q46: offline after 3 missed or declined Exclusive offers in a row (contract.json#configDefaults).
+    autoOffline: { on: true, after: 3 },
     offerCard: offerCardDefault(),
     exclusiveReasons: exclusiveReasonsDefault(),
     hiddenComesBackMin: 2,

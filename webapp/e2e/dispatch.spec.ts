@@ -257,7 +257,7 @@ test("radar offers in the driver app and going offline automatically", async ({ 
   const list = page.getByRole("list", { name: "Changes not live yet" });
   await expect(list).toContainText("Offers in the popup: 2 → 3");
   await expect(list).toContainText("Exclusive while driving: on → off");
-  await expect(list).toContainText("Offline after offers not accepted: 5 → 4");
+  await expect(list).toContainText("Offline after offers not accepted: 3 → 4");
   await page.getByLabel("Go offline automatically on").uncheck();
   await expect(page.getByLabel("Offline after offers not accepted")).toBeDisabled();
 });
@@ -477,7 +477,7 @@ test("offer card details, Exclusive reasons, hidden Radar trips and going offlin
   await expect(list).toContainText("Exclusive reason (the best driver by the rules): Best match → Top match");
   await expect(list).toContainText("Exclusive reason “Best match”: on → off");
   await expect(list).toContainText("Hidden Radar trip comes back after: 2 → 5");
-  await expect(list).toContainText("Offline after offers not accepted: 5 → 99");
+  await expect(list).toContainText("Offline after offers not accepted: 3 → 99");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await confirm(page);
   await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
@@ -490,10 +490,10 @@ test("waiting at pickup: Pricing's values per category, ride type and distance r
   await page.goto("/dispatch?zone=Z001&tab=rides");
   const wait = page.getByRole("region", { name: "Waiting at pickup" });
   const pricing = wait.getByRole("group", { name: "Waiting from Pricing" });
-  await expect(pricing.getByRole("row").filter({ hasText: "Movera" })).toContainText("2 min");
+  await expect(pricing.getByRole("row").filter({ hasText: "Movera" })).toContainText("5 min");
   await expect(pricing.getByRole("link", { name: "Change in Pricing" })).toHaveAttribute("href", /\/pricing\?country=SE&zone=Z001/);
   const examples = wait.getByRole("group", { name: "Waiting examples" }).getByRole("listitem");
-  await expect(examples.filter({ hasText: "Normal ride" })).toContainText("2 min free · then 12,26 kr/min · no-show after 5 min · fee 65 kr (driver gets 52 kr)");
+  await expect(examples.filter({ hasText: "Normal ride" })).toContainText("5 min free · then 12,26 kr/min · no-show after 5 min · fee 65 kr (driver gets 52 kr)");
   await expect(examples.filter({ hasText: "Scheduled ride" })).toContainText("5 min free");
   await expect(examples.filter({ hasText: "Airport pickup" })).toContainText("15 min free · then 12,26 kr/min · no-show after 20 min");
   await expect(examples.filter({ hasText: "Far pickup" })).toContainText("1 min free · then 12,26 kr/min · no-show after 5 min · fee 85 kr");
@@ -504,7 +504,7 @@ test("waiting at pickup: Pricing's values per category, ride type and distance r
   await far.getByLabel("Far pickup price per minute").fill("8");
   await expect(examples.filter({ hasText: "Far pickup" })).toContainText("then 8 kr/min");
   await wait.getByLabel("Event pickup rule on").uncheck();
-  await expect(examples.filter({ hasText: "Event pickup" })).toContainText("2 min free");
+  await expect(examples.filter({ hasText: "Event pickup" })).toContainText("5 min free");
   await wait.getByRole("button", { name: "Use in all zones" }).click();
   await expect(wait.getByRole("status")).toContainText("Copied to 11 zones. Not live yet.");
 

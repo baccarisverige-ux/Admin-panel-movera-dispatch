@@ -97,15 +97,15 @@ const stopped = stopManualSurges(surged.store, ["Z001", "Z003"], "nora", "Over",
 assert(stopped.stopped.join() === "Z003" && !zoneLive(stopped.store, "Z003").manual, "stop all stops only running surges");
 
 // Quote: waiting after the free minutes, stops, seats, app fee, min fare, split.
-const input: QuoteInput = { categoryId: "economy", km: 10, minutes: 20, waitMin: 5, stops: 1, stopWaitMin: 2, babySeats: 1, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 };
+const input: QuoteInput = { categoryId: "economy", km: 10, minutes: 20, waitMin: 8, stops: 1, stopWaitMin: 2, babySeats: 1, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 };
 const quote = quoteRide(norrmalm, input);
-// 29 + 120 + 80 = 229; waiting 3 × 12.26 = 36.78; stop 15; stop wait 10; baby seat 30 → 320.78; app fee 10% → 352.86 → 353
+// 29 + 120 + 80 = 229; waiting (8 − 5 free min, owner Q41) 3 × 12.26 = 36.78; stop 15; stop wait 10; baby seat 30 → 320.78; app fee 10% → 352.86 → 353
 assert(quote.total === 353, `quote total ${quote.total}`);
 assert(quote.driverGets === 256.62, `driver gets 80% of 320.78, got ${quote.driverGets}`);
 // Waiting matches the driver app: 12.26 kr/min (Premium 16.90), 65 kr no-show fee, Premium 5 and XL 3 free minutes.
 assert(norrmalm.prices.economy.waitPerMin === 12.26 && norrmalm.prices.premium.waitPerMin === 16.9 && norrmalm.prices.comfort.waitPerMin === 12.26, "waiting per minute");
 assert(norrmalm.prices.economy.noShowFee === 65 && norrmalm.prices.premium.noShowFee === 65, "no-show fee");
-assert(norrmalm.prices.economy.freeWaitMin === 2 && norrmalm.prices.premium.freeWaitMin === 5 && norrmalm.prices.xl.freeWaitMin === 3, "free wait");
+assert(norrmalm.prices.economy.freeWaitMin === 5 && norrmalm.prices.premium.freeWaitMin === 5 && norrmalm.prices.xl.freeWaitMin === 3, "free wait: 5 min, XL 3 (owner Q41)");
 // The rider's free cancel time and cancel fee are set in Dispatch › Rider cancel fees only. Older saves that still have them open fine.
 assert(!PRICE_ROWS.some((row) => ["cancelFee", "freeCancelMin"].includes(row.field)) && PRICE_ROWS.some((row) => row.field === "noShowFee" && row.group === "Cancellation"), "no rider cancel fee in Pricing; the no-show fee stays");
 const oldSave = normalizeStore({ ...emptyPricingStore(), zones: { Z001: { ...defaultZoneBook("Z001"), prices: { economy: { ...norrmalm.prices.economy, cancelFee: 40, freeCancelMin: 2 } } } } });

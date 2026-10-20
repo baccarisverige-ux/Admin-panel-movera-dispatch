@@ -1,5 +1,6 @@
 import { MARKETS, formatMoney as formatMarketMoney, market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import { completePickupPay, convertPickupPay, defaultPickupPay, diffPickupPay, validatePickupPay, type PickupPay } from "./pickupPay.ts";
+import { defaultFreeWaitMin } from "../config/zoneDefaults.ts";
 
 /**
  * Prices, fees, surge settings, commission and driver pickup pay, one full set per zone.
@@ -263,7 +264,8 @@ export function defaultCategoryPrice(categoryId: string, id: MarketId, airport =
     const lifted = field === "babySeatFee" || field === "childSeatFee" ? SEK_BASE[field] * (categoryId === "child_seat" ? 0.5 : 1) : SEK_BASE[field] * lift;
     price[field] = roundTo(lifted * factor * (airport && (field === "base" || field === "minimum") ? 1.3 : 1), step);
   }
-  price.freeWaitMin = categoryId === "premium" ? 5 : airport ? 5 : categoryId === "xl" ? 3 : 2;
+  // Owner Q41: the free wait is also the no-show wait; default 5 min, XL 3 min (contract.json#configDefaults.freeWaitMin).
+  price.freeWaitMin = airport ? 5 : defaultFreeWaitMin(categoryId);
   // Waiting at pickup is the same in every category (Premium waits longer and costs more), and matches the driver app's waiting rules.
   const waitSek = categoryId === "premium" ? WAIT_PER_MIN_PREMIUM_SEK : WAIT_PER_MIN_SEK;
   price.waitPerMin = id === "SE" ? waitSek : roundTo(waitSek * factor, step);

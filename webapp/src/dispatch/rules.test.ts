@@ -144,7 +144,7 @@ assert(!simulate(base, rankDrivers(base, country, request, [busyDriver]), "radar
 assert(simulate(base, rankDrivers(base, country, request, [busyDriver]), "exclusive")[0].title === "Exclusive to busy", "Exclusive while driving reaches a driver with a rider");
 const noDriving = { ...base, exclusiveWhileDriving: { on: false, count: 1 } };
 assert(simulate(noDriving, rankDrivers(noDriving, country, request, [busyDriver]), "exclusive")[0].title !== "Exclusive to busy", "no offers while driving when Exclusive while driving is off");
-assert(changeLines(base, { ...base, autoOffline: { on: true, after: 8 } })[0] === "Offline after offers not accepted: 5 → 8", "change line for auto offline");
+assert(changeLines(base, { ...base, autoOffline: { on: true, after: 8 } })[0] === "Offline after offers not accepted: 3 → 8", "change line for auto offline");
 
 // Ride check: four triggers, each on or off, with their numbers.
 const rcDefault = base.rideCheck;

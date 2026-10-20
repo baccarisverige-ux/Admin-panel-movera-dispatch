@@ -4,7 +4,7 @@ import { formatMoney } from "./money.ts";
 export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
-export const CONTRACT_VERSION = "0.3.1" as const;
+export const CONTRACT_VERSION = "0.4.0" as const;
 
 /** The 19 trip statuses of contract v0.3.0 (contract.json#tripStatus.values), in lifecycle order. */
 export const TRIP_STATUSES = [
@@ -198,13 +198,11 @@ export const categoryIdSchema = z.enum([
   "pet",
 ]);
 
+/** contract.json#paymentMethods (v0.4.0, owner Q7): no swish, no d17. `wallet` is the per-currency balance, used first. */
 export const PAYMENT_METHODS = [
   "card",
-  "swish",
-  "klarna",
-  "apple",
-  "google",
-  "paypal",
+  "apple_pay",
+  "google_pay",
   "cash",
   "wallet",
 ] as const;
