@@ -43,14 +43,25 @@ test("trips list uses all 600 and a trip page is complete", async ({ page }) => 
     await page.goto(`/trips/${id}`);
     const button = page.getByRole("button", { name: "Cancel trip" });
     await expect(button).toBeVisible();
-    if (ALLOWED.has(id)) await expect(button).toBeEnabled();
-    else await expect(button).toBeDisabled();
+    if (ALLOWED.has(id)) {
+      // A-O1: no cancel reason is preselected; Cancel trip waits for one.
+      await expect(page.getByLabel("Cancel reason")).toHaveValue("");
+      await expect(button).toBeDisabled();
+      await page.getByLabel("Cancel reason").selectOption({ index: 1 });
+      await expect(button).toBeEnabled();
+    } else {
+      // Refused by the trip's status, not only by the missing reason: the reason list is locked too.
+      await expect(page.getByLabel("Cancel reason")).toBeDisabled();
+      await expect(button).toBeDisabled();
+    }
   }
 
   await page.goto("/trips/T0012");
   await expect(page.getByTestId("cancel-block")).toContainText("completed");
   await page.goto("/trips/T0004");
+  await page.getByLabel("Cancel reason").selectOption("admin_safety");
   await page.getByRole("button", { name: "Cancel trip" }).click();
+  await page.getByLabel("Reason", { exact: true }).selectOption("Safety");
   await page.getByLabel("Type T0004 to confirm").fill("T0004");
   await page.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByRole("heading", { level: 2 })).toContainText("Trip T0004");
@@ -59,6 +70,7 @@ test("trips list uses all 600 and a trip page is complete", async ({ page }) => 
   await page.reload();
   await expect(page.getByTestId("trip-waybill")).toContainText("Cancelled by admin");
   await expect(page.getByTestId("trip-timeline")).toContainText("Safety");
+  await expect(page.getByLabel("Cancel reason")).toBeDisabled();
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeDisabled();
   if (process.env.SHOTS) {
     for (const width of [390, 768, 1024, 1440]) {

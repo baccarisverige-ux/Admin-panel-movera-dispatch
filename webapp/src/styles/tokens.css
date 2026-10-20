@@ -1248,6 +1248,20 @@ fieldset input[type=checkbox] {
   margin-bottom:12px
 }
 
+.modal-card label.check-row {
+  flex-direction:row;
+  align-items:center
+}
+
+.modal-card [data-testid="large-change-warning"] {
+  margin-bottom:12px
+}
+
+.modal-card [data-testid="large-change-warning"] ul {
+  margin:6px 0 0;
+  padding-left:18px
+}
+
 .modal-card textarea {
   min-height:80px;
   resize:vertical

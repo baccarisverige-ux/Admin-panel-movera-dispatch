@@ -60,7 +60,28 @@ test("UI-03 + UI-12: reasons fit the command, Other needs text, and a cancelled 
   expect(pricingReasons).toContain("Planned change");
   expect(pricingReasons).not.toContain("Blurry");
   expect(pricingReasons).not.toContain("Wrong document");
+  await expect(dialog(page).getByTestId("large-change-warning")).toHaveCount(0);
   await dialog(page).getByRole("button", { name: "Cancel" }).click();
+});
+
+test("A-O2/A-O3: a 0 base fare is refused and a price moved more than 50% asks Are you sure", async ({ page }) => {
+  await session(page);
+  await page.goto("/pricing");
+  const base = page.getByLabel("Norrmalm Movera Base fare");
+  const published = await base.inputValue();
+  await base.fill("0");
+  await expect(page.getByRole("region", { name: "Unpublished changes" })).toContainText("Base fare must be above 0");
+  await expect(page.getByRole("button", { name: "Publish changes" })).toBeDisabled();
+  const doubled = String(Number(published) * 2);
+  await base.fill(doubled);
+  await page.getByRole("button", { name: "Publish changes" }).click();
+  const warning = dialog(page).getByTestId("large-change-warning");
+  await expect(warning).toContainText("Are you sure?");
+  await expect(warning).toContainText(`Norrmalm · Movera Base fare: ${published} → ${doubled} kr (+100%)`);
+  await expect(dialog(page).getByRole("button", { name: "Confirm" })).toBeDisabled();
+  await dialog(page).getByLabel("Yes, I'm sure").check();
+  await dialog(page).getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText(/Published as pricing revision/)).toBeVisible();
 });
 
 test("UI-04: a refund asks for a reason and the payment id, and Retry refund is only for a refund that did not go through", async ({ page }) => {
@@ -199,6 +220,7 @@ test("UI-13: a long unbroken note is capped and wraps inside its card", async ({
 test("C-10: a screen loaded before someone else's change gets a conflict instead of overwriting it", async ({ page }) => {
   await session(page);
   await page.goto("/trips/T0004");
+  await page.getByLabel("Cancel reason").selectOption("admin_operational");
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeEnabled();
 
   // Another admin, in another tab, commits a change after this screen was read.
@@ -206,12 +228,14 @@ test("C-10: a screen loaded before someone else's change gets a conflict instead
   await other.goto("/payments/PAY0005");
   await other.getByRole("button", { name: "Refund payment" }).click();
   await other.locator(".modal.open").getByLabel("Type PAY0005 to confirm").fill("PAY0005");
+  await other.locator(".modal.open").getByLabel("Reason", { exact: true }).selectOption("Charged twice");
   await other.locator(".modal.open").getByRole("button", { name: "Confirm" }).click();
   await expect(other.getByTestId("payment-timeline")).toContainText("Refunded");
   await other.close();
 
   await page.getByRole("button", { name: "Cancel trip" }).click();
   await dialog(page).getByLabel("Type T0004 to confirm").fill("T0004");
+  await dialog(page).getByLabel("Reason", { exact: true }).selectOption({ index: 1 });
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText(/Someone else changed this/).first()).toBeVisible();
   await expect(page.getByTestId("trip-waybill")).not.toContainText("Cancelled by admin");
@@ -219,6 +243,7 @@ test("C-10: a screen loaded before someone else's change gets a conflict instead
   // The conflict reloaded the screen, so the next try goes through.
   await page.getByRole("button", { name: "Cancel trip" }).click();
   await dialog(page).getByLabel("Type T0004 to confirm").fill("T0004");
+  await dialog(page).getByLabel("Reason", { exact: true }).selectOption({ index: 1 });
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByTestId("trip-waybill")).toContainText("Cancelled by admin");
 });

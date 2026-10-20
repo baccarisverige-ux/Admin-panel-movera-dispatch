@@ -102,6 +102,7 @@ test("to confirm: a money approval shows in the inbox and a product value is con
   await page.getByRole("button", { name: "Refund 250 kr" }).click();
   const modal = page.locator(".modal.open").last();
   await modal.getByLabel("Type RF-LARGE to confirm").fill("RF-LARGE");
+  await modal.getByLabel("Reason", { exact: true }).selectOption("Charged twice");
   await modal.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByRole("heading", { level: 3, name: "Pending approvals" }).locator("..")).toContainText("RF-LARGE");
   await page.goto("/confirm");

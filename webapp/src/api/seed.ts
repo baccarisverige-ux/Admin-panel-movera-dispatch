@@ -1,5 +1,6 @@
 import { TRIP_STATUSES, type TripStatus } from "../domain/contract.ts";
 import type { CurrencyCode } from "../domain/money.ts";
+import type { ErrorCode } from "./httpClient.ts";
 
 /** The demo rotates trips through the 18 pre-v0.3 statuses so every seeded trip id keeps its state (no cancelled_by_system in the seed). */
 const SEED_TRIP_STATUSES = TRIP_STATUSES.filter((status) => status !== "cancelled_by_system");
@@ -79,6 +80,8 @@ export type OperationRow = {
   targetId: string;
   status: "committed" | "rejected" | "pending_approval";
   httpStatus: number;
+  /** Contract error code of a stored rejection, replayed with it. */
+  code?: ErrorCode;
   message: string;
   rev: number;
   at: string;

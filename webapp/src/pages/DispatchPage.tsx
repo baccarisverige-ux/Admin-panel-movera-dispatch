@@ -19,6 +19,7 @@ import { useAlertsMaybe } from "../alerts/AlertsContext";
 import { DispatchAlerts } from "../alerts/DispatchAlerts";
 import { cancelRecords, driverFacts, onlyFinishingNearby } from "../dispatch/demo";
 import { CancelView } from "../dispatch/CancelView";
+import { largeCancelFeeChanges } from "../dispatch/cancelFees";
 import { CancelReasonsView } from "../dispatch/CancelReasonsView";
 import { EventsView } from "../dispatch/EventsView";
 import { Approvals, HistoryView } from "../dispatch/HistoryView";
@@ -199,6 +200,18 @@ export function DispatchPage() {
     const prices = zoneBook(pricing, id).prices;
     return activeCategories(pricing).filter((category) => prices[category.id]?.enabled).map(({ id: categoryId, label }) => ({ id: categoryId, label }));
   };
+  // A cancel fee moving more than 50 % from its published value asks "Are you sure?" on Save and Publish (A-O3).
+  const largeChangesIn = (ids: readonly string[]) => ids.flatMap((id) => {
+    const before = liveRules(book, id);
+    const after = allRules[id];
+    const name = zoneById(id)?.name ?? id;
+    return [
+      ...largeCancelFeeChanges(before.riderCancel.fees, after.riderCancel.fees, feeCategoriesOf(id), `${name} · Rider cancels`, symbol),
+      ...largeCancelFeeChanges(before.reservation.riderFees, after.reservation.riderFees, feeCategoriesOf(id), `${name} · Reservations`, symbol),
+    ];
+  });
+  const largeChanges = largeChangesIn(zoneIds);
+  const largeDraftChanges = largeChangesIn(zoneIds.filter((id) => id in working));
   const waitBasesOf = (id: string) => {
     const prices = zoneBook(pricing, id).prices;
     return activeCategories(pricing).filter((category) => prices[category.id]?.enabled).map((category) => ({ id: category.id, label: category.label, base: { freeWaitMin: prices[category.id].freeWaitMin, perMin: prices[category.id].waitPerMin, noShowFee: prices[category.id].noShowFee } }));
@@ -256,12 +269,12 @@ export function DispatchPage() {
               <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" aria-expanded={showChanges} onClick={() => setShowChanges((value) => !value)}>{showChanges ? "Hide changes" : "See changes"}</button>
               {unsaved ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => { setWorking({}); setWorkingCountry({}); setNotice("Unsaved changes were thrown away."); }}><Undo2 size={13} aria-hidden="true" /> Discard</button> : null}
               {unsaved ? (
-                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole} onDone={() => { setWorking({}); setWorkingCountry({}); setNotice("Draft saved. Nothing is live yet. Test it in Test a ride, then publish."); }}>
+                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole} largeChanges={largeDraftChanges} onDone={() => { setWorking({}); setWorkingCountry({}); setNotice("Draft saved. Nothing is live yet. Test it in Test a ride, then publish."); }}>
                   <Save size={13} aria-hidden="true" /> Save draft
                 </CommandButton>
               ) : null}
               {view !== "test" ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => go({ view: "test" })}><FlaskConical size={13} aria-hidden="true" /> Test it</button> : null}
-              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error)} title={published.error} onDone={() => {
+              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error)} title={published.error} largeChanges={largeChanges} onDone={() => {
                 const liveNames = published.live.map((id) => zoneById(id)?.name ?? id);
                 const waitNames = published.waiting.map((id) => zoneById(id)?.name ?? id);
                 setWorking({});

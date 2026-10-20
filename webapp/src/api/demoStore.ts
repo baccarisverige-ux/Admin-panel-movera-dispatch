@@ -88,7 +88,8 @@ export function assertWritable(fault: Fault): void {
   if (fault === "none" || fault === "slow" || fault === "empty") return;
   if (fault === "offline") throw new ApiError(0, classifyStatus(0));
   const status = Number(fault);
-  throw new ApiError(status, status === 409 ? "This record changed. The newest version is still here." : classifyStatus(status));
+  if (status === 409) throw new ApiError(409, "This record changed. The newest version is still here.", { code: "version_mismatch", retryable: false });
+  throw new ApiError(status, classifyStatus(status));
 }
 
 export function rowsFor(db: DemoDb, name: string, scope: ZoneScope, fault: Fault): DemoRecord[] {

@@ -4,7 +4,7 @@ import { useCommands } from "../api/hooks";
 import type { CommandResult } from "../api/create";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
-import { OTHER_REASON, auditReason, reasonsFor } from "../commands/reasons";
+import { OTHER_REASON, auditReason, initialReason, mustChooseReason, reasonsFor } from "../commands/reasons";
 import { commandById } from "../commands/registry";
 
 type CommandButtonProps = {
@@ -33,6 +33,11 @@ type CommandButtonProps = {
   onDone?: (result?: CommandResult) => void;
   /** Also render a retry button. It is enabled only after an attempt that did not commit (unknown or rejected), re-sends with the same reason, and reuses the operation key when the outcome is unknown. */
   retryLabel?: string;
+  /**
+   * Large changes to confirm (A-O3): when the list is not empty the dialog asks "Are you sure?", lists them and
+   * keeps Confirm disabled until "Yes, I'm sure" is ticked.
+   */
+  largeChanges?: readonly string[];
   children: ReactNode;
   "aria-label"?: string;
 };
@@ -62,6 +67,7 @@ export function CommandButton({
   storeReason,
   onDone,
   retryLabel,
+  largeChanges,
   children,
   "aria-label": ariaLabel,
 }: CommandButtonProps) {
@@ -71,22 +77,27 @@ export function CommandButton({
   const denied = Boolean(spec && session.agent && !can(session.agent.role, spec.permission));
   const disabledReason = !spec ? "Action is not registered." : denied ? "Your role cannot perform this action." : undefined;
   const reasons = reasonsFor(command);
+  const choose = mustChooseReason(command);
   const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState<string>(reasons[0]);
+  const [reason, setReason] = useState<string>(() => initialReason(command));
   const [otherText, setOtherText] = useState("");
   const [typed, setTyped] = useState("");
   const [lastReason, setLastReason] = useState("");
+  const [sure, setSure] = useState(false);
+  const askSure = Boolean(largeChanges && largeChanges.length);
   const mustType = confirmTarget ? (targetId ?? "") : "";
   const dialogRoot=useDialogFocus(open,()=>setOpen(false));
   const chosen = auditReason(reason, otherText);
-  const confirmed = (mustType.length === 0 || typed === mustType) && chosen.length > 0;
+  const confirmed = (mustType.length === 0 || typed === mustType) && chosen.length > 0 && (!askSure || sure);
   const blocked = disabled || commands.busy || commands.phase === "submitting" || !spec || denied;
 
   // Every opening starts clean: no half-typed id or reason carried over from a cancelled dialog.
+  // Cancel and refund dialogs open with no reason, so Confirm waits until one is picked (A-O1).
   function openDialog() {
-    setReason(reasons[0]);
+    setReason(initialReason(command));
     setOtherText("");
     setTyped("");
+    setSure(false);
     setOpen(true);
   }
 
@@ -164,9 +175,19 @@ export function CommandButton({
           >
             <h3>{spec?.label}</h3>
             <p>This acts on {targetId ?? spec?.label}.</p>
+            {askSure ? (
+              <div className="state-line" role="alert" data-testid="large-change-warning">
+                <strong>Are you sure?</strong> {largeChanges!.length === 1 ? "This price changes" : "These prices change"} by more than 50% from the published value:
+                <ul>
+                  {largeChanges!.slice(0, 8).map((line) => <li key={line}>{line}</li>)}
+                  {largeChanges!.length > 8 ? <li>and {largeChanges!.length - 8} more</li> : null}
+                </ul>
+              </div>
+            ) : null}
             <label>
               Reason
-              <select aria-label="Reason" value={reason} onChange={(event) => setReason(event.target.value)}>
+              <select aria-label="Reason" value={reason} required={choose} onChange={(event) => setReason(event.target.value)}>
+                {choose ? <option value="" disabled>Choose a reason</option> : null}
                 {reasons.map((item) => (
                   <option key={item}>{item}</option>
                 ))}
@@ -182,6 +203,11 @@ export function CommandButton({
               <label>
                 Type {mustType} to confirm
                 <input value={typed} onChange={(event) => setTyped(event.target.value)} />
+              </label>
+            ) : null}
+            {askSure ? (
+              <label className="check-row">
+                <input type="checkbox" checked={sure} onChange={(event) => setSure(event.target.checked)} /> Yes, I'm sure
               </label>
             ) : null}
             <button data-command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!confirmed}>Confirm</button>

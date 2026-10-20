@@ -16,15 +16,19 @@ const EXTRA = [
   { ...astrid, id: "astrid-fr", email: "astrid-fr@movera.se", scope: { zones: "all" as const, market: "SE-STO" as const, countries: ["FR" as const] } },
 ];
 
-async function expectStatus(work: Promise<unknown>, status: number, message: string) {
+async function expectStatus(work: Promise<unknown>, status: number, message: string, code?: string): Promise<ApiError> {
+  let caught: ApiError | null = null;
   await work.then(
     () => {
       throw new Error(`${message}: expected rejection`);
     },
     (error: unknown) => {
-      assert(error instanceof ApiError && error.status === status, `${message}: expected ${status}`);
+      assert(error instanceof ApiError && error.status === status, `${message}: expected ${status}, got ${error instanceof ApiError ? error.status : String(error)}`);
+      if (code) assert((error as ApiError).code === code, `${message}: expected code ${code}, got ${(error as ApiError).code}`);
+      caught = error as ApiError;
     },
   );
+  return caught!;
 }
 
 const raw = createFixtureAdminApi(0);
@@ -82,7 +86,11 @@ await expectStatus(
   }),
   409,
   "stale revision",
-);
+  "version_mismatch",
+).then((error) => {
+  // X8: the contract's stale-version error carries the current record so the screen can rebase.
+  assert((error.projection as { id?: string } | undefined)?.id === "R0001", "version_mismatch carries the current record as projection");
+});
 
 const currentAfterRefund = await api.revision();
 await expectStatus(
@@ -138,9 +146,13 @@ await expectStatus(
     before: "completed",
     after: "cancelled_by_admin",
   }),
-  422,
+  409,
   "state guard",
-);
+  "invalid_transition",
+).then((error) => {
+  // X8: a command the trip's status does not allow is 409 invalid_transition with the trip, not 422 invalid_request.
+  assert((error.projection as { id?: string; status?: string } | undefined)?.status === "completed", "invalid_transition carries the trip as projection");
+});
 
 const currentAfterState = await api.revision();
 await expectStatus(
@@ -158,6 +170,7 @@ await expectStatus(
   }),
   422,
   "reason requirement",
+  "invalid_request",
 );
 
 await api.reset();
@@ -307,9 +320,11 @@ await expectStatus(
 // C-09: a conflict is not replayed forever: after it clears, the same key goes through.
 await api.setFault("409");
 const conflictInput = { action: "admin.rider.block", targetId: "R0001", reason: "Safety review", actorId: "lena", idempotencyKey: "conflict-then-ok", collection: "riders", patch: { status: "blocked" }, before: "active", after: "blocked" };
-await expectStatus(api.command({ ...conflictInput, expectedRev: await api.revision() }), 409, "injected conflict");
+await expectStatus(api.command({ ...conflictInput, expectedRev: await api.revision() }), 409, "injected conflict", "version_mismatch");
 await api.setFault("none");
 assert((await api.command({ ...conflictInput, expectedRev: await api.revision() })).status === "committed", "the retry after a conflict is checked again, not replayed");
+// Moved from the old riders/book.ts test (C-21): a block needs a reason (above) and then sticks.
+assert((await api.list("riders", null)).find((row) => row.id === "R0001")?.status === "blocked", "block sticks");
 
 await api.reset();
 const transientRev = await api.revision();
@@ -342,7 +357,21 @@ await tripCommand("admin.trip.reassign", accepted.id, "reassign-1", { driverId: 
 assert((await api.list("trips", null)).find((trip) => trip.id === accepted.id)!.status === "searching", "reassign lands in searching whatever the client patch says");
 await tripCommand("admin.trip.offer", accepted.id, "assign-1", { driverId: "D0003" });
 assert((await api.list("trips", null)).find((trip) => trip.id === accepted.id)!.status === "offered", "assign lands in offered; the driver still accepts");
-await expectStatus(tripCommand("admin.trip.cancel", finished.id, "cancel-lie", { status: "cancelled_by_admin" }, "searching"), 422, "a client-claimed state cannot unlock a terminal trip");
+await expectStatus(tripCommand("admin.trip.cancel", finished.id, "cancel-lie", { status: "cancelled_by_admin", cancelReasonCode: "admin_safety" }, "searching"), 409, "a client-claimed state cannot unlock a terminal trip", "invalid_transition");
+// X8: invalid transitions are 409 invalid_transition for every lifecycle command (the transition table runs before
+// the action's own state list), and an admin cancel accepts only admin_* reason codes.
+await expectStatus(tripCommand("admin.trip.reassign", finished.id, "reassign-done", { driverId: null }), 409, "reassign a completed trip", "invalid_transition");
+const searchingTrip = (await api.list("trips", null)).find((trip) => trip.status === "searching");
+if (searchingTrip) await expectStatus(tripCommand("admin.trip.noShow", searchingTrip.id, "noshow-searching", { status: "no_show", cancelReasonCode: "rider_no_show" }), 409, "no-show while searching", "invalid_transition");
+await expectStatus(tripCommand("admin.trip.noShow", onTrip.id, "noshow-in-trip", { status: "no_show", cancelReasonCode: "rider_no_show" }), 409, "no-show while in_trip", "invalid_transition");
+const cancellable = (await api.list("trips", null)).find((trip) => trip.status === "searching" || trip.status === "accepted" || trip.status === "arrived")!;
+await expectStatus(tripCommand("admin.trip.cancel", cancellable.id, "cancel-rider-code", { status: "cancelled_by_admin", cancelReasonCode: "plans_changed" }), 422, "a rider reason code is refused on an admin cancel", "invalid_request");
+await expectStatus(tripCommand("admin.trip.cancel", cancellable.id, "cancel-no-code", { status: "cancelled_by_admin" }), 422, "an admin cancel needs a reason code", "invalid_request");
+assert((await api.list("trips", null)).find((trip) => trip.id === cancellable.id)!.status === cancellable.status, "refused cancels change nothing");
+await tripCommand("admin.trip.cancel", cancellable.id, "cancel-admin-code", { status: "cancelled_by_admin", cancelReasonCode: "admin_safety" });
+assert((await api.list("trips", null)).find((trip) => trip.id === cancellable.id)!.status === "cancelled_by_admin", "an admin_* reason code cancels");
+const staleRev = (await api.revision()) - 1;
+await expectStatus(api.command({ action: "admin.trip.cancel", targetId: accepted.id, reason: "Ops check", actorId: "lena", idempotencyKey: "cancel-stale", expectedRev: staleRev, collection: "trips", patch: { status: "cancelled_by_admin", cancelReasonCode: "admin_safety" }, before: "", after: "" }), 409, "cancel with a stale version", "version_mismatch");
 await expectStatus(tripCommand("admin.trip.adjust", onTrip.id, "status-sneak", { status: "completed" }), 403, "a non-lifecycle command cannot change the status");
 assert((await api.list("trips", null)).find((trip) => trip.id === onTrip.id)!.status === "in_trip", "status unchanged after the refused sneak");
 

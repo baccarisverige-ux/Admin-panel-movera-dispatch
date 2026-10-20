@@ -38,6 +38,11 @@ const byRides = sortRows(rows, "rides");
 assert(byRides[0].periodRides >= byRides[byRides.length - 1].periodRides, "sort by most rides");
 assert(rows.filter((row) => row.segments.has("top")).every((row) => row.periodRides >= sortRows(rows.filter((item) => item.segments.has("top")), "rides").at(-1)!.periodRides), "top riders book the most");
 assert(matches(rows[0], "RD-SE-0001") && matches(rows[0], "rider 1 test") && !matches(rows[0], "nobody"), "search by code and name");
+// Moved from the old riders/book.ts test (C-21): search by phone as stored (spaces must match), by trip and by name.
+assert(matches(rows[0], "70 000 0000") && !matches(rows[0], "070 000 0000"), "find by phone; spaces must match the stored phone");
+const onTrip = buildRows([{ ...people[1], tripId: "T1002" }], care, NOW, "month", new Set())[0];
+assert(matches(onTrip, "T1002") && !matches(rows[0], "T1002"), "find by trip");
+assert(matches(rows[0], "rider 1 test"), "find by name");
 assert(ridersCsv(rows.slice(0, 2), (_row, minor) => String(minor / 100)).split("\n").length === 3, "CSV has a header and one line per rider");
 const facts = insights(rows, NOW);
 assert(facts.signups.length === 14 && facts.retention > 0 && facts.topZones.length > 0, "insights are computed");

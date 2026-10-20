@@ -2,8 +2,7 @@ import { classifyStatus } from "../api/httpClient.ts";
 import { can } from "../auth/permissions.ts";
 import { APPS, tripContractMatchesApps } from "./apps.ts";
 import { canStartCheckout, existingAuthContinues, type PaymentMethod } from "../payments/book.ts";
-import { publicIncident, resolveIncident, takeIncident } from "../safety/book.ts";
-import { addNote, deliveredToRider, reply, type Ticket } from "../support/book.ts";
+import { liveSos, liveTicket } from "./frontendC.ts";
 
 export type ScenarioResult = {
   id: string;
@@ -28,11 +27,10 @@ export function chapter16(): ScenarioResult[] {
   sim("T07", !canStartCheckout(methods, "cash") && existingAuthContinues({ id: "C", method: "cash", state: "authorized" }, methods), "New cash checkout refused. Existing authorisation continues.");
   sim("T08", false, "A repeated refund key is one effect. Tip and payout retries are not all wired.");
   sim("T09", false, "Cancel keeps the policy version in the reservation book. Daylight-saving was not exercised, so this scenario is not passed.");
-  const view = publicIncident(resolveIncident(takeIncident({ id: "I", state: "queued", locationAt: "2026-10-05T10:00:00Z", accuracyM: 8, ownerId: null }, "erik")).incident);
-  sim("T10", view.state === "resolved" && !("pin" in view), "SOS taken and resolved. No PIN.");
-  let ticket: Ticket = { id: "S", ownerId: null, ownerUntil: null, messages: [] };
-  ticket = addNote(ticket, "maja", "private");
-  sim("T11", deliveredToRider(reply(ticket, "maja", "hello", "k", new Set()).ticket).length === 1, "One public reply. The note stays private.");
+  const view = liveSos();
+  sim("T10", !view.error && view.status === "resolved" && !("pin" in view.record), "SOS taken and resolved. No PIN.");
+  const ticket = liveTicket();
+  sim("T11", ticket.replies === 1 && ticket.private, "One public reply. The note stays private.");
   sim("T12", false, "A stale revision is a conflict and a second agent can publish. Scheduled expiry does not reach the apps.");
   sim("T13", false, "The audience filter exists. A deep link does not open an app screen, so this scenario is not passed.");
   sim("T14", !can("support", "finance.read") && can("finance", "payments.refund"), "Out-of-scope permission is refused in the admin.");

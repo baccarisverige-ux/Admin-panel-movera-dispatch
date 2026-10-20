@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cancelFeeAmount, cancelFeeIssues, completeCancelFees, DEFAULT_FEE_CATEGORIES, feeRow, riderSeesLine, sameForAll, type CancelFeeRow } from "./cancelFees.ts";
+import { cancelFeeAmount, cancelFeeIssues, completeCancelFees, DEFAULT_FEE_CATEGORIES, feeRow, largeCancelFeeChanges, riderSeesLine, sameForAll, type CancelFeeRow } from "./cancelFees.ts";
 import { cancelDecision, changeLines, emptyDispatchBook, liveRules, normalizeDispatchBook, riderCancelFee, riderScheduledRules, zoneDefault, zoneIssues } from "./rules.ts";
 
 const kr = (value: number) => `${value} kr`;
@@ -98,4 +98,19 @@ test("every car type Pricing lists: a car type without a row copies Economy unti
   assert.deepEqual(Object.keys(loaded), ["economy", "comfort", "premium", "xl", "van"]);
   // A change on a car type that copied Economy shows only what changed.
   assert.deepEqual(changeLines(zone, { ...zone, riderCancel: { ...zone.riderCancel, fees: { ...zone.riderCancel.fees, pet: { ...zone.riderCancel.fees.economy, value: 40 } } } }), ["Live trips, Pet: fee: 35 → 40"]);
+});
+
+test("A-O3: cancel fees moving more than 50 % from the published table are listed for \"Are you sure?\"", () => {
+  const live = zoneDefault("Z001").riderCancel.fees;
+  const cats = [{ id: "economy", label: "Movera" }, { id: "comfort", label: "Comfort" }, { id: "premium", label: "Premium" }];
+  assert.deepEqual(largeCancelFeeChanges(live, structuredClone(live), cats, "Norrmalm · Rider cancels", "kr"), []);
+  const next = structuredClone(live);
+  next.economy.value = 100; // 35 → 100 kr
+  next.comfort.value = 60; // 45 → 60 kr, +33 %
+  next.premium.max = 50; // 150 → 50 kr
+  const lines = largeCancelFeeChanges(live, next, cats, "Norrmalm · Rider cancels", "kr");
+  assert.deepEqual(lines, ["Norrmalm · Rider cancels, Movera: fee 35 → 100 kr (+186%)", "Norrmalm · Rider cancels, Premium: highest fee 150 → 50 kr (−67%)"]);
+  const switched = structuredClone(live);
+  switched.economy = { ...switched.economy, type: "percent", value: 90 };
+  assert.deepEqual(largeCancelFeeChanges(live, switched, cats, "x", "kr"), [], "a fixed to % switch has nothing to compare");
 });

@@ -10,6 +10,9 @@ async function session(page: Page, agentId = "nora") {
 async function confirm(page: Page, target?: string) {
   const modal = page.locator(".modal.open").last();
   if (target) await modal.getByLabel(`Type ${target} to confirm`).fill(target);
+  // Cancel and refund dialogs start with no reason (A-O1): pick the first one when none is chosen.
+  const reason = modal.getByLabel("Reason", { exact: true });
+  if ((await reason.count()) && (await reason.inputValue()) === "") await reason.selectOption({ index: 1 });
   await modal.getByRole("button", { name: "Confirm" }).click();
 }
 
