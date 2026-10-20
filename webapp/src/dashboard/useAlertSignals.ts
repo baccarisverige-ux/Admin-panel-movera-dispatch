@@ -13,46 +13,66 @@ export function readMuted(): boolean {
   }
 }
 
+/** True once the person has clicked or typed on the page: before that a browser refuses to start sound. */
+function hadGesture(): boolean {
+  const activation = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation;
+  return activation ? activation.hasBeenActive : gestureSeen;
+}
+
+let gestureSeen = false;
+if (typeof document !== "undefined") {
+  const seen = () => { gestureSeen = true; };
+  document.addEventListener("pointerdown", seen, { once: true, capture: true });
+  document.addEventListener("keydown", seen, { once: true, capture: true });
+}
+
+function playOn(context: AudioContext, urgent: boolean) {
+  const start = context.currentTime;
+  const notes = urgent ? [880, 660, 880] : [660];
+  notes.forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(0.0001, start + index * 0.22);
+    gain.gain.exponentialRampToValueAtTime(0.18, start + index * 0.22 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + index * 0.22 + 0.2);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(start + index * 0.22);
+    oscillator.stop(start + index * 0.22 + 0.21);
+  });
+  window.setTimeout(() => void context.close(), 1200);
+}
+
 /**
- * A short tone made with Web Audio. With waitForClick, a browser that holds sound until the
- * person clicks plays it on that first click instead of not at all.
+ * A short tone made with Web Audio. The audio context is only made after the person has clicked or typed
+ * (UI-16): made earlier, the browser refuses it and logs "AudioContext was not allowed to start". With
+ * waitForClick, a tone asked for before that plays on the first click instead of not at all.
  */
 export function tone(urgent: boolean, waitForClick = false) {
   if (typeof window === "undefined") return;
-  try {
-    const AudioContext = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
-    if (!AudioContext) return;
-    const context = new AudioContext();
-    const play = () => {
-      const start = context.currentTime;
-      const notes = urgent ? [880, 660, 880] : [660];
-      notes.forEach((frequency, index) => {
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
-        oscillator.frequency.value = frequency;
-        gain.gain.setValueAtTime(0.0001, start + index * 0.22);
-        gain.gain.exponentialRampToValueAtTime(0.18, start + index * 0.22 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + index * 0.22 + 0.2);
-        oscillator.connect(gain).connect(context.destination);
-        oscillator.start(start + index * 0.22);
-        oscillator.stop(start + index * 0.22 + 0.21);
-      });
-      window.setTimeout(() => void context.close(), 1200);
-    };
-    if (context.state !== "suspended" || !waitForClick) {
-      play();
-      return;
+  const AudioContext = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
+  if (!AudioContext) return;
+  const start = () => {
+    try {
+      const context = new AudioContext();
+      if (context.state === "suspended") void context.resume().then(() => playOn(context, urgent), () => void context.close());
+      else playOn(context, urgent);
+    } catch {
+      // Sound is a convenience; the on-screen alert stays either way.
     }
-    const resume = () => {
-      document.removeEventListener("pointerdown", resume);
-      document.removeEventListener("keydown", resume);
-      void context.resume().then(play, () => void context.close());
-    };
-    document.addEventListener("pointerdown", resume, { once: true });
-    document.addEventListener("keydown", resume, { once: true });
-  } catch {
-    // Sound is a convenience; the on-screen alert stays either way.
+  };
+  if (hadGesture()) {
+    start();
+    return;
   }
+  if (!waitForClick) return;
+  const resume = () => {
+    document.removeEventListener("pointerdown", resume);
+    document.removeEventListener("keydown", resume);
+    start();
+  };
+  document.addEventListener("pointerdown", resume, { once: true });
+  document.addEventListener("keydown", resume, { once: true });
 }
 
 export type Signal = { id: string; title: string; body: string; urgent: boolean; sound?: boolean; notify?: boolean };

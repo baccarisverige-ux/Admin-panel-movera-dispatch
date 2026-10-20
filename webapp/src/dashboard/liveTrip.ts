@@ -1,4 +1,5 @@
 import type { DemoRecord } from "../api/seed.ts";
+import { statusLabel } from "../domain/labels.ts";
 import { CATEGORIES } from "../domain/contract.ts";
 import { driverCode } from "../fleet/codes.ts";
 import { formatMoney, market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
@@ -163,7 +164,8 @@ export function liveTrip(
     distance: `${tripKm.toFixed(1)} km`,
     fare: `${fare} (estimate)`,
     payment,
-    status: phase === "to_pickup" ? "Driver on the way to pickup" : "Rider on board",
+    // Q35: the contract status words, as the rider and driver apps show them.
+    status: statusLabel(phase === "to_pickup" ? "driver_to_pickup" : "in_trip"),
   };
 
   return {

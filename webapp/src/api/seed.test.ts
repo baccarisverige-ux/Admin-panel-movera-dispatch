@@ -44,7 +44,7 @@ assert(seed.banners.length === 6, "6 banners");
 assert(seed.events.length === 4, "4 events");
 assert(seed.bonuses.length === 3, "3 bonuses");
 assert(seed.staff.length === 12, "12 staff");
-assert(statusLabel("in_trip") === "On a trip", "status label");
+assert(statusLabel("in_trip") === "In trip", "status label: the contract name in readable form (Q35)");
 assert(!statusLabel("in_trip").includes("_"), "no raw status");
 const r1 = seed.riders.find((rider) => rider.id === "R0001");
 const r2 = seed.riders.find((rider) => rider.id === "R0002");
@@ -154,7 +154,7 @@ const pending = await api.command({
   expectedRev: approvalRev,
   before: "open",
   after: "refunded",
-  amountOre: 25_000,
+  amountOre: 60_000,
 });
 assert(pending.status === "pending_approval", "large refund waits for approval");
 assert((await api.approvals()).some((item) => item.targetId === "RF-LARGE" && item.status === "pending"), "approval queue stores high-impact action");

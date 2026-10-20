@@ -277,7 +277,7 @@ export function createSeed(now = SEED_NOW): DemoDb {
     phone: "",
     zoneId: zoneId(index),
     status: index % 8 === 0 ? "failed" : "captured",
-    fareOre: index === 199 ? 25_000 : 10000 + index * 10,
+    fareOre: index === 199 ? 60_000 : 10000 + index * 10,
   }));
   const refunds = Array.from({ length: 20 }, (_, index) => ({
     id: `RF${String(index + 1).padStart(3, "0")}`,

@@ -68,7 +68,7 @@ export function AuditPage() {
         </div>
         <div className="actions">
           <CommandButton command="admin.audit.refund50" className="secondary-btn" type="button" targetId="RF-SMALL" before="open" after="refunded" amountOre={5_000}>Refund 50 kr</CommandButton>
-          <CommandButton command="admin.audit.refund250" className="primary-btn" type="button" targetId="RF-LARGE" before="open" after="pending approval" amountOre={25_000}>Refund 250 kr</CommandButton>
+          <CommandButton command="admin.audit.refund250" className="primary-btn" type="button" targetId="RF-LARGE" before="open" after="pending approval" amountOre={60_000}>Refund 600 kr</CommandButton>
         </div>
       </div>
 

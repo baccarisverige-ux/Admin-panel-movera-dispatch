@@ -1,7 +1,7 @@
 import { logExport } from "../reports/activityLog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { AlertTriangle, ArrowLeft, CalendarDays, Download, FlaskConical, History, ListX, Radio, Save, Scale, ScrollText, Send, Undo2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarDays, Download, FlaskConical, History, ListX, Radio, Save, Scale, ListTree, ScrollText, Send, Undo2, UserRoundCheck } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
@@ -19,6 +19,8 @@ import { useAlertsMaybe } from "../alerts/AlertsContext";
 import { DispatchAlerts } from "../alerts/DispatchAlerts";
 import { cancelRecords, driverFacts, onlyFinishingNearby } from "../dispatch/demo";
 import { CancelView } from "../dispatch/CancelView";
+import { ActivityView } from "../dispatch/ActivityView";
+import { AllFeaturesView } from "../dispatch/AllFeaturesView";
 import { largeCancelFeeChanges } from "../dispatch/cancelFees";
 import { CancelReasonsView } from "../dispatch/CancelReasonsView";
 import { EventsView } from "../dispatch/EventsView";
@@ -46,7 +48,10 @@ const VIEWS = [
   { id: "history", label: "History", icon: History },
 ] as const;
 
-type View = (typeof VIEWS)[number]["id"];
+/** Views opened from a header button rather than a tab. */
+const EXTRA_VIEWS = ["activity", "features"] as const;
+
+type View = (typeof VIEWS)[number]["id"] | (typeof EXTRA_VIEWS)[number];
 
 const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
 
@@ -57,7 +62,7 @@ export function DispatchPage() {
   const scope = useMarketScope();
   const market = scope.market;
   const country = scope.country;
-  const view: View = VIEWS.some((item) => item.id === params.get("view")) ? (params.get("view") as View) : "rules";
+  const view: View = VIEWS.some((item) => item.id === params.get("view")) || (EXTRA_VIEWS as readonly string[]).includes(params.get("view") ?? "") ? (params.get("view") as View) : "rules";
   const tab: TabId = TABS.some((item) => item.id === params.get("tab")) ? (params.get("tab") as TabId) : "modes";
   const slice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
   const rideCheck = useRideCheckSettings();
@@ -91,6 +96,18 @@ export function DispatchPage() {
     const timer = window.setInterval(() => { setTick((value) => value + 1); setNow(Date.now()); }, 5000);
     return () => window.clearInterval(timer);
   }, []);
+
+  // "All features" links name a card (Q40): once the rules are drawn, scroll to it and flash it.
+  const card = params.get("card");
+  useEffect(() => {
+    if (!card || slice.loading) return;
+    const node = [...document.querySelectorAll<HTMLElement>("section.dx-card")].find((item) => item.getAttribute("aria-label") === card);
+    if (!node) return;
+    node.scrollIntoView({ block: "start" });
+    node.classList.add("pl-flash");
+    const timer = window.setTimeout(() => node.classList.remove("pl-flash"), 1600);
+    return () => window.clearTimeout(timer);
+  }, [card, slice.loading, params]);
 
   const access = agent?.scope ?? { zones: "all" as const };
   const zones = market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id)));
@@ -226,6 +243,8 @@ export function DispatchPage() {
           <h2>Dispatch in {market.name}</h2>
           <p>How ride requests find a driver: Radar, Exclusive and reservations, with rules for every zone.</p>
         </div>
+        <button data-command="admin.dispatch.view" type="button" className={view === "features" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "features"} onClick={() => go({ view: view === "features" ? null : "features" })} title="Every setting and feature, with a search"><ListTree size={15} aria-hidden="true" /> All features</button>
+        <button data-command="admin.dispatch.view" type="button" className={view === "activity" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "activity"} onClick={() => go({ view: view === "activity" ? null : "activity" })} title="Everything you did, this session and earlier, with done or failed"><UserRoundCheck size={15} aria-hidden="true" /> My activity</button>
         <button data-command="admin.dispatch.rulesFile" type="button" className="dash-btn ghost" onClick={downloadRules} title="All live rules in one file for the backend team"><Download size={15} aria-hidden="true" /> Rules file</button>
         {zoneId ? (
           <>
@@ -340,6 +359,8 @@ export function DispatchPage() {
       {!slice.loading && view === "events" ? <EventsView book={book} market={market} drivers={countryLive.map((driver) => ({ id: driver.id, name: driver.name, zoneName: driver.zoneName }))} canEdit={canEditRole} canBonus={Boolean(agent && can(agent.role, "drivers.bonuses"))} onNotice={say} /> : null}
       {!slice.loading && view === "reasons" ? <CancelReasonsView market={market} country={countryRules} onCountry={(next) => setWorkingCountry((current) => ({ ...current, [country]: next }))} canEdit={canEditRole} /> : null}
       {!slice.loading && view === "cancels" ? <CancelView book={book} market={market} records={records} categories={activeCategories(pricing)} rulesOf={liveOf} canDecide={canControl} agentId={agent?.id ?? ""} money={money} onNotice={say} /> : null}
+      {view === "activity" ? <ActivityView timeZone={market.timeZone} /> : null}
+      {view === "features" ? <AllFeaturesView zoneId={zoneId || zones[0]?.id || ""} /> : null}
       {!slice.loading && view === "history" ? <HistoryView book={book} market={market} agentId={agent?.id ?? ""} canEdit={canEditRole} canApprove={canApprove} rulesOf={liveOf} onNotice={say} /> : null}
     </div>
   );

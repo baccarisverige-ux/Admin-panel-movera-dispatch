@@ -1,3 +1,4 @@
+import { formatMoney } from "../domain/money.ts";
 export type StatTuple = [label: string, value: string];
 export type CardTuple = [title: string, detail: string, actionsPipeSeparated: string];
 
@@ -150,9 +151,9 @@ export function calculateFare(
   return Math.max(rates[3], rates[0] + distance * rates[1] + duration * rates[2]);
 }
 
+/** Whole kronor as "1234,50 kr": the one formatter (C-23), without grouping as before. */
 export function formatSek(amount: number): string {
-  const [whole, frac] = amount.toFixed(2).split(".");
-  return `${whole},${frac} kr`;
+  return formatMoney({ amountMinor: Math.round(amount * 100), currency: "SEK" }, "sv-SE", { grouping: false });
 }
 
 export const PRICE_ROWS: PriceRow[] = [

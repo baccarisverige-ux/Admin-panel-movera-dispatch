@@ -20,7 +20,6 @@ import {
   setAppVersion,
   setEnvironment,
   setExpiry,
-  setMaxStops,
   setOverride,
   setReason,
   setSchedule,
@@ -37,6 +36,9 @@ import {
 import { CATEGORIES } from "../domain/contract";
 import { coreZones, stockholmZones } from "../zones/releases";
 import { CommandButton } from "../ui/CommandButton";
+import { useDirtyWarning } from "../ui/useDirtyWarning";
+import { RefundPolicyPanel } from "../payments/RefundPolicyPanel";
+import { can } from "../auth/permissions";
 
 const LEVELS: OverrideLevel[] = ["market", "zone", "category", "app", "platform", "appVersion", "cohort"];
 
@@ -84,7 +86,22 @@ function sameBook(a: ConfigBook, b: ConfigBook): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-function ConfigAll() {
+/** Switches Dispatch owns (Q26, X18): scheduled rides. Shown read-only here, with a link to the real setting. */
+const DISPATCH_SWITCHES = new Set(["scheduled", "bookLater", "scheduledRides"]);
+
+function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: boolean }; onChange: (on: boolean) => void }) {
+  if (DISPATCH_SWITCHES.has(item.id)) {
+    return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{item.label}: set per zone in Dispatch › Reservations. <Link to="/dispatch?tab=reservations">Edit in Dispatch</Link></p>;
+  }
+  return (
+    <label className="check-row">
+      <input type="checkbox" checked={item.on} onChange={(event) => onChange(event.target.checked)} />
+      {item.label}
+    </label>
+  );
+}
+
+function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
   const { agent } = useSession();
   const store = useSlice<ConfigBook>("config", emptyConfig());
   const persisted = useMemo(() => normalizeConfig(store.value), [store.value]);
@@ -107,26 +124,23 @@ function ConfigAll() {
     cohort: "beta",
   });
 
+  // C-17 / Q33: opening Settings saves nothing. A schedule or expiry that is due is applied on read (as the app
+  // config export does), shown here, and stored only with Save draft or "Apply due schedule / expiry".
+  const [openedAt] = useState(() => new Date().toISOString());
+  const base = useMemo(() => advanceConfigClock(persisted, openedAt), [persisted, openedAt]);
+  const lifecycleDue = !sameBook(base, persisted);
   useEffect(() => {
     if (store.loading) return;
-    const advanced = advanceConfigClock(persisted, new Date().toISOString());
-    setBook(advanced);
+    setBook(base);
+  }, [base, store.loading]);
 
-    if (agent && !sameBook(advanced, persisted)) {
-      void store.save(advanced, {
-        targetId: "configuration",
-        reason: "Apply scheduled configuration lifecycle",
-        actorId: agent.id,
-        before: `config ${persisted.draftRev}`,
-        after: `config ${advanced.draftRev}`,
-        expectedSliceRev: persisted.draftRev,
-      }).then((result) => {
-        if (result) setNotice("Scheduled configuration lifecycle applied.");
-      });
-    }
-  }, [agent?.id, persisted, store.loading]);
-
-  const dirty = !sameBook(book, persisted);
+  const dirty = !sameBook(book, base);
+  const [refundDirty, setRefundDirty] = useState(false);
+  useDirtyWarning(dirty || refundDirty);
+  useEffect(() => {
+    onDirty?.(dirty || refundDirty);
+    return () => onDirty?.(false);
+  }, [dirty, refundDirty, onDirty]);
   const missing = missingTranslations(book.draft.reasons);
   const staff = useRecords("staff", null);
   const diff = configDiff(book.published, book.draft);
@@ -151,8 +165,6 @@ function ConfigAll() {
   const approval = agent ? approveConfig(book, agent.id) : null;
   const publication = agent ? publishConfig(book, agent.id, new Date().toISOString()) : null;
   const rollback = agent ? rollbackConfig(book, agent.id, new Date().toISOString()) : book;
-  const clocked = advanceConfigClock(book, new Date().toISOString());
-  const clockChanged = !sameBook(clocked, book);
 
   if (store.loading) return <p className="state-line">Loading configuration.</p>;
 
@@ -174,7 +186,10 @@ function ConfigAll() {
         {store.message ? ` ${store.message}` : ""}
         {missing.length > 0 ? ` Missing translation: ${missing.join(", ")}.` : ""}
         {dirty ? " Unsaved changes." : " Saved draft."}
+        {lifecycleDue && !dirty ? " A scheduled change is due: it is shown here and is stored with the next save." : ""}
       </p>
+
+      <RefundPolicyPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setRefundDirty} />
 
       <article className="panel" data-testid="config-impact">
         <h3>Impact preview</h3>
@@ -223,7 +238,7 @@ function ConfigAll() {
             type="button"
             disabled={!dirty}
             onClick={() => {
-              setBook(persisted);
+              setBook(base);
               setNotice("Unsaved draft changes discarded.");
             }}
           >
@@ -235,31 +250,9 @@ function ConfigAll() {
       <article className="panel">
         <h3>Features</h3>
         <p className="state-line">Rider app</p>
-        {book.draft.switches.filter((item) => item.app === "rider").map((item) => (
-          <label className="check-row" key={item.id}>
-            <input
-              type="checkbox"
-              checked={item.on}
-              onChange={(event) => agent && edit(
-                (current) => setSwitch(current, item.id, event.target.checked, agent.id),
-              )}
-            />
-            {item.label}
-          </label>
-        ))}
+        {book.draft.switches.filter((item) => item.app === "rider").map((item) => <SwitchRow key={item.id} item={item} onChange={(on) => agent && edit((current) => setSwitch(current, item.id, on, agent.id))} />)}
         <p className="state-line">Driver app</p>
-        {book.draft.switches.filter((item) => item.app === "driver").map((item) => (
-          <label className="check-row" key={item.id}>
-            <input
-              type="checkbox"
-              checked={item.on}
-              onChange={(event) => agent && edit(
-                (current) => setSwitch(current, item.id, event.target.checked, agent.id),
-              )}
-            />
-            {item.label}
-          </label>
-        ))}
+        {book.draft.switches.filter((item) => item.app === "driver").map((item) => <SwitchRow key={item.id} item={item} onChange={(on) => agent && edit((current) => setSwitch(current, item.id, on, agent.id))} />)}
       </article>
 
       <article className="panel">
@@ -368,7 +361,6 @@ function ConfigAll() {
             Feature
             <select aria-label="Override feature" value={featureKey} onChange={(event) => setFeatureKey(event.target.value as FeatureKey)}>
               <option value="wallet">Wallet</option>
-              <option value="reservations">Reservations</option>
             </select>
           </label>
           <label>
@@ -516,16 +508,10 @@ function ConfigAll() {
             {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
           </select>
         </label>
-        <label className="check-row">
-          <input
-            type="checkbox"
-            checked={legacyOverride.reservations ?? book.draft.features.reservations}
-            onChange={(event) => agent && edit(
-              (current) => setZoneOverride(current, zoneId, "reservations", event.target.checked, agent.id),
-            )}
-          />
-          Reservations in this zone
-        </label>
+        {/* Q26 / X18: scheduled rides are set per zone in Dispatch; shown here read-only. */}
+        <p className="op-help" data-testid="config-reservations-moved">
+          Reservations per zone: set in Dispatch. <Link to="/dispatch?tab=reservations">Edit in Dispatch</Link>
+        </p>
         <label className="check-row">
           <input
             type="checkbox"
@@ -573,17 +559,10 @@ function ConfigAll() {
 
       <article className="panel">
         <h3>Booking rules</h3>
-        <label>
-          Max stops
-          <input
-            type="number"
-            min={0}
-            value={book.draft.booking.maxStops}
-            onChange={(event) => agent && edit(
-              (current) => setMaxStops(current, Number(event.target.value), agent.id),
-            )}
-          />
-        </label>
+        {/* Q26 / X18: max stops is set per zone in Dispatch › Rides & stops (the value the apps get). */}
+        <p className="op-help" data-testid="config-stops-moved">
+          Max stops: set per zone in Dispatch › Rides &amp; stops. <Link to="/dispatch?tab=rides">Edit in Dispatch</Link>
+        </p>
       </article>
 
       <article className="panel">
@@ -736,15 +715,15 @@ function ConfigAll() {
             className="secondary-btn"
             type="button"
             targetId="configuration"
-            before={`config ${book.draftRev}`}
-            after={`config ${clocked.draftRev}`}
-            disabled={dirty || !clockChanged}
-            title={dirty ? "Save or discard unsaved changes first." : clockChanged ? undefined : "No schedule or expiry is due."}
+            before={`config ${persisted.draftRev}`}
+            after={`config ${base.draftRev}`}
+            disabled={dirty || !lifecycleDue}
+            title={dirty ? "Save or discard unsaved changes first." : lifecycleDue ? undefined : "No schedule or expiry is due."}
             expectedSliceRev={persisted.draftRev}
             sliceKey="config"
-            value={clocked}
+            value={base}
             onDone={() => {
-              setBook(clocked);
+              setBook(base);
               setNotice("Due schedule or expiry applied.");
             }}
           >
@@ -770,7 +749,10 @@ export function ConfigPage() {
   const [params, setParams] = useSearchParams();
   const tab = (SETTINGS_TABS.find((item) => item.id === params.get("tab"))?.id ?? "all") as SettingsTab;
   const [notice, setNotice] = useState("");
-  const selectTab = (id: SettingsTab) => setParams(() => {
+  const [unsaved, setUnsaved] = useState(false);
+  // Leaving the settings with unsaved changes asks first (Q33), for tabs and Back as for links.
+  const leave = () => !unsaved || window.confirm("You have unsaved changes. Leave this page?");
+  const selectTab = (id: SettingsTab) => leave() && setParams(() => {
     const next = new URLSearchParams(globalThis.location.search);
     if (id === "all") next.delete("tab");
     else next.set("tab", id);
@@ -785,13 +767,13 @@ export function ConfigPage() {
   return (
     <div className="dx-page pl-page">
       <div className="pl-top">
-        <button data-command="admin.panel.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.panel.view" type="button" className="dash-btn ghost dx-back" onClick={() => { if (!leave()) return; if (globalThis.history.length > 1) navigate(-1); else navigate("/"); }}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
         <div className="dash-tabs dx-views" role="tablist" aria-label="Settings sections">
           {SETTINGS_TABS.map((item) => <button data-command="admin.panel.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => selectTab(item.id)}>{item.label}</button>)}
         </div>
       </div>
       {notice ? <p role="status" className="pl-status">{notice}</p> : null}
-      {tab === "all" ? <><FindSetting onPick={jump} /><ConfigAll /></> : null}
+      {tab === "all" ? <><FindSetting onPick={jump} /><ConfigAll onDirty={setUnsaved} /></> : null}
       {tab === "compare" ? <CompareVersions /> : null}
       {tab === "elsewhere" ? <SettingsElsewhere /> : null}
       {tab === "panel" ? <PanelSettings isSuper={agent?.role === "super"} onNotice={setNotice} /> : null}

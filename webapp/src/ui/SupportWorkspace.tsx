@@ -9,6 +9,10 @@ import { Cards, SortTable } from "../reports/ui";
 import { SupportSettings } from "../support/SupportSettings";
 import { LANGS, SUPPORT_DESK_KEY, TOPICS, emptyDesk, factsOf, linkCase, normalizeDesk, reopen, setTopic, setWaiting, solve, teamNumbers, templatesFor, type Desk, type Facts, type TopicId } from "../support/desk";
 import { CommandButton } from "./CommandButton";
+import { NotFoundRecord } from "./NotFoundRecord";
+import { shortDateTime } from "../domain/time";
+import { statusLabel } from "../domain/labels";
+import { zoneTimeZone } from "../markets/markets";
 
 type Filter = "all" | "mine" | "new" | "late" | "waiting" | "solved";
 const FILTERS: { id: Filter; label: string; icon: ReactNode; tone: string }[] = [
@@ -101,6 +105,8 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
     </header>
   );
 
+  // An unknown ticket address says so (Q23), instead of quietly opening the first ticket.
+  if (id && !view && rows.data && !all.some((item) => item.row.id === id)) return <div className="dx-page sp-page">{header}<NotFoundRecord kind="Ticket" id={id} list={chat ? "/chat" : "/support"} listLabel={chat ? "chat" : "support"} /></div>;
   if (view === "settings") return <div className="dx-page sp-page">{header}<SupportSettings desk={desk} country={scope.market.id} editable={Boolean(agent && can(agent.role, "settings.edit"))} /></div>;
   if (view === "team") {
     const team = teamNumbers(all.map((item) => item.facts));
@@ -192,7 +198,9 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
           <article className="sp-conversation panel" aria-label={`Ticket ${row.id}`}>
             <header className="sp-conv-head">
               <h3>{row.id} · {row.name}</h3>
-              <p>Owner {ops.owner ?? "Unassigned"} {ops.ownerUntil ? `until ${ops.ownerUntil}` : ""} · SLA {ops.dueAt} · {ops.priority} · {ops.language}</p>
+              {/* Q22 / UI-14: who opened it and when, in the zone's local time; the owner is the same one the list shows. */}
+              <p data-testid="ticket-opened">{facts.who === "driver" ? "Driver" : "Rider"} {row.name} · {shortDateTime(facts.openedAt, zoneTimeZone(row.zoneId))}</p>
+              <p className="sp-help" data-testid="ticket-owner">{facts.owner ? `${agentName(facts.owner)} is working on it${ops.ownerUntil ? ` until ${shortDateTime(ops.ownerUntil, zoneTimeZone(row.zoneId))}` : ""}` : "Nobody is working on it yet"} · Due {shortDateTime(ops.dueAt, zoneTimeZone(row.zoneId))} · Priority {ops.priority}</p>
               <span className="sp-conv-meta">
                 <span className={`sp-topic ${facts.topic}`}>{TOPICS.find((item) => item.id === facts.topic)?.label}</span>
                 <small className="sp-help">Not right? Move it to</small>
@@ -242,7 +250,7 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
             </section>
             <section className="sp-card">
               <h4><MessageSquareText size={14} aria-hidden="true" /> Trip</h4>
-              {trip ? <><b>{trip.id}</b><small>{trip.status.replaceAll("_", " ")}</small><Link to={`/trips/${trip.id}`}>Open the trip: route, chat, calls, refund</Link></> : <small>No trip found for this ticket.</small>}
+              {trip ? <><b>{trip.id}</b><small>{statusLabel(trip.status)}</small><Link to={`/trips/${trip.id}`}>Open the trip: route, chat, calls, refund</Link></> : <small>No trip found for this ticket.</small>}
             </section>
             <section className="sp-card">
               <h4><Siren size={14} aria-hidden="true" /> Safety</h4>

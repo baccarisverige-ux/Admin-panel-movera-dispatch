@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { COLLECTION_WRITES, COMMANDS, REFUND_APPROVAL_MINOR, SLICE_WRITERS } from "./registry.ts";
+import { COLLECTION_WRITES, COMMANDS, SLICE_WRITERS } from "./registry.ts";
 
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
@@ -20,10 +20,10 @@ assert(COMMANDS.every((command) => command.owner.length > 0), "every action has 
 assert(COMMANDS.every((command) => command.entity.length > 0), "every action has an entity");
 assert(COMMANDS.find((command) => command.id === "admin.trip.cancel")?.allowedStates?.includes("in_trip"), "trip cancel has state policy");
 const refundSpec = COMMANDS.find((command) => command.id === "admin.payment.refund");
-assert(refundSpec?.approvalThresholdMinor?.SEK === 20_000, "refund threshold is registered");
-// C-08: the same rule in every currency: 200 kr, 20 €, 60 DT (TND has 1000 millimes, so not 20 DT).
-assert(refundSpec?.approvalThresholdMinor?.EUR === 2_000 && refundSpec.approvalThresholdMinor.TND === 60_000, "refund threshold per currency");
-assert(COMMANDS.find((command) => command.id === "admin.trip.refund")?.approvalThresholdMinor === REFUND_APPROVAL_MINOR, "a full trip refund has the same threshold");
+// Q25 / C-22: refunds are under the one second-admin rule from Settings; the limits live in payments/refundPolicy.ts only.
+assert(refundSpec?.secondAdmin === true, "a payment refund needs a second admin above the limit");
+assert(COMMANDS.find((command) => command.id === "admin.trip.refund")?.secondAdmin === true, "a full trip refund has the same rule");
+assert(COMMANDS.find((command) => command.id === "admin.trip.cancel")?.secondAdmin === false, "other commands do not");
 // C-04: every command declares what it writes, and the tables only name real commands.
 for (const id of Object.keys(COLLECTION_WRITES)) assert(ids.has(id), `${id} in COLLECTION_WRITES is a command`);
 for (const [slice, patterns] of Object.entries(SLICE_WRITERS)) {

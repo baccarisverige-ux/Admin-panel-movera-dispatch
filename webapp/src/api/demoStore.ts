@@ -16,8 +16,51 @@ const memoryStorage: StorageLike = {
 };
 
 function storage(): StorageLike {
-  if (typeof localStorage === "undefined") return memoryStorage;
-  return localStorage;
+  // C-26: a browser that blocks storage throws on access; the demo then keeps its data in memory.
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.getItem(DB_KEY);
+      return localStorage;
+    }
+  } catch {
+    // fall through
+  }
+  return memoryStorage;
+}
+
+const isObject = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+const isRow = (value: unknown): value is DemoRecord => isObject(value) && typeof value.id === "string";
+const AUDIT_RESULTS = new Set(["committed", "rejected", "denied", "conflict", "pending_approval"]);
+const isAudit = (value: unknown): value is DemoDb["audits"][number] =>
+  isObject(value) && ["id", "at", "actorId", "action", "targetId"].every((key) => typeof value[key] === "string") && AUDIT_RESULTS.has(String(value.result));
+
+/**
+ * C-26: stored demo data is checked, not cast. Each collection must be a list of records with an id (bad rows
+ * are dropped, a missing or broken list comes back from the seed), audits need their fields, and the slices,
+ * operations and approvals must have the right shape. Anything unreadable starts from the seed.
+ */
+let seedForRepair: DemoDb | null = null;
+
+export function validateDb(stored: unknown): DemoDb {
+  if (!isObject(stored) || !Array.isArray(stored.drivers)) return createSeed();
+  // Lists that are missing come back from one seed made once, so a read stays fast.
+  const seed = (seedForRepair ??= createSeed());
+  const out: Record<string, unknown> = { ...stored };
+  for (const [key, value] of Object.entries(seed)) {
+    if (!Array.isArray(value) || key === "audits" || key === "approvals" || key === "rideChecks" || key === "inbox" || key === "zones") continue;
+    const rows = stored[key];
+    out[key] = Array.isArray(rows) ? rows.filter(isRow) : value;
+  }
+  out.zones = Array.isArray(stored.zones) ? stored.zones.filter((zone) => isObject(zone) && typeof zone.id === "string" && typeof zone.name === "string") : seed.zones;
+  out.inbox = Array.isArray(stored.inbox) ? stored.inbox.filter((item) => isObject(item) && typeof item.id === "string" && typeof item.path === "string") : seed.inbox;
+  if (stored.rideChecks !== undefined && !Array.isArray(stored.rideChecks)) delete out.rideChecks;
+  out.rev = typeof stored.rev === "number" && Number.isFinite(stored.rev) ? stored.rev : seed.rev;
+  out.updatedAt = typeof stored.updatedAt === "string" ? stored.updatedAt : seed.updatedAt;
+  out.slices = isObject(stored.slices) ? stored.slices : {};
+  out.operations = isObject(stored.operations) ? Object.fromEntries(Object.entries(stored.operations).filter(([, op]) => isObject(op) && typeof op.operationId === "string" && typeof op.status === "string")) : {};
+  out.approvals = Array.isArray(stored.approvals) ? stored.approvals.filter((item) => isObject(item) && typeof item.id === "string" && typeof item.targetId === "string" && typeof item.amountOre === "number") : [];
+  out.audits = Array.isArray(stored.audits) ? stored.audits.filter(isAudit) : [];
+  return out as DemoDb;
 }
 
 let seedChecks: Pick<DemoDb, "rideChecks" | "incidents"> | null = null;
@@ -37,9 +80,9 @@ export function loadDb(): DemoDb {
   const raw = storage().getItem(DB_KEY);
   if (!raw) return createSeed();
   try {
-    const stored = JSON.parse(raw) as DemoDb;
-    if (!stored || !Array.isArray(stored.drivers)) return createSeed();
-    const parsed = withRideChecks(stored);
+    const stored = JSON.parse(raw) as unknown;
+    if (!isObject(stored) || !Array.isArray(stored.drivers)) return createSeed();
+    const parsed = withRideChecks(validateDb(stored));
     return {
       ...parsed,
       operations: parsed.operations ?? {},

@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { useState } from "react";
 import { KeyRound, Plus, ShieldCheck, Wallet } from "lucide-react";
 import { useSlice } from "../api/hooks";
@@ -80,11 +81,11 @@ export function LimitsView({ editable, currency, onNotice }: { editable: boolean
   const error = limitError(value);
   const patch = (next: Partial<RoleLimit>) => setDraft({ ...value, ...next });
   return (
-    <Card title="Limits per role" icon={<Wallet size={15} />} tone="orange" help="The most one admin with this role can give in one go. Above the second-admin amount, a second admin must approve.">
+    <Card title="Limits per role" icon={<Wallet size={15} />} tone="orange" help="The most one admin with this role can give in one go. Above the country's second-admin limit (Settings), a second admin must approve.">
       <label className="pl-field"><span>Role</span><select aria-label="Limits for role" value={role} onChange={(e) => { setRole(e.target.value as Role); setDraft(null); }}>{ROLES.map((item) => <option key={item} value={item}>{ROLE_LABELS[item]}</option>)}</select></label>
       <Row label="Money back on one payment" on={value.refund.on} onToggle={(on) => patch({ refund: { ...value.refund, on } })} disabled={!editable}><Num label="Refund limit" value={value.refund.max} unit={currency} min={1} disabled={!editable || !value.refund.on} onChange={(max) => patch({ refund: { ...value.refund, max } })} /></Row>
       <Row label="Wallet credit to one rider" on={value.credit.on} onToggle={(on) => patch({ credit: { ...value.credit, on } })} disabled={!editable}><Num label="Credit limit" value={value.credit.max} unit={currency} min={1} disabled={!editable || !value.credit.on} onChange={(max) => patch({ credit: { ...value.credit, max } })} /></Row>
-      <Row label="Second admin above" help="Off: no second admin is needed for this role." on={value.secondAbove.on} onToggle={(on) => patch({ secondAbove: { ...value.secondAbove, on } })} disabled={!editable}><Num label="Second admin above" value={value.secondAbove.amount} unit={currency} disabled={!editable || !value.secondAbove.on} onChange={(amount) => patch({ secondAbove: { ...value.secondAbove, amount } })} /></Row>
+      <Row label="Second admin above" help="One limit per country for every role, set in Settings."><Link to="/settings#refunds">Edit in Settings</Link></Row>
       {error ? <p role="alert" className="pl-warn">{error}</p> : null}
       <NotEnforced>These limits are saved for the backend. Refunds and wallet credits do not check them yet.</NotEnforced>
       <div className="actions">

@@ -5,6 +5,7 @@ import { SessionProvider, useSession } from "./auth/SessionContext";
 import { AppShell } from "./layout/AppShell";
 import { isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
 import { LoginPage } from "./pages/LoginPage";
+import { NotFoundRecord } from "./ui/NotFoundRecord";
 
 // Pages load on first visit, so the sign-in screen and the shell do not wait for every page and map library.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same constraint as React.lazy itself
@@ -100,14 +101,7 @@ export function routerBasename(): string {
 }
 
 function NotFound() {
-  return (
-    <div className="page-heading">
-      <div>
-        <h2>Page not found</h2>
-        <p>That address is not an admin screen.</p>
-      </div>
-    </div>
-  );
+  return <NotFoundRecord kind="Page" list="/" listLabel="the dashboard" />;
 }
 
 function NoAccess() {

@@ -1,4 +1,5 @@
 import type { DemoRecord } from "../api/seed.ts";
+import { needsSecondAdmin, type RefundPolicy } from "../payments/refundPolicy.ts";
 import type { Role } from "../auth/permissions.ts";
 import { lengthKm, tripRoute, type LatLng } from "../dashboard/route.ts";
 import { CATEGORIES } from "../domain/contract.ts";
@@ -294,8 +295,6 @@ export type TripSettings = {
   /** Ask for a reason before showing numbers and chats. Every look is logged either way. */
   reasonToShow: boolean;
   actions: Record<ActionId, boolean>;
-  /** Over this amount (major units), a refund or a pay change waits for a second admin. */
-  approvalOver: Record<MarketId, number>;
 };
 
 export type TripOps = { draftRev: number; settings: TripSettings; entries: Entry[]; views: TripView[] };
@@ -305,7 +304,6 @@ export function defaultTripSettings(): TripSettings {
     extraRoles: [],
     reasonToShow: true,
     actions: Object.fromEntries(ACTIONS.map((item) => [item.id, true])) as Record<ActionId, boolean>,
-    approvalOver: { SE: 500, FR: 50, TN: 150 },
   };
 }
 
@@ -324,7 +322,6 @@ export function normalizeTripOps(value: unknown): TripOps {
       extraRoles: Array.isArray(settings.extraRoles) ? settings.extraRoles : [],
       reasonToShow: settings.reasonToShow !== false,
       actions: { ...base.settings.actions, ...(settings.actions ?? {}) },
-      approvalOver: { ...base.settings.approvalOver, ...(settings.approvalOver ?? {}) },
     },
     entries: Array.isArray(raw.entries) ? raw.entries : [],
     views: Array.isArray(raw.views) ? raw.views : [],
@@ -380,10 +377,10 @@ function waitingRefunds(ops: TripOps, tripId: string): number {
   return ops.entries.filter((entry) => entry.tripId === tripId && entry.kind === "refund" && entry.status === "waiting").reduce((sum, entry) => sum + (entry.amountMinor ?? 0), 0);
 }
 
-/** Money entries above the country limit need a second admin. */
-export function needsApproval(kind: Entry["kind"], amountMinor: number, country: MarketId, settings: TripSettings): boolean {
+/** Money entries above the country's second-admin limit (Settings, Q25) need a second admin. */
+export function needsApproval(kind: Entry["kind"], amountMinor: number, country: MarketId, policy: RefundPolicy): boolean {
   if (kind !== "refund" && kind !== "pay") return false;
-  return Math.abs(amountMinor) > settings.approvalOver[country] * market(country).minorUnits;
+  return needsSecondAdmin(policy, country, amountMinor);
 }
 
 export function withStatus(result: { ops: TripOps; entry: Entry; error?: string }, waiting: boolean): { ops: TripOps; entry: Entry; error?: string } {
@@ -401,9 +398,6 @@ export function decide(ops: TripOps, entryId: string, approverId: string, approv
 }
 
 export function saveSettings(ops: TripOps, settings: TripSettings): { ops: TripOps; error?: string } {
-  for (const [country, value] of Object.entries(settings.approvalOver)) {
-    if (!Number.isFinite(value) || value < 0) return { ops, error: `The approval limit for ${market(country as MarketId).name} must be zero or more.` };
-  }
   return { ops: { ...ops, draftRev: ops.draftRev + 1, settings } };
 }
 

@@ -14,6 +14,7 @@ import {
   Map,
   MapPinned,
   Menu,
+  MoreHorizontal,
   X,
   MessageSquare,
   MessagesSquare,
@@ -162,6 +163,30 @@ function ShellInner({ page, children }: AppShellProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
+  // The "⋯" menu closes with Escape or a click outside, and gives focus back to its button.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRoot = useRef<HTMLDivElement>(null);
+  const moreButton = useRef<HTMLButtonElement>(null);
+  const inboxOn = alerts.book.settings.legacy.inbox;
+  useEffect(() => {
+    if (!moreOpen) return;
+    function onDown(event: MouseEvent) {
+      if (moreRoot.current && !moreRoot.current.contains(event.target as Node)) setMoreOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      setMoreOpen(false);
+      moreButton.current?.focus();
+    }
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [moreOpen]);
+
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -222,14 +247,28 @@ function ShellInner({ page, children }: AppShellProps) {
             <MarketBar />
             <CommandButton command="admin.shell.search" className="secondary-btn" type="button" onDone={() => setSearchOpen(true)}>Search</CommandButton>
             <AlertBell />
-            {alerts.book.settings.legacy.inbox ? <CommandButton command="admin.shell.inbox" className="secondary-btn" type="button" aria-label="Inbox" onDone={() => setInboxOpen((open) => !open)}>Inbox</CommandButton> : null}
+            {inboxOn ? <span className="topbar-inbox"><CommandButton command="admin.shell.inbox" className="secondary-btn" type="button" aria-label="Inbox" onDone={() => setInboxOpen((open) => !open)}>Inbox</CommandButton></span> : null}
+            {/* Q24 / UI-17: at 1280 px and on phones the bar keeps Search, the bell and the profile; the rest is in "⋯". */}
+            <div ref={moreRoot} className="topbar-more-wrap">
+              <button ref={moreButton} data-command="admin.shell.menu" type="button" className="icon-btn topbar-more" aria-label="More options" aria-haspopup="true" aria-expanded={moreOpen} aria-controls="topbar-more" onClick={() => setMoreOpen((open) => !open)}>
+                <MoreHorizontal size={18} aria-hidden="true" />
+              </button>
+              {moreOpen ? (
+                <div id="topbar-more" className="topbar-more-menu" role="group" aria-label="More options">
+                  <MarketBar />
+                  {inboxOn ? <CommandButton command="admin.shell.inbox" className="secondary-btn" type="button" aria-label="Inbox" onDone={() => { setInboxOpen((open) => !open); setMoreOpen(false); }}>Inbox</CommandButton> : null}
+                  <p className="topbar-more-meta">{agent?.name ?? "Signed out"} · {marketScope.market.name} · {localTime} · {env} · {agent?.role ?? "signed out"}</p>
+                  <CommandButton command="admin.shell.signOut" className="link-action" type="button" onDone={signOut}>Sign out</CommandButton>
+                </div>
+              ) : null}
+            </div>
             <div className="admin-profile">
               <div className="avatar">{agent ? agent.name.slice(0, 2).toUpperCase() : "AD"}</div>
               <div>
                 <strong>{agent?.name ?? "Signed out"}</strong>
-                <span>{marketScope.market.name} · {localTime} · {env} · {agent?.role ?? "signed out"}</span>
+                <span className="profile-meta">{marketScope.market.name} · {localTime} · {env} · {agent?.role ?? "signed out"}</span>
               </div>
-              <CommandButton command="admin.shell.signOut" className="link-action" type="button" onDone={signOut}>Sign out</CommandButton>
+              <span className="profile-signout"><CommandButton command="admin.shell.signOut" className="link-action" type="button" onDone={signOut}>Sign out</CommandButton></span>
             </div>
           </div>
         </header>
@@ -251,7 +290,7 @@ function ShellInner({ page, children }: AppShellProps) {
             <CommandButton command="admin.shell.closeSearch" className="secondary-btn" type="button" onDone={() => setSearchOpen(false)}>Close</CommandButton>
           </div>
         ) : null}
-        {inboxOpen && alerts.book.settings.legacy.inbox ? (
+        {inboxOpen && inboxOn ? (
           <div className="panel">
             <h3>Inbox</h3>
             <ul>

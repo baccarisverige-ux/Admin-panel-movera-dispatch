@@ -167,14 +167,16 @@ test("documents follow the live admin state: published fees, overrides, payment 
   assert.equal(riderAppConfig("Z001", after).publishedAt, "2026-10-19T09:30:00Z");
   // A draft that is not published changes nothing.
   assert.deepEqual(riderAppConfig("Z002", after).cancelFees.live.economy.value, 3500);
-  // Config: reservations off for Norrmalm only (published).
+  // Q26 / X18: scheduled rides are owned by Dispatch › Reservations; an old Settings override no longer decides it.
   const config = emptyConfig("nora");
   const off = setZoneOverride(config, "op-norrmalm", "reservations", false, "nora");
   const withOff = { ...base, config: { ...off, published: off.draft } };
-  assert.equal(riderAppConfig("Z001", withOff).features.scheduledRides, false);
-  assert.equal(driverAppConfig("Z001", withOff).features.scheduledRides, false);
-  assert.equal(riderAppConfig("Z002", withOff).features.scheduledRides, true);
-  assert.equal(riderAppConfig("Z001", { ...base, config: off }).features.scheduledRides, true, "an unpublished config draft is not exported");
+  assert.equal(riderAppConfig("Z001", withOff).features.scheduledRides, true, "the old Settings switch is read-only");
+  const dispatchOff = publish(base.dispatch, { Z001: { ...liveRules(base.dispatch, "Z001"), reservation: { ...liveRules(base.dispatch, "Z001").reservation, on: false } } }, {}, ["Z001"], "nora", "2026-10-19T09:40:00.000Z", "");
+  assert.ok(!dispatchOff.error, dispatchOff.error ?? "");
+  assert.equal(riderAppConfig("Z001", { ...base, dispatch: dispatchOff.book }).features.scheduledRides, false, "Dispatch decides");
+  assert.equal(driverAppConfig("Z001", { ...base, dispatch: dispatchOff.book }).features.scheduledRides, false, "for both apps");
+  assert.equal(riderAppConfig("Z002", { ...base, dispatch: dispatchOff.book }).features.scheduledRides, true, "only in that zone");
   // Finance: cash off for every category and platform in Z001.
   let finance = defaultFinanceBook();
   for (const category of riderAppConfig("Z001", base).catalog.categories) for (const platform of ["ios", "android"] as const) finance = savePaymentPolicy(finance, { zoneId: "Z001", category: category.id, platform }, { ...defaultMethodPolicy(), cash: false });

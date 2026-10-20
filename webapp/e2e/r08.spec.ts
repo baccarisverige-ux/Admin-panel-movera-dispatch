@@ -62,7 +62,6 @@ test("R8 trip actions follow lifecycle state", async ({ page }) => {
   await session(page);
 
   await page.goto("/trips/T0004");
-  await page.getByLabel("Cancel reason").selectOption({ index: 1 });
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Offer to driver" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Reassign" })).toBeDisabled();
@@ -76,8 +75,7 @@ test("R8 trip actions follow lifecycle state", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Save waiting time" })).toBeEnabled();
 
   await page.goto("/trips/T0048");
-  // Disabled by the trip's status, not only by the missing reason: the reason list is locked too.
-  await expect(page.getByLabel("Cancel reason")).toBeDisabled();
+  // Disabled by the trip's status.
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Reassign" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Apply fare adjustment" })).toBeDisabled();

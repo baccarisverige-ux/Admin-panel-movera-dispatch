@@ -1,4 +1,3 @@
-import type { CurrencyCode } from "../domain/money.ts";
 import { CANCEL_OK, COMPLETE_OK, FARE_ADJUST_OK, NO_SHOW_OK, OFFER_OK, REASSIGN_OK, REFUND_TRIP_OK, WAITING_OK } from "../trips/rules.ts";
 
 export type CommandSpec = {
@@ -19,8 +18,11 @@ export type ActionSpec = CommandSpec & {
   versioned: boolean;
   audit: "always" | "none";
   allowedStates?: readonly string[];
-  /** A second authorised agent must approve when the amount (minor units) is at or over the threshold of its currency. */
-  approvalThresholdMinor?: Readonly<Record<CurrencyCode, number>>;
+  /**
+   * A second authorised agent must approve when the amount is above the country's limit in Settings
+   * (payments/refundPolicy.ts, Q25): one rule, read by the server and every screen.
+   */
+  secondAdmin?: boolean;
   /** The only store slices and collection fields this command may write. Anything else in a request is refused. */
   writes: WriteSpec;
 };
@@ -30,11 +32,6 @@ export type WriteSpec = {
   collections: Readonly<Record<string, readonly string[]>>;
 };
 
-/**
- * Refunds at or over this amount need a second admin. 200 kr was the original rule; the other
- * currencies use about the same value in round numbers: 20 € and 60 DT (TND has 1000 millimes).
- */
-export const REFUND_APPROVAL_MINOR: Readonly<Record<CurrencyCode, number>> = { SEK: 20_000, EUR: 2_000, TND: 60_000 };
 
 const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.shell.menu", label: "Open menu", reason: false, permission: "overview.read" },
@@ -47,8 +44,10 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.auth.signIn", label: "Sign in", reason: false, permission: "overview.read" },
   { id: "admin.auth.pickAgent", label: "Pick demo agent", reason: false, permission: "overview.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },
-  { id: "admin.audit.refund250", label: "Refund 250 kr", reason: true, permission: "payments.refund" },
+  // The id is kept for older audit rows; the demo amount is above the default 500 kr second-admin limit.
+  { id: "admin.audit.refund250", label: "Refund 600 kr", reason: true, permission: "payments.refund" },
   { id: "admin.config.save", label: "Save configuration draft", reason: false, permission: "settings.edit" },
+  { id: "admin.refundPolicy.save", label: "Save refund second-admin limits", reason: true, permission: "settings.publish" },
   { id: "admin.config.publish", label: "Publish configuration", reason: true, permission: "settings.publish" },
   { id: "admin.config.approve", label: "Approve configuration", reason: true, permission: "settings.publish" },
   { id: "admin.config.review", label: "Send configuration for approval", reason: true, permission: "settings.edit" },
@@ -432,6 +431,7 @@ const OWNER_BY_DOMAIN: Record<string, string> = {
   auth: "Platform",
   audit: "Finance",
   config: "Configuration",
+  refundPolicy: "Finance",
   content: "Content",
   design: "Platform",
   driver: "Driver operations",
@@ -582,6 +582,7 @@ export const SLICE_WRITERS: Readonly<Record<string, readonly string[]>> = {
   reservationOps: ["admin.reservation.*"],
   reviewOps: ["admin.review.*"],
   rideCheckOps: ["admin.rideCheck.open"],
+  refundPolicy: ["admin.refundPolicy.save"],
   rideCheckSettings: ["admin.rideCheck.settings"],
   riderCare: ["admin.rider.*", "admin.riders.*"],
   riderOps: ["admin.rider.*"],
@@ -655,11 +656,8 @@ function writesFor(id: string): WriteSpec {
   };
 }
 
-const APPROVAL_THRESHOLDS: Readonly<Record<string, Readonly<Record<CurrencyCode, number>>>> = {
-  "admin.payment.refund": REFUND_APPROVAL_MINOR,
-  "admin.trip.refund": REFUND_APPROVAL_MINOR,
-  "admin.audit.refund250": REFUND_APPROVAL_MINOR,
-};
+/** Money commands under the one second-admin rule (Settings › Refunds, per country). */
+const SECOND_ADMIN = new Set(["admin.payment.refund", "admin.trip.refund", "admin.audit.refund250"]);
 
 const GLOBAL_DOMAINS = new Set(["shell", "auth", "design", "handover", "table", "card", "modal", "tabs", "ui", "doc", "confirm"]);
 const ZONE_DOMAINS = new Set(["zone", "config", "pricing", "dispatch", "live"]);
@@ -682,7 +680,7 @@ function enrich(command: CommandSpec): ActionSpec {
     versioned: !GLOBAL_DOMAINS.has(domain),
     audit: GLOBAL_DOMAINS.has(domain) ? "none" : "always",
     allowedStates: ALLOWED_STATES[command.id],
-    approvalThresholdMinor: APPROVAL_THRESHOLDS[command.id],
+    secondAdmin: SECOND_ADMIN.has(command.id),
     writes: writesFor(command.id),
   };
 }

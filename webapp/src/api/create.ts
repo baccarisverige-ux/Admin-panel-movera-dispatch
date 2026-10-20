@@ -28,6 +28,7 @@ import {
   type Fault,
 } from "./demoStore.ts";
 import { ApiError, apiRequest, classifyStatus, type ApiErrorBody } from "./httpClient.ts";
+import { REFUND_POLICY_KEY, needsSecondAdminIn, normalizeRefundPolicy, parseRefundAbove, saveRefundPolicy, type RefundPolicy } from "../payments/refundPolicy.ts";
 import type { ApprovalRow, AuditRow, DemoDb, DemoRecord, InboxItem, OperationRow, ZoneScope } from "./seed.ts";
 
 export type ApiEnv = {
@@ -498,6 +499,16 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         raw = { ...raw, sliceKey: "reportOps", value: result.book };
       }
 
+      if (raw.action === "admin.refundPolicy.save") {
+        // The server rebuilds the policy from the numbers sent and checks them (C-26), whatever else the body holds.
+        const current = normalizeRefundPolicy(db.slices[REFUND_POLICY_KEY]);
+        const sent = parseRefundAbove(raw.value);
+        if ("error" in sent) reject(422, sent.error);
+        const result = saveRefundPolicy(current, (sent as { aboveMajor: RefundPolicy["aboveMajor"] }).aboveMajor);
+        if (result.error) reject(422, result.error);
+        raw = { ...raw, sliceKey: REFUND_POLICY_KEY, value: result.policy };
+      }
+
       if (raw.action === "admin.gateA.record") {
         if(actorScope.zones!=="all") reject(403,"Acceptance evidence requires all-zone scope.");
         const book=(db.slices.gateAOps??emptyGateA()) as GateBook;
@@ -519,9 +530,10 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         );
       }
 
-      const stored = actionSpec.approvalThresholdMinor ? storedAmount(db, raw) : null;
-      if (actionSpec.approvalThresholdMinor && !stored) reject(404, "The record to refund was not found.");
-      if (stored && stored.amountMinor >= actionSpec.approvalThresholdMinor![stored.currency]) {
+      const stored = actionSpec.secondAdmin ? storedAmount(db, raw) : null;
+      if (actionSpec.secondAdmin && !stored) reject(404, "The record to refund was not found.");
+      // Q25: one limit per country, from Settings (the stored refundPolicy slice); above it a second admin decides.
+      if (stored && needsSecondAdminIn(normalizeRefundPolicy(db.slices[REFUND_POLICY_KEY]), stored.currency, stored.amountMinor)) {
         if (db.approvals.some((item) => item.status === "pending" && item.action === raw.action && item.targetId === raw.targetId)) {
           reject(409, "A request for this is already waiting for a second admin.", false, { code: "conflict" });
         }

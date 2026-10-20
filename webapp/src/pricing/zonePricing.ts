@@ -1,4 +1,4 @@
-import { MARKETS, market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
+import { MARKETS, formatMoney as formatMarketMoney, market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import { completePickupPay, convertPickupPay, defaultPickupPay, diffPickupPay, validatePickupPay, type PickupPay } from "./pickupPay.ts";
 
 /**
@@ -188,11 +188,9 @@ export function roundTo(value: number, step: number): number {
   return Number((Math.round(value / step) * step).toFixed(decimals));
 }
 
-/** Format a major-unit amount in the zone's currency. */
+/** Format a major-unit amount in the zone's currency, with the one formatter (C-23). */
 export function money(value: number, id: MarketId): string {
-  const item = market(id);
-  const digits = item.minorUnits === 1000 ? 3 : 2;
-  return new Intl.NumberFormat(item.locale, { style: "currency", currency: item.currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+  return formatMarketMoney(Math.round(value * market(id).minorUnits), id);
 }
 
 /** An amount in Swedish kronor in a market's own money, with the same rate and rounding the default prices use. */
@@ -485,7 +483,42 @@ export function largePriceChanges(published: ZoneBook, draft: ZoneBook, categori
     const before = published.routes.find((item) => item.id === route.id);
     if (before && isLargePriceChange(before.price, route.price)) lines.push(changeText(`${where}Fixed route ${route.from} → ${route.to}`, before.price, route.price, money));
   }
+  // Q29: the other money settings follow the same rule: commission, driver pickup pay and surge caps.
+  // (Tips have no admin setting yet; they need a config field first and then go through this list too.)
+  for (const category of categories.filter((item) => !item.archived)) {
+    const before = published.commission[category.id];
+    const after = draft.commission[category.id];
+    if (before !== undefined && after !== undefined && isLargePriceChange(before, after)) lines.push(changeText(`${where}${category.label} commission`, before, after, "%"));
+    const pickBefore = published.pickupPay.rates[category.id];
+    const pickAfter = draft.pickupPay.rates[category.id];
+    if (pickBefore && pickAfter) {
+      if (isLargePriceChange(pickBefore.perKm, pickAfter.perKm)) lines.push(changeText(`${where}${category.label} pickup pay per km`, pickBefore.perKm, pickAfter.perKm, money));
+      if (isLargePriceChange(pickBefore.perMin, pickAfter.perMin)) lines.push(changeText(`${where}${category.label} pickup pay per min`, pickBefore.perMin, pickAfter.perMin, money));
+      (pickAfter.ranges ?? []).forEach((range, index) => {
+        const old = pickBefore.ranges?.[index];
+        if (!old || old.fromKm !== range.fromKm || old.toKm !== range.toKm) return;
+        const span = `${range.fromKm}–${range.toKm ?? "+"} km`;
+        if (isLargePriceChange(old.krPerKm, range.krPerKm)) lines.push(changeText(`${where}${category.label} pickup pay ${span} per km`, old.krPerKm, range.krPerKm, money));
+        if (isLargePriceChange(old.krPerMinute, range.krPerMinute)) lines.push(changeText(`${where}${category.label} pickup pay ${span} per min`, old.krPerMinute, range.krPerMinute, money));
+      });
+    }
+  }
+  if (isLargePriceChange(published.fleetCommissionPct, draft.fleetCommissionPct)) lines.push(changeText(`${where}Fleet commission`, published.fleetCommissionPct, draft.fleetCommissionPct, "%"));
+  for (const profile of draft.smart.profiles) {
+    const before = published.smart.profiles.find((item) => item.id === profile.id);
+    if (before && isLargePriceChange(before.cap, profile.cap)) lines.push(changeText(`${where}Surge cap ${profile.name}`, before.cap, profile.cap, "×"));
+  }
   return lines;
+}
+
+/**
+ * Q28: Undo and History restore ask "Are you sure?" by the same rule as Publish: the zones the new store
+ * publishes, compared with what is live now.
+ */
+export function largeStoreChanges(live: PricingStore, next: PricingStore): string[] {
+  if (next === live || next.draftRev === live.draftRev) return [];
+  const zoneIds = next.history[0]?.zoneIds ?? [];
+  return zoneIds.flatMap((zoneId) => largePriceChanges(zoneBook(live, zoneId), zoneBook(next, zoneId), live.categories, zoneName(zoneId)));
 }
 
 function short(value: number): string {
@@ -719,7 +752,7 @@ export type QuoteInput = {
   fixedRouteId?: string | null;
 };
 
-export type QuoteLine = { label: string; amount: number; kind: "trip" | "surge" | "limit" | "extra" | "fee" };
+export type QuoteLine = { label: string; amount: number; kind: "trip" | "surge" | "limit" | "extra" | "fee" | "rounding" };
 
 export type Quote = { lines: QuoteLine[]; total: number; appFee: number; driverGets: number; moveraGets: number; error?: string };
 
@@ -774,10 +807,17 @@ export function quoteRide(book: ZoneBook, input: QuoteInput): Quote {
   const beforeFee = ride + extras;
   const appFee = beforeFee * (price.appFeePct / 100);
   if (appFee > 0) lines.push({ label: `App fee ${short(price.appFeePct)}%`, amount: appFee, kind: "fee" });
-  const total = roundTo(beforeFee + appFee, book.fees.rounding);
+  // C-24 / Q36: exact per currency. Every amount is a whole minor unit (öre, cent: 2 decimals; millime: 3),
+  // the lines add up to the total (a "Rounding" line shows the price rounding), and driver + Movera = total.
+  const unit = market(currencyOf(book.zoneId)).minorUnits;
+  const minor = (value: number) => Math.round(value * unit);
+  const totalMinor = minor(roundTo(beforeFee + appFee, book.fees.rounding));
+  const exact = lines.map((line) => ({ ...line, amount: minor(line.amount) / unit }));
+  const linesMinor = exact.reduce((sum, line) => sum + minor(line.amount), 0);
+  if (linesMinor !== totalMinor) exact.push({ label: "Rounding", amount: (totalMinor - linesMinor) / unit, kind: "rounding" });
   const commission = (book.commission[input.categoryId] ?? 0) / 100;
-  const driverGets = roundTo(beforeFee * (1 - commission), 0.01);
-  return { lines: lines.map((line) => ({ ...line, amount: roundTo(line.amount, 0.001) })), total, appFee: roundTo(appFee, 0.01), driverGets, moveraGets: roundTo(total - driverGets, 0.01) };
+  const driverMinor = Math.min(totalMinor, minor(beforeFee * (1 - commission)));
+  return { lines: exact, total: totalMinor / unit, appFee: minor(appFee) / unit, driverGets: driverMinor / unit, moveraGets: (totalMinor - driverMinor) / unit };
 }
 
 export function marketZoneIdsFor(id: MarketId): string[] {

@@ -9,6 +9,7 @@ import {
   editCategory,
   emptyPricingStore,
   isLargePriceChange,
+  largeStoreChanges,
   largePriceChanges,
   normalizeStore,
   PRICE_ROWS,
@@ -197,3 +198,58 @@ console.log("pricing bounds ok");
   assert(!lines.some((line) => line.includes("Free waiting")), "free waiting minutes are not a price");
 }
 console.log("price checks ok");
+
+// Q29: commission, pickup pay and surge caps follow the same "more than 50 % → Are you sure?" rule.
+{
+  const published = zoneBook(store, "Z001");
+  const draft = structuredClone(published);
+  draft.commission.economy = (published.commission.economy ?? 20) * 2;
+  draft.pickupPay.rates.economy.perKm = published.pickupPay.rates.economy.perKm * 3 + 1;
+  draft.fleetCommissionPct = published.fleetCommissionPct * 1.1;
+  const profile = draft.smart.profiles[0];
+  if (profile) profile.cap = profile.cap * 2;
+  const lines = largePriceChanges(published, draft, store.categories, "Norrmalm");
+  assert(lines.some((line) => line.startsWith("Norrmalm · Movera commission")), `a doubled commission is listed: ${lines.join(" | ")}`);
+  assert(lines.some((line) => line.startsWith("Norrmalm · Movera pickup pay per km")), "a tripled pickup pay is listed");
+  assert(!lines.some((line) => line.includes("Fleet commission")), "a 10 % change is not listed");
+  if (profile) assert(lines.some((line) => line.startsWith(`Norrmalm · Surge cap ${profile.name}`)), "a doubled surge cap is listed");
+}
+
+// Q28: Undo and History restore ask "Are you sure?" by the same rule as Publish.
+{
+  const base = zoneBook(store, "Z001");
+  const doubled = { ...base, prices: { ...base.prices, economy: { ...base.prices.economy, base: base.prices.economy.base * 2 } } };
+  const one = publishZones(store, { Z001: doubled }, "nora", "Double base", AT);
+  const undo = undoLastPublish(one.store, "nora", AT);
+  const undoLines = largeStoreChanges(one.store, undo.store);
+  assert(undoLines.some((line) => line.includes("Base fare") && line.includes("−50%")) === false, "halving is exactly 50 %, not more");
+  const tripled = { ...base, prices: { ...base.prices, economy: { ...base.prices.economy, base: base.prices.economy.base * 3 } } };
+  const two = publishZones(store, { Z001: tripled }, "nora", "Triple base", AT);
+  const undoTwo = undoLastPublish(two.store, "nora", AT);
+  assert(largeStoreChanges(two.store, undoTwo.store).some((line) => line.includes("Base fare") && line.includes("−67%")), "undoing a tripled base fare asks first");
+  const restore = restoreRevision(two.store, two.store.history[0]!.rev, "nora", AT);
+  assert(restore.error !== undefined, "the live revision cannot be restored");
+  const three = publishZones(two.store, { Z001: { ...zoneBook(two.store, "Z001"), prices: { ...zoneBook(two.store, "Z001").prices, economy: { ...zoneBook(two.store, "Z001").prices.economy, base: base.prices.economy.base } } } }, "nora", "Back", AT);
+  const again = restoreRevision(three.store, two.store.history[0]!.rev, "nora", AT);
+  assert(!again.error && largeStoreChanges(three.store, again.store).some((line) => line.includes("Base fare") && line.includes("+200%")), "restoring a tripled revision asks first");
+  assert(largeStoreChanges(three.store, three.store).length === 0, "nothing new, nothing to confirm");
+}
+console.log("large change checks ok");
+
+// C-24 / Q36: money splits are exact per currency and the lines add up to the total.
+{
+  const decimals = (value: number) => (String(value).split(".")[1] ?? "").length;
+  for (const [zone, digits] of [[tunis, 3], [paris, 2], [norrmalm, 2]] as const) {
+    for (const surge of [1, 1.3, 2.7]) {
+      const q = quoteRide(zone, { ...input, surge, km: 13.7, minutes: 23 });
+      const unit = 10 ** digits;
+      const sumMinor = q.lines.reduce((sum, line) => sum + Math.round(line.amount * unit), 0);
+      assert(sumMinor === Math.round(q.total * unit), `${zone.zoneId}: lines ${sumMinor} add up to the total ${q.total}`);
+      assert(Math.round(q.driverGets * unit) + Math.round(q.moveraGets * unit) === Math.round(q.total * unit), `${zone.zoneId}: driver + Movera = total`);
+      for (const value of [q.total, q.driverGets, q.moveraGets, q.appFee, ...q.lines.map((line) => line.amount)]) assert(decimals(value) <= digits, `${zone.zoneId}: ${value} has at most ${digits} decimals`);
+    }
+  }
+  const rounded = quoteRide(tunis, { ...input, km: 13.7, minutes: 23 });
+  assert(rounded.lines.some((line) => line.kind === "rounding") || rounded.lines.reduce((sum, line) => sum + line.amount, 0).toFixed(3) === rounded.total.toFixed(3), "price rounding is shown as its own line");
+}
+console.log("exact split checks ok");

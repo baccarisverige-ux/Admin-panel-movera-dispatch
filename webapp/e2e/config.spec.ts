@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
+/** Q24: at 1280 px and below the country picker, Inbox and Sign out are in the top bar's "⋯" menu. */
+async function topbarMore(page: Page) {
+  const more = page.getByRole("button", { name: "More options", exact: true });
+  if ((await more.isVisible()) && (await more.getAttribute("aria-expanded")) !== "true") await more.click();
+}
+
 async function signIn(page: Page, email: string) {
   await page.goto("/");
   await page.getByLabel("Email").fill(email);
@@ -22,7 +28,11 @@ test("configuration draft is saved, approved by a second agent, published and ro
   await expect(page.getByRole("checkbox", { name: "Apple Pay" })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Show rating" })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Luxury" })).toHaveCount(0);
-  await expect(page.getByLabel("Max stops")).toHaveValue("3");
+  // Q26 / X18: max stops and scheduled rides are set in Dispatch; Settings shows where, read-only.
+  await expect(page.getByTestId("config-stops-moved").getByRole("link", { name: "Edit in Dispatch" })).toHaveAttribute("href", "/dispatch?tab=rides");
+  await expect(page.getByTestId("config-switch-moved-scheduled").getByRole("link", { name: "Edit in Dispatch" })).toHaveAttribute("href", "/dispatch?tab=reservations");
+  await expect(page.getByRole("checkbox", { name: "Scheduled rides" })).toHaveCount(0);
+  await expect(page.getByLabel("Max stops")).toHaveCount(0);
   await expect(page.getByLabel("Rider iOS minimum")).toHaveValue("1.0.0");
   await expect(page.getByLabel("Rider iOS message")).toHaveValue("A new version of Movera is available.");
   await expect(page.getByRole("list", { name: "Configuration diff" })).toContainText("No unpublished changes");
@@ -40,9 +50,10 @@ test("configuration draft is saved, approved by a second agent, published and ro
   await expect(page.getByText(/Missing translation: charged_twice/)).toBeVisible();
   await page.getByLabel("charged_twice Swedish").fill("Drog två gånger");
 
-  await page.getByRole("checkbox", { name: "Reservations in this zone" }).uncheck();
+  await expect(page.getByRole("checkbox", { name: "Reservations in this zone" })).toHaveCount(0);
+  // Wallet is off for everyone now; a zone override turns it back on in Norrmalm.
+  await page.getByRole("checkbox", { name: "Wallet in this zone" }).check();
   await expect(page.getByRole("list", { name: "Configuration diff" })).toContainText("op-norrmalm");
-  await expect(page.locator("[data-effective='zone']")).toContainText("Winning level: zone");
   await expect(page.locator("[data-config-dirty='yes']")).toBeVisible();
   await expect(page.getByRole("button", { name: "Send for approval" })).toBeDisabled();
 
@@ -55,6 +66,7 @@ test("configuration draft is saved, approved by a second agent, published and ro
   await expect(page.getByText("Sent for approval.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve" })).toBeDisabled();
 
+  await topbarMore(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.getByRole("button", { name: "Lena Berg · ops" }).click();
   await expect(page.getByLabel("Email")).toHaveValue("lena@movera.se");
@@ -136,7 +148,7 @@ test("stale configuration editor is refused instead of overwriting a newer draft
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText("Draft saved through AdminApi.")).toBeVisible();
 
-  await stale.getByRole("checkbox", { name: "Reservations in this zone" }).uncheck();
+  await stale.getByRole("checkbox", { name: "Wallet in this zone" }).uncheck();
   await stale.getByRole("button", { name: "Save draft" }).click();
   await expect(stale.getByText(/Someone else changed this/)).toBeVisible();
 });

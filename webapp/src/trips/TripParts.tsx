@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { Link } from "react-router";
 import { Ban, Check, Flag, Headset, Lock, MessageSquare, Phone, PhoneMissed, Receipt, RotateCcw, Siren, StickyNote, Wallet } from "lucide-react";
 import type { DemoRecord } from "../api/seed";
@@ -123,6 +124,7 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
   const { agent } = useSession();
   const role = agent?.role ?? "viewer";
   const make = useEntry(ops);
+  const { policy: refundPolicy } = useRefundPolicy();
   const on = ops.settings.actions;
   const minor = market(country).minorUnits;
   const symbol = { SE: "kr", FR: "€", TN: "DT" }[country];
@@ -137,14 +139,14 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
   const refundable = Math.max(0, split.riderPaid - split.tip);
   const refundMinor = Math.round(Number(refund.replace(",", ".")) * minor) || 0;
   const payMinor = Math.round(Number(pay.replace(",", ".")) * minor) || 0;
-  const refundTry = withStatus(make({ tripId: trip.id, kind: "refund", text: `Refund ${money(refundMinor)}`, amountMinor: refundMinor }, split), needsApproval("refund", refundMinor, country, ops.settings));
-  const payTry = withStatus(make({ tripId: trip.id, kind: "pay", text: `Driver pay ${payMinor > 0 ? "+" : "−"}${money(Math.abs(payMinor))}`, amountMinor: payMinor }, split), needsApproval("pay", payMinor, country, ops.settings));
+  const refundTry = withStatus(make({ tripId: trip.id, kind: "refund", text: `Refund ${money(refundMinor)}`, amountMinor: refundMinor }, split), needsApproval("refund", refundMinor, country, refundPolicy));
+  const payTry = withStatus(make({ tripId: trip.id, kind: "pay", text: `Driver pay ${payMinor > 0 ? "+" : "−"}${money(Math.abs(payMinor))}`, amountMinor: payMinor }, split), needsApproval("pay", payMinor, country, refundPolicy));
   const noteTry = make({ tripId: trip.id, kind: "note", text: note.trim() });
   const flagTry = make({ tripId: trip.id, kind: flagged ? "unflag" : "flag", text: flagWhy.trim() || (flagged ? "Checked" : "") });
   const caseTry = make({ tripId: trip.id, kind: "case", text: caseText.trim(), target: caseKind });
   const blockTry = make({ tripId: trip.id, kind: "block", text: `${trip.name} and the driver will not be matched again`, target: "both" });
   const receiptTry = make({ tripId: trip.id, kind: "receipt", text: `Receipt sent again to ${trip.name}` });
-  const limit = `${ops.settings.approvalOver[country]} ${symbol}`;
+  const limit = `${refundPolicy.aboveMajor[country]} ${symbol}`;
   const any = Object.values(on).some(Boolean);
   const save = (result: { ops: TripOps; entry: Entry; error?: string }) => ({ sliceKey: TRIP_OPS_KEY, value: result.ops, expectedSliceRev: ops.draftRev, targetId: trip.id, scope: trip.zoneId, confirmTarget: false });
 
@@ -158,7 +160,7 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
           <div className="op-inline">
             <label className="op-money"><input aria-label="Refund amount" inputMode="decimal" value={refund} placeholder="0" onChange={(event) => setRefund(event.target.value)} /><span>{symbol}</span></label>
             <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" disabled={!refundable} onClick={() => setRefund(String(refundable / minor))}>Full amount</button>
-            <CommandButton command="admin.trip.partRefund" className="dash-btn small" {...save(refundTry)} before={money(split.riderPaid)} after={refundTry.error ? "" : `${refundTry.entry.status === "waiting" ? "waiting: " : ""}refund ${money(refundMinor)}`} disabled={!can(role, "payments.refund") || Boolean(refundTry.error)} title={!can(role, "payments.refund") ? "Your role cannot refund." : refundTry.error} onDone={() => { setRefund(""); onNotice(refundTry.entry.status === "waiting" ? `Refund of ${money(refundMinor)} waits for a second admin.` : `${money(refundMinor)} refunded to ${trip.name}.`); }}>{needsApproval("refund", refundMinor, country, ops.settings) ? "Ask a second admin" : "Give money back"}</CommandButton>
+            <CommandButton command="admin.trip.partRefund" className="dash-btn small" {...save(refundTry)} before={money(split.riderPaid)} after={refundTry.error ? "" : `${refundTry.entry.status === "waiting" ? "waiting: " : ""}refund ${money(refundMinor)}`} disabled={!can(role, "payments.refund") || Boolean(refundTry.error)} title={!can(role, "payments.refund") ? "Your role cannot refund." : refundTry.error} onDone={() => { setRefund(""); onNotice(refundTry.entry.status === "waiting" ? `Refund of ${money(refundMinor)} waits for a second admin.` : `${money(refundMinor)} refunded to ${trip.name}.`); }}>{needsApproval("refund", refundMinor, country, refundPolicy) ? "Ask a second admin" : "Give money back"}</CommandButton>
           </div>
           {refund && refundTry.error ? <p className="dx-warn">{refundTry.error}</p> : null}
         </div>
@@ -169,7 +171,7 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
           <p className="op-help">Use + to add, − to take away. Over {limit}, a second admin approves.</p>
           <div className="op-inline">
             <label className="op-money"><input aria-label="Driver pay change" inputMode="decimal" value={pay} placeholder="+0" onChange={(event) => setPay(event.target.value)} /><span>{symbol}</span></label>
-            <CommandButton command="admin.trip.pay" className="dash-btn small" {...save(payTry)} before={money(split.driverGets)} after={payTry.error ? "" : money(split.driverGets + payMinor)} disabled={!can(role, "trips.intervene") || Boolean(payTry.error)} title={!can(role, "trips.intervene") ? "Your role cannot change driver pay." : payTry.error} onDone={() => { setPay(""); onNotice(payTry.entry.status === "waiting" ? "The pay change waits for a second admin." : "Driver pay changed."); }}>{needsApproval("pay", payMinor, country, ops.settings) ? "Ask a second admin" : "Change pay"}</CommandButton>
+            <CommandButton command="admin.trip.pay" className="dash-btn small" {...save(payTry)} before={money(split.driverGets)} after={payTry.error ? "" : money(split.driverGets + payMinor)} disabled={!can(role, "trips.intervene") || Boolean(payTry.error)} title={!can(role, "trips.intervene") ? "Your role cannot change driver pay." : payTry.error} onDone={() => { setPay(""); onNotice(payTry.entry.status === "waiting" ? "The pay change waits for a second admin." : "Driver pay changed."); }}>{needsApproval("pay", payMinor, country, refundPolicy) ? "Ask a second admin" : "Change pay"}</CommandButton>
           </div>
           {pay && payTry.error ? <p className="dx-warn">{payTry.error}</p> : null}
         </div>

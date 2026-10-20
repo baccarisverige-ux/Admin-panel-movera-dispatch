@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { History, RotateCcw } from "lucide-react";
 import { CommandButton } from "../ui/CommandButton";
-import { restoreRevision, SLICE_KEY, type PricingStore } from "./zonePricing";
+import { largeStoreChanges, restoreRevision, SLICE_KEY, type PricingStore } from "./zonePricing";
 import { zoneById } from "../markets/markets";
 
 type Props = {
@@ -62,6 +62,7 @@ export function HistoryPanel({ store, zoneId, agentId, canEdit, locale, timeZone
                     value={restore.store}
                     disabled={!canEdit || Boolean(restore.error)}
                     title={restore.error}
+                    largeChanges={restore.error ? undefined : largeStoreChanges(store, restore.store)}
                     onDone={() => onRestored(`Pricing revision ${revision.rev} restored as revision ${restore.store.draftRev}.`)}
                   >
                     <RotateCcw size={13} aria-hidden="true" /> Restore

@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
+/** Q24: at 1280 px and below the country picker, Inbox and Sign out are in the top bar's "⋯" menu. */
+async function topbarMore(page: Page) {
+  const more = page.getByRole("button", { name: "More options", exact: true });
+  if ((await more.isVisible()) && (await more.getAttribute("aria-expanded")) !== "true") await more.click();
+}
+
 async function signInAs(page: Page, id: string) {
   await page.addInitScript((agent) => {
     localStorage.setItem("movera-admin-session", agent);
@@ -12,6 +18,7 @@ test("country first, then zones, then period drive the dashboard", async ({ page
   await page.goto("/");
   await expect(page.getByTestId("gross-bookings")).toContainText("kr");
 
+  await topbarMore(page);
   await page.getByRole("radio", { name: "France" }).click();
   await expect(page).toHaveURL(/country=FR/);
   await expect(page.getByTestId("gross-bookings")).toContainText("€");
@@ -23,6 +30,9 @@ test("country first, then zones, then period drive the dashboard", async ({ page
   await expect(page.getByRole("button", { name: "Zones: La Défense" })).toBeVisible();
   await expect(page.getByTestId("gross-bookings")).not.toHaveText(allZones);
 
+  // Close the zone list and the "⋯" menu over the page (Escape closes one at a time).
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
   await page.getByRole("radio", { name: "Month" }).click();
   await expect(page).toHaveURL(/period=month/);
   await page.getByLabel("Pick a date").fill("2026-09-15");
@@ -30,12 +40,14 @@ test("country first, then zones, then period drive the dashboard", async ({ page
 
   await page.getByRole("link", { name: "Drivers", exact: true }).click();
   await expect(page).toHaveURL(/\/drivers\?country=FR&scope=FR-LD/);
+  await topbarMore(page);
   await expect(page.getByRole("button", { name: "Zones: La Défense" })).toBeVisible();
 });
 
 test("a country manager only sees their country", async ({ page }) => {
   await signInAs(page, "yasmine");
   await page.goto("/?country=SE");
+  await topbarMore(page);
   await expect(page.getByRole("radiogroup", { name: "Country" }).getByRole("radio")).toHaveCount(1);
   await expect(page.getByRole("radio", { name: "Tunisia" })).toBeChecked();
   await expect(page.getByTestId("gross-bookings")).toContainText("DT");
