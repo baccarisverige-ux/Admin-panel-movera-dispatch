@@ -3,7 +3,8 @@ import type { CurrencyCode, Money } from "../domain/money.ts";
 
 /**
  * Defaults for the per-zone config fields of contract v0.4.0 (contracts/CONTRACT.md §6, contract.json#configDefaults).
- * The RiderAppConfig / DriverAppConfig exporters use them where no admin setting exists yet.
+ * They are the starting values of the admin settings (config/countrySettings.ts, Dispatch, Pricing); the exporters read
+ * those settings. Only driverBonus.hardMax and waitingDriverSharePct (100 %) are fixed and used as they are.
  * `zoneDefaults.test.ts` keeps them equal to contract.json.
  */
 

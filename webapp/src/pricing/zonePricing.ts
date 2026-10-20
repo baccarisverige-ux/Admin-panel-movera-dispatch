@@ -150,8 +150,8 @@ export const PRICE_ROWS: { field: PriceField; label: string; unit: "money" | "mi
   { field: "base", label: "Base fare", unit: "money", group: "Trip", hint: "Start price of every ride" },
   { field: "perKm", label: "Price per km", unit: "money", group: "Trip" },
   { field: "perMin", label: "Price per min", unit: "money", group: "Trip" },
-  { field: "freeWaitMin", label: "Free waiting at pickup", unit: "min", group: "Waiting" },
-  { field: "waitPerMin", label: "Waiting after free time, per min", unit: "money", group: "Waiting" },
+  { field: "freeWaitMin", label: "Free waiting at pickup", unit: "min", group: "Waiting", hint: "Also the no-show wait: then the driver can mark a no-show" },
+  { field: "waitPerMin", label: "Waiting after free time, per min", unit: "money", group: "Waiting", hint: "100% goes to the driver" },
   { field: "stopWaitPerMin", label: "Waiting at a stop, per min", unit: "money", group: "Waiting" },
   { field: "noShowFee", label: "No-show fee", unit: "money", group: "Cancellation" },
   { field: "extraStopFee", label: "Extra stop fee", unit: "money", group: "Extras" },
@@ -486,7 +486,7 @@ export function largePriceChanges(published: ZoneBook, draft: ZoneBook, categori
     if (before && isLargePriceChange(before.price, route.price)) lines.push(changeText(`${where}Fixed route ${route.from} → ${route.to}`, before.price, route.price, money));
   }
   // Q29: the other money settings follow the same rule: commission, driver pickup pay and surge caps.
-  // (Tips have no admin setting yet; they need a config field first and then go through this list too.)
+  // Tips, raise steps, the promo cap and the driver bonus limit are per country: config/countrySettings.ts largeCountryChanges.
   for (const category of categories.filter((item) => !item.archived)) {
     const before = published.commission[category.id];
     const after = draft.commission[category.id];

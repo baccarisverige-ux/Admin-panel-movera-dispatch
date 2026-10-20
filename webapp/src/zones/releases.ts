@@ -131,7 +131,8 @@ export type ActivityPoint = {
 
 export const RIDE_CATEGORIES = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
 export const RIDE_OPTIONS = ["baby_seat", "child_seat", "booster_seat", "extra_bags", "pet"];
-export const ZONE_PAYMENT_METHODS = ["card", "swish", "klarna", "apple", "google", "paypal", "cash", "wallet"];
+/** Owner Q7 FINAL: no Swish, Klarna or PayPal. */
+export const ZONE_PAYMENT_METHODS = ["card", "apple", "google", "cash", "wallet"];
 
 const DEFAULT_PRIORITY: Record<ZoneKind, number> = {
   service: 10,
@@ -320,7 +321,7 @@ function normalizeZone(raw: ZoneShape): ZoneShape {
     color: raw.color ?? ZONE_COLOR[raw.kind],
     priority: Number.isFinite(raw.priority) ? raw.priority : DEFAULT_PRIORITY[raw.kind],
     options: Array.isArray(raw.options) ? raw.options : [...RIDE_OPTIONS],
-    paymentMethods: Array.isArray(raw.paymentMethods) ? raw.paymentMethods : [...ZONE_PAYMENT_METHODS],
+    paymentMethods: Array.isArray(raw.paymentMethods) ? raw.paymentMethods.filter((method: unknown) => ZONE_PAYMENT_METHODS.includes(method as string)) : [...ZONE_PAYMENT_METHODS],
     pickupOnly: raw.pickupOnly ?? false,
     pickups: (raw.pickups ?? []).map((pickup) => normalizePickup(pickup)),
     queuePolygon: raw.queuePolygon ?? (raw.kind === "airport" ? [...raw.points] : []),

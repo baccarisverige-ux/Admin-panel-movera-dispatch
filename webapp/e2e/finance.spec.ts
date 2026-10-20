@@ -49,7 +49,9 @@ test("failed payments retry, disputes get an answer, numbers per method", async 
   await confirm(page);
   await expect(page.getByRole("list", { name: "Disputes" }).getByRole("listitem").first()).toContainText("evidence sent");
   await page.getByRole("tab", { name: "Numbers" }).click();
-  await expect(page.getByRole("table", { name: "Payment methods" })).toContainText("Swish");
+  await expect(page.getByRole("table", { name: "Payment methods" })).toContainText("Apple Pay");
+  // Q7 FINAL: no Swish, Klarna or PayPal anywhere in Payments.
+  await expect(page.getByRole("table", { name: "Payment methods" })).not.toContainText(/Swish|Klarna|PayPal/);
 });
 
 test("payment rules: retries, owing riders and refund limits per role", async ({ page }) => {

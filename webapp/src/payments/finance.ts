@@ -98,10 +98,9 @@ export function normalizeFinanceBook(value: unknown): FinanceBook {
 }
 
 export function paymentPolicy(book: FinanceBook, context: PaymentPolicyContext): Record<PaymentMethod, boolean> {
-  return {
-    ...defaultMethodPolicy(),
-    ...(book.policies[paymentPolicyKey(context)] ?? {}),
-  };
+  const saved = (book.policies[paymentPolicyKey(context)] ?? {}) as Partial<Record<string, boolean>>;
+  // Only today's methods: an older save's swish, klarna or paypal (Q7 FINAL) is dropped.
+  return Object.fromEntries(PAYMENT_METHODS.map((method) => [method, typeof saved[method] === "boolean" ? saved[method] : true])) as Record<PaymentMethod, boolean>;
 }
 
 export function savePaymentPolicy(

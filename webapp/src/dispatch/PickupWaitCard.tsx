@@ -4,8 +4,8 @@ import { Copy, Hourglass, Wallet } from "lucide-react";
 import { emptyReservationBook, normalizeReservationBook, useSlice, type ReservationBook } from "../api/hooks";
 import type { MarketId } from "../markets/markets";
 import { Card, Check, Num, Row, Switch } from "./fields";
-import { driverNoShowShare, pickupTerms, WAIT_FIELDS, WAIT_RIDE_TYPES, type PickupWait, type WaitBase, type WaitOverride } from "./offers";
-import type { ZoneDispatch } from "./rules";
+import { driverNoShowShare, pickupTerms, WAIT_FIELDS, WAIT_RIDE_TYPES, WAITING_DRIVER_SHARE_PCT, type PickupWait, type WaitBase, type WaitOverride } from "./offers";
+import type { CountryDispatch, ZoneDispatch } from "./rules";
 
 export type WaitBaseRow = { id: string; label: string; base: WaitBase };
 
@@ -20,6 +20,10 @@ type Props = {
   waitBases: WaitBaseRow[];
   /** Puts these waiting rules in every zone the admin may change. Returns how many zones. */
   onAllZones: (pickupWait: PickupWait) => number;
+  /** The no-show fee share is a country rule (Q44). */
+  country: CountryDispatch;
+  onCountry: (next: CountryDispatch) => void;
+  countryName: string;
 };
 
 /** One value a rule can change. Unticked: the same as the zone's own terms. */
@@ -45,7 +49,7 @@ const EXAMPLES: { type: "normal" | "scheduled" | "airport" | "event"; far: boole
 ];
 
 /** Q19/Q20: waiting at pickup. One source: the category's free wait, price per minute and no-show fee are Pricing's. */
-export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countryId, waitBases, onAllZones }: Props) {
+export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countryId, waitBases, onAllZones, country, onCountry, countryName }: Props) {
   const wait = zone.pickupWait;
   const set = (patch: Partial<PickupWait>) => onChange({ ...zone, pickupWait: { ...wait, ...patch } });
   const policySlice = useSlice<ReservationBook>("reservationOps", emptyReservationBook());
@@ -59,24 +63,21 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
     </span>
   );
   return (
-    <Card title="Waiting at pickup" tone="green" icon={<Hourglass size={18} />} help="Free wait, then a price per minute, then the driver can cancel for no-show and the rider pays the no-show fee. Extra rules change only the values you tick.">
+    <Card title="Waiting at pickup" tone="green" icon={<Hourglass size={18} />} help="Free wait, then a price per minute. When the free wait ends the driver can also cancel for no-show and the rider pays the no-show fee. Extra rules change only the values you tick.">
       <div className="dx-sub" role="group" aria-label="Waiting from Pricing">
         <b><Wallet size={13} aria-hidden="true" /> Per category, from Pricing</b>
-        <small>Free wait, price per minute and the no-show fee are the Pricing values of this zone, so there is one place to change them.</small>
+        <small>Free wait, price per minute and the no-show fee are the Pricing values of this zone, so there is one place to change them. The free wait is also the no-show wait: the driver can cancel for no-show when it ends.</small>
         <table className="dx-wait-table">
-          <thead><tr><th>Category</th><th>Free wait</th><th>Then per minute</th><th>No-show fee</th></tr></thead>
+          <thead><tr><th>Category</th><th>Free wait = no-show wait</th><th>Then per minute</th><th>No-show fee</th></tr></thead>
           <tbody>
             {waitBases.map((row) => <tr key={row.id}><td>{row.label}</td><td>{row.base.freeWaitMin} min</td><td>{money(row.base.perMin)}</td><td>{money(row.base.noShowFee)}</td></tr>)}
           </tbody>
         </table>
         <Link className="dash-btn small ghost" to={`/pricing?country=${countryId}&zone=${zone.zoneId}`}>Change in Pricing</Link>
       </div>
-      <Row label="No-show after" help="From then the driver can cancel for no-show. The no-show reason never counts in the cancel rate.">
-        <Num label="No-show after" value={wait.noShowAfterMin} unit="min" min={1} max={60} disabled={disabled} onChange={(noShowAfterMin) => set({ noShowAfterMin })} />
-      </Row>
-      <Row label="Driver's share" help="How much of the waiting money and of the no-show fee goes to the driver.">
-        <Num label="Driver's share of waiting money" before="waiting" value={wait.driverShareWaitPct} unit="%" min={0} max={100} disabled={disabled} onChange={(driverShareWaitPct) => set({ driverShareWaitPct })} />
-        <Num label="Driver's share of the no-show fee" before="no-show" value={wait.driverShareNoShowPct} unit="%" min={0} max={100} disabled={disabled} onChange={(driverShareNoShowPct) => set({ driverShareNoShowPct })} />
+      <Row label="Driver's share" help={`The waiting money always goes ${WAITING_DRIVER_SHARE_PCT}% to the driver. The no-show fee share is one rule for all of ${countryName}. The no-show reason never counts in the cancel rate.`}>
+        <span className="dx-override on" data-testid="wait-share-fixed"><small>waiting money {WAITING_DRIVER_SHARE_PCT}% (fixed)</small></span>
+        <Num label="Driver's share of the no-show fee" before={`no-show, all of ${countryName}`} value={country.noShowDriverSharePct} unit="%" min={0} max={100} disabled={disabled} onChange={(noShowDriverSharePct) => onCountry({ ...country, noShowDriverSharePct: Math.round(noShowDriverSharePct) })} />
       </Row>
 
       <div className="dx-sub" role="group" aria-label="Far pickups">
@@ -124,7 +125,7 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
           <b>What the driver sees, {first.label}</b>
           <ul className="dx-wait-examples">
             {EXAMPLES.filter((item) => !item.far || wait.farPickupOn).map((item) => {
-              const terms = pickupTerms(first.base, wait, { type: item.type, pickupKm: item.far ? wait.farPickupKm + 1 : 2, includedWaitingMin: included });
+              const terms = pickupTerms(first.base, wait, { type: item.type, pickupKm: item.far ? wait.farPickupKm + 1 : 2, includedWaitingMin: included, noShowDriverSharePct: country.noShowDriverSharePct });
               return (
                 <li key={item.label}>
                   <b>{item.label}{item.far ? ` (over ${wait.farPickupKm} km)` : ""}</b>

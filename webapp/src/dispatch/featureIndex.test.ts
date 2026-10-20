@@ -37,3 +37,22 @@ test("Q40: the search box matches phrase, section and keywords, every word", () 
   assert.equal(searchFeatures("zzzz-nothing").length, 0);
   assert.equal(searchFeatures("").length, FEATURE_INDEX.length);
 });
+
+test("Round 2: every new per-country and zone setting is in All features and opens its section", () => {
+  const target = (id: string) => featureTarget(FEATURE_INDEX.find((entry) => entry.id === id)!, "Z001");
+  assert.equal(target("tips"), "/pricing?tab=extras&section=tips");
+  assert.equal(target("raise-steps"), "/pricing?tab=extras&section=raise-steps");
+  assert.equal(target("promo-cap"), "/pricing?tab=extras&section=promo-cap");
+  assert.equal(target("driver-bonus-limit"), "/pricing?tab=extras&section=driver-bonus");
+  assert.equal(target("payment-methods"), "/settings#country-apps");
+  assert.equal(target("languages"), "/settings#country-apps");
+  assert.equal(target("pickup-move"), "/dispatch?tab=rides&zone=Z001&card=Pickup+move+after+accept");
+  assert.equal(target("no-show-share"), "/dispatch?tab=rides&zone=Z001&card=Waiting+at+pickup");
+  assert.equal(target("waiting-per-category"), "/pricing?tab=prices");
+  assert.ok(searchFeatures("missed exclusive").some((entry) => entry.id === "auto-offline"));
+  assert.ok(searchFeatures("apple pay").some((entry) => entry.id === "payment-methods"));
+  assert.ok(searchFeatures("promo cap").some((entry) => entry.id === "promo-cap"));
+  // The Pricing sections the rows open exist in the Tips & limits tab.
+  const panel = readFileSync(new URL("../pricing/CountryExtrasPanel.tsx", import.meta.url), "utf8");
+  for (const id of ["tips", "raise-steps", "promo-cap", "driver-bonus"]) assert.ok(panel.includes(`id="extras-${id}"`), `section ${id} exists`);
+});

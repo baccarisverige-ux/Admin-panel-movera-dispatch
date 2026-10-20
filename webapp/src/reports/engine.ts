@@ -239,6 +239,8 @@ export function linkFor(targetId: string, action: string): string | null {
   if (action.startsWith("admin.risk.")) return "/risk";
   if (action.startsWith("admin.shift.")) return "/handover?tab=past";
   if (action.startsWith("admin.zone.")) return "/zones";
+  if (action === "admin.pricing.saveCountry") return "/pricing?tab=extras";
+  if (action === "admin.config.saveCountry") return "/settings#country-apps";
   if (action.startsWith("admin.pricing.")) return "/pricing";
   return null;
 }

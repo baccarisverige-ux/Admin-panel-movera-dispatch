@@ -7,6 +7,7 @@ import {
   CircleDollarSign,
   Copy,
   HandCoins,
+  HandHeart,
   History,
   Plane,
   Receipt,
@@ -29,6 +30,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { CategoryManager } from "../pricing/CategoryManager";
 import { CommissionPanel } from "../pricing/CommissionPanel";
 import { CopyZones } from "../pricing/CopyZones";
+import { CountryExtrasPanel } from "../pricing/CountryExtrasPanel";
 import { FeesPanel, FixedRoutes } from "../pricing/FeesPanel";
 import { HistoryPanel } from "../pricing/HistoryPanel";
 import { PickupPayPanel } from "../pricing/PickupPayPanel";
@@ -69,6 +71,7 @@ const TABS = [
   { id: "surge", label: "Surge", icon: Zap },
   { id: "commission", label: "Commission", icon: BadgePercent },
   { id: "pickup", label: "Pickup pay", icon: HandCoins },
+  { id: "extras", label: "Tips & limits", icon: HandHeart },
   { id: "history", label: "History", icon: History },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
@@ -107,6 +110,8 @@ export function PricingPage() {
   const [catsOpen, setCatsOpen] = useState(false);
   // Discard remounts the editors, so text still marked invalid in a box goes back to the published value too.
   const [editorKey, setEditorKey] = useState(0);
+  // Tips & limits (one per country) save on their own; leaving with unsaved ones asks too.
+  const [extrasDirty, setExtrasDirty] = useState(false);
   const surgeMap = useSurgePref("pricing", { shown: true, style: "zones" });
   const now = useNow(15_000);
   const minute = Math.floor(now / 60_000) * 60_000;
@@ -136,7 +141,7 @@ export function PricingPage() {
   // Typed values that are not numbers or are over a field's maximum stay in their box until fixed (UI-05, UI-10).
   const fieldErrors = useFieldErrors();
   // Leaving Pricing with unpublished changes asks first, like Content, Messages and Team (UI-09).
-  useDirtyWarning(dirty.length > 0);
+  useDirtyWarning(dirty.length > 0 || extrasDirty);
   const at = new Date(now).toISOString();
   const publish = agent ? publishZones(store, drafts, agent.id, "Pricing update", at) : { store, error: "Sign in again.", changes: [] };
   const undo = agent ? undoLastPublish(store, agent.id, at) : { store, error: "Sign in again." };
@@ -369,6 +374,8 @@ export function PricingPage() {
               }}
             />
           ) : null}
+
+          {tab === "extras" ? <CountryExtrasPanel key={country} country={country} canEdit={canPublish} section={params.get("section")} onDirty={setExtrasDirty} onNotice={setNotice} /> : null}
 
           {tab === "history" ? (
             <section className="dash-card" aria-labelledby="history-title">

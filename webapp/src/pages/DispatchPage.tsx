@@ -1,7 +1,7 @@
 import { logExport } from "../reports/activityLog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { AlertTriangle, ArrowLeft, CalendarDays, Download, FlaskConical, History, ListX, Radio, Save, Scale, ListTree, ScrollText, Send, Undo2, UserRoundCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarDays, Download, FlaskConical, HandHeart, History, ListX, Radio, Save, Scale, ListTree, ScrollText, Send, Undo2, UserRoundCheck } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
@@ -32,6 +32,8 @@ import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
 import { RIDE_CHECK_SETTINGS_KEY } from "../safety/rideCheckSettings";
 import { appConfigFileName, appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs";
 import { DRIVER_TEXTS_KEY } from "../content/driverTexts";
+import { COUNTRY_SETTINGS_KEY } from "../config/countrySettings";
+import { largeWaitChanges } from "../dispatch/offers";
 import { DRIVER_NOTICES_KEY } from "../messages/driverNotices";
 import {
   countryLines, DISPATCH_KEY, draftCountry, draftRules, emptyDispatchBook, liveCountry, liveRules, normalizeDispatchBook, pendingChanges, publish, rulesFile, saveDraft, TABS,
@@ -81,6 +83,7 @@ export function DispatchPage() {
     driverTexts: useSlice<unknown>(DRIVER_TEXTS_KEY, null),
     driverNotices: useSlice<unknown>(DRIVER_NOTICES_KEY, null),
     rideCheck: useSlice<unknown>(RIDE_CHECK_SETTINGS_KEY, null),
+    countrySettings: useSlice<unknown>(COUNTRY_SETTINGS_KEY, null),
   };
   const appSourcesReady = !slice.loading && !pricingSlice.loading && !slice.error && !pricingSlice.error && Object.values(appSources).every((source) => !source.loading && !source.error);
   const incidents = useRecords("incidents");
@@ -225,6 +228,7 @@ export function DispatchPage() {
     return [
       ...largeCancelFeeChanges(before.riderCancel.fees, after.riderCancel.fees, feeCategoriesOf(id), `${name} · Rider cancels`, symbol),
       ...largeCancelFeeChanges(before.reservation.riderFees, after.reservation.riderFees, feeCategoriesOf(id), `${name} · Reservations`, symbol),
+      ...largeWaitChanges(before.pickupWait, after.pickupWait, `${name} · Waiting at pickup`, symbol),
     ];
   });
   const largeChanges = largeChangesIn(zoneIds);
@@ -244,6 +248,7 @@ export function DispatchPage() {
           <p>How ride requests find a driver: Radar, Exclusive and reservations, with rules for every zone.</p>
         </div>
         <button data-command="admin.dispatch.view" type="button" className={view === "features" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "features"} onClick={() => go({ view: view === "features" ? null : "features" })} title="Every setting and feature, with a search"><ListTree size={15} aria-hidden="true" /> All features</button>
+        <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate("/pricing?tab=extras&section=tips")} title="Tips and raise-offer quick steps per country, in Pricing"><HandHeart size={15} aria-hidden="true" /> Tips &amp; raise steps</button>
         <button data-command="admin.dispatch.view" type="button" className={view === "activity" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "activity"} onClick={() => go({ view: view === "activity" ? null : "activity" })} title="Everything you did, this session and earlier, with done or failed"><UserRoundCheck size={15} aria-hidden="true" /> My activity</button>
         <button data-command="admin.dispatch.rulesFile" type="button" className="dash-btn ghost" onClick={downloadRules} title="All live rules in one file for the backend team"><Download size={15} aria-hidden="true" /> Rules file</button>
         {zoneId ? (

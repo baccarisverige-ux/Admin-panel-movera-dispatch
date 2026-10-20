@@ -497,6 +497,10 @@ test("waiting at pickup: Pricing's values per category, ride type and distance r
   await expect(examples.filter({ hasText: "Scheduled ride" })).toContainText("5 min free");
   await expect(examples.filter({ hasText: "Airport pickup" })).toContainText("15 min free · then 12,26 kr/min · no-show after 20 min");
   await expect(examples.filter({ hasText: "Far pickup" })).toContainText("1 min free · then 12,26 kr/min · no-show after 5 min · fee 85 kr");
+  // Q41/Q43: no-show comes at the end of Pricing's free wait (no own setting), and the waiting money is all the driver's.
+  await expect(wait.getByRole("textbox", { name: "No-show after", exact: true })).toHaveCount(0);
+  await expect(wait.getByTestId("wait-share-fixed")).toContainText("waiting money 100% (fixed)");
+  // Q44: the no-show fee share is one rule for the whole country.
   await wait.getByLabel("Driver's share of the no-show fee").fill("100");
   await expect(examples.filter({ hasText: "Normal ride" })).toContainText("(driver gets 65 kr)");
   const far = wait.getByRole("group", { name: "Far pickups" });
@@ -512,7 +516,7 @@ test("waiting at pickup: Pricing's values per category, ride type and distance r
   await expect(bar).toContainText("Södermalm");
   await bar.getByRole("button", { name: "See changes" }).click();
   const list = page.getByRole("list", { name: "Changes not live yet" });
-  await expect(list.getByRole("listitem").filter({ hasText: "Norrmalm" }).first()).toContainText("Driver's share of the no-show fee: 80 → 100");
+  await expect(list.getByRole("listitem").filter({ hasText: "Sweden" }).first()).toContainText("Driver's share of the no-show fee: 80% → 100%");
   await expect(list).toContainText("Far pickup: price per minute: same as the zone → 8");
   await expect(list).toContainText("Event pickup rule: on → off");
   await bar.getByRole("button", { name: "Publish now" }).click();

@@ -1,4 +1,5 @@
-export const PAYMENT_METHODS = ["card", "swish", "klarna", "apple", "google", "paypal", "cash", "wallet"] as const;
+/** Owner Q7 FINAL: Card, Apple Pay, Google Pay and Cash in every country (no Swish, Klarna or PayPal); the wallet is one balance per currency. */
+export const PAYMENT_METHODS = ["card", "apple", "google", "cash", "wallet"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export type Checkout = { id: string; method: PaymentMethod; state: "new" | "authorized" };

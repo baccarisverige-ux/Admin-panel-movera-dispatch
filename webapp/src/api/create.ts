@@ -28,6 +28,7 @@ import {
   type Fault,
 } from "./demoStore.ts";
 import { ApiError, apiRequest, classifyStatus, type ApiErrorBody } from "./httpClient.ts";
+import { COUNTRY_SETTINGS_KEY, normalizeCountrySettingsBook, saveCountrySettings } from "../config/countrySettings.ts";
 import { REFUND_POLICY_KEY, needsSecondAdminIn, normalizeRefundPolicy, parseRefundAbove, saveRefundPolicy, type RefundPolicy } from "../payments/refundPolicy.ts";
 import type { ApprovalRow, AuditRow, DemoDb, DemoRecord, InboxItem, OperationRow, ZoneScope } from "./seed.ts";
 
@@ -507,6 +508,15 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
         const result = saveRefundPolicy(current, (sent as { aboveMajor: RefundPolicy["aboveMajor"] }).aboveMajor);
         if (result.error) reject(422, result.error);
         raw = { ...raw, sliceKey: REFUND_POLICY_KEY, value: result.policy };
+      }
+
+      if (raw.action === "admin.pricing.saveCountry" || raw.action === "admin.config.saveCountry") {
+        // Round 2 per-country settings: the server keeps only the fields of the section that saves (Pricing: tips, raise
+        // steps, promo cap, driver bonus limit; Settings: payment methods, languages) and checks every country (C-26).
+        const current = normalizeCountrySettingsBook(db.slices[COUNTRY_SETTINGS_KEY]);
+        const result = saveCountrySettings(current, raw.value, raw.action === "admin.pricing.saveCountry" ? "pricing" : "settings");
+        if (result.error) reject(422, result.error);
+        raw = { ...raw, sliceKey: COUNTRY_SETTINGS_KEY, value: result.book };
       }
 
       if (raw.action === "admin.gateA.record") {

@@ -1,5 +1,6 @@
 import type { MarketId } from "../markets/markets.ts";
-import { currencySymbol, fromSek } from "../pricing/zonePricing.ts";
+import { currencySymbol, fromSek, isLargePriceChange } from "../pricing/zonePricing.ts";
+import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
 
 /**
  * Round 3 offer and trip rules (Q14–Q22): what the offer card shows, why an offer is Exclusive,
@@ -103,11 +104,12 @@ export function exclusiveReasonIssues(reasons: Record<ExclusiveReasonId, Exclusi
 export type WaitOverride = { freeWaitMin: number | null; perMin: number | null; noShowAfterMin: number | null; noShowFee: number | null };
 export type WaitRideType = "scheduled" | "airport" | "event";
 
+/**
+ * Waiting at pickup in one zone. The base terms are Pricing's, per category: free wait (also the no-show wait, Q41),
+ * price per minute after it and the no-show fee. The waiting money is always 100 % to the driver (Q43); the no-show
+ * fee share is a country rule (CountryDispatch.noShowDriverSharePct, Q44). Only the extra rules below are per zone.
+ */
 export type PickupWait = {
-  /** From then the driver can cancel for no-show. Free wait, price per minute and the no-show fee come from Pricing, per category. */
-  noShowAfterMin: number;
-  driverShareWaitPct: number;
-  driverShareNoShowPct: number;
   /** Pickups farther than farPickupKm get the far rule. */
   farPickupOn: boolean;
   farPickupKm: number;
@@ -115,6 +117,9 @@ export type PickupWait = {
   /** A scheduled ride's free wait is the reservation policy's included waiting. */
   rideTypes: Record<WaitRideType, WaitOverride & { on: boolean }>;
 };
+
+/** Q43: the waiting fee goes 100 % to the driver, everywhere. Not a setting. */
+export const WAITING_DRIVER_SHARE_PCT = CONFIG_DEFAULTS.waitingDriverSharePct;
 
 export const WAIT_RIDE_TYPES: { id: WaitRideType; label: string; help: string }[] = [
   { id: "scheduled", label: "Scheduled ride", help: "A ride booked for later. Its free wait is the included waiting of the reservation policy." },
@@ -133,9 +138,6 @@ const none = (): WaitOverride => ({ freeWaitMin: null, perMin: null, noShowAfter
 
 export function pickupWaitDefault(country: MarketId = "SE"): PickupWait {
   return {
-    noShowAfterMin: 5,
-    driverShareWaitPct: 100,
-    driverShareNoShowPct: 80,
     farPickupOn: true,
     farPickupKm: 5,
     farPickup: { ...none(), freeWaitMin: 1, noShowFee: fromSek(85, country) },
@@ -164,9 +166,6 @@ export function completePickupWait(base: PickupWait, stored: unknown): PickupWai
   const num = (value: unknown, fallback: number) => (typeof value === "number" && Number.isFinite(value) ? value : fallback);
   const types = (raw.rideTypes && typeof raw.rideTypes === "object" ? raw.rideTypes : {}) as Partial<PickupWait["rideTypes"]>;
   return {
-    noShowAfterMin: num(raw.noShowAfterMin, base.noShowAfterMin),
-    driverShareWaitPct: num(raw.driverShareWaitPct, base.driverShareWaitPct),
-    driverShareNoShowPct: num(raw.driverShareNoShowPct, base.driverShareNoShowPct),
     farPickupOn: typeof raw.farPickupOn === "boolean" ? raw.farPickupOn : base.farPickupOn,
     farPickupKm: num(raw.farPickupKm, base.farPickupKm),
     farPickup: completeOverride(base.farPickup, raw.farPickup),
@@ -190,8 +189,6 @@ function overrideIssues(label: string, rule: WaitOverride, symbol: string): stri
 export function pickupWaitIssues(wait: PickupWait, country: MarketId): string[] {
   const symbol = currencySymbol(country);
   const issues: string[] = [];
-  if (wait.noShowAfterMin < 1 || wait.noShowAfterMin > 60) issues.push("Waiting at pickup: no-show after must be 1 to 60 minutes.");
-  if (wait.driverShareWaitPct < 0 || wait.driverShareWaitPct > 100 || wait.driverShareNoShowPct < 0 || wait.driverShareNoShowPct > 100) issues.push("Waiting at pickup: the driver's share must be 0 to 100%.");
   if (wait.farPickupOn) {
     if (wait.farPickupKm < 0.5 || wait.farPickupKm > 50) issues.push("Waiting at pickup: a far pickup must start 0.5 to 50 km away.");
     issues.push(...overrideIssues(`over ${wait.farPickupKm} km`, wait.farPickup, symbol));
@@ -208,8 +205,9 @@ export type WaitTerms = WaitBase & { noShowAfterMin: number; driverShareWaitPct:
  * The terms for one pickup, like the driver app works them out: the category's terms from Pricing, then the ride type,
  * then the distance rule. A later rule wins where it sets a value. A scheduled ride's free wait is the policy's included waiting.
  */
-export function pickupTerms(base: WaitBase, wait: PickupWait, input: { type: "normal" | WaitRideType; pickupKm: number; includedWaitingMin: number }): WaitTerms {
-  let terms: WaitTerms = { ...base, noShowAfterMin: wait.noShowAfterMin, driverShareWaitPct: wait.driverShareWaitPct, driverShareNoShowPct: wait.driverShareNoShowPct, rule: "" };
+export function pickupTerms(base: WaitBase, wait: PickupWait, input: { type: "normal" | WaitRideType; pickupKm: number; includedWaitingMin: number; noShowDriverSharePct: number }): WaitTerms {
+  // Q41: no-show is allowed once the free wait is over. Q43: the waiting money is all the driver's.
+  let terms: WaitTerms = { ...base, noShowAfterMin: base.freeWaitMin, driverShareWaitPct: WAITING_DRIVER_SHARE_PCT, driverShareNoShowPct: input.noShowDriverSharePct, rule: "" };
   const apply = (rule: WaitOverride, label: string) => {
     terms = {
       ...terms,
@@ -227,6 +225,30 @@ export function pickupTerms(base: WaitBase, wait: PickupWait, input: { type: "no
   if (wait.farPickupOn && input.pickupKm > wait.farPickupKm) apply(wait.farPickup, `Pickup over ${wait.farPickupKm} km`);
   if (terms.noShowAfterMin < terms.freeWaitMin) terms = { ...terms, noShowAfterMin: terms.freeWaitMin };
   return terms;
+}
+
+/**
+ * Q29: the money values of the extra waiting rules (price per minute, no-show fee) that move more than 50 % from the
+ * published rule. A value that is "same as the zone" on either side has nothing to compare and is not listed.
+ */
+export function largeWaitChanges(before: PickupWait, after: PickupWait, where: string, symbol: string): string[] {
+  const lines: string[] = [];
+  const rules: [string, WaitOverride, WaitOverride][] = [
+    ["Far pickup", before.farPickup, after.farPickup],
+    ...WAIT_RIDE_TYPES.map((type): [string, WaitOverride, WaitOverride] => [type.label, before.rideTypes[type.id], after.rideTypes[type.id]]),
+  ];
+  for (const [label, old, next] of rules) {
+    for (const field of ["perMin", "noShowFee"] as const) {
+      const from = old[field];
+      const to = next[field];
+      if (from === null || to === null || from === to) continue;
+      if (isLargePriceChange(from, to)) {
+        const pct = from === 0 ? "new value" : `${to > from ? "+" : "−"}${Math.round((Math.abs(to - from) / from) * 100)}%`;
+        lines.push(`${where} · ${label} ${field === "perMin" ? "price per minute" : "no-show fee"}: ${from} → ${to} ${symbol} (${pct})`);
+      }
+    }
+  }
+  return lines;
 }
 
 /** What the driver gets from a no-show fee. */

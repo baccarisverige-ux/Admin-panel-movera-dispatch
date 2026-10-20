@@ -63,8 +63,8 @@ const STREETS: Record<MarketId, string[]> = {
 };
 const OPERATOR: Record<MarketId, string> = { SE: "Movera Sverige AB", FR: "Movera France SAS", TN: "Movera Tunisie SARL" };
 const PAYMENT: Record<MarketId, string[]> = {
-  SE: ["Card", "Swish", "Apple Pay", "Klarna", "Wallet"],
-  FR: ["Card", "Apple Pay", "Google Pay", "PayPal", "Cash"],
+  SE: ["Card", "Apple Pay", "Google Pay", "Cash", "Wallet"],
+  FR: ["Card", "Apple Pay", "Google Pay", "Cash", "Wallet"],
   TN: ["Cash", "Card", "Wallet"],
 };
 const SOURCE = ["Rider app", "Rider app", "Reservation", "Airport desk", "Business account"];

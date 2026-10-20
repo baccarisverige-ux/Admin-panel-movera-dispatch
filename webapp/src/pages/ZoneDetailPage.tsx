@@ -68,7 +68,7 @@ const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
 
 const CATEGORY_LABEL: Record<string, string> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "XL", electric: "Electric", pet: "Pet" };
 const OPTION_LABEL: Record<string, string> = { baby_seat: "Baby seat", child_seat: "Child seat", booster_seat: "Booster seat", extra_bags: "Extra bags", pet: "Pet" };
-const PAYMENT_LABEL: Record<string, string> = { card: "Card", swish: "Swish", klarna: "Klarna", apple: "Apple Pay", google: "Google Pay", paypal: "PayPal", cash: "Cash", wallet: "Movera wallet" };
+const PAYMENT_LABEL: Record<string, string> = { card: "Card", apple: "Apple Pay", google: "Google Pay", cash: "Cash", wallet: "Movera wallet" };
 
 function TextField({ label, value, onCommit, type = "text", disabled, placeholder }: { label: string; value: string; onCommit: (value: string) => void; type?: string; disabled?: boolean; placeholder?: string }) {
   const [text, setText] = useState(value);

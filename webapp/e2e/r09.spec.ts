@@ -37,7 +37,8 @@ test("R9 prices, fees and commission are drafted, published per zone and persist
 
   await page.getByRole("tab", { name: "Fees" }).click();
   await page.getByLabel("Reservation fee").fill("30");
-  await page.getByLabel("Tip presets").fill("10, 25, 40");
+  // Q5/Q6: tips are one list per country now (Pricing › Tips & limits); the Fees card only shows them.
+  await expect(page.getByTestId("fees-tips-moved")).toContainText("Edit in Tips & limits");
   await publish(page);
   await expect(page.getByText("Published as pricing revision 3.")).toBeVisible();
 
@@ -58,7 +59,6 @@ test("R9 prices, fees and commission are drafted, published per zone and persist
   await expect(page.getByLabel("Movera commission")).toHaveValue("18");
   await page.getByRole("tab", { name: "Fees" }).click();
   await expect(page.getByLabel("Reservation fee")).toHaveValue("30");
-  await expect(page.getByLabel("Tip presets")).toHaveValue("10, 25, 40");
   await page.getByRole("tab", { name: "Prices" }).click();
   await expect(page.getByLabel("Södermalm Movera Price per km")).toHaveValue("20");
   await expect(page.getByLabel("Norrmalm Movera Price per km")).toHaveCount(0);

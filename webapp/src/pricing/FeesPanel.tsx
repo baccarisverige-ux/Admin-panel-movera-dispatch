@@ -1,5 +1,7 @@
 import { Plus, Route, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Link } from "react-router";
+import { countrySettingsOf } from "../config/countrySettings";
+import { useCountrySettings } from "../config/useCountrySettings";
 import type { MarketId } from "../markets/markets";
 import { NumberField } from "./NumberField";
 import { currencySymbol, feeMax, inputStep, money, roundingOptions, routeMax, type CategoryDef, type FixedRoute, type Problem, type ZoneBook, type ZoneFees } from "./zonePricing";
@@ -26,12 +28,8 @@ const FEE_ROWS: { key: "airportPickup" | "airportDropoff" | "reservationFee" | "
 export function FeesPanel({ zoneName, airport, currency, book, published, problems, canEdit, onChange }: FeesProps) {
   const symbol = currencySymbol(currency);
   const bad = new Set(problems.map((problem) => problem.path));
-  const [tipText, setTipText] = useState(book.fees.tips.join(", "));
-  const [tipKey, setTipKey] = useState(book.fees.tips.join(","));
-  if (tipKey !== book.fees.tips.join(",")) {
-    setTipKey(book.fees.tips.join(","));
-    setTipText(book.fees.tips.join(", "));
-  }
+  // Q5/Q6: tips are one list per country (Pricing › Tips & limits); the zone's old tip presets are no longer used.
+  const tips = countrySettingsOf(useCountrySettings().book, currency).tips;
   return (
     <div className="fee-grid">
       {FEE_ROWS.map((row) => (
@@ -55,24 +53,13 @@ export function FeesPanel({ zoneName, airport, currency, book, published, proble
           {book.fees.tollsPassThrough ? "Added to fare" : "Not added"}
         </label>
       </div>
-      <div className="fee-card">
+      <div className="fee-card" data-testid="fees-tips-moved">
         <div>
-          <strong>Tip presets</strong>
-          <small>Buttons riders see after the ride, in {symbol}</small>
+          <strong>Tips</strong>
+          <small>One list for all of the country, in Tips &amp; limits</small>
         </div>
-        <span className={bad.has("fees.tips") ? "num-field wide invalid" : "num-field wide"}>
-          <input
-            aria-label="Tip presets"
-            value={tipText}
-            disabled={!canEdit}
-            onChange={(event) => {
-              setTipText(event.target.value);
-              const tips = event.target.value.split(/[,;\s]+/).map((part) => Number(part.replace(",", "."))).filter((tip) => Number.isFinite(tip) && tip > 0);
-              if (tips.length) onChange({ tips });
-            }}
-          />
-        </span>
-        <div className="tip-preview" aria-hidden="true">{book.fees.tips.map((tip) => <span key={tip}>{money(tip, currency)}</span>)}</div>
+        <div className="tip-preview">{tips.filter((tip) => tip.enabled).map((tip) => <span key={tip.id}>{money(tip.amount, currency)}</span>)}</div>
+        <Link className="link-action" to={`/pricing?tab=extras&section=tips&zone=${encodeURIComponent(book.zoneId)}`}>Edit in Tips &amp; limits</Link>
       </div>
       <div className="fee-card">
         <div>

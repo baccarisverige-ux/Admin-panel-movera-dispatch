@@ -1,0 +1,191 @@
+import { useEffect, useState } from "react";
+import { BadgeDollarSign, Gift, HandHeart, Plus, Save, TrendingUp } from "lucide-react";
+import { market, type MarketId } from "../markets/markets";
+import {
+  COUNTRY_SETTINGS_KEY,
+  MAX_AMOUNTS,
+  addAmount,
+  countrySettingsIssues,
+  countrySettingsLines,
+  countrySettingsOf,
+  driverBonusHardMax,
+  largeCountryChanges,
+  moneyStep,
+  pricingSummary,
+  promoCapMax,
+  raiseStepMax,
+  sectionPart,
+  type AmountOption,
+  type CountrySettings,
+} from "../config/countrySettings";
+import { useCountrySettings } from "../config/useCountrySettings";
+import { CommandButton } from "../ui/CommandButton";
+import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
+import { NumberField } from "./NumberField";
+import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
+
+/** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
+export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus"] as const;
+
+type ListProps = {
+  title: string;
+  help: string;
+  item: string;
+  prefix: string;
+  plus?: boolean;
+  list: AmountOption[];
+  saved: AmountOption[];
+  max: number;
+  country: MarketId;
+  canEdit: boolean;
+  onChange: (list: AmountOption[]) => void;
+};
+
+/** A list of amounts: change one, add one, or switch one off (it stays in the list, so it can come back). */
+function AmountList({ title, help, item, prefix, plus, list, saved, max, country, canEdit, onChange }: ListProps) {
+  const symbol = currencySymbol(country);
+  const active = list.filter((entry) => entry.enabled);
+  const set = (id: string, patch: Partial<AmountOption>) => onChange(list.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
+  return (
+    <div className="fee-card cx-list" role="group" aria-label={title}>
+      <div>
+        <strong>{title}</strong>
+        <small>{help} Up to {MAX_AMOUNTS} amounts, each at most {money(max, country)}.</small>
+      </div>
+      <ul className="cx-amounts">
+        {list.map((entry, index) => {
+          const before = saved.find((old) => old.id === entry.id);
+          return (
+            <li key={entry.id} className={entry.enabled ? undefined : "off"}>
+              <span className="cx-index" aria-hidden="true">{index + 1}</span>
+              <NumberField label={`${item} ${index + 1}`} value={entry.amount} unit={symbol} step={moneyStep(country)} max={max} disabled={!canEdit} changed={!before || before.amount !== entry.amount} onChange={(amount) => set(entry.id, { amount })} />
+              <label className="mini-switch">
+                <input type="checkbox" aria-label={`${item} ${index + 1} active`} checked={entry.enabled} disabled={!canEdit} onChange={(event) => set(entry.id, { enabled: event.target.checked })} />
+                <span aria-hidden="true"><i /></span>
+                {entry.enabled ? "Active" : "Off"}
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+      <button data-command="admin.pricing.edit" type="button" className="link-action" disabled={!canEdit || list.length >= MAX_AMOUNTS} onClick={() => onChange(addAmount(list, prefix, country))}>
+        <Plus size={13} aria-hidden="true" /> Add an amount
+      </button>
+      <div className="tip-preview" aria-label={`${title} the rider sees`}>
+        {active.length ? active.map((entry) => <span key={entry.id}>{plus ? "+" : ""}{money(entry.amount, country)}</span>) : <small>None active: the rider sees no buttons.</small>}
+      </div>
+    </div>
+  );
+}
+
+type Props = {
+  country: MarketId;
+  canEdit: boolean;
+  /** The section to scroll to when the tab opens (from the Dispatch shortcut or All features). */
+  section: string | null;
+  onDirty: (dirty: boolean) => void;
+  onNotice: (text: string) => void;
+};
+
+/**
+ * Pricing › Tips & limits: the money settings that are one per country (contract v0.4.0): tips and raise-offer steps
+ * (Q5, Q6), the promo cap (Q10) and the driver bonus limit (Q17). Nothing is saved until Save; a change of more than
+ * 50 % asks "Are you sure?" (Q29). The rider and driver app configs read the saved values.
+ */
+export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotice }: Props) {
+  const { book, loading } = useCountrySettings();
+  const saved = countrySettingsOf(book, country);
+  const [draft, setDraft] = useState<CountrySettings | null>(null);
+  const shown = draft ?? saved;
+  const dirty = draft !== null && JSON.stringify(sectionPart(draft, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
+  const fieldErrors = useFieldErrors();
+  const issues = dirty ? countrySettingsIssues(country, shown) : [];
+  const lines = dirty ? countrySettingsLines(country, saved, shown) : [];
+  const large = dirty ? largeCountryChanges(country, saved, shown) : [];
+  const symbol = currencySymbol(country);
+  const name = market(country).name;
+  const hardMax = driverBonusHardMax(country);
+  const edit = (patch: Partial<CountrySettings>) => setDraft({ ...shown, ...patch });
+
+  useEffect(() => {
+    onDirty(dirty);
+    return () => onDirty(false);
+  }, [dirty, onDirty]);
+  useEffect(() => {
+    if (!section || loading) return;
+    const node = document.getElementById(`extras-${section}`);
+    if (!node) return;
+    node.scrollIntoView({ block: "start" });
+    node.classList.add("pl-flash");
+    const timer = window.setTimeout(() => node.classList.remove("pl-flash"), 1600);
+    return () => window.clearTimeout(timer);
+  }, [section, loading]);
+
+  if (loading) return <p className="state-line">Loading the country settings.</p>;
+
+  return (
+    <FieldErrorScope value={fieldErrors.report}>
+      <section className="dash-card" aria-labelledby="extras-title" data-testid="pricing-extras">
+        <div className="card-head">
+          <h3 id="extras-title"><HandHeart size={16} aria-hidden="true" /> Tips &amp; limits · all of {name}</h3>
+          <span className="fine-print">One setting per country, in {symbol}. Saved with Save, not with Publish.</span>
+        </div>
+        <div className="fee-grid">
+          <div id="extras-tips" className="cx-anchor">
+            <AmountList title="Tips" help="Buttons the rider sees after the ride." item="Tip" prefix="tip" list={shown.tips} saved={saved.tips} max={tipMax(country)} country={country} canEdit={canEdit} onChange={(tips) => edit({ tips })} />
+          </div>
+          <div id="extras-raise-steps" className="cx-anchor">
+            <AmountList title="Raise-offer quick steps" help="Quick “+” buttons while the rider waits for a driver." item="Raise step" prefix="raise" plus list={shown.raiseSteps} saved={saved.raiseSteps} max={raiseStepMax(country)} country={country} canEdit={canEdit} onChange={(raiseSteps) => edit({ raiseSteps })} />
+          </div>
+          <div id="extras-promo-cap" className="cx-anchor">
+            <div className="fee-card">
+              <div>
+                <strong><Gift size={14} aria-hidden="true" /> Promo cap</strong>
+                <small>The highest promo discount on one ride, shown to the rider in {symbol}. At most {money(promoCapMax(country), country)}.</small>
+              </div>
+              <label className="mini-switch big">
+                <input type="checkbox" aria-label="Cap promo discounts" checked={shown.promoCap !== null} disabled={!canEdit} onChange={(event) => edit({ promoCap: event.target.checked ? saved.promoCap ?? fromSek(100, country) : null })} />
+                <span aria-hidden="true"><i /></span>
+                {shown.promoCap === null ? "No cap" : "Capped"}
+              </label>
+              {shown.promoCap !== null ? <NumberField label="Promo cap" value={shown.promoCap} unit={symbol} step={moneyStep(country)} max={promoCapMax(country)} disabled={!canEdit} changed={shown.promoCap !== saved.promoCap} onChange={(promoCap) => edit({ promoCap })} /> : null}
+            </div>
+          </div>
+          <div id="extras-driver-bonus" className="cx-anchor">
+            <div className="fee-card">
+              <div>
+                <strong><BadgeDollarSign size={14} aria-hidden="true" /> Driver bonus limit</strong>
+                <small>The most an admin can add to one trip for the driver. Movera pays it; the rider never does. Above it the admin sees “adjust the limit in Pricing”.</small>
+              </div>
+              <NumberField label="Driver bonus limit" value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
+              <small data-testid="driver-bonus-hard-max"><TrendingUp size={12} aria-hidden="true" /> Hard max {money(hardMax, country)}: the limit can never be higher.</small>
+            </div>
+          </div>
+        </div>
+        {issues.length ? <p className="pl-warn" role="alert">{issues[0]}</p> : null}
+        {dirty && !issues.length ? <ul className="cx-lines" aria-label="Unsaved changes">{lines.map((line) => <li key={line}>{line}</li>)}</ul> : null}
+        <div className="actions">
+          <CommandButton
+            command="admin.pricing.saveCountry"
+            className="dash-btn publish"
+            targetId={`${country} tips and limits`}
+            confirmTarget={false}
+            scope={country}
+            before={pricingSummary(country, saved)}
+            after={pricingSummary(country, shown)}
+            sliceKey={COUNTRY_SETTINGS_KEY}
+            value={{ ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
+            expectedSliceRev={book.draftRev}
+            disabled={!canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
+            title={!canEdit ? "Your role cannot change this." : !dirty ? "No unsaved change." : fieldErrors.first ?? issues[0]}
+            largeChanges={large}
+            onDone={() => { setDraft(null); onNotice(`Tips & limits saved for ${name}. The rider and driver apps get them with the next app config.`); }}
+          >
+            <Save size={15} aria-hidden="true" /> Save tips &amp; limits
+          </CommandButton>
+          <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" disabled={!draft} onClick={() => setDraft(null)}>Discard</button>
+        </div>
+      </section>
+    </FieldErrorScope>
+  );
+}
