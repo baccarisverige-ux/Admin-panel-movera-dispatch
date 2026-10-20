@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { DEMO_CODE, DEMO_PASSWORD } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
-import { COMMAND_STORE_KEY, readCommandDb, withSignIn } from "../commands/run";
+import { SIGN_IN_LOG_KEY, readSignInLog, withSignIn } from "../auth/signInLog";
 import { CommandButton } from "../ui/CommandButton";
 
 export function LoginPage() {
@@ -18,10 +18,10 @@ export function LoginPage() {
           event.preventDefault();
           const agent = session.signInWith(email, password, code);
           if (!agent) return;
-          const book = readCommandDb(localStorage.getItem(COMMAND_STORE_KEY));
+          const log = readSignInLog(localStorage.getItem(SIGN_IN_LOG_KEY));
           localStorage.setItem(
-            COMMAND_STORE_KEY,
-            JSON.stringify(withSignIn(book, agent.id, agent.email, new Date().toISOString())),
+            SIGN_IN_LOG_KEY,
+            JSON.stringify(withSignIn(log, agent.id, agent.email, new Date().toISOString())),
           );
         }}
       >

@@ -1,11 +1,11 @@
 import { ROLE_PERMISSIONS, type Role } from "../auth/permissions.ts";
-import { editContent, emptyContent, publishContent, rollbackContent } from "../content/book.ts";
+import { changeStudio, emptyStudio, studioSlot } from "../content/studio.ts";
 import { blankDocuments, setAccount, type Driver } from "../drivers/gate.ts";
 import { APPS } from "../gates/apps.ts";
+import { liveSos } from "../gates/frontendC.ts";
 import { gateB } from "../gates/scenarios.ts";
 import { canStartCheckout, existingAuthContinues, type PaymentMethod } from "../payments/book.ts";
 import { assignReservation, needsDriverSoon, type Reservation } from "../reservations/book.ts";
-import { publicIncident, resolveIncident, takeIncident, type Incident } from "../safety/book.ts";
 
 export type DrillResult = { id: string; pass: boolean; steps: string[] };
 
@@ -50,15 +50,13 @@ export function drillPaymentFailure(): DrillResult {
 }
 
 export function drillSos(): DrillResult {
-  const queued: Incident = { id: "INC-1", state: "queued", locationAt: "2026-10-05T10:00:00Z", accuracyM: 12, ownerId: null };
-  const taken = takeIncident(queued, "erik");
-  const resolved = resolveIncident(taken);
-  const view = publicIncident(resolved.incident);
-  const pass = taken.state === "taken" && view.state === "resolved" && !("pin" in view);
+  // The live Safety rules on a seeded SOS (safety/ops.ts): take it, then resolve it.
+  const sos = liveSos();
+  const pass = !sos.error && sos.owner === "erik" && sos.status === "resolved" && !("pin" in sos.record);
   return {
     id: "sos",
     pass,
-    steps: [`Taken by ${taken.ownerId}.`, `Location ${view.locationAt}, accuracy ${view.accuracyM} m.`, "No PIN is shown.", `State ${view.state}.`],
+    steps: [`Taken by ${sos.owner ?? "nobody"}.`, `Incident ${String(sos.record.id)} in ${String(sos.record.zoneId)}.`, "No PIN is shown.", `State ${sos.status}.`],
   };
 }
 
@@ -91,18 +89,25 @@ export function drillReservation(): DrillResult {
 }
 
 export function drillBadPublish(): DrillResult {
-  const edited = editContent(emptyContent("nora"), "Wrong fare text.", "nora");
-  const blocked = publishContent(edited, "nora");
-  const published = publishContent(edited, "lena");
-  const restored = rollbackContent(published.book);
-  const pass = Boolean(blocked.error) && published.book.published.body === "Wrong fare text." && restored.published.body === "Book a ride in Stockholm.";
+  // The live Content rules (content/studio.ts): the author cannot publish, a second agent can, rollback restores.
+  const slot = "help";
+  const good = { ...studioSlot(emptyStudio(), slot).draft, sv: "Boka en resa i Stockholm.", en: "Book a ride in Stockholm." };
+  let book = changeStudio(emptyStudio(), slot, good, "save", "nora").book;
+  book = changeStudio(book, slot, good, "publish", "lena").book;
+  const wrong = { ...good, en: "Wrong fare text." };
+  book = changeStudio(book, slot, wrong, "save", "nora").book;
+  const blocked = changeStudio(book, slot, wrong, "publish", "nora");
+  const published = changeStudio(book, slot, wrong, "publish", "lena");
+  const restored = changeStudio(published.book, slot, wrong, "rollback", "lena");
+  const restoredText = restored.book.slots[slot]?.published?.en ?? "";
+  const pass = Boolean(blocked.error) && published.book.slots[slot]?.published?.en === "Wrong fare text." && !restored.error && restoredText === good.en;
   return {
     id: "bad-publish",
     pass,
     steps: [
       blocked.error ?? "The author was allowed to publish.",
       "A second agent published.",
-      `Rollback restored: ${restored.published.body}`,
+      `Rollback restored: ${restoredText}`,
     ],
   };
 }

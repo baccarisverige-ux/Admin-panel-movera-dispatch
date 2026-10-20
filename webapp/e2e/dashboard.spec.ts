@@ -61,6 +61,7 @@ test("a passed reservation can be marked as no-show", async ({ page }) => {
   const modal = page.locator(".modal.open");
   const input = modal.getByLabel("Type B002 to confirm");
   if (await input.count()) await input.fill("B002");
+  await modal.getByLabel("Reason", { exact: true }).selectOption({ index: 1 });
   await modal.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText("Reservation marked as no-show.")).toBeVisible();
   await page.reload();

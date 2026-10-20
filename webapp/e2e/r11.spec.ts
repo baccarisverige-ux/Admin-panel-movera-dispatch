@@ -13,6 +13,9 @@ async function confirm(page: Page, target?: string) {
     const input = modal.getByLabel(`Type ${target} to confirm`);
     if (await input.count()) await input.fill(target);
   }
+  // Cancel and refund dialogs start with no reason (A-O1): pick the first one when none is chosen.
+  const reason = modal.getByLabel("Reason", { exact: true });
+  if ((await reason.count()) && (await reason.inputValue()) === "") await reason.selectOption({ index: 1 });
   await modal.getByRole("button", { name: "Confirm" }).click();
 }
 
