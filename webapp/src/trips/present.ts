@@ -1,6 +1,6 @@
 import type { DemoRecord, TripRecord } from "../api/seed.ts";
 import { ZONES } from "../api/seed.ts";
-import { CATEGORIES, TRIP_STATUSES, type TripStatus } from "../domain/contract.ts";
+import { CATEGORIES, RIDER_ONBOARD_STATUSES, TRIP_STATUSES, ratingAllowed, type TripStatus } from "../domain/contract.ts";
 import { statusLabel } from "../domain/labels.ts";
 import { formatMoney } from "../domain/money.ts";
 import { market, marketOfZone } from "../markets/markets.ts";
@@ -148,8 +148,13 @@ export function pinVerified(id: string): "Yes" | "No" {
   return tripIndex(id) % 2 === 0 ? "Yes" : "No";
 }
 
+/**
+ * contract.json#ratingAllowed: the rider rates a completed trip and one they ended early. A rider leaves an on-board
+ * status for cancelled_by_rider only through `end_early`, so that is how an ended-early trip shows here.
+ */
 export function ratingLabel(trip: DemoRecord): string {
-  if (trip.status !== "completed") return "Not rated yet";
+  const endedEarly = trip.status === "cancelled_by_rider" && (RIDER_ONBOARD_STATUSES as readonly string[]).includes(trip.previousStatus ?? "");
+  if (!ratingAllowed("rider", trip.status, endedEarly ? "end_early" : undefined)) return "Not rated yet";
   return `${3 + (tripIndex(trip.id) % 3)} of 5`;
 }
 

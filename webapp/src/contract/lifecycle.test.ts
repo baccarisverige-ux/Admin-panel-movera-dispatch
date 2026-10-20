@@ -11,6 +11,8 @@ import {
   isCancelReasonCode,
   isTerminal,
   nextStatus,
+  RATING_ALLOWED,
+  ratingAllowed,
   type Actor,
   type TripCommand,
   type TripKind,
@@ -22,8 +24,11 @@ type Contract = {
   tripStatus: { values: string[]; terminal: string[]; driverAssigned: string[]; riderOnboard: string[] };
   transitions: { command: string; actor: string; from: string[]; to: string; when?: string }[];
   cancelReasons: Record<string, string[]>;
+  ratingAllowed: { rules: { rater: string; status: string; command?: string }[] };
 };
-type Scenarios = { scenarios: { id: string; kind: TripKind; steps: [TripCommand, Actor, string][] }[] };
+type Scenarios = {
+  scenarios: { id: string; kind: TripKind; steps: [TripCommand, Actor, string][]; rating?: Record<"rider" | "driver", string> }[];
+};
 
 const contract = contractJson<Contract>("contract.json");
 
@@ -53,6 +58,28 @@ test("fixtures/scenarios.json replays identically", () => {
       assert.equal(next ?? "invalid_transition", expect, `${scenario.id} step ${index + 1}: ${command} by ${actor} from ${status}`);
       if (next) status = next;
     });
+  }
+});
+
+test("rating rules equal contract.json#ratingAllowed entry for entry", () => {
+  assert.deepEqual(RATING_ALLOWED.map((rule) => ({ ...rule })), contract.ratingAllowed.rules.map(({ rater, status, command }) => ({ rater, status, ...(command ? { command } : {}) })));
+});
+
+test("fixtures/scenarios.json rating cases replay identically", () => {
+  const cases = contractJson<Scenarios>("fixtures/scenarios.json").scenarios.filter((scenario) => scenario.rating);
+  const ids = cases.map((scenario) => scenario.id);
+  assert.ok(ids.includes("rider_rates_trip_ended_early") && ids.includes("plain_rider_cancel_is_not_rated"), ids.join(","));
+  for (const scenario of cases) {
+    let status: string = "draft";
+    let endedBy: TripCommand | undefined;
+    for (const [command, actor] of scenario.steps) {
+      const next = nextStatus(status, command, actor, scenario.kind);
+      if (next) [status, endedBy] = [next, command];
+    }
+    for (const [rater, expect] of Object.entries(scenario.rating!) as ["rider" | "driver", string][]) {
+      const got = isTerminal(status) && ratingAllowed(rater, status, endedBy) ? "allowed" : "invalid_transition";
+      assert.equal(got, expect, `${scenario.id}: ${rater} rates after ${status} by ${endedBy}`);
+    }
   }
 });
 

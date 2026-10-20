@@ -4,7 +4,7 @@ import { formatMoney } from "./money.ts";
 export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
-export const CONTRACT_VERSION = "0.3.0" as const;
+export const CONTRACT_VERSION = "0.3.1" as const;
 
 /** The 19 trip statuses of contract v0.3.0 (contract.json#tripStatus.values), in lifecycle order. */
 export const TRIP_STATUSES = [
@@ -122,6 +122,24 @@ export function nextStatus(status: string, command: TripCommand, actor: Actor, k
     if (rule.command === command && rule.actor === actor && (rule.from as readonly string[]).includes(status) && (rule.when ?? kind) === kind) return rule.to;
   }
   return null;
+}
+
+/** One row of contract.json#ratingAllowed.rules: `rater` may rate a trip that ended in `status`, through `command` when set. */
+export type RatingRule = { rater: "rider" | "driver"; status: TripStatus; command?: TripCommand };
+
+/**
+ * Who may rate a finished trip (contract.json#ratingAllowed, same order). The rider also rates a trip they ended early
+ * (`end_early` → cancelled_by_rider); a plain rider `cancel` is never rated. Anything else is `invalid_transition`.
+ */
+export const RATING_ALLOWED: readonly RatingRule[] = [
+  { rater: "rider", status: "completed" },
+  { rater: "driver", status: "completed" },
+  { rater: "rider", status: "cancelled_by_rider", command: "end_early" },
+];
+
+/** Whether `rater` may rate a trip in `status` that `endedBy` (the command that ended it, when known) brought there. */
+export function ratingAllowed(rater: "rider" | "driver", status: string, endedBy?: TripCommand): boolean {
+  return RATING_ALLOWED.some((rule) => rule.rater === rater && rule.status === status && (rule.command === undefined || rule.command === endedBy));
 }
 
 /** Every status `command` by `actor` may start from (any trip kind), in lifecycle order. */

@@ -13,6 +13,7 @@ import {
   offersFor,
   paymentOf,
   pinVerified,
+  ratingLabel,
   reassignBlock,
   refundBlock,
   stopsOf,
@@ -45,6 +46,9 @@ assert(waitingBlock(arrived.status) === null && waitingBlock(searching.status) !
 
 assert(pinVerified("T0001") === "Yes" && pinVerified("T0002") === "No", "pin is yes or no, never a code");
 assert(!pinVerified("T0001").match(/\d{4}/), "pin text has no code");
+const rated = (status: string, previousStatus?: string) => ratingLabel({ id: "T0001", name: "R", phone: "", zoneId: "Z001", status, previousStatus });
+assert(rated("cancelled_by_rider", "in_trip") !== "Not rated yet" && rated("completed") !== "Not rated yet", "contract v0.3.1: a trip the rider ended early is rated like a completed one");
+assert(rated("cancelled_by_rider", "arrived") === "Not rated yet" && rated("cancelled_by_rider") === "Not rated yet", "a plain rider cancel is not rated");
 
 const stops = stopsOf(searching);
 assert(stops.length >= 2 && stops.length <= 5, "route has pickup, up to 3 stops, and drop-off");
