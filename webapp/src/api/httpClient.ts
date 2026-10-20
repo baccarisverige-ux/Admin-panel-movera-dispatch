@@ -5,7 +5,7 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 /** The wire error body: { code, message, requestId, retryable, projection? }. */
 export type ApiErrorBody = { code: ErrorCode; message: string; requestId: string; retryable: boolean; projection?: unknown };
 
-export const API_VERSION = "0.3";
+export const API_VERSION = "0.4";
 
 export class ApiError extends Error {
   readonly status: number;

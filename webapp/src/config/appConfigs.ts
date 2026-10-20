@@ -14,6 +14,7 @@ import { driverAppTexts, normalizeDriverTextBook, type DriverTextBook } from "..
 import { driverAppNotices, normalizeDriverNoticeBook, type DriverNoticeBook } from "../messages/driverNotices.ts";
 import { normalizeRideCheckSettings, type RideCheckSettings } from "../safety/rideCheckSettings.ts";
 import { seedZones } from "../zones/releases.ts";
+import { APP_LANGUAGES, CONFIG_DEFAULTS, countryDefaults, ZONE_PAYMENT_METHODS, zonePaymentMethodOf, type ZonePaymentMethod } from "./zoneDefaults.ts";
 
 /**
  * The two per-zone config documents of contracts/CONTRACT.md §6, RiderAppConfig and DriverAppConfig, built from the
@@ -21,8 +22,11 @@ import { seedZones } from "../zones/releases.ts";
  * TND 3); cancel fees are FeeRule per Pricing category id. Pure functions: same state in, same document out.
  * The legacy dispatch rules file (dispatch/rules.ts rulesFile) is separate and unchanged.
  *
- * Keys beyond the contract sample are additive ("unknown keys are ignored"): waiting.byCategory, pickupPay.byCategory,
+ * Keys beyond the contract sample are additive ("unknown keys are ignored"): pickupPay.byCategory,
  * cancelCheck, sourceRevisions, and a few on/off switches next to the numbers they gate.
+ *
+ * Contract v0.4.0 per-zone fields (country, languages, tips, raiseSteps, promoCap, wallet, booking.maxPickupMoveMeters,
+ * driverBonus, waiting.byCategory) come from the admin settings where one exists, else from CONFIG_DEFAULTS (zoneDefaults.ts).
  */
 
 /** contract §6 FeeRule. fixed: value in minor units. percent: value 0–100 of the fare. */
@@ -146,7 +150,27 @@ function publishedAtOf(state: AppConfigState): string {
 
 function header(zoneId: string, state: AppConfigState, base: Common) {
   const revisions = sourceRevisions(state);
-  return { version: versionOf(revisions), publishedAt: publishedAtOf(state), zoneId, currency: base.currency, timeZone: base.info.timeZone };
+  return { version: versionOf(revisions), publishedAt: publishedAtOf(state), zoneId, currency: base.currency, timeZone: base.info.timeZone, country: base.info.id, languages: languages(base) };
+}
+
+/** Owner Q48/Q49: en / fr / sv in every app; the country's default for the rider, driver and admin apps (no admin setting yet). */
+function languages(base: Common) {
+  const lang = countryDefaults(base.info.id).defaultLanguage;
+  return { available: [...APP_LANGUAGES], default: { rider: lang, driver: lang, admin: lang } };
+}
+
+/** Tips and raise-offer steps of the country (owner Q5/Q6), all on: no admin setting yet. */
+function amountOptions(amounts: readonly Money[]) {
+  return amounts.map((amount) => ({ amount: { ...amount }, enabled: true }));
+}
+
+function driverBonus(base: Common) {
+  const limits = countryDefaults(base.info.id).driverBonus;
+  return { defaultLimit: { ...limits.defaultLimit }, hardMax: { ...limits.hardMax } };
+}
+
+function booking(base: Common) {
+  return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: CONFIG_DEFAULTS.maxPickupMoveMeters };
 }
 
 function catalog(base: Common) {
@@ -177,9 +201,10 @@ function scheduledRides(base: Common): boolean {
   return base.zone.reservation.on;
 }
 
+/** Owner Q41/Q42: no-show is allowed once the category's free wait (Pricing) is over; the waiting fee per minute starts then. */
 function waitingFor(base: Common, categoryId: string) {
   const price = base.pricing.prices[categoryId];
-  return { freeWaitMin: price.freeWaitMin, perMin: wire(price.waitPerMin, base.currency), noShowAfterMin: base.zone.pickupWait.noShowAfterMin, noShowFee: wire(price.noShowFee, base.currency) };
+  return { freeWaitMin: price.freeWaitMin, perMin: wire(price.waitPerMin, base.currency), noShowAfterMin: price.freeWaitMin, noShowFee: wire(price.noShowFee, base.currency) };
 }
 
 /** The category whose terms are the zone's headline terms: Economy, else the first in the catalog. */
@@ -239,15 +264,20 @@ function appUpdate(base: Common, app: AppId) {
 /* ---------- RiderAppConfig ---------- */
 
 /** Config switches that gate a payment method; methods without one are only gated by Finance. */
-const METHOD_SWITCH: Partial<Record<PaymentMethod, string>> = { cash: "cash", apple: "applePay", google: "googlePay", swish: "swish" };
+const METHOD_SWITCH: Partial<Record<PaymentMethod, string>> = { cash: "cash", apple: "applePay", google: "googlePay" };
 
-/** A method is offered in the zone when Finance has it on for at least one of the zone's categories on one platform, and its config switch is on. */
-function paymentMethods(base: Common, state: AppConfigState, zoneId: string): PaymentMethod[] {
+/**
+ * Contract v0.4 (owner Q7): the zone's methods are a subset of cash, card, apple_pay, google_pay, in that order. A method
+ * is offered when Finance has it on for at least one of the zone's categories on one platform, and its config switch is on.
+ * Finance-only ids without a contract method (swish, klarna, paypal) are never exported; the wallet is separate (features.wallet).
+ */
+function paymentMethods(base: Common, state: AppConfigState, zoneId: string): ZonePaymentMethod[] {
   const contexts = base.categoryIds.flatMap((category) => (["ios", "android"] as const).map((platform) => ({ zoneId, category, platform })));
-  return PAYMENT_METHODS.filter((method) => {
-    const gate = method === "wallet" ? switchOn(base, "rider", "wallet") && featureOn(base, "wallet", zoneId, "rider", state.now) : METHOD_SWITCH[method] ? switchOn(base, "rider", METHOD_SWITCH[method]!) : true;
+  const on = PAYMENT_METHODS.filter((method) => {
+    const gate = METHOD_SWITCH[method] ? switchOn(base, "rider", METHOD_SWITCH[method]!) : true;
     return gate && contexts.some((context) => paymentPolicy(state.finance, context)[method]);
-  });
+  }).map(zonePaymentMethodOf);
+  return ZONE_PAYMENT_METHODS.filter((method) => on.includes(method));
 }
 
 export function riderAppConfig(zoneId: string, state: AppConfigState) {
@@ -262,7 +292,12 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
       shareTrip: switchOn(base, "rider", "shareTrip"),
     },
     paymentMethods: paymentMethods(base, state, zoneId),
-    booking: { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays },
+    wallet: { usedFirst: true },
+    tips: amountOptions(countryDefaults(base.info.id).tips),
+    raiseSteps: amountOptions(countryDefaults(base.info.id).raiseSteps),
+    /** Owner Q10: set by admin per country; no setting yet, so no cap. */
+    promoCap: null,
+    booking: { ...booking(base), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays },
     cancelFees: cancelFees(base),
     cancelCheck: { on: base.zone.riderCancel.on, closerPct: base.zone.riderCancel.closerPct },
     waiting: waiting(base),
@@ -328,6 +363,8 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
       showAcceptance: switchOn(base, "driver", "showAcceptance"),
       showCancellation: switchOn(base, "driver", "showCancellation"),
     },
+    paymentMethods: paymentMethods(base, state, zoneId),
+    booking: booking(base),
     offers: {
       radarSeconds: zone.radar.seconds,
       exclusiveSeconds: zone.exclusive.seconds,
@@ -341,6 +378,7 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
       exclusiveWhileDriving: { ...zone.exclusiveWhileDriving },
     },
     pickupPay: pickupPay(base),
+    driverBonus: driverBonus(base),
     cancelFees: cancelFees(base),
     waiting: {
       freeWaitMin: wait.freeWaitMin, perMin: wait.perMin, noShowAfterMin: wait.noShowAfterMin, noShowFee: wait.noShowFee, ...share,
