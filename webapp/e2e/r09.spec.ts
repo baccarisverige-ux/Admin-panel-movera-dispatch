@@ -8,7 +8,11 @@ async function session(page: Page, agentId = "nora") {
 }
 
 async function confirm(page: Page) {
-  await page.locator(".modal.open").last().getByRole("button", { name: "Confirm" }).click();
+  const modal = page.locator(".modal.open").last();
+  // A price moved more than 50% from the published one asks "Are you sure?" first (A-O3).
+  const sure = modal.getByLabel("Yes, I'm sure");
+  if (await sure.count()) await sure.check();
+  await modal.getByRole("button", { name: "Confirm" }).click();
 }
 
 async function publish(page: Page) {

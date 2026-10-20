@@ -8,7 +8,11 @@ async function session(page: Page, agentId = "astrid") {
 }
 
 async function confirm(page: Page) {
-  await page.locator(".modal.open").getByRole("button", { name: "Confirm" }).click();
+  const modal = page.locator(".modal.open");
+  // Cancel and refund dialogs start with no reason (A-O1): pick the first one when none is chosen.
+  const reason = modal.getByLabel("Reason", { exact: true });
+  if ((await reason.count()) && (await reason.inputValue()) === "") await reason.selectOption({ index: 1 });
+  await modal.getByRole("button", { name: "Confirm" }).click();
 }
 
 test("R10 payment policy voucher and reconciliation persist", async ({ page }) => {

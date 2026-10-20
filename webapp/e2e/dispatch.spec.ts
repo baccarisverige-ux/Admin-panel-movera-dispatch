@@ -12,7 +12,11 @@ async function session(page: Page, agentId = "nora") {
 }
 
 async function confirm(page: Page) {
-  await page.locator(".modal.open").last().getByRole("button", { name: "Confirm" }).click();
+  const modal = page.locator(".modal.open").last();
+  // Cancel and refund dialogs start with no reason (A-O1): pick the first one when none is chosen.
+  const reason = modal.getByLabel("Reason", { exact: true });
+  if ((await reason.count()) && (await reason.inputValue()) === "") await reason.selectOption({ index: 1 });
+  await modal.getByRole("button", { name: "Confirm" }).click();
 }
 
 const zone = (page: Page, name: string) => page.getByRole("navigation", { name: "Zones" }).getByRole("button", { name: new RegExp(`^${name}`) });
@@ -632,4 +636,20 @@ test("rider cancel fees per car type: live trips and reservations, % with min an
   await page.setViewportSize({ width: 390, height: 860 });
   await expect(resv.getByLabel("Reservations Premium highest fee")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(392);
+});
+
+test("A-O3: a rider cancel fee moved more than 50% asks Are you sure before it is published", async ({ page }) => {
+  await session(page);
+  await page.goto("/dispatch?zone=Z001&tab=rides");
+  const fee = page.getByLabel("Live trips Movera fee", { exact: true });
+  await expect(fee).toHaveValue("35", { timeout: 20_000 });
+  await fee.fill("100");
+  await page.getByRole("region", { name: "Publish" }).getByRole("button", { name: "Publish now" }).click();
+  const modal = page.locator(".modal.open").last();
+  await expect(modal.getByTestId("large-change-warning")).toContainText("Are you sure?");
+  await expect(modal.getByTestId("large-change-warning")).toContainText("Norrmalm · Rider cancels, Movera: fee 35 → 100 kr (+186%)");
+  await expect(modal.getByRole("button", { name: "Confirm" })).toBeDisabled();
+  await modal.getByLabel("Yes, I'm sure").check();
+  await modal.getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
 });

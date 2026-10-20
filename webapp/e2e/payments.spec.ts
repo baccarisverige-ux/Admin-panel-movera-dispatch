@@ -25,6 +25,10 @@ test("a timed-out double click still refunds once", async ({ page }) => {
   // A refund asks for a reason and the payment id (UI-04); a double click on Confirm still refunds once.
   const modal = page.locator(".modal.open");
   await modal.getByLabel("Type PAY0002 to confirm").fill("PAY0002");
+  // A-O1: no reason is preselected, so Confirm waits for one.
+  await expect(modal.getByLabel("Reason", { exact: true })).toHaveValue("");
+  await expect(modal.getByRole("button", { name: "Confirm" })).toBeDisabled();
+  await modal.getByLabel("Reason", { exact: true }).selectOption("Charged twice");
   await modal.getByRole("button", { name: "Confirm" }).dblclick();
   await expect(page.getByText("Unknown. Check the audit before trying again.")).toBeVisible();
   await expect(page.getByTestId("payment-timeline")).toContainText("Refunded");
