@@ -43,7 +43,7 @@ const PAGES: Check[] = [
   { path: "/", title: "Dashboard", text: "Today", name: "dashboard" },
   { path: "/trips", title: "Trips", text: "All trips", name: "trips" },
   { path: "/trips/T0004", title: "Trips", text: "Who did what", name: "trip" },
-  { path: "/dispatch", title: "Dispatch", text: "How ride requests find a driver: Radar, Exclusive and reservations, with rules for every zone.", name: "dispatch" },
+  { path: "/dispatch", title: "Dispatch", text: "How ride requests find a driver, with rules for every zone. Radar, Exclusive and reservations have their own section.", name: "dispatch" },
   { path: "/dispatch?view=features", title: "Dispatch", text: "Every setting and feature, in one list. Click one to open its section.", name: "dispatch-features" },
   { path: "/dispatch?view=activity", title: "Dispatch", text: "Change my panel language", name: "dispatch-activity" },
   { path: "/pricing", title: "Pricing", text: "Editing zone", name: "pricing" },

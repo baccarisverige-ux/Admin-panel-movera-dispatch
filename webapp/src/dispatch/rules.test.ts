@@ -121,7 +121,7 @@ assert(paused.waiting && !paused.book.control.Z001, "pause waits for approval");
 const resumed = requestControl({ ...book, control: { Z001: { paused: true, mode: null, by: "x", at: "" } } }, "Z001", { paused: false, mode: null }, "nora", "now");
 assert(!resumed.waiting && !resumed.book.control.Z001.paused, "resume is immediate");
 
-const copied = copyParts(small, zoneDefault("Z002"), ["modes"]);
+const copied = copyParts(small, zoneDefault("Z002"), ["radar"]);
 assert(copied.zoneId === "Z002" && copied.radar.drivers === 8, "copy keeps the zone");
 const airport = applyPreset(zoneDefault("FR-PC"), BUILT_IN_PRESETS.find((item) => item.id === "airport")!, "FR");
 assert(airport.airport.on && airport.riderCancel.fees.comfort.value === 4.3 && airport.reservation.riderFees.premium.max === 28.5 && airport.zoneId === "FR-PC", "preset keeps the country's money");
@@ -137,6 +137,18 @@ assert(once.filter((step) => step.title === "Exclusive to a").length === 1, "a d
 // Radar in the driver app and going offline.
 assert(zoneIssues({ ...base, radarApp: { ...base.radarApp, popup: 9 } }).some((line) => line.includes("popup")), "popup has a limit");
 assert(zoneIssues({ ...base, radarApp: { ...base.radarApp, fullOn: false, popupOn: false } }).some((line) => line.includes("cannot see")), "radar needs a screen");
+// Two independent radar screens (Radar · Exclusive · Reservations): the list locks while driving; the map cards can have their own limit while driving.
+assert(base.radarApp.fullLockWhileDriving === true && base.radarApp.popupSplitByDriving === false && base.radarApp.popupWhileDriving === 1, "new radar screen defaults");
+assert(zoneIssues({ ...base, radarApp: { ...base.radarApp, popupSplitByDriving: true, popupWhileDriving: 3 } }).some((line) => line.includes("while driving")), "cards while driving never exceed the stopped limit");
+assert(zoneIssues({ ...base, radarApp: { ...base.radarApp, popupSplitByDriving: true, popupWhileDriving: 1 } }).every((line) => !line.includes("while driving")), "1 card while driving with 2 when stopped is fine");
+assert(zoneIssues({ ...base, radarApp: { ...base.radarApp, popupSplitByDriving: false, popupWhileDriving: 9 } }).every((line) => !line.includes("while driving")), "the split off: one number all the time, the driving one is ignored");
+const oldScreens = normalizeDispatchBook(JSON.parse(JSON.stringify({ ...emptyDispatchBook(), live: { Z001: { ...base, radarApp: { fullOn: true, full: 6, popupOn: true, popup: 3 } } } })));
+const oldApp = liveRules(oldScreens, "Z001").radarApp;
+assert(oldApp.full === 6 && oldApp.popup === 3 && oldApp.fullLockWhileDriving === true && oldApp.popupSplitByDriving === false && oldApp.popupWhileDriving === 1, "an older save gets the new radar screen settings from the defaults");
+assert(copyParts({ ...base, radar: { ...base.radar, seconds: 44 }, autoOffline: { on: true, after: 7 } }, zoneDefault("Z002"), ["radar"]).radar.seconds === 44, "copying the Radar tab copies the Radar rules");
+assert(copyParts({ ...base, autoOffline: { on: true, after: 7 } }, zoneDefault("Z002"), ["radar"]).autoOffline.after === 7, "going offline automatically belongs to the Radar tab");
+assert(copyParts({ ...base, exclusive: { ...base.exclusive, seconds: 33 } }, zoneDefault("Z002"), ["exclusive"]).exclusive.seconds === 33, "copying the Exclusive tab copies the Exclusive rules");
+assert(copyParts({ ...base, exclusive: { ...base.exclusive, seconds: 33 } }, zoneDefault("Z002"), ["modes"]).exclusive.seconds !== 33, "the Modes tab no longer carries Exclusive");
 const offline = rankDrivers(base, country, request, [driver("quiet", { noInRow: 6 })]);
 assert(offline[0].out?.includes("offline"), "driver goes offline after offers not accepted");
 assert(!rankDrivers({ ...base, autoOffline: { on: false, after: 5 } }, country, request, [driver("quiet", { noInRow: 6 })])[0].out?.includes("offline"), "auto offline can be off");

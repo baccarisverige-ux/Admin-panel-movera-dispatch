@@ -30,7 +30,7 @@ test("dispatch has its own menu item, a back button, and every zone with its mod
   await expect(zone(page, "Arlanda")).toBeVisible();
   await zone(page, "Norrmalm").click();
   await expect(page.getByRole("heading", { name: /Norrmalm/ })).toBeVisible();
-  await expect(page.getByLabel("Radar drivers")).toHaveValue("5");
+  await expect(page.getByTestId("dx-moved-modes")).toBeVisible();
   await page.getByRole("button", { name: "Go back" }).click();
   await expect(page).not.toHaveURL(/zone=/);
   await page.getByRole("button", { name: "Go back" }).click();
@@ -39,7 +39,7 @@ test("dispatch has its own menu item, a back button, and every zone with its mod
 
 test("change Radar, publish now, see it in history, then undo", async ({ page }) => {
   await session(page);
-  await page.goto("/dispatch?zone=Z001");
+  await page.goto("/offers?zone=Z001");
   await page.getByLabel("Radar drivers").fill("8");
   const bar = page.getByRole("region", { name: "Publish" });
   await expect(bar).toContainText("1 change not live yet");
@@ -54,15 +54,14 @@ test("change Radar, publish now, see it in history, then undo", async ({ page })
   await page.reload();
   await expect(page.getByLabel("Radar drivers")).toHaveValue("8");
 
-  await page.getByRole("tab", { name: "History" }).click();
+  await page.goto("/dispatch?view=history");
   const versions = page.getByRole("list", { name: "Versions" });
   await expect(versions).toContainText("Norrmalm: Radar drivers: 5 → 8");
   await expect(versions).toContainText("More drivers for Friday");
   await versions.getByRole("button", { name: "Undo this version" }).first().click();
   await confirm(page);
   await expect(page.getByText(/undone/)).toBeVisible();
-  await page.getByRole("tab", { name: "Rules" }).click();
-  await zone(page, "Norrmalm").click();
+  await page.goto("/offers?zone=Z001");
   await expect(page.getByLabel("Radar drivers")).toHaveValue("5");
 });
 
@@ -143,9 +142,13 @@ test("live: alerts, pause a zone needs approval, send a rider to a radar", async
   await expect(page.getByText("Pause Norrmalm: waiting for a second admin to approve.")).toBeVisible();
   const list = page.getByRole("list", { name: "Riders waiting" });
   const first = list.getByRole("listitem").first();
-  await first.getByRole("button", { name: "Handle" }).click();
-  await first.getByRole("button", { name: "Send" }).nth(1).click();
+  await first.getByRole("button", { name: /Nearby drivers for / }).click();
+  const panel = page.getByTestId("assign-panel");
+  await expect(panel.getByTestId("assign-exclusive")).toBeVisible();
+  await panel.getByTestId("assign-radar").getByRole("button", { name: "Send radar" }).click();
   await confirm(page);
+  await expect(panel.getByTestId("handled-line")).toContainText(/Sent to radar/);
+  await page.keyboard.press("Escape");
   await expect(first).toContainText(/Sent to radar/);
   const map = page.getByRole("region", { name: /Live map/ });
   await map.getByRole("button", { name: "Full screen" }).click();
@@ -237,7 +240,8 @@ test("rules file, other countries, read-only roles and phones", async ({ page })
 
 test("radar offers in the driver app and going offline automatically", async ({ page }) => {
   await session(page);
-  await page.goto("/dispatch?zone=Z001");
+  await page.goto("/offers?zone=Z001");
+  const tabs = page.getByRole("tablist", { name: "Zone settings" });
   await page.getByLabel("Offers in the popup").fill("3");
   const phone = page.getByLabel("Driver offer preview");
   await expect(phone.getByLabel("3 offers stacked")).toHaveCount(1);
@@ -246,11 +250,12 @@ test("radar offers in the driver app and going offline automatically", async ({ 
   await phone.getByRole("button", { name: "Full screen" }).click();
   await expect(phone.getByLabel("Full-screen radar")).toContainText("10 offers max");
   await expect(phone.getByRole("button", { name: "While driving" })).toHaveCount(0);
+  await tabs.getByRole("tab", { name: "Exclusive" }).click();
   await page.getByLabel("Exclusive while driving on").uncheck();
   await phone.getByRole("tab", { name: "Exclusive" }).click();
   await phone.getByRole("button", { name: "While driving" }).click();
   await expect(phone).toContainText("No offers while driving a rider in this zone.");
-  await page.getByRole("tab", { name: "Drivers" }).click();
+  await tabs.getByRole("tab", { name: "Radar" }).click();
   await page.getByLabel("Offline after offers not accepted").fill("4");
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
@@ -319,8 +324,8 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await session(page);
   await page.goto("/dispatch?zone=Z001");
   await expect(page.getByRole("region", { name: "Reservations" })).toHaveCount(0);
-  await page.getByRole("tab", { name: "Reservations" }).click();
-  await expect(page).toHaveURL(/tab=reservations/);
+  await page.getByTestId("dx-moved-modes").getByRole("link", { name: "Reservations" }).click();
+  await expect(page).toHaveURL(/\/offers\?.*tab=reservations/);
   const card = page.getByRole("region", { name: "Reservations" });
   const steps = card.getByRole("list", { name: "Reservation steps" }).getByRole("listitem");
 
@@ -385,7 +390,8 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(fees.getByLabel("Reservations Premium free cancel minutes")).toHaveValue("120");
   await expect(fees.getByLabel("Reservations Movera fee", { exact: true })).toHaveValue("50");
   await fees.getByLabel("Reservations Movera fee", { exact: true }).fill("75");
-  await page.getByRole("tab", { name: "Reservations" }).first().click();
+  await page.getByRole("button", { name: "Radar · Exclusive · Reservations" }).click();
+  await page.getByRole("tablist", { name: "Zone settings" }).getByRole("tab", { name: "Reservations" }).click();
 
   // No driver near pickup: raise from Movera's commission, never over 500 kr.
   const none = page.getByRole("region", { name: "No driver near pickup" });
@@ -443,7 +449,7 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
 
 test("a viewer can look but not change", async ({ page }) => {
   await session(page, "anna");
-  await page.goto("/dispatch?zone=Z001");
+  await page.goto("/offers?zone=Z001");
   await expect(page.getByText("You can view these rules.")).toBeVisible();
   await expect(page.getByLabel("Radar on", { exact: true })).toBeDisabled();
 });
@@ -463,7 +469,18 @@ test("offer card details, Exclusive reasons, hidden Radar trips and going offlin
   await expect(offer).not.toContainText("120 trips");
   await card.getByLabel("Pickup address on").uncheck();
   await expect(offer).toContainText("Pickup nearby");
+  const bar = page.getByRole("region", { name: "Publish" });
+  await bar.getByRole("button", { name: "See changes" }).click();
+  const list = page.getByRole("list", { name: "Changes not live yet" });
+  await expect(list).toContainText("Offer card shows the driver's share: off → on");
+  await expect(list).toContainText("Offer card: drop-off area only: off → on");
+  await expect(list).toContainText("Offer card: rider rating and trips: on → off");
+  await bar.getByRole("button", { name: "Publish now" }).click();
+  await confirm(page);
+  await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
 
+  await page.goto("/offers?zone=Z001&tab=exclusive");
+  const tabs = page.getByRole("tablist", { name: "Zone settings" });
   const reasons = page.getByRole("region", { name: "Exclusive reasons" });
   await phone.getByRole("tab", { name: "Exclusive" }).click();
   await expect(offer).toContainText("Best match");
@@ -480,8 +497,8 @@ test("offer card details, Exclusive reasons, hidden Radar trips and going offlin
   await expect(offer).toContainText("Finishing nearby");
   await expect(offer).toContainText("you are driving a rider");
 
+  await tabs.getByRole("tab", { name: "Radar" }).click();
   await page.getByLabel("Hidden Radar trip comes back after").fill("5");
-  await page.getByRole("tab", { name: "Drivers" }).click();
   await expect(page.getByRole("region", { name: "Go offline automatically" })).toContainText("Radar trips never count");
   await page.getByLabel("Offline after offers not accepted").fill("1");
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toHaveCount(0);
@@ -492,12 +509,7 @@ test("offer card details, Exclusive reasons, hidden Radar trips and going offlin
   await page.getByLabel("Offline after offers not accepted").fill("99");
   await expect(page.getByLabel("Offline after offers not accepted")).not.toHaveAttribute("aria-invalid", "true");
 
-  const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
-  const list = page.getByRole("list", { name: "Changes not live yet" });
-  await expect(list).toContainText("Offer card shows the driver's share: off → on");
-  await expect(list).toContainText("Offer card: drop-off area only: off → on");
-  await expect(list).toContainText("Offer card: rider rating and trips: on → off");
   await expect(list).toContainText("Exclusive reason (the best driver by the rules): Best match → Top match");
   await expect(list).toContainText("Exclusive reason “Best match”: on → off");
   await expect(list).toContainText("Hidden Radar trip comes back after: 2 → 5");
@@ -505,7 +517,7 @@ test("offer card details, Exclusive reasons, hidden Radar trips and going offlin
   await bar.getByRole("button", { name: "Publish now" }).click();
   await confirm(page);
   await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
-  await page.goto("/dispatch?zone=Z001");
+  await page.goto("/offers?zone=Z001&tab=exclusive");
   await expect(page.getByRole("region", { name: "Exclusive reasons" }).getByLabel("Exclusive reason text: The best driver by the rules")).toHaveValue("Top match");
 });
 

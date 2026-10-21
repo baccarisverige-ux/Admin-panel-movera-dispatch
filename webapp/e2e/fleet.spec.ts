@@ -149,9 +149,9 @@ test("riders waiting for a driver can be sent to the nearest driver with the rad
   await page.goto("/?country=SE&tab=live");
   const list = page.getByRole("list", { name: "Riders looking for a driver" });
   await expect(list.locator("li").first()).toBeVisible();
-  const row = list.locator("li").filter({ has: page.getByRole("button", { name: "Driver radar", disabled: false }) }).first();
+  const row = list.locator("li").filter({ has: page.getByRole("button", { name: "Exclusive to nearest", disabled: false }) }).first();
   const rider = (await row.locator(".request-who strong").innerText()).trim();
-  await row.getByRole("button", { name: "Driver radar" }).click();
+  await row.getByRole("button", { name: "Exclusive to nearest" }).click();
   await page.locator(".modal.open").getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText(new RegExp(`${rider}'s ride offered to .+ \\(MV-SE-\\d{4}\\)`))).toBeVisible();
   await expect(list).toContainText("Offered to D");
@@ -164,7 +164,9 @@ test("a waiting rider opens on the map with assign actions and a link to the rid
   await first.getByRole("button", { name: /on the map$/ }).click();
   const panel = page.getByRole("dialog", { name: /^Rider / });
   await expect(panel).toContainText("Looking for a driver");
-  await expect(panel.getByRole("button", { name: "Assign" })).toBeVisible();
+  await expect(panel.getByRole("group", { name: "Quick actions" }).getByRole("button", { name: "Radar" })).toBeVisible();
+  await panel.getByRole("button", { name: "Nearby driver", exact: true }).click();
+  await expect(panel.getByRole("button", { name: "Send exclusive offer" })).toBeVisible();
   await panel.getByRole("link").first().click();
   await expect(page).toHaveURL(/\/riders\/R\d{4}/);
 });

@@ -1,0 +1,33 @@
+/* Handle system: the same rider tools in the Dispatch list, the Dashboard list and the rider pop-up on both maps. */
+.hq { display: grid; gap: 10px; }
+.hq-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hq-actions .dash-btn.active { background: #f0ebff; border-color: #c9bdf5; color: #5b3fd1; }
+.hq-block { display: grid; gap: 8px; padding: 10px; border-radius: 12px; background: #f7f8fa; border: 1px solid var(--line); }
+.hq-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.hq-row .dx-handled { flex: 1 1 160px; }
+.hq-field { display: grid; gap: 4px; font-size: 11px; font-weight: 600; color: #687386; min-width: 0; }
+.hq-field select, .hq-field input[type="number"] { height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 9px; font: inherit; font-size: 12.5px; background: #fff; max-width: 100%; }
+.hq-field.inline { grid-template-columns: minmax(0, 1fr) 70px; align-items: center; gap: 8px; }
+.hq-field.inline input { width: 70px; }
+.hq-radar { display: grid; gap: 8px; }
+.hq-list { display: grid; gap: 6px; }
+.hq-options { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 190px; overflow-y: auto; }
+.hq-options label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; align-items: center; padding: 6px 8px; border-radius: 9px; background: #fff; border: 1px solid var(--line); font-size: 12.5px; cursor: pointer; }
+.hq-options label b { font-weight: 700; }
+.hq-options label small { grid-column: 2; font-size: 11px; color: var(--muted); }
+.hq-options li.far label { color: var(--muted); }
+.hq-options input { margin: 0; }
+.hq-timer { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
+.hq-timer small { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: #1f62b5; font-weight: 700; }
+.hq-radar.compact .hq-options { max-height: 150px; }
+.as-pick { display: grid; gap: 6px; }
+.as-pick > b { font-size: 12px; color: var(--dash-ink-2); }
+.as-exclusive { border-color: #cfe0f7; }
+.as-radar { border-color: #d8ccf7; background: #fbfaff; }
+.as-cancel { border-color: #f1d4d4; background: #fffafa; }
+.as-bonus.compact { padding: 10px; }
+.as-bonus.compact .as-split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dash-btn.danger { color: #a32a2a; border-color: #f1c7c7; }
+.dash-btn.danger:hover { background: #fdf1f1; }
+.rider-panel { gap: 10px; }
+.rider-panel .driver-panel-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }

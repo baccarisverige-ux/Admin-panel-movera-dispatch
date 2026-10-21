@@ -150,13 +150,17 @@
     "radarApp": {
       "fullOn": true,
       "full": 8,
+      "fullLockWhileDriving": true,
       "popupOn": true,
-      "popup": 2
+      "popup": 2,
+      "popupSplitByDriving": false,
+      "popupWhileDriving": 1
     },
     "exclusiveWhileDriving": {
       "on": true,
       "count": 1
-    }
+    },
+    "radarZones": []
   },
   "pickupPay": {
     "perKm": {

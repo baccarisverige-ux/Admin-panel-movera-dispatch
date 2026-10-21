@@ -10,6 +10,7 @@ import "./styles/zones.css";
 import "./styles/bonus.css";
 import "./styles/riders.css";
 import "./styles/dispatch.css";
+import "./styles/handle.css";
 import "./styles/alerts.css";
 import "./styles/reports.css";
 import "./styles/ops.css";
