@@ -211,7 +211,9 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
     }
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    map.on("load", async () => {
+    // "style.load" rather than "load": the pins, pop-ups and focus work as soon as the style is in, even while the
+    // street tiles are still (or never) loading.
+    map.on("style.load", async () => {
       await addMapIcons(map);
       if (mapRef.current !== map) return;
       installSurgeLayers(map, (zoneId) => surgeClick.current?.(zoneId));
