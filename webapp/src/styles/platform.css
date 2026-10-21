@@ -119,3 +119,8 @@
   .pl-inbox-row { grid-template-columns: auto minmax(0, 1fr); }
   .pl-inbox-row .actions { grid-column: 1 / -1; }
 }
+
+/* Settings › Panel language card, above the sections. */
+.pl-language { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 12px 16px; margin: 0 0 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.pl-language h3 { margin: 0 0 2px; font-size: 14px; }
+.pl-language p { margin: 0; font-size: 12px; color: var(--muted); }
