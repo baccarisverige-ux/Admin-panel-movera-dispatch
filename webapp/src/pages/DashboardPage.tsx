@@ -61,6 +61,7 @@ import { SurgeControls, SurgeLegend } from "../pricing/SurgeControls";
 import { useSurgePref } from "../pricing/useSurgePref";
 import { SLICE_KEY, emptyPricingStore, normalizeStore } from "../pricing/zonePricing";
 import { Flag } from "../ui/Flag";
+import { LanguageQuickSwitch } from "../i18n/LanguageQuickSwitch";
 import { BONUS_KEY, bonusState, emptyBonusBook, normalizeBonusBook, type BonusBook } from "../drivers/bonus";
 import type { BonusMapArea } from "../dashboard/DriversMap";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
@@ -476,6 +477,7 @@ export function DashboardPage() {
                 ) : null}
               </div>
             ) : null}
+            <LanguageQuickSwitch compact />
           </div>
 
           <section className={stale ? "earnings-card is-stale" : "earnings-card"} aria-labelledby="earnings-title" aria-busy={stale}>
