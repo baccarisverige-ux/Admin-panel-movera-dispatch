@@ -313,24 +313,43 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
 
 /* ---------- DriverAppConfig ---------- */
 
+/**
+ * One category's pickup pay for the driver app: tiered ranges (each km at its range's rate, minutes split by km share),
+ * an optional maximum per ride, and the rider's fixed pickup fee (null when off). The driver app shows only the total.
+ */
 function pickupRate(rate: PickupRate | undefined, currency: CurrencyCode) {
-  const own = rate ?? { enabled: false, perKm: 0, perMin: 0, freeKmOn: false, freeKm: 0, freeMinOn: false, freeMin: 0 };
+  const fee = (own: { on: boolean; amount: number } | undefined) => (own?.on ? wire(own.amount, currency) : null);
   return {
-    enabled: own.enabled,
-    perKm: wire(own.perKm, currency),
-    perMin: wire(own.perMin, currency),
-    freeKm: own.freeKmOn ? own.freeKm : 0,
-    freeMin: own.freeMinOn ? own.freeMin : 0,
-    ranges: (own.ranges ?? []).map((range) => ({ fromKm: range.fromKm, toKm: range.toKm, perKm: wire(range.krPerKm, currency), perMin: wire(range.krPerMinute, currency) })),
+    enabled: rate?.enabled ?? false,
+    maxPerRide: rate && rate.maxPerRide !== null ? wire(rate.maxPerRide, currency) : null,
+    ranges: (rate?.ranges ?? []).map((range) => ({ fromKm: range.fromKm, toKm: range.toKm, perKm: wire(range.krPerKm, currency), perMin: wire(range.krPerMinute, currency) })),
+    riderFee: { live: fee(rate?.riderFee.live), reservation: fee(rate?.riderFee.reservation) },
   };
 }
 
+/**
+ * The contract sample's top-level keys (one rate, free km, display), filled from the headline category so an app on
+ * the older shape still reads something sensible: the first paid range's rate, a leading 0-rate range as free km.
+ */
 function pickupPay(base: Common) {
   const pay = base.pricing.pickupPay;
   const head = headlineCategory(base);
-  const { enabled: _enabled, ...top } = pickupRate(head ? pay.rates[head] : undefined, base.currency);
-  void _enabled;
-  return { ...top, display: pay.display, offers: { ...pay.offers }, byCategory: Object.fromEntries(base.categoryIds.map((id) => [id, pickupRate(pay.rates[id], base.currency)])) };
+  const headRate = head ? pay.rates[head] : undefined;
+  const ranges = headRate?.ranges ?? [];
+  const paid = ranges.find((range) => range.krPerKm > 0 || range.krPerMinute > 0);
+  const leadingFree = ranges[0] && ranges[0].krPerKm === 0 && ranges[0].krPerMinute === 0 && ranges[0].toKm !== null ? ranges[0].toKm : 0;
+  const top = pickupRate(headRate, base.currency);
+  return {
+    perKm: wire(paid?.krPerKm ?? 0, base.currency),
+    perMin: wire(paid?.krPerMinute ?? 0, base.currency),
+    freeKm: leadingFree,
+    freeMin: 0,
+    ranges: top.ranges,
+    maxPerRide: top.maxPerRide,
+    display: "total" as const,
+    offers: { ...pay.offers },
+    byCategory: Object.fromEntries(base.categoryIds.map((id) => [id, pickupRate(pay.rates[id], base.currency)])),
+  };
 }
 
 const codes = (list: readonly CancelReason[]) => list.map((item) => item.code);

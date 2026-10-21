@@ -204,13 +204,13 @@ console.log("price checks ok");
   const published = zoneBook(store, "Z001");
   const draft = structuredClone(published);
   draft.commission.economy = (published.commission.economy ?? 20) * 2;
-  draft.pickupPay.rates.economy.perKm = published.pickupPay.rates.economy.perKm * 3 + 1;
+  draft.pickupPay.rates.economy.ranges[1].krPerKm = published.pickupPay.rates.economy.ranges[1].krPerKm * 3 + 1;
   draft.fleetCommissionPct = published.fleetCommissionPct * 1.1;
   const profile = draft.smart.profiles[0];
   if (profile) profile.cap = profile.cap * 2;
   const lines = largePriceChanges(published, draft, store.categories, "Norrmalm");
   assert(lines.some((line) => line.startsWith("Norrmalm · Movera commission")), `a doubled commission is listed: ${lines.join(" | ")}`);
-  assert(lines.some((line) => line.startsWith("Norrmalm · Movera pickup pay per km")), "a tripled pickup pay is listed");
+  assert(lines.some((line) => line.startsWith("Norrmalm · Movera pickup pay 1–+ km per km")), `a tripled pickup pay is listed: ${lines.join(" | ")}`);
   assert(!lines.some((line) => line.includes("Fleet commission")), "a 10 % change is not listed");
   if (profile) assert(lines.some((line) => line.startsWith(`Norrmalm · Surge cap ${profile.name}`)), "a doubled surge cap is listed");
 }

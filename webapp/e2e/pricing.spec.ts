@@ -43,40 +43,50 @@ test("test a ride follows the zone price list, in each country's currency", asyn
   }
 });
 
-test("pickup pay is set per category, paid by Movera, and published with the zone", async ({ page }) => {
+test("pickup pay is set per category: tiered ranges and a maximum for the driver, a fixed fee for the rider", async ({ page }) => {
   await signIn(page);
   await page.getByRole("link", { name: "Pricing", exact: true }).click();
   await page.getByRole("tab", { name: "Pickup pay" }).click();
-  await expect(page.getByRole("heading", { name: "Pickup pay · paid by Movera" })).toBeVisible();
-  await expect(page.getByLabel("Comfort pickup per km")).toHaveValue("3");
+  await expect(page.getByRole("heading", { name: "Pickup pay", exact: true })).toBeVisible();
+  // Default: the first km is a free range, then 3 kr/km + 1 kr/min.
+  await expect(page.getByLabel("Comfort range 1 per km")).toHaveValue("0");
+  await expect(page.getByLabel("Comfort range 2 per km")).toHaveValue("3");
   await expect(page.getByText("Normal reservations taken from Scheduled rides")).toBeVisible();
   await expect(page.getByRole("switch", { name: "Pickup pay for normal reservations from Scheduled rides" })).toBeDisabled();
-  await expect(page.getByText(/The old "Long pickup fee"/)).toBeVisible();
+  await expect(page.getByText(/The old "Long pickup fee"/)).toHaveCount(0);
 
   const toggle = (name: string) => page.locator("label.mini-switch", { has: page.getByRole("switch", { name, exact: true }) }).click();
   const example = page.getByTestId("pickup-example");
-  // Comfort 3 kr/km + 1 kr/min, 4.2 km / 9 min, 1 km and 2 min free: 3.2 × 3 + 7 × 1 = 16.60
-  await expect(example.getByTestId("pickup-pay-total")).toHaveText("16,60 kr");
-  await toggle("Comfort free first km");
-  await toggle("Comfort free first minutes");
-  // No free part: 4.2 × 3 + 9 × 1 = 21.60
+  // 4.2 km / 9 min, first km free: 3.2 × 3 + 9 × (3.2 / 4.2) × 1 = 9.60 + 6.86 = 16.46
+  await expect(example.getByTestId("pickup-pay-total")).toHaveText("16,46 kr");
+  // One range for everything: 4.2 × 3 + 9 × 1 = 21.60
+  await page.getByRole("button", { name: "Delete Comfort range 1 (0–1 km)" }).click();
   await expect(example.getByTestId("pickup-pay-total")).toHaveText("21,60 kr");
 
-  // Pay by distance: 0–10 km at 3/km, then >10 km and above at 4/km. 4.2 km falls in 0–10.
-  await page.getByRole("group", { name: "Comfort pickup ranges" }).getByRole("button", { name: "Add range" }).click();
-  await expect(page.getByLabel("Comfort pickup per km")).toBeDisabled();
+  // Tiered: 0–10 km at 3/km, then >10 km and above at 4/km. Each km is paid at its own range's rate.
   await page.getByRole("group", { name: "Comfort pickup ranges" }).getByRole("button", { name: "Add range" }).click();
   await page.getByLabel("Comfort range 2 per km").fill("4");
-  await expect(example.getByTestId("pickup-example-range")).toContainText("0–10 km");
+  await expect(example.getByTestId("pickup-example-range")).toHaveCount(1);
   await expect(example.getByTestId("pickup-pay-total")).toHaveText("21,60 kr");
   await example.getByLabel("Example pickup km").fill("12");
-  // 12 km is in >10 and above: 12 × 4 + 9 × 1 = 57
-  await expect(example.getByTestId("pickup-example-range")).toContainText(">10 km and above");
-  await expect(example.getByTestId("pickup-pay-total")).toHaveText("57,00 kr");
+  // 0–10: 10 × 3 + 7.5 min × 1 = 37.50; >10: 2 × 4 + 1.5 min × 1 = 9.50 → 47.00
+  await expect(example.getByTestId("pickup-example-range").nth(1)).toContainText(">10 km and above");
+  await expect(example.getByTestId("pickup-pay-total")).toHaveText("47,00 kr");
+
+  // The maximum per ride caps the total of all ranges.
+  await toggle("Comfort maximum per ride");
+  await page.getByLabel("Comfort maximum pickup pay per ride").fill("30");
+  await expect(example.getByTestId("pickup-pay-total")).toHaveText("30,00 kr");
+  await expect(example.getByTestId("pickup-max-from")).toContainText("the maximum of 30,00 kr applies");
   await example.getByLabel("Example pickup km").fill("4.2");
 
-  await page.getByRole("radio", { name: "Fare + pickup line" }).click();
-  await expect(page.getByTestId("offer-breakdown")).toContainText("incl. 21,60 kr pickup · 4.2 km · 9 min");
+  // The rider's fixed pickup fee is a line in the price; the driver's pay does not change.
+  const riderBefore = await example.getByTestId("pickup-rider-pays").textContent();
+  await toggle("Comfort rider pickup fee for Live rides (Radar & Exclusive)");
+  await expect(example.getByTestId("pickup-rider-fee")).toHaveText("15,00 kr");
+  await expect(example.getByTestId("pickup-rider-pays")).not.toHaveText(riderBefore ?? "");
+  await expect(example.getByTestId("pickup-pay-total")).toHaveText("21,60 kr");
+
   await toggle("Pickup pay for Radar trips");
   await expect(page.getByRole("switch", { name: "Pickup pay for Radar trips", exact: true })).not.toBeChecked();
 
@@ -85,7 +95,9 @@ test("pickup pay is set per category, paid by Movera, and published with the zon
   await expect(page.getByText(/Published as pricing revision/)).toBeVisible();
   await page.getByRole("tab", { name: "History" }).click();
   await expect(page.getByText(/Pickup pay for Radar trips turned off/).first()).toBeVisible();
-  await expect(page.getByText(/Comfort · pickup ranges one rate → 0–10 km 3\/km 1\/min, >10 km and above 4\/km 1\/min/).first()).toBeVisible();
+  await expect(page.getByText(/Comfort · pickup ranges 0–1 km 0\/km 0\/min, >1 km and above 3\/km 1\/min → 0–10 km 3\/km 1\/min, >10 km and above 4\/km 1\/min/).first()).toBeVisible();
+  await expect(page.getByText(/Comfort · pickup pay maximum per ride none → 30/).first()).toBeVisible();
+  await expect(page.getByText(/Comfort · rider pickup fee for live rides turned on/).first()).toBeVisible();
 });
 
 test("rider cancel fees are not set in Pricing: the Cancellation group points to Dispatch › Rider cancel fees", async ({ page }) => {
