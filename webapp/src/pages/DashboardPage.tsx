@@ -37,7 +37,8 @@ import { EarningsChart } from "../dashboard/EarningsChart";
 import { change, COMMISSION_PLACEHOLDER, earningsReport, type Share } from "../dashboard/earnings";
 import { activeBoosts, airportQueues, cancellations, ratings, supplyDemand } from "../dashboard/insights";
 import { countStates, LIVE_STATES, liveDrivers, type LiveState } from "../dashboard/live";
-import { AssignControls, LiveRiders } from "../dashboard/LiveRiders";
+import { LiveRiders } from "../dashboard/LiveRiders";
+import { RiderQuickActions } from "../dispatch/HandlePanel";
 import { liveTrip } from "../dashboard/liveTrip";
 import { PeriodPicker } from "../dashboard/PeriodPicker";
 import { parsePeriod, periodParams, periodWindow, type Period } from "../dashboard/period";
@@ -567,7 +568,7 @@ export function DashboardPage() {
                 bonusAreas={bonusAreas}
                 bonusShown={showBonus}
                 onSurgeZone={(zoneId) => { const link = surgeLink(zoneId); if (link) navigate(link); }}
-                renderAssign={can(role, "trips.intervene") ? (request) => <AssignControls request={request} candidates={candidatesOf(request)} onDone={setLiveNotice} /> : undefined}
+                renderAssign={can(role, "trips.intervene") ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={setLiveNotice} /> : undefined}
                 market={market}
                 zones={scope.zones}
                 hidden={hidden}

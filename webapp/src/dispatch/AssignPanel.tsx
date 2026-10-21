@@ -1,16 +1,16 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BadgeDollarSign, Clock, Lock, MapPin, Radar, Send, Star, UserRound, X, Zap } from "lucide-react";
+import { Clock, Lock, MapPin, Radar, Send, Star, Target, UserRound, X, Zap } from "lucide-react";
 import { useAdminApi } from "../api/AdminApiContext";
 import { useTrips } from "../api/hooks";
 import type { TripOffersView } from "../api/dispatchSim";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
+import type { Candidate } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
 import { statusLabel, statusPresentation } from "../domain/labels";
-import { MARKETS, formatMoney, market, zoneById } from "../markets/markets";
-import { countryOf } from "../trips/file";
+import { MARKETS, formatMoney, zoneById } from "../markets/markets";
 import { categoryOf } from "../trips/present";
 import { CommandButton } from "../ui/CommandButton";
 import { StatusDot } from "../ui/kit";
@@ -20,7 +20,6 @@ import {
   OFFER_STATUS_LABEL,
   RADAR_GROUP_MAX,
   RADIUS_PRESETS_KM,
-  bonusIssue,
   canAssign,
   countdownLabel,
   distanceLabel,
@@ -30,75 +29,50 @@ import {
   type AdminOffer,
   type NearbyQuery,
 } from "./assign";
+import { AssignPanelContext, useAssignPanel, type AssignExtras } from "./assignContext";
+import { DriverBonusBox, useClock, useTripOffers } from "./DriverBonusBox";
+import { handledOf } from "./handle";
+import { CancelRequestButton, HandledLine, RadarSender, useDispatchBook, type HandledRide } from "./HandlePanel";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 
+export { useAssignPanel } from "./assignContext";
+export { DriverBonusBox, useTripOffers } from "./DriverBonusBox";
+
 /**
- * The admin assign tool (owner Q13–Q18): opened from a waiting rider on the Dispatch live map, the Trips list or the
- * Trip page. Nearby active drivers, a direct exclusive offer to one driver, radar groups of up to 10 drivers (again
- * and again until one accepts), the lock once a driver accepts, and "Add money for driver".
+ * The admin assign tool (owner Q13–Q18), the big "Handle" panel: opened from a waiting rider on the Dispatch live
+ * list and map, the Dashboard, the Trips list or the Trip page. Two clear sections — EXCLUSIVE (nearby drivers, one
+ * offer to one driver) and RADAR (radar zones, zones, driver groups, or drivers ticked by hand, up to 10, again and
+ * again until one accepts) — then the offers sent, "Add money for driver" and "Cancel request".
  */
 
-const PRICING_LINK = "/pricing?tab=extras&section=driver-bonus";
 const CATEGORY_LABEL = new Map(CATEGORIES.map((category) => [category.id, category.label]));
-
-type AssignPanelApi = { open: (tripId: string) => void };
-
-const AssignPanelContext = createContext<AssignPanelApi>({ open: () => undefined });
 
 /** One assign panel for the whole admin: any screen opens it with useAssignPanel().open(tripId). */
 export function AssignPanelProvider({ children }: { children: ReactNode }) {
-  const [tripId, setTripId] = useState<string | null>(null);
-  const open = useCallback((id: string) => setTripId(id), []);
+  const [opened, setOpened] = useState<{ tripId: string; extras: AssignExtras } | null>(null);
+  const open = useCallback((id: string, extras: AssignExtras = {}) => setOpened({ tripId: id, extras }), []);
   const value = useMemo(() => ({ open }), [open]);
   return (
     <AssignPanelContext.Provider value={value}>
       {children}
-      {tripId ? <AssignPanel key={tripId} tripId={tripId} onClose={() => setTripId(null)} /> : null}
+      {opened ? <AssignPanel key={opened.tripId} tripId={opened.tripId} candidates={opened.extras.candidates ?? []} onClose={() => setOpened(null)} /> : null}
     </AssignPanelContext.Provider>
   );
 }
 
-export function useAssignPanel(): AssignPanelApi {
-  return useContext(AssignPanelContext);
-}
-
-/** The admin offers of a trip, read every second while the panel is open (countdowns, answers, the lock). */
-export function useTripOffers(tripId: string, enabled = true) {
-  const api = useAdminApi();
-  return useQuery({
-    queryKey: ["assign-offers", tripId],
-    queryFn: () => api.tripOffers(tripId),
-    // Every second while offers can still change; a trip past assigning is read again only now and then.
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      return !data || canAssign(data.status) || data.offers.some((offer) => offer.status === "open") ? 1000 : 15_000;
-    },
-    enabled: enabled && Boolean(tripId),
-  });
-}
-
-function useClock(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(timer);
-  }, []);
-  return now;
-}
-
 /** Opens the assign panel for a waiting rider. */
-export function NearbyButton({ tripId, rider, className = "dash-btn small" }: { tripId: string; rider: string; className?: string }) {
+export function NearbyButton({ tripId, rider, candidates, className = "dash-btn small" }: { tripId: string; rider: string; candidates?: Candidate[]; className?: string }) {
   const panel = useAssignPanel();
   return (
-    <button data-command="admin.dispatch.view" type="button" className={className} aria-label={tr("Nearby drivers for {0}", [rider])} title={tr("See the active drivers near the pickup: assign one or send a radar group")} onClick={() => panel.open(tripId)}>{trn("{0} Nearby drivers", <Radar size={13} aria-hidden="true" />)}</button>
+    <button data-command="admin.dispatch.view" type="button" className={className} aria-label={tr("Nearby drivers for {0}", [rider])} title={tr("See the active drivers near the pickup: send an exclusive offer or a radar")} onClick={() => panel.open(tripId, { candidates })}>{trn("{0} Nearby drivers", <Radar size={13} aria-hidden="true" />)}</button>
   );
 }
 
 /** The rider's name as a button that opens the assign panel (Q13: "click on the rider … or his name"). */
-export function RiderAssignName({ tripId, rider }: { tripId: string; rider: string }) {
+export function RiderAssignName({ tripId, rider, candidates }: { tripId: string; rider: string; candidates?: Candidate[] }) {
   const panel = useAssignPanel();
   return (
-    <button data-command="admin.dispatch.view" type="button" className="link-action as-rider-name" title={tr("Assign a driver")} aria-label={tr("{0}, assign a driver", [rider])} onClick={(event) => { event.stopPropagation(); panel.open(tripId); }}>
+    <button data-command="admin.dispatch.view" type="button" className="link-action as-rider-name" title={tr("Assign a driver")} aria-label={tr("{0}, assign a driver", [rider])} onClick={(event) => { event.stopPropagation(); panel.open(tripId, { candidates }); }}>
       {rider}
     </button>
   );
@@ -128,7 +102,7 @@ export function OfferStatus({ offer, now }: { offer: AdminOffer; now: number }) 
   );
 }
 
-export function AssignPanel({ tripId, onClose }: { tripId: string; onClose: () => void }) {
+export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; candidates: Candidate[]; onClose: () => void }) {
   const api = useAdminApi();
   const client = useQueryClient();
   const { agent } = useSession();
@@ -137,6 +111,7 @@ export function AssignPanel({ tripId, onClose }: { tripId: string; onClose: () =
   const trips = useTrips(null);
   const trip = trips.data?.find((row) => row.id === tripId);
   const offers = useTripOffers(tripId);
+  const book = useDispatchBook();
   const now = useClock();
   const [scope, setScope] = useState<Scope>({ kind: "preset", km: RADIUS_PRESETS_KM[0] });
   const [custom, setCustom] = useState("15");
@@ -175,6 +150,9 @@ export function AssignPanel({ tripId, onClose }: { tripId: string; onClose: () =
     void offers.refetch();
     void nearby.refetch();
   };
+  const ride: HandledRide = { tripId, zoneId: trip?.zoneId ?? "", rider: trip?.name ?? tripId, status };
+  const handled = handledOf(book, tripId);
+  const say = (text: string) => { setNotice(text); refresh(); };
 
   const scopeButton = (label: string, next: Scope, active: boolean) => (
     <button data-command="admin.dispatch.view" type="button" className={active ? "as-chip active" : "as-chip"} aria-pressed={active} onClick={() => setScope(next)}>{trx(label)}</button>
@@ -204,13 +182,14 @@ export function AssignPanel({ tripId, onClose }: { tripId: string; onClose: () =
         ) : !canAct ? (
           <p className="dx-note">{tr("Your role can see the offers but cannot assign.")}</p>
         ) : (
-          <p className="as-help">{trn("The rider only sees “Searching” until a driver accepts. Click a driver’s name to send an exclusive offer, or tick up to {0} drivers and send them to the radar. Repeat until someone accepts.", RADAR_GROUP_MAX)}</p>
+          <p className="as-help">{trn("The rider only sees “Searching” until a driver accepts. Exclusive: one offer to one driver. Radar: several drivers at once, up to {0}. Repeat until someone accepts.", RADAR_GROUP_MAX)}</p>
         )}
+        {handled ? <HandledLine action={handled} /> : null}
         {notice ? <p className="dx-note" role="status">{trSentences(notice)}</p> : null}
 
-        <section className="as-section" aria-label={tr("Nearby drivers")}>
+        <section className="as-section as-exclusive" aria-label={tr("Exclusive")} data-testid="assign-exclusive">
           <div className="as-section-head">
-            <h4>{trn("{0} Active drivers near the pickup", <MapPin size={14} aria-hidden="true" />)}</h4>
+            <h4>{trn("{0} Exclusive · one driver at a time", <Target size={14} aria-hidden="true" />)}</h4>
             <div className="as-chips" role="group" aria-label={tr("How far")}>
               {RADIUS_PRESETS_KM.map((km) => scopeButton(`${km} km`, { kind: "preset", km }, scope.kind === "preset" && scope.km === km))}
               {scopeButton("Custom", { kind: "custom" }, scope.kind === "custom")}
@@ -221,25 +200,21 @@ export function AssignPanel({ tripId, onClose }: { tripId: string; onClose: () =
               ) : null}
             </div>
           </div>
+          <p className="as-help">{trn("{0} Active drivers near the pickup. Click a driver’s name to send the exclusive offer; the driver has {1} s to accept.", <MapPin size={12} aria-hidden="true" />, timers?.exclusiveSeconds ?? 15)}</p>
           {scope.kind === "custom" && radiusIssue(Number(custom)) ? <p className="pl-warn" role="alert">{radiusIssue(Number(custom))}</p> : null}
           {nearby.isLoading ? <p className="state-line">{tr("Looking for drivers.")}</p> : nearby.isError ? <p className="pl-warn" role="alert">{trSentences(nearby.error.message)}</p> : drivers.length === 0 && query ? (
             <p className="dx-calm">{trn("No active driver {0}. Try a wider distance.", query.scope === "radius" ? tr("within {0} km", [query.radiusKm]) : query.scope === "zone" ? tr("in this zone") : tr("in this zone or the zones next to it"))}</p>
           ) : (
             <table className="as-drivers" aria-label={tr("Nearby drivers")}>
               <thead>
-                <tr><th scope="col"><span className="sr-only">{tr("Radar")}</span></th><th scope="col">{tr("Driver")}</th><th scope="col">{tr("Distance")}</th><th scope="col">ETA</th><th scope="col">{tr("Category")}</th><th scope="col">{tr("Rating")}</th><th scope="col">{tr("Status")}</th><th scope="col">{tr("Offer")}</th></tr>
+                <tr><th scope="col">{tr("Driver")}</th><th scope="col">{tr("Distance")}</th><th scope="col">ETA</th><th scope="col">{tr("Category")}</th><th scope="col">{tr("Rating")}</th><th scope="col">{tr("Status")}</th><th scope="col">{tr("Offer")}</th></tr>
               </thead>
               <tbody>
                 {drivers.map((row) => {
                   const offer = latest.get(row.driverId);
                   const free = row.onlineStatus === "online";
-                  const checked = selected.includes(row.driverId);
-                  const full = !checked && selected.length >= RADAR_GROUP_MAX;
                   return (
                     <tr key={row.driverId} data-driver={row.driverId} className={free ? undefined : "busy"}>
-                      <td>
-                        <input type="checkbox" aria-label={tr("Select {0} for the radar", [row.name])} checked={checked} disabled={!pickable(row.driverId) || full} title={full ? tr("At most {0} drivers in one radar group.", [RADAR_GROUP_MAX]) : undefined} onChange={() => setPicked((list) => (list.includes(row.driverId) ? list.filter((id) => id !== row.driverId) : [...list, row.driverId]))} />
-                      </td>
                       <td>
                         <CommandButton
                           command="admin.trip.assign"
@@ -278,6 +253,27 @@ export function AssignPanel({ tripId, onClose }: { tripId: string; onClose: () =
               </tbody>
             </table>
           )}
+        </section>
+
+        <section className="as-section as-radar" aria-label={tr("Radar")} data-testid="assign-radar">
+          <h4>{trn("{0} Radar · several drivers at once", <Radar size={14} aria-hidden="true" />)}</h4>
+          <p className="as-help">{tr("Send the ride to a radar zone, to whole zones or to a driver group; or tick the drivers yourself. The first to accept takes it.")}</p>
+          {trip ? <RadarSender ride={ride} book={book} candidates={candidates} onNotice={say} /> : null}
+          <div className="as-pick">
+            <b>{tr("Or tick drivers yourself")}</b>
+            <div className="as-chips" role="group" aria-label={tr("Drivers for the radar")}>
+              {drivers.filter((row) => row.onlineStatus === "online").length === 0 ? <small className="as-none">{tr("No free driver in the list above.")}</small> : null}
+              {drivers.filter((row) => row.onlineStatus === "online").map((row) => {
+                const checked = selected.includes(row.driverId);
+                const full = !checked && selected.length >= RADAR_GROUP_MAX;
+                return (
+                  <button key={row.driverId} data-command="admin.dispatch.view" type="button" className={checked ? "as-chip active" : "as-chip"} role="checkbox" aria-checked={checked} aria-label={tr("Select {0} for the radar", [row.name])} disabled={!pickable(row.driverId) || full} title={full ? tr("At most {0} drivers in one radar group.", [RADAR_GROUP_MAX]) : row.openOfferId ? tr("{0} already has an open offer.", [row.name]) : undefined} onClick={() => setPicked((list) => (list.includes(row.driverId) ? list.filter((id) => id !== row.driverId) : [...list, row.driverId]))}>
+                    {row.name} · {distanceLabel(row.distanceMeters)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="as-radar-bar">
             <span>{trn("{0} of {1} selected{2}", <b>{selected.length}</b>, RADAR_GROUP_MAX, timers ? tr(" · radar timer {0} s (the zone's normal timer)", [timers.radarSeconds]) : "")}</span>
             <CommandButton
@@ -301,7 +297,17 @@ export function AssignPanel({ tripId, onClose }: { tripId: string; onClose: () =
 
         <OffersSection view={view} now={now} />
 
-        {view && trip ? <DriverBonusBox trip={{ id: trip.id, zoneId: trip.zoneId, status }} view={view} canAct={canAct} onDone={(text) => { setNotice(text); refresh(); }} /> : null}
+        {view && trip ? <DriverBonusBox trip={{ id: trip.id, zoneId: trip.zoneId, status }} view={view} canAct={canAct} onDone={say} /> : null}
+
+        {trip && canAct && canAssign(status) ? (
+          <section className="as-section as-cancel" aria-label={tr("Cancel request")}>
+            <div className="as-section-head">
+              <h4>{trn("{0} Cancel request", <Zap size={14} aria-hidden="true" />)}</h4>
+              <CancelRequestButton ride={ride} book={book} onNotice={say} />
+            </div>
+            <p className="as-help">{tr("Ends the search. The rider is told that no driver was found.")}</p>
+          </section>
+        ) : null}
       </div>
     </div>
   );
@@ -360,66 +366,5 @@ function OfferLine({ offer, now }: { offer: AdminOffer; now: number }) {
       <small>{trn("Driver sees {0}{1}", money(offer.fareMinor), offer.driverBonusMinor ? tr(" (incl. +{0})", [money(offer.driverBonusMinor)]) : "")}</small>
       {offer.priority ? <span className="as-priority">{tr("Priority")}</span> : null}
     </li>
-  );
-}
-
-/**
- * "Add money for driver" (Q16, Q17): on the trip and in the assign panel, while the trip is requested, searching or
- * offered. Movera pays it from its commission, and may pay more than its commission; the rider never pays it.
- * The total per trip may not pass the country's limit from Pricing › Tips & limits (never above the hard max).
- */
-export function DriverBonusBox({ trip, view, canAct, onDone }: { trip: { id: string; zoneId: string; status: string }; view: TripOffersView; canAct: boolean; onDone?: (text: string) => void }) {
-  const country = countryOf(trip.zoneId);
-  const place = market(country);
-  const money = (minor: number) => formatMoney(minor, country);
-  const [amount, setAmount] = useState("");
-  const [priority, setPriority] = useState(true);
-  const raw = amount.trim() === "" ? 0 : Number(amount) * place.minorUnits;
-  const addMinor = Number.isFinite(raw) ? Math.round(raw) : 0;
-  const tooFine = Number.isFinite(raw) && Math.abs(raw - addMinor) > 1e-6;
-  const issue = amount.trim() === "" ? null : tooFine ? { code: "invalid" as const, message: "Too many decimals for this currency." } : bonusIssue(Number.isFinite(raw) ? addMinor : Number.NaN, view.bonusMinor, view.limits, money);
-  const open = canAssign(trip.status);
-  const total = view.bonusMinor + (issue ? 0 : addMinor);
-  const moveraKeeps = view.commissionMinor - total;
-  return (
-    <section className="as-section as-bonus" aria-label={tr("Add money for driver")} data-testid="driver-bonus-box">
-      <h4>{trn("{0} Add money for driver", <BadgeDollarSign size={14} aria-hidden="true" />)}</h4>
-      <p className="as-help">{tr("Movera pays it from its commission, and can pay more than its commission. The rider never pays it. The driver sees the total fare with it and a red “Priority” badge.")}</p>
-      {view.bonusMinor ? <p className="as-bonus-now" data-testid="driver-bonus-now">{trn("Added so far: {0}{1}", <b>{money(view.bonusMinor)}</b>, view.priority ? <span className="as-priority">{tr("Priority")}</span> : null)}</p> : null}
-      <div className="as-bonus-row">
-        <label>{trn("Amount ({0}){1}", place.currency, <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={amount} disabled={!canAct || !open} onChange={(event) => setAmount(event.target.value)} placeholder={tr("Up to {0}", [money(Math.max(0, view.limits.limitMinor - view.bonusMinor))])} />)}</label>
-        <label className="check-row">{trn("{0} Priority badge", <input type="checkbox" checked={priority} disabled={!canAct || !open} onChange={(event) => setPriority(event.target.checked)} />)}</label>
-        <CommandButton
-          command="admin.trip.driverBonus"
-          className="dash-btn small"
-          targetId={trip.id}
-          scope={trip.zoneId}
-          confirmTarget={false}
-          entityState={trip.status}
-          before={money(view.bonusMinor)}
-          after={money(view.bonusMinor + addMinor)}
-          value={{ amountMinor: addMinor, priority }}
-          disabled={!canAct || !open || addMinor <= 0 || Boolean(issue)}
-          title={!open ? tr("Money can be added only while the trip is requested, searching or offered.") : issue?.message}
-          summary={<>{trn("Add {0} for the driver on {1}. Movera pays it; the rider’s price does not change.", <b>{money(addMinor)}</b>, trip.id)}</>}
-          onDone={() => { setAmount(""); onDone?.(`${money(addMinor)} added for the driver.`); }}
-        >{tr("Add money")}</CommandButton>
-      </div>
-      {issue ? (
-        <p className="pl-warn" role="alert" data-testid="driver-bonus-issue">
-          {trSentences(issue.message)}{issue.code === "over_limit" ? <> <Link to={PRICING_LINK}>{tr("Open Pricing › Tips & limits")}</Link></> : null}
-        </p>
-      ) : (
-        <p className="as-help">{trn("Limit {0} per trip, set in {1} (hard max {2}).", money(view.limits.limitMinor), <Link to={PRICING_LINK}>{tr("Pricing › Tips & limits")}</Link>, money(view.limits.hardMaxMinor))}</p>
-      )}
-      <dl className="as-split" aria-label={tr("Money split with the bonus")} data-testid="driver-bonus-split">
-        <div><dt>{tr("Rider pays")}</dt><dd>{money(view.fareMinor)}</dd></div>
-        <div><dt>{tr("Driver gets")}</dt><dd>{money(view.driverNetMinor + total)}</dd></div>
-        <div><dt>{tr("Movera commission")}</dt><dd>{money(view.commissionMinor)}</dd></div>
-        <div className={total ? "minus" : undefined}><dt>{tr("Bonus paid by Movera")}</dt><dd>− {money(total)}</dd></div>
-        <div className={moveraKeeps < 0 ? "total minus" : "total"}><dt>{tr("Movera keeps")}</dt><dd>{money(moveraKeeps)}</dd></div>
-      </dl>
-      {moveraKeeps < 0 ? <p className="dx-note" data-testid="driver-bonus-beyond">{trn("Movera pays {0} more than its commission on this trip.", money(-moveraKeeps))}</p> : null}
-    </section>
   );
 }

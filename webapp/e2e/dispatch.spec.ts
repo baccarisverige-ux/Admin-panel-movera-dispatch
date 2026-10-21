@@ -143,9 +143,13 @@ test("live: alerts, pause a zone needs approval, send a rider to a radar", async
   await expect(page.getByText("Pause Norrmalm: waiting for a second admin to approve.")).toBeVisible();
   const list = page.getByRole("list", { name: "Riders waiting" });
   const first = list.getByRole("listitem").first();
-  await first.getByRole("button", { name: "Handle" }).click();
-  await first.getByRole("button", { name: "Send" }).nth(1).click();
+  await first.getByRole("button", { name: /Nearby drivers for / }).click();
+  const panel = page.getByTestId("assign-panel");
+  await expect(panel.getByTestId("assign-exclusive")).toBeVisible();
+  await panel.getByTestId("assign-radar").getByRole("button", { name: "Send radar" }).click();
   await confirm(page);
+  await expect(panel.getByTestId("handled-line")).toContainText(/Sent to radar/);
+  await page.keyboard.press("Escape");
   await expect(first).toContainText(/Sent to radar/);
   const map = page.getByRole("region", { name: /Live map/ });
   await map.getByRole("button", { name: "Full screen" }).click();
