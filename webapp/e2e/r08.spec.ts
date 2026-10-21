@@ -88,7 +88,7 @@ test("R8 dispatch rules are versioned and restorable in Dispatch, the one place 
   await expect(page.getByTestId("dispatch-link")).toContainText("Norrmalm");
   await expect(page.getByLabel("Norrmalm offer time")).toHaveCount(0);
 
-  await page.goto("/dispatch?zone=Z001");
+  await page.goto("/offers?zone=Z001&tab=exclusive");
   await page.getByLabel("Exclusive time").fill("20");
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "Publish now" }).click();
@@ -110,7 +110,7 @@ test("R8 dispatch rules are versioned and restorable in Dispatch, the one place 
 
 test("R8 scoped dispatcher sees only assigned zones in Dispatch and cannot change the rules", async ({ page }) => {
   await session(page, "daniel");
-  await page.goto("/dispatch");
+  await page.goto("/offers?tab=exclusive");
   const rail = page.getByRole("navigation", { name: "Zones" });
   await expect(rail.getByRole("button", { name: /^Norrmalm/ })).toBeVisible();
   await expect(rail.getByRole("button", { name: /^Kista/ })).toHaveCount(0);

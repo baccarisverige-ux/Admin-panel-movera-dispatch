@@ -133,14 +133,21 @@ test("Q39/Q40/Q44/Q46: max stops, pickup move after accept, no-show share and mi
   await move.getByLabel("Pickup move limit").fill("300");
   const wait = page.getByRole("region", { name: "Waiting at pickup" });
   await wait.getByLabel("Driver's share of the no-show fee").fill("70");
-  await page.getByRole("tab", { name: "Drivers", exact: true }).click();
-  const offline = page.getByRole("region", { name: "Go offline automatically" });
-  await offline.getByLabel("Offline after offers not accepted").fill("5");
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
   const list = page.getByRole("list", { name: "Changes not live yet" });
   await expect(list).toContainText("Pickup move after accept (m): 500 → 300");
   await expect(list).toContainText("Driver's share of the no-show fee: 80% → 70%");
+  await bar.getByRole("button", { name: "Publish now" }).click();
+  await dialog(page).getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText(/Live now/)).toBeVisible();
+
+  // Going offline after missed offers moved to Radar · Exclusive · Reservations › Radar.
+  await page.getByRole("tab", { name: "Drivers", exact: true }).click();
+  await page.getByTestId("dx-moved-auto-offline").getByRole("link", { name: "Radar rules" }).click();
+  await expect(page).toHaveURL(/\/offers\?zone=Z001/);
+  const offline = page.getByRole("region", { name: "Go offline automatically" });
+  await offline.getByLabel("Offline after offers not accepted").fill("5");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText(/Live now/)).toBeVisible();

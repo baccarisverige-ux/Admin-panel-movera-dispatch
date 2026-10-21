@@ -53,6 +53,8 @@ test("the Live map has no second dispatch editor: it shows Dispatch's live value
   }
   await panel.getByRole("link", { name: "Norrmalm" }).click();
   await expect(page).toHaveURL(/\/dispatch\?zone=Z001/);
+  await page.getByTestId("dx-moved-modes").getByRole("link", { name: "Exclusive rules" }).click();
+  await expect(page).toHaveURL(/\/offers\?.*tab=exclusive/);
   await expect(page.getByLabel("Exclusive time")).toHaveValue("15");
 });
 

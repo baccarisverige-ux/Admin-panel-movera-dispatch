@@ -366,7 +366,15 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
           onZone={(id) => go({ zone: id })}
           tab={tab}
           tabs={tabs}
-          onTab={(next) => go({ tab: next === defaultTab ? null : next })}
+          onTab={(next) => {
+            // A tab of the other section (Rider cancel fees from Reservations, and back): open it there, same zone.
+            if (!tabs.some((item) => item.id === next)) {
+              if (next === "radar" || next === "exclusive" || next === "reservations") navigate(offersLink(next, zoneId || undefined));
+              else navigate(`/dispatch?${new URLSearchParams({ ...(zoneId ? { zone: zoneId } : {}), tab: next })}`);
+              return;
+            }
+            go({ tab: next === defaultTab ? null : next });
+          }}
           below={offers ? (id, open) => (open === "radar" ? (
             <div className="dx-cards dx-radar-extra">
               <RadarZonesCard book={book} market={market} zone={zones.find((zone) => zone.id === id) ?? zones[0]} drivers={countryLive} canEdit={canEdit(id)} onNotice={say} />
