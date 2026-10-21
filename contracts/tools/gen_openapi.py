@@ -1,4 +1,4 @@
-"""Generates contracts/openapi.yaml (v0.4.1) from contract.json + hand-written surface.
+"""Generates contracts/openapi.yaml (v0.4.2) from contract.json + hand-written surface.
 Enums are read from contract.json so they stay byte-exact."""
 import json, sys, yaml
 from collections import OrderedDict
@@ -347,8 +347,7 @@ S["LateEta"] = obj({
     desc="Running late: an online driver who would arrive more than toleranceMin late loses the ride early. Otherwise an online driver keeps it.")
 S["DriverReservations"] = obj(OrderedDict([
     ("on", dflt(b("Reservations are enabled in this zone."), RD["on"])),
-    ("leaveNow", dflt(b("Open the trip automatically at Leave now (estimated drive time to the pickup + spareMin before pickup)."), RD["leaveNow"])),
-    ("lateWarn", dflt(b("Island warning \"Head to your 07:40 pickup\" when Leave now cannot start the trip."), RD["lateWarn"])),
+    ("lateWarn", dflt(b("Island warning \"Head to your 07:40 pickup\" when Leave now cannot start the trip (driver offline, or busy with another screen). Leave now itself always opens the trip; there is no switch for it (v0.4.2)."), RD["lateWarn"])),
     ("offlineBackupAfterMin", dflt(i("Only an OFFLINE driver loses the ride, this many minutes after Leave now; an online driver keeps it.", minimum=1, maximum=60), RD["offlineBackupAfterMin"])),
     ("homePopupAfterMin", dflt(i("Untaken: the Home popup this many minutes after booking.", minimum=1, maximum=1440), RD["homePopupAfterMin"])),
     ("exclusiveBeforeMin", dflt(i("Untaken: Exclusive from this many minutes before pickup.", minimum=1, maximum=180), RD["exclusiveBeforeMin"])),
@@ -918,11 +917,11 @@ doc = OrderedDict()
 doc["openapi"] = "3.1.0"
 doc["info"] = {
     "title": "Movera API",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "description": (
         "**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter) and "
         "Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + "
-        "`CONTRACT.md` v0.4.1 in this folder; this file must agree with them.\n\n"
+        "`CONTRACT.md` v0.4.2 in this folder; this file must agree with them.\n\n"
         "Wire rules: ids match `" + ID_PATTERN + "`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is "
         "`Money {amountMinor, currency}`; keys camelCase, enum values snake_case. Success responses are the bare resource; errors are `Error`.\n\n"
         "Every mutation needs `Idempotency-Key`. Trip, offer, driver, rider, vehicle and config commands send `expectedVersion`; a stale "
@@ -950,7 +949,7 @@ def to_plain(x):
 
 class D(yaml.SafeDumper):
     def ignore_aliases(self, data): return True
-header = "# Movera API v0.4.1 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.\n"
+header = "# Movera API v0.4.2 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.\n"
 with open(OUT, "w") as f:
     f.write(header)
     yaml.dump(to_plain(doc), f, Dumper=D, sort_keys=False, allow_unicode=True, width=120)

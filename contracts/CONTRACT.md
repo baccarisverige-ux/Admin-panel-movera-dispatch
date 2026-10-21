@@ -1,4 +1,6 @@
-# Movera shared contract v0.4.1
+# Movera shared contract v0.4.2
+
+v0.4.2: owner decision 1, the `reservations.leaveNow` switch is removed. Leave now always opens the trip (§6.1); apps ignore a `leaveNow` field in an older document.
 
 v0.4.1 (additive): `DriverAppConfig.reservations` carries the Dispatch › Reservations timings to the driver app, with the new running-late ETA watch (`reservations.lateEta`, §6.1).
 
@@ -167,7 +169,7 @@ Every admin control below has one owner page, one config path and one defined ef
 | Default languages (Settings, per country) | `rider.languages`, `driver.languages` | Default app language | Default app language | — |
 | Offer modes, timers, offer card (Dispatch › Modes) | `driver.offers` | — | Radar/Exclusive timers, card fields, auto-offline | Dispatch |
 | Exclusive reasons (Dispatch) | `driver.offers.exclusiveReasons` | — | Reason line on Exclusive | — |
-| Reservations: steps, smart gap, Leave now, running late, cancels (Dispatch › Reservations) | `driver.reservations` (§6.1) | — | Home popup / Exclusive / Radar times, Leave now, late warning, ETA watch, offline backup, late-cancel pause | Reassigns a late or offline driver's ride |
+| Reservations: steps, smart gap, Leave now, running late, cancels (Dispatch › Reservations) | `driver.reservations` (§6.1) | — | Home popup / Exclusive / Radar times, Leave now (always opens the trip), late warning, ETA watch, offline backup, late-cancel pause | Reassigns a late or offline driver's ride |
 | Destination mode, next trips (Dispatch) | `driver.destinationMode`, `driver.nextTrips` | — | Filters, limits | Dispatch filter |
 | Cancel reasons (Dispatch › Cancel reasons) | `rider.cancelReasons`, `driver.cancelReasons` | Rider reason list | Driver reason sheets | Validates `reasonCode` per actor |
 | Ride check thresholds (Safety) | `rider.rideCheck`, `driver.rideCheck` | Ride check prompts | Ride check prompts | Triggers |
@@ -248,7 +250,6 @@ Built by Admin from Dispatch › Reservations of the zone. Every field is option
 ```
 DriverReservations {
   on: true,                     // reservations enabled in this zone
-  leaveNow: true,               // open the trip automatically at "Leave now"
   lateWarn: true,               // "Head to your 07:40 pickup" island warning when Leave now cannot start
   offlineBackupAfterMin: 5,     // 1–60. Only an OFFLINE driver loses the ride this long after Leave now; an online driver keeps it
   homePopupAfterMin: 10,        // untaken: Home popup this long after booking
@@ -266,7 +267,7 @@ DriverReservations {
   lateEta: { on: true, toleranceMin: 3, checkEverySeconds: 60, reassignTo: "exclusive" } }
 ```
 
-- **Leave now** fires at the driver's estimated drive time to the pickup + `rideTypes[kind].spareMin` before pickup (an estimate, not live traffic).
+- **Leave now** fires at the driver's estimated drive time to the pickup + `rideTypes[kind].spareMin` before pickup (an estimate, not live traffic). It always opens the trip, heading to the pickup; there is no switch for it (v0.4.2, owner decision 1). When the trip cannot open at that moment (the driver is offline, or another screen or an offer answer is in the way), the `lateWarn` warning shows and the trip opens as soon as it can. A `leaveNow` field in an older document is ignored.
 - **Running late (`lateEta`)**: from Leave now until the driver arrives at the pickup, the driver's ETA is checked every `checkEverySeconds` (15–600). When `now + ETA > pickup time + toleranceMin` (`toleranceMin` 0–30), the ride is reassigned early to `reassignTo`: `exclusive` (Exclusive offer to the nearest available driver), `radar` (Radar trips) or `dispatch` (back to admin dispatch). Otherwise an online driver keeps the ride.
 - **Offline driver**: only a driver who is offline at Leave now loses the ride, after `offlineBackupAfterMin`. An online driver is never removed by that timer.
 - Admin ids map: `normal → normal`, `airport → airport`, `long → longTrip`, `premium → comfortPremium`, `event → event`; Admin `lateBackupAfterMin` is `offlineBackupAfterMin`.
