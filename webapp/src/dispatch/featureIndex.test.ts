@@ -25,9 +25,12 @@ test("Q40: every Dispatch card named in the list exists, so a click lands on it"
   const dir = new URL("./", import.meta.url).pathname;
   const sources = readdirSync(dir).filter((name) => name.endsWith(".tsx")).map((name) => readFileSync(`${dir}${name}`, "utf8")).join("\n");
   for (const entry of FEATURE_INDEX) {
-    if ("path" in entry || !entry.dispatch.card) continue;
-    // The card titles are translated (round 4): the English text is the key of tr().
-    assert.ok(sources.includes(`Card title={tr(${JSON.stringify(entry.dispatch.card)})}`), `${entry.id}: card "${entry.dispatch.card}" exists`);
+    if ("path" in entry) continue;
+    const card = "offers" in entry ? entry.offers.card : entry.dispatch.card;
+    if (!card) continue;
+    // The card titles are translated (round 4): the English text is the key of tr(). Radar zones, their rules and
+    // driver groups are list cards with their own aria-label.
+    assert.ok(sources.includes(`Card title={tr(${JSON.stringify(card)})}`) || sources.includes(`aria-label={tr(${JSON.stringify(card)})}`), `${entry.id}: card "${card}" exists`);
   }
 });
 
@@ -51,6 +54,14 @@ test("Round 2: every new per-country and zone setting is in All features and ope
   assert.equal(target("no-show-share"), "/dispatch?tab=rides&zone=Z001&card=Waiting+at+pickup");
   assert.equal(target("waiting-per-category"), "/pricing?tab=prices");
   assert.ok(searchFeatures("missed exclusive").some((entry) => entry.id === "auto-offline"));
+  // Radar, Exclusive and reservation rules live in their own section: the rows open it, in the zone, on the card.
+  assert.equal(target("radar"), "/offers?zone=Z001&card=Radar");
+  assert.equal(target("exclusive"), "/offers?tab=exclusive&zone=Z001&card=Exclusive");
+  assert.equal(target("reservations"), "/offers?tab=reservations&zone=Z001&card=Reservations");
+  assert.equal(target("radar-zones"), "/offers?zone=Z001&card=Radar+zones");
+  assert.equal(target("auto-offline"), "/offers?zone=Z001&card=Go+offline+automatically");
+  assert.ok(searchFeatures("locked while driving").some((entry) => entry.id === "radar-full-lock"));
+  assert.ok(!FEATURE_INDEX.some((entry) => "dispatch" in entry && ["radar", "exclusive", "reservations"].includes(entry.dispatch.tab ?? "")), "no row still points at a Dispatch tab that moved");
   assert.ok(searchFeatures("apple pay").some((entry) => entry.id === "payment-methods"));
   assert.ok(searchFeatures("promo cap").some((entry) => entry.id === "promo-cap"));
   // The Pricing sections the rows open exist in the Tips & limits tab.

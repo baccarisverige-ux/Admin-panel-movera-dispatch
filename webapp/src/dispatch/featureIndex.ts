@@ -13,27 +13,38 @@ export type FeatureEntry = {
   section: string;
   /** Extra words people may search for. */
   keywords?: string;
-} & ({ dispatch: { view?: string; tab?: string; card?: string } } | { path: string });
+} & ({ dispatch: { view?: string; tab?: string; card?: string } } | { offers: { tab: "radar" | "exclusive" | "reservations"; card?: string } } | { path: string });
 
 const rules = (tab: string, card?: string) => ({ dispatch: { tab, card } });
 const view = (name: string) => ({ dispatch: { view: name } });
+/** A row in Radar · Exclusive · Reservations: its tab and, when there is one, the card to scroll to. */
+const offers = (tab: "radar" | "exclusive" | "reservations", card?: string) => ({ offers: { tab, card } });
 
 export const FEATURE_INDEX: readonly FeatureEntry[] = [
+  // Radar · Exclusive · Reservations › Radar
+  { id: "radar", phrase: "Radar: one request to several drivers", section: "Radar · Exclusive · Reservations › Radar", keywords: "offer timer drivers", ...offers("radar", "Radar") },
+  { id: "radar-app", phrase: "Radar offers one driver sees at once", section: "Radar · Exclusive · Reservations › Radar", keywords: "full screen list map cards popup", ...offers("radar", "Radar in the driver app") },
+  { id: "radar-full-lock", phrase: "Full-screen radar list locked while driving", section: "Radar · Exclusive · Reservations › Radar", keywords: "lock driving moving stopped list", ...offers("radar", "Radar in the driver app") },
+  { id: "radar-cards-driving", phrase: "Offer cards on the map: limit while driving", section: "Radar · Exclusive · Reservations › Radar", keywords: "cards popup driving stopped moving limit", ...offers("radar", "Radar in the driver app") },
+  { id: "radar-group-timer", phrase: "Radar group timer (the zone's radar time)", section: "Radar · Exclusive · Reservations › Radar", keywords: "countdown seconds radar group assign", ...offers("radar", "Radar") },
+  { id: "auto-offline", phrase: "Go offline after N missed exclusive offers", section: "Radar · Exclusive · Reservations › Radar", keywords: "auto offline missed declined exclusive offers in a row", ...offers("radar", "Go offline automatically") },
+  { id: "radar-zones", phrase: "Radar zones drawn on the map", section: "Radar · Exclusive · Reservations › Radar", keywords: "area draw map södermalm overlap free drivers inside", ...offers("radar", "Radar zones") },
+  { id: "radar-zone-rules", phrase: "Rules per radar zone: time, drivers, repeat", section: "Radar · Exclusive · Reservations › Radar", keywords: "all radar zones several one wins", ...offers("radar", "Radar zone rules") },
+  { id: "driver-groups", phrase: "Driver groups for sending a ride", section: "Radar · Exclusive · Reservations › Radar", keywords: "group hand-picked drivers radar send", ...offers("radar", "Driver groups") },
+  // Radar · Exclusive · Reservations › Exclusive
+  { id: "exclusive", phrase: "Exclusive: one driver at a time", section: "Radar · Exclusive · Reservations › Exclusive", keywords: "offer seconds while driving", ...offers("exclusive", "Exclusive") },
+  { id: "exclusive-reasons", phrase: "Exclusive reasons on the offer", section: "Radar · Exclusive · Reservations › Exclusive", ...offers("exclusive", "Exclusive reasons") },
   // Dispatch › Rules › Modes
-  { id: "radar", phrase: "Radar: one request to several drivers", section: "Dispatch › Modes", keywords: "offer timer drivers", ...rules("modes", "Radar") },
-  { id: "exclusive", phrase: "Exclusive: one driver at a time", section: "Dispatch › Modes", keywords: "offer seconds", ...rules("modes", "Exclusive") },
-  { id: "radar-app", phrase: "Radar offers one driver sees at once", section: "Dispatch › Modes", ...rules("modes", "Radar in the driver app") },
   { id: "mode-runs", phrase: "Which mode runs, by time or how busy", section: "Dispatch › Modes", ...rules("modes", "Which mode runs") },
   { id: "offer-card", phrase: "What the driver's offer card shows", section: "Dispatch › Modes", ...rules("modes", "Offer card") },
-  { id: "exclusive-reasons", phrase: "Exclusive reasons on the offer", section: "Dispatch › Modes", ...rules("modes", "Exclusive reasons") },
   { id: "whose-rules", phrase: "Whose rules across zone borders", section: "Dispatch › Modes", ...rules("modes", "Whose rules") },
-  // Reservations
-  { id: "reservations", phrase: "Scheduled rides (reservations) on or off", section: "Dispatch › Reservations", keywords: "book later scheduled rides reservations row", ...rules("reservations", "Reservations") },
-  { id: "smart-gap", phrase: "Smart gap between reservations", section: "Dispatch › Reservations", ...rules("reservations", "Smart gap") },
-  { id: "resv-running-late", phrase: "Running late to a reservation pickup", section: "Dispatch › Reservations", keywords: "eta arrival late reassign offline backup leave now", ...rules("reservations", "Running late") },
-  { id: "resv-cancels", phrase: "Reservation cancels and late cancels", section: "Dispatch › Reservations", ...rules("reservations", "Cancels") },
-  { id: "resv-no-driver", phrase: "No driver near pickup for a reservation", section: "Dispatch › Reservations", ...rules("reservations", "No driver near pickup") },
-  { id: "resv-assign", phrase: "Movera gives a reservation to a driver", section: "Dispatch › Reservations", keywords: "assign raise fare", ...rules("reservations", "Movera gives a ride to a driver") },
+  // Radar · Exclusive · Reservations › Reservations
+  { id: "reservations", phrase: "Scheduled rides (reservations) on or off", section: "Radar · Exclusive · Reservations › Reservations", keywords: "book later scheduled rides reservations row", ...offers("reservations", "Reservations") },
+  { id: "smart-gap", phrase: "Smart gap between reservations", section: "Radar · Exclusive · Reservations › Reservations", ...offers("reservations", "Smart gap") },
+  { id: "resv-running-late", phrase: "Running late to a reservation pickup", section: "Radar · Exclusive · Reservations › Reservations", keywords: "eta arrival late reassign offline backup leave now", ...offers("reservations", "Running late") },
+  { id: "resv-cancels", phrase: "Reservation cancels and late cancels", section: "Radar · Exclusive · Reservations › Reservations", ...offers("reservations", "Cancels") },
+  { id: "resv-no-driver", phrase: "No driver near pickup for a reservation", section: "Radar · Exclusive · Reservations › Reservations", ...offers("reservations", "No driver near pickup") },
+  { id: "resv-assign", phrase: "Movera gives a reservation to a driver", section: "Radar · Exclusive · Reservations › Reservations", keywords: "assign raise fare", ...offers("reservations", "Movera gives a ride to a driver") },
   // Best driver
   { id: "best-driver", phrase: "What makes the best driver", section: "Dispatch › Best driver", keywords: "rating acceptance eta weight", ...rules("best", "What makes the best driver") },
   { id: "search-distance", phrase: "Search distance, step by step", section: "Dispatch › Best driver", keywords: "radius km", ...rules("best", "Search distance") },
@@ -57,7 +68,6 @@ export const FEATURE_INDEX: readonly FeatureEntry[] = [
   { id: "going-home", phrase: "Going home: rides towards home", section: "Dispatch › Drivers", ...rules("drivers", "Going home") },
   { id: "fairness", phrase: "Fairness between drivers", section: "Dispatch › Drivers", ...rules("drivers", "Fairness") },
   { id: "saying-no", phrase: "Saying no: declined or missed offers", section: "Dispatch › Drivers", keywords: "decline acceptance pause", ...rules("drivers", "Saying no") },
-  { id: "auto-offline", phrase: "Go offline after N missed exclusive offers", section: "Dispatch › Drivers", keywords: "auto offline missed declined exclusive offers in a row", ...rules("drivers", "Go offline automatically") },
   { id: "rest", phrase: "Rest after long work", section: "Dispatch › Drivers", keywords: "driving hours", ...rules("drivers") },
   { id: "cancel-rate", phrase: "Driver cancel rate to stay under", section: "Dispatch › Drivers", ...rules("drivers") },
   // Destination & next trips
@@ -72,10 +82,9 @@ export const FEATURE_INDEX: readonly FeatureEntry[] = [
   // Round 3 assign tool (Q13–Q18): opened from a waiting rider on the live map, the Trips list or a Trip page.
   { id: "assign-tool", phrase: "Assign tool: nearby drivers and direct assign", section: "Dispatch › Live", keywords: "assign rider exclusive offer nearby active drivers radius 5 7 10 km custom whole zone neighbours lock accepted", ...view("live") },
   { id: "radar-groups", phrase: "Radar groups of up to 10 drivers", section: "Dispatch › Live", keywords: "send to radar group countdown repeat again zone timer", ...view("live") },
-  { id: "radar-group-timer", phrase: "Radar group timer (the zone's radar time)", section: "Dispatch › Modes", keywords: "countdown seconds radar group assign", ...rules("modes", "Radar") },
   { id: "add-money-driver", phrase: "Add money for driver (Movera pays)", section: "Dispatch › Live", keywords: "driver bonus extra money priority badge commission trip limit", ...view("live") },
   { id: "test", phrase: "Test a ride before publishing", section: "Dispatch › Test a ride", ...view("test") },
-  { id: "events", phrase: "Events and driver groups", section: "Dispatch › Events & groups", ...view("events") },
+  { id: "events", phrase: "Events: a concert or a match", section: "Dispatch › Events & groups", keywords: "event area time driver groups", ...view("events") },
   { id: "cancel-checks", phrase: "Cancel checks: decide disputed cancels", section: "Dispatch › Cancel checks", ...view("cancels") },
   { id: "cancel-reasons", phrase: "Cancel reasons for riders, drivers and admins", section: "Dispatch › Cancel reasons", ...view("reasons") },
   { id: "history", phrase: "Dispatch history, undo and approvals", section: "Dispatch › History", ...view("history") },
@@ -118,6 +127,14 @@ export function searchFeatures(query: string, list: readonly FeatureEntry[] = FE
 /** Where a row goes: a Dispatch search string, or a path elsewhere. */
 export function featureTarget(entry: FeatureEntry, zoneId: string): string {
   if ("path" in entry) return entry.path;
+  if ("offers" in entry) {
+    const params = new URLSearchParams();
+    if (entry.offers.tab !== "radar") params.set("tab", entry.offers.tab);
+    if (zoneId) params.set("zone", zoneId);
+    if (entry.offers.card) params.set("card", entry.offers.card);
+    const search = params.toString();
+    return `/offers${search ? `?${search}` : ""}`;
+  }
   const params = new URLSearchParams();
   if (entry.dispatch.view) params.set("view", entry.dispatch.view);
   if (entry.dispatch.tab) {

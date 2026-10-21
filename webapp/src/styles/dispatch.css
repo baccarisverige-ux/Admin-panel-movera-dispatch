@@ -108,6 +108,15 @@ body.dx-no-scroll { overflow: hidden; }
 .dx-zone-side { position: sticky; top: 150px; display: grid; justify-items: center; gap: 8px; padding: 14px 10px; border-radius: 18px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); }
 .dx-cards { display: grid; gap: 12px; }
 
+/* Radar · Exclusive · Reservations: where a setting used to be, and the radar zones under the Radar tab. */
+.dx-card.moved { border-style: dashed; background: linear-gradient(135deg, #faf8ff, #f3f7ff); }
+.dx-card.moved .dx-card-icon { background: #ede7ff; color: #5b43c9; }
+.dx-moved-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.dx-moved-links .dash-btn svg { margin-left: 2px; }
+.dx-radar-extra { margin-top: 12px; }
+.dx-radar-zones .dx-state { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.dx-radar-zones .dx-state.off { opacity: .55; }
+
 /* Setting cards */
 .dx-card { --tone: #2a78d6; --tone-soft: #edf4ff; border-radius: 18px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; }
 .dx-card.purple { --tone: #6250d6; --tone-soft: #f2efff; }

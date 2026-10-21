@@ -16,6 +16,7 @@ assert(MENU.some((item) => item.id === "drivers" && item.path === "/drivers"), "
 assert(!MENU.some((item) => item.path === "/franchise" || item.path === "/database" || item.path === "/api"), "old pages are gone");
 assert(pageForPath("/incidents")?.group === "Operations", "incidents sit in Operations");
 assert(pageForPath("/risk")?.group === "Operations", "risk sits in Operations");
+assert(pageForPath("/offers")?.group === "Operations" && pageForPath("/offers")?.permission === pageForPath("/dispatch")?.permission, "Radar · Exclusive · Reservations sits next to Dispatch with the same permission");
 
 const support = MENU.filter((item) => can("support", item.permission));
 assert(support.some((item) => item.id === "support") && support.some((item) => item.id === "riders"), "support sees its work");
