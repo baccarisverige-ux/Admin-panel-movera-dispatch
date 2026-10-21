@@ -2,7 +2,7 @@ import { marketOfZone, type MarketId } from "../markets/markets.ts";
 import { fromMajor, type CurrencyCode, type Money } from "../domain/money.ts";
 import { activeCategories, normalizeStore, zoneBook, type PricingStore } from "../pricing/zonePricing.ts";
 import type { PickupRate } from "../pricing/pickupPay.ts";
-import { liveCountry, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules.ts";
+import { liveCountry, liveRules, normalizeDispatchBook, type DispatchBook, type RideTypeId, type ZoneDispatch } from "../dispatch/rules.ts";
 import { feeRow, type CancelFeeKind, type CancelFeeRow, type CancelFeeTable } from "../dispatch/cancelFees.ts";
 import { exclusiveReasonList, LANGS, reasonText, type CancelReason, type LangId, type WaitOverride } from "../dispatch/offers.ts";
 import { destinationModeForDriverApp, nextTripsForDriverApp } from "../dispatch/tripRules.ts";
@@ -26,7 +26,7 @@ import { countrySettingsOf, normalizeCountrySettingsBook, type AmountOption, typ
  * Keys beyond the contract sample are additive ("unknown keys are ignored"): pickupPay.byCategory,
  * cancelCheck, sourceRevisions, and a few on/off switches next to the numbers they gate.
  *
- * Contract v0.4.0 per-zone fields come from the admin settings: languages, tips, raiseSteps, promoCap, paymentMethods and
+ * Contract v0.4.0 per-zone fields (and v0.4.1 reservations) come from the admin settings: languages, tips, raiseSteps, promoCap, paymentMethods and
  * the driver bonus limit from the country settings (Pricing and Settings, countrySettings.ts); booking.maxStops,
  * booking.maxPickupMoveMeters, offers.autoOffline.missedExclusive and the no-show fee share from Dispatch; waiting per
  * category from Pricing. Only the fixed values (driverBonus.hardMax, the 100 % waiting share) are CONFIG_DEFAULTS.
@@ -351,6 +351,41 @@ function driverTexts(base: Common, state: AppConfigState) {
   };
 }
 
+/** Admin ride type ids → contract DriverAppConfig.reservations.rideTypes keys. */
+export const RESERVATION_RIDE_TYPE_KEYS = { normal: "normal", airport: "airport", long: "longTrip", premium: "comfortPremium", event: "event" } as const satisfies Record<RideTypeId, string>;
+
+/**
+ * Contract v0.4.1 DriverAppConfig.reservations: the zone's Dispatch › Reservations timings for the driver app
+ * (CONTRACT.md §6.1). lateBackupAfterMin is the offline rule (offlineBackupAfterMin); lateEta is the running-late ETA watch.
+ */
+function driverReservations(zone: ZoneDispatch) {
+  const resv = zone.reservation;
+  return {
+    on: resv.on,
+    leaveNow: resv.leaveNow,
+    lateWarn: resv.lateWarn,
+    offlineBackupAfterMin: resv.lateBackupAfterMin,
+    homePopupAfterMin: resv.homePopupAfterMin,
+    exclusiveBeforeMin: resv.exclusiveBeforeMin,
+    radarBeforeMin: resv.radarBeforeMin,
+    onDriverCancel: resv.onDriverCancel,
+    hideClashing: resv.hideClashing,
+    towardPickup: resv.towardPickup,
+    towardPickupBeforeMin: resv.towardPickupBeforeMin,
+    longTripKm: zone.longTripKm,
+    driverLateCancelHours: resv.driverLateCancelHours,
+    lateCancelLimit: resv.latePauseAfter,
+    lateCancelPeriodDays: resv.latePeriodDays,
+    pauseDays: resv.latePauseDays,
+    assignAcceptSeconds: resv.assignAcceptSec,
+    rideTypes: Object.fromEntries((Object.keys(RESERVATION_RIDE_TYPE_KEYS) as RideTypeId[]).map((id) => {
+      const rule = resv.types[id];
+      return [RESERVATION_RIDE_TYPE_KEYS[id], { onlineBeforeMin: rule.onlineBeforeMin, spareMin: rule.spareMin, reminderMin: [rule.remindFirstMin, rule.remindLastMin] }];
+    })) as Record<(typeof RESERVATION_RIDE_TYPE_KEYS)[RideTypeId], { onlineBeforeMin: number; spareMin: number; reminderMin: number[] }>,
+    lateEta: { on: resv.lateEta.on, toleranceMin: resv.lateEta.toleranceMin, checkEverySeconds: resv.lateEta.checkEverySeconds, reassignTo: resv.lateEta.reassignTo },
+  };
+}
+
 export function driverAppConfig(zoneId: string, state: AppConfigState) {
   const base = common(zoneId, state);
   const { zone, country, currency } = base;
@@ -396,6 +431,7 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     },
     destinationMode: { perDay: zone.destinationMode.perDay, ...destinationModeForDriverApp(zone.destinationMode) },
     nextTrips: { on: true, ...nextTripsForDriverApp(zone.nextTrips) },
+    reservations: driverReservations(zone),
     cancelReasons: {
       driverBeforeTrip: codes(country.cancelReasons.groups.driverBeforeTrip),
       driverDuringTrip: codes(country.cancelReasons.groups.driverDuringTrip),

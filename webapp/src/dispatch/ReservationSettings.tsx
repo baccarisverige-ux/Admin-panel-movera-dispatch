@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { AlertTriangle, Bell, CalendarClock, Timer, TrendingUp, UserCheck, Users, UserX } from "lucide-react";
+import { AlertTriangle, Bell, CalendarClock, Clock, Timer, TrendingUp, UserCheck, Users, UserX } from "lucide-react";
 import type { MarketId } from "../markets/markets";
 import { Card, Choice, Num, Row, Switch } from "./fields";
 import { ReservationTimelinePreview, spanLabel } from "./Previews";
 import { BookingPolicyCard } from "./BookingPolicy";
 import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
 import {
-  HOME_POPUP_TO, leaveNowBeforeMin, raiseCap, raiseSplit, RESERVATION_CANCEL_TO, RESERVATION_LIST_TO, RIDE_TYPES, smartGapMin,
-  type DriverGroup, type ReservationRules, type RideTypeId, type RideTypeRule, type ZoneDispatch,
+  HOME_POPUP_TO, LATE_ETA_REASSIGN_TO, leaveNowBeforeMin, raiseCap, raiseSplit, RESERVATION_CANCEL_TO, RESERVATION_LIST_TO, RIDE_TYPES, smartGapMin,
+  type DriverGroup, type LateEtaRules, type ReservationRules, type RideTypeId, type RideTypeRule, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx } from "../i18n";
 
@@ -42,7 +42,12 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   const setResv = (patch: Partial<ReservationRules>) => set({ reservation: { ...resv, ...patch } });
   const setType = (id: RideTypeId, patch: Partial<RideTypeRule>) => setResv({ types: { ...resv.types, [id]: { ...resv.types[id], ...patch } } });
+  const setLate = (patch: Partial<LateEtaRules>) => setResv({ lateEta: { ...resv.lateEta, ...patch } });
   const off = disabled || !resv.on;
+  const late = resv.lateEta;
+  const lateTo = LATE_ETA_REASSIGN_TO.find((item) => item.id === late.reassignTo) ?? LATE_ETA_REASSIGN_TO[0];
+  // Worked example: at 07:30 the driver is just far enough away to arrive one minute past the minutes allowed.
+  const lateAway = 10 + late.toleranceMin + 1;
   const cap = raiseCap(countryId);
   const [tryRaise, setTryRaise] = useState(() => Math.min(cap, Math.round(sampleFare * 0.3)));
   const split = raiseSplit(tryRaise, sampleFare, commissionPct);
@@ -104,10 +109,8 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
 
       <Card title={tr("Smart gap")} tone="blue" icon={<Timer size={18} />} help={tr("Trip time + drive to the next pickup + spare minutes. It keeps a driver's scheduled rides apart and sends the driver off in time.")} off={!resv.on}>
         <Row label={tr("Clashing rides leave the list")} help={tr("A driver can't hold two rides at the same or a close time. They see them all, but once they take one, the others that do not fit the smart gap leave their Scheduled rides.")} on={resv.hideClashing} disabled={off} onToggle={(hideClashing) => setResv({ hideClashing })} />
-        <Row label={tr("Leave now")} help={tr("Live drive time to the pickup + spare minutes. Then the ride lands on the driver's screen as the active trip with Head to pickup, even if they were driving away.")} on={resv.leaveNow} disabled={off} onToggle={(leaveNow) => setResv({ leaveNow })} />
-        <Row label={tr("Late warning, then backup driver")} help={tr("Not moving toward the pickup after Leave now: the island says “Head to your 07:40 pickup”. After these minutes: an admin alert, and the backup driver gets the ride.")} on={resv.lateWarn} disabled={off} onToggle={(lateWarn) => setResv({ lateWarn })}>
-          <Num label={tr("Backup driver after the late warning")} before="backup after" value={resv.lateBackupAfterMin} unit="min" min={1} max={60} disabled={disabled} onChange={(lateBackupAfterMin) => setResv({ lateBackupAfterMin })} />
-        </Row>
+        <Row label={tr("Leave now")} help={tr("The driver app's estimated drive time to the pickup + spare minutes (an estimate, not live traffic). Then the ride lands on the driver's screen as the active trip with Head to pickup, even if they were driving away.")} on={resv.leaveNow} disabled={off} onToggle={(leaveNow) => setResv({ leaveNow })} />
+        <Row label={tr("Late warning")} help={tr("Leave now cannot start the trip: the island says “Head to your 07:40 pickup”.")} on={resv.lateWarn} disabled={off} onToggle={(lateWarn) => setResv({ lateWarn })} />
         <Row label={tr("Trips toward the pickup before the ride")} help={tr("Like destination mode, aimed at the scheduled pickup. Every trip is checked with the smart gap, so the driver is still in time.")} on={resv.towardPickup} disabled={off} onToggle={(towardPickup) => setResv({ towardPickup })}>
           <Num label={tr("Trips toward the pickup from")} before="from" value={resv.towardPickupBeforeMin} unit="min before" min={15} max={240} disabled={disabled} onChange={(towardPickupBeforeMin) => setResv({ towardPickupBeforeMin })} />
         </Row>
@@ -136,6 +139,22 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
           </ul>
           <p className="dx-resv-foot" aria-label={tr("Smart gap example")}>{trn("Example, normal ride: pickup {0}, 35 min trip, ends 20 min from the next pickup. With {1} spare minutes the next ride can start at {2} or later ({3} gap).{4}", clock(SAMPLE_PICKUP, 0), normal.spareMin, <b>{clock(SAMPLE_PICKUP, gap)}</b>, spanLabel(gap), resv.leaveNow ? <>{" "}{trn("A driver 18 min from the pickup gets Leave now {0} before pickup ({1}).", <b>{trn("{0} min", leaveNowBeforeMin(18, normal.spareMin))}</b>, clock(SAMPLE_PICKUP, -leaveNowBeforeMin(18, normal.spareMin)))}</> : null)}</p>
         </div>
+      </Card>
+
+      <Card title={tr("Running late")} tone="red" icon={<Clock size={18} />} help={tr("From Leave now until the driver arrives, their arrival time is checked. If they would arrive more than the minutes allowed late, the ride goes to another driver early. Otherwise an online driver keeps the ride. Only an offline driver loses it, after the offline minutes.")} off={!resv.on}>
+        <Row label={tr("Watch arrival time")} help={tr("Checks the driver's estimated arrival at the pickup, from Leave now until they are there.")} on={late.on} disabled={off} onToggle={(on) => setLate({ on })}>
+          <Num label={tr("Minutes late allowed")} before="up to" value={late.toleranceMin} unit="min late" min={0} max={30} disabled={disabled} onChange={(toleranceMin) => setLate({ toleranceMin })} />
+          <Num label={tr("Check every (seconds)")} before="every" value={late.checkEverySeconds} unit="s" min={15} max={600} disabled={disabled} onChange={(checkEverySeconds) => setLate({ checkEverySeconds })} />
+        </Row>
+        {late.on ? (
+          <Row label={tr("Give the ride to")} help={lateTo.help}>
+            <Choice label={tr("Late ride goes to")} value={late.reassignTo} disabled={off} onChange={(reassignTo) => setLate({ reassignTo })} options={LATE_ETA_REASSIGN_TO.map((item) => ({ id: item.id, label: item.label, hint: item.help }))} />
+          </Row>
+        ) : null}
+        <Row label={tr("Offline driver loses the ride")} help={tr("Only a driver who is offline at Leave now: after these minutes the ride goes to another driver and you get an alert. An online driver keeps the ride.")}>
+          <Num label={tr("Offline driver loses the ride after")} before="after" value={resv.lateBackupAfterMin} unit="min" min={1} max={60} disabled={off} onChange={(lateBackupAfterMin) => setResv({ lateBackupAfterMin })} />
+        </Row>
+        {late.on ? <p className="dx-resv-foot" aria-label={tr("Running late example")}>{trn("Example: pickup {0}. At {1} the driver is {2} min away, so they would arrive at {3}: more than {4} min late. The ride goes to: {5}.", clock(SAMPLE_PICKUP, 0), clock(SAMPLE_PICKUP, -10), lateAway, <b>{clock(SAMPLE_PICKUP, late.toleranceMin + 1)}</b>, late.toleranceMin, trx(lateTo.label))}</p> : null}
       </Card>
 
       <Card title={tr("Cancels")} tone="red" icon={<UserX size={18} />} help={tr("Drivers never pay a fee when they cancel. Every driver cancel counts in the driver's cancel rate.")} off={!resv.on}>

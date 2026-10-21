@@ -81,6 +81,8 @@ export type RideTypeId = "normal" | "airport" | "long" | "premium" | "event";
 export type RideTypeRule = { onlineBeforeMin: number; spareMin: number; remindFirstMin: number; remindLastMin: number };
 /** Where a reservation goes back to when the driver who took it cancels. */
 export type ReservationCancelTo = "byTime" | "list" | "home" | "exclusive";
+/** Running late (contract DriverAppConfig.reservations.lateEta.reassignTo): where the ride goes when the driver would arrive too late. */
+export type LateEtaReassignTo = "exclusive" | "radar" | "dispatch";
 /** The steps an untaken reservation goes through, in this order. */
 export type ReservationStep = "list" | "home" | "exclusive" | "radar";
 
@@ -150,6 +152,22 @@ export const RESERVATION_CANCEL_TO: { id: ReservationCancelTo; label: string; he
   { id: "exclusive", label: "Exclusive", help: "Offered as Exclusive at once." },
 ];
 
+export const LATE_ETA_REASSIGN_TO: { id: LateEtaReassignTo; label: string; help: string }[] = [
+  { id: "exclusive", label: "Exclusive offer to nearest driver", help: "The nearest available driver gets it as an Exclusive offer." },
+  { id: "radar", label: "Radar", help: "It goes to Radar trips for drivers nearby." },
+  { id: "dispatch", label: "Back to dispatch", help: "It comes back to Live for an admin to give it to a driver." },
+];
+
+/** Running late: from Leave now until arrival the driver's arrival time is checked; too late and the ride goes to another driver early. */
+export type LateEtaRules = {
+  on: boolean;
+  /** Reassign when now + the driver's ETA is later than pickup + this many minutes. 0 to 30. */
+  toleranceMin: number;
+  /** How often the arrival time is checked. 15 to 600 seconds. */
+  checkEverySeconds: number;
+  reassignTo: LateEtaReassignTo;
+};
+
 export const RESERVATION_STEP_LABEL: Record<ReservationStep, string> = { list: "Scheduled rides", home: "Home popup", exclusive: "Exclusive", radar: "Radar trips" };
 
 export type ReservationRules = {
@@ -188,11 +206,14 @@ export type ReservationRules = {
    * When a driver takes a ride, the rides that do not fit leave that driver's Scheduled rides list.
    */
   hideClashing: boolean;
-  /** Leave now: live drive time to the pickup + spare minutes. Then the ride lands on the driver's screen as the active trip. */
+  /** Leave now: the driver's estimated drive time to the pickup + spare minutes. Then the ride lands on the driver's screen as the active trip. */
   leaveNow: boolean;
-  /** Not moving toward the pickup after Leave now: a warning on the island at once, then an admin alert and the backup driver. */
+  /** Leave now cannot start the trip: a warning on the island ("Head to your 07:40 pickup"). */
   lateWarn: boolean;
+  /** Only an OFFLINE driver loses the ride, this many minutes after Leave now (contract offlineBackupAfterMin). An online driver keeps it. */
   lateBackupAfterMin: number;
+  /** Running late: an online driver who would arrive more than toleranceMin late loses the ride early (contract lateEta). */
+  lateEta: LateEtaRules;
   /** Before the ride, offers head toward the scheduled pickup (like destination mode), from this many minutes before. */
   towardPickup: boolean;
   towardPickupBeforeMin: number;
@@ -417,6 +438,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
       onDriverCancel: "byTime",
       listGroupId: "", homePopupTo: "list", popupClosedExclusive: true,
       hideClashing: true, leaveNow: true, lateWarn: true, lateBackupAfterMin: 5, towardPickup: true, towardPickupBeforeMin: 60,
+      lateEta: { on: true, toleranceMin: 3, checkEverySeconds: 60, reassignTo: "exclusive" },
       types: rideTypesDefault(),
       riderFees: cancelFeeDefaults("reservation"), driverLateCancelHours: 1,
       latePause: true, latePauseAfter: 2, latePeriodDays: 7, latePauseDays: 7,
@@ -609,6 +631,14 @@ export function completeReservation(base: ReservationRules, stored: unknown, leg
   if (!RESERVATION_CANCEL_TO.some((item) => item.id === next.onDriverCancel)) next.onDriverCancel = base.onDriverCancel;
   if (!HOME_POPUP_TO.some((item) => item.id === next.homePopupTo)) next.homePopupTo = base.homePopupTo;
   if (typeof next.listGroupId !== "string") next.listGroupId = base.listGroupId;
+  // Running late came later: an older save gets the defaults, a broken part falls back on its own.
+  const lateEta = raw.lateEta && typeof raw.lateEta === "object" && !Array.isArray(raw.lateEta) ? raw.lateEta as Partial<LateEtaRules> : {};
+  next.lateEta = {
+    on: typeof lateEta.on === "boolean" ? lateEta.on : base.lateEta.on,
+    toleranceMin: typeof lateEta.toleranceMin === "number" && Number.isFinite(lateEta.toleranceMin) ? lateEta.toleranceMin : base.lateEta.toleranceMin,
+    checkEverySeconds: typeof lateEta.checkEverySeconds === "number" && Number.isFinite(lateEta.checkEverySeconds) ? lateEta.checkEverySeconds : base.lateEta.checkEverySeconds,
+    reassignTo: LATE_ETA_REASSIGN_TO.some((item) => item.id === lateEta.reassignTo) ? lateEta.reassignTo as LateEtaReassignTo : base.lateEta.reassignTo,
+  };
   // Every kind of ride gets its own times; kinds or times missing from an older save come from the defaults.
   const storedTypes = raw.types && typeof raw.types === "object" && !Array.isArray(raw.types) ? raw.types as Partial<Record<RideTypeId, Partial<RideTypeRule>>> : {};
   next.types = Object.fromEntries(RIDE_TYPES.map((type) => {
@@ -774,7 +804,9 @@ function reservationIssues(resv: ReservationRules, zoneId: string, categories: r
   if (resv.onDriverCancel === "home" && !resv.homePopup) issues.push("Reservations: after a driver cancels it cannot go to the Home popup, because the Home popup is off.");
   if (resv.onDriverCancel === "exclusive" && !resv.toExclusive) issues.push("Reservations: after a driver cancels it cannot become Exclusive, because \"Becomes an Exclusive trip\" is off.");
   if (resv.listTo === "group" && !resv.listGroupId) issues.push("Reservations: pick the driver group that gets Scheduled rides.");
-  if (resv.lateWarn && (resv.lateBackupAfterMin < 1 || resv.lateBackupAfterMin > 60)) issues.push("Reservations: the backup driver must come 1 to 60 minutes after the late warning.");
+  if (resv.lateBackupAfterMin < 1 || resv.lateBackupAfterMin > 60) issues.push("Reservations: an offline driver must lose the ride 1 to 60 minutes after Leave now.");
+  if (resv.lateEta.on && (!Number.isInteger(resv.lateEta.toleranceMin) || resv.lateEta.toleranceMin < 0 || resv.lateEta.toleranceMin > 30)) issues.push("Reservations: minutes late allowed must be 0 to 30.");
+  if (resv.lateEta.on && (!Number.isInteger(resv.lateEta.checkEverySeconds) || resv.lateEta.checkEverySeconds < 15 || resv.lateEta.checkEverySeconds > 600)) issues.push("Reservations: the arrival time must be checked every 15 to 600 seconds.");
   if (resv.towardPickup && (resv.towardPickupBeforeMin < 15 || resv.towardPickupBeforeMin > 240)) issues.push("Reservations: trips toward the pickup must start 15 to 240 minutes before pickup.");
   for (const type of RIDE_TYPES) {
     const rule = resv.types[type.id];
@@ -993,7 +1025,8 @@ Object.assign(LABELS, TRIP_RULE_LABELS);
 Object.assign(LABELS, {
   "reservation.listGroupId": "Driver group for Scheduled rides", "reservation.homePopupTo": "Home popup goes to",
   "reservation.popupClosedExclusive": "Closed popup comes back as Exclusive", "reservation.hideClashing": "Clashing rides leave the list",
-  "reservation.leaveNow": "Leave now", "reservation.lateWarn": "Late warning, then backup", "reservation.lateBackupAfterMin": "Backup driver after the late warning",
+  "reservation.leaveNow": "Leave now", "reservation.lateWarn": "Late warning", "reservation.lateBackupAfterMin": "Offline driver loses the ride after",
+  "reservation.lateEta.on": "Watch arrival time", "reservation.lateEta.toleranceMin": "Minutes late allowed", "reservation.lateEta.checkEverySeconds": "Check arrival every (seconds)", "reservation.lateEta.reassignTo": "Late ride goes to",
   "reservation.towardPickup": "Trips toward the pickup before the ride", "reservation.towardPickupBeforeMin": "Trips toward the pickup from",
   "reservation.driverLateCancelHours": "Driver late cancel, hours before pickup", "reservation.latePause": "Pause after late cancels",
   "reservation.latePauseAfter": "Late cancels before a pause", "reservation.latePeriodDays": "Late cancels counted over days", "reservation.latePauseDays": "Scheduled rides paused for days",
@@ -1041,6 +1074,7 @@ const PATH_WORDS: Record<string, Record<string, string>> = {
   "reservation.homePopupTo": { list: "same drivers as the list", zone: "all drivers in the zone" },
   "reservation.listGroupId": { "": "none" },
   "reservation.onDriverCancel": { byTime: "by time left", list: "Scheduled rides", home: "Home popup", exclusive: "Exclusive" },
+  "reservation.lateEta.reassignTo": { exclusive: "Exclusive offer to nearest driver", radar: "Radar", dispatch: "back to dispatch" },
 };
 
 function show(raw: string | undefined, path = ""): string {
@@ -1533,7 +1567,7 @@ export function rulesFile(book: DispatchBook, country: MarketId, at: string, thr
       countryRules: "country.rest: work and rest hours, warnings warnFirstMin and warnLastMin before the limit, blockOnline at the limit. country.cancelRateLimitPct: the cancel rate drivers should stay under, never shown to drivers (they see a rule text). It is the only cancel rate number: in zones where safety.maxCancel is on, drivers over it get no requests. Only normal-trip cancels count, without pause or fee; reasons with counts=false never count. country.cancelReasons: per group and language (en, sv, fr, ar); an empty language uses English.",
       reservationWho: "listTo group = only the drivers of the saved group listGroupId (groups below). homePopupTo: list = the same drivers as the list, zone = every online driver in the zone. popupClosedExclusive: a driver who closed the Home popup with × can get it back as an Exclusive if nobody took it.",
       smartGap: "A driver cannot hold two scheduled rides whose times are the same or close. Gap = the first ride's trip time + the drive to the next pickup + types[kind].spareMin. With hideClashing, once a driver takes one, the rides that do not fit leave that driver's list (they still see them all before taking one).",
-      leaveNow: "leaveNow: at live drive time to the pickup + types[kind].spareMin before pickup, the ride lands on the driver's screen as the active trip with Head to pickup. lateWarn: not moving toward the pickup after that, an island warning at once, then after lateBackupAfterMin an admin alert and the backup driver. towardPickup: from towardPickupBeforeMin before pickup, offers head toward the scheduled pickup, each checked with the smart gap.",
+      leaveNow: "leaveNow: at the driver's estimated drive time to the pickup + types[kind].spareMin before pickup, the ride lands on the driver's screen as the active trip with Head to pickup. lateWarn: when Leave now cannot start the trip, an island warning at once. lateBackupAfterMin: only an offline driver loses the ride that many minutes after Leave now; an online driver keeps it. lateEta: from Leave now until arrival the driver's ETA is checked every checkEverySeconds; when now + ETA is later than pickup + toleranceMin the ride goes early to reassignTo (exclusive, radar or dispatch). towardPickup: from towardPickupBeforeMin before pickup, offers head toward the scheduled pickup, each checked with the smart gap.",
       rideTypes: "types: normal, airport, long (over longTripKm), premium (Comfort and Premium) and event, each with onlineBeforeMin, spareMin and two reminders (remindFirstMin, remindLastMin) before pickup.",
       riderCancelFees: "Rider cancel fees per car type (Pricing's category ids; a car type without its own row uses the economy row), two sets. riderCancel.fees = live trips (Radar and live Exclusive): free for freeMin minutes after the driver accepts. reservation.riderFees = booked rides, Exclusive reservations too: free until freeMin minutes before pickup. Then the fee: type fixed = value in country money (major units); type percent = value % of the trip price, rounded half-up to a whole minor unit (öre, cent, millime), then kept between min and max (major units, null = no limit).",
       reservationCancels: "Drivers never pay. Riders cancel for free and then pay the late cancel fee by car type, see riderCancelFees. A driver cancel under driverLateCancelHours before pickup is a late cancel; latePauseAfter late cancels in latePeriodDays = no scheduled rides for latePauseDays. Every driver cancel counts in the cancel rate.",

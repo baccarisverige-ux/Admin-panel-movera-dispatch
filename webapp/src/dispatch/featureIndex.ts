@@ -30,6 +30,7 @@ export const FEATURE_INDEX: readonly FeatureEntry[] = [
   // Reservations
   { id: "reservations", phrase: "Scheduled rides (reservations) on or off", section: "Dispatch › Reservations", keywords: "book later scheduled rides reservations row", ...rules("reservations", "Reservations") },
   { id: "smart-gap", phrase: "Smart gap between reservations", section: "Dispatch › Reservations", ...rules("reservations", "Smart gap") },
+  { id: "resv-running-late", phrase: "Running late to a reservation pickup", section: "Dispatch › Reservations", keywords: "eta arrival late reassign offline backup leave now", ...rules("reservations", "Running late") },
   { id: "resv-cancels", phrase: "Reservation cancels and late cancels", section: "Dispatch › Reservations", ...rules("reservations", "Cancels") },
   { id: "resv-no-driver", phrase: "No driver near pickup for a reservation", section: "Dispatch › Reservations", ...rules("reservations", "No driver near pickup") },
   { id: "resv-assign", phrase: "Movera gives a reservation to a driver", section: "Dispatch › Reservations", keywords: "assign raise fare", ...rules("reservations", "Movera gives a ride to a driver") },
