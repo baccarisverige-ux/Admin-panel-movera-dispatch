@@ -41,6 +41,7 @@ import { RefundPolicyPanel } from "../payments/RefundPolicyPanel";
 import { CountryAppsPanel } from "../config/CountryAppsPanel";
 import { can } from "../auth/permissions";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { LanguageQuickSwitch } from "../i18n/LanguageQuickSwitch";
 
 const LEVELS: OverrideLevel[] = ["market", "zone", "category", "app", "platform", "appVersion", "cohort"];
 
@@ -666,6 +667,13 @@ export function ConfigPage() {
           {SETTINGS_TABS.map((item) => <button data-command="admin.panel.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => selectTab(item.id)}>{trx(item.label)}</button>)}
         </div>
       </div>
+      <section className="pl-language" aria-labelledby="pl-language-title">
+        <div>
+          <h3 id="pl-language-title">{tr("Panel language")}</h3>
+          <p>{tr("Switch the panel to English, French or Swedish. The choice is saved for you only, as in My profile.")}</p>
+        </div>
+        <LanguageQuickSwitch />
+      </section>
       {notice ? <p role="status" className="pl-status">{trSentences(notice)}</p> : null}
       {tab === "all" ? <><FindSetting onPick={jump} /><ConfigAll onDirty={setUnsaved} /></> : null}
       {tab === "compare" ? <CompareVersions /> : null}

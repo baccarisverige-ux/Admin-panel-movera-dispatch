@@ -813,3 +813,12 @@
   .dash-tabs button { padding: 0 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .alert-pill.flash { animation: none; } }
+
+/* Language quick switch (EN · FR · SV): the same setting as My profile › Panel language. */
+.lang-switch { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px 0 10px; height: 40px; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 1px 2px rgba(17, 22, 20, .04); }
+.lang-switch > svg { color: var(--dash-blue); margin-right: 4px; }
+.lang-switch-btn { height: 28px; min-width: 36px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .04em; cursor: pointer; transition: background .12s ease, color .12s ease; }
+.lang-switch-btn:hover:not(:disabled) { background: rgba(42, 120, 214, .08); color: var(--text); }
+.lang-switch-btn.active, .lang-switch-btn.active:disabled { background: var(--dash-blue); color: #fff; cursor: default; opacity: 1; }
+.lang-switch-btn:focus-visible { outline: 2px solid var(--dash-blue); outline-offset: 1px; }
+.lang-switch.compact { margin-left: auto; }

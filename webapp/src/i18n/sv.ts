@@ -4763,4 +4763,8 @@ export const sv: Record<MessageKey, string> = {
   "Zones: {0}": "Zoner: {0}",
   "Zoom in": "Zooma in",
   "Zoom out": "Zooma ut",
+  // Language quick switch
+  "The panel is in {0}.": "Panelen är på {0}.",
+  "Switch the panel to {0}": "Byt panelen till {0}",
+  "Switch the panel to English, French or Swedish. The choice is saved for you only, as in My profile.": "Byt panelen till engelska, franska eller svenska. Valet sparas bara för dig, som i Min profil.",
 };
