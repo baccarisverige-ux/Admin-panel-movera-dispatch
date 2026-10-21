@@ -159,6 +159,9 @@ export function DispatchPage() {
   const factsFor = useCallback((pickup: [number, number]) => onlyFinishingNearby(driverFacts(countryLive, statsOf, pickup)), [countryLive, statsOf]);
   const [loadedAt] = useState(() => Date.now());
   const sharedAlerts = useAlertsMaybe();
+  // Ride checks still open on a live trip, pinned to the car on the live map (safety team and dispatchers).
+  const canRideCheck = Boolean(agent && (can(agent.role, "incidents.read") || can(agent.role, "trips.intervene")));
+  const mapRideChecks = canRideCheck && sharedAlerts ? { checks: sharedAlerts.rideCheck.checks, demoShift: sharedAlerts.rideCheck.demoShift, now: sharedAlerts.now } : null;
   const ownAlerts = sharedAlerts ? sharedAlerts.book.settings.legacy.dispatchAlerts : true;
   const records = useMemo(() => cancelRecords(country, zones.map((zone) => ({ id: zone.id, name: zone.name, center: zone.center })), (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })), loadedAt), [country, zones.map((zone) => zone.id).join(","), drivers.data, loadedAt]);
 
@@ -356,7 +359,7 @@ export function DispatchPage() {
           feeCategoriesOf={feeCategoriesOf}
         />
       ) : null}
-      {!slice.loading && view === "live" ? <LiveView book={book} market={market} zones={zones} drivers={live.filter((driver) => zones.some((zone) => zone.id === driver.zoneId))} requests={requests} candidatesOf={candidatesOf} rulesOf={liveOf} busyOf={busyOf} hhmm={hhmm} canControl={canControl} agentId={agent?.id ?? ""} withScope={(path) => path} onNotice={say} sharedAlerts={ownAlerts ? undefined : <DispatchAlerts zoneIds={zones.map((zone) => zone.id)} />} /> : null}
+      {!slice.loading && view === "live" ? <LiveView book={book} market={market} zones={zones} drivers={live.filter((driver) => zones.some((zone) => zone.id === driver.zoneId))} requests={requests} candidatesOf={candidatesOf} rulesOf={liveOf} busyOf={busyOf} hhmm={hhmm} canControl={canControl} agentId={agent?.id ?? ""} withScope={(path) => path} onNotice={say} sharedAlerts={ownAlerts ? undefined : <DispatchAlerts zoneIds={zones.map((zone) => zone.id)} />} rideChecks={mapRideChecks} /> : null}
       {!slice.loading && view === "test" ? <TestView market={market} zones={zones} zoneId={zoneId || zones[0]?.id || ""} onZone={(id) => go({ zone: id })} draftOf={rulesOf} liveOf={liveOf} countryDraft={countryRules} countryLive={liveCountry(book, country)} controlOf={(id) => book.control[id]} factsFor={factsFor} busyOf={busyOf} hhmm={hhmm} hasChanges={changes.length > 0 || countryChanged.length > 0} events={book.events.filter((event) => event.country === country)} /> : null}
       {!slice.loading && view === "events" ? <EventsView book={book} market={market} drivers={countryLive.map((driver) => ({ id: driver.id, name: driver.name, zoneName: driver.zoneName }))} canEdit={canEditRole} canBonus={Boolean(agent && can(agent.role, "drivers.bonuses"))} onNotice={say} /> : null}
       {!slice.loading && view === "reasons" ? <CancelReasonsView market={market} country={countryRules} onCountry={(next) => setWorkingCountry((current) => ({ ...current, [country]: next }))} canEdit={canEditRole} /> : null}
