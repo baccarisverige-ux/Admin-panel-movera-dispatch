@@ -1,5 +1,5 @@
 import { MARKETS, formatMoney as formatMarketMoney, market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
-import { completePickupPay, convertPickupPay, defaultPickupPay, diffPickupPay, validatePickupPay, type PickupPay } from "./pickupPay.ts";
+import { completePickupPay, convertPickupPay, defaultPickupPay, diffPickupPay, riderPickupFee, validatePickupPay, type PickupPay } from "./pickupPay.ts";
 import { defaultFreeWaitMin } from "../config/zoneDefaults.ts";
 
 /**
@@ -494,15 +494,17 @@ export function largePriceChanges(published: ZoneBook, draft: ZoneBook, categori
     const pickBefore = published.pickupPay.rates[category.id];
     const pickAfter = draft.pickupPay.rates[category.id];
     if (pickBefore && pickAfter) {
-      if (isLargePriceChange(pickBefore.perKm, pickAfter.perKm)) lines.push(changeText(`${where}${category.label} pickup pay per km`, pickBefore.perKm, pickAfter.perKm, money));
-      if (isLargePriceChange(pickBefore.perMin, pickAfter.perMin)) lines.push(changeText(`${where}${category.label} pickup pay per min`, pickBefore.perMin, pickAfter.perMin, money));
-      (pickAfter.ranges ?? []).forEach((range, index) => {
-        const old = pickBefore.ranges?.[index];
+      pickAfter.ranges.forEach((range, index) => {
+        const old = pickBefore.ranges[index];
         if (!old || old.fromKm !== range.fromKm || old.toKm !== range.toKm) return;
         const span = `${range.fromKm}–${range.toKm ?? "+"} km`;
         if (isLargePriceChange(old.krPerKm, range.krPerKm)) lines.push(changeText(`${where}${category.label} pickup pay ${span} per km`, old.krPerKm, range.krPerKm, money));
         if (isLargePriceChange(old.krPerMinute, range.krPerMinute)) lines.push(changeText(`${where}${category.label} pickup pay ${span} per min`, old.krPerMinute, range.krPerMinute, money));
       });
+      if (pickBefore.maxPerRide !== null && pickAfter.maxPerRide !== null && isLargePriceChange(pickBefore.maxPerRide, pickAfter.maxPerRide)) lines.push(changeText(`${where}${category.label} pickup pay maximum per ride`, pickBefore.maxPerRide, pickAfter.maxPerRide, money));
+      for (const [side, label] of [["live", "live rides"], ["reservation", "reservations"]] as const) {
+        if (isLargePriceChange(pickBefore.riderFee[side].amount, pickAfter.riderFee[side].amount)) lines.push(changeText(`${where}${category.label} rider pickup fee for ${label}`, pickBefore.riderFee[side].amount, pickAfter.riderFee[side].amount, money));
+      }
     }
   }
   if (isLargePriceChange(published.fleetCommissionPct, draft.fleetCommissionPct)) lines.push(changeText(`${where}Fleet commission`, published.fleetCommissionPct, draft.fleetCommissionPct, "%"));
@@ -809,11 +811,15 @@ export function quoteRide(book: ZoneBook, input: QuoteInput): Quote {
   const beforeFee = ride + extras;
   const appFee = beforeFee * (price.appFeePct / 100);
   if (appFee > 0) lines.push({ label: `App fee ${short(price.appFeePct)}%`, amount: appFee, kind: "fee" });
+  // Pricing › Pickup pay: the rider's fixed pickup fee (live rides or reservations). Like the app fee it goes to
+  // Movera, not into the driver's share: Movera pays the driver's pickup pay out of it.
+  const pickupFee = riderPickupFee(book.pickupPay, input.categoryId, input.reservation);
+  if (pickupFee > 0) lines.push({ label: "Pickup fee", amount: pickupFee, kind: "fee" });
   // C-24 / Q36: exact per currency. Every amount is a whole minor unit (öre, cent: 2 decimals; millime: 3),
   // the lines add up to the total (a "Rounding" line shows the price rounding), and driver + Movera = total.
   const unit = market(currencyOf(book.zoneId)).minorUnits;
   const minor = (value: number) => Math.round(value * unit);
-  const totalMinor = minor(roundTo(beforeFee + appFee, book.fees.rounding));
+  const totalMinor = minor(roundTo(beforeFee + appFee + pickupFee, book.fees.rounding));
   const exact = lines.map((line) => ({ ...line, amount: minor(line.amount) / unit }));
   const linesMinor = exact.reduce((sum, line) => sum + minor(line.amount), 0);
   if (linesMinor !== totalMinor) exact.push({ label: "Rounding", amount: (totalMinor - linesMinor) / unit, kind: "rounding" });
