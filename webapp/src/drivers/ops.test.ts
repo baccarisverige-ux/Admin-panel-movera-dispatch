@@ -1,4 +1,4 @@
-import { accessLabel, accessState, choiceError, clearAccess, emptyAccessBook, lateCancelsFor, normalizeAccessBook, setAccess } from "./scheduledAccess.ts";
+import { accessLabel, accessState, choiceError, clearAccess, driverScheduledRides, emptyAccessBook, lateCancelsFor, normalizeAccessBook, setAccess } from "./scheduledAccess.ts";
 import {
   approveRequiredDocuments,
   driverActivationIssue,
@@ -89,5 +89,9 @@ assert(!accessState(turnedOff.drivers.D0001, [], lateRule, accessNow + 400 * 86_
 assert(setAccess(emptyAccessBook(), "D0001", { on: false, period: "until", days: 7, until: "2026-10-01" }, "nora", accessIso).error === "The last day must be in the future." && choiceError({ on: true, period: "days", days: 0, until: "" }, accessNow) === "Choose 1 to 365 days.", "the period is checked");
 const back = clearAccess(turnedOff, "D0001", "nora", accessIso);
 assert(!back.drivers.D0001 && back.log[0].line === "Back to the late-cancel rule" && normalizeAccessBook(null).draftRev === 1, "back to the rule");
+// Owner decision 2 (contract v0.4.2): the admin's choice reaches the driver app as Driver.scheduledRides.
+assert(JSON.stringify(driverScheduledRides(turnedOff.drivers.D0001, accessNow)) === JSON.stringify({ on: false, until: null }), "off always: no new reservations until an admin turns them on");
+assert(JSON.stringify(driverScheduledRides(turnedOn.book.drivers.D0006, accessNow)) === JSON.stringify({ on: true, until: "2026-10-18T12:00:00.000Z" }), "on for 3 days: until when, in UTC");
+assert(driverScheduledRides(turnedOn.book.drivers.D0006, accessNow + 4 * 86_400_000) === null && driverScheduledRides(undefined, accessNow) === null, "no choice in force: nothing, the zone switch and the late-cancel rule decide");
 
 console.log("driver ops ok");

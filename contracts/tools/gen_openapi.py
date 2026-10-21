@@ -197,8 +197,12 @@ S["Document"] = obj({"documentId": ref("Id"), "ownerId": {"allOf": [ref("Id")], 
 S["Driver"] = obj({"driverId": ref("Id"), "accountStatus": ref("DriverAccountStatus"), "onlineStatus": ref("DriverOnlineStatus"),
                    "firstName": s(), "rating": n(minimum=0, maximum=5), "zoneIds": arr(ref("Id")),
                    "categoryIds": arr(ref("CategoryId")), "vehicleId": ref("Id"), "documents": arr(ref("DocumentSummary")),
-                   "activeTripId": ref("Id"), "version": i(minimum=1)},
+                   "activeTripId": ref("Id"), "scheduledRides": ref("DriverScheduledRides"), "version": i(minimum=1)},
                   ["driverId", "accountStatus", "onlineStatus", "firstName", "zoneIds", "categoryIds", "documents", "version"])
+S["DriverScheduledRides"] = obj({"on": b("false = no new reservations for this driver; true = on, and the late-cancel pause is skipped while it lasts."),
+                                 "until": {"description": "When the admin's choice ends; null = until an admin changes it.", **nullable("Timestamp")}},
+                                ["on"], "Owner decision 2 (v0.4.2): an admin's reservations on/off for this one driver (CONTRACT.md §6.1). "
+                                "Missing = no admin choice; the zone switch and the late-cancel pause decide. Accepted reservations always stay.")
 S["VehicleStatus"] = s(enum=["pending", "approved", "rejected", "blocked"])
 S["Vehicle"] = obj({"vehicleId": ref("Id"), "make": s(), "model": s(), "year": i(minimum=1950, maximum=2100), "color": s(),
                     "plate": s(), "seats": i(minimum=1, maximum=20), "categoryIds": arr(ref("CategoryId")),
@@ -346,7 +350,7 @@ S["LateEta"] = obj({
                          enum=["exclusive", "radar", "dispatch"]), RD["lateEta"]["reassignTo"])},
     desc="Running late: an online driver who would arrive more than toleranceMin late loses the ride early. Otherwise an online driver keeps it.")
 S["DriverReservations"] = obj(OrderedDict([
-    ("on", dflt(b("Reservations are enabled in this zone."), RD["on"])),
+    ("on", dflt(b("Reservations for every driver in this zone (same value as features.scheduledRides). Off: no new reservations; accepted ones still run."), RD["on"])),
     ("lateWarn", dflt(b("Island warning \"Head to your 07:40 pickup\" when Leave now cannot start the trip (driver offline, or busy with another screen). Leave now itself always opens the trip; there is no switch for it (v0.4.2)."), RD["lateWarn"])),
     ("offlineBackupAfterMin", dflt(i("Only an OFFLINE driver loses the ride, this many minutes after Leave now; an online driver keeps it.", minimum=1, maximum=60), RD["offlineBackupAfterMin"])),
     ("homePopupAfterMin", dflt(i("Untaken: the Home popup this many minutes after booking.", minimum=1, maximum=1440), RD["homePopupAfterMin"])),

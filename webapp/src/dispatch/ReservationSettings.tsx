@@ -57,6 +57,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
   return (
     <div className="dx-cards">
       <Card title={tr("Reservations")} tone="orange" icon={<CalendarClock size={18} />} help={tr("Rides booked for later. Nobody took it yet: Scheduled rides, then the Home popup, then Exclusive, then Radar trips.")} off={!resv.on} aside={<Switch label={tr("Reservations")} on={resv.on} disabled={disabled} onChange={(on) => setResv({ on })} />}>
+        {!resv.on ? <p className="dx-note warn" role="status">{trn("{0} Reservations are off for every driver in this zone: nobody gets new reservations. Rides drivers already accepted still run. To pause one driver, use Drivers' access to scheduled rides below.", <AlertTriangle size={13} aria-hidden="true" />)}</p> : null}
         <Row label={tr("Start looking for a driver")} help={tr("Before the pickup time.")}>
           <Num label={tr("Reservation search starts")} value={resv.searchBeforeMin} unit="min before" min={5} max={240} disabled={off} onChange={(searchBeforeMin) => setResv({ searchBeforeMin })} />
         </Row>

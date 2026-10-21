@@ -5717,9 +5717,27 @@ components:
             $ref: '#/components/schemas/DocumentSummary'
         activeTripId:
           $ref: '#/components/schemas/Id'
+        scheduledRides:
+          $ref: '#/components/schemas/DriverScheduledRides'
         version:
           type: integer
           minimum: 1
+    DriverScheduledRides:
+      type: object
+      description: 'Owner decision 2 (v0.4.2): an admin''s reservations on/off for this one driver (CONTRACT.md §6.1). Missing
+        = no admin choice; the zone switch and the late-cancel pause decide. Accepted reservations always stay.'
+      required:
+      - 'on'
+      properties:
+        'on':
+          type: boolean
+          description: false = no new reservations for this driver; true = on, and the late-cancel pause is skipped while
+            it lasts.
+        until:
+          description: When the admin's choice ends; null = until an admin changes it.
+          oneOf:
+          - $ref: '#/components/schemas/Timestamp'
+          - type: 'null'
     VehicleStatus:
       type: string
       enum:
@@ -6678,7 +6696,8 @@ components:
       properties:
         'on':
           type: boolean
-          description: Reservations are enabled in this zone.
+          description: 'Reservations for every driver in this zone (same value as features.scheduledRides). Off: no new reservations;
+            accepted ones still run.'
           default: true
         lateWarn:
           type: boolean
