@@ -22,6 +22,8 @@ async function shot(page: Page, name: string) {
 
 const panel = (page: Page) => page.getByTestId("assign-panel");
 const row = (page: Page, driverId: string) => panel(page).locator(`tr[data-driver="${driverId}"]`);
+/** The driver's tick in the Radar section ("Or tick drivers yourself"). */
+const tick = (page: Page, driverId: string) => panel(page).locator(`[role="checkbox"][data-driver="${driverId}"]`);
 const confirmDialog = (page: Page) => page.locator(".modal.open").last();
 
 test("Trips list: the rider's name opens the assign panel; a direct assign is an exclusive offer the driver declines", async ({ page }) => {
@@ -79,18 +81,18 @@ test("Trip page: radar groups again and again until one accepts, then the assign
   await expect(panel(page)).toBeVisible();
 
   // Group 1: two drivers on the zone's radar timer, with a countdown.
-  await row(page, "D0006").getByRole("checkbox").check();
-  await row(page, "D0022").getByRole("checkbox").check();
+  await tick(page, "D0006").check();
+  await tick(page, "D0022").check();
   await expect(panel(page).getByText(/2 of 10 selected/)).toBeVisible();
   await panel(page).getByRole("button", { name: "Send to radar" }).click();
   await expect(panel(page).getByText("Sent to the radar of 2 drivers.")).toBeVisible();
   await expect(panel(page).getByTestId("group-countdown-1")).toContainText(/0:1\d left/);
-  await expect(row(page, "D0022").getByRole("checkbox")).toBeDisabled();
+  await expect(tick(page, "D0022")).toBeDisabled();
   await shot(page, "04-radar-group-1");
   await expect(row(page, "D0006").locator("[data-status]")).toHaveAttribute("data-status", "declined", { timeout: 15_000 });
 
   // Group 2 while group 1 still runs: the first to accept wins.
-  await row(page, "D0046").getByRole("checkbox").check();
+  await tick(page, "D0046").check();
   await panel(page).getByRole("button", { name: "Send to radar" }).click();
   await expect(panel(page).getByText("Sent to the radar of 1 driver.")).toBeVisible();
   await expect(panel(page).locator('[data-group="T0004-G2"]')).toBeVisible();
@@ -142,7 +144,7 @@ test("Add money for driver: Q17 limits with a link to Pricing, Movera pays it ev
 
   // Offers sent now carry the bonus and the Priority badge (Q18).
   await page.getByTestId("trip-assign").getByRole("button", { name: "Nearby drivers for Oscar Wallin" }).click();
-  await row(page, "D0058").getByRole("checkbox").check();
+  await tick(page, "D0058").check();
   await panel(page).getByRole("button", { name: "Send to radar" }).click();
   const offer = panel(page).locator('[data-group="T0004-G1"] [data-driver="D0058"]');
   await expect(offer).toContainText("incl. +150,00 kr");

@@ -165,7 +165,7 @@ test("a waiting rider opens on the map with assign actions and a link to the rid
   const panel = page.getByRole("dialog", { name: /^Rider / });
   await expect(panel).toContainText("Looking for a driver");
   await expect(panel.getByRole("group", { name: "Quick actions" }).getByRole("button", { name: "Radar" })).toBeVisible();
-  await panel.getByRole("button", { name: "Nearby driver" }).click();
+  await panel.getByRole("button", { name: "Nearby driver", exact: true }).click();
   await expect(panel.getByRole("button", { name: "Send exclusive offer" })).toBeVisible();
   await panel.getByRole("link").first().click();
   await expect(page).toHaveURL(/\/riders\/R\d{4}/);

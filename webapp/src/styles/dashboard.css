@@ -616,7 +616,7 @@
 }
 
 /* Ride check pinned to a driver's car: a pulsing ring on the car and a small card above it */
-.ride-check-anchor { z-index: 4; }
+.ride-check-anchor { z-index: 2; } /* under the driver and rider panels (z-index 3) the admin opened on purpose */
 .ride-check-pin { position: relative; width: 0; height: 0; pointer-events: none; }
 .ride-check-ring { position: absolute; left: -20px; top: -20px; width: 40px; height: 40px; border-radius: 50%; border: 3px solid var(--rc-color, #d03b3b); opacity: .9; animation: rc-pulse 1.4s ease-out infinite; }
 .ride-check-pin.red { --rc-color: #d03b3b; --rc-bg: #fdecec; --rc-ink: #9b2020; }
