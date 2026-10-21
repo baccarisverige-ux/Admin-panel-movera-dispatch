@@ -3,6 +3,8 @@ import {
 } from "./offers.ts";
 import {
   approve,
+  completeReservation,
+  LATE_ETA_REASSIGN_TO,
   completeCountry,
   countryIssues,
   countryLines,
@@ -306,8 +308,26 @@ assert(groupFlow[1].detail.includes("the same drivers as the list") && groupFlow
 assert(reservationTimeline(withResv({ listTo: "group", listGroupId: "G-airport", homePopupTo: "zone" }), 180, groups)[1].detail.includes("every online driver in the zone"), "the popup can go to every driver in the zone");
 assert(!reservationTimeline(withResv({ popupClosedExclusive: false }), 180)[1].detail.includes("Exclusive"), "a closed popup can stay closed");
 
-assert(resvIssues({ lateBackupAfterMin: 0 })[0] === "Reservations: the backup driver must come 1 to 60 minutes after the late warning.", "backup has a limit");
-assert(resvIssues({ lateWarn: false, lateBackupAfterMin: 0 }).length === 0, "a late warning that is off is not checked");
+assert(resvIssues({ lateBackupAfterMin: 0 })[0] === "Reservations: an offline driver must lose the ride 1 to 60 minutes after Leave now.", "the offline rule has a limit");
+assert(resvIssues({ lateWarn: false, lateBackupAfterMin: 61 })[0] === "Reservations: an offline driver must lose the ride 1 to 60 minutes after Leave now.", "the offline rule is checked without the late warning");
+assert(resvIssues({ lateWarn: false, lateBackupAfterMin: 60 }).length === 0 && resvIssues({ lateBackupAfterMin: 1 }).length === 0, "1 and 60 minutes are fine");
+
+// Running late (contract v0.4.1 DriverAppConfig.reservations.lateEta): watch the ETA from Leave now until arrival.
+assert(JSON.stringify(resv.lateEta) === JSON.stringify({ on: true, toleranceMin: 3, checkEverySeconds: 60, reassignTo: "exclusive" }), "running late is on: 3 min allowed, checked every 60 s, to an Exclusive offer");
+assert(LATE_ETA_REASSIGN_TO.map((item) => item.id).join("|") === "exclusive|radar|dispatch", "a late ride goes to Exclusive, Radar or back to dispatch");
+const lateIssues = (patch: Partial<ReservationRules["lateEta"]>) => resvIssues({ lateEta: { ...resv.lateEta, ...patch } });
+assert(lateIssues({ toleranceMin: 0 }).length === 0 && lateIssues({ toleranceMin: 30 }).length === 0, "0 to 30 minutes late allowed");
+assert(lateIssues({ toleranceMin: 31 })[0] === "Reservations: minutes late allowed must be 0 to 30." && lateIssues({ toleranceMin: -1 }).length === 1 && lateIssues({ toleranceMin: 2.5 }).length === 1, "minutes late allowed are whole minutes 0 to 30");
+assert(lateIssues({ checkEverySeconds: 15 }).length === 0 && lateIssues({ checkEverySeconds: 600 }).length === 0, "checked every 15 to 600 s");
+assert(lateIssues({ checkEverySeconds: 10 })[0] === "Reservations: the arrival time must be checked every 15 to 600 seconds." && lateIssues({ checkEverySeconds: 601 }).length === 1, "the check interval has a limit");
+assert(lateIssues({ on: false, toleranceMin: 99, checkEverySeconds: 1 }).length === 0, "running late that is off is not checked");
+const lateOld = completeReservation(resv, { ...resv, lateEta: undefined });
+assert(JSON.stringify(lateOld.lateEta) === JSON.stringify(resv.lateEta), "a save from before running late gets the defaults");
+const lateBroken = completeReservation(resv, { ...resv, lateEta: { on: false, toleranceMin: "5", checkEverySeconds: 90, reassignTo: "nobody" } });
+assert(!lateBroken.lateEta.on && lateBroken.lateEta.toleranceMin === 3 && lateBroken.lateEta.checkEverySeconds === 90 && lateBroken.lateEta.reassignTo === "exclusive", "a broken part falls back on its own, the rest is kept");
+assert(completeReservation(resv, { ...resv, lateEta: "on" }).lateEta.reassignTo === "exclusive", "a lateEta that is not an object gets the defaults");
+const lateChange = changeLines(base, withResv({ lateBackupAfterMin: 8, lateEta: { on: true, toleranceMin: 5, checkEverySeconds: 60, reassignTo: "dispatch" } }));
+assert(lateChange.includes("Offline driver loses the ride after: 5 → 8") && lateChange.includes("Minutes late allowed: 3 → 5") && lateChange.includes("Late ride goes to: Exclusive offer to nearest driver → back to dispatch"), "change lines for running late and the offline rule");
 assert(resvIssues({ towardPickupBeforeMin: 5 })[0] === "Reservations: trips toward the pickup must start 15 to 240 minutes before pickup.", "trips toward the pickup have a limit");
 const typeIssues = (patch: Partial<ReservationRules["types"]["airport"]>) => zoneIssues(withResv({ types: { ...resv.types, airport: { ...resv.types.airport, ...patch } } }));
 assert(typeIssues({ onlineBeforeMin: 2 }).includes("Reservations, Airport: be online before must be 5 to 240 minutes."), "be online before has a limit per kind");
@@ -339,11 +359,12 @@ assert(r3Change.includes("Reservations, Movera: free cancel minutes before picku
 assert(r3Change.includes("Airport rides: be online before: 60 → 90"), "change line per kind of ride");
 
 // Saves from before Round 3 get the new settings from the defaults.
-const R3_KEYS = ["listGroupId", "homePopupTo", "popupClosedExclusive", "hideClashing", "leaveNow", "lateWarn", "lateBackupAfterMin", "towardPickup", "towardPickupBeforeMin", "types", "riderFees", "driverLateCancelHours", "latePause", "latePauseAfter", "latePeriodDays", "latePauseDays", "showDriverOnAccept", "raiseFare", "raiseMax", "assignAcceptSec"];
+const R3_KEYS = ["listGroupId", "homePopupTo", "popupClosedExclusive", "hideClashing", "leaveNow", "lateWarn", "lateBackupAfterMin", "towardPickup", "towardPickupBeforeMin", "types", "riderFees", "driverLateCancelHours", "latePause", "latePauseAfter", "latePeriodDays", "latePauseDays", "showDriverOnAccept", "raiseFare", "raiseMax", "assignAcceptSec", "lateEta"];
 const preR3 = Object.fromEntries(Object.entries(zoneDefault("FR-PC").reservation).filter(([key]) => !R3_KEYS.includes(key)));
 const r3Book = normalizeDispatchBook(JSON.parse(JSON.stringify({ ...emptyDispatchBook(), live: { "FR-PC": { ...zoneDefault("FR-PC"), reservation: { ...preR3, homePopupTo: "everyone", types: { airport: { onlineBeforeMin: 75 }, normal: "bad" } } } } })));
 const r3Live = liveRules(r3Book, "FR-PC").reservation;
 assert(r3Live.homePopupTo === "list" && r3Live.popupClosedExclusive && r3Live.riderFees.comfort.value === 5.7 && r3Live.raiseMax === 47.5 && r3Live.assignAcceptSec === 30 && r3Live.riderFees.economy.freeMin === 60 && r3Live.showDriverOnAccept, "an old save gets the new settings in the country's money");
+assert(JSON.stringify(r3Live.lateEta) === JSON.stringify(zoneDefault("FR-PC").reservation.lateEta), "an old save gets running late from the defaults");
 assert(r3Live.types.airport.onlineBeforeMin === 75 && r3Live.types.airport.spareMin === 15 && r3Live.types.normal.onlineBeforeMin === 30 && r3Live.types.event.onlineBeforeMin === 45 && r3Live.types.premium.onlineBeforeMin === 45, "kinds of ride are filled in one by one");
 assert(zoneIssues(liveRules(r3Book, "FR-PC")).length === 0, "an old save stays valid");
 assert(changeLines(liveRules(r3Book, "FR-PC"), draftRules(r3Book, "FR-PC")).length === 0, "an old save does not show as changed");

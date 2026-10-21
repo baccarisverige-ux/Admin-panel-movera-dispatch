@@ -184,6 +184,45 @@ test("documents follow the live admin state: published fees, overrides, payment 
   assert.ok(riderAppConfig("Z002", { ...base, finance }).paymentMethods.includes("cash"));
 });
 
+/** contract.json#configDefaults.reservations: the driver app's defaults for DriverAppConfig.reservations (v0.4.1, CONTRACT.md §6.1). */
+const reservationDefaults = Object.fromEntries(Object.entries(contractJson<{ configDefaults: { reservations: { [key: string]: Json } } }>("contract.json").configDefaults.reservations).filter(([key]) => key !== "note"));
+const RESERVATION_ENUMS = { onDriverCancel: ["byTime", "list", "home", "exclusive"], reassignTo: ["exclusive", "radar", "dispatch"] };
+
+test("DriverAppConfig.reservations: the admin defaults are the contract defaults, with exactly its keys", () => {
+  for (const zoneId of ZONES) {
+    const doc = JSON.parse(JSON.stringify(driverAppConfig(zoneId, state()).reservations)) as { [key: string]: Json };
+    assert.deepEqual(doc, reservationDefaults, `${zoneId}: every key, ride type and lateEta value as in contract.json`);
+    assert.deepEqual(Object.keys(doc.rideTypes as object).sort(), ["airport", "comfortPremium", "event", "longTrip", "normal"]);
+    assert.ok(RESERVATION_ENUMS.onDriverCancel.includes(doc.onDriverCancel as string));
+    assert.ok(RESERVATION_ENUMS.reassignTo.includes((doc.lateEta as { reassignTo: string }).reassignTo));
+  }
+});
+
+test("DriverAppConfig.reservations follows the published Dispatch › Reservations of the zone", () => {
+  const base = state();
+  const zone = liveRules(base.dispatch, "Z001");
+  const resv = zone.reservation;
+  const next = {
+    ...zone, longTripKm: 80,
+    reservation: {
+      ...resv, lateBackupAfterMin: 9, homePopupAfterMin: 25, latePauseAfter: 4, latePeriodDays: 14, latePauseDays: 3, assignAcceptSec: 45, onDriverCancel: "home" as const,
+      types: { ...resv.types, premium: { onlineBeforeMin: 50, spareMin: 20, remindFirstMin: 90, remindLastMin: 10 }, long: { ...resv.types.long, onlineBeforeMin: 75 } },
+      lateEta: { on: false, toleranceMin: 7, checkEverySeconds: 120, reassignTo: "dispatch" as const },
+    },
+  };
+  const published = publish(base.dispatch, { Z001: next }, {}, ["Z001"], "nora", "2026-10-19T09:30:00.000Z", "");
+  assert.ok(!published.error, published.error ?? "");
+  const doc = driverAppConfig("Z001", { ...base, dispatch: published.book }).reservations;
+  assert.equal(doc.offlineBackupAfterMin, 9, "lateBackupAfterMin is the offline rule");
+  assert.equal(doc.homePopupAfterMin, 25);
+  assert.equal(doc.longTripKm, 80);
+  assert.deepEqual([doc.lateCancelLimit, doc.lateCancelPeriodDays, doc.pauseDays, doc.assignAcceptSeconds, doc.onDriverCancel], [4, 14, 3, 45, "home"]);
+  assert.deepEqual(doc.rideTypes.comfortPremium, { onlineBeforeMin: 50, spareMin: 20, reminderMin: [90, 10] }, "premium is comfortPremium");
+  assert.equal(doc.rideTypes.longTrip.onlineBeforeMin, 75, "long is longTrip");
+  assert.deepEqual(doc.lateEta, { on: false, toleranceMin: 7, checkEverySeconds: 120, reassignTo: "dispatch" });
+  assert.deepEqual(driverAppConfig("Z002", { ...base, dispatch: published.book }).reservations, driverAppConfig("Z002", base).reservations, "only that zone");
+});
+
 test("the legacy rules file is unchanged in shape", () => {
   const file = rulesFile(emptyDispatchBook(), "SE", NOW);
   assert.deepEqual(Object.keys(file), ["format", "version", "exportedAt", "revision", "rideCheckThresholds", "country", "glossary", "zones", "events", "groups", "riderApp", "driverApp"]);

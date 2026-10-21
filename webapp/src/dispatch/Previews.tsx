@@ -278,7 +278,7 @@ export function ReservationDriverPreview({ zone, money, country }: { zone: ZoneD
             <b>{sample.pickup}</b>
             <span className="dx-offer-line">{trn("{0} {1} min drive + {2} min spare = leave {3} min before", <Clock size={11} aria-hidden="true" />, drive, spare, leave)}</span>
             <span className="dx-offer-actions single"><span className="yes">{trn("{0} Head to pickup", <Navigation size={12} aria-hidden="true" />)}</span></span>
-            {shown === "late" ? <span className="dx-offer-more warn">{trn("Not moving toward the pickup: backup driver in {0} min", resv.lateBackupAfterMin)}</span> : null}
+            {shown === "late" ? <span className="dx-offer-more warn">{trn("Offline: another driver gets it in {0} min", resv.lateBackupAfterMin)}</span> : null}
           </div>
         ) : null}
       </div>

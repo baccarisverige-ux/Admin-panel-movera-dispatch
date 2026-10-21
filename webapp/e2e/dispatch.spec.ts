@@ -315,6 +315,7 @@ test("reservations: who gets them, the Home popup, Exclusive, Radar trips and a 
 });
 
 test("reservations in one place: a driver group, the Home popup, smart gap, cancels, a fare raise and rides given by Movera", async ({ page }) => {
+  test.setTimeout(90_000);
   await session(page);
   await page.goto("/dispatch?zone=Z001");
   await expect(page.getByRole("region", { name: "Reservations" })).toHaveCount(0);
@@ -349,7 +350,25 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(alert).toContainText("Reservations, Airport: the first reminder must come before the second");
   await gap.getByLabel("Airport first reminder").fill("90");
   await expect(alert).toHaveCount(0);
-  await gap.getByLabel("Backup driver after the late warning").fill("8");
+
+  // Running late: the arrival time is watched from Leave now; an offline driver loses the ride after its own minutes.
+  const late = page.getByRole("region", { name: "Running late" });
+  await expect(late.getByRole("switch", { name: "Watch arrival time on" })).toBeChecked();
+  await expect(late.getByLabel("Minutes late allowed")).toHaveValue("3");
+  await expect(late.getByLabel("Check every (seconds)")).toHaveValue("60");
+  await expect(late.getByLabel("Offline driver loses the ride after")).toHaveValue("5");
+  await expect(late.getByLabel("Running late example")).toContainText("07:44");
+  await expect(late.getByLabel("Running late example")).toContainText("Exclusive offer to nearest driver");
+  await late.getByLabel("Minutes late allowed").fill("5");
+  await expect(late.getByLabel("Running late example")).toContainText("07:46");
+  await late.getByRole("radiogroup", { name: "Late ride goes to" }).getByText("Back to dispatch").click();
+  await expect(late.getByLabel("Running late example")).toContainText("Back to dispatch");
+  await late.getByLabel("Check every (seconds)").fill("10");
+  await late.getByLabel("Check every (seconds)").blur();
+  await expect(late.getByLabel("Check every (seconds)")).toHaveAttribute("aria-invalid", "true");
+  await expect(late.locator(".num-field-error")).toContainText("Min 15");
+  await late.getByLabel("Check every (seconds)").fill("90");
+  await late.getByLabel("Offline driver loses the ride after").fill("8");
 
   // Cancels: drivers never pay; riders free until 1 h before.
   const cancels = page.getByRole("region", { name: "Cancels" });
@@ -392,7 +411,7 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(phone.getByLabel("90 seconds to accept")).toBeVisible();
   await phone.getByRole("button", { name: "Late" }).click();
   await expect(phone.getByLabel("Island")).toContainText("Head to your 07:40 pickup");
-  await expect(phone).toContainText("backup driver in 8 min");
+  await expect(phone).toContainText("Offline: another driver gets it in 8 min");
   await page.getByRole("tab", { name: "Rider app" }).click();
   await expect(page.getByLabel("Rider reservation preview")).toContainText("Your driver");
   await expect(page.getByLabel("Rider reservation preview")).toContainText("Free cancel until 06:40 · then 75 kr");
@@ -409,12 +428,17 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(list).toContainText("Reservations, Movera: fee: 50 → 75");
   await expect(list).toContainText("Highest fare raise: 500 → 300");
   await expect(list).toContainText("Time to accept a ride assigned by Movera: 30 → 90");
+  await expect(list).toContainText("Minutes late allowed: 3 → 5");
+  await expect(list).toContainText("Check arrival every (seconds): 60 → 90");
+  await expect(list).toContainText("Late ride goes to: Exclusive offer to nearest driver → back to dispatch");
+  await expect(list).toContainText("Offline driver loses the ride after: 5 → 8");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await confirm(page);
   await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
   await page.reload();
   await expect(page.getByRole("region", { name: "Smart gap" }).getByLabel("Normal spare minutes")).toHaveValue("20");
   await expect(page.getByRole("region", { name: "Reservations" }).getByLabel("Driver group for Scheduled rides")).toHaveValue("G-comfort");
+  await expect(page.getByRole("region", { name: "Running late" }).getByLabel("Minutes late allowed")).toHaveValue("5");
 });
 
 test("a viewer can look but not change", async ({ page }) => {
