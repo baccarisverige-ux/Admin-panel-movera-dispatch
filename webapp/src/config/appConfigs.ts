@@ -3,6 +3,7 @@ import { fromMajor, type CurrencyCode, type Money } from "../domain/money.ts";
 import { activeCategories, normalizeStore, zoneBook, type PricingStore } from "../pricing/zonePricing.ts";
 import type { PickupRate } from "../pricing/pickupPay.ts";
 import { liveCountry, liveRules, normalizeDispatchBook, type DispatchBook, type RideTypeId, type ZoneDispatch } from "../dispatch/rules.ts";
+import { radarRuleFor, radarZonesOf } from "../dispatch/radarZones.ts";
 import { feeRow, type CancelFeeKind, type CancelFeeRow, type CancelFeeTable } from "../dispatch/cancelFees.ts";
 import { exclusiveReasonList, LANGS, reasonText, type CancelReason, type LangId, type WaitOverride } from "../dispatch/offers.ts";
 import { destinationModeForDriverApp, nextTripsForDriverApp } from "../dispatch/tripRules.ts";
@@ -313,6 +314,14 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
 
 /* ---------- DriverAppConfig ---------- */
 
+/** Radar zones drawn inside the zone, each with the rule it follows (a rule naming it wins over the rule for all). */
+function radarZonesFor(zoneId: string, state: AppConfigState) {
+  return radarZonesOf(state.dispatch, zoneId).map((zone) => {
+    const rule = radarRuleFor(state.dispatch, zone.id, zone.country);
+    return { id: zone.id, name: zone.name, ring: zone.ring.map(([lat, lng]) => ({ lat, lng })), rule: rule ? { id: rule.id, name: rule.name, seconds: rule.seconds, maxDrivers: rule.maxDrivers, repeat: rule.repeat } : null };
+  });
+}
+
 function pickupRate(rate: PickupRate | undefined, currency: CurrencyCode) {
   const own = rate ?? { enabled: false, perKm: 0, perMin: 0, freeKmOn: false, freeKm: 0, freeMinOn: false, freeMin: 0 };
   return {
@@ -414,6 +423,8 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
       autoOffline: { on: zone.autoOffline.on, missedExclusive: zone.autoOffline.after, hiddenComesBackMin: zone.hiddenComesBackMin },
       radarApp: { ...zone.radarApp },
       exclusiveWhileDriving: { ...zone.exclusiveWhileDriving },
+      // Radar zones drawn inside this zone and the rules that apply to them (Radar · Exclusive · Reservations). Additive keys.
+      radarZones: radarZonesFor(zoneId, state),
     },
     pickupPay: pickupPay(base),
     driverBonus: driverBonus(base),

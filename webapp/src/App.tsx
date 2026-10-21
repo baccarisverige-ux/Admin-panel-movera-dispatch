@@ -92,6 +92,7 @@ function Screen({ id }: { id: string }) {
   if (id === "trips") return <TripsPage />;
   if (id === "live") return <LivePage />;
   if (id === "dispatch") return <DispatchPage />;
+  if (id === "offers") return <DispatchPage section="offers" />;
   if (id === "alerts") return <AlertsPage />;
   if (id === "team") return <TeamPage />;
   if (id === "system") return <SystemPage />;
@@ -160,6 +161,7 @@ function Authed() {
         <Route path="reservations/:id" element={<ReservationDetailPage />} />
         <Route path="live" element={<Screen id="live" />} />
         <Route path="dispatch" element={<Screen id="dispatch" />} />
+        <Route path="offers" element={<Screen id="offers" />} />
         <Route path="alerts" element={<Screen id="alerts" />} />
         <Route path="drivers" element={<Screen id="drivers" />} />
         <Route path="drivers/:driverId" element={<DriverDetailPage />} />

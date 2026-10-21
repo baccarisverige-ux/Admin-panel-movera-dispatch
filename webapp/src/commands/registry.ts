@@ -360,6 +360,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.dispatch.preset", label: "Save a dispatch preset", reason: true, permission: "dispatch.edit" },
   { id: "admin.dispatch.event", label: "Save a dispatch event", reason: true, permission: "dispatch.edit" },
   { id: "admin.dispatch.group", label: "Save a driver group", reason: true, permission: "dispatch.edit" },
+  { id: "admin.dispatch.radarZone", label: "Save a radar zone", reason: true, permission: "dispatch.edit" },
+  { id: "admin.dispatch.radarRule", label: "Save a radar zone rule", reason: true, permission: "dispatch.edit" },
   { id: "admin.dispatch.control", label: "Pause a zone or switch its mode", reason: true, permission: "trips.intervene" },
   { id: "admin.dispatch.send", label: "Send a waiting ride to drivers", reason: true, permission: "trips.intervene" },
   { id: "admin.dispatch.cancelCheck", label: "Change a cancel fee decision", reason: true, permission: "trips.intervene" },

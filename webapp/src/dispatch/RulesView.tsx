@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { AlertTriangle, ArrowLeft, Bell, Flag, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
 import type { Market, MarketZone } from "../markets/markets";
@@ -42,9 +42,13 @@ type Props = {
   waitBasesOf: (zoneId: string) => WaitBaseRow[];
   /** The car types Pricing lists for a zone, for the rider cancel fees. */
   feeCategoriesOf: (zoneId: string) => FeeCategory[];
+  /** The tabs of this section: Dispatch rules (TABS) or Radar · Exclusive · Reservations (OFFER_TABS). */
+  tabs?: { id: TabId; label: string }[];
+  /** Extra cards under a tab's settings, for example the radar zones under Radar. */
+  below?: (zoneId: string, tab: TabId) => ReactNode;
 };
 
-const TAB_ICON: Record<TabId, typeof Radar> = { modes: Radar, reservations: CalendarClock, best: Star, waiting: Smartphone, rides: MapPin, drivers: Users, destination: Flag, safety: Shield, alerts: Bell };
+const TAB_ICON: Record<TabId, typeof Radar> = { modes: Gauge, radar: Radar, exclusive: Target, reservations: CalendarClock, best: Star, waiting: Smartphone, rides: MapPin, drivers: Users, destination: Flag, safety: Shield, alerts: Bell };
 
 function ModeBadge({ zone, paused }: { zone: ZoneDispatch; paused: boolean }) {
   if (paused) return <span className="dx-mode-tag paused">{trn("{0} Paused", <Pause size={10} aria-hidden="true" />)}</span>;
@@ -53,7 +57,7 @@ function ModeBadge({ zone, paused }: { zone: ZoneDispatch; paused: boolean }) {
 }
 
 export function RulesView(props: Props) {
-  const { book, market, zones, zoneId, onZone, tab, onTab, rulesOf, onRules, changed, canEdit, busyOf, hhmm, money, symbol } = props;
+  const { book, market, zones, zoneId, onZone, tab, onTab, rulesOf, onRules, changed, canEdit, busyOf, hhmm, money, symbol, tabs = TABS, below } = props;
   const [copyOpen, setCopyOpen] = useState(false);
   const [presetOpen, setPresetOpen] = useState(false);
   const [phone, setPhone] = useState<"auto" | "driver" | "rider">("auto");
@@ -106,7 +110,7 @@ export function RulesView(props: Props) {
         <div className="dx-zone dx-zone-empty">
           <Layers size={34} aria-hidden="true" />
           <b>{tr("Pick a zone on the left")}</b>
-          <p>{tab === "reservations" ? tr("Each zone has its own reservation rules. The reservation policy for all zones is there too.") : tr("Each zone has its own rules: Radar, Exclusive, reservations, the best driver, what the rider sees while waiting, and more.")}</p>
+          <p>{tab === "reservations" ? tr("Each zone has its own reservation rules. The reservation policy for all zones is there too.") : tab === "radar" || tab === "exclusive" ? tr("Each zone has its own Radar and Exclusive rules, its radar zones drawn on the map, and what the driver app shows.") : tr("Each zone has its own rules: the best driver, what the rider sees while waiting, rides and stops, and more. Radar, Exclusive and reservations have their own section.")}</p>
         </div>
       </div>
     );
@@ -157,7 +161,7 @@ export function RulesView(props: Props) {
         </section>
 
         <div className="dx-tabs" role="tablist" aria-label={tr("Zone settings")}>
-          {TABS.map((item) => {
+          {tabs.map((item) => {
             const Icon = TAB_ICON[item.id];
             return <button data-command="admin.dispatch.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => onTab(item.id)}><Icon size={14} aria-hidden="true" /> {trx(item.label)}</button>;
           })}
@@ -167,7 +171,7 @@ export function RulesView(props: Props) {
         {issues.length ? <ul className="dx-issues" role="alert">{issues.map((line) => <li key={line}><AlertTriangle size={13} aria-hidden="true" /> {line}</li>)}</ul> : null}
 
         <div className="dx-zone-body">
-          <div className="dx-zone-main" role="tabpanel" aria-label={trx(TABS.find((item) => item.id === tab)?.label)}>
+          <div className="dx-zone-main" role="tabpanel" aria-label={trx(tabs.find((item) => item.id === tab)?.label)}>
             <ZoneSettings
               tab={tab}
               zone={rules}
@@ -209,6 +213,7 @@ export function RulesView(props: Props) {
                 return targets.length;
               }}
             />
+            {below ? below(zone.id, tab) : null}
           </div>
           <aside className="dx-zone-side" aria-label={tr("Phone preview")}>
             <div className="ra-switch" role="tablist" aria-label={tr("Which phone")}>
@@ -222,7 +227,7 @@ export function RulesView(props: Props) {
         </div>
       </div>
 
-      <CopyDialog open={copyOpen} onClose={() => setCopyOpen(false)} from={rules} zones={zones.filter((item) => item.id !== zone.id && canEdit(item.id))} rulesOf={rulesOf} onApply={(ids, parts) => {
+      <CopyDialog open={copyOpen} tabs={tabs} onClose={() => setCopyOpen(false)} from={rules} zones={zones.filter((item) => item.id !== zone.id && canEdit(item.id))} rulesOf={rulesOf} onApply={(ids, parts) => {
         for (const id of ids) onRules(id, copyParts(rules, rulesOf(id), parts));
         props.onNotice(`Copied ${parts.length} part${parts.length === 1 ? "" : "s"} from ${zone.name} to ${ids.length} zone${ids.length === 1 ? "" : "s"}. Not live yet.`);
         setCopyOpen(false);
@@ -236,9 +241,9 @@ export function RulesView(props: Props) {
   );
 }
 
-function CopyDialog({ open, onClose, from, zones, onApply }: { open: boolean; onClose: () => void; from: ZoneDispatch; zones: MarketZone[]; rulesOf: (zoneId: string) => ZoneDispatch; onApply: (zoneIds: string[], parts: TabId[]) => void }) {
+function CopyDialog({ open, tabs, onClose, from, zones, onApply }: { open: boolean; tabs: { id: TabId; label: string }[]; onClose: () => void; from: ZoneDispatch; zones: MarketZone[]; rulesOf: (zoneId: string) => ZoneDispatch; onApply: (zoneIds: string[], parts: TabId[]) => void }) {
   const [ids, setIds] = useState<string[]>([]);
-  const [parts, setParts] = useState<TabId[]>(TABS.map((item) => item.id));
+  const [parts, setParts] = useState<TabId[]>(tabs.map((item) => item.id));
   void from;
   return (
     <Modal open={open} title={tr("Copy to other zones")} onClose={onClose}>
@@ -253,7 +258,7 @@ function CopyDialog({ open, onClose, from, zones, onApply }: { open: boolean; on
       </div>
       <h5 className="dx-modal-h">{tr("Parts")}</h5>
       <div className="zn-chips">
-        {TABS.map((item) => (
+        {tabs.map((item) => (
           <label key={item.id} className={parts.includes(item.id) ? "check-chip on" : "check-chip"}>
             <input type="checkbox" checked={parts.includes(item.id)} onChange={() => setParts(parts.includes(item.id) ? parts.filter((id) => id !== item.id) : [...parts, item.id])} />{trx(item.label)}
           </label>

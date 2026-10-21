@@ -36,9 +36,12 @@ import { COUNTRY_SETTINGS_KEY } from "../config/countrySettings";
 import { largeWaitChanges } from "../dispatch/offers";
 import { DRIVER_NOTICES_KEY } from "../messages/driverNotices";
 import {
-  countryLines, DISPATCH_KEY, draftCountry, draftRules, emptyDispatchBook, liveCountry, liveRules, normalizeDispatchBook, pendingChanges, publish, rulesFile, saveDraft, TABS,
+  countryLines, DISPATCH_KEY, draftCountry, draftRules, emptyDispatchBook, liveCountry, liveRules, normalizeDispatchBook, OFFER_TABS, pendingChanges, publish, rulesFile, saveDraft, TABS,
   type CountryDispatch, type DispatchBook, type TabId, type ZoneDispatch,
 } from "../dispatch/rules";
+import { DriverGroupsCard } from "../dispatch/DriverGroupsCard";
+import { RadarZoneRulesCard, RadarZonesCard } from "../dispatch/RadarZones";
+import { offersLink } from "../dispatch/MovedCard";
 import { tr, trn, trx, uiLocale, trSentences } from "../i18n";
 
 const VIEWS = [
@@ -58,15 +61,28 @@ type View = (typeof VIEWS)[number]["id"] | (typeof EXTRA_VIEWS)[number];
 
 const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
 
-export function DispatchPage() {
+/**
+ * Two sections share this page and the same rule book: Dispatch (the rules views) and Radar · Exclusive · Reservations
+ * (three tabs: Radar, Exclusive, Reservations, plus radar zones, their rules and driver groups). Each setting lives in one of them.
+ */
+export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | "offers" } = {}) {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const offers = section === "offers";
+  const tabs = offers ? OFFER_TABS : TABS;
+  const defaultTab: TabId = offers ? "radar" : "modes";
   const { agent } = useSession();
   const scope = useMarketScope();
   const market = scope.market;
   const country = scope.country;
-  const view: View = VIEWS.some((item) => item.id === params.get("view")) || (EXTRA_VIEWS as readonly string[]).includes(params.get("view") ?? "") ? (params.get("view") as View) : "rules";
-  const tab: TabId = TABS.some((item) => item.id === params.get("tab")) ? (params.get("tab") as TabId) : "modes";
+  const view: View = !offers && (VIEWS.some((item) => item.id === params.get("view")) || (EXTRA_VIEWS as readonly string[]).includes(params.get("view") ?? "")) ? (params.get("view") as View) : "rules";
+  const tab: TabId = tabs.some((item) => item.id === params.get("tab")) ? (params.get("tab") as TabId) : defaultTab;
+  // The reservation tab moved to Radar · Exclusive · Reservations: an old Dispatch link lands there, same zone.
+  useEffect(() => {
+    if (offers) return;
+    const wanted = params.get("tab");
+    if (wanted === "reservations" || wanted === "radar" || wanted === "exclusive") navigate(offersLink(wanted, params.get("zone") ?? undefined, params.get("card") ?? undefined), { replace: true });
+  }, [offers, params, navigate]);
   const slice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
   const rideCheck = useRideCheckSettings();
   const book = useMemo(() => normalizeDispatchBook(slice.value), [slice.value]);
@@ -117,6 +133,13 @@ export function DispatchPage() {
   const zones = market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id)));
   const zoneParam = params.get("zone");
   const zoneId = zoneParam && zones.some((zone) => zone.id === zoneParam) ? zoneParam : "";
+  // Radar · Exclusive · Reservations opens on the first zone, straight into its three tabs.
+  useEffect(() => {
+    if (!offers || zoneId || !zones.length) return;
+    const next = new URLSearchParams(params);
+    next.set("zone", zones[0].id);
+    setParams(next, { replace: true });
+  }, [offers, zoneId, zones, params, setParams]);
   const canEditRole = Boolean(agent && can(agent.role, "dispatch.edit"));
   const canApprove = Boolean(agent && can(agent.role, "dispatch.approve"));
   const canControl = Boolean(agent && can(agent.role, "trips.intervene"));
@@ -245,12 +268,14 @@ export function DispatchPage() {
       <header className="dx-head">
         <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost dx-back" onClick={back} aria-label={tr("Go back")}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
         <div className="dx-head-text">
-          <h2>{trn("Dispatch in {0}", trx(market.name))}</h2>
-          <p>{tr("How ride requests find a driver: Radar, Exclusive and reservations, with rules for every zone.")}</p>
+          <h2>{offers ? trn("Radar · Exclusive · Reservations in {0}", trx(market.name)) : trn("Dispatch in {0}", trx(market.name))}</h2>
+          <p>{offers ? tr("Every offer rule in one place: Radar and its radar zones, Exclusive, and reservations, for every zone.") : tr("How ride requests find a driver, with rules for every zone. Radar, Exclusive and reservations have their own section.")}</p>
         </div>
-        <button data-command="admin.dispatch.view" type="button" className={view === "features" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "features"} onClick={() => go({ view: view === "features" ? null : "features" })} title={tr("Every setting and feature, with a search")}>{trn("{0} All features", <ListTree size={15} aria-hidden="true" />)}</button>
-        <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate("/pricing?tab=extras&section=tips")} title={tr("Tips and raise-offer quick steps per country, in Pricing")}>{trn("{0} Tips & raise steps", <HandHeart size={15} aria-hidden="true" />)}</button>
-        <button data-command="admin.dispatch.view" type="button" className={view === "activity" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "activity"} onClick={() => go({ view: view === "activity" ? null : "activity" })} title={tr("Everything you did, this session and earlier, with done or failed")}>{trn("{0} My activity", <UserRoundCheck size={15} aria-hidden="true" />)}</button>
+        {offers ? <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate(zoneId ? `/dispatch?zone=${zoneId}` : "/dispatch")} title={tr("The other dispatch rules: best driver, rider waiting, rides and stops, drivers, safety, alerts")}>{trn("{0} Dispatch rules", <ScrollText size={15} aria-hidden="true" />)}</button> : null}
+        {!offers ? <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate(offersLink("radar", zoneId || undefined))} title={tr("Radar, Exclusive and reservation rules, radar zones and driver groups")}>{trn("{0} Radar · Exclusive · Reservations", <Radio size={15} aria-hidden="true" />)}</button> : null}
+        {!offers ? <button data-command="admin.dispatch.view" type="button" className={view === "features" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "features"} onClick={() => go({ view: view === "features" ? null : "features" })} title={tr("Every setting and feature, with a search")}>{trn("{0} All features", <ListTree size={15} aria-hidden="true" />)}</button> : null}
+        {!offers ? <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate("/pricing?tab=extras&section=tips")} title={tr("Tips and raise-offer quick steps per country, in Pricing")}>{trn("{0} Tips & raise steps", <HandHeart size={15} aria-hidden="true" />)}</button> : null}
+        {!offers ? <button data-command="admin.dispatch.view" type="button" className={view === "activity" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "activity"} onClick={() => go({ view: view === "activity" ? null : "activity" })} title={tr("Everything you did, this session and earlier, with done or failed")}>{trn("{0} My activity", <UserRoundCheck size={15} aria-hidden="true" />)}</button> : null}
         <button data-command="admin.dispatch.rulesFile" type="button" className="dash-btn ghost" onClick={downloadRules} title={tr("All live rules in one file for the backend team")}>{trn("{0} Rules file", <Download size={15} aria-hidden="true" />)}</button>
         {zoneId ? (
           <>
@@ -260,7 +285,7 @@ export function DispatchPage() {
         ) : null}
       </header>
 
-      <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Dispatch sections")}>
+      {offers ? null : <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Dispatch sections")}>
         {VIEWS.map((item) => {
           const Icon = item.icon;
           const count = item.id === "history" ? book.approvals.length : 0;
@@ -270,7 +295,7 @@ export function DispatchPage() {
             </button>
           );
         })}
-      </div>
+      </div>}
 
       {view !== "history" ? <Approvals book={book} agentId={agent?.id ?? ""} canApprove={canApprove} onNotice={say} compact /> : null}
 
@@ -337,7 +362,15 @@ export function DispatchPage() {
           zoneId={zoneId}
           onZone={(id) => go({ zone: id })}
           tab={tab}
-          onTab={(next) => go({ tab: next === "modes" ? null : next })}
+          tabs={tabs}
+          onTab={(next) => go({ tab: next === defaultTab ? null : next })}
+          below={offers ? (id, open) => (open === "radar" ? (
+            <div className="dx-cards dx-radar-extra">
+              <RadarZonesCard book={book} market={market} zone={zones.find((zone) => zone.id === id) ?? zones[0]} drivers={countryLive} canEdit={canEdit(id)} onNotice={say} />
+              <RadarZoneRulesCard book={book} market={market} canEdit={canEditRole} onNotice={say} />
+              <DriverGroupsCard book={book} market={market} drivers={countryLive.map((driver) => ({ id: driver.id, name: driver.name, zoneName: driver.zoneName }))} canEdit={canEditRole} onNotice={say} />
+            </div>
+          ) : null) : undefined}
           rulesOf={rulesOf}
           onRules={(id, next) => setWorking((current) => ({ ...current, [id]: next }))}
           country={countryRules}
@@ -358,7 +391,7 @@ export function DispatchPage() {
       ) : null}
       {!slice.loading && view === "live" ? <LiveView book={book} market={market} zones={zones} drivers={live.filter((driver) => zones.some((zone) => zone.id === driver.zoneId))} requests={requests} candidatesOf={candidatesOf} rulesOf={liveOf} busyOf={busyOf} hhmm={hhmm} canControl={canControl} agentId={agent?.id ?? ""} withScope={(path) => path} onNotice={say} sharedAlerts={ownAlerts ? undefined : <DispatchAlerts zoneIds={zones.map((zone) => zone.id)} />} /> : null}
       {!slice.loading && view === "test" ? <TestView market={market} zones={zones} zoneId={zoneId || zones[0]?.id || ""} onZone={(id) => go({ zone: id })} draftOf={rulesOf} liveOf={liveOf} countryDraft={countryRules} countryLive={liveCountry(book, country)} controlOf={(id) => book.control[id]} factsFor={factsFor} busyOf={busyOf} hhmm={hhmm} hasChanges={changes.length > 0 || countryChanged.length > 0} events={book.events.filter((event) => event.country === country)} /> : null}
-      {!slice.loading && view === "events" ? <EventsView book={book} market={market} drivers={countryLive.map((driver) => ({ id: driver.id, name: driver.name, zoneName: driver.zoneName }))} canEdit={canEditRole} canBonus={Boolean(agent && can(agent.role, "drivers.bonuses"))} onNotice={say} /> : null}
+      {!slice.loading && view === "events" ? <EventsView book={book} market={market} canEdit={canEditRole} canBonus={Boolean(agent && can(agent.role, "drivers.bonuses"))} onNotice={say} /> : null}
       {!slice.loading && view === "reasons" ? <CancelReasonsView market={market} country={countryRules} onCountry={(next) => setWorkingCountry((current) => ({ ...current, [country]: next }))} canEdit={canEditRole} /> : null}
       {!slice.loading && view === "cancels" ? <CancelView book={book} market={market} records={records} categories={activeCategories(pricing)} rulesOf={liveOf} canDecide={canControl} agentId={agent?.id ?? ""} money={money} onNotice={say} /> : null}
       {view === "activity" ? <ActivityView timeZone={market.timeZone} /> : null}

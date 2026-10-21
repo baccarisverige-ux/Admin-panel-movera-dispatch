@@ -306,6 +306,7 @@ test("All features lists the assign tool, radar groups and Add money for driver"
   for (const id of ["assign-tool", "radar-groups", "radar-group-timer", "add-money-driver"]) {
     const entry = FEATURE_INDEX.find((item) => item.id === id);
     assert.ok(entry, id);
-    assert.ok(featureTarget(entry!, "Z001").startsWith("/dispatch"), id);
+    // The radar group timer is the zone's radar time, set in Radar · Exclusive · Reservations.
+    assert.ok(featureTarget(entry!, "Z001").startsWith(id === "radar-group-timer" ? "/offers" : "/dispatch"), id);
   }
 });

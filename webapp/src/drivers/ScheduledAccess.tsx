@@ -95,6 +95,7 @@ export function ScheduledAccessCard({ driverId }: { driverId?: string }) {
               {current.state.lateInPeriod.map((item) => <li key={item.id}>{trn("{0} · {1} · {2} min before pickup · {3}", item.at.slice(0, 16).replace("T", " "), <Link to={`/reservations/${item.reservationId}`}>{item.reservationId}</Link>, item.minutesBefore, item.reason)}</li>)}
             </ul>
           ) : null}
+          <p className="dx-note">{trn("{0} The zone's reservation rules are in {1}.", <CalendarOff size={13} aria-hidden="true" />, <Link to={`/offers?tab=reservations&zone=${driver.zoneId}`}>{tr("Radar · Exclusive · Reservations")}</Link>)}</p>
           {!current.rule.on ? <p className="dx-note warn" role="status">{tr("Reservations are off for every driver in this zone (Dispatch › Reservations): this driver gets no new reservations, whatever is set here.")}</p> : null}
           <Row label={tr("Scheduled rides")} help={choice.on ? undefined : tr("Off: no new reservations for this driver. Rides they already accepted still run.")}>
             <Choice label={tr("Scheduled rides for the driver")} value={choice.on ? "on" : "off"} disabled={!canEdit} onChange={(value) => patch({ on: value === "on" })} options={[{ id: "on", label: tr("On") }, { id: "off", label: tr("Off") }]} />
