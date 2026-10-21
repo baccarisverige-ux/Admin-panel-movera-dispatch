@@ -57,6 +57,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
   return (
     <div className="dx-cards">
       <Card title={tr("Reservations")} tone="orange" icon={<CalendarClock size={18} />} help={tr("Rides booked for later. Nobody took it yet: Scheduled rides, then the Home popup, then Exclusive, then Radar trips.")} off={!resv.on} aside={<Switch label={tr("Reservations")} on={resv.on} disabled={disabled} onChange={(on) => setResv({ on })} />}>
+        {!resv.on ? <p className="dx-note warn" role="status">{trn("{0} Reservations are off for every driver in this zone: nobody gets new reservations. Rides drivers already accepted still run. To pause one driver, use Drivers' access to scheduled rides below.", <AlertTriangle size={13} aria-hidden="true" />)}</p> : null}
         <Row label={tr("Start looking for a driver")} help={tr("Before the pickup time.")}>
           <Num label={tr("Reservation search starts")} value={resv.searchBeforeMin} unit="min before" min={5} max={240} disabled={off} onChange={(searchBeforeMin) => setResv({ searchBeforeMin })} />
         </Row>
@@ -109,7 +110,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
 
       <Card title={tr("Smart gap")} tone="blue" icon={<Timer size={18} />} help={tr("Trip time + drive to the next pickup + spare minutes. It keeps a driver's scheduled rides apart and sends the driver off in time.")} off={!resv.on}>
         <Row label={tr("Clashing rides leave the list")} help={tr("A driver can't hold two rides at the same or a close time. They see them all, but once they take one, the others that do not fit the smart gap leave their Scheduled rides.")} on={resv.hideClashing} disabled={off} onToggle={(hideClashing) => setResv({ hideClashing })} />
-        <Row label={tr("Leave now")} help={tr("The driver app's estimated drive time to the pickup + spare minutes (an estimate, not live traffic). Then the ride lands on the driver's screen as the active trip with Head to pickup, even if they were driving away.")} on={resv.leaveNow} disabled={off} onToggle={(leaveNow) => setResv({ leaveNow })} />
+        <p className="dx-note">{trn("{0} Leave now: the driver app's estimated drive time to the pickup + spare minutes (an estimate, not live traffic). Then the ride always lands on the driver's screen as the active trip with Head to pickup, even if they were driving away.", <Clock size={13} aria-hidden="true" />)}</p>
         <Row label={tr("Late warning")} help={tr("Leave now cannot start the trip: the island says “Head to your 07:40 pickup”.")} on={resv.lateWarn} disabled={off} onToggle={(lateWarn) => setResv({ lateWarn })} />
         <Row label={tr("Trips toward the pickup before the ride")} help={tr("Like destination mode, aimed at the scheduled pickup. Every trip is checked with the smart gap, so the driver is still in time.")} on={resv.towardPickup} disabled={off} onToggle={(towardPickup) => setResv({ towardPickup })}>
           <Num label={tr("Trips toward the pickup from")} before="from" value={resv.towardPickupBeforeMin} unit="min before" min={15} max={240} disabled={disabled} onChange={(towardPickupBeforeMin) => setResv({ towardPickupBeforeMin })} />
@@ -137,7 +138,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
               );
             })}
           </ul>
-          <p className="dx-resv-foot" aria-label={tr("Smart gap example")}>{trn("Example, normal ride: pickup {0}, 35 min trip, ends 20 min from the next pickup. With {1} spare minutes the next ride can start at {2} or later ({3} gap).{4}", clock(SAMPLE_PICKUP, 0), normal.spareMin, <b>{clock(SAMPLE_PICKUP, gap)}</b>, spanLabel(gap), resv.leaveNow ? <>{" "}{trn("A driver 18 min from the pickup gets Leave now {0} before pickup ({1}).", <b>{trn("{0} min", leaveNowBeforeMin(18, normal.spareMin))}</b>, clock(SAMPLE_PICKUP, -leaveNowBeforeMin(18, normal.spareMin)))}</> : null)}</p>
+          <p className="dx-resv-foot" aria-label={tr("Smart gap example")}>{trn("Example, normal ride: pickup {0}, 35 min trip, ends 20 min from the next pickup. With {1} spare minutes the next ride can start at {2} or later ({3} gap).{4}", clock(SAMPLE_PICKUP, 0), normal.spareMin, <b>{clock(SAMPLE_PICKUP, gap)}</b>, spanLabel(gap), <>{" "}{trn("A driver 18 min from the pickup gets Leave now {0} before pickup ({1}).", <b>{trn("{0} min", leaveNowBeforeMin(18, normal.spareMin))}</b>, clock(SAMPLE_PICKUP, -leaveNowBeforeMin(18, normal.spareMin)))}</>)}</p>
         </div>
       </Card>
 

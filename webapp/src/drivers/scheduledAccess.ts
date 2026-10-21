@@ -111,6 +111,18 @@ export function accessState(entry: AccessEntry | undefined, lateCancels: readonl
   return { allowed: true, source: "normal", until: null, lateInPeriod, pausedByRule, ruleUntil };
 }
 
+/**
+ * Owner decision 2 (contract v0.4.2): the admin's choice for one driver as the driver app reads it, `Driver.scheduledRides`
+ * on GET /driver/profile (CONTRACT.md §6.1). Null while no choice is in force: the zone switch and the late-cancel rule decide.
+ * Off: no new reservations until `until` (null = until an admin turns them on). Reservations already accepted always stay.
+ */
+export function driverScheduledRides(entry: AccessEntry | undefined, nowMs: number): { on: boolean; until: string | null } | null {
+  if (!entry) return null;
+  const end = entryEnd(entry);
+  if (end !== null && end <= nowMs) return null;
+  return { on: entry.on, until: end === null ? null : new Date(end).toISOString() };
+}
+
 const dateLabel = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /** "Scheduled rides on", "Paused until 2026-10-21 (2 late cancels in 7 days)", "Off until 2026-10-22 (set by nora)". */

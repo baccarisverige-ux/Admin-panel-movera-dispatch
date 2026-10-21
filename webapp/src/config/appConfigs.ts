@@ -356,13 +356,12 @@ export const RESERVATION_RIDE_TYPE_KEYS = { normal: "normal", airport: "airport"
 
 /**
  * Contract v0.4.1 DriverAppConfig.reservations: the zone's Dispatch › Reservations timings for the driver app
- * (CONTRACT.md §6.1). lateBackupAfterMin is the offline rule (offlineBackupAfterMin); lateEta is the running-late ETA watch.
+ * (CONTRACT.md §6.1). v0.4.2: no leaveNow, Leave now always opens the trip. lateBackupAfterMin is the offline rule (offlineBackupAfterMin); lateEta is the running-late ETA watch.
  */
 function driverReservations(zone: ZoneDispatch) {
   const resv = zone.reservation;
   return {
     on: resv.on,
-    leaveNow: resv.leaveNow,
     lateWarn: resv.lateWarn,
     offlineBackupAfterMin: resv.lateBackupAfterMin,
     homePopupAfterMin: resv.homePopupAfterMin,

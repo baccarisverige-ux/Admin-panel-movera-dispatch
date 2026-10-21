@@ -28,8 +28,8 @@ const contract = contractJson<Contract>("contract.json");
 const NOW = "2026-10-19T08:00:00Z";
 const state = () => appConfigState({ now: NOW });
 
-test("contract v0.4.1: version, X-Api-Version, payment methods, languages and ratings", () => {
-  assert.equal(contract.version, "0.4.1");
+test("contract v0.4.2: version, X-Api-Version, payment methods, languages and ratings", () => {
+  assert.equal(contract.version, "0.4.2");
   assert.equal(contract.headers["X-Api-Version"], "0.4");
   assert.deepEqual([...PAYMENT_METHODS], contract.paymentMethods);
   assert.ok(!contract.paymentMethods.includes("swish") && !contract.paymentMethods.includes("d17"));

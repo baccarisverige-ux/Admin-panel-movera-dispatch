@@ -620,7 +620,6 @@
   },
   "reservations": {
     "on": true,
-    "leaveNow": true,
     "lateWarn": true,
     "offlineBackupAfterMin": 5,
     "homePopupAfterMin": 10,

@@ -210,7 +210,7 @@ export function ReservationDriverPreview({ zone, money, country }: { zone: ZoneD
   const sample = SAMPLE[country];
   const resv = zone.reservation;
   const [view, setView] = useState<ResvView>("popup");
-  const shown: ResvView = view === "popup" && !resv.homePopup ? "assigned" : view === "leave" && !resv.leaveNow ? "assigned" : view === "late" && !resv.lateWarn ? "assigned" : view;
+  const shown: ResvView = view === "popup" && !resv.homePopup ? "assigned" : view === "late" && !resv.lateWarn ? "assigned" : view;
   const spare = resv.types.normal.spareMin;
   const drive = 18;
   const leave = leaveNowBeforeMin(drive, spare);
@@ -222,7 +222,7 @@ export function ReservationDriverPreview({ zone, money, country }: { zone: ZoneD
     <figure className="dp-phone dx-phone" aria-label={tr("Driver reservation preview")}>
       <div className="dx-step-pick" role="group" aria-label={tr("Reservation screen")}>
         {RESV_VIEWS.map((item) => {
-          const able = item.id === "popup" ? resv.homePopup : item.id === "leave" ? resv.leaveNow : item.id === "late" ? resv.lateWarn : true;
+          const able = item.id === "popup" ? resv.homePopup : item.id === "late" ? resv.lateWarn : true;
           return <button data-command="admin.dispatch.view" key={item.id} type="button" aria-pressed={shown === item.id} className={shown === item.id ? "on" : undefined} disabled={!able} onClick={() => setView(item.id)}>{trx(item.label)}</button>;
         })}
       </div>

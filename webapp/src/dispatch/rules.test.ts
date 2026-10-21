@@ -283,7 +283,7 @@ assert(resvFile.zones[0].rules.reservation.homePopupAfterMin === 10 && resvFile.
 
 // Round 3: who gets it, the Home popup, smart gap, cancels, no driver near pickup and rides given by Movera.
 assert(resv.listGroupId === "" && resv.homePopupTo === "list" && resv.popupClosedExclusive, "Home popup goes to the list's drivers and a closed popup comes back as Exclusive by default");
-assert(resv.hideClashing && resv.leaveNow && resv.lateWarn && resv.lateBackupAfterMin === 5 && resv.towardPickup, "smart gap parts are on by default");
+assert(resv.hideClashing && resv.lateWarn && resv.lateBackupAfterMin === 5 && resv.towardPickup, "smart gap parts are on by default");
 assert(Object.values(resv.types).every((type) => type.spareMin === 15), "spare minutes start at 15 for every kind of ride");
 assert(resv.types.normal.onlineBeforeMin === 30 && resv.types.airport.onlineBeforeMin === 60 && resv.types.long.onlineBeforeMin === 60 && resv.types.premium.onlineBeforeMin === 45 && resv.types.event.onlineBeforeMin === 45, "be online before: normal 30, airport 60, long trip 60, Comfort/Premium 45, events 45 (same as the driver app)");
 assert(resv.types.normal.remindFirstMin === 60 && resv.types.normal.remindLastMin === 15, "reminders 60 and 15 min before pickup");
@@ -359,7 +359,7 @@ assert(r3Change.includes("Reservations, Movera: free cancel minutes before picku
 assert(r3Change.includes("Airport rides: be online before: 60 → 90"), "change line per kind of ride");
 
 // Saves from before Round 3 get the new settings from the defaults.
-const R3_KEYS = ["listGroupId", "homePopupTo", "popupClosedExclusive", "hideClashing", "leaveNow", "lateWarn", "lateBackupAfterMin", "towardPickup", "towardPickupBeforeMin", "types", "riderFees", "driverLateCancelHours", "latePause", "latePauseAfter", "latePeriodDays", "latePauseDays", "showDriverOnAccept", "raiseFare", "raiseMax", "assignAcceptSec", "lateEta"];
+const R3_KEYS = ["listGroupId", "homePopupTo", "popupClosedExclusive", "hideClashing", "lateWarn", "lateBackupAfterMin", "towardPickup", "towardPickupBeforeMin", "types", "riderFees", "driverLateCancelHours", "latePause", "latePauseAfter", "latePeriodDays", "latePauseDays", "showDriverOnAccept", "raiseFare", "raiseMax", "assignAcceptSec", "lateEta"];
 const preR3 = Object.fromEntries(Object.entries(zoneDefault("FR-PC").reservation).filter(([key]) => !R3_KEYS.includes(key)));
 const r3Book = normalizeDispatchBook(JSON.parse(JSON.stringify({ ...emptyDispatchBook(), live: { "FR-PC": { ...zoneDefault("FR-PC"), reservation: { ...preR3, homePopupTo: "everyone", types: { airport: { onlineBeforeMin: 75 }, normal: "bad" } } } } })));
 const r3Live = liveRules(r3Book, "FR-PC").reservation;
@@ -370,9 +370,13 @@ assert(zoneIssues(liveRules(r3Book, "FR-PC")).length === 0, "an old save stays v
 assert(changeLines(liveRules(r3Book, "FR-PC"), draftRules(r3Book, "FR-PC")).length === 0, "an old save does not show as changed");
 const r3Preset = applyPreset(zoneDefault("TN-TC"), BUILT_IN_PRESETS[0], "TN");
 assert(r3Preset.reservation.riderFees.economy.value === 15 && r3Preset.reservation.raiseMax === 150, "a ready-made preset keeps the country's money for reservations");
-const r3Copy = copyParts(withResv({ leaveNow: false }), zoneDefault("Z002"), ["reservations"]);
-assert(!r3Copy.reservation.leaveNow && r3Copy.zoneId === "Z002", "reservations copy as their own part");
-assert(copyParts(withResv({ leaveNow: false }), zoneDefault("Z002"), ["modes"]).reservation.leaveNow, "Modes no longer copies reservations");
+const r3Copy = copyParts(withResv({ lateWarn: false }), zoneDefault("Z002"), ["reservations"]);
+assert(!r3Copy.reservation.lateWarn && r3Copy.zoneId === "Z002", "reservations copy as their own part");
+assert(copyParts(withResv({ lateWarn: false }), zoneDefault("Z002"), ["modes"]).reservation.lateWarn, "Modes no longer copies reservations");
+// Owner decision 1 (contract v0.4.2): no Leave now switch. Leave now always opens the trip; a save that still has the switch reads without it.
+const oldLeave = normalizeDispatchBook(JSON.parse(JSON.stringify({ ...emptyDispatchBook(), live: { Z001: { ...zoneDefault("Z001"), reservation: { ...zoneDefault("Z001").reservation, leaveNow: false } } } })));
+assert(!("leaveNow" in liveRules(oldLeave, "Z001").reservation) && !("leaveNow" in zoneDefault("Z001").reservation), "the Leave now switch is gone, also from an older save");
+assert(changeLines(liveRules(oldLeave, "Z001"), draftRules(oldLeave, "Z001")).length === 0, "an older save does not show as changed");
 const r3File = rulesFile(emptyDispatchBook(), "SE", "now");
 assert(r3File.glossary.smartGap.includes("spareMin") && r3File.glossary.raiseFare.includes("500 kr") && r3File.zones[0].rules.reservation.types.normal.spareMin === 15, "the rules file explains the new settings");
 assert(r3File.riderApp.Z001.lateCancelFeeMinor === 5000 && r3File.glossary.riderApp.includes("/api/v1/rider/scheduled-rides/rules"), "the rules file has what the rider app reads");
