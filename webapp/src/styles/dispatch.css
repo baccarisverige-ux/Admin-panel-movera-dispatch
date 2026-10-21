@@ -371,6 +371,13 @@ body.dx-no-scroll { overflow: hidden; }
 .dx-rank-pin { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #2a78d6; color: #fff; font-size: 11px; font-weight: 800; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .3); pointer-events: none; }
 .dx-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 11px; font-weight: 600; color: var(--dash-ink-2); }
 .dx-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: -6px; }
+/* Driver swatches are small cars (rounded, nose up); rider swatches are a small person on a clear background. */
+.dx-legend i.car { width: 9px; height: 15px; border-radius: 4px 4px 3px 3px / 5px 5px 3px 3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
+.dx-legend i.rider { width: 11px; height: 12px; border-radius: 0; background: none !important; position: relative; }
+.dx-legend i.rider::before { content: ""; position: absolute; left: 3px; top: 0; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.dx-legend i.rider::after { content: ""; position: absolute; left: 0; bottom: 0; width: 11px; height: 6px; border-radius: 6px 6px 0 0; background: currentColor; }
+.dx-legend .rider.waiting { color: #d03b3b; } .dx-legend .rider.offered { color: #2a78d6; }
+.dx-legend .car.pickup { background: #ef8a1f; }
 .dx-legend .free { background: #0ca30c; } .dx-legend .pickup { background: #eda100; } .dx-legend .trip { background: #2a78d6; } .dx-legend .rider { background: #d55181; }
 .dx-legend .pickup-pin { background: #e34948; } .dx-legend .top { background: #2a78d6; } .dx-legend .out { background: #a3a8ab; } .dx-legend .ring { border: 2px dashed #6250d6; border-radius: 50%; background: transparent; }
 

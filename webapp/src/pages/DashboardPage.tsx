@@ -32,7 +32,7 @@ import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { commandById } from "../commands/registry";
 import { useAlertsMaybe } from "../alerts/AlertsContext";
-import { DriversMap, STATE_COLOR } from "../dashboard/DriversMap";
+import { DriversMap, REQUEST_COLOR, STATE_COLOR } from "../dashboard/DriversMap";
 import { EarningsChart } from "../dashboard/EarningsChart";
 import { change, COMMISSION_PLACEHOLDER, earningsReport, type Share } from "../dashboard/earnings";
 import { activeBoosts, airportQueues, cancellations, ratings, supplyDemand } from "../dashboard/insights";
@@ -544,11 +544,11 @@ export function DashboardPage() {
                         return next;
                       })}
                     >
-                      <i style={{ background: STATE_COLOR[state.id] }} />{trx(state.label)}<strong>{liveCounts[state.id]}</strong>
+                      <i className="car" style={{ background: STATE_COLOR[state.id] }} />{trx(state.label)}<strong>{liveCounts[state.id]}</strong>
                     </button>
                   );
                 })}
-                <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showRequests} className={showRequests ? "state-chip" : "state-chip off"} onClick={() => setShowRequests((value) => !value)}>{trn("{0}Riders waiting{1}", <i style={{ background: "#d55181" }} />, <strong>{requests.length}</strong>)}</button>
+                <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showRequests} className={showRequests ? "state-chip" : "state-chip off"} onClick={() => setShowRequests((value) => !value)}>{trn("{0}Riders waiting{1}", <i className="rider" style={{ background: REQUEST_COLOR.waiting }} />, <strong>{requests.length}</strong>)}</button>
                 <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBalance} className={showBalance ? "state-chip" : "state-chip off"} onClick={() => setShowBalance((value) => !value)}>{trn("{0}Supply vs demand", <i style={{ background: "linear-gradient(90deg,#0ca30c,#eda100,#d03b3b)" }} />)}</button>
                 <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBonus} className={showBonus ? "state-chip" : "state-chip off"} onClick={() => setShowBonus((value) => !value)}>{trn("{0}Driver bonus areas{1}", <i style={{ background: "#f2994a" }} />, <strong>{bonusAreas.length}</strong>)}</button>
                 <SurgeControls compact shown={surgePref.shown} style={surgePref.style} onShown={surgePref.setShown} onStyle={surgePref.setStyle} />
@@ -566,6 +566,7 @@ export function DashboardPage() {
                 surgeStyle={surgePref.style}
                 bonusAreas={bonusAreas}
                 bonusShown={showBonus}
+                rideChecks={shared && (can(role, "incidents.read") || can(role, "trips.intervene")) ? { checks: shared.rideCheck.checks, demoShift: shared.rideCheck.demoShift, now: shared.now } : null}
                 onSurgeZone={(zoneId) => { const link = surgeLink(zoneId); if (link) navigate(link); }}
                 renderAssign={can(role, "trips.intervene") ? (request) => <AssignControls request={request} candidates={candidatesOf(request)} onDone={setLiveNotice} /> : undefined}
                 market={market}

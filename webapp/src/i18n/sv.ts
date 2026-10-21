@@ -4763,4 +4763,12 @@ export const sv: Record<MessageKey, string> = {
   "Zones: {0}": "Zoner: {0}",
   "Zoom in": "Zooma in",
   "Zoom out": "Zooma ut",
+  // Live map pins & ride check
+  "{0} Free {1} To pickup {2} On trip {3} Rider waiting {4} Driver offered": "{0} Ledig {1} Till upphämtning {2} På resa {3} Passagerare väntar {4} Förare erbjuden",
+  "Driver says: {0}": "Föraren säger: {0}",
+  "Rider says: {0}": "Passageraren säger: {0}",
+  "Ride check for {0}": "Resekontroll för {0}",
+  "Dismiss": "Dölj",
+  "{0}Call driver": "{0}Ring föraren",
+  "{0}Call rider": "{0}Ring passageraren",
 };
