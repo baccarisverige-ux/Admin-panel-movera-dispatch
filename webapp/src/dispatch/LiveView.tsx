@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { AlertTriangle, Bell, Car, Clock, Pause, Play, Radar, Send, Target, Undo2, UserRound, Users } from "lucide-react";
 import { DriversMap } from "../dashboard/DriversMap";
+import type { RideCheck } from "../safety/rideCheck";
 import { AssignControls } from "../dashboard/LiveRiders";
 import type { LiveDriver, LiveState } from "../dashboard/live";
 import type { Candidate, RideRequest } from "../dashboard/riders";
@@ -28,6 +29,8 @@ type Props = {
   onNotice: (text: string) => void;
   /** When set, shown instead of this tab's own alert list (the shared one from Alerts). */
   sharedAlerts?: ReactNode;
+  /** Open ride checks to pin on the cars, for admins who may see incidents. */
+  rideChecks?: { checks: RideCheck[]; demoShift: number; now: number } | null;
 };
 
 type Alert = { id: string; zoneId: string; tone: "red" | "orange"; text: string; tripId?: string };
@@ -76,7 +79,7 @@ function RequestActions({ request, book, zones, groups, candidates, canControl, 
   );
 }
 
-export function LiveView({ book, market, zones, drivers, requests, candidatesOf, rulesOf, busyOf, hhmm, canControl, agentId, withScope, onNotice, sharedAlerts }: Props) {
+export function LiveView({ book, market, zones, drivers, requests, candidatesOf, rulesOf, busyOf, hhmm, canControl, agentId, withScope, onNotice, sharedAlerts, rideChecks = null }: Props) {
   const assignPanel = useAssignPanel();
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -155,8 +158,8 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
 
       <RideCheckSettingsCard where="dispatch" />
 
-      <MapPanel title={tr("Live map · {0}", [trx(market.name)])} note={<span className="dx-legend">{trn("{0} Free {1} To pickup {2} On trip {3} Rider waiting", <i className="free" />, <i className="pickup" />, <i className="trip" />, <i className="rider" />)}</span>}>
-        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} onRequestOpen={canControl ? assignPanel.open : undefined} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} renderAssign={canControl ? (request) => <AssignControls request={request} candidates={candidatesOf(request)} onDone={onNotice} /> : undefined} />
+      <MapPanel title={tr("Live map · {0}", [trx(market.name)])} note={<span className="dx-legend">{trn("{0} Free {1} To pickup {2} On trip {3} Rider waiting {4} Driver offered", <i className="car free" />, <i className="car pickup" />, <i className="car trip" />, <i className="rider waiting" />, <i className="rider offered" />)}</span>}>
+        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} onRequestOpen={canControl ? assignPanel.open : undefined} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <AssignControls request={request} candidates={candidatesOf(request)} onDone={onNotice} /> : undefined} />
       </MapPanel>
 
       <section className="dash-card" aria-labelledby="dx-waiting-title">
