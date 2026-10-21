@@ -377,7 +377,37 @@ export type Version = {
 };
 
 export type CancelDecision = { fee: boolean; by: string; reason: string; at: string };
-export type LiveAction = { id: string; tripId: string; kind: "group" | "radar_group" | "cancel"; target: string; by: string; at: string };
+export type LiveAction = { id: string; tripId: string; kind: "group" | "radar_group" | "radar_zone" | "exclusive" | "cancel"; target: string; by: string; at: string };
+
+/**
+ * A radar zone: an area drawn on the map inside a market zone. A radar sent to it goes to the free drivers inside it
+ * at that moment. Radar zones are independent and may overlap; there is no nesting. Made in Radar · Exclusive · Reservations.
+ */
+export type RadarZone = {
+  id: string;
+  country: MarketId;
+  /** The market zone it belongs to (where it is listed and offered). */
+  zoneId: string;
+  name: string;
+  /** [lat, lng] ring, like a bonus area. */
+  ring: [number, number][];
+  createdAt: string;
+};
+
+/** A radar rule for one or more radar zones; "all" is the default and a rule naming a zone wins over it. */
+export type RadarZoneRule = {
+  id: string;
+  country: MarketId;
+  name: string;
+  /** "all" or the ids of the radar zones it applies to. */
+  radarZoneIds: "all" | string[];
+  /** Seconds the radar stays open. */
+  seconds: number;
+  /** Most drivers who can see the ride at once (1–10). */
+  maxDrivers: number;
+  /** Send again by itself when nobody accepts. */
+  repeat: boolean;
+};
 
 export type DispatchBook = {
   draftRev: number;
@@ -393,6 +423,8 @@ export type DispatchBook = {
   versions: Version[];
   cancelChecks: Record<string, CancelDecision>;
   liveActions: LiveAction[];
+  radarZones: RadarZone[];
+  radarZoneRules: RadarZoneRule[];
 };
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -568,7 +600,7 @@ export const BUILT_IN_PRESETS: Preset[] = [
 ];
 
 export function emptyDispatchBook(): DispatchBook {
-  return { draftRev: 1, draft: {}, live: {}, countries: {}, liveCountries: {}, events: seedEvents(), groups: seedGroups(), presets: [], control: {}, approvals: [], versions: [], cancelChecks: {}, liveActions: [] };
+  return { draftRev: 1, draft: {}, live: {}, countries: {}, liveCountries: {}, events: seedEvents(), groups: seedGroups(), presets: [], control: {}, approvals: [], versions: [], cancelChecks: {}, liveActions: [], radarZones: [], radarZoneRules: [] };
 }
 
 function seedEvents(): DispatchEvent[] {
@@ -612,6 +644,8 @@ export function normalizeDispatchBook(value: unknown): DispatchBook {
     versions: Array.isArray(raw.versions) ? raw.versions : [],
     cancelChecks: raw.cancelChecks ?? {},
     liveActions: Array.isArray(raw.liveActions) ? raw.liveActions : [],
+    radarZones: Array.isArray(raw.radarZones) ? raw.radarZones : [],
+    radarZoneRules: Array.isArray(raw.radarZoneRules) ? raw.radarZoneRules : [],
   };
 }
 
