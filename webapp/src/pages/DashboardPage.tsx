@@ -42,6 +42,7 @@ import { RiderQuickActions, useDispatchBook } from "../dispatch/HandlePanel";
 import { SupplyDemandDrill } from "../dashboard/SupplyDemandDrill";
 import type { MapLocate } from "../dashboard/supplyDrill";
 import { offersLink } from "../dispatch/MovedCard";
+import { useOnTheWay } from "../dispatch/RideProgress";
 import { liveTrip } from "../dashboard/liveTrip";
 import { PeriodPicker } from "../dashboard/PeriodPicker";
 import { parsePeriod, periodParams, periodWindow, type Period } from "../dashboard/period";
@@ -262,6 +263,10 @@ export function DashboardPage() {
   // Offers only count when they went to a driver who could really take them.
   const requests = useMemo(() => maskRequests(rideRequests(tripRows, riderRows, (driverId) => onlineIds.has(driverId)), access), [tripRows, riderRows, onlineIds, access]);
   const riderStats = riderCounts(requests, live, riderRows);
+  // Rides a driver just accepted: listed apart under the waiting riders and kept on the map (never counted as waiting).
+  const allOnTheWay = useOnTheWay();
+  const onTheWay = useMemo(() => maskRequests(allOnTheWay.filter((item) => !requests.some((request) => request.tripId === item.tripId)), access).map((item) => ({ ...item, driverName: access.drivers ? item.driverName : HIDDEN_DRIVER })), [allOnTheWay, requests, access]);
+  const ridersOnMap = useMemo(() => (onTheWay.length ? [...requests, ...onTheWay] : requests), [requests, onTheWay]);
   const candidatesOf = (request: RideRequest) => candidatesFor(request, live, allowedCategories);
   const balance = useMemo(() => supplyDemand(country, scope.zones, requests, live), [country, scope.zones, requests, live]);
   const pricingSlice = useSlice<unknown>(SLICE_KEY, emptyPricingStore());
@@ -565,7 +570,7 @@ export function DashboardPage() {
               {liveNotice ? <p className="fd-notice" role="status">{liveNotice}</p> : null}
               <DriversMap
                 drivers={live}
-                requests={requests}
+                requests={ridersOnMap}
                 showRequests={showRequests}
                 focusRequest={focusRequest}
                 locate={locate}
@@ -621,6 +626,7 @@ export function DashboardPage() {
             onLocate={(id) => setFocusRequest({ id, nonce: Date.now() })}
             canAssign={can(role, "trips.intervene")}
             onAssigned={setLiveNotice}
+            onTheWay={onTheWay}
           />
 
           <div className="dash-grid-2">

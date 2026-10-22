@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { Link } from "react-router";
 import { useDrivers, useRecords, useSlice, useTrips } from "../api/hooks";
 import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
@@ -80,9 +81,11 @@ function LiveBoard() {
       ? selected.id
       : null;
   const selectedTrip = selectedTripId ? (trips.data ?? []).find((trip) => trip.id === selectedTripId) ?? null : null;
+  // Only drivers who can take an offer now: the server refuses an exclusive offer to a busy driver.
+  const free = useFreeDriverIds();
   const candidates = useMemo(
-    () => selectedTrip ? offersFor(selectedTrip, drivers.data ?? [], vehicles.data ?? []) : [],
-    [drivers.data, selectedTrip, vehicles.data],
+    () => selectedTrip ? offersFor(selectedTrip, drivers.data ?? [], vehicles.data ?? []).filter((driver) => !free || free.has(driver.id)) : [],
+    [drivers.data, selectedTrip, vehicles.data, free],
   );
   const chosen = candidates.some((item) => item.id === offerDriverId) ? offerDriverId : candidates[0]?.id ?? "";
   const selectedOfferWhy = selectedTrip
@@ -177,8 +180,9 @@ function LiveBoard() {
                       {candidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name} · {candidate.id}</option>)}
                     </select>
                   </label>
+                  {/* A real exclusive offer (the assign tool): offer record, the money added for the driver, countdown. */}
                   <CommandButton
-                    command="admin.trip.offer"
+                    command="admin.trip.assign"
                     className="primary-btn"
                     type="button"
                     targetId={selectedTrip.id}
@@ -187,8 +191,9 @@ function LiveBoard() {
                     scope={selectedTrip.zoneId}
                     collection="trips"
                     before={selectedTrip.status}
-                    after={`offered to ${chosen}`}
-                    patch={{ driverId: chosen, status: "offered" }}
+                    after={`exclusive offer to ${chosen}`}
+                    patch={{ status: "offered" }}
+                    value={{ driverId: chosen }}
                     disabled={Boolean(selectedOfferWhy)}
                     title={selectedOfferWhy ?? undefined}
                     onDone={() => {

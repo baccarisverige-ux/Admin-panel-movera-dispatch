@@ -6,6 +6,7 @@ import { change, earningsReport } from "./earnings.ts";
 import { countStates, liveDrivers } from "./live.ts";
 import { bucketStarts, parsePeriod, periodParams, periodWindow } from "./period.ts";
 import { rideCounts, scheduledRides } from "./scheduled.ts";
+import { ON_THE_WAY_MAX_MIN, onTheWayRequests, rideRequests } from "./riders.ts";
 
 const NOW = Date.parse("2026-10-10T14:30:00Z");
 const STOCKHOLM = "Europe/Stockholm";
@@ -121,4 +122,22 @@ test("UI-06: roles without rider, driver or trip access get counts, not names or
   }
   const ops = dashboardAccess("ops");
   assert.deepEqual(maskRiders(seed.riders, ops), seed.riders, "ops still sees names");
+});
+
+test("rides a driver just accepted stay listed as on the way for 15 minutes, never as waiting", () => {
+  const db = createSeed();
+  const now = Date.parse(SEED_NOW);
+  const searching = db.trips.filter((row) => row.status === "searching");
+  const accepted = { ...searching[0], status: "accepted", driverId: db.drivers[0].id, acceptedAt: new Date(now - 4 * 60_000).toISOString() };
+  const old = { ...searching[1], status: "driver_to_pickup", driverId: db.drivers[1].id, acceptedAt: new Date(now - (ON_THE_WAY_MAX_MIN + 1) * 60_000).toISOString() };
+  const seeded = db.trips.filter((row) => row.status === "accepted" && !row.acceptedAt);
+  const trips = [accepted, old, ...seeded];
+  const names = (id: string) => db.drivers.find((row) => row.id === id)?.name;
+  const items = onTheWayRequests(trips, db.riders, names, now);
+  assert.deepEqual(items.map((item) => item.tripId), [accepted.id], "only a recent accept from the assign tool");
+  assert.equal(items[0].driverName, db.drivers[0].name);
+  assert.equal(items[0].status, "offered");
+  assert.equal(rideRequests([accepted, old], db.riders).length, 0, "never counted as waiting");
+  // Once the driver arrived (or the rider is on board) it leaves the list.
+  assert.equal(onTheWayRequests([{ ...accepted, status: "arrived" }], db.riders, names, now).length, 0);
 });

@@ -39,6 +39,8 @@ export type DemoRecord = {
   model?: string;
   waitingMin?: number;
   previousStatus?: string;
+  /** Trips: when a driver accepted an admin offer (the assign tool), for the "Driver on the way" list. */
+  acceptedAt?: string;
   notes?: string;
   pickupAt?: string;
   createdAt?: string;

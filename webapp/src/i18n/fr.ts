@@ -5058,4 +5058,5 @@ export const fr: Record<MessageKey, string> = {
   "Offline or no GPS": "Hors ligne ou sans GPS",
   "Tight": "Juste",
   "More drivers needed": "Plus de chauffeurs nécessaires",
+  "{0} Driver on the way {1}": "{0} Chauffeur en route {1}",
 };

@@ -20,12 +20,18 @@ export type RideRequest = {
   offeredTo: string | null;
 };
 
+/** A ride whose driver accepted an admin offer a moment ago: still shown under the waiting riders, apart. */
+export type OnTheWay = RideRequest & { driverId: string; driverName: string; acceptedAt: string };
+
 export type Candidate = { driver: LiveDriver; km: number; etaMin: number; categoryOk: boolean };
 
 export type RiderCounts = { online: number; onTrip: number; beingPickedUp: number; waiting: number; longWait: number };
 
 const WAITING = new Set(["requested", "searching", "offered"]);
 const LONG_WAIT_MIN = 5;
+/** A driver who accepted is "on the way" until the trip leaves these statuses, at most this long after accepting. */
+export const ON_THE_WAY_STATUSES: readonly string[] = ["accepted", "driver_to_pickup"];
+export const ON_THE_WAY_MAX_MIN = 15;
 
 function hash(text: string): number {
   let value = 2166136261;
@@ -44,28 +50,47 @@ export function rideRequests(trips: readonly DemoRecord[], riders: readonly Demo
   return trips
     // Older demo requests are long gone; about one in seven is still waiting right now.
     .filter((trip) => WAITING.has(trip.status) && zoneById(trip.zoneId) && (hash(`wait:${trip.id}`) >>> 4) % 7 === 0)
-    .map((trip) => {
-      const zone = zoneById(trip.zoneId)!;
-      const seed = hash(trip.id);
-      const angle = ((seed % 360) * Math.PI) / 180;
-      const radius = (zone.kind === "airport" ? 0.004 : 0.012) * (0.3 + ((seed >>> 8) % 70) / 100);
-      const category = CATEGORIES[seed % CATEGORIES.length];
-      const rider = riders.find((row) => row.phone === trip.phone) ?? null;
-      return {
-        tripId: trip.id,
-        riderId: rider?.id ?? null,
-        rider: trip.name,
-        zoneId: trip.zoneId,
-        zoneName: zone.name,
-        at: [zone.center[0] + Math.sin(angle) * radius, zone.center[1] + (Math.cos(angle) * radius) / Math.cos((zone.center[0] * Math.PI) / 180)] as LatLng,
-        category: category.id,
-        categoryLabel: category.label,
-        waitingMin: 1 + (seed % 9),
-        status: trip.status === "offered" && trip.driverId && canTake(trip.driverId) ? "offered" as const : "searching" as const,
-        offeredTo: trip.status === "offered" && trip.driverId && canTake(trip.driverId) ? trip.driverId : null,
-      };
-    })
+    .map((trip) => requestOf(trip, riders, trip.status === "offered" && trip.driverId && canTake(trip.driverId) ? trip.driverId : null))
     .sort((a, b) => b.waitingMin - a.waitingMin);
+}
+
+/** A trip as a rider on the map: where they wait (near the zone centre), their category and how long they waited. */
+function requestOf(trip: DemoRecord, riders: readonly DemoRecord[], offeredTo: string | null): RideRequest {
+  const zone = zoneById(trip.zoneId)!;
+  const seed = hash(trip.id);
+  const angle = ((seed % 360) * Math.PI) / 180;
+  const radius = (zone.kind === "airport" ? 0.004 : 0.012) * (0.3 + ((seed >>> 8) % 70) / 100);
+  const category = CATEGORIES[seed % CATEGORIES.length];
+  const rider = riders.find((row) => row.phone === trip.phone) ?? null;
+  return {
+    tripId: trip.id,
+    riderId: rider?.id ?? null,
+    rider: trip.name,
+    zoneId: trip.zoneId,
+    zoneName: zone.name,
+    at: [zone.center[0] + Math.sin(angle) * radius, zone.center[1] + (Math.cos(angle) * radius) / Math.cos((zone.center[0] * Math.PI) / 180)] as LatLng,
+    category: category.id,
+    categoryLabel: category.label,
+    waitingMin: 1 + (seed % 9),
+    status: offeredTo ? "offered" : "searching",
+    offeredTo,
+  };
+}
+
+/**
+ * Rides a driver accepted from an admin offer (the assign tool) in the last ON_THE_WAY_MAX_MIN minutes, while the
+ * driver is still heading to the pickup: the admin can open them again and see who is on the way. Newest first.
+ * They are not waiting any more, so they never count as waiting.
+ */
+export function onTheWayRequests(trips: readonly DemoRecord[], riders: readonly DemoRecord[], driverName: (driverId: string) => string | undefined, now = Date.now()): OnTheWay[] {
+  return trips
+    .filter((trip) => ON_THE_WAY_STATUSES.includes(trip.status) && trip.driverId && trip.acceptedAt && zoneById(trip.zoneId))
+    .filter((trip) => {
+      const age = now - Date.parse(trip.acceptedAt!);
+      return Number.isFinite(age) && age >= -60_000 && age <= ON_THE_WAY_MAX_MIN * 60_000;
+    })
+    .map((trip) => ({ ...requestOf(trip, riders, trip.driverId!), driverId: trip.driverId!, driverName: driverName(trip.driverId!) ?? trip.driverId!, acceptedAt: trip.acceptedAt! }))
+    .sort((a, b) => b.acceptedAt.localeCompare(a.acceptedAt));
 }
 
 /** Free online drivers nearest to a request; those who may drive its category come first. */

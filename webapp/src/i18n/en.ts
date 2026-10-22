@@ -5056,6 +5056,7 @@ export const en = {
   "Offline or no GPS": "Offline or no GPS",
   "Tight": "Tight",
   "More drivers needed": "More drivers needed",
+  "{0} Driver on the way {1}": "{0} Driver on the way {1}",
 } as const;
 
 export type MessageKey = keyof typeof en;
