@@ -6,10 +6,13 @@ import {
   ADMIN_DISPATCH_KEY,
   addDriverBonus,
   advanceAdminDispatch,
+  BONUS_SCOPES,
   directAssign,
+  distanceMeters,
   nearbyDrivers,
   normalizeAdminDispatch,
   openOffers,
+  pickupEtaSeconds,
   radarGroup,
   tripDispatch,
   type AdminDispatchBook,
@@ -17,6 +20,7 @@ import {
   type AssignContext,
   type AssignResult,
   type BonusLimits,
+  type BonusScope,
   type DispatchEvent,
   type NearbyDriver,
   type NearbyQuery,
@@ -26,6 +30,7 @@ import {
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops.ts";
 import { formatMoney, market } from "../markets/markets.ts";
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY } from "../pricing/zonePricing.ts";
+import { driverCode } from "../fleet/codes.ts";
 import { countryOf, moneySplit, routeOf } from "../trips/file.ts";
 import { categoryOf } from "../trips/present.ts";
 import { saveDb } from "./demoStore.ts";
@@ -44,7 +49,10 @@ export type TripOffersView = {
   currency: string;
   offers: AdminOffer[];
   groups: RadarGroup[];
+  /** Money added for the driver: once a driver accepted, what that offer carried; before, the larger of the two below. */
   bonusMinor: number;
+  bonusExclusiveMinor: number;
+  bonusRadarMinor: number;
   priority: boolean;
   lockedTo: TripDispatch["lockedTo"];
   events: DispatchEvent[];
@@ -55,6 +63,25 @@ export type TripOffersView = {
   driverNetMinor: number;
   /** Movera's commission on the ride, from which the bonus is paid. */
   commissionMinor: number;
+  /** The driver who accepted, with what the admin needs to follow the pickup. */
+  accepted: AcceptedDriver | null;
+};
+
+export type AcceptedDriver = {
+  driverId: string;
+  name: string;
+  code: string;
+  phone: string;
+  car: string | null;
+  plate: string | null;
+  /** Minutes to the pickup from the driver's position now (demo average speed). */
+  etaMin: number | null;
+  kind: AdminOffer["kind"];
+  /** Where the radar that reached the driver went ("radar Södermalm"), when it was a radar. */
+  via: string | null;
+  fareMinor: number;
+  driverBonusMinor: number;
+  acceptedAt: string;
 };
 
 export type NearbyDriverList = { scope: NearbyQuery["scope"]; radiusKm?: number; items: NearbyDriver[] };
@@ -123,15 +150,18 @@ export function dispatchCommand(db: DemoDb, trip: DemoRecord, action: string, pa
   const format = (minor: number) => formatMoney(minor, country);
   const extra = minorOf(sent.driverBonusMinor) ?? 0;
   const priority = typeof sent.priority === "boolean" ? sent.priority : undefined;
-  if (action === "admin.trip.driverBonus") return addDriverBonus(book, ctx, minorOf(sent.amountMinor) ?? Number.NaN, priority ?? true, limits, format);
+  const scope: BonusScope = (BONUS_SCOPES as readonly unknown[]).includes(sent.bonusScope) ? (sent.bonusScope as BonusScope) : "both";
+  if (action === "admin.trip.driverBonus") return addDriverBonus(book, ctx, minorOf(sent.amountMinor) ?? Number.NaN, priority ?? true, limits, format, scope);
   if (extra) {
-    const checked = addDriverBonus(book, ctx, extra, priority ?? true, limits, format);
+    const checked = addDriverBonus(book, ctx, extra, priority ?? true, limits, format, scope);
     if (checked.error) return checked;
   }
-  const options = { driverBonusMinor: extra, ...(priority === undefined ? {} : { priority }) };
+  const options = { driverBonusMinor: extra, bonusScope: scope, ...(priority === undefined ? {} : { priority }) };
   if (action === "admin.trip.assign") return directAssign(book, ctx, typeof sent.driverId === "string" ? sent.driverId : "", options);
   const ids = Array.isArray(sent.driverIds) ? sent.driverIds.filter((id): id is string => typeof id === "string") : [];
-  return radarGroup(book, ctx, ids, options);
+  const target = typeof sent.target === "string" && sent.target.trim() ? sent.target.trim().slice(0, 120) : undefined;
+  const maxDrivers = minorOf(sent.maxDrivers);
+  return radarGroup(book, ctx, ids, { ...options, ...(target ? { target } : {}), ...(maxDrivers === undefined ? {} : { maxDrivers }) });
 }
 
 /**
@@ -156,16 +186,45 @@ export function advanceDemoDispatch(db: DemoDb, now = new Date().toISOString()):
   return saveDb({ ...db, trips, slices: { ...db.slices, [ADMIN_DISPATCH_KEY]: result.book } });
 }
 
+/** The driver who accepted the trip's offer: name, code, car, phone, ETA to the pickup and how the ride reached them. */
+export function acceptedDriver(db: DemoDb, trip: DemoRecord, state: TripDispatch): AcceptedDriver | null {
+  const offer = state.offers.find((item) => item.status === "claimed");
+  if (!offer) return null;
+  const record = db.drivers.find((row) => row.id === offer.driverId);
+  const position = liveDrivers(db.drivers, db.vehicles, db.trips, db.incidents, 0).find((row) => row.id === offer.driverId);
+  const vehicle = db.vehicles.find((row) => row.driverId === offer.driverId);
+  const meters = position ? distanceMeters([position.lat, position.lng], routeOf(trip).stops[0].at) : null;
+  const group = offer.groupId ? state.groups.find((item) => item.groupId === offer.groupId) : undefined;
+  return {
+    driverId: offer.driverId,
+    name: offer.driverName,
+    code: driverCode({ id: offer.driverId, zoneId: record?.zoneId ?? trip.zoneId }),
+    phone: typeof record?.phone === "string" ? record.phone : "",
+    car: position?.vehicle ?? (typeof vehicle?.model === "string" ? vehicle.model : null),
+    plate: position?.plate ?? (typeof vehicle?.plate === "string" ? vehicle.plate : null),
+    etaMin: meters === null ? null : Math.round(pickupEtaSeconds(meters) / 60),
+    kind: offer.kind,
+    via: group?.target ?? null,
+    fareMinor: offer.fareMinor,
+    driverBonusMinor: offer.driverBonusMinor,
+    acceptedAt: offer.answeredAt ?? offer.sentAt,
+  };
+}
+
 export function tripOffersView(db: DemoDb, trip: DemoRecord): TripOffersView {
   const state = tripDispatch(dispatchBook(db), trip.id);
   const ctx = context(db, trip, "", new Date().toISOString());
+  const accepted = acceptedDriver(db, trip, state);
   return {
     tripId: trip.id,
     status: trip.status,
     currency: market(countryOf(trip.zoneId)).currency,
     offers: state.offers,
     groups: state.groups,
-    bonusMinor: state.bonusMinor,
+    // Once a driver accepted, only the money on that driver's offer is paid.
+    bonusMinor: accepted ? accepted.driverBonusMinor : state.bonusMinor,
+    bonusExclusiveMinor: state.bonusExclusiveMinor,
+    bonusRadarMinor: state.bonusRadarMinor,
     priority: state.priority,
     lockedTo: state.lockedTo,
     events: dispatchBook(db).events.filter((event) => event.tripId === trip.id),
@@ -174,6 +233,7 @@ export function tripOffersView(db: DemoDb, trip: DemoRecord): TripOffersView {
     fareMinor: ctx.fareMinor,
     driverNetMinor: ctx.driverNetMinor,
     commissionMinor: ctx.fareMinor - ctx.driverNetMinor,
+    accepted,
   };
 }
 

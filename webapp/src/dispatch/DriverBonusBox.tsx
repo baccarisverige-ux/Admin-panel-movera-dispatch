@@ -7,8 +7,8 @@ import type { TripOffersView } from "../api/dispatchSim";
 import { formatMoney, market } from "../markets/markets";
 import { countryOf } from "../trips/file";
 import { CommandButton } from "../ui/CommandButton";
-import { bonusIssue, canAssign } from "./assign";
-import { tr, trn, trSentences } from "../i18n";
+import { BONUS_SCOPES, bonusInScope, bonusIssue, bonusOf, canAssign, scopeCovers, type AdminOffer, type BonusIssue, type BonusScope } from "./assign";
+import { tr, trn, trSentences, trx } from "../i18n";
 
 const PRICING_LINK = "/pricing?tab=extras&section=driver-bonus";
 
@@ -36,46 +36,119 @@ export function useClock(): number {
   return now;
 }
 
+/** The money an admin is about to add for the driver: typed once, used by the next Exclusive or Radar send. */
+export type MoneyDraft = { amount: string; scope: BonusScope; priority: boolean };
+
+export const EMPTY_MONEY: MoneyDraft = { amount: "", scope: "both", priority: true };
+
+export const SCOPE_LABEL: Record<BonusScope, string> = { exclusive: "Exclusive", radar: "Radar", both: "Both" };
+
+type Bonused = Pick<TripOffersView, "bonusExclusiveMinor" | "bonusRadarMinor" | "limits">;
+
+/** The typed amount in minor units, and what is wrong with it for its scope (limit, hard max, decimals). */
+export function draftMoney(draft: MoneyDraft, view: Bonused, zoneId: string): { addMinor: number; issue: BonusIssue | null } {
+  const country = countryOf(zoneId);
+  const minor = market(country).minorUnits;
+  if (draft.amount.trim() === "") return { addMinor: 0, issue: null };
+  const raw = Number(draft.amount) * minor;
+  const addMinor = Number.isFinite(raw) ? Math.round(raw) : 0;
+  if (Number.isFinite(raw) && Math.abs(raw - addMinor) > 1e-6) return { addMinor: 0, issue: { code: "invalid", message: "Too many decimals for this currency." } };
+  const issue = bonusIssue(Number.isFinite(raw) ? addMinor : Number.NaN, bonusInScope(view, draft.scope), view.limits, (value) => formatMoney(value, country));
+  return { addMinor: issue ? 0 : addMinor, issue };
+}
+
 /**
- * "Add money for driver" (Q16, Q17): on the trip, in the assign panel and in the rider pop-up on the map, while the
- * trip is requested, searching or offered. Movera pays it from its commission, and may pay more than its commission;
- * the rider never pays it. The total per trip may not pass the country's limit from Pricing › Tips & limits.
+ * What one send carries for the driver: the typed money when it applies to this kind of offer, the fare the driver
+ * will see (with the money already added for this kind), and a reason not to send when the typed amount is wrong.
  */
-export function DriverBonusBox({ trip, view, canAct, onDone, compact = false }: { trip: { id: string; zoneId: string; status: string }; view: TripOffersView; canAct: boolean; onDone?: (text: string) => void; compact?: boolean }) {
+export function moneyForSend(draft: MoneyDraft, view: (Bonused & Pick<TripOffersView, "fareMinor">) | undefined, zoneId: string, kind: AdminOffer["kind"]) {
+  if (!view) return { params: {} as Record<string, unknown>, used: false, seesMinor: null as number | null, bonusMinor: 0, blocked: null as string | null };
+  const covers = scopeCovers(draft.scope, kind);
+  const { addMinor, issue } = draftMoney(draft, view, zoneId);
+  const used = covers && addMinor > 0;
+  const bonusMinor = bonusOf(view, kind) + (used ? addMinor : 0);
+  return {
+    params: used ? { driverBonusMinor: addMinor, bonusScope: draft.scope, priority: draft.priority } : {},
+    used,
+    seesMinor: view.fareMinor + bonusMinor,
+    bonusMinor,
+    blocked: covers && issue ? issue.message : null,
+  };
+}
+
+function seesAmount(money: { seesMinor: number | null; bonusMinor: number }, zoneId: string): string {
+  if (money.seesMinor === null) return "";
+  const country = countryOf(zoneId);
+  const total = formatMoney(money.seesMinor, country);
+  return money.bonusMinor ? `${total} (+${formatMoney(money.bonusMinor, country)})` : total;
+}
+
+/** "driver sees 103,00 kr (+50,00 kr)" for a send button. */
+export function seesLabel(money: { seesMinor: number | null; bonusMinor: number }, zoneId: string): string {
+  const amount = seesAmount(money, zoneId);
+  return amount ? tr("driver sees {0}", [amount]) : "";
+}
+
+/** "The driver sees 103,00 kr (+50,00 kr)." for a confirm dialog. */
+export function seesSentence(money: { seesMinor: number | null; bonusMinor: number }, zoneId: string): string {
+  const amount = seesAmount(money, zoneId);
+  return amount ? tr("The driver sees {0}.", [amount]) : "";
+}
+
+/**
+ * "Add money for driver" (Q16, Q17), the money line at the top of the rider pop-up and the big panel, and on the
+ * Trip page: while the trip is requested, searching or offered. The admin types an amount and picks where it applies
+ * (Exclusive, Radar or both); the next send carries it, or "Add money" adds it at once to the offers already out.
+ * Movera pays it from its commission, and may pay more than its commission; the rider never pays it. The total per
+ * trip may not pass the country's limit from Pricing › Tips & limits.
+ */
+export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, draft: controlled, onDraft }: { trip: { id: string; zoneId: string; status: string }; view: TripOffersView; canAct: boolean; onDone?: (text: string) => void; compact?: boolean; draft?: MoneyDraft; onDraft?: (draft: MoneyDraft) => void }) {
   const country = countryOf(trip.zoneId);
   const place = market(country);
   const money = (minor: number) => formatMoney(minor, country);
-  const [amount, setAmount] = useState("");
-  const [priority, setPriority] = useState(true);
-  const raw = amount.trim() === "" ? 0 : Number(amount) * place.minorUnits;
-  const addMinor = Number.isFinite(raw) ? Math.round(raw) : 0;
-  const tooFine = Number.isFinite(raw) && Math.abs(raw - addMinor) > 1e-6;
-  const issue = amount.trim() === "" ? null : tooFine ? { code: "invalid" as const, message: "Too many decimals for this currency." } : bonusIssue(Number.isFinite(raw) ? addMinor : Number.NaN, view.bonusMinor, view.limits, money);
+  const [own, setOwn] = useState<MoneyDraft>(EMPTY_MONEY);
+  const draft = controlled ?? own;
+  const set = (patch: Partial<MoneyDraft>) => (onDraft ? onDraft({ ...draft, ...patch }) : setOwn({ ...draft, ...patch }));
+  const { addMinor, issue } = draftMoney(draft, view, trip.zoneId);
   const open = canAssign(trip.status);
-  const total = view.bonusMinor + (issue ? 0 : addMinor);
+  const already = bonusInScope(view, draft.scope);
+  const total = already + addMinor;
   const moveraKeeps = view.commissionMinor - total;
+  const same = view.bonusExclusiveMinor === view.bonusRadarMinor;
   return (
     <section className={compact ? "as-section as-bonus compact" : "as-section as-bonus"} aria-label={tr("Add money for driver")} data-testid="driver-bonus-box">
       <h4>{trn("{0} Add money for driver", <BadgeDollarSign size={14} aria-hidden="true" />)}</h4>
-      {compact ? null : <p className="as-help">{tr("Movera pays it from its commission, and can pay more than its commission. The rider never pays it. The driver sees the total fare with it and a red “Priority” badge.")}</p>}
-      {view.bonusMinor ? <p className="as-bonus-now" data-testid="driver-bonus-now">{trn("Added so far: {0}{1}", <b>{money(view.bonusMinor)}</b>, view.priority ? <span className="as-priority">{tr("Priority")}</span> : null)}</p> : null}
+      {compact ? null : <p className="as-help">{tr("Type the amount and choose where it applies: the next Exclusive or Radar send carries it, and every send button shows what the driver will see. Movera pays it from its commission; the rider never pays it.")}</p>}
+      {view.bonusMinor ? (
+        <p className="as-bonus-now" data-testid="driver-bonus-now">
+          {same
+            ? trn("Added so far: {0}{1}", <b>{money(view.bonusExclusiveMinor)}</b>, view.priority ? <span className="as-priority">{tr("Priority")}</span> : null)
+            : trn("Added so far: Exclusive {0} · Radar {1}{2}", <b>{money(view.bonusExclusiveMinor)}</b>, <b>{money(view.bonusRadarMinor)}</b>, view.priority ? <span className="as-priority">{tr("Priority")}</span> : null)}
+        </p>
+      ) : null}
       <div className="as-bonus-row">
-        <label>{trn("Amount ({0}){1}", place.currency, <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={amount} disabled={!canAct || !open} onChange={(event) => setAmount(event.target.value)} placeholder={tr("Up to {0}", [money(Math.max(0, view.limits.limitMinor - view.bonusMinor))])} />)}</label>
-        <label className="check-row">{trn("{0} Priority badge", <input type="checkbox" checked={priority} disabled={!canAct || !open} onChange={(event) => setPriority(event.target.checked)} />)}</label>
+        <label>{trn("Amount ({0}){1}", place.currency, <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={draft.amount} disabled={!canAct || !open} onChange={(event) => set({ amount: event.target.value })} placeholder={tr("Up to {0}", [money(Math.max(0, view.limits.limitMinor - already))])} />)}</label>
+        <div className="as-chips" role="group" aria-label={tr("Apply to")} data-testid="driver-bonus-scope">
+          <span className="as-chips-label">{tr("Apply to")}</span>
+          {BONUS_SCOPES.map((scope) => (
+            <button key={scope} data-command="admin.dispatch.view" type="button" className={draft.scope === scope ? "as-chip active" : "as-chip"} aria-pressed={draft.scope === scope} disabled={!canAct || !open} onClick={() => set({ scope })}>{trx(SCOPE_LABEL[scope])}</button>
+          ))}
+        </div>
+        <label className="check-row">{trn("{0} Priority badge", <input type="checkbox" checked={draft.priority} disabled={!canAct || !open} onChange={(event) => set({ priority: event.target.checked })} />)}</label>
         <CommandButton
           command="admin.trip.driverBonus"
-          className="dash-btn small"
+          className="dash-btn small ghost"
           targetId={trip.id}
           scope={trip.zoneId}
           confirmTarget={false}
           entityState={trip.status}
-          before={money(view.bonusMinor)}
-          after={money(view.bonusMinor + addMinor)}
-          value={{ amountMinor: addMinor, priority }}
+          before={money(already)}
+          after={money(already + addMinor)}
+          value={{ amountMinor: addMinor, priority: draft.priority, bonusScope: draft.scope }}
           disabled={!canAct || !open || addMinor <= 0 || Boolean(issue)}
-          title={!open ? tr("Money can be added only while the trip is requested, searching or offered.") : issue?.message}
-          summary={<>{trn("Add {0} for the driver on {1}. Movera pays it; the rider’s price does not change.", <b>{money(addMinor)}</b>, trip.id)}</>}
-          onDone={() => { setAmount(""); onDone?.(`${money(addMinor)} added for the driver.`); }}
+          title={!open ? tr("Money can be added only while the trip is requested, searching or offered.") : issue?.message ?? tr("Adds it now to the offers already out, and keeps it for the next sends.")}
+          summary={<>{trn("Add {0} for the driver on {1} ({2}). Movera pays it; the rider’s price does not change.", <b>{money(addMinor)}</b>, trip.id, trx(SCOPE_LABEL[draft.scope]))}</>}
+          onDone={() => { set({ amount: "" }); onDone?.(`${money(addMinor)} added for the driver.`); }}
         >{tr("Add money")}</CommandButton>
       </div>
       {issue ? (
@@ -85,13 +158,16 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false }: 
       ) : (
         <p className="as-help">{trn("Limit {0} per trip, set in {1} (hard max {2}).", money(view.limits.limitMinor), <Link to={PRICING_LINK}>{tr("Pricing › Tips & limits")}</Link>, money(view.limits.hardMaxMinor))}</p>
       )}
-      <dl className="as-split" aria-label={tr("Money split with the bonus")} data-testid="driver-bonus-split">
-        <div><dt>{tr("Rider pays")}</dt><dd>{money(view.fareMinor)}</dd></div>
-        <div><dt>{tr("Driver gets")}</dt><dd>{money(view.driverNetMinor + total)}</dd></div>
-        <div><dt>{tr("Movera commission")}</dt><dd>{money(view.commissionMinor)}</dd></div>
-        <div className={total ? "minus" : undefined}><dt>{tr("Bonus paid by Movera")}</dt><dd>− {money(total)}</dd></div>
-        <div className={moveraKeeps < 0 ? "total minus" : "total"}><dt>{tr("Movera keeps")}</dt><dd>{money(moveraKeeps)}</dd></div>
-      </dl>
+      {addMinor > 0 ? <p className="as-pending" data-testid="driver-bonus-pending">{trn("{0} goes with the next {1} send.", <b>{money(addMinor)}</b>, draft.scope === "both" ? tr("Exclusive or Radar") : trx(SCOPE_LABEL[draft.scope]))}</p> : null}
+      {compact ? null : (
+        <dl className="as-split" aria-label={tr("Money split with the bonus")} data-testid="driver-bonus-split">
+          <div><dt>{tr("Rider pays")}</dt><dd>{money(view.fareMinor)}</dd></div>
+          <div><dt>{tr("Driver gets")}</dt><dd>{money(view.driverNetMinor + total)}</dd></div>
+          <div><dt>{tr("Movera commission")}</dt><dd>{money(view.commissionMinor)}</dd></div>
+          <div className={total ? "minus" : undefined}><dt>{tr("Bonus paid by Movera")}</dt><dd>− {money(total)}</dd></div>
+          <div className={moveraKeeps < 0 ? "total minus" : "total"}><dt>{tr("Movera keeps")}</dt><dd>{money(moveraKeeps)}</dd></div>
+        </dl>
+      )}
       {moveraKeeps < 0 ? <p className="dx-note" data-testid="driver-bonus-beyond">{trn("Movera pays {0} more than its commission on this trip.", money(-moveraKeeps))}</p> : null}
     </section>
   );

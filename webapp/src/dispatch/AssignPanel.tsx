@@ -1,48 +1,46 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock, Lock, MapPin, Radar, Send, Star, Target, UserRound, X, Zap } from "lucide-react";
+import { Lock, MapPin, Radar, Send, Star, Target, UserRound, X, Zap } from "lucide-react";
 import { useAdminApi } from "../api/AdminApiContext";
 import { useTrips } from "../api/hooks";
-import type { TripOffersView } from "../api/dispatchSim";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import type { Candidate } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
 import { statusLabel, statusPresentation } from "../domain/labels";
-import { MARKETS, formatMoney, zoneById } from "../markets/markets";
+import { zoneById } from "../markets/markets";
 import { categoryOf } from "../trips/present";
 import { CommandButton } from "../ui/CommandButton";
 import { StatusDot } from "../ui/kit";
 import { useDialogFocus } from "../ui/useDialogFocus";
 import {
-  EVENT_LABEL,
-  OFFER_STATUS_LABEL,
   RADAR_GROUP_MAX,
   RADIUS_PRESETS_KM,
   canAssign,
-  countdownLabel,
   distanceLabel,
   isLocked,
   radiusIssue,
-  secondsLeft,
   type AdminOffer,
   type NearbyQuery,
 } from "./assign";
 import { AssignPanelContext, useAssignPanel, type AssignExtras } from "./assignContext";
-import { DriverBonusBox, useClock, useTripOffers } from "./DriverBonusBox";
+import { DriverBonusBox, EMPTY_MONEY, moneyForSend, seesLabel, seesSentence, useClock, useTripOffers, type MoneyDraft } from "./DriverBonusBox";
+import { AcceptedCard, OfferStatus, OffersSection } from "./RideProgress";
 import { handledOf } from "./handle";
 import { CancelRequestButton, HandledLine, RadarSender, useDispatchBook, type HandledRide } from "./HandlePanel";
-import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { tr, trn, trx, trSentences } from "../i18n";
 
 export { useAssignPanel } from "./assignContext";
 export { DriverBonusBox, useTripOffers } from "./DriverBonusBox";
+export { OfferStatus, OffersSection } from "./RideProgress";
 
 /**
  * The admin assign tool (owner Q13–Q18), the big "Handle" panel: opened from a waiting rider on the Dispatch live
  * list and map, the Dashboard, the Trips list or the Trip page. Two clear sections — EXCLUSIVE (nearby drivers, one
  * offer to one driver) and RADAR (radar zones, zones, driver groups, or drivers ticked by hand, up to 10, again and
- * again until one accepts) — then the offers sent, "Add money for driver" and "Cancel request".
+ * again until one accepts). On top the money for the driver: typed once, it goes with the next Exclusive or Radar send
+ * (or both), and every send button shows what the driver will see. Then the offers sent and "Cancel request".
  */
 
 const CATEGORY_LABEL = new Map(CATEGORIES.map((category) => [category.id, category.label]));
@@ -86,22 +84,6 @@ function queryOf(scope: Scope, custom: string): NearbyQuery | null {
   return { scope: scope.kind };
 }
 
-function offerTone(status: AdminOffer["status"]): "green" | "amber" | "red" | "muted" {
-  if (status === "claimed") return "green";
-  if (status === "open") return "amber";
-  if (status === "declined" || status === "expired") return "red";
-  return "muted";
-}
-
-export function OfferStatus({ offer, now }: { offer: AdminOffer; now: number }) {
-  return (
-    <span className="as-offer-status" data-status={offer.status}>
-      <StatusDot tone={offerTone(offer.status)}>{trx(OFFER_STATUS_LABEL[offer.status])}</StatusDot>
-      {offer.status === "open" ? <span className="as-countdown" aria-label={tr("{0} seconds left", [secondsLeft(offer.expiresAt, now)])}><Clock size={11} aria-hidden="true" /> {countdownLabel(secondsLeft(offer.expiresAt, now))}</span> : null}
-    </span>
-  );
-}
-
 export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; candidates: Candidate[]; onClose: () => void }) {
   const api = useAdminApi();
   const client = useQueryClient();
@@ -117,6 +99,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
   const [custom, setCustom] = useState("15");
   const [picked, setPicked] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
+  const [draft, setDraft] = useState<MoneyDraft>(EMPTY_MONEY);
   const root = useDialogFocus(true, onClose);
   const query = queryOf(scope, custom);
   const nearby = useQuery({
@@ -158,6 +141,12 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
     if (handledId && !root.current?.contains(document.activeElement)) root.current?.focus();
   }, [handledId, root]);
   const say = (text: string) => { setNotice(text); refresh(); };
+  const sent = () => setDraft((value) => ({ ...value, amount: "" }));
+  const zoneId = trip?.zoneId ?? "";
+  const exclusiveMoney = moneyForSend(draft, view, zoneId, "assigned");
+  const radarMoney = moneyForSend(draft, view, zoneId, "radar");
+  const exclusiveSees = seesLabel(exclusiveMoney, zoneId);
+  const radarSees = seesLabel(radarMoney, zoneId);
 
   const scopeButton = (label: string, next: Scope, active: boolean) => (
     <button data-command="admin.dispatch.view" type="button" className={active ? "as-chip active" : "as-chip"} aria-pressed={active} onClick={() => setScope(next)}>{trx(label)}</button>
@@ -191,6 +180,9 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
         )}
         {handled ? <HandledLine action={handled} /> : null}
         {notice ? <p className="dx-note" role="status">{trSentences(notice)}</p> : null}
+        {view?.accepted ? <AcceptedCard view={view} /> : null}
+
+        {view && trip && canAssign(status) ? <DriverBonusBox trip={{ id: trip.id, zoneId: trip.zoneId, status }} view={view} canAct={canAct} onDone={say} draft={draft} onDraft={setDraft} /> : null}
 
         <section className="as-section as-exclusive" aria-label={tr("Exclusive")} data-testid="assign-exclusive">
           <div className="as-section-head">
@@ -205,7 +197,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
               ) : null}
             </div>
           </div>
-          <p className="as-help">{trn("{0} Active drivers near the pickup. Click a driver’s name to send the exclusive offer; the driver has {1} s to accept.", <MapPin size={12} aria-hidden="true" />, timers?.exclusiveSeconds ?? 15)}</p>
+          <p className="as-help">{trn("{0} Active drivers near the pickup. Click a driver’s name to send the exclusive offer; the driver has {1} s to accept.", <MapPin size={12} aria-hidden="true" />, timers?.exclusiveSeconds ?? 15)}{exclusiveSees ? <b className="hq-sees" data-testid="exclusive-sees"> {seesSentence(exclusiveMoney, zoneId)}</b> : null}</p>
           {scope.kind === "custom" && radiusIssue(Number(custom)) ? <p className="pl-warn" role="alert">{radiusIssue(Number(custom))}</p> : null}
           {nearby.isLoading ? <p className="state-line">{tr("Looking for drivers.")}</p> : nearby.isError ? <p className="pl-warn" role="alert">{trSentences(nearby.error.message)}</p> : drivers.length === 0 && query ? (
             <p className="dx-calm">{trn("No active driver {0}. Try a wider distance.", query.scope === "radius" ? tr("within {0} km", [query.radiusKm]) : query.scope === "zone" ? tr("in this zone") : tr("in this zone or the zones next to it"))}</p>
@@ -233,11 +225,11 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
                           patch={{ status: "offered" }}
                           before={status}
                           after={`exclusive offer to ${row.driverId}`}
-                          value={{ driverId: row.driverId }}
-                          disabled={!pickable(row.driverId)}
+                          value={{ driverId: row.driverId, ...exclusiveMoney.params }}
+                          disabled={!pickable(row.driverId) || Boolean(exclusiveMoney.blocked)}
                           title={!assignable ? tr("This trip cannot be assigned now.") : !free ? tr("{0} is on a trip.", [row.name]) : row.openOfferId ? tr("{0} already has an open offer.", [row.name]) : tr("Send an exclusive offer to {0}", [row.name])}
-                          summary={<>{trn("Send an exclusive offer for {0} to {1}, {2} away. {3} has {4} s to accept or decline.", <b>{trip?.name ?? tripId}</b>, <b>{row.name}</b>, distanceLabel(row.distanceMeters), row.name, timers?.exclusiveSeconds ?? 15)}</>}
-                          onDone={() => { setNotice(`Exclusive offer sent to ${row.name}.`); refresh(); }}
+                          summary={<>{trn("Send an exclusive offer for {0} to {1}, {2} away. {3} has {4} s to accept or decline.", <b>{trip?.name ?? tripId}</b>, <b>{row.name}</b>, distanceLabel(row.distanceMeters), row.name, timers?.exclusiveSeconds ?? 15)}{exclusiveSees ? ` ${seesSentence(exclusiveMoney, zoneId)}` : ""}</>}
+                          onDone={() => { if (exclusiveMoney.used) sent(); setNotice(`Exclusive offer sent to ${row.name}.`); refresh(); }}
                         >
                           {row.name}
                         </CommandButton>
@@ -263,7 +255,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
         <section className="as-section as-radar" aria-label={tr("Radar")} data-testid="assign-radar">
           <h4>{trn("{0} Radar · several drivers at once", <Radar size={14} aria-hidden="true" />)}</h4>
           <p className="as-help">{tr("Send the ride to a radar zone, to whole zones or to a driver group; or tick the drivers yourself. The first to accept takes it.")}</p>
-          {trip ? <RadarSender ride={ride} book={book} candidates={candidates} onNotice={say} /> : null}
+          {trip ? <RadarSender ride={ride} book={book} candidates={candidates} onNotice={say} view={view} draft={draft} onSent={sent} /> : null}
           <div className="as-pick">
             <b>{tr("Or tick drivers yourself")}</b>
             <div className="as-chips" role="group" aria-label={tr("Drivers for the radar")}>
@@ -292,17 +284,15 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
               patch={{ status: "offered" }}
               before={status}
               after={`radar group: ${selected.join(", ")}`}
-              value={{ driverIds: selected }}
-              disabled={!assignable || selected.length === 0}
-              title={!assignable ? tr("This trip cannot be assigned now.") : selected.length === 0 ? tr("Tick 1 to 10 drivers first.") : undefined}
-              onDone={() => { setNotice(`Sent to the radar of ${selected.length} driver${selected.length === 1 ? "" : "s"}.`); setPicked([]); refresh(); }}
+              value={{ driverIds: selected, ...radarMoney.params }}
+              disabled={!assignable || selected.length === 0 || Boolean(radarMoney.blocked)}
+              title={!assignable ? tr("This trip cannot be assigned now.") : selected.length === 0 ? tr("Tick 1 to 10 drivers first.") : radarMoney.blocked ? trx(radarMoney.blocked) : radarSees || undefined}
+              onDone={() => { if (radarMoney.used) sent(); setNotice(`Sent to the radar of ${selected.length} driver${selected.length === 1 ? "" : "s"}.`); setPicked([]); refresh(); }}
             >{trn("{0} Send to radar", <Send size={13} aria-hidden="true" />)}</CommandButton>
           </div>
         </section>
 
         <OffersSection view={view} now={now} />
-
-        {view && trip ? <DriverBonusBox trip={{ id: trip.id, zoneId: trip.zoneId, status }} view={view} canAct={canAct} onDone={say} /> : null}
 
         {trip && canAct && canAssign(status) ? (
           <section className="as-section as-cancel" aria-label={tr("Cancel request")}>
@@ -315,61 +305,5 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
         ) : null}
       </div>
     </div>
-  );
-}
-
-/** Offers sent (direct and radar groups), with the countdown of each group, and the dispatch events of the trip. */
-export function OffersSection({ view, now }: { view: TripOffersView | undefined; now: number }) {
-  if (!view) return null;
-  const direct = view.offers.filter((offer) => offer.kind === "assigned");
-  return (
-    <section className="as-section" aria-label={tr("Offers sent")}>
-      <h4>{trn("{0} Offers sent", <Radar size={14} aria-hidden="true" />)}</h4>
-      {view.offers.length === 0 ? <p className="dx-calm">{tr("No offer sent from here yet.")}</p> : (
-        <ul className="as-offers" aria-label={tr("Offers")}>
-          {direct.length ? (
-            <li>
-              <b>{trn("{0} Direct assign (exclusive)", <Zap size={12} aria-hidden="true" />)}</b>
-              <ul>{direct.map((offer) => <OfferLine key={offer.offerId} offer={offer} now={now} />)}</ul>
-            </li>
-          ) : null}
-          {view.groups.map((group) => {
-            const left = secondsLeft(group.expiresAt, now);
-            const items = view.offers.filter((offer) => offer.groupId === group.groupId);
-            const open = items.some((offer) => offer.status === "open");
-            return (
-              <li key={group.groupId} data-group={group.groupId}>
-                <b>{trn("{0} Radar group {1} · {2} driver{3}", <Radar size={12} aria-hidden="true" />, group.number, group.driverIds.length, group.driverIds.length === 1 ? "" : tr("s"))}</b>
-                <span className="as-countdown" data-testid={`group-countdown-${group.number}`}>{open ? <>{trn("{0} {1} left", <Clock size={11} aria-hidden="true" />, countdownLabel(left))}</> : tr("Ended")}</span>
-                <ul>{items.map((offer) => <OfferLine key={offer.offerId} offer={offer} now={now} />)}</ul>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {view.events.length ? (
-        <ol className="as-events" aria-label={tr("Dispatch events")}>
-          {view.events.slice(-8).reverse().map((event) => (
-            <li key={event.eventId} data-kind={event.kind}>
-              <time>{new Date(event.occurredAt).toLocaleTimeString(uiLocale(), { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</time>
-              <span>{trx(EVENT_LABEL[event.kind])}{event.driverName ? ` · ${event.driverName}` : ""}</span>
-            </li>
-          ))}
-        </ol>
-      ) : null}
-    </section>
-  );
-}
-
-function OfferLine({ offer, now }: { offer: AdminOffer; now: number }) {
-  const country = MARKETS.find((item) => item.currency === offer.currency)?.id ?? "SE";
-  const money = (minor: number) => formatMoney(minor, country);
-  return (
-    <li data-offer={offer.offerId} data-driver={offer.driverId}>
-      <span>{offer.driverName}</span>
-      <OfferStatus offer={offer} now={now} />
-      <small>{trn("Driver sees {0}{1}", money(offer.fareMinor), offer.driverBonusMinor ? tr(" (incl. +{0})", [money(offer.driverBonusMinor)]) : "")}</small>
-      {offer.priority ? <span className="as-priority">{tr("Priority")}</span> : null}
-    </li>
   );
 }

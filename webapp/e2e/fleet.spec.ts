@@ -154,7 +154,11 @@ test("riders waiting for a driver can be sent to the nearest driver with the rad
   await row.getByRole("button", { name: "Exclusive to nearest" }).click();
   await page.locator(".modal.open").getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText(new RegExp(`${rider}'s ride offered to .+ \\(MV-SE-\\d{4}\\)`))).toBeVisible();
-  await expect(list).toContainText("Offered to D");
+  // A real exclusive offer: recorded for every place, and in the rider's offers with its countdown.
+  const sentRow = list.locator("li").filter({ hasText: rider }).first();
+  await expect(sentRow).toContainText(/Sent to .+ by nora/);
+  await sentRow.getByRole("button", { name: `Nearby drivers for ${rider}` }).click();
+  await expect(page.getByTestId("assign-panel").getByRole("list", { name: "Offers" })).toContainText("Direct assign (exclusive)");
 });
 
 test("a waiting rider opens on the map with assign actions and a link to the rider", async ({ page }) => {
