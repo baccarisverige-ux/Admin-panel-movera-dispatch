@@ -7,6 +7,7 @@ import type { Candidate, RideRequest } from "../dashboard/riders";
 import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { RiderQuickActions, RiderRowActions } from "./HandlePanel";
+import { OnTheWayGroup, useOnTheWay } from "./RideProgress";
 import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import { supplyDemand } from "../dashboard/insights";
 import { LiveMapLayerChips, LiveMapQuickPopup, useLiveMapExtras, type QuickTarget } from "../pricing/LiveMapExtras";
@@ -15,6 +16,11 @@ import { MapPanel } from "./maps";
 import { RiderAssignName, useAssignPanel } from "./AssignPanel";
 import { DISPATCH_KEY, modeLabel, modeNow, requestControl, type DispatchBook, type ZoneDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
+import { SupplyDemandDrill } from "../dashboard/SupplyDemandDrill";
+import type { MapLocate } from "../dashboard/supplyDrill";
+import { useSession } from "../auth/SessionContext";
+import { can } from "../auth/permissions";
+import { offersLink } from "./MovedCard";
 
 type Props = {
   book: DispatchBook;
@@ -43,6 +49,9 @@ const NO_HIDDEN = new Set<LiveState>();
 export function LiveView({ book, market, zones, drivers, requests, candidatesOf, rulesOf, busyOf, hhmm, canControl, agentId, withScope, onNotice, sharedAlerts, rideChecks = null }: Props) {
   const assignPanel = useAssignPanel();
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
+  const [locate, setLocate] = useState<MapLocate | null>(null);
+  const [showBalance, setShowBalance] = useState(false);
+  const role = useSession().agent?.role;
   const ids = new Set(zones.map((zone) => zone.id));
   const handled = new Map(book.liveActions.map((action) => [action.tripId, action]));
   const now = new Date().toISOString();
@@ -50,6 +59,10 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
   // Surge layer, driver bonus areas and their quick pop-ups: the same as on the Dashboard map.
   const [quick, setQuick] = useState<QuickTarget>(null);
   const extras = useLiveMapExtras({ prefKey: "dispatch", country: market.id, market, zoneIds: zones.map((zone) => zone.id), balance: supplyDemand(market.id, zones.map((zone) => zone.id), waiting, drivers), now: Date.now() });
+  // Rides a driver just accepted: listed apart and still on the map, so "See on map" shows who is on the way.
+  const allOnTheWay = useOnTheWay();
+  const onTheWay = allOnTheWay.filter((item) => ids.has(item.zoneId) && !waiting.some((request) => request.tripId === item.tripId));
+  const onMap = onTheWay.length ? [...waiting, ...onTheWay] : waiting;
   const alerts: Alert[] = [];
   for (const zone of zones) {
     const rules = rulesOf(zone.id);
@@ -61,6 +74,9 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
       if (alert.id === "no_driver" && zoneWaiting.length >= alert.limit) alerts.push({ id: `${alert.id}:${zone.id}`, zoneId: zone.id, tone: "red", text: `${zoneWaiting.length} requests without a driver in ${zone.name}` });
     }
   }
+
+  const balance = supplyDemand(market.id, zones.map((zone) => zone.id), waiting, drivers);
+  const surgeLink = (zoneId: string) => (role && can(role, "settings.read") ? withScope(`/pricing?zone=${zoneId}&tab=surge`) : null);
 
   return (
     <div className="dx-live">
@@ -123,12 +139,14 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
         <div className="dx-map-layers" role="toolbar" aria-label={tr("Map layers")}>
           <LiveMapLayerChips bonusCount={extras.bonusAreas.length} showBonus={extras.showBonus} onBonus={extras.setShowBonus} surgePref={extras.surgePref} />
         </div>
-        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined}
+        <DriversMap drivers={drivers} requests={onMap} showRequests focusRequest={focus} locate={locate} balance={balance} showBalance={showBalance} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined}
           surge={extras.surge} surgeShown={extras.surgePref.shown} surgeStyle={extras.surgePref.style} bonusAreas={extras.bonusAreas} bonusShown={extras.showBonus}
           onSurgeZone={(zoneId) => setQuick({ kind: "surge", zoneId })} onBonusArea={(id) => setQuick({ kind: "bonus", id })}
           overlay={<LiveMapQuickPopup target={quick} surge={extras.surge} country={market.id} market={market} withScope={withScope} onClose={() => setQuick(null)} onNotice={onNotice} />} />
         {extras.surgePref.shown ? <SurgeLegend /> : null}
       </MapPanel>
+
+      <SupplyDemandDrill rows={balance} showOnMap={showBalance} onToggleMap={() => setShowBalance((value) => !value)} surgeLink={surgeLink} drivers={drivers} requests={waiting} radarZones={book.radarZones} onLocate={setLocate} radarZoneLink={(zoneId) => withScope(offersLink("radar", zoneId))} />
 
       <section className="dash-card" aria-labelledby="dx-waiting-title">
         <div className="card-head"><h3 id="dx-waiting-title">{trn("{0} Riders waiting for a driver {1}", <Users size={16} aria-hidden="true" />, <span className="dx-count">{waiting.filter((item) => !handled.has(item.tripId)).length}</span>)}</h3></div>
@@ -147,6 +165,7 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
             ))}
           </ul>
         )}
+        <OnTheWayGroup items={onTheWay} onLocate={(tripId) => setFocus({ id: tripId, nonce: Date.now() })} />
         <p className="fine-print">{tr("Handle opens the same panel as on the Dashboard: Exclusive (one offer to one nearby driver) and Radar (a radar zone, whole zones, a driver group or drivers you tick, up to 10), again and again until one accepts. Exclusive to nearest offers the ride to the nearest free driver now.")}</p>
       </section>
     </div>

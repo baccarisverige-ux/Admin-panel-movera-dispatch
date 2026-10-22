@@ -18,19 +18,22 @@ test("R8 live quick dispatch offers an open request to an eligible vehicle-backe
   await page.goto("/live");
   await expect(page.getByRole("heading", { level: 2, name: "Live map" })).toBeVisible();
 
-  const request = page.getByRole("list", { name: "Open requests" }).getByRole("button", { name: /Open T0003/ });
-  await request.click();
+  // T0003's only eligible drivers are in SOS or without GPS: nobody can take it, so quick dispatch says so.
+  await page.getByRole("list", { name: "Open requests" }).getByRole("button", { name: /Open T0003/ }).click();
   await expect(page.getByTestId("quick-dispatch")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Offer request" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Offer request" })).toBeDisabled();
 
+  // T0004 has free eligible drivers: a real exclusive offer (offer record, countdown), shown on the trip.
+  await page.getByRole("list", { name: "Open requests" }).getByRole("button", { name: /Open T0004/ }).click();
+  await expect(page.getByRole("button", { name: "Offer request" })).toBeEnabled();
   await page.getByRole("button", { name: "Offer request" }).click();
   await confirm(page);
-  await expect(page.getByText(/T0003 offered to D\d+/)).toBeVisible();
+  await expect(page.getByText(/T0004 offered to D\d+/)).toBeVisible();
 
-  await page.goto("/trips/T0003");
-  await expect(page.getByRole("heading", { level: 2, name: "Trip T0003" })).toBeVisible();
+  await page.goto("/trips/T0004");
+  await expect(page.getByRole("heading", { level: 2, name: "Trip T0004" })).toBeVisible();
   await expect(page.getByText("Offered", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText(/Driver .*D\d+/)).toBeVisible();
+  await expect(page.getByTestId("trip-assign").getByRole("list", { name: "Offers" })).toContainText("Direct assign (exclusive)");
 });
 
 test("R8 waiting and bounded fare corrections persist and are audited", async ({ page }) => {

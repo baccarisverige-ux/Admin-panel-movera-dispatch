@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from "react-router";
+import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Banknote, Car, Clock3, Coins, Eye, FileText, Flag, History, ListOrdered, Lock, MapPinned, MessagesSquare, Radar, Route as RouteIcon, ShieldCheck, Star, Users, Wrench } from "lucide-react";
@@ -118,9 +119,11 @@ export function TripPage() {
   const [revealed, setRevealed] = useState(false);
   const [notice, setNotice] = useState("");
 
+  // Only drivers who can take an offer now: the server refuses an exclusive offer to a busy driver.
+  const free = useFreeDriverIds();
   const eligible = useMemo(
-    () => (trip ? offersFor(trip, drivers.data ?? [], vehicles.data ?? []) : []),
-    [drivers.data, trip, vehicles.data],
+    () => (trip ? offersFor(trip, drivers.data ?? [], vehicles.data ?? []).filter((driver) => !free || free.has(driver.id)) : []),
+    [drivers.data, trip, vehicles.data, free],
   );
   const route = useMemo(() => (trip ? routeOf(trip) : null), [trip]);
   const chosen = driverId || eligible[0]?.id || "";
@@ -424,10 +427,12 @@ export function TripPage() {
 
               <p data-testid="offer-block">{offerWhy ?? tr("Offer is allowed in this state. The driver gets an Assigned by Movera offer and still has to accept.")}</p>
               {offerWhy ? (
-                <button data-command="admin.trip.offer" className="secondary-btn" type="button" disabled title={offerWhy}>{tr("Offer to driver")}</button>
+                <button data-command="admin.trip.assign" className="secondary-btn" type="button" disabled title={offerWhy}>{tr("Offer to driver")}</button>
               ) : (
+                // A real exclusive offer (the assign tool): an offer record with the money added for the driver and
+                // its countdown, shown in the offers above; the trip gets its driver only when the driver accepts.
                 <CommandButton
-                  command="admin.trip.offer"
+                  command="admin.trip.assign"
                   className="secondary-btn"
                   targetId={trip.id}
                   confirmTarget={false}
@@ -435,8 +440,9 @@ export function TripPage() {
                   scope={trip.zoneId}
                   collection="trips"
                   before={trip.status}
-                  after={`offered to ${chosen}`}
-                  patch={{ driverId: chosen, status: "offered" }}
+                  after={`exclusive offer to ${chosen}`}
+                  patch={{ status: "offered" }}
+                  value={{ driverId: chosen }}
                 >{tr("Offer to driver")}</CommandButton>
               )}
 

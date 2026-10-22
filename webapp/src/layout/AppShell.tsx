@@ -49,6 +49,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { MarketBar } from "./MarketBar";
 import { tr, trn, trx, uiLocale } from "../i18n";
 import { ProfileMenu } from "../i18n/ProfileMenu";
+import { BackToFrom } from "../ui/BackToFrom";
 import { COUNTRY_LABEL } from "../i18n/countries";
 
 const ICONS: Record<NavIcon, typeof Menu> = {
@@ -300,7 +301,7 @@ function ShellInner({ page, children }: AppShellProps) {
             </ul>
           </div>
         ) : null}
-        <main id="content" tabIndex={-1} className="content">{children}</main>
+        <main id="content" tabIndex={-1} className="content"><BackToFrom />{children}</main>
         <footer className="build-footer">{trn("Demo data · {0} · {1}", env, buildLabel())}</footer>
       </section>
     </div>

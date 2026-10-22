@@ -39,7 +39,7 @@ export function maskBookings(rows: readonly DemoRecord[], access: DashboardAcces
   return access.riders ? rows : rows.map((row) => ({ ...row, name: HIDDEN_RIDER, phone: "" }));
 }
 
-export function maskRequests(rows: readonly RideRequest[], access: DashboardAccess): RideRequest[] {
+export function maskRequests<T extends RideRequest>(rows: readonly T[], access: DashboardAccess): T[] {
   return rows.map((row) => ({
     ...row,
     rider: access.riders ? row.rider : HIDDEN_RIDER,

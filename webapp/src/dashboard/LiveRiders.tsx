@@ -1,7 +1,8 @@
 import { Link } from "react-router";
 import { Clock, MapPin, Radar, UserRound, Users } from "lucide-react";
 import { RiderRowActions } from "../dispatch/HandlePanel";
-import type { Candidate, RideRequest, RiderCounts } from "./riders";
+import { OnTheWayGroup } from "../dispatch/RideProgress";
+import type { Candidate, OnTheWay, RideRequest, RiderCounts } from "./riders";
 import { tr, trn } from "../i18n";
 
 type Props = {
@@ -11,9 +12,11 @@ type Props = {
   onLocate: (tripId: string) => void;
   canAssign: boolean;
   onAssigned: (message: string) => void;
+  /** Rides a driver just accepted, shown apart under the waiting riders. */
+  onTheWay?: readonly OnTheWay[];
 };
 
-export function LiveRiders({ counts, requests, candidatesOf, onLocate, canAssign, onAssigned }: Props) {
+export function LiveRiders({ counts, requests, candidatesOf, onLocate, canAssign, onAssigned, onTheWay = [] }: Props) {
   return (
     <section className="dash-card live-riders" aria-labelledby="live-riders-title">
       <div className="card-head">
@@ -50,6 +53,7 @@ export function LiveRiders({ counts, requests, candidatesOf, onLocate, canAssign
           })}
         </ul>
       )}
+      <OnTheWayGroup items={onTheWay} onLocate={onLocate} />
       <p className="fine-print">{trn("{0} Exclusive to nearest offers the ride to the nearest free driver who is allowed to drive the requested category. Handle opens Exclusive and Radar, the same panel as in Dispatch.", <Radar size={12} aria-hidden="true" />)}</p>
     </section>
   );

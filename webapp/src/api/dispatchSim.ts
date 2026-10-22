@@ -178,7 +178,8 @@ export function advanceDemoDispatch(db: DemoDb, now = new Date().toISOString()):
     if (!change) return row;
     if (change.to === "accepted") {
       const to = nextStatus(row.status, "accept", "driver");
-      return to ? { ...row, status: to, previousStatus: row.status, driverId: change.driverId } : row;
+      const acceptedAt = result.book.trips[row.id]?.lockedTo?.at ?? now;
+      return to ? { ...row, status: to, previousStatus: row.status, driverId: change.driverId, acceptedAt } : row;
     }
     const to = nextStatus(row.status, "offer_lapsed", "system");
     return to ? { ...row, status: to, previousStatus: row.status, driverId: null } : row;

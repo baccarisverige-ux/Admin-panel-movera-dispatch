@@ -38,7 +38,11 @@ import { change, COMMISSION_PLACEHOLDER, earningsReport, type Share } from "../d
 import { activeBoosts, airportQueues, cancellations, ratings, supplyDemand } from "../dashboard/insights";
 import { countStates, LIVE_STATES, liveDrivers, type LiveState } from "../dashboard/live";
 import { LiveRiders } from "../dashboard/LiveRiders";
-import { RiderQuickActions } from "../dispatch/HandlePanel";
+import { RiderQuickActions, useDispatchBook } from "../dispatch/HandlePanel";
+import { SupplyDemandDrill } from "../dashboard/SupplyDemandDrill";
+import type { MapLocate } from "../dashboard/supplyDrill";
+import { offersLink } from "../dispatch/MovedCard";
+import { useOnTheWay } from "../dispatch/RideProgress";
 import { liveTrip } from "../dashboard/liveTrip";
 import { PeriodPicker } from "../dashboard/PeriodPicker";
 import { parsePeriod, periodParams, periodWindow, type Period } from "../dashboard/period";
@@ -49,7 +53,7 @@ import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
 import { useAlertSignals, type Signal } from "../dashboard/useAlertSignals";
 import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
-import { ActivityFeed, AirportCard, BoostCard, InsightsCard, LiveStamp, LiveTag, SoundToggle, SupplyDemandCard, type ActivityItem, type DriverRank } from "../dashboard/Widgets";
+import { ActivityFeed, AirportCard, BoostCard, InsightsCard, LiveStamp, LiveTag, SoundToggle, type ActivityItem, type DriverRank } from "../dashboard/Widgets";
 import { CATEGORIES } from "../domain/contract";
 import { statusLabel } from "../domain/labels";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
@@ -157,6 +161,8 @@ export function DashboardPage() {
   const [showBonus, setShowBonus] = useState(true);
   const [quick, setQuick] = useState<QuickTarget>(null);
   const [focusRequest, setFocusRequest] = useState<{ id: string; nonce: number } | null>(null);
+  const [locate, setLocate] = useState<MapLocate | null>(null);
+  const supplyBook = useDispatchBook();
   const [liveNotice, setLiveNotice] = useState("");
   const [refreshedAt, setRefreshedAt] = useState(0);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -257,6 +263,10 @@ export function DashboardPage() {
   // Offers only count when they went to a driver who could really take them.
   const requests = useMemo(() => maskRequests(rideRequests(tripRows, riderRows, (driverId) => onlineIds.has(driverId)), access), [tripRows, riderRows, onlineIds, access]);
   const riderStats = riderCounts(requests, live, riderRows);
+  // Rides a driver just accepted: listed apart under the waiting riders and kept on the map (never counted as waiting).
+  const allOnTheWay = useOnTheWay();
+  const onTheWay = useMemo(() => maskRequests(allOnTheWay.filter((item) => !requests.some((request) => request.tripId === item.tripId)), access).map((item) => ({ ...item, driverName: access.drivers ? item.driverName : HIDDEN_DRIVER })), [allOnTheWay, requests, access]);
+  const ridersOnMap = useMemo(() => (onTheWay.length ? [...requests, ...onTheWay] : requests), [requests, onTheWay]);
   const candidatesOf = (request: RideRequest) => candidatesFor(request, live, allowedCategories);
   const balance = useMemo(() => supplyDemand(country, scope.zones, requests, live), [country, scope.zones, requests, live]);
   const pricingSlice = useSlice<unknown>(SLICE_KEY, emptyPricingStore());
@@ -560,9 +570,10 @@ export function DashboardPage() {
               {liveNotice ? <p className="fd-notice" role="status">{liveNotice}</p> : null}
               <DriversMap
                 drivers={live}
-                requests={requests}
+                requests={ridersOnMap}
                 showRequests={showRequests}
                 focusRequest={focusRequest}
+                locate={locate}
                 balance={balance}
                 showBalance={showBalance}
                 surge={surge}
@@ -605,7 +616,7 @@ export function DashboardPage() {
               <p className="fine-print">{trn("{0}Drivers move every 5 seconds; data reloads every 10 seconds.", api.demo ? tr("Simulated positions from demo data. ") : "")}</p>
             </section>
 
-            <SupplyDemandCard rows={balance} showOnMap={showBalance} onToggleMap={() => setShowBalance((value) => !value)} surgeLink={surgeLink} />
+            <SupplyDemandDrill rows={balance} showOnMap={showBalance} onToggleMap={() => setShowBalance((value) => !value)} surgeLink={surgeLink} drivers={live} requests={requests} radarZones={supplyBook.radarZones} onLocate={setLocate} radarZoneLink={can(role, "trips.read") ? (zoneId) => withScope(offersLink("radar", zoneId)) : null} />
           </div>
 
           <LiveRiders
@@ -615,6 +626,7 @@ export function DashboardPage() {
             onLocate={(id) => setFocusRequest({ id, nonce: Date.now() })}
             canAssign={can(role, "trips.intervene")}
             onAssigned={setLiveNotice}
+            onTheWay={onTheWay}
           />
 
           <div className="dash-grid-2">
