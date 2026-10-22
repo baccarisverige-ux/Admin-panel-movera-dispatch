@@ -55,6 +55,9 @@ test("N5/N8: Dispatch's live map has the surge layer, its new styles, bonus area
   for (const name of ["Heatmap", "Flat hexagons", "Label only", "Pulse rings", "Bubbles", "Density dots", "Soft outline"]) await expect(styles.getByRole("radio", { name })).toBeVisible();
   await styles.getByRole("radio", { name: "Label only" }).click();
   await expect(styles.getByRole("radio", { name: "Label only" })).toHaveAttribute("aria-checked", "true");
+  // With map fonts, Label only writes "×1.4" on the map itself (no pills); the zone pills are clicked in the Zones style.
+  await styles.getByRole("radio", { name: "Zones", exact: true }).click();
+  await expect(styles.getByRole("radio", { name: "Zones", exact: true })).toHaveAttribute("aria-checked", "true");
 
   await page.getByRole("button", { name: /^Södermalm: / }).first().dispatchEvent("click");
   const pop = page.getByTestId("surge-quick-popup");
