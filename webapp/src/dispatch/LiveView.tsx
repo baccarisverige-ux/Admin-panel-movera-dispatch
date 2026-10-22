@@ -12,6 +12,12 @@ import { MapPanel } from "./maps";
 import { RiderAssignName, useAssignPanel } from "./AssignPanel";
 import { DISPATCH_KEY, modeLabel, modeNow, requestControl, type DispatchBook, type ZoneDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
+import { SupplyDemandDrill } from "../dashboard/SupplyDemandDrill";
+import { supplyDemand } from "../dashboard/insights";
+import type { MapLocate } from "../dashboard/supplyDrill";
+import { useSession } from "../auth/SessionContext";
+import { can } from "../auth/permissions";
+import { offersLink } from "./MovedCard";
 
 type Props = {
   book: DispatchBook;
@@ -40,6 +46,9 @@ const NO_HIDDEN = new Set<LiveState>();
 export function LiveView({ book, market, zones, drivers, requests, candidatesOf, rulesOf, busyOf, hhmm, canControl, agentId, withScope, onNotice, sharedAlerts, rideChecks = null }: Props) {
   const assignPanel = useAssignPanel();
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
+  const [locate, setLocate] = useState<MapLocate | null>(null);
+  const [showBalance, setShowBalance] = useState(false);
+  const role = useSession().agent?.role;
   const ids = new Set(zones.map((zone) => zone.id));
   const handled = new Map(book.liveActions.map((action) => [action.tripId, action]));
   const now = new Date().toISOString();
@@ -55,6 +64,9 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
       if (alert.id === "no_driver" && zoneWaiting.length >= alert.limit) alerts.push({ id: `${alert.id}:${zone.id}`, zoneId: zone.id, tone: "red", text: `${zoneWaiting.length} requests without a driver in ${zone.name}` });
     }
   }
+
+  const balance = supplyDemand(market.id, zones.map((zone) => zone.id), waiting, drivers);
+  const surgeLink = (zoneId: string) => (role && can(role, "settings.read") ? withScope(`/pricing?zone=${zoneId}&tab=surge`) : null);
 
   return (
     <div className="dx-live">
@@ -114,8 +126,10 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
       <RideCheckSettingsCard where="dispatch" />
 
       <MapPanel title={tr("Live map · {0}", [trx(market.name)])} note={<span className="dx-legend">{trn("{0} Free {1} To pickup {2} On trip {3} Rider waiting {4} Driver offered", <i className="car free" />, <i className="car pickup" />, <i className="car trip" />, <i className="rider waiting" />, <i className="rider offered" />)}</span>}>
-        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined} />
+        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} locate={locate} balance={balance} showBalance={showBalance} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined} />
       </MapPanel>
+
+      <SupplyDemandDrill rows={balance} showOnMap={showBalance} onToggleMap={() => setShowBalance((value) => !value)} surgeLink={surgeLink} drivers={drivers} requests={waiting} radarZones={book.radarZones} onLocate={setLocate} radarZoneLink={(zoneId) => withScope(offersLink("radar", zoneId))} />
 
       <section className="dash-card" aria-labelledby="dx-waiting-title">
         <div className="card-head"><h3 id="dx-waiting-title">{trn("{0} Riders waiting for a driver {1}", <Users size={16} aria-hidden="true" />, <span className="dx-count">{waiting.filter((item) => !handled.has(item.tripId)).length}</span>)}</h3></div>

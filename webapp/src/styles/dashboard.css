@@ -798,6 +798,42 @@
 .sd-list li > :last-child:not(.sd-level) { grid-area: link; justify-self: end; }
 .sd-list .link-action { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 
+/* Supply vs demand drill-down */
+.sd-open { border: 0; background: transparent; padding: 0; font: inherit; font-weight: 700; color: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 2px; text-align: left; }
+.sd-open:hover { text-decoration: underline; }
+.sd-tools { display: inline-flex; align-items: center; gap: 8px; }
+.sd-pin { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; }
+.sd-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 0; font-size: 13px; }
+.sd-crumbs button { border: 0; background: transparent; padding: 2px 4px; font: inherit; color: var(--muted); cursor: pointer; }
+.sd-crumbs .sd-back { display: inline-flex; align-items: center; color: inherit; font-weight: 700; }
+.sd-summary { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.sd-drivers { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
+.sd-drivers li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; background: #f8f9f9; font-size: 13px; }
+.sd-driver { border: 0; background: transparent; padding: 0; font: inherit; font-weight: 600; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sd-chip { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.sd-chip.free { background: #e5f5e5; color: var(--status-good-text); }
+.sd-chip.pickup { background: #fff1e0; color: #8a4b00; }
+.sd-chip.trip { background: #e6efff; color: #1d4ed8; }
+.sd-chip.off { background: #eef0f2; color: #5b6168; }
+
+/* Driver pop-up: Trip | Money tabs */
+.driver-panel-tabs { display: flex; gap: 4px; padding: 3px; background: #f1f2f3; border-radius: 10px; width: max-content; }
+.driver-panel-tabs button { border: 0; background: transparent; padding: 5px 12px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.driver-panel-tabs button.active { background: #fff; color: inherit; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.trip-money-lines { display: grid; gap: 2px; margin: 0; }
+.trip-money-lines > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 8px; font-size: 13px; }
+.trip-money-lines dt, .trip-money-lines dd { margin: 0; }
+.trip-money-lines dd { font-variant-numeric: tabular-nums; }
+.trip-money-lines .lead { background: #f8f9f9; font-weight: 700; }
+.trip-money-lines .sub { padding-left: 22px; color: var(--muted); }
+.trip-money-lines .keeps { background: #e5f5e5; color: var(--status-good-text); }
+.trip-money-lines .covers { background: #fdecec; color: #9b2020; }
+.trip-money .fine-print { margin: 6px 0 0; }
+
+/* Back to the map (pages opened from a map pop-up) */
+.back-to-from { margin: 0 0 12px; }
+.back-to-from .dx-back { display: inline-flex; align-items: center; gap: 6px; }
+
 .mini-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .mini-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 10px 12px; border-radius: 10px; background: #f8f9f9; font-size: 13px; }
 .mini-list li strong { flex: 1 1 100%; font-size: 14px; }

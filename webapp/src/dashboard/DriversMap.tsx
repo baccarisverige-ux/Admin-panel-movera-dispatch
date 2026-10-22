@@ -22,6 +22,9 @@ import { tr, trn, trx } from "../i18n";
 import { addMapIcons, CAR_COLOR, carIcon, headingOf, remainingPath, RIDER_COLOR, RIDER_OFFERED_ICON, RIDER_WAITING_ICON } from "./mapIcons";
 import type { RideCheck } from "../safety/rideCheck";
 import { openRideChecks, RideCheckMapPopup, useDismissedRideChecks } from "../safety/RideCheckMapPopup";
+import { useBackLinks, useMapUrlState } from "../ui/BackToFrom";
+import { showLocate } from "./locateLayer";
+import type { MapLocate } from "./supplyDrill";
 
 const STYLE = {
   version: 8 as const,
@@ -56,6 +59,8 @@ type Props = {
   showRequests?: boolean;
   /** Open a waiting rider from outside the map (the Live riders list). */
   focusRequest?: { id: string; nonce: number } | null;
+  /** A map pin from Supply vs demand: a zone, a radar zone (outline) or a driver to show. */
+  locate?: MapLocate | null;
   renderAssign?: (request: RideRequest) => ReactNode;
   /** Called when the admin clicks a waiting rider on the map, besides opening the pop-up. */
   onRequestOpen?: (tripId: string) => void;
@@ -171,7 +176,7 @@ function dropoffGeo(drivers: LiveDriver[], hidden: Set<LiveState>, selectedId: s
 }
 
 /** Live drivers on a MapLibre map, coloured by state; click a driver for details. */
-export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, renderAssign, onRequestOpen, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false, rideChecks = null }: Props) {
+export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, locate = null, renderAssign, onRequestOpen, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false, rideChecks = null }: Props) {
   const access = useDashboardAccess();
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -198,6 +203,13 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
     setFollowing(false);
     setWaybillOpen(false);
   }
+
+  // Back to the map: the view and the open pop-up live in the page address; links in the pop-ups carry ?back=.
+  const backLinks = useBackLinks();
+  useMapUrlState(mapRef, ready, selectedId ? { kind: "driver", id: selectedId } : requestId ? { kind: "rider", id: requestId } : null, (open) => {
+    if (open.kind === "driver") select(open.id);
+    else setRequestId(open.id);
+  });
 
   useEffect(() => {
     const node = host.current;
@@ -382,6 +394,19 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
     host.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusRequest, ready]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !locate) return;
+    if (locate.kind === "driver") {
+      const driver = latest.current.drivers.find((item) => item.id === locate.id);
+      select(locate.id);
+      if (driver) map.flyTo({ center: [driver.lng, driver.lat], zoom: Math.max(map.getZoom(), 15), duration: 900 });
+    } else {
+      showLocate(map, locate);
+    }
+    host.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [locate?.nonce, ready]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const zoneKey = zones.join(",");
   useEffect(() => {
     const map = mapRef.current;
@@ -499,7 +524,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
   }
 
   return (
-    <div className="drivers-map">
+    <div className="drivers-map" onClickCapture={backLinks}>
       <div ref={host} className="drivers-map-canvas" data-testid="dashboard-map" />
       {selected ? (
         <DriverPanel

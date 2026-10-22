@@ -38,7 +38,10 @@ import { change, COMMISSION_PLACEHOLDER, earningsReport, type Share } from "../d
 import { activeBoosts, airportQueues, cancellations, ratings, supplyDemand } from "../dashboard/insights";
 import { countStates, LIVE_STATES, liveDrivers, type LiveState } from "../dashboard/live";
 import { LiveRiders } from "../dashboard/LiveRiders";
-import { RiderQuickActions } from "../dispatch/HandlePanel";
+import { RiderQuickActions, useDispatchBook } from "../dispatch/HandlePanel";
+import { SupplyDemandDrill } from "../dashboard/SupplyDemandDrill";
+import type { MapLocate } from "../dashboard/supplyDrill";
+import { offersLink } from "../dispatch/MovedCard";
 import { liveTrip } from "../dashboard/liveTrip";
 import { PeriodPicker } from "../dashboard/PeriodPicker";
 import { parsePeriod, periodParams, periodWindow, type Period } from "../dashboard/period";
@@ -49,7 +52,7 @@ import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
 import { useAlertSignals, type Signal } from "../dashboard/useAlertSignals";
 import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
-import { ActivityFeed, AirportCard, BoostCard, InsightsCard, LiveStamp, LiveTag, SoundToggle, SupplyDemandCard, type ActivityItem, type DriverRank } from "../dashboard/Widgets";
+import { ActivityFeed, AirportCard, BoostCard, InsightsCard, LiveStamp, LiveTag, SoundToggle, type ActivityItem, type DriverRank } from "../dashboard/Widgets";
 import { CATEGORIES } from "../domain/contract";
 import { statusLabel } from "../domain/labels";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
@@ -156,6 +159,8 @@ export function DashboardPage() {
   const [showBalance, setShowBalance] = useState(false);
   const [showBonus, setShowBonus] = useState(true);
   const [focusRequest, setFocusRequest] = useState<{ id: string; nonce: number } | null>(null);
+  const [locate, setLocate] = useState<MapLocate | null>(null);
+  const supplyBook = useDispatchBook();
   const [liveNotice, setLiveNotice] = useState("");
   const [refreshedAt, setRefreshedAt] = useState(0);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -562,6 +567,7 @@ export function DashboardPage() {
                 requests={requests}
                 showRequests={showRequests}
                 focusRequest={focusRequest}
+                locate={locate}
                 balance={balance}
                 showBalance={showBalance}
                 surge={surge}
@@ -602,7 +608,7 @@ export function DashboardPage() {
               <p className="fine-print">{trn("{0}Drivers move every 5 seconds; data reloads every 10 seconds.", api.demo ? tr("Simulated positions from demo data. ") : "")}</p>
             </section>
 
-            <SupplyDemandCard rows={balance} showOnMap={showBalance} onToggleMap={() => setShowBalance((value) => !value)} surgeLink={surgeLink} />
+            <SupplyDemandDrill rows={balance} showOnMap={showBalance} onToggleMap={() => setShowBalance((value) => !value)} surgeLink={surgeLink} drivers={live} requests={requests} radarZones={supplyBook.radarZones} onLocate={setLocate} radarZoneLink={can(role, "trips.read") ? (zoneId) => withScope(offersLink("radar", zoneId)) : null} />
           </div>
 
           <LiveRiders
