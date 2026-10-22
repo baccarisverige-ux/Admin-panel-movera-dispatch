@@ -168,8 +168,34 @@
       "currency": "EUR"
     },
     "freeKm": 1,
-    "freeMin": 2,
-    "ranges": [],
+    "freeMin": 0,
+    "ranges": [
+      {
+        "fromKm": 0,
+        "toKm": 1,
+        "perKm": {
+          "amountMinor": 0,
+          "currency": "EUR"
+        },
+        "perMin": {
+          "amountMinor": 0,
+          "currency": "EUR"
+        }
+      },
+      {
+        "fromKm": 1,
+        "toKm": null,
+        "perKm": {
+          "amountMinor": 24,
+          "currency": "EUR"
+        },
+        "perMin": {
+          "amountMinor": 8,
+          "currency": "EUR"
+        }
+      }
+    ],
+    "maxPerRide": null,
     "display": "total",
     "offers": {
       "radar": true,
@@ -181,115 +207,275 @@
     "byCategory": {
       "economy": {
         "enabled": true,
-        "perKm": {
-          "amountMinor": 24,
-          "currency": "EUR"
-        },
-        "perMin": {
-          "amountMinor": 8,
-          "currency": "EUR"
-        },
-        "freeKm": 1,
-        "freeMin": 2,
-        "ranges": []
+        "maxPerRide": null,
+        "ranges": [
+          {
+            "fromKm": 0,
+            "toKm": 1,
+            "perKm": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            }
+          },
+          {
+            "fromKm": 1,
+            "toKm": null,
+            "perKm": {
+              "amountMinor": 24,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 8,
+              "currency": "EUR"
+            }
+          }
+        ],
+        "riderFee": {
+          "live": null,
+          "reservation": null
+        }
       },
       "comfort": {
         "enabled": true,
-        "perKm": {
-          "amountMinor": 29,
-          "currency": "EUR"
-        },
-        "perMin": {
-          "amountMinor": 10,
-          "currency": "EUR"
-        },
-        "freeKm": 1,
-        "freeMin": 2,
-        "ranges": []
+        "maxPerRide": null,
+        "ranges": [
+          {
+            "fromKm": 0,
+            "toKm": 1,
+            "perKm": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            }
+          },
+          {
+            "fromKm": 1,
+            "toKm": null,
+            "perKm": {
+              "amountMinor": 29,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 10,
+              "currency": "EUR"
+            }
+          }
+        ],
+        "riderFee": {
+          "live": null,
+          "reservation": null
+        }
       },
       "premium": {
         "enabled": true,
-        "perKm": {
-          "amountMinor": 38,
-          "currency": "EUR"
-        },
-        "perMin": {
-          "amountMinor": 14,
-          "currency": "EUR"
-        },
-        "freeKm": 1,
-        "freeMin": 2,
-        "ranges": []
+        "maxPerRide": null,
+        "ranges": [
+          {
+            "fromKm": 0,
+            "toKm": 1,
+            "perKm": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            }
+          },
+          {
+            "fromKm": 1,
+            "toKm": null,
+            "perKm": {
+              "amountMinor": 38,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 14,
+              "currency": "EUR"
+            }
+          }
+        ],
+        "riderFee": {
+          "live": null,
+          "reservation": null
+        }
       },
       "priority": {
         "enabled": true,
-        "perKm": {
-          "amountMinor": 33,
-          "currency": "EUR"
-        },
-        "perMin": {
-          "amountMinor": 11,
-          "currency": "EUR"
-        },
-        "freeKm": 1,
-        "freeMin": 2,
-        "ranges": []
+        "maxPerRide": null,
+        "ranges": [
+          {
+            "fromKm": 0,
+            "toKm": 1,
+            "perKm": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            }
+          },
+          {
+            "fromKm": 1,
+            "toKm": null,
+            "perKm": {
+              "amountMinor": 33,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 11,
+              "currency": "EUR"
+            }
+          }
+        ],
+        "riderFee": {
+          "live": null,
+          "reservation": null
+        }
       },
       "xl": {
         "enabled": true,
-        "perKm": {
-          "amountMinor": 33,
-          "currency": "EUR"
-        },
-        "perMin": {
-          "amountMinor": 11,
-          "currency": "EUR"
-        },
-        "freeKm": 1,
-        "freeMin": 2,
-        "ranges": []
+        "maxPerRide": null,
+        "ranges": [
+          {
+            "fromKm": 0,
+            "toKm": 1,
+            "perKm": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            }
+          },
+          {
+            "fromKm": 1,
+            "toKm": null,
+            "perKm": {
+              "amountMinor": 33,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 11,
+              "currency": "EUR"
+            }
+          }
+        ],
+        "riderFee": {
+          "live": null,
+          "reservation": null
+        }
       },
       "electric": {
         "enabled": true,
-        "perKm": {
-          "amountMinor": 29,
-          "currency": "EUR"
-        },
-        "perMin": {
-          "amountMinor": 10,
-          "currency": "EUR"
-        },
-        "freeKm": 1,
-        "freeMin": 2,
-        "ranges": []
+        "maxPerRide": null,
+        "ranges": [
+          {
+            "fromKm": 0,
+            "toKm": 1,
+            "perKm": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            }
+          },
+          {
+            "fromKm": 1,
+            "toKm": null,
+            "perKm": {
+              "amountMinor": 29,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 10,
+              "currency": "EUR"
+            }
+          }
+        ],
+        "riderFee": {
+          "live": null,
+          "reservation": null
+        }
       },
       "pet": {
         "enabled": true,
-        "perKm": {
-          "amountMinor": 29,
-          "currency": "EUR"
-        },
-        "perMin": {
-          "amountMinor": 10,
-          "currency": "EUR"
-        },
-        "freeKm": 1,
-        "freeMin": 2,
-        "ranges": []
+        "maxPerRide": null,
+        "ranges": [
+          {
+            "fromKm": 0,
+            "toKm": 1,
+            "perKm": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            }
+          },
+          {
+            "fromKm": 1,
+            "toKm": null,
+            "perKm": {
+              "amountMinor": 29,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 10,
+              "currency": "EUR"
+            }
+          }
+        ],
+        "riderFee": {
+          "live": null,
+          "reservation": null
+        }
       },
       "child_seat": {
         "enabled": true,
-        "perKm": {
-          "amountMinor": 29,
-          "currency": "EUR"
-        },
-        "perMin": {
-          "amountMinor": 10,
-          "currency": "EUR"
-        },
-        "freeKm": 1,
-        "freeMin": 2,
-        "ranges": []
+        "maxPerRide": null,
+        "ranges": [
+          {
+            "fromKm": 0,
+            "toKm": 1,
+            "perKm": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 0,
+              "currency": "EUR"
+            }
+          },
+          {
+            "fromKm": 1,
+            "toKm": null,
+            "perKm": {
+              "amountMinor": 29,
+              "currency": "EUR"
+            },
+            "perMin": {
+              "amountMinor": 10,
+              "currency": "EUR"
+            }
+          }
+        ],
+        "riderFee": {
+          "live": null,
+          "reservation": null
+        }
       }
     }
   },
