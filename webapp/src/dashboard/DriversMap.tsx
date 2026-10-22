@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useDashboardAccess } from "./access";
 import { Link } from "react-router";
 import { Clock, UserRound, X } from "lucide-react";
@@ -18,6 +19,9 @@ import { along, type LatLng } from "./route";
 import { WaybillDialog } from "./TripCard";
 import { useEscape } from "../ui/useEscape";
 import { tr, trn, trx } from "../i18n";
+import { addMapIcons, CAR_COLOR, carIcon, headingOf, remainingPath, RIDER_COLOR, RIDER_OFFERED_ICON, RIDER_WAITING_ICON } from "./mapIcons";
+import type { RideCheck } from "../safety/rideCheck";
+import { openRideChecks, RideCheckMapPopup, useDismissedRideChecks } from "../safety/RideCheckMapPopup";
 
 const STYLE = {
   version: 8 as const,
@@ -32,13 +36,10 @@ const STYLE = {
   layers: [{ id: "base", type: "raster" as const, source: "base" }],
 };
 
-export const STATE_COLOR: Record<LiveState, string> = {
-  free: "#0ca30c",
-  pickup: "#eda100",
-  trip: "#2a78d6",
-  stale: "#898781",
-  sos: "#d03b3b",
-};
+/** Car colour per driver state: free green, to pickup orange, on trip blue. */
+export const STATE_COLOR: Record<LiveState, string> = CAR_COLOR;
+/** Rider pin colour: red while looking for a driver, blue once a driver is offered. */
+export const REQUEST_COLOR = RIDER_COLOR;
 
 type Props = {
   drivers: LiveDriver[];
@@ -69,6 +70,8 @@ type Props = {
   /** Driver bonus areas, drawn in orange with a label, when shown. */
   bonusAreas?: BonusMapArea[];
   bonusShown?: boolean;
+  /** Ride checks to pin on the drivers' cars while they are open; only for admins who may see incidents. */
+  rideChecks?: { checks: RideCheck[]; demoShift: number; now: number } | null;
 };
 
 export type BonusMapArea = { id: string; label: string; live: boolean; rings: [number, number][][] };
@@ -102,7 +105,7 @@ function requestGeo(requests: readonly RideRequest[], shown: boolean) {
     type: "FeatureCollection" as const,
     features: (shown ? requests : []).map((request) => ({
       type: "Feature" as const,
-      properties: { id: request.tripId, long: request.waitingMin > 5 },
+      properties: { id: request.tripId, long: request.waitingMin > 5, icon: request.status === "offered" ? RIDER_OFFERED_ICON : RIDER_WAITING_ICON },
       geometry: { type: "Point" as const, coordinates: [request.at[1], request.at[0]] },
     })),
   };
@@ -149,14 +152,26 @@ function geo(drivers: LiveDriver[], hidden: Set<LiveState>) {
       .filter((driver) => !hidden.has(driver.state))
       .map((driver) => ({
         type: "Feature" as const,
-        properties: { id: driver.id, state: driver.state, color: STATE_COLOR[driver.state] },
+        properties: { id: driver.id, state: driver.state, color: STATE_COLOR[driver.state], icon: carIcon(driver.state), heading: headingOf(driver) },
         geometry: { type: "Point" as const, coordinates: [driver.lng, driver.lat] },
       })),
   };
 }
 
+/** The thin blue line from each car with a rider on board to its drop-off (the selected driver has the full route instead). */
+function dropoffGeo(drivers: LiveDriver[], hidden: Set<LiveState>, selectedId: string | null) {
+  return {
+    type: "FeatureCollection" as const,
+    features: drivers.flatMap((driver) => {
+      if (hidden.has(driver.state) || driver.id === selectedId) return [];
+      const path = remainingPath(driver);
+      return path && path.length >= 2 ? [line("left", path)] : [];
+    }),
+  };
+}
+
 /** Live drivers on a MapLibre map, coloured by state; click a driver for details. */
-export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, renderAssign, onRequestOpen, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false }: Props) {
+export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, renderAssign, onRequestOpen, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false, rideChecks = null }: Props) {
   const access = useDashboardAccess();
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -196,7 +211,11 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
     }
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    map.on("load", () => {
+    // "style.load" rather than "load": the pins, pop-ups and focus work as soon as the style is in, even while the
+    // street tiles are still (or never) loading.
+    map.on("style.load", async () => {
+      await addMapIcons(map);
+      if (mapRef.current !== map) return;
       installSurgeLayers(map, (zoneId) => surgeClick.current?.(zoneId));
       map.addSource("bonus-areas", { type: "geojson", data: bonusGeo(latest.current.bonusAreas, latest.current.bonusShown) });
       map.addLayer({ id: "bonus-fill", type: "fill", source: "bonus-areas", paint: { "fill-color": "#f2994a", "fill-opacity": ["case", ["==", ["get", "live"], 1], 0.34, 0.16] } });
@@ -231,18 +250,33 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
       });
       routeLayer("route-solid", ["done", "left"], false, 5);
       routeLayer("route-dashed", ["approach", "upcoming", "next"], true, 4);
+      map.addSource("dropoffs", { type: "geojson", data: dropoffGeo(latest.current.drivers, latest.current.hidden, null) });
+      map.addLayer({
+        id: "dropoffs",
+        type: "line",
+        source: "dropoffs",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ROUTE_COLOR.left, "line-width": 1.6, "line-opacity": 0.45 },
+      });
       map.addSource("requests", { type: "geojson", data: requestGeo(latest.current.requests, latest.current.showRequests) });
       map.addLayer({
         id: "request-halo",
         type: "circle",
         source: "requests",
-        paint: { "circle-radius": 13, "circle-color": ["case", ["get", "long"], "#d03b3b", "#e87ba4"], "circle-opacity": 0.22 },
+        filter: ["get", "long"],
+        paint: { "circle-radius": 14, "circle-color": RIDER_COLOR.waiting, "circle-opacity": 0.14 },
       });
       map.addLayer({
         id: "requests",
-        type: "circle",
+        type: "symbol",
         source: "requests",
-        paint: { "circle-radius": 6, "circle-color": ["case", ["get", "long"], "#d03b3b", "#d55181"], "circle-stroke-color": "#ffffff", "circle-stroke-width": 2 },
+        layout: {
+          "icon-image": ["get", "icon"],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.7, 13, 1],
+          "icon-anchor": "bottom",
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+        },
       });
       map.on("click", "requests", (event) => {
         const id = event.features?.[0]?.properties?.id;
@@ -263,13 +297,15 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
       });
       map.addLayer({
         id: "drivers",
-        type: "circle",
+        type: "symbol",
         source: "drivers",
-        paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 4, 13, 7],
-          "circle-color": ["get", "color"],
-          "circle-stroke-color": "#ffffff",
-          "circle-stroke-width": 2,
+        layout: {
+          "icon-image": ["get", "icon"],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.55, 12, 0.8, 15, 1.05],
+          "icon-rotate": ["get", "heading"],
+          "icon-rotation-alignment": "map",
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
         },
       });
       map.on("click", "drivers", (event) => {
@@ -292,6 +328,11 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
     const source = mapRef.current?.getSource("drivers") as GeoJSONSource | undefined;
     if (ready && source) source.setData(geo(drivers, hidden));
   }, [drivers, hidden, ready]);
+
+  useEffect(() => {
+    const source = mapRef.current?.getSource("dropoffs") as GeoJSONSource | undefined;
+    if (ready && source) source.setData(dropoffGeo(drivers, hidden, selectedId));
+  }, [drivers, hidden, selectedId, ready]);
 
   const bonusKey = bonusShown ? JSON.stringify(bonusAreas.map((area) => [area.id, area.label, area.live, area.rings.length])) : "";
   useEffect(() => {
@@ -373,6 +414,43 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
   const info = selected && infoFor ? infoFor(selected.id) : null;
   // Escape closes the rider panel like its close button (the driver panel handles its own).
   useEscape(() => setRequestId(null), Boolean(request && !selected));
+
+  // Ride checks still open on a live trip: a small card pinned to the driver's car.
+  const [dismissed, dismiss] = useDismissedRideChecks();
+  const driverTrips = useMemo(() => new Map(drivers.map((driver) => [driver.id, driver.tripId])), [drivers]);
+  const openChecks = useMemo(() => (rideChecks ? openRideChecks(rideChecks.checks, driverTrips, rideChecks.demoShift, dismissed) : []), [rideChecks, driverTrips, dismissed]);
+  const checkMarkers = useRef(new Map<string, maplibregl.Marker>());
+  const [checkNodes, setCheckNodes] = useState<Record<string, HTMLElement>>({});
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const keep = new Set(openChecks.map((item) => item.check.id));
+    let changed = false;
+    for (const [id, marker] of checkMarkers.current) {
+      if (keep.has(id)) continue;
+      marker.remove();
+      checkMarkers.current.delete(id);
+      changed = true;
+    }
+    for (const item of openChecks) {
+      const driver = latest.current.drivers.find((row) => row.id === item.driverId);
+      if (!driver) continue;
+      const marker = checkMarkers.current.get(item.check.id);
+      if (marker) {
+        marker.setLngLat([driver.lng, driver.lat]);
+        continue;
+      }
+      const element = document.createElement("div");
+      element.className = "ride-check-anchor";
+      checkMarkers.current.set(item.check.id, new maplibregl.Marker({ element, anchor: "center" }).setLngLat([driver.lng, driver.lat]).addTo(map));
+      changed = true;
+    }
+    if (changed) setCheckNodes(Object.fromEntries([...checkMarkers.current].map(([id, marker]) => [id, marker.getElement()])));
+  }, [openChecks, drivers, ready]);
+  useEffect(() => () => {
+    for (const marker of checkMarkers.current.values()) marker.remove();
+    checkMarkers.current.clear();
+  }, [market]);
 
   // Draw or clear the selected driver's route and its A / B / next pins.
   const routeKey = selected && trip && routeShown ? `${selected.id}:${selected.progress.toFixed(3)}:${trip.next?.id ?? ""}` : "";
@@ -461,6 +539,25 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
         </aside>
       ) : null}
       {waybillOpen && trip ? <WaybillDialog waybill={trip.waybill} onClose={() => setWaybillOpen(false)} /> : null}
+      {rideChecks ? openChecks.map((item) => {
+        const node = checkNodes[item.check.id];
+        const driver = drivers.find((row) => row.id === item.driverId);
+        if (!node || !driver) return null;
+        return createPortal(
+          <RideCheckMapPopup
+            key={item.check.id}
+            item={item}
+            now={rideChecks.now}
+            driverName={driver.name}
+            driverPhone={infoFor?.(driver.id)?.phone ?? null}
+            openTo={access.trips ? withScope(`/trips/${item.check.tripId}`) : "/alerts"}
+            driverTo={access.drivers ? withScope(`/drivers/${driver.id}`) : null}
+            onDismiss={() => dismiss(item.check.id)}
+          />,
+          node,
+          item.check.id,
+        );
+      }) : null}
     </div>
   );
 }
