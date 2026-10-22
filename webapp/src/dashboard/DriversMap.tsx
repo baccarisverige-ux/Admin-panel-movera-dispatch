@@ -57,7 +57,7 @@ type Props = {
   /** Open a waiting rider from outside the map (the Live riders list). */
   focusRequest?: { id: string; nonce: number } | null;
   renderAssign?: (request: RideRequest) => ReactNode;
-  /** Called when the admin clicks a waiting rider on the map (Dispatch: opens the assign panel, Q13). */
+  /** Called when the admin clicks a waiting rider on the map, besides opening the pop-up. */
   onRequestOpen?: (tripId: string) => void;
   /** Supply vs demand per zone, drawn as coloured circles when shown. */
   balance?: ZoneBalance[];
@@ -519,7 +519,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
         />
       ) : null}
       {request && !selected ? (
-        <aside className="driver-panel" role="dialog" aria-label={tr("Rider {0}", [request.rider])}>
+        <aside className="driver-panel rider-panel" role="dialog" aria-label={tr("Rider {0}", [request.rider])} data-testid="rider-popup">
           <div className="driver-panel-head">
             <span className="request-avatar"><UserRound size={22} aria-hidden="true" /></span>
             <div className="driver-panel-title">

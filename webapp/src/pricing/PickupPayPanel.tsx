@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { Copy, Info, Layers, Plus, Route, Trash2, UserRound, Wallet } from "lucide-react";
 import { market, type MarketId } from "../markets/markets";
 import { NumberField } from "./NumberField";
@@ -211,6 +212,7 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
               </li>
             </ul>
             <p className="pp-note">{trn("{0} Reservations taken from the Scheduled rides list never get driver pickup pay. The rider's reservation pickup fee, when on, is paid either way.", <Info size={15} aria-hidden="true" />)}</p>
+            <p className="pp-note">{trn("{0} How Radar, Exclusive and reservation offers work is set in {1}.", <Info size={15} aria-hidden="true" />, <Link to="/offers">{tr("Radar · Exclusive · Reservations")}</Link>)}</p>
           </div>
         </section>
       </div>

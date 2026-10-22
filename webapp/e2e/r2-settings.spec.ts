@@ -133,9 +133,6 @@ test("Q39/Q40/Q44/Q46: max stops, pickup move after accept, no-show share and mi
   await move.getByLabel("Pickup move limit").fill("300");
   const wait = page.getByRole("region", { name: "Waiting at pickup" });
   await wait.getByLabel("Driver's share of the no-show fee").fill("70");
-  await page.getByRole("tab", { name: "Drivers", exact: true }).click();
-  const offline = page.getByRole("region", { name: "Go offline automatically" });
-  await offline.getByLabel("Offline after offers not accepted").fill("5");
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
   const list = page.getByRole("list", { name: "Changes not live yet" });
@@ -145,9 +142,22 @@ test("Q39/Q40/Q44/Q46: max stops, pickup move after accept, no-show share and mi
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText(/Live now/)).toBeVisible();
 
+  // Going offline after missed offers moved to Radar · Exclusive · Reservations › Radar.
+  await page.getByRole("tab", { name: "Drivers", exact: true }).click();
+  await page.getByTestId("dx-moved-auto-offline").getByRole("link", { name: "Radar rules" }).click();
+  await expect(page).toHaveURL(/\/offers\?zone=Z001/);
+  const offline = page.getByRole("region", { name: "Go offline automatically" });
+  await offline.getByLabel("Offline after offers not accepted").fill("5");
+  await bar.getByRole("button", { name: "Publish now" }).click();
+  await dialog(page).getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText(/Live now/)).toBeVisible();
+
+  // The first publish already shows "Live now": wait for the second one to reach the driver config.
+  const missed = (config: Record<string, unknown>) => (config.offers as { autoOffline: { missedExclusive: number } }).autoOffline.missedExclusive;
+  await expect.poll(async () => missed(await appConfig(page, "Driver")), { timeout: 15_000 }).toBe(5);
   const driver = await appConfig(page, "Driver");
   expect(driver.booking).toEqual({ maxStops: 4, maxPickupMoveMeters: 300 });
-  expect((driver.offers as { autoOffline: { missedExclusive: number } }).autoOffline.missedExclusive).toBe(5);
+  expect(missed(driver)).toBe(5);
   const waiting = driver.waiting as { driverSharePct: number; driverShareWaitPct: number; byCategory: Record<string, { freeWaitMin: number; noShowAfterMin: number }> };
   expect([waiting.driverSharePct, waiting.driverShareWaitPct]).toEqual([70, 100]);
   expect(waiting.byCategory.xl).toMatchObject({ freeWaitMin: 3, noShowAfterMin: 3 });

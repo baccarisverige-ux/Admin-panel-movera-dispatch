@@ -23,12 +23,13 @@ test("reservation queue uses seeded records and preserves booked policy snapshot
   await expect(page.getByTestId("reservation-policy-snapshot")).toContainText("Booking horizon 5 days");
 });
 
-test("reservation settings live in Dispatch › Reservations; the Reservations page keeps the list and a link", async ({ page }) => {
+test("reservation settings live in Radar · Exclusive · Reservations; the Reservations page keeps the list and a link", async ({ page }) => {
   await signIn(page);
   await page.getByRole("link", { name: "Reservations", exact: true }).click();
   await page.getByRole("link", { name: "Open reservation settings" }).click();
-  await expect(page).toHaveURL(/\/dispatch\?tab=reservations/);
-  await expect(page.getByText("Each zone has its own reservation rules.")).toBeVisible();
+  // The old Dispatch › Reservations link lands in the new section (same rules, same behaviour), on its first zone.
+  await expect(page).toHaveURL(/\/offers\?.*tab=reservations/);
+  await expect(page.getByRole("heading", { name: /^Radar · Exclusive · Reservations in / })).toBeVisible();
   await page.getByRole("navigation", { name: "Zones" }).getByRole("button", { name: /^Norrmalm/ }).click();
   await expect(page.getByRole("tab", { name: "Reservations" })).toHaveAttribute("aria-selected", "true");
   const policy = page.getByTestId("reservation-policy");

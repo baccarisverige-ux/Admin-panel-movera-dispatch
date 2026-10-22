@@ -1,12 +1,12 @@
 import { useState, type ReactNode } from "react";
-import { AlertTriangle, Bell, Car, Clock, Pause, Play, Radar, Send, Target, Undo2, UserRound, Users } from "lucide-react";
+import { AlertTriangle, Bell, Car, Clock, Pause, Play, Radar, Target, Undo2, UserRound, Users } from "lucide-react";
 import { DriversMap } from "../dashboard/DriversMap";
 import type { RideCheck } from "../safety/rideCheck";
-import { AssignControls } from "../dashboard/LiveRiders";
 import type { LiveDriver, LiveState } from "../dashboard/live";
 import type { Candidate, RideRequest } from "../dashboard/riders";
 import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
+import { RiderQuickActions, RiderRowActions } from "./HandlePanel";
 import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import { MapPanel } from "./maps";
 import { RiderAssignName, useAssignPanel } from "./AssignPanel";
@@ -37,54 +37,12 @@ type Alert = { id: string; zoneId: string; tone: "red" | "orange"; text: string;
 
 const NO_HIDDEN = new Set<LiveState>();
 
-type ActionProps = { request: RideRequest; book: DispatchBook; zones: MarketZone[]; groups: DispatchBook["groups"]; candidates: Candidate[]; canControl: boolean; agentId: string; now: string; onNotice: (text: string) => void };
-
-/** What an admin can do with one waiting ride: assign a driver, send to a group, put it on a radar, or cancel it. */
-function RequestActions({ request, book, zones, groups, candidates, canControl, agentId, now, onNotice }: ActionProps) {
-  const handled = new Map(book.liveActions.map((action) => [action.tripId, action]));
-  const send = (request: RideRequest, kind: "group" | "radar_group" | "cancel", target: string, label: string) => {
-    const next: DispatchBook = { ...book, draftRev: book.draftRev + 1, liveActions: [{ id: `LA-${book.draftRev + 1}`, tripId: request.tripId, kind, target, by: agentId, at: now }, ...book.liveActions].slice(0, 200) };
-    return (
-      <CommandButton command="admin.dispatch.send" className={kind === "cancel" ? "dash-btn small ghost" : "dash-btn small"} targetId={request.tripId} confirmTarget={false} scope={request.zoneId} before="searching" after={`${kind} ${target}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={next} disabled={!canControl || !target || (kind === "group" && !groups.find((item) => item.name === target)?.driverIds.length)} title={kind === "group" && !groups.find((item) => item.name === target)?.driverIds.length ? tr("This group has no drivers yet. Add drivers in Events & groups.") : undefined} onDone={() => onNotice(kind === "cancel" ? tr("{0}'s request was cancelled.", [request.rider]) : tr("{0}'s ride was sent to {1}.", [request.rider, label]))}>
-        {kind === "cancel" ? tr("Cancel request") : <>{trn("{0} Send", <Send size={12} aria-hidden="true" />)}</>}
-      </CommandButton>
-    );
-  };
-  const [group, setGroup] = useState(groups[0]?.id ?? "");
-  const [area, setArea] = useState(`zone:${request.zoneId}`);
-  const done = handled.get(request.tripId);
-  if (done) return <p className="dx-handled">{trn("{0} by {1}", done.kind === "cancel" ? tr("Cancelled") : tr("Sent to {0}", [done.target]), done.by)}</p>;
-  const groupName = groups.find((item) => item.id === group)?.name ?? "";
-  const areaName = area.startsWith("zone:") ? zones.find((item) => `zone:${item.id}` === area)?.name ?? "" : groups.find((item) => `group:${item.id}` === area)?.name ?? "";
-  return (
-    <div className="dx-live-actions">
-      <div className="dx-live-line"><b>{tr("Assign by hand")}</b><AssignControls request={request} candidates={candidates} onDone={onNotice} /></div>
-      <div className="dx-live-line">
-        <b>{tr("Send to a group")}</b>
-        <select aria-label={tr("Driver group for {0}", [request.rider])} value={group} onChange={(event) => setGroup(event.target.value)}>
-          {groups.length ? groups.map((item) => <option key={item.id} value={item.id}>{trn("{0} · {1} drivers", item.name, item.driverIds.length)}</option>) : <option value="">{tr("No group yet")}</option>}
-        </select>
-        {send(request, "group", groupName, groupName)}
-      </div>
-      <div className="dx-live-line">
-        <b>{tr("Radar for")}</b>
-        <select aria-label={tr("Radar area for {0}", [request.rider])} value={area} onChange={(event) => setArea(event.target.value)}>
-          <optgroup label={tr("Zones")}>{zones.map((item) => <option key={item.id} value={`zone:${item.id}`}>{trn("All drivers in {0}", item.name)}</option>)}</optgroup>
-          {groups.length ? <optgroup label={tr("Groups")}>{groups.map((item) => <option key={item.id} value={`group:${item.id}`}>{item.name}</option>)}</optgroup> : null}
-        </select>
-        {send(request, "radar_group", `radar ${areaName}`, `the radar for ${areaName}`)}
-        {send(request, "cancel", "cancel", "")}
-      </div>
-    </div>
-  );
-}
-
 export function LiveView({ book, market, zones, drivers, requests, candidatesOf, rulesOf, busyOf, hhmm, canControl, agentId, withScope, onNotice, sharedAlerts, rideChecks = null }: Props) {
   const assignPanel = useAssignPanel();
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
   const ids = new Set(zones.map((zone) => zone.id));
   const handled = new Map(book.liveActions.map((action) => [action.tripId, action]));
+  const now = new Date().toISOString();
   const waiting = requests.filter((request) => ids.has(request.zoneId));
   const alerts: Alert[] = [];
   for (const zone of zones) {
@@ -98,9 +56,6 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
     }
   }
 
-  const groups = book.groups.filter((group) => group.country === market.id);
-  const now = new Date().toISOString();
-
   return (
     <div className="dx-live">
       {sharedAlerts ?? <section className="dx-alerts" aria-label={tr("Alerts")}>
@@ -110,7 +65,7 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
             {alerts.slice(0, 8).map((alert) => (
               <li key={alert.id} className={alert.tone}>
                 <AlertTriangle size={14} aria-hidden="true" /> <span>{alert.text}</span>
-                {alert.tripId ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => { setOpenId(alert.tripId!); setFocus({ id: alert.tripId!, nonce: Date.now() }); document.getElementById(`dx-req-${alert.tripId}`)?.scrollIntoView({ block: "center", behavior: "smooth" }); }}>{tr("Handle")}</button> : null}
+                {alert.tripId ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => { const request = waiting.find((item) => item.tripId === alert.tripId); setFocus({ id: alert.tripId!, nonce: Date.now() }); document.getElementById(`dx-req-${alert.tripId}`)?.scrollIntoView({ block: "center", behavior: "smooth" }); assignPanel.open(alert.tripId!, { candidates: request ? candidatesOf(request) : [] }); }}>{tr("Handle")}</button> : null}
               </li>
             ))}
           </ul>
@@ -159,7 +114,7 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
       <RideCheckSettingsCard where="dispatch" />
 
       <MapPanel title={tr("Live map · {0}", [trx(market.name)])} note={<span className="dx-legend">{trn("{0} Free {1} To pickup {2} On trip {3} Rider waiting {4} Driver offered", <i className="car free" />, <i className="car pickup" />, <i className="car trip" />, <i className="rider waiting" />, <i className="rider offered" />)}</span>}>
-        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} onRequestOpen={canControl ? assignPanel.open : undefined} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <AssignControls request={request} candidates={candidatesOf(request)} onDone={onNotice} /> : undefined} />
+        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined} />
       </MapPanel>
 
       <section className="dash-card" aria-labelledby="dx-waiting-title">
@@ -170,18 +125,16 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
               <li key={request.tripId} id={`dx-req-${request.tripId}`} className={request.waitingMin >= 5 ? "long" : undefined}>
                 <div className="dx-waiting-head">
                   <span className="dx-avatar"><UserRound size={16} aria-hidden="true" /></span>
-                  <span><b>{canControl ? <RiderAssignName tripId={request.tripId} rider={request.rider} /> : request.rider}</b><small>{request.zoneName} · {request.categoryLabel} · {request.tripId}</small></span>
+                  <span><b>{canControl ? <RiderAssignName tripId={request.tripId} rider={request.rider} candidates={candidatesOf(request)} /> : request.rider}</b><small>{request.zoneName} · {request.categoryLabel} · {request.tripId}</small></span>
                   <span className={request.waitingMin >= 5 ? "dx-wait-chip long" : "dx-wait-chip"}>{trn("{0} {1} min", <Clock size={11} aria-hidden="true" />, request.waitingMin)}</span>
                   <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => setFocus({ id: request.tripId, nonce: Date.now() })}>{tr("See on map")}</button>
-                  {canControl && !handled.has(request.tripId) ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small" aria-expanded={openId === request.tripId} onClick={() => setOpenId(openId === request.tripId ? null : request.tripId)}>{openId === request.tripId ? tr("Close") : tr("Handle")}</button> : null}
                 </div>
-                {handled.has(request.tripId) ? <p className="dx-handled">{trn("{0} by {1}", handled.get(request.tripId)!.kind === "cancel" ? tr("Cancelled") : tr("Sent to {0}", [handled.get(request.tripId)!.target]), handled.get(request.tripId)!.by)}</p> : null}
-                {canControl && openId === request.tripId && !handled.has(request.tripId) ? <RequestActions request={request} book={book} zones={zones} groups={groups} candidates={candidatesOf(request)} canControl={canControl} agentId={agentId} now={now} onNotice={onNotice} /> : null}
+                <RiderRowActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} />
               </li>
             ))}
           </ul>
         )}
-        <p className="fine-print">{tr("Click a rider (on the map or here) to see the active drivers near the pickup: send an exclusive offer to one, or a radar group of up to 10, again and again until one accepts. Assign by hand offers the ride to that driver now. Send to a group: the first driver in the group to accept takes it.")}</p>
+        <p className="fine-print">{tr("Handle opens the same panel as on the Dashboard: Exclusive (one offer to one nearby driver) and Radar (a radar zone, whole zones, a driver group or drivers you tick, up to 10), again and again until one accepts. Exclusive to nearest offers the ride to the nearest free driver now.")}</p>
       </section>
     </div>
   );

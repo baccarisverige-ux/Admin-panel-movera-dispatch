@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import {
   ArrowDown, ArrowUp, Baby, Bell, Clock, Gauge, Heart, Home, Layers, ListOrdered, Luggage, Mail, MapPin, MessageSquare,
-  MonitorSmartphone, Moon, Power, PawPrint, Plane, Plus, Radar, Route, Scale, Shield, ShieldAlert, Smartphone, Sparkles, Star, Target, Timer, Trash2,
+  MonitorSmartphone, Moon, PawPrint, Plane, Plus, Route, Scale, Shield, ShieldAlert, Smartphone, Sparkles, Star, Timer, Trash2,
   TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins, Move,
 } from "lucide-react";
 import type { MarketId } from "../markets/markets";
@@ -13,6 +13,8 @@ import { Card, Check, Choice, Num, Row, Switch } from "./fields";
 import { ReservationSettings } from "./ReservationSettings";
 import { DestinationSettings } from "./DestinationSettings";
 import { CancelRateCard, OfferCardSettings } from "./OfferSettings";
+import { ExclusiveRules, RadarRules } from "./OfferSections";
+import { MovedCard, offersLink } from "./MovedCard";
 import { PickupWaitCard, type WaitBaseRow } from "./PickupWaitCard";
 import { RiderCancelFeesCard } from "./CancelFeeTable";
 import type { CancelFeeKind, CancelFeeTable as FeeTable, FeeCategory } from "./cancelFees";
@@ -67,6 +69,8 @@ type Props = {
 export function ZoneSettings(props: Props) {
   const { tab } = props;
   if (tab === "modes") return <Modes {...props} />;
+  if (tab === "radar") return <div className="dx-cards"><RadarRules zone={props.zone} onChange={props.onChange} disabled={props.disabled} zoneId={props.zone.zoneId} /></div>;
+  if (tab === "exclusive") return <div className="dx-cards"><ExclusiveRules zone={props.zone} onChange={props.onChange} disabled={props.disabled} zoneId={props.zone.zoneId} /></div>;
   if (tab === "reservations") return <ReservationSettings zone={props.zone} onChange={props.onChange} disabled={props.disabled} symbol={props.symbol} money={props.money} countryId={props.countryId} countryName={props.countryName} groups={props.groups} commissionPct={props.commissionPct} sampleFare={props.sampleFare} onOpenCancelFees={() => props.onOpenCancelFees("reservation")} />;
   if (tab === "best") return <Best {...props} />;
   if (tab === "waiting") return <Waiting {...props} />;
@@ -82,47 +86,13 @@ function Modes({ zone, onChange, busy, disabled }: Props) {
   const choose = zone.choose;
   return (
     <div className="dx-cards">
-      <Card title={tr("Radar")} tone="purple" icon={<Radar size={18} />} help={tr("One request is shown to several nearby drivers at once. The first to accept gets it.")} off={!zone.radar.on} aside={<Switch label={tr("Radar")} on={zone.radar.on} disabled={disabled} onChange={(on) => set({ radar: { ...zone.radar, on } })} />}>
-        <Row label={tr("Drivers who see it")} help={tr("The nearest suitable drivers, all at the same time.")}>
-          <Num label={tr("Radar drivers")} value={zone.radar.drivers} unit="drivers" min={1} max={30} disabled={disabled || !zone.radar.on} onChange={(drivers) => set({ radar: { ...zone.radar, drivers } })} />
-        </Row>
-        <Row label={tr("Time on the radar")} help={tr("How long the request stays before the next step.")}>
-          <Num label={tr("Radar time")} value={zone.radar.seconds} unit="s" min={5} max={120} disabled={disabled || !zone.radar.on} onChange={(seconds) => set({ radar: { ...zone.radar, seconds } })} />
-        </Row>
-        <Row label={tr("If nobody accepts")}>
-          <Choice label={tr("After Radar")} value={zone.radar.then} disabled={disabled || !zone.radar.on} onChange={(then) => set({ radar: { ...zone.radar, then } })} options={[{ id: "widen", label: tr("Wider area") }, { id: "exclusive", label: tr("Exclusive") }, { id: "widen_then_exclusive", label: tr("Wider area, then Exclusive") }]} />
-        </Row>
-      </Card>
-
-      <Card title={tr("Exclusive")} tone="blue" icon={<Target size={18} />} help={tr("One request goes to one driver at a time, the best first.")} off={!zone.exclusive.on} aside={<Switch label={tr("Exclusive")} on={zone.exclusive.on} disabled={disabled} onChange={(on) => set({ exclusive: { ...zone.exclusive, on } })} />}>
-        <Row label={tr("Time to accept")} help={tr("Each driver has this long to say yes.")}>
-          <Num label={tr("Exclusive time")} value={zone.exclusive.seconds} unit="s" min={5} max={60} disabled={disabled || !zone.exclusive.on} onChange={(seconds) => set({ exclusive: { ...zone.exclusive, seconds } })} />
-        </Row>
-        <Row label={tr("Drivers to try")} help={tr("One after the other, before the next step.")}>
-          <Num label={tr("Exclusive drivers")} value={zone.exclusive.drivers} unit="drivers" min={1} max={10} disabled={disabled || !zone.exclusive.on} onChange={(drivers) => set({ exclusive: { ...zone.exclusive, drivers } })} />
-        </Row>
-        <Row label={tr("If all say no")}>
-          <Choice label={tr("After Exclusive")} value={zone.exclusive.then} disabled={disabled || !zone.exclusive.on} onChange={(then) => set({ exclusive: { ...zone.exclusive, then } })} options={[{ id: "radar", label: tr("Radar") }, { id: "widen", label: tr("Wider area") }, { id: "widen_then_radar", label: tr("Wider area, then Radar") }]} />
-        </Row>
-        <Row label={tr("Exclusive while driving")} help={tr("Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no offers while driving a rider.")} on={zone.exclusiveWhileDriving.on} disabled={disabled || !zone.exclusive.on} onToggle={(on) => set({ exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, on } })}>
-          <Num label={tr("Exclusive offers while driving")} before="up to" value={zone.exclusiveWhileDriving.count} unit="at a time" min={1} max={5} disabled={disabled || !zone.exclusive.on} onChange={(count) => set({ exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, count } })} />
-        </Row>
-      </Card>
+      <MovedCard what="Radar, Exclusive and reservation rules" testId="dx-moved-modes" links={[
+        { label: "Radar rules", to: offersLink("radar", zone.zoneId) },
+        { label: "Exclusive rules", to: offersLink("exclusive", zone.zoneId) },
+        { label: "Reservations", to: offersLink("reservations", zone.zoneId) },
+      ]} />
 
       <OfferCardSettings zone={zone} onChange={onChange} disabled={disabled} />
-
-      <Card title={tr("Radar in the driver app")} tone="purple" icon={<Smartphone size={18} />} help={tr("How many Radar offers one driver sees at the same time.")} off={!zone.radar.on}>
-        <Row label={tr("Full-screen radar")} help={tr("When the driver opens the radar screen.")} on={zone.radarApp.fullOn} disabled={disabled || !zone.radar.on} onToggle={(fullOn) => set({ radarApp: { ...zone.radarApp, fullOn } })}>
-          <Num label={tr("Offers on full-screen radar")} before="up to" value={zone.radarApp.full} unit="offers" min={1} max={20} disabled={disabled || !zone.radar.on} onChange={(full) => set({ radarApp: { ...zone.radarApp, full } })} />
-        </Row>
-        <Row label={tr("Popup over the map")} help={tr("Small offer cards while the driver waits on the map.")} on={zone.radarApp.popupOn} disabled={disabled || !zone.radar.on} onToggle={(popupOn) => set({ radarApp: { ...zone.radarApp, popupOn } })}>
-          <Num label={tr("Offers in the popup")} before="up to" value={zone.radarApp.popup} unit="offers" min={1} max={5} disabled={disabled || !zone.radar.on} onChange={(popup) => set({ radarApp: { ...zone.radarApp, popup } })} />
-        </Row>
-        <Row label={tr("Hidden with ×: comes back after")} help={tr("A trip the driver hid in the Live list can come back if nobody took it and it is still in Radar. It never counts against the driver.")}>
-          <Num label={tr("Hidden Radar trip comes back after")} value={zone.hiddenComesBackMin} unit="min" min={1} max={60} disabled={disabled || !zone.radar.on} onChange={(hiddenComesBackMin) => set({ hiddenComesBackMin })} />
-        </Row>
-        <p className="dx-note">{trn("{0} No Radar offers while driving a rider. Only Exclusive offers come during a trip.", <Route size={13} aria-hidden="true" />)}</p>
-      </Card>
 
       <Card title={tr("Which mode runs")} tone="green" icon={<Gauge size={18} />} help={tr("Let the system choose by how busy the zone is, or choose yourself.")}>
         <Row label={tr("How to choose")}>
@@ -393,11 +363,7 @@ function Drivers({ zone, onChange, disabled, country, onCountry, countryName }: 
         </Row>
       </Card>
 
-      <Card title={tr("Go offline automatically")} tone="red" icon={<Power size={18} />} help={tr("A driver who does not accept offers is set offline, so riders are not kept waiting.")} off={!zone.autoOffline.on} aside={<Switch label={tr("Go offline automatically")} on={zone.autoOffline.on} disabled={disabled} onChange={(on) => set({ autoOffline: { ...zone.autoOffline, on } })} />}>
-        <Row label={tr("After offers not accepted in a row")} help={tr("Exclusive and other one-driver offers, declined or left to run out, also rides given by Movera and offers while driving. Radar trips never count, here or in the acceptance rate. The driver can go online again at once.")}>
-          <Num label={tr("Offline after offers not accepted")} value={zone.autoOffline.after} unit="offers" min={1} max={99} disabled={disabled || !zone.autoOffline.on} onChange={(after) => set({ autoOffline: { ...zone.autoOffline, after: Math.round(after) } })} />
-        </Row>
-      </Card>
+      <MovedCard what="Go offline automatically" testId="dx-moved-auto-offline" links={[{ label: "Radar rules", to: offersLink("radar", zone.zoneId, "Go offline automatically") }]} />
 
       <Card title={tr("Rest after long work · all of {0}", [countryName])} tone="purple" icon={<Timer size={18} />} help={tr("After this many hours of work, a driver cannot go online until the rest is done. This is a country rule.")} off={!country.rest.on} aside={<Switch label={tr("Rest after long work")} on={country.rest.on} disabled={disabled} onChange={(on) => onCountry({ ...country, rest: { ...country.rest, on } })} />}>
         <Row label={tr("Work hours")}><Num label={tr("Work hours before rest")} value={country.rest.workHours} unit="h" min={4} max={16} disabled={disabled || !country.rest.on} onChange={(workHours) => onCountry({ ...country, rest: { ...country.rest, workHours } })} /></Row>
