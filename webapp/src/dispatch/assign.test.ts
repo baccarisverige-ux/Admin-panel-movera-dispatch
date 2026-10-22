@@ -17,12 +17,15 @@ import {
   RADAR_GROUP_MAX,
   RADAR_GROUP_MIN,
   RADIUS_PRESETS_KM,
+  addDriverBonus,
   advanceAdminDispatch,
   bonusIssue,
   demoReply,
   directAssign,
   emptyAdminDispatch,
   nearbyDrivers,
+  normalizeAdminDispatch,
+  offerProgress,
   radarGroup,
   tripDispatch,
   type AssignContext,
@@ -308,5 +311,109 @@ test("All features lists the assign tool, radar groups and Add money for driver"
     assert.ok(entry, id);
     // The radar group timer is the zone's radar time, set in Radar · Exclusive · Reservations.
     assert.ok(featureTarget(entry!, "Z001").startsWith(id === "radar-group-timer" ? "/offers" : "/dispatch"), id);
+  }
+});
+
+/* ------------------------------------------------------------------ round 2: scoped money, radar targets, accepted driver */
+
+test("money added for the driver applies to Exclusive, Radar or both; offers carry only their own kind's money", () => {
+  const limits = { limitMinor: 20_000, hardMaxMinor: 100_000 };
+  const fmt = (minor: number) => `${minor / 100} kr`;
+  const exclusive = directAssign(emptyAdminDispatch(), ctx("searching"), "N1", { driverBonusMinor: 5_000, bonusScope: "exclusive" });
+  assert.equal(exclusive.offers[0].fareMinor, 25_000);
+  const trip = tripDispatch(exclusive.book, "T1");
+  assert.deepEqual([trip.bonusExclusiveMinor, trip.bonusRadarMinor, trip.bonusMinor], [5_000, 0, 5_000]);
+  // A radar afterwards carries no exclusive money.
+  const radar = radarGroup(exclusive.book, ctx("offered"), ["N2"]);
+  assert.equal(radar.offers[0].fareMinor, 20_000);
+  assert.equal(radar.offers[0].driverBonusMinor, 0);
+  // Money for the radar raises only the open radar offers; the limit counts per kind.
+  const raised = addDriverBonus(radar.book, ctx("offered"), 3_000, true, limits, fmt, "radar");
+  const offers = tripDispatch(raised.book, "T1").offers;
+  assert.equal(offers.find((offer) => offer.driverId === "N1")?.fareMinor, 25_000, "the exclusive offer keeps its own money");
+  assert.equal(offers.find((offer) => offer.driverId === "N2")?.fareMinor, 23_000);
+  assert.equal(addDriverBonus(raised.book, ctx("offered"), 16_000, true, limits, fmt, "exclusive").error?.includes("adjust the limit"), true, "5 000 + 16 000 passes the exclusive limit");
+  assert.equal(addDriverBonus(raised.book, ctx("offered"), 16_000, true, limits, fmt, "radar").error, undefined, "3 000 + 16 000 fits the radar limit");
+  // Both: one amount for every kind.
+  const both = directAssign(emptyAdminDispatch(), ctx("searching"), "N1", { driverBonusMinor: 2_000 });
+  assert.deepEqual([tripDispatch(both.book, "T1").bonusExclusiveMinor, tripDispatch(both.book, "T1").bonusRadarMinor], [2_000, 2_000]);
+});
+
+test("older saves with one bonusMinor keep it for both Exclusive and Radar", () => {
+  const book = normalizeAdminDispatch({ seq: 1, trips: { T1: { offers: [], groups: [], bonusMinor: 3_000, priority: true } }, events: [] });
+  const trip = tripDispatch(book, "T1");
+  assert.deepEqual([trip.bonusMinor, trip.bonusExclusiveMinor, trip.bonusRadarMinor], [3_000, 3_000, 3_000]);
+  const newer = normalizeAdminDispatch({ trips: { T1: { offers: [], groups: [], bonusMinor: 3_000, bonusExclusiveMinor: 3_000, bonusRadarMinor: 0 } } });
+  assert.deepEqual([tripDispatch(newer, "T1").bonusExclusiveMinor, tripDispatch(newer, "T1").bonusRadarMinor], [3_000, 0]);
+});
+
+test("a radar sent to a target with nobody inside stays on the radar for its timer, waiting for drivers", () => {
+  const empty = radarGroup(emptyAdminDispatch(), ctx("searching"), [], { target: "radar Södermalm", maxDrivers: 3 });
+  assert.equal(empty.error, undefined);
+  assert.equal(empty.offers.length, 0);
+  assert.equal(empty.group?.target, "radar Södermalm");
+  assert.equal(empty.group?.maxDrivers, 3);
+  const progress = offerProgress(tripDispatch(empty.book, "T1"), Date.parse(T0) + 5_000);
+  assert.equal(progress.radarWaiting, true);
+  assert.equal(progress.radarEndsAt, at(12));
+  assert.equal(offerProgress(tripDispatch(empty.book, "T1"), Date.parse(T0) + 13_000).radarEndsAt, null, "the timer ended");
+  // Without a target a radar still needs drivers; never more than the maximum.
+  assert.match(radarGroup(emptyAdminDispatch(), ctx("searching"), []).error ?? "", /at least one driver/);
+  assert.match(radarGroup(emptyAdminDispatch(), ctx("searching"), ["N1", "N2", "N3", "N4"], { target: "radar X", maxDrivers: 3 }).error ?? "", /at most 3 drivers/);
+});
+
+test("offer progress counts who sees it on the radar, ignored and refused offers, and the driver who accepted", () => {
+  const accept = driverAnswering("accept", "A");
+  const decline = driverAnswering("decline", "D");
+  const silent = driverAnswering("none", "N");
+  const sent = radarGroup(emptyAdminDispatch(), ctx("searching"), [decline, silent]);
+  const open = offerProgress(tripDispatch(sent.book, "T1"), Date.parse(T0) + 1_000);
+  assert.deepEqual([open.onRadar, open.ignored, open.refused, open.accepted], [2, 0, 0, null]);
+  const later = advanceAdminDispatch(sent.book, at(30), () => "offered").book;
+  const ended = offerProgress(tripDispatch(later, "T1"), Date.parse(at(30)));
+  assert.deepEqual([ended.onRadar, ended.ignored, ended.refused], [0, 1, 1]);
+  const won = advanceAdminDispatch(directAssign(later, ctx("searching", at(30)), accept).book, at(60), () => "offered").book;
+  assert.equal(offerProgress(tripDispatch(won, "T1"), Date.parse(at(60))).accepted?.driverId, accept);
+});
+
+test("on the server: a quick exclusive offer carries the money; the accepted driver shows with car, ETA and price", async () => {
+  mock.timers.enable({ apis: ["Date"], now: Date.parse(T0) });
+  try {
+    await api.reset();
+    await run({ action: "admin.trip.assign", value: { driverId: "D0046", driverBonusMinor: 5_000, bonusScope: "exclusive", priority: true } });
+    writeSession("lena");
+    const sent = await api.tripOffers("T0004");
+    assert.equal(sent.offers[0].driverBonusMinor, 5_000);
+    assert.deepEqual([sent.bonusExclusiveMinor, sent.bonusRadarMinor], [5_000, 0]);
+    mock.timers.tick(demoReply("D0046").afterSeconds * 1000);
+    assert.equal(await tripStatus(), "accepted");
+    writeSession("lena");
+    const done = await api.tripOffers("T0004");
+    assert.equal(done.accepted?.driverId, "D0046");
+    assert.equal(done.accepted?.kind, "assigned");
+    assert.equal(done.accepted?.driverBonusMinor, 5_000);
+    assert.equal(done.accepted?.fareMinor, done.fareMinor + 5_000);
+    assert.match(done.accepted?.code ?? "", /^MV-SE-\d{4}$/);
+    assert.ok(done.accepted?.etaMin === null || done.accepted!.etaMin >= 1);
+    assert.equal(done.bonusMinor, 5_000, "only the accepted offer's money is paid");
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test("on the server: a radar to a target with nobody inside goes out without offering the ride to anyone", async () => {
+  mock.timers.enable({ apis: ["Date"], now: Date.parse(T0) });
+  try {
+    await api.reset();
+    await run({ action: "admin.trip.radarGroup", value: { driverIds: [], target: "radar Södermalm", maxDrivers: 3 } });
+    assert.equal(await tripStatus(), "searching", "nobody was offered the ride");
+    writeSession("lena");
+    const view = await api.tripOffers("T0004");
+    assert.equal(view.groups.length, 1);
+    assert.equal(view.groups[0].target, "radar Södermalm");
+    assert.equal(view.offers.length, 0);
+    await refused(run({ action: "admin.trip.radarGroup", value: { driverIds: [] } }), 400, "invalid_request");
+  } finally {
+    mock.timers.reset();
   }
 });

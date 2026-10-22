@@ -554,7 +554,8 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
           if (result.code === "invalid_transition") notAllowed(result.error);
           reject(400, result.error, undefined, { code: "invalid_request" });
         }
-        const to = raw.action === "admin.trip.driverBonus" ? null : nextStatus(trip!.status, "assign", "admin");
+        // A radar that went out with nobody inside its target yet offers the ride to no one: the trip keeps searching.
+        const to = raw.action === "admin.trip.driverBonus" || result.offers.length === 0 ? null : nextStatus(trip!.status, "assign", "admin");
         raw = { ...raw, sliceKey: ADMIN_DISPATCH_KEY, value: result.book, ...(to ? { collection: "trips", patch: { status: to } } : { collection: undefined, patch: undefined }) };
       }
 

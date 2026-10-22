@@ -31,3 +31,24 @@
 .dash-btn.danger:hover { background: #fdf1f1; }
 .rider-panel { gap: 10px; }
 .rider-panel .driver-panel-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Add money and offer status */
+.as-bonus .as-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.as-chips-label { font-size: 12px; font-weight: 700; color: var(--dash-ink-2); margin-right: 2px; }
+.as-bonus .as-chip { height: 26px; padding: 0 10px; }
+.as-pending { margin: 4px 0 0; font-size: 12.5px; color: #5b3fd1; }
+.hq-sees { font-size: 11.5px; font-weight: 600; opacity: 0.85; }
+.dash-btn:has(.hq-sees) { height: auto; min-height: 30px; padding-top: 5px; padding-bottom: 5px; flex-wrap: wrap; white-space: normal; text-align: left; line-height: 1.25; }
+.as-bonus-now { display: block; line-height: 1.5; }
+.as-bonus-now .as-priority { margin-left: 6px; }
+.as-group-target { margin-left: 6px; color: var(--dash-ink-2); font-size: 12px; }
+.hq-progress { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.hq-chip { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--dash-ink-2); }
+.hq-chip.amber { background: #fff7e8; border-color: #f3d9a4; color: #8a5a00; }
+.hq-chip.red { background: #fdf1f1; border-color: #f1c7c7; color: #a32a2a; }
+.hq-chip.green { background: #eaf7ef; border-color: #bfe3cc; color: #1f7a45; }
+.hq-progress-block { display: grid; gap: 8px; }
+.hq-progress-block .as-offers-section.compact { padding: 10px; }
+.hq-accepted { border: 1px solid #bfe3cc; background: #f5fbf7; border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+.hq-accepted-head { margin: 0; font-weight: 700; }
+.hq-accepted .driver-panel-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }

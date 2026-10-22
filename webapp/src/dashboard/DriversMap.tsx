@@ -22,6 +22,8 @@ import { tr, trn, trx } from "../i18n";
 import { addMapIcons, CAR_COLOR, carIcon, headingOf, remainingPath, RIDER_COLOR, RIDER_OFFERED_ICON, RIDER_WAITING_ICON } from "./mapIcons";
 import type { RideCheck } from "../safety/rideCheck";
 import { openRideChecks, RideCheckMapPopup, useDismissedRideChecks } from "../safety/RideCheckMapPopup";
+import { MapFocusContext } from "../dispatch/assignContext";
+import { RequestState } from "../dispatch/RideProgress";
 
 const STYLE = {
   version: 8 as const,
@@ -409,7 +411,18 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
   }, [focusId, ready, drivers]);
 
   const selected = drivers.find((driver) => driver.id === selectedId) ?? null;
-  const request = requestId ? requests.find((item) => item.tripId === requestId) ?? null : null;
+  // Once a driver accepts, the rider leaves the waiting list: the open pop-up stays, showing who is on the way.
+  const lastRequest = useRef<RideRequest | null>(null);
+  const found = requestId ? requests.find((item) => item.tripId === requestId) ?? null : null;
+  if (found) lastRequest.current = found;
+  const request = found ?? (requestId && lastRequest.current?.tripId === requestId ? lastRequest.current : null);
+  const mapFocus = useMemo(() => ({
+    focusDriver: (driverId: string) => {
+      const target = latest.current.drivers.find((driver) => driver.id === driverId);
+      select(driverId);
+      if (target) mapRef.current?.flyTo({ center: [target.lng, target.lat], zoom: 14.5, duration: 900 });
+    },
+  }), []);
   const trip = selected && tripFor ? tripFor(selected) : null;
   const info = selected && infoFor ? infoFor(selected.id) : null;
   // Escape closes the rider panel like its close button (the driver panel handles its own).
@@ -525,7 +538,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
             <div className="driver-panel-title">
               {request.riderId ? <Link to={`/riders/${request.riderId}`}><strong>{request.rider}</strong></Link> : <strong>{request.rider}</strong>}
               <small className="map-popup-code">{request.tripId}</small>
-              <span className="map-popup-state"><i style={{ background: request.waitingMin > 5 ? "#d03b3b" : "#d55181" }} />{request.status === "offered" ? tr("Offered to {0}", [request.offeredTo]) : tr("Looking for a driver")}</span>
+              <RequestState request={request} />
             </div>
             <button data-command="admin.ui.mapClose" type="button" className="map-popup-close" aria-label={tr("Close")} onClick={() => setRequestId(null)}><X size={14} /></button>
           </div>
@@ -535,7 +548,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
             <div><dt>{tr("Waiting")}</dt><dd>{trn("{0} {1} min", <Clock size={12} aria-hidden="true" />, request.waitingMin)}</dd></div>
             <div><dt>{tr("Trip")}</dt><dd>{access.trips ? <Link to={withScope(`/trips/${request.tripId}`)}>{request.tripId}</Link> : request.tripId}</dd></div>
           </dl>
-          {renderAssign ? renderAssign(request) : null}
+          {renderAssign ? <MapFocusContext.Provider value={mapFocus}>{renderAssign(request)}</MapFocusContext.Provider> : null}
         </aside>
       ) : null}
       {waybillOpen && trip ? <WaybillDialog waybill={trip.waybill} onClose={() => setWaybillOpen(false)} /> : null}

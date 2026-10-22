@@ -94,7 +94,23 @@ export type AdminOffer = {
   by: string;
 };
 
-export type RadarGroup = { groupId: string; tripId: string; number: number; driverIds: string[]; sentAt: string; expiresAt: string; by: string };
+export type RadarGroup = {
+  groupId: string;
+  tripId: string;
+  number: number;
+  driverIds: string[];
+  sentAt: string;
+  expiresAt: string;
+  by: string;
+  /** Where the radar went ("radar Södermalm", "Night team"); missing for drivers ticked by hand. */
+  target?: string;
+  /** Most drivers who may see the ride (1–10). */
+  maxDrivers?: number;
+};
+
+/** Where money added for the driver applies: exclusive offers, radar offers or both. */
+export type BonusScope = "exclusive" | "radar" | "both";
+export const BONUS_SCOPES: readonly BonusScope[] = ["exclusive", "radar", "both"];
 
 export type DispatchEvent = {
   eventId: string;
@@ -112,8 +128,12 @@ export type DispatchEvent = {
 export type TripDispatch = {
   offers: AdminOffer[];
   groups: RadarGroup[];
-  /** Total money added for the driver on this trip (minor units of the zone's currency). */
+  /** Money added for the driver on this trip, the larger of the two below (minor units of the zone's currency). */
   bonusMinor: number;
+  /** Money added for the driver on exclusive offers (direct assign). */
+  bonusExclusiveMinor: number;
+  /** Money added for the driver on radar offers. */
+  bonusRadarMinor: number;
   priority: boolean;
   lockedTo: { driverId: string; driverName: string; at: string } | null;
 };
@@ -129,19 +149,26 @@ export function emptyAdminDispatch(): AdminDispatchBook {
 const isObject = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 export function emptyTripDispatch(): TripDispatch {
-  return { offers: [], groups: [], bonusMinor: 0, priority: false, lockedTo: null };
+  return { offers: [], groups: [], bonusMinor: 0, bonusExclusiveMinor: 0, bonusRadarMinor: 0, priority: false, lockedTo: null };
 }
 
 /** Stored data is checked, not cast: anything unreadable starts empty. */
 export function normalizeAdminDispatch(value: unknown): AdminDispatchBook {
   if (!isObject(value) || !isObject(value.trips)) return emptyAdminDispatch();
   const trips: Record<string, TripDispatch> = {};
+  const minor = (amount: unknown): number | null => (typeof amount === "number" && Number.isFinite(amount) && amount >= 0 ? amount : null);
   for (const [id, raw] of Object.entries(value.trips)) {
     if (!isObject(raw)) continue;
+    // Older saves have one bonusMinor for every offer: it applies to both exclusive and radar.
+    const total = minor(raw.bonusMinor) ?? 0;
+    const exclusive = minor(raw.bonusExclusiveMinor) ?? total;
+    const radar = minor(raw.bonusRadarMinor) ?? total;
     trips[id] = {
       offers: Array.isArray(raw.offers) ? (raw.offers as AdminOffer[]).filter((offer) => isObject(offer) && typeof offer.offerId === "string" && (OFFER_STATUSES as readonly string[]).includes(String(offer.status))) : [],
       groups: Array.isArray(raw.groups) ? (raw.groups as RadarGroup[]).filter((group) => isObject(group) && typeof group.groupId === "string" && Array.isArray(group.driverIds)) : [],
-      bonusMinor: typeof raw.bonusMinor === "number" && Number.isFinite(raw.bonusMinor) && raw.bonusMinor >= 0 ? raw.bonusMinor : 0,
+      bonusMinor: Math.max(exclusive, radar),
+      bonusExclusiveMinor: exclusive,
+      bonusRadarMinor: radar,
       priority: raw.priority === true,
       lockedTo: isObject(raw.lockedTo) && typeof raw.lockedTo.driverId === "string" ? (raw.lockedTo as TripDispatch["lockedTo"]) : null,
     };
@@ -168,6 +195,74 @@ export function canAssign(status: string): boolean {
 
 export function openOffers(trip: TripDispatch): AdminOffer[] {
   return trip.offers.filter((offer) => offer.status === "open");
+}
+
+type Bonuses = Pick<TripDispatch, "bonusExclusiveMinor" | "bonusRadarMinor">;
+
+/** The money added for the driver on offers of this kind. */
+export function bonusOf(trip: Bonuses, kind: AdminOffer["kind"]): number {
+  return kind === "assigned" ? trip.bonusExclusiveMinor : trip.bonusRadarMinor;
+}
+
+/** Whether money added with this scope applies to offers of this kind. */
+export function scopeCovers(scope: BonusScope, kind: AdminOffer["kind"]): boolean {
+  return scope === "both" || (scope === "exclusive" ? kind === "assigned" : kind === "radar");
+}
+
+/** The bonus already added on the offers a new amount with this scope would raise (the larger, for the limit). */
+export function bonusInScope(trip: Bonuses, scope: BonusScope): number {
+  if (scope === "exclusive") return trip.bonusExclusiveMinor;
+  if (scope === "radar") return trip.bonusRadarMinor;
+  return Math.max(trip.bonusExclusiveMinor, trip.bonusRadarMinor);
+}
+
+/** The trip's bonuses once `extra` is added with `scope`. */
+export function withBonus(trip: Bonuses, extra: number, scope: BonusScope): Bonuses & { bonusMinor: number } {
+  const exclusive = trip.bonusExclusiveMinor + (scopeCovers(scope, "assigned") ? extra : 0);
+  const radar = trip.bonusRadarMinor + (scopeCovers(scope, "radar") ? extra : 0);
+  return { bonusExclusiveMinor: exclusive, bonusRadarMinor: radar, bonusMinor: Math.max(exclusive, radar) };
+}
+
+/** Raises the open offers the new money applies to (offer_updated). */
+function raiseOpen(offers: readonly AdminOffer[], trip: Bonuses, ctx: Pick<AssignContext, "fareMinor" | "driverNetMinor">, priority: boolean, scope: BonusScope): AdminOffer[] {
+  return offers.map((offer) => {
+    if (offer.status !== "open" || !scopeCovers(scope, offer.kind)) return offer;
+    const bonus = bonusOf(trip, offer.kind);
+    return { ...offer, fareMinor: ctx.fareMinor + bonus, driverEarningsMinor: ctx.driverNetMinor + bonus, driverBonusMinor: bonus, priority, version: offer.version + 1 };
+  });
+}
+
+/** What became of the offers sent for a trip, for "Offers sent" and the rider pop-up. */
+export type OfferProgress = {
+  /** Drivers who see the ride on the radar now. */
+  onRadar: number;
+  /** When the latest radar still running ends, if one is. */
+  radarEndsAt: string | null;
+  /** The latest radar went out with no driver inside its target yet. */
+  radarWaiting: boolean;
+  /** The open exclusive offer, if any. */
+  exclusiveOpen: AdminOffer | null;
+  /** Offers that ran out without an answer. */
+  ignored: number;
+  refused: number;
+  accepted: AdminOffer | null;
+  sent: number;
+};
+
+export function offerProgress(trip: Pick<TripDispatch, "offers" | "groups">, now: number): OfferProgress {
+  const open = trip.offers.filter((offer) => offer.status === "open");
+  const running = trip.groups.filter((group) => Date.parse(group.expiresAt) > now);
+  const latest = running.at(-1) ?? null;
+  return {
+    onRadar: open.filter((offer) => offer.kind === "radar").length,
+    radarEndsAt: latest?.expiresAt ?? null,
+    radarWaiting: latest !== null && !trip.offers.some((offer) => offer.groupId === latest.groupId),
+    exclusiveOpen: open.find((offer) => offer.kind === "assigned") ?? null,
+    ignored: trip.offers.filter((offer) => offer.status === "expired").length,
+    refused: trip.offers.filter((offer) => offer.status === "declined").length,
+    accepted: trip.offers.find((offer) => offer.status === "claimed") ?? null,
+    sent: trip.offers.length,
+  };
 }
 
 /* ------------------------------------------------------------------ nearby drivers */
@@ -240,7 +335,7 @@ export function nearbyDrivers(
         name: driver.name,
         onlineStatus: driver.state === "free" ? "online" : "on_trip",
         distanceMeters: meters,
-        pickupEtaSeconds: Math.max(60, Math.round(((meters / 1000) / PICKUP_KMH) * 3600 / 60) * 60),
+        pickupEtaSeconds: pickupEtaSeconds(meters),
         zoneId: driver.zoneId,
         zoneName: driver.zoneName,
         categoryIds: info.categoryIds,
@@ -277,7 +372,16 @@ export type AssignContext = {
   canTake: (driverId: string) => boolean;
 };
 
-export type AssignOptions = { driverBonusMinor?: number; priority?: boolean };
+export type AssignOptions = {
+  driverBonusMinor?: number;
+  /** Which offers the added money applies to (default both). */
+  bonusScope?: BonusScope;
+  priority?: boolean;
+  /** Radar only: where the radar went; with a target the radar may go out with nobody inside yet. */
+  target?: string;
+  /** Radar only: most drivers who may see it (1–10). */
+  maxDrivers?: number;
+};
 
 export type AssignResult = { book: AdminDispatchBook; error?: string; code?: "invalid_transition" | "invalid_request"; offers: AdminOffer[]; group?: RadarGroup };
 
@@ -311,7 +415,9 @@ function sendOffers(book: AdminDispatchBook, ctx: AssignContext, driverIds: read
   const already = driverIds.find((id) => openOffers(current).some((offer) => offer.driverId === id));
   if (already) return { book, offers: [], code: "invalid_request", error: `${ctx.nameOf(already)} already has an open offer for this trip.` };
   const extra = Math.max(0, Math.round(options.driverBonusMinor ?? 0));
-  const bonusMinor = current.bonusMinor + extra;
+  const scope = options.bonusScope ?? "both";
+  const bonuses = withBonus(current, extra, scope);
+  const bonusMinor = bonusOf(bonuses, kind);
   const priority = options.priority ?? current.priority;
   const seconds = kind === "assigned" ? ctx.exclusiveSeconds : ctx.radarSeconds;
   const expiresAt = plusSeconds(ctx.now, seconds);
@@ -337,12 +443,14 @@ function sendOffers(book: AdminDispatchBook, ctx: AssignContext, driverIds: read
     priority,
     by: ctx.by,
   }));
-  const group: RadarGroup | undefined = groupId ? { groupId, tripId: ctx.tripId, number, driverIds: [...driverIds], sentAt: ctx.now, expiresAt, by: ctx.by } : undefined;
+  const group: RadarGroup | undefined = groupId
+    ? { groupId, tripId: ctx.tripId, number, driverIds: [...driverIds], sentAt: ctx.now, expiresAt, by: ctx.by, ...(options.target ? { target: options.target } : {}), ...(options.maxDrivers ? { maxDrivers: options.maxDrivers } : {}) }
+    : undefined;
   // A bonus sent with the offers also raises the open offers already out (offer_updated).
-  const raised = extra > 0 ? current.offers.map((offer) => (offer.status === "open" ? { ...offer, fareMinor: ctx.fareMinor + bonusMinor, driverEarningsMinor: ctx.driverNetMinor + bonusMinor, driverBonusMinor: bonusMinor, priority, version: offer.version + 1 } : offer)) : current.offers;
+  const raised = extra > 0 ? raiseOpen(current.offers, bonuses, ctx, priority, scope) : current.offers;
   let next: AdminDispatchBook = {
     ...book,
-    trips: { ...book.trips, [ctx.tripId]: { ...current, offers: [...raised, ...offers], groups: group ? [...current.groups, group] : current.groups, bonusMinor, priority, lockedTo: null } },
+    trips: { ...book.trips, [ctx.tripId]: { ...current, ...bonuses, offers: [...raised, ...offers], groups: group ? [...current.groups, group] : current.groups, priority, lockedTo: null } },
   };
   if (extra > 0) next = event(next, { kind: "driver_bonus_added", tripId: ctx.tripId, amountMinor: extra, occurredAt: ctx.now });
   for (const offer of offers) next = event(next, { kind: "offer_sent", tripId: ctx.tripId, offerId: offer.offerId, driverId: offer.driverId, driverName: offer.driverName, ...(groupId ? { groupId } : {}), occurredAt: ctx.now });
@@ -355,12 +463,18 @@ export function directAssign(book: AdminDispatchBook, ctx: AssignContext, driver
   return sendOffers(book, ctx, [driverId], "assigned", options);
 }
 
-/** Radar group: 1 to 10 drivers on the zone's radar timer (Q13–Q15). Can be repeated until a driver accepts. */
+/**
+ * Radar group: 1 to 10 drivers on the zone's radar timer (Q13–Q15). Can be repeated until a driver accepts.
+ * Sent to a target (a radar zone, zones or a driver group) it may go out with nobody inside yet: it then stays on
+ * the radar for its timer, "waiting for drivers", and never reaches more than `maxDrivers`.
+ */
 export function radarGroup(book: AdminDispatchBook, ctx: AssignContext, driverIds: readonly string[], options: AssignOptions = {}): AssignResult {
   const unique = [...new Set(driverIds)];
   if (unique.length !== driverIds.length) return { book, offers: [], code: "invalid_request", error: "A driver is in the list twice." };
-  if (unique.length < RADAR_GROUP_MIN) return { book, offers: [], code: "invalid_request", error: "Choose at least one driver for the radar." };
-  if (unique.length > RADAR_GROUP_MAX) return { book, offers: [], code: "invalid_request", error: `A radar group has at most ${RADAR_GROUP_MAX} drivers.` };
+  const max = options.maxDrivers === undefined ? RADAR_GROUP_MAX : Math.round(options.maxDrivers);
+  if (!Number.isFinite(max) || max < RADAR_GROUP_MIN || max > RADAR_GROUP_MAX) return { book, offers: [], code: "invalid_request", error: `Max drivers must be ${RADAR_GROUP_MIN} to ${RADAR_GROUP_MAX}.` };
+  if (unique.length < RADAR_GROUP_MIN && !options.target) return { book, offers: [], code: "invalid_request", error: "Choose at least one driver for the radar." };
+  if (unique.length > max) return { book, offers: [], code: "invalid_request", error: `A radar group has at most ${max} drivers.` };
   return sendOffers(book, ctx, unique, "radar", options);
 }
 
@@ -382,14 +496,14 @@ export function bonusIssue(addMinor: number, alreadyMinor: number, limits: Bonus
   return null;
 }
 
-export function addDriverBonus(book: AdminDispatchBook, ctx: AssignContext, addMinor: number, priority: boolean, limits: BonusLimits, format: (minor: number) => string): AssignResult {
+export function addDriverBonus(book: AdminDispatchBook, ctx: AssignContext, addMinor: number, priority: boolean, limits: BonusLimits, format: (minor: number) => string, scope: BonusScope = "both"): AssignResult {
   if (!canAssign(ctx.tripStatus)) return { book, offers: [], code: "invalid_transition", error: `Money can be added only while the trip is requested, searching or offered (it is ${ctx.tripStatus}).` };
   const current = tripDispatch(book, ctx.tripId);
-  const issue = bonusIssue(addMinor, current.bonusMinor, limits, format);
+  const issue = bonusIssue(addMinor, bonusInScope(current, scope), limits, format);
   if (issue) return { book, offers: [], code: "invalid_request", error: issue.message };
-  const bonusMinor = current.bonusMinor + addMinor;
-  const offers = current.offers.map((offer) => (offer.status === "open" ? { ...offer, fareMinor: ctx.fareMinor + bonusMinor, driverEarningsMinor: ctx.driverNetMinor + bonusMinor, driverBonusMinor: bonusMinor, priority, version: offer.version + 1 } : offer));
-  const next = { ...book, trips: { ...book.trips, [ctx.tripId]: { ...current, offers, bonusMinor, priority } } };
+  const bonuses = withBonus(current, addMinor, scope);
+  const offers = raiseOpen(current.offers, bonuses, ctx, priority, scope);
+  const next = { ...book, trips: { ...book.trips, [ctx.tripId]: { ...current, ...bonuses, offers, priority } } };
   return { book: event(next, { kind: "driver_bonus_added", tripId: ctx.tripId, amountMinor: addMinor, occurredAt: ctx.now }), offers: offers.filter((offer) => offer.status === "open") };
 }
 
@@ -478,6 +592,11 @@ export function advanceAdminDispatch(book: AdminDispatchBook, now: string, statu
     for (const entry of pending.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))) next = event(next, entry);
   }
   return { book: next, changes };
+}
+
+/** Demo ETA to the pickup at the demo average speed, whole minutes, at least one. */
+export function pickupEtaSeconds(meters: number): number {
+  return Math.max(60, Math.round(((meters / 1000) / PICKUP_KMH) * 3600 / 60) * 60);
 }
 
 /** Seconds left on an offer or a group, never below 0. */

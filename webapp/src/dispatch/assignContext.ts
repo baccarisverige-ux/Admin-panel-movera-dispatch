@@ -15,3 +15,12 @@ export const AssignPanelContext = createContext<AssignPanelApi>({ open: () => un
 export function useAssignPanel(): AssignPanelApi {
   return useContext(AssignPanelContext);
 }
+
+/** What a live map lets a pop-up inside it do: fly to a driver and open the driver's pop-up. Null outside a map. */
+export type MapFocusApi = { focusDriver: (driverId: string) => void };
+
+export const MapFocusContext = createContext<MapFocusApi | null>(null);
+
+export function useMapFocus(): MapFocusApi | null {
+  return useContext(MapFocusContext);
+}

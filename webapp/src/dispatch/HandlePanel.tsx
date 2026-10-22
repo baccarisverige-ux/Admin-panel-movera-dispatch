@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { BadgeDollarSign, Clock, Radar, Send, Target, UserRound, XCircle, Zap } from "lucide-react";
+import { Clock, Radar, Send, Target, UserRound, XCircle, Zap } from "lucide-react";
 import { useCommand, useSlice } from "../api/hooks";
+import type { TripOffersView } from "../api/dispatchSim";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import type { Candidate, RideRequest } from "../dashboard/riders";
@@ -10,7 +11,8 @@ import { marketOfZone, zoneById } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { canAssign, RADAR_GROUP_MAX } from "./assign";
 import { useAssignPanel } from "./assignContext";
-import { DriverBonusBox, useTripOffers } from "./DriverBonusBox";
+import { DriverBonusBox, EMPTY_MONEY, moneyForSend, seesLabel, seesSentence, useTripOffers, type MoneyDraft } from "./DriverBonusBox";
+import { RideProgress } from "./RideProgress";
 import { actionKindFor, defaultTarget, driversInTarget, groupIssue, handledOf, nearestAble, radarTimerFor, radarZonesFor, recordLiveAction, targetName, zoneChoicesFor, type RadarScope, type RadarTarget } from "./handle";
 import { DISPATCH_KEY, emptyDispatchBook, normalizeDispatchBook, type DispatchBook, type LiveAction } from "./rules";
 import { tr, trn, trx } from "../i18n";
@@ -56,37 +58,77 @@ export function HandleButton({ ride, candidates, className = "dash-btn small", c
   );
 }
 
-/** An exclusive offer to the nearest free driver who may drive the requested category. */
-export function NearestExclusiveButton({ request, candidates, onDone, className = "dash-btn small ghost" }: { request: RideRequest; candidates: Candidate[]; onDone: (message: string) => void; className?: string }) {
-  const best = nearestAble(candidates);
-  return <ExclusiveOfferButton request={request} target={best} className={className} label={tr("Exclusive to nearest")} title={best ? tr("Exclusive offer to the nearest free driver who can drive {0}: {1}, {2} km", [request.categoryLabel, best.driver.name, String(best.km)]) : tr("No free driver nearby")} onDone={onDone} />;
+/** What a send carries besides the target: the trip's offers (for the price the driver sees) and the typed money. */
+type Money = { view?: TripOffersView; draft?: MoneyDraft; onSent?: () => void };
+
+/**
+ * Records a send in the dispatch book so every place (Dispatch, Dashboard, both maps) shows "Sent to … by …".
+ * It follows the offer command, which already asked for the reason.
+ */
+function useRecordSend() {
+  const book = useDispatchBook();
+  const { agent } = useSession();
+  const send = useCommand("admin.dispatch.send");
+  return (ride: HandledRide, kind: LiveAction["kind"], target: string) =>
+    void send.run({
+      targetId: ride.tripId,
+      scope: ride.zoneId,
+      before: ride.status,
+      after: `${kind} ${target}`,
+      reason: "Recorded with the offer sent",
+      sliceKey: DISPATCH_KEY,
+      expectedSliceRev: book.draftRev,
+      value: recordLiveAction(book, { tripId: ride.tripId, kind, target, by: agent?.id ?? "", at: new Date().toISOString() }),
+    });
 }
 
-function ExclusiveOfferButton({ request, target, className, label, title, onDone }: { request: RideRequest; target: Candidate | null; className: string; label: string; title: string; onDone: (message: string) => void }) {
+/** An exclusive offer to the nearest free driver who may drive the requested category. */
+export function NearestExclusiveButton({ request, candidates, onDone, className = "dash-btn small ghost", view, draft, onSent }: { request: RideRequest; candidates: Candidate[]; onDone: (message: string) => void; className?: string } & Money) {
+  const best = nearestAble(candidates);
+  return <ExclusiveOfferButton ride={rideOf(request)} target={best} className={className} label={tr("Exclusive to nearest")} title={best ? tr("Exclusive offer to the nearest free driver who can drive {0}: {1}, {2} km", [request.categoryLabel, best.driver.name, String(best.km)]) : tr("No free driver nearby")} onDone={onDone} view={view} draft={draft} onSent={onSent} />;
+}
+
+/**
+ * A real exclusive offer to one driver (admin.trip.assign): an offer record with the fare the driver sees (the money
+ * added for exclusive offers included), the zone's exclusive countdown, and a line in "Offers sent".
+ */
+function ExclusiveOfferButton({ ride, target, className, label, title, onDone, view, draft = EMPTY_MONEY, onSent }: { ride: HandledRide; target: Candidate | null; className: string; label: string; title: string; onDone: (message: string) => void } & Money) {
+  const record = useRecordSend();
+  const money = moneyForSend(draft, view, ride.zoneId, "assigned");
+  const sees = seesLabel(money, ride.zoneId);
+  const status = view?.status ?? ride.status;
+  const why = !target ? title : !canAssign(status) ? tr("This trip cannot be assigned now.") : money.blocked ? trx(money.blocked) : title;
   return (
     <CommandButton
-      command="admin.trip.offer"
+      command="admin.trip.assign"
       className={className}
       type="button"
-      targetId={request.tripId}
+      targetId={ride.tripId}
       confirmTarget={false}
-      entityState="searching"
-      scope={request.zoneId}
+      entityState={status}
+      scope={ride.zoneId}
       collection="trips"
-      before={request.status}
-      after={target ? `offered to ${target.driver.id}` : "offered"}
-      patch={target ? { driverId: target.driver.id, status: "offered" } : undefined}
-      disabled={!target}
-      title={title}
-      onDone={() => target && onDone(`${request.rider}'s ride offered to ${target.driver.name} (${driverCode(target.driver)}), about ${target.etaMin} min away.`)}
+      patch={{ status: "offered" }}
+      before={status}
+      after={target ? `exclusive offer to ${target.driver.id}` : "exclusive offer"}
+      value={target ? { driverId: target.driver.id, ...money.params } : undefined}
+      disabled={!target || !canAssign(status) || Boolean(money.blocked)}
+      title={why}
+      summary={target ? <>{trn("Send an exclusive offer for {0} to {1}, about {2} min away.", <b>{ride.rider}</b>, <b>{target.driver.name}</b>, target.etaMin)}{sees ? ` ${seesSentence(money, ride.zoneId)}` : ""}</> : undefined}
+      onDone={() => {
+        if (!target) return;
+        record(ride, "exclusive", target.driver.name);
+        if (money.used) onSent?.();
+        onDone(`${ride.rider}'s ride offered to ${target.driver.name} (${driverCode(target.driver)}), about ${target.etaMin} min away.`);
+      }}
     >
-      {label}
+      {label}{sees ? <small className="hq-sees"> · {sees}</small> : null}
     </CommandButton>
   );
 }
 
 /** Quick action: pick one of the nearest free drivers and send the exclusive offer from here. */
-export function QuickNearbyPick({ request, candidates, onDone }: { request: RideRequest; candidates: Candidate[]; onDone: (message: string) => void }) {
+export function QuickNearbyPick({ request, candidates, onDone, view, draft, onSent }: { request: RideRequest; candidates: Candidate[]; onDone: (message: string) => void } & Money) {
   const best = nearestAble(candidates);
   const [chosen, setChosen] = useState("");
   const pick = candidates.find((item) => item.driver.id === chosen) ?? best ?? candidates[0] ?? null;
@@ -101,7 +143,7 @@ export function QuickNearbyPick({ request, candidates, onDone }: { request: Ride
           ))}
         </select>
       </label>
-      <ExclusiveOfferButton request={request} target={pick} className="dash-btn small" label={tr("Send exclusive offer")} title={pick ? tr("Exclusive offer to {0}", [pick.driver.name]) : tr("No free driver nearby")} onDone={onDone} />
+      <ExclusiveOfferButton ride={rideOf(request)} target={pick} className="dash-btn small" label={tr("Send exclusive offer")} title={pick ? tr("Exclusive offer to {0}", [pick.driver.name]) : tr("No free driver nearby")} onDone={onDone} view={view} draft={draft} onSent={onSent} />
     </div>
   );
 }
@@ -223,43 +265,46 @@ type SendProps = {
   max: number;
   onNotice: (text: string) => void;
   className?: string;
-};
+} & Money;
 
 /**
- * Sends the ride to the radar target: recorded in the dispatch book (so every place shows "Sent to … by …"), and
- * when free drivers are inside the target right now, a real radar group goes to them so the countdown shows.
+ * Sends the ride to the radar target as a real radar (admin.trip.radarGroup): the free drivers inside the target
+ * right now get the offer (at most `max`), with the money added for radar offers and the countdown; when nobody is
+ * inside yet the radar still goes out and shows "On the radar · waiting for drivers" until its timer ends.
+ * The send is also recorded in the dispatch book, so every place shows "Sent to … by …".
  */
-export function SendRadarButton({ ride, book, candidates, target, max, onNotice, className = "dash-btn small" }: SendProps) {
-  const { agent } = useSession();
-  const radarGroup = useCommand("admin.trip.radarGroup");
+export function SendRadarButton({ ride, book, candidates, target, max, onNotice, className = "dash-btn small", view, draft = EMPTY_MONEY, onSent }: SendProps) {
+  const record = useRecordSend();
   const name = targetName(target, book);
   const drivers = driversInTarget(target, candidates, book, max);
   const kind = actionKindFor(target);
   const label = kind === "group" ? name : `radar ${name}`;
-  const issue = target.kind === "group" ? groupIssue(book.groups.find((group) => group.id === target.id)) : target.kind === "zone" && target.ids.length === 0 ? "Pick at least one zone." : !name ? "Choose where the radar goes." : null;
-  const next = recordLiveAction(book, { tripId: ride.tripId, kind, target: label, by: agent?.id ?? "", at: new Date().toISOString() });
+  const money = moneyForSend(draft, view, ride.zoneId, "radar");
+  const sees = seesLabel(money, ride.zoneId);
+  const status = view?.status ?? ride.status;
+  const issue = target.kind === "group" ? groupIssue(book.groups.find((group) => group.id === target.id)) : target.kind === "zone" && target.ids.length === 0 ? "Pick at least one zone." : !name ? "Choose where the radar goes." : !canAssign(status) ? "This trip cannot be assigned now." : money.blocked;
   return (
     <CommandButton
-      command="admin.dispatch.send"
+      command="admin.trip.radarGroup"
       className={className}
       targetId={ride.tripId}
       confirmTarget={false}
       scope={ride.zoneId}
-      before={ride.status}
-      after={`${kind} ${label}`}
-      expectedSliceRev={book.draftRev}
-      sliceKey={DISPATCH_KEY}
-      value={next}
+      entityState={status}
+      collection="trips"
+      patch={{ status: "offered" }}
+      before={status}
+      after={`radar ${label}: ${drivers.map((item) => item.driver.id).join(", ") || "nobody inside yet"}`}
+      value={{ driverIds: drivers.map((item) => item.driver.id), target: label, maxDrivers: max, ...money.params }}
       disabled={Boolean(issue)}
       title={issue ? trx(issue) : drivers.length ? tr("{0} free driver(s) inside right now get the radar", [String(drivers.length)]) : tr("No free driver inside right now. The radar still goes out and reaches drivers who come in.")}
-      summary={<>{trn("Send {0}'s ride to the radar for {1}: up to {2} drivers see it, {3} right now.", <b>{ride.rider}</b>, <b>{name}</b>, max, drivers.length)}</>}
+      summary={<>{trn("Send {0}'s ride to the radar for {1}: up to {2} drivers see it, {3} right now.", <b>{ride.rider}</b>, <b>{name}</b>, max, drivers.length)}{sees ? ` ${seesSentence(money, ride.zoneId)}` : ""}</>}
       onDone={() => {
+        record(ride, kind, label);
+        if (money.used) onSent?.();
         onNotice(tr("{0}'s ride was sent to {1}.", [ride.rider, kind === "group" ? name : tr("the radar for {0}", [name])]));
-        if (drivers.length && canAssign(ride.status)) {
-          void radarGroup.run({ targetId: ride.tripId, scope: ride.zoneId, entityState: ride.status, collection: "trips", patch: { status: "offered" }, before: ride.status, after: `radar group: ${drivers.map((item) => item.driver.id).join(", ")}`, value: { driverIds: drivers.map((item) => item.driver.id) } });
-        }
       }}
-    >{trn("{0} Send radar", <Send size={12} aria-hidden="true" />)}</CommandButton>
+    >{trn("{0} Send radar", <Send size={12} aria-hidden="true" />)}{sees ? <small className="hq-sees"> · {sees}</small> : null}</CommandButton>
   );
 }
 
@@ -275,7 +320,7 @@ export function CancelRequestButton({ ride, book, onNotice, className = "dash-bt
 }
 
 /** "Radar" with the target picker and its Send button, the same in the small pop-up and the big panel. */
-export function RadarSender({ ride, book, candidates, onNotice, compact = false }: { ride: HandledRide; book: DispatchBook; candidates: Candidate[]; onNotice: (text: string) => void; compact?: boolean }) {
+export function RadarSender({ ride, book, candidates, onNotice, compact = false, view, draft, onSent }: { ride: HandledRide; book: DispatchBook; candidates: Candidate[]; onNotice: (text: string) => void; compact?: boolean } & Money) {
   const [target, setTarget] = useState<RadarTarget>(() => defaultTarget(book, ride.zoneId));
   const [max, setMax] = useState(() => radarTimerFor(book, defaultTarget(book, ride.zoneId), ride.zoneId).maxDrivers);
   const change = (next: RadarTarget) => {
@@ -285,51 +330,52 @@ export function RadarSender({ ride, book, candidates, onNotice, compact = false 
   return (
     <div className="hq-block" data-testid="radar-sender">
       <RadarTargetPicker ride={ride} book={book} candidates={candidates} value={target} onChange={change} max={max} onMax={setMax} compact={compact} />
-      <SendRadarButton ride={ride} book={book} candidates={candidates} target={target} max={max} onNotice={onNotice} />
+      <SendRadarButton ride={ride} book={book} candidates={candidates} target={target} max={max} onNotice={onNotice} view={view} draft={draft} onSent={onSent} />
     </div>
   );
 }
 
-function QuickMoney({ ride, onNotice }: { ride: HandledRide; onNotice: (text: string) => void }) {
-  const offers = useTripOffers(ride.tripId);
-  const canAct = useCanHandle();
-  if (!offers.data) return <p className="state-line">{tr("Loading.")}</p>;
-  return <DriverBonusBox compact trip={{ id: ride.tripId, zoneId: ride.zoneId, status: offers.data.status }} view={offers.data} canAct={canAct} onDone={onNotice} />;
-}
-
-type QuickKind = "money" | "radar" | "nearby";
+type QuickKind = "radar" | "nearby";
 
 /**
- * The quick actions in the rider pop-up on the map (Dashboard and Dispatch): add money for the driver, radar,
- * nearby driver, cancel request. Always shown; once the ride is handled they give way to the "Sent to …" line.
+ * The rider pop-up on the map (Dashboard and Dispatch). On top, the money for the driver (typed once, used by the next
+ * Exclusive or Radar send); then the quick actions: Radar, Nearby driver, Cancel request, and the big panel. Below,
+ * the live state of the offers: who sees it on the radar, ignored, refused — and, once a driver accepts, who is on the
+ * way. The quick actions stay while the ride can still be sent again; they go once it is accepted or cancelled.
  */
 export function RiderQuickActions({ request, candidates, onNotice }: { request: RideRequest; candidates: Candidate[]; onNotice: (text: string) => void }) {
   const book = useDispatchBook();
   const canAct = useCanHandle();
   const ride = rideOf(request);
   const done = handledOf(book, request.tripId);
+  const offers = useTripOffers(request.tripId, canAct);
+  const view = offers.data;
   const [open, setOpen] = useState<QuickKind | null>(null);
+  const [draft, setDraft] = useState<MoneyDraft>(EMPTY_MONEY);
   if (!canAct) return null;
+  const status = view?.status ?? request.status;
+  const finished = Boolean(view?.accepted) || done?.kind === "cancel" || !canAssign(status);
+  const sent = () => setDraft((value) => ({ ...value, amount: "" }));
   const toggle = (kind: QuickKind, icon: ReactNode, label: string) => (
     <button data-command="admin.dispatch.view" type="button" className={open === kind ? "dash-btn small active" : "dash-btn small ghost"} aria-pressed={open === kind} aria-expanded={open === kind} onClick={() => setOpen(open === kind ? null : kind)}>{icon} {label}</button>
   );
   return (
     <div className="hq" data-testid="rider-quick-actions">
       {done ? <HandledLine action={done} /> : null}
+      {!finished && view ? <DriverBonusBox compact trip={{ id: ride.tripId, zoneId: ride.zoneId, status }} view={view} canAct={canAct} onDone={onNotice} draft={draft} onDraft={setDraft} /> : null}
       <div className="hq-actions" role="group" aria-label={tr("Quick actions")}>
-        {done ? null : (
+        {finished ? null : (
           <>
-            {toggle("money", <BadgeDollarSign size={13} aria-hidden="true" />, tr("Add money"))}
             {toggle("radar", <Radar size={13} aria-hidden="true" />, tr("Radar"))}
             {toggle("nearby", <Target size={13} aria-hidden="true" />, tr("Nearby driver"))}
-            <CancelRequestButton ride={ride} book={book} onNotice={onNotice} />
+            {done?.kind === "cancel" ? null : <CancelRequestButton ride={ride} book={book} onNotice={onNotice} />}
           </>
         )}
         <HandleButton ride={ride} candidates={candidates} className="dash-btn small ghost">{trn("{0} Nearby drivers", <UserRound size={13} aria-hidden="true" />)}</HandleButton>
       </div>
-      {!done && open === "money" ? <QuickMoney ride={ride} onNotice={onNotice} /> : null}
-      {!done && open === "radar" ? <RadarSender ride={ride} book={book} candidates={candidates} onNotice={onNotice} compact /> : null}
-      {!done && open === "nearby" ? <QuickNearbyPick request={request} candidates={candidates} onDone={onNotice} /> : null}
+      {!finished && open === "radar" ? <RadarSender ride={ride} book={book} candidates={candidates} onNotice={onNotice} compact view={view} draft={draft} onSent={sent} /> : null}
+      {!finished && open === "nearby" ? <QuickNearbyPick request={request} candidates={candidates} onDone={onNotice} view={view} draft={draft} onSent={sent} /> : null}
+      <RideProgress view={view} />
     </div>
   );
 }
