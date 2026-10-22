@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -65,6 +65,7 @@ import { Flag } from "../ui/Flag";
 import { LanguageQuickSwitch } from "../i18n/LanguageQuickSwitch";
 import { BONUS_KEY, bonusState, emptyBonusBook, normalizeBonusBook, type BonusBook } from "../drivers/bonus";
 import type { BonusMapArea } from "../dashboard/DriversMap";
+import { LiveMapQuickPopup, type QuickTarget } from "../pricing/LiveMapExtras";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 
 const FIVE_MIN = 5 * 60_000;
@@ -134,7 +135,6 @@ type Action = { id: string; label: string; icon: ReactNode; path?: string; permi
 
 export function DashboardPage() {
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
   const client = useQueryClient();
   const api = useAdminApi();
   const { agent } = useSession();
@@ -155,6 +155,7 @@ export function DashboardPage() {
   const [showRequests, setShowRequests] = useState(true);
   const [showBalance, setShowBalance] = useState(false);
   const [showBonus, setShowBonus] = useState(true);
+  const [quick, setQuick] = useState<QuickTarget>(null);
   const [focusRequest, setFocusRequest] = useState<{ id: string; nonce: number } | null>(null);
   const [liveNotice, setLiveNotice] = useState("");
   const [refreshedAt, setRefreshedAt] = useState(0);
@@ -264,7 +265,7 @@ export function DashboardPage() {
   const surgeMinute = Math.floor(now / 60_000) * 60_000;
   const surgeZoneKey = (scope.zones.length ? scope.zones : market.zones.map((zone) => zone.id)).join(",");
   const surge = useMemo(
-    () => surgeRows(pricing, surgeZoneKey.split(","), new Map(balance.map((row) => [row.zoneId, { waiting: row.waiting, free: row.free }])), surgeMinute).map((row) => row.surge),
+    () => surgeRows(pricing, surgeZoneKey.split(","), new Map(balance.map((row) => [row.zoneId, { waiting: row.waiting, free: row.free }])), Math.max(surgeMinute, Date.now())).map((row) => row.surge),
     [pricing, surgeZoneKey, balance, surgeMinute],
   );
 
@@ -570,7 +571,9 @@ export function DashboardPage() {
                 bonusAreas={bonusAreas}
                 bonusShown={showBonus}
                 rideChecks={shared && (can(role, "incidents.read") || can(role, "trips.intervene")) ? { checks: shared.rideCheck.checks, demoShift: shared.rideCheck.demoShift, now: shared.now } : null}
-                onSurgeZone={(zoneId) => { const link = surgeLink(zoneId); if (link) navigate(link); }}
+                onSurgeZone={(zoneId) => setQuick({ kind: "surge", zoneId })}
+                onBonusArea={(id) => setQuick({ kind: "bonus", id })}
+                overlay={<LiveMapQuickPopup target={quick} surge={surge} country={country} market={market} withScope={withScope} onClose={() => setQuick(null)} onNotice={setLiveNotice} />}
                 renderAssign={can(role, "trips.intervene") ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={setLiveNotice} /> : undefined}
                 market={market}
                 zones={scope.zones}

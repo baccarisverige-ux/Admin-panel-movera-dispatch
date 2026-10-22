@@ -1,14 +1,25 @@
 import { LEVEL_COLOR, surgeLevel, type ZoneSurge } from "./surge.ts";
 
-/** GeoJSON for the three surge map styles: coloured zones, glow circles and a hexagon grid. */
+/** GeoJSON for the surge map styles: coloured zones, glow, hexagons, heatmap, labels, rings, bubbles, dots and soft outlines. */
 
-export type SurgeStyle = "zones" | "glow" | "hex";
+export type SurgeStyle = "zones" | "glow" | "hex" | "heat" | "flat" | "label" | "rings" | "bubbles" | "dots" | "soft";
 
 export const SURGE_STYLES: { id: SurgeStyle; label: string }[] = [
   { id: "zones", label: "Zones" },
   { id: "glow", label: "Glow" },
   { id: "hex", label: "Hexagons" },
+  { id: "heat", label: "Heatmap" },
+  { id: "flat", label: "Flat hexagons" },
+  { id: "label", label: "Label only" },
+  { id: "rings", label: "Pulse rings" },
+  { id: "bubbles", label: "Bubbles" },
+  { id: "dots", label: "Density dots" },
+  { id: "soft", label: "Soft outline" },
 ];
+
+export function isSurgeStyle(value: unknown): value is SurgeStyle {
+  return SURGE_STYLES.some((item) => item.id === value);
+}
 
 type Point = [lng: number, lat: number];
 
@@ -68,6 +79,45 @@ export function glowGeo(rows: readonly ZoneSurge[]) {
       geometry: { type: "Point" as const, coordinates: [row.center[1], row.center[0]] },
     })),
   };
+}
+
+/** One point per zone centre, for the heatmap, pulse rings, bubbles and the "×1.4" labels. */
+export function pointsGeo(rows: readonly ZoneSurge[]) {
+  return {
+    type: "FeatureCollection" as const,
+    features: rows.map((row) => ({
+      type: "Feature" as const,
+      properties: {
+        zoneId: row.zoneId,
+        color: LEVEL_COLOR[row.level],
+        weight: Math.max(0.05, Math.min(1, (row.multiplier - 1) / 2)),
+        size: row.level === "none" ? 0.6 : 1 + (row.multiplier - 1) * 0.9,
+        label: row.multiplier > 1 ? `×${row.multiplier.toFixed(1)}` : "×1.0",
+      },
+      geometry: { type: "Point" as const, coordinates: [row.center[1], row.center[0]] },
+    })),
+  };
+}
+
+/** Small dots scattered in each zone: more of them where the surge is higher. Same places every time. */
+export function dotsGeo(rows: readonly ZoneSurge[]) {
+  const features = [];
+  for (const row of rows) {
+    const count = row.level === "none" ? 5 : Math.min(60, Math.round(10 + (row.multiplier - 1) * 30));
+    const radius = radiusOf(row);
+    const [lat, lng] = row.center;
+    for (let index = 0; index < count; index += 1) {
+      const h = hash(`${row.zoneId}:${index}`);
+      const angle = ((h % 3600) / 3600) * Math.PI * 2;
+      const distance = Math.sqrt(((h >>> 12) % 1000) / 1000) * radius;
+      features.push({
+        type: "Feature" as const,
+        properties: { zoneId: row.zoneId, color: LEVEL_COLOR[row.level] },
+        geometry: { type: "Point" as const, coordinates: [lng + (Math.cos(angle) * distance) / kmLng(lat), lat + (Math.sin(angle) * distance) / KM_LAT] },
+      });
+    }
+  }
+  return { type: "FeatureCollection" as const, features };
 }
 
 const HEX_KM = 0.3;
