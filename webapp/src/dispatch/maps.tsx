@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, Eye, EyeOff, Maximize2, Minimize2 } from "lucide-react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { baseMapStyle } from "../ui/mapStyle";
 import type { Market } from "../markets/markets";
 import type { Ranked } from "./rules";
 import { tr, trn, trx } from "../i18n";
@@ -47,11 +48,7 @@ export function MapPanel({ title, tools, children, note }: { title: string; tool
   );
 }
 
-const STYLE = {
-  version: 8 as const,
-  sources: { base: { type: "raster" as const, tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "&copy; OpenStreetMap contributors" } },
-  layers: [{ id: "base", type: "raster" as const, source: "base" }],
-};
+const STYLE = baseMapStyle();
 
 function circle(center: [number, number], km: number): [number, number][] {
   const dLat = km / 111.32 / 1.25;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { baseMapStyle } from "../ui/mapStyle";
 import { TerraDraw, type GeoJSONStoreFeatures } from "terra-draw";
 import { TerraDrawGoogleMapsAdapter } from "terra-draw-google-maps-adapter";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
@@ -49,27 +50,17 @@ type DrawProps = {
 
 const INNER_IDS = ["op-bromma", "op-kungsholmen", "op-sodermalm", "op-norrmalm", "op-vasastan", "op-ostermalm"];
 
-const OSM_STYLE = {
-  version: 8 as const,
+const OSM_STYLE = baseMapStyle({
   sources: {
-    osm: {
-      type: "raster" as const,
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "&copy; OpenStreetMap",
-    },
     satellite: {
-      type: "raster" as const,
+      type: "raster",
       tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
       tileSize: 256,
       attribution: "Imagery &copy; Esri",
     },
   },
-  layers: [
-    { id: "osm", type: "raster" as const, source: "osm" },
-    { id: "satellite", type: "raster" as const, source: "satellite", layout: { visibility: "none" as const } },
-  ],
-};
+  layers: [{ id: "satellite", type: "raster", source: "satellite", layout: { visibility: "none" } }],
+});
 
 function overlayGeo(overlays: MapOverlays | undefined, layers: ZoneLayers): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = [];

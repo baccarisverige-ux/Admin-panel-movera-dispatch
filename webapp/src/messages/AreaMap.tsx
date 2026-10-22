@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { baseMapStyle } from "../ui/mapStyle";
 
-const STYLE = {
-  version: 8 as const,
-  sources: { base: { type: "raster" as const, tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "&copy; OpenStreetMap contributors" } },
-  layers: [{ id: "base", type: "raster" as const, source: "base" }],
-};
+const STYLE = baseMapStyle();
 
 function ring(center: [number, number], km: number): [number, number][] {
   const dLat = km / 111.32;
