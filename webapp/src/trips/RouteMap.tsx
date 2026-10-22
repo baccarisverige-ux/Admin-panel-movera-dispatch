@@ -1,17 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { baseMapStyle } from "../ui/mapStyle";
 import type { LatLng } from "../dashboard/route";
 import { tr } from "../i18n";
 
 export type MapStop = { kind: "pickup" | "stop" | "dropoff"; label: string; at: LatLng };
 export type MapPoint = { id: string; label: string; at: LatLng; tone: "rider" | "driver" | "alert" };
 
-const STYLE = {
-  version: 8 as const,
-  sources: { base: { type: "raster" as const, tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "&copy; OpenStreetMap contributors" } },
-  layers: [{ id: "base", type: "raster" as const, source: "base" }],
-};
+const STYLE = baseMapStyle();
 
 const STOP_COLOR = { pickup: "#1a9256", stop: "#eda100", dropoff: "#c63c3c" };
 const POINT_COLOR = { rider: "#6250d6", driver: "#2a78d6", alert: "#e34948" };

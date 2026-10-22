@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { baseMapStyle } from "../ui/mapStyle";
 import type { Market } from "../markets/markets";
 import type { ZoneSurge } from "./surge";
 import type { SurgeStyle } from "./surgeGeo";
@@ -8,11 +9,7 @@ import { installSurgeLayers, surgePitch, updateSurgeLayers } from "./surgeLayers
 import { SurgeControls, SurgeLegend } from "./SurgeControls";
 import { tr } from "../i18n";
 
-const STYLE = {
-  version: 8 as const,
-  sources: { base: { type: "raster" as const, tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "&copy; OpenStreetMap contributors" } },
-  layers: [{ id: "base", type: "raster" as const, source: "base", paint: { "raster-saturation": -0.55, "raster-brightness-max": 0.97 } }],
-};
+const STYLE = baseMapStyle();
 
 type Props = {
   market: Market;

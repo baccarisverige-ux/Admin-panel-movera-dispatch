@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { Clock, UserRound, X } from "lucide-react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { baseMapStyle } from "../ui/mapStyle";
 import type { Market } from "../markets/markets";
 import { zoneById } from "../markets/markets";
 import { DriverPanel, type DriverInfo } from "./DriverPanel";
@@ -23,18 +24,7 @@ import { addMapIcons, CAR_COLOR, carIcon, headingOf, remainingPath, RIDER_COLOR,
 import type { RideCheck } from "../safety/rideCheck";
 import { openRideChecks, RideCheckMapPopup, useDismissedRideChecks } from "../safety/RideCheckMapPopup";
 
-const STYLE = {
-  version: 8 as const,
-  sources: {
-    base: {
-      type: "raster" as const,
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "&copy; OpenStreetMap contributors",
-    },
-  },
-  layers: [{ id: "base", type: "raster" as const, source: "base" }],
-};
+const STYLE = baseMapStyle();
 
 /** Car colour per driver state: free green, to pickup orange, on trip blue. */
 export const STATE_COLOR: Record<LiveState, string> = CAR_COLOR;
