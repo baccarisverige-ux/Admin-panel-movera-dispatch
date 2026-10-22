@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { useDashboardAccess } from "./access";
 import { Crosshair, MessageSquare, Phone, Siren, Star, UserRound, X } from "lucide-react";
@@ -7,6 +8,8 @@ import { CommandButton } from "../ui/CommandButton";
 import { LIVE_STATES, type LiveDriver } from "./live";
 import type { LiveTrip } from "./liveTrip";
 import { TripCard } from "./TripCard";
+import { TripMoneyTab } from "./TripMoneyTab";
+import { lengthKm } from "./route";
 import { useEscape } from "../ui/useEscape";
 import { tr, trn, trx } from "../i18n";
 
@@ -45,6 +48,11 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
   const access = useDashboardAccess();
   useEscape(onClose);
   const state = LIVE_STATES.find((item) => item.id === driver.state)?.label ?? driver.state;
+  const [tab, setTab] = useState<"trip" | "money">("trip");
+  const pickupKm = driver.route ? Math.round(lengthKm(driver.route.approach) * 10) / 10 : null;
+  // The Money tab needs only the ride, so it shows on both maps even where the trip card has no details.
+  const busy = driver.state === "trip" || driver.state === "pickup" || driver.state === "sos";
+  const moneyTripId = trip?.tripId ?? (busy ? driver.tripId ?? `T-${driver.id}` : null);
   return (
     <aside className="driver-panel" role="dialog" aria-label={tr("Driver {0}", [driver.name])}>
       <div className="driver-panel-head">
@@ -96,7 +104,15 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
         ) : null}
       </dl>
 
-      {trip ? (
+      {moneyTripId ? (
+        <div className="driver-panel-tabs" role="tablist" aria-label={tr("Trip details")}>
+          <button type="button" role="tab" data-command="admin.ui.mapLayer" aria-selected={tab === "trip"} className={tab === "trip" ? "active" : undefined} onClick={() => setTab("trip")}>{tr("Trip")}</button>
+          <button type="button" role="tab" data-command="admin.ui.mapLayer" aria-selected={tab === "money"} className={tab === "money" ? "active" : undefined} onClick={() => setTab("money")} data-testid="driver-money-tab">{tr("Money")}</button>
+        </div>
+      ) : null}
+      {moneyTripId && tab === "money" ? (
+        <TripMoneyTab tripId={moneyTripId} zoneId={driver.zoneId} pickupKm={pickupKm} hasFleet={Boolean(info?.fleet)} />
+      ) : trip ? (
         <TripCard
           trip={trip}
           locale={locale}
