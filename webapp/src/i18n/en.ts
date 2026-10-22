@@ -4761,6 +4761,10 @@ export const en = {
   "Zones: {0}": "Zones: {0}",
   "Zoom in": "Zoom in",
   "Zoom out": "Zoom out",
+  // Language quick switch
+  "The panel is in {0}.": "The panel is in {0}.",
+  "Switch the panel to {0}": "Switch the panel to {0}",
+  "Switch the panel to English, French or Swedish. The choice is saved for you only, as in My profile.": "Switch the panel to English, French or Swedish. The choice is saved for you only, as in My profile.",
 } as const;
 
 export type MessageKey = keyof typeof en;
