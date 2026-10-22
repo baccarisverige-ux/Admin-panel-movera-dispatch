@@ -1,6 +1,7 @@
 import { MARKETS, formatMoney as formatMarketMoney, market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import { completePickupPay, convertPickupPay, defaultPickupPay, diffPickupPay, riderPickupFee, validatePickupPay, type PickupPay } from "./pickupPay.ts";
 import { defaultFreeWaitMin } from "../config/zoneDefaults.ts";
+import { cleanPoints, curveIssue, curvePeak, type CurvePoint, type SurgeCurve } from "./surgeCurve.ts";
 
 /**
  * Prices, fees, surge settings, commission and driver pickup pay, one full set per zone.
@@ -92,7 +93,15 @@ export type ZoneBook = {
   pickupPay: PickupPay;
 };
 
-export type ManualSurge = { multiplier: number; startedAt: string; endsAt: string; by: string; reason: string };
+export type ManualSurge = {
+  multiplier: number;
+  startedAt: string;
+  endsAt: string;
+  by: string;
+  reason: string;
+  /** Optional curve over the surge's time: the level moves in 5-minute steps (see surgeCurve.ts). `multiplier` is its peak. */
+  curve?: SurgeCurve;
+};
 
 export type ZoneLive = { manual: ManualSurge | null; notifyDrivers: boolean; lastNotifiedAt: string | null };
 
@@ -701,11 +710,20 @@ export function restoreCategory(store: PricingStore, id: string, now: number): {
   return { store: { ...store, draftRev: store.draftRev + 1, categories: store.categories.map((item) => (item.id === id ? { ...item, archived: null } : item)) } };
 }
 
-export function startManualSurge(store: PricingStore, zoneId: string, multiplier: number, minutes: number, actorId: string, reason: string, at: string): { store: PricingStore; error?: string } {
+export function startManualSurge(store: PricingStore, zoneId: string, multiplier: number, minutes: number, actorId: string, reason: string, at: string, points?: readonly CurvePoint[]): { store: PricingStore; error?: string } {
   if (!(multiplier >= SLIDER_MIN && multiplier <= SLIDER_MAX)) return { store, error: `Surge must be between ×${SLIDER_MIN} and ×${SLIDER_MAX}.` };
   if (!(minutes >= 5 && minutes <= 720)) return { store, error: "A manual surge lasts between 5 min and 12 h." };
   const live = zoneLive(store, zoneId);
-  const manual: ManualSurge = { multiplier: roundTo(multiplier, 0.1), startedAt: at, endsAt: new Date(Date.parse(at) + minutes * 60_000).toISOString(), by: actorId, reason };
+  const endsAt = new Date(Date.parse(at) + minutes * 60_000).toISOString();
+  let curve: SurgeCurve | undefined;
+  if (points?.length) {
+    const clean = cleanPoints(points, minutes, SLIDER_MAX);
+    const issue = curveIssue(clean, minutes, SLIDER_MAX);
+    if (issue) return { store, error: issue };
+    if (curvePeak(clean) <= 1) return { store, error: "Move at least one point above ×1.0." };
+    curve = { startAt: at, endAt: endsAt, points: clean };
+  }
+  const manual: ManualSurge = { multiplier: roundTo(curve ? curvePeak(curve.points) : multiplier, 0.1), startedAt: at, endsAt, by: actorId, reason, ...(curve ? { curve } : {}) };
   const event: SurgeEvent = { id: `${zoneId}-${at}-start`, zoneId, kind: "manual-start", multiplier: manual.multiplier, at, by: actorId, reason };
   const notify: SurgeEvent[] = live.notifyDrivers ? [{ id: `${zoneId}-${at}-notify`, zoneId, kind: "notify", multiplier: manual.multiplier, at, by: actorId, reason: "Drivers told about the surge" }] : [];
   return {

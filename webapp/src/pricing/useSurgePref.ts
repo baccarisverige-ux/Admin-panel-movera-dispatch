@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { SurgeStyle } from "./surgeGeo.ts";
+import { isSurgeStyle, type SurgeStyle } from "./surgeGeo.ts";
 
 /** Each map remembers whether the surge layer is on and which style the admin picked. */
 export function useSurgePref(key: string, defaults: { shown: boolean; style: SurgeStyle }) {
@@ -7,7 +7,7 @@ export function useSurgePref(key: string, defaults: { shown: boolean; style: Sur
   const [pref, setPref] = useState<{ shown: boolean; style: SurgeStyle }>(() => {
     try {
       const raw = JSON.parse(localStorage.getItem(storageKey) ?? "null") as { shown?: unknown; style?: unknown } | null;
-      if (raw && typeof raw.shown === "boolean" && (raw.style === "zones" || raw.style === "glow" || raw.style === "hex")) return { shown: raw.shown, style: raw.style };
+      if (raw && typeof raw.shown === "boolean" && isSurgeStyle(raw.style)) return { shown: raw.shown, style: raw.style };
     } catch {
       // Private mode or blocked storage: fall back to the defaults.
     }
