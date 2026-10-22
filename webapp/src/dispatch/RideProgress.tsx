@@ -1,7 +1,11 @@
+import { useMemo } from "react";
 import { Link } from "react-router";
 import { Car, Clock, MapPin, Phone, Radar, UserRound, Zap } from "lucide-react";
+import { useRecords } from "../api/hooks";
 import type { TripOffersView } from "../api/dispatchSim";
-import type { RideRequest } from "../dashboard/riders";
+import type { DemoRecord } from "../api/seed";
+import { liveDrivers } from "../dashboard/live";
+import { onTheWayRequests, type OnTheWay, type RideRequest } from "../dashboard/riders";
 import { MARKETS, formatMoney } from "../markets/markets";
 import { StatusDot } from "../ui/kit";
 import { EVENT_LABEL, OFFER_STATUS_LABEL, countdownLabel, offerProgress, secondsLeft, type AdminOffer } from "./assign";
@@ -162,4 +166,56 @@ export function RequestState({ request }: { request: RideRequest }) {
   const open = offers.data?.offers.find((offer) => offer.status === "open" && offer.kind === "assigned");
   const label = open ? tr("Offered to {0}", [open.driverName]) : request.status === "offered" ? tr("Offered to {0}", [request.offeredTo]) : tr("Looking for a driver");
   return <span className="map-popup-state" data-testid="rider-state" data-state={open || request.status === "offered" ? "offered" : "searching"}><i style={{ background: request.waitingMin > 5 ? "#d03b3b" : "#d55181" }} />{label}</span>;
+}
+
+/**
+ * Rides a driver accepted a moment ago (the same trips the screen already reads): shown apart under the waiting
+ * riders as "Driver on the way", so the admin can open them again on the map. Never counted as waiting.
+ */
+export function useOnTheWay(): OnTheWay[] {
+  const trips = useRecords("trips", undefined, { refetchMs: 10_000 });
+  const drivers = useRecords("drivers", undefined, { refetchMs: 10_000 });
+  const riders = useRecords("riders");
+  return useMemo(() => {
+    const names = new Map(((drivers.data ?? []) as DemoRecord[]).map((row) => [row.id, row.name]));
+    return onTheWayRequests((trips.data ?? []) as DemoRecord[], (riders.data ?? []) as DemoRecord[], (id) => names.get(id));
+  }, [trips.data, drivers.data, riders.data]);
+}
+
+/**
+ * The drivers who can take an offer right now (online, free, not heading to a pickup): the same rule the server uses
+ * for an exclusive offer, so a picker never offers a driver the server would refuse. Null while loading.
+ */
+export function useFreeDriverIds(): Set<string> | null {
+  const drivers = useRecords("drivers", null);
+  const vehicles = useRecords("vehicles", null);
+  const trips = useRecords("trips", null);
+  const incidents = useRecords("incidents", null);
+  return useMemo(() => {
+    if (!drivers.data || !vehicles.data || !trips.data) return null;
+    const live = liveDrivers(drivers.data as DemoRecord[], vehicles.data as DemoRecord[], trips.data as DemoRecord[], (incidents.data ?? []) as DemoRecord[], 0);
+    return new Set(live.filter((driver) => driver.state === "free").map((driver) => driver.id));
+  }, [drivers.data, vehicles.data, trips.data, incidents.data]);
+}
+
+/** The small "Driver on the way" group under a riders list: rider, zone, the driver, and See on map. */
+export function OnTheWayGroup({ items, onLocate }: { items: readonly OnTheWay[]; onLocate: (tripId: string) => void }) {
+  if (!items.length) return null;
+  return (
+    <div className="hq-on-the-way" data-testid="on-the-way">
+      <h4>{trn("{0} Driver on the way {1}", <Car size={14} aria-hidden="true" />, <span className="dx-count">{items.length}</span>)}</h4>
+      <ul aria-label={tr("Driver on the way")}>
+        {items.map((item) => (
+          <li key={item.tripId} data-trip={item.tripId}>
+            <span className="hq-on-the-way-who">
+              {item.riderId ? <Link to={`/riders/${item.riderId}`}><b>{item.rider}</b></Link> : <b>{item.rider}</b>}
+              <small>{item.zoneName} · {item.tripId}</small>
+            </span>
+            <span className="hq-chip blue">{tr("Driver on the way · {0}", [item.driverName])}</span>
+            <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" aria-label={tr("Show {0} on the map", [item.rider])} onClick={() => onLocate(item.tripId)}>{trn("{0}See on map", <MapPin size={13} aria-hidden="true" />)}</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }

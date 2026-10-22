@@ -4967,4 +4967,5 @@ export const sv: Record<MessageKey, string> = {
   "{0} ignored": "{0} ignorerade",
   "{0} min away": "{0} min bort",
   "{0} refused": "{0} nekade",
+  "{0} Driver on the way {1}": "{0} Förare på väg {1}",
 };

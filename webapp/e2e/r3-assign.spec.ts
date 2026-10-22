@@ -184,3 +184,30 @@ test("Dispatch live: a waiting rider's name and the map popup open the assign pa
   await page.getByLabel("Find a setting").fill("assign tool");
   await expect(list).toContainText("Assign tool: nearby drivers and direct assign");
 });
+
+test("after a driver accepts, the ride stays under the waiting riders as Driver on the way and opens again on the map", async ({ page }) => {
+  test.setTimeout(60_000);
+  await session(page);
+  await page.goto("/trips/T0004");
+  await page.getByTestId("trip-assign").getByRole("button", { name: "Nearby drivers for Oscar Wallin" }).click();
+  // 50 kr for exclusive offers only, then an exclusive offer to D0046 (who accepts in the demo).
+  await panel(page).getByTestId("driver-bonus-box").getByLabel("Money for the driver").fill("50");
+  await panel(page).getByTestId("driver-bonus-scope").getByRole("button", { name: "Exclusive" }).click();
+  await expect(panel(page).getByTestId("exclusive-sees")).toContainText("(+50,00 kr)");
+  await row(page, "D0046").getByRole("button", { name: /^Assign / }).click();
+  await expect(confirmDialog(page)).toContainText("The driver sees");
+  await confirmDialog(page).getByRole("button", { name: "Confirm" }).click();
+  await expect(panel(page).getByTestId("accepted-driver")).toContainText("Driver on the way", { timeout: 15_000 });
+  await expect(panel(page).getByTestId("accepted-price")).toContainText("incl. +50,00 kr");
+  await panel(page).getByRole("button", { name: "Close" }).click();
+
+  await page.goto("/dispatch?view=live");
+  const ride = page.getByTestId("on-the-way").locator('[data-trip="T0004"]');
+  await expect(ride).toContainText("Driver on the way ·");
+  await ride.getByRole("button", { name: "Show Oscar Wallin on the map" }).click();
+  const popup = page.getByTestId("rider-popup");
+  await expect(popup.getByTestId("rider-state")).toHaveAttribute("data-state", "accepted");
+  await expect(popup.getByTestId("accepted-driver")).toContainText(/MV-SE-\d{4}/);
+  await expect(popup.getByTestId("accepted-driver")).toContainText("Exclusive");
+  await expect(popup.getByRole("link", { name: /Open driver/ })).toHaveAttribute("href", /\/drivers\/D0046/);
+});

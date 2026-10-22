@@ -7,6 +7,7 @@ import type { Candidate, RideRequest } from "../dashboard/riders";
 import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { RiderQuickActions, RiderRowActions } from "./HandlePanel";
+import { OnTheWayGroup, useOnTheWay } from "./RideProgress";
 import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import { MapPanel } from "./maps";
 import { RiderAssignName, useAssignPanel } from "./AssignPanel";
@@ -44,6 +45,10 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
   const handled = new Map(book.liveActions.map((action) => [action.tripId, action]));
   const now = new Date().toISOString();
   const waiting = requests.filter((request) => ids.has(request.zoneId));
+  // Rides a driver just accepted: listed apart and still on the map, so "See on map" shows who is on the way.
+  const allOnTheWay = useOnTheWay();
+  const onTheWay = allOnTheWay.filter((item) => ids.has(item.zoneId) && !waiting.some((request) => request.tripId === item.tripId));
+  const onMap = onTheWay.length ? [...waiting, ...onTheWay] : waiting;
   const alerts: Alert[] = [];
   for (const zone of zones) {
     const rules = rulesOf(zone.id);
@@ -114,7 +119,7 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
       <RideCheckSettingsCard where="dispatch" />
 
       <MapPanel title={tr("Live map · {0}", [trx(market.name)])} note={<span className="dx-legend">{trn("{0} Free {1} To pickup {2} On trip {3} Rider waiting {4} Driver offered", <i className="car free" />, <i className="car pickup" />, <i className="car trip" />, <i className="rider waiting" />, <i className="rider offered" />)}</span>}>
-        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined} />
+        <DriversMap drivers={drivers} requests={onMap} showRequests focusRequest={focus} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined} />
       </MapPanel>
 
       <section className="dash-card" aria-labelledby="dx-waiting-title">
@@ -134,6 +139,7 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
             ))}
           </ul>
         )}
+        <OnTheWayGroup items={onTheWay} onLocate={(tripId) => setFocus({ id: tripId, nonce: Date.now() })} />
         <p className="fine-print">{tr("Handle opens the same panel as on the Dashboard: Exclusive (one offer to one nearby driver) and Radar (a radar zone, whole zones, a driver group or drivers you tick, up to 10), again and again until one accepts. Exclusive to nearest offers the ride to the nearest free driver now.")}</p>
       </section>
     </div>

@@ -52,3 +52,10 @@
 .hq-accepted { border: 1px solid #bfe3cc; background: #f5fbf7; border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
 .hq-accepted-head { margin: 0; font-weight: 700; }
 .hq-accepted .driver-panel-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hq-chip.blue { background: #ecf3ff; border-color: #c4d8fb; color: #1d5bc6; }
+.hq-on-the-way { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.hq-on-the-way h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.hq-on-the-way ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.hq-on-the-way li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border: 1px solid #c4d8fb; background: #f7faff; border-radius: 12px; }
+.hq-on-the-way-who { display: grid; flex: 1 1 160px; min-width: 0; }
+.hq-on-the-way-who small { color: var(--dash-ink-2); font-size: 12px; }

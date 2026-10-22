@@ -4965,6 +4965,7 @@ export const en = {
   "{0} ignored": "{0} ignored",
   "{0} min away": "{0} min away",
   "{0} refused": "{0} refused",
+  "{0} Driver on the way {1}": "{0} Driver on the way {1}",
 } as const;
 
 export type MessageKey = keyof typeof en;
