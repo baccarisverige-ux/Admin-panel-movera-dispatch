@@ -26,8 +26,12 @@ test("N5: a surge zone on the Dashboard map opens a quick pop-up: level, time, c
   const pop = page.getByTestId("surge-quick-popup");
   await expect(pop).toBeVisible();
   await expect(pop.getByRole("link", { name: /Open full screen/ })).toHaveAttribute("href", /\/pricing\?zone=Z003&tab=surge/);
+  // The demo's surge follows the time of day, so the test starts from whatever level the zone has now.
+  const start = Number((await pop.locator("output").innerText()).replace("×", ""));
+  const raised = (start + 0.1).toFixed(1);
+  const peak = (start + 0.2).toFixed(1);
   await pop.getByRole("button", { name: "Raise the surge" }).click();
-  await expect(pop.locator("output")).toHaveText("×1.6");
+  await expect(pop.locator("output")).toHaveText(`×${raised}`);
   await pop.getByRole("button", { name: "10 min", exact: true }).click();
   await expect(pop).toContainText("Ends by itself at");
 
@@ -35,11 +39,11 @@ test("N5: a surge zone on the Dashboard map opens a quick pop-up: level, time, c
   const first = pop.getByRole("slider", { name: /^Point 1:/ });
   await first.focus();
   await page.keyboard.press("ArrowUp");
-  await expect(pop.getByRole("slider", { name: /^Point 1:/ })).toHaveAttribute("aria-valuenow", "1.7");
+  await expect(pop.getByRole("slider", { name: /^Point 1:/ })).toHaveAttribute("aria-valuenow", peak);
 
   await pop.getByRole("button", { name: "OK", exact: true }).click();
   await confirm(page);
-  await expect(page.getByText(/Surge in Östermalm set: curve up to ×1\.7 for 10 min\./)).toBeVisible();
+  await expect(page.getByText(`Surge in Östermalm set: curve up to ×${peak} for 10 min.`)).toBeVisible();
   await expect(pop).toBeHidden();
 });
 
@@ -55,6 +59,9 @@ test("N5/N8: Dispatch's live map has the surge layer, its new styles, bonus area
   for (const name of ["Heatmap", "Flat hexagons", "Label only", "Pulse rings", "Bubbles", "Density dots", "Soft outline"]) await expect(styles.getByRole("radio", { name })).toBeVisible();
   await styles.getByRole("radio", { name: "Label only" }).click();
   await expect(styles.getByRole("radio", { name: "Label only" })).toHaveAttribute("aria-checked", "true");
+  // With map fonts, Label only writes "×1.4" on the map itself (no pills); the zone pills are clicked in the Zones style.
+  await styles.getByRole("radio", { name: "Zones", exact: true }).click();
+  await expect(styles.getByRole("radio", { name: "Zones", exact: true })).toHaveAttribute("aria-checked", "true");
 
   await page.getByRole("button", { name: /^Södermalm: / }).first().dispatchEvent("click");
   const pop = page.getByTestId("surge-quick-popup");
@@ -62,7 +69,7 @@ test("N5/N8: Dispatch's live map has the surge layer, its new styles, bonus area
   await pop.getByRole("button", { name: "30 min", exact: true }).click();
   await pop.getByRole("button", { name: "OK", exact: true }).click();
   await confirm(page);
-  await expect(page.getByText(/Surge in Södermalm set: ×1\.5 for 30 min\./)).toBeVisible();
+  await expect(page.getByText(/Surge in Södermalm set: ×\d+\.\d for 30 min\./)).toBeVisible();
 
   // Open it again and switch the manual surge off.
   await page.getByRole("button", { name: /^Södermalm: / }).first().dispatchEvent("click");
