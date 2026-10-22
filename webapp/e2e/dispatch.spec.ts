@@ -145,9 +145,10 @@ test("live: alerts, pause a zone needs approval, send a rider to a radar", async
   await first.getByRole("button", { name: /Nearby drivers for / }).click();
   const panel = page.getByTestId("assign-panel");
   await expect(panel.getByTestId("assign-exclusive")).toBeVisible();
-  await panel.getByTestId("assign-radar").getByRole("button", { name: "Send radar" }).click();
-  await confirm(page);
+  // A real radar (like "Send to radar"): no reason to type; it shows in the offers with its countdown.
+  await panel.getByTestId("assign-radar").getByRole("button", { name: /^Send radar/ }).click();
   await expect(panel.getByTestId("handled-line")).toContainText(/Sent to radar/);
+  await expect(panel.getByRole("list", { name: "Offers" })).toContainText("Radar group 1");
   await page.keyboard.press("Escape");
   await expect(first).toContainText(/Sent to radar/);
   const map = page.getByRole("region", { name: /Live map/ });
