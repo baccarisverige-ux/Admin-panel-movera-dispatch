@@ -230,16 +230,16 @@ test("R9 surge map style and layer switch, and the dashboard shows the surge lay
   await session(page);
   await page.goto("/pricing?tab=surge");
   const styles = page.getByRole("radiogroup", { name: "Surge map style" });
-  await styles.getByRole("radio", { name: "Hexagons" }).click();
-  await expect(styles.getByRole("radio", { name: "Hexagons" })).toHaveAttribute("aria-checked", "true");
+  await styles.getByRole("radio", { name: "Hexagons", exact: true }).click();
+  await expect(styles.getByRole("radio", { name: "Hexagons", exact: true })).toHaveAttribute("aria-checked", "true");
   await page.reload();
-  await expect(page.getByRole("radio", { name: "Hexagons" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("radio", { name: "Hexagons", exact: true })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("button", { name: "Surge layer" }).click();
   await expect(page.getByRole("radiogroup", { name: "Surge map style" })).toHaveCount(0);
 
   await page.goto("/?tab=live");
   await page.getByRole("button", { name: "Surge layer" }).click();
   await expect(page.getByLabel("Surge colours")).toBeVisible();
-  await page.getByRole("radio", { name: "Glow" }).click();
-  await expect(page.getByRole("radio", { name: "Glow" })).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("radio", { name: "Glow", exact: true }).click();
+  await expect(page.getByRole("radio", { name: "Glow", exact: true })).toHaveAttribute("aria-checked", "true");
 });

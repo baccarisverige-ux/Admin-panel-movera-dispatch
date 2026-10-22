@@ -8,6 +8,9 @@ import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { RiderQuickActions, RiderRowActions } from "./HandlePanel";
 import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
+import { supplyDemand } from "../dashboard/insights";
+import { LiveMapLayerChips, LiveMapQuickPopup, useLiveMapExtras, type QuickTarget } from "../pricing/LiveMapExtras";
+import { SurgeLegend } from "../pricing/SurgeControls";
 import { MapPanel } from "./maps";
 import { RiderAssignName, useAssignPanel } from "./AssignPanel";
 import { DISPATCH_KEY, modeLabel, modeNow, requestControl, type DispatchBook, type ZoneDispatch } from "./rules";
@@ -44,6 +47,9 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
   const handled = new Map(book.liveActions.map((action) => [action.tripId, action]));
   const now = new Date().toISOString();
   const waiting = requests.filter((request) => ids.has(request.zoneId));
+  // Surge layer, driver bonus areas and their quick pop-ups: the same as on the Dashboard map.
+  const [quick, setQuick] = useState<QuickTarget>(null);
+  const extras = useLiveMapExtras({ prefKey: "dispatch", country: market.id, market, zoneIds: zones.map((zone) => zone.id), balance: supplyDemand(market.id, zones.map((zone) => zone.id), waiting, drivers), now: Date.now() });
   const alerts: Alert[] = [];
   for (const zone of zones) {
     const rules = rulesOf(zone.id);
@@ -114,7 +120,14 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
       <RideCheckSettingsCard where="dispatch" />
 
       <MapPanel title={tr("Live map · {0}", [trx(market.name)])} note={<span className="dx-legend">{trn("{0} Free {1} To pickup {2} On trip {3} Rider waiting {4} Driver offered", <i className="car free" />, <i className="car pickup" />, <i className="car trip" />, <i className="rider waiting" />, <i className="rider offered" />)}</span>}>
-        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined} />
+        <div className="dx-map-layers" role="toolbar" aria-label={tr("Map layers")}>
+          <LiveMapLayerChips bonusCount={extras.bonusAreas.length} showBonus={extras.showBonus} onBonus={extras.setShowBonus} surgePref={extras.surgePref} />
+        </div>
+        <DriversMap drivers={drivers} requests={waiting} showRequests focusRequest={focus} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined}
+          surge={extras.surge} surgeShown={extras.surgePref.shown} surgeStyle={extras.surgePref.style} bonusAreas={extras.bonusAreas} bonusShown={extras.showBonus}
+          onSurgeZone={(zoneId) => setQuick({ kind: "surge", zoneId })} onBonusArea={(id) => setQuick({ kind: "bonus", id })}
+          overlay={<LiveMapQuickPopup target={quick} surge={extras.surge} country={market.id} market={market} withScope={withScope} onClose={() => setQuick(null)} onNotice={onNotice} />} />
+        {extras.surgePref.shown ? <SurgeLegend /> : null}
       </MapPanel>
 
       <section className="dash-card" aria-labelledby="dx-waiting-title">

@@ -1,9 +1,20 @@
-import { Hexagon, Layers, Map as MapIcon, Sun } from "lucide-react";
+import { CircleDot, Flame, Hexagon, Layers, LayoutGrid, Map as MapIcon, Radio, Sparkles, SquareDashed, Sun, Tag } from "lucide-react";
 import { LEVEL_COLOR, LEVEL_LABEL, type SurgeLevel } from "./surge";
 import { SURGE_STYLES, type SurgeStyle } from "./surgeGeo";
 import { tr, trn, trx } from "../i18n";
 
-const ICON: Record<SurgeStyle, typeof MapIcon> = { zones: MapIcon, glow: Sun, hex: Hexagon };
+const ICON: Record<SurgeStyle, typeof MapIcon> = {
+  zones: MapIcon,
+  glow: Sun,
+  hex: Hexagon,
+  heat: Flame,
+  flat: LayoutGrid,
+  label: Tag,
+  rings: Radio,
+  bubbles: CircleDot,
+  dots: Sparkles,
+  soft: SquareDashed,
+};
 
 /** Surge layer on/off plus the style picker; the style picker only shows while the layer is on. */
 export function SurgeControls({ shown, style, onShown, onStyle, compact = false }: { shown: boolean; style: SurgeStyle; onShown: (shown: boolean) => void; onStyle: (style: SurgeStyle) => void; compact?: boolean }) {

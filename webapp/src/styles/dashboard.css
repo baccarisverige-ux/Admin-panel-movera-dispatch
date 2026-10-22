@@ -848,3 +848,38 @@
 .lang-switch-btn.active, .lang-switch-btn.active:disabled { background: var(--dash-blue); color: #fff; cursor: default; opacity: 1; }
 .lang-switch-btn:focus-visible { outline: 2px solid var(--dash-blue); outline-offset: 1px; }
 .lang-switch.compact { margin-left: auto; }
+
+/* Quick surge and bonus pop-ups on the live maps (Dashboard and Dispatch) */
+.bonus-pin.clickable { pointer-events: auto; cursor: pointer; }
+.dx-map-layers { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
+.map-quick-pop { position: absolute; top: 12px; left: 12px; z-index: 4; width: min(340px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow-y: auto; display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: #fff; border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(17, 22, 20, .18); font-size: 13px; }
+.map-quick-pop .mq-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; }
+.map-quick-pop .mq-head strong { display: block; font-size: 15px; }
+.map-quick-pop .mq-head small { color: var(--dash-ink-2); }
+.map-quick-pop .mq-icon { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; color: #fff; }
+.map-quick-pop .mq-level { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.map-quick-pop .mq-level output { font-size: 26px; font-weight: 800; min-width: 74px; text-align: center; font-variant-numeric: tabular-nums; }
+.map-quick-pop fieldset.mq-time { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px 10px; margin: 0; display: grid; gap: 8px; }
+.map-quick-pop fieldset.mq-time legend { padding: 0 4px; font-weight: 700; font-size: 12px; }
+.map-quick-pop .mq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.map-quick-pop .mq-chip { height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.map-quick-pop .mq-chip.active { background: #111614; color: #fff; border-color: #111614; }
+.map-quick-pop .mq-chip:disabled { opacity: .5; cursor: default; }
+.map-quick-pop .mq-time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.map-quick-pop .mq-time-row label, .map-quick-pop .mq-field { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: var(--dash-ink-2); }
+.map-quick-pop input[type="number"], .map-quick-pop input[type="time"] { height: 32px; border: 1px solid var(--line); border-radius: 9px; padding: 0 8px; font: inherit; }
+.map-quick-pop .mq-warn { display: flex; align-items: flex-start; gap: 6px; padding: 8px; border-radius: 10px; background: #fff4e5; color: #8a4b00; font-size: 12px; }
+.map-quick-pop .mq-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.map-quick-pop .fine { color: var(--dash-ink-2); font-size: 11.5px; }
+.surge-curve { display: grid; gap: 6px; }
+.surge-curve-presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.surge-curve-graph { width: 100%; height: auto; touch-action: none; user-select: none; background: #fafbfb; border: 1px solid var(--line); border-radius: 10px; }
+.surge-curve-graph .grid { stroke: #e6e9eb; stroke-width: 1; }
+.surge-curve-graph .axis { font-size: 9px; fill: #6b7378; }
+.surge-curve-graph .steps { fill: none; stroke: #f2994a; stroke-width: 2; opacity: .55; }
+.surge-curve-graph .line { fill: none; stroke: #111614; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.surge-curve-graph .point { stroke: #fff; stroke-width: 2.5; cursor: grab; }
+.surge-curve-graph .point:focus-visible { outline: none; stroke: #111614; stroke-width: 3; }
+@media (max-width: 720px) {
+  .map-quick-pop { position: static; width: 100%; max-height: none; margin-top: 10px; box-shadow: none; }
+}

@@ -1,6 +1,7 @@
 import { localParts } from "../dashboard/time.ts";
 import { marketOfZone, zoneById } from "../markets/markets.ts";
 import { demandSeries, type ZoneDemand } from "./demand.ts";
+import { surgeAt } from "./surgeCurve.ts";
 import type { SmartSurge, SurgeEvent, SurgeProfile, ZoneBook, ZoneLive } from "./zonePricing.ts";
 
 /** Which surge is on in a zone right now, and why. Manual wins, then scheduled, then smart. */
@@ -114,7 +115,9 @@ export function zoneSurge(book: ZoneBook, live: ZoneLive, demand: ZoneDemand, at
   const profile = activeProfile(book.smart, at, timeZone);
   const smartNote = !book.smart.enabled ? "Smart surge is off" : !inActiveHours(book.smart, at, timeZone) ? "Outside smart surge hours" : null;
   if (live.manual && Date.parse(live.manual.endsAt) > at && Date.parse(live.manual.startedAt) <= at) {
-    return { ...base, multiplier: live.manual.multiplier, source: "manual", level: surgeLevel(live.manual.multiplier), profile, smartNote: "Paused while the manual surge runs", endsAt: live.manual.endsAt, scheduledName: null };
+    // A curve gives the current 5-minute step; a plain manual surge keeps one level.
+    const multiplier = live.manual.curve ? surgeAt(live.manual.curve, at) ?? 1 : live.manual.multiplier;
+    return { ...base, multiplier, source: "manual", level: surgeLevel(multiplier), profile, smartNote: "Paused while the manual surge runs", endsAt: live.manual.endsAt, scheduledName: null };
   }
   const scheduled = book.scheduled.find((item) => Date.parse(item.startsAt) <= at && Date.parse(item.endsAt) > at);
   if (scheduled) {

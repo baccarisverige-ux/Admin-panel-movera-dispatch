@@ -70,6 +70,10 @@ type Props = {
   /** Driver bonus areas, drawn in orange with a label, when shown. */
   bonusAreas?: BonusMapArea[];
   bonusShown?: boolean;
+  /** A click on a driver bonus area (its fill or its label). */
+  onBonusArea?: (id: string) => void;
+  /** Drawn on top of the map, e.g. the quick surge and bonus pop-ups. */
+  overlay?: ReactNode;
   /** Ride checks to pin on the drivers' cars while they are open; only for admins who may see incidents. */
   rideChecks?: { checks: RideCheck[]; demoShift: number; now: number } | null;
 };
@@ -171,7 +175,7 @@ function dropoffGeo(drivers: LiveDriver[], hidden: Set<LiveState>, selectedId: s
 }
 
 /** Live drivers on a MapLibre map, coloured by state; click a driver for details. */
-export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, renderAssign, onRequestOpen, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false, rideChecks = null }: Props) {
+export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, renderAssign, onRequestOpen, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false, rideChecks = null, onBonusArea, overlay }: Props) {
   const access = useDashboardAccess();
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -186,6 +190,8 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
   const [waybillOpen, setWaybillOpen] = useState(false);
   const surgeClick = useRef(onSurgeZone);
   surgeClick.current = onSurgeZone;
+  const bonusClick = useRef(onBonusArea);
+  bonusClick.current = onBonusArea;
   const requestOpen = useRef(onRequestOpen);
   requestOpen.current = onRequestOpen;
   const pins = useRef<maplibregl.Marker[]>([]);
@@ -220,6 +226,10 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
       map.addSource("bonus-areas", { type: "geojson", data: bonusGeo(latest.current.bonusAreas, latest.current.bonusShown) });
       map.addLayer({ id: "bonus-fill", type: "fill", source: "bonus-areas", paint: { "fill-color": "#f2994a", "fill-opacity": ["case", ["==", ["get", "live"], 1], 0.34, 0.16] } });
       map.addLayer({ id: "bonus-line", type: "line", source: "bonus-areas", paint: { "line-color": "#e36414", "line-width": ["case", ["==", ["get", "live"], 1], 3, 1.5], "line-dasharray": ["case", ["==", ["get", "live"], 1], ["literal", [1, 0]], ["literal", [3, 2]]] } });
+      map.on("click", "bonus-fill", (event) => {
+        const id = event.features?.[0]?.properties?.id;
+        if (typeof id === "string" && bonusClick.current) bonusClick.current(id);
+      });
       map.addSource("balance", { type: "geojson", data: balanceGeo(latest.current.balance, latest.current.showBalance) });
       map.addLayer({
         id: "balance",
@@ -349,6 +359,12 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
       const element = document.createElement("div");
       element.className = area.live ? "bonus-pin live" : "bonus-pin";
       element.textContent = area.label;
+      if (bonusClick.current) element.classList.add("clickable");
+      element.addEventListener("click", (event) => {
+        if (!bonusClick.current) return;
+        event.stopPropagation();
+        bonusClick.current(area.id);
+      });
       const lat = ring.reduce((sum, [value]) => sum + value, 0) / ring.length;
       const lng = ring.reduce((sum, [, value]) => sum + value, 0) / ring.length;
       bonusPins.current.push(new maplibregl.Marker({ element, anchor: "center" }).setLngLat([lng, lat]).addTo(map));
@@ -501,6 +517,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
   return (
     <div className="drivers-map">
       <div ref={host} className="drivers-map-canvas" data-testid="dashboard-map" />
+      {overlay}
       {selected ? (
         <DriverPanel
           driver={selected}
