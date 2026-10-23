@@ -10,7 +10,7 @@ import type { TripRecord } from "./seed.ts";
 import { useMarketScope } from "../markets/useMarketScope.ts";
 import { parseZoneList } from "../markets/markets.ts";
 import { ApiError } from "./httpClient.ts";
-import { BUSY_MESSAGE, CHECKING_MESSAGE, UNREACHABLE_MESSAGE, outcomeOf, queryTouched, touchedBy } from "./commandFlow.ts";
+import { BUSY_MESSAGE, CHECKING_MESSAGE, UNREACHABLE_MESSAGE, outcomeOf, queryTouched, readAt, readTracked, touchedBy } from "./commandFlow.ts";
 
 export { markPaid, PAYMENT_METHODS, setMethod } from "../payments/book.ts";
 export type { BankAccount, PaymentMethod, Payout } from "../payments/book.ts";
@@ -23,21 +23,6 @@ export { advanceConfigClock, approveConfig, configDiff, draftRevisionMatches, ef
 export type { ConfigBook, EffectiveContext, FeatureKey, OverrideLevel, OverrideRule } from "../config/book.ts";
 export { activeScheduledBoost, defaultPricingBook, enabledCategoryIds, normalizePricingBook, pricingDiff, removeBoostSchedule, restorePricingVersion, saveBoostSchedule, savePriceZone, validateZonePrice } from "../pricing/book.ts";
 export type { BoostSchedule, PricingBook, PricingSnapshot } from "../pricing/book.ts";
-
-/**
- * The store revision each query's data was read at (C-10). A command sends the oldest revision among the
- * queries on screen, so a screen that shows data from before someone else's change gets a 409 instead of
- * silently overwriting it. After a command the reads it can have changed are read again, and the others are
- * moved to the new revision when it was the only change (C-18), so the next try is up to date.
- */
-const readAt = new Map<string, number>();
-
-async function readTracked<T>(api: { revision: () => Promise<number> }, key: readonly unknown[], read: () => Promise<T>): Promise<T> {
-  const rev = await api.revision().catch(() => undefined);
-  const data = await read();
-  if (rev !== undefined) readAt.set(JSON.stringify(key), rev);
-  return data;
-}
 
 function screenRevision(client: ReturnType<typeof useQueryClient>): number | undefined {
   const revs = client

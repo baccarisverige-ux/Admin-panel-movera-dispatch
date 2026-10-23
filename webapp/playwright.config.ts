@@ -9,11 +9,17 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
   },
   webServer: {
-    command: "npm run dev -- --host 127.0.0.1 --port 4173 --strictPort",
+    // CI runs the production build (every page is lazy-loaded; served by the dev server its modules were
+    // transformed on demand, one per round trip, and a first visit on a busy two-core runner took longer than
+    // an assertion waits while React Router kept the old page on screen). The build needs VITE_DATA=demo to
+    // allow the simulation adapter. Locally the dev server stays, with hot reload.
+    command: process.env.CI
+      ? "npx vite build && npx vite preview --host 127.0.0.1 --port 4173 --strictPort"
+      : "npm run dev -- --host 127.0.0.1 --port 4173 --strictPort",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
     // The e2e texts are English: every admin starts in English unless a test picks another language (round 4).
-    env: { VITE_ADMIN_LANGUAGE: "en" },
-    timeout: 60_000,
+    env: { VITE_ADMIN_LANGUAGE: "en", ...(process.env.CI ? { VITE_DATA: "demo" } : {}) },
+    timeout: process.env.CI ? 300_000 : 60_000,
   },
 });

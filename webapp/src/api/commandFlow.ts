@@ -60,3 +60,32 @@ export const CHECKING_MESSAGE = "Checking… The server is taking longer than us
 export const BUSY_MESSAGE = "Please wait: another action is still running.";
 /** Shown when even the re-check could not reach the server. */
 export const UNREACHABLE_MESSAGE = "Failed. The server could not be reached to confirm it. Retry uses the same operation key, so it is never done twice.";
+
+/**
+ * The store revision each query's data was read at (C-10). A command sends the oldest revision among the
+ * queries on screen, so a screen that shows data from before someone else's change gets a 409 instead of
+ * silently overwriting it. After a command the reads it can have changed are read again, and the others are
+ * moved to the new revision when it was the only change (C-18), so the next try is up to date.
+ */
+export const readAt = new Map<string, number>();
+
+/**
+ * Reads data and records the revision it belongs to. The revision is read before and after the data; when a
+ * change landed in between (a command committing while a timed refresh was out), the data is read again, so
+ * the recorded revision is the data's own. Recording the earlier revision in that case made the next command
+ * on the screen fail with "Someone else changed this" although it was the admin's own change it had seen.
+ */
+export async function readTracked<T>(api: { revision: () => Promise<number> }, key: readonly unknown[], read: () => Promise<T>): Promise<T> {
+  const id = JSON.stringify(key);
+  const revision = () => api.revision().catch(() => undefined);
+  let before = await revision();
+  let data = await read();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const after = await revision();
+    if (before === undefined || after === undefined || before === after) break;
+    before = after;
+    data = await read();
+  }
+  if (before !== undefined) readAt.set(id, before);
+  return data;
+}
