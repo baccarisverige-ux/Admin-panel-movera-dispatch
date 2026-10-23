@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { commandById } from "../commands/registry.ts";
 import { ApiError } from "./httpClient.ts";
-import { outcomeOf, queryRetry, queryTouched, touchedBy } from "./commandFlow.ts";
+import { outcomeOf, queryRetry, queryTouched, readAt, readTracked, touchedBy } from "./commandFlow.ts";
 import type { OperationRow } from "./seed.ts";
 
 test("C-18: 401/403/422 are not retried; offline and 503 are retried twice at most", () => {
@@ -46,4 +46,33 @@ test("C-14: a slow command ends as Done or Failed from the server's record, neve
   assert.equal(lost.retrySameKey, true);
   for (const outcome of [done, failed, lost]) assert.doesNotMatch(outcome.message, /Unknown/);
   assert.equal(outcomeOf(op("pending_approval", "Pending approval."), "").phase, "pending_approval");
+});
+
+test("C-10: a read that overlaps a commit records the revision of the data it ends with, not the one before", async () => {
+  // The screen's own command commits (rev 5 → 6) while a timed refresh is out: the refresh must not pin the
+  // screen to 5, or the next command gets "Someone else changed this" for a change the admin made.
+  let rev = 5;
+  let reads = 0;
+  const api = { revision: async () => rev };
+  const read = async () => {
+    reads += 1;
+    if (reads === 1) rev = 6; // the commit lands during the first read
+    return `data@${rev}`;
+  };
+  const data = await readTracked(api, ["records", "riders"], read);
+  assert.equal(data, "data@6");
+  assert.equal(reads, 2, "read again once the revision moved");
+  assert.equal(readAt.get(JSON.stringify(["records", "riders"])), 6);
+
+  // A quiet read is recorded once, at its revision.
+  reads = 0;
+  await readTracked(api, ["slice", "care"], read);
+  assert.equal(reads, 1);
+  assert.equal(readAt.get(JSON.stringify(["slice", "care"])), 6);
+
+  // A revision the server cannot give leaves the data usable and the record untouched.
+  readAt.delete(JSON.stringify(["records", "trips"]));
+  const noRev = { revision: async () => { throw new Error("offline"); } };
+  assert.equal(await readTracked(noRev, ["records", "trips"], async () => "x"), "x");
+  assert.equal(readAt.has(JSON.stringify(["records", "trips"])), false);
 });
