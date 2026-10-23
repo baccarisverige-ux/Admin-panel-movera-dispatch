@@ -301,6 +301,7 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     raiseSteps: amountOptions(base.settings.raiseSteps, base.currency),
     /** Owner Q10: set per country in Pricing › Tips & limits, in local money; null = no cap. */
     promoCap: base.settings.promoCap === null ? null : wire(base.settings.promoCap, base.currency),
+    pickupFee: riderPickupFee(base),
     booking: { ...booking(base), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays },
     cancelFees: cancelFees(base),
     cancelCheck: { on: base.zone.riderCancel.on, closerPct: base.zone.riderCancel.closerPct },
@@ -324,6 +325,17 @@ function radarZonesFor(zoneId: string, state: AppConfigState) {
     const rule = radarRuleFor(state.dispatch, zone.id, zone.country);
     return { id: zone.id, name: zone.name, ring: zone.ring.map(([lat, lng]) => ({ lat, lng })), rule: rule ? { id: rule.id, name: rule.name, seconds: rule.seconds, maxDrivers: rule.maxDrivers, repeat: rule.repeat } : null };
   });
+}
+
+/** RiderAppConfig.pickupFee (contract v0.5.0 §3.2): the rider's fixed pickup fee per category, live rides and reservations; null = off. */
+function riderPickupFee(base: Common) {
+  const fee = (own: { on: boolean; amount: number } | undefined) => (own?.on ? wire(own.amount, base.currency) : null);
+  return {
+    byCategory: Object.fromEntries(base.categoryIds.map((id) => {
+      const rate = base.pricing.pickupPay.rates[id];
+      return [id, { live: fee(rate?.riderFee.live), reservation: fee(rate?.riderFee.reservation) }];
+    })),
+  };
 }
 
 function pickupRate(rate: PickupRate | undefined, currency: CurrencyCode) {
