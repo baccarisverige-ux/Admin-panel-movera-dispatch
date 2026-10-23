@@ -1,11 +1,11 @@
 /** Error codes of contract v0.3.0 (contract.json#errors.codes). */
-export const ERROR_CODES = ["invalid_request", "unauthenticated", "forbidden", "not_found", "conflict", "invalid_transition", "version_mismatch", "rate_limited", "unavailable", "internal"] as const;
+export const ERROR_CODES = ["invalid_request", "unauthenticated", "forbidden", "not_found", "otp_expired", "conflict", "invalid_transition", "version_mismatch", "rate_limited", "unavailable", "internal"] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 /** The wire error body: { code, message, requestId, retryable, projection? }. */
 export type ApiErrorBody = { code: ErrorCode; message: string; requestId: string; retryable: boolean; projection?: unknown };
 
-export const API_VERSION = "0.4";
+export const API_VERSION = "0.5";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -47,6 +47,7 @@ export function codeForStatus(status: number): ErrorCode {
   if (status === 403) return "forbidden";
   if (status === 404) return "not_found";
   if (status === 409) return "conflict";
+  if (status === 410) return "otp_expired";
   if (status === 429) return "rate_limited";
   return "internal";
 }
