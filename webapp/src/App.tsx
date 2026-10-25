@@ -176,7 +176,7 @@ function Authed() {
   if (!agent && live) {
     return (
       <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>
-        {location.pathname === "/setup-password" ? <LiveSetupPasswordPage /> : <LiveLoginPage />}
+        {/^\/setup-password\/?$/.test(location.pathname) ? <LiveSetupPasswordPage /> : <LiveLoginPage />}
       </Suspense>
     );
   }
