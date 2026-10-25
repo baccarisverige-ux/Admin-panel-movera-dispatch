@@ -9,13 +9,26 @@ import { useLiveSession } from "./LiveSessionContext";
 import { fullName, placeLabel } from "./format";
 import { DateText, DecisionDialog, ErrorLine, Field, Status, isVersionMismatch } from "./ui";
 import { REVIEW_ACTIONS, VehicleReviewButtons, type ReviewDecision } from "./VehicleReview";
-import type { Fleet, FleetDriver, FleetView } from "./types";
+import type { Fleet, FleetDriver, FleetInvitation, FleetView } from "./types";
 
 const STALE: MessageKey = "Someone else changed this record. It was reloaded; check it and try again.";
 
+type InvitationDecision = { action: "accept" | "cancel"; invitation: FleetInvitation };
+
+/** Who the invitation concerns: the driver (a link), or the invited number while nobody has signed up with it. */
+function InvitationWho({ invitation }: { invitation: FleetInvitation }) {
+  if (invitation.driverId) return <Link to={`/drivers/${encodeURIComponent(invitation.driverId)}`}>{invitation.driverName || invitation.driverId}</Link>;
+  return (
+    <>
+      {invitation.phone ?? "—"} <span className="live-muted">{tr("not signed up yet")}</span>
+    </>
+  );
+}
+
 /**
  * GET /api/v1/admin/fleets/{fleetId} → FleetView: the company, its owner, the join code (after approval), Approve /
- * Reject / Block, New code, the linked drivers (Remove from fleet) and the cars (Approve / Reject / Block).
+ * Reject / Block, New code, the pending invitations (Accept / Cancel, CONTRACT.md §14 "Joining is an invitation"),
+ * the linked drivers (Remove from fleet) and the cars (Approve / Reject / Block).
  */
 export function LiveFleetDetailPage() {
   const { ownerId: fleetId = "" } = useParams();
@@ -25,6 +38,7 @@ export function LiveFleetDetailPage() {
   const [review, setReview] = useState<(typeof REVIEW_ACTIONS)[number] | null>(null);
   const [newCode, setNewCode] = useState(false);
   const [removing, setRemoving] = useState<FleetDriver | null>(null);
+  const [deciding, setDeciding] = useState<InvitationDecision | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const query = useQuery({
@@ -49,6 +63,7 @@ export function LiveFleetDetailPage() {
   if (query.error || !query.data) return <ErrorLine error={query.error ?? new Error(tr("Something failed."))} onRetry={() => void query.refetch()} />;
 
   const { fleet, drivers, vehicles } = query.data;
+  const invitations = (query.data.invitations ?? []).filter((item) => item.status === "pending");
   const mayAct = can("drivers.activate");
 
   async function copyCode() {
@@ -114,6 +129,58 @@ export function LiveFleetDetailPage() {
           )}
         </section>
       </div>
+
+      <section className="panel" data-testid="fleet-invitations">
+        <div className="panel-title-row">
+          <h3>{tr("Pending invitations")}</h3>
+          <p>{trn("{0} pending", invitations.length)}</p>
+        </div>
+        {invitations.length === 0 ? <p className="state-line">{tr("No pending invitations.")}</p> : (
+          <div className="table-wrap">
+            <table className="live-table">
+              <thead>
+                <tr>
+                  <th>{tr("Driver")}</th>
+                  <th>{tr("Direction")}</th>
+                  <th>{tr("Created")}</th>
+                  <th>{tr("Expires")}</th>
+                  <th>{tr("Actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invitations.map((invitation) => (
+                  <tr key={invitation.invitationId} data-invitation-id={invitation.invitationId}>
+                    <td><InvitationWho invitation={invitation} /></td>
+                    <td>{invitation.direction === "driver_request" ? tr("The driver asked to join") : tr("The owner invited")}</td>
+                    <td><DateText value={invitation.createdAt} /></td>
+                    <td><DateText value={invitation.expiresAt} /></td>
+                    <td className="live-actions">
+                      {mayAct ? (
+                        <>
+                          <button
+                            data-command="admin.server.invitationAccept"
+                            type="button"
+                            className="link-action"
+                            disabled={!invitation.driverId}
+                            title={invitation.driverId ? undefined : tr("Accept is possible once that number has signed up.")}
+                            onClick={() => setDeciding({ action: "accept", invitation })}
+                          >
+                            {tr("Accept")}
+                          </button>
+                          {invitation.driverId ? null : <span className="live-muted">{tr("Accept is possible once that number has signed up.")}</span>}
+                          <button data-command="admin.server.invitationCancel" type="button" className="link-action live-danger-link" onClick={() => setDeciding({ action: "cancel", invitation })}>
+                            {tr("Cancel invitation")}
+                          </button>
+                        </>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <section className="panel">
         <div className="panel-title-row">
@@ -236,6 +303,36 @@ export function LiveFleetDetailPage() {
             setFleet(await client.post<Fleet>(`/admin/fleets/${encodeURIComponent(fleet.fleetId)}/code`, { expectedVersion: fleet.version }));
           } catch (error) {
             if (isVersionMismatch(error)) stale();
+            throw error;
+          }
+        }}
+      />
+
+      <DecisionDialog
+        open={Boolean(deciding)}
+        title={deciding?.action === "accept" ? tr("Accept invitation") : tr("Cancel invitation")}
+        summary={deciding ? (
+          deciding.action === "accept"
+            ? trn("Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of his closes.", <strong>{deciding.invitation.driverName || deciding.invitation.driverId || deciding.invitation.phone}</strong>, <strong>{fleet.name}</strong>)
+            : trn("Withdraw the invitation for {0}. Nothing links; the other side is told.", <strong>{deciding.invitation.driverName || deciding.invitation.phone || deciding.invitation.driverId}</strong>)
+        ) : null}
+        confirmLabel={deciding?.action === "accept" ? tr("Accept") : tr("Cancel invitation")}
+        note="none"
+        danger={deciding?.action === "cancel"}
+        onClose={() => setDeciding(null)}
+        onConfirm={async () => {
+          if (!deciding) return;
+          const { action, invitation } = deciding;
+          try {
+            await client.post<FleetInvitation>(`/admin/fleets/${encodeURIComponent(fleet.fleetId)}/invitations/${encodeURIComponent(invitation.invitationId)}/${action}`);
+            queryClient.setQueryData<FleetView>(key, (current) => (current ? { ...current, invitations: (current.invitations ?? []).filter((item) => item.invitationId !== invitation.invitationId) } : current));
+            setNotice(null);
+            reload();
+            void queryClient.invalidateQueries({ queryKey: ["live", "drivers"] });
+            if (invitation.driverId) void queryClient.invalidateQueries({ queryKey: ["live", "driver", invitation.driverId] });
+          } catch (error) {
+            // Expired, already answered or gone: the row is stale, so the fleet is reloaded while the dialog says why.
+            if (error instanceof ApiError && (error.status === 404 || error.status === 409)) reload();
             throw error;
           }
         }}

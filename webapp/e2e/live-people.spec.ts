@@ -42,7 +42,7 @@ const DRIVER = {
   version: 2,
 };
 
-const OWNER = { ...DRIVER, driverId: "D1000", firstName: "Bo", lastName: "Nord", accountStatus: "active", accountType: "fleet", fleet: { ...DRIVER.fleet, role: "owner" }, payoutTo: "self", requiredFleetDocuments: ["company_registration", "bank_statement"], version: 5 };
+const OWNER = { ...DRIVER, driverId: "D1000", firstName: "Bo", lastName: "Nord", accountStatus: "active", accountType: "fleet", fleet: { ...DRIVER.fleet, role: "owner" }, payoutTo: "self", requiredFleetDocuments: ["company_registration", "bank_statement"], pendingFleetInvitations: 2, version: 5 };
 
 const VEHICLE = {
   vehicleId: "V1",
@@ -78,13 +78,20 @@ const FLEET = {
   version: 3,
 };
 
+/** v0.5.3: a driver's request (he asked with the code), an owner's invite to a number without an account, and one that expired. */
+const INVITATIONS = [
+  { invitationId: "INV1", fleetId: "F1", fleetName: "Taxi Nord AB", direction: "driver_request", driverId: "D1002", driverName: "Carl Ek", status: "pending", createdAt: "2026-10-24T08:00:00Z", expiresAt: "2026-10-31T08:00:00Z", version: 1 },
+  { invitationId: "INV2", fleetId: "F1", fleetName: "Taxi Nord AB", direction: "owner_invite", phone: "+46701740609", status: "pending", createdAt: "2026-10-25T09:30:00Z", expiresAt: "2026-11-01T09:30:00Z", version: 1 },
+  { invitationId: "INV3", fleetId: "F1", fleetName: "Taxi Nord AB", direction: "owner_invite", driverId: "D1003", driverName: "Eva Lund", phone: "+46701740610", status: "pending", createdAt: "2026-10-10T09:30:00Z", expiresAt: "2026-10-17T09:30:00Z", version: 1 },
+];
+
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-expose-headers": "*" };
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
 
-type State = { driver: typeof DRIVER; fleet: typeof FLEET; vehicle: typeof VEHICLE; calls: { method: string; path: string; headers: Record<string, string>; body: unknown }[] };
+type State = { driver: typeof DRIVER; fleet: typeof FLEET; vehicle: typeof VEHICLE; invitations: typeof INVITATIONS; calls: { method: string; path: string; headers: Record<string, string>; body: unknown }[] };
 
 async function fakeServer(page: Page): Promise<State> {
-  const state: State = { driver: { ...DRIVER }, fleet: { ...FLEET }, vehicle: { ...VEHICLE }, calls: [] };
+  const state: State = { driver: { ...DRIVER }, fleet: { ...FLEET }, vehicle: { ...VEHICLE }, invitations: INVITATIONS.map((item) => ({ ...item })), calls: [] };
   const json = (route: Route, status: number, body: unknown, headers: Record<string, string> = {}) =>
     route.fulfill({ status, headers: { ...CORS, "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
   await page.route(`${API}/**`, async (route) => {
@@ -111,6 +118,7 @@ async function fakeServer(page: Page): Promise<State> {
       return json(route, 200, { items, nextCursor: null });
     }
     if (p === "/api/v1/admin/drivers/D1001") return json(route, 200, state.driver);
+    if (p === "/api/v1/admin/drivers/D1000") return json(route, 200, OWNER);
     if (p === "/api/v1/admin/drivers/D1001/status") {
       if (body.expectedVersion !== state.driver.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409", retryable: false, projection: state.driver });
       if (!body.note) return json(route, 400, { code: "invalid_request", message: "note is required", requestId: "r-400", retryable: false });
@@ -131,7 +139,18 @@ async function fakeServer(page: Page): Promise<State> {
           { driverId: "D1001", firstName: "Anna", lastName: "Berg", accountStatus: state.driver.accountStatus, onlineStatus: "offline", linkedAt: "2026-10-20T10:00:00Z" },
         ],
         vehicles: [state.vehicle],
+        invitations: state.invitations.filter((item) => item.status === "pending"),
       });
+    }
+    const decision = /^\/api\/v1\/admin\/fleets\/F1\/invitations\/([^/]+)\/(accept|cancel)$/.exec(p);
+    if (decision) {
+      const invitation = state.invitations.find((item) => item.invitationId === decision[1]);
+      if (!invitation) return json(route, 404, { code: "not_found", message: "No such invitation in this fleet.", requestId: "r-inv404", retryable: false, reason: "invitation_not_found" });
+      if (new Date(invitation.expiresAt).getTime() < Date.parse("2026-10-25T12:00:00Z")) return json(route, 409, { code: "invalid_transition", message: "The invitation has expired.", requestId: "r-inv409", retryable: false, reason: "invitation_expired" });
+      if (decision[2] === "accept" && !invitation.driverId) return json(route, 409, { code: "invalid_transition", message: "That number has no account yet.", requestId: "r-inv409b", retryable: false, reason: "driver_not_signed_up" });
+      invitation.status = decision[2] === "accept" ? "accepted" : "cancelled";
+      if (decision[2] === "accept") state.fleet = { ...state.fleet, driverCount: state.fleet.driverCount + 1 };
+      return json(route, 200, { ...invitation, decidedAt: "2026-10-25T12:00:00Z", version: 2 });
     }
     if (p === "/api/v1/admin/fleets/F1/code") {
       state.fleet = { ...state.fleet, code: "MV-NEW42", version: state.fleet.version + 1 };
@@ -247,6 +266,12 @@ test("fleet detail: code with copy, new code after a confirm, vehicle review and
   await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("MV-7KQ2X");
   await expect(page.getByRole("link", { name: "Bo Nord" }).first()).toHaveAttribute("href", "/drivers/D1000");
+  await page.getByRole("link", { name: "Bo Nord" }).first().click();
+  await expect(page.getByRole("heading", { level: 2, name: "Bo Nord" })).toBeVisible();
+  await expect(page.getByTestId("pending-invitations")).toHaveText("Pending fleet invitations: 2");
+  await expect(page.locator(".page-heading")).not.toContainText("Pending fleet invitations");
+  await page.goBack();
+  await expect(page.getByTestId("fleet-code")).toHaveText("MV-7KQ2X");
 
   await page.getByRole("button", { name: "New code" }).click();
   await page.getByRole("dialog", { name: "New join code" }).getByRole("button", { name: "Make a new code" }).click();
@@ -264,6 +289,47 @@ test("fleet detail: code with copy, new code after a confirm, vehicle review and
   const remove = page.getByRole("dialog", { name: "Remove from fleet" });
   await remove.getByRole("button", { name: "Remove from fleet" }).click();
   await expect(remove).toContainText("The driver is on a trip.");
+});
+
+test("fleet detail: pending invitations with Accept (disabled for a number without an account) and Cancel; an expired one says so", async ({ page }) => {
+  const state = await fakeServer(page);
+  await signIn(page);
+  await page.goto("/fleets/F1");
+  const section = page.getByTestId("fleet-invitations");
+  await expect(section.getByRole("heading", { name: "Pending invitations" })).toBeVisible();
+  await expect(section).toContainText("3 pending");
+  const request = section.locator('tr[data-invitation-id="INV1"]');
+  await expect(request).toContainText("The driver asked to join");
+  await expect(request.getByRole("link", { name: "Carl Ek" })).toHaveAttribute("href", "/drivers/D1002");
+  await expect(request).toContainText(/24 Oct 2026|Oct 24, 2026/);
+  await expect(request).toContainText(/31 Oct 2026|Oct 31, 2026/);
+  const invite = section.locator('tr[data-invitation-id="INV2"]');
+  await expect(invite).toContainText("+46701740609");
+  await expect(invite).toContainText("not signed up yet");
+  await expect(invite).toContainText("The owner invited");
+  await expect(invite.getByRole("button", { name: "Accept", exact: true })).toBeDisabled();
+  await expect(invite.getByRole("button", { name: "Cancel invitation" })).toBeEnabled();
+
+  await request.getByRole("button", { name: "Accept", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Accept invitation" });
+  await expect(dialog).toContainText("Carl Ek");
+  await dialog.getByRole("button", { name: "Accept", exact: true }).click();
+  await expect(request).toHaveCount(0);
+  await expect(section).toContainText("2 pending");
+  const accept = state.calls.find((call) => call.path.endsWith("/fleets/F1/invitations/INV1/accept"))!;
+  expect(accept.method).toBe("POST");
+  expect(accept.headers.authorization).toBe("Bearer access-1");
+  expect(accept.headers["idempotency-key"]?.length).toBeGreaterThan(15);
+  await expect(page.locator(".page-heading")).toContainText("3 drivers, 1 vehicles");
+
+  const expired = section.locator('tr[data-invitation-id="INV3"]');
+  await expired.getByRole("button", { name: "Cancel invitation" }).click();
+  const cancel = page.getByRole("dialog", { name: "Cancel invitation" });
+  await cancel.getByRole("button", { name: "Cancel invitation" }).click();
+  await expect(cancel).toContainText("This invitation has expired.");
+  expect(state.calls.some((call) => call.path.endsWith("/fleets/F1/invitations/INV3/cancel"))).toBe(true);
+  await cancel.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(cancel).toHaveCount(0);
 });
 
 test("vehicles list unfolds a car's documents; sign-out revokes on the server", async ({ page }) => {

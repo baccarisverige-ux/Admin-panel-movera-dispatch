@@ -770,7 +770,7 @@
       "apple",
       "google"
     ],
-    "providerNote": "POST /auth/provider { provider, idToken } signs in a linked account, or answers { code: PHONE_REQUIRED, linkToken, name? } for a new one: the phone is then verified with the linkToken on the OTP calls, and the account is created linked.",
+    "providerNote": "POST /auth/provider { provider, idToken, app } signs in an account already linked to that Apple / Google identity (AuthTokens), or answers { code: PHONE_REQUIRED, linkToken, firstName?, lastName?, email? } for a new one: the app then verifies a phone with the linkToken on the OTP calls (the phone is confirmed once, the first time), the account is created linked, and the driver app prefills its details screen with the names and e-mail the provider gave (Apple gives them only the first time and may give a hidden relay e-mail; all stay editable). Unset provider keys on the server answer 503 unavailable (provider_not_configured).",
     "tokens": {
       "access": "JWT, short-lived (accessExpiresSeconds), bearer on every call",
       "refresh": "opaque, rotated on every POST /auth/refresh; a used or revoked one is 401 unauthenticated",
@@ -826,6 +826,10 @@
       "lockout": "failed sign-ins are slowed and then locked per e-mail and per address: 429 rate_limited with Retry-After",
       "secondFactor": "none in v0.5.1. Reserved for later, additively: a sign-in answer { code: \"SECOND_FACTOR_REQUIRED\", challengeId } followed by a verify call; v0.5.1 servers never send it.",
       "superAdmin": "role super: AdminMe.approvalExempt is true and every permission is granted; refunds, publishes, surge and dispatch control run directly (200, never 202 pending_approval) and are written in the audit (owner decision 14)."
+    },
+    "providerKeys": {
+      "apple": "APPLE_CLIENT_IDS (the app bundle ids / service id), tokens verified against Apple's public keys",
+      "google": "GOOGLE_CLIENT_IDS (the OAuth client ids), tokens verified against Google's public keys"
     }
   },
   "configVersion": {
@@ -1188,7 +1192,7 @@
       "suspended": "blocked by an admin"
     },
     "fleetCode": {
-      "note": "Made by the server when an admin approves the fleet; shown only to the fleet owner (GET /driver/fleet) and admins. A driver joins with the code plus the owner's full name and e-mail as registered; all three must match, and one mismatch message covers all three (fleet_join_mismatch). An admin can make a new code (POST /admin/fleets/{fleetId}/code); the old one stops working at once.",
+      "note": "Made by the server when an admin approves the fleet; shown only to the fleet owner (GET /driver/fleet) and admins. A driver asks to join with the code plus the owner's full name and e-mail as registered; all three must match (one mismatch message, fleet_join_mismatch), and the owner then accepts or declines the request (fleetInvitations). An admin can make a new code (POST /admin/fleets/{fleetId}/code); the old one stops working at once.",
       "prefix": "MV-",
       "length": 5,
       "alphabet": "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
@@ -1411,6 +1415,25 @@
         ],
         "note": "Files are stored by the server (encrypted at rest, Europe) and read only through GET /driver/documents/{documentId}/file (the owner) and GET /admin/documents/{documentId}/file (documents.approve). fileUrl is that path, never a public link."
       }
+    },
+    "fleetInvitations": {
+      "note": "Owner decision 2026-10-25: joining a fleet is a two-sided invitation. driver_request: the driver asks with the code, the owner's name and e-mail (POST /driver/fleet/join); the owner accepts or declines. owner_invite: the owner invites a phone number (POST /driver/fleet/invite); a driver with an account gets it at once, one without gets it the moment he signs up with that number; he accepts or declines. Either side may cancel its own. The other side is told in the app (GET /notifications, kind fleet_invitation; a badge on Home and My fleet) and by one SMS. An admin sees pending invitations on the fleet and may accept or cancel one. Accepting links the driver (Driver.fleet) and closes every other pending invitation of his.",
+      "expiresDays": 7,
+      "notice": [
+        "in_app",
+        "sms"
+      ],
+      "smsText": {
+        "sv": "{fleet} bjuder in dig till sitt åkeri i Movera. Öppna appen för att svara.",
+        "fr": "{fleet} vous invite dans sa flotte Movera. Ouvrez l’application pour répondre.",
+        "en": "{fleet} invites you to its fleet in Movera. Open the app to answer."
+      },
+      "smsTextRequest": {
+        "sv": "{driver} vill gå med i {fleet} i Movera. Öppna appen för att svara.",
+        "fr": "{driver} veut rejoindre {fleet} dans Movera. Ouvrez l’application pour répondre.",
+        "en": "{driver} wants to join {fleet} in Movera. Open the app to answer."
+      },
+      "appLink": "the SMS to a number without an account ends with the app's install link (deploy setting)"
     }
   },
   "outstandingFee": {

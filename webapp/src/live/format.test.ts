@@ -124,6 +124,11 @@ test("error texts: 403 is one sentence, 409 version_mismatch says reloaded, 429 
   assert.equal(errorText(new ApiError(409, "Stale", { code: "version_mismatch", requestId: "r1" })), "Someone else changed this record. It was reloaded; check it and try again.");
   assert.equal(errorText(new ApiError(409, "Driver is on a trip", { code: "invalid_transition", reason: "on_trip" })), "The driver is on a trip. Try again when the trip has ended.");
   assert.equal(errorText(new ApiError(409, "Already approved", { code: "invalid_transition" })), "Already approved", "the server's message is shown");
+  assert.equal(errorText(new ApiError(409, "Expired", { code: "invalid_transition", reason: "invitation_expired" })), "This invitation has expired.");
+  assert.equal(errorText(new ApiError(409, "Closed", { code: "invalid_transition", reason: "invitation_closed" })), "This invitation was already answered or withdrawn.");
+  assert.equal(errorText(new ApiError(409, "No account", { code: "invalid_transition", reason: "driver_not_signed_up" })), "That number has no account yet. Accept is possible once it signs up.");
+  assert.equal(errorText(new ApiError(409, "In a fleet", { code: "conflict", reason: "already_in_fleet" })), "The driver is already in a fleet.");
+  assert.equal(errorText(new ApiError(404, "No such invitation", { code: "not_found", reason: "invitation_not_found" })), "This invitation is no longer on the fleet.");
   assert.equal(errorText(new ApiError(400, "note is required", { code: "invalid_request", requestId: "r2" })), "note is required");
   assert.equal(errorText(new ApiError(429, "Slow down", { code: "rate_limited", retryAfterSeconds: 30 })), "Too many attempts. Wait 30 s.");
   assert.equal(errorText(new ApiError(500, "Boom", { code: "internal", requestId: "req-9" })), "Boom (request req-9)");

@@ -3106,9 +3106,10 @@ paths:
   /driver/fleet/join:
     post:
       operationId: joinFleet
-      summary: Join a fleet with its code, the owner's name and e-mail
-      description: v0.5.3. Driver accounts only (a fleet account → 409 invalid_transition, fleet_account); already in a fleet
-        → 409 invalid_transition (already_in_fleet).
+      summary: Ask to join a fleet with its code, the owner's name and e-mail
+      description: v0.5.3. A pending driver_request the owner accepts or declines (contract.json#driverOnboarding.fleetInvitations);
+        a pending request already open → 200 with it. Driver accounts only (a fleet account → 409 invalid_transition, fleet_account);
+        already in a fleet → 409 invalid_transition (already_in_fleet).
       tags:
       - Driver · Fleet
       x-actor:
@@ -3124,6 +3125,92 @@ paths:
             schema:
               $ref: '#/components/schemas/FleetJoinRequest'
       responses:
+        '201':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetInvitation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/fleet/invite:
+    post:
+      operationId: inviteFleetDriver
+      summary: 'Owner: invite a driver by phone number'
+      description: v0.5.3. Owner of an approved fleet only (else 403 / 409 fleet_not_approved). A number already in a fleet
+        → 409 invalid_transition (already_in_fleet); the owner's own number → 400. An open invite to the same number → 200
+        with it.
+      tags:
+      - Driver · Fleet
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FleetInviteRequest'
+      responses:
+        '201':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetInvitation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/fleet/invitations:
+    get:
+      operationId: listFleetInvitations
+      summary: 'Pending invitations: incoming and own'
+      description: 'v0.5.3. A driver account: owner invites waiting for him and his own open request; an owner: his fleet''s
+        open requests and invites.'
+      tags:
+      - Driver · Fleet
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
         '200':
           description: OK
           headers:
@@ -3134,7 +3221,126 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Driver'
+                $ref: '#/components/schemas/FleetInvitationList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/fleet/invitations/{invitationId}/accept:
+    post:
+      operationId: acceptFleetInvitation
+      summary: Accept (the driver an invite, the owner a request)
+      description: v0.5.3. Links the driver; his other pending invitations close. The driver on a trip → 409 (on_trip); already
+        in a fleet → 409 (already_in_fleet); expired → 409 (invitation_expired). Not pending → 409 invalid_transition.
+      tags:
+      - Driver · Fleet
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/InvitationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetInvitation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/fleet/invitations/{invitationId}/decline:
+    post:
+      operationId: declineFleetInvitation
+      summary: Decline (the driver an invite, the owner a request)
+      description: v0.5.3. Closed; the sender is told. Not pending → 409 invalid_transition.
+      tags:
+      - Driver · Fleet
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/InvitationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetInvitation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/fleet/invitations/{invitationId}/cancel:
+    post:
+      operationId: cancelFleetInvitation
+      summary: Cancel one's own request or invite
+      description: v0.5.3. Only the side that created it. Not pending → 409 invalid_transition.
+      tags:
+      - Driver · Fleet
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/InvitationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetInvitation'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -4952,6 +5158,90 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /admin/fleets/{fleetId}/invitations/{invitationId}/accept:
+    post:
+      operationId: adminAcceptFleetInvitation
+      summary: Accept a pending invitation or request for the fleet
+      description: v0.5.3. The same effect as the driver's or owner's answer; written in the audit.
+      tags:
+      - Admin · People
+      x-actor:
+      - admin
+      x-permission: drivers.activate
+      parameters:
+      - $ref: '#/components/parameters/FleetId'
+      - $ref: '#/components/parameters/InvitationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetInvitation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/fleets/{fleetId}/invitations/{invitationId}/cancel:
+    post:
+      operationId: adminCancelFleetInvitation
+      summary: Cancel a pending invitation or request
+      description: v0.5.3. The same effect as the driver's or owner's answer; written in the audit.
+      tags:
+      - Admin · People
+      x-actor:
+      - admin
+      x-permission: drivers.activate
+      parameters:
+      - $ref: '#/components/parameters/FleetId'
+      - $ref: '#/components/parameters/InvitationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetInvitation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /admin/fleets/{fleetId}/drivers/{driverId}/remove:
     post:
       operationId: adminRemoveFleetDriver
@@ -6677,6 +6967,12 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/Id'
+    InvitationId:
+      name: invitationId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
     RideId:
       name: rideId
       in: path
@@ -8103,6 +8399,11 @@ components:
           items:
             $ref: '#/components/schemas/DocumentType'
           description: 'v0.5.3: fleet accounts only: the company''s documents (…required[country].fleet).'
+        pendingFleetInvitations:
+          type: integer
+          minimum: 0
+          description: 'v0.5.3: pending invitations waiting for this account''s answer (a driver''s incoming invites, or an
+            owner''s incoming requests), for the badge.'
     DriverScheduledRides:
       type: object
       description: 'Owner decision 2 (v0.4.2): an admin''s reservations on/off for this one driver (CONTRACT.md §6.1). Missing
@@ -8313,6 +8614,78 @@ components:
           $ref: '#/components/schemas/Id'
         linkedAt:
           $ref: '#/components/schemas/Timestamp'
+    FleetInvitationStatus:
+      type: string
+      enum:
+      - pending
+      - accepted
+      - declined
+      - cancelled
+      - expired
+    FleetInvitation:
+      type: object
+      description: 'v0.5.3 (contract.json#driverOnboarding.fleetInvitations): one side asks, the other accepts.'
+      required:
+      - invitationId
+      - fleetId
+      - fleetName
+      - direction
+      - status
+      - createdAt
+      - expiresAt
+      - version
+      properties:
+        invitationId:
+          $ref: '#/components/schemas/Id'
+        fleetId:
+          $ref: '#/components/schemas/Id'
+        fleetName:
+          type: string
+        direction:
+          type: string
+          enum:
+          - driver_request
+          - owner_invite
+          description: 'driver_request: the driver asked with the code; owner_invite: the owner invited a phone number.'
+        driverId:
+          allOf:
+          - $ref: '#/components/schemas/Id'
+          description: The driver concerned; missing while an owner_invite waits for a number without an account.
+        driverName:
+          type: string
+        phone:
+          type: string
+          description: 'owner_invite: the invited number (owner and admin views).'
+        status:
+          $ref: '#/components/schemas/FleetInvitationStatus'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        expiresAt:
+          $ref: '#/components/schemas/Timestamp'
+        decidedAt:
+          $ref: '#/components/schemas/Timestamp'
+        version:
+          type: integer
+          minimum: 1
+    FleetInvitationList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FleetInvitation'
+    FleetInviteRequest:
+      type: object
+      description: 'v0.5.3: the owner invites a number.'
+      required:
+      - phone
+      properties:
+        phone:
+          type: string
+          pattern: ^\+[1-9]\d{6,14}$
+          description: E.164; the driver's sign-in number.
     FleetView:
       type: object
       description: 'v0.5.3: the fleet with its drivers (owner and admins; a member gets an empty list) and its cars.'
@@ -8331,6 +8704,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Vehicle'
+        invitations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FleetInvitation'
+          description: 'v0.5.3: the pending invitations and requests (owner and admins; a member gets none).'
     FleetDriverEarnings:
       type: object
       required:
@@ -9849,13 +10227,26 @@ components:
           minLength: 1
         name:
           type: string
+        firstName:
+          type: string
+          description: 'v0.5.3: what the provider gave, for the driver''s details screen; editable.'
+        lastName:
+          type: string
+          description: v0.5.3
+        email:
+          type: string
+          format: email
+          description: 'v0.5.3: may be Apple''s hidden relay address; editable.'
     ProviderSignInResult:
       oneOf:
       - $ref: '#/components/schemas/AuthTokens'
       - $ref: '#/components/schemas/PhoneRequired'
-      description: 'POST /auth/provider { provider, idToken } signs in a linked account, or answers { code: PHONE_REQUIRED,
-        linkToken, name? } for a new one: the phone is then verified with the linkToken on the OTP calls, and the account
-        is created linked.'
+      description: 'POST /auth/provider { provider, idToken, app } signs in an account already linked to that Apple / Google
+        identity (AuthTokens), or answers { code: PHONE_REQUIRED, linkToken, firstName?, lastName?, email? } for a new one:
+        the app then verifies a phone with the linkToken on the OTP calls (the phone is confirmed once, the first time), the
+        account is created linked, and the driver app prefills its details screen with the names and e-mail the provider gave
+        (Apple gives them only the first time and may give a hidden relay e-mail; all stay editable). Unset provider keys
+        on the server answer 503 unavailable (provider_not_configured).'
     RefreshRequest:
       type: object
       required:

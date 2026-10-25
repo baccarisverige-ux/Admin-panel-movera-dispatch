@@ -99,6 +99,7 @@ export function LiveDriverDetailPage() {
           ) : (
             <p className="state-line">{driver.accountType === "driver" ? tr("No fleet yet. The driver joins one with a fleet code.") : tr("No fleet.")}</p>
           )}
+          {driver.pendingFleetInvitations ? <p className="live-muted" data-testid="pending-invitations">{tr("Pending fleet invitations: {0}", [driver.pendingFleetInvitations])}</p> : null}
         </section>
       </div>
 

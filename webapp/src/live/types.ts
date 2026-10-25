@@ -1,6 +1,7 @@
 /**
  * The wire shapes of contract v0.5.3 that the live people area reads (openapi.yaml: AdminSession, AdminMe, Driver,
- * Fleet, FleetView, Vehicle, Document). Only the fields the panel shows are typed; unknown fields pass through.
+ * Fleet, FleetView, FleetInvitation, Vehicle, Document). Only the fields the panel shows are typed; unknown fields pass
+ * through.
  */
 import type { Role } from "../auth/permissions.ts";
 
@@ -72,6 +73,8 @@ export type Driver = {
   requiredDocuments?: string[];
   requiredFleetDocuments?: string[];
   termsAcceptedAt?: string;
+  /** Pending invitations waiting for this account's answer (a driver's incoming invites, an owner's incoming requests). */
+  pendingFleetInvitations?: number;
   version: number;
   location?: { lat: number; lng: number; measuredAt: string };
   lastFixAt?: string;
@@ -124,6 +127,27 @@ export type Vehicle = {
   requiredDocuments?: string[];
 };
 
-export type FleetView = { fleet: Fleet; drivers: FleetDriver[]; vehicles: Vehicle[] };
+export type FleetInvitationStatus = "pending" | "accepted" | "declined" | "cancelled" | "expired";
+
+/**
+ * Joining a fleet is two-sided (CONTRACT.md §14 "Joining is an invitation"): the driver asked with the code
+ * (driver_request) or the owner invited a phone number (owner_invite; driverId missing until that number signs up).
+ */
+export type FleetInvitation = {
+  invitationId: string;
+  fleetId: string;
+  fleetName: string;
+  direction: "driver_request" | "owner_invite";
+  driverId?: string;
+  driverName?: string;
+  phone?: string;
+  status: FleetInvitationStatus;
+  createdAt: string;
+  expiresAt: string;
+  decidedAt?: string;
+  version: number;
+};
+
+export type FleetView = { fleet: Fleet; drivers: FleetDriver[]; vehicles: Vehicle[]; invitations?: FleetInvitation[] };
 
 export type Page<T> = { items: T[]; nextCursor: string | null };

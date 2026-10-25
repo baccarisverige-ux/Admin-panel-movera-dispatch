@@ -57,6 +57,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.fleetCode", label: "Make a new fleet code", reason: false, permission: "drivers.activate" },
   { id: "admin.server.copyCode", label: "Copy fleet code", reason: false, permission: "drivers.read" },
   { id: "admin.server.removeDriver", label: "Remove driver from fleet", reason: false, permission: "drivers.activate" },
+  { id: "admin.server.invitationAccept", label: "Accept a fleet invitation", reason: false, permission: "drivers.activate" },
+  { id: "admin.server.invitationCancel", label: "Cancel a fleet invitation", reason: false, permission: "drivers.activate" },
   { id: "admin.server.vehicleReview", label: "Decide a vehicle", reason: false, permission: "vehicles.edit" },
   { id: "admin.server.vehicleDocuments", label: "Show vehicle documents", reason: false, permission: "drivers.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },

@@ -112,6 +112,11 @@ export function errorText(error: unknown): string {
   if (error.status === 401) return tr("Sign in again.");
   if (error.status === 409 && error.code === "version_mismatch") return tr("Someone else changed this record. It was reloaded; check it and try again.");
   if (error.status === 409 && error.reason === "on_trip") return tr("The driver is on a trip. Try again when the trip has ended.");
+  if (error.status === 409 && error.reason === "invitation_expired") return tr("This invitation has expired.");
+  if (error.status === 409 && error.reason === "invitation_closed") return tr("This invitation was already answered or withdrawn.");
+  if (error.status === 409 && error.reason === "driver_not_signed_up") return tr("That number has no account yet. Accept is possible once it signs up.");
+  if (error.status === 409 && error.reason === "already_in_fleet") return tr("The driver is already in a fleet.");
+  if (error.status === 404 && error.reason === "invitation_not_found") return tr("This invitation is no longer on the fleet.");
   if (error.status === 429) return error.retryAfterSeconds ? tr("Too many attempts. Wait {0} s.", [error.retryAfterSeconds]) : tr("Too many attempts. Wait.");
   if (error.status === 0) return error.message;
   const unexpected = error.status >= 500 || error.code === "internal" || error.code === "unavailable";

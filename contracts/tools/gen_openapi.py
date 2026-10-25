@@ -255,7 +255,19 @@ S["Fleet"] = obj({"fleetId": ref("Id"), "name": s(), "orgNumber": s("Organisatio
 S["FleetDriver"] = obj({"driverId": ref("Id"), "firstName": s(), "lastName": s(), "accountStatus": ref("DriverAccountStatus"),
                         "onlineStatus": ref("DriverOnlineStatus"), "vehicleId": ref("Id"), "linkedAt": ref("Timestamp")},
                        ["driverId", "firstName", "accountStatus", "onlineStatus", "linkedAt"])
-S["FleetView"] = obj({"fleet": ref("Fleet"), "drivers": arr(ref("FleetDriver")), "vehicles": arr(ref("Vehicle"))},
+S["FleetInvitationStatus"] = s(enum=["pending", "accepted", "declined", "cancelled", "expired"])
+S["FleetInvitation"] = obj({"invitationId": ref("Id"), "fleetId": ref("Id"), "fleetName": s(),
+                            "direction": s("driver_request: the driver asked with the code; owner_invite: the owner invited a phone number.", enum=["driver_request", "owner_invite"]),
+                            "driverId": {"allOf": [ref("Id")], "description": "The driver concerned; missing while an owner_invite waits for a number without an account."},
+                            "driverName": s(), "phone": s("owner_invite: the invited number (owner and admin views)."),
+                            "status": ref("FleetInvitationStatus"), "createdAt": ref("Timestamp"), "expiresAt": ref("Timestamp"),
+                            "decidedAt": ref("Timestamp"), "version": i(minimum=1)},
+                           ["invitationId", "fleetId", "fleetName", "direction", "status", "createdAt", "expiresAt", "version"],
+                           "v0.5.3 (contract.json#driverOnboarding.fleetInvitations): one side asks, the other accepts.")
+S["FleetInvitationList"] = obj({"items": arr(ref("FleetInvitation"))}, ["items"])
+S["FleetInviteRequest"] = obj({"phone": s("E.164; the driver's sign-in number.", pattern=r"^\+[1-9]\d{6,14}$")}, ["phone"], "v0.5.3: the owner invites a number.")
+S["FleetView"] = obj({"fleet": ref("Fleet"), "drivers": arr(ref("FleetDriver")), "vehicles": arr(ref("Vehicle")),
+                      "invitations": arr(ref("FleetInvitation"), description="v0.5.3: the pending invitations and requests (owner and admins; a member gets none).")},
                      ["fleet", "drivers", "vehicles"],
                      "v0.5.3: the fleet with its drivers (owner and admins; a member gets an empty list) and its cars.")
 S["FleetDriverEarnings"] = obj({"driverId": ref("Id"), "firstName": s(), "lastName": s(), "trips": i(minimum=0), "earnings": ref("Money")},
@@ -274,6 +286,7 @@ S["Driver"]["properties"].update({
                   enum=["self", "fleet"]),
     "requiredDocuments": arr(ref("DocumentType"), description="v0.5.3: the person's documents this account must have approved (contract.json#driverOnboarding.documents.required[country].driver)."),
     "requiredFleetDocuments": arr(ref("DocumentType"), description="v0.5.3: fleet accounts only: the company's documents (…required[country].fleet)."),
+    "pendingFleetInvitations": i("v0.5.3: pending invitations waiting for this account's answer (a driver's incoming invites, or an owner's incoming requests), for the badge.", minimum=0),
 })
 S["Vehicle"]["properties"].update({
     "fleetId": {"allOf": [ref("Id")], "description": "v0.5.3: the fleet that owns the car."},
@@ -532,7 +545,9 @@ S["AuthTokens"] = obj({"accessToken": s("JWT bearer token.", minLength=1), "refr
                       ["accessToken", "refreshToken"], "Signed in. Actor, subject id and zone scope are inside the access token.")
 S["ProviderSignInRequest"] = obj({"provider": s(enum=AU["providers"]), "idToken": s("The provider's identity token, verified server-side.", minLength=1),
                                   "app": s(enum=["rider", "driver"]), "name": s(maxLength=120)}, ["provider", "idToken", "app"])
-S["PhoneRequired"] = obj({"code": s(const="PHONE_REQUIRED"), "linkToken": s(minLength=1), "name": s()}, ["code", "linkToken"],
+S["PhoneRequired"] = obj({"code": s(const="PHONE_REQUIRED"), "linkToken": s(minLength=1), "name": s(),
+                          "firstName": s("v0.5.3: what the provider gave, for the driver's details screen; editable."), "lastName": s("v0.5.3"),
+                          "email": s("v0.5.3: may be Apple's hidden relay address; editable.", format="email")}, ["code", "linkToken"],
                          "No account is linked to this provider identity yet: verify a phone with this linkToken on the OTP calls and the account is created linked.")
 S["ProviderSignInResult"] = {"oneOf": [ref("AuthTokens"), ref("PhoneRequired")], "description": AU["providerNote"]}
 S["RefreshRequest"] = obj({"refreshToken": s(minLength=1)}, ["refreshToken"])
@@ -955,7 +970,7 @@ def path_id(name, desc=None):
     if desc: p["description"] = desc
     return p
 for nm in ["tripId", "offerId", "paymentId", "paymentMethodId", "placeId", "notificationId", "driverId", "riderId",
-           "vehicleId", "documentId", "approvalId", "fleetId"]:
+           "vehicleId", "documentId", "approvalId", "fleetId", "invitationId"]:
     PARAMS[nm[0].upper() + nm[1:]] = path_id(nm)
 PARAMS["RideId"] = path_id("rideId", "Deprecated alias of tripId.")
 PARAMS["ZoneId"] = path_id("zoneId")
@@ -1236,9 +1251,22 @@ op("post", "/driver/onboarding", "submitDriverOnboarding", "Send the sign-up det
         "accountStatus pending → on_hold.")
 op("get", "/driver/fleet", "getDriverFleet", "Own fleet: company, drivers and cars", ["driver"], "Driver · Fleet", ok=(200, "FleetView"),
    desc="v0.5.3. The owner sees the code (after approval), the drivers and the cars; a member sees the company and the cars, no code and no drivers. No fleet → 404.")
-op("post", "/driver/fleet/join", "joinFleet", "Join a fleet with its code, the owner's name and e-mail", ["driver"], "Driver · Fleet",
-   body="FleetJoinRequest", ok=(200, "Driver"), mutation=True,
-   desc="v0.5.3. Driver accounts only (a fleet account → 409 invalid_transition, fleet_account); already in a fleet → 409 invalid_transition (already_in_fleet).")
+op("post", "/driver/fleet/join", "joinFleet", "Ask to join a fleet with its code, the owner's name and e-mail", ["driver"], "Driver · Fleet",
+   body="FleetJoinRequest", ok=(201, "FleetInvitation"), mutation=True,
+   desc="v0.5.3. A pending driver_request the owner accepts or declines (contract.json#driverOnboarding.fleetInvitations); a pending request already open → 200 with it. "
+        "Driver accounts only (a fleet account → 409 invalid_transition, fleet_account); already in a fleet → 409 invalid_transition (already_in_fleet).")
+op("post", "/driver/fleet/invite", "inviteFleetDriver", "Owner: invite a driver by phone number", ["driver"], "Driver · Fleet",
+   body="FleetInviteRequest", ok=(201, "FleetInvitation"), mutation=True,
+   desc="v0.5.3. Owner of an approved fleet only (else 403 / 409 fleet_not_approved). A number already in a fleet → 409 invalid_transition (already_in_fleet); the owner's own number → 400. An open invite to the same number → 200 with it.")
+op("get", "/driver/fleet/invitations", "listFleetInvitations", "Pending invitations: incoming and own", ["driver"], "Driver · Fleet",
+   ok=(200, "FleetInvitationList"), desc="v0.5.3. A driver account: owner invites waiting for him and his own open request; an owner: his fleet's open requests and invites.")
+for seg, opid, summ, d in [
+    ("accept", "acceptFleetInvitation", "Accept (the driver an invite, the owner a request)", "Links the driver; his other pending invitations close. The driver on a trip → 409 (on_trip); already in a fleet → 409 (already_in_fleet); expired → 409 (invitation_expired)."),
+    ("decline", "declineFleetInvitation", "Decline (the driver an invite, the owner a request)", "Closed; the sender is told."),
+    ("cancel", "cancelFleetInvitation", "Cancel one's own request or invite", "Only the side that created it."),
+]:
+    op("post", f"/driver/fleet/invitations/{{invitationId}}/{seg}", opid, summ, ["driver"], "Driver · Fleet",
+       params=[pref("InvitationId")], ok=(200, "FleetInvitation"), mutation=True, desc=f"v0.5.3. {d} Not pending → 409 invalid_transition.")
 op("post", "/driver/fleet/leave", "leaveFleet", "Leave the fleet (not during a trip)", ["driver"], "Driver · Fleet", ok=(200, "Driver"), mutation=True,
    desc="v0.5.3. The car is released and the driver goes offline if online; on a trip → 409 invalid_transition (on_trip); the owner cannot leave (fleet_owner).")
 op("post", "/driver/fleet/drivers/{driverId}/remove", "removeFleetDriver", "Owner: remove a driver from the fleet", ["driver"], "Driver · Fleet",
@@ -1325,6 +1353,10 @@ op("post", "/admin/fleets/{fleetId}/review", "adminReviewFleet", "Approve / reje
    desc="v0.5.3. The first approval makes the join code (contract.json#driverOnboarding.fleetCode). Approving the fleet does not activate its owner as a driver: POST /admin/drivers/{driverId}/status does, when his own documents are approved.")
 op("post", "/admin/fleets/{fleetId}/code", "adminRenewFleetCode", "Make a new join code (the old one stops working)", ["admin"], "Admin · People",
    params=[pref("FleetId")], body="FleetCodeCommand", ok=(200, "Fleet"), mutation=True, permission="drivers.activate", desc="v0.5.3. Approved fleets only (409 invalid_transition).")
+for seg, opid, summ in [("accept", "adminAcceptFleetInvitation", "Accept a pending invitation or request for the fleet"), ("cancel", "adminCancelFleetInvitation", "Cancel a pending invitation or request")]:
+    op("post", f"/admin/fleets/{{fleetId}}/invitations/{{invitationId}}/{seg}", opid, summ, ["admin"], "Admin · People",
+       params=[pref("FleetId"), pref("InvitationId")], ok=(200, "FleetInvitation"), mutation=True, permission="drivers.activate",
+       desc="v0.5.3. The same effect as the driver's or owner's answer; written in the audit.")
 op("post", "/admin/fleets/{fleetId}/drivers/{driverId}/remove", "adminRemoveFleetDriver", "Remove a driver from a fleet", ["admin"], "Admin · People",
    params=[pref("FleetId"), pref("DriverId")], ok=(204, None), mutation=True, permission="drivers.activate",
    desc="v0.5.3. Same effect as the owner's POST /driver/fleet/drivers/{driverId}/remove; written in the audit.")
