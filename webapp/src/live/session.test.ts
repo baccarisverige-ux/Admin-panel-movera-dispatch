@@ -211,3 +211,19 @@ test("resolveBase: a URL loses its trailing slash; same origin takes the page's 
   assert.equal(resolveBase(" https://api.movera.se "), "https://api.movera.se");
   assert.equal(resolveBase(""), typeof location === "undefined" ? "" : location.origin);
 });
+
+test("the setup link is checked, then the first password signs the admin in", async () => {
+  const storage = memoryStorage();
+  const server = fakeServer([
+    () => respond(200, { email: "owner@movera.se", name: "Owner", expiresAt: "2026-10-29T08:00:00Z" }),
+    () => respond(200, session("access-1", "refresh-1")),
+  ]);
+  const client = createLiveClient({ baseUrl: "http://api.test", fetchImpl: server.fetchImpl, storage });
+  assert.deepEqual(await client.checkSetupLink("t".repeat(32)), { email: "owner@movera.se", name: "Owner", expiresAt: "2026-10-29T08:00:00Z" });
+  assert.equal((await client.setupPassword("t".repeat(32), "correct horse battery")).adminId, "A1");
+  assert.equal(server.calls[0].url, "http://api.test/api/v1/admin/auth/setup-password/check");
+  assert.deepEqual(server.calls[1].body, { setupToken: "t".repeat(32), password: "correct horse battery" });
+  assert.equal(server.calls[1].headers.get("Authorization"), null);
+  assert.equal(client.state()?.accessToken, "access-1");
+  assert.ok(storage.map.has(LIVE_SESSION_KEY));
+});

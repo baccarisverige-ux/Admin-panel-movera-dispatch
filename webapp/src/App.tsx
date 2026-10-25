@@ -62,6 +62,7 @@ const ZoneDetailPage = lazyPage(() => import("./pages/ZoneDetailPage"), "ZoneDet
 const ZonesPage = lazyPage(() => import("./pages/ZonesPage"), "ZonesPage");
 // Live mode (VITE_ADMIN_API=http or an http(s) URL): the people area reads the Movera server instead of the demo store.
 const LiveLoginPage = lazyPage(() => import("./live/LiveLoginPage"), "LiveLoginPage");
+const LiveSetupPasswordPage = lazyPage(() => import("./live/LiveSetupPasswordPage"), "LiveSetupPasswordPage");
 const LiveDriversPage = lazyPage(() => import("./live/LiveDriversPage"), "LiveDriversPage");
 const LiveDriverDetailPage = lazyPage(() => import("./live/LiveDriverDetailPage"), "LiveDriverDetailPage");
 const LiveFleetsPage = lazyPage(() => import("./live/LiveFleetsPage"), "LiveFleetsPage");
@@ -172,7 +173,14 @@ function Authed() {
   const { agent } = useSession();
   const live = useLiveSessionMaybe();
   const location = useLocation();
-  if (!agent) return live ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}><LiveLoginPage /></Suspense> : <LoginPage />;
+  if (!agent && live) {
+    return (
+      <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>
+        {location.pathname === "/setup-password" ? <LiveSetupPasswordPage /> : <LiveLoginPage />}
+      </Suspense>
+    );
+  }
+  if (!agent) return <LoginPage />;
   const page = pageForPath(location.pathname);
   const scope = new URLSearchParams(location.search).get("scope");
   const scopeDenied = Boolean(agent && scope && !canUseZone(agent, scope));

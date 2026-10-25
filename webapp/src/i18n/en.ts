@@ -5189,6 +5189,15 @@ export const en = {
   "Pending fleet invitations: {0}": "Pending fleet invitations: {0}",
   "Accept a fleet invitation": "Accept a fleet invitation",
   "Cancel a fleet invitation": "Cancel a fleet invitation",
+  "Choose your password": "Choose your password",
+  "For {0} ({1}). At least 10 characters.": "For {0} ({1}). At least 10 characters.",
+  "Repeat the password": "Repeat the password",
+  "The two passwords differ.": "The two passwords differ.",
+  "Save password": "Save password",
+  "Saving.": "Saving.",
+  "Checking the link.": "Checking the link.",
+  "This link is not valid any more. Ask for a new one.": "This link is not valid any more. Ask for a new one.",
+  "Choose the first password": "Choose the first password",
 } as const;
 
 export type MessageKey = keyof typeof en;

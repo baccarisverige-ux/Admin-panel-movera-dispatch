@@ -5191,4 +5191,13 @@ export const fr: Record<MessageKey, string> = {
   "Pending fleet invitations: {0}": "Invitations de flotte en attente : {0}",
   "Accept a fleet invitation": "Accepter une invitation de flotte",
   "Cancel a fleet invitation": "Annuler une invitation de flotte",
+  "Choose your password": "Choisissez votre mot de passe",
+  "For {0} ({1}). At least 10 characters.": "Pour {0} ({1}). Au moins 10 caractères.",
+  "Repeat the password": "Répétez le mot de passe",
+  "The two passwords differ.": "Les deux mots de passe diffèrent.",
+  "Save password": "Enregistrer le mot de passe",
+  "Saving.": "Enregistrement.",
+  "Checking the link.": "Vérification du lien.",
+  "This link is not valid any more. Ask for a new one.": "Ce lien n’est plus valable. Demandez-en un nouveau.",
+  "Choose the first password": "Choisir le premier mot de passe",
 };

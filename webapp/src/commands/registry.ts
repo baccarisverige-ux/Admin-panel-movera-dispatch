@@ -45,6 +45,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.auth.pickAgent", label: "Pick demo agent", reason: false, permission: "overview.read" },
   // Live mode (src/live): the server decides and writes the audit; the note travels in the request body.
   { id: "admin.server.signIn", label: "Sign in to the server", reason: false, permission: "overview.read" },
+  { id: "admin.server.setupPassword", label: "Choose the first password", reason: false, permission: "overview.read" },
   { id: "admin.server.reload", label: "Reload from the server", reason: false, permission: "overview.read" },
   { id: "admin.server.loadMore", label: "Load more rows", reason: false, permission: "overview.read" },
   { id: "admin.server.openRecord", label: "Open record", reason: false, permission: "overview.read" },

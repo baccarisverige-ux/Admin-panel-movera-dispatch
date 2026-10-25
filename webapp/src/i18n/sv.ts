@@ -5191,4 +5191,13 @@ export const sv: Record<MessageKey, string> = {
   "Pending fleet invitations: {0}": "Väntande åkeriinbjudningar: {0}",
   "Accept a fleet invitation": "Acceptera en åkeriinbjudan",
   "Cancel a fleet invitation": "Avbryt en åkeriinbjudan",
+  "Choose your password": "Välj ditt lösenord",
+  "For {0} ({1}). At least 10 characters.": "För {0} ({1}). Minst 10 tecken.",
+  "Repeat the password": "Upprepa lösenordet",
+  "The two passwords differ.": "De två lösenorden skiljer sig.",
+  "Save password": "Spara lösenord",
+  "Saving.": "Sparar.",
+  "Checking the link.": "Kontrollerar länken.",
+  "This link is not valid any more. Ask for a new one.": "Länken gäller inte längre. Be om en ny.",
+  "Choose the first password": "Välj det första lösenordet",
 };

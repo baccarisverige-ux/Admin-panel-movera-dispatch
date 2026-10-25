@@ -153,6 +153,19 @@ export function createLiveClient(options: Options) {
       return session.admin;
     },
 
+    /** The setup link's token (contract §9): who it is for, or the server's error (expired, used). */
+    async checkSetupLink(setupToken: string): Promise<{ email: string; name: string; expiresAt: string }> {
+      const response = await apiFetch(base, `${API_PREFIX}/admin/auth/setup-password/check`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ setupToken }) }, fetchImpl);
+      return (await response.json()) as { email: string; name: string; expiresAt: string };
+    },
+
+    /** Chooses the first password with the setup link's token; the answer is a session, so the admin is signed in. */
+    async setupPassword(setupToken: string, password: string): Promise<AdminMe> {
+      const session = await authCall("/admin/auth/setup-password", { setupToken, password });
+      setState(fromSession(session));
+      return session.admin;
+    },
+
     /** Revokes the session on the server (204, idempotent) and forgets the tokens whatever the server answers. */
     async signOut(): Promise<void> {
       const token = state?.accessToken;
