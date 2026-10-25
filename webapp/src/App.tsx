@@ -9,6 +9,8 @@ import { LoginPage } from "./pages/LoginPage";
 import { NotFoundRecord } from "./ui/NotFoundRecord";
 import { I18nProvider } from "./i18n/I18nProvider";
 import { tr, trx } from "./i18n";
+import { useAdminApi } from "./api/AdminApiContext";
+import { LiveSessionProvider, useLiveSessionMaybe } from "./live/LiveSessionContext";
 
 // Pages load on first visit, so the sign-in screen and the shell do not wait for every page and map library.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same constraint as React.lazy itself
@@ -58,10 +60,31 @@ const AdminPage = lazyPage(() => import("./pages/AdminPage"), "AdminPage");
 const VehicleDetailPage = lazyPage(() => import("./pages/VehicleDetailPage"), "VehicleDetailPage");
 const ZoneDetailPage = lazyPage(() => import("./pages/ZoneDetailPage"), "ZoneDetailPage");
 const ZonesPage = lazyPage(() => import("./pages/ZonesPage"), "ZonesPage");
+// Live mode (VITE_ADMIN_API=http or an http(s) URL): the people area reads the Movera server instead of the demo store.
+const LiveLoginPage = lazyPage(() => import("./live/LiveLoginPage"), "LiveLoginPage");
+const LiveDriversPage = lazyPage(() => import("./live/LiveDriversPage"), "LiveDriversPage");
+const LiveDriverDetailPage = lazyPage(() => import("./live/LiveDriverDetailPage"), "LiveDriverDetailPage");
+const LiveFleetsPage = lazyPage(() => import("./live/LiveFleetsPage"), "LiveFleetsPage");
+const LiveFleetDetailPage = lazyPage(() => import("./live/LiveFleetDetailPage"), "LiveFleetDetailPage");
+const LiveVehiclesPage = lazyPage(() => import("./live/LiveVehiclesPage"), "LiveVehiclesPage");
+
+/** The screens that exist against the server; every other menu id keeps its demo page. */
+function LiveScreen({ id }: { id: string }) {
+  if (id === "drivers") return <LiveDriversPage />;
+  if (id === "onboarding") return <LiveDriversPage initialStatus="on_hold" title="Onboarding" />;
+  if (id === "fleets") return <LiveFleetsPage />;
+  if (id === "vehicles") return <LiveVehiclesPage />;
+  return null;
+}
 
 function Screen({ id }: { id: string }) {
   const item = menuItem(id);
+  const live = useLiveSessionMaybe();
   if (!item) return <NotFound />;
+  if (live) {
+    const screen = LiveScreen({ id });
+    if (screen) return screen;
+  }
   if (item.coming) return <ComingPage title={trx(item.label)} order={item.coming} />;
   if (id === "audit") return <AuditPage />;
   if (id === "settings") return <ConfigPage />;
@@ -121,8 +144,11 @@ function NoAccess() {
 
 function Shell({ page, children, forceNoAccess = false, redirect = false }: { page: MenuItem | undefined; children: ReactNode; forceNoAccess?: boolean; redirect?: boolean }) {
   const { agent } = useSession();
+  const live = useLiveSessionMaybe();
   // Default deny: a route with no page entry (and so no permission) never renders its screen.
-  const denied = forceNoAccess || (page && agent && !can(agent.role, page.permission));
+  // Live mode asks the server's expanded permission list, not the panel's role tables.
+  const allowed = (permission: string) => (live ? live.can(permission) : agent ? can(agent.role, permission) : false);
+  const denied = forceNoAccess || (page && agent && !allowed(page.permission));
   const shown: MenuItem = page ?? {
     id: "not-found",
     path: "/404",
@@ -144,15 +170,16 @@ function Shell({ page, children, forceNoAccess = false, redirect = false }: { pa
 
 function Authed() {
   const { agent } = useSession();
+  const live = useLiveSessionMaybe();
   const location = useLocation();
-  if (!agent) return <LoginPage />;
+  if (!agent) return live ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}><LiveLoginPage /></Suspense> : <LoginPage />;
   const page = pageForPath(location.pathname);
   const scope = new URLSearchParams(location.search).get("scope");
   const scopeDenied = Boolean(agent && scope && !canUseZone(agent, scope));
   return (
     <Shell page={page} forceNoAccess={scopeDenied} redirect={isRedirectPath(location.pathname)}>
       <Routes>
-        <Route index element={<Screen id="dashboard" />} />
+        <Route index element={live ? <Navigate to="/drivers" replace /> : <Screen id="dashboard" />} />
         <Route path="reports" element={<Screen id="reports" />} />
         <Route path="handover" element={<Screen id="handover" />} />
         <Route path="trips" element={<Screen id="trips" />} />
@@ -164,14 +191,14 @@ function Authed() {
         <Route path="offers" element={<Screen id="offers" />} />
         <Route path="alerts" element={<Screen id="alerts" />} />
         <Route path="drivers" element={<Screen id="drivers" />} />
-        <Route path="drivers/:driverId" element={<DriverDetailPage />} />
+        <Route path="drivers/:driverId" element={live ? <LiveDriverDetailPage /> : <DriverDetailPage />} />
         <Route path="onboarding" element={<Screen id="onboarding" />} />
         <Route path="riders" element={<Screen id="riders" />} />
         <Route path="riders/:riderId" element={<RiderDetailPage />} />
         <Route path="fleets" element={<Screen id="fleets" />} />
-        <Route path="fleets/:ownerId" element={<FleetOwnerDetailPage />} />
+        <Route path="fleets/:ownerId" element={live ? <LiveFleetDetailPage /> : <FleetOwnerDetailPage />} />
         <Route path="vehicles" element={<Screen id="vehicles" />} />
-        <Route path="vehicles/:id" element={<VehicleDetailPage />} />
+        <Route path="vehicles/:id" element={live ? <LiveVehiclesPage /> : <VehicleDetailPage />} />
         <Route path="payments" element={<Screen id="payments" />} />
         <Route path="payments/:id" element={<PaymentPage />} />
         <Route path="payouts" element={<Screen id="payouts" />} />
@@ -205,13 +232,15 @@ function Authed() {
 }
 
 export function App() {
+  const api = useAdminApi();
+  const body = (
+    <I18nProvider>
+      <Authed />
+    </I18nProvider>
+  );
   return (
     <BrowserRouter basename={routerBasename()}>
-      <SessionProvider>
-        <I18nProvider>
-          <Authed />
-        </I18nProvider>
-      </SessionProvider>
+      {api.kind === "http" ? <LiveSessionProvider>{body}</LiveSessionProvider> : <SessionProvider>{body}</SessionProvider>}
     </BrowserRouter>
   );
 }

@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { IDLE_MS, isIdle, signIn, type Agent } from "./permissions";
 import { lastActivity, markActivity, readAgents, sessionAgentId, writeAgents, writeSession } from "./sessionStore";
 
-type SessionValue = {
+export type SessionValue = {
   agent: Agent | null;
   agents: Agent[];
   error: string | null;
@@ -13,7 +13,8 @@ type SessionValue = {
   setAgents: (next: Agent[]) => void;
 };
 
-const SessionContext = createContext<SessionValue | null>(null);
+/** Exported so the live mode (src/live) can provide an Agent-like value built from the server's AdminMe. */
+export const SessionContext = createContext<SessionValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();

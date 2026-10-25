@@ -184,6 +184,13 @@ export function useCommands() {
       setMessage("A reason is required.");
       return undefined;
     }
+    // Live mode (src/live): the server has no demo command endpoint. A screen-only command (menu, sign out, tabs,
+    // close a dialog) runs in the browser; the live screens send their own requests with the bearer token.
+    if (api.kind === "http" && spec.scope === "global") {
+      setPhase("committed");
+      setMessage("");
+      return { message: "", operationId: extra.idempotencyKey ?? newIdempotencyKey(id), status: "committed" as const, rev: 0 };
+    }
 
     lock.current = true;
     setGlobalCommandBusy(true);

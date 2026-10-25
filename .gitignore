@@ -1,5 +1,6 @@
 webapp/node_modules/
 webapp/dist/
+webapp/dist-live/
 webapp/tsconfig.tsbuildinfo
 webapp/test-results/
 webapp/playwright-report/
