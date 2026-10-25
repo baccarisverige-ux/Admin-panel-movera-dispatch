@@ -41,12 +41,35 @@ jobs:
           npx tsc -b
           npx vite build --base=/Admin-panel-movera-dispatch/
 
+      # The live admin (the test week's server) next to the demo, once the repository variable
+      # MOVERA_LIVE_API_URL names the server (e.g. https://movera-server-xxxx.onrender.com).
+      - name: Build the live admin
+        if: ${{ vars.MOVERA_LIVE_API_URL != '' }}
+        working-directory: webapp
+        env:
+          VITE_BUILD_SHA: ${{ github.sha }}
+          VITE_GOOGLE_MAPS_KEY: ${{ secrets.VITE_GOOGLE_MAPS_KEY }}
+          VITE_ADMIN_API: ${{ vars.MOVERA_LIVE_API_URL }}
+        run: |
+          case "$VITE_ADMIN_API" in https://*) ;; *) echo "::error::MOVERA_LIVE_API_URL must start with https://"; exit 1 ;; esac
+          mv dist dist-demo
+          npx vite build --base=/Admin-panel-movera-dispatch/live/
+          mv dist dist-live
+          mv dist-demo dist
+
       - name: Assemble the site
         run: |
           mkdir -p _site/legacy _site/app
           cp index.html app.js styles.css _site/legacy/
           cp -r webapp/dist/. _site/
           cp _site/index.html _site/404.html
+          if [ -d webapp/dist-live ]; then
+            mkdir -p _site/live/setup-password
+            cp -r webapp/dist-live/. _site/live/
+            # The server's password link opens /live/setup-password; other unknown /live/ paths go to the live start.
+            cp _site/live/index.html _site/live/setup-password/index.html
+            sed -i 's#<head>#<head><script>if(location.pathname.indexOf("/Admin-panel-movera-dispatch/live/")===0)location.replace("/Admin-panel-movera-dispatch/live/")</script>#' _site/404.html
+          fi
           printf '%s\n' '<!doctype html><meta http-equiv="refresh" content="0;url=/Admin-panel-movera-dispatch/"><link rel="canonical" href="/Admin-panel-movera-dispatch/"><script>location.replace("/Admin-panel-movera-dispatch/")</script>' > _site/app/index.html
           echo "${GITHUB_SHA}" > _site/version.txt
           echo "${GITHUB_SHA}" > _site/app/version.txt

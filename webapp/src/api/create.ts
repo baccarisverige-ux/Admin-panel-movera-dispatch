@@ -68,7 +68,8 @@ export type CommandInput = {
 
 export type CommandResult = {
   message: string;
-  db: DemoDb;
+  /** The demo store after the command (simulation adapter only; a screen-only command in live mode has none). */
+  db?: DemoDb;
   operationId: string;
   status: "committed" | "pending_approval";
   rev: number;

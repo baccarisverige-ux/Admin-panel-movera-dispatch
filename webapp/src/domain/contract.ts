@@ -4,7 +4,7 @@ import { formatMoney } from "./money.ts";
 export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
-export const CONTRACT_VERSION = "0.5.0" as const;
+export const CONTRACT_VERSION = "0.5.3" as const;
 
 /** The 19 trip statuses of contract v0.3.0 (contract.json#tripStatus.values), in lifecycle order. */
 export const TRIP_STATUSES = [
@@ -89,7 +89,8 @@ export const TRANSITIONS: readonly Transition[] = [
   { command: "start_search", actor: "system", from: ["requested"], to: "searching" },
   { command: "send_offer", actor: "system", from: ["searching"], to: "offered" },
   { command: "offer_lapsed", actor: "system", from: ["offered"], to: "searching" },
-  { command: "accept", actor: "driver", from: ["offered", "requested"], to: "accepted" },
+  { command: "accept", actor: "driver", from: ["offered"], to: "accepted" },
+  { command: "accept", actor: "driver", from: ["requested"], to: "accepted", when: "scheduled" },
   { command: "assign", actor: "admin", from: ["requested", "searching", "offered"], to: "offered" },
   { command: "head_to_pickup", actor: "driver", from: ["accepted"], to: "driver_to_pickup" },
   { command: "arrive", actor: "driver", from: ["driver_to_pickup"], to: "arrived" },
