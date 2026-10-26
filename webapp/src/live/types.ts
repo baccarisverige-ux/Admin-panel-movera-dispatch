@@ -151,3 +151,42 @@ export type FleetInvitation = {
 export type FleetView = { fleet: Fleet; drivers: FleetDriver[]; vehicles: Vehicle[]; invitations?: FleetInvitation[] };
 
 export type Page<T> = { items: T[]; nextCursor: string | null };
+
+/** contract Money: integer minor units. */
+export type LiveMoney = { amountMinor: number; currency: string };
+export type TripPlace = { address?: string; lat: number; lng: number };
+
+/** contract TripProjection as GET /admin/trips and GET /admin/trips/{tripId} send it (the fields the panel reads). */
+export type Trip = {
+  tripId: string;
+  status: string;
+  version: number;
+  kind: "live" | "scheduled";
+  scheduledAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  acceptedAt?: string;
+  riderId: string;
+  driverId?: string;
+  vehicleId?: string;
+  zoneId: string;
+  categoryId: string;
+  pickup: TripPlace;
+  dropoff: TripPlace;
+  stops: TripPlace[];
+  fare: LiveMoney;
+  fareLines?: { code: string; amount: LiveMoney }[];
+  driverEarnings?: LiveMoney;
+  commission?: LiveMoney;
+  driverBonus?: LiveMoney;
+  paymentMethod: string;
+  paymentStatus?: string;
+  driver?: { driverId: string; firstName: string; vehicle?: { vehicleId?: string; make?: string; model?: string; color?: string; plate?: string } };
+  cancellation?: { actor: string; reasonCode: string; at: string; fee: LiveMoney | null; note?: string; feeStatus?: string };
+};
+
+/** contract Offer (GET /admin/trips/{tripId}/offers). */
+export type TripOffer = { offerId: string; kind: string; status: string; expiresAt: string; fare: LiveMoney; driverEarnings?: LiveMoney; source?: string };
+
+/** contract Refund (201 of POST /admin/trips/{tripId}/refund). */
+export type Refund = { refundId: string; amount: LiveMoney; status: string; reason: string };

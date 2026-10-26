@@ -92,6 +92,16 @@ export const MENU: MenuItem[] = [
   { id: "design", path: "/design", label: "Design", group: "Platform", permission: "system.read", icon: "Palette" },
 ];
 
+/**
+ * The menu pages that read the Movera server in a live build (VITE_ADMIN_API set). Every other page still shows the
+ * browser's demo data: a live build hides it from the menu and marks it "Demo, not live" when opened by its address.
+ */
+export const LIVE_PAGE_IDS: readonly string[] = ["drivers", "trips", "fleets", "vehicles", "onboarding"];
+
+export function isLivePage(id: string): boolean {
+  return LIVE_PAGE_IDS.includes(id);
+}
+
 const DETAILS: { pattern: RegExp; id: string }[] = [
   { pattern: /^\/drivers\/[^/]+$/, id: "drivers" },
   { pattern: /^\/fleets\/[^/]+$/, id: "fleets" },
