@@ -4,7 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
 import { AppShell } from "./layout/AppShell";
-import { isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
+import { isLivePage, isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundRecord } from "./ui/NotFoundRecord";
 import { I18nProvider } from "./i18n/I18nProvider";
@@ -68,6 +68,8 @@ const LiveDriverDetailPage = lazyPage(() => import("./live/LiveDriverDetailPage"
 const LiveFleetsPage = lazyPage(() => import("./live/LiveFleetsPage"), "LiveFleetsPage");
 const LiveFleetDetailPage = lazyPage(() => import("./live/LiveFleetDetailPage"), "LiveFleetDetailPage");
 const LiveVehiclesPage = lazyPage(() => import("./live/LiveVehiclesPage"), "LiveVehiclesPage");
+const LiveTripsPage = lazyPage(() => import("./live/LiveTripsPage"), "LiveTripsPage");
+const LiveTripDetailPage = lazyPage(() => import("./live/LiveTripDetailPage"), "LiveTripDetailPage");
 
 /** The screens that exist against the server; every other menu id keeps its demo page. */
 function LiveScreen({ id }: { id: string }) {
@@ -75,6 +77,7 @@ function LiveScreen({ id }: { id: string }) {
   if (id === "onboarding") return <LiveDriversPage initialStatus="on_hold" title="Onboarding" />;
   if (id === "fleets") return <LiveFleetsPage />;
   if (id === "vehicles") return <LiveVehiclesPage />;
+  if (id === "trips") return <LiveTripsPage />;
   return null;
 }
 
@@ -162,6 +165,11 @@ function Shell({ page, children, forceNoAccess = false, redirect = false }: { pa
     <AppShell page={shown}>
       <AssignPanelProvider>
         <section className="page active" data-page={shown.id}>
+          {live && page && !isLivePage(page.id) && !denied ? (
+            <p className="live-demo-banner" role="note" data-testid="demo-banner">
+              {tr("Demo, not live: this page shows sample data kept in this browser, not the Movera server. Nothing here reaches riders or drivers.")}
+            </p>
+          ) : null}
           {denied ? <NoAccess /> : page || redirect ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>{children}</Suspense> : <NotFound />}
         </section>
       </AssignPanelProvider>
@@ -191,7 +199,7 @@ function Authed() {
         <Route path="reports" element={<Screen id="reports" />} />
         <Route path="handover" element={<Screen id="handover" />} />
         <Route path="trips" element={<Screen id="trips" />} />
-        <Route path="trips/:tripId" element={<TripPage />} />
+        <Route path="trips/:tripId" element={live ? <LiveTripDetailPage /> : <TripPage />} />
         <Route path="reservations" element={<Screen id="reservations" />} />
         <Route path="reservations/:id" element={<ReservationDetailPage />} />
         <Route path="live" element={<Screen id="live" />} />

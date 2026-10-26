@@ -6,7 +6,7 @@ import { StatusDot } from "../ui/kit";
 import { Modal } from "../ui/Modal";
 import { tr, trx, uiLocale } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
-import { errorText, shortDate } from "./format";
+import { errorText, shortDate, shortDateTime } from "./format";
 import type { Page } from "./types";
 
 /** A failed call, in words: the server's message, "Your role cannot do that." on 403, the request id when unexpected. */
@@ -31,9 +31,9 @@ export function Status({ code }: { code: string }) {
   return <StatusDot tone={status.tone}>{trx(status.label)}</StatusDot>;
 }
 
-export function DateText({ value }: { value: string | undefined }) {
+export function DateText({ value, withTime = false }: { value: string | undefined; withTime?: boolean }) {
   if (!value) return <span className="live-muted">—</span>;
-  return <time dateTime={value}>{shortDate(value, uiLocale())}</time>;
+  return <time dateTime={value}>{withTime ? shortDateTime(value, uiLocale()) : shortDate(value, uiLocale())}</time>;
 }
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {

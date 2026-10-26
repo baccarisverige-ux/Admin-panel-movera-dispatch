@@ -6,7 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: /live-people\.spec\.ts/,
+  testMatch: /live-[a-z-]+\.spec\.ts/,
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
   use: {
