@@ -311,6 +311,18 @@ textarea:focus {
   font-size: 28px
 }
 
+.login-help {
+  font-size: 14px
+}
+
+.login-help summary {
+  cursor: pointer
+}
+
+.login-help p {
+  margin: 8px 0 0
+}
+
 .demo-agents {
   list-style: none;
   margin: 0;

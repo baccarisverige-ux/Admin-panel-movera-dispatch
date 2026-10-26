@@ -181,6 +181,13 @@ async function signIn(page: Page) {
   await expect(page.getByRole("heading", { level: 2, name: "Drivers" })).toBeVisible();
 }
 
+test("forgot password: the sign-in page says how to get a new password link", async ({ page }) => {
+  await fakeServer(page);
+  await page.goto("/");
+  await page.getByText("Forgot your password?").click();
+  await expect(page.getByText("Ask a Super admin for a new password link.", { exact: false })).toBeVisible();
+});
+
 test("wrong password gives one plain message; the tokens never reach localStorage", async ({ page }) => {
   await fakeServer(page);
   await page.goto("/");

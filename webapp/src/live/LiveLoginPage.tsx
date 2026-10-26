@@ -33,6 +33,11 @@ export function LiveLoginPage() {
         <button className="primary-btn" type="submit" data-command="admin.server.signIn" disabled={live.busy}>
           {live.busy ? tr("Signing in.") : tr("Sign in")}
         </button>
+        {/* Audit Phase 4: the only way back in after a forgotten password (no e-mail provider yet). */}
+        <details className="login-help">
+          <summary>{tr("Forgot your password?")}</summary>
+          <p>{tr("Ask a Super admin for a new password link. If you are the only Super admin, the server's operator makes one (deploy guide: “Forgot the admin password”).")}</p>
+        </details>
       </form>
     </main>
   );

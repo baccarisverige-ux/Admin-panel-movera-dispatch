@@ -5125,6 +5125,8 @@ export const en = {
   "Search by plate, make or model": "Search by plate, make or model",
   "Seats": "Seats",
   "Sending.": "Sending.",
+  "Forgot your password?": "Forgot your password?",
+  "Ask a Super admin for a new password link. If you are the only Super admin, the server's operator makes one (deploy guide: “Forgot the admin password”).": "Ask a Super admin for a new password link. If you are the only Super admin, the server's operator makes one (deploy guide: “Forgot the admin password”).",
   "Sign in with your Movera admin e-mail and password.": "Sign in with your Movera admin e-mail and password.",
   "Signing in.": "Signing in.",
   "Someone else changed this record. It was reloaded; check it and try again.": "Someone else changed this record. It was reloaded; check it and try again.",

@@ -5127,6 +5127,8 @@ export const sv: Record<MessageKey, string> = {
   "Search by plate, make or model": "Sök på registreringsnummer, märke eller modell",
   "Seats": "Platser",
   "Sending.": "Skickar.",
+  "Forgot your password?": "Glömt lösenordet?",
+  "Ask a Super admin for a new password link. If you are the only Super admin, the server's operator makes one (deploy guide: “Forgot the admin password”).": "Be en superadministratör om en ny lösenordslänk. Är du den enda superadministratören gör serverns driftansvarige en (driftguiden: ”Forgot the admin password”).",
   "Sign in with your Movera admin e-mail and password.": "Logga in med din e-post och ditt lösenord som Movera-administratör.",
   "Signing in.": "Loggar in.",
   "Someone else changed this record. It was reloaded; check it and try again.": "Någon annan ändrade den här posten. Den har laddats om; kontrollera och försök igen.",
