@@ -6,13 +6,13 @@ Branch `audit/phase-1`, base `origin/main` @ 2614394. Documentation only.
 - [x] 1 Structure and architecture
 - [x] 2 Dependencies
 - [x] 3 CI
-- [ ] 4 Baseline run
+- [x] 4 Baseline run
 - [x] 5 Coverage
 - [x] 6 Page inventory
 - [x] 7 Code quality
-- [ ] 8 Live test week gaps
-- [ ] 9 Untested features and risks
-- [ ] 10 Summary
+- [x] 8 Live test week gaps
+- [x] 9 Untested features and risks
+- [x] 10 Summary
 
 ## 1. Structure and architecture
 
@@ -103,3 +103,73 @@ Actions: demo pages run the 412 registry commands (counts per entity in section 
 - Console logging: no `console.log/info/debug/warn/error` in non-test src.
 - ESLint: 0 errors, **39 warnings** (react-hooks/exhaustive-deps etc.).
 - Error handling: live pages map server errors (stale version reload e2e-tested `live-people.spec.ts:240`); demo pages in live mode get a generic "Admin API is not connected."
+
+## 4. Baseline run (webapp/, 2026-10-26, Node v22.22.0, sandbox container)
+
+| Step | Result | Wall time |
+|---|---|---|
+| `npm ci` | ok (warns: run npm audit) | 25 s |
+| `npx tsc -b` | exit 0 | 42 s |
+| `npm run lint` | exit 0, **0 errors / 39 warnings** | 29 s |
+| `npm test` (node --test, 93 files) | **257 pass / 0 fail** | 33 s |
+| `npm run build` | exit 0, chunk-size warning | 179–194 s |
+| `npx playwright test` (CI=1: prod build + preview, retries 1) | **239 passed, 4 flaky, 2 failed** of 245 | 28.8 min (1735 s) |
+| `npm run e2e:live` (CI=1) | **6 / 6 passed** | 57 s |
+
+Browser note: the repo pins @playwright/test 1.63.0 (wants chromium build 1243); the container has build 1194, so both e2e runs launched `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` via `executablePath` (main config through a temporary wrapper config, not committed; live config via its `PW_CHROMIUM` env). A browser-version effect on the failures cannot be excluded.
+
+Failures (both failed again on a single rerun with `--retries=0`, so reproducible here, not flaky):
+1. `e2e/dispatch.spec.ts:136` "live: alerts, pause a zone needs approval, send a rider to a radar" — `locator.click: Test timeout of 30000ms exceeded.` waiting for `getByTestId('assign-panel').getByTestId('assign-radar').getByRole('button', { name: /^Send radar/ })`; the button resolved, visible, enabled and stable, title "No free driver inside right now. The radar still goes out and reaches drivers who come in.", click never completed (line 149).
+2. `e2e/touch-draw.spec.ts:39` "bonus areas: rectangle, circle, shape and free hand with a finger" — `touchscreen.tap: Test timeout of 60000ms exceeded.` at line 22 (first run, retry: `locator.tap` timeout waiting for toolbar "Bonus drawing tools" button "Free hand", line 70).
+
+Flaky (failed first, passed on retry): `fleet.spec.ts:113` (driver on a trip map), `map-money-back-supply.spec.ts:14` (Dispatch supply vs demand), `operations.spec.ts:49` (trip page who gets what), `touch-draw.spec.ts:76` (new zone drawn with a finger: `page.waitForFunction` 60 s timeout waiting for `window.__moveraMap`). All are map-heavy.
+
+## 8. Live test week: what the live panel can and cannot do
+
+Server admin routes (read-only grep of `/home/user/movera-server/src`, all under `/api/v1`): auth (sign-in, refresh, me, sign-out, setup-password[/check]), `POST admin/agents/:adminId/setup-link`, approvals list + decision, audit, config `GET/PUT :doc` + `POST :doc/publish`, documents file + review, drivers list/detail/status, fleets list/detail/code/review/invitations/remove driver, `GET admin/live/drivers` (`drivers/routes.ts:153`), payments list, refunds payouts list + `POST refunds/:refundId/paid` (`admin/tripRoutes.ts:92`), riders list + status, trips list/detail/nearby-drivers/offers/trace, trip commands cancel/reassign/assign/radar-group/no-show/complete/driver-bonus/adjust/refund (`admin/tripRoutes.ts:109-117`), vehicles list + review, zone dispatch-control GET/PUT.
+
+Panel live calls (`webapp/src/live/*`): auth, drivers, driver status, documents file/review, fleets (detail, code, review, invitations accept/cancel, remove driver), vehicles list/review. That is all.
+
+**Can do live:** sign in / set password, see drivers and onboarding queue, review documents (incl. invitations, fleets, vehicles), activate/suspend drivers, fleet codes and memberships.
+
+**Cannot do live although the server has the route:** trips list and trip detail/trace; any trip intervention (cancel, reassign, manual assign, radar group, no-show, complete, adjust, driver bonus); **refunds** and marking refund payouts paid; payments list; riders list and rider suspend; live driver map (`admin/live/drivers`); dispatch control per zone; config draft/publish (pricing/settings publish to server); approvals (second-admin) and audit log; admin team setup links.
+**Cannot do live and the server has no admin route (grep found none):** manual booking for a rider, reservations, zones geometry publish (zone book is browser-local), support tickets/chat, incidents/safety, messages/content/promotions/reviews, payouts to drivers, reports/dashboard.
+Owner risk: the live menu shows all these pages (section 1); they show "Admin API is not connected" style errors or demo-only behaviour.
+
+## 9. Untested features and risks
+
+| Sev | Risk | Evidence |
+|---|---|---|
+| S1 | Operators cannot intervene in live trips (cancel/reassign/refund) from the panel during the test week; would need DB or API by hand | section 8 |
+| S2 | Live build exposes ~29 demo-only pages without a "not live" marker; owner/operators may believe actions took effect | `App.tsx:82-125`, `create.ts:880-897` |
+| S2 | Zone and pricing edits saved in browser localStorage in live mode, never reach the server | `zones/bookStore.ts:70-118` |
+| S2 | maplibre-gl critical XSS advisory in prod deps; zod high | section 2 |
+| S2 | 2 e2e tests fail reproducibly (dispatch radar, touch-draw bonus areas) + 4 flaky map tests; CI has retries=1 | section 4 |
+| S2 | pages.yml deploys main without waiting for webapp-ci (no e2e/lint gate before deploy) | `.github/workflows/pages.yml` |
+| S3 | Client-side copies of fare/cancel-fee/refund/ledger rules may drift from server (demo shows numbers the server would not) | section 7 |
+| S3 | Live pages covered only by 6 e2e tests on a faked server; no test against a real movera-server | `playwright.live.config.ts` |
+| S3 | No coverage for any `.tsx`; `payments/finance.ts` 47.7% branches; `pricing/quote.ts` lines 66-89 untested | section 5 |
+| S3 | Gates and Design pages have no e2e | section 6 |
+| S4 | 39 ESLint warnings, chunks 0.9–1.0 MB, vite/source-map-js dev advisories, browser matrix workflow dormant | sections 2–4 |
+
+## 10. Summary — top 10 findings
+
+| # | Sev | Finding | Action | Phase |
+|---|---|---|---|---|
+| 1 | S1 | Live panel has no trips list/detail or trip interventions though server routes exist | Build live Trips + trip commands on `admin/trips*` | 5 (before test week) |
+| 2 | S1 | No live refunds / refund payouts / payments | Wire `trips/:id/refund`, `refunds/payouts`, `refunds/:id/paid`, `payments` | 5 |
+| 3 | S2 | Live build shows ~29 demo-only pages as if live | Hide or badge non-live menu items in live mode | 2/5 (quick) |
+| 4 | S2 | Zones/pricing edits stored in localStorage even in live mode; config publish not wired | Wire `admin/config/:doc` + publish; block local book in live | 5 |
+| 5 | S2 | No live riders list/suspend, live driver map, dispatch control, approvals, audit | Wire existing server routes | 5 |
+| 6 | S2 | maplibre-gl critical + zod high in prod deps | Upgrade zod (audit fix) and maplibre-gl 6.x | 2 |
+| 7 | S2 | 2 reproducible e2e failures + 4 flaky map tests | Triage in CI's real browser; fix or quarantine | 2 |
+| 8 | S2 | Deploy (pages.yml) not gated on webapp-ci | Require checks / branch protection (D1) | 2 |
+| 9 | S3 | CI lacks npm audit, secret scan, coverage, timeouts, format check | Add per Phase 2 table | 2 |
+| 10 | S3 | Live pages tested only on a faked server; client business rules duplicated | Add live e2e against real server in Phase 3 harness | 3 |
+
+## NOT VERIFIED
+- Live build behaviour of demo pages in a browser (derived from code only).
+- Branch protection settings on GitHub (not queried).
+- Whether e2e failures also happen with chromium 1243 / in GitHub CI (sandbox has 1194 only).
+- Google Maps key referrer restriction.
+- Agreement of client-side money rules with the server.
