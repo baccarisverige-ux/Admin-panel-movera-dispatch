@@ -61,6 +61,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.invitationAccept", label: "Accept a fleet invitation", reason: false, permission: "drivers.activate" },
   { id: "admin.server.invitationCancel", label: "Cancel a fleet invitation", reason: false, permission: "drivers.activate" },
   { id: "admin.server.vehicleReview", label: "Decide a vehicle", reason: false, permission: "vehicles.edit" },
+  { id: "admin.server.tripRefund", label: "Refund a trip", reason: false, permission: "payments.refund" },
   { id: "admin.server.vehicleDocuments", label: "Show vehicle documents", reason: false, permission: "drivers.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },
   // The id is kept for older audit rows; the demo amount is above the default 500 kr second-admin limit.

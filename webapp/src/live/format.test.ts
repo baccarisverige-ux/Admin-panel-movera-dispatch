@@ -4,7 +4,7 @@ import { ApiError } from "../api/httpClient.ts";
 import { contractJson } from "../contract/load.ts";
 import { registerDictionary, setLanguage } from "../i18n/core.ts";
 import { sv } from "../i18n/sv.ts";
-import { adminCan, agentFromAdmin, documentCounts, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, placeLabel, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, viewableMediaType } from "./format.ts";
+import { adminCan, agentFromAdmin, documentCounts, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, liveMoney, parseMinor, placeLabel, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, tripTimeline, viewableMediaType } from "./format.ts";
 import { DOCUMENT_TYPES, FLEET_CODE, ONBOARDING_COUNTRIES, REQUIRED_DOCUMENTS } from "./onboardingContract.ts";
 import type { AdminMe, DocumentSummary } from "./types.ts";
 
@@ -175,4 +175,16 @@ test("liveBaseUrl: 'http' means same origin; a URL loses its trailing slash", ()
   assert.equal(liveBaseUrl(undefined), "");
   assert.equal(liveBaseUrl("http://127.0.0.1:8080/"), "http://127.0.0.1:8080");
   assert.equal(liveBaseUrl("https://api.movera.se"), "https://api.movera.se");
+});
+
+test("trip money, typed amounts and the timeline (audit phase 5)", () => {
+  assert.equal(liveMoney({ amountMinor: 52000, currency: "SEK" }), "520,00 kr");
+  assert.equal(liveMoney(null), "—");
+  assert.equal(parseMinor("120,50", "SEK"), 12050);
+  assert.equal(parseMinor("120.5", "SEK"), 12050);
+  assert.equal(parseMinor("12.345", "TND"), 12345);
+  assert.equal(parseMinor("1.234", "SEK"), null);
+  assert.equal(parseMinor("abc", "SEK"), null);
+  const rows = tripTimeline({ createdAt: "2026-10-26T07:00:00Z", updatedAt: "2026-10-26T07:04:00Z", cancellation: { at: "2026-10-26T07:04:00Z" } });
+  assert.deepEqual(rows.map((row) => row.label), ["Created", "Cancelled"]);
 });
