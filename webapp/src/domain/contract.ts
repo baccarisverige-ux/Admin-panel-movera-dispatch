@@ -4,7 +4,7 @@ import { formatMoney } from "./money.ts";
 export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
-export const CONTRACT_VERSION = "0.5.3" as const;
+export const CONTRACT_VERSION = "0.5.6" as const;
 
 /** The 19 trip statuses of contract v0.3.0 (contract.json#tripStatus.values), in lifecycle order. */
 export const TRIP_STATUSES = [
@@ -64,7 +64,7 @@ export type Actor = (typeof ACTORS)[number];
 export type TripKind = "live" | "scheduled";
 
 export type TripCommand =
-  | "quote" | "request" | "start_search" | "send_offer" | "offer_lapsed" | "accept" | "assign"
+  | "quote" | "request" | "start_search" | "raise_price" | "send_offer" | "offer_lapsed" | "accept" | "assign"
   | "head_to_pickup" | "arrive" | "board" | "start_trip" | "near_dropoff" | "complete"
   | "cancel" | "end_early" | "no_show" | "reassign" | "expire" | "system_cancel" | "fail";
 
@@ -87,6 +87,8 @@ export const TRANSITIONS: readonly Transition[] = [
   { command: "quote", actor: "system", from: ["draft"], to: "quoted" },
   { command: "request", actor: "rider", from: ["quoted"], to: "requested" },
   { command: "start_search", actor: "system", from: ["requested"], to: "searching" },
+  // v0.5.5: the rider raises their offer while the search is on; a new search starts.
+  { command: "raise_price", actor: "rider", from: ["searching", "offered"], to: "searching" },
   { command: "send_offer", actor: "system", from: ["searching"], to: "offered" },
   { command: "offer_lapsed", actor: "system", from: ["offered"], to: "searching" },
   { command: "accept", actor: "driver", from: ["offered"], to: "accepted" },

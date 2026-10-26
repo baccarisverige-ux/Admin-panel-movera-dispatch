@@ -34,7 +34,7 @@ export const CONFIG_DEFAULTS = {
   freeWaitMin: { default: 5, xl: 3 },
   waitingDriverSharePct: 100,
   noShowDriverSharePct: 80,
-  missedExclusiveBeforeOffline: 3,
+  missedExclusiveBeforeOffline: 10,
   countries: {
     SE: { currency: "SEK", defaultLanguage: "sv", tips: [sek(1000), sek(2000), sek(3000)], raiseSteps: [sek(5000), sek(10000), sek(15000), sek(20000)], driverBonus: { defaultLimit: sek(20000), hardMax: sek(100000) } },
     FR: { currency: "EUR", defaultLanguage: "fr", tips: [eur(100), eur(200), eur(500)], raiseSteps: [eur(200), eur(400), eur(600), eur(800)], driverBonus: { defaultLimit: eur(2000), hardMax: eur(9500) } },

@@ -37,7 +37,7 @@ export function driverFacts(live: readonly LiveDriver[], stats: (id: string) => 
       female: seed % 3 === 0,
       ridesThisHour: seed % 5,
       skipsInRow: (seed >>> 5) % 9 === 0 ? 3 : (seed >>> 5) % 2,
-      noInRow: (seed >>> 7) % 11 === 0 ? 3 : (seed >>> 7) % 13 === 0 ? 6 : 0,
+      noInRow: (seed >>> 7) % 11 === 0 ? 3 : (seed >>> 7) % 13 === 0 ? 10 : 0,
       favourite: (seed >>> 2) % 13 === 0,
       goingHome: (seed >>> 4) % 10 === 0,
       homeDirectionOk: (seed >>> 6) % 2 === 0,
