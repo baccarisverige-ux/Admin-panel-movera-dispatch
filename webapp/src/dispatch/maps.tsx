@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, Eye, EyeOff, Maximize2, Minimize2 } from "lucide-react";
-import maplibregl, { type GeoJSONSource } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "../ui/maplibreWorker";
 import { baseMapStyle } from "../ui/mapStyle";
 import type { Market } from "../markets/markets";
 import type { Ranked } from "./rules";
@@ -96,7 +98,9 @@ export function TestMap({ market, pickup, ranked, steps, highlight, onPick }: { 
     }
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    map.on("load", () => {
+    // "style.load", not "load": "load" also waits for the base map's TileJSON (tiles.openfreemap.org), so a slow or
+    // unreachable tile server kept this map empty. Same as DriversMap.
+    map.on("style.load", () => {
       const now = latest.current;
       map.addSource("test", { type: "geojson", data: data(now.pickup, now.ranked, now.steps, now.highlight) });
       map.addLayer({ id: "rings", type: "line", source: "test", filter: ["==", ["get", "kind"], "ring"], paint: { "line-color": "#6250d6", "line-width": 2, "line-dasharray": [2, 2], "line-opacity": 0.7 } });

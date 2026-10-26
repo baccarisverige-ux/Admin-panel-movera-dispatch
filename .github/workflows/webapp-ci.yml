@@ -1,14 +1,27 @@
 name: Webapp checks
+# The required gate for main. pages.yml deploys only after this workflow succeeds on a push to main.
 on:
   pull_request:
   push:
     branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webapp-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: webapp
+
 jobs:
   checks:
+    name: typecheck, lint, unit tests, build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: webapp
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,10 +30,85 @@ jobs:
           cache: npm
           cache-dependency-path: webapp/package-lock.json
       - run: npm ci
-      - run: npx tsc -b
-      - run: npm run lint --if-present
-      - run: npm test
+      - name: Typecheck
+        run: npx tsc -b
+      - name: Lint (fails on any error and on any warning above the documented baseline)
+        run: npm run lint:ci
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npx vite build
+
+  audit:
+    name: npm audit (production dependencies, high and above)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm audit --omit=dev --audit-level=high
+
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks (full history)
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.21.2 \
+            detect --source /repo --redact --no-banner --exit-code 1
+
+  e2e:
+    name: Playwright e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+      - run: npm ci
+      # Installs the Chromium build that matches the pinned @playwright/test version.
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-report
+          path: |
+            webapp/playwright-report
+            webapp/test-results
+          retention-days: 7
+
+  e2e-live:
+    name: Playwright e2e (live, faked server)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
       - run: npm run e2e:live
-      - run: npx vite build
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-live-report
+          path: |
+            webapp/playwright-report
+            webapp/test-results
+          retention-days: 7

@@ -1,4 +1,5 @@
-import maplibregl, { type GeoJSONSource } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { GeoJSONSource } from "maplibre-gl";
 import type { ZoneSurge } from "./surge.ts";
 import { dotsGeo, glowGeo, hexGeo, pointsGeo, zonesGeo, type SurgeStyle } from "./surgeGeo.ts";
 
@@ -83,7 +84,12 @@ export function installSurgeLayers(map: maplibregl.Map, onZone?: (zoneId: string
     const tick = () => {
       if (!states.has(map) || !map.getLayer("surge-zone-pulse")) return;
       const t = (performance.now() % 2400) / 2400;
-      map.setPaintProperty("surge-zone-pulse", "line-opacity", 0.15 + 0.45 * Math.sin(t * Math.PI));
+      // Every setPaintProperty repaints the whole map. Only animate a layer that is on screen: the old loop also
+      // repainted ~12 times a second while surge was hidden, which kept the page's main thread busy all the time
+      // (no GPU: each frame costs 100-250 ms) and made clicks and key presses on map pages time out.
+      if (map.getLayoutProperty("surge-zone-pulse", "visibility") === "visible") {
+        map.setPaintProperty("surge-zone-pulse", "line-opacity", 0.15 + 0.45 * Math.sin(t * Math.PI));
+      }
       // Pulse rings grow and fade, only while that style is on.
       if (map.getLayer("surge-rings") && map.getLayoutProperty("surge-rings", "visibility") === "visible") {
         const grow = 0.55 + t * 0.9;

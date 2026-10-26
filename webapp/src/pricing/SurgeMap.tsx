@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "../ui/maplibreWorker";
 import { baseMapStyle } from "../ui/mapStyle";
 import type { Market } from "../markets/markets";
 import type { ZoneSurge } from "./surge";
@@ -45,7 +46,9 @@ export function SurgeMap({ market, rows, selectedId, onSelect, shown, style, onS
     }
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), "top-right");
-    map.on("load", () => {
+    // "style.load", not "load": "load" also waits for the base map's TileJSON (tiles.openfreemap.org), so a slow or
+    // unreachable tile server kept this map empty. Same as DriversMap.
+    map.on("style.load", () => {
       installSurgeLayers(map, (zoneId) => select.current(zoneId));
       setReady(true);
     });

@@ -1,7 +1,10 @@
 name: Deploy Admin Panel to GitHub Pages
 
+# Deploys only after the required gate (webapp-ci.yml, "Webapp checks") succeeded on a push to main.
 on:
-  push:
+  workflow_run:
+    workflows: ["Webapp checks"]
+    types: [completed]
     branches: ["main"]
   workflow_dispatch:
 
@@ -16,12 +19,16 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: actions/setup-node@v4
         with:
@@ -32,7 +39,7 @@ jobs:
       - name: Test and build the new admin
         working-directory: webapp
         env:
-          VITE_BUILD_SHA: ${{ github.sha }}
+          VITE_BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           VITE_GOOGLE_MAPS_KEY: ${{ secrets.VITE_GOOGLE_MAPS_KEY }}
           VITE_DATA: demo
         run: |
@@ -47,7 +54,7 @@ jobs:
         if: ${{ vars.MOVERA_LIVE_API_URL != '' }}
         working-directory: webapp
         env:
-          VITE_BUILD_SHA: ${{ github.sha }}
+          VITE_BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           VITE_GOOGLE_MAPS_KEY: ${{ secrets.VITE_GOOGLE_MAPS_KEY }}
           VITE_ADMIN_API: ${{ vars.MOVERA_LIVE_API_URL }}
         run: |
@@ -58,6 +65,8 @@ jobs:
           mv dist-demo dist
 
       - name: Assemble the site
+        env:
+          BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           mkdir -p _site/legacy _site/app
           cp index.html app.js styles.css _site/legacy/
@@ -71,8 +80,8 @@ jobs:
             sed -i 's#<head>#<head><script>if(location.pathname.indexOf("/Admin-panel-movera-dispatch/live/")===0)location.replace("/Admin-panel-movera-dispatch/live/")</script>#' _site/404.html
           fi
           printf '%s\n' '<!doctype html><meta http-equiv="refresh" content="0;url=/Admin-panel-movera-dispatch/"><link rel="canonical" href="/Admin-panel-movera-dispatch/"><script>location.replace("/Admin-panel-movera-dispatch/")</script>' > _site/app/index.html
-          echo "${GITHUB_SHA}" > _site/version.txt
-          echo "${GITHUB_SHA}" > _site/app/version.txt
+          echo "${BUILD_SHA}" > _site/version.txt
+          echo "${BUILD_SHA}" > _site/app/version.txt
 
       - uses: actions/configure-pages@v5
         with:

@@ -9,6 +9,8 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:4173",
     ...devices["Desktop Chrome"],
+    // Local runs on a machine without the pinned browser build can point at another Chromium (CI installs its own).
+    ...(process.env.PW_CHROMIUM ? { launchOptions: { executablePath: process.env.PW_CHROMIUM } } : {}),
   },
   webServer: {
     // CI runs the production build (every page is lazy-loaded; served by the dev server its modules were
