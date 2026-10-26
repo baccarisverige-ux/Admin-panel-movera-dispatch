@@ -1,4 +1,4 @@
-import type maplibregl from "maplibre-gl";
+import type * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource } from "maplibre-gl";
 import { ringBounds, type MapLocate } from "./supplyDrill";
 

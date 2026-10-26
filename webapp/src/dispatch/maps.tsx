@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, Eye, EyeOff, Maximize2, Minimize2 } from "lucide-react";
-import maplibregl, { type GeoJSONSource } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { baseMapStyle } from "../ui/mapStyle";
 import type { Market } from "../markets/markets";

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type MouseEvent, type RefObject } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import type maplibregl from "maplibre-gl";
+import type * as maplibregl from "maplibre-gl";
 import { tr } from "../i18n";
 import { BACK_PARAM, backPlace, decodeMapAt, decodeMapOpen, MAP_AT_PARAM, MAP_OPEN_PARAM, safeBack, searchWithMap, withBack, type MapOpen } from "./backTo";
 

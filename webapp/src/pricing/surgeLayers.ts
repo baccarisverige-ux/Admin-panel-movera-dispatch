@@ -1,4 +1,5 @@
-import maplibregl, { type GeoJSONSource } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { GeoJSONSource } from "maplibre-gl";
 import type { ZoneSurge } from "./surge.ts";
 import { dotsGeo, glowGeo, hexGeo, pointsGeo, zonesGeo, type SurgeStyle } from "./surgeGeo.ts";
 

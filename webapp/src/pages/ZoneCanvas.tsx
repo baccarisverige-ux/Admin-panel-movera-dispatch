@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
-import maplibregl, { type GeoJSONSource } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { baseMapStyle } from "../ui/mapStyle";
 import { TerraDraw, type GeoJSONStoreFeatures } from "terra-draw";
