@@ -4,7 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
 import { AppShell } from "./layout/AppShell";
-import { isLivePage, isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
+import { LIVE_PAGE_IDS, isLivePage, isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundRecord } from "./ui/NotFoundRecord";
 import { I18nProvider } from "./i18n/I18nProvider";
@@ -189,6 +189,12 @@ function Authed() {
     );
   }
   if (!agent) return <LoginPage />;
+  // Live: "/" is the demo dashboard, so it opens the first live page the admin may read (an admin without
+  // overview.read used to land on "No access" right after signing in).
+  if (live && location.pathname === "/") {
+    const first = LIVE_PAGE_IDS.map((id) => menuItem(id)).find((item) => item && live.can(item.permission));
+    return <Navigate to={first?.path ?? "/drivers"} replace />;
+  }
   const page = pageForPath(location.pathname);
   const scope = new URLSearchParams(location.search).get("scope");
   const scopeDenied = Boolean(agent && scope && !canUseZone(agent, scope));
