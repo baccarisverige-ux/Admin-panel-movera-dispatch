@@ -702,6 +702,9 @@ S["DispatchControlCommand"] = obj({"expectedVersion": i("Version of the control 
 S["SearchStep"] = obj({"id": s(minLength=1), "kind": s(enum=[k for k in DP["waitingKinds"] if k not in DP["skippedWaitingKinds"]]), "message": s(),
                        "extraMin": {"type": ["number", "null"]}, "at": ref("Timestamp")}, ["id", "kind", "message", "extraMin", "at"],
                       "The latest rider-waiting step of the search (v0.5.1, contract.json#dispatch.searchStep). keep_waiting: the app asks Keep waiting / Stop (POST /trips/{tripId}/keep-waiting); busy: the search ended.")
+S["RaisePriceCommand"] = obj({"expectedVersion": i(minimum=1), "increase": ref("Money")}, ["expectedVersion", "increase"],
+                             "The rider raises their offer while the search is on (owner decision 25, contract.json#dispatch.raisePrice): a positive amount in the trip's currency; "
+                             "the new fare may not pass raisePrice.maxFactor × the quoted fare.")
 S["KeepWaitingCommand"] = obj({"expectedVersion": i("Optional; the answer does not change the version.", minimum=1), "answer": s(enum=DP["keepWaitingAnswers"])}, ["answer"],
                               "Answer to a keep_waiting step: wait = the search end moves by the step's extraMin; stop = the normal free rider cancel (owner decision 24).")
 AA = C["auth"]["admin"]
@@ -1114,6 +1117,12 @@ op("post", "/trips/{tripId}/cancel-reason", "setCancelReason", "Rider tells the 
         "cancellation.reasonCode is still something_else (the code a cancel-first names): sets cancellation.reasonCode and "
         "cancellation.note. Not a lifecycle transition: status, version, sequence, fee and fare do not change and no realtime event "
         "is sent. Any other state (also a reason already told) → 409 invalid_transition; a code outside the rider group → 400 invalid_request.")
+op("post", "/trips/{tripId}/on-the-way", "riderOnTheWay", "Rider says they are on their way to the car", ["rider"], "Rider · Booking",
+   params=TID, ok=(200, TP), mutation=True,
+   desc="v0.5.4, CONTRACT.md §4. The rider's \"I'm on the way\" (shown once the driver has arrived, also while the driver is "
+        "coming) reaches the driver as a `rider_on_the_way` realtime event carrying the current projection. Not a lifecycle "
+        "transition: status and version do not change. Allowed while the trip is accepted, driver_to_pickup or arrived; any "
+        "other state → 409 invalid_transition. No request body.")
 op("get", "/trips/{tripId}/events", "streamTripEvents", "Trip realtime stream (SSE / WebSocket) or JSON replay",
    ["rider", "driver", "admin"], "Realtime", params=TID + [pref("After"), pref("Limit"), pref("LastEventId")],
    content=sse("Server-sent events. A WebSocket upgrade on the same URL carries the same JSON frames.", "RealtimeEvent", "RealtimeEventPage"),
@@ -1450,6 +1459,11 @@ for path, opid, summ, body in [("/telemetry/logs", "postTelemetryLog", "App log 
                 f"scrubbed again by the server and kept {C['telemetry']['keepDays']} days. A bearer token is used when sent.")
     o["security"] = [{}, {"bearerAuth": []}]
 # Rider: keep waiting, account deletion
+op("post", "/trips/{tripId}/raise-price", "raisePrice", "Raise the offer while searching", ["rider"], "Rider · Booking",
+   params=TID, body="RaisePriceCommand", ok=(200, TP), mutation=True, transition="raise_price",
+   desc="Owner decision 25 (CONTRACT.md §3.6). While the trip is searching or offered: the fare grows by increase (a rider_raise fare line), the whole raise goes to the driver's "
+        "earnings, open offers are withdrawn and a new search starts in which drivers who already declined are asked again at the new price; version + 1. "
+        "Otherwise 409 invalid_transition with the projection. A raise in another currency or a fare above dispatch.raisePrice.maxFactor × the quoted fare is 400 invalid_request.")
 op("post", "/trips/{tripId}/keep-waiting", "answerKeepWaiting", "Answer the Keep waiting? step while searching", ["rider"], "Rider · Booking",
    params=TID, body="KeepWaitingCommand", ok=(200, TP), mutation=True,
    desc="Owner decision 24 (CONTRACT.md §3.6). Only while the trip is searching or offered and its searchStep is an unanswered keep_waiting: wait → the search end moves by extraMin; "

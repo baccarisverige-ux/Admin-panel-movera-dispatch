@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.5.3",
+  "version": "0.5.5",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -99,7 +99,8 @@
       "reservation_fee",
       "fixed_route",
       "rounding",
-      "outstanding_fee"
+      "outstanding_fee",
+      "rider_raise"
     ],
     "driverOnly": [
       "pickup_pay",
@@ -254,6 +255,15 @@
       "actor": "system",
       "from": [
         "requested"
+      ],
+      "to": "searching"
+    },
+    {
+      "command": "raise_price",
+      "actor": "rider",
+      "from": [
+        "searching",
+        "offered"
       ],
       "to": "searching"
     },
@@ -1093,7 +1103,11 @@
       "wait",
       "stop"
     ],
-    "offerTimers": "DriverAppConfig.offers.radarSeconds, exclusiveSeconds, radarOn, exclusiveOn must equal dispatch.radar.seconds, exclusive.seconds, radar.on, exclusive.on of the same zone (contract.json#configDocs.mustMatch)."
+    "offerTimers": "DriverAppConfig.offers.radarSeconds, exclusiveSeconds, radarOn, exclusiveOn must equal dispatch.radar.seconds, exclusive.seconds, radar.on, exclusive.on of the same zone (contract.json#configDocs.mustMatch).",
+    "raisePrice": {
+      "maxFactor": 2,
+      "note": "Owner decision 25 (2026-10-26): POST /trips/{tripId}/raise-price while searching or offered. fare += increase (rider_raise line); the whole raise goes to driverEarnings (Movera's share unchanged); open offers are withdrawn and a new search starts in which drivers who declined are asked again at the new price; version + 1. The new fare may not pass maxFactor × the quoted fare (400 invalid_request, reason raise_too_high). The raise_price waiting step stays skipped: the rider app offers the raise on its own schedule."
+    }
   },
   "maps": {
     "note": "v0.5.1 (CONTRACT.md §10), owner decision 4: address search through the server (Google Places / Geocoding), routes and arrival times from Movera's own OSRM. All of them are read-only POSTs or GETs: no Idempotency-Key.",
