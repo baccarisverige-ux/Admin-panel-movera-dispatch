@@ -449,9 +449,11 @@ function MapLibreCanvas({ zones, selectedId, mode, layers, focus, selectionNonce
       map.on("mouseleave", "zones-fill", () => { map.getCanvas().style.cursor = ""; });
       paintLabels(map);
       const inner = (fitRef.current?.length ? boundsFor(zonesRef.current, fitRef.current) : boundsFor(zonesRef.current, INNER_IDS)) ?? boundsFor(zonesRef.current);
-      // The test hook is published when the camera has settled ("moveend"), not on "idle": "idle" also waits for every
-      // base-map tile, so with a slow tile server the hook (and the e2e that waits for it) waited on the network.
+      // The test hook is published when the camera has settled ("moveend") and again on "idle" (drawn and settled).
+      // "idle" alone also waits for every base-map tile, so with a slow tile server the hook (and the e2e that waits
+      // for it) waited on the network; "moveend" does not.
       map.on("moveend", publish);
+      map.on("idle", publish);
       if (inner) map.fitBounds(inner, { padding: 36, animate: false, maxZoom: 13 });
       else publish();
       map.addSource("draft", { type: "geojson", data: draftGeo(modeRef.current, [], null) });

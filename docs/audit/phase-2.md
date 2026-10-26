@@ -71,8 +71,10 @@ live config already had), against the production build. CI installs the Chromium
    tile. A slow tile server therefore left zones off the map and made the e2e that waits for the hook time out
    (touch-draw.spec.ts:76, bonus.spec.ts:91 flakes). `src/ui/mapStyle.ts` already promised "pins and zones never wait
    for tiles" and DriversMap already used `"style.load"`. Fix: `"style.load"` in RouteMap, TestMap, AreaMap, SurgeMap,
-   ZoneCanvas; the hook is published on `"moveend"` (camera settled). Probe with the tile host answering 503 / never
-   answering: before, hook never set (15 s); after, set in ≈1.3 s in both cases.
+   ZoneCanvas; the hook is also published on `"moveend"` (camera settled), not only on `"idle"`. (A first version
+   replaced `"idle"` by `"moveend"`; CI then failed zones.spec.ts:261, which waits for a new generation after a
+   step that repaints without moving the camera, so both events publish now.) Probe with the tile host answering
+   503 / never answering: before, hook never set (15 s); after, set in about 1 s in both cases.
 3. **maplibre 6 worker** (item 2), which made every map test fail after the upgrade.
 
 Full local run after the fixes (`--retries=0`, 4 workers): **243 passed, 2 failed** (touch-draw.spec.ts:39 and
