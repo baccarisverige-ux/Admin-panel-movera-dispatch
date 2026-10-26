@@ -1,0 +1,4 @@
+# Fake test values (setup token "tok-0123456789abcdef", password "correct-horse-1") in an early
+# commit of the closed PR #148 branch; not secrets. The scan reads every branch.
+fd1c4b4370a52b37def4ed71f756af155a689b52:webapp/e2e/live-controls.spec.ts:generic-api-key:83
+fd1c4b4370a52b37def4ed71f756af155a689b52:webapp/e2e/live-controls.spec.ts:generic-api-key:93
