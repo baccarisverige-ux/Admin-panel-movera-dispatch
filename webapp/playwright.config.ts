@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   // The live people spec runs against a faked server with its own config (playwright.live.config.ts).
-  testIgnore: /live-people\.spec\.ts/,
+  testIgnore: /live-[a-z-]+\.spec\.ts/,
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
   use: {

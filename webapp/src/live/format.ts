@@ -5,6 +5,7 @@
 import type { Agent } from "../auth/permissions.ts";
 import type { MarketId } from "../markets/markets.ts";
 import { ApiError } from "../api/httpClient.ts";
+import { CURRENCIES, formatMoney, type CurrencyCode, type Money } from "../domain/money.ts";
 import { currentLanguage, tr } from "../i18n/index.ts";
 import { DOCUMENT_TYPES, ONBOARDING_COUNTRIES, REQUIRED_DOCUMENTS } from "./onboardingContract.ts";
 import type { AdminMe, DocumentStatus, DocumentSummary, Driver, Vehicle } from "./types.ts";
@@ -170,6 +171,13 @@ export function liveBaseUrl(value: string | undefined): string {
 }
 
 /** A YYYY-MM-DD or ISO timestamp as a date in the panel's language; "" when missing. */
+/** A timestamp with its time of day ("25 Oct 2026, 08:01"), for timelines. */
+export function shortDateTime(value: string, locale: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", hourCycle: "h23" }).format(date);
+}
+
 export function shortDate(value: string | undefined, locale: string): string {
   if (!value) return "";
   const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value);
@@ -183,4 +191,34 @@ export function viewableMediaType(mediaType: string): "image" | "pdf" | "downloa
   if (mediaType.startsWith("image/")) return "image";
   if (mediaType === "application/pdf") return "pdf";
   return "download";
+}
+
+/** Money from the server in the currency's own format ("520,00 kr"); an unknown currency as "520.00 XYZ". */
+export function liveMoney(value: { amountMinor: number; currency: string } | null | undefined): string {
+  if (!value) return "—";
+  if (value.currency in CURRENCIES) return formatMoney(value as Money);
+  return `${(value.amountMinor / 100).toFixed(2)} ${value.currency}`;
+}
+
+/**
+ * The amount an admin types ("120,50" or "120.50") in minor units of the currency; null when it is not a number with at
+ * most the currency's decimals.
+ */
+export function parseMinor(text: string, currency: string): number | null {
+  const exponent = currency in CURRENCIES ? CURRENCIES[currency as CurrencyCode].exponent : 2;
+  const clean = text.trim().replace(/\s/g, "").replace(",", ".");
+  if (!/^\d+(\.\d+)?$/.test(clean)) return null;
+  const [whole, frac = ""] = clean.split(".");
+  if (frac.length > exponent) return null;
+  return Number(whole) * 10 ** exponent + Number(frac.padEnd(exponent, "0") || "0");
+}
+
+/** The trip's timeline from the projection's own timestamps, oldest first. */
+export function tripTimeline(trip: { createdAt: string; scheduledAt?: string; acceptedAt?: string; updatedAt: string; cancellation?: { at: string } }): { label: "Created" | "Scheduled for" | "Driver accepted" | "Cancelled" | "Last change"; at: string }[] {
+  const rows: { label: "Created" | "Scheduled for" | "Driver accepted" | "Cancelled" | "Last change"; at: string }[] = [{ label: "Created", at: trip.createdAt }];
+  if (trip.scheduledAt) rows.push({ label: "Scheduled for", at: trip.scheduledAt });
+  if (trip.acceptedAt) rows.push({ label: "Driver accepted", at: trip.acceptedAt });
+  if (trip.cancellation) rows.push({ label: "Cancelled", at: trip.cancellation.at });
+  if (!trip.cancellation || trip.cancellation.at !== trip.updatedAt) rows.push({ label: "Last change", at: trip.updatedAt });
+  return rows.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 }
