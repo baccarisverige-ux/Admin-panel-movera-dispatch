@@ -149,8 +149,9 @@ assert(copyParts({ ...base, radar: { ...base.radar, seconds: 44 }, autoOffline: 
 assert(copyParts({ ...base, autoOffline: { on: true, after: 7 } }, zoneDefault("Z002"), ["radar"]).autoOffline.after === 7, "going offline automatically belongs to the Radar tab");
 assert(copyParts({ ...base, exclusive: { ...base.exclusive, seconds: 33 } }, zoneDefault("Z002"), ["exclusive"]).exclusive.seconds === 33, "copying the Exclusive tab copies the Exclusive rules");
 assert(copyParts({ ...base, exclusive: { ...base.exclusive, seconds: 33 } }, zoneDefault("Z002"), ["modes"]).exclusive.seconds !== 33, "the Modes tab no longer carries Exclusive");
-const offline = rankDrivers(base, country, request, [driver("quiet", { noInRow: 6 })]);
+const offline = rankDrivers(base, country, request, [driver("quiet", { noInRow: 10 })]);
 assert(offline[0].out?.includes("offline"), "driver goes offline after offers not accepted");
+assert(!rankDrivers(base, country, request, [driver("quiet", { noInRow: 9 })])[0].out?.includes("offline"), "owner decision 35: 9 offers not accepted in a row is not yet offline (10 is)");
 assert(!rankDrivers({ ...base, autoOffline: { on: false, after: 5 } }, country, request, [driver("quiet", { noInRow: 6 })])[0].out?.includes("offline"), "auto offline can be off");
 const busyDriver = driver("busy", { finishing: { inMin: 2, dropKm: 0.5 } });
 // Q18: a driver with a rider gets Exclusive offers only, never Radar.
@@ -158,7 +159,7 @@ assert(!simulate(base, rankDrivers(base, country, request, [busyDriver]), "radar
 assert(simulate(base, rankDrivers(base, country, request, [busyDriver]), "exclusive")[0].title === "Exclusive to busy", "Exclusive while driving reaches a driver with a rider");
 const noDriving = { ...base, exclusiveWhileDriving: { on: false, count: 1 } };
 assert(simulate(noDriving, rankDrivers(noDriving, country, request, [busyDriver]), "exclusive")[0].title !== "Exclusive to busy", "no offers while driving when Exclusive while driving is off");
-assert(changeLines(base, { ...base, autoOffline: { on: true, after: 8 } })[0] === "Offline after offers not accepted: 3 → 8", "change line for auto offline");
+assert(changeLines(base, { ...base, autoOffline: { on: true, after: 8 } })[0] === "Offline after offers not accepted: 10 → 8", "change line for auto offline");
 
 // Ride check: four triggers, each on or off, with their numbers.
 const rcDefault = base.rideCheck;

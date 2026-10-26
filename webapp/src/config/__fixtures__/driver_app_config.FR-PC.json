@@ -144,7 +144,7 @@
     ],
     "autoOffline": {
       "on": true,
-      "missedExclusive": 3,
+      "missedExclusive": 10,
       "hiddenComesBackMin": 2
     },
     "radarApp": {
