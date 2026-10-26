@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "../ui/maplibreWorker";
 import { baseMapStyle } from "../ui/mapStyle";
 import type { LatLng } from "../dashboard/route";
 import { tr } from "../i18n";
@@ -46,7 +47,9 @@ export function RouteMap({ stops, path, approach = [], points = [], label }: { s
     }
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    map.on("load", () => {
+    // "style.load", not "load": "load" also waits for the base map's TileJSON (tiles.openfreemap.org), so a slow or
+    // unreachable tile server kept this map empty. Same as DriversMap.
+    map.on("style.load", () => {
       const now = latest.current;
       map.addSource("trip", { type: "geojson", data: geo(now.stops, now.path, now.approach, now.points) });
       map.addLayer({ id: "approach", type: "line", source: "trip", filter: ["==", ["get", "kind"], "approach"], paint: { "line-color": "#d9730d", "line-width": 3, "line-dasharray": [1.5, 1.5] } });

@@ -6,6 +6,7 @@ import { Clock, UserRound, X } from "lucide-react";
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "../ui/maplibreWorker";
 import { baseMapStyle } from "../ui/mapStyle";
 import type { Market } from "../markets/markets";
 import { zoneById } from "../markets/markets";

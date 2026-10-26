@@ -3,6 +3,7 @@ import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "../ui/maplibreWorker";
 import { baseMapStyle } from "../ui/mapStyle";
 import { TerraDraw, type GeoJSONStoreFeatures } from "terra-draw";
 import { TerraDrawGoogleMapsAdapter } from "terra-draw-google-maps-adapter";
@@ -329,7 +330,9 @@ function MapLibreCanvas({ zones, selectedId, mode, layers, focus, selectionNonce
         },
       };
     };
-    map.on("load", () => {
+    // "style.load", not "load": "load" also waits for the base map's TileJSON (tiles.openfreemap.org), so a slow or
+    // unreachable tile server kept this map empty (and window.__moveraMap unset). Same as DriversMap.
+    map.on("style.load", () => {
       if (!alive) return;
       map.addSource("zones", { type: "geojson", data: zonesGeo(zonesRef.current, selectedRef.current, layers) });
       map.addLayer({
@@ -446,7 +449,9 @@ function MapLibreCanvas({ zones, selectedId, mode, layers, focus, selectionNonce
       map.on("mouseleave", "zones-fill", () => { map.getCanvas().style.cursor = ""; });
       paintLabels(map);
       const inner = (fitRef.current?.length ? boundsFor(zonesRef.current, fitRef.current) : boundsFor(zonesRef.current, INNER_IDS)) ?? boundsFor(zonesRef.current);
-      map.on("idle", publish);
+      // The test hook is published when the camera has settled ("moveend"), not on "idle": "idle" also waits for every
+      // base-map tile, so with a slow tile server the hook (and the e2e that waits for it) waited on the network.
+      map.on("moveend", publish);
       if (inner) map.fitBounds(inner, { padding: 36, animate: false, maxZoom: 13 });
       else publish();
       map.addSource("draft", { type: "geojson", data: draftGeo(modeRef.current, [], null) });

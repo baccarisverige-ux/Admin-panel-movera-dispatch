@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "../ui/maplibreWorker";
 import { baseMapStyle } from "../ui/mapStyle";
 
 const STYLE = baseMapStyle();
@@ -47,7 +48,9 @@ export function AreaMap({ center, radiusKm, onPick, label }: { center: [number, 
     }
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    map.on("load", () => {
+    // "style.load", not "load": "load" also waits for the base map's TileJSON (tiles.openfreemap.org), so a slow or
+    // unreachable tile server kept this map empty. Same as DriversMap.
+    map.on("style.load", () => {
       map.addSource("area", { type: "geojson", data: shape(latest.current.center, latest.current.radiusKm) });
       map.addLayer({ id: "area-fill", type: "fill", source: "area", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#e34948", "fill-opacity": 0.14 } });
       map.addLayer({ id: "area-line", type: "line", source: "area", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": "#e34948", "line-width": 2 } });
