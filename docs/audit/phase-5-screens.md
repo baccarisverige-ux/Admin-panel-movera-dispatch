@@ -23,9 +23,9 @@ Live tests run with `npm run e2e:live` (`playwright.live.config.ts`, faked serve
 | Drivers `/drivers` | `GET /admin/drivers` | tabs, search, row open, Load more | tested | n/a | tested (loading, error + Retry, empty) | n/a | tested | tested |
 | Driver `/drivers/{id}` | `GET /admin/drivers/{id}`, `POST …/status`, documents | Activate / Put on hold / Suspend, documents Open / Approve / Reject | tested | status: tested (one POST) | stale version tested | note required (tested) | not tested | tested |
 | Onboarding `/onboarding` | `GET /admin/drivers?accountStatus=on_hold` | as Drivers | tested (open) | n/a | as Drivers | n/a | not tested | tested |
-| Fleet owners `/fleets` | `GET /admin/fleets` | tabs, search, row open | tested | n/a | not tested | n/a | menu tested | tested |
+| Fleet owners `/fleets` | `GET /admin/fleets` | tabs, search, row open | tabs and row open tested; search not tested | n/a | not tested | n/a | menu tested | tested |
 | Fleet `/fleets/{id}` | `GET /admin/fleets/{id}`, review, code, invitations, remove | Copy code, New code, Approve/Reject/Block, invitation Accept/Cancel, Remove from fleet, vehicle review | tested | not tested (dialogs share the guarded `DecisionDialog`) | refusal on a trip, expired invitation tested | note rules in `DecisionDialog` | not tested | not tested |
-| Vehicles `/vehicles`, `/vehicles/{id}` | `GET /admin/vehicles`, review | row unfold, documents, Approve/Reject | tested | not tested | not tested | n/a | not tested | tested |
+| Vehicles `/vehicles`, `/vehicles/{id}` | `GET /admin/vehicles`, review | row unfold, documents, Approve/Reject | unfold tested; approve tested from the fleet page | not tested | not tested | n/a | not tested | tested |
 | Sign out | `POST /admin/auth/sign-out` | Sign out | tested | n/a | n/a | n/a | n/a | n/a |
 
 ## Demo pages (not live)
