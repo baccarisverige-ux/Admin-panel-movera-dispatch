@@ -5127,6 +5127,8 @@ export const fr: Record<MessageKey, string> = {
   "Search by plate, make or model": "Rechercher par immatriculation, marque ou modèle",
   "Seats": "Places",
   "Sending.": "Envoi.",
+  "Forgot your password?": "Mot de passe oublié ?",
+  "Ask a Super admin for a new password link. If you are the only Super admin, the server's operator makes one (deploy guide: “Forgot the admin password”).": "Demandez un nouveau lien de mot de passe à un super administrateur. Si vous êtes le seul, l’exploitant du serveur en crée un (guide de déploiement : « Forgot the admin password »).",
   "Sign in with your Movera admin e-mail and password.": "Connectez-vous avec votre e-mail et votre mot de passe d’administrateur Movera.",
   "Signing in.": "Connexion.",
   "Someone else changed this record. It was reloaded; check it and try again.": "Quelqu’un d’autre a modifié cette fiche. Elle a été rechargée ; vérifiez-la et réessayez.",
