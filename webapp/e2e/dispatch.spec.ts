@@ -263,7 +263,7 @@ test("radar offers in the driver app and going offline automatically", async ({ 
   const list = page.getByRole("list", { name: "Changes not live yet" });
   await expect(list).toContainText("Offers in the popup: 2 → 3");
   await expect(list).toContainText("Exclusive while driving: on → off");
-  await expect(list).toContainText("Offline after offers not accepted: 3 → 4");
+  await expect(list).toContainText("Offline after offers not accepted: 10 → 4");
   await page.getByLabel("Go offline automatically on").uncheck();
   await expect(page.getByLabel("Offline after offers not accepted")).toBeDisabled();
 });
@@ -514,7 +514,7 @@ test("offer card details, Exclusive reasons, hidden Radar trips and going offlin
   await expect(list).toContainText("Exclusive reason (the best driver by the rules): Best match → Top match");
   await expect(list).toContainText("Exclusive reason “Best match”: on → off");
   await expect(list).toContainText("Hidden Radar trip comes back after: 2 → 5");
-  await expect(list).toContainText("Offline after offers not accepted: 3 → 99");
+  await expect(list).toContainText("Offline after offers not accepted: 10 → 99");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await confirm(page);
   await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();

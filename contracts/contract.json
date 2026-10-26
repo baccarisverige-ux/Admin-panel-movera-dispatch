@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -1472,7 +1472,7 @@
     ]
   },
   "configDefaults": {
-    "note": "Defaults for the per-zone config fields (CONTRACT.md §6). Admin exports them where no setting exists yet; apps fall back to them when a document lacks a field or has a bad value. Money is in the country's currency. v0.5.0 adds offers, pickupPay and surge. v0.5.1 adds pricing (SE, the admin's Stockholm prices) and dispatch (the admin's zone defaults).",
+    "note": "Defaults for the per-zone config fields (CONTRACT.md §6). Admin exports them where no setting exists yet; apps fall back to them when a document lacks a field or has a bad value. Money is in the country's currency. v0.5.0 adds offers, pickupPay and surge. v0.5.1 adds pricing (SE, the admin's Stockholm prices) and dispatch (the admin's zone defaults). v0.5.6: missedExclusiveBeforeOffline (DriverAppConfig.offers.autoOffline.missedExclusive) goes from 3 to 10 (owner decision 35, 2026-10-26).",
     "maxStops": 3,
     "maxPickupMoveMeters": 500,
     "freeWaitMin": {
@@ -1482,7 +1482,7 @@
     "noShowAfterMin": "equals the category freeWaitMin (owner Q41): the no-show button appears when the free wait ends",
     "waitingDriverSharePct": 100,
     "noShowDriverSharePct": 80,
-    "missedExclusiveBeforeOffline": 3,
+    "missedExclusiveBeforeOffline": 10,
     "offers": {
       "note": "DriverAppConfig.offers limits (v0.5.0, CONTRACT.md §3.3). Admin Dispatch › Modes; every field optional on read.",
       "radarApp": {

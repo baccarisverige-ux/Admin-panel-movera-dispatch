@@ -28,8 +28,8 @@ const contract = contractJson<Contract>("contract.json");
 const NOW = "2026-10-19T08:00:00Z";
 const state = () => appConfigState({ now: NOW });
 
-test("contract v0.5.5: version, X-Api-Version, payment methods, languages and ratings", () => {
-  assert.equal(contract.version, "0.5.5");
+test("contract v0.5.6: version, X-Api-Version, payment methods, languages and ratings", () => {
+  assert.equal(contract.version, "0.5.6");
   assert.equal(contract.headers["X-Api-Version"], "0.5");
   assert.deepEqual([...PAYMENT_METHODS], contract.paymentMethods);
   assert.ok(!contract.paymentMethods.includes("swish") && !contract.paymentMethods.includes("d17"));
@@ -87,7 +87,7 @@ for (const [zoneId, country, timeZone, lang] of [["Z001", "SE", "Europe/Stockhol
     assert.equal(rider.promoCap, null);
     assert.deepEqual(rider.wallet, { usedFirst: true });
     assert.deepEqual(driver.driverBonus, defaults.driverBonus);
-    assert.equal(driver.offers.autoOffline.missedExclusive, 3, "Q46: offline after 3, was 5");
+    assert.equal(driver.offers.autoOffline.missedExclusive, 10, "owner decision 35: offline after 10, was 3");
     assert.equal(driver.waiting.driverSharePct, 80, "no-show share");
     assert.equal(driver.waiting.driverShareWaitPct, 100, "waiting fee share");
     assert.ok(!("driverBonus" in rider), "the rider never sees the Movera-paid driver bonus");

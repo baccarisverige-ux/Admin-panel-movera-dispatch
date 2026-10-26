@@ -1,4 +1,6 @@
-# Movera shared contract v0.5.5
+# Movera shared contract v0.5.6
+
+v0.5.6 (X-Api-Version stays `0.5`; no field or endpoint changes): **a driver goes offline after 10 missed or declined Exclusive offers in a row, not 3** (§6, owner decision 35, 2026-10-26). The default of `DriverAppConfig.offers.autoOffline.missedExclusive` (`contract.json#configDefaults.missedExclusiveBeforeOffline`) and the sample `fixtures/config/driver_app_config.json` go from 3 to 10. A zone document that sets its own number keeps it; the admin panel's Dispatch default becomes 10, so a zone published with the old default needs one new publish to take 10. Apps fall back to 10 when a document lacks the field or has a bad value. The refund and payout additions the server already does move to v0.5.7.
 
 v0.5.5 (additive; X-Api-Version stays `0.5`): **the rider raises their offer** (§3.6, owner decision 25, 2026-10-26): `POST /trips/{tripId}/raise-price { expectedVersion, increase }` while the trip is `searching` or `offered`: the fare grows by `increase` (a `rider_raise` fare line), the whole raise goes to the driver's earnings (Movera's share is unchanged), open offers are withdrawn and a new search starts in which drivers who already declined are asked again at the new price; `version` + 1. At most `contract.json#dispatch.raisePrice.maxFactor` (2) × the quoted fare. The `raise_price` waiting step stays skipped: the rider app offers the raise on its own schedule. The refund and payout additions the server already does move to v0.5.6.
 
@@ -384,7 +386,7 @@ Per-zone settings (owner round 2; defaults in `contract.json#configDefaults`, us
 | `waiting.byCategory[].freeWaitMin` = `noShowAfterMin` | ✓ | ✓ | 5 min, `xl` 3 min |
 | `waiting.byCategory[].perMin` (waiting fee after the free wait) | ✓ | ✓ | from Pricing; `driverShareWaitPct` 100 |
 | `waiting.driverSharePct` (no-show fee share, per country) | — | ✓ | 80 |
-| `offers.autoOffline.missedExclusive` (missed/declined exclusive offers in a row → offline) | — | ✓ | 3 |
+| `offers.autoOffline.missedExclusive` (missed/declined exclusive offers in a row → offline) | — | ✓ | 10 (owner decision 35, v0.5.6; was 3) |
 | `driverBonus.defaultLimit` / `hardMax` | — | ✓ | SE 200 / 1000 kr · FR 20 / 95 € · TN 60 / 300 DT |
 | `offers.radarApp`, `offers.exclusiveWhileDriving` (§3.3) | — | ✓ | list 8, locked while driving; cards 2, no split, 1 while driving; Exclusive while driving on, 1 |
 | `pickupPay` (§3.2) | fee | ✓ | every kind on, total only, no maximum; rider fee off (suggested SE 15 / 20 kr · FR 1.50 / 2 € · TN 1.5 / 2 DT); first km free, then SE 2.50 kr/km + 0.80 kr/min · FR 0.25 €/km + 0.08 €/min · TN 0.250 DT/km + 0.080 DT/min |
@@ -503,6 +505,7 @@ v0.5.3: driver `POST /driver/onboarding`, `GET /driver/fleet`, `POST /driver/fle
 
 v0.5.4: rider `POST /trips/{tripId}/on-the-way`.
 v0.5.5: rider `POST /trips/{tripId}/raise-price`.
+v0.5.6: no new endpoints (the auto-offline default only).
 
 Auth (all apps): bearer token; actor and scope come from the token, never from the body.
 
