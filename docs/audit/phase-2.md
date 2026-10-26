@@ -77,7 +77,12 @@ live config already had), against the production build. CI installs the Chromium
    503 / never answering: before, hook never set (15 s); after, set in about 1 s in both cases.
 3. **maplibre 6 worker** (item 2), which made every map test fail after the upgrade.
 
-Full local run after the fixes (`--retries=0`, 4 workers): **243 passed, 2 failed** (touch-draw.spec.ts:39 and
+**Final evidence:** CI run 40363293013 (commit fd98a8e, Chromium 1243 installed by the job): "Playwright e2e"
+245 passed, 0 flaky, 0 failed; all five jobs green. Local, same commit, Chromium 1194, `--retries=0`, 2 workers:
+245 passed. The baseline's 4 flaky tests (fleet.spec.ts:113, map-money-back-supply.spec.ts:14,
+operations.spec.ts:49, touch-draw.spec.ts:76) passed in both runs; one clean run is not proof that a flake is gone.
+
+Earlier local run (before the zones fix, `--retries=0`, 4 workers): **243 passed, 2 failed** (touch-draw.spec.ts:39 and
 zones.spec.ts:261), both ZoneCanvas drawing tests. Their traces show no hang: each step is just slow (a 350 ms
 `waitForTimeout` took 1.3 s) while this shared machine ran at load average 10–15 on 4 cores; 4 parallel copies of
 touch-draw:39 failed 8/8, 2 parallel copies (CI's worker count) passed 4/4. Not changed: the fixed
