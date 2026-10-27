@@ -69,6 +69,7 @@ const LiveFleetsPage = lazyPage(() => import("./live/LiveFleetsPage"), "LiveFlee
 const LiveFleetDetailPage = lazyPage(() => import("./live/LiveFleetDetailPage"), "LiveFleetDetailPage");
 const LiveVehiclesPage = lazyPage(() => import("./live/LiveVehiclesPage"), "LiveVehiclesPage");
 const LiveTripsPage = lazyPage(() => import("./live/LiveTripsPage"), "LiveTripsPage");
+const LivePricingPage = lazyPage(() => import("./live/LivePricingPage"), "LivePricingPage");
 const LiveTripDetailPage = lazyPage(() => import("./live/LiveTripDetailPage"), "LiveTripDetailPage");
 
 /** The screens that exist against the server; every other menu id keeps its demo page. */
@@ -78,6 +79,7 @@ function LiveScreen({ id }: { id: string }) {
   if (id === "fleets") return <LiveFleetsPage />;
   if (id === "vehicles") return <LiveVehiclesPage />;
   if (id === "trips") return <LiveTripsPage />;
+  if (id === "pricing") return <LivePricingPage />;
   return null;
 }
 

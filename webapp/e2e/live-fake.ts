@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, type Page, type Route } from "@playwright/test";
 
 /**
@@ -84,6 +85,25 @@ export const CANCELLED_TRIP = {
   cancellation: { actor: "rider", reasonCode: "changed_mind", at: "2026-10-26T07:04:00Z", fee: null },
 };
 
+/** A trip whose driver waits at pickup: the admin may mark a no-show (contract §5). */
+export const ARRIVED_TRIP = {
+  ...COMPLETED_TRIP,
+  tripId: "T2004",
+  status: "arrived",
+  version: 5,
+  createdAt: "2026-10-27T09:00:00Z",
+  acceptedAt: "2026-10-27T09:01:00Z",
+  updatedAt: "2026-10-27T09:12:00Z",
+  riderId: "R504",
+  fare: SEK(23000),
+  fareLines: [],
+  paymentStatus: "authorized",
+  ratingStatus: "none",
+};
+
+/** The contract's sample pricing document (contracts/fixtures/config): no-show fee 65 kr in every category. */
+export const PRICING_DOCUMENT = JSON.parse(readFileSync(new URL("../../contracts/fixtures/config/pricing_document.json", import.meta.url), "utf8")) as { categories: Record<string, { waiting: { noShowFee: { amountMinor: number } } }> };
+
 export const OFFERS = [
   { offerId: "O1", tripId: "T2001", kind: "radar", status: "declined", version: 2, expiresAt: "2026-10-25T08:00:40Z", fare: SEK(52000), driverEarnings: SEK(41600) },
   { offerId: "O2", tripId: "T2001", kind: "exclusive", status: "claimed", version: 2, expiresAt: "2026-10-25T08:01:45Z", fare: SEK(52000), driverEarnings: SEK(41600) },
@@ -102,12 +122,21 @@ export type TripState = {
   /** POST /admin/trips/{id}/refund answers 202 pending_approval instead of 201. */
   refundNeedsApproval?: boolean;
   refundDelayMs?: number;
+  /** The pricing draft of Z001 (GET/PUT /admin/config/pricing, POST …/publish). */
+  pricing: { version: number; liveVersion: number; document: unknown };
+  /** POST /admin/config/pricing/publish answers 202 pending_approval instead of 200. */
+  publishNeedsApproval?: boolean;
   /** Changes to the signed-in admin (language, permissions). */
   admin?: Partial<typeof ADMIN> & { language?: string };
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
-  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], ...init };
+  const state: TripState = {
+    trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })),
+    calls: [],
+    pricing: { version: 1, liveVersion: 1, document: structuredClone(PRICING_DOCUMENT) },
+    ...init,
+  };
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
   const wait = (ms?: number) => (ms ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve());
   await page.route(`${API}/**`, async (route) => {
@@ -132,12 +161,35 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (!cursor && items.length > 2) return json(route, 200, { items: items.slice(0, 2), nextCursor: "c2" });
       return json(route, 200, { items: cursor ? items.slice(2) : items, nextCursor: null });
     }
-    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund)?$/.exec(p);
+    if (p === "/api/v1/admin/config/pricing") {
+      const pricing = state.pricing;
+      if (url.searchParams.get("zoneId") && url.searchParams.get("zoneId") !== "Z001") return json(route, 404, { code: "not_found", message: "This zone has no such document yet.", requestId: "r-404c", retryable: false, reason: "config_not_found" });
+      const view = () => ({ doc: "pricing", zoneId: "Z001", version: pricing.version, liveVersion: pricing.liveVersion, document: pricing.document, updatedAt: "2026-10-27T08:00:00Z", updatedBy: "A1" });
+      if (method === "GET") return json(route, 200, view());
+      if (body.expectedVersion !== pricing.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409c", retryable: false });
+      pricing.document = body.document;
+      pricing.version += 1;
+      return json(route, 200, view());
+    }
+    if (p === "/api/v1/admin/config/pricing/publish") {
+      if (body.expectedVersion !== state.pricing.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409p", retryable: false });
+      if (state.publishNeedsApproval) return json(route, 202, { approvalId: "AP2", status: "pending", action: "config.publish" });
+      state.pricing.liveVersion += 1;
+      return json(route, 200, { doc: "pricing", zoneId: "Z001", version: state.pricing.liveVersion, publishedAt: "2026-10-27T10:00:00Z" });
+    }
+    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/no-show)?$/.exec(p);
     if (one) {
       const trip = state.trips.find((item) => item.tripId === one[1]);
       if (!trip) return json(route, 404, { code: "not_found", message: "No such trip.", requestId: "r-404t", retryable: false });
       if (!one[2]) return json(route, 200, trip);
       if (one[2] === "/offers") return json(route, 200, { items: OFFERS.filter((offer) => offer.tripId === trip.tripId), nextCursor: null });
+      if (one[2] === "/no-show") {
+        if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409n", retryable: false, projection: trip });
+        trip.status = "no_show";
+        trip.version = Number(trip.version) + 1;
+        trip.cancellation = { actor: "admin", reasonCode: "rider_no_show", at: "2026-10-27T09:20:00Z", fee: body.waiveFee ? null : SEK(6500) };
+        return json(route, 200, trip);
+      }
       await wait(state.refundDelayMs);
       if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409", retryable: false, projection: trip });
       if (state.refundNeedsApproval) return json(route, 202, { approvalId: "AP1", status: "pending", action: "trip.refund" });

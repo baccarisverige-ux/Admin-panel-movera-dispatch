@@ -20,6 +20,9 @@ export function refundable(trip: Pick<Trip, "status" | "paymentStatus">): boolea
   return TERMINAL.includes(trip.status) && (trip.paymentStatus === "captured" || trip.paymentStatus === "partially_refunded");
 }
 
+/** contract §5: an admin may mark a no-show while the driver is on the way or waiting at pickup. */
+export const NO_SHOW_FROM = ["accepted", "driver_to_pickup", "arrived"];
+
 /**
  * GET /api/v1/admin/trips/{tripId} and /offers: the trip's id, status, rider, driver, car, route, money, timeline and the
  * offers sent; Refund (POST /admin/trips/{tripId}/refund, payments.refund) on a paid, finished trip.
@@ -29,6 +32,7 @@ export function LiveTripDetailPage() {
   const { client, can } = useLiveSession();
   const queryClient = useQueryClient();
   const [refundOpen, setRefundOpen] = useState(false);
+  const [noShowOpen, setNoShowOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const key = ["live", "trip", tripId];
   const query = useQuery({ queryKey: key, queryFn: () => client.json<Trip>(`/admin/trips/${encodeURIComponent(tripId)}`), enabled: can("trips.read") && Boolean(tripId) });
@@ -46,6 +50,7 @@ export function LiveTripDetailPage() {
 
   const trip = query.data;
   const canRefund = can("payments.refund") && refundable(trip);
+  const canNoShow = can("trips.intervene") && NO_SHOW_FROM.includes(trip.status);
 
   return (
     <>
@@ -57,9 +62,10 @@ export function LiveTripDetailPage() {
             <Status code={trip.status} /> · {trip.kind === "scheduled" ? tr("Reservation") : tr("Ride now")} · {trip.categoryId}
           </p>
         </div>
-        {canRefund ? (
+        {canRefund || canNoShow ? (
           <div className="actions">
-            <button data-command="admin.server.tripRefund" type="button" className="primary-btn" onClick={() => setRefundOpen(true)}>{tr("Refund")}</button>
+            {canNoShow ? <button data-command="admin.server.tripNoShow" type="button" className="secondary-btn" onClick={() => setNoShowOpen(true)}>{tr("Mark no-show")}</button> : null}
+            {canRefund ? <button data-command="admin.server.tripRefund" type="button" className="primary-btn" onClick={() => setRefundOpen(true)}>{tr("Refund")}</button> : null}
           </div>
         ) : null}
       </div>
@@ -154,6 +160,23 @@ export function LiveTripDetailPage() {
         </section>
       </div>
 
+      <NoShowDialog
+        open={noShowOpen}
+        onClose={() => setNoShowOpen(false)}
+        onSend={async (note, waiveFee) => {
+          try {
+            await client.post<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/no-show`, { expectedVersion: trip.version, note, ...(waiveFee ? { waiveFee: true } : {}) });
+            setNotice(waiveFee ? tr("Marked as no-show. No fee is charged.") : tr("Marked as no-show. The zone's no-show fee is charged."));
+            reload();
+          } catch (error) {
+            if (isVersionMismatch(error)) {
+              reload();
+              setNotice(tr("Someone else changed this record. It was reloaded; check it and try again."));
+            }
+            throw error;
+          }
+        }}
+      />
       <RefundDialog
         open={refundOpen}
         trip={trip}
@@ -234,6 +257,64 @@ function RefundDialog({ open, trip, onClose, onSend }: { open: boolean; trip: Tr
           <button data-command="admin.server.dialogConfirm" type="submit" className="primary-btn" disabled={invalid || busy}>
             {busy ? tr("Sending.") : tr("Refund")}
           </button>
+          <button data-command="admin.server.dialogCancel" type="button" className="secondary-btn" onClick={onClose} disabled={busy}>{tr("Cancel")}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function NoShowDialog({ open, onClose, onSend }: { open: boolean; onClose: () => void; onSend: (note: string, waiveFee: boolean) => Promise<void> }) {
+  const [note, setNote] = useState("");
+  const [waive, setWaive] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const sending = useRef(false);
+  useEffect(() => {
+    if (open) {
+      setNote("");
+      setWaive(false);
+      setError(null);
+      setBusy(false);
+      sending.current = false;
+    }
+  }, [open]);
+  const text = note.trim();
+  const invalid = text.length === 0 || text.length > 1000;
+  return (
+    <Modal open={open} title={tr("Mark rider no-show")} onClose={onClose}>
+      <form
+        className="live-dialog"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          if (invalid || sending.current) return;
+          sending.current = true;
+          setBusy(true);
+          setError(null);
+          try {
+            await onSend(text, waive);
+            onClose();
+          } catch (caught) {
+            setError(caught);
+            sending.current = false;
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <p>{tr("The trip ends as a no-show. The rider pays the zone's no-show fee and the driver gets their share, unless you waive it.")}</p>
+        <label>
+          {tr("Note (required)")}
+          <textarea value={note} maxLength={1000} rows={3} onChange={(event) => setNote(event.target.value)} />
+        </label>
+        <label className="check-row live-check">
+          <input type="checkbox" checked={waive} onChange={(event) => setWaive(event.target.checked)} />
+          {tr("Waive fee")}
+        </label>
+        {waive ? <p className="live-muted">{tr("The rider pays nothing and the driver gets no no-show share.")}</p> : null}
+        {error ? <ErrorLine error={error} /> : null}
+        <div className="actions">
+          <button data-command="admin.server.dialogConfirm" type="submit" className="primary-btn live-danger" disabled={invalid || busy}>{busy ? tr("Sending.") : tr("Mark no-show")}</button>
           <button data-command="admin.server.dialogCancel" type="button" className="secondary-btn" onClick={onClose} disabled={busy}>{tr("Cancel")}</button>
         </div>
       </form>

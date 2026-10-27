@@ -152,8 +152,8 @@ test("live menu lists only live pages; a demo page opened by its address says it
   await fakeTripServer(page);
   await signIn(page);
   const nav = page.locator("nav");
-  for (const name of ["Trips", "Drivers", "Fleet owners", "Vehicles", "Onboarding"]) await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
-  for (const name of ["Dashboard", "Payments", "Pricing", "Zones", "Live map", "Support", "Riders"]) await expect(nav.getByRole("link", { name, exact: true })).toHaveCount(0);
+  for (const name of ["Trips", "Drivers", "Fleet owners", "Vehicles", "Onboarding", "Pricing"]) await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
+  for (const name of ["Dashboard", "Payments", "Zones", "Live map", "Support", "Riders"]) await expect(nav.getByRole("link", { name, exact: true })).toHaveCount(0);
   for (const path of ["/payments", "/zones", "/riders"]) {
     await page.goto(path);
     await expect(page.getByTestId("demo-banner")).toContainText("Demo, not live");
