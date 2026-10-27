@@ -3,8 +3,9 @@ import { useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, MapPinned, Plane } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
-import { MARKETS, zoneById, zoneGroups, type MarketId } from "../markets/markets";
-import { allowedCountries, zoneAllowed } from "../markets/scope";
+import { MARKETS, isStandardZone, standardZoneId, zoneById, zoneGroups, type MarketId } from "../markets/markets";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { ALL_ZONES, allowedCountries, zoneAllowed } from "../markets/scope";
 import { rememberCountry, useMarketScope } from "../markets/useMarketScope";
 import { Flag } from "../ui/Flag";
 import { tr, trn, trx } from "../i18n";
@@ -16,6 +17,7 @@ export function MarketBar() {
   const [params, setParams] = useSearchParams();
   const client = useQueryClient();
   const scope = useMarketScope();
+  const live = Boolean(useLiveSessionMaybe());
   const access = agent?.scope ?? { zones: "all" as const };
   const countries = allowedCountries(access);
   const [open, setOpen] = useState(false);
@@ -60,6 +62,10 @@ export function MarketBar() {
   }
 
   function toggle(zoneId: string) {
+    // The country's Standard beside "All zones": every zone and the Standard.
+    if (isStandardZone(zoneId) && !scope.zones.length) return setZones([ALL_ZONES, zoneId]);
+    const allZones = scope.zones.filter((id) => !isStandardZone(id)).length === allowedHere.length && scope.zones.some(isStandardZone);
+    if (isStandardZone(zoneId) && allZones) return setZones([]);
     const picked = new Set(scope.zones);
     if (picked.has(zoneId)) picked.delete(zoneId);
     else picked.add(zoneId);
@@ -67,8 +73,13 @@ export function MarketBar() {
   }
 
   const groups = zoneGroups(scope.country, (zoneId) => zoneAllowed(access, zoneId));
+  const allowedHere = groups.flatMap((group) => group.zones.map((zone) => zone.id));
+  const standardId = standardZoneId(scope.country);
+  const everyZoneAndStandard = scope.zones.includes(standardId) && allowedHere.every((id) => scope.zones.includes(id));
   const label = scope.zones.length === 0
     ? tr("All zones")
+    : everyZoneAndStandard
+      ? tr("All zones and the Standard")
     : scope.zones.length === 1
       ? zoneById(scope.zones[0])?.name ?? scope.zones[0]
       : tr("{0} zones", [scope.zones.length]);
@@ -100,6 +111,16 @@ export function MarketBar() {
         {open ? (
           <div className="zone-menu" role="group" aria-label={tr("Zones in {0}", [trx(COUNTRY_LABEL[scope.market.id])])}>
             <button data-command="admin.ui.zones" type="button" className={scope.zones.length ? "zone-option" : "zone-option checked"} onClick={() => setZones([])}>{trn("{0}All zones in {1}", <span className="zone-check">{scope.zones.length ? null : <Check size={13} aria-hidden="true" />}</span>, trx(COUNTRY_LABEL[scope.market.id]))}</button>
+            {live ? (
+              <div className="zone-group">
+                <p>{tr("Standard")}</p>
+                <label className={scope.zones.includes(standardId) ? "zone-option checked" : "zone-option"}>
+                  <input type="checkbox" checked={scope.zones.includes(standardId)} onChange={() => toggle(standardId)} />
+                  <span className="zone-check">{scope.zones.includes(standardId) ? <Check size={13} aria-hidden="true" /> : null}</span>
+                  {tr("Standard for {0}", [trx(COUNTRY_LABEL[scope.market.id])])}
+                </label>
+              </div>
+            ) : null}
             {groups.map((group) => (
               <div key={group.label} className="zone-group">
                 <p>{trx(group.label)}</p>

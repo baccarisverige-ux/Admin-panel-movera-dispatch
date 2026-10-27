@@ -5277,4 +5277,10 @@ export const fr: Record<MessageKey, string> = {
   "Trips, drivers, each zone's and each country's Standard rules from the server, published at once; dispatch actions on trips are not connected yet.": "Courses, chauffeurs, règles de chaque zone et standard de chaque pays depuis le serveur, publiées tout de suite ; les actions de dispatch sur les courses ne sont pas encore connectées.",
   "Prices, fees, surge settings, commission and pickup pay of each zone and each country's Standard, and Tips & limits, from the server; manual surges and undo are not connected yet.": "Prix, frais, réglages de majoration, commission et rémunération d'approche de chaque zone et du standard de chaque pays, et Pourboires et limites, depuis le serveur ; les majorations manuelles et l'annulation ne sont pas encore connectées.",
   "Feature switches and app updates go to the apps at once; scheduled publish, expiry and overrides are not connected yet.": "Les interrupteurs de fonctions et les mises à jour des apps partent tout de suite ; la publication planifiée, l'expiration et les exceptions ne sont pas encore connectées.",
+  "All zones and the Standard": "Toutes les zones et le standard",
+  "Standard for {0}": "Standard pour {0}",
+  "Publishes to: {0}. No other zone changes.": "Publié pour : {0}. Aucune autre zone ne change.",
+  "Nothing is chosen at the top: choose the zones first.": "Rien n'est choisi en haut : choisissez d'abord les zones.",
+  "Draft saved in this session. Publish sends it to the chosen zones.": "Brouillon enregistré pour cette session. Publier l'envoie aux zones choisies.",
+  "Choose the zones at the top first.": "Choisissez d'abord les zones en haut.",
 };

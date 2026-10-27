@@ -35,6 +35,8 @@ export function settingsScopes(): string[] {
 
 type Listener = () => void;
 
+const CONFIG_KEY = "config";
+
 /** "Uses standard" marks per document and zone, read from the server's drafts (usesStandard). */
 export const standardMarks = (() => {
   const marks = new Map<string, boolean>();
@@ -57,7 +59,7 @@ export const standardMarks = (() => {
 
 export type LiveSettings = {
   readSlice: (key: string, fallback: unknown) => Promise<unknown> | null;
-  command: (action: string, input: { targetId: string; value?: unknown }) => Promise<string> | null;
+  command: (action: string, input: { targetId: string; value?: unknown; scope?: string }) => Promise<string> | null;
 };
 
 const notFound = (error: unknown) => (error as { status?: number } | null)?.status === 404;
@@ -67,16 +69,23 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   const slices = new Map<string, unknown>();
   const key = (doc: ConfigDocName, id: string) => `${doc}:${id}`;
 
+  const unknownZones = new Set<string>();
+  const readAt = new Map<string, number>();
   async function draft(doc: ConfigDocName, id: string, fresh = false): Promise<Draft | null> {
-    if (!fresh && drafts.has(key(doc, id))) return drafts.get(key(doc, id)) ?? null;
+    // A zone the server does not have is not asked again in this session; a fresh read is reused for 10 s.
+    if (unknownZones.has(id)) return null;
+    const recent = Date.now() - (readAt.get(key(doc, id)) ?? 0) < 10_000;
+    if ((!fresh || recent) && drafts.has(key(doc, id))) return drafts.get(key(doc, id)) ?? null;
     let found: Draft | null = null;
     try {
       found = await readDraft(http, doc, id);
     } catch (error) {
       // A zone the server does not have (zone_not_found) keeps the demo's values.
       if (!notFound(error) && (error as { status?: number } | null)?.status !== 400) throw error;
+      if (notFound(error)) unknownZones.add(id);
     }
     drafts.set(key(doc, id), found);
+    readAt.set(key(doc, id), Date.now());
     if (found && doc !== "country_rules") standardMarks.set(doc, id, found.usesStandard === true);
     return found;
   }
@@ -97,7 +106,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const book = normalizeDispatchBook(fallback);
     const live = { ...book.live };
     await Promise.all(settingsScopes().map(async (id) => {
-      const [rules, driver] = await Promise.all([draft("dispatch", id, true), draft("driver_app_config", id, true), draft("rider_app_config", id, true)]);
+      // One read first tells whether the server knows the zone at all.
+      const rules = await draft("dispatch", id, true);
+      const driver = unknownZones.has(id) ? null : await draft("driver_app_config", id, true);
       if (rules || driver) live[id] = rulesOfDispatch(rules?.document ?? null, driver?.document ?? null, liveRules(book, id));
     }));
     const next = { ...book, live };
@@ -162,14 +173,14 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return "Published.";
   }
 
-  async function publishSettings(value: unknown): Promise<string> {
+  /**
+   * Owner 2026-10-27: only the zones chosen at the top get the change (the Standard when chosen). A chosen
+   * zone that uses the Standard gets settings of its own; no other zone is touched.
+   */
+  async function publishSettings(value: unknown, targets: readonly string[]): Promise<string> {
+    if (!targets.length) throw new Error("Choose the zones at the top first.");
     const state = stateWith({ config: value });
-    for (const id of settingsScopes()) {
-      const rider = drafts.get(key("rider_app_config", id));
-      // Zones that use the Standard get it from there; only the Standards and zones with their own documents change.
-      if (rider?.usesStandard) continue;
-      await publishAppParts(id, OWNED.settings, state);
-    }
+    for (const id of targets) await publishAppParts(id, OWNED.settings, state);
     return "Published.";
   }
 
@@ -204,12 +215,21 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       if (sliceKey === PRICING_KEY) return readPricing(fallback);
       if (sliceKey === DISPATCH_KEY) return readDispatch(fallback);
       if (sliceKey === COUNTRY_SETTINGS_KEY) return readCountries(fallback);
+      // Settings' draft lives in this session until it is published (the server keeps the published documents).
+      if (sliceKey === CONFIG_KEY) return Promise.resolve(slices.get(CONFIG_KEY) ?? fallback);
       return null;
     },
     command(action, input) {
       if (action === "admin.pricing.publish") return publishPricing(normalizeStore(input.value));
       if (action === "admin.dispatch.publish") return publishDispatch(normalizeDispatchBook(input.value));
-      if (action === "admin.config.publish") return publishSettings(input.value);
+      if (action === "admin.config.save") {
+        slices.set(CONFIG_KEY, input.value);
+        return Promise.resolve("Draft saved in this session. Publish sends it to the chosen zones.");
+      }
+      if (action === "admin.config.publish") {
+        slices.set(CONFIG_KEY, input.value);
+        return publishSettings(input.value, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
+      }
       if (action === "admin.pricing.saveCountry") return saveCountries(input.value as CountrySettingsBook);
       if (action === "admin.config.useStandard") return backToStandard(input.targetId, ((input.value as { docs?: string[] } | undefined)?.docs ?? ["pricing"]) as Exclude<ConfigDocName, "country_rules">[]);
       return null;

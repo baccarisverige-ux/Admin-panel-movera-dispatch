@@ -280,7 +280,10 @@ export async function readDraft(http: ConfigHttp, doc: ConfigDocName, id: string
   try {
     return await http.json<Draft>(`/admin/config/${doc}?${query(id)}`);
   } catch (error) {
-    if (isStatus(error, 404)) return null;
+    // Only "nothing published yet" is an empty answer; any other 404 (a zone or country the server does not
+    // know) is the caller's to remember.
+    const reason = (error as { reason?: string | null } | null)?.reason;
+    if (isStatus(error, 404) && reason === "config_not_found") return null;
     throw error;
   }
 }

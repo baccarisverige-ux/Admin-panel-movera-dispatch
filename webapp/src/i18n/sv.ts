@@ -5277,4 +5277,10 @@ export const sv: Record<MessageKey, string> = {
   "Trips, drivers, each zone's and each country's Standard rules from the server, published at once; dispatch actions on trips are not connected yet.": "Resor, förare, varje zons och varje lands standardregler från servern, publiceras direkt; utskicksåtgärder på resor är inte kopplade än.",
   "Prices, fees, surge settings, commission and pickup pay of each zone and each country's Standard, and Tips & limits, from the server; manual surges and undo are not connected yet.": "Priser, avgifter, rusningsinställningar, provision och upphämtningsersättning för varje zon och varje lands standard, samt Dricks och gränser, från servern; manuella rusningspriser och ångra är inte kopplade än.",
   "Feature switches and app updates go to the apps at once; scheduled publish, expiry and overrides are not connected yet.": "Funktionsbrytare och appuppdateringar går till apparna direkt; schemalagd publicering, utgång och undantag är inte kopplade än.",
+  "All zones and the Standard": "Alla zoner och standarden",
+  "Standard for {0}": "Standard för {0}",
+  "Publishes to: {0}. No other zone changes.": "Publiceras till: {0}. Ingen annan zon ändras.",
+  "Nothing is chosen at the top: choose the zones first.": "Inget är valt överst: välj zonerna först.",
+  "Draft saved in this session. Publish sends it to the chosen zones.": "Utkastet sparat i den här sessionen. Publicera skickar det till de valda zonerna.",
+  "Choose the zones at the top first.": "Välj zonerna överst först.",
 };

@@ -139,3 +139,31 @@ test("live Dispatch publishes big changes at once: no second admin", () => {
   // The demo keeps its second-admin step for the same change.
   assert.deepEqual(demo.waiting, ["Z001"]);
 });
+
+test("publish scope (owner 2026-10-27): only the zones chosen at the top; the Standard only when chosen", async () => {
+  const { resolveScope, publishTargets, zoneAllowed } = await import("../markets/scope.ts");
+  const all = { zones: "all" as const };
+  assert.deepEqual(publishTargets(resolveScope(all, { scope: "Z002" })), ["Z002"]);
+  const every = publishTargets(resolveScope(all, { country: "SE" }));
+  assert.ok(every.includes("Z001") && every.includes("BMA") && !every.includes("standard-SE"));
+  const withStandard = publishTargets(resolveScope(all, { scope: "all,standard-SE" }));
+  assert.ok(withStandard.includes("standard-SE") && withStandard.includes("Z009"));
+  assert.deepEqual(publishTargets(resolveScope(all, { scope: "standard-FR" })), ["standard-FR"]);
+  // A zone admin of Sweden may work on Sweden's Standard, not on France's.
+  assert.equal(zoneAllowed({ zones: ["Z001"] }, "standard-SE"), true);
+  assert.equal(zoneAllowed({ zones: ["Z001"] }, "standard-FR"), false);
+});
+
+test("live Settings publishes only to the chosen zones; a chosen zone on the Standard gets its own", async () => {
+  const doc = { ...sample("rider_app_config"), zoneId: "Z002" };
+  const server = fakeServer({
+    "rider_app_config:Z002": { version: 1, liveVersion: 0, usesStandard: true, document: doc },
+    "driver_app_config:Z002": { version: 1, liveVersion: 0, usesStandard: true, document: { ...sample("driver_app_config"), zoneId: "Z002" } },
+    "rider_app_config:Z003": { version: 2, liveVersion: 1, usesStandard: false, document: { ...doc, zoneId: "Z003" } },
+  });
+  const settings = createLiveSettings(server.http, () => "2026-10-27T10:00:00Z");
+  await settings.command("admin.config.publish", { targetId: "configuration", value: null, scope: "Z002" });
+  const written = server.calls.filter((c) => c.method !== "GET").map((c) => (c.body as { zoneId?: string }).zoneId);
+  assert.ok(written.length > 0 && written.every((zone) => zone === "Z002"));
+  await assert.rejects(settings.command("admin.config.publish", { targetId: "configuration", value: null, scope: "" })!);
+});

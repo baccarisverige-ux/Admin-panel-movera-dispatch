@@ -5275,6 +5275,12 @@ export const en = {
   "Trips, drivers, each zone's and each country's Standard rules from the server, published at once; dispatch actions on trips are not connected yet.": "Trips, drivers, each zone's and each country's Standard rules from the server, published at once; dispatch actions on trips are not connected yet.",
   "Prices, fees, surge settings, commission and pickup pay of each zone and each country's Standard, and Tips & limits, from the server; manual surges and undo are not connected yet.": "Prices, fees, surge settings, commission and pickup pay of each zone and each country's Standard, and Tips & limits, from the server; manual surges and undo are not connected yet.",
   "Feature switches and app updates go to the apps at once; scheduled publish, expiry and overrides are not connected yet.": "Feature switches and app updates go to the apps at once; scheduled publish, expiry and overrides are not connected yet.",
+  "All zones and the Standard": "All zones and the Standard",
+  "Standard for {0}": "Standard for {0}",
+  "Publishes to: {0}. No other zone changes.": "Publishes to: {0}. No other zone changes.",
+  "Nothing is chosen at the top: choose the zones first.": "Nothing is chosen at the top: choose the zones first.",
+  "Draft saved in this session. Publish sends it to the chosen zones.": "Draft saved in this session. Publish sends it to the chosen zones.",
+  "Choose the zones at the top first.": "Choose the zones at the top first.",
 } as const;
 
 export type MessageKey = keyof typeof en;

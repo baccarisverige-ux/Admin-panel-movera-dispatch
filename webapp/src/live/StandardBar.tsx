@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { Layers, RotateCcw } from "lucide-react";
-import { isStandardZone, type MarketId } from "../markets/markets";
+import { isStandardZone, zoneById, type MarketId } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trx } from "../i18n";
 import { standardMarks } from "./liveSettings.ts";
@@ -49,5 +49,15 @@ export function StandardBar({ doc, docs, zoneId, zoneName, country, countryName,
         <RotateCcw size={13} aria-hidden="true" /> {tr("Go back to Standard")}
       </CommandButton>
     </div>
+  );
+}
+
+/** The publish dialog's line in the live panel: exactly which zones (and Standard) get the change. */
+export function PublishTargetsLine({ zoneIds }: { zoneIds: readonly string[] }) {
+  const names = zoneIds.map((id) => zoneById(id)?.name ?? id);
+  return (
+    <span data-testid="publish-targets">
+      {names.length ? tr("Publishes to: {0}. No other zone changes.", [names.join(", ")]) : tr("Nothing is chosen at the top: choose the zones first.")}
+    </span>
   );
 }

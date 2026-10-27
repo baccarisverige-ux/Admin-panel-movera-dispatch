@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { NotConnected } from "../live/NotConnected";
+import { PublishTargetsLine } from "../live/StandardBar";
+import { publishTargets } from "../markets/scope";
+import { useMarketScope } from "../markets/useMarketScope";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { CompareVersions, FindSetting, PanelSettings, SettingsElsewhere } from "../platform/SettingsParts";
@@ -174,6 +177,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
 
   // v0.8.0 (owner 2026-10-27): live publishes at once; scheduled publish, expiry and overrides have no server field yet.
   const liveSession = useLiveSessionMaybe();
+  // Owner 2026-10-27: a Settings publish reaches only the zones chosen at the top (the Standard when chosen).
+  const settingsTargets = publishTargets(useMarketScope());
   const review = agent ? submitConfigApproval(book, agent.id) : null;
   const approval = agent ? approveConfig(book, agent.id) : null;
   const publication = agent ? publishConfig(book, agent.id, new Date().toISOString(), { direct: Boolean(liveSession) }) : null;
@@ -572,6 +577,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
           <CommandButton
             command="admin.config.publish"
             confirmTarget={false}
+            summary={liveSession ? <PublishTargetsLine zoneIds={settingsTargets} /> : undefined}
+            scope={liveSession ? settingsTargets.join(",") : undefined}
             className="primary-btn"
             type="button"
             targetId="configuration"

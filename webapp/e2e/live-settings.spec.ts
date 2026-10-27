@@ -71,18 +71,18 @@ test("Pricing: the Standard for Sweden, 'Uses standard' on a zone, and Go back t
   await fakeTripServer(page, { admin: SV_ADMIN });
   const server = await fakeSettings(page);
   await signIn(page, "Kontrollpanel");
-  await page.goto("/pricing?zone=standard-SE");
+  await page.goto("/pricing?scope=all,standard-SE&zone=standard-SE");
   await expect(page.getByTestId("standard-bar")).toContainText("Standard för Sverige");
 
   await expect(page.getByTestId("uses-standard-Z001")).toHaveText("Använder standard");
   await expect(page.getByTestId("uses-standard-Z002")).toHaveCount(0);
   await shot(page, "admin-pricing-standard-sv");
 
-  await page.goto("/pricing?zone=Z001");
+  await page.goto("/pricing?scope=all,standard-SE&zone=Z001");
   await expect(page.getByTestId("standard-bar")).toContainText("använder standarden för Sverige");
   await shot(page, "admin-pricing-uses-standard-sv");
 
-  await page.goto("/pricing?zone=Z002");
+  await page.goto("/pricing?scope=all,standard-SE&zone=Z002");
   const bar = page.getByTestId("standard-bar");
   await expect(bar).toContainText("har egna inställningar");
   await shot(page, "admin-pricing-own-settings-sv");
@@ -105,6 +105,8 @@ test("Dispatch: the driver's share of the cancel fee; publishing goes live at on
   await shot(page, "admin-dispatch-cancel-share-sv");
   const publish = page.getByRole("region", { name: "Publicera" });
   await publish.getByRole("button", { name: "Publicera nu" }).click();
+  await expect(page.getByTestId("publish-targets")).toHaveText("Publiceras till: Södermalm. Ingen annan zon ändras.");
+  await shot(page, "admin-dispatch-publish-confirm-zones-sv");
   await confirm(page);
   // The driver document (its cancel share) goes live at once; the dispatch rules did not change, so they are not sent.
   await expect.poll(() => server.sent.filter((s) => s.method === "POST").map((s) => s.path)).toContain("/api/v1/admin/config/driver_app_config/publish");
@@ -125,4 +127,27 @@ test("Settings: publish without Send for approval or Approve; scheduled publish 
   await expect(page.getByTestId("control-not-connected").first()).toHaveText("Inte kopplad än");
   await page.getByRole("heading", { name: /Granska och publicera/ }).scrollIntoViewIfNeeded();
   await shot(page, "admin-settings-publish-sv");
+});
+
+test("Scope at the top: the Standard can be chosen beside the zones; Settings publishes only to the chosen zone", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  const server = await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto("/settings?scope=Z002");
+  await page.getByRole("button", { name: /^Zoner:/ }).first().click();
+  const menu = page.getByRole("group", { name: /Zoner i/ });
+  await expect(menu.getByText("Standard för Sverige")).toBeVisible();
+  await shot(page, "admin-scope-choice-sv");
+  await page.keyboard.press("Escape");
+  await page.locator("article.panel", { has: page.getByRole("heading", { name: "Funktioner", exact: true }) }).locator("label.check-row input[type=checkbox]").first().click();
+  await page.getByRole("button", { name: "Spara utkast" }).first().click();
+  await expect(page.getByText("Utkastet sparat i den här sessionen.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Publicera", exact: true }).click();
+  await expect(page.getByTestId("publish-targets")).toHaveText("Publiceras till: Södermalm. Ingen annan zon ändras.");
+  await shot(page, "admin-settings-publish-confirm-zones-sv");
+  await confirm(page);
+  await expect.poll(() => server.sent.filter((s) => s.method === "POST").length).toBeGreaterThan(0);
+  const written = server.sent.filter((s) => s.method !== "GET").map((s) => s.body?.["zoneId"] ?? s.body?.["country"]);
+  expect(new Set(written)).toEqual(new Set(["Z002"]));
 });

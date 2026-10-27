@@ -246,7 +246,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return answer?.status === "pending" ? done("Waits for a second admin.", "pending_approval") : done("Refunded.");
     }
     // Pricing, Dispatch, Settings and Tips & limits publish to the server's config documents (contract v0.8.0).
-    const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value });
+    const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value, ...(input.scope ? { scope: input.scope } : {}) });
     if (settingsCall) {
       try {
         return done(await settingsCall);

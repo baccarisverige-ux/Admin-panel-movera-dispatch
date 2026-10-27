@@ -11,9 +11,9 @@ import { activeCategories, emptyPricingStore, normalizeStore, SLICE_KEY as PRICI
 import { candidatesFor, rideRequests, type RideRequest } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
-import { standardZone, zoneById } from "../markets/markets";
+import { standardZone, standardZoneId, zoneById } from "../markets/markets";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { StandardBar } from "../live/StandardBar";
+import { PublishTargetsLine, StandardBar } from "../live/StandardBar";
 import { zoneAllowed } from "../markets/scope";
 import { useMarketScope } from "../markets/useMarketScope";
 import { CommandButton } from "../ui/CommandButton";
@@ -135,7 +135,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const zones = market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id)));
   // v0.8.0 (owner 2026-10-27): the live panel edits each country's Standard like a zone; no second admin.
   const liveSession = useLiveSessionMaybe();
-  const ruleZones = liveSession && zones.length ? [standardZone(country), ...zones] : zones;
+  // Owner 2026-10-27: only what is chosen at the top; the Standard only when it is chosen there.
+  const ruleZones = liveSession && scope.zones.includes(standardZoneId(country)) ? [standardZone(country), ...zones] : zones;
   const zoneParam = params.get("zone");
   const zoneId = zoneParam && ruleZones.some((zone) => zone.id === zoneParam) ? zoneParam : "";
   // Radar · Exclusive · Reservations opens on the first zone, straight into its three tabs.
@@ -330,7 +331,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
                 <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole} largeChanges={largeDraftChanges} onDone={() => { setWorking({}); setWorkingCountry({}); setNotice("Draft saved. Nothing is live yet. Test it in Test a ride, then publish."); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
               ) : null}
               {view !== "test" ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => go({ view: "test" })}>{trn("{0} Test it", <FlaskConical size={13} aria-hidden="true" />)}</button> : null}
-              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error)} title={published.error} largeChanges={largeChanges} onDone={() => {
+              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} summary={liveSession ? <PublishTargetsLine zoneIds={[...changed]} /> : undefined} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error)} title={published.error} largeChanges={largeChanges} onDone={() => {
                 const liveNames = published.live.map((id) => zoneById(id)?.name ?? id);
                 const waitNames = published.waiting.map((id) => zoneById(id)?.name ?? id);
                 setWorking({});
