@@ -179,6 +179,14 @@ export type Trip = {
   driverEarnings?: LiveMoney;
   commission?: LiveMoney;
   driverBonus?: LiveMoney;
+  /** Admins and drivers only: Movera's pay for the drive to the pickup (contract.json#pickupPay). */
+  pickupPay?: LiveMoney;
+  walletApplied?: LiveMoney;
+  cashToCollect?: LiveMoney;
+  ratingStatus?: string;
+  pinRequired?: boolean;
+  /** Set once the driver arrived: the waiting clock (chargedSeconds after an admin change). */
+  waiting?: { arrivedAt?: string; freeUntil?: string; noShowAt?: string; chargedSeconds?: number };
   paymentMethod: string;
   paymentStatus?: string;
   driver?: { driverId: string; firstName: string; vehicle?: { vehicleId?: string; make?: string; model?: string; color?: string; plate?: string } };
@@ -186,7 +194,19 @@ export type Trip = {
 };
 
 /** contract Offer (GET /admin/trips/{tripId}/offers). */
-export type TripOffer = { offerId: string; kind: string; status: string; expiresAt: string; fare: LiveMoney; driverEarnings?: LiveMoney; source?: string };
+export type TripOffer = { offerId: string; kind: string; status: string; expiresAt: string; fare: LiveMoney; driverEarnings?: LiveMoney; source?: string; driverId?: string; groupId?: string; reasonCode?: string; pickupEtaSeconds?: number; pickupMeters?: number; tripSeconds?: number; tripMeters?: number };
+
+/** GET /admin/trips/{tripId}/nearby-drivers. */
+export type NearbyDriver = { driverId: string; firstName: string; onlineStatus: string; distanceMeters: number; pickupEtaSeconds: number; zoneId?: string; categoryIds: string[]; openOfferId?: string };
+
+/** GET /admin/trips/{tripId}/trace: the driver's GPS fixes on the trip. */
+export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; measuredAt?: string }[] };
+
+/** GET /admin/audit. */
+export type AuditEntry = { auditId: string; at: string; actorId: string; actorRole?: string; action: string; targetType: string; targetId: string; reason?: string; result: string; after?: unknown };
+
+/** GET /admin/riders (the fields the trips pages read). */
+export type Rider = { riderId: string; firstName?: string; phone?: string };
 
 /** contract Refund (201 of POST /admin/trips/{tripId}/refund). */
 export type Refund = { refundId: string; amount: LiveMoney; status: string; reason: string };
