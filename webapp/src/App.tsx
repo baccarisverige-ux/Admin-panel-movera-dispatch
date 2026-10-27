@@ -4,13 +4,15 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
 import { AppShell } from "./layout/AppShell";
-import { LIVE_PAGE_IDS, isLivePage, isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
+import { MENU, isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundRecord } from "./ui/NotFoundRecord";
 import { I18nProvider } from "./i18n/I18nProvider";
 import { tr, trx } from "./i18n";
 import { useAdminApi } from "./api/AdminApiContext";
 import { LiveSessionProvider, useLiveSessionMaybe } from "./live/LiveSessionContext";
+import { LiveAdminApiProvider } from "./live/LiveAdminApiProvider";
+import { connectionOf } from "./live/connection";
 
 // Pages load on first visit, so the sign-in screen and the shell do not wait for every page and map library.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same constraint as React.lazy itself
@@ -60,35 +62,12 @@ const AdminPage = lazyPage(() => import("./pages/AdminPage"), "AdminPage");
 const VehicleDetailPage = lazyPage(() => import("./pages/VehicleDetailPage"), "VehicleDetailPage");
 const ZoneDetailPage = lazyPage(() => import("./pages/ZoneDetailPage"), "ZoneDetailPage");
 const ZonesPage = lazyPage(() => import("./pages/ZonesPage"), "ZonesPage");
-// Live mode (VITE_ADMIN_API=http or an http(s) URL): the people area reads the Movera server instead of the demo store.
+// Live mode (VITE_ADMIN_API=http or an http(s) URL): the demo pages read the Movera server; only sign-in differs.
 const LiveLoginPage = lazyPage(() => import("./live/LiveLoginPage"), "LiveLoginPage");
 const LiveSetupPasswordPage = lazyPage(() => import("./live/LiveSetupPasswordPage"), "LiveSetupPasswordPage");
-const LiveDriversPage = lazyPage(() => import("./live/LiveDriversPage"), "LiveDriversPage");
-const LiveDriverDetailPage = lazyPage(() => import("./live/LiveDriverDetailPage"), "LiveDriverDetailPage");
-const LiveFleetsPage = lazyPage(() => import("./live/LiveFleetsPage"), "LiveFleetsPage");
-const LiveFleetDetailPage = lazyPage(() => import("./live/LiveFleetDetailPage"), "LiveFleetDetailPage");
-const LiveVehiclesPage = lazyPage(() => import("./live/LiveVehiclesPage"), "LiveVehiclesPage");
-const LiveTripsPage = lazyPage(() => import("./live/LiveTripsPage"), "LiveTripsPage");
-const LiveTripDetailPage = lazyPage(() => import("./live/LiveTripDetailPage"), "LiveTripDetailPage");
-
-/** The screens that exist against the server; every other menu id keeps its demo page. */
-function LiveScreen({ id }: { id: string }) {
-  if (id === "drivers") return <LiveDriversPage />;
-  if (id === "onboarding") return <LiveDriversPage initialStatus="on_hold" title="Onboarding" />;
-  if (id === "fleets") return <LiveFleetsPage />;
-  if (id === "vehicles") return <LiveVehiclesPage />;
-  if (id === "trips") return <LiveTripsPage />;
-  return null;
-}
-
 function Screen({ id }: { id: string }) {
   const item = menuItem(id);
-  const live = useLiveSessionMaybe();
   if (!item) return <NotFound />;
-  if (live) {
-    const screen = LiveScreen({ id });
-    if (screen) return screen;
-  }
   if (item.coming) return <ComingPage title={trx(item.label)} order={item.coming} />;
   if (id === "audit") return <AuditPage />;
   if (id === "settings") return <ConfigPage />;
@@ -165,9 +144,9 @@ function Shell({ page, children, forceNoAccess = false, redirect = false }: { pa
     <AppShell page={shown}>
       <AssignPanelProvider>
         <section className="page active" data-page={shown.id}>
-          {live && page && !isLivePage(page.id) && !denied ? (
-            <p className="live-demo-banner" role="note" data-testid="demo-banner">
-              {tr("Demo, not live: this page shows sample data kept in this browser, not the Movera server. Nothing here reaches riders or drivers.")}
+          {live && page && !denied && connectionOf(page.id).state !== "connected" ? (
+            <p className="live-not-connected" role="note" data-testid="not-connected" title={connectionOf(page.id).what ? tr(connectionOf(page.id).what as Parameters<typeof tr>[0]) : undefined}>
+              {tr("Not connected yet")}
             </p>
           ) : null}
           {denied ? <NoAccess /> : page || redirect ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>{children}</Suspense> : <NotFound />}
@@ -189,11 +168,10 @@ function Authed() {
     );
   }
   if (!agent) return <LoginPage />;
-  // Live: "/" is the demo dashboard, so it opens the first live page the admin may read (an admin without
-  // overview.read used to land on "No access" right after signing in).
-  if (live && location.pathname === "/") {
-    const first = LIVE_PAGE_IDS.map((id) => menuItem(id)).find((item) => item && live.can(item.permission));
-    return <Navigate to={first?.path ?? "/drivers"} replace />;
+  // Live: an admin without overview.read (the dashboard) opens the first menu page they may read, not "No access".
+  if (live && location.pathname === "/" && !live.can("overview.read")) {
+    const first = MENU.find((item) => live.can(item.permission));
+    if (first && first.path !== "/") return <Navigate to={first.path} replace />;
   }
   const page = pageForPath(location.pathname);
   const scope = new URLSearchParams(location.search).get("scope");
@@ -201,11 +179,11 @@ function Authed() {
   return (
     <Shell page={page} forceNoAccess={scopeDenied} redirect={isRedirectPath(location.pathname)}>
       <Routes>
-        <Route index element={live ? <Navigate to="/drivers" replace /> : <Screen id="dashboard" />} />
+        <Route index element={<Screen id="dashboard" />} />
         <Route path="reports" element={<Screen id="reports" />} />
         <Route path="handover" element={<Screen id="handover" />} />
         <Route path="trips" element={<Screen id="trips" />} />
-        <Route path="trips/:tripId" element={live ? <LiveTripDetailPage /> : <TripPage />} />
+        <Route path="trips/:tripId" element={<TripPage />} />
         <Route path="reservations" element={<Screen id="reservations" />} />
         <Route path="reservations/:id" element={<ReservationDetailPage />} />
         <Route path="live" element={<Screen id="live" />} />
@@ -213,14 +191,14 @@ function Authed() {
         <Route path="offers" element={<Screen id="offers" />} />
         <Route path="alerts" element={<Screen id="alerts" />} />
         <Route path="drivers" element={<Screen id="drivers" />} />
-        <Route path="drivers/:driverId" element={live ? <LiveDriverDetailPage /> : <DriverDetailPage />} />
+        <Route path="drivers/:driverId" element={<DriverDetailPage />} />
         <Route path="onboarding" element={<Screen id="onboarding" />} />
         <Route path="riders" element={<Screen id="riders" />} />
         <Route path="riders/:riderId" element={<RiderDetailPage />} />
         <Route path="fleets" element={<Screen id="fleets" />} />
-        <Route path="fleets/:ownerId" element={live ? <LiveFleetDetailPage /> : <FleetOwnerDetailPage />} />
+        <Route path="fleets/:ownerId" element={<FleetOwnerDetailPage />} />
         <Route path="vehicles" element={<Screen id="vehicles" />} />
-        <Route path="vehicles/:id" element={live ? <LiveVehiclesPage /> : <VehicleDetailPage />} />
+        <Route path="vehicles/:id" element={<VehicleDetailPage />} />
         <Route path="payments" element={<Screen id="payments" />} />
         <Route path="payments/:id" element={<PaymentPage />} />
         <Route path="payouts" element={<Screen id="payouts" />} />
@@ -262,7 +240,7 @@ export function App() {
   );
   return (
     <BrowserRouter basename={routerBasename()}>
-      {api.kind === "http" ? <LiveSessionProvider>{body}</LiveSessionProvider> : <SessionProvider>{body}</SessionProvider>}
+      {api.kind === "http" ? <LiveSessionProvider><LiveAdminApiProvider>{body}</LiveAdminApiProvider></LiveSessionProvider> : <SessionProvider>{body}</SessionProvider>}
     </BrowserRouter>
   );
 }

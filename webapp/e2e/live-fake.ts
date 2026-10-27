@@ -89,6 +89,49 @@ export const OFFERS = [
   { offerId: "O2", tripId: "T2001", kind: "exclusive", status: "claimed", version: 2, expiresAt: "2026-10-25T08:01:45Z", fare: SEK(52000), driverEarnings: SEK(41600) },
 ];
 
+
+export const DRIVER = {
+  driverId: "D1001",
+  accountStatus: "on_hold",
+  onlineStatus: "offline",
+  firstName: "Anna",
+  lastName: "Berg",
+  email: "anna@example.se",
+  country: "SE",
+  cityId: "stockholm_lan",
+  accountType: "driver",
+  zoneIds: ["Z001"],
+  categoryIds: ["standard"],
+  fleet: { fleetId: "F1", name: "Taxi Nord AB", role: "member", status: "approved", linkedAt: "2026-10-20T10:00:00Z" },
+  documents: [
+    { documentId: "DOC1", type: "terms", status: "approved" },
+    { documentId: "DOC2", type: "driving_license", status: "in_review" },
+  ],
+  requiredDocuments: ["terms", "driving_license"],
+  version: 2,
+};
+
+export const OWNER = { ...DRIVER, driverId: "D1000", firstName: "Bo", lastName: "Nord", email: "bo@example.se", accountStatus: "active", accountType: "fleet", fleet: { ...DRIVER.fleet, role: "owner" }, documents: [{ documentId: "DOC5", type: "terms", status: "approved" }, { documentId: "DOC6", type: "driving_license", status: "approved" }], version: 5 };
+
+export const FLEET = {
+  fleetId: "F1",
+  name: "Taxi Nord AB",
+  orgNumber: "556000-0001",
+  country: "SE",
+  cityId: "stockholm_lan",
+  ownerDriverId: "D1000",
+  ownerName: "Bo Nord",
+  ownerEmail: "bo@example.se",
+  status: "approved",
+  code: "MV-AAAA1",
+  driverCount: 2,
+  vehicleCount: 1,
+  createdAt: "2026-10-18T09:00:00Z",
+  version: 3,
+};
+
+export const VEHICLE = { vehicleId: "V1", make: "Volvo", model: "V90", year: 2022, color: "black", plate: "ABC 123", seats: 4, categoryIds: ["standard"], status: "pending", version: 1, fleetId: "F1", driverId: "D1001" };
+
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-expose-headers": "*" };
 
 export type Call = { method: string; path: string; headers: Record<string, string>; body: unknown };
@@ -104,10 +147,17 @@ export type TripState = {
   refundDelayMs?: number;
   /** Changes to the signed-in admin (language, permissions). */
   admin?: Partial<typeof ADMIN> & { language?: string };
+  drivers: (typeof DRIVER)[];
+  fleets: (typeof FLEET)[];
+  vehicles: (typeof VEHICLE)[];
+  /** Answer GET /admin/drivers with this status instead of the list. */
+  driversFail?: number;
+  /** Hold POST /admin/drivers/{id}/status this many ms. */
+  statusDelayMs?: number;
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
-  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], ...init };
+  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], ...init };
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
   const wait = (ms?: number) => (ms ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve());
   await page.route(`${API}/**`, async (route) => {
@@ -118,10 +168,36 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     const body = request.postDataJSON?.() ?? null;
     state.calls.push({ method, path: url.pathname + url.search, headers: request.headers(), body });
     const p = url.pathname;
+    if (p === "/api/v1/admin/auth/sign-in" && body?.password !== "correct-horse") return json(route, 401, { code: "unauthenticated", message: "Unauthenticated", requestId: "r-401", retryable: false, reason: "invalid_credentials" });
     if (p === "/api/v1/admin/auth/sign-in") return json(route, 200, { accessToken: "access-1", refreshToken: "refresh-1", expiresIn: 900, actor: "admin", admin: { ...ADMIN, ...state.admin } });
     if (p === "/api/v1/admin/auth/sign-out") return route.fulfill({ status: 204, headers: CORS });
     if (request.headers().authorization !== "Bearer access-1") return json(route, 401, { code: "unauthenticated", message: "Sign in again.", requestId: "r-401", retryable: false });
-    if (p === "/api/v1/admin/drivers") return json(route, 200, { items: [], nextCursor: null });
+    if (p === "/api/v1/admin/drivers") {
+      if (state.driversFail) return json(route, state.driversFail, { code: "unavailable", message: "The server is busy.", requestId: "r-503", retryable: false });
+      return json(route, 200, { items: state.drivers, nextCursor: null });
+    }
+    const driver = /^\/api\/v1\/admin\/drivers\/([^/]+)(\/status)?$/.exec(p);
+    if (driver) {
+      const index = state.drivers.findIndex((item) => item.driverId === driver[1]);
+      if (index < 0) return json(route, 404, { code: "not_found", message: "No such driver.", requestId: "r-404d", retryable: false });
+      if (!driver[2]) return json(route, 200, state.drivers[index]);
+      await wait(state.statusDelayMs);
+      const current = state.drivers[index];
+      if (body.expectedVersion !== current.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409d", retryable: false, projection: current });
+      if (!body.note) return json(route, 400, { code: "invalid_request", message: "note is required", requestId: "r-400d", retryable: false });
+      state.drivers[index] = { ...current, accountStatus: body.accountStatus, version: current.version + 1 };
+      return json(route, 200, state.drivers[index]);
+    }
+    if (p === "/api/v1/admin/fleets") return json(route, 200, { items: state.fleets, nextCursor: null });
+    if (p === "/api/v1/admin/vehicles") return json(route, 200, { items: state.vehicles, nextCursor: null });
+    const review = /^\/api\/v1\/admin\/vehicles\/([^/]+)\/review$/.exec(p);
+    if (review) {
+      const index = state.vehicles.findIndex((item) => item.vehicleId === review[1]);
+      if (index < 0) return json(route, 404, { code: "not_found", message: "No such vehicle.", requestId: "r-404v", retryable: false });
+      if (body.expectedVersion !== state.vehicles[index].version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409v", retryable: false });
+      state.vehicles[index] = { ...state.vehicles[index], status: body.decision, version: state.vehicles[index].version + 1 };
+      return json(route, 200, state.vehicles[index]);
+    }
     if (p === "/api/v1/admin/trips") {
       await wait(state.listDelayMs);
       if (state.listFails) return json(route, state.listFails, { code: "internal", message: "The server failed.", requestId: "r-500", retryable: true });
@@ -152,7 +228,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
   return state;
 }
 
-export async function signIn(page: Page, landing = "Drivers") {
+export async function signIn(page: Page, landing = "Dashboard") {
   await page.goto("/");
   await page.getByLabel("Email").fill("owner@movera.se");
   await page.getByLabel("Password").fill("correct-horse");

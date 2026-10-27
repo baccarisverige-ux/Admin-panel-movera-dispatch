@@ -5223,6 +5223,18 @@ export const en = {
   "Partially refunded": "Partially refunded",
   "Claimed": "Claimed",
   "Refund a trip": "Refund a trip",
+  "Not connected yet": "Not connected yet",
+  "Drivers and trips from the server; the rest is not connected yet.": "Drivers and trips from the server; the rest is not connected yet.",
+  "Trips from the server; the rest is not connected yet.": "Trips from the server; the rest is not connected yet.",
+  "Trips, trip page, offers and full refund from the server; chat, ride check and other actions are not connected yet.": "Trips, trip page, offers and full refund from the server; chat, ride check and other actions are not connected yet.",
+  "Drivers and trips from the server; positions are not connected yet.": "Drivers and trips from the server; positions are not connected yet.",
+  "Trips and drivers from the server; dispatch actions are not connected yet.": "Trips and drivers from the server; dispatch actions are not connected yet.",
+  "Trips and their offers from the server; sending offers is not connected yet.": "Trips and their offers from the server; sending offers is not connected yet.",
+  "Drivers and their account status from the server; documents, notes and bonuses are not connected yet.": "Drivers and their account status from the server; documents, notes and bonuses are not connected yet.",
+  "Fleet companies and owners from the server; owner documents and notes are not connected yet.": "Fleet companies and owners from the server; owner documents and notes are not connected yet.",
+  "Vehicles and their review from the server; photos and rules are not connected yet.": "Vehicles and their review from the server; photos and rules are not connected yet.",
+  "Drivers and their account status from the server; document review is not connected yet.": "Drivers and their account status from the server; document review is not connected yet.",
+  "Not connected yet.": "Not connected yet.",
 } as const;
 
 export type MessageKey = keyof typeof en;
