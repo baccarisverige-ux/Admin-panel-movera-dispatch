@@ -15,7 +15,7 @@ import { ApiError } from "../api/httpClient.ts";
 import type { ApprovalRow, AuditRow, DemoRecord, LiveTripFacts } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
-import type { Approval, AuditEntry, DocumentSummary, Driver, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
+import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
@@ -240,6 +240,30 @@ export function nearbyRow(row: NearbyDriver, categoryId: string, rating: number 
   };
 }
 
+/** A rating as a record (Admin › Reviews): id tripId~from, the server's hidden flag as the status. */
+export function ratingRecord(rating: AdminRating): DemoRecord {
+  return {
+    id: `${rating.tripId}~${rating.from}`,
+    name: (rating.from === "rider" ? rating.riderName : rating.driverName) ?? "",
+    phone: "",
+    zoneId: rating.zoneId,
+    status: rating.hidden ? "hidden" : "visible",
+    tripId: rating.tripId,
+    createdAt: rating.at,
+    live: true,
+    liveRating: {
+      tripId: rating.tripId, from: rating.from, stars: rating.stars, tags: rating.tags, comment: rating.comment ?? null, at: rating.at,
+      riderId: rating.riderId, riderName: rating.riderName ?? null, driverId: rating.driverId ?? null, driverName: rating.driverName ?? null, zoneId: rating.zoneId,
+      hidden: rating.hidden, hiddenBy: rating.hiddenBy ?? null, hiddenAt: rating.hiddenAt ?? null, hideReason: rating.hideReason ?? null,
+    },
+  };
+}
+
+/** A support ticket as the demo ticket record: the subject is the name, status open / pending / resolved / closed. */
+export function ticketRecord(ticket: SupportTicket): DemoRecord {
+  return { id: ticket.ticketId, name: ticket.subject, phone: "", zoneId: ticket.zoneId ?? "", status: ticket.status, ...(ticket.tripId ? { tripId: ticket.tripId } : {}), createdAt: ticket.createdAt, kind: ticket.category, ...(ticket.driverId ? { driverId: ticket.driverId } : {}), live: true };
+}
+
 export function auditRow(entry: AuditEntry): AuditRow {
   const after = entry.after ?? {};
   const zone = typeof after["zoneId"] === "string" ? (after["zoneId"] as string) : "";
@@ -345,6 +369,19 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const rows = await paged<Payment>(client, "payments", "/admin/payments");
       return rows.map((row) => paymentRecord(row, trips.get(row.tripId)?.zoneId ?? ""));
     }
+    if (name === "ratings") return (await all<AdminRating>(client, "/admin/ratings")).map(ratingRecord);
+    if (name === "tickets") return (await all<SupportTicket>(client, "/admin/tickets")).map(ticketRecord);
+    if (name === "refunds") {
+      const rows = await all<{ refundId: string; tripId?: string; amount: LiveMoney; reason: string; status: string; createdAt?: string }>(client, "/admin/refunds");
+      return rows.map((row) => ({ id: row.refundId, name: row.tripId ? `pay_${row.tripId}` : "", phone: "", zoneId: row.tripId ? trips.get(row.tripId)?.zoneId ?? "" : "", status: row.status === "done" ? "refunded" : row.status, ...(row.tripId ? { tripId: row.tripId } : {}), fareOre: row.amount.amountMinor, ...(row.createdAt ? { createdAt: row.createdAt } : {}), notes: row.reason, live: true }));
+    }
+    if (name === "payouts") {
+      const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string }>(client, "/admin/payouts");
+      return rows.map((row) => ({
+        id: row.payoutId, name: `${row.periodStart.slice(0, 10)} – ${row.periodEnd.slice(0, 10)}`, phone: "", zoneId: row.zoneId ?? "", status: row.status === "paid" ? "paid" : "scheduled", driverId: row.driverId, fareOre: row.amount.amountMinor, createdAt: row.createdAt, live: true,
+        livePayout: { lines: (row.lines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor, ...(line.count !== undefined ? { count: line.count } : {}) })), source: row.source, periodStart: row.periodStart, periodEnd: row.periodEnd, tripCount: row.tripCount, currency: row.amount.currency },
+      }));
+    }
     if (name === "refundPayouts") {
       const answer = await client.json<Page<RefundPayout>>("/admin/refunds/payouts?payoutStatus=pending");
       return answer.items.map(refundPayoutRecord);
@@ -419,6 +456,14 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (input.action === "admin.trip.assign") await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/assign`, { ...common, driverId: params.driverId });
       else await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/radar-group`, { ...common, driverIds: params.driverIds ?? [] });
       return done(input.action === "admin.trip.assign" ? "Exclusive offer sent." : "Sent to the radar group.");
+    }
+    if (input.action === "admin.growthOps.moderate") {
+      // Admin › Reviews: hide or show again (POST /admin/ratings/{tripId}/{from}/hide|restore). targetId is tripId~from.
+      const [tripId, from] = input.targetId.split("~");
+      if (!tripId || (from !== "rider" && from !== "driver")) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const verb = input.after === "shown" ? "restore" : "hide";
+      await client.post(`/admin/ratings/${encodeURIComponent(tripId)}/${from}/${verb}`, { reason: input.reason || (verb === "hide" ? "Hidden by an admin" : "Shown again by an admin") });
+      return done(verb === "hide" ? "Hidden." : "Shown again.");
     }
     if (input.action === "admin.approval.approve" || input.action === "admin.approval.reject") {
       const decision = input.action.endsWith("approve") ? "approve" : "reject";
@@ -510,6 +555,21 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const trip = trips.get(tripId);
       return { scope: answer.scope, ...(answer.radiusKm !== undefined ? { radiusKm: answer.radiusKm } : {}), items: answer.items.map((row) => nearbyRow(row, trip?.categoryId ?? "", drivers.get(row.driverId)?.rating ?? null)) };
     },
-    dispatchEvents: async () => ({ items: [], last: 0 }),
+    // GET /admin/dispatch/stream as a JSON page (contract §4 AdminDispatchEvent).
+    dispatchEvents: async (after) => {
+      const page = await client.json<Page<{ eventId: string; sequence: number; kind: string; tripId: string; groupId?: string; offer?: { offerId: string; driverId?: string; driverBonus?: LiveMoney }; projection?: { driverBonus?: LiveMoney }; occurredAt: string }>>(`/admin/dispatch/stream?after=${after}&limit=200`);
+      const items = page.items.map((event) => ({
+        eventId: event.eventId,
+        sequence: event.sequence,
+        kind: event.kind,
+        tripId: event.tripId,
+        ...(event.groupId ? { groupId: event.groupId } : {}),
+        ...(event.offer ? { offerId: event.offer.offerId } : {}),
+        ...(event.offer?.driverId ? { driverId: event.offer.driverId, driverName: nameOf(event.offer.driverId) } : {}),
+        ...(event.kind === "driver_bonus_added" && event.projection?.driverBonus ? { amountMinor: event.projection.driverBonus.amountMinor } : {}),
+        occurredAt: event.occurredAt,
+      })) as Awaited<ReturnType<AdminApi["dispatchEvents"]>>["items"];
+      return { items, last: items.length ? items[items.length - 1]!.sequence : after };
+    },
   };
 }

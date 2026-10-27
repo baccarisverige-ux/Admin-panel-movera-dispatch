@@ -1,3 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { kpiReport, localDay as kpiDay } from "../live/kpis";
+import type { KpiDay } from "../live/types";
 import { NotConnected } from "../live/NotConnected";
 import { isLiveData } from "../live/realData";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -235,7 +239,14 @@ export function DashboardPage() {
   // The old numbers stay on screen, faded, while a long period such as a year is worked out.
   const shownSpan = useDeferredValue(span);
   const stale = shownSpan !== span;
-  const report = useMemo(() => earningsReport(country, zoneKey ? zoneKey.split(",") : [], shownSpan), [country, zoneKey, shownSpan]);
+  // Live (contract v0.9.0): the server's KPI days (today live, earlier days from the nightly summary).
+  const liveSession = useLiveSessionMaybe();
+  const kpiZones = zoneKey ? zoneKey.split(",") : market.zones.map((zone) => zone.id);
+  const kpiFrom = kpiDay(shownSpan.prevStart, market.timeZone);
+  const kpiTo = kpiDay(Math.max(shownSpan.start, shownSpan.end - 1), market.timeZone);
+  const kpiQuery = useQuery({ queryKey: ["live", "kpis", kpiFrom, kpiTo], queryFn: () => liveSession!.client.json<{ days: KpiDay[] }>(`/admin/kpis?fromDate=${kpiFrom}&toDate=${kpiTo}`), enabled: Boolean(liveSession) });
+  const demoReport = useMemo(() => earningsReport(country, zoneKey ? zoneKey.split(",") : [], shownSpan), [country, zoneKey, shownSpan]);
+  const report = liveSession ? kpiReport(kpiQuery.data?.days ?? [], kpiZones, shownSpan, market.timeZone, uiLocale()) : demoReport;
   useEffect(() => {
     if (period.kind === "year") return;
     const timer = window.setTimeout(() => earningsReport(country, zoneKey ? zoneKey.split(",") : [], periodWindow({ kind: "year" }, Date.now(), market.timeZone, uiLocale())), 2500);
@@ -724,7 +735,7 @@ export function DashboardPage() {
                 </button>
               ))}
             </div>
-            {liveData ? <NotConnected block /> : totals.grossMinor ? <ShareBars rows={shareTab === "zone" ? report.byZone : shareTab === "category" ? report.byCategory : report.byMethod} format={compact} /> : <p className="state-line">{tr("No earnings in this period yet.")}</p>}
+            {liveData && (shareTab !== "zone" || !report.byZone.length) ? <NotConnected block /> : totals.grossMinor ? <ShareBars rows={shareTab === "zone" ? report.byZone : shareTab === "category" ? report.byCategory : report.byMethod} format={compact} /> : <p className="state-line">{tr("No earnings in this period yet.")}</p>}
           </section>
         </div>
       ) : null}

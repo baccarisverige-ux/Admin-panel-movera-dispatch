@@ -1,5 +1,6 @@
 import { tr } from "../i18n";
 import { NotConnected } from "../live/NotConnected";
+import { LiveMoneyReport } from "../live/LiveMoneyReport";
 import { isLiveData } from "../live/realData";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -182,7 +183,8 @@ export function ReportsPage() {
       {notice || slice.message ? <p className="pricing-notice" role="status">{notice} {slice.message}</p> : null}
 
       {/* Live: only the server's audit (Work) has a source yet; the other reports read "Not connected yet". */}
-      {liveData && tab !== "work" ? <div className="rp-tab" data-testid="report-not-connected"><NotConnected block /></div> : null}
+      {liveData && tab === "money" ? <LiveMoneyReport window={window} timeZone={market.timeZone} zoneIds={zones.map((zone) => zone.id)} /> : null}
+      {liveData && tab !== "work" && tab !== "money" ? <div className="rp-tab" data-testid="report-not-connected"><NotConnected block /></div> : null}
       {liveData && tab !== "work" ? null : <>
       {tab === "overview" ? <OverviewTab {...props} /> : null}
       {tab === "rides" ? <><RidesTab {...props} /><TripExport /></> : null}

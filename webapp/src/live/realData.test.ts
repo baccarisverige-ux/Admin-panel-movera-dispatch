@@ -107,3 +107,28 @@ test("live: every listed demo source answers with server facts or Not connected,
   assert.deepEqual([profile.fraudFlags, profile.devices, profile.trustedContacts], [[], [], []]);
   setLiveData(false);
 });
+
+test("live KPIs: a total only when every zone-day is there; tips, refunds and wait stay Not connected", async () => {
+  const { daysOf, totalsOf, kpiReport } = await import("./kpis.ts");
+  const { liveReviewsOf } = await import("../growth/reviews.ts");
+  const { ratingRecord, ticketRecord } = await import("./liveAdminApi.ts");
+  const { ratingTagLabel, RATING_TAGS } = await import("./ratingTags.ts");
+  const { payoutLineLabel } = await import("./LivePayouts.tsx").catch(() => ({ payoutLineLabel: (code: string) => code }));
+  const day = (date: string, zoneId: string, gross: number) => ({ date, zoneId, source: "summary" as const, currency: "SEK", completedTrips: 2, cancelledTrips: 1, noShows: 1, gross, commission: gross / 5, driverEarnings: gross - gross / 5, pickupPay: 0, driverBonus: 100, cashCollected: 0, walletApplied: 0, newRiders: 1, newDrivers: 0 });
+  const tz = "Europe/Stockholm";
+  assert.deepEqual(daysOf(Date.parse("2026-10-25T23:00:00Z"), Date.parse("2026-10-27T23:00:00Z"), tz), ["2026-10-26", "2026-10-27"]);
+  const both = totalsOf([day("2026-10-26", "Z001", 1000), day("2026-10-26", "Z002", 500)], ["Z001", "Z002"], ["2026-10-26"]);
+  assert.deepEqual([both.trips, both.cancelled, both.grossMinor, both.commissionMinor, both.driverMinor, both.newRiders], [4, 4, 1500, 300, 1400, 2]);
+  assert.ok(Number.isNaN(both.tipsMinor) && Number.isNaN(both.refundsMinor) && Number.isNaN(both.waitMinTotal));
+  const gap = totalsOf([day("2026-10-26", "Z001", 1000)], ["Z001", "Z002"], ["2026-10-26"]);
+  assert.ok(Number.isNaN(gap.grossMinor), "a missing zone-day makes the total Not connected, not smaller");
+  const report = kpiReport([day("2026-10-26", "Z001", 1000)], ["Z001"], { start: Date.parse("2026-10-25T23:00:00Z"), end: Date.parse("2026-10-26T21:00:00Z"), spanEnd: 0, prevStart: Date.parse("2026-10-24T22:00:00Z"), prevEnd: Date.parse("2026-10-25T23:00:00Z"), bucket: "hour", label: "", compareLabel: "" } as never, tz, "en");
+  assert.equal(report.totals.grossMinor, 1000);
+  assert.ok(Number.isNaN(report.previous.grossMinor));
+  assert.deepEqual(report.byZone.map((row) => [row.id, row.minor]), [["Z001", 1000]]);
+  const reviews = liveReviewsOf([ratingRecord({ tripId: "T1", from: "rider", stars: 2, tags: ["clean_car"], comment: "Late", at: "2026-10-25T08:00:00Z", riderId: "R1", riderName: "Ida", driverId: "D1", driverName: "Anna", zoneId: "Z001", hidden: true })]);
+  assert.deepEqual(reviews.map((row) => [row.id, row.byName, row.aboutName, row.stars, row.text, row.hidden]), [["T1~rider", "Ida", "Anna", 2, "Late", true]]);
+  assert.equal(ticketRecord({ ticketId: "K1", openedBy: "rider", category: "help", subject: "Hi", status: "open", createdAt: "2026-10-25T08:00:00Z", updatedAt: "2026-10-25T08:00:00Z" }).status, "open");
+  assert.deepEqual([...RATING_TAGS.aboutDriver, ...RATING_TAGS.aboutRider].map(ratingTagLabel), ["Clean car", "Friendly", "Safe driving", "Good music", "Knew the way", "On time", "Polite", "Clear pickup"]);
+  assert.equal(typeof payoutLineLabel, "function");
+});

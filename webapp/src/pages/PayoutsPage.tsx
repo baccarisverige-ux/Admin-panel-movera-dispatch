@@ -1,3 +1,6 @@
+import { tr } from "../i18n";
+import { isLiveData } from "../live/realData";
+import { LivePayouts } from "../live/LivePayouts";
 import { useMemo, useState } from "react";
 import { formatZoneMoney } from "../markets/markets";
 import { refundAboveMinor } from "../payments/refundPolicy";
@@ -67,6 +70,18 @@ export function PayoutsPage() {
   const money = (minor: number) => formatMoney(minor, country);
   const driverName = (id: string | null | undefined) => (drivers.data ?? []).find((row) => row.id === id)?.name ?? id ?? "";
 
+  // Live: the server's payouts with their lines, Create payout and the refunds to send by hand (owner, part 3).
+  if (isLiveData()) {
+    return (
+      <div className="dx-page fn-page po-page">
+        <header className="dx-head">
+          <button data-command="admin.payout.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> {tr("Back")}</button>
+          <div className="dx-head-text"><h2>{tr("Payouts")}</h2></div>
+        </header>
+        <LivePayouts />
+      </div>
+    );
+  }
   if (payouts.isLoading || financeStore.loading) return <p className="state-line">Loading payouts.</p>;
   if (!selected) return <p className="state-line">No payouts are available.</p>;
 

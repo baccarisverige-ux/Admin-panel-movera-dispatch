@@ -177,6 +177,41 @@ export const REFUND_PAYOUTS = [
   { refundId: "RF9", tripId: "T2003", amount: { amountMinor: 4500, currency: "SEK" }, status: "done", reason: "Charged twice", createdAt: "2026-10-26T08:10:00Z", riderId: "R503", riderName: "Lea", riderPhone: "+46700000503", payoutTo: { method: "swish", phone: "+46700000503" }, payoutStatus: "pending" },
 ];
 
+export const PAYOUTS = [
+  { payoutId: "PY1", driverId: "D1001", driverName: "Anna Berg", zoneId: "Z001", amount: { amountMinor: -6500, currency: "SEK" }, status: "pending", periodStart: "2026-10-19T22:00:00Z", periodEnd: "2026-10-26T23:00:00Z", createdAt: "2026-10-27T01:00:00Z", source: "weekly", tripCount: 2,
+    lines: [{ code: "trips", amount: { amountMinor: 39400, currency: "SEK" }, count: 2 }, { code: "waiting", amount: { amountMinor: 600, currency: "SEK" } }, { code: "bonus", amount: { amountMinor: 1000, currency: "SEK" } }, { code: "fees", amount: { amountMinor: 2500, currency: "SEK" } }, { code: "cash_collected", amount: { amountMinor: -50000, currency: "SEK" } }] },
+];
+
+export const TICKETS = [
+  { ticketId: "TK1", tripId: "T2001", openedBy: "rider", riderId: "R501", category: "ride_dispute", subject: "Charged too much", status: "open", priority: "normal", createdAt: "2026-10-26T09:00:00Z", updatedAt: "2026-10-26T09:00:00Z", zoneId: "Z001", lastMessageAt: "2026-10-26T09:00:00Z" },
+];
+export const TICKET_MESSAGES = [{ messageId: "M1", from: "rider", text: "The driver took a long way.", at: "2026-10-26T09:00:00Z" }];
+
+export const RATINGS = [
+  { tripId: "T2001", from: "rider", stars: 2, tags: ["clean_car"], comment: "Late and rude", at: "2026-10-25T08:40:00Z", riderId: "R501", riderName: "Ida", driverId: "D1001", driverName: "Anna Berg", zoneId: "Z001", hidden: false },
+  { tripId: "T2001", from: "driver", stars: 5, tags: ["polite", "on_time"], at: "2026-10-25T08:41:00Z", riderId: "R501", riderName: "Ida", driverId: "D1001", driverName: "Anna Berg", zoneId: "Z001", hidden: false },
+];
+
+export const RISK = [
+  { who: "driver", id: "D1001", name: "Anna Berg", zoneId: "Z001", signals: { cancels: { value: 40, count: 2, total: 5 }, low_rating: { value: 3.9, count: 12 } } },
+  { who: "rider", id: "R502", name: "Omar", zoneId: "Z001", signals: { failed_payments: { value: 5, count: 5 } } },
+];
+
+/** One live day and one summarized day per zone in the range asked (GET /admin/kpis). */
+const SE_ZONES = ["Z001", "Z002", "Z003", "Z004", "Z005", "Z006", "Z007", "Z008", "Z009", "ARN", "BMA"];
+export function kpiDays(from: string, to: string) {
+  const out = [];
+  for (let day = from; day <= to; ) {
+    const live = day === to;
+    for (const zoneId of SE_ZONES.slice(1)) out.push({ date: day, zoneId, source: live ? "live" : "summary", currency: "SEK", completedTrips: 0, cancelledTrips: 0, noShows: 0, gross: 0, commission: 0, driverEarnings: 0, pickupPay: 0, driverBonus: 0, cashCollected: 0, walletApplied: 0, newRiders: 0, newDrivers: 0 });
+    out.push({ date: day, zoneId: "Z001", source: live ? "live" : "summary", currency: "SEK", completedTrips: 3, cancelledTrips: 1, noShows: 0, gross: 123400, commission: 24680, driverEarnings: 98720, pickupPay: 1500, driverBonus: 0, cashCollected: 52000, walletApplied: 0, newRiders: 1, newDrivers: 0 });
+    const next = new Date(`${day}T12:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    day = next.toISOString().slice(0, 10);
+  }
+  return out;
+}
+
 export const VEHICLE = { vehicleId: "V1", make: "Volvo", model: "V90", year: 2022, color: "black", plate: "ABC 123", seats: 4, categoryIds: ["standard"], status: "pending", version: 1, fleetId: "F1", driverId: "D1001" };
 
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-expose-headers": "*" };
@@ -207,12 +242,16 @@ export type TripState = {
   /** Feed events so far: one per change, numbered from 1. */
   incidentEvents: { eventId: string; sequence: number; kind: string; incident: Incident; occurredAt: string; serverTime: string }[];
   riders: Record<string, unknown>[];
+  payouts: Record<string, unknown>[];
+  tickets: Record<string, unknown>[];
+  ticketMessages: Record<string, unknown>[];
+  ratings: Record<string, unknown>[];
   approvals: (typeof APPROVALS)[number][];
   refundPayouts: (typeof REFUND_PAYOUTS)[number][];
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
-  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), incidents: [], incidentEvents: [], riders: RIDERS.map((item) => ({ ...item })), approvals: APPROVALS.map((item) => ({ ...item })), refundPayouts: REFUND_PAYOUTS.map((item) => ({ ...item })), ...init };
+  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), incidents: [], incidentEvents: [], riders: RIDERS.map((item) => ({ ...item })), payouts: PAYOUTS.map((item) => ({ ...item })), tickets: TICKETS.map((item) => ({ ...item })), ticketMessages: TICKET_MESSAGES.map((item) => ({ ...item })), ratings: RATINGS.map((item) => ({ ...item })), approvals: APPROVALS.map((item) => ({ ...item })), refundPayouts: REFUND_PAYOUTS.map((item) => ({ ...item })), ...init };
   const feed = (kind: string, incident: Incident) => state.incidentEvents.push({ eventId: `ev${state.incidentEvents.length + 1}`, sequence: state.incidentEvents.length + 1, kind, incident: { ...incident }, occurredAt: "2026-10-26T09:21:00Z", serverTime: "2026-10-26T09:21:00Z" });
   if (!init.incidentEvents) state.incidents.forEach((incident) => feed(incident.escalatedAt ? "incident_escalated" : "incident_opened", incident));
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -300,6 +339,42 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       state.approvals = state.approvals.filter((item) => item.approvalId !== decided[1]);
       return json(route, 200, { approvalId: decided[1], status: decided[2] === "approve" ? "approved" : "rejected" });
     }
+    if (p === "/api/v1/admin/payouts" && method === "GET") return json(route, 200, { items: state.payouts, nextCursor: null });
+    if (p === "/api/v1/admin/payouts" && method === "POST") {
+      const made = { payoutId: `PY${state.payouts.length + 1}`, driverId: body.driverId, driverName: "Anna Berg", zoneId: "Z001", amount: { amountMinor: 41600, currency: "SEK" }, status: "pending", periodStart: body.from, periodEnd: body.to, createdAt: "2026-10-27T10:00:00Z", source: "manual", tripCount: 1, lines: [{ code: "trips", amount: { amountMinor: 41600, currency: "SEK" }, count: 1 }] };
+      state.payouts.unshift(made);
+      return json(route, 201, made);
+    }
+    const payoutPaid = /^\/api\/v1\/admin\/payouts\/([^/]+)\/paid$/.exec(p);
+    if (payoutPaid) {
+      const item = state.payouts.find((row) => row["payoutId"] === payoutPaid[1]);
+      if (!item) return json(route, 404, { code: "not_found", message: "No such payout.", requestId: "r-404p", retryable: false });
+      item["status"] = "paid";
+      item["paidAt"] = "2026-10-27T10:05:00Z";
+      return json(route, 200, item);
+    }
+    if (p === "/api/v1/admin/tickets") return json(route, 200, { items: state.tickets.filter((item) => !url.searchParams.get("status") || item["status"] === url.searchParams.get("status")), nextCursor: null });
+    const ticket = /^\/api\/v1\/admin\/tickets\/([^/]+)(\/reply)?$/.exec(p);
+    if (ticket) {
+      const item = state.tickets.find((row) => row["ticketId"] === ticket[1]);
+      if (!item) return json(route, 404, { code: "not_found", message: "No such ticket.", requestId: "r-404k", retryable: false });
+      if (ticket[2]) {
+        state.ticketMessages.push({ messageId: `M${state.ticketMessages.length + 1}`, from: "support", text: body.text, at: "2026-10-27T10:00:00Z", adminName: "Nora Lind" });
+        item["status"] = body.status ?? "pending";
+      }
+      return json(route, 200, { ...item, messages: state.ticketMessages });
+    }
+    if (p === "/api/v1/admin/ratings") return json(route, 200, { items: state.ratings, nextCursor: null });
+    const moderate = /^\/api\/v1\/admin\/ratings\/([^/]+)\/(rider|driver)\/(hide|restore)$/.exec(p);
+    if (moderate) {
+      const item = state.ratings.find((row) => row["tripId"] === moderate[1] && row["from"] === moderate[2]);
+      if (!item) return json(route, 404, { code: "not_found", message: "No such rating.", requestId: "r-404r", retryable: false });
+      item["hidden"] = moderate[3] === "hide";
+      return json(route, 200, item);
+    }
+    if (p === "/api/v1/admin/risk/signals") return json(route, 200, { items: RISK, nextCursor: null });
+    if (p === "/api/v1/admin/kpis") return json(route, 200, { days: kpiDays(url.searchParams.get("fromDate") ?? "2026-10-27", url.searchParams.get("toDate") ?? "2026-10-27"), generatedAt: "2026-10-27T10:00:00Z" });
+    if (p === "/api/v1/admin/dispatch/stream") return json(route, 200, { items: [], nextCursor: null });
     if (p === "/api/v1/admin/refunds/payouts") return json(route, 200, { items: state.refundPayouts, nextCursor: null });
     const paid = /^\/api\/v1\/admin\/refunds\/([^/]+)\/paid$/.exec(p);
     if (paid) {

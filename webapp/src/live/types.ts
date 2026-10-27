@@ -245,3 +245,17 @@ export type Approval = { approvalId: string; action: string; targetType: string;
 
 /** GET /admin/trips/{tripId}/nearby-drivers. */
 export type NearbyDriver = { driverId: string; firstName: string; onlineStatus: string; moving?: boolean; location: { lat: number; lng: number; measuredAt: string }; distanceMeters: number; pickupEtaSeconds: number; zoneId?: string; categoryIds: string[]; openOfferId?: string };
+
+/** GET /admin/ratings (AdminRating, contract v0.9.0). */
+export type AdminRating = { tripId: string; from: "rider" | "driver"; stars: number; tags: string[]; comment?: string; at: string; riderId: string; riderName?: string; driverId?: string; driverName?: string; zoneId: string; hidden: boolean; hiddenBy?: string; hiddenAt?: string; hideReason?: string };
+
+/** GET /admin/tickets (SupportTicket, contract v0.9.0). */
+export type TicketMessage = { messageId: string; from: "rider" | "driver" | "support"; text: string; at: string; adminName?: string };
+export type SupportTicket = { ticketId: string; tripId?: string; openedBy: "rider" | "driver"; riderId?: string; driverId?: string; category: string; subject: string; status: "open" | "pending" | "resolved" | "closed"; priority?: string; createdAt: string; updatedAt: string; zoneId?: string; lastMessageAt?: string; messages?: TicketMessage[] };
+
+/** GET /admin/risk/signals (RiskPerson, contract v0.9.0). */
+export type RiskSignal = { value: number; count: number; total?: number };
+export type RiskPerson = { who: "driver" | "rider"; id: string; name: string; zoneId?: string; signals: Partial<Record<"cancels" | "failed_payments" | "low_rating", RiskSignal>> };
+
+/** GET /admin/kpis (KpiDay, contract v0.9.0). */
+export type KpiDay = { date: string; zoneId: string; source: "live" | "summary"; currency: string; completedTrips: number; cancelledTrips: number; noShows: number; gross: number; commission: number; driverEarnings: number; pickupPay: number; driverBonus: number; cashCollected: number; walletApplied: number; newRiders: number; newDrivers: number };

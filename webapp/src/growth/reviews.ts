@@ -117,3 +117,15 @@ export function rulesError(value: ReviewRules): string | null {
   if (value.minReviews < 1) return "Count people with at least 1 review.";
   return null;
 }
+
+/** Live: the server's ratings (GET /admin/ratings) as reviews; the hidden flag is the server's. */
+export function liveReviewsOf(records: readonly DemoRecord[]): (Review & { hidden: boolean })[] {
+  return records.flatMap((record) => {
+    const r = record.liveRating;
+    if (!r) return [];
+    const country = marketOfZone(r.zoneId)?.id ?? "SE";
+    const byName = (r.from === "rider" ? r.riderName : r.driverName) ?? "";
+    const aboutName = (r.from === "rider" ? r.driverName : r.riderName) ?? "";
+    return [{ id: record.id, tripId: r.tripId, zone: r.zoneId, country, from: r.from, byName, aboutId: r.from === "rider" ? r.driverId : r.riderId, aboutName, stars: r.stars, tags: r.tags, text: r.comment ?? "", at: r.at, hidden: r.hidden }];
+  });
+}

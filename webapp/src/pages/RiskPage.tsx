@@ -11,7 +11,11 @@ import { zoneById } from "../markets/markets";
 import { useMarketScope } from "../markets/useMarketScope";
 import { zoneAllowed } from "../markets/scope";
 import { Cards } from "../reports/ui";
-import { ACTIONS, RISK_KEY, RULES, emptyRiskOps, flagged, normalizeRiskOps, people, preview, review, ruleChanges, ruleError, saveRules, type Decision, type RiskOps, type Rule } from "../safety/risk";
+import { ACTIONS, RISK_KEY, RULES, emptyRiskOps, flagged, normalizeRiskOps, people, preview, review, ruleChanges, ruleError, saveRules, type Decision, type Person, type RiskOps, type Rule } from "../safety/risk";
+import { useQuery } from "@tanstack/react-query";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import type { Page, RiskPerson } from "../live/types";
+import { tr } from "../i18n";
 import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
 import type { RideCheckThresholds } from "../safety/rideCheckSettings";
 import { agentName } from "../trips/TripParts";
@@ -159,15 +163,29 @@ function useRisk() {
   const drivers = useRecords("drivers");
   const riders = useRecords("riders");
   const ops = normalizeRiskOps(slice.value);
-  const list = useMemo(() => people(drivers.data ?? [], riders.data ?? []), [drivers.data, riders.data]);
-  return { ops, list, loading: slice.loading || drivers.isLoading || riders.isLoading };
+  // Live (contract v0.9.0): the three signals the server counts (GET /admin/risk/signals); demo: the demo signals.
+  const live = useLiveSessionMaybe();
+  const signals = useQuery({ queryKey: ["live", "risk"], queryFn: () => live!.client.json<Page<RiskPerson>>("/admin/risk/signals?limit=200"), enabled: Boolean(live) });
+  const demoList = useMemo(() => people(drivers.data ?? [], riders.data ?? []), [drivers.data, riders.data]);
+  const list = live ? (signals.data?.items ?? []).map(serverPerson) : demoList;
+  return { ops, list, loading: slice.loading || drivers.isLoading || riders.isLoading || signals.isLoading, live: Boolean(live) };
 }
+
+/** A server risk person in the page's shape: only the signals the server counted. */
+function serverPerson(person: RiskPerson): Person {
+  const signals: Person["signals"] = {};
+  for (const [id, signal] of Object.entries(person.signals)) if (signal) signals[id as keyof Person["signals"]] = signal.value;
+  return { key: `${person.who}:${person.id}`, id: person.id, who: person.who, name: person.name, zoneId: person.zoneId ?? "", signals };
+}
+
+/** contract.json#risk.later: rules with no server signal yet. */
+const LATER: readonly string[] = ["fake_gps", "multi_account", "shared_card", "promo_abuse"];
 
 function FraudRules({ editable }: { editable: boolean }) {
   const { agent } = useSession();
   const scope = useMarketScope();
   const country = scope.market.id;
-  const { ops, list, loading } = useRisk();
+  const { ops, list, loading, live } = useRisk();
   const [draft, setDraft] = useState<Rule[] | null>(null);
   const rules = draft ?? ops.rules[country];
   const changes = ruleChanges(ops.rules[country], rules);
@@ -188,7 +206,7 @@ function FraudRules({ editable }: { editable: boolean }) {
             const rule = rules.find((item) => item.id === def.id)!;
             const count = counts.byRule.find((item) => item.id === def.id);
             return (
-              <Row key={def.id} label={def.label} help={`${def.help} For ${def.who.map((item) => `${item}s`).join(" and ")}. Flags ${count?.after ?? 0}${count && count.after !== count.now ? ` (now ${count.now})` : ""}.`} on={rule.on} onToggle={(on) => patch(def.id, { on })}>
+              <Row key={def.id} label={def.label} help={live && LATER.includes(def.id) ? `${def.help} ${tr("Not connected yet")}.` : `${def.help} For ${def.who.map((item) => `${item}s`).join(" and ")}. Flags ${count?.after ?? 0}${count && count.after !== count.now ? ` (now ${count.now})` : ""}.`} on={rule.on} onToggle={(on) => patch(def.id, { on })}>
                 <Num label={`${def.label} limit`} before={def.worse === "up" ? "From" : "Below"} value={rule.limit} unit={def.unit} min={def.min} max={def.max} step={def.step} onChange={(value) => patch(def.id, { limit: value })} />
                 <Choice label={`${def.label} action`} value={rule.action} options={ACTIONS.map((item) => ({ id: item.id, label: item.label, hint: item.help }))} onChange={(action) => patch(def.id, { action })} />
               </Row>

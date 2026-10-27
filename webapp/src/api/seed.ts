@@ -69,7 +69,13 @@ export type DemoRecord = {
   liveDriver?: LiveDriverFacts;
   /** Live riders: the server's rating, wallet and unpaid fees (AdminRider). */
   liveRider?: LiveRiderFacts;
+  /** Live ratings (GET /admin/ratings, contract v0.9.0). */
+  liveRating?: LiveRatingFacts;
+  /** Live payouts (GET /admin/payouts, contract v0.9.0): the lines behind the amount. */
+  livePayout?: { lines: { code: string; amountMinor: number; count?: number }[]; source: string; periodStart: string; periodEnd: string; tripCount: number; currency: string };
 };
+
+export type LiveRatingFacts = { tripId: string; from: "rider" | "driver"; stars: number; tags: string[]; comment: string | null; at: string; riderId: string; riderName: string | null; driverId: string | null; driverName: string | null; zoneId: string; hidden: boolean; hiddenBy: string | null; hiddenAt: string | null; hideReason: string | null };
 
 export type LivePlace = { address?: string; lat: number; lng: number };
 /** Money in minor units of the trip's currency; null when the server did not send that line. */
