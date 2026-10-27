@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import { AssignPanelProvider } from "./dispatch/AssignPanel";
+import { IncidentAlarm } from "./live/IncidentAlarm";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
@@ -149,6 +150,7 @@ function Shell({ page, children, forceNoAccess = false, redirect = false }: { pa
               {tr("Not connected yet")}
             </p>
           ) : null}
+          {live ? <IncidentAlarm /> : null}
           {denied ? <NoAccess /> : page || redirect ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>{children}</Suspense> : <NotFound />}
         </section>
       </AssignPanelProvider>

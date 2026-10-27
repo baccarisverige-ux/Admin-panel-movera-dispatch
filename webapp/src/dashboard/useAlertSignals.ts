@@ -14,7 +14,7 @@ export function readMuted(): boolean {
 }
 
 /** True once the person has clicked or typed on the page: before that a browser refuses to start sound. */
-function hadGesture(): boolean {
+export function hadGesture(): boolean {
   const activation = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation;
   return activation ? activation.hasBeenActive : gestureSeen;
 }
@@ -125,6 +125,44 @@ export function useAlertSignals(signals: Signal[], ready: boolean) {
     async askPermission() {
       if (typeof Notification === "undefined") return;
       setPermission(await Notification.requestPermission());
+    },
+  };
+}
+
+/** How often the urgent alarm rings while an SOS or a lost car waits to be taken. */
+export const URGENT_ALARM_MS = 5_000;
+
+/**
+ * Owner safety part 1 (2026-10-27): a repeating urgent alarm for an SOS or a lost car until someone takes it. It is
+ * always on: the bell's sound switch (readMuted) does not silence it. A browser plays sound only after a click or a
+ * key on the page, so `soundAllowed` stays false until then and the panel shows "Turn on alarm sound".
+ */
+export function useUrgentAlarm(active: boolean, everyMs = URGENT_ALARM_MS) {
+  const [soundAllowed, setSoundAllowed] = useState(hadGesture);
+  useEffect(() => {
+    if (soundAllowed) return;
+    // After the click has done its own work (not on pointerdown): the banner going away moves the page up, and a
+    // move between pointerdown and click would make the click miss what the admin aimed at.
+    const allow = () => window.setTimeout(() => setSoundAllowed(true), 0);
+    document.addEventListener("click", allow, { once: true });
+    document.addEventListener("keydown", allow, { once: true });
+    return () => {
+      document.removeEventListener("click", allow);
+      document.removeEventListener("keydown", allow);
+    };
+  }, [soundAllowed]);
+  useEffect(() => {
+    if (!active) return;
+    tone(true, true);
+    const timer = window.setInterval(() => tone(true), everyMs);
+    return () => window.clearInterval(timer);
+  }, [active, everyMs]);
+  return {
+    soundAllowed,
+    /** The banner's button: the click itself lets the browser play sound; a short tone says it works. */
+    allowSound() {
+      setSoundAllowed(true);
+      tone(false);
     },
   };
 }

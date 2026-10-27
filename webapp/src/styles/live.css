@@ -38,3 +38,15 @@ tr.live-open td { background: #f6f7fb; }
 .live-list-bar .live-search { margin: 0; flex: 1 1 280px; }
 .live-status-filter { display: flex; gap: 8px; align-items: center; font-size: 13px; color: #687386; }
 .live-list-bar .live-error { flex-basis: 100%; margin: 0; }
+
+/* Safety part 1 (2026-10-27): the SOS / car-lost alarm on every live page, and the sound permission banner. */
+.incident-alarm { display: grid; gap: 6px; margin: 0 0 10px; }
+.incident-alarm:empty { display: none; }
+.incident-sound, .incident-ring { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 12px; font-size: 13px; }
+.incident-sound { position: fixed; z-index: 60; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); background: #fff4e5; border: 1px solid #f3c27a; color: #6b3d00; }
+.incident-ring { background: #c62828; color: #fff; border: 1px solid #8e0000; animation: incident-pulse 1.2s ease-in-out infinite; }
+.incident-ring b { font-size: 14px; letter-spacing: 0.02em; text-transform: uppercase; }
+.incident-ring span { flex: 1 1 200px; min-width: 0; }
+.incident-ring .dash-btn { background: #fff; color: #8e0000; border-color: #fff; }
+@keyframes incident-pulse { 50% { box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.25); } }
+@media (prefers-reduced-motion: reduce) { .incident-ring { animation: none; } }

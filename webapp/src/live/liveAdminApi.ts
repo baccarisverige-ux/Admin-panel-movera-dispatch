@@ -16,6 +16,8 @@ import type { DemoRecord } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
 import type { DocumentSummary, Driver, Fleet, Page, Trip, TripOffer, Vehicle } from "./types.ts";
+import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
+import type { SafetyBook } from "../safety/ops.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
@@ -155,10 +157,14 @@ const STATUS_COMMANDS: Record<string, string> = {
 
 const VEHICLE_COMMANDS: Record<string, string> = { "admin.vehicle.activate": "approved", "admin.vehicle.hold": "blocked" };
 
+/** Incidents page commands the server has (contract v0.7.0 §15): Take, Solved, False alarm. */
+const INCIDENT_COMMANDS: Record<string, "take" | "resolve" | "dismiss"> = { "admin.safety.take": "take", "admin.safety.resolve": "resolve", "admin.safety.dismiss": "dismiss" };
+
 export function createLiveAdminApi(client: LiveClient): AdminApi {
   const drivers = new Map<string, Driver>();
   const vehicles = new Map<string, Vehicle>();
   const trips = new Map<string, Trip>();
+  const incidents = new Map<string, ServerIncident>();
   let currency: string = CURRENCY;
 
   async function readDrivers(own = false): Promise<Driver[]> {
@@ -195,6 +201,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (rows[0] && isCurrency(rows[0].fare.currency)) currency = rows[0].fare.currency;
       return rows.map(tripRecord);
     }
+    if (name === "incidents") {
+      const rows = await all<ServerIncident>(client, "/admin/incidents");
+      rows.forEach((row) => incidents.set(row.incidentId, row));
+      return rows.map(incidentRecord);
+    }
     if (name === "zones") return MARKETS.flatMap((market) => market.zones.map((zone) => ({ id: zone.id, name: zone.name, phone: "", zoneId: zone.id, status: "active" })));
     return [];
   }
@@ -215,6 +226,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const next = await client.post<Vehicle>(`/admin/vehicles/${encodeURIComponent(vehicle.vehicleId)}/review`, { expectedVersion: vehicle.version, decision, note: input.reason });
       if (next?.vehicleId) vehicles.set(next.vehicleId, next);
       return done("Saved.");
+    }
+    const step = INCIDENT_COMMANDS[input.action];
+    if (step) {
+      const incident = incidents.get(input.targetId) ?? (await client.json<ServerIncident>(`/admin/incidents/${encodeURIComponent(input.targetId)}`));
+      // The note is the last line the page wrote in its safety book (the outcome box), else the reason.
+      const book = input.value as SafetyBook | undefined;
+      const note = step === "take" ? undefined : book?.incidents[input.targetId]?.events.at(-1)?.text ?? input.reason;
+      const next = await client.post<ServerIncident>(`/admin/incidents/${encodeURIComponent(incident.incidentId)}/${step}`, { expectedVersion: incident.version ?? 1, ...(note ? { note } : {}) });
+      if (next?.incidentId) incidents.set(next.incidentId, next);
+      nudgeIncidentFeed();
+      return done(step === "take" ? "Taken." : step === "resolve" ? "Solved." : "Marked as a false alarm.");
     }
     if (input.action === "admin.trip.refund") {
       const trip = trips.get(input.targetId) ?? (await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`));
@@ -283,7 +305,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     setFault: async () => undefined,
     inbox: async () => [],
     freshness: async () => new Date().toISOString(),
-    readSlice: async (_key, fallback) => fallback,
+    // The Incidents page's safety book (owner and steps of each case) comes from the server's incidents.
+    readSlice: async (key, fallback) => {
+      if (key !== "safetyOps") return fallback;
+      if (!incidents.size) await list("incidents").catch(() => []);
+      return bookFrom(incidents.values()) as typeof fallback;
+    },
     tripOffers,
     nearbyDrivers: async (_tripId, query) => ({ scope: query.scope, ...(query.radiusKm !== undefined ? { radiusKm: query.radiusKm } : {}), items: [] }),
     dispatchEvents: async () => ({ items: [], last: 0 }),

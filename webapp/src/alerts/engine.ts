@@ -9,7 +9,7 @@ export const ALERTS_KEY = "alertOps";
 export type Level = "critical" | "important" | "info";
 export type GroupId = "safety" | "dispatch" | "drivers" | "money" | "riders" | "system";
 export type KindId =
-  | "sos" | "sos_slow" | "ride_check"
+  | "sos" | "sos_slow" | "ride_check" | "car_lost"
   | "long_wait" | "few_drivers" | "no_driver" | "late_reservation"
   | "doc_expiring" | "low_rating" | "auto_offline"
   | "payment_failed" | "refund_approval" | "payout_big"
@@ -55,6 +55,7 @@ export type KindDef = {
 
 export const KINDS: KindDef[] = [
   { id: "sos", group: "safety", label: "SOS from a rider or driver", help: "Taken and solved in Incidents too: one owner for both.", mode: "fixed", level: "critical", path: "/incidents" },
+  { id: "car_lost", group: "safety", label: "Car lost", help: "The rider is on board and the car sent no position for 30 min. Red with the repeating alarm until someone takes it in Incidents; it closes by itself when the car's position comes back.", mode: "fixed", level: "critical", path: "/incidents" },
   { id: "ride_check", group: "safety", label: "Ride check", help: "The driver or rider tapped Accident, Someone hurt or I feel unsafe. A later Yes or Not sure updates it. A red banner shows on every page until an admin opens it. Taken and solved in Incidents.", mode: "fixed", level: "critical", anyOf: ["incidents.read", "trips.intervene"], path: "/incidents" },
   { id: "sos_slow", group: "safety", label: "SOS taken but not solved", help: "Minutes since the SOS was taken. The SOS alert says it is not solved yet.", mode: "limits", direction: "up", unit: "min", limits: { info: null, important: 15, critical: 30 }, path: "/incidents" },
   { id: "long_wait", group: "dispatch", label: "A rider waits too long", help: "Important from the limit set per zone in Dispatch → Alerts. Critical from the number here.", mode: "limits", direction: "up", unit: "min", limits: { info: null, important: null, critical: 15 }, fromDispatch: true, path: "/dispatch?view=live" },
@@ -235,7 +236,7 @@ export type Alert = {
 
 /** SOS and Ride check alerts follow their incident: one owner, taken and solved in Incidents. */
 export function followsIncident(kind: KindId): boolean {
-  return kind === "sos" || kind === "sos_slow" || kind === "ride_check";
+  return kind === "sos" || kind === "sos_slow" || kind === "ride_check" || kind === "car_lost";
 }
 
 function hash(text: string): number {
@@ -268,10 +269,17 @@ export function computeAlerts(facts: Facts, settings: AlertSettings, rules: read
 
   // An SOS stays in the list from the moment it comes in until it is solved, with who works on it.
   if (k("sos").on) {
-    for (const row of facts.incidents.filter((item) => item.kind !== "ride_check" && (item.status === "queued" || item.status === "taken") && inZones.has(item.zoneId))) {
+    for (const row of facts.incidents.filter((item) => item.kind !== "ride_check" && item.kind !== "car_lost" && (item.status === "queued" || item.status === "taken") && inZones.has(item.zoneId))) {
       const minutes = row.takenAt ? Math.round((facts.now - Date.parse(row.takenAt)) / 60_000) : 0;
       const slow = row.status === "taken" && k("sos_slow").on && levelFor(minutes, k("sos_slow").limits, "up");
       push({ id: `sos:${row.id}`, kind: "sos", level: k("sos").level, title: slow ? tr("SOS from {0} not solved after {1} min", [row.who, minutes]) : row.late ? tr("SOS from {0} {1}", [row.who, row.late]) : tr("SOS from {0}", [row.who]), detail: `${zoneName(row.zoneId)} · ${row.id}`, zoneId: row.zoneId, since: row.createdAt ? Date.parse(row.createdAt) : row.takenAt ? Date.parse(row.takenAt) - 2 * 60_000 : seeded(row.id, 8), incidentId: row.id });
+    }
+  }
+
+  // Car lost (safety part 1, 2026-10-27): red like an SOS, followed in Incidents, until the case is closed.
+  if (k("car_lost").on) {
+    for (const row of facts.incidents.filter((item) => item.kind === "car_lost" && (item.status === "queued" || item.status === "taken") && inZones.has(item.zoneId))) {
+      push({ id: `car_lost:${row.id}`, kind: "car_lost", level: k("car_lost").level, title: tr("Car lost: {0}", [row.who]), detail: `${zoneName(row.zoneId)} · ${row.id}`, zoneId: row.zoneId, since: row.createdAt ? Date.parse(row.createdAt) : seeded(row.id, 8), incidentId: row.id, path: `/incidents?case=${row.id}` });
     }
   }
 
@@ -459,7 +467,7 @@ export function openAlerts(alerts: readonly Alert[], book: AlertBook, now: numbe
     .map((alert): OpenAlert | null => {
       const record = book.records[alert.id] ?? null;
       const muted = Boolean(book.mutes[alert.kind] && Date.parse(book.mutes[alert.kind].until) > now);
-      if ((alert.kind === "sos" || alert.kind === "ride_check") && alert.incidentId) {
+      if ((alert.kind === "sos" || alert.kind === "ride_check" || alert.kind === "car_lost") && alert.incidentId) {
         const owner = sosOwner(alert.incidentId);
         return { ...alert, status: owner ? "taken" : "new", owner, record, muted: false };
       }
@@ -481,7 +489,7 @@ function save(book: AlertBook, record: AlertRecord): AlertBook {
 
 /** "Nora is working on it". Nobody else can take it while it is taken. */
 export function takeAlert(book: AlertBook, alert: Alert, actor: string, at: string): { book: AlertBook; error?: string } {
-  if (alert.kind === "sos") return { book, error: "Take an SOS with the Incidents take, so there is one owner." };
+  if (alert.kind === "sos" || alert.kind === "car_lost") return { book, error: "Take an SOS with the Incidents take, so there is one owner." };
   if (alert.kind === "ride_check") return { book, error: "Take a ride check with the Incidents take, so there is one owner." };
   const record = base(alert, book.records[alert.id]);
   if (record.owner && record.owner !== actor && record.status !== "done") return { book, error: `${record.owner} is already working on it.` };
@@ -490,7 +498,7 @@ export function takeAlert(book: AlertBook, alert: Alert, actor: string, at: stri
 
 /** "Solved by Nora". Only the person working on it can close it; an alert nobody took can be closed directly. */
 export function doneAlert(book: AlertBook, alert: Alert, actor: string, note: string, at: string): { book: AlertBook; error?: string } {
-  if (alert.kind === "sos") return { book, error: "Solve an SOS in Incidents, so there is one owner." };
+  if (alert.kind === "sos" || alert.kind === "car_lost") return { book, error: "Solve an SOS in Incidents, so there is one owner." };
   if (alert.kind === "ride_check") return { book, error: "Solve a ride check in Incidents, so there is one owner." };
   const record = base(alert, book.records[alert.id]);
   if (record.owner && record.owner !== actor) return { book, error: `Only ${record.owner} can mark it solved, or they pass it to you.` };
@@ -499,7 +507,7 @@ export function doneAlert(book: AlertBook, alert: Alert, actor: string, note: st
 }
 
 export function snoozeAlert(book: AlertBook, alert: Alert, actor: string, minutes: number, at: string): { book: AlertBook; error?: string } {
-  if (alert.kind === "sos" || alert.kind === "ride_check") return { book, error: "An SOS or a ride check cannot be snoozed." };
+  if (alert.kind === "sos" || alert.kind === "ride_check" || alert.kind === "car_lost") return { book, error: "An SOS or a ride check cannot be snoozed." };
   const record = base(alert, book.records[alert.id]);
   if (record.owner && record.owner !== actor) return { book, error: `${record.owner} is working on it.` };
   const until = new Date(Date.parse(at) + minutes * 60_000).toISOString();
@@ -507,7 +515,7 @@ export function snoozeAlert(book: AlertBook, alert: Alert, actor: string, minute
 }
 
 export function passAlert(book: AlertBook, alert: Alert, actor: string, to: string, at: string): { book: AlertBook; error?: string } {
-  if (alert.kind === "sos" || alert.kind === "ride_check") return { book, error: "Pass an SOS or a ride check in Incidents." };
+  if (alert.kind === "sos" || alert.kind === "ride_check" || alert.kind === "car_lost") return { book, error: "Pass an SOS or a ride check in Incidents." };
   if (to === actor) return { book, error: "Pick another admin." };
   const record = base(alert, book.records[alert.id]);
   if (record.owner && record.owner !== actor) return { book, error: `${record.owner} is working on it.` };

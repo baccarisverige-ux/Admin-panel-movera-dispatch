@@ -139,6 +139,18 @@ export const INVITATIONS = [
 
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
 
+/** Safety part 1 (contract v0.7.0 §15): an SOS from a rider and a car-lost case, both new. */
+export const SOS_INCIDENT = {
+  incidentId: "inc_1", tripId: "T2002", kind: "sos", severity: "critical", status: "open", version: 1, raisedBy: "rider", zoneId: "Z001",
+  riderId: "R502", driverId: "D1001", position: { lat: 59.3331, lng: 18.0651, accuracyM: 8, at: "2026-10-26T09:20:30Z" },
+  driverPosition: { lat: 59.334, lng: 18.066, accuracy: 5, measuredAt: "2026-10-26T09:20:40Z" }, openedAt: "2026-10-26T09:20:31Z", updatedAt: "2026-10-26T09:20:31Z",
+};
+export const LOST_INCIDENT = {
+  incidentId: "inc_2", tripId: "T2001", kind: "driver_silent", severity: "critical", status: "open", version: 1, raisedBy: "system", zoneId: "Z001",
+  riderId: "R501", driverId: "D1001", openedAt: "2026-10-26T08:50:00Z", updatedAt: "2026-10-26T08:50:00Z",
+};
+export type Incident = Record<string, unknown> & { incidentId: string; status: string; version: number };
+
 export const VEHICLE = { vehicleId: "V1", make: "Volvo", model: "V90", year: 2022, color: "black", plate: "ABC 123", seats: 4, categoryIds: ["standard"], status: "pending", version: 1, fleetId: "F1", driverId: "D1001" };
 
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-expose-headers": "*" };
@@ -164,10 +176,16 @@ export type TripState = {
   /** Hold POST /admin/drivers/{id}/status this many ms. */
   statusDelayMs?: number;
   invitations: (typeof INVITATIONS)[number][];
+  /** GET /admin/incidents and the incident feed (contract v0.7.0). */
+  incidents: Incident[];
+  /** Feed events so far: one per change, numbered from 1. */
+  incidentEvents: { eventId: string; sequence: number; kind: string; incident: Incident; occurredAt: string; serverTime: string }[];
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
-  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), ...init };
+  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), incidents: [], incidentEvents: [], ...init };
+  const feed = (kind: string, incident: Incident) => state.incidentEvents.push({ eventId: `ev${state.incidentEvents.length + 1}`, sequence: state.incidentEvents.length + 1, kind, incident: { ...incident }, occurredAt: "2026-10-26T09:21:00Z", serverTime: "2026-10-26T09:21:00Z" });
+  if (!init.incidentEvents) state.incidents.forEach((incident) => feed(incident.escalatedAt ? "incident_escalated" : "incident_opened", incident));
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
   const wait = (ms?: number) => (ms ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve());
   await page.route(`${API}/**`, async (route) => {
@@ -242,6 +260,32 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (body.expectedVersion !== state.vehicles[index].version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409v", retryable: false });
       state.vehicles[index] = { ...state.vehicles[index], status: body.decision, version: state.vehicles[index].version + 1 };
       return json(route, 200, state.vehicles[index]);
+    }
+    if (p === "/api/v1/admin/incidents") return json(route, 200, { items: state.incidents, nextCursor: null });
+    if (p === "/api/v1/admin/incidents/stream") {
+      const after = Number(url.searchParams.get("after") ?? 0);
+      const items = state.incidentEvents.filter((event) => event.sequence > after);
+      if ((request.headers().accept ?? "").includes("text/event-stream")) {
+        return route.fulfill({ status: 200, headers: { ...CORS, "content-type": "text/event-stream" }, body: `: stream open\n\n${items.map((event) => `id: ${event.sequence}\ndata: ${JSON.stringify(event)}\n\n`).join("")}` });
+      }
+      return json(route, 200, { items, nextCursor: null });
+    }
+    const incidentCall = /^\/api\/v1\/admin\/incidents\/([^/]+)(?:\/(take|resolve|dismiss))?$/.exec(p);
+    if (incidentCall) {
+      const index = state.incidents.findIndex((item) => item.incidentId === incidentCall[1]);
+      if (index < 0) return json(route, 404, { code: "not_found", message: "No such incident.", requestId: "r-404i", retryable: false });
+      const current = state.incidents[index];
+      if (!incidentCall[2]) return json(route, 200, current);
+      if (body.expectedVersion !== current.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409i", retryable: false, projection: current });
+      const from: Record<string, string[]> = { take: ["open"], resolve: ["open", "investigating"], dismiss: ["open", "investigating"] };
+      if (!from[incidentCall[2]].includes(current.status)) return json(route, 409, { code: "invalid_transition", message: "Not now", requestId: "r-409j", retryable: false, projection: current });
+      const at = "2026-10-26T09:22:00Z";
+      const next: Incident = incidentCall[2] === "take"
+        ? { ...current, status: "investigating", takenBy: "A1", takenAt: at, version: current.version + 1 }
+        : { ...current, status: incidentCall[2] === "resolve" ? "resolved" : "dismissed", resolvedBy: "A1", resolvedAt: at, ...(body.note ? { resolution: body.note } : {}), version: current.version + 1 };
+      state.incidents[index] = next;
+      feed(incidentCall[2] === "take" ? "incident_updated" : "incident_closed", next);
+      return json(route, 200, next);
     }
     if (p === "/api/v1/admin/trips") {
       await wait(state.listDelayMs);
