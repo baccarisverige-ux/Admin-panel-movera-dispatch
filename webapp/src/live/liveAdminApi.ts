@@ -101,6 +101,12 @@ export function ownerRecord(fleet: Fleet, zoneId: string): DemoRecord {
   };
 }
 
+/** The demo trip's payment state (DemoRecord.kind) from the server's paymentStatus. */
+function paymentKind(status?: string): string | undefined {
+  if (status === "partially_refunded") return "captured";
+  return status && ["pending", "authorized", "captured", "failed", "refunded"].includes(status) ? status : undefined;
+}
+
 export function tripRecord(trip: Trip): DemoRecord {
   return {
     id: trip.tripId,
@@ -113,7 +119,7 @@ export function tripRecord(trip: Trip): DemoRecord {
     createdAt: trip.createdAt,
     ...(trip.acceptedAt ? { acceptedAt: trip.acceptedAt } : {}),
     ...(trip.scheduledAt ? { pickupAt: trip.scheduledAt } : {}),
-    ...(trip.paymentStatus === "refunded" ? { kind: "refunded" } : {}),
+    ...(paymentKind(trip.paymentStatus) ? { kind: paymentKind(trip.paymentStatus) } : {}),
     ...(trip.cancellation ? { cancelReasonCode: trip.cancellation.reasonCode } : {}),
   } as DemoRecord;
 }
