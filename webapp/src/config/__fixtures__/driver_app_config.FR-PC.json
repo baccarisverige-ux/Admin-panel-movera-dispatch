@@ -633,7 +633,8 @@
         "min": null,
         "max": null
       }
-    }
+    },
+    "driverSharePct": 100
   },
   "waiting": {
     "freeWaitMin": 5,

@@ -5261,6 +5261,20 @@ export const en = {
   "SOS and car-lost cases with Take, Solve and False alarm from the server; contact log, levels and calls are not connected yet.": "SOS and car-lost cases with Take, Solve and False alarm from the server; contact log, levels and calls are not connected yet.",
   "SOS and car-lost alerts from the server; the other alerts are not connected yet.": "SOS and car-lost alerts from the server; the other alerts are not connected yet.",
   "The rider is on board and the car sent no position for 30 min. Red with the repeating alarm until someone takes it in Incidents; it closes by itself when the car's position comes back.": "The rider is on board and the car sent no position for 30 min. Red with the repeating alarm until someone takes it in Incidents; it closes by itself when the car's position comes back.",
+  "Driver's share of the cancel fee": "Driver's share of the cancel fee",
+  "What the driver gets of a rider's cancel fee in this zone. Movera keeps the rest. Booked rides keep the share they were booked with.": "What the driver gets of a rider's cancel fee in this zone. Movera keeps the rest. Booked rides keep the share they were booked with.",
+  "This zone has no settings of its own and uses its country's Standard.": "This zone has no settings of its own and uses its country's Standard.",
+  "Uses standard": "Uses standard",
+  "Standard for {0}: every zone without settings of its own uses these, at once.": "Standard for {0}: every zone without settings of its own uses these, at once.",
+  "{0} uses the Standard for {1}. Publishing a change here gives the zone settings of its own.": "{0} uses the Standard for {1}. Publishing a change here gives the zone settings of its own.",
+  "{0} has settings of its own; it does not use the Standard.": "{0} has settings of its own; it does not use the Standard.",
+  "Own settings": "Own settings",
+  "{0} will use the Standard for {1} again. Its own settings stay in History.": "{0} will use the Standard for {1} again. Its own settings stay in History.",
+  "Go back to Standard": "Go back to Standard",
+  "Standard": "Standard",
+  "Trips, drivers, each zone's and each country's Standard rules from the server, published at once; dispatch actions on trips are not connected yet.": "Trips, drivers, each zone's and each country's Standard rules from the server, published at once; dispatch actions on trips are not connected yet.",
+  "Prices, fees, surge settings, commission and pickup pay of each zone and each country's Standard, and Tips & limits, from the server; manual surges and undo are not connected yet.": "Prices, fees, surge settings, commission and pickup pay of each zone and each country's Standard, and Tips & limits, from the server; manual surges and undo are not connected yet.",
+  "Feature switches and app updates go to the apps at once; scheduled publish, expiry and overrides are not connected yet.": "Feature switches and app updates go to the apps at once; scheduled publish, expiry and overrides are not connected yet.",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -50,3 +50,10 @@ tr.live-open td { background: #f6f7fb; }
 .incident-ring .dash-btn { background: #fff; color: #8e0000; border-color: #fff; }
 @keyframes incident-pulse { 50% { box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.25); } }
 @media (prefers-reduced-motion: reduce) { .incident-ring { animation: none; } }
+/* v0.8.0 settings flow: a control with no server field yet, the Standard bar and the "Uses standard" chip. */
+.live-not-connected.inline { float: none; margin: 0 0 0 8px; padding: 1px 8px; font-size: 11px; vertical-align: middle; }
+.standard-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 12px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line, #d9dde3); font-size: 13px; }
+.standard-bar.standard { background: rgba(37, 99, 235, 0.06); }
+.standard-bar.uses { background: rgba(22, 163, 74, 0.06); }
+.standard-bar span { display: inline-flex; align-items: center; gap: 6px; }
+.uses-standard { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: rgba(22, 163, 74, 0.12); color: #166534; }

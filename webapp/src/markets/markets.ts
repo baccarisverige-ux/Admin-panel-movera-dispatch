@@ -107,11 +107,29 @@ export function market(id: MarketId): Market {
   return MARKETS.find((item) => item.id === id) ?? MARKETS[0];
 }
 
+/**
+ * v0.8.0 (owner 2026-10-27): each country's Standard settings, edited like a zone in the live panel's Pricing and
+ * Dispatch. Its id is the server's scope key, standard-<country>.
+ */
+export const standardZoneId = (id: MarketId) => `standard-${id}`;
+
+export function standardZone(id: MarketId): MarketZone {
+  const owner = MARKETS.find((item) => item.id === id)!;
+  return { id: standardZoneId(id), name: "Standard", city: "Standard", kind: "operating", center: owner.center };
+}
+
+export function isStandardZone(zoneId: string): boolean {
+  return /^standard-[A-Z]{2}$/.test(zoneId) && MARKETS.some((item) => standardZoneId(item.id) === zoneId);
+}
+
 export function marketOfZone(zoneId: string): Market | undefined {
+  if (isStandardZone(zoneId)) return MARKETS.find((item) => standardZoneId(item.id) === zoneId);
   return MARKETS.find((item) => item.zones.some((zone) => zone.id === zoneId));
 }
 
 export function zoneById(zoneId: string): MarketZone | undefined {
+  const standard = MARKETS.find((item) => standardZoneId(item.id) === zoneId);
+  if (standard) return standardZone(standard.id);
   for (const item of MARKETS) {
     const found = item.zones.find((zone) => zone.id === zoneId);
     if (found) return found;

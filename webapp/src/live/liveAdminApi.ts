@@ -18,6 +18,7 @@ import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./li
 import type { DocumentSummary, Driver, Fleet, Page, Trip, TripOffer, Vehicle } from "./types.ts";
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
+import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
@@ -165,6 +166,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   const vehicles = new Map<string, Vehicle>();
   const trips = new Map<string, Trip>();
   const incidents = new Map<string, ServerIncident>();
+  const settings = createLiveSettings({ json: (path) => client.json(path), put: (path, body) => client.put(path, body), post: (path, body) => client.post(path, body) });
   let currency: string = CURRENCY;
 
   async function readDrivers(own = false): Promise<Driver[]> {
@@ -243,6 +245,16 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const answer = await client.post<{ status?: string }>(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
       return answer?.status === "pending" ? done("Waits for a second admin.", "pending_approval") : done("Refunded.");
     }
+    // Pricing, Dispatch, Settings and Tips & limits publish to the server's config documents (contract v0.8.0).
+    const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value });
+    if (settingsCall) {
+      try {
+        return done(await settingsCall);
+      } catch (error) {
+        if (error instanceof SettingsChanged) throw new ApiError(409, error.message, { code: "version_mismatch", retryable: false });
+        throw error;
+      }
+    }
     throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
   }
 
@@ -307,6 +319,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     freshness: async () => new Date().toISOString(),
     // The Incidents page's safety book (owner and steps of each case) comes from the server's incidents.
     readSlice: async (key, fallback) => {
+      const fromSettings = settings.readSlice(key, fallback);
+      if (fromSettings) return (await fromSettings) as typeof fallback;
       if (key !== "safetyOps") return fallback;
       if (!incidents.size) await list("incidents").catch(() => []);
       return bookFrom(incidents.values()) as typeof fallback;

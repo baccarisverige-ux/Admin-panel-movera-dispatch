@@ -496,12 +496,18 @@ export function publishConfig(
   book: ConfigBook,
   actorId: string,
   nowIso: string,
+  /** v0.8.0 (owner 2026-10-27): the live panel publishes at once, no second admin and no approval step. */
+  options: { direct?: boolean } = {},
 ): { book: ConfigBook; error?: string; scheduled?: boolean } {
   const missing = missingTranslations(book.draft.reasons);
   if (missing.length > 0) return { book, error: `Missing translation: ${missing.join(", ")}` };
   if (book.draft.features.luxury !== false) return { book, error: "luxury is not a feature." };
-  if (actorId === book.authorId) return { book, error: "A second agent must publish." };
-  if (book.status !== "approved") return { book, error: "Approve the draft before publishing." };
+  if (options.direct) {
+    if (configDiff(book.published, book.draft).length === 0) return { book, error: "There is no unpublished change to review." };
+  } else {
+    if (actorId === book.authorId) return { book, error: "A second agent must publish." };
+    if (book.status !== "approved") return { book, error: "Approve the draft before publishing." };
+  }
 
   const snapshot = cloneDraft(book.draft);
   const diff = configDiff(book.published, snapshot);

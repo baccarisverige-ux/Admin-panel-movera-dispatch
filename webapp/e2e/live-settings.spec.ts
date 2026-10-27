@@ -1,0 +1,128 @@
+import { readFileSync } from "node:fs";
+import { expect, test, type Page, type Route } from "@playwright/test";
+import { ADMIN, API, fakeTripServer, signIn } from "./live-fake";
+
+/**
+ * Contract v0.8.0 settings flow in the live panel (owner 2026-10-27): each country's Standard edited like a zone,
+ * "Uses standard" on zones without settings of their own, "Go back to Standard" with a confirm step, publishing at
+ * once (no second admin), the driver's share of the cancel fee in Dispatch, and "Not connected yet" on Settings
+ * controls with no server field. Screenshots (sv) go to SHOTS when it is set.
+ */
+
+const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,PUT,OPTIONS", "access-control-expose-headers": "*" };
+const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
+const sample = (name: string) => JSON.parse(readFileSync(new URL(`../../contracts/fixtures/config/${name}.json`, import.meta.url), "utf8")) as Record<string, unknown>;
+const SHOTS = process.env.SHOTS;
+const SV_ADMIN = { language: "sv", permissions: [...ADMIN.permissions, "settings.read", "settings.edit", "settings.publish", "dispatch.edit"] };
+const shot = async (page: Page, name: string) => {
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: false });
+};
+
+type Entry = { version: number; liveVersion: number; usesStandard?: boolean; document: Record<string, unknown> };
+type Sent = { method: string; path: string; body: Record<string, unknown> | null };
+
+async function fakeSettings(page: Page) {
+  const docs = new Map<string, Entry>();
+  const sent: Sent[] = [];
+  const names = { pricing: "pricing_document", dispatch: "dispatch_document", rider_app_config: "rider_app_config", driver_app_config: "driver_app_config" } as const;
+  for (const [doc, file] of Object.entries(names)) {
+    const base = sample(file);
+    docs.set(`${doc}:standard-SE`, { version: 2, liveVersion: 1, document: { ...base, zoneId: "standard-SE" } });
+    docs.set(`${doc}:Z001`, { version: 1, liveVersion: 0, usesStandard: true, document: { ...base, zoneId: "Z001" } });
+    docs.set(`${doc}:Z002`, { version: 3, liveVersion: 2, usesStandard: false, document: { ...base, zoneId: "Z002" } });
+  }
+  await page.route(`${API}/api/v1/admin/config/**`, async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+    const url = new URL(request.url());
+    const [, , , , , doc, action] = url.pathname.split("/");
+    const body = (request.postDataJSON?.() ?? null) as Record<string, unknown> | null;
+    sent.push({ method: request.method(), path: url.pathname + url.search, body });
+    const scope = (q: { zoneId?: unknown; country?: unknown }) => (q.zoneId ? String(q.zoneId) : `standard-${String(q.country)}`);
+    if (request.method() === "GET") {
+      const entry = docs.get(`${doc}:${scope({ zoneId: url.searchParams.get("zoneId"), country: url.searchParams.get("country") })}`);
+      return entry ? json(route, 200, { doc, ...entry, updatedAt: "2026-10-27T09:00:00Z" }) : json(route, 404, { code: "not_found", message: "No such zone.", requestId: "r-404", retryable: false, reason: "zone_not_found" });
+    }
+    const key = `${doc}:${scope(body ?? {})}`;
+    const entry = docs.get(key) ?? { version: 1, liveVersion: 0, document: {} };
+    if (action === "use-standard") {
+      docs.set(key, { ...entry, version: 1, liveVersion: 0, usesStandard: true });
+      return json(route, 200, { doc, zoneId: body?.["zoneId"], version: 9, publishedAt: "2026-10-27T10:00:00Z" });
+    }
+    if (body?.["expectedVersion"] !== entry.version) return json(route, 409, { code: "version_mismatch", message: "The settings changed since you last saw them.", requestId: "r-409", retryable: false });
+    if (request.method() === "PUT") {
+      docs.set(key, { ...entry, version: entry.version + 1, document: body["document"] as Record<string, unknown> });
+      return json(route, 200, { doc, ...docs.get(key), updatedAt: "2026-10-27T10:00:00Z" });
+    }
+    docs.set(key, { ...entry, version: entry.version + 1, liveVersion: entry.liveVersion + 1, usesStandard: false });
+    return json(route, 200, { doc, version: entry.liveVersion + 1, publishedAt: "2026-10-27T10:00:00Z" });
+  });
+  return { docs, sent };
+}
+
+const confirm = async (page: Page) => {
+  const modal = page.locator(".modal.open").last();
+  const reason = modal.getByLabel(/^(Reason|Skäl)$/);
+  if ((await reason.count()) && (await reason.inputValue()) === "") await reason.selectOption({ index: 1 });
+  await modal.getByRole("button", { name: /^(Confirm|Bekräfta)$/ }).click();
+};
+
+test("Pricing: the Standard for Sweden, 'Uses standard' on a zone, and Go back to Standard for a zone with its own", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  const server = await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/pricing?zone=standard-SE");
+  await expect(page.getByTestId("standard-bar")).toContainText("Standard för Sverige");
+
+  await expect(page.getByTestId("uses-standard-Z001")).toHaveText("Använder standard");
+  await expect(page.getByTestId("uses-standard-Z002")).toHaveCount(0);
+  await shot(page, "admin-pricing-standard-sv");
+
+  await page.goto("/pricing?zone=Z001");
+  await expect(page.getByTestId("standard-bar")).toContainText("använder standarden för Sverige");
+  await shot(page, "admin-pricing-uses-standard-sv");
+
+  await page.goto("/pricing?zone=Z002");
+  const bar = page.getByTestId("standard-bar");
+  await expect(bar).toContainText("har egna inställningar");
+  await shot(page, "admin-pricing-own-settings-sv");
+  await bar.getByRole("button", { name: "Gå tillbaka till standard" }).click();
+  await expect(page.locator(".modal.open")).toContainText("Historik");
+  await shot(page, "admin-pricing-go-back-confirm-sv");
+  await confirm(page);
+  await expect.poll(() => server.sent.filter((s) => s.path.endsWith("/use-standard")).map((s) => s.body)).toEqual([{ zoneId: "Z002", expectedVersion: 3 }]);
+  await expect(page.getByTestId("uses-standard-Z002")).toHaveText("Använder standard");
+});
+
+test("Dispatch: the driver's share of the cancel fee; publishing goes live at once (no second admin) to the server", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  const server = await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/dispatch?zone=Z002&tab=rides");
+  const share = page.getByLabel("Förarens andel av avbokningsavgiften");
+  await expect(share).toHaveValue("100");
+  await share.fill("80");
+  await shot(page, "admin-dispatch-cancel-share-sv");
+  const publish = page.getByRole("region", { name: "Publicera" });
+  await publish.getByRole("button", { name: "Publicera nu" }).click();
+  await confirm(page);
+  // The driver document (its cancel share) goes live at once; the dispatch rules did not change, so they are not sent.
+  await expect.poll(() => server.sent.filter((s) => s.method === "POST").map((s) => s.path)).toContain("/api/v1/admin/config/driver_app_config/publish");
+  expect(server.sent.some((s) => s.path.includes("/admin/config/dispatch/publish"))).toBe(false);
+  const driver = server.sent.find((s) => s.method === "PUT" && s.path.endsWith("/driver_app_config"))!;
+  expect(((driver.body!["document"] as Record<string, Record<string, unknown>>)["cancelFees"])!["driverSharePct"]).toBe(80);
+  await expect(page.getByText(/Väntar på en andra admin/)).toHaveCount(0);
+  await shot(page, "admin-dispatch-published-sv");
+});
+
+test("Settings: publish without Send for approval or Approve; scheduled publish and expiry are not connected yet", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/settings");
+  await expect(page.getByRole("button", { name: "Skicka för godkännande" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Godkänn" })).toHaveCount(0);
+  await expect(page.getByTestId("control-not-connected").first()).toHaveText("Inte kopplad än");
+  await page.getByRole("heading", { name: /Granska och publicera/ }).scrollIntoViewIfNeeded();
+  await shot(page, "admin-settings-publish-sv");
+});
