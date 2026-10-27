@@ -38,6 +38,8 @@ jobs:
         run: npm test
       - name: Build
         run: npx vite build
+      - name: First-load size budget (audit Phase 7)
+        run: node scripts/check-bundle.mjs dist
 
   audit:
     name: npm audit (production dependencies, high and above)
