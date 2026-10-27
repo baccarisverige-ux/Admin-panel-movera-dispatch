@@ -9,6 +9,7 @@
  */
 import type { CategoryDef, ManualSurge, PricingStore, Revision, ZoneLive } from "../pricing/zonePricing.ts";
 import { zoneBook } from "../pricing/zonePricing.ts";
+import { zoneById } from "../markets/markets.ts";
 import { bookOfPricing, notifyDriversOf, type ConfigHttp, type Doc } from "./configDocs.ts";
 
 type Lines = { sv: string; fr: string; en: string };
@@ -71,7 +72,7 @@ export function revisionsOf(entries: readonly HistoryEntry[], store: PricingStor
       actorId: entry.publishedBy ?? "",
       reason,
       zoneIds: [entry.zoneId],
-      changes: [`${entry.zoneId} · version ${entry.version}`],
+      changes: [`${zoneById(entry.zoneId)?.name ?? entry.zoneId} · version ${entry.version}${entry.restoredFrom ? ` (= version ${entry.restoredFrom})` : ""}`],
       books: { [entry.zoneId]: bookOfPricing(entry.document, zoneBook(store, entry.zoneId)) },
     };
   });

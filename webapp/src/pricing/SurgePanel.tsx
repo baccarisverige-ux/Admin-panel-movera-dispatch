@@ -31,6 +31,7 @@ import {
   SLICE_KEY,
   WEEKDAY_LABELS,
   notifyDriversNow,
+  overlappingSurges,
   setNotifyDrivers,
   startManualSurge,
   stopManualSurges,
@@ -340,6 +341,11 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
               ))}
             </ul>
           )}
+          {overlappingSurges(book.scheduled).length ? (
+            <p className="state-line warn" role="status" data-testid="scheduled-overlap-warning">
+              {trn("{0} overlap: while both run, the higher surge counts.", overlappingSurges(book.scheduled).map(([x, y]) => `${x} + ${y}`).join(", "))}
+            </p>
+          ) : null}
           <button data-command="admin.pricing.schedule" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => {
             const startAt = Math.ceil(now / 3_600_000) * 3_600_000 + 2 * 3_600_000;
             onScheduled([...book.scheduled, { id: `${zoneId}-sched-${startAt}-${book.scheduled.length}`, name: "", multiplier: 1.5, startsAt: new Date(startAt).toISOString(), endsAt: new Date(startAt + 3 * 3_600_000).toISOString() }]);

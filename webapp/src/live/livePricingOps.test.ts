@@ -93,7 +93,7 @@ test("Manage categories, surge Start / Stop, Tell drivers, Restore and Undo go t
   assert.deepEqual(server.calls.filter((c) => c.method === "POST"), [{ method: "POST", path: "/admin/zones/Z001/surge/end", body: { expectedVersion: 6 } }]);
 
   server.calls.length = 0;
-  assert.equal(await settings.command("admin.pricing.notifyDrivers", { targetId: "Z001", value: stopped }), "Drivers told: 3.");
+  assert.equal(await settings.command("admin.pricing.notifyDrivers", { targetId: "Z001", value: stopped }), "Drivers were told.");
   assert.deepEqual(sent(), ["POST /admin/zones/Z001/surge/notify"]);
 
   server.calls.length = 0;

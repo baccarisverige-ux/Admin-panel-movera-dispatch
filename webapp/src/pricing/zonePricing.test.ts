@@ -13,6 +13,7 @@ import {
   largeStoreChanges,
   largePriceChanges,
   normalizeStore,
+  overlappingSurges,
   PRICE_ROWS,
   priceMax,
   publishZones,
@@ -220,6 +221,15 @@ console.log("pricing bounds ok");
   const lines = largePriceChanges(already, high, store.categories, "Norrmalm");
   assert(lines.some((line) => line.startsWith("Norrmalm · Comfort Price per km") && line.includes("very high")), `a very high price is listed: ${lines.join(" | ")}`);
 }
+// Owner 2026-10-27: overlapping planned surges are allowed (the higher counts) and named for the warning.
+assert(
+  JSON.stringify(overlappingSurges([
+    { id: "a", name: "Concert", multiplier: 1.5, startsAt: "2026-10-31T18:00:00Z", endsAt: "2026-10-31T23:00:00Z" },
+    { id: "b", name: "Late peak", multiplier: 2, startsAt: "2026-10-31T21:00:00Z", endsAt: "2026-11-01T01:00:00Z" },
+    { id: "c", name: "Morning", multiplier: 1.2, startsAt: "2026-11-01T07:00:00Z", endsAt: "2026-11-01T09:00:00Z" },
+  ])) === JSON.stringify([["Concert", "Late peak"]]),
+  "overlapping planned surges are named",
+);
 console.log("price checks ok");
 
 // Q29: commission, pickup pay and surge caps follow the same "more than 50 % → Are you sure?" rule.

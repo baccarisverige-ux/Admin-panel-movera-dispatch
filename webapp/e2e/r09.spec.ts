@@ -114,8 +114,10 @@ test("R9 smart surge profiles and a scheduled surge are saved with the draft", a
   test.setTimeout(60_000);
   await session(page);
   await page.goto("/pricing?zone=Z002&tab=surge");
-  await page.locator("label.mini-switch", { has: page.getByRole("checkbox", { name: "Smart surge on" }) }).click();
+  // Owner 2026-10-27: smart surge is off until the admin switches it on.
   await expect(page.getByRole("checkbox", { name: "Smart surge on" })).not.toBeChecked();
+  await page.locator("label.mini-switch", { has: page.getByRole("checkbox", { name: "Smart surge on" }) }).click();
+  await expect(page.getByRole("checkbox", { name: "Smart surge on" })).toBeChecked();
   await page.getByRole("button", { name: "Plan a surge" }).click();
   await page.getByLabel("Scheduled surge name").fill("Concert");
   await page.getByLabel("Scheduled surge start").fill("2026-12-31T20:00");
@@ -124,11 +126,11 @@ test("R9 smart surge profiles and a scheduled surge are saved with the draft", a
   await publish(page);
   await expect(page.getByText(/Published as pricing revision 2/)).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("checkbox", { name: "Smart surge on" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Smart surge on" })).toBeChecked();
   await expect(page.getByLabel("Scheduled surge name")).toHaveValue("Concert");
   await expect(page.getByRole("article", { name: "Time profile New profile" })).toBeVisible();
   await page.getByRole("tab", { name: "History" }).click();
-  await expect(page.getByRole("list", { name: "Pricing history" })).toContainText("Smart surge turned off");
+  await expect(page.getByRole("list", { name: "Pricing history" })).toContainText("Smart surge turned on");
 });
 
 test("R9 history restores an older revision as a new one, and undo goes back one publish", async ({ page }) => {
@@ -166,7 +168,10 @@ test("R9 categories can be added and deleted only through the safety check", asy
 
   await dialog.getByRole("button", { name: "New category" }).click();
   await dialog.getByLabel("New category name").fill("Women Driver");
-  await dialog.getByLabel("New category line").fill("A woman drives you");
+  // Owner 2026-10-27: the sub-line in Swedish, French and English.
+  await dialog.getByLabel("New category line · Short line in Swedish").fill("En kvinna kör dig");
+  await dialog.getByLabel("New category line · Short line in French").fill("Une femme vous conduit");
+  await dialog.getByLabel("New category line · Short line in English").fill("A woman drives you");
   await dialog.getByRole("button", { name: "Add category" }).click();
   await confirm(page);
   await expect(page.getByText(/Women Driver added/)).toBeVisible();

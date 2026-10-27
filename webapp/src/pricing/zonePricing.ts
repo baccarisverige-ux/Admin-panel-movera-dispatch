@@ -83,6 +83,20 @@ export type SmartSurge = {
 
 export type ScheduledSurge = { id: string; name: string; multiplier: number; startsAt: string; endsAt: string };
 
+/**
+ * Owner 2026-10-27 (contract v0.7.1): planned surges may overlap; while both run the higher one counts, and the
+ * admin is warned. The pairs that overlap, by name.
+ */
+export function overlappingSurges(list: readonly ScheduledSurge[]): Array<[string, string]> {
+  const out: Array<[string, string]> = [];
+  list.forEach((a, i) => {
+    for (const b of list.slice(i + 1)) {
+      if (Date.parse(a.startsAt) < Date.parse(b.endsAt) && Date.parse(b.startsAt) < Date.parse(a.endsAt)) out.push([a.name || "Scheduled", b.name || "Scheduled"]);
+    }
+  });
+  return out;
+}
+
 export type ZoneBook = {
   zoneId: string;
   version: number;

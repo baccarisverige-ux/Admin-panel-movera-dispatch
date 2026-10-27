@@ -141,7 +141,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   async function tellDrivers(zoneId: string, value: PricingStore): Promise<string> {
     const told = await http.post<{ notified: number; multiplier: number }>(`/admin/zones/${encodeURIComponent(zoneId)}/surge/notify`, {});
     slices.set(PRICING_KEY, value);
-    return `Drivers told: ${told.notified}.`;
+    void told;
+    return "Drivers were told.";
   }
 
   /** "Tell drivers when a surge starts": kept in the zone's pricing document, published at once. */

@@ -5288,6 +5288,16 @@ export const en = {
   "Short line in English": "Short line in English",
   "Write the short line in Swedish, French and English.": "Write the short line in Swedish, French and English.",
   "Keep the short line to 80 letters or fewer.": "Keep the short line to 80 letters or fewer.",
+  "Published.": "Published.",
+  "Saved.": "Saved.",
+  "Added.": "Added.",
+  "Deleted. It can be restored for 30 days.": "Deleted. It can be restored for 30 days.",
+  "Restored, switched off in every zone.": "Restored, switched off in every zone.",
+  "Restored.": "Restored.",
+  "Drivers were told.": "Drivers were told.",
+  "That revision is not on the server.": "That revision is not on the server.",
+  "Prices are not set for this zone on the server yet.": "Prices are not set for this zone on the server yet.",
+  "{0} overlap: while both run, the higher surge counts.": "{0} overlap: while both run, the higher surge counts.",
 } as const;
 
 export type MessageKey = keyof typeof en;
