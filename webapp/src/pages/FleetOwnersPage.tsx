@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { LiveListBar } from "../live/LiveListBar";
 import { useNavigate, useSearchParams } from "react-router";
 import { Building2, CalendarClock, Car, PauseCircle, UserCheck, Users } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
@@ -79,6 +80,7 @@ export function FleetOwnersPage() {
         </div>
       </div>
 
+      <LiveListBar list="fleets" records="fleetOwners" />
       <DataTable
         className="fd-table"
         head={["Code", "Name", "Company", "Country", "Fleets", "Drivers", "Active drivers", "On hold", "Vehicles", "Documents", "Status", "Contact"]}

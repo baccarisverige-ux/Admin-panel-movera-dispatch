@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { LiveFleetPanel } from "../live/LiveFleetPanel";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Building2, Car, Hash, Mail, MessageSquare, Phone, StickyNote, Users } from "lucide-react";
@@ -229,6 +230,7 @@ export function FleetOwnerDetailPage() {
         </TabPanel>
 
         <TabPanel id="fleets" activeId={tab}>
+          <LiveFleetPanel ownerId={owner.id} />
           {ownFleets.length === 0 ? <p className="state-line">This owner has no fleet yet.</p> : ownFleets.map((fleet) => {
             const members = crewStats.filter((row) => row.driver.fleetId === fleet.id);
             return (

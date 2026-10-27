@@ -34,7 +34,8 @@ function screenRevision(client: ReturnType<typeof useQueryClient>): number | und
 }
 
 /** `refetchMs` keeps live screens up to date by reloading on a timer. */
-export function useRecords(name: string, scope?: string | null, options: { refetchMs?: number } = {}) {
+/** `observe` watches the list without reading it again on mount (the live list bar beside a page that reads it). */
+export function useRecords(name: string, scope?: string | null, options: { refetchMs?: number; observe?: boolean } = {}) {
   const api = useAdminApi();
   const session = useSession();
   const resolved = useMarketScope(scope);
@@ -45,6 +46,7 @@ export function useRecords(name: string, scope?: string | null, options: { refet
     queryKey,
     queryFn: () => readTracked(api, queryKey, () => api.list(name, effectiveScope)),
     refetchInterval: options.refetchMs,
+    ...(options.observe ? { refetchOnMount: false, retryOnMount: false } : {}),
   });
   return { ...query, scopeDenied, effectiveScope };
 }

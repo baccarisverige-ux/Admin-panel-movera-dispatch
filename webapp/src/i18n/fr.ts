@@ -5237,4 +5237,8 @@ export const fr: Record<MessageKey, string> = {
   "Vehicles and their review from the server; photos and rules are not connected yet.": "Véhicules et leur vérification depuis le serveur ; photos et règles pas encore connectées.",
   "Drivers and their account status from the server; document review is not connected yet.": "Chauffeurs et statut du compte depuis le serveur ; la vérification des documents n'est pas encore connectée.",
   "Not connected yet.": "Pas encore connecté.",
+  "Try again": "Réessayer",
+  "Status on the server": "Statut sur le serveur",
+  "Uploaded files": "Fichiers envoyés",
+  "Company documents": "Documents de la société",
 };

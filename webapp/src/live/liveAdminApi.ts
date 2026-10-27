@@ -14,11 +14,14 @@ import type { TripOffersView } from "../api/dispatchSim.ts";
 import { ApiError } from "../api/httpClient.ts";
 import type { DemoRecord } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
+import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
 import type { DocumentSummary, Driver, Fleet, Page, Trip, TripOffer, Vehicle } from "./types.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
 const PAGE_LIMIT = 100;
+/** One server page of a list page; "Load more" asks for the next one. */
+export const LIST_PAGE = 50;
 const MAX_PAGES = 20;
 
 async function all<T>(client: LiveClient, path: string): Promise<T[]> {
@@ -31,6 +34,25 @@ async function all<T>(client: LiveClient, path: string): Promise<T[]> {
     cursor = page.nextCursor;
     if (!cursor) break;
   }
+  return items;
+}
+
+/** A list page's own rows: the server's search and status filter, as many pages as "Load more" asked for. */
+async function paged<T>(client: LiveClient, name: LiveListName, path: string): Promise<T[]> {
+  const query = listQueryOf(name);
+  const items: T[] = [];
+  let cursor: string | null = null;
+  for (let index = 0; index < query.pages; index += 1) {
+    const params = new URLSearchParams({ limit: String(LIST_PAGE) });
+    if (query.q) params.set("q", query.q);
+    if (query.status) params.set(STATUS_PARAM[name], query.status);
+    if (cursor) params.set("cursor", cursor);
+    const page: Page<T> = await client.json<Page<T>>(`${path}?${params.toString()}`);
+    items.push(...page.items);
+    cursor = page.nextCursor;
+    if (!cursor) break;
+  }
+  setListQuery(name, { hasMore: Boolean(cursor) });
   return items;
 }
 
@@ -139,14 +161,14 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   const trips = new Map<string, Trip>();
   let currency: string = CURRENCY;
 
-  async function readDrivers(): Promise<Driver[]> {
-    const rows = await all<Driver>(client, "/admin/drivers");
+  async function readDrivers(own = false): Promise<Driver[]> {
+    const rows = own ? await paged<Driver>(client, "drivers", "/admin/drivers") : await all<Driver>(client, "/admin/drivers");
     rows.forEach((row) => drivers.set(row.driverId, row));
     return rows;
   }
 
   async function readFleets(): Promise<Fleet[]> {
-    return all<Fleet>(client, "/admin/fleets");
+    return paged<Fleet>(client, "fleets", "/admin/fleets");
   }
 
   async function fleetZones(fleets: Fleet[]): Promise<Map<string, string>> {
@@ -155,9 +177,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   }
 
   async function list(name: string): Promise<DemoRecord[]> {
-    if (name === "drivers") return (await readDrivers()).map(driverRecord);
+    if (name === "drivers") return (await readDrivers(true)).map(driverRecord);
     if (name === "vehicles") {
-      const rows = await all<Vehicle>(client, "/admin/vehicles");
+      const rows = await paged<Vehicle>(client, "vehicles", "/admin/vehicles");
       rows.forEach((row) => vehicles.set(row.vehicleId, row));
       if (!drivers.size) await readDrivers().catch(() => []);
       return rows.map((row) => vehicleRecord(row, drivers));
@@ -168,7 +190,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return fleets.map((fleet) => (name === "fleets" ? fleetRecord : ownerRecord)(fleet, zones.get(fleet.fleetId) ?? ""));
     }
     if (name === "trips") {
-      const rows = await all<Trip>(client, "/admin/trips");
+      const rows = await paged<Trip>(client, "trips", "/admin/trips");
       rows.forEach((row) => trips.set(row.tripId, row));
       if (rows[0] && isCurrency(rows[0].fare.currency)) currency = rows[0].fare.currency;
       return rows.map(tripRecord);

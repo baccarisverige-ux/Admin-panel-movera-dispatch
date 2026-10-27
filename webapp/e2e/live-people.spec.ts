@@ -131,3 +131,123 @@ test("a command the server does not have yet is refused with Not connected yet, 
   await expect(page.getByText("Not connected yet.").first()).toBeVisible();
   await expect(page.getByText("Private driver note saved.")).toHaveCount(0);
 });
+
+test("driver documents: the demo Documents tab opens an uploaded file and approves it on the server", async ({ page }) => {
+  const state = await fakeTripServer(page, { admin: { permissions: ["overview.read", "drivers.read", "drivers.activate", "documents.approve", "vehicles.edit", "trips.read"] } });
+  await signIn(page);
+  await page.goto("/drivers/D1001?tab=documents");
+  const files = page.getByTestId("live-documents");
+  const rows = files.locator("tr[data-document-type]");
+  await expect(rows).toHaveCount(2);
+  await expect(files.locator('tr[data-document-type="driving_license"]')).toContainText("In review");
+  await files.locator('tr[data-document-type="driving_license"]').getByRole("button", { name: "Open" }).click();
+  const viewer = page.getByRole("dialog");
+  await expect(viewer.locator("img.live-file")).toBeVisible();
+  expect(state.calls.find((call) => call.path.endsWith("/documents/DOC2/file"))!.headers.authorization).toBe("Bearer access-1");
+  await viewer.getByRole("button", { name: "Approve" }).click();
+  await page.getByRole("dialog", { name: "Approve document" }).getByRole("button", { name: "Approve" }).click();
+  await expect(files.locator('tr[data-document-type="driving_license"]')).toContainText("Approved");
+  const review = state.calls.find((call) => call.path.endsWith("/documents/DOC2/review"))!;
+  expect(review.body).toEqual({ decision: "approved" });
+  expect(review.headers["idempotency-key"]?.length).toBeGreaterThan(15);
+});
+
+test("driver documents: Reject needs a note", async ({ page }) => {
+  const state = await fakeTripServer(page, { admin: { permissions: ["overview.read", "drivers.read", "documents.approve"] } });
+  await signIn(page);
+  await page.goto("/drivers/D1001?tab=documents");
+  await page.getByTestId("live-documents").locator('tr[data-document-type="driving_license"]').getByRole("button", { name: "Reject" }).click();
+  const reject = page.getByRole("dialog", { name: "Reject document" });
+  await expect(reject.getByRole("button", { name: "Reject" })).toBeDisabled();
+  await reject.getByLabel("Note (required)").fill("Blurry photo");
+  await reject.getByRole("button", { name: "Reject" }).click();
+  await expect(page.getByTestId("live-documents").locator('tr[data-document-type="driving_license"]')).toContainText("Rejected");
+  expect(state.calls.find((call) => call.path.endsWith("/documents/DOC2/review"))!.body).toEqual({ decision: "rejected", note: "Blurry photo" });
+});
+
+test("fleet: join code with copy and a new code; remove from fleet refused on a trip", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const state = await fakeTripServer(page, { admin: { permissions: ["overview.read", "drivers.read", "drivers.activate"] } });
+  await signIn(page);
+  await page.goto("/fleets/D1000?tab=fleets");
+  const fleet = page.getByTestId("live-fleet");
+  await expect(page.getByTestId("fleet-code")).toHaveText("MV-AAAA1");
+  await fleet.getByRole("button", { name: "Copy code" }).click();
+  await expect(fleet.getByRole("button", { name: "Copied" })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("MV-AAAA1");
+  await fleet.getByRole("button", { name: "New code" }).click();
+  await page.getByRole("dialog", { name: "New join code" }).getByRole("button", { name: "Make a new code" }).click();
+  await expect(page.getByTestId("fleet-code")).toHaveText("MV-BBBB2");
+  expect(state.calls.find((call) => call.path.endsWith("/fleets/F1/code"))!.body).toEqual({ expectedVersion: 3 });
+
+  await page.locator('tr[data-driver-id="D1001"]').getByRole("button", { name: "Remove from fleet" }).click();
+  const remove = page.getByRole("dialog", { name: "Remove from fleet" });
+  await remove.getByRole("button", { name: "Remove from fleet" }).click();
+  await expect(remove).toContainText("The driver is on a trip.");
+  expect(state.calls.some((call) => call.method === "POST" && call.path.endsWith("/fleets/F1/drivers/D1001/remove"))).toBe(true);
+});
+
+test("fleet invitations: Accept (disabled for a number without an account) and Cancel; an expired one says so", async ({ page }) => {
+  const state = await fakeTripServer(page, { admin: { permissions: ["overview.read", "drivers.read", "drivers.activate"] } });
+  await signIn(page);
+  await page.goto("/fleets/D1000?tab=fleets");
+  const section = page.getByTestId("fleet-invitations");
+  await expect(section).toContainText("3 pending");
+  const request = section.locator('tr[data-invitation-id="INV1"]');
+  await expect(request).toContainText("The driver asked to join");
+  await expect(request.getByRole("link", { name: "Carl Ek" })).toHaveAttribute("href", "/drivers/D1002");
+  const invite = section.locator('tr[data-invitation-id="INV2"]');
+  await expect(invite).toContainText("+46700000002");
+  await expect(invite).toContainText("not signed up yet");
+  await expect(invite.getByRole("button", { name: "Accept", exact: true })).toBeDisabled();
+  await expect(invite.getByRole("button", { name: "Cancel invitation" })).toBeEnabled();
+  await request.getByRole("button", { name: "Accept", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Accept invitation" });
+  await expect(dialog).toContainText("Carl Ek");
+  await dialog.getByRole("button", { name: "Accept", exact: true }).click();
+  await expect(request).toHaveCount(0);
+  await expect(section).toContainText("2 pending");
+  const accept = state.calls.find((call) => call.path.endsWith("/fleets/F1/invitations/INV1/accept"))!;
+  expect(accept.headers["idempotency-key"]?.length).toBeGreaterThan(15);
+  await section.locator('tr[data-invitation-id="INV3"]').getByRole("button", { name: "Cancel invitation" }).click();
+  const cancel = page.getByRole("dialog", { name: "Cancel invitation" });
+  await cancel.getByRole("button", { name: "Cancel invitation" }).click();
+  await expect(cancel).toContainText("This invitation has expired.");
+});
+
+test("drivers, fleets and vehicles lists: server search and status filter; a failure shows Try again", async ({ page }) => {
+  const state = await fakeTripServer(page);
+  await signIn(page);
+  await page.goto("/drivers");
+  const bar = page.getByTestId("live-list-drivers");
+  await bar.getByLabel("Status on the server").selectOption("active");
+  await expect.poll(() => state.calls.some((call) => call.path.includes("accountStatus=active"))).toBe(true);
+  await expect(page.getByRole("cell", { name: "Bo Nord", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Anna Berg", exact: true })).toHaveCount(0);
+  await bar.getByLabel("Status on the server").selectOption("");
+  await bar.getByLabel("Search by name, e-mail or id").fill("anna");
+  await bar.getByRole("button", { name: "Search" }).click();
+  await expect.poll(() => state.calls.some((call) => call.path.includes("q=anna"))).toBe(true);
+  await expect(page.getByRole("cell", { name: "Bo Nord", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("cell", { name: "Anna Berg", exact: true }).first()).toBeVisible();
+
+  await page.goto("/fleets");
+  await page.getByTestId("live-list-fleets").getByLabel("Status on the server").selectOption("pending");
+  await expect.poll(() => state.calls.some((call) => call.path.startsWith("/api/v1/admin/fleets?") && call.path.includes("status=pending"))).toBe(true);
+  await expect(page.getByText("Taxi Nord AB")).toHaveCount(0);
+
+  await page.goto("/vehicles");
+  const vehicles = page.getByTestId("live-list-vehicles");
+  await vehicles.getByLabel("Search by plate, make or model").fill("ABC");
+  await vehicles.getByRole("button", { name: "Search" }).click();
+  await expect.poll(() => state.calls.some((call) => call.path.startsWith("/api/v1/admin/vehicles?") && call.path.includes("q=ABC"))).toBe(true);
+  await expect(page.getByText("ABC 123").first()).toBeVisible();
+
+  state.driversFail = 500;
+  await page.goto("/onboarding");
+  const onboarding = page.getByTestId("live-list-drivers");
+  await expect(onboarding.getByRole("alert")).toContainText("The server is busy.", { timeout: 15_000 });
+  state.driversFail = undefined;
+  await onboarding.getByRole("button", { name: "Try again" }).click();
+  await expect(onboarding.getByRole("alert")).toHaveCount(0);
+});

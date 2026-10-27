@@ -5237,4 +5237,8 @@ export const sv: Record<MessageKey, string> = {
   "Vehicles and their review from the server; photos and rules are not connected yet.": "Fordon och deras granskning från servern; foton och regler är inte kopplade än.",
   "Drivers and their account status from the server; document review is not connected yet.": "Förare och kontostatus från servern; dokumentgranskning är inte kopplad än.",
   "Not connected yet.": "Inte kopplad än.",
+  "Try again": "Försök igen",
+  "Status on the server": "Status på servern",
+  "Uploaded files": "Uppladdade filer",
+  "Company documents": "Företagets dokument",
 };

@@ -5235,6 +5235,10 @@ export const en = {
   "Vehicles and their review from the server; photos and rules are not connected yet.": "Vehicles and their review from the server; photos and rules are not connected yet.",
   "Drivers and their account status from the server; document review is not connected yet.": "Drivers and their account status from the server; document review is not connected yet.",
   "Not connected yet.": "Not connected yet.",
+  "Try again": "Try again",
+  "Status on the server": "Status on the server",
+  "Uploaded files": "Uploaded files",
+  "Company documents": "Company documents",
 } as const;
 
 export type MessageKey = keyof typeof en;

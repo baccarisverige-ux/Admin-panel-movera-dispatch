@@ -130,6 +130,15 @@ export const FLEET = {
   version: 3,
 };
 
+/** A driver's request (he asked with the code), an owner's invite to a number without an account, and one that expired. */
+export const INVITATIONS = [
+  { invitationId: "INV1", fleetId: "F1", fleetName: "Taxi Nord AB", direction: "driver_request", driverId: "D1002", driverName: "Carl Ek", status: "pending", createdAt: "2026-10-24T08:00:00Z", expiresAt: "2026-10-31T08:00:00Z", version: 1 },
+  { invitationId: "INV2", fleetId: "F1", fleetName: "Taxi Nord AB", direction: "owner_invite", phone: "+46700000002", status: "pending", createdAt: "2026-10-25T09:30:00Z", expiresAt: "2026-11-01T09:30:00Z", version: 1 },
+  { invitationId: "INV3", fleetId: "F1", fleetName: "Taxi Nord AB", direction: "owner_invite", driverId: "D1003", driverName: "Eva Lund", phone: "+46700000003", status: "pending", createdAt: "2026-10-10T09:30:00Z", expiresAt: "2026-10-17T09:30:00Z", version: 1 },
+];
+
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+
 export const VEHICLE = { vehicleId: "V1", make: "Volvo", model: "V90", year: 2022, color: "black", plate: "ABC 123", seats: 4, categoryIds: ["standard"], status: "pending", version: 1, fleetId: "F1", driverId: "D1001" };
 
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-expose-headers": "*" };
@@ -154,10 +163,11 @@ export type TripState = {
   driversFail?: number;
   /** Hold POST /admin/drivers/{id}/status this many ms. */
   statusDelayMs?: number;
+  invitations: (typeof INVITATIONS)[number][];
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
-  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], ...init };
+  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), ...init };
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
   const wait = (ms?: number) => (ms ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve());
   await page.route(`${API}/**`, async (route) => {
@@ -174,7 +184,9 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     if (request.headers().authorization !== "Bearer access-1") return json(route, 401, { code: "unauthenticated", message: "Sign in again.", requestId: "r-401", retryable: false });
     if (p === "/api/v1/admin/drivers") {
       if (state.driversFail) return json(route, state.driversFail, { code: "unavailable", message: "The server is busy.", requestId: "r-503", retryable: false });
-      return json(route, 200, { items: state.drivers, nextCursor: null });
+      const status = url.searchParams.get("accountStatus");
+      const q = (url.searchParams.get("q") ?? "").toLowerCase();
+      return json(route, 200, { items: state.drivers.filter((item) => (!status || item.accountStatus === status) && (!q || JSON.stringify(item).toLowerCase().includes(q))), nextCursor: null });
     }
     const driver = /^\/api\/v1\/admin\/drivers\/([^/]+)(\/status)?$/.exec(p);
     if (driver) {
@@ -188,8 +200,41 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       state.drivers[index] = { ...current, accountStatus: body.accountStatus, version: current.version + 1 };
       return json(route, 200, state.drivers[index]);
     }
-    if (p === "/api/v1/admin/fleets") return json(route, 200, { items: state.fleets, nextCursor: null });
-    if (p === "/api/v1/admin/vehicles") return json(route, 200, { items: state.vehicles, nextCursor: null });
+    const filtered = <T extends { status: string }>(items: T[]) => {
+      const status = url.searchParams.get("status");
+      const q = (url.searchParams.get("q") ?? "").toLowerCase();
+      return items.filter((item) => (!status || item.status === status) && (!q || JSON.stringify(item).toLowerCase().includes(q)));
+    };
+    if (p === "/api/v1/admin/fleets") return json(route, 200, { items: filtered(state.fleets), nextCursor: null });
+    if (p === "/api/v1/admin/vehicles") return json(route, 200, { items: filtered(state.vehicles), nextCursor: null });
+    if (p === "/api/v1/admin/fleets/F1") {
+      const [owner, member] = [state.drivers.find((item) => item.driverId === "D1000"), state.drivers.find((item) => item.driverId === "D1001")];
+      return json(route, 200, {
+        fleet: state.fleets[0],
+        drivers: [owner, member].filter(Boolean).map((item) => ({ driverId: item!.driverId, firstName: item!.firstName, lastName: item!.lastName, accountStatus: item!.accountStatus, onlineStatus: item!.onlineStatus, linkedAt: "2026-10-20T10:00:00Z" })),
+        vehicles: state.vehicles,
+        invitations: state.invitations.filter((item) => item.status === "pending"),
+      });
+    }
+    if (p === "/api/v1/admin/fleets/F1/code") {
+      state.fleets[0] = { ...state.fleets[0]!, code: "MV-BBBB2", version: state.fleets[0]!.version + 1 };
+      return json(route, 200, state.fleets[0]);
+    }
+    const invitation = /^\/api\/v1\/admin\/fleets\/F1\/invitations\/([^/]+)\/(accept|cancel)$/.exec(p);
+    if (invitation) {
+      const item = state.invitations.find((row) => row.invitationId === invitation[1]);
+      if (!item) return json(route, 404, { code: "not_found", message: "No such invitation in this fleet.", requestId: "r-inv404", retryable: false, reason: "invitation_not_found" });
+      if (Date.parse(item.expiresAt) < Date.parse("2026-10-25T12:00:00Z")) return json(route, 409, { code: "invalid_transition", message: "The invitation has expired.", requestId: "r-inv409", retryable: false, reason: "invitation_expired" });
+      if (invitation[2] === "accept" && !item.driverId) return json(route, 409, { code: "invalid_transition", message: "That number has no account yet.", requestId: "r-inv409b", retryable: false, reason: "driver_not_signed_up" });
+      item.status = invitation[2] === "accept" ? "accepted" : "cancelled";
+      return json(route, 200, { ...item, decidedAt: "2026-10-25T12:00:00Z", version: 2 });
+    }
+    if (p === "/api/v1/admin/fleets/F1/drivers/D1001/remove") return json(route, 409, { code: "invalid_transition", message: "The driver is on a trip.", requestId: "r-trip", retryable: false, reason: "on_trip" });
+    if (p === "/api/v1/admin/documents/DOC2/file") return route.fulfill({ status: 200, headers: { ...CORS, "content-type": "image/png" }, body: PNG });
+    if (p === "/api/v1/admin/documents/DOC2/review") {
+      state.drivers = state.drivers.map((item) => (item.driverId === "D1001" ? { ...item, documents: item.documents.map((doc) => (doc.documentId === "DOC2" ? { ...doc, status: body.decision } : doc)) } : item));
+      return json(route, 200, { documentId: "DOC2", ownerId: "D1001", type: "driving_license", status: body.decision, version: 2, reviewNote: body.note });
+    }
     const review = /^\/api\/v1\/admin\/vehicles\/([^/]+)\/review$/.exec(p);
     if (review) {
       const index = state.vehicles.findIndex((item) => item.vehicleId === review[1]);

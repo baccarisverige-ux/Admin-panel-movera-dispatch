@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { LiveListBar } from "../live/LiveListBar";
 import { useNavigate, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Camera, Car, CheckCircle2, FileWarning, PauseCircle, Settings2 } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
@@ -145,6 +146,7 @@ export function FleetPage() {
         Fleet partners: {(fleets.data ?? []).map((fleet) => `${fleet.id} ${fleet.name}`).join(" · ") || "none in scope"}.
       </p>
 
+      <LiveListBar list="vehicles" />
       <DataTable
         head={["Vehicle", "Plate", "Car", "Driver", "Fleet", "Category", "Fits", "Year", "Papers", "Status", "Rule check"]}
         rowIds={shown.map((row) => row.record.id)}

@@ -85,16 +85,21 @@ test("driver status: a double click on Confirm sends one change", async ({ page 
   expect(state.calls.filter((call) => call.method === "POST" && call.path.endsWith("/drivers/D1000/status"))).toHaveLength(1);
 });
 
-test("drivers list: a failing server shows no rows (no demo drivers filled in); the server's rows come back after a reload", async ({ page }) => {
+test("drivers list: a failing server shows the error line and no demo drivers; Try again brings the server's rows", async ({ page }) => {
   const state = await fakeTripServer(page, { driversFail: 503 });
   await signIn(page);
   await page.goto("/drivers");
-  await expect.poll(() => state.calls.filter((call) => call.path.startsWith("/api/v1/admin/drivers?")).length).toBeGreaterThan(0);
-  await expect(page.getByText(/^0 in All\./)).toBeVisible({ timeout: 15_000 });
+  const bar = page.getByTestId("live-list-drivers");
+  await expect(bar.getByRole("alert")).toContainText("The server is busy.", { timeout: 15_000 });
+  await expect(page.getByText(/^0 in All\./)).toBeVisible();
   await expect(page.getByRole("cell", { name: "Anna Berg", exact: true })).toHaveCount(0);
   state.driversFail = undefined;
-  await page.reload();
+  await bar.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("cell", { name: "Anna Berg", exact: true }).first()).toBeVisible();
+  await expect(bar.getByRole("alert")).toHaveCount(0);
+  await bar.getByLabel("Search by name, e-mail or id").fill("nobody");
+  await bar.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByText(/^0 in All\./)).toBeVisible();
 });
 
 for (const [language, dashboard, fleets, marker] of [
