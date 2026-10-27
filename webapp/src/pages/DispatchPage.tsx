@@ -1,3 +1,5 @@
+import { NotConnected } from "../live/NotConnected";
+import { isLiveData } from "../live/realData";
 import { logExport } from "../reports/activityLog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -401,7 +403,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
         />
       ) : null}
       {!slice.loading && view === "live" ? <LiveView book={book} market={market} zones={zones} drivers={live.filter((driver) => zones.some((zone) => zone.id === driver.zoneId))} requests={requests} candidatesOf={candidatesOf} rulesOf={liveOf} busyOf={busyOf} hhmm={hhmm} canControl={canControl} agentId={agent?.id ?? ""} withScope={(path) => path} onNotice={say} sharedAlerts={ownAlerts ? undefined : <DispatchAlerts zoneIds={zones.map((zone) => zone.id)} />} rideChecks={mapRideChecks} /> : null}
-      {!slice.loading && view === "test" ? <TestView market={market} zones={zones} zoneId={zoneId || zones[0]?.id || ""} onZone={(id) => go({ zone: id })} draftOf={rulesOf} liveOf={liveOf} countryDraft={countryRules} countryLive={liveCountry(book, country)} controlOf={(id) => book.control[id]} factsFor={factsFor} busyOf={busyOf} hhmm={hhmm} hasChanges={changes.length > 0 || countryChanged.length > 0} events={book.events.filter((event) => event.country === country)} /> : null}
+      {!slice.loading && view === "test" && isLiveData() ? <NotConnected block /> : null}
+      {!slice.loading && view === "test" && !isLiveData() ? <TestView market={market} zones={zones} zoneId={zoneId || zones[0]?.id || ""} onZone={(id) => go({ zone: id })} draftOf={rulesOf} liveOf={liveOf} countryDraft={countryRules} countryLive={liveCountry(book, country)} controlOf={(id) => book.control[id]} factsFor={factsFor} busyOf={busyOf} hhmm={hhmm} hasChanges={changes.length > 0 || countryChanged.length > 0} events={book.events.filter((event) => event.country === country)} /> : null}
       {!slice.loading && view === "events" ? <EventsView book={book} market={market} canEdit={canEditRole} canBonus={Boolean(agent && can(agent.role, "drivers.bonuses"))} onNotice={say} /> : null}
       {!slice.loading && view === "reasons" ? <CancelReasonsView market={market} country={countryRules} onCountry={(next) => setWorkingCountry((current) => ({ ...current, [country]: next }))} canEdit={canEditRole} /> : null}
       {!slice.loading && view === "cancels" ? <CancelView book={book} market={market} records={records} categories={activeCategories(pricing)} rulesOf={liveOf} canDecide={canControl} agentId={agent?.id ?? ""} money={money} onNotice={say} /> : null}

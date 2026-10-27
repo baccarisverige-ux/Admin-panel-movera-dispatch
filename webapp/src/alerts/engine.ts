@@ -1,3 +1,4 @@
+import { isLiveData } from "../live/realData.ts";
 import type { Role } from "../auth/permissions.ts";
 import { csvCell } from "../reports/csv.ts";
 import { tr, trx } from "../i18n/core.ts";
@@ -209,7 +210,7 @@ export type Facts = {
   documents: { driverId: string; driver: string; zoneId: string; doc: string; days: number }[];
   ratings: { driverId: string; driver: string; zoneId: string; rating: number }[];
   offline: { driverId: string; driver: string; zoneId: string; count: number }[];
-  payments: { id: string; zoneId: string; rider: string; amount: number; system: boolean; reason: string }[];
+  payments: { id: string; zoneId: string; rider: string; amount: number; system: boolean; reason: string; at?: string }[];
   refunds: { id: string; title: string }[];
   payouts: { id: string; driver: string; zoneId: string; amount: number }[];
   riders: { id: string; name: string; flags: string[]; cancelRate: number; rides: number }[];
@@ -245,6 +246,16 @@ function hash(text: string): number {
   return value >>> 0;
 }
 
+const FIRST_SEEN = new Map<string, number>();
+
+/** When the panel first saw a live alert (kept for the session). */
+export function firstSeen(id: string, now: number): number {
+  const seen = FIRST_SEEN.get(id);
+  if (seen !== undefined) return seen;
+  FIRST_SEEN.set(id, now);
+  return now;
+}
+
 /** The level a number reaches, or null when it is fine. */
 export function levelFor(value: number, limits: Limits, direction: "up" | "down"): Level | null {
   const reached = (limit: number | null) => limit !== null && (direction === "up" ? value >= limit : value <= limit);
@@ -261,7 +272,8 @@ export function computeAlerts(facts: Facts, settings: AlertSettings, rules: read
   const inZones = new Set(facts.zones.map((zone) => zone.id));
   const k = (id: KindId) => settings.kinds[id] ?? defaultKind(kindDef(id)!);
   const ago = (min: number) => facts.now - min * 60_000;
-  const seeded = (id: string, span = 50) => ago(2 + (hash(id) % span));
+  // Live: an alert without its own time is dated when the panel first saw it, never a made-up "minutes ago".
+  const seeded = (id: string, span = 50) => (isLiveData() ? firstSeen(id, facts.now) : ago(2 + (hash(id) % span)));
   const push = (alert: Omit<Alert, "group" | "path"> & { path?: string }) => {
     const def = kindDef(alert.kind);
     out.push({ ...alert, group: def?.group ?? "system", path: alert.path ?? def?.path ?? "/alerts" });
@@ -333,7 +345,7 @@ export function computeAlerts(facts: Facts, settings: AlertSettings, rules: read
   }
   if (k("payment_failed").on) {
     for (const row of facts.payments.filter((item) => inZones.has(item.zoneId))) {
-      push({ id: `payment_failed:${row.id}`, kind: "payment_failed", level: row.system ? "critical" : k("payment_failed").level, title: row.rider === "Card" ? tr("A card payment of {0} failed", [facts.money(row.amount)]) : tr("{0}'s payment of {1} failed", [row.rider, facts.money(row.amount)]), detail: `${trx(row.reason)} · ${row.id}`, zoneId: row.zoneId, since: seeded(row.id, 180), path: `/payments/${row.id}` });
+      push({ id: `payment_failed:${row.id}`, kind: "payment_failed", level: row.system ? "critical" : k("payment_failed").level, title: row.rider === "Card" ? tr("A card payment of {0} failed", [facts.money(row.amount)]) : tr("{0}'s payment of {1} failed", [row.rider, facts.money(row.amount)]), detail: `${trx(row.reason)} · ${row.id}`, zoneId: row.zoneId, since: row.at ? Date.parse(row.at) : seeded(row.id, 180), path: `/payments/${row.id}` });
     }
   }
   if (k("refund_approval").on) {
@@ -384,7 +396,9 @@ export function metricValue(facts: Facts, metric: Metric, zoneId: string): numbe
 }
 
 /** How many times a rule would have alerted over the last 24 hours, from a demo history around today's value. */
-export function rulePreview(rule: Pick<AlertRule, "metric" | "op" | "value" | "forMin" | "zoneId">, facts: Facts): { times: number; zones: number } {
+export function rulePreview(rule: Pick<AlertRule, "metric" | "op" | "value" | "forMin" | "zoneId">, facts: Facts): { times: number; zones: number } | null {
+  // Live: there is no 24 h history on the server yet; never a demo wave.
+  if (isLiveData()) return null;
   let times = 0;
   const hit = new Set<string>();
   for (const zone of facts.zones.filter((item) => rule.zoneId === "all" || item.id === rule.zoneId)) {

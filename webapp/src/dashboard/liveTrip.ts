@@ -5,7 +5,10 @@ import { driverCode } from "../fleet/codes.ts";
 import { formatMoney, market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import type { LiveDriver } from "./live.ts";
 import { lengthKm, type LatLng } from "./route.ts";
-import { uiLocale } from "../i18n/core.ts";
+import { tr, uiLocale } from "../i18n/core.ts";
+import { NOT_CONNECTED_TEXT, isLiveData, liveTripOf } from "../live/realData.ts";
+import { placeText } from "../trips/present.ts";
+import { formatMoney as formatCurrency, isCurrency } from "../domain/money.ts";
 
 /** What the admin sees about a driver's current trip, its waybill and the next pickup. */
 
@@ -24,7 +27,8 @@ export type Waybill = {
   vehicle: string;
   plate: string;
   rider: string;
-  passengers: number;
+  /** null: not sent by the server (live). */
+  passengers: number | null;
   bookedVia: string;
   bookedAt: string;
   pickup: string;
@@ -48,10 +52,11 @@ export type LiveTrip = {
   category: string;
   payment: string;
   fare: string;
-  distanceKm: number;
-  /** Minutes to the pickup while heading there, otherwise to the drop-off. */
-  etaMin: number;
-  progressPct: number;
+  /** null: not sent by the server (live). */
+  distanceKm: number | null;
+  /** Minutes to the pickup while heading there, otherwise to the drop-off. null: not sent by the server. */
+  etaMin: number | null;
+  progressPct: number | null;
   startedAtMs: number;
   next: NextPickup | null;
   waybill: Waybill;
@@ -87,6 +92,7 @@ export function liveTrip(
   nowMs: number,
   shiftMs = 0,
 ): LiveTrip | null {
+  if (isLiveData()) return serverTrip(driver, records);
   if (!driver.route) return null;
   const id = marketOfZone(driver.zoneId)?.id ?? "SE";
   const { timeZone } = market(id);
@@ -186,5 +192,71 @@ export function liveTrip(
     startedAtMs,
     next,
     waybill,
+  };
+}
+
+const METHOD: Record<string, string> = { cash: "Cash", card: "Card", wallet: "Wallet", apple_pay: "Apple Pay", google_pay: "Google Pay" };
+
+/**
+ * Live build: the driver's current trip from the server's trip (places, category, fare, payment method, times).
+ * ETA, progress, distance, licence, passengers and the next pickup are not sent: they read "Not connected yet".
+ */
+function serverTrip(driver: LiveDriver, records: { trips: readonly DemoRecord[]; vehicles: readonly DemoRecord[]; fleets: readonly DemoRecord[]; riders: readonly DemoRecord[] }): LiveTrip | null {
+  const trip = driver.tripId ? records.trips.find((row) => row.id === driver.tripId) ?? null : null;
+  const facts = trip ? liveTripOf(trip) : null;
+  if (!trip || !facts) return null;
+  const id = marketOfZone(trip.zoneId)?.id ?? "SE";
+  const { timeZone } = market(id);
+  const none = tr(NOT_CONNECTED_TEXT);
+  const dateTime = new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeStyle: "short", hourCycle: "h23", timeZone });
+  const phase = driver.state === "pickup" ? "to_pickup" : "on_trip";
+  const pickup: Stop = { label: placeText(facts.pickup), at: [facts.pickup.lat, facts.pickup.lng] };
+  const dropoff: Stop = { label: placeText(facts.dropoff), at: [facts.dropoff.lat, facts.dropoff.lng] };
+  const category = CATEGORIES.find((item) => item.id === facts.categoryId)?.label ?? facts.categoryId;
+  const fare = isCurrency(facts.currency) ? formatCurrency({ amountMinor: facts.fare, currency: facts.currency }) : `${facts.fare} ${facts.currency}`;
+  const payment = METHOD[facts.paymentMethod] ?? facts.paymentMethod;
+  const startedAtMs = Date.parse(trip.acceptedAt ?? trip.createdAt ?? facts.updatedAt);
+  const vehicle = records.vehicles.find((row) => row.driverId === driver.id);
+  const fleet = vehicle?.fleetId ? records.fleets.find((row) => row.id === vehicle.fleetId)?.name ?? null : null;
+  const riderId = trip.tripId ?? null;
+  return {
+    tripId: trip.id,
+    phase,
+    rider: trip.name,
+    riderId,
+    riderPhone: trip.phone,
+    pickup,
+    dropoff,
+    category,
+    payment,
+    fare,
+    distanceKm: null,
+    etaMin: null,
+    progressPct: null,
+    startedAtMs,
+    next: null,
+    waybill: {
+      number: trip.id,
+      issuedAt: dateTime.format(startedAtMs),
+      operator: OPERATOR[id],
+      fleet,
+      driver: driver.name,
+      driverCode: driverCode(driver),
+      licence: none,
+      vehicle: driver.vehicle ?? none,
+      plate: driver.plate ?? none,
+      rider: trip.name,
+      passengers: null,
+      bookedVia: facts.kind === "scheduled" ? "Reservation" : "Rider app",
+      bookedAt: trip.createdAt ? dateTime.format(Date.parse(trip.createdAt)) : none,
+      pickup: pickup.label,
+      pickupAt: none,
+      dropoff: dropoff.label,
+      category,
+      distance: none,
+      fare,
+      payment,
+      status: statusLabel(trip.status),
+    },
   };
 }

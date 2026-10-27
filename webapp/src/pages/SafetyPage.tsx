@@ -1,3 +1,5 @@
+import { isLiveData } from "../live/realData";
+import { NotConnected } from "../live/NotConnected";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlertOctagon, ArrowLeft, Car, Clock3, FileDown, History, ListChecks, MapPin, Phone, PhoneCall, Settings2, ShieldAlert, ShieldCheck, Siren, UserRound, Users } from "lucide-react";
@@ -456,6 +458,10 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
         ) : settings.liveMap && where.live ? (
           <MapPanel title={tr("Where they are")} note={<span className="op-help"><MapPin size={12} aria-hidden="true" /> {tr("Phone GPS sent with the SOS; car position from the server, {0} s ago.", [where.secondsAgo])}</span>}>
             <RouteMap stops={[]} path={[]} points={[...(item.phoneAt ? [{ id: "phone", label: tr("SOS phone"), at: where.rider, tone: "alert" as const }] : []), ...(where.driver ? [{ id: "car", label: `${tr("Car")} · ${driver?.name ?? item.driverId ?? ""}`, at: where.driver, tone: item.kind === "car_lost" ? "alert" as const : "driver" as const }] : [])]} label={`Where the people of ${item.id} are`} />
+          </MapPanel>
+        ) : settings.liveMap && isLiveData() ? (
+          <MapPanel title={tr("Where they are")} note={<span className="op-help"><MapPin size={12} aria-hidden="true" /> {tr("No position from the server for this case.")}</span>}>
+            <NotConnected block />
           </MapPanel>
         ) : settings.liveMap ? (
           <MapPanel title="Where they are now" note={<span className={stale ? "op-late" : "op-help"}><MapPin size={12} aria-hidden="true" /> Location updated {where.secondsAgo} s ago{stale ? `, older than ${policy.staleSeconds} s: call to check` : ""}. Demo location until the apps send it.</span>}>

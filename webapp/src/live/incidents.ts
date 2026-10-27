@@ -74,6 +74,7 @@ export function incidentRecord(incident: ServerIncident): DemoRecord {
     kind: caseKind(incident.kind),
     driverId: incident.driverId ?? null,
     createdAt: incident.openedAt,
+    live: true,
     ...(incident.tripId ? { tripId: incident.tripId } : {}),
     ...(incident.raisedBy ? { raisedBy: incident.raisedBy } : {}),
     ...flat("phone", position(incident.position)),

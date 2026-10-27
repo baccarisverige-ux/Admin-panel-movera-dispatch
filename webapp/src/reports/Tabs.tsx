@@ -217,7 +217,8 @@ export function DispatchTab({ zones, window, compare, fmt, onCsv }: TabProps) {
   const book = normalizeDispatchBook(slice.value);
   const rows = zones.map((zone) => {
     const rules = liveRules(book, zone.id);
-    const result = zoneResults(zone.id, rules);
+    // Reports are not shown in a live build; the demo model always answers here.
+    const result = zoneResults(zone.id, rules) ?? { findSec: NaN, acceptedPct: NaN, noDriverPct: NaN, pickupMin: NaN, radarPct: NaN, exclusivePct: NaN, requests: NaN };
     const mode = mainMode(rules);
     return { id: zone.id, name: zone.name, ...result, mode: mode === "auto" ? "Automatic" : mode === "radar" ? "Radar" : "Exclusive" };
   });

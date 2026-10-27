@@ -81,6 +81,7 @@ export function setHold(ops: PayoutOps, id: string, on: boolean, reason: string,
 
 /** Demo: payouts whose id ends in 7 failed at the bank, until someone retries them. */
 export function failedOf(ops: PayoutOps, record: DemoRecord): string | null {
+  if (record.live) return null;
   if (!/7$/.test(record.id)) return null;
   if (ops.retries[record.id]?.length) return null;
   return "The bank returned the payment: account closed or wrong.";

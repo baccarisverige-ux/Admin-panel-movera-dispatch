@@ -1,3 +1,5 @@
+import { isLiveData, liveDriverOf } from "../live/realData";
+import { NotConnected } from "../live/NotConnected";
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
@@ -117,7 +119,10 @@ export function DriverDetailPage() {
   const fleet = (fleets.data ?? []).find((item) => item.id === driver.fleetId);
   const jobs = (trips.data ?? []).filter((item) => item.driverId === driverId);
   const pay = (payouts.data ?? []).filter((item) => item.driverId === driverId);
-  const activationIssue = driverActivationIssue(store.value, driverSeed, car);
+  // Live (owner rule, part 3): the server decides activation and holds the documents; nothing from local demo stores.
+  const liveData = isLiveData();
+  const liveFacts = liveDriverOf(driver);
+  const activationIssue = liveData ? null : driverActivationIssue(store.value, driverSeed, car);
   const driverAudits = (audit.data ?? []).filter((item) => item.targetId === driver.id).slice(0, 20);
   const money = (minor: number) => formatMoney(minor, country);
   const compact = (minor: number) => formatMoney(minor, country, { compact: true });
@@ -136,7 +141,7 @@ export function DriverDetailPage() {
   const perf = report.current;
   const prev = report.previous;
   const sinceMonth = driverPerformance(profile, periodWindow({ kind: "month" }, now, market.timeZone, uiLocale()), false).current;
-  const email = `${driver.name.toLowerCase().normalize("NFD").replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, ".")}@${country === "SE" ? "mail.se" : country === "FR" ? "mail.fr" : "mail.tn"}`;
+  const email = liveData ? driver.email ?? tr("Not connected yet") : `${driver.name.toLowerCase().normalize("NFD").replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, ".")}@${country === "SE" ? "mail.se" : country === "FR" ? "mail.fr" : "mail.tn"}`;
   const seed = Number(driver.id.replace(/\D/g, "")) || 1;
   const joined = driver.joinedAt ?? new Date(Date.parse("2026-10-05T00:00:00Z") - (60 + (seed * 37) % 800) * 86_400_000).toISOString();
   const live = liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0).find((row) => row.id === driver.id);
@@ -144,7 +149,7 @@ export function DriverDetailPage() {
   const code = driverCode(driver);
   const mapTo = live ? `/?country=${country}&focus=${driver.id}` : null;
   const current = live ? liveTrip(live, { trips: trips.data ?? [], reservations: reservations.data ?? [], vehicles: vehicles.data ?? [], fleets: fleets.data ?? [], riders: riders.data ?? [] }, now, demoShift(now, api.demo)) : null;
-  const lastOnline = live ? tr("Online now") : driver.status === "active" ? (seed % 3 === 0 ? tr("Online now") : tr("{0} min ago", [5 + (seed % 50)])) : driver.status === "pending" ? tr("Never") : tr("{0} days ago", [7 + (seed % 9)]);
+  const lastOnline = liveData ? (live ? tr("Online now") : liveFacts?.lastFixAt ? dateFormat.format(Date.parse(liveFacts.lastFixAt)) : tr("Not connected yet")) : live ? tr("Online now") : driver.status === "active" ? (seed % 3 === 0 ? tr("Online now") : tr("{0} min ago", [5 + (seed % 50)])) : driver.status === "pending" ? tr("Never") : tr("{0} days ago", [7 + (seed % 9)]);
 
   function selectTab(id: string) {
     setTab(id);
@@ -200,7 +205,7 @@ export function DriverDetailPage() {
     };
   };
 
-  const reviews = (perf.trips ? jobs : []).slice(0, 5).map((trip, index) => ({
+  const reviews = (perf.trips && !liveData ? jobs : []).slice(0, 5).map((trip, index) => ({
     id: trip.id,
     rider: trip.name,
     stars: Math.max(3, Math.min(5, Math.round(ops.ratings.stars + ((seed + index) % 3 === 0 ? -1 : 0.2)))),
@@ -225,8 +230,8 @@ export function DriverDetailPage() {
               {fleet ? (
                 <Link className="fd-chip fleet" to={`/fleets/${fleet.ownerId ?? ""}`}><Building2 size={13} aria-hidden="true" />{fleet.name}</Link>
               ) : <span className="fd-chip">{tr("Independent driver")}</span>}
-              <span className="fd-chip"><Star size={13} aria-hidden="true" />{ops.ratings.stars.toFixed(2)}</span>
-              <DocSummary counts={health} total={required.length} />
+              <span className="fd-chip"><Star size={13} aria-hidden="true" />{liveData ? (liveFacts?.rating != null ? liveFacts.rating.toFixed(2) : tr("Not connected yet")) : ops.ratings.stars.toFixed(2)}</span>
+              {liveData ? null : <DocSummary counts={health} total={required.length} />}
             </div>
             <p className="fd-sub">{driver.id} · {statusLabel(driver.status)} · {zoneById(driver.zoneId)?.name ?? driver.zoneId}, {trx(market.name)}</p>
           </div>
@@ -265,15 +270,15 @@ export function DriverDetailPage() {
           <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> {email}</Field>
           <Field label={tr("Zone")}>{zoneById(driver.zoneId)?.name ?? driver.zoneId}</Field>
           <Field label={tr("Vehicle")}><Car size={13} aria-hidden="true" /> {carRecord ? `${carRecord.make ?? ""} ${carRecord.model ?? ""} · ${carRecord.plate ?? carRecord.id}` : tr("No vehicle linked")}</Field>
-          <Field label={tr("Payouts go to")}>{fleet ? tr("{0} (fleet)", [fleet.name]) : tr("The driver · bank •••• {0}", [ops.bank.last4])}</Field>
-          <Field label={tr("Joined")}>{dateFormat.format(Date.parse(joined))}</Field>
+          <Field label={tr("Payouts go to")}>{fleet ? tr("{0} (fleet)", [fleet.name]) : liveData ? tr("Not connected yet") : tr("The driver · bank •••• {0}", [ops.bank.last4])}</Field>
+          <Field label={tr("Joined")}>{liveData ? tr("Not connected yet") : dateFormat.format(Date.parse(joined))}</Field>
           <Field label={tr("Last online")}>{lastOnline}</Field>
 
         </dl>
       </section>
 
       {notice || store.message ? <p className="fd-notice" role="status">{trSentences(notice)} {trSentences(store.message)}</p> : null}
-      {driver.status === "active" && health.invalid ? (
+      {liveData ? null : driver.status === "active" && health.invalid ? (
         <p className="fd-banner red">{trn("{0} {1} document{2} missing, wrong or expired. Consider putting the account on hold.", <AlertTriangle size={16} aria-hidden="true" />, health.invalid, health.invalid > 1 ? tr("s are") : tr(" is"))}</p>
       ) : driver.status !== "active" && allGreen && !activationIssue ? (
         <p className="fd-banner green">{trn("{0} All documents are valid. The account can be activated.", <CheckCircle2 size={16} aria-hidden="true" />)}</p>
@@ -410,6 +415,7 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="performance" activeId={tab}>
+          {liveData ? <NotConnected block /> : <>
           <div className="fd-section-head">
             <div><h3>{tr("Performance")}</h3><p>{trx(span.label)} · {span.compareLabel}</p></div>
             <PeriodPicker key={`${period.kind}${period.on ?? ""}${period.from ?? ""}`} period={period} today={localDay(now, market.timeZone)} onChange={(next) => setParams(periodParams(next, params))} />
@@ -440,9 +446,11 @@ export function DriverDetailPage() {
               </ul>
             )}
           </section>
+        </>}
         </TabPanel>
 
         <TabPanel id="earnings" activeId={tab}>
+          {liveData ? <NotConnected block /> : <>
           <div className="fd-section-head">
             <div><h3>{tr("Earnings")}</h3><p>{trx(span.label)} · {fleet ? tr("paid to {0}", [fleet.name]) : tr("paid to the driver")}</p></div>
             <div className="fd-head-tools">
@@ -500,6 +508,7 @@ export function DriverDetailPage() {
               </div>
             </section>
           </div>
+        </>}
         </TabPanel>
 
         <TabPanel id="trips" activeId={tab}>

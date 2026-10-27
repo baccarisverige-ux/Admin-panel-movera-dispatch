@@ -1,6 +1,7 @@
 import { market, type MarketId } from "../markets/markets.ts";
 import { bucketLabel, bucketStarts, type PeriodWindow } from "./period.ts";
 import { localParts } from "./time.ts";
+import { isLiveData } from "../live/realData.ts";
 
 /**
  * Demo earnings: a deterministic hourly model per zone, so every period (today → a year)
@@ -165,7 +166,14 @@ function shares(rows: [string, string, number][], totalMinor: number): Share[] {
   return rows.map(([id, label, share]) => ({ id, label, minor: Math.round(totalMinor * share) }));
 }
 
+/** Live: every total is NaN ("Not connected yet") until the server's KPI summary is read; no modelled numbers. */
+export function notConnectedReport(): EarningsReport {
+  const none = Object.fromEntries(Object.keys(emptyTotals()).map((key) => [key, NaN])) as Totals;
+  return { totals: none, previous: { ...none }, series: [], byZone: [], byCategory: [], byMethod: [] };
+}
+
 export function earningsReport(id: MarketId, zones: readonly string[], window: PeriodWindow, locale = market(id).locale): EarningsReport {
+  if (isLiveData()) return notConnectedReport();
   const { timeZone } = market(id);
   const perZone = new Map<string, number>();
   const starts = bucketStarts(window.start, window.spanEnd, window.bucket, timeZone);

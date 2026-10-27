@@ -17,7 +17,6 @@ import {
   MessageSquare,
   Package,
   RotateCcw,
-  Shield,
   Smartphone,
   UserCog,
   Users,
@@ -40,10 +39,8 @@ import {
   advanceLostItem,
   assign,
   ban,
-  blockedByDrivers,
   creditedThisMonth,
   decideRefund,
-  driverReports,
   isBanned,
   markPaid,
   merge,
@@ -58,7 +55,8 @@ import {
 import { advanceRiderPrivacy, emptyRiderOpsBook, revokeRiderSessions, riderOps, setRiderAccountReason, setRiderNote, type RiderOpsBook } from "../riders/ops";
 import { BOOKING_LABEL, categoryName, type Booking } from "../riders/profile";
 import { PromoBuilder } from "../riders/PromoBuilder";
-import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, waitText } from "../riders/ui";
+import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
+import { isLiveData } from "../live/realData";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
 import { NOTE_MAX } from "../domain/labels";
@@ -127,6 +125,9 @@ export function RiderDetailPage() {
   const symbol = CURRENCY_SYMBOL[country];
   const date = new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeZone: place.timeZone });
   const dateTime = new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeStyle: "short", hourCycle: "h23", timeZone: place.timeZone });
+  // Live: a date the server does not send is NaN ("Not connected yet").
+  const safeDate = (ms: number) => (Number.isFinite(ms) ? date.format(ms) : tr("Not connected yet"));
+  const liveData = isLiveData();
   const me = agent?.id ?? "";
   const seed = { id: rider.id, name: rider.name, status: rider.status, tripId: rider.tripId ?? undefined };
   const book = opsSlice.value;
@@ -137,8 +138,6 @@ export function RiderDetailPage() {
   const refundsMinor = refundsFor.filter((item) => item.status === "sent").reduce((sum, item) => sum + Math.round(item.amount * place.minorUnits), 0);
   const lifetimeMinor = profile.spentMinor - refundsMinor - profile.promoMinor;
   const tone = responseTone(row.waitingMin);
-  const reports = driverReports(rider, now);
-  const blockers = blockedByDrivers(rider);
   const tickets = (data.tickets.data ?? []).filter((item) => item.phone === rider.phone || item.name === rider.name);
   const incidents = (data.incidents.data ?? []).filter((item) => item.phone === rider.phone || item.name === rider.name);
   const lost = care.lostFound[rider.id] ?? [];
@@ -196,12 +195,12 @@ export function RiderDetailPage() {
             <div className="fd-chips">
               <span className="fd-chip code"><Hash size={13} aria-hidden="true" />{profile.code}</span>
               <ScoreBadge score={profile.score} />
-              <span className="fd-chip">{trn("{0} from drivers", profile.rating.toFixed(2))}</span>
+              <span className="fd-chip">{trn("{0} from drivers", Number.isFinite(profile.rating) ? profile.rating.toFixed(2) : tr("Not connected yet"))}</span>
               <LiveChip state={row.live} />
               <AccountChip status={rider.status} />
             </div>
             <RiderBadges row={row} />
-            <p className="fd-sub">{trn("{0} · {1} · Member since {2} · {3}, {4}", rider.id, statusLabelOf(rider.status), date.format(profile.joinedAt), zoneById(rider.zoneId)?.name ?? rider.zoneId, trx(place.name))}</p>
+            <p className="fd-sub">{trn("{0} · {1} · Member since {2} · {3}, {4}", rider.id, statusLabelOf(rider.status), safeDate(profile.joinedAt), zoneById(rider.zoneId)?.name ?? rider.zoneId, trx(place.name))}</p>
           </div>
           <div className="fd-hero-actions">
             <ContactActions kind="rider" id={rider.id} name={rider.name} phone={rider.phone} zoneId={rider.zoneId} messageTo={`/riders/${rider.id}?tab=messages`} />
@@ -220,11 +219,11 @@ export function RiderDetailPage() {
           </div>
         </div>
         <div className="rd-facts">
-          <Stat label={tr("Rides")} value={String(profile.completed)} hint={tr("{0} in the last 30 days", [profile.ridesLast30])} />
+          <Stat label={tr("Rides")} value={shown(profile.completed)} hint={Number.isFinite(profile.ridesLast30) ? tr("{0} in the last 30 days", [profile.ridesLast30]) : undefined} />
           <Stat label={tr("Spent")} value={money(profile.spentMinor, country, true)} hint={tr("all time")} />
           <Stat label={tr("Average fare")} value={money(profile.avgFareMinor, country)} />
-          <Stat label={tr("Cancel rate")} value={`${profile.cancelRate}%`} warn={profile.cancelRate > 20 ? "red" : profile.cancelRate > 12 ? "amber" : null} />
-          <Stat label={tr("No-shows")} value={String(profile.noShows)} warn={profile.noShows >= 3 ? "red" : null} />
+          <Stat label={tr("Cancel rate")} value={Number.isFinite(profile.cancelRate) ? `${profile.cancelRate}%` : tr("Not connected yet")} warn={profile.cancelRate > 20 ? "red" : profile.cancelRate > 12 ? "amber" : null} />
+          <Stat label={tr("No-shows")} value={shown(profile.noShows)} warn={profile.noShows >= 3 ? "red" : null} />
           <Stat label={tr("Lifetime value")} value={money(lifetimeMinor, country, true)} hint={tr("spent − refunds − promotions")} />
           <Stat label={tr("Wallet")} value={money(row.walletMinor, country)} />
         </div>
@@ -262,16 +261,16 @@ export function RiderDetailPage() {
                 <div><dt>{tr("Email")}</dt><dd><SensitiveValue value={profile.email} permission="riders.viewSensitive" command="admin.rider.revealSensitive" targetId={rider.id} label={tr("Email")} /></dd></div>
                 <div><dt>{trn("{0} Language", <Languages size={13} aria-hidden="true" />)}</dt><dd>{profile.language}</dd></div>
                 <div><dt>{trn("{0} Home and work", <MapPin size={13} aria-hidden="true" />)}</dt><dd>{profile.homeArea} · {profile.workArea}</dd></div>
-                <div><dt>{trn("{0} Member since", <CalendarDays size={13} aria-hidden="true" />)}</dt><dd>{date.format(profile.joinedAt)}</dd></div>
-                <div><dt>{tr("Last ride")}</dt><dd>{profile.lastRideAt ? dateTime.format(profile.lastRideAt) : tr("No ride yet")}</dd></div>
+                <div><dt>{trn("{0} Member since", <CalendarDays size={13} aria-hidden="true" />)}</dt><dd>{safeDate(profile.joinedAt)}</dd></div>
+                <div><dt>{tr("Last ride")}</dt><dd>{profile.lastRideAt ? dateTime.format(profile.lastRideAt) : liveData ? tr("Not connected yet") : tr("No ride yet")}</dd></div>
               </dl>
             </section>
             <section className="fd-box">
               <h3>{trn("{0} Habits", <History size={16} aria-hidden="true" />)}</h3>
               <dl className="rd-dl">
-                <div><dt>{tr("Favourite category")}</dt><dd>{categoryName(profile.favouriteCategory)}</dd></div>
+                <div><dt>{tr("Favourite category")}</dt><dd>{trx(categoryName(profile.favouriteCategory))}</dd></div>
                 <div><dt>{tr("Usually rides")}</dt><dd>{profile.usualTimes}</dd></div>
-                <div><dt>{tr("Cancelled")}</dt><dd>{trn("{0} · no-shows {1} · interrupted {2}", profile.cancelled, profile.noShows, profile.interrupted)}</dd></div>
+                <div><dt>{tr("Cancelled")}</dt><dd>{Number.isFinite(profile.cancelled) ? trn("{0} · no-shows {1} · interrupted {2}", profile.cancelled, profile.noShows, profile.interrupted) : tr("Not connected yet")}</dd></div>
                 <div><dt>{tr("Promotion savings")}</dt><dd>{money(profile.promoMinor, country)}</dd></div>
               </dl>
             </section>
@@ -280,16 +279,16 @@ export function RiderDetailPage() {
               <dl className="rd-dl">
                 <div><dt>{tr("Method")}</dt><dd>{profile.payment.method}</dd></div>
                 <div><dt>{tr("Card expires")}</dt><dd className={profile.payment.expiringSoon ? "warn" : undefined}>{profile.payment.expires}{profile.payment.expiringSoon ? tr(" · expires soon") : ""}</dd></div>
-                <div><dt>{tr("Failed payments")}</dt><dd className={profile.payment.failed ? "warn" : undefined}>{profile.payment.failed}</dd></div>
-                <div><dt>{tr("Chargebacks")}</dt><dd className={profile.payment.chargebacks ? "warn" : undefined}>{profile.payment.chargebacks}</dd></div>
+                <div><dt>{tr("Failed payments")}</dt><dd className={profile.payment.failed ? "warn" : undefined}>{shown(profile.payment.failed)}</dd></div>
+                <div><dt>{tr("Chargebacks")}</dt><dd className={profile.payment.chargebacks ? "warn" : undefined}>{shown(profile.payment.chargebacks)}</dd></div>
               </dl>
             </section>
             <section className="fd-box">
               <h3>{trn("{0} Referral", <Users size={16} aria-hidden="true" />)}</h3>
               <dl className="rd-dl">
                 <div><dt>{tr("Invite code")}</dt><dd><code>{profile.referral.code}</code></dd></div>
-                <div><dt>{tr("Friends invited")}</dt><dd>{profile.referral.invited}</dd></div>
-                <div><dt>{tr("Joined and rode")}</dt><dd>{profile.referral.joined}</dd></div>
+                <div><dt>{tr("Friends invited")}</dt><dd>{shown(profile.referral.invited)}</dd></div>
+                <div><dt>{tr("Joined and rode")}</dt><dd>{shown(profile.referral.joined)}</dd></div>
               </dl>
             </section>
             <section className="fd-box">
@@ -463,12 +462,6 @@ export function RiderDetailPage() {
         <TabPanel id="safety" activeId={tab}>
           <div className="rd-overview">
             <section className="fd-box">
-              <h3>{trn("{0} Reports from drivers", <Shield size={16} aria-hidden="true" />)}</h3>
-              {reports.length === 0 ? <p className="state-line">{tr("No driver reported this rider.")}</p> : <ul className="rd-ledger">{reports.map((item) => <li key={item.id}><b>{item.reason}</b><span>{trn("by {0}", item.driver)}</span><small>{trn("{0} · {1} photo{2}", date.format(item.at), item.photos, item.photos === 1 ? "" : tr("s"))}</small></li>)}</ul>}
-              <h4>{tr("Drivers who blocked this rider")}</h4>
-              {blockers.length ? <p>{blockers.join(", ")}</p> : <p className="state-line">{tr("None.")}</p>}
-            </section>
-            <section className="fd-box">
               <h3>{tr("Trusted contacts")}</h3>
               {profile.trustedContacts.length === 0 ? <p className="state-line">{tr("The rider shares trips with nobody.")}</p> : <ul className="rd-ledger">{profile.trustedContacts.map((item) => <li key={item.name}><b>{item.name}</b><span>{item.relation}</span></li>)}</ul>}
               <h4>{tr("Safety incidents")}</h4>
@@ -526,7 +519,7 @@ export function RiderDetailPage() {
 
         <TabPanel id="activity" activeId={tab}>
           <Timeline items={[
-            { at: profile.joinedAt, text: "Joined Movera", tone: "violet" },
+            ...(Number.isFinite(profile.joinedAt) ? [{ at: profile.joinedAt, text: "Joined Movera", tone: "violet" as const }] : []),
             ...row.bookings.filter((booking) => booking.at <= now).slice(0, 15).map((booking) => ({ at: booking.at, text: `${BOOKING_LABEL[booking.status]} · ${booking.from} → ${booking.to}${booking.fareMinor ? ` · ${money(booking.fareMinor, country)}` : ""}`, tone: booking.status === "completed" ? "green" : booking.status === "interrupted" || booking.status === "no_show" ? "red" : "grey" })),
             ...care.credits.filter((item) => item.riderId === rider.id).map((item) => ({ at: Date.parse(item.at), text: `Wallet +${item.amount} ${symbol} by ${item.by}: ${item.reason}`, tone: "blue" })),
             ...refundsFor.map((item) => ({ at: Date.parse(item.at), text: `Refund ${item.amount} ${symbol} to ${item.destination} (${item.status}) by ${item.by}`, tone: "blue" })),

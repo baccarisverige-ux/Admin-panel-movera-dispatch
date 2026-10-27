@@ -1,3 +1,4 @@
+import { isLiveData } from "../live/realData.ts";
 import type { DemoRecord } from "../api/seed.ts";
 import { MARKETS, marketOfZone, type MarketId } from "../markets/markets.ts";
 import type { Moderation } from "./ops.ts";
@@ -55,6 +56,8 @@ const RIDER_TEXT = ["Polite rider.", "Was waiting at the right place.", "Kept me
 
 /** Two reviews per completed trip: the rider about the driver and the driver about the rider. Demo text and stars from the trip id. */
 export function reviewsOf(trips: readonly DemoRecord[], drivers: readonly DemoRecord[], ops: ReviewOps, now: number): Review[] {
+  // Live: reviews come from the server's ratings (GET /admin/ratings), never from the trip id.
+  if (isLiveData()) return [];
   const names = new Map(drivers.map((row) => [row.id, row.name]));
   return trips.filter((trip) => trip.status === "completed").flatMap((trip) => {
     const country = marketOfZone(trip.zoneId)?.id ?? "SE";

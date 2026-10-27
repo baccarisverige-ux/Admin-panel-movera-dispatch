@@ -138,7 +138,7 @@ assert(entityKey("few_drivers:Z001:2026-10-12") === "few_drivers:Z001", "same pr
 const rule: AlertRule = { id: "r1", name: "Norrmalm short of drivers", on: true, metric: "free_drivers", op: "below", value: 3, forMin: 10, zoneId: "Z001", level: "important", who: "all", country: "SE", by: "nora" };
 assert(ruleIssues(rule).length === 0 && ruleIssues({ ...rule, name: "" }).length === 1, "rule checks");
 assert(computeAlerts(facts, book.settings, [rule]).some((alert) => alert.kind === "rule" && alert.zoneId === "Z001"), "rule fires");
-assert(rulePreview(rule, facts).times >= 0, "rule preview");
+assert((rulePreview(rule, facts)?.times ?? -1) >= 0, "rule preview");
 const bad = { ...book.settings, kinds: { ...book.settings.kinds, long_wait: { ...book.settings.kinds.long_wait, limits: { info: null, important: 20, critical: 10 } } } };
 assert(settingsIssues(bad).length === 0, "long wait important comes from Dispatch, so only critical is checked against itself");
 const badDocs = { ...book.settings, kinds: { ...book.settings.kinds, doc_expiring: { ...book.settings.kinds.doc_expiring, limits: { info: 5, important: 10, critical: 0 } } } };

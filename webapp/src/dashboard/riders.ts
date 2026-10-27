@@ -1,3 +1,4 @@
+import { isLiveData, liveTripOf } from "../live/realData.ts";
 import type { DemoRecord } from "../api/seed.ts";
 import { CATEGORIES } from "../domain/contract.ts";
 import { zoneById } from "../markets/markets.ts";
@@ -49,7 +50,8 @@ function distanceKm(a: LatLng, b: LatLng): number {
 export function rideRequests(trips: readonly DemoRecord[], riders: readonly DemoRecord[], canTake: (driverId: string) => boolean = () => true): RideRequest[] {
   return trips
     // Older demo requests are long gone; about one in seven is still waiting right now.
-    .filter((trip) => WAITING.has(trip.status) && zoneById(trip.zoneId) && (hash(`wait:${trip.id}`) >>> 4) % 7 === 0)
+    // Live: every trip the server says is waiting; demo: about one in seven old demo requests.
+    .filter((trip) => WAITING.has(trip.status) && zoneById(trip.zoneId) && (isLiveData() || (hash(`wait:${trip.id}`) >>> 4) % 7 === 0))
     .map((trip) => requestOf(trip, riders, trip.status === "offered" && trip.driverId && canTake(trip.driverId) ? trip.driverId : null))
     .sort((a, b) => b.waitingMin - a.waitingMin);
 }
@@ -57,6 +59,25 @@ export function rideRequests(trips: readonly DemoRecord[], riders: readonly Demo
 /** A trip as a rider on the map: where they wait (near the zone centre), their category and how long they waited. */
 function requestOf(trip: DemoRecord, riders: readonly DemoRecord[], offeredTo: string | null): RideRequest {
   const zone = zoneById(trip.zoneId)!;
+  const facts = liveTripOf(trip);
+  if (facts) {
+    // Live: the pickup the rider set, the trip's category, and minutes since the server created the trip.
+    const category = CATEGORIES.find((item) => item.id === facts.categoryId);
+    const created = Date.parse(trip.createdAt ?? facts.updatedAt);
+    return {
+      tripId: trip.id,
+      riderId: trip.tripId ?? null,
+      rider: trip.name,
+      zoneId: trip.zoneId,
+      zoneName: zone.name,
+      at: [facts.pickup.lat, facts.pickup.lng] as LatLng,
+      category: facts.categoryId,
+      categoryLabel: category?.label ?? facts.categoryId,
+      waitingMin: Number.isFinite(created) ? Math.max(0, Math.round((Date.now() - created) / 60_000)) : 0,
+      status: offeredTo ? "offered" : "searching",
+      offeredTo,
+    };
+  }
   const seed = hash(trip.id);
   const angle = ((seed % 360) * Math.PI) / 180;
   const radius = (zone.kind === "airport" ? 0.004 : 0.012) * (0.3 + ((seed >>> 8) % 70) / 100);

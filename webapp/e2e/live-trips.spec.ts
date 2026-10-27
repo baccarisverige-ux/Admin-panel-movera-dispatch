@@ -22,7 +22,8 @@ test("trips list: the demo list shows the server trips, search in the page, open
   await expect(page.getByTestId("not-connected")).toBeVisible();
   for (const id of ["T2001", "T2002"]) await expect(page.getByRole("cell", { name: id, exact: true })).toBeVisible();
   const row = page.getByRole("row").filter({ hasText: "T2001" });
-  await expect(row).toContainText("R501");
+  // The rider's first name from GET /admin/riders, not the id.
+  await expect(row).toContainText("Ida");
   await expect(row).toContainText("Anna Berg");
   await expect(row).toContainText("520,00 kr");
   expect(state.calls.some((call) => call.path.startsWith("/api/v1/admin/trips?") && call.path.includes("limit=50"))).toBe(true);
@@ -74,7 +75,8 @@ test("trip page: the demo trip page shows the server trip and its offers", async
   await signIn(page);
   await page.goto("/trips/T2001");
   await expect(page.getByText("T2001").first()).toBeVisible();
-  await expect(page.getByText("R501").first()).toBeVisible();
+  await expect(page.getByText("Ida").first()).toBeVisible();
+  await expect(page.locator('a[href="/riders/R501"]').first()).toBeVisible();
   await expect(page.getByText("520,00 kr").first()).toBeVisible();
   await expect.poll(() => state.calls.some((call) => call.path.startsWith("/api/v1/admin/trips/T2001/offers"))).toBe(true);
   await page.goto("/trips/NOPE");

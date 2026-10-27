@@ -1,3 +1,4 @@
+import { isLiveData } from "../live/realData.ts";
 import type { LiveDriver } from "../dashboard/live.ts";
 import { zoneById, type MarketId } from "../markets/markets.ts";
 import { fromSek } from "../pricing/zonePricing.ts";
@@ -56,7 +57,9 @@ export function onlyFinishingNearby(facts: DriverFacts[]): DriverFacts[] {
 export type ZoneResults = { findSec: number; acceptedPct: number; noDriverPct: number; pickupMin: number; radarPct: number; exclusivePct: number; requests: number };
 
 /** How dispatch did today in a zone. Deterministic from the zone and its rules, so a change shows a before and after. */
-export function zoneResults(zoneId: string, rules: ZoneDispatch): ZoneResults {
+export function zoneResults(zoneId: string, rules: ZoneDispatch): ZoneResults | null {
+  // Live: the server does not report dispatch results yet (null = "Not connected yet").
+  if (isLiveData()) return null;
   const seed = hash(`results:${zoneId}`);
   const airport = zoneById(zoneId)?.kind === "airport";
   const radarShare = rules.choose.how === "auto" ? 0.45 : rules.choose.main === "radar" ? 0.75 : 0.25;
@@ -84,14 +87,17 @@ export function beforeAfter(zoneId: string, versions: readonly Version[], fallba
   if (index < 0) return null;
   const after = versions[index].live[zoneId] ?? fallback;
   const before = versions[index + 1]?.live[zoneId] ?? fallback;
-  return { before: zoneResults(zoneId, before), after: zoneResults(zoneId, after), at: versions[index].at };
+  const was = zoneResults(zoneId, before);
+  const now = zoneResults(zoneId, after);
+  return was && now ? { before: was, after: now, at: versions[index].at } : null;
 }
 
 const RIDERS = ["Sara Lind", "Omar Haddad", "Julie Martin", "Amine Ben Ali", "Elin Berg", "Lucas Petit", "Nour Trabelsi", "Hugo Laurent"];
 
 /** Rider cancels after a driver accepted, with the driver's route from accept to cancel. */
 export function cancelRecords(country: MarketId, zones: readonly { id: string; name: string; center: [number, number] }[], drivers: readonly { id: string; name: string; zoneId: string }[], now: number): CancelRecord[] {
-  const pool = zones.length ? zones : [];
+  // Live: no rider cancel is made up; the server's cancels are not read here yet.
+  const pool = zones.length && !isLiveData() ? zones : [];
   return Array.from({ length: Math.min(8, pool.length * 2) }, (_, index) => {
     const zone = pool[index % pool.length];
     const seed = hash(`${country}:cancel:${index}`);

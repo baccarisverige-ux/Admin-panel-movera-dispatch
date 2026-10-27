@@ -1,3 +1,4 @@
+import { NotConnected } from "../live/NotConnected";
 import { useEffect, useState, type ReactNode } from "react";
 import { useDashboardAccess } from "./access";
 import { Link } from "react-router";
@@ -67,14 +68,14 @@ export function SupplyDemandCard({ rows, showOnMap, onToggleMap, surgeLink }: { 
   );
 }
 
-export function AirportCard({ rows }: { rows: AirportQueue[] }) {
+export function AirportCard({ rows }: { rows: AirportQueue[] | null }) {
   return (
     <section className="dash-card" aria-labelledby="airport-title">
       <div className="card-head">
         <h3 id="airport-title">{trn("{0} Airport queue", <Plane size={16} aria-hidden="true" />)}</h3>
         <LiveTag />
       </div>
-      {rows.length === 0 ? <p className="state-line">{tr("No airport in this selection.")}</p> : (
+      {rows === null ? <NotConnected block /> : rows.length === 0 ? <p className="state-line">{tr("No airport in this selection.")}</p> : (
         <ul className="mini-list">
           {rows.map((row) => (
             <li key={row.zoneId}>
@@ -143,17 +144,20 @@ export function ActivityFeed({ items, format }: { items: ActivityItem[]; format:
 
 export type DriverRank = { id: string; name: string; zoneId: string; trips: number; rating: number; cancellationPct: number };
 
-export function InsightsCard({ tab, onTab, top, cancel, rating, periodLabel, topLabel, money }: {
+export function InsightsCard({ tab, onTab, top, cancel, rating, periodLabel, topLabel, money, rankingConnected = true }: {
   tab: "drivers" | "cancellations" | "ratings";
   onTab: (tab: "drivers" | "cancellations" | "ratings") => void;
   top: { rated: DriverRank[]; busiest: DriverRank[]; cancelling: DriverRank[] } | null;
-  cancel: CancelRow[];
-  rating: RatingSummary;
+  /** null: not sent by the server yet (live). */
+  cancel: CancelRow[] | null;
+  rating: RatingSummary | null;
   periodLabel: string;
   topLabel: string;
   money: ReactNode;
+  /** Live: the driver ranking has no source yet. */
+  rankingConnected?: boolean;
 }) {
-  const totalCancelled = cancel.reduce((sum, row) => sum + row.count, 0) || 1;
+  const totalCancelled = (cancel ?? []).reduce((sum, row) => sum + row.count, 0) || 1;
   return (
     <section className="dash-card insights-card" aria-labelledby="insights-title">
       <div className="card-head">
@@ -167,7 +171,7 @@ export function InsightsCard({ tab, onTab, top, cancel, rating, periodLabel, top
           </button>
         ))}
       </div>
-      {tab === "drivers" ? (
+      {tab === "drivers" && !rankingConnected ? <NotConnected block /> : tab === "cancellations" && cancel === null ? <NotConnected block /> : tab === "ratings" && rating === null ? <NotConnected block /> : tab === "drivers" ? (
         top ? (
           <div className="rank-grid">
             <Rank title={tr("Best rating")} icon={<Star size={14} aria-hidden="true" />} rows={top.rated} value={(row) => row.rating.toFixed(2)} />
@@ -177,7 +181,7 @@ export function InsightsCard({ tab, onTab, top, cancel, rating, periodLabel, top
         ) : <p className="state-line">{tr("Working out the ranking…")}</p>
       ) : tab === "cancellations" ? (
         <ul className="cancel-list">
-          {cancel.map((row) => (
+          {(cancel ?? []).map((row) => (
             <li key={row.who}>
               <div className="share-head"><span>{trn("By {0}", row.who.toLowerCase())}</span><strong>{row.count}</strong><small>{Math.round((row.count / totalCancelled) * 100)}%</small></div>
               <div className="share-track"><i style={{ width: `${(row.count / totalCancelled) * 100}%` }} /></div>
@@ -185,13 +189,13 @@ export function InsightsCard({ tab, onTab, top, cancel, rating, periodLabel, top
             </li>
           ))}
         </ul>
-      ) : (
+      ) : rating ? (
         <div className="rating-grid">
           <div><span>{tr("Average rating")}</span><strong>{rating.average ? rating.average.toFixed(2) : "—"}</strong><small>{trn("{0} rated trips", rating.rated)}</small></div>
           <div className={rating.low ? "warn" : undefined}><span>{tr("Low ratings (1–2 stars)")}</span><strong>{rating.low}</strong><small>{trn("{0} follow up", <AlertTriangle size={12} aria-hidden="true" />)}</small></div>
           <div><span>{tr("Complaints")}</span><strong>{rating.complaints}</strong><small>{rating.topComplaints.filter((item) => item.count).map((item) => `${item.label} ${item.count}`).join(" · ") || tr("None")}</small></div>
         </div>
-      )}
+      ) : null}
       {money}
     </section>
   );

@@ -151,6 +151,32 @@ export const LOST_INCIDENT = {
 };
 export type Incident = Record<string, unknown> & { incidentId: string; status: string; version: number };
 
+/** GET /admin/riders (AdminRider): wallet and unpaid fees from the server. */
+export const RIDERS = [
+  { riderId: "R501", firstName: "Ida", phone: "+46700000501", email: "ida@example.se", rating: 4.9, status: "active", version: 2, outstanding: null, wallet: { amountMinor: 5000, currency: "SEK" }, consents: {} },
+  { riderId: "R502", firstName: "Omar", phone: "+46700000502", status: "active", version: 1, outstanding: { amountMinor: 4900, currency: "SEK" }, wallet: { amountMinor: 0, currency: "SEK" }, consents: {} },
+];
+
+/** GET /admin/live/drivers: Anna online on T2002 with a fresh position. */
+export const LIVE_DRIVERS = { items: [{ driverId: "D1001", firstName: "Anna", onlineStatus: "on_trip", moving: true, location: { lat: 59.3345, lng: 18.0632, accuracy: 6, measuredAt: "2026-10-26T09:20:40Z" }, lastFixAt: "2026-10-26T09:20:41Z", stale: false, activeTripId: "T2002", tripStatus: "in_trip", vehicleId: "V1", plate: "ABC 123", zoneId: "Z001" }], staleAfterSeconds: 120, serverTime: "2026-10-26T09:21:00Z" };
+
+export const PAYMENTS = [
+  { paymentId: "pay_T2001", tripId: "T2001", amount: { amountMinor: 52000, currency: "SEK" }, method: "card", purpose: "trip", status: "captured", createdAt: "2026-10-25T08:31:00Z", cashCollected: { amountMinor: 0, currency: "SEK" }, walletApplied: { amountMinor: 0, currency: "SEK" } },
+  { paymentId: "pay_T2003", tripId: "T2003", amount: { amountMinor: 4500, currency: "SEK" }, method: "cash", purpose: "trip", status: "failed", createdAt: "2026-10-26T07:04:00Z", cashCollected: { amountMinor: 0, currency: "SEK" }, walletApplied: { amountMinor: 0, currency: "SEK" } },
+];
+
+export const AUDIT = [
+  { auditId: "41", at: "2026-10-26T08:00:00Z", actor: "admin", actorId: "A1", actorRole: "super", action: "driver.status", targetType: "driver", targetId: "D1001", reason: "Documents out of date", result: "committed", after: { zoneId: "Z001", accountStatus: "on_hold" }, requestId: "41" },
+];
+
+export const APPROVALS = [
+  { approvalId: "AP7", action: "trip.refund", targetType: "trip", targetId: "T2001", status: "pending_approval", requestedBy: "A2", requestedAt: "2026-10-26T09:00:00Z" },
+];
+
+export const REFUND_PAYOUTS = [
+  { refundId: "RF9", tripId: "T2003", amount: { amountMinor: 4500, currency: "SEK" }, status: "done", reason: "Charged twice", createdAt: "2026-10-26T08:10:00Z", riderId: "R503", riderName: "Lea", riderPhone: "+46700000503", payoutTo: { method: "swish", phone: "+46700000503" }, payoutStatus: "pending" },
+];
+
 export const VEHICLE = { vehicleId: "V1", make: "Volvo", model: "V90", year: 2022, color: "black", plate: "ABC 123", seats: 4, categoryIds: ["standard"], status: "pending", version: 1, fleetId: "F1", driverId: "D1001" };
 
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-expose-headers": "*" };
@@ -180,10 +206,13 @@ export type TripState = {
   incidents: Incident[];
   /** Feed events so far: one per change, numbered from 1. */
   incidentEvents: { eventId: string; sequence: number; kind: string; incident: Incident; occurredAt: string; serverTime: string }[];
+  riders: Record<string, unknown>[];
+  approvals: (typeof APPROVALS)[number][];
+  refundPayouts: (typeof REFUND_PAYOUTS)[number][];
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
-  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), incidents: [], incidentEvents: [], ...init };
+  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), incidents: [], incidentEvents: [], riders: RIDERS.map((item) => ({ ...item })), approvals: APPROVALS.map((item) => ({ ...item })), refundPayouts: REFUND_PAYOUTS.map((item) => ({ ...item })), ...init };
   const feed = (kind: string, incident: Incident) => state.incidentEvents.push({ eventId: `ev${state.incidentEvents.length + 1}`, sequence: state.incidentEvents.length + 1, kind, incident: { ...incident }, occurredAt: "2026-10-26T09:21:00Z", serverTime: "2026-10-26T09:21:00Z" });
   if (!init.incidentEvents) state.incidents.forEach((incident) => feed(incident.escalatedAt ? "incident_escalated" : "incident_opened", incident));
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -260,6 +289,22 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (body.expectedVersion !== state.vehicles[index].version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409v", retryable: false });
       state.vehicles[index] = { ...state.vehicles[index], status: body.decision, version: state.vehicles[index].version + 1 };
       return json(route, 200, state.vehicles[index]);
+    }
+    if (p === "/api/v1/admin/riders") return json(route, 200, { items: state.riders, nextCursor: null });
+    if (p === "/api/v1/admin/live/drivers") return json(route, 200, LIVE_DRIVERS);
+    if (p === "/api/v1/admin/payments") return json(route, 200, { items: PAYMENTS, nextCursor: null });
+    if (p === "/api/v1/admin/audit") return json(route, 200, { items: AUDIT, nextCursor: null });
+    if (p === "/api/v1/admin/approvals") return json(route, 200, { items: state.approvals, nextCursor: null });
+    const decided = /^\/api\/v1\/admin\/approvals\/([^/]+)\/(approve|reject)$/.exec(p);
+    if (decided) {
+      state.approvals = state.approvals.filter((item) => item.approvalId !== decided[1]);
+      return json(route, 200, { approvalId: decided[1], status: decided[2] === "approve" ? "approved" : "rejected" });
+    }
+    if (p === "/api/v1/admin/refunds/payouts") return json(route, 200, { items: state.refundPayouts, nextCursor: null });
+    const paid = /^\/api\/v1\/admin\/refunds\/([^/]+)\/paid$/.exec(p);
+    if (paid) {
+      state.refundPayouts = state.refundPayouts.filter((item) => item.refundId !== paid[1]);
+      return json(route, 200, { refundId: paid[1], payoutStatus: "paid" });
     }
     if (p === "/api/v1/admin/incidents") return json(route, 200, { items: state.incidents, nextCursor: null });
     if (p === "/api/v1/admin/incidents/stream") {

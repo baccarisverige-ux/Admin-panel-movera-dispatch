@@ -40,7 +40,7 @@ export function PaymentPage() {
   const threshold = refundAboveMinor(refundPolicy, facts.country);
   const needsSecond = needsSecondAdmin(refundPolicy, facts.country, amount) && payment.status === "captured";
   const pendingApproval = (approvals.data ?? []).find((item) => item.targetId === payment.id && item.action === "admin.payment.refund" && item.status === "pending");
-  const split = paySplit(amount, facts.country);
+  const split = paySplit(amount, facts.country, facts.tripId);
   const plan = payment.status === "failed" ? retryPlan(payment, facts, ops, now) : null;
   const limit = agent ? refundLimitMinor(agent.role, facts.country, ops) : 0;
   const overLimit = limit !== null && amount > limit && payment.status === "captured";
@@ -87,7 +87,7 @@ export function PaymentPage() {
           <i className="driver" style={{ width: `${(split.driver / Math.max(split.price, 1)) * 100}%` }} />
           <i className="movera" style={{ width: `${(split.movera / Math.max(split.price, 1)) * 100}%` }} />
         </div>
-        {plan ? <p className="fn-warn">{trn("{0} {1}: {2}. Tried {3} of {4}. {5} {6}", <RefreshCcw size={14} aria-hidden="true" />, plan.cause.kind === "system" ? tr("Our side") : tr("Rider's side"), plan.cause.reason, plan.tries, plan.max, plan.nextAt ? tr("Next try {0}.", [new Intl.DateTimeFormat(market(facts.country).locale, { timeZone: market(facts.country).timeZone, dateStyle: "short", timeStyle: "short" }).format(new Date(plan.nextAt))]) : tr("No more automatic tries."), <Link to="/payments?tab=failed">{tr("Failed and retries")}</Link>)}</p> : null}
+        {plan ? <p className="fn-warn">{trn("{0} {1}: {2}. Tried {3} of {4}. {5} {6}", <RefreshCcw size={14} aria-hidden="true" />, plan.cause.kind === "system" ? tr("Our side") : tr("Rider's side"), trx(plan.cause.reason), Number.isFinite(plan.tries) ? plan.tries : tr("Not connected yet"), plan.max, plan.nextAt ? tr("Next try {0}.", [new Intl.DateTimeFormat(market(facts.country).locale, { timeZone: market(facts.country).timeZone, dateStyle: "short", timeStyle: "short" }).format(new Date(plan.nextAt))]) : tr("No more automatic tries."), <Link to="/payments?tab=failed">{tr("Failed and retries")}</Link>)}</p> : null}
         {facts.dispute ? <p className="fn-warn">{trn("{0} Dispute: {1}. Answer by {2}. {3}", <Gavel size={14} aria-hidden="true" />, facts.dispute.reason, facts.dispute.deadline, <Link to="/payments?tab=disputes">{tr("Disputes")}</Link>)}</p> : null}
       </section>
 

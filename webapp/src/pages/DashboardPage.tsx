@@ -1,3 +1,5 @@
+import { NotConnected } from "../live/NotConnected";
+import { isLiveData } from "../live/realData";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
@@ -240,13 +242,17 @@ export function DashboardPage() {
     return () => window.clearTimeout(timer);
   }, [country, zoneKey, market, period.kind]);
   const { totals, previous } = report;
-  const cancelRate = totals.trips + totals.cancelled ? (totals.cancelled / (totals.trips + totals.cancelled)) * 100 : 0;
+  const known = Number.isFinite(totals.trips);
+  const cancelRate = !known ? NaN : totals.trips + totals.cancelled ? (totals.cancelled / (totals.trips + totals.cancelled)) * 100 : 0;
   const prevCancelRate = previous.trips + previous.cancelled ? (previous.cancelled / (previous.trips + previous.cancelled)) * 100 : 0;
-  const avgWait = totals.trips ? totals.waitMinTotal / totals.trips : 0;
+  const avgWait = !known ? NaN : totals.trips ? totals.waitMinTotal / totals.trips : 0;
   const prevWait = previous.trips ? previous.waitMinTotal / previous.trips : 0;
-  const avgFare = totals.trips ? totals.grossMinor / totals.trips : 0;
+  const avgFare = !known ? NaN : totals.trips ? totals.grossMinor / totals.trips : 0;
   const prevAvgFare = previous.trips ? previous.grossMinor / previous.trips : 0;
-  const number = new Intl.NumberFormat(uiLocale());
+  const numberFormat = new Intl.NumberFormat(uiLocale());
+  // Live: a total without a source is NaN and reads "Not connected yet" (owner rule, part 3).
+  const number = { format: (value: number) => (Number.isFinite(value) ? numberFormat.format(value) : tr("Not connected yet")) };
+  const liveData = isLiveData();
 
   const live = useMemo(
     () => liveDrivers(driverRows, vehicles.data ?? [], tripRows, incidents.data ?? [], tick),
@@ -506,7 +512,7 @@ export function DashboardPage() {
             </div>
             <dl className="earnings-side">
               <div className="side-row accent">
-                <dt>{trn("Movera earnings {0}", <small>{trn("Commission {0}% placeholder · set later in Pricing", Math.round(COMMISSION_PLACEHOLDER * 100))}</small>)}</dt>
+                <dt>{liveData ? tr("Movera earnings") : trn("Movera earnings {0}", <small>{trn("Commission {0}% placeholder · set later in Pricing", Math.round(COMMISSION_PLACEHOLDER * 100))}</small>)}</dt>
                 <dd>{money(totals.commissionMinor)} <Delta value={change(totals.commissionMinor, previous.commissionMinor)} label={shownSpan.compareLabel} /></dd>
               </div>
               <div className="side-row"><dt>{tr("Driver earnings")}</dt><dd>{money(totals.driverMinor)} <Delta value={change(totals.driverMinor, previous.driverMinor)} label={shownSpan.compareLabel} /></dd></div>
@@ -526,8 +532,8 @@ export function DashboardPage() {
               value={loading ? "…" : number.format(liveCounts.free + busy + liveCounts.sos)}
               hint={<>{trn("{0} free · {1} busy{2}", liveCounts.free, busy, liveCounts.sos ? <> · <b className="sos-text">{trn("{0} SOS", liveCounts.sos)}</b></> : null)}</>}
             />
-            <Kpi icon={<XCircle size={18} />} tone="red" label={tr("Cancellation rate")} value={`${cancelRate.toFixed(1)}%`} delta={<Delta value={change(cancelRate, prevCancelRate)} inverse label={shownSpan.compareLabel} />} />
-            <Kpi icon={<Clock size={18} />} tone="amber" label={tr("Avg pickup wait")} value={`${avgWait.toFixed(1)} min`} delta={<Delta value={change(avgWait, prevWait)} inverse label={shownSpan.compareLabel} />} />
+            <Kpi icon={<XCircle size={18} />} tone="red" label={tr("Cancellation rate")} value={Number.isFinite(cancelRate) ? `${cancelRate.toFixed(1)}%` : tr("Not connected yet")} delta={<Delta value={change(cancelRate, prevCancelRate)} inverse label={shownSpan.compareLabel} />} />
+            <Kpi icon={<Clock size={18} />} tone="amber" label={tr("Avg pickup wait")} value={Number.isFinite(avgWait) ? `${avgWait.toFixed(1)} min` : tr("Not connected yet")} delta={<Delta value={change(avgWait, prevWait)} inverse label={shownSpan.compareLabel} />} />
             <Kpi icon={<Users size={18} />} tone="violet" label={tr("New riders")} value={number.format(totals.newRiders)} delta={<Delta value={change(totals.newRiders, previous.newRiders)} label={shownSpan.compareLabel} />} />
             <Kpi icon={<UserPlus size={18} />} tone="aqua" label={tr("New drivers")} value={number.format(totals.newDrivers)} delta={<Delta value={previous.newDrivers < 5 ? null : change(totals.newDrivers, previous.newDrivers)} label={shownSpan.compareLabel} />} />
           </section>
@@ -707,6 +713,7 @@ export function DashboardPage() {
             periodLabel={shownSpan.label}
             topLabel={ranking?.label ?? shownSpan.label}
             money={null}
+            rankingConnected={!liveData}
           />
           <section className="dash-card shares-card" aria-labelledby="shares-title">
             <div className="card-head"><h3 id="shares-title">{tr("Where the money comes from")}</h3></div>
@@ -717,7 +724,7 @@ export function DashboardPage() {
                 </button>
               ))}
             </div>
-            {totals.grossMinor ? <ShareBars rows={shareTab === "zone" ? report.byZone : shareTab === "category" ? report.byCategory : report.byMethod} format={compact} /> : <p className="state-line">{tr("No earnings in this period yet.")}</p>}
+            {liveData ? <NotConnected block /> : totals.grossMinor ? <ShareBars rows={shareTab === "zone" ? report.byZone : shareTab === "category" ? report.byCategory : report.byMethod} format={compact} /> : <p className="state-line">{tr("No earnings in this period yet.")}</p>}
           </section>
         </div>
       ) : null}

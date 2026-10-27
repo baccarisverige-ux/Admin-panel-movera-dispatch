@@ -40,7 +40,7 @@ export function RulesView() {
               const removed = { ...data.book, draftRev: data.book.draftRev + 1, rules: data.book.rules.filter((item) => item.id !== rule.id) };
               return (
                 <li key={rule.id} className={rule.on ? `al-rule ${rule.level}` : `al-rule ${rule.level} off`}>
-                  <span className="al-rule-text"><b>{rule.name}</b><small>{sentence(rule)}</small><small>{trn("{0} · {1} times in the last 24 h · made by {2}", rule.who === "all" ? tr("Every admin") : rule.who.map((role) => ROLE_LABELS[role]).join(", "), preview.times, agentName(rule.by))}</small></span>
+                  <span className="al-rule-text"><b>{rule.name}</b><small>{sentence(rule)}</small><small>{trn("{0} · {1} times in the last 24 h · made by {2}", rule.who === "all" ? tr("Every admin") : rule.who.map((role) => ROLE_LABELS[role]).join(", "), preview ? preview.times : tr("Not connected yet"), agentName(rule.by))}</small></span>
                   <CommandButton command="admin.alerts.rule" className={rule.on ? "surge-toggle on" : "surge-toggle"} targetId={rule.name} confirmTarget={false} scope="all" before={rule.on ? "on" : "off"} after={rule.on ? "off" : "on"} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={toggled} disabled={!canManage} aria-label={`${rule.name} ${rule.on ? "on" : "off"}`} onDone={() => setNotice(`Rule ${rule.name} switched ${rule.on ? "off" : "on"}.`)}>
                     {rule.on ? tr("On") : tr("Off")} <span className="switch" aria-hidden="true"><i /></span>
                   </CommandButton>
@@ -85,7 +85,7 @@ export function RulesView() {
             const next = { ...data.book, draftRev: data.book.draftRev + 1, rules: exists ? data.book.rules.map((rule) => (rule.id === editing.id ? { ...editing, name: editing.name.trim() } : rule)) : [...data.book.rules, { ...editing, name: editing.name.trim() }] };
             return (
               <>
-                <p className={preview.times > 20 ? "al-preview noisy" : "al-preview"} aria-label={tr("Preview")}>{trn("{0} This would have alerted {1} in the last 24 hours{2}.{3}", <Eye size={14} aria-hidden="true" />, <b>{trn("{0} time{1}", preview.times, preview.times === 1 ? "" : tr("s"))}</b>, preview.zones ? tr(", in {0} zone{1}", [preview.zones, preview.zones === 1 ? "" : "s"]) : "", preview.times > 20 ? tr(" That is a lot: try a higher limit or more minutes.") : "")}</p>
+                {preview === null ? <p className="al-preview" aria-label={tr("Preview")}>{tr("Not connected yet")}</p> : <p className={preview.times > 20 ? "al-preview noisy" : "al-preview"} aria-label={tr("Preview")}>{trn("{0} This would have alerted {1} in the last 24 hours{2}.{3}", <Eye size={14} aria-hidden="true" />, <b>{trn("{0} time{1}", preview.times, preview.times === 1 ? "" : tr("s"))}</b>, preview.zones ? tr(", in {0} zone{1}", [preview.zones, preview.zones === 1 ? "" : "s"]) : "", preview.times > 20 ? tr(" That is a lot: try a higher limit or more minutes.") : "")}</p>}
                 {issues.length ? <p className="dx-issues" role="alert">{issues[0]}</p> : null}
                 <div className="dx-modal-actions">
                   <button data-command="admin.alerts.view" type="button" className="dash-btn ghost" onClick={() => setEditing(null)}>{tr("Cancel")}</button>

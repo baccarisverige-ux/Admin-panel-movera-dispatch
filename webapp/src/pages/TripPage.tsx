@@ -165,7 +165,7 @@ export function TripPage() {
   const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees, dispatchOffers.data?.bonusMinor ?? 0);
   const chat = chatOf(trip);
   const calls = callsOf(trip);
-  const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })));
+  const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })), dispatchOffers.data?.offers);
   const offers = timelineOffers(offerSteps);
   const driverName = (id: string) => drivers.data?.find((row) => row.id === id)?.name ?? "A driver";
   const allowed = canSeePrivate(role, ops.settings);

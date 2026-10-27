@@ -1,3 +1,4 @@
+import { isLiveData } from "../live/realData";
 import { logExport } from "../reports/activityLog";
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -234,9 +235,9 @@ export function RidersPage() {
                     </span>
                     <LiveChip state={row.live} />
                     <Stars value={row.profile.rating} />
-                    <span className="rd-num" title={tr("{0} in the chosen period · {1} in total", [row.periodRides, row.profile.completed])}><b>{period === "year" || sort === "rides" || segment === "top" ? row.periodRides : row.profile.completed}</b><small>{period === "year" || sort === "rides" || segment === "top" ? tr("{0} total", [row.profile.completed]) : tr("{0} this {1}", [row.periodRides, period === "today" ? "day" : period])}</small></span>
-                    <span className="rd-num"><b>{money(segment === "top" || sort === "spent" ? row.periodSpentMinor : row.profile.spentMinor, row.profile.country, true)}</b><small>{segment === "top" || sort === "spent" ? tr("in period") : tr("all time")}</small></span>
-                    <span className="rd-date">{row.profile.lastRideAt ? date.format(row.profile.lastRideAt) : tr("Never")}</span>
+                    <span className="rd-num" title={tr("{0} in the chosen period · {1} in total", [row.periodRides, row.profile.completed])}><b>{isLiveData() ? tr("Not connected yet") : period === "year" || sort === "rides" || segment === "top" ? row.periodRides : row.profile.completed}</b>{isLiveData() ? null : <small>{period === "year" || sort === "rides" || segment === "top" ? tr("{0} total", [row.profile.completed]) : tr("{0} this {1}", [row.periodRides, period === "today" ? "day" : period])}</small>}</span>
+                    <span className="rd-num"><b>{money(isLiveData() ? NaN : segment === "top" || sort === "spent" ? row.periodSpentMinor : row.profile.spentMinor, row.profile.country, true)}</b><small>{segment === "top" || sort === "spent" ? tr("in period") : tr("all time")}</small></span>
+                    <span className="rd-date">{row.profile.lastRideAt ? date.format(row.profile.lastRideAt) : isLiveData() ? tr("Not connected yet") : tr("Never")}</span>
                     <AccountChip status={row.rider.status} />
                     <span onClick={(event) => event.stopPropagation()}>
                       <ContactActions kind="rider" compact id={row.rider.id} name={row.rider.name} phone={row.rider.phone} zoneId={row.rider.zoneId} messageTo={`/riders/${row.rider.id}?tab=messages`} />

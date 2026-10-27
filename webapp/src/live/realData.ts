@@ -15,6 +15,7 @@ const drivers = new Map<string, LiveDriverFacts>();
 const riders = new Map<string, LiveRiderFacts>();
 const riderOfTrip = new Map<string, string>();
 const createdOfTrip = new Map<string, string>();
+const tripRecords = new Map<string, DemoRecord>();
 
 /** Called once by the live AdminApi: from then on no helper may fall back to demo values. */
 export function setLiveData(on: boolean): void {
@@ -25,6 +26,7 @@ export function setLiveData(on: boolean): void {
     riders.clear();
     riderOfTrip.clear();
     createdOfTrip.clear();
+    tripRecords.clear();
   }
 }
 
@@ -40,6 +42,7 @@ export function remember(records: readonly DemoRecord[]): void {
       trips.set(record.id, record.liveTrip);
       if (record.tripId) riderOfTrip.set(record.id, record.tripId);
       if (record.createdAt) createdOfTrip.set(record.id, record.createdAt);
+      tripRecords.set(record.id, record);
     }
     if (record.liveDriver) drivers.set(record.id, record.liveDriver);
     if (record.liveRider) riders.set(record.id, record.liveRider);
@@ -71,4 +74,9 @@ export function isLiveRecord(record: { live?: true } | null | undefined): boolea
 /** When the server created a live trip, or null for a demo id. */
 export function liveCreatedAt(tripId: string): string | null {
   return createdOfTrip.get(tripId) ?? null;
+}
+
+/** The live trips read so far that belong to a rider (TripProjection.riderId), newest first. */
+export function liveTripsOfRider(riderId: string): DemoRecord[] {
+  return [...tripRecords.values()].filter((trip) => trip.tripId === riderId).sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
 }

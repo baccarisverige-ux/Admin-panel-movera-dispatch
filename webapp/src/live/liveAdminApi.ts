@@ -409,6 +409,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const answer = await client.post<{ status?: string }>(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
       return answer?.status === "pending" ? done("Waits for a second admin.", "pending_approval") : done("Refunded.");
     }
+    if (input.action === "admin.trip.assign" || input.action === "admin.trip.radarGroup") {
+      // Exclusive offer or radar group (contract §9 /admin/trips/{id}/assign and /radar-group), with the trip's version.
+      const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
+      trips.set(trip.tripId, trip);
+      const params = (input.value ?? {}) as { driverId?: string; driverIds?: string[]; driverBonusMinor?: number; priority?: boolean };
+      const bonus = params.driverBonusMinor ? { driverBonus: { amountMinor: params.driverBonusMinor, currency: trip.fare.currency } } : {};
+      const common = { expectedVersion: trip.version, ...(input.reason ? { note: input.reason } : {}), ...bonus, ...(params.priority ? { priority: true } : {}) };
+      if (input.action === "admin.trip.assign") await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/assign`, { ...common, driverId: params.driverId });
+      else await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/radar-group`, { ...common, driverIds: params.driverIds ?? [] });
+      return done(input.action === "admin.trip.assign" ? "Exclusive offer sent." : "Sent to the radar group.");
+    }
     if (input.action === "admin.approval.approve" || input.action === "admin.approval.reject") {
       const decision = input.action.endsWith("approve") ? "approve" : "reject";
       await client.post(`/admin/approvals/${encodeURIComponent(input.targetId)}/${decision}`, { note: input.reason });

@@ -78,7 +78,7 @@ function List({ facts, money, country }: { facts: readonly PayFacts[]; money: (m
         head={[tr("Payment"), tr("Rider"), tr("Method"), tr("Status"), tr("Zone"), tr("Amount"), tr("Driver gets"), tr("Movera"), tr("Trip")]}
         rowIds={shown.map((item) => item.id)}
         rows={shown.map((item) => {
-          const split = paySplit(item.amount, item.country);
+          const split = paySplit(item.amount, item.country, item.tripId);
           return [item.id, item.riderName, METHOD_LABELS[item.method], item.group === "disputed" ? "Disputed" : item.status, zoneById(item.zoneId)?.name ?? item.zoneId, money(item.amount), money(split.driver), money(split.movera), item.tripId ?? "–"];
         })}
         onRow={(index) => {
@@ -110,7 +110,7 @@ function Failed({ facts, byId, ops, now, money, me, timeZone }: { facts: readonl
                 <b><Link to={`/payments/${item.id}`}>{item.id}</Link> · {money(item.amount)} · {trx(METHOD_LABELS[item.method])}</b>
                 <small>{item.riderId ? <Link to={`/riders/${item.riderId}`}>{item.riderName}</Link> : item.riderName} · {plan.cause.kind === "system" ? tr("Our side") : tr("Rider's side")}: {plan.cause.reason}</small>
                 <span className="pm-tags">
-                  <span className="dx-tag">{trn("Tried {0} of {1}", plan.tries, plan.max)}</span>
+                  {Number.isFinite(plan.tries) ? <span className="dx-tag">{trn("Tried {0} of {1}", plan.tries, plan.max)}</span> : null}
                   {plan.nextAt ? <span className="dx-tag">{trn("Next try {0}", time(plan.nextAt))}</span> : <span className="dx-tag">{tr("No more automatic tries")}</span>}
                   {plan.owing ? <span className="dx-tag bad">{tr("Rider blocked until paid")}</span> : null}
                   {item.riderId && (fails.get(item.riderId) ?? 0) >= 2 ? <Link className="dx-tag bad" to="/risk?tab=flagged">{trn("{0} Check in Risk", <ShieldAlert size={11} aria-hidden="true" />)}</Link> : null}

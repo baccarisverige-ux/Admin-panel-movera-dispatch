@@ -59,7 +59,7 @@ export function BookingHistory({ bookings, country, refunded, onRefund, limit }:
                   <button data-command="admin.rider.tab" type="button" className="rd-booking-main" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : booking.id)}>
                     <span className="rd-b-icon" aria-hidden="true"><Icon size={16} /></span>
                     <span className="rd-b-when">{format.format(booking.at)}<small>{booking.id}</small></span>
-                    <span className="rd-b-route"><span className="rd-b-line">{booking.from} <i aria-hidden="true">→</i> {booking.to}</span><small>{trn("{0} · {1} km · {2} min{3}", categoryName(booking.category), booking.km, booking.minutes, booking.driverName ? ` · ${booking.driverName}` : "")}</small></span>
+                    <span className="rd-b-route"><span className="rd-b-line">{booking.from} <i aria-hidden="true">→</i> {booking.to}</span><small>{Number.isFinite(booking.km) ? trn("{0} · {1} km · {2} min{3}", categoryName(booking.category), booking.km, booking.minutes, booking.driverName ? ` · ${booking.driverName}` : "") : `${categoryName(booking.category)}${booking.driverName ? ` · ${booking.driverName}` : ""}`}</small></span>
                     <span className={`rd-b-status s-${booking.status}`}>{trx(BOOKING_LABEL[booking.status])}</span>
                     <span className="rd-b-fare">{booking.fareMinor ? money(booking.fareMinor, country) : "—"}{back ? <small>{trn("−{0} refunded", money(Math.round(back * market(country).minorUnits), country))}</small> : null}</span>
                     <ChevronDown size={15} aria-hidden="true" className="rd-b-chev" />
@@ -70,10 +70,10 @@ export function BookingHistory({ bookings, country, refunded, onRefund, limit }:
                         <div><dt>{tr("Outcome")}</dt><dd>{trx(BOOKING_LABEL[booking.status])}{booking.reason ? ` · ${booking.reason}` : ""}</dd></div>
                         <div><dt>{tr("Route")}</dt><dd>{booking.from} → {booking.to}</dd></div>
                         <div><dt>{tr("Category")}</dt><dd>{categoryName(booking.category)}</dd></div>
-                        <div><dt>{tr("Distance and time")}</dt><dd>{trn("{0} km · {1} min", booking.km, booking.minutes)}</dd></div>
+                        <div><dt>{tr("Distance and time")}</dt><dd>{Number.isFinite(booking.km) ? trn("{0} km · {1} min", booking.km, booking.minutes) : tr("Not connected yet")}</dd></div>
                         <div><dt>{tr("Driver")}</dt><dd>{booking.driverId ? <Link to={`/drivers/${booking.driverId}`}>{booking.driverName}</Link> : tr("No driver")}</dd></div>
                         <div><dt>{tr("Paid")}</dt><dd>{booking.fareMinor ? `${money(booking.fareMinor, country)} · ${booking.payment}` : tr("Nothing charged")}{booking.promo ? tr(" · promotion used") : ""}</dd></div>
-                        <div><dt>{tr("Movera fee")}</dt><dd>{booking.feeMinor ? money(booking.feeMinor, country) : "—"}</dd></div>
+                        <div><dt>{tr("Movera fee")}</dt><dd>{Number.isNaN(booking.feeMinor) ? tr("Not connected yet") : booking.feeMinor ? money(booking.feeMinor, country) : "—"}</dd></div>
                         <div><dt>{tr("Rider's rating")}</dt><dd>{booking.ratingGiven ? tr("{0} of 5", [booking.ratingGiven]) : tr("Not rated")}</dd></div>
                       </dl>
                       {onRefund && booking.fareMinor > 0 ? (

@@ -166,8 +166,8 @@ export function caseOf(row: DemoRecord, safety: SafetyBook, ops: IncidentOps, no
   const seed = hash(row.id);
   const takenAt = take ? Date.parse(take.at) : null;
   // Same opening time as the SOS alert: two minutes before it was taken, or a few minutes ago.
-  const openedAt = row.createdAt ? Date.parse(row.createdAt) : takenAt ? takenAt - 2 * 60_000 : open ? now - (2 + (seed % 8)) * 60_000 : now - (1 + (seed % 20)) * 86_400_000 - (seed % 600) * 60_000;
-  const demoSolved = !open && !resolve ? openedAt + (6 + (seed % 40)) * 60_000 : null;
+  const openedAt = row.createdAt ? Date.parse(row.createdAt) : row.live ? NaN : takenAt ? takenAt - 2 * 60_000 : open ? now - (2 + (seed % 8)) * 60_000 : now - (1 + (seed % 20)) * 86_400_000 - (seed % 600) * 60_000;
+  const demoSolved = !open && !resolve && !row.live ? openedAt + (6 + (seed % 40)) * 60_000 : null;
   return {
     id: row.id,
     zoneId: row.zoneId,

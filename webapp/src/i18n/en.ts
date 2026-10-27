@@ -492,7 +492,6 @@ export const en = {
   "{0} refunded to {1}.": "{0} refunded to {1}.",
   "{0} Refunds above {1} also need a second admin ({2}).": "{0} Refunds above {1} also need a second admin ({2}).",
   "{0} Remove overlaps": "{0} Remove overlaps",
-  "{0} Reports from drivers": "{0} Reports from drivers",
   "{0} Requests": "{0} Requests",
   "{0} requests without a driver in {1}": "{0} requests without a driver in {1}",
   "{0} Resend receipt": "{0} Resend receipt",
@@ -1753,7 +1752,6 @@ export const en = {
   "Drivers wait in line for airport rides": "Drivers wait in line for airport rides",
   "Drivers who accept more often score higher. Only Exclusive and other one-driver offers count, never Radar.": "Drivers who accept more often score higher. Only Exclusive and other one-driver offers count, never Radar.",
   "Drivers who are near the pickup when the rider books, within the distance you set.": "Drivers who are near the pickup when the rider books, within the distance you set.",
-  "Drivers who blocked this rider": "Drivers who blocked this rider",
   "Drivers who cancel less score higher.": "Drivers who cancel less score higher.",
   "Drivers who cancel more get nothing": "Drivers who cancel more get nothing",
   "Drivers who cannot take it": "Drivers who cannot take it",
@@ -2662,7 +2660,6 @@ export const en = {
   "No driver is taking the ride": "No driver is taking the ride",
   "No driver near pickup": "No driver near pickup",
   "No driver near pickup for a reservation": "No driver near pickup for a reservation",
-  "No driver reported this rider.": "No driver reported this rider.",
   "No driver was assigned, so there were no calls.": "No driver was assigned, so there were no calls.",
   "no driver yet": "no driver yet",
   "No drivers": "No drivers",
@@ -5276,6 +5273,9 @@ export const en = {
   "Fixed route price": "Fixed route price",
   "Unpaid fee from an earlier trip": "Unpaid fee from an earlier trip",
   "Rider raised the price": "Rider raised the price",
+  "ETA": "ETA",
+  "Movera earnings": "Movera earnings",
+  "No position from the server for this case.": "No position from the server for this case.",
 } as const;
 
 export type MessageKey = keyof typeof en;

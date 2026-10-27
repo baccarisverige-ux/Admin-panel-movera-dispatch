@@ -2,6 +2,7 @@ import type { DemoRecord } from "../api/seed.ts";
 import { isOnline } from "../api/presence.ts";
 import { zoneById } from "../markets/markets.ts";
 import { along, tripRoute, type TripRoute } from "./route.ts";
+import { isLiveData, liveDriverOf } from "../live/realData.ts";
 
 export type LiveState = "free" | "pickup" | "trip" | "stale" | "sos";
 
@@ -57,6 +58,7 @@ export function liveDrivers(
   const sosDrivers = new Set(sos.filter((row) => row.driverId).map((row) => row.driverId!));
   const sosZones = new Set(sos.filter((row) => !row.driverId).map((row) => row.zoneId));
   const flagged = new Set<string>();
+  if (isLiveData()) return serverDrivers(drivers, vehicles, trips, sosDrivers);
   return drivers
     .filter((driver) => isOnline(driver) && zoneById(driver.zoneId))
     .map((driver) => {
@@ -107,4 +109,38 @@ export function countStates(rows: readonly LiveDriver[]): Record<LiveState, numb
   const counts: Record<LiveState, number> = { free: 0, pickup: 0, trip: 0, stale: 0, sos: 0 };
   for (const row of rows) counts[row.state] += 1;
   return counts;
+}
+
+const PICKUP = new Set(["accepted", "driver_to_pickup", "arrived"]);
+
+/**
+ * Live build: online drivers where the server last saw them (GET /admin/live/drivers). The state comes from the
+ * server (online, on a trip and the trip's status, stale GPS); no driver is moved or placed without a position.
+ */
+function serverDrivers(drivers: readonly DemoRecord[], vehicles: readonly DemoRecord[], trips: readonly DemoRecord[], sosDrivers: ReadonlySet<string>): LiveDriver[] {
+  return drivers.flatMap((driver): LiveDriver[] => {
+    const live = liveDriverOf(driver);
+    if (!live?.location || !isOnline(driver)) return [];
+    const trip = live.activeTripId ? trips.find((row) => row.id === live.activeTripId) : trips.find((row) => row.driverId === driver.id && ACTIVE_TRIP.has(row.status));
+    let state: LiveState = live.onlineStatus === "on_trip" ? (trip && PICKUP.has(trip.status) ? "pickup" : "trip") : "free";
+    if (live.stale) state = "stale";
+    if (sosDrivers.has(driver.id)) state = "sos";
+    const vehicle = vehicles.find((row) => row.driverId === driver.id);
+    const seen = Date.parse(live.lastFixAt ?? live.location.measuredAt);
+    return [{
+      id: driver.id,
+      name: driver.name,
+      zoneId: driver.zoneId,
+      zoneName: zoneById(driver.zoneId)?.name ?? driver.zoneId,
+      state,
+      lat: live.location.lat,
+      lng: live.location.lng,
+      lastSeenMin: Number.isFinite(seen) ? Math.max(0, Math.round((Date.now() - seen) / 60_000)) : 0,
+      vehicle: vehicle ? `${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim() || null : null,
+      plate: vehicle?.plate ?? null,
+      tripId: live.activeTripId ?? trip?.id ?? null,
+      route: null,
+      progress: 0,
+    }];
+  });
 }

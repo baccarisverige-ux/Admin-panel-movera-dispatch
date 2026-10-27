@@ -1,3 +1,6 @@
+import { tr } from "../i18n";
+import { NotConnected } from "../live/NotConnected";
+import { isLiveData } from "../live/realData";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft, Bookmark, CalendarClock, FileDown, FileText, Plus, Printer, Trash2 } from "lucide-react";
@@ -52,6 +55,7 @@ export function ReportsPage() {
   const drivers = useRecords("drivers");
   const fleets = useRecords("fleets");
   const [csv, setCsv] = useState<CsvTable | null>(null);
+  const liveData = isLiveData();
   const onCsv = useCallback((table: CsvTable) => setCsv(table), []);
   const [viewOpen, setViewOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -60,6 +64,8 @@ export function ReportsPage() {
 
   const money = (minor: number) => formatMoney(Math.round(minor), market.id);
   const fmt = (value: number, format: Format) => {
+    // Live: a value without a source is NaN and reads "Not connected yet" (owner rule, part 3).
+    if (!Number.isFinite(value)) return tr("Not connected yet");
     if (format === "money") return money(value);
     if (format === "pct") return `${value}%`;
     if (format === "min") return `${value} min`;
@@ -175,6 +181,9 @@ export function ReportsPage() {
       <div className="rp-print-head" aria-hidden="true"><b>Movera · {TABS.find((item) => item.id === tab)?.label} report · {market.name}</b><span>{window.label} {compare !== "none" ? `· ${window.compareLabel}` : ""}</span></div>
       {notice || slice.message ? <p className="pricing-notice" role="status">{notice} {slice.message}</p> : null}
 
+      {/* Live: only the server's audit (Work) has a source yet; the other reports read "Not connected yet". */}
+      {liveData && tab !== "work" ? <div className="rp-tab" data-testid="report-not-connected"><NotConnected block /></div> : null}
+      {liveData && tab !== "work" ? null : <>
       {tab === "overview" ? <OverviewTab {...props} /> : null}
       {tab === "rides" ? <><RidesTab {...props} /><TripExport /></> : null}
       {tab === "money" ? <MoneyTab {...props} /> : null}
@@ -189,6 +198,7 @@ export function ReportsPage() {
       {tab === "surge" ? <SurgeTab {...props} /> : null}
       {tab === "care" ? <CareTab {...props} /> : null}
       {tab === "promos" ? <PromosTab {...props} /> : null}
+      </>}
 
       <SaveViewDialog open={viewOpen} onClose={() => setViewOpen(false)} settings={settings} agentId={agent?.id ?? ""} build={(name, shared) => ({ id: `RV-${Date.now().toString(36)}`, name, by: agent?.id ?? "", shared, tab, period: periodParams(period, new URLSearchParams()).toString(), compare, filters, country: market.id, zones: scope.zones.join(",") })} onSaved={(name) => setNotice(`View ${name} saved.`)} />
       <ScheduleDialog key={`${tab}-${scheduleOpen}`} open={scheduleOpen} onClose={() => setScheduleOpen(false)} settings={settings} agentId={agent?.id ?? ""} tab={tab} country={market.id} onSaved={setNotice} />
