@@ -5281,6 +5281,13 @@ export const en = {
   "Nothing is chosen at the top: choose the zones first.": "Nothing is chosen at the top: choose the zones first.",
   "Draft saved in this session. Publish sends it to the chosen zones.": "Draft saved in this session. Publish sends it to the chosen zones.",
   "Choose the zones at the top first.": "Choose the zones at the top first.",
+  "{0}: not on {1}": "{0}: not on {1}",
+  "Only Child Seat: every Child Seat ride includes one seat": "Only Child Seat: every Child Seat ride includes one seat",
+  "Short line in Swedish": "Short line in Swedish",
+  "Short line in French": "Short line in French",
+  "Short line in English": "Short line in English",
+  "Write the short line in Swedish, French and English.": "Write the short line in Swedish, French and English.",
+  "Keep the short line to 80 letters or fewer.": "Keep the short line to 80 letters or fewer.",
 } as const;
 
 export type MessageKey = keyof typeof en;

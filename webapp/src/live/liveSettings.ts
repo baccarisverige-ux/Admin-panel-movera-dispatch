@@ -4,7 +4,8 @@
  * publishing a page saves and publishes the server documents it owns at once (no second admin, owner 2026-10-27).
  */
 import { MARKETS, standardZoneId, type MarketId } from "../markets/markets.ts";
-import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
+import { normalizeStore, zoneBook, zoneLive, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
+import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
 import { COUNTRY_SETTINGS_KEY, countrySettingsOf, driverBonusHardMax, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
@@ -90,6 +91,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return found;
   }
 
+  let historyIndex: HistoryIndex = new Map();
+  let surgeVersions: Record<string, number> = {};
+
   async function readPricing(fallback: unknown): Promise<PricingStore> {
     const store = normalizeStore(fallback);
     const zones = { ...store.zones };
@@ -97,9 +101,76 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const found = await draft("pricing", id, true);
       if (found) zones[id] = bookOfPricing(found.document, zoneBook(store, id));
     }));
-    const next = { ...store, zones };
+    // v0.7.1: the car type catalog, the running manual surges and the pricing history come from the server too.
+    const known = settingsScopes().filter((id) => !unknownZones.has(id) && drafts.get(key("pricing", id)));
+    const extras = await readPricingExtras(http, normalizeStore({ ...store, zones }), known);
+    historyIndex = extras.index;
+    surgeVersions = extras.surgeVersions;
+    const next = extras.store;
     slices.set(PRICING_KEY, next);
     return next;
+  }
+
+  const pricingSlice = () => normalizeStore(slices.get(PRICING_KEY) ?? null);
+
+  /** Manage categories: the catalog changes the page asks for, sent to the server's one catalog. */
+  async function saveCatalog(value: PricingStore, done: string): Promise<string> {
+    await sendCatalog(http, catalogChanges(pricingSlice().categories, value.categories));
+    await readPricing(value);
+    return done;
+  }
+
+  /** Manual surge Start / Stop per zone (PUT …/surge, POST …/surge/end); the slider's value is the maximum. */
+  async function sendSurges(value: PricingStore): Promise<string> {
+    for (const change of surgeChanges(pricingSlice(), value)) {
+      const path = `/admin/zones/${encodeURIComponent(change.zoneId)}/surge`;
+      const version = surgeVersions[change.zoneId] ?? 0;
+      if (change.manual) {
+        const started = await http.put<{ version: number }>(path, scheduleOf(change.manual, version));
+        surgeVersions[change.zoneId] = started.version;
+      } else if (version > 0) {
+        await http.post(`${path}/end`, { expectedVersion: version });
+        surgeVersions[change.zoneId] = 0;
+      }
+    }
+    slices.set(PRICING_KEY, value);
+    return "Saved.";
+  }
+
+  /** "Tell drivers now": the server sends the zone's online drivers a surge notice. */
+  async function tellDrivers(zoneId: string, value: PricingStore): Promise<string> {
+    const told = await http.post<{ notified: number; multiplier: number }>(`/admin/zones/${encodeURIComponent(zoneId)}/surge/notify`, {});
+    slices.set(PRICING_KEY, value);
+    return `Drivers told: ${told.notified}.`;
+  }
+
+  /** "Tell drivers when a surge starts": kept in the zone's pricing document, published at once. */
+  async function saveNotifySetting(zoneId: string, value: PricingStore): Promise<string> {
+    const current = await draft("pricing", zoneId, true);
+    if (!current) throw new Error("Prices are not set for this zone on the server yet.");
+    await savePublish(http, "pricing", zoneId, current, pricingDocumentOf(zoneBook(value, zoneId), zoneId, current.document, zoneLive(value, zoneId)));
+    slices.set(PRICING_KEY, value);
+    return "Saved.";
+  }
+
+  /** Restore a history row, or Undo last publish: the server publishes that version again. */
+  async function restore(rev: number | null): Promise<string> {
+    const row = rev === null ? null : historyIndex.get(rev);
+    if (!row) throw new Error("That revision is not on the server.");
+    await http.post("/admin/config/pricing/restore", { zoneId: row.zoneId, version: row.version, expectedVersion: row.liveVersion });
+    drafts.delete(key("pricing", row.zoneId));
+    await readPricing(pricingSlice());
+    return "Restored.";
+  }
+
+  async function undoLast(): Promise<string> {
+    const store = pricingSlice();
+    const latest = store.history[0];
+    const row = latest ? historyIndex.get(latest.rev) : undefined;
+    if (!row) throw new Error("Nothing to undo yet.");
+    const before = [...historyIndex.entries()].filter(([, item]) => item.zoneId === row.zoneId && item.version < row.version).sort((a, b) => b[1].version - a[1].version)[0];
+    if (!before) throw new Error("Nothing to undo yet.");
+    return restore(before[0]);
   }
 
   async function readDispatch(fallback: unknown): Promise<DispatchBook> {
@@ -154,7 +225,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const zoneIds = store.history[0]?.rev === store.draftRev ? store.history[0].zoneIds : [];
     for (const id of zoneIds) {
       const current = await draft("pricing", id, true);
-      await savePublish(http, "pricing", id, current, pricingDocumentOf(zoneBook(store, id), id, current?.document ?? null));
+      await savePublish(http, "pricing", id, current, pricingDocumentOf(zoneBook(store, id), id, current?.document ?? null, zoneLive(store, id)));
     }
     slices.set(PRICING_KEY, store);
     return "Published.";
@@ -221,6 +292,16 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     },
     command(action, input) {
       if (action === "admin.pricing.publish") return publishPricing(normalizeStore(input.value));
+      // v0.7.1: Manage categories, manual surge, Tell drivers, History.
+      if (action === "admin.pricing.createCategory") return saveCatalog(normalizeStore(input.value), "Added.");
+      if (action === "admin.pricing.editCategory") return saveCatalog(normalizeStore(input.value), "Saved.");
+      if (action === "admin.pricing.archiveCategory") return saveCatalog(normalizeStore(input.value), "Deleted. It can be restored for 30 days.");
+      if (action === "admin.pricing.restoreCategory") return saveCatalog(normalizeStore(input.value), "Restored, switched off in every zone.");
+      if (action === "admin.pricing.startSurge" || action === "admin.pricing.stopSurge" || action === "admin.pricing.stopAllSurges") return sendSurges(normalizeStore(input.value));
+      if (action === "admin.pricing.notifyDrivers") return tellDrivers(input.targetId, normalizeStore(input.value));
+      if (action === "admin.pricing.notifySetting") return saveNotifySetting(input.targetId, normalizeStore(input.value));
+      if (action === "admin.pricing.restore") return restore(Number(/(\d+)$/.exec(input.targetId)?.[1] ?? NaN));
+      if (action === "admin.pricing.undo") return undoLast();
       if (action === "admin.dispatch.publish") return publishDispatch(normalizeDispatchBook(input.value));
       if (action === "admin.config.save") {
         slices.set(CONFIG_KEY, input.value);

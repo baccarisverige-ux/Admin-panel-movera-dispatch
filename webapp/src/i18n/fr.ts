@@ -5283,4 +5283,11 @@ export const fr: Record<MessageKey, string> = {
   "Nothing is chosen at the top: choose the zones first.": "Rien n'est choisi en haut : choisissez d'abord les zones.",
   "Draft saved in this session. Publish sends it to the chosen zones.": "Brouillon enregistré pour cette session. Publier l'envoie aux zones choisies.",
   "Choose the zones at the top first.": "Choisissez d'abord les zones en haut.",
+  "{0}: not on {1}": "{0} : pas pour {1}",
+  "Only Child Seat: every Child Seat ride includes one seat": "Seulement Child Seat : chaque course Child Seat inclut un siège",
+  "Short line in Swedish": "Ligne courte en suédois",
+  "Short line in French": "Ligne courte en français",
+  "Short line in English": "Ligne courte en anglais",
+  "Write the short line in Swedish, French and English.": "Écrivez la ligne courte en suédois, français et anglais.",
+  "Keep the short line to 80 letters or fewer.": "Limitez la ligne courte à 80 caractères.",
 };

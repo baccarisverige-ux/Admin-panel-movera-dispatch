@@ -119,6 +119,8 @@
 .price-table .cat-head small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; margin: 2px 0 8px; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .price-table .cat-head.off strong { color: var(--muted); }
 .price-table td.off .num-field input { opacity: .5; }
+.price-table td.na { text-align: center; }
+.price-table td.na .na-dash { color: var(--muted, #8a94a3); opacity: .6; font-weight: 600; }
 .price-table .group-row th {
   position: sticky; left: 0; background: linear-gradient(90deg, #f3f6fb, #fff); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #4c5a75; padding: 8px 12px;
 }
@@ -451,6 +453,10 @@
 .cat-form { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.4fr 80px; gap: 8px; align-items: center; }
 .cat-form.add { padding: 12px; border-radius: 14px; background: #f6f8fb; border: 1px dashed #c9d3e2; }
 .cat-form input { height: 36px; border-radius: 9px; border: 1px solid #dfe3e5; padding: 0 10px; font: inherit; font-size: 13px; min-width: 0; }
+.cat-lines { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cat-line { display: grid; grid-template-columns: 28px 1fr; align-items: center; gap: 4px; }
+.cat-line span { font-size: 11px; font-weight: 700; color: var(--muted); }
+@media (max-width: 640px) { .cat-lines { grid-template-columns: 1fr; } }
 .cat-form .form-error { grid-column: 1 / -1; color: var(--status-critical); font-size: 12px; }
 .cat-form .fine, .cat-form .cat-actions { grid-column: 1 / -1; }
 .delete-check { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 12px; border-radius: 12px; background: #fdf0f0; color: #7d1d1d; }

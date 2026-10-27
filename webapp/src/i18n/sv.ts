@@ -5283,4 +5283,11 @@ export const sv: Record<MessageKey, string> = {
   "Nothing is chosen at the top: choose the zones first.": "Inget är valt överst: välj zonerna först.",
   "Draft saved in this session. Publish sends it to the chosen zones.": "Utkastet sparat i den här sessionen. Publicera skickar det till de valda zonerna.",
   "Choose the zones at the top first.": "Välj zonerna överst först.",
+  "{0}: not on {1}": "{0}: inte för {1}",
+  "Only Child Seat: every Child Seat ride includes one seat": "Bara Child Seat: varje Child Seat-resa har en stol",
+  "Short line in Swedish": "Kort rad på svenska",
+  "Short line in French": "Kort rad på franska",
+  "Short line in English": "Kort rad på engelska",
+  "Write the short line in Swedish, French and English.": "Skriv den korta raden på svenska, franska och engelska.",
+  "Keep the short line to 80 letters or fewer.": "Håll den korta raden till högst 80 tecken.",
 };

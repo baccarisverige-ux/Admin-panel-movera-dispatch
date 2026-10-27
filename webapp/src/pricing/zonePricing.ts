@@ -12,12 +12,16 @@ import { cleanPoints, curveIssue, curvePeak, type CurvePoint, type SurgeCurve } 
 export type CategoryDef = {
   id: string;
   label: string;
-  /** Short line riders see under the name in the app. */
+  /** Short line riders see under the name in the app (English; the demo's own text). */
   line: string;
+  /** Owner 2026-10-27 (contract v0.7.1): the sub-line the admin writes per app language; the rider app shows it. */
+  lines?: CategoryLines;
   seats: number;
   builtIn: boolean;
   archived: { at: string; by: string; reason: string } | null;
 };
+
+export type CategoryLines = { sv: string; fr: string; en: string };
 
 export type CategoryPrice = {
   enabled: boolean;
@@ -29,7 +33,7 @@ export type CategoryPrice = {
   stopWaitPerMin: number;
   noShowFee: number;
   extraStopFee: number;
-  babySeatFee: number;
+  /** Owner 2026-10-27 (contract v0.7.1): the ONE seat fee, only on Child Seat; every Child Seat ride includes one seat. */
   childSeatFee: number;
   minimum: number;
   maximum: number;
@@ -144,15 +148,23 @@ const LOG_LIMIT = 200;
 const RESTORE_DAYS = 30;
 
 export const BUILT_IN_CATEGORIES: CategoryDef[] = [
-  { id: "economy", label: "Movera", line: "Everyday ride", seats: 4, builtIn: true, archived: null },
-  { id: "comfort", label: "Comfort", line: "Newer cars, more room", seats: 4, builtIn: true, archived: null },
-  { id: "premium", label: "Premium", line: "High-end cars, top drivers", seats: 4, builtIn: true, archived: null },
-  { id: "priority", label: "Priority", line: "Faster pickup", seats: 4, builtIn: true, archived: null },
-  { id: "xl", label: "XL", line: "Up to 6 seats", seats: 6, builtIn: true, archived: null },
-  { id: "electric", label: "Electric", line: "Fully electric car", seats: 4, builtIn: true, archived: null },
-  { id: "pet", label: "Pet", line: "Your pet rides with you", seats: 4, builtIn: true, archived: null },
-  { id: "child_seat", label: "Child Seat", line: "Car with a baby or child seat", seats: 4, builtIn: true, archived: null },
+  // The demo's own names; the live section shows the server catalog's (Movera XL, Movera Pet, owner 2026-10-27).
+  // The sub-lines in sv / fr / en are the server's seed (contract.json#categoryCatalog.seedLines).
+  { id: "economy", label: "Movera", line: "Everyday ride", lines: { sv: "Vardagsresa", fr: "Course du quotidien", en: "Everyday ride" }, seats: 4, builtIn: true, archived: null },
+  { id: "comfort", label: "Comfort", line: "Newer cars, more room", lines: { sv: "Nyare bilar, mer plats", fr: "Voitures récentes, plus d’espace", en: "Newer cars, more room" }, seats: 4, builtIn: true, archived: null },
+  { id: "premium", label: "Premium", line: "High-end cars, top drivers", lines: { sv: "Exklusiva bilar, toppförare", fr: "Voitures haut de gamme, meilleurs chauffeurs", en: "High-end cars, top drivers" }, seats: 4, builtIn: true, archived: null },
+  { id: "priority", label: "Priority", line: "Faster pickup", lines: { sv: "Snabbare upphämtning", fr: "Prise en charge plus rapide", en: "Faster pickup" }, seats: 4, builtIn: true, archived: null },
+  { id: "xl", label: "XL", line: "Up to 6 seats", lines: { sv: "Upp till 6 platser", fr: "Jusqu’à 6 places", en: "Up to 6 seats" }, seats: 6, builtIn: true, archived: null },
+  { id: "electric", label: "Electric", line: "Fully electric car", lines: { sv: "Helt eldriven bil", fr: "Voiture 100 % électrique", en: "Fully electric car" }, seats: 4, builtIn: true, archived: null },
+  { id: "pet", label: "Pet", line: "Your pet rides with you", lines: { sv: "Ditt husdjur åker med dig", fr: "Votre animal voyage avec vous", en: "Your pet rides with you" }, seats: 4, builtIn: true, archived: null },
+  { id: "child_seat", label: "Child Seat", line: "Car with a baby or child seat", lines: { sv: "Bil med babystol eller barnstol", fr: "Voiture avec siège bébé ou enfant", en: "Car with a baby or child seat" }, seats: 4, builtIn: true, archived: null },
 ];
+
+/** The sub-line in an app language: the admin's own text, else the demo's English line. */
+export function categoryLine(category: CategoryDef, language: string): string {
+  const own = category.lines?.[language as keyof CategoryLines]?.trim();
+  return own || category.line;
+}
 
 /** Rows of the price table, in the order the admin reads them. */
 export const PRICE_ROWS: { field: PriceField; label: string; unit: "money" | "min" | "pct"; group: string; hint?: string }[] = [
@@ -164,8 +176,7 @@ export const PRICE_ROWS: { field: PriceField; label: string; unit: "money" | "mi
   { field: "stopWaitPerMin", label: "Waiting at a stop, per min", unit: "money", group: "Waiting" },
   { field: "noShowFee", label: "No-show fee", unit: "money", group: "Cancellation" },
   { field: "extraStopFee", label: "Extra stop fee", unit: "money", group: "Extras" },
-  { field: "babySeatFee", label: "Baby seat fee", unit: "money", group: "Extras" },
-  { field: "childSeatFee", label: "Child seat fee", unit: "money", group: "Extras" },
+  { field: "childSeatFee", label: "Child seat fee", unit: "money", group: "Extras", hint: "Only Child Seat: every Child Seat ride includes one seat" },
   { field: "minimum", label: "Minimum fare", unit: "money", group: "Limits" },
   { field: "maximum", label: "Maximum fare", unit: "money", group: "Limits" },
   { field: "appFeePct", label: "App fee", unit: "pct", group: "Limits", hint: "Added to the rider's price" },
@@ -221,7 +232,7 @@ export function roundMoney(value: number, id: MarketId): number {
  */
 const PRICE_MAX_SEK: Record<Exclude<PriceField, "freeWaitMin" | "appFeePct">, number> = {
   base: 1_000, perKm: 100, perMin: 50, waitPerMin: 50, stopWaitPerMin: 50, noShowFee: 1_000,
-  extraStopFee: 500, babySeatFee: 500, childSeatFee: 500, minimum: 2_000, maximum: 50_000,
+  extraStopFee: 500, childSeatFee: 500, minimum: 2_000, maximum: 50_000,
 };
 const FEE_MAX_SEK = { airportPickup: 1_000, airportDropoff: 1_000, reservationFee: 1_000, cleaningFee: 2_000 } as const;
 const ROUTE_MAX_SEK = 20_000;
@@ -253,7 +264,7 @@ export function currencySymbol(id: MarketId): string {
 const SEK_BASE: Omit<CategoryPrice, "enabled"> = {
   base: 29, perKm: 12, perMin: 4, freeWaitMin: 2, waitPerMin: 5, stopWaitPerMin: 5,
   noShowFee: 50, extraStopFee: 15,
-  babySeatFee: 30, childSeatFee: 30, minimum: 49, maximum: 1500, appFeePct: 10,
+  childSeatFee: 30, minimum: 49, maximum: 1500, appFeePct: 10,
 };
 
 /** Waiting at pickup in kronor: per minute after the free wait, and the no-show fee. Other countries get the same value in local money. */
@@ -263,14 +274,23 @@ const NO_SHOW_FEE_SEK = 65;
 
 const CATEGORY_LIFT: Record<string, number> = { economy: 1, comfort: 1.25, premium: 1.8, priority: 1.35, xl: 1.5, electric: 1.1, pet: 1.15, child_seat: 1.2 };
 
-const MONEY_FIELDS: PriceField[] = ["base", "perKm", "perMin", "waitPerMin", "stopWaitPerMin", "noShowFee", "extraStopFee", "babySeatFee", "childSeatFee", "minimum", "maximum"];
+const MONEY_FIELDS: PriceField[] = ["base", "perKm", "perMin", "waitPerMin", "stopWaitPerMin", "noShowFee", "extraStopFee", "childSeatFee", "minimum", "maximum"];
+
+/** The one car type with a seat fee (owner 2026-10-27). */
+export const SEAT_CATEGORY = "child_seat";
+
+/** True when the price row applies to the category: the seat fee only on Child Seat (shown grey "—" elsewhere). */
+export function rowApplies(field: PriceField, categoryId: string): boolean {
+  return field !== "childSeatFee" || categoryId === SEAT_CATEGORY;
+}
 
 export function defaultCategoryPrice(categoryId: string, id: MarketId, airport = false): CategoryPrice {
   const lift = CATEGORY_LIFT[categoryId] ?? 1;
   const { factor, step } = CURRENCY[id];
   const price = { enabled: categoryId in CATEGORY_LIFT, ...SEK_BASE } as CategoryPrice;
   for (const field of MONEY_FIELDS) {
-    const lifted = field === "babySeatFee" || field === "childSeatFee" ? SEK_BASE[field] * (categoryId === "child_seat" ? 0.5 : 1) : SEK_BASE[field] * lift;
+    // Owner 2026-10-27: one seat fee (15 kr), only on Child Seat; no other car type has one.
+    const lifted = field === "childSeatFee" ? (categoryId === SEAT_CATEGORY ? SEK_BASE[field] * 0.5 : 0) : SEK_BASE[field] * lift;
     price[field] = roundTo(lifted * factor * (airport && (field === "base" || field === "minimum") ? 1.3 : 1), step);
   }
   // Owner Q41: the free wait is also the no-show wait; default 5 min, XL 3 min (contract.json#configDefaults.freeWaitMin).
@@ -293,7 +313,8 @@ function defaultProfiles(): SurgeProfile[] {
 }
 
 export function defaultSmartSurge(): SmartSurge {
-  return { enabled: true, activeFrom: "00:00", activeTo: "00:00", checkEveryMin: 1, holdMin: 3, stopAfterMin: 5, cooldownMin: 2, profiles: defaultProfiles() };
+  // Owner 2026-10-27: smart surge is OFF until the admin switches it on.
+  return { enabled: false, activeFrom: "00:00", activeTo: "00:00", checkEveryMin: 1, holdMin: 3, stopAfterMin: 5, cooldownMin: 2, profiles: defaultProfiles() };
 }
 
 export function defaultZoneBook(zoneId: string, categories: readonly CategoryDef[] = BUILT_IN_CATEGORIES): ZoneBook {
@@ -356,7 +377,7 @@ function completeBook(book: ZoneBook, categories: readonly CategoryDef[]): ZoneB
   return {
     ...fallback,
     ...book,
-    prices: Object.fromEntries(categories.map((category) => [category.id, withoutRetiredFields({ ...defaultCategoryPrice(category.id, id, airport), ...(book.prices?.[category.id] ?? {}) })])),
+    prices: Object.fromEntries(categories.map((category) => [category.id, withoutRetiredFields({ ...defaultCategoryPrice(category.id, id, airport), ...(book.prices?.[category.id] ?? {}) }, category.id)])),
     commission: Object.fromEntries(categories.map((category) => [category.id, book.commission?.[category.id] ?? fallback.commission[category.id] ?? 20])),
     fees: { ...fallback.fees, ...(book.fees ?? {}) },
     smart: { ...fallback.smart, ...(book.smart ?? {}), profiles: book.smart?.profiles?.length ? book.smart.profiles : fallback.smart.profiles },
@@ -370,11 +391,13 @@ function completeBook(book: ZoneBook, categories: readonly CategoryDef[]): ZoneB
  * Fields older data may still carry. The rider "Long pickup fee" is gone: drivers get pickup pay from Movera instead.
  * The rider free cancellation window and cancellation fee moved to Dispatch › Rides & stops › Rider cancel fees.
  */
-const RETIRED_PRICE_FIELDS = ["longPickupFee", "cancelFee", "freeCancelMin"];
+const RETIRED_PRICE_FIELDS = ["longPickupFee", "cancelFee", "freeCancelMin", "babySeatFee"];
 
-function withoutRetiredFields(price: CategoryPrice): CategoryPrice {
+function withoutRetiredFields(price: CategoryPrice, categoryId: string): CategoryPrice {
   const copy: Record<string, unknown> = { ...price };
   for (const field of RETIRED_PRICE_FIELDS) delete copy[field];
+  // Owner 2026-10-27: the seat fee exists only on Child Seat.
+  if (categoryId !== SEAT_CATEGORY) copy["childSeatFee"] = 0;
   return copy as CategoryPrice;
 }
 
@@ -399,6 +422,7 @@ export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDe
     const price = book.prices[category.id];
     if (!price) continue;
     for (const row of PRICE_ROWS) {
+      if (!rowApplies(row.field, category.id)) continue;
       const value = price[row.field];
       const max = priceMax(row.field, currency);
       if (!Number.isFinite(value) || value < 0) add(`prices.${category.id}.${row.field}`, `${category.label}: ${row.label} must be 0 or more.`);
@@ -458,6 +482,9 @@ export const LARGE_PRICE_CHANGE = 0.5;
  * True when a price moves more than 50 % up or down from its published value. From a published 0 any rise
  * counts as large (there is no percentage to compare against).
  */
+/** A price above this many times Movera's own price for the car type is "very high" (owner 2026-10-27). */
+export const VERY_HIGH_FACTOR = 3;
+
 export function isLargePriceChange(before: number, after: number, limit = LARGE_PRICE_CHANGE): boolean {
   if (!Number.isFinite(before) || !Number.isFinite(after) || before === after) return false;
   if (before === 0) return after > 0;
@@ -482,9 +509,12 @@ export function largePriceChanges(published: ZoneBook, draft: ZoneBook, categori
     const before = published.prices[category.id];
     const after = draft.prices[category.id];
     if (!before || !after) continue;
+    const movera = defaultCategoryPrice(category.id, currencyOf(draft.zoneId), zoneById(draft.zoneId)?.kind === "airport");
     for (const row of PRICE_ROWS) {
-      if (row.field === "freeWaitMin") continue;
+      if (row.field === "freeWaitMin" || !rowApplies(row.field, category.id)) continue;
       if (isLargePriceChange(before[row.field], after[row.field])) lines.push(changeText(`${where}${category.label} ${row.label}`, before[row.field], after[row.field], row.unit === "pct" ? "%" : money));
+      // Owner 2026-10-27: a very high price asks first too: more than 3 times Movera's own price in this market.
+      else if (row.unit === "money" && movera[row.field] > 0 && after[row.field] > movera[row.field] * VERY_HIGH_FACTOR) lines.push(`${where}${category.label} ${row.label}: ${short(after[row.field])} ${money} is very high (Movera's price ${short(movera[row.field])} ${money})`);
     }
   }
   for (const [key, label] of [["airportPickup", "Airport pickup fee"], ["airportDropoff", "Airport drop-off fee"], ["reservationFee", "Reservation fee"], ["cleaningFee", "Cleaning fee"]] as const) {
@@ -652,30 +682,35 @@ function slug(text: string): string {
   return text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 24) || "category";
 }
 
-export function validateCategory(store: PricingStore, input: { id?: string; label: string; line: string; seats: number }): string | null {
+export function validateCategory(store: PricingStore, input: { id?: string; label: string; line: string; lines?: CategoryLines; seats: number }): string | null {
   const label = input.label.trim();
   if (label.length < 2) return "The name needs at least 2 letters.";
   if (label.length > 24) return "Keep the name to 24 letters or fewer.";
   if (!input.line.trim()) return "Add the short line riders see under the name.";
+  // Owner 2026-10-27: the admin writes the sub-line in Swedish, French and English.
+  if (input.lines && (["sv", "fr", "en"] as const).some((code) => !input.lines![code].trim())) return "Write the short line in Swedish, French and English.";
+  if (input.lines && (["sv", "fr", "en"] as const).some((code) => input.lines![code].trim().length > 80)) return "Keep the short line to 80 letters or fewer.";
   if (!(input.seats >= 1 && input.seats <= 8)) return "Seats must be between 1 and 8.";
   if (store.categories.some((item) => item.id !== input.id && !item.archived && item.label.toLowerCase() === label.toLowerCase())) return `A category called ${label} already exists.`;
   return null;
 }
 
-export function addCategory(store: PricingStore, input: { label: string; line: string; seats: number }): { store: PricingStore; id: string; error?: string } {
+export function addCategory(store: PricingStore, input: { label: string; line: string; lines?: CategoryLines; seats: number }): { store: PricingStore; id: string; error?: string } {
   const error = validateCategory(store, input);
   if (error) return { store, id: "", error };
   let id = slug(input.label);
   while (store.categories.some((item) => item.id === id)) id = `${id}_2`;
-  const category: CategoryDef = { id, label: input.label.trim(), line: input.line.trim(), seats: input.seats, builtIn: false, archived: null };
+  const category: CategoryDef = { id, label: input.label.trim(), line: input.line.trim(), ...(input.lines ? { lines: trimLines(input.lines) } : {}), seats: input.seats, builtIn: false, archived: null };
   return { store: { ...store, draftRev: store.draftRev + 1, categories: [...store.categories, category] }, id };
 }
 
-export function editCategory(store: PricingStore, id: string, input: { label: string; line: string; seats: number }): { store: PricingStore; error?: string } {
+const trimLines = (lines: CategoryLines): CategoryLines => ({ sv: lines.sv.trim(), fr: lines.fr.trim(), en: lines.en.trim() });
+
+export function editCategory(store: PricingStore, id: string, input: { label: string; line: string; lines?: CategoryLines; seats: number }): { store: PricingStore; error?: string } {
   if (!store.categories.some((item) => item.id === id)) return { store, error: "Category not found." };
   const error = validateCategory(store, { ...input, id });
   if (error) return { store, error };
-  return { store: { ...store, draftRev: store.draftRev + 1, categories: store.categories.map((item) => (item.id === id ? { ...item, label: input.label.trim(), line: input.line.trim(), seats: input.seats } : item)) } };
+  return { store: { ...store, draftRev: store.draftRev + 1, categories: store.categories.map((item) => (item.id === id ? { ...item, label: input.label.trim(), line: input.line.trim(), ...(input.lines ? { lines: trimLines(input.lines) } : {}), seats: input.seats } : item)) } };
 }
 
 export type CategoryUsage = { activeRides: number; reservations: number; vehicles: number };
@@ -765,8 +800,6 @@ export type QuoteInput = {
   waitMin: number;
   stops: number;
   stopWaitMin: number;
-  babySeats: number;
-  childSeats: number;
   airportPickup: boolean;
   airportDropoff: boolean;
   reservation: boolean;
@@ -821,8 +854,8 @@ export function quoteRide(book: ZoneBook, input: QuoteInput): Quote {
   extra(`Waiting ${paidWait} min after ${price.freeWaitMin} free`, paidWait * price.waitPerMin);
   extra(`${input.stops} extra stop${input.stops === 1 ? "" : "s"}`, input.stops * price.extraStopFee);
   extra(`Waiting at stops ${input.stopWaitMin} min`, input.stopWaitMin * price.stopWaitPerMin);
-  extra(`${input.babySeats} baby seat${input.babySeats === 1 ? "" : "s"}`, input.babySeats * price.babySeatFee);
-  extra(`${input.childSeats} child seat${input.childSeats === 1 ? "" : "s"}`, input.childSeats * price.childSeatFee);
+  // Owner 2026-10-27: every Child Seat ride includes one seat; its fee is added once (no other car type has one).
+  if (input.categoryId === SEAT_CATEGORY) extra("Child seat", price.childSeatFee);
   if (input.airportPickup) extra("Airport pickup", book.fees.airportPickup, "fee");
   if (input.airportDropoff) extra("Airport drop-off", book.fees.airportDropoff, "fee");
   if (input.reservation) extra("Reservation", book.fees.reservationFee, "fee");
@@ -842,7 +875,10 @@ export function quoteRide(book: ZoneBook, input: QuoteInput): Quote {
   const linesMinor = exact.reduce((sum, line) => sum + minor(line.amount), 0);
   if (linesMinor !== totalMinor) exact.push({ label: "Rounding", amount: (totalMinor - linesMinor) / unit, kind: "rounding" });
   const commission = (book.commission[input.categoryId] ?? 0) / 100;
-  const driverMinor = Math.min(totalMinor, minor(beforeFee * (1 - commission)));
+  // Owner 2026-10-27 (contract.json#pricing.moneySplit): waiting at pickup and at stops is 100 % the driver's, no commission.
+  const pickupWait = paidWait * price.waitPerMin;
+  const stopWait = input.stopWaitMin * price.stopWaitPerMin;
+  const driverMinor = Math.min(totalMinor, minor((beforeFee - pickupWait - stopWait) * (1 - commission)) + minor(pickupWait) + minor(stopWait));
   return { lines: exact, total: totalMinor / unit, appFee: minor(appFee) / unit, driverGets: driverMinor / unit, moveraGets: (totalMinor - driverMinor) / unit };
 }
 
