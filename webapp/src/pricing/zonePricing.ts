@@ -148,9 +148,9 @@ export const BUILT_IN_CATEGORIES: CategoryDef[] = [
   { id: "comfort", label: "Comfort", line: "Newer cars, more room", seats: 4, builtIn: true, archived: null },
   { id: "premium", label: "Premium", line: "High-end cars, top drivers", seats: 4, builtIn: true, archived: null },
   { id: "priority", label: "Priority", line: "Faster pickup", seats: 4, builtIn: true, archived: null },
-  { id: "xl", label: "Movera XL", line: "Up to 6 seats", seats: 6, builtIn: true, archived: null },
+  { id: "xl", label: "XL", line: "Up to 6 seats", seats: 6, builtIn: true, archived: null },
   { id: "electric", label: "Electric", line: "Fully electric car", seats: 4, builtIn: true, archived: null },
-  { id: "pet", label: "Movera Pet", line: "Your pet rides with you", seats: 4, builtIn: true, archived: null },
+  { id: "pet", label: "Pet", line: "Your pet rides with you", seats: 4, builtIn: true, archived: null },
   { id: "child_seat", label: "Child Seat", line: "Car with a baby or child seat", seats: 4, builtIn: true, archived: null },
 ];
 
@@ -270,8 +270,7 @@ export function defaultCategoryPrice(categoryId: string, id: MarketId, airport =
   const { factor, step } = CURRENCY[id];
   const price = { enabled: categoryId in CATEGORY_LIFT, ...SEK_BASE } as CategoryPrice;
   for (const field of MONEY_FIELDS) {
-    // Owner 2026-10-27 (contract v0.6.0): seat fees only on Child Seat (15 kr each); the other categories have none.
-    const lifted = field === "babySeatFee" || field === "childSeatFee" ? (categoryId === "child_seat" ? SEK_BASE[field] * 0.5 : 0) : SEK_BASE[field] * lift;
+    const lifted = field === "babySeatFee" || field === "childSeatFee" ? SEK_BASE[field] * (categoryId === "child_seat" ? 0.5 : 1) : SEK_BASE[field] * lift;
     price[field] = roundTo(lifted * factor * (airport && (field === "base" || field === "minimum") ? 1.3 : 1), step);
   }
   // Owner Q41: the free wait is also the no-show wait; default 5 min, XL 3 min (contract.json#configDefaults.freeWaitMin).
@@ -822,8 +821,6 @@ export function quoteRide(book: ZoneBook, input: QuoteInput): Quote {
   extra(`Waiting ${paidWait} min after ${price.freeWaitMin} free`, paidWait * price.waitPerMin);
   extra(`${input.stops} extra stop${input.stops === 1 ? "" : "s"}`, input.stops * price.extraStopFee);
   extra(`Waiting at stops ${input.stopWaitMin} min`, input.stopWaitMin * price.stopWaitPerMin);
-  // Owner decision 17 (contract.json#pricing.moneySplit): waiting at pickup and at stops goes 100 % to the driver, no commission.
-  const waitingMoney = Math.max(0, paidWait * price.waitPerMin) + Math.max(0, input.stopWaitMin * price.stopWaitPerMin);
   extra(`${input.babySeats} baby seat${input.babySeats === 1 ? "" : "s"}`, input.babySeats * price.babySeatFee);
   extra(`${input.childSeats} child seat${input.childSeats === 1 ? "" : "s"}`, input.childSeats * price.childSeatFee);
   if (input.airportPickup) extra("Airport pickup", book.fees.airportPickup, "fee");
@@ -845,7 +842,7 @@ export function quoteRide(book: ZoneBook, input: QuoteInput): Quote {
   const linesMinor = exact.reduce((sum, line) => sum + minor(line.amount), 0);
   if (linesMinor !== totalMinor) exact.push({ label: "Rounding", amount: (totalMinor - linesMinor) / unit, kind: "rounding" });
   const commission = (book.commission[input.categoryId] ?? 0) / 100;
-  const driverMinor = Math.min(totalMinor, minor((beforeFee - waitingMoney) * (1 - commission)) + minor(paidWait * price.waitPerMin) + minor(input.stopWaitMin * price.stopWaitPerMin));
+  const driverMinor = Math.min(totalMinor, minor(beforeFee * (1 - commission)));
   return { lines: exact, total: totalMinor / unit, appFee: minor(appFee) / unit, driverGets: driverMinor / unit, moveraGets: (totalMinor - driverMinor) / unit };
 }
 

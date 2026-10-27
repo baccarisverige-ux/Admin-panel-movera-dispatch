@@ -1,4 +1,4 @@
-import { DEFAULT_MARKET, MARKETS, isMarketId, marketOfZone, marketZoneIds, parseZoneList, type MarketId } from "./markets.ts";
+import { DEFAULT_MARKET, MARKETS, isMarketId, isStandardZone, marketOfZone, marketZoneIds, parseZoneList, type MarketId } from "./markets.ts";
 
 /** The part of an agent's access that decides which countries and zones they can open. */
 export type ScopeAccess = {
@@ -15,6 +15,8 @@ export function countryAllowed(access: ScopeAccess, id: MarketId): boolean {
 
 export function zoneAllowed(access: ScopeAccess, zoneId: string): boolean {
   const owner = marketOfZone(zoneId);
+  // v0.8.0 (owner 2026-10-27): any admin of a country may work on its Standard.
+  if (isStandardZone(zoneId)) return Boolean(owner) && countryAllowed(access, owner!.id);
   if (access.countries && (!owner || !access.countries.includes(owner.id))) return false;
   return access.zones === "all" || access.zones.includes(zoneId);
 }
@@ -22,6 +24,9 @@ export function zoneAllowed(access: ScopeAccess, zoneId: string): boolean {
 export function allowedCountries(access: ScopeAccess): MarketId[] {
   return MARKETS.map((item) => item.id).filter((id) => countryAllowed(access, id));
 }
+
+/** In the `scope` URL value: every zone of the country (with a Standard named beside it). */
+export const ALL_ZONES = "all";
 
 export type ResolvedScope = {
   country: MarketId;
@@ -40,7 +45,12 @@ export type ResolvedScope = {
 export function resolveScope(access: ScopeAccess, input: { country?: string | null; scope?: string | null; remembered?: string | null }): ResolvedScope {
   const allowed = allowedCountries(access);
   const fallback = allowed[0] ?? DEFAULT_MARKET;
-  const zones = parseZoneList(input.scope);
+  const listed = parseZoneList(input.scope);
+  // "all" with a Standard: every zone of the country and its Standard (owner 2026-10-27).
+  const wantsAll = listed.includes(ALL_ZONES);
+  const named = listed.filter((zone) => zone !== ALL_ZONES);
+  const owner = named.map((zone) => marketOfZone(zone)?.id).find(isMarketId);
+  const zones = wantsAll && owner ? [...named, ...marketZoneIds(owner).filter((zone) => zoneAllowed(access, zone) && !named.includes(zone))] : named;
   const fromZones = zones.map((zone) => marketOfZone(zone)?.id).find(isMarketId);
   const pick = (value: string | null | undefined) => (isMarketId(value) && allowed.includes(value) ? value : null);
   const country = fromZones ?? pick(input.country) ?? pick(input.remembered) ?? fallback;
@@ -52,4 +62,15 @@ export function resolveScope(access: ScopeAccess, input: { country?: string | nu
   if (!allowed.includes(country)) return { country, zones: [], effective: ["__scope-denied__"], denied: true };
   const effective = marketZoneIds(country).filter((zone) => zoneAllowed(access, zone));
   return { country, zones: [], effective, denied: false };
+}
+
+/**
+ * Owner 2026-10-27: what a publish in Settings, Pricing or Dispatch applies to: exactly the zones chosen at
+ * the top (each country's Standard only when it is chosen there); "All zones" is every zone the admin may
+ * work in, without the Standard.
+ */
+export function publishTargets(scope: Pick<ResolvedScope, "zones" | "effective" | "denied">): string[] {
+  if (scope.denied) return [];
+  if (scope.zones.length) return [...scope.zones];
+  return Array.isArray(scope.effective) ? [...scope.effective] : [scope.effective];
 }

@@ -62,9 +62,6 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.invitationCancel", label: "Cancel a fleet invitation", reason: false, permission: "drivers.activate" },
   { id: "admin.server.vehicleReview", label: "Decide a vehicle", reason: false, permission: "vehicles.edit" },
   { id: "admin.server.tripRefund", label: "Refund a trip", reason: false, permission: "payments.refund" },
-  { id: "admin.server.tripNoShow", label: "Mark a trip no-show", reason: false, permission: "trips.intervene" },
-  { id: "admin.server.pricingSave", label: "Save zone prices as a draft", reason: false, permission: "settings.edit" },
-  { id: "admin.server.pricingPublish", label: "Publish zone prices", reason: false, permission: "settings.publish" },
   { id: "admin.server.vehicleDocuments", label: "Show vehicle documents", reason: false, permission: "drivers.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },
   // The id is kept for older audit rows; the demo amount is above the default 500 kr second-admin limit.
@@ -72,6 +69,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.config.save", label: "Save configuration draft", reason: false, permission: "settings.edit" },
   { id: "admin.refundPolicy.save", label: "Save refund second-admin limits", reason: true, permission: "settings.publish" },
   { id: "admin.config.publish", label: "Publish configuration", reason: true, permission: "settings.publish" },
+  { id: "admin.config.useStandard", label: "Go back to Standard", reason: true, permission: "settings.publish" },
   { id: "admin.config.approve", label: "Approve configuration", reason: true, permission: "settings.publish" },
   { id: "admin.config.review", label: "Send configuration for approval", reason: true, permission: "settings.edit" },
   { id: "admin.config.rollback", label: "Roll back configuration", reason: true, permission: "settings.publish" },
@@ -223,6 +221,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.safety.contact", label: "Log contact attempt", reason: true, permission: "safety.edit" },
   { id: "admin.safety.take", label: "Take incident", reason: true, permission: "safety.edit" },
   { id: "admin.safety.resolve", label: "Resolve incident", reason: true, permission: "safety.edit" },
+  { id: "admin.safety.dismiss", label: "Mark incident as false alarm", reason: true, permission: "safety.edit" },
   { id: "admin.support.assign", label: "Assign support ticket", reason: true, permission: "support.reply" },
   { id: "admin.support.draft", label: "Save private draft", reason: false, permission: "support.reply" },
   { id: "admin.support.metadata", label: "Update ticket metadata", reason: true, permission: "support.reply" },
@@ -420,6 +419,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.trip.settings", label: "Save trip settings", reason: true, permission: "team.read" },
   { id: "admin.trip.saveView", label: "Save a trips view", reason: false, permission: "trips.read" },
   { id: "admin.incident.view", label: "Incidents view", reason: false, permission: "incidents.read" },
+  { id: "admin.alarm.sound", label: "Turn on alarm sound", reason: false, permission: "overview.read" },
   { id: "admin.incident.level", label: "Change an incident level", reason: true, permission: "safety.edit" },
   { id: "admin.incident.call", label: "Log a call from an incident", reason: false, permission: "safety.edit" },
   { id: "admin.incident.settings", label: "Save incident settings", reason: true, permission: "safety.edit" },
@@ -505,6 +505,7 @@ const ALLOWED_STATES: Record<string, readonly string[]> = {
   "admin.safety.take": ["queued"],
   "admin.safety.contact": ["taken"],
   "admin.safety.resolve": ["taken"],
+  "admin.safety.dismiss": ["queued", "taken"],
   // Trip lifecycle commands: allowed states come from the shared transition table (trips/rules.ts → contract.json).
   "admin.trip.cancel": CANCEL_OK,
   "admin.trip.offer": OFFER_OK,
@@ -539,6 +540,7 @@ const ALLOWED_STATES: Record<string, readonly string[]> = {
 
 const DESTRUCTIVE = new Set([
   "admin.shell.reset",
+  "admin.config.useStandard",
   "admin.config.publish",
   "admin.config.rollback",
   "admin.content.publish",

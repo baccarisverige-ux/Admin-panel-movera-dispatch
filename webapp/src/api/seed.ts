@@ -51,6 +51,16 @@ export type DemoRecord = {
   orgNumber?: string;
   ownerId?: string;
   joinedAt?: string;
+  /** Incidents (live, contract v0.7.0): who raised it, the phone's GPS, the car's position, the escalation. */
+  raisedBy?: "rider" | "driver" | "system";
+  phoneLat?: number;
+  phoneLng?: number;
+  phoneAt?: string | null;
+  carLat?: number;
+  carLng?: number;
+  carAt?: string | null;
+  escalatedAt?: string | null;
+  version?: number;
 };
 
 /** A trip row: a DemoRecord whose status is a contract TripStatus. */

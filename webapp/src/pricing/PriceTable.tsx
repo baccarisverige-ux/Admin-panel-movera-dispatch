@@ -8,8 +8,8 @@ type Props = {
   zoneName: string;
   currency: MarketId;
   categories: CategoryDef[];
-  book: Pick<ZoneBook, "prices">;
-  published: Pick<ZoneBook, "prices">;
+  book: ZoneBook;
+  published: ZoneBook;
   problems: Problem[];
   canEdit: boolean;
   onChange: (categoryId: string, patch: Partial<CategoryPrice>) => void;
@@ -53,7 +53,7 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
           {groups.map((group) => (
             <Fragment key={group}>
               <tr className="group-row">
-                <th scope="rowgroup" colSpan={categories.length + 1}>{trx(group)}</th>
+                <th scope="rowgroup" colSpan={categories.length + 1}>{group}</th>
               </tr>
               {group === "Cancellation" ? (
                 <tr className="note-row">

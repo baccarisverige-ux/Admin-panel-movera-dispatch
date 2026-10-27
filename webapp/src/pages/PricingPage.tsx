@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { PublishTargetsLine, StandardBar, UsesStandardChip } from "../live/StandardBar";
 import { useNavigate, useSearchParams } from "react-router";
 import {
   AlertTriangle,
@@ -25,7 +27,8 @@ import { supplyDemand } from "../dashboard/insights";
 import { liveDrivers } from "../dashboard/live";
 import { rideRequests } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
-import { zoneById } from "../markets/markets";
+import { standardZone, standardZoneId, zoneById } from "../markets/markets";
+import { publishTargets } from "../markets/scope";
 import { useMarketScope } from "../markets/useMarketScope";
 import { CategoryManager } from "../pricing/CategoryManager";
 import { CommissionPanel } from "../pricing/CommissionPanel";
@@ -99,7 +102,8 @@ export function PricingPage() {
   const { agent } = useSession();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const { market, country, zones: scopedZones } = useMarketScope();
+  const topScope = useMarketScope();
+  const { market, country, zones: scopedZones } = topScope;
   const role = agent?.role ?? "viewer";
   const canPublish = can(role, "settings.publish");
   const slice = useSlice<unknown>(SLICE_KEY, emptyPricingStore());
@@ -117,10 +121,17 @@ export function PricingPage() {
   const now = useNow(15_000);
   const minute = Math.floor(now / 60_000) * 60_000;
 
-  const zones = market.zones.filter((zone) => !agent || canUseZone(agent, zone.id));
+  // v0.8.0 (owner 2026-10-27): the live panel edits each country's Standard like a zone.
+  const liveSession = useLiveSessionMaybe();
+  const ownZones = market.zones.filter((zone) => !agent || canUseZone(agent, zone.id));
+  // Owner 2026-10-27: in the live panel only the zones chosen at the top (and the Standard when chosen).
+  const targets = new Set(publishTargets(topScope));
+  const zones = liveSession
+    ? [...(targets.has(standardZoneId(country)) ? [standardZone(country)] : []), ...ownZones.filter((zone) => targets.has(zone.id))]
+    : ownZones;
   const requested = params.get("zone");
   const zoneId = zones.find((zone) => zone.id === requested)?.id ?? (scopedZones.length === 1 && zones.some((zone) => zone.id === scopedZones[0]) ? scopedZones[0] : zones[0]?.id ?? "Z001");
-  const zone = market.zones.find((item) => item.id === zoneId);
+  const zone = zones.find((item) => item.id === zoneId);
   const tab: Tab = TABS.find((item) => item.id === params.get("tab"))?.id ?? "prices";
   const currency = currencyOf(zoneId);
 
@@ -146,7 +157,7 @@ export function PricingPage() {
   const at = new Date(now).toISOString();
   const publish = agent ? publishZones(store, drafts, agent.id, "Pricing update", at) : { store, error: "Sign in again.", changes: [] };
   const undo = agent ? undoLastPublish(store, agent.id, at) : { store, error: "Sign in again." };
-  const countryZoneIds = zones.map((item) => item.id);
+  const countryZoneIds = ownZones.map((item) => item.id);
   const stopAll = agent ? stopManualSurges(store, countryZoneIds, agent.id, "Stop all surges", at) : { store, error: "Sign in again.", stopped: [] };
   const lastRevision = store.history.find((item) => item.zoneIds.includes(zoneId));
 
@@ -221,10 +232,13 @@ export function PricingPage() {
               <span>{item.name}</span>
               {surge && surge.multiplier > 1 ? <b>×{surge.multiplier.toFixed(1)}</b> : null}
               {hasDraft ? <em title={tr("Unpublished changes")}>{tr("edited")}</em> : null}
+              {liveSession ? <UsesStandardChip doc="pricing" zoneId={item.id} /> : null}
             </button>
           );
         })}
       </nav>
+
+      {liveSession ? <StandardBar doc="pricing" docs={["pricing"]} zoneId={zoneId} zoneName={zone?.name ?? zoneId} country={country} countryName={market.name} canEdit={canPublish} /> : null}
 
       <section className="pricing-actions" aria-label={tr("Quick actions")}>
         <button data-command="admin.pricing.startSurge" type="button" className="quick-tile surge" disabled={!canPublish} onClick={() => { go({ tab: "surge" }); window.setTimeout(() => document.getElementById("manual-title")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80); }}>
@@ -397,7 +411,7 @@ export function PricingPage() {
             <small>{fieldErrors.first ?? (dirtyProblems.length ? dirtyProblems[0].message : tr("{0} change{1} · riders see them after you publish", [publish.changes.length, publish.changes.length === 1 ? "" : "s"]))}</small>
           </div>
           <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice("Changes discarded."); }}>{tr("Discard")}</button>
-          <CommandButton command="admin.pricing.publish" className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(`Published as pricing revision ${publish.store.draftRev}.`); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
+          <CommandButton command="admin.pricing.publish" summary={liveSession ? <PublishTargetsLine zoneIds={dirty.map((draft) => draft.zoneId)} /> : undefined} className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(`Published as pricing revision ${publish.store.draftRev}.`); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
         </div>
       ) : null}
 

@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "../api/httpClient";
-import { NotFoundRecord } from "../ui/NotFoundRecord";
-import { NoAccess } from "../ui/kit";
+import { useRecords } from "../api/hooks";
 import { tr, trn, type MessageKey } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
-import { fullName, placeLabel } from "./format";
-import { DateText, DecisionDialog, ErrorLine, Field, Status, isVersionMismatch } from "./ui";
-import { REVIEW_ACTIONS, VehicleReviewButtons, type ReviewDecision } from "./VehicleReview";
+import { fullName } from "./format";
+import { DateText, DecisionDialog, ErrorLine, Status, isVersionMismatch } from "./ui";
+import { useLiveSessionMaybe } from "./LiveSessionContext";
 import type { Fleet, FleetDriver, FleetInvitation, FleetView } from "./types";
 
 const STALE: MessageKey = "Someone else changed this record. It was reloaded; check it and try again.";
@@ -26,16 +25,23 @@ function InvitationWho({ invitation }: { invitation: FleetInvitation }) {
 }
 
 /**
- * GET /api/v1/admin/fleets/{fleetId} → FleetView: the company, its owner, the join code (after approval), Approve /
- * Reject / Block, New code, the pending invitations (Accept / Cancel, CONTRACT.md §14 "Joining is an invitation"),
- * the linked drivers (Remove from fleet) and the cars (Approve / Reject / Block).
+ * Live builds only, on the demo fleet owner page: the owner's fleet from GET /admin/fleets/{fleetId} with the join
+ * code (Copy, New code), the pending invitations (Accept, Cancel; an expired one says so) and the linked drivers
+ * (Remove from fleet). The demo page above keeps its own look.
  */
-export function LiveFleetDetailPage() {
-  const { ownerId: fleetId = "" } = useParams();
+export function LiveFleetPanel({ ownerId }: { ownerId: string }) {
+  const live = useLiveSessionMaybe();
+  const fleets = useRecords("fleets", null);
+  if (!live) return null;
+  const fleetId = (fleets.data ?? []).find((row) => row.ownerId === ownerId)?.id;
+  if (!fleetId) return null;
+  return <Panel fleetId={fleetId} />;
+}
+
+function Panel({ fleetId }: { fleetId: string }) {
   const { client, can } = useLiveSession();
   const queryClient = useQueryClient();
   const key = ["live", "fleet", fleetId];
-  const [review, setReview] = useState<(typeof REVIEW_ACTIONS)[number] | null>(null);
   const [newCode, setNewCode] = useState(false);
   const [removing, setRemoving] = useState<FleetDriver | null>(null);
   const [deciding, setDeciding] = useState<InvitationDecision | null>(null);
@@ -57,12 +63,10 @@ export function LiveFleetDetailPage() {
     void queryClient.invalidateQueries({ queryKey: ["live", "fleets"] });
   };
 
-  if (!can("drivers.read")) return <NoAccess />;
   if (query.isLoading) return <p className="state-line">{tr("Loading fleet.")}</p>;
-  if (query.error instanceof ApiError && query.error.status === 404) return <NotFoundRecord kind="Fleet" list="/fleets" listLabel="Fleet owners" />;
   if (query.error || !query.data) return <ErrorLine error={query.error ?? new Error(tr("Something failed."))} onRetry={() => void query.refetch()} />;
 
-  const { fleet, drivers, vehicles } = query.data;
+  const { fleet, drivers } = query.data;
   const invitations = (query.data.invitations ?? []).filter((item) => item.status === "pending");
   const mayAct = can("drivers.activate");
 
@@ -79,41 +83,8 @@ export function LiveFleetDetailPage() {
 
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <p className="crumb"><Link to="/fleets">{tr("Fleet owners")}</Link> · {fleet.fleetId}</p>
-          <h2>{fleet.name}</h2>
-          <p><Status code={fleet.status} /> · {placeLabel(fleet.country, fleet.cityId)} · {trn("{0} drivers, {1} vehicles", fleet.driverCount, fleet.vehicleCount)}</p>
-        </div>
-        {mayAct ? (
-          <div className="actions">
-            {REVIEW_ACTIONS.filter((item) => item.to !== fleet.status).map((item) => (
-              <button key={item.to} data-command="admin.server.fleetReview" type="button" className={item.to === "approved" ? "primary-btn" : item.danger ? "secondary-btn live-danger-link" : "secondary-btn"} onClick={() => setReview(item)}>
-                {tr(item.label)}
-              </button>
-            ))}
-            {fleet.status === "approved" ? <button data-command="admin.server.fleetCode" type="button" className="secondary-btn" onClick={() => setNewCode(true)}>{tr("New code")}</button> : null}
-          </div>
-        ) : null}
-      </div>
       {notice ? <p className="state-line" role="status">{notice}</p> : null}
-
-      <div className="live-grid">
-        <section className="panel">
-          <h3>{tr("Company")}</h3>
-          <div className="live-fields">
-            <Field label={tr("Org. number")}>{fleet.orgNumber}</Field>
-            <Field label={tr("Address")}>{fleet.address}</Field>
-            <Field label={tr("Country / city")}>{placeLabel(fleet.country, fleet.cityId)}</Field>
-            <Field label={tr("Signed up")}><DateText value={fleet.createdAt} /></Field>
-            <Field label={tr("Version")}>{fleet.version}</Field>
-          </div>
-          <h3>{tr("Owner")}</h3>
-          <div className="live-fields">
-            <Field label={tr("Name")}><Link to={`/drivers/${encodeURIComponent(fleet.ownerDriverId)}`}>{fleet.ownerName}</Link></Field>
-            <Field label={tr("E-mail")}>{fleet.ownerEmail}</Field>
-          </div>
-        </section>
+      <div className="live-grid" data-testid="live-fleet">
         <section className="panel live-code-panel">
           <h3>{tr("Join code")}</h3>
           {fleet.code ? (
@@ -127,6 +98,7 @@ export function LiveFleetDetailPage() {
           ) : (
             <p className="state-line">{fleet.status === "approved" ? tr("No code yet.") : tr("The code is made when the fleet is approved.")}</p>
           )}
+          {mayAct && fleet.status === "approved" ? <div className="actions"><button data-command="admin.server.fleetCode" type="button" className="secondary-btn" onClick={() => setNewCode(true)}>{tr("New code")}</button></div> : null}
         </section>
       </div>
 
@@ -218,77 +190,6 @@ export function LiveFleetDetailPage() {
           </div>
         )}
       </section>
-
-      <section className="panel">
-        <div className="panel-title-row">
-          <h3>{tr("Vehicles")}</h3>
-          <p>{trn("{0} cars", vehicles.length)}</p>
-        </div>
-        {vehicles.length === 0 ? <p className="state-line">{tr("No cars yet.")}</p> : (
-          <div className="table-wrap">
-            <table className="live-table">
-              <thead>
-                <tr>
-                  <th>{tr("Vehicle")}</th>
-                  <th>{tr("Plate")}</th>
-                  <th>{tr("Seats")}</th>
-                  <th>{tr("Categories")}</th>
-                  <th>{tr("Status")}</th>
-                  <th>{tr("Driver")}</th>
-                  <th>{tr("Actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vehicles.map((vehicle) => (
-                  <tr key={vehicle.vehicleId} data-vehicle-id={vehicle.vehicleId}>
-                    <td><Link to={`/vehicles/${encodeURIComponent(vehicle.vehicleId)}`}>{vehicle.make} {vehicle.model} {vehicle.year}</Link> <span className="live-muted">{vehicle.color}</span></td>
-                    <td>{vehicle.plate}</td>
-                    <td>{vehicle.seats}</td>
-                    <td>{vehicle.categoryIds.join(", ") || "—"}</td>
-                    <td><Status code={vehicle.status} /></td>
-                    <td>{vehicle.driverId ? <>{vehicle.driverId}{vehicle.inUse ? <span className="chip">{tr("In use")}</span> : null}</> : "—"}</td>
-                    <td className="live-actions">
-                      <VehicleReviewButtons
-                        vehicle={vehicle}
-                        onStale={stale}
-                        onChanged={(next) => {
-                          queryClient.setQueryData<FleetView>(key, (current) => (current ? { ...current, vehicles: current.vehicles.map((item) => (item.vehicleId === next.vehicleId ? next : item)) } : current));
-                          setNotice(null);
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <DecisionDialog
-        open={Boolean(review)}
-        title={tr("Decide fleet")}
-        summary={review ? (
-          <>
-            {trn("{0}: {1} → {2}.", <strong>{fleet.name}</strong>, <Status code={fleet.status} />, <Status code={review.to} />)}
-            {review.to === "approved" ? <> {tr("The first approval makes the join code and lets drivers join.")}</> : null}
-            {review.to === "blocked" ? <> {tr("Blocking takes every linked driver offline and withdraws their offers.")}</> : null}
-          </>
-        ) : null}
-        confirmLabel={review ? tr(review.label) : ""}
-        note={review?.to === "blocked" ? "required" : "optional"}
-        danger={Boolean(review?.danger)}
-        onClose={() => setReview(null)}
-        onConfirm={async ({ note }) => {
-          if (!review) return;
-          try {
-            setFleet(await client.post<Fleet>(`/admin/fleets/${encodeURIComponent(fleet.fleetId)}/review`, { expectedVersion: fleet.version, decision: review.to as ReviewDecision, ...(note ? { note } : {}) }));
-          } catch (error) {
-            if (isVersionMismatch(error)) stale();
-            throw error;
-          }
-        }}
-      />
 
       <DecisionDialog
         open={newCode}

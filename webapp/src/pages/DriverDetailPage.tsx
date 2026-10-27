@@ -1,4 +1,5 @@
 import { logExport } from "../reports/activityLog";
+import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
 import { useEffect, useMemo, useState } from "react";
@@ -370,6 +371,7 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="documents" activeId={tab}>
+          <LiveDriverDocuments driverId={driver.id} />
           <div className="fd-section-head">
             <div>
               <h3>{tr("Documents")}</h3>

@@ -49,7 +49,7 @@
       },
       {
         "id": "xl",
-        "label": "Movera XL",
+        "label": "XL",
         "seats": 6,
         "sort": 5,
         "line": "Up to 6 seats"
@@ -63,7 +63,7 @@
       },
       {
         "id": "pet",
-        "label": "Movera Pet",
+        "label": "Pet",
         "seats": 4,
         "sort": 7,
         "line": "Your pet rides with you"

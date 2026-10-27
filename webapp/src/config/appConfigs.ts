@@ -239,6 +239,11 @@ function cancelFees(base: Common) {
   };
 }
 
+/** DriverAppConfig.cancelFees (v0.8.0): the tables plus the driver's share of a rider's cancel fee (Dispatch, per zone). */
+function driverCancelFees(base: Common) {
+  return { ...cancelFees(base), driverSharePct: base.zone.riderCancel.driverSharePct ?? 100 };
+}
+
 function rideCheck(base: Common, state: AppConfigState) {
   const rules = base.zone.rideCheck;
   return {
@@ -459,7 +464,7 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     },
     pickupPay: pickupPay(base),
     driverBonus: driverBonus(base),
-    cancelFees: cancelFees(base),
+    cancelFees: driverCancelFees(base),
     waiting: {
       freeWaitMin: wait.freeWaitMin, perMin: wait.perMin, noShowAfterMin: wait.noShowAfterMin, noShowFee: wait.noShowFee, ...share,
       byCategory: wait.byCategory,

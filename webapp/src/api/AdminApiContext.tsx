@@ -3,7 +3,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 import { createAdminApi, type AdminApi } from "./create";
 import { queryRetry } from "./commandFlow";
 
-const AdminApiContext = createContext<AdminApi | null>(null);
+export const AdminApiContext = createContext<AdminApi | null>(null);
 
 export function useAdminApi(): AdminApi {
   const api = useContext(AdminApiContext);

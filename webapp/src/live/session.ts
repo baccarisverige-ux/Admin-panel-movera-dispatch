@@ -191,6 +191,11 @@ export function createLiveClient(options: Options) {
       return json<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body), idempotencyKey: newKey() });
     },
 
+    /** PUT with a JSON body and a fresh Idempotency-Key (the config drafts, contract §6). */
+    put<T>(path: string, body: unknown): Promise<T> {
+      return json<T>(path, { method: "PUT", body: JSON.stringify(body), idempotencyKey: newKey() });
+    },
+
     async me(): Promise<AdminMe> {
       const me = await json<unknown>("/admin/auth/me");
       if (!isAdminMe(me)) throw new ApiError(0, "The server's /me payload is not an AdminMe.", { code: "internal", retryable: false });

@@ -44,7 +44,7 @@ import { PANEL_OPS_KEY, emptyPanelOps, normalizePanelOps, showInMenu, type Panel
 import { AlertsProvider, useAlertsData } from "../alerts/AlertsContext";
 import { AlertBell } from "../alerts/AlertBell";
 import { RideCheckBanner } from "../alerts/RideCheckBanner";
-import { MENU, MENU_GROUPS, isLivePage, type MenuItem, type NavIcon } from "../nav";
+import { MENU, MENU_GROUPS, type MenuItem, type NavIcon } from "../nav";
 import { CommandButton } from "../ui/CommandButton";
 import { useMarketScope } from "../markets/useMarketScope";
 import { MarketBar } from "./MarketBar";
@@ -117,7 +117,7 @@ function ShellInner({ page, children }: AppShellProps) {
   const panel = normalizePanelOps(useSlice<PanelOps>(PANEL_OPS_KEY, emptyPanelOps(), { enabled: Boolean(agent) }).value);
   const api = useAdminApi();
   // A live build lists only the pages that read the server; the demo pages stay reachable by address, marked "not live".
-  const visible = MENU.filter((item) => (!agent || can(agent.role, item.permission)) && showInMenu(item.id, agent?.role, panel) && (api.kind !== "http" || isLivePage(item.id)));
+  const visible = MENU.filter((item) => (!agent || can(agent.role, item.permission)) && showInMenu(item.id, agent?.role, panel));
   const groups = MENU_GROUPS.filter((group) => visible.some((item) => item.group === group));
   const env = api.kind === "http" ? "live" : import.meta.env.VITE_DATA || "demo";
   const scope = params.get("scope") ?? "";

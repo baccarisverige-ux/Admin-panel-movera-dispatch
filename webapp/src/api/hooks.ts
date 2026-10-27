@@ -5,7 +5,6 @@ import { canUseZone } from "../auth/permissions.ts";
 import { useSession } from "../auth/SessionContext.tsx";
 import { commandById } from "../commands/registry.ts";
 import { useAdminApi } from "./AdminApiContext.tsx";
-import { useSliceBridges } from "./sliceBridge.tsx";
 import type { CommandInput } from "./create.ts";
 import type { TripRecord } from "./seed.ts";
 import { useMarketScope } from "../markets/useMarketScope.ts";
@@ -35,7 +34,8 @@ function screenRevision(client: ReturnType<typeof useQueryClient>): number | und
 }
 
 /** `refetchMs` keeps live screens up to date by reloading on a timer. */
-export function useRecords(name: string, scope?: string | null, options: { refetchMs?: number } = {}) {
+/** `observe` watches the list without reading it again on mount (the live list bar beside a page that reads it). */
+export function useRecords(name: string, scope?: string | null, options: { refetchMs?: number; observe?: boolean } = {}) {
   const api = useAdminApi();
   const session = useSession();
   const resolved = useMarketScope(scope);
@@ -46,6 +46,7 @@ export function useRecords(name: string, scope?: string | null, options: { refet
     queryKey,
     queryFn: () => readTracked(api, queryKey, () => api.list(name, effectiveScope)),
     refetchInterval: options.refetchMs,
+    ...(options.observe ? { refetchOnMount: false, retryOnMount: false } : {}),
   });
   return { ...query, scopeDenied, effectiveScope };
 }
@@ -149,7 +150,6 @@ export function useCommands() {
   const retrySameKey = useRef(false);
   const [phase, setPhase] = useState<CommandPhase>("idle");
   const [message, setMessage] = useState("");
-  const bridges = useSliceBridges();
 
   /** Read again only what the command can have changed (C-18); the rest is moved to the new revision. */
   async function refresh(spec: ReturnType<typeof commandById>, extra: Partial<CommandInput>, expectedRev: number, rev: number | undefined) {
@@ -185,29 +185,6 @@ export function useCommands() {
       setPhase("rejected");
       setMessage("A reason is required.");
       return undefined;
-    }
-    // A bridged slice (live Pricing) is written by its bridge through the contract, not the demo command endpoint.
-    const bridge = extra.sliceKey ? bridges[extra.sliceKey] : undefined;
-    if (bridge) {
-      lock.current = true;
-      setGlobalCommandBusy(true);
-      setPhase("submitting");
-      setMessage("");
-      const idempotencyKey = extra.idempotencyKey ?? newIdempotencyKey(id);
-      try {
-        const written = await bridge.write(extra.value, { action: id, reason: extra.reason ?? "No person affected", targetId: extra.targetId ?? id, before: extra.before ?? "", after: extra.after ?? spec.label, idempotencyKey });
-        setPhase(written.status);
-        setMessage(written.message);
-        return { message: written.message, operationId: idempotencyKey, status: written.status, rev: 0 };
-      } catch (error) {
-        setPhase("rejected");
-        setMessage(error instanceof Error ? error.message : "Rejected");
-        return undefined;
-      } finally {
-        await client.invalidateQueries({ queryKey: bridge.queryKey });
-        lock.current = false;
-        setGlobalCommandBusy(false);
-      }
     }
     // Live mode (src/live): the server has no demo command endpoint. A screen-only command (menu, sign out, tabs,
     // close a dialog) runs in the browser; the live screens send their own requests with the bearer token.
@@ -330,9 +307,8 @@ export function useSlice<T>(key: string, fallback: T, options: { enabled?: boole
   const [params]=useSearchParams();
   const requested=params.get("scope");
   const scope=agent ? { ...agent.scope, zones: requested ? canUseZone(agent,requested) ? parseZoneList(requested) : ["__scope-denied__"] : agent.scope.zones } : undefined;
-  const bridge = useSliceBridges()[key];
-  const queryKey = bridge ? [...bridge.queryKey] : ["slice", key, agent?.id, JSON.stringify(scope)];
-  const query = useQuery({ queryKey, queryFn: bridge ? () => bridge.read() as Promise<T> : () => readTracked(api, queryKey, () => api.readSlice(key, fallback, agent && scope ? { actorId:agent.id,role:agent.role,scope } : undefined)), enabled:Boolean(agent) && options.enabled !== false });
+  const queryKey = ["slice", key, agent?.id, JSON.stringify(scope)];
+  const query = useQuery({ queryKey, queryFn: () => readTracked(api, queryKey, () => api.readSlice(key, fallback, agent && scope ? { actorId:agent.id,role:agent.role,scope } : undefined)), enabled:Boolean(agent) && options.enabled !== false });
   const command = useCommand(`admin.${key}.save`);
   return {
     value: query.data ?? fallback,

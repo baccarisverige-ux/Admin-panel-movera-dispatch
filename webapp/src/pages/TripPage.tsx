@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from "react-router";
+import { useLiveRefund } from "../live/LiveRefund";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useEffect, useMemo, useState } from "react";
@@ -96,6 +97,7 @@ export function TripPage() {
   const navigate = useNavigate();
   const { agent } = useSession();
   const role = agent?.role ?? "viewer";
+  const liveRefund = useLiveRefund(tripId);
   const trips = useTrips(null);
   const drivers = useDrivers(null);
   const vehicles = useRecords("vehicles", null);
@@ -560,6 +562,8 @@ export function TripPage() {
               <p data-testid="refund-block">{refundWhy ?? tr("Refund is allowed. The captured terminal payment can be returned.")}</p>
               {refundWhy ? (
                 <button data-command="admin.trip.refund" className="secondary-btn" type="button" disabled title={refundWhy}>{tr("Refund")}</button>
+              ) : liveRefund ? (
+                <button data-command="admin.trip.refund" className="secondary-btn" type="button" disabled={!can(role, "payments.refund")} onClick={liveRefund.open}>{tr("Refund")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.refund"
@@ -577,6 +581,7 @@ export function TripPage() {
             </div>
           </div>
         ) : null}
+        {liveRefund?.dialog}
       </Section>
 
       <Section id="history" title={tr("Who did what")} icon={<History size={16} />} wide>

@@ -1,5 +1,8 @@
 import { logExport } from "../reports/activityLog";
-import { isValidElement, useMemo, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { listQueryOf, setListQuery, type LiveListName } from "../live/liveLists";
+import { isValidElement, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table";
 import { statusLabel, statusPresentation } from "../domain/labels";
 import { toCsv } from "../reports/csv";
@@ -46,6 +49,8 @@ type DataTableProps = {
   state?: "ready" | "loading" | "error";
   onRetry?: () => void;
   onRow?: (index: number) => void;
+  /** Live builds: this box searches the server list instead (src/live/liveLists.ts); the demo searches its rows. */
+  serverSearch?: LiveListName;
 };
 
 function stableRows(rows: TableCell[][], rowIds?: string[]): Row[] {
@@ -66,19 +71,37 @@ function stableRows(rows: TableCell[][], rowIds?: string[]): Row[] {
   });
 }
 
-export function DataTable({ head, rows, rowIds, className, state = "ready", onRetry, onRow }: DataTableProps) {
+export function DataTable({ head, rows, rowIds, className, state = "ready", onRetry, onRow, serverSearch }: DataTableProps) {
   const { agent } = useSession();
+  const live = useLiveSessionMaybe();
+  const queryClient = useQueryClient();
+  const server = live && serverSearch ? serverSearch : null;
   const [query, setQuery] = useState("");
+  // A new page starts without a server search; then the box asks the server 400 ms after the last key (Enter: at once).
+  useEffect(() => {
+    if (server) setListQuery(server, { q: "", pages: 1 });
+  }, [server]);
+  useEffect(() => {
+    if (!server) return;
+    const timer = window.setTimeout(() => searchServer(query), 400);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- searchServer only reads server and query
+  }, [query, server]);
+  function searchServer(text: string) {
+    if (!server || listQueryOf(server).q === text.trim()) return;
+    setListQuery(server, { q: text.trim(), pages: 1 });
+    void queryClient.invalidateQueries({ queryKey: ["records"] });
+  }
   const [chips, setChips] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [menu, setMenu] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const data = useMemo<Row[]>(() => {
-    const needles = [query.trim().toLowerCase(), ...chips.map((chip) => chip.toLowerCase())].filter(Boolean);
+    const needles = [server ? "" : query.trim().toLowerCase(), ...chips.map((chip) => chip.toLowerCase())].filter(Boolean);
     return stableRows(rows, rowIds)
       .filter((row) => needles.every((needle) => row.text.some((cell) => cell.toLowerCase().includes(needle))));
-  }, [chips, query, rowIds, rows]);
+  }, [chips, query, rowIds, rows, server]);
 
   const columns = useMemo<ColumnDef<Row>[]>(
     () => head.map((column, index) => ({ id: column, header: column, accessorFn: (row) => row.text[index] ?? "" })),
@@ -119,6 +142,9 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
           onChange={(event) => {
             setQuery(event.target.value);
             setPage(0);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") searchServer(query);
           }}
         />
         <CommandButton command="admin.table.filter" className="secondary-btn" type="button" onDone={() => { if (query.trim()) { setChips((current) => [...current, query.trim()]); setQuery(""); } }}>{tr("Add filter")}</CommandButton>
