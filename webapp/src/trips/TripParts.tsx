@@ -1,3 +1,4 @@
+import { NotConnected } from "../live/NotConnected";
 import { useState, type ReactNode } from "react";
 import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { Link } from "react-router";
@@ -37,7 +38,32 @@ export function Section({ id, title, icon, aside, children, testId, wide = false
 
 /* ------------------------------------------------------------------ money */
 
+/** A live trip's money: only the server's lines; what it does not send reads "Not connected yet". */
+function LiveSplitView({ split, money }: { split: MoneySplit; money: (minor: number) => string }) {
+  const facts = split.live!;
+  const line = (label: string, value: number | null, testId?: string) => (
+    <div data-testid={testId}><dt>{label}</dt><dd>{value === null || !Number.isFinite(value) ? <NotConnected /> : money(value)}</dd></div>
+  );
+  return (
+    <div className="op-split" data-testid="trip-split-live">
+      {split.state === "estimate" ? <p className="dx-note">{tr("The trip is not finished. These numbers are an estimate from the price at booking.")}</p> : null}
+      <dl className="op-split-lines">
+        {line(tr("Trip price"), facts.fare, "split-fare")}
+        {line(tr("Movera commission"), facts.commission, "split-commission")}
+        {line(tr("Driver earnings"), facts.driverEarnings, "split-driver-earnings")}
+        {facts.pickupPay !== null ? line(tr("Driver pickup pay · paid by Movera"), facts.pickupPay, "split-pickup-pay") : null}
+        {facts.driverBonus !== null ? line(tr("Money added for the driver (paid by Movera)"), facts.driverBonus, "split-driver-bonus") : null}
+        {facts.walletApplied !== null ? line(tr("Paid from the wallet"), facts.walletApplied, "split-wallet") : null}
+        {facts.cashToCollect !== null ? line(tr("Cash to collect"), facts.cashToCollect, "split-cash") : null}
+        {line(tr("Tip (all to the driver)"), null, "split-tip")}
+        {line(tr("Promotion (paid by Movera)"), null, "split-promo")}
+      </dl>
+    </div>
+  );
+}
+
 export function SplitView({ split, money }: { split: MoneySplit; money: (minor: number) => string }) {
+  if (split.live) return <LiveSplitView split={split} money={money} />;
   if (split.state === "none") return <p className="dx-calm">{tr("No money moved on this trip.")}</p>;
   const pct = (value: number) => (split.riderPaid > 0 ? Math.max(0, Math.round((value / split.riderPaid) * 100)) : 0);
   return (
@@ -71,7 +97,15 @@ export function SplitView({ split, money }: { split: MoneySplit; money: (minor: 
 
 /* ------------------------------------------------------------------ chat and calls */
 
-export function ChatCalls({ chat, calls, revealed, allowed, reveal, country, riderName, driverName }: { chat: readonly ChatLine[]; calls: readonly CallLine[]; revealed: boolean; allowed: boolean; reveal: ReactNode; country: MarketId; riderName: string; driverName: string }) {
+export function ChatCalls({ chat, calls, revealed, allowed, reveal, country, riderName, driverName }: { chat: readonly ChatLine[] | null; calls: readonly CallLine[] | null; revealed: boolean; allowed: boolean; reveal: ReactNode; country: MarketId; riderName: string; driverName: string }) {
+  if (chat === null || calls === null) {
+    return (
+      <div className="op-chat-grid" data-testid="trip-chat-not-connected">
+        <div><h4 className="op-sub">{tr("Calls through Movera")}</h4><NotConnected block /></div>
+        <div><h4 className="op-sub">{tr("Messages in the app")}</h4><NotConnected block /></div>
+      </div>
+    );
+  }
   const time = (iso: string) => new Intl.DateTimeFormat(market(country).locale, { timeZone: market(country).timeZone, timeStyle: "short" }).format(new Date(iso));
   return (
     <div className="op-chat-grid">

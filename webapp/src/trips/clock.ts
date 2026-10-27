@@ -1,3 +1,5 @@
+import { liveCreatedAt } from "../live/realData.ts";
+
 /** When a demo trip started, from its id. Kept apart so the demo seed can use it without the rest of the trip code. */
 
 export function tripIndex(id: string): number {
@@ -6,6 +8,9 @@ export function tripIndex(id: string): number {
 }
 
 export function startedAt(id: string): string {
+  // Live build: when the server created the trip.
+  const live = liveCreatedAt(id);
+  if (live) return live;
   const index = tripIndex(id);
   const day = index % 14;
   const date = new Date(Date.UTC(2026, 9, 5, 6 + (index % 12), index % 60, 0));

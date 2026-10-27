@@ -6,7 +6,9 @@ import { CATEGORIES } from "../domain/contract.ts";
 import { cancelFeeAmount, cancelFeeDefaults, feeRow, type CancelFeeTable } from "../dispatch/cancelFees.ts";
 import { market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import type { ZoneBook } from "../pricing/zonePricing.ts";
-import { categoryOf, fareBreakdown, startedAt, timelineOf, tripIndex } from "./present.ts";
+import { categoryOf, fareBreakdown, startedAt, stopsOf, timelineOf, tripIndex } from "./present.ts";
+import { isLiveData, liveTripOf } from "../live/realData.ts";
+import type { LiveTripFacts } from "../api/seed.ts";
 
 /**
  * Everything about one trip, in one place: route, money, chat, calls, offers and admin work.
@@ -63,6 +65,14 @@ export type RouteStop = { kind: "pickup" | "stop" | "dropoff"; label: string; at
 export type TripRouteInfo = { stops: RouteStop[]; path: LatLng[]; approach: LatLng[]; km: number; minutes: number; center: LatLng };
 
 export function routeOf(trip: DemoRecord): TripRouteInfo {
+  const live = liveTripOf(trip);
+  if (live) {
+    // Live: the trip's own pickup, stops and drop-off; the line joins them. Distance and minutes are not on the trip.
+    const stops: RouteStop[] = stopsOf(trip).map((stop) => ({ kind: stop.kind, label: stop.label, at: [stop.lat, stop.lng] as LatLng }));
+    const path = stops.map((stop) => stop.at);
+    const center: LatLng = [path.reduce((sum, at) => sum + at[0], 0) / path.length, path.reduce((sum, at) => sum + at[1], 0) / path.length];
+    return { stops, path, approach: [], km: NaN, minutes: NaN, center };
+  }
   const index = tripIndex(trip.id);
   const country = countryOf(trip.zoneId);
   const zone = zoneById(trip.zoneId);
@@ -132,13 +142,50 @@ export type MoneySplit = {
   moveraKeeps: number;
   /** "Add money for driver" (Q16): paid by Movera from its commission, possibly beyond it; never by the rider. */
   driverBonus: number;
+  /** Live build: the server's money lines of the trip; numbers above that the server does not send are NaN. */
+  live?: LiveTripFacts;
 };
+
+const LIVE_ONBOARD = new Set(["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff", "requested", "searching", "offered"]);
+
+/** A live trip's split, only from the server's lines (fare, commission, driver earnings, pickup pay, bonus). */
+export function liveMoneySplit(trip: DemoRecord, facts: LiveTripFacts): MoneySplit {
+  const country = countryOf(trip.zoneId);
+  const charged = trip.status === "completed" || trip.status === "no_show" || (trip.status.startsWith("cancelled") && facts.fare > 0);
+  const state: MoneySplit["state"] = LIVE_ONBOARD.has(trip.status) ? "estimate" : charged ? (trip.status === "completed" ? "charged" : "cancel_fee") : "none";
+  const refunded = facts.paymentStatus === "refunded" ? facts.fare : facts.paymentStatus === "partially_refunded" ? NaN : 0;
+  const commission = facts.commission ?? NaN;
+  return {
+    country,
+    state,
+    price: facts.fare,
+    appFee: NaN,
+    ridePrice: facts.fare,
+    commissionPct: facts.commission !== null && facts.fare > 0 ? Math.round((facts.commission / facts.fare) * 100) : NaN,
+    commission,
+    promo: NaN,
+    tip: NaN,
+    refunded,
+    payChange: NaN,
+    vat: NaN,
+    vatRate: NaN,
+    fleetPct: NaN,
+    fleet: NaN,
+    riderPaid: facts.fare - refunded,
+    driverGets: facts.driverEarnings ?? NaN,
+    moveraKeeps: commission,
+    driverBonus: facts.driverBonus ?? 0,
+    live: facts,
+  };
+}
 
 /**
  * `liveCancelFees`: the zone's Live trips table from Dispatch › Rider cancel fees (the one place rider cancel fees are set).
  * Left out, the country's default table is used.
  */
 export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: boolean, entries: readonly Entry[], liveCancelFees?: CancelFeeTable, driverBonusMinor = 0): MoneySplit {
+  const live = liveTripOf(trip);
+  if (live) return liveMoneySplit(trip, live);
   const country = countryOf(trip.zoneId);
   const minor = market(country).minorUnits;
   const index = tripIndex(trip.id);
@@ -219,7 +266,9 @@ function plus(iso: string, seconds: number): string {
 }
 
 /** Messages sent through the Movera app between rider and driver. */
-export function chatOf(trip: DemoRecord): ChatLine[] {
+export function chatOf(trip: DemoRecord): ChatLine[] | null {
+  // Live: the server's trip chat is not read by the panel yet (null = "Not connected yet").
+  if (liveTripOf(trip) || isLiveData()) return null;
   if (!trip.driverId) return [];
   const accepted = reached(trip, "accepted");
   if (!accepted) return [];
@@ -235,7 +284,9 @@ export function chatOf(trip: DemoRecord): ChatLine[] {
 }
 
 /** Calls made through the Movera line. Numbers stay hidden from both sides; nothing is recorded. */
-export function callsOf(trip: DemoRecord): CallLine[] {
+export function callsOf(trip: DemoRecord): CallLine[] | null {
+  // Live: calls through Movera are not on the server (null = "Not connected yet").
+  if (liveTripOf(trip) || isLiveData()) return null;
   if (!trip.driverId) return [];
   const accepted = reached(trip, "accepted");
   if (!accepted) return [];
@@ -249,6 +300,8 @@ export function callsOf(trip: DemoRecord): CallLine[] {
 
 /** Drivers asked before one said yes. */
 export function offersOf(trip: DemoRecord, driverIds: readonly string[]): OfferLine[] {
+  // Live: the trip's offers come from GET /admin/trips/{id}/offers, never from the id.
+  if (liveTripOf(trip) || isLiveData()) return [];
   const asked = reached(trip, "searching") ?? reached(trip, "requested");
   if (!asked || !driverIds.length) return [];
   const index = tripIndex(trip.id);

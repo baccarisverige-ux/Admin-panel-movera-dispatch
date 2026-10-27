@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tr } from "../i18n/core.ts";
 
 /** ISO 4217 currencies of contract v0.3.0 (contract.json#currencies): exponent = minor-unit digits. */
 export const CURRENCIES = {
@@ -62,6 +63,8 @@ function separators(locale: string): { decimal: string; group: string } {
  * `compact` is for big totals on cards: whole units, and "12,3 k kr" style from 10 000 up.
  */
 export function formatMoney(value: Money, locale?: string, options: { grouping?: boolean; compact?: boolean } = {}): string {
+  // A live value without a source is NaN: it reads "Not connected yet", never a number (owner rule, part 3).
+  if (!Number.isFinite(value.amountMinor)) return tr("Not connected yet");
   const { exponent, symbol, locale: home } = CURRENCIES[value.currency];
   if (options.compact) {
     const major = value.amountMinor / 10 ** exponent;

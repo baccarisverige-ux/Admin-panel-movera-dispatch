@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN, fakeTripServer, signIn } from "./live-fake";
+import { ADMIN, COMPLETED_TRIP, fakeTripServer, signIn } from "./live-fake";
 
 /**
  * The live build's Trips area is the demo Trips list and trip page, fed by the faked server (e2e/live-fake.ts):
@@ -79,6 +79,32 @@ test("trip page: the demo trip page shows the server trip and its offers", async
   await expect.poll(() => state.calls.some((call) => call.path.startsWith("/api/v1/admin/trips/T2001/offers"))).toBe(true);
   await page.goto("/trips/NOPE");
   await expect(page.getByText(/not found/i).first()).toBeVisible();
+});
+
+test("trip page: places, stops, money lines and payment come from the server; nothing invented", async ({ page }) => {
+  await fakeTripServer(page, {
+    trips: [{ ...COMPLETED_TRIP, paymentMethod: "cash", stops: [{ address: "Odenplan 1", lat: 59.343, lng: 18.049 }], pickupPay: { amountMinor: 1500, currency: "SEK" } }],
+  });
+  await signIn(page);
+  await page.goto("/trips/T2001");
+  const stops = page.getByTestId("trip-stops");
+  await expect(stops).toContainText("Sergels torg 1, Stockholm");
+  await expect(stops).toContainText("Odenplan 1");
+  await expect(stops).toContainText("Arlanda Terminal 5");
+  await expect(stops.locator("li")).toHaveCount(3);
+  const split = page.getByTestId("trip-split-live");
+  await expect(split.getByTestId("split-fare")).toContainText("520,00 kr");
+  await expect(split.getByTestId("split-commission")).toContainText("104,00 kr");
+  await expect(split.getByTestId("split-driver-earnings")).toContainText("416,00 kr");
+  await expect(split.getByTestId("split-pickup-pay")).toContainText("15,00 kr");
+  await expect(split.getByTestId("split-tip")).toContainText("Not connected yet");
+  await expect(page.getByTestId("trip-fare-lines")).toContainText("310,00 kr");
+  await expect(page.getByTestId("trip-payment")).toContainText("Cash");
+  await expect(page.getByTestId("trip-pin")).toContainText("Not connected yet");
+  await expect(page.getByTestId("trip-chat-not-connected")).toBeVisible();
+  await expect(page.getByTestId("trip-route")).toContainText("Not connected yet");
+  await expect(page.getByText("Volvo XC40")).toHaveCount(0);
+  await expect(page.getByText("Drottninggatan 12")).toHaveCount(0);
 });
 
 test("refund: the demo Refund button opens the amount form; it validates, a double click sends one refund", async ({ page }) => {

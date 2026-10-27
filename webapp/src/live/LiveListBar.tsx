@@ -13,6 +13,8 @@ const STATUSES: Record<LiveListName, readonly string[]> = {
   fleets: ["pending", "approved", "rejected", "blocked"],
   vehicles: ["pending", "approved", "rejected", "blocked"],
   trips: TRIP_STATUSES,
+  riders: ["active", "suspended"],
+  payments: ["pending", "authorized", "captured", "failed", "refunded", "partially_refunded"],
 };
 
 /**

@@ -5261,6 +5261,21 @@ export const en = {
   "SOS and car-lost cases with Take, Solve and False alarm from the server; contact log, levels and calls are not connected yet.": "SOS and car-lost cases with Take, Solve and False alarm from the server; contact log, levels and calls are not connected yet.",
   "SOS and car-lost alerts from the server; the other alerts are not connected yet.": "SOS and car-lost alerts from the server; the other alerts are not connected yet.",
   "The rider is on board and the car sent no position for 30 min. Red with the repeating alarm until someone takes it in Incidents; it closes by itself when the car's position comes back.": "The rider is on board and the car sent no position for 30 min. Red with the repeating alarm until someone takes it in Incidents; it closes by itself when the car's position comes back.",
+  "Rated": "Rated",
+  "Stars": "Stars",
+  "Skipped": "Skipped",
+  "Paid from the wallet": "Paid from the wallet",
+  "Cash to collect": "Cash to collect",
+  "Messages in the app": "Messages in the app",
+  "Fare lines": "Fare lines",
+  "Extra stops": "Extra stops",
+  "Pickup fee": "Pickup fee",
+  "Raised to the minimum": "Raised to the minimum",
+  "Lowered to the maximum": "Lowered to the maximum",
+  "Waiting at stops": "Waiting at stops",
+  "Fixed route price": "Fixed route price",
+  "Unpaid fee from an earlier trip": "Unpaid fee from an earlier trip",
+  "Rider raised the price": "Rider raised the price",
 } as const;
 
 export type MessageKey = keyof typeof en;

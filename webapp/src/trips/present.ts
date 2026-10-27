@@ -7,6 +7,8 @@ import { market, marketOfZone } from "../markets/markets.ts";
 import { canAdjustFare, canComplete, canNoShow, canOffer, canReassign, canRefundTrip, canSetWaiting, cancelTrip, eligibleDrivers, type OfferDriver, type Trip } from "./rules.ts";
 import { STEP_MS, startedAt, tripIndex } from "./clock.ts";
 import { tr, uiLocale } from "../i18n/core.ts";
+import { NOT_CONNECTED_TEXT, isLiveData, liveDriverOf, liveRiderIdOf, liveTripOf } from "../live/realData.ts";
+import type { LivePlace } from "../api/seed.ts";
 
 export { startedAt, tripIndex };
 
@@ -46,13 +48,20 @@ export function zoneName(zoneId: string): string {
   return ZONES.find(([id]) => id === zoneId)?.[1] ?? zoneId;
 }
 
-export function categoryOf(id: string) {
+export type CategoryInfo = { id: string; label: string; seats: number | null };
+
+export function categoryOf(id: string): CategoryInfo {
+  // Live build: the trip's own category from the server (seats unknown for a category the panel does not know).
+  const live = liveTripOf({ id });
+  if (live) return CATEGORIES.find((item) => item.id === live.categoryId) ?? { id: live.categoryId, label: live.categoryId, seats: null };
   return CATEGORIES[tripIndex(id) % CATEGORIES.length];
 }
 
 export function paymentOf(trip: DemoRecord): PaymentState {
   const kind = trip.kind ?? "";
   if ((PAYMENT_STATES as readonly string[]).includes(kind)) return kind as PaymentState;
+  // Live: no payment state from the server yet means none was made.
+  if (liveTripOf(trip) || isLiveData()) return "pending";
   return PAYMENT_STATES[tripIndex(trip.id) % PAYMENT_STATES.length];
 }
 
@@ -68,7 +77,20 @@ export function zoneTimeLabel(iso: string, zoneId: string): string {
 
 export type StopPoint = { label: string; lat: number; lng: number; kind: "pickup" | "stop" | "dropoff" };
 
+/** A server place as a line: its address, else its coordinates. */
+export function placeText(place: LivePlace): string {
+  return place.address?.trim() || `${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}`;
+}
+
 export function stopsOf(trip: DemoRecord): StopPoint[] {
+  const live = liveTripOf(trip);
+  if (live) {
+    return [
+      { label: placeText(live.pickup), lat: live.pickup.lat, lng: live.pickup.lng, kind: "pickup" },
+      ...live.stops.map((stop): StopPoint => ({ label: placeText(stop), lat: stop.lat, lng: stop.lng, kind: "stop" })),
+      { label: placeText(live.dropoff), lat: live.dropoff.lat, lng: live.dropoff.lng, kind: "dropoff" },
+    ];
+  }
   const index = tripIndex(trip.id);
   const [lat, lng] = ZONE_CENTER[trip.zoneId] ?? [59.33, 18.06];
   const extra = index % 4;
@@ -103,6 +125,15 @@ function terminalBaseStatus(trip: DemoRecord): TripStatus {
 }
 
 export function timelineOf(trip: DemoRecord): { at: string; label: string; code: string }[] {
+  // Live: only the times the server sent (created, accepted, the last change), never steps 90 s apart.
+  const live = liveTripOf(trip);
+  if (live) {
+    const steps: { at: string; label: string; code: string }[] = [];
+    if (trip.createdAt) steps.push({ code: "requested", label: statusLabel("requested"), at: trip.createdAt });
+    if (trip.acceptedAt) steps.push({ code: "accepted", label: statusLabel("accepted"), at: trip.acceptedAt });
+    if (!steps.some((step) => step.code === trip.status)) steps.push({ code: trip.status, label: statusLabel(trip.status), at: live.updatedAt });
+    return steps;
+  }
   const start = Date.parse(startedAt(trip.id));
   let codes: readonly TripStatus[];
   if (ACTIVE_FLOW.includes(trip.status as TripStatus)) {
@@ -120,6 +151,11 @@ export function timelineOf(trip: DemoRecord): { at: string; label: string; code:
 }
 
 export function fareBreakdown(trip: DemoRecord) {
+  const live = liveTripOf(trip);
+  if (live) {
+    // Live: the trip's own fare lines; distance, minutes and rates are not on the trip (shown as not connected).
+    return { pickupOre: NaN, km: NaN, perKmOre: NaN, minutes: NaN, perMinOre: NaN, waitingMin: trip.waitingMin ?? NaN, waitingOre: NaN, minimumOre: NaN, appliedMin: false, ruleVersion: NOT_CONNECTED_TEXT, chargedOre: live.fare, lines: live.fareLines, live: true as const };
+  }
   const index = tripIndex(trip.id);
   const pickupOre = 3900 + (index % 5) * 100;
   const km = 2 + (index % 18);
@@ -142,10 +178,13 @@ export function fareBreakdown(trip: DemoRecord) {
     appliedMin: summed < minimumOre,
     ruleVersion: `price-${trip.zoneId}-v${(index % 3) + 1}`,
     chargedOre: trip.fareOre ?? Math.max(summed, minimumOre),
+    lines: [] as { code: string; amountMinor: number }[],
+    live: false as const,
   };
 }
 
-export function pinVerified(id: string): "Yes" | "No" {
+export function pinVerified(id: string): string {
+  if (liveTripOf({ id }) || isLiveData()) return tr(NOT_CONNECTED_TEXT);
   return tripIndex(id) % 2 === 0 ? "Yes" : "No";
 }
 
@@ -156,6 +195,9 @@ export function pinVerified(id: string): "Yes" | "No" {
 export function ratingLabel(trip: DemoRecord): string {
   const endedEarly = trip.status === "cancelled_by_rider" && (RIDER_ONBOARD_STATUSES as readonly string[]).includes(trip.previousStatus ?? "");
   if (!ratingAllowed("rider", trip.status, endedEarly ? "end_early" : undefined)) return tr("Not rated yet");
+  const live = liveTripOf(trip);
+  if (live) return live.ratingStatus === "rated" ? `${tr("Rated")} · ${tr("Stars")}: ${tr(NOT_CONNECTED_TEXT)}` : live.ratingStatus === "skipped" ? tr("Skipped") : tr("Not rated yet");
+  if (isLiveData()) return tr(NOT_CONNECTED_TEXT);
   return `${3 + (tripIndex(trip.id) % 3)} of 5`;
 }
 
@@ -171,12 +213,15 @@ export function cancelledBy(status: string): string {
 export function cancelReason(trip: DemoRecord): string {
   if (trip.notes) return trip.notes;
   if (trip.status.startsWith("cancelled") || trip.status === "no_show") {
+    if (liveTripOf(trip) || isLiveData()) return (trip as TripRecord).cancelReasonCode ?? tr(NOT_CONNECTED_TEXT);
     return ["Rider changed plans", "Could not reach the pickup", "Safety review", "Rider did not arrive"][tripIndex(trip.id) % 4];
   }
   return tr("Not cancelled");
 }
 
 export function riderIdFor(trip: DemoRecord): string {
+  const live = trip.liveTrip ? trip.tripId ?? null : liveRiderIdOf(trip.id);
+  if (live) return live;
   return `R${String((tripIndex(trip.id) % 250) + 1).padStart(4, "0")}`;
 }
 
@@ -184,7 +229,7 @@ export function asTrip(trip: DemoRecord | TripRecord): Trip {
   return {
     id: trip.id,
     status: trip.status as TripStatus,
-    category: categoryOf(trip.id).id,
+    category: categoryOf(trip.id).id as Trip["category"],
     fareOre: trip.fareOre ?? 0,
     ruleVersion: fareBreakdown(trip).ruleVersion,
     driverId: trip.driverId ?? null,
@@ -231,7 +276,8 @@ export function refundBlock(payment: PaymentState, status = "completed"): string
   return null;
 }
 
-export function waybill(trip: DemoRecord, driverName: string, plate: string) {
+export function waybill(trip: DemoRecord, driverName: string, plate: string, vehicleName = "") {
+  const live = liveTripOf(trip);
   const stops = stopsOf(trip);
   const category = categoryOf(trip.id);
   return {
@@ -243,11 +289,11 @@ export function waybill(trip: DemoRecord, driverName: string, plate: string) {
     riderName: trip.name,
     pickup: stops[0]?.label ?? "",
     dropoff: stops[stops.length - 1]?.label ?? "",
-    source: ["Rider app", "Reservation", "Airport desk", "Street hail"][tripIndex(trip.id) % 4],
+    source: live ? (live.kind === "scheduled" ? "Reservation" : "Rider app") : ["Rider app", "Reservation", "Airport desk", "Street hail"][tripIndex(trip.id) % 4],
     driverName: driverName || "Unassigned",
-    vehicle: plate ? "Volvo XC40" : "Unassigned",
+    vehicle: plate ? (live ? vehicleName || tr(NOT_CONNECTED_TEXT) : "Volvo XC40") : "Unassigned",
     plate: plate || "Unassigned",
-    seats: String(category.seats),
+    seats: category.seats === null ? tr(NOT_CONNECTED_TEXT) : String(category.seats),
   };
 }
 
@@ -344,7 +390,19 @@ export function projectMarker(lat: number, lng: number): { left: string; top: st
 
 const ACTIVE = new Set(["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"]);
 
+/** Live build: only drivers with a server position; no trip, queue or boost markers without a source. */
+function serverMarkers(drivers: readonly DemoRecord[]): LiveMarker[] {
+  return drivers.flatMap((driver) => {
+    const live = liveDriverOf(driver);
+    if (!live?.location) return [];
+    const { lat, lng } = live.location;
+    const stale = live.stale === true;
+    return [{ id: driver.id, kind: "driver" as const, name: driver.name, lat, lng, stale, lastSeen: live.lastFixAt ?? live.location.measuredAt, href: `/drivers/${driver.id}`, onMap: insideFrame(lat, lng) }];
+  });
+}
+
 export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecord[]): LiveMarker[] {
+  if (isLiveData()) return serverMarkers(drivers);
   const driverMarks: LiveMarker[] = drivers.map((driver, index) => {
     const stale = index % 5 === 3;
     const [baseLat, baseLng] = ZONE_CENTER[driver.zoneId] ?? [59.33, 18.06];
@@ -430,6 +488,7 @@ export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly Demo
 }
 
 export function moveMarker(marker: LiveMarker, tick: number): LiveMarker {
+  if (isLiveData()) return marker;
   if (marker.stale || marker.kind !== "driver") return marker;
   const shift = Math.sin(tick / 2 + tripIndex(marker.id)) * 0.003;
   return { ...marker, lat: marker.lat + shift, lng: marker.lng + shift / 2 };

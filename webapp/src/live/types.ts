@@ -179,6 +179,11 @@ export type Trip = {
   driverEarnings?: LiveMoney;
   commission?: LiveMoney;
   driverBonus?: LiveMoney;
+  pickupPay?: LiveMoney;
+  walletApplied?: LiveMoney;
+  cashToCollect?: LiveMoney;
+  driverSilentAlert?: { at?: string; [key: string]: unknown };
+  ratingStatus?: string;
   paymentMethod: string;
   paymentStatus?: string;
   driver?: { driverId: string; firstName: string; vehicle?: { vehicleId?: string; make?: string; model?: string; color?: string; plate?: string } };
@@ -186,7 +191,57 @@ export type Trip = {
 };
 
 /** contract Offer (GET /admin/trips/{tripId}/offers). */
-export type TripOffer = { offerId: string; kind: string; status: string; expiresAt: string; fare: LiveMoney; driverEarnings?: LiveMoney; source?: string };
+export type TripOffer = { offerId: string; driverId?: string; kind: string; status: string; expiresAt: string; fare: LiveMoney; driverEarnings?: LiveMoney; driverBonus?: LiveMoney; priority?: boolean; groupId?: string; source?: string };
 
 /** contract Refund (201 of POST /admin/trips/{tripId}/refund). */
 export type Refund = { refundId: string; amount: LiveMoney; status: string; reason: string };
+
+/** GET /admin/live/drivers: drivers not offline, with the last position. */
+export type LiveDriverRow = {
+  driverId: string;
+  firstName: string;
+  onlineStatus: DriverOnlineStatus;
+  moving?: boolean;
+  location?: { lat: number; lng: number; measuredAt: string };
+  lastFixAt?: string;
+  stale: boolean;
+  activeTripId?: string;
+  tripStatus?: string;
+  vehicleId?: string;
+  plate?: string;
+  zoneId?: string;
+};
+export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string };
+
+/** GET /admin/trips/{tripId}/trace: the car's positions on the trip (kept 30 days). */
+export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; measuredAt: string }[]; keptUntil: string };
+
+/** GET /admin/riders (AdminRider). */
+export type Rider = {
+  riderId: string;
+  firstName: string;
+  phone: string;
+  email?: string;
+  rating?: number;
+  status: string;
+  version: number;
+  outstanding: LiveMoney | null;
+  wallet?: LiveMoney;
+  language?: string;
+  deletionRequestedAt?: string;
+};
+
+/** GET /admin/payments (PaymentIntent; the cash week adds cashCollected and walletApplied). */
+export type Payment = { paymentId: string; tripId: string; amount: LiveMoney; method: string; purpose: string; status: string; createdAt: string; cashCollected?: LiveMoney; walletApplied?: LiveMoney };
+
+/** GET /admin/refunds/payouts: refunds to send by hand (Swish/bank). */
+export type RefundPayout = { refundId: string; tripId?: string; amount: LiveMoney; status?: string; reason?: string; createdAt?: string; riderId: string; riderName: string; riderPhone: string; payoutTo: unknown; payoutStatus?: string };
+
+/** GET /admin/audit (AuditEntry). */
+export type AuditEntry = { auditId: string; at: string; actor: string; actorId: string; actorRole?: string; action: string; targetType: string; targetId: string; reason?: string; result: string; after?: Record<string, unknown>; requestId: string };
+
+/** GET /admin/approvals (Approval). */
+export type Approval = { approvalId: string; action: string; targetType: string; targetId: string; status: "pending_approval" | "approved" | "rejected" | "expired"; requestedBy: string; requestedAt: string; decidedBy?: string; decidedAt?: string; decisionNote?: string };
+
+/** GET /admin/trips/{tripId}/nearby-drivers. */
+export type NearbyDriver = { driverId: string; firstName: string; onlineStatus: string; moving?: boolean; location: { lat: number; lng: number; measuredAt: string }; distanceMeters: number; pickupEtaSeconds: number; zoneId?: string; categoryIds: string[]; openOfferId?: string };

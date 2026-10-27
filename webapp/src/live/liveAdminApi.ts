@@ -12,12 +12,15 @@ import { MARKETS } from "../markets/markets.ts";
 import type { AdminApi, CommandInput, CommandResult } from "../api/create.ts";
 import type { TripOffersView } from "../api/dispatchSim.ts";
 import { ApiError } from "../api/httpClient.ts";
-import type { DemoRecord } from "../api/seed.ts";
+import type { ApprovalRow, AuditRow, DemoRecord, LiveTripFacts } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
-import type { DocumentSummary, Driver, Fleet, Page, Trip, TripOffer, Vehicle } from "./types.ts";
+import type { Approval, AuditEntry, DocumentSummary, Driver, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
+import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
+import { zoneById } from "../markets/markets.ts";
+import { remember, setLiveData } from "./realData.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
@@ -72,16 +75,26 @@ export function docState(documents: readonly DocumentSummary[] = [], required: r
   return "approved";
 }
 
-export function driverRecord(driver: Driver): DemoRecord {
+export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
+  const location = live?.location ?? driver.location;
   return {
     id: driver.driverId,
     name: fullName(driver.firstName, driver.lastName),
     phone: "",
-    zoneId: driver.zoneIds[0] ?? "",
+    zoneId: live?.zoneId ?? driver.zoneIds[0] ?? "",
     status: driver.accountStatus,
     kind: docState(driver.documents, driver.requiredDocuments),
     fleetId: driver.fleet?.fleetId ?? null,
     ...(driver.email ? { email: driver.email } : {}),
+    live: true,
+    liveDriver: {
+      onlineStatus: live?.onlineStatus ?? driver.onlineStatus,
+      rating: typeof driver.rating === "number" ? driver.rating : null,
+      location: location ? { lat: location.lat, lng: location.lng, measuredAt: location.measuredAt } : null,
+      lastFixAt: live?.lastFixAt ?? driver.lastFixAt ?? null,
+      stale: live ? live.stale : null,
+      activeTripId: live?.activeTripId ?? null,
+    },
   };
 }
 
@@ -131,21 +144,138 @@ function paymentKind(status?: string): string | undefined {
   return status && ["pending", "authorized", "captured", "failed", "refunded"].includes(status) ? status : undefined;
 }
 
-export function tripRecord(trip: Trip): DemoRecord {
+const minorOf = (money?: LiveMoney | null): number | null => (money && Number.isFinite(money.amountMinor) ? money.amountMinor : null);
+
+/** The server's facts of a trip, kept whole on the record (owner rule, part 3: no page invents them). */
+export function tripFacts(trip: Trip): LiveTripFacts {
+  return {
+    kind: trip.kind,
+    categoryId: trip.categoryId,
+    paymentMethod: trip.paymentMethod,
+    paymentStatus: trip.paymentStatus ?? null,
+    currency: trip.fare.currency,
+    pickup: trip.pickup,
+    dropoff: trip.dropoff,
+    stops: trip.stops ?? [],
+    fare: trip.fare.amountMinor,
+    fareLines: (trip.fareLines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor })),
+    commission: minorOf(trip.commission),
+    driverEarnings: minorOf(trip.driverEarnings),
+    pickupPay: minorOf(trip.pickupPay),
+    driverBonus: minorOf(trip.driverBonus),
+    walletApplied: minorOf(trip.walletApplied),
+    cashToCollect: minorOf(trip.cashToCollect),
+    driverSilentAlert: trip.driverSilentAlert ?? null,
+    ratingStatus: trip.ratingStatus ?? null,
+    updatedAt: trip.updatedAt,
+  };
+}
+
+export function tripRecord(trip: Trip, rider?: Rider): DemoRecord {
   return {
     id: trip.tripId,
-    name: trip.riderId,
-    phone: "",
+    name: rider?.firstName || trip.riderId,
+    phone: rider?.phone ?? "",
     zoneId: trip.zoneId,
     status: trip.status,
     driverId: trip.driverId ?? null,
     fareOre: trip.fare.amountMinor,
     createdAt: trip.createdAt,
+    tripId: trip.riderId,
     ...(trip.acceptedAt ? { acceptedAt: trip.acceptedAt } : {}),
     ...(trip.scheduledAt ? { pickupAt: trip.scheduledAt } : {}),
     ...(paymentKind(trip.paymentStatus) ? { kind: paymentKind(trip.paymentStatus) } : {}),
     ...(trip.cancellation ? { cancelReasonCode: trip.cancellation.reasonCode } : {}),
+    version: trip.version,
+    live: true,
+    liveTrip: tripFacts(trip),
   } as DemoRecord;
+}
+
+/** A rider row: AdminRider. zoneId is empty, the server keeps no home zone for a rider. */
+export function riderRecord(rider: Rider): DemoRecord {
+  return {
+    id: rider.riderId,
+    name: rider.firstName,
+    phone: rider.phone,
+    zoneId: "",
+    status: rider.status,
+    version: rider.version,
+    ...(rider.email ? { email: rider.email } : {}),
+    live: true,
+    liveRider: {
+      rating: typeof rider.rating === "number" ? rider.rating : null,
+      walletMinor: minorOf(rider.wallet),
+      outstandingMinor: rider.outstanding ? rider.outstanding.amountMinor : null,
+      currency: rider.wallet?.currency ?? rider.outstanding?.currency ?? null,
+      deletionRequestedAt: rider.deletionRequestedAt ?? null,
+    },
+  };
+}
+
+/** A payment row: the trip's PaymentIntent. name is the method, as in the demo's "Card". */
+export function paymentRecord(payment: Payment, zoneId = ""): DemoRecord {
+  return { id: payment.paymentId, name: payment.method, phone: "", zoneId, status: payment.status, tripId: payment.tripId, fareOre: payment.amount.amountMinor, createdAt: payment.createdAt, kind: payment.method, live: true };
+}
+
+/** A refund to send by hand (Swish/bank): the rider and the amount. */
+export function refundPayoutRecord(row: RefundPayout): DemoRecord {
+  return { id: row.refundId, name: row.riderName, phone: row.riderPhone, zoneId: "", status: row.payoutStatus ?? "pending", tripId: row.tripId, fareOre: row.amount.amountMinor, ...(row.createdAt ? { createdAt: row.createdAt } : {}), notes: row.reason ?? "", live: true };
+}
+
+/** A nearby driver as the assign tool shows it; the rating is the server's or null (never invented). */
+export function nearbyRow(row: NearbyDriver, categoryId: string, rating: number | null): AssignNearbyDriver {
+  return {
+    driverId: row.driverId,
+    name: row.firstName,
+    onlineStatus: row.onlineStatus === "on_trip" ? "on_trip" : "online",
+    distanceMeters: row.distanceMeters,
+    pickupEtaSeconds: row.pickupEtaSeconds,
+    zoneId: row.zoneId ?? "",
+    zoneName: row.zoneId ? zoneById(row.zoneId)?.name ?? row.zoneId : "",
+    categoryIds: row.categoryIds,
+    categoryOk: !categoryId || row.categoryIds.includes(categoryId),
+    rating,
+    ...(row.openOfferId ? { openOfferId: row.openOfferId } : {}),
+  };
+}
+
+export function auditRow(entry: AuditEntry): AuditRow {
+  const after = entry.after ?? {};
+  const zone = typeof after["zoneId"] === "string" ? (after["zoneId"] as string) : "";
+  return {
+    id: entry.auditId,
+    operationId: entry.requestId,
+    at: entry.at,
+    actorId: entry.actorId,
+    action: entry.action,
+    targetId: entry.targetId,
+    scope: zone,
+    before: "",
+    after: Object.keys(after).length ? JSON.stringify(after) : "",
+    reason: entry.reason ?? "",
+    result: entry.result === "pending_approval" ? "pending_approval" : "committed",
+  };
+}
+
+const APPROVAL_STATUS: Record<Approval["status"], ApprovalRow["status"] | null> = { pending_approval: "pending", approved: "approved", rejected: "rejected", expired: null };
+
+/** An approval row. The server's Approval has no amount: amountOre is NaN, and the page shows "Not connected yet". */
+export function approvalRow(approval: Approval): ApprovalRow | null {
+  const status = APPROVAL_STATUS[approval.status];
+  if (!status) return null;
+  return {
+    id: approval.approvalId,
+    action: approval.action,
+    targetId: approval.targetId,
+    requestedBy: approval.requestedBy,
+    amountOre: Number.NaN,
+    reason: "",
+    status,
+    ...(approval.decidedBy ? { decidedBy: approval.decidedBy } : {}),
+    ...(approval.decidedAt ? { decidedAt: approval.decidedAt } : {}),
+    ...(approval.decisionNote ? { decisionReason: approval.decisionNote } : {}),
+  };
 }
 
 const STATUS_COMMANDS: Record<string, string> = {
@@ -161,7 +291,10 @@ const VEHICLE_COMMANDS: Record<string, string> = { "admin.vehicle.activate": "ap
 const INCIDENT_COMMANDS: Record<string, "take" | "resolve" | "dismiss"> = { "admin.safety.take": "take", "admin.safety.resolve": "resolve", "admin.safety.dismiss": "dismiss" };
 
 export function createLiveAdminApi(client: LiveClient): AdminApi {
+  setLiveData(true);
   const drivers = new Map<string, Driver>();
+  const riders = new Map<string, Rider>();
+  const presence = new Map<string, LiveDriverRow>();
   const vehicles = new Map<string, Vehicle>();
   const trips = new Map<string, Trip>();
   const incidents = new Map<string, ServerIncident>();
@@ -182,8 +315,40 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return new Map(fleets.map((fleet) => [fleet.fleetId, drivers.get(fleet.ownerDriverId)?.zoneIds[0] ?? ""]));
   }
 
+  async function readRiders(own = false): Promise<Rider[]> {
+    const rows = own ? await paged<Rider>(client, "riders", "/admin/riders") : await all<Rider>(client, "/admin/riders");
+    rows.forEach((row) => riders.set(row.riderId, row));
+    return rows;
+  }
+
+  /** GET /admin/live/drivers: who is online now, with the last position (drivers not offline). */
+  async function readPresence(): Promise<void> {
+    const answer = await client.json<LiveDriverList>("/admin/live/drivers");
+    presence.clear();
+    answer.items.forEach((row) => presence.set(row.driverId, row));
+  }
+
   async function list(name: string): Promise<DemoRecord[]> {
-    if (name === "drivers") return (await readDrivers(true)).map(driverRecord);
+    const rows = await listRaw(name);
+    remember(rows);
+    return rows;
+  }
+
+  async function listRaw(name: string): Promise<DemoRecord[]> {
+    if (name === "drivers") {
+      const rows = await readDrivers(true);
+      await readPresence().catch(() => undefined);
+      return rows.map((row) => driverRecord(row, presence.get(row.driverId)));
+    }
+    if (name === "riders") return (await readRiders(true)).map(riderRecord);
+    if (name === "payments") {
+      const rows = await paged<Payment>(client, "payments", "/admin/payments");
+      return rows.map((row) => paymentRecord(row, trips.get(row.tripId)?.zoneId ?? ""));
+    }
+    if (name === "refundPayouts") {
+      const answer = await client.json<Page<RefundPayout>>("/admin/refunds/payouts?payoutStatus=pending");
+      return answer.items.map(refundPayoutRecord);
+    }
     if (name === "vehicles") {
       const rows = await paged<Vehicle>(client, "vehicles", "/admin/vehicles");
       rows.forEach((row) => vehicles.set(row.vehicleId, row));
@@ -199,7 +364,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const rows = await paged<Trip>(client, "trips", "/admin/trips");
       rows.forEach((row) => trips.set(row.tripId, row));
       if (rows[0] && isCurrency(rows[0].fare.currency)) currency = rows[0].fare.currency;
-      return rows.map(tripRecord);
+      if (!riders.size) await readRiders().catch(() => []);
+      return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
     }
     if (name === "incidents") {
       const rows = await all<ServerIncident>(client, "/admin/incidents");
@@ -243,7 +409,21 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const answer = await client.post<{ status?: string }>(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
       return answer?.status === "pending" ? done("Waits for a second admin.", "pending_approval") : done("Refunded.");
     }
+    if (input.action === "admin.approval.approve" || input.action === "admin.approval.reject") {
+      const decision = input.action.endsWith("approve") ? "approve" : "reject";
+      await client.post(`/admin/approvals/${encodeURIComponent(input.targetId)}/${decision}`, { note: input.reason });
+      return done(decision === "approve" ? "Approved." : "Rejected.");
+    }
+    if (input.action === "admin.refund.markPaid") {
+      await client.post(`/admin/refunds/${encodeURIComponent(input.targetId)}/paid`, input.reason ? { note: input.reason } : {});
+      return done("Marked as paid.");
+    }
     throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+  }
+
+  function nameOf(driverId: string): string {
+    const driver = drivers.get(driverId);
+    return driver ? fullName(driver.firstName, driver.lastName) : driverId;
   }
 
   async function tripOffers(tripId: string): Promise<TripOffersView> {
@@ -257,8 +437,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       offers: page.items.map((offer) => ({
         offerId: offer.offerId,
         tripId,
-        driverId: "",
-        driverName: "",
+        driverId: offer.driverId ?? "",
+        driverName: offer.driverId ? nameOf(offer.driverId) : "",
         kind: offer.kind === "radar" ? "radar" : "assigned",
         status: offer.status,
         source: "admin",
@@ -268,9 +448,10 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         currency: tripCurrency,
         fareMinor: offer.fare.amountMinor,
         driverEarningsMinor: offer.driverEarnings?.amountMinor ?? 0,
-        driverBonusMinor: 0,
-        priority: false,
-        by: "",
+        driverBonusMinor: offer.driverBonus?.amountMinor ?? 0,
+        priority: Boolean(offer.priority),
+        ...(offer.groupId ? { groupId: offer.groupId } : {}),
+        by: offer.source ?? "",
       })),
       groups: [],
       bonusMinor: trip.driverBonus?.amountMinor ?? 0,
@@ -297,8 +478,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     search: async () => [],
     command,
     revision: async () => 0,
-    audit: async () => [],
-    approvals: async () => [],
+    audit: async () => (await all<AuditEntry>(client, "/admin/audit")).map(auditRow),
+    approvals: async () => (await all<Approval>(client, "/admin/approvals")).map(approvalRow).filter((row): row is ApprovalRow => row !== null),
     operation: async () => null,
     reset: async () => { throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false }); },
     getFault: async () => "none",
@@ -312,7 +493,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return bookFrom(incidents.values()) as typeof fallback;
     },
     tripOffers,
-    nearbyDrivers: async (_tripId, query) => ({ scope: query.scope, ...(query.radiusKm !== undefined ? { radiusKm: query.radiusKm } : {}), items: [] }),
+    nearbyDrivers: async (tripId, query) => {
+      const params = new URLSearchParams({ scope: query.scope, ...(query.radiusKm !== undefined ? { radiusKm: String(query.radiusKm) } : {}) });
+      const answer = await client.json<{ items: NearbyDriver[]; scope: typeof query.scope; radiusKm?: number }>(`/admin/trips/${encodeURIComponent(tripId)}/nearby-drivers?${params.toString()}`);
+      const trip = trips.get(tripId);
+      return { scope: answer.scope, ...(answer.radiusKm !== undefined ? { radiusKm: answer.radiusKm } : {}), items: answer.items.map((row) => nearbyRow(row, trip?.categoryId ?? "", drivers.get(row.driverId)?.rating ?? null)) };
+    },
     dispatchEvents: async () => ({ items: [], last: 0 }),
   };
 }
