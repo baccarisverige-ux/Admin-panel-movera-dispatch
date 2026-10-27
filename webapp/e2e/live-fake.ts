@@ -101,8 +101,33 @@ export const ARRIVED_TRIP = {
   ratingStatus: "none",
 };
 
+const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../../contracts/fixtures/config/${name}.json`, import.meta.url), "utf8"));
+
 /** The contract's sample pricing document (contracts/fixtures/config): no-show fee 65 kr in every category. */
-export const PRICING_DOCUMENT = JSON.parse(readFileSync(new URL("../../contracts/fixtures/config/pricing_document.json", import.meta.url), "utf8")) as { categories: Record<string, { waiting: { noShowFee: { amountMinor: number } } }> };
+export const PRICING_DOCUMENT = fixture("pricing_document") as { categories: Record<string, { waiting: { noShowFee: { amountMinor: number } } }> };
+
+type Doc = Record<string, unknown> & { categories?: Record<string, Record<string, unknown>> };
+/**
+ * The same document as contract v0.6.0 has it (branch pricing/v0.6): seat fees only on child_seat, which joins the
+ * seed with 15 kr seats. Built here because contracts/ is still the v0.5.6 copy.
+ */
+export function pricingV06(): Doc {
+  const doc = structuredClone(PRICING_DOCUMENT) as Doc;
+  for (const category of Object.values(doc.categories!)) {
+    delete category.babySeatFee;
+    delete category.childSeatFee;
+  }
+  doc.categories!.child_seat = { ...structuredClone(doc.categories!.economy!), base: SEK(3500), minimum: SEK(5900), babySeatFee: SEK(1500), childSeatFee: SEK(1500) };
+  return doc;
+}
+
+/** The contract's sample rider and driver app documents of Z001. */
+export const RIDER_DOCUMENT = fixture("rider_app_config") as Doc;
+export const DRIVER_DOCUMENT = fixture("driver_app_config") as Doc;
+
+export type ConfigName = "pricing" | "rider_app_config" | "driver_app_config";
+export type Draft = { version: number; liveVersion: number; document: unknown };
+export type SurgeRow = { scheduleId: string; zoneId: string; categoryIds: string[]; startAt: string; endAt: string; stepMinutes: number; cap: number; points: { atMin: number; multiplier: number }[]; status: string; version: number; createdBy: string; createdAt: string };
 
 export const OFFERS = [
   { offerId: "O1", tripId: "T2001", kind: "radar", status: "declined", version: 2, expiresAt: "2026-10-25T08:00:40Z", fare: SEK(52000), driverEarnings: SEK(41600) },
@@ -122,8 +147,14 @@ export type TripState = {
   /** POST /admin/trips/{id}/refund answers 202 pending_approval instead of 201. */
   refundNeedsApproval?: boolean;
   refundDelayMs?: number;
-  /** The pricing draft of Z001 (GET/PUT /admin/config/pricing, POST …/publish). */
-  pricing: { version: number; liveVersion: number; document: unknown };
+  /** The pricing draft of Z001 (GET/PUT /admin/config/pricing, POST …/publish); the same object as configs.pricing.Z001. */
+  pricing: Draft;
+  /** Every config draft per document and zone. A zone without one answers 404 config_not_found. */
+  configs: Record<ConfigName, Record<string, Draft>>;
+  /** The zones' surge schedules (GET/PUT /admin/zones/{zoneId}/surge, POST …/end). */
+  surges: Record<string, SurgeRow>;
+  /** These paths answer 400 invalid_request with this message (e.g. a schema refusal). */
+  refuse?: Record<string, string>;
   /** POST /admin/config/pricing/publish answers 202 pending_approval instead of 200. */
   publishNeedsApproval?: boolean;
   /** Changes to the signed-in admin (language, permissions). */
@@ -135,8 +166,12 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })),
     calls: [],
     pricing: { version: 1, liveVersion: 1, document: structuredClone(PRICING_DOCUMENT) },
+    surges: {},
     ...init,
+    configs: init.configs ?? { pricing: {}, rider_app_config: {}, driver_app_config: {} },
   };
+  state.configs.pricing.Z001 ??= state.pricing;
+  state.pricing = state.configs.pricing.Z001;
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
   const wait = (ms?: number) => (ms ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve());
   await page.route(`${API}/**`, async (route) => {
@@ -161,21 +196,49 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (!cursor && items.length > 2) return json(route, 200, { items: items.slice(0, 2), nextCursor: "c2" });
       return json(route, 200, { items: cursor ? items.slice(2) : items, nextCursor: null });
     }
-    if (p === "/api/v1/admin/config/pricing") {
-      const pricing = state.pricing;
-      if (url.searchParams.get("zoneId") && url.searchParams.get("zoneId") !== "Z001") return json(route, 404, { code: "not_found", message: "This zone has no such document yet.", requestId: "r-404c", retryable: false, reason: "config_not_found" });
-      const view = () => ({ doc: "pricing", zoneId: "Z001", version: pricing.version, liveVersion: pricing.liveVersion, document: pricing.document, updatedAt: "2026-10-27T08:00:00Z", updatedBy: "A1" });
-      if (method === "GET") return json(route, 200, view());
-      if (body.expectedVersion !== pricing.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409c", retryable: false });
-      pricing.document = body.document;
-      pricing.version += 1;
-      return json(route, 200, view());
-    }
-    if (p === "/api/v1/admin/config/pricing/publish") {
-      if (body.expectedVersion !== state.pricing.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409p", retryable: false });
+    if (state.refuse?.[p]) return json(route, 400, { code: "invalid_request", message: state.refuse[p], requestId: "r-400r", retryable: false });
+    const config = /^\/api\/v1\/admin\/config\/(pricing|rider_app_config|driver_app_config)(\/publish)?$/.exec(p);
+    if (config) {
+      const name = config[1] as ConfigName;
+      const zoneId = url.searchParams.get("zoneId") ?? body?.zoneId ?? "";
+      const draft = state.configs[name][zoneId];
+      const view = (one: Draft) => ({ doc: name, zoneId, version: one.version, liveVersion: one.liveVersion, document: one.document, updatedAt: "2026-10-27T08:00:00Z", updatedBy: "A1" });
+      if (method === "GET") return draft ? json(route, 200, view(draft)) : json(route, 404, { code: "not_found", message: "This zone has no such document yet.", requestId: "r-404c", retryable: false, reason: "config_not_found" });
+      if (!config[2]) {
+        if ((draft?.version ?? 1) !== body.expectedVersion) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409c", retryable: false });
+        const next = draft ?? (state.configs[name][zoneId] = { version: 1, liveVersion: 0, document: null });
+        next.document = body.document;
+        next.version += 1;
+        return json(route, 200, view(next));
+      }
+      if (!draft || body.expectedVersion !== draft.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409p", retryable: false });
       if (state.publishNeedsApproval) return json(route, 202, { approvalId: "AP2", status: "pending", action: "config.publish" });
-      state.pricing.liveVersion += 1;
-      return json(route, 200, { doc: "pricing", zoneId: "Z001", version: state.pricing.liveVersion, publishedAt: "2026-10-27T10:00:00Z" });
+      draft.liveVersion += 1;
+      // Contract v0.6.0 publishPricing: the zone's app documents take the new waiting and pickup fee, and their draft version goes up by 1.
+      if (name === "pricing") for (const app of ["rider_app_config", "driver_app_config"] as const) {
+        const own = state.configs[app][zoneId];
+        if (own) {
+          own.version += 1;
+          own.liveVersion += 1;
+        }
+      }
+      return json(route, 200, { doc: name, zoneId, version: draft.liveVersion, publishedAt: "2026-10-27T10:00:00Z" });
+    }
+    const surge = /^\/api\/v1\/admin\/zones\/([^/]+)\/surge(\/end)?$/.exec(p);
+    if (surge) {
+      const zoneId = decodeURIComponent(surge[1]!);
+      const row = state.surges[zoneId];
+      if (method === "GET") return row ? json(route, 200, row) : route.fulfill({ status: 204, headers: CORS });
+      if (body.expectedVersion !== (row?.version ?? 0)) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409s", retryable: false });
+      if (surge[2]) {
+        if (!row) return json(route, 404, { code: "not_found", message: "No surge.", requestId: "r-404s", retryable: false });
+        row.status = "ended";
+        row.version += 1;
+        return json(route, 200, row);
+      }
+      const next: SurgeRow = { scheduleId: "S1", zoneId, categoryIds: body.categoryIds ?? [], startAt: body.startAt, endAt: body.endAt, stepMinutes: body.stepMinutes ?? 5, cap: 6, points: body.points, status: "active", version: (row?.version ?? 0) + 1, createdBy: "A1", createdAt: body.startAt };
+      state.surges[zoneId] = next;
+      return json(route, 200, next);
     }
     const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/no-show)?$/.exec(p);
     if (one) {

@@ -99,9 +99,14 @@ assert(stopped.stopped.join() === "Z003" && !zoneLive(stopped.store, "Z003").man
 // Quote: waiting after the free minutes, stops, seats, app fee, min fare, split.
 const input: QuoteInput = { categoryId: "economy", km: 10, minutes: 20, waitMin: 8, stops: 1, stopWaitMin: 2, babySeats: 1, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 };
 const quote = quoteRide(norrmalm, input);
-// 29 + 120 + 80 = 229; waiting (8 − 5 free min, owner Q41) 3 × 12.26 = 36.78; stop 15; stop wait 10; baby seat 30 → 320.78; app fee 10% → 352.86 → 353
-assert(quote.total === 353, `quote total ${quote.total}`);
-assert(quote.driverGets === 256.62, `driver gets 80% of 320.78, got ${quote.driverGets}`);
+// 29 + 120 + 80 = 229; waiting (8 − 5 free min, owner Q41) 3 × 12.26 = 36.78; stop 15; stop wait 10; a baby seat in Movera adds
+// nothing (owner 2026-10-27: seat fees only on Child Seat) → 290.78; app fee 10% → 319.86 → 320
+assert(quote.total === 320, `quote total ${quote.total}`);
+// Owner decision 17: waiting (36.78 + 10) goes 100 % to the driver; 80 % of the rest (244) is 195.20 → 241.98
+assert(quote.driverGets === 241.98, `driver gets 80% of 244 plus all 46.78 of waiting, got ${quote.driverGets}`);
+assert(norrmalm.prices.economy.babySeatFee === 0 && norrmalm.prices.economy.childSeatFee === 0 && norrmalm.prices.child_seat.babySeatFee === 15 && norrmalm.prices.child_seat.childSeatFee === 15, "seat fees only on Child Seat, 15 kr each (contract v0.6.0)");
+const seated = quoteRide(norrmalm, { ...input, categoryId: "child_seat", waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 1, childSeats: 2 });
+assert(seated.lines.some((line) => line.label === "1 baby seat" && line.amount === 15) && seated.lines.some((line) => line.label === "2 child seats" && line.amount === 30), "Child Seat prices its seats");
 // Waiting matches the driver app: 12.26 kr/min (Premium 16.90), 65 kr no-show fee, Premium 5 and XL 3 free minutes.
 assert(norrmalm.prices.economy.waitPerMin === 12.26 && norrmalm.prices.premium.waitPerMin === 16.9 && norrmalm.prices.comfort.waitPerMin === 12.26, "waiting per minute");
 assert(norrmalm.prices.economy.noShowFee === 65 && norrmalm.prices.premium.noShowFee === 65, "no-show fee");

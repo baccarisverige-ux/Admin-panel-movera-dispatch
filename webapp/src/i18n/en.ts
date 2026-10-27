@@ -5242,6 +5242,22 @@ export const en = {
   "Mark a trip no-show": "Mark a trip no-show",
   "Save zone prices as a draft": "Save zone prices as a draft",
   "Publish zone prices": "Publish zone prices",
+  "{0}: a category is deleted with Delete safely, never removed outright.": "{0}: a category is deleted with Delete safely, never removed outright.",
+  "Categories are listed in the rider and driver app settings, and no zone has them on the server yet. Publish the app settings of a zone first.": "Categories are listed in the rider and driver app settings, and no zone has them on the server yet. Publish the app settings of a zone first.",
+  "{0} rider app categories": "{0} rider app categories",
+  "{0} driver app categories": "{0} driver app categories",
+  "{0} is outside your zones.": "{0} is outside your zones.",
+  "{0} prices": "{0} prices",
+  "{0}: driver pickup pay is in the driver app settings, and this zone has none on the server yet.": "{0}: driver pickup pay is in the driver app settings, and this zone has none on the server yet.",
+  "{0} driver pickup pay": "{0} driver pickup pay",
+  "{0}: telling drivers about a surge has no call in the contract yet.": "{0}: telling drivers about a surge has no call in the contract yet.",
+  "{0}: Tips & limits go into the rider and driver app settings, and no zone of {0} has them on the server yet.": "{0}: Tips & limits go into the rider and driver app settings, and no zone of {0} has them on the server yet.",
+  "{0} rider tips & limits": "{0} rider tips & limits",
+  "{0} driver bonus limit": "{0} driver bonus limit",
+  "Someone else changed {0}. It was reloaded; check it and try again.": "Someone else changed {0}. It was reloaded; check it and try again.",
+  "Sent. {0} of the changes wait for a second admin to approve.": "Sent. {0} of the changes wait for a second admin to approve.",
+  "Movera XL": "Movera XL",
+  "Movera Pet": "Movera Pet",
 } as const;
 
 export type MessageKey = keyof typeof en;
