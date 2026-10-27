@@ -220,13 +220,19 @@ test("drivers, fleets and vehicles lists: server search and status filter; a fai
   await signIn(page);
   await page.goto("/drivers");
   const bar = page.getByTestId("live-list-drivers");
+  // One search box only: the demo table's own, which searches the server in a live build.
+  for (const path of ["/drivers", "/fleets", "/vehicles", "/onboarding", "/trips"]) {
+    await page.goto(path);
+    await expect(page.locator("input.table-search")).toHaveCount(1);
+  }
+  await page.goto("/drivers");
   await bar.getByLabel("Status on the server").selectOption("active");
   await expect.poll(() => state.calls.some((call) => call.path.includes("accountStatus=active"))).toBe(true);
   await expect(page.getByRole("cell", { name: "Bo Nord", exact: true }).first()).toBeVisible();
   await expect(page.getByRole("cell", { name: "Anna Berg", exact: true })).toHaveCount(0);
   await bar.getByLabel("Status on the server").selectOption("");
-  await bar.getByLabel("Search by name, e-mail or id").fill("anna");
-  await bar.getByRole("button", { name: "Search" }).click();
+  await page.getByLabel("Search this table").fill("anna");
+  await page.getByLabel("Search this table").press("Enter");
   await expect.poll(() => state.calls.some((call) => call.path.includes("q=anna"))).toBe(true);
   await expect(page.getByRole("cell", { name: "Bo Nord", exact: true })).toHaveCount(0);
   await expect(page.getByRole("cell", { name: "Anna Berg", exact: true }).first()).toBeVisible();
@@ -238,8 +244,8 @@ test("drivers, fleets and vehicles lists: server search and status filter; a fai
 
   await page.goto("/vehicles");
   const vehicles = page.getByTestId("live-list-vehicles");
-  await vehicles.getByLabel("Search by plate, make or model").fill("ABC");
-  await vehicles.getByRole("button", { name: "Search" }).click();
+  await page.getByLabel("Search this table").fill("ABC");
+  await page.getByLabel("Search this table").press("Enter");
   await expect.poll(() => state.calls.some((call) => call.path.startsWith("/api/v1/admin/vehicles?") && call.path.includes("q=ABC"))).toBe(true);
   await expect(page.getByText("ABC 123").first()).toBeVisible();
 

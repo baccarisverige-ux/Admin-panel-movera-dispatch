@@ -148,6 +148,7 @@ export function FleetPage() {
 
       <LiveListBar list="vehicles" />
       <DataTable
+          serverSearch="vehicles"
         head={["Vehicle", "Plate", "Car", "Driver", "Fleet", "Category", "Fits", "Year", "Papers", "Status", "Rule check"]}
         rowIds={shown.map((row) => row.record.id)}
         rows={shown.map((row) => [

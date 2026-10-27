@@ -82,6 +82,7 @@ export function FleetOwnersPage() {
 
       <LiveListBar list="fleets" records="fleetOwners" />
       <DataTable
+          serverSearch="fleets"
         className="fd-table"
         head={["Code", "Name", "Company", "Country", "Fleets", "Drivers", "Active drivers", "On hold", "Vehicles", "Documents", "Status", "Contact"]}
         rowIds={shown.map((row) => row.owner.id)}

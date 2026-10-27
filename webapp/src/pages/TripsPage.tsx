@@ -254,6 +254,7 @@ export function TripsPage() {
       <LiveListBar list="trips" />
       <div className={peek ? "op-list-grid with-peek" : "op-list-grid"}>
         <DataTable
+          serverSearch="trips"
           head={[tr("Trip"), tr("Rider"), tr("Driver"), tr("Status"), tr("Zone"), tr("Category"), tr("Price"), tr("Payment"), tr("When"), tr("Quick look")]}
           rowIds={filtered.map((trip) => trip.id)}
           rows={filtered.map((trip) => [

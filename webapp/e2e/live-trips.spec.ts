@@ -49,8 +49,8 @@ test("trips list: server Load more, status filter and search", async ({ page }) 
   await expect(page.getByRole("cell", { name: "T2003", exact: true })).toBeVisible();
   await expect(page.getByRole("cell", { name: "T2001", exact: true })).toHaveCount(0);
   await bar.getByLabel("Status on the server").selectOption("");
-  await bar.getByLabel("Search by trip, rider or driver id").fill("R502");
-  await bar.getByRole("button", { name: "Search" }).click();
+  await page.getByLabel("Search this table").fill("R502");
+  await page.getByLabel("Search this table").press("Enter");
   await expect.poll(() => state.calls.some((call) => call.path.includes("q=R502"))).toBe(true);
   await expect(page.getByRole("cell", { name: "T2002", exact: true })).toBeVisible();
   await expect(page.getByRole("cell", { name: "T2001", exact: true })).toHaveCount(0);

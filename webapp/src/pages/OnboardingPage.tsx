@@ -231,6 +231,7 @@ export function OnboardingPage() {
         <h3><ClipboardCheck size={16} aria-hidden="true" /> All applications</h3>
         <LiveListBar list="drivers" />
         <DataTable
+          serverSearch="drivers"
           head={["Driver", "Name", "Fleet", "Status", "Step", "Zone", "Vehicle"]}
           rows={queue.map((item) => {
             const linked = (vehicles.data ?? []).find((vehicle) => vehicle.driverId === item.id);

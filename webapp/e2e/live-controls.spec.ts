@@ -97,8 +97,8 @@ test("drivers list: a failing server shows the error line and no demo drivers; T
   await bar.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("cell", { name: "Anna Berg", exact: true }).first()).toBeVisible();
   await expect(bar.getByRole("alert")).toHaveCount(0);
-  await bar.getByLabel("Search by name, e-mail or id").fill("nobody");
-  await bar.getByRole("button", { name: "Search" }).click();
+  await page.getByLabel("Search this table").fill("nobody");
+  await page.getByLabel("Search this table").press("Enter");
   await expect(page.getByText(/^0 in All\./)).toBeVisible();
 });
 
