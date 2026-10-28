@@ -63,9 +63,7 @@ export const MENU: MenuItem[] = [
   { id: "alerts", path: "/alerts", label: "Alerts", group: "Operations", permission: "overview.read", icon: "Bell" },
   { id: "trips", path: "/trips", label: "Trips", group: "Operations", permission: "trips.read", icon: "Route" },
   { id: "reservations", path: "/reservations", label: "Reservations", group: "Operations", permission: "trips.read", icon: "CalendarClock" },
-  { id: "live", path: "/live", label: "Live map", group: "Operations", permission: "trips.read", icon: "Map" },
-  { id: "dispatch", path: "/dispatch", label: "Dispatch", group: "Operations", permission: "trips.read", icon: "Radar" },
-  { id: "offers", path: "/offers", label: "Radar · Exclusive · Reservations", group: "Operations", permission: "trips.read", icon: "Radar" },
+  { id: "dispatch", path: "/dispatch/map", label: "Dispatch", group: "Operations", permission: "trips.read", icon: "Radar" },
   { id: "incidents", path: "/incidents", label: "Incidents", group: "Operations", permission: "incidents.read", icon: "Siren" },
   { id: "risk", path: "/risk", label: "Risk", group: "Operations", permission: "safety.edit", icon: "ShieldAlert" },
   { id: "riders", path: "/riders", label: "Riders", group: "Operations", permission: "riders.read", icon: "UserRound" },
@@ -105,10 +103,12 @@ const DETAILS: { pattern: RegExp; id: string }[] = [
   { pattern: /^\/payouts\/[^/]+$/, id: "payouts" },
   { pattern: /^\/payments\/[^/]+$/, id: "payments" },
   { pattern: /^\/team\/[^/]+$/, id: "team" },
+  // The Dispatch section's tabs (Live map, Radar · Exclusive, Bookings, Rules): one menu item.
+  { pattern: /^\/dispatch\/(map|radar|bookings|rules)$/, id: "dispatch" },
 ];
 
 /** Routes that only redirect somewhere else; every other route must resolve to a page (and its permission). */
-export const REDIRECT_PATHS: readonly string[] = ["/users"];
+export const REDIRECT_PATHS: readonly string[] = ["/users", "/live", "/offers", "/dispatch"];
 
 export function isRedirectPath(pathname: string): boolean {
   return REDIRECT_PATHS.includes(pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname);
