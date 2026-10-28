@@ -53,6 +53,8 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
   const [locate, setLocate] = useState<MapLocate | null>(null);
   const [showBalance, setShowBalance] = useState(false);
   const role = useSession().agent?.role;
+  // Contract §3.6: the zone switch (pause, force a mode) needs dispatch.edit.
+  const canSwitch = Boolean(role && can(role, "dispatch.edit"));
   const ids = new Set(zones.map((zone) => zone.id));
   const handled = new Map(book.liveActions.map((action) => [action.tripId, action]));
   const now = new Date().toISOString();
@@ -114,14 +116,14 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
               if (liveControls) {
                 // Live: the server's switch, one admin is enough (contract v0.7.2).
                 return (
-                  <CommandButton command="admin.dispatch.control" className={className} targetId={zone.id} confirmTarget={false} scope={zone.id} before={before} after={after} disabled={!canControl} aria-label={`${label} ${zone.name}`} onDone={(result) => { liveControls.refresh(); onNotice(result?.status === "pending_approval" ? tr("{0} {1}: waiting for a second admin to approve.", [label, zone.name]) : tr("{0}: {1} done.", [zone.name, label.toLowerCase()])); }}>
+                  <CommandButton command="admin.dispatch.control" className={className} targetId={zone.id} confirmTarget={false} scope={zone.id} before={before} after={after} disabled={!canSwitch} aria-label={`${label} ${zone.name}`} onDone={(result) => { liveControls.refresh(); onNotice(result?.status === "pending_approval" ? tr("{0} {1}: waiting for a second admin to approve.", [label, zone.name]) : tr("{0}: {1} done.", [zone.name, label.toLowerCase()])); /* the 202 line is only a fallback for an older server */ }}>
                     {icon} {trx(label)}
                   </CommandButton>
                 );
               }
               const result = requestControl(book, zone.id, value, agentId, now);
               return (
-                <CommandButton command="admin.dispatch.control" className={className} targetId={zone.id} confirmTarget={false} scope={zone.id} before={before} after={after} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={result.book} disabled={!canControl || Boolean(pending)} aria-label={`${label} ${zone.name}`} onDone={() => onNotice(result.waiting ? tr("{0} {1}: waiting for a second admin to approve.", [label, zone.name]) : tr("{0}: {1} done.", [zone.name, label.toLowerCase()]))}>
+                <CommandButton command="admin.dispatch.control" className={className} targetId={zone.id} confirmTarget={false} scope={zone.id} before={before} after={after} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={result.book} disabled={!canSwitch || Boolean(pending)} aria-label={`${label} ${zone.name}`} onDone={() => onNotice(result.waiting ? tr("{0} {1}: waiting for a second admin to approve.", [label, zone.name]) : tr("{0}: {1} done.", [zone.name, label.toLowerCase()]))}>
                   {icon} {trx(label)}
                 </CommandButton>
               );
