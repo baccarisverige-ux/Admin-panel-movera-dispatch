@@ -5767,6 +5767,14 @@ export const en = {
   "What one new rider cost in promotions.": "What one new rider cost in promotions.",
   "What the rides brought in for each 1 spent.": "What the rides brought in for each 1 spent.",
   "Bookings ÷ rides for the best zone.": "Bookings ÷ rides for the best zone.",
+  "Send": "Send",
+  "No messages yet.": "No messages yet.",
+  "Chat open": "Chat open",
+  "Chat closed for rider and driver": "Chat closed for rider and driver",
+  "No trip chats in your zones.": "No trip chats in your zones.",
+  "Message as Support": "Message as Support",
+  "The trip has ended: the rider and the driver can no longer write. Support can still answer.": "The trip has ended: the rider and the driver can no longer write. Support can still answer.",
+  "Trip chats between rider and driver in your zones. Support can read and write; messages are kept 90 days.": "Trip chats between rider and driver in your zones. Support can read and write; messages are kept 90 days.",
 } as const;
 
 export type MessageKey = keyof typeof en;

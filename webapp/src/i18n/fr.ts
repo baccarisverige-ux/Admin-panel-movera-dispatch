@@ -5769,4 +5769,12 @@ export const fr: Record<MessageKey, string> = {
   "What one new rider cost in promotions.": "Ce qu’un nouveau passager a coûté en promotions.",
   "What the rides brought in for each 1 spent.": "Ce que les courses ont rapporté pour 1 dépensé.",
   "Bookings ÷ rides for the best zone.": "Réservations ÷ courses pour la meilleure zone.",
+  "Send": "Envoyer",
+  "No messages yet.": "Aucun message pour l’instant.",
+  "Chat open": "Chat ouvert",
+  "Chat closed for rider and driver": "Chat fermé pour le passager et le chauffeur",
+  "No trip chats in your zones.": "Aucun chat de course dans vos zones.",
+  "Message as Support": "Message en tant que Support",
+  "The trip has ended: the rider and the driver can no longer write. Support can still answer.": "La course est terminée : le passager et le chauffeur ne peuvent plus écrire. Le support peut encore répondre.",
+  "Trip chats between rider and driver in your zones. Support can read and write; messages are kept 90 days.": "Chats de course entre passager et chauffeur dans vos zones. Le support peut lire et écrire ; les messages sont conservés 90 jours.",
 };
