@@ -77,6 +77,8 @@ test("a fleet owner needs the company documents; Onboarding is the server's queu
 
   await page.goto("/drivers/D1001");
   await expect(page.getByRole("heading", { level: 2, name: "Anna Berg" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Återaktivera" })).toBeVisible();
+  await expect(page.getByTestId("live-doc-box")).toContainText("Körkort");
   await press(page, /^Aktivera$/, "D1001");
   await expect(page.getByTestId("activation-refused")).toContainText("Kontot kan inte aktiveras än.");
   await expect(page.getByTestId("activation-refused").locator('[data-missing-scope="driver"]')).toContainText("Körkort");

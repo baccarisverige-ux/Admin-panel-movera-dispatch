@@ -5851,4 +5851,5 @@ export const fr: Record<MessageKey, string> = {
   "Can't be driven – documents missing": "Ne peut pas rouler – documents manquants",
   "Not all required documents are approved.": "Tous les documents obligatoires ne sont pas approuvés.",
   "{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.": "{0} comptes pas encore actifs en {1}. Un compte est activé quand tous les documents obligatoires sont approuvés : un chauffeur d’une flotte a besoin de ses propres documents, un propriétaire de flotte aussi de ceux de la société. Aucune voiture n’est nécessaire.",
+  "Reactivate": "Réactiver",
 };

@@ -5851,4 +5851,5 @@ export const sv: Record<MessageKey, string> = {
   "Can't be driven – documents missing": "Kan inte köras – dokument saknas",
   "Not all required documents are approved.": "Alla obligatoriska dokument är inte godkända.",
   "{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.": "{0} konton är inte aktiva än i {1}. Ett konto aktiveras när alla obligatoriska dokument är godkända: en förare i en flotta behöver sina egna dokument, en flottägare även företagets. Bil behövs inte.",
+  "Reactivate": "Återaktivera",
 };

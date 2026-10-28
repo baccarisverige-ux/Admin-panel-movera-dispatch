@@ -2,6 +2,7 @@ import { isLiveData, liveDriverOf } from "../live/realData";
 import { NotConnected } from "../live/NotConnected";
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
+import { LiveDocBox } from "../live/LiveDocBox";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
@@ -351,6 +352,7 @@ export function DriverDetailPage() {
           <div className="fd-grid-2">
             <section className="fd-box">
               <h3>{tr("Documents")}</h3>
+              {liveData ? <LiveDocBox driverId={driver.id} /> : (<>
               <div className="fd-health-big">
                 <span className="h-valid">{trn("{0}Valid", <strong>{health.valid}</strong>)}</span>
                 <span className="h-expiring">{trn("{0}Expiring", <strong>{health.expiring}</strong>)}</span>
@@ -363,6 +365,7 @@ export function DriverDetailPage() {
                   return <li key={row.id} className={`h-${state.health}`}><i aria-hidden="true" />{row.id.replaceAll("_", " ")} · {trx(state.label)}</li>;
                 })}
               </ul>
+              </>)}
               <button type="button" data-command="admin.ui.dashboardTab" className="link-action" onClick={() => selectTab("documents")}>{tr("Open documents →")}</button>
             </section>
             <section className="fd-box">
