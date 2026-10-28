@@ -58,7 +58,7 @@ for (const where of [{ name: "Dispatch", url: "/dispatch?view=live", back: "Back
     await expect(page.getByTestId("back-to-map")).toHaveText(where.back, { timeout: 20_000 });
     await page.getByTestId("back-to-map").click();
     await expect(page.getByTestId("back-to-map")).toHaveCount(0);
-    await expect(page).toHaveURL(new RegExp(where.url === "/?tab=live" ? "/\\?.*tab=live" : "/dispatch\\?.*view=live"));
+    await expect(page).toHaveURL(new RegExp(where.url === "/?tab=live" ? "/\\?.*tab=live" : "/dispatch/rules\\?.*view=live"));
     await expect(page.getByRole("dialog", { name: `Driver ${driverName}` })).toBeVisible({ timeout: 15_000 });
     expect(await page.getByTestId("back-to-map").count()).toBe(0);
   });

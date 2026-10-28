@@ -25,7 +25,9 @@ test("dispatch has its own menu item, a back button, and every zone with its mod
   await session(page);
   await page.goto("/");
   await page.getByRole("link", { name: "Dispatch" }).click();
-  await expect(page.getByRole("heading", { name: "Dispatch in Sweden" })).toBeVisible();
+  await expect(page).toHaveURL(/\/dispatch\/map$/);
+  await page.getByTestId("dispatch-section-tabs").getByRole("link", { name: "Rules" }).click();
+  await expect(page.getByRole("heading", { name: "Dispatch rules in Sweden" })).toBeVisible();
   await expect(zone(page, "Norrmalm")).toContainText("Automatic");
   await expect(zone(page, "Arlanda")).toBeVisible();
   await zone(page, "Norrmalm").click();
@@ -33,8 +35,9 @@ test("dispatch has its own menu item, a back button, and every zone with its mod
   await expect(page.getByTestId("dx-moved-modes")).toBeVisible();
   await page.getByRole("button", { name: "Go back" }).click();
   await expect(page).not.toHaveURL(/zone=/);
+  // Back from Rules returns to the tab it came from: the Live map.
   await page.getByRole("button", { name: "Go back" }).click();
-  await expect(page).toHaveURL(/\/$|\/\?/);
+  await expect(page).toHaveURL(/\/dispatch\/map$/);
 });
 
 test("change Radar, publish now, see it in history, then undo", async ({ page }) => {
@@ -230,7 +233,7 @@ test("rules file, other countries, read-only roles and phones", async ({ page })
   expect((await download).suggestedFilename()).toMatch(/movera-dispatch-rules-SE-rev\d+\.json/);
 
   await page.goto("/dispatch?country=FR&zone=FR-PC&tab=rides");
-  await expect(page.getByRole("heading", { name: "Dispatch in France" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dispatch rules in France" })).toBeVisible();
   await expect(page.getByLabel("Live trips Movera fee", { exact: true })).toHaveValue("3.35");
 
   await page.setViewportSize({ width: 390, height: 860 });
@@ -326,7 +329,7 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await page.goto("/dispatch?zone=Z001");
   await expect(page.getByRole("region", { name: "Reservations" })).toHaveCount(0);
   await page.getByTestId("dx-moved-modes").getByRole("link", { name: "Reservations" }).click();
-  await expect(page).toHaveURL(/\/offers\?.*tab=reservations/);
+  await expect(page).toHaveURL(/\/dispatch\/bookings\?/);
   const card = page.getByRole("region", { name: "Reservations" });
   const steps = card.getByRole("list", { name: "Reservation steps" }).getByRole("listitem");
 
@@ -391,7 +394,7 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(fees.getByLabel("Reservations Premium free cancel minutes")).toHaveValue("120");
   await expect(fees.getByLabel("Reservations Movera fee", { exact: true })).toHaveValue("50");
   await fees.getByLabel("Reservations Movera fee", { exact: true }).fill("75");
-  await page.getByRole("button", { name: "Radar · Exclusive · Reservations" }).click();
+  await page.getByTestId("dispatch-tab-bookings").click();
   await page.getByRole("tablist", { name: "Zone settings" }).getByRole("tab", { name: "Reservations" }).click();
 
   // No driver near pickup: raise from Movera's commission, never over 500 kr.

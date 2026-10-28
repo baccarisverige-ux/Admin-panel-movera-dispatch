@@ -15,9 +15,9 @@ test("Q40: one list, unique ids, every row has a place to go", () => {
 
 test("Q40: a Dispatch row opens its tab in a zone and names the card", () => {
   const stops = FEATURE_INDEX.find((entry) => entry.id === "stops")!;
-  assert.equal(featureTarget(stops, "Z001"), "/dispatch?tab=rides&zone=Z001&card=Stops");
+  assert.equal(featureTarget(stops, "Z001"), "/dispatch/rules?tab=rides&zone=Z001&card=Stops");
   const activity = FEATURE_INDEX.find((entry) => entry.id === "my-activity")!;
-  assert.equal(featureTarget(activity, "Z001"), "/dispatch?view=activity");
+  assert.equal(featureTarget(activity, "Z001"), "/dispatch/rules?view=activity");
   assert.equal(featureTarget(FEATURE_INDEX.find((entry) => entry.id === "refund-second-admin")!, ""), "/settings#refunds");
 });
 
@@ -50,16 +50,16 @@ test("Round 2: every new per-country and zone setting is in All features and ope
   assert.equal(target("driver-bonus-limit"), "/pricing?tab=extras&section=driver-bonus");
   assert.equal(target("payment-methods"), "/settings#country-apps");
   assert.equal(target("languages"), "/settings#country-apps");
-  assert.equal(target("pickup-move"), "/dispatch?tab=rides&zone=Z001&card=Pickup+move+after+accept");
-  assert.equal(target("no-show-share"), "/dispatch?tab=rides&zone=Z001&card=Waiting+at+pickup");
+  assert.equal(target("pickup-move"), "/dispatch/rules?tab=rides&zone=Z001&card=Pickup+move+after+accept");
+  assert.equal(target("no-show-share"), "/dispatch/rules?tab=rides&zone=Z001&card=Waiting+at+pickup");
   assert.equal(target("waiting-per-category"), "/pricing?tab=prices");
   assert.ok(searchFeatures("missed exclusive").some((entry) => entry.id === "auto-offline"));
   // Radar, Exclusive and reservation rules live in their own section: the rows open it, in the zone, on the card.
-  assert.equal(target("radar"), "/offers?zone=Z001&card=Radar");
-  assert.equal(target("exclusive"), "/offers?tab=exclusive&zone=Z001&card=Exclusive");
-  assert.equal(target("reservations"), "/offers?tab=reservations&zone=Z001&card=Reservations");
-  assert.equal(target("radar-zones"), "/offers?zone=Z001&card=Radar+zones");
-  assert.equal(target("auto-offline"), "/offers?zone=Z001&card=Go+offline+automatically");
+  assert.equal(target("radar"), "/dispatch/radar?zone=Z001&card=Radar");
+  assert.equal(target("exclusive"), "/dispatch/radar?tab=exclusive&zone=Z001&card=Exclusive");
+  assert.equal(target("reservations"), "/dispatch/bookings?zone=Z001&card=Reservations");
+  assert.equal(target("radar-zones"), "/dispatch/radar?zone=Z001&card=Radar+zones");
+  assert.equal(target("auto-offline"), "/dispatch/radar?zone=Z001&card=Go+offline+automatically");
   assert.ok(searchFeatures("locked while driving").some((entry) => entry.id === "radar-full-lock"));
   assert.ok(!FEATURE_INDEX.some((entry) => "dispatch" in entry && ["radar", "exclusive", "reservations"].includes(entry.dispatch.tab ?? "")), "no row still points at a Dispatch tab that moved");
   assert.ok(searchFeatures("apple pay").some((entry) => entry.id === "payment-methods"));

@@ -16,7 +16,10 @@ assert(MENU.some((item) => item.id === "drivers" && item.path === "/drivers"), "
 assert(!MENU.some((item) => item.path === "/franchise" || item.path === "/database" || item.path === "/api"), "old pages are gone");
 assert(pageForPath("/incidents")?.group === "Operations", "incidents sit in Operations");
 assert(pageForPath("/risk")?.group === "Operations", "risk sits in Operations");
-assert(pageForPath("/offers")?.group === "Operations" && pageForPath("/offers")?.permission === pageForPath("/dispatch")?.permission, "Radar · Exclusive · Reservations sits next to Dispatch with the same permission");
+// Owner 2026-10-28: one Dispatch item; Live map, Radar · Exclusive, Bookings and Rules are its tabs.
+assert(MENU.filter((item) => item.icon === "Radar" || item.id === "live" || item.id === "offers").map((item) => item.id).join() === "dispatch", "one Dispatch item in the menu");
+for (const tab of ["map", "radar", "bookings", "rules"]) assert(pageForPath(`/dispatch/${tab}`)?.id === "dispatch", `the ${tab} tab is the Dispatch page`);
+assert(REDIRECT_PATHS.includes("/live") && REDIRECT_PATHS.includes("/offers") && REDIRECT_PATHS.includes("/dispatch"), "the old Live map and Radar · Exclusive · Reservations addresses redirect");
 
 const support = MENU.filter((item) => can("support", item.permission));
 assert(support.some((item) => item.id === "support") && support.some((item) => item.id === "riders"), "support sees its work");

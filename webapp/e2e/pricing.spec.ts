@@ -113,7 +113,7 @@ test("rider cancel fees are not set in Pricing: the Cancellation group points to
   const pointer = page.getByTestId("rider-cancel-fees-pointer");
   await expect(pointer).toContainText("Rider cancel fees are set in Dispatch › Rides & stops › Rider cancel fees.");
   await pointer.getByRole("button", { name: "Open Rider cancel fees" }).click();
-  await expect(page).toHaveURL(/\/dispatch\?zone=Z001&tab=rides/);
+  await expect(page).toHaveURL(/\/dispatch\/rules\?zone=Z001&tab=rides/);
   await expect(page.getByRole("tab", { name: "Rides & stops" })).toHaveAttribute("aria-selected", "true");
   const card = page.getByRole("region", { name: "Rider cancel fees" });
   await expect(card).toBeInViewport();
