@@ -2,6 +2,8 @@ import { Link } from "react-router";
 import { ArrowRight, Radar } from "lucide-react";
 import { tr, trn, trx } from "../i18n";
 
+import { dispatchHref } from "./section";
+
 export const OFFERS_PATH = "/offers";
 
 /** A deep link into Radar · Exclusive · Reservations: a tab and, when known, the zone and the card to scroll to. */
@@ -11,7 +13,7 @@ export function offersLink(tab: "radar" | "exclusive" | "reservations", zoneId?:
   if (zoneId) params.set("zone", zoneId);
   if (card) params.set("card", card);
   const search = params.toString();
-  return `${OFFERS_PATH}${search ? `?${search}` : ""}`;
+  return dispatchHref(`${OFFERS_PATH}${search ? `?${search}` : ""}`);
 }
 
 type Props = {

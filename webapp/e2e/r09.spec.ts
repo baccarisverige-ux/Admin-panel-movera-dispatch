@@ -166,8 +166,8 @@ test("R9 categories can be added and deleted only through the safety check", asy
   await page.goto("/pricing");
   await page.getByRole("button", { name: /^Categories/ }).click();
   const dialog = page.getByRole("dialog", { name: "Manage categories" });
-  await dialog.getByRole("button", { name: "Delete Movera" }).click();
-  await expect(dialog.getByRole("region", { name: "Delete Movera" })).toContainText("cannot be deleted now");
+  await dialog.getByRole("button", { name: "Delete Movera", exact: true }).click();
+  await expect(dialog.getByRole("region", { name: "Delete Movera", exact: true })).toContainText("cannot be deleted now");
 
   await dialog.getByRole("button", { name: "New category" }).click();
   await dialog.getByLabel("New category name").fill("Women Driver");

@@ -17,7 +17,7 @@ import type { RideRequest } from "./riders";
 import type { ZoneBalance } from "./insights";
 import type { ZoneSurge } from "../pricing/surge";
 import type { SurgeStyle } from "../pricing/surgeGeo";
-import { installSurgeLayers, updateSurgeLayers } from "../pricing/surgeLayers";
+import { installSurgeLayers, updateDriverSurgeLayers, updateSurgeLayers } from "../pricing/surgeLayers";
 import { along, type LatLng } from "./route";
 import { WaybillDialog } from "./TripCard";
 import { useEscape } from "../ui/useEscape";
@@ -65,6 +65,8 @@ type Props = {
   surge?: ZoneSurge[];
   surgeShown?: boolean;
   surgeStyle?: SurgeStyle;
+  /** Live: the server's surge in the driver map's three colours (contract.json#driverSurgeMap), no style, no pills. */
+  surgeDriver?: boolean;
   onSurgeZone?: (zoneId: string) => void;
   /** Driver bonus areas, drawn in orange with a label, when shown. */
   bonusAreas?: BonusMapArea[];
@@ -174,7 +176,7 @@ function dropoffGeo(drivers: LiveDriver[], hidden: Set<LiveState>, selectedId: s
 }
 
 /** Live drivers on a MapLibre map, coloured by state; click a driver for details. */
-export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, locate = null, renderAssign, onRequestOpen, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", onSurgeZone, bonusAreas = [], bonusShown = false, rideChecks = null, onBonusArea, overlay }: Props) {
+export function DriversMap({ drivers, market, zones, hidden, withScope, focusId = null, tripFor, infoFor, requests = [], showRequests = true, focusRequest = null, locate = null, renderAssign, onRequestOpen, balance = [], showBalance = false, surge = [], surgeShown = false, surgeStyle = "zones", surgeDriver = false, onSurgeZone, bonusAreas = [], bonusShown = false, rideChecks = null, onBonusArea, overlay }: Props) {
   const access = useDashboardAccess();
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -385,8 +387,9 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    updateSurgeLayers(map, surge, surgeStyle, surgeShown, null, (zoneId) => surgeClick.current?.(zoneId));
-  }, [surge, surgeStyle, surgeShown, ready]);
+    if (surgeDriver) updateDriverSurgeLayers(map, surge, surgeShown, (zoneId) => surgeClick.current?.(zoneId));
+    else updateSurgeLayers(map, surge, surgeStyle, surgeShown, null, (zoneId) => surgeClick.current?.(zoneId));
+  }, [surge, surgeStyle, surgeShown, surgeDriver, ready]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource("requests") as GeoJSONSource | undefined;

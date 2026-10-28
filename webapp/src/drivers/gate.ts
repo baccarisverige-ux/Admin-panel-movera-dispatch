@@ -71,7 +71,7 @@ export function activate(driver: Driver): { driver: Driver; error?: string } {
 
 export function vehicleBlock(vehicle: Vehicle): string | null {
   if (vehicle.category === "electric" && vehicle.fuel !== "electric") return "Electric category requires an electric vehicle.";
-  if (vehicle.category === "xl" && vehicle.seats < 6) return "XL requires at least 6 seats.";
+  if (vehicle.category === "xl" && vehicle.seats < 6) return "Movera XL requires at least 6 seats.";
   if (vehicle.year < 2015) return "Vehicle is older than the minimum year.";
   return null;
 }

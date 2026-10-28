@@ -85,7 +85,7 @@ export type RiderProfile = {
 };
 
 const DAY = 86_400_000;
-const CATEGORY_NAMES: Record<string, string> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "XL", electric: "Electric", pet: "Pet", child_seat: "Child Seat" };
+const CATEGORY_NAMES: Record<string, string> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "Movera XL", electric: "Electric", pet: "Pet", child_seat: "Child Seat" };
 const CATEGORY_WEIGHTS: [string, number][] = [["economy", 46], ["comfort", 18], ["electric", 10], ["xl", 8], ["premium", 7], ["priority", 5], ["pet", 3], ["child_seat", 3]];
 const CATEGORY_LIFT: Record<string, number> = { economy: 1, comfort: 1.25, premium: 1.8, priority: 1.35, xl: 1.5, electric: 1.1, pet: 1.15, child_seat: 1.2 };
 const CURRENCY_FACTOR: Record<MarketId, number> = { SE: 1, FR: 0.095, TN: 0.3 };

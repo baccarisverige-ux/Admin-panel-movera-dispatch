@@ -9,7 +9,7 @@ export const CATEGORY_INFO: { id: PriceCategoryId; label: string; line: string; 
   { id: "comfort", label: "Comfort", line: "Extra comfort", badge: "Plush", eligibility: "4 seats, year 2018 or newer" },
   { id: "premium", label: "Premium", line: "Premium service", badge: "Luxury", eligibility: "4 seats, year 2020 or newer" },
   { id: "priority", label: "Priority", line: "Faster pickup", badge: "Priority", eligibility: "Acceptance at least 90 percent" },
-  { id: "xl", label: "XL", line: "More seats", badge: "XL", eligibility: "6 seats" },
+  { id: "xl", label: "Movera XL", line: "More seats", badge: "XL", eligibility: "6 seats" },
   { id: "electric", label: "Electric", line: "Low emissions", badge: "Eco", eligibility: "Electric vehicle" },
   { id: "pet", label: "Pet", line: "Pet friendly", badge: "Carrier OK", eligibility: "Driver accepts pets" },
 ];

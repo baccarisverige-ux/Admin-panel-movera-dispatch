@@ -28,8 +28,8 @@ test("reservation settings live in Radar · Exclusive · Reservations; the Reser
   await page.getByRole("link", { name: "Reservations", exact: true }).click();
   await page.getByRole("link", { name: "Open reservation settings" }).click();
   // The old Dispatch › Reservations link lands in the new section (same rules, same behaviour), on its first zone.
-  await expect(page).toHaveURL(/\/offers\?.*tab=reservations/);
-  await expect(page.getByRole("heading", { name: /^Radar · Exclusive · Reservations in / })).toBeVisible();
+  await expect(page).toHaveURL(/\/dispatch\/bookings\?/);
+  await expect(page.getByRole("heading", { name: /^Bookings in / })).toBeVisible();
   await page.getByRole("navigation", { name: "Zones" }).getByRole("button", { name: /^Norrmalm/ }).click();
   await expect(page.getByRole("tab", { name: "Reservations" })).toHaveAttribute("aria-selected", "true");
   const policy = page.getByTestId("reservation-policy");

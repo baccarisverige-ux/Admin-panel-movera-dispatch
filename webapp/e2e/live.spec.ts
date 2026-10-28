@@ -6,14 +6,17 @@ async function signIn(page: Page) {
   await page.getByLabel("Password").fill("movera");
   await page.getByLabel("6-digit code").fill("123456");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("link", { name: "Live map", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Dispatch", exact: true })).toBeVisible();
 }
 
 test("live map moves drivers and opens a stale position", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await signIn(page);
-  await page.getByRole("link", { name: "Live map", exact: true }).click();
+  // Dispatch opens on its Live map tab.
+  await page.getByRole("link", { name: "Dispatch", exact: true }).click();
+  await expect(page).toHaveURL(/\/dispatch\/map$/);
+  await expect(page.getByTestId("dispatch-tab-map")).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", { level: 2, name: "Live map" })).toBeVisible();
   await expect(page.locator(".page-heading")).toContainText("OpenStreetMap");
   await expect(page.locator("[data-live='counts']")).toContainText("600");
@@ -52,9 +55,9 @@ test("the Live map has no second dispatch editor: it shows Dispatch's live value
     }
   }
   await panel.getByRole("link", { name: "Norrmalm" }).click();
-  await expect(page).toHaveURL(/\/dispatch\?zone=Z001/);
+  await expect(page).toHaveURL(/\/dispatch\/rules\?zone=Z001/);
   await page.getByTestId("dx-moved-modes").getByRole("link", { name: "Exclusive rules" }).click();
-  await expect(page).toHaveURL(/\/offers\?.*tab=exclusive/);
+  await expect(page).toHaveURL(/\/dispatch\/radar\?.*tab=exclusive/);
   await expect(page.getByLabel("Exclusive time")).toHaveValue("15");
 });
 
@@ -65,6 +68,6 @@ test("To confirm points offer time, search radius and the reservation values to 
   await expect(offer.getByRole("textbox")).toHaveValue("Set per zone in Dispatch");
   await expect(page.locator("#value-horizon").getByRole("link", { name: "Open in Dispatch" })).toHaveAttribute("href", /tab=reservations/);
   await offer.getByRole("link", { name: "Open in Dispatch" }).click();
-  await expect(page).toHaveURL(/\/dispatch$/);
-  await expect(page.getByRole("heading", { name: "Dispatch in Sweden" })).toBeVisible();
+  await expect(page).toHaveURL(/\/dispatch\/rules$/);
+  await expect(page.getByRole("heading", { name: "Dispatch rules in Sweden" })).toBeVisible();
 });

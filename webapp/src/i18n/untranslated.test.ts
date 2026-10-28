@@ -11,11 +11,8 @@ import { needsTranslation, scanSource, scanTree } from "./untranslated.ts";
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const KNOWN = new Set(Object.keys(en));
 
-/** Files another branch translates (owner/live-safety2); drop them from this list when that branch is in main. */
-const ELSEWHERE = new Set(["src/pages/SafetyPage.tsx", "src/safety/RideCheckLog.tsx", "src/safety/IncidentSettings.tsx"]);
-
 test("no English-only text in the panel: JSX text, labels, notices and CSV headers go through tr()", () => {
-  const findings = scanTree(ROOT, KNOWN).filter((finding) => !ELSEWHERE.has(finding.file.replaceAll("\\", "/")));
+  const findings = scanTree(ROOT, KNOWN);
   assert.deepEqual(findings.map((finding) => `${finding.file}:${finding.line} ${finding.where} "${finding.text}"`), []);
 });
 

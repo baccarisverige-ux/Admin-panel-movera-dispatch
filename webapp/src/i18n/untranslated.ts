@@ -26,7 +26,7 @@ export const ALLOW = new Set([
   "Movera", "Movera Admin", "Google", "Google Maps", "MapLibre", "OpenStreetMap", "Stripe", "Swish", "Klarna", "Apple Pay",
   "Google Pay", "Visa", "Mastercard", "iOS", "Android", "SMS", "API", "CSV", "JSON", "PDF", "QR", "ID", "OK", "km", "min",
   "km/h", "kr", "SEK", "EUR", "TND", "€", "h", "s", "m", "x", "×", "WhatsApp", "FR", "SV", "EN",
-  "SE", "TN", "GPS", "VAT", "PIN", "IBAN", "BIC", "URL", "UTC", "ms", "MB", "kB", "px", "%", "SOS", "OTP",
+  "SE", "TN", "XL", "GPS", "VAT", "PIN", "IBAN", "BIC", "URL", "UTC", "ms", "MB", "kB", "px", "%", "SOS", "OTP",
 ]);
 
 /** A text that needs a translation: it has a word, and is not an id, a code, a symbol or a brand. */

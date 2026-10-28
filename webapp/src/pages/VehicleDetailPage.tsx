@@ -212,7 +212,7 @@ export function VehicleDetailPage() {
               <option value="comfort">{tr("Comfort")}</option>
               <option value="premium">{tr("Premium")}</option>
               <option value="priority">{tr("Priority")}</option>
-              <option value="xl">XL</option>
+              <option value="xl">Movera XL</option>
               <option value="electric">{tr("Electric")}</option>
               <option value="pet">{tr("Pet")}</option>
             </select>

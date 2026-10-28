@@ -16,7 +16,7 @@ import {
 import { CommandButton } from "../ui/CommandButton";
 import { stockholmZones } from "../zones/releases";
 import { ZoneCanvas } from "./ZoneCanvas";
-import { tr, trn } from "../i18n";
+import { tr, trx } from "../i18n";
 
 const LAYERS: { id: LiveKind | "stale"; label: string }[] = [
   { id: "driver", label: "Online drivers" },
@@ -90,8 +90,8 @@ function LiveBoard() {
   );
   const chosen = candidates.some((item) => item.id === offerDriverId) ? offerDriverId : candidates[0]?.id ?? "";
   const selectedOfferWhy = selectedTrip
-    ? offerBlock(selectedTrip.status) ?? (candidates.length === 0 ? "No eligible driver with a matching eligible vehicle is available." : null)
-    : "Select an open request.";
+    ? offerBlock(selectedTrip.status) ?? (candidates.length === 0 ? tr("No eligible driver with a matching eligible vehicle is available.") : null)
+    : tr("Select an open request.");
 
   const online = markers.filter((marker) => marker.kind === "driver" && !marker.stale);
   const stale = markers.filter((marker) => marker.kind === "driver" && marker.stale);
@@ -113,7 +113,10 @@ function LiveBoard() {
         </div>
       </div>
 
-      <p className="state-line" data-live="counts" data-testid="live-tick" data-tick={tick}>{trn("Drivers {0}. Trips in the book {1}. Online {2}. Stale {3}. Trips on the map {4} of {5} active. Open requests plotted {6} of {7}. Airport queue {8}. Boosts {9}.{10}", drivers.data?.length ?? 0, trips.data?.length ?? 0, online.length, stale.length, tripMarks.length, activeAll, requests.length, openAll, queue.length, boosts.length, notice ? ` ${notice}` : "")}</p>
+      <p className="state-line" data-live="counts" data-testid="live-tick" data-tick={tick}>
+        {tr("Drivers {0}. Trips in the book {1}. Online {2}. Stale {3}. Trips on the map {4} of {5} active. Open requests plotted {6} of {7}. Airport queue {8}. Boosts {9}.", [drivers.data?.length ?? 0, trips.data?.length ?? 0, online.length, stale.length, tripMarks.length, activeAll, requests.length, openAll, queue.length, boosts.length])}
+        {notice ? ` ${notice}` : ""}
+      </p>
 
       <div className="actions" aria-label={tr("Map layers")}>
         {LAYERS.map((layer) => (
@@ -123,7 +126,7 @@ function LiveBoard() {
               checked={layers[layer.id] ?? false}
               onChange={() => setLayers((current) => ({ ...current, [layer.id]: !current[layer.id] }))}
             />
-            {layer.label}
+            {trx(layer.label)}
           </label>
         ))}
       </div>
@@ -166,7 +169,9 @@ function LiveBoard() {
                 <div data-testid="quick-dispatch">
                   <h4>{tr("Quick dispatch")}</h4>
                   <p>{selectedOfferWhy ?? tr("{0} eligible drivers with eligible matching vehicles.", [candidates.length])}</p>
-                  <label>{tr("Driver")}<select
+                  <label>
+                    {tr("Driver")}
+                    <select
                       aria-label={tr("Quick dispatch driver")}
                       value={chosen}
                       disabled={Boolean(selectedOfferWhy)}
@@ -197,7 +202,9 @@ function LiveBoard() {
                       setSelectedId(null);
                       setOfferDriverId("");
                     }}
-                  >{tr("Offer request")}</CommandButton>
+                  >
+                    {tr("Offer request")}
+                  </CommandButton>
                 </div>
               ) : null}
             </>
@@ -282,13 +289,13 @@ function DispatchLink() {
           const rules = liveRules(book, zone.id);
           return (
             <li key={zone.id}>
-              <Link to={`/dispatch?zone=${zone.id}`}>{zone.name}</Link>
-              <small>{trn("Exclusive {0} · Radar {1} · Search {2} km", rules.exclusive.on ? `${rules.exclusive.seconds} s` : tr("off"), rules.radar.on ? `${rules.radar.seconds} s` : tr("off"), rules.radius.steps.join(" → "))}</small>
+              <Link to={`/dispatch/rules?zone=${zone.id}`}>{trx(zone.name)}</Link>
+              <small>{tr("Exclusive {0} · Radar {1} · Search {2} km", [rules.exclusive.on ? `${rules.exclusive.seconds} s` : tr("off"), rules.radar.on ? `${rules.radar.seconds} s` : tr("off"), rules.radius.steps.join(" → ")])}</small>
             </li>
           );
         })}
       </ul>
-      <Link className="dash-btn small" to="/dispatch">{tr("Open Dispatch")}</Link>
+      <Link className="dash-btn small" to="/dispatch/rules">{tr("Open Dispatch")}</Link>
     </article>
   );
 }

@@ -170,7 +170,7 @@ export const BUILT_IN_CATEGORIES: CategoryDef[] = [
   { id: "comfort", label: "Comfort", line: "Newer cars, more room", lines: { sv: "Nyare bilar, mer plats", fr: "Voitures récentes, plus d’espace", en: "Newer cars, more room" }, seats: 4, builtIn: true, archived: null },
   { id: "premium", label: "Premium", line: "High-end cars, top drivers", lines: { sv: "Exklusiva bilar, toppförare", fr: "Voitures haut de gamme, meilleurs chauffeurs", en: "High-end cars, top drivers" }, seats: 4, builtIn: true, archived: null },
   { id: "priority", label: "Priority", line: "Faster pickup", lines: { sv: "Snabbare upphämtning", fr: "Prise en charge plus rapide", en: "Faster pickup" }, seats: 4, builtIn: true, archived: null },
-  { id: "xl", label: "XL", line: "Up to 6 seats", lines: { sv: "Upp till 6 platser", fr: "Jusqu’à 6 places", en: "Up to 6 seats" }, seats: 6, builtIn: true, archived: null },
+  { id: "xl", label: "Movera XL", line: "Up to 6 seats", lines: { sv: "Upp till 6 platser", fr: "Jusqu’à 6 places", en: "Up to 6 seats" }, seats: 6, builtIn: true, archived: null },
   { id: "electric", label: "Electric", line: "Fully electric car", lines: { sv: "Helt eldriven bil", fr: "Voiture 100 % électrique", en: "Fully electric car" }, seats: 4, builtIn: true, archived: null },
   { id: "pet", label: "Pet", line: "Your pet rides with you", lines: { sv: "Ditt husdjur åker med dig", fr: "Votre animal voyage avec vous", en: "Your pet rides with you" }, seats: 4, builtIn: true, archived: null },
   { id: "child_seat", label: "Child Seat", line: "Car with a baby or child seat", lines: { sv: "Bil med babystol eller barnstol", fr: "Voiture avec siège bébé ou enfant", en: "Car with a baby or child seat" }, seats: 4, builtIn: true, archived: null },
