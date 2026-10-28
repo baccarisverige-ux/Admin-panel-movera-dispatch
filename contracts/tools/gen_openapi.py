@@ -348,7 +348,11 @@ S["Notification"] = obj({"notificationId": ref("Id"), "audience": s(enum=["rider
                         ["notificationId", "audience", "kind", "title", "body", "at", "read"])
 S["Message"] = obj({"messageId": ref("Id"), "tripId": ref("Id"), "from": s(enum=["rider", "driver", "support"]),
                     "text": s(minLength=1, maxLength=2000), "at": ref("Timestamp")},
-                   ["messageId", "tripId", "from", "text", "at"])
+                   ["messageId", "tripId", "from", "text", "at"],
+                   "A trip chat message. v0.13.0 (CONTRACT.md §22): kept 90 days (longer when the trip has a safety case); never carries a phone number.")
+S["TripCall"] = obj({"tripId": ref("Id"), "proxyNumber": s("v0.13.0: the masked number to dial (E.164); the provider bridges to the other side.", pattern=r"^\+[1-9][0-9]{6,14}$"),
+                     "expiresAt": ref("Timestamp")}, ["tripId", "proxyNumber", "expiresAt"],
+                    "v0.13.0: a masked call between the trip's rider and driver (contract.json#chat.call).")
 S["SavedPlace"] = obj({"placeId": ref("Id"), "label": s(minLength=1, maxLength=80), "kind": s(enum=["home", "work", "other"]),
                        "place": ref("Place")}, ["placeId", "label", "kind", "place"])
 S["SupportTicket"] = obj({"ticketId": ref("Id"), "tripId": ref("Id"), "openedBy": ref("Actor"), "riderId": ref("Id"),
@@ -1293,9 +1297,14 @@ op("get", "/notifications", "listNotifications", "Own notifications (audience fr
 op("post", "/notifications/{notificationId}/read", "markNotificationRead", "Mark a notification read", ["rider", "driver"],
    "Notifications & messages", params=[pref("NotificationId")], ok=(200, "Notification"), mutation=True)
 op("get", "/trips/{tripId}/messages", "listTripMessages", "Trip chat messages", ["rider", "driver", "admin"], "Notifications & messages",
-   params=TID + [pref("Cursor"), pref("Limit")], ok=(200, "MessagePage"))
+   params=TID + [pref("Cursor"), pref("Limit")], ok=(200, "MessagePage"), permission="support.reply",
+   desc="v0.13.0 (CONTRACT.md §22): the trip's own rider or driver; an admin needs support.reply and the trip in the admin's zones (else 403, reason zone_out_of_scope). x-permission applies to admins only.")
 op("post", "/trips/{tripId}/messages", "sendTripMessage", "Send a trip chat message (emits kind=message)", ["rider", "driver", "admin"],
-   "Notifications & messages", params=TID, body="MessageRequest", ok=(201, "Message"), mutation=True)
+   "Notifications & messages", params=TID, body="MessageRequest", ok=(201, "Message"), mutation=True, permission="support.reply",
+   desc="v0.13.0: open from driver assignment until drop-off; after it the rider and driver get 409 invalid_transition, reason chat_closed (no grace period). Admins as for GET.")
+op("post", "/trips/{tripId}/call", "callTripPeer", "Call the other side through a masked number", ["rider", "driver"], "Notifications & messages",
+   params=TID, ok=(200, "TripCall"), mutation=True,
+   desc="v0.13.0 (contract.json#chat.call): the trip's rider or driver while the trip is open for chat. 503 unavailable, reason call_unavailable, while no telephony provider is set up; 409 invalid_transition, reason chat_closed, after drop-off.")
 op("get", "/support/tickets", "listOwnTickets", "Own support tickets", ["rider", "driver"], "Support",
    params=[pref("Cursor"), pref("Limit"), q("status", {"type": "string", "enum": ["open", "pending", "resolved", "closed"]})],
    ok=(200, "SupportTicketPage"))
@@ -1460,10 +1469,10 @@ op("post", "/admin/payouts/{payoutId}/paid", "adminMarkPayoutPaid", "Mark a payo
 op("get", "/support/tickets/{ticketId}", "getOwnTicket", "One own support ticket with its messages", ["rider", "driver"], "Support",
    params=[pref("TicketId")], ok=(200, "SupportTicket"), desc="v0.9.0.")
 op("get", "/admin/tickets/{ticketId}", "adminGetTicket", "A support ticket with its messages", ["admin"], "Admin · Support",
-   params=[pref("TicketId")], ok=(200, "SupportTicket"), permission="support.reply", desc="v0.9.0. In the admin's zones only (else 403 zone_out_of_scope).")
+   params=[pref("TicketId")], ok=(200, "SupportTicket"), permission="support.reply", desc="v0.9.0. In the admin's zones only (else 403 zone_out_of_scope). v0.13.0: support.reply is needed to read too.")
 op("post", "/admin/tickets/{ticketId}/reply", "adminReplyTicket", "Answer a support ticket", ["admin"], "Admin · Support",
    params=[pref("TicketId")], body="TicketReplyCommand", ok=(200, "SupportTicket"), mutation=True, permission="support.reply",
-   desc="v0.9.0. The person sees the answer in the app (GET /support/tickets/{ticketId}).")
+   desc="v0.9.0. The person sees the answer in the app (GET /support/tickets/{ticketId}). v0.13.0: the admin's zones only (else 403 zone_out_of_scope); audited.")
 op("get", "/admin/ratings", "adminListRatings", "Ratings riders and drivers gave each other", ["admin"], "Admin · Reviews",
    params=AL + [q("rater", {"type": "string", "enum": ["rider", "driver"]}, "Who gave the rating."), q("hidden", {"type": "boolean"}), q("maxStars", {"type": "integer", "minimum": 1, "maximum": 5}),
                 q("driverId", ref("Id")), q("riderId", ref("Id")), pref("ZoneIdQuery"), pref("From"), pref("To")],
@@ -1648,7 +1657,7 @@ o = op("post", "/rides/{rideId}/cancel", "cancelRideDeprecated", "Deprecated ali
        params=[pref("RideId")], body="CancelCommand", ok=(200, TP), mutation=True, transition="cancel", deprecated=True)
 
 # ---------------------------------------------------------------- document
-TAG_DESC = {"Auth": "Sign-in, tokens and push devices for the rider and driver apps (v0.5.0)", "Admin · Auth": "Admin panel sign-in with e-mail and password (v0.5.1)",
+TAG_DESC = {"Admin · Zones": "Zones from the server: list, create, outline, open and close (v0.11.0)", "Auth": "Sign-in, tokens and push devices for the rider and driver apps (v0.5.0)", "Admin · Auth": "Admin panel sign-in with e-mail and password (v0.5.1)",
             "Maps": "Address search, geocoding and road routes through the server (v0.5.1); read-only, no Idempotency-Key",
             "Telemetry": "Fire-and-forget app logs, analytics and crashes (v0.5.1); no auth required", "Trips": "Shared trip resource (rider, driver, admin)", "Realtime": "Streams: SSE (or WebSocket) + JSON replay",
             "Deprecated": "Legacy /rides aliases kept for one release"}
@@ -1740,6 +1749,31 @@ op("get", "/admin/content/legal/acceptances", "adminTermsAcceptances", "Who acce
 op("get", "/rider/content", "riderContent", "Content for the rider app", ["rider"], "Rider · Config", params=[q("zoneId", ref("Id"))], ok=(200, "ContentList"), desc="v0.10.0. " + CT["apps_read"] + " " + CT["appVersions"])
 op("get", "/driver/content", "driverContent", "Content for the driver app", ["driver"], "Driver · Session", params=[q("zoneId", ref("Id"))], ok=(200, "ContentList"), desc="v0.10.0. " + CT["apps_read"] + " " + CT["appVersions"])
 op("post", "/account/terms/accept", "acceptTerms", "Accept the published legal terms", ["rider", "driver"], "Account", body="TermsAcceptCommand", ok=(204, None), mutation=True, desc="v0.10.0. " + CT["legal"])
+
+# ---- v0.11.0: zones from the server (owner 2026-10-28, decision #9)
+ZN = C["zones"]
+TZ = s(pattern=r"^[A-Za-z_]+(/[A-Za-z0-9_+\-]+)*$")
+S["ZoneNames"] = obj({"sv": s(minLength=1, maxLength=80), "fr": s(minLength=1, maxLength=80), "en": s(minLength=1, maxLength=80)}, ["sv", "fr", "en"], ZN["names"])
+S["ZoneKind"] = s(enum=["operating", "airport"])
+S["ZonePoint"] = arr(n(), minItems=2, maxItems=2, description="[lat, lng]")
+S["ZonePolygon"] = arr(ref("ZonePoint"), minItems=3, maxItems=500, description=ZN["polygon"])
+S["Zone"] = obj({"zoneId": ref("Id"), "names": ref("ZoneNames"), "country": ref("CountryCode"), "currency": ref("CurrencyCode"), "timeZone": TZ,
+                 "kind": ref("ZoneKind"), "polygon": ref("ZonePolygon"), "bounds": ref("ZoneBounds"), "center": obj({"lat": n(), "lng": n()}, ["lat", "lng"]),
+                 "open": b(), "version": i(minimum=1), "createdAt": ref("Timestamp"), "updatedAt": ref("Timestamp"), "updatedBy": ref("Id")},
+                ["zoneId", "names", "country", "currency", "timeZone", "kind", "polygon", "bounds", "center", "open", "version"], "v0.11.0: " + ZN["zone"] + " " + ZN["idScheme"])
+S["ZoneList"] = obj({"zones": arr(ref("Zone"))}, ["zones"])
+S["ZoneCreateCommand"] = obj({"zoneId": ref("Id"), "names": ref("ZoneNames"), "country": ref("CountryCode"), "currency": ref("CurrencyCode"), "timeZone": TZ,
+                              "kind": ref("ZoneKind"), "polygon": ref("ZonePolygon"), "open": b("default false")},
+                             ["zoneId", "names", "country", "currency", "timeZone", "polygon"], "A new zone starts closed unless open is true. 409 conflict zone_exists when the id is taken.")
+S["ZoneUpdateCommand"] = obj({**EV, "names": ref("ZoneNames"), "kind": ref("ZoneKind"), "polygon": ref("ZonePolygon")}, ["expectedVersion"], ZN["version"])
+S["ZoneOpenCommand"] = obj({**EV, "note": s(maxLength=1000)}, ["expectedVersion"])
+op("get", "/admin/zones", "adminListZones", "Every zone in the admin's scope, open and closed", ["admin"], "Admin · Zones", params=[q("country", ref("CountryCode"))], ok=(200, "ZoneList"), permission="zones.read", desc="v0.11.0. " + ZN["permissions"])
+op("post", "/admin/zones", "adminCreateZone", "Create a zone", ["admin"], "Admin · Zones", body="ZoneCreateCommand", ok=(201, "Zone"), mutation=True, permission="zones.edit", desc="v0.11.0. " + ZN["idScheme"] + " " + ZN["neverDeleted"])
+op("put", "/admin/zones/{zoneId}", "adminUpdateZone", "Change a zone's names, kind or outline", ["admin"], "Admin · Zones", params=[pref("ZoneId")], body="ZoneUpdateCommand", ok=(200, "Zone"), mutation=True, permission="zones.edit", desc="v0.11.0. " + ZN["polygon"])
+op("post", "/admin/zones/{zoneId}/open", "adminOpenZone", "Open a zone for new rides", ["admin"], "Admin · Zones", params=[pref("ZoneId")], body="ZoneOpenCommand", ok=(200, "Zone"), mutation=True, permission="zones.edit", desc="v0.11.0. " + ZN["open"])
+op("post", "/admin/zones/{zoneId}/close", "adminCloseZone", "Close a zone (never deleted)", ["admin"], "Admin · Zones", params=[pref("ZoneId")], body="ZoneOpenCommand", ok=(200, "Zone"), mutation=True, permission="zones.edit", desc="v0.11.0. " + ZN["open"] + " " + ZN["neverDeleted"])
+op("get", "/rider/zones", "riderZones", "The open zones, with outline and names", ["rider"], "Rider · Config", params=[q("country", ref("CountryCode"))], ok=(200, "ZoneList"), desc="v0.11.0. " + ZN["apps"] + " " + ZN["notHere"])
+op("get", "/driver/zones", "driverZones", "The open zones, with outline and names", ["driver"], "Driver · Session", params=[q("country", ref("CountryCode"))], ok=(200, "ZoneList"), desc="v0.11.0. " + ZN["apps"])
 
 doc = OrderedDict()
 doc["openapi"] = "3.1.0"

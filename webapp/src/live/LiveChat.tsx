@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { tr } from "../i18n";
+import { tr, uiLocale } from "../i18n";
+import { shortDateTime } from "./format";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine, Status } from "./ui";
 import type { Page, Trip } from "./types";
@@ -33,8 +34,9 @@ export function chatTrips(trips: Trip[]): Trip[] {
     .sort((a, b) => Number(chatOpen(b.status)) - Number(chatOpen(a.status)) || b.updatedAt.localeCompare(a.updatedAt));
 }
 
+/** In the admin's language (sv/fr/en locale), like the rest of the live pages. */
 function when(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return shortDateTime(iso, uiLocale());
 }
 
 function sender(from: TripMessage["from"]): string {

@@ -1,4 +1,10 @@
-# Movera shared contract v0.10.3
+# Movera shared contract v0.13.0
+
+v0.13.0 (owner 2026-10-28 and "chat only support roles in their zones"; X-Api-Version stays `0.5`, additive except the chat window): **Trip chat, masked calls and support scope** (§22, `contract.json#chat`, `contract.json#support.adminScope`): admins read and write trip chat and tickets only with `support.reply` and only in their zones (403 `zone_out_of_scope`); the trip chat closes at drop-off (409 `invalid_transition`, reason `chat_closed`; the earlier 1 hour after the trip is gone); chat messages are kept 90 days, those of a trip with a safety case stay with the case; `POST /trips/{tripId}/call` → `TripCall { tripId, proxyNumber, expiresAt }` or 503 `unavailable`, reason `call_unavailable`; no real phone number of the other side in any rider or driver payload; no fleet owner ↔ driver chat. The number follows v0.12 (safety part 2); reconciled at merge.
+
+v0.11.0 (owner 2026-10-28 and decision #9 "the server's list is the truth"; X-Api-Version stays `0.5`, additive): **Zones from the server** (§21, `contract.json#zones`, `fixtures/zones.json`): `Zone { zoneId, names { sv, fr, en }, country, currency, timeZone, kind, polygon, bounds, center, open, version }`; the admin's Zones page `GET /admin/zones`, `POST /admin/zones`, `PUT /admin/zones/{zoneId}`, `POST /admin/zones/{zoneId}/open|close` (`zones.edit`, one admin, audited; never deleted, only closed); the apps' `GET /rider/zones`, `GET /driver/zones` (open zones with outline and names). A pickup outside every open zone is `403 forbidden service_not_available` and the rider app shows "Movera isn't here yet". Paris & Île-de-France (FR-PC, open) gets the whole region's outline, with open airport zones CDG and ORY inside it; Grand Tunis (TN-TC) is added closed. Zone changes and content arrive on the app config streams. Builds on v0.10.0; independent of the pending v0.10.1.
+
+v0.10.4 (owner 2026-10-28): **One status word list** (§20, `contract.json#statusWords`): the sv/fr/en word for every status code of every family, used by the admin, rider and driver apps; new enums `documentStatus`, `vehicleReviewStatus`, `ticketStatus`.
 
 v0.10.3 (owner Reports answers of 2026-10-28; X-Api-Version stays `0.5`, additive): **Reports › Money** (§18 KPIs, `contract.json#kpis.money`): `KpiDay` gains `tips`, `refunds`, `fees`, `moveraEarnings`. Bookings (`gross`) = ride price + cancel/no-show fees, VAT included; tips on their own line, not in bookings; refunds are subtracted on the trip's day (an older day changes when a refund comes later, the nightly summary re-sums that day); Movera earnings = commission + fees − pickup pay − driver bonuses Movera paid (may be negative); each currency apart, never added across countries; a day is the zone's local day. Fleet views have no owners' share. Taxes have no server source: the admin shows "Inte kopplad än".
 
@@ -134,7 +140,7 @@ Refund { refundId, paymentId, amount: Money, reason, status: pending_approval | 
 WalletEntry { entryId, ownerId, amount: Money, kind: topup | charge | refund | payout | adjustment, tripId?, at }
 Rating { tripId, from: rider | driver, stars: 1..5 (whole stars, integer), tags[], comment? }
 Notification { notificationId, audience: rider | driver, kind, title, body, at, read }
-Message { messageId, tripId, from: rider | driver | support, text, at }
+Message { messageId, tripId, from: rider | driver | support, text, at }   (v0.13.0: §22)
 ```
 
 Status enums (exact values in `contract.json`): `TripStatus` (19), `PaymentStatus`, `RatingStatus`, `DriverAccountStatus`, `DriverOnlineStatus`, `OfferKind`, `OfferStatus`.
@@ -672,3 +678,49 @@ Owner Content answers of 2026-10-28; the machine-readable rules are in `contract
 - **Apps.** `GET /rider/content?zoneId`, `GET /driver/content?zoneId` on start and on `config_published` (doc `content`); expired items are left out; the last answer is kept offline.
 - **App versions.** Separate `min` / `recommended` for the rider and the driver app. Below min: "Uppdatera appen" full screen with a store button; below recommended: a closable message; during a trip only a small message, the block after the trip; SOS always works.
 - **Legal.** With `reaccept`, the new terms show at the next app start (never during a trip) with "Jag godkänner"; `POST /account/terms/accept { contentVersion }`; until accepted the rider cannot book and the driver cannot go online.
+
+## 20. One status word list (v0.10.4)
+
+Owner decision of 2026-10-28 (and #16, "the server's words everywhere in the admin"). `contract.json#statusWords.families` gives, for each family, every code's word in sv, fr and en; `statusWords.sources` names where each family's codes are listed. The admin, rider and driver apps show these words and no words of their own; `reference_check.py` fails when a code has no word or an empty one.
+
+| Family | Codes from |
+| --- | --- |
+| tripStatus | `tripStatus.values` (19) |
+| driverAccountStatus | `driverAccountStatus` |
+| driverOnlineStatus | `driverOnlineStatus` |
+| paymentStatus | `paymentStatus` (incl. `partially_refunded`) |
+| feeStatus | `outstandingFee.feeStatus` |
+| payoutStatus | `payouts.statuses` |
+| documentStatus | `documentStatus.values` (new) |
+| incidentStatus | `safety.statuses` |
+| ticketStatus | `ticketStatus.values` (new) |
+| vehicleReviewStatus | `vehicleReviewStatus.values` (new; vehicles and fleets) |
+| offerStatus | `offerStatus` |
+| ratingStatus | `ratingStatus` |
+
+- The same code can have different words in different families (trip `expired` is "Utgången", document `expired` is "Utgånget"): an app picks the family of the record it shows.
+- Chosen words: finished trip "Slutförd" / "Terminée"; the rider is "Resenär" in Swedish (never "Passagerare"); driver account `on_hold` "Väntar på granskning" / "En cours de validation" (`pending` stays "Väntande" / "En attente"); document `needed` "Krävs"; Swedish agrees with the noun (documents are neuter: "Godkänt", "Utgånget", "Avslaget").
+
+## 21. Zones from the server (v0.11.0)
+
+Owner decisions of 2026-10-28 and #9 ("the server's list is the truth; the admin reads it and creates zones on the server"); the machine-readable rules are in `contract.json#zones`, cases in `fixtures/zones.json`.
+
+- **Zone.** `{ zoneId, names { sv, fr, en }, country, currency, timeZone, kind: operating | airport, polygon [[lat, lng], …], bounds { south, west, north, east }, center, open, version, createdAt, updatedAt, updatedBy? }`. The polygon is the outline the admin draws on the map (3–500 points, not closed, not self-crossing); the server computes `bounds` (its rectangle, which earlier sections such as the driver surge map still use) and `center`.
+- **Ids.** Fixed at creation. Stockholm keeps `Z001`–`Z009`; a new city zone is `<country>-<two letters>` (`FR-PC` Paris & Île-de-France, `TN-TC` Grand Tunis, as the apps already use); an airport is its IATA code (`ARN`, `BMA`, `CDG`, `ORY`).
+- **Admin.** `GET /admin/zones?country` (`zones.read`, the admin's zones; Super admin all, open and closed). `POST /admin/zones` (201; `409 conflict zone_exists`), `PUT /admin/zones/{zoneId} { expectedVersion, names?, kind?, polygon? }`, `POST /admin/zones/{zoneId}/open|close { expectedVersion }` — all `zones.edit`, one admin is enough, one audit row each (`zone.create`, `zone.update`, `zone.open`, `zone.close`), `409 version_mismatch` on a stale version. An admin changes zones in its scope; creating needs the whole scope or a zone of the same country. `country`, `currency` and `timeZone` never change.
+- **Never deleted.** There is no delete; a zone is closed. A closed zone takes no new rides; rides already booked go on.
+- **Apps.** `GET /rider/zones?country`, `GET /driver/zones?country` → `{ zones }`: the open zones only, with polygon and names (shown in the app language). Read on start and on `config_published` with `doc: "zones"`, which every zone change sends on every rider and driver config stream (`doc: "content"` goes to the streams of its zone); the SSE id stays the app document's version.
+- **Which zone.** Zones whose bounds hold the point, then whose polygon holds it (the edge counts as inside); an open zone before a closed one, a city zone before an airport, then the smallest. An airport inside a city zone (ARN, CDG, ORY) never takes the ride; it adds the airport fees, open or not.
+- **Not here.** A quote or booking whose pickup is in no open zone is `403 forbidden`, reason `service_not_available`. The rider app shows "Movera isn't here yet" (sv "Movera finns inte här än", fr "Movera n’est pas encore ici") and cannot book.
+- **Seed.** `Z001` Stockholm län (open); `FR-PC` Paris & Île-de-France (the whole region, Paris and 77, 78, 91, 92, 93, 94, 95; open) with the open airport zones `CDG` and `ORY` inside it (airport fees as at ARN), EUR, Europe/Paris; `TN-TC` Grand Tunis (Tunis, Ariana, Ben Arous, Manouba), TND, Africa/Tunis — closed until an admin opens it.
+
+## 22. Trip chat, masked calls and support scope (v0.13.0)
+
+Owner decisions "chat only support roles in their zones" and of 2026-10-28; the machine-readable rules are in `contract.json#chat` and `contract.json#support`.
+
+- **Who.** The trip chat (`GET|POST /trips/{tripId}/messages`) is between the trip's own rider and driver; anyone else is `404 not_found`. An admin reads and writes it only with `support.reply` (reading too) and only for a trip in one of the admin's zones; a Super admin sees all. Without the permission `403 forbidden`; outside the zones `403 forbidden`, reason `zone_out_of_scope`. There is no fleet owner ↔ driver chat.
+- **Window.** Open while a driver is on the trip (`contract.json#tripStatus.driverAssigned`: `accepted` … `approaching_dropoff`) until drop-off. When the trip ends, the rider and the driver can no longer write (`409 invalid_transition`, reason `chat_closed`); the earlier hour after the trip is removed. The history stays readable while it is kept. Support may still write on an ended trip.
+- **Retention.** A daily job deletes chat messages older than 90 days. Messages of a trip with a safety case (any incident on the trip: SOS, `driver_silent`, …) are kept with the case.
+- **No phone numbers.** No rider or driver payload (trip views, `Message`, realtime envelopes, tickets in the apps) carries the other side's real phone number. The person's own profile keeps their own.
+- **Calls.** `POST /trips/{tripId}/call` (the trip's rider or driver, while the chat is open) → `200 TripCall { tripId, proxyNumber, expiresAt }`: the app dials `proxyNumber` and the telephony provider bridges the call without showing either number. While no provider is set up (the server default) the answer is `503 unavailable`, reason `call_unavailable`, and the app hides the call button (the chat stays). After drop-off `409 invalid_transition`, reason `chat_closed`. **The owner must pick a telephony provider** (number masking); its keys live in the server environment, never in git.
+- **Support tickets.** `POST /support/tickets`, `GET /support/tickets`, `GET /support/tickets/{ticketId}`: a rider or driver sees only their own tickets (another's is `404`); a `tripId` must be the caller's own trip. `GET /admin/tickets`, `GET /admin/tickets/{ticketId}`, `POST /admin/tickets/{ticketId}/reply` need `support.reply` and the ticket's zone in the admin's zones (a ticket without zone: Super admin only); every reply is audited.
