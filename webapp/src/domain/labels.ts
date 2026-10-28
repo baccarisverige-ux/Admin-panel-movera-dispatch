@@ -1,54 +1,31 @@
-import { trx } from "../i18n/core.ts";
+import contract from "../../../contracts/contract.json" with { type: "json" };
+import { currentLanguage, trx } from "../i18n/core.ts";
+import type { AppLanguage } from "../config/zoneDefaults.ts";
 
 /**
- * Display words for record statuses. Trip statuses are the contract names in readable form (Q35, X15), the
- * same words the rider and driver apps use: "driver_to_pickup" is "Driver to pickup", "in_trip" is "In trip".
+ * Status words: ONE STATUS WORD LIST (contract v0.10.2 §20, contract.json#statusWords, owner 2026-10-28 and #16
+ * "the server's words everywhere in the admin"). The admin, rider and driver apps show the same sv/fr/en word for
+ * a code; the panel has no words of its own for contract codes. labels.test.ts fails when a code lacks a word.
  */
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  quoted: "Quoted",
-  requested: "Requested",
-  searching: "Searching",
-  offered: "Offered",
-  accepted: "Accepted",
-  driver_to_pickup: "Driver to pickup",
-  arrived: "Arrived",
-  rider_onboard: "Rider onboard",
-  in_trip: "In trip",
-  approaching_dropoff: "Approaching drop-off",
-  completed: "Completed",
-  cancelled_by_rider: "Cancelled by rider",
-  cancelled_by_driver: "Cancelled by driver",
-  cancelled_by_admin: "Cancelled by admin",
-  cancelled_by_system: "Cancelled by system",
-  no_show: "No show",
-  expired: "Expired",
-  failed: "Failed",
-  pending: "Pending",
-  authorized: "Authorized",
-  captured: "Captured",
-  refunded: "Refunded",
-  active: "Active",
+export type StatusWord = Readonly<Record<AppLanguage, string>>;
+export const STATUS_WORDS = contract.statusWords.families as unknown as Readonly<Record<string, Readonly<Record<string, StatusWord>>>>;
+export type StatusFamily = keyof typeof contract.statusWords.families;
+
+/** The family whose word a bare code takes when the caller does not say (the first family that has the code). */
+const FAMILY_ORDER: readonly StatusFamily[] = [
+  "tripStatus", "driverAccountStatus", "driverOnlineStatus", "paymentStatus", "payoutStatus", "feeStatus",
+  "documentStatus", "vehicleReviewStatus", "ticketStatus", "offerStatus", "ratingStatus", "incidentStatus",
+];
+
+/** Panel-only codes that are not contract statuses (queue, outbox, approvals, bank details); English keys of i18n. */
+const OTHER_LABELS: Record<string, string> = {
   inactive: "Inactive",
-  offline: "Offline",
-  going_online: "Going online",
-  online: "Online",
-  on_trip: "On a trip",
-  on_hold: "On hold",
-  suspended: "Suspended",
-  in_review: "In review",
-  approved: "Approved",
-  rejected: "Rejected",
   blocked: "Blocked",
-  missing: "Missing",
-  needed: "Needed",
-  expiring: "Expiring",
   queued: "Queued",
   waiting: "Waiting",
   booked: "Booked",
   assigned: "Assigned",
   cancelled: "Cancelled",
-  resolved: "Resolved",
   sent: "Sent",
   delivered: "Delivered",
   committed: "Committed",
@@ -114,15 +91,20 @@ const STATUS_TONES: Record<string, StatusTone> = {
   conflict: "red",
 };
 
-/** The readable status word in the admin's language (round 4); an unknown code is shown with spaces. */
-export function statusLabel(code: string): string {
-  return trx(STATUS_LABELS[code] ?? code.replaceAll("_", " "));
+/**
+ * The contract word of a status in the admin's language. Give the family when the record is not a trip
+ * (a document's "expired" is "Utgånget", a trip's is "Utgången"); an unknown code is shown with spaces.
+ */
+export function statusLabel(code: string, family?: StatusFamily): string {
+  const word = (family ? STATUS_WORDS[family]?.[code] : undefined) ?? FAMILY_ORDER.map((name) => STATUS_WORDS[name][code]).find(Boolean);
+  if (word) return word[currentLanguage()] || word.en;
+  return trx(OTHER_LABELS[code] ?? code.replaceAll("_", " "));
 }
 
-export function statusPresentation(code: string): { label: string; tone: StatusTone } | null {
+export function statusPresentation(code: string, family?: StatusFamily): { label: string; tone: StatusTone } | null {
   const tone = STATUS_TONES[code];
   if (!tone) return null;
-  return { label: statusLabel(code), tone };
+  return { label: statusLabel(code, family), tone };
 }
 
 export const ACTION_REASONS = [

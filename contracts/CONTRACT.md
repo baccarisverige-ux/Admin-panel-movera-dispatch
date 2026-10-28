@@ -1,4 +1,6 @@
-# Movera shared contract v0.10.0
+# Movera shared contract v0.10.2
+
+v0.10.2 (owner 2026-10-28): **One status word list** (§20, `contract.json#statusWords`): the sv/fr/en word for every status code of every family, used by the admin, rider and driver apps; new enums `documentStatus`, `vehicleReviewStatus`, `ticketStatus`.
 
 v0.10.0 (owner Content answers of 2026-10-28; X-Api-Version stays `0.5`): **Content from the admin to the apps** (§19, `contract.json#content`): 11 places (driver Home, driver event, 6 rider banners, Help, Legal, App versions) with texts in sv, fr and en, published by one admin to the zones chosen at the top; `GET /rider/content`, `GET /driver/content`; app versions per app (rider, driver) block below the minimum (never during a trip; SOS always works); new legal terms with "users must accept again" are accepted before the next trip (`POST /account/terms/accept`).
 
@@ -670,3 +672,25 @@ Owner Content answers of 2026-10-28; the machine-readable rules are in `contract
 - **Apps.** `GET /rider/content?zoneId`, `GET /driver/content?zoneId` on start and on `config_published` (doc `content`); expired items are left out; the last answer is kept offline.
 - **App versions.** Separate `min` / `recommended` for the rider and the driver app. Below min: "Uppdatera appen" full screen with a store button; below recommended: a closable message; during a trip only a small message, the block after the trip; SOS always works.
 - **Legal.** With `reaccept`, the new terms show at the next app start (never during a trip) with "Jag godkänner"; `POST /account/terms/accept { contentVersion }`; until accepted the rider cannot book and the driver cannot go online.
+
+## 20. One status word list (v0.10.2)
+
+Owner decision of 2026-10-28 (and #16, "the server's words everywhere in the admin"). `contract.json#statusWords.families` gives, for each family, every code's word in sv, fr and en; `statusWords.sources` names where each family's codes are listed. The admin, rider and driver apps show these words and no words of their own; `reference_check.py` fails when a code has no word or an empty one.
+
+| Family | Codes from |
+| --- | --- |
+| tripStatus | `tripStatus.values` (19) |
+| driverAccountStatus | `driverAccountStatus` |
+| driverOnlineStatus | `driverOnlineStatus` |
+| paymentStatus | `paymentStatus` (incl. `partially_refunded`) |
+| feeStatus | `outstandingFee.feeStatus` |
+| payoutStatus | `payouts.statuses` |
+| documentStatus | `documentStatus.values` (new) |
+| incidentStatus | `safety.statuses` |
+| ticketStatus | `ticketStatus.values` (new) |
+| vehicleReviewStatus | `vehicleReviewStatus.values` (new; vehicles and fleets) |
+| offerStatus | `offerStatus` |
+| ratingStatus | `ratingStatus` |
+
+- The same code can have different words in different families (trip `expired` is "Utgången", document `expired` is "Utgånget"): an app picks the family of the record it shows.
+- Chosen words: finished trip "Slutförd" / "Terminée"; the rider is "Resenär" in Swedish (never "Passagerare"); driver account `on_hold` "Väntar på granskning" / "En cours de validation" (`pending` stays "Väntande" / "En attente"); document `needed` "Krävs"; Swedish agrees with the noun (documents are neuter: "Godkänt", "Utgånget", "Avslaget").
