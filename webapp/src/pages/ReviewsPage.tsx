@@ -2,7 +2,7 @@ import { useDirtyWarning } from "../ui/useDirtyWarning";
 import { isLiveData } from "../live/realData";
 import { NotConnected } from "../live/NotConnected";
 import { RATING_TAGS, ratingTagLabel } from "../live/ratingTags";
-import { tr } from "../i18n";
+import { tr, trn } from "../i18n";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft, EyeOff, Search, ShieldAlert } from "lucide-react";
@@ -72,13 +72,13 @@ export function ReviewsPage() {
   return (
     <div className="dx-page gr-page">
       <header className="dx-head">
-        <button data-command="admin.review.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.review.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
-          <h2>Reviews</h2>
-          <p>{liveData ? tr("Ratings riders and drivers give each other, from the server. A hidden rating does not count in the average.") : <>Ratings riders and drivers give each other in {scope.market.name}. Hiding keeps the original. Review text is demo text until the apps send real reviews.</>}</p>
+          <h2>{tr("Reviews")}</h2>
+          <p>{liveData ? tr("Ratings riders and drivers give each other, from the server. A hidden rating does not count in the average.") : <>{trn("Ratings riders and drivers give each other in {0}. Hiding keeps the original. Review text is demo text until the apps send real reviews.", scope.market.name)}</>}</p>
         </div>
       </header>
-      <div className="dash-tabs dx-views" role="tablist" aria-label="Review sections">
+      <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Review sections")}>
         {([["reviews", "Reviews"], ["people", "Ratings per person"], ["rules", "Rules"]] as const).map(([id, label]) => <button data-command="admin.review.view" key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : undefined} onClick={() => selectTab(id)}>{label}</button>)}
       </div>
       <p role="status" className="gr-status">{notice}</p>
@@ -100,36 +100,36 @@ export function ReviewsPage() {
       {tab === "rules" && liveData ? <LiveRules /> : tab === "people" ? <PeopleView persons={persons} /> : tab === "rules" ? <RulesView ops={ops} country={country} editable={editable} onNotice={setNotice} /> : (
         <>
           <div className="gr-filters">
-            <label className="gr-search"><Search size={13} aria-hidden="true" /><input aria-label="Search reviews" placeholder="Trip, name or words" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
-            <select aria-label="Who wrote it" value={from} onChange={(e) => setFrom(e.target.value as typeof from)}><option value="all">Everyone</option><option value="rider">Riders about drivers</option><option value="driver">Drivers about riders</option></select>
-            <select aria-label="Stars" value={stars} onChange={(e) => setStars(e.target.value as typeof stars)}><option value="all">Any stars</option><option value="low">1–2 stars</option><option value="mid">3 stars</option><option value="high">4–5 stars</option></select>
-            <label className="check-chip"><input type="checkbox" checked={onlyHidden} onChange={(e) => setOnlyHidden(e.target.checked)} />Only hidden</label>
+            <label className="gr-search"><Search size={13} aria-hidden="true" /><input aria-label={tr("Search reviews")} placeholder={tr("Trip, name or words")} value={query} onChange={(e) => setQuery(e.target.value)} /></label>
+            <select aria-label={tr("Who wrote it")} value={from} onChange={(e) => setFrom(e.target.value as typeof from)}><option value="all">{tr("Everyone")}</option><option value="rider">{tr("Riders about drivers")}</option><option value="driver">{tr("Drivers about riders")}</option></select>
+            <select aria-label={tr("Stars")} value={stars} onChange={(e) => setStars(e.target.value as typeof stars)}><option value="all">{tr("Any stars")}</option><option value="low">{tr("1–2 stars")}</option><option value="mid">{tr("3 stars")}</option><option value="high">{tr("4–5 stars")}</option></select>
+            <label className="check-chip"><input type="checkbox" checked={onlyHidden} onChange={(e) => setOnlyHidden(e.target.checked)} />{tr("Only hidden")}</label>
           </div>
-          <label className="gr-field gr-reason">Moderation reason<input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why you hide or restore a review" /></label>
+          <label className="gr-field gr-reason">{tr("Moderation reason")}<input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tr("Why you hide or restore a review")} /></label>
           {shown.length ? (
-            <ul className="gr-reviews" aria-label="Reviews">
+            <ul className="gr-reviews" aria-label={tr("Reviews")}>
               {shown.slice(0, limit).map(({ review, state }) => {
                 const result = moderateGrowth(store.value, review.id, !state.hidden, reason, agent?.id ?? "");
                 return (
                   <li key={review.id} className={state.hidden ? "gr-review hidden" : "gr-review"}>
                     <div className="gr-review-head">
                       <Stars value={review.stars} />
-                      <span><b>{review.byName}</b> about <b>{review.aboutName}</b> <small>{review.from === "rider" ? "rider → driver" : "driver → rider"}</small></span>
-                      <span className={state.hidden ? "gr-state paused" : "gr-state active"}>{state.hidden ? (state.auto ? "Hidden by word list" : "Hidden") : "Visible"}</span>
+                      <span>{trn("{0} about {1} {2}", <b>{review.byName}</b>, <b>{review.aboutName}</b>, <small>{review.from === "rider" ? tr("rider → driver") : tr("driver → rider")}</small>)}</span>
+                      <span className={state.hidden ? "gr-state paused" : "gr-state active"}>{state.hidden ? (state.auto ? tr("Hidden by word list") : tr("Hidden")) : tr("Visible")}</span>
                     </div>
-                    {review.text ? <p className="gr-review-text">{review.text}</p> : <p className="gr-help">No comment.</p>}
+                    {review.text ? <p className="gr-review-text">{review.text}</p> : <p className="gr-help">{tr("No comment.")}</p>}
                     {review.tags.length ? <p className="gr-tags">{review.tags.map((tag) => <span key={tag}>{liveData ? ratingTagLabel(tag) : tag}</span>)}</p> : null}
-                    <p className="gr-help"><Link to={`/trips/${review.tripId}`}>{review.tripId}</Link> · {new Date(review.at).toLocaleString(scope.market.locale, { dateStyle: "medium", timeStyle: "short", timeZone: scope.market.timeZone })}{liveData ? null : <> · Saved record: {records.get(review.id) ?? "none"}</>}</p>
+                    <p className="gr-help"><Link to={`/trips/${review.tripId}`}>{review.tripId}</Link> · {new Date(review.at).toLocaleString(scope.market.locale, { dateStyle: "medium", timeStyle: "short", timeZone: scope.market.timeZone })}{liveData ? null : <>{" "}{trn("· Saved record: {0}", records.get(review.id) ?? tr("none"))}</>}</p>
                     <div className="actions">
-                      {liveData ? <CommandButton command="admin.growthOps.moderate" className="dash-btn small ghost" targetId={review.id} scope={review.zone} confirmTarget={false} before={state.hidden ? "hidden" : "shown"} after={state.hidden ? "shown" : "hidden"} disabled={!editable} onDone={() => { setNotice(state.hidden ? "Shown again: it counts in the average." : "Hidden: it no longer counts in the average."); void liveRatings.refetch(); }}>{state.hidden ? "Restore" : "Hide"}</CommandButton> : <CommandButton command="admin.growthOps.moderate" className="dash-btn small ghost" targetId={review.id} scope={review.zone} sliceKey="growthOps" value={result.book} expectedSliceRev={store.value.draftRev} confirmTarget={false} disabled={store.loading || Boolean(result.error)} title={result.error} onDone={() => setNotice("Moderation saved; original retained.")}>{state.hidden ? "Restore" : "Hide"}</CommandButton>}
+                      {liveData ? <CommandButton command="admin.growthOps.moderate" className="dash-btn small ghost" targetId={review.id} scope={review.zone} confirmTarget={false} before={state.hidden ? "hidden" : "shown"} after={state.hidden ? "shown" : "hidden"} disabled={!editable} onDone={() => { setNotice(state.hidden ? tr("Shown again: it counts in the average.") : tr("Hidden: it no longer counts in the average.")); void liveRatings.refetch(); }}>{state.hidden ? tr("Restore") : tr("Hide")}</CommandButton> : <CommandButton command="admin.growthOps.moderate" className="dash-btn small ghost" targetId={review.id} scope={review.zone} sliceKey="growthOps" value={result.book} expectedSliceRev={store.value.draftRev} confirmTarget={false} disabled={store.loading || Boolean(result.error)} title={result.error} onDone={() => setNotice(tr("Moderation saved; original retained."))}>{state.hidden ? tr("Restore") : tr("Hide")}</CommandButton>}
                     </div>
-                    {store.value.moderation[review.id]?.length ? <ul className="gr-events">{store.value.moderation[review.id].map((m, i) => <li key={i}>{m.at} · {m.actor} · {m.hidden ? "hide" : "restore"} · {m.reason}</li>)}</ul> : null}
+                    {store.value.moderation[review.id]?.length ? <ul className="gr-events">{store.value.moderation[review.id].map((m, i) => <li key={i}>{m.at} · {m.actor} · {m.hidden ? tr("hide") : tr("restore")} · {m.reason}</li>)}</ul> : null}
                   </li>
                 );
               })}
             </ul>
-          ) : <p className="dx-calm">No reviews match.</p>}
-          {shown.length > limit ? <button data-command="admin.review.view" type="button" className="dash-btn small ghost" onClick={() => setLimit(limit + 30)}>Show more ({shown.length - limit} left)</button> : null}
+          ) : <p className="dx-calm">{tr("No reviews match.")}</p>}
+          {shown.length > limit ? <button data-command="admin.review.view" type="button" className="dash-btn small ghost" onClick={() => setLimit(limit + 30)}>{trn("Show more ({0} left)", shown.length - limit)}</button> : null}
         </>
       )}
     </div>
@@ -144,27 +144,27 @@ function RulesView({ ops, country, editable, onNotice }: { ops: ReviewOps; count
   const patch = (next: Partial<ReviewRules>) => setDraft({ ...value, ...next });
   const line = (key: "warn" | "review" | "block", label: string, help: string) => (
     <Row label={label} help={help} on={value[key].on} onToggle={(on) => patch({ [key]: { ...value[key], on } })} disabled={!editable}>
-      <Num label={`${label} below`} before="Below" value={value[key].below} step={0.1} min={1} max={5} disabled={!editable || !value[key].on} onChange={(below) => patch({ [key]: { ...value[key], below } })} />
+      <Num label={tr("{0} below", [label])} before="Below" value={value[key].below} step={0.1} min={1} max={5} disabled={!editable || !value[key].on} onChange={(below) => patch({ [key]: { ...value[key], below } })} />
     </Row>
   );
   return (
     <div className="gr-two">
-      <Card title="Low ratings" icon={<ShieldAlert size={15} />} tone="orange" help="What happens when a person's average falls under a line.">
+      <Card title={tr("Low ratings")} icon={<ShieldAlert size={15} />} tone="orange" help={tr("What happens when a person's average falls under a line.")}>
         {line("warn", "Send a warning", "The person gets a message to improve.")}
         {line("review", "Admin review", "The person shows up for an admin to look at.")}
         {line("block", "Block", "The person cannot use the app until an admin lets them back.")}
-        <Row label="Count after" help="Only people with at least this many reviews."><Num label="Minimum reviews" value={value.minReviews} min={1} unit="reviews" disabled={!editable} onChange={(minReviews) => patch({ minReviews })} /></Row>
+        <Row label={tr("Count after")} help={tr("Only people with at least this many reviews.")}><Num label={tr("Minimum reviews")} value={value.minReviews} min={1} unit="reviews" disabled={!editable} onChange={(minReviews) => patch({ minReviews })} /></Row>
       </Card>
-      <Card title="Words and tags" icon={<EyeOff size={15} />} tone="purple" help="Comments with these words are hidden by themselves. An admin can restore them.">
-        <Row label="Hide bad words"><Switch label="Hide bad words" on={value.badWords.on} disabled={!editable} onChange={(on) => patch({ badWords: { ...value.badWords, on } })} /></Row>
-        <label className="gr-field"><span>Words, one per line</span><textarea aria-label="Bad words" value={value.badWords.words.join("\n")} disabled={!editable || !value.badWords.on} onChange={(e) => patch({ badWords: { ...value.badWords, words: e.target.value.split("\n") } })} /></label>
-        <label className="gr-field"><span>Tags riders can give drivers, comma between</span><input aria-label="Driver tags" value={value.driverTags.join(", ")} disabled={!editable} onChange={(e) => patch({ driverTags: e.target.value.split(",").map((tag) => tag.trimStart()) })} /></label>
-        <label className="gr-field"><span>Tags drivers can give riders, comma between</span><input aria-label="Rider tags" value={value.riderTags.join(", ")} disabled={!editable} onChange={(e) => patch({ riderTags: e.target.value.split(",").map((tag) => tag.trimStart()) })} /></label>
+      <Card title={tr("Words and tags")} icon={<EyeOff size={15} />} tone="purple" help={tr("Comments with these words are hidden by themselves. An admin can restore them.")}>
+        <Row label={tr("Hide bad words")}><Switch label={tr("Hide bad words")} on={value.badWords.on} disabled={!editable} onChange={(on) => patch({ badWords: { ...value.badWords, on } })} /></Row>
+        <label className="gr-field"><span>{tr("Words, one per line")}</span><textarea aria-label={tr("Bad words")} value={value.badWords.words.join("\n")} disabled={!editable || !value.badWords.on} onChange={(e) => patch({ badWords: { ...value.badWords, words: e.target.value.split("\n") } })} /></label>
+        <label className="gr-field"><span>{tr("Tags riders can give drivers, comma between")}</span><input aria-label={tr("Driver tags")} value={value.driverTags.join(", ")} disabled={!editable} onChange={(e) => patch({ driverTags: e.target.value.split(",").map((tag) => tag.trimStart()) })} /></label>
+        <label className="gr-field"><span>{tr("Tags drivers can give riders, comma between")}</span><input aria-label={tr("Rider tags")} value={value.riderTags.join(", ")} disabled={!editable} onChange={(e) => patch({ riderTags: e.target.value.split(",").map((tag) => tag.trimStart()) })} /></label>
       </Card>
       <div className="gr-save">
         {error ? <p role="alert" className="gr-warn">{error}</p> : null}
-        <CommandButton command="admin.review.rules" confirmTarget={false} className="dash-btn small" sliceKey={REVIEW_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, rules: { ...ops.rules, [country]: { ...value, badWords: { ...value.badWords, words: value.badWords.words.map((word) => word.trim()).filter(Boolean) }, driverTags: value.driverTags.map((tag) => tag.trim()).filter(Boolean), riderTags: value.riderTags.map((tag) => tag.trim()).filter(Boolean) } } }} expectedSliceRev={ops.draftRev} targetId={country} disabled={!editable || !draft || Boolean(error)} onDone={() => { setDraft(null); onNotice("Review rules saved."); }}>Save review rules</CommandButton>
-        {draft ? <button data-command="admin.review.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>Undo changes</button> : null}
+        <CommandButton command="admin.review.rules" confirmTarget={false} className="dash-btn small" sliceKey={REVIEW_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, rules: { ...ops.rules, [country]: { ...value, badWords: { ...value.badWords, words: value.badWords.words.map((word) => word.trim()).filter(Boolean) }, driverTags: value.driverTags.map((tag) => tag.trim()).filter(Boolean), riderTags: value.riderTags.map((tag) => tag.trim()).filter(Boolean) } } }} expectedSliceRev={ops.draftRev} targetId={country} disabled={!editable || !draft || Boolean(error)} onDone={() => { setDraft(null); onNotice(tr("Review rules saved.")); }}>{tr("Save review rules")}</CommandButton>
+        {draft ? <button data-command="admin.review.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{tr("Undo changes")}</button> : null}
       </div>
     </div>
   );
@@ -174,10 +174,10 @@ function RulesView({ ops, country, editable, onNotice }: { ops: ReviewOps; count
 function LiveRules() {
   return (
     <div className="gr-two" data-testid="live-review-rules">
-      <Card title="Low ratings" icon={<ShieldAlert size={15} />} tone="orange" help="What happens when a person's average falls under a line.">
+      <Card title={tr("Low ratings")} icon={<ShieldAlert size={15} />} tone="orange" help={tr("What happens when a person's average falls under a line.")}>
         <NotConnected block />
       </Card>
-      <Card title="Words and tags" icon={<EyeOff size={15} />} tone="purple" help="The same tags in every country, set in the contract. Each app shows them in its own words.">
+      <Card title={tr("Words and tags")} icon={<EyeOff size={15} />} tone="purple" help={tr("The same tags in every country, set in the contract. Each app shows them in its own words.")}>
         <p className="gr-help">{tr("Tags riders can give drivers")}</p>
         <p className="gr-tags">{RATING_TAGS.aboutDriver.map((tag) => <span key={tag}>{ratingTagLabel(tag)}</span>)}</p>
         <p className="gr-help">{tr("Tags drivers can give riders")}</p>

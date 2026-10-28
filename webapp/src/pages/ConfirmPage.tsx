@@ -10,6 +10,7 @@ import { OPEN_VALUES } from "../config/confirm";
 import { CONFIRM_OPS_KEY, decisionError, emptyConfirmOps, inboxItems, normalizeConfirmOps, type ConfirmOps, type InboxKind } from "../platform/inbox";
 import { Cards } from "../reports/ui";
 import { CommandButton } from "../ui/CommandButton";
+import { tr, trn } from "../i18n";
 
 const KIND_LABEL: Record<InboxKind, string> = { money: "Money", settings: "Settings", value: "Product value" };
 
@@ -49,10 +50,10 @@ export function ConfirmPage() {
     <div className="dx-page pl-page">
       <div className="page-heading">
         <div className="pl-head">
-          <button data-command="admin.inbox.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+          <button data-command="admin.inbox.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
           <div>
-            <h2>To confirm</h2>
-            <p>Values the product owner has not confirmed. Today’s number is the demo default, not a second policy.</p>
+            <h2>{tr("To confirm")}</h2>
+            <p>{tr("Values the product owner has not confirmed. Today’s number is the demo default, not a second policy.")}</p>
           </div>
         </div>
       </div>
@@ -70,36 +71,36 @@ export function ConfirmPage() {
         ]}
       />
 
-      <section className="panel pl-inbox" aria-label="Waiting for you">
-        <h3><ClipboardList size={15} aria-hidden="true" /> Waiting for a decision</h3>
-        <div className="pl-chips" role="group" aria-label="Kind">
-          {(["all", "money", "settings", "value"] as const).map((id) => <button data-command="admin.inbox.view" key={id} type="button" aria-pressed={kind === id} className={kind === id ? "pl-chip on" : "pl-chip"} onClick={() => setKind(id)}>{id === "all" ? "Approvals" : KIND_LABEL[id]} <small>{id === "all" ? work.length : items.filter((item) => item.kind === id).length}</small></button>)}
+      <section className="panel pl-inbox" aria-label={tr("Waiting for you")}>
+        <h3><ClipboardList size={15} aria-hidden="true" />{" "}{tr("Waiting for a decision")}</h3>
+        <div className="pl-chips" role="group" aria-label={tr("Kind")}>
+          {(["all", "money", "settings", "value"] as const).map((id) => <button data-command="admin.inbox.view" key={id} type="button" aria-pressed={kind === id} className={kind === id ? "pl-chip on" : "pl-chip"} onClick={() => setKind(id)}>{id === "all" ? tr("Approvals") : KIND_LABEL[id]} <small>{id === "all" ? work.length : items.filter((item) => item.kind === id).length}</small></button>)}
         </div>
         {shown.length ? (
-          <ul className="pl-inbox-list" aria-label="Inbox">
+          <ul className="pl-inbox-list" aria-label={tr("Inbox")}>
             {shown.map((item) => (
               <li key={item.id} className={`pl-inbox-row ${item.kind}`}>
                 <span className="pl-inbox-icon" aria-hidden="true">{item.kind === "money" ? <Banknote size={15} /> : item.kind === "settings" ? <Settings2 size={15} /> : <CheckCircle2 size={15} />}</span>
-                <span className="pl-inbox-text"><b>{item.title}</b><small>{item.detail}{item.by ? ` · asked by ${item.by}` : ""}</small></span>
+                <span className="pl-inbox-text"><b>{item.title}</b><small>{item.detail}{item.by ? tr(" · asked by {0}", [item.by]) : ""}</small></span>
                 <span className="actions">
                   {item.kind === "money" ? (
                     <>
-                      <CommandButton command="admin.approval.approve" className="dash-btn small" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={item.mine || !canDecide || !canDo(item.id)} title={item.mine ? "The requester cannot approve their own action." : !canDo(item.id) ? "Your role cannot do this action, so it cannot approve it." : undefined}>Approve</CommandButton>
-                      <CommandButton command="admin.approval.reject" className="dash-btn small ghost" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={item.mine || !canDecide || !canDo(item.id)} title={item.mine ? "The requester cannot decide their own action." : !canDo(item.id) ? "Your role cannot do this action, so it cannot decide it." : undefined}>Reject</CommandButton>
+                      <CommandButton command="admin.approval.approve" className="dash-btn small" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={item.mine || !canDecide || !canDo(item.id)} title={item.mine ? tr("The requester cannot approve their own action.") : !canDo(item.id) ? tr("Your role cannot do this action, so it cannot approve it.") : undefined}>{tr("Approve")}</CommandButton>
+                      <CommandButton command="admin.approval.reject" className="dash-btn small ghost" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={item.mine || !canDecide || !canDo(item.id)} title={item.mine ? tr("The requester cannot decide their own action.") : !canDo(item.id) ? tr("Your role cannot do this action, so it cannot decide it.") : undefined}>{tr("Reject")}</CommandButton>
                     </>
                   ) : null}
-                  {item.kind === "value" ? <button data-command="admin.inbox.view" type="button" className="dash-btn small" disabled={!canConfirm} onClick={() => { start(item.id, OPEN_VALUES.find((row) => row.id === item.id)?.today ?? ""); document.getElementById(`value-${item.id}`)?.scrollIntoView({ block: "center" }); }}>Confirm</button> : null}
-                  <Link className="dash-btn small ghost" to={item.link}>Open</Link>
+                  {item.kind === "value" ? <button data-command="admin.inbox.view" type="button" className="dash-btn small" disabled={!canConfirm} onClick={() => { start(item.id, OPEN_VALUES.find((row) => row.id === item.id)?.today ?? ""); document.getElementById(`value-${item.id}`)?.scrollIntoView({ block: "center" }); }}>{tr("Confirm")}</button> : null}
+                  <Link className="dash-btn small ghost" to={item.link}>{tr("Open")}</Link>
                 </span>
               </li>
             ))}
           </ul>
-        ) : <p className="dx-calm">Nothing is waiting. Good work.</p>}
+        ) : <p className="dx-calm">{tr("Nothing is waiting. Good work.")}</p>}
       </section>
 
-      <section className="panel pl-values" aria-label="Product values">
-        <h3>Product values</h3>
-        <p className="pl-help">Confirm a value to record who decided it and when. The setting itself is changed in its own section.</p>
+      <section className="panel pl-values" aria-label={tr("Product values")}>
+        <h3>{tr("Product values")}</h3>
+        <p className="pl-help">{tr("Confirm a value to record who decided it and when. The setting itself is changed in its own section.")}</p>
         <div className="field-grid">
           {OPEN_VALUES.map((item) => {
             const decision = ops.values[item.id];
@@ -109,19 +110,19 @@ export function ConfirmPage() {
                   {item.label}
                   <input readOnly value={item.today} />
                 </label>
-                {item.link ? <Link className="link-action" to={item.link}>{item.link.startsWith("/dispatch") ? "Open in Dispatch" : "Open"}</Link> : null}
-                {decision ? <span className="pl-confirmed">Confirmed: {decision.value} · {decision.by} · {decision.at.slice(0, 10)}{decision.note ? ` · ${decision.note}` : ""}</span> : <span className="badge-amber">To confirm</span>}
+                {item.link ? <Link className="link-action" to={item.link}>{item.link.startsWith("/dispatch") ? tr("Open in Dispatch") : tr("Open")}</Link> : null}
+                {decision ? <span className="pl-confirmed">{trn("Confirmed: {0} · {1} · {2}{3}", decision.value, decision.by, decision.at.slice(0, 10), decision.note ? ` · ${decision.note}` : "")}</span> : <span className="badge-amber">{tr("To confirm")}</span>}
                 {editing === item.id ? (
                   <div className="pl-value-edit">
-                    <input aria-label="Value to confirm" value={value} onChange={(e) => setValue(e.target.value)} />
-                    <input aria-label="Note for the team" placeholder="Why, or where it was decided" value={note} onChange={(e) => setNote(e.target.value)} />
+                    <input aria-label={tr("Value to confirm")} value={value} onChange={(e) => setValue(e.target.value)} />
+                    <input aria-label={tr("Note for the team")} placeholder={tr("Why, or where it was decided")} value={note} onChange={(e) => setNote(e.target.value)} />
                     {error ? <small role="alert" className="pl-warn">{error}</small> : null}
                     <span className="actions">
-                      <CommandButton command="admin.inbox.value" confirmTarget={false} className="dash-btn small" sliceKey={CONFIRM_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, values: { ...ops.values, [item.id]: { value: value.trim(), note: note.trim(), by: me, at: new Date().toISOString() } } }} expectedSliceRev={ops.draftRev} targetId={item.id} disabled={Boolean(error) || slice.loading} onDone={() => { setEditing(null); setNotice(`${item.label} confirmed.`); }}>Save confirmation</CommandButton>
-                      <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" onClick={() => setEditing(null)}>Cancel</button>
+                      <CommandButton command="admin.inbox.value" confirmTarget={false} className="dash-btn small" sliceKey={CONFIRM_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, values: { ...ops.values, [item.id]: { value: value.trim(), note: note.trim(), by: me, at: new Date().toISOString() } } }} expectedSliceRev={ops.draftRev} targetId={item.id} disabled={Boolean(error) || slice.loading} onDone={() => { setEditing(null); setNotice(tr("{0} confirmed.", [item.label])); }}>{tr("Save confirmation")}</CommandButton>
+                      <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" onClick={() => setEditing(null)}>{tr("Cancel")}</button>
                     </span>
                   </div>
-                ) : canConfirm ? <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" aria-label={`Confirm ${item.id}`} onClick={() => start(item.id, item.today)}>{decision ? "Change" : "Confirm"}</button> : null}
+                ) : canConfirm ? <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" aria-label={tr("Confirm {0}", [item.id])} onClick={() => start(item.id, item.today)}>{decision ? tr("Change") : tr("Confirm")}</button> : null}
               </div>
             );
           })}

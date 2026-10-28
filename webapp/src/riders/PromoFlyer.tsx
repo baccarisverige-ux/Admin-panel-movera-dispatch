@@ -35,11 +35,11 @@ function qrPath(text: string, size: number): { d: string; cell: number } {
 export function flyerSvg(promo: FlyerPromo, link: string, locale: string): string {
   const symbol = CURRENCY_SYMBOL[promo.country];
   const deal = promo.kind === "percent" ? `${promo.value}%` : `${promo.value} ${symbol}`;
-  const rides = `your next ${promo.rides} ride${promo.rides === 1 ? "" : "s"}`;
-  const cap = promo.kind === "percent" ? ` · up to ${promo.maxPerRide} ${symbol} per ride` : "";
+  const rides = promo.rides === 1 ? tr("off your next ride") : tr("off your next {0} rides", [promo.rides]);
+  const cap = promo.kind === "percent" ? tr(" · up to {0} {1} per ride", [promo.maxPerRide, symbol]) : "";
   const date = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" });
-  const valid = promo.validFrom && promo.validTo ? `Valid ${date.format(Date.parse(promo.validFrom))} – ${date.format(Date.parse(promo.validTo))}` : "";
-  const cats = promo.categories.length ? promo.categories.map(categoryName).join(", ") : "All ride categories";
+  const valid = promo.validFrom && promo.validTo ? tr("Valid {0} – {1}", [date.format(Date.parse(promo.validFrom)), date.format(Date.parse(promo.validTo))]) : "";
+  const cats = promo.categories.length ? promo.categories.map(categoryName).join(", ") : tr("All ride categories");
   const qr = qrPath(link || promo.code, 116);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Poppins, Arial, sans-serif">
   <defs>
@@ -51,25 +51,25 @@ export function flyerSvg(promo: FlyerPromo, link: string, locale: string): strin
   <circle cx="30" cy="230" r="70" fill="#FFFFFF" opacity="0.06"/>
   <text x="32" y="54" fill="#FFFFFF" font-size="20" font-weight="700" letter-spacing="3">MOVERA</text>
   <text x="32" y="140" fill="#FFFFFF" font-size="68" font-weight="800">${escapeXml(deal)}</text>
-  <text x="32" y="176" fill="#FFFFFF" font-size="26" font-weight="600">OFF ${escapeXml(rides.toUpperCase())}</text>
-  <text x="32" y="212" fill="#D6E9F7" font-size="15">${escapeXml(promo.title || "Movera offer")}${escapeXml(cap)}</text>
-  <text x="32" y="292" fill="#5C656C" font-size="13" font-weight="600" letter-spacing="1.5">YOUR CODE</text>
+  <text x="32" y="176" fill="#FFFFFF" font-size="26" font-weight="600">${escapeXml(rides.toUpperCase())}</text>
+  <text x="32" y="212" fill="#D6E9F7" font-size="15">${escapeXml(promo.title || tr("Movera offer"))}${escapeXml(cap)}</text>
+  <text x="32" y="292" fill="#5C656C" font-size="13" font-weight="600" letter-spacing="1.5">${escapeXml(tr("Your code").toUpperCase())}</text>
   <rect x="32" y="304" width="${W - 64}" height="64" rx="12" fill="#EEF5FB" stroke="#215277" stroke-width="2" stroke-dasharray="7 5"/>
-  <text x="${W / 2}" y="347" text-anchor="middle" fill="#1D252C" font-size="32" font-weight="800" letter-spacing="4">${escapeXml(promo.code || "CODE")}</text>
+  <text x="${W / 2}" y="347" text-anchor="middle" fill="#1D252C" font-size="32" font-weight="800" letter-spacing="4">${escapeXml(promo.code || tr("Code").toUpperCase())}</text>
   <g transform="translate(32 396)">
     <rect width="132" height="132" rx="10" fill="#FFFFFF" stroke="#E7EBEE"/>
     <path transform="translate(8 8)" d="${qr.d}" fill="#1D252C"/>
   </g>
   <g fill="#1D252C" font-size="13">
-    <text x="184" y="414" font-weight="700" font-size="14">How to use it</text>
-    <text x="184" y="442"><tspan font-weight="700" fill="#215277">1 </tspan>Scan the code or open Movera</text>
-    <text x="184" y="466"><tspan font-weight="700" fill="#215277">2 </tspan>Account, then Vouchers</text>
-    <text x="184" y="490"><tspan font-weight="700" fill="#215277">3 </tspan>Type ${escapeXml(promo.code || "the code")}</text>
-    <text x="184" y="514"><tspan font-weight="700" fill="#215277">4 </tspan>Book your ride</text>
+    <text x="184" y="414" font-weight="700" font-size="14">${escapeXml(tr("How to use it"))}</text>
+    <text x="184" y="442"><tspan font-weight="700" fill="#215277">1 </tspan>${escapeXml(tr("Scan the code or open Movera"))}</text>
+    <text x="184" y="466"><tspan font-weight="700" fill="#215277">2 </tspan>${escapeXml(tr("Account, then Vouchers"))}</text>
+    <text x="184" y="490"><tspan font-weight="700" fill="#215277">3 </tspan>${escapeXml(tr("Type {0}", [promo.code || tr("the code")]))}</text>
+    <text x="184" y="514"><tspan font-weight="700" fill="#215277">4 </tspan>${escapeXml(tr("Book your ride"))}</text>
   </g>
   <line x1="32" y1="548" x2="${W - 32}" y2="548" stroke="#E7EBEE"/>
   <text x="32" y="568" fill="#5C656C" font-size="11">${escapeXml(valid)}</text>
-  <text x="32" y="584" fill="#5C656C" font-size="11">${escapeXml(cats)} · one code per rider</text>
+  <text x="32" y="584" fill="#5C656C" font-size="11">${escapeXml(tr("{0} · one code per rider", [cats]))}</text>
 </svg>`;
 }
 

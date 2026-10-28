@@ -79,7 +79,7 @@ export function OpenView() {
 
       {mutedKinds.length ? (
         <p className="al-muted-line">{trn("{0} Muted: {1}", <BellOff size={13} aria-hidden="true" />, mutedKinds.map(([kind, mute]) => (
-          <span key={kind}>{trn("{0} until {1} by {2}{3}", trx(kindDef(kind as OpenAlert["kind"])?.label) ?? kind, new Date(mute.until).toTimeString().slice(0, 5), agentName(mute.by), <CommandButton command="admin.alerts.mute" className="link-action" targetId={kind} confirmTarget={false} scope="all" before="muted" after="on" expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={unmuteKind(data.book, kind as OpenAlert["kind"])} onDone={() => setNotice("Alerts of that kind show again.")}>{tr("Unmute")}</CommandButton>)}</span>
+          <span key={kind}>{trn("{0} until {1} by {2}{3}", trx(kindDef(kind as OpenAlert["kind"])?.label) ?? kind, new Date(mute.until).toTimeString().slice(0, 5), agentName(mute.by), <CommandButton command="admin.alerts.mute" className="link-action" targetId={kind} confirmTarget={false} scope="all" before="muted" after="on" expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={unmuteKind(data.book, kind as OpenAlert["kind"])} onDone={() => setNotice(tr("Alerts of that kind show again."))}>{tr("Unmute")}</CommandButton>)}</span>
         )))}</p>
       ) : null}
       {notice ? <p className="pricing-notice" role="status">{trSentences(notice)}</p> : null}

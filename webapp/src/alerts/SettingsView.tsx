@@ -50,7 +50,7 @@ export function SettingsView() {
           <div className="dx-publish-text"><b>{issues.length ? tr("Fix the settings first") : tr("Settings changed, not saved")}</b><small>{issues[0] ?? tr("Save to use them for everyone.")}</small></div>
           <div className="dx-publish-actions">
             <button data-command="admin.alerts.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{tr("Discard")}</button>
-            <CommandButton command="admin.alerts.settings" className="dash-btn small publish" targetId="alert settings" confirmTarget={false} scope="all" before={`rev ${data.book.draftRev}`} after={`rev ${data.book.draftRev + 1}`} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={{ ...data.book, draftRev: data.book.draftRev + 1, settings }} disabled={disabled || Boolean(issues.length)} onDone={() => { setDraft(null); setNotice("Alert settings saved."); }}>{tr("Save settings")}</CommandButton>
+            <CommandButton command="admin.alerts.settings" className="dash-btn small publish" targetId="alert settings" confirmTarget={false} scope="all" before={`rev ${data.book.draftRev}`} after={`rev ${data.book.draftRev + 1}`} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={{ ...data.book, draftRev: data.book.draftRev + 1, settings }} disabled={disabled || Boolean(issues.length)} onDone={() => { setDraft(null); setNotice(tr("Alert settings saved.")); }}>{tr("Save settings")}</CommandButton>
           </div>
         </section>
       ) : null}
@@ -147,7 +147,7 @@ export function SettingsView() {
           <input type="time" aria-label={tr("Quiet to")} value={quiet.to} onChange={(event) => setQuiet({ ...quiet, to: event.target.value })} />
         </Row>
         <div className="dx-modal-actions">
-          <CommandButton command="admin.alerts.quiet" className="dash-btn small" targetId={agent?.id ?? "me"} confirmTarget={false} scope="all" before={mine.on ? `${mine.from}-${mine.to}` : "off"} after={quiet.on ? `${quiet.from}-${quiet.to}` : "off"} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={{ ...data.book, draftRev: data.book.draftRev + 1, personal: { ...data.book.personal, [agent?.id ?? "me"]: { quiet } } }} disabled={JSON.stringify(quiet) === JSON.stringify(mine) || quiet.from === quiet.to} onDone={() => setNotice("Your quiet hours are saved.")}>{tr("Save my quiet hours")}</CommandButton>
+          <CommandButton command="admin.alerts.quiet" className="dash-btn small" targetId={agent?.id ?? "me"} confirmTarget={false} scope="all" before={mine.on ? `${mine.from}-${mine.to}` : "off"} after={quiet.on ? `${quiet.from}-${quiet.to}` : "off"} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={{ ...data.book, draftRev: data.book.draftRev + 1, personal: { ...data.book.personal, [agent?.id ?? "me"]: { quiet } } }} disabled={JSON.stringify(quiet) === JSON.stringify(mine) || quiet.from === quiet.to} onDone={() => setNotice(tr("Your quiet hours are saved."))}>{tr("Save my quiet hours")}</CommandButton>
         </div>
       </Card>
     </div>

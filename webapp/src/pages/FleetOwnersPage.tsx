@@ -10,6 +10,7 @@ import { ownerCode } from "../fleet/codes";
 import { ContactActions, DocSummary } from "../fleet/ui";
 import { marketOfZone } from "../markets/markets";
 import { DataTable } from "../ui/DataTable";
+import { tr } from "../i18n";
 
 const VIEWS = [
   { id: "all", label: "All" },
@@ -56,22 +57,22 @@ export function FleetOwnersPage() {
     <div className="fd-page">
       <div className="fd-head">
         <div>
-          <h2>Fleet owners</h2>
-          <p>Companies and people who own fleets. Open an owner to see their documents, each fleet and its drivers, performance and earnings.</p>
+          <h2>{tr("Fleet owners")}</h2>
+          <p>{tr("Companies and people who own fleets. Open an owner to see their documents, each fleet and its drivers, performance and earnings.")}</p>
         </div>
       </div>
 
-      <section className="fd-cards" aria-label="Fleet owner summary">
-        <Card icon={<Building2 size={18} />} tone="blue" label="Fleet owners" value={rows.length} />
-        <Card icon={<UserCheck size={18} />} tone="green" label="Active" value={count("active")} />
-        <Card icon={<PauseCircle size={18} />} tone="amber" label="On hold" value={count("on_hold")} />
-        <Card icon={<CalendarClock size={18} />} tone="violet" label="Pending approval" value={count("pending")} />
-        <Card icon={<Users size={18} />} tone="aqua" label="Drivers in fleets" value={rows.reduce((sum, row) => sum + row.crew.length, 0)} />
-        <Card icon={<Car size={18} />} tone="orange" label="Fleet vehicles" value={rows.reduce((sum, row) => sum + row.cars, 0)} />
+      <section className="fd-cards" aria-label={tr("Fleet owner summary")}>
+        <Card icon={<Building2 size={18} />} tone="blue" label={tr("Fleet owners")} value={rows.length} />
+        <Card icon={<UserCheck size={18} />} tone="green" label={tr("Active")} value={count("active")} />
+        <Card icon={<PauseCircle size={18} />} tone="amber" label={tr("On hold")} value={count("on_hold")} />
+        <Card icon={<CalendarClock size={18} />} tone="violet" label={tr("Pending approval")} value={count("pending")} />
+        <Card icon={<Users size={18} />} tone="aqua" label={tr("Drivers in fleets")} value={rows.reduce((sum, row) => sum + row.crew.length, 0)} />
+        <Card icon={<Car size={18} />} tone="orange" label={tr("Fleet vehicles")} value={rows.reduce((sum, row) => sum + row.cars, 0)} />
       </section>
 
       <div className="fd-toolbar">
-        <div className="fd-views" role="group" aria-label="Fleet owner views">
+        <div className="fd-views" role="group" aria-label={tr("Fleet owner views")}>
           {VIEWS.map((item) => (
             <button key={item.id} type="button" data-command="admin.table.filter" aria-label={item.label} aria-pressed={view === item.id} className={view === item.id ? "fd-view active" : "fd-view"} onClick={() => setView(item.id)}>
               {item.label}<span>{item.id === "all" ? rows.length : count(item.id)}</span>

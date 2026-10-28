@@ -16,6 +16,7 @@ import {
 import { CommandButton } from "../ui/CommandButton";
 import { stockholmZones } from "../zones/releases";
 import { ZoneCanvas } from "./ZoneCanvas";
+import { tr, trn } from "../i18n";
 
 const LAYERS: { id: LiveKind | "stale"; label: string }[] = [
   { id: "driver", label: "Online drivers" },
@@ -107,17 +108,14 @@ function LiveBoard() {
     <>
       <div className="page-heading">
         <div>
-          <h2>Live map</h2>
-          <p>OpenStreetMap. Positions refresh in the demo. Stale markers stay grey and cannot be selected as dispatch candidates.</p>
+          <h2>{tr("Live map")}</h2>
+          <p>{tr("OpenStreetMap. Positions refresh in the demo. Stale markers stay grey and cannot be selected as dispatch candidates.")}</p>
         </div>
       </div>
 
-      <p className="state-line" data-live="counts" data-testid="live-tick" data-tick={tick}>
-        Drivers {drivers.data?.length ?? 0}. Trips in the book {trips.data?.length ?? 0}. Online {online.length}. Stale {stale.length}. Trips on the map {tripMarks.length} of {activeAll} active. Open requests plotted {requests.length} of {openAll}. Airport queue {queue.length}. Boosts {boosts.length}.
-        {notice ? ` ${notice}` : ""}
-      </p>
+      <p className="state-line" data-live="counts" data-testid="live-tick" data-tick={tick}>{trn("Drivers {0}. Trips in the book {1}. Online {2}. Stale {3}. Trips on the map {4} of {5} active. Open requests plotted {6} of {7}. Airport queue {8}. Boosts {9}.{10}", drivers.data?.length ?? 0, trips.data?.length ?? 0, online.length, stale.length, tripMarks.length, activeAll, requests.length, openAll, queue.length, boosts.length, notice ? ` ${notice}` : "")}</p>
 
-      <div className="actions" aria-label="Map layers">
+      <div className="actions" aria-label={tr("Map layers")}>
         {LAYERS.map((layer) => (
           <label key={layer.id} className="check-row">
             <input
@@ -143,7 +141,7 @@ function LiveBoard() {
                 style={{ left: point.left, top: point.top }}
                 data-lat={marker.lat.toFixed(6)}
                 data-stale={marker.stale ? "yes" : "no"}
-                title={marker.stale ? `${marker.name}, last seen ${marker.lastSeen}` : marker.name}
+                title={marker.stale ? tr("{0}, last seen {1}", [marker.name, marker.lastSeen]) : marker.name}
                 onClick={() => {
                   setSelectedId(marker.id);
                   setOfferDriverId("");
@@ -156,27 +154,25 @@ function LiveBoard() {
         </div>
 
         <aside className="panel" data-testid="live-panel">
-          <h3>Selected</h3>
+          <h3>{tr("Selected")}</h3>
           {selected ? (
             <>
               <p><strong>{selected.name}</strong></p>
-              <p>{selected.stale ? `Last seen ${selected.lastSeen}` : "Live position"}</p>
+              <p>{selected.stale ? tr("Last seen {0}", [selected.lastSeen]) : tr("Live position")}</p>
               <p>{selected.kind} · {selected.lat.toFixed(4)}, {selected.lng.toFixed(4)}</p>
-              <Link to={selected.href}>Open page</Link>
+              <Link to={selected.href}>{tr("Open page")}</Link>
 
               {selected.kind === "request" && selectedTrip ? (
                 <div data-testid="quick-dispatch">
-                  <h4>Quick dispatch</h4>
-                  <p>{selectedOfferWhy ?? `${candidates.length} eligible drivers with eligible matching vehicles.`}</p>
-                  <label>
-                    Driver
-                    <select
-                      aria-label="Quick dispatch driver"
+                  <h4>{tr("Quick dispatch")}</h4>
+                  <p>{selectedOfferWhy ?? tr("{0} eligible drivers with eligible matching vehicles.", [candidates.length])}</p>
+                  <label>{tr("Driver")}<select
+                      aria-label={tr("Quick dispatch driver")}
                       value={chosen}
                       disabled={Boolean(selectedOfferWhy)}
                       onChange={(event) => setOfferDriverId(event.target.value)}
                     >
-                      {candidates.length === 0 ? <option value="">No eligible driver</option> : null}
+                      {candidates.length === 0 ? <option value="">{tr("No eligible driver")}</option> : null}
                       {candidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name} · {candidate.id}</option>)}
                     </select>
                   </label>
@@ -197,26 +193,24 @@ function LiveBoard() {
                     disabled={Boolean(selectedOfferWhy)}
                     title={selectedOfferWhy ?? undefined}
                     onDone={() => {
-                      setNotice(`${selectedTrip.id} offered to ${chosen}.`);
+                      setNotice(tr("{0} offered to {1}.", [selectedTrip.id, chosen]));
                       setSelectedId(null);
                       setOfferDriverId("");
                     }}
-                  >
-                    Offer request
-                  </CommandButton>
+                  >{tr("Offer request")}</CommandButton>
                 </div>
               ) : null}
             </>
           ) : (
-            <p>Choose a driver, trip, request, queue or boost.</p>
+            <p>{tr("Choose a driver, trip, request, queue or boost.")}</p>
           )}
         </aside>
       </div>
 
       <div className="split">
         <article className="panel">
-          <h3>Drivers</h3>
-          <ul aria-label="Live drivers">
+          <h3>{tr("Drivers")}</h3>
+          <ul aria-label={tr("Live drivers")}>
             {[...online, ...stale].map((marker) => (
               <li key={marker.id}>
                 <button
@@ -228,7 +222,7 @@ function LiveBoard() {
                     setOfferDriverId("");
                   }}
                 >
-                  {marker.name} · {marker.stale ? `Stale · last seen ${marker.lastSeen}` : "Live"}
+                  {marker.name} · {marker.stale ? tr("Stale · last seen {0}", [marker.lastSeen]) : tr("Live")}
                 </button>
               </li>
             ))}
@@ -236,8 +230,8 @@ function LiveBoard() {
         </article>
 
         <article className="panel">
-          <h3>Open requests, airport queue and boosts</h3>
-          <ul aria-label="Open requests">
+          <h3>{tr("Open requests, airport queue and boosts")}</h3>
+          <ul aria-label={tr("Open requests")}>
             {requests.map((marker) => (
               <li key={marker.id}>
                 <button
@@ -254,14 +248,14 @@ function LiveBoard() {
               </li>
             ))}
           </ul>
-          <ul aria-label="Airport queue">
+          <ul aria-label={tr("Airport queue")}>
             {queue.map((marker) => (
               <li key={marker.id}>
                 <button data-command="admin.live.focus" className="link-action" type="button" onClick={() => setSelectedId(marker.id)}>{marker.name}</button>
               </li>
             ))}
           </ul>
-          <ul aria-label="Boosts">
+          <ul aria-label={tr("Boosts")}>
             {boosts.map((marker) => (
               <li key={marker.id}>
                 <button data-command="admin.live.focus" className="link-action" type="button" onClick={() => setSelectedId(marker.id)}>{marker.name}</button>
@@ -281,20 +275,20 @@ function DispatchLink() {
   const zones = market("SE").zones;
   return (
     <article className="panel dp-link-panel" data-testid="dispatch-link">
-      <h3>Dispatch rules</h3>
-      <p>Offer times, search distance and every other dispatch rule are set per zone in Dispatch. These are the live values.</p>
-      <ul aria-label="Live dispatch values">
+      <h3>{tr("Dispatch rules")}</h3>
+      <p>{tr("Offer times, search distance and every other dispatch rule are set per zone in Dispatch. These are the live values.")}</p>
+      <ul aria-label={tr("Live dispatch values")}>
         {zones.map((zone) => {
           const rules = liveRules(book, zone.id);
           return (
             <li key={zone.id}>
               <Link to={`/dispatch?zone=${zone.id}`}>{zone.name}</Link>
-              <small>Exclusive {rules.exclusive.on ? `${rules.exclusive.seconds} s` : "off"} · Radar {rules.radar.on ? `${rules.radar.seconds} s` : "off"} · Search {rules.radius.steps.join(" → ")} km</small>
+              <small>{trn("Exclusive {0} · Radar {1} · Search {2} km", rules.exclusive.on ? `${rules.exclusive.seconds} s` : tr("off"), rules.radar.on ? `${rules.radar.seconds} s` : tr("off"), rules.radius.steps.join(" → "))}</small>
             </li>
           );
         })}
       </ul>
-      <Link className="dash-btn small" to="/dispatch">Open Dispatch</Link>
+      <Link className="dash-btn small" to="/dispatch">{tr("Open Dispatch")}</Link>
     </article>
   );
 }

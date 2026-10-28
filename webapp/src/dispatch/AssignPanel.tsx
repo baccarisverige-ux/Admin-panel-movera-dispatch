@@ -229,7 +229,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
                           disabled={!pickable(row.driverId) || Boolean(exclusiveMoney.blocked)}
                           title={!assignable ? tr("This trip cannot be assigned now.") : !free ? tr("{0} is on a trip.", [row.name]) : row.openOfferId ? tr("{0} already has an open offer.", [row.name]) : tr("Send an exclusive offer to {0}", [row.name])}
                           summary={<>{trn("Send an exclusive offer for {0} to {1}, {2} away. {3} has {4} s to accept or decline.", <b>{trip?.name ?? tripId}</b>, <b>{row.name}</b>, distanceLabel(row.distanceMeters), row.name, timers?.exclusiveSeconds ?? 15)}{exclusiveSees ? ` ${seesSentence(exclusiveMoney, zoneId)}` : ""}</>}
-                          onDone={() => { if (exclusiveMoney.used) sent(); setNotice(`Exclusive offer sent to ${row.name}.`); refresh(); }}
+                          onDone={() => { if (exclusiveMoney.used) sent(); setNotice(tr("Exclusive offer sent to {0}.", [row.name])); refresh(); }}
                         >
                           {row.name}
                         </CommandButton>
@@ -287,7 +287,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
               value={{ driverIds: selected, ...radarMoney.params }}
               disabled={!assignable || selected.length === 0 || Boolean(radarMoney.blocked)}
               title={!assignable ? tr("This trip cannot be assigned now.") : selected.length === 0 ? tr("Tick 1 to 10 drivers first.") : radarMoney.blocked ? trx(radarMoney.blocked) : radarSees || undefined}
-              onDone={() => { if (radarMoney.used) sent(); setNotice(`Sent to the radar of ${selected.length} driver${selected.length === 1 ? "" : "s"}.`); setPicked([]); refresh(); }}
+              onDone={() => { if (radarMoney.used) sent(); setNotice(tr("Sent to the radar of {0} driver{1}.", [selected.length, selected.length === 1 ? "" : "s"])); setPicked([]); refresh(); }}
             >{trn("{0} Send to radar", <Send size={13} aria-hidden="true" />)}</CommandButton>
           </div>
         </section>

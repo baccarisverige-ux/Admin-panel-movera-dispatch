@@ -53,7 +53,7 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
           {groups.map((group) => (
             <Fragment key={group}>
               <tr className="group-row">
-                <th scope="rowgroup" colSpan={categories.length + 1}>{group}</th>
+                <th scope="rowgroup" colSpan={categories.length + 1}>{trx(group)}</th>
               </tr>
               {group === "Cancellation" ? (
                 <tr className="note-row">

@@ -14,7 +14,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { DiffTable } from "../content/DiffTable";
 import { DriverTextsView } from "../content/DriverTexts";
 import { emptyStudioText, publishBody, validateStudio } from "../content/studio";
-import { tr } from "../i18n";
+import { tr, trn } from "../i18n";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { PublishTargetsLine } from "../live/StandardBar";
 import { ErrorLine } from "../live/ui";
@@ -106,7 +106,7 @@ export function ContentPage() {
         <button data-command="admin.content.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> {tr("Back")}</button>
         <div className="dx-head-text">
           <h2>{tr("Content")}</h2>
-          <p>{view === "driver-texts" ? "Island, offer and button texts in the driver app, in English, Swedish, French and Arabic." : live ? tr("Texts in Swedish, French and English for the apps. Publish sends them to the zones chosen at the top; one admin is enough. History and rollback come from the server.") : tr("Content studio in Swedish, French and English. A second agent must publish. Originals and every publication remain in history. Simulation only.")}</p>
+          <p>{view === "driver-texts" ? tr("Island, offer and button texts in the driver app, in English, Swedish, French and Arabic.") : live ? tr("Texts in Swedish, French and English for the apps. Publish sends them to the zones chosen at the top; one admin is enough. History and rollback come from the server.") : tr("Content studio in Swedish, French and English. A second agent must publish. Originals and every publication remain in history. Simulation only.")}</p>
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Content sections")}>
@@ -126,7 +126,7 @@ export function ContentPage() {
             return (
               <button data-command="admin.content.slot" key={item} type="button" className={item === id ? "active" : undefined} aria-current={item === id ? "true" : undefined} onClick={() => choose(item)}>
                 <b>{slotLabel(item)}</b>
-                <small>{live ? "" : row.published ? tr("Live · v{0}", [String(row.history.at(-1)?.version ?? 1)]) : tr("Not published")}{hidden ? ` · not in ${scope.market.name}` : ""}</small>
+                <small>{live ? "" : row.published ? tr("Live · v{0}", [String(row.history.at(-1)?.version ?? 1)]) : tr("Not published")}{hidden ? tr(" · not in {0}", [scope.market.name]) : ""}</small>
               </button>
             );
           })}
@@ -169,39 +169,39 @@ export function ContentPage() {
             <div className="actions">
                 {(["save", "publish", "rollback"] as const).map((action) => {
                   const result = changeStudio(store.value, id, text, action, agent?.id ?? "");
-                  return <CommandButton key={action} command={`admin.studio.${action}`} className={action === "publish" ? "dash-btn small" : "dash-btn small ghost"} targetId={id} sliceKey="studioOps" value={result.book} expectedSliceRev={store.value.draftRev} confirmTarget={false} disabled={store.loading || Boolean(result.error) || Boolean(draft && action !== "save")} title={result.error} onDone={() => { setDraft(null); setNotice(`${id}: ${action} recorded.`); }}>{action === "save" ? "Save draft" : action === "publish" ? "Publish" : "Roll back"}</CommandButton>;
+                  return <CommandButton key={action} command={`admin.studio.${action}`} className={action === "publish" ? "dash-btn small" : "dash-btn small ghost"} targetId={id} sliceKey="studioOps" value={result.book} expectedSliceRev={store.value.draftRev} confirmTarget={false} disabled={store.loading || Boolean(result.error) || Boolean(draft && action !== "save")} title={result.error} onDone={() => { setDraft(null); setNotice(tr("{0}: {1} recorded.", [id, action])); }}>{action === "save" ? tr("Save draft") : action === "publish" ? tr("Publish") : tr("Roll back")}</CommandButton>;
                 })}
               </div>
             )}
             <p role="alert" className="gr-help">{publishError ? tr(publishError as Parameters<typeof tr>[0]) : ""}</p>
           </article>
 
-          {live ? null : <Card title="Image, places and app update" icon={<ImagePlus size={15} />} tone="purple" help="Saved apart from the text. Applies when the content is shown.">
-            <Row label="Image" help="Upload a picture. Fill covers the whole space and may cut the edges; fit shows the whole picture.">
+          {live ? null : <Card title={tr("Image, places and app update")} icon={<ImagePlus size={15} />} tone="purple" help={tr("Saved apart from the text. Applies when the content is shown.")}>
+            <Row label={tr("Image")} help={tr("Upload a picture. Fill covers the whole space and may cut the edges; fit shows the whole picture.")}>
               <span className="gr-image-row">
-                <label className="dash-btn small ghost gr-upload">Upload image<input type="file" accept="image/*" aria-label="Upload image" disabled={!editable} onChange={(e) => upload(e.target.files?.[0])} /></label>
-                {extra.image ? <><small>{extra.image.name}</small><button data-command="admin.content.view" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => patchExtra({ image: null })}>Remove image</button></> : <small>No image uploaded</small>}
+                <label className="dash-btn small ghost gr-upload">{tr("Upload image")}<input type="file" accept="image/*" aria-label={tr("Upload image")} disabled={!editable} onChange={(e) => upload(e.target.files?.[0])} /></label>
+                {extra.image ? <><small>{extra.image.name}</small><button data-command="admin.content.view" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => patchExtra({ image: null })}>{tr("Remove image")}</button></> : <small>{tr("No image uploaded")}</small>}
               </span>
             </Row>
-            <Row label="How the image fits">
-              <Choice label="Image fit" value={extra.image?.fit ?? "fill"} disabled={!editable || !extra.image} options={[{ id: "fill", label: "Fill" }, { id: "fit", label: "Fit" }]} onChange={(fit) => extra.image && patchExtra({ image: { ...extra.image, fit } })} />
+            <Row label={tr("How the image fits")}>
+              <Choice label={tr("Image fit")} value={extra.image?.fit ?? "fill"} disabled={!editable || !extra.image} options={[{ id: "fill", label: "Fill" }, { id: "fit", label: "Fit" }]} onChange={(fit) => extra.image && patchExtra({ image: { ...extra.image, fit } })} />
             </Row>
-            <Row label="Countries" help="The content shows only in these countries.">
+            <Row label={tr("Countries")} help={tr("The content shows only in these countries.")}>
               <span className="gr-checks">{MARKETS.map((item) => <Check key={item.id} label={item.name} on={extra.countries.includes(item.id)} disabled={!editable} onChange={(on) => patchExtra({ countries: on ? [...extra.countries, item.id] : extra.countries.filter((x) => x !== item.id), zones: on ? extra.zones : extra.zones.filter((zone) => !item.zones.some((z) => z.id === zone)) })} />)}</span>
             </Row>
-            <Row label="Only some zones" help="Leave empty to show it in every zone of the chosen countries." on={extra.zones.length > 0}>
-              <span className="gr-checks gr-zones" aria-label="Zones"><MapPin size={12} aria-hidden="true" />{zonesHere.map((zone) => <Check key={zone.id} label={zone.name} on={extra.zones.includes(zone.id)} disabled={!editable} onChange={(on) => patchExtra({ zones: on ? [...extra.zones, zone.id] : extra.zones.filter((x) => x !== zone.id) })} />)}</span>
+            <Row label={tr("Only some zones")} help={tr("Leave empty to show it in every zone of the chosen countries.")} on={extra.zones.length > 0}>
+              <span className="gr-checks gr-zones" aria-label={tr("Zones")}><MapPin size={12} aria-hidden="true" />{zonesHere.map((zone) => <Check key={zone.id} label={zone.name} on={extra.zones.includes(zone.id)} disabled={!editable} onChange={(on) => patchExtra({ zones: on ? [...extra.zones, zone.id] : extra.zones.filter((x) => x !== zone.id) })} />)}</span>
             </Row>
             {id === "app-versions" ? (
               <>
-                <Row label="Force update on iPhone" help="People below the minimum version must update before they can book."><Switch label="Force update on iPhone" on={extra.forceUpdate.ios} disabled={!editable} onChange={(ios) => patchExtra({ forceUpdate: { ...extra.forceUpdate, ios } })} /></Row>
-                <Row label="Force update on Android"><Switch label="Force update on Android" on={extra.forceUpdate.android} disabled={!editable} onChange={(android) => patchExtra({ forceUpdate: { ...extra.forceUpdate, android } })} /></Row>
+                <Row label={tr("Force update on iPhone")} help={tr("People below the minimum version must update before they can book.")}><Switch label={tr("Force update on iPhone")} on={extra.forceUpdate.ios} disabled={!editable} onChange={(ios) => patchExtra({ forceUpdate: { ...extra.forceUpdate, ios } })} /></Row>
+                <Row label={tr("Force update on Android")}><Switch label={tr("Force update on Android")} on={extra.forceUpdate.android} disabled={!editable} onChange={(android) => patchExtra({ forceUpdate: { ...extra.forceUpdate, android } })} /></Row>
               </>
             ) : null}
             {errorExtra ? <p role="alert" className="gr-warn">{errorExtra}</p> : null}
             <div className="actions">
-              <CommandButton command="admin.content.extra" className="dash-btn small" targetId={id} sliceKey={CONTENT_OPS_KEY} value={setExtra(ops, id, extra)} expectedSliceRev={ops.draftRev} confirmTarget={false} disabled={!editable || !extraDraft || Boolean(errorExtra) || extraSlice.loading} onDone={() => { setExtraDraft(null); setNotice(`${id}: image, places and app update saved.`); }}>Save image and places</CommandButton>
-              {extraDraft ? <button data-command="admin.content.view" type="button" className="dash-btn small ghost" onClick={() => setExtraDraft(null)}>Undo changes</button> : null}
+              <CommandButton command="admin.content.extra" className="dash-btn small" targetId={id} sliceKey={CONTENT_OPS_KEY} value={setExtra(ops, id, extra)} expectedSliceRev={ops.draftRev} confirmTarget={false} disabled={!editable || !extraDraft || Boolean(errorExtra) || extraSlice.loading} onDone={() => { setExtraDraft(null); setNotice(tr("{0}: image, places and app update saved.", [id])); }}>{tr("Save image and places")}</CommandButton>
+              {extraDraft ? <button data-command="admin.content.view" type="button" className="dash-btn small ghost" onClick={() => setExtraDraft(null)}>{tr("Undo changes")}</button> : null}
             </div>
           </Card>}
 
@@ -211,7 +211,7 @@ export function ContentPage() {
                 <select aria-label={tr("History zone")} value={historyZone} onChange={(e) => setHistoryZone(e.target.value)}>{targets.map((zone) => <option key={zone} value={zone}>{zoneById(zone)?.name ?? zone}</option>)}</select>
               </label>
               {history.isLoading ? <p className="state-line">{tr("Loading.")}</p> : history.error ? <ErrorLine error={history.error} onRetry={() => void history.refetch()} /> : liveHistory.length === 0 ? <p className="dx-calm">{tr("Nothing published yet in this zone.")}</p> : (
-                <ol aria-label="Content history" className="gr-events" data-testid="live-content-history">
+                <ol aria-label={tr("Content history")} className="gr-events" data-testid="live-content-history">
                   {liveHistory.map((item, index) => (
                     <li key={item.version}>v{item.version} · {item.publishedBy ?? ""} · {item.publishedAt.slice(0, 16).replace("T", " ")} · {item.text.sv}
                       {index > 0 ? <> {" "}<CommandButton command="admin.studio.rollback" className="dash-btn small ghost" targetId={id} value={{ zoneId: historyZone, version: item.version }} confirmTarget={false} disabled={!editable} summary={tr("Version {0} is published again in {1} as the next version.", [String(item.version), zoneById(historyZone)?.name ?? historyZone])} onDone={() => { setNotice(tr("{0}: rolled back.", [slotLabel(id)])); void queryClient.invalidateQueries({ queryKey: ["live", "content-history"] }); }}>{tr("Roll back to v{0}", [String(item.version)])}</CommandButton></> : <em> · {tr("live now")}</em>}
@@ -230,17 +230,17 @@ export function ContentPage() {
             </Card>
           ) : null}
 
-          {live ? null : <Card title="Compare versions" icon={<GitCompare size={15} />} tone="blue" help="What the draft changes, field by field.">
-            <label className="gr-field"><span>Compare the draft with</span>
-              <select aria-label="Compare with" value={against ?? ""} onChange={(e) => setAgainst(e.target.value ? Number(e.target.value) : null)}>
-                <option value="">What is live now</option>
+          {live ? null : <Card title={tr("Compare versions")} icon={<GitCompare size={15} />} tone="blue" help={tr("What the draft changes, field by field.")}>
+            <label className="gr-field"><span>{tr("Compare the draft with")}</span>
+              <select aria-label={tr("Compare with")} value={against ?? ""} onChange={(e) => setAgainst(e.target.value ? Number(e.target.value) : null)}>
+                <option value="">{tr("What is live now")}</option>
                 {slot.history.map((h) => <option key={h.version} value={h.version}>v{h.version} · {h.action} · {h.actor}</option>)}
               </select>
             </label>
-            {!base ? <p className="dx-calm">Nothing published yet to compare with.</p> : diff.length ? (
+            {!base ? <p className="dx-calm">{tr("Nothing published yet to compare with.")}</p> : diff.length ? (
               <DiffTable rows={diff} />
-            ) : <p className="dx-calm">The draft is the same as this version.</p>}
-            <ol aria-label="Content history" className="gr-events">{slot.history.map((h) => <li key={h.version}>v{h.version} · {h.action} · {h.actor} · {h.at} · {h.text.en}</li>)}</ol>
+            ) : <p className="dx-calm">{tr("The draft is the same as this version.")}</p>}
+            <ol aria-label={tr("Content history")} className="gr-events">{slot.history.map((h) => <li key={h.version}>v{h.version} · {h.action} · {h.actor} · {h.at} · {h.text.en}</li>)}</ol>
           </Card>}
         </div>
 
@@ -256,8 +256,8 @@ export function ContentPage() {
               <p>{text[lang]}</p>
             </div>
           </div>
-          {live ? <p className="gr-help"><PublishTargetsLine zoneIds={targets} /></p> : <p className="gr-help">Shown in {extra.countries.length === MARKETS.length ? "every country" : MARKETS.filter((item) => extra.countries.includes(item.id)).map((item) => item.name).join(", ") || "no country"}{extra.zones.length ? `, ${extra.zones.length} zone${extra.zones.length > 1 ? "s" : ""}` : ""}.</p>}
-          {live ? null : <p className="gr-help">Published: {slot.published?.en ?? "No publication"}</p>}
+          {live ? <p className="gr-help"><PublishTargetsLine zoneIds={targets} /></p> : <p className="gr-help">{trn("Shown in {0}{1}.", extra.countries.length === MARKETS.length ? tr("every country") : MARKETS.filter((item) => extra.countries.includes(item.id)).map((item) => item.name).join(", ") || tr("no country"), extra.zones.length ? tr(", {0} zone{1}", [extra.zones.length, extra.zones.length > 1 ? "s" : ""]) : "")}</p>}
+          {live ? null : <p className="gr-help">{trn("Published: {0}", slot.published?.en ?? tr("No publication"))}</p>}
         </aside>
       </div>
       )}

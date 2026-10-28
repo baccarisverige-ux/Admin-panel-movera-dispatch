@@ -7,7 +7,7 @@ import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { localParts } from "../dashboard/time";
 import { CommandButton } from "../ui/CommandButton";
-import { tr, trn, trx } from "../i18n";
+import { tr, trn, trx, uiLocale } from "../i18n";
 import { SurgeCurve } from "./SurgeCurve";
 import { DURATION_CHIPS, curvePreset, minutesUntil, type CurvePoint } from "./surgeCurve";
 import { sliderColor, type ZoneSurge } from "./surge";
@@ -48,7 +48,7 @@ export function SurgeQuickPopup({ zone, timeZone, fullLink, onClose, onNotice }:
   const local = localParts(now, timeZone);
   const minutes = mode === "chip" ? chip : mode === "minutes" ? Number(custom) : minutesUntil(until, local.hour * 60 + local.minute) ?? Number.NaN;
   const endsAt = Number.isFinite(minutes) ? new Date(now + minutes * 60_000) : null;
-  const clock = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", timeZone });
+  const clock = new Intl.DateTimeFormat(uiLocale(), { hour: "2-digit", minute: "2-digit", timeZone });
   const curve = shaped && Number.isFinite(minutes) ? points.map((point) => ({ ...point, atMin: Math.min(point.atMin, minutes) })) : undefined;
   const peak = curve ? Math.max(1, ...curve.map((point) => point.multiplier)) : level;
   const high = peak > HIGH_SURGE;

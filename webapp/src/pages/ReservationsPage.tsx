@@ -14,6 +14,7 @@ import {
 import { DataTable } from "../ui/DataTable";
 import { market, marketOfZone } from "../markets/markets";
 import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
+import { tr, trn } from "../i18n";
 
 const VIEWS = [
   { id: "all", label: "All" },
@@ -55,23 +56,20 @@ export function ReservationsPage() {
     <>
       <div className="page-heading">
         <div>
-          <h2>Reservations</h2>
-          <p>
-            {reservations.isLoading || store.loading ? "Loading reservations." : `${rows.length} reservations in this view.`}
-            {" "}Pickup times display in each zone's local time. Each booking keeps its policy snapshot after policy changes or cancellation.
-          </p>
+          <h2>{tr("Reservations")}</h2>
+          <p>{trn("{0} Pickup times display in each zone's local time. Each booking keeps its policy snapshot after policy changes or cancellation.", reservations.isLoading || store.loading ? tr("Loading reservations.") : tr("{0} reservations in this view.", [rows.length]))}</p>
         </div>
       </div>
 
-      <p className="state-line">Existing reservations keep the policy version they were booked with. {store.message}</p>
+      <p className="state-line">{trn("Existing reservations keep the policy version they were booked with. {0}", store.message)}</p>
 
       <p className="resv-settings-link" data-testid="reservation-settings-link">
         <Settings2 size={14} aria-hidden="true" />
-        <span>Reservation settings and the reservation policy (now {book.currentPolicy.version}) are in Dispatch › Reservations.</span>
-        <Link className="dash-btn small ghost" to="/dispatch?tab=reservations">Open reservation settings</Link>
+        <span>{trn("Reservation settings and the reservation policy (now {0}) are in Dispatch › Reservations.", book.currentPolicy.version)}</span>
+        <Link className="dash-btn small ghost" to="/dispatch?tab=reservations">{tr("Open reservation settings")}</Link>
       </p>
 
-      <div className="actions" aria-label="Reservation views">
+      <div className="actions" aria-label={tr("Reservation views")}>
         {VIEWS.map((item) => (
           <button
             key={item.id}
@@ -85,13 +83,11 @@ export function ReservationsPage() {
         ))}
       </div>
 
-      <label>
-        Find reservation
-        <input
-          aria-label="Find reservation"
+      <label>{tr("Find reservation")}<input
+          aria-label={tr("Find reservation")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Reservation, rider, phone, driver, category or policy"
+          placeholder={tr("Reservation, rider, phone, driver, category or policy")}
         />
       </label>
 

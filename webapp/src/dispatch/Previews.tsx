@@ -98,7 +98,7 @@ export function DriverOfferPreview({ zone, money, country, commissionPct = 20 }:
           {current === "driving" ? <span className="dx-offer-more">{trn("Next ride · you are driving a rider{0}", stack > 1 ? tr(" · up to {0}", [stack]) : "")}</span> : null}
         </div> : null}
       </div>
-      <figcaption>{shown === "radar" ? tr("Driver app · Radar {0}", [current === "full" ? "full screen" : "popup"]) : current === "driving" ? tr("Driver app · Exclusive while driving") : tr("Driver app · Exclusive offer")}</figcaption>
+      <figcaption>{shown === "radar" ? tr("Driver app · Radar {0}", [current === "full" ? tr("full screen") : tr("popup")]) : current === "driving" ? tr("Driver app · Exclusive while driving") : tr("Driver app · Exclusive offer")}</figcaption>
     </figure>
   );
 }

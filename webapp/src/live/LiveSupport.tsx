@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { tr } from "../i18n";
+import { tr, uiLocale } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine } from "./ui";
 import type { Page, SupportTicket } from "./types";
@@ -29,7 +29,7 @@ export function categoryLabel(code: string): string {
 }
 
 function when(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return new Date(iso).toLocaleString(uiLocale(), { dateStyle: "medium", timeStyle: "short" });
 }
 
 export function LiveSupport() {

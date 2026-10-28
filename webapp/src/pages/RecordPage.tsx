@@ -4,6 +4,7 @@ import { formatZoneMoney } from "../markets/markets";
 import { useRecords } from "../api/hooks";
 import { statusLabel } from "../domain/labels";
 import { StatusDot } from "../ui/kit";
+import { trn, tr } from "../i18n";
 
 type Kind = "payouts" | "incidents";
 
@@ -14,7 +15,7 @@ export function RecordPage({ kind, label, list }: { kind: Kind; label: string; l
   const records = useRecords(kind, null);
   const row = records.data?.find((item) => item.id === id);
 
-  if (records.isLoading) return <p className="state-line">Loading {label.toLowerCase()}.</p>;
+  if (records.isLoading) return <p className="state-line">{trn("Loading {0}.", label.toLowerCase())}</p>;
 
   if (!row) {
     return <NotFoundRecord kind={label} id={id} list={list} listLabel={`${label.toLowerCase()}s`} />;
@@ -36,19 +37,19 @@ export function RecordPage({ kind, label, list }: { kind: Kind; label: string; l
           {kind === "payouts" ? (
             <>
               <p>{row.name} · {formatZoneMoney(row.fareOre ?? 0, row.zoneId)} · {row.zoneId}</p>
-              <p>Driver {row.driverId ? <Link to={`/drivers/${row.driverId}`}>{row.driverId}</Link> : "none"}.</p>
+              <p>{trn("Driver {0}.", row.driverId ? <Link to={`/drivers/${row.driverId}`}>{row.driverId}</Link> : tr("none"))}</p>
             </>
           ) : (
             <>
-              <p>Rider {row.name} · {row.zoneId}</p>
-              <p>Driver {row.driverId ? <Link to={`/drivers/${row.driverId}`}>{row.driverId}</Link> : "none"}.</p>
+              <p>{trn("Rider {0} · {1}", row.name, row.zoneId)}</p>
+              <p>{trn("Driver {0}.", row.driverId ? <Link to={`/drivers/${row.driverId}`}>{row.driverId}</Link> : tr("none"))}</p>
             </>
           )}
           <p>
-            <Link to={open}>{kind === "payouts" ? "Open in Payouts" : "Open the case"}</Link>
+            <Link to={open}>{kind === "payouts" ? tr("Open in Payouts") : tr("Open the case")}</Link>
           </p>
         </article>
-        <Link to={list}>Back</Link>
+        <Link to={list}>{tr("Back")}</Link>
       </div>
     </div>
   );

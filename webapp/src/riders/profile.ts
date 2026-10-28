@@ -2,6 +2,7 @@ import { market, marketOfZone, zoneById, type MarketId } from "../markets/market
 import { NOT_CONNECTED_TEXT, isLiveData, liveRiderOf, liveTripOf, liveTripsOfRider } from "../live/realData.ts";
 import { placeText } from "../trips/present.ts";
 import type { DemoRecord } from "../api/seed.ts";
+import { trx } from "../i18n/core.ts";
 
 /**
  * Everything the admin sees about one rider, built from the rider record.
@@ -116,7 +117,8 @@ function weighted(seed: number): string {
 }
 
 export function categoryName(id: string): string {
-  return CATEGORY_NAMES[id] ?? id;
+  const name = CATEGORY_NAMES[id];
+  return name ? trx(name) : id;
 }
 
 export function countryOf(rider: { zoneId: string }): MarketId {

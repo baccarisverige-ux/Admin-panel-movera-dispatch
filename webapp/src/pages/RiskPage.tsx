@@ -15,7 +15,7 @@ import { ACTIONS, RISK_KEY, RULES, emptyRiskOps, flagged, normalizeRiskOps, peop
 import { useQuery } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import type { Page, RiskPerson } from "../live/types";
-import { tr } from "../i18n";
+import { tr, trn } from "../i18n";
 import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
 import type { RideCheckThresholds } from "../safety/rideCheckSettings";
 import { agentName } from "../trips/TripParts";
@@ -75,16 +75,16 @@ export function RiskPage() {
   return (
     <div className="dx-page op-page">
       <header className="dx-head">
-        <button data-command="admin.risk.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.risk.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
-          <h2>Risk in {scope.market.name}</h2>
-          <p>Safety rules per zone, fraud rules per country, and the people the rules flag. Every change is logged with your name.</p>
+          <h2>{trn("Risk in {0}", scope.market.name)}</h2>
+          <p>{tr("Safety rules per zone, fraud rules per country, and the people the rules flag. Every change is logged with your name.")}</p>
         </div>
       </header>
-      <div className="dash-tabs dx-views" role="tablist" aria-label="Risk sections">
+      <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Risk sections")}>
         {TABS.map((item) => <button data-command="admin.risk.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => set({ tab: item.id === "safety" ? null : item.id })}>{item.label}</button>)}
       </div>
-      {!editable ? <p className="dx-readonly">You can look, but only the safety team can change rules.</p> : null}
+      {!editable ? <p className="dx-readonly">{tr("You can look, but only the safety team can change rules.")}</p> : null}
       {tab === "safety" ? <SafetyRules editable={editable} /> : tab === "fraud" ? <FraudRules editable={editable} /> : <FlaggedPeople editable={editable} />}
     </div>
   );
@@ -111,44 +111,44 @@ function SafetyRules({ editable }: { editable: boolean }) {
   useDirtyWarning(Boolean(draft));
   return (
     <div className="op-risk-grid">
-      <aside className="op-zone-pick" aria-label="Zones">
-        <label className="op-field"><span>Safety zone</span>
-          <select aria-label="Safety zone" value={id} onChange={(event) => { setZone(event.target.value); setDraft(null); }}>
+      <aside className="op-zone-pick" aria-label={tr("Zones")}>
+        <label className="op-field"><span>{tr("Safety zone")}</span>
+          <select aria-label={tr("Safety zone")} value={id} onChange={(event) => { setZone(event.target.value); setDraft(null); }}>
             {list.map((row) => <option key={row.id} value={row.id}>{row.id} · {row.name}</option>)}
           </select>
         </label>
-        <p className="op-help">Each zone has its own safety rules. Zones without their own rules use the defaults.</p>
+        <p className="op-help">{tr("Each zone has its own safety rules. Zones without their own rules use the defaults.")}</p>
         <div className="op-rest">
           <Timer size={16} aria-hidden="true" />
-          <span><b>Driving and rest (Dispatch)</b><small>{rest.on ? `After ${rest.workHours} h of work, ${rest.restHours} h rest before going online.` : "Off in Dispatch."}</small></span>
-          <Link className="dash-btn small ghost" to="/dispatch">Open Dispatch</Link>
+          <span><b>{tr("Driving and rest (Dispatch)")}</b><small>{rest.on ? tr("After {0} h of work, {1} h rest before going online.", [rest.workHours, rest.restHours]) : tr("Off in Dispatch.")}</small></span>
+          <Link className="dash-btn small ghost" to="/dispatch">{tr("Open Dispatch")}</Link>
         </div>
         {id ? (
           <div className="op-rest rc-risk">
             <ListChecks size={16} aria-hidden="true" />
-            <span><b>Ride check (Dispatch)</b><small>{rideCheckLine(liveRules(dispatchBook, id).rideCheck, rideCheckShared.settings)}</small></span>
-            <Link className="dash-btn small ghost" to={`/dispatch?zone=${id}&tab=safety`}>Ride check settings</Link>
+            <span><b>{tr("Ride check (Dispatch)")}</b><small>{rideCheckLine(liveRules(dispatchBook, id).rideCheck, rideCheckShared.settings)}</small></span>
+            <Link className="dash-btn small ghost" to={`/dispatch?zone=${id}&tab=safety`}>{tr("Ride check settings")}</Link>
           </div>
         ) : null}
       </aside>
       <div className="op-settings">
         <fieldset className="op-fieldset" disabled={!editable || store.loading}>
-          <Card title={`Numbers for ${zoneById(id)?.name ?? id}`} icon={<Gauge size={18} />} tone="blue">
+          <Card title={tr("Numbers for {0}", [zoneById(id)?.name ?? id])} icon={<Gauge size={18} />} tone="blue">
             {NUMBERS.map((item) => (
               <Row key={item.key} label={item.title} help={item.help}>
                 <span className="op-unit-input"><input aria-label={item.label} type="number" min="0" value={Number(policy[item.key])} onChange={(event) => setDraft({ ...policy, [item.key]: Number(event.target.value) })} /><small>{item.unit}</small></span>
               </Row>
             ))}
           </Card>
-          <Card title="In the apps" icon={<ShieldCheck size={18} />} tone="green">
+          <Card title={tr("In the apps")} icon={<ShieldCheck size={18} />} tone="green">
             {SWITCHES.map((item) => <Row key={item.key} label={item.label} help={item.help} on={policy[item.key]} onToggle={(on) => setDraft({ ...policy, [item.key]: on })} />)}
           </Card>
         </fieldset>
         <div className="dx-publish">
-          <span className="dx-publish-text"><b>{draft ? "Changes not saved" : "Everything is saved"}</b><small>{error ?? "Saved rules are versioned and logged."}</small></span>
-          <button data-command="admin.risk.view" type="button" className="dash-btn small ghost" disabled={!draft} onClick={() => setDraft(null)}>Undo changes</button>
+          <span className="dx-publish-text"><b>{draft ? tr("Changes not saved") : tr("Everything is saved")}</b><small>{error ?? tr("Saved rules are versioned and logged.")}</small></span>
+          <button data-command="admin.risk.view" type="button" className="dash-btn small ghost" disabled={!draft} onClick={() => setDraft(null)}>{tr("Undo changes")}</button>
           <span role="alert" className="dx-warn">{draft ? error : null}</span>
-          <CommandButton command="admin.safetyOps.save" className="dash-btn small" scope={id} targetId={id} confirmTarget={false} sliceKey="safetyOps" expectedSliceRev={store.value.draftRev} value={{ ...store.value, draftRev: store.value.draftRev + 1, policies: { ...store.value.policies, [id]: policy } }} disabled={!id || !draft || Boolean(error) || store.loading} onDone={() => setDraft(null)}>Save safety rules</CommandButton>
+          <CommandButton command="admin.safetyOps.save" className="dash-btn small" scope={id} targetId={id} confirmTarget={false} sliceKey="safetyOps" expectedSliceRev={store.value.draftRev} value={{ ...store.value, draftRev: store.value.draftRev + 1, policies: { ...store.value.policies, [id]: policy } }} disabled={!id || !draft || Boolean(error) || store.loading} onDone={() => setDraft(null)}>{tr("Save safety rules")}</CommandButton>
         </div>
       </div>
     </div>
@@ -196,19 +196,19 @@ function FraudRules({ editable }: { editable: boolean }) {
   useDirtyWarning(changes.length > 0);
   return (
     <div className="op-settings">
-      <section className="op-preview" aria-label="Test before saving">
+      <section className="op-preview" aria-label={tr("Test before saving")}>
         <Eye size={18} aria-hidden="true" />
-        <span><b>{changes.length ? `With your changes: ${counts.after} people flagged (now ${counts.now})` : `${counts.now} people flagged in ${scope.market.name} right now`}</b><small>{counts.blocked} would be blocked at once. Test the numbers here before you save; nothing changes for anyone until then.</small></span>
+        <span><b>{changes.length ? tr("With your changes: {0} people flagged (now {1})", [counts.after, counts.now]) : tr("{0} people flagged in {1} right now", [counts.now, scope.market.name])}</b><small>{trn("{0} would be blocked at once. Test the numbers here before you save; nothing changes for anyone until then.", counts.blocked)}</small></span>
       </section>
       <fieldset className="op-fieldset" disabled={!editable || loading}>
-        <Card title={`Fraud rules for ${scope.market.name}`} icon={<Fingerprint size={18} />} tone="purple" help="Each rule has a limit and what happens when someone goes over it.">
+        <Card title={tr("Fraud rules for {0}", [scope.market.name])} icon={<Fingerprint size={18} />} tone="purple" help={tr("Each rule has a limit and what happens when someone goes over it.")}>
           {RULES.map((def) => {
             const rule = rules.find((item) => item.id === def.id)!;
             const count = counts.byRule.find((item) => item.id === def.id);
             return (
-              <Row key={def.id} label={def.label} help={live && LATER.includes(def.id) ? `${def.help} ${tr("Not connected yet")}.` : `${def.help} For ${def.who.map((item) => `${item}s`).join(" and ")}. Flags ${count?.after ?? 0}${count && count.after !== count.now ? ` (now ${count.now})` : ""}.`} on={rule.on} onToggle={(on) => patch(def.id, { on })}>
-                <Num label={`${def.label} limit`} before={def.worse === "up" ? "From" : "Below"} value={rule.limit} unit={def.unit} min={def.min} max={def.max} step={def.step} onChange={(value) => patch(def.id, { limit: value })} />
-                <Choice label={`${def.label} action`} value={rule.action} options={ACTIONS.map((item) => ({ id: item.id, label: item.label, hint: item.help }))} onChange={(action) => patch(def.id, { action })} />
+              <Row key={def.id} label={def.label} help={live && LATER.includes(def.id) ? `${def.help} ${tr("Not connected yet")}.` : tr("{0} For {1}. Flags {2}{3}.", [def.help, def.who.map((item) => `${item}s`).join(" and "), count?.after ?? 0, count && count.after !== count.now ? ` (now ${count.now})` : ""])} on={rule.on} onToggle={(on) => patch(def.id, { on })}>
+                <Num label={tr("{0} limit", [def.label])} before={def.worse === "up" ? "From" : "Below"} value={rule.limit} unit={def.unit} min={def.min} max={def.max} step={def.step} onChange={(value) => patch(def.id, { limit: value })} />
+                <Choice label={tr("{0} action", [def.label])} value={rule.action} options={ACTIONS.map((item) => ({ id: item.id, label: item.label, hint: item.help }))} onChange={(action) => patch(def.id, { action })} />
               </Row>
             );
           })}
@@ -216,14 +216,14 @@ function FraudRules({ editable }: { editable: boolean }) {
       </fieldset>
       {editable ? (
         <div className="dx-publish">
-          <span className="dx-publish-text"><b>{changes.length ? `${changes.length} change${changes.length === 1 ? "" : "s"} not saved` : "Everything is saved"}</b><small>{error ?? (changes.slice(0, 3).join(" · ") || "Rules apply to the whole country.")}</small></span>
-          <button data-command="admin.risk.view" type="button" className="dash-btn small ghost" disabled={!changes.length} onClick={() => setDraft(null)}>Undo changes</button>
-          <CommandButton command="admin.risk.rules" className="dash-btn small" targetId={`fraud rules ${country}`} scope="all" confirmTarget={false} before="saved" after={changes.join("; ")} sliceKey={RISK_KEY} value={result.ops} expectedSliceRev={ops.draftRev} disabled={!changes.length || Boolean(error)} onDone={() => setDraft(null)}>Save fraud rules</CommandButton>
+          <span className="dx-publish-text"><b>{changes.length ? tr("{0} change{1} not saved", [changes.length, changes.length === 1 ? "" : "s"]) : tr("Everything is saved")}</b><small>{error ?? (changes.slice(0, 3).join(" · ") || tr("Rules apply to the whole country."))}</small></span>
+          <button data-command="admin.risk.view" type="button" className="dash-btn small ghost" disabled={!changes.length} onClick={() => setDraft(null)}>{tr("Undo changes")}</button>
+          <CommandButton command="admin.risk.rules" className="dash-btn small" targetId={`fraud rules ${country}`} scope="all" confirmTarget={false} before="saved" after={changes.join("; ")} sliceKey={RISK_KEY} value={result.ops} expectedSliceRev={ops.draftRev} disabled={!changes.length || Boolean(error)} onDone={() => setDraft(null)}>{tr("Save fraud rules")}</CommandButton>
         </div>
       ) : null}
       {ops.history.filter((item) => item.country === country).length ? (
-        <section className="op-section" aria-label="Rule changes">
-          <header className="op-section-head"><h3>Changes</h3></header>
+        <section className="op-section" aria-label={tr("Rule changes")}>
+          <header className="op-section-head"><h3>{tr("Changes")}</h3></header>
           <ul className="op-history">
             {ops.history.filter((item) => item.country === country).slice(-10).reverse().map((item) => <li key={item.at}><time>{new Date(item.at).toLocaleString(scope.market.locale)}</time><b>{agentName(item.by)}</b><span>{item.changes.join(" · ")}</span></li>)}
           </ul>
@@ -266,23 +266,23 @@ function FlaggedPeople({ editable }: { editable: boolean }) {
         ]}
       />
       <div className="op-inline wrap">
-        <Choice label="Who" value={who} options={[{ id: "all", label: "Everyone" }, { id: "driver", label: "Drivers" }, { id: "rider", label: "Riders" }]} onChange={setWho} />
-        <Switch label="Show people already checked" on={showReviewed} onChange={setShowReviewed} />
-        <small className="op-help">Show people already checked</small>
+        <Choice label={tr("Who")} value={who} options={[{ id: "all", label: "Everyone" }, { id: "driver", label: "Drivers" }, { id: "rider", label: "Riders" }]} onChange={setWho} />
+        <Switch label={tr("Show people already checked")} on={showReviewed} onChange={setShowReviewed} />
+        <small className="op-help">{tr("Show people already checked")}</small>
       </div>
-      {loading ? <p className="dx-calm">Loading…</p> : null}
-      <ul className="op-flagged" aria-label="Flagged people">
+      {loading ? <p className="dx-calm">{tr("Loading…")}</p> : null}
+      <ul className="op-flagged" aria-label={tr("Flagged people")}>
         {rows.slice(0, 60).map((person) => (
           <li key={person.key} className={person.action}>
-            <span className="op-score" style={{ "--s": person.score } as CSSProperties} aria-label={`Score ${person.score} of 100`}><b>{person.score}</b></span>
+            <span className="op-score" style={{ "--s": person.score } as CSSProperties} aria-label={tr("Score {0} of 100", [person.score])}><b>{person.score}</b></span>
             <span className="op-flag-main">
               <span className="op-flag-name">{person.who === "driver" ? <Car size={13} aria-hidden="true" /> : <UserRound size={13} aria-hidden="true" />} <Link to={`/${person.who}s/${person.id}`}>{person.name}</Link> <small>{person.who} · {zoneById(person.zoneId)?.name ?? person.zoneId}</small></span>
               <span className="op-hits">{person.hits.map((hit) => <span key={hit.rule.id} className={`op-hit ${hit.action}`} title={hit.rule.help}>{hit.rule.label}: {hit.value} {hit.rule.unit}</span>)}</span>
-              {person.review ? <small className="op-help"><ShieldAlert size={11} aria-hidden="true" /> {DECISIONS.find((item) => item.id === person.review?.decision)?.label} by {agentName(person.review.by)}{person.review.note ? `: ${person.review.note}` : ""}</small> : null}
+              {person.review ? <small className="op-help"><ShieldAlert size={11} aria-hidden="true" />{" "}{trn("{0} by {1}{2}", DECISIONS.find((item) => item.id === person.review?.decision)?.label, agentName(person.review.by), person.review.note ? `: ${person.review.note}` : "")}</small> : null}
             </span>
             {editable ? (
               <span className="op-flag-actions">
-                <input aria-label={`Note about ${person.name}`} placeholder="Note (optional)" value={notes[person.key] ?? ""} onChange={(event) => setNotes({ ...notes, [person.key]: event.target.value })} />
+                <input aria-label={tr("Note about {0}", [person.name])} placeholder={tr("Note (optional)")} value={notes[person.key] ?? ""} onChange={(event) => setNotes({ ...notes, [person.key]: event.target.value })} />
                 {DECISIONS.map((item) => (
                   <CommandButton key={item.id} command="admin.risk.review" className={item.id === "blocked" ? "dash-btn small danger-ghost" : "dash-btn small ghost"} targetId={person.id} scope={person.zoneId} confirmTarget={false} before={person.review?.decision ?? "not checked"} after={item.id} sliceKey={RISK_KEY} value={review(ops, person.key, item.id, notes[person.key] ?? "", agent?.id ?? "", new Date().toISOString())} expectedSliceRev={ops.draftRev} title={item.help} onDone={() => setNotes({ ...notes, [person.key]: "" })}>{item.label}</CommandButton>
                 ))}
@@ -290,9 +290,9 @@ function FlaggedPeople({ editable }: { editable: boolean }) {
             ) : null}
           </li>
         ))}
-        {!rows.length && !loading ? <li className="dx-calm">Nobody to check. Good.</li> : null}
+        {!rows.length && !loading ? <li className="dx-calm">{tr("Nobody to check. Good.")}</li> : null}
       </ul>
-      {rows.length > 60 ? <p className="op-help">Showing the 60 with the highest score of {rows.length}.</p> : null}
+      {rows.length > 60 ? <p className="op-help">{trn("Showing the 60 with the highest score of {0}.", rows.length)}</p> : null}
     </div>
   );
 }

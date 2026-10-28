@@ -48,7 +48,7 @@ export function LiveMoneyReport({ window, timeZone, zoneIds }: { window: PeriodW
             {groups.length > 1 ? <h3>{group.currency}</h3> : null}
             <Cards cards={cards} fmt={fmt} compareLabel="" compare={false} />
             <div className="rp-grid">
-              <Panel title="By zone" icon={<MapPin size={16} aria-hidden="true" />} wide>
+              <Panel title={tr("By zone")} icon={<MapPin size={16} aria-hidden="true" />} wide>
                 <SortTable<MoneyLine> label={tr("Money by zone")} rows={group.zones} rowKey={(row) => row.key} initial="gross" columns={[
                   { id: "name", label: "Zone", value: (row) => zoneById(row.key)?.name ?? row.key },
                   { id: "gross", label: "Bookings", value: (row) => row.bookings, show: (row) => money(row.bookings), numeric: true },
@@ -60,7 +60,7 @@ export function LiveMoneyReport({ window, timeZone, zoneIds }: { window: PeriodW
                   { id: "trips", label: "Rides", value: (row) => row.trips, show: (row) => (Number.isFinite(row.trips) ? row.trips : tr("Not connected yet")), numeric: true },
                 ]} />
               </Panel>
-              <Panel title="By day" icon={<CalendarDays size={16} aria-hidden="true" />} wide>
+              <Panel title={tr("By day")} icon={<CalendarDays size={16} aria-hidden="true" />} wide>
                 <SortTable<MoneyLine> label={tr("Money by day")} rows={group.days} rowKey={(row) => row.key} initial="day" limit={60} columns={[
                   { id: "day", label: "Day", value: (row) => row.key },
                   { id: "gross", label: "Bookings", value: (row) => row.bookings, show: (row) => money(row.bookings), numeric: true },

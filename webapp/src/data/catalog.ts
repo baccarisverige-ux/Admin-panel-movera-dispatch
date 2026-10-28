@@ -612,7 +612,7 @@ export const PAGE_CATALOG: Record<string, CatalogEntry> = {
       head: ["Report Type", "Period", "Generated", "Status", "Actions"],
       rows: [
         ["Driver Compliance", "Q4 2026", "2026-11-20", "Complete", "View · Download"],
-        ["Financial Audit", "October 2026", "2026-11-15", "Complete", "View · Download"],
+        ["Financial Audit", "2026-10", "2026-11-15", "Complete", "View · Download"],
         ["Safety Compliance", "Q4 2026", "2026-11-10", "In Progress", "View · Generate"],
       ],
     },

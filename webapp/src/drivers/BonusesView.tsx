@@ -130,7 +130,7 @@ export function BonusesView({ country, drivers, fleets, agentId, canEdit }: { co
                     </div>
                     <div className="db-item-actions">
                       {state !== "ended" ? (
-                        <CommandButton command="admin.drivers.bonusToggle" className={on ? "surge-toggle on" : "surge-toggle"} targetId={bonus.name} confirmTarget={false} scope="all" before={bonus.status} after={on ? "paused" : "active"} expectedSliceRev={book.draftRev} sliceKey={BONUS_KEY} value={setBonusStatus(book, bonus.id, on ? "paused" : "active")} disabled={!canEdit} aria-label={`${bonus.name} ${on ? "on" : "off"}`} onDone={() => setNotice(`Bonus ${bonus.name} switched ${on ? "off" : "on"}.`)}>
+                        <CommandButton command="admin.drivers.bonusToggle" className={on ? "surge-toggle on" : "surge-toggle"} targetId={bonus.name} confirmTarget={false} scope="all" before={bonus.status} after={on ? "paused" : "active"} expectedSliceRev={book.draftRev} sliceKey={BONUS_KEY} value={setBonusStatus(book, bonus.id, on ? "paused" : "active")} disabled={!canEdit} aria-label={`${bonus.name} ${on ? "on" : "off"}`} onDone={() => setNotice(tr("Bonus {0} switched {1}.", [bonus.name, on ? tr("off") : tr("on")]))}>
                           {on ? tr("On") : tr("Off")} <span className="switch" aria-hidden="true"><i /></span>
                         </CommandButton>
                       ) : null}
@@ -153,7 +153,7 @@ export function BonusesView({ country, drivers, fleets, agentId, canEdit }: { co
                   <footer className="db-item-foot">
                     <small>{trn("Made by {0}{1}{2}", bonus.createdBy, bonus.editedBy ? tr(" · changed by {0}", [bonus.editedBy]) : "", bonus.budget ? tr(" · budget {0}", [money(bonus.budget)]) : tr(" · no budget"))}</small>
                     {state !== "ended" ? (
-                      <CommandButton command="admin.drivers.bonusStop" className="dash-btn small ghost" targetId={bonus.name} confirmTarget={false} scope="all" before={bonus.status} after="ended" expectedSliceRev={book.draftRev} sliceKey={BONUS_KEY} value={setBonusStatus(book, bonus.id, "ended")} disabled={!canEdit} onDone={() => setNotice(`Bonus ${bonus.name} ended.`)}>{tr("End bonus")}</CommandButton>
+                      <CommandButton command="admin.drivers.bonusStop" className="dash-btn small ghost" targetId={bonus.name} confirmTarget={false} scope="all" before={bonus.status} after="ended" expectedSliceRev={book.draftRev} sliceKey={BONUS_KEY} value={setBonusStatus(book, bonus.id, "ended")} disabled={!canEdit} onDone={() => setNotice(tr("Bonus {0} ended.", [bonus.name]))}>{tr("End bonus")}</CommandButton>
                     ) : null}
                   </footer>
                 </li>

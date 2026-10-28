@@ -2,7 +2,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { can, type Role } from "../auth/permissions";
 import { CommandButton } from "./CommandButton";
 import { useDialogFocus } from "./useDialogFocus";
-import { tr, trn, trx } from "../i18n";
+import { tr, trn, trx, uiLocale } from "../i18n";
 
 export function StatusDot({ tone, children }: { tone: "green" | "amber" | "red" | "muted"; children: ReactNode }) {
   return (
@@ -14,11 +14,11 @@ export function StatusDot({ tone, children }: { tone: "green" | "amber" | "red" 
 }
 
 export function Money({ ore }: { ore: number }) {
-  return <span>{new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK" }).format(ore / 100)}</span>;
+  return <span>{new Intl.NumberFormat(uiLocale(), { style: "currency", currency: "SEK" }).format(ore / 100)}</span>;
 }
 
 export function DateTime({ iso }: { iso: string }) {
-  return <time dateTime={iso}>{new Intl.DateTimeFormat("sv-SE", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Stockholm" }).format(new Date(iso))}</time>;
+  return <time dateTime={iso}>{new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Stockholm" }).format(new Date(iso))}</time>;
 }
 
 export function Duration({ seconds }: { seconds: number }) {

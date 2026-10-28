@@ -29,7 +29,7 @@ type Props = {
  */
 export function MovedCard({ what, links, testId }: Props) {
   return (
-    <section className="dx-card moved" aria-label={tr("{0} moved", [what])} data-testid={testId}>
+    <section className="dx-card moved" aria-label={tr("{0} moved", [trx(what)])} data-testid={testId}>
       <header className="dx-card-head">
         <span className="dx-card-icon" aria-hidden="true"><Radar size={18} /></span>
         <span className="dx-card-title">

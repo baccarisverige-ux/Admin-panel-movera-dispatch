@@ -245,7 +245,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             expectedSliceRev={persisted.draftRev}
             sliceKey="config"
             value={book}
-            onDone={() => setNotice("Draft saved through AdminApi.")}
+            onDone={() => setNotice(tr("Draft saved through AdminApi."))}
           >{tr("Save draft")}</CommandButton>
           <button
             data-command="admin.card.action"
@@ -254,7 +254,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             disabled={!dirty}
             onClick={() => {
               setBook(base);
-              setNotice("Unsaved draft changes discarded.");
+              setNotice(tr("Unsaved draft changes discarded."));
             }}
           >{tr("Discard unsaved")}</button>
         </div>
@@ -379,7 +379,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
               startsAt: isoFromLocal(startsAt),
               expiresAt: isoFromLocal(ruleExpiresAt),
             }, agent.id));
-            setNotice(`Override ${id} added to the unsaved draft.`);
+            setNotice(tr("Override {0} added to the unsaved draft.", [id]));
           }}
         >{tr("Add or replace override")}</button>
 
@@ -400,7 +400,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
                   onClick={() => {
                     if (!agent) return;
                     edit((current) => removeOverride(current, rule.id, agent.id));
-                    setNotice(`Override ${rule.id} removed from the unsaved draft.`);
+                    setNotice(tr("Override {0} removed from the unsaved draft.", [rule.id]));
                   }}
                 >{tr("Remove")}</button>
               </li>
@@ -551,7 +551,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             onDone={() => {
               if (!review || review.error) return;
               setBook(review.book);
-              setNotice("Sent for approval.");
+              setNotice(tr("Sent for approval."));
             }}
           >{tr("Send for approval")}</CommandButton>
 
@@ -571,7 +571,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             onDone={() => {
               if (!approval || approval.error) return;
               setBook(approval.book);
-              setNotice("Approved. A second agent can publish.");
+              setNotice(tr("Approved. A second agent can publish."));
             }}
           >{tr("Approve")}</CommandButton>
           </>}
@@ -594,11 +594,9 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             onDone={() => {
               if (!publication || publication.error) return;
               setBook(publication.book);
-              setNotice(
-                publication.scheduled
-                  ? `Scheduled configuration version ${publication.book.rev}.`
-                  : `Published version ${publication.book.rev}.`,
-              );
+              setNotice(publication.scheduled
+                  ? tr("Scheduled configuration version {0}.", [publication.book.rev])
+                  : tr("Published version {0}.", [publication.book.rev]));
             }}
           >{tr("Publish")}</CommandButton>
 
@@ -617,7 +615,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             value={rollback}
             onDone={() => {
               setBook(rollback);
-              setNotice(`Rolled back as version ${rollback.rev}.`);
+              setNotice(tr("Rolled back as version {0}.", [rollback.rev]));
             }}
           >{tr("Roll back")}</CommandButton>
 
@@ -636,7 +634,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
             value={base}
             onDone={() => {
               setBook(base);
-              setNotice("Due schedule or expiry applied.");
+              setNotice(tr("Due schedule or expiry applied."));
             }}
           >{tr("Apply due schedule / expiry")}</CommandButton>
         </div>

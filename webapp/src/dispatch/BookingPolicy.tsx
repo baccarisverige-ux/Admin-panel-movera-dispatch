@@ -61,7 +61,7 @@ export function BookingPolicyCard() {
             title={prepared.error ?? (!draft ? tr("No unsaved policy change.") : undefined)}
             onDone={() => {
               setDraft(null);
-              setNotice(`Reservation policy saved as ${nextVersion}. Rides already booked keep their own version.`);
+              setNotice(tr("Reservation policy saved as {0}. Rides already booked keep their own version.", [nextVersion]));
             }}
           >{tr("Save reservation policy")}</CommandButton>
         </div>

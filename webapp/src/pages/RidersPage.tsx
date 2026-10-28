@@ -122,7 +122,7 @@ export function RidersPage() {
     link.click();
     URL.revokeObjectURL(link.href);
     logExport(agent?.id, `${list.length} riders (CSV)`);
-    setNotice(`Exported ${list.length} rider${list.length === 1 ? "" : "s"} to CSV.`);
+    setNotice(tr("Exported {0} rider{1} to CSV.", [list.length, list.length === 1 ? "" : "s"]));
   }
 
   const save = agent && filterName !== null ? saveFilter(care, { name: filterName, by: agent.id, segment, query, sort, period }) : { care, error: "Name the filter." };
@@ -191,7 +191,7 @@ export function RidersPage() {
             ) : (
               <span className="rd-inline">
                 <input aria-label={tr("Filter name")} value={filterName} onChange={(event) => setFilterName(event.target.value)} placeholder={tr("Top riders in Norrmalm")} />
-                <CommandButton command="admin.riders.saveFilter" className="dash-btn small" targetId="saved-filter" confirmTarget={false} scope="all" before="" after={filterName} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={save.care} disabled={Boolean(save.error)} onDone={() => { setNotice(`Filter "${filterName}" saved.`); setFilterName(null); }}>{tr("Save")}</CommandButton>
+                <CommandButton command="admin.riders.saveFilter" className="dash-btn small" targetId="saved-filter" confirmTarget={false} scope="all" before="" after={filterName} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={save.care} disabled={Boolean(save.error)} onDone={() => { setNotice(tr("Filter \"{0}\" saved.", [filterName])); setFilterName(null); }}>{tr("Save")}</CommandButton>
                 <button data-command="admin.confirm.cancel" type="button" className="link-action" onClick={() => setFilterName(null)}>{tr("Cancel")}</button>
               </span>
             )}
@@ -267,7 +267,7 @@ export function RidersPage() {
 
       {view === "insights" ? <InsightsView rows={rows} now={now} locale={place.locale} country={country} onSegment={(seg) => go({ view: "riders", seg })} /> : null}
 
-      {messageOpen ? <GroupMessage care={care} rows={chosen} agentId={agent?.id ?? ""} now={now} onClose={() => setMessageOpen(false)} onSent={(count) => { setMessageOpen(false); setSelected(new Set()); setNotice(`Message sent to ${count} rider${count === 1 ? "" : "s"}.`); }} /> : null}
+      {messageOpen ? <GroupMessage care={care} rows={chosen} agentId={agent?.id ?? ""} now={now} onClose={() => setMessageOpen(false)} onSent={(count) => { setMessageOpen(false); setSelected(new Set()); setNotice(tr("Message sent to {0} rider{1}.", [count, count === 1 ? "" : "s"])); }} /> : null}
     </div>
   );
 }
@@ -344,7 +344,7 @@ function PromotionsView({ care, rows, country, agentId, canEdit, builder, onBuil
                     <PromoTicketCard ticket={draft ? { ...ticket, ...draft, maxPerRide: ticket.kind === "percent" ? draft.maxPerRide : draft.value } : ticket} locale={locale} />
                     {ticket.status !== "stopped" ? (
                       <div className="rd-promo-controls">
-                        <CommandButton command="admin.riders.promoToggle" className={on ? "surge-toggle on" : "surge-toggle"} targetId={ticket.code} confirmTarget={false} scope="all" before={ticket.status} after={on ? "off" : "on"} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={setPromotionOn(care, ticket.id, !on)} disabled={!canEdit} aria-label={`${ticket.code} ${on ? "on" : "off"}`} onDone={() => onNotice(tr("Promotion {0} switched {1}.", [ticket.code, on ? "off" : "on"]))}>
+                        <CommandButton command="admin.riders.promoToggle" className={on ? "surge-toggle on" : "surge-toggle"} targetId={ticket.code} confirmTarget={false} scope="all" before={ticket.status} after={on ? "off" : "on"} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={setPromotionOn(care, ticket.id, !on)} disabled={!canEdit} aria-label={`${ticket.code} ${on ? "on" : "off"}`} onDone={() => onNotice(tr("Promotion {0} switched {1}.", [ticket.code, on ? tr("off") : tr("on")]))}>
                           {on ? tr("On") : tr("Off")} <span className="switch" aria-hidden="true"><i /></span>
                         </CommandButton>
                         {draft ? null : <button data-command="admin.riders.promoEdit" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => setEditing({ id: ticket.id, edit: { value: ticket.value, maxPerRide: ticket.maxPerRide, rides: ticket.rides } })}>{tr("Edit")}</button>}
