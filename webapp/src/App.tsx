@@ -12,7 +12,8 @@ import { I18nProvider } from "./i18n/I18nProvider";
 import { tr, trx } from "./i18n";
 import { useAdminApi } from "./api/AdminApiContext";
 import { LiveSessionProvider, useLiveSessionMaybe } from "./live/LiveSessionContext";
-import { LiveAdminApiProvider } from "./live/LiveAdminApiProvider";
+// The live client and its settings code load only in a live build, so the demo's first load stays small.
+const LiveAdminApiProvider = lazy(() => import("./live/LiveAdminApiProvider").then((module) => ({ default: module.LiveAdminApiProvider })));
 import { connectionOf } from "./live/connection";
 
 // Pages load on first visit, so the sign-in screen and the shell do not wait for every page and map library.
@@ -242,7 +243,7 @@ export function App() {
   );
   return (
     <BrowserRouter basename={routerBasename()}>
-      {api.kind === "http" ? <LiveSessionProvider><LiveAdminApiProvider>{body}</LiveAdminApiProvider></LiveSessionProvider> : <SessionProvider>{body}</SessionProvider>}
+      {api.kind === "http" ? <LiveSessionProvider><Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}><LiveAdminApiProvider>{body}</LiveAdminApiProvider></Suspense></LiveSessionProvider> : <SessionProvider>{body}</SessionProvider>}
     </BrowserRouter>
   );
 }
