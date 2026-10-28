@@ -151,6 +151,17 @@ export const LOST_INCIDENT = {
   incidentId: "inc_2", tripId: "T2001", kind: "driver_silent", severity: "critical", status: "open", version: 1, raisedBy: "system", zoneId: "Z001",
   riderId: "R501", driverId: "D1001", openedAt: "2026-10-26T08:50:00Z", updatedAt: "2026-10-26T08:50:00Z",
 };
+/** Safety part 2 (contract v0.12.0 §22): the driver's Ride check "I need help" (alarm) and the rider's no answer (silent). */
+export const RIDE_CHECK_HELP = {
+  incidentId: "inc_3", tripId: "T2002", kind: "ride_check", severity: "critical", status: "open", version: 1, raisedBy: "driver", zoneId: "Z001", alarm: true,
+  riderId: "R502", driverId: "D1001", rideCheck: { checkId: "rc-help-1", trigger: "off_route", by: "driver", answer: "need_help", shownAt: "2026-10-26T09:30:00Z", answeredAt: "2026-10-26T09:30:20Z" },
+  position: { lat: 59.3331, lng: 18.0651, accuracyM: 8, at: "2026-10-26T09:30:20Z" }, openedAt: "2026-10-26T09:30:20Z", updatedAt: "2026-10-26T09:30:20Z",
+};
+export const RIDE_CHECK_SILENT = {
+  incidentId: "inc_4", tripId: "T2001", kind: "ride_check", severity: "critical", status: "open", version: 1, raisedBy: "system", zoneId: "Z001", alarm: false,
+  riderId: "R501", driverId: "D1001", rideCheck: { checkId: "rc-quiet-1", trigger: "long_stop", by: "rider", answer: "no_answer", shownAt: "2026-10-26T09:40:00Z", lateAnswer: "ok" },
+  openedAt: "2026-10-26T09:42:00Z", updatedAt: "2026-10-26T09:43:00Z",
+};
 export type Incident = Record<string, unknown> & { incidentId: string; status: string; version: number };
 
 /** GET /admin/riders (AdminRider): wallet and unpaid fees from the server. */

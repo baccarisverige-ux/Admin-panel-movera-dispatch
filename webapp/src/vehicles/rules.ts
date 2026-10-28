@@ -20,7 +20,7 @@ export const FUELS: { id: Fuel; label: string }[] = [
   { id: "electric", label: "Electric" },
 ];
 
-export const CATEGORY_LABELS: Record<CategoryId, string> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "XL", electric: "Electric", pet: "Pet" };
+export const CATEGORY_LABELS: Record<CategoryId, string> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "Movera XL", electric: "Electric", pet: "Pet" };
 
 export type CatRule = { category: CategoryId; on: boolean; minYear: number; minSeats: number; fuels: Fuel[] };
 export type CountryRules = { categories: CatRule[]; warnDays: number; autoHold: boolean; photosNeeded: boolean };

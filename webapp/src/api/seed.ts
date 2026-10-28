@@ -61,6 +61,10 @@ export type DemoRecord = {
   carAt?: string | null;
   escalatedAt?: string | null;
   version?: number;
+  /** Live incidents (contract v0.12.0 §22): the server rings for this case (SOS, car lost, Ride check "I need help"). */
+  alarm?: boolean;
+  /** Live Ride check incidents (contract v0.12.0 §22): what the app reported. */
+  liveRideCheck?: LiveRideCheck;
   /** Live build: the record came from the Movera server. Nothing on it may be invented (owner rule, part 3). */
   live?: true;
   /** Live trips: the server's own facts (contract TripProjection), so no page derives them from the id. */
@@ -77,6 +81,16 @@ export type DemoRecord = {
   liveRating?: LiveRatingFacts;
   /** Live payouts (GET /admin/payouts, contract v0.9.0): the lines behind the amount. */
   livePayout?: { lines: { code: string; amountMinor: number; count?: number }[]; source: string; periodStart: string; periodEnd: string; tripCount: number; currency: string };
+};
+
+export type LiveRideCheck = {
+  checkId: string;
+  trigger: "dropped_far" | "long_stop" | "off_route" | "possible_crash" | string;
+  by: "rider" | "driver";
+  answer: "need_help" | "no_answer";
+  shownAt?: string;
+  answeredAt?: string;
+  lateAnswer?: "ok" | "need_help" | string;
 };
 
 export type LiveRatingFacts = { tripId: string; from: "rider" | "driver"; stars: number; tags: string[]; comment: string | null; at: string; riderId: string; riderName: string | null; driverId: string | null; driverName: string | null; zoneId: string; hidden: boolean; hiddenBy: string | null; hiddenAt: string | null; hideReason: string | null };

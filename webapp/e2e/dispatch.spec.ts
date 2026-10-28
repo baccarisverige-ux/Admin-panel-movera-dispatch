@@ -25,7 +25,9 @@ test("dispatch has its own menu item, a back button, and every zone with its mod
   await session(page);
   await page.goto("/");
   await page.getByRole("link", { name: "Dispatch" }).click();
-  await expect(page.getByRole("heading", { name: "Dispatch in Sweden" })).toBeVisible();
+  await expect(page).toHaveURL(/\/dispatch\/map$/);
+  await page.getByTestId("dispatch-section-tabs").getByRole("link", { name: "Rules" }).click();
+  await expect(page.getByRole("heading", { name: "Dispatch rules in Sweden" })).toBeVisible();
   await expect(zone(page, "Norrmalm")).toContainText("Automatic");
   await expect(zone(page, "Arlanda")).toBeVisible();
   await zone(page, "Norrmalm").click();
@@ -33,8 +35,9 @@ test("dispatch has its own menu item, a back button, and every zone with its mod
   await expect(page.getByTestId("dx-moved-modes")).toBeVisible();
   await page.getByRole("button", { name: "Go back" }).click();
   await expect(page).not.toHaveURL(/zone=/);
+  // Back from Rules returns to the tab it came from: the Live map.
   await page.getByRole("button", { name: "Go back" }).click();
-  await expect(page).toHaveURL(/\/$|\/\?/);
+  await expect(page).toHaveURL(/\/dispatch\/map$/);
 });
 
 test("change Radar, publish now, see it in history, then undo", async ({ page }) => {
@@ -230,7 +233,7 @@ test("rules file, other countries, read-only roles and phones", async ({ page })
   expect((await download).suggestedFilename()).toMatch(/movera-dispatch-rules-SE-rev\d+\.json/);
 
   await page.goto("/dispatch?country=FR&zone=FR-PC&tab=rides");
-  await expect(page.getByRole("heading", { name: "Dispatch in France" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dispatch rules in France" })).toBeVisible();
   await expect(page.getByLabel("Live trips Movera fee", { exact: true })).toHaveValue("3.35");
 
   await page.setViewportSize({ width: 390, height: 860 });
@@ -326,7 +329,7 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await page.goto("/dispatch?zone=Z001");
   await expect(page.getByRole("region", { name: "Reservations" })).toHaveCount(0);
   await page.getByTestId("dx-moved-modes").getByRole("link", { name: "Reservations" }).click();
-  await expect(page).toHaveURL(/\/offers\?.*tab=reservations/);
+  await expect(page).toHaveURL(/\/dispatch\/bookings\?/);
   const card = page.getByRole("region", { name: "Reservations" });
   const steps = card.getByRole("list", { name: "Reservation steps" }).getByRole("listitem");
 
@@ -391,7 +394,7 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(fees.getByLabel("Reservations Premium free cancel minutes")).toHaveValue("120");
   await expect(fees.getByLabel("Reservations Movera fee", { exact: true })).toHaveValue("50");
   await fees.getByLabel("Reservations Movera fee", { exact: true }).fill("75");
-  await page.getByRole("button", { name: "Radar · Exclusive · Reservations" }).click();
+  await page.getByTestId("dispatch-tab-bookings").click();
   await page.getByRole("tablist", { name: "Zone settings" }).getByRole("tab", { name: "Reservations" }).click();
 
   // No driver near pickup: raise from Movera's commission, never over 500 kr.
@@ -527,7 +530,7 @@ test("waiting at pickup: Pricing's values per category, ride type and distance r
   await page.goto("/dispatch?zone=Z001&tab=rides");
   const wait = page.getByRole("region", { name: "Waiting at pickup" });
   const pricing = wait.getByRole("group", { name: "Waiting from Pricing" });
-  await expect(pricing.getByRole("row").filter({ hasText: "Movera" })).toContainText("5 min");
+  await expect(pricing.getByRole("row").filter({ has: page.getByRole("cell", { name: "Movera", exact: true }) })).toContainText("5 min");
   await expect(pricing.getByRole("link", { name: "Change in Pricing" })).toHaveAttribute("href", /\/pricing\?country=SE&zone=Z001/);
   const examples = wait.getByRole("group", { name: "Waiting examples" }).getByRole("listitem");
   await expect(examples.filter({ hasText: "Normal ride" })).toContainText("5 min free · then 12,26 kr/min · no-show after 5 min · fee 65 kr (driver gets 52 kr)");
@@ -651,7 +654,7 @@ test("rider cancel fees per car type: live trips and reservations, % with min an
   await expect(page.getByRole("region", { name: "Rider cancels: smart check" })).toContainText("see Rider cancel fees");
   const live = page.getByRole("group", { name: "Live trips cancel fees" });
   // Every car type from Pricing, also the ones without their own row (they start as a copy of Movera).
-  for (const name of ["Movera", "Comfort", "Premium", "Priority", "XL", "Electric", "Pet", "Child Seat"]) await expect(live.getByRole("rowheader", { name, exact: true })).toBeVisible();
+  for (const name of ["Movera", "Comfort", "Premium", "Priority", "Movera XL", "Electric", "Pet", "Child Seat"]) await expect(live.getByRole("rowheader", { name, exact: true })).toBeVisible();
   await expect(live.getByLabel("Live trips Pet fee", { exact: true })).toHaveValue("35");
   await expect(live.getByLabel("Live trips Comfort fee", { exact: true })).toHaveValue("45");
   await expect(live.getByLabel("Live trips: rider sees")).toContainText("Free cancel for 2 min after the driver accepts · then 45 kr");
@@ -662,9 +665,9 @@ test("rider cancel fees per car type: live trips and reservations, % with min an
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toHaveCount(0);
   await expect(live.getByLabel("Live trips: rider sees")).toContainText("then 37,5 kr (15%, at most 150 kr)"); // X4: 15% of 250 kr, whole öre like the apps (was rounded to 38 kr)
   await live.getByRole("button", { name: "Same for all car types" }).click();
-  await live.getByRole("group", { name: /use one car type's rule for all/ }).getByRole("button", { name: "Movera" }).click();
+  await live.getByRole("group", { name: /use one car type's rule for all/ }).getByRole("button", { name: "Movera", exact: true }).click();
   await expect(live.getByLabel("Live trips Comfort fee", { exact: true })).toHaveValue("35");
-  await expect(live.getByLabel("Live trips XL fee", { exact: true })).toHaveValue("35");
+  await expect(live.getByLabel("Live trips Movera XL fee", { exact: true })).toHaveValue("35");
   await live.getByRole("button", { name: "Copy to other zones…" }).click();
   await page.locator(".modal.open").getByText("Södermalm").click();
   await page.locator(".modal.open").getByRole("button", { name: "Copy to 1 zone" }).click();

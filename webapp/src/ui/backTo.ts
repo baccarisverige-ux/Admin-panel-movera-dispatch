@@ -69,9 +69,9 @@ export function withBack(href: string, here: string): string {
 export function backPlace(target: string): "dashboard" | "dispatch" | "live" | "offers" | "other" {
   const path = target.split("?")[0];
   if (path === "/" || path === "") return "dashboard";
+  if (path.startsWith("/dispatch/map") || path.startsWith("/live")) return "live";
+  if (path.startsWith("/dispatch/radar") || path.startsWith("/dispatch/bookings") || path.startsWith("/offers")) return "offers";
   if (path.startsWith("/dispatch")) return "dispatch";
-  if (path.startsWith("/live")) return "live";
-  if (path.startsWith("/offers")) return "offers";
   return "other";
 }
 

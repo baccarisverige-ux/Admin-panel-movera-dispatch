@@ -38,5 +38,9 @@ test("the back button names the screen it returns to", () => {
   assert.equal(backPlace("/dispatch?view=live"), "dispatch");
   assert.equal(backPlace("/live"), "live");
   assert.equal(backPlace("/offers?tab=radar"), "offers");
+  assert.equal(backPlace("/dispatch/map?zone=Z1"), "live");
+  assert.equal(backPlace("/dispatch/radar"), "offers");
+  assert.equal(backPlace("/dispatch/bookings"), "offers");
+  assert.equal(backPlace("/dispatch/rules?tab=best"), "dispatch");
   assert.equal(backPlace("/pricing"), "other");
 });

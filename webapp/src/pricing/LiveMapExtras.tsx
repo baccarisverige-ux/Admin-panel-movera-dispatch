@@ -13,6 +13,7 @@ import type { ZoneSurge } from "./surge";
 import { SurgeControls } from "./SurgeControls";
 import { SurgeQuickPopup } from "./SurgeQuickPopup";
 import { useSurgePref } from "./useSurgePref";
+import { useLiveMapSurge } from "../live/useLiveSurge";
 import { SLICE_KEY, emptyPricingStore, normalizeStore } from "./zonePricing";
 
 /**
@@ -32,6 +33,8 @@ export function useLiveMapExtras({ prefKey, country, market, zoneIds, balance, n
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pricing, zoneKey, balanceKey, minute],
   );
+  // Live (contract.json#driverSurgeMap): the server's surge now, in the driver map's colours.
+  const liveSurge = useLiveMapSurge(zoneKey.split(","), pricing);
   const bonusSlice = useSlice<BonusBook>(BONUS_KEY, emptyBonusBook());
   const bonusAreas: BonusMapArea[] = useMemo(() => normalizeBonusBook(bonusSlice.value).bonuses
     .filter((bonus) => bonus.country === country && bonus.kind === "area")
@@ -39,15 +42,15 @@ export function useLiveMapExtras({ prefKey, country, market, zoneIds, balance, n
     .filter((item) => item.state === "live" || item.state === "today")
     .map(({ bonus, state }) => ({ id: bonus.id, label: state === "live" ? tr("Bonus now · {0}", [bonus.name]) : tr("{0} · from {1}", [bonus.name, bonus.start]), live: state === "live", rings: bonus.areas.map((area) => area.ring) })), [bonusSlice.value, country, minute, market.timeZone]);
   const [showBonus, setShowBonus] = useState(true);
-  return { surge, surgePref, bonusAreas, showBonus, setShowBonus };
+  return { surge: liveSurge ? liveSurge.rows : surge, surgeLive: Boolean(liveSurge), surgeFailed: liveSurge?.state === "failed", surgePref, bonusAreas, showBonus, setShowBonus };
 }
 
 /** "Driver bonus areas" chip and the surge layer switch with its style picker. */
-export function LiveMapLayerChips({ bonusCount, showBonus, onBonus, surgePref }: { bonusCount: number; showBonus: boolean; onBonus: (shown: boolean) => void; surgePref: ReturnType<typeof useSurgePref> }) {
+export function LiveMapLayerChips({ bonusCount, showBonus, onBonus, surgePref, surgeLive = false }: { bonusCount: number; showBonus: boolean; onBonus: (shown: boolean) => void; surgePref: ReturnType<typeof useSurgePref>; surgeLive?: boolean }) {
   return (
     <>
       <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBonus} className={showBonus ? "state-chip" : "state-chip off"} onClick={() => onBonus(!showBonus)}>{trn("{0}Driver bonus areas{1}", <i style={{ background: "#f2994a" }} />, <strong>{bonusCount}</strong>)}</button>
-      <SurgeControls compact shown={surgePref.shown} style={surgePref.style} onShown={surgePref.setShown} onStyle={surgePref.setStyle} />
+      <SurgeControls compact shown={surgePref.shown} style={surgePref.style} onShown={surgePref.setShown} onStyle={surgePref.setStyle} noStyle={surgeLive} />
     </>
   );
 }

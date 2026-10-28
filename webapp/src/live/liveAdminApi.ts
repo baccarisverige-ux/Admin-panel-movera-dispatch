@@ -19,6 +19,7 @@ import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary,
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
+import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
 import { vehicleMissing } from "./activation.ts";
@@ -466,6 +467,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // v0.7.2 (contract.json#auth.admin.oneAdmin): one admin is enough; the refund is made at once.
       await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
       return done("Refunded.");
+    }
+    if (input.action === "admin.dispatch.control") {
+      // Dispatch › Live: pause, force a mode, resume or back to the rules (PUT /admin/zones/{zoneId}/dispatch-control).
+      const value = controlValueOf(input.after);
+      if (!value) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const path = dispatchControlPath(input.targetId);
+      const current = parseControl(await client.json<unknown>(path));
+      const answer = await client.put<unknown>(path, controlBody(current, value, input.reason));
+      // v0.7.2: one admin is enough. A server that still files an approval answers 202 PendingApproval.
+      if (isPendingApproval(answer)) return done("Waiting for a second admin to approve.", "pending_approval");
+      return done("Saved.");
     }
     // Pricing, Dispatch, Settings and Tips & limits publish to the server's config documents (contract v0.8.0).
     const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value, ...(input.scope ? { scope: input.scope } : {}) });

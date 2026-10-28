@@ -53,7 +53,7 @@ const CATEGORY_SHARE: [string, string, number][] = [
   ["comfort", "Comfort", 0.2],
   ["premium", "Premium", 0.1],
   ["electric", "Electric", 0.09],
-  ["xl", "XL", 0.08],
+  ["xl", "Movera XL", 0.08],
   ["priority", "Priority", 0.04],
   ["pet", "Pet", 0.03],
 ];

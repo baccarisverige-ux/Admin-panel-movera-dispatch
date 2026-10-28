@@ -63,7 +63,7 @@ test("checks: % 0–100, fixed 0–1000, min not over max, free minutes in range
   const table = zoneDefault("Z001").riderCancel.fees;
   assert.deepEqual(cancelFeeIssues({ ...table, premium: { ...table.premium, value: 120 } }, "live"), ["Rider cancels, Premium: the fee must be 0 to 100% of the price."]);
   assert.deepEqual(cancelFeeIssues({ ...table, economy: { ...table.economy, value: 1200 } }, "live"), ["Rider cancels, Movera: the fixed fee must be 0 to 1000."]);
-  assert.deepEqual(cancelFeeIssues({ ...table, xl: { ...table.xl, min: 200, max: 100 } }, "live"), ["Rider cancels, XL: the lowest fee must not be more than the highest."]);
+  assert.deepEqual(cancelFeeIssues({ ...table, xl: { ...table.xl, min: 200, max: 100 } }, "live"), ["Rider cancels, Movera XL: the lowest fee must not be more than the highest."]);
   assert.deepEqual(cancelFeeIssues({ ...table, xl: { ...table.xl, max: null } }, "live"), [], "min and max are optional");
   assert.deepEqual(cancelFeeIssues({ ...table, comfort: { ...table.comfort, freeMin: 16 } }, "live"), ["Rider cancels, Comfort: free cancel must be 0 to 15 minutes after the driver accepts."]);
   assert.deepEqual(cancelFeeIssues(sameForAll(table, "premium", DEFAULT_FEE_CATEGORIES), "reservation"), [], "same for all copies one row");

@@ -11,8 +11,9 @@ import { OnTheWayGroup, useOnTheWay } from "./RideProgress";
 import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import { supplyDemand } from "../dashboard/insights";
 import { LiveMapLayerChips, LiveMapQuickPopup, useLiveMapExtras, type QuickTarget } from "../pricing/LiveMapExtras";
-import { SurgeLegend } from "../pricing/SurgeControls";
+import { DriverSurgeLegend, SurgeLegend } from "../pricing/SurgeControls";
 import { MapPanel } from "./maps";
+import { useLiveDispatchControls } from "../live/useLiveDispatchControl";
 import { RiderAssignName, useAssignPanel } from "./AssignPanel";
 import { DISPATCH_KEY, modeLabel, modeNow, requestControl, type DispatchBook, type ZoneDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
@@ -52,12 +53,16 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
   const [locate, setLocate] = useState<MapLocate | null>(null);
   const [showBalance, setShowBalance] = useState(false);
   const role = useSession().agent?.role;
+  // Contract §3.6: the zone switch (pause, force a mode) needs dispatch.edit.
+  const canSwitch = Boolean(role && can(role, "dispatch.edit"));
   const ids = new Set(zones.map((zone) => zone.id));
   const handled = new Map(book.liveActions.map((action) => [action.tripId, action]));
   const now = new Date().toISOString();
   const waiting = requests.filter((request) => ids.has(request.zoneId));
   // Surge layer, driver bonus areas and their quick pop-ups: the same as on the Dashboard map.
   const [quick, setQuick] = useState<QuickTarget>(null);
+  // Live: the zones' switches are the server's (GET/PUT /admin/zones/{zoneId}/dispatch-control).
+  const liveControls = useLiveDispatchControls(zones.map((zone) => zone.id));
   const extras = useLiveMapExtras({ prefKey: "dispatch", country: market.id, market, zoneIds: zones.map((zone) => zone.id), balance: supplyDemand(market.id, zones.map((zone) => zone.id), waiting, drivers), now: Date.now() });
   // Rides a driver just accepted: listed apart and still on the map, so "See on map" shows who is on the way.
   const allOnTheWay = useOnTheWay();
@@ -98,16 +103,27 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
         <h3 className="dx-h3">{trn("{0} Zones right now", <Radar size={15} aria-hidden="true" />)}</h3>
         <ul className="dx-control-grid">
           {zones.map((zone) => {
-            const control = book.control[zone.id];
+            const serverControl = liveControls?.byZone.get(zone.id);
+            const control = liveControls ? (serverControl ? { paused: serverControl.paused, mode: serverControl.mode, by: serverControl.by ?? "", at: serverControl.at ?? "" } : undefined) : book.control[zone.id];
             const rules = rulesOf(zone.id);
             const mode = modeNow(rules, control, busyOf(zone.id), hhmm);
             const free = drivers.filter((driver) => driver.zoneId === zone.id && driver.state === "free").length;
             const count = waiting.filter((request) => request.zoneId === zone.id && !handled.has(request.tripId)).length;
-            const pending = book.approvals.find((item) => item.kind === "control" && item.control?.zoneId === zone.id);
+            const pending = liveControls ? undefined : book.approvals.find((item) => item.kind === "control" && item.control?.zoneId === zone.id);
             const button = (label: string, value: { paused: boolean; mode: "radar" | "exclusive" | null }, icon: ReactNode, className = "dash-btn small ghost") => {
+              const before = control?.paused ? "paused" : control?.mode ?? "rules";
+              const after = value.paused ? "paused" : value.mode ?? "rules";
+              if (liveControls) {
+                // Live: the server's switch, one admin is enough (contract v0.7.2).
+                return (
+                  <CommandButton command="admin.dispatch.control" className={className} targetId={zone.id} confirmTarget={false} scope={zone.id} before={before} after={after} disabled={!canSwitch} aria-label={`${label} ${zone.name}`} onDone={(result) => { liveControls.refresh(); onNotice(result?.status === "pending_approval" ? tr("{0} {1}: waiting for a second admin to approve.", [label, zone.name]) : tr("{0}: {1} done.", [zone.name, label.toLowerCase()])); /* the 202 line is only a fallback for an older server */ }}>
+                    {icon} {trx(label)}
+                  </CommandButton>
+                );
+              }
               const result = requestControl(book, zone.id, value, agentId, now);
               return (
-                <CommandButton command="admin.dispatch.control" className={className} targetId={zone.id} confirmTarget={false} scope={zone.id} before={control?.paused ? "paused" : control?.mode ?? "rules"} after={value.paused ? "paused" : value.mode ?? "rules"} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={result.book} disabled={!canControl || Boolean(pending)} aria-label={`${label} ${zone.name}`} onDone={() => onNotice(result.waiting ? tr("{0} {1}: waiting for a second admin to approve.", [label, zone.name]) : tr("{0}: {1} done.", [zone.name, label.toLowerCase()]))}>
+                <CommandButton command="admin.dispatch.control" className={className} targetId={zone.id} confirmTarget={false} scope={zone.id} before={before} after={after} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={result.book} disabled={!canSwitch || Boolean(pending)} aria-label={`${label} ${zone.name}`} onDone={() => onNotice(result.waiting ? tr("{0} {1}: waiting for a second admin to approve.", [label, zone.name]) : tr("{0}: {1} done.", [zone.name, label.toLowerCase()]))}>
                   {icon} {trx(label)}
                 </CommandButton>
               );
@@ -137,13 +153,13 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
 
       <MapPanel title={tr("Live map · {0}", [trx(market.name)])} note={<span className="dx-legend">{trn("{0} Free {1} To pickup {2} On trip {3} Rider waiting {4} Driver offered", <i className="car free" />, <i className="car pickup" />, <i className="car trip" />, <i className="rider waiting" />, <i className="rider offered" />)}</span>}>
         <div className="dx-map-layers" role="toolbar" aria-label={tr("Map layers")}>
-          <LiveMapLayerChips bonusCount={extras.bonusAreas.length} showBonus={extras.showBonus} onBonus={extras.setShowBonus} surgePref={extras.surgePref} />
+          <LiveMapLayerChips bonusCount={extras.bonusAreas.length} showBonus={extras.showBonus} onBonus={extras.setShowBonus} surgePref={extras.surgePref} surgeLive={extras.surgeLive} />
         </div>
         <DriversMap drivers={drivers} requests={onMap} showRequests focusRequest={focus} locate={locate} balance={balance} showBalance={showBalance} market={market} zones={zones.map((zone) => zone.id)} hidden={NO_HIDDEN} withScope={withScope} rideChecks={rideChecks} renderAssign={canControl ? (request) => <RiderQuickActions request={request} candidates={candidatesOf(request)} onNotice={onNotice} /> : undefined}
-          surge={extras.surge} surgeShown={extras.surgePref.shown} surgeStyle={extras.surgePref.style} bonusAreas={extras.bonusAreas} bonusShown={extras.showBonus}
+          surge={extras.surge} surgeShown={extras.surgePref.shown} surgeStyle={extras.surgePref.style} surgeDriver={extras.surgeLive} bonusAreas={extras.bonusAreas} bonusShown={extras.showBonus}
           onSurgeZone={(zoneId) => setQuick({ kind: "surge", zoneId })} onBonusArea={(id) => setQuick({ kind: "bonus", id })}
           overlay={<LiveMapQuickPopup target={quick} surge={extras.surge} country={market.id} market={market} withScope={withScope} onClose={() => setQuick(null)} onNotice={onNotice} />} />
-        {extras.surgePref.shown ? <SurgeLegend /> : null}
+        {extras.surgePref.shown ? (extras.surgeLive ? <DriverSurgeLegend failed={extras.surgeFailed} /> : <SurgeLegend />) : null}
       </MapPanel>
 
       <SupplyDemandDrill rows={balance} showOnMap={showBalance} onToggleMap={() => setShowBalance((value) => !value)} surgeLink={surgeLink} drivers={drivers} requests={waiting} radarZones={book.radarZones} onLocate={setLocate} radarZoneLink={(zoneId) => withScope(offersLink("radar", zoneId))} />

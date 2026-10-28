@@ -28,7 +28,8 @@ const ConfigPage = lazyPage(() => import("./pages/ConfigPage"), "ConfigPage");
 const ConfirmPage = lazyPage(() => import("./pages/ConfirmPage"), "ConfirmPage");
 const ContentPage = lazyPage(() => import("./pages/ContentPage"), "ContentPage");
 const DashboardPage = lazyPage(() => import("./pages/DashboardPage"), "DashboardPage");
-const DispatchPage = lazyPage(() => import("./pages/DispatchPage"), "DispatchPage");
+const DispatchSectionPage = lazyPage(() => import("./pages/DispatchSectionPage"), "DispatchSectionPage");
+const DispatchRedirect = lazyPage(() => import("./pages/DispatchSectionPage"), "DispatchRedirect");
 const AlertsPage = lazyPage(() => import("./pages/AlertsPage"), "AlertsPage");
 const DesignPage = lazyPage(() => import("./pages/DesignPage"), "DesignPage");
 const DriverDetailPage = lazyPage(() => import("./pages/DriverDetailPage"), "DriverDetailPage");
@@ -40,7 +41,6 @@ const GatesPage = lazyPage(() => import("./pages/GatesPage"), "GatesPage");
 const PromotionsPage = lazyPage(() => import("./pages/PromotionsPage"), "PromotionsPage");
 const ReviewsPage = lazyPage(() => import("./pages/ReviewsPage"), "ReviewsPage");
 const HandoverPage = lazyPage(() => import("./pages/HandoverPage"), "HandoverPage");
-const LivePage = lazyPage(() => import("./pages/LivePage"), "LivePage");
 const MessagesPage = lazyPage(() => import("./pages/MessagesPage"), "MessagesPage");
 const OnboardingPage = lazyPage(() => import("./pages/OnboardingPage"), "OnboardingPage");
 const PaymentsPage = lazyPage(() => import("./pages/PaymentsPage"), "PaymentsPage");
@@ -98,9 +98,7 @@ function Screen({ id }: { id: string }) {
   if (id === "risk") return <RiskPage />;
   if (id === "riders") return <RidersPage />;
   if (id === "trips") return <TripsPage />;
-  if (id === "live") return <LivePage />;
-  if (id === "dispatch") return <DispatchPage />;
-  if (id === "offers") return <DispatchPage section="offers" />;
+  if (id === "dispatch") return <DispatchSectionPage />;
   if (id === "alerts") return <AlertsPage />;
   if (id === "team") return <TeamPage />;
   if (id === "system") return <SystemPage />;
@@ -189,9 +187,14 @@ function Authed() {
         <Route path="trips/:tripId" element={<TripPage />} />
         <Route path="reservations" element={<Screen id="reservations" />} />
         <Route path="reservations/:id" element={<ReservationDetailPage />} />
-        <Route path="live" element={<Screen id="live" />} />
-        <Route path="dispatch" element={<Screen id="dispatch" />} />
-        <Route path="offers" element={<Screen id="offers" />} />
+        {/* Dispatch: one section with four tabs; the old Live map and Radar · Exclusive · Reservations pages open their tab. */}
+        <Route path="dispatch" element={<DispatchRedirect />} />
+        <Route path="dispatch/map" element={<Screen id="dispatch" />} />
+        <Route path="dispatch/radar" element={<Screen id="dispatch" />} />
+        <Route path="dispatch/bookings" element={<Screen id="dispatch" />} />
+        <Route path="dispatch/rules" element={<Screen id="dispatch" />} />
+        <Route path="live" element={<DispatchRedirect />} />
+        <Route path="offers" element={<DispatchRedirect />} />
         <Route path="alerts" element={<Screen id="alerts" />} />
         <Route path="drivers" element={<Screen id="drivers" />} />
         <Route path="drivers/:driverId" element={<DriverDetailPage />} />

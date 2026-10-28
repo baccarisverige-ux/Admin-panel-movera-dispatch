@@ -1,8 +1,6 @@
 /** Error codes of contract v0.3.0 (contract.json#errors.codes). */
-export const ERROR_CODES = ["invalid_request", "unauthenticated", "forbidden", "not_found", "otp_expired", "conflict", "invalid_transition", "version_mismatch", "rate_limited", "unavailable", "internal"] as const;
-/** Contract v0.10.1 adds documents_not_approved (activation and car documents); accepted before the contract copy is synced. */
-export const NEWER_ERROR_CODES = ["documents_not_approved"] as const;
-export type ErrorCode = (typeof ERROR_CODES)[number] | (typeof NEWER_ERROR_CODES)[number];
+export const ERROR_CODES = ["invalid_request", "unauthenticated", "forbidden", "not_found", "otp_expired", "conflict", "invalid_transition", "version_mismatch", "documents_not_approved", "rate_limited", "unavailable", "internal"] as const;
+export type ErrorCode = (typeof ERROR_CODES)[number];
 
 /** The wire error body: { code, message, requestId, retryable, projection? }. */
 export type ApiErrorBody = { code: ErrorCode; message: string; requestId: string; retryable: boolean; projection?: unknown; reason?: string; details?: string[] };
@@ -67,7 +65,7 @@ export function codeForStatus(status: number): ErrorCode {
 export function parseErrorBody(value: unknown): ApiErrorBody | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  if (typeof raw.code !== "string" || ![...ERROR_CODES, ...NEWER_ERROR_CODES].includes(raw.code as ErrorCode) || typeof raw.message !== "string") return null;
+  if (typeof raw.code !== "string" || !(ERROR_CODES as readonly string[]).includes(raw.code) || typeof raw.message !== "string") return null;
   return {
     code: raw.code as ErrorCode,
     message: raw.message,
