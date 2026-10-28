@@ -7,7 +7,7 @@ import { LIVE_ZONES_KEY } from "../live/LiveZones";
 import { namesProblem, NAME_MAX, type ServerZone, type ZoneNames } from "../zones/live";
 
 /**
- * Contract v0.11.0 §20: open or close a server zone (POST /admin/zones/{zoneId}/open|close with expectedVersion), in
+ * Contract v0.11.0 §21: open or close a server zone (POST /admin/zones/{zoneId}/open|close with expectedVersion), in
  * the confirm box. Never a delete: a closed zone takes no new rides; rides already booked go on.
  */
 export function LiveOpenClose({ zone, name, disabled }: { zone: ServerZone; name: string; disabled?: boolean }) {

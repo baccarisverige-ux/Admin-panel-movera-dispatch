@@ -7,7 +7,7 @@ import { marketZoneOf, shapeOfServerZone, type ServerZone } from "../zones/live"
 import { useLiveSessionMaybe } from "./LiveSessionContext";
 
 /**
- * Contract v0.11.0 §20 (owner 2026-10-28, decision #9): in a live build GET /admin/zones is the zone list of every
+ * Contract v0.11.0 §21 (owner 2026-10-28, decision #9): in a live build GET /admin/zones is the zone list of every
  * screen — the top bar's country and zone picker, the Zones page, the zone page and the map. Never the panel's
  * built-in list: until it answers the list is empty, and a failed read shows the error with Try again.
  */

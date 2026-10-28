@@ -4,7 +4,7 @@ import { CITIES, citiesOf } from "./cities.ts";
 import { makeZone, type ZoneShape } from "./releases.ts";
 
 /**
- * Contract v0.11.0 §20 (contract.json#zones, owner 2026-10-28): the Zone object of GET /admin/zones and the request
+ * Contract v0.11.0 §21 (contract.json#zones, owner 2026-10-28): the Zone object of GET /admin/zones and the request
  * bodies of POST /admin/zones, PUT /admin/zones/{zoneId} and POST …/open|close (server src/zones/routes.ts). Zones are
  * never deleted, only closed; one admin with zones.edit is enough.
  */

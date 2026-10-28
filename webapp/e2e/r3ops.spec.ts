@@ -215,7 +215,7 @@ test("Safety points to the one cancel rate limit, and document colours follow th
   const again = page.getByTestId("doc-driver_license");
   await again.getByLabel("Driving licence status").selectOption("approved");
   await again.getByLabel("Driving licence expiry date").fill(day(20));
-  await expect(again.locator(".fd-health")).toHaveText("Valid");
+  await expect(again.locator(".fd-health")).toHaveText("Approved");
   await again.getByLabel("Driving licence expiry date").fill(day(10));
   await expect(again.locator(".fd-health")).toHaveText("Expires in 10 days");
 });

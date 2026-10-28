@@ -500,7 +500,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return done("Rolled back.");
     }
     if (input.action === "admin.zone.create" || input.action === "admin.zone.update" || input.action === "admin.zone.open" || input.action === "admin.zone.close") {
-      // Zones (contract v0.11.0 §20): one admin with zones.edit; never deleted, only closed. A stale expectedVersion
+      // Zones (contract v0.11.0 §21): one admin with zones.edit; never deleted, only closed. A stale expectedVersion
       // is 409 version_mismatch: the page reloads the list and says so.
       const zone = encodeURIComponent(input.targetId);
       try {

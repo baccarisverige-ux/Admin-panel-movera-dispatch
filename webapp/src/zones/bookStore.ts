@@ -149,7 +149,7 @@ export function useZoneUi(): ZoneUi {
 
 export const zoneStore = {
   /**
-   * Live (contract v0.11.0 §20): the server's list is the truth. Draft and published both become the server's zones;
+   * Live (contract v0.11.0 §21): the server's list is the truth. Draft and published both become the server's zones;
    * a zone whose server copy did not change keeps an outline drawn but not saved yet. Simulated map layers go off.
    */
   loadLive(zones: ZoneShape[]) {

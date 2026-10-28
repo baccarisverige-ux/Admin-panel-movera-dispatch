@@ -1,4 +1,5 @@
 import type { DocStatus } from "../drivers/gate.ts";
+import { statusLabel } from "../domain/labels.ts";
 
 /** Colour a document shows: green valid, orange expiring soon, red missing / wrong / expired, blue waiting review. */
 export type DocHealth = "valid" | "expiring" | "invalid" | "review";
@@ -8,15 +9,9 @@ export const EXPIRY_WARNING_DAYS = 30;
 
 export type DocState = { status: DocStatus; expiresAt: string };
 
-/** What the admin can set a document to, in the order the picker shows them. */
-export const DOC_CHOICES: { status: DocStatus; label: string }[] = [
-  { status: "approved", label: "Valid" },
-  { status: "expiring", label: "Expires soon" },
-  { status: "rejected", label: "Wrong" },
-  { status: "needed", label: "Missing" },
-  { status: "in_review", label: "Waiting review" },
-  { status: "expired", label: "Expired" },
-];
+/** The document states an admin can set; the words are the contract's (contract.json#statusWords.documentStatus). */
+export const DOC_CHOICES: { status: DocStatus; readonly label: string }[] = (["approved", "expiring", "rejected", "needed", "in_review", "expired"] as const)
+  .map((status) => ({ status, get label() { return statusLabel(status, "documentStatus"); } }));
 
 const DAY = 86_400_000;
 
@@ -31,14 +26,15 @@ export function daysUntil(date: string, nowMs: number): number | null {
  */
 export function docHealth(doc: DocState, nowMs: number, warnDays = EXPIRY_WARNING_DAYS): { health: DocHealth; label: string } {
   const days = daysUntil(doc.expiresAt, nowMs);
-  if (doc.status === "needed") return { health: "invalid", label: "Missing" };
-  if (doc.status === "rejected") return { health: "invalid", label: "Wrong" };
-  if (doc.status === "expired" || (days !== null && days < 0)) return { health: "invalid", label: "Expired" };
-  if (doc.status === "in_review") return { health: "review", label: "Waiting review" };
+  const word = (status: DocStatus) => statusLabel(status, "documentStatus");
+  if (doc.status === "needed") return { health: "invalid", label: word("needed") };
+  if (doc.status === "rejected") return { health: "invalid", label: word("rejected") };
+  if (doc.status === "expired" || (days !== null && days < 0)) return { health: "invalid", label: word("expired") };
+  if (doc.status === "in_review") return { health: "review", label: word("in_review") };
   if (doc.status === "expiring" || (days !== null && days <= warnDays)) {
-    return { health: "expiring", label: days === null ? "Expires soon" : `Expires in ${days} day${days === 1 ? "" : "s"}` };
+    return { health: "expiring", label: days === null ? word("expiring") : `Expires in ${days} day${days === 1 ? "" : "s"}` };
   }
-  return { health: "valid", label: "Valid" };
+  return { health: "valid", label: word("approved") };
 }
 
 export type HealthCount = Record<DocHealth, number>;

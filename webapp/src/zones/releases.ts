@@ -105,7 +105,7 @@ export type ZoneShape = {
   hours: string;
   from: string;
   until: string;
-  /** Live (contract v0.11.0 §20): the name is the server's full name, shown without the city in front. */
+  /** Live (contract v0.11.0 §21): the name is the server's full name, shown without the city in front. */
   named?: boolean;
 };
 

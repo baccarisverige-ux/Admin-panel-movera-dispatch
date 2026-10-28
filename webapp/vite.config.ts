@@ -8,5 +8,9 @@ const proxyTarget = process.env.MOVERA_DEV_PROXY;
 export default defineConfig({
   plugins: [react()],
   base: "/",
-  ...(proxyTarget ? { server: { proxy: { "/api": { target: proxyTarget, changeOrigin: true } } } } : {}),
+  // The status words come from the shared contract copy next to webapp/ (contracts/contract.json#statusWords).
+  server: {
+    fs: { allow: [".", "../contracts"] },
+    ...(proxyTarget ? { proxy: { "/api": { target: proxyTarget, changeOrigin: true } } } : {}),
+  },
 });

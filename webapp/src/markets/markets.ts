@@ -98,7 +98,7 @@ const SEED_MARKETS: readonly Market[] = [
 ];
 
 /**
- * Contract v0.11.0 §20 (owner 2026-10-28, decision #9 "the server's list is the truth"): in a live build the zones of
+ * Contract v0.11.0 §21 (owner 2026-10-28, decision #9 "the server's list is the truth"): in a live build the zones of
  * every country come from GET /admin/zones (src/live/LiveZones.tsx sets them here); the demo keeps the seeds above.
  * Each market's `zones` reads the server's list while one is set, so every screen (top bar, scope, pages) follows it.
  */

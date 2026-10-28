@@ -1,3 +1,4 @@
+import { tr } from "../i18n";
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { BarChart3, Bell, Car, Clock, CreditCard, Layers, MapPin, Radar, Tags, Trophy, UserRound, Users, Wallet } from "lucide-react";
@@ -75,17 +76,17 @@ export function RidesTab({ market, zones, window, compare, filters, fmt, onCsv }
       <Notes notes={data.notes} />
       <Cards cards={data.cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Rides over time" icon={<BarChart3 size={16} aria-hidden="true" />} wide>
-          <EarningsChart points={data.series} format={(value) => `${count(value)} rides`} formatAxis={(value) => count(value)} compareLabel={compare ? window.compareLabel : ""} />
+        <Panel title={tr("Rides over time")} icon={<BarChart3 size={16} aria-hidden="true" />} wide>
+          <EarningsChart points={data.series} format={(value) => tr("{0} rides", [count(value)])} formatAxis={(value) => count(value)} compareLabel={compare ? window.compareLabel : ""} />
         </Panel>
-        <Panel title="Busiest hours" icon={<Clock size={16} aria-hidden="true" />}>
+        <Panel title={tr("Busiest hours")} icon={<Clock size={16} aria-hidden="true" />}>
           <HourBars rows={data.byHour} />
         </Panel>
-        <Panel title="By category" icon={<Tags size={16} aria-hidden="true" />}>
+        <Panel title={tr("By category")} icon={<Tags size={16} aria-hidden="true" />}>
           <Bars rows={data.byCategory.filter((row) => !filters.category || row.label.toLowerCase() === filters.category || data.byCategory.length === 1).map((row) => ({ label: row.label, value: row.trips }))} format={count} />
         </Panel>
-        <Panel title="By zone" icon={<MapPin size={16} aria-hidden="true" />} wide>
-          <SortTable label="Rides by zone" rows={zoneRows} rowKey={(row) => row.id} initial="trips" columns={[
+        <Panel title={tr("By zone")} icon={<MapPin size={16} aria-hidden="true" />} wide>
+          <SortTable label={tr("Rides by zone")} rows={zoneRows} rowKey={(row) => row.id} initial="trips" columns={[
             { id: "name", label: "Zone", value: (row) => row.name },
             { id: "trips", label: "Rides", value: (row) => Math.round(row.trips * share), show: (row) => <>{count(row.trips * share)} {compare ? <Delta now={row.trips} before={row.previousTrips} /> : null}</>, numeric: true },
             { id: "cancelled", label: "Cancelled", value: (row) => Math.round(row.cancelled * share), numeric: true },
@@ -112,17 +113,17 @@ export function MoneyTab({ market, zones, window, compare, filters, fmt, money, 
       <Notes notes={data.notes} />
       <Cards cards={data.cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Bookings over time" icon={<BarChart3 size={16} aria-hidden="true" />} wide>
+        <Panel title={tr("Bookings over time")} icon={<BarChart3 size={16} aria-hidden="true" />} wide>
           <EarningsChart points={data.series} format={money} formatAxis={(value) => money(value)} compareLabel={compare ? window.compareLabel : ""} />
         </Panel>
-        <Panel title="By payment method" icon={<CreditCard size={16} aria-hidden="true" />}>
+        <Panel title={tr("By payment method")} icon={<CreditCard size={16} aria-hidden="true" />}>
           <Bars rows={data.byMethod.map((row) => ({ label: row.label, value: row.minor }))} format={money} />
         </Panel>
-        <Panel title="By category" icon={<Tags size={16} aria-hidden="true" />}>
+        <Panel title={tr("By category")} icon={<Tags size={16} aria-hidden="true" />}>
           <Bars rows={data.byCategory.map((row) => ({ label: row.label, value: row.minor }))} format={money} />
         </Panel>
-        <Panel title="By zone" icon={<MapPin size={16} aria-hidden="true" />} wide>
-          <SortTable label="Money by zone" rows={zoneRows} rowKey={(row) => row.id} initial="gross" columns={[
+        <Panel title={tr("By zone")} icon={<MapPin size={16} aria-hidden="true" />} wide>
+          <SortTable label={tr("Money by zone")} rows={zoneRows} rowKey={(row) => row.id} initial="gross" columns={[
             { id: "name", label: "Zone", value: (row) => row.name },
             { id: "gross", label: "Bookings", value: (row) => row.grossMinor * share, show: (row) => money(row.grossMinor * share), numeric: true },
             { id: "net", label: "Net revenue", value: (row) => row.netMinor * share, show: (row) => money(row.netMinor * share), numeric: true },
@@ -131,7 +132,7 @@ export function MoneyTab({ market, zones, window, compare, filters, fmt, money, 
           ]} />
         </Panel>
       </div>
-      <p className="rp-foot">VAT and taxes per country are in the <Link to="/reports?tab=taxes">Taxes</Link> tab.</p>
+      <p className="rp-foot">{tr("VAT and taxes per country are in the")} <Link to="/reports?tab=taxes">{tr("Taxes")}</Link> {tr("tab.")}</p>
     </div>
   );
 }
@@ -167,8 +168,8 @@ export function DriversTab({ market, zones, window, compare, filters, fmt, money
     <div className="rp-tab">
       <Notes notes={data.notes} />
       <Cards cards={data.cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
-      <Panel title="Drivers" icon={<Car size={16} aria-hidden="true" />} wide>
-        <SortTable label="Drivers" rows={data.rows} rowKey={(row) => row.id} initial="rides" columns={[
+      <Panel title={tr("Drivers")} icon={<Car size={16} aria-hidden="true" />} wide>
+        <SortTable label={tr("Drivers")} rows={data.rows} rowKey={(row) => row.id} initial="rides" columns={[
           { id: "name", label: "Driver", value: (row) => row.name, show: (row) => <Link to={`/drivers/${row.id}`}>{row.name}</Link> },
           { id: "zone", label: "Zone", value: (row) => row.zone },
           { id: "fleet", label: "Fleet", value: (row) => row.fleet || "Own" },
@@ -199,13 +200,13 @@ export function RidersTab({ market, window, compare, fmt, money, onCsv }: TabPro
     <div className="rp-tab">
       <Notes notes={data.notes} />
       <Cards cards={data.cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
-      <Panel title="Top riders" icon={<Trophy size={16} aria-hidden="true" />} wide>
-        <SortTable label="Top riders" rows={data.top} rowKey={(row) => row.id} initial="spent" columns={[
+      <Panel title={tr("Top riders")} icon={<Trophy size={16} aria-hidden="true" />} wide>
+        <SortTable label={tr("Top riders")} rows={data.top} rowKey={(row) => row.id} initial="spent" columns={[
           { id: "name", label: "Rider", value: (row) => row.name, show: (row) => <Link to={`/riders/${row.id}`}>{row.name}</Link> },
           { id: "rides", label: "Rides", value: (row) => row.rides, numeric: true },
           { id: "spent", label: "Spent", value: (row) => row.spentMinor, show: (row) => money(row.spentMinor), numeric: true },
-          { id: "new", label: "New", value: (row) => (row.isNew ? "New" : ""), show: (row) => (row.isNew ? <span className="rp-tag">New</span> : null) },
-          { id: "promo", label: "Promotion", value: (row) => (row.promo ? "Yes" : ""), show: (row) => (row.promo ? <span className="rp-tag">Used</span> : null) },
+          { id: "new", label: "New", value: (row) => (row.isNew ? "New" : ""), show: (row) => (row.isNew ? <span className="rp-tag">{tr("New")}</span> : null) },
+          { id: "promo", label: "Promotion", value: (row) => (row.promo ? "Yes" : ""), show: (row) => (row.promo ? <span className="rp-tag">{tr("Used")}</span> : null) },
         ]} />
       </Panel>
     </div>
@@ -228,8 +229,8 @@ export function DispatchTab({ zones, window, compare, fmt, onCsv }: TabProps) {
     <div className="rp-tab">
       <Notes notes={data.notes} />
       <Cards cards={data.cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
-      <Panel title="By zone" icon={<Radar size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to="/dispatch?view=history">Dispatch history</Link>}>
-        <SortTable label="Dispatch by zone" rows={data.rows} rowKey={(row) => row.id} initial="requests" columns={[
+      <Panel title={tr("By zone")} icon={<Radar size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to="/dispatch?view=history">{tr("Dispatch history")}</Link>}>
+        <SortTable label={tr("Dispatch by zone")} rows={data.rows} rowKey={(row) => row.id} initial="requests" columns={[
           { id: "name", label: "Zone", value: (row) => row.name },
           { id: "mode", label: "Main mode", value: (row) => row.mode },
           { id: "requests", label: "Requests", value: (row) => row.requests, numeric: true },
@@ -253,11 +254,11 @@ export function AlertsTab({ window, compare, fmt, onCsv }: TabProps) {
       <Notes notes={data.notes} />
       <Cards cards={data.cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Solved by" icon={<Users size={16} aria-hidden="true" />}>
-          {data.byAdmin.length ? <Bars rows={data.byAdmin.map((row) => ({ label: agentName(row.admin), value: row.count, hint: `${row.avgSolve} min` }))} format={count} /> : <p className="dx-calm">No alert solved in this period.</p>}
+        <Panel title={tr("Solved by")} icon={<Users size={16} aria-hidden="true" />}>
+          {data.byAdmin.length ? <Bars rows={data.byAdmin.map((row) => ({ label: agentName(row.admin), value: row.count, hint: `${row.avgSolve} min` }))} format={count} /> : <p className="dx-calm">{tr("No alert solved in this period.")}</p>}
         </Panel>
-        <Panel title="Solved alerts" icon={<Bell size={16} aria-hidden="true" />} aside={<Link className="link-action" to="/alerts?view=history">All alert history</Link>}>
-          <SortTable label="Solved alerts" rows={data.rows} rowKey={(row) => `${row.id}-${row.doneAt}`} initial="done" columns={[
+        <Panel title={tr("Solved alerts")} icon={<Bell size={16} aria-hidden="true" />} aside={<Link className="link-action" to="/alerts?view=history">{tr("All alert history")}</Link>}>
+          <SortTable label={tr("Solved alerts")} rows={data.rows} rowKey={(row) => `${row.id}-${row.doneAt}`} initial="done" columns={[
             { id: "title", label: "Alert", value: (row) => row.title },
             { id: "solved", label: "Solved by", value: (row) => agentName(row.solvedBy) },
             { id: "solve", label: "Minutes", value: (row) => row.solveMin, numeric: true },
@@ -285,13 +286,13 @@ export function OverviewTab(props: TabProps) {
       <Notes notes={[...notesFor(cards), ...rides.notes.filter((note) => note.text.startsWith("Cancels in"))]} />
       <Cards cards={cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Bookings over time" icon={<Wallet size={16} aria-hidden="true" />} wide>
+        <Panel title={tr("Bookings over time")} icon={<Wallet size={16} aria-hidden="true" />} wide>
           <EarningsChart points={cash.series} format={money} formatAxis={(value) => money(value)} compareLabel={compare ? window.compareLabel : ""} />
         </Panel>
-        <Panel title="Top zones" icon={<Layers size={16} aria-hidden="true" />}>
+        <Panel title={tr("Top zones")} icon={<Layers size={16} aria-hidden="true" />}>
           <Bars rows={best.map((row) => ({ label: row.name, value: row.grossMinor * share }))} format={money} />
         </Panel>
-        <Panel title="Busiest hours" icon={<UserRound size={16} aria-hidden="true" />}>
+        <Panel title={tr("Busiest hours")} icon={<UserRound size={16} aria-hidden="true" />}>
           <HourBars rows={rides.byHour} />
         </Panel>
       </div>
