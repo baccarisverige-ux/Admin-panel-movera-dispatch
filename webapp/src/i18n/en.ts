@@ -5429,6 +5429,19 @@ export const en = {
   "Tablet": "Tablet",
   "Who": "Who",
   "ID": "ID",
+  "Ride prices plus cancel and no-show fees, VAT included. Tips are not in it.": "Ride prices plus cancel and no-show fees, VAT included. Tips are not in it.",
+  "What Movera keeps: commission and fees, minus pickup pay and the driver bonuses Movera paid. Can be negative.": "What Movera keeps: commission and fees, minus pickup pay and the driver bonuses Movera paid. Can be negative.",
+  "What drivers earned: their part of the rides, pickup pay and bonuses. Tips are apart.": "What drivers earned: their part of the rides, pickup pay and bonuses. Tips are apart.",
+  "Tips riders gave drivers. All of it goes to the driver.": "Tips riders gave drivers. All of it goes to the driver.",
+  "Money given back to riders, counted on the day of the trip.": "Money given back to riders, counted on the day of the trip.",
+  "Movera earnings minus refunds.": "Movera earnings minus refunds.",
+  "By zone": "By zone",
+  "Money by zone": "Money by zone",
+  "By day": "By day",
+  "Money by day": "Money by day",
+  "Amounts include VAT. A day is the zone's own local day.": "Amounts include VAT. A day is the zone's own local day.",
+  "What fleet drivers earned.": "What fleet drivers earned.",
+  "Payouts are in": "Payouts are in",
 } as const;
 
 export type MessageKey = keyof typeof en;

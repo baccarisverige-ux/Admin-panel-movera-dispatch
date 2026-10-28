@@ -124,7 +124,7 @@ function CompanyRules({ rules, editable, loading, onSaved }: { rules: TaxRules; 
   );
 }
 
-/** Fleet owners: each fleet's drivers, rides, earnings and the owner's share. */
+/** Fleet owners: each fleet's drivers, rides and the drivers' earnings (owner 2026-10-28: no owners' share). */
 export function FleetsTab({ market: current, zones, window, compare, fmt, money, onCsv }: TabProps) {
   const drivers = useRecords("drivers");
   const fleets = useRecords("fleets");
@@ -144,10 +144,9 @@ export function FleetsTab({ market: current, zones, window, compare, fmt, money,
     { id: "fleets", label: "Fleet owners", value: rows.length, previous: null, format: "count", info: "Fleets with at least one driver in these zones." },
     { id: "drivers", label: "Fleet drivers", value: rows.reduce((sum, row) => sum + row.drivers, 0), previous: null, format: "count", info: "Drivers who work for a fleet owner, not on their own." },
     { id: "rides", label: "Fleet rides", value: trips, previous: rows.reduce((sum, row) => sum + row.previousTrips, 0), format: "count", info: "Rides driven by fleet drivers." },
-    { id: "earned", label: "Drivers earned", value: rows.reduce((sum, row) => sum + row.driverMinor, 0), previous: null, format: "money", info: "What fleet drivers earned, before the owner's share." },
-    { id: "share", label: "Owners' share", value: rows.reduce((sum, row) => sum + row.fleetMinor, 0), previous: null, format: "money", info: "The fleet owner's cut, set in Pricing as the fleet owner share per zone." },
+    { id: "earned", label: "Drivers earned", value: rows.reduce((sum, row) => sum + row.driverMinor, 0), previous: null, format: "money", info: "What fleet drivers earned." },
   ];
-  useCsv(onCsv, { name: "fleet-owners", head: ["Fleet", "Drivers", "Online now", "Rides", "Rides before", "Bookings", "Drivers earned", "Owner share", "Rides per driver", "Rating"], rows: rows.map((row) => [row.name, row.drivers, row.online, row.trips, row.previousTrips, row.grossMinor / current.minorUnits, row.driverMinor / current.minorUnits, row.fleetMinor / current.minorUnits, row.perDriverTrips, row.rating]) });
+  useCsv(onCsv, { name: "fleet-owners", head: ["Fleet", "Drivers", "Online now", "Rides", "Rides before", "Bookings", "Drivers earned", "Rides per driver", "Rating"], rows: rows.map((row) => [row.name, row.drivers, row.online, row.trips, row.previousTrips, row.grossMinor / current.minorUnits, row.driverMinor / current.minorUnits, row.perDriverTrips, row.rating]) });
   return (
     <div className="rp-tab">
       <Notes notes={notesFor(cards)} />
@@ -161,12 +160,11 @@ export function FleetsTab({ market: current, zones, window, compare, fmt, money,
             { id: "perDriver", label: "Per driver", value: (row) => row.perDriverTrips, numeric: true },
             { id: "gross", label: "Bookings", value: (row) => row.grossMinor, show: (row) => money(row.grossMinor), numeric: true },
             { id: "earned", label: "Drivers earned", value: (row) => row.driverMinor, show: (row) => money(row.driverMinor), numeric: true },
-            { id: "share", label: "Owner share", value: (row) => row.fleetMinor, show: (row) => money(row.fleetMinor), numeric: true },
             { id: "rating", label: "Rating", value: (row) => row.rating, numeric: true },
           ]} />
         ) : <p className="dx-calm">No fleet drivers in these zones.</p>}
       </Panel>
-      <p className="rp-foot">The owner's share is a percentage of what the driver earned, set per zone in <Link to="/pricing">Pricing</Link>. Payouts to owners are in <Link to="/payouts">Payouts</Link>.</p>
+      <p className="rp-foot">Payouts are in <Link to="/payouts">Payouts</Link>.</p>
     </div>
   );
 }

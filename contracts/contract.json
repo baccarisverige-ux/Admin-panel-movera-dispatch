@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.10.0",
+  "version": "0.10.3",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -2550,9 +2550,24 @@
       "cashCollected",
       "walletApplied",
       "newRiders",
-      "newDrivers"
+      "newDrivers",
+      "tips",
+      "refunds",
+      "fees",
+      "moveraEarnings"
     ],
-    "maxDays": 400
+    "maxDays": 400,
+    "money": {
+      "note": "v0.10.3 (owner Reports answers 2026-10-28): Reports > Money. All amounts minor units, VAT included, one row per zone and zone-local day, one currency per row; amounts of different currencies are never added.",
+      "gross": "Bookings: ride prices of completed trips plus cancel and no-show fees charged. Tips not included.",
+      "fees": "Cancel and no-show fees charged that day (also inside gross).",
+      "tips": "Tips given on the day's trips, a line of their own, not in gross.",
+      "refunds": "Refunds of the day's trips, counted on the TRIP's day: a later refund changes that older day (its summary is re-summed).",
+      "moveraEarnings": "What Movera keeps: commission + Movera's share of fees - pickup pay - driver bonuses Movera paid. Can be negative.",
+      "netRevenue": "Shown by the admin as moveraEarnings - refunds (not sent).",
+      "fleets": "Fleet views get only the driver earnings; there is no owners' share.",
+      "missing": "A value the server does not send reads \"Not connected yet\" (sv \"Inte kopplad än\"), never 0."
+    }
   },
   "content": {
     "note": "v0.10.0 (owner Content answers 2026-10-28): the admin's Content page publishes texts to the apps. One admin is enough (no second admin). A publish goes only to the zones chosen at the top ('All zones' = every zone of the country).",
