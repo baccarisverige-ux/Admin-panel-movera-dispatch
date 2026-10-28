@@ -19,6 +19,7 @@ const PARTLY: Record<string, string> = {
   onboarding: "Drivers and their account status from the server; document review is not connected yet.",
   incidents: "SOS and car-lost cases with Take, Solve and False alarm from the server; contact log, levels and calls are not connected yet.",
   alerts: "SOS and car-lost alerts from the server; the other alerts are not connected yet.",
+  zones: "Zones, outlines, names and open or closed from the server; traffic on the map, rules and pickup points are not connected yet.",
 };
 
 export function connectionOf(id: string): Connection {

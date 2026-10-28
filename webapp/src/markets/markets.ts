@@ -28,7 +28,7 @@ function zones(city: string, rows: Array<[string, string, number, number, ("airp
   return rows.map(([id, name, lat, lng, kind]) => ({ id, name, city, kind: kind ?? "operating", center: [lat, lng] }));
 }
 
-export const MARKETS: readonly Market[] = [
+const SEED_MARKETS: readonly Market[] = [
   {
     id: "SE",
     name: "Sweden",
@@ -96,6 +96,42 @@ export const MARKETS: readonly Market[] = [
     ]),
   },
 ];
+
+/**
+ * Contract v0.11.0 §21 (owner 2026-10-28, decision #9 "the server's list is the truth"): in a live build the zones of
+ * every country come from GET /admin/zones (src/live/LiveZones.tsx sets them here); the demo keeps the seeds above.
+ * Each market's `zones` reads the server's list while one is set, so every screen (top bar, scope, pages) follows it.
+ */
+let liveZones: ReadonlyMap<MarketId, MarketZone[]> | null = null;
+let liveZonesVersion = 0;
+const liveZoneListeners = new Set<() => void>();
+
+export function setLiveMarketZones(zones: readonly (MarketZone & { country: string })[] | null): void {
+  if (zones === null) liveZones = null;
+  else {
+    const byCountry = new Map<MarketId, MarketZone[]>(SEED_MARKETS.map((item) => [item.id, []]));
+    for (const { country, ...zone } of zones) if (isMarketId(country)) byCountry.get(country)!.push(zone);
+    liveZones = byCountry;
+  }
+  liveZonesVersion += 1;
+  liveZoneListeners.forEach((listener) => listener());
+}
+
+export function subscribeMarketZones(listener: () => void): () => void {
+  liveZoneListeners.add(listener);
+  return () => liveZoneListeners.delete(listener);
+}
+
+export const marketZonesVersion = () => liveZonesVersion;
+
+/** True while the zones come from the server (live build, list loaded). */
+export const hasLiveMarketZones = () => liveZones !== null;
+
+export const MARKETS: readonly Market[] = SEED_MARKETS.map((seed) => {
+  const item = { ...seed } as Market;
+  Object.defineProperty(item, "zones", { enumerable: true, get: () => liveZones?.get(seed.id) ?? seed.zones });
+  return item;
+});
 
 export const DEFAULT_MARKET: MarketId = "SE";
 
