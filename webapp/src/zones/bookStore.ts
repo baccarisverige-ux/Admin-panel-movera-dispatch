@@ -83,6 +83,8 @@ function loadBook(): ZoneBook {
 }
 
 let coalesce = false;
+/** Live build: the book holds the server's zones (src/live/LiveZones.tsx) and is never written to localStorage. */
+let liveBook = false;
 let state: ZoneUi = {
   book: loadBook(),
   selectedId: "op-norrmalm",
@@ -115,7 +117,7 @@ let state: ZoneUi = {
 const listeners = new Set<() => void>();
 
 function emit() {
-  if (typeof localStorage !== "undefined") localStorage.setItem(STORE_KEY, JSON.stringify(state.book));
+  if (!liveBook && typeof localStorage !== "undefined") localStorage.setItem(STORE_KEY, JSON.stringify(state.book));
   listeners.forEach((listener) => listener());
 }
 
@@ -146,6 +148,35 @@ export function useZoneUi(): ZoneUi {
 }
 
 export const zoneStore = {
+  /**
+   * Live (contract v0.11.0 §20): the server's list is the truth. Draft and published both become the server's zones;
+   * a zone whose server copy did not change keeps an outline drawn but not saved yet. Simulated map layers go off.
+   */
+  loadLive(zones: ZoneShape[]) {
+    const first = !liveBook;
+    liveBook = true;
+    coalesce = false;
+    update((current) => {
+      const draft = first ? zones : zones.map((zone) => {
+        const before = current.book.published.find((item) => item.id === zone.id);
+        const edited = current.book.draft.find((item) => item.id === zone.id);
+        return before && edited && JSON.stringify(before) === JSON.stringify(zone) ? edited : zone;
+      });
+      const selectedId = draft.some((zone) => zone.id === current.selectedId) ? current.selectedId : "";
+      return {
+        ...current,
+        book: { authorId: current.book.authorId, status: "draft", draft, published: zones, versions: [] },
+        selectedId,
+        ...(first ? { past: [], future: [], notice: "", layers: { ...current.layers, drivers: false, trips: false, requests: false, demandHour: false, demand7d: false, pickups: false, queue: false, boosts: false, events: false } } : {}),
+      };
+    });
+  },
+  /** Live: put the server's outline back on a zone (undo a drawing that was not saved). */
+  revertLive(zoneId: string) {
+    const saved = state.book.published.find((zone) => zone.id === zoneId);
+    if (!saved) return;
+    remember({ ...state.book, draft: state.book.draft.map((zone) => (zone.id === zoneId ? saved : zone)) }, "Outline put back as saved on the server.");
+  },
   select(id: string) {
     coalesce = false;
     update((current) => ({ ...current, selectedId: id, selectionNonce: current.selectionNonce + 1 }));

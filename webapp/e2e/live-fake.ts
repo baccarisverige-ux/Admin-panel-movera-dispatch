@@ -609,3 +609,53 @@ export async function fakeContent(page: Page) {
   });
   return { items, sent };
 }
+
+/**
+ * Contract v0.11.0 §20 (contract.json#zones, fixtures/zones.json): GET /admin/zones, POST /admin/zones, PUT
+ * /admin/zones/{zoneId} and POST …/open|close with expectedVersion (409 version_mismatch when stale). No delete.
+ */
+export type FakeZone = { zoneId: string; names: { sv: string; fr: string; en: string }; country: string; currency: string; timeZone: string; kind: string; polygon: [number, number][]; bounds: { south: number; west: number; north: number; east: number }; center: { lat: number; lng: number }; open: boolean; version: number; createdAt: string; updatedAt?: string; updatedBy?: string };
+const zoneOf = (zoneId: string, names: FakeZone["names"], country: string, currency: string, timeZone: string, kind: string, open: boolean, polygon: [number, number][]): FakeZone => {
+  const lats = polygon.map((p) => p[0]);
+  const lngs = polygon.map((p) => p[1]);
+  const bounds = { south: Math.min(...lats), west: Math.min(...lngs), north: Math.max(...lats), east: Math.max(...lngs) };
+  return { zoneId, names, country, currency, timeZone, kind, polygon, bounds, center: { lat: (bounds.south + bounds.north) / 2, lng: (bounds.west + bounds.east) / 2 }, open, version: 1, createdAt: "2026-10-28T08:00:00Z" };
+};
+export const SEED_ZONES = (): FakeZone[] => [
+  zoneOf("Z001", { sv: "Stockholm län", fr: "Comté de Stockholm", en: "Stockholm County" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.325, 18.06], [59.35, 18.06], [59.35, 18.11], [59.325, 18.11]]),
+  zoneOf("ARN", { sv: "Arlanda flygplats", fr: "Aéroport d'Arlanda", en: "Arlanda Airport" }, "SE", "SEK", "Europe/Stockholm", "airport", true, [[59.62, 17.85], [59.68, 17.85], [59.68, 17.97], [59.62, 17.97]]),
+  zoneOf("FR-PC", { sv: "Paris & Île-de-France", fr: "Paris & Île-de-France", en: "Paris & Île-de-France" }, "FR", "EUR", "Europe/Paris", "operating", true, [[49.24, 1.79], [49.23, 2.17], [49.17, 2.53], [49.12, 2.7], [49.08, 3.07], [49.04, 3.18], [48.93, 3.34], [48.82, 3.49], [48.53, 3.56], [48.37, 3.41], [48.27, 3.05], [48.13, 2.94], [48.12, 2.52], [48.29, 2.18], [48.36, 1.97], [48.44, 1.92], [48.65, 1.58], [48.76, 1.45], [48.94, 1.47], [49.08, 1.61]]),
+  zoneOf("CDG", { sv: "Paris-Charles de Gaulle flygplats", fr: "Aéroport Paris-Charles de Gaulle", en: "Paris-Charles de Gaulle Airport" }, "FR", "EUR", "Europe/Paris", "airport", true, [[49.035, 2.49], [49.035, 2.61], [48.985, 2.61], [48.985, 2.49]]),
+  zoneOf("ORY", { sv: "Paris-Orly flygplats", fr: "Aéroport Paris-Orly", en: "Paris-Orly Airport" }, "FR", "EUR", "Europe/Paris", "airport", true, [[48.745, 2.32], [48.745, 2.41], [48.71, 2.41], [48.71, 2.32]]),
+  zoneOf("TN-TC", { sv: "Stor-Tunis", fr: "Grand Tunis", en: "Greater Tunis" }, "TN", "TND", "Africa/Tunis", "operating", false, [[37.02, 10.05], [37.01, 10.25], [36.92, 10.33], [36.85, 10.37], [36.73, 10.42], [36.62, 10.38], [36.55, 10.22], [36.6, 10.05], [36.66, 9.88], [36.75, 9.75], [36.88, 9.78], [36.97, 9.9]]),
+];
+export async function fakeZones(page: Page) {
+  const zones = SEED_ZONES();
+  const sent: Sent[] = [];
+  await page.route(/\/api\/v1\/admin\/zones(\/[^/?]+(\/(open|close))?)?(\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CONFIG_CORS });
+    const url = new URL(request.url());
+    const body = (request.postDataJSON?.() ?? null) as Record<string, unknown> | null;
+    sent.push({ method: request.method(), path: url.pathname, body });
+    const [, , , , , zoneId, action] = url.pathname.split("/");
+    if (request.method() === "DELETE") return configJson(route, 404, { code: "not_found", message: "No delete.", requestId: "r-404", retryable: false });
+    if (!zoneId && request.method() === "GET") return configJson(route, 200, { zones: [...zones].sort((a, b) => a.zoneId.localeCompare(b.zoneId)) });
+    if (!zoneId && request.method() === "POST") {
+      const b = body as unknown as FakeZone;
+      if (zones.some((z) => z.zoneId === b.zoneId)) return configJson(route, 409, { code: "conflict", message: "A zone with this id exists.", requestId: "r-409", retryable: false, reason: "zone_exists" });
+      const made = zoneOf(b.zoneId, b.names, b.country, b.currency, b.timeZone, b.kind ?? "operating", Boolean(b.open), b.polygon);
+      zones.push(made);
+      return configJson(route, 201, made);
+    }
+    const zone = zones.find((z) => z.zoneId === zoneId);
+    if (!zone) return configJson(route, 404, { code: "not_found", message: "No such zone.", requestId: "r-404", retryable: false, reason: "zone_not_found" });
+    if (body?.["expectedVersion"] !== zone.version) return configJson(route, 409, { code: "version_mismatch", message: "The zone changed since you last saw it.", requestId: "r-409v", retryable: false, projection: zone });
+    const next: FakeZone = action ? { ...zone, open: action === "open" } : { ...zoneOf(zone.zoneId, (body?.["names"] as FakeZone["names"]) ?? zone.names, zone.country, zone.currency, zone.timeZone, (body?.["kind"] as string) ?? zone.kind, zone.open, (body?.["polygon"] as [number, number][]) ?? zone.polygon), createdAt: zone.createdAt };
+    Object.assign(zone, next, { version: zone.version + 1, updatedAt: "2026-10-28T10:00:00Z", updatedBy: "A1" });
+    return configJson(route, 200, zone);
+  });
+  /** Another admin changes a zone behind the page's back (the next write with the old version is stale). */
+  const bump = (zoneId: string) => { const zone = zones.find((z) => z.zoneId === zoneId); if (zone) zone.version += 1; };
+  return { zones, sent, bump };
+}

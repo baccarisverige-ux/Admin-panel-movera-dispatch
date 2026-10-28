@@ -42,6 +42,9 @@ import {
 } from "../zones/releases";
 import { statusTone, ZoneMap } from "./ZoneMap";
 import { tr, trn, trx } from "../i18n";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { useLiveZoneList } from "../live/LiveZones";
+import { liveIssues } from "../zones/liveIssues";
 
 type Filter = "all" | "operating" | "airport" | "rules" | "pickup" | "archived";
 
@@ -54,7 +57,9 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "archived", get label() { return tr("Archived"); } },
 ];
 
-function matchesFilter(zone: ZoneShape, filter: Filter): boolean {
+function matchesFilter(zone: ZoneShape, filter: Filter, live = false): boolean {
+  // Live: zones are never deleted or archived, only closed; the last chip lists the closed ones.
+  if (live && filter === "archived") return !zone.active;
   if (filter === "archived") return zone.archived;
   if (zone.archived) return false;
   if (filter === "all") return zone.kind !== "service";
@@ -67,7 +72,10 @@ export function ZonesPage() {
   const { country, market, zones: scopeZones } = useMarketScope();
   const [params] = useSearchParams();
   const ui = useZoneUi();
-  const canEdit = Boolean(agent && can(agent.role, "zones.edit"));
+  const liveSession = useLiveSessionMaybe();
+  const isLive = Boolean(liveSession);
+  const serverZones = useLiveZoneList();
+  const canEdit = liveSession ? liveSession.can("zones.edit") : Boolean(agent && can(agent.role, "zones.edit"));
   const canPublish = Boolean(agent && can(agent.role, "zones.publish"));
   const [wizard, setWizard] = useState<{ city?: string } | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -76,7 +84,8 @@ export function ZonesPage() {
   const [gapCity, setGapCity] = useState<string | null>(null);
   const zones = useMemo(() => ui.book.draft.filter((zone) => zone.country === country), [ui.book.draft, country]);
   const live = zones.filter((zone) => !zone.archived && zone.kind !== "service" && zone.kind !== "pickup");
-  const issues = useMemo(() => validateZones(ui.book.draft), [ui.book.draft]);
+  const issues = useMemo(() => (isLive ? liveIssues : validateZones)(ui.book.draft), [ui.book.draft, isLive]);
+  const openCount = isLive ? zones.filter((zone) => zone.active).length : 0;
   const changes = useMemo(() => zoneChanges(ui.book.published, ui.book.draft, country), [ui.book.published, ui.book.draft, country]);
   const otherChanges = useMemo(() => (["SE", "FR", "TN"] as const).filter((id) => id !== country).reduce((sum, id) => sum + zoneChanges(ui.book.published, ui.book.draft, id).length, 0), [ui.book.published, ui.book.draft, country]);
   const impact = useMemo(() => zoneImpact(ui.book.published, ui.book.draft, country), [ui.book.published, ui.book.draft, country]);
@@ -111,16 +120,24 @@ export function ZonesPage() {
       <header className="pricing-hero zn-hero">
         <div className="pricing-title">
           <h2>{tr("Zones")}</h2>
-          <p>{trn("{0} {1} · {2} cities with zones · {3} zones · version {4}", <Flag id={country} />, trx(market.name), groups.filter((group) => group.zones.length).length, live.length, version)}</p>
+          <p>{isLive ? trn("{0} {1} · {2} cities with zones · {3} zones", <Flag id={country} />, trx(market.name), groups.filter((group) => group.zones.length).length, live.length) : trn("{0} {1} · {2} cities with zones · {3} zones · version {4}", <Flag id={country} />, trx(market.name), groups.filter((group) => group.zones.length).length, live.length, version)}</p>
         </div>
         <div className="zn-hero-actions">
-          <span className={`zn-release-pill ${inReview ? "review" : changes.length ? "draft" : "live"}`}>
+          {isLive ? <span className="zn-release-pill live" data-testid="zones-server">{trn("{0} {1} open · {2} closed", <CheckCircle2 size={14} aria-hidden="true" />, openCount, zones.length - openCount)}</span> : <span className={`zn-release-pill ${inReview ? "review" : changes.length ? "draft" : "live"}`}>
             {inReview ? <>{trn("{0} In review", <ShieldCheck size={14} aria-hidden="true" />)}</> : changes.length ? <>{trn("{0} {1} change{2} not published", <ClipboardList size={14} aria-hidden="true" />, changes.length, changes.length === 1 ? "" : tr("s"))}</> : <>{trn("{0} All published", <CheckCircle2 size={14} aria-hidden="true" />)}</>}
-          </span>
+          </span>}
           <button data-command="admin.zone.create" type="button" className="dash-btn publish" disabled={!canEdit} onClick={() => newZone()}>{trn("{0} New zone", <Plus size={15} aria-hidden="true" />)}</button>
         </div>
       </header>
 
+      {isLive ? (
+      <section className="zn-kpis" aria-label={tr("Zones at a glance")}>
+        <div className="zn-kpi"><Layers3 size={18} aria-hidden="true" /><span><b>{openCount}</b><small>{tr("Open zones")}</small></span></div>
+        <div className={zones.length - openCount ? "zn-kpi bad" : "zn-kpi"}><EyeOff size={18} aria-hidden="true" /><span><b>{zones.length - openCount}</b><small>{tr("Closed zones")}</small></span></div>
+        <div className="zn-kpi"><Plane size={18} aria-hidden="true" /><span><b>{zones.filter((zone) => zone.kind === "airport").length}</b><small>{tr("Airports")}</small></span></div>
+        <div className="zn-kpi"><MapPinned size={18} aria-hidden="true" /><span><b>{trn("{0} km²", zones.filter((zone) => zone.active && zone.kind === "operating").reduce((sum, zone) => sum + zoneAreaKm(zone), 0).toFixed(0))}</b><small>{tr("Service area")}</small></span></div>
+      </section>
+      ) : (
       <section className="zn-kpis" aria-label={tr("Zones at a glance")}>
         <div className="zn-kpi"><Layers3 size={18} aria-hidden="true" /><span><b>{live.length}</b><small>{tr("Live zones")}</small></span></div>
         <div className="zn-kpi"><Car size={18} aria-hidden="true" /><span><b>{drivers}</b><small>{tr("Drivers online in zones")}</small></span></div>
@@ -128,7 +145,14 @@ export function ZonesPage() {
         <div className={attention.length ? "zn-kpi bad" : "zn-kpi"}><AlertTriangle size={18} aria-hidden="true" /><span><b>{attention.length}</b><small>{tr("Need attention")}</small></span></div>
         <div className="zn-kpi"><MapPinned size={18} aria-hidden="true" /><span><b>{trn("{0} km²", impact.areaKm.toFixed(0))}</b><small>{tr("Service area")}</small></span></div>
       </section>
+      )}
 
+      {isLive ? (
+        <section className="zn-release" aria-label={tr("Zones on the server")}>
+          <p className="fine" data-testid="zones-live-note">{trn("{0} The list comes from the server. A change goes to the apps at once; one admin is enough. A zone is never deleted, only closed.", <ShieldCheck size={13} aria-hidden="true" />)}</p>
+          {serverZones === null ? <p className="state-line">{tr("Loading.")}</p> : null}
+        </section>
+      ) : (
       <section className="zn-release" aria-label={tr("Publish zones")}>
         <ol className="zn-flow" aria-label={tr("How zones go live")}>
           <li className={!inReview ? "on" : "done"}><i>1</i><span><b>{tr("Edit")}</b><small>{tr("Drafts only riders don't see")}</small></span></li>
@@ -167,21 +191,22 @@ export function ZonesPage() {
         ) : null}
         <p className="zn-version" data-versions={version}>{trn("{0} Versions: {1} · status {2}", <History size={13} aria-hidden="true" />, version, inReview ? tr("in review") : tr("draft"))}</p>
       </section>
+      )}
 
       <ZoneMap country={country} wizard={wizard} onWizard={setWizard} />
 
       <section className="zn-list" aria-label={tr("Zones by city")}>
         <div className="zn-list-head">
           <div className="zn-filters" role="group" aria-label={tr("Filter zones")}>
-            {FILTERS.map((item) => (
-              <button data-command="admin.zone.filter" key={item.id} type="button" aria-pressed={filter === item.id} className={filter === item.id ? "zn-chip on" : "zn-chip"} onClick={() => setFilter(item.id)}>{trx(item.label)}</button>
+            {FILTERS.filter((item) => !isLive || item.id === "all" || item.id === "operating" || item.id === "airport" || item.id === "archived").map((item) => (
+              <button data-command="admin.zone.filter" key={item.id} type="button" aria-pressed={filter === item.id} className={filter === item.id ? "zn-chip on" : "zn-chip"} onClick={() => setFilter(item.id)}>{isLive && item.id === "archived" ? tr("Closed") : trx(item.label)}</button>
             ))}
           </div>
           <label className="rd-search small"><Search size={14} aria-hidden="true" /><input aria-label={tr("Find a zone")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tr("Find by name or code")} /></label>
         </div>
 
         {groups.map(({ city, zones: cityZones }) => {
-          const shown = cityZones.filter((zone) => matchesFilter(zone, filter) && (!query.trim() || `${zone.name} ${zone.code}`.toLowerCase().includes(query.trim().toLowerCase())));
+          const shown = cityZones.filter((zone) => matchesFilter(zone, filter, isLive) && (!query.trim() || `${zone.name} ${zone.code}`.toLowerCase().includes(query.trim().toLowerCase())));
           if (!cityZones.length && (filter !== "all" || query.trim())) return null;
           const gaps = gapCity === city.id || ui.layers.gaps ? cityGaps(ui.book.draft, city, 20) : null;
           const coverage = gaps?.coverage ?? cityGaps(ui.book.draft, city, 12).coverage;
@@ -211,15 +236,15 @@ export function ZonesPage() {
                             <span className="zn-card-type">{zone.kind === "airport" ? <Plane size={12} aria-hidden="true" /> : <i aria-hidden="true" />}{zoneTypeLabel(zone.kind)}</span>
                             <b>{zone.name.replace(`${city.name} · `, "")}</b>
                             <small>{zone.code} · {zone.kind === "pickup" ? tr("pin") : tr("{0} km²", [zoneAreaKm(zone).toFixed(1)])}</small>
-                            <span className="zn-card-health">
+                            {isLive ? null : <span className="zn-card-health">
                               <span title={tr("Drivers online")}><Car size={12} aria-hidden="true" /> {item.drivers}</span>
                               <span title={tr("Open requests")}><Users size={12} aria-hidden="true" /> {item.requests}</span>
                               {!zone.active ? <em className="bad">{tr("Off")}</em> : null}
-                            </span>
+                            </span>}
                           </button>
                           <footer>
-                            <span className={`zn-status ${statusTone(status)}`}>{scheduled ? tr("Scheduled") : status}</span>
-                            {zoneErrors.length ? <span className="zn-flag bad" title={zoneErrors[0]!.message}>{trn("{0} Fix", <AlertTriangle size={11} aria-hidden="true" />)}</span> : item.alert ? <span className={`zn-flag ${item.tone}`} title={trx(item.alert)}><AlertTriangle size={11} aria-hidden="true" /> {trx(item.alert)}</span> : null}
+                            {isLive ? <span className={`zn-status ${zone.active ? "good" : "muted"}`} data-zone-open={zone.active}>{zone.active ? tr("Open for rides") : tr("Closed to new rides")}</span> : <span className={`zn-status ${statusTone(status)}`}>{scheduled ? tr("Scheduled") : status}</span>}
+                            {zoneErrors.length ? <span className="zn-flag bad" title={zoneErrors[0]!.message}>{trn("{0} Fix", <AlertTriangle size={11} aria-hidden="true" />)}</span> : !isLive && item.alert ? <span className={`zn-flag ${item.tone}`} title={trx(item.alert)}><AlertTriangle size={11} aria-hidden="true" /> {trx(item.alert)}</span> : null}
                             <Link to={`/zones/${zone.id}`} aria-label={tr("Open {0}", [displayName(zone)])}>{tr("Open")}</Link>
                           </footer>
                         </article>
