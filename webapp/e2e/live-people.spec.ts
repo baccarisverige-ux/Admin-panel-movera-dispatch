@@ -62,7 +62,7 @@ test("drivers: the demo list shows the server's drivers; the demo driver page pu
   await page.getByRole("button", { name: "Put on hold" }).first().click();
   await dialog(page).getByLabel("Type D1000 to confirm").fill("D1000");
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
-  await expect(page.getByText("Driver account is now on hold.")).toBeVisible();
+  await expect(page.getByText("Driver account is now awaiting review.")).toBeVisible();
   const posts = state.calls.filter((call) => call.method === "POST" && call.path === "/api/v1/admin/drivers/D1000/status");
   expect(posts).toHaveLength(1);
   expect(posts[0]!.body).toMatchObject({ expectedVersion: 5, accountStatus: "on_hold" });

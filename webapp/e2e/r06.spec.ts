@@ -31,7 +31,7 @@ test("R6 onboarding activation persists into driver operations", async ({ page }
   await page.goto("/drivers/D0005");
   await expect(page.getByRole("heading", { level: 2 })).toBeVisible();
   await page.getByRole("tab", { name: "Documents" }).click();
-  await expect(page.getByRole("list", { name: "Driver documents" }).getByTestId("doc-driver_license")).toContainText("Valid");
+  await expect(page.getByRole("list", { name: "Driver documents" }).getByTestId("doc-driver_license")).toContainText("Approved");
 
   await page.getByRole("tab", { name: "Notes" }).click();
   await page.getByLabel("Private internal note").fill("R6 verification note");

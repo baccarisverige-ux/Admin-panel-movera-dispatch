@@ -81,7 +81,7 @@ test("driver status: a double click on Confirm sends one change", async ({ page 
   await page.getByRole("button", { name: "Put on hold" }).first().click();
   await dialog(page).getByLabel("Type D1000 to confirm").fill("D1000");
   await dialog(page).getByRole("button", { name: "Confirm" }).dblclick();
-  await expect(page.getByText("Driver account is now on hold.")).toBeVisible();
+  await expect(page.getByText("Driver account is now awaiting review.")).toBeVisible();
   expect(state.calls.filter((call) => call.method === "POST" && call.path.endsWith("/drivers/D1000/status"))).toHaveLength(1);
 });
 

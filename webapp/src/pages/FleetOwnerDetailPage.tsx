@@ -135,7 +135,7 @@ export function FleetOwnerDetailPage() {
       value={setOwnerAccount(store.value, seed, status, accountNote || label, agent?.id ?? "")}
       disabled={disabled}
       onDone={() => {
-        setNotice(`Fleet owner account is now ${statusLabel(status).toLowerCase()}.`);
+        setNotice(`Fleet owner account is now ${status === "on_hold" ? "on hold" : statusLabel(status).toLowerCase()}.`);
         setAccountNote("");
       }}
     >
@@ -254,7 +254,7 @@ export function FleetOwnerDetailPage() {
                   {members.length === 0 ? <li className="state-line">No drivers in this fleet yet.</li> : members.map(({ driver, counts, total: docTotal, perf }) => (
                     <li key={driver.id}>
                       <Link to={`/drivers/${driver.id}`} className="fd-crew-name"><Avatar name={driver.name} size={30} /><span><strong>{driver.name}</strong><small>{driverCode(driver)}</small></span></Link>
-                      <span><AccountChip status={driver.status} /></span>
+                      <span><AccountChip status={driver.status} family="driverAccountStatus" /></span>
                       <span><OnlinePill presence={presence.get(driver.id) ?? "offline"} /></span>
                       <span><DocSummary counts={counts} total={docTotal} /></span>
                       <span>{perf.rating ? perf.rating.toFixed(2) : "—"}</span>
