@@ -167,7 +167,7 @@ export function useCommands() {
     await client.invalidateQueries({ predicate: (query) => queryTouched(query.queryKey, touched) });
   }
 
-  async function run(id: string, extra: Partial<CommandInput> = {}) {
+  async function run(id: string, extra: Partial<CommandInput> = {}, onError?: (error: unknown) => void) {
     const spec = commandById(id);
     if (!spec) throw new Error(`Unknown command ${id}`);
     if (lock.current || globalCommandBusy) {
@@ -271,6 +271,7 @@ export function useCommands() {
       return result;
     } catch (error) {
       clearTimeout(timer);
+      onError?.(error);
       const text = error instanceof Error ? error.message : "Rejected";
       // A lost connection or a busy server says nothing about whether the command ran: ask the server.
       const unsure = error instanceof ApiError ? error.status === 0 || error.status === 429 || error.status >= 500 : !(error instanceof Error);

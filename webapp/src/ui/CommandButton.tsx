@@ -33,6 +33,8 @@ type CommandButtonProps = {
   confirmTarget?: boolean;
   storeReason?: boolean;
   onDone?: (result?: CommandResult) => void;
+  /** Called with the error when the command was refused (for a screen that explains a server refusal). */
+  onError?: (error: unknown) => void;
   /** Also render a retry button. It is enabled only after an attempt that did not commit (unknown or rejected), re-sends with the same reason, and reuses the operation key when the outcome is unknown. */
   retryLabel?: string;
   /**
@@ -80,6 +82,7 @@ export function CommandButton({
   confirmTarget = true,
   storeReason,
   onDone,
+  onError,
   retryLabel,
   largeChanges,
   reasonChoices,
@@ -149,7 +152,7 @@ export function CommandButton({
       idempotencyKey,
       sliceKey,
       value,
-    }).then((result) => {
+    }, onError).then((result) => {
       if (result) onDone?.(result);
     });
   }

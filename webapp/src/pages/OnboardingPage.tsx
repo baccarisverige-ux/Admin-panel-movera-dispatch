@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { LiveListBar } from "../live/LiveListBar";
+import { LiveOnboarding } from "../live/LiveOnboarding";
+import { isLiveData } from "../live/realData";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlarmClock, ArrowLeft, BellRing, Car, CheckCircle2, ClipboardCheck, FileText, Landmark, Send, Settings2, UserPlus } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
@@ -59,7 +61,12 @@ const REVIEW: { status: DocStatus; label: string }[] = [
   { status: "in_review", label: "Back to review" },
 ];
 
+/** Live builds show only the server's drivers and documents (owner decisions #2, #15); the demo keeps its board. */
 export function OnboardingPage() {
+  return isLiveData() ? <LiveOnboarding /> : <DemoOnboardingPage />;
+}
+
+function DemoOnboardingPage() {
   const { agent } = useSession();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();

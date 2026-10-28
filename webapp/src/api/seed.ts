@@ -71,6 +71,10 @@ export type DemoRecord = {
   liveTrip?: LiveTripFacts;
   /** Live drivers: the server's presence and rating (Driver, /admin/live/drivers). */
   liveDriver?: LiveDriverFacts;
+  /** Live drivers (contract v0.10.1): what activation reads (Driver.documents, requiredDocuments, requiredFleetDocuments). */
+  liveAccount?: LiveAccountFacts;
+  /** Live cars (contract v0.10.1): the required car documents not approved yet; non-empty means the car can't be picked or driven. */
+  liveVehicleMissing?: string[];
   /** Live riders: the server's rating, wallet and unpaid fees (AdminRider). */
   liveRider?: LiveRiderFacts;
   /** Live ratings (GET /admin/ratings, contract v0.9.0). */
@@ -114,6 +118,17 @@ export type LiveTripFacts = {
   ratingStatus: string | null;
   updatedAt: string;
 };
+export type LiveAccountFacts = {
+  accountStatus: string;
+  accountType?: "driver" | "fleet";
+  country?: string;
+  fleetRole?: "owner" | "member";
+  vehicleId?: string;
+  documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string }[];
+  requiredDocuments?: string[];
+  requiredFleetDocuments?: string[];
+};
+
 export type LiveDriverFacts = {
   onlineStatus: string;
   rating: number | null;
