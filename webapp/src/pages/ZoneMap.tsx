@@ -160,13 +160,13 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
 
   function applyTool(spec: ToolSpec) {
     if (spec.needsZone && !selected && !wizard) {
-      zoneStore.notify("Pick a zone on the map or in the list first.");
+      zoneStore.notify(tr("Pick a zone on the map or in the list first."));
       return;
     }
     // While making a new zone, drawing tools shape the new zone, not the selected one.
     const target: DrawTarget = spec.target ?? (wizard ? "sketch" : "zone");
     zoneStore.setTool(spec.tool, target);
-    if (spec.tool !== "render") zoneStore.notify(HINT[spec.tool] ?? "");
+    if (spec.tool !== "render") zoneStore.notify(trx(HINT[spec.tool] ?? ""));
   }
 
   useEffect(() => {
@@ -272,7 +272,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
               if (!agent) return;
               if (ui.target === "measure") {
                 zoneStore.setMeasure(points);
-                zoneStore.notify(`Distance: ${lineKm(points).toFixed(2)} km.`);
+                zoneStore.notify(tr("Distance: {0} km.", [lineKm(points).toFixed(2)]));
                 return;
               }
               if (ui.target === "nostop") {
@@ -287,7 +287,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
               else if (intent === "point") zoneStore.place(ui.selectedId, points, agent.id);
               else if (intent === "outer") zoneStore.replace(ui.selectedId, points, agent.id);
               zoneStore.setTool("render");
-              if (isLive && intent === "outer") zoneStore.notify("Outline changed. Save it to send it to the server.");
+              if (isLive && intent === "outer") zoneStore.notify(tr("Outline changed. Save it to send it to the server."));
             }}
             onEdited={(points) => {
               if (agent && ui.target === "zone") zoneStore.edit(ui.selectedId, points, agent.id);
@@ -371,7 +371,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
               return (
                 <div className="zn-sel-actions" data-testid="live-zone-actions">
                   <Link className="dash-btn small" to={`/zones/${selected.id}`}>{trn("{0} Open zone page", <ExternalLink size={13} aria-hidden="true" />)}</Link>
-                  <CommandButton command="admin.zone.update" className="dash-btn small publish" type="button" targetId={selected.id} confirmTarget={false} disabled={!canEdit || !server || !changed || Boolean(problem)} title={changed && problem ? trSentences(problem) : undefined} value={{ expectedVersion: server?.version, polygon: outline }} summary={tr("The new outline of {0} goes to the server and the apps at once ({1} points).", [displayName(selected), outline.length])} onDone={() => { zoneStore.notify("Outline saved on the server."); void queryClient.invalidateQueries({ queryKey: LIVE_ZONES_KEY }); }}>{tr("Save outline")}</CommandButton>
+                  <CommandButton command="admin.zone.update" className="dash-btn small publish" type="button" targetId={selected.id} confirmTarget={false} disabled={!canEdit || !server || !changed || Boolean(problem)} title={changed && problem ? trSentences(problem) : undefined} value={{ expectedVersion: server?.version, polygon: outline }} summary={tr("The new outline of {0} goes to the server and the apps at once ({1} points).", [displayName(selected), outline.length])} onDone={() => { zoneStore.notify(tr("Outline saved on the server.")); void queryClient.invalidateQueries({ queryKey: LIVE_ZONES_KEY }); }}>{tr("Save outline")}</CommandButton>
                   {changed ? <button data-command="admin.zone.undo" type="button" className="dash-btn small ghost" onClick={() => zoneStore.revertLive(selected.id)}>{tr("Undo the drawing")}</button> : null}
                   {server ? <LiveOpenClose zone={server} name={displayName(selected)} disabled={!canEdit} /> : null}
                 </div>

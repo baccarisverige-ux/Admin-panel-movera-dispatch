@@ -18,6 +18,8 @@ import { HealthPill } from "../fleet/ui";
 import { formatMoney } from "../markets/markets";
 import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { CommandButton } from "../ui/CommandButton";
+import { tr, trn } from "../i18n";
+import { statusLabel } from "../domain/labels";
 
 export function VehicleDetailPage() {
   const { id = "" } = useParams();
@@ -63,7 +65,7 @@ export function VehicleDetailPage() {
     return (drivers.data ?? []).filter((driver) => !fleetScope || driver.fleetId === fleetScope);
   }, [agent?.scope.fleetPartnerId, drivers.data]);
 
-  if (vehicles.isLoading || drivers.isLoading || fleets.isLoading || store.loading) return <p className="state-line">Loading vehicle.</p>;
+  if (vehicles.isLoading || drivers.isLoading || fleets.isLoading || store.loading) return <p className="state-line">{tr("Loading vehicle.")}</p>;
   if (!record || !profile) {
     return <NotFoundRecord kind="Vehicle" id={id} list="/vehicles" listLabel="vehicles" />;
   }
@@ -71,9 +73,9 @@ export function VehicleDetailPage() {
     return (
       <div className="page-heading">
         <div>
-          <h2>No access</h2>
-          <p>This vehicle belongs to another fleet partner.</p>
-          <Link to="/vehicles">Back to vehicles</Link>
+          <h2>{tr("No access")}</h2>
+          <p>{tr("This vehicle belongs to another fleet partner.")}</p>
+          <Link to="/vehicles">{tr("Back to vehicles")}</Link>
         </div>
       </div>
     );
@@ -122,59 +124,56 @@ export function VehicleDetailPage() {
   return (
     <div className="dx-page vh-page">
       <header className="dx-head">
-        <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/vehicles"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/vehicles"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
           <h2>{record.plate ?? record.id}</h2>
-          <p>
-            {record.id} · {record.make ?? "Vehicle"} {record.model ?? ""} · {record.status} · zone {record.zoneId}.
-            {record.driverId ? ` Driver ${record.driverId}.` : " Unassigned."}
-          </p>
+          <p>{trn("{0} · {1} {2} · {3} · zone {4}.{5}", record.id, record.make ?? tr("Vehicle"), record.model ?? "", record.status, record.zoneId, record.driverId ? tr(" Driver {0}.", [record.driverId]) : tr(" Unassigned."))}</p>
         </div>
-        <Link className="dash-btn small ghost" to="/vehicles">Back to vehicles</Link>
+        <Link className="dash-btn small ghost" to="/vehicles">{tr("Back to vehicles")}</Link>
       </header>
 
       <p className="state-line">{notice} {store.message}</p>
-      {hold ? <p className="vh-warn"><AlertTriangle size={14} aria-hidden="true" /> Insurance or inspection has expired. Vehicle rules say this car should be on hold.</p> : null}
+      {hold ? <p className="vh-warn"><AlertTriangle size={14} aria-hidden="true" />{" "}{tr("Insurance or inspection has expired. Vehicle rules say this car should be on hold.")}</p> : null}
 
-      <section className="vh-hero" aria-label="Car">
+      <section className="vh-hero" aria-label={tr("Car")}>
         <span className="vh-car-icon" aria-hidden="true"><CarFront size={30} /></span>
         <span className="vh-hero-text">
-          <b>{record.make ?? "Vehicle"} {record.model ?? ""} · {profile.year}</b>
-          <small>{profile.seats} seats · {profile.fuel} · {profile.fleetId || record.fleetId ? `Fleet ${profile.fleetId || record.fleetId}` : "Independent"}</small>
-          <span>Driver {driver ? <Link to={`/drivers/${driver.id}`}>{driver.name}</Link> : "not linked"}</span>
+          <b>{record.make ?? tr("Vehicle")} {record.model ?? ""} · {profile.year}</b>
+          <small>{trn("{0} seats · {1} · {2}", profile.seats, profile.fuel, profile.fleetId || record.fleetId ? tr("Fleet {0}", [profile.fleetId || record.fleetId]) : tr("Independent"))}</small>
+          <span>{trn("Driver {0}", driver ? <Link to={`/drivers/${driver.id}`}>{driver.name}</Link> : tr("not linked"))}</span>
         </span>
-        <span className="vh-fits" aria-label="Categories it fits">
-          {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((id) => <span key={id} className={fitsList.includes(id) ? "on" : undefined} title={fitsList.includes(id) ? "Fits" : "Does not fit"}>{CATEGORY_LABELS[id]}</span>)}
+        <span className="vh-fits" aria-label={tr("Categories it fits")}>
+          {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((id) => <span key={id} className={fitsList.includes(id) ? "on" : undefined} title={fitsList.includes(id) ? tr("Fits") : tr("Does not fit")}>{CATEGORY_LABELS[id]}</span>)}
         </span>
       </section>
 
       <div className="vh-grid">
-        <section className="vh-section" aria-label="Checks">
-          <h3><ListChecks size={16} aria-hidden="true" /> Can it drive?</h3>
+        <section className="vh-section" aria-label={tr("Checks")}>
+          <h3><ListChecks size={16} aria-hidden="true" />{" "}{tr("Can it drive?")}</h3>
           <ul className="vh-checks">
             {list.map((item) => <li key={item.label} className={item.ok ? "ok" : "bad"}>{item.ok ? <CheckCircle2 size={14} aria-hidden="true" /> : <XCircle size={14} aria-hidden="true" />}<b>{item.label}</b><small>{item.detail}</small></li>)}
           </ul>
         </section>
-        <section className="vh-section" aria-label="Papers">
-          <h3><FileText size={16} aria-hidden="true" /> Papers</h3>
+        <section className="vh-section" aria-label={tr("Papers")}>
+          <h3><FileText size={16} aria-hidden="true" />{" "}{tr("Papers")}</h3>
           <ul className="vh-docs">
-            {docs.map((doc) => <li key={doc.id}><span><b>{doc.label}</b>{doc.expiresAt ? <small>Until {doc.expiresAt}</small> : null}</span><HealthPill health={doc.health}>{doc.text}</HealthPill></li>)}
+            {docs.map((doc) => <li key={doc.id}><span><b>{doc.label}</b>{doc.expiresAt ? <small>{trn("Until {0}", doc.expiresAt)}</small> : null}</span><HealthPill health={doc.health}>{doc.text}</HealthPill></li>)}
           </ul>
-          <p className="vh-help">Warnings start {countryRules.warnDays} days before papers expire.</p>
+          <p className="vh-help">{trn("Warnings start {0} days before papers expire.", countryRules.warnDays)}</p>
         </section>
-        <section className="vh-section" aria-label="Trips and earnings">
-          <h3><Banknote size={16} aria-hidden="true" /> Trips and earnings</h3>
+        <section className="vh-section" aria-label={tr("Trips and earnings")}>
+          <h3><Banknote size={16} aria-hidden="true" />{" "}{tr("Trips and earnings")}</h3>
           <dl className="vh-facts">
-            <div><dt>Trips</dt><dd>{earnings.trips}</dd></div>
-            <div><dt>Completed</dt><dd>{earnings.completed}</dd></div>
-            <div><dt>Riders paid</dt><dd>{money(earnings.grossMinor)}</dd></div>
+            <div><dt>{tr("Trips")}</dt><dd>{earnings.trips}</dd></div>
+            <div><dt>{tr("Completed")}</dt><dd>{earnings.completed}</dd></div>
+            <div><dt>{tr("Riders paid")}</dt><dd>{money(earnings.grossMinor)}</dd></div>
           </dl>
-          {earnings.lastTripId ? <Link className="vh-help" to={`/trips/${earnings.lastTripId}`}>Latest trip {earnings.lastTripId}</Link> : <p className="vh-help">No trips with this car yet.</p>}
+          {earnings.lastTripId ? <Link className="vh-help" to={`/trips/${earnings.lastTripId}`}>{trn("Latest trip {0}", earnings.lastTripId)}</Link> : <p className="vh-help">{tr("No trips with this car yet.")}</p>}
         </section>
       </div>
 
-      <section className="vh-section" aria-label="Photos">
-        <h3><Camera size={16} aria-hidden="true" /> Photos</h3>
+      <section className="vh-section" aria-label={tr("Photos")}>
+        <h3><Camera size={16} aria-hidden="true" />{" "}{tr("Photos")}</h3>
         <div className="vh-photos">
           {PHOTO_SIDES.map((side) => {
             const photo = photos[side.id];
@@ -182,75 +181,57 @@ export function VehicleDetailPage() {
               <div key={side.id} className={`vh-photo ${photo.status}`}>
                 <span className="vh-photo-img" aria-hidden="true"><Camera size={22} /></span>
                 <b>{side.label}</b>
-                <small>{photo.status === "approved" ? `Approved${photo.by ? ` by ${photo.by}` : ""}` : photo.status === "rejected" ? `Rejected: ${photo.note || "no reason"}` : "Waiting review"}</small>
+                <small>{photo.status === "approved" ? tr("Approved{0}", [photo.by ? ` by ${photo.by}` : ""]) : photo.status === "rejected" ? tr("Rejected: {0}", [photo.note || "no reason"]) : tr("Waiting review")}</small>
                 <span className="vh-photo-actions">
-                  <CommandButton command="admin.vehicle.photo" className="dash-btn small ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="approved" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "approved", agent?.id ?? "", new Date().toISOString(), "")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "approved"} aria-label={`Approve ${side.label}`} onDone={() => setNotice(`${side.label} approved.`)}>Approve</CommandButton>
-                  <CommandButton command="admin.vehicle.photo" className="dash-btn small danger-ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="rejected" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "rejected", agent?.id ?? "", new Date().toISOString(), note || "Upload a clearer photo")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "rejected"} aria-label={`Reject ${side.label}`} onDone={() => setNotice(`${side.label} rejected. The driver is asked for a new photo.`)}>Reject</CommandButton>
+                  <CommandButton command="admin.vehicle.photo" className="dash-btn small ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="approved" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "approved", agent?.id ?? "", new Date().toISOString(), "")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "approved"} aria-label={tr("Approve {0}", [side.label])} onDone={() => setNotice(tr("{0} approved.", [side.label]))}>{tr("Approve")}</CommandButton>
+                  <CommandButton command="admin.vehicle.photo" className="dash-btn small danger-ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="rejected" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "rejected", agent?.id ?? "", new Date().toISOString(), note || "Upload a clearer photo")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "rejected"} aria-label={tr("Reject {0}", [side.label])} onDone={() => setNotice(tr("{0} rejected. The driver is asked for a new photo.", [side.label]))}>{tr("Reject")}</CommandButton>
                 </span>
               </div>
             );
           })}
         </div>
-        <p className="vh-help">The reason for a rejection is the private fleet note below, or "Upload a clearer photo".</p>
+        <p className="vh-help">{tr("The reason for a rejection is the private fleet note below, or \"Upload a clearer photo\".")}</p>
       </section>
 
       <article className="panel vh-panel">
-        <h3>Compliance and eligibility</h3>
+        <h3>{tr("Compliance and eligibility")}</h3>
         <div className="field-grid">
-          <label>
-            Year
-            <input type="number" value={year} onChange={(event) => setYear(event.target.value)} />
+          <label>{tr("Year")}<input type="number" value={year} onChange={(event) => setYear(event.target.value)} />
           </label>
-          <label>
-            Seats
-            <input type="number" value={seats} onChange={(event) => setSeats(event.target.value)} />
+          <label>{tr("Seats")}<input type="number" value={seats} onChange={(event) => setSeats(event.target.value)} />
           </label>
-          <label>
-            Fuel
-            <select value={fuel} onChange={(event) => setFuel(event.target.value as Vehicle["fuel"])}>
-              <option value="petrol">Petrol</option>
-              <option value="diesel">Diesel</option>
-              <option value="hybrid">Hybrid</option>
-              <option value="electric">Electric</option>
+          <label>{tr("Fuel")}<select value={fuel} onChange={(event) => setFuel(event.target.value as Vehicle["fuel"])}>
+              <option value="petrol">{tr("Petrol")}</option>
+              <option value="diesel">{tr("Diesel")}</option>
+              <option value="hybrid">{tr("Hybrid")}</option>
+              <option value="electric">{tr("Electric")}</option>
             </select>
           </label>
-          <label>
-            Category
-            <select value={category} onChange={(event) => setCategory(event.target.value as Vehicle["category"])}>
+          <label>{tr("Category")}<select value={category} onChange={(event) => setCategory(event.target.value as Vehicle["category"])}>
               <option value="economy">Movera</option>
-              <option value="comfort">Comfort</option>
-              <option value="premium">Premium</option>
-              <option value="priority">Priority</option>
+              <option value="comfort">{tr("Comfort")}</option>
+              <option value="premium">{tr("Premium")}</option>
+              <option value="priority">{tr("Priority")}</option>
               <option value="xl">Movera XL</option>
-              <option value="electric">Electric</option>
-              <option value="pet">Pet</option>
+              <option value="electric">{tr("Electric")}</option>
+              <option value="pet">{tr("Pet")}</option>
             </select>
           </label>
-          <label>
-            Fleet partner
-            <select value={fleetId} onChange={(event) => setFleetId(event.target.value)}>
-              <option value="">Independent</option>
+          <label>{tr("Fleet partner")}<select value={fleetId} onChange={(event) => setFleetId(event.target.value)}>
+              <option value="">{tr("Independent")}</option>
               {(fleets.data ?? []).map((fleet) => (
                 <option key={fleet.id} value={fleet.id}>{fleet.id} · {fleet.name}</option>
               ))}
             </select>
           </label>
-          <label>
-            Inspection expires
-            <input type="date" value={inspectionExpiresAt} onChange={(event) => setInspectionExpiresAt(event.target.value)} />
+          <label>{tr("Inspection expires")}<input type="date" value={inspectionExpiresAt} onChange={(event) => setInspectionExpiresAt(event.target.value)} />
           </label>
-          <label>
-            Insurance expires
-            <input type="date" value={insuranceExpiresAt} onChange={(event) => setInsuranceExpiresAt(event.target.value)} />
+          <label>{tr("Insurance expires")}<input type="date" value={insuranceExpiresAt} onChange={(event) => setInsuranceExpiresAt(event.target.value)} />
           </label>
-          <label>
-            Private fleet note
-            <input value={note} onChange={(event) => setNote(event.target.value)} />
+          <label>{tr("Private fleet note")}<input value={note} onChange={(event) => setNote(event.target.value)} />
           </label>
         </div>
-        <p className="state-line">
-          Rule check: {ruleIssue ?? "passed"}. Registration: {profile.registrationStatus}. Saving this form will set the simulated vehicle state to {savedStatus}.
-        </p>
+        <p className="state-line">{trn("Rule check: {0}. Registration: {1}. Saving this form will set the simulated vehicle state to {2}.", ruleIssue ?? tr("passed"), profile.registrationStatus, savedStatus)}</p>
         <CommandButton
           command="admin.vehicle.update"
           className="primary-btn"
@@ -266,15 +247,13 @@ export function VehicleDetailPage() {
           expectedSliceRev={store.value.draftRev}
           sliceKey="driverOps"
           value={nextBook}
-          onDone={() => setNotice("Vehicle compliance profile saved.")}
-        >
-          Save vehicle compliance
-        </CommandButton>
+          onDone={() => setNotice(tr("Vehicle compliance profile saved."))}
+        >{tr("Save vehicle compliance")}</CommandButton>
       </article>
 
       <article className="panel vh-panel">
-        <h3>Registration review</h3>
-        <p>Current state: {profile.registrationStatus}.</p>
+        <h3>{tr("Registration review")}</h3>
+        <p>{trn("Current state: {0}.", profile.registrationStatus)}</p>
         <div className="actions">
           {(["approved", "rejected", "in_review"] as const).map((status) => {
             const book = updateVehicleOps(store.value, record, { registrationStatus: status });
@@ -297,7 +276,7 @@ export function VehicleDetailPage() {
                 expectedSliceRev={store.value.draftRev}
                 sliceKey="driverOps"
                 value={book}
-                onDone={() => setNotice(`Registration marked ${status}.`)}
+                onDone={() => setNotice(tr("Registration marked {0}.", [statusLabel(status).toLowerCase()]))}
               >
                 {status}
               </CommandButton>
@@ -307,11 +286,9 @@ export function VehicleDetailPage() {
       </article>
 
       <article className="panel vh-panel">
-        <h3>Driver assignment</h3>
-        <label>
-          Linked driver
-          <select value={driverId} onChange={(event) => setDriverId(event.target.value)}>
-            <option value="">Unassigned</option>
+        <h3>{tr("Driver assignment")}</h3>
+        <label>{tr("Linked driver")}<select value={driverId} onChange={(event) => setDriverId(event.target.value)}>
+            <option value="">{tr("Unassigned")}</option>
             {driverOptions.map((driver) => (
               <option key={driver.id} value={driver.id}>{driver.id} · {driver.name}</option>
             ))}
@@ -328,14 +305,12 @@ export function VehicleDetailPage() {
           after={driverId || "unassigned"}
           collection="vehicles"
           patch={{ driverId: driverId || null, name: selectedDriver?.name ?? record.name }}
-          onDone={() => setNotice(driverId ? `Vehicle linked to ${driverId}.` : "Vehicle unassigned.")}
-        >
-          Save driver assignment
-        </CommandButton>
+          onDone={() => setNotice(driverId ? tr("Vehicle linked to {0}.", [driverId]) : tr("Vehicle unassigned."))}
+        >{tr("Save driver assignment")}</CommandButton>
       </article>
 
       <article className="panel vh-panel">
-        <h3>Service state</h3>
+        <h3>{tr("Service state")}</h3>
         <div className="actions">
           <CommandButton
             command="admin.vehicle.hold"
@@ -349,10 +324,8 @@ export function VehicleDetailPage() {
             collection="vehicles"
             patch={{ status: "on_hold" }}
             disabled={record.status === "on_hold"}
-            onDone={() => setNotice("Vehicle placed on hold.")}
-          >
-            Put on hold
-          </CommandButton>
+            onDone={() => setNotice(tr("Vehicle placed on hold."))}
+          >{tr("Put on hold")}</CommandButton>
           <CommandButton
             command="admin.vehicle.activate"
             className="primary-btn"
@@ -365,11 +338,9 @@ export function VehicleDetailPage() {
             collection="vehicles"
             patch={{ status: "eligible" }}
             disabled={Boolean(ruleIssue) || profile.registrationStatus !== "approved" || record.status === "eligible"}
-            title={ruleIssue ?? (profile.registrationStatus !== "approved" ? "Registration must be approved." : undefined)}
-            onDone={() => setNotice("Vehicle returned to service.")}
-          >
-            Return to service
-          </CommandButton>
+            title={ruleIssue ?? (profile.registrationStatus !== "approved" ? tr("Registration must be approved.") : undefined)}
+            onDone={() => setNotice(tr("Vehicle returned to service."))}
+          >{tr("Return to service")}</CommandButton>
         </div>
       </article>
     </div>

@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { useFieldErrorReport } from "../ui/fieldErrors";
 import { numberInputError, parseNumberInput } from "./numberInput";
-import { trSentences } from "../i18n";
+import { trSentences, trx } from "../i18n";
 
 type Props = {
   value: number;
@@ -41,7 +41,7 @@ export function NumberField({ value, onChange, label, unit, step = 1, min = 0, m
         <input
           type="text"
           inputMode="decimal"
-          aria-label={label}
+          aria-label={trx(label)}
           aria-invalid={invalid || Boolean(error) || undefined}
           aria-describedby={error ? errorId : undefined}
           value={text}

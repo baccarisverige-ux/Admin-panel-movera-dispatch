@@ -231,7 +231,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
     const file = rulesFile(book, country, new Date().toISOString(), rideCheck.settings, activeCategories(pricing).map(({ id, label }) => ({ id, label })));
     downloadJson(`movera-dispatch-rules-${country}-rev${book.draftRev}.json`, file);
     logExport(agent?.id, `Dispatch rules file ${country}`);
-    setNotice(`Rules file downloaded: every zone in ${market.name}, revision ${book.draftRev}.`);
+    setNotice(tr("Rules file downloaded: every zone in {0}, revision {1}.", [market.name, book.draftRev]));
   }
 
   /** RiderAppConfig / DriverAppConfig (contract §6) for the open zone, from the live (published) settings. */
@@ -247,7 +247,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
     downloadJson(appConfigFileName(app, doc), doc);
     const name = zoneById(zoneId)?.name ?? zoneId;
     logExport(agent?.id, `${app === "rider" ? "Rider" : "Driver"} app config ${zoneId}`);
-    setNotice(`${app === "rider" ? "RiderAppConfig" : "DriverAppConfig"} downloaded for ${name}, version ${doc.version}. Live settings only; drafts are not in it.`);
+    setNotice(tr("{0} downloaded for {1}, version {2}. Live settings only; drafts are not in it.", [app === "rider" ? "RiderAppConfig" : "DriverAppConfig", name, doc.version]));
   }
 
   const say = (text: string) => setNotice(text);
@@ -329,9 +329,9 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
           {changes.length || countryChanged.length ? (
             <div className="dx-publish-actions">
               <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" aria-expanded={showChanges} onClick={() => setShowChanges((value) => !value)}>{showChanges ? tr("Hide changes") : tr("See changes")}</button>
-              {unsaved ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => { setWorking({}); setWorkingCountry({}); setNotice("Unsaved changes were thrown away."); }}>{trn("{0} Discard", <Undo2 size={13} aria-hidden="true" />)}</button> : null}
+              {unsaved ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => { setWorking({}); setWorkingCountry({}); setNotice(tr("Unsaved changes were thrown away.")); }}>{trn("{0} Discard", <Undo2 size={13} aria-hidden="true" />)}</button> : null}
               {unsaved ? (
-                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole} largeChanges={largeDraftChanges} onDone={() => { setWorking({}); setWorkingCountry({}); setNotice("Draft saved. Nothing is live yet. Test it in Test a ride, then publish."); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
+                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole} largeChanges={largeDraftChanges} onDone={() => { setWorking({}); setWorkingCountry({}); setNotice(tr("Draft saved. Nothing is live yet. Test it in Test a ride, then publish.")); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
               ) : null}
               {view !== "test" ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => go({ view: "test" })}>{trn("{0} Test it", <FlaskConical size={13} aria-hidden="true" />)}</button> : null}
               <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} summary={liveSession ? <PublishTargetsLine zoneIds={[...changed]} /> : undefined} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error)} title={published.error} largeChanges={largeChanges} onDone={() => {

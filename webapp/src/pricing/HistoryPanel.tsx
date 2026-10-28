@@ -60,7 +60,7 @@ export function HistoryPanel({ store, zoneId, agentId, canEdit, timeZone, onRest
                     disabled={!canEdit || Boolean(restore.error)}
                     title={restore.error}
                     largeChanges={restore.error ? undefined : largeStoreChanges(store, restore.store)}
-                    onDone={() => onRestored(`Pricing revision ${revision.rev} restored as revision ${restore.store.draftRev}.`)}
+                    onDone={() => onRestored(tr("Pricing revision {0} restored as revision {1}.", [revision.rev, restore.store.draftRev]))}
                   >{trn("{0} Restore", <RotateCcw size={13} aria-hidden="true" />)}</CommandButton>
                 ) : null}
               </li>

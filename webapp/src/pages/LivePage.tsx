@@ -144,7 +144,7 @@ function LiveBoard() {
                 style={{ left: point.left, top: point.top }}
                 data-lat={marker.lat.toFixed(6)}
                 data-stale={marker.stale ? "yes" : "no"}
-                title={marker.stale ? `${marker.name}, last seen ${marker.lastSeen}` : marker.name}
+                title={marker.stale ? tr("{0}, last seen {1}", [marker.name, marker.lastSeen]) : marker.name}
                 onClick={() => {
                   setSelectedId(marker.id);
                   setOfferDriverId("");
@@ -198,7 +198,7 @@ function LiveBoard() {
                     disabled={Boolean(selectedOfferWhy)}
                     title={selectedOfferWhy ?? undefined}
                     onDone={() => {
-                      setNotice(`${selectedTrip.id} offered to ${chosen}.`);
+                      setNotice(tr("{0} offered to {1}.", [selectedTrip.id, chosen]));
                       setSelectedId(null);
                       setOfferDriverId("");
                     }}

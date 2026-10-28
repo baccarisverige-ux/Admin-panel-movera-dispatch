@@ -52,6 +52,8 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
 import { CommandButton } from "../ui/CommandButton";
 import { DataTable } from "../ui/DataTable";
+import { tr, trn, trx } from "../i18n";
+import { statusLabel } from "../domain/labels";
 
 const REVIEW: { status: DocStatus; label: string }[] = [
   { status: "approved", label: "Approve" },
@@ -121,29 +123,29 @@ function DemoOnboardingPage() {
     return next;
   }, { replace: true });
 
-  if (drivers.isLoading || vehicles.isLoading || store.loading) return <p className="state-line">Loading onboarding queue.</p>;
+  if (drivers.isLoading || vehicles.isLoading || store.loading) return <p className="state-line">{tr("Loading onboarding queue.")}</p>;
   if (drivers.isError || vehicles.isError) {
     return (
       <>
-        <h2>Onboarding queue</h2>
+        <h2>{tr("Onboarding queue")}</h2>
         <LiveListBar list="drivers" />
-        <p className="state-line">The onboarding records could not be loaded.</p>
+        <p className="state-line">{tr("The onboarding records could not be loaded.")}</p>
       </>
     );
   }
 
   const header = (
     <header className="dx-head">
-      <button data-command="admin.onboarding.view" type="button" className="dash-btn ghost dx-back" onClick={() => (params.get("view") ? set({ view: null }) : globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+      <button data-command="admin.onboarding.view" type="button" className="dash-btn ghost dx-back" onClick={() => (params.get("view") ? set({ view: null }) : globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
       <div className="dx-head-text">
-        <h2>{params.get("view") === "steps" ? `Onboarding steps for ${scope.market.name}` : "Onboarding queue"}</h2>
+        <h2>{params.get("view") === "steps" ? tr("Onboarding steps for {0}", [scope.market.name]) : tr("Onboarding queue")}</h2>
         <p>
           {params.get("view") === "steps"
-            ? "The steps new drivers go through, the papers they need, how long each step may take and the reminders they get."
-            : `${queue.length} applications in this scope. Eleven document types are supported. Fleet partners are exempt from company registration. Activation also checks bank review and vehicle eligibility.`}
+            ? tr("The steps new drivers go through, the papers they need, how long each step may take and the reminders they get.")
+            : tr("{0} applications in this scope. Eleven document types are supported. Fleet partners are exempt from company registration. Activation also checks bank review and vehicle eligibility.", [queue.length])}
         </p>
       </div>
-      {!params.get("view") ? <button data-command="admin.onboarding.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "steps" })}><Settings2 size={14} aria-hidden="true" /> Steps and papers</button> : null}
+      {!params.get("view") ? <button data-command="admin.onboarding.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "steps" })}><Settings2 size={14} aria-hidden="true" />{" "}{tr("Steps and papers")}</button> : null}
     </header>
   );
 
@@ -182,37 +184,37 @@ function DemoOnboardingPage() {
         ]}
       />
 
-      <section className="ob-funnel" aria-label="Where applicants drop off">
+      <section className="ob-funnel" aria-label={tr("Where applicants drop off")}>
         {flow.map((row, index) => (
           <div key={row.step} className="ob-funnel-step">
             <span className="ob-funnel-bar"><i style={{ width: `${Math.max(row.pct, 4)}%` }} /></span>
             <b>{row.label}</b>
-            <small>{row.reached} reached · {row.pct}%{index > 0 ? ` · ${flow[index - 1].reached - row.reached} dropped` : ""}</small>
+            <small>{trn("{0} reached · {1}%{2}", row.reached, row.pct, index > 0 ? tr(" · {0} dropped", [flow[index - 1].reached - row.reached]) : "")}</small>
           </div>
         ))}
       </section>
 
-      <section className="ob-board" aria-label="Board">
+      <section className="ob-board" aria-label={tr("Board")}>
         {steps.map((step) => {
           const cards = placed.filter((row) => row.step === step.id);
           return (
             <div key={step.id} className={`ob-column ${step.id}`} aria-label={step.label} role="group">
               <header><b>{step.label}</b><span className="dx-count">{cards.length}</span></header>
-              <small className="vh-help">{step.help} Limit {countryRules.steps.find((row) => row.id === step.id)?.days} days.</small>
+              <small className="vh-help">{trn("{0} Limit {1} days.", step.help, countryRules.steps.find((row) => row.id === step.id)?.days)}</small>
               {cards.slice(0, open[step.id] ? cards.length : 6).map((row) => (
                 <button key={row.applicant.id} data-command="admin.onboarding.view" type="button" className={`ob-card${(driver?.id ?? lead?.applicant.id) === row.applicant.id ? " active" : ""}${row.time.stuck ? " stuck" : row.time.late ? " late" : ""}`} onClick={() => setSelectedId(row.applicant.id)}>
                   <b>{row.applicant.name}</b>
-                  <small>{scope.market.zones.find((zone) => zone.id === row.applicant.zoneId)?.name ?? row.applicant.zoneId}{row.applicant.fleet ? " · Fleet" : ""}{row.applicant.lead ? " · new sign-up" : ""}</small>
+                  <small>{scope.market.zones.find((zone) => zone.id === row.applicant.zoneId)?.name ?? row.applicant.zoneId}{row.applicant.fleet ? tr(" · Fleet") : ""}{row.applicant.lead ? tr(" · new sign-up") : ""}</small>
                   <span className="ob-card-meta">
                     <span><FileText size={11} aria-hidden="true" /> {row.progress.done}/{row.progress.total}</span>
                     <span className={row.time.late ? "late" : undefined}><AlarmClock size={11} aria-hidden="true" /> {row.time.days} d</span>
-                    {row.time.stuck ? <span className="tag stuck">Stuck</span> : row.time.late ? <span className="tag late">Late</span> : null}
-                    {row.due ? <span className="tag due">Remind</span> : null}
+                    {row.time.stuck ? <span className="tag stuck">{tr("Stuck")}</span> : row.time.late ? <span className="tag late">{tr("Late")}</span> : null}
+                    {row.due ? <span className="tag due">{tr("Remind")}</span> : null}
                   </span>
                 </button>
               ))}
-              {cards.length > 6 ? <button data-command="admin.onboarding.view" type="button" className="dash-btn small ghost" onClick={() => setOpen({ ...open, [step.id]: !open[step.id] })}>{open[step.id] ? "Show fewer" : `Show all ${cards.length}`}</button> : null}
-              {!cards.length ? <p className="vh-help">Nobody here.</p> : null}
+              {cards.length > 6 ? <button data-command="admin.onboarding.view" type="button" className="dash-btn small ghost" onClick={() => setOpen({ ...open, [step.id]: !open[step.id] })}>{open[step.id] ? tr("Show fewer") : tr("Show all {0}", [cards.length])}</button> : null}
+              {!cards.length ? <p className="vh-help">{tr("Nobody here.")}</p> : null}
             </div>
           );
         })}
@@ -225,17 +227,17 @@ function DemoOnboardingPage() {
       {lead ? (
         <article className="vh-section ob-lead" aria-label={lead.applicant.name}>
           <h3><UserPlus size={16} aria-hidden="true" /> {lead.applicant.name}</h3>
-          <p className="vh-help">Signed up {lead.time.days} days ago and has not uploaded anything yet. Demo sign-up until the driver app sends them.</p>
-          <CommandButton command="admin.onboarding.remind" className="dash-btn small" sliceKey={ONBOARDING_KEY} value={remind(rules, lead.applicant.id, lead.step, agent?.id ?? "", new Date().toISOString())} expectedSliceRev={rules.draftRev} targetId={lead.applicant.id} confirmTarget={false} before="" after="reminder sent" disabled={!countryRules.reminders} title={countryRules.reminders ? undefined : "Reminders are off in Steps and papers."} onDone={() => setNotice(`Reminder sent to ${lead.applicant.name}.`)}><Send size={13} aria-hidden="true" /> Send a reminder</CommandButton>
+          <p className="vh-help">{trn("Signed up {0} days ago and has not uploaded anything yet. Demo sign-up until the driver app sends them.", lead.time.days)}</p>
+          <CommandButton command="admin.onboarding.remind" className="dash-btn small" sliceKey={ONBOARDING_KEY} value={remind(rules, lead.applicant.id, lead.step, agent?.id ?? "", new Date().toISOString())} expectedSliceRev={rules.draftRev} targetId={lead.applicant.id} confirmTarget={false} before="" after="reminder sent" disabled={!countryRules.reminders} title={countryRules.reminders ? undefined : tr("Reminders are off in Steps and papers.")} onDone={() => setNotice(tr("Reminder sent to {0}.", [lead.applicant.name]))}><Send size={13} aria-hidden="true" />{" "}{tr("Send a reminder")}</CommandButton>
         </article>
       ) : null}
 
       {driver ? <ApplicantView key={driver.id} driver={driver} rules={rules} country={country} now={now} reviewNote={reviewNote} setReviewNote={setReviewNote} setNotice={setNotice} vehicles={vehicles.data ?? []} store={store.value} placed={placed.find((row) => row.applicant.id === driver.id)} /> : !lead ? (
-        <p className="dx-calm">No pending or on-hold applications are in your active scope.</p>
+        <p className="dx-calm">{tr("No pending or on-hold applications are in your active scope.")}</p>
       ) : null}
 
-      <section className="vh-section" aria-label="All applicants">
-        <h3><ClipboardCheck size={16} aria-hidden="true" /> All applications</h3>
+      <section className="vh-section" aria-label={tr("All applicants")}>
+        <h3><ClipboardCheck size={16} aria-hidden="true" />{" "}{tr("All applications")}</h3>
         <LiveListBar list="drivers" />
         <DataTable
           serverSearch="drivers"
@@ -289,36 +291,36 @@ function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote,
   const required = new Set<DocId>([...neededDocs(countryRules, Boolean(driver.fleetId)), ...countryRules.docs.filter((id) => id === "terms" || id === "virtual_session")]);
   const [preview, setPreview] = useState<{ doc: DocId; action: "rejected" | "needed"; note: string } | null>(null);
   return (
-    <article className="vh-section ob-applicant" aria-label={`Application of ${driver.name}`}>
+    <article className="vh-section ob-applicant" aria-label={tr("Application of {0}", [driver.name])}>
       <header className="ob-applicant-head">
         <span>
           <h3>{driver.name}</h3>
           <p className="state-line">
-            {driver.id} · {driver.status} · {driver.zoneId} · {driver.fleetId ? `Fleet ${driver.fleetId}` : "Independent"}.
-            {activationIssue ? ` Activation blocked: ${activationIssue}` : " Ready for activation."}
+            {driver.id} · {driver.status} · {driver.zoneId} · {driver.fleetId ? tr("Fleet {0}", [driver.fleetId]) : tr("Independent")}.
+            {activationIssue ? tr(" Activation blocked: {0}", [activationIssue]) : tr(" Ready for activation.")}
           </p>
         </span>
-        {placed ? <span className={placed.time.late ? "ob-step late" : "ob-step"}>{STEPS.find((step) => step.id === placed.step)?.label} · {placed.time.days} of {placed.time.limit} days</span> : null}
-        <Link className="dash-btn small ghost" to={`/drivers/${driver.id}`}>Open driver</Link>
+        {placed ? <span className={placed.time.late ? "ob-step late" : "ob-step"}>{trn("{0} · {1} of {2} days", STEPS.find((step) => step.id === placed.step)?.label, placed.time.days, placed.time.limit)}</span> : null}
+        <Link className="dash-btn small ghost" to={`/drivers/${driver.id}`}>{tr("Open driver")}</Link>
       </header>
 
       <label className="ob-note">
-        <span>Review note / request details</span>
-        <input value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} placeholder="Reason or information requested" />
+        <span>{tr("Review note / request details")}</span>
+        <input value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} placeholder={tr("Reason or information requested")} />
       </label>
       {preview ? (
-        <p className="ob-message" aria-label="Message to the driver"><Send size={13} aria-hidden="true" /> {driverMessage(driver.name, docLabel(preview.doc), preview.action, preview.note)}</p>
-      ) : <p className="vh-help">When you reject a paper or ask for more, the driver gets a message in the app with your note.</p>}
+        <p className="ob-message" aria-label={tr("Message to the driver")}><Send size={13} aria-hidden="true" /> {driverMessage(driver.name, docLabel(preview.doc), preview.action, preview.note)}</p>
+      ) : <p className="vh-help">{tr("When you reject a paper or ask for more, the driver gets a message in the app with your note.")}</p>}
 
-      <ul className="ob-docs" aria-label="Documents">
+      <ul className="ob-docs" aria-label={tr("Documents")}>
         {DRIVER_DOCUMENTS.map((id) => {
           const review = ops.documents[id];
           const needed = required.has(id);
           const health = docHealth(review, now, firstWarningDays(rules, country));
           return (
             <li key={id} className={needed ? undefined : "off"}>
-              <span className="ob-doc-name"><b>{docLabel(id)}</b><small>{id.replaceAll("_", " ")} · {needed ? "Required" : driver.fleetId && id === "company_registration" ? "Fleet exempt" : `Not needed in ${country}`}</small></span>
-              <span className="ob-doc-file"><small>{review.fileType} · {review.fileName}</small><small>{review.expiresAt || "No expiry"}</small></span>
+              <span className="ob-doc-name"><b>{docLabel(id)}</b><small>{id.replaceAll("_", " ")} · {needed ? tr("Required") : driver.fleetId && id === "company_registration" ? tr("Fleet exempt") : tr("Not needed in {0}", [country])}</small></span>
+              <span className="ob-doc-file"><small>{review.fileType} · {review.fileName}</small><small>{review.expiresAt || tr("No expiry")}</small></span>
               <HealthPill health={health.health}>{health.label}</HealthPill>
               {needed ? (
                 <span className="ob-doc-actions">
@@ -337,9 +339,9 @@ function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote,
                       sliceKey="driverOps"
                       value={reviewDriverDocument(store, driverSeed, id, choice.status, agent?.id ?? "", reviewNote)}
                       disabled={review.status === choice.status}
-                      aria-label={`${choice.label} ${docLabel(id)}`}
+                      aria-label={`${trx(choice.label)} ${docLabel(id)}`}
                       onDone={() => {
-                        setNotice(`${id.replaceAll("_", " ")} marked ${choice.status}.`);
+                        setNotice(tr("{0} marked {1}.", [docLabel(id), statusLabel(choice.status, "documentStatus").toLowerCase()]));
                         if (choice.status === "rejected") setPreview({ doc: id, action: "rejected", note: reviewNote });
                         setReviewNote("");
                       }}
@@ -359,17 +361,15 @@ function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote,
                     expectedSliceRev={store.draftRev}
                     sliceKey="driverOps"
                     value={requestDriverInfo(store, driverSeed, id as DocId, agent?.id ?? "", reviewNote)}
-                    aria-label={`Ask for more about ${docLabel(id)}`}
+                    aria-label={tr("Ask for more about {0}", [docLabel(id)])}
                     onDone={() => {
-                      setNotice(`More information requested for ${id.replaceAll("_", " ")}.`);
+                      setNotice(tr("More information requested for {0}.", [id.replaceAll("_", " ")]));
                       setPreview({ doc: id, action: "needed", note: reviewNote });
                       setReviewNote("");
                     }}
-                  >
-                    Ask for more
-                  </CommandButton>
+                  >{tr("Ask for more")}</CommandButton>
                 </span>
-              ) : <span className="vh-help">Not required</span>}
+              ) : <span className="vh-help">{tr("Not required")}</span>}
             </li>
           );
         })}
@@ -388,48 +388,38 @@ function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote,
           expectedSliceRev={store.draftRev}
           sliceKey="driverOps"
           value={approveRequiredDocuments(store, driverSeed, agent?.id ?? "")}
-          onDone={() => setNotice("Documents approved.")}
+          onDone={() => setNotice(tr("Documents approved."))}
         >
-          <CheckCircle2 size={13} aria-hidden="true" /> Approve remaining
-        </CommandButton>
+          <CheckCircle2 size={13} aria-hidden="true" />{" "}{tr("Approve remaining")}</CommandButton>
       </div>
 
       <div className="ob-checks">
-        <section className="ob-check" aria-label="Bank verification">
-          <h4><Landmark size={14} aria-hidden="true" /> Bank verification</h4>
-          <p>Holder {ops.bank.holder}. Account •••• {ops.bank.last4}. Status {ops.bank.status}.{ops.bank.note ? ` Note: ${ops.bank.note}` : ""}</p>
+        <section className="ob-check" aria-label={tr("Bank verification")}>
+          <h4><Landmark size={14} aria-hidden="true" />{" "}{tr("Bank verification")}</h4>
+          <p>{trn("Holder {0}. Account •••• {1}. Status {2}.{3}", ops.bank.holder, ops.bank.last4, ops.bank.status, ops.bank.note ? tr(" Note: {0}", [ops.bank.note]) : "")}</p>
           <div className="ob-inline">
             {(["approved", "rejected", "in_review"] as const).map((status) => (
-              <CommandButton command="admin.driver.bankReview" key={status} className="dash-btn small ghost" type="button" targetId={driver.id} confirmTarget={false} scope={driver.zoneId} before={ops.bank.status} after={status} expectedSliceRev={store.draftRev} sliceKey="driverOps" value={setBankReview(store, driverSeed, status, agent?.id ?? "", reviewNote)} onDone={() => setNotice(`Bank details marked ${status}.`)}>
-                Bank {status}
-              </CommandButton>
+              <CommandButton command="admin.driver.bankReview" key={status} className="dash-btn small ghost" type="button" targetId={driver.id} confirmTarget={false} scope={driver.zoneId} before={ops.bank.status} after={status} expectedSliceRev={store.draftRev} sliceKey="driverOps" value={setBankReview(store, driverSeed, status, agent?.id ?? "", reviewNote)} onDone={() => setNotice(tr("Bank details marked {0}.", [status]))}>{trn("Bank {0}", status)}</CommandButton>
             ))}
           </div>
         </section>
-        <section className="ob-check" aria-label="Linked vehicle">
-          <h4><Car size={14} aria-hidden="true" /> Linked vehicle</h4>
+        <section className="ob-check" aria-label={tr("Linked vehicle")}>
+          <h4><Car size={14} aria-hidden="true" />{" "}{tr("Linked vehicle")}</h4>
           {carRecord && car ? (
             <>
-              <p>{carRecord.plate} · {carRecord.make ?? "Vehicle"} {carRecord.model ?? ""} · {car.year} · {car.category} · {car.fuel} · {car.seats} seats · {car.status}.</p>
-              <p className="vh-help">
-                Inspection expires {car.inspectionExpiresAt}. Insurance expires {car.insuranceExpiresAt}. Registration {car.registrationStatus}.
-                {vehicleBlock({ year: car.year, seats: car.seats, fuel: car.fuel, category: car.category }) ?? " Vehicle rule check passed."}
-              </p>
-              <Link className="vh-help" to={`/vehicles/${carRecord.id}`}>Open the vehicle</Link>
+              <p>{trn("{0} · {1} {2} · {3} · {4} · {5} · {6} seats · {7}.", carRecord.plate, carRecord.make ?? tr("Vehicle"), carRecord.model ?? "", car.year, car.category, car.fuel, car.seats, car.status)}</p>
+              <p className="vh-help">{trn("Inspection expires {0}. Insurance expires {1}. Registration {2}.{3}", car.inspectionExpiresAt, car.insuranceExpiresAt, car.registrationStatus, vehicleBlock({ year: car.year, seats: car.seats, fuel: car.fuel, category: car.category }) ?? tr(" Vehicle rule check passed."))}</p>
+              <Link className="vh-help" to={`/vehicles/${carRecord.id}`}>{tr("Open the vehicle")}</Link>
             </>
-          ) : <p className="state-line">No vehicle linked. Activation is blocked.</p>}
+          ) : <p className="state-line">{tr("No vehicle linked. Activation is blocked.")}</p>}
         </section>
-        <section className="ob-check decision" aria-label="Account decision">
-          <h4><BellRing size={14} aria-hidden="true" /> Account decision</h4>
+        <section className="ob-check decision" aria-label={tr("Account decision")}>
+          <h4><BellRing size={14} aria-hidden="true" />{" "}{tr("Account decision")}</h4>
           <div className="ob-inline">
-            <CommandButton command="admin.driver.activate" className="dash-btn small" type="button" targetId={driver.id} confirmTarget={false} entityState={driver.status} scope={driver.zoneId} before={driver.status} after="active" collection="drivers" patch={{ status: "active" }} expectedSliceRev={store.draftRev} sliceKey="driverOps" value={setAccountReason(store, driverSeed, "active", "Onboarding approved", agent?.id ?? "")} disabled={Boolean(activationIssue)} title={activationIssue ?? undefined} onDone={() => setNotice("Driver is active. New offers can be sent.")}>
-              Activate
-            </CommandButton>
-            <CommandButton command="admin.driver.onHold" className="dash-btn small ghost" type="button" targetId={driver.id} entityState={driver.status} scope={driver.zoneId} before={driver.status} after="on_hold" collection="drivers" patch={{ status: "on_hold" }} expectedSliceRev={store.draftRev} sliceKey="driverOps" value={setAccountReason(store, driverSeed, "on_hold", reviewNote || "Onboarding review hold", agent?.id ?? "")} onDone={() => setNotice("Driver placed on hold.")}>
-              Put on hold
-            </CommandButton>
+            <CommandButton command="admin.driver.activate" className="dash-btn small" type="button" targetId={driver.id} confirmTarget={false} entityState={driver.status} scope={driver.zoneId} before={driver.status} after="active" collection="drivers" patch={{ status: "active" }} expectedSliceRev={store.draftRev} sliceKey="driverOps" value={setAccountReason(store, driverSeed, "active", "Onboarding approved", agent?.id ?? "")} disabled={Boolean(activationIssue)} title={activationIssue ?? undefined} onDone={() => setNotice(tr("Driver is active. New offers can be sent."))}>{tr("Activate")}</CommandButton>
+            <CommandButton command="admin.driver.onHold" className="dash-btn small ghost" type="button" targetId={driver.id} entityState={driver.status} scope={driver.zoneId} before={driver.status} after="on_hold" collection="drivers" patch={{ status: "on_hold" }} expectedSliceRev={store.draftRev} sliceKey="driverOps" value={setAccountReason(store, driverSeed, "on_hold", reviewNote || "Onboarding review hold", agent?.id ?? "")} onDone={() => setNotice(tr("Driver placed on hold."))}>{tr("Put on hold")}</CommandButton>
             {placed?.due ? (
-              <CommandButton command="admin.onboarding.remind" className="dash-btn small ghost" sliceKey={ONBOARDING_KEY} value={remind(rules, driver.id, placed.step, agent?.id ?? "", new Date().toISOString())} expectedSliceRev={rules.draftRev} targetId={driver.id} confirmTarget={false} before="" after="reminder sent" onDone={() => setNotice(`Reminder sent to ${driver.name}.`)}><Send size={13} aria-hidden="true" /> Send a reminder</CommandButton>
+              <CommandButton command="admin.onboarding.remind" className="dash-btn small ghost" sliceKey={ONBOARDING_KEY} value={remind(rules, driver.id, placed.step, agent?.id ?? "", new Date().toISOString())} expectedSliceRev={rules.draftRev} targetId={driver.id} confirmTarget={false} before="" after="reminder sent" onDone={() => setNotice(tr("Reminder sent to {0}.", [driver.name]))}><Send size={13} aria-hidden="true" />{" "}{tr("Send a reminder")}</CommandButton>
             ) : null}
           </div>
         </section>

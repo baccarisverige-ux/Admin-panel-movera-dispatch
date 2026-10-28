@@ -104,7 +104,7 @@ export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onN
                     <input aria-label={tr("Category seats")} type="number" min={1} max={8} value={form.seats} onChange={(event) => setForm({ ...form, seats: Number(event.target.value) })} />
                     {formError ? <small className="form-error">{formError}</small> : null}
                     <div className="cat-actions">
-                      <CommandButton command="admin.pricing.editCategory" className="dash-btn small" targetId={category.id} confirmTarget={false} scope="all" before={category.label} after={form.label} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={edited?.store} disabled={!canEdit || Boolean(formError)} onDone={() => { setEditing(null); onNotice(`${form.label} saved.`); }}>{tr("Save")}</CommandButton>
+                      <CommandButton command="admin.pricing.editCategory" className="dash-btn small" targetId={category.id} confirmTarget={false} scope="all" before={category.label} after={form.label} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={edited?.store} disabled={!canEdit || Boolean(formError)} onDone={() => { setEditing(null); onNotice(tr("{0} saved.", [form.label])); }}>{tr("Save")}</CommandButton>
                       <button data-command="admin.pricing.cancelCategory" type="button" className="dash-btn small ghost" onClick={() => setEditing(null)}>{tr("Cancel")}</button>
                     </div>
                   </div>
@@ -168,7 +168,7 @@ export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onN
                 return (
                   <li key={category.id}>
                     <span><strong>{trx(category.label)}</strong><small>{trn("Deleted {0} by {1} · until {2}", date.format(Date.parse(category.archived!.at)), category.archived!.by, deadline ? date.format(deadline) : "—")}</small></span>
-                    <CommandButton command="admin.pricing.restoreCategory" className="dash-btn small ghost" targetId={category.id} confirmTarget={false} scope="all" before="archived" after="active" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={restore.store} disabled={!canEdit || Boolean(restore.error)} title={restore.error} onDone={() => onNotice(`${category.label} restored.`)}>{trn("{0} Restore", <Undo2 size={13} aria-hidden="true" />)}</CommandButton>
+                    <CommandButton command="admin.pricing.restoreCategory" className="dash-btn small ghost" targetId={category.id} confirmTarget={false} scope="all" before="archived" after="active" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={restore.store} disabled={!canEdit || Boolean(restore.error)} title={restore.error} onDone={() => onNotice(tr("{0} restored.", [category.label]))}>{trn("{0} Restore", <Undo2 size={13} aria-hidden="true" />)}</CommandButton>
                   </li>
                 );
               })}

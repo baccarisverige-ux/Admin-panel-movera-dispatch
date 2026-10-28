@@ -187,7 +187,7 @@ export function DriverDetailPage() {
       onError={(error) => setRefused(status === "active" ? refusedDetails(error) : null)}
       onDone={() => {
         setRefused(null);
-        setNotice(`Driver account is now ${statusLabel(status).toLowerCase()}.`);
+        setNotice(tr("Driver account is now {0}.", [statusLabel(status).toLowerCase()]));
         setAccountNote("");
       }}
     >
@@ -324,7 +324,7 @@ export function DriverDetailPage() {
                     sliceKey="driverOps"
                     value={setDriverCategory(store.value, driverSeed, category, !enabled, agent?.id ?? "")}
                     aria-label={`${info?.label ?? category}: ${enabled ? "on, turn off" : "off, turn on"}`}
-                    onDone={() => setNotice(`${info?.label ?? category} ${enabled ? "turned off" : "turned on"} for ${driver.name}.`)}
+                    onDone={() => setNotice(tr("{0} {1} for {2}.", [info?.label ?? category, enabled ? tr("turned off") : tr("turned on"), driver.name]))}
                   >
                     <span className="cat-name">{trx(info?.label) ?? category}</span>
                     <span className="cat-switch" aria-hidden="true"><i /></span>
@@ -404,7 +404,7 @@ export function DriverDetailPage() {
               sliceKey="driverOps"
               value={approveRequiredDocuments(store.value, driverSeed, agent?.id ?? "")}
               disabled={allGreen || !canReview}
-              onDone={() => setNotice("All remaining documents approved.")}
+              onDone={() => setNotice(tr("All remaining documents approved."))}
             >{tr("Approve all remaining")}</CommandButton>
           </div>
           <DocumentsTable
@@ -508,7 +508,7 @@ export function DriverDetailPage() {
                     sliceKey="driverOps"
                     value={setBankReview(store.value, driverSeed, status, agent?.id ?? "", accountNote)}
                     disabled={ops.bank.status === status}
-                    onDone={() => setNotice(`Bank details marked ${statusLabel(status, "documentStatus").toLowerCase()}.`)}
+                    onDone={() => setNotice(tr("Bank details marked {0}.", [statusLabel(status, "documentStatus").toLowerCase()]))}
                   >
                     {statusLabel(status, "documentStatus")}
                   </CommandButton>
@@ -565,7 +565,7 @@ export function DriverDetailPage() {
             expectedSliceRev={store.value.draftRev}
             build={(text) => sendDriverMessage(store.value, driverSeed, text, agent?.id ?? "", new Date().toISOString())}
             templates={TEMPLATES}
-            onSent={() => setNotice(`Message sent to ${driver.name}.`)}
+            onSent={() => setNotice(tr("Message sent to {0}.", [driver.name]))}
             locale={market.locale}
             timeZone={market.timeZone}
           />
@@ -589,7 +589,7 @@ export function DriverDetailPage() {
             value={setDriverNote(store.value, driverSeed, privateNote, agent?.id ?? "")}
             disabled={!privateNote.trim()}
             onDone={() => {
-              setNotice("Private driver note saved.");
+              setNotice(tr("Private driver note saved."));
               setPrivateNote("");
             }}
           >{tr("Save private note")}</CommandButton>

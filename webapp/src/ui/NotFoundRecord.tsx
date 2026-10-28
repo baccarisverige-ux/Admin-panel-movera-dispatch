@@ -15,8 +15,8 @@ export function NotFoundRecord({ kind, id, list, listLabel }: { kind: string; id
   return (
     <div className="page-heading not-found" data-testid="record-missing">
       <div>
-        <h2>{trn("{0} not found", kind)}</h2>
-        <p className="state-line">{trn("{0} It may be in another country or zone, it may have been deleted, or the address is wrong.", id ? <>{trn("There is no {0} {1} you can open.", kind.toLowerCase(), <b>{id}</b>)}</> : <>{trn("There is no such {0}.", kind.toLowerCase())}</>)}</p>
+        <h2>{trn("{0} not found", trx(kind))}</h2>
+        <p className="state-line">{trn("{0} It may be in another country or zone, it may have been deleted, or the address is wrong.", id ? <>{trn("There is no {0} {1} you can open.", trx(kind).toLowerCase(), <b>{id}</b>)}</> : <>{trn("There is no such {0}.", trx(kind).toLowerCase())}</>)}</p>
         <form className="not-found-search" role="search" onSubmit={(event) => event.preventDefault()}>
           <label className="pl-search">
             <Search size={14} aria-hidden="true" />
@@ -30,7 +30,7 @@ export function NotFoundRecord({ kind, id, list, listLabel }: { kind: string; id
             </ul>
           ) : <p className="state-line">{search.isLoading ? tr("Searching.") : tr("Nothing matches.")}</p>
         ) : null}
-        <Link className="dash-btn small ghost not-found-back" to={list}>{trn("{0} Back to {1}", <ArrowLeft size={13} aria-hidden="true" />, listLabel)}</Link>
+        <Link className="dash-btn small ghost not-found-back" to={list}>{trn("{0} Back to {1}", <ArrowLeft size={13} aria-hidden="true" />, trx(listLabel))}</Link>
       </div>
     </div>
   );

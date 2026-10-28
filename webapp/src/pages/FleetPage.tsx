@@ -13,6 +13,7 @@ import { Cards } from "../reports/ui";
 import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { VehicleRulesView } from "../vehicles/RulesView";
 import { DataTable } from "../ui/DataTable";
+import { tr, trn } from "../i18n";
 
 const VIEWS = [
   { id: "all", label: "All" },
@@ -88,16 +89,16 @@ export function FleetPage() {
     return next;
   }, { replace: true });
 
-  if (vehicles.isLoading || fleets.isLoading || store.loading) return <p className="state-line">Loading vehicles.</p>;
+  if (vehicles.isLoading || fleets.isLoading || store.loading) return <p className="state-line">{tr("Loading vehicles.")}</p>;
 
   if (params.get("view") === "rules") {
     return (
       <div className="dx-page vh-page">
         <header className="dx-head">
-          <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => set({ view: null })}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+          <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => set({ view: null })}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
           <div className="dx-head-text">
-            <h2>Vehicle rules for {scope.market.name}</h2>
-            <p>Which car fits which category, when papers count as expiring, and what happens when they run out.</p>
+            <h2>{trn("Vehicle rules for {0}", scope.market.name)}</h2>
+            <p>{tr("Which car fits which category, when papers count as expiring, and what happens when they run out.")}</p>
           </div>
         </header>
         <VehicleRulesView rules={rules} country={scope.market.id} cars={rows.filter((row) => countryOfZone(row.record.zoneId) === scope.market.id).map((row) => ({ year: row.profile.year, seats: row.profile.seats, fuel: row.profile.fuel, category: row.profile.category }))} editable={editable} />
@@ -108,15 +109,12 @@ export function FleetPage() {
   return (
     <div className="dx-page vh-page">
       <header className="dx-head">
-        <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
-          <h2>Vehicles</h2>
-          <p>
-            {shown.length} vehicles in this view. Eligibility uses year, seats, fuel/category rules, registration review and account state.
-            {agent?.scope.fleetPartnerId ? ` Fleet partner scope: ${agent.scope.fleetPartnerId}.` : ""}
-          </p>
+          <h2>{tr("Vehicles")}</h2>
+          <p>{trn("{0} vehicles in this view. Eligibility uses year, seats, fuel/category rules, registration review and account state.{1}", shown.length, agent?.scope.fleetPartnerId ? tr(" Fleet partner scope: {0}.", [agent.scope.fleetPartnerId]) : "")}</p>
         </div>
-        <button data-command="admin.vehicle.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "rules" })}><Settings2 size={14} aria-hidden="true" /> Vehicle rules</button>
+        <button data-command="admin.vehicle.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "rules" })}><Settings2 size={14} aria-hidden="true" />{" "}{tr("Vehicle rules")}</button>
       </header>
 
       <Cards
@@ -133,7 +131,7 @@ export function FleetPage() {
         ]}
       />
 
-      <nav className="vh-groups" aria-label="Vehicle views">
+      <nav className="vh-groups" aria-label={tr("Vehicle views")}>
         {VIEWS.map((item) => (
           <button key={item.id} data-command="admin.table.filter" type="button" className={`vh-group ${VIEW_TONE[item.id]}${view === item.id ? " active" : ""}`} aria-pressed={view === item.id} onClick={() => set({ show: item.id === "all" ? null : item.id })}>
             <span className="vh-group-icon" aria-hidden="true">{VIEW_ICON[item.id]}</span>
@@ -142,9 +140,7 @@ export function FleetPage() {
         ))}
       </nav>
 
-      <p className="state-line vh-help">
-        Fleet partners: {(fleets.data ?? []).map((fleet) => `${fleet.id} ${fleet.name}`).join(" · ") || "none in scope"}.
-      </p>
+      <p className="state-line vh-help">{trn("Fleet partners: {0}.", (fleets.data ?? []).map((fleet) => `${fleet.id} ${fleet.name}`).join(" · ") || tr("none in scope"))}</p>
 
       <LiveListBar list="vehicles" />
       <DataTable

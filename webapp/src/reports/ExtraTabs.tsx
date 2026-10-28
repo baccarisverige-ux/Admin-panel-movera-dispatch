@@ -1,4 +1,4 @@
-import { tr, trx } from "../i18n";
+import { tr, trx, trn, uiLocale } from "../i18n";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { Building2, Flame, Gift, Landmark, LifeBuoy, MapPin, ShieldAlert, Tags } from "lucide-react";
@@ -25,7 +25,7 @@ import { TAX_RULES_KEY, companyTotals, compareZones, emptyTaxRules, fleetRows, n
 import { useCsv, useZoneRows, type TabProps } from "./Tabs";
 import { Bars, Cards, Delta, Notes, Panel, SortTable } from "./ui";
 
-const count = (value: number) => new Intl.NumberFormat("en-GB").format(Math.round(value));
+const count = (value: number) => new Intl.NumberFormat(uiLocale()).format(Math.round(value));
 const sek = (minor: number) => formatMoney(minor, "SE");
 
 /** Taxes: VAT and tax for a Swedish company working in Sweden, France and Tunisia. */
@@ -73,20 +73,20 @@ export function TaxesTab({ market: current, zones, window, compare, fmt, onCsv }
           <SortTable label={tr("Taxes by country")} rows={lines} rowKey={(item) => item.market.id} columns={[
             { id: "country", label: "Country", value: (item) => item.market.name, show: (item) => <b className={item.market.id === current.id ? "rp-now" : undefined}>{item.market.name}</b> },
             { id: "gross", label: "Bookings", value: (item) => item.line.grossMinor, show: (item) => formatMoney(item.line.grossMinor, item.market.id), numeric: true },
-            { id: "rideVat", label: "VAT in rides", value: (item) => item.line.rideVatMinor, show: (item) => <>{formatMoney(item.line.rideVatMinor, item.market.id)} <small className="rp-muted">{item.line.rideVatBy === "Off" ? "off" : `by ${item.line.rideVatBy}`}</small></>, numeric: true },
+            { id: "rideVat", label: "VAT in rides", value: (item) => item.line.rideVatMinor, show: (item) => <>{formatMoney(item.line.rideVatMinor, item.market.id)} <small className="rp-muted">{item.line.rideVatBy === "Off" ? tr("off") : tr("by {0}", [item.line.rideVatBy])}</small></>, numeric: true },
             { id: "commission", label: "Commission", value: (item) => item.line.commissionMinor, show: (item) => formatMoney(item.line.commissionMinor, item.market.id), numeric: true },
             { id: "swedishVat", label: "Swedish VAT", value: (item) => item.line.commissionVatMinor, show: (item) => formatMoney(item.line.commissionVatMinor, item.market.id), numeric: true },
             { id: "reverse", label: "Reverse charge", value: (item) => item.line.reverseChargeMinor, show: (item) => formatMoney(item.line.reverseChargeMinor, item.market.id), numeric: true },
             { id: "owes", label: "Movera owes", value: (item) => item.line.moveraOwesMinor, show: (item) => formatMoney(item.line.moveraOwesMinor, item.market.id), numeric: true },
             { id: "owesSek", label: "In SEK", value: (item) => toSekMinor(item.line.moveraOwesMinor, item.market.id, item.minorUnits, rules), show: (item) => sek(toSekMinor(item.line.moveraOwesMinor, item.market.id, item.minorUnits, rules)), numeric: true },
           ]} />
-          <p className="rp-foot">{tr("Movera owes in total")} <b>{sek(company.owesSekMinor)}</b> {tr("· Commission earned")} <b>{sek(company.commissionSekMinor)}</b>{company.companyTaxSekMinor !== null ? <> · Company tax about <b>{sek(company.companyTaxSekMinor)}</b> ({rules.companyTax.pct}% of net revenue, before costs)</> : null} · 1 EUR = {rules.sekPer.EUR} SEK · 1 TND = {rules.sekPer.TND} SEK</p>
+          <p className="rp-foot">{tr("Movera owes in total")} <b>{sek(company.owesSekMinor)}</b> {tr("· Commission earned")} <b>{sek(company.commissionSekMinor)}</b>{company.companyTaxSekMinor !== null ? <>{" "}{trn("· Company tax about {0} ({1}% of net revenue, before costs)", <b>{sek(company.companyTaxSekMinor)}</b>, rules.companyTax.pct)}</> : null} · 1 EUR = {rules.sekPer.EUR} SEK · 1 TND = {rules.sekPer.TND} SEK</p>
         </Panel>
         <SettingsCard title={tr("Tax rules for {0}", [current.name])} icon={<Landmark size={15} />} tone="orange" help={tr("Rates and who pays. Change them when the accountant says so; every rule has a switch.")}>
           {rate("VAT in ride prices", "rideVat", "Passenger transport VAT, inside the price riders pay.")}
-          <Row label={tr("Movera sells the ride")} help="On: Movera is the seller and pays the ride VAT. Off: the driver or fleet sells the ride; Movera only takes a commission."><Switch label={tr("Movera sells the ride")} on={rule.moveraSellsRide} disabled={!editable} onChange={(moveraSellsRide) => patch({ moveraSellsRide })} /></Row>
+          <Row label={tr("Movera sells the ride")} help={tr("On: Movera is the seller and pays the ride VAT. Off: the driver or fleet sells the ride; Movera only takes a commission.")}><Switch label={tr("Movera sells the ride")} on={rule.moveraSellsRide} disabled={!editable} onChange={(moveraSellsRide) => patch({ moveraSellsRide })} /></Row>
           {rate("VAT on commission", "commissionVat", "Swedish VAT Movera adds on its commission.")}
-          {current.id !== "SE" ? <Row label={tr("Reverse charge")} help="On: commission to drivers abroad is billed without Swedish VAT; they account for it at home."><Switch label={tr("Reverse charge")} on={rule.reverseCharge} disabled={!editable} onChange={(reverseCharge) => patch({ reverseCharge })} /></Row> : null}
+          {current.id !== "SE" ? <Row label={tr("Reverse charge")} help={tr("On: commission to drivers abroad is billed without Swedish VAT; they account for it at home.")}><Switch label={tr("Reverse charge")} on={rule.reverseCharge} disabled={!editable} onChange={(reverseCharge) => patch({ reverseCharge })} /></Row> : null}
           {rate("Tax kept from drivers", "withholding", "Tax kept back from payouts where the country asks for it.")}
           {error ? <p role="alert" className="dx-issues">{error}</p> : null}
           <div className="actions">
@@ -94,7 +94,7 @@ export function TaxesTab({ market: current, zones, window, compare, fmt, onCsv }
             {draft ? <button data-command="admin.reports.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{tr("Undo changes")}</button> : null}
           </div>
         </SettingsCard>
-        <SettingsCard title={tr("Company")} icon={<Building2 size={15} />} tone="blue" help="Exchange rates to SEK and the company tax estimate.">
+        <SettingsCard title={tr("Company")} icon={<Building2 size={15} />} tone="blue" help={tr("Exchange rates to SEK and the company tax estimate.")}>
           <CompanyRules rules={rules} editable={editable} loading={slice.loading} onSaved={() => setNotice(tr("Company rules saved."))} />
           <p className="dx-note">{tr("Movera is a Swedish company. Money earned in France and Tunisia is shown in SEK with the rates above, so the accountant sees one total. Demo rides until the backend is connected.")}</p>
         </SettingsCard>
@@ -113,7 +113,7 @@ function CompanyRules({ rules, editable, loading, onSaved }: { rules: TaxRules; 
     <>
       <Row label={tr("1 EUR in SEK")}><Num label={tr("SEK per EUR")} value={value.sekPer.EUR} unit="SEK" min={0.01} step={0.1} disabled={!editable} onChange={(EUR) => setDraft({ ...value, sekPer: { ...value.sekPer, EUR } })} /></Row>
       <Row label={tr("1 TND in SEK")}><Num label={tr("SEK per TND")} value={value.sekPer.TND} unit="SEK" min={0.01} step={0.1} disabled={!editable} onChange={(TND) => setDraft({ ...value, sekPer: { ...value.sekPer, TND } })} /></Row>
-      <Row label={tr("Company tax estimate")} help="Swedish company tax on net revenue, before costs. A rough number for planning, not the tax return." on={value.companyTax.on} onToggle={(on) => setDraft({ ...value, companyTax: { ...value.companyTax, on } })} disabled={!editable}>
+      <Row label={tr("Company tax estimate")} help={tr("Swedish company tax on net revenue, before costs. A rough number for planning, not the tax return.")} on={value.companyTax.on} onToggle={(on) => setDraft({ ...value, companyTax: { ...value.companyTax, on } })} disabled={!editable}>
         <Num label={tr("Company tax rate")} value={value.companyTax.pct} unit="%" min={0} max={50} step={0.1} disabled={!editable || !value.companyTax.on} onChange={(pct) => setDraft({ ...value, companyTax: { ...value.companyTax, pct } })} />
       </Row>
       {error ? <p role="alert" className="dx-issues">{error}</p> : null}
@@ -156,7 +156,7 @@ export function FleetsTab({ market: current, zones, window, compare, fmt, money,
         {rows.length ? (
           <SortTable label={tr("Fleet owners")} rows={rows} rowKey={(row) => row.id} initial="trips" columns={[
             { id: "name", label: "Fleet", value: (row) => row.name, show: (row) => <Link to={`/fleets/${row.id}`}>{row.name}</Link> },
-            { id: "drivers", label: "Drivers", value: (row) => row.drivers, show: (row) => <>{row.drivers} <small className="rp-muted">{row.online} online</small></>, numeric: true },
+            { id: "drivers", label: "Drivers", value: (row) => row.drivers, show: (row) => <>{row.drivers} <small className="rp-muted">{trn("{0} online", row.online)}</small></>, numeric: true },
             { id: "trips", label: "Rides", value: (row) => row.trips, show: (row) => <>{count(row.trips)} {compare ? <Delta now={row.trips} before={row.previousTrips} /> : null}</>, numeric: true },
             { id: "perDriver", label: "Per driver", value: (row) => row.perDriverTrips, numeric: true },
             { id: "gross", label: "Bookings", value: (row) => row.grossMinor, show: (row) => money(row.grossMinor), numeric: true },
@@ -204,7 +204,7 @@ export function ZonesTab({ market: current, zones, window, compare, fmt, money, 
             { id: "perRide", label: "Per ride", value: (row) => row.perRideMinor, show: (row) => money(row.perRideMinor), numeric: true },
             { id: "cancel", label: "Cancel rate", value: (row) => row.cancelPct, show: (row) => <>{row.cancelPct}% {compare ? <Delta now={row.cancelPct} before={row.previousCancelPct} goodDown /> : null}</>, numeric: true },
             { id: "wait", label: "Wait", value: (row) => row.waitMin, show: (row) => `${row.waitMin} min`, numeric: true },
-            { id: "ratio", label: "Busy now", value: (row) => row.ratio, show: (row) => <span className={row.ratio > 1.4 ? "rp-hot" : undefined}>{row.ratio} per free driver</span>, numeric: true },
+            { id: "ratio", label: "Busy now", value: (row) => row.ratio, show: (row) => <span className={row.ratio > 1.4 ? "rp-hot" : undefined}>{trn("{0} per free driver", row.ratio)}</span>, numeric: true },
           ]} />
         </Panel>
       </div>

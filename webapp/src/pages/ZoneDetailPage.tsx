@@ -336,9 +336,9 @@ export function ZoneDetailPage() {
               <Toggle label={tr("Cash allowed")} checked={zone.cash} disabled={!canEdit} onChange={(cash) => save({ cash })} />
               <Toggle label={tr("PIN at pickup")} hint={tr("Rider tells the driver a code")} checked={zone.pinRequired} disabled={!canEdit} onChange={(pinRequired) => save({ pinRequired })} />
             </div>
-            <Chips legend="Ride categories" all={RIDE_CATEGORIES} labels={CATEGORY_LABEL} value={zone.categories} disabled={!canEdit} onChange={(categories) => save({ categories })} />
-            <Chips legend="Ride options" all={RIDE_OPTIONS} labels={OPTION_LABEL} value={zone.options} disabled={!canEdit} onChange={(options) => save({ options })} />
-            <Chips legend="Payment methods" all={ZONE_PAYMENT_METHODS} labels={PAYMENT_LABEL} value={zone.paymentMethods} disabled={!canEdit} onChange={(paymentMethods) => save({ paymentMethods })} />
+            <Chips legend={tr("Ride categories")} all={RIDE_CATEGORIES} labels={CATEGORY_LABEL} value={zone.categories} disabled={!canEdit} onChange={(categories) => save({ categories })} />
+            <Chips legend={tr("Ride options")} all={RIDE_OPTIONS} labels={OPTION_LABEL} value={zone.options} disabled={!canEdit} onChange={(options) => save({ options })} />
+            <Chips legend={tr("Payment methods")} all={ZONE_PAYMENT_METHODS} labels={PAYMENT_LABEL} value={zone.paymentMethods} disabled={!canEdit} onChange={(paymentMethods) => save({ paymentMethods })} />
             <div className="zd-fields">
               <TextField label={tr("Oldest app version allowed")} value={zone.minAppVersion} disabled={!canEdit} onCommit={(minAppVersion) => save({ minAppVersion })} />
               <TextField label={tr("Paused until")} type="datetime-local" value={zone.suspendedUntil} disabled={!canEdit} onCommit={(suspendedUntil) => save({ suspendedUntil })} />

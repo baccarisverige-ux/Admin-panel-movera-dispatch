@@ -63,9 +63,9 @@ function AmountList({ title, help, item, prefix, plus, list, saved, max, country
           return (
             <li key={entry.id} className={entry.enabled ? undefined : "off"}>
               <span className="cx-index" aria-hidden="true">{index + 1}</span>
-              <NumberField label={`${item} ${index + 1}`} value={entry.amount} unit={symbol} step={moneyStep(country)} max={max} disabled={!canEdit} changed={!before || before.amount !== entry.amount} onChange={(amount) => set(entry.id, { amount })} />
+              <NumberField label={`${trx(item)} ${index + 1}`} value={entry.amount} unit={symbol} step={moneyStep(country)} max={max} disabled={!canEdit} changed={!before || before.amount !== entry.amount} onChange={(amount) => set(entry.id, { amount })} />
               <label className="mini-switch">
-                <input type="checkbox" aria-label={tr("{0} {1} active", [item, index + 1])} checked={entry.enabled} disabled={!canEdit} onChange={(event) => set(entry.id, { enabled: event.target.checked })} />
+                <input type="checkbox" aria-label={tr("{0} {1} active", [trx(item), index + 1])} checked={entry.enabled} disabled={!canEdit} onChange={(event) => set(entry.id, { enabled: event.target.checked })} />
                 <span aria-hidden="true"><i /></span>
                 {entry.enabled ? tr("Active") : tr("Off")}
               </label>

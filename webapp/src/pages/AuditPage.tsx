@@ -11,6 +11,7 @@ import { logExport } from "../reports/activityLog";
 import { Cards } from "../reports/ui";
 import { DataTable } from "../ui/DataTable";
 import { CommandButton } from "../ui/CommandButton";
+import { tr, trn } from "../i18n";
 
 const PAGE = 50;
 
@@ -57,18 +58,15 @@ export function AuditPage() {
     <div className="dx-page pl-page">
       <div className="page-heading">
         <div className="pl-head">
-          <button data-command="admin.auditLog.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+          <button data-command="admin.auditLog.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
           <div>
-            <h2>Audit and approvals</h2>
-            <p>
-              Generic command audit. Revision {revision.data ?? "…"}. Every business command records actor, action,
-              target, scope, before, after, reason and result.
-            </p>
+            <h2>{tr("Audit and approvals")}</h2>
+            <p>{trn("Generic command audit. Revision {0}. Every business command records actor, action, target, scope, before, after, reason and result.", revision.data ?? "…")}</p>
           </div>
         </div>
         <div className="actions">
-          <CommandButton command="admin.audit.refund50" className="secondary-btn" type="button" targetId="RF-SMALL" before="open" after="refunded" amountOre={5_000}>Refund 50 kr</CommandButton>
-          <CommandButton command="admin.audit.refund250" className="primary-btn" type="button" targetId="RF-LARGE" before="open" after="pending approval" amountOre={60_000}>Refund 600 kr</CommandButton>
+          <CommandButton command="admin.audit.refund50" className="secondary-btn" type="button" targetId="RF-SMALL" before="open" after="refunded" amountOre={5_000}>{tr("Refund 50 kr")}</CommandButton>
+          <CommandButton command="admin.audit.refund250" className="primary-btn" type="button" targetId="RF-LARGE" before="open" after="pending approval" amountOre={60_000}>{tr("Refund 600 kr")}</CommandButton>
         </div>
       </div>
 
@@ -86,9 +84,9 @@ export function AuditPage() {
       />
 
       <article className="panel">
-        <h3>Pending approvals</h3>
+        <h3>{tr("Pending approvals")}</h3>
         {pending.length === 0 ? (
-          <p className="state-line">No pending approvals.</p>
+          <p className="state-line">{tr("No pending approvals.")}</p>
         ) : (
           <DataTable
             head={["Approval", "Action", "Target", "Requested by", "Amount", "Reason", "Status", "Decision"]}
@@ -102,28 +100,28 @@ export function AuditPage() {
               item.reason,
               item.status,
               <div className="actions" key={`${item.id}-decision`}>
-                <CommandButton command="admin.approval.approve" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={Boolean(decideBlock(item, "approve"))} title={decideBlock(item, "approve")}>Approve</CommandButton>
-                <CommandButton command="admin.approval.reject" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={Boolean(decideBlock(item, "decide"))} title={decideBlock(item, "decide")}>Reject</CommandButton>
+                <CommandButton command="admin.approval.approve" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={Boolean(decideBlock(item, "approve"))} title={decideBlock(item, "approve")}>{tr("Approve")}</CommandButton>
+                <CommandButton command="admin.approval.reject" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={Boolean(decideBlock(item, "decide"))} title={decideBlock(item, "decide")}>{tr("Reject")}</CommandButton>
               </div>,
             ])}
           />
         )}
       </article>
 
-      <section className="panel pl-audit" aria-label="Who did what">
-        <h3>Who did what</h3>
+      <section className="panel pl-audit" aria-label={tr("Who did what")}>
+        <h3>{tr("Who did what")}</h3>
         <div className="pl-filters">
-          <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label="Search the audit" placeholder="Target, action, reason or value" value={filters.query} onChange={(e) => patch({ query: e.target.value })} /></label>
-          <select aria-label="Admin" value={filters.actor} onChange={(e) => patch({ actor: e.target.value })}><option value="">Every admin</option>{actors.map((id) => <option key={id} value={id}>{nameOf(id)}</option>)}</select>
-          <select aria-label="Section" value={filters.area} onChange={(e) => patch({ area: e.target.value })}><option value="">Every section</option>{areas.map((area) => <option key={area} value={area}>{area}</option>)}</select>
-          <select aria-label="Result" value={filters.result} onChange={(e) => patch({ result: e.target.value })}><option value="">Any result</option>{Object.entries(RESULT_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>
-          <label className="pl-date"><span>From</span><input type="date" aria-label="From date" value={filters.from} onChange={(e) => patch({ from: e.target.value })} /></label>
-          <label className="pl-date"><span>To</span><input type="date" aria-label="To date" value={filters.to} onChange={(e) => patch({ to: e.target.value })} /></label>
-          {filtered ? <button data-command="admin.auditLog.view" type="button" className="dash-btn small ghost" onClick={() => patch(EMPTY_FILTERS)}>Clear filters</button> : null}
-          <CommandButton command="admin.auditLog.export" className="dash-btn small" type="button" confirmTarget={false} disabled={!shown.length} onDone={exportCsv}><Download size={13} aria-hidden="true" /> Export {shown.length} rows</CommandButton>
+          <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label={tr("Search the audit")} placeholder={tr("Target, action, reason or value")} value={filters.query} onChange={(e) => patch({ query: e.target.value })} /></label>
+          <select aria-label={tr("Admin")} value={filters.actor} onChange={(e) => patch({ actor: e.target.value })}><option value="">{tr("Every admin")}</option>{actors.map((id) => <option key={id} value={id}>{nameOf(id)}</option>)}</select>
+          <select aria-label={tr("Section")} value={filters.area} onChange={(e) => patch({ area: e.target.value })}><option value="">{tr("Every section")}</option>{areas.map((area) => <option key={area} value={area}>{area}</option>)}</select>
+          <select aria-label={tr("Result")} value={filters.result} onChange={(e) => patch({ result: e.target.value })}><option value="">{tr("Any result")}</option>{Object.entries(RESULT_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>
+          <label className="pl-date"><span>{tr("From")}</span><input type="date" aria-label={tr("From date")} value={filters.from} onChange={(e) => patch({ from: e.target.value })} /></label>
+          <label className="pl-date"><span>{tr("To")}</span><input type="date" aria-label={tr("To date")} value={filters.to} onChange={(e) => patch({ to: e.target.value })} /></label>
+          {filtered ? <button data-command="admin.auditLog.view" type="button" className="dash-btn small ghost" onClick={() => patch(EMPTY_FILTERS)}>{tr("Clear filters")}</button> : null}
+          <CommandButton command="admin.auditLog.export" className="dash-btn small" type="button" confirmTarget={false} disabled={!shown.length} onDone={exportCsv}><Download size={13} aria-hidden="true" />{" "}{trn("Export {0} rows", shown.length)}</CommandButton>
         </div>
-        {audit.isLoading ? <p className="pl-help">Loading the audit.</p> : shown.length ? (
-          <ol className="pl-log" aria-label="Audit log">
+        {audit.isLoading ? <p className="pl-help">{tr("Loading the audit.")}</p> : shown.length ? (
+          <ol className="pl-log" aria-label={tr("Audit log")}>
             {shown.slice(0, limit).map((row) => {
               const change = changeOf(row);
               return (
@@ -131,30 +129,30 @@ export function AuditPage() {
                   <button data-command="admin.auditLog.view" type="button" aria-expanded={open === row.id} onClick={() => setOpen(open === row.id ? null : row.id)}>
                     <time dateTime={row.at}>{new Date(row.at).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" })}</time>
                     <span className="pl-who">{nameOf(row.actorId)}</span>
-                    <span className="pl-what"><b>{row.action}</b> on {row.targetId || "—"}{change ? <small className="pl-change">{change}</small> : null}</span>
+                    <span className="pl-what">{trn("{0} on {1}{2}", <b>{row.action}</b>, row.targetId || "—", change ? <small className="pl-change">{change}</small> : null)}</span>
                     <span className={`pl-result ${row.result}`}>{RESULT_LABEL[row.result] ?? row.result}</span>
                   </button>
                   {open === row.id ? (
                     <dl className="pl-detail">
-                      <dt>Admin</dt><dd><Link to={`/team/${row.actorId}`}>{nameOf(row.actorId)}</Link> · <Link to={`/reports?tab=work&admin=${row.actorId}`}>All their work</Link></dd>
-                      <dt>Section</dt><dd>{areaOf(row.action)}</dd>
-                      <dt>Scope</dt><dd>{row.scope || "—"}</dd>
-                      <dt>Before</dt><dd>{row.before || "(empty)"}</dd>
-                      <dt>After</dt><dd>{row.after || "(empty)"}</dd>
-                      <dt>Reason</dt><dd>{row.reason || "—"}</dd>
-                      <dt>Operation</dt><dd><code>{row.operationId}</code></dd>
+                      <dt>{tr("Admin")}</dt><dd><Link to={`/team/${row.actorId}`}>{nameOf(row.actorId)}</Link> · <Link to={`/reports?tab=work&admin=${row.actorId}`}>{tr("All their work")}</Link></dd>
+                      <dt>{tr("Section")}</dt><dd>{areaOf(row.action)}</dd>
+                      <dt>{tr("Scope")}</dt><dd>{row.scope || "—"}</dd>
+                      <dt>{tr("Before")}</dt><dd>{row.before || tr("(empty)")}</dd>
+                      <dt>{tr("After")}</dt><dd>{row.after || tr("(empty)")}</dd>
+                      <dt>{tr("Reason")}</dt><dd>{row.reason || "—"}</dd>
+                      <dt>{tr("Operation")}</dt><dd><code>{row.operationId}</code></dd>
                     </dl>
                   ) : null}
                 </li>
               );
             })}
           </ol>
-        ) : <p className="dx-calm">{filtered ? "No action matches these filters." : "Nothing recorded yet."}</p>}
-        {shown.length > limit ? <button data-command="admin.auditLog.view" type="button" className="dash-btn small ghost" onClick={() => setLimit(limit + PAGE)}>Show more ({shown.length - limit} left)</button> : null}
+        ) : <p className="dx-calm">{filtered ? tr("No action matches these filters.") : tr("Nothing recorded yet.")}</p>}
+        {shown.length > limit ? <button data-command="admin.auditLog.view" type="button" className="dash-btn small ghost" onClick={() => setLimit(limit + PAGE)}>{trn("Show more ({0} left)", shown.length - limit)}</button> : null}
       </section>
 
       <article className="panel">
-        <h3>Command audit</h3>
+        <h3>{tr("Command audit")}</h3>
         <DataTable
           head={["When", "Operation", "Agent", "Action", "Target", "Scope", "Before", "After", "Reason", "Result"]}
           rowIds={rows.map((entry) => entry.id)}

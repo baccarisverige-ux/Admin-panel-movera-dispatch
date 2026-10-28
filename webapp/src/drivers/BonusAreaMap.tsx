@@ -54,13 +54,13 @@ export function BonusAreaMap({ country, areas, onChange }: { country: MarketId; 
     if (ring.length < 3) return;
     onChange([...areas, { id: `A${Date.now().toString(36)}${areas.length}`, name: name || `Area ${areas.length + 1}`, ring }]);
     setFitTo(ring);
-    setNotice(`${name || `Area ${areas.length + 1}`} added. ${ringAreaKm(ring).toFixed(2)} km².`);
+    setNotice(tr("{0} added. {1} km².", [name || `Area ${areas.length + 1}`, ringAreaKm(ring).toFixed(2)]));
   }
 
   function pickTool(next: DrawTool) {
     setTool(next);
     setMethod(null);
-    setNotice(HINT[next] ?? "Move the map. Pick a tool to draw.");
+    setNotice(HINT[next] ?? tr("Move the map. Pick a tool to draw."));
   }
 
   function pickCity(id: string) {

@@ -6,7 +6,7 @@ import { tr, trx } from "../i18n";
 
 export function Card({ title, icon, help, tone = "blue", aside, children, off = false }: { title: string; icon: ReactNode; help?: string; tone?: "blue" | "purple" | "orange" | "green" | "red" | "pink"; aside?: ReactNode; children: ReactNode; off?: boolean }) {
   return (
-    <section className={off ? `dx-card ${tone} off` : `dx-card ${tone}`} aria-label={title}>
+    <section className={off ? `dx-card ${tone} off` : `dx-card ${tone}`} aria-label={trx(title)}>
       <header className="dx-card-head">
         <span className="dx-card-icon" aria-hidden="true">{icon}</span>
         <span className="dx-card-title"><b>{trx(title)}</b>{help ? <small>{trx(help)}</small> : null}</span>
@@ -21,7 +21,7 @@ export function Card({ title, icon, help, tone = "blue", aside, children, off = 
 export function Switch({ label, on, onChange, disabled }: { label: string; on: boolean; onChange: (next: boolean) => void; disabled?: boolean }) {
   return (
     <label className={on ? "dx-switch on" : "dx-switch"} title={on ? tr("On") : tr("Off")}>
-      <input type="checkbox" role="switch" aria-label={tr("{0} on", [label])} checked={on} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
+      <input type="checkbox" role="switch" aria-label={tr("{0} on", [trx(label)])} checked={on} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
       <span className="dx-switch-track" aria-hidden="true"><i /></span>
       <span className="dx-switch-text">{on ? tr("On") : tr("Off")}</span>
     </label>
@@ -54,7 +54,7 @@ export function Num({ label, value, unit, onChange, min = 0, max, step = 1, disa
 
 export function Choice<T extends string>({ label, value, options, onChange, disabled }: { label: string; value: T; options: readonly { id: T; label: string; hint?: string }[]; onChange: (next: T) => void; disabled?: boolean }) {
   return (
-    <span className="dx-choice" role="radiogroup" aria-label={label}>
+    <span className="dx-choice" role="radiogroup" aria-label={trx(label)}>
       {options.map((option) => (
         <label key={option.id} className={option.id === value ? "on" : undefined} title={trx(option.hint)}>
           <input type="radio" name={label} checked={option.id === value} disabled={disabled} onChange={() => onChange(option.id)} />

@@ -476,7 +476,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
           </MapPanel>
         ) : settings.liveMap && where.live ? (
           <MapPanel title={tr("Where they are")} note={<span className="op-help"><MapPin size={12} aria-hidden="true" /> {tr("Phone GPS sent with the SOS; car position from the server, {0} s ago.", [where.secondsAgo])}</span>}>
-            <RouteMap stops={[]} path={[]} points={[...(item.phoneAt ? [{ id: "phone", label: tr("SOS phone"), at: where.rider, tone: "alert" as const }] : []), ...(where.driver ? [{ id: "car", label: `${tr("Car")} · ${driver?.name ?? item.driverId ?? ""}`, at: where.driver, tone: item.kind === "car_lost" ? "alert" as const : "driver" as const }] : [])]} label={`Where the people of ${item.id} are`} />
+            <RouteMap stops={[]} path={[]} points={[...(item.phoneAt ? [{ id: "phone", label: tr("SOS phone"), at: where.rider, tone: "alert" as const }] : []), ...(where.driver ? [{ id: "car", label: `${tr("Car")} · ${driver?.name ?? item.driverId ?? ""}`, at: where.driver, tone: item.kind === "car_lost" ? "alert" as const : "driver" as const }] : [])]} label={tr("Where the people of {0} are", [item.id])} />
           </MapPanel>
         ) : settings.liveMap && isLiveData() ? (
           <MapPanel title={tr("Where they are")} note={<span className="op-help"><MapPin size={12} aria-hidden="true" /> {tr("No position from the server for this case.")}</span>}>
@@ -484,7 +484,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
           </MapPanel>
         ) : settings.liveMap ? (
           <MapPanel title={tr("Where they are now")} note={<span className={stale ? "op-late" : "op-help"}><MapPin size={12} aria-hidden="true" /> {stale ? tr("Location updated {0} s ago, older than {1} s: call to check.", [where.secondsAgo, policy.staleSeconds]) : tr("Location updated {0} s ago.", [where.secondsAgo])} {tr("Demo location until the apps send it.")}</span>}>
-            <RouteMap stops={[]} path={[]} points={[{ id: "rider", label: item.who, at: where.rider, tone: item.raisedBy === "rider" ? "alert" : "rider" }, ...(where.driver ? [{ id: "driver", label: driver?.name ?? tr("Driver"), at: where.driver, tone: item.raisedBy === "driver" ? "alert" as const : "driver" as const }] : [])]} label={`Where the people of ${item.id} are`} />
+            <RouteMap stops={[]} path={[]} points={[{ id: "rider", label: item.who, at: where.rider, tone: item.raisedBy === "rider" ? "alert" : "rider" }, ...(where.driver ? [{ id: "driver", label: driver?.name ?? tr("Driver"), at: where.driver, tone: item.raisedBy === "driver" ? "alert" as const : "driver" as const }] : [])]} label={tr("Where the people of {0} are", [item.id])} />
           </MapPanel>
         ) : null}
         <section className="op-section" aria-label={tr("People and trip")}>

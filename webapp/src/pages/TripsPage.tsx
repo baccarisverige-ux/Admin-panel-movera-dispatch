@@ -239,7 +239,7 @@ export function TripsPage() {
               const next = new URLSearchParams(chosen.query);
               for (const key of ["country", "scope"]) { const value = params.get(key); if (value) next.set(key, value); }
               setParams(next, { replace: true });
-              setNotice(`View ${chosen.name} opened.`);
+              setNotice(tr("View {0} opened.", [chosen.name]));
             }}>
               <option value="">{tr("Saved views…")}</option>
               {views.map((item) => <option key={item.id} value={item.id}>{item.name}{item.shared && item.by !== agent?.id ? tr(" (shared)") : ""}</option>)}
@@ -280,7 +280,7 @@ export function TripsPage() {
         {peek ? <Peek trip={peek} driverName={peek.driverId ? driverNames.get(peek.driverId) ?? "" : ""} money={money} flagged={flagged.has(peek.id)} onClose={() => setPeekId(null)} /> : null}
       </div>
 
-      <SaveViewDialog open={saveOpen} onClose={() => setSaveOpen(false)} ops={ops} query={filterQuery()} country={country} by={agent?.id ?? ""} onSaved={(name) => setNotice(`View ${name} saved.`)} />
+      <SaveViewDialog open={saveOpen} onClose={() => setSaveOpen(false)} ops={ops} query={filterQuery()} country={country} by={agent?.id ?? ""} onSaved={(name) => setNotice(tr("View {0} saved.", [name]))} />
     </div>
   );
 }

@@ -94,7 +94,7 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
         <div className="al-filters" role="group" aria-label={tr("Show")}>
           <span className="dx-choice" role="radiogroup" aria-label={tr("What to show")}>
             {(["all", "save", "alert", "view", "export", "signin"] as const).map((kind) => (
-              <label key={kind} className={kindFilter === kind ? "on" : undefined}><input type="radio" name="rp-kind" checked={kindFilter === kind} onChange={() => setKindFilter(kind)} />{kind === "all" ? "Everything" : kind === "signin" ? "Sign in & out" : KIND_LABEL[kind]}</label>
+              <label key={kind} className={kindFilter === kind ? "on" : undefined}><input type="radio" name="rp-kind" checked={kindFilter === kind} onChange={() => setKindFilter(kind)} />{kind === "all" ? tr("Everything") : kind === "signin" ? tr("Sign in & out") : KIND_LABEL[kind]}</label>
             ))}
           </span>
         </div>
@@ -156,7 +156,7 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
         </Panel>
         {agent?.role === "super" ? <AccessCard settings={settings} /> : null}
       </div>
-      <p className="rp-foot"><KeyRound size={12} aria-hidden="true" /> Sign-ins and downloads are recorded in this browser in the demo; the backend records them for real. Rows marked Demo are example history.</p>
+      <p className="rp-foot"><KeyRound size={12} aria-hidden="true" />{" "}{tr("Sign-ins and downloads are recorded in this browser in the demo; the backend records them for real. Rows marked Demo are example history.")}</p>
     </div>
   );
 }
@@ -167,12 +167,10 @@ function AccessCard({ settings }: { settings: ReportSettings }) {
   const dirty = JSON.stringify(roles) !== JSON.stringify(settings.access.roles);
   return (
     <Panel title={tr("Who sees other admins' work")} icon={<ShieldCheck size={16} aria-hidden="true" />}>
-      <p className="dx-modal-help">Super admin and Operations always see everyone's work. Add roles here; they only see work in their own zones and country.</p>
+      <p className="dx-modal-help">{tr("Super admin and Operations always see everyone's work. Add roles here; they only see work in their own zones and country.")}</p>
       <div className="zn-chips">{choices.map((role) => <Check key={role} label={ROLE_LABELS[role]} on={roles.includes(role)} onChange={(on) => setRoles(on ? [...roles, role] : roles.filter((item) => item !== role))} />)}</div>
       <div className="dx-modal-actions">
-        <CommandButton command="admin.reports.access" className="dash-btn small" targetId="report access" confirmTarget={false} scope="all" before={settings.access.roles.join(",") || "none"} after={roles.join(",") || "none"} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, access: { roles } }} disabled={!dirty}>
-          Save who can see
-        </CommandButton>
+        <CommandButton command="admin.reports.access" className="dash-btn small" targetId="report access" confirmTarget={false} scope="all" before={settings.access.roles.join(",") || "none"} after={roles.join(",") || "none"} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, access: { roles } }} disabled={!dirty}>{tr("Save who can see")}</CommandButton>
       </div>
     </Panel>
   );

@@ -162,7 +162,7 @@ export function PaymentsPage() {
                 checked={shownPolicy[method] ?? false}
                 onChange={(event) => {
                   setPolicyDraft({ ...shownPolicy, [method]: event.target.checked });
-                  setNotice(`${method} will be ${event.target.checked ? "on" : "off"} for new checkouts in ${zone}, ${category}, ${platform} after saving.`);
+                  setNotice(tr("{0} will be {1} for new checkouts in {2}, {3}, {4} after saving.", [method, event.target.checked ? tr("on") : tr("off"), zone, category, platform]));
                 }}
               />
               {trx(METHOD_LABELS[method])}{method === "wallet" ? tr(" (one balance per currency)") : ""}
@@ -186,7 +186,7 @@ export function PaymentsPage() {
             title={!policyDirty ? tr("No unsaved payment-method change.") : undefined}
             onDone={() => {
               setPolicyDraft(null);
-              setNotice("Payment-method policy saved. Existing authorisations continue.");
+              setNotice(tr("Payment-method policy saved. Existing authorisations continue."));
             }}
           >{tr("Save payment methods")}</CommandButton>
           <button data-command="admin.card.action" className="secondary-btn" type="button" disabled={!policyDirty} onClick={() => setPolicyDraft(null)}>{tr("Discard unsaved")}</button>
@@ -216,7 +216,7 @@ export function PaymentsPage() {
                     expectedSliceRev={finance.draftRev}
                     sliceKey="finance"
                     value={voidWalletVoucher(finance, item.id, agent?.id ?? "", "Manual void").book}
-                    onDone={() => setNotice(`${item.id} voided; the ledger entry remains visible.`)}
+                    onDone={() => setNotice(tr("{0} voided; the ledger entry remains visible.", [item.id]))}
                   >{tr("void")}</CommandButton>
                 ) : null}
               </li>
@@ -244,7 +244,7 @@ export function PaymentsPage() {
             value={voucher.book}
             disabled={Boolean(voucherError)}
             title={voucherError}
-            onDone={() => setNotice(`Wallet voucher ${voucherMoney(voucherAmountOre, voucherRider)} posted for ${voucherRider}.`)}
+            onDone={() => setNotice(tr("Wallet voucher {0} posted for {1}.", [voucherMoney(voucherAmountOre, voucherRider), voucherRider]))}
           >{tr("Issue wallet voucher")}</CommandButton>
         </article>
 
@@ -264,7 +264,7 @@ export function PaymentsPage() {
             expectedSliceRev={finance.draftRev}
             sliceKey="finance"
             value={reconciliation.book}
-            onDone={() => setNotice("Reconciliation snapshot saved.")}
+            onDone={() => setNotice(tr("Reconciliation snapshot saved."))}
           >{tr("Save reconciliation")}</CommandButton>
           {finance.reconciliations.length === 0 ? <p className="state-line">{tr("No saved reconciliation run.")}</p> : (
             <ol aria-label={tr("Reconciliation history")} className="version-list">

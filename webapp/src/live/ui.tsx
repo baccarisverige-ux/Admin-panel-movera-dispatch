@@ -39,7 +39,7 @@ export function DateText({ value, withTime = false }: { value: string | undefine
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="live-field">
-      <span>{label}</span>
+      <span>{trx(label)}</span>
       <strong>{children ?? "—"}</strong>
     </div>
   );

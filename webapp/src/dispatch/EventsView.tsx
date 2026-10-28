@@ -104,7 +104,7 @@ export function EventsView({ book, market, canEdit, canBonus, onNotice }: Props)
                   </span>
                   <span className={`dx-state ${state}`}>{trx(STATE_TEXT[state])}</span>
                   <span className="dx-event-actions">
-                    <CommandButton command="admin.dispatch.event" className={event.on ? "surge-toggle on" : "surge-toggle"} targetId={event.name} confirmTarget={false} scope="all" before={event.on ? "on" : "off"} after={event.on ? "off" : "on"} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={toggled} disabled={!canEdit} aria-label={`${event.name} ${event.on ? "on" : "off"}`} onDone={() => onNotice(tr("Event {0} switched {1}.", [event.name, event.on ? "off" : "on"]))}>
+                    <CommandButton command="admin.dispatch.event" className={event.on ? "surge-toggle on" : "surge-toggle"} targetId={event.name} confirmTarget={false} scope="all" before={event.on ? "on" : "off"} after={event.on ? "off" : "on"} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={toggled} disabled={!canEdit} aria-label={`${event.name} ${event.on ? "on" : "off"}`} onDone={() => onNotice(tr("Event {0} switched {1}.", [event.name, event.on ? tr("off") : tr("on")]))}>
                       {event.on ? tr("On") : tr("Off")} <span className="switch" aria-hidden="true"><i /></span>
                     </CommandButton>
                     <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => setEditing(event)}>{trn("{0} Edit", <Pencil size={13} aria-hidden="true" />)}</button>

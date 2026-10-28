@@ -1,4 +1,4 @@
-import { tr } from "../i18n";
+import { tr, uiLocale } from "../i18n";
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { BarChart3, Bell, Car, Clock, CreditCard, Layers, MapPin, Radar, Tags, Trophy, UserRound, Users, Wallet } from "lucide-react";
@@ -63,7 +63,7 @@ export function useCsv(onCsv: (table: CsvTable) => void, table: CsvTable) {
   useEffect(() => onCsv(JSON.parse(key) as CsvTable), [key, onCsv]);
 }
 
-const count = (value: number) => new Intl.NumberFormat("en-GB").format(Math.round(value));
+const count = (value: number) => new Intl.NumberFormat(uiLocale()).format(Math.round(value));
 
 export function RidesTab({ market, zones, window, compare, filters, fmt, onCsv }: TabProps) {
   const report = useReport(market, zones, window);
@@ -195,7 +195,7 @@ export function RidersTab({ market, window, compare, fmt, money, onCsv }: TabPro
   }), [riders.rows, market.id, window]);
   const before = riders.rows.filter((row) => row.profile.country === market.id && row.bookings.some((booking) => booking.status === "completed" && inWindow(booking.at, window.prevStart, window.prevEnd)));
   const data = ridersData(rows, before.length, before.filter((row) => inWindow(row.profile.joinedAt, window.prevStart, window.prevEnd)).length);
-  useCsv(onCsv, { name: "riders", head: ["Rider", "Rides", "Spent", "New", "Used a promotion"], rows: data.top.map((row) => [row.name, row.rides, row.spentMinor / market.minorUnits, row.isNew ? "yes" : "no", row.promo ? "yes" : "no"]) });
+  useCsv(onCsv, { name: "riders", head: ["Rider", "Rides", "Spent", "New", "Used a promotion"], rows: data.top.map((row) => [row.name, row.rides, row.spentMinor / market.minorUnits, row.isNew ? tr("yes") : tr("no"), row.promo ? tr("yes") : tr("no")]) });
   return (
     <div className="rp-tab">
       <Notes notes={data.notes} />

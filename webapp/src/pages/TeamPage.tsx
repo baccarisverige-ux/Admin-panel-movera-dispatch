@@ -20,6 +20,7 @@ import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { DataTable } from "../ui/DataTable";
 import { CommandButton } from "../ui/CommandButton";
+import { tr } from "../i18n";
 
 const ROLES = Object.keys(ROLE_LABELS) as Role[];
 
@@ -52,19 +53,15 @@ function AdminsTable() {
       <p className="state-line">{notice}</p>
 
       <article className="panel">
-        <h3>Invite agent</h3>
+        <h3>{tr("Invite agent")}</h3>
         <div className="field-grid">
-          <label>
-            Name
-            <input value={inviteName} onChange={(event) => setInviteName(event.target.value)} />
+          <label>{tr("Name")}<input value={inviteName} onChange={(event) => setInviteName(event.target.value)} />
           </label>
           <label>
-            Email
+            {tr("Email")}
             <input type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} />
           </label>
-          <label>
-            Role
-            <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as Role)}>
+          <label>{tr("Role")}<select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as Role)}>
               {ROLES.map((role) => <option key={role} value={role}>{ROLE_LABELS[role]}</option>)}
             </select>
           </label>
@@ -83,11 +80,9 @@ function AdminsTable() {
             setInviteName("");
             setInviteEmail("");
             setInviteRole("viewer");
-            setNotice("Agent invited in the demo team.");
+            setNotice(tr("Agent invited in the demo team."));
           }}
-        >
-          Invite agent
-        </CommandButton>
+        >{tr("Invite agent")}</CommandButton>
       </article>
 
       <article className="panel">
@@ -101,7 +96,7 @@ function AdminsTable() {
               agent.email,
               <span key={`${agent.id}-role`}>
                 <select
-                  aria-label={`Role for ${agent.name}`}
+                  aria-label={tr("Role for {0}", [agent.name])}
                   value={desired}
                   disabled={actor.role !== "super" || actor.id === agent.id}
                   onChange={(event) => setDesiredRoles((current) => ({ ...current, [agent.id]: event.target.value as Role }))}
@@ -114,9 +109,7 @@ function AdminsTable() {
                   type="button"
                   disabled={desired === agent.role || actor.id === agent.id}
                   onDone={() => apply(changeAgentRole(session.agents, agent.id, desired, actor), `${agent.name} is now ${ROLE_LABELS[desired]}.`)}
-                >
-                  Apply
-                </CommandButton>
+                >{tr("Apply")}</CommandButton>
               </span>,
               <span key={`${agent.id}-presence`}>
                 {agent.presence}
@@ -126,9 +119,7 @@ function AdminsTable() {
                   type="button"
                   disabled={actor.role !== "super"}
                   onDone={() => apply(setAgentPresence(session.agents, agent.id, agent.presence === "online" ? "away" : "online", actor), `${agent.name} presence changed.`)}
-                >
-                  Toggle
-                </CommandButton>
+                >{tr("Toggle")}</CommandButton>
               </span>,
               scopeLabel(agent.scope.zones),
               agent.active ? "active" : "inactive",
@@ -140,9 +131,7 @@ function AdminsTable() {
                   disabled={agent.id === actor.id}
                   targetId={agent.id}
                   onDone={() => apply(resetAgentCode(session.agents, agent.id, actor), `2-step code reset for ${agent.name}.`)}
-                >
-                  Reset 2-step
-                </CommandButton>
+                >{tr("Reset 2-step")}</CommandButton>
                 {agent.active ? (
                   <CommandButton
                     command="admin.team.deactivate"
@@ -151,9 +140,7 @@ function AdminsTable() {
                     disabled={agent.id === actor.id}
                     targetId={agent.id}
                     onDone={() => apply(deactivateAgent(session.agents, agent.id, actor), `${agent.name} deactivated.`)}
-                  >
-                    Deactivate
-                  </CommandButton>
+                  >{tr("Deactivate")}</CommandButton>
                 ) : (
                   <CommandButton
                     command="admin.team.reactivate"
@@ -161,9 +148,7 @@ function AdminsTable() {
                     className="link-action"
                     targetId={agent.id}
                     onDone={() => apply(reactivateAgent(session.agents, agent.id, actor), `${agent.name} reactivated.`)}
-                  >
-                    Reactivate
-                  </CommandButton>
+                  >{tr("Reactivate")}</CommandButton>
                 )}
               </span>,
             ];
@@ -208,14 +193,14 @@ export function TeamPage() {
     <div className="dx-page pl-page">
       <div className="page-heading">
         <div className="pl-head">
-          <button data-command="admin.team.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+          <button data-command="admin.team.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
           <div>
-            <h2>Team and roles</h2>
-            <p>Eleven planned admin roles are represented. Changes are permission-gated and stored in the demo session.</p>
+            <h2>{tr("Team and roles")}</h2>
+            <p>{tr("Eleven planned admin roles are represented. Changes are permission-gated and stored in the demo session.")}</p>
           </div>
         </div>
       </div>
-      <div className="dash-tabs dx-views" role="tablist" aria-label="Team sections">
+      <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Team sections")}>
         {TEAM_TABS.map((item) => <button data-command="admin.team.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => selectTab(item.id)}>{item.label}</button>)}
       </div>
       {notice ? <p role="status" className="pl-status">{notice}</p> : null}
@@ -235,12 +220,12 @@ export function TeamPage() {
               { id: "custom", label: "Custom roles", value: ops.customRoles.length, previous: null, format: "count", info: "Roles made from switches in Roles and permissions." },
             ]}
           />
-          <Card title="Admins" icon={<Users size={15} />} tone="blue" help="Open an admin to see what they can do and what they did.">
+          <Card title={tr("Admins")} icon={<Users size={15} />} tone="blue" help={tr("Open an admin to see what they can do and what they did.")}>
             <div className="pl-filters">
-              <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label="Search admins" placeholder="Name, email or role" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
-              <select aria-label="Filter by role" value={role} onChange={(e) => setRole(e.target.value as Role | "")}><option value="">Every role</option>{ROLES.map((item) => <option key={item} value={item}>{ROLE_LABELS[item]}</option>)}</select>
+              <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label={tr("Search admins")} placeholder={tr("Name, email or role")} value={query} onChange={(e) => setQuery(e.target.value)} /></label>
+              <select aria-label={tr("Filter by role")} value={role} onChange={(e) => setRole(e.target.value as Role | "")}><option value="">{tr("Every role")}</option>{ROLES.map((item) => <option key={item} value={item}>{ROLE_LABELS[item]}</option>)}</select>
             </div>
-            <ul className="pl-admins" aria-label="Admin list">
+            <ul className="pl-admins" aria-label={tr("Admin list")}>
               {list.map((agent) => {
                 const custom = ops.customRoles.find((item) => item.id === ops.assigned[agent.id]);
                 return (
@@ -249,7 +234,7 @@ export function TeamPage() {
                       <span className={`pl-avatar ${agent.presence}`} aria-hidden="true">{agent.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</span>
                       <span className="pl-admin-text"><b>{agent.name}</b><small>{agent.email}</small></span>
                       <span className="pl-role-pill">{custom ? custom.name : ROLE_LABELS[agent.role]}</span>
-                      <small className="pl-admin-place">{placeOf(agent.scope)} · {agent.active ? agent.presence : "deactivated"}</small>
+                      <small className="pl-admin-place">{placeOf(agent.scope)} · {agent.active ? agent.presence : tr("deactivated")}</small>
                     </Link>
                   </li>
                 );

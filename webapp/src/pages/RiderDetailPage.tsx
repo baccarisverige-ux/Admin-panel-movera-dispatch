@@ -234,8 +234,8 @@ export function RiderDetailPage() {
         <div className="fd-banner red rd-banner" role="alert">
           <Wallet size={16} aria-hidden="true" />
           <span>{trn("{0} A payment failed on the rider's side. New rides are blocked until it is paid.", <b>{trn("Unpaid balance {0}.", money(row.unpaidMinor, country))}</b>)}</span>
-          <CommandButton command="admin.rider.askPay" className="dash-btn small" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before="unpaid" after="asked to pay" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={reply(care, rider, `You have an unpaid balance of ${money(row.unpaidMinor, country)}. Please update your card in the app to keep riding.`, me, now)} disabled={!can(role, "support.reply")} onDone={() => setNotice("Rider asked to pay.")}>{tr("Ask to pay")}</CommandButton>
-          <CommandButton command="admin.rider.markPaid" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={money(row.unpaidMinor, country)} after="paid" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={markPaid(care, rider.id, now)} onDone={() => setNotice("Unpaid balance marked as paid. Rides are open again.")}>{tr("Mark as paid")}</CommandButton>
+          <CommandButton command="admin.rider.askPay" className="dash-btn small" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before="unpaid" after="asked to pay" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={reply(care, rider, `You have an unpaid balance of ${money(row.unpaidMinor, country)}. Please update your card in the app to keep riding.`, me, now)} disabled={!can(role, "support.reply")} onDone={() => setNotice(tr("Rider asked to pay."))}>{tr("Ask to pay")}</CommandButton>
+          <CommandButton command="admin.rider.markPaid" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={money(row.unpaidMinor, country)} after="paid" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={markPaid(care, rider.id, now)} onDone={() => setNotice(tr("Unpaid balance marked as paid. Rides are open again."))}>{tr("Mark as paid")}</CommandButton>
         </div>
       ) : null}
       {row.waitingMin !== null ? (
@@ -329,7 +329,7 @@ export function RiderDetailPage() {
                 <label className="field">{trn("Why{0}", <input aria-label={tr("Wallet reason")} value={creditReason} onChange={(event) => setCreditReason(event.target.value)} placeholder={tr("Driver was late")} />)}</label>
               </div>
               {credit.error && (creditReason || creditAmount !== 100) ? <p className="rd-form-error">{trSentences(credit.error)}</p> : <small className="fine">{trn("At most {0} {1} at a time.", CREDIT_MAX[country], symbol)}</small>}
-              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={money(row.walletMinor, country)} after={`+${creditAmount} ${symbol}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(`Added ${creditAmount} ${symbol} to ${rider.name}'s wallet.`); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
+              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={money(row.walletMinor, country)} after={`+${creditAmount} ${symbol}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(tr("Added {0} {1} to {2}'s wallet.", [creditAmount, symbol, rider.name])); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
               {care.credits.filter((item) => item.riderId === rider.id).length ? (
                 <ul className="rd-ledger" aria-label={tr("Wallet credits")}>
                   {care.credits.filter((item) => item.riderId === rider.id).map((item) => <li key={item.id}><b>+{item.amount} {symbol}</b><span>{item.reason}</span><small>{dateTime.format(Date.parse(item.at))} · {item.by}</small></li>)}
@@ -359,7 +359,7 @@ export function RiderDetailPage() {
                 ))}
               </div>
               {refund.error && refundRide && refundReason ? <p className="rd-form-error">{trSentences(refund.error)}</p> : <small className="fine">{trn("Refunds above {0} {1} need a second admin to approve ({2}).", refundPolicy.aboveMajor[country], symbol, <Link to="/settings#refunds">{tr("set in Settings")}</Link>)}</small>}
-              <CommandButton command="admin.rider.refund" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(refundAmount * place.minorUnits)} before={refundRide?.id ?? ""} after={`${refundAmount} ${symbol} to ${refundTo}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={refund.care} disabled={!can(role, "finance.read") || Boolean(refund.error)} title={refund.error} onDone={() => { setNotice(refund.needsApproval ? `Refund of ${refundAmount} ${symbol} is waiting for a second admin to approve.` : `Refunded ${refundAmount} ${symbol} to the rider's ${DESTINATIONS.find((item) => item.id === refundTo)?.label.toLowerCase()}.`); setRefundReason(""); setRefundId(""); }}>{trn("{0} Refund {1}", <RotateCcw size={14} aria-hidden="true" />, refundAmount ? `${refundAmount} ${symbol}` : "")}</CommandButton>
+              <CommandButton command="admin.rider.refund" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(refundAmount * place.minorUnits)} before={refundRide?.id ?? ""} after={`${refundAmount} ${symbol} to ${refundTo}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={refund.care} disabled={!can(role, "finance.read") || Boolean(refund.error)} title={refund.error} onDone={() => { setNotice(refund.needsApproval ? tr("Refund of {0} {1} is waiting for a second admin to approve.", [refundAmount, symbol]) : tr("Refunded {0} {1} to the rider's {2}.", [refundAmount, symbol, DESTINATIONS.find((item) => item.id === refundTo)?.label.toLowerCase()])); setRefundReason(""); setRefundId(""); }}>{trn("{0} Refund {1}", <RotateCcw size={14} aria-hidden="true" />, refundAmount ? `${refundAmount} ${symbol}` : "")}</CommandButton>
             </section>
           </div>
           <section className="fd-box">
@@ -374,8 +374,8 @@ export function RiderDetailPage() {
                     <small>{trn("Asked by {0} · {1}{2}", item.by, dateTime.format(Date.parse(item.at)), item.decidedBy ? tr(" · decided by {0}", [item.decidedBy]) : "")}</small>
                     {item.status === "waiting" && can(role, "approval.decide") ? (
                       <span className="rd-inline">
-                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="approved" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, true, me).care} disabled={Boolean(decideRefund(care, item.id, true, me).error)} title={decideRefund(care, item.id, true, me).error} onDone={() => setNotice("Refund approved and sent.")}>{tr("Approve")}</CommandButton>
-                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small ghost" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="rejected" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, false, me).care} disabled={Boolean(decideRefund(care, item.id, false, me).error)} title={decideRefund(care, item.id, false, me).error} onDone={() => setNotice("Refund rejected.")}>{tr("Reject")}</CommandButton>
+                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="approved" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, true, me).care} disabled={Boolean(decideRefund(care, item.id, true, me).error)} title={decideRefund(care, item.id, true, me).error} onDone={() => setNotice(tr("Refund approved and sent."))}>{tr("Approve")}</CommandButton>
+                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small ghost" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="rejected" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, false, me).care} disabled={Boolean(decideRefund(care, item.id, false, me).error)} title={decideRefund(care, item.id, false, me).error} onDone={() => setNotice(tr("Refund rejected."))}>{tr("Reject")}</CommandButton>
                       </span>
                     ) : null}
                   </li>
@@ -404,9 +404,9 @@ export function RiderDetailPage() {
             {tone ? <span className={`rd-badge reply t-${tone}`}>{trn("Waiting {0}", waitText(row.waitingMin ?? 0))}</span> : <span className="rd-badge done">{tr("All answered")}</span>}
             <span className="fine">{care.assigned[rider.id] ? tr("Assigned to {0}", [care.assigned[rider.id]]) : tr("Not assigned")}</span>
             {care.assigned[rider.id] !== me ? (
-              <CommandButton command="admin.rider.assign" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={care.assigned[rider.id] ?? "nobody"} after={me} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={assign(care, rider.id, me)} disabled={!can(role, "support.reply")} onDone={() => setNotice("Conversation assigned to you.")}>{tr("Assign to me")}</CommandButton>
+              <CommandButton command="admin.rider.assign" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={care.assigned[rider.id] ?? "nobody"} after={me} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={assign(care, rider.id, me)} disabled={!can(role, "support.reply")} onDone={() => setNotice(tr("Conversation assigned to you."))}>{tr("Assign to me")}</CommandButton>
             ) : (
-              <CommandButton command="admin.rider.assign" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={me} after="nobody" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={assign(care, rider.id, null)} onDone={() => setNotice("Conversation unassigned.")}>{tr("Unassign")}</CommandButton>
+              <CommandButton command="admin.rider.assign" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={me} after="nobody" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={assign(care, rider.id, null)} onDone={() => setNotice(tr("Conversation unassigned."))}>{tr("Unassign")}</CommandButton>
             )}
           </div>
           <MessagesPanel
@@ -419,7 +419,7 @@ export function RiderDetailPage() {
             expectedSliceRev={care.draftRev}
             build={(text) => reply(care, rider, text, me, now)}
             templates={REPLY_TEMPLATES}
-            onSent={() => setNotice(`Message sent to ${rider.name}.`)}
+            onSent={() => setNotice(tr("Message sent to {0}.", [rider.name]))}
             locale={place.locale}
             timeZone={place.timeZone}
           />
@@ -454,7 +454,7 @@ export function RiderDetailPage() {
                     {row.bookings.filter((booking) => booking.status === "completed").slice(0, 10).map((booking) => <option key={booking.id} value={booking.id}>{date.format(booking.at)} · {booking.driverName ?? tr("driver")}</option>)}
                   </select>)}</label>
               </div>
-              <CommandButton command="admin.rider.lostFound" className="dash-btn small" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before="" after={lostItem} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={lostNext.care} disabled={Boolean(lostNext.error)} onDone={() => { setNotice(`${lostItem} reported as lost.`); setLostItem(""); }}>{tr("Report lost item")}</CommandButton>
+              <CommandButton command="admin.rider.lostFound" className="dash-btn small" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before="" after={lostItem} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={lostNext.care} disabled={Boolean(lostNext.error)} onDone={() => { setNotice(tr("{0} reported as lost.", [lostItem])); setLostItem(""); }}>{tr("Report lost item")}</CommandButton>
             </section>
           </div>
         </TabPanel>
@@ -471,7 +471,7 @@ export function RiderDetailPage() {
               <h3>{trn("{0} Identity check", <BadgeCheck size={16} aria-hidden="true" />)}</h3>
               <p>{care.identity[rider.id] === "verified" ? tr("Identity verified.") : care.identity[rider.id] === "requested" ? tr("Asked the rider to verify their identity.") : tr("Not checked. Ask for it for high-risk riders or large wallet balances.")}</p>
               {care.identity[rider.id] !== "verified" ? (
-                <CommandButton command="admin.rider.identity" className="dash-btn small" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={care.identity[rider.id] ?? "none"} after={care.identity[rider.id] === "requested" ? "verified" : "requested"} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={setIdentity(care, rider.id, care.identity[rider.id] === "requested" ? "verified" : "requested")} disabled={!can(role, "riders.block")} onDone={() => setNotice(care.identity[rider.id] === "requested" ? "Identity marked as verified." : "Identity check requested.")}>
+                <CommandButton command="admin.rider.identity" className="dash-btn small" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={care.identity[rider.id] ?? "none"} after={care.identity[rider.id] === "requested" ? "verified" : "requested"} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={setIdentity(care, rider.id, care.identity[rider.id] === "requested" ? "verified" : "requested")} disabled={!can(role, "riders.block")} onDone={() => setNotice(care.identity[rider.id] === "requested" ? tr("Identity marked as verified.") : tr("Identity check requested."))}>
                   {care.identity[rider.id] === "requested" ? tr("Mark as verified") : tr("Ask to verify identity")}
                 </CommandButton>
               ) : null}
@@ -484,14 +484,14 @@ export function RiderDetailPage() {
             <section className="fd-box">
               <h3>{trn("{0} Sessions", <Smartphone size={16} aria-hidden="true" />)}</h3>
               <ul className="rd-ledger" aria-label={tr("Rider sessions")}>{ops.sessions.map((session) => <li key={session.id}><b>{session.platform} · {session.device}</b><span>{session.active ? tr("Signed in") : tr("Signed out")}</span></li>)}</ul>
-              <CommandButton command="admin.rider.signOut" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={`${activeSessions.length} active sessions`} after="0 active sessions" expectedSliceRev={book.draftRev} sliceKey="riderOps" value={revokeRiderSessions(book, seed, me)} disabled={activeSessions.length === 0} onDone={() => setNotice("Signed out of every active rider session.")}>{tr("Sign out all sessions")}</CommandButton>
+              <CommandButton command="admin.rider.signOut" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={`${activeSessions.length} active sessions`} after="0 active sessions" expectedSliceRev={book.draftRev} sliceKey="riderOps" value={revokeRiderSessions(book, seed, me)} disabled={activeSessions.length === 0} onDone={() => setNotice(tr("Signed out of every active rider session."))}>{tr("Sign out all sessions")}</CommandButton>
             </section>
             <section className="fd-box">
               <h3>{trn("{0} Ban list", <Ban size={16} aria-hidden="true" />)}</h3>
               <p className="fine">{tr("A banned phone or card cannot open a new account.")}</p>
               <div className="fd-action-row">
-                <CommandButton command="admin.rider.ban" className="dash-btn small danger" targetId={rider.id} scope={rider.zoneId} before="allowed" after="phone banned" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={ban(care, "phones", rider.phone, rider.id, reason || "Banned by admin", me, now).care} disabled={!can(role, "riders.block") || care.bans.phones.some((item) => item.value === rider.phone)} onDone={() => setNotice("Phone number added to the ban list.")}>{tr("Ban phone number")}</CommandButton>
-                <CommandButton command="admin.rider.ban" className="dash-btn small danger" targetId={rider.id} scope={rider.zoneId} before="allowed" after="card banned" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={ban(care, "cards", profile.payment.method, rider.id, reason || "Banned by admin", me, now).care} disabled={!can(role, "riders.block") || care.bans.cards.some((item) => item.value === profile.payment.method)} onDone={() => setNotice("Card added to the ban list.")}>{tr("Ban card")}</CommandButton>
+                <CommandButton command="admin.rider.ban" className="dash-btn small danger" targetId={rider.id} scope={rider.zoneId} before="allowed" after="phone banned" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={ban(care, "phones", rider.phone, rider.id, reason || "Banned by admin", me, now).care} disabled={!can(role, "riders.block") || care.bans.phones.some((item) => item.value === rider.phone)} onDone={() => setNotice(tr("Phone number added to the ban list."))}>{tr("Ban phone number")}</CommandButton>
+                <CommandButton command="admin.rider.ban" className="dash-btn small danger" targetId={rider.id} scope={rider.zoneId} before="allowed" after="card banned" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={ban(care, "cards", profile.payment.method, rider.id, reason || "Banned by admin", me, now).care} disabled={!can(role, "riders.block") || care.bans.cards.some((item) => item.value === profile.payment.method)} onDone={() => setNotice(tr("Card added to the ban list."))}>{tr("Ban card")}</CommandButton>
               </div>
             </section>
             <section className="fd-box">
@@ -499,19 +499,19 @@ export function RiderDetailPage() {
               <p className="fine">{tr("Same person with two accounts? Keep the other one; this one points to it.")}</p>
               <div className="rd-inline">
                 <input aria-label={tr("Account to keep")} value={mergeInto} onChange={(event) => setMergeInto(event.target.value)} placeholder={tr("Rider id, e.g. R0042")} />
-                <CommandButton command="admin.rider.merge" className="dash-btn small" targetId={rider.id} scope={rider.zoneId} before={rider.id} after={`merged into ${mergeInto}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={mergeNext.care} disabled={!can(role, "riders.block") || Boolean(mergeNext.error) || Boolean(mergedInto)} title={mergeNext.error} onDone={() => setNotice(`Merged into ${mergeInto.toUpperCase()}.`)}>{tr("Merge")}</CommandButton>
+                <CommandButton command="admin.rider.merge" className="dash-btn small" targetId={rider.id} scope={rider.zoneId} before={rider.id} after={`merged into ${mergeInto}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={mergeNext.care} disabled={!can(role, "riders.block") || Boolean(mergeNext.error) || Boolean(mergedInto)} title={mergeNext.error} onDone={() => setNotice(tr("Merged into {0}.", [mergeInto.toUpperCase()]))}>{tr("Merge")}</CommandButton>
               </div>
             </section>
             <section className="fd-box">
               <h3>{tr("Privacy request")}</h3>
               <p>{trn("Status: {0}", ops.privacy)}</p>
-              <CommandButton command="admin.rider.privacy" className="dash-btn small ghost" targetId={rider.id} scope={rider.zoneId} before={ops.privacy} after="next" expectedSliceRev={book.draftRev} sliceKey="riderOps" value={advanceRiderPrivacy(book, seed, me)} disabled={ops.privacy === "done"} onDone={() => setNotice("Privacy request advanced.")}>{tr("Advance privacy")}</CommandButton>
+              <CommandButton command="admin.rider.privacy" className="dash-btn small ghost" targetId={rider.id} scope={rider.zoneId} before={ops.privacy} after="next" expectedSliceRev={book.draftRev} sliceKey="riderOps" value={advanceRiderPrivacy(book, seed, me)} disabled={ops.privacy === "done"} onDone={() => setNotice(tr("Privacy request advanced."))}>{tr("Advance privacy")}</CommandButton>
             </section>
             <section className="fd-box">
               <h3>{tr("Private note")}</h3>
               <p className="fd-note-text">{ops.privateNote || tr("No private note.")}</p>
               <textarea aria-label={tr("Private internal note")} rows={3} value={note} maxLength={NOTE_MAX} onChange={(event) => setNote(event.target.value)} />
-              <CommandButton command="admin.rider.note" className="dash-btn small" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={ops.privateNote || "empty"} after={note || "empty"} expectedSliceRev={book.draftRev} sliceKey="riderOps" value={setRiderNote(book, seed, note, me)} disabled={!note.trim()} onDone={() => { setNotice("Private rider note saved."); setNote(""); }}>{tr("Save private note")}</CommandButton>
+              <CommandButton command="admin.rider.note" className="dash-btn small" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={ops.privateNote || "empty"} after={note || "empty"} expectedSliceRev={book.draftRev} sliceKey="riderOps" value={setRiderNote(book, seed, note, me)} disabled={!note.trim()} onDone={() => { setNotice(tr("Private rider note saved.")); setNote(""); }}>{tr("Save private note")}</CommandButton>
               {ops.accountReason ? <p className="fine">{trn("Latest account reason: {0}", ops.accountReason)}</p> : null}
             </section>
           </div>

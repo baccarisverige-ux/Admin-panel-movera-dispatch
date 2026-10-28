@@ -61,7 +61,7 @@ export function RefundPolicyPanel({ editable, onDirty }: { editable: boolean; on
           disabled={!editable || !dirty || Boolean(error)}
           title={!editable ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : error ?? undefined}
           largeChanges={large}
-          onDone={() => { setDraft(null); setNotice("Refund limits saved. They apply at once."); }}
+          onDone={() => { setDraft(null); setNotice(tr("Refund limits saved. They apply at once.")); }}
         >{tr("Save refund limits")}</CommandButton>
         <button data-command="admin.card.action" type="button" className="secondary-btn" disabled={!draft} onClick={() => setDraft(null)}>{tr("Discard")}</button>
       </div>

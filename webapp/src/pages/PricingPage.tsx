@@ -255,7 +255,7 @@ export function PricingPage() {
         <button data-command="admin.pricing.startSurge" type="button" className="quick-tile surge" disabled={!canPublish} onClick={() => { go({ tab: "surge" }); window.setTimeout(() => document.getElementById("manual-title")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80); }}>
           <Zap size={18} aria-hidden="true" /><span><b>{tr("Start surge")}</b><small>{trn("Manual, in {0}", zone?.name)}</small></span>
         </button>
-        <CommandButton command="admin.pricing.stopAllSurges" className="quick-tile stop" targetId={market.id} confirmTarget={false} scope="all" before={`${stopAll.stopped.length} manual surges`} after="none" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={stopAll.store} disabled={!canPublish || Boolean(stopAll.error)} title={stopAll.error} onDone={() => setNotice(`Stopped ${stopAll.stopped.length} manual surge${stopAll.stopped.length === 1 ? "" : "s"} in ${market.name}.`)}>
+        <CommandButton command="admin.pricing.stopAllSurges" className="quick-tile stop" targetId={market.id} confirmTarget={false} scope="all" before={`${stopAll.stopped.length} manual surges`} after="none" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={stopAll.store} disabled={!canPublish || Boolean(stopAll.error)} title={stopAll.error} onDone={() => setNotice(tr("Stopped {0} manual surge{1} in {2}.", [stopAll.stopped.length, stopAll.stopped.length === 1 ? "" : "s", market.name]))}>
           <Square size={18} aria-hidden="true" /><span><b>{tr("Stop all surges")}</b><small>{stopAll.stopped.length ? tr("{0} manual running", [stopAll.stopped.length]) : tr("None running")}</small></span>
         </CommandButton>
         <button data-command="admin.pricing.copyZones" type="button" className="quick-tile" disabled={!canPublish} onClick={() => setCopyOpen(["prices", "fees"])}>
@@ -267,7 +267,7 @@ export function PricingPage() {
         <button data-command="admin.pricing.addCategory" type="button" className="quick-tile" onClick={() => setCatsOpen(true)}>
           <Tags size={18} aria-hidden="true" /><span><b>{tr("Categories")}</b><small>{trn("{0} active", categories.length)}</small></span>
         </button>
-        <CommandButton command="admin.pricing.undo" className="quick-tile" targetId={`pricing-rev-${store.history[0]?.rev ?? 0}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after="undo last publish" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={undo.store} disabled={!canPublish || Boolean(undo.error)} title={undo.error} largeChanges={undo.error ? undefined : largeStoreChanges(store, undo.store)} onDone={() => setNotice(`Revision ${store.history[0]?.rev} undone.`)}>
+        <CommandButton command="admin.pricing.undo" className="quick-tile" targetId={`pricing-rev-${store.history[0]?.rev ?? 0}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after="undo last publish" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={undo.store} disabled={!canPublish || Boolean(undo.error)} title={undo.error} largeChanges={undo.error ? undefined : largeStoreChanges(store, undo.store)} onDone={() => setNotice(tr("Revision {0} undone.", [store.history[0]?.rev]))}>
           <Undo2 size={18} aria-hidden="true" /><span><b>{tr("Undo last publish")}</b><small>{store.history[0] ? tr("Revision {0}", [store.history[0].rev]) : tr("Nothing yet")}</small></span>
         </CommandButton>
       </section>
@@ -395,7 +395,7 @@ export function PricingPage() {
                   for (const target of targets) next[target] = copyInto(book, current[target] ?? zoneBook(store, target), ["pickup"]);
                   return next;
                 });
-                setNotice(`Pickup pay from ${zone?.name} copied to all ${targets.length} other zones in ${market.name} as drafts. Review and publish.`);
+                setNotice(tr("Pickup pay from {0} copied to all {1} other zones in {2} as drafts. Review and publish.", [zone?.name, targets.length, market.name]));
               }}
             />
           ) : null}
@@ -422,8 +422,8 @@ export function PricingPage() {
             <strong>{trn("Unpublished changes in {0}", dirty.map((draft) => zoneById(draft.zoneId)?.name ?? draft.zoneId).join(", "))}</strong>
             <small>{fieldErrors.first ?? (dirtyProblems.length ? dirtyProblems[0].message : tr("{0} change{1} · riders see them after you publish", [publish.changes.length, publish.changes.length === 1 ? "" : "s"]))}</small>
           </div>
-          <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice("Changes discarded."); }}>{tr("Discard")}</button>
-          <CommandButton command="admin.pricing.publish" summary={liveSession ? <PublishTargetsLine zoneIds={dirty.map((draft) => draft.zoneId)} /> : undefined} className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(`Published as pricing revision ${publish.store.draftRev}.`); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
+          <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice(tr("Changes discarded.")); }}>{tr("Discard")}</button>
+          <CommandButton command="admin.pricing.publish" summary={liveSession ? <PublishTargetsLine zoneIds={dirty.map((draft) => draft.zoneId)} /> : undefined} className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(tr("Published as pricing revision {0}.", [publish.store.draftRev])); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
         </div>
       ) : null}
 
@@ -441,7 +441,7 @@ export function PricingPage() {
               return next;
             });
             setCopyOpen(false);
-            setNotice(`Copied ${zone?.name} to ${targets.length} zone${targets.length === 1 ? "" : "s"} as drafts. Review and publish.`);
+            setNotice(tr("Copied {0} to {1} zone{2} as drafts. Review and publish.", [zone?.name, targets.length, targets.length === 1 ? "" : "s"]));
           }}
         />
       ) : null}

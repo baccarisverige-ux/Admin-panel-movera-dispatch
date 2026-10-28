@@ -4,6 +4,7 @@ import type { GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "../ui/maplibreWorker";
 import { baseMapStyle } from "../ui/mapStyle";
+import { tr } from "../i18n";
 
 const STYLE = baseMapStyle();
 
@@ -78,6 +79,6 @@ export function AreaMap({ center, radiusKm, onPick, label }: { center: [number, 
     // Refit only when the area changes.
   }, [ready, key]);
 
-  if (failed) return <p className="dx-map-hidden">The map needs WebGL, which this browser has turned off. Pick the area in the list instead.</p>;
+  if (failed) return <p className="dx-map-hidden">{tr("The map needs WebGL, which this browser has turned off. Pick the area in the list instead.")}</p>;
   return <div ref={host} className="dn-map" role="img" aria-label={label} data-testid="notice-area-map" />;
 }

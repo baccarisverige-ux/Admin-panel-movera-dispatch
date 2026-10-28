@@ -140,7 +140,7 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
 
       <div className="dx-modal-actions">
         {copied ? <small role="status">{copied}</small> : null}
-        <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled} onClick={() => { const count = onAllZones(wait); setCopied(`Copied to ${count} zone${count === 1 ? "" : "s"}. Not live yet.`); }}>{trn("{0} Use in all zones", <Copy size={13} aria-hidden="true" />)}</button>
+        <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled} onClick={() => { const count = onAllZones(wait); setCopied(tr("Copied to {0} zone{1}. Not live yet.", [count, count === 1 ? "" : "s"])); }}>{trn("{0} Use in all zones", <Copy size={13} aria-hidden="true" />)}</button>
       </div>
     </Card>
   );

@@ -1,4 +1,4 @@
-import { tr } from "../i18n";
+import { tr, trn } from "../i18n";
 import { isLiveData } from "../live/realData";
 import { LivePayouts } from "../live/LivePayouts";
 import { useMemo, useState } from "react";
@@ -82,8 +82,8 @@ export function PayoutsPage() {
       </div>
     );
   }
-  if (payouts.isLoading || financeStore.loading) return <p className="state-line">Loading payouts.</p>;
-  if (!selected) return <p className="state-line">No payouts are available.</p>;
+  if (payouts.isLoading || financeStore.loading) return <p className="state-line">{tr("Loading payouts.")}</p>;
+  if (!selected) return <p className="state-line">{tr("No payouts are available.")}</p>;
 
   const driverId = selected.driverId ?? "";
   const selectedFleet = Boolean((drivers.data ?? []).find((row) => row.id === selected.driverId)?.fleetId);
@@ -122,16 +122,13 @@ export function PayoutsPage() {
   return (
     <div className="dx-page fn-page po-page">
       <header className="dx-head">
-        <button data-command="admin.payout.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.payout.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
-          <h2>Payouts</h2>
-          <p>
-            Weekly payouts. Wallet vouchers are 100, 200 and 500 kr. Refunds above {money(refundAboveMinor(refundPolicy, scope.market.id))} need a second authorised agent.
-            Demo rows {rows.length}. Finance revision {finance.draftRev}.
-          </p>
+          <h2>{tr("Payouts")}</h2>
+          <p>{trn("Weekly payouts. Wallet vouchers are 100, 200 and 500 kr. Refunds above {0} need a second authorised agent. Demo rows {1}. Finance revision {2}.", money(refundAboveMinor(refundPolicy, scope.market.id)), rows.length, finance.draftRev)}</p>
         </div>
       </header>
-      <div className="dash-tabs dx-views" role="tablist" aria-label="Payout sections">
+      <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Payout sections")}>
         {[["payouts", "Payouts"], ["schedule", "Schedule and rules"]].map(([id, label]) => <button data-command="admin.payout.view" key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : undefined} onClick={() => selectTab(id)}>{label}</button>)}
       </div>
       {tab === "schedule" ? <ScheduleView ops={ops} country={country} editable={Boolean(agent && can(agent.role, "approval.decide"))} /> : (
@@ -160,35 +157,26 @@ export function PayoutsPage() {
 
       <article className="panel fn-panel" data-testid="payout-detail">
         <h3>{selected.id}</h3>
-        <p>
-          {selected.driverId} · {formatZoneMoney(selected.fareOre ?? 0, selected.zoneId)} · payout {state.status}. Bank {bank.status}.
-          {state.paidAt ? ` Paid ${state.paidAt} by ${state.paidBy}.` : ""}
-        </p>
+        <p>{trn("{0} · {1} · payout {2}. Bank {3}.{4}", selected.driverId, formatZoneMoney(selected.fareOre ?? 0, selected.zoneId), state.status, bank.status, state.paidAt ? tr(" Paid {0} by {1}.", [state.paidAt, state.paidBy]) : "")}</p>
 
-        <h4>Bank review</h4>
+        <h4>{tr("Bank review")}</h4>
         <div className="field-grid">
-          <label>
-            Clearing number
-            <input aria-label="Payout clearing number" value={bank.clearing} onChange={(event) => patchBank({ clearing: event.target.value })} />
+          <label>{tr("Clearing number")}<input aria-label={tr("Payout clearing number")} value={bank.clearing} onChange={(event) => patchBank({ clearing: event.target.value })} />
           </label>
-          <label>
-            Account
-            <input aria-label="Payout account number" value={bank.account} onChange={(event) => patchBank({ account: event.target.value })} />
+          <label>{tr("Account")}<input aria-label={tr("Payout account number")} value={bank.account} onChange={(event) => patchBank({ account: event.target.value })} />
           </label>
           <label>
             IBAN
-            <input aria-label="Payout IBAN" value={bank.iban} onChange={(event) => patchBank({ iban: event.target.value })} />
+            <input aria-label={tr("Payout IBAN")} value={bank.iban} onChange={(event) => patchBank({ iban: event.target.value })} />
           </label>
           <label>
             BIC
-            <input aria-label="Payout BIC" value={bank.bic} onChange={(event) => patchBank({ bic: event.target.value.toUpperCase() })} />
+            <input aria-label={tr("Payout BIC")} value={bank.bic} onChange={(event) => patchBank({ bic: event.target.value.toUpperCase() })} />
           </label>
-          <label>
-            Review note
-            <input aria-label="Bank review note" value={bankNote} onChange={(event) => setBankNote(event.target.value)} />
+          <label>{tr("Review note")}<input aria-label={tr("Bank review note")} value={bankNote} onChange={(event) => setBankNote(event.target.value)} />
           </label>
         </div>
-        <p data-testid="payout-bank-check">{validation ?? "Bank details pass the configured validation checks."}</p>
+        <p data-testid="payout-bank-check">{validation ?? tr("Bank details pass the configured validation checks.")}</p>
 
         <div className="actions">
           <CommandButton
@@ -207,11 +195,9 @@ export function PayoutsPage() {
             title={approved.error}
             onDone={() => {
               setBankDraft(null);
-              setNotice("Bank details approved.");
+              setNotice(tr("Bank details approved."));
             }}
-          >
-            Approve bank
-          </CommandButton>
+          >{tr("Approve bank")}</CommandButton>
           <CommandButton
             command="admin.payment.rejectBank"
             className="secondary-btn"
@@ -228,11 +214,9 @@ export function PayoutsPage() {
             title={rejected.error}
             onDone={() => {
               setBankDraft(null);
-              setNotice(`Bank details rejected for ${driverId}.`);
+              setNotice(tr("Bank details rejected for {0}.", [driverId]));
             }}
-          >
-            Reject bank
-          </CommandButton>
+          >{tr("Reject bank")}</CommandButton>
           <CommandButton
             command="admin.payment.markPaid"
             className="primary-btn"
@@ -248,11 +232,9 @@ export function PayoutsPage() {
             disabled={state.status === "paid" || Boolean(blockPay)}
             validationError={paid.error}
             onValidationError={(message) => setNotice(message)}
-            title={state.status === "paid" ? "Already paid." : blockPay ?? undefined}
-            onDone={() => setNotice("Payout marked paid once. Reusing the operation key cannot pay it twice.")}
-          >
-            Mark paid
-          </CommandButton>
+            title={state.status === "paid" ? tr("Already paid.") : blockPay ?? undefined}
+            onDone={() => setNotice(tr("Payout marked paid once. Reusing the operation key cannot pay it twice."))}
+          >{tr("Mark paid")}</CommandButton>
         </div>
       </article>
       <PayoutLines record={selected} fleet={selectedFleet} ops={ops} country={countryOfPayout(selected)} money={(minor) => formatMoney(minor, countryOfPayout(selected))} onNotice={setNotice} cash={selectedCash} />

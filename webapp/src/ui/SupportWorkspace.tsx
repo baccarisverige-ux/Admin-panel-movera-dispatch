@@ -13,6 +13,7 @@ import { NotFoundRecord } from "./NotFoundRecord";
 import { shortDateTime } from "../domain/time";
 import { statusLabel } from "../domain/labels";
 import { zoneTimeZone } from "../markets/markets";
+import { tr, trn } from "../i18n";
 
 type Filter = "all" | "mine" | "new" | "late" | "waiting" | "solved";
 const FILTERS: { id: Filter; label: string; icon: ReactNode; tone: string }[] = [
@@ -91,15 +92,15 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
 
   const header = (
     <header className="dx-head">
-      <button data-command="admin.ticket.view" type="button" className="dash-btn ghost dx-back" onClick={() => (view ? set({ view: null }) : globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+      <button data-command="admin.ticket.view" type="button" className="dash-btn ghost dx-back" onClick={() => (view ? set({ view: null }) : globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
       <div className="dx-head-text">
-        <h2>{view === "settings" ? `${chat ? "Chat" : "Support"} settings` : view === "team" ? "Support team numbers" : chat ? "Chat" : "Support"}</h2>
-        <p>Scoped ticket queue, 3-day ownership and isolated Rider/Driver threads. Replies are simulated; attachment names are metadata only.</p>
+        <h2>{view === "settings" ? tr("{0} settings", [chat ? "Chat" : "Support"]) : view === "team" ? tr("Support team numbers") : chat ? tr("Chat") : tr("Support")}</h2>
+        <p>{tr("Scoped ticket queue, 3-day ownership and isolated Rider/Driver threads. Replies are simulated; attachment names are metadata only.")}</p>
       </div>
       {!view ? (
         <span className="sp-head-actions">
-          <button data-command="admin.ticket.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "team" })}><Users size={14} aria-hidden="true" /> Team numbers</button>
-          <button data-command="admin.ticket.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "settings" })}><Settings2 size={14} aria-hidden="true" /> Settings</button>
+          <button data-command="admin.ticket.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "team" })}><Users size={14} aria-hidden="true" />{" "}{tr("Team numbers")}</button>
+          <button data-command="admin.ticket.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "settings" })}><Settings2 size={14} aria-hidden="true" />{" "}{tr("Settings")}</button>
         </span>
       ) : null}
     </header>
@@ -113,15 +114,15 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
     return (
       <div className="dx-page sp-page">
         {header}
-        <section className="dash-card rp-panel" aria-label="Team numbers">
-          <SortTable label="Support team" rowKey={(item) => item.agentId} rows={team} initial="solved" columns={[
+        <section className="dash-card rp-panel" aria-label={tr("Team numbers")}>
+          <SortTable label={tr("Support team")} rowKey={(item) => item.agentId} rows={team} initial="solved" columns={[
             { id: "agent", label: "Admin", value: (item) => agentName(item.agentId) },
             { id: "solved", label: "Solved", value: (item) => item.solved, numeric: true },
             { id: "open", label: "Open now", value: (item) => item.open, numeric: true },
             { id: "reply", label: "First answer", value: (item) => item.avgFirstReplyMin ?? -1, show: (item) => (item.avgFirstReplyMin === null ? "–" : `${item.avgFirstReplyMin} min`), numeric: true },
             { id: "rating", label: "Rating", value: (item) => item.avgRating ?? 0, show: (item) => (item.avgRating === null ? "–" : `${item.avgRating} of 5`), numeric: true },
           ]} />
-          <p className="sp-help">Every reply, note and solve is also in Reports → Admin work with the admin's name.</p>
+          <p className="sp-help">{tr("Every reply, note and solve is also in Reports → Admin work with the admin's name.")}</p>
         </section>
       </div>
     );
@@ -156,9 +157,9 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
         ]}
       />
 
-      {chat ? <div className="actions sp-threads">{["rider", "driver"].map((item) => <button type="button" key={item} data-command="admin.tabs.select" className={thread === item ? "dash-btn small" : "dash-btn small ghost"} onClick={() => { setThread(item); setSelected(""); setAttachment(""); }}>{item === "rider" ? "Rider thread" : "Driver thread"}</button>)}</div> : null}
+      {chat ? <div className="actions sp-threads">{["rider", "driver"].map((item) => <button type="button" key={item} data-command="admin.tabs.select" className={thread === item ? "dash-btn small" : "dash-btn small ghost"} onClick={() => { setThread(item); setSelected(""); setAttachment(""); }}>{item === "rider" ? tr("Rider thread") : tr("Driver thread")}</button>)}</div> : null}
 
-      <nav className="sp-filters" aria-label="Ticket groups">
+      <nav className="sp-filters" aria-label={tr("Ticket groups")}>
         {FILTERS.map((item) => (
           <button key={item.id} data-command="admin.ticket.view" type="button" className={`sp-filter ${item.tone}${filter === item.id ? " active" : ""}`} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>
             <span aria-hidden="true">{item.icon}</span><b>{item.label}</b><small>{inThread.filter((entry) => passes(entry.facts, item.id)).length}</small>
@@ -167,13 +168,13 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
       </nav>
 
       <div className="sp-grid">
-        <aside className="sp-list" aria-label="Tickets">
-          <label className="sp-field"><span>Search tickets</span><input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <aside className="sp-list" aria-label={tr("Tickets")}>
+          <label className="sp-field"><span>{tr("Search tickets")}</span><input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
           <div className="sp-list-filters">
-            <select aria-label="Topic" value={topicFilter} onChange={(event) => setTopicFilter(event.target.value)}><option value="">Every topic</option>{TOPICS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
-            <select aria-label="Language" value={langFilter} onChange={(event) => setLangFilter(event.target.value)}><option value="">Every language</option>{Object.entries(LANGS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select>
+            <select aria-label={tr("Topic")} value={topicFilter} onChange={(event) => setTopicFilter(event.target.value)}><option value="">{tr("Every topic")}</option>{TOPICS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
+            <select aria-label={tr("Language")} value={langFilter} onChange={(event) => setLangFilter(event.target.value)}><option value="">{tr("Every language")}</option>{Object.entries(LANGS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select>
           </div>
-          <label className="sp-field sr-only"><span>Ticket</span><select value={row?.id ?? ""} onChange={(event) => { setSelected(event.target.value); setAttachment(""); setOwner(""); }}>{list.map((item) => <option key={item.row.id} value={item.row.id}>{item.row.id} · {item.row.name} · {item.row.status}</option>)}</select></label>
+          <label className="sp-field sr-only"><span>{tr("Ticket")}</span><select value={row?.id ?? ""} onChange={(event) => { setSelected(event.target.value); setAttachment(""); setOwner(""); }}>{list.map((item) => <option key={item.row.id} value={item.row.id}>{item.row.id} · {item.row.name} · {item.row.status}</option>)}</select></label>
           <ul>
             {list.map((item) => (
               <li key={item.row.id}>
@@ -183,94 +184,94 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
                   <span className="sp-ticket-tags">
                     <span className={`sp-topic ${item.facts.topic}`}>{TOPICS.find((topic) => topic.id === item.facts.topic)?.label}</span>
                     <span className="sp-tag">{item.facts.lang.toUpperCase()}</span>
-                    <span className="sp-tag">{item.facts.who === "driver" ? "Driver" : "Rider"}</span>
-                    {item.facts.state === "solved" ? <span className="sp-tag good">Solved by {agentName(item.facts.solvedBy)}</span> : item.facts.owner ? <span className="sp-tag">{agentName(item.facts.owner)}</span> : <span className="sp-tag warn">Nobody yet</span>}
-                    {item.facts.replyLate ? <span className="sp-tag bad">Answer late</span> : item.facts.solveLate ? <span className="sp-tag bad">Solve late</span> : null}
+                    <span className="sp-tag">{item.facts.who === "driver" ? tr("Driver") : tr("Rider")}</span>
+                    {item.facts.state === "solved" ? <span className="sp-tag good">{trn("Solved by {0}", agentName(item.facts.solvedBy))}</span> : item.facts.owner ? <span className="sp-tag">{agentName(item.facts.owner)}</span> : <span className="sp-tag warn">{tr("Nobody yet")}</span>}
+                    {item.facts.replyLate ? <span className="sp-tag bad">{tr("Answer late")}</span> : item.facts.solveLate ? <span className="sp-tag bad">{tr("Solve late")}</span> : null}
                   </span>
                 </button>
               </li>
             ))}
-            {!list.length ? <li className="dx-calm">{rows.isLoading ? "Loading tickets…" : "No tickets here."}</li> : null}
+            {!list.length ? <li className="dx-calm">{rows.isLoading ? tr("Loading tickets…") : tr("No tickets here.")}</li> : null}
           </ul>
         </aside>
 
         {row && ops && facts ? (
-          <article className="sp-conversation panel" aria-label={`Ticket ${row.id}`}>
+          <article className="sp-conversation panel" aria-label={tr("Ticket {0}", [row.id])}>
             <header className="sp-conv-head">
               <h3>{row.id} · {row.name}</h3>
               {/* Q22 / UI-14: who opened it and when, in the zone's local time; the owner is the same one the list shows. */}
-              <p data-testid="ticket-opened">{facts.who === "driver" ? "Driver" : "Rider"} {row.name} · {shortDateTime(facts.openedAt, zoneTimeZone(row.zoneId))}</p>
-              <p className="sp-help" data-testid="ticket-owner">{facts.owner ? `${agentName(facts.owner)} is working on it${ops.ownerUntil ? ` until ${shortDateTime(ops.ownerUntil, zoneTimeZone(row.zoneId))}` : ""}` : "Nobody is working on it yet"} · Due {shortDateTime(ops.dueAt, zoneTimeZone(row.zoneId))} · Priority {ops.priority}</p>
+              <p data-testid="ticket-opened">{facts.who === "driver" ? tr("Driver") : tr("Rider")} {row.name} · {shortDateTime(facts.openedAt, zoneTimeZone(row.zoneId))}</p>
+              <p className="sp-help" data-testid="ticket-owner">{trn("{0} · Due {1} · Priority {2}", facts.owner ? tr("{0} is working on it{1}", [agentName(facts.owner), ops.ownerUntil ? ` until ${shortDateTime(ops.ownerUntil, zoneTimeZone(row.zoneId))}` : ""]) : tr("Nobody is working on it yet"), shortDateTime(ops.dueAt, zoneTimeZone(row.zoneId)), ops.priority)}</p>
               <span className="sp-conv-meta">
                 <span className={`sp-topic ${facts.topic}`}>{TOPICS.find((item) => item.id === facts.topic)?.label}</span>
-                <small className="sp-help">Not right? Move it to</small>
+                <small className="sp-help">{tr("Not right? Move it to")}</small>
                 {TOPICS.filter((item) => item.id !== facts.topic && item.for.includes(facts.who)).slice(0, 3).map((item) => (
-                  <CommandButton key={item.id} command="admin.ticket.topic" className="dash-btn small ghost" sliceKey={SUPPORT_DESK_KEY} value={setTopic(desk, row.id, item.id as TopicId)} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before={facts.topic} after={item.id} onDone={() => setNotice(`Topic changed to ${item.label}.`)}>{item.label}</CommandButton>
+                  <CommandButton key={item.id} command="admin.ticket.topic" className="dash-btn small ghost" sliceKey={SUPPORT_DESK_KEY} value={setTopic(desk, row.id, item.id as TopicId)} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before={facts.topic} after={item.id} onDone={() => setNotice(tr("Topic changed to {0}.", [item.label]))}>{item.label}</CommandButton>
                 ))}
                 <span className="sp-tag"><Languages size={11} aria-hidden="true" /> {LANGS[facts.lang]}</span>
-                <span className={facts.replyLate || facts.solveLate ? "sp-tag bad" : "sp-tag"}>Answer within {settings.limits[facts.topic].firstReplyMin} min · solve within {settings.limits[facts.topic].solveHours} h</span>
+                <span className={facts.replyLate || facts.solveLate ? "sp-tag bad" : "sp-tag"}>{trn("Answer within {0} min · solve within {1} h", settings.limits[facts.topic].firstReplyMin, settings.limits[facts.topic].solveHours)}</span>
               </span>
             </header>
             <div className="actions sp-actions">
-              <CommandButton command="admin.support.claim" className="dash-btn small" targetId={row.id} scope={row.zoneId} sliceKey="supportOps" expectedSliceRev={store.value.draftRev} value={prepared("claim").book} disabled={store.loading} onDone={() => setNotice("Claimed for 3 days.")}>Claim</CommandButton>
-              <label className="sp-inline">Assign agent<select value={chosen} onChange={(event) => setOwner(event.target.value)}>{eligible.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-              <CommandButton command="admin.support.assign" className="dash-btn small ghost" targetId={row.id} scope={row.zoneId} sliceKey="supportOps" value={prepared("assign").book} expectedSliceRev={store.value.draftRev} confirmTarget={false} disabled={!chosen || store.loading}>Assign</CommandButton>
-              {["normal", "urgent"].map((priority) => <CommandButton key={priority} command="admin.support.metadata" className="dash-btn small ghost" targetId={row.id} scope={row.zoneId} sliceKey="supportOps" value={supportChange(store.value, row, agent?.id ?? "", "metadata", "", "", undefined, undefined, { priority: priority as "normal" | "urgent" }).book} expectedSliceRev={store.value.draftRev} confirmTarget={false}>Priority {priority}</CommandButton>)}
+              <CommandButton command="admin.support.claim" className="dash-btn small" targetId={row.id} scope={row.zoneId} sliceKey="supportOps" expectedSliceRev={store.value.draftRev} value={prepared("claim").book} disabled={store.loading} onDone={() => setNotice(tr("Claimed for 3 days."))}>{tr("Claim")}</CommandButton>
+              <label className="sp-inline">{tr("Assign agent")}<select value={chosen} onChange={(event) => setOwner(event.target.value)}>{eligible.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <CommandButton command="admin.support.assign" className="dash-btn small ghost" targetId={row.id} scope={row.zoneId} sliceKey="supportOps" value={prepared("assign").book} expectedSliceRev={store.value.draftRev} confirmTarget={false} disabled={!chosen || store.loading}>{tr("Assign")}</CommandButton>
+              {["normal", "urgent"].map((priority) => <CommandButton key={priority} command="admin.support.metadata" className="dash-btn small ghost" targetId={row.id} scope={row.zoneId} sliceKey="supportOps" value={supportChange(store.value, row, agent?.id ?? "", "metadata", "", "", undefined, undefined, { priority: priority as "normal" | "urgent" }).book} expectedSliceRev={store.value.draftRev} confirmTarget={false}>{trn("Priority {0}", priority)}</CommandButton>)}
             </div>
             <ol className="sp-thread">
               <li className="them"><span>{facts.text}</span><small>{row.name} · {time(facts.openedAt)}</small></li>
             </ol>
-            <ul aria-label="Ticket messages" className="sp-thread mine">{ops.messages.map((message) => <li key={message.id} className={message.kind === "note" ? "note" : "us"}><span>{message.actor}: {message.text} · {message.kind === "note" ? "Private note" : message.delivery}{message.attachment ? ` · Attachment metadata: ${message.attachment}` : ""}</span></li>)}</ul>
+            <ul aria-label={tr("Ticket messages")} className="sp-thread mine">{ops.messages.map((message) => <li key={message.id} className={message.kind === "note" ? "note" : "us"}><span>{message.actor}: {message.text} · {message.kind === "note" ? tr("Private note") : message.delivery}{message.attachment ? tr(" · Attachment metadata: {0}", [message.attachment]) : ""}</span></li>)}</ul>
             <div className="sp-compose">
-              <label className="sp-field"><span>Ready-made reply</span>
-                <select aria-label="Ready-made reply" value="" onChange={(event) => { const pick = replies.find((item) => item.id === event.target.value); if (pick) setDraft({ ...draft, [key]: pick.text }); }}>
-                  <option value="">Choose a reply…</option>
+              <label className="sp-field"><span>{tr("Ready-made reply")}</span>
+                <select aria-label={tr("Ready-made reply")} value="" onChange={(event) => { const pick = replies.find((item) => item.id === event.target.value); if (pick) setDraft({ ...draft, [key]: pick.text }); }}>
+                  <option value="">{tr("Choose a reply…")}</option>
                   {replies.map((item) => <option key={item.id} value={item.id}>{item.title} ({LANGS[item.lang]})</option>)}
                 </select>
               </label>
-              <label className="sp-field"><span>Message</span><textarea aria-label="Message" value={text} rows={3} onChange={(event) => setDraft({ ...draft, [key]: event.target.value })} /></label>
-              <label className="sp-field"><span>Attachment name (metadata only)</span><input value={attachment} onChange={(event) => setAttachment(event.target.value)} /></label>
+              <label className="sp-field"><span>{tr("Message")}</span><textarea aria-label={tr("Message")} value={text} rows={3} onChange={(event) => setDraft({ ...draft, [key]: event.target.value })} /></label>
+              <label className="sp-field"><span>{tr("Attachment name (metadata only)")}</span><input value={attachment} onChange={(event) => setAttachment(event.target.value)} /></label>
               <div className="actions">
-                <button type="button" data-command="admin.message.useText" className="dash-btn small ghost" onClick={() => setDraft({ ...draft, [key]: ops.language === "sv" ? "Vi undersöker ditt ärende." : "We are reviewing your request." })}>Use response macro</button>
+                <button type="button" data-command="admin.message.useText" className="dash-btn small ghost" onClick={() => setDraft({ ...draft, [key]: ops.language === "sv" ? "Vi undersöker ditt ärende." : "We are reviewing your request." })}>{tr("Use response macro")}</button>
                 {(["reply", "note", "draft"] as const).map((kind) => {
                   const result = prepared(kind);
-                  return <CommandButton key={kind} command={`admin.support.${kind}`} className={kind === "reply" ? "dash-btn small" : "dash-btn small ghost"} targetId={row.id} scope={row.zoneId} sliceKey="supportOps" expectedSliceRev={store.value.draftRev} value={result.book} confirmTarget={false} disabled={store.loading || Boolean(result.error)} title={result.error} onDone={() => { if (kind !== "draft") setDraft({ ...draft, [key]: "" }); setNotice(kind === "reply" ? "Reply saved once to this simulated thread." : kind === "note" ? "Private note saved. It is not sent to the app." : "Draft saved."); }}>{kind === "reply" ? "Send reply" : kind === "note" ? "Private note" : "Save draft"}</CommandButton>;
+                  return <CommandButton key={kind} command={`admin.support.${kind}`} className={kind === "reply" ? "dash-btn small" : "dash-btn small ghost"} targetId={row.id} scope={row.zoneId} sliceKey="supportOps" expectedSliceRev={store.value.draftRev} value={result.book} confirmTarget={false} disabled={store.loading || Boolean(result.error)} title={result.error} onDone={() => { if (kind !== "draft") setDraft({ ...draft, [key]: "" }); setNotice(kind === "reply" ? tr("Reply saved once to this simulated thread.") : kind === "note" ? tr("Private note saved. It is not sent to the app.") : tr("Draft saved.")); }}>{kind === "reply" ? tr("Send reply") : kind === "note" ? tr("Private note") : tr("Save draft")}</CommandButton>;
                 })}
               </div>
             </div>
           </article>
-        ) : <p className="dx-calm">{rows.isLoading ? "Loading tickets…" : "No tickets in this scope."}</p>}
+        ) : <p className="dx-calm">{rows.isLoading ? tr("Loading tickets…") : tr("No tickets in this scope.")}</p>}
 
         {row && facts ? (
-          <aside className="sp-side" aria-label="About this ticket">
+          <aside className="sp-side" aria-label={tr("About this ticket")}>
             <section className="sp-card">
-              <h4>{facts.who === "driver" ? <CarFront size={14} aria-hidden="true" /> : <UserRound size={14} aria-hidden="true" />} {facts.who === "driver" ? "Driver" : "Rider"}</h4>
+              <h4>{facts.who === "driver" ? <CarFront size={14} aria-hidden="true" /> : <UserRound size={14} aria-hidden="true" />} {facts.who === "driver" ? tr("Driver") : tr("Rider")}</h4>
               <b>{row.name}</b>
-              {person ? <Link to={`/${facts.who === "driver" ? "drivers" : "riders"}/${person.id}`}>Open the {facts.who} page</Link> : null}
+              {person ? <Link to={`/${facts.who === "driver" ? "drivers" : "riders"}/${person.id}`}>{trn("Open the {0} page", facts.who)}</Link> : null}
             </section>
             <section className="sp-card">
-              <h4><MessageSquareText size={14} aria-hidden="true" /> Trip</h4>
-              {trip ? <><b>{trip.id}</b><small>{statusLabel(trip.status)}</small><Link to={`/trips/${trip.id}`}>Open the trip: route, chat, calls, refund</Link></> : <small>No trip found for this ticket.</small>}
+              <h4><MessageSquareText size={14} aria-hidden="true" />{" "}{tr("Trip")}</h4>
+              {trip ? <><b>{trip.id}</b><small>{statusLabel(trip.status)}</small><Link to={`/trips/${trip.id}`}>{tr("Open the trip: route, chat, calls, refund")}</Link></> : <small>{tr("No trip found for this ticket.")}</small>}
             </section>
             <section className="sp-card">
-              <h4><Siren size={14} aria-hidden="true" /> Safety</h4>
-              {desk.tickets[row.id]?.caseIds?.length ? <Link to="/incidents">Incident opened. Open Incidents</Link> : (
-                <CommandButton command="admin.ticket.case" className="dash-btn small danger-ghost" sliceKey={SUPPORT_DESK_KEY} value={linkCase(desk, row.id, incidentId)} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before="" after="incident opened" onDone={() => setNotice("Incident opened. The safety team sees it in Incidents.")}>Open an incident</CommandButton>
+              <h4><Siren size={14} aria-hidden="true" />{" "}{tr("Safety")}</h4>
+              {desk.tickets[row.id]?.caseIds?.length ? <Link to="/incidents">{tr("Incident opened. Open Incidents")}</Link> : (
+                <CommandButton command="admin.ticket.case" className="dash-btn small danger-ghost" sliceKey={SUPPORT_DESK_KEY} value={linkCase(desk, row.id, incidentId)} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before="" after="incident opened" onDone={() => setNotice(tr("Incident opened. The safety team sees it in Incidents."))}>{tr("Open an incident")}</CommandButton>
               )}
             </section>
             <section className={facts.state === "solved" ? "sp-card solved" : "sp-card"}>
-              <h4><CheckCircle2 size={14} aria-hidden="true" /> {facts.state === "solved" ? `Solved by ${agentName(facts.solvedBy)}` : facts.owner ? `${agentName(facts.owner)} is working on it` : "Nobody is working on it"}</h4>
+              <h4><CheckCircle2 size={14} aria-hidden="true" /> {facts.state === "solved" ? tr("Solved by {0}", [agentName(facts.solvedBy)]) : facts.owner ? tr("{0} is working on it", [agentName(facts.owner)]) : tr("Nobody is working on it")}</h4>
               {facts.state === "solved" ? (
                 <>
                   <small>{desk.tickets[row.id]?.note}</small>
-                  {facts.rating ? <span className="sp-stars" aria-label={`Rated ${facts.rating} of 5`}>{Array.from({ length: 5 }, (_, index) => <Star key={index} size={14} className={index < (facts.rating ?? 0) ? "on" : undefined} aria-hidden="true" />)}</span> : settings.rating ? <small>Waiting for a rating.</small> : null}
-                  <CommandButton command="admin.ticket.reopen" className="dash-btn small ghost" sliceKey={SUPPORT_DESK_KEY} value={reopen(desk, row.id)} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before="solved" after="open" onDone={() => setNotice("Ticket opened again.")}><RotateCcw size={13} aria-hidden="true" /> Reopen</CommandButton>
+                  {facts.rating ? <span className="sp-stars" aria-label={tr("Rated {0} of 5", [facts.rating])}>{Array.from({ length: 5 }, (_, index) => <Star key={index} size={14} className={index < (facts.rating ?? 0) ? "on" : undefined} aria-hidden="true" />)}</span> : settings.rating ? <small>{tr("Waiting for a rating.")}</small> : null}
+                  <CommandButton command="admin.ticket.reopen" className="dash-btn small ghost" sliceKey={SUPPORT_DESK_KEY} value={reopen(desk, row.id)} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before="solved" after="open" onDone={() => setNotice(tr("Ticket opened again."))}><RotateCcw size={13} aria-hidden="true" />{" "}{tr("Reopen")}</CommandButton>
                 </>
               ) : (
                 <>
-                  <CommandButton command="admin.ticket.waiting" className="dash-btn small ghost" sliceKey={SUPPORT_DESK_KEY} value={setWaiting(desk, row.id, facts.state !== "waiting")} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before={facts.state} after={facts.state === "waiting" ? "open" : "waiting"} onDone={() => setNotice(facts.state === "waiting" ? "Back in the queue." : "Waiting for their answer.")}>{facts.state === "waiting" ? "They answered" : "Waiting for them"}</CommandButton>
-                  <textarea aria-label="What did you do" rows={2} value={solveNote} placeholder="What you did, for the next admin" onChange={(event) => setSolveNote(event.target.value)} />
-                  <CommandButton command="admin.ticket.solve" className="dash-btn small" sliceKey={SUPPORT_DESK_KEY} value={solveTry?.desk} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before={facts.state} after="solved" disabled={Boolean(solveTry?.error)} title={solveTry?.error} onDone={() => { setSolveNote(""); setNotice(`Solved by ${agentName(agent?.id)}.${settings.rating ? " The person is asked to rate the help." : ""}`); }}>Mark solved</CommandButton>
+                  <CommandButton command="admin.ticket.waiting" className="dash-btn small ghost" sliceKey={SUPPORT_DESK_KEY} value={setWaiting(desk, row.id, facts.state !== "waiting")} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before={facts.state} after={facts.state === "waiting" ? "open" : "waiting"} onDone={() => setNotice(facts.state === "waiting" ? tr("Back in the queue.") : tr("Waiting for their answer."))}>{facts.state === "waiting" ? tr("They answered") : tr("Waiting for them")}</CommandButton>
+                  <textarea aria-label={tr("What did you do")} rows={2} value={solveNote} placeholder={tr("What you did, for the next admin")} onChange={(event) => setSolveNote(event.target.value)} />
+                  <CommandButton command="admin.ticket.solve" className="dash-btn small" sliceKey={SUPPORT_DESK_KEY} value={solveTry?.desk} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before={facts.state} after="solved" disabled={Boolean(solveTry?.error)} title={solveTry?.error} onDone={() => { setSolveNote(""); setNotice(tr("Solved by {0}.{1}", [agentName(agent?.id), settings.rating ? " The person is asked to rate the help." : ""])); }}>{tr("Mark solved")}</CommandButton>
                 </>
               )}
             </section>

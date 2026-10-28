@@ -34,7 +34,7 @@ export function HistoryView() {
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     logExport(agent?.id, `${rows.length} solved alerts (CSV)`);
-    setNotice(`${rows.length} solved alerts exported.`);
+    setNotice(tr("{0} solved alerts exported.", [rows.length]));
   }
 
   return (
@@ -82,7 +82,7 @@ export function HistoryView() {
           <section className="dash-card" aria-labelledby="al-week-title">
             <div className="card-head">
               <h3 id="al-week-title">{trn("{0} Weekly summary", <Mail size={16} aria-hidden="true" />)}</h3>
-              <button data-command="admin.alerts.export" type="button" className="dash-btn small ghost" onClick={() => { void navigator.clipboard?.writeText(summary.join("\n")).catch(() => undefined); setNotice("Weekly summary copied. Paste it in an email to managers."); }}>{trn("{0} Copy", <Copy size={13} aria-hidden="true" />)}</button>
+              <button data-command="admin.alerts.export" type="button" className="dash-btn small ghost" onClick={() => { void navigator.clipboard?.writeText(summary.join("\n")).catch(() => undefined); setNotice(tr("Weekly summary copied. Paste it in an email to managers.")); }}>{trn("{0} Copy", <Copy size={13} aria-hidden="true" />)}</button>
             </div>
             <ul className="al-summary" aria-label={tr("Weekly summary")}>{summary.map((line) => <li key={line}>{line}</li>)}</ul>
           </section>

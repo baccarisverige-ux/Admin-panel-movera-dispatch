@@ -41,11 +41,11 @@ export function RulesView() {
               return (
                 <li key={rule.id} className={rule.on ? `al-rule ${rule.level}` : `al-rule ${rule.level} off`}>
                   <span className="al-rule-text"><b>{rule.name}</b><small>{sentence(rule)}</small><small>{trn("{0} · {1} times in the last 24 h · made by {2}", rule.who === "all" ? tr("Every admin") : rule.who.map((role) => ROLE_LABELS[role]).join(", "), preview ? preview.times : tr("Not connected yet"), agentName(rule.by))}</small></span>
-                  <CommandButton command="admin.alerts.rule" className={rule.on ? "surge-toggle on" : "surge-toggle"} targetId={rule.name} confirmTarget={false} scope="all" before={rule.on ? "on" : "off"} after={rule.on ? "off" : "on"} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={toggled} disabled={!canManage} aria-label={`${rule.name} ${rule.on ? "on" : "off"}`} onDone={() => setNotice(`Rule ${rule.name} switched ${rule.on ? "off" : "on"}.`)}>
+                  <CommandButton command="admin.alerts.rule" className={rule.on ? "surge-toggle on" : "surge-toggle"} targetId={rule.name} confirmTarget={false} scope="all" before={rule.on ? "on" : "off"} after={rule.on ? "off" : "on"} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={toggled} disabled={!canManage} aria-label={`${rule.name} ${rule.on ? "on" : "off"}`} onDone={() => setNotice(tr("Rule {0} switched {1}.", [rule.name, rule.on ? tr("off") : tr("on")]))}>
                     {rule.on ? tr("On") : tr("Off")} <span className="switch" aria-hidden="true"><i /></span>
                   </CommandButton>
                   <button data-command="admin.alerts.view" type="button" className="dash-btn small ghost" disabled={!canManage} onClick={() => setEditing(rule)}>{trn("{0} Edit", <Pencil size={13} aria-hidden="true" />)}</button>
-                  <CommandButton command="admin.alerts.rule" className="icon-ghost" targetId={rule.name} confirmTarget={false} scope="all" before="rule" after="removed" expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={removed} disabled={!canManage} aria-label={tr("Remove {0}", [rule.name])} onDone={() => setNotice(`Rule ${rule.name} removed.`)}><Trash2 size={14} aria-hidden="true" /></CommandButton>
+                  <CommandButton command="admin.alerts.rule" className="icon-ghost" targetId={rule.name} confirmTarget={false} scope="all" before="rule" after="removed" expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={removed} disabled={!canManage} aria-label={tr("Remove {0}", [rule.name])} onDone={() => setNotice(tr("Rule {0} removed.", [rule.name]))}><Trash2 size={14} aria-hidden="true" /></CommandButton>
                 </li>
               );
             })}
@@ -89,7 +89,7 @@ export function RulesView() {
                 {issues.length ? <p className="dx-issues" role="alert">{issues[0]}</p> : null}
                 <div className="dx-modal-actions">
                   <button data-command="admin.alerts.view" type="button" className="dash-btn ghost" onClick={() => setEditing(null)}>{tr("Cancel")}</button>
-                  <CommandButton command="admin.alerts.rule" className="dash-btn" targetId={editing.name.trim() || "rule"} confirmTarget={false} scope="all" before={exists ? "rule" : "none"} after={editing.on ? "on" : "off"} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={next} disabled={!canManage || Boolean(issues.length)} onDone={() => { setNotice(`Rule ${editing.name.trim()} saved.`); setEditing(null); }}>{tr("Save rule")}</CommandButton>
+                  <CommandButton command="admin.alerts.rule" className="dash-btn" targetId={editing.name.trim() || "rule"} confirmTarget={false} scope="all" before={exists ? "rule" : "none"} after={editing.on ? "on" : "off"} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={next} disabled={!canManage || Boolean(issues.length)} onDone={() => { setNotice(tr("Rule {0} saved.", [editing.name.trim()])); setEditing(null); }}>{tr("Save rule")}</CommandButton>
                 </div>
               </>
             );

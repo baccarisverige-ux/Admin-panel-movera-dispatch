@@ -206,7 +206,7 @@ export function RulesView(props: Props) {
                   const target = rulesOf(id);
                   onRules(id, kind === "live" ? { ...target, riderCancel: { ...target.riderCancel, fees: copy() } } : { ...target, reservation: { ...target.reservation, riderFees: copy() } });
                 }
-                props.onNotice(`${kind === "live" ? "Live trip" : "Reservation"} cancel fees copied from ${zone.name} to ${ids.length} zone${ids.length === 1 ? "" : "s"}. Not live yet.`);
+                props.onNotice(tr("{0} cancel fees copied from {1} to {2} zone{3}. Not live yet.", [kind === "live" ? "Live trip" : "Reservation", zone.name, ids.length, ids.length === 1 ? "" : "s"]));
               }}
               onWaitAllZones={(pickupWait) => {
                 const targets = zones.filter((item) => canEdit(item.id));
@@ -230,14 +230,14 @@ export function RulesView(props: Props) {
 
       <CopyDialog open={copyOpen} tabs={tabs} onClose={() => setCopyOpen(false)} from={rules} zones={zones.filter((item) => item.id !== zone.id && canEdit(item.id))} rulesOf={rulesOf} onApply={(ids, parts) => {
         for (const id of ids) onRules(id, copyParts(rules, rulesOf(id), parts));
-        props.onNotice(`Copied ${parts.length} part${parts.length === 1 ? "" : "s"} from ${zone.name} to ${ids.length} zone${ids.length === 1 ? "" : "s"}. Not live yet.`);
+        props.onNotice(tr("Copied {0} part{1} from {2} to {3} zone{4}. Not live yet.", [parts.length, parts.length === 1 ? "" : "s", zone.name, ids.length, ids.length === 1 ? "" : "s"]));
         setCopyOpen(false);
       }} />
       <PresetDialog open={presetOpen} onClose={() => setPresetOpen(false)} book={book} zone={rules} zoneName={zone.name} countryId={market.id} agentId={props.agentId} onUse={(next, name) => {
         onRules(zone.id, next);
-        props.onNotice(`Preset ${name} used for ${zone.name}. Not live yet.`);
+        props.onNotice(tr("Preset {0} used for {1}. Not live yet.", [name, zone.name]));
         setPresetOpen(false);
-      }} onSaved={(name) => props.onNotice(`Preset ${name} saved.`)} />
+      }} onSaved={(name) => props.onNotice(tr("Preset {0} saved.", [name]))} />
     </div>
   );
 }

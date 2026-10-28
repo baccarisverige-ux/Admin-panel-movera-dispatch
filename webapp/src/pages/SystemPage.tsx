@@ -6,6 +6,7 @@ import { useFreshness } from "../api/hooks";
 import type { Fault } from "../api/demoStore";
 import { useSession } from "../auth/SessionContext";
 import { CommandButton } from "../ui/CommandButton";
+import { tr, trn } from "../i18n";
 
 const INTEGRATIONS = [
   ["Maps", "OpenStreetMap", "Configured tile provider; availability not probed"],
@@ -29,15 +30,13 @@ function DemoTools() {
   }, [api]);
   return (
     <article className="panel" aria-labelledby="demo-tools-title">
-      <h3 id="demo-tools-title">Demo tools</h3>
-      <p className="state-line">Only in the demo. Errors you pick here stay on until you set them back to none.</p>
-      <label>
-        Simulate errors
-        <select value={fault} onChange={(event) => { const next = event.target.value as Fault; setFault(next); void api.setFault(next); }}>
+      <h3 id="demo-tools-title">{tr("Demo tools")}</h3>
+      <p className="state-line">{tr("Only in the demo. Errors you pick here stay on until you set them back to none.")}</p>
+      <label>{tr("Simulate errors")}<select value={fault} onChange={(event) => { const next = event.target.value as Fault; setFault(next); void api.setFault(next); }}>
           {FAULTS.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
       </label>
-      <CommandButton command="admin.shell.reset" className="secondary-btn" type="button" onDone={() => void api.reset().then(() => client.invalidateQueries())}>Reset demo</CommandButton>
+      <CommandButton command="admin.shell.reset" className="secondary-btn" type="button" onDone={() => void api.reset().then(() => client.invalidateQueries())}>{tr("Reset demo")}</CommandButton>
     </article>
   );
 }
@@ -51,16 +50,16 @@ export function SystemPage() {
       <DevBanner />
       <div className="page-heading">
         <div>
-          <h2>System</h2>
-          <p>Read-only. No secrets and no database console.</p>
+          <h2>{tr("System")}</h2>
+          <p>{tr("Read-only. No secrets and no database console.")}</p>
         </div>
       </div>
-      <ul className="pl-integrations" aria-label="Integrations">
+      <ul className="pl-integrations" aria-label={tr("Integrations")}>
         {INTEGRATIONS.map(([name, value, state]) => (
           <li key={name}>{name}: {value} · {state}</li>
         ))}
       </ul>
-      <p className="state-line">Transport: {api.kind} · Simulation: {api.demo ? "yes" : "no"} · Data updated {freshness.data ?? "unavailable"}. External SMS, payout and mobile delivery are not verified.</p>
+      <p className="state-line">{trn("Transport: {0} · Simulation: {1} · Data updated {2}. External SMS, payout and mobile delivery are not verified.", api.kind, api.demo ? tr("yes") : tr("no"), freshness.data ?? tr("unavailable"))}</p>
       {api.demo && agent?.role === "super" ? <DemoTools /> : null}
     </>
   );

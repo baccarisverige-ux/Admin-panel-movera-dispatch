@@ -37,7 +37,7 @@ export function RideTable({ rides, now, upcoming, timeFormat, dayFormat, money, 
                 <td>{ride.category}</td>
                 <td>{ride.driver ?? (ride.status === "cancelled" || ride.status === "no_show" ? "—" : <span className={ride.warning === "red" ? "no-driver red" : "no-driver"}>{trn("{0} Unassigned", <AlertTriangle size={13} aria-hidden="true" />)}</span>)}</td>
                 <td><span className={`ride-status s-${ride.status}`}>{statusLabel(ride.status)}</span></td>
-                <td className="num">{money(ride.fareMinor)}{ride.estimated ? <small> est.</small> : null}</td>
+                <td className="num">{money(ride.fareMinor)}{ride.estimated ? <small>{" "}{tr("est.")}</small> : null}</td>
                 <td>{access.trips ? <Link className="link-action" to={withScope(`/reservations/${ride.id}`)}>{open ? tr("Assign") : tr("Open")}</Link> : null}</td>
               </tr>
             );

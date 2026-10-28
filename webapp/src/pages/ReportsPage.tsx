@@ -91,7 +91,7 @@ export function ReportsPage() {
 
   function downloadCsv() {
     if (!csv) return;
-    const blob = new Blob([csvOf(csv.head, csv.rows)], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([csvOf(csv.head.map((label) => trx(label)), csv.rows)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -223,9 +223,7 @@ function SaveViewDialog({ open, onClose, settings, agentId, build, onSaved }: { 
       {mine.length ? <ul className="rp-saved" aria-label={tr("Your views")}>{mine.map((item) => <li key={item.id}><FileText size={13} aria-hidden="true" /> {item.name}{item.shared ? ` · ${tr("shared")}` : ""}</li>)}</ul> : null}
       <div className="dx-modal-actions">
         <button data-command="admin.reports.view" type="button" className="dash-btn ghost" onClick={onClose}>{tr("Cancel")}</button>
-        <CommandButton command="admin.reports.saveView" className="dash-btn" targetId={name.trim() || "view"} confirmTarget={false} scope="all" before={`${settings.views.length} views`} after={`${settings.views.length + 1} views`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, views: [...settings.views, view] }} disabled={!name.trim()} onDone={() => { onSaved(name.trim()); setName(""); onClose(); }}>
-          Save view
-        </CommandButton>
+        <CommandButton command="admin.reports.saveView" className="dash-btn" targetId={name.trim() || "view"} confirmTarget={false} scope="all" before={`${settings.views.length} views`} after={`${settings.views.length + 1} views`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, views: [...settings.views, view] }} disabled={!name.trim()} onDone={() => { onSaved(name.trim()); setName(""); onClose(); }}>{tr("Save view")}</CommandButton>
       </div>
     </Modal>
   );
@@ -259,15 +257,13 @@ function ScheduleDialog({ open, onClose, settings, agentId, tab, country, onSave
         <label className="field">{tr("How often")}<select aria-label={tr("Schedule every")} value={draft.every} onChange={(event) => setDraft({ ...draft, every: event.target.value as Schedule["every"] })}><option value="day">{tr("Every day")}</option><option value="week">{tr("Every week")}</option><option value="month">{tr("Every month")}</option></select></label>
         {draft.every === "week" ? <label className="field">{tr("Day")}<select aria-label={tr("Schedule day")} value={draft.weekday} onChange={(event) => setDraft({ ...draft, weekday: Number(event.target.value) })}>{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, index) => <option key={day} value={index}>{trx(day)}</option>)}</select></label> : null}
         <label className="field">{tr("Time")}<input type="time" aria-label={tr("Schedule time")} value={draft.time} onChange={(event) => setDraft({ ...draft, time: event.target.value })} /></label>
-        <label className="field wide">{tr("Send to")}<input aria-label={tr("Schedule emails")} value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} placeholder="finance@movera.se, manager@movera.se" /></label>
+        <label className="field wide">{tr("Send to")}<input aria-label={tr("Schedule emails")} value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} placeholder={tr("finance@movera.se, manager@movera.se")} /></label>
       </div>
       {issues.length && (draft.name || draft.to) ? <p className="dx-issues" role="alert">{issues[0]}</p> : null}
       {!issues.length ? <p className="dx-note">{scheduleLine(draft)}</p> : null}
       <div className="dx-modal-actions">
         <button data-command="admin.reports.view" type="button" className="dash-btn ghost" onClick={onClose}>{tr("Close")}</button>
-        <CommandButton command="admin.reports.schedule" className="dash-btn" targetId={draft.name.trim() || "schedule"} confirmTarget={false} scope="all" before={`${settings.schedules.length} schedules`} after={`${settings.schedules.length + 1} schedules`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, schedules: [...settings.schedules, { ...draft, name: draft.name.trim() }] }} disabled={Boolean(issues.length)} onDone={() => { onSaved(tr("Schedule {0} saved: {1}.", [draft.name.trim(), scheduleLine(draft)])); setDraft(blank()); }}>
-          Save schedule
-        </CommandButton>
+        <CommandButton command="admin.reports.schedule" className="dash-btn" targetId={draft.name.trim() || "schedule"} confirmTarget={false} scope="all" before={`${settings.schedules.length} schedules`} after={`${settings.schedules.length + 1} schedules`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, schedules: [...settings.schedules, { ...draft, name: draft.name.trim() }] }} disabled={Boolean(issues.length)} onDone={() => { onSaved(tr("Schedule {0} saved: {1}.", [draft.name.trim(), scheduleLine(draft)])); setDraft(blank()); }}>{tr("Save schedule")}</CommandButton>
       </div>
     </Modal>
   );

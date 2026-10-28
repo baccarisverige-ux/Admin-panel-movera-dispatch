@@ -16,6 +16,7 @@ import {
   limitOf, noticeChanges, noticeDef, noticeIssues, noticeText, normalizeDriverNoticeBook, promoToday, sendNotice, targetDrivers,
   type DriverNoticeBook, type NoticeArea, type NoticeKind, type NoticeLang, type NoticeLimits, type NoticeReach, type NoticeSetting,
 } from "./driverNotices";
+import { tr, trn } from "../i18n";
 
 /** The island text each kind uses, from Content › Driver app texts. */
 const ISLAND_KEY: Partial<Record<NoticeKind, string>> = {
@@ -63,27 +64,27 @@ export function DriverNoticesView({ country, editable, onNotice }: { country: Ma
 
   return (
     <div className="gr-tab dn-page">
-      <p className="dx-note dx-resv-tie"><BellRing size={13} aria-hidden="true" /> <span>What the driver app sends by itself, and what you send. Popups also reach drivers who are offline or have the app closed, when “Also offline” is on.</span></p>
+      <p className="dx-note dx-resv-tie"><BellRing size={13} aria-hidden="true" /> <span>{tr("What the driver app sends by itself, and what you send. Popups also reach drivers who are offline or have the app closed, when “Also offline” is on.")}</span></p>
       <div className="dn-layout">
         <div className="dn-main">
           {NOTICE_GROUPS.map((group) => (
             <Card key={group.id} title={`${group.code} ${group.label}`} tone={group.id === "rideAlerts" ? "blue" : group.id === "demand" ? "orange" : "green"} icon={group.id === "rideAlerts" ? <BellRing size={18} /> : group.id === "demand" ? <Megaphone size={18} /> : <WalletCards size={18} />} help={group.help}>
-              <ul className="dn-kinds" aria-label={`${group.label} notifications`}>
+              <ul className="dn-kinds" aria-label={tr("{0} notifications", [group.label])}>
                 {NOTICE_KINDS.filter((item) => item.group === group.id).map((item) => {
                   const kind = current.kinds[item.kind];
                   const text = noticeText(kind, item.kind, lang);
                   return (
                     <li key={item.kind} className={`${kind.on ? "on" : "off"}${item.kind === selected ? " picked" : ""}`} aria-label={item.label}>
                       <span className="dn-kind">
-                        <b>{item.label}{limitOf(item.kind) === "always" ? <em className="dn-tag">Always goes through</em> : null}</b>
+                        <b>{item.label}{limitOf(item.kind) === "always" ? <em className="dn-tag">{tr("Always goes through")}</em> : null}</b>
                         <small>{item.when} · {item.kind}</small>
-                        <span className="dn-line" dir={rtl ? "rtl" : undefined}>{fillNotice(text.title)} · {fillNotice(text.body)}{text.own ? "" : " (default)"}</span>
+                        <span className="dn-line" dir={rtl ? "rtl" : undefined}>{fillNotice(text.title)} · {fillNotice(text.body)}{text.own ? "" : tr(" (default)")}</span>
                       </span>
                       <span className="dn-tools">
                         <Switch label={item.label} on={kind.on} disabled={!editable} onChange={(on) => setKind(item.kind, { on })} />
-                        <Check label="Island" on={kind.island} disabled={!editable || !kind.on} onChange={(island) => setKind(item.kind, { island })} />
-                        <Check label="Also offline" on={kind.offline} disabled={!editable || !kind.on} onChange={(offline) => setKind(item.kind, { offline })} />
-                        <button data-command="admin.campaigns.view" type="button" className={item.kind === selected ? "dash-btn small" : "dash-btn small ghost"} aria-pressed={item.kind === selected} onClick={() => setSelected(item.kind)}><Pencil size={12} aria-hidden="true" /> Text</button>
+                        <Check label={tr("Island")} on={kind.island} disabled={!editable || !kind.on} onChange={(island) => setKind(item.kind, { island })} />
+                        <Check label={tr("Also offline")} on={kind.offline} disabled={!editable || !kind.on} onChange={(offline) => setKind(item.kind, { offline })} />
+                        <button data-command="admin.campaigns.view" type="button" className={item.kind === selected ? "dash-btn small" : "dash-btn small ghost"} aria-pressed={item.kind === selected} onClick={() => setSelected(item.kind)}><Pencil size={12} aria-hidden="true" />{" "}{tr("Text")}</button>
                       </span>
                     </li>
                   );
@@ -92,58 +93,56 @@ export function DriverNoticesView({ country, editable, onNotice }: { country: Ma
             </Card>
           ))}
 
-          <Card title={`N4 Limits · ${market.name}`} tone="purple" icon={<MoonStar size={18} />} help="Too many messages make drivers turn them off.">
-            <Row label="Promo messages per driver per day" help="Demand and event messages." on={limits.promoPerDay.on} disabled={!editable} onToggle={(on) => setLimits({ promoPerDay: { ...limits.promoPerDay, on } })}>
-              <Num label="Promo messages per day" value={limits.promoPerDay.max} unit="a day" min={1} max={10} disabled={!editable} onChange={(max) => setLimits({ promoPerDay: { ...limits.promoPerDay, max: Math.round(max) } })} />
+          <Card title={tr("N4 Limits · {0}", [market.name])} tone="purple" icon={<MoonStar size={18} />} help={tr("Too many messages make drivers turn them off.")}>
+            <Row label={tr("Promo messages per driver per day")} help={tr("Demand and event messages.")} on={limits.promoPerDay.on} disabled={!editable} onToggle={(on) => setLimits({ promoPerDay: { ...limits.promoPerDay, on } })}>
+              <Num label={tr("Promo messages per day")} value={limits.promoPerDay.max} unit="a day" min={1} max={10} disabled={!editable} onChange={(max) => setLimits({ promoPerDay: { ...limits.promoPerDay, max: Math.round(max) } })} />
             </Row>
-            <Row label="Quiet hours" help="Demand, event and account messages wait until quiet hours end." on={limits.quiet.on} disabled={!editable} onToggle={(on) => setLimits({ quiet: { ...limits.quiet, on } })}>
-              <input className="dx-select" aria-label="Driver quiet hours from" type="time" value={limits.quiet.from} disabled={!editable} onChange={(event) => setLimits({ quiet: { ...limits.quiet, from: event.target.value } })} />
-              <input className="dx-select" aria-label="Driver quiet hours to" type="time" value={limits.quiet.to} disabled={!editable} onChange={(event) => setLimits({ quiet: { ...limits.quiet, to: event.target.value } })} />
+            <Row label={tr("Quiet hours")} help={tr("Demand, event and account messages wait until quiet hours end.")} on={limits.quiet.on} disabled={!editable} onToggle={(on) => setLimits({ quiet: { ...limits.quiet, on } })}>
+              <input className="dx-select" aria-label={tr("Driver quiet hours from")} type="time" value={limits.quiet.from} disabled={!editable} onChange={(event) => setLimits({ quiet: { ...limits.quiet, from: event.target.value } })} />
+              <input className="dx-select" aria-label={tr("Driver quiet hours to")} type="time" value={limits.quiet.to} disabled={!editable} onChange={(event) => setLimits({ quiet: { ...limits.quiet, to: event.target.value } })} />
             </Row>
-            <p className="dx-note dx-resv-tie"><ShieldCheck size={13} aria-hidden="true" /> <span>Ride alerts and reminders always go through, also in quiet hours and over the limit.</span></p>
+            <p className="dx-note dx-resv-tie"><ShieldCheck size={13} aria-hidden="true" /> <span>{tr("Ride alerts and reminders always go through, also in quiet hours and over the limit.")}</span></p>
           </Card>
 
           <div className={changes.length ? "dx-publish has-changes" : "dx-publish"}>
             <span className="dx-publish-text">
-              <b>{changes.length ? `${changes.length} change${changes.length === 1 ? "" : "s"} not saved` : "Everything is saved"}</b>
-              <small>{issues[0] ?? "Applies to every driver. The limits are for this country."}</small>
+              <b>{changes.length ? tr("{0} change{1} not saved", [changes.length, changes.length === 1 ? "" : "s"]) : tr("Everything is saved")}</b>
+              <small>{issues[0] ?? tr("Applies to every driver. The limits are for this country.")}</small>
             </span>
             <span className="dx-publish-actions">
-              <button data-command="admin.campaigns.view" type="button" className="dash-btn small ghost" disabled={!changes.length} onClick={() => setDraft(null)}>Undo changes</button>
-              <CommandButton command="admin.driverNotices.save" className="dash-btn small" targetId="driver notifications" scope="all" confirmTarget={false} before="saved" after={`${changes.length} changes`} sliceKey={DRIVER_NOTICES_KEY} value={{ ...book, draftRev: book.draftRev + 1, kinds: current.kinds, limits: current.limits }} expectedSliceRev={book.draftRev} disabled={!editable || !changes.length || issues.length > 0} onDone={() => { setDraft(null); onNotice(`Driver notifications saved: ${changes.length} change${changes.length === 1 ? "" : "s"}.`); }}>
-                Save notifications
-              </CommandButton>
+              <button data-command="admin.campaigns.view" type="button" className="dash-btn small ghost" disabled={!changes.length} onClick={() => setDraft(null)}>{tr("Undo changes")}</button>
+              <CommandButton command="admin.driverNotices.save" className="dash-btn small" targetId="driver notifications" scope="all" confirmTarget={false} before="saved" after={`${changes.length} changes`} sliceKey={DRIVER_NOTICES_KEY} value={{ ...book, draftRev: book.draftRev + 1, kinds: current.kinds, limits: current.limits }} expectedSliceRev={book.draftRev} disabled={!editable || !changes.length || issues.length > 0} onDone={() => { setDraft(null); onNotice(tr("Driver notifications saved: {0} change{1}.", [changes.length, changes.length === 1 ? "" : "s"])); }}>{tr("Save notifications")}</CommandButton>
             </span>
-            {changes.length ? <ul className="dt-changes" aria-label="Notification changes not saved">{changes.slice(0, 6).map((line) => <li key={line}>{line}</li>)}{changes.length > 6 ? <li>and {changes.length - 6} more</li> : null}</ul> : null}
+            {changes.length ? <ul className="dt-changes" aria-label={tr("Notification changes not saved")}>{changes.slice(0, 6).map((line) => <li key={line}>{line}</li>)}{changes.length > 6 ? <li>{trn("and {0} more", changes.length - 6)}</li> : null}</ul> : null}
           </div>
         </div>
 
-        <aside className="gr-phone dn-preview" aria-label="Notification text">
+        <aside className="gr-phone dn-preview" aria-label={tr("Notification text")}>
           <h3><Smartphone size={15} aria-hidden="true" /> {def.label}</h3>
-          <Choice<NoticeLang> label="Notification language" value={lang} onChange={setLang} options={NOTICE_LANGS} />
-          <label className="gr-field dn-field"><span>Title</span><input aria-label="Notification title" dir={rtl ? "rtl" : undefined} placeholder={def.title} maxLength={TITLE_MAX + 20} value={setting.texts[lang]?.title ?? ""} disabled={!editable} onChange={(event) => setText("title", event.target.value)} /></label>
-          <label className="gr-field dn-field"><span>Text</span><textarea aria-label="Notification text" dir={rtl ? "rtl" : undefined} rows={2} placeholder={def.body} value={setting.texts[lang]?.body ?? ""} disabled={!editable} onChange={(event) => setText("body", event.target.value)} /></label>
-          <p className="gr-help">Empty means the app's default. Values: {[...new Set(`${def.title} ${def.body}`.match(/\{\w+\}/g) ?? [])].join(" ") || "none"}.</p>
-          {shown.own ? <button data-command="admin.campaigns.view" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setKind(selected, { texts: { ...setting.texts, [lang]: {} } })}><RotateCcw size={12} aria-hidden="true" /> Use the default</button> : null}
+          <Choice<NoticeLang> label={tr("Notification language")} value={lang} onChange={setLang} options={NOTICE_LANGS} />
+          <label className="gr-field dn-field"><span>{tr("Title")}</span><input aria-label={tr("Notification title")} dir={rtl ? "rtl" : undefined} placeholder={def.title} maxLength={TITLE_MAX + 20} value={setting.texts[lang]?.title ?? ""} disabled={!editable} onChange={(event) => setText("title", event.target.value)} /></label>
+          <label className="gr-field dn-field"><span>{tr("Text")}</span><textarea aria-label={tr("Notification text")} dir={rtl ? "rtl" : undefined} rows={2} placeholder={def.body} value={setting.texts[lang]?.body ?? ""} disabled={!editable} onChange={(event) => setText("body", event.target.value)} /></label>
+          <p className="gr-help">{trn("Empty means the app's default. Values: {0}.", [...new Set(`${def.title} ${def.body}`.match(/\{\w+\}/g) ?? [])].join(" ") || tr("none"))}</p>
+          {shown.own ? <button data-command="admin.campaigns.view" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setKind(selected, { texts: { ...setting.texts, [lang]: {} } })}><RotateCcw size={12} aria-hidden="true" />{" "}{tr("Use the default")}</button> : null}
           <div className={setting.on ? "dn-phone" : "dn-phone off"} dir={rtl ? "rtl" : undefined}>
             <span className="dn-clock">{now}</span>
             {setting.island && setting.on ? <p className="dt-island" data-testid="notice-island">{islandText}</p> : null}
             <div className="dn-push" data-testid="notice-preview">
-              <small>Movera Driver · now</small>
+              <small>{tr("Movera Driver · now")}</small>
               <b>{fillNotice(shown.title)}</b>
               <span>{fillNotice(shown.body)}</span>
               {def.action ? <i>{def.action}</i> : null}
             </div>
-            {!setting.on ? <p className="dn-off">Off: drivers do not get it.</p> : null}
+            {!setting.on ? <p className="dn-off">{tr("Off: drivers do not get it.")}</p> : null}
           </div>
-          <p className="gr-help">{setting.on ? deliveryLine(selected, limits, now) : "Turned off."}{islandKey ? <> The island text is in <Link to="/content?view=driver-texts">Driver app texts</Link>.</> : null}</p>
+          <p className="gr-help">{setting.on ? deliveryLine(selected, limits, now) : tr("Turned off.")}{islandKey ? <>{" "}{trn("The island text is in {0}.", <Link to="/content?view=driver-texts">{tr("Driver app texts")}</Link>)}</> : null}</p>
         </aside>
       </div>
 
       <SendCard book={book} country={country} editable={editable} onNotice={onNotice} />
 
       <details className="dt-file">
-        <summary>What the driver app gets</summary>
+        <summary>{tr("What the driver app gets")}</summary>
         <pre>{JSON.stringify(driverAppNotices(book, country), null, 2)}</pre>
       </details>
     </div>
@@ -192,65 +191,59 @@ function SendCard({ book, country, editable, onNotice }: { book: DriverNoticeBoo
 
   return (
     <>
-      <Card title="Send a demand or event message" tone="orange" icon={<Megaphone size={18} />} help="Pick the zone or an area, a driver group and online or offline drivers. The driver sees the area on a map.">
+      <Card title={tr("Send a demand or event message")} tone="orange" icon={<Megaphone size={18} />} help={tr("Pick the zone or an area, a driver group and online or offline drivers. The driver sees the area on a map.")}>
         <div className="dn-send">
           <div className="dn-send-form">
-            <Row label="Message">
-              <Choice<"highDemand" | "event"> label="Message kind" value={kind} onChange={(next) => { setKind(next); reset(); }} options={[{ id: "highDemand", label: "High demand" }, { id: "event", label: "Event" }]} />
+            <Row label={tr("Message")}>
+              <Choice<"highDemand" | "event"> label={tr("Message kind")} value={kind} onChange={(next) => { setKind(next); reset(); }} options={[{ id: "highDemand", label: "High demand" }, { id: "event", label: "Event" }]} />
             </Row>
-            <Row label="Zone">
-              <select className="dx-select" aria-label="Zone for the message" value={zoneId} onChange={(event) => { setZoneId(event.target.value); setAreaPick("zone"); reset(); }}>
+            <Row label={tr("Zone")}>
+              <select className="dx-select" aria-label={tr("Zone for the message")} value={zoneId} onChange={(event) => { setZoneId(event.target.value); setAreaPick("zone"); reset(); }}>
                 {market.zones.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
             </Row>
-            <Row label="Area" help="Or click the map to put the area there.">
-              <select className="dx-select" aria-label="Area" value={areaPick} onChange={(event) => { setAreaPick(event.target.value); reset(); }}>
-                <option value="zone">Whole zone</option>
+            <Row label={tr("Area")} help={tr("Or click the map to put the area there.")}>
+              <select className="dx-select" aria-label={tr("Area")} value={areaPick} onChange={(event) => { setAreaPick(event.target.value); reset(); }}>
+                <option value="zone">{tr("Whole zone")}</option>
                 {places.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
-                {picked ? <option value="map">Picked on the map</option> : null}
+                {picked ? <option value="map">{tr("Picked on the map")}</option> : null}
               </select>
-              <Num label="Area size" value={radiusKm} unit="km" min={0.5} max={30} step={0.5} onChange={setRadiusKm} />
+              <Num label={tr("Area size")} value={radiusKm} unit="km" min={0.5} max={30} step={0.5} onChange={setRadiusKm} />
             </Row>
-            <Row label="Driver group">
-              <select className="dx-select" aria-label="Driver group" value={groupId} onChange={(event) => setGroupId(event.target.value)}>
-                <option value="">All drivers in the zone</option>
-                {groups.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.driverIds.length} drivers</option>)}
+            <Row label={tr("Driver group")}>
+              <select className="dx-select" aria-label={tr("Driver group")} value={groupId} onChange={(event) => setGroupId(event.target.value)}>
+                <option value="">{tr("All drivers in the zone")}</option>
+                {groups.map((item) => <option key={item.id} value={item.id}>{trn("{0} · {1} drivers", item.name, item.driverIds.length)}</option>)}
               </select>
             </Row>
-            <Row label="Drivers">
-              <Choice<NoticeReach> label="Which drivers" value={reach} onChange={setReach} options={[{ id: "all", label: "Everyone" }, { id: "online", label: "Online now" }, { id: "offline", label: "Offline" }]} />
+            <Row label={tr("Drivers")}>
+              <Choice<NoticeReach> label={tr("Which drivers")} value={reach} onChange={setReach} options={[{ id: "all", label: "Everyone" }, { id: "online", label: "Online now" }, { id: "offline", label: "Offline" }]} />
             </Row>
-            <label className="gr-field dn-field"><span>Title</span><input aria-label="Message title" value={titleText} maxLength={TITLE_MAX + 20} disabled={!editable} onChange={(event) => setTitle(event.target.value)} /></label>
-            <label className="gr-field dn-field"><span>Text</span><textarea aria-label="Message text" rows={2} value={bodyText} maxLength={BODY_MAX + 40} disabled={!editable} onChange={(event) => setBody(event.target.value)} /></label>
-            <p className="dn-reach" role="status" data-testid="notice-reach">
-              Reaches {targets.length} driver{targets.length === 1 ? "" : "s"}: {online} online, {targets.length - online} offline.
-              {overLimit ? ` ${overLimit} already got ${limits.promoPerDay.max} promo messages today and are left out.` : ""}
-              {!book.kinds[kind].offline && targets.length - online ? ` ${noticeDef(kind).label} does not reach offline drivers.` : ""}
-              {" "}{deliveryLine(kind, limits, time)}
-            </p>
+            <label className="gr-field dn-field"><span>{tr("Title")}</span><input aria-label={tr("Message title")} value={titleText} maxLength={TITLE_MAX + 20} disabled={!editable} onChange={(event) => setTitle(event.target.value)} /></label>
+            <label className="gr-field dn-field"><span>{tr("Text")}</span><textarea aria-label={tr("Message text")} rows={2} value={bodyText} maxLength={BODY_MAX + 40} disabled={!editable} onChange={(event) => setBody(event.target.value)} /></label>
+            <p className="dn-reach" role="status" data-testid="notice-reach">{trn("Reaches {0} driver{1}: {2} online, {3} offline.{4}{5} {6}", targets.length, targets.length === 1 ? "" : "s", online, targets.length - online, overLimit ? tr(" {0} already got {1} promo messages today and are left out.", [overLimit, limits.promoPerDay.max]) : "", !book.kinds[kind].offline && targets.length - online ? tr(" {0} does not reach offline drivers.", [noticeDef(kind).label]) : "", deliveryLine(kind, limits, time))}</p>
             {result.error ? <p className="dx-issues" role="alert">{result.error}</p> : null}
             <div className="dx-modal-actions">
-              <CommandButton command="admin.driverNotices.send" className="dash-btn small" targetId={`${kind} ${zoneId}`} scope={zoneId} confirmTarget={false} before="" after={`${result.sent?.driverIds.length ?? 0} drivers`} sliceKey={DRIVER_NOTICES_KEY} value={result.book} expectedSliceRev={book.draftRev} disabled={!editable || Boolean(result.error)} title={result.error} onDone={() => { onNotice(`Sent “${titleText}” to ${result.sent?.driverIds.length ?? 0} drivers${result.sent?.sendsAt ? `. It goes out at ${result.sent.sendsAt}` : ""}.`); reset(); }}>
-                <Send size={13} aria-hidden="true" /> Send to {result.sent?.driverIds.length ?? 0} drivers
-              </CommandButton>
+              <CommandButton command="admin.driverNotices.send" className="dash-btn small" targetId={`${kind} ${zoneId}`} scope={zoneId} confirmTarget={false} before="" after={`${result.sent?.driverIds.length ?? 0} drivers`} sliceKey={DRIVER_NOTICES_KEY} value={result.book} expectedSliceRev={book.draftRev} disabled={!editable || Boolean(result.error)} title={result.error} onDone={() => { onNotice(tr("Sent “{0}” to {1} drivers{2}.", [titleText, result.sent?.driverIds.length ?? 0, result.sent?.sendsAt ? `. It goes out at ${result.sent.sendsAt}` : ""])); reset(); }}>
+                <Send size={13} aria-hidden="true" />{" "}{trn("Send to {0} drivers", result.sent?.driverIds.length ?? 0)}</CommandButton>
             </div>
           </div>
           <div className="dn-send-side">
-            <AreaMap center={area.center} radiusKm={radiusKm} label={`Area: ${area.name}, ${radiusKm} km`} onPick={(at) => { setPicked(at); setAreaPick("map"); reset(); }} />
+            <AreaMap center={area.center} radiusKm={radiusKm} label={tr("Area: {0}, {1} km", [area.name, radiusKm])} onPick={(at) => { setPicked(at); setAreaPick("map"); reset(); }} />
             <div className="dn-push" data-testid="send-preview">
-              <small>Movera Driver · {area.name}</small>
+              <small>{trn("Movera Driver · {0}", area.name)}</small>
               <b>{titleText}</b>
               <span>{bodyText}</span>
             </div>
           </div>
         </div>
       </Card>
-      <Card title={`Sent messages · ${market.name}`} tone="blue" icon={<Send size={18} />}>
+      <Card title={tr("Sent messages · {0}", [market.name])} tone="blue" icon={<Send size={18} />}>
         {sent.length ? (
-          <ul className="sa-log" aria-label="Sent driver messages">
-            {sent.slice(0, 10).map((item) => <li key={item.id}><Send size={11} aria-hidden="true" /> {item.at.slice(0, 16).replace("T", " ")} · {item.title} · {zoneById(item.zoneId)?.name ?? item.zoneId} · {item.area.name} · {item.driverIds.length} drivers{item.skipped ? ` (${item.skipped} left out)` : ""}{item.sendsAt ? ` · goes out at ${item.sendsAt}` : ""} · {item.by}</li>)}
+          <ul className="sa-log" aria-label={tr("Sent driver messages")}>
+            {sent.slice(0, 10).map((item) => <li key={item.id}><Send size={11} aria-hidden="true" />{" "}{trn("{0} · {1} · {2} · {3} · {4} drivers{5}{6} · {7}", item.at.slice(0, 16).replace("T", " "), item.title, zoneById(item.zoneId)?.name ?? item.zoneId, item.area.name, item.driverIds.length, item.skipped ? tr(" ({0} left out)", [item.skipped]) : "", item.sendsAt ? tr(" · goes out at {0}", [item.sendsAt]) : "", item.by)}</li>)}
           </ul>
-        ) : <p className="dx-calm">Nothing sent yet.</p>}
+        ) : <p className="dx-calm">{tr("Nothing sent yet.")}</p>}
       </Card>
     </>
   );
