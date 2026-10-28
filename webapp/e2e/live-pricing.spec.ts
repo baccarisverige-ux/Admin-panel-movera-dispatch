@@ -23,7 +23,7 @@ async function open(page: Page, init: Parameters<typeof fakeSurge>[1] = {}) {
 
 test("Surge tab: surge now, zone list, demand chart, price check and timeline are the server's numbers", async ({ page }) => {
   const surge = await open(page);
-  const now = page.getByRole("region", { name: "Surge now in Norrmalm" });
+  const now = page.getByRole("region", { name: "Surge now in Stockholm County" });
   await expect(page.getByTestId("surge-now")).toHaveText("×1.8");
   await expect(now).toContainText("Smart");
   await expect(page.getByTestId("surge-requests")).toHaveText("14");
@@ -32,7 +32,7 @@ test("Surge tab: surge now, zone list, demand chart, price check and timeline ar
 
   const strip = page.getByRole("list", { name: "Surge by zone" });
   await expect(strip).toContainText("Södermalm×2.2");
-  await expect(strip).toContainText("Norrmalm×1.8");
+  await expect(strip).toContainText("Stockholm County×1.8");
   await expect(strip).toContainText("Östermalm×1.0");
 
   // Demand chart: the newest server point (42 requests, 5 free drivers, ×1.8).
@@ -82,7 +82,7 @@ test("Surge tab: a zone without a sample and a failed history say Not connected 
 test("Surge tab: when the server's surge calls fail, the boxes say Not connected yet", async ({ page }) => {
   await open(page, { now: 503, history: 503 });
   await expect(page.getByTestId("surge-now")).toHaveText("—");
-  await expect(page.getByRole("region", { name: "Surge now in Norrmalm" }).getByTestId("control-not-connected").first()).toHaveText("Not connected yet");
+  await expect(page.getByRole("region", { name: "Surge now in Stockholm County" }).getByTestId("control-not-connected").first()).toHaveText("Not connected yet");
   await expect(page.getByTestId("surge-alerts-not-connected")).toContainText("Not connected yet");
   await expect(page.getByText("All zones are fine. Smart surge is handling demand.")).toHaveCount(0);
   await expect(page.getByRole("list", { name: "Surge by zone" }).getByRole("listitem")).toHaveCount(0);

@@ -19,6 +19,7 @@ import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary,
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
+import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
@@ -449,6 +450,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
       return done("Refunded.");
     }
+    if (input.action === "admin.dispatch.control") {
+      // Dispatch › Live: pause, force a mode, resume or back to the rules (PUT /admin/zones/{zoneId}/dispatch-control).
+      const value = controlValueOf(input.after);
+      if (!value) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const path = dispatchControlPath(input.targetId);
+      const current = parseControl(await client.json<unknown>(path));
+      const answer = await client.put<unknown>(path, controlBody(current, value, input.reason));
+      // v0.7.2: one admin is enough. A server that still files an approval answers 202 PendingApproval.
+      if (isPendingApproval(answer)) return done("Waiting for a second admin to approve.", "pending_approval");
+      return done("Saved.");
+    }
     // Pricing, Dispatch, Settings and Tips & limits publish to the server's config documents (contract v0.8.0).
     const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value, ...(input.scope ? { scope: input.scope } : {}) });
     if (settingsCall) {
@@ -498,6 +510,30 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       }
       await client.post(`/admin/content/${slot}/rollback`, input.value ?? {});
       return done("Rolled back.");
+    }
+    if (input.action === "admin.zone.create" || input.action === "admin.zone.update" || input.action === "admin.zone.open" || input.action === "admin.zone.close") {
+      // Zones (contract v0.11.0 §21): one admin with zones.edit; never deleted, only closed. A stale expectedVersion
+      // is 409 version_mismatch: the page reloads the list and says so.
+      const zone = encodeURIComponent(input.targetId);
+      try {
+        if (input.action === "admin.zone.create") {
+          await client.post("/admin/zones", input.value);
+          return done("Zone created.");
+        }
+        if (input.action === "admin.zone.update") {
+          await client.put(`/admin/zones/${zone}`, input.value);
+          return done("Zone saved.");
+        }
+        const verb = input.action === "admin.zone.open" ? "open" : "close";
+        const body = (input.value ?? {}) as { expectedVersion?: number };
+        await client.post(`/admin/zones/${zone}/${verb}`, { expectedVersion: body.expectedVersion, ...(input.reason ? { note: input.reason.slice(0, 1000) } : {}) });
+        return done(verb === "open" ? "Zone opened." : "Zone closed.");
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 409 && error.code === "version_mismatch") throw new ApiError(409, "The zone changed since you last saw it. The newest version was loaded; check it and try again.", { code: "version_mismatch", retryable: false });
+        if (error instanceof ApiError && error.status === 409 && error.reason === "zone_exists") throw new ApiError(409, "A zone with this id exists.", { code: "conflict", retryable: false });
+        if (error instanceof ApiError && error.status === 403 && error.reason === "zone_out_of_scope") throw new ApiError(403, "This zone is outside your scope.", { code: "forbidden", retryable: false });
+        throw error;
+      }
     }
     throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
   }

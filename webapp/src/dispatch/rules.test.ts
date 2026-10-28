@@ -346,7 +346,7 @@ const typeIssues = (patch: Partial<ReservationRules["types"]["airport"]>) => zon
 assert(typeIssues({ onlineBeforeMin: 2 }).includes("Reservations, Airport: be online before must be 5 to 240 minutes."), "be online before has a limit per kind");
 assert(typeIssues({ spareMin: 90 }).includes("Reservations, Airport: spare minutes must be 0 to 60."), "spare minutes have a limit");
 assert(typeIssues({ remindFirstMin: 10, remindLastMin: 15 }).includes("Reservations, Airport: the first reminder must come before the second (a larger number of minutes)."), "reminders come in order");
-assert(zoneIssues(withResv({ riderFees: { ...resv.riderFees, xl: { ...resv.riderFees.xl, freeMin: 20000 } } }))[0] === "Reservations, XL: free cancel must end 0 to 10080 minutes (7 days) before pickup, in whole minutes.", "rider free cancel has the rider app's limit");
+assert(zoneIssues(withResv({ riderFees: { ...resv.riderFees, xl: { ...resv.riderFees.xl, freeMin: 20000 } } }))[0] === "Reservations, Movera XL: free cancel must end 0 to 10080 minutes (7 days) before pickup, in whole minutes.", "rider free cancel has the rider app's limit");
 assert(zoneIssues(withResv({ riderFees: { ...resv.riderFees, economy: { ...resv.riderFees.economy, freeMin: 30.5 } } })).length === 1, "rider free cancel is in whole minutes");
 assert(resvIssues({ driverLateCancelHours: 0 })[0] === "Reservations: a driver's late cancel must be set 0.5 to 72 hours before pickup.", "late cancel time has a limit");
 assert(resvIssues({ latePauseAfter: 0 })[0] === "Reservations: the pause must come after 1 to 20 late cancels.", "pause count has a limit");

@@ -4,7 +4,7 @@ import { formatMoney } from "./money.ts";
 export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
-export const CONTRACT_VERSION = "0.10.4" as const;
+export const CONTRACT_VERSION = "0.11.0" as const;
 
 /** The 19 trip statuses of contract v0.3.0 (contract.json#tripStatus.values), in lifecycle order. */
 export const TRIP_STATUSES = [
@@ -186,7 +186,7 @@ export const CATEGORIES = [
   { id: "comfort", label: "Comfort", seats: 4 },
   { id: "premium", label: "Premium", seats: 4 },
   { id: "priority", label: "Priority", seats: 4 },
-  { id: "xl", label: "XL", seats: 6 },
+  { id: "xl", label: "Movera XL", seats: 6 },
   { id: "electric", label: "Electric", seats: 4 },
   { id: "pet", label: "Pet", seats: 4 },
 ] as const;

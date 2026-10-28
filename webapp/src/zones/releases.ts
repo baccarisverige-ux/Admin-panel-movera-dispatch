@@ -1,3 +1,4 @@
+import { trx } from "../i18n/core.ts";
 import area from "@turf/area";
 import { booleanIntersects } from "@turf/boolean-intersects";
 import { booleanWithin } from "@turf/boolean-within";
@@ -104,6 +105,8 @@ export type ZoneShape = {
   hours: string;
   from: string;
   until: string;
+  /** Live (contract v0.11.0 §21): the name is the server's full name, shown without the city in front. */
+  named?: boolean;
 };
 
 export type ZoneStatus = "draft" | "in_review";
@@ -155,7 +158,7 @@ function rect(south: number, west: number, north: number, east: number): [number
   ];
 }
 
-function zone(input: Pick<ZoneShape, "id" | "code" | "name" | "kind" | "points"> & Partial<ZoneShape>): ZoneShape {
+export function makeZone(input: Pick<ZoneShape, "id" | "code" | "name" | "kind" | "points"> & Partial<ZoneShape>): ZoneShape {
   const airport = input.kind === "airport";
   return {
     parentId: input.kind === "service" ? null : "svc-stockholm",
@@ -215,7 +218,7 @@ export function zoneStatus(zone: ZoneShape, book: ZoneBook): "Archived" | "In re
 }
 
 export function zoneTypeLabel(kind: ZoneKind): string {
-  return ZONE_TYPES.find((item) => item.id === kind)?.label ?? kind;
+  return trx(ZONE_TYPES.find((item) => item.id === kind)?.label ?? kind);
 }
 
 /** Greater Stockholm, 9 operating zones, Arlanda and Bromma — the 12 areas — plus one of each other type. */
@@ -232,16 +235,16 @@ export function stockholmZones(): ZoneShape[] {
     ["op-sodertalje", "SODT", "Södertälje", 59.17, 17.52, 59.23, 17.7, "Z009"],
   ];
   return [
-    zone({ id: "svc-stockholm", code: "STO", name: "Greater Stockholm", kind: "service", parentId: null, points: rect(59.1, 17.4, 59.8, 18.5) }),
-    ...operating.map(([id, code, name, south, west, north, east, marketZoneId]) => zone({ id, code, name, kind: "operating", marketZoneId, city: id === "op-sodertalje" ? "sodertalje" : "stockholm", points: rect(south, west, north, east) })),
-    zone({ id: "air-arlanda", code: "ARN", name: "Arlanda", kind: "airport", marketZoneId: "ARN", terminals: "Terminal 2, Terminal 5", points: rect(59.62, 17.85, 59.68, 17.97) }),
-    zone({ id: "air-bromma", code: "BMA", name: "Bromma airport", kind: "airport", marketZoneId: "BMA", terminals: "Main terminal", points: rect(59.348, 17.8, 59.378, 17.88) }),
-    zone({ id: "boost-1", code: "BST", name: "Friday night Stureplan", kind: "boost", points: rect(59.333, 18.072, 59.341, 18.098) }),
-    zone({ id: "event-1", code: "EVE", name: "Tele2 event", kind: "event", points: rect(59.22, 18.02, 59.248, 18.09) }),
-    zone({ id: "nopick-1", code: "NOP", name: "Drottninggatan no pickup", kind: "no_pickup", points: rect(59.328, 18.068, 59.331, 18.09) }),
-    zone({ id: "restricted-1", code: "DEP", name: "Depot", kind: "restricted", points: rect(59.3, 18.19, 59.32, 18.23) }),
-    zone({ id: "fleet-1", code: "FLT", name: "Partner north", kind: "fleet", points: rect(59.46, 18, 59.505, 18.07) }),
-    zone({ id: "pin-t5", code: "T5", name: "Terminal 5", kind: "pickup", parentId: "air-arlanda", points: [[59.651, 17.922]] }),
+    makeZone({ id: "svc-stockholm", code: "STO", name: "Greater Stockholm", kind: "service", parentId: null, points: rect(59.1, 17.4, 59.8, 18.5) }),
+    ...operating.map(([id, code, name, south, west, north, east, marketZoneId]) => makeZone({ id, code, name, kind: "operating", marketZoneId, city: id === "op-sodertalje" ? "sodertalje" : "stockholm", points: rect(south, west, north, east) })),
+    makeZone({ id: "air-arlanda", code: "ARN", name: "Arlanda", kind: "airport", marketZoneId: "ARN", terminals: "Terminal 2, Terminal 5", points: rect(59.62, 17.85, 59.68, 17.97) }),
+    makeZone({ id: "air-bromma", code: "BMA", name: "Bromma airport", kind: "airport", marketZoneId: "BMA", terminals: "Main terminal", points: rect(59.348, 17.8, 59.378, 17.88) }),
+    makeZone({ id: "boost-1", code: "BST", name: "Friday night Stureplan", kind: "boost", points: rect(59.333, 18.072, 59.341, 18.098) }),
+    makeZone({ id: "event-1", code: "EVE", name: "Tele2 event", kind: "event", points: rect(59.22, 18.02, 59.248, 18.09) }),
+    makeZone({ id: "nopick-1", code: "NOP", name: "Drottninggatan no pickup", kind: "no_pickup", points: rect(59.328, 18.068, 59.331, 18.09) }),
+    makeZone({ id: "restricted-1", code: "DEP", name: "Depot", kind: "restricted", points: rect(59.3, 18.19, 59.32, 18.23) }),
+    makeZone({ id: "fleet-1", code: "FLT", name: "Partner north", kind: "fleet", points: rect(59.46, 18, 59.505, 18.07) }),
+    makeZone({ id: "pin-t5", code: "T5", name: "Terminal 5", kind: "pickup", parentId: "air-arlanda", points: [[59.651, 17.922]] }),
   ];
 }
 
@@ -259,10 +262,10 @@ export function parisZones(): ZoneShape[] {
     ["FR-BB", "BB", "Boulogne-Billancourt", rect(48.825, 2.22, 48.848, 2.26)],
   ];
   return [
-    zone({ id: "svc-paris", code: "PAR", name: "Grand Paris", kind: "service", country: "FR", city: "paris", parentId: null, points: rect(48.7, 2.15, 49.05, 2.65) }),
-    ...operating.map(([marketZoneId, code, name, points]) => zone({ ...base, id: `op-${marketZoneId.toLowerCase()}`, code: `PAR-${code}`, name, kind: "operating", marketZoneId, points })),
-    zone({ ...base, id: "air-cdg", code: "CDG", name: "Charles de Gaulle", kind: "airport", marketZoneId: "CDG", terminals: "Terminal 1, Terminal 2E", zoneFeeOre: 500, airportFeeOre: 500, queueFeeOre: 500, points: rect(48.99, 2.51, 49.03, 2.6) }),
-    zone({ ...base, id: "air-ory", code: "ORY", name: "Orly", kind: "airport", marketZoneId: "ORY", terminals: "Orly 1-2-3-4", zoneFeeOre: 500, airportFeeOre: 500, queueFeeOre: 500, points: rect(48.715, 2.34, 48.74, 2.39) }),
+    makeZone({ id: "svc-paris", code: "PAR", name: "Grand Paris", kind: "service", country: "FR", city: "paris", parentId: null, points: rect(48.7, 2.15, 49.05, 2.65) }),
+    ...operating.map(([marketZoneId, code, name, points]) => makeZone({ ...base, id: `op-${marketZoneId.toLowerCase()}`, code: `PAR-${code}`, name, kind: "operating", marketZoneId, points })),
+    makeZone({ ...base, id: "air-cdg", code: "CDG", name: "Charles de Gaulle", kind: "airport", marketZoneId: "CDG", terminals: "Terminal 1, Terminal 2E", zoneFeeOre: 500, airportFeeOre: 500, queueFeeOre: 500, points: rect(48.99, 2.51, 49.03, 2.6) }),
+    makeZone({ ...base, id: "air-ory", code: "ORY", name: "Orly", kind: "airport", marketZoneId: "ORY", terminals: "Orly 1-2-3-4", zoneFeeOre: 500, airportFeeOre: 500, queueFeeOre: 500, points: rect(48.715, 2.34, 48.74, 2.39) }),
   ];
 }
 
@@ -280,9 +283,9 @@ export function tunisZones(): ZoneShape[] {
     ["TN-BA", "BA", "Ben Arous", rect(36.735, 10.2, 36.77, 10.25)],
   ];
   return [
-    zone({ id: "svc-tunis", code: "TUN", name: "Grand Tunis", kind: "service", country: "TN", city: "tunis", parentId: null, points: rect(36.7, 10.05, 36.95, 10.4) }),
-    ...operating.map(([marketZoneId, code, name, points]) => zone({ ...base, id: `op-${marketZoneId.toLowerCase()}`, code: `TUN-${code}`, name, kind: "operating", marketZoneId, cash: true, points })),
-    zone({ ...base, id: "air-tun", code: "TUN-AIR", name: "Tunis-Carthage", kind: "airport", marketZoneId: "TUN", terminals: "Main terminal", zoneFeeOre: 3000, airportFeeOre: 3000, queueFeeOre: 3000, cash: true, points: rect(36.846, 10.205, 36.862, 10.245) }),
+    makeZone({ id: "svc-tunis", code: "TUN", name: "Grand Tunis", kind: "service", country: "TN", city: "tunis", parentId: null, points: rect(36.7, 10.05, 36.95, 10.4) }),
+    ...operating.map(([marketZoneId, code, name, points]) => makeZone({ ...base, id: `op-${marketZoneId.toLowerCase()}`, code: `TUN-${code}`, name, kind: "operating", marketZoneId, cash: true, points })),
+    makeZone({ ...base, id: "air-tun", code: "TUN-AIR", name: "Tunis-Carthage", kind: "airport", marketZoneId: "TUN", terminals: "Main terminal", zoneFeeOre: 3000, airportFeeOre: 3000, queueFeeOre: 3000, cash: true, points: rect(36.846, 10.205, 36.862, 10.245) }),
   ];
 }
 
@@ -316,7 +319,7 @@ function normalizePickup(raw: Partial<PickupPoint>): PickupPoint {
 }
 
 function normalizeZone(raw: ZoneShape): ZoneShape {
-  return zone({
+  return makeZone({
     ...raw,
     color: raw.color ?? ZONE_COLOR[raw.kind],
     priority: Number.isFinite(raw.priority) ? raw.priority : DEFAULT_PRIORITY[raw.kind],
@@ -381,7 +384,7 @@ export function patchZone(book: ZoneBook, zoneId: string, patch: Partial<ZoneSha
 
 export function createZone(book: ZoneBook, authorId: string): { book: ZoneBook; id: string } {
   const id = `zone-${book.draft.length + 1}`;
-  const created = zone({ id, code: `N${book.draft.length + 1}`, name: "New zone", kind: "operating", points: [] });
+  const created = makeZone({ id, code: `N${book.draft.length + 1}`, name: "New zone", kind: "operating", points: [] });
   return {
     id,
     book: { ...book, authorId, status: "draft", draft: [...book.draft, created] },
@@ -997,7 +1000,8 @@ export const ADDRESS_BOOK: { name: string; lat: number; lng: number }[] = [
 /* ---------- Countries, cities and new zones ---------- */
 
 /** The name shown everywhere: the city first, like "Stockholm · Norrmalm". */
-export function displayName(zone: Pick<ZoneShape, "name" | "city">): string {
+export function displayName(zone: Pick<ZoneShape, "name" | "city" | "named">): string {
+  if (zone.named) return zone.name;
   const city = cityById(zone.city);
   if (!city || zone.name.toLowerCase().startsWith(`${city.name.toLowerCase()} · `)) return zone.name;
   return `${city.name} · ${zone.name}`;
@@ -1059,7 +1063,7 @@ export function createZoneIn(book: ZoneBook, input: NewZone, authorId: string): 
   const copied = source ? Object.fromEntries(COPY_FIELDS.map((field) => [field, JSON.parse(JSON.stringify(source[field]))])) : {};
   let id = `zone-${city.id}-${input.code.toLowerCase()}`;
   for (let index = 2; book.draft.some((item) => item.id === id); index += 1) id = `zone-${city.id}-${input.code.toLowerCase()}-${index}`;
-  const created = zone({
+  const created = makeZone({
     ...copied,
     id,
     code: input.code,
@@ -1180,7 +1184,7 @@ export function lineKm(line: Ring): number {
 /** Checks while drawing a new shape, before it is saved. */
 export function shapeChecks(points: Ring, city: City | undefined, kind: ZoneKind, zones: readonly ZoneShape[], ignoreId?: string): ZoneIssue[] {
   if (points.length < 3) return [{ level: "error", zoneId: "new", message: "Make the shape first." }];
-  const probe = zone({ id: ignoreId ?? "new-shape", code: "NEW", name: "New zone", kind, points, city: city?.id ?? "", country: city?.country ?? "SE", parentId: zones.find((item) => item.kind === "service" && item.country === city?.country)?.id ?? null });
+  const probe = makeZone({ id: ignoreId ?? "new-shape", code: "NEW", name: "New zone", kind, points, city: city?.id ?? "", country: city?.country ?? "SE", parentId: zones.find((item) => item.kind === "service" && item.country === city?.country)?.id ?? null });
   const others = zones.filter((item) => item.id !== probe.id);
   const issues = validateZones([...others, probe]).filter((issue) => issue.zoneId === probe.id || issue.message.includes(probe.name));
   const size = ringAreaKm(points);
