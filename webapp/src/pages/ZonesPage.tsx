@@ -43,7 +43,8 @@ import {
 import { statusTone, ZoneMap } from "./ZoneMap";
 import { tr, trn, trx } from "../i18n";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { useLiveZoneList } from "../live/LiveZones";
+import { useLiveZoneList, useLiveZonesFailure } from "../live/LiveZones";
+import { ErrorLine } from "../live/ui";
 import { liveIssues } from "../zones/liveIssues";
 
 type Filter = "all" | "operating" | "airport" | "rules" | "pickup" | "archived";
@@ -75,6 +76,7 @@ export function ZonesPage() {
   const liveSession = useLiveSessionMaybe();
   const isLive = Boolean(liveSession);
   const serverZones = useLiveZoneList();
+  const zonesFailure = useLiveZonesFailure();
   const canEdit = liveSession ? liveSession.can("zones.edit") : Boolean(agent && can(agent.role, "zones.edit"));
   const canPublish = Boolean(agent && can(agent.role, "zones.publish"));
   const [wizard, setWizard] = useState<{ city?: string } | null>(null);
@@ -150,7 +152,7 @@ export function ZonesPage() {
       {isLive ? (
         <section className="zn-release" aria-label={tr("Zones on the server")}>
           <p className="fine" data-testid="zones-live-note">{trn("{0} The list comes from the server. A change goes to the apps at once; one admin is enough. A zone is never deleted, only closed.", <ShieldCheck size={13} aria-hidden="true" />)}</p>
-          {serverZones === null ? <p className="state-line">{tr("Loading.")}</p> : null}
+          {zonesFailure ? <><p className="live-not-connected" role="note" data-testid="zones-not-connected">{tr("Not connected yet")}</p><ErrorLine error={zonesFailure.error} onRetry={zonesFailure.retry} /></> : serverZones === null ? <p className="state-line">{tr("Loading.")}</p> : null}
         </section>
       ) : (
       <section className="zn-release" aria-label={tr("Publish zones")}>

@@ -1,3 +1,4 @@
+import { trx } from "../i18n/core.ts";
 import area from "@turf/area";
 import { booleanIntersects } from "@turf/boolean-intersects";
 import { booleanWithin } from "@turf/boolean-within";
@@ -217,7 +218,7 @@ export function zoneStatus(zone: ZoneShape, book: ZoneBook): "Archived" | "In re
 }
 
 export function zoneTypeLabel(kind: ZoneKind): string {
-  return ZONE_TYPES.find((item) => item.id === kind)?.label ?? kind;
+  return trx(ZONE_TYPES.find((item) => item.id === kind)?.label ?? kind);
 }
 
 /** Greater Stockholm, 9 operating zones, Arlanda and Bromma — the 12 areas — plus one of each other type. */

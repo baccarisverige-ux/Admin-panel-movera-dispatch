@@ -53,6 +53,9 @@ test("Zones: zone page FR-PC with its outline, names in three languages saved wi
   const server = await open(page, "/zones?country=FR");
   await page.goto("/zones/FR-PC");
   await expect(page.getByRole("heading", { level: 2, name: "Paris & Île-de-France" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Frankrike/ })).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator(".zd-hero")).toContainText("Frankrike");
+  await expect(page.locator(".zd-hero")).toContainText("Driftzon");
   await expect(page.getByRole("img", { name: /Paris & Île-de-France/ })).toBeVisible();
   await expect(page.locator('[data-command="admin.zone.delete"]')).toHaveCount(0);
   await expect(page.getByLabel("Namn på franska")).toHaveValue("Paris & Île-de-France");
@@ -71,10 +74,12 @@ test("Zones: create a zone with outline and names in sv, fr, en (POST /admin/zon
   await page.getByLabel("Namn på franska").fill("Sousse centre");
   await page.getByLabel("Namn på engelska").fill("Sousse centre");
   await expect(page.getByLabel("Zon-id")).toHaveValue("TN-SC");
+  await shot(page, "admin-zone-create-names-sv");
   await page.getByRole("button", { name: "Nästa: formen" }).click();
   await page.getByRole("radio", { name: /Hela staden/ }).click();
   await page.getByRole("button", { name: "Nästa: kontrollera och spara" }).click();
   await expect(page.getByTestId("zone-create-closed")).toBeVisible();
+  await expect(page.locator(".zn-inside")).toHaveCount(0);
   await shot(page, "admin-zone-create-form-sv");
   await page.getByRole("button", { name: "Skapa zon" }).click();
   await confirm(page);
@@ -100,4 +105,25 @@ test("Zones: close FR-PC in the confirm box; a stale version reloads with a mess
   await confirm(page);
   await expect(page.getByText("Zonen har ändrats sedan du såg den.").first()).toBeVisible();
   await expect.poll(() => server.sent.filter((s) => s.method === "GET").length).toBeGreaterThan(1);
+});
+
+test("Zones: a failed GET /admin/zones shows Not connected yet with Try again, never the built-in list", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  let fail = true;
+  await page.route(/\/api\/v1\/admin\/zones(\?.*)?$/, (route) => {
+    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" } });
+    if (fail) return route.fulfill({ status: 503, headers: { "access-control-allow-origin": "*", "content-type": "application/json" }, body: JSON.stringify({ code: "unavailable", message: "The server is busy.", requestId: "r-503", retryable: true }) });
+    return route.fallback();
+  });
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/zones?country=FR");
+  await expect(page.getByTestId("zones-not-connected")).toHaveText("Inte kopplad än");
+  await expect(page.getByRole("region", { name: "Zoner per stad" })).not.toContainText("Rive Gauche");
+  await page.locator('[data-command="admin.ui.zones"].zone-trigger').click();
+  await expect(page.locator(".zone-menu")).not.toContainText("FR-RG");
+  await page.keyboard.press("Escape");
+  fail = false;
+  await page.getByRole("button", { name: "Försök igen" }).click();
+  await expect(page.getByTestId("zones-server")).toContainText("3 öppna · 0 stängda");
 });

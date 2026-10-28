@@ -42,7 +42,7 @@ test("Content: three languages, publish to the chosen zones (one admin), history
   await expect(page.getByRole("button", { name: "Publicera", exact: true })).toBeDisabled();
   await page.getByLabel("Franskt innehåll").fill("Bonne route !");
   await page.getByRole("button", { name: "Publicera", exact: true }).click();
-  await expect(page.locator(".modal.open").getByTestId("publish-targets")).toHaveText("Publiceras till: Norrmalm, Södermalm. Ingen annan zon ändras.");
+  await expect(page.locator(".modal.open").getByTestId("publish-targets")).toHaveText("Publiceras till: Stockholm län, Södermalm. Ingen annan zon ändras.");
   await shot(page, "admin-content-publish-confirm-zones-sv");
   await confirm(page);
   await expect.poll(() => server.sent.filter((s) => s.path === "/api/v1/admin/content/driver-home/publish").map((s) => s.body)).toEqual([

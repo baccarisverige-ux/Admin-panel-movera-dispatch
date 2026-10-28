@@ -267,6 +267,8 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     if (p === "/api/v1/admin/auth/sign-in") return json(route, 200, { accessToken: "access-1", refreshToken: "refresh-1", expiresIn: 900, actor: "admin", admin: { ...ADMIN, ...state.admin } });
     if (p === "/api/v1/admin/auth/sign-out") return route.fulfill({ status: 204, headers: CORS });
     if (request.headers().authorization !== "Bearer access-1") return json(route, 401, { code: "unauthenticated", message: "Sign in again.", requestId: "r-401", retryable: false });
+    // Contract v0.11.0 §20: the zone list every live screen reads (fakeZones() answers writes too).
+    if (p === "/api/v1/admin/zones" && method === "GET") return json(route, 200, { zones: SEED_ZONES() });
     if (p === "/api/v1/admin/drivers") {
       if (state.driversFail) return json(route, state.driversFail, { code: "unavailable", message: "The server is busy.", requestId: "r-503", retryable: false });
       const status = url.searchParams.get("accountStatus");
@@ -623,6 +625,15 @@ const zoneOf = (zoneId: string, names: FakeZone["names"], country: string, curre
 };
 export const SEED_ZONES = (): FakeZone[] => [
   zoneOf("Z001", { sv: "Stockholm län", fr: "Comté de Stockholm", en: "Stockholm County" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.325, 18.06], [59.35, 18.06], [59.35, 18.11], [59.325, 18.11]]),
+  zoneOf("Z002", { sv: "Södermalm", fr: "Södermalm", en: "Södermalm" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.255, 18.008], [59.318, 18.008], [59.318, 18.145], [59.255, 18.145]]),
+  zoneOf("Z003", { sv: "Östermalm", fr: "Östermalm", en: "Östermalm" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.325, 18.118], [59.39, 18.118], [59.39, 18.185], [59.325, 18.185]]),
+  zoneOf("Z004", { sv: "Kungsholmen", fr: "Kungsholmen", en: "Kungsholmen" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.322, 18.008], [59.355, 18.008], [59.355, 18.055], [59.322, 18.055]]),
+  zoneOf("Z005", { sv: "Vasastan", fr: "Vasastan", en: "Vasastan" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.358, 18.015], [59.395, 18.015], [59.395, 18.1], [59.358, 18.1]]),
+  zoneOf("Z006", { sv: "Bromma", fr: "Bromma", en: "Bromma" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.3, 17.9], [59.345, 17.9], [59.345, 18.0], [59.3, 18.0]]),
+  zoneOf("Z007", { sv: "Solna", fr: "Solna", en: "Solna" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.4, 17.99], [59.445, 17.99], [59.445, 18.055], [59.4, 18.055]]),
+  zoneOf("Z008", { sv: "Kista", fr: "Kista", en: "Kista" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.4, 17.85], [59.455, 17.85], [59.455, 17.97], [59.4, 17.97]]),
+  zoneOf("Z009", { sv: "Södertälje", fr: "Södertälje", en: "Södertälje" }, "SE", "SEK", "Europe/Stockholm", "operating", true, [[59.17, 17.52], [59.23, 17.52], [59.23, 17.7], [59.17, 17.7]]),
+  zoneOf("BMA", { sv: "Bromma flygplats", fr: "Aéroport de Bromma", en: "Bromma Airport" }, "SE", "SEK", "Europe/Stockholm", "airport", true, [[59.348, 17.8], [59.378, 17.8], [59.378, 17.88], [59.348, 17.88]]),
   zoneOf("ARN", { sv: "Arlanda flygplats", fr: "Aéroport d'Arlanda", en: "Arlanda Airport" }, "SE", "SEK", "Europe/Stockholm", "airport", true, [[59.62, 17.85], [59.68, 17.85], [59.68, 17.97], [59.62, 17.97]]),
   zoneOf("FR-PC", { sv: "Paris & Île-de-France", fr: "Paris & Île-de-France", en: "Paris & Île-de-France" }, "FR", "EUR", "Europe/Paris", "operating", true, [[49.24, 1.79], [49.23, 2.17], [49.17, 2.53], [49.12, 2.7], [49.08, 3.07], [49.04, 3.18], [48.93, 3.34], [48.82, 3.49], [48.53, 3.56], [48.37, 3.41], [48.27, 3.05], [48.13, 2.94], [48.12, 2.52], [48.29, 2.18], [48.36, 1.97], [48.44, 1.92], [48.65, 1.58], [48.76, 1.45], [48.94, 1.47], [49.08, 1.61]]),
   zoneOf("CDG", { sv: "Paris-Charles de Gaulle flygplats", fr: "Aéroport Paris-Charles de Gaulle", en: "Paris-Charles de Gaulle Airport" }, "FR", "EUR", "Europe/Paris", "airport", true, [[49.035, 2.49], [49.035, 2.61], [48.985, 2.61], [48.985, 2.49]]),

@@ -5475,6 +5475,20 @@ export const en = {
   "Zones, outlines, names and open or closed from the server; traffic on the map, rules and pickup points are not connected yet.": "Zones, outlines, names and open or closed from the server; traffic on the map, rules and pickup points are not connected yet.",
   "Open for rides": "Open for rides",
   "Closed to new rides": "Closed to new rides",
+  "{0}: draw the new zone on the map.": "{0}: draw the new zone on the map.",
+  "The whole of {0} is the shape.": "The whole of {0} is the shape.",
+  "{0} district{1} joined.": "{0} district{1} joined.",
+  "{0} km around {1}.": "{0} km around {1}.",
+  "Copied the shape of {0}. Change it after saving.": "Copied the shape of {0}. Change it after saving.",
+  "Shape from {0}.": "Shape from {0}.",
+  "Cut to the {0} border.": "Cut to the {0} border.",
+  "Riders can book here": "Riders can book here",
+  "Queue, fees and pickup doors": "Queue, fees and pickup doors",
+  "Extra pay for drivers": "Extra pay for drivers",
+  "Concerts, matches, fairs": "Concerts, matches, fairs",
+  "No pickup or drop-off": "No pickup or drop-off",
+  "Drivers may not enter": "Drivers may not enter",
+  "A fleet owner's area": "A fleet owner's area",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -52,7 +52,10 @@ import {
 import { statusTone } from "./ZoneMap";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { useLiveZoneList } from "../live/LiveZones";
+import { COUNTRY_LABEL } from "../i18n/countries";
+import { useMarketScope } from "../markets/useMarketScope";
+import { useLiveZoneList, useLiveZonesFailure } from "../live/LiveZones";
+import { ErrorLine } from "../live/ui";
 import { liveIssues } from "../zones/liveIssues";
 import { LiveOpenClose, LiveZoneFields } from "./LiveZoneActions";
 
@@ -170,6 +173,7 @@ export function ZoneDetailPage() {
   const liveSession = useLiveSessionMaybe();
   const isLive = Boolean(liveSession);
   const serverZones = useLiveZoneList();
+  const zonesFailure = useLiveZonesFailure();
   const server = serverZones?.find((item) => item.zoneId === zoneId);
   const canEdit = liveSession ? liveSession.can("zones.edit") : Boolean(agent && can(agent.role, "zones.edit"));
   // Live: the server keeps the outline, names, type and open or closed; the other tabs are the demo's own settings.
@@ -180,6 +184,16 @@ export function ZoneDetailPage() {
   const [pickupNotes, setPickupNotes] = useState("");
   const [pickupPhoto, setPickupPhoto] = useState("");
   const zone = ui.book.draft.find((item) => item.id === zoneId);
+  const scope = useMarketScope();
+  // Opened directly (/zones/FR-PC): the top bar follows the zone's country.
+  useEffect(() => {
+    if (!zone || zone.country === scope.country) return;
+    const copy = new URLSearchParams(params);
+    copy.set("country", zone.country);
+    copy.delete("scope");
+    setParams(copy, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a country change moves the top bar
+  }, [zone?.country, scope.country]);
 
   function save(patch: Partial<ZoneShape>) {
     if (!agent || !zone) return;
@@ -192,6 +206,7 @@ export function ZoneDetailPage() {
     setParams(copy, { replace: true });
   }
 
+  if (isLive && zonesFailure) return <><p className="live-not-connected" role="note">{tr("Not connected yet")}</p><ErrorLine error={zonesFailure.error} onRetry={zonesFailure.retry} /></>;
   if (isLive && serverZones === null) return <p className="state-line">{tr("Loading.")}</p>;
   if (!zone) {
     // A deleted zone comes back with Undo or a roll back on the Zones page.
@@ -220,7 +235,7 @@ export function ZoneDetailPage() {
           <span className="zn-sel-type"><i />{zoneTypeLabel(zone.kind)}</span>
           <h2>{displayName(zone)}</h2>
           <p>
-            <Flag id={zone.country} /> {country.name} · {city?.name ?? tr("No city")} · <b>{zone.code}</b> · {isLive ? <span className={`zn-status ${zone.active ? "good" : "muted"}`} data-zone-open={zone.active}>{zone.active ? tr("Open for rides") : tr("Closed to new rides")}</span> : <span className={`zn-status ${statusTone(status)}`} data-zone-status={status}>{trn("Status: {0}", scheduled ? tr("Scheduled") : status)}</span>}
+            <Flag id={zone.country} /> {trx(COUNTRY_LABEL[zone.country])} · {city?.name ?? tr("No city")} · <b>{zone.code}</b> · {isLive ? <span className={`zn-status ${zone.active ? "good" : "muted"}`} data-zone-open={zone.active}>{zone.active ? tr("Open for rides") : tr("Closed to new rides")}</span> : <span className={`zn-status ${statusTone(status)}`} data-zone-status={status}>{trn("Status: {0}", scheduled ? tr("Scheduled") : status)}</span>}
           </p>
         </div>
         <dl className="zd-hero-stats">
