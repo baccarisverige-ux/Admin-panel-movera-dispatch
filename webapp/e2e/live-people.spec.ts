@@ -241,6 +241,7 @@ test("drivers, fleets and vehicles lists: server search and status filter; a fai
   await expect(page.getByRole("cell", { name: "Anna Berg", exact: true }).first()).toBeVisible();
 
   await page.goto("/fleets");
+  await expect(page.getByText("Taxi Nord AB").first()).toBeVisible();
   await page.getByTestId("live-list-fleets").getByLabel("Status on the server").selectOption("pending");
   await expect.poll(() => state.calls.some((call) => call.path.startsWith("/api/v1/admin/fleets?") && call.path.includes("status=pending"))).toBe(true);
   await expect(page.getByText("Taxi Nord AB")).toHaveCount(0);

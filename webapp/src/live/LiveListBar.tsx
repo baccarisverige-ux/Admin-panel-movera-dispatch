@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router";
 import { useRecords } from "../api/hooks";
@@ -36,14 +36,18 @@ function Bar({ list, records, initialStatus }: { list: LiveListName; records: st
   const query = useSyncExternalStore(subscribeLists, () => listQueryOf(list), () => listQueryOf(list));
   const rows = useRecords(records, null, { observe: true });
   const visit = useLocation().pathname;
+  const picked = useRef(false);
   useEffect(() => {
     // Once per page: a remount or a redirect while the page loads keeps the status the admin just picked.
     const key = `${visit}:${initialStatus}`;
     if (appliedOn.get(list) === key) return;
     appliedOn.set(list, key);
+    // The admin picked a status before this ran (the page was still loading): keep it.
+    if (picked.current) return;
     setListQuery(list, { status: initialStatus, pages: 1 });
   }, [list, initialStatus, visit]);
   const change = (patch: Parameters<typeof setListQuery>[1]) => {
+    picked.current = true;
     setListQuery(list, patch);
     // Only this list asks the server again; the page's other lists keep their rows.
     void queryClient.invalidateQueries({ queryKey: ["records", records] });
