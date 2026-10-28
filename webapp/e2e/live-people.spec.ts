@@ -228,6 +228,7 @@ test("drivers, fleets and vehicles lists: server search and status filter; a fai
     await expect(page.locator("input.table-search")).toHaveCount(1);
   }
   await page.goto("/drivers");
+  await expect(page.getByRole("cell", { name: "Anna Berg", exact: true }).first()).toBeVisible();
   await bar.getByLabel("Status on the server").selectOption("active");
   await expect.poll(() => state.calls.some((call) => call.path.includes("accountStatus=active")), { timeout: 15_000 }).toBe(true);
   await expect(page.getByRole("cell", { name: "Bo Nord", exact: true }).first()).toBeVisible();

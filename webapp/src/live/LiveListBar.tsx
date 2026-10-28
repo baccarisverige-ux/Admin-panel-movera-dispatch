@@ -28,16 +28,16 @@ export function LiveListBar({ list, records = list, initialStatus = "" }: { list
   return <Bar list={list} records={records} initialStatus={initialStatus} />;
 }
 
-/** The page visit each list's starting status was last set on. */
+/** The page each list's starting status was last set on. */
 const appliedOn = new Map<LiveListName, string>();
 
 function Bar({ list, records, initialStatus }: { list: LiveListName; records: string; initialStatus: string }) {
   const queryClient = useQueryClient();
   const query = useSyncExternalStore(subscribeLists, () => listQueryOf(list), () => listQueryOf(list));
   const rows = useRecords(records, null, { observe: true });
-  const visit = useLocation().key;
+  const visit = useLocation().pathname;
   useEffect(() => {
-    // Once per visit of the page: a remount while the page loads keeps the status the admin just picked.
+    // Once per page: a remount or a redirect while the page loads keeps the status the admin just picked.
     const key = `${visit}:${initialStatus}`;
     if (appliedOn.get(list) === key) return;
     appliedOn.set(list, key);
