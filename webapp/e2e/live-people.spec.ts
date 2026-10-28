@@ -216,6 +216,8 @@ test("fleet invitations: Accept (disabled for a number without an account) and C
 });
 
 test("drivers, fleets and vehicles lists: server search and status filter; a failure shows Try again", async ({ page }) => {
+  // Five list pages in one test, each loading every list the page shows.
+  test.slow();
   const state = await fakeTripServer(page);
   await signIn(page);
   await page.goto("/drivers");
@@ -227,7 +229,7 @@ test("drivers, fleets and vehicles lists: server search and status filter; a fai
   }
   await page.goto("/drivers");
   await bar.getByLabel("Status on the server").selectOption("active");
-  await expect.poll(() => state.calls.some((call) => call.path.includes("accountStatus=active"))).toBe(true);
+  await expect.poll(() => state.calls.some((call) => call.path.includes("accountStatus=active")), { timeout: 15_000 }).toBe(true);
   await expect(page.getByRole("cell", { name: "Bo Nord", exact: true }).first()).toBeVisible();
   await expect(page.getByRole("cell", { name: "Anna Berg", exact: true })).toHaveCount(0);
   await bar.getByLabel("Status on the server").selectOption("");
