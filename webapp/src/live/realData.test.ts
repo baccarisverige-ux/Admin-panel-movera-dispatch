@@ -132,3 +132,18 @@ test("live KPIs: a total only when every zone-day is there; tips, refunds and wa
   assert.deepEqual([...RATING_TAGS.aboutDriver, ...RATING_TAGS.aboutRider].map(ratingTagLabel), ["Clean car", "Friendly", "Safe driving", "Good music", "Knew the way", "On time", "Polite", "Clear pickup"]);
   assert.equal(typeof payoutLineLabel, "function");
 });
+
+test("live Reports › Money (contract v0.10.3): per currency apart, net = Movera earnings − refunds, a missing day is Not connected", async () => {
+  const { moneyGroups, totalsOf } = await import("./kpis.ts");
+  const day = (date: string, zoneId: string, currency: string, gross: number, extra: Record<string, number> = { tips: 200, refunds: 100, fees: 400, moveraEarnings: 2500 }) => ({ date, zoneId, source: "summary" as const, currency, completedTrips: 2, cancelledTrips: 0, noShows: 0, gross, commission: 2000, driverEarnings: 8000, pickupPay: 500, driverBonus: 0, cashCollected: 0, walletApplied: 0, newRiders: 0, newDrivers: 0, ...extra });
+  const dates = ["2026-10-26", "2026-10-27"];
+  const groups = moneyGroups([day("2026-10-26", "Z001", "SEK", 10000), day("2026-10-27", "Z001", "SEK", 10000), day("2026-10-26", "FR-PC", "EUR", 3000), day("2026-10-27", "FR-PC", "EUR", 3000, { tips: 0, refunds: 0, fees: 0, moveraEarnings: -100 })], dates);
+  assert.deepEqual(groups.map((g) => [g.currency, g.missing, g.total.bookings, g.total.moveraEarnings, g.total.driverEarnings, g.total.tips, g.total.refunds, g.total.net]), [["EUR", false, 6000, 2400, 17000, 200, 100, 2300], ["SEK", false, 20000, 5000, 17000, 400, 200, 4800]]);
+  const gap = moneyGroups([day("2026-10-26", "Z001", "SEK", 10000)], dates)[0]!;
+  assert.ok(gap.missing && Number.isNaN(gap.total.bookings) && Number.isNaN(gap.days[1]!.bookings));
+  assert.equal(gap.days[0]!.bookings, 10000);
+  const old = moneyGroups([day("2026-10-26", "Z001", "SEK", 10000, {})], ["2026-10-26"])[0]!;
+  assert.ok(Number.isNaN(old.total.tips) && Number.isNaN(old.total.net) && old.total.bookings === 10000, "an older server without the money lines: Not connected, never 0");
+  const totals = totalsOf([day("2026-10-26", "Z001", "SEK", 10000)], ["Z001"], ["2026-10-26"]);
+  assert.deepEqual([totals.tipsMinor, totals.refundsMinor, totals.netMinor], [200, 100, 2400]);
+});

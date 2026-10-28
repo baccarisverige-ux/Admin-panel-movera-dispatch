@@ -204,8 +204,8 @@ export function kpiDays(from: string, to: string) {
   const out = [];
   for (let day = from; day <= to; ) {
     const live = day === to;
-    for (const zoneId of SE_ZONES.slice(1)) out.push({ date: day, zoneId, source: live ? "live" : "summary", currency: "SEK", completedTrips: 0, cancelledTrips: 0, noShows: 0, gross: 0, commission: 0, driverEarnings: 0, pickupPay: 0, driverBonus: 0, cashCollected: 0, walletApplied: 0, newRiders: 0, newDrivers: 0 });
-    out.push({ date: day, zoneId: "Z001", source: live ? "live" : "summary", currency: "SEK", completedTrips: 3, cancelledTrips: 1, noShows: 0, gross: 123400, commission: 24680, driverEarnings: 98720, pickupPay: 1500, driverBonus: 0, cashCollected: 52000, walletApplied: 0, newRiders: 1, newDrivers: 0 });
+    for (const zoneId of SE_ZONES.slice(1)) out.push({ date: day, zoneId, source: live ? "live" : "summary", currency: "SEK", completedTrips: 0, cancelledTrips: 0, noShows: 0, gross: 0, commission: 0, driverEarnings: 0, pickupPay: 0, driverBonus: 0, cashCollected: 0, walletApplied: 0, newRiders: 0, newDrivers: 0, tips: 0, refunds: 0, fees: 0, moveraEarnings: 0 });
+    out.push({ date: day, zoneId: "Z001", source: live ? "live" : "summary", currency: "SEK", completedTrips: 3, cancelledTrips: 1, noShows: 0, gross: 123400, commission: 24680, driverEarnings: 98720, pickupPay: 1500, driverBonus: 0, cashCollected: 52000, walletApplied: 0, newRiders: 1, newDrivers: 0, tips: 2000, refunds: 1000, fees: 4000, moveraEarnings: 25000 });
     const next = new Date(`${day}T12:00:00Z`);
     next.setUTCDate(next.getUTCDate() + 1);
     day = next.toISOString().slice(0, 10);

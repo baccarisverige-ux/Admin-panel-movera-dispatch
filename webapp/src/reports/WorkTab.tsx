@@ -70,7 +70,7 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
 
   if (selected) {
     const person = AGENTS.find((item) => item.id === selected);
-    if (!others && selected !== agent?.id) return <p className="dx-readonly" role="status">You can only see your own work.</p>;
+    if (!others && selected !== agent?.id) return <p className="dx-readonly" role="status">{tr("You can only see your own work.")}</p>;
     const mine = events.filter((event) => event.actorId === selected && Date.parse(event.at) >= window.start && Date.parse(event.at) < window.end && (kindFilter === "all" || event.kind === kindFilter));
     const summary = summaries.find((row) => row.actorId === selected);
     const days = new Map<string, WorkEvent[]>();
@@ -80,29 +80,29 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
     return (
       <div className="rp-tab rp-person">
         <header className="rp-person-head">
-          <button data-command="admin.reports.view" type="button" className="dash-btn small ghost" onClick={() => { const next = new URLSearchParams(params); next.delete("admin"); setParams(next, { replace: true }); }}><ArrowLeft size={14} aria-hidden="true" /> All admins</button>
+          <button data-command="admin.reports.view" type="button" className="dash-btn small ghost" onClick={() => { const next = new URLSearchParams(params); next.delete("admin"); setParams(next, { replace: true }); }}><ArrowLeft size={14} aria-hidden="true" /> {tr("All admins")}</button>
           <span className="rp-avatar" aria-hidden="true">{nameOf(selected).slice(0, 2).toUpperCase()}</span>
           <span><h3>{nameOf(selected)}</h3><small>{person ? ROLE_LABELS[person.role] : ""} · {window.label}</small></span>
         </header>
         <Cards fmt={fmt} compare={false} compareLabel="" cards={[
           { id: "a", label: "Changes saved", value: summary?.actions ?? 0, previous: null, format: "count", info: "Saves in the period." },
-          { id: "b", label: "Alerts solved", value: liveData ? NaN : summary?.alertsSolved ?? 0, previous: null, format: "count", info: `Average ${summary?.avgSolveMin ?? 0} min to solve.` },
-          { id: "c", label: "Time online", value: liveData ? NaN : Math.round((summary?.onlineMin ?? 0) / 60), previous: null, format: "hours", info: `${summary?.sessions ?? 0} sessions in the period.` },
+          { id: "b", label: "Alerts solved", value: liveData ? NaN : summary?.alertsSolved ?? 0, previous: null, format: "count", info: tr("Average {0} min to solve.", [summary?.avgSolveMin ?? 0]) },
+          { id: "c", label: "Time online", value: liveData ? NaN : Math.round((summary?.onlineMin ?? 0) / 60), previous: null, format: "hours", info: tr("{0} sessions in the period.", [summary?.sessions ?? 0]) },
           { id: "d", label: "Private data opened", value: liveData ? NaN : summary?.views ?? 0, previous: null, format: "count", info: "Phone numbers or documents revealed." },
           { id: "e", label: "Downloads", value: liveData ? NaN : summary?.exports ?? 0, previous: null, format: "count", info: "Files downloaded." },
         ]} />
-        <div className="al-filters" role="group" aria-label="Show">
-          <span className="dx-choice" role="radiogroup" aria-label="What to show">
+        <div className="al-filters" role="group" aria-label={tr("Show")}>
+          <span className="dx-choice" role="radiogroup" aria-label={tr("What to show")}>
             {(["all", "save", "alert", "view", "export", "signin"] as const).map((kind) => (
               <label key={kind} className={kindFilter === kind ? "on" : undefined}><input type="radio" name="rp-kind" checked={kindFilter === kind} onChange={() => setKindFilter(kind)} />{kind === "all" ? "Everything" : kind === "signin" ? "Sign in & out" : KIND_LABEL[kind]}</label>
             ))}
           </span>
         </div>
-        {mine.length === 0 ? <p className="dx-calm">Nothing in this period.</p> : (
-          <div className="rp-days" aria-label="Day by day">
+        {mine.length === 0 ? <p className="dx-calm">{tr("Nothing in this period.")}</p> : (
+          <div className="rp-days" aria-label={tr("Day by day")}>
             {[...days.entries()].map(([day, list]) => (
               <section key={day} className="rp-day" aria-label={day}>
-                <h4>{day} <small>{list.length} item{list.length === 1 ? "" : "s"}</small></h4>
+                <h4>{day} <small>{list.length === 1 ? tr("{0} item", [list.length]) : tr("{0} items", [list.length])}</small></h4>
                 <ol className="rp-timeline">
                   {list.filter((event) => kindFilter !== "signin" || event.kind === "signin" || event.kind === "signout").map((event) => {
                     const Icon = KIND_ICON[event.kind];
@@ -111,8 +111,8 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
                         <span className="rp-time">{time(event.at)}</span>
                         <span className="rp-kind" aria-hidden="true"><Icon size={13} /></span>
                         <span className="rp-what"><b>{event.text}</b>{event.detail ? <small>{event.detail}</small> : null}</span>
-                        {event.demo ? <span className="rp-tag demo">Demo</span> : null}
-                        {event.link ? <Link className="link-action" to={event.link}>Open</Link> : null}
+                        {event.demo ? <span className="rp-tag demo">{tr("Demo")}</span> : null}
+                        {event.link ? <Link className="link-action" to={event.link}>{tr("Open")}</Link> : null}
                       </li>
                     );
                   })}
@@ -127,15 +127,15 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
 
   const open = (id: string) => { const next = new URLSearchParams(params); next.set("admin", id); setParams(next, { replace: true }); };
   const top = summaries[0];
-  const notes = top && summaries.length > 1 && total("actions") ? [{ tone: "info" as const, text: `${nameOf(top.actorId)} made ${Math.round((top.actions / Math.max(1, total("actions"))) * 100)}% of all changes` }] : [];
+  const notes = top && summaries.length > 1 && total("actions") ? [{ tone: "info" as const, text: tr("{0} made {1}% of all changes", [nameOf(top.actorId), Math.round((top.actions / Math.max(1, total("actions"))) * 100)]) }] : [];
   return (
     <div className="rp-tab">
-      {!others ? <p className="dx-readonly" role="status">You see your own work. Super admin and Operations see everyone's.</p> : null}
+      {!others ? <p className="dx-readonly" role="status">{tr("You see your own work. Super admin and Operations see everyone's.")}</p> : null}
       <Notes notes={notes} />
       <Cards cards={cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Admins" icon={<UserRound size={16} aria-hidden="true" />} wide>
-          <SortTable label="Admin work" rows={summaries} rowKey={(row) => row.actorId} initial="actions" columns={[
+        <Panel title={tr("Admins")} icon={<UserRound size={16} aria-hidden="true" />} wide>
+          <SortTable label={tr("Admin work")} rows={summaries} rowKey={(row) => row.actorId} initial="actions" columns={[
             { id: "name", label: "Admin", value: (row) => nameOf(row.actorId), show: (row) => <button data-command="admin.reports.view" type="button" className="link-action" onClick={() => open(row.actorId)}>{nameOf(row.actorId)}</button> },
             { id: "role", label: "Role", value: (row) => ROLE_LABELS[(AGENTS.find((item) => item.id === row.actorId)?.role ?? "viewer") as Role] },
             { id: "actions", label: "Changes", value: (row) => row.actions, numeric: true },
@@ -146,12 +146,12 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
             { id: "sections", label: "Most in", value: (row) => row.sections[0]?.section ?? "", show: (row) => row.sections.slice(0, 2).map((item) => item.section).join(", ") || "–" },
           ]} />
         </Panel>
-        <Panel title="Changes by section" icon={<Timer size={16} aria-hidden="true" />}>
+        <Panel title={tr("Changes by section")} icon={<Timer size={16} aria-hidden="true" />}>
           {(() => {
             const map = new Map<string, number>();
             for (const row of summaries) for (const item of row.sections) map.set(item.section, (map.get(item.section) ?? 0) + item.count);
             const rows = [...map.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 8);
-            return rows.length ? <Bars rows={rows} format={(value) => String(value)} /> : <p className="dx-calm">No change in this period.</p>;
+            return rows.length ? <Bars rows={rows} format={(value) => String(value)} /> : <p className="dx-calm">{tr("No change in this period.")}</p>;
           })()}
         </Panel>
         {agent?.role === "super" ? <AccessCard settings={settings} /> : null}
@@ -166,7 +166,7 @@ function AccessCard({ settings }: { settings: ReportSettings }) {
   const choices = (Object.keys(ROLE_LABELS) as Role[]).filter((role) => role !== "super" && role !== "ops");
   const dirty = JSON.stringify(roles) !== JSON.stringify(settings.access.roles);
   return (
-    <Panel title="Who sees other admins' work" icon={<ShieldCheck size={16} aria-hidden="true" />}>
+    <Panel title={tr("Who sees other admins' work")} icon={<ShieldCheck size={16} aria-hidden="true" />}>
       <p className="dx-modal-help">Super admin and Operations always see everyone's work. Add roles here; they only see work in their own zones and country.</p>
       <div className="zn-chips">{choices.map((role) => <Check key={role} label={ROLE_LABELS[role]} on={roles.includes(role)} onChange={(on) => setRoles(on ? [...roles, role] : roles.filter((item) => item !== role))} />)}</div>
       <div className="dx-modal-actions">

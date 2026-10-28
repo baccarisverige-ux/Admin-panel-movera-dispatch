@@ -3,7 +3,7 @@ import { currentLanguage, trx } from "../i18n/core.ts";
 import type { AppLanguage } from "../config/zoneDefaults.ts";
 
 /**
- * Status words: ONE STATUS WORD LIST (contract v0.10.2 §20, contract.json#statusWords, owner 2026-10-28 and #16
+ * Status words: ONE STATUS WORD LIST (contract v0.10.4 §20, contract.json#statusWords, owner 2026-10-28 and #16
  * "the server's words everywhere in the admin"). The admin, rider and driver apps show the same sv/fr/en word for
  * a code; the panel has no words of its own for contract codes. labels.test.ts fails when a code lacks a word.
  */

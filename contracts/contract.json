@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.10.2",
+  "version": "0.10.4",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -231,7 +231,7 @@
     "skipped"
   ],
   "documentStatus": {
-    "note": "v0.10.2: what a driver/fleet document shows. The server stores missing, in_review, approved, rejected, expired (openapi DocumentStatus); needed (required, not uploaded) and expiring (approved, expires within the warning window) are shown states.",
+    "note": "v0.10.4: what a driver/fleet document shows. The server stores missing, in_review, approved, rejected, expired (openapi DocumentStatus); needed (required, not uploaded) and expiring (approved, expires within the warning window) are shown states.",
     "values": [
       "needed",
       "in_review",
@@ -243,7 +243,7 @@
     ]
   },
   "vehicleReviewStatus": {
-    "note": "v0.10.2: review of a vehicle or a fleet by Movera.",
+    "note": "v0.10.4: review of a vehicle or a fleet by Movera.",
     "values": [
       "in_review",
       "approved",
@@ -251,7 +251,7 @@
     ]
   },
   "ticketStatus": {
-    "note": "v0.10.2: support ticket state (support.replyStatuses are the states a reply may set).",
+    "note": "v0.10.4: support ticket state (support.replyStatuses are the states a reply may set).",
     "values": [
       "open",
       "pending",
@@ -2579,9 +2579,24 @@
       "cashCollected",
       "walletApplied",
       "newRiders",
-      "newDrivers"
+      "newDrivers",
+      "tips",
+      "refunds",
+      "fees",
+      "moveraEarnings"
     ],
-    "maxDays": 400
+    "maxDays": 400,
+    "money": {
+      "note": "v0.10.3 (owner Reports answers 2026-10-28): Reports > Money. All amounts minor units, VAT included, one row per zone and zone-local day, one currency per row; amounts of different currencies are never added.",
+      "gross": "Bookings: ride prices of completed trips plus cancel and no-show fees charged. Tips not included.",
+      "fees": "Cancel and no-show fees charged that day (also inside gross).",
+      "tips": "Tips given on the day's trips, a line of their own, not in gross.",
+      "refunds": "Refunds of the day's trips, counted on the TRIP's day: a later refund changes that older day (its summary is re-summed).",
+      "moveraEarnings": "What Movera keeps: commission + Movera's share of fees - pickup pay - driver bonuses Movera paid. Can be negative.",
+      "netRevenue": "Shown by the admin as moveraEarnings - refunds (not sent).",
+      "fleets": "Fleet views get only the driver earnings; there is no owners' share.",
+      "missing": "A value the server does not send reads \"Not connected yet\" (sv \"Inte kopplad än\"), never 0."
+    }
   },
   "content": {
     "note": "v0.10.0 (owner Content answers 2026-10-28): the admin's Content page publishes texts to the apps. One admin is enough (no second admin). A publish goes only to the zones chosen at the top ('All zones' = every zone of the country).",
@@ -2618,7 +2633,7 @@
     "legal": "When a legal item is published with reaccept true: the next time the app opens (never during a trip) it shows the new terms with 'Jag godkänner' / 'J'accepte' / 'I accept'; POST /account/terms/accept { contentVersion } stores who accepted and when (GET /admin/content/legal/acceptances?zoneId lists them). Until accepted, the rider cannot book and the driver cannot go online."
   },
   "statusWords": {
-    "note": "v0.10.2 (owner 2026-10-28): ONE STATUS WORD LIST. The words the admin, rider and driver apps show for every status code, per family, in sv, fr and en. Swedish agrees with the noun of the family (documents, vehicles, offers, ratings, tickets, incidents are neuter: Godkänt, Utgånget, Avslaget). The rider is \"Resenär\" in Swedish, never \"Passagerare\". An app shows these words, never its own; a code without a word is a contract error (reference_check.py).",
+    "note": "v0.10.4 (owner 2026-10-28): ONE STATUS WORD LIST. The words the admin, rider and driver apps show for every status code, per family, in sv, fr and en. Swedish agrees with the noun of the family (documents, vehicles, offers, ratings, tickets, incidents are neuter: Godkänt, Utgånget, Avslaget). The rider is \"Resenär\" in Swedish, never \"Passagerare\". An app shows these words, never its own; a code without a word is a contract error (reference_check.py).",
     "sources": {
       "tripStatus": "tripStatus.values",
       "driverAccountStatus": "driverAccountStatus",

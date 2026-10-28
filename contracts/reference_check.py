@@ -427,7 +427,7 @@ for case in json.load(open('fixtures/payouts.json'))['cases']:
     got = payout(case['entries'])
     want = case['expect']
     if got != (want['lines'], want['tripCount'], want['amountMinor']): bad += 1; print('PAYOUT', case['id'], got, want)
-# v0.10.2: ONE STATUS WORD LIST (contract.json#statusWords): every code of every family has a non-empty sv, fr and en word.
+# v0.10.4: ONE STATUS WORD LIST (contract.json#statusWords): every code of every family has a non-empty sv, fr and en word.
 def _at(path):
     o = c
     for part in path.split('.'): o = o[part]
