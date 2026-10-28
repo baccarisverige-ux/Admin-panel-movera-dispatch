@@ -45,7 +45,7 @@ export function IncidentAlarm() {
         return (
           <p key={incident.incidentId} className="incident-ring" role="alert" data-kind={incident.kind}>
             {lost ? <Car size={16} aria-hidden="true" /> : <Siren size={16} aria-hidden="true" />}
-            <b>{lost ? tr("Car lost") : tr("SOS")}</b>
+            <b>{lost ? tr("Car lost") : incident.kind === "ride_check" ? tr("Ride check · I need help") : tr("SOS")}</b>
             <span>
               {zoneById(incident.zoneId ?? "")?.name ?? incident.zoneId} · {incident.incidentId} · {tr("Nobody has taken it yet.")}
               {incident.escalatedAt ? <> <BellRing size={13} aria-hidden="true" /> {tr("Every admin is alerted.")}</> : null}
