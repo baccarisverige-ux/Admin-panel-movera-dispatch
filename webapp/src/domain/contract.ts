@@ -186,7 +186,7 @@ export const CATEGORIES = [
   { id: "comfort", label: "Comfort", seats: 4 },
   { id: "premium", label: "Premium", seats: 4 },
   { id: "priority", label: "Priority", seats: 4 },
-  { id: "xl", label: "Movera XL", seats: 6 },
+  { id: "xl", label: "XL", seats: 6 },
   { id: "electric", label: "Electric", seats: 4 },
   { id: "pet", label: "Pet", seats: 4 },
 ] as const;

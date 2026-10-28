@@ -37,6 +37,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { can, canUseZone } from "../auth/permissions";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { useSession } from "../auth/SessionContext";
 import { useInbox, useSearch, useSlice } from "../api/hooks";
 import { useAdminApi } from "../api/AdminApiContext";
@@ -117,7 +118,9 @@ function ShellInner({ page, children }: AppShellProps) {
   const panel = normalizePanelOps(useSlice<PanelOps>(PANEL_OPS_KEY, emptyPanelOps(), { enabled: Boolean(agent) }).value);
   const api = useAdminApi();
   // A live build lists only the pages that read the server; the demo pages stay reachable by address, marked "not live".
-  const visible = MENU.filter((item) => (!agent || can(agent.role, item.permission)) && showInMenu(item.id, agent?.role, panel));
+  // Live: the server's expanded permission list decides (Chat needs support.reply, contract v0.13.0 §22).
+  const live = useLiveSessionMaybe();
+  const visible = MENU.filter((item) => (!agent || (live ? live.can(item.permission) : can(agent.role, item.permission))) && showInMenu(item.id, agent?.role, panel));
   const groups = MENU_GROUPS.filter((group) => visible.some((item) => item.group === group));
   const env = api.kind === "http" ? "live" : import.meta.env.VITE_DATA || "demo";
   const scope = params.get("scope") ?? "";
