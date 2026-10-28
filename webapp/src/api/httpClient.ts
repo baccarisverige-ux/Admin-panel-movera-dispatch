@@ -3,7 +3,7 @@ export const ERROR_CODES = ["invalid_request", "unauthenticated", "forbidden", "
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 /** The wire error body: { code, message, requestId, retryable, projection? }. */
-export type ApiErrorBody = { code: ErrorCode; message: string; requestId: string; retryable: boolean; projection?: unknown; reason?: string };
+export type ApiErrorBody = { code: ErrorCode; message: string; requestId: string; retryable: boolean; projection?: unknown; reason?: string; details?: string[] };
 
 export const API_VERSION = "0.5";
 
@@ -17,6 +17,8 @@ export class ApiError extends Error {
   readonly projection: unknown;
   /** Optional machine-readable detail under the code (snake_case, e.g. invalid_credentials, on_trip); never shown as is. */
   readonly reason: string | null;
+  /** v0.10.1: the detail list (documents_not_approved: "<scope>:<type>" for each missing required document). */
+  readonly details: readonly string[];
   /** Seconds from a Retry-After header on 429 / 503, when the server sent one. */
   readonly retryAfterSeconds: number | null;
 
@@ -28,6 +30,7 @@ export class ApiError extends Error {
     this.retryable = body.retryable ?? (status === 0 || status === 429 || status === 503);
     this.projection = body.projection;
     this.reason = body.reason ?? null;
+    this.details = Array.isArray(body.details) ? body.details.filter((item): item is string => typeof item === "string") : [];
     this.retryAfterSeconds = body.retryAfterSeconds ?? null;
   }
 }
@@ -70,6 +73,7 @@ export function parseErrorBody(value: unknown): ApiErrorBody | null {
     retryable: raw.retryable === true,
     ...("projection" in raw ? { projection: raw.projection } : {}),
     ...(typeof raw.reason === "string" ? { reason: raw.reason } : {}),
+    ...(Array.isArray(raw.details) ? { details: raw.details.filter((item): item is string => typeof item === "string") } : {}),
   };
 }
 

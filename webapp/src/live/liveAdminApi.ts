@@ -22,6 +22,7 @@ import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
 import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
+import { vehicleMissing } from "./activation.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
@@ -89,6 +90,16 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
     fleetId: driver.fleet?.fleetId ?? null,
     ...(driver.email ? { email: driver.email } : {}),
     live: true,
+    liveAccount: {
+      accountStatus: driver.accountStatus,
+      documents: driver.documents ?? [],
+      ...(driver.accountType ? { accountType: driver.accountType } : {}),
+      ...(driver.country ? { country: driver.country } : {}),
+      ...(driver.fleet ? { fleetRole: driver.fleet.role } : {}),
+      ...(driver.vehicleId ? { vehicleId: driver.vehicleId } : {}),
+      ...(driver.requiredDocuments ? { requiredDocuments: driver.requiredDocuments } : {}),
+      ...(driver.requiredFleetDocuments ? { requiredFleetDocuments: driver.requiredFleetDocuments } : {}),
+    },
     liveDriver: {
       onlineStatus: live?.onlineStatus ?? driver.onlineStatus,
       rating: typeof driver.rating === "number" ? driver.rating : null,
@@ -117,6 +128,7 @@ export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Dri
     seats: vehicle.seats,
     make: vehicle.make,
     model: vehicle.model,
+    liveVehicleMissing: vehicleMissing(vehicle, driver?.country),
   };
 }
 
@@ -421,7 +433,13 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     const toStatus = STATUS_COMMANDS[input.action];
     if (toStatus) {
       const driver = drivers.get(input.targetId) ?? (await client.json<Driver>(`/admin/drivers/${encodeURIComponent(input.targetId)}`));
-      const next = await client.post<Driver>(`/admin/drivers/${encodeURIComponent(driver.driverId)}/status`, { expectedVersion: driver.version, accountStatus: toStatus, note: input.reason });
+      const next = await client.post<Driver>(`/admin/drivers/${encodeURIComponent(driver.driverId)}/status`, { expectedVersion: driver.version, accountStatus: toStatus, note: input.reason }).catch((error: unknown) => {
+        // v0.10.1: the page lists the missing documents (details); the line under the button says why in short.
+        if (error instanceof ApiError && error.status === 409 && error.code === "documents_not_approved") {
+          throw new ApiError(409, "Not all required documents are approved.", { code: error.code, reason: error.reason ?? undefined, details: [...error.details], requestId: error.requestId ?? undefined, retryable: false });
+        }
+        throw error;
+      });
       if (next?.driverId) drivers.set(next.driverId, next);
       return done("Saved.");
     }
