@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, type Page, type Route } from "@playwright/test";
+import { activationMissing } from "../src/live/activation";
 
 /**
  * A faked Movera server for the live trips screens (playwright.live.config.ts starts the app with
@@ -295,6 +296,9 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const current = state.drivers[index];
       if (body.expectedVersion !== current.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409d", retryable: false, projection: current });
       if (!body.note) return json(route, 400, { code: "invalid_request", message: "note is required", requestId: "r-400d", retryable: false });
+      // Contract v0.10.1: active needs every required document approved (a fleet owner also the company's).
+      const missing = body.accountStatus === "active" ? activationMissing(current as Parameters<typeof activationMissing>[0]) : [];
+      if (missing.length) return json(route, 409, { code: "documents_not_approved", message: "Required documents are not approved", requestId: "r-409a", retryable: false, details: missing });
       state.drivers[index] = { ...current, accountStatus: body.accountStatus, version: current.version + 1 };
       return json(route, 200, state.drivers[index]);
     }

@@ -57,3 +57,14 @@ tr.live-open td { background: #f6f7fb; }
 .standard-bar.uses { background: rgba(22, 163, 74, 0.06); }
 .standard-bar span { display: inline-flex; align-items: center; gap: 6px; }
 .uses-standard { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: rgba(22, 163, 74, 0.12); color: #166534; }
+
+/* Contract v0.10.1: activation refused (missing documents) and blocked cars. */
+.fd-banner.live-activation-refused { display: block; }
+.live-activation-refused p { margin: 0 0 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.live-activation-refused div { margin-top: 6px; }
+.live-activation-refused ul { margin: 4px 0 0; padding-left: 20px; font-weight: 500; }
+.live-vehicle-blocked { margin: 6px 0 0; color: #9b2020; font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.live-onboarding-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 14px; align-items: start; }
+.live-onboarding-grid tr.active td { background: var(--doc-valid-soft, #eef6ee); }
+@media (max-width: 900px) { .live-onboarding-grid { grid-template-columns: 1fr; } }
+.live-onboarding-grid .link-button { background: none; border: 0; padding: 0; color: var(--accent, #2a78d6); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }

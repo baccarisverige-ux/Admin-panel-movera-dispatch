@@ -24,6 +24,7 @@ function Documents({ driverId }: { driverId: string }) {
   const changed = () => {
     void queryClient.invalidateQueries({ queryKey: key });
     void queryClient.invalidateQueries({ queryKey: ["records"] });
+    void queryClient.invalidateQueries({ queryKey: ["live", "onboarding"] });
   };
   if (query.isLoading) return <p className="state-line">{tr("Loading driver.")}</p>;
   if (query.error || !query.data) return <ErrorLine error={query.error ?? new Error(tr("Something failed."))} onRetry={() => void query.refetch()} />;
