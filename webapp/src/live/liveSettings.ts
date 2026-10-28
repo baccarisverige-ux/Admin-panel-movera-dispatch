@@ -3,9 +3,9 @@
  * Reading a slice loads the server's drafts of every zone and of each country's Standard into the demo store;
  * publishing a page saves and publishes the server documents it owns at once (no second admin, owner 2026-10-27).
  */
-import { MARKETS, marketOfZone, standardZoneId, type MarketId } from "../markets/markets.ts";
+import { MARKETS, marketOfZone, standardZoneId, zoneById, type MarketId } from "../markets/markets.ts";
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
-import { DISPATCH_KEY, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
+import { DISPATCH_KEY, draftRules, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
 import { COUNTRY_SETTINGS_KEY, ZONE_RULES_KEY, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
@@ -17,7 +17,11 @@ import {
   pricingDocumentOf,
   readDraft,
   rulesOfDispatch,
+  restoreVersion,
+  saveDraftOnly,
   savePublish,
+  type HistoryEntry,
+  countryOfStandard,
   standardKey,
   goBackToStandard,
   withOwned,
@@ -102,16 +106,46 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return next;
   }
 
+  /** History rows of the Dispatch page (rev) → the zone, its server version and the version before it there. */
+  const dispatchVersions = new Map<number, { zoneId: string; version: number; previous: number | null; liveVersion: number }>();
+
   async function readDispatch(fallback: unknown): Promise<DispatchBook> {
     const book = normalizeDispatchBook(fallback);
     const live = { ...book.live };
+    const drivers = new Map<string, Doc | null>();
     await Promise.all(settingsScopes().map(async (id) => {
       // One read first tells whether the server knows the zone at all.
       const rules = await draft("dispatch", id, true);
       const driver = unknownZones.has(id) ? null : await draft("driver_app_config", id, true);
+      drivers.set(id, driver?.document ?? null);
       if (rules || driver) live[id] = rulesOfDispatch(rules?.document ?? null, driver?.document ?? null, liveRules(book, id));
     }));
-    const next = { ...book, live };
+    // Owner 2026-10-28: History shows the server's published versions, so "Ångra" can put the one before back.
+    const rows: Array<HistoryEntry & { zoneId: string }> = [];
+    await Promise.all(Object.keys(live).filter((id) => !countryOfStandard(id)).map(async (id) => {
+      const page = await http.json<{ items?: HistoryEntry[] }>(`/admin/config/dispatch/history?zoneId=${encodeURIComponent(id)}&limit=10`).catch(() => null);
+      for (const item of page?.items ?? []) rows.push({ ...item, zoneId: id });
+    }));
+    rows.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt) || b.version - a.version);
+    dispatchVersions.clear();
+    const versions: DispatchBook["versions"] = rows.map((row, i) => {
+      const rev = rows.length - i;
+      const older = rows.filter((other) => other.zoneId === row.zoneId && other.version < row.version).sort((a, b) => b.version - a.version)[0];
+      const liveVersion = Math.max(...rows.filter((other) => other.zoneId === row.zoneId).map((other) => other.version));
+      dispatchVersions.set(rev, { zoneId: row.zoneId, version: row.version, previous: older?.version ?? null, liveVersion });
+      const name = zoneById(row.zoneId)?.name ?? row.zoneId;
+      return {
+        rev,
+        at: row.publishedAt,
+        actorId: row.publishedBy ?? "",
+        note: row.action === "restore" ? `Undo: version ${row.restoredFrom ?? "?"} again` : row.note ?? "",
+        zoneIds: [row.zoneId],
+        lines: [`${name} · version ${row.version}`],
+        live: { ...live, [row.zoneId]: rulesOfDispatch(row.document, drivers.get(row.zoneId) ?? null, liveRules(book, row.zoneId)) },
+        liveCountries: book.liveCountries,
+      };
+    });
+    const next = { ...book, live, ...(versions.length ? { versions } : {}) };
     slices.set(DISPATCH_KEY, next);
     return next;
   }
@@ -178,6 +212,31 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     }
     slices.set(PRICING_KEY, store);
     return "Published.";
+  }
+
+  /** Owner 2026-10-28: "Spara utkast" keeps the changed zones' rules on the server as a draft, not live. */
+  async function saveDispatchDraft(book: DispatchBook, scope: string | undefined): Promise<string> {
+    const chosen = (scope ?? "").split(",").filter((id) => settingsScopes().includes(id));
+    const zoneIds = Object.keys(book.draft).filter((id) => settingsScopes().includes(id) && (!chosen.length || chosen.includes(id)));
+    if (!zoneIds.length) throw new Error("Nothing to save. Change a rule first.");
+    for (const id of zoneIds) {
+      const current = await draft("dispatch", id, true);
+      await saveDraftOnly(http, "dispatch", id, current, dispatchDocumentOf(draftRules(book, id), id, current?.document ?? null));
+      drafts.delete(key("dispatch", id));
+    }
+    slices.set(DISPATCH_KEY, book);
+    return "Draft saved on the server. It is not live until you publish.";
+  }
+
+  /** Owner 2026-10-28: "Ångra" puts back the zone's version before the chosen one (a new version, in the Audit). */
+  async function undoDispatch(targetId: string): Promise<string> {
+    const rev = Number(/(\d+)$/.exec(targetId)?.[1]);
+    const row = dispatchVersions.get(rev);
+    if (!row) throw new Error("That version was not found. Open History again.");
+    if (row.previous === null) throw new Error("There is no earlier version of this zone to go back to.");
+    await restoreVersion(http, "dispatch", row.zoneId, row.previous, row.liveVersion);
+    drafts.delete(key("dispatch", row.zoneId));
+    return "Undone. The version before is live again.";
   }
 
   async function publishDispatch(book: DispatchBook): Promise<string> {
@@ -248,6 +307,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     command(action, input) {
       if (action === "admin.pricing.publish") return publishPricing(normalizeStore(input.value));
       if (action === "admin.dispatch.publish") return publishDispatch(normalizeDispatchBook(input.value));
+      if (action === "admin.dispatch.saveDraft") return saveDispatchDraft(normalizeDispatchBook(input.value), input.scope);
+      if (action === "admin.dispatch.undo") return undoDispatch(input.targetId);
       if (action === "admin.config.save") {
         slices.set(CONFIG_KEY, input.value);
         return Promise.resolve("Draft saved in this session. Publish sends it to the chosen zones.");

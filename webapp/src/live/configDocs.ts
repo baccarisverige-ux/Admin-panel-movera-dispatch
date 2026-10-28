@@ -304,6 +304,30 @@ export async function savePublish(http: ConfigHttp, doc: ConfigDocName, id: stri
   }
 }
 
+/** Owner 2026-10-28: Dispatch "Spara utkast" keeps the draft on the server without making it live. */
+export async function saveDraftOnly(http: ConfigHttp, doc: ConfigDocName, id: string, draft: Draft | null, document: Doc): Promise<{ version: number } | null> {
+  if (draft && sameDocument(draft.document, document)) return null;
+  try {
+    return await http.put<{ version: number }>(`/admin/config/${doc}`, { expectedVersion: draft?.version ?? 1, ...scopeOf(id), document });
+  } catch (error) {
+    if (isStatus(error, 409)) throw new SettingsChanged();
+    throw error;
+  }
+}
+
+/** A published version as History shows it (contract.json#pricingHistory, any document). */
+export type HistoryEntry = { version: number; publishedAt: string; publishedBy?: string; note?: string; action: "publish" | "restore"; restoredFrom?: number; document: Doc };
+
+/** Owner 2026-10-28: Dispatch "Ångra" publishes an earlier version again (POST /admin/config/{doc}/restore). */
+export async function restoreVersion(http: ConfigHttp, doc: ConfigDocName, zoneId: string, version: number, liveVersion: number): Promise<{ version: number }> {
+  try {
+    return await http.post<{ version: number }>(`/admin/config/${doc}/restore`, { zoneId, version, expectedVersion: liveVersion });
+  } catch (error) {
+    if (isStatus(error, 409)) throw new SettingsChanged();
+    throw error;
+  }
+}
+
 /** Go back to Standard (contract.json#configDocs.useStandard): the zone's own document goes, kept in the history. */
 export async function goBackToStandard(http: ConfigHttp, doc: ConfigDocName, zoneId: string, draft: Draft): Promise<{ version: number }> {
   try {

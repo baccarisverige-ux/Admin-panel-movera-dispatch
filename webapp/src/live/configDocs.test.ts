@@ -196,3 +196,41 @@ test("live Tips & limits (v0.8.1, owner 2026-10-28): read per zone, saved only t
   assert.equal(server.calls.some((c) => c.path.includes("country=SE") && c.method !== "GET"), false);
   await assert.rejects(Promise.resolve(settings.command("admin.pricing.saveCountry", { targetId: "x", value, scope: "" })), /Choose the zones/);
 });
+
+test("live Dispatch (owner 2026-10-28): Spara utkast keeps a server draft; Ångra puts the zone's version before back", async () => {
+  const base = dispatchDocumentOf(liveRules(emptyDispatchBook(), "Z001"), "Z001", null);
+  const calls: Array<{ method: string; path: string; body?: unknown }> = [];
+  const history = [
+    { version: 5, publishedAt: "2026-10-28T09:00:00Z", publishedBy: "A2", action: "publish", document: { ...base, version: 5 } },
+    { version: 4, publishedAt: "2026-10-27T09:00:00Z", publishedBy: "A1", action: "publish", document: { ...base, version: 4 } },
+  ];
+  const http: ConfigHttp = {
+    json: async <T,>(path: string) => {
+      calls.push({ method: "GET", path });
+      if (path.startsWith("/admin/config/dispatch/history?zoneId=Z001")) return { items: history } as T;
+      if (path.startsWith("/admin/config/dispatch?zoneId=Z001")) return { version: 6, liveVersion: 5, usesStandard: false, document: { ...base, version: 5 } } as T;
+      throw Object.assign(new Error("not found"), { status: 404 });
+    },
+    put: async <T,>(path: string, body: unknown) => {
+      calls.push({ method: "PUT", path, body });
+      return { version: 7 } as T;
+    },
+    post: async <T,>(path: string, body: unknown) => {
+      calls.push({ method: "POST", path, body });
+      return { version: 6 } as T;
+    },
+  };
+  const settings = createLiveSettings(http, () => "2026-10-28T10:00:00Z");
+  const book = (await settings.readSlice("dispatchRules", null)) as ReturnType<typeof emptyDispatchBook>;
+  assert.deepEqual(book.versions.map((v) => [v.rev, v.zoneIds[0]]), [[2, "Z001"], [1, "Z001"]]);
+
+  const edited = { ...book, draft: { Z001: { ...liveRules(book, "Z001"), radar: { ...liveRules(book, "Z001").radar, seconds: 33 } } } };
+  calls.length = 0;
+  assert.match(await settings.command("admin.dispatch.saveDraft", { targetId: "dispatch draft", value: edited })!, /Draft saved/);
+  assert.deepEqual(calls.filter((c) => c.method !== "GET").map((c) => `${c.method} ${c.path}`), ["PUT /admin/config/dispatch"]);
+
+  calls.length = 0;
+  assert.match(await settings.command("admin.dispatch.undo", { targetId: "version 2" })!, /Undone/);
+  assert.deepEqual(calls.at(-1), { method: "POST", path: "/admin/config/dispatch/restore", body: { zoneId: "Z001", version: 4, expectedVersion: 5 } });
+  await assert.rejects(Promise.resolve(settings.command("admin.dispatch.undo", { targetId: "version 1" })), /no earlier version/);
+});
