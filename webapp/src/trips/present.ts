@@ -444,7 +444,7 @@ export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly Demo
       return {
         id: `req-${trip.id}`,
         kind: "request" as const,
-        name: `Open ${trip.id}`,
+        name: tr("Open {0}", [trip.id]),
         lat,
         lng,
         stale: false,
@@ -454,10 +454,10 @@ export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly Demo
       };
     });
   const queue: LiveMarker[] = [
-    { id: "q-arn-1", name: "Arlanda queue 1", lat: 59.651, lng: 17.923, href: "/trips/T0003" },
-    { id: "q-arn-2", name: "Arlanda queue 2", lat: 59.649, lng: 17.936, href: "/trips/T0006" },
-    { id: "q-arn-3", name: "Arlanda queue 3", lat: 59.646, lng: 17.918, href: "/trips/T0010" },
-    { id: "q-bma-1", name: "Bromma queue 1", lat: 59.355, lng: 17.95, href: "/trips/T0008" },
+    { id: "q-arn-1", name: tr("{0} queue {1}", ["Arlanda", 1]), lat: 59.651, lng: 17.923, href: "/trips/T0003" },
+    { id: "q-arn-2", name: tr("{0} queue {1}", ["Arlanda", 2]), lat: 59.649, lng: 17.936, href: "/trips/T0006" },
+    { id: "q-arn-3", name: tr("{0} queue {1}", ["Arlanda", 3]), lat: 59.646, lng: 17.918, href: "/trips/T0010" },
+    { id: "q-bma-1", name: tr("{0} queue {1}", ["Bromma", 1]), lat: 59.355, lng: 17.95, href: "/trips/T0008" },
   ].map((item) => ({
     id: item.id,
     kind: "queue" as const,
@@ -470,9 +470,9 @@ export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly Demo
     onMap: insideFrame(item.lat, item.lng),
   }));
   const boosts: LiveMarker[] = [
-    { id: "boost-norrmalm", name: "Norrmalm boost +20%", lat: 59.336, lng: 18.058, href: "/pricing" },
-    { id: "boost-sodermalm", name: "Södermalm boost +15%", lat: 59.316, lng: 18.066, href: "/pricing" },
-    { id: "boost-kista", name: "Kista evening boost", lat: 59.401, lng: 17.95, href: "/pricing" },
+    { id: "boost-norrmalm", name: tr("{0} boost +{1}%", ["Norrmalm", 20]), lat: 59.336, lng: 18.058, href: "/pricing" },
+    { id: "boost-sodermalm", name: tr("{0} boost +{1}%", ["Södermalm", 15]), lat: 59.316, lng: 18.066, href: "/pricing" },
+    { id: "boost-kista", name: tr("{0} evening boost", ["Kista"]), lat: 59.401, lng: 17.95, href: "/pricing" },
   ].map((item) => ({
     id: item.id,
     kind: "boost" as const,

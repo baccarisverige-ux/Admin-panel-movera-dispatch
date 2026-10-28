@@ -5865,6 +5865,9 @@ export const en = {
   "Stale · last seen {0}": "Stale · last seen {0}",
   "{0} eligible drivers with eligible matching vehicles.": "{0} eligible drivers with eligible matching vehicles.",
   "Stale positions": "Stale positions",
+  "{0} queue {1}": "{0} queue {1}",
+  "{0} boost +{1}%": "{0} boost +{1}%",
+  "{0} evening boost": "{0} evening boost",
 } as const;
 
 export type MessageKey = keyof typeof en;

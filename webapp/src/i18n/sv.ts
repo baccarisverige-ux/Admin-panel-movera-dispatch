@@ -5867,4 +5867,7 @@ export const sv: Record<MessageKey, string> = {
   "Stale · last seen {0}": "Gammal · senast sedd {0}",
   "{0} eligible drivers with eligible matching vehicles.": "{0} behöriga förare med passande godkända fordon.",
   "Stale positions": "Gamla positioner",
+  "{0} queue {1}": "{0} kö {1}",
+  "{0} boost +{1}%": "{0} boost +{1} %",
+  "{0} evening boost": "{0} kvällsboost",
 };

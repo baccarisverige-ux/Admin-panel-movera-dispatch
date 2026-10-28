@@ -5867,4 +5867,7 @@ export const fr: Record<MessageKey, string> = {
   "Stale · last seen {0}": "Ancienne · vue {0}",
   "{0} eligible drivers with eligible matching vehicles.": "{0} chauffeurs éligibles avec des véhicules éligibles correspondants.",
   "Stale positions": "Positions anciennes",
+  "{0} queue {1}": "File {0} {1}",
+  "{0} boost +{1}%": "Boost {0} +{1} %",
+  "{0} evening boost": "Boost du soir {0}",
 };
