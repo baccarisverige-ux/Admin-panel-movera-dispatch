@@ -116,6 +116,7 @@ function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: 
 
 function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
   const { agent } = useSession();
+  const liveAdmin = Boolean(useLiveSessionMaybe());
   const store = useSlice<ConfigBook>("config", emptyConfig());
   const persisted = useMemo(() => normalizeConfig(store.value), [store.value]);
   const [book, setBook] = useState<ConfigBook>(() => emptyConfig());
@@ -204,7 +205,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
         {lifecycleDue && !dirty ? tr(" A scheduled change is due: it is shown here and is stored with the next save.") : ""}
       </p>
 
-      <RefundPolicyPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setRefundDirty} />
+      {/* Owner 2026-10-28: one admin is enough everywhere, so the live panel has no second-admin limit. */}
+      {liveAdmin ? null : <RefundPolicyPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setRefundDirty} />}
 
       <CountryAppsPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setCountryDirty} />
 

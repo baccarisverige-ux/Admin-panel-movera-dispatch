@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { useState } from "react";
 import { KeyRound, Plus, ShieldCheck, Wallet } from "lucide-react";
 import { useSlice } from "../api/hooks";
@@ -85,7 +86,8 @@ export function LimitsView({ editable, currency, onNotice }: { editable: boolean
       <label className="pl-field"><span>Role</span><select aria-label="Limits for role" value={role} onChange={(e) => { setRole(e.target.value as Role); setDraft(null); }}>{ROLES.map((item) => <option key={item} value={item}>{ROLE_LABELS[item]}</option>)}</select></label>
       <Row label="Money back on one payment" on={value.refund.on} onToggle={(on) => patch({ refund: { ...value.refund, on } })} disabled={!editable}><Num label="Refund limit" value={value.refund.max} unit={currency} min={1} disabled={!editable || !value.refund.on} onChange={(max) => patch({ refund: { ...value.refund, max } })} /></Row>
       <Row label="Wallet credit to one rider" on={value.credit.on} onToggle={(on) => patch({ credit: { ...value.credit, on } })} disabled={!editable}><Num label="Credit limit" value={value.credit.max} unit={currency} min={1} disabled={!editable || !value.credit.on} onChange={(max) => patch({ credit: { ...value.credit, max } })} /></Row>
-      <Row label="Second admin above" help="One limit per country for every role, set in Settings."><Link to="/settings#refunds">Edit in Settings</Link></Row>
+      {/* Owner 2026-10-28: one admin is enough everywhere (live panel). */}
+      {useLiveSessionMaybe() ? null : <Row label="Second admin above" help="One limit per country for every role, set in Settings."><Link to="/settings#refunds">Edit in Settings</Link></Row>}
       {error ? <p role="alert" className="pl-warn">{error}</p> : null}
       <NotEnforced>These limits are saved for the backend. Refunds and wallet credits do not check them yet.</NotEnforced>
       <div className="actions">
