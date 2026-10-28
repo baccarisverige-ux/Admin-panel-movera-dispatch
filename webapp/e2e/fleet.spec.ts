@@ -50,7 +50,7 @@ test("each driver document has its own status, expiry date and colour", async ({
   await confirm(page);
   await expect(page.getByTestId("doc-driver_license")).toHaveClass(/doc-invalid/);
   await page.reload();
-  await expect(page.getByTestId("doc-driver_license")).toContainText("Wrong");
+  await expect(page.getByTestId("doc-driver_license")).toContainText("Rejected");
   await expect(page.getByTestId("doc-driver_license")).toContainText("Photo is cut off");
   await expect(page.getByText(/missing, wrong or expired. Consider putting the account on hold/)).toBeVisible();
 });
@@ -62,7 +62,7 @@ test("a driver can be put on hold, messaged and has performance and earnings", a
   await page.getByRole("button", { name: "Put on hold" }).click();
   await page.locator(".modal.open").getByLabel("Type D0002 to confirm").fill("D0002");
   await confirm(page);
-  await expect(page.getByText("Driver account is now on hold.")).toBeVisible();
+  await expect(page.getByText("Driver account is now awaiting review.")).toBeVisible();
 
   await page.getByRole("tab", { name: "Messages" }).click();
   await page.getByPlaceholder("Write to Sara Nyström").fill("Please upload the new insurance.");

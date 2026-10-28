@@ -224,7 +224,7 @@ export function DriverDetailPage() {
           <div className="fd-hero-title">
             <h2>{driver.name}</h2>
             <div className="fd-chips">
-              <AccountChip status={driver.status} />
+              <AccountChip status={driver.status} family="driverAccountStatus" />
               <OnlinePill presence={presence} />
               <span className="fd-chip code"><Hash size={13} aria-hidden="true" />{code}</span>
               {fleet ? (
@@ -477,12 +477,12 @@ export function DriverDetailPage() {
             <section className="fd-box">
               <h3>{tr("Payouts")}</h3>
               {pay.length === 0 ? <p className="state-line">{fleet ? tr("Payouts are made to {0}.", [fleet.name]) : tr("No payout yet.")}</p> : (
-                <ul className="fd-list">{pay.map((item) => <li key={item.id}><Link to={`/payouts/${item.id}`}>{item.name}</Link><span>{money(item.fareOre ?? 0)}</span><span className={`fd-chip s-${item.status}`}>{statusLabel(item.status)}</span></li>)}</ul>
+                <ul className="fd-list">{pay.map((item) => <li key={item.id}><Link to={`/payouts/${item.id}`}>{item.name}</Link><span>{money(item.fareOre ?? 0)}</span><span className={`fd-chip s-${item.status}`}>{statusLabel(item.status, "payoutStatus")}</span></li>)}</ul>
               )}
             </section>
             <section className="fd-box">
               <h3>{tr("Bank account")}</h3>
-              <p>{ops.bank.holder} · •••• {ops.bank.last4} · <strong>{statusLabel(ops.bank.status)}</strong></p>
+              <p>{ops.bank.holder} · •••• {ops.bank.last4} · <strong>{statusLabel(ops.bank.status, "documentStatus")}</strong></p>
               {ops.bank.note ? <p className="state-line">{trn("Review note: {0}", ops.bank.note)}</p> : null}
               <div className="fd-action-row">
                 {(["approved", "rejected", "in_review"] as const).map((status) => (
@@ -500,9 +500,9 @@ export function DriverDetailPage() {
                     sliceKey="driverOps"
                     value={setBankReview(store.value, driverSeed, status, agent?.id ?? "", accountNote)}
                     disabled={ops.bank.status === status}
-                    onDone={() => setNotice(`Bank details marked ${statusLabel(status).toLowerCase()}.`)}
+                    onDone={() => setNotice(`Bank details marked ${statusLabel(status, "documentStatus").toLowerCase()}.`)}
                   >
-                    {statusLabel(status)}
+                    {statusLabel(status, "documentStatus")}
                   </CommandButton>
                 ))}
               </div>
@@ -599,8 +599,8 @@ export function DriverDetailPage() {
               )}
               <h3>{tr("Support and safety")}</h3>
               <ul className="fd-timeline">
-                {(tickets.data ?? []).filter((item) => item.name === driver.name).map((ticket) => <li key={ticket.id}><Link to={`/tickets/${ticket.id}`}>{ticket.id}</Link> · {statusLabel(ticket.status)}</li>)}
-                {(incidents.data ?? []).filter((item) => item.name === driver.name).map((incident) => <li key={incident.id}><Link to={`/incidents/${incident.id}`}>{incident.id}</Link> · {statusLabel(incident.status)}</li>)}
+                {(tickets.data ?? []).filter((item) => item.name === driver.name).map((ticket) => <li key={ticket.id}><Link to={`/tickets/${ticket.id}`}>{ticket.id}</Link> · {statusLabel(ticket.status, "ticketStatus")}</li>)}
+                {(incidents.data ?? []).filter((item) => item.name === driver.name).map((incident) => <li key={incident.id}><Link to={`/incidents/${incident.id}`}>{incident.id}</Link> · {statusLabel(incident.status, "incidentStatus")}</li>)}
                 <li><Link to="/support">{tr("Open support queue")}</Link> · <Link to="/incidents">{tr("Open incident center")}</Link></li>
               </ul>
             </section>
