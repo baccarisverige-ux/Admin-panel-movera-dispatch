@@ -25,6 +25,11 @@ async function fakeSettings(page: Page) {
   const docs = new Map<string, Entry>();
   const sent: Sent[] = [];
   const names = { pricing: "pricing_document", dispatch: "dispatch_document", rider_app_config: "rider_app_config", driver_app_config: "driver_app_config" } as const;
+  // v0.8.1 Tips & limits: the Standard, a zone on it (Z001) and a zone with its own (Z002).
+  const rules = (tips: number[]) => ({ version: 1, publishedAt: "2026-10-27T09:00:00Z", country: "SE", currency: "SEK", tips: tips.map((kr) => ({ amount: { amountMinor: kr * 100, currency: "SEK" }, enabled: true })), raiseSteps: [{ amount: { amountMinor: 2000, currency: "SEK" }, enabled: true }], driverBonus: { defaultLimit: { amountMinor: 20000, currency: "SEK" }, hardMax: { amountMinor: 100000, currency: "SEK" } } });
+  docs.set("country_rules:standard-SE", { version: 2, liveVersion: 1, document: rules([10, 20, 50]) });
+  docs.set("country_rules:Z001", { version: 1, liveVersion: 0, usesStandard: true, document: rules([10, 20, 50]) });
+  docs.set("country_rules:Z002", { version: 3, liveVersion: 2, usesStandard: false, document: rules([15, 35]) });
   for (const [doc, file] of Object.entries(names)) {
     const base = sample(file);
     docs.set(`${doc}:standard-SE`, { version: 2, liveVersion: 1, document: { ...base, zoneId: "standard-SE" } });
@@ -150,4 +155,30 @@ test("Scope at the top: the Standard can be chosen beside the zones; Settings pu
   await expect.poll(() => server.sent.filter((s) => s.method === "POST").length).toBeGreaterThan(0);
   const written = server.sent.filter((s) => s.method !== "GET").map((s) => s.body?.["zoneId"] ?? s.body?.["country"]);
   expect(new Set(written)).toEqual(new Set(["Z002"]));
+});
+
+test("Tips & limits (v0.8.1, owner 2026-10-28): shown for the zone chosen at the top and saved only to the chosen zones", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  const server = await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/pricing?tab=extras&scope=Z002");
+  const panel = page.getByTestId("pricing-extras");
+  await expect(panel.getByRole("heading", { name: /Dricks och gränser · Södermalm/ })).toBeVisible();
+  await expect(panel).toContainText("Bara för zonerna som är valda högst upp");
+  await expect(panel.getByLabel("Tip 2", { exact: true })).toHaveValue("35");
+  await shot(page, "admin-tips-zone-sv");
+  await page.goto("/pricing?tab=extras&scope=Z001");
+  await expect(page.getByTestId("standard-bar")).toBeVisible();
+  await expect(page.getByTestId("pricing-extras").getByLabel("Tip 1", { exact: true })).toHaveValue("10");
+  await page.goto("/pricing?tab=extras&scope=Z001,Z002");
+  await expect(page.getByTestId("pricing-extras").getByRole("heading", { name: /Norrmalm, Södermalm/ })).toBeVisible();
+  await page.getByTestId("pricing-extras").getByLabel("Tip 1", { exact: true }).fill("12");
+  await shot(page, "admin-tips-two-zones-sv");
+  server.sent.length = 0;
+  await page.getByTestId("pricing-extras").getByRole("button", { name: /Spara dricks och gränser/ }).click();
+  await expect(page.getByTestId("publish-targets")).toContainText("Norrmalm, Södermalm");
+  await shot(page, "admin-tips-confirm-sv");
+  await confirm(page);
+  await expect.poll(() => server.sent.filter((s) => s.method === "PUT" && s.path.includes("country_rules")).map((s) => s.body?.["zoneId"])).toEqual(["Z001", "Z002"]);
+  expect(server.sent.some((s) => s.method !== "GET" && s.body?.["country"] === "SE")).toBe(false);
 });

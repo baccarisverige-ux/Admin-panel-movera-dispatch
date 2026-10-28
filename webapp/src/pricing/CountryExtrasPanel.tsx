@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BadgeDollarSign, Gift, HandHeart, Plus, Save, TrendingUp } from "lucide-react";
 import { market, zoneById, type MarketId } from "../markets/markets";
-import { PublishTargetsLine, StandardBar } from "../live/StandardBar";
+import { PublishTargetsLine } from "../live/StandardBar";
 import {
   COUNTRY_SETTINGS_KEY,
   MAX_AMOUNTS,
@@ -93,6 +93,8 @@ type Props = {
    * shown for the first and saved to all of them; no other zone changes. Absent in the demo: one setting per country.
    */
   targets?: readonly string[];
+  /** Live: the zone the page shows (the one the Standard line names); else the first chosen. */
+  zoneId?: string;
 };
 
 /**
@@ -100,9 +102,9 @@ type Props = {
  * (Q5, Q6), the promo cap (Q10) and the driver bonus limit (Q17). Nothing is saved until Save; a change of more than
  * 50 % asks "Are you sure?" (Q29). The rider and driver app configs read the saved values.
  */
-export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotice, targets }: Props) {
+export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotice, targets, zoneId: shownZone }: Props) {
   const { book, loading: bookLoading } = useCountrySettings();
-  const zoneId = targets?.[0];
+  const zoneId = targets ? (shownZone && targets.includes(shownZone) ? shownZone : targets[0]) : undefined;
   // v0.8.1 live: each zone's (or Standard's) own Tips & limits, read when this tab opens.
   const zoneRules = useSlice<Record<string, CountrySettings>>(ZONE_RULES_KEY, {}, { enabled: Boolean(targets) });
   const zoneBook = { ...book, zones: zoneRules.value };
@@ -153,7 +155,6 @@ export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotic
             </>
           )}
         </div>
-        {targets && zoneId ? <StandardBar doc="country_rules" docs={["country_rules"]} zoneId={zoneId} zoneName={zoneById(zoneId)?.name ?? zoneId} country={country} countryName={name} canEdit={canEdit} /> : null}
         <div className="fee-grid">
           <div id="extras-tips" className="cx-anchor">
             <AmountList title={tr("Tips")} help={tr("Buttons the rider sees after the ride.")} item="Tip" prefix="tip" list={shown.tips} saved={saved.tips} max={tipMax(country)} country={country} canEdit={canEdit} onChange={(tips) => edit({ tips })} />

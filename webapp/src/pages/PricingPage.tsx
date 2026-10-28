@@ -238,7 +238,7 @@ export function PricingPage() {
         })}
       </nav>
 
-      {liveSession ? <StandardBar doc="pricing" docs={["pricing"]} zoneId={zoneId} zoneName={zone?.name ?? zoneId} country={country} countryName={market.name} canEdit={canPublish} /> : null}
+      {liveSession ? <StandardBar doc={tab === "extras" ? "country_rules" : "pricing"} docs={tab === "extras" ? ["country_rules"] : ["pricing"]} zoneId={zoneId} zoneName={zone?.name ?? zoneId} country={country} countryName={market.name} canEdit={canPublish} /> : null}
 
       <section className="pricing-actions" aria-label={tr("Quick actions")}>
         <button data-command="admin.pricing.startSurge" type="button" className="quick-tile surge" disabled={!canPublish} onClick={() => { go({ tab: "surge" }); window.setTimeout(() => document.getElementById("manual-title")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80); }}>
@@ -388,7 +388,7 @@ export function PricingPage() {
             />
           ) : null}
 
-          {tab === "extras" ? <CountryExtrasPanel key={liveSession ? `${country}:${[...targets].join(",")}` : country} country={country} canEdit={canPublish} section={params.get("section")} onDirty={setExtrasDirty} onNotice={setNotice} {...(liveSession ? { targets: [...targets] } : {})} /> : null}
+          {tab === "extras" ? <CountryExtrasPanel key={liveSession ? `${country}:${[...targets].join(",")}` : country} country={country} canEdit={canPublish} section={params.get("section")} onDirty={setExtrasDirty} onNotice={setNotice} {...(liveSession ? { targets: [...targets], zoneId } : {})} /> : null}
 
           {tab === "history" ? (
             <section className="dash-card" aria-labelledby="history-title">
