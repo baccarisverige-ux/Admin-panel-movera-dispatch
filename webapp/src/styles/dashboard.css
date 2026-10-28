@@ -919,3 +919,10 @@
 @media (max-width: 720px) {
   .map-quick-pop { position: static; width: 100%; max-height: none; margin-top: 10px; box-shadow: none; }
 }
+
+/* Dispatch section: one menu item, four tabs (Live map, Radar · Exclusive, Bookings, Rules). */
+.dispatch-section-tabs { margin: 0 0 14px; }
+.dispatch-section-tabs a { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 18px; border-radius: 10px; color: var(--dash-ink-2); font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.dispatch-section-tabs a:hover { color: var(--text); }
+.dispatch-section-tabs a.active { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(17, 22, 20, .14); }
+.dispatch-section-tabs a:focus-visible { outline: 2px solid var(--dash-blue); outline-offset: 1px; }

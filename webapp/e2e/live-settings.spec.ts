@@ -120,12 +120,12 @@ test("Tips & limits (v0.8.1, owner 2026-10-28): shown for the zone chosen at the
   await expect(page.getByTestId("standard-bar")).toBeVisible();
   await expect(page.getByTestId("pricing-extras").getByLabel("Tip 1", { exact: true })).toHaveValue("10");
   await page.goto("/pricing?tab=extras&scope=Z001,Z002");
-  await expect(page.getByTestId("pricing-extras").getByRole("heading", { name: /Norrmalm, Södermalm/ })).toBeVisible();
+  await expect(page.getByTestId("pricing-extras").getByRole("heading", { name: /Stockholm län, Södermalm/ })).toBeVisible();
   await page.getByTestId("pricing-extras").getByLabel("Tip 1", { exact: true }).fill("12");
   await shot(page, "admin-tips-two-zones-sv");
   server.sent.length = 0;
   await page.getByTestId("pricing-extras").getByRole("button", { name: /Spara dricks och gränser/ }).click();
-  await expect(page.getByTestId("publish-targets")).toContainText("Norrmalm, Södermalm");
+  await expect(page.getByTestId("publish-targets")).toContainText("Stockholm län, Södermalm");
   await shot(page, "admin-tips-confirm-sv");
   await confirm(page);
   await expect.poll(() => server.sent.filter((s) => s.method === "PUT" && s.path.includes("country_rules")).map((s) => s.body?.["zoneId"])).toEqual(["Z001", "Z002"]);

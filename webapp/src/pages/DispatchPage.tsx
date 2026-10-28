@@ -46,6 +46,7 @@ import {
 import { DriverGroupsCard } from "../dispatch/DriverGroupsCard";
 import { RadarZoneRulesCard, RadarZonesCard } from "../dispatch/RadarZones";
 import { offersLink } from "../dispatch/MovedCard";
+import { dispatchHref } from "../dispatch/section";
 import { tr, trn, trx, uiLocale, trSentences } from "../i18n";
 
 const VIEWS = [
@@ -69,12 +70,14 @@ const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
  * Two sections share this page and the same rule book: Dispatch (the rules views) and Radar · Exclusive · Reservations
  * (three tabs: Radar, Exclusive, Reservations, plus radar zones, their rules and driver groups). Each setting lives in one of them.
  */
-export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | "offers" } = {}) {
+export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | "offers" | "bookings" } = {}) {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const offers = section === "offers";
-  const tabs = offers ? OFFER_TABS : TABS;
-  const defaultTab: TabId = offers ? "radar" : "modes";
+  // Radar · Exclusive and Bookings are the offer tabs of the Dispatch section; Rules is the rest.
+  const offers = section !== "dispatch";
+  const bookings = section === "bookings";
+  const tabs = section === "offers" ? OFFER_TABS.filter((item) => item.id !== "reservations") : bookings ? OFFER_TABS.filter((item) => item.id === "reservations") : TABS;
+  const defaultTab: TabId = section === "offers" ? "radar" : bookings ? "reservations" : "modes";
   const { agent } = useSession();
   const scope = useMarketScope();
   const market = scope.market;
@@ -279,11 +282,9 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
       <header className="dx-head">
         <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost dx-back" onClick={back} aria-label={tr("Go back")}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
         <div className="dx-head-text">
-          <h2>{offers ? trn("Radar · Exclusive · Reservations in {0}", trx(market.name)) : trn("Dispatch in {0}", trx(market.name))}</h2>
-          <p>{offers ? tr("Every offer rule in one place: Radar and its radar zones, Exclusive, and reservations, for every zone.") : tr("How ride requests find a driver, with rules for every zone. Radar, Exclusive and reservations have their own section.")}</p>
+          <h2>{bookings ? trn("Bookings in {0}", trx(market.name)) : offers ? trn("Radar · Exclusive in {0}", trx(market.name)) : trn("Dispatch rules in {0}", trx(market.name))}</h2>
+          <p>{bookings ? tr("Rules for booked rides in every zone: who gets the offer, when it goes out, and the cancel fees.") : offers ? tr("Radar and its radar zones, Exclusive offers and driver groups, for every zone.") : tr("How ride requests find a driver, with rules for every zone. Radar, Exclusive and bookings have their own tabs.")}</p>
         </div>
-        {offers ? <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate(zoneId ? `/dispatch?zone=${zoneId}` : "/dispatch")} title={tr("The other dispatch rules: best driver, rider waiting, rides and stops, drivers, safety, alerts")}>{trn("{0} Dispatch rules", <ScrollText size={15} aria-hidden="true" />)}</button> : null}
-        {!offers ? <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate(offersLink("radar", zoneId || undefined))} title={tr("Radar, Exclusive and reservation rules, radar zones and driver groups")}>{trn("{0} Radar · Exclusive · Reservations", <Radio size={15} aria-hidden="true" />)}</button> : null}
         {!offers ? <button data-command="admin.dispatch.view" type="button" className={view === "features" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "features"} onClick={() => go({ view: view === "features" ? null : "features" })} title={tr("Every setting and feature, with a search")}>{trn("{0} All features", <ListTree size={15} aria-hidden="true" />)}</button> : null}
         {!offers ? <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => navigate("/pricing?tab=extras&section=tips")} title={tr("Tips and raise-offer quick steps per country, in Pricing")}>{trn("{0} Tips & raise steps", <HandHeart size={15} aria-hidden="true" />)}</button> : null}
         {!offers ? <button data-command="admin.dispatch.view" type="button" className={view === "activity" ? "dash-btn ghost active" : "dash-btn ghost"} aria-pressed={view === "activity"} onClick={() => go({ view: view === "activity" ? null : "activity" })} title={tr("Everything you did, this session and earlier, with done or failed")}>{trn("{0} My activity", <UserRoundCheck size={15} aria-hidden="true" />)}</button> : null}
@@ -380,7 +381,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
             // A tab of the other section (Rider cancel fees from Reservations, and back): open it there, same zone.
             if (!tabs.some((item) => item.id === next)) {
               if (next === "radar" || next === "exclusive" || next === "reservations") navigate(offersLink(next, zoneId || undefined));
-              else navigate(`/dispatch?${new URLSearchParams({ ...(zoneId ? { zone: zoneId } : {}), tab: next })}`);
+              else navigate(dispatchHref(`/dispatch?${new URLSearchParams({ ...(zoneId ? { zone: zoneId } : {}), tab: next })}`));
               return;
             }
             go({ tab: next === defaultTab ? null : next });

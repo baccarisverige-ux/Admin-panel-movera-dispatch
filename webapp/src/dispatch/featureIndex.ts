@@ -5,6 +5,7 @@
  * A row in Dispatch names its view or rules tab (`tab` needs a zone, so the first zone opens when none is
  * picked) and, when there is one, the card to scroll to (`card`, the card's title). A row elsewhere has a path.
  */
+import { dispatchHref } from "./section.ts";
 export type FeatureEntry = {
   id: string;
   /** The short phrase shown in the list. */
@@ -133,7 +134,7 @@ export function featureTarget(entry: FeatureEntry, zoneId: string): string {
     if (zoneId) params.set("zone", zoneId);
     if (entry.offers.card) params.set("card", entry.offers.card);
     const search = params.toString();
-    return `/offers${search ? `?${search}` : ""}`;
+    return dispatchHref(`/offers${search ? `?${search}` : ""}`);
   }
   const params = new URLSearchParams();
   if (entry.dispatch.view) params.set("view", entry.dispatch.view);
@@ -143,5 +144,5 @@ export function featureTarget(entry: FeatureEntry, zoneId: string): string {
   }
   if (entry.dispatch.card) params.set("card", entry.dispatch.card);
   const search = params.toString();
-  return `/dispatch${search ? `?${search}` : ""}`;
+  return `/dispatch/rules${search ? `?${search}` : ""}`;
 }

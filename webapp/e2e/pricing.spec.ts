@@ -30,7 +30,7 @@ test("test a ride follows the zone price list, in each country's currency", asyn
   // Owner 2026-10-27: no seat numbers; the seat fee row is only on Child Seat (a grey "—" elsewhere).
   await expect(quote.getByLabel("Quote baby seats")).toHaveCount(0);
   await expect(page.getByLabel("Norrmalm Movera Child seat fee")).toHaveCount(0);
-  await expect(page.getByLabel("Child seat fee: not on Movera")).toHaveText("—");
+  await expect(page.getByLabel("Child seat fee: not on Movera", { exact: true })).toHaveText("—");
   await expect(page.getByLabel("Norrmalm Child Seat Child seat fee")).toHaveValue("15");
 
   await topbarMore(page);
@@ -113,7 +113,7 @@ test("rider cancel fees are not set in Pricing: the Cancellation group points to
   const pointer = page.getByTestId("rider-cancel-fees-pointer");
   await expect(pointer).toContainText("Rider cancel fees are set in Dispatch › Rides & stops › Rider cancel fees.");
   await pointer.getByRole("button", { name: "Open Rider cancel fees" }).click();
-  await expect(page).toHaveURL(/\/dispatch\?zone=Z001&tab=rides/);
+  await expect(page).toHaveURL(/\/dispatch\/rules\?zone=Z001&tab=rides/);
   await expect(page.getByRole("tab", { name: "Rides & stops" })).toHaveAttribute("aria-selected", "true");
   const card = page.getByRole("region", { name: "Rider cancel fees" });
   await expect(card).toBeInViewport();

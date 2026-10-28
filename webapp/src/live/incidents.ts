@@ -7,7 +7,7 @@
  * The alarm feed is GET /admin/incidents/stream: Server-Sent Events read with fetch (the bearer token goes in a
  * header, never in a URL); when the stream cannot be held, the same events are polled as JSON every 10 s.
  */
-import type { DemoRecord } from "../api/seed.ts";
+import type { DemoRecord, LiveRideCheck } from "../api/seed.ts";
 import type { IncidentEvent, SafetyBook } from "../safety/ops.ts";
 import type { LiveClient } from "./session.ts";
 
@@ -34,6 +34,10 @@ export type ServerIncident = {
   resolvedBy?: string;
   resolvedAt?: string;
   resolution?: string;
+  /** v0.12.0: the panel rings for an open incident with alarm true until it is taken. */
+  alarm?: boolean;
+  /** v0.12.0 §22: kind ride_check only. */
+  rideCheck?: LiveRideCheck;
 };
 
 export type IncidentFeedEvent = {
@@ -48,7 +52,7 @@ export type IncidentFeedEvent = {
 /** The demo page's words for the server's statuses. */
 export const DEMO_STATUS: Record<ServerIncident["status"], string> = { open: "queued", investigating: "taken", resolved: "resolved", dismissed: "dismissed" };
 
-/** Kinds that ring the repeating alarm until someone takes them (contract.json#safety.alarmKinds). */
+/** Kinds that ring when an older server sends no `alarm` (contract.json#safety.alarmKinds, before v0.12.0). */
 export const ALARM_KINDS = new Set(["sos", "driver_silent"]);
 
 /** The Incidents page's kind: "Car lost" is the server's driver_silent. */
@@ -80,6 +84,8 @@ export function incidentRecord(incident: ServerIncident): DemoRecord {
     ...flat("phone", position(incident.position)),
     ...flat("car", position(incident.driverPosition)),
     escalatedAt: incident.escalatedAt ?? null,
+    alarm: rings(incident),
+    ...(incident.rideCheck ? { liveRideCheck: incident.rideCheck } : {}),
     ...(incident.version ? { version: incident.version } : {}),
   };
 }
@@ -98,9 +104,14 @@ export function bookFrom(incidents: Iterable<ServerIncident>): SafetyBook {
   return book;
 }
 
-/** Open SOS and car-lost incidents nobody has taken: the alarm rings for these. */
+/** v0.12.0: the server says whether a case rings (SOS, car lost, Ride check "I need help"; never "no answer"). */
+export function rings(incident: Pick<ServerIncident, "alarm" | "kind">): boolean {
+  return incident.alarm ?? ALARM_KINDS.has(incident.kind);
+}
+
+/** Open incidents with the alarm that nobody has taken: the alarm rings for these. */
 export function ringing(incidents: Iterable<ServerIncident>): ServerIncident[] {
-  return [...incidents].filter((incident) => incident.status === "open" && ALARM_KINDS.has(incident.kind)).sort((a, b) => Date.parse(a.openedAt) - Date.parse(b.openedAt));
+  return [...incidents].filter((incident) => incident.status === "open" && rings(incident)).sort((a, b) => Date.parse(a.openedAt) - Date.parse(b.openedAt));
 }
 
 /** Keeps the newest picture of every incident the feed has told about. */

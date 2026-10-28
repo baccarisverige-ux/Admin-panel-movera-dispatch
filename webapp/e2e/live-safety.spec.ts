@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { LOST_INCIDENT, SOS_INCIDENT, fakeTripServer, signIn, type Incident } from "./live-fake";
+import { LOST_INCIDENT, RIDE_CHECK_HELP, RIDE_CHECK_SILENT, SOS_INCIDENT, fakeTripServer, signIn, type Incident } from "./live-fake";
 
 /**
  * Safety part 1 (contract v0.7.0 §15, owner decisions 2026-10-27): the live admin reads SOS and car-lost incidents
@@ -142,22 +142,72 @@ test("sv: screenshots for the owner", async ({ page }) => {
   await expect(page.getByText("Bil borttappad: R501").first()).toBeVisible();
   await shot(page, "admin-2-larm-bil-borttappad");
   await page.goto("/incidents?case=inc_1");
-  const view = page.getByRole("article", { name: "Case inc_1" });
+  const view = page.getByRole("article", { name: "Ärende inc_1" });
   await expect(view.getByRole("heading", { name: "inc_1 · Ny" })).toBeVisible();
   await shot(page, "admin-3-incidenter-sos-nytt");
   await view.getByRole("button", { name: "Ta", exact: true }).click();
   await confirm(page);
   await expect(view.getByRole("heading", { name: "inc_1 · Taget" })).toBeVisible();
   await shot(page, "admin-4-sos-tagen");
-  await view.getByLabel("Contact or outcome").fill("Kunden är trygg, pratade i telefon");
+  await view.getByLabel("Kontakt eller utfall").fill("Kunden är trygg, pratade i telefon");
   await view.getByRole("button", { name: "Lös", exact: true }).click();
   await confirm(page);
   await expect(view.getByRole("heading", { name: "inc_1 · Löst" })).toBeVisible();
   await shot(page, "admin-5-sos-lost");
   await page.goto("/incidents?case=inc_2");
-  const lost = page.getByRole("article", { name: "Case inc_2" });
+  const lost = page.getByRole("article", { name: "Ärende inc_2" });
   await lost.getByRole("button", { name: "Falskt larm", exact: true }).click();
   await confirm(page);
   await expect(lost.getByRole("heading", { name: "inc_2 · Falskt larm" })).toBeVisible();
   await shot(page, "admin-6-bil-borttappad-falskt-larm");
+});
+
+const rideChecks = () => [{ ...RIDE_CHECK_HELP }, { ...RIDE_CHECK_SILENT }] as Incident[];
+
+test("Ride check cases (v0.12.0): I need help rings, no answer is silent; the case shows trigger, who and answer", async ({ page }) => {
+  await fakeTripServer(page, { admin: { permissions: SAFETY }, incidents: rideChecks() });
+  await signInCold(page);
+  const ring = page.locator(".incident-ring[data-kind=ride_check]");
+  await expect(ring).toHaveCount(1);
+  await expect(ring).toContainText("Ride check · I need help");
+  await expect(ring).toContainText("inc_3");
+  await page.goto("/incidents");
+  const list = page.getByRole("complementary", { name: "Cases" });
+  await expect(list.getByRole("button", { name: /inc_3/ })).toContainText("I need help");
+  await expect(list.getByRole("button", { name: /inc_4/ })).toContainText("No answer in 2 minutes · Late answer: I'm OK");
+  await page.goto("/incidents?case=inc_3");
+  const help = page.getByRole("region", { name: "Ride check answer" });
+  await expect(help).toContainText("Off the route");
+  await expect(help).toContainText("The driver");
+  await expect(help).toContainText("I need help");
+  await page.goto("/incidents?case=inc_4");
+  const quiet = page.getByRole("region", { name: "Ride check answer" });
+  await expect(quiet).toContainText("Long stop");
+  await expect(quiet).toContainText("The rider");
+  await expect(quiet).toContainText("No answer in 2 minutes · Late answer: I'm OK");
+  await expect(quiet).toContainText("No answer: the case opened without the alarm sound.");
+  // Still only the need-help case rings.
+  await expect(page.locator(".incident-ring")).toHaveCount(1);
+});
+
+test("sv: Ride check screenshots for the owner", async ({ page }) => {
+  test.skip(!shots, "SHOTS=<dir> saves the owner's screenshots");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const ago = (s: number) => new Date(Date.now() - s * 1000).toISOString();
+  const fresh = [
+    { ...RIDE_CHECK_HELP, openedAt: ago(40), rideCheck: { ...RIDE_CHECK_HELP.rideCheck, shownAt: ago(60), answeredAt: ago(40) } },
+    { ...RIDE_CHECK_SILENT, openedAt: ago(200), rideCheck: { ...RIDE_CHECK_SILENT.rideCheck, shownAt: ago(320) } },
+  ] as Incident[];
+  await fakeTripServer(page, { admin: { permissions: SAFETY, language: "sv" }, incidents: fresh });
+  await page.goto("/");
+  await page.getByLabel(/E-post|Email/).fill("owner@movera.se");
+  await page.getByLabel(/Lösenord|Password/).fill("correct-horse");
+  await page.getByRole("button", { name: /Logga in|Sign in/ }).click();
+  await expect(page.locator(".incident-ring[data-kind=ride_check]")).toContainText("Resekontroll · Jag behöver hjälp");
+  await page.goto("/incidents?case=inc_3");
+  await expect(page.locator(".rc-live")).toContainText("Jag behöver hjälp");
+  await shot(page, "admin-safety2-1-arenden-resekontroll-hjalp");
+  await page.goto("/incidents?case=inc_4");
+  await expect(page.locator(".rc-live")).toContainText("Inget svar på 2 minuter");
+  await shot(page, "admin-safety2-2-resekontroll-inget-svar");
 });

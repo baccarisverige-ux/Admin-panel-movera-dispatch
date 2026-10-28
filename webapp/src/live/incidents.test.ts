@@ -114,3 +114,30 @@ test("the feed reads the SSE stream with the bearer token, and falls back to pol
   assert.deepEqual(modes.slice(0, 3), ["connecting", "live", "polling"]);
   assert.equal(waits[0], 10_000);
 });
+
+/** Safety part 2 (contract v0.12.0 §22, owner decisions 2026-10-28): Ride check cases from the server. */
+const HELP: ServerIncident = {
+  incidentId: "inc_3", tripId: "trp_3", kind: "ride_check", severity: "critical", status: "open", version: 1, raisedBy: "driver", zoneId: "Z001", alarm: true,
+  rideCheck: { checkId: "rc-1", trigger: "off_route", by: "driver", answer: "need_help", shownAt: "2026-10-28T10:00:00Z", answeredAt: "2026-10-28T10:00:20Z" },
+  openedAt: "2026-10-28T10:00:20Z",
+};
+const SILENT: ServerIncident = {
+  incidentId: "inc_4", tripId: "trp_4", kind: "ride_check", severity: "critical", status: "open", version: 1, raisedBy: "system", zoneId: "Z001", alarm: false,
+  rideCheck: { checkId: "rc-2", trigger: "long_stop", by: "rider", answer: "no_answer", shownAt: "2026-10-28T10:00:00Z", lateAnswer: "ok" },
+  openedAt: "2026-10-28T10:02:00Z",
+};
+
+test("Ride check cases: alarm only when the server says so; trigger, who and answer reach the case", async () => {
+  assert.deepEqual(ringing([HELP, SILENT, SOS, { ...SOS, incidentId: "inc_5", alarm: false }]).map((row) => row.incidentId), ["inc_1", "inc_3"]);
+  const help = caseOf(incidentRecord(HELP), bookFrom([HELP]), emptyIncidentOps(), Date.parse("2026-10-28T10:01:00Z"));
+  assert.deepEqual([help.kind, help.level, help.raisedBy, help.rideCheck?.answer], ["ride_check", "critical", "driver", "need_help"]);
+  assert.equal(incidentRecord(HELP).alarm, true);
+  const silent = incidentRecord(SILENT);
+  assert.equal(silent.alarm, false);
+  const item = caseOf(silent, bookFrom([SILENT]), emptyIncidentOps(), Date.parse("2026-10-28T10:03:00Z"));
+  const { liveAnswerLabel, liveTriggerLabel } = await import("../safety/cases.ts");
+  assert.equal(liveAnswerLabel(item.rideCheck!), "No answer in 2 minutes · Late answer: I'm OK");
+  assert.equal(liveAnswerLabel(help.rideCheck!), "I need help");
+  assert.deepEqual(["dropped_far", "long_stop", "off_route", "possible_crash", "x"].map(liveTriggerLabel), ["Dropped far from the destination", "Long stop", "Off the route", "Possible crash", "x"]);
+  assert.equal(liveAnswerLabel({ ...help.rideCheck!, lateAnswer: "need_help" }), "I need help · Late answer: I need help");
+});

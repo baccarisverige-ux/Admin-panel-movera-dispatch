@@ -1,5 +1,5 @@
 /** Error codes of contract v0.3.0 (contract.json#errors.codes). */
-export const ERROR_CODES = ["invalid_request", "unauthenticated", "forbidden", "not_found", "otp_expired", "conflict", "invalid_transition", "version_mismatch", "rate_limited", "unavailable", "internal"] as const;
+export const ERROR_CODES = ["invalid_request", "unauthenticated", "forbidden", "not_found", "otp_expired", "conflict", "invalid_transition", "version_mismatch", "documents_not_approved", "rate_limited", "unavailable", "internal"] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 /** The wire error body: { code, message, requestId, retryable, projection? }. */

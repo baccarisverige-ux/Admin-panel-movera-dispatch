@@ -5,6 +5,7 @@ import type { DocStatus } from "../drivers/gate";
 import type { ThreadMessage } from "../drivers/ops";
 import { CommandButton } from "../ui/CommandButton";
 import { DOC_CHOICES, docHealth, docLabel, type DocHealth, type HealthCount } from "./documents";
+import { statusLabel, type StatusFamily } from "../domain/labels";
 import { uiLocale, trx, tr, trn } from "../i18n";
 
 export function Avatar({ name, size = 56 }: { name: string; size?: number }) {
@@ -37,9 +38,10 @@ export function DocSummary({ counts, total }: { counts: HealthCount; total: numb
   );
 }
 
-export function AccountChip({ status }: { status: string }) {
-  const label = status === "on_hold" ? "On hold" : status.charAt(0).toUpperCase() + status.slice(1).replaceAll("_", " ");
-  return <span className={`fd-account a-${status}`}><i aria-hidden="true" />{trx(label)}</span>;
+/** A driver's account uses the contract words (driverAccountStatus); riders and fleet owners keep the panel's. */
+export function AccountChip({ status, family }: { status: string; family?: StatusFamily }) {
+  const label = family ? statusLabel(status, family) : trx(status === "on_hold" ? "On hold" : status.charAt(0).toUpperCase() + status.slice(1).replaceAll("_", " "));
+  return <span className={`fd-account a-${status}`}><i aria-hidden="true" />{label}</span>;
 }
 
 export function Stat({ label, value, delta, inverse = false, warn = null, hint }: { label: string; value: string; delta?: number | null; inverse?: boolean; warn?: "red" | "amber" | null; hint?: string }) {

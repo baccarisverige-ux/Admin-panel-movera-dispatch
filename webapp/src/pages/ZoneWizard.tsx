@@ -44,6 +44,14 @@ import {
   type ZoneShape,
 } from "../zones/releases";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { useQueryClient } from "@tanstack/react-query";
+import { market } from "../markets/markets";
+import { LIVE_ZONES_KEY, useLiveZoneList } from "../live/LiveZones";
+import { createZoneProblem, outlineForServer, suggestZoneId, ZONE_ID, type CreateZoneBody, type ZoneNames } from "../zones/live";
+import { NamesFields } from "./LiveZoneActions";
+
+/** Live: only what the server refuses blocks saving (contract.json#zones.polygon); the demo's other checks only warn. */
+const SERVER_BLOCKS = /crosses itself|needs at least 3 points|not a closed polygon|Make the shape first/;
 
 export type WizardOverlay = { districts?: { ring: [number, number][]; name: string; picked: boolean }[]; outline?: [number, number][] };
 
@@ -77,8 +85,13 @@ const KIND_HINT: Partial<Record<ZoneKind, string>> = {
 type Step = 1 | 2 | 3 | 4;
 
 /** Make a new zone in four steps: city, type and name, how to make the shape, check and save. */
-export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country: MarketId; startCity?: string; onClose: () => void; onOverlay: (overlay: WizardOverlay) => void }) {
+export function ZoneWizard({ country, startCity, onClose, onOverlay, live = false }: { country: MarketId; startCity?: string; onClose: () => void; onOverlay: (overlay: WizardOverlay) => void; live?: boolean }) {
   const { agent } = useSession();
+  const queryClient = useQueryClient();
+  const serverZones = useLiveZoneList() ?? [];
+  const [names, setNames] = useState<ZoneNames>({ sv: "", fr: "", en: "" });
+  const [zoneId, setZoneId] = useState("");
+  const kinds = live ? KINDS.filter((item) => item === "operating" || item === "airport") : KINDS;
   const ui = useZoneUi();
   const cities = citiesOf(country);
   const [cityId, setCityId] = useState(startCity && cityById(startCity)?.country === country ? startCity : "");
@@ -110,7 +123,11 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
   const inside = useMemo(() => activityInside(sketch), [sketch]);
   const areaKm = ringAreaKm(sketch);
   const size = ringSizeKm(sketch);
-  const blocking = checks.filter((issue) => issue.level === "error");
+  const blocks = (issue: { level: string; message: string }) => issue.level === "error" && (!live || SERVER_BLOCKS.test(issue.message));
+  const blocking = checks.filter(blocks);
+  const liveName = names.sv.trim() || names.en.trim() || names.fr.trim();
+  const finalZoneId = zoneId || suggestZoneId(country, kind === "airport" ? "airport" : "operating", names.en || names.sv || names.fr || "New", serverZones);
+  const createBody: CreateZoneBody = { zoneId: finalZoneId, names: { sv: names.sv.trim(), fr: names.fr.trim(), en: names.en.trim() }, country, currency: market(country).currency, timeZone: market(country).timeZone, kind: kind === "airport" ? "airport" : "operating", polygon: outlineForServer(sketch) };
 
   useEffect(() => {
     if (!city) {
@@ -146,11 +163,11 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
     if (spec?.draw) {
       zoneStore.clearSketch();
       zoneStore.setTool(spec.draw, "sketch");
-      zoneStore.notify(`${spec.label}: draw the new zone on the map.`);
+      zoneStore.notify(tr("{0}: draw the new zone on the map.", [spec.label]));
       return;
     }
     zoneStore.setTool("render");
-    if (next === "city") shape(city.outline.map((point) => [...point] as [number, number]), `The whole of ${city.name} is the shape.`);
+    if (next === "city") shape(city.outline.map((point) => [...point] as [number, number]), tr("The whole of {0} is the shape.", [city.name]));
     if (next === "suggest") {
       const result = suggestedShape(city);
       if (result.error) setError(result.error);
@@ -166,14 +183,14 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
     const result = joinShapes(city.districts.filter((item) => next.includes(item.id)).map((item) => item.ring));
     if (!next.length) zoneStore.clearSketch();
     else if (result.error) setError(result.error);
-    else shape(result.points, `${next.length} district${next.length === 1 ? "" : "s"} joined.`);
+    else shape(result.points, tr("{0} district{1} joined.", [next.length, next.length === 1 ? "" : tr("s")]));
     if (!name && next.length === 1) setName(city.districts.find((item) => item.id === id)?.name ?? "");
   }
 
   function aroundPlace(placeLabel: string, distance: number) {
     const place = PLACES.find((item) => item.name === placeLabel);
     if (!place) return;
-    shape(circleRing(place.lat, place.lng, distance), `${distance} km around ${place.name}.`);
+    shape(circleRing(place.lat, place.lng, distance), tr("{0} km around {1}.", [distance, place.name]));
     if (!name) setName(place.name.split(",")[0] ?? "");
   }
 
@@ -196,7 +213,7 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
     if (id) onClose();
   }
 
-  const saveError = !city ? "Pick the city." : !name.trim() ? "Give the zone a name." : sketch.length < 3 ? "Make the shape first." : blocking[0]?.message ?? (goLive === "later" && !goLiveAt ? "Pick when it goes live." : schedule === "range" && (!from || !until) ? "Pick the dates." : "");
+  const saveError = live ? (!city ? "Pick the city." : createZoneProblem(createBody, serverZones) || (blocking[0]?.message ?? "")) : !city ? "Pick the city." : !name.trim() ? "Give the zone a name." : sketch.length < 3 ? "Make the shape first." : blocking[0]?.message ?? (goLive === "later" && !goLiveAt ? "Pick when it goes live." : schedule === "range" && (!from || !until) ? "Pick the dates." : "");
 
   return (
     <div className="zn-panel zn-wizard" aria-label={tr("New zone")}>
@@ -236,20 +253,27 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
       {step === 2 && city ? (
         <section className="zn-step" aria-label={tr("Type and name")}>
           <div className="zn-kinds" role="radiogroup" aria-label={tr("Zone type")}>
-            {KINDS.map((item) => (
+            {kinds.map((item) => (
               <button data-command="admin.zone.wizard" key={item} type="button" role="radio" aria-checked={kind === item} className={kind === item ? "zn-kind on" : "zn-kind"} style={{ ["--zc" as string]: ZONE_COLOR[item] }} onClick={() => setKind(item)}>
                 <i aria-hidden="true" />
-                <span><b>{trx(ZONE_TYPES.find((type) => type.id === item)?.label)}</b><small>{KIND_HINT[item]}</small></span>
+                <span><b>{trx(ZONE_TYPES.find((type) => type.id === item)?.label)}</b><small>{trx(KIND_HINT[item])}</small></span>
               </button>
             ))}
           </div>
+          {live ? (
+            <>
+              <NamesFields names={names} onChange={setNames} />
+              <label className="field">{tr("Zone id")}<input aria-label={tr("Zone id")} value={finalZoneId} maxLength={64} onChange={(event) => setZoneId(event.target.value.replace(/[^A-Za-z0-9_-]/g, ""))} /><small className="fine">{tr("Fixed once created: <country>-<two letters> for a city zone, the IATA code for an airport.")}</small></label>
+            </>
+          ) : <>
           <label className="field">{trn("Name{0}", <span className="zn-name">
               <em>{city.name} ·</em>
               <input aria-label={tr("Zone name")} value={name} onChange={(event) => setName(event.target.value)} placeholder={tr("Kista Nord")} maxLength={40} />
             </span>)}</label>
           <label className="field">{trn("Code{0}{1}", <input aria-label={tr("Zone code")} value={finalCode} onChange={(event) => { setCodeTouched(true); setCode(event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "")); }} maxLength={12} />, <small className="fine">{tr("Made from the city code. You can change it.")}</small>)}</label>
+          </>}
           <div className="zn-step-foot">
-            <button data-command="admin.zone.wizard" type="button" className="dash-btn" disabled={!name.trim()} onClick={() => setStep(3)}>{tr("Next: the shape")}</button>
+            <button data-command="admin.zone.wizard" type="button" className="dash-btn" disabled={live ? !(names.sv.trim() && names.fr.trim() && names.en.trim() && ZONE_ID.test(finalZoneId)) : !name.trim()} onClick={() => setStep(3)}>{tr("Next: the shape")}</button>
           </div>
         </section>
       ) : null}
@@ -296,7 +320,7 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
                   setCopyId(event.target.value);
                   setSettingsFrom(event.target.value);
                   const source = countryZones.find((zone) => zone.id === event.target.value);
-                  if (source) shape(source.points.map((point) => [...point] as [number, number]), `Copied the shape of ${displayName(source)}. Change it after saving.`);
+                  if (source) shape(source.points.map((point) => [...point] as [number, number]), tr("Copied the shape of {0}. Change it after saving.", [displayName(source)]));
                 }}>
                   <option value="">{tr("Pick a zone")}</option>
                   {countryZones.filter((zone) => zone.kind !== "service" && zone.kind !== "pickup").map((zone) => <option key={zone.id} value={zone.id}>{displayName(zone)}</option>)}
@@ -312,7 +336,7 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
                   void file.text().then((raw) => {
                     const result = firstShapeFromFile(raw);
                     if (result.error) setError(result.error);
-                    else shape(result.points, `Shape from ${file.name}.`);
+                    else shape(result.points, tr("Shape from {0}.", [file.name]));
                   });
                 }} />)}</label>
             </div>
@@ -329,7 +353,7 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
             <div className="zn-shape-sum" aria-label={tr("Shape")}>
               <span>{trn("{0} · {1} × {2} km", <b>{trn("{0} km²", areaKm.toFixed(2))}</b>, size.width.toFixed(1), size.height.toFixed(1))}</span>
               <div className="zn-row">
-                <button data-command="admin.zone.snap" type="button" className="dash-btn small ghost" onClick={() => { const result = clipToCity(sketch, city); if (result.error) setError(result.error); else shape(result.points, `Cut to the ${city.name} border.`); }}>{trn("{0} Fit to city border", <Scissors size={13} aria-hidden="true" />)}</button>
+                <button data-command="admin.zone.snap" type="button" className="dash-btn small ghost" onClick={() => { const result = clipToCity(sketch, city); if (result.error) setError(result.error); else shape(result.points, tr("Cut to the {0} border.", [city.name])); }}>{trn("{0} Fit to city border", <Scissors size={13} aria-hidden="true" />)}</button>
                 <button data-command="admin.zone.snap" type="button" className="dash-btn small ghost" onClick={() => { const result = removeOverlaps(sketch, ui.book.draft.filter((zone) => zone.country === country)); if (result.error) setError(result.error); else shape(result.points, "Overlaps with other zones removed. Zones now touch."); }}>{trn("{0} Remove overlaps", <Scissors size={13} aria-hidden="true" />)}</button>
               </div>
             </div>
@@ -345,19 +369,20 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
         <section className="zn-step" aria-label={tr("Check and save")}>
           <div className="zn-summary">
             <i style={{ background: ZONE_COLOR[kind] }} aria-hidden="true" />
-            <span><b>{city.name} · {name}</b><small>{trn("{0} · {1} · {2} km²", finalCode, trx(ZONE_TYPES.find((type) => type.id === kind)?.label), areaKm.toFixed(2))}</small></span>
+            <span><b>{live ? liveName : `${city.name} · ${name}`}</b><small>{trn("{0} · {1} · {2} km²", live ? finalZoneId : finalCode, trx(ZONE_TYPES.find((type) => type.id === kind)?.label), areaKm.toFixed(2))}</small></span>
           </div>
           <div className="zn-live-checks" aria-label={tr("Live checks")}>
             {checks.length === 0 ? <p className="zn-ok">{trn("{0} No overlap, inside {1}, lines do not cross.", <CircleCheck size={14} aria-hidden="true" />, city.name)}</p> : checks.map((issue) => (
-              <p key={issue.message} className={issue.level === "error" ? "zn-alert bad" : "zn-alert busy"}><AlertTriangle size={14} aria-hidden="true" /> {trSentences(issue.message)}</p>
+              <p key={issue.message} className={blocks(issue) ? "zn-alert bad" : "zn-alert busy"}><AlertTriangle size={14} aria-hidden="true" /> {trSentences(issue.message)}</p>
             ))}
           </div>
-          <dl className="zn-inside" aria-label={tr("Inside the shape now")}>
+          {live ? null : <dl className="zn-inside" aria-label={tr("Inside the shape now")}>
             <div><dt>{trn("{0} Drivers online", <Car size={12} aria-hidden="true" />)}</dt><dd>{inside.drivers}</dd></div>
             <div><dt>{trn("{0} Open requests", <Users size={12} aria-hidden="true" />)}</dt><dd>{inside.requests}</dd></div>
             <div><dt>{tr("Trips now")}</dt><dd>{inside.trips}</dd></div>
             <div><dt>{tr("Requests · 7 days")}</dt><dd>{inside.demand7d}</dd></div>
-          </dl>
+          </dl>}
+          {live ? <p className="fine" data-testid="zone-create-closed">{tr("The zone is created closed on the server. Open it on the map or the zone page when it is ready.")}</p> : <>
           <label className="field">{trn("Copy prices and settings from{0}", <select aria-label={tr("Copy settings from")} value={settingsFrom} onChange={(event) => setSettingsFrom(event.target.value)}>
               <option value="">{tr("Movera default settings")}</option>
               {countryZones.filter((zone) => zone.kind === kind || zone.kind === "operating").filter((zone) => zone.kind !== "service").map((zone) => <option key={zone.id} value={zone.id}>{displayName(zone)}</option>)}
@@ -386,10 +411,15 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay }: { country
             {goLive === "later" ? <label className="field">{trn("Start{0}", <input type="datetime-local" aria-label={tr("Go live at")} value={goLiveAt} onChange={(event) => setGoLiveAt(event.target.value)} />)}</label> : null}
           </fieldset>
           <p className="fine">{tr("Saved as a draft. Then send it for review: a second admin publishes it.")}</p>
-          {saveError ? <p className="rd-form-error" role="alert">{saveError}</p> : null}
+          </>}
+          {saveError ? <p className="rd-form-error" role="alert">{trSentences(saveError)}</p> : null}
           <div className="zn-step-foot">
             <button data-command="admin.zone.wizard" type="button" className="dash-btn ghost" onClick={() => setStep(3)}>{tr("Back")}</button>
+            {live ? (
+              <CommandButton command="admin.zone.create" className="dash-btn publish" type="button" targetId={finalZoneId} confirmTarget={false} disabled={Boolean(saveError)} title={saveError ? trSentences(saveError) : undefined} value={createBody} summary={tr("{0} ({1}) is created on the server, closed, with its outline of {2} points.", [liveName, finalZoneId, createBody.polygon.length])} onDone={() => { zoneStore.clearSketch(); zoneStore.notify("Zone created."); void queryClient.invalidateQueries({ queryKey: LIVE_ZONES_KEY }).then(() => zoneStore.select(createBody.zoneId)); onClose(); }}>{tr("Create zone")}</CommandButton>
+            ) : (
             <CommandButton command="admin.zone.create" className="dash-btn publish" type="button" disabled={Boolean(saveError)} title={saveError} onDone={save}>{tr("Save as draft")}</CommandButton>
+            )}
           </div>
         </section>
       ) : null}

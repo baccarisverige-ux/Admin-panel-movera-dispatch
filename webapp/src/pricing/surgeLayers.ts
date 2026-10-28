@@ -1,6 +1,7 @@
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource } from "maplibre-gl";
 import type { ZoneSurge } from "./surge.ts";
+import { colouredZones, DRIVER_EDGE_PX, DRIVER_FILL_OPACITY, DRIVER_LEVEL_COLOR, driverSurgeLevel } from "../live/liveSurgeMap.ts";
 import { dotsGeo, glowGeo, hexGeo, pointsGeo, zonesGeo, type SurgeStyle } from "./surgeGeo.ts";
 
 /** Adds, updates and removes the surge layers on any MapLibre map (Pricing, the dashboard and Dispatch). */
@@ -158,4 +159,30 @@ export function updateSurgeLayers(map: maplibregl.Map, rows: readonly ZoneSurge[
 export function surgePitch(map: maplibregl.Map, style: SurgeStyle, shown: boolean): void {
   const pitch = shown && style === "hex" ? 48 : 0;
   if (Math.abs(map.getPitch() - pitch) > 1) map.easeTo({ pitch, duration: 700 });
+}
+
+/**
+ * Live maps (contract.json#driverSurgeMap): the server's surge in the driver map's three colours, as filled zones
+ * with a 2 px edge, no pills and no multiplier on the map. Zones at 1.0 get no colour.
+ */
+export function updateDriverSurgeLayers(map: maplibregl.Map, rows: readonly ZoneSurge[], shown: boolean, onZone?: (zoneId: string) => void): void {
+  const state = states.get(map);
+  if (!state) return;
+  state.onZone = onZone;
+  const coloured = shown ? colouredZones(rows) : [];
+  const geo = zonesGeo(coloured, null);
+  for (const feature of geo.features) {
+    const row = coloured.find((item) => item.zoneId === feature.properties.zoneId);
+    const level = row ? driverSurgeLevel(row.multiplier) : null;
+    feature.properties = { ...feature.properties, color: level ? DRIVER_LEVEL_COLOR[level] : "#000000", opacity: DRIVER_FILL_OPACITY, selected: false };
+  }
+  (map.getSource("surge-zones") as GeoJSONSource | undefined)?.setData(geo);
+  for (const id of ["surge-glow", "surge-hex", "surge-points", "surge-dots"]) (map.getSource(id) as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: [] });
+  const visible = new Set(shown ? ["surge-zone-fill", "surge-zone-line"] : []);
+  for (const ids of Object.values(LAYERS)) {
+    for (const id of ids) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible.has(id) ? "visible" : "none");
+  }
+  if (map.getLayer("surge-zone-line")) map.setPaintProperty("surge-zone-line", "line-width", DRIVER_EDGE_PX);
+  for (const pill of state.pills) pill.remove();
+  state.pills = [];
 }

@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { statusLabel } from "../domain/labels";
 import { LiveListBar } from "../live/LiveListBar";
 import { useNavigate, useSearchParams } from "react-router";
 import { can } from "../auth/permissions";
@@ -25,10 +26,10 @@ import { tr, trn, trx, uiLocale } from "../i18n";
 const VIEWS = [
   { id: "all", get label() { return tr("All"); } },
   { id: "online", get label() { return tr("Online now"); } },
-  { id: "active", get label() { return tr("Active"); } },
-  { id: "on_hold", get label() { return tr("On hold"); } },
-  { id: "pending", get label() { return tr("Pending"); } },
-  { id: "suspended", get label() { return tr("Suspended"); } },
+  { id: "active", get label() { return statusLabel("active", "driverAccountStatus"); } },
+  { id: "on_hold", get label() { return statusLabel("on_hold", "driverAccountStatus"); } },
+  { id: "pending", get label() { return statusLabel("pending", "driverAccountStatus"); } },
+  { id: "suspended", get label() { return statusLabel("suspended", "driverAccountStatus"); } },
   { id: "expiring", get label() { return tr("Documents expiring"); } },
   { id: "invalid", get label() { return tr("Documents missing"); } },
 ] as const;
@@ -148,9 +149,9 @@ export function DriversPage() {
 
       <section className="fd-cards" aria-label={tr("Driver summary")}>
         <SummaryCard icon={<Users size={18} />} tone="blue" label={tr("All drivers")} value={counts.all} />
-        <SummaryCard icon={<UserCheck size={18} />} tone="green" label={tr("Active")} value={counts.active} hint={tr("{0} online now", [counts.online])} />
-        <SummaryCard icon={<PauseCircle size={18} />} tone="amber" label={tr("On hold")} value={counts.on_hold} />
-        <SummaryCard icon={<CalendarClock size={18} />} tone="violet" label={tr("Pending approval")} value={counts.pending} />
+        <SummaryCard icon={<UserCheck size={18} />} tone="green" label={statusLabel("active", "driverAccountStatus")} value={counts.active} hint={tr("{0} online now", [counts.online])} />
+        <SummaryCard icon={<PauseCircle size={18} />} tone="amber" label={statusLabel("on_hold", "driverAccountStatus")} value={counts.on_hold} />
+        <SummaryCard icon={<CalendarClock size={18} />} tone="violet" label={statusLabel("pending", "driverAccountStatus")} value={counts.pending} />
         <SummaryCard icon={<AlertTriangle size={18} />} tone="orange" label={tr("Documents expiring")} value={counts.expiring} />
         <SummaryCard icon={<Car size={18} />} tone="red" label={tr("Documents missing or wrong")} value={counts.invalid} />
       </section>

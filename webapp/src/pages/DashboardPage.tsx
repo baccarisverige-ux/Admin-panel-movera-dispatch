@@ -68,7 +68,8 @@ import { formatMoney } from "../markets/markets";
 import { useMarketScope } from "../markets/useMarketScope";
 import { openFailures } from "../payments/failures";
 import { surgeRows } from "../pricing/rows";
-import { SurgeControls, SurgeLegend } from "../pricing/SurgeControls";
+import { DriverSurgeLegend, SurgeControls, SurgeLegend } from "../pricing/SurgeControls";
+import { useLiveMapSurge } from "../live/useLiveSurge";
 import { useSurgePref } from "../pricing/useSurgePref";
 import { SLICE_KEY, emptyPricingStore, normalizeStore } from "../pricing/zonePricing";
 import { Flag } from "../ui/Flag";
@@ -291,10 +292,13 @@ export function DashboardPage() {
   const surgePref = useSurgePref("dashboard", { shown: false, style: "zones" });
   const surgeMinute = Math.floor(now / 60_000) * 60_000;
   const surgeZoneKey = (scope.zones.length ? scope.zones : market.zones.map((zone) => zone.id)).join(",");
-  const surge = useMemo(
+  // Live (contract.json#driverSurgeMap): the server's surge now (GET /admin/surge/now) in the driver map's colours.
+  const liveSurge = useLiveMapSurge(surgeZoneKey.split(","), pricing);
+  const demoSurge = useMemo(
     () => surgeRows(pricing, surgeZoneKey.split(","), new Map(balance.map((row) => [row.zoneId, { waiting: row.waiting, free: row.free }])), Math.max(surgeMinute, Date.now())).map((row) => row.surge),
     [pricing, surgeZoneKey, balance, surgeMinute],
   );
+  const surge = liveSurge ? liveSurge.rows : demoSurge;
 
   const shift = demoShift(now, api.demo);
   const rides = useMemo(() => scheduledRides(reservationRows, driverRows, now, shift), [reservationRows, driverRows, now, shift]);
@@ -582,7 +586,7 @@ export function DashboardPage() {
                 <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showRequests} className={showRequests ? "state-chip" : "state-chip off"} onClick={() => setShowRequests((value) => !value)}>{trn("{0}Riders waiting{1}", <i className="rider" style={{ background: REQUEST_COLOR.waiting }} />, <strong>{requests.length}</strong>)}</button>
                 <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBalance} className={showBalance ? "state-chip" : "state-chip off"} onClick={() => setShowBalance((value) => !value)}>{trn("{0}Supply vs demand", <i style={{ background: "linear-gradient(90deg,#0ca30c,#eda100,#d03b3b)" }} />)}</button>
                 <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBonus} className={showBonus ? "state-chip" : "state-chip off"} onClick={() => setShowBonus((value) => !value)}>{trn("{0}Driver bonus areas{1}", <i style={{ background: "#f2994a" }} />, <strong>{bonusAreas.length}</strong>)}</button>
-                <SurgeControls compact shown={surgePref.shown} style={surgePref.style} onShown={surgePref.setShown} onStyle={surgePref.setStyle} />
+                <SurgeControls compact shown={surgePref.shown} style={surgePref.style} onShown={surgePref.setShown} onStyle={surgePref.setStyle} noStyle={Boolean(liveSurge)} />
               </div>
               {liveNotice ? <p className="fd-notice" role="status">{liveNotice}</p> : null}
               <DriversMap
@@ -596,6 +600,7 @@ export function DashboardPage() {
                 surge={surge}
                 surgeShown={surgePref.shown}
                 surgeStyle={surgePref.style}
+                surgeDriver={Boolean(liveSurge)}
                 bonusAreas={bonusAreas}
                 bonusShown={showBonus}
                 rideChecks={shared && (can(role, "incidents.read") || can(role, "trips.intervene")) ? { checks: shared.rideCheck.checks, demoShift: shared.rideCheck.demoShift, now: shared.now } : null}
@@ -629,7 +634,7 @@ export function DashboardPage() {
                   };
                 }}
               />
-              {surgePref.shown ? <SurgeLegend /> : null}
+              {surgePref.shown ? (liveSurge ? <DriverSurgeLegend failed={liveSurge.state === "failed"} /> : <SurgeLegend />) : null}
               <p className="fine-print">{trn("{0}Drivers move every 5 seconds; data reloads every 10 seconds.", api.demo ? tr("Simulated positions from demo data. ") : "")}</p>
             </section>
 

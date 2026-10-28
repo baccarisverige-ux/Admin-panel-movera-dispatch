@@ -145,7 +145,7 @@ test("Q39/Q40/Q44/Q46: max stops, pickup move after accept, no-show share and mi
   // Going offline after missed offers moved to Radar · Exclusive · Reservations › Radar.
   await page.getByRole("tab", { name: "Drivers", exact: true }).click();
   await page.getByTestId("dx-moved-auto-offline").getByRole("link", { name: "Radar rules" }).click();
-  await expect(page).toHaveURL(/\/offers\?zone=Z001/);
+  await expect(page).toHaveURL(/\/dispatch\/radar\?zone=Z001/);
   const offline = page.getByRole("region", { name: "Go offline automatically" });
   await offline.getByLabel("Offline after offers not accepted").fill("5");
   await bar.getByRole("button", { name: "Publish now" }).click();
