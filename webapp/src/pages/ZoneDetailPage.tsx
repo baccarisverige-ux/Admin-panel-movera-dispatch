@@ -51,6 +51,13 @@ import {
 } from "../zones/releases";
 import { statusTone } from "./ZoneMap";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { COUNTRY_LABEL } from "../i18n/countries";
+import { useMarketScope } from "../markets/useMarketScope";
+import { useLiveZoneList, useLiveZonesFailure } from "../live/LiveZones";
+import { ErrorLine } from "../live/ui";
+import { liveIssues } from "../zones/liveIssues";
+import { LiveOpenClose, LiveZoneFields } from "./LiveZoneActions";
 
 type TabId = "shape" | "settings" | "prices" | "dispatch" | "pickups" | "airport" | "hours" | "between" | "preview" | "history";
 
@@ -163,14 +170,30 @@ export function ZoneDetailPage() {
   const [params, setParams] = useSearchParams();
   const { agent } = useSession();
   const ui = useZoneUi();
-  const canEdit = Boolean(agent && can(agent.role, "zones.edit"));
-  const tab = (TABS.find((item) => item.id === params.get("tab"))?.id ?? "shape") as TabId;
+  const liveSession = useLiveSessionMaybe();
+  const isLive = Boolean(liveSession);
+  const serverZones = useLiveZoneList();
+  const zonesFailure = useLiveZonesFailure();
+  const server = serverZones?.find((item) => item.zoneId === zoneId);
+  const canEdit = liveSession ? liveSession.can("zones.edit") : Boolean(agent && can(agent.role, "zones.edit"));
+  // Live: the server keeps the outline, names, type and open or closed; the other tabs are the demo's own settings.
+  const tab = isLive ? "shape" : (TABS.find((item) => item.id === params.get("tab"))?.id ?? "shape") as TabId;
   const [pickupName, setPickupName] = useState("");
   const [pickupLat, setPickupLat] = useState("");
   const [pickupLng, setPickupLng] = useState("");
   const [pickupNotes, setPickupNotes] = useState("");
   const [pickupPhoto, setPickupPhoto] = useState("");
   const zone = ui.book.draft.find((item) => item.id === zoneId);
+  const scope = useMarketScope();
+  // Opened directly (/zones/FR-PC): the top bar follows the zone's country.
+  useEffect(() => {
+    if (!zone || zone.country === scope.country) return;
+    const copy = new URLSearchParams(params);
+    copy.set("country", zone.country);
+    copy.delete("scope");
+    setParams(copy, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a country change moves the top bar
+  }, [zone?.country, scope.country]);
 
   function save(patch: Partial<ZoneShape>) {
     if (!agent || !zone) return;
@@ -183,12 +206,14 @@ export function ZoneDetailPage() {
     setParams(copy, { replace: true });
   }
 
+  if (isLive && zonesFailure) return <><p className="live-not-connected" role="note">{tr("Not connected yet")}</p><ErrorLine error={zonesFailure.error} onRetry={zonesFailure.retry} /></>;
+  if (isLive && serverZones === null) return <p className="state-line">{tr("Loading.")}</p>;
   if (!zone) {
     // A deleted zone comes back with Undo or a roll back on the Zones page.
     return <NotFoundRecord kind="Zone" id={zoneId} list="/zones" listLabel="zones" />;
   }
 
-  const issues = validateZones(ui.book.draft);
+  const issues = isLive ? liveIssues(ui.book.draft) : validateZones(ui.book.draft);
   const checklist = launchChecklist(zone, issues);
   const ready = checklist.filter((item) => item.required).every((item) => item.ok);
   const status = zoneStatus(zone, ui.book);
@@ -210,25 +235,34 @@ export function ZoneDetailPage() {
           <span className="zn-sel-type"><i />{zoneTypeLabel(zone.kind)}</span>
           <h2>{displayName(zone)}</h2>
           <p>
-            <Flag id={zone.country} /> {country.name} · {city?.name ?? tr("No city")} · <b>{zone.code}</b> · <span className={`zn-status ${statusTone(status)}`} data-zone-status={status}>{trn("Status: {0}", scheduled ? tr("Scheduled") : status)}</span>
+            <Flag id={zone.country} /> {trx(COUNTRY_LABEL[zone.country])} · {city?.name ?? tr("No city")} · <b>{zone.code}</b> · {isLive ? <span className={`zn-status ${zone.active ? "good" : "muted"}`} data-zone-open={zone.active}>{zone.active ? tr("Open for rides") : tr("Closed to new rides")}</span> : <span className={`zn-status ${statusTone(status)}`} data-zone-status={status}>{trn("Status: {0}", scheduled ? tr("Scheduled") : status)}</span>}
           </p>
         </div>
         <dl className="zd-hero-stats">
           <div><dt>{tr("Area")}</dt><dd>{trn("{0} km²", zoneAreaKm(zone).toFixed(2))}</dd></div>
           <div><dt>{tr("Size")}</dt><dd>{trn("{0} × {1} km", size.width.toFixed(1), size.height.toFixed(1))}</dd></div>
+          {isLive && server ? <>
+          <div><dt>{tr("Version")}</dt><dd>{server.version}</dd></div>
+          <div><dt>{tr("Currency")}</dt><dd>{server.currency}</dd></div>
+          </> : <>
           <div><dt>{trn("{0} Drivers", <Car size={12} aria-hidden="true" />)}</dt><dd>{health.drivers}</dd></div>
           <div><dt>{trn("{0} Requests", <Users size={12} aria-hidden="true" />)}</dt><dd>{health.requests}</dd></div>
+          </>}
         </dl>
         <div className="zd-hero-actions">
           <Link className="dash-btn small" to={`/zones?country=${zone.country}&zone=${zone.id}`}>{trn("{0} Edit on the map", <Shapes size={13} aria-hidden="true" />)}</Link>
+          {isLive ? (server ? <LiveOpenClose zone={server} name={displayName(zone)} disabled={!canEdit} /> : null) : <>
           <CommandButton command="admin.zone.save" className={zone.active ? "dash-btn small ghost" : "dash-btn small"} type="button" disabled={!canEdit} onDone={() => save({ active: !zone.active })}>{zone.active ? tr("Switch off") : tr("Switch on")}</CommandButton>
           <CommandButton command="admin.zone.delete" className="dash-btn small danger-ghost" type="button" targetId={zone.code} disabled={!canEdit} onDone={() => { if (agent) zoneStore.remove(zone.id, agent.id); }}>{trn("{0} Delete", <Trash2 size={13} aria-hidden="true" />)}</CommandButton>
+          </>}
         </div>
       </header>
 
-      {health.alert ? <p className={`zn-alert ${health.tone}`}><TriangleAlert size={14} aria-hidden="true" /> {trx(health.alert)}</p> : null}
+      {isLive && server ? <p className="fine" data-testid="zone-server-line">{tr("On the server: version {0} · {1} · last change {2}{3}", [server.version, server.timeZone, new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeStyle: "short" }).format(Date.parse(server.updatedAt ?? server.createdAt)), server.updatedBy ? tr(" by {0}", [server.updatedBy]) : ""])}</p> : null}
 
-      <section className={ready ? "zd-launch ready" : "zd-launch"} aria-label={tr("Launch checklist")}>
+      {!isLive && health.alert ? <p className={`zn-alert ${health.tone}`}><TriangleAlert size={14} aria-hidden="true" /> {trx(health.alert)}</p> : null}
+
+      {isLive ? null : <section className={ready ? "zd-launch ready" : "zd-launch"} aria-label={tr("Launch checklist")}>
         <div className="zd-launch-head">
           {ready ? <CircleCheck size={20} aria-hidden="true" /> : <TriangleAlert size={20} aria-hidden="true" />}
           <span><b>{ready ? tr("Ready to go live") : tr("Not ready to go live")}</b><small>{trn("{0} of {1} checks pass{2}", checklist.filter((item) => item.ok).length, checklist.length, scheduled ? tr(" · starts {0}", [new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeStyle: "short" }).format(Date.parse(zone.goLiveAt))]) : "")}</small></span>
@@ -241,10 +275,10 @@ export function ZoneDetailPage() {
             </li>
           ))}
         </ul>
-      </section>
+      </section>}
 
       <div className="dash-tabs zd-tabs" role="tablist" aria-label={tr("Zone sections")}>
-        {TABS.map((item) => (
+        {TABS.filter((item) => !isLive || item.id === "shape").map((item) => (
           <button data-command="admin.zone.tab" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => setTab(item.id)}>{item.icon}{trx(item.label)}</button>
         ))}
       </div>
@@ -256,6 +290,12 @@ export function ZoneDetailPage() {
               <ShapePreview zone={zone} />
               <p className="fine">{trn("{0} points · {1} holes · {2} pickup points", zone.points.length, zone.holes.length, zone.pickups.length)}</p>
             </div>
+            {isLive ? (
+              <div className="zd-col">
+                {server ? <LiveZoneFields zone={server} disabled={!canEdit} /> : null}
+                <p className="fine">{tr("The outline is drawn on the map: Edit on the map, draw, then Save outline.")}</p>
+              </div>
+            ) : (
             <div className="zd-col">
               <div className="zd-fields">
                 <TextField label={tr("Name")} value={zone.name} disabled={!canEdit} onCommit={(name) => save({ name: city && !name.startsWith(`${city.name} · `) ? `${city.name} · ${name}` : name })} />
@@ -285,6 +325,7 @@ export function ZoneDetailPage() {
                 )}
               </div>
             </div>
+            )}
           </div>
         ) : null}
 
@@ -473,7 +514,7 @@ export function ZoneDetailPage() {
           </ol>
         ) : null}
       </section>
-      {ui.notice ? <p className="zn-version" role="status"><History size={13} aria-hidden="true" /> {trSentences(ui.notice)}</p> : null}
+      {ui.notice && !isLive ? <p className="zn-version" role="status"><History size={13} aria-hidden="true" /> {trSentences(ui.notice)}</p> : null}
     </div>
   );
 }

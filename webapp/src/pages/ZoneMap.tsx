@@ -59,6 +59,16 @@ import { CommandButton } from "../ui/CommandButton";
 import { mapProviderLabel, ZoneCanvas, type MapOverlays } from "./ZoneCanvas";
 import { ZoneWizard, type WizardOverlay } from "./ZoneWizard";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { LIVE_ZONES_KEY, liveZoneById } from "../live/LiveZones";
+import { liveIssues } from "../zones/liveIssues";
+import { outlineForServer, polygonProblem } from "../zones/live";
+import { LiveOpenClose } from "./LiveZoneActions";
+
+/** Live: tools and layers the server keeps (an outline without holes, pickup pins or no-stop streets; no simulated traffic). */
+const LIVE_TOOLS = new Set(["render", "polygon", "rectangle", "circle", "freehand", "select", "line:measure"]);
+const LIVE_LAYERS = new Set(["districts", "gaps", "before"]);
 
 type ToolSpec = { tool: DrawTool; target?: DrawTarget; label: string; key: string; icon: ReactNode; needsZone?: boolean };
 
@@ -108,7 +118,11 @@ export function statusTone(status: string): string {
 export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wizard: { city?: string } | null; onWizard: (next: { city?: string } | null) => void }) {
   const { agent } = useSession();
   const ui = useZoneUi();
-  const canEdit = Boolean(agent && can(agent.role, "zones.edit"));
+  const liveSession = useLiveSessionMaybe();
+  const isLive = Boolean(liveSession);
+  const queryClient = useQueryClient();
+  const canEdit = liveSession ? liveSession.can("zones.edit") : Boolean(agent && can(agent.role, "zones.edit"));
+  const tools = isLive ? TOOLS.filter((spec) => LIVE_TOOLS.has(spec.target === "measure" ? "line:measure" : spec.tool) && spec.target !== "nostop") : TOOLS;
   const [query, setQuery] = useState("");
   const [probe, setProbe] = useState("");
   const [mergeSource, setMergeSource] = useState("");
@@ -116,7 +130,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
   const [wizardOverlay, setWizardOverlay] = useState<WizardOverlay>({});
   const zones = useMemo(() => ui.book.draft.filter((zone) => zone.country === country), [ui.book.draft, country]);
   const selected = zones.find((zone) => zone.id === ui.selectedId);
-  const issues = useMemo(() => validateZones(ui.book.draft), [ui.book.draft]);
+  const issues = useMemo(() => (isLive ? liveIssues : validateZones)(ui.book.draft), [ui.book.draft, isLive]);
   const selectedIssues = selected ? issues.filter((issue) => issue.zoneId === selected.id) : [];
   const published = selected ? ui.book.published.find((zone) => zone.id === selected.id) : undefined;
   const cities = citiesOf(country);
@@ -169,7 +183,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
         else zoneStore.undo();
         return;
       }
-      const spec = TOOLS.find((item) => item.key === key);
+      const spec = tools.find((item) => item.key === key);
       if (spec) applyTool(spec);
     };
     window.addEventListener("keydown", onKey);
@@ -220,7 +234,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
 
         <div className="zn-map-wrap">
           <div className="zn-toolbar" role="toolbar" aria-label={tr("Drawing tools")}>
-            {TOOLS.map((spec) => (
+            {tools.map((spec) => (
               <button
                 key={`${spec.tool}-${spec.target ?? ""}`}
                 data-command="admin.zone.tool"
@@ -273,6 +287,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
               else if (intent === "point") zoneStore.place(ui.selectedId, points, agent.id);
               else if (intent === "outer") zoneStore.replace(ui.selectedId, points, agent.id);
               zoneStore.setTool("render");
+              if (isLive && intent === "outer") zoneStore.notify("Outline changed. Save it to send it to the server.");
             }}
             onEdited={(points) => {
               if (agent && ui.target === "zone") zoneStore.edit(ui.selectedId, points, agent.id);
@@ -287,7 +302,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
             <button data-command="admin.zone.layer" type="button" className={layersOpen ? "zn-layers-btn on" : "zn-layers-btn"} aria-expanded={layersOpen} onClick={() => setLayersOpen(!layersOpen)}>{trn("{0} Layers", <Layers size={15} aria-hidden="true" />)}</button>
             {layersOpen ? (
               <div className="zn-layers" role="group" aria-label={tr("Map layers")}>
-                {LAYERS.map((layer) => (
+                {LAYERS.filter((layer) => !isLive || LIVE_LAYERS.has(layer.id)).map((layer) => (
                   <label key={layer.id} className={ui.layers[layer.id] ? "zn-layer on" : "zn-layer"}>
                     <input type="checkbox" checked={ui.layers[layer.id]} onChange={() => zoneStore.toggleLayer(layer.id)} />
                     {trx(layer.label)}
@@ -307,6 +322,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
             ))}
           </ul>
           <div className="zn-io">
+            {isLive ? null : <>
             <button data-command="admin.zone.import" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => document.getElementById("zone-import")?.click()}>{trn("{0} Import GeoJSON", <Upload size={13} aria-hidden="true" />)}</button>
             <input id="zone-import" hidden type="file" accept="application/geo+json,application/json,.geojson,.json" onChange={(event) => {
               const file = event.target.files?.[0];
@@ -321,6 +337,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
               if (!file || !agent) return;
               void file.text().then((raw) => zoneStore.importKml(raw, agent.id));
             }} />
+            </>}
             <button data-command="admin.zone.export" type="button" className="dash-btn small ghost" onClick={exportGeo}>{trn("{0} Export GeoJSON", <Download size={13} aria-hidden="true" />)}</button>
             <small className="fine">{trn("Map: {0} · drawing: Terra Draw", mapProviderLabel())}</small>
           </div>
@@ -329,21 +346,37 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
 
       <aside className="zn-side">
         {wizard ? (
-          <ZoneWizard country={country} startCity={wizard.city} onClose={() => { zoneStore.clearSketch(); setWizardOverlay({}); onWizard(null); }} onOverlay={setWizardOverlay} />
+          <ZoneWizard live={isLive} country={country} startCity={wizard.city} onClose={() => { zoneStore.clearSketch(); setWizardOverlay({}); onWizard(null); }} onOverlay={setWizardOverlay} />
         ) : selected ? (
           <div className="zn-panel" aria-label={tr("Selected zone {0}", [displayName(selected)])}>
             <div className="zn-sel-head" style={{ ["--zc" as string]: selected.color || ZONE_COLOR[selected.kind] }}>
               <span className="zn-sel-type"><i />{zoneTypeLabel(selected.kind)}</span>
               <h3>{displayName(selected)}</h3>
-              <p><b>{selected.code}</b> · <span className={`zn-status ${statusTone(status)}`}>{status}</span></p>
+              <p><b>{selected.code}</b> · {isLive ? <span className={`zn-status ${selected.active ? "good" : "muted"}`} data-zone-open={selected.active}>{selected.active ? tr("Open for rides") : tr("Closed to new rides")}</span> : <span className={`zn-status ${statusTone(status)}`}>{status}</span>}</p>
             </div>
             <dl className="zn-sel-stats">
               <div><dt>{tr("Area")}</dt><dd>{trn("{0} km²", zoneAreaKm(selected).toFixed(2))}</dd></div>
               <div><dt>{tr("Size")}</dt><dd>{trn("{0} × {1} km", size.width.toFixed(1), size.height.toFixed(1))}</dd></div>
+              {isLive ? null : <>
               <div><dt>{trn("{0} Drivers", <Car size={12} aria-hidden="true" />)}</dt><dd>{health?.drivers ?? 0}</dd></div>
               <div><dt>{trn("{0} Requests", <Users size={12} aria-hidden="true" />)}</dt><dd>{health?.requests ?? 0}</dd></div>
+              </>}
             </dl>
-            {health?.alert ? <p className={`zn-alert ${health.tone}`}><AlertTriangle size={14} aria-hidden="true" /> {trx(health.alert)}</p> : null}
+            {!isLive && health?.alert ? <p className={`zn-alert ${health.tone}`}><AlertTriangle size={14} aria-hidden="true" /> {trx(health.alert)}</p> : null}
+            {isLive ? (() => {
+              const server = liveZoneById(selected.id);
+              const outline = outlineForServer(selected.points);
+              const changed = Boolean(published && JSON.stringify(published.points) !== JSON.stringify(selected.points));
+              const problem = polygonProblem(outline) || selectedIssues[0]?.message || "";
+              return (
+                <div className="zn-sel-actions" data-testid="live-zone-actions">
+                  <Link className="dash-btn small" to={`/zones/${selected.id}`}>{trn("{0} Open zone page", <ExternalLink size={13} aria-hidden="true" />)}</Link>
+                  <CommandButton command="admin.zone.update" className="dash-btn small publish" type="button" targetId={selected.id} confirmTarget={false} disabled={!canEdit || !server || !changed || Boolean(problem)} title={changed && problem ? trSentences(problem) : undefined} value={{ expectedVersion: server?.version, polygon: outline }} summary={tr("The new outline of {0} goes to the server and the apps at once ({1} points).", [displayName(selected), outline.length])} onDone={() => { zoneStore.notify("Outline saved on the server."); void queryClient.invalidateQueries({ queryKey: LIVE_ZONES_KEY }); }}>{tr("Save outline")}</CommandButton>
+                  {changed ? <button data-command="admin.zone.undo" type="button" className="dash-btn small ghost" onClick={() => zoneStore.revertLive(selected.id)}>{tr("Undo the drawing")}</button> : null}
+                  {server ? <LiveOpenClose zone={server} name={displayName(selected)} disabled={!canEdit} /> : null}
+                </div>
+              );
+            })() : (
             <div className="zn-sel-actions">
               <Link className="dash-btn small" to={`/zones/${selected.id}`}>{trn("{0} Open zone page", <ExternalLink size={13} aria-hidden="true" />)}</Link>
               <CommandButton command="admin.zone.rotate" className="dash-btn small ghost" type="button" disabled={!canEdit || selected.kind === "pickup"} onDone={() => { if (agent) zoneStore.rotate(selected.id, 15, agent.id); }}>{trn("{0} Rotate 15°", <RotateCw size={13} aria-hidden="true" />)}</CommandButton>
@@ -351,7 +384,8 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
               <CommandButton command="admin.zone.archive" className="dash-btn small ghost" type="button" disabled={!canEdit || selected.archived} onDone={() => { if (agent) zoneStore.archive(selected.id, agent.id); }}>{trn("{0} Archive", <Archive size={13} aria-hidden="true" />)}</CommandButton>
               <CommandButton command="admin.zone.delete" className="dash-btn small danger-ghost" type="button" targetId={selected.code} disabled={!canEdit} onDone={() => { if (agent) zoneStore.remove(selected.id, agent.id); }}>{trn("{0} Delete", <Trash2 size={13} aria-hidden="true" />)}</CommandButton>
             </div>
-            {mergeOptions.length ? (
+            )}
+            {!isLive && mergeOptions.length ? (
               <div className="zn-merge">
                 <label className="field">{trn("Join with{0}", <select aria-label={tr("Merge source")} value={mergeSource} onChange={(event) => setMergeSource(event.target.value)}>
                     <option value="">{tr("Pick a zone")}</option>
@@ -380,7 +414,7 @@ export function ZoneMap({ country, wizard, onWizard }: { country: MarketId; wiza
                 </ol>
               )}
             </details>
-            {priorities.length ? (
+            {!isLive && priorities.length ? (
               <details className="zn-more">
                 <summary>{tr("Which rule wins when zones overlap")}</summary>
                 <ol className="zn-priority" aria-label={tr("Zone overlap priority")}>

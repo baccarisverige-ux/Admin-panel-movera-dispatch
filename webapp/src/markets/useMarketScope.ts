@@ -1,6 +1,7 @@
+import { useSyncExternalStore } from "react";
 import { useSearchParams } from "react-router";
 import { useSession } from "../auth/SessionContext.tsx";
-import { market, type Market, type MarketId } from "./markets.ts";
+import { market, marketZonesVersion, subscribeMarketZones, type Market, type MarketId } from "./markets.ts";
 import { resolveScope, type ResolvedScope } from "./scope.ts";
 
 const REMEMBER_KEY = "movera-admin-country";
@@ -27,6 +28,8 @@ export function rememberCountry(agentId: string | undefined, id: MarketId): void
 export function useMarketScope(scopeOverride?: string | null): ResolvedScope & { market: Market } {
   const { agent } = useSession();
   const [params] = useSearchParams();
+  // Live: the server's zone list arrives after sign-in; every screen that reads the scope follows it.
+  useSyncExternalStore(subscribeMarketZones, marketZonesVersion, marketZonesVersion);
   const resolved = resolveScope(agent?.scope ?? { zones: "all" }, {
     country: params.get("country"),
     scope: scopeOverride ?? params.get("scope"),
