@@ -1,0 +1,342 @@
+/**
+ * Contract v0.8.0 settings flow, admin side: the demo stores (Pricing's ZoneBook, Dispatch's ZoneDispatch, the app
+ * documents' parts) as the server's config documents and back, and the calls that save and publish them
+ * (GET/PUT /admin/config/{doc}, POST …/publish and …/use-standard). Pure functions, so node --test covers them.
+ *
+ * Owner 2026-10-27: a zone without its own settings uses its country's Standard ("Uses standard"); publishing has no
+ * second admin; tips, raise steps and driver bonus limits are country rules (country_rules).
+ */
+import type { CurrencyCode, Money } from "../domain/money.ts";
+import { fromMajor } from "../domain/money.ts";
+import { marketOfZone } from "../markets/markets.ts";
+import type { CategoryPrice, ZoneBook } from "../pricing/zonePricing.ts";
+import type { ZoneDispatch } from "../dispatch/rules.ts";
+
+export type ConfigDocName = "rider_app_config" | "driver_app_config" | "pricing" | "dispatch" | "country_rules";
+export type Doc = Record<string, unknown>;
+
+/** The server's scope key of a country's Standard and country rules (contract.json#configDocs.standard). */
+export const STANDARD_PREFIX = "standard-";
+export const standardKey = (country: string) => `${STANDARD_PREFIX}${country}`;
+export const countryOfStandard = (id: string): string | null => (/^standard-([A-Z]{2})$/.exec(id)?.[1] ?? null);
+
+/** ?zoneId= for a zone, ?country= for a Standard. */
+export function scopeOf(id: string): { zoneId: string } | { country: string } {
+  const country = countryOfStandard(id);
+  return country ? { country } : { zoneId: id };
+}
+
+const toMinor = (major: number, currency: CurrencyCode): Money => fromMajor(major, currency);
+const toMajor = (money: unknown, factor: number, fallback: number): number => {
+  const amount = (money as Money | null | undefined)?.amountMinor;
+  return typeof amount === "number" ? amount / factor : fallback;
+};
+
+export type ZoneFacts = { id: string; currency: CurrencyCode; country: string; timeZone: string; factor: number };
+
+/** The zone's (or Standard's) currency, country and time zone from the admin's markets. */
+export function zoneFacts(id: string): ZoneFacts {
+  const market = marketOfZone(id);
+  if (!market) throw new RangeError(`Unknown zone ${id}`);
+  return { id, currency: market.currency as CurrencyCode, country: market.id, timeZone: market.timeZone, factor: market.minorUnits };
+}
+
+/* ---------------------------------------------------------------- pricing */
+
+const SEAT_CATEGORY = "child_seat";
+
+function categoryDoc(price: CategoryPrice, commissionPct: number, riderFee: ZoneBook["pickupPay"]["rates"][string]["riderFee"] | undefined, id: string, currency: CurrencyCode): Doc {
+  const fee = (own: { on: boolean; amount: number } | undefined) => (own?.on ? toMinor(own.amount, currency) : null);
+  return {
+    enabled: price.enabled,
+    base: toMinor(price.base, currency),
+    perKm: toMinor(price.perKm, currency),
+    perMin: toMinor(price.perMin, currency),
+    minimum: toMinor(price.minimum, currency),
+    maximum: price.maximum > 0 ? toMinor(price.maximum, currency) : null,
+    appFeePct: price.appFeePct,
+    commissionPct,
+    extraStopFee: toMinor(price.extraStopFee, currency),
+    stopWaitPerMin: toMinor(price.stopWaitPerMin, currency),
+    // v0.7.1 (owner 2026-10-27): ONE seat fee, only on Child Seat.
+    ...(id === SEAT_CATEGORY ? { childSeatFee: toMinor(price.childSeatFee, currency) } : {}),
+    waiting: { freeWaitMin: price.freeWaitMin, perMin: toMinor(price.waitPerMin, currency), noShowAfterMin: price.freeWaitMin, noShowFee: toMinor(price.noShowFee, currency) },
+    riderPickupFee: { live: fee(riderFee?.live), reservation: fee(riderFee?.reservation) },
+  };
+}
+
+/**
+ * PricingDocument (CONTRACT.md §6.2) from the Pricing page's book. Fields the page has no control for (the surge
+ * maximum, the free minutes at a stop) keep the server's value (`base`). version and publishedAt are the server's.
+ */
+export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null): Doc {
+  const facts = zoneFacts(id);
+  const c = facts.currency;
+  const prior = (base ?? {}) as { surge?: Doc; version?: number; publishedAt?: string };
+  return {
+    version: prior.version ?? 1,
+    publishedAt: prior.publishedAt ?? new Date(0).toISOString(),
+    zoneId: id,
+    currency: c,
+    country: facts.country,
+    timeZone: facts.timeZone,
+    priceStep: toMinor(book.fees.rounding, c),
+    categories: Object.fromEntries(Object.entries(book.prices).map(([cid, price]) => [cid, categoryDoc(price, book.commission[cid] ?? 20, book.pickupPay.rates[cid]?.riderFee, cid, c)])),
+    fees: {
+      airportPickup: toMinor(book.fees.airportPickup, c),
+      airportDropoff: toMinor(book.fees.airportDropoff, c),
+      reservationFee: toMinor(book.fees.reservationFee, c),
+      cleaningFee: toMinor(book.fees.cleaningFee, c),
+      tollsPassThrough: book.fees.tollsPassThrough,
+    },
+    fixedRoutes: book.routes.map((route) => ({ id: route.id, from: route.from, to: route.to, categoryId: route.categoryId, price: toMinor(route.price, c) })),
+    // v0.7.1: no separate surge maximum (each slider is its own maximum). v0.7.2 (owner 2026-10-28): no surge notice
+    // to drivers, so no notifyDrivers (contract.json#surgeNoticeRemoved).
+    surge: {
+      smart: structuredClone(book.smart),
+      scheduled: structuredClone(book.scheduled),
+    },
+    fleetCommissionPct: book.fleetCommissionPct,
+  };
+}
+
+/** The book the Pricing page shows for a server pricing document: the document's values over `fallback`. */
+export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
+  const facts = zoneFacts(fallback.zoneId);
+  const f = facts.factor;
+  const categories = (doc["categories"] ?? {}) as Record<string, Doc>;
+  const book = structuredClone(fallback);
+  for (const [cid, cat] of Object.entries(categories)) {
+    const own = book.prices[cid];
+    if (!own) continue;
+    const waiting = (cat["waiting"] ?? {}) as Doc;
+    book.prices[cid] = {
+      ...own,
+      enabled: Boolean(cat["enabled"]),
+      base: toMajor(cat["base"], f, own.base),
+      perKm: toMajor(cat["perKm"], f, own.perKm),
+      perMin: toMajor(cat["perMin"], f, own.perMin),
+      minimum: toMajor(cat["minimum"], f, own.minimum),
+      maximum: cat["maximum"] === null ? 0 : toMajor(cat["maximum"], f, own.maximum),
+      appFeePct: typeof cat["appFeePct"] === "number" ? cat["appFeePct"] : own.appFeePct,
+      extraStopFee: toMajor(cat["extraStopFee"], f, own.extraStopFee),
+      stopWaitPerMin: toMajor(cat["stopWaitPerMin"], f, own.stopWaitPerMin),
+      childSeatFee: cid === SEAT_CATEGORY ? toMajor(cat["childSeatFee"], f, own.childSeatFee) : 0,
+      freeWaitMin: typeof waiting["freeWaitMin"] === "number" ? waiting["freeWaitMin"] : own.freeWaitMin,
+      waitPerMin: toMajor(waiting["perMin"], f, own.waitPerMin),
+      noShowFee: toMajor(waiting["noShowFee"], f, own.noShowFee),
+    };
+    if (typeof cat["commissionPct"] === "number") book.commission[cid] = cat["commissionPct"];
+    const rate = book.pickupPay.rates[cid];
+    const rider = cat["riderPickupFee"] as { live?: Money | null; reservation?: Money | null } | undefined;
+    if (rate && rider) {
+      rate.riderFee = {
+        live: rider.live ? { on: true, amount: rider.live.amountMinor / f } : { ...rate.riderFee.live, on: false },
+        reservation: rider.reservation ? { on: true, amount: rider.reservation.amountMinor / f } : { ...rate.riderFee.reservation, on: false },
+      };
+    }
+  }
+  const fees = (doc["fees"] ?? {}) as Doc;
+  book.fees = {
+    ...book.fees,
+    airportPickup: toMajor(fees["airportPickup"], f, book.fees.airportPickup),
+    airportDropoff: toMajor(fees["airportDropoff"], f, book.fees.airportDropoff),
+    reservationFee: toMajor(fees["reservationFee"], f, book.fees.reservationFee),
+    cleaningFee: toMajor(fees["cleaningFee"], f, book.fees.cleaningFee),
+    tollsPassThrough: typeof fees["tollsPassThrough"] === "boolean" ? fees["tollsPassThrough"] : book.fees.tollsPassThrough,
+    rounding: toMajor(doc["priceStep"], f, book.fees.rounding),
+  };
+  const routes = doc["fixedRoutes"] as Array<{ id: string; from: string; to: string; categoryId: string; price: Money }> | undefined;
+  if (Array.isArray(routes)) book.routes = routes.map((route) => ({ id: route.id, from: route.from, to: route.to, categoryId: route.categoryId, price: route.price.amountMinor / f }));
+  const surge = doc["surge"] as { smart?: ZoneBook["smart"]; scheduled?: ZoneBook["scheduled"] } | undefined;
+  if (surge?.smart) book.smart = structuredClone(surge.smart);
+  if (surge?.scheduled) book.scheduled = structuredClone(surge.scheduled);
+  if (typeof doc["fleetCommissionPct"] === "number") book.fleetCommissionPct = doc["fleetCommissionPct"];
+  if (typeof doc["version"] === "number") book.version = doc["version"];
+  return book;
+}
+
+/* ---------------------------------------------------------------- dispatch */
+
+/** DispatchDocument (CONTRACT.md §6.3) from the zone's Dispatch rules (admin field names). */
+export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | null): Doc {
+  const facts = zoneFacts(id);
+  const prior = (base ?? {}) as { version?: number; publishedAt?: string };
+  return {
+    version: prior.version ?? 1,
+    publishedAt: prior.publishedAt ?? new Date(0).toISOString(),
+    zoneId: id,
+    country: facts.country,
+    timeZone: facts.timeZone,
+    radar: { ...zone.radar },
+    exclusive: { on: zone.exclusive.on, drivers: zone.exclusive.drivers, seconds: zone.exclusive.seconds, then: zone.exclusive.then },
+    choose: structuredClone(zone.choose),
+    rulesFrom: zone.rulesFrom,
+    radius: structuredClone(zone.radius),
+    factors: structuredClone(zone.factors),
+    finishing: { exclusive: zone.finishing.exclusive, withinMin: zone.finishing.withinMin, withinKm: zone.finishing.withinKm },
+    favourite: { on: zone.favourite.on, maxKm: zone.favourite.maxKm },
+    exclusiveWhileDriving: { ...zone.exclusiveWhileDriving },
+    waiting: zone.waiting.map((step) => ({ id: step.id, kind: step.kind, on: step.on, afterMin: step.afterMin, message: step.message, extraMin: step.extraMin ?? null })),
+  };
+}
+
+/** The Dispatch rules for a server dispatch document (+ the driver document's offer and cancel-share parts) over `fallback`. */
+export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: ZoneDispatch): ZoneDispatch {
+  const zone = structuredClone(fallback);
+  if (doc) {
+    const d = doc as unknown as Partial<ZoneDispatch> & { finishing?: Partial<ZoneDispatch["finishing"]>; favourite?: Partial<ZoneDispatch["favourite"]> };
+    if (d.radar) zone.radar = { ...zone.radar, ...d.radar };
+    if (d.exclusive) zone.exclusive = { ...zone.exclusive, ...d.exclusive };
+    if (d.choose) zone.choose = structuredClone(d.choose);
+    if (d.rulesFrom) zone.rulesFrom = d.rulesFrom;
+    if (d.radius) zone.radius = structuredClone(d.radius);
+    if (d.factors) zone.factors = structuredClone(d.factors);
+    if (d.finishing) zone.finishing = { ...zone.finishing, ...d.finishing };
+    if (d.favourite) zone.favourite = { ...zone.favourite, ...d.favourite };
+    if (d.exclusiveWhileDriving) zone.exclusiveWhileDriving = { ...d.exclusiveWhileDriving };
+    if (Array.isArray(d.waiting)) zone.waiting = d.waiting.map((step) => ({ ...step, ...(step.extraMin === null ? { extraMin: undefined } : {}) })).map(({ extraMin, ...rest }) => (extraMin === undefined ? rest : { ...rest, extraMin }));
+  }
+  const offers = (driver?.["offers"] ?? null) as { radarApp?: ZoneDispatch["radarApp"]; autoOffline?: { on?: boolean; missedExclusive?: number } } | null;
+  if (offers?.radarApp) zone.radarApp = { ...zone.radarApp, ...offers.radarApp };
+  if (offers?.autoOffline && typeof offers.autoOffline.missedExclusive === "number") zone.autoOffline = { on: offers.autoOffline.on ?? true, after: offers.autoOffline.missedExclusive };
+  const share = (driver?.["cancelFees"] as { driverSharePct?: number } | undefined)?.driverSharePct;
+  if (typeof share === "number") zone.riderCancel = { ...zone.riderCancel, driverSharePct: share };
+  return zone;
+}
+
+/* ---------------------------------------------------------------- app documents */
+
+/** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
+export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits"] },
+  settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
+  content: { rider: [], driver: ["texts", "notices"] },
+};
+
+/** `server` with `keys` taken from `built` (the admin exporter's full document). The waiting money stays the server's (pricing keeps it, §6.2). */
+export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc {
+  const next: Doc = structuredClone(server);
+  for (const key of keys) {
+    if (!(key in built)) continue;
+    if (key === "waiting") {
+      const own = (server["waiting"] ?? {}) as Doc;
+      const made = built["waiting"] as Doc;
+      next["waiting"] = { ...own, driverSharePct: made["driverSharePct"], driverShareWaitPct: made["driverShareWaitPct"], farPickup: made["farPickup"], rideTypes: made["rideTypes"] };
+      continue;
+    }
+    next[key] = structuredClone(built[key]);
+  }
+  delete next["usesStandard"];
+  return next;
+}
+
+/** Equal for publishing: the server's stamps and marks do not count. */
+export function sameDocument(a: Doc, b: Doc): boolean {
+  const strip = (doc: Doc) => JSON.stringify({ ...doc, version: 0, publishedAt: "", usesStandard: undefined });
+  return strip(a) === strip(b);
+}
+
+/* ---------------------------------------------------------------- country rules */
+
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number } };
+
+/** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
+export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
+  const option = (amount: number) => ({ amount: toMinor(amount, currency), enabled: true });
+  return {
+    version: (base?.["version"] as number | undefined) ?? 1,
+    publishedAt: (base?.["publishedAt"] as string | undefined) ?? new Date(0).toISOString(),
+    country,
+    currency,
+    tips: input.tips.map(option),
+    raiseSteps: input.raiseSteps.map(option),
+    driverBonus: { defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
+  };
+}
+
+/* ---------------------------------------------------------------- the calls */
+
+export type Draft = { version: number; liveVersion: number; usesStandard?: boolean; document: Doc };
+
+export type ConfigHttp = {
+  json: <T>(path: string) => Promise<T>;
+  put: <T>(path: string, body: unknown) => Promise<T>;
+  post: <T>(path: string, body: unknown) => Promise<T>;
+};
+
+/** A 409 from the server: someone changed the settings since this page read them. */
+export class SettingsChanged extends Error {
+  constructor() {
+    super("The settings changed since you opened them. Reload the page and make your change again.");
+  }
+}
+
+const query = (id: string) => {
+  const scope = scopeOf(id);
+  return "country" in scope ? `country=${scope.country}` : `zoneId=${encodeURIComponent(scope.zoneId)}`;
+};
+
+const isStatus = (error: unknown, status: number) => (error as { status?: number } | null)?.status === status;
+
+export async function readDraft(http: ConfigHttp, doc: ConfigDocName, id: string): Promise<Draft | null> {
+  try {
+    return await http.json<Draft>(`/admin/config/${doc}?${query(id)}`);
+  } catch (error) {
+    // Only "nothing published yet" is an empty answer; any other 404 (a zone or country the server does not
+    // know) is the caller's to remember.
+    const reason = (error as { reason?: string | null } | null)?.reason;
+    if (isStatus(error, 404) && reason === "config_not_found") return null;
+    throw error;
+  }
+}
+
+/**
+ * Saves `document` as the draft and publishes it at once (no second admin, v0.8.0). Nothing is sent when the server
+ * already has the same live document. A 409 becomes SettingsChanged.
+ */
+export async function savePublish(http: ConfigHttp, doc: ConfigDocName, id: string, draft: Draft | null, document: Doc): Promise<{ version: number } | null> {
+  if (draft && draft.liveVersion > 0 && !draft.usesStandard && sameDocument(draft.document, document)) return null;
+  const scope = scopeOf(id);
+  try {
+    const saved = await http.put<Draft>(`/admin/config/${doc}`, { expectedVersion: draft?.version ?? 1, ...scope, document });
+    return await http.post<{ version: number }>(`/admin/config/${doc}/publish`, { expectedVersion: saved.version, ...scope });
+  } catch (error) {
+    if (isStatus(error, 409)) throw new SettingsChanged();
+    throw error;
+  }
+}
+
+/** Owner 2026-10-28: Dispatch "Spara utkast" keeps the draft on the server without making it live. */
+export async function saveDraftOnly(http: ConfigHttp, doc: ConfigDocName, id: string, draft: Draft | null, document: Doc): Promise<{ version: number } | null> {
+  if (draft && sameDocument(draft.document, document)) return null;
+  try {
+    return await http.put<{ version: number }>(`/admin/config/${doc}`, { expectedVersion: draft?.version ?? 1, ...scopeOf(id), document });
+  } catch (error) {
+    if (isStatus(error, 409)) throw new SettingsChanged();
+    throw error;
+  }
+}
+
+/** A published version as History shows it (contract.json#pricingHistory, any document). */
+export type HistoryEntry = { version: number; publishedAt: string; publishedBy?: string; note?: string; action: "publish" | "restore"; restoredFrom?: number; document: Doc };
+
+/** Owner 2026-10-28: Dispatch "Ångra" publishes an earlier version again (POST /admin/config/{doc}/restore). */
+export async function restoreVersion(http: ConfigHttp, doc: ConfigDocName, zoneId: string, version: number, liveVersion: number): Promise<{ version: number }> {
+  try {
+    return await http.post<{ version: number }>(`/admin/config/${doc}/restore`, { zoneId, version, expectedVersion: liveVersion });
+  } catch (error) {
+    if (isStatus(error, 409)) throw new SettingsChanged();
+    throw error;
+  }
+}
+
+/** Go back to Standard (contract.json#configDocs.useStandard): the zone's own document goes, kept in the history. */
+export async function goBackToStandard(http: ConfigHttp, doc: ConfigDocName, zoneId: string, draft: Draft): Promise<{ version: number }> {
+  try {
+    return await http.post<{ version: number }>(`/admin/config/${doc}/use-standard`, { zoneId, expectedVersion: draft.version });
+  } catch (error) {
+    if (isStatus(error, 409)) throw new SettingsChanged();
+    throw error;
+  }
+}

@@ -21,6 +21,7 @@ import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
+import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
@@ -322,6 +323,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   const vehicles = new Map<string, Vehicle>();
   const trips = new Map<string, Trip>();
   const incidents = new Map<string, ServerIncident>();
+  const settings = createLiveSettings({ json: (path) => client.json(path), put: (path, body) => client.put(path, body), post: (path, body) => client.post(path, body) });
   let currency: string = CURRENCY;
 
   async function readDrivers(own = false): Promise<Driver[]> {
@@ -443,8 +445,19 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     if (input.action === "admin.trip.refund") {
       const trip = trips.get(input.targetId) ?? (await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`));
-      const answer = await client.post<{ status?: string }>(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
-      return answer?.status === "pending" ? done("Waits for a second admin.", "pending_approval") : done("Refunded.");
+      // v0.7.2 (contract.json#auth.admin.oneAdmin): one admin is enough; the refund is made at once.
+      await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
+      return done("Refunded.");
+    }
+    // Pricing, Dispatch, Settings and Tips & limits publish to the server's config documents (contract v0.8.0).
+    const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value, ...(input.scope ? { scope: input.scope } : {}) });
+    if (settingsCall) {
+      try {
+        return done(await settingsCall);
+      } catch (error) {
+        if (error instanceof SettingsChanged) throw new ApiError(409, error.message, { code: "version_mismatch", retryable: false });
+        throw error;
+      }
     }
     if (input.action === "admin.trip.assign" || input.action === "admin.trip.radarGroup") {
       // Exclusive offer or radar group (contract §9 /admin/trips/{id}/assign and /radar-group), with the trip's version.
@@ -544,6 +557,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     freshness: async () => new Date().toISOString(),
     // The Incidents page's safety book (owner and steps of each case) comes from the server's incidents.
     readSlice: async (key, fallback) => {
+      const fromSettings = settings.readSlice(key, fallback);
+      if (fromSettings) return (await fromSettings) as typeof fallback;
       if (key !== "safetyOps") return fallback;
       if (!incidents.size) await list("incidents").catch(() => []);
       return bookFrom(incidents.values()) as typeof fallback;

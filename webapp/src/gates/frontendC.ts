@@ -30,7 +30,7 @@ function sampleDriver(): Driver {
 /** The live Pricing quote (pricing/zonePricing.ts) for a Movera ride in Norrmalm, and the published version it used. */
 function liveQuote(km: number, minutes: number): { minor: number; label: string; ruleVersion: string } {
   const book = zoneBook(emptyPricingStore(), "Z001");
-  const quote = zoneQuote(book, { categoryId: "economy", km, minutes, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 });
+  const quote = zoneQuote(book, { categoryId: "economy", km, minutes, waitMin: 0, stops: 0, stopWaitMin: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 });
   return { minor: Math.round(quote.total * 100), label: `${quote.total} kr`, ruleVersion: `Z001-v${book.version}` };
 }
 

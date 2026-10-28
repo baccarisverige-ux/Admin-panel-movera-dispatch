@@ -9,12 +9,14 @@ import {
   editCategory,
   restoreCategory,
   restoreDeadline,
+  categoryLine,
   usageBlocks,
   validateCategory,
+  type CategoryLines,
   type CategoryUsage,
   type PricingStore,
 } from "./zonePricing";
-import { tr, trn, uiLocale, trx } from "../i18n";
+import { currentLanguage, tr, trn, uiLocale, trx } from "../i18n";
 
 type Props = {
   store: PricingStore;
@@ -26,14 +28,44 @@ type Props = {
   onNotice: (message: string) => void;
 };
 
-type Form = { label: string; line: string; seats: number };
+type Form = { label: string; line: string; lines: CategoryLines; seats: number };
+
+const NO_LINES: CategoryLines = { sv: "", fr: "", en: "" };
+
+/**
+ * Owner 2026-10-27 (contract v0.7.1): the sub-line under the car type's name, written in Swedish, French and
+ * English; the rider app shows the one in the rider's language.
+ */
+function LineFields({ form, setForm, prefix }: { form: Form; setForm: (form: Form) => void; prefix: "Category" | "New category" }) {
+  const label = { sv: tr("Short line in Swedish"), fr: tr("Short line in French"), en: tr("Short line in English") };
+  return (
+    <div className="cat-lines">
+      {(["sv", "fr", "en"] as const).map((code) => (
+        <label key={code} className="cat-line">
+          <span>{code.toUpperCase()}</span>
+          <input
+            aria-label={`${prefix === "Category" ? tr("Category line") : tr("New category line")} · ${label[code]}`}
+            placeholder={label[code]}
+            maxLength={80}
+            value={form.lines[code]}
+            onChange={(event) => {
+              const lines = { ...form.lines, [code]: event.target.value };
+              setForm({ ...form, lines, line: code === "en" ? event.target.value : form.line || event.target.value });
+            }}
+          />
+        </label>
+      ))}
+    </div>
+  );
+}
 
 /** Add, rename or delete categories. Delete is a safe archive, blocked while anything uses it. */
 export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onNotice }: Props) {
   const root = useDialogFocus(true, onClose);
   const [editing, setEditing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [form, setForm] = useState<Form>({ label: "", line: "", seats: 4 });
+  const [form, setForm] = useState<Form>({ label: "", line: "", lines: NO_LINES, seats: 4 });
+  const language = currentLanguage();
   const [adding, setAdding] = useState(false);
   const now = new Date().toISOString();
   const active = store.categories.filter((category) => !category.archived);
@@ -68,7 +100,7 @@ export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onN
                 {isEditing ? (
                   <div className="cat-form">
                     <input aria-label={tr("Category name")} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} />
-                    <input aria-label={tr("Category line")} value={form.line} onChange={(event) => setForm({ ...form, line: event.target.value })} />
+                    <LineFields form={form} setForm={setForm} prefix="Category" />
                     <input aria-label={tr("Category seats")} type="number" min={1} max={8} value={form.seats} onChange={(event) => setForm({ ...form, seats: Number(event.target.value) })} />
                     {formError ? <small className="form-error">{formError}</small> : null}
                     <div className="cat-actions">
@@ -80,11 +112,11 @@ export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onN
                   <>
                     <div className="cat-info">
                       <strong>{trx(category.label)}</strong>
-                      <small>{trn("{0} · {1} seats", trx(category.line), category.seats)}</small>
+                      <small>{trn("{0} · {1} seats", category.lines ? categoryLine(category, language) : trx(category.line), category.seats)}</small>
                       <span className="cat-usage">{blocks.length ? blocks.join(" · ") : tr("Not used right now")}</span>
                     </div>
                     <div className="cat-actions">
-                      <button data-command="admin.pricing.edit" type="button" className="icon-ghost" aria-label={tr("Edit {0}", [trx(category.label)])} disabled={!canEdit} onClick={() => { setEditing(category.id); setDeleting(null); setAdding(false); setForm({ label: category.label, line: category.line, seats: category.seats }); }}><Pencil size={15} aria-hidden="true" /></button>
+                      <button data-command="admin.pricing.edit" type="button" className="icon-ghost" aria-label={tr("Edit {0}", [trx(category.label)])} disabled={!canEdit} onClick={() => { setEditing(category.id); setDeleting(null); setAdding(false); setForm({ label: category.label, line: category.line, lines: category.lines ?? { sv: category.line, fr: category.line, en: category.line }, seats: category.seats }); }}><Pencil size={15} aria-hidden="true" /></button>
                       <button data-command="admin.pricing.edit" type="button" className="icon-ghost danger" aria-label={tr("Delete {0}", [trx(category.label)])} disabled={!canEdit} onClick={() => setDeleting(isDeleting ? null : category.id)}><Archive size={15} aria-hidden="true" /></button>
                     </div>
                   </>
@@ -114,7 +146,7 @@ export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onN
         {adding ? (
           <div className="cat-form add">
             <input aria-label={tr("New category name")} placeholder={tr("Name riders see, e.g. Women Driver")} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} />
-            <input aria-label={tr("New category line")} placeholder={tr("Short line under the name")} value={form.line} onChange={(event) => setForm({ ...form, line: event.target.value })} />
+            <LineFields form={form} setForm={setForm} prefix="New category" />
             <input aria-label={tr("New category seats")} type="number" min={1} max={8} value={form.seats} onChange={(event) => setForm({ ...form, seats: Number(event.target.value) })} />
             {formError ? <small className="form-error">{formError}</small> : <small className="fine">{tr("Starts off in every zone, with Movera's prices to edit.")}</small>}
             <div className="cat-actions">
@@ -123,7 +155,7 @@ export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onN
             </div>
           </div>
         ) : (
-          <button data-command="admin.pricing.addCategory" type="button" className="dash-btn small" disabled={!canEdit} onClick={() => { setAdding(true); setEditing(null); setDeleting(null); setForm({ label: "", line: "", seats: 4 }); }}>{trn("{0} New category", <Plus size={14} aria-hidden="true" />)}</button>
+          <button data-command="admin.pricing.addCategory" type="button" className="dash-btn small" disabled={!canEdit} onClick={() => { setAdding(true); setEditing(null); setDeleting(null); setForm({ label: "", line: "", lines: NO_LINES, seats: 4 }); }}>{trn("{0} New category", <Plus size={14} aria-hidden="true" />)}</button>
         )}
 
         {archived.length ? (

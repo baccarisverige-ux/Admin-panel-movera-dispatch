@@ -85,7 +85,7 @@ const published = publishZones(store, { Z001: edit }, "nora", "Pickup pay", AT);
 assert(!published.error && published.changes.some((line) => line.startsWith("Norrmalm · Comfort · pickup ranges")), `publish lists pickup changes: ${published.changes.join(" | ")}`);
 assert(zoneBook(published.store, "Z001").pickupPay.offers.nextTrip === false, "published pickup pay is stored");
 assert(zoneBook(undoLastPublish(published.store, "nora", AT).store, "Z001").pickupPay.rates.comfort.ranges[1].krPerKm === 3, "undo brings the old pickup pay back");
-const input = { categoryId: "comfort", km: 8, minutes: 18, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 };
+const input = { categoryId: "comfort", km: 8, minutes: 18, waitMin: 0, stops: 0, stopWaitMin: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 };
 const quote = quoteRide(zoneBook(published.store, "Z001"), input);
 assert(quote.total === quoteRide(book, input).total, "driver pickup pay never changes the rider's price");
 assert(quote.lines.every((line) => !/pickup/i.test(line.label)), "no pickup line on the rider's quote while the rider fee is off");

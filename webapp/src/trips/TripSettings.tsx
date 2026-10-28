@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { Banknote, EyeOff, ListChecks } from "lucide-react";
 import { ROLE_LABELS, type Role } from "../auth/permissions";
 import { Link } from "react-router";
@@ -13,6 +14,7 @@ const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
 
 /** Super admin only: who sees private trip data, which actions exist, and the money limits. */
 export function TripSettingsView({ ops, rev, loading, editable }: { ops: TripOps; rev: number; loading: boolean; editable: boolean }) {
+  const live = Boolean(useLiveSessionMaybe());
   const [draft, setDraft] = useState<TripSettings | null>(null);
   const { policy: refundPolicy } = useRefundPolicy();
   const settings = draft ?? ops.settings;
@@ -44,6 +46,8 @@ export function TripSettingsView({ ops, rev, loading, editable }: { ops: TripOps
         <Card title={tr("Actions on a trip")} icon={<ListChecks size={18} />} tone="blue" help={tr("Turn an action off and its button is gone from every trip page. Everything done is logged with the admin's name.")}>
           {ACTIONS.map((item) => <Row key={item.id} label={trx(item.label)} help={trx(item.help)} on={settings.actions[item.id]} onToggle={(on) => patch({ actions: { ...settings.actions, [item.id]: on } })} />)}
         </Card>
+        {/* Owner 2026-10-28: one admin is enough everywhere; the live panel has no second-admin limit. */}
+        {live ? null : (
         <Card title={tr("Second admin for big amounts")} icon={<Banknote size={18} />} tone="green" help={tr("Refunds and driver pay changes above the amount wait until another admin approves them. One limit per country, the same everywhere (Q25).")}>
           {MARKETS.map((item) => (
             <Row key={item.id} label={item.name} help={tr("In {0}.", [item.currency])}>
@@ -52,6 +56,7 @@ export function TripSettingsView({ ops, rev, loading, editable }: { ops: TripOps
           ))}
           <p className="dx-readonly"><Link to="/settings#refunds">{tr("Edit in Settings")}</Link></p>
         </Card>
+        )}
       </fieldset>
       {editable ? (
         <div className="dx-publish">

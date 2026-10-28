@@ -24,56 +24,88 @@
         "label": "Movera",
         "seats": 4,
         "sort": 1,
-        "line": "Everyday ride"
+        "line": {
+          "sv": "Vardagsresa",
+          "fr": "Course du quotidien",
+          "en": "Everyday ride"
+        }
       },
       {
         "id": "comfort",
         "label": "Comfort",
         "seats": 4,
         "sort": 2,
-        "line": "Newer cars, more room"
+        "line": {
+          "sv": "Nyare bilar, mer plats",
+          "fr": "Voitures récentes, plus d’espace",
+          "en": "Newer cars, more room"
+        }
       },
       {
         "id": "premium",
         "label": "Premium",
         "seats": 4,
         "sort": 3,
-        "line": "High-end cars, top drivers"
+        "line": {
+          "sv": "Exklusiva bilar, toppförare",
+          "fr": "Voitures haut de gamme, meilleurs chauffeurs",
+          "en": "High-end cars, top drivers"
+        }
       },
       {
         "id": "priority",
         "label": "Priority",
         "seats": 4,
         "sort": 4,
-        "line": "Faster pickup"
+        "line": {
+          "sv": "Snabbare upphämtning",
+          "fr": "Prise en charge plus rapide",
+          "en": "Faster pickup"
+        }
       },
       {
         "id": "xl",
         "label": "XL",
         "seats": 6,
         "sort": 5,
-        "line": "Up to 6 seats"
+        "line": {
+          "sv": "Upp till 6 platser",
+          "fr": "Jusqu’à 6 places",
+          "en": "Up to 6 seats"
+        }
       },
       {
         "id": "electric",
         "label": "Electric",
         "seats": 4,
         "sort": 6,
-        "line": "Fully electric car"
+        "line": {
+          "sv": "Helt eldriven bil",
+          "fr": "Voiture 100 % électrique",
+          "en": "Fully electric car"
+        }
       },
       {
         "id": "pet",
         "label": "Pet",
         "seats": 4,
         "sort": 7,
-        "line": "Your pet rides with you"
+        "line": {
+          "sv": "Ditt husdjur åker med dig",
+          "fr": "Votre animal voyage avec vous",
+          "en": "Your pet rides with you"
+        }
       },
       {
         "id": "child_seat",
         "label": "Child Seat",
         "seats": 4,
         "sort": 8,
-        "line": "Car with a baby or child seat"
+        "line": {
+          "sv": "Bil med babystol eller barnstol",
+          "fr": "Voiture avec siège bébé ou enfant",
+          "en": "Car with a baby or child seat"
+        }
       }
     ]
   },
@@ -633,7 +665,8 @@
         "min": null,
         "max": null
       }
-    }
+    },
+    "driverSharePct": 100
   },
   "waiting": {
     "freeWaitMin": 5,

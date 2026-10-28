@@ -13,7 +13,9 @@ import { activeCategories, emptyPricingStore, normalizeStore, SLICE_KEY as PRICI
 import { candidatesFor, rideRequests, type RideRequest } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
-import { zoneById } from "../markets/markets";
+import { standardZone, standardZoneId, zoneById } from "../markets/markets";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { PublishTargetsLine, StandardBar } from "../live/StandardBar";
 import { zoneAllowed } from "../markets/scope";
 import { useMarketScope } from "../markets/useMarketScope";
 import { CommandButton } from "../ui/CommandButton";
@@ -133,8 +135,12 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
 
   const access = agent?.scope ?? { zones: "all" as const };
   const zones = market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id)));
+  // v0.8.0 (owner 2026-10-27): the live panel edits each country's Standard like a zone; no second admin.
+  const liveSession = useLiveSessionMaybe();
+  // Owner 2026-10-27: only what is chosen at the top; the Standard only when it is chosen there.
+  const ruleZones = liveSession && scope.zones.includes(standardZoneId(country)) ? [standardZone(country), ...zones] : zones;
   const zoneParam = params.get("zone");
-  const zoneId = zoneParam && zones.some((zone) => zone.id === zoneParam) ? zoneParam : "";
+  const zoneId = zoneParam && ruleZones.some((zone) => zone.id === zoneParam) ? zoneParam : "";
   // Radar · Exclusive · Reservations opens on the first zone, straight into its three tabs.
   useEffect(() => {
     if (!offers || zoneId || !zones.length) return;
@@ -153,7 +159,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const rulesOf = useCallback((id: string) => working[id] ?? draftRules(book, id), [working, book]);
   const liveOf = useCallback((id: string) => liveRules(book, id), [book]);
   const countryRules = workingCountry[country] ?? draftCountry(book, country);
-  const zoneIds = zones.map((zone) => zone.id);
+  const zoneIds = ruleZones.map((zone) => zone.id);
   const allRules = Object.fromEntries(zoneIds.map((id) => [id, rulesOf(id)]));
   const changes = pendingChanges(book, allRules, zoneIds);
   const countryChanged = countryLines(liveCountry(book, country), countryRules);
@@ -162,7 +168,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const lineCount = changes.reduce((sum, change) => sum + change.lines.length, 0) + countryChanged.length;
   const at = new Date(now).toISOString();
   const countries = { ...(book.countries[country] ? { [country]: draftCountry(book, country) } : {}), ...(workingCountry[country] ? { [country]: countryRules } : {}) };
-  const published = agent ? publish(book, allRules, countries, zoneIds, agent.id, at, note.trim()) : { book, live: [], waiting: [], error: "Sign in again." };
+  const published = agent ? publish(book, allRules, countries, zoneIds, agent.id, at, note.trim(), { direct: Boolean(liveSession) }) : { book, live: [], waiting: [], error: "Sign in again." };
   const drafted = saveDraft(book, working, workingCountry);
 
   const live = useMemo(() => liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], tick), [drivers.data, vehicles.data, trips.data, incidents.data, tick]);
@@ -327,7 +333,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
                 <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole} largeChanges={largeDraftChanges} onDone={() => { setWorking({}); setWorkingCountry({}); setNotice("Draft saved. Nothing is live yet. Test it in Test a ride, then publish."); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
               ) : null}
               {view !== "test" ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => go({ view: "test" })}>{trn("{0} Test it", <FlaskConical size={13} aria-hidden="true" />)}</button> : null}
-              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error)} title={published.error} largeChanges={largeChanges} onDone={() => {
+              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} summary={liveSession ? <PublishTargetsLine zoneIds={[...changed]} /> : undefined} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error)} title={published.error} largeChanges={largeChanges} onDone={() => {
                 const liveNames = published.live.map((id) => zoneById(id)?.name ?? id);
                 const waitNames = published.waiting.map((id) => zoneById(id)?.name ?? id);
                 setWorking({});
@@ -343,7 +349,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
               <ul aria-label={tr("Changes not live yet")}>
                 {changes.map((change) => (
                   <li key={change.zoneId}>
-                    <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>{change.big ? <span className="dx-dot waiting">{tr("Needs a second admin")}</span> : null}
+                    <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>{change.big && !liveSession ? <span className="dx-dot waiting">{tr("Needs a second admin")}</span> : null}
                     <ul>{change.lines.map((line) => <li key={line}>{line}</li>)}</ul>
                   </li>
                 ))}
@@ -360,10 +366,12 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
       {slice.loading ? <p className="state-line">{tr("Loading dispatch rules.")}</p> : null}
 
       {!slice.loading && view === "rules" ? (
+        <>
+        {liveSession && zoneId ? <StandardBar doc="dispatch" docs={["dispatch", "driver_app_config", "rider_app_config"]} zoneId={zoneId} zoneName={ruleZones.find((zone) => zone.id === zoneId)?.name ?? zoneId} country={country} countryName={market.name} canEdit={canEdit(zoneId) || (zoneId.startsWith("standard-") && canEditRole)} /> : null}
         <RulesView
           book={book}
           market={market}
-          zones={zones}
+          zones={ruleZones}
           zoneId={zoneId}
           onZone={(id) => go({ zone: id })}
           tab={tab}
@@ -401,6 +409,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
           waitBasesOf={waitBasesOf}
           feeCategoriesOf={feeCategoriesOf}
         />
+        </>
       ) : null}
       {!slice.loading && view === "live" ? <LiveView book={book} market={market} zones={zones} drivers={live.filter((driver) => zones.some((zone) => zone.id === driver.zoneId))} requests={requests} candidatesOf={candidatesOf} rulesOf={liveOf} busyOf={busyOf} hhmm={hhmm} canControl={canControl} agentId={agent?.id ?? ""} withScope={(path) => path} onNotice={say} sharedAlerts={ownAlerts ? undefined : <DispatchAlerts zoneIds={zones.map((zone) => zone.id)} />} rideChecks={mapRideChecks} /> : null}
       {!slice.loading && view === "test" && isLiveData() ? <NotConnected block /> : null}

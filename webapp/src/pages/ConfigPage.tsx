@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { NotConnected } from "../live/NotConnected";
+import { PublishTargetsLine } from "../live/StandardBar";
+import { publishTargets } from "../markets/scope";
+import { useMarketScope } from "../markets/useMarketScope";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { CompareVersions, FindSetting, PanelSettings, SettingsElsewhere } from "../platform/SettingsParts";
@@ -111,6 +116,7 @@ function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: 
 
 function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
   const { agent } = useSession();
+  const liveAdmin = Boolean(useLiveSessionMaybe());
   const store = useSlice<ConfigBook>("config", emptyConfig());
   const persisted = useMemo(() => normalizeConfig(store.value), [store.value]);
   const [book, setBook] = useState<ConfigBook>(() => emptyConfig());
@@ -170,9 +176,13 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
     setTarget(defaultTarget(next, zoneId, book));
   }
 
+  // v0.8.0 (owner 2026-10-27): live publishes at once; scheduled publish, expiry and overrides have no server field yet.
+  const liveSession = useLiveSessionMaybe();
+  // Owner 2026-10-27: a Settings publish reaches only the zones chosen at the top (the Standard when chosen).
+  const settingsTargets = publishTargets(useMarketScope());
   const review = agent ? submitConfigApproval(book, agent.id) : null;
   const approval = agent ? approveConfig(book, agent.id) : null;
-  const publication = agent ? publishConfig(book, agent.id, new Date().toISOString()) : null;
+  const publication = agent ? publishConfig(book, agent.id, new Date().toISOString(), { direct: Boolean(liveSession) }) : null;
   const rollback = agent ? rollbackConfig(book, agent.id, new Date().toISOString()) : book;
 
   if (store.loading) return <p className="state-line">{tr("Loading configuration.")}</p>;
@@ -195,7 +205,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
         {lifecycleDue && !dirty ? tr(" A scheduled change is due: it is shown here and is stored with the next save.") : ""}
       </p>
 
-      <RefundPolicyPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setRefundDirty} />
+      {/* Owner 2026-10-28: one admin is enough everywhere, so the live panel has no second-admin limit. */}
+      {liveAdmin ? null : <RefundPolicyPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setRefundDirty} />}
 
       <CountryAppsPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setCountryDirty} />
 
@@ -317,7 +328,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
                 const scheduleAt = isoFromLocal(event.target.value);
                 edit((current) => setSchedule(current, scheduleAt, agent.id));
               }}
-            />)}</label>
+            />)}{liveSession ? <NotConnected control /> : null}</label>
           <label>{trn("Expiry{0}", <input
               aria-label={tr("Configuration expiry")}
               type="datetime-local"
@@ -327,12 +338,12 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
                 const expiresAt = isoFromLocal(event.target.value);
                 edit((current) => setExpiry(current, expiresAt, agent.id));
               }}
-            />)}</label>
+            />)}{liveSession ? <NotConnected control /> : null}</label>
         </div>
       </article>
 
       <article className="panel">
-        <h3>{tr("Advanced precedence overrides")}</h3>
+        <h3>{tr("Advanced precedence overrides")}{liveSession ? <NotConnected control /> : null}</h3>
         <p className="state-line">{tr("Winning order: global → market → zone → category → app → platform → app version → cohort.")}</p>
         <div className="field-grid">
           <label>{trn("Feature{0}", <select aria-label={tr("Override feature")} value={featureKey} onChange={(event) => setFeatureKey(event.target.value as FeatureKey)}>
@@ -499,7 +510,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       </article>
 
       <article className="panel">
-        <h3>{tr("Scheduled versions")}</h3>
+        <h3>{tr("Scheduled versions")}{liveSession ? <NotConnected control /> : null}</h3>
         {book.scheduled.length === 0 ? (
           <p className="state-line">{tr("No scheduled configuration.")}</p>
         ) : (
@@ -523,6 +534,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       <article className="panel">
         <h3>{tr("Review and publish")}</h3>
         <div className="actions">
+          {liveSession ? null : <>
           <CommandButton
             command="admin.config.review"
             confirmTarget={false}
@@ -562,10 +574,13 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
               setNotice("Approved. A second agent can publish.");
             }}
           >{tr("Approve")}</CommandButton>
+          </>}
 
           <CommandButton
             command="admin.config.publish"
             confirmTarget={false}
+            summary={liveSession ? <PublishTargetsLine zoneIds={settingsTargets} /> : undefined}
+            scope={liveSession ? settingsTargets.join(",") : undefined}
             className="primary-btn"
             type="button"
             targetId="configuration"

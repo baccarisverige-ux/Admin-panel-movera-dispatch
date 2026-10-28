@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, type Page, type Route } from "@playwright/test";
 
 /**
@@ -224,8 +225,6 @@ export type TripState = {
   listFails?: number;
   /** Hold GET /admin/trips this many ms (loading state). */
   listDelayMs?: number;
-  /** POST /admin/trips/{id}/refund answers 202 pending_approval instead of 201. */
-  refundNeedsApproval?: boolean;
   refundDelayMs?: number;
   /** Changes to the signed-in admin (language, permissions). */
   admin?: Partial<typeof ADMIN> & { language?: string };
@@ -425,7 +424,6 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (one[2] === "/offers") return json(route, 200, { items: OFFERS.filter((offer) => offer.tripId === trip.tripId), nextCursor: null });
       await wait(state.refundDelayMs);
       if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409", retryable: false, projection: trip });
-      if (state.refundNeedsApproval) return json(route, 202, { approvalId: "AP1", status: "pending", action: "trip.refund" });
       const fare = trip.fare as { amountMinor: number };
       if (body.amount.amountMinor > fare.amountMinor) return json(route, 400, { code: "invalid_request", message: `At most ${fare.amountMinor / 100} SEK is left to refund.`, requestId: "r-400", retryable: false, reason: "refund_too_large" });
       trip.paymentStatus = body.amount.amountMinor === fare.amountMinor ? "refunded" : "partially_refunded";
@@ -444,3 +442,127 @@ export async function signIn(page: Page, landing = "Dashboard") {
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { level: 2, name: landing })).toBeVisible();
 }
+
+/**
+ * Contract v0.7.2 (contract.json#surgeLive): GET /admin/surge/now and GET /admin/zones/{zoneId}/surge/history, with
+ * times relative to now (the page keeps the last 6 hours of the chart). `now` / `history` set to a number answer
+ * with that error status. Every surge call is kept, so a spec can check that POST …/surge/notify never goes out.
+ */
+export type SurgeFake = {
+  now: ((at: number) => unknown) | number;
+  history: ((zoneId: string, at: number) => unknown) | number;
+  calls: { method: string; path: string }[];
+};
+
+const minutesAgo = (at: number, minutes: number) => new Date(at - minutes * 60_000).toISOString();
+
+/** The fake server's surge now: Norrmalm ×1.8 smart, Södermalm ×2.2 manual, Östermalm no surge (sample known). */
+export const SURGE_NOW = (at: number) => ({
+  at: new Date(at).toISOString(),
+  zones: [
+    { zoneId: "Z001", multiplier: 1.8, source: "smart", requests: 14, freeDrivers: 5, ratio: 2.8, checkedAt: minutesAgo(at, 1) },
+    { zoneId: "Z002", multiplier: 2.2, source: "manual", until: new Date(at + 40 * 60_000).toISOString(), scheduleId: "sur_1", requests: 6, freeDrivers: 4, ratio: 1.5, checkedAt: minutesAgo(at, 1) },
+    { zoneId: "Z003", multiplier: 1, source: "off", requests: 2, freeDrivers: 9, ratio: 0.2, checkedAt: minutesAgo(at, 1) },
+  ],
+});
+
+/** The fake server's history of a zone: 6 hours of 10-minute points, the price check and a timeline. */
+export const SURGE_HISTORY = (zoneId: string, at: number) => {
+  const bucket = Math.floor(at / 600_000) * 600_000;
+  const points = Array.from({ length: 37 }, (_, i) => {
+    const time = bucket - (36 - i) * 600_000;
+    const busy = i >= 30 ? 1 : 0;
+    const requests = [4, 5, 7, 6, 8, 9, 7, 6, 5, 6, 8, 10, 12, 11, 9, 8, 7, 6, 6, 7, 9, 11, 13, 12, 10, 9, 8, 9, 11, 14, 20, 26, 30, 34, 38, 40, 42][i]!;
+    const freeDrivers = busy ? 5 : 9 - (i % 3);
+    return { at: new Date(time).toISOString(), requests, freeDrivers, ratio: Math.round((requests / freeDrivers) * 10) / 10, multiplier: busy ? (i >= 33 ? 1.8 : 1.5) : 1 };
+  });
+  return {
+    zoneId,
+    from: minutesAgo(at, 480),
+    to: new Date(at).toISOString(),
+    bucketMin: 10,
+    points,
+    priceCheck: { windowMin: 60, saw: 40, left: 12, leftPct: 30 },
+    timeline: [
+      { at: minutesAgo(at, 25), kind: "smart_change", multiplier: 1.8, previous: 1.5, by: "smart" },
+      { at: minutesAgo(at, 60), kind: "smart_change", multiplier: 1.5, previous: 1, by: "smart", effect: { drivers: -2, ridesPct: 12, leftPct: 30 } },
+      { at: minutesAgo(at, 180), kind: "manual_stop", multiplier: 1, previous: 2, by: "A1" },
+      { at: minutesAgo(at, 240), kind: "manual_start", multiplier: 2, previous: 1, by: "A1", effect: { drivers: 4, ridesPct: 18, leftPct: 9 } },
+    ],
+  };
+};
+
+export async function fakeSurge(page: Page, init: Partial<Omit<SurgeFake, "calls">> = {}): Promise<SurgeFake> {
+  const fake: SurgeFake = { now: SURGE_NOW, history: SURGE_HISTORY, calls: [], ...init };
+  const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "access-control-allow-methods": "GET,POST,PUT,OPTIONS", "content-type": "application/json" }, body: JSON.stringify(body) });
+  const fail = (route: Route, status: number) => json(route, status, { code: status === 404 ? "not_found" : "unavailable", message: "No surge data.", requestId: `r-${status}s`, retryable: false });
+  await page.route(/\/api\/v1\/admin\/(surge\/now|zones\/[^/]+\/surge(\/.*)?)(\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: { ...CORS, "access-control-allow-methods": "GET,POST,PUT,OPTIONS" } });
+    const url = new URL(request.url());
+    fake.calls.push({ method: request.method(), path: url.pathname + url.search });
+    const at = Date.now();
+    if (url.pathname === "/api/v1/admin/surge/now") return typeof fake.now === "number" ? fail(route, fake.now) : json(route, 200, fake.now(at));
+    const history = /^\/api\/v1\/admin\/zones\/([^/]+)\/surge\/history$/.exec(url.pathname);
+    if (history) return typeof fake.history === "number" ? fail(route, fake.history) : json(route, 200, fake.history(decodeURIComponent(history[1]!), at));
+    // Södermalm's running manual surge (the schedule Start / Stop reads); POST …/surge/notify is gone (404, v0.7.2).
+    if (request.method() === "GET" && url.pathname === "/api/v1/admin/zones/Z002/surge") {
+      return json(route, 200, { scheduleId: "sur_1", zoneId: "Z002", startAt: minutesAgo(at, 20), endAt: new Date(at + 40 * 60_000).toISOString(), cap: 2.2, points: [{ atMin: 0, multiplier: 2.2 }, { atMin: 60, multiplier: 2.2 }], status: "active", version: 3, createdBy: "A1" });
+    }
+    return fail(route, 404);
+  });
+  return fake;
+}
+
+const CONFIG_CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,PUT,OPTIONS", "access-control-expose-headers": "*" };
+const configJson = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CONFIG_CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
+const sample = (name: string) => JSON.parse(readFileSync(new URL(`../../contracts/fixtures/config/${name}.json`, import.meta.url), "utf8")) as Record<string, unknown>;
+
+type Entry = { version: number; liveVersion: number; usesStandard?: boolean; document: Record<string, unknown> };
+type Sent = { method: string; path: string; body: Record<string, unknown> | null };
+
+/** The config documents of the live settings flow (contract v0.8.0): Sweden's Standard, Z001 on the Standard, Z002 with its own. */
+export async function fakeSettings(page: Page) {
+  const docs = new Map<string, Entry>();
+  const sent: Sent[] = [];
+  const names = { pricing: "pricing_document", dispatch: "dispatch_document", rider_app_config: "rider_app_config", driver_app_config: "driver_app_config" } as const;
+  // v0.8.1 Tips & limits: the Standard, a zone on it (Z001) and a zone with its own (Z002).
+  const rules = (tips: number[]) => ({ version: 1, publishedAt: "2026-10-27T09:00:00Z", country: "SE", currency: "SEK", tips: tips.map((kr) => ({ amount: { amountMinor: kr * 100, currency: "SEK" }, enabled: true })), raiseSteps: [{ amount: { amountMinor: 2000, currency: "SEK" }, enabled: true }], driverBonus: { defaultLimit: { amountMinor: 20000, currency: "SEK" }, hardMax: { amountMinor: 100000, currency: "SEK" } } });
+  docs.set("country_rules:standard-SE", { version: 2, liveVersion: 1, document: rules([10, 20, 50]) });
+  docs.set("country_rules:Z001", { version: 1, liveVersion: 0, usesStandard: true, document: rules([10, 20, 50]) });
+  docs.set("country_rules:Z002", { version: 3, liveVersion: 2, usesStandard: false, document: rules([15, 35]) });
+  for (const [doc, file] of Object.entries(names)) {
+    const base = sample(file);
+    docs.set(`${doc}:standard-SE`, { version: 2, liveVersion: 1, document: { ...base, zoneId: "standard-SE" } });
+    docs.set(`${doc}:Z001`, { version: 1, liveVersion: 0, usesStandard: true, document: { ...base, zoneId: "Z001" } });
+    docs.set(`${doc}:Z002`, { version: 3, liveVersion: 2, usesStandard: false, document: { ...base, zoneId: "Z002" } });
+  }
+  await page.route(`${API}/api/v1/admin/config/**`, async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CONFIG_CORS });
+    const url = new URL(request.url());
+    const [, , , , , doc, action] = url.pathname.split("/");
+    const body = (request.postDataJSON?.() ?? null) as Record<string, unknown> | null;
+    sent.push({ method: request.method(), path: url.pathname + url.search, body });
+    const scope = (q: { zoneId?: unknown; country?: unknown }) => (q.zoneId ? String(q.zoneId) : `standard-${String(q.country)}`);
+    if (request.method() === "GET") {
+      const entry = docs.get(`${doc}:${scope({ zoneId: url.searchParams.get("zoneId"), country: url.searchParams.get("country") })}`);
+      return entry ? configJson(route, 200, { doc, ...entry, updatedAt: "2026-10-27T09:00:00Z" }) : configJson(route, 404, { code: "not_found", message: "No such zone.", requestId: "r-404", retryable: false, reason: "zone_not_found" });
+    }
+    const key = `${doc}:${scope(body ?? {})}`;
+    const entry = docs.get(key) ?? { version: 1, liveVersion: 0, document: {} };
+    if (action === "use-standard") {
+      docs.set(key, { ...entry, version: 1, liveVersion: 0, usesStandard: true });
+      return configJson(route, 200, { doc, zoneId: body?.["zoneId"], version: 9, publishedAt: "2026-10-27T10:00:00Z" });
+    }
+    if (body?.["expectedVersion"] !== entry.version) return configJson(route, 409, { code: "version_mismatch", message: "The settings changed since you last saw them.", requestId: "r-409", retryable: false });
+    if (request.method() === "PUT") {
+      docs.set(key, { ...entry, version: entry.version + 1, document: body["document"] as Record<string, unknown> });
+      return configJson(route, 200, { doc, ...docs.get(key), updatedAt: "2026-10-27T10:00:00Z" });
+    }
+    docs.set(key, { ...entry, version: entry.version + 1, liveVersion: entry.liveVersion + 1, usesStandard: false });
+    return configJson(route, 200, { doc, version: entry.liveVersion + 1, publishedAt: "2026-10-27T10:00:00Z" });
+  });
+  return { docs, sent };
+}
+

@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { NumberField } from "./NumberField";
-import { PRICE_ROWS, currencySymbol, inputStep, priceMax, type CategoryDef, type CategoryPrice, type PriceField, type Problem, type ZoneBook } from "./zonePricing";
+import { PRICE_ROWS, rowApplies, currencySymbol, inputStep, priceMax, type CategoryDef, type CategoryPrice, type PriceField, type Problem, type ZoneBook } from "./zonePricing";
 import type { MarketId } from "../markets/markets";
 import { tr, trn, trx } from "../i18n";
 
@@ -76,6 +76,8 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
                     const before = published.prices[category.id];
                     if (!price) return <td key={category.id} />;
                     const field = row.field as PriceField;
+                    // Owner 2026-10-27: the seat fee exists only on Child Seat; every other car type shows a grey "—".
+                    if (!rowApplies(field, category.id)) return <td key={category.id} className="na" aria-label={tr("{0}: not on {1}", [trx(row.label), trx(category.label)])}><span className="na-dash">—</span></td>;
                     const changed = before ? before[field] !== price[field] : false;
                     return (
                       <td key={category.id} className={price.enabled ? undefined : "off"}>

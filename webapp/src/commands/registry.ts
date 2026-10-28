@@ -69,6 +69,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.config.save", label: "Save configuration draft", reason: false, permission: "settings.edit" },
   { id: "admin.refundPolicy.save", label: "Save refund second-admin limits", reason: true, permission: "settings.publish" },
   { id: "admin.config.publish", label: "Publish configuration", reason: true, permission: "settings.publish" },
+  { id: "admin.config.useStandard", label: "Go back to Standard", reason: true, permission: "settings.publish" },
   { id: "admin.config.approve", label: "Approve configuration", reason: true, permission: "settings.publish" },
   { id: "admin.config.review", label: "Send configuration for approval", reason: true, permission: "settings.edit" },
   { id: "admin.config.rollback", label: "Roll back configuration", reason: true, permission: "settings.publish" },
@@ -197,8 +198,6 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.pricing.startSurge", label: "Start manual surge", reason: true, permission: "settings.publish" },
   { id: "admin.pricing.stopSurge", label: "Stop manual surge", reason: true, permission: "settings.publish" },
   { id: "admin.pricing.stopAllSurges", label: "Stop all manual surges", reason: true, permission: "settings.publish" },
-  { id: "admin.pricing.notifyDrivers", label: "Tell drivers about the surge", reason: false, permission: "settings.publish" },
-  { id: "admin.pricing.notifySetting", label: "Change driver surge messages", reason: false, permission: "settings.publish" },
   { id: "admin.pricing.copyZones", label: "Copy prices to other zones", reason: false, permission: "settings.read" },
   { id: "admin.pricing.testRide", label: "Test a ride", reason: false, permission: "settings.read" },
   { id: "admin.pricing.editCategory", label: "Save category", reason: true, permission: "settings.publish" },
@@ -539,6 +538,7 @@ const ALLOWED_STATES: Record<string, readonly string[]> = {
 
 const DESTRUCTIVE = new Set([
   "admin.shell.reset",
+  "admin.config.useStandard",
   "admin.config.publish",
   "admin.config.rollback",
   "admin.content.publish",
