@@ -1,4 +1,4 @@
-import { tr } from "../i18n";
+import { tr, trx } from "../i18n";
 import { NotConnected } from "../live/NotConnected";
 import { LiveMoneyReport } from "../live/LiveMoneyReport";
 import { isLiveData } from "../live/realData";
@@ -101,7 +101,7 @@ export function ReportsPage() {
     link.remove();
     globalThis.setTimeout(() => URL.revokeObjectURL(url), 1000);
     logExport(agent?.id, `${TABS.find((item) => item.id === tab)?.label} report (CSV)`);
-    setNotice(`${TABS.find((item) => item.id === tab)?.label} report downloaded as CSV.`);
+    setNotice(tr("{0} report downloaded as CSV.", [trx(TABS.find((item) => item.id === tab)?.label ?? "")]));
   }
 
   function printPdf() {
@@ -116,47 +116,47 @@ export function ReportsPage() {
   return (
     <div className="dx-page rp-page">
       <header className="dx-head">
-        <button data-command="admin.reports.view" type="button" className="dash-btn ghost dx-back" aria-label="Go back" onClick={() => (params.get("admin") ? set({ admin: null }) : globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
+        <button data-command="admin.reports.view" type="button" className="dash-btn ghost dx-back" aria-label={tr("Go back")} onClick={() => (params.get("admin") ? set({ admin: null }) : globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> {tr("Back")}</button>
         <div className="dx-head-text">
-          <h2>Reports for {market.name}</h2>
-          <p>{window.label} · {market.currency} · {market.timeZone.replace("_", " ")} time · Demo data until the backend is connected.</p>
+          <h2>{tr("Reports for {0}", [trx(market.name)])}</h2>
+          <p>{window.label} · {market.currency} · {tr("{0} time", [market.timeZone.replace("_", " ")])}{liveData ? null : <> · {tr("Demo data until the backend is connected.")}</>}</p>
         </div>
       </header>
 
-      <div className="dash-tabs dx-views rp-tabs" role="tablist" aria-label="Report sections">
+      <div className="dash-tabs dx-views rp-tabs" role="tablist" aria-label={tr("Report sections")}>
         {TABS.map((item) => (
-          <button data-command="admin.reports.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => set({ tab: item.id === "overview" ? null : item.id, admin: null })}>{item.label}</button>
+          <button data-command="admin.reports.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => set({ tab: item.id === "overview" ? null : item.id, admin: null })}>{trx(item.label)}</button>
         ))}
       </div>
 
-      <section className="rp-bar" aria-label="Report settings">
+      <section className="rp-bar" aria-label={tr("Report settings")}>
         <PeriodPicker key={`${period.kind}-${period.on ?? ""}-${period.from ?? ""}`} period={period} today={localDay(now, market.timeZone)} onChange={choosePeriod} />
-        <select aria-label="Compare" value={compare} onChange={(event) => set({ compare: event.target.value === "previous" ? null : event.target.value })}>
-          {COMPARES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+        <select aria-label={tr("Compare")} value={compare} onChange={(event) => set({ compare: event.target.value === "previous" ? null : event.target.value })}>
+          {COMPARES.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
         </select>
-        <select aria-label="Category" value={filters.category} onChange={(event) => set({ category: event.target.value })}>
-          <option value="">All categories</option>
-          {CATEGORIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+        <select aria-label={tr("Category")} value={filters.category} onChange={(event) => set({ category: event.target.value })}>
+          <option value="">{tr("All categories")}</option>
+          {CATEGORIES.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
         </select>
-        <select aria-label="Payment method" value={filters.method} onChange={(event) => set({ method: event.target.value })}>
-          <option value="">All payment methods</option>
-          {methods.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+        <select aria-label={tr("Payment method")} value={filters.method} onChange={(event) => set({ method: event.target.value })}>
+          <option value="">{tr("All payment methods")}</option>
+          {methods.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
         </select>
         {tab === "drivers" ? (
           <>
-            <select aria-label="Driver" value={filters.driverId} onChange={(event) => set({ driver: event.target.value })}>
-              <option value="">All drivers</option>
+            <select aria-label={tr("Driver")} value={filters.driverId} onChange={(event) => set({ driver: event.target.value })}>
+              <option value="">{tr("All drivers")}</option>
               {countryDrivers.slice(0, 200).map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
             </select>
-            <select aria-label="Fleet" value={filters.fleetId} onChange={(event) => set({ fleet: event.target.value })}>
-              <option value="">All fleets</option>
+            <select aria-label={tr("Fleet")} value={filters.fleetId} onChange={(event) => set({ fleet: event.target.value })}>
+              <option value="">{tr("All fleets")}</option>
               {(fleets.data ?? []).map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
             </select>
           </>
         ) : null}
         <span className="rp-bar-actions">
           {views.length ? (
-            <select aria-label="Saved views" value="" onChange={(event) => {
+            <select aria-label={tr("Saved views")} value="" onChange={(event) => {
               const view = views.find((item) => item.id === event.target.value);
               if (!view) return;
               const next = new URLSearchParams(view.period);
@@ -166,20 +166,20 @@ export function ReportsPage() {
               if (view.compare !== "previous") next.set("compare", view.compare);
               for (const [key, value] of [["category", view.filters.category], ["method", view.filters.method], ["driver", view.filters.driverId], ["fleet", view.filters.fleetId]]) if (value) next.set(key, value);
               setParams(next, { replace: true });
-              setNotice(`View ${view.name} opened.`);
+              setNotice(tr("View {0} opened.", [view.name]));
             }}>
-              <option value="">Saved views…</option>
-              {views.map((view) => <option key={view.id} value={view.id}>{view.name}{view.shared && view.by !== agent?.id ? " (shared)" : ""}</option>)}
+              <option value="">{tr("Saved views…")}</option>
+              {views.map((view) => <option key={view.id} value={view.id}>{view.name}{view.shared && view.by !== agent?.id ? ` ${tr("(shared)")}` : ""}</option>)}
             </select>
           ) : null}
-          <button data-command="admin.reports.saveView" type="button" className="dash-btn small ghost" onClick={() => setViewOpen(true)}><Bookmark size={13} aria-hidden="true" /> Save view</button>
+          <button data-command="admin.reports.saveView" type="button" className="dash-btn small ghost" onClick={() => setViewOpen(true)}><Bookmark size={13} aria-hidden="true" /> {tr("Save view")}</button>
           <button data-command="admin.reports.download" type="button" className="dash-btn small ghost" disabled={!csv} onClick={downloadCsv}><FileDown size={13} aria-hidden="true" /> CSV</button>
           <button data-command="admin.reports.download" type="button" className="dash-btn small ghost" onClick={printPdf}><Printer size={13} aria-hidden="true" /> PDF</button>
-          <button data-command="admin.reports.view" type="button" className="dash-btn small" onClick={() => setScheduleOpen(true)}><CalendarClock size={13} aria-hidden="true" /> Schedule</button>
+          <button data-command="admin.reports.view" type="button" className="dash-btn small" onClick={() => setScheduleOpen(true)}><CalendarClock size={13} aria-hidden="true" /> {tr("Schedule")}</button>
         </span>
       </section>
 
-      <div className="rp-print-head" aria-hidden="true"><b>Movera · {TABS.find((item) => item.id === tab)?.label} report · {market.name}</b><span>{window.label} {compare !== "none" ? `· ${window.compareLabel}` : ""}</span></div>
+      <div className="rp-print-head" aria-hidden="true"><b>Movera · {tr("{0} report", [trx(TABS.find((item) => item.id === tab)?.label ?? "")])} · {trx(market.name)}</b><span>{window.label} {compare !== "none" ? `· ${window.compareLabel}` : ""}</span></div>
       {notice || slice.message ? <p className="pricing-notice" role="status">{notice} {slice.message}</p> : null}
 
       {/* Live: only the server's audit (Work) has a source yet; the other reports read "Not connected yet". */}
@@ -202,7 +202,7 @@ export function ReportsPage() {
       {tab === "promos" ? <PromosTab {...props} /> : null}
       </>}
 
-      <SaveViewDialog open={viewOpen} onClose={() => setViewOpen(false)} settings={settings} agentId={agent?.id ?? ""} build={(name, shared) => ({ id: `RV-${Date.now().toString(36)}`, name, by: agent?.id ?? "", shared, tab, period: periodParams(period, new URLSearchParams()).toString(), compare, filters, country: market.id, zones: scope.zones.join(",") })} onSaved={(name) => setNotice(`View ${name} saved.`)} />
+      <SaveViewDialog open={viewOpen} onClose={() => setViewOpen(false)} settings={settings} agentId={agent?.id ?? ""} build={(name, shared) => ({ id: `RV-${Date.now().toString(36)}`, name, by: agent?.id ?? "", shared, tab, period: periodParams(period, new URLSearchParams()).toString(), compare, filters, country: market.id, zones: scope.zones.join(",") })} onSaved={(name) => setNotice(tr("View {0} saved.", [name]))} />
       <ScheduleDialog key={`${tab}-${scheduleOpen}`} open={scheduleOpen} onClose={() => setScheduleOpen(false)} settings={settings} agentId={agent?.id ?? ""} tab={tab} country={market.id} onSaved={setNotice} />
     </div>
   );
@@ -214,15 +214,15 @@ function SaveViewDialog({ open, onClose, settings, agentId, build, onSaved }: { 
   const view = build(name.trim(), shared);
   const mine = settings.views.filter((item) => item.by === agentId);
   return (
-    <Modal open={open} title="Save this view" onClose={onClose}>
-      <p className="dx-modal-help">Saves the tab, the period, the compare, the zones and the filters, so you can open the same view again.</p>
+    <Modal open={open} title={tr("Save this view")} onClose={onClose}>
+      <p className="dx-modal-help">{tr("Saves the tab, the period, the compare, the zones and the filters, so you can open the same view again.")}</p>
       <div className="dx-modal-row">
-        <label className="field">View name<input aria-label="View name" maxLength={40} value={name} onChange={(event) => setName(event.target.value)} placeholder="For example Stockholm nights" /></label>
+        <label className="field">{tr("View name")}<input aria-label={tr("View name")} maxLength={40} value={name} onChange={(event) => setName(event.target.value)} placeholder={tr("For example Stockholm nights")} /></label>
       </div>
-      <label className={shared ? "check-chip on" : "check-chip"}><input type="checkbox" checked={shared} onChange={(event) => setShared(event.target.checked)} />Share with other admins</label>
-      {mine.length ? <ul className="rp-saved" aria-label="Your views">{mine.map((item) => <li key={item.id}><FileText size={13} aria-hidden="true" /> {item.name}{item.shared ? " · shared" : ""}</li>)}</ul> : null}
+      <label className={shared ? "check-chip on" : "check-chip"}><input type="checkbox" checked={shared} onChange={(event) => setShared(event.target.checked)} />{tr("Share with other admins")}</label>
+      {mine.length ? <ul className="rp-saved" aria-label={tr("Your views")}>{mine.map((item) => <li key={item.id}><FileText size={13} aria-hidden="true" /> {item.name}{item.shared ? ` · ${tr("shared")}` : ""}</li>)}</ul> : null}
       <div className="dx-modal-actions">
-        <button data-command="admin.reports.view" type="button" className="dash-btn ghost" onClick={onClose}>Cancel</button>
+        <button data-command="admin.reports.view" type="button" className="dash-btn ghost" onClick={onClose}>{tr("Cancel")}</button>
         <CommandButton command="admin.reports.saveView" className="dash-btn" targetId={name.trim() || "view"} confirmTarget={false} scope="all" before={`${settings.views.length} views`} after={`${settings.views.length + 1} views`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, views: [...settings.views, view] }} disabled={!name.trim()} onDone={() => { onSaved(name.trim()); setName(""); onClose(); }}>
           Save view
         </CommandButton>
@@ -237,35 +237,35 @@ function ScheduleDialog({ open, onClose, settings, agentId, tab, country, onSave
   const issues = scheduleIssues(draft);
   const list = settings.schedules.filter((item) => item.country === country);
   return (
-    <Modal open={open} title="Scheduled reports" onClose={onClose}>
-      <p className="dx-modal-help">The backend emails the report at the time you pick, in this country's time.</p>
+    <Modal open={open} title={tr("Scheduled reports")} onClose={onClose}>
+      <p className="dx-modal-help">{tr("The backend emails the report at the time you pick, in this country's time.")}</p>
       {list.length ? (
-        <ul className="rp-saved" aria-label="Schedules">
+        <ul className="rp-saved" aria-label={tr("Schedules")}>
           {list.map((item) => (
             <li key={item.id}>
               <CalendarClock size={13} aria-hidden="true" /> <span><b>{item.name}</b><small>{scheduleLine(item)}</small></span>
-              <CommandButton command="admin.reports.schedule" className="icon-ghost" targetId={item.name} confirmTarget={false} scope="all" before="schedule" after="removed" expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, schedules: settings.schedules.filter((entry) => entry.id !== item.id) }} aria-label={`Remove ${item.name}`} onDone={() => onSaved(`Schedule ${item.name} removed.`)}>
+              <CommandButton command="admin.reports.schedule" className="icon-ghost" targetId={item.name} confirmTarget={false} scope="all" before="schedule" after="removed" expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, schedules: settings.schedules.filter((entry) => entry.id !== item.id) }} aria-label={tr("Remove {0}", [item.name])} onDone={() => onSaved(tr("Schedule {0} removed.", [item.name]))}>
                 <Trash2 size={13} aria-hidden="true" />
               </CommandButton>
             </li>
           ))}
         </ul>
       ) : null}
-      <h5 className="dx-modal-h"><Plus size={12} aria-hidden="true" /> New schedule</h5>
+      <h5 className="dx-modal-h"><Plus size={12} aria-hidden="true" /> {tr("New schedule")}</h5>
       <div className="rp-schedule-form">
-        <label className="field">Name<input aria-label="Schedule name" maxLength={50} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="For example Weekly money" /></label>
-        <label className="field">Report<select aria-label="Schedule report" value={draft.tab} onChange={(event) => setDraft({ ...draft, tab: event.target.value as ReportTab })}>{TABS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-        <label className="field">As<select aria-label="Schedule format" value={draft.format} onChange={(event) => setDraft({ ...draft, format: event.target.value as Schedule["format"] })}><option value="pdf">PDF</option><option value="csv">CSV</option></select></label>
-        <label className="field">How often<select aria-label="Schedule every" value={draft.every} onChange={(event) => setDraft({ ...draft, every: event.target.value as Schedule["every"] })}><option value="day">Every day</option><option value="week">Every week</option><option value="month">Every month</option></select></label>
-        {draft.every === "week" ? <label className="field">Day<select aria-label="Schedule day" value={draft.weekday} onChange={(event) => setDraft({ ...draft, weekday: Number(event.target.value) })}>{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, index) => <option key={day} value={index}>{day}</option>)}</select></label> : null}
-        <label className="field">Time<input type="time" aria-label="Schedule time" value={draft.time} onChange={(event) => setDraft({ ...draft, time: event.target.value })} /></label>
-        <label className="field wide">Send to<input aria-label="Schedule emails" value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} placeholder="finance@movera.se, manager@movera.se" /></label>
+        <label className="field">{tr("Name")}<input aria-label={tr("Schedule name")} maxLength={50} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder={tr("For example Weekly money")} /></label>
+        <label className="field">{tr("Report")}<select aria-label={tr("Schedule report")} value={draft.tab} onChange={(event) => setDraft({ ...draft, tab: event.target.value as ReportTab })}>{TABS.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}</select></label>
+        <label className="field">{tr("As")}<select aria-label={tr("Schedule format")} value={draft.format} onChange={(event) => setDraft({ ...draft, format: event.target.value as Schedule["format"] })}><option value="pdf">PDF</option><option value="csv">CSV</option></select></label>
+        <label className="field">{tr("How often")}<select aria-label={tr("Schedule every")} value={draft.every} onChange={(event) => setDraft({ ...draft, every: event.target.value as Schedule["every"] })}><option value="day">{tr("Every day")}</option><option value="week">{tr("Every week")}</option><option value="month">{tr("Every month")}</option></select></label>
+        {draft.every === "week" ? <label className="field">{tr("Day")}<select aria-label={tr("Schedule day")} value={draft.weekday} onChange={(event) => setDraft({ ...draft, weekday: Number(event.target.value) })}>{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, index) => <option key={day} value={index}>{trx(day)}</option>)}</select></label> : null}
+        <label className="field">{tr("Time")}<input type="time" aria-label={tr("Schedule time")} value={draft.time} onChange={(event) => setDraft({ ...draft, time: event.target.value })} /></label>
+        <label className="field wide">{tr("Send to")}<input aria-label={tr("Schedule emails")} value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} placeholder="finance@movera.se, manager@movera.se" /></label>
       </div>
       {issues.length && (draft.name || draft.to) ? <p className="dx-issues" role="alert">{issues[0]}</p> : null}
       {!issues.length ? <p className="dx-note">{scheduleLine(draft)}</p> : null}
       <div className="dx-modal-actions">
-        <button data-command="admin.reports.view" type="button" className="dash-btn ghost" onClick={onClose}>Close</button>
-        <CommandButton command="admin.reports.schedule" className="dash-btn" targetId={draft.name.trim() || "schedule"} confirmTarget={false} scope="all" before={`${settings.schedules.length} schedules`} after={`${settings.schedules.length + 1} schedules`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, schedules: [...settings.schedules, { ...draft, name: draft.name.trim() }] }} disabled={Boolean(issues.length)} onDone={() => { onSaved(`Schedule ${draft.name.trim()} saved: ${scheduleLine(draft)}.`); setDraft(blank()); }}>
+        <button data-command="admin.reports.view" type="button" className="dash-btn ghost" onClick={onClose}>{tr("Close")}</button>
+        <CommandButton command="admin.reports.schedule" className="dash-btn" targetId={draft.name.trim() || "schedule"} confirmTarget={false} scope="all" before={`${settings.schedules.length} schedules`} after={`${settings.schedules.length + 1} schedules`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, schedules: [...settings.schedules, { ...draft, name: draft.name.trim() }] }} disabled={Boolean(issues.length)} onDone={() => { onSaved(tr("Schedule {0} saved: {1}.", [draft.name.trim(), scheduleLine(draft)])); setDraft(blank()); }}>
           Save schedule
         </CommandButton>
       </div>

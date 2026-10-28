@@ -1,6 +1,7 @@
 import type { Totals } from "../dashboard/earnings.ts";
 import type { MarketId } from "../markets/markets.ts";
 import type { Card, Note, ZoneRow } from "./engine.ts";
+import { tr, trx } from "../i18n/index.ts";
 
 /**
  * The extra reports: taxes for a Swedish company working in three countries, fleet owners,
@@ -63,7 +64,7 @@ export function normalizeTaxRules(value: unknown): TaxRules {
 export function taxRulesError(rules: TaxRules): string | null {
   for (const [id, row] of Object.entries(rules.countries)) {
     for (const [label, rate] of [["Ride VAT", row.rideVat], ["VAT on commission", row.commissionVat], ["Tax kept from drivers", row.withholding]] as const) {
-      if (rate.on && (rate.pct < 0 || rate.pct > 50)) return `${id}: ${label} must be 0 to 50%.`;
+      if (rate.on && (rate.pct < 0 || rate.pct > 50)) return tr("{0}: {1} must be 0 to 50%.", [id, trx(label)]);
     }
   }
   if (rules.sekPer.EUR <= 0 || rules.sekPer.TND <= 0) return "Exchange rates must be more than zero.";
@@ -174,11 +175,11 @@ export function compareZones(rows: readonly ZoneRow[], ratios: Record<string, nu
   }));
   const notes: Note[] = [];
   const busiest = [...out].sort((a, b) => b.trips - a.trips)[0];
-  if (busiest && busiest.trips) notes.push({ tone: "info", text: `${busiest.name} has the most rides (${busiest.ridesShare}%)` });
+  if (busiest && busiest.trips) notes.push({ tone: "info", text: tr("{0} has the most rides ({1}%)", [busiest.name, busiest.ridesShare]) });
   const slow = [...out].filter((row) => row.trips).sort((a, b) => b.waitMin - a.waitMin)[0];
-  if (slow && slow.waitMin >= 8) notes.push({ tone: "bad", text: `${slow.name} has the longest wait (${slow.waitMin} min)` });
+  if (slow && slow.waitMin >= 8) notes.push({ tone: "bad", text: tr("{0} has the longest wait ({1} min)", [slow.name, slow.waitMin]) });
   const grow = [...out].filter((row) => row.growthPct !== null).sort((a, b) => (b.growthPct ?? 0) - (a.growthPct ?? 0))[0];
-  if (grow && (grow.growthPct ?? 0) >= 15) notes.push({ tone: "good", text: `${grow.name} grew ${grow.growthPct}%` });
+  if (grow && (grow.growthPct ?? 0) >= 15) notes.push({ tone: "good", text: tr("{0} grew {1}%", [grow.name, grow.growthPct]) });
   return { rows: out, notes };
 }
 
@@ -249,9 +250,9 @@ export function supportSafety(tickets: readonly TicketFact[], cases: readonly Ca
   const late = opened.filter((row) => row.replyLate || row.solveLate).length;
   const count = (list: readonly string[]) => [...list.reduce((map, key) => map.set(key, (map.get(key) ?? 0) + 1), new Map<string, number>())].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
   const notes: Note[] = [];
-  if (late) notes.push({ tone: "bad", text: `${late} ticket${late > 1 ? "s" : ""} went past the time limit` });
+  if (late) notes.push({ tone: "bad", text: late > 1 ? tr("{0} tickets went past the time limit", [late]) : tr("{0} ticket went past the time limit", [late]) });
   const critical = incidents.filter((row) => row.level === "critical").length;
-  if (critical) notes.push({ tone: "bad", text: `${critical} critical incident${critical > 1 ? "s" : ""} in this period` });
+  if (critical) notes.push({ tone: "bad", text: critical > 1 ? tr("{0} critical incidents in this period", [critical]) : tr("{0} critical incident in this period", [critical]) });
   return {
     cards: [
       { id: "tickets", label: "Tickets opened", value: opened.length, previous: null, format: "count", info: "Riders and drivers who wrote to support in this period." },

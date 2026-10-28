@@ -1,3 +1,4 @@
+import { tr, trx } from "../i18n";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { Building2, Flame, Gift, Landmark, LifeBuoy, MapPin, ShieldAlert, Tags } from "lucide-react";
@@ -48,7 +49,7 @@ export function TaxesTab({ market: current, zones, window, compare, fmt, onCsv }
   const rule = draft ?? rules.countries[current.id];
   const error = taxRulesError({ ...rules, countries: { ...rules.countries, [current.id]: rule } });
   const cards: Card[] = [
-    { id: "rideVat", label: "VAT in ride prices", value: here.line.rideVatMinor, previous: here.previous.rideVatMinor, format: "money", info: `VAT inside what riders paid, at ${rules.countries[current.id].rideVat.pct}%. ${here.line.rideVatBy === "Movera" ? "Movera sells the ride and pays it." : here.line.rideVatBy === "Drivers" ? "The drivers or fleets pay it; Movera only shows it." : "Switched off."}` },
+    { id: "rideVat", label: "VAT in ride prices", value: here.line.rideVatMinor, previous: here.previous.rideVatMinor, format: "money", info: `${tr("VAT inside what riders paid, at {0}%.", [rules.countries[current.id].rideVat.pct])} ${here.line.rideVatBy === "Movera" ? tr("Movera sells the ride and pays it.") : here.line.rideVatBy === "Drivers" ? tr("The drivers or fleets pay it; Movera only shows it.") : tr("Switched off.")}` },
     { id: "commissionVat", label: "Swedish VAT on commission", value: here.line.commissionVatMinor, previous: here.previous.commissionVatMinor, format: "money", info: "Movera is a Swedish company and adds Swedish VAT on its commission. Paid to Skatteverket." },
     { id: "reverse", label: "Reverse charge", value: here.line.reverseChargeMinor, previous: here.previous.reverseChargeMinor, format: "money", info: "Commission billed abroad without Swedish VAT: the driver or fleet accounts for the VAT in their country." },
     { id: "withholding", label: "Tax kept from drivers", value: here.line.withholdingMinor, previous: here.previous.withholdingMinor, format: "money", info: "Tax kept back from driver payouts where the country asks for it." },
@@ -58,18 +59,18 @@ export function TaxesTab({ market: current, zones, window, compare, fmt, onCsv }
   const patch = (next: Partial<CountryTax>) => setDraft({ ...rule, ...next });
   const rate = (label: string, key: "rideVat" | "commissionVat" | "withholding", help: string) => (
     <Row label={label} help={help} on={rule[key].on} onToggle={(on) => patch({ [key]: { ...rule[key], on } })} disabled={!editable}>
-      <Num label={`${label} rate`} value={rule[key].pct} unit="%" min={0} max={50} step={0.5} disabled={!editable || !rule[key].on} onChange={(pct) => patch({ [key]: { ...rule[key], pct } })} />
+      <Num label={tr("{0} rate", [trx(label)])} value={rule[key].pct} unit="%" min={0} max={50} step={0.5} disabled={!editable || !rule[key].on} onChange={(pct) => patch({ [key]: { ...rule[key], pct } })} />
     </Row>
   );
-  if (!finance) return <div className="rp-tab"><p className="dx-calm">Taxes are for admins who can see finance.</p></div>;
+  if (!finance) return <div className="rp-tab"><p className="dx-calm">{tr("Taxes are for admins who can see finance.")}</p></div>;
   return (
     <div className="rp-tab">
       <Notes notes={notesFor(cards)} />
       {notice ? <p role="status" className="pricing-notice">{notice}</p> : null}
       <Cards cards={cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Whole company in SEK" icon={<Landmark size={16} aria-hidden="true" />} wide aside={<span className="rp-tag">Movera AB · Sweden</span>}>
-          <SortTable label="Taxes by country" rows={lines} rowKey={(item) => item.market.id} columns={[
+        <Panel title={tr("Whole company in SEK")} icon={<Landmark size={16} aria-hidden="true" />} wide aside={<span className="rp-tag">{tr("Movera AB · Sweden")}</span>}>
+          <SortTable label={tr("Taxes by country")} rows={lines} rowKey={(item) => item.market.id} columns={[
             { id: "country", label: "Country", value: (item) => item.market.name, show: (item) => <b className={item.market.id === current.id ? "rp-now" : undefined}>{item.market.name}</b> },
             { id: "gross", label: "Bookings", value: (item) => item.line.grossMinor, show: (item) => formatMoney(item.line.grossMinor, item.market.id), numeric: true },
             { id: "rideVat", label: "VAT in rides", value: (item) => item.line.rideVatMinor, show: (item) => <>{formatMoney(item.line.rideVatMinor, item.market.id)} <small className="rp-muted">{item.line.rideVatBy === "Off" ? "off" : `by ${item.line.rideVatBy}`}</small></>, numeric: true },
@@ -79,23 +80,23 @@ export function TaxesTab({ market: current, zones, window, compare, fmt, onCsv }
             { id: "owes", label: "Movera owes", value: (item) => item.line.moveraOwesMinor, show: (item) => formatMoney(item.line.moveraOwesMinor, item.market.id), numeric: true },
             { id: "owesSek", label: "In SEK", value: (item) => toSekMinor(item.line.moveraOwesMinor, item.market.id, item.minorUnits, rules), show: (item) => sek(toSekMinor(item.line.moveraOwesMinor, item.market.id, item.minorUnits, rules)), numeric: true },
           ]} />
-          <p className="rp-foot">Movera owes in total <b>{sek(company.owesSekMinor)}</b> · Commission earned <b>{sek(company.commissionSekMinor)}</b>{company.companyTaxSekMinor !== null ? <> · Company tax about <b>{sek(company.companyTaxSekMinor)}</b> ({rules.companyTax.pct}% of net revenue, before costs)</> : null} · 1 EUR = {rules.sekPer.EUR} SEK · 1 TND = {rules.sekPer.TND} SEK</p>
+          <p className="rp-foot">{tr("Movera owes in total")} <b>{sek(company.owesSekMinor)}</b> {tr("· Commission earned")} <b>{sek(company.commissionSekMinor)}</b>{company.companyTaxSekMinor !== null ? <> · Company tax about <b>{sek(company.companyTaxSekMinor)}</b> ({rules.companyTax.pct}% of net revenue, before costs)</> : null} · 1 EUR = {rules.sekPer.EUR} SEK · 1 TND = {rules.sekPer.TND} SEK</p>
         </Panel>
-        <SettingsCard title={`Tax rules for ${current.name}`} icon={<Landmark size={15} />} tone="orange" help="Rates and who pays. Change them when the accountant says so; every rule has a switch.">
+        <SettingsCard title={tr("Tax rules for {0}", [current.name])} icon={<Landmark size={15} />} tone="orange" help={tr("Rates and who pays. Change them when the accountant says so; every rule has a switch.")}>
           {rate("VAT in ride prices", "rideVat", "Passenger transport VAT, inside the price riders pay.")}
-          <Row label="Movera sells the ride" help="On: Movera is the seller and pays the ride VAT. Off: the driver or fleet sells the ride; Movera only takes a commission."><Switch label="Movera sells the ride" on={rule.moveraSellsRide} disabled={!editable} onChange={(moveraSellsRide) => patch({ moveraSellsRide })} /></Row>
+          <Row label={tr("Movera sells the ride")} help="On: Movera is the seller and pays the ride VAT. Off: the driver or fleet sells the ride; Movera only takes a commission."><Switch label={tr("Movera sells the ride")} on={rule.moveraSellsRide} disabled={!editable} onChange={(moveraSellsRide) => patch({ moveraSellsRide })} /></Row>
           {rate("VAT on commission", "commissionVat", "Swedish VAT Movera adds on its commission.")}
-          {current.id !== "SE" ? <Row label="Reverse charge" help="On: commission to drivers abroad is billed without Swedish VAT; they account for it at home."><Switch label="Reverse charge" on={rule.reverseCharge} disabled={!editable} onChange={(reverseCharge) => patch({ reverseCharge })} /></Row> : null}
+          {current.id !== "SE" ? <Row label={tr("Reverse charge")} help="On: commission to drivers abroad is billed without Swedish VAT; they account for it at home."><Switch label={tr("Reverse charge")} on={rule.reverseCharge} disabled={!editable} onChange={(reverseCharge) => patch({ reverseCharge })} /></Row> : null}
           {rate("Tax kept from drivers", "withholding", "Tax kept back from payouts where the country asks for it.")}
           {error ? <p role="alert" className="dx-issues">{error}</p> : null}
           <div className="actions">
-            <CommandButton command="admin.tax.rules" confirmTarget={false} className="dash-btn small" sliceKey={TAX_RULES_KEY} value={{ ...rules, draftRev: rules.draftRev + 1, countries: { ...rules.countries, [current.id]: rule } }} expectedSliceRev={rules.draftRev} targetId={current.id} disabled={!editable || !draft || Boolean(error) || slice.loading} onDone={() => { setDraft(null); setNotice(`Tax rules for ${current.name} saved.`); }}>Save tax rules</CommandButton>
-            {draft ? <button data-command="admin.reports.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>Undo changes</button> : null}
+            <CommandButton command="admin.tax.rules" confirmTarget={false} className="dash-btn small" sliceKey={TAX_RULES_KEY} value={{ ...rules, draftRev: rules.draftRev + 1, countries: { ...rules.countries, [current.id]: rule } }} expectedSliceRev={rules.draftRev} targetId={current.id} disabled={!editable || !draft || Boolean(error) || slice.loading} onDone={() => { setDraft(null); setNotice(tr("Tax rules for {0} saved.", [current.name])); }}>{tr("Save tax rules")}</CommandButton>
+            {draft ? <button data-command="admin.reports.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{tr("Undo changes")}</button> : null}
           </div>
         </SettingsCard>
-        <SettingsCard title="Company" icon={<Building2 size={15} />} tone="blue" help="Exchange rates to SEK and the company tax estimate.">
-          <CompanyRules rules={rules} editable={editable} loading={slice.loading} onSaved={() => setNotice("Company rules saved.")} />
-          <p className="dx-note">Movera is a Swedish company. Money earned in France and Tunisia is shown in SEK with the rates above, so the accountant sees one total. Demo rides until the backend is connected.</p>
+        <SettingsCard title={tr("Company")} icon={<Building2 size={15} />} tone="blue" help="Exchange rates to SEK and the company tax estimate.">
+          <CompanyRules rules={rules} editable={editable} loading={slice.loading} onSaved={() => setNotice(tr("Company rules saved."))} />
+          <p className="dx-note">{tr("Movera is a Swedish company. Money earned in France and Tunisia is shown in SEK with the rates above, so the accountant sees one total. Demo rides until the backend is connected.")}</p>
         </SettingsCard>
       </div>
     </div>
@@ -110,15 +111,15 @@ function CompanyRules({ rules, editable, loading, onSaved }: { rules: TaxRules; 
   const error = taxRulesError(next);
   return (
     <>
-      <Row label="1 EUR in SEK"><Num label="SEK per EUR" value={value.sekPer.EUR} unit="SEK" min={0.01} step={0.1} disabled={!editable} onChange={(EUR) => setDraft({ ...value, sekPer: { ...value.sekPer, EUR } })} /></Row>
-      <Row label="1 TND in SEK"><Num label="SEK per TND" value={value.sekPer.TND} unit="SEK" min={0.01} step={0.1} disabled={!editable} onChange={(TND) => setDraft({ ...value, sekPer: { ...value.sekPer, TND } })} /></Row>
-      <Row label="Company tax estimate" help="Swedish company tax on net revenue, before costs. A rough number for planning, not the tax return." on={value.companyTax.on} onToggle={(on) => setDraft({ ...value, companyTax: { ...value.companyTax, on } })} disabled={!editable}>
-        <Num label="Company tax rate" value={value.companyTax.pct} unit="%" min={0} max={50} step={0.1} disabled={!editable || !value.companyTax.on} onChange={(pct) => setDraft({ ...value, companyTax: { ...value.companyTax, pct } })} />
+      <Row label={tr("1 EUR in SEK")}><Num label={tr("SEK per EUR")} value={value.sekPer.EUR} unit="SEK" min={0.01} step={0.1} disabled={!editable} onChange={(EUR) => setDraft({ ...value, sekPer: { ...value.sekPer, EUR } })} /></Row>
+      <Row label={tr("1 TND in SEK")}><Num label={tr("SEK per TND")} value={value.sekPer.TND} unit="SEK" min={0.01} step={0.1} disabled={!editable} onChange={(TND) => setDraft({ ...value, sekPer: { ...value.sekPer, TND } })} /></Row>
+      <Row label={tr("Company tax estimate")} help="Swedish company tax on net revenue, before costs. A rough number for planning, not the tax return." on={value.companyTax.on} onToggle={(on) => setDraft({ ...value, companyTax: { ...value.companyTax, on } })} disabled={!editable}>
+        <Num label={tr("Company tax rate")} value={value.companyTax.pct} unit="%" min={0} max={50} step={0.1} disabled={!editable || !value.companyTax.on} onChange={(pct) => setDraft({ ...value, companyTax: { ...value.companyTax, pct } })} />
       </Row>
       {error ? <p role="alert" className="dx-issues">{error}</p> : null}
       <div className="actions">
-        <CommandButton command="admin.tax.rules" confirmTarget={false} className="dash-btn small" sliceKey={TAX_RULES_KEY} value={{ ...next, draftRev: rules.draftRev + 1 }} expectedSliceRev={rules.draftRev} targetId="company" disabled={!editable || !draft || Boolean(error) || loading} onDone={() => { setDraft(null); onSaved(); }}>Save company rules</CommandButton>
-        {draft ? <button data-command="admin.reports.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>Undo changes</button> : null}
+        <CommandButton command="admin.tax.rules" confirmTarget={false} className="dash-btn small" sliceKey={TAX_RULES_KEY} value={{ ...next, draftRev: rules.draftRev + 1 }} expectedSliceRev={rules.draftRev} targetId="company" disabled={!editable || !draft || Boolean(error) || loading} onDone={() => { setDraft(null); onSaved(); }}>{tr("Save company rules")}</CommandButton>
+        {draft ? <button data-command="admin.reports.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{tr("Undo changes")}</button> : null}
       </div>
     </>
   );
@@ -151,9 +152,9 @@ export function FleetsTab({ market: current, zones, window, compare, fmt, money,
     <div className="rp-tab">
       <Notes notes={notesFor(cards)} />
       <Cards cards={cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
-      <Panel title="Fleet owners" icon={<Building2 size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to="/fleets">Fleet pages</Link>}>
+      <Panel title={tr("Fleet owners")} icon={<Building2 size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to="/fleets">{tr("Fleet pages")}</Link>}>
         {rows.length ? (
-          <SortTable label="Fleet owners" rows={rows} rowKey={(row) => row.id} initial="trips" columns={[
+          <SortTable label={tr("Fleet owners")} rows={rows} rowKey={(row) => row.id} initial="trips" columns={[
             { id: "name", label: "Fleet", value: (row) => row.name, show: (row) => <Link to={`/fleets/${row.id}`}>{row.name}</Link> },
             { id: "drivers", label: "Drivers", value: (row) => row.drivers, show: (row) => <>{row.drivers} <small className="rp-muted">{row.online} online</small></>, numeric: true },
             { id: "trips", label: "Rides", value: (row) => row.trips, show: (row) => <>{count(row.trips)} {compare ? <Delta now={row.trips} before={row.previousTrips} /> : null}</>, numeric: true },
@@ -162,9 +163,9 @@ export function FleetsTab({ market: current, zones, window, compare, fmt, money,
             { id: "earned", label: "Drivers earned", value: (row) => row.driverMinor, show: (row) => money(row.driverMinor), numeric: true },
             { id: "rating", label: "Rating", value: (row) => row.rating, numeric: true },
           ]} />
-        ) : <p className="dx-calm">No fleet drivers in these zones.</p>}
+        ) : <p className="dx-calm">{tr("No fleet drivers in these zones.")}</p>}
       </Panel>
-      <p className="rp-foot">Payouts are in <Link to="/payouts">Payouts</Link>.</p>
+      <p className="rp-foot">{tr("Payouts are in")} <Link to="/payouts">{tr("Payouts")}</Link>.</p>
     </div>
   );
 }
@@ -178,7 +179,7 @@ export function ZonesTab({ market: current, zones, window, compare, fmt, money, 
   const cards: Card[] = [
     { id: "zones", label: "Zones", value: data.rows.length, previous: null, format: "count", info: "Zones in the country or the ones picked in the top bar." },
     { id: "active", label: "Zones with rides", value: data.rows.filter((row) => row.trips).length, previous: null, format: "count", info: "Zones with at least one ride in the period." },
-    { id: "perRide", label: "Best money per ride", value: best?.perRideMinor ?? 0, previous: null, format: "money", info: best ? `${best.name}: bookings ÷ rides.` : "Bookings ÷ rides for the best zone." },
+    { id: "perRide", label: "Best money per ride", value: best?.perRideMinor ?? 0, previous: null, format: "money", info: best ? tr("{0}: bookings ÷ rides.", [best.name]) : "Bookings ÷ rides for the best zone." },
     { id: "wait", label: "Longest wait", value: Math.max(0, ...data.rows.map((row) => row.waitMin)), previous: null, format: "min", info: "The zone where riders wait longest for a driver.", goodDown: true },
     { id: "cancel", label: "Highest cancel rate", value: Math.max(0, ...data.rows.map((row) => row.cancelPct)), previous: null, format: "pct", info: "The zone with the most cancelled rides, as a share.", goodDown: true },
   ];
@@ -188,14 +189,14 @@ export function ZonesTab({ market: current, zones, window, compare, fmt, money, 
       <Notes notes={data.notes} />
       <Cards cards={cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Share of rides" icon={<MapPin size={16} aria-hidden="true" />}>
+        <Panel title={tr("Share of rides")} icon={<MapPin size={16} aria-hidden="true" />}>
           <Bars rows={data.rows.map((row) => ({ label: row.name, value: row.trips, hint: `${row.ridesShare}%` }))} format={count} />
         </Panel>
-        <Panel title="Money per ride" icon={<Tags size={16} aria-hidden="true" />}>
+        <Panel title={tr("Money per ride")} icon={<Tags size={16} aria-hidden="true" />}>
           <Bars rows={data.rows.map((row) => ({ label: row.name, value: row.perRideMinor }))} format={money} />
         </Panel>
-        <Panel title="Side by side" icon={<MapPin size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to="/zones">Zones</Link>}>
-          <SortTable label="Zones side by side" rows={data.rows} rowKey={(row) => row.id} initial="trips" columns={[
+        <Panel title={tr("Side by side")} icon={<MapPin size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to="/zones">{tr("Zones")}</Link>}>
+          <SortTable label={tr("Zones side by side")} rows={data.rows} rowKey={(row) => row.id} initial="trips" columns={[
             { id: "name", label: "Zone", value: (row) => row.name, show: (row) => <Link to={`/zones/${row.id}`}>{row.name}</Link> },
             { id: "trips", label: "Rides", value: (row) => row.trips, show: (row) => <>{count(row.trips)} {compare ? <Delta now={row.trips} before={row.previousTrips} /> : null}</>, numeric: true },
             { id: "share", label: "Share", value: (row) => row.ridesShare, show: (row) => `${row.ridesShare}%`, numeric: true },
@@ -221,17 +222,17 @@ export function SurgeTab({ market: current, zones, window, compare, fmt, money, 
   const top = [...rows].sort((a, b) => b.surgePct - a.surgePct)[0];
   return (
     <div className="rp-tab">
-      <Notes notes={top && top.surgePct >= 25 ? [{ tone: "info", text: `${top.name} had surge ${top.surgePct}% of the time` }] : []} />
+      <Notes notes={top && top.surgePct >= 25 ? [{ tone: "info", text: tr("{0} had surge {1}% of the time", [top.name, top.surgePct]) }] : []} />
       <Cards cards={cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Time with surge" icon={<Flame size={16} aria-hidden="true" />}>
+        <Panel title={tr("Time with surge")} icon={<Flame size={16} aria-hidden="true" />}>
           <Bars rows={rows.map((row) => ({ label: row.name, value: row.surgePct, hint: `peak ${row.peakMultiplier}×` }))} format={(value) => `${value}%`} />
         </Panel>
-        <Panel title="Added by surge" icon={<Tags size={16} aria-hidden="true" />}>
+        <Panel title={tr("Added by surge")} icon={<Tags size={16} aria-hidden="true" />}>
           <Bars rows={rows.map((row) => ({ label: row.name, value: row.extraMinor }))} format={money} />
         </Panel>
-        <Panel title="By zone" icon={<Flame size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to="/pricing?tab=surge">Surge settings</Link>}>
-          <SortTable label="Surge by zone" rows={rows} rowKey={(row) => row.id} initial="surgePct" columns={[
+        <Panel title={tr("By zone")} icon={<Flame size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to="/pricing?tab=surge">{tr("Surge settings")}</Link>}>
+          <SortTable label={tr("Surge by zone")} rows={rows} rowKey={(row) => row.id} initial="surgePct" columns={[
             { id: "name", label: "Zone", value: (row) => row.name },
             { id: "surgePct", label: "Time with surge", value: (row) => row.surgePct, show: (row) => `${row.surgePct}%`, numeric: true },
             { id: "avg", label: "Average", value: (row) => row.avgMultiplier, show: (row) => `${row.avgMultiplier}×`, numeric: true },
@@ -241,7 +242,7 @@ export function SurgeTab({ market: current, zones, window, compare, fmt, money, 
           ]} />
         </Panel>
       </div>
-      <p className="rp-foot">Demo: surge here comes from how busy each zone was (requests per free driver). When the backend logs real surge, this report reads the log.</p>
+      <p className="rp-foot">{tr("Demo: surge here comes from how busy each zone was (requests per free driver). When the backend logs real surge, this report reads the log.")}</p>
     </div>
   );
 }
@@ -269,14 +270,14 @@ export function CareTab({ market: current, zones, window, compare, fmt, onCsv }:
       <Notes notes={data.notes} />
       <Cards cards={data.cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Tickets by topic" icon={<LifeBuoy size={16} aria-hidden="true" />} aside={<Link className="link-action" to={`/support?country=${current.id}`}>Support</Link>}>
-          {data.topics.length ? <Bars rows={data.topics.map((row) => ({ label: topicLabel(row.label), value: row.value }))} format={count} /> : <p className="dx-calm">No tickets in this period.</p>}
+        <Panel title={tr("Tickets by topic")} icon={<LifeBuoy size={16} aria-hidden="true" />} aside={<Link className="link-action" to={`/support?country=${current.id}`}>{tr("Support")}</Link>}>
+          {data.topics.length ? <Bars rows={data.topics.map((row) => ({ label: topicLabel(row.label), value: row.value }))} format={count} /> : <p className="dx-calm">{tr("No tickets in this period.")}</p>}
         </Panel>
-        <Panel title="Incidents by level" icon={<ShieldAlert size={16} aria-hidden="true" />} aside={<Link className="link-action" to={`/incidents?country=${current.id}`}>Incidents</Link>}>
-          {data.levels.length ? <Bars rows={data.levels.map((row) => ({ label: row.label, value: row.value }))} format={count} /> : <p className="dx-calm">No incidents in this period.</p>}
+        <Panel title={tr("Incidents by level")} icon={<ShieldAlert size={16} aria-hidden="true" />} aside={<Link className="link-action" to={`/incidents?country=${current.id}`}>{tr("Incidents")}</Link>}>
+          {data.levels.length ? <Bars rows={data.levels.map((row) => ({ label: row.label, value: row.value }))} format={count} /> : <p className="dx-calm">{tr("No incidents in this period.")}</p>}
         </Panel>
       </div>
-      <p className="rp-foot">Demo tickets and incidents only reach back about a day and a half, so longer periods show the same numbers.</p>
+      <p className="rp-foot">{tr("Demo tickets and incidents only reach back about a day and a half, so longer periods show the same numbers.")}</p>
     </div>
   );
 }
@@ -296,17 +297,17 @@ export function PromosTab({ market: current, window, compare, fmt, money, onCsv 
   useCsv(onCsv, { name: "promotions", head: ["Promotion", "Kind", "Status", "Spent", "Rides", "New riders", "Brought in", "Back per 1 spent"], rows: rows.map((row) => [row.title, row.kind, row.status, row.cost, row.rides, row.newRiders, row.revenue, row.cost ? Math.round((row.revenue / row.cost) * 10) / 10 : 0]) });
   return (
     <div className="rp-tab">
-      <Notes notes={data.best ? [{ tone: "good", text: `${data.best.title} brings back the most: ${Math.round((data.best.revenue / data.best.cost) * 10) / 10} per 1 spent` }] : []} />
+      <Notes notes={data.best ? [{ tone: "good", text: tr("{0} brings back the most: {1} per 1 spent", [data.best.title, Math.round((data.best.revenue / data.best.cost) * 10) / 10]) }] : []} />
       <Cards cards={cards} fmt={fmt} compareLabel={window.compareLabel} compare={compare} />
       <div className="rp-grid">
-        <Panel title="Spent by kind" icon={<Gift size={16} aria-hidden="true" />}>
-          <Bars rows={data.byKind.map((row) => ({ label: row.label, value: row.cost * units, hint: `${row.cost ? Math.round((row.revenue / row.cost) * 10) / 10 : 0}× back` }))} format={money} />
+        <Panel title={tr("Spent by kind")} icon={<Gift size={16} aria-hidden="true" />}>
+          <Bars rows={data.byKind.map((row) => ({ label: row.label, value: row.cost * units, hint: tr("{0}× back", [row.cost ? Math.round((row.revenue / row.cost) * 10) / 10 : 0]) }))} format={money} />
         </Panel>
-        <Panel title="Brought in by kind" icon={<Tags size={16} aria-hidden="true" />}>
+        <Panel title={tr("Brought in by kind")} icon={<Tags size={16} aria-hidden="true" />}>
           <Bars rows={data.byKind.map((row) => ({ label: row.label, value: row.revenue * units }))} format={money} />
         </Panel>
-        <Panel title="Every promotion" icon={<Gift size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to={`/promotions?country=${country}`}>Promotions</Link>}>
-          <SortTable label="Promotions return" rows={rows} rowKey={(row) => row.id} initial="back" columns={[
+        <Panel title={tr("Every promotion")} icon={<Gift size={16} aria-hidden="true" />} wide aside={<Link className="link-action" to={`/promotions?country=${country}`}>{tr("Promotions")}</Link>}>
+          <SortTable label={tr("Promotions return")} rows={rows} rowKey={(row) => row.id} initial="back" columns={[
             { id: "title", label: "Promotion", value: (row) => row.title },
             { id: "kind", label: "Kind", value: (row) => row.kind },
             { id: "status", label: "Status", value: (row) => row.status },
@@ -318,7 +319,7 @@ export function PromosTab({ market: current, window, compare, fmt, money, onCsv 
           ]} />
         </Panel>
       </div>
-      <p className="rp-foot">Demo results for the whole life of each promotion, not only this period, until rides are counted per promotion.</p>
+      <p className="rp-foot">{tr("Demo results for the whole life of each promotion, not only this period, until rides are counted per promotion.")}</p>
     </div>
   );
 }
