@@ -25,6 +25,11 @@ export type ZoneSurge = {
   free: number;
   endsAt: string | null;
   scheduledName: string | null;
+  /**
+   * Live panel only (contract v0.7.2 surgeLive): false while the server has no SurgeSample for the zone yet, so
+   * requests, free drivers and ratio are not known (they are 0 then and must not be shown as data).
+   */
+  demandKnown?: boolean;
 };
 
 export const LEVEL_COLOR: Record<SurgeLevel, string> = {
@@ -153,23 +158,26 @@ export function smartChanges(book: ZoneBook, at: number): number {
   return changes;
 }
 
-/** Alerts only for what needs a person: a manual surge, an error, or smart surge misbehaving. */
-export function surgeAlerts(rows: readonly { book: ZoneBook; live: ZoneLive; surge: ZoneSurge }[], at: number): SurgeAlert[] {
+/**
+ * Alerts only for what needs a person: a manual surge, an error, or smart surge misbehaving. The live panel passes
+ * `changes` (smart surge level changes in the last hour from the server's timeline; null = not known, no alert).
+ */
+export function surgeAlerts(rows: readonly { book: ZoneBook; live: ZoneLive; surge: ZoneSurge }[], at: number, changes: (book: ZoneBook) => number | null = (book) => smartChanges(book, at)): SurgeAlert[] {
   const alerts: SurgeAlert[] = [];
   for (const { book, live, surge } of rows) {
     const top = surge.profile?.steps[surge.profile.steps.length - 1];
-    const short = top ? surge.ratio >= top.ratio : surge.ratio >= 3;
+    const short = surge.demandKnown !== false && (top ? surge.ratio >= top.ratio : surge.ratio >= 3);
     if (surge.source !== "manual" && short) {
       const cause = surge.smartNote ?? (surge.profile && surge.multiplier >= surge.profile.cap ? `smart surge is at its cap ×${surge.profile.cap}` : "smart surge is at its highest step");
       alerts.push({ id: `${surge.zoneId}-manual`, zoneId: surge.zoneId, tone: "critical", title: `${surge.name} needs a manual surge`, detail: `${surge.requests} ride requests · ${surge.free} free online drivers · ${cause.charAt(0).toLowerCase()}${cause.slice(1)}.`, action: "manual" });
     }
-    if (book.smart.enabled && surge.requests === 0 && surge.free === 0) {
+    if (book.smart.enabled && (surge.demandKnown === false || (surge.requests === 0 && surge.free === 0))) {
       alerts.push({ id: `${surge.zoneId}-nodata`, zoneId: surge.zoneId, tone: "warning", title: `No live data from ${surge.name}`, detail: "Smart surge cannot work here until riders or drivers show up.", action: "settings" });
     }
     if (live.manual && Date.parse(live.manual.endsAt) > at && at - Date.parse(live.manual.startedAt) > 3 * 3_600_000) {
       alerts.push({ id: `${surge.zoneId}-long`, zoneId: surge.zoneId, tone: "warning", title: `Manual surge in ${surge.name} has run over 3 h`, detail: `×${live.manual.multiplier.toFixed(1)} since ${new Date(live.manual.startedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}. Check it is still needed.`, action: "stop" });
     }
-    if (book.smart.enabled && surge.source !== "manual" && smartChanges(book, at) >= 6) {
+    if (book.smart.enabled && surge.source !== "manual" && (changes(book) ?? 0) >= 6) {
       alerts.push({ id: `${surge.zoneId}-flap`, zoneId: surge.zoneId, tone: "warning", title: `Smart surge in ${surge.name} goes up and down too often`, detail: `It changed level 6 or more times in the last hour. Raise "start only if it holds" above ${book.smart.holdMin} min.`, action: "settings" });
     }
   }
@@ -207,12 +215,13 @@ export function surgeEffect(id: string, multiplier: number): { drivers: number; 
 export function surgeTimeline(book: ZoneBook, log: readonly SurgeEvent[], at: number, hours = 12): TimelineItem[] {
   const timeZone = marketOfZone(book.zoneId)?.timeZone ?? "Europe/Stockholm";
   const items: TimelineItem[] = log
-    .filter((event) => event.zoneId === book.zoneId && Date.parse(event.at) > at - 7 * 86_400_000)
+    // v0.7.2 (owner 2026-10-28): no surge notice to drivers; an old "notify" entry is not shown.
+    .filter((event) => event.zoneId === book.zoneId && event.kind !== "notify" && Date.parse(event.at) > at - 7 * 86_400_000)
     .map((event) => ({
       id: event.id,
       at: Date.parse(event.at),
-      source: event.kind === "notify" ? "off" : "manual",
-      title: event.kind === "manual-start" ? `Manual surge ×${event.multiplier.toFixed(1)} started` : event.kind === "manual-stop" ? "Manual surge stopped" : `Drivers told about surge ×${event.multiplier.toFixed(1)}`,
+      source: "manual" as const,
+      title: event.kind === "manual-start" ? `Manual surge ×${event.multiplier.toFixed(1)} started` : "Manual surge stopped",
       by: event.by,
       multiplier: event.multiplier,
       effect: event.kind === "manual-start" ? surgeEffect(event.id, event.multiplier) : null,

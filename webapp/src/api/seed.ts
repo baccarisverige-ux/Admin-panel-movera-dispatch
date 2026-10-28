@@ -51,7 +51,64 @@ export type DemoRecord = {
   orgNumber?: string;
   ownerId?: string;
   joinedAt?: string;
+  /** Incidents (live, contract v0.7.0): who raised it, the phone's GPS, the car's position, the escalation. */
+  raisedBy?: "rider" | "driver" | "system";
+  phoneLat?: number;
+  phoneLng?: number;
+  phoneAt?: string | null;
+  carLat?: number;
+  carLng?: number;
+  carAt?: string | null;
+  escalatedAt?: string | null;
+  version?: number;
+  /** Live build: the record came from the Movera server. Nothing on it may be invented (owner rule, part 3). */
+  live?: true;
+  /** Live trips: the server's own facts (contract TripProjection), so no page derives them from the id. */
+  liveTrip?: LiveTripFacts;
+  /** Live drivers: the server's presence and rating (Driver, /admin/live/drivers). */
+  liveDriver?: LiveDriverFacts;
+  /** Live riders: the server's rating, wallet and unpaid fees (AdminRider). */
+  liveRider?: LiveRiderFacts;
+  /** Live ratings (GET /admin/ratings, contract v0.9.0). */
+  liveRating?: LiveRatingFacts;
+  /** Live payouts (GET /admin/payouts, contract v0.9.0): the lines behind the amount. */
+  livePayout?: { lines: { code: string; amountMinor: number; count?: number }[]; source: string; periodStart: string; periodEnd: string; tripCount: number; currency: string };
 };
+
+export type LiveRatingFacts = { tripId: string; from: "rider" | "driver"; stars: number; tags: string[]; comment: string | null; at: string; riderId: string; riderName: string | null; driverId: string | null; driverName: string | null; zoneId: string; hidden: boolean; hiddenBy: string | null; hiddenAt: string | null; hideReason: string | null };
+
+export type LivePlace = { address?: string; lat: number; lng: number };
+/** Money in minor units of the trip's currency; null when the server did not send that line. */
+export type LiveTripFacts = {
+  kind: "live" | "scheduled";
+  categoryId: string;
+  paymentMethod: string;
+  paymentStatus: string | null;
+  currency: string;
+  pickup: LivePlace;
+  dropoff: LivePlace;
+  stops: LivePlace[];
+  fare: number;
+  fareLines: { code: string; amountMinor: number }[];
+  commission: number | null;
+  driverEarnings: number | null;
+  pickupPay: number | null;
+  driverBonus: number | null;
+  walletApplied: number | null;
+  cashToCollect: number | null;
+  driverSilentAlert: { at?: string; [key: string]: unknown } | null;
+  ratingStatus: string | null;
+  updatedAt: string;
+};
+export type LiveDriverFacts = {
+  onlineStatus: string;
+  rating: number | null;
+  location: { lat: number; lng: number; measuredAt: string } | null;
+  lastFixAt: string | null;
+  stale: boolean | null;
+  activeTripId: string | null;
+};
+export type LiveRiderFacts = { rating: number | null; walletMinor: number | null; outstandingMinor: number | null; currency: string | null; deletionRequestedAt: string | null };
 
 /** A trip row: a DemoRecord whose status is a contract TripStatus. */
 export type TripRecord = Omit<DemoRecord, "status" | "previousStatus"> & {

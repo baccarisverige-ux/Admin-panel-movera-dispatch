@@ -31,6 +31,29 @@ tr.live-open td { background: #f6f7fb; }
 .live-actions .link-action:disabled { color: #687386; opacity: 0.6; cursor: not-allowed; text-decoration: none; }
 .live-dialog input[inputmode="decimal"] { width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 8px; font: inherit; }
 .live-timeline { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
-.live-demo-banner { border: 1px solid #f5c26b; background: #fff8e6; color: #7a4b00; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-weight: 600; }
+.live-not-connected { display: inline-block; float: right; margin: 0 0 8px 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line, #d9dde3); color: var(--muted, #5b6472); font-size: 12px; font-weight: 600; background: transparent; }
 .live-fare-lines table, [data-testid="trip-offers"] .table-wrap table { min-width: 0; }
 .live-field strong span { text-transform: none; letter-spacing: normal; font-size: inherit; }
+.live-list-bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 0 0 12px; }
+.live-list-bar .live-search { margin: 0; flex: 1 1 280px; }
+.live-status-filter { display: flex; gap: 8px; align-items: center; font-size: 13px; color: #687386; }
+.live-list-bar .live-error { flex-basis: 100%; margin: 0; }
+
+/* Safety part 1 (2026-10-27): the SOS / car-lost alarm on every live page, and the sound permission banner. */
+.incident-alarm { display: grid; gap: 6px; margin: 0 0 10px; }
+.incident-alarm:empty { display: none; }
+.incident-sound, .incident-ring { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 12px; font-size: 13px; }
+.incident-sound { position: fixed; z-index: 60; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); background: #fff4e5; border: 1px solid #f3c27a; color: #6b3d00; }
+.incident-ring { background: #c62828; color: #fff; border: 1px solid #8e0000; animation: incident-pulse 1.2s ease-in-out infinite; }
+.incident-ring b { font-size: 14px; letter-spacing: 0.02em; text-transform: uppercase; }
+.incident-ring span { flex: 1 1 200px; min-width: 0; }
+.incident-ring .dash-btn { background: #fff; color: #8e0000; border-color: #fff; }
+@keyframes incident-pulse { 50% { box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.25); } }
+@media (prefers-reduced-motion: reduce) { .incident-ring { animation: none; } }
+/* v0.8.0 settings flow: a control with no server field yet, the Standard bar and the "Uses standard" chip. */
+.live-not-connected.inline { float: none; margin: 0 0 0 8px; padding: 1px 8px; font-size: 11px; vertical-align: middle; }
+.standard-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 12px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line, #d9dde3); font-size: 13px; }
+.standard-bar.standard { background: rgba(37, 99, 235, 0.06); }
+.standard-bar.uses { background: rgba(22, 163, 74, 0.06); }
+.standard-bar span { display: inline-flex; align-items: center; gap: 6px; }
+.uses-standard { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: rgba(22, 163, 74, 0.12); color: #166534; }

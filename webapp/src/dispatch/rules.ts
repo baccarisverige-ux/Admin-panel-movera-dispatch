@@ -313,7 +313,8 @@ export type ZoneDispatch = {
   waiting: WaitStep[];
   driverCancel: { on: boolean; commissionCutPct: number };
   /** Live trips (Radar and live Exclusive): the smart check, and per car type free minutes after accept, then the fee. */
-  riderCancel: { on: boolean; closerPct: number; priority: boolean; priorityMin: number; fees: CancelFeeTable };
+  /** v0.8.0 (owner 2026-10-27): driverSharePct, the driver's share of the rider's cancel fee, per zone; default 100 %. */
+  riderCancel: { on: boolean; closerPct: number; priority: boolean; priorityMin: number; fees: CancelFeeTable; driverSharePct: number };
   extras: { id: ExtraId; on: boolean; badge: boolean }[];
   longTripKm: number;
   stops: { on: boolean; max: number; freeWaitMin: number; perMin: number; perStop: number; changeDuring: boolean; driverCanRefuse: boolean };
@@ -510,7 +511,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     favourite: { on: true, maxKm: 4, waitSec: 15 },
     waiting: waitingDefault(),
     driverCancel: { on: true, commissionCutPct: 5 },
-    riderCancel: { on: true, closerPct: 25, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live") },
+    riderCancel: { on: true, closerPct: 25, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live"), driverSharePct: 100 },
     extras: EXTRAS.map((extra) => ({ id: extra.id, on: true, badge: true })),
     longTripKm: 50,
     // Owner Q39: 3 stops at most by default (contract.json#configDefaults.maxStops).
@@ -765,6 +766,8 @@ function complete(zoneId: string, stored: Partial<ZoneDispatch> | undefined): Zo
   riderCancel.fees = completeCancelFees(oldCancel.fees, oldCancel.fees === undefined && (oldCancel.freeMin !== undefined || oldCancel.fee !== undefined)
     ? legacyCancelFees(typeof oldCancel.freeMin === "number" ? oldCancel.freeMin : 2, typeof oldCancel.fee === "number" ? oldCancel.fee : legacyFee)
     : base.riderCancel.fees);
+  const share = oldCancel.driverSharePct;
+  riderCancel.driverSharePct = typeof share === "number" && share >= 0 && share <= 100 ? share : 100;
   merged.riderCancel = riderCancel;
   merged.rideCheck = completeRideCheck(base.rideCheck, stored.rideCheck);
   merged.destinationMode = completeDestinationMode(stored.destinationMode);
@@ -1218,6 +1221,8 @@ export function publish(
   actorId: string,
   at: string,
   note: string,
+  /** v0.8.0 (owner 2026-10-27): the live panel publishes at once, no second admin. */
+  options: { direct?: boolean } = {},
 ): { book: DispatchBook; live: string[]; waiting: string[]; error?: string } {
   const changes = pendingChanges(book, working, zoneIds);
   const countryChanges = Object.values(countries).flatMap((item) => countryLines(liveCountry(book, item.country), item).map((line) => `${market(item.country).name}: ${line}`));
@@ -1226,8 +1231,8 @@ export function publish(
   const badCountry = Object.values(countries).map(countryIssues).find((list) => list.length);
   if (badCountry) return { book, live: [], waiting: [], error: badCountry[0] };
   if (!changes.length && !countryChanges.length) return { book, live: [], waiting: [], error: "Nothing to publish. Change a rule first." };
-  const now = changes.filter((change) => !change.big);
-  const later = changes.filter((change) => change.big);
+  const now = changes.filter((change) => options.direct || !change.big);
+  const later = changes.filter((change) => !options.direct && change.big);
   const nextLive = { ...book.live };
   for (const change of now) nextLive[change.zoneId] = clone(working[change.zoneId] ?? draftRules(book, change.zoneId));
   const nextCountries = { ...book.liveCountries, ...clone(countries) };

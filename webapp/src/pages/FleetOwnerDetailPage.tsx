@@ -1,4 +1,8 @@
+import { isLiveData } from "../live/realData";
+import { NotConnected } from "../live/NotConnected";
+import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { useEffect, useMemo, useState } from "react";
+import { LiveFleetPanel } from "../live/LiveFleetPanel";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Building2, Car, Hash, Mail, MessageSquare, Phone, StickyNote, Users } from "lucide-react";
@@ -229,6 +233,7 @@ export function FleetOwnerDetailPage() {
         </TabPanel>
 
         <TabPanel id="fleets" activeId={tab}>
+          <LiveFleetPanel ownerId={owner.id} />
           {ownFleets.length === 0 ? <p className="state-line">This owner has no fleet yet.</p> : ownFleets.map((fleet) => {
             const members = crewStats.filter((row) => row.driver.fleetId === fleet.id);
             return (
@@ -271,7 +276,7 @@ export function FleetOwnerDetailPage() {
               <p>Fleet owners provide company documents. Some are the same as drivers (registration, tax, bank), others are only for owners. Set each one on its own.</p>
             </div>
           </div>
-          <DocumentsTable
+          {isLiveData() ? <LiveDriverDocuments driverId={owner.id} /> : <DocumentsTable
             label="Fleet owner documents"
             rows={docRows}
             nowMs={now}
@@ -283,10 +288,11 @@ export function FleetOwnerDetailPage() {
             expectedSliceRev={store.value.draftRev}
             build={buildDoc}
             onSaved={setNotice}
-          />
+          />}
         </TabPanel>
 
         <TabPanel id="performance" activeId={tab}>
+          {isLiveData() ? <NotConnected block /> : <>
           <div className="fd-section-head">
             <div><h3>Fleet performance</h3><p>All drivers in this owner's fleets · {span.label} · {span.compareLabel}</p></div>
             <PeriodPicker key={`${period.kind}${period.on ?? ""}${period.from ?? ""}`} period={period} today={localDay(now, market.timeZone)} onChange={(next) => setParams(periodParams(next, params))} />
@@ -301,9 +307,11 @@ export function FleetOwnerDetailPage() {
             <Stat label="Complaints" value={String(total.complaints)} inverse delta={change(total.complaints, before.complaints)} />
             <Stat label="Distance" value={`${new Intl.NumberFormat(market.locale).format(total.distanceKm)} km`} />
           </div>
+        </>}
         </TabPanel>
 
         <TabPanel id="earnings" activeId={tab}>
+          {isLiveData() ? <NotConnected block /> : <>
           <div className="fd-section-head">
             <div><h3>Fleet earnings</h3><p>{span.label} · paid to the company account</p></div>
             <PeriodPicker key={`e${period.kind}${period.on ?? ""}${period.from ?? ""}`} period={period} today={localDay(now, market.timeZone)} onChange={(next) => setParams(periodParams(next, params))} />
@@ -331,6 +339,7 @@ export function FleetOwnerDetailPage() {
               )}
             </section>
           </div>
+        </>}
         </TabPanel>
 
         <TabPanel id="messages" activeId={tab}>

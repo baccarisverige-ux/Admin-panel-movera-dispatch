@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { AlertTriangle, Maximize2, Minus, Plus, X, Zap } from "lucide-react";
 import { useSlice } from "../api/hooks";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { localParts } from "../dashboard/time";
@@ -24,6 +25,8 @@ type TimeMode = "chip" | "minutes" | "until";
  */
 export function SurgeQuickPopup({ zone, timeZone, fullLink, onClose, onNotice }: { zone: ZoneSurge; timeZone: string; fullLink: string | null; onClose: () => void; onNotice: (text: string) => void }) {
   const { agent } = useSession();
+  // v0.7.2 (contract.json#auth.admin.oneAdmin): in the live panel one admin is enough, so no "second admin" line.
+  const liveSession = useLiveSessionMaybe();
   const slice = useSlice<unknown>(SLICE_KEY, emptyPricingStore());
   const store = useMemo(() => normalizeStore(slice.value), [slice.value]);
   const canEdit = Boolean(agent && can(agent.role, "settings.publish"));
@@ -136,7 +139,7 @@ export function SurgeQuickPopup({ zone, timeZone, fullLink, onClose, onNotice }:
         )}
         {fullLink ? <Link className="dash-btn small ghost" to={fullLink}>{trn("{0} Open full screen ›", <Maximize2 size={12} aria-hidden="true" />)}</Link> : null}
       </footer>
-      <small className="fine">{tr("A ride keeps the price it was quoted. Big changes may need a second admin, like in Pricing.")}</small>
+      <small className="fine">{liveSession ? tr("A ride keeps the price it was quoted.") : tr("A ride keeps the price it was quoted. Big changes may need a second admin, like in Pricing.")}</small>
     </aside>
   );
 }

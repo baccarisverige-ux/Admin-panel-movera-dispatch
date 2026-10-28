@@ -1,5 +1,6 @@
 import type { DemoRecord } from "../api/seed.ts";
 import type { MarketId } from "../markets/markets.ts";
+import { isLiveData } from "../live/realData.ts";
 
 /**
  * Fraud rules per country, the signals they read for each rider and driver, a score,
@@ -74,6 +75,8 @@ function hash(text: string): number {
 export type Person = { key: string; id: string; who: Who; name: string; zoneId: string; signals: Partial<Record<RuleId, number>> };
 
 export function signalsOf(record: DemoRecord, who: Who): Partial<Record<RuleId, number>> {
+  // Live: no signal is derived from the id; the server's signals are read by the Risk page (owner rule, part 3).
+  if (isLiveData() || record.live) return {};
   const seed = hash(`${who}:${record.id}`);
   const signals: Partial<Record<RuleId, number>> = {
     cancels: who === "driver" ? seed % 42 : (seed >>> 3) % 40,

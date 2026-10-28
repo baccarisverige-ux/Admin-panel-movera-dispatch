@@ -1,4 +1,7 @@
 import { market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
+import { NOT_CONNECTED_TEXT, isLiveData, liveRiderOf, liveTripOf, liveTripsOfRider } from "../live/realData.ts";
+import { placeText } from "../trips/present.ts";
+import type { DemoRecord } from "../api/seed.ts";
 
 /**
  * Everything the admin sees about one rider, built from the rider record.
@@ -6,7 +9,7 @@ import { market, marketOfZone, zoneById, type MarketId } from "../markets/market
  * the rider page always agree. Demo model: stable per rider, anchored to "now".
  */
 
-export type RiderRecord = { id: string; name: string; phone: string; zoneId: string; status: string; tripId?: string | null };
+export type RiderRecord = { id: string; name: string; phone: string; zoneId: string; status: string; tripId?: string | null; email?: string; live?: true; liveRider?: DemoRecord["liveRider"] };
 
 export type BookingStatus =
   | "completed"
@@ -127,6 +130,8 @@ export function riderCode(rider: { id: string; zoneId: string }): string {
 
 /** When the rider signed up: about one in sixteen joined this week. */
 export function joinedAt(rider: { id: string }, now: number): number {
+  // Live: the server sends no sign-up date for a rider (NaN = "Not connected yet").
+  if (isLiveData()) return NaN;
   const seed = hash(`join:${rider.id}`);
   const days = seed % 16 === 0 ? seed % 7 : 8 + (seed >>> 5) % 900;
   return now - days * DAY - ((seed >>> 3) % 86_400) * 1000;
@@ -135,7 +140,48 @@ export function joinedAt(rider: { id: string }, now: number): number {
 type DriverLite = { id: string; name: string; zoneId: string };
 
 /** Every booking the rider ever made, newest first, with the outcome of each. */
+const LIVE_STATUS: Record<string, BookingStatus> = {
+  completed: "completed",
+  cancelled_by_rider: "cancelled_rider",
+  cancelled_by_driver: "cancelled_driver",
+  cancelled_by_admin: "cancelled_driver",
+  cancelled_by_system: "cancelled_driver",
+  expired: "cancelled_driver",
+  no_show: "no_show",
+  failed: "interrupted",
+};
+
+/** Live: the rider's trips the panel has read from the server; km and minutes are not on a trip (NaN). */
+function liveBookings(rider: RiderRecord, drivers: readonly DriverLite[]): Booking[] {
+  return liveTripsOfRider(rider.id).flatMap((trip): Booking[] => {
+    const facts = liveTripOf(trip);
+    if (!facts) return [];
+    const status: BookingStatus = LIVE_STATUS[trip.status] ?? (facts.kind === "scheduled" && !trip.driverId ? "scheduled" : "in_progress");
+    const driver = trip.driverId ? drivers.find((row) => row.id === trip.driverId) ?? null : null;
+    return [{
+      id: trip.id,
+      at: Date.parse(trip.pickupAt ?? trip.createdAt ?? facts.updatedAt),
+      status,
+      reason: (trip as { cancelReasonCode?: string }).cancelReasonCode ?? null,
+      category: facts.categoryId,
+      from: placeText(facts.pickup),
+      to: placeText(facts.dropoff),
+      km: NaN,
+      minutes: NaN,
+      fareMinor: status === "completed" || status === "no_show" || status === "cancelled_rider" ? facts.fare : 0,
+      feeMinor: NaN,
+      driverId: trip.driverId ?? null,
+      driverName: driver?.name ?? null,
+      payment: facts.paymentMethod,
+      ratingGiven: null,
+      promo: false,
+      zoneId: trip.zoneId,
+    }];
+  });
+}
+
 export function riderBookings(rider: RiderRecord, now: number, drivers: readonly DriverLite[] = []): Booking[] {
+  if (isLiveData()) return liveBookings(rider, drivers);
   const seed = hash(rider.id);
   const country = countryOf(rider);
   const start = joinedAt(rider, now);
@@ -226,7 +272,44 @@ function usualTimes(bookings: readonly Booking[], timeZone: string): string {
   return `${days}, around ${String(peak).padStart(2, "0")}:00`;
 }
 
+/** Live: only what the server sends (rating, email); every other number is NaN and every text "Not connected yet". */
+function liveProfile(rider: RiderRecord): RiderProfile {
+  const facts = liveRiderOf(rider);
+  const none = NOT_CONNECTED_TEXT;
+  return {
+    id: rider.id,
+    code: rider.id,
+    country: facts?.currency === "EUR" ? "FR" : facts?.currency === "TND" ? "TN" : countryOf(rider),
+    joinedAt: NaN,
+    email: rider.email ?? none,
+    language: none,
+    rating: facts?.rating ?? NaN,
+    score: NaN,
+    completed: NaN,
+    cancelled: NaN,
+    noShows: NaN,
+    interrupted: NaN,
+    cancelRate: NaN,
+    spentMinor: NaN,
+    avgFareMinor: NaN,
+    promoMinor: NaN,
+    lastRideAt: null,
+    ridesLast30: NaN,
+    favouriteCategory: none,
+    usualTimes: none,
+    payment: { method: none, expires: none, expiringSoon: false, failed: NaN, chargebacks: NaN },
+    devices: [],
+    referral: { code: none, invited: NaN, joined: NaN },
+    fraudFlags: [],
+    trustedContacts: [],
+    homeArea: none,
+    workArea: none,
+    birthdayMonth: NaN,
+  };
+}
+
 export function riderProfile(rider: RiderRecord, bookings: readonly Booking[], now: number): RiderProfile {
+  if (isLiveData()) return liveProfile(rider);
   const seed = hash(rider.id);
   const country = countryOf(rider);
   const done = bookings.filter((booking) => booking.status === "completed");

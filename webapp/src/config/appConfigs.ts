@@ -183,8 +183,9 @@ function booking(base: Common) {
   return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: base.zone.pickupMove.maxMeters };
 }
 
+/** v0.7.1/v0.7.2 contract sample: the sub-line goes to the rider app as { sv, fr, en } (contract.json#categoryCatalog). */
 function catalog(base: Common) {
-  return { categories: base.categories.map((category, index) => ({ id: category.id, label: category.label, seats: category.seats, sort: index + 1, line: category.line })) };
+  return { categories: base.categories.map((category, index) => ({ id: category.id, label: category.label, seats: category.seats, sort: index + 1, line: category.lines ?? { sv: category.line, fr: category.line, en: category.line } })) };
 }
 
 /** The config page's override context for a market zone: its shape id ("op-norrmalm") and market ("SE-STO"). */
@@ -237,6 +238,11 @@ function cancelFees(base: Common) {
     live: feeRules(base.zone.riderCancel.fees, base.categoryIds, base.currency),
     reservation: feeRules(base.zone.reservation.riderFees, base.categoryIds, base.currency),
   };
+}
+
+/** DriverAppConfig.cancelFees (v0.8.0): the tables plus the driver's share of a rider's cancel fee (Dispatch, per zone). */
+function driverCancelFees(base: Common) {
+  return { ...cancelFees(base), driverSharePct: base.zone.riderCancel.driverSharePct ?? 100 };
 }
 
 function rideCheck(base: Common, state: AppConfigState) {
@@ -459,7 +465,7 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     },
     pickupPay: pickupPay(base),
     driverBonus: driverBonus(base),
-    cancelFees: cancelFees(base),
+    cancelFees: driverCancelFees(base),
     waiting: {
       freeWaitMin: wait.freeWaitMin, perMin: wait.perMin, noShowAfterMin: wait.noShowAfterMin, noShowFee: wait.noShowFee, ...share,
       byCategory: wait.byCategory,

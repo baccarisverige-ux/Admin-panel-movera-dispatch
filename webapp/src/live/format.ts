@@ -222,3 +222,34 @@ export function tripTimeline(trip: { createdAt: string; scheduledAt?: string; ac
   if (!trip.cancellation || trip.cancellation.at !== trip.updatedAt) rows.push({ label: "Last change", at: trip.updatedAt });
   return rows.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 }
+
+/** contract.json#fareLines codes in the admin's words (sv/fr/en through the dictionary). */
+export const FARE_LINE_LABEL = {
+  base: "Base fare",
+  distance: "Distance",
+  time: "Time",
+  stops: "Extra stops",
+  waiting: "Waiting at pickup",
+  pickup_fee: "Pickup fee",
+  surge: "Surge",
+  discount: "Discount",
+  cancel_fee: "Cancel fee",
+  app_fee: "App fee",
+  minimum_adjust: "Raised to the minimum",
+  maximum_adjust: "Lowered to the maximum",
+  stop_waiting: "Waiting at stops",
+  extras: "Extras",
+  airport: "Airport fee",
+  reservation_fee: "Reservation fee",
+  fixed_route: "Fixed route price",
+  rounding: "Rounding",
+  outstanding_fee: "Unpaid fee from an earlier trip",
+  rider_raise: "Rider raised the price",
+  pickup_pay: "Driver pickup pay · paid by Movera",
+  driver_bonus: "Money added for the driver (paid by Movera)",
+} as const;
+
+export function fareLineLabel(code: string): string {
+  const label = (FARE_LINE_LABEL as Record<string, (typeof FARE_LINE_LABEL)[keyof typeof FARE_LINE_LABEL]>)[code];
+  return label ? tr(label) : code;
+}

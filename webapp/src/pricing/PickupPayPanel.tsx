@@ -122,7 +122,7 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
   const rate = exampleCategory ? pay.rates[exampleCategory.id] : undefined;
   const pickup = pickupPayFor(rate, exampleKm, exampleMin);
   const maxFromKm = maxReachedAtKm(rate, exampleKm > 0 ? exampleMin / exampleKm : 0);
-  const quote = exampleCategory ? quoteRide(book, { categoryId: exampleCategory.id, ...SAMPLE_TRIP, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: exampleReservation, surge: 1 }) : null;
+  const quote = exampleCategory ? quoteRide(book, { categoryId: exampleCategory.id, ...SAMPLE_TRIP, waitMin: 0, stops: 0, stopWaitMin: 0, airportPickup: false, airportDropoff: false, reservation: exampleReservation, surge: 1 }) : null;
   const exampleFee = exampleCategory ? riderPickupFee(pay, exampleCategory.id, exampleReservation) : 0;
   const split = quote && !quote.error ? pickupSplit(quote.total, quote.driverGets, pickup.total, exampleFee) : null;
 

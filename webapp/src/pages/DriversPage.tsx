@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { LiveListBar } from "../live/LiveListBar";
 import { useNavigate, useSearchParams } from "react-router";
 import { can } from "../auth/permissions";
 import { BonusesView } from "../drivers/BonusesView";
@@ -173,7 +174,9 @@ export function DriversPage() {
         </label>
       </div>
 
+      <LiveListBar list="drivers" />
       <DataTable
+          serverSearch="drivers"
         className="fd-table"
         head={[tr("Code"), tr("Name"), tr("Online"), tr("Type"), tr("Status"), tr("Zone"), tr("Vehicle"), tr("Categories"), tr("Documents"), tr("Rating"), tr("Trips"), tr("Cancel %"), tr("Earnings"), tr("Contact")]}
         rowIds={rows.map((row) => row.driver.id)}

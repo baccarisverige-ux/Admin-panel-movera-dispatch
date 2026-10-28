@@ -1,4 +1,5 @@
 import type { DemoRecord } from "../api/seed.ts";
+import { isLiveData } from "../live/realData.ts";
 
 /** Why a ride payment failed, and whether it is the rider's problem or Movera's. */
 export type FailureCause = { kind: "rider" | "system"; reason: string };
@@ -12,7 +13,9 @@ function hash(text: string): number {
   return value >>> 0;
 }
 
-export function failureCause(payment: Pick<DemoRecord, "id">): FailureCause {
+export function failureCause(payment: Pick<DemoRecord, "id"> & { live?: true }): FailureCause {
+  // Live: the server sends no failure reason yet.
+  if (payment.live || isLiveData()) return { kind: "rider", reason: "Not connected yet" };
   const seed = hash(payment.id);
   return seed % 4 === 0
     ? { kind: "system", reason: SYSTEM_REASONS[(seed >>> 3) % SYSTEM_REASONS.length] }
@@ -20,7 +23,9 @@ export function failureCause(payment: Pick<DemoRecord, "id">): FailureCause {
 }
 
 /** Demo: older failures were already followed up; roughly a third are still open. */
-export function failureHandled(payment: Pick<DemoRecord, "id">): boolean {
+export function failureHandled(payment: Pick<DemoRecord, "id"> & { live?: true }): boolean {
+  // Live: every failed payment counts as open until the server says otherwise.
+  if (payment.live || isLiveData()) return false;
   return (hash(`handled:${payment.id}`) >>> 5) % 3 !== 0;
 }
 

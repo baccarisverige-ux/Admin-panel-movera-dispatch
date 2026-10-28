@@ -2,6 +2,7 @@ import { market, zoneById, type MarketId } from "../markets/markets.ts";
 import type { Totals } from "./earnings.ts";
 import type { LiveDriver } from "./live.ts";
 import type { RideRequest } from "./riders.ts";
+import { isLiveData } from "../live/realData.ts";
 
 /** Smaller dashboard views built from the live state and the period totals. */
 
@@ -32,7 +33,9 @@ export function supplyDemand(id: MarketId, zoneIds: readonly string[], requests:
 
 export type AirportQueue = { zoneId: string; name: string; waiting: number; waitMin: number; pickupsLastHour: number };
 
-export function airportQueues(id: MarketId, drivers: readonly LiveDriver[], hourSeed: number): AirportQueue[] {
+/** Live: the airport rank queue is not on the server (null = "Not connected yet"). */
+export function airportQueues(id: MarketId, drivers: readonly LiveDriver[], hourSeed: number): AirportQueue[] | null {
+  if (isLiveData()) return null;
   return market(id).zones
     .filter((zone) => zone.kind === "airport")
     .map((zone) => {
@@ -47,7 +50,9 @@ export function airportQueues(id: MarketId, drivers: readonly LiveDriver[], hour
 export type CancelRow = { who: string; count: number; reasons: { label: string; count: number }[] };
 
 /** The period's cancellations split by who cancelled and why. */
-export function cancellations(totals: Totals): CancelRow[] {
+export function cancellations(totals: Totals): CancelRow[] | null {
+  // Live: who cancelled and why is not summed by the server yet; never shares of a made-up total.
+  if (isLiveData()) return null;
   const total = totals.cancelled;
   const split = (share: number, reasons: [string, number][]): CancelRow["reasons"] =>
     reasons.map(([label, part]) => ({ label, count: Math.round(total * share * part) }));
@@ -61,7 +66,8 @@ export function cancellations(totals: Totals): CancelRow[] {
 
 export type RatingSummary = { average: number; rated: number; low: number; complaints: number; topComplaints: { label: string; count: number }[] };
 
-export function ratings(totals: Totals, seedKey: string): RatingSummary {
+export function ratings(totals: Totals, seedKey: string): RatingSummary | null {
+  if (isLiveData()) return null;
   const seed = hash(seedKey);
   const rated = Math.round(totals.trips * 0.71);
   const complaints = Math.round(totals.trips * 0.004);

@@ -1,4 +1,5 @@
-import { complaintOf, driverReports, promoUsed, randomRiders, threadOf, unpaidMinor, waitingMinutes, walletMinor, type CareMessage, type PromoTicket, type RiderCare } from "./care.ts";
+import { isLiveData } from "../live/realData.ts";
+import { complaintOf, promoUsed, randomRiders, threadOf, unpaidMinor, waitingMinutes, walletMinor, type CareMessage, type PromoTicket, type RiderCare } from "./care.ts";
 import { hash, riderBookings, riderProfile, type Booking, type RiderProfile, type RiderRecord } from "./profile.ts";
 
 /** One row per rider for the list, plus the categories each rider belongs to. */
@@ -41,7 +42,6 @@ export type RiderRow = {
   unpaidMinor: number;
   walletMinor: number;
   complaint: string | null;
-  reports: number;
   promos: { ticket: PromoTicket; used: number }[];
   periodRides: number;
   periodSpentMinor: number;
@@ -58,7 +58,7 @@ export function buildRows(riders: readonly RiderRecord[], care: RiderCare, now: 
     const profile = riderProfile(rider, bookings, now);
     const thread = threadOf(care, rider, now);
     const inPeriod = bookings.filter((booking) => booking.status === "completed" && booking.at >= since && booking.at <= now);
-    const live: LiveState = waitingIds.has(rider.id) ? "waiting" : bookings.some((booking) => booking.status === "in_progress") ? "on_trip" : hash(`online:${rider.id}`) % 18 === 0 ? "online" : "offline";
+    const live: LiveState = waitingIds.has(rider.id) ? "waiting" : bookings.some((booking) => booking.status === "in_progress") ? "on_trip" : !isLiveData() && hash(`online:${rider.id}`) % 18 === 0 ? "online" : "offline";
     const promos = care.promotions
       .filter((ticket) => ticket.status === "active" && ticket.riderIds.includes(rider.id) && Date.parse(ticket.validTo) > now)
       .map((ticket) => ({ ticket, used: promoUsed(ticket, rider.id, bookings) }))
@@ -73,7 +73,6 @@ export function buildRows(riders: readonly RiderRecord[], care: RiderCare, now: 
       unpaidMinor: unpaidMinor(care, rider, profile),
       walletMinor: walletMinor(care, rider),
       complaint: complaintOf(rider),
-      reports: driverReports(rider, now).length,
       promos,
       periodRides: inPeriod.length,
       periodSpentMinor: inPeriod.reduce((sum, booking) => sum + booking.fareMinor, 0),
@@ -98,7 +97,7 @@ export function buildRows(riders: readonly RiderRecord[], care: RiderCare, now: 
     if (!row.isNew && (!row.profile.lastRideAt || now - row.profile.lastRideAt > 30 * DAY)) s.add("inactive");
     if (row.promos.length) s.add("promo");
     if (blocked) s.add("blocked");
-    if (s.has("reply") || s.has("unpaid") || row.complaint || row.reports) s.add("attention");
+    if (s.has("reply") || s.has("unpaid") || row.complaint) s.add("attention");
   }
   return rows;
 }

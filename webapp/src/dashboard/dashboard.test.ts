@@ -84,7 +84,7 @@ test("drivers on a trip move along their route and carry trip details and a wayb
     const trip = liveTrip(driver, { trips: seed.trips, reservations: seed.reservations, vehicles: seed.vehicles, fleets: seed.fleets, riders: seed.riders }, NOW);
     assert.ok(trip, "a moving driver has a current trip");
     assert.equal(trip!.phase, driver.state === "pickup" ? "to_pickup" : "on_trip");
-    assert.ok(trip!.etaMin >= 1);
+    assert.ok((trip!.etaMin ?? 0) >= 1);
     assert.match(trip!.waybill.number, /^WB-FR-\d{8}-\d{4}$/);
     assert.equal(trip!.waybill.operator, "Movera France SAS");
     assert.match(trip!.fare, /€/);

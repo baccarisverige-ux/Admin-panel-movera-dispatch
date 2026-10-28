@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { LiveListBar } from "../live/LiveListBar";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Bookmark, CarFront, CheckCircle2, Eye, Flag, Layers, Search, Settings2, XCircle } from "lucide-react";
 import { useDrivers, useSlice, useTrips } from "../api/hooks";
@@ -250,8 +251,10 @@ export function TripsPage() {
       </section>
       {notice ? <p className="dx-note" role="status">{trSentences(notice)}</p> : null}
 
+      <LiveListBar list="trips" />
       <div className={peek ? "op-list-grid with-peek" : "op-list-grid"}>
         <DataTable
+          serverSearch="trips"
           head={[tr("Trip"), tr("Rider"), tr("Driver"), tr("Status"), tr("Zone"), tr("Category"), tr("Price"), tr("Payment"), tr("When"), tr("Quick look")]}
           rowIds={filtered.map((trip) => trip.id)}
           rows={filtered.map((trip) => [

@@ -1,9 +1,11 @@
+import { NotConnected } from "../live/NotConnected";
 import { useState, type ReactNode } from "react";
 import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { Link } from "react-router";
 import { Ban, Check, Flag, Headset, Lock, MessageSquare, Phone, PhoneMissed, Receipt, RotateCcw, Siren, StickyNote, Wallet } from "lucide-react";
 import type { DemoRecord } from "../api/seed";
 import { useSession } from "../auth/SessionContext";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { AGENTS, can } from "../auth/permissions";
 import { market, type MarketId } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
@@ -37,7 +39,32 @@ export function Section({ id, title, icon, aside, children, testId, wide = false
 
 /* ------------------------------------------------------------------ money */
 
+/** A live trip's money: only the server's lines; what it does not send reads "Not connected yet". */
+function LiveSplitView({ split, money }: { split: MoneySplit; money: (minor: number) => string }) {
+  const facts = split.live!;
+  const line = (label: string, value: number | null, testId?: string) => (
+    <div data-testid={testId}><dt>{label}</dt><dd>{value === null || !Number.isFinite(value) ? <NotConnected /> : money(value)}</dd></div>
+  );
+  return (
+    <div className="op-split" data-testid="trip-split-live">
+      {split.state === "estimate" ? <p className="dx-note">{tr("The trip is not finished. These numbers are an estimate from the price at booking.")}</p> : null}
+      <dl className="op-split-lines">
+        {line(tr("Trip price"), facts.fare, "split-fare")}
+        {line(tr("Movera commission"), facts.commission, "split-commission")}
+        {line(tr("Driver earnings"), facts.driverEarnings, "split-driver-earnings")}
+        {facts.pickupPay !== null ? line(tr("Driver pickup pay · paid by Movera"), facts.pickupPay, "split-pickup-pay") : null}
+        {facts.driverBonus !== null ? line(tr("Money added for the driver (paid by Movera)"), facts.driverBonus, "split-driver-bonus") : null}
+        {facts.walletApplied !== null ? line(tr("Paid from the wallet"), facts.walletApplied, "split-wallet") : null}
+        {facts.cashToCollect !== null ? line(tr("Cash to collect"), facts.cashToCollect, "split-cash") : null}
+        {line(tr("Tip (all to the driver)"), null, "split-tip")}
+        {line(tr("Promotion (paid by Movera)"), null, "split-promo")}
+      </dl>
+    </div>
+  );
+}
+
 export function SplitView({ split, money }: { split: MoneySplit; money: (minor: number) => string }) {
+  if (split.live) return <LiveSplitView split={split} money={money} />;
   if (split.state === "none") return <p className="dx-calm">{tr("No money moved on this trip.")}</p>;
   const pct = (value: number) => (split.riderPaid > 0 ? Math.max(0, Math.round((value / split.riderPaid) * 100)) : 0);
   return (
@@ -71,7 +98,15 @@ export function SplitView({ split, money }: { split: MoneySplit; money: (minor: 
 
 /* ------------------------------------------------------------------ chat and calls */
 
-export function ChatCalls({ chat, calls, revealed, allowed, reveal, country, riderName, driverName }: { chat: readonly ChatLine[]; calls: readonly CallLine[]; revealed: boolean; allowed: boolean; reveal: ReactNode; country: MarketId; riderName: string; driverName: string }) {
+export function ChatCalls({ chat, calls, revealed, allowed, reveal, country, riderName, driverName }: { chat: readonly ChatLine[] | null; calls: readonly CallLine[] | null; revealed: boolean; allowed: boolean; reveal: ReactNode; country: MarketId; riderName: string; driverName: string }) {
+  if (chat === null || calls === null) {
+    return (
+      <div className="op-chat-grid" data-testid="trip-chat-not-connected">
+        <div><h4 className="op-sub">{tr("Calls through Movera")}</h4><NotConnected block /></div>
+        <div><h4 className="op-sub">{tr("Messages in the app")}</h4><NotConnected block /></div>
+      </div>
+    );
+  }
   const time = (iso: string) => new Intl.DateTimeFormat(market(country).locale, { timeZone: market(country).timeZone, timeStyle: "short" }).format(new Date(iso));
   return (
     <div className="op-chat-grid">
@@ -125,6 +160,7 @@ function useEntry(ops: TripOps) {
 
 export function AdminActions({ trip, ops, split, money, country, riderId, onNotice }: ActionProps) {
   const { agent } = useSession();
+  const liveSession = useLiveSessionMaybe();
   const role = agent?.role ?? "viewer";
   const make = useEntry(ops);
   const { policy: refundPolicy } = useRefundPolicy();
@@ -142,8 +178,10 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
   const refundable = Math.max(0, split.riderPaid - split.tip);
   const refundMinor = Math.round(Number(refund.replace(",", ".")) * minor) || 0;
   const payMinor = Math.round(Number(pay.replace(",", ".")) * minor) || 0;
-  const refundTry = withStatus(make({ tripId: trip.id, kind: "refund", text: `Refund ${money(refundMinor)}`, amountMinor: refundMinor }, split), needsApproval("refund", refundMinor, country, refundPolicy));
-  const payTry = withStatus(make({ tripId: trip.id, kind: "pay", text: `Driver pay ${payMinor > 0 ? "+" : "−"}${money(Math.abs(payMinor))}`, amountMinor: payMinor }, split), needsApproval("pay", payMinor, country, refundPolicy));
+  // v0.7.2 (contract.json#auth.admin.oneAdmin): in the live panel one admin is enough, nothing waits for a second.
+  const oneAdmin = Boolean(liveSession);
+  const refundTry = withStatus(make({ tripId: trip.id, kind: "refund", text: `Refund ${money(refundMinor)}`, amountMinor: refundMinor }, split), !oneAdmin && needsApproval("refund", refundMinor, country, refundPolicy));
+  const payTry = withStatus(make({ tripId: trip.id, kind: "pay", text: `Driver pay ${payMinor > 0 ? "+" : "−"}${money(Math.abs(payMinor))}`, amountMinor: payMinor }, split), !oneAdmin && needsApproval("pay", payMinor, country, refundPolicy));
   const noteTry = make({ tripId: trip.id, kind: "note", text: note.trim() });
   const flagTry = make({ tripId: trip.id, kind: flagged ? "unflag" : "flag", text: flagWhy.trim() || (flagged ? "Checked" : "") });
   const caseTry = make({ tripId: trip.id, kind: "case", text: caseText.trim(), target: caseKind });
@@ -159,7 +197,7 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
       {on.refund ? (
         <div className="op-action green">
           <h4>{trn("{0} Refund the rider", <RotateCcw size={15} aria-hidden="true" />)}</h4>
-          <p className="op-help">{trn("Up to {0}. Over {1}, a second admin approves.", money(refundable), limit)}</p>
+          <p className="op-help">{oneAdmin ? trn("Up to {0}.", money(refundable)) : trn("Up to {0}. Over {1}, a second admin approves.", money(refundable), limit)}</p>
           <div className="op-inline">
             <label className="op-money"><input aria-label={tr("Refund amount")} inputMode="decimal" value={refund} placeholder="0" onChange={(event) => setRefund(event.target.value)} /><span>{symbol}</span></label>
             <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" disabled={!refundable} onClick={() => setRefund(String(refundable / minor))}>{tr("Full amount")}</button>
@@ -171,7 +209,7 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
       {on.pay ? (
         <div className="op-action blue">
           <h4>{trn("{0} Change the driver's pay", <Wallet size={15} aria-hidden="true" />)}</h4>
-          <p className="op-help">{trn("Use + to add, − to take away. Over {0}, a second admin approves.", limit)}</p>
+          <p className="op-help">{oneAdmin ? tr("Use + to add, − to take away.") : trn("Use + to add, − to take away. Over {0}, a second admin approves.", limit)}</p>
           <div className="op-inline">
             <label className="op-money"><input aria-label={tr("Driver pay change")} inputMode="decimal" value={pay} placeholder="+0" onChange={(event) => setPay(event.target.value)} /><span>{symbol}</span></label>
             <CommandButton command="admin.trip.pay" className="dash-btn small" {...save(payTry)} before={money(split.driverGets)} after={payTry.error ? "" : money(split.driverGets + payMinor)} disabled={!can(role, "trips.intervene") || Boolean(payTry.error)} title={!can(role, "trips.intervene") ? tr("Your role cannot change driver pay.") : payTry.error} onDone={() => { setPay(""); onNotice(payTry.entry.status === "waiting" ? tr("The pay change waits for a second admin.") : tr("Driver pay changed.")); }}>{needsApproval("pay", payMinor, country, refundPolicy) ? tr("Ask a second admin") : tr("Change pay")}</CommandButton>

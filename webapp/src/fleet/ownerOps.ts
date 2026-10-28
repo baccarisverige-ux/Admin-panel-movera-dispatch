@@ -1,3 +1,4 @@
+import { isLiveData } from "../live/realData.ts";
 import type { DocStatus } from "../drivers/gate.ts";
 import type { ThreadMessage } from "../drivers/ops.ts";
 
@@ -34,7 +35,8 @@ export function emptyOwnerOpsBook(): OwnerOpsBook {
 export function ownerOps(book: OwnerOpsBook, owner: OwnerSeed): OwnerOps {
   const stored = book.owners[owner.id];
   if (stored) return stored;
-  const live = owner.status && owner.status !== "pending";
+  // Live: no document is approved by "nora" and no message is made up; the server's documents are shown instead.
+  const live = !isLiveData() && owner.status && owner.status !== "pending";
   const documents = Object.fromEntries(OWNER_DOCUMENTS.map((id, index) => [id, {
     id,
     status: live ? "approved" : "needed",

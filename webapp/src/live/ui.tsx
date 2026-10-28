@@ -18,7 +18,7 @@ export function ErrorLine({ error, onRetry }: { error: unknown; onRetry?: () => 
       {onRetry ? (
         <>
           {" "}
-          <button data-command="admin.server.reload" type="button" className="link-action" onClick={onRetry}>{tr("Retry")}</button>
+          <button data-command="admin.server.reload" type="button" className="link-action" onClick={onRetry}>{tr("Try again")}</button>
         </>
       ) : null}
     </p>

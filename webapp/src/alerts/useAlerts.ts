@@ -1,3 +1,4 @@
+import { isLiveData, liveDriverOf } from "../live/realData";
 import { useEffect, useMemo, useState } from "react";
 import { useApprovals, useRecords, useSlice } from "../api/hooks";
 import { useAdminApi } from "../api/AdminApiContext";
@@ -86,6 +87,8 @@ export function useAlerts() {
     const day = new Date(now).toISOString().slice(0, 10);
     const zoneName = (id: string) => market.zones.find((zone) => zone.id === id)?.name ?? id;
     const hour = Math.floor(now / 3_600_000);
+    // Live (owner rule, part 3): only facts the server sends; local demo stores and hashes give nothing.
+    const liveData = isLiveData();
     return {
       now,
       day,
@@ -124,7 +127,7 @@ export function useAlerts() {
         .filter((row) => row.pickupAt && (row.status === "waiting" || row.status === "booked") && !row.driverId)
         .map((row) => ({ id: row.id, rider: row.name, zoneId: row.zoneId, minutesLeft: Math.round((Date.parse(row.pickupAt!) + shift - now) / 60_000) }))
         .filter((row) => row.minutesLeft >= 0 && row.minutesLeft <= 180),
-      documents: activeDrivers.flatMap((row) => {
+      documents: liveData ? [] : activeDrivers.flatMap((row) => {
         const ops = opsOf(row);
         return DRIVER_DOCUMENTS.filter((id) => !(row.fleetId && id === "company_registration")).flatMap((id) => {
           const doc = ops.documents[id];
@@ -132,22 +135,27 @@ export function useAlerts() {
           return days === null ? [] : [{ driverId: row.id, driver: row.name, zoneId: row.zoneId, doc: DRIVER_DOC_LABELS[id] ?? id, days }];
         });
       }),
-      ratings: activeDrivers.map((row) => ({ driverId: row.id, driver: row.name, zoneId: row.zoneId, rating: opsOf(row).ratings.stars })),
-      offline: driverFacts(live, () => ({ rating: 4.7, acceptancePct: 80, cancelPct: 5, categories: [] }), null)
+      ratings: liveData
+        ? activeDrivers.flatMap((row) => {
+          const rating = liveDriverOf(row)?.rating ?? null;
+          return rating === null ? [] : [{ driverId: row.id, driver: row.name, zoneId: row.zoneId, rating }];
+        })
+        : activeDrivers.map((row) => ({ driverId: row.id, driver: row.name, zoneId: row.zoneId, rating: opsOf(row).ratings.stars })),
+      offline: liveData ? [] : driverFacts(live, () => ({ rating: 4.7, acceptancePct: 80, cancelPct: 5, categories: [] }), null)
         .filter((row) => liveRules(dispatchBook, row.zoneId).autoOffline.on && row.noInRow >= liveRules(dispatchBook, row.zoneId).autoOffline.after)
         .map((row) => ({ driverId: row.id, driver: row.name, zoneId: row.zoneId, count: row.noInRow })),
       payments: (payments.data ?? [])
         .filter((row) => row.status === "failed" && !failureHandled(row))
         .map((row) => {
-          const cause = failureCause(row);
-          return { id: row.id, zoneId: row.zoneId, rider: row.name, amount: (row.fareOre ?? 0) / market.minorUnits, system: cause.kind === "system", reason: cause.reason };
+          const cause = liveData ? { kind: "rider" as const, reason: "Not connected yet" } : failureCause(row);
+          return { id: row.id, zoneId: row.zoneId, rider: row.name, amount: (row.fareOre ?? 0) / market.minorUnits, system: cause.kind === "system", reason: cause.reason, ...(row.createdAt ? { at: row.createdAt } : {}) };
         }),
       refunds: (approvals.data ?? []).filter((row) => row.status === "pending" && row.action.includes("refund")).map((row) => ({ id: row.id, title: `Refund ${row.targetId} waits for approval` })),
       payouts: (payouts.data ?? []).filter((row) => row.status === "scheduled").map((row) => ({ id: row.id, driver: (drivers.data ?? []).find((item) => item.id === row.driverId)?.name ?? row.name, zoneId: row.zoneId, amount: (row.fareOre ?? 0) / market.minorUnits })),
-      riders: riders.rows.filter((row) => row.profile.country === market.id).map((row) => ({ id: row.rider.id, name: row.rider.name, flags: row.profile.fraudFlags, cancelRate: row.profile.cancelRate, rides: row.profile.completed + row.profile.cancelled + row.profile.noShows })),
+      riders: liveData ? [] : riders.rows.filter((row) => row.profile.country === market.id).map((row) => ({ id: row.rider.id, name: row.rider.name, flags: row.profile.fraudFlags, cancelRate: row.profile.cancelRate, rides: row.profile.completed + row.profile.cancelled + row.profile.noShows })),
       tickets: (tickets.data ?? []).filter((row) => row.status === "open").map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })),
       // Demo health: the map tiles are slow now and then; the backend reports real health later.
-      system: [
+      system: liveData ? [] : [
         { id: "api", name: "Admin API", state: "ok", detail: "" },
         { id: "maps", name: "Map tiles", state: hash(`maps:${hour}`) % 4 === 0 ? "slow" : "ok", detail: "Answers take over 2 seconds" },
         { id: "payments", name: "Payment provider", state: hash(`pay:${hour}`) % 9 === 0 ? "slow" : "ok", detail: "Card payments take longer than usual" },

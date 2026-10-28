@@ -1,3 +1,5 @@
+import { tr } from "../i18n";
+import { isLiveData } from "../live/realData";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ArrowLeft, Bell, Download, Eye, KeyRound, LogIn, LogOut, Pencil, ShieldCheck, Timer, UserRound } from "lucide-react";
@@ -51,7 +53,10 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
   const summaries = adminSummaries(events, history.filter((row) => others || row.solvedBy === agent?.id), window.start, window.end, Date.now());
   const previous = adminSummaries(events, history, window.prevStart, window.prevEnd, Date.now());
   const selected = params.get("admin");
-  const total = (key: "actions" | "alertsSolved" | "onlineMin" | "views" | "exports", list = summaries) => list.reduce((sum, row) => sum + row[key], 0);
+  // Live: only saves come from the server's audit; sign-in time, solved alerts, reveals and downloads are kept in this
+  // browser only, so they read "Not connected yet" rather than a partial number (owner rule, part 3).
+  const liveData = isLiveData();
+  const total = (key: "actions" | "alertsSolved" | "onlineMin" | "views" | "exports", list = summaries) => (liveData && key !== "actions" ? NaN : list.reduce((sum, row) => sum + row[key], 0));
   const cards = [
     { id: "actions", label: "Changes saved", value: total("actions"), previous: total("actions", previous), format: "count" as const, info: "Every save an admin made: rules, prices, drivers, rides and more. Rejected tries are not counted." },
     { id: "alerts", label: "Alerts solved", value: total("alertsSolved"), previous: total("alertsSolved", previous), format: "count" as const, info: "Alerts marked solved, SOS included." },
@@ -81,10 +86,10 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
         </header>
         <Cards fmt={fmt} compare={false} compareLabel="" cards={[
           { id: "a", label: "Changes saved", value: summary?.actions ?? 0, previous: null, format: "count", info: "Saves in the period." },
-          { id: "b", label: "Alerts solved", value: summary?.alertsSolved ?? 0, previous: null, format: "count", info: `Average ${summary?.avgSolveMin ?? 0} min to solve.` },
-          { id: "c", label: "Time online", value: Math.round((summary?.onlineMin ?? 0) / 60), previous: null, format: "hours", info: `${summary?.sessions ?? 0} sessions in the period.` },
-          { id: "d", label: "Private data opened", value: summary?.views ?? 0, previous: null, format: "count", info: "Phone numbers or documents revealed." },
-          { id: "e", label: "Downloads", value: summary?.exports ?? 0, previous: null, format: "count", info: "Files downloaded." },
+          { id: "b", label: "Alerts solved", value: liveData ? NaN : summary?.alertsSolved ?? 0, previous: null, format: "count", info: `Average ${summary?.avgSolveMin ?? 0} min to solve.` },
+          { id: "c", label: "Time online", value: liveData ? NaN : Math.round((summary?.onlineMin ?? 0) / 60), previous: null, format: "hours", info: `${summary?.sessions ?? 0} sessions in the period.` },
+          { id: "d", label: "Private data opened", value: liveData ? NaN : summary?.views ?? 0, previous: null, format: "count", info: "Phone numbers or documents revealed." },
+          { id: "e", label: "Downloads", value: liveData ? NaN : summary?.exports ?? 0, previous: null, format: "count", info: "Files downloaded." },
         ]} />
         <div className="al-filters" role="group" aria-label="Show">
           <span className="dx-choice" role="radiogroup" aria-label="What to show">
@@ -134,10 +139,10 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
             { id: "name", label: "Admin", value: (row) => nameOf(row.actorId), show: (row) => <button data-command="admin.reports.view" type="button" className="link-action" onClick={() => open(row.actorId)}>{nameOf(row.actorId)}</button> },
             { id: "role", label: "Role", value: (row) => ROLE_LABELS[(AGENTS.find((item) => item.id === row.actorId)?.role ?? "viewer") as Role] },
             { id: "actions", label: "Changes", value: (row) => row.actions, numeric: true },
-            { id: "alerts", label: "Alerts solved", value: (row) => row.alertsSolved, show: (row) => <>{row.alertsSolved}{row.alertsSolved ? <small className="rp-sub"> · {row.avgSolveMin} min</small> : null}</>, numeric: true },
-            { id: "online", label: "Online", value: (row) => row.onlineMin, show: (row) => hours(row.onlineMin), numeric: true },
-            { id: "views", label: "Private data", value: (row) => row.views, numeric: true },
-            { id: "exports", label: "Downloads", value: (row) => row.exports, numeric: true },
+            { id: "alerts", label: "Alerts solved", value: (row) => row.alertsSolved, show: (row) => liveData ? tr("Not connected yet") : <>{row.alertsSolved}{row.alertsSolved ? <small className="rp-sub"> · {row.avgSolveMin} min</small> : null}</>, numeric: true },
+            { id: "online", label: "Online", value: (row) => row.onlineMin, show: (row) => liveData ? tr("Not connected yet") : hours(row.onlineMin), numeric: true },
+            { id: "views", label: "Private data", value: (row) => row.views, show: (row) => liveData ? tr("Not connected yet") : row.views, numeric: true },
+            { id: "exports", label: "Downloads", value: (row) => row.exports, show: (row) => liveData ? tr("Not connected yet") : row.exports, numeric: true },
             { id: "sections", label: "Most in", value: (row) => row.sections[0]?.section ?? "", show: (row) => row.sections.slice(0, 2).map((item) => item.section).join(", ") || "–" },
           ]} />
         </Panel>

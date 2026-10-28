@@ -1,3 +1,4 @@
+import { isLiveData, liveRiderOf } from "../live/realData.ts";
 import { market, type MarketId } from "../markets/markets.ts";
 import { defaultRefundPolicy, needsSecondAdmin, type RefundPolicy } from "../payments/refundPolicy.ts";
 import { countryOf, hash, type Booking, type RiderProfile, type RiderRecord } from "./profile.ts";
@@ -109,7 +110,6 @@ export type RiderCare = {
   limits: Record<MarketId, number>;
 };
 
-const DAY = 86_400_000;
 export const CREDIT_MAX: Record<MarketId, number> = { SE: 500, FR: 50, TN: 150 };
 
 export function emptyRiderCare(): RiderCare {
@@ -200,6 +200,8 @@ export function seededThread(rider: RiderRecord, now: number): CareMessage[] {
 }
 
 export function threadOf(care: RiderCare, rider: RiderRecord, now: number): CareMessage[] {
+  // Live: no seeded conversation; only messages this panel saved.
+  if (isLiveData()) return care.messages[rider.id] ?? [];
   return care.messages[rider.id] ?? seededThread(rider, now);
 }
 
@@ -236,6 +238,8 @@ export function assign(care: RiderCare, riderId: string, agentId: string | null)
 /* ---------- Money ---------- */
 
 export function walletMinor(care: RiderCare, rider: RiderRecord): number {
+  // Live: the server's wallet balance (AdminRider.wallet), NaN when it sent none.
+  if (isLiveData()) return liveRiderOf(rider)?.walletMinor ?? NaN;
   const country = countryOf(rider);
   const base = toMinor((hash(`wallet:${rider.id}`) % 7 === 0 ? (hash(rider.id) % 250) : 0) * (country === "SE" ? 1 : country === "FR" ? 0.1 : 0.3), country);
   const credits = care.credits.filter((item) => item.riderId === rider.id).reduce((sum, item) => sum + toMinor(item.amount, country), 0);
@@ -285,6 +289,8 @@ export function decideRefund(care: RiderCare, refundId: string, approve: boolean
 
 /** A failed rider payment that is not settled yet. Rides stay blocked until it is paid. */
 export function unpaidMinor(care: RiderCare, rider: RiderRecord, profile: RiderProfile): number {
+  // Live: the server's unpaid fees (AdminRider.outstanding).
+  if (isLiveData()) return liveRiderOf(rider)?.outstandingMinor ?? 0;
   if (!profile.payment.failed || care.paid[rider.id]) return 0;
   return Math.max(profile.avgFareMinor, toMinor(profile.country === "SE" ? 149 : profile.country === "FR" ? 14 : 45, profile.country)) * profile.payment.failed;
 }
@@ -499,17 +505,8 @@ export function deleteFilter(care: RiderCare, id: string): RiderCare {
 /* ---------- Signals that need a person ---------- */
 
 export function complaintOf(rider: RiderRecord): string | null {
+  if (isLiveData()) return null;
   const seed = hash(`complaint:${rider.id}`);
   return seed % 19 === 0 ? ["Overcharged on a long route", "Driver behaviour", "Car was dirty", "Driver cancelled after waiting"][(seed >>> 4) % 4] : null;
 }
 
-export function driverReports(rider: RiderRecord, now: number): { id: string; driver: string; reason: string; at: number; photos: number }[] {
-  const seed = hash(`report:${rider.id}`);
-  if (seed % 29 !== 0) return [];
-  return [{ id: `${rider.id}-REP1`, driver: ["Ali Hassan", "Erik Berg", "Jonas Lund", "Sami Ben Ali"][(seed >>> 3) % 4], reason: ["Rude to the driver", "Damaged the seat", "Smoked in the car", "Did not show up twice"][(seed >>> 6) % 4], at: now - ((seed >>> 8) % 20) * DAY, photos: (seed >>> 10) % 3 }];
-}
-
-export function blockedByDrivers(rider: RiderRecord): string[] {
-  const seed = hash(`blockedby:${rider.id}`);
-  return seed % 31 === 0 ? [["Ali Hassan", "Jonas Lund", "Camille Petit"][(seed >>> 3) % 3]] : [];
-}

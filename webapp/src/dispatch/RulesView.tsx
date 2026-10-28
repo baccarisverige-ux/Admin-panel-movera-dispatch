@@ -1,3 +1,4 @@
+import { NotConnected } from "../live/NotConnected";
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { AlertTriangle, ArrowLeft, Bell, Flag, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
@@ -148,7 +149,7 @@ export function RulesView(props: Props) {
           </div>
         </header>
 
-        <section className="dx-results" aria-label={tr("{0} results today", [zone.name])}>
+        {!results || !preview ? <section className="dx-results" aria-label={tr("{0} results today", [zone.name])}><NotConnected block /></section> : <section className="dx-results" aria-label={tr("{0} results today", [zone.name])}>
           <div><Timer size={15} aria-hidden="true" /><span><b>{trn("{0} s", results.findSec)}</b><small>{tr("Time to find a driver")}</small></span>{changed.has(zone.id) ? delta(results.findSec, preview.findSec, true) : null}</div>
           <div><CheckCircle2 size={15} aria-hidden="true" /><span><b>{results.acceptedPct}%</b><small>{tr("Requests accepted")}</small></span>{changed.has(zone.id) ? delta(results.acceptedPct, preview.acceptedPct, false) : null}</div>
           <div className="warn"><AlertTriangle size={15} aria-hidden="true" /><span><b>{results.noDriverPct}%</b><small>{tr("No driver found")}</small></span>{changed.has(zone.id) ? delta(results.noDriverPct, preview.noDriverPct, true) : null}</div>
@@ -158,7 +159,7 @@ export function RulesView(props: Props) {
             <p className="dx-compare" aria-label={tr("Before and after the last publish")}>{trn("Last publish {0}: time to find a driver {1} s → {2}, no driver {3}% → {4}", compare.at.slice(0, 16).replace("T", " "), compare.before.findSec, <b>{trn("{0} s", compare.after.findSec)}</b>, compare.before.noDriverPct, <b>{compare.after.noDriverPct}%</b>)}</p>
           ) : null}
           {changed.has(zone.id) ? <p className="dx-compare soft">{tr("Small arrows show the expected effect of your changes.")}</p> : null}
-        </section>
+        </section>}
 
         <div className="dx-tabs" role="tablist" aria-label={tr("Zone settings")}>
           {tabs.map((item) => {

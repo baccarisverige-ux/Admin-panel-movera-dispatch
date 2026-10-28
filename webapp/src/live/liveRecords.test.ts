@@ -1,0 +1,78 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { approvalRow, auditRow, driverRecord, nearbyRow, paymentRecord, refundPayoutRecord, riderRecord, tripRecord } from "./liveAdminApi.ts";
+import { isLiveData, liveDriverOf, liveTripOf, remember, setLiveData } from "./realData.ts";
+import type { Driver, Trip } from "./types.ts";
+
+const SEK = (amountMinor: number) => ({ amountMinor, currency: "SEK" });
+
+const TRIP: Trip = {
+  tripId: "trp_1", status: "completed", version: 4, kind: "live", createdAt: "2026-10-25T08:00:00Z", updatedAt: "2026-10-25T08:30:00Z", acceptedAt: "2026-10-25T08:01:00Z",
+  riderId: "rdr_1", driverId: "drv_1", zoneId: "Z001", categoryId: "comfort",
+  pickup: { address: "Sergels torg 1", lat: 59.33, lng: 18.06 }, dropoff: { address: "Arlanda T5", lat: 59.65, lng: 17.92 }, stops: [{ address: "Odenplan", lat: 59.34, lng: 18.05 }],
+  fare: SEK(40000), fareLines: [{ code: "base", amount: SEK(4000) }], driverEarnings: SEK(32000), commission: SEK(8000), pickupPay: SEK(1500), driverBonus: SEK(2000),
+  walletApplied: SEK(5000), cashToCollect: SEK(35000), driverSilentAlert: { at: "2026-10-25T08:20:00Z" }, paymentMethod: "cash", paymentStatus: "captured", ratingStatus: "rated",
+};
+
+test("a live trip keeps every server fact: method, places, stops, money lines, silent alert", () => {
+  const record = tripRecord(TRIP, { riderId: "rdr_1", firstName: "Ida", phone: "+46700000001", status: "active", version: 1, outstanding: null });
+  assert.equal(record.name, "Ida");
+  assert.equal(record.tripId, "rdr_1");
+  assert.equal(record.live, true);
+  const facts = record.liveTrip!;
+  assert.equal(facts.paymentMethod, "cash");
+  assert.equal(facts.categoryId, "comfort");
+  assert.deepEqual(facts.stops, TRIP.stops);
+  assert.equal(facts.pickup.address, "Sergels torg 1");
+  assert.deepEqual([facts.fare, facts.commission, facts.driverEarnings, facts.pickupPay, facts.driverBonus, facts.walletApplied, facts.cashToCollect], [40000, 8000, 32000, 1500, 2000, 5000, 35000]);
+  assert.deepEqual(facts.fareLines, [{ code: "base", amountMinor: 4000 }]);
+  assert.equal(facts.driverSilentAlert?.at, "2026-10-25T08:20:00Z");
+});
+
+test("money lines the server did not send stay null, never 0", () => {
+  const facts = tripRecord({ ...TRIP, commission: undefined, pickupPay: undefined, walletApplied: undefined, driverSilentAlert: undefined }).liveTrip!;
+  assert.equal(facts.commission, null);
+  assert.equal(facts.pickupPay, null);
+  assert.equal(facts.walletApplied, null);
+  assert.equal(facts.driverSilentAlert, null);
+});
+
+test("a live driver carries online status, rating and position from /admin/live/drivers", () => {
+  const driver = { driverId: "drv_1", accountStatus: "active", onlineStatus: "offline", firstName: "Anna", zoneIds: ["Z001"], categoryIds: [], documents: [], version: 1, rating: 4.8 } as Driver;
+  const record = driverRecord(driver, { driverId: "drv_1", firstName: "Anna", onlineStatus: "on_trip", stale: false, location: { lat: 59.3, lng: 18.0, measuredAt: "2026-10-26T09:00:00Z" }, lastFixAt: "2026-10-26T09:00:01Z", activeTripId: "trp_1" });
+  assert.deepEqual(record.liveDriver, { onlineStatus: "on_trip", rating: 4.8, location: { lat: 59.3, lng: 18.0, measuredAt: "2026-10-26T09:00:00Z" }, lastFixAt: "2026-10-26T09:00:01Z", stale: false, activeTripId: "trp_1" });
+  const plain = driverRecord({ ...driver, rating: undefined });
+  assert.equal(plain.liveDriver?.onlineStatus, "offline");
+  assert.equal(plain.liveDriver?.rating, null);
+});
+
+test("riders, payments, refunds to pay by hand, audit and approvals map from the server", () => {
+  const rider = riderRecord({ riderId: "rdr_2", firstName: "Bo", phone: "+46700000002", rating: 4.5, status: "active", version: 3, outstanding: SEK(2500), wallet: SEK(1000) });
+  assert.deepEqual(rider.liveRider, { rating: 4.5, walletMinor: 1000, outstandingMinor: 2500, currency: "SEK", deletionRequestedAt: null });
+  const payment = paymentRecord({ paymentId: "pay_trp_1", tripId: "trp_1", amount: SEK(40000), method: "cash", purpose: "trip", status: "captured", createdAt: "2026-10-25T08:30:00Z" }, "Z001");
+  assert.deepEqual([payment.name, payment.tripId, payment.fareOre, payment.zoneId], ["cash", "trp_1", 40000, "Z001"]);
+  const refund = refundPayoutRecord({ refundId: "rfd_1", tripId: "trp_1", amount: SEK(3000), riderId: "rdr_2", riderName: "Bo", riderPhone: "+46700000002", payoutTo: { kind: "swish" }, reason: "Late" });
+  assert.deepEqual([refund.id, refund.name, refund.fareOre, refund.status], ["rfd_1", "Bo", 3000, "pending"]);
+  const audit = auditRow({ auditId: "9", at: "2026-10-26T10:00:00Z", actor: "admin", actorId: "adm_1", action: "trip.refund", targetType: "trip", targetId: "trp_1", reason: "Late", result: "committed", after: { zoneId: "Z001" }, requestId: "9" });
+  assert.deepEqual([audit.actorId, audit.scope, audit.reason, audit.result], ["adm_1", "Z001", "Late", "committed"]);
+  const approval = approvalRow({ approvalId: "apr_1", action: "trip.refund", targetType: "trip", targetId: "trp_1", status: "pending_approval", requestedBy: "adm_2", requestedAt: "2026-10-26T10:00:00Z" });
+  assert.equal(approval?.status, "pending");
+  assert.ok(Number.isNaN(approval?.amountOre), "no amount on the server: not a 0");
+  assert.equal(approvalRow({ approvalId: "apr_2", action: "x", targetType: "trip", targetId: "t", status: "expired", requestedBy: "a", requestedAt: "2026-10-26T10:00:00Z" }), null);
+});
+
+test("nearby drivers keep the server's distance and ETA, rating is null without a source", () => {
+  const row = nearbyRow({ driverId: "drv_3", firstName: "Eva", onlineStatus: "online", location: { lat: 59.3, lng: 18, measuredAt: "2026-10-26T09:00:00Z" }, distanceMeters: 1200, pickupEtaSeconds: 180, zoneId: "Z001", categoryIds: ["economy"] }, "comfort", null);
+  assert.deepEqual([row.distanceMeters, row.pickupEtaSeconds, row.categoryOk, row.rating], [1200, 180, false, null]);
+});
+
+test("the live registry answers id-only helpers with server facts", () => {
+  setLiveData(true);
+  assert.equal(isLiveData(), true);
+  const trip = tripRecord(TRIP);
+  remember([trip, driverRecord({ driverId: "drv_9", accountStatus: "active", onlineStatus: "online", firstName: "Al", zoneIds: [], categoryIds: [], documents: [], version: 1 } as Driver)]);
+  assert.equal(liveTripOf({ id: "trp_1" })?.paymentMethod, "cash");
+  assert.equal(liveDriverOf({ id: "drv_9" })?.onlineStatus, "online");
+  setLiveData(false);
+  assert.equal(liveTripOf({ id: "trp_1" }), null);
+});

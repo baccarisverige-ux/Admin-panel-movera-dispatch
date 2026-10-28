@@ -1,3 +1,5 @@
+import { isLiveData } from "../live/realData";
+import { NotConnected } from "../live/NotConnected";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlertOctagon, ArrowLeft, Car, Clock3, FileDown, History, ListChecks, MapPin, Phone, PhoneCall, Settings2, ShieldAlert, ShieldCheck, Siren, UserRound, Users } from "lucide-react";
@@ -14,6 +16,7 @@ import { Cards } from "../reports/ui";
 import {
   INCIDENT_OPS_KEY,
   KINDS,
+  caseStep,
   LEVELS,
   caseOf,
   caseReport,
@@ -60,6 +63,7 @@ import { routeOf } from "../trips/file";
 import { agentName } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
 import { CommandButton } from "../ui/CommandButton";
+import { tr, trx } from "../i18n/core";
 
 type Show = "open" | "all" | "solved";
 
@@ -215,8 +219,8 @@ export function SafetyPage() {
                 <li key={row.id}>
                   <button data-command="admin.incident.view" type="button" className={`op-case ${row.level}${item?.id === row.id ? " active" : ""}`} aria-pressed={item?.id === row.id} onClick={() => set({ case: row.id })}>
                     <span className={`op-level ${row.level}`}>{LEVELS.find((level) => level.id === row.level)?.label}</span>
-                    <b>{KINDS.find((kind) => kind.id === row.kind)?.label} · {row.who}</b>
-                    <small>{row.id} · {zoneById(row.zoneId)?.name ?? row.zoneId} · {row.state === "solved" ? "Solved" : row.owner ? `${agentName(row.owner)} is on it` : "Nobody yet"}</small>
+                    <b>{trx(KINDS.find((kind) => kind.id === row.kind)?.label)} · {row.who}</b>
+                    <small>{row.id} · {zoneById(row.zoneId)?.name ?? row.zoneId} · {row.state === "solved" ? caseStep(row.status) : row.owner ? `${agentName(row.owner)} is on it` : "Nobody yet"}</small>
                     {lateLine ? <small className="op-late"><Clock3 size={11} aria-hidden="true" /> {lateLine}</small> : null}
                   </button>
                 </li>
@@ -302,7 +306,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
   // Ride check: the shift puts a live check's answers at the time the incident opened.
   const shift = check ? checkTime(check) - Date.parse(check.at) : 0;
   const clock = (iso: string) => shifted(iso, shift);
-  const raisedBy: Person = (check ? alertBy(check)?.who : null) ?? item.raisedBy;
+  const raisedBy: Person | "system" = (check ? alertBy(check)?.who : null) ?? item.raisedBy;
   const opened = check ? rideOps.opened[check.id] : undefined;
   const route = check && trip ? routeOf(trip) : null;
   const carAt = route?.path.length ? route.path[Math.round((route.path.length - 1) * (check?.trigger === "far" ? 0.94 : check?.trigger === "crash" ? 0.45 : 0.58))] : where.driver ?? where.rider;
@@ -333,8 +337,9 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
   ] : [];
   const events = [
     ...rideEvents,
-    { at: item.openedAt, text: check ? `Alert sent by the ${raisedBy}. Ride check incident opened.` : `${item.raisedBy === "rider" ? "The rider" : "The driver"} raised the case (${KINDS.find((kind) => kind.id === item.kind)?.label})`, who: "" },
-    ...item.events.map((event) => ({ at: Date.parse(event.at), text: event.kind === "take" ? "Took the case" : event.kind === "resolve" ? `Solved: ${event.text}` : `Contact: ${event.text}`, who: agentName(event.actor) })),
+    { at: item.openedAt, text: check ? `Alert sent by the ${raisedBy}. Ride check incident opened.` : item.raisedBy === "system" ? tr("Movera opened the case: no car position for 30 min with the rider on board.") : `${item.raisedBy === "rider" ? "The rider" : "The driver"} raised the case (${trx(KINDS.find((kind) => kind.id === item.kind)?.label)})`, who: "" },
+    ...(item.escalatedAt ? [{ at: Date.parse(item.escalatedAt), text: tr("Nobody took it in 2 minutes: every signed-in admin is alerted."), who: "" }] : []),
+    ...item.events.map((event) => ({ at: Date.parse(event.at), text: event.kind === "take" ? "Took the case" : event.kind === "resolve" ? `${tr("Solved")}: ${event.text}` : event.kind === "dismiss" ? `${tr("False alarm")}: ${event.text}` : `Contact: ${event.text}`, who: agentName(event.actor) })),
     ...(caseInfo?.levelAt ? [{ at: Date.parse(caseInfo.levelAt), text: `Level set to ${LEVELS.find((row) => row.id === caseInfo.level)?.label}${caseInfo.levelWhy ? `: ${caseInfo.levelWhy}` : ""}`, who: agentName(caseInfo.levelBy ?? "") }] : []),
     ...calls.map((call) => ({ at: Date.parse(call.at), text: `Called ${call.to}`, who: agentName(call.actorId) })),
     ...(item.state === "solved" && !item.events.some((event) => event.kind === "resolve") && item.solvedAt ? [{ at: item.solvedAt, text: "Solved (earlier case)", who: "" }] : []),
@@ -376,11 +381,12 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
     <article className={`op-case-view ${item.level}`} aria-label={`Case ${item.id}`}>
       <header className="op-case-head">
         <span className={`op-level ${item.level}`}><AlertOctagon size={12} aria-hidden="true" /> {LEVELS.find((row) => row.id === item.level)?.label}</span>
-        <h3>{record.id} · {record.status}</h3>
-        <p>{KINDS.find((kind) => kind.id === item.kind)?.label} · raised by the {raisedBy} · rider {item.who}{driver ? ` · driver ${driver.name}` : ""} · {zoneById(item.zoneId)?.name ?? item.zoneId} · opened {time(item.openedAt)}</p>
+        <h3>{record.id} · {caseStep(record.status)}</h3>
+        <p>{trx(KINDS.find((kind) => kind.id === item.kind)?.label)} · raised by the {raisedBy} · rider {item.who}{driver ? ` · driver ${driver.name}` : ""} · {zoneById(item.zoneId)?.name ?? item.zoneId} · opened {time(item.openedAt)}</p>
         <p className="op-owner"><UserRound size={13} aria-hidden="true" /> Owner {item.owner ? agentName(item.owner) : "Unassigned"}{item.owner === me ? " (you)" : ""}</p>
       </header>
       {notice ? <p className="dx-note" role="status">{notice}</p> : null}
+      {item.escalatedAt && item.state === "new" ? <p className="op-late-banner" role="alert"><Siren size={14} aria-hidden="true" /> {tr("Nobody took it in 2 minutes: every signed-in admin is alerted.")}</p> : null}
       {lateLine ? <p className="op-late-banner"><Clock3 size={14} aria-hidden="true" /> Late: {lateLine}.</p> : null}
 
       <div className="op-clocks">
@@ -405,11 +411,11 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
       <section className="op-case-actions" aria-label="Work on the case">
         <label className="op-field"><span>Contact or outcome</span><textarea aria-label="Contact or outcome" rows={2} value={text} placeholder="Who you called, what they said, what you did" onChange={(event) => setText(event.target.value)} /></label>
         <div className="op-inline wrap">
-          {(["take", "contact", "resolve"] as const).map((kind) => {
+          {(["take", "contact", "resolve", "dismiss"] as const).map((kind) => {
             const prepared = safetyAction(store, record, me, kind, kind === "take" ? "Responder accepted incident" : text);
             return (
-              <CommandButton key={kind} command={`admin.safety.${kind}`} className={kind === "take" ? "dash-btn small danger" : "dash-btn small"} targetId={record.id} scope={record.zoneId} collection="incidents" patch={{ status: prepared.status }} entityState={record.status} sliceKey="safetyOps" value={prepared.book} expectedSliceRev={store.draftRev} confirmTarget={false} disabled={storeLoading || Boolean(prepared.error)} title={prepared.error} after={prepared.status} onDone={() => { setText(""); onOpen(item.id); setNotice(kind === "take" ? "You took the case." : kind === "resolve" ? "Case solved." : "Contact logged."); }}>
-                {kind === "take" ? "Take" : kind === "contact" ? "Log contact" : "Resolve"}
+              <CommandButton key={kind} command={`admin.safety.${kind}`} className={kind === "take" ? "dash-btn small danger" : "dash-btn small"} targetId={record.id} scope={record.zoneId} collection="incidents" patch={{ status: prepared.status }} entityState={record.status} sliceKey="safetyOps" value={prepared.book} expectedSliceRev={store.draftRev} confirmTarget={false} disabled={storeLoading || Boolean(prepared.error)} title={prepared.error} after={prepared.status} onDone={() => { setText(""); onOpen(item.id); setNotice(kind === "take" ? tr("You took the case.") : kind === "resolve" ? tr("Case solved.") : kind === "dismiss" ? tr("Marked as a false alarm.") : "Contact logged."); }}>
+                {kind === "take" ? tr("Take") : kind === "contact" ? "Log contact" : kind === "resolve" ? tr("Solve") : tr("False alarm")}
               </CommandButton>
             );
           })}
@@ -448,6 +454,14 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
         {settings.liveMap && check && carPoint ? (
           <MapPanel title={item.state === "solved" ? "Where the car was" : "Where the car is now"} note={<span className={stale ? "op-late" : "op-help"}><MapPin size={12} aria-hidden="true" /> {item.state === "solved" ? `At the ride check, ${time(clock(check.at))}.` : `Location updated ${where.secondsAgo} s ago${stale ? `, older than ${policy.staleSeconds} s: call to check` : ""}.`} Demo location until the apps send it.</span>}>
             <RouteMap key={trip?.id ?? "no-trip"} stops={route?.stops ?? []} path={route?.path ?? []} points={[{ id: "car", label: `${vehicle?.plate ?? "Car"} · ${driver?.name ?? "Driver"}`, at: carPoint, tone: "alert" }]} label={`Where the car of ${item.id} is`} />
+          </MapPanel>
+        ) : settings.liveMap && where.live ? (
+          <MapPanel title={tr("Where they are")} note={<span className="op-help"><MapPin size={12} aria-hidden="true" /> {tr("Phone GPS sent with the SOS; car position from the server, {0} s ago.", [where.secondsAgo])}</span>}>
+            <RouteMap stops={[]} path={[]} points={[...(item.phoneAt ? [{ id: "phone", label: tr("SOS phone"), at: where.rider, tone: "alert" as const }] : []), ...(where.driver ? [{ id: "car", label: `${tr("Car")} · ${driver?.name ?? item.driverId ?? ""}`, at: where.driver, tone: item.kind === "car_lost" ? "alert" as const : "driver" as const }] : [])]} label={`Where the people of ${item.id} are`} />
+          </MapPanel>
+        ) : settings.liveMap && isLiveData() ? (
+          <MapPanel title={tr("Where they are")} note={<span className="op-help"><MapPin size={12} aria-hidden="true" /> {tr("No position from the server for this case.")}</span>}>
+            <NotConnected block />
           </MapPanel>
         ) : settings.liveMap ? (
           <MapPanel title="Where they are now" note={<span className={stale ? "op-late" : "op-help"}><MapPin size={12} aria-hidden="true" /> Location updated {where.secondsAgo} s ago{stale ? `, older than ${policy.staleSeconds} s: call to check` : ""}. Demo location until the apps send it.</span>}>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { LiveListBar } from "../live/LiveListBar";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlarmClock, ArrowLeft, BellRing, Car, CheckCircle2, ClipboardCheck, FileText, Landmark, Send, Settings2, UserPlus } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
@@ -118,6 +119,7 @@ export function OnboardingPage() {
     return (
       <>
         <h2>Onboarding queue</h2>
+        <LiveListBar list="drivers" />
         <p className="state-line">The onboarding records could not be loaded.</p>
       </>
     );
@@ -227,7 +229,9 @@ export function OnboardingPage() {
 
       <section className="vh-section" aria-label="All applicants">
         <h3><ClipboardCheck size={16} aria-hidden="true" /> All applications</h3>
+        <LiveListBar list="drivers" />
         <DataTable
+          serverSearch="drivers"
           head={["Driver", "Name", "Fleet", "Status", "Step", "Zone", "Vehicle"]}
           rows={queue.map((item) => {
             const linked = (vehicles.data ?? []).find((vehicle) => vehicle.driverId === item.id);

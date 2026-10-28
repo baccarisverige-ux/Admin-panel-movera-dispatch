@@ -1,3 +1,5 @@
+import { tr } from "../i18n/core.ts";
+import { isLiveData, liveTripOf } from "../live/realData.ts";
 import type { DemoRecord } from "../api/seed.ts";
 import type { Role } from "../auth/permissions.ts";
 import { MARKETS, market, marketOfZone, type MarketId } from "../markets/markets.ts";
@@ -103,7 +105,19 @@ export function disputeOf(record: DemoRecord, ops: PayOps, now: number): Dispute
   return last ? { ...base, status: last.status } : base;
 }
 
+/** Live: the payment's own trip, method, time and the trip's rider; nothing picked from the id. */
+function liveFacts(record: DemoRecord, trips: readonly DemoRecord[], ops: PayOps): PayFacts {
+  const trip = record.tripId ? trips.find((row) => row.id === record.tripId) ?? null : null;
+  const country = marketOfZone(trip?.zoneId ?? record.zoneId)?.id ?? "SE";
+  const method: PaymentMethod = (["card", "apple", "google", "cash", "wallet"] as const).find((item) => item === record.name) ?? (record.name === "apple_pay" ? "apple" : record.name === "google_pay" ? "google" : "card");
+  const retried = ops.retries[record.id]?.at(-1);
+  const status = retried?.result === "paid" ? "captured" : record.status;
+  const group: PayFacts["group"] = status === "captured" ? "paid" : status === "failed" ? "failed" : status === "refunded" || status === "partially_refunded" ? "refunded" : "waiting";
+  return { id: record.id, zoneId: trip?.zoneId ?? record.zoneId, country, method, amount: record.fareOre ?? 0, status, group, at: record.createdAt ?? "", riderId: trip?.tripId ?? null, riderName: trip?.name ?? tr("Not connected yet"), tripId: record.tripId ?? null, dispute: null };
+}
+
 export function factsOf(record: DemoRecord, riders: readonly DemoRecord[], trips: readonly DemoRecord[], ops: PayOps, now: number): PayFacts {
+  if (record.live || isLiveData()) return liveFacts(record, trips, ops);
   const country = marketOfZone(record.zoneId)?.id ?? "SE";
   const seed = hash(record.id);
   const methods = COUNTRY_METHODS[country];
@@ -121,7 +135,13 @@ export function factsOf(record: DemoRecord, riders: readonly DemoRecord[], trips
 export type PaySplit = { price: number; vat: number; vatRate: number; commission: number; driver: number; movera: number };
 
 /** How a payment splits: driver, Movera's commission, and the VAT inside the price. */
-export function paySplit(amount: number, country: MarketId): PaySplit {
+export function paySplit(amount: number, country: MarketId, tripId?: string | null): PaySplit {
+  if (isLiveData()) {
+    // Live: the trip's commission and driver earnings from the server; VAT is not sent (NaN = "Not connected yet").
+    const facts = tripId ? liveTripOf({ id: tripId }) : null;
+    const commission = facts?.commission ?? NaN;
+    return { price: amount, vat: NaN, vatRate: NaN, commission, driver: facts?.driverEarnings ?? NaN, movera: commission };
+  }
   const vatRate = VAT[country];
   const commission = Math.round(amount * COMMISSION);
   return { price: amount, vat: Math.round((amount * vatRate) / (1 + vatRate)), vatRate, commission, driver: amount - commission, movera: commission };
@@ -134,9 +154,9 @@ export function retryPlan(record: DemoRecord, facts: PayFacts, ops: PayOps, now:
   const rules = ops.rules[facts.country];
   const seed = hash(`retry:${record.id}`);
   const saved = ops.retries[record.id] ?? [];
-  const tries = Math.min(rules.retry.maxTries, (seed % 2) + saved.length);
+  const tries = isLiveData() ? NaN : Math.min(rules.retry.maxTries, (seed % 2) + saved.length);
   const failedAt = Date.parse(facts.at);
-  const next = rules.retry.on && tries < rules.retry.maxTries ? failedAt + (rules.retry.afterHours[tries] ?? rules.retry.afterHours.at(-1) ?? 24) * 3_600_000 : null;
+  const next = !isLiveData() && rules.retry.on && tries < rules.retry.maxTries ? failedAt + (rules.retry.afterHours[tries] ?? rules.retry.afterHours.at(-1) ?? 24) * 3_600_000 : null;
   const days = (now - failedAt) / 86_400_000;
   const owing = rules.owing.on && facts.amount >= rules.owing.overMajor * market(facts.country).minorUnits && days >= rules.owing.afterDays;
   return { tries, max: rules.retry.maxTries, nextAt: next ? new Date(Math.max(next, now + 5 * 60_000)).toISOString() : null, cause: failureCause(record), handled: failureHandled(record), owing };

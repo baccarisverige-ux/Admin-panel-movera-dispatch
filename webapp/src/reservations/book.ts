@@ -213,7 +213,7 @@ export function cancelReservation(reservation: Reservation): Reservation {
   return { ...reservation, status: "cancelled", driverId: reservation.driverId };
 }
 
-export function unassignReservation(record: DemoRecord): Partial<DemoRecord> {
+export function unassignReservation(record: DemoRecord): { driverId?: null; status?: string } {
   if (reservationClosed(record.status)) return {};
   return { driverId: null, status: "waiting" };
 }

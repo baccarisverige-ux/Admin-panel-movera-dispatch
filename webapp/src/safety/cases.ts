@@ -13,7 +13,7 @@ import { tr } from "../i18n/core.ts";
 export const INCIDENT_OPS_KEY = "incidentOps";
 
 export type Level = "low" | "high" | "critical";
-export type Kind = "sos" | "ride_check" | "accident" | "harassment" | "route" | "lost" | "other";
+export type Kind = "sos" | "car_lost" | "ride_check" | "accident" | "harassment" | "route" | "lost" | "other";
 
 export const LEVELS: { id: Level; label: string; help: string }[] = [
   { id: "critical", label: "Critical", help: "Someone is in danger now: SOS, accident, violence." },
@@ -23,6 +23,8 @@ export const LEVELS: { id: Level; label: string; help: string }[] = [
 
 export const KINDS: { id: Kind; label: string; level: Level }[] = [
   { id: "sos", label: "SOS button", level: "critical" },
+  // Safety part 1 (2026-10-27): the rider is on board and the server has no car position for 30 min.
+  { id: "car_lost", label: "Car lost", level: "critical" },
   { id: "ride_check", label: "Ride check", level: "critical" },
   { id: "accident", label: "Accident", level: "critical" },
   { id: "harassment", label: "Harassment or threat", level: "high" },
@@ -96,13 +98,24 @@ function hash(text: string): number {
 
 export type CaseState = "new" | "taken" | "solved";
 
+/** The case steps the owner named (2026-10-27): New, Taken, Solved, False alarm. */
+export function caseStep(status: string): string {
+  if (status === "queued" || status === "open") return tr("New");
+  if (status === "taken" || status === "investigating") return tr("Taken");
+  if (status === "dismissed") return tr("False alarm");
+  return tr("Solved");
+}
+
+/** A phone's or a car's position the server sent with the case (live). */
+export type CasePosition = { lat: number; lng: number; at: string | null };
+
 export type Case = {
   id: string;
   zoneId: string;
   country: MarketId;
   who: string;
   phone: string;
-  raisedBy: "rider" | "driver";
+  raisedBy: "rider" | "driver" | "system";
   kind: Kind;
   level: Level;
   state: CaseState;
@@ -115,9 +128,16 @@ export type Case = {
   /** The trip the case is about, when the incident names it (Ride check). */
   tripId: string | null;
   events: IncidentEvent[];
+  /** Live: the GPS the SOS phone sent, and the car's latest position. */
+  phoneAt: CasePosition | null;
+  carAt: CasePosition | null;
+  /** Live: nobody took it in 2 minutes, so every signed-in admin was alerted. */
+  escalatedAt: string | null;
+  falseAlarm: boolean;
 };
 
 const OPEN = new Set(["queued", "taken"]);
+const LIVE_KINDS = new Set<Kind>(["sos", "car_lost"]);
 
 /** A "Ride check" incident: opened by itself when the driver or rider app sends a ride check alert. */
 export function isRideCheckIncident(row: Pick<DemoRecord, "kind">): boolean {
@@ -126,6 +146,8 @@ export function isRideCheckIncident(row: Pick<DemoRecord, "kind">): boolean {
 
 export function kindOf(row: DemoRecord, handledLive = false): Kind {
   if (isRideCheckIncident(row)) return "ride_check";
+  // Live: the server names the kind.
+  if (row.kind && LIVE_KINDS.has(row.kind as Kind)) return row.kind as Kind;
   // An SOS stays an SOS after it is solved.
   if (OPEN.has(row.status) || handledLive) return "sos";
   const order: Kind[] = ["accident", "harassment", "route", "lost", "other", "sos"];
@@ -137,22 +159,22 @@ export function caseOf(row: DemoRecord, safety: SafetyBook, ops: IncidentOps, no
   const record = safety.incidents[row.id];
   const events = record?.events ?? [];
   const take = events.find((event) => event.kind === "take");
-  const resolve = events.find((event) => event.kind === "resolve");
+  const resolve = events.find((event) => event.kind === "resolve" || event.kind === "dismiss");
   const open = OPEN.has(row.status);
   const kind = kindOf(row, events.length > 0);
   const level = ops.cases[row.id]?.level ?? KINDS.find((item) => item.id === kind)?.level ?? "low";
   const seed = hash(row.id);
   const takenAt = take ? Date.parse(take.at) : null;
   // Same opening time as the SOS alert: two minutes before it was taken, or a few minutes ago.
-  const openedAt = row.createdAt ? Date.parse(row.createdAt) : takenAt ? takenAt - 2 * 60_000 : open ? now - (2 + (seed % 8)) * 60_000 : now - (1 + (seed % 20)) * 86_400_000 - (seed % 600) * 60_000;
-  const demoSolved = !open && !resolve ? openedAt + (6 + (seed % 40)) * 60_000 : null;
+  const openedAt = row.createdAt ? Date.parse(row.createdAt) : row.live ? NaN : takenAt ? takenAt - 2 * 60_000 : open ? now - (2 + (seed % 8)) * 60_000 : now - (1 + (seed % 20)) * 86_400_000 - (seed % 600) * 60_000;
+  const demoSolved = !open && !resolve && !row.live ? openedAt + (6 + (seed % 40)) * 60_000 : null;
   return {
     id: row.id,
     zoneId: row.zoneId,
     country: marketOfZone(row.zoneId)?.id ?? "SE",
     who: row.name,
     phone: row.phone,
-    raisedBy: seed % 3 === 0 ? "driver" : "rider",
+    raisedBy: row.raisedBy ?? (seed % 3 === 0 ? "driver" : "rider"),
     kind,
     level,
     state: open ? (row.status === "taken" ? "taken" : "new") : "solved",
@@ -164,6 +186,10 @@ export function caseOf(row: DemoRecord, safety: SafetyBook, ops: IncidentOps, no
     driverId: row.driverId ?? null,
     tripId: row.tripId ?? null,
     events,
+    phoneAt: typeof row.phoneLat === "number" && typeof row.phoneLng === "number" ? { lat: row.phoneLat, lng: row.phoneLng, at: row.phoneAt ?? null } : null,
+    carAt: typeof row.carLat === "number" && typeof row.carLng === "number" ? { lat: row.carLat, lng: row.carLng, at: row.carAt ?? null } : null,
+    escalatedAt: row.escalatedAt ?? null,
+    falseAlarm: row.status === "dismissed",
   };
 }
 
@@ -191,8 +217,17 @@ export function lateText(item: Case, settings: IncidentSettings, now: number): s
   return null;
 }
 
-/** Where rider and driver are now: demo positions near the zone, with how fresh they are. */
-export function positions(item: Case): { rider: LatLng; driver: LatLng | null; secondsAgo: number } {
+/**
+ * Where rider and driver are now. Live: the GPS the SOS phone sent and the car's latest position from the server.
+ * Demo: positions near the zone, with how fresh they are.
+ */
+export function positions(item: Case, now = Date.now()): { rider: LatLng; driver: LatLng | null; secondsAgo: number; live?: boolean } {
+  if (item.phoneAt || item.carAt) {
+    const point = (p: CasePosition | null): LatLng | null => (p ? [p.lat, p.lng] : null);
+    const times = [item.phoneAt?.at, item.carAt?.at].filter((at): at is string => Boolean(at)).map((at) => Date.parse(at));
+    const latest = times.length ? Math.max(...times) : now;
+    return { rider: point(item.phoneAt) ?? (point(item.carAt) as LatLng), driver: point(item.carAt), secondsAgo: Math.max(0, Math.round((now - latest) / 1000)), live: true };
+  }
   const center = zoneById(item.zoneId)?.center ?? market(item.country).center;
   const seed = hash(item.id);
   const dLat = ((seed % 200) - 100) / 20_000;
@@ -246,7 +281,7 @@ export function caseReport(item: Case, extra: { zone: string; trip: string; owne
     `Movera incident report ${item.id}`,
     `Level: ${extra.level}`,
     `Kind: ${KINDS.find((kind) => kind.id === item.kind)?.label ?? item.kind}`,
-    `Raised by: ${item.raisedBy === "rider" ? "the rider" : "the driver"} (${item.who})`,
+    `Raised by: ${item.raisedBy === "rider" ? "the rider" : item.raisedBy === "system" ? "Movera (car lost)" : "the driver"} (${item.who})`,
     `Zone: ${extra.zone}`,
     `Trip: ${extra.trip}`,
     `Opened: ${format(item.openedAt)}`,

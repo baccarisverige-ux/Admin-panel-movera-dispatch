@@ -308,6 +308,7 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
           <Num label={tr("Priority minutes")} value={zone.riderCancel.priorityMin} unit="min" min={1} max={60} disabled={disabled} onChange={(priorityMin) => set({ riderCancel: { ...zone.riderCancel, priorityMin } })} />
         </Row>
         <p className="dx-note">{trn("{0} Every decision is saved with the driver's route, so you can check it by hand in Cancel checks.", <UserCheck size={13} aria-hidden="true" />)}</p>
+        <Row label={tr("Driver's share of the cancel fee")} help={tr("What the driver gets of a rider's cancel fee in this zone. Movera keeps the rest. Booked rides keep the share they were booked with.")}><Num label={tr("Driver's share of the cancel fee")} value={zone.riderCancel.driverSharePct ?? 100} unit="%" min={0} max={100} disabled={disabled} onChange={(driverSharePct) => set({ riderCancel: { ...zone.riderCancel, driverSharePct } })} /></Row>
       </Card>
 
       <RiderCancelFeesCard zone={zone} onChange={onChange} disabled={disabled} symbol={symbol} money={money} countryId={countryId} otherZones={otherZones} onCopyCancelFees={onCopyCancelFees} categories={feeCategories} tab={feeTab} onTab={onFeeTab} />

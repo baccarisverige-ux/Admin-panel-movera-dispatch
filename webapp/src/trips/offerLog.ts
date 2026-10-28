@@ -1,5 +1,7 @@
 import type { DemoRecord } from "../api/seed.ts";
 import { timelineOf } from "./present.ts";
+import { isLiveData, liveTripOf } from "../live/realData.ts";
+import { OFFER_STATUS_LABEL, type AdminOffer } from "../dispatch/assign.ts";
 
 /**
  * The offer log of a trip (Round 3, Q28): one line per step, with times. Scheduled rides → Home popup →
@@ -31,10 +33,25 @@ const plus = (iso: string, seconds: number) => new Date(Date.parse(iso) + second
 
 /** A ride booked for later goes through Scheduled rides and the Home popup first. About one trip in four. */
 export function isScheduledTrip(trip: Pick<DemoRecord, "id">): boolean {
+  const live = liveTripOf(trip);
+  if (live) return live.kind === "scheduled";
+  if (isLiveData()) return false;
   return hash(`${trip.id}:scheduled`) % 4 === 0;
 }
 
-export function offerLog(trip: DemoRecord, drivers: readonly { id: string; name: string; zoneId?: string }[]): OfferStep[] {
+/** Live: one line per offer the server sent (GET /admin/trips/{id}/offers), at the time the offer ran out. */
+export function offerLogFromServer(offers: readonly AdminOffer[]): OfferStep[] {
+  return [...offers]
+    .sort((a, b) => a.expiresAt.localeCompare(b.expiresAt))
+    .map((offer) => {
+      const kind: OfferStepKind = offer.status === "claimed" ? "won" : offer.kind === "radar" ? "radar" : "exclusive";
+      const who = offer.driverName || offer.driverId;
+      return { at: offer.expiresAt, kind, title: OFFER_STEP_LABEL[kind], detail: `${who ? `${who} · ` : ""}${OFFER_STATUS_LABEL[offer.status] ?? offer.status}`, driverIds: offer.driverId ? [offer.driverId] : [] };
+    });
+}
+
+export function offerLog(trip: DemoRecord, drivers: readonly { id: string; name: string; zoneId?: string }[], serverOffers?: readonly AdminOffer[]): OfferStep[] {
+  if (liveTripOf(trip) || isLiveData()) return offerLogFromServer(serverOffers ?? []);
   const timeline = timelineOf(trip);
   const searched = timeline.find((item) => item.code === "searching")?.at ?? timeline.find((item) => item.code === "requested")?.at;
   if (!searched) return [];
@@ -93,7 +110,8 @@ export type TimelineOffer = { at: string; driverId: string; answer: "accepted" |
 export function timelineOffers(steps: readonly OfferStep[]): TimelineOffer[] {
   return steps.flatMap((step): TimelineOffer[] => {
     if (step.kind === "won") return [{ at: step.at, driverId: step.driverIds[0] ?? "", answer: "accepted" }];
-    if (step.kind === "exclusive" && !step.detail.endsWith("accepted")) return [{ at: step.at, driverId: step.driverIds[0] ?? "", answer: step.detail.endsWith("said no") ? "declined" : "no answer" }];
+    if (step.kind === "radar") return [];
+    if (step.kind === "exclusive" && !step.detail.endsWith("accepted")) return [{ at: step.at, driverId: step.driverIds[0] ?? "", answer: step.detail.endsWith("said no") || step.detail.endsWith(OFFER_STATUS_LABEL.declined) ? "declined" : "no answer" }];
     return [];
   });
 }

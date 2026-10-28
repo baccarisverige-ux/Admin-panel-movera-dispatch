@@ -1,4 +1,8 @@
 import { useDirtyWarning } from "../ui/useDirtyWarning";
+import { isLiveData } from "../live/realData";
+import { NotConnected } from "../live/NotConnected";
+import { RATING_TAGS, ratingTagLabel } from "../live/ratingTags";
+import { tr } from "../i18n";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft, EyeOff, Search, ShieldAlert } from "lucide-react";
@@ -6,7 +10,7 @@ import { emptyGrowth, moderateGrowth, growthReviews, useRecords, useSlice, type 
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { Card, Num, Row, Switch } from "../dispatch/fields";
-import { REVIEW_OPS_KEY, emptyReviewOps, normalizeReviewOps, people, reviewsOf, rulesError, visibility, type Review, type ReviewOps, type ReviewRules } from "../growth/reviews";
+import { REVIEW_OPS_KEY, emptyReviewOps, liveReviewsOf, normalizeReviewOps, people, reviewsOf, rulesError, visibility, type Review, type ReviewOps, type ReviewRules } from "../growth/reviews";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
 import { CommandButton } from "../ui/CommandButton";
@@ -43,11 +47,15 @@ export function ReviewsPage() {
   }, { replace: true });
 
   const now = useMemo(() => Date.now(), []);
-  const all = useMemo(() => reviewsOf(trips.data ?? [], drivers.data ?? [], ops, now), [trips.data, drivers.data, ops, now]);
+  // Live (contract v0.9.0): the server's ratings with its hidden flag; demo: the demo reviews and the word list.
+  const liveData = isLiveData();
+  const liveRatings = useRecords("ratings");
+  const liveRows = useMemo(() => (liveData ? liveReviewsOf(liveRatings.data ?? []) : []), [liveData, liveRatings.data]);
+  const all = useMemo(() => (liveData ? liveRows : reviewsOf(trips.data ?? [], drivers.data ?? [], ops, now)), [liveData, liveRows, trips.data, drivers.data, ops, now]);
   const records = useMemo(() => new Map(growthReviews(trips.data ?? []).map((row) => [row.id, row.text])), [trips.data]);
   const here = all.filter((review) => review.country === country && (!scope.zones.length || scope.zones.includes(review.zone)));
   const rules = ops.rules[country];
-  const withState = here.map((review) => ({ review, state: visibility(review, store.value.moderation, rules) }));
+  const withState = here.map((review) => ({ review, state: liveData ? { hidden: Boolean((review as { hidden?: boolean }).hidden), auto: false, last: null } : visibility(review, store.value.moderation, rules) }));
   const q = query.trim().toLowerCase();
   const shown = withState.filter(({ review, state }) =>
     (from === "all" || review.from === from)
@@ -67,7 +75,7 @@ export function ReviewsPage() {
         <button data-command="admin.review.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> Back</button>
         <div className="dx-head-text">
           <h2>Reviews</h2>
-          <p>Ratings riders and drivers give each other in {scope.market.name}. Hiding keeps the original. Review text is demo text until the apps send real reviews.</p>
+          <p>{liveData ? tr("Ratings riders and drivers give each other, from the server. A hidden rating does not count in the average.") : <>Ratings riders and drivers give each other in {scope.market.name}. Hiding keeps the original. Review text is demo text until the apps send real reviews.</>}</p>
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label="Review sections">
@@ -89,7 +97,7 @@ export function ReviewsPage() {
         ]}
       />
 
-      {tab === "people" ? <PeopleView persons={persons} /> : tab === "rules" ? <RulesView ops={ops} country={country} editable={editable} onNotice={setNotice} /> : (
+      {tab === "rules" && liveData ? <LiveRules /> : tab === "people" ? <PeopleView persons={persons} /> : tab === "rules" ? <RulesView ops={ops} country={country} editable={editable} onNotice={setNotice} /> : (
         <>
           <div className="gr-filters">
             <label className="gr-search"><Search size={13} aria-hidden="true" /><input aria-label="Search reviews" placeholder="Trip, name or words" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
@@ -110,10 +118,10 @@ export function ReviewsPage() {
                       <span className={state.hidden ? "gr-state paused" : "gr-state active"}>{state.hidden ? (state.auto ? "Hidden by word list" : "Hidden") : "Visible"}</span>
                     </div>
                     {review.text ? <p className="gr-review-text">{review.text}</p> : <p className="gr-help">No comment.</p>}
-                    {review.tags.length ? <p className="gr-tags">{review.tags.map((tag) => <span key={tag}>{tag}</span>)}</p> : null}
-                    <p className="gr-help"><Link to={`/trips/${review.tripId}`}>{review.tripId}</Link> · {new Date(review.at).toLocaleString(scope.market.locale, { dateStyle: "medium", timeStyle: "short", timeZone: scope.market.timeZone })} · Saved record: {records.get(review.id) ?? "none"}</p>
+                    {review.tags.length ? <p className="gr-tags">{review.tags.map((tag) => <span key={tag}>{liveData ? ratingTagLabel(tag) : tag}</span>)}</p> : null}
+                    <p className="gr-help"><Link to={`/trips/${review.tripId}`}>{review.tripId}</Link> · {new Date(review.at).toLocaleString(scope.market.locale, { dateStyle: "medium", timeStyle: "short", timeZone: scope.market.timeZone })}{liveData ? null : <> · Saved record: {records.get(review.id) ?? "none"}</>}</p>
                     <div className="actions">
-                      <CommandButton command="admin.growthOps.moderate" className="dash-btn small ghost" targetId={review.id} scope={review.zone} sliceKey="growthOps" value={result.book} expectedSliceRev={store.value.draftRev} confirmTarget={false} disabled={store.loading || Boolean(result.error)} title={result.error} onDone={() => setNotice("Moderation saved; original retained.")}>{state.hidden ? "Restore" : "Hide"}</CommandButton>
+                      {liveData ? <CommandButton command="admin.growthOps.moderate" className="dash-btn small ghost" targetId={review.id} scope={review.zone} confirmTarget={false} before={state.hidden ? "hidden" : "shown"} after={state.hidden ? "shown" : "hidden"} disabled={!editable} onDone={() => { setNotice(state.hidden ? "Shown again: it counts in the average." : "Hidden: it no longer counts in the average."); void liveRatings.refetch(); }}>{state.hidden ? "Restore" : "Hide"}</CommandButton> : <CommandButton command="admin.growthOps.moderate" className="dash-btn small ghost" targetId={review.id} scope={review.zone} sliceKey="growthOps" value={result.book} expectedSliceRev={store.value.draftRev} confirmTarget={false} disabled={store.loading || Boolean(result.error)} title={result.error} onDone={() => setNotice("Moderation saved; original retained.")}>{state.hidden ? "Restore" : "Hide"}</CommandButton>}
                     </div>
                     {store.value.moderation[review.id]?.length ? <ul className="gr-events">{store.value.moderation[review.id].map((m, i) => <li key={i}>{m.at} · {m.actor} · {m.hidden ? "hide" : "restore"} · {m.reason}</li>)}</ul> : null}
                   </li>
@@ -158,6 +166,24 @@ function RulesView({ ops, country, editable, onNotice }: { ops: ReviewOps; count
         <CommandButton command="admin.review.rules" confirmTarget={false} className="dash-btn small" sliceKey={REVIEW_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, rules: { ...ops.rules, [country]: { ...value, badWords: { ...value.badWords, words: value.badWords.words.map((word) => word.trim()).filter(Boolean) }, driverTags: value.driverTags.map((tag) => tag.trim()).filter(Boolean), riderTags: value.riderTags.map((tag) => tag.trim()).filter(Boolean) } } }} expectedSliceRev={ops.draftRev} targetId={country} disabled={!editable || !draft || Boolean(error)} onDone={() => { setDraft(null); onNotice("Review rules saved."); }}>Save review rules</CommandButton>
         {draft ? <button data-command="admin.review.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>Undo changes</button> : null}
       </div>
+    </div>
+  );
+}
+
+/** Live: the tag lists are fixed in the contract (contract.json#ratings.tags); the warning lines have no server source yet. */
+function LiveRules() {
+  return (
+    <div className="gr-two" data-testid="live-review-rules">
+      <Card title="Low ratings" icon={<ShieldAlert size={15} />} tone="orange" help="What happens when a person's average falls under a line.">
+        <NotConnected block />
+      </Card>
+      <Card title="Words and tags" icon={<EyeOff size={15} />} tone="purple" help="The same tags in every country, set in the contract. Each app shows them in its own words.">
+        <p className="gr-help">{tr("Tags riders can give drivers")}</p>
+        <p className="gr-tags">{RATING_TAGS.aboutDriver.map((tag) => <span key={tag}>{ratingTagLabel(tag)}</span>)}</p>
+        <p className="gr-help">{tr("Tags drivers can give riders")}</p>
+        <p className="gr-tags">{RATING_TAGS.aboutRider.map((tag) => <span key={tag}>{ratingTagLabel(tag)}</span>)}</p>
+        <p className="gr-help">{tr("Bad words list")}: <NotConnected /></p>
+      </Card>
     </div>
   );
 }

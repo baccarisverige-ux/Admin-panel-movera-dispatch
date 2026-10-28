@@ -18,13 +18,19 @@ export function LiveChip({ state }: { state: LiveState }) {
   return <span className={`rd-live l-${state}`}><i aria-hidden="true" />{trx(LIVE_LABEL[state])}</span>;
 }
 
+/** A count, or "Not connected yet" for a live value without a source (NaN). */
+export function shown(value: number): string {
+  return Number.isFinite(value) ? String(value) : tr("Not connected yet");
+}
+
 export function ScoreBadge({ score }: { score: number }) {
+  if (!Number.isFinite(score)) return null;
   const tone = score >= 80 ? "good" : score >= 55 ? "mid" : "low";
   return <span className={`rd-score s-${tone}`} title={tr("Rider score from rating, cancellations, no-shows and payments")}>{trn("Score {0}", score)}</span>;
 }
 
 export function Stars({ value }: { value: number }) {
-  return <span className="rd-stars"><Star size={12} aria-hidden="true" />{value.toFixed(2)}</span>;
+  return <span className="rd-stars"><Star size={12} aria-hidden="true" />{Number.isFinite(value) ? value.toFixed(2) : tr("Not connected yet")}</span>;
 }
 
 /** Small badges on a rider: new, top, waiting for reply, unpaid, promotion, flags. */

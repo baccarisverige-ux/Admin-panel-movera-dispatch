@@ -1,3 +1,4 @@
+import { isLiveData } from "../live/realData.ts";
 import type { DemoRecord } from "../api/seed.ts";
 import { MARKETS, marketOfZone, type MarketId } from "../markets/markets.ts";
 import type { Moderation } from "./ops.ts";
@@ -55,6 +56,8 @@ const RIDER_TEXT = ["Polite rider.", "Was waiting at the right place.", "Kept me
 
 /** Two reviews per completed trip: the rider about the driver and the driver about the rider. Demo text and stars from the trip id. */
 export function reviewsOf(trips: readonly DemoRecord[], drivers: readonly DemoRecord[], ops: ReviewOps, now: number): Review[] {
+  // Live: reviews come from the server's ratings (GET /admin/ratings), never from the trip id.
+  if (isLiveData()) return [];
   const names = new Map(drivers.map((row) => [row.id, row.name]));
   return trips.filter((trip) => trip.status === "completed").flatMap((trip) => {
     const country = marketOfZone(trip.zoneId)?.id ?? "SE";
@@ -113,4 +116,16 @@ export function rulesError(value: ReviewRules): string | null {
   if (value.review.on && value.block.on && value.block.below > value.review.below) return "Block must be below the review line.";
   if (value.minReviews < 1) return "Count people with at least 1 review.";
   return null;
+}
+
+/** Live: the server's ratings (GET /admin/ratings) as reviews; the hidden flag is the server's. */
+export function liveReviewsOf(records: readonly DemoRecord[]): (Review & { hidden: boolean })[] {
+  return records.flatMap((record) => {
+    const r = record.liveRating;
+    if (!r) return [];
+    const country = marketOfZone(r.zoneId)?.id ?? "SE";
+    const byName = (r.from === "rider" ? r.riderName : r.driverName) ?? "";
+    const aboutName = (r.from === "rider" ? r.driverName : r.riderName) ?? "";
+    return [{ id: record.id, tripId: r.tripId, zone: r.zoneId, country, from: r.from, byName, aboutId: r.from === "rider" ? r.driverId : r.riderId, aboutName, stars: r.stars, tags: r.tags, text: r.comment ?? "", at: r.at, hidden: r.hidden }];
+  });
 }

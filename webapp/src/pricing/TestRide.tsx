@@ -21,7 +21,7 @@ type Props = {
 export function TestRide({ zoneName, currency, categories, book, liveSurge, draft, onClose }: Props) {
   const enabled = categories.filter((category) => book.prices[category.id]?.enabled);
   const [input, setInput] = useState<QuoteInput>({
-    categoryId: enabled[0]?.id ?? "economy", km: 8, minutes: 18, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, childSeats: 0,
+    categoryId: enabled[0]?.id ?? "economy", km: 8, minutes: 18, waitMin: 0, stops: 0, stopWaitMin: 0,
     airportPickup: false, airportDropoff: false, reservation: false, surge: liveSurge, fixedRouteId: null,
   });
   useEscape(onClose);
@@ -54,8 +54,6 @@ export function TestRide({ zoneName, currency, categories, book, liveSurge, draf
           <label className="field">{trn("Waiting at pickup{0}", <NumberField label={tr("Quote waiting minutes")} value={input.waitMin} unit="min" onChange={(waitMin) => set({ waitMin })} />)}</label>
           <label className="field">{trn("Extra stops{0}", <NumberField label={tr("Quote stops")} value={input.stops} max={5} onChange={(stops) => set({ stops: Math.round(stops) })} />)}</label>
           <label className="field">{trn("Waiting at stops{0}", <NumberField label={tr("Quote stop waiting")} value={input.stopWaitMin} unit="min" onChange={(stopWaitMin) => set({ stopWaitMin })} />)}</label>
-          <label className="field">{trn("Baby seats{0}", <NumberField label={tr("Quote baby seats")} value={input.babySeats} max={3} onChange={(babySeats) => set({ babySeats: Math.round(babySeats) })} />)}</label>
-          <label className="field">{trn("Child seats{0}", <NumberField label={tr("Quote child seats")} value={input.childSeats} max={3} onChange={(childSeats) => set({ childSeats: Math.round(childSeats) })} />)}</label>
         </div>
         <div className="check-chips">
           {([["airportPickup", "Airport pickup"], ["airportDropoff", "Airport drop-off"], ["reservation", "Reservation"]] as const).map(([key, label]) => (

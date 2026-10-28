@@ -5,6 +5,7 @@ import {
   archiveCategory,
   bookAtRevision,
   copyInto,
+  defaultCategoryPrice,
   defaultZoneBook,
   editCategory,
   emptyPricingStore,
@@ -12,12 +13,14 @@ import {
   largeStoreChanges,
   largePriceChanges,
   normalizeStore,
+  overlappingSurges,
   PRICE_ROWS,
   priceMax,
   publishZones,
   quoteRide,
   restoreCategory,
   restoreRevision,
+  rowApplies,
   startManualSurge,
   stopManualSurges,
   undoLastPublish,
@@ -91,17 +94,28 @@ assert(restoreCategory(archived.store, "women_driver", Date.parse(AT) + 31 * 86_
 // Manual surge.
 const surged = startManualSurge(store, "Z003", 1.8, 60, "nora", "Concert", AT);
 assert(!surged.error && zoneLive(surged.store, "Z003").manual?.multiplier === 1.8, "manual surge stored");
-assert(surged.store.surgeLog.some((event) => event.kind === "notify"), "drivers are told by default");
+// v0.7.2 (owner 2026-10-28): drivers get no surge notice; only the start is logged and the zone keeps only the surge.
+assert(!surged.store.surgeLog.some((event) => event.kind === "notify") && surged.store.surgeLog[0]?.kind === "manual-start", "no surge notice to drivers");
+assert(Object.keys(zoneLive(surged.store, "Z003")).join() === "manual", "no notifyDrivers / lastNotifiedAt any more");
 assert(startManualSurge(store, "Z003", 7, 60, "nora", "x", AT).error, "slider stops at ×6");
 const stopped = stopManualSurges(surged.store, ["Z001", "Z003"], "nora", "Over", AT);
 assert(stopped.stopped.join() === "Z003" && !zoneLive(stopped.store, "Z003").manual, "stop all stops only running surges");
 
-// Quote: waiting after the free minutes, stops, seats, app fee, min fare, split.
-const input: QuoteInput = { categoryId: "economy", km: 10, minutes: 20, waitMin: 8, stops: 1, stopWaitMin: 2, babySeats: 1, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 };
+// Quote: waiting after the free minutes, stops, app fee, min fare, split.
+const input: QuoteInput = { categoryId: "economy", km: 10, minutes: 20, waitMin: 8, stops: 1, stopWaitMin: 2, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 };
 const quote = quoteRide(norrmalm, input);
-// 29 + 120 + 80 = 229; waiting (8 − 5 free min, owner Q41) 3 × 12.26 = 36.78; stop 15; stop wait 10; baby seat 30 → 320.78; app fee 10% → 352.86 → 353
-assert(quote.total === 353, `quote total ${quote.total}`);
-assert(quote.driverGets === 256.62, `driver gets 80% of 320.78, got ${quote.driverGets}`);
+// 29 + 120 + 80 = 229; waiting (8 − 5 free min, owner Q41) 3 × 12.26 = 36.78; stop 15; stop wait 2 × 5 = 10 → 290.78; app fee 10% → 319.86 → 320
+assert(quote.total === 320, `quote total ${quote.total}`);
+// Owner 2026-10-27: waiting money is 100 % the driver's: 80 % of (290.78 − 36.78 − 10) = 195.20, + 36.78 + 10 = 241.98.
+assert(quote.driverGets === 241.98, `driver gets 80% of the ride and stop fee plus all the waiting, got ${quote.driverGets}`);
+// Owner 2026-10-27: ONE seat fee, only on Child Seat; every Child Seat ride includes one seat.
+assert(!PRICE_ROWS.some((row) => (row.field as string) === "babySeatFee") && PRICE_ROWS.some((row) => row.field === "childSeatFee"), "one seat fee row");
+assert(norrmalm.prices.economy.childSeatFee === 0 && norrmalm.prices.child_seat.childSeatFee === 15, "seat fee 15 kr on Child Seat only");
+assert(!quote.lines.some((line) => line.label === "Child seat"), "no seat on another car type");
+const childQuote = quoteRide(norrmalm, { ...input, categoryId: "child_seat", waitMin: 0, stops: 0, stopWaitMin: 0 });
+assert(childQuote.lines.filter((line) => line.label === "Child seat").map((line) => line.amount).join() === "15", "a Child Seat ride includes its one seat once");
+assert(rowApplies("childSeatFee", "child_seat") && !rowApplies("childSeatFee", "economy") && rowApplies("base", "economy"), "seat row only on Child Seat");
+assert(!defaultZoneBook("Z001").smart.enabled, "smart surge is off until the admin switches it on");
 // Waiting matches the driver app: 12.26 kr/min (Premium 16.90), 65 kr no-show fee, Premium 5 and XL 3 free minutes.
 assert(norrmalm.prices.economy.waitPerMin === 12.26 && norrmalm.prices.premium.waitPerMin === 16.9 && norrmalm.prices.comfort.waitPerMin === 12.26, "waiting per minute");
 assert(norrmalm.prices.economy.noShowFee === 65 && norrmalm.prices.premium.noShowFee === 65, "no-show fee");
@@ -111,9 +125,9 @@ assert(!PRICE_ROWS.some((row) => ["cancelFee", "freeCancelMin"].includes(row.fie
 const oldSave = normalizeStore({ ...emptyPricingStore(), zones: { Z001: { ...defaultZoneBook("Z001"), prices: { economy: { ...norrmalm.prices.economy, cancelFee: 40, freeCancelMin: 2 } } } } });
 const reopened = zoneBook(oldSave, "Z001").prices.economy as Record<string, unknown>;
 assert(!("cancelFee" in reopened) && !("freeCancelMin" in reopened) && reopened.noShowFee === 65 && reopened.base === norrmalm.prices.economy.base, "an older save with the cancel fields still opens, without them");
-const surgedQuote = quoteRide(norrmalm, { ...input, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, surge: 1.5 });
+const surgedQuote = quoteRide(norrmalm, { ...input, waitMin: 0, stops: 0, stopWaitMin: 0, surge: 1.5 });
 assert(surgedQuote.lines.some((line) => line.kind === "surge" && line.amount === 114.5), "surge applies to the trip part");
-assert(quoteRide(norrmalm, { ...input, km: 0.5, minutes: 1, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0 }).lines.some((line) => line.kind === "limit"), "minimum fare applies");
+assert(quoteRide(norrmalm, { ...input, km: 0.5, minutes: 1, waitMin: 0, stops: 0, stopWaitMin: 0 }).lines.some((line) => line.kind === "limit"), "minimum fare applies");
 const off = structuredClone(norrmalm);
 off.prices.pet.enabled = false;
 assert(quoteRide(off, { ...input, categoryId: "pet" }).error, "an off category cannot be quoted");
@@ -197,6 +211,27 @@ console.log("pricing bounds ok");
   assert(!lines.some((line) => line.includes("Price per km")), "a 20 % change is not listed");
   assert(!lines.some((line) => line.includes("Free waiting")), "free waiting minutes are not a price");
 }
+// Owner 2026-10-27: a very high price asks "Are you sure?" too, even when it was already that high when published
+// (more than 3 times Movera's own price for the car type in that market).
+{
+  const published = zoneBook(store, "Z001");
+  const high = structuredClone(published);
+  high.prices.comfort.perKm = published.prices.comfort.perKm * 1.4;
+  assert(!largePriceChanges(published, high, store.categories).some((line) => line.includes("very high")), "40 % above Movera's price is not very high");
+  high.prices.comfort.perKm = defaultCategoryPrice("comfort", "SE").perKm * 3 + 1;
+  const already = structuredClone(high);
+  const lines = largePriceChanges(already, high, store.categories, "Norrmalm");
+  assert(lines.some((line) => line.startsWith("Norrmalm · Comfort Price per km") && line.includes("very high")), `a very high price is listed: ${lines.join(" | ")}`);
+}
+// Owner 2026-10-27: overlapping planned surges are allowed (the higher counts) and named for the warning.
+assert(
+  JSON.stringify(overlappingSurges([
+    { id: "a", name: "Concert", multiplier: 1.5, startsAt: "2026-10-31T18:00:00Z", endsAt: "2026-10-31T23:00:00Z" },
+    { id: "b", name: "Late peak", multiplier: 2, startsAt: "2026-10-31T21:00:00Z", endsAt: "2026-11-01T01:00:00Z" },
+    { id: "c", name: "Morning", multiplier: 1.2, startsAt: "2026-11-01T07:00:00Z", endsAt: "2026-11-01T09:00:00Z" },
+  ])) === JSON.stringify([["Concert", "Late peak"]]),
+  "overlapping planned surges are named",
+);
 console.log("price checks ok");
 
 // Q29: commission, pickup pay and surge caps follow the same "more than 50 % → Are you sure?" rule.

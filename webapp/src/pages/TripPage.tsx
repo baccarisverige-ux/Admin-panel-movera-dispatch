@@ -1,4 +1,7 @@
+import { NotConnected } from "../live/NotConnected";
+import { fareLineLabel } from "../live/format";
 import { Link, useNavigate, useParams } from "react-router";
+import { useLiveRefund } from "../live/LiveRefund";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useEffect, useMemo, useState } from "react";
@@ -96,6 +99,7 @@ export function TripPage() {
   const navigate = useNavigate();
   const { agent } = useSession();
   const role = agent?.role ?? "viewer";
+  const liveRefund = useLiveRefund(tripId);
   const trips = useTrips(null);
   const drivers = useDrivers(null);
   const vehicles = useRecords("vehicles", null);
@@ -136,11 +140,11 @@ export function TripPage() {
   const country = countryOf(trip.zoneId);
   const place = market(country);
   const money = (minor: number) => formatMoney(minor, country);
-  const legacyMoney = (minor: number) => formatTripMoney({ amountMinor: minor, currency: place.currency });
+  const legacyMoney = (minor: number) => formatTripMoney({ amountMinor: minor, currency: (trip.liveTrip?.currency as typeof place.currency | undefined) ?? place.currency });
   const driver = drivers.data?.find((item) => item.id === trip.driverId);
   const vehicle = vehicles.data?.find((item) => item.driverId === trip.driverId);
   const fare = fareBreakdown(trip);
-  const sheet = waybill(trip, driver?.name ?? "", vehicle?.plate ?? "");
+  const sheet = waybill(trip, driver?.name ?? "", vehicle?.plate ?? "", vehicle ? `${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim() : "");
   const payment = paymentOf(trip);
   const cancelWhy = cancelBlock(trip.status);
   const offerWhy = offerBlock(trip.status) ?? (eligible.length === 0 ? "No eligible driver with an eligible matching vehicle is free for this category." : null);
@@ -161,7 +165,7 @@ export function TripPage() {
   const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees, dispatchOffers.data?.bonusMinor ?? 0);
   const chat = chatOf(trip);
   const calls = callsOf(trip);
-  const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })));
+  const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })), dispatchOffers.data?.offers);
   const offers = timelineOffers(offerSteps);
   const driverName = (id: string) => drivers.data?.find((row) => row.id === id)?.name ?? "A driver";
   const allowed = canSeePrivate(role, ops.settings);
@@ -197,7 +201,7 @@ export function TripPage() {
     ...rideEvents,
     ...timelineOf(trip).map((event) => ({ at: event.at, text: event.label, tone: "status" as const })),
     ...offers.map((offer) => ({ at: offer.at, text: offer.answer === "accepted" ? `${driverName(offer.driverId)} said yes` : `Asked ${driverName(offer.driverId)}: ${offer.answer}`, tone: offer.answer === "accepted" ? "good" as const : "muted" as const })),
-    ...calls.map((call) => ({ at: call.at, text: `${call.from === "driver" ? "The driver called the rider" : "The rider called the driver"}${call.answered ? "" : " (not answered)"}`, tone: "call" as const })),
+    ...(calls ?? []).map((call) => ({ at: call.at, text: `${call.from === "driver" ? "The driver called the rider" : "The rider called the driver"}${call.answered ? "" : " (not answered)"}`, tone: "call" as const })),
   ].sort((a, b) => a.at.localeCompare(b.at));
 
   const reveal = ops.settings.reasonToShow ? (
@@ -234,7 +238,7 @@ export function TripPage() {
       <Cards
         compare={false}
         compareLabel=""
-        fmt={(value, format) => (format === "money" ? money(value) : format === "min" ? `${value} min` : String(value))}
+        fmt={(value, format) => (!Number.isFinite(value) ? tr("Not connected yet") : format === "money" ? money(value) : format === "min" ? `${value} min` : String(value))}
         cards={[
           { id: "paid", label: split.state === "estimate" ? tr("Rider pays (estimate)") : tr("Rider paid"), value: split.riderPaid, previous: null, format: "money", info: tr("The trip price, minus promotions and refunds, plus the tip.") },
           { id: "driver", label: tr("Driver gets"), value: split.driverGets, previous: null, format: "money", info: tr("The ride price minus Movera's commission (and the fleet owner's share), plus the tip.") },
@@ -315,8 +319,8 @@ export function TripPage() {
               ))}
             </ol>
             <dl className="op-facts">
-              <div><dt>{tr("Distance")}</dt><dd>{trn("{0} km", route.km)}</dd></div>
-              <div><dt>{tr("Ride time")}</dt><dd>{trn("{0} min", route.minutes)}</dd></div>
+              <div><dt>{tr("Distance")}</dt><dd>{Number.isFinite(route.km) ? trn("{0} km", route.km) : <NotConnected />}</dd></div>
+              <div><dt>{tr("Ride time")}</dt><dd>{Number.isFinite(route.minutes) ? trn("{0} min", route.minutes) : <NotConnected />}</dd></div>
               <div><dt>{tr("Stops")}</dt><dd>{route.stops.length - 2}</dd></div>
             </dl>
           </div>
@@ -325,14 +329,19 @@ export function TripPage() {
 
       <div className="op-trip-grid">
         <Section id="fare" title={tr("How the price was made · rule {0}", [fare.ruleVersion])} icon={<ListOrdered size={16} />} testId="trip-fare">
-          <ul className="op-lines">
+          {fare.live ? (
+            <ul className="op-lines" data-testid="trip-fare-lines">
+              {fare.lines.length ? fare.lines.map((line) => <li key={line.code}><span>{fareLineLabel(line.code)}</span><b>{legacyMoney(line.amountMinor)}</b></li>) : <li><span>{tr("Fare lines")}</span><b><NotConnected /></b></li>}
+              <li className="total"><span>{trn("Charged {0}", legacyMoney(fare.chargedOre))}</span></li>
+            </ul>
+          ) : <ul className="op-lines">
             <li><span>{tr("Pickup")}</span><b>{legacyMoney(fare.pickupOre)}</b></li>
             <li><span>{trn("{0} km × {1}", fare.km, legacyMoney(fare.perKmOre))}</span><b>{legacyMoney(fare.km * fare.perKmOre)}</b></li>
             <li><span>{trn("{0} min × {1}", fare.minutes, legacyMoney(fare.perMinOre))}</span><b>{legacyMoney(fare.minutes * fare.perMinOre)}</b></li>
             <li><span>{trn("Waiting time charged: {0} min · {1}", fare.waitingMin, legacyMoney(fare.waitingOre))}</span></li>
             <li><span>{fare.appliedMin ? tr("Minimum {0} applied", [legacyMoney(fare.minimumOre)]) : tr("Minimum not applied")}</span></li>
             <li className="total"><span>{trn("Charged {0}", legacyMoney(fare.chargedOre))}</span></li>
-          </ul>
+          </ul>}
         </Section>
         <Section id="split" title={tr("Who gets what")} icon={<Banknote size={16} />}>
           <SplitView split={split} money={money} />
@@ -560,6 +569,8 @@ export function TripPage() {
               <p data-testid="refund-block">{refundWhy ?? tr("Refund is allowed. The captured terminal payment can be returned.")}</p>
               {refundWhy ? (
                 <button data-command="admin.trip.refund" className="secondary-btn" type="button" disabled title={refundWhy}>{tr("Refund")}</button>
+              ) : liveRefund ? (
+                <button data-command="admin.trip.refund" className="secondary-btn" type="button" disabled={!can(role, "payments.refund")} onClick={liveRefund.open}>{tr("Refund")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.refund"
@@ -577,6 +588,7 @@ export function TripPage() {
             </div>
           </div>
         ) : null}
+        {liveRefund?.dialog}
       </Section>
 
       <Section id="history" title={tr("Who did what")} icon={<History size={16} />} wide>

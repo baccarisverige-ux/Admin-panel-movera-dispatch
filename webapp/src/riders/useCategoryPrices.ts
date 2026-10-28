@@ -19,7 +19,7 @@ export function useCategoryPrices(country: MarketId, zoneId?: string): { zoneNam
         label: category.label,
         line: category.line,
         seats: category.seats,
-        price: quoteRide(book, { categoryId: category.id, km: 8, minutes: 18, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 }).total,
+        price: quoteRide(book, { categoryId: category.id, km: 8, minutes: 18, waitMin: 0, stops: 0, stopWaitMin: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 }).total,
       }));
     return { zoneName: zone.name, rows };
   }, [slice.value, country, zoneId]);
