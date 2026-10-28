@@ -216,6 +216,8 @@ test("fleet invitations: Accept (disabled for a number without an account) and C
 });
 
 test("drivers, fleets and vehicles lists: server search and status filter; a failure shows Try again", async ({ page }) => {
+  // Five list pages in one test, each loading every list the page shows.
+  test.slow();
   const state = await fakeTripServer(page);
   await signIn(page);
   await page.goto("/drivers");
@@ -226,8 +228,9 @@ test("drivers, fleets and vehicles lists: server search and status filter; a fai
     await expect(page.locator("input.table-search")).toHaveCount(1);
   }
   await page.goto("/drivers");
+  await expect(page.getByRole("cell", { name: "Anna Berg", exact: true }).first()).toBeVisible();
   await bar.getByLabel("Status on the server").selectOption("active");
-  await expect.poll(() => state.calls.some((call) => call.path.includes("accountStatus=active"))).toBe(true);
+  await expect.poll(() => state.calls.some((call) => call.path.includes("accountStatus=active")), { timeout: 15_000 }).toBe(true);
   await expect(page.getByRole("cell", { name: "Bo Nord", exact: true }).first()).toBeVisible();
   await expect(page.getByRole("cell", { name: "Anna Berg", exact: true })).toHaveCount(0);
   await bar.getByLabel("Status on the server").selectOption("");
@@ -238,6 +241,7 @@ test("drivers, fleets and vehicles lists: server search and status filter; a fai
   await expect(page.getByRole("cell", { name: "Anna Berg", exact: true }).first()).toBeVisible();
 
   await page.goto("/fleets");
+  await expect(page.getByText("Taxi Nord AB").first()).toBeVisible();
   await page.getByTestId("live-list-fleets").getByLabel("Status on the server").selectOption("pending");
   await expect.poll(() => state.calls.some((call) => call.path.startsWith("/api/v1/admin/fleets?") && call.path.includes("status=pending"))).toBe(true);
   await expect(page.getByText("Taxi Nord AB")).toHaveCount(0);
