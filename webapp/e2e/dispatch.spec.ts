@@ -527,7 +527,7 @@ test("waiting at pickup: Pricing's values per category, ride type and distance r
   await page.goto("/dispatch?zone=Z001&tab=rides");
   const wait = page.getByRole("region", { name: "Waiting at pickup" });
   const pricing = wait.getByRole("group", { name: "Waiting from Pricing" });
-  await expect(pricing.getByRole("row").filter({ hasText: "Movera" })).toContainText("5 min");
+  await expect(pricing.getByRole("row").filter({ has: page.getByRole("cell", { name: "Movera", exact: true }) })).toContainText("5 min");
   await expect(pricing.getByRole("link", { name: "Change in Pricing" })).toHaveAttribute("href", /\/pricing\?country=SE&zone=Z001/);
   const examples = wait.getByRole("group", { name: "Waiting examples" }).getByRole("listitem");
   await expect(examples.filter({ hasText: "Normal ride" })).toContainText("5 min free · then 12,26 kr/min · no-show after 5 min · fee 65 kr (driver gets 52 kr)");
@@ -651,7 +651,7 @@ test("rider cancel fees per car type: live trips and reservations, % with min an
   await expect(page.getByRole("region", { name: "Rider cancels: smart check" })).toContainText("see Rider cancel fees");
   const live = page.getByRole("group", { name: "Live trips cancel fees" });
   // Every car type from Pricing, also the ones without their own row (they start as a copy of Movera).
-  for (const name of ["Movera", "Comfort", "Premium", "Priority", "XL", "Electric", "Pet", "Child Seat"]) await expect(live.getByRole("rowheader", { name, exact: true })).toBeVisible();
+  for (const name of ["Movera", "Comfort", "Premium", "Priority", "Movera XL", "Electric", "Pet", "Child Seat"]) await expect(live.getByRole("rowheader", { name, exact: true })).toBeVisible();
   await expect(live.getByLabel("Live trips Pet fee", { exact: true })).toHaveValue("35");
   await expect(live.getByLabel("Live trips Comfort fee", { exact: true })).toHaveValue("45");
   await expect(live.getByLabel("Live trips: rider sees")).toContainText("Free cancel for 2 min after the driver accepts · then 45 kr");
@@ -662,9 +662,9 @@ test("rider cancel fees per car type: live trips and reservations, % with min an
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toHaveCount(0);
   await expect(live.getByLabel("Live trips: rider sees")).toContainText("then 37,5 kr (15%, at most 150 kr)"); // X4: 15% of 250 kr, whole öre like the apps (was rounded to 38 kr)
   await live.getByRole("button", { name: "Same for all car types" }).click();
-  await live.getByRole("group", { name: /use one car type's rule for all/ }).getByRole("button", { name: "Movera" }).click();
+  await live.getByRole("group", { name: /use one car type's rule for all/ }).getByRole("button", { name: "Movera", exact: true }).click();
   await expect(live.getByLabel("Live trips Comfort fee", { exact: true })).toHaveValue("35");
-  await expect(live.getByLabel("Live trips XL fee", { exact: true })).toHaveValue("35");
+  await expect(live.getByLabel("Live trips Movera XL fee", { exact: true })).toHaveValue("35");
   await live.getByRole("button", { name: "Copy to other zones…" }).click();
   await page.locator(".modal.open").getByText("Södermalm").click();
   await page.locator(".modal.open").getByRole("button", { name: "Copy to 1 zone" }).click();

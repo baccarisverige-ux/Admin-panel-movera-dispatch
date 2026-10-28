@@ -67,7 +67,7 @@ const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "history", get label() { return tr("History"); }, icon: <History size={15} /> },
 ];
 
-const CATEGORY_LABEL: Record<string, string> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "XL", electric: "Electric", pet: "Pet" };
+const CATEGORY_LABEL: Record<string, string> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "Movera XL", electric: "Electric", pet: "Pet" };
 const OPTION_LABEL: Record<string, string> = { baby_seat: "Baby seat", child_seat: "Child seat", booster_seat: "Booster seat", extra_bags: "Extra bags", pet: "Pet" };
 const PAYMENT_LABEL: Record<string, string> = { card: "Card", apple: "Apple Pay", google: "Google Pay", cash: "Cash", wallet: "Movera wallet" };
 

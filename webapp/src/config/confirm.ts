@@ -6,7 +6,7 @@ export const OPEN_VALUES: OpenValue[] = [
   { id: "offer-time", label: "Offer time", today: "Set per zone in Dispatch", link: "/dispatch" },
   { id: "search-radius", label: "Search radius", today: "Set per zone in Dispatch", link: "/dispatch?tab=best" },
   { id: "next-trip", label: "Next-trip radius", today: "Set per zone in Dispatch", link: "/dispatch?tab=best" },
-  { id: "free-waiting", label: "Free waiting", today: "Set per zone and car type in Pricing (default 5 min, XL 3 min)", link: "/pricing?tab=prices" },
+  { id: "free-waiting", label: "Free waiting", today: "Set per zone and car type in Pricing (default 5 min, Movera XL 3 min)", link: "/pricing?tab=prices" },
   { id: "waiting-fee", label: "Waiting fee", today: "Set per zone and car type in Pricing, 100% to the driver", link: "/pricing?tab=prices" },
   { id: "no-show", label: "No-show time", today: "When the free wait ends (Pricing)", link: "/pricing?tab=prices" },
   { id: "no-show-fee", label: "No-show fee", today: "none" },

@@ -221,7 +221,7 @@ export function VehicleDetailPage() {
               <option value="comfort">Comfort</option>
               <option value="premium">Premium</option>
               <option value="priority">Priority</option>
-              <option value="xl">XL</option>
+              <option value="xl">Movera XL</option>
               <option value="electric">Electric</option>
               <option value="pet">Pet</option>
             </select>

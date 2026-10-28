@@ -137,7 +137,7 @@ export const FARE_CATEGORIES: { id: FareCategoryId; label: string }[] = [
   { id: "economy", label: "Economy" },
   { id: "comfort", label: "Comfort" },
   { id: "premium", label: "Premium" },
-  { id: "xl", label: "XL" },
+  { id: "xl", label: "Movera XL" },
 ];
 
 export function calculateFare(
