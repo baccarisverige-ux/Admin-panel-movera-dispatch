@@ -2,7 +2,7 @@ import type { DemoRecord, LiveRideCheck } from "../api/seed.ts";
 import type { LatLng } from "../dashboard/route.ts";
 import { market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import type { IncidentEvent, SafetyBook } from "./ops.ts";
-import { tr } from "../i18n/core.ts";
+import { tr, trx } from "../i18n/core.ts";
 
 /**
  * Incidents as cases: a level, time limits per level, where the people are, the linked trip
@@ -268,12 +268,12 @@ export function logCall(ops: IncidentOps, incidentId: string, to: string, actorI
 export function settingsError(settings: IncidentSettings): string | null {
   for (const level of LEVELS) {
     const limit = settings.limits[level.id];
-    if (!Number.isFinite(limit.takeMin) || limit.takeMin < 1) return `${level.label}: time to take must be at least 1 minute.`;
-    if (!Number.isFinite(limit.solveMin) || limit.solveMin < limit.takeMin) return `${level.label}: time to solve must be at least the time to take.`;
+    if (!Number.isFinite(limit.takeMin) || limit.takeMin < 1) return tr("{0}: time to take must be at least 1 minute.", [trx(level.label)]);
+    if (!Number.isFinite(limit.solveMin) || limit.solveMin < limit.takeMin) return tr("{0}: time to solve must be at least the time to take.", [trx(level.label)]);
   }
-  if (settings.limits.critical.takeMin > settings.limits.high.takeMin || settings.limits.high.takeMin > settings.limits.low.takeMin) return "A higher level must be taken at least as fast as a lower one.";
+  if (settings.limits.critical.takeMin > settings.limits.high.takeMin || settings.limits.high.takeMin > settings.limits.low.takeMin) return tr("A higher level must be taken at least as fast as a lower one.");
   for (const [country, rows] of Object.entries(settings.emergency)) {
-    if (rows.some((row) => !row.number.trim() || !row.label.trim())) return `${market(country as MarketId).name}: every emergency number needs a name and a number.`;
+    if (rows.some((row) => !row.number.trim() || !row.label.trim())) return tr("{0}: every emergency number needs a name and a number.", [trx(market(country as MarketId).name)]);
   }
   return null;
 }
@@ -281,21 +281,21 @@ export function settingsError(settings: IncidentSettings): string | null {
 /** A plain-text case report, for printing or attaching to a police report. */
 export function caseReport(item: Case, extra: { zone: string; trip: string; owner: string; level: string; events: string[]; calls: string[] }, format: (ms: number) => string): string {
   return [
-    `Movera incident report ${item.id}`,
-    `Level: ${extra.level}`,
-    `Kind: ${KINDS.find((kind) => kind.id === item.kind)?.label ?? item.kind}`,
-    `Raised by: ${item.raisedBy === "rider" ? "the rider" : item.raisedBy === "system" ? "Movera (car lost)" : "the driver"} (${item.who})`,
-    `Zone: ${extra.zone}`,
-    `Trip: ${extra.trip}`,
-    `Opened: ${format(item.openedAt)}`,
-    `Taken: ${item.takenAt ? format(item.takenAt) : "not yet"} by ${extra.owner}`,
-    `Solved: ${item.solvedAt ? format(item.solvedAt) : "not yet"}`,
+    tr("Movera incident report {0}", [item.id]),
+    tr("Level: {0}", [extra.level]),
+    tr("Kind: {0}", [trx(KINDS.find((kind) => kind.id === item.kind)?.label ?? item.kind)]),
+    tr("Raised by: {0} ({1})", [item.raisedBy === "rider" ? tr("the rider") : item.raisedBy === "system" ? (item.kind === "ride_check" ? tr("Movera (no answer)") : tr("Movera (car lost)")) : tr("the driver"), item.who]),
+    tr("Zone: {0}", [extra.zone]),
+    tr("Trip: {0}", [extra.trip]),
+    tr("Opened: {0}", [format(item.openedAt)]),
+    tr("Taken: {0} by {1}", [item.takenAt ? format(item.takenAt) : tr("not yet"), extra.owner]),
+    tr("Solved: {0}", [item.solvedAt ? format(item.solvedAt) : tr("not yet")]),
     "",
-    "What happened",
+    tr("What happened"),
     ...extra.events.map((line) => `- ${line}`),
     "",
-    "Calls",
-    ...(extra.calls.length ? extra.calls.map((line) => `- ${line}`) : ["- none"]),
+    tr("Calls"),
+    ...(extra.calls.length ? extra.calls.map((line) => `- ${line}`) : [`- ${tr("none")}`]),
   ].join("\n");
 }
 

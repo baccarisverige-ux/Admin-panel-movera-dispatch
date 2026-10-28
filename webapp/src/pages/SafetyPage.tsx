@@ -356,12 +356,12 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
 
   function download() {
     const body = caseReport(item, {
-      zone: zoneById(item.zoneId)?.name ?? item.zoneId,
-      trip: trip?.id ?? "none",
-      owner: item.owner ? agentName(item.owner) : "nobody",
-      level: LEVELS.find((row) => row.id === item.level)?.label ?? item.level,
+      zone: trx(zoneById(item.zoneId)?.name ?? item.zoneId),
+      trip: trip?.id ?? tr("none"),
+      owner: item.owner ? agentName(item.owner) : tr("nobody"),
+      level: trx(LEVELS.find((row) => row.id === item.level)?.label ?? item.level),
       events: events.map((event) => `${time(event.at)} ${event.who ? `${event.who}: ` : ""}${event.text}`),
-      calls: calls.map((row) => `${time(Date.parse(row.at))} ${agentName(row.actorId)} called ${row.to}`),
+      calls: calls.map((row) => tr("{0} {1} called {2}", [time(Date.parse(row.at)), agentName(row.actorId), trx(row.to)])),
     }, time);
     const url = URL.createObjectURL(new Blob([body], { type: "text/plain;charset=utf-8" }));
     const link = document.createElement("a");
