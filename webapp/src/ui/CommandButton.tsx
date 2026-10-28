@@ -84,7 +84,7 @@ export function CommandButton({
   largeChanges,
   reasonChoices,
   reasonField,
-  reasonLabel = "Reason",
+  reasonLabel = tr("Reason"),
   optionalNote = false,
   summary,
   children,
@@ -211,8 +211,8 @@ export function CommandButton({
                 </ul>)}</div>
             ) : null}
             <label>
-              {tr(reasonLabel)}
-              <select aria-label={tr(reasonLabel)} value={reason} required={choose} onChange={(event) => setReason(event.target.value)}>
+              {reasonLabel}
+              <select aria-label={reasonLabel} value={reason} required={choose} onChange={(event) => setReason(event.target.value)}>
                 {choose ? <option value="" disabled>{tr("Choose a reason")}</option> : null}
                 {reasonChoices
                   ? reasonChoices.map((item) => <option key={item.value} value={item.value}>{trx(item.label)}</option>)
