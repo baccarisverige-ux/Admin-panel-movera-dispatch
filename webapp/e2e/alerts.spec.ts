@@ -87,7 +87,7 @@ test("an SOS has one owner: taken in Alerts is taken in Incidents", async ({ pag
   await page.goto("/incidents");
   // A new Ride check case is listed first (not taken yet), so open the SOS case itself.
   await page.getByRole("complementary", { name: "Cases" }).getByRole("button", { name: /SOS button/ }).first().click();
-  await expect(page.getByRole("heading", { name: /INC-\d+ · taken/ }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: /INC-\d+ · Taken/ }).first()).toBeVisible();
   await switchTo(page, "erik");
   await page.goto("/alerts");
   await expect(row(page, /^SOS from/)).toContainText("Only Nora Lind can solve it");
