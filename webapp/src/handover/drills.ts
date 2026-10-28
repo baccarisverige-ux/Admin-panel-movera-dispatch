@@ -91,7 +91,7 @@ export function drillReservation(): DrillResult {
 export function drillBadPublish(): DrillResult {
   // The live Content rules (content/studio.ts): the author cannot publish, a second agent can, rollback restores.
   const slot = "help";
-  const good = { ...studioSlot(emptyStudio(), slot).draft, sv: "Boka en resa i Stockholm.", en: "Book a ride in Stockholm." };
+  const good = { ...studioSlot(emptyStudio(), slot).draft, sv: "Boka en resa i Stockholm.", fr: "Réservez une course à Stockholm.", en: "Book a ride in Stockholm." };
   let book = changeStudio(emptyStudio(), slot, good, "save", "nora").book;
   book = changeStudio(book, slot, good, "publish", "lena").book;
   const wrong = { ...good, en: "Wrong fare text." };

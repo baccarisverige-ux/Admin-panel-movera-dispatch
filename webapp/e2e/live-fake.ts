@@ -566,3 +566,46 @@ export async function fakeSettings(page: Page) {
   return { docs, sent };
 }
 
+
+/** Contract v0.10.0 §19 Content: published items per slot and zone, publish, history, rollback and the legal acceptances. */
+export type ContentFakeItem = { slot: string; zoneId: string; version: number; publishedAt: string; publishedBy: string; title: string; text: { sv: string; fr: string; en: string }; reaccept?: boolean; versions?: unknown };
+export async function fakeContent(page: Page) {
+  const items: ContentFakeItem[] = [
+    { slot: "driver-home", zoneId: "Z001", version: 1, publishedAt: "2026-10-27T08:00:00Z", publishedBy: "Mia Admin", title: "Välkommen", text: { sv: "Hej förare!", fr: "Bonjour chauffeur !", en: "Hello driver!" } },
+    { slot: "driver-home", zoneId: "Z001", version: 2, publishedAt: "2026-10-28T08:00:00Z", publishedBy: "Mia Admin", title: "Välkommen", text: { sv: "Kör säkert i dag.", fr: "Conduisez prudemment aujourd'hui.", en: "Drive safely today." } },
+    { slot: "legal", zoneId: "Z001", version: 1, publishedAt: "2026-10-20T08:00:00Z", publishedBy: "Mia Admin", title: "Villkor", text: { sv: "Villkor v1", fr: "Conditions v1", en: "Terms v1" }, reaccept: true },
+  ];
+  const acceptances = [
+    { userId: "R1", name: "Sara Lind", app: "rider", contentVersion: 1, acceptedAt: "2026-10-21T09:12:00Z" },
+    { userId: "D1001", name: "Anna Berg", app: "driver", contentVersion: 1, acceptedAt: "2026-10-21T10:40:00Z" },
+  ];
+  const sent: Sent[] = [];
+  await page.route(/\/api\/v1\/admin\/content(\/.*)?(\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CONFIG_CORS });
+    const url = new URL(request.url());
+    const body = (request.postDataJSON?.() ?? null) as Record<string, unknown> | null;
+    sent.push({ method: request.method(), path: url.pathname + url.search, body });
+    const [, , , , , slot, action] = url.pathname.split("/");
+    const zoneId = url.searchParams.get("zoneId") ?? "";
+    if (slot === "legal" && action === "acceptances") return configJson(route, 200, { items: acceptances });
+    if (!slot) return configJson(route, 200, { items: items.filter((item) => item.zoneId === zoneId) });
+    const of = (zone: string) => items.filter((item) => item.slot === slot && item.zoneId === zone);
+    if (action === "history") return configJson(route, 200, { items: of(zoneId) });
+    if (action === "publish") {
+      const made = ((body?.["zoneIds"] as string[]) ?? []).map((zone) => ({ ...(body as object), slot, zoneId: zone, version: of(zone).length + 1, publishedAt: "2026-10-28T10:00:00Z", publishedBy: "Mia Admin" }) as unknown as ContentFakeItem);
+      items.push(...made);
+      return configJson(route, 200, { items: made });
+    }
+    if (action === "rollback") {
+      const zone = String(body?.["zoneId"]);
+      const earlier = of(zone).find((item) => item.version === body?.["version"]);
+      if (!earlier) return configJson(route, 404, { code: "not_found", message: "No such version.", requestId: "r-404", retryable: false });
+      const next = { ...earlier, version: of(zone).length + 1, publishedAt: "2026-10-28T10:05:00Z" };
+      items.push(next);
+      return configJson(route, 200, { items: [next] });
+    }
+    return configJson(route, 404, { code: "not_found", message: "Not found.", requestId: "r-404", retryable: false });
+  });
+  return { items, sent };
+}
