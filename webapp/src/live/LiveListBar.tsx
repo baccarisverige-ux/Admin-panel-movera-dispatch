@@ -36,7 +36,8 @@ function Bar({ list, records, initialStatus }: { list: LiveListName; records: st
   }, [list, initialStatus]);
   const change = (patch: Parameters<typeof setListQuery>[1]) => {
     setListQuery(list, patch);
-    void queryClient.invalidateQueries({ queryKey: ["records"] });
+    // Only this list asks the server again; the page's other lists keep their rows.
+    void queryClient.invalidateQueries({ queryKey: ["records", records] });
   };
   return (
     <div className="live-list-bar" data-testid={`live-list-${list}`}>
