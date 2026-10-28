@@ -487,6 +487,18 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       await client.post(`/admin/refunds/${encodeURIComponent(input.targetId)}/paid`, input.reason ? { note: input.reason } : {});
       return done("Marked as paid.");
     }
+    if (input.action === "admin.studio.publish" || input.action === "admin.studio.rollback") {
+      // Content (contract v0.10.0 §19): one admin publishes to the zones chosen at the top; rollback per zone.
+      const slot = encodeURIComponent(input.targetId);
+      if (input.action === "admin.studio.publish") {
+        const body = (input.value ?? {}) as { zoneIds?: string[] };
+        if (!body.zoneIds?.length) throw new ApiError(400, "Choose the zones first.", { code: "invalid_request", retryable: false });
+        await client.post(`/admin/content/${slot}/publish`, body);
+        return done("Published.");
+      }
+      await client.post(`/admin/content/${slot}/rollback`, input.value ?? {});
+      return done("Rolled back.");
+    }
     throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
   }
 

@@ -30,7 +30,7 @@ test("content: places, image size and what changed", () => {
   const next = setExtra(emptyContentOps(), "help", { ...extra, zones: ["Z001"] });
   assert.equal(next.draftRev, 2);
   assert.deepEqual(slotExtra(next, "help").zones, ["Z001"]);
-  const base = { title: "Movera", sv: "Hej", en: "Hi", image: "", expiresAt: "", minVersion: "", recommendedVersion: "", reaccept: false };
+  const base = { title: "Movera", sv: "Hej", fr: "Salut", en: "Hi", image: "", expiresAt: "", riderMin: "", riderRecommended: "", driverMin: "", driverRecommended: "", reaccept: false };
   assert.deepEqual(compare(base, { ...base, en: "Hello" }), [{ label: "English", before: "Hi", after: "Hello" }]);
   assert.deepEqual(compare(base, base), []);
 });

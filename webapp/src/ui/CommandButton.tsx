@@ -84,7 +84,7 @@ export function CommandButton({
   largeChanges,
   reasonChoices,
   reasonField,
-  reasonLabel = "Reason",
+  reasonLabel = tr("Reason"),
   optionalNote = false,
   summary,
   children,

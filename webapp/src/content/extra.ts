@@ -36,11 +36,14 @@ export const PHONES: { id: string; label: string; width: number; height: number 
 const FIELDS: { key: keyof StudioText; label: string }[] = [
   { key: "title", label: "Title" },
   { key: "sv", label: "Swedish" },
+  { key: "fr", label: "French" },
   { key: "en", label: "English" },
   { key: "image", label: "Image URL" },
   { key: "expiresAt", label: "Ends" },
-  { key: "minVersion", label: "Minimum app version" },
-  { key: "recommendedVersion", label: "Recommended app version" },
+  { key: "riderMin", label: "Rider app minimum version" },
+  { key: "riderRecommended", label: "Rider app recommended version" },
+  { key: "driverMin", label: "Driver app minimum version" },
+  { key: "driverRecommended", label: "Driver app recommended version" },
   { key: "reaccept", label: "Re-accept" },
 ];
 
