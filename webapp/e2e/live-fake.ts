@@ -576,8 +576,8 @@ export async function fakeContent(page: Page) {
     { slot: "legal", zoneId: "Z001", version: 1, publishedAt: "2026-10-20T08:00:00Z", publishedBy: "Mia Admin", title: "Villkor", text: { sv: "Villkor v1", fr: "Conditions v1", en: "Terms v1" }, reaccept: true },
   ];
   const acceptances = [
-    { userId: "R1", name: "Sara Lind", app: "rider", contentVersion: 1, acceptedAt: "2026-10-21T09:12:00Z" },
-    { userId: "D1001", name: "Anna Berg", app: "driver", contentVersion: 1, acceptedAt: "2026-10-21T10:40:00Z" },
+    { actor: "rider", subjectId: "R1", zoneId: "Z001", contentVersion: 1, acceptedAt: "2026-10-21T09:12:00Z" },
+    { actor: "driver", subjectId: "D1001", zoneId: "Z001", contentVersion: 1, acceptedAt: "2026-10-21T10:40:00Z" },
   ];
   const sent: Sent[] = [];
   await page.route(/\/api\/v1\/admin\/content(\/.*)?(\?.*)?$/, async (route) => {

@@ -5426,4 +5426,9 @@ export const fr: Record<MessageKey, string> = {
   "Live · v{0}": "En ligne · v{0}",
   "This content has ended and is no longer shown.": "Ce contenu est terminé et n'est plus affiché.",
   "Content sections": "Sections du contenu",
+  "Small phone": "Petit téléphone",
+  "Large phone": "Grand téléphone",
+  "Tablet": "Tablette",
+  "Who": "Qui",
+  "ID": "Identifiant",
 };

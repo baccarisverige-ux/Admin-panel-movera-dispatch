@@ -5424,6 +5424,11 @@ export const en = {
   "Live · v{0}": "Live · v{0}",
   "This content has ended and is no longer shown.": "This content has ended and is no longer shown.",
   "Content sections": "Content sections",
+  "Small phone": "Small phone",
+  "Large phone": "Large phone",
+  "Tablet": "Tablet",
+  "Who": "Who",
+  "ID": "ID",
 } as const;
 
 export type MessageKey = keyof typeof en;

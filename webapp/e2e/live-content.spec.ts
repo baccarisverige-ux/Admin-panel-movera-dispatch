@@ -70,8 +70,8 @@ test("Content: legal keeps 'users must accept again' and lists who accepted", as
   await page.getByLabel("Innehållsplats").selectOption("legal");
   await expect(page.getByText("Användarna måste godkänna igen").first()).toBeVisible();
   const list = page.getByTestId("live-acceptances");
-  await expect(list).toContainText("Sara Lind");
-  await expect(list).toContainText("Anna Berg");
-  await expect(list).toContainText("Förarappen");
+  await expect(list).toContainText("R1");
+  await expect(list).toContainText("D1001");
+  await expect(list).toContainText("Förare");
   await shot(page, "admin-content-legal-acceptances-sv");
 });

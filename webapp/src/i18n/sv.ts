@@ -5426,4 +5426,9 @@ export const sv: Record<MessageKey, string> = {
   "Live · v{0}": "Live · v{0}",
   "This content has ended and is no longer shown.": "Innehållet har slutat och visas inte längre.",
   "Content sections": "Innehållsdelar",
+  "Small phone": "Liten telefon",
+  "Large phone": "Stor telefon",
+  "Tablet": "Surfplatta",
+  "Who": "Vem",
+  "ID": "ID",
 };

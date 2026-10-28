@@ -246,7 +246,7 @@ export function ContentPage() {
 
         <aside className="gr-phone" aria-label={tr("Phone preview")}>
           <h3><Smartphone size={15} aria-hidden="true" /> {tr("Phone preview")}</h3>
-          <Choice label={tr("Phone size")} value={phone} options={PHONES.map((item) => ({ id: item.id, label: item.label }))} onChange={setPhone} />
+          <Choice label={tr("Phone size")} value={phone} options={PHONES.map((item) => ({ id: item.id, label: tr(item.label as Parameters<typeof tr>[0]) }))} onChange={setPhone} />
           <Choice label={tr("Preview language")} value={lang} options={[{ id: "sv", label: tr("Swedish") }, { id: "fr", label: tr("French") }, { id: "en", label: tr("English") }]} onChange={setLang} />
           <div className="gr-phone-frame" style={{ width: size.width, minHeight: size.height }}>
             <span className="gr-phone-bar" />
