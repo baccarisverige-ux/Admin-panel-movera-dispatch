@@ -2,6 +2,7 @@ import { isLiveData, liveDriverOf } from "../live/realData";
 import { NotConnected } from "../live/NotConnected";
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
+import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
 import { useEffect, useMemo, useState } from "react";
@@ -85,6 +86,7 @@ export function DriverDetailPage() {
   const [accountNote, setAccountNote] = useState("");
   const [privateNote, setPrivateNote] = useState("");
   const [notice, setNotice] = useState("");
+  const [refused, setRefused] = useState<string[] | null>(null);
   const [now] = useState(() => Date.now());
   const period = parsePeriodOr(params, { kind: "month" });
 
@@ -181,7 +183,9 @@ export function DriverDetailPage() {
       value={setAccountReason(store.value, driverSeed, status, accountNote || label, agent?.id ?? "")}
       disabled={disabled}
       title={disabled && status === "active" ? activationIssue ?? undefined : undefined}
+      onError={(error) => setRefused(status === "active" ? refusedDetails(error) : null)}
       onDone={() => {
+        setRefused(null);
         setNotice(`Driver account is now ${statusLabel(status).toLowerCase()}.`);
         setAccountNote("");
       }}
@@ -277,6 +281,7 @@ export function DriverDetailPage() {
         </dl>
       </section>
 
+      {refused ? <ActivationRefused details={refused} /> : null}
       {notice || store.message ? <p className="fd-notice" role="status">{trSentences(notice)} {trSentences(store.message)}</p> : null}
       {liveData ? null : driver.status === "active" && health.invalid ? (
         <p className="fd-banner red">{trn("{0} {1} document{2} missing, wrong or expired. Consider putting the account on hold.", <AlertTriangle size={16} aria-hidden="true" />, health.invalid, health.invalid > 1 ? tr("s are") : tr(" is"))}</p>
@@ -529,7 +534,7 @@ export function DriverDetailPage() {
 
         <TabPanel id="vehicles" activeId={tab}>
           <h3>{tr("Vehicles")}</h3>
-          {cars.length === 0 ? <p>{tr("No vehicle linked. Activation remains blocked.")}</p> : cars.map((record) => {
+          {cars.length === 0 ? <p>{liveData ? tr("No vehicle linked. A car is not needed to activate the account.") : tr("No vehicle linked. Activation remains blocked.")}</p> : cars.map((record) => {
             const vehicle = vehicleOps(store.value, record);
             return (
               <div key={record.id} className="fd-vehicle">
@@ -537,7 +542,8 @@ export function DriverDetailPage() {
                 <div>
                   <Link to={`/vehicles/${record.id}`}><strong>{record.plate ?? record.id}</strong></Link>
                   <p>{trn("{0} {1} · {2} · {3} seats · {4} · {5}", record.make ?? tr("Vehicle"), record.model ?? "", vehicle.year, vehicle.seats, vehicle.fuel, vehicle.category)}</p>
-                  <small>{trn("Inspection until {0} · insurance until {1} · {2}", vehicle.inspectionExpiresAt, vehicle.insuranceExpiresAt, statusLabel(record.status))}</small>
+                  {liveData ? <small>{statusLabel(record.status)}</small> : <small>{trn("Inspection until {0} · insurance until {1} · {2}", vehicle.inspectionExpiresAt, vehicle.insuranceExpiresAt, statusLabel(record.status))}</small>}
+                  <VehicleBlocked missing={record.liveVehicleMissing} />
                 </div>
               </div>
             );
