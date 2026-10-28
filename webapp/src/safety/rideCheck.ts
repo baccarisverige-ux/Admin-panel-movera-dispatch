@@ -98,7 +98,7 @@ export type RideCheck = {
 };
 
 export function triggerLabel(trigger: Trigger): string {
-  return TRIGGERS.find((item) => item.id === trigger)?.label ?? trigger;
+  return trx(TRIGGERS.find((item) => item.id === trigger)?.label ?? trigger);
 }
 
 export function distanceText(metres: number): string {
