@@ -73,5 +73,14 @@ test("Content: legal keeps 'users must accept again' and lists who accepted", as
   await expect(list).toContainText("R1");
   await expect(list).toContainText("D1001");
   await expect(list).toContainText("Förare");
+  await expect(list).toContainText("21 okt.");
+  const fits = () => list.evaluate((el) => el.scrollWidth <= el.clientWidth + 1 && el.getBoundingClientRect().right <= document.documentElement.clientWidth);
+  expect(await fits()).toBe(true);
+  await list.scrollIntoViewIfNeeded();
   await shot(page, "admin-content-legal-acceptances-sv");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await list.scrollIntoViewIfNeeded();
+  expect(await fits()).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  if (SHOTS) await list.screenshot({ path: `${SHOTS}/admin-content-legal-acceptances-390-sv.png` });
 });
