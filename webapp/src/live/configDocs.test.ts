@@ -176,7 +176,10 @@ test("live Tips & limits (v0.8.1, owner 2026-10-28): read per zone, saved only t
     "country_rules:Z002": { version: 4, liveVersion: 3, usesStandard: false, document: rules(35) },
   });
   const settings = createLiveSettings(server.http, () => "2026-10-28T10:00:00Z");
-  const book = (await settings.readSlice("countrySettings", { draftRev: 0, countries: {} })) as { draftRev: number; countries: Record<string, { tips: Array<{ amount: number }> }>; zones: Record<string, { tips: Array<{ amount: number }> }> };
+  const countries = (await settings.readSlice("countrySettings", { draftRev: 0, countries: {} })) as { draftRev: number; countries: Record<string, { tips: Array<{ amount: number }> }> };
+  // The zones' own are read only when the Tips & limits tab asks (the panel's first load does not wait for them).
+  const zones = (await settings.readSlice("countrySettingsZones", {})) as Record<string, { tips: Array<{ amount: number }> }>;
+  const book = { ...countries, zones };
   assert.equal(book.zones["Z002"]!.tips[0]!.amount, 35);
   assert.equal(book.zones["Z001"]!.tips[0]!.amount, 10);
   assert.equal(standardMarks.get("country_rules", "Z001"), true);

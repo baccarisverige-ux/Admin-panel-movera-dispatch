@@ -10,6 +10,7 @@ import {
   countrySettingsLines,
   countrySettingsOf,
   zoneSettingsOf,
+  ZONE_RULES_KEY,
   driverBonusHardMax,
   largeCountryChanges,
   moneyStep,
@@ -21,6 +22,7 @@ import {
   type CountrySettings,
 } from "../config/countrySettings";
 import { useCountrySettings } from "../config/useCountrySettings";
+import { useSlice } from "../api/hooks";
 import { CommandButton } from "../ui/CommandButton";
 import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { NumberField } from "./NumberField";
@@ -99,9 +101,13 @@ type Props = {
  * 50 % asks "Are you sure?" (Q29). The rider and driver app configs read the saved values.
  */
 export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotice, targets }: Props) {
-  const { book, loading } = useCountrySettings();
+  const { book, loading: bookLoading } = useCountrySettings();
   const zoneId = targets?.[0];
-  const saved = zoneId ? zoneSettingsOf(book, country, zoneId) : countrySettingsOf(book, country);
+  // v0.8.1 live: each zone's (or Standard's) own Tips & limits, read when this tab opens.
+  const zoneRules = useSlice<Record<string, CountrySettings>>(ZONE_RULES_KEY, {}, { enabled: Boolean(targets) });
+  const zoneBook = { ...book, zones: zoneRules.value };
+  const loading = bookLoading || (Boolean(targets) && zoneRules.loading);
+  const saved = zoneId ? zoneSettingsOf(zoneBook, country, zoneId) : countrySettingsOf(book, country);
   const [draft, setDraft] = useState<CountrySettings | null>(null);
   const shown = draft ?? saved;
   const dirty = draft !== null && JSON.stringify(sectionPart(draft, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
@@ -193,12 +199,12 @@ export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotic
             before={pricingSummary(country, saved)}
             after={pricingSummary(country, shown)}
             sliceKey={COUNTRY_SETTINGS_KEY}
-            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...(book.zones ?? {}), ...Object.fromEntries(targets.map((id) => [id, shown])) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
+            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...Object.fromEntries(targets.map((id) => [id, shown])) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
             expectedSliceRev={book.draftRev}
             disabled={!canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
             title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}
             largeChanges={large}
-            onDone={() => { setDraft(null); onNotice(targets ? tr("Tips & limits saved for {0}. No other zone changed.", [zoneNames]) : tr("Tips & limits saved for {0}. The rider and driver apps get them with the next app config.", [name])); }}
+            onDone={() => { setDraft(null); if (targets) void zoneRules.refetch(); onNotice(targets ? tr("Tips & limits saved for {0}. No other zone changed.", [zoneNames]) : tr("Tips & limits saved for {0}. The rider and driver apps get them with the next app config.", [name])); }}
           >{trn("{0} Save tips & limits", <Save size={15} aria-hidden="true" />)}</CommandButton>
           <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" disabled={!draft} onClick={() => setDraft(null)}>{tr("Discard")}</button>
         </div>

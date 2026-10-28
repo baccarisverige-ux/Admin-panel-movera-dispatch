@@ -6,7 +6,7 @@
 import { MARKETS, marketOfZone, standardZoneId, type MarketId } from "../markets/markets.ts";
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { DISPATCH_KEY, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
-import { COUNTRY_SETTINGS_KEY, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, ZONE_RULES_KEY, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
@@ -128,24 +128,33 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     };
   }
 
-  // v0.8.1 (owner 2026-10-28): Tips & limits per zone or Standard, each as the server has it ("Uses standard" marked).
   async function readCountries(fallback: unknown): Promise<CountrySettingsBook> {
     const book = fallback as CountrySettingsBook;
     const countries = { ...book.countries };
-    const zones: Record<string, CountrySettings> = { ...(book.zones ?? {}) };
     await Promise.all(MARKETS.map(async (market) => {
       const found = await draft("country_rules", standardKey(market.id), true);
       if (found) countries[market.id] = settingsOfRules(countrySettingsOf(book, market.id), market, found.document);
     }));
-    await Promise.all(settingsScopes().map(async (id) => {
-      const market = MARKETS.find((m) => standardZoneId(m.id) === id) ?? marketOfZone(id);
-      if (!market) return;
-      const found = await draft("country_rules", id, true);
-      if (found) zones[id] = settingsOfRules({ ...countrySettingsOf({ ...book, countries }, market.id) }, market, found.document);
-    }));
-    const next = { ...book, countries, zones };
+    const next = { ...book, countries };
     slices.set(COUNTRY_SETTINGS_KEY, next);
     return next;
+  }
+
+  /**
+   * v0.8.1 (owner 2026-10-28): Tips & limits of every zone and Standard as the server has them ("Uses standard"
+   * marked). Read only when the Tips & limits tab opens, so the rest of the panel does not wait for it.
+   */
+  async function readZoneRules(): Promise<Record<string, CountrySettings>> {
+    const book = (slices.get(COUNTRY_SETTINGS_KEY) as CountrySettingsBook | undefined) ?? { draftRev: 0, countries: {} as CountrySettingsBook["countries"] };
+    const zones: Record<string, CountrySettings> = {};
+    await Promise.all(settingsScopes().map(async (id) => {
+      const market = marketOfZone(id);
+      if (!market) return;
+      // A zone the server cannot answer for keeps its country's values (the tab still opens).
+      const found = await draft("country_rules", id, true).catch(() => null);
+      if (found) zones[id] = settingsOfRules(countrySettingsOf(book, market.id), market, found.document);
+    }));
+    return zones;
   }
 
   /** The rider and driver documents a page owns parts of, built by the admin's exporters, over the server's. */
@@ -202,7 +211,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   async function saveCountries(book: CountrySettingsBook, targets: readonly string[]): Promise<string> {
     if (!targets.length) throw new Error("Choose the zones at the top first.");
     for (const id of targets) {
-      const market = MARKETS.find((m) => standardZoneId(m.id) === id) ?? marketOfZone(id);
+      const market = marketOfZone(id);
       if (!market) continue;
       const next = zoneSettingsOf(book, market.id as MarketId, id);
       const current = await draft("country_rules", id, true);
@@ -231,6 +240,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       if (sliceKey === PRICING_KEY) return readPricing(fallback);
       if (sliceKey === DISPATCH_KEY) return readDispatch(fallback);
       if (sliceKey === COUNTRY_SETTINGS_KEY) return readCountries(fallback);
+      if (sliceKey === ZONE_RULES_KEY) return readZoneRules();
       // Settings' draft lives in this session until it is published (the server keeps the published documents).
       if (sliceKey === CONFIG_KEY) return Promise.resolve(slices.get(CONFIG_KEY) ?? fallback);
       return null;
