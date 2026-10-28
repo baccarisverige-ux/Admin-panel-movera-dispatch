@@ -24,6 +24,8 @@ import {
   emptyIncidentOps,
   lateText,
   linkedTrip,
+  liveAnswerLabel,
+  liveTriggerLabel,
   logCall,
   normalizeIncidentOps,
   pastCases,
@@ -221,6 +223,7 @@ export function SafetyPage() {
                     <span className={`op-level ${row.level}`}>{LEVELS.find((level) => level.id === row.level)?.label}</span>
                     <b>{trx(KINDS.find((kind) => kind.id === row.kind)?.label)} · {row.who}</b>
                     <small>{row.id} · {zoneById(row.zoneId)?.name ?? row.zoneId} · {row.state === "solved" ? caseStep(row.status) : row.owner ? `${agentName(row.owner)} is on it` : "Nobody yet"}</small>
+                    {row.rideCheck ? <small className="op-rc-answer" data-answer={row.rideCheck.answer}>{liveAnswerLabel(row.rideCheck)}</small> : null}
                     {lateLine ? <small className="op-late"><Clock3 size={11} aria-hidden="true" /> {lateLine}</small> : null}
                   </button>
                 </li>
@@ -337,7 +340,8 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
   ] : [];
   const events = [
     ...rideEvents,
-    { at: item.openedAt, text: check ? `Alert sent by the ${raisedBy}. Ride check incident opened.` : item.raisedBy === "system" ? tr("Movera opened the case: no car position for 30 min with the rider on board.") : `${item.raisedBy === "rider" ? "The rider" : "The driver"} raised the case (${trx(KINDS.find((kind) => kind.id === item.kind)?.label)})`, who: "" },
+    ...(!check && item.rideCheck?.answeredAt && item.rideCheck.answer === "need_help" ? [{ at: Date.parse(item.rideCheck.answeredAt), text: tr("{0} answered the Ride check: {1}", [item.rideCheck.by === "rider" ? tr("The rider") : tr("The driver"), tr("I need help")]), who: "" }] : []),
+    { at: item.openedAt, text: check ? `Alert sent by the ${raisedBy}. Ride check incident opened.` : item.rideCheck?.answer === "no_answer" ? tr("Movera opened the case: {0} did not answer the Ride check in 2 minutes.", [item.rideCheck.by === "rider" ? tr("The rider") : tr("The driver")]) : item.rideCheck ? `${trx(KINDS.find((kind) => kind.id === item.kind)?.label)} · ${liveAnswerLabel(item.rideCheck)}` : item.raisedBy === "system" ? tr("Movera opened the case: no car position for 30 min with the rider on board.") : `${item.raisedBy === "rider" ? "The rider" : "The driver"} raised the case (${trx(KINDS.find((kind) => kind.id === item.kind)?.label)})`, who: "" },
     ...(item.escalatedAt ? [{ at: Date.parse(item.escalatedAt), text: tr("Nobody took it in 2 minutes: every signed-in admin is alerted."), who: "" }] : []),
     ...item.events.map((event) => ({ at: Date.parse(event.at), text: event.kind === "take" ? "Took the case" : event.kind === "resolve" ? `${tr("Solved")}: ${event.text}` : event.kind === "dismiss" ? `${tr("False alarm")}: ${event.text}` : `Contact: ${event.text}`, who: agentName(event.actor) })),
     ...(caseInfo?.levelAt ? [{ at: Date.parse(caseInfo.levelAt), text: `Level set to ${LEVELS.find((row) => row.id === caseInfo.level)?.label}${caseInfo.levelWhy ? `: ${caseInfo.levelWhy}` : ""}`, who: agentName(caseInfo.levelBy ?? "") }] : []),
@@ -394,6 +398,21 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
         <ClockBar clock={time2.solve} />
       </div>
 
+      {!check && item.rideCheck ? (
+        <section className="op-section rc-answers rc-live" aria-label={tr("Ride check answer")}>
+          <header className="op-section-head">
+            <h3><span aria-hidden="true"><ShieldCheck size={16} /></span> {tr("Ride check")} · {liveTriggerLabel(item.rideCheck.trigger)}</h3>
+          </header>
+          <dl className="rc-live-facts">
+            <div><dt>{tr("Why the app asked")}</dt><dd>{liveTriggerLabel(item.rideCheck.trigger)}</dd></div>
+            <div><dt>{tr("Who was asked")}</dt><dd>{item.rideCheck.by === "rider" ? tr("The rider") : tr("The driver")}</dd></div>
+            <div><dt>{tr("Answer")}</dt><dd data-answer={item.rideCheck.answer}><b>{liveAnswerLabel(item.rideCheck)}</b></dd></div>
+            {item.rideCheck.shownAt ? <div><dt>{tr("Card shown")}</dt><dd>{time(Date.parse(item.rideCheck.shownAt))}</dd></div> : null}
+            {item.rideCheck.answeredAt ? <div><dt>{tr("Answered")}</dt><dd>{time(Date.parse(item.rideCheck.answeredAt))}</dd></div> : null}
+          </dl>
+          {item.rideCheck.answer === "no_answer" && !record.alarm ? <p className="state-line">{tr("No answer: the case opened without the alarm sound.")}</p> : null}
+        </section>
+      ) : null}
       {check ? (
         <section className="op-section rc-answers" aria-label="Ride check answers">
           <header className="op-section-head">

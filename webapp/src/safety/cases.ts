@@ -1,4 +1,4 @@
-import type { DemoRecord } from "../api/seed.ts";
+import type { DemoRecord, LiveRideCheck } from "../api/seed.ts";
 import type { LatLng } from "../dashboard/route.ts";
 import { market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import type { IncidentEvent, SafetyBook } from "./ops.ts";
@@ -134,6 +134,8 @@ export type Case = {
   /** Live: nobody took it in 2 minutes, so every signed-in admin was alerted. */
   escalatedAt: string | null;
   falseAlarm: boolean;
+  /** Live Ride check (contract v0.12.0 §22): trigger, who, answer, from the server. */
+  rideCheck?: LiveRideCheck;
 };
 
 const OPEN = new Set(["queued", "taken"]);
@@ -190,6 +192,7 @@ export function caseOf(row: DemoRecord, safety: SafetyBook, ops: IncidentOps, no
     carAt: typeof row.carLat === "number" && typeof row.carLng === "number" ? { lat: row.carLat, lng: row.carLng, at: row.carAt ?? null } : null,
     escalatedAt: row.escalatedAt ?? null,
     falseAlarm: row.status === "dismissed",
+    ...(row.liveRideCheck ? { rideCheck: row.liveRideCheck } : {}),
   };
 }
 
@@ -294,4 +297,16 @@ export function caseReport(item: Case, extra: { zone: string; trip: string; owne
     "Calls",
     ...(extra.calls.length ? extra.calls.map((line) => `- ${line}`) : ["- none"]),
   ].join("\n");
+}
+
+/** The app's trigger, as the admin reads it (contract v0.12.0 §22). */
+export function liveTriggerLabel(trigger: string): string {
+  return trigger === "dropped_far" ? tr("Dropped far from the destination") : trigger === "long_stop" ? tr("Long stop") : trigger === "off_route" ? tr("Off the route") : trigger === "possible_crash" ? tr("Possible crash") : trigger;
+}
+
+/** What the Ride check said: "I need help", "No answer in 2 minutes", and a late answer when one came. */
+export function liveAnswerLabel(check: LiveRideCheck): string {
+  const answer = check.answer === "need_help" ? tr("I need help") : tr("No answer in 2 minutes");
+  if (!check.lateAnswer) return answer;
+  return `${answer} · ${check.lateAnswer === "ok" ? tr("Late answer: I'm OK") : tr("Late answer: I need help")}`;
 }

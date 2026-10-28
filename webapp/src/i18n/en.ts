@@ -5767,6 +5767,23 @@ export const en = {
   "What one new rider cost in promotions.": "What one new rider cost in promotions.",
   "What the rides brought in for each 1 spent.": "What the rides brought in for each 1 spent.",
   "Bookings ÷ rides for the best zone.": "Bookings ÷ rides for the best zone.",
+  "Dropped far from the destination": "Dropped far from the destination",
+  "Long stop": "Long stop",
+  "I need help": "I need help",
+  "No answer in 2 minutes": "No answer in 2 minutes",
+  "Late answer: I'm OK": "Late answer: I'm OK",
+  "Late answer: I need help": "Late answer: I need help",
+  "Ride check · I need help": "Ride check · I need help",
+  "Ride check answer": "Ride check answer",
+  "Why the app asked": "Why the app asked",
+  "Who was asked": "Who was asked",
+  "The rider": "The rider",
+  "The driver": "The driver",
+  "Card shown": "Card shown",
+  "Answered": "Answered",
+  "No answer: the case opened without the alarm sound.": "No answer: the case opened without the alarm sound.",
+  "{0} answered the Ride check: {1}": "{0} answered the Ride check: {1}",
+  "Movera opened the case: {0} did not answer the Ride check in 2 minutes.": "Movera opened the case: {0} did not answer the Ride check in 2 minutes.",
 } as const;
 
 export type MessageKey = keyof typeof en;
