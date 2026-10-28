@@ -347,7 +347,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
               <ul aria-label={tr("Changes not live yet")}>
                 {changes.map((change) => (
                   <li key={change.zoneId}>
-                    <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>{change.big ? <span className="dx-dot waiting">{tr("Needs a second admin")}</span> : null}
+                    <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>{change.big && !liveSession ? <span className="dx-dot waiting">{tr("Needs a second admin")}</span> : null}
                     <ul>{change.lines.map((line) => <li key={line}>{line}</li>)}</ul>
                   </li>
                 ))}

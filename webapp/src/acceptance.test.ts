@@ -39,7 +39,7 @@ assert(pending.status === "pending_approval" && again.operationId === pending.op
 // A04: the live Pricing quote (pricing/zonePricing.ts) adds up from its own lines, from the published Movera prices.
 const book = zoneBook(emptyPricingStore(), "Z001");
 const price = book.prices.economy;
-const quote = quoteRide(book, { categoryId: "economy", km: 10, minutes: 20, waitMin: 0, stops: 0, stopWaitMin: 0, babySeats: 0, childSeats: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 });
+const quote = quoteRide(book, { categoryId: "economy", km: 10, minutes: 20, waitMin: 0, stops: 0, stopWaitMin: 0, airportPickup: false, airportDropoff: false, reservation: false, surge: 1 });
 const ride = price.base + price.perKm * 10 + price.perMin * 20;
 assert(!quote.error && quote.total === roundTo(ride * (1 + price.appFeePct / 100), book.fees.rounding) && quote.lines.filter((line) => line.kind === "trip").reduce((sum, line) => sum + line.amount, 0) === ride, "A04 quote matches");
 

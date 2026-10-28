@@ -27,8 +27,11 @@ test("test a ride follows the zone price list, in each country's currency", asyn
   await quote.getByLabel("Quote waiting minutes").fill("8");
   // 3 paid minutes × 12.26 kr after 5 free (owner Q41): 233.78 × 1.1 = 257.16
   await expect(page.getByTestId("quote-total")).toHaveText("257,00 kr");
-  await quote.getByLabel("Quote baby seats").fill("1");
-  await expect(page.getByTestId("quote-lines")).toContainText("1 baby seat");
+  // Owner 2026-10-27: no seat numbers; the seat fee row is only on Child Seat (a grey "—" elsewhere).
+  await expect(quote.getByLabel("Quote baby seats")).toHaveCount(0);
+  await expect(page.getByLabel("Norrmalm Movera Child seat fee")).toHaveCount(0);
+  await expect(page.getByLabel("Child seat fee: not on Movera")).toHaveText("—");
+  await expect(page.getByLabel("Norrmalm Child Seat Child seat fee")).toHaveValue("15");
 
   await topbarMore(page);
   await page.getByRole("radio", { name: "France" }).click();

@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { expect, test, type Page, type Route } from "@playwright/test";
-import { ADMIN, API, fakeTripServer, signIn } from "./live-fake";
+import { expect, test, type Page } from "@playwright/test";
+import { ADMIN, fakeSettings, fakeTripServer, signIn } from "./live-fake";
 
 /**
  * Contract v0.8.0 settings flow in the live panel (owner 2026-10-27): each country's Standard edited like a zone,
@@ -9,61 +8,11 @@ import { ADMIN, API, fakeTripServer, signIn } from "./live-fake";
  * controls with no server field. Screenshots (sv) go to SHOTS when it is set.
  */
 
-const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,PUT,OPTIONS", "access-control-expose-headers": "*" };
-const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
-const sample = (name: string) => JSON.parse(readFileSync(new URL(`../../contracts/fixtures/config/${name}.json`, import.meta.url), "utf8")) as Record<string, unknown>;
 const SHOTS = process.env.SHOTS;
 const SV_ADMIN = { language: "sv", permissions: [...ADMIN.permissions, "settings.read", "settings.edit", "settings.publish", "dispatch.edit"] };
 const shot = async (page: Page, name: string) => {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: false });
 };
-
-type Entry = { version: number; liveVersion: number; usesStandard?: boolean; document: Record<string, unknown> };
-type Sent = { method: string; path: string; body: Record<string, unknown> | null };
-
-async function fakeSettings(page: Page) {
-  const docs = new Map<string, Entry>();
-  const sent: Sent[] = [];
-  const names = { pricing: "pricing_document", dispatch: "dispatch_document", rider_app_config: "rider_app_config", driver_app_config: "driver_app_config" } as const;
-  // v0.8.1 Tips & limits: the Standard, a zone on it (Z001) and a zone with its own (Z002).
-  const rules = (tips: number[]) => ({ version: 1, publishedAt: "2026-10-27T09:00:00Z", country: "SE", currency: "SEK", tips: tips.map((kr) => ({ amount: { amountMinor: kr * 100, currency: "SEK" }, enabled: true })), raiseSteps: [{ amount: { amountMinor: 2000, currency: "SEK" }, enabled: true }], driverBonus: { defaultLimit: { amountMinor: 20000, currency: "SEK" }, hardMax: { amountMinor: 100000, currency: "SEK" } } });
-  docs.set("country_rules:standard-SE", { version: 2, liveVersion: 1, document: rules([10, 20, 50]) });
-  docs.set("country_rules:Z001", { version: 1, liveVersion: 0, usesStandard: true, document: rules([10, 20, 50]) });
-  docs.set("country_rules:Z002", { version: 3, liveVersion: 2, usesStandard: false, document: rules([15, 35]) });
-  for (const [doc, file] of Object.entries(names)) {
-    const base = sample(file);
-    docs.set(`${doc}:standard-SE`, { version: 2, liveVersion: 1, document: { ...base, zoneId: "standard-SE" } });
-    docs.set(`${doc}:Z001`, { version: 1, liveVersion: 0, usesStandard: true, document: { ...base, zoneId: "Z001" } });
-    docs.set(`${doc}:Z002`, { version: 3, liveVersion: 2, usesStandard: false, document: { ...base, zoneId: "Z002" } });
-  }
-  await page.route(`${API}/api/v1/admin/config/**`, async (route) => {
-    const request = route.request();
-    if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
-    const url = new URL(request.url());
-    const [, , , , , doc, action] = url.pathname.split("/");
-    const body = (request.postDataJSON?.() ?? null) as Record<string, unknown> | null;
-    sent.push({ method: request.method(), path: url.pathname + url.search, body });
-    const scope = (q: { zoneId?: unknown; country?: unknown }) => (q.zoneId ? String(q.zoneId) : `standard-${String(q.country)}`);
-    if (request.method() === "GET") {
-      const entry = docs.get(`${doc}:${scope({ zoneId: url.searchParams.get("zoneId"), country: url.searchParams.get("country") })}`);
-      return entry ? json(route, 200, { doc, ...entry, updatedAt: "2026-10-27T09:00:00Z" }) : json(route, 404, { code: "not_found", message: "No such zone.", requestId: "r-404", retryable: false, reason: "zone_not_found" });
-    }
-    const key = `${doc}:${scope(body ?? {})}`;
-    const entry = docs.get(key) ?? { version: 1, liveVersion: 0, document: {} };
-    if (action === "use-standard") {
-      docs.set(key, { ...entry, version: 1, liveVersion: 0, usesStandard: true });
-      return json(route, 200, { doc, zoneId: body?.["zoneId"], version: 9, publishedAt: "2026-10-27T10:00:00Z" });
-    }
-    if (body?.["expectedVersion"] !== entry.version) return json(route, 409, { code: "version_mismatch", message: "The settings changed since you last saw them.", requestId: "r-409", retryable: false });
-    if (request.method() === "PUT") {
-      docs.set(key, { ...entry, version: entry.version + 1, document: body["document"] as Record<string, unknown> });
-      return json(route, 200, { doc, ...docs.get(key), updatedAt: "2026-10-27T10:00:00Z" });
-    }
-    docs.set(key, { ...entry, version: entry.version + 1, liveVersion: entry.liveVersion + 1, usesStandard: false });
-    return json(route, 200, { doc, version: entry.liveVersion + 1, publishedAt: "2026-10-27T10:00:00Z" });
-  });
-  return { docs, sent };
-}
 
 const confirm = async (page: Page) => {
   const modal = page.locator(".modal.open").last();

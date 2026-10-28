@@ -38,16 +38,28 @@ function fakeServer(drafts: Record<string, Doc & { version: number; liveVersion:
   return { http, calls };
 }
 
-test("PricingDocument from the Pricing page: minor units, seat fees only on Child Seat, the same keys as the contract sample", () => {
-  const book = zoneBook(emptyPricingStore(), "Z001");
-  const doc = pricingDocumentOf(book, "Z001", null);
+test("PricingDocument from the Pricing page: minor units, ONE seat fee on Child Seat only (v0.7.1), the contract sample's keys", () => {
+  const store = emptyPricingStore();
+  const book = zoneBook(store, "Z001");
+  const doc = pricingDocumentOf(book, "Z001", { surge: { maxMultiplier: 3, notifyDrivers: true }, stopFreeWaitMin: 3 });
   const fixture = sample("pricing_document");
-  assert.deepEqual(Object.keys(doc).sort(), Object.keys(fixture).sort());
+  // v0.7.1 (owner 2026-10-27): no free minutes at a stop and no separate surge maximum (the slider is the maximum).
+  const gone = new Set(["stopFreeWaitMin"]);
+  assert.deepEqual(Object.keys(doc).sort(), Object.keys(fixture).filter((k) => !gone.has(k)).sort());
+  assert.ok(!("stopFreeWaitMin" in doc));
+  const surge = doc["surge"] as Doc;
+  assert.ok(!("maxMultiplier" in surge));
+  // v0.7.2 (owner 2026-10-28): no surge notice; an old notifyDrivers on the server is not written back.
+  assert.ok(!("notifyDrivers" in surge));
+  assert.deepEqual(Object.keys(surge).sort(), ["scheduled", "smart"]);
   const categories = doc["categories"] as Record<string, Doc>;
   assert.deepEqual(categories["economy"]!["base"], { amountMinor: Math.round(book.prices["economy"]!.base * 100), currency: "SEK" });
-  assert.ok(!("babySeatFee" in categories["economy"]!));
-  assert.ok("babySeatFee" in categories["child_seat"]!);
-  // The admin's contract copy is older than v0.6.0 (seat fees on every category there); the other keys match.
+  for (const [id, category] of Object.entries(categories)) {
+    assert.ok(!("babySeatFee" in category), `${id} has no baby seat fee`);
+    assert.equal("childSeatFee" in category, id === "child_seat", `${id}: seat fee only on Child Seat`);
+  }
+  assert.deepEqual(categories["child_seat"]!["childSeatFee"], { amountMinor: 1500, currency: "SEK" });
+  // The admin's contract copy is older (seat fees on every category there); the other keys match.
   const seat = new Set(["babySeatFee", "childSeatFee"]);
   assert.deepEqual(Object.keys(categories["economy"]!).sort(), Object.keys((fixture["categories"] as Record<string, Doc>)["economy"]!).filter((k) => !seat.has(k)).sort());
   // Back to the page: the same book.

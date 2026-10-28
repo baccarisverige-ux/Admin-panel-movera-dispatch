@@ -198,8 +198,6 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.pricing.startSurge", label: "Start manual surge", reason: true, permission: "settings.publish" },
   { id: "admin.pricing.stopSurge", label: "Stop manual surge", reason: true, permission: "settings.publish" },
   { id: "admin.pricing.stopAllSurges", label: "Stop all manual surges", reason: true, permission: "settings.publish" },
-  { id: "admin.pricing.notifyDrivers", label: "Tell drivers about the surge", reason: false, permission: "settings.publish" },
-  { id: "admin.pricing.notifySetting", label: "Change driver surge messages", reason: false, permission: "settings.publish" },
   { id: "admin.pricing.copyZones", label: "Copy prices to other zones", reason: false, permission: "settings.read" },
   { id: "admin.pricing.testRide", label: "Test a ride", reason: false, permission: "settings.read" },
   { id: "admin.pricing.editCategory", label: "Save category", reason: true, permission: "settings.publish" },

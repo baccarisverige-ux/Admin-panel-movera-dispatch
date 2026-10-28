@@ -58,8 +58,8 @@ function categoryDoc(price: CategoryPrice, commissionPct: number, riderFee: Zone
     commissionPct,
     extraStopFee: toMinor(price.extraStopFee, currency),
     stopWaitPerMin: toMinor(price.stopWaitPerMin, currency),
-    // v0.6.0: seat fees only on Child Seat.
-    ...(id === SEAT_CATEGORY ? { babySeatFee: toMinor(price.babySeatFee, currency), childSeatFee: toMinor(price.childSeatFee, currency) } : {}),
+    // v0.7.1 (owner 2026-10-27): ONE seat fee, only on Child Seat.
+    ...(id === SEAT_CATEGORY ? { childSeatFee: toMinor(price.childSeatFee, currency) } : {}),
     waiting: { freeWaitMin: price.freeWaitMin, perMin: toMinor(price.waitPerMin, currency), noShowAfterMin: price.freeWaitMin, noShowFee: toMinor(price.noShowFee, currency) },
     riderPickupFee: { live: fee(riderFee?.live), reservation: fee(riderFee?.reservation) },
   };
@@ -72,7 +72,7 @@ function categoryDoc(price: CategoryPrice, commissionPct: number, riderFee: Zone
 export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null): Doc {
   const facts = zoneFacts(id);
   const c = facts.currency;
-  const prior = (base ?? {}) as { surge?: Doc; stopFreeWaitMin?: number; version?: number; publishedAt?: string };
+  const prior = (base ?? {}) as { surge?: Doc; version?: number; publishedAt?: string };
   return {
     version: prior.version ?? 1,
     publishedAt: prior.publishedAt ?? new Date(0).toISOString(),
@@ -89,9 +89,13 @@ export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null):
       cleaningFee: toMinor(book.fees.cleaningFee, c),
       tollsPassThrough: book.fees.tollsPassThrough,
     },
-    stopFreeWaitMin: prior.stopFreeWaitMin ?? 3,
     fixedRoutes: book.routes.map((route) => ({ id: route.id, from: route.from, to: route.to, categoryId: route.categoryId, price: toMinor(route.price, c) })),
-    surge: { maxMultiplier: (prior.surge?.["maxMultiplier"] as number | undefined) ?? 3, smart: structuredClone(book.smart), scheduled: structuredClone(book.scheduled) },
+    // v0.7.1: no separate surge maximum (each slider is its own maximum). v0.7.2 (owner 2026-10-28): no surge notice
+    // to drivers, so no notifyDrivers (contract.json#surgeNoticeRemoved).
+    surge: {
+      smart: structuredClone(book.smart),
+      scheduled: structuredClone(book.scheduled),
+    },
     fleetCommissionPct: book.fleetCommissionPct,
   };
 }
@@ -117,8 +121,7 @@ export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
       appFeePct: typeof cat["appFeePct"] === "number" ? cat["appFeePct"] : own.appFeePct,
       extraStopFee: toMajor(cat["extraStopFee"], f, own.extraStopFee),
       stopWaitPerMin: toMajor(cat["stopWaitPerMin"], f, own.stopWaitPerMin),
-      babySeatFee: toMajor(cat["babySeatFee"], f, own.babySeatFee),
-      childSeatFee: toMajor(cat["childSeatFee"], f, own.childSeatFee),
+      childSeatFee: cid === SEAT_CATEGORY ? toMajor(cat["childSeatFee"], f, own.childSeatFee) : 0,
       freeWaitMin: typeof waiting["freeWaitMin"] === "number" ? waiting["freeWaitMin"] : own.freeWaitMin,
       waitPerMin: toMajor(waiting["perMin"], f, own.waitPerMin),
       noShowFee: toMajor(waiting["noShowFee"], f, own.noShowFee),

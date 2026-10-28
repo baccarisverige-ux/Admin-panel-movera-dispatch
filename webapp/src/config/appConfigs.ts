@@ -183,8 +183,9 @@ function booking(base: Common) {
   return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: base.zone.pickupMove.maxMeters };
 }
 
+/** v0.7.1/v0.7.2 contract sample: the sub-line goes to the rider app as { sv, fr, en } (contract.json#categoryCatalog). */
 function catalog(base: Common) {
-  return { categories: base.categories.map((category, index) => ({ id: category.id, label: category.label, seats: category.seats, sort: index + 1, line: category.line })) };
+  return { categories: base.categories.map((category, index) => ({ id: category.id, label: category.label, seats: category.seats, sort: index + 1, line: category.lines ?? { sv: category.line, fr: category.line, en: category.line } })) };
 }
 
 /** The config page's override context for a market zone: its shape id ("op-norrmalm") and market ("SE-STO"). */

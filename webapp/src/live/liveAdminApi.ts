@@ -242,8 +242,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     if (input.action === "admin.trip.refund") {
       const trip = trips.get(input.targetId) ?? (await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`));
-      const answer = await client.post<{ status?: string }>(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
-      return answer?.status === "pending" ? done("Waits for a second admin.", "pending_approval") : done("Refunded.");
+      // v0.7.2 (contract.json#auth.admin.oneAdmin): one admin is enough; the refund is made at once.
+      await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
+      return done("Refunded.");
     }
     // Pricing, Dispatch, Settings and Tips & limits publish to the server's config documents (contract v0.8.0).
     const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value, ...(input.scope ? { scope: input.scope } : {}) });

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { PublishTargetsLine, StandardBar, UsesStandardChip } from "../live/StandardBar";
+import { liveSurgeRows, smartChangesLastHour } from "../live/liveSurge";
+import { useLiveSurge } from "../live/useLiveSurge";
 import { useNavigate, useSearchParams } from "react-router";
 import {
   AlertTriangle,
@@ -182,8 +184,17 @@ export function PricingPage() {
   const requests = useMemo(() => rideRequests(trips.data ?? [], riders.data ?? [], (id) => online.has(id)), [trips.data, riders.data, online]);
   const counts = useMemo(() => new Map(supplyDemand(country, [], requests, live).map((row) => [row.zoneId, { waiting: row.waiting, free: row.free }])), [country, requests, live]);
   const zoneKey = countryZoneIds.join(",");
-  const rows = useMemo(() => surgeRows(store, zoneKey.split(","), counts, minute), [store, zoneKey, counts, minute]);
-  const alerts = alertsFor(rows, minute);
+  // Contract v0.7.2 (owner 2026-10-28, contract.json#surgeLive): the live panel shows the server's surge only
+  // (GET /admin/surge/now, the chosen zone's GET …/surge/history on the Surge tab); the demo keeps its model.
+  const liveSurge = useLiveSurge(liveSession ? countryZoneIds : [], zoneId, tab === "surge");
+  const demoRows = useMemo(() => (liveSession ? [] : surgeRows(store, zoneKey.split(","), counts, minute)), [liveSession, store, zoneKey, counts, minute]);
+  const liveNow = liveSurge?.now ?? null;
+  const liveRows = useMemo(() => liveSurgeRows(store, zoneKey.split(","), liveNow, minute), [liveNow, store, zoneKey, minute]);
+  const rows = liveSurge ? liveRows : demoRows;
+  const liveHistory = liveSurge?.history ?? null;
+  const alerts = liveSurge
+    ? liveSurge.nowState === "ok" ? alertsFor(rows, minute, (item) => (liveHistory && item.zoneId === liveHistory.zoneId ? smartChangesLastHour(liveHistory, minute) : null)) : []
+    : alertsFor(rows, minute);
   const surgeOf = (id: string) => rows.find((row) => row.surge.zoneId === id)?.surge;
 
   function usageOf(categoryId: string): CategoryUsage {
@@ -228,7 +239,7 @@ export function PricingPage() {
           const hasDraft = dirty.some((draft) => draft.zoneId === item.id);
           return (
             <button data-command="admin.pricing.zone" key={item.id} type="button" aria-pressed={item.id === zoneId} className={item.id === zoneId ? "zone-pill active" : "zone-pill"} onClick={() => go({ zone: item.id })}>
-              {item.kind === "airport" ? <Plane size={13} aria-hidden="true" /> : <i style={{ background: LEVEL_COLOR[surge?.level ?? "none"] }} aria-hidden="true" />}
+              {item.kind === "airport" ? <Plane size={13} aria-hidden="true" /> : <i style={{ background: surge || !liveSession ? LEVEL_COLOR[surge?.level ?? "none"] : "var(--line, #d9dde3)" }} aria-hidden="true" />}
               <span>{item.name}</span>
               {surge && surge.multiplier > 1 ? <b>×{surge.multiplier.toFixed(1)}</b> : null}
               {hasDraft ? <em title={tr("Unpublished changes")}>{tr("edited")}</em> : null}
@@ -351,6 +362,7 @@ export function PricingPage() {
               onScheduled={(list) => update((draft) => { draft.scheduled = list; })}
               onSelectZone={(id) => go({ zone: id })}
               onNotice={setNotice}
+              liveData={liveSurge}
             />
           ) : null}
 
