@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BadgeDollarSign, Gift, HandHeart, Plus, Save, TrendingUp } from "lucide-react";
-import { market, type MarketId } from "../markets/markets";
+import { market, zoneById, type MarketId } from "../markets/markets";
+import { PublishTargetsLine, StandardBar } from "../live/StandardBar";
 import {
   COUNTRY_SETTINGS_KEY,
   MAX_AMOUNTS,
@@ -8,6 +9,7 @@ import {
   countrySettingsIssues,
   countrySettingsLines,
   countrySettingsOf,
+  zoneSettingsOf,
   driverBonusHardMax,
   largeCountryChanges,
   moneyStep,
@@ -84,6 +86,11 @@ type Props = {
   section: string | null;
   onDirty: (dirty: boolean) => void;
   onNotice: (text: string) => void;
+  /**
+   * Live panel (contract v0.8.1, owner 2026-10-28): the zones (or the Standard) chosen at the top. Tips & limits are
+   * shown for the first and saved to all of them; no other zone changes. Absent in the demo: one setting per country.
+   */
+  targets?: readonly string[];
 };
 
 /**
@@ -91,9 +98,10 @@ type Props = {
  * (Q5, Q6), the promo cap (Q10) and the driver bonus limit (Q17). Nothing is saved until Save; a change of more than
  * 50 % asks "Are you sure?" (Q29). The rider and driver app configs read the saved values.
  */
-export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotice }: Props) {
+export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotice, targets }: Props) {
   const { book, loading } = useCountrySettings();
-  const saved = countrySettingsOf(book, country);
+  const zoneId = targets?.[0];
+  const saved = zoneId ? zoneSettingsOf(book, country, zoneId) : countrySettingsOf(book, country);
   const [draft, setDraft] = useState<CountrySettings | null>(null);
   const shown = draft ?? saved;
   const dirty = draft !== null && JSON.stringify(sectionPart(draft, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
@@ -103,6 +111,7 @@ export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotic
   const large = dirty ? largeCountryChanges(country, saved, shown) : [];
   const symbol = currencySymbol(country);
   const name = market(country).name;
+  const zoneNames = (targets ?? []).map((id) => zoneById(id)?.name ?? id).join(", ");
   const hardMax = driverBonusHardMax(country);
   const edit = (patch: Partial<CountrySettings>) => setDraft({ ...shown, ...patch });
 
@@ -126,9 +135,19 @@ export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotic
     <FieldErrorScope value={fieldErrors.report}>
       <section className="dash-card" aria-labelledby="extras-title" data-testid="pricing-extras">
         <div className="card-head">
-          <h3 id="extras-title">{trn("{0} Tips & limits · all of {1}", <HandHeart size={16} aria-hidden="true" />, name)}</h3>
-          <span className="fine-print">{trn("One setting per country, in {0}. Saved with Save, not with Publish.", symbol)}</span>
+          {targets ? (
+            <>
+              <h3 id="extras-title">{trn("{0} Tips & limits · {1}", <HandHeart size={16} aria-hidden="true" />, zoneNames || name)}</h3>
+              <span className="fine-print">{trn("Only for the zones chosen at the top, in {0}. Saved with Save, not with Publish.", symbol)}</span>
+            </>
+          ) : (
+            <>
+              <h3 id="extras-title">{trn("{0} Tips & limits · all of {1}", <HandHeart size={16} aria-hidden="true" />, name)}</h3>
+              <span className="fine-print">{trn("One setting per country, in {0}. Saved with Save, not with Publish.", symbol)}</span>
+            </>
+          )}
         </div>
+        {targets && zoneId ? <StandardBar doc="country_rules" docs={["country_rules"]} zoneId={zoneId} zoneName={zoneById(zoneId)?.name ?? zoneId} country={country} countryName={name} canEdit={canEdit} /> : null}
         <div className="fee-grid">
           <div id="extras-tips" className="cx-anchor">
             <AmountList title={tr("Tips")} help={tr("Buttons the rider sees after the ride.")} item="Tip" prefix="tip" list={shown.tips} saved={saved.tips} max={tipMax(country)} country={country} canEdit={canEdit} onChange={(tips) => edit({ tips })} />
@@ -169,16 +188,17 @@ export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotic
             className="dash-btn publish"
             targetId={`${country} tips and limits`}
             confirmTarget={false}
-            scope={country}
+            scope={targets ? targets.join(",") : country}
+            summary={targets ? <PublishTargetsLine zoneIds={targets} /> : undefined}
             before={pricingSummary(country, saved)}
             after={pricingSummary(country, shown)}
             sliceKey={COUNTRY_SETTINGS_KEY}
-            value={{ ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
+            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...(book.zones ?? {}), ...Object.fromEntries(targets.map((id) => [id, shown])) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
             expectedSliceRev={book.draftRev}
             disabled={!canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
             title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}
             largeChanges={large}
-            onDone={() => { setDraft(null); onNotice(tr("Tips & limits saved for {0}. The rider and driver apps get them with the next app config.", [name])); }}
+            onDone={() => { setDraft(null); onNotice(targets ? tr("Tips & limits saved for {0}. No other zone changed.", [zoneNames]) : tr("Tips & limits saved for {0}. The rider and driver apps get them with the next app config.", [name])); }}
           >{trn("{0} Save tips & limits", <Save size={15} aria-hidden="true" />)}</CommandButton>
           <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" disabled={!draft} onClick={() => setDraft(null)}>{tr("Discard")}</button>
         </div>

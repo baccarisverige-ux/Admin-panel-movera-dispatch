@@ -167,3 +167,29 @@ test("live Settings publishes only to the chosen zones; a chosen zone on the Sta
   assert.ok(written.length > 0 && written.every((zone) => zone === "Z002"));
   await assert.rejects(settings.command("admin.config.publish", { targetId: "configuration", value: null, scope: "" })!);
 });
+
+test("live Tips & limits (v0.8.1, owner 2026-10-28): read per zone, saved only to the zones chosen at the top", async () => {
+  const rules = (tip: number) => countryRulesOf("SE", "SEK", { tips: [tip], raiseSteps: [20], driverBonus: { defaultLimit: 150, hardMax: 1000 } }, null);
+  const server = fakeServer({
+    "country_rules:standard-SE": { version: 2, liveVersion: 1, usesStandard: false, document: rules(10) },
+    "country_rules:Z001": { version: 1, liveVersion: 0, usesStandard: true, document: rules(10) },
+    "country_rules:Z002": { version: 4, liveVersion: 3, usesStandard: false, document: rules(35) },
+  });
+  const settings = createLiveSettings(server.http, () => "2026-10-28T10:00:00Z");
+  const book = (await settings.readSlice("countrySettings", { draftRev: 0, countries: {} })) as { draftRev: number; countries: Record<string, { tips: Array<{ amount: number }> }>; zones: Record<string, { tips: Array<{ amount: number }> }> };
+  assert.equal(book.zones["Z002"]!.tips[0]!.amount, 35);
+  assert.equal(book.zones["Z001"]!.tips[0]!.amount, 10);
+  assert.equal(standardMarks.get("country_rules", "Z001"), true);
+  assert.equal(standardMarks.get("country_rules", "Z002"), false);
+
+  server.calls.length = 0;
+  const shown = { ...book.zones["Z002"]!, tips: [{ id: "t1", amount: 40, enabled: true }] };
+  const value = { ...book, draftRev: 1, zones: { ...book.zones, Z001: shown, Z002: shown } };
+  assert.equal(await settings.command("admin.pricing.saveCountry", { targetId: "SE tips and limits", value, scope: "Z001,Z002" }), "Saved for the chosen zones.");
+  const puts = server.calls.filter((c) => c.method === "PUT");
+  assert.deepEqual(puts.map((c) => (c.body as { zoneId?: string }).zoneId), ["Z001", "Z002"]);
+  assert.deepEqual(((puts[0]!.body as { document: Doc }).document)["tips"], [{ amount: { amountMinor: 4000, currency: "SEK" }, enabled: true }]);
+  // Nothing went to the Standard or another zone, and nothing goes without a choice at the top.
+  assert.equal(server.calls.some((c) => c.path.includes("country=SE") && c.method !== "GET"), false);
+  await assert.rejects(Promise.resolve(settings.command("admin.pricing.saveCountry", { targetId: "x", value, scope: "" })), /Choose the zones/);
+});

@@ -3,10 +3,10 @@
  * Reading a slice loads the server's drafts of every zone and of each country's Standard into the demo store;
  * publishing a page saves and publishes the server documents it owns at once (no second admin, owner 2026-10-27).
  */
-import { MARKETS, standardZoneId, type MarketId } from "../markets/markets.ts";
+import { MARKETS, marketOfZone, standardZoneId, type MarketId } from "../markets/markets.ts";
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { DISPATCH_KEY, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
-import { COUNTRY_SETTINGS_KEY, countrySettingsOf, driverBonusHardMax, type CountrySettingsBook } from "../config/countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
@@ -86,7 +86,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     }
     drafts.set(key(doc, id), found);
     readAt.set(key(doc, id), Date.now());
-    if (found && doc !== "country_rules") standardMarks.set(doc, id, found.usesStandard === true);
+    if (found) standardMarks.set(doc, id, found.usesStandard === true);
     return found;
   }
 
@@ -116,23 +116,34 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return next;
   }
 
+  /** A country_rules document as the panel's Tips & limits, over the country's other settings. */
+  function settingsOfRules(base: CountrySettings, market: (typeof MARKETS)[number], document: unknown): CountrySettings {
+    const doc = document as { tips?: Array<{ amount: { amountMinor: number }; enabled: boolean }>; raiseSteps?: Array<{ amount: { amountMinor: number }; enabled: boolean }>; driverBonus?: { defaultLimit?: { amountMinor: number } } };
+    const options = (list: typeof doc.tips, prefix: string) => (list ?? []).map((item, index) => ({ id: `${prefix}${index + 1}`, amount: item.amount.amountMinor / market.minorUnits, enabled: item.enabled }));
+    return {
+      ...base,
+      ...(doc.tips ? { tips: options(doc.tips, "t") } : {}),
+      ...(doc.raiseSteps ? { raiseSteps: options(doc.raiseSteps, "r") } : {}),
+      ...(doc.driverBonus?.defaultLimit ? { driverBonusLimit: doc.driverBonus.defaultLimit.amountMinor / market.minorUnits } : {}),
+    };
+  }
+
+  // v0.8.1 (owner 2026-10-28): Tips & limits per zone or Standard, each as the server has it ("Uses standard" marked).
   async function readCountries(fallback: unknown): Promise<CountrySettingsBook> {
     const book = fallback as CountrySettingsBook;
     const countries = { ...book.countries };
+    const zones: Record<string, CountrySettings> = { ...(book.zones ?? {}) };
     await Promise.all(MARKETS.map(async (market) => {
       const found = await draft("country_rules", standardKey(market.id), true);
-      if (!found) return;
-      const doc = found.document as { tips?: Array<{ amount: { amountMinor: number }; enabled: boolean }>; raiseSteps?: Array<{ amount: { amountMinor: number }; enabled: boolean }>; driverBonus?: { defaultLimit?: { amountMinor: number } } };
-      const own = countrySettingsOf(book, market.id);
-      const options = (list: typeof doc.tips, prefix: string) => (list ?? []).map((item, index) => ({ id: `${prefix}${index + 1}`, amount: item.amount.amountMinor / market.minorUnits, enabled: item.enabled }));
-      countries[market.id] = {
-        ...own,
-        ...(doc.tips ? { tips: options(doc.tips, "t") } : {}),
-        ...(doc.raiseSteps ? { raiseSteps: options(doc.raiseSteps, "r") } : {}),
-        ...(doc.driverBonus?.defaultLimit ? { driverBonusLimit: doc.driverBonus.defaultLimit.amountMinor / market.minorUnits } : {}),
-      };
+      if (found) countries[market.id] = settingsOfRules(countrySettingsOf(book, market.id), market, found.document);
     }));
-    const next = { ...book, countries };
+    await Promise.all(settingsScopes().map(async (id) => {
+      const market = MARKETS.find((m) => standardZoneId(m.id) === id) ?? marketOfZone(id);
+      if (!market) return;
+      const found = await draft("country_rules", id, true);
+      if (found) zones[id] = settingsOfRules({ ...countrySettingsOf({ ...book, countries }, market.id) }, market, found.document);
+    }));
+    const next = { ...book, countries, zones };
     slices.set(COUNTRY_SETTINGS_KEY, next);
     return next;
   }
@@ -184,23 +195,28 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return "Published.";
   }
 
-  async function saveCountries(book: CountrySettingsBook): Promise<string> {
-    const before = slices.get(COUNTRY_SETTINGS_KEY) as CountrySettingsBook | undefined;
-    for (const market of MARKETS) {
-      const next = countrySettingsOf(book, market.id as MarketId);
-      if (before && JSON.stringify(countrySettingsOf(before, market.id as MarketId)) === JSON.stringify(next)) continue;
-      const id = standardKey(market.id);
+  /**
+   * v0.8.1 (owner 2026-10-28): Tips & limits go only to the zones chosen at the top (the Standard when chosen); a
+   * chosen zone that used the Standard gets its own. "All zones" at the top is every zone of the country.
+   */
+  async function saveCountries(book: CountrySettingsBook, targets: readonly string[]): Promise<string> {
+    if (!targets.length) throw new Error("Choose the zones at the top first.");
+    for (const id of targets) {
+      const market = MARKETS.find((m) => standardZoneId(m.id) === id) ?? marketOfZone(id);
+      if (!market) continue;
+      const next = zoneSettingsOf(book, market.id as MarketId, id);
       const current = await draft("country_rules", id, true);
       const facts = zoneFacts(id);
       const hardMax = driverBonusHardMax(market.id as MarketId);
       const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax } }, current?.document ?? null);
       await savePublish(http, "country_rules", id, current, doc);
+      standardMarks.set("country_rules", id, false);
     }
     slices.set(COUNTRY_SETTINGS_KEY, book);
-    return "Saved for every zone of the country.";
+    return "Saved for the chosen zones.";
   }
 
-  async function backToStandard(zoneId: string, docs: readonly Exclude<ConfigDocName, "country_rules">[]): Promise<string> {
+  async function backToStandard(zoneId: string, docs: readonly ConfigDocName[]): Promise<string> {
     for (const doc of docs) {
       const current = await draft(doc, zoneId, true);
       if (!current || current.usesStandard) continue;
@@ -230,8 +246,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         slices.set(CONFIG_KEY, input.value);
         return publishSettings(input.value, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
       }
-      if (action === "admin.pricing.saveCountry") return saveCountries(input.value as CountrySettingsBook);
-      if (action === "admin.config.useStandard") return backToStandard(input.targetId, ((input.value as { docs?: string[] } | undefined)?.docs ?? ["pricing"]) as Exclude<ConfigDocName, "country_rules">[]);
+      if (action === "admin.pricing.saveCountry") return saveCountries(input.value as CountrySettingsBook, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
+      if (action === "admin.config.useStandard") return backToStandard(input.targetId, ((input.value as { docs?: string[] } | undefined)?.docs ?? ["pricing"]) as ConfigDocName[]);
       return null;
     },
   };

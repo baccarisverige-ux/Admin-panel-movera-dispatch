@@ -305,7 +305,7 @@ export async function savePublish(http: ConfigHttp, doc: ConfigDocName, id: stri
 }
 
 /** Go back to Standard (contract.json#configDocs.useStandard): the zone's own document goes, kept in the history. */
-export async function goBackToStandard(http: ConfigHttp, doc: Exclude<ConfigDocName, "country_rules">, zoneId: string, draft: Draft): Promise<{ version: number }> {
+export async function goBackToStandard(http: ConfigHttp, doc: ConfigDocName, zoneId: string, draft: Draft): Promise<{ version: number }> {
   try {
     return await http.post<{ version: number }>(`/admin/config/${doc}/use-standard`, { zoneId, expectedVersion: draft.version });
   } catch (error) {

@@ -29,7 +29,11 @@ export type CountrySettings = {
   languages: Record<LanguageApp, AppLanguage>;
 };
 
-export type CountrySettingsBook = { draftRev: number; countries: Record<MarketId, CountrySettings> };
+/**
+ * `zones` (contract v0.8.1, owner 2026-10-28, live panel): Tips & limits of a zone or a country's Standard, by its
+ * id, as the server has them; a zone without its own shows its Standard's.
+ */
+export type CountrySettingsBook = { draftRev: number; countries: Record<MarketId, CountrySettings>; zones?: Record<string, CountrySettings> };
 
 /** The fields each section owns: Pricing saves the money settings, Settings the payment methods and languages. */
 export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit"] as const satisfies readonly (keyof CountrySettings)[];
@@ -121,6 +125,11 @@ export function normalizeCountrySettingsBook(value: unknown): CountrySettingsBoo
 
 export function countrySettingsOf(book: CountrySettingsBook, country: MarketId): CountrySettings {
   return book.countries[country] ?? defaultCountrySettings(country);
+}
+
+/** v0.8.1: the Tips & limits of one zone (or Standard) in the live panel, else the country's. */
+export function zoneSettingsOf(book: CountrySettingsBook, country: MarketId, zoneId: string): CountrySettings {
+  return book.zones?.[zoneId] ?? countrySettingsOf(book, country);
 }
 
 /** A new amount for a list: one step above the highest, with an id the list does not use yet. */
