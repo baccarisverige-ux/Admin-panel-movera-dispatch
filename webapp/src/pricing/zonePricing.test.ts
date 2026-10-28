@@ -94,7 +94,9 @@ assert(restoreCategory(archived.store, "women_driver", Date.parse(AT) + 31 * 86_
 // Manual surge.
 const surged = startManualSurge(store, "Z003", 1.8, 60, "nora", "Concert", AT);
 assert(!surged.error && zoneLive(surged.store, "Z003").manual?.multiplier === 1.8, "manual surge stored");
-assert(surged.store.surgeLog.some((event) => event.kind === "notify"), "drivers are told by default");
+// v0.7.2 (owner 2026-10-28): drivers get no surge notice; only the start is logged and the zone keeps only the surge.
+assert(!surged.store.surgeLog.some((event) => event.kind === "notify") && surged.store.surgeLog[0]?.kind === "manual-start", "no surge notice to drivers");
+assert(Object.keys(zoneLive(surged.store, "Z003")).join() === "manual", "no notifyDrivers / lastNotifiedAt any more");
 assert(startManualSurge(store, "Z003", 7, 60, "nora", "x", AT).error, "slider stops at ×6");
 const stopped = stopManualSurges(surged.store, ["Z001", "Z003"], "nora", "Over", AT);
 assert(stopped.stopped.join() === "Z003" && !zoneLive(stopped.store, "Z003").manual, "stop all stops only running surges");

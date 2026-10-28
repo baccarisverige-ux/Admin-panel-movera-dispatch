@@ -15,6 +15,6 @@ export function surgeRows(store: PricingStore, zoneIds: readonly string[], count
   });
 }
 
-export function alertsFor(rows: readonly SurgeRow[], at: number): SurgeAlert[] {
-  return surgeAlerts(rows, at);
+export function alertsFor(rows: readonly SurgeRow[], at: number, changes?: (book: ZoneBook) => number | null): SurgeAlert[] {
+  return surgeAlerts(rows, at, changes);
 }

@@ -108,8 +108,8 @@ test("refund: the demo Refund button opens the amount form; it validates, a doub
   expect(state.trips.find((trip) => trip.tripId === "T2001")!.paymentStatus).toBe("partially_refunded");
 });
 
-test("refund of the whole fare above the role limit waits for a second admin", async ({ page }) => {
-  await fakeTripServer(page, { refundNeedsApproval: true });
+test("refund of the whole fare is made at once: one admin is enough (contract v0.7.2)", async ({ page }) => {
+  await fakeTripServer(page);
   await signIn(page);
   await page.goto("/trips/T2001");
   await page.getByRole("button", { name: "Refund", exact: true }).click();
@@ -117,7 +117,8 @@ test("refund of the whole fare above the role limit waits for a second admin", a
   await dialog.getByLabel("Amount (kr)").fill("520");
   await dialog.getByLabel("Reason (required)").fill("Wrong car");
   await dialog.getByRole("button", { name: "Refund", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "second admin" })).toContainText("The refund waits for a second admin.");
+  await expect(page.getByRole("status").filter({ hasText: "Refund made" })).toContainText("Refund made: 520,00 kr.");
+  await expect(page.getByText(/second admin/)).toHaveCount(0);
 });
 
 test("a role without payments.refund cannot refund", async ({ page }) => {

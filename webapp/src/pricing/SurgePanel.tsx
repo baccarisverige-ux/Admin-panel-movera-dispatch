@@ -4,13 +4,11 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
-  BellRing,
   CalendarClock,
   Clock,
   Cpu,
   Eye,
   Hand,
-  Megaphone,
   Plus,
   Square,
   Trash2,
@@ -19,6 +17,9 @@ import {
 } from "lucide-react";
 import type { Market } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
+import { NotConnected } from "../live/NotConnected";
+import { liveDemand, liveTimeline } from "../live/liveSurge";
+import type { LiveSurgeData } from "../live/useLiveSurge";
 import { demandSeries } from "./demand";
 import { DemandChart } from "./DemandChart";
 import { NumberField } from "./NumberField";
@@ -30,9 +31,7 @@ import type { SurgeStyle } from "./surgeGeo";
 import {
   SLICE_KEY,
   WEEKDAY_LABELS,
-  notifyDriversNow,
   overlappingSurges,
-  setNotifyDrivers,
   startManualSurge,
   stopManualSurges,
   type PricingStore,
@@ -63,6 +62,11 @@ type Props = {
   onScheduled: (list: ScheduledSurge[]) => void;
   onSelectZone: (zoneId: string) => void;
   onNotice: (message: string) => void;
+  /**
+   * Live panel (contract v0.7.2 surgeLive): the server's surge now and history. Then the surge now, alerts, demand
+   * chart, rider price check and timeline show only the server's numbers, or "Not connected yet". null = demo.
+   */
+  liveData?: LiveSurgeData | null;
 };
 
 const DURATIONS = [15, 30, 60, 120, 240, 480];
@@ -81,7 +85,7 @@ function fromLocalInput(value: string, timeZone: string): string {
   return new Date(guess - (shown - guess)).toISOString();
 }
 
-export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live, store, problems, agentId, canEdit, now, map, onSmart, onScheduled, onSelectZone, onNotice }: Props) {
+export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live, store, problems, agentId, canEdit, now, map, onSmart, onScheduled, onSelectZone, onNotice, liveData = null }: Props) {
   const [manual, setManual] = useState(1.5);
   const [minutes, setMinutes] = useState(60);
   const current = rows.find((row) => row.surge.zoneId === zoneId)?.surge;
@@ -95,14 +99,24 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
   const profileNow = activeProfile(book.smart, now, market.timeZone);
   const hoursOn = inActiveHours(book.smart, now, market.timeZone);
   const bucket = Math.floor(now / 600_000) * 600_000;
-  const series = useMemo(() => demandSeries(zoneId, bucket, 6, 10), [zoneId, bucket]);
-  const seriesSurge = series.map((point) => {
+  const isLive = Boolean(liveData);
+  const history = liveData?.history ?? null;
+  // Live: the server's history only (contract v0.7.2); the demo keeps its own model.
+  const demoSeries = useMemo(() => (isLive ? [] : demandSeries(zoneId, bucket, 6, 10)), [isLive, zoneId, bucket]);
+  const liveSeries = history ? liveDemand(history, now) : null;
+  const series = liveSeries ? liveSeries.points : demoSeries;
+  const seriesSurge = liveSeries ? liveSeries.surge : series.map((point) => {
     if (running && point.at >= Date.parse(running.startedAt)) return running.multiplier;
     const profile = activeProfile(book.smart, point.at, market.timeZone);
     return book.smart.enabled && profile && inActiveHours(book.smart, point.at, market.timeZone) ? smartMultiplier(profile, point.ratio) : 1;
   });
-  const timeline = surgeTimeline(book, store.surgeLog, now, 8).slice(0, 12);
-  const check = current ? priceCheck(current) : { saw: 0, left: 0, leftPct: 0 };
+  const timeline = isLive ? (history ? liveTimeline(history, book) : []) : surgeTimeline(book, store.surgeLog, now, 8).slice(0, 12);
+  const check = isLive ? history?.priceCheck ?? null : current ? priceCheck(current) : { saw: 0, left: 0, leftPct: 0 };
+  // Live: what the server could not give (a failed call, no sample yet) says "Not connected yet", never a 0.
+  const nowMissing = isLive && !current;
+  const demandMissing = isLive && (!current || current.demandKnown === false);
+  const historyMissing = isLive && liveData?.historyState === "failed";
+  const fact = (value: string | number) => (demandMissing ? <NotConnected /> : value);
 
   const patchProfile = (id: string, patch: Partial<SurgeProfile>) => onSmart({ profiles: book.smart.profiles.map((profile) => (profile.id === id ? { ...profile, ...patch } : profile)) });
   const moveProfile = (id: string, by: number) => {
@@ -121,22 +135,26 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
         <section className={`surge-now lvl-${current?.level ?? "none"}`} aria-label={tr("Surge now in {0}", [zoneName])}>
           <div className="surge-now-head">
             <span className="eyebrow">{trn("{0} Live · {1}", <span className="live-dot" aria-hidden="true" />, zoneName)}</span>
-            <span className={`source-chip ${current?.source ?? "off"}`}>
-              {current?.source === "manual" ? <Hand size={12} aria-hidden="true" /> : current?.source === "scheduled" ? <CalendarClock size={12} aria-hidden="true" /> : current?.source === "smart" ? <Cpu size={12} aria-hidden="true" /> : null}
-              {current?.source === "manual" ? tr("Manual") : current?.source === "scheduled" ? tr("Scheduled") : current?.source === "smart" ? tr("Smart") : tr("No surge")}
-            </span>
+            {nowMissing ? null : (
+              <span className={`source-chip ${current?.source ?? "off"}`}>
+                {current?.source === "manual" ? <Hand size={12} aria-hidden="true" /> : current?.source === "scheduled" ? <CalendarClock size={12} aria-hidden="true" /> : current?.source === "smart" ? <Cpu size={12} aria-hidden="true" /> : null}
+                {current?.source === "manual" ? tr("Manual") : current?.source === "scheduled" ? tr("Scheduled") : current?.source === "smart" ? tr("Smart") : tr("No surge")}
+              </span>
+            )}
           </div>
-          <div className="surge-big" data-testid="surge-now">×{(current?.multiplier ?? 1).toFixed(1)}</div>
+          <div className="surge-big" data-testid="surge-now">{nowMissing ? "—" : `×${(current?.multiplier ?? 1).toFixed(1)}`}</div>
           <div className="surge-gauge" aria-hidden="true"><i style={{ width: `${Math.min(100, (((current?.multiplier ?? 1) - 1) / 5) * 100)}%`, background: LEVEL_COLOR[current?.level ?? "none"] }} /></div>
           <dl className="surge-facts">
-            <div><dt>{tr("Ride requests")}</dt><dd>{current?.requests ?? 0}</dd></div>
-            <div><dt>{tr("Free online drivers")}</dt><dd>{current?.free ?? 0}</dd></div>
-            <div><dt>{tr("Requests per free driver")}</dt><dd>{(current?.ratio ?? 0).toFixed(1)}</dd></div>
-            <div><dt>{tr("Time profile")}</dt><dd>{profileNow?.name ?? "—"}</dd></div>
+            <div><dt>{tr("Ride requests")}</dt><dd data-testid="surge-requests">{fact(current?.requests ?? 0)}</dd></div>
+            <div><dt>{tr("Free online drivers")}</dt><dd data-testid="surge-free">{fact(current?.free ?? 0)}</dd></div>
+            <div><dt>{tr("Requests per free driver")}</dt><dd data-testid="surge-ratio">{fact((current?.ratio ?? 0).toFixed(1))}</dd></div>
+            <div><dt>{tr("Time profile")}</dt><dd>{(isLive ? current?.profile : profileNow)?.name ?? "—"}</dd></div>
           </dl>
           <p className="surge-note">
-            {current?.source === "manual" && running ? tr("Manual surge until {0}, started by {1}. Smart surge is paused.", [time.format(Date.parse(running.endsAt)), running.by])
-              : current?.source === "scheduled" ? tr("Scheduled \"{0}\" until {1}.", [current.scheduledName, time.format(Date.parse(current.endsAt!))])
+            {nowMissing ? <NotConnected />
+              : current?.source === "manual" && running ? tr("Manual surge until {0}, started by {1}. Smart surge is paused.", [time.format(Date.parse(running.endsAt)), running.by])
+              : current?.source === "scheduled" && current.endsAt && current.scheduledName ? tr("Scheduled \"{0}\" until {1}.", [current.scheduledName, time.format(Date.parse(current.endsAt))])
+              : current?.source === "scheduled" && current.endsAt ? tr("Scheduled surge until {0}.", [time.format(Date.parse(current.endsAt))])
               : current?.smartNote ? `${current.smartNote}.`
               : current?.source === "smart" ? tr("Smart surge follows demand and stops by itself when requests per free online driver stay under {0} for {1} min.", [profileNow?.steps[0]?.ratio ?? 1.5, book.smart.stopAfterMin])
               : tr("Enough drivers. Smart surge is watching.")}
@@ -157,21 +175,18 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
               <label className="field inline">{trn("Runs for{0}", <select aria-label={tr("Manual surge duration")} value={minutes} disabled={!canEdit} onChange={(event) => setMinutes(Number(event.target.value))}>
                   {DURATIONS.map((value) => <option key={value} value={value}>{value < 60 ? tr("{0} min", [value]) : tr("{0} h", [value / 60])}</option>)}
                 </select>)}</label>
-              <CommandButton command="admin.pricing.startSurge" className="dash-btn surge-go" targetId={zoneId} confirmTarget={false} scope={zoneId} before="no manual surge" after={`×${manual.toFixed(1)} for ${minutes} min`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={start.store} disabled={!canEdit || manual <= 1 || Boolean(start.error)} title={manual <= 1 ? tr("Move the slider above ×1.0") : start.error} onDone={() => onNotice(tr("Manual surge ×{0} started in {1} for {2}.{3}", [manual.toFixed(1), zoneName, minutes < 60 ? `${minutes} min` : `${minutes / 60} h`, live.notifyDrivers ? " Drivers were told." : ""]))}>{trn("{0} Start surge ×{1}", <Zap size={14} aria-hidden="true" />, manual.toFixed(1))}</CommandButton>
+              <CommandButton command="admin.pricing.startSurge" className="dash-btn surge-go" targetId={zoneId} confirmTarget={false} scope={zoneId} before="no manual surge" after={`×${manual.toFixed(1)} for ${minutes} min`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={start.store} disabled={!canEdit || manual <= 1 || Boolean(start.error)} title={manual <= 1 ? tr("Move the slider above ×1.0") : start.error} onDone={() => onNotice(tr("Manual surge ×{0} started in {1} for {2}.", [manual.toFixed(1), zoneName, minutes < 60 ? `${minutes} min` : `${minutes / 60} h`]))}>{trn("{0} Start surge ×{1}", <Zap size={14} aria-hidden="true" />, manual.toFixed(1))}</CommandButton>
               <small className="fine">{tr("It stops by itself at the end. Manual surge wins over smart and scheduled surge.")}</small>
             </>
           )}
-          <div className="notify-row">
-            <CommandButton command="admin.pricing.notifySetting" className={live.notifyDrivers ? "surge-toggle on" : "surge-toggle"} targetId={zoneId} confirmTarget={false} scope={zoneId} before={String(live.notifyDrivers)} after={String(!live.notifyDrivers)} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={setNotifyDrivers(store, zoneId, !live.notifyDrivers)} disabled={!canEdit} aria-label={tr("Tell drivers when a surge starts")}>{trn("{0} Tell drivers when a surge starts {1}", <BellRing size={14} aria-hidden="true" />, <span className="switch" aria-hidden="true"><i /></span>)}</CommandButton>
-            <CommandButton command="admin.pricing.notifyDrivers" className="dash-btn small ghost" targetId={zoneId} confirmTarget={false} scope={zoneId} before="" after={`drivers told ×${(current?.multiplier ?? 1).toFixed(1)}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={agentId ? notifyDriversNow(store, zoneId, current?.multiplier ?? 1, agentId, at) : store} disabled={!canEdit || (current?.multiplier ?? 1) <= 1} title={(current?.multiplier ?? 1) <= 1 ? tr("No surge to tell drivers about") : undefined} onDone={() => onNotice(tr("Drivers in and near {0} were told about surge ×{1}.", [zoneName, (current?.multiplier ?? 1).toFixed(1)]))}>{trn("{0} Tell drivers now", <Megaphone size={13} aria-hidden="true" />)}</CommandButton>
-          </div>
-          {live.lastNotifiedAt ? <small className="fine">{trn("Drivers last told {0}.", dateTime.format(Date.parse(live.lastNotifiedAt)))}</small> : null}
         </section>
       </div>
 
       {/* Alerts only when a person is needed */}
       <section className="surge-alerts" aria-label={tr("Surge alerts")}>
-        {alerts.length === 0 ? (
+        {isLive && liveData?.nowState !== "ok" ? (
+          liveData?.nowState === "failed" ? <p className="state-line" data-testid="surge-alerts-not-connected">{tr("Surge alerts")} <NotConnected /></p> : null
+        ) : alerts.length === 0 ? (
           <p className="all-good">{trn("{0} All zones are fine. Smart surge is handling demand.", <Activity size={15} aria-hidden="true" />)}</p>
         ) : alerts.map((alert) => (
           <div key={alert.id} className={`surge-alert ${alert.tone}`} role={alert.tone === "critical" ? "alert" : undefined}>
@@ -190,7 +205,7 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
       <section className="dash-card surge-map-card" aria-labelledby="surge-map-title">
         <div className="card-head">
           <h3 id="surge-map-title">{trn("{0} Surge map · {1}", <Zap size={16} aria-hidden="true" />, trx(market.name))}</h3>
-          <span className="fine-print">{tr("Click a zone to open it")}</span>
+          <span className="fine-print">{isLive && liveData?.nowState === "failed" ? <NotConnected /> : tr("Click a zone to open it")}</span>
         </div>
         <SurgeMap market={market} rows={rows.map((row) => row.surge)} selectedId={zoneId} onSelect={onSelectZone} shown={map.shown} style={map.style} onShown={map.setShown} onStyle={map.setStyle} />
         <ul className="zone-surge-strip" aria-label={tr("Surge by zone")}>
@@ -212,14 +227,14 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
             <h3 id="demand-title">{trn("{0} Demand · {1}", <TrendingUp size={16} aria-hidden="true" />, zoneName)}</h3>
             <span className="fine-print">{tr("Last 6 hours")}</span>
           </div>
-          <DemandChart points={series} surge={seriesSurge} locale={market.locale} timeZone={market.timeZone} />
+          {isLive && series.length < 2 ? (liveData?.historyState === "loading" ? null : <p className="state-line" data-testid="demand-not-connected"><NotConnected /></p>) : <DemandChart points={series} surge={seriesSurge} locale={market.locale} timeZone={market.timeZone} />}
         </section>
         <section className="dash-card" aria-labelledby="check-title">
           <div className="card-head">
             <h3 id="check-title">{trn("{0} Rider price check", <Eye size={16} aria-hidden="true" />)}</h3>
             <span className="fine-print">{tr("Last hour")}</span>
           </div>
-          {check.saw ? (
+          {!check ? (historyMissing ? <p className="state-line" data-testid="price-check-not-connected"><NotConnected /></p> : null) : check.saw ? (
             <div className="price-check">
               <div><span>{tr("Saw the surge price")}</span><strong>{check.saw}</strong></div>
               <div className={check.leftPct >= 25 ? "warn" : undefined}><span>{tr("Left without booking")}</span><strong>{check.left}</strong><small>{check.leftPct}%</small></div>
@@ -357,7 +372,7 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
             <h3 id="timeline-title">{trn("{0} Surge timeline and effect", <Activity size={16} aria-hidden="true" />)}</h3>
             <span className="fine-print">{tr("Last 8 hours")}</span>
           </div>
-          {timeline.length === 0 ? <p className="state-line">{trn("No surge in {0} in the last hours.", zoneName)}</p> : (
+          {historyMissing ? <p className="state-line" data-testid="timeline-not-connected"><NotConnected /></p> : isLive && !history ? null : timeline.length === 0 ? <p className="state-line">{trn("No surge in {0} in the last hours.", zoneName)}</p> : (
             <ol className="surge-timeline" aria-label={tr("Surge timeline")}>
               {timeline.map((item) => (
                 <li key={item.id} className={`src-${item.source}`}>
@@ -367,7 +382,7 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
                     <small>{item.by}</small>
                     {item.effect ? (
                       <span className="effect">
-                        <b className="good">{trn("+{0} drivers came", item.effect.drivers)}</b>
+                        {item.effect.drivers >= 0 ? <b className="good">{trn("+{0} drivers came", item.effect.drivers)}</b> : <b className="bad">{trn("{0} fewer drivers", Math.abs(item.effect.drivers))}</b>}
                         <b className={item.effect.ridesPct >= 0 ? "good" : "bad"}>{trn("rides {0}{1}%", item.effect.ridesPct >= 0 ? "+" : "", item.effect.ridesPct)}</b>
                         <b className={item.effect.leftPct >= 25 ? "bad" : "soft"}>{trn("{0}% left on price", item.effect.leftPct)}</b>
                       </span>

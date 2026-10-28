@@ -17,7 +17,7 @@ export function refundable(trip: Pick<Trip, "status" | "paymentStatus">): boolea
 
 /**
  * Live builds only: the demo trip page's Refund button opens this dialog instead, for part or all of the fare
- * (POST /admin/trips/{id}/refund with expectedVersion; above the role limit it waits for a second admin).
+ * (POST /admin/trips/{id}/refund with expectedVersion; v0.7.2: one admin is enough, it is made at once).
  * Returns null in a demo build, where the page keeps its own Refund button.
  */
 export function useLiveRefund(tripId: string) {
@@ -46,8 +46,9 @@ function LiveRefundDialog({ tripId, open, onClose }: { tripId: string; open: boo
           onSend={async (amountMinor, reason) => {
             const current = trip.data!;
             try {
-              const answer = await client.post<Partial<Refund>>(`/admin/trips/${encodeURIComponent(current.tripId)}/refund`, { expectedVersion: current.version, amount: { amountMinor, currency: current.fare.currency }, reason });
-              setNotice(answer && answer.refundId ? tr("Refund made: {0}.", [liveMoney({ amountMinor, currency: current.fare.currency })]) : tr("The refund waits for a second admin."));
+              await client.post<Partial<Refund>>(`/admin/trips/${encodeURIComponent(current.tripId)}/refund`, { expectedVersion: current.version, amount: { amountMinor, currency: current.fare.currency }, reason });
+              // v0.7.2 (contract.json#auth.admin.oneAdmin): never waits for a second admin.
+              setNotice(tr("Refund made: {0}.", [liveMoney({ amountMinor, currency: current.fare.currency })]));
             } catch (error) {
               if (isVersionMismatch(error)) setNotice(tr("Someone else changed this record. It was reloaded; check it and try again."));
               throw error;
@@ -109,7 +110,7 @@ function RefundForm({ open, trip, onClose, onSend }: { open: boolean; trip: Trip
           }
         }}
       >
-        <p>{tr("The money goes back to the rider. The reason is written in the audit; a big refund waits for a second admin.")}</p>
+        <p>{tr("The money goes back to the rider. The reason is written in the audit.")}</p>
         <label>
           {tr("Amount ({0})", [symbol])}
           <input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} aria-invalid={Boolean(amountError)} />

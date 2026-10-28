@@ -69,7 +69,7 @@ function categoryDoc(price: CategoryPrice, commissionPct: number, riderFee: Zone
  * PricingDocument (CONTRACT.md §6.2) from the Pricing page's book. Fields the page has no control for (the surge
  * maximum, the free minutes at a stop) keep the server's value (`base`). version and publishedAt are the server's.
  */
-export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null, live?: { notifyDrivers: boolean }): Doc {
+export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null): Doc {
   const facts = zoneFacts(id);
   const c = facts.currency;
   const prior = (base ?? {}) as { surge?: Doc; version?: number; publishedAt?: string };
@@ -90,19 +90,14 @@ export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null, 
       tollsPassThrough: book.fees.tollsPassThrough,
     },
     fixedRoutes: book.routes.map((route) => ({ id: route.id, from: route.from, to: route.to, categoryId: route.categoryId, price: toMinor(route.price, c) })),
-    // v0.7.1: no separate surge maximum (each slider is its own maximum); "Tell drivers when a surge starts".
+    // v0.7.1: no separate surge maximum (each slider is its own maximum). v0.7.2 (owner 2026-10-28): no surge notice
+    // to drivers, so no notifyDrivers (contract.json#surgeNoticeRemoved).
     surge: {
       smart: structuredClone(book.smart),
       scheduled: structuredClone(book.scheduled),
-      notifyDrivers: live?.notifyDrivers ?? (prior.surge?.["notifyDrivers"] as boolean | undefined) ?? false,
     },
     fleetCommissionPct: book.fleetCommissionPct,
   };
-}
-
-/** "Tell drivers when a surge starts" of a server pricing document (v0.7.1, default off). */
-export function notifyDriversOf(doc: Doc | null | undefined): boolean {
-  return ((doc?.["surge"] as Doc | undefined)?.["notifyDrivers"] as boolean | undefined) === true;
 }
 
 /** The book the Pricing page shows for a server pricing document: the document's values over `fallback`. */

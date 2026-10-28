@@ -53,11 +53,12 @@ test("the server's catalog, running surge and history fill the live Pricing sect
   assert.deepEqual(store.categories.map((c) => c.id), ["economy", "pet", "child_seat"]);
   assert.deepEqual(store.categories[1]!.lines, { sv: "Ditt husdjur åker med dig", fr: "Votre animal voyage avec vous", en: "Your pet rides with you" });
   assert.equal(store.live["Z001"]!.manual!.multiplier, 2);
-  assert.equal(store.live["Z001"]!.notifyDrivers, true);
+  // v0.7.2: no notifyDrivers kept for the zone, even when an old document has it.
+  assert.deepEqual(store.live["Z001"], { manual: store.live["Z001"]!.manual });
   assert.deepEqual(store.history.map((r) => r.rev), [2, 1]);
 });
 
-test("Manage categories, surge Start / Stop, Tell drivers, Restore and Undo go to the server", async () => {
+test("Manage categories, surge Start / Stop, Restore and Undo go to the server; Tell drivers is gone (v0.7.2)", async () => {
   const server = fakeServer();
   const settings = createLiveSettings(server.http, () => AT);
   const store = (await settings.readSlice("zonePricing", null)) as PricingStore;
@@ -93,8 +94,10 @@ test("Manage categories, surge Start / Stop, Tell drivers, Restore and Undo go t
   assert.deepEqual(server.calls.filter((c) => c.method === "POST"), [{ method: "POST", path: "/admin/zones/Z001/surge/end", body: { expectedVersion: 6 } }]);
 
   server.calls.length = 0;
-  assert.equal(await settings.command("admin.pricing.notifyDrivers", { targetId: "Z001", value: stopped }), "Drivers were told.");
-  assert.deepEqual(sent(), ["POST /admin/zones/Z001/surge/notify"]);
+  // v0.7.2 (contract.json#surgeNoticeRemoved): no command sends a surge notice any more.
+  assert.equal(settings.command("admin.pricing.notifyDrivers", { targetId: "Z001", value: stopped }), null);
+  assert.equal(settings.command("admin.pricing.notifySetting", { targetId: "Z001", value: stopped }), null);
+  assert.deepEqual(sent(), []);
 
   server.calls.length = 0;
   await settings.command("admin.pricing.restore", { targetId: "pricing-rev-1", value: store });

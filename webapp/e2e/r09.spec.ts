@@ -96,7 +96,10 @@ test("R9 manual surge starts with a slider, asks above ×3, wins over smart and 
   await page.getByLabel("Manual surge duration").selectOption("30");
   await page.getByRole("button", { name: "Start surge ×2.2" }).click();
   await confirm(page);
-  await expect(page.getByText(/Manual surge ×2.2 started in Östermalm for 30 min. Drivers were told./)).toBeVisible();
+  await expect(page.getByText(/Manual surge ×2\.2 started in Östermalm for 30 min\./)).toBeVisible();
+  // v0.7.2 (owner 2026-10-28): no surge notice to drivers, no "Tell drivers" switch or button.
+  await expect(page.getByText(/Drivers were told/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Tell drivers/ })).toHaveCount(0);
   await expect(page.getByTestId("surge-now")).toHaveText("×2.2");
   await expect(page.getByRole("region", { name: "Surge now in Östermalm" })).toContainText("Manual");
   await expect(page.getByRole("list", { name: "Surge timeline" })).toContainText("Manual surge ×2.2 started");

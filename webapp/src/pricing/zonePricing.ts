@@ -121,11 +121,13 @@ export type ManualSurge = {
   curve?: SurgeCurve;
 };
 
-export type ZoneLive = { manual: ManualSurge | null; notifyDrivers: boolean; lastNotifiedAt: string | null };
+/** Contract v0.7.2 (owner 2026-10-28): drivers get no surge notice, so the zone keeps only its running manual surge. */
+export type ZoneLive = { manual: ManualSurge | null };
 
 export type SurgeEvent = {
   id: string;
   zoneId: string;
+  /** "notify" only in logs stored before v0.7.2 (no surge notice any more); it is not shown. */
   kind: "manual-start" | "manual-stop" | "notify";
   multiplier: number;
   at: string;
@@ -416,7 +418,9 @@ function withoutRetiredFields(price: CategoryPrice, categoryId: string): Categor
 }
 
 export function zoneLive(store: PricingStore, zoneId: string): ZoneLive {
-  return store.live[zoneId] ?? { manual: null, notifyDrivers: true, lastNotifiedAt: null };
+  const live = store.live[zoneId];
+  // Older stored books may still carry notifyDrivers / lastNotifiedAt (removed in v0.7.2); only the manual surge is kept.
+  return { manual: live?.manual ?? null };
 }
 
 export function activeCategories(store: PricingStore): CategoryDef[] {
@@ -774,13 +778,12 @@ export function startManualSurge(store: PricingStore, zoneId: string, multiplier
   }
   const manual: ManualSurge = { multiplier: roundTo(curve ? curvePeak(curve.points) : multiplier, 0.1), startedAt: at, endsAt, by: actorId, reason, ...(curve ? { curve } : {}) };
   const event: SurgeEvent = { id: `${zoneId}-${at}-start`, zoneId, kind: "manual-start", multiplier: manual.multiplier, at, by: actorId, reason };
-  const notify: SurgeEvent[] = live.notifyDrivers ? [{ id: `${zoneId}-${at}-notify`, zoneId, kind: "notify", multiplier: manual.multiplier, at, by: actorId, reason: "Drivers told about the surge" }] : [];
   return {
     store: {
       ...store,
       draftRev: store.draftRev + 1,
-      live: { ...store.live, [zoneId]: { ...live, manual, lastNotifiedAt: live.notifyDrivers ? at : live.lastNotifiedAt } },
-      surgeLog: [...notify, event, ...store.surgeLog].slice(0, LOG_LIMIT),
+      live: { ...store.live, [zoneId]: { ...live, manual } },
+      surgeLog: [event, ...store.surgeLog].slice(0, LOG_LIMIT),
     },
   };
 }
@@ -796,15 +799,6 @@ export function stopManualSurges(store: PricingStore, zoneIds: readonly string[]
     live[zoneId] = { ...current, manual: null };
   }
   return { store: { ...store, draftRev: store.draftRev + 1, live, surgeLog: [...events, ...store.surgeLog].slice(0, LOG_LIMIT) }, stopped };
-}
-
-export function setNotifyDrivers(store: PricingStore, zoneId: string, enabled: boolean): PricingStore {
-  return { ...store, draftRev: store.draftRev + 1, live: { ...store.live, [zoneId]: { ...zoneLive(store, zoneId), notifyDrivers: enabled } } };
-}
-
-export function notifyDriversNow(store: PricingStore, zoneId: string, multiplier: number, actorId: string, at: string): PricingStore {
-  const event: SurgeEvent = { id: `${zoneId}-${at}-notify`, zoneId, kind: "notify", multiplier, at, by: actorId, reason: "Drivers told about the surge" };
-  return { ...store, draftRev: store.draftRev + 1, live: { ...store.live, [zoneId]: { ...zoneLive(store, zoneId), lastNotifiedAt: at } }, surgeLog: [event, ...store.surgeLog].slice(0, LOG_LIMIT) };
 }
 
 export type QuoteInput = {

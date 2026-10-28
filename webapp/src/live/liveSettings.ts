@@ -4,7 +4,7 @@
  * publishing a page saves and publishes the server documents it owns at once (no second admin, owner 2026-10-27).
  */
 import { MARKETS, standardZoneId, type MarketId } from "../markets/markets.ts";
-import { normalizeStore, zoneBook, zoneLive, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
+import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
 import { COUNTRY_SETTINGS_KEY, countrySettingsOf, driverBonusHardMax, type CountrySettingsBook } from "../config/countrySettings.ts";
@@ -137,23 +137,6 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return "Saved.";
   }
 
-  /** "Tell drivers now": the server sends the zone's online drivers a surge notice. */
-  async function tellDrivers(zoneId: string, value: PricingStore): Promise<string> {
-    const told = await http.post<{ notified: number; multiplier: number }>(`/admin/zones/${encodeURIComponent(zoneId)}/surge/notify`, {});
-    slices.set(PRICING_KEY, value);
-    void told;
-    return "Drivers were told.";
-  }
-
-  /** "Tell drivers when a surge starts": kept in the zone's pricing document, published at once. */
-  async function saveNotifySetting(zoneId: string, value: PricingStore): Promise<string> {
-    const current = await draft("pricing", zoneId, true);
-    if (!current) throw new Error("Prices are not set for this zone on the server yet.");
-    await savePublish(http, "pricing", zoneId, current, pricingDocumentOf(zoneBook(value, zoneId), zoneId, current.document, zoneLive(value, zoneId)));
-    slices.set(PRICING_KEY, value);
-    return "Saved.";
-  }
-
   /** Restore a history row, or Undo last publish: the server publishes that version again. */
   async function restore(rev: number | null): Promise<string> {
     const row = rev === null ? null : historyIndex.get(rev);
@@ -226,7 +209,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const zoneIds = store.history[0]?.rev === store.draftRev ? store.history[0].zoneIds : [];
     for (const id of zoneIds) {
       const current = await draft("pricing", id, true);
-      await savePublish(http, "pricing", id, current, pricingDocumentOf(zoneBook(store, id), id, current?.document ?? null, zoneLive(store, id)));
+      await savePublish(http, "pricing", id, current, pricingDocumentOf(zoneBook(store, id), id, current?.document ?? null));
     }
     slices.set(PRICING_KEY, store);
     return "Published.";
@@ -293,14 +276,12 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     },
     command(action, input) {
       if (action === "admin.pricing.publish") return publishPricing(normalizeStore(input.value));
-      // v0.7.1: Manage categories, manual surge, Tell drivers, History.
+      // v0.7.1: Manage categories, manual surge, History (v0.7.2: no Tell drivers, contract.json#surgeNoticeRemoved).
       if (action === "admin.pricing.createCategory") return saveCatalog(normalizeStore(input.value), "Added.");
       if (action === "admin.pricing.editCategory") return saveCatalog(normalizeStore(input.value), "Saved.");
       if (action === "admin.pricing.archiveCategory") return saveCatalog(normalizeStore(input.value), "Deleted. It can be restored for 30 days.");
       if (action === "admin.pricing.restoreCategory") return saveCatalog(normalizeStore(input.value), "Restored, switched off in every zone.");
       if (action === "admin.pricing.startSurge" || action === "admin.pricing.stopSurge" || action === "admin.pricing.stopAllSurges") return sendSurges(normalizeStore(input.value));
-      if (action === "admin.pricing.notifyDrivers") return tellDrivers(input.targetId, normalizeStore(input.value));
-      if (action === "admin.pricing.notifySetting") return saveNotifySetting(input.targetId, normalizeStore(input.value));
       if (action === "admin.pricing.restore") return restore(Number(/(\d+)$/.exec(input.targetId)?.[1] ?? NaN));
       if (action === "admin.pricing.undo") return undoLast();
       if (action === "admin.dispatch.publish") return publishDispatch(normalizeDispatchBook(input.value));

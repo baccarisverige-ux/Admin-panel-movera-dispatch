@@ -3,14 +3,15 @@
  * controls, wired to the server.
  *  - Manage categories: one catalog for every zone (GET|POST /admin/categories, PUT …/{id}, …/archive, …/restore),
  *    with the sub-line in sv / fr / en.
- *  - Manual surge Start / Stop (PUT /admin/zones/{zoneId}/surge, POST …/end) and "Tell drivers now" (…/notify).
+ *  - Manual surge Start / Stop (PUT /admin/zones/{zoneId}/surge, POST …/end). v0.7.2 (owner 2026-10-28): no
+ *    "Tell drivers now" and no surge notice (POST …/surge/notify is gone, contract.json#surgeNoticeRemoved).
  *  - History, Restore and Undo last publish (GET /admin/config/pricing/history, POST …/restore).
  * Pure over a ConfigHttp, so node --test covers them.
  */
 import type { CategoryDef, ManualSurge, PricingStore, Revision, ZoneLive } from "../pricing/zonePricing.ts";
 import { zoneBook } from "../pricing/zonePricing.ts";
 import { zoneById } from "../markets/markets.ts";
-import { bookOfPricing, notifyDriversOf, type ConfigHttp, type Doc } from "./configDocs.ts";
+import { bookOfPricing, type ConfigHttp, type Doc } from "./configDocs.ts";
 
 type Lines = { sv: string; fr: string; en: string };
 export type ServerCategory = { id: string; label: string; line: Lines; seats: number; builtIn: boolean; sort: number; archivedAt?: string; archivedBy?: string; archiveReason?: string };
@@ -100,13 +101,11 @@ export async function readPricingExtras(http: ConfigHttp, store: PricingStore, z
       const schedule = await quiet(http.json<Schedule>(`/admin/zones/${encodeURIComponent(zoneId)}/surge`));
       const manual = manualOf(schedule && typeof schedule === "object" && "scheduleId" in schedule ? schedule : null);
       if (schedule && typeof schedule === "object" && "version" in schedule) surgeVersions[zoneId] = manual ? schedule.version : 0;
-      const before: ZoneLive = next.live[zoneId] ?? { manual: null, notifyDrivers: false, lastNotifiedAt: null };
-      next.live[zoneId] = { ...before, manual, notifyDrivers: before.notifyDrivers };
+      next.live[zoneId] = { manual } satisfies ZoneLive;
       const page = await quiet(http.json<{ items: HistoryEntry[] }>(`/admin/config/pricing/history?zoneId=${encodeURIComponent(zoneId)}&limit=20`));
       if (page?.items?.length) {
         entries.push(...page.items.map((item) => ({ ...item, zoneId })));
         liveVersions[zoneId] = Math.max(...page.items.map((item) => item.version));
-        next.live[zoneId] = { ...next.live[zoneId]!, notifyDrivers: notifyDriversOf(page.items[0]!.document) };
       }
     }),
   );

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { emptyPricingStore, publishZones, zoneBook } from "../pricing/zonePricing.ts";
 import { emptyDispatchBook, liveRules, publish, zoneDefault } from "../dispatch/rules.ts";
-import { SettingsChanged, bookOfPricing, notifyDriversOf, countryRulesOf, dispatchDocumentOf, pricingDocumentOf, rulesOfDispatch, savePublish, withOwned, zoneFacts, type ConfigHttp, type Doc } from "./configDocs.ts";
+import { SettingsChanged, bookOfPricing, countryRulesOf, dispatchDocumentOf, pricingDocumentOf, rulesOfDispatch, savePublish, withOwned, zoneFacts, type ConfigHttp, type Doc } from "./configDocs.ts";
 import { createLiveSettings, standardMarks } from "./liveSettings.ts";
 
 /** Contract v0.8.0 settings flow (owner 2026-10-27): exporters, the Standard per country, publish without a second admin. */
@@ -41,7 +41,7 @@ function fakeServer(drafts: Record<string, Doc & { version: number; liveVersion:
 test("PricingDocument from the Pricing page: minor units, ONE seat fee on Child Seat only (v0.7.1), the contract sample's keys", () => {
   const store = emptyPricingStore();
   const book = zoneBook(store, "Z001");
-  const doc = pricingDocumentOf(book, "Z001", { surge: { maxMultiplier: 3 }, stopFreeWaitMin: 3 }, { notifyDrivers: true });
+  const doc = pricingDocumentOf(book, "Z001", { surge: { maxMultiplier: 3, notifyDrivers: true }, stopFreeWaitMin: 3 });
   const fixture = sample("pricing_document");
   // v0.7.1 (owner 2026-10-27): no free minutes at a stop and no separate surge maximum (the slider is the maximum).
   const gone = new Set(["stopFreeWaitMin"]);
@@ -49,7 +49,9 @@ test("PricingDocument from the Pricing page: minor units, ONE seat fee on Child 
   assert.ok(!("stopFreeWaitMin" in doc));
   const surge = doc["surge"] as Doc;
   assert.ok(!("maxMultiplier" in surge));
-  assert.equal(surge["notifyDrivers"], true);
+  // v0.7.2 (owner 2026-10-28): no surge notice; an old notifyDrivers on the server is not written back.
+  assert.ok(!("notifyDrivers" in surge));
+  assert.deepEqual(Object.keys(surge).sort(), ["scheduled", "smart"]);
   const categories = doc["categories"] as Record<string, Doc>;
   assert.deepEqual(categories["economy"]!["base"], { amountMinor: Math.round(book.prices["economy"]!.base * 100), currency: "SEK" });
   for (const [id, category] of Object.entries(categories)) {
@@ -62,7 +64,6 @@ test("PricingDocument from the Pricing page: minor units, ONE seat fee on Child 
   assert.deepEqual(Object.keys(categories["economy"]!).sort(), Object.keys((fixture["categories"] as Record<string, Doc>)["economy"]!).filter((k) => !seat.has(k)).sort());
   // Back to the page: the same book.
   assert.deepEqual(bookOfPricing(doc, zoneBook(emptyPricingStore(), "Z001")), { ...book, version: 1 });
-  assert.equal(notifyDriversOf(doc), true);
 });
 
 test("the Standard of a country is a scope of its own, in the country's money", () => {
