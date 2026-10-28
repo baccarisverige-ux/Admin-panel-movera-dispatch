@@ -67,14 +67,14 @@ test("Dashboard map: the surge layer is the server's surge now in the driver map
 
 test("Dispatch: Pause asks for a reason and puts the zone's switch on the server; Resume puts it back", async ({ page }) => {
   const { dispatch } = await open(page, "/dispatch?view=live");
-  await page.getByRole("button", { name: "Pause Norrmalm" }).click();
+  await page.getByRole("button", { name: "Pause Stockholm County" }).click();
   const dialog = page.locator(".modal.open");
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: /Confirm/ }).click();
   await expect.poll(() => dispatch.puts.length).toBe(1);
   expect(dispatch.puts[0]).toMatchObject({ zoneId: "Z001", expectedVersion: 0, paused: true, mode: null });
-  await expect(page.getByRole("button", { name: "Resume Norrmalm" })).toBeVisible();
-  await page.getByRole("button", { name: "Resume Norrmalm" }).click();
+  await expect(page.getByRole("button", { name: "Resume Stockholm County" })).toBeVisible();
+  await page.getByRole("button", { name: "Resume Stockholm County" }).click();
   await page.locator(".modal.open").getByRole("button", { name: /Confirm/ }).click();
   await expect.poll(() => dispatch.puts.length).toBe(2);
   expect(dispatch.puts[1]).toMatchObject({ zoneId: "Z001", expectedVersion: 1, paused: false, mode: null });
@@ -82,7 +82,7 @@ test("Dispatch: Pause asks for a reason and puts the zone's switch on the server
 
 test("Dispatch: a server that files an approval (202) says it waits for a second admin", async ({ page }) => {
   const { dispatch } = await open(page, "/dispatch?view=live", { pending: true });
-  await page.getByRole("button", { name: "Pause Norrmalm" }).click();
+  await page.getByRole("button", { name: "Pause Stockholm County" }).click();
   await page.locator(".modal.open").getByRole("button", { name: /Confirm/ }).click();
   await expect.poll(() => dispatch.puts.length).toBe(1);
   await expect(page.getByText("waiting for a second admin to approve").first()).toBeVisible();
@@ -112,7 +112,7 @@ test("live screenshots in Swedish (SHOTS)", async ({ page }) => {
   await page.goto("/dispatch?view=live");
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${SHOTS}/live-dispatch-sv-1440.png`, fullPage: true });
-  await page.getByRole("button", { name: "Pause Norrmalm" }).click();
+  await page.getByRole("button", { name: "Pause Stockholm County" }).click();
   await expect(page.locator(".modal.open")).toBeVisible();
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${SHOTS}/live-dispatch-pause-confirm-sv-1440.png` });
