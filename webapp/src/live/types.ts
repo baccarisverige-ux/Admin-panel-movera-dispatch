@@ -257,5 +257,7 @@ export type SupportTicket = { ticketId: string; tripId?: string; openedBy: "ride
 export type RiskSignal = { value: number; count: number; total?: number };
 export type RiskPerson = { who: "driver" | "rider"; id: string; name: string; zoneId?: string; signals: Partial<Record<"cancels" | "failed_payments" | "low_rating", RiskSignal>> };
 
-/** GET /admin/kpis (KpiDay, contract v0.9.0). */
-export type KpiDay = { date: string; zoneId: string; source: "live" | "summary"; currency: string; completedTrips: number; cancelledTrips: number; noShows: number; gross: number; commission: number; driverEarnings: number; pickupPay: number; driverBonus: number; cashCollected: number; walletApplied: number; newRiders: number; newDrivers: number };
+/** GET /admin/kpis (KpiDay, contract v0.9.0; money lines v0.10.3). */
+export type KpiDay = { date: string; zoneId: string; source: "live" | "summary"; currency: string; completedTrips: number; cancelledTrips: number; noShows: number; gross: number; commission: number; driverEarnings: number; pickupPay: number; driverBonus: number; cashCollected: number; walletApplied: number; newRiders: number; newDrivers: number;
+  /** v0.10.3 (contract.json#kpis.money); absent from an older server = "Not connected yet". */
+  tips?: number; refunds?: number; fees?: number; moveraEarnings?: number };

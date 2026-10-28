@@ -3,6 +3,7 @@ import type { HistoryRow } from "../alerts/engine.ts";
 import { HOURLY, type EarningsReport, type SeriesPoint } from "../dashboard/earnings.ts";
 import type { PeriodWindow } from "../dashboard/period.ts";
 import type { Activity } from "./activityLog.ts";
+import { tr, trx } from "../i18n/index.ts";
 
 /** Reports: the numbers per tab for a period and its comparison, short notes on big changes, and who did what. */
 
@@ -54,7 +55,7 @@ export function notesFor(cards: readonly Card[], threshold = 15): Note[] {
     if (diff === null || Math.abs(diff) < threshold) return [];
     const up = diff > 0;
     const good = card.goodDown ? !up : up;
-    return [{ tone: good ? "good" : "bad", text: `${card.label} is ${up ? "up" : "down"} ${Math.abs(diff)}%` }];
+    return [{ tone: good ? "good" : "bad", text: up ? tr("{0} is up {1}%", [trx(card.label), Math.abs(diff)]) : tr("{0} is down {1}%", [trx(card.label), Math.abs(diff)]) }];
   });
 }
 
@@ -90,7 +91,7 @@ export function ridesData(report: EarningsReport, zones: readonly ZoneRow[], sha
     .slice(0, 2)
     .map((zone) => {
       const diff = change(zone.cancelPct, zone.previousCancelPct) ?? 0;
-      return { tone: diff > 0 ? "bad" : "good", text: `Cancels in ${zone.name} are ${diff > 0 ? "up" : "down"} ${Math.abs(diff)}%` };
+      return { tone: diff > 0 ? "bad" : "good", text: diff > 0 ? tr("Cancels in {0} are up {1}%", [zone.name, Math.abs(diff)]) : tr("Cancels in {0} are down {1}%", [zone.name, Math.abs(diff)]) };
     });
   return {
     cards,
@@ -116,7 +117,7 @@ export function moneyData(report: EarningsReport, zones: readonly ZoneRow[], sha
     { id: "refunds", label: "Refunds & vouchers", value: s(t.refundsMinor), previous: s(p.refundsMinor), format: "money", info: "Money given back to riders, as refunds or vouchers.", goodDown: true },
     { id: "net", label: "Net revenue", value: s(t.netMinor), previous: s(p.netMinor), format: "money", info: "Movera earnings minus refunds and vouchers." },
     { id: "avgFare", label: "Average fare", value: t.trips ? Math.round(t.grossMinor / t.trips) : 0, previous: p.trips ? Math.round(p.grossMinor / p.trips) : null, format: "money", info: "Bookings ÷ completed rides." },
-    { id: "failed", label: "Failed payments open", value: failed.minor, previous: null, format: "money", info: `${failed.count} payments failed and are not settled yet. Right now, not for the period.`, goodDown: true },
+    { id: "failed", label: "Failed payments open", value: failed.minor, previous: null, format: "money", info: tr("{0} payments failed and are not settled yet. Right now, not for the period.", [failed.count]), goodDown: true },
   ];
   return {
     cards,
@@ -150,7 +151,7 @@ export function driversData(rows: readonly DriverRow[]): { cards: Card[]; rows: 
   const top = sorted[0];
   const total = sum("rides");
   const notes: Note[] = [...notesFor(cards)];
-  if (top && total && top.rides / total >= 0.08) notes.push({ tone: "info", text: `${top.name} did ${Math.round((top.rides / total) * 100)}% of all rides` });
+  if (top && total && top.rides / total >= 0.08) notes.push({ tone: "info", text: tr("{0} did {1}% of all rides", [top.name, Math.round((top.rides / total) * 100)]) });
   return { cards, rows: sorted, notes };
 }
 
@@ -183,7 +184,7 @@ export function dispatchData(rows: readonly DispatchRow[]): { cards: Card[]; row
     { id: "exclusive", label: "Accepted on Exclusive", value: avg("exclusivePct"), previous: null, format: "pct", info: "Exclusive offers that the driver accepted." },
   ];
   const worst = [...rows].sort((a, b) => b.noDriverPct - a.noDriverPct)[0];
-  const notes: Note[] = worst && worst.noDriverPct >= 4 ? [{ tone: "bad", text: `${worst.name} has the most requests without a driver (${worst.noDriverPct}%)` }] : [];
+  const notes: Note[] = worst && worst.noDriverPct >= 4 ? [{ tone: "bad", text: tr("{0} has the most requests without a driver ({1}%)", [worst.name, worst.noDriverPct]) }] : [];
   return { cards, rows: [...rows].sort((a, b) => b.requests - a.requests), notes };
 }
 
@@ -201,10 +202,10 @@ export function alertsData(rows: readonly HistoryRow[], window: PeriodWindow, op
     { id: "critical", label: "Critical solved", value: now.filter((row) => row.level === "critical").length, previous: before.filter((row) => row.level === "critical").length, format: "count", info: "Solved alerts that were Critical." },
     { id: "take", label: "Time to take", value: avg(now, "takeMin"), previous: before.length ? avg(before, "takeMin") : null, format: "min", info: "From the alert starting until someone took it.", goodDown: true },
     { id: "solve", label: "Time to solve", value: avg(now, "solveMin"), previous: before.length ? avg(before, "solveMin") : null, format: "min", info: "From the alert starting until it was solved.", goodDown: true },
-    { id: "open", label: "Open now", value: open.critical + open.important + open.info, previous: null, format: "count", info: `${open.critical} critical, ${open.important} important, ${open.info} info right now.`, goodDown: true },
+    { id: "open", label: "Open now", value: open.critical + open.important + open.info, previous: null, format: "count", info: tr("{0} critical, {1} important, {2} info right now.", [open.critical, open.important, open.info]), goodDown: true },
   ];
   const notes: Note[] = [...notesFor(cards)];
-  if (byAdmin[0] && now.length >= 3) notes.push({ tone: "info", text: `${byAdmin[0].admin} solved ${Math.round((byAdmin[0].count / now.length) * 100)}% of all alerts` });
+  if (byAdmin[0] && now.length >= 3) notes.push({ tone: "info", text: tr("{0} solved {1}% of all alerts", [byAdmin[0].admin, Math.round((byAdmin[0].count / now.length) * 100)]) });
   return { cards, rows: now, byAdmin, notes };
 }
 
@@ -397,9 +398,14 @@ export function scheduleIssues(schedule: Schedule): string[] {
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export function scheduleLine(schedule: Schedule): string {
-  const when = schedule.every === "day" ? `Every day at ${schedule.time}` : schedule.every === "week" ? `Every ${WEEKDAYS[schedule.weekday] ?? "Monday"} at ${schedule.time}` : `On the 1st of every month at ${schedule.time}`;
-  const what = schedule.every === "day" ? "yesterday" : schedule.every === "week" ? "last week" : "last month";
-  return `${when}: ${what}'s ${TABS.find((tab) => tab.id === schedule.tab)?.label ?? "report"} as ${schedule.format.toUpperCase()} to ${schedule.to.split(/[,;\s]+/).filter(Boolean).length} address${schedule.to.split(/[,;\s]+/).filter(Boolean).length === 1 ? "" : "es"}`;
+  const when = schedule.every === "day" ? tr("Every day at {0}", [schedule.time]) : schedule.every === "week" ? tr("Every {0} at {1}", [trx(WEEKDAYS[schedule.weekday] ?? "Monday"), schedule.time]) : tr("On the 1st of every month at {0}", [schedule.time]);
+  const report = trx(TABS.find((tab) => tab.id === schedule.tab)?.label ?? "report");
+  const count = schedule.to.split(/[,;\s]+/).filter(Boolean).length;
+  const vars = [when, report, schedule.format.toUpperCase(), count];
+  const what = schedule.every === "day" ? (count === 1 ? tr("{0}: yesterday's {1} as {2} to {3} address", vars) : tr("{0}: yesterday's {1} as {2} to {3} addresses", vars))
+    : schedule.every === "week" ? (count === 1 ? tr("{0}: last week's {1} as {2} to {3} address", vars) : tr("{0}: last week's {1} as {2} to {3} addresses", vars))
+    : count === 1 ? tr("{0}: last month's {1} as {2} to {3} address", vars) : tr("{0}: last month's {1} as {2} to {3} addresses", vars);
+  return what;
 }
 
 export function csvOf(head: readonly string[], rows: readonly (string | number)[][]): string {
