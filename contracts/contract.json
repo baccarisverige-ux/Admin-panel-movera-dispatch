@@ -874,8 +874,14 @@
         "POST /admin/auth/refresh",
         "POST /admin/auth/sign-out",
         "GET /admin/auth/me",
+        "PATCH /admin/auth/me",
         "POST /admin/agents/{adminId}/setup-link"
       ],
+      "meLanguage": {
+        "note": "v0.17.1 (owner 2026-10-29, \"Why change languages in admin doesn't work\"; \"Fix fully (Recommended)\"): PATCH /admin/auth/me { language } saves the signed-in admin's own panel language on the server; null clears it (the panel then uses its default). Any signed-in admin, every role, no permission id, like GET /admin/auth/me. Audited. Answers AdminMe.",
+        "values": "languages.values or null",
+        "permission": "any signed-in admin, every role"
+      },
       "passwordMinLength": 10,
       "passwordHash": "argon2id, server side; the password never leaves the sign-in and setup calls",
       "setupLinkHours": 72,
@@ -1323,7 +1329,9 @@
       "GET /admin/tickets",
       "GET /admin/ratings",
       "GET /admin/incidents",
-      "GET /admin/live/drivers"
+      "GET /admin/live/drivers",
+      "GET /admin/risk/signals",
+      "GET /admin/kpis"
     ],
     "reservations": "reservations are trips: GET /admin/trips?kind=scheduled with the same filters",
     "params": {

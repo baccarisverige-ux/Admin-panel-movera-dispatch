@@ -227,3 +227,26 @@ test("the setup link is checked, then the first password signs the admin in", as
   assert.equal(client.state()?.accessToken, "access-1");
   assert.ok(storage.map.has(LIVE_SESSION_KEY));
 });
+
+test("contract v0.16.1: updateMyLanguage PATCHes /admin/auth/me with a key, keeps the answer and tells the listeners", async () => {
+  const storage = memoryStorage();
+  const server = fakeServer([
+    () => respond(200, session("access-1", "refresh-1")),
+    () => respond(200, { ...ADMIN, language: "sv" }),
+    () => respond(200, ADMIN),
+  ]);
+  const client = createLiveClient({ baseUrl: "http://api.test", fetchImpl: server.fetchImpl, storage });
+  await client.signIn("owner@movera.se", "secret");
+  const seen: (string | undefined)[] = [];
+  client.subscribe((state) => seen.push(state?.admin.language));
+  const me = await client.updateMyLanguage("sv");
+  assert.equal(me.language, "sv");
+  assert.equal(server.calls[1]!.method, "PATCH");
+  assert.equal(server.calls[1]!.url, "http://api.test/api/v1/admin/auth/me");
+  assert.deepEqual(server.calls[1]!.body, { language: "sv" });
+  assert.ok(server.calls[1]!.headers.get("Idempotency-Key"));
+  assert.equal(JSON.parse(storage.map.get(LIVE_SESSION_KEY)!).admin.language, "sv", "kept for a reload");
+  await client.updateMyLanguage(null);
+  assert.deepEqual(server.calls[2]!.body, { language: null });
+  assert.deepEqual(seen, ["sv", undefined]);
+});

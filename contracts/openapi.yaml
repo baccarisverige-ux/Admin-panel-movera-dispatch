@@ -5595,7 +5595,9 @@ paths:
     get:
       operationId: adminRiskSignals
       summary: Risk signals the server counts (cancels, failed payments, low rating)
-      description: v0.9.0 (contract.json#risk). People with at least one counted event in the window.
+      description: 'v0.9.0 (contract.json#risk). People with at least one counted event in the window. v0.17.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Safety
       x-actor:
@@ -5612,7 +5614,9 @@ paths:
           enum:
           - driver
           - rider
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
       responses:
@@ -5644,14 +5648,17 @@ paths:
       operationId: adminKpis
       summary: Key numbers per zone and day
       description: 'v0.9.0 (contract.json#kpis). Days are zone-local, both ends included, at most kpis.maxDays. Today: source
-        live; earlier: the nightly summary.'
+        live; earlier: the nightly summary. v0.17.2 (contract.json#adminListFilters): zoneId, zoneIds and country narrow the
+        list inside those zones; an unknown query key → 400 invalid_request (reason unknown_filter).'
       tags:
       - Admin · Reports
       x-actor:
       - admin
       x-permission: overview.read
       parameters:
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - name: fromDate
         in: query
         required: false
@@ -7502,6 +7509,52 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    patch:
+      operationId: adminUpdateMe
+      summary: Save the signed-in admin's own panel language
+      description: 'v0.17.1: PATCH /admin/auth/me { language } saves the signed-in admin''s own panel language on the server;
+        null clears it (the panel then uses its default). Any signed-in admin, every role, no permission id, like GET /admin/auth/me.
+        Audited. Answers AdminMe.'
+      tags:
+      - Admin · Auth
+      x-actor:
+      - admin
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminMeUpdate'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMe'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
@@ -17530,6 +17583,16 @@ components:
           description: Version the caller last saw; stale → 409 version_mismatch.
         zoneId:
           $ref: '#/components/schemas/Id'
+    AdminMeUpdate:
+      type: object
+      description: 'v0.17.1: the signed-in admin''s own panel language; null clears it.'
+      required:
+      - language
+      properties:
+        language:
+          oneOf:
+          - $ref: '#/components/schemas/Language'
+          - type: 'null'
     StopVisit:
       type: object
       description: 'v0.7.1: one extra stop the driver arrived at (contract.json#stopWaits); stop_waiting runs from arrivedAt

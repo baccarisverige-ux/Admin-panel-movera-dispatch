@@ -6,7 +6,7 @@ import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine } from "./ui";
 import type { Page, SupportTicket } from "./types";
 import { useMarketScope } from "../markets/useMarketScope";
-import { zoneFilterOf } from "./liveAdminApi";
+import { zoneFilterOf } from "./zoneFilter";
 
 /**
  * Live builds only (contract v0.9.0 §16, owner decision 3 of part 3): Admin › Support lists the tickets riders and

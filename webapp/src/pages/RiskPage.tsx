@@ -20,6 +20,7 @@ import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
 import type { RideCheckThresholds } from "../safety/rideCheckSettings";
 import { agentName } from "../trips/TripParts";
 import { CommandButton } from "../ui/CommandButton";
+import { zoneFilterOf } from "../live/zoneFilter";
 
 const NUMBERS: { key: keyof SafetyPolicy; label: string; title: string; help: string; unit: string }[] = [
   { key: "impossibleTravelMps", label: "Impossible travel (m/s)", title: "Fake GPS: fastest believable speed", help: "A jump faster than this between two GPS points counts as fake GPS. 55 m/s is about 200 km/h.", unit: "m/s" },
@@ -165,10 +166,13 @@ function useRisk() {
   const ops = normalizeRiskOps(slice.value);
   // Live (contract v0.9.0): the three signals the server counts (GET /admin/risk/signals); demo: the demo signals.
   const live = useLiveSessionMaybe();
-  const signals = useQuery({ queryKey: ["live", "risk"], queryFn: () => live!.client.json<Page<RiskPerson>>("/admin/risk/signals?limit=200"), enabled: Boolean(live) });
+  // v0.17.2: the server counts only the people of the zones picked in the top bar.
+  const riskScope = useMarketScope();
+  const riskFilter = new URLSearchParams(zoneFilterOf(riskScope.effective).params).toString();
+  const signals = useQuery({ queryKey: ["live", "risk", riskFilter], queryFn: () => live!.client.json<Page<RiskPerson>>(`/admin/risk/signals?limit=200${riskFilter ? `&${riskFilter}` : ""}`), enabled: Boolean(live) && !riskScope.denied });
   const demoList = useMemo(() => people(drivers.data ?? [], riders.data ?? []), [drivers.data, riders.data]);
   // v0.17.2: the people of the country and zones picked in the top bar (a person without a zone stays).
-  const effective = useMarketScope().effective;
+  const effective = riskScope.effective;
   const zones = new Set(Array.isArray(effective) ? effective : [effective]);
   const list = live ? (signals.data?.items ?? []).filter((person) => !person.zoneId || zones.has(person.zoneId)).map(serverPerson) : demoList;
   return { ops, list, loading: slice.loading || drivers.isLoading || riders.isLoading || signals.isLoading, live: Boolean(live) };

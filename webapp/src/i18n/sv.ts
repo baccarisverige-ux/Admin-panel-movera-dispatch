@@ -3739,6 +3739,7 @@ export const sv: Record<MessageKey, string> = {
   "Save growth rule": "Spara tillväxtregel",
   "Save incident settings": "Spara incidentinställningar",
   "Save language": "Spara språket",
+  "The language was not saved. Try again.": "Språket sparades inte. Försök igen.",
   "Save message limits and quiet hours": "Spara meddelandegränser och tysta timmar",
   "Save my quiet hours": "Spara mina tysta timmar",
   "Save note": "Spara anteckningen",

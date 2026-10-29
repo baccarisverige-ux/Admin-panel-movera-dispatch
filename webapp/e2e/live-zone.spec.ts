@@ -17,7 +17,7 @@ const FR_PAYOUT = { ...PAYOUTS[0]!, payoutId: "PY9", driverId: "D3001", driverNa
 const FR_RATING = { ...RATINGS[0]!, tripId: "T3001", riderId: "R601", riderName: "Lucie", driverId: "D3001", driverName: "Luc Moreau", comment: "Très bien", zoneId: "FR-PC" };
 
 async function franceAndSweden(page: Page) {
-  const state = await fakeTripServer(page, { admin: { permissions: [...ADMIN.permissions, "support.reply", "settings.read", "incidents.read"] } });
+  const state = await fakeTripServer(page, { admin: { permissions: [...ADMIN.permissions, "support.reply", "settings.read", "incidents.read", "safety.edit"] } });
   state.trips.push(FR_TRIP as never);
   state.drivers.push(FR_DRIVER as never);
   state.riders.push(FR_RIDER);
@@ -48,7 +48,7 @@ async function open(page: Page, path: string, country: string) {
 const PAGES: { path: string; name: string; endpoints: string[]; fr: string; se: string }[] = [
   { path: "/trips", name: "trips", endpoints: ["trips"], fr: "T3001", se: "T2001" },
   { path: "/reservations", name: "reservations", endpoints: ["trips"], fr: "", se: "" },
-  { path: "/", name: "dashboard", endpoints: ["trips", "drivers"], fr: "", se: "" },
+  { path: "/", name: "dashboard", endpoints: ["trips", "drivers", "kpis"], fr: "", se: "" },
   { path: "/dispatch/map", name: "livemap", endpoints: ["drivers", "live/drivers"], fr: "", se: "" },
   { path: "/drivers", name: "drivers", endpoints: ["drivers"], fr: "Luc Moreau", se: "Anna Berg" },
   { path: "/riders", name: "riders", endpoints: ["riders"], fr: "Lucie", se: "Ida" },
@@ -57,6 +57,7 @@ const PAGES: { path: string; name: string; endpoints: string[]; fr: string; se: 
   { path: "/support", name: "support", endpoints: ["tickets"], fr: "Chauffeur en retard", se: "Charged too much" },
   { path: "/reviews", name: "reviews", endpoints: ["ratings"], fr: "", se: "" },
   { path: "/incidents", name: "incidents", endpoints: ["incidents"], fr: "", se: "" },
+  { path: "/risk", name: "risk", endpoints: ["risk/signals"], fr: "", se: "" },
 ];
 
 for (const item of PAGES) {

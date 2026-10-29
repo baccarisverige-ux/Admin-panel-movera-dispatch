@@ -7,7 +7,7 @@ import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine, Status } from "./ui";
 import type { Page, Trip } from "./types";
 import { useMarketScope } from "../markets/useMarketScope";
-import { zoneFilterOf } from "./liveAdminApi";
+import { zoneFilterOf } from "./zoneFilter";
 
 /**
  * Live builds only (contract v0.13.0 §22, owner "chat only support roles in their zones"): the trip chat between a

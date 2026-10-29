@@ -7,7 +7,7 @@ import { ErrorLine } from "./ui";
 import type { Driver, LiveMoney, Page } from "./types";
 import { NotConnected } from "./NotConnected";
 import { useMarketScope } from "../markets/useMarketScope";
-import { zoneFilterOf } from "./liveAdminApi";
+import { zoneFilterOf } from "./zoneFilter";
 
 /**
  * Live builds only, in the demo Payouts page (contract v0.9.0 §16, owner real-data decisions part 3): the server's
