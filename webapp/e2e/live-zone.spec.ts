@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN, COMPLETED_TRIP, DRIVER, PAYOUTS, RATINGS, RIDERS, TICKETS, fakeTripServer, signIn } from "./live-fake";
+import { ADMIN, COMPLETED_TRIP, DRIVER, PAYOUTS, RATINGS, RIDERS, SEED_ZONES, TICKETS, fakeTripServer, signIn } from "./live-fake";
 
 /**
  * Contract v0.16.2 (contract.json#adminListFilters; owner 2026-10-29: "if I chose France it show Sweden trips !",
@@ -29,14 +29,20 @@ async function franceAndSweden(page: Page) {
   return state;
 }
 
+/** A list read narrowed to one country: country=XX, or zoneId/zoneIds that are all zones of XX (before the server's zone list arrives the panel names the zones). */
+function namesCountry(path: string, country: string): boolean {
+  const url = new URL(path, "http://x");
+  if (url.searchParams.get("country")) return url.searchParams.get("country") === country;
+  const zones = [...url.searchParams.getAll("zoneId"), ...url.searchParams.getAll("zoneIds").flatMap((part) => part.split(","))];
+  const of = new Map(SEED_ZONES().map((zone) => [zone.zoneId, zone.country]));
+  return zones.length > 0 && zones.every((zone) => of.get(zone) === country);
+}
+
 const calls = (state: { calls: { path: string }[] }, from: number, endpoint: string) => state.calls.slice(from).map((call) => call.path).filter((path) => path.startsWith(`/api/v1/admin/${endpoint}?`) || path === `/api/v1/admin/${endpoint}`);
 
-async function open(page: Page, path: string, country: string, name: string, endpoint: string) {
-  const read = page.waitForResponse((response) => response.url().includes(`/api/v1/admin/${endpoint}?`) && response.url().includes(`country=${country}`));
+async function open(page: Page, path: string, country: string) {
   await page.goto(`${path}${path.includes("?") ? "&" : "?"}country=${country}`);
   await expect(page.locator("main")).toBeVisible();
-  await read;
-  if (OUT) await page.screenshot({ path: `${OUT}/after-${name}-${country}.png`, fullPage: true });
 }
 
 const PAGES: { path: string; name: string; endpoints: string[]; fr: string; se: string }[] = [
@@ -58,11 +64,12 @@ for (const item of PAGES) {
     const state = await franceAndSweden(page);
     for (const [country, mine, other] of [["SE", item.se, item.fr], ["FR", item.fr, item.se]] as const) {
       const from = state.calls.length;
-      await open(page, item.path, country, item.name, item.endpoints[0]!);
+      await open(page, item.path, country);
       // The page's list reads name the country (a name lookup beside them may read without it).
-      for (const endpoint of item.endpoints) expect(calls(state, from, endpoint).some((path) => path.includes(`country=${country}`)), `${item.name} ${country} ${endpoint}`).toBe(true);
+      for (const endpoint of item.endpoints) await expect.poll(() => calls(state, from, endpoint).some((path) => namesCountry(path, country)), { message: `${item.name} ${country} ${endpoint}`, timeout: 15_000 }).toBe(true);
       if (mine) await expect(page.locator("main")).toContainText(mine);
       if (other) await expect(page.locator("main")).not.toContainText(other);
+      if (OUT) await page.screenshot({ path: `${OUT}/after-${item.name}-${country}.png`, fullPage: true });
     }
   });
 }
