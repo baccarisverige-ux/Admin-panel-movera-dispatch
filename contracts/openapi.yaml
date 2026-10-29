@@ -1,11 +1,11 @@
-# Movera API v0.16.0 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.16.2 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.16.0
+  version: 0.16.2
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.16.0 in this folder; this file must agree with them.
+    v0.16.2 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -80,7 +80,7 @@ tags:
   description: 'Zones from the server: list, create, outline, open and close (v0.11.0)'
 x-contract:
   name: movera
-  version: 0.16.0
+  version: 0.16.2
   source: contract.json
 paths:
   /auth/otp/request:
@@ -3724,7 +3724,9 @@ paths:
     get:
       operationId: adminListTrips
       summary: List trips (cursor paging)
-      description: Results are limited to the zones in the admin's token scope.
+      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Lists
       x-actor:
@@ -3747,7 +3749,9 @@ paths:
         required: false
         schema:
           $ref: '#/components/schemas/TripKind'
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - name: categoryId
         in: query
         required: false
@@ -3801,7 +3805,9 @@ paths:
     get:
       operationId: adminListRiders
       summary: List riders (cursor paging)
-      description: Results are limited to the zones in the admin's token scope.
+      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Lists
       x-actor:
@@ -3818,7 +3824,9 @@ paths:
           enum:
           - active
           - suspended
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/Q'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
@@ -3850,7 +3858,9 @@ paths:
     get:
       operationId: adminListDrivers
       summary: List drivers (cursor paging)
-      description: Results are limited to the zones in the admin's token scope.
+      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Lists
       x-actor:
@@ -3877,7 +3887,9 @@ paths:
             $ref: '#/components/schemas/DriverOnlineStatus'
         style: form
         explode: true
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - name: categoryId
         in: query
         required: false
@@ -4034,7 +4046,9 @@ paths:
     get:
       operationId: adminListPayments
       summary: List payments (cursor paging)
-      description: Results are limited to the zones in the admin's token scope.
+      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Lists
       x-actor:
@@ -4068,7 +4082,9 @@ paths:
         required: false
         schema:
           $ref: '#/components/schemas/Id'
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/From'
       - $ref: '#/components/parameters/To'
       - $ref: '#/components/parameters/RequestId'
@@ -4101,7 +4117,9 @@ paths:
     get:
       operationId: adminListRefunds
       summary: List refunds (cursor paging)
-      description: Results are limited to the zones in the admin's token scope.
+      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Lists
       x-actor:
@@ -4132,6 +4150,9 @@ paths:
           $ref: '#/components/schemas/Id'
       - $ref: '#/components/parameters/From'
       - $ref: '#/components/parameters/To'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
       responses:
@@ -4162,7 +4183,9 @@ paths:
     get:
       operationId: adminListPayouts
       summary: List payouts (cursor paging)
-      description: Results are limited to the zones in the admin's token scope.
+      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Lists
       x-actor:
@@ -4194,6 +4217,9 @@ paths:
           $ref: '#/components/schemas/Id'
       - $ref: '#/components/parameters/From'
       - $ref: '#/components/parameters/To'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
       responses:
@@ -4270,7 +4296,9 @@ paths:
     get:
       operationId: adminListTickets
       summary: List tickets (cursor paging)
-      description: Results are limited to the zones in the admin's token scope.
+      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Lists
       x-actor:
@@ -4320,6 +4348,9 @@ paths:
         schema:
           $ref: '#/components/schemas/Id'
       - $ref: '#/components/parameters/Q'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
       responses:
@@ -4350,7 +4381,9 @@ paths:
     get:
       operationId: adminListIncidents
       summary: List incidents (cursor paging)
-      description: Results are limited to the zones in the admin's token scope.
+      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Lists
       x-actor:
@@ -4394,7 +4427,9 @@ paths:
         required: false
         schema:
           $ref: '#/components/schemas/Id'
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/From'
       - $ref: '#/components/parameters/To'
       - $ref: '#/components/parameters/RequestId'
@@ -5386,7 +5421,8 @@ paths:
     get:
       operationId: adminListRatings
       summary: Ratings riders and drivers gave each other
-      description: v0.9.0. Newest first; limited to the admin's zones.
+      description: 'v0.9.0. Newest first; limited to the admin''s zones. v0.16.2 (contract.json#adminListFilters): zoneId,
+        zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason unknown_filter).'
       tags:
       - Admin · Reviews
       x-actor:
@@ -5426,7 +5462,9 @@ paths:
         required: false
         schema:
           $ref: '#/components/schemas/Id'
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/From'
       - $ref: '#/components/parameters/To'
       - $ref: '#/components/parameters/RequestId'
@@ -8127,14 +8165,18 @@ paths:
     get:
       operationId: adminLiveDrivers
       summary: Driver positions for the admin live map
-      description: Limited to the zones in the admin's scope. stale = no fix for staleAfterSeconds.
+      description: 'Limited to the zones in the admin''s scope. stale = no fix for staleAfterSeconds. v0.16.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter).'
       tags:
       - Admin · Dispatch
       x-actor:
       - admin
       x-permission: trips.read
       parameters:
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
       responses:
@@ -9753,6 +9795,34 @@ components:
       description: Defaults to the zone in the token / current location.
       schema:
         $ref: '#/components/schemas/Id'
+    ListZoneId:
+      name: zoneId
+      in: query
+      required: false
+      description: 'v0.16.2: only this zone (inside the admin''s zones; a zone outside them → 403 zone_out_of_scope).'
+      schema:
+        $ref: '#/components/schemas/Id'
+    ListZoneIds:
+      name: zoneIds
+      in: query
+      required: false
+      description: 'v0.16.2: only these zones, comma separated or repeated (at most 200; one outside the admin''s zones →
+        403 zone_out_of_scope). Joined with zoneId.'
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/Id'
+        maxItems: 200
+      style: form
+      explode: false
+    ListCountry:
+      name: country
+      in: query
+      required: false
+      description: 'v0.16.2: only the zones of this country that the admin covers (with zoneId/zoneIds: only those of them
+        in the country).'
+      schema:
+        $ref: '#/components/schemas/CountryCode'
     ZoneIdRequired:
       name: zoneId
       in: query
