@@ -26,6 +26,8 @@ import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, pa
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
 import { vehicleMissing } from "./activation.ts";
+import { errorText, requiredForVehicle } from "./format.ts";
+import { tr } from "../i18n/index.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
@@ -104,6 +106,7 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       ...(driver.vehicleId ? { vehicleId: driver.vehicleId } : {}),
       ...(driver.requiredDocuments ? { requiredDocuments: driver.requiredDocuments } : {}),
       ...(driver.requiredFleetDocuments ? { requiredFleetDocuments: driver.requiredFleetDocuments } : {}),
+      ...(driver.categoryIds ? { categoryIds: [...driver.categoryIds] } : {}),
     },
     liveDriver: {
       onlineStatus: live?.onlineStatus ?? driver.onlineStatus,
@@ -134,6 +137,7 @@ export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Dri
     make: vehicle.make,
     model: vehicle.model,
     liveVehicleMissing: vehicleMissing(vehicle, driver?.country),
+    liveVehicleDocs: { documents: [...(vehicle.documents ?? [])], required: requiredForVehicle(vehicle, driver?.country), ...(driver?.country ? { country: driver.country } : {}) },
   };
 }
 
@@ -328,6 +332,8 @@ const STATUS_COMMANDS: Record<string, string> = {
   "admin.driver.suspend": "suspended",
 };
 
+const FLEET_COMMANDS: Record<string, "approved" | "blocked"> = { "admin.fleetOwner.activate": "approved", "admin.fleetOwner.onHold": "blocked" };
+
 const VEHICLE_COMMANDS: Record<string, string> = { "admin.vehicle.activate": "approved", "admin.vehicle.hold": "blocked" };
 
 /** Incidents page commands the server has (contract v0.7.0 §15): Take, Solved, False alarm. */
@@ -476,6 +482,55 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (!vehicle) throw new ApiError(404, "No such vehicle.", { code: "not_found" });
       const next = await client.post<Vehicle>(`/admin/vehicles/${encodeURIComponent(vehicle.vehicleId)}/review`, { expectedVersion: vehicle.version, decision, note: input.reason });
       if (next?.vehicleId) vehicles.set(next.vehicleId, next);
+      return done("Saved.");
+    }
+    // Owner 2026-10-29 (group 2, live audit): Fleet owners Activate / Put on hold review the owner's fleet
+    // (POST /admin/fleets/{fleetId}/review: approved, blocked) like a new fleet; targetId is the owner's driver id.
+    const fleetDecision = FLEET_COMMANDS[input.action];
+    if (fleetDecision) {
+      const fleets = await readFleets();
+      const fleet = fleets.find((item) => item.ownerDriverId === input.targetId || item.fleetId === input.targetId);
+      if (!fleet) throw new ApiError(404, "No such fleet.", { code: "not_found" });
+      await client.post<Fleet>(`/admin/fleets/${encodeURIComponent(fleet.fleetId)}/review`, { expectedVersion: fleet.version, decision: fleetDecision, ...(input.reason ? { note: input.reason.slice(0, 1000) } : {}) });
+      return done("Saved.");
+    }
+    // Contract v0.18.0 (owner 2026-10-29, live audit): car details, the car's driver, the driver's categories and the
+    // bank review go to the server; its refusals are explained (errorText) in the admin's language.
+    const explained = (error: unknown): never => {
+      if (error instanceof ApiError) throw new ApiError(error.status, errorText(error), { code: error.code, reason: error.reason ?? undefined, details: [...error.details], requestId: error.requestId ?? undefined, retryable: false });
+      throw error;
+    };
+    if (input.action === "admin.vehicle.update" || input.action === "admin.vehicle.link") {
+      const vehicle = vehicles.get(input.targetId) ?? (await paged<Vehicle>(client, "vehicles", "/admin/vehicles")).find((row) => row.vehicleId === input.targetId);
+      if (!vehicle) throw new ApiError(404, "No such vehicle.", { code: "not_found" });
+      const value = (input.value ?? {}) as Record<string, unknown>;
+      const next = input.action === "admin.vehicle.update"
+        ? await client.patch<Vehicle>(`/admin/vehicles/${encodeURIComponent(vehicle.vehicleId)}`, { expectedVersion: vehicle.version, ...value }).catch(explained)
+        : await client.post<Vehicle>(`/admin/vehicles/${encodeURIComponent(vehicle.vehicleId)}/driver`, { expectedVersion: vehicle.version, driverId: (value["driverId"] as string | null | undefined) ?? null }).catch((error: unknown) => {
+          // 409 documents_not_approved here is about the car's documents.
+          if (error instanceof ApiError && error.code === "documents_not_approved") throw new ApiError(409, tr("The car's documents are not approved yet."), { code: error.code, retryable: false });
+          return explained(error);
+        });
+      if (next?.vehicleId) vehicles.set(next.vehicleId, next);
+      return done("Saved.");
+    }
+    if (input.action === "admin.driver.category") {
+      const driver = await client.json<Driver>(`/admin/drivers/${encodeURIComponent(input.targetId)}`);
+      const { categoryId, on } = (input.value ?? {}) as { categoryId?: string; on?: boolean };
+      if (!categoryId) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const ids = new Set(driver.categoryIds ?? []);
+      if (on) ids.add(categoryId);
+      else ids.delete(categoryId);
+      if (!ids.size) throw new ApiError(400, tr("Keep at least one category on."), { code: "invalid_request", retryable: false });
+      const next = await client.put<Driver>(`/admin/drivers/${encodeURIComponent(driver.driverId)}/categories`, { expectedVersion: driver.version, categoryIds: [...ids] }).catch(explained);
+      if (next?.driverId) drivers.set(next.driverId, next);
+      return done("Saved.");
+    }
+    if (input.action === "admin.driver.bankReview") {
+      const decision = input.after === "approved" || input.after === "rejected" ? input.after : null;
+      if (!decision) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const note = ((input.value as { note?: string } | undefined)?.note ?? "").trim();
+      await client.post(`/admin/drivers/${encodeURIComponent(input.targetId)}/bank/review`, { decision, ...(note ? { note: note.slice(0, 1000) } : {}) }).catch(explained);
       return done("Saved.");
     }
     const step = INCIDENT_COMMANDS[input.action];

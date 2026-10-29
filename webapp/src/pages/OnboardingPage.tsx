@@ -3,9 +3,8 @@ import { LiveListBar } from "../live/LiveListBar";
 import { LiveOnboarding } from "../live/LiveOnboarding";
 import { isLiveData } from "../live/realData";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { AlarmClock, ArrowLeft, BellRing, Car, CheckCircle2, ClipboardCheck, FileText, Landmark, Send, Settings2, UserPlus } from "lucide-react";
+import { AlarmClock, ArrowLeft, BellRing, Car, ClipboardCheck, FileText, Landmark, Send, Settings2, UserPlus } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
-import { can } from "../auth/permissions";
 import { useRecords, useSlice } from "../api/hooks";
 import {
   DRIVER_DOCUMENTS,
@@ -14,7 +13,6 @@ import {
   type DocStatus,
 } from "../drivers/gate";
 import {
-  approveRequiredDocuments,
   driverActivationIssue,
   driverOps,
   emptyDriverOpsBook,
@@ -37,6 +35,7 @@ import {
   funnel,
   neededDocs,
   normalizeOnboardingRules,
+  withSettings,
   remind,
   reminderDue,
   stepOf,
@@ -45,7 +44,8 @@ import {
   type OnboardingRules,
   type StepId,
 } from "../drivers/onboarding";
-import { OnboardingSettings } from "../drivers/OnboardingSettings";
+import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
+import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook, typeInfo, type SettingsDoc } from "../drivers/onboardingSettings";
 import { docHealth, docLabel } from "../fleet/documents";
 import { HealthPill } from "../fleet/ui";
 import { useMarketScope } from "../markets/useMarketScope";
@@ -76,7 +76,8 @@ function DemoOnboardingPage() {
   const vehicles = useRecords("vehicles", null);
   const store = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const rulesSlice = useSlice<OnboardingRules>(ONBOARDING_KEY, emptyOnboardingRules());
-  const rules = normalizeOnboardingRules(rulesSlice.value);
+  const settingsSlice = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
+  const rules = withSettings(normalizeOnboardingRules(rulesSlice.value), normalizeSettingsBook(settingsSlice.value));
   const countryRules = rules.countries[country];
   const [selectedId, setSelectedId] = useState("");
   const [reviewNote, setReviewNote] = useState("");
@@ -153,7 +154,7 @@ function DemoOnboardingPage() {
     return (
       <div className="dx-page vh-page">
         {header}
-        <OnboardingSettings rules={rules} country={country} editable={Boolean(agent && can(agent.role, "drivers.activate"))} />
+        <OnboardingSettingsEditor key={country} country={country} part="onboarding" />
       </div>
     );
   }
@@ -232,7 +233,7 @@ function DemoOnboardingPage() {
         </article>
       ) : null}
 
-      {driver ? <ApplicantView key={driver.id} driver={driver} rules={rules} country={country} now={now} reviewNote={reviewNote} setReviewNote={setReviewNote} setNotice={setNotice} vehicles={vehicles.data ?? []} store={store.value} placed={placed.find((row) => row.applicant.id === driver.id)} /> : !lead ? (
+      {driver ? <ApplicantView key={driver.id} settings={normalizeSettingsBook(settingsSlice.value).countries[country].document} driver={driver} rules={rules} country={country} now={now} reviewNote={reviewNote} setReviewNote={setReviewNote} setNotice={setNotice} vehicles={vehicles.data ?? []} store={store.value} placed={placed.find((row) => row.applicant.id === driver.id)} /> : !lead ? (
         <p className="dx-calm">{tr("No pending or on-hold applications are in your active scope.")}</p>
       ) : null}
 
@@ -266,6 +267,8 @@ function DemoOnboardingPage() {
 }
 
 type ApplicantProps = {
+  /** The country's onboarding settings (v0.17.0 §25): which types expire and which are checked by Movera. */
+  settings: SettingsDoc;
   driver: NonNullable<ReturnType<typeof useRecords>["data"]>[number];
   rules: OnboardingRules;
   country: "SE" | "FR" | "TN";
@@ -278,7 +281,7 @@ type ApplicantProps = {
   placed?: { applicant: Applicant; step: StepId; time: { days: number; limit: number; late: boolean; stuck: boolean }; due: boolean };
 };
 
-function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote, setNotice, vehicles, store, placed }: ApplicantProps) {
+function ApplicantView({ settings, driver, rules, country, now, reviewNote, setReviewNote, setNotice, vehicles, store, placed }: ApplicantProps) {
   const { agent } = useSession();
   const countryRules = rules.countries[country];
   const driverSeed = { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status };
@@ -290,6 +293,8 @@ function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote,
   const activationIssue = applicant ? countryActivationIssue(applicant, countryRules, base && !base.startsWith("Still needed") ? base : null) : base;
   const required = new Set<DocId>([...neededDocs(countryRules, Boolean(driver.fleetId)), ...countryRules.docs.filter((id) => id === "terms" || id === "virtual_session")]);
   const [preview, setPreview] = useState<{ doc: DocId; action: "rejected" | "needed"; note: string } | null>(null);
+  const [expiry, setExpiry] = useState<Partial<Record<DocId, string>>>({});
+  const tomorrow = new Date(now + 86_400_000).toISOString().slice(0, 10);
   return (
     <article className="vh-section ob-applicant" aria-label={tr("Application of {0}", [driver.name])}>
       <header className="ob-applicant-head">
@@ -317,6 +322,13 @@ function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote,
           const review = ops.documents[id];
           const needed = required.has(id);
           const health = docHealth(review, now, firstWarningDays(rules, country));
+          // v0.17.0 (owner items 1, 8, 13, 14, 15): the same rules as live. A type that expires needs its date to be
+          // approved; the info session (admin_check) is marked held by Movera instead of approved.
+          const info = typeInfo(settings, contractTypeOf(id));
+          const expires = Boolean(info?.expires);
+          const adminCheck = info?.kind === "admin_check";
+          const typed = expiry[id] ?? "";
+          const dateOk = !expires || (typed !== "" && typed >= tomorrow);
           return (
             <li key={id} className={needed ? undefined : "off"}>
               <span className="ob-doc-name"><b>{docLabel(id)}</b><small>{id.replaceAll("_", " ")} · {needed ? tr("Required") : driver.fleetId && id === "company_registration" ? tr("Fleet exempt") : tr("Not needed in {0}", [country])}</small></span>
@@ -324,6 +336,13 @@ function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote,
               <HealthPill health={health.health}>{health.label}</HealthPill>
               {needed ? (
                 <span className="ob-doc-actions">
+                  {expires && review.status !== "approved" ? (
+                    <label className="ob-expiry">
+                      <span>{tr("Valid until (required)")}</span>
+                      <input type="date" min={tomorrow} value={typed} aria-label={tr("Valid until for {0}", [docLabel(id)])} onChange={(event) => setExpiry({ ...expiry, [id]: event.target.value })} />
+                    </label>
+                  ) : null}
+                  {adminCheck && review.status !== "approved" ? <span className="chip warn">{tr("Waiting for Movera")}</span> : null}
                   {REVIEW.map((choice) => (
                     <CommandButton
                       command="admin.driver.review"
@@ -337,16 +356,17 @@ function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote,
                       after={choice.status}
                       expectedSliceRev={store.draftRev}
                       sliceKey="driverOps"
-                      value={reviewDriverDocument(store, driverSeed, id, choice.status, agent?.id ?? "", reviewNote)}
-                      disabled={review.status === choice.status}
-                      aria-label={`${trx(choice.label)} ${docLabel(id)}`}
+                      value={reviewDriverDocument(store, driverSeed, id, choice.status, agent?.id ?? "", reviewNote, choice.status === "approved" && expires ? typed : undefined)}
+                      disabled={review.status === choice.status || (choice.status === "approved" && !dateOk)}
+                      title={choice.status === "approved" && !dateOk ? tr("This document expires: type the expiry date from the document (after today).") : undefined}
+                      aria-label={`${choice.status === "approved" && adminCheck ? tr("Mark held") : trx(choice.label)} ${docLabel(id)}`}
                       onDone={() => {
                         setNotice(tr("{0} marked {1}.", [docLabel(id), statusLabel(choice.status, "documentStatus").toLowerCase()]));
                         if (choice.status === "rejected") setPreview({ doc: id, action: "rejected", note: reviewNote });
                         setReviewNote("");
                       }}
                     >
-                      {choice.label}
+                      {choice.status === "approved" && adminCheck ? tr("Mark held") : trx(choice.label)}
                     </CommandButton>
                   ))}
                   <CommandButton
@@ -375,23 +395,7 @@ function ApplicantView({ driver, rules, country, now, reviewNote, setReviewNote,
         })}
       </ul>
 
-      <div className="ob-actions-row">
-        <CommandButton
-          command="admin.driver.approveAll"
-          className="dash-btn small"
-          type="button"
-          targetId={driver.id}
-          confirmTarget={false}
-          scope={driver.zoneId}
-          before="required documents"
-          after="approved"
-          expectedSliceRev={store.draftRev}
-          sliceKey="driverOps"
-          value={approveRequiredDocuments(store, driverSeed, agent?.id ?? "")}
-          onDone={() => setNotice(tr("Documents approved."))}
-        >
-          <CheckCircle2 size={13} aria-hidden="true" />{" "}{tr("Approve remaining")}</CommandButton>
-      </div>
+      {/* Owner decision 18 (2026-10-29): "Remove the button" — no Approve all; each document is approved on its own. */}
 
       <div className="ob-checks">
         <section className="ob-check" aria-label={tr("Bank verification")}>

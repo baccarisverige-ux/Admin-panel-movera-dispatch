@@ -230,6 +230,7 @@ export function reviewDriverDocument(
   status: DocStatus,
   actorId: string,
   note: string,
+  expiresAt?: string,
 ): DriverOpsBook {
   const current = driverOps(book, driver);
   const updated: DriverOps = {
@@ -241,6 +242,7 @@ export function reviewDriverDocument(
         status,
         reviewerId: actorId,
         note: note.trim(),
+        ...(expiresAt ? { expiresAt } : {}),
       },
     },
     activity: [`${id}: ${status} by ${actorId}`, ...current.activity].slice(0, 30),

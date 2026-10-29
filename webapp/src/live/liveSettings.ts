@@ -32,6 +32,8 @@ import {
   type Doc,
   type Draft,
 } from "./configDocs.ts";
+import { ONBOARDING_SETTINGS_KEY, normalizeSettingsBook, wireDocument, type SettingsBook, type SettingsDoc } from "../drivers/onboardingSettings.ts";
+import { registerCountryTypes } from "./format.ts";
 
 /** Every zone of the admin's markets and each country's Standard. */
 export function settingsScopes(): string[] {
@@ -339,6 +341,40 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return "Saved for the chosen zones.";
   }
 
+  /**
+   * Contract v0.17.0 §25: the onboarding settings of each country (GET /admin/config/onboarding?country). A country
+   * with nothing published answers the contract defaults (liveVersion 0); one the server cannot answer keeps them.
+   */
+  async function readOnboarding(fallback: unknown): Promise<SettingsBook> {
+    const book = normalizeSettingsBook(fallback);
+    const countries = { ...book.countries };
+    await Promise.all(MARKETS.map(async (market) => {
+      // Read directly: a country whose zone documents are missing still has onboarding settings (defaults at least).
+      const found = await readDraft(http, "onboarding", standardKey(market.id)).catch(() => null);
+      if (!found) return;
+      const document = found.document as unknown as SettingsDoc;
+      countries[market.id] = { draftVersion: found.version, liveVersion: found.liveVersion, document };
+      registerCountryTypes(market.id, document);
+    }));
+    const next = normalizeSettingsBook({ ...book, countries });
+    slices.set(ONBOARDING_SETTINGS_KEY, next);
+    return next;
+  }
+
+  /** Publish one country's onboarding settings: PUT the draft (the server gives new types their id), then publish it. */
+  async function publishOnboarding(value: unknown, country: string): Promise<string> {
+    const market = MARKETS.find((item) => item.id === country);
+    if (!market) throw new Error("Choose a country first.");
+    // The page's own document as it is: a new type keeps its draftKey so the server makes its id.
+    const staged = (value as SettingsBook | null)?.countries?.[market.id]?.document;
+    if (!staged) throw new Error("Nothing to publish.");
+    const id = standardKey(market.id);
+    const current = await readDraft(http, "onboarding", id);
+    await savePublish(http, "onboarding", id, current, { ...wireDocument(staged), version: current?.document?.["version"] ?? staged.version, country: market.id } as unknown as Doc);
+    await readOnboarding(value);
+    return "Published.";
+  }
+
   async function backToStandard(zoneId: string, docs: readonly ConfigDocName[]): Promise<string> {
     for (const doc of docs) {
       const current = await draft(doc, zoneId, true);
@@ -355,11 +391,13 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       if (sliceKey === DISPATCH_KEY) return readDispatch(fallback);
       if (sliceKey === COUNTRY_SETTINGS_KEY) return readCountries(fallback);
       if (sliceKey === ZONE_RULES_KEY) return readZoneRules();
+      if (sliceKey === ONBOARDING_SETTINGS_KEY) return readOnboarding(fallback);
       // Settings' draft lives in this session until it is published (the server keeps the published documents).
       if (sliceKey === CONFIG_KEY) return Promise.resolve(slices.get(CONFIG_KEY) ?? fallback);
       return null;
     },
     command(action, input) {
+      if (action === "admin.onboarding.publishSettings") return publishOnboarding(input.value, input.targetId);
       if (action === "admin.pricing.publish") return publishPricing(normalizeStore(input.value));
       // v0.7.1: Manage categories, manual surge, History (v0.7.2: no Tell drivers, contract.json#surgeNoticeRemoved).
       if (action === "admin.pricing.createCategory") return saveCatalog(normalizeStore(input.value), "Added.");

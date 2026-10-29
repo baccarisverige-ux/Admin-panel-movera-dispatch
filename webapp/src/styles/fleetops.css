@@ -138,3 +138,18 @@
   .ob-doc-file { display: none; }
   .ob-doc-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
+
+/* v0.17.0 §25: document lists of the onboarding settings (owner items 14, 15). */
+.ob-type-list { list-style: none; margin: 0; padding: 8px 16px; display: grid; gap: 6px; }
+.ob-type-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line, #e5e7eb); }
+.ob-type-row:last-child { border-bottom: 0; }
+.ob-type-name { display: grid; gap: 4px; min-width: 0; flex: 1 1 260px; }
+.ob-type-name small { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ob-type-help { color: var(--muted, #6b7280); }
+.ob-type-actions { display: flex; gap: 6px; }
+.ob-type-add { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 16px 16px; }
+.ob-type-add select { max-width: 100%; min-height: 32px; }
+.ob-type-form fieldset { display: grid; gap: 6px; border: 0; padding: 0; margin: 0 0 8px; }
+.ob-type-form label { display: grid; gap: 4px; }
+.ob-check-line { display: flex !important; align-items: center; gap: 8px; }
+.ob-expiry { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }

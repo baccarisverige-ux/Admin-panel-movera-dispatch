@@ -1,5 +1,6 @@
 import type { MarketId } from "../markets/markets.ts";
 import { DRIVER_DOCUMENTS, type DocId, type DocStatus } from "./gate.ts";
+import type { SettingsBook } from "./onboardingSettings.ts";
 
 /**
  * Onboarding: the steps a new driver goes through in each country, which documents are needed,
@@ -202,4 +203,26 @@ export function driverMessage(name: string, doc: string, action: "rejected" | "n
   return action === "rejected"
     ? `Hi ${first}, your ${doc.toLowerCase()} could not be approved.${reason} Please upload a new one in the Movera Driver app.`
     : `Hi ${first}, we need more information about your ${doc.toLowerCase()}.${reason} Please add it in the Movera Driver app.`;
+}
+
+/**
+ * Contract v0.17.0 §25: the steps, sign-up reminders and expiry warnings come from the country's onboarding settings
+ * document (the page Steps and papers publishes it). The demo board keeps its own paper list (demo document ids).
+ */
+export function withSettings(rules: OnboardingRules, book: SettingsBook): OnboardingRules {
+  const countries = { ...rules.countries };
+  for (const id of Object.keys(countries) as MarketId[]) {
+    const doc = book.countries[id]?.document;
+    if (!doc) continue;
+    countries[id] = {
+      ...countries[id],
+      steps: countries[id].steps.map((step) => ({ ...step, ...(doc.steps.find((row) => row.id === step.id) ?? {}) })),
+      reminders: doc.signUpReminders.on,
+      remindEveryDays: doc.signUpReminders.everyDays,
+      stuckAfterDays: doc.signUpReminders.stuckAfterDays,
+      docWarnDays: [...doc.expiry.warnDays],
+      blockAtExpiry: doc.expiry.blockAtExpiry,
+    };
+  }
+  return { ...rules, countries };
 }

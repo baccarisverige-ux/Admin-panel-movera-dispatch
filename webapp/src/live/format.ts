@@ -16,17 +16,45 @@ export function fullName(first: string | undefined, last: string | undefined, fa
   return name || fallback;
 }
 
-/** The document type's name in the panel's language (contract.json#driverOnboarding.documents.types); the id when unknown. */
-export function documentTypeName(type: string, language: string = currentLanguage()): string {
-  const info = DOCUMENT_TYPES[type];
-  if (!info) return type;
+type LocalName = { en: string; sv: string; fr: string };
+type CountryTypes = { names: Map<string, LocalName>; kinds: Map<string, string> };
+const COUNTRY_TYPES = new Map<string, CountryTypes>();
+
+/**
+ * Contract v0.17.0 (owner item 14): the admin's own document types and new names of a country, read with its onboarding
+ * settings, so a type the contract does not know (custom_…) shows its name and kind everywhere in the panel.
+ */
+export function registerCountryTypes(country: string, doc: { customTypes?: Array<{ id?: string; kind: string; name: LocalName }>; texts?: Record<string, { name?: LocalName }> }): void {
+  const entry: CountryTypes = { names: new Map(), kinds: new Map() };
+  for (const custom of doc.customTypes ?? []) if (custom.id) { entry.names.set(custom.id, custom.name); entry.kinds.set(custom.id, custom.kind); }
+  for (const [type, text] of Object.entries(doc.texts ?? {})) if (text.name) entry.names.set(type, text.name);
+  COUNTRY_TYPES.set(country, entry);
+}
+
+function registered(type: string, country?: string): { name?: LocalName; kind?: string } {
+  const own = country ? COUNTRY_TYPES.get(country) : undefined;
+  if (own?.names.has(type) || own?.kinds.has(type)) return { name: own.names.get(type), kind: own.kinds.get(type) };
+  if (!type.startsWith("custom_")) return {};
+  for (const entry of COUNTRY_TYPES.values()) if (entry.kinds.has(type)) return { name: entry.names.get(type), kind: entry.kinds.get(type) };
+  return {};
+}
+
+/** The document type's name in the panel's language (contract.json#driverOnboarding.documents.types, or the country's own); the id when unknown. */
+export function documentTypeName(type: string, language: string = currentLanguage(), country?: string): string {
   const lang = language === "sv" || language === "fr" ? language : "en";
-  return info.name[lang] ?? info.name.en;
+  const name = registered(type, country).name ?? DOCUMENT_TYPES[type]?.name;
+  if (!name) return type;
+  return name[lang] || name.en;
 }
 
 /** Whether a type takes an uploaded file (vs the terms acceptance or an admin check). */
 export function documentHasFile(type: string): boolean {
-  return (DOCUMENT_TYPES[type]?.kind ?? "file") === "file";
+  return (registered(type).kind ?? DOCUMENT_TYPES[type]?.kind ?? "file") === "file";
+}
+
+/** An admin_check type (the info session, or the admin's own): Movera marks it held (POST …/documents/{type}/check). */
+export function isAdminCheck(type: string): boolean {
+  return (registered(type).kind ?? DOCUMENT_TYPES[type]?.kind) === "admin_check";
 }
 
 export type DocumentRow = { type: string; status: DocumentStatus; document: DocumentSummary | null; required: boolean };
@@ -112,6 +140,20 @@ export function errorText(error: unknown): string {
   if (error.status === 403) return tr("Your role cannot do that.");
   if (error.status === 401) return tr("Sign in again.");
   if (error.status === 409 && error.code === "version_mismatch") return tr("Someone else changed this record. It was reloaded; check it and try again.");
+  // v0.18.0 (owner 2026-10-29, live audit): car details, the car's driver, categories and the bank review.
+  if (error.reason === "category_not_allowed") return tr("The car does not fit that category: {0}.", [error.details.join(", ") || "—"]);
+  if (error.reason === "plate_taken") return tr("Another car already has this plate.");
+  if (error.reason === "driver_not_in_fleet") return tr("That driver is not in the car's fleet.");
+  if (error.reason === "vehicle_not_approved") return tr("The car is not approved yet.");
+  if (error.reason === "vehicle_documents_not_approved") return tr("The car's documents are not approved yet.");
+  if (error.reason === "vehicle_in_use") return tr("The car is in use by another driver.");
+  if (error.reason === "driver_online") return tr("The driver is online. Try again when the driver is offline.");
+  if (error.reason === "no_vehicle") return tr("The driver has no car, so no category can be set.");
+  if (error.reason === "bank_not_uploaded") return tr("The driver has not uploaded bank details yet.");
+  if (error.reason === "note_required") return tr("Write a note: the driver sees why the bank details were rejected.");
+  // v0.17.0 (owner item 1): approving a document that expires needs its date.
+  if (error.status === 400 && error.reason === "expiry_required") return tr("This document expires: type the expiry date from the document (after today).");
+  if (error.status === 400 && error.reason === "expiry_in_past") return tr("The expiry date must be after today.");
   if (error.status === 409 && error.reason === "on_trip") return tr("The driver is on a trip. Try again when the trip has ended.");
   if (error.status === 409 && error.reason === "invitation_expired") return tr("This invitation has expired.");
   if (error.status === 409 && error.reason === "invitation_closed") return tr("This invitation was already answered or withdrawn.");

@@ -1,3 +1,4 @@
+import type { SettingsBook } from "../drivers/onboardingSettings.ts";
 import type { DemoRecord } from "../api/seed.ts";
 import type { DocStatus, Vehicle } from "../drivers/gate.ts";
 import { EXPIRY_WARNING_DAYS, docHealth, type DocHealth } from "../fleet/documents.ts";
@@ -182,4 +183,15 @@ export function rulesImpact(cars: readonly CarFacts[], before: CountryRules, aft
     before: cars.filter((car) => fits(car, before).includes(rule.category)).length,
     after: cars.filter((car) => fits(car, after).includes(rule.category)).length,
   }));
+}
+
+/** Contract v0.17.0 §25: the car rules of each country come from its onboarding settings document (vehicles). */
+export function withVehicleSettings(rules: VehicleRules, book: SettingsBook): VehicleRules {
+  const countries = { ...rules.countries };
+  for (const item of MARKETS) {
+    const doc = book.countries[item.id]?.document;
+    if (!doc) continue;
+    countries[item.id] = { ...countries[item.id], warnDays: doc.vehicles.warnDays, autoHold: doc.vehicles.autoHold, photosNeeded: doc.vehicles.photosNeeded, categories: countries[item.id].categories.map((rule) => ({ ...rule, ...(doc.vehicles.categories.find((row) => row.category === rule.category) ?? {}) }) as CatRule) };
+  }
+  return { ...rules, countries };
 }

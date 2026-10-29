@@ -1,3 +1,6 @@
+import { isLiveData } from "../live/realData";
+import { LiveVehicleDocuments } from "../live/LiveVehicleDocuments";
+import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { useEffect, useMemo, useState } from "react";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useNavigate, useParams } from "react-router";
@@ -16,7 +19,7 @@ import {
 import { can } from "../auth/permissions";
 import { HealthPill } from "../fleet/ui";
 import { formatMoney } from "../markets/markets";
-import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, withVehicleSettings, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn } from "../i18n";
 import { statusLabel } from "../domain/labels";
@@ -29,7 +32,8 @@ export function VehicleDetailPage() {
   const fleets = useRecords("fleets", null);
   const store = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const rulesSlice = useSlice<VehicleRules>(VEHICLE_RULES_KEY, emptyVehicleRules());
-  const rules = normalizeVehicleRules(rulesSlice.value);
+  const settingsSlice = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
+  const rules = withVehicleSettings(normalizeVehicleRules(rulesSlice.value), normalizeSettingsBook(settingsSlice.value));
   const trips = useRecords("trips", null);
   const navigate = useNavigate();
   const [now] = useState(() => Date.now());
@@ -147,6 +151,8 @@ export function VehicleDetailPage() {
         </span>
       </section>
 
+      <LiveVehicleDocuments record={record} />
+
       <div className="vh-grid">
         <section className="vh-section" aria-label={tr("Checks")}>
           <h3><ListChecks size={16} aria-hidden="true" />{" "}{tr("Can it drive?")}</h3>
@@ -172,26 +178,29 @@ export function VehicleDetailPage() {
         </section>
       </div>
 
+      {/* Live: the four photos are car documents (v0.17.0 vehicle_photo_*), reviewed in LiveVehicleDocuments above. */}
+      {isLiveData() ? null : (
       <section className="vh-section" aria-label={tr("Photos")}>
-        <h3><Camera size={16} aria-hidden="true" />{" "}{tr("Photos")}</h3>
-        <div className="vh-photos">
-          {PHOTO_SIDES.map((side) => {
-            const photo = photos[side.id];
-            return (
-              <div key={side.id} className={`vh-photo ${photo.status}`}>
-                <span className="vh-photo-img" aria-hidden="true"><Camera size={22} /></span>
-                <b>{side.label}</b>
-                <small>{photo.status === "approved" ? tr("Approved{0}", [photo.by ? ` by ${photo.by}` : ""]) : photo.status === "rejected" ? tr("Rejected: {0}", [photo.note || "no reason"]) : tr("Waiting review")}</small>
-                <span className="vh-photo-actions">
-                  <CommandButton command="admin.vehicle.photo" className="dash-btn small ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="approved" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "approved", agent?.id ?? "", new Date().toISOString(), "")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "approved"} aria-label={tr("Approve {0}", [side.label])} onDone={() => setNotice(tr("{0} approved.", [side.label]))}>{tr("Approve")}</CommandButton>
-                  <CommandButton command="admin.vehicle.photo" className="dash-btn small danger-ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="rejected" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "rejected", agent?.id ?? "", new Date().toISOString(), note || "Upload a clearer photo")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "rejected"} aria-label={tr("Reject {0}", [side.label])} onDone={() => setNotice(tr("{0} rejected. The driver is asked for a new photo.", [side.label]))}>{tr("Reject")}</CommandButton>
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        <p className="vh-help">{tr("The reason for a rejection is the private fleet note below, or \"Upload a clearer photo\".")}</p>
-      </section>
+          <h3><Camera size={16} aria-hidden="true" />{" "}{tr("Photos")}</h3>
+          <div className="vh-photos">
+            {PHOTO_SIDES.map((side) => {
+              const photo = photos[side.id];
+              return (
+                <div key={side.id} className={`vh-photo ${photo.status}`}>
+                  <span className="vh-photo-img" aria-hidden="true"><Camera size={22} /></span>
+                  <b>{side.label}</b>
+                  <small>{photo.status === "approved" ? tr("Approved{0}", [photo.by ? ` by ${photo.by}` : ""]) : photo.status === "rejected" ? tr("Rejected: {0}", [photo.note || "no reason"]) : tr("Waiting review")}</small>
+                  <span className="vh-photo-actions">
+                    <CommandButton command="admin.vehicle.photo" className="dash-btn small ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="approved" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "approved", agent?.id ?? "", new Date().toISOString(), "")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "approved"} aria-label={tr("Approve {0}", [side.label])} onDone={() => setNotice(tr("{0} approved.", [side.label]))}>{tr("Approve")}</CommandButton>
+                    <CommandButton command="admin.vehicle.photo" className="dash-btn small danger-ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="rejected" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "rejected", agent?.id ?? "", new Date().toISOString(), note || "Upload a clearer photo")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "rejected"} aria-label={tr("Reject {0}", [side.label])} onDone={() => setNotice(tr("{0} rejected. The driver is asked for a new photo.", [side.label]))}>{tr("Reject")}</CommandButton>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="vh-help">{tr("The reason for a rejection is the private fleet note below, or \"Upload a clearer photo\".")}</p>
+        </section>
+      )}
 
       <article className="panel vh-panel">
         <h3>{tr("Compliance and eligibility")}</h3>
@@ -246,11 +255,13 @@ export function VehicleDetailPage() {
           patch={{ status: savedStatus, fleetId: fleetId || null }}
           expectedSliceRev={store.value.draftRev}
           sliceKey="driverOps"
-          value={nextBook}
+          value={isLiveData() ? { year: nextProfile.year, seats: nextProfile.seats, fuel: nextProfile.fuel, categoryIds: [nextProfile.category] } : nextBook}
           onDone={() => setNotice(tr("Vehicle compliance profile saved."))}
         >{tr("Save vehicle compliance")}</CommandButton>
       </article>
 
+      {/* Live: the registration is a car document, reviewed in LiveVehicleDocuments above. */}
+      {isLiveData() ? null : (
       <article className="panel vh-panel">
         <h3>{tr("Registration review")}</h3>
         <p>{trn("Current state: {0}.", profile.registrationStatus)}</p>
@@ -284,6 +295,7 @@ export function VehicleDetailPage() {
           })}
         </div>
       </article>
+      )}
 
       <article className="panel vh-panel">
         <h3>{tr("Driver assignment")}</h3>
@@ -305,6 +317,7 @@ export function VehicleDetailPage() {
           after={driverId || "unassigned"}
           collection="vehicles"
           patch={{ driverId: driverId || null, name: selectedDriver?.name ?? record.name }}
+          value={isLiveData() ? { driverId: driverId || null } : undefined}
           onDone={() => setNotice(driverId ? tr("Vehicle linked to {0}.", [driverId]) : tr("Vehicle unassigned."))}
         >{tr("Save driver assignment")}</CommandButton>
       </article>
