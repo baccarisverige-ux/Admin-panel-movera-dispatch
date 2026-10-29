@@ -430,6 +430,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.rideCheck.settings", label: "Save Ride check triggers", reason: true, permission: "safety.edit" },
   { id: "admin.risk.view", label: "Risk view", reason: false, permission: "safety.edit" },
   { id: "admin.waitlist.view", label: "Waiting list view", reason: false, permission: "overview.read" },
+  { id: "admin.errors.view", label: "Crashes and errors view", reason: false, permission: "overview.read" },
+  { id: "admin.errors.status", label: "Mark a crash fixed or open again", reason: false, permission: "overview.read" },
   { id: "admin.risk.rules", label: "Save fraud rules", reason: true, permission: "safety.edit" },
   { id: "admin.risk.review", label: "Review a flagged person", reason: true, permission: "safety.edit" },
   { id: "admin.shift.view", label: "Handover view", reason: false, permission: "overview.read" },
