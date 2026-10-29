@@ -3739,6 +3739,7 @@ export const fr: Record<MessageKey, string> = {
   "Save growth rule": "Enregistrer la règle de croissance",
   "Save incident settings": "Enregistrer les réglages des incidents",
   "Save language": "Enregistrer la langue",
+  "The language was not saved. Try again.": "La langue n’a pas été enregistrée. Réessayez.",
   "Save message limits and quiet hours": "Enregistrer les limites de messages et heures calmes",
   "Save my quiet hours": "Enregistrer mes heures calmes",
   "Save note": "Enregistrer la note",

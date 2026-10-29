@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "../auth/SessionContext";
 import { ROLE_LABELS } from "../auth/permissions";
-import { CommandButton } from "../ui/CommandButton";
+import { LanguageSaveButton } from "./LanguageSaveButton";
 import { tr, trx } from "./core";
 import { trn } from "./nodes";
 import { useLanguage } from "./I18nProvider";
@@ -88,18 +88,17 @@ export function ProfileMenu({ initials }: { initials: string }) {
               ? tr("This build starts every admin in {0}.", [languageOptionLabel(language.defaultLanguage)])
               : trn("The default for {0} is {1}, set in Settings › Payment methods and languages per country. Your choice is saved for you only.", trx(COUNTRY_LABEL[language.country]), <b>{languageOptionLabel(language.defaultLanguage)}</b>)}
           </p>
-          <CommandButton
-            command="admin.profile.language"
+          <LanguageSaveButton
+            agentId={agent.id}
+            next={next}
             className="primary-btn"
-            targetId={agent.id}
-            confirmTarget={false}
             before={languageSetting(language.chosen, language.defaultLanguage)}
             after={languageSetting(next, language.defaultLanguage)}
             disabled={unchanged}
-            onDone={save}
+            onDemoDone={save}
           >
             {tr("Save language")}
-          </CommandButton>
+          </LanguageSaveButton>
         </section>
       ) : null}
     </div>

@@ -3737,6 +3737,7 @@ export const en = {
   "Save growth rule": "Save growth rule",
   "Save incident settings": "Save incident settings",
   "Save language": "Save language",
+  "The language was not saved. Try again.": "The language was not saved. Try again.",
   "Save message limits and quiet hours": "Save message limits and quiet hours",
   "Save my quiet hours": "Save my quiet hours",
   "Save note": "Save note",

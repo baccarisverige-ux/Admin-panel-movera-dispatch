@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.16.0",
+  "version": "0.17.1",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -874,8 +874,14 @@
         "POST /admin/auth/refresh",
         "POST /admin/auth/sign-out",
         "GET /admin/auth/me",
+        "PATCH /admin/auth/me",
         "POST /admin/agents/{adminId}/setup-link"
       ],
+      "meLanguage": {
+        "note": "v0.17.1 (owner 2026-10-29, \"Why change languages in admin doesn't work\"; \"Fix fully (Recommended)\"): PATCH /admin/auth/me { language } saves the signed-in admin's own panel language on the server; null clears it (the panel then uses its default). Any signed-in admin, every role, no permission id, like GET /admin/auth/me. Audited. Answers AdminMe.",
+        "values": "languages.values or null",
+        "permission": "any signed-in admin, every role"
+      },
       "passwordMinLength": 10,
       "passwordHash": "argon2id, server side; the password never leaves the sign-in and setup calls",
       "setupLinkHours": 72,
@@ -3257,5 +3263,19 @@
       "closed": "409 invalid_transition, reason chat_closed, outside the open statuses.",
       "provider": "Number masking needs a telephony provider. The owner must pick one; the server reads its keys from the environment, never from git. Until then the provider is 'disabled'."
     }
+  },
+  "tripPath": {
+    "note": "v0.17.0 (owner 2026-10-29, driver past ride detail; CONTRACT.md §25): the route of an ended trip for the trip's own driver or rider, drawn on the past-ride map with pickup and drop-off pins.",
+    "path": "GET /trips/{tripId}/path → TripPath { tripId, source: driven | planned, points: LatLng[], pickup, dropoff, stops, keptUntil? }",
+    "actors": "the trip's rider or the trip's driver (anyone else: 404 not_found, like GET /trips/{tripId}); only once the trip is terminal (tripStatus.terminal), else 409 invalid_transition, reason trip_not_ended",
+    "sources": [
+      "driven",
+      "planned"
+    ],
+    "driven": "The driven path is made from the trip's own GPS trace (the fixes of POST /driver/location kept in the trip trace, §12) from boarding to the end: fixes with accuracy ≤ 50 m, a step only once the car moved 25 m, no step faster than 150 km/h, then evenly thinned to at most maxPoints. At least 2 such points are needed.",
+    "planned": "No usable trace (the trace was deleted after liveDrivers.traceKeepDays, or never sent): the server's road route (§10, OSRM or the straight-line estimate) from the pickup through the stops to the drop-off.",
+    "maxPoints": 300,
+    "retention": "No new storage: the driven path is read from the trip trace and follows its rule (deleted traceKeepDays = 30 days after the fix); afterwards the answer is the planned route. keptUntil is when the trace goes.",
+    "apps": "The driver's past-ride screen (and the rider's, when it reads the server) shows the line and pins; a failed call shows the pickup and drop-off pins only."
   }
 }

@@ -283,6 +283,15 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     if (p === "/api/v1/admin/auth/sign-in") return json(route, 200, { accessToken: "access-1", refreshToken: "refresh-1", expiresIn: 900, actor: "admin", admin: { ...ADMIN, ...state.admin } });
     if (p === "/api/v1/admin/auth/sign-out") return route.fulfill({ status: 204, headers: CORS });
     if (request.headers().authorization !== "Bearer access-1") return json(route, 401, { code: "unauthenticated", message: "Sign in again.", requestId: "r-401", retryable: false });
+    // Contract v0.16.1 §9: the admin saves their own panel language; the next sign-in answers it too.
+    if (p === "/api/v1/admin/auth/me" && method === "PATCH") {
+      const language = (body as { language?: string | null } | null)?.language;
+      const { language: _old, ...rest } = state.admin ?? {};
+      void _old;
+      state.admin = language ? { ...rest, language } : rest;
+      return json(route, 200, { ...ADMIN, ...state.admin });
+    }
+    if (p === "/api/v1/admin/auth/me" && method === "GET") return json(route, 200, { ...ADMIN, ...state.admin });
     // Contract v0.11.0 §20: the zone list every live screen reads (fakeZones() answers writes too).
     if (p === "/api/v1/admin/zones" && method === "GET") return json(route, 200, { zones: SEED_ZONES() });
     if (p === "/api/v1/admin/drivers") {
