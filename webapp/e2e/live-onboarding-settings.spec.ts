@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
-import { API, DRIVER, FLEET, fakeTripServer, signIn } from "./live-fake";
+import { API, DRIVER, FLEET, VEHICLE, fakeTripServer, signIn } from "./live-fake";
 import { defaultDoc } from "../src/drivers/onboardingSettings";
 
 /**
@@ -30,7 +30,8 @@ const NEW_FLEET = { ...FLEET, fleetId: "F9", name: "Lind Taxi AB", orgNumber: "5
 
 type Sent = { method: string; path: string; body: Record<string, unknown> | null };
 async function fakeOnboarding(page: Page) {
-  const state = await fakeTripServer(page, { drivers: [{ ...STARTER }, { ...FRENCH }], fleets: [{ ...FLEET }, { ...NEW_FLEET }], admin: { permissions: PERMS } });
+  const car = { ...VEHICLE, driverId: "D2001", documents: [{ documentId: "DV1", type: "vehicle_photo_front", status: "in_review" }, { documentId: "DV2", type: "insurance", status: "in_review" }], requiredDocuments: ["vehicle_registration", "insurance", "vehicle_photo_front", "vehicle_photo_back", "vehicle_photo_side", "vehicle_photo_inside"] } as unknown as typeof VEHICLE;
+  const state = await fakeTripServer(page, { drivers: [{ ...STARTER }, { ...FRENCH }], fleets: [{ ...FLEET }, { ...NEW_FLEET }], vehicles: [car], admin: { permissions: PERMS } });
   const docs: Record<string, { version: number; liveVersion: number; document: Record<string, unknown> }> = {};
   for (const c of ["SE", "FR", "TN"] as const) docs[c] = { version: 1, liveVersion: 0, document: defaultDoc(c) as unknown as Record<string, unknown> };
   const sent: Sent[] = [];
@@ -65,8 +66,9 @@ async function fakeOnboarding(page: Page) {
     const review = /^\/admin\/documents\/([^/]+)\/review$/.exec(p);
     if (review) {
       keep();
-      const owner = state.drivers.find((d) => d.documents.some((doc) => doc.documentId === review[1]))!;
-      const doc = owner.documents.find((item) => item.documentId === review[1])!;
+      const car = state.vehicles.find((v) => ((v as { documents?: Array<{ documentId: string }> }).documents ?? []).some((doc) => doc.documentId === review[1]));
+      const owner = car ? state.drivers.find((d) => d.driverId === car.driverId)! : state.drivers.find((d) => d.documents.some((doc) => doc.documentId === review[1]))!;
+      const doc = car ? (car as unknown as { documents: Array<{ documentId: string; type: string; status: string }> }).documents.find((item) => item.documentId === review[1])! : owner.documents.find((item) => item.documentId === review[1])!;
       const country = (owner as { country: string }).country;
       const expiring = (docs[country]!.document["expiringTypes"] as string[]).includes(doc.type);
       if (body?.["decision"] === "approved" && expiring && !body["expiresAt"]) return json(route, 400, { code: "invalid_request", message: "Type the expiry date to approve this document.", requestId: "r", retryable: false, reason: "expiry_required" });
@@ -197,7 +199,7 @@ test("item 1 (FR): the VTC card needs its expiry date; the server's expiry_requi
   await signIn(page);
   await page.goto("/drivers/D3001?tab=documents");
   const row = page.getByTestId("live-documents").locator('[data-document-type="vtc_card"]').first();
-  await expect(row).toContainText("Expires");
+  await expect(row).toContainText("Expires", { timeout: 15_000 });
   await row.getByRole("button", { name: "Approve" }).click();
   const dialog = page.getByRole("dialog", { name: "Approve document" });
   await expect(dialog.getByRole("button", { name: "Approve" })).toBeDisabled();
@@ -205,4 +207,32 @@ test("item 1 (FR): the VTC card needs its expiry date; the server's expiry_requi
   await dialog.getByRole("button", { name: "Approve" }).click();
   await expect.poll(() => fake.sent.filter((call) => call.path === "/admin/documents/DF1/review").length).toBe(1);
   await expect(page.getByTestId("live-documents").locator('[data-document-type="info_session"]').first().getByTestId("waiting-for-movera")).toBeVisible();
+});
+
+test("live audit (owner 2026-10-29): Fleet owners Activate and Put on hold review the fleet on the server", async ({ page }) => {
+  const fake = await fakeOnboarding(page);
+  await signIn(page);
+  await page.goto("/fleets/D2001");
+  await page.getByRole("button", { name: "Activate", exact: true }).first().click();
+  const target = modal(page).locator("label input").first();
+  if (await target.count()) await target.fill("D2001");
+  await confirm(page);
+  await expect.poll(() => fake.sent.find((call) => call.path === "/admin/fleets/F9/review")?.body?.["decision"]).toBe("approved");
+});
+
+test("live audit: car photos and insurance are reviewed as car documents; insurance needs its expiry date", async ({ page }) => {
+  const fake = await fakeOnboarding(page);
+  await signIn(page);
+  await page.goto("/vehicles/V1");
+  const docs = page.getByTestId("live-vehicle-documents");
+  await expect(page.getByRole("region", { name: "Photos" })).toHaveCount(0);
+  await docs.locator('[data-document-type="vehicle_photo_front"]').getByRole("button", { name: "Approve" }).click();
+  await page.getByRole("dialog", { name: "Approve document" }).getByRole("button", { name: "Approve" }).click();
+  await expect.poll(() => fake.sent.some((call) => call.path === "/admin/documents/DV1/review")).toBe(true);
+  await docs.locator('[data-document-type="insurance"]').getByRole("button", { name: "Approve" }).click();
+  const dialog = page.getByRole("dialog", { name: "Approve document" });
+  await expect(dialog.getByRole("button", { name: "Approve" })).toBeDisabled();
+  await dialog.getByLabel("Valid until (required)").fill(day(300));
+  await dialog.getByRole("button", { name: "Approve" }).click();
+  await expect.poll(() => fake.sent.some((call) => call.path === "/admin/documents/DV2/review")).toBe(true);
 });

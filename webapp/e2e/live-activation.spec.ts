@@ -46,6 +46,8 @@ test("a fleet member: Activate refused lists the driver's documents; after Appro
   await page.getByRole("tab", { name: "Documents" }).click();
   const row = page.getByTestId("live-documents").locator('[data-document-type="driving_license"]');
   await row.getByRole("button", { name: "Approve" }).click();
+  // Owner 2026-10-29 group 2 item 1: the driving licence expires in Sweden, so its expiry date is typed to approve it.
+  await page.getByRole("dialog", { name: "Approve document" }).getByLabel("Valid until (required)").fill(new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10));
   await page.getByRole("dialog", { name: "Approve document" }).getByRole("button", { name: "Approve" }).click();
   await expect.poll(() => state.drivers[0]!.documents.find((doc) => doc.documentId === "DOC2")?.status).toBe("approved");
   await page.reload();

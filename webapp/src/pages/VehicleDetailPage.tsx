@@ -1,3 +1,4 @@
+import { isLiveData } from "../live/realData";
 import { LiveVehicleDocuments } from "../live/LiveVehicleDocuments";
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { useEffect, useMemo, useState } from "react";
@@ -177,26 +178,29 @@ export function VehicleDetailPage() {
         </section>
       </div>
 
+      {/* Live: the four photos are car documents (v0.17.0 vehicle_photo_*), reviewed in LiveVehicleDocuments above. */}
+      {isLiveData() ? null : (
       <section className="vh-section" aria-label={tr("Photos")}>
-        <h3><Camera size={16} aria-hidden="true" />{" "}{tr("Photos")}</h3>
-        <div className="vh-photos">
-          {PHOTO_SIDES.map((side) => {
-            const photo = photos[side.id];
-            return (
-              <div key={side.id} className={`vh-photo ${photo.status}`}>
-                <span className="vh-photo-img" aria-hidden="true"><Camera size={22} /></span>
-                <b>{side.label}</b>
-                <small>{photo.status === "approved" ? tr("Approved{0}", [photo.by ? ` by ${photo.by}` : ""]) : photo.status === "rejected" ? tr("Rejected: {0}", [photo.note || "no reason"]) : tr("Waiting review")}</small>
-                <span className="vh-photo-actions">
-                  <CommandButton command="admin.vehicle.photo" className="dash-btn small ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="approved" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "approved", agent?.id ?? "", new Date().toISOString(), "")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "approved"} aria-label={tr("Approve {0}", [side.label])} onDone={() => setNotice(tr("{0} approved.", [side.label]))}>{tr("Approve")}</CommandButton>
-                  <CommandButton command="admin.vehicle.photo" className="dash-btn small danger-ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="rejected" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "rejected", agent?.id ?? "", new Date().toISOString(), note || "Upload a clearer photo")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "rejected"} aria-label={tr("Reject {0}", [side.label])} onDone={() => setNotice(tr("{0} rejected. The driver is asked for a new photo.", [side.label]))}>{tr("Reject")}</CommandButton>
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        <p className="vh-help">{tr("The reason for a rejection is the private fleet note below, or \"Upload a clearer photo\".")}</p>
-      </section>
+          <h3><Camera size={16} aria-hidden="true" />{" "}{tr("Photos")}</h3>
+          <div className="vh-photos">
+            {PHOTO_SIDES.map((side) => {
+              const photo = photos[side.id];
+              return (
+                <div key={side.id} className={`vh-photo ${photo.status}`}>
+                  <span className="vh-photo-img" aria-hidden="true"><Camera size={22} /></span>
+                  <b>{side.label}</b>
+                  <small>{photo.status === "approved" ? tr("Approved{0}", [photo.by ? ` by ${photo.by}` : ""]) : photo.status === "rejected" ? tr("Rejected: {0}", [photo.note || "no reason"]) : tr("Waiting review")}</small>
+                  <span className="vh-photo-actions">
+                    <CommandButton command="admin.vehicle.photo" className="dash-btn small ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="approved" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "approved", agent?.id ?? "", new Date().toISOString(), "")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "approved"} aria-label={tr("Approve {0}", [side.label])} onDone={() => setNotice(tr("{0} approved.", [side.label]))}>{tr("Approve")}</CommandButton>
+                    <CommandButton command="admin.vehicle.photo" className="dash-btn small danger-ghost" targetId={record.id} scope={record.zoneId} confirmTarget={false} before={photo.status} after="rejected" sliceKey={VEHICLE_RULES_KEY} value={setPhoto(rules, record.id, side.id, "rejected", agent?.id ?? "", new Date().toISOString(), note || "Upload a clearer photo")} expectedSliceRev={rules.draftRev} disabled={!canEdit || photo.status === "rejected"} aria-label={tr("Reject {0}", [side.label])} onDone={() => setNotice(tr("{0} rejected. The driver is asked for a new photo.", [side.label]))}>{tr("Reject")}</CommandButton>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="vh-help">{tr("The reason for a rejection is the private fleet note below, or \"Upload a clearer photo\".")}</p>
+        </section>
+      )}
 
       <article className="panel vh-panel">
         <h3>{tr("Compliance and eligibility")}</h3>

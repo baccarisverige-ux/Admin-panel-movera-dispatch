@@ -145,10 +145,13 @@ test("driver documents: the demo Documents tab opens an uploaded file and approv
   await expect(viewer.locator("img.live-file")).toBeVisible();
   expect(state.calls.find((call) => call.path.endsWith("/documents/DOC2/file"))!.headers.authorization).toBe("Bearer access-1");
   await viewer.getByRole("button", { name: "Approve" }).click();
+  // Owner 2026-10-29 group 2 item 1: the driving licence expires in Sweden, so its expiry date is typed to approve it.
+  await page.getByRole("dialog", { name: "Approve document" }).getByLabel("Valid until (required)").fill(new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10));
   await page.getByRole("dialog", { name: "Approve document" }).getByRole("button", { name: "Approve" }).click();
   await expect(files.locator('tr[data-document-type="driving_license"]')).toContainText("Approved");
   const review = state.calls.find((call) => call.path.endsWith("/documents/DOC2/review"))!;
-  expect(review.body).toEqual({ decision: "approved" });
+  expect(review.body).toMatchObject({ decision: "approved" });
+  expect(String((review.body as { expiresAt?: string }).expiresAt)).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   expect(review.headers["idempotency-key"]?.length).toBeGreaterThan(15);
 });
 

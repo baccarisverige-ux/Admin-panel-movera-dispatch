@@ -325,6 +325,8 @@ const STATUS_COMMANDS: Record<string, string> = {
   "admin.driver.suspend": "suspended",
 };
 
+const FLEET_COMMANDS: Record<string, "approved" | "blocked"> = { "admin.fleetOwner.activate": "approved", "admin.fleetOwner.onHold": "blocked" };
+
 const VEHICLE_COMMANDS: Record<string, string> = { "admin.vehicle.activate": "approved", "admin.vehicle.hold": "blocked" };
 
 /** Incidents page commands the server has (contract v0.7.0 §15): Take, Solved, False alarm. */
@@ -451,6 +453,16 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (!vehicle) throw new ApiError(404, "No such vehicle.", { code: "not_found" });
       const next = await client.post<Vehicle>(`/admin/vehicles/${encodeURIComponent(vehicle.vehicleId)}/review`, { expectedVersion: vehicle.version, decision, note: input.reason });
       if (next?.vehicleId) vehicles.set(next.vehicleId, next);
+      return done("Saved.");
+    }
+    // Owner 2026-10-29 (group 2, live audit): Fleet owners Activate / Put on hold review the owner's fleet
+    // (POST /admin/fleets/{fleetId}/review: approved, blocked) like a new fleet; targetId is the owner's driver id.
+    const fleetDecision = FLEET_COMMANDS[input.action];
+    if (fleetDecision) {
+      const fleets = await readFleets();
+      const fleet = fleets.find((item) => item.ownerDriverId === input.targetId || item.fleetId === input.targetId);
+      if (!fleet) throw new ApiError(404, "No such fleet.", { code: "not_found" });
+      await client.post<Fleet>(`/admin/fleets/${encodeURIComponent(fleet.fleetId)}/review`, { expectedVersion: fleet.version, decision: fleetDecision, ...(input.reason ? { note: input.reason.slice(0, 1000) } : {}) });
       return done("Saved.");
     }
     const step = INCIDENT_COMMANDS[input.action];

@@ -182,7 +182,7 @@ export function FleetOwnerDetailPage() {
               <input value={accountNote} onChange={(event) => setAccountNote(event.target.value)} placeholder={tr("For example: fleet insurance expired")} />
             </label>
             <div className="fd-action-row">
-              {accountAction("admin.fleetOwner.activate", "active", "Activate", owner.status === "active" || health.invalid > 0, health.invalid === 0 && owner.status !== "active" ? "" : "ghost")}
+              {accountAction("admin.fleetOwner.activate", "active", "Activate", owner.status === "active" || (!isLiveData() && health.invalid > 0), health.invalid === 0 && owner.status !== "active" ? "" : "ghost")}
               {accountAction("admin.fleetOwner.onHold", "on_hold", "Put on hold", owner.status === "on_hold")}
               <CommandButton
                 command="admin.fleetOwner.call"
