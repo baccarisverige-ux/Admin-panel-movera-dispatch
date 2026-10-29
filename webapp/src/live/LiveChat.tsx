@@ -52,7 +52,7 @@ export function LiveChat() {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  // v0.16.2: the trips of the country and zones picked in the top bar.
+  // v0.17.2: the trips of the country and zones picked in the top bar.
   const zoneFilter = zoneFilterOf(useMarketScope().effective);
   const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
   const list = useQuery({ queryKey: ["live", "chat-trips", zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<Trip>) : client.json<Page<Trip>>(`/admin/trips?limit=100${zoneQuery ? `&${zoneQuery}` : ""}`)), refetchInterval: POLL_MS * 6 });

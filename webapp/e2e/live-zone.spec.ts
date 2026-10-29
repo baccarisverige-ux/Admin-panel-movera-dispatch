@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { ADMIN, COMPLETED_TRIP, DRIVER, PAYOUTS, RATINGS, RIDERS, SEED_ZONES, TICKETS, fakeTripServer, signIn } from "./live-fake";
 
 /**
- * Contract v0.16.2 (contract.json#adminListFilters; owner 2026-10-29: "if I chose France it show Sweden trips !",
+ * Contract v0.17.2 (contract.json#adminListFilters; owner 2026-10-29: "if I chose France it show Sweden trips !",
  * "Fix fully (Recommended)"): every live page reads the lists of the country and zones picked in the top bar.
  * Sweden has Ida's trip T2001 with Anna Berg; France has Lucie's trip T3001 with Luc Moreau in Paris (FR-PC).
  */

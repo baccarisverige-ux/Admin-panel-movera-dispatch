@@ -1,11 +1,11 @@
-# Movera API v0.16.2 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.17.2 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.16.2
+  version: 0.17.2
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.16.2 in this folder; this file must agree with them.
+    v0.17.2 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -80,7 +80,7 @@ tags:
   description: 'Zones from the server: list, create, outline, open and close (v0.11.0)'
 x-contract:
   name: movera
-  version: 0.16.2
+  version: 0.17.2
   source: contract.json
 paths:
   /auth/otp/request:
@@ -3724,7 +3724,7 @@ paths:
     get:
       operationId: adminListTrips
       summary: List trips (cursor paging)
-      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+      description: 'Results are limited to the zones in the admin''s token scope. v0.17.2 (contract.json#adminListFilters):
         zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
         unknown_filter).'
       tags:
@@ -3805,7 +3805,7 @@ paths:
     get:
       operationId: adminListRiders
       summary: List riders (cursor paging)
-      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+      description: 'Results are limited to the zones in the admin''s token scope. v0.17.2 (contract.json#adminListFilters):
         zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
         unknown_filter).'
       tags:
@@ -3858,7 +3858,7 @@ paths:
     get:
       operationId: adminListDrivers
       summary: List drivers (cursor paging)
-      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+      description: 'Results are limited to the zones in the admin''s token scope. v0.17.2 (contract.json#adminListFilters):
         zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
         unknown_filter).'
       tags:
@@ -4046,7 +4046,7 @@ paths:
     get:
       operationId: adminListPayments
       summary: List payments (cursor paging)
-      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+      description: 'Results are limited to the zones in the admin''s token scope. v0.17.2 (contract.json#adminListFilters):
         zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
         unknown_filter).'
       tags:
@@ -4117,7 +4117,7 @@ paths:
     get:
       operationId: adminListRefunds
       summary: List refunds (cursor paging)
-      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+      description: 'Results are limited to the zones in the admin''s token scope. v0.17.2 (contract.json#adminListFilters):
         zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
         unknown_filter).'
       tags:
@@ -4183,7 +4183,7 @@ paths:
     get:
       operationId: adminListPayouts
       summary: List payouts (cursor paging)
-      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+      description: 'Results are limited to the zones in the admin''s token scope. v0.17.2 (contract.json#adminListFilters):
         zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
         unknown_filter).'
       tags:
@@ -4296,7 +4296,7 @@ paths:
     get:
       operationId: adminListTickets
       summary: List tickets (cursor paging)
-      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+      description: 'Results are limited to the zones in the admin''s token scope. v0.17.2 (contract.json#adminListFilters):
         zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
         unknown_filter).'
       tags:
@@ -4381,7 +4381,7 @@ paths:
     get:
       operationId: adminListIncidents
       summary: List incidents (cursor paging)
-      description: 'Results are limited to the zones in the admin''s token scope. v0.16.2 (contract.json#adminListFilters):
+      description: 'Results are limited to the zones in the admin''s token scope. v0.17.2 (contract.json#adminListFilters):
         zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
         unknown_filter).'
       tags:
@@ -5421,7 +5421,7 @@ paths:
     get:
       operationId: adminListRatings
       summary: Ratings riders and drivers gave each other
-      description: 'v0.9.0. Newest first; limited to the admin''s zones. v0.16.2 (contract.json#adminListFilters): zoneId,
+      description: 'v0.9.0. Newest first; limited to the admin''s zones. v0.17.2 (contract.json#adminListFilters): zoneId,
         zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason unknown_filter).'
       tags:
       - Admin · Reviews
@@ -8076,6 +8076,52 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /trips/{tripId}/path:
+    get:
+      operationId: getTripPath
+      summary: The route of an ended trip (driven or planned)
+      description: 'v0.17.0 (CONTRACT.md §25): the trip''s rider or the trip''s driver (anyone else: 404 not_found, like GET
+        /trips/{tripId}); only once the trip is terminal (tripStatus.terminal), else 409 invalid_transition, reason trip_not_ended.
+        The driven path is made from the trip''s own GPS trace (the fixes of POST /driver/location kept in the trip trace,
+        §12) from boarding to the end: fixes with accuracy ≤ 50 m, a step only once the car moved 25 m, no step faster than
+        150 km/h, then evenly thinned to at most maxPoints. At least 2 such points are needed. No usable trace (the trace
+        was deleted after liveDrivers.traceKeepDays, or never sent): the server''s road route (§10, OSRM or the straight-line
+        estimate) from the pickup through the stops to the drop-off.'
+      tags:
+      - Trips
+      x-actor:
+      - rider
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/TripId'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripPath'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /admin/zones/{zoneId}/dispatch-control:
     get:
       operationId: adminGetDispatchControl
@@ -8165,7 +8211,7 @@ paths:
     get:
       operationId: adminLiveDrivers
       summary: Driver positions for the admin live map
-      description: 'Limited to the zones in the admin''s scope. stale = no fix for staleAfterSeconds. v0.16.2 (contract.json#adminListFilters):
+      description: 'Limited to the zones in the admin''s scope. stale = no fix for staleAfterSeconds. v0.17.2 (contract.json#adminListFilters):
         zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
         unknown_filter).'
       tags:
@@ -9799,14 +9845,14 @@ components:
       name: zoneId
       in: query
       required: false
-      description: 'v0.16.2: only this zone (inside the admin''s zones; a zone outside them → 403 zone_out_of_scope).'
+      description: 'v0.17.2: only this zone (inside the admin''s zones; a zone outside them → 403 zone_out_of_scope).'
       schema:
         $ref: '#/components/schemas/Id'
     ListZoneIds:
       name: zoneIds
       in: query
       required: false
-      description: 'v0.16.2: only these zones, comma separated or repeated (at most 200; one outside the admin''s zones →
+      description: 'v0.17.2: only these zones, comma separated or repeated (at most 200; one outside the admin''s zones →
         403 zone_out_of_scope). Joined with zoneId.'
       schema:
         type: array
@@ -9819,7 +9865,7 @@ components:
       name: country
       in: query
       required: false
-      description: 'v0.16.2: only the zones of this country that the admin covers (with zoneId/zoneIds: only those of them
+      description: 'v0.17.2: only the zones of this country that the admin covers (with zoneId/zoneIds: only those of them
         in the country).'
       schema:
         $ref: '#/components/schemas/CountryCode'
@@ -15419,6 +15465,47 @@ components:
           type: number
           minimum: -180
           maximum: 180
+    TripPath:
+      type: object
+      description: 'v0.17.0 (CONTRACT.md §25): the route of an ended trip. No new storage: the driven path is read from the
+        trip trace and follows its rule (deleted traceKeepDays = 30 days after the fix); afterwards the answer is the planned
+        route. keptUntil is when the trace goes.'
+      required:
+      - tripId
+      - source
+      - points
+      - pickup
+      - dropoff
+      - stops
+      properties:
+        tripId:
+          $ref: '#/components/schemas/Id'
+        source:
+          type: string
+          enum:
+          - driven
+          - planned
+          description: 'driven: thinned from the trip''s GPS trace; planned: the server''s road route (trace deleted or never
+            sent).'
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/LatLng'
+          minItems: 2
+          maxItems: 300
+          description: The line, in order.
+        pickup:
+          $ref: '#/components/schemas/LatLng'
+        dropoff:
+          $ref: '#/components/schemas/LatLng'
+        stops:
+          type: array
+          items:
+            $ref: '#/components/schemas/LatLng'
+          description: Middle stops, in order.
+        keptUntil:
+          $ref: '#/components/schemas/Timestamp'
+      additionalProperties: false
     RouteRequest:
       type: object
       required:

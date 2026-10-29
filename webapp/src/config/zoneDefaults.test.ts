@@ -29,7 +29,7 @@ const NOW = "2026-10-19T08:00:00Z";
 const state = () => appConfigState({ now: NOW });
 
 test("contract v0.7.2: version, X-Api-Version, payment methods, languages and ratings", () => {
-  assert.equal(contract.version, "0.16.2");
+  assert.equal(contract.version, "0.17.2");
   assert.equal(contract.headers["X-Api-Version"], "0.5");
   assert.deepEqual([...PAYMENT_METHODS], contract.paymentMethods);
   assert.ok(!contract.paymentMethods.includes("swish") && !contract.paymentMethods.includes("d17"));

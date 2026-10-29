@@ -43,7 +43,7 @@ export function LiveSupport() {
   const [after, setAfter] = useState<"pending" | "resolved" | "closed">("pending");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  // v0.16.2: the tickets of the country and zones picked in the top bar.
+  // v0.17.2: the tickets of the country and zones picked in the top bar.
   const zoneFilter = zoneFilterOf(useMarketScope().effective);
   const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
   const list = useQuery({ queryKey: ["live", "tickets", status, zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<SupportTicket>) : client.json<Page<SupportTicket>>(`/admin/tickets?limit=100${status ? `&status=${status}` : ""}${zoneQuery ? `&${zoneQuery}` : ""}`)) });

@@ -64,7 +64,7 @@ function payoutTo(value: unknown): string {
 export function LivePayouts() {
   const { client } = useLiveSession();
   const queryClient = useQueryClient();
-  // v0.16.2: the payouts of the country and zones picked in the top bar.
+  // v0.17.2: the payouts of the country and zones picked in the top bar.
   const zoneFilter = zoneFilterOf(useMarketScope().effective);
   const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
   const payouts = useQuery({ queryKey: ["live", "payouts", zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<LivePayout>) : client.json<Page<LivePayout>>(`/admin/payouts?limit=100${zoneQuery ? `&${zoneQuery}` : ""}`)) });

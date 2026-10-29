@@ -263,7 +263,7 @@ export type TripState = {
   ratings: Record<string, unknown>[];
   approvals: (typeof APPROVALS)[number][];
   refundPayouts: (typeof REFUND_PAYOUTS)[number][];
-  /** v0.16.2: more rows of GET /admin/live/drivers (e.g. a driver in Paris). */
+  /** v0.17.2: more rows of GET /admin/live/drivers (e.g. a driver in Paris). */
   liveDrivers: Record<string, unknown>[];
 };
 
@@ -281,7 +281,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     const body = request.postDataJSON?.() ?? null;
     state.calls.push({ method, path: url.pathname + url.search, headers: request.headers(), body });
     const p = url.pathname;
-    // Contract v0.16.2 (contract.json#adminListFilters): zoneId, zoneIds and country narrow the lists.
+    // Contract v0.17.2 (contract.json#adminListFilters): zoneId, zoneIds and country narrow the lists.
     const named = [...(url.searchParams.get("zoneId") ? [url.searchParams.get("zoneId")!] : []), ...url.searchParams.getAll("zoneIds").flatMap((part) => part.split(",")).filter(Boolean)];
     const country = url.searchParams.get("country");
     const ofCountry = country ? new Set(SEED_ZONES().filter((zone) => zone.country === country).map((zone) => zone.zoneId)) : null;

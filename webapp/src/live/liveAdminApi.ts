@@ -33,7 +33,7 @@ export const LIST_PAGE = 50;
 const MAX_PAGES = 20;
 
 /**
- * Contract v0.16.2 (contract.json#adminListFilters; owner 2026-10-29: "if I chose France it show Sweden trips"):
+ * Contract v0.17.2 (contract.json#adminListFilters; owner 2026-10-29: "if I chose France it show Sweden trips"):
  * the zones picked in the top bar, as list query params. Every zone of one country → country=XX; one zone →
  * zoneId; else zoneIds. `zones` is null without a filter; `denied` when the scope allows nothing.
  */
@@ -392,7 +392,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     answer.items.forEach((row) => presence.set(row.driverId, row));
   }
 
-  /** v0.16.2: a list of the zones picked in the top bar; the server filters, the rows are checked again here. */
+  /** v0.17.2: a list of the zones picked in the top bar; the server filters, the rows are checked again here. */
   async function list(name: string, scope?: ZoneScope): Promise<DemoRecord[]> {
     const filter = name === "zones" ? NO_FILTER : zoneFilterOf(scope);
     if (filter.denied) return [];
