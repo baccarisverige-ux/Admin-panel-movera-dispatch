@@ -7086,6 +7086,16 @@ export const en = {
   "Can't be driven – documents missing": "Can't be driven – documents missing",
   "Not all required documents are approved.": "Not all required documents are approved.",
   "{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.": "{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.",
+  "Waiting list": "Waiting list",
+  "Waiting list view": "Waiting list view",
+  "Numbers that asked to join from the apps' sign-in. Sign-in is open only for the test numbers until an SMS company is chosen.": "Numbers that asked to join from the apps' sign-in. Sign-in is open only for the test numbers until an SMS company is chosen.",
+  "Could not load the waiting list. It is tried again in 15 seconds.": "Could not load the waiting list. It is tried again in 15 seconds.",
+  "Nobody is on the waiting list yet.": "Nobody is on the waiting list yet.",
+  "Asked": "Asked",
+  "First asked": "First asked",
+  "Last asked": "Last asked",
+  "{0} times": "{0} times",
+  "{0} numbers": "{0} numbers",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -67,6 +67,7 @@ export const MENU: MenuItem[] = [
   { id: "incidents", path: "/incidents", label: "Incidents", group: "Operations", permission: "incidents.read", icon: "Siren" },
   { id: "risk", path: "/risk", label: "Risk", group: "Operations", permission: "safety.edit", icon: "ShieldAlert" },
   { id: "riders", path: "/riders", label: "Riders", group: "Operations", permission: "riders.read", icon: "UserRound" },
+  { id: "waitlist", path: "/waitlist", label: "Waiting list", group: "Operations", permission: "overview.read", icon: "ClipboardList" },
   { id: "drivers", path: "/drivers", label: "Drivers", group: "Fleet & Drivers", permission: "drivers.read", icon: "Users" },
   { id: "fleets", path: "/fleets", label: "Fleet owners", group: "Fleet & Drivers", permission: "drivers.read", icon: "Building2" },
   { id: "vehicles", path: "/vehicles", label: "Vehicles", group: "Fleet & Drivers", permission: "drivers.read", icon: "Car" },
