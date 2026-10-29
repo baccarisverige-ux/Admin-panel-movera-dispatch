@@ -57,7 +57,7 @@ const PAGES: { path: string; name: string; endpoints: string[]; fr: string; se: 
   { path: "/support", name: "support", endpoints: ["tickets"], fr: "Chauffeur en retard", se: "Charged too much" },
   { path: "/reviews", name: "reviews", endpoints: ["ratings"], fr: "", se: "" },
   { path: "/incidents", name: "incidents", endpoints: ["incidents"], fr: "", se: "" },
-  { path: "/risk", name: "risk", endpoints: ["risk/signals"], fr: "", se: "" },
+  { path: "/risk?tab=flagged", name: "risk", endpoints: ["risk/signals"], fr: "", se: "" },
 ];
 
 for (const item of PAGES) {
