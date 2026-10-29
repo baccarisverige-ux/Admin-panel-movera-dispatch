@@ -42,10 +42,9 @@ test("vehicle rules per country change which categories a car fits", async ({ pa
   await page.goto("/vehicles?view=rules");
   await expect(page.getByRole("heading", { name: "Vehicle rules for Sweden" })).toBeVisible();
   await page.getByLabel("Premium oldest year").fill("2020");
-  await expect(page.getByText(/cars fit \(now \d+\)/).first()).toBeVisible();
-  await page.getByRole("button", { name: "Save vehicle rules" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await confirm(page);
-  await expect(page.getByText("Everything is saved")).toBeVisible();
+  await expect(page.getByText("Everything is published")).toBeVisible();
   await page.goto("/vehicles/V0003");
   await expect(page.getByRole("region", { name: "Checks" })).not.toContainText("needs 2021");
   await expect(page.getByLabel("Categories it fits").locator(".on").filter({ hasText: "Premium" })).toHaveCount(1);
@@ -74,9 +73,9 @@ test("onboarding steps and papers per country", async ({ page }) => {
   await page.goto("/onboarding?view=steps");
   await expect(page.getByRole("heading", { name: "Onboarding steps for Sweden" })).toBeVisible();
   await page.getByLabel("Training on").uncheck();
-  await page.getByRole("button", { name: "Save steps" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await confirm(page);
-  await expect(page.getByText("Everything is saved")).toBeVisible();
+  await expect(page.getByText("Everything is published")).toBeVisible();
   await page.getByRole("button", { name: "Back" }).click();
   await expect(page.getByRole("region", { name: "Board" }).getByRole("group", { name: "Training" })).toHaveCount(0);
   await page.goto("/onboarding?country=FR");

@@ -23,13 +23,17 @@ export const DOCUMENT_TYPES: Readonly<Record<string, DocumentTypeInfo>> = {
   vehicle_registration: { owner: "vehicle", kind: "file", name: { en: "Registration certificate", sv: "Registreringsbevis", fr: "Certificat d’immatriculation (carte grise)" } },
   insurance: { owner: "vehicle", kind: "file", name: { en: "Vehicle insurance", sv: "Försäkringsbrev", fr: "Assurance transport de personnes" } },
   vtc_sticker: { owner: "vehicle", kind: "file", name: { en: "VTC sticker (macaron)", sv: "VTC-dekal", fr: "Macaron VTC" } },
+  vehicle_photo_front: { owner: "vehicle", kind: "file", name: { en: "Photo: front with plate", sv: "Foto: framifrån med registreringsskylt", fr: "Photo : avant avec plaque" } },
+  vehicle_photo_back: { owner: "vehicle", kind: "file", name: { en: "Photo: back with plate", sv: "Foto: bakifrån med registreringsskylt", fr: "Photo : arrière avec plaque" } },
+  vehicle_photo_side: { owner: "vehicle", kind: "file", name: { en: "Photo: side", sv: "Foto: från sidan", fr: "Photo : côté" } },
+  vehicle_photo_inside: { owner: "vehicle", kind: "file", name: { en: "Photo: inside", sv: "Foto: insidan", fr: "Photo : intérieur" } },
 };
 
 export type RequiredDocuments = { driver: readonly string[]; fleet: readonly string[]; vehicle: readonly string[] };
 
 export const REQUIRED_DOCUMENTS: Readonly<Record<string, RequiredDocuments>> = {
   SE: { driver: ["terms", "info_session", "driving_license", "profile_photo", "taxi_driver_license"], fleet: ["company_registration", "taxi_traffic_permit", "tax_settings", "bank_statement"], vehicle: ["vehicle_registration", "insurance"] },
-  FR: { driver: ["terms", "vtc_card", "driving_license", "national_id", "profile_photo"], fleet: ["company_registration", "vtc_register_certificate", "rc_pro_insurance", "urssaf_certificate", "national_id", "bank_statement"], vehicle: ["vehicle_registration", "insurance", "vtc_sticker"] },
+  FR: { driver: ["terms",  "info_session",  "vtc_card",  "driving_license",  "national_id",  "profile_photo"], fleet: ["company_registration", "vtc_register_certificate", "rc_pro_insurance", "urssaf_certificate", "national_id", "bank_statement"], vehicle: ["vehicle_registration", "insurance", "vtc_sticker"] },
 };
 
 export type OnboardingCity = { cityId: string; name: string; zoneId: string };

@@ -126,13 +126,18 @@ export type DecisionDialogProps = {
   noteLabel?: string;
   /** Offer an expiry date (document approval). */
   expiry?: boolean;
+  /**
+   * v0.17.0 (owner item 1: "admin types expiry when approving"): the type expires in the driver's country, so the date
+   * must be typed (the server answers 400 expiry_required without it) and be in the future (expiry_in_past).
+   */
+  expiryRequired?: boolean;
   danger?: boolean;
   onClose: () => void;
   onConfirm: (input: { note: string; expiresAt?: string }) => Promise<void>;
 };
 
 /** One dialog for every live decision: a summary, a note when the contract needs one, Confirm and Cancel. */
-export function DecisionDialog({ open, title, summary, confirmLabel, note, noteLabel, expiry = false, danger = false, onClose, onConfirm }: DecisionDialogProps) {
+export function DecisionDialog({ open, title, summary, confirmLabel, note, noteLabel, expiry = false, expiryRequired = false, danger = false, onClose, onConfirm }: DecisionDialogProps) {
   const [text, setText] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -148,13 +153,15 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
   const trimmed = text.trim();
   const noteMissing = note === "required" && trimmed.length === 0;
   const tooLong = trimmed.length > 1000;
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  const expiryMissing = expiry && expiryRequired && (!expiresAt || expiresAt < tomorrow);
   return (
     <Modal open={open} title={title} onClose={onClose}>
       <form
         className="live-dialog"
         onSubmit={async (event) => {
           event.preventDefault();
-          if (noteMissing || tooLong || busy) return;
+          if (noteMissing || tooLong || expiryMissing || busy) return;
           setBusy(true);
           setError(null);
           try {
@@ -176,13 +183,14 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         ) : null}
         {expiry ? (
           <label>
-            {tr("Valid until (optional)")}
-            <input type="date" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} />
+            {expiryRequired ? tr("Valid until (required)") : tr("Valid until (optional)")}
+            <input type="date" value={expiresAt} min={expiryRequired ? tomorrow : undefined} required={expiryRequired} aria-invalid={expiryMissing} onChange={(event) => setExpiresAt(event.target.value)} />
           </label>
         ) : null}
+        {expiryMissing ? <p className="vh-help" data-testid="expiry-required">{tr("This document expires: type the expiry date from the document (after today).")}</p> : null}
         {error ? <ErrorLine error={error} /> : null}
         <div className="actions">
-          <button data-command="admin.server.dialogConfirm" type="submit" className={danger ? "primary-btn live-danger" : "primary-btn"} disabled={noteMissing || tooLong || busy}>
+          <button data-command="admin.server.dialogConfirm" type="submit" className={danger ? "primary-btn live-danger" : "primary-btn"} disabled={noteMissing || tooLong || expiryMissing || busy}>
             {busy ? tr("Sending.") : confirmLabel}
           </button>
           <button data-command="admin.server.dialogCancel" type="button" className="secondary-btn" onClick={onClose} disabled={busy}>{tr("Cancel")}</button>

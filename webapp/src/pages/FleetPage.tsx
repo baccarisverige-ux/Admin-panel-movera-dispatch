@@ -4,14 +4,14 @@ import { useNavigate, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Camera, Car, CheckCircle2, FileWarning, PauseCircle, Settings2 } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
-import { can } from "../auth/permissions";
 import { emptyDriverOpsBook, driverOps, vehicleOps, type DriverOpsBook } from "../drivers/ops";
 import { vehicleBlock } from "../drivers/gate";
 import { overallHealth, type DocHealth } from "../fleet/documents";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
-import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, shouldHold, type VehicleRules } from "../vehicles/rules";
-import { VehicleRulesView } from "../vehicles/RulesView";
+import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, withVehicleSettings, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
+import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
 import { DataTable } from "../ui/DataTable";
 import { tr, trn } from "../i18n";
 
@@ -48,7 +48,8 @@ export function FleetPage() {
   const fleets = useRecords("fleets", null);
   const store = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const rulesSlice = useSlice<VehicleRules>(VEHICLE_RULES_KEY, emptyVehicleRules());
-  const rules = normalizeVehicleRules(rulesSlice.value);
+  const settingsSlice = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
+  const rules = withVehicleSettings(normalizeVehicleRules(rulesSlice.value), normalizeSettingsBook(settingsSlice.value));
   const view = (VIEWS.find((item) => item.id === params.get("show"))?.id ?? "all") as ViewId;
   const [now] = useState(() => Date.now());
 
@@ -79,7 +80,6 @@ export function FleetPage() {
     return row.record.status === id;
   };
   const shown = rows.filter((row) => inView(row, view));
-  const editable = Boolean(agent && can(agent.role, "vehicles.edit"));
   const set = (patch: Record<string, string | null>) => setParams(() => {
     const next = new URLSearchParams(globalThis.location.search);
     for (const [key, value] of Object.entries(patch)) {
@@ -101,7 +101,7 @@ export function FleetPage() {
             <p>{tr("Which car fits which category, when papers count as expiring, and what happens when they run out.")}</p>
           </div>
         </header>
-        <VehicleRulesView rules={rules} country={scope.market.id} cars={rows.filter((row) => countryOfZone(row.record.zoneId) === scope.market.id).map((row) => ({ year: row.profile.year, seats: row.profile.seats, fuel: row.profile.fuel, category: row.profile.category }))} editable={editable} />
+        <OnboardingSettingsEditor key={scope.market.id} country={scope.market.id} part="vehicles" />
       </div>
     );
   }

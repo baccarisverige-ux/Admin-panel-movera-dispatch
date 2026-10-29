@@ -207,9 +207,9 @@ test("Safety points to the one cancel rate limit, and document colours follow th
   await page.goto("/onboarding?view=steps");
   const docs = page.getByRole("region", { name: "Documents that expire" });
   await docs.getByLabel("Document warning 1").fill("14");
-  await page.getByRole("button", { name: "Save steps" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await confirm(page);
-  await expect(page.getByText("Everything is saved")).toBeVisible();
+  await expect(page.getByText("Everything is published")).toBeVisible();
 
   await page.goto("/drivers/D0002?tab=documents");
   const again = page.getByTestId("doc-driver_license");

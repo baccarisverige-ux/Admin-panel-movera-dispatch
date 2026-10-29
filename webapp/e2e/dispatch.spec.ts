@@ -635,9 +635,9 @@ test("documents that expire are warned and blocked, and the driver page explains
   await docs.getByLabel("Document warning 2").fill("40");
   await expect(page.getByText("Document warnings: each warning must come after the one before (fewer days).")).toBeVisible();
   await docs.getByLabel("Document warning 2").fill("14");
-  await page.getByRole("button", { name: "Save steps" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await confirm(page);
-  await expect(page.getByText("Everything is saved")).toBeVisible();
+  await expect(page.getByText("Everything is published")).toBeVisible();
   await page.reload();
   await expect(page.getByRole("region", { name: "Documents that expire" }).getByLabel("Document warning 2")).toHaveValue("14");
 

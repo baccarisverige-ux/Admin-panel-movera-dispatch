@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
-import { Car, CheckCircle2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router";
+import { ArrowLeft, Car, CheckCircle2, Settings2 } from "lucide-react";
+import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
+import { LiveCompanyReview } from "./LiveCompanyReview";
 import { useRecords } from "../api/hooks";
 import { tr, trn } from "../i18n";
 import { useMarketScope } from "../markets/useMarketScope";
@@ -32,6 +34,14 @@ export function LiveOnboarding() {
   const drivers = useRecords("drivers", null);
   const vehicles = useRecords("vehicles", null);
   const [selectedId, setSelectedId] = useState("");
+  const [params, setParams] = useSearchParams();
+  const steps = params.get("view") === "steps";
+  const view = (next: string | null) => setParams(() => {
+    const out = new URLSearchParams(globalThis.location.search);
+    if (next) out.set("view", next);
+    else out.delete("view");
+    return out;
+  }, { replace: true });
 
   const inCountry = useMemo<Account[]>(() => (drivers.data ?? []).flatMap((record: DemoRecord) => (record.liveAccount && (!record.liveAccount.country || record.liveAccount.country === country) ? [{ id: record.id, name: record.name || record.id, fleetId: record.fleetId ?? null, facts: record.liveAccount }] : [])), [drivers.data, country]);
   const queue = useMemo(() => inCountry.filter((item) => item.facts.accountStatus === "pending" || item.facts.accountStatus === "on_hold")
@@ -39,17 +49,20 @@ export function LiveOnboarding() {
 
   const header = (
     <header className="dx-head">
+      {steps ? <button data-command="admin.onboarding.view" type="button" className="dash-btn ghost dx-back" onClick={() => view(null)}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button> : null}
       <div className="dx-head-text">
-        <h2>{tr("Onboarding queue")}</h2>
-        <p>{trn("{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.", queue.length, scope.market.name)}</p>
+        <h2>{steps ? tr("Onboarding steps for {0}", [scope.market.name]) : tr("Onboarding queue")}</h2>
+        <p>{steps ? tr("The steps new drivers go through, the papers they need, how long each step may take and the reminders they get.") : trn("{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.", queue.length, scope.market.name)}</p>
       </div>
+      {!steps ? <button data-command="admin.onboarding.view" type="button" className="dash-btn small ghost" onClick={() => view("steps")}><Settings2 size={14} aria-hidden="true" />{" "}{tr("Steps and papers")}</button> : null}
     </header>
   );
+  if (steps) return <div className="dx-page vh-page">{header}<OnboardingSettingsEditor key={country} country={country} part="onboarding" /></div>;
   if (drivers.isLoading || vehicles.isLoading) return <p className="state-line">{tr("Loading onboarding queue.")}</p>;
   if (drivers.isError) return <div className="dx-page vh-page">{header}<LiveListBar list="drivers" /></div>;
 
-  const steps = liveFunnel(inCountry.map((item) => asDriver(item.facts)));
-  const top = steps[0]?.count ?? 0;
+  const funnelSteps = liveFunnel(inCountry.map((item) => asDriver(item.facts)));
+  const top = funnelSteps[0]?.count ?? 0;
   const selected = queue.find((item) => item.id === selectedId) ?? queue[0] ?? null;
   const cars = selected ? (vehicles.data ?? []).filter((car) => (selected.facts.fleetRole === "owner" && selected.fleetId && car.fleetId === selected.fleetId) || car.driverId === selected.id || car.id === selected.facts.vehicleId) : [];
   const kindOf = (item: Account) => (item.facts.accountType === "fleet" ? tr("Fleet owner") : item.fleetId ? tr("Driver in a fleet") : tr("Driver"));
@@ -59,9 +72,9 @@ export function LiveOnboarding() {
       {header}
       <LiveListBar list="drivers" />
 
-      {steps.length ? (
+      {funnelSteps.length ? (
         <section className="ob-funnel" aria-label={tr("Where applicants drop off")}>
-          {steps.map((step) => {
+          {funnelSteps.map((step) => {
             const pct = top ? Math.round((step.count / top) * 100) : 0;
             return (
               <div key={step.id} className="ob-funnel-step" data-step={step.id}>
@@ -120,6 +133,7 @@ function Selected({ account, kind, cars }: { account: Account; kind: string; car
           {groups.fleet.length ? <div data-missing-scope="fleet"><strong>{tr("Company")}</strong><ul>{groups.fleet.map((type) => <li key={type}>{documentTypeName(type)}</li>)}</ul></div> : null}
         </div>
       )}
+      {account.facts.accountType === "fleet" && account.fleetId ? <LiveCompanyReview fleetId={account.fleetId} /> : null}
       <LiveDriverDocuments driverId={driver.driverId} />
       <h4>{tr("Cars")}</h4>
       {cars.length === 0 ? <p className="fd-sub">{tr("No car yet. A car is not needed to activate the account.")}</p> : (

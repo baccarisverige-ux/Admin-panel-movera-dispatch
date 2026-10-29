@@ -1,11 +1,11 @@
-# Movera API v0.15.0 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.17.0 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.15.0
+  version: 0.17.0
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.15.0 in this folder; this file must agree with them.
+    v0.17.0 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -53,6 +53,8 @@ tags:
 - name: Driver · Account
 - name: Driver · Fleet
 - name: Admin · Lists
+- name: Admin · System
+  description: Crashes & errors from the apps and the server, grouped (v0.16.0)
 - name: Admin · Trips
 - name: Admin · Dispatch
 - name: Admin · Money
@@ -78,7 +80,7 @@ tags:
   description: 'Zones from the server: list, create, outline, open and close (v0.11.0)'
 x-contract:
   name: movera
-  version: 0.15.0
+  version: 0.17.0
   source: contract.json
 paths:
   /auth/otp/request:
@@ -2156,7 +2158,11 @@ paths:
       summary: Go online / offline
       description: '409 when on a trip, account not active, documents expired or driving limit reached (projection = Driver).
         v0.14.0: a car whose Vehicle.requiredDocuments are not all approved → 409 documents_not_approved (reason vehicle_documents_not_approved,
-        details).'
+        details). v0.17.0: settings.expiry.blockAtExpiry true (default): with any document of Driver.requiredDocuments (and
+        requiredFleetDocuments for a fleet owner) expired, POST /driver/availability online is 409 documents_not_approved,
+        reason documents_expired, details "<scope>:<type>". false: an expired document does not stop going online (it still
+        shows red). Car documents follow settings.vehicles.autoHold the same way (reason vehicle_documents_not_approved).
+        With no car picked: reason fleet_no_approved_car when the fleet has no car that can be picked, else no_vehicle (contract.json#driverOnboarding.reminders).'
       tags:
       - Driver · Session
       x-actor:
@@ -4470,6 +4476,128 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /admin/errors:
+    get:
+      operationId: adminListErrors
+      summary: Crashes & errors, grouped (newest first)
+      description: 'v0.16.0: app + platform + the message with numbers, hex and ids replaced + the top stack frame. GET /admin/errors?app=&platform=&version=&status=&cursor=&limit=
+        → ErrorGroupPage, newest lastSeen first; PATCH /admin/errors/{errorId} { status } → ErrorGroup. Permission: any signed-in
+        admin, every role, for the list and for marking fixed; no permission id, like GET /admin/auth/me (owner 2026-10-29:
+        "No code now every one can see and later we add"; "All admin roles (Recommended)"). The rest of System keeps system.read..'
+      tags:
+      - Admin · System
+      x-actor:
+      - admin
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      - name: app
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - driver
+          - rider
+          - server
+      - name: platform
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+          - web
+          - server
+      - name: version
+        in: query
+        required: false
+        schema:
+          type: string
+        description: An app version the group was seen in.
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - open
+          - fixed
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorGroupPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/errors/{errorId}:
+    patch:
+      operationId: adminSetErrorStatus
+      summary: Mark a crash or error group fixed (or open)
+      description: 'v0.16.0: a group marked fixed that occurs again is open again. Audited. Permission: any signed-in admin,
+        every role, for the list and for marking fixed; no permission id, like GET /admin/auth/me (owner 2026-10-29: "No code
+        now every one can see and later we add"; "All admin roles (Recommended)"). The rest of System keeps system.read..'
+      tags:
+      - Admin · System
+      x-actor:
+      - admin
+      parameters:
+      - $ref: '#/components/parameters/ErrorId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ErrorGroupStatusCommand'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /admin/trips/{tripId}:
     get:
       operationId: adminGetTrip
@@ -6111,6 +6239,11 @@ paths:
     post:
       operationId: adminReviewDocument
       summary: Approve / reject a document
+      description: 'v0.17.0: v0.17.0 (owner item 1: "First answer but add reminder to driver one month before expire"; item
+        3; note check): the admin types the expiry date when approving (POST /admin/documents/{documentId}/review { decision:
+        approved, expiresAt }). For a type in settings.expiringTypes of the driver''s country, approving without expiresAt
+        is 400 invalid_request (reason expiry_required) and a date not in the future is 400 (reason expiry_in_past); other
+        types keep expiresAt optional. A driver may send expiresAt on upload; the admin''s date wins.'
       tags:
       - Admin · People
       x-actor:
@@ -6558,6 +6691,7 @@ paths:
         pricing: settings.edit
         dispatch: dispatch.edit
         country_rules: settings.edit
+        onboarding: settings.edit
       parameters:
       - $ref: '#/components/parameters/ConfigDoc'
       - $ref: '#/components/parameters/IdempotencyKey'
@@ -6616,6 +6750,7 @@ paths:
         pricing: settings.publish
         dispatch: dispatch.edit
         country_rules: settings.publish
+        onboarding: settings.publish
       parameters:
       - $ref: '#/components/parameters/ConfigDoc'
       - $ref: '#/components/parameters/IdempotencyKey'
@@ -8160,6 +8295,199 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /admin/drivers/{driverId}/documents/{type}/check:
+    post:
+      operationId: adminCheckDocument
+      summary: Mark an admin_check document (info session) held
+      description: 'v0.17.0: v0.17.0 (owner items 8 and 13): an admin marks a kind admin_check document (the info session,
+        or a custom one) with POST /admin/drivers/{driverId}/documents/{type}/check { decision: approved | rejected, note?
+        } (documents.approve); approved counts for activation like any approved document. Until then the driver sees waiting_for_movera.'
+      tags:
+      - Admin · People
+      x-actor:
+      - admin
+      x-permission: documents.approve
+      parameters:
+      - $ref: '#/components/parameters/DriverId'
+      - name: type
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/DocumentType'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCheckCommand'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/onboarding/settings:
+    get:
+      operationId: getDriverOnboardingSettings
+      summary: The onboarding settings of the driver's country
+      description: 'v0.17.0: GET /driver/onboarding/settings → OnboardingSettings of the driver''s country (published, else
+        defaults; version 0 = defaults), so the app offers only the car categories a car fits, asks the photos and shows the
+        warnings the server uses. A driver with no country yet names it: ?country=SE. v0.17.0 (item 14): the answer also has
+        documentTypes: { [type]: { owner, kind, expires, name, help? } } for every type in the country''s lists, contract
+        types with the admin''s texts and the custom types, so the app renders a type it does not know from this data.'
+      tags:
+      - Driver · Account
+      x-actor:
+      - driver
+      parameters:
+      - name: country
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/CountryCode'
+        description: Only for an account with no country yet.
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingSettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/reminders:
+    get:
+      operationId: getDriverReminders
+      summary: Important reminders for the Home sheet
+      description: 'v0.17.0: v0.17.0 (owner items 2 and 3: "add on the home page sheet that reminder ! Dont copy it''s only
+        example"; "Yes, build this (Recommended)"; item 9): GET /driver/reminders → DriverReminderList, what the driver Home
+        sheet "Important reminders (N)" shows, one line per issue with tap-to-fix. blocks_online lines first (red), then due_soon
+        (orange), then waiting; inside a level by expiresAt then type. Also covers why an account is not active (group 1):
+        the driver sees the whole app but cannot go online, with the exact reason and action.'
+      tags:
+      - Driver · Account
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverReminderList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/fleet/start-company:
+    post:
+      operationId: startOwnCompany
+      summary: 'Start my own company: the account becomes a fleet (waits for Movera)'
+      description: 'v0.17.0: v0.17.0 (owner item 7: "First answer but his account become like fleet company account and the
+        documents that already exist no need to uppload again only the new documents and procces like fleet account and wait
+        for admin approv"): POST /driver/fleet/start-company { expectedVersion, company } ("Start my own company" in My fleet).
+        Only an account of type driver, not on a trip (409 invalid_transition, reasons already_fleet, on_trip). The driver
+        leaves his fleet (car released, offline), the account becomes type fleet with a new pending fleet he owns, and the
+        account goes on_hold. Every document he has stays as it is (approved ones count, nothing is uploaded again); only
+        requiredFleetDocuments he does not have yet and the new cars'' documents are needed. An admin then reviews the fleet
+        (POST /admin/fleets/{fleetId}/review) and activates the account (POST /admin/drivers/{driverId}/status, the fleet
+        documents checked) like a new fleet.'
+      tags:
+      - Driver · Fleet
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartCompanyRequest'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Driver'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /driver/trips/{tripId}/stops/{stopIndex}/arrive:
     post:
       operationId: driverArriveAtStop
@@ -9520,6 +9848,12 @@ components:
         $ref: '#/components/schemas/Id'
     TicketId:
       name: ticketId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    ErrorId:
+      name: errorId
       in: path
       required: true
       schema:
@@ -11042,6 +11376,30 @@ components:
           minimum: 0
           description: 'v0.5.3: pending invitations waiting for this account''s answer (a driver''s incoming invites, or an
             owner''s incoming requests), for the badge.'
+        signUp:
+          type: object
+          description: 'v0.17.0, admin view only, while the account is pending or on_hold: v0.17.0 (note check: "Sign-up reminders
+            to stuck drivers (every 2 days, stuck after 10 days) also go live (push ''Finish your sign-up''), editable in
+            admin"): while settings.signUpReminders.on, an account that is pending or on_hold and still waits on itself (details
+            not sent, or a required file document of Driver.requiredDocuments / requiredFleetDocuments missing or rejected)
+            gets the notice kind finish_sign_up (GET /notifications, deepLink movera-driver://home) every everyDays days counted
+            from sign-up, then from the last one. From stuckAfterDays after sign-up the admin driver view shows signUp.stuck
+            true. No reminder while Movera is the one to act (documents in review, info session, activation).'
+          required:
+          - since
+          - stuck
+          - remindersSent
+          properties:
+            since:
+              $ref: '#/components/schemas/Timestamp'
+            stuck:
+              type: boolean
+              description: Signed up at least signUpReminders.stuckAfterDays ago and not active.
+            remindersSent:
+              type: integer
+              minimum: 0
+            lastReminderAt:
+              $ref: '#/components/schemas/Timestamp'
     DriverScheduledRides:
       type: object
       description: 'Owner decision 2 (v0.4.2): an admin''s reservations on/off for this one driver (CONTRACT.md §6.1). Missing
@@ -11127,6 +11485,14 @@ components:
           items:
             $ref: '#/components/schemas/DocumentType'
           description: 'v0.5.3: contract.json#driverOnboarding.documents.required[country].vehicle.'
+        fuel:
+          type: string
+          enum:
+          - petrol
+          - diesel
+          - hybrid
+          - electric
+          description: 'v0.17.0: the car''s fuel (contract.json#driverOnboarding.settings.fuels).'
     DriverAccountType:
       type: string
       enum:
@@ -12621,10 +12987,12 @@ components:
       - pricing
       - dispatch
       - country_rules
+      - onboarding
       x-server-only:
       - pricing
       - dispatch
       - country_rules
+      - onboarding
       description: app documents are served to the apps; pricing and dispatch (v0.5.1) are server-only (x-server-only, contract.json#configDocs).
     ConfigDraft:
       type: object
@@ -12665,6 +13033,7 @@ components:
           - $ref: '#/components/schemas/PricingDocument'
           - $ref: '#/components/schemas/DispatchDocument'
           - $ref: '#/components/schemas/CountryRules'
+          - $ref: '#/components/schemas/OnboardingSettings'
         updatedAt:
           $ref: '#/components/schemas/Timestamp'
         updatedBy:
@@ -15426,6 +15795,10 @@ components:
           type: object
     TelemetryCrash:
       type: object
+      description: 'v0.16.0 (owner 2026-10-29, "Want section on dispatch to show all crash droids and bugs detected from server"):
+        POST /telemetry/crashes takes optional app, platform, appVersion, build, screen, kind and occurredAt next to error,
+        stack and extra (additive; an older app sends none). The server scrubs again, groups each report and keeps the reports
+        keepDays days.'
       required:
       - error
       properties:
@@ -15437,6 +15810,119 @@ components:
           maxLength: 12000
         extra:
           type: object
+        app:
+          type: string
+          enum:
+          - driver
+          - rider
+          description: v0.16.0
+        platform:
+          type: string
+          enum:
+          - android
+          - ios
+          - web
+          description: v0.16.0
+        appVersion:
+          type: string
+          maxLength: 40
+          description: 'v0.16.0: e.g. 1.4.2.'
+        build:
+          type: string
+          maxLength: 40
+          description: 'v0.16.0: store build number.'
+        screen:
+          type: string
+          maxLength: 200
+          description: 'v0.16.0: route or screen name, no ids.'
+        kind:
+          type: string
+          enum:
+          - crash
+          - error
+          description: 'v0.16.0: crash (the app stopped) or error (caught). Default crash.'
+        occurredAt:
+          $ref: '#/components/schemas/Timestamp'
+    ErrorGroup:
+      type: object
+      description: 'v0.16.0 (owner 2026-10-29): the admin "Crashes & errors" section. Reports with the same fingerprint are
+        one ErrorGroup. The server also records its own unhandled 5xx errors as app server (scrubbed, platform server).'
+      required:
+      - id
+      - app
+      - platform
+      - appVersions
+      - message
+      - kind
+      - count
+      - devices
+      - firstSeen
+      - lastSeen
+      - status
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        app:
+          type: string
+          enum:
+          - driver
+          - rider
+          - server
+        platform:
+          type: string
+          enum:
+          - android
+          - ios
+          - web
+          - server
+        appVersions:
+          type: array
+          items:
+            type: string
+          description: Versions seen in this group, newest first.
+        message:
+          type: string
+          description: Scrubbed message of the latest report.
+        topFrame:
+          type: string
+          description: Top stack frame used in the fingerprint, when there was a stack.
+        kind:
+          type: string
+          enum:
+          - crash
+          - error
+        count:
+          type: integer
+          minimum: 1
+          description: Reports in this group.
+        devices:
+          type: integer
+          minimum: 0
+          description: Distinct devices (or addresses) that sent one.
+        firstSeen:
+          $ref: '#/components/schemas/Timestamp'
+        lastSeen:
+          $ref: '#/components/schemas/Timestamp'
+        status:
+          type: string
+          enum:
+          - open
+          - fixed
+        fixedAt:
+          anyOf:
+          - $ref: '#/components/schemas/Timestamp'
+          - type: 'null'
+    ErrorGroupStatusCommand:
+      type: object
+      description: 'v0.16.0: a group marked fixed that occurs again is open again.'
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - open
+          - fixed
     LiveDriver:
       type: object
       required:
@@ -16528,6 +17014,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CategoryId'
+        fuel:
+          type: string
+          enum:
+          - petrol
+          - diesel
+          - hybrid
+          - electric
+          description: 'v0.17.0: the car''s fuel (contract.json#driverOnboarding.settings.fuels).'
+      description: 'v0.17.0: v0.17.0 (owner item 11: "Make them real (Recommended)"): POST /driver/vehicles is checked against
+        settings.vehicles of the fleet''s country. Each categoryId must fit: the category on, year ≥ minYear, seats ≥ minSeats,
+        fuel in fuels; else 400 invalid_request, reason category_not_allowed, details "<category>:<problem>" with problem
+        category_off, year_too_old, too_few_seats, fuel_not_allowed or fuel_required (fuel missing while the category does
+        not allow every fuel). A category with no rule in the document (e.g. child_seat) is not checked. With photosNeeded
+        the four photo types (settings.photoTypes) are added to Vehicle.requiredDocuments, uploaded like other car documents
+        (POST /driver/documents, ownerId = vehicleId) and approved by an admin; the car cannot be picked or driven without
+        them.'
     DocumentUpload:
       type: object
       required:
@@ -16896,7 +17398,12 @@ components:
           maxLength: 1000
     DocumentReviewCommand:
       type: object
-      description: Document has no version in CONTRACT.md §2; Idempotency-Key only.
+      description: 'Document has no version in CONTRACT.md §2; Idempotency-Key only. v0.17.0: v0.17.0 (owner item 1: "First
+        answer but add reminder to driver one month before expire"; item 3; note check): the admin types the expiry date when
+        approving (POST /admin/documents/{documentId}/review { decision: approved, expiresAt }). For a type in settings.expiringTypes
+        of the driver''s country, approving without expiresAt is 400 invalid_request (reason expiry_required) and a date not
+        in the future is 400 (reason expiry_in_past); other types keep expiresAt optional. A driver may send expiresAt on
+        upload; the admin''s date wins.'
       required:
       - decision
       properties:
@@ -17063,6 +17570,7 @@ components:
           - $ref: '#/components/schemas/PricingDocument'
           - $ref: '#/components/schemas/DispatchDocument'
           - $ref: '#/components/schemas/CountryRules'
+          - $ref: '#/components/schemas/OnboardingSettings'
     ConfigPublishCommand:
       type: object
       description: Exactly one of zoneId or country (v0.8.0).
@@ -17096,6 +17604,16 @@ components:
             items:
               $ref: '#/components/schemas/WaitlistEntry'
       description: Page<WaitlistEntry>
+    ErrorGroupPage:
+      allOf:
+      - $ref: '#/components/schemas/Page'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/ErrorGroup'
+      description: Page<ErrorGroup>
     UseStandardCommand:
       type: object
       description: 'v0.8.0 (owner 2026-10-27): POST /admin/config/{doc}/use-standard { zoneId, expectedVersion } (the zone''s
@@ -17116,6 +17634,855 @@ components:
           description: Version the caller last saw; stale → 409 version_mismatch.
         zoneId:
           $ref: '#/components/schemas/Id'
+    OnboardingDocumentLists:
+      type: object
+      description: 'v0.17.0 (owner item 10): the documents a person (driver), a company (fleet) and a car (vehicle) need in
+        the country.'
+      required:
+      - driver
+      - fleet
+      - vehicle
+      properties:
+        driver:
+          type: array
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/DocumentType'
+            - type: string
+              pattern: ^draft:.{1,40}$
+              description: A new custom type of this draft, named by its draftKey; the server puts the id in its place.
+        fleet:
+          type: array
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/DocumentType'
+            - type: string
+              pattern: ^draft:.{1,40}$
+              description: A new custom type of this draft, named by its draftKey; the server puts the id in its place.
+        vehicle:
+          type: array
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/DocumentType'
+            - type: string
+              pattern: ^draft:.{1,40}$
+              description: A new custom type of this draft, named by its draftKey; the server puts the id in its place.
+    OnboardingStep:
+      type: object
+      required:
+      - id
+      - 'on'
+      - days
+      properties:
+        id:
+          type: string
+          enum:
+          - signup
+          - documents
+          - checks
+          - training
+          - ready
+        'on':
+          type: boolean
+        days:
+          type: integer
+          minimum: 1
+          maximum: 60
+          description: Days the step may take before it is late.
+    VehicleCategoryRule:
+      type: object
+      required:
+      - category
+      - 'on'
+      - minYear
+      - minSeats
+      - fuels
+      properties:
+        category:
+          $ref: '#/components/schemas/CategoryId'
+        'on':
+          type: boolean
+        minYear:
+          type: integer
+          minimum: 1990
+          maximum: 2030
+        minSeats:
+          type: integer
+          minimum: 1
+          maximum: 9
+        fuels:
+          type: array
+          items:
+            type: string
+            enum:
+            - petrol
+            - diesel
+            - hybrid
+            - electric
+          uniqueItems: true
+    LocalText:
+      type: object
+      required:
+      - sv
+      - fr
+      - en
+      properties:
+        sv:
+          type: string
+          minLength: 1
+        fr:
+          type: string
+          minLength: 1
+        en:
+          type: string
+          minLength: 1
+    CustomDocumentType:
+      type: object
+      description: 'v0.17.0 (owner item 14): a document type the admin creates for one country. { id, owner: driver | fleet
+        | vehicle, kind: file | admin_check, expires: boolean, name: { sv, fr, en }, help: { sv, fr, en } } (all three languages,
+        non-empty). The server makes the id (custom_ + 10 lower-case letters or digits) the first time the draft is saved:
+        a new entry is sent without id and with draftKey (any short text the panel chooses), and the lists (documents.driver
+        / fleet / vehicle, expiringTypes) may name it by "draft:<draftKey>"; the server replaces each with the new id and
+        drops draftKey. An id once made never changes; an entry with an id the country does not have is 400 invalid_document.
+        expires true puts the type in expiringTypes, false takes it out (the server keeps the two in step). owner fleet is
+        a company document of a fleet account (owner_kind driver); owner vehicle a car document. Deleting an entry removes
+        the type from the country: it must not stay in a list. Documents already uploaded for it stay stored.'
+      required:
+      - owner
+      - kind
+      - expires
+      - name
+      - help
+      properties:
+        id:
+          type: string
+          pattern: ^custom_[a-z0-9]{10}$
+          description: Made by the server; leave out for a new type.
+        draftKey:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: 'A new type only: lists may name it draft:<draftKey> until the server gives the id.'
+        owner:
+          type: string
+          enum:
+          - driver
+          - fleet
+          - vehicle
+        kind:
+          type: string
+          enum:
+          - file
+          - admin_check
+        expires:
+          type: boolean
+        name:
+          $ref: '#/components/schemas/LocalText'
+        help:
+          $ref: '#/components/schemas/LocalText'
+    DocumentTypeTexts:
+      type: object
+      description: 'v0.17.0 (owner item 14): texts[type] = { name?: { sv, fr, en }, help?: { sv, fr, en } } replaces the contract
+        name, and adds a help / checklist text, of a contract type in this country. A key that is not a contract type of documents.types
+        is 400 invalid_document (a custom type carries its own texts).'
+      properties:
+        name:
+          $ref: '#/components/schemas/LocalText'
+        help:
+          $ref: '#/components/schemas/LocalText'
+    DocumentTypeInfo:
+      type: object
+      required:
+      - owner
+      - kind
+      - expires
+      - name
+      properties:
+        owner:
+          type: string
+          enum:
+          - driver
+          - fleet
+          - vehicle
+        kind:
+          type: string
+          enum:
+          - file
+          - acceptance
+          - admin_check
+        expires:
+          type: boolean
+        custom:
+          type: boolean
+        name:
+          $ref: '#/components/schemas/LocalText'
+        help:
+          $ref: '#/components/schemas/LocalText'
+    AdminCheckCommand:
+      type: object
+      description: 'v0.17.0 (owner items 8 and 13): an admin marks a kind admin_check document (the info session, or a custom
+        one) with POST /admin/drivers/{driverId}/documents/{type}/check { decision: approved | rejected, note? } (documents.approve);
+        approved counts for activation like any approved document. Until then the driver sees waiting_for_movera.'
+      required:
+      - decision
+      properties:
+        decision:
+          type: string
+          enum:
+          - approved
+          - rejected
+        note:
+          type: string
+          maxLength: 1000
+    OnboardingSettings:
+      type: object
+      description: 'v0.17.0, per country only: v0.17.0 (owner decisions of 2026-10-29, driver group 2 "Onboarding", items
+        1, 3, 10, 11 and the note check "Use admin''s settings (Recommended)"): the admin''s Drivers › Onboarding and Vehicles
+        › Rules settings are one config document per country, onboarding (configDocs.rules, configDocs.countryOnly), saved
+        and published with GET/PUT /admin/config/onboarding?country and POST /admin/config/onboarding/publish { country }
+        (settings.edit / settings.publish), the same draft / publish / version rule as the other documents. Until a country
+        has one published, the server and the apps use defaults[country] (the admin''s own defaults). Publishing changes at
+        once: the documents each new and existing account needs (Driver.requiredDocuments, requiredFleetDocuments, Vehicle.requiredDocuments),
+        the expiry warnings, the sign-up reminders and the car rules. Tunisia stays present but closed (no documents). v0.17.0
+        (owner item 14: "First answer , and admin can change text and add or delete documents so must add on contract and
+        server and admin ! Also same for Sweden"): per country the admin also creates new document types (customTypes), changes
+        the name and help text of any type (texts), sets which expire (expiringTypes), and adds or removes types in each list.
+        Rules: documents.driver, documents.fleet: types whose owner is driver; documents.vehicle: types whose owner is vehicle
+        (documents.types). An unknown type or one of the wrong owner is 400 invalid_document. A new type needs a contract
+        change (it has names in sv / fr / en and a kind). documents.driver always contains driving_license (admin rule "The
+        driving licence is always needed"). expiringTypes: the listed types need an expiry date when an admin approves them
+        (documentExpiry). steps: every id of stepIds once, at least one on, days within limits.stepDays. The server stores
+        and serves them; the admin panel shows the funnel with them. signUpReminders.everyDays within limits.remindEveryDays,
+        stuckAfterDays within limits.stuckAfterDays. expiry.warnDays: 1 to 3 numbers within limits.warnDays, largest first,
+        each smaller than the one before. vehicles.categories: each category of the catalog at most once; minYear, minSeats
+        within limits; a category that is on allows at least one fuel of fuels; vehicles.warnDays within limits.vehicleWarnDays.
+        customTypes: ids unique and of idPattern; the scope list a custom type is in matches its owner (driver → documents.driver,
+        fleet → documents.fleet, vehicle → documents.vehicle); names and help in sv, fr and en.'
+      required:
+      - version
+      - country
+      - documents
+      - expiringTypes
+      - steps
+      - signUpReminders
+      - expiry
+      - vehicles
+      properties:
+        version:
+          type: integer
+          minimum: 0
+          description: Stamped by the server; 0 = the contract defaults (nothing published).
+        publishedAt:
+          $ref: '#/components/schemas/Timestamp'
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        documents:
+          $ref: '#/components/schemas/OnboardingDocumentLists'
+        expiringTypes:
+          type: array
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/DocumentType'
+            - type: string
+              pattern: ^draft:.{1,40}$
+              description: A new custom type of this draft, named by its draftKey; the server puts the id in its place.
+          uniqueItems: true
+          description: Types that need an expiry date when approved (contract.json#driverOnboarding.documentExpiry).
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/OnboardingStep'
+          minItems: 1
+        signUpReminders:
+          type: object
+          description: 'v0.17.0 (note check: "Sign-up reminders to stuck drivers (every 2 days, stuck after 10 days) also
+            go live (push ''Finish your sign-up''), editable in admin"): while settings.signUpReminders.on, an account that
+            is pending or on_hold and still waits on itself (details not sent, or a required file document of Driver.requiredDocuments
+            / requiredFleetDocuments missing or rejected) gets the notice kind finish_sign_up (GET /notifications, deepLink
+            movera-driver://home) every everyDays days counted from sign-up, then from the last one. From stuckAfterDays after
+            sign-up the admin driver view shows signUp.stuck true. No reminder while Movera is the one to act (documents in
+            review, info session, activation).'
+          required:
+          - 'on'
+          - everyDays
+          - stuckAfterDays
+          properties:
+            'on':
+              type: boolean
+            everyDays:
+              type: integer
+              minimum: 1
+              maximum: 30
+            stuckAfterDays:
+              type: integer
+              minimum: 2
+              maximum: 90
+        expiry:
+          type: object
+          description: 'From the largest of settings.expiry.warnDays (cars: settings.vehicles.warnDays) before expiresAt the
+            document is expiring (shown orange). Push (GET /notifications, kind document_expiring, data { documentId, type,
+            scope, vehicleId?, daysLeft, expiresAt }) once per warning day reached (30, 7, 1 by default; when several are
+            reached at once only the smallest is sent); at expiry one notice kind document_expired. deepLink movera-driver://documents/{type}
+            (cars: ?vehicleId=).'
+          required:
+          - warnDays
+          - blockAtExpiry
+          properties:
+            warnDays:
+              type: array
+              items:
+                type: integer
+                minimum: 1
+                maximum: 90
+              minItems: 1
+              maxItems: 3
+            blockAtExpiry:
+              type: boolean
+              description: 'settings.expiry.blockAtExpiry true (default): with any document of Driver.requiredDocuments (and
+                requiredFleetDocuments for a fleet owner) expired, POST /driver/availability online is 409 documents_not_approved,
+                reason documents_expired, details "<scope>:<type>". false: an expired document does not stop going online
+                (it still shows red). Car documents follow settings.vehicles.autoHold the same way (reason vehicle_documents_not_approved).'
+        customTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomDocumentType'
+          description: 'v0.17.0 (owner item 14): a document type the admin creates for one country. { id, owner: driver |
+            fleet | vehicle, kind: file | admin_check, expires: boolean, name: { sv, fr, en }, help: { sv, fr, en } } (all
+            three languages, non-empty). The server makes the id (custom_ + 10 lower-case letters or digits) the first time
+            the draft is saved: a new entry is sent without id and with draftKey (any short text the panel chooses), and the
+            lists (documents.driver / fleet / vehicle, expiringTypes) may name it by "draft:<draftKey>"; the server replaces
+            each with the new id and drops draftKey. An id once made never changes; an entry with an id the country does not
+            have is 400 invalid_document. expires true puts the type in expiringTypes, false takes it out (the server keeps
+            the two in step). owner fleet is a company document of a fleet account (owner_kind driver); owner vehicle a car
+            document. Deleting an entry removes the type from the country: it must not stay in a list. Documents already uploaded
+            for it stay stored.'
+        texts:
+          type: object
+          description: 'v0.17.0 (owner item 14): texts[type] = { name?: { sv, fr, en }, help?: { sv, fr, en } } replaces the
+            contract name, and adds a help / checklist text, of a contract type in this country. A key that is not a contract
+            type of documents.types is 400 invalid_document (a custom type carries its own texts).'
+          additionalProperties:
+            $ref: '#/components/schemas/DocumentTypeTexts'
+        documentTypes:
+          type: object
+          readOnly: true
+          description: 'Only in GET /driver/onboarding/settings. GET /driver/onboarding/settings → OnboardingSettings of the
+            driver''s country (published, else defaults; version 0 = defaults), so the app offers only the car categories
+            a car fits, asks the photos and shows the warnings the server uses. A driver with no country yet names it: ?country=SE.
+            v0.17.0 (item 14): the answer also has documentTypes: { [type]: { owner, kind, expires, name, help? } } for every
+            type in the country''s lists, contract types with the admin''s texts and the custom types, so the app renders
+            a type it does not know from this data.'
+          additionalProperties:
+            $ref: '#/components/schemas/DocumentTypeInfo'
+        vehicles:
+          type: object
+          description: 'v0.17.0 (owner item 11: "Make them real (Recommended)"): POST /driver/vehicles is checked against
+            settings.vehicles of the fleet''s country. Each categoryId must fit: the category on, year ≥ minYear, seats ≥
+            minSeats, fuel in fuels; else 400 invalid_request, reason category_not_allowed, details "<category>:<problem>"
+            with problem category_off, year_too_old, too_few_seats, fuel_not_allowed or fuel_required (fuel missing while
+            the category does not allow every fuel). A category with no rule in the document (e.g. child_seat) is not checked.
+            With photosNeeded the four photo types (settings.photoTypes) are added to Vehicle.requiredDocuments, uploaded
+            like other car documents (POST /driver/documents, ownerId = vehicleId) and approved by an admin; the car cannot
+            be picked or driven without them.'
+          required:
+          - categories
+          - warnDays
+          - autoHold
+          - photosNeeded
+          properties:
+            categories:
+              type: array
+              items:
+                $ref: '#/components/schemas/VehicleCategoryRule'
+            warnDays:
+              type: integer
+              minimum: 1
+              maximum: 120
+            autoHold:
+              type: boolean
+              description: An expired car document takes the car off the road.
+            photosNeeded:
+              type: boolean
+              description: The four photo types are required car documents.
+      x-server-only: true
+      x-defaults:
+        SE:
+          documents:
+            driver:
+            - terms
+            - info_session
+            - driving_license
+            - profile_photo
+            - taxi_driver_license
+            fleet:
+            - company_registration
+            - taxi_traffic_permit
+            - tax_settings
+            - bank_statement
+            vehicle:
+            - vehicle_registration
+            - insurance
+          expiringTypes:
+          - driving_license
+          - taxi_driver_license
+          - taxi_traffic_permit
+          - vehicle_registration
+          - insurance
+          steps:
+          - id: signup
+            'on': true
+            days: 3
+          - id: documents
+            'on': true
+            days: 7
+          - id: checks
+            'on': true
+            days: 3
+          - id: training
+            'on': true
+            days: 5
+          - id: ready
+            'on': true
+            days: 2
+          signUpReminders:
+            'on': true
+            everyDays: 2
+            stuckAfterDays: 10
+          expiry:
+            warnDays:
+            - 30
+            - 7
+            - 1
+            blockAtExpiry: true
+          vehicles:
+            categories:
+            - category: economy
+              'on': true
+              minYear: 2015
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: comfort
+              'on': true
+              minYear: 2019
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: premium
+              'on': true
+              minYear: 2021
+              minSeats: 4
+              fuels:
+              - hybrid
+              - electric
+              - petrol
+              - diesel
+            - category: priority
+              'on': true
+              minYear: 2015
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: xl
+              'on': true
+              minYear: 2015
+              minSeats: 6
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: electric
+              'on': true
+              minYear: 2017
+              minSeats: 4
+              fuels:
+              - electric
+            - category: pet
+              'on': true
+              minYear: 2015
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            warnDays: 30
+            autoHold: true
+            photosNeeded: true
+          customTypes: []
+          texts: {}
+        FR:
+          documents:
+            driver:
+            - terms
+            - info_session
+            - vtc_card
+            - driving_license
+            - national_id
+            - profile_photo
+            fleet:
+            - company_registration
+            - vtc_register_certificate
+            - rc_pro_insurance
+            - urssaf_certificate
+            - national_id
+            - bank_statement
+            vehicle:
+            - vehicle_registration
+            - insurance
+            - vtc_sticker
+          expiringTypes:
+          - driving_license
+          - national_id
+          - vtc_card
+          - vehicle_registration
+          - insurance
+          - rc_pro_insurance
+          - urssaf_certificate
+          - vtc_sticker
+          - vtc_register_certificate
+          steps:
+          - id: signup
+            'on': true
+            days: 3
+          - id: documents
+            'on': true
+            days: 7
+          - id: checks
+            'on': true
+            days: 3
+          - id: training
+            'on': true
+            days: 5
+          - id: ready
+            'on': true
+            days: 2
+          signUpReminders:
+            'on': true
+            everyDays: 2
+            stuckAfterDays: 10
+          expiry:
+            warnDays:
+            - 30
+            - 7
+            - 1
+            blockAtExpiry: true
+          vehicles:
+            categories:
+            - category: economy
+              'on': true
+              minYear: 2016
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: comfort
+              'on': true
+              minYear: 2020
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: premium
+              'on': true
+              minYear: 2022
+              minSeats: 4
+              fuels:
+              - hybrid
+              - electric
+              - petrol
+              - diesel
+            - category: priority
+              'on': true
+              minYear: 2016
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: xl
+              'on': true
+              minYear: 2016
+              minSeats: 6
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: electric
+              'on': true
+              minYear: 2018
+              minSeats: 4
+              fuels:
+              - electric
+            - category: pet
+              'on': true
+              minYear: 2016
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            warnDays: 30
+            autoHold: true
+            photosNeeded: true
+          customTypes: []
+          texts: {}
+        TN:
+          documents:
+            driver: []
+            fleet: []
+            vehicle: []
+          expiringTypes: []
+          steps:
+          - id: signup
+            'on': true
+            days: 3
+          - id: documents
+            'on': true
+            days: 7
+          - id: checks
+            'on': true
+            days: 3
+          - id: training
+            'on': true
+            days: 5
+          - id: ready
+            'on': true
+            days: 2
+          signUpReminders:
+            'on': true
+            everyDays: 2
+            stuckAfterDays: 10
+          expiry:
+            warnDays:
+            - 30
+            - 7
+            - 1
+            blockAtExpiry: true
+          vehicles:
+            categories:
+            - category: economy
+              'on': true
+              minYear: 2012
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: comfort
+              'on': true
+              minYear: 2016
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: premium
+              'on': true
+              minYear: 2018
+              minSeats: 4
+              fuels:
+              - hybrid
+              - electric
+              - petrol
+              - diesel
+            - category: priority
+              'on': true
+              minYear: 2012
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: xl
+              'on': true
+              minYear: 2012
+              minSeats: 6
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            - category: electric
+              'on': true
+              minYear: 2014
+              minSeats: 4
+              fuels:
+              - electric
+            - category: pet
+              'on': true
+              minYear: 2012
+              minSeats: 4
+              fuels:
+              - petrol
+              - diesel
+              - hybrid
+              - electric
+            warnDays: 30
+            autoHold: true
+            photosNeeded: true
+          customTypes: []
+          texts: {}
+    ReminderFix:
+      type: object
+      description: 'Where a tap on the line goes: document = the upload guide of documentType (vehicleId for a car); info_session
+        = the content slot; fleet_vehicles = My fleet › cars; pick_vehicle = the car list.'
+      required:
+      - target
+      properties:
+        target:
+          type: string
+          enum:
+          - document
+          - info_session
+          - fleet_vehicles
+          - pick_vehicle
+        documentType:
+          $ref: '#/components/schemas/DocumentType'
+        scope:
+          type: string
+          enum:
+          - driver
+          - fleet
+          - vehicle
+        vehicleId:
+          $ref: '#/components/schemas/Id'
+        contentSlot:
+          type: string
+          enum:
+          - driver-info-session
+    DriverReminder:
+      type: object
+      description: 'v0.17.0: document_needed: blocks_online: a required document has none (fix: document). document_rejected:
+        blocks_online: rejected; reviewNote says why (fix: document). document_expired: blocks_online when blockAtExpiry (cars:
+        autoHold), else due_soon (fix: document). document_expiring: due_soon: approved, expires within the warning window
+        (fix: document). document_in_review: waiting: uploaded, Movera reviews it (no fix). info_session_waiting: waiting:
+        the info session (kind admin_check) is not marked held yet; status waiting_for_movera; fix: info_session (content
+        slot driver-info-session "How to book your info session"). account_not_active: blocks_online: the account is pending
+        / on_hold / suspended and every document is done; Movera activates it (no fix). fleet_not_approved: blocks_online:
+        the fleet is pending / rejected / blocked (no fix). fleet_no_approved_car: blocks_online: the fleet has no car that
+        can be picked (approved, every car document approved); owner fix: fleet_vehicles (add / finish a car); member: no
+        fix ("Your fleet has no approved car yet…"). no_vehicle: blocks_online: the fleet has a car that can be picked but
+        this driver has none picked (fix: pick_vehicle). admin_check_waiting: waiting: a custom admin_check document not marked
+        yet; status waiting_for_movera (no fix).'
+      required:
+      - kind
+      - level
+      properties:
+        kind:
+          type: string
+          enum:
+          - document_needed
+          - document_rejected
+          - document_expired
+          - document_expiring
+          - document_in_review
+          - info_session_waiting
+          - account_not_active
+          - fleet_not_approved
+          - fleet_no_approved_car
+          - no_vehicle
+          - admin_check_waiting
+        level:
+          type: string
+          enum:
+          - blocks_online
+          - due_soon
+          - waiting
+        scope:
+          type: string
+          enum:
+          - driver
+          - fleet
+          - vehicle
+        documentType:
+          $ref: '#/components/schemas/DocumentType'
+        documentId:
+          $ref: '#/components/schemas/Id'
+        vehicleId:
+          $ref: '#/components/schemas/Id'
+        status:
+          type: string
+          enum:
+          - needed
+          - in_review
+          - approved
+          - rejected
+          - expired
+          - expiring
+          - missing
+          - waiting_for_movera
+          description: The shown document state (contract.json#documentStatus), e.g. waiting_for_movera.
+        expiresAt:
+          $ref: '#/components/schemas/Timestamp'
+        daysLeft:
+          type: integer
+          minimum: 0
+          description: whole days until expiresAt, rounded up (0 = expired).
+        reviewNote:
+          type: string
+        fix:
+          $ref: '#/components/schemas/ReminderFix'
+    DriverReminderList:
+      type: object
+      description: 'v0.17.0 (owner items 2 and 3: "add on the home page sheet that reminder ! Dont copy it''s only example";
+        "Yes, build this (Recommended)"; item 9): GET /driver/reminders → DriverReminderList, what the driver Home sheet "Important
+        reminders (N)" shows, one line per issue with tap-to-fix. blocks_online lines first (red), then due_soon (orange),
+        then waiting; inside a level by expiresAt then type. Also covers why an account is not active (group 1): the driver
+        sees the whole app but cannot go online, with the exact reason and action.'
+      required:
+      - items
+      - blocksOnline
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverReminder'
+        blocksOnline:
+          type: integer
+          minimum: 0
+          description: Lines with level blocks_online.
+    StartCompanyRequest:
+      type: object
+      description: 'v0.17.0: v0.17.0 (owner item 7: "First answer but his account become like fleet company account and the
+        documents that already exist no need to uppload again only the new documents and procces like fleet account and wait
+        for admin approv"): POST /driver/fleet/start-company { expectedVersion, company } ("Start my own company" in My fleet).
+        Only an account of type driver, not on a trip (409 invalid_transition, reasons already_fleet, on_trip). The driver
+        leaves his fleet (car released, offline), the account becomes type fleet with a new pending fleet he owns, and the
+        account goes on_hold. Every document he has stays as it is (approved ones count, nothing is uploaded again); only
+        requiredFleetDocuments he does not have yet and the new cars'' documents are needed. An admin then reviews the fleet
+        (POST /admin/fleets/{fleetId}/review) and activates the account (POST /admin/drivers/{driverId}/status, the fleet
+        documents checked) like a new fleet.'
+      required:
+      - expectedVersion
+      - company
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: Version the caller last saw; stale → 409 version_mismatch.
+        company:
+          $ref: '#/components/schemas/FleetCompany'
     StopVisit:
       type: object
       description: 'v0.7.1: one extra stop the driver arrived at (contract.json#stopWaits); stop_waiting runs from arrivedAt
@@ -17537,6 +18904,7 @@ components:
       - help
       - legal
       - app-versions
+      - driver-info-session
     ContentText:
       type: object
       required:

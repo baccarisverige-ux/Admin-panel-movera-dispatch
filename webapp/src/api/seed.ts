@@ -75,6 +75,8 @@ export type DemoRecord = {
   liveAccount?: LiveAccountFacts;
   /** Live cars (contract v0.10.1): the required car documents not approved yet; non-empty means the car can't be picked or driven. */
   liveVehicleMissing?: string[];
+  /** Live builds: the car's documents as the server sent them (v0.17.0: reviewed on the car page, expiry typed). */
+  liveVehicleDocs?: { documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string }[]; required: string[]; country?: string };
   /** Live riders: the server's rating, wallet and unpaid fees (AdminRider). */
   liveRider?: LiveRiderFacts;
   /** Live ratings (GET /admin/ratings, contract v0.9.0). */

@@ -33,8 +33,8 @@ function Documents({ driverId }: { driverId: string }) {
   const split = splitDocuments(driver.documents, required);
   return (
     <div data-testid="live-documents">
-      <DocumentsTable title={tr("Uploaded files")} required={required.person} documents={split.person} onChanged={changed} />
-      {driver.accountType === "fleet" ? <DocumentsTable title={tr("Company documents")} required={required.company} documents={split.company} onChanged={changed} /> : null}
+      <DocumentsTable title={tr("Uploaded files")} required={required.person} documents={split.person} onChanged={changed} driverId={driver.driverId} {...(driver.country ? { country: driver.country } : {})} />
+      {driver.accountType === "fleet" ? <DocumentsTable title={tr("Company documents")} required={required.company} documents={split.company} onChanged={changed} driverId={driver.driverId} {...(driver.country ? { country: driver.country } : {})} /> : null}
     </div>
   );
 }

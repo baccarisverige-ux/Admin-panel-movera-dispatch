@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Modal } from "../ui/Modal";
 import { tr, trn } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
-import { documentHasFile, documentRows, documentTypeName, viewableMediaType, type DocumentRow } from "./format";
+import { useSlice } from "../api/hooks";
+import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
+import type { MarketId } from "../markets/markets";
+import { documentHasFile, documentRows, documentTypeName, isAdminCheck, viewableMediaType, type DocumentRow } from "./format";
 import { DateText, DecisionDialog, ErrorLine, Status } from "./ui";
 import type { DocumentRecord, DocumentSummary } from "./types";
 
@@ -13,6 +16,10 @@ type Props = {
   /** Called after a decision so the owner (driver, vehicle) is reloaded. */
   onChanged: () => void;
   title?: string;
+  /** The account the documents belong to: an admin_check type is marked held with POST /admin/drivers/{driverId}/documents/{type}/check. */
+  driverId?: string;
+  /** The country whose onboarding settings say which types expire (owner items 1, 14, 15). */
+  country?: string;
 };
 
 type Viewer = { row: DocumentRow; url: string | null; mediaType: string; error: unknown; loading: boolean };
@@ -21,8 +28,12 @@ type Viewer = { row: DocumentRow; url: string | null; mediaType: string; error: 
  * One row per required document type (plus any extra upload): status, expiry and, for uploads, Open (the file is
  * fetched with the bearer token into a blob URL; the token never goes in a URL), Approve and Reject (a note is required).
  */
-export function DocumentsTable({ required, documents, onChanged, title }: Props) {
+export function DocumentsTable({ required, documents, onChanged, title, driverId, country }: Props) {
   const { client, can } = useLiveSession();
+  const settings = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
+  const countryDoc = country && country in normalizeSettingsBook(settings.value).countries ? normalizeSettingsBook(settings.value).countries[country as MarketId].document : null;
+  const expiring = new Set(countryDoc?.expiringTypes ?? []);
+  const [check, setCheck] = useState<DocumentRow | null>(null);
   const mayReview = can("documents.approve");
   const rows = documentRows(required, documents);
   const [viewer, setViewer] = useState<Viewer | null>(null);
@@ -47,7 +58,7 @@ export function DocumentsTable({ required, documents, onChanged, title }: Props)
   }
 
   const kind = viewer?.mediaType ? viewableMediaType(viewer.mediaType) : "download";
-  const name = (row: DocumentRow) => documentTypeName(row.type);
+  const name = (row: DocumentRow) => documentTypeName(row.type, undefined, country);
 
   return (
     <section className="panel live-documents">
@@ -69,22 +80,25 @@ export function DocumentsTable({ required, documents, onChanged, title }: Props)
             <tbody>
               {rows.map((row) => {
                 const uploaded = row.document && row.status !== "missing";
+                const adminCheck = isAdminCheck(row.type);
                 const canOpen = Boolean(uploaded && documentHasFile(row.type));
-                const canDecide = Boolean(uploaded && mayReview && row.status !== "approved");
-                const canApproveCheck = Boolean(mayReview && row.document && !documentHasFile(row.type) && row.status !== "approved");
+                const canDecide = Boolean(uploaded && mayReview && row.status !== "approved" && !adminCheck);
+                // v0.17.0 (owner items 8, 13): the info session is held by Movera; the driver sees "Waiting for Movera".
+                const canMarkHeld = Boolean(adminCheck && mayReview && driverId && row.status !== "approved");
                 return (
                   <tr key={row.type} data-document-type={row.type}>
                     <td>
                       {name(row)}
                       {!row.required ? <span className="chip">{tr("Extra")}</span> : null}
                     </td>
-                    <td><Status code={row.status} /></td>
+                    <td>{adminCheck && row.status !== "approved" ? <span className="chip warn" data-testid="waiting-for-movera">{tr("Waiting for Movera")}</span> : <Status code={row.status} />}{expiring.has(row.type) ? <span className="chip">{tr("Expires")}</span> : null}</td>
                     <td><DateText value={row.document?.expiresAt} /></td>
                     <td className="live-actions">
                       {canOpen && mayReview ? <button data-command="admin.server.documentOpen" type="button" className="link-action" onClick={() => void open(row)}>{tr("Open")}</button> : null}
-                      {canDecide || canApproveCheck ? <button data-command="admin.server.documentReview" type="button" className="link-action" onClick={() => setDecision({ row, kind: "approved" })}>{tr("Approve")}</button> : null}
+                      {canMarkHeld ? <button data-command="admin.server.documentCheck" type="button" className="link-action" onClick={() => setCheck(row)}>{tr("Mark held")}</button> : null}
+                      {canDecide ? <button data-command="admin.server.documentReview" type="button" className="link-action" onClick={() => setDecision({ row, kind: "approved" })}>{tr("Approve")}</button> : null}
                       {canDecide ? <button data-command="admin.server.documentReview" type="button" className="link-action live-danger-link" onClick={() => setDecision({ row, kind: "rejected" })}>{tr("Reject")}</button> : null}
-                      {!uploaded ? <span className="live-muted">{tr("Nothing uploaded yet")}</span> : null}
+                      {!uploaded && !adminCheck ? <span className="live-muted">{tr("Nothing uploaded yet")}</span> : null}
                     </td>
                   </tr>
                 );
@@ -120,6 +134,7 @@ export function DocumentsTable({ required, documents, onChanged, title }: Props)
         confirmLabel={decision?.kind === "rejected" ? tr("Reject") : tr("Approve")}
         note={decision?.kind === "rejected" ? "required" : "optional"}
         expiry={decision?.kind === "approved"}
+        expiryRequired={Boolean(decision && expiring.has(decision.row.type))}
         danger={decision?.kind === "rejected"}
         onClose={() => setDecision(null)}
         onConfirm={async ({ note, expiresAt }) => {
@@ -130,6 +145,19 @@ export function DocumentsTable({ required, documents, onChanged, title }: Props)
             ...(expiresAt ? { expiresAt } : {}),
           });
           setViewer(null);
+          onChanged();
+        }}
+      />
+      <DecisionDialog
+        open={Boolean(check)}
+        title={tr("Mark held")}
+        summary={check ? trn("{0} was held. It then counts as approved for activation.", <strong>{name(check)}</strong>) : null}
+        confirmLabel={tr("Mark held")}
+        note="optional"
+        onClose={() => setCheck(null)}
+        onConfirm={async ({ note }) => {
+          if (!check || !driverId) return;
+          await client.post<DocumentRecord>(`/admin/drivers/${encodeURIComponent(driverId)}/documents/${encodeURIComponent(check.type)}/check`, { decision: "approved", ...(note ? { note } : {}) });
           onChanged();
         }}
       />

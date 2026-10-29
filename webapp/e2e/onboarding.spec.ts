@@ -13,6 +13,21 @@ async function confirm(page: Page) {
   await page.locator(".modal.open").getByRole("button", { name: "Confirm" }).click();
 }
 
+/** Owner decision 2026-10-29 item 1: a document that expires is approved one by one, with its expiry date typed. */
+async function approveExpiring(page: Page) {
+  const app = page.getByRole("article", { name: /^Application of / });
+  const date = new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10);
+  for (;;) {
+    const field = app.getByLabel(/^Valid until for /).first();
+    if (!(await field.count())) return;
+    const label = (await field.getAttribute("aria-label"))!.replace("Valid until for ", "");
+    await field.fill(date);
+    await app.getByRole("button", { name: `Approve ${label}`, exact: true }).click();
+    await page.locator(".modal.open").last().getByRole("button", { name: "Confirm" }).click();
+    await expect(app.getByLabel(`Valid until for ${label}`, { exact: true })).toHaveCount(0);
+  }
+}
+
 test("onboarding approves documents and activates a driver", async ({ page }) => {
   test.setTimeout(60_000);
   await signIn(page);
@@ -20,6 +35,7 @@ test("onboarding approves documents and activates a driver", async ({ page }) =>
   await expect(page.getByRole("heading", { level: 2, name: "Onboarding queue" })).toBeVisible();
   await expect(page.getByText("driver license").first()).toBeVisible();
   await expect(page.getByText("company registration").first()).toBeVisible();
+  await approveExpiring(page);
   await page.getByRole("button", { name: "Approve remaining" }).click();
   await confirm(page);
   await expect(page.getByText("Documents approved.")).toBeVisible();

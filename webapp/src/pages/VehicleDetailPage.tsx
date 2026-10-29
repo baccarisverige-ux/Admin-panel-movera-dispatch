@@ -1,3 +1,5 @@
+import { LiveVehicleDocuments } from "../live/LiveVehicleDocuments";
+import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { useEffect, useMemo, useState } from "react";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useNavigate, useParams } from "react-router";
@@ -16,7 +18,7 @@ import {
 import { can } from "../auth/permissions";
 import { HealthPill } from "../fleet/ui";
 import { formatMoney } from "../markets/markets";
-import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, withVehicleSettings, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn } from "../i18n";
 import { statusLabel } from "../domain/labels";
@@ -29,7 +31,8 @@ export function VehicleDetailPage() {
   const fleets = useRecords("fleets", null);
   const store = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const rulesSlice = useSlice<VehicleRules>(VEHICLE_RULES_KEY, emptyVehicleRules());
-  const rules = normalizeVehicleRules(rulesSlice.value);
+  const settingsSlice = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
+  const rules = withVehicleSettings(normalizeVehicleRules(rulesSlice.value), normalizeSettingsBook(settingsSlice.value));
   const trips = useRecords("trips", null);
   const navigate = useNavigate();
   const [now] = useState(() => Date.now());
@@ -146,6 +149,8 @@ export function VehicleDetailPage() {
           {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((id) => <span key={id} className={fitsList.includes(id) ? "on" : undefined} title={fitsList.includes(id) ? tr("Fits") : tr("Does not fit")}>{CATEGORY_LABELS[id]}</span>)}
         </span>
       </section>
+
+      <LiveVehicleDocuments record={record} />
 
       <div className="vh-grid">
         <section className="vh-section" aria-label={tr("Checks")}>

@@ -54,6 +54,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.driverStatus", label: "Change driver account status", reason: false, permission: "drivers.activate" },
   { id: "admin.server.documentOpen", label: "Open document file", reason: false, permission: "documents.approve" },
   { id: "admin.server.documentReview", label: "Decide a document", reason: false, permission: "documents.approve" },
+  // v0.17.0 (owner items 8 and 13): the info session (an admin_check type) marked held.
+  { id: "admin.server.documentCheck", label: "Mark a check held", reason: false, permission: "documents.approve" },
   { id: "admin.server.fleetReview", label: "Decide a fleet", reason: false, permission: "drivers.activate" },
   { id: "admin.server.fleetCode", label: "Make a new fleet code", reason: false, permission: "drivers.activate" },
   { id: "admin.server.copyCode", label: "Copy fleet code", reason: false, permission: "drivers.read" },
@@ -395,6 +397,9 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.vehicle.rules", label: "Save vehicle rules", reason: true, permission: "vehicles.edit" },
   { id: "admin.onboarding.view", label: "Onboarding view", reason: false, permission: "drivers.read" },
   { id: "admin.onboarding.rules", label: "Save onboarding steps", reason: true, permission: "drivers.activate" },
+  // v0.17.0 §25 (owner items 10, 11, 14, 15): the country's onboarding settings document, published.
+  { id: "admin.onboarding.publishSettings", label: "Publish onboarding settings", reason: true, permission: "settings.publish" },
+  { id: "admin.onboarding.editTypes", label: "Edit document types", reason: false, permission: "settings.edit" },
   { id: "admin.onboarding.remind", label: "Send an onboarding reminder", reason: false, permission: "documents.approve" },
   { id: "admin.alerts.view", label: "Alerts view", reason: false, permission: "overview.read" },
   { id: "admin.alerts.take", label: "Take an alert", reason: false, permission: "overview.read" },
@@ -619,6 +624,7 @@ export const SLICE_WRITERS: Readonly<Record<string, readonly string[]>> = {
   incidentOps: ["admin.incident.*"],
   messageOps: ["admin.campaigns.*"],
   onboardingRules: ["admin.onboarding.*"],
+  onboardingSettings: ["admin.onboarding.publishSettings"],
   panelOps: ["admin.panel.*"],
   paymentOps: ["admin.payment.dispute", "admin.payment.retry", "admin.payment.rules"],
   payoutOps: ["admin.payout.*"],

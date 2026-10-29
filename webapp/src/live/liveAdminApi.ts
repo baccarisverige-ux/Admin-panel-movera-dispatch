@@ -23,6 +23,7 @@ import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, pa
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
 import { vehicleMissing } from "./activation.ts";
+import { requiredForVehicle } from "./format.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
@@ -129,6 +130,7 @@ export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Dri
     make: vehicle.make,
     model: vehicle.model,
     liveVehicleMissing: vehicleMissing(vehicle, driver?.country),
+    liveVehicleDocs: { documents: [...(vehicle.documents ?? [])], required: requiredForVehicle(vehicle, driver?.country), ...(driver?.country ? { country: driver.country } : {}) },
   };
 }
 

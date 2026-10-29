@@ -500,7 +500,7 @@ S["AuditEntry"] = obj({"auditId": ref("Id"), "at": ref("Timestamp"), "actor": re
                       ["auditId", "at", "actor", "actorId", "action", "targetType", "targetId", "result", "requestId"])
 S["ConfigDocName"] = s("app documents are served to the apps; pricing and dispatch (v0.5.1) are server-only (x-server-only, contract.json#configDocs).",
                         enum=C["configDocs"]["app"] + C["configDocs"]["serverOnly"] + C["configDocs"]["rules"], **{"x-server-only": C["configDocs"]["serverOnly"] + C["configDocs"]["rules"]})
-CONFIG_DOC_ONE_OF = [ref("RiderAppConfig"), ref("DriverAppConfig"), ref("PricingDocument"), ref("DispatchDocument"), ref("CountryRules")]
+CONFIG_DOC_ONE_OF = [ref("RiderAppConfig"), ref("DriverAppConfig"), ref("PricingDocument"), ref("DispatchDocument"), ref("CountryRules"), ref("OnboardingSettings")]
 S["ConfigDraft"] = obj({"doc": ref("ConfigDocName"), "zoneId": ref("Id"), "country": ref("CountryCode"),
                         "usesStandard": b("v0.8.0: the zone has no own published document of this kind and uses its country's standard (configDocs.standard); the draft starts from the standard."),
                         "version": i("Draft version (expectedVersion for PUT/publish).", minimum=1),
@@ -897,7 +897,22 @@ S["OsrmRouteResponse"] = obj({"code": s("Ok, or NoRoute (still 200).", examples=
 TL = C["telemetry"]
 S["TelemetryLog"] = obj({"level": s(enum=TL["levels"]), "event": s(minLength=1, maxLength=200), "extra": {"type": "object"}, "error": s(maxLength=4000)}, ["level", "event"])
 S["TelemetryEvent"] = obj({"event": s(minLength=1, maxLength=200), "extra": {"type": "object"}}, ["event"])
-S["TelemetryCrash"] = obj({"error": s(maxLength=4000), "stack": s(maxLength=12000), "extra": {"type": "object"}}, ["error"])
+# v0.16.0 (owner 2026-10-29, Crashes & errors): optional fields that let the server group and filter reports (contract.json#telemetry.crashReport).
+TC = TL["crashReport"]; TE = TL["errorGroups"]
+S["TelemetryCrash"] = obj({"error": s(maxLength=4000), "stack": s(maxLength=12000), "extra": {"type": "object"},
+                           "app": s("v0.16.0", enum=TC["apps"]), "platform": s("v0.16.0", enum=TC["platforms"]),
+                           "appVersion": s("v0.16.0: e.g. 1.4.2.", maxLength=40), "build": s("v0.16.0: store build number.", maxLength=40),
+                           "screen": s("v0.16.0: route or screen name, no ids.", maxLength=200),
+                           "kind": s(f"v0.16.0: crash (the app stopped) or error (caught). Default {TC['defaultKind']}.", enum=TC["kinds"]),
+                           "occurredAt": ref("Timestamp")}, ["error"], TC["note"])
+S["ErrorGroup"] = obj({"id": ref("Id"), "app": s(enum=TE["apps"]), "platform": s(enum=TE["platforms"]),
+                       "appVersions": arr(s(), description="Versions seen in this group, newest first."), "message": s("Scrubbed message of the latest report."),
+                       "topFrame": s("Top stack frame used in the fingerprint, when there was a stack."), "kind": s(enum=TC["kinds"]),
+                       "count": i("Reports in this group.", minimum=1), "devices": i("Distinct devices (or addresses) that sent one.", minimum=0),
+                       "firstSeen": ref("Timestamp"), "lastSeen": ref("Timestamp"), "status": s(enum=TE["statuses"]),
+                       "fixedAt": {"anyOf": [ref("Timestamp"), {"type": "null"}]}},
+                      ["id", "app", "platform", "appVersions", "message", "kind", "count", "devices", "firstSeen", "lastSeen", "status"], TE["note"])
+S["ErrorGroupStatusCommand"] = obj({"status": s(enum=TE["statuses"])}, ["status"], "v0.16.0: " + TE["reopen"] + ".")
 LD = C["liveDrivers"]
 S["LiveDriver"] = obj(OrderedDict([("driverId", ref("Id")), ("firstName", s()), ("onlineStatus", ref("DriverOnlineStatus")), ("moving", b()),
                                    ("location", ref("GeoFix")), ("lastFixAt", ref("Timestamp")),
@@ -1119,7 +1134,7 @@ def path_id(name, desc=None):
     if desc: p["description"] = desc
     return p
 for nm in ["tripId", "offerId", "paymentId", "paymentMethodId", "placeId", "notificationId", "driverId", "riderId",
-           "vehicleId", "documentId", "approvalId", "fleetId", "invitationId", "incidentId", "payoutId", "ticketId"]:
+           "vehicleId", "documentId", "approvalId", "fleetId", "invitationId", "incidentId", "payoutId", "ticketId", "errorId"]:
     PARAMS[nm[0].upper() + nm[1:]] = path_id(nm)
 PARAMS["RideId"] = path_id("rideId", "Deprecated alias of tripId.")
 PARAMS["RatingFrom"] = {"name": "from", "in": "path", "required": True, "description": "v0.9.0: who gave the rating.", "schema": {"type": "string", "enum": ["rider", "driver"]}}
@@ -1361,7 +1376,8 @@ op("post", "/support/tickets", "createTicket", "Open a support ticket", ["rider"
 # ---- Driver
 op("post", "/driver/availability", "setDriverAvailability", "Go online / offline", ["driver"], "Driver · Session",
    body="AvailabilityRequest", ok=(200, "Driver"), mutation=True,
-   desc="409 when on a trip, account not active, documents expired or driving limit reached (projection = Driver). v0.14.0: a car whose Vehicle.requiredDocuments are not all approved → 409 documents_not_approved (reason vehicle_documents_not_approved, details).")
+   desc="409 when on a trip, account not active, documents expired or driving limit reached (projection = Driver). v0.14.0: a car whose Vehicle.requiredDocuments are not all approved → 409 documents_not_approved (reason vehicle_documents_not_approved, details). "
+        "v0.17.0: " + C["driverOnboarding"]["documentExpiry"]["block"] + " With no car picked: reason fleet_no_approved_car when the fleet has no car that can be picked, else no_vehicle (contract.json#driverOnboarding.reminders).")
 op("post", "/driver/location", "postDriverLocation", "Upload a batch of GPS fixes", ["driver"], "Driver · Session",
    body="LocationBatch", ok=(200, "DriverLocationAck"), mutation=True,
    desc="Fixes are fanned out as kind=location on the active trip's stream; they never change the projection version.")
@@ -1485,6 +1501,15 @@ S["WaitlistEntryPage"] = {"allOf": [ref("Page"), {"type": "object", "properties"
 op("get", "/admin/waitlist", "adminListWaitlist", "The sign-in waiting list (newest first)", ["admin"], "Admin · Lists",
    params=AL + [q("app", {"type": "string", "enum": ["rider", "driver"]})], ok=(200, "WaitlistEntryPage"), permission="overview.read",
    desc="v0.15.0 (owner 2026-10-29, decision 5): the numbers that asked to join, newest lastAt first; the admin page reads it again every 15 s. " + AU["waitlist"]["admin"])
+# v0.16.0 (owner 2026-10-29): Crashes & errors (contract.json#telemetry.errorGroups).
+S["ErrorGroupPage"] = {"allOf": [ref("Page"), {"type": "object", "properties": {"items": arr(ref("ErrorGroup"))}}], "description": "Page<ErrorGroup>"}
+op("get", "/admin/errors", "adminListErrors", "Crashes & errors, grouped (newest first)", ["admin"], "Admin · System",
+   params=AL + [q("app", s(enum=TE["apps"])), q("platform", s(enum=TE["platforms"])), q("version", s(), "An app version the group was seen in."),
+                q("status", s(enum=TE["statuses"]))], ok=(200, "ErrorGroupPage"),
+   desc="v0.16.0: " + TE["fingerprint"] + ". " + TE["admin"] + " Permission: " + TE["permission"] + ".")
+op("patch", "/admin/errors/{errorId}", "adminSetErrorStatus", "Mark a crash or error group fixed (or open)", ["admin"], "Admin · System",
+   params=[pref("ErrorId")], body="ErrorGroupStatusCommand", ok=(200, "ErrorGroup"), mutation=True,
+   desc="v0.16.0: " + TE["reopen"] + ". Audited. Permission: " + TE["permission"] + ".")
 op("get", "/admin/trips/{tripId}", "adminGetTrip", "Trip detail incl. money split", ["admin"], "Admin · Trips",
    params=TID, ok=(200, TP), permission="trips.read")
 for seg, cmd, opid, body, summ, perm, appr, okc in [
@@ -1574,7 +1599,8 @@ op("post", "/admin/riders/{riderId}/status", "adminSetRiderStatus", "Set rider s
 op("post", "/admin/vehicles/{vehicleId}/review", "adminReviewVehicle", "Approve / reject / block a vehicle", ["admin"], "Admin · People",
    params=[pref("VehicleId")], body="VehicleReviewCommand", ok=(200, "Vehicle"), mutation=True, permission="vehicles.edit", permission_v050="fleet.edit")
 op("post", "/admin/documents/{documentId}/review", "adminReviewDocument", "Approve / reject a document", ["admin"], "Admin · People",
-   params=[pref("DocumentId")], body="DocumentReviewCommand", ok=(200, "Document"), mutation=True, permission="documents.approve", permission_v050="drivers.edit")
+   params=[pref("DocumentId")], body="DocumentReviewCommand", ok=(200, "Document"), mutation=True, permission="documents.approve", permission_v050="drivers.edit",
+   desc="v0.17.0: " + C["driverOnboarding"]["documentExpiry"]["note"])
 # ---- v0.5.3 (CONTRACT.md §14): fleets and document files
 op("get", "/admin/drivers/{driverId}", "adminGetDriver", "Driver detail (details, fleet, documents)", ["admin"], "Admin · People",
    params=[pref("DriverId")], ok=(200, "Driver"), permission="drivers.read", desc="v0.5.3.")
@@ -1600,12 +1626,12 @@ op("get", "/admin/config/{doc}", "adminGetConfigDraft", "Get the config draft fo
    desc="pricing and dispatch (v0.5.1) are server-only documents: only admins with settings.read read them; GET /rider/config and /driver/config never include them.")
 op("put", "/admin/config/{doc}", "adminPutConfigDraft", "Replace the config draft", ["admin"], "Admin · Config",
    params=[pref("ConfigDoc")], body="ConfigDraftUpdate", ok=(200, "ConfigDraft"), mutation=True, permission="settings.edit", permission_v050="config.edit",
-   ext={"x-permission-by-doc": {"rider_app_config": "settings.edit", "driver_app_config": "settings.edit", "pricing": "settings.edit", "dispatch": "dispatch.edit", "country_rules": "settings.edit"}},
+   ext={"x-permission-by-doc": {"rider_app_config": "settings.edit", "driver_app_config": "settings.edit", "pricing": "settings.edit", "dispatch": "dispatch.edit", "country_rules": "settings.edit", "onboarding": "settings.edit"}},
    desc="The draft's document must be the doc's schema (pricing → PricingDocument, dispatch → DispatchDocument, v0.5.1). x-permission-by-doc: the admin panel saves dispatch rules with dispatch.edit.")
 op("post", "/admin/config/{doc}/publish", "adminPublishConfig", "Publish the draft at once (no second admin, v0.8.0)", ["admin"], "Admin · Config",
    params=[pref("ConfigDoc")], body="ConfigPublishCommand", ok=(200, "ConfigPublication"), mutation=True,
    permission="settings.publish", permission_v050="config.edit",
-   ext={"x-permission-by-doc": {"rider_app_config": "settings.publish", "driver_app_config": "settings.publish", "pricing": "settings.publish", "dispatch": "dispatch.edit", "country_rules": "settings.publish"}},
+   ext={"x-permission-by-doc": {"rider_app_config": "settings.publish", "driver_app_config": "settings.publish", "pricing": "settings.publish", "dispatch": "dispatch.edit", "country_rules": "settings.publish", "onboarding": "settings.publish"}},
    desc=C["configDocs"]["publishApproval"] + " The server stamps version and publishedAt (contract.json#configVersion). "
         "Emits config_published on the app streams for rider_app_config and driver_app_config only; pricing and dispatch (server-only) are published with the same version rule but never reach the apps.")
 S["UseStandardCommand"] = obj(dict(EV, zoneId=ref("Id")), ["expectedVersion", "zoneId"], C["configDocs"]["useStandard"])
@@ -1716,8 +1742,76 @@ o = op("get", "/rides/{rideId}", "getRideDeprecated", "Deprecated alias of GET /
 o = op("post", "/rides/{rideId}/cancel", "cancelRideDeprecated", "Deprecated alias of POST /trips/{tripId}/cancel", ["rider"], "Deprecated",
        params=[pref("RideId")], body="CancelCommand", ok=(200, TP), mutation=True, transition="cancel", deprecated=True)
 
+# ---- v0.17.0 (owner 2026-10-29, driver group 2 "Onboarding"): onboarding settings, expiry, reminders, car rules, own company.
+DOS = C["driverOnboarding"]["settings"]; LIM = DOS["limits"]
+def rng(name, desc=None): return i(desc, minimum=LIM[name][0], maximum=LIM[name][1])
+DOC_OR_DRAFT = {"anyOf": [ref("DocumentType"), s("A new custom type of this draft, named by its draftKey; the server puts the id in its place.", pattern="^draft:.{1,40}$")]}
+S["OnboardingDocumentLists"] = obj({"driver": arr(DOC_OR_DRAFT), "fleet": arr(DOC_OR_DRAFT), "vehicle": arr(DOC_OR_DRAFT)},
+                                   ["driver", "fleet", "vehicle"], "v0.17.0 (owner item 10): the documents a person (driver), a company (fleet) and a car (vehicle) need in the country.")
+S["OnboardingStep"] = obj({"id": s(enum=DOS["stepIds"]), "on": b(), "days": rng("stepDays", "Days the step may take before it is late.")}, ["id", "on", "days"])
+S["VehicleCategoryRule"] = obj({"category": ref("CategoryId"), "on": b(), "minYear": rng("minYear"), "minSeats": rng("minSeats"),
+                                "fuels": arr(s(enum=DOS["fuels"]), uniqueItems=True)}, ["category", "on", "minYear", "minSeats", "fuels"])
+CT_ = DOS["customTypes"]
+S["LocalText"] = obj({"sv": s(minLength=1), "fr": s(minLength=1), "en": s(minLength=1)}, ["sv", "fr", "en"])
+S["CustomDocumentType"] = obj({"id": s("Made by the server; leave out for a new type.", pattern=CT_["idPattern"]),
+                               "draftKey": s("A new type only: lists may name it draft:<draftKey> until the server gives the id.", minLength=1, maxLength=40),
+                               "owner": s(enum=CT_["owners"]), "kind": s(enum=CT_["kinds"]), "expires": b(),
+                               "name": ref("LocalText"), "help": ref("LocalText")}, ["owner", "kind", "expires", "name", "help"], CT_["note"])
+S["DocumentTypeTexts"] = obj({"name": ref("LocalText"), "help": ref("LocalText")}, [], DOS["texts"])
+S["DocumentTypeInfo"] = obj({"owner": s(enum=CT_["owners"]), "kind": s(enum=["file", "acceptance", "admin_check"]), "expires": b(), "custom": b(),
+                             "name": ref("LocalText"), "help": ref("LocalText")}, ["owner", "kind", "expires", "name"])
+S["AdminCheckCommand"] = obj({"decision": s(enum=["approved", "rejected"]), "note": s(maxLength=1000)}, ["decision"], DOS["adminCheck"])
+op("post", "/admin/drivers/{driverId}/documents/{type}/check", "adminCheckDocument", "Mark an admin_check document (info session) held", ["admin"], "Admin · People",
+   params=[pref("DriverId"), {"name": "type", "in": "path", "required": True, "schema": ref("DocumentType")}], body="AdminCheckCommand", ok=(200, "Document"),
+   mutation=True, permission="documents.approve", desc="v0.17.0: " + DOS["adminCheck"])
+S["OnboardingSettings"] = obj(OrderedDict([
+    ("version", i("Stamped by the server; 0 = the contract defaults (nothing published).", minimum=0)), ("publishedAt", ref("Timestamp")),
+    ("country", ref("CountryCode")),
+    ("documents", ref("OnboardingDocumentLists")),
+    ("expiringTypes", arr(DOC_OR_DRAFT, uniqueItems=True, description="Types that need an expiry date when approved (contract.json#driverOnboarding.documentExpiry).")),
+    ("steps", arr(ref("OnboardingStep"), minItems=1)),
+    ("signUpReminders", obj({"on": b(), "everyDays": rng("remindEveryDays"), "stuckAfterDays": rng("stuckAfterDays")}, ["on", "everyDays", "stuckAfterDays"],
+                            C["driverOnboarding"]["signUpReminders"]["note"])),
+    ("expiry", obj({"warnDays": arr(rng("warnDays"), minItems=1, maxItems=3), "blockAtExpiry": b(C["driverOnboarding"]["documentExpiry"]["block"])},
+                   ["warnDays", "blockAtExpiry"], C["driverOnboarding"]["documentExpiry"]["warn"])),
+    ("customTypes", arr(ref("CustomDocumentType"), description=DOS["customTypes"]["note"])),
+    ("texts", {"type": "object", "description": DOS["texts"], "additionalProperties": ref("DocumentTypeTexts")}),
+    ("documentTypes", {"type": "object", "readOnly": True, "description": "Only in GET /driver/onboarding/settings. " + DOS["driverRead"], "additionalProperties": ref("DocumentTypeInfo")}),
+    ("vehicles", obj({"categories": arr(ref("VehicleCategoryRule")), "warnDays": rng("vehicleWarnDays"), "autoHold": b("An expired car document takes the car off the road."),
+                      "photosNeeded": b("The four photo types are required car documents.")}, ["categories", "warnDays", "autoHold", "photosNeeded"],
+                     C["driverOnboarding"]["vehicleRules"]["note"])),
+]), ["version", "country", "documents", "expiringTypes", "steps", "signUpReminders", "expiry", "vehicles"],
+    "v0.17.0, per country only: " + DOS["note"] + " Rules: " + " ".join(DOS["rules"]), **{"x-server-only": True, "x-defaults": DOS["defaults"]})
+op("get", "/driver/onboarding/settings", "getDriverOnboardingSettings", "The onboarding settings of the driver's country", ["driver"], "Driver · Account",
+   params=[q("country", ref("CountryCode"), "Only for an account with no country yet.")], ok=(200, "OnboardingSettings"), desc="v0.17.0: " + DOS["driverRead"])
+RM = C["driverOnboarding"]["reminders"]
+S["ReminderFix"] = obj({"target": s(enum=RM["fixTargets"]), "documentType": ref("DocumentType"), "scope": s(enum=["driver", "fleet", "vehicle"]),
+                        "vehicleId": ref("Id"), "contentSlot": s(enum=[C["driverOnboarding"]["infoSession"]["contentSlot"]])}, ["target"],
+                       "Where a tap on the line goes: document = the upload guide of documentType (vehicleId for a car); info_session = the content slot; fleet_vehicles = My fleet › cars; pick_vehicle = the car list.")
+S["DriverReminder"] = obj({"kind": s(enum=list(RM["kinds"].keys())), "level": s(enum=list(RM["levels"].keys())),
+                           "scope": s(enum=["driver", "fleet", "vehicle"]), "documentType": ref("DocumentType"), "documentId": ref("Id"), "vehicleId": ref("Id"),
+                           "status": s("The shown document state (contract.json#documentStatus), e.g. waiting_for_movera.", enum=C["documentStatus"]["values"]),
+                           "expiresAt": ref("Timestamp"), "daysLeft": i(C["driverOnboarding"]["documentExpiry"]["daysLeft"], minimum=0), "reviewNote": s(),
+                           "fix": ref("ReminderFix")}, ["kind", "level"], "v0.17.0: " + " ".join(f"{k}: {v}." for k, v in RM["kinds"].items()))
+S["DriverReminderList"] = obj({"items": arr(ref("DriverReminder")), "blocksOnline": i("Lines with level blocks_online.", minimum=0)}, ["items", "blocksOnline"], RM["note"])
+op("get", "/driver/reminders", "getDriverReminders", "Important reminders for the Home sheet", ["driver"], "Driver · Account", ok=(200, "DriverReminderList"),
+   desc="v0.17.0: " + RM["note"])
+SC = C["driverOnboarding"]["startCompany"]
+S["StartCompanyRequest"] = obj(dict(EV, company=ref("FleetCompany")), ["expectedVersion", "company"], "v0.17.0: " + SC["note"])
+op("post", "/driver/fleet/start-company", "startOwnCompany", "Start my own company: the account becomes a fleet (waits for Movera)", ["driver"], "Driver · Fleet",
+   body="StartCompanyRequest", ok=(200, "Driver"), mutation=True, desc="v0.17.0: " + SC["note"])
+VR = C["driverOnboarding"]["vehicleRules"]
+FUEL = s("v0.17.0: the car's fuel (contract.json#driverOnboarding.settings.fuels).", enum=DOS["fuels"])
+S["VehicleRequest"]["properties"]["fuel"] = FUEL
+S["VehicleRequest"]["description"] = "v0.17.0: " + VR["note"]
+S["Vehicle"]["properties"]["fuel"] = dict(FUEL)
+S["Driver"]["properties"]["signUp"] = obj({"since": ref("Timestamp"), "stuck": b("Signed up at least signUpReminders.stuckAfterDays ago and not active."),
+                                           "remindersSent": i(minimum=0), "lastReminderAt": ref("Timestamp")}, ["since", "stuck", "remindersSent"],
+                                          "v0.17.0, admin view only, while the account is pending or on_hold: " + C["driverOnboarding"]["signUpReminders"]["note"])
+S["DocumentReviewCommand"]["description"] += " v0.17.0: " + C["driverOnboarding"]["documentExpiry"]["note"]
+
 # ---------------------------------------------------------------- document
-TAG_DESC = {"Admin · Zones": "Zones from the server: list, create, outline, open and close (v0.11.0)", "Auth": "Sign-in, tokens and push devices for the rider and driver apps (v0.5.0)", "Admin · Auth": "Admin panel sign-in with e-mail and password (v0.5.1)",
+TAG_DESC = {"Admin · System": "Crashes & errors from the apps and the server, grouped (v0.16.0)", "Admin · Zones": "Zones from the server: list, create, outline, open and close (v0.11.0)", "Auth": "Sign-in, tokens and push devices for the rider and driver apps (v0.5.0)", "Admin · Auth": "Admin panel sign-in with e-mail and password (v0.5.1)",
             "Maps": "Address search, geocoding and road routes through the server (v0.5.1); read-only, no Idempotency-Key",
             "Telemetry": "Fire-and-forget app logs, analytics and crashes (v0.5.1); no auth required", "Trips": "Shared trip resource (rider, driver, admin)", "Realtime": "Streams: SSE (or WebSocket) + JSON replay",
             "Deprecated": "Legacy /rides aliases kept for one release"}
