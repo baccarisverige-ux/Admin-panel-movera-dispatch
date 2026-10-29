@@ -488,7 +488,7 @@ if set(_tc['apps']) != {'driver', 'rider'} or not set(_tc['apps']) < set(_te['ap
 if not set(_tc['platforms']) < set(_te['platforms']) or _tc['defaultKind'] not in _tc['kinds']: bad += 1; print('ERROR GROUP platforms/kind')
 if _te['statuses'] != ['open', 'fixed'] or _te['maxEventsPerGroup'] < 1 or 'every role' not in _te['permission']: bad += 1; print('ERROR GROUP statuses/permission')
 if 'system.read' not in c['adminPermissions']['values']: bad += 1; print('ERROR GROUP system.read missing')
-# v0.18.0 (CONTRACT.md §26): driver onboarding group 2, France and Sweden alike, Tunisia closed.
+# v0.18.0 (CONTRACT.md §27): driver onboarding group 2, France and Sweden alike, Tunisia closed.
 _do = c['driverOnboarding']; _st = _do['settings']; _ty = _do['documents']['types']
 if set(_st['defaults']) != set(_do['countries']): bad += 1; print('ONBOARDING defaults countries')
 _base = {'SE': 2015, 'FR': 2016, 'TN': 2012}
