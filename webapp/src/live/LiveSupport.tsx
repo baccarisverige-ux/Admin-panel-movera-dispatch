@@ -5,6 +5,8 @@ import { tr, uiLocale } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine } from "./ui";
 import type { Page, SupportTicket } from "./types";
+import { useMarketScope } from "../markets/useMarketScope";
+import { zoneFilterOf } from "./zoneFilter";
 
 /**
  * Live builds only (contract v0.9.0 §16, owner decision 3 of part 3): Admin › Support lists the tickets riders and
@@ -41,7 +43,10 @@ export function LiveSupport() {
   const [after, setAfter] = useState<"pending" | "resolved" | "closed">("pending");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const list = useQuery({ queryKey: ["live", "tickets", status], queryFn: () => client.json<Page<SupportTicket>>(`/admin/tickets?limit=100${status ? `&status=${status}` : ""}`) });
+  // v0.17.2: the tickets of the country and zones picked in the top bar.
+  const zoneFilter = zoneFilterOf(useMarketScope().effective);
+  const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
+  const list = useQuery({ queryKey: ["live", "tickets", status, zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<SupportTicket>) : client.json<Page<SupportTicket>>(`/admin/tickets?limit=100${status ? `&status=${status}` : ""}${zoneQuery ? `&${zoneQuery}` : ""}`)) });
   const items = list.data?.items ?? [];
   const current = items.find((item) => item.ticketId === selected) ?? items[0];
   const detail = useQuery({ queryKey: ["live", "ticket", current?.ticketId], queryFn: () => client.json<SupportTicket>(`/admin/tickets/${encodeURIComponent(current!.ticketId)}`), enabled: Boolean(current) });

@@ -9,10 +9,13 @@ import { catalogFor } from "../data/catalog.ts";
 import { CURRENCY, TIME_ZONE } from "../domain/contract.ts";
 import { isCurrency } from "../domain/money.ts";
 import { MARKETS } from "../markets/markets.ts";
+import { NO_FILTER, zoneFilterOf, type ZoneFilter } from "./zoneFilter.ts";
+
+export { zoneFilterOf, type ZoneFilter };
 import type { AdminApi, CommandInput, CommandResult } from "../api/create.ts";
 import type { TripOffersView } from "../api/dispatchSim.ts";
 import { ApiError } from "../api/httpClient.ts";
-import type { ApprovalRow, AuditRow, DemoRecord, LiveTripFacts } from "../api/seed.ts";
+import type { ApprovalRow, AuditRow, DemoRecord, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
 import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
@@ -32,11 +35,12 @@ const PAGE_LIMIT = 100;
 export const LIST_PAGE = 50;
 const MAX_PAGES = 20;
 
-async function all<T>(client: LiveClient, path: string): Promise<T[]> {
+async function all<T>(client: LiveClient, path: string, filter: ZoneFilter = NO_FILTER): Promise<T[]> {
   const items: T[] = [];
   let cursor: string | null = null;
   for (let index = 0; index < MAX_PAGES; index += 1) {
     const query = new URLSearchParams({ limit: String(PAGE_LIMIT), ...(cursor ? { cursor } : {}) });
+    for (const [key, value] of filter.params) query.set(key, value);
     const page: Page<T> = await client.json<Page<T>>(`${path}?${query.toString()}`);
     items.push(...page.items);
     cursor = page.nextCursor;
@@ -46,7 +50,7 @@ async function all<T>(client: LiveClient, path: string): Promise<T[]> {
 }
 
 /** A list page's own rows: the server's search and status filter, as many pages as "Load more" asked for. */
-async function paged<T>(client: LiveClient, name: LiveListName, path: string): Promise<T[]> {
+async function paged<T>(client: LiveClient, name: LiveListName, path: string, filter: ZoneFilter = NO_FILTER): Promise<T[]> {
   const query = listQueryOf(name);
   const items: T[] = [];
   let cursor: string | null = null;
@@ -55,6 +59,7 @@ async function paged<T>(client: LiveClient, name: LiveListName, path: string): P
     if (query.q) params.set("q", query.q);
     if (query.status) params.set(STATUS_PARAM[name], query.status);
     if (cursor) params.set("cursor", cursor);
+    for (const [key, value] of filter.params) params.set(key, value);
     const page: Page<T> = await client.json<Page<T>>(`${path}?${params.toString()}`);
     items.push(...page.items);
     cursor = page.nextCursor;
@@ -339,8 +344,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   const settings = createLiveSettings({ json: (path) => client.json(path), put: (path, body) => client.put(path, body), post: (path, body) => client.post(path, body) });
   let currency: string = CURRENCY;
 
-  async function readDrivers(own = false): Promise<Driver[]> {
-    const rows = own ? await paged<Driver>(client, "drivers", "/admin/drivers") : await all<Driver>(client, "/admin/drivers");
+  async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER): Promise<Driver[]> {
+    const rows = own ? await paged<Driver>(client, "drivers", "/admin/drivers", filter) : await all<Driver>(client, "/admin/drivers");
     rows.forEach((row) => drivers.set(row.driverId, row));
     return rows;
   }
@@ -354,44 +359,66 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return new Map(fleets.map((fleet) => [fleet.fleetId, drivers.get(fleet.ownerDriverId)?.zoneIds[0] ?? ""]));
   }
 
-  async function readRiders(own = false): Promise<Rider[]> {
-    const rows = own ? await paged<Rider>(client, "riders", "/admin/riders") : await all<Rider>(client, "/admin/riders");
+  async function readRiders(own = false, filter: ZoneFilter = NO_FILTER): Promise<Rider[]> {
+    const rows = own ? await paged<Rider>(client, "riders", "/admin/riders", filter) : await all<Rider>(client, "/admin/riders");
     rows.forEach((row) => riders.set(row.riderId, row));
     return rows;
   }
 
   /** GET /admin/live/drivers: who is online now, with the last position (drivers not offline). */
-  async function readPresence(): Promise<void> {
-    const answer = await client.json<LiveDriverList>("/admin/live/drivers");
+  async function readPresence(filter: ZoneFilter = NO_FILTER): Promise<void> {
+    const query = new URLSearchParams(filter.params).toString();
+    const answer = await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`);
     presence.clear();
     answer.items.forEach((row) => presence.set(row.driverId, row));
   }
 
-  async function list(name: string): Promise<DemoRecord[]> {
-    const rows = await listRaw(name);
+  /** v0.17.2: a list of the zones picked in the top bar; the server filters, the rows are checked again here. */
+  async function list(name: string, scope?: ZoneScope): Promise<DemoRecord[]> {
+    const filter = name === "zones" ? NO_FILTER : zoneFilterOf(scope);
+    if (filter.denied) return [];
+    const read = await listRaw(name, filter);
+    const zones = filter.zones;
+    // A row without a zone (a rider, a refund without its trip) is the server's answer for those zones.
+    const rows = zones ? read.filter((row) => !row.zoneId || zones.has(row.zoneId)) : read;
     remember(rows);
     return rows;
   }
 
-  async function listRaw(name: string): Promise<DemoRecord[]> {
+  /** Live search (top bar): trips, drivers and riders of the picked zones whose id, name or phone matches. */
+  async function search(text: string, scope?: ZoneScope): Promise<{ kind: string; id: string; label: string; path: string }[]> {
+    const needle = text.trim();
+    const filter = zoneFilterOf(scope);
+    if (needle.length < 2 || filter.denied) return [];
+    const params = new URLSearchParams([["q", needle], ["limit", "5"], ...filter.params]).toString();
+    const quiet = <T,>(path: string) => client.json<Page<T>>(`${path}?${params}`).then((page) => page.items).catch(() => [] as T[]);
+    const [tripRows, driverRows, riderRows] = await Promise.all([quiet<Trip>("/admin/trips"), quiet<Driver>("/admin/drivers"), quiet<Rider>("/admin/riders")]);
+    return [
+      ...tripRows.map((row) => ({ kind: "trip", id: row.tripId, label: row.tripId, path: `/trips/${row.tripId}` })),
+      ...driverRows.map((row) => ({ kind: "driver", id: row.driverId, label: fullName(row.firstName, row.lastName) || row.driverId, path: `/drivers/${row.driverId}` })),
+      ...riderRows.map((row) => ({ kind: "rider", id: row.riderId, label: row.firstName || row.riderId, path: `/riders/${row.riderId}` })),
+    ].slice(0, 8);
+  }
+
+  async function listRaw(name: string, filter: ZoneFilter): Promise<DemoRecord[]> {
     if (name === "drivers") {
-      const rows = await readDrivers(true);
-      await readPresence().catch(() => undefined);
+      const rows = await readDrivers(true, filter);
+      await readPresence(filter).catch(() => undefined);
       return rows.map((row) => driverRecord(row, presence.get(row.driverId)));
     }
-    if (name === "riders") return (await readRiders(true)).map(riderRecord);
+    if (name === "riders") return (await readRiders(true, filter)).map(riderRecord);
     if (name === "payments") {
-      const rows = await paged<Payment>(client, "payments", "/admin/payments");
+      const rows = await paged<Payment>(client, "payments", "/admin/payments", filter);
       return rows.map((row) => paymentRecord(row, trips.get(row.tripId)?.zoneId ?? ""));
     }
-    if (name === "ratings") return (await all<AdminRating>(client, "/admin/ratings")).map(ratingRecord);
-    if (name === "tickets") return (await all<SupportTicket>(client, "/admin/tickets")).map(ticketRecord);
+    if (name === "ratings") return (await all<AdminRating>(client, "/admin/ratings", filter)).map(ratingRecord);
+    if (name === "tickets") return (await all<SupportTicket>(client, "/admin/tickets", filter)).map(ticketRecord);
     if (name === "refunds") {
-      const rows = await all<{ refundId: string; tripId?: string; amount: LiveMoney; reason: string; status: string; createdAt?: string }>(client, "/admin/refunds");
+      const rows = await all<{ refundId: string; tripId?: string; amount: LiveMoney; reason: string; status: string; createdAt?: string }>(client, "/admin/refunds", filter);
       return rows.map((row) => ({ id: row.refundId, name: row.tripId ? `pay_${row.tripId}` : "", phone: "", zoneId: row.tripId ? trips.get(row.tripId)?.zoneId ?? "" : "", status: row.status === "done" ? "refunded" : row.status, ...(row.tripId ? { tripId: row.tripId } : {}), fareOre: row.amount.amountMinor, ...(row.createdAt ? { createdAt: row.createdAt } : {}), notes: row.reason, live: true }));
     }
     if (name === "payouts") {
-      const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string }>(client, "/admin/payouts");
+      const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string }>(client, "/admin/payouts", filter);
       return rows.map((row) => ({
         id: row.payoutId, name: `${row.periodStart.slice(0, 10)} – ${row.periodEnd.slice(0, 10)}`, phone: "", zoneId: row.zoneId ?? "", status: row.status === "paid" ? "paid" : "scheduled", driverId: row.driverId, fareOre: row.amount.amountMinor, createdAt: row.createdAt, live: true,
         livePayout: { lines: (row.lines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor, ...(line.count !== undefined ? { count: line.count } : {}) })), source: row.source, periodStart: row.periodStart, periodEnd: row.periodEnd, tripCount: row.tripCount, currency: row.amount.currency },
@@ -413,14 +440,14 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return fleets.map((fleet) => (name === "fleets" ? fleetRecord : ownerRecord)(fleet, zones.get(fleet.fleetId) ?? ""));
     }
     if (name === "trips") {
-      const rows = await paged<Trip>(client, "trips", "/admin/trips");
+      const rows = await paged<Trip>(client, "trips", "/admin/trips", filter);
       rows.forEach((row) => trips.set(row.tripId, row));
       if (rows[0] && isCurrency(rows[0].fare.currency)) currency = rows[0].fare.currency;
       if (!riders.size) await readRiders().catch(() => []);
       return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
     }
     if (name === "incidents") {
-      const rows = await all<ServerIncident>(client, "/admin/incidents");
+      const rows = await all<ServerIncident>(client, "/admin/incidents", filter);
       rows.forEach((row) => incidents.set(row.incidentId, row));
       return rows.map(incidentRecord);
     }
@@ -609,8 +636,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     demo: false,
     ready: async () => ({ currency: isCurrency(currency) ? currency : CURRENCY, timeZone: TIME_ZONE, demo: false }),
     page: async (pageId) => catalogFor(pageId),
-    list: async (name) => list(name),
-    search: async () => [],
+    list: async (name, scope) => list(name, scope),
+    search: async (query, scope) => search(query, scope),
     command,
     revision: async () => 0,
     audit: async () => (await all<AuditEntry>(client, "/admin/audit")).map(auditRow),

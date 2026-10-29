@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.17.1",
+  "version": "0.17.2",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -1316,6 +1316,41 @@
       "permission": "any signed-in admin, every role, for the list and for marking fixed; no permission id, like GET /admin/auth/me (owner 2026-10-29: \"No code now every one can see and later we add\"; \"All admin roles (Recommended)\"). The rest of System keeps system.read.",
       "admin": "GET /admin/errors?app=&platform=&version=&status=&cursor=&limit= → ErrorGroupPage, newest lastSeen first; PATCH /admin/errors/{errorId} { status } → ErrorGroup."
     }
+  },
+  "adminListFilters": {
+    "note": "v0.17.2 (owner 2026-10-29, \"if I chose France it show Sweden trips\"; decision \"Fix fully (Recommended)\"): the admin lists follow the country and zones picked in the panel's top bar (CONTRACT.md §7).",
+    "lists": [
+      "GET /admin/trips",
+      "GET /admin/drivers",
+      "GET /admin/riders",
+      "GET /admin/payments",
+      "GET /admin/refunds",
+      "GET /admin/payouts",
+      "GET /admin/tickets",
+      "GET /admin/ratings",
+      "GET /admin/incidents",
+      "GET /admin/live/drivers",
+      "GET /admin/risk/signals",
+      "GET /admin/kpis"
+    ],
+    "reservations": "reservations are trips: GET /admin/trips?kind=scheduled with the same filters",
+    "params": {
+      "zoneId": "one zone id",
+      "zoneIds": "several zone ids, comma separated or repeated, at most 200; joined with zoneId",
+      "country": "ISO 3166-1 alpha-2: every zone of that country"
+    },
+    "rules": [
+      "the filters only narrow: a list never leaves the admin's own zones",
+      "a zone named in zoneId or zoneIds outside the admin's zones is 403 forbidden (reason zone_out_of_scope)",
+      "country alone: the zones of that country the admin covers (none covered: an empty page)",
+      "country with zoneId or zoneIds: only the named zones that are in that country",
+      "riders have no zone: a rider is in a zone when one of the rider's trips is",
+      "drivers: by any of the driver's zones; live drivers: the zone of the latest fix, else the driver's first zone",
+      "a ticket without a zone is in no zone: it is left out as soon as a filter is given",
+      "no filter: the list as before (every zone of the admin)",
+      "a query key the list does not know is 400 invalid_request (reason unknown_filter); a malformed value is 400 invalid_request"
+    ],
+    "panel": "the admin sends zoneIds (or zoneId for one zone) of the zones picked, and country when \"All zones\" of a country is picked; each money value is shown in its own currency, never the picked country's"
   },
   "liveDrivers": {
     "note": "v0.5.1 (CONTRACT.md §12), owner decision 11: the admin live map reads driver positions from the server.",

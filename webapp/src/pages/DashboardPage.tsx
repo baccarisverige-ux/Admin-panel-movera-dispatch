@@ -78,6 +78,7 @@ import { BONUS_KEY, bonusState, emptyBonusBook, normalizeBonusBook, type BonusBo
 import type { BonusMapArea } from "../dashboard/DriversMap";
 import { LiveMapQuickPopup, type QuickTarget } from "../pricing/LiveMapExtras";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { zoneFilterOf } from "../live/zoneFilter";
 
 const FIVE_MIN = 5 * 60_000;
 const DAY_MS = 86_400_000;
@@ -245,7 +246,9 @@ export function DashboardPage() {
   const kpiZones = zoneKey ? zoneKey.split(",") : market.zones.map((zone) => zone.id);
   const kpiFrom = kpiDay(shownSpan.prevStart, market.timeZone);
   const kpiTo = kpiDay(Math.max(shownSpan.start, shownSpan.end - 1), market.timeZone);
-  const kpiQuery = useQuery({ queryKey: ["live", "kpis", kpiFrom, kpiTo], queryFn: () => liveSession!.client.json<{ days: KpiDay[] }>(`/admin/kpis?fromDate=${kpiFrom}&toDate=${kpiTo}`), enabled: Boolean(liveSession) });
+  // v0.17.2: the server counts only the zones picked in the top bar.
+  const kpiFilter = new URLSearchParams(zoneFilterOf(scope.effective).params).toString();
+  const kpiQuery = useQuery({ queryKey: ["live", "kpis", kpiFrom, kpiTo, kpiFilter], queryFn: () => liveSession!.client.json<{ days: KpiDay[] }>(`/admin/kpis?fromDate=${kpiFrom}&toDate=${kpiTo}${kpiFilter ? `&${kpiFilter}` : ""}`), enabled: Boolean(liveSession) && !scope.denied });
   const demoReport = useMemo(() => earningsReport(country, zoneKey ? zoneKey.split(",") : [], shownSpan), [country, zoneKey, shownSpan]);
   const report = liveSession ? kpiReport(kpiQuery.data?.days ?? [], kpiZones, shownSpan, market.timeZone, uiLocale()) : demoReport;
   useEffect(() => {

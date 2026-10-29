@@ -6,6 +6,8 @@ import { liveMoney } from "./format";
 import { ErrorLine } from "./ui";
 import type { Driver, LiveMoney, Page } from "./types";
 import { NotConnected } from "./NotConnected";
+import { useMarketScope } from "../markets/useMarketScope";
+import { zoneFilterOf } from "./zoneFilter";
 
 /**
  * Live builds only, in the demo Payouts page (contract v0.9.0 §16, owner real-data decisions part 3): the server's
@@ -62,7 +64,10 @@ function payoutTo(value: unknown): string {
 export function LivePayouts() {
   const { client } = useLiveSession();
   const queryClient = useQueryClient();
-  const payouts = useQuery({ queryKey: ["live", "payouts"], queryFn: () => client.json<Page<LivePayout>>("/admin/payouts?limit=100") });
+  // v0.17.2: the payouts of the country and zones picked in the top bar.
+  const zoneFilter = zoneFilterOf(useMarketScope().effective);
+  const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
+  const payouts = useQuery({ queryKey: ["live", "payouts", zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<LivePayout>) : client.json<Page<LivePayout>>(`/admin/payouts?limit=100${zoneQuery ? `&${zoneQuery}` : ""}`)) });
   const refunds = useQuery({ queryKey: ["live", "refund-payouts"], queryFn: () => client.json<Page<RefundToSend>>("/admin/refunds/payouts?payoutStatus=pending") });
   const drivers = useQuery({ queryKey: ["live", "payout-drivers"], queryFn: () => client.json<Page<Driver>>("/admin/drivers?limit=200") });
   const [selectedId, setSelectedId] = useState<string | null>(null);

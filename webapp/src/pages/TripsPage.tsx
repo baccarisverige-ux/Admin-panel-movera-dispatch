@@ -7,7 +7,7 @@ import type { TripRecord as DemoRecord } from "../trips/file";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { CATEGORIES } from "../domain/contract";
-import { formatMoney, zoneById } from "../markets/markets";
+import { formatMoney, marketOfZone, zoneById } from "../markets/markets";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
 import { MapPanel } from "../dispatch/maps";
@@ -73,7 +73,15 @@ export function TripsPage() {
   const facts = useMemo(() => {
     const dayFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit", day: "2-digit" });
     const whenFormat = new Intl.DateTimeFormat(uiLocale(), { timeZone: scope.market.timeZone, dateStyle: "short", timeStyle: "short" });
-    const priceFormat = new Intl.NumberFormat(scope.market.locale, { style: "currency", currency: scope.market.currency });
+    // Each price in its own currency (the server's fare currency, else its zone's), never the picked country's.
+    const priceFormats = new Map<string, Intl.NumberFormat>();
+    const priceOf = (trip: DemoRecord, minor: number) => {
+      const owner = marketOfZone(trip.zoneId) ?? scope.market;
+      const currency = (trip as { liveTrip?: { currency?: string } }).liveTrip?.currency ?? owner.currency;
+      let format = priceFormats.get(currency);
+      if (!format) priceFormats.set(currency, (format = new Intl.NumberFormat(owner.locale, { style: "currency", currency })));
+      return format.format(minor / owner.minorUnits);
+    };
     return new Map(rows.map((trip) => {
       const started = new Date(startedAt(trip.id));
       const tripGroup = groupOf(trip.status);
@@ -83,7 +91,7 @@ export function TripsPage() {
         group: tripGroup,
         category: categoryOf(trip.id),
         payment: paymentOf(trip),
-        price: tripGroup === "completed" ? priceFormat.format(fareBreakdown(trip).chargedOre / scope.market.minorUnits) : "–",
+        price: tripGroup === "completed" ? priceOf(trip, fareBreakdown(trip).chargedOre) : "–",
       }];
     }));
   }, [rows, scope.market]);
