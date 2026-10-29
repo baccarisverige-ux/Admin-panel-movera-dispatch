@@ -167,7 +167,10 @@ function useRisk() {
   const live = useLiveSessionMaybe();
   const signals = useQuery({ queryKey: ["live", "risk"], queryFn: () => live!.client.json<Page<RiskPerson>>("/admin/risk/signals?limit=200"), enabled: Boolean(live) });
   const demoList = useMemo(() => people(drivers.data ?? [], riders.data ?? []), [drivers.data, riders.data]);
-  const list = live ? (signals.data?.items ?? []).map(serverPerson) : demoList;
+  // v0.16.2: the people of the country and zones picked in the top bar (a person without a zone stays).
+  const effective = useMarketScope().effective;
+  const zones = new Set(Array.isArray(effective) ? effective : [effective]);
+  const list = live ? (signals.data?.items ?? []).filter((person) => !person.zoneId || zones.has(person.zoneId)).map(serverPerson) : demoList;
   return { ops, list, loading: slice.loading || drivers.isLoading || riders.isLoading || signals.isLoading, live: Boolean(live) };
 }
 
