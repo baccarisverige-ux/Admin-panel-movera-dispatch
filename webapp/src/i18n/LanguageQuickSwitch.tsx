@@ -1,14 +1,14 @@
 import { Languages } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
-import { CommandButton } from "../ui/CommandButton";
 import { tr } from "./core";
 import { useLanguage } from "./I18nProvider";
+import { LanguageSaveButton } from "./LanguageSaveButton";
 import { languageSetting } from "./ProfileMenu";
 import { ADMIN_LANGUAGES, LANGUAGE_NATIVE_NAME, languageOptionLabel, type AppLanguage } from "./languages";
 
 /**
  * EN · FR · SV in one tap. The same per-admin setting as My profile › Panel language: the choice is saved for this
- * admin only, logged in My activity, and wins over the country default. The language in use is marked and disabled.
+ * admin only (live: on the server, PATCH /admin/auth/me), logged in My activity, and wins over the country default. The language in use is marked and disabled.
  */
 export function LanguageQuickSwitch({ compact = false }: { compact?: boolean }) {
   const { agent, agents, setAgents } = useSession();
@@ -21,21 +21,20 @@ export function LanguageQuickSwitch({ compact = false }: { compact?: boolean }) 
       {ADMIN_LANGUAGES.map((code) => {
         const active = language.language === code;
         return (
-          <CommandButton
+          <LanguageSaveButton
             key={code}
-            command="admin.profile.language"
+            agentId={agent.id}
+            next={code}
             className={active ? "lang-switch-btn active" : "lang-switch-btn"}
-            targetId={agent.id}
-            confirmTarget={false}
             before={languageSetting(language.chosen, language.defaultLanguage)}
             after={languageSetting(code, language.defaultLanguage)}
             disabled={active}
             title={active ? tr("The panel is in {0}.", [LANGUAGE_NATIVE_NAME[code]]) : tr("Switch the panel to {0}", [LANGUAGE_NATIVE_NAME[code]])}
             aria-label={languageOptionLabel(code)}
-            onDone={() => choose(code)}
+            onDemoDone={() => choose(code)}
           >
             {code.toUpperCase()}
-          </CommandButton>
+          </LanguageSaveButton>
         );
       })}
     </div>

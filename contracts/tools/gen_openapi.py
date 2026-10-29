@@ -1679,6 +1679,11 @@ for p in ["/admin/auth/setup-password", "/admin/auth/setup-password/check"]:
     PATHS[p]["post"]["responses"]["410"] = err("otp_expired: the setup link expired (setup_link_expired) or was used (setup_link_used); ask for a new link.")
 op("post", "/admin/auth/sign-out", "adminSignOut", "End this admin session", ["admin"], "Admin · Auth", ok=(204, None), desc="Revokes the refresh token; idempotent.")
 op("get", "/admin/auth/me", "adminMe", "The signed-in admin: role, expanded permissions, scope", ["admin"], "Admin · Auth", ok=(200, "AdminMe"))
+# v0.16.1 (owner 2026-10-29, "Fix fully (Recommended)"): the admin saves their own panel language (contract.json#auth.admin.meLanguage).
+S["AdminMeUpdate"] = obj(OrderedDict([("language", nullable("Language"))]), ["language"], "v0.16.1: the signed-in admin's own panel language; null clears it.")
+op("patch", "/admin/auth/me", "adminUpdateMe", "Save the signed-in admin's own panel language", ["admin"], "Admin · Auth",
+   body="AdminMeUpdate", ok=(200, "AdminMe"), mutation=True,
+   desc="v0.16.1: " + AA["meLanguage"]["note"].split(": ", 1)[1])
 op("post", "/admin/agents/{adminId}/setup-link", "adminIssueSetupLink", "Issue a one-time password setup link for an admin", ["admin"], "Admin · Auth",
    params=[pref("AdminId")], ok=(201, "SetupLink"), mutation=True, permission="team.edit",
    desc=f"Single use, {AU_A['setupLinkHours']} h; a new link revokes the admin's earlier unused one. The first Super admin's link comes from the server seed / CLI.")
