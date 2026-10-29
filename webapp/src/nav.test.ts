@@ -23,7 +23,9 @@ assert(REDIRECT_PATHS.includes("/live") && REDIRECT_PATHS.includes("/offers") &&
 
 const support = MENU.filter((item) => can("support", item.permission));
 assert(support.some((item) => item.id === "support") && support.some((item) => item.id === "riders"), "support sees its work");
-assert(!support.some((item) => item.group === "Finance" || item.group === "Platform"), "support does not see finance or platform");
+// Owner 2026-10-29: Crashes & errors is open to every admin role; support sees no other Platform page.
+assert(!support.some((item) => item.group === "Finance" || (item.group === "Platform" && item.id !== "errors")), "support does not see finance or platform");
+assert(support.some((item) => item.id === "errors"), "support sees Crashes & errors");
 
 // C-06 / UI-01: an admin's page is guarded like the Team list, so a viewer cannot open /team/nora.
 assert(pageForPath("/team/nora")?.id === "team", "team member page is the Team page");

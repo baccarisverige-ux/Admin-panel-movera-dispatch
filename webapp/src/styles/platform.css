@@ -124,3 +124,16 @@
 .pl-language { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 12px 16px; margin: 0 0 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .pl-language h3 { margin: 0 0 2px; font-size: 14px; }
 .pl-language p { margin: 0; font-size: 12px; color: var(--muted); }
+
+/* Crashes & errors (contract v0.16.0 §11). */
+.errors-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.errors-filters select { min-width: 0; max-width: 100%; }
+.errors-message { display: grid; gap: 2px; min-width: 200px; max-width: 300px; white-space: normal; overflow-wrap: anywhere; }
+.errors-message code { font-size: 11px; color: var(--dash-ink-2); }
+.errors-kind { justify-self: start; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: #f1f3f4; color: var(--dash-ink-2); }
+.errors-kind.crash { background: #fdecec; color: #9b2020; }
+.errors-pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.errors-pill.open { background: #fdf0e6; color: #9a4a10; }
+.errors-pill.fixed { background: #e5f5e5; color: var(--status-good-text); }
+.errors-empty { padding: 16px 0; }
+.errors-note { margin-top: 12px; font-size: 12px; }

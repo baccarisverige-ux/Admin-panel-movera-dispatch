@@ -22,6 +22,7 @@ import {
   Radar,
   Route,
   Bell,
+  Bug,
   ScrollText,
   Server,
   Settings,
@@ -85,6 +86,7 @@ const ICONS: Record<NavIcon, typeof Menu> = {
   Palette,
   Radar,
   Bell,
+  Bug,
 };
 
 type AppShellProps = {

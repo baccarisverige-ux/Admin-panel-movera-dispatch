@@ -227,12 +227,14 @@ export function kpiDays(from: string, to: string) {
 
 export const VEHICLE = { vehicleId: "V1", make: "Volvo", model: "V90", year: 2022, color: "black", plate: "ABC 123", seats: 4, categoryIds: ["standard"], status: "pending", version: 1, fleetId: "F1", driverId: "D1001" };
 
-const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-expose-headers": "*" };
+const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,PATCH,OPTIONS", "access-control-expose-headers": "*" };
 
 export type Call = { method: string; path: string; headers: Record<string, string>; body: unknown };
 export type TripState = {
   trips: Record<string, unknown>[];
   /** Contract v0.15.0 §24: GET /admin/waitlist answers these. */
+  /** Contract v0.16.0 §11: GET /admin/errors and PATCH /admin/errors/{errorId} answer these. */
+  errors?: { id: string; app: string; platform: string; appVersions: string[]; message: string; topFrame?: string; kind: string; count: number; devices: number; firstSeen: string; lastSeen: string; status: string; fixedAt?: string }[];
   waitlist?: { phone: string; app: "rider" | "driver"; locale?: string; firstAt: string; lastAt: string; count: number }[];
   calls: Call[];
   /** Answer GET /admin/trips with this status (e.g. 500) instead of the list. */
@@ -391,6 +393,22 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, item);
     }
     if (p === "/api/v1/admin/risk/signals") return json(route, 200, { items: RISK, nextCursor: null });
+    // Contract v0.16.0 §11: Crashes & errors, newest lastSeen first; PATCH needs an Idempotency-Key.
+    if (p === "/api/v1/admin/errors" && method === "GET") {
+      const q = url.searchParams;
+      const items = (state.errors ?? []).filter((item) => (!q.get("app") || item.app === q.get("app")) && (!q.get("platform") || item.platform === q.get("platform")) && (!q.get("version") || item.appVersions.includes(q.get("version")!)) && (!q.get("status") || item.status === q.get("status")));
+      return json(route, 200, { items: [...items].sort((a, b) => Date.parse(b.lastSeen) - Date.parse(a.lastSeen)), nextCursor: null });
+    }
+    const errorGroup = /^\/api\/v1\/admin\/errors\/([^/]+)$/.exec(p);
+    if (errorGroup && method === "PATCH") {
+      if (!request.headers()["idempotency-key"]) return json(route, 400, { code: "invalid_request", message: "Idempotency-Key is required", requestId: "r-400e", retryable: false });
+      const item = (state.errors ?? []).find((group) => group.id === errorGroup[1]);
+      if (!item) return json(route, 404, { code: "not_found", message: "No such error group.", requestId: "r-404e", retryable: false });
+      item.status = body.status;
+      if (body.status === "fixed") item.fixedAt = "2026-10-29T12:00:00Z";
+      else delete item.fixedAt;
+      return json(route, 200, item);
+    }
     // Contract v0.15.0 §24: the sign-in waiting list.
     if (p === "/api/v1/admin/waitlist") {
       const app = url.searchParams.get("app");

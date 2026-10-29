@@ -42,6 +42,7 @@ export const NAV_ICONS = [
   "Palette",
   "Radar",
   "Bell",
+  "Bug",
 ] as const;
 
 export type NavIcon = (typeof NAV_ICONS)[number];
@@ -86,6 +87,8 @@ export const MENU: MenuItem[] = [
   { id: "audit", path: "/audit", label: "Audit", group: "Platform", permission: "audit.read", icon: "ScrollText" },
   { id: "settings", path: "/settings", label: "Settings", group: "Platform", permission: "settings.read", icon: "Settings" },
   { id: "confirm", path: "/confirm", label: "To confirm", group: "Platform", permission: "settings.read", icon: "ClipboardList" },
+  // Owner 2026-10-29 ("All admin roles (Recommended)"): every role sees Crashes & errors; the rest of System stays super only.
+  { id: "errors", path: "/errors", label: "Crashes & errors", group: "Platform", permission: "overview.read", icon: "Bug" },
   { id: "system", path: "/system", label: "System", group: "Platform", permission: "system.read", icon: "Server" },
   { id: "gates", path: "/gates", label: "Release gates", group: "Platform", permission: "system.read", icon: "Shield" },
   { id: "design", path: "/design", label: "Design", group: "Platform", permission: "system.read", icon: "Palette" },
