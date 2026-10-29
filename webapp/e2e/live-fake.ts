@@ -232,6 +232,8 @@ const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers
 export type Call = { method: string; path: string; headers: Record<string, string>; body: unknown };
 export type TripState = {
   trips: Record<string, unknown>[];
+  /** Contract v0.15.0 §24: GET /admin/waitlist answers these. */
+  waitlist?: { phone: string; app: "rider" | "driver"; locale?: string; firstAt: string; lastAt: string; count: number }[];
   calls: Call[];
   /** Answer GET /admin/trips with this status (e.g. 500) instead of the list. */
   listFails?: number;
@@ -389,6 +391,11 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, item);
     }
     if (p === "/api/v1/admin/risk/signals") return json(route, 200, { items: RISK, nextCursor: null });
+    // Contract v0.15.0 §24: the sign-in waiting list.
+    if (p === "/api/v1/admin/waitlist") {
+      const app = url.searchParams.get("app");
+      return json(route, 200, { items: (state.waitlist ?? []).filter((item) => !app || item.app === app), nextCursor: null });
+    }
     if (p === "/api/v1/admin/kpis") return json(route, 200, { days: kpiDays(url.searchParams.get("fromDate") ?? "2026-10-27", url.searchParams.get("toDate") ?? "2026-10-27"), generatedAt: "2026-10-27T10:00:00Z" });
     if (p === "/api/v1/admin/dispatch/stream") return json(route, 200, { items: [], nextCursor: null });
     if (p === "/api/v1/admin/refunds/payouts") return json(route, 200, { items: state.refundPayouts, nextCursor: null });
