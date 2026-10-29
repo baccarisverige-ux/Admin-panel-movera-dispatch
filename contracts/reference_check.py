@@ -488,7 +488,7 @@ if set(_tc['apps']) != {'driver', 'rider'} or not set(_tc['apps']) < set(_te['ap
 if not set(_tc['platforms']) < set(_te['platforms']) or _tc['defaultKind'] not in _tc['kinds']: bad += 1; print('ERROR GROUP platforms/kind')
 if _te['statuses'] != ['open', 'fixed'] or _te['maxEventsPerGroup'] < 1 or 'every role' not in _te['permission']: bad += 1; print('ERROR GROUP statuses/permission')
 if 'system.read' not in c['adminPermissions']['values']: bad += 1; print('ERROR GROUP system.read missing')
-# v0.16.1 (CONTRACT.md §9): the admin saves their own language.
+# v0.17.1 (CONTRACT.md §9): the admin saves their own language.
 _ml = c['auth']['admin'].get('meLanguage') or {}
 if 'PATCH /admin/auth/me' not in c['auth']['admin']['paths'] or 'every role' not in _ml.get('permission', '') or c['languages']['values'] != ['en', 'fr', 'sv']: bad += 1; print('ADMIN ME LANGUAGE')
 print('OK' if not bad else f'{bad} mismatches'); sys.exit(1 if bad else 0)
