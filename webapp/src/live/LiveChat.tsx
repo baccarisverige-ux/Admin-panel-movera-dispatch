@@ -6,6 +6,8 @@ import { shortDateTime } from "./format";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine, Status } from "./ui";
 import type { Page, Trip } from "./types";
+import { useMarketScope } from "../markets/useMarketScope";
+import { zoneFilterOf } from "./zoneFilter";
 
 /**
  * Live builds only (contract v0.13.0 §22, owner "chat only support roles in their zones"): the trip chat between a
@@ -50,7 +52,10 @@ export function LiveChat() {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const list = useQuery({ queryKey: ["live", "chat-trips"], queryFn: () => client.json<Page<Trip>>("/admin/trips?limit=100"), refetchInterval: POLL_MS * 6 });
+  // v0.17.2: the trips of the country and zones picked in the top bar.
+  const zoneFilter = zoneFilterOf(useMarketScope().effective);
+  const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
+  const list = useQuery({ queryKey: ["live", "chat-trips", zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<Trip>) : client.json<Page<Trip>>(`/admin/trips?limit=100${zoneQuery ? `&${zoneQuery}` : ""}`)), refetchInterval: POLL_MS * 6 });
   const trips = chatTrips(list.data?.items ?? []);
   const current = trips.find((trip) => trip.tripId === selected) ?? trips[0];
   const messages = useQuery({

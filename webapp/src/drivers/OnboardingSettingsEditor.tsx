@@ -8,7 +8,7 @@ import { currentLanguage, tr, trx, type MessageKey } from "../i18n";
 import type { MarketId } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { Modal } from "../ui/Modal";
-import { CATEGORY_LABELS, FUELS } from "../vehicles/rules";
+import { CATEGORY_LABELS, FUELS, rulesImpact, type CarFacts, type CountryRules } from "../vehicles/rules";
 import {
   LIMITS,
   ONBOARDING_SETTINGS_KEY,
@@ -54,7 +54,8 @@ type Form = { name: LocalText; help: LocalText; kind: "file" | "admin_check"; ex
  * Drivers › Onboarding › Steps and papers (part "onboarding") and Vehicles › Rules (part "vehicles"): one onboarding
  * settings document per country (contract v0.17.0 §25). Demo and live show the same page; live publishes it to the server.
  */
-export function OnboardingSettingsEditor({ country, part }: { country: MarketId; part: "onboarding" | "vehicles" }) {
+/** cars: the country's cars, so each category shows how many fit with the changes ("N cars fit (now M)"). */
+export function OnboardingSettingsEditor({ country, part, cars = [] }: { country: MarketId; part: "onboarding" | "vehicles"; cars?: readonly CarFacts[] }) {
   const { agent } = useSession();
   const slice = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
   const book = useMemo(() => normalizeSettingsBook(slice.value), [slice.value]);
@@ -71,6 +72,9 @@ export function OnboardingSettingsEditor({ country, part }: { country: MarketId;
   const set = (doc: SettingsDoc) => setDraft({ country, doc });
   const language = currentLanguage();
   const closed = !OPEN[country];
+
+  const asRules = (doc: SettingsDoc) => ({ ...doc.vehicles, categories: doc.vehicles.categories }) as unknown as CountryRules;
+  const impact = part === "vehicles" ? rulesImpact(cars, asRules(saved), asRules(current)) : [];
 
   if (slice.loading) return <p className="state-line">{tr("Loading onboarding settings.")}</p>;
 
@@ -166,7 +170,7 @@ export function OnboardingSettingsEditor({ country, part }: { country: MarketId;
                 const label = trx(CATEGORY_LABELS[rule.category as keyof typeof CATEGORY_LABELS] ?? rule.category);
                 const patchRule = (next: Partial<typeof rule>) => patch({ vehicles: { ...current.vehicles, categories: current.vehicles.categories.map((item) => (item.category === rule.category ? { ...item, ...next } : item)) } });
                 return (
-                  <Row key={rule.category} label={label} on={rule.on} onToggle={(on) => patchRule({ on })}>
+                  <Row key={rule.category} label={label} help={(() => { const count = impact.find((item) => item.category === rule.category); return tr("{0} cars fit{1}.", [count?.after ?? 0, count && count.after !== count.before ? ` (now ${count.before})` : ""]); })()} on={rule.on} onToggle={(on) => patchRule({ on })}>
                     <Num label={tr("{0} oldest year", [label])} before="From" value={rule.minYear} min={LIMITS.minYear[0]} max={LIMITS.minYear[1]} onChange={(value) => patchRule({ minYear: value })} />
                     <Num label={tr("{0} seats", [label])} before="Seats" value={rule.minSeats} min={LIMITS.minSeats[0]} max={LIMITS.minSeats[1]} onChange={(value) => patchRule({ minSeats: value })} />
                     <span className="vh-fuels">{FUELS.map((fuel) => <Check key={fuel.id} label={trx(fuel.label)} on={rule.fuels.includes(fuel.id)} onChange={(on) => patchRule({ fuels: on ? [...rule.fuels, fuel.id] : rule.fuels.filter((item) => item !== fuel.id) })} />)}</span>

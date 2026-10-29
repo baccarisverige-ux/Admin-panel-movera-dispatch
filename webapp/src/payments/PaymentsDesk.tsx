@@ -6,7 +6,7 @@ import type { DemoRecord } from "../api/seed";
 import { useSession } from "../auth/SessionContext";
 import { ROLE_LABELS, can, type Role } from "../auth/permissions";
 import { Card, Num, Row } from "../dispatch/fields";
-import { formatMoney, zoneById } from "../markets/markets";
+import { formatMoney, formatZoneMoney, marketOfZone, zoneById } from "../markets/markets";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Bars, Cards, SortTable } from "../reports/ui";
 import { CommandButton } from "../ui/CommandButton";
@@ -18,6 +18,11 @@ const GROUP_ICON: Record<PayGroup, ReactNode> = { all: <Layers size={16} />, pai
 const GROUP_TONE: Record<PayGroup, string> = { all: "blue", paid: "green", failed: "red", refunded: "orange", disputed: "violet", waiting: "grey" };
 
 /** The new payment tabs. The old methods, vouchers, reconciliation and bank tools stay in their own tab. */
+
+/** A payment row in its own currency (its zone's); without a known zone, the chosen country's. Totals stay in the chosen country's. */
+function zoneMoney(money: (minor: number) => string, minor: number, zoneId: string): string {
+  return zoneId && marketOfZone(zoneId) ? formatZoneMoney(minor, zoneId) : money(minor);
+}
 export function PaymentsDesk({ tab, rows, loading }: { tab: "payments" | "failed" | "disputes" | "numbers" | "rules"; rows: readonly DemoRecord[]; loading: boolean }) {
   const { agent } = useSession();
   const scope = useMarketScope();
@@ -79,7 +84,7 @@ function List({ facts, money, country }: { facts: readonly PayFacts[]; money: (m
         rowIds={shown.map((item) => item.id)}
         rows={shown.map((item) => {
           const split = paySplit(item.amount, item.country, item.tripId);
-          return [item.id, item.riderName, METHOD_LABELS[item.method], item.group === "disputed" ? "Disputed" : item.status, zoneById(item.zoneId)?.name ?? item.zoneId, money(item.amount), money(split.driver), money(split.movera), item.tripId ?? "–"];
+          return [item.id, item.riderName, METHOD_LABELS[item.method], item.group === "disputed" ? "Disputed" : item.status, zoneById(item.zoneId)?.name ?? item.zoneId, zoneMoney(money, item.amount, item.zoneId), zoneMoney(money, split.driver, item.zoneId), zoneMoney(money, split.movera, item.zoneId), item.tripId ?? "–"];
         })}
         onRow={(index) => {
           const id = shown[index]?.id;
@@ -107,7 +112,7 @@ function Failed({ facts, byId, ops, now, money, me, timeZone }: { facts: readonl
           return (
             <li key={item.id} className={plan.cause.kind}>
               <span className="pm-main">
-                <b><Link to={`/payments/${item.id}`}>{item.id}</Link> · {money(item.amount)} · {trx(METHOD_LABELS[item.method])}</b>
+                <b><Link to={`/payments/${item.id}`}>{item.id}</Link> · {zoneMoney(money, item.amount, item.zoneId)} · {trx(METHOD_LABELS[item.method])}</b>
                 <small>{item.riderId ? <Link to={`/riders/${item.riderId}`}>{item.riderName}</Link> : item.riderName} · {plan.cause.kind === "system" ? tr("Our side") : tr("Rider's side")}: {plan.cause.reason}</small>
                 <span className="pm-tags">
                   {Number.isFinite(plan.tries) ? <span className="dx-tag">{trn("Tried {0} of {1}", plan.tries, plan.max)}</span> : null}
@@ -142,7 +147,7 @@ function Disputes({ facts, ops, now, money, me }: { facts: readonly PayFacts[]; 
           return (
             <li key={item.id} className={open ? (days <= 3 ? "late" : "open") : "done"}>
               <span className="pm-main">
-                <b><Link to={`/payments/${item.id}`}>{item.id}</Link> · {money(item.amount)} · {dispute.reason}</b>
+                <b><Link to={`/payments/${item.id}`}>{item.id}</Link> · {zoneMoney(money, item.amount, item.zoneId)} · {dispute.reason}</b>
                 <small>{item.riderName}{item.tripId ? <>{" "}{trn("· trip {0}", <Link to={`/trips/${item.tripId}`}>{item.tripId}</Link>)}</> : null} · {open ? tr("Answer by {0} ({1} day{2} left)", [dispute.deadline, days, days === 1 ? "" : "s"]) : tr("Closed: {0}", [dispute.status])}</small>
                 <span className="pm-tags"><span className={`dx-tag ${dispute.status}`}>{dispute.status.replace("_", " ")}</span></span>
               </span>

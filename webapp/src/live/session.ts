@@ -203,6 +203,17 @@ export function createLiveClient(options: Options) {
       return me;
     },
 
+    /**
+     * contract v0.16.1 §9: saves the signed-in admin's own panel language (null = country default) and keeps the
+     * server's AdminMe, so the panel switches at once and the choice stays after reload, sign-in and on other devices.
+     */
+    async updateMyLanguage(language: "en" | "fr" | "sv" | null): Promise<AdminMe> {
+      const me = await json<unknown>("/admin/auth/me", { method: "PATCH", body: JSON.stringify({ language }), idempotencyKey: newKey() });
+      if (!isAdminMe(me)) throw new ApiError(0, "The server's /me payload is not an AdminMe.", { code: "internal", retryable: false });
+      if (state) setState({ ...state, admin: me });
+      return me;
+    },
+
     /** A document file as a Blob with its media type, fetched with the bearer token (never a token in a URL). */
     async blob(path: string): Promise<{ blob: Blob; mediaType: string }> {
       const response = await fetchAuthed(path);

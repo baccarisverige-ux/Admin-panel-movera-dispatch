@@ -1,3 +1,4 @@
+import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { isLiveData, liveDriverOf } from "../live/realData";
 import { NotConnected } from "../live/NotConnected";
 import { logExport } from "../reports/activityLog";
@@ -20,7 +21,6 @@ import { parsePeriodOr, periodParams, periodWindow } from "../dashboard/period";
 import { localDay } from "../dashboard/time";
 import { DRIVER_DOCUMENTS, type DocId, type Vehicle } from "../drivers/gate";
 import {
-  approveRequiredDocuments,
   driverActivationIssue,
   driverOps,
   emptyDriverOpsBook,
@@ -94,6 +94,9 @@ export function DriverDetailPage() {
   const driver = drivers.data?.find((item) => item.id === driverId);
   const country = driver ? marketOfZone(driver.zoneId)?.id ?? "SE" : "SE";
   const market = marketById(country);
+  const onboardingSettings = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
+  // Demo ids → contract types; a type in the country's expiringTypes needs its expiry date to be approved (item 1).
+  const expiringDemo = new Set(DRIVER_DOCUMENTS.filter((id) => normalizeSettingsBook(onboardingSettings.value).countries[country].document.expiringTypes.includes(contractTypeOf(id))) as string[]);
   const periodSearch = params.toString();
   const span = useMemo(() => periodWindow(parsePeriodOr(new URLSearchParams(periodSearch), { kind: "month" }), now, market.timeZone, uiLocale()), [periodSearch, now, market]);
 
@@ -391,21 +394,7 @@ export function DriverDetailPage() {
               <p>{tr("Set each document on its own and write its expiry date. Documents expiring within 30 days turn orange automatically.")}</p>
               <div className="fd-legend"><HealthPill health="valid">{tr("Valid")}</HealthPill><HealthPill health="expiring">{tr("Expires soon")}</HealthPill><HealthPill health="invalid">{tr("Missing, wrong or expired")}</HealthPill><HealthPill health="review">{tr("Waiting review")}</HealthPill></div>
             </div>
-            <CommandButton
-              command="admin.driver.approveAll"
-              className="dash-btn ghost"
-              type="button"
-              targetId={driver.id}
-              confirmTarget={false}
-              scope={driver.zoneId}
-              before="documents"
-              after="approved"
-              expectedSliceRev={store.value.draftRev}
-              sliceKey="driverOps"
-              value={approveRequiredDocuments(store.value, driverSeed, agent?.id ?? "")}
-              disabled={allGreen || !canReview}
-              onDone={() => setNotice(tr("All remaining documents approved."))}
-            >{tr("Approve all remaining")}</CommandButton>
+            {/* Owner decision 18 (2026-10-29): "Remove the button" — documents are approved one by one. */}
           </div>
           <DocumentsTable
             label={tr("Driver documents")}
@@ -419,6 +408,7 @@ export function DriverDetailPage() {
             expectedSliceRev={store.value.draftRev}
             build={buildDoc}
             onSaved={setNotice}
+            expiring={expiringDemo}
           />
         </TabPanel>
 

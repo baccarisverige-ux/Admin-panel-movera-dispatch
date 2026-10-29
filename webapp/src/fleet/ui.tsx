@@ -88,6 +88,8 @@ type DocumentsProps = {
   /** Build the command for saving a document with the chosen status, expiry date and note. */
   build: (row: DocRow, draft: { status: DocStatus; expiresAt: string; note: string }) => DocSave | null;
   onSaved: (message: string) => void;
+  /** Owner decisions of 2026-10-29 (items 1, 14, 15, 18): these documents expire, so approving one needs its expiry date. */
+  expiring?: ReadonlySet<string>;
 };
 
 /** One row per document: colour, status picker, expiry date and note, saved on its own. */
@@ -99,7 +101,7 @@ export function DocumentsTable(props: DocumentsProps) {
   );
 }
 
-function DocumentRow({ row, nowMs, warnDays, canEdit, targetId, scope, sliceKey, expectedSliceRev, build, onSaved }: DocumentsProps & { row: DocRow }) {
+function DocumentRow({ row, nowMs, warnDays, canEdit, targetId, scope, sliceKey, expectedSliceRev, build, onSaved, expiring }: DocumentsProps & { row: DocRow }) {
   const [status, setStatus] = useState<DocStatus>(row.status);
   const [expiresAt, setExpiresAt] = useState(row.expiresAt);
   const [note, setNote] = useState(row.note);
@@ -108,6 +110,8 @@ function DocumentRow({ row, nowMs, warnDays, canEdit, targetId, scope, sliceKey,
   const changed = status !== row.status || expiresAt !== row.expiresAt || note.trim() !== row.note;
   const save = changed ? build(row, { status, expiresAt, note }) : null;
   const name = docLabel(row.id);
+  const today = new Date(nowMs).toISOString().slice(0, 10);
+  const needsDate = Boolean(expiring?.has(row.id)) && status === "approved" && status !== row.status && !(expiresAt > today);
 
   if (row.exempt) {
     return (
@@ -144,8 +148,10 @@ function DocumentRow({ row, nowMs, warnDays, canEdit, targetId, scope, sliceKey,
         </label>
       ) : null}
       <div className="fd-doc-actions">
+        {needsDate ? <small className="vh-help" data-testid={`doc-${row.id}-needs-date`}>{tr("This document expires: type the expiry date from the document (after today).")}</small> : null}
         {save ? (
           <CommandButton
+            disabled={needsDate}
             command={save.command}
             className="dash-btn small"
             type="button"

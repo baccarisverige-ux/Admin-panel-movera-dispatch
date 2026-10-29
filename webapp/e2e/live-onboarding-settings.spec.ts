@@ -213,6 +213,11 @@ test("live audit (owner 2026-10-29): Fleet owners Activate and Put on hold revie
   const fake = await fakeOnboarding(page);
   await signIn(page);
   await page.goto("/fleets/D2001");
+  // The company documents are not approved yet: Activate stays off.
+  await expect(page.getByRole("button", { name: "Activate", exact: true }).first()).toBeDisabled();
+  const starter = fake.state.drivers.find((item) => item.driverId === "D2001")!;
+  starter.documents = [...starter.documents, ...["company_registration", "taxi_traffic_permit", "tax_settings", "bank_statement"].map((type, index) => ({ documentId: `DC${index}`, type, status: "approved" }))];
+  await page.reload();
   await page.getByRole("button", { name: "Activate", exact: true }).first().click();
   const target = modal(page).locator("label input").first();
   if (await target.count()) await target.fill("D2001");

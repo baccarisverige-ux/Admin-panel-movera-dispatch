@@ -96,7 +96,19 @@ test("items 1 and 8 (SE): approving a document that expires needs its date; the 
     await held.click();
     await confirm(page);
   }
-  await expect(app.getByRole("button", { name: "Approve remaining" })).toBeVisible();
+  // Owner decision 18: "Remove the button" — no Approve all, here or on the driver page.
+  await expect(app.getByRole("button", { name: /^Approve (remaining|all)/ })).toHaveCount(0);
+  await page.goto("/drivers/D0005?tab=documents");
+  await expect(page.getByRole("heading", { level: 2 })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Approve all/ })).toHaveCount(0);
+  // One by one on the driver page too: an expiring document needs its date before Save.
+  const taxi = page.getByTestId("doc-taxi_driver_license");
+  await taxi.getByLabel("Taxi driver licence status").selectOption("approved");
+  await taxi.getByLabel("Taxi driver licence expiry date").fill("");
+  await expect(taxi.getByRole("button", { name: "Save Taxi driver licence" })).toBeDisabled();
+  await expect(page.getByTestId("doc-taxi_driver_license-needs-date")).toBeVisible();
+  await taxi.getByLabel("Taxi driver licence expiry date").fill(day(300));
+  await expect(taxi.getByRole("button", { name: "Save Taxi driver licence" })).toBeEnabled();
 });
 
 test("fits a phone", async ({ page }) => {

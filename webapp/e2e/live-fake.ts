@@ -227,12 +227,14 @@ export function kpiDays(from: string, to: string) {
 
 export const VEHICLE = { vehicleId: "V1", make: "Volvo", model: "V90", year: 2022, color: "black", plate: "ABC 123", seats: 4, categoryIds: ["standard"], status: "pending", version: 1, fleetId: "F1", driverId: "D1001" };
 
-const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-expose-headers": "*" };
+const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,PATCH,OPTIONS", "access-control-expose-headers": "*" };
 
 export type Call = { method: string; path: string; headers: Record<string, string>; body: unknown };
 export type TripState = {
   trips: Record<string, unknown>[];
   /** Contract v0.15.0 §24: GET /admin/waitlist answers these. */
+  /** Contract v0.16.0 §11: GET /admin/errors and PATCH /admin/errors/{errorId} answer these. */
+  errors?: { id: string; app: string; platform: string; appVersions: string[]; message: string; topFrame?: string; kind: string; count: number; devices: number; firstSeen: string; lastSeen: string; status: string; fixedAt?: string }[];
   waitlist?: { phone: string; app: "rider" | "driver"; locale?: string; firstAt: string; lastAt: string; count: number }[];
   calls: Call[];
   /** Answer GET /admin/trips with this status (e.g. 500) instead of the list. */
@@ -261,10 +263,12 @@ export type TripState = {
   ratings: Record<string, unknown>[];
   approvals: (typeof APPROVALS)[number][];
   refundPayouts: (typeof REFUND_PAYOUTS)[number][];
+  /** v0.17.2: more rows of GET /admin/live/drivers (e.g. a driver in Paris). */
+  liveDrivers: Record<string, unknown>[];
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
-  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), incidents: [], incidentEvents: [], riders: RIDERS.map((item) => ({ ...item })), payouts: PAYOUTS.map((item) => ({ ...item })), tickets: TICKETS.map((item) => ({ ...item })), ticketMessages: TICKET_MESSAGES.map((item) => ({ ...item })), ratings: RATINGS.map((item) => ({ ...item })), approvals: APPROVALS.map((item) => ({ ...item })), refundPayouts: REFUND_PAYOUTS.map((item) => ({ ...item })), ...init };
+  const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), incidents: [], incidentEvents: [], riders: RIDERS.map((item) => ({ ...item })), payouts: PAYOUTS.map((item) => ({ ...item })), tickets: TICKETS.map((item) => ({ ...item })), ticketMessages: TICKET_MESSAGES.map((item) => ({ ...item })), ratings: RATINGS.map((item) => ({ ...item })), approvals: APPROVALS.map((item) => ({ ...item })), refundPayouts: REFUND_PAYOUTS.map((item) => ({ ...item })), liveDrivers: [], ...init };
   const feed = (kind: string, incident: Incident) => state.incidentEvents.push({ eventId: `ev${state.incidentEvents.length + 1}`, sequence: state.incidentEvents.length + 1, kind, incident: { ...incident }, occurredAt: "2026-10-26T09:21:00Z", serverTime: "2026-10-26T09:21:00Z" });
   if (!init.incidentEvents) state.incidents.forEach((incident) => feed(incident.escalatedAt ? "incident_escalated" : "incident_opened", incident));
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -277,17 +281,34 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     const body = request.postDataJSON?.() ?? null;
     state.calls.push({ method, path: url.pathname + url.search, headers: request.headers(), body });
     const p = url.pathname;
+    // Contract v0.17.2 (contract.json#adminListFilters): zoneId, zoneIds and country narrow the lists.
+    const named = [...(url.searchParams.get("zoneId") ? [url.searchParams.get("zoneId")!] : []), ...url.searchParams.getAll("zoneIds").flatMap((part) => part.split(",")).filter(Boolean)];
+    const country = url.searchParams.get("country");
+    const ofCountry = country ? new Set(SEED_ZONES().filter((zone) => zone.country === country).map((zone) => zone.zoneId)) : null;
+    const picked = named.length || ofCountry ? new Set((named.length ? named : [...ofCountry!]).filter((zone) => !ofCountry || ofCountry.has(zone))) : null;
+    const inZones = <T,>(items: T[], zoneOfItem: (item: T) => readonly string[]) => (picked ? items.filter((item) => zoneOfItem(item).some((zone) => picked.has(zone))) : items);
+    const zoneField = (item: unknown) => [String((item as { zoneId?: string }).zoneId ?? "")];
+    const tripZone = (tripId: unknown) => String(state.trips.find((trip) => trip.tripId === tripId)?.zoneId ?? "Z001");
     if (p === "/api/v1/admin/auth/sign-in" && body?.password !== "correct-horse") return json(route, 401, { code: "unauthenticated", message: "Unauthenticated", requestId: "r-401", retryable: false, reason: "invalid_credentials" });
     if (p === "/api/v1/admin/auth/sign-in") return json(route, 200, { accessToken: "access-1", refreshToken: "refresh-1", expiresIn: 900, actor: "admin", admin: { ...ADMIN, ...state.admin } });
     if (p === "/api/v1/admin/auth/sign-out") return route.fulfill({ status: 204, headers: CORS });
     if (request.headers().authorization !== "Bearer access-1") return json(route, 401, { code: "unauthenticated", message: "Sign in again.", requestId: "r-401", retryable: false });
+    // Contract v0.16.1 §9: the admin saves their own panel language; the next sign-in answers it too.
+    if (p === "/api/v1/admin/auth/me" && method === "PATCH") {
+      const language = (body as { language?: string | null } | null)?.language;
+      const { language: _old, ...rest } = state.admin ?? {};
+      void _old;
+      state.admin = language ? { ...rest, language } : rest;
+      return json(route, 200, { ...ADMIN, ...state.admin });
+    }
+    if (p === "/api/v1/admin/auth/me" && method === "GET") return json(route, 200, { ...ADMIN, ...state.admin });
     // Contract v0.11.0 §20: the zone list every live screen reads (fakeZones() answers writes too).
     if (p === "/api/v1/admin/zones" && method === "GET") return json(route, 200, { zones: SEED_ZONES() });
     if (p === "/api/v1/admin/drivers") {
       if (state.driversFail) return json(route, state.driversFail, { code: "unavailable", message: "The server is busy.", requestId: "r-503", retryable: false });
       const status = url.searchParams.get("accountStatus");
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
-      return json(route, 200, { items: state.drivers.filter((item) => (!status || item.accountStatus === status) && (!q || JSON.stringify(item).toLowerCase().includes(q))), nextCursor: null });
+      return json(route, 200, { items: inZones(state.drivers, (item) => item.zoneIds).filter((item) => (!status || item.accountStatus === status) && (!q || JSON.stringify(item).toLowerCase().includes(q))), nextCursor: null });
     }
     const driver = /^\/api\/v1\/admin\/drivers\/([^/]+)(\/status)?$/.exec(p);
     if (driver) {
@@ -347,9 +368,9 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       state.vehicles[index] = { ...state.vehicles[index], status: body.decision, version: state.vehicles[index].version + 1 };
       return json(route, 200, state.vehicles[index]);
     }
-    if (p === "/api/v1/admin/riders") return json(route, 200, { items: state.riders, nextCursor: null });
-    if (p === "/api/v1/admin/live/drivers") return json(route, 200, LIVE_DRIVERS);
-    if (p === "/api/v1/admin/payments") return json(route, 200, { items: PAYMENTS, nextCursor: null });
+    if (p === "/api/v1/admin/riders") return json(route, 200, { items: inZones(state.riders, (rider) => state.trips.filter((trip) => trip.riderId === rider["riderId"]).map((trip) => String(trip.zoneId)).concat(state.trips.some((trip) => trip.riderId === rider["riderId"]) ? [] : ["Z001"])), nextCursor: null });
+    if (p === "/api/v1/admin/live/drivers") return json(route, 200, { ...LIVE_DRIVERS, items: inZones([...LIVE_DRIVERS.items, ...state.liveDrivers], zoneField) });
+    if (p === "/api/v1/admin/payments") return json(route, 200, { items: inZones(PAYMENTS, (item) => [tripZone(item.tripId)]), nextCursor: null });
     if (p === "/api/v1/admin/audit") return json(route, 200, { items: AUDIT, nextCursor: null });
     if (p === "/api/v1/admin/approvals") return json(route, 200, { items: state.approvals, nextCursor: null });
     const decided = /^\/api\/v1\/admin\/approvals\/([^/]+)\/(approve|reject)$/.exec(p);
@@ -357,7 +378,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       state.approvals = state.approvals.filter((item) => item.approvalId !== decided[1]);
       return json(route, 200, { approvalId: decided[1], status: decided[2] === "approve" ? "approved" : "rejected" });
     }
-    if (p === "/api/v1/admin/payouts" && method === "GET") return json(route, 200, { items: state.payouts, nextCursor: null });
+    if (p === "/api/v1/admin/payouts" && method === "GET") return json(route, 200, { items: inZones(state.payouts, zoneField), nextCursor: null });
     if (p === "/api/v1/admin/payouts" && method === "POST") {
       const made = { payoutId: `PY${state.payouts.length + 1}`, driverId: body.driverId, driverName: "Anna Berg", zoneId: "Z001", amount: { amountMinor: 41600, currency: "SEK" }, status: "pending", periodStart: body.from, periodEnd: body.to, createdAt: "2026-10-27T10:00:00Z", source: "manual", tripCount: 1, lines: [{ code: "trips", amount: { amountMinor: 41600, currency: "SEK" }, count: 1 }] };
       state.payouts.unshift(made);
@@ -371,7 +392,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       item["paidAt"] = "2026-10-27T10:05:00Z";
       return json(route, 200, item);
     }
-    if (p === "/api/v1/admin/tickets") return json(route, 200, { items: state.tickets.filter((item) => !url.searchParams.get("status") || item["status"] === url.searchParams.get("status")), nextCursor: null });
+    if (p === "/api/v1/admin/tickets") return json(route, 200, { items: inZones(state.tickets, zoneField).filter((item) => !url.searchParams.get("status") || item["status"] === url.searchParams.get("status")), nextCursor: null });
     const ticket = /^\/api\/v1\/admin\/tickets\/([^/]+)(\/reply)?$/.exec(p);
     if (ticket) {
       const item = state.tickets.find((row) => row["ticketId"] === ticket[1]);
@@ -382,7 +403,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       }
       return json(route, 200, { ...item, messages: state.ticketMessages });
     }
-    if (p === "/api/v1/admin/ratings") return json(route, 200, { items: state.ratings, nextCursor: null });
+    if (p === "/api/v1/admin/ratings") return json(route, 200, { items: inZones(state.ratings, zoneField), nextCursor: null });
     const moderate = /^\/api\/v1\/admin\/ratings\/([^/]+)\/(rider|driver)\/(hide|restore)$/.exec(p);
     if (moderate) {
       const item = state.ratings.find((row) => row["tripId"] === moderate[1] && row["from"] === moderate[2]);
@@ -390,13 +411,29 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       item["hidden"] = moderate[3] === "hide";
       return json(route, 200, item);
     }
-    if (p === "/api/v1/admin/risk/signals") return json(route, 200, { items: RISK, nextCursor: null });
+    if (p === "/api/v1/admin/risk/signals") return json(route, 200, { items: inZones(RISK, zoneField), nextCursor: null });
+    // Contract v0.16.0 §11: Crashes & errors, newest lastSeen first; PATCH needs an Idempotency-Key.
+    if (p === "/api/v1/admin/errors" && method === "GET") {
+      const q = url.searchParams;
+      const items = (state.errors ?? []).filter((item) => (!q.get("app") || item.app === q.get("app")) && (!q.get("platform") || item.platform === q.get("platform")) && (!q.get("version") || item.appVersions.includes(q.get("version")!)) && (!q.get("status") || item.status === q.get("status")));
+      return json(route, 200, { items: [...items].sort((a, b) => Date.parse(b.lastSeen) - Date.parse(a.lastSeen)), nextCursor: null });
+    }
+    const errorGroup = /^\/api\/v1\/admin\/errors\/([^/]+)$/.exec(p);
+    if (errorGroup && method === "PATCH") {
+      if (!request.headers()["idempotency-key"]) return json(route, 400, { code: "invalid_request", message: "Idempotency-Key is required", requestId: "r-400e", retryable: false });
+      const item = (state.errors ?? []).find((group) => group.id === errorGroup[1]);
+      if (!item) return json(route, 404, { code: "not_found", message: "No such error group.", requestId: "r-404e", retryable: false });
+      item.status = body.status;
+      if (body.status === "fixed") item.fixedAt = "2026-10-29T12:00:00Z";
+      else delete item.fixedAt;
+      return json(route, 200, item);
+    }
     // Contract v0.15.0 §24: the sign-in waiting list.
     if (p === "/api/v1/admin/waitlist") {
       const app = url.searchParams.get("app");
       return json(route, 200, { items: (state.waitlist ?? []).filter((item) => !app || item.app === app), nextCursor: null });
     }
-    if (p === "/api/v1/admin/kpis") return json(route, 200, { days: kpiDays(url.searchParams.get("fromDate") ?? "2026-10-27", url.searchParams.get("toDate") ?? "2026-10-27"), generatedAt: "2026-10-27T10:00:00Z" });
+    if (p === "/api/v1/admin/kpis") return json(route, 200, { days: inZones(kpiDays(url.searchParams.get("fromDate") ?? "2026-10-27", url.searchParams.get("toDate") ?? "2026-10-27"), zoneField), generatedAt: "2026-10-27T10:00:00Z" });
     if (p === "/api/v1/admin/dispatch/stream") return json(route, 200, { items: [], nextCursor: null });
     if (p === "/api/v1/admin/refunds/payouts") return json(route, 200, { items: state.refundPayouts, nextCursor: null });
     const paid = /^\/api\/v1\/admin\/refunds\/([^/]+)\/paid$/.exec(p);
@@ -404,7 +441,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       state.refundPayouts = state.refundPayouts.filter((item) => item.refundId !== paid[1]);
       return json(route, 200, { refundId: paid[1], payoutStatus: "paid" });
     }
-    if (p === "/api/v1/admin/incidents") return json(route, 200, { items: state.incidents, nextCursor: null });
+    if (p === "/api/v1/admin/incidents") return json(route, 200, { items: inZones(state.incidents, zoneField), nextCursor: null });
     if (p === "/api/v1/admin/incidents/stream") {
       const after = Number(url.searchParams.get("after") ?? 0);
       const items = state.incidentEvents.filter((event) => event.sequence > after);
@@ -435,7 +472,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (state.listFails) return json(route, state.listFails, { code: "internal", message: "The server failed.", requestId: "r-500", retryable: true });
       const statuses = url.searchParams.getAll("status");
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
-      const items = state.trips.filter((trip) => (!statuses.length || statuses.includes(String(trip.status))) && (!q || JSON.stringify(trip).toLowerCase().includes(q)));
+      const items = inZones(state.trips, (trip) => [String(trip.zoneId)]).filter((trip) => (!statuses.length || statuses.includes(String(trip.status))) && (!q || JSON.stringify(trip).toLowerCase().includes(q)));
       const cursor = url.searchParams.get("cursor");
       if (!cursor && items.length > 2) return json(route, 200, { items: items.slice(0, 2), nextCursor: "c2" });
       return json(route, 200, { items: cursor ? items.slice(2) : items, nextCursor: null });

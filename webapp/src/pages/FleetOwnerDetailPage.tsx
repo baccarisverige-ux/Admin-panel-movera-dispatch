@@ -1,3 +1,4 @@
+import { activationMissing, groupMissing } from "../live/activation";
 import { isLiveData } from "../live/realData";
 import { NotConnected } from "../live/NotConnected";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
@@ -101,6 +102,9 @@ export function FleetOwnerDetailPage() {
   const docRows: DocRow[] = OWNER_DOCUMENTS.map((id) => ops.documents[id]);
   const warnDays = warnDaysFor(owner.zoneId);
   const health = countHealth(docRows, now, warnDays);
+  // Live: the company is approved only when its documents are (the server's facts, not the demo's papers).
+  const ownerFacts = (drivers.data ?? []).find((item) => item.id === owner.id)?.liveAccount;
+  const liveCompanyMissing = ownerFacts ? groupMissing(activationMissing(ownerFacts)).fleet.length > 0 : true;
   const money = (minor: number) => formatMoney(minor, country);
   const compact = (minor: number) => formatMoney(minor, country, { compact: true });
   const total = combine(crewStats.map((row) => row.perf));
@@ -182,7 +186,7 @@ export function FleetOwnerDetailPage() {
               <input value={accountNote} onChange={(event) => setAccountNote(event.target.value)} placeholder={tr("For example: fleet insurance expired")} />
             </label>
             <div className="fd-action-row">
-              {accountAction("admin.fleetOwner.activate", "active", "Activate", owner.status === "active" || (!isLiveData() && health.invalid > 0), health.invalid === 0 && owner.status !== "active" ? "" : "ghost")}
+              {accountAction("admin.fleetOwner.activate", "active", "Activate", owner.status === "active" || (isLiveData() ? liveCompanyMissing : health.invalid > 0), health.invalid === 0 && owner.status !== "active" ? "" : "ghost")}
               {accountAction("admin.fleetOwner.onHold", "on_hold", "Put on hold", owner.status === "on_hold")}
               <CommandButton
                 command="admin.fleetOwner.call"

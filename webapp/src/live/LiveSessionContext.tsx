@@ -31,18 +31,14 @@ export function LiveSessionProvider({ children, baseUrl = liveBaseUrl(import.met
   const [admin, setAdmin] = useState<AdminMe | null>(() => client.admin());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // The language picker edits "agents"; in live mode that list is the signed-in admin alone (kept in memory).
+  // In live mode "agents" is the signed-in admin alone, built from the server's AdminMe.
   const [agents, setAgentsState] = useState<Agent[]>(() => (admin ? [agentFromAdmin(admin)] : []));
   const lastActivity = useRef(Date.now());
 
   useEffect(() => client.subscribe((state) => {
     setAdmin(state?.admin ?? null);
-    setAgentsState((current) => {
-      if (!state) return [];
-      const next = agentFromAdmin(state.admin);
-      const kept = current.find((item) => item.id === next.id);
-      return [kept ? { ...next, language: kept.language ?? next.language } : next];
-    });
+    // The server's AdminMe decides, the language too (contract v0.16.1: PATCH /admin/auth/me saves it there).
+    setAgentsState(state ? [agentFromAdmin(state.admin)] : []);
   }), [client]);
 
   useEffect(() => {

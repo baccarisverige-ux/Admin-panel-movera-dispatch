@@ -3,7 +3,7 @@ import { LiveListBar } from "../live/LiveListBar";
 import { LiveOnboarding } from "../live/LiveOnboarding";
 import { isLiveData } from "../live/realData";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { AlarmClock, ArrowLeft, BellRing, Car, CheckCircle2, ClipboardCheck, FileText, Landmark, Send, Settings2, UserPlus } from "lucide-react";
+import { AlarmClock, ArrowLeft, BellRing, Car, ClipboardCheck, FileText, Landmark, Send, Settings2, UserPlus } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
 import { useRecords, useSlice } from "../api/hooks";
 import {
@@ -13,7 +13,6 @@ import {
   type DocStatus,
 } from "../drivers/gate";
 import {
-  approveRequiredDocuments,
   driverActivationIssue,
   driverOps,
   emptyDriverOpsBook,
@@ -296,7 +295,6 @@ function ApplicantView({ settings, driver, rules, country, now, reviewNote, setR
   const [preview, setPreview] = useState<{ doc: DocId; action: "rejected" | "needed"; note: string } | null>(null);
   const [expiry, setExpiry] = useState<Partial<Record<DocId, string>>>({});
   const tomorrow = new Date(now + 86_400_000).toISOString().slice(0, 10);
-  const waitingDates = [...required].filter((id) => ops.documents[id].status !== "approved" && Boolean(typeInfo(settings, contractTypeOf(id))?.expires));
   return (
     <article className="vh-section ob-applicant" aria-label={tr("Application of {0}", [driver.name])}>
       <header className="ob-applicant-head">
@@ -397,25 +395,7 @@ function ApplicantView({ settings, driver, rules, country, now, reviewNote, setR
         })}
       </ul>
 
-      <div className="ob-actions-row">
-        <CommandButton
-          command="admin.driver.approveAll"
-          className="dash-btn small"
-          type="button"
-          targetId={driver.id}
-          confirmTarget={false}
-          scope={driver.zoneId}
-          before="required documents"
-          after="approved"
-          expectedSliceRev={store.draftRev}
-          sliceKey="driverOps"
-          value={approveRequiredDocuments(store, driverSeed, agent?.id ?? "")}
-          disabled={waitingDates.length > 0}
-          title={waitingDates.length ? tr("Documents that expire are approved one by one, with their expiry date.") : undefined}
-          onDone={() => setNotice(tr("Documents approved."))}
-        >
-          <CheckCircle2 size={13} aria-hidden="true" />{" "}{tr("Approve remaining")}</CommandButton>
-      </div>
+      {/* Owner decision 18 (2026-10-29): "Remove the button" — no Approve all; each document is approved on its own. */}
 
       <div className="ob-checks">
         <section className="ob-check" aria-label={tr("Bank verification")}>

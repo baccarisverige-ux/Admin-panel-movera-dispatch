@@ -101,7 +101,7 @@ export function FleetPage() {
             <p>{tr("Which car fits which category, when papers count as expiring, and what happens when they run out.")}</p>
           </div>
         </header>
-        <OnboardingSettingsEditor key={scope.market.id} country={scope.market.id} part="vehicles" />
+        <OnboardingSettingsEditor key={scope.market.id} country={scope.market.id} part="vehicles" cars={rows.filter((row) => countryOfZone(row.record.zoneId) === scope.market.id).map((row) => ({ year: row.profile.year, seats: row.profile.seats, fuel: row.profile.fuel, category: row.profile.category }))} />
       </div>
     );
   }

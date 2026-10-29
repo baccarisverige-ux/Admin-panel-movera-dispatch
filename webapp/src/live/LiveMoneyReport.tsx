@@ -10,6 +10,7 @@ import { useLiveSession } from "./LiveSessionContext";
 import { daysOf, localDay, moneyGroups, type MoneyLine } from "./kpis";
 import { ErrorLine } from "./ui";
 import type { KpiDay } from "./types";
+import { zoneFilterOf } from "./zoneFilter";
 
 /**
  * Live Reports › Money (owner decisions of 2026-10-27 and 2026-10-28, contract v0.10.3 kpis.money): Movera's real
@@ -21,7 +22,9 @@ export function LiveMoneyReport({ window, timeZone, zoneIds }: { window: PeriodW
   const { client } = useLiveSession();
   const fromDate = localDay(window.start, timeZone);
   const toDate = localDay(Math.max(window.start, window.end - 1), timeZone);
-  const query = useQuery({ queryKey: ["live", "kpis", fromDate, toDate], queryFn: () => client.json<{ days: KpiDay[] }>(`/admin/kpis?fromDate=${fromDate}&toDate=${toDate}`) });
+  // v0.17.2: the server counts only the zones shown.
+  const zoneQuery = zoneIds.length ? new URLSearchParams(zoneFilterOf([...zoneIds]).params).toString() : "";
+  const query = useQuery({ queryKey: ["live", "kpis", fromDate, toDate, zoneQuery], queryFn: () => client.json<{ days: KpiDay[] }>(`/admin/kpis?fromDate=${fromDate}&toDate=${toDate}${zoneQuery ? `&${zoneQuery}` : ""}`) });
   if (query.isLoading) return <p className="state-line">{tr("Loading.")}</p>;
   if (query.error) return <ErrorLine error={query.error} onRetry={() => void query.refetch()} />;
   const dates = daysOf(window.start, window.end, timeZone);

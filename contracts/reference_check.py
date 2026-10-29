@@ -488,7 +488,7 @@ if set(_tc['apps']) != {'driver', 'rider'} or not set(_tc['apps']) < set(_te['ap
 if not set(_tc['platforms']) < set(_te['platforms']) or _tc['defaultKind'] not in _tc['kinds']: bad += 1; print('ERROR GROUP platforms/kind')
 if _te['statuses'] != ['open', 'fixed'] or _te['maxEventsPerGroup'] < 1 or 'every role' not in _te['permission']: bad += 1; print('ERROR GROUP statuses/permission')
 if 'system.read' not in c['adminPermissions']['values']: bad += 1; print('ERROR GROUP system.read missing')
-# v0.17.0 (CONTRACT.md §25): driver onboarding group 2, France and Sweden alike, Tunisia closed.
+# v0.18.0 (CONTRACT.md §26): driver onboarding group 2, France and Sweden alike, Tunisia closed.
 _do = c['driverOnboarding']; _st = _do['settings']; _ty = _do['documents']['types']
 if set(_st['defaults']) != set(_do['countries']): bad += 1; print('ONBOARDING defaults countries')
 _base = {'SE': 2015, 'FR': 2016, 'TN': 2012}
@@ -518,4 +518,5 @@ if 'onboarding' not in c['configDocs']['rules'] or c['configDocs']['countryOnly'
 if 'waiting_for_movera' not in c['documentStatus']['values'] or _do['infoSession']['contentSlot'] not in c['content']['slots'] or c['content']['apps'][_do['infoSession']['contentSlot']] != 'driver': bad += 1; print('INFO SESSION status/slot')
 if not set(_do['reminders']['levels']) == {'blocks_online', 'due_soon', 'waiting'} or 'fleet_no_approved_car' not in _do['reminders']['kinds']: bad += 1; print('REMINDERS')
 if set(_do['signUpReminders']['text']['title']) != {'sv', 'fr', 'en'} or _do['signUpReminders']['text']['title']['en'] != 'Finish your sign-up': bad += 1; print('SIGN-UP reminder text')
+if _do['documentExpiry']['validityHints']['urssaf_certificate']['months'] != 6 or 'vehicle_photos_needed' not in _do['reminders']['kinds'] or set(_do['reminders']['texts']['vehicle_photos_needed']) != {'sv', 'fr', 'en'}: bad += 1; print('v0.18.0 photos / URSSAF')
 print('OK' if not bad else f'{bad} mismatches'); sys.exit(1 if bad else 0)

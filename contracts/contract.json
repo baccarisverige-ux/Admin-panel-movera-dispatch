@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -231,7 +231,7 @@
     "skipped"
   ],
   "documentStatus": {
-    "note": "v0.10.4: what a driver/fleet document shows. The server stores missing, in_review, approved, rejected, expired (openapi DocumentStatus); needed (required, not uploaded) and expiring (approved, expires within the warning window) are shown states. v0.17.0: waiting_for_movera is a shown state of an admin_check document (the info session) not approved yet (driverOnboarding.infoSession).",
+    "note": "v0.10.4: what a driver/fleet document shows. The server stores missing, in_review, approved, rejected, expired (openapi DocumentStatus); needed (required, not uploaded) and expiring (approved, expires within the warning window) are shown states. v0.18.0: waiting_for_movera is a shown state of an admin_check document (the info session) not approved yet (driverOnboarding.infoSession).",
     "values": [
       "needed",
       "in_review",
@@ -1073,7 +1073,7 @@
     "countryOnly": [
       "onboarding"
     ],
-    "countryOnlyNote": "v0.8.1: country_rules is published per zone or per country. v0.17.0: onboarding (driverOnboarding.settings) is published per country only; a zoneId is 400 invalid_request (reason scope_country_only).",
+    "countryOnlyNote": "v0.8.1: country_rules is published per zone or per country. v0.18.0: onboarding (driverOnboarding.settings) is published per country only; a zoneId is 400 invalid_request (reason scope_country_only).",
     "scope": "v0.8.0: GET, PUT and POST …/publish on /admin/config/{doc} name exactly one of zoneId (the zone's own document) or country (ISO alpha-2; the country's standard). Both or neither → 400 invalid_request (reason scope_required). v0.8.1: country_rules too may name a zoneId (the zone's own tips and limits) or a country (its standard). A country scope is open to any admin who covers at least one zone of that country and holds the document's permission (owner 2026-10-27).",
     "standard": "v0.8.0 (owner 2026-10-27): every country has one standard rider_app_config, driver_app_config, pricing and dispatch, set in the admin, in the country's currency. A zone with no own published document of a kind uses its country's standard of that kind: the server serves it (GET /rider/config, /driver/config) and prices and dispatches with it, with zoneId set to the zone's id and usesStandard: true; its version is the standard's version. A zone with its own published document never uses the standard. Publishing a standard sends config_published (app documents) for every zone of the country that uses it. A zone's first own publish gets version max(own live, standard live) + 1. A standard document carries zoneId \"standard-<CC>\" (e.g. standard-SE) and its country's currency, country and timeZone. GET /admin/config/{doc}?zoneId returns usesStandard: true and the standard as the draft's starting point while the zone has nothing of its own.",
     "countryRules": "v0.8.1 (owner 2026-10-28: Tips & limits apply only to the zones chosen at the top; for the whole country the admin chooses all zones): tips, raiseSteps and driverBonus are the country_rules document { version, publishedAt, country, currency, tips: [AmountOption], raiseSteps: [AmountOption], driverBonus: { defaultLimit, hardMax } }, like the other documents published per zone (?zoneId, the zone's own) or per country (?country, the country's standard). A zone's rules are its own once published for it, else its country's standard (usesStandard: true); a zone with its own rules never uses the standard again until 'Go back to Standard' (useStandard, also for country_rules). Publishing a zone's own rules writes, in the same transaction, RiderAppConfig.tips / raiseSteps and DriverAppConfig.driverBonus of that zone's live and draft app documents; a zone that uses the standard app documents gets its own, copied from the standard with the new values (as publishPricing does), each changed one as its next version with config_published. Publishing the standard rules writes them into the standard app documents and into the own app documents of every zone of the country that has no own rules; zones with their own rules keep them. While a zone's rules (own or standard) are live, PUT and publish of that zone's app documents take those three fields from them, whatever the admin sent; the dispatch driver bonus limit of a trip is its zone's rules. The admin panel publishes to exactly the zones chosen at the top ('All zones' = every zone of the country it may work in, each as its own) and to the standard only when it is chosen.",
@@ -1380,7 +1380,7 @@
       "joinAttemptsPerHour": 10
     },
     "activation": {
-      "note": "v0.14.0 (owner decisions, PROGRESS.md #6 and 2026-10-28): account activation and car approval are separate. POST /admin/drivers/{driverId}/status with status active is refused with 409 documents_not_approved unless every required document has a document with status approved (kinds acceptance and admin_check included): a driver attached to a fleet needs every type in Driver.requiredDocuments; a fleet owner (also a driver who drives his own car; a fleet may have one car) needs every type in Driver.requiredDocuments AND Driver.requiredFleetDocuments. No car is needed for activation, and a missing car never puts an account on hold. Cars: only a car with status approved whose Vehicle.requiredDocuments are all approved can be picked (PATCH /driver/profile { vehicleId }) or driven online (POST /driver/availability); otherwise 409 documents_not_approved, reason vehicle_documents_not_approved, with details.",
+      "note": "v0.14.0 (owner decisions, PROGRESS.md #6 and 2026-10-28): account activation and car approval are separate. POST /admin/drivers/{driverId}/status with status active is refused with 409 documents_not_approved unless every required document has a document with status approved (kinds acceptance and admin_check included): a driver attached to a fleet needs every type in Driver.requiredDocuments; a fleet owner (also a driver who drives his own car; a fleet may have one car) needs every type in Driver.requiredDocuments AND Driver.requiredFleetDocuments. No car is needed for activation, and a missing car never puts an account on hold. Cars: only a car with status approved whose Vehicle.requiredDocuments are all approved can be picked (PATCH /driver/profile { vehicleId }) or driven online (POST /driver/availability); otherwise 409 documents_not_approved, reason vehicle_documents_not_approved, with details. v0.18.0: an expired document counts as approved for activation while the country's settings.expiry.blockAtExpiry is false.",
       "errorCode": "documents_not_approved",
       "vehicleReason": "vehicle_documents_not_approved",
       "details": "string[] of \"<scope>:<type>\" for each required type that is missing or not approved; scope driver (Driver.requiredDocuments), fleet (Driver.requiredFleetDocuments) or vehicle (Vehicle.requiredDocuments), e.g. driver:info_session, fleet:company_registration, vehicle:insurance"
@@ -1392,7 +1392,7 @@
       "note": "Driver.payoutTo tells who is paid: fleet for a driver linked to a fleet (the fleet's bank; the driver sees his own trips and earnings, the owner sees every driver's earnings with GET /driver/fleet/earnings), self for a fleet account."
     },
     "documents": {
-      "note": "kind file: uploaded with POST /driver/documents (multipart) and reviewed by an admin; acceptance: terms, accepted on POST /driver/onboarding (termsAccepted) and stored approved; admin_check: no file, an admin marks it approved (the session was held). required[country].driver are the person's documents (every account); required[country].fleet are the company's (fleet accounts; the fleet is approved on them, and the owner needs his driver documents too to go online himself); required[country].vehicle per car. Driver.requiredDocuments and Vehicle.requiredDocuments carry the lists so the app never computes them. v0.17.0: required[country] are the contract's starting lists; the live lists are the onboarding document's (driverOnboarding.settings), editable by the admin per country and account type.",
+      "note": "kind file: uploaded with POST /driver/documents (multipart) and reviewed by an admin; acceptance: terms, accepted on POST /driver/onboarding (termsAccepted) and stored approved; admin_check: no file, an admin marks it approved (the session was held). required[country].driver are the person's documents (every account); required[country].fleet are the company's (fleet accounts; the fleet is approved on them, and the owner needs his driver documents too to go online himself); required[country].vehicle per car. Driver.requiredDocuments and Vehicle.requiredDocuments carry the lists so the app never computes them. v0.18.0: required[country] are the contract's starting lists; the live lists are the onboarding document's (driverOnboarding.settings), editable by the admin per country and account type.",
       "types": {
         "terms": {
           "owner": "driver",
@@ -1659,7 +1659,7 @@
       "appLink": "the SMS to a number without an account ends with the app's install link (deploy setting)"
     },
     "settings": {
-      "note": "v0.17.0 (owner decisions of 2026-10-29, driver group 2 \"Onboarding\", items 1, 3, 10, 11 and the note check \"Use admin's settings (Recommended)\"): the admin's Drivers › Onboarding and Vehicles › Rules settings are one config document per country, onboarding (configDocs.rules, configDocs.countryOnly), saved and published with GET/PUT /admin/config/onboarding?country and POST /admin/config/onboarding/publish { country } (settings.edit / settings.publish), the same draft / publish / version rule as the other documents. Until a country has one published, the server and the apps use defaults[country] (the admin's own defaults). Publishing changes at once: the documents each new and existing account needs (Driver.requiredDocuments, requiredFleetDocuments, Vehicle.requiredDocuments), the expiry warnings, the sign-up reminders and the car rules. Tunisia stays present but closed (no documents). v0.17.0 (owner item 14: \"First answer , and admin can change text and add or delete documents so must add on contract and server and admin ! Also same for Sweden\"): per country the admin also creates new document types (customTypes), changes the name and help text of any type (texts), sets which expire (expiringTypes), and adds or removes types in each list.",
+      "note": "v0.18.0 (owner decisions of 2026-10-29, driver group 2 \"Onboarding\", items 1, 3, 10, 11 and the note check \"Use admin's settings (Recommended)\"): the admin's Drivers › Onboarding and Vehicles › Rules settings are one config document per country, onboarding (configDocs.rules, configDocs.countryOnly), saved and published with GET/PUT /admin/config/onboarding?country and POST /admin/config/onboarding/publish { country } (settings.edit / settings.publish), the same draft / publish / version rule as the other documents. Until a country has one published, the server and the apps use defaults[country] (the admin's own defaults). Publishing changes at once: the documents each new and existing account needs (Driver.requiredDocuments, requiredFleetDocuments, Vehicle.requiredDocuments), the expiry warnings, the sign-up reminders and the car rules. Tunisia stays present but closed (no documents). v0.18.0 (owner item 14: \"First answer , and admin can change text and add or delete documents so must add on contract and server and admin ! Also same for Sweden\"): per country the admin also creates new document types (customTypes), changes the name and help text of any type (texts), sets which expire (expiringTypes), and adds or removes types in each list.",
       "doc": "onboarding",
       "schema": "OnboardingSettings",
       "defaults": {
@@ -2185,10 +2185,10 @@
         "vehicles.categories: each category of the catalog at most once; minYear, minSeats within limits; a category that is on allows at least one fuel of fuels; vehicles.warnDays within limits.vehicleWarnDays.",
         "customTypes: ids unique and of idPattern; the scope list a custom type is in matches its owner (driver → documents.driver, fleet → documents.fleet, vehicle → documents.vehicle); names and help in sv, fr and en."
       ],
-      "driverRead": "GET /driver/onboarding/settings → OnboardingSettings of the driver's country (published, else defaults; version 0 = defaults), so the app offers only the car categories a car fits, asks the photos and shows the warnings the server uses. A driver with no country yet names it: ?country=SE. v0.17.0 (item 14): the answer also has documentTypes: { [type]: { owner, kind, expires, name, help? } } for every type in the country's lists, contract types with the admin's texts and the custom types, so the app renders a type it does not know from this data.",
+      "driverRead": "GET /driver/onboarding/settings → OnboardingSettings of the driver's country (published, else defaults; version 0 = defaults), so the app offers only the car categories a car fits, asks the photos and shows the warnings the server uses. A driver with no country yet names it: ?country=SE. v0.18.0 (item 14): the answer also has documentTypes: { [type]: { owner, kind, expires, name, help? } } for every type in the country's lists, contract types with the admin's texts and the custom types, so the app renders a type it does not know from this data.",
       "admin": "The draft and publish calls take country only; a zoneId is 400 invalid_request (reason scope_country_only).",
       "customTypes": {
-        "note": "v0.17.0 (owner item 14): a document type the admin creates for one country. { id, owner: driver | fleet | vehicle, kind: file | admin_check, expires: boolean, name: { sv, fr, en }, help: { sv, fr, en } } (all three languages, non-empty). The server makes the id (custom_ + 10 lower-case letters or digits) the first time the draft is saved: a new entry is sent without id and with draftKey (any short text the panel chooses), and the lists (documents.driver / fleet / vehicle, expiringTypes) may name it by \"draft:<draftKey>\"; the server replaces each with the new id and drops draftKey. An id once made never changes; an entry with an id the country does not have is 400 invalid_document. expires true puts the type in expiringTypes, false takes it out (the server keeps the two in step). owner fleet is a company document of a fleet account (owner_kind driver); owner vehicle a car document. Deleting an entry removes the type from the country: it must not stay in a list. Documents already uploaded for it stay stored.",
+        "note": "v0.18.0 (owner item 14): a document type the admin creates for one country. { id, owner: driver | fleet | vehicle, kind: file | admin_check, expires: boolean, name: { sv, fr, en }, help: { sv, fr, en } } (all three languages, non-empty). The server makes the id (custom_ + 10 lower-case letters or digits) the first time the draft is saved: a new entry is sent without id and with draftKey (any short text the panel chooses), and the lists (documents.driver / fleet / vehicle, expiringTypes) may name it by \"draft:<draftKey>\"; the server replaces each with the new id and drops draftKey. An id once made never changes; an entry with an id the country does not have is 400 invalid_document. expires true puts the type in expiringTypes, false takes it out (the server keeps the two in step). owner fleet is a company document of a fleet account (owner_kind driver); owner vehicle a car document. Deleting an entry removes the type from the country: it must not stay in a list. Documents already uploaded for it stay stored.",
         "idPattern": "^custom_[a-z0-9]{10}$",
         "draftRef": "draft:",
         "owners": [
@@ -2201,11 +2201,11 @@
           "admin_check"
         ]
       },
-      "texts": "v0.17.0 (owner item 14): texts[type] = { name?: { sv, fr, en }, help?: { sv, fr, en } } replaces the contract name, and adds a help / checklist text, of a contract type in this country. A key that is not a contract type of documents.types is 400 invalid_document (a custom type carries its own texts).",
-      "adminCheck": "v0.17.0 (owner items 8 and 13): an admin marks a kind admin_check document (the info session, or a custom one) with POST /admin/drivers/{driverId}/documents/{type}/check { decision: approved | rejected, note? } (documents.approve); approved counts for activation like any approved document. Until then the driver sees waiting_for_movera."
+      "texts": "v0.18.0 (owner item 14): texts[type] = { name?: { sv, fr, en }, help?: { sv, fr, en } } replaces the contract name, and adds a help / checklist text, of a contract type in this country. A key that is not a contract type of documents.types is 400 invalid_document (a custom type carries its own texts).",
+      "adminCheck": "v0.18.0 (owner items 8 and 13): an admin marks a kind admin_check document (the info session, or a custom one) with POST /admin/drivers/{driverId}/documents/{type}/check { decision: approved | rejected, note? } (documents.approve); approved counts for activation like any approved document. Until then the driver sees waiting_for_movera."
     },
     "documentExpiry": {
-      "note": "v0.17.0 (owner item 1: \"First answer but add reminder to driver one month before expire\"; item 3; note check): the admin types the expiry date when approving (POST /admin/documents/{documentId}/review { decision: approved, expiresAt }). For a type in settings.expiringTypes of the driver's country, approving without expiresAt is 400 invalid_request (reason expiry_required) and a date not in the future is 400 (reason expiry_in_past); other types keep expiresAt optional. A driver may send expiresAt on upload; the admin's date wins.",
+      "note": "v0.18.0 (owner item 1: \"First answer but add reminder to driver one month before expire\"; item 3; note check): the admin types the expiry date when approving (POST /admin/documents/{documentId}/review { decision: approved, expiresAt }). For a type in settings.expiringTypes of the driver's country, approving without expiresAt is 400 invalid_request (reason expiry_required) and a date not in the future is 400 (reason expiry_in_past); other types keep expiresAt optional. A driver may send expiresAt on upload; the admin's date wins.",
       "expire": "At expiresAt the server marks the document expired (a sweep every hour; every check before that already counts a document whose expiresAt has passed as expired). The driver uploads a new one (in_review) and an admin approves it with a new date.",
       "block": "settings.expiry.blockAtExpiry true (default): with any document of Driver.requiredDocuments (and requiredFleetDocuments for a fleet owner) expired, POST /driver/availability online is 409 documents_not_approved, reason documents_expired, details \"<scope>:<type>\". false: an expired document does not stop going online (it still shows red). Car documents follow settings.vehicles.autoHold the same way (reason vehicle_documents_not_approved).",
       "warn": "From the largest of settings.expiry.warnDays (cars: settings.vehicles.warnDays) before expiresAt the document is expiring (shown orange). Push (GET /notifications, kind document_expiring, data { documentId, type, scope, vehicleId?, daysLeft, expiresAt }) once per warning day reached (30, 7, 1 by default; when several are reached at once only the smallest is sent); at expiry one notice kind document_expired. deepLink movera-driver://documents/{type} (cars: ?vehicleId=).",
@@ -2213,10 +2213,16 @@
         "document_expiring",
         "document_expired"
       ],
-      "daysLeft": "whole days until expiresAt, rounded up (0 = expired)."
+      "daysLeft": "whole days until expiresAt, rounded up (0 = expired).",
+      "validityHints": {
+        "note": "v0.18.0 (checker, owner item 14 \"URSSAF (6 months)\"): a suggested validity the admin panel fills in as the expiry date when approving (the admin may change it); the server does not apply it.",
+        "urssaf_certificate": {
+          "months": 6
+        }
+      }
     },
     "reminders": {
-      "note": "v0.17.0 (owner items 2 and 3: \"add on the home page sheet that reminder ! Dont copy it's only example\"; \"Yes, build this (Recommended)\"; item 9): GET /driver/reminders → DriverReminderList, what the driver Home sheet \"Important reminders (N)\" shows, one line per issue with tap-to-fix. blocks_online lines first (red), then due_soon (orange), then waiting; inside a level by expiresAt then type. Also covers why an account is not active (group 1): the driver sees the whole app but cannot go online, with the exact reason and action.",
+      "note": "v0.18.0 (owner items 2 and 3: \"add on the home page sheet that reminder ! Dont copy it's only example\"; \"Yes, build this (Recommended)\"; item 9): GET /driver/reminders → DriverReminderList, what the driver Home sheet \"Important reminders (N)\" shows, one line per issue with tap-to-fix. blocks_online lines first (red), then due_soon (orange), then waiting; inside a level by expiresAt then type. Also covers why an account is not active (group 1): the driver sees the whole app but cannot go online, with the exact reason and action.",
       "levels": {
         "blocks_online": "red: going online is refused until it is fixed",
         "due_soon": "orange: expires within the warning window, still works",
@@ -2233,7 +2239,8 @@
         "fleet_not_approved": "blocks_online: the fleet is pending / rejected / blocked (no fix)",
         "fleet_no_approved_car": "blocks_online: the fleet has no car that can be picked (approved, every car document approved); owner fix: fleet_vehicles (add / finish a car); member: no fix (\"Your fleet has no approved car yet…\")",
         "no_vehicle": "blocks_online: the fleet has a car that can be picked but this driver has none picked (fix: pick_vehicle)",
-        "admin_check_waiting": "waiting: a custom admin_check document not marked yet; status waiting_for_movera (no fix)"
+        "admin_check_waiting": "waiting: a custom admin_check document not marked yet; status waiting_for_movera (no fix)",
+        "vehicle_photos_needed": "blocks_online: a car's four photos are not all uploaded and approved (fix: document, the first photo missing); text \"Add 4 photos of your car\""
       },
       "fixTargets": [
         "document",
@@ -2241,16 +2248,23 @@
         "fleet_vehicles",
         "pick_vehicle"
       ],
-      "scope": "driver (Driver.requiredDocuments), fleet (requiredFleetDocuments), vehicle (the picked car, or for a fleet owner every car of the fleet)"
+      "scope": "driver (Driver.requiredDocuments), fleet (requiredFleetDocuments), vehicle (the picked car, or for a fleet owner every car of the fleet)",
+      "texts": {
+        "vehicle_photos_needed": {
+          "sv": "Lägg till 4 foton av din bil",
+          "fr": "Ajoutez 4 photos de votre voiture",
+          "en": "Add 4 photos of your car"
+        }
+      }
     },
     "infoSession": {
-      "note": "v0.17.0 (owner item 8: \"How to book + 'Waiting for Movera' (Recommended)\"): the info_session document (kind admin_check; Sweden and France (owner item 13: \"Yes, same as Sweden\")) shows the shown state waiting_for_movera until an admin marks it approved. Tapping it opens \"How to book your info session\", the admin's content slot driver-info-session (title, text sv / fr / en, an https link in the text) from GET /driver/content.",
+      "note": "v0.18.0 (owner item 8: \"How to book + 'Waiting for Movera' (Recommended)\"): the info_session document (kind admin_check; Sweden and France (owner item 13: \"Yes, same as Sweden\")) shows the shown state waiting_for_movera until an admin marks it approved. Tapping it opens \"How to book your info session\", the admin's content slot driver-info-session (title, text sv / fr / en, an https link in the text) from GET /driver/content.",
       "type": "info_session",
       "status": "waiting_for_movera",
       "contentSlot": "driver-info-session"
     },
     "vehicleRules": {
-      "note": "v0.17.0 (owner item 11: \"Make them real (Recommended)\"): POST /driver/vehicles is checked against settings.vehicles of the fleet's country. Each categoryId must fit: the category on, year ≥ minYear, seats ≥ minSeats, fuel in fuels; else 400 invalid_request, reason category_not_allowed, details \"<category>:<problem>\" with problem category_off, year_too_old, too_few_seats, fuel_not_allowed or fuel_required (fuel missing while the category does not allow every fuel). A category with no rule in the document (e.g. child_seat) is not checked. With photosNeeded the four photo types (settings.photoTypes) are added to Vehicle.requiredDocuments, uploaded like other car documents (POST /driver/documents, ownerId = vehicleId) and approved by an admin; the car cannot be picked or driven without them.",
+      "note": "v0.18.0 (owner item 11: \"Make them real (Recommended)\"): POST /driver/vehicles is checked against settings.vehicles of the fleet's country. Each categoryId must fit: the category on, year ≥ minYear, seats ≥ minSeats, fuel in fuels; else 400 invalid_request, reason category_not_allowed, details \"<category>:<problem>\" with problem category_off, year_too_old, too_few_seats, fuel_not_allowed or fuel_required (fuel missing while the category does not allow every fuel). A category with no rule in the document (e.g. child_seat) is not checked. With photosNeeded the four photo types (settings.photoTypes) are added to Vehicle.requiredDocuments, uploaded like other car documents (POST /driver/documents, ownerId = vehicleId) and approved by an admin; the car cannot be picked or driven without them.",
       "problems": [
         "category_off",
         "year_too_old",
@@ -2258,17 +2272,18 @@
         "fuel_not_allowed",
         "fuel_required"
       ],
-      "reason": "category_not_allowed"
+      "reason": "category_not_allowed",
+      "photosForAll": "v0.18.0 (owner item 16: \"Before approve any car must have photos uppload led and approv it\"; \"First answer and keep approved account works for test only\"): every car, also one approved before v0.18.0, needs the four photos approved before it can be picked or driven (409 documents_not_approved, reason vehicle_documents_not_approved, details vehicle:vehicle_photo_*). The Home sheet shows one line vehicle_photos_needed (\"Add 4 photos of your car\"). Exempt: a test account (its phone is a driver-app number of the test phones, the seeded test drivers included): it is never asked for the photos."
     },
     "startCompany": {
-      "note": "v0.17.0 (owner item 7: \"First answer but his account become like fleet company account and the documents that already exist no need to uppload again only the new documents and procces like fleet account and wait for admin approv\"): POST /driver/fleet/start-company { expectedVersion, company } (\"Start my own company\" in My fleet). Only an account of type driver, not on a trip (409 invalid_transition, reasons already_fleet, on_trip). The driver leaves his fleet (car released, offline), the account becomes type fleet with a new pending fleet he owns, and the account goes on_hold. Every document he has stays as it is (approved ones count, nothing is uploaded again); only requiredFleetDocuments he does not have yet and the new cars' documents are needed. An admin then reviews the fleet (POST /admin/fleets/{fleetId}/review) and activates the account (POST /admin/drivers/{driverId}/status, the fleet documents checked) like a new fleet.",
+      "note": "v0.18.0 (owner item 7: \"First answer but his account become like fleet company account and the documents that already exist no need to uppload again only the new documents and procces like fleet account and wait for admin approv\"): POST /driver/fleet/start-company { expectedVersion, company } (\"Start my own company\" in My fleet). Only an account of type driver, not on a trip (409 invalid_transition, reasons already_fleet, on_trip). The driver leaves his fleet (car released, offline), the account becomes type fleet with a new pending fleet he owns, and the account goes on_hold. Every document he has stays as it is (approved ones count, nothing is uploaded again); only requiredFleetDocuments he does not have yet and the new cars' documents are needed. An admin then reviews the fleet (POST /admin/fleets/{fleetId}/review) and activates the account (POST /admin/drivers/{driverId}/status, the fleet documents checked) like a new fleet.",
       "reasons": [
         "already_fleet",
         "on_trip"
       ]
     },
     "signUpReminders": {
-      "note": "v0.17.0 (note check: \"Sign-up reminders to stuck drivers (every 2 days, stuck after 10 days) also go live (push 'Finish your sign-up'), editable in admin\"): while settings.signUpReminders.on, an account that is pending or on_hold and still waits on itself (details not sent, or a required file document of Driver.requiredDocuments / requiredFleetDocuments missing or rejected) gets the notice kind finish_sign_up (GET /notifications, deepLink movera-driver://home) every everyDays days counted from sign-up, then from the last one. From stuckAfterDays after sign-up the admin driver view shows signUp.stuck true. No reminder while Movera is the one to act (documents in review, info session, activation).",
+      "note": "v0.18.0 (note check: \"Sign-up reminders to stuck drivers (every 2 days, stuck after 10 days) also go live (push 'Finish your sign-up'), editable in admin\"): while settings.signUpReminders.on, an account that is pending or on_hold and still waits on itself (details not sent, or a required file document of Driver.requiredDocuments / requiredFleetDocuments missing or rejected) gets the notice kind finish_sign_up (GET /notifications, deepLink movera-driver://home) every everyDays days counted from sign-up, then from the last one. From stuckAfterDays after sign-up the admin driver view shows signUp.stuck true. No reminder while Movera is the one to act (documents in review, info session, activation).",
       "kind": "finish_sign_up",
       "text": {
         "title": {
@@ -3930,5 +3945,19 @@
       "closed": "409 invalid_transition, reason chat_closed, outside the open statuses.",
       "provider": "Number masking needs a telephony provider. The owner must pick one; the server reads its keys from the environment, never from git. Until then the provider is 'disabled'."
     }
+  },
+  "tripPath": {
+    "note": "v0.17.0 (owner 2026-10-29, driver past ride detail; CONTRACT.md §25): the route of an ended trip for the trip's own driver or rider, drawn on the past-ride map with pickup and drop-off pins.",
+    "path": "GET /trips/{tripId}/path → TripPath { tripId, source: driven | planned, points: LatLng[], pickup, dropoff, stops, keptUntil? }",
+    "actors": "the trip's rider or the trip's driver (anyone else: 404 not_found, like GET /trips/{tripId}); only once the trip is terminal (tripStatus.terminal), else 409 invalid_transition, reason trip_not_ended",
+    "sources": [
+      "driven",
+      "planned"
+    ],
+    "driven": "The driven path is made from the trip's own GPS trace (the fixes of POST /driver/location kept in the trip trace, §12) from boarding to the end: fixes with accuracy ≤ 50 m, a step only once the car moved 25 m, no step faster than 150 km/h, then evenly thinned to at most maxPoints. At least 2 such points are needed.",
+    "planned": "No usable trace (the trace was deleted after liveDrivers.traceKeepDays, or never sent): the server's road route (§10, OSRM or the straight-line estimate) from the pickup through the stops to the drop-off.",
+    "maxPoints": 300,
+    "retention": "No new storage: the driven path is read from the trip trace and follows its rule (deleted traceKeepDays = 30 days after the fix); afterwards the answer is the planned route. keptUntil is when the trace goes.",
+    "apps": "The driver's past-ride screen (and the rider's, when it reads the server) shows the line and pins; a failed call shows the pickup and drop-off pins only."
   }
 }

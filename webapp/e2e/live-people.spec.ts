@@ -150,8 +150,7 @@ test("driver documents: the demo Documents tab opens an uploaded file and approv
   await page.getByRole("dialog", { name: "Approve document" }).getByRole("button", { name: "Approve" }).click();
   await expect(files.locator('tr[data-document-type="driving_license"]')).toContainText("Approved");
   const review = state.calls.find((call) => call.path.endsWith("/documents/DOC2/review"))!;
-  expect(review.body).toMatchObject({ decision: "approved" });
-  expect(String((review.body as { expiresAt?: string }).expiresAt)).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  expect(review.body).toEqual({ decision: "approved", expiresAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/) });
   expect(review.headers["idempotency-key"]?.length).toBeGreaterThan(15);
 });
 

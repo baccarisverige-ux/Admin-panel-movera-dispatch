@@ -42,6 +42,7 @@ test("vehicle rules per country change which categories a car fits", async ({ pa
   await page.goto("/vehicles?view=rules");
   await expect(page.getByRole("heading", { name: "Vehicle rules for Sweden" })).toBeVisible();
   await page.getByLabel("Premium oldest year").fill("2020");
+  await expect(page.getByText(/cars fit \(now \d+\)/).first()).toBeVisible();
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await confirm(page);
   await expect(page.getByText("Everything is published")).toBeVisible();

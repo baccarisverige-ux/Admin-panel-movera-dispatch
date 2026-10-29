@@ -54,6 +54,7 @@ const ReservationsPage = lazyPage(() => import("./pages/ReservationsPage"), "Res
 const RiderDetailPage = lazyPage(() => import("./pages/RiderDetailPage"), "RiderDetailPage");
 const RidersPage = lazyPage(() => import("./pages/RidersPage"), "RidersPage");
 const RiskPage = lazyPage(() => import("./pages/RiskPage"), "RiskPage");
+const ErrorsPage = lazyPage(() => import("./pages/ErrorsPage"), "ErrorsPage");
 const WaitlistPage = lazyPage(() => import("./pages/WaitlistPage"), "WaitlistPage");
 const SafetyPage = lazyPage(() => import("./pages/SafetyPage"), "SafetyPage");
 const SupportPage = lazyPage(() => import("./pages/SupportPage"), "SupportPage");
@@ -98,6 +99,7 @@ function Screen({ id }: { id: string }) {
   if (id === "incidents") return <SafetyPage />;
   if (id === "risk") return <RiskPage />;
   if (id === "waitlist") return <WaitlistPage />;
+  if (id === "errors") return <ErrorsPage />;
   if (id === "riders") return <RidersPage />;
   if (id === "trips") return <TripsPage />;
   if (id === "dispatch") return <DispatchSectionPage />;
@@ -221,6 +223,7 @@ function Authed() {
         <Route path="incidents/:id" element={<RecordPage kind="incidents" label={tr("Incident")} list="/incidents" />} />
         <Route path="risk" element={<Screen id="risk" />} />
         <Route path="waitlist" element={<Screen id="waitlist" />} />
+        <Route path="errors" element={<Screen id="errors" />} />
         <Route path="messages" element={<Screen id="messages" />} />
         <Route path="content" element={<Screen id="content" />} />
         <Route path="promotions" element={<Screen id="promotions" />} />
