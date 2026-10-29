@@ -129,6 +129,8 @@ export type LiveAccountFacts = {
   documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string }[];
   requiredDocuments?: string[];
   requiredFleetDocuments?: string[];
+  /** v0.18.0: the categories the admin allows (PUT /admin/drivers/{id}/categories). */
+  categoryIds?: string[];
 };
 
 export type LiveDriverFacts = {

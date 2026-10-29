@@ -127,6 +127,37 @@ export function DriverDetailPage() {
   const pay = (payouts.data ?? []).filter((item) => item.driverId === driverId);
   // Live (owner rule, part 3): the server decides activation and holds the documents; nothing from local demo stores.
   const liveData = isLiveData();
+  // Live (v0.18.0): the bank details are the bank_statement document; its status is the bank review.
+  const liveBank = driver?.liveAccount?.documents.find((doc) => doc.type === "bank_statement")?.status ?? "missing";
+  const bankBox = !driver ? null : (
+  <section className="fd-box">
+    <h3>{tr("Bank account")}</h3>
+    {liveData ? <p data-testid="live-bank-status"><strong>{statusLabel(liveBank, "documentStatus")}</strong></p> : <p>{ops.bank.holder} · •••• {ops.bank.last4} · <strong>{statusLabel(ops.bank.status, "documentStatus")}</strong></p>}
+    {!liveData && ops.bank.note ? <p className="state-line">{trn("Review note: {0}", ops.bank.note)}</p> : null}
+    <div className="fd-action-row">
+      {(liveData ? (["approved", "rejected"] as const) : (["approved", "rejected", "in_review"] as const)).map((status) => (
+        <CommandButton
+          command="admin.driver.bankReview"
+          key={status}
+          className="dash-btn small ghost"
+          type="button"
+          targetId={driver.id}
+          confirmTarget={false}
+          scope={driver.zoneId}
+          before={ops.bank.status}
+          after={status}
+          expectedSliceRev={store.value.draftRev}
+          sliceKey="driverOps"
+          value={liveData ? { note: accountNote } : setBankReview(store.value, driverSeed, status, agent?.id ?? "", accountNote)}
+          disabled={(liveData ? liveBank : ops.bank.status) === status}
+          onDone={() => setNotice(tr("Bank details marked {0}.", [statusLabel(status, "documentStatus").toLowerCase()]))}
+        >
+          {statusLabel(status, "documentStatus")}
+        </CommandButton>
+      ))}
+    </div>
+  </section>
+  );
   const liveFacts = liveDriverOf(driver);
   const activationIssue = liveData ? null : driverActivationIssue(store.value, driverSeed, car);
   const driverAudits = (audit.data ?? []).filter((item) => item.targetId === driver.id).slice(0, 20);
@@ -309,7 +340,8 @@ export function DriverDetailPage() {
             </div>
             <div className="cat-grid">
               {CATEGORIES.map((category) => {
-                const enabled = ops.categories[category];
+                // Live: the server's categories of the driver (PUT /admin/drivers/{id}/categories, v0.18.0).
+                const enabled = liveData ? (driver.liveAccount?.categoryIds ?? []).includes(category) : ops.categories[category];
                 const info = CATEGORY_INFO.find((item) => item.id === category);
                 const fits = !car ? false : category === "xl" ? car.seats >= 6 : category === "electric" ? car.fuel === "electric" : category === "premium" ? car.year >= 2020 : true;
                 return (
@@ -325,9 +357,11 @@ export function DriverDetailPage() {
                     after={enabled ? "disabled" : "enabled"}
                     expectedSliceRev={store.value.draftRev}
                     sliceKey="driverOps"
-                    value={setDriverCategory(store.value, driverSeed, category, !enabled, agent?.id ?? "")}
+                    value={liveData ? { categoryId: category, on: !enabled } : setDriverCategory(store.value, driverSeed, category, !enabled, agent?.id ?? "")}
                     aria-label={`${info?.label ?? category}: ${enabled ? "on, turn off" : "off, turn on"}`}
                     onDone={() => setNotice(tr("{0} {1} for {2}.", [info?.label ?? category, enabled ? tr("turned off") : tr("turned on"), driver.name]))}
+                    // The toggle is small: a refusal (e.g. the last category, no car) is said in the page's notice line.
+                    onError={(error) => setNotice(error instanceof Error ? error.message : "")}
                   >
                     <span className="cat-name">{trx(info?.label) ?? category}</span>
                     <span className="cat-switch" aria-hidden="true"><i /></span>
@@ -448,7 +482,7 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="earnings" activeId={tab}>
-          {liveData ? <NotConnected block /> : <>
+          {liveData ? <><NotConnected block />{bankBox}</> : <>
           <div className="fd-section-head">
             <div><h3>{tr("Earnings")}</h3><p>{trx(span.label)} · {fleet ? tr("paid to {0}", [fleet.name]) : tr("paid to the driver")}</p></div>
             <div className="fd-head-tools">
@@ -478,33 +512,7 @@ export function DriverDetailPage() {
                 <ul className="fd-list">{pay.map((item) => <li key={item.id}><Link to={`/payouts/${item.id}`}>{item.name}</Link><span>{money(item.fareOre ?? 0)}</span><span className={`fd-chip s-${item.status}`}>{statusLabel(item.status, "payoutStatus")}</span></li>)}</ul>
               )}
             </section>
-            <section className="fd-box">
-              <h3>{tr("Bank account")}</h3>
-              <p>{ops.bank.holder} · •••• {ops.bank.last4} · <strong>{statusLabel(ops.bank.status, "documentStatus")}</strong></p>
-              {ops.bank.note ? <p className="state-line">{trn("Review note: {0}", ops.bank.note)}</p> : null}
-              <div className="fd-action-row">
-                {(["approved", "rejected", "in_review"] as const).map((status) => (
-                  <CommandButton
-                    command="admin.driver.bankReview"
-                    key={status}
-                    className="dash-btn small ghost"
-                    type="button"
-                    targetId={driver.id}
-                    confirmTarget={false}
-                    scope={driver.zoneId}
-                    before={ops.bank.status}
-                    after={status}
-                    expectedSliceRev={store.value.draftRev}
-                    sliceKey="driverOps"
-                    value={setBankReview(store.value, driverSeed, status, agent?.id ?? "", accountNote)}
-                    disabled={ops.bank.status === status}
-                    onDone={() => setNotice(tr("Bank details marked {0}.", [statusLabel(status, "documentStatus").toLowerCase()]))}
-                  >
-                    {statusLabel(status, "documentStatus")}
-                  </CommandButton>
-                ))}
-              </div>
-            </section>
+            {bankBox}
           </div>
         </>}
         </TabPanel>

@@ -197,7 +197,7 @@ test("items 1, 7, 8 (SE): expiry date required to approve, info session marked h
 test("item 1 (FR): the VTC card needs its expiry date; the server's expiry_required is explained", async ({ page }) => {
   const fake = await fakeOnboarding(page);
   await signIn(page);
-  await page.goto("/drivers/D3001?tab=documents");
+  await page.goto("/drivers/D3001?tab=documents&country=FR");
   const row = page.getByTestId("live-documents").locator('[data-document-type="vtc_card"]').first();
   await expect(row).toContainText("Expires", { timeout: 15_000 });
   await row.getByRole("button", { name: "Approve" }).click();

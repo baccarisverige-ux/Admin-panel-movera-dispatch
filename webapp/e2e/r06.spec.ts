@@ -17,6 +17,7 @@ async function confirm(page: Page) {
  */
 async function approveOneByOne(page: Page) {
   const app = page.getByRole("article", { name: /^Application of / });
+  await expect(app.getByRole("button", { name: /^(Approve|Mark held) / }).first()).toBeVisible();
   await expect(app.getByRole("button", { name: /^Approve (remaining|all)/ })).toHaveCount(0);
   const date = new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10);
   for (let round = 0; round < 30; round += 1) {
@@ -29,8 +30,14 @@ async function approveOneByOne(page: Page) {
         await field.fill(date);
       }
     }
-    const button = app.getByRole("button", { name: /^(Approve|Mark held) / }).and(page.locator(":enabled")).first();
-    if (!(await button.count())) return;
+    const all = app.getByRole("button", { name: /^(Approve|Mark held) / });
+    let button = null;
+    // A running command disables every button for a moment: look twice before deciding nothing is left.
+    for (let look = 0; look < 2 && !button; look += 1) {
+      if (look) await page.waitForTimeout(1500);
+      for (let index = 0; index < (await all.count()); index += 1) if (await all.nth(index).isEnabled()) { button = all.nth(index); break; }
+    }
+    if (!button) return;
     await button.click();
     await page.locator(".modal.open").last().getByRole("button", { name: "Confirm" }).click();
     await expect(page.locator(".modal.open")).toHaveCount(0);

@@ -255,11 +255,13 @@ export function VehicleDetailPage() {
           patch={{ status: savedStatus, fleetId: fleetId || null }}
           expectedSliceRev={store.value.draftRev}
           sliceKey="driverOps"
-          value={nextBook}
+          value={isLiveData() ? { year: nextProfile.year, seats: nextProfile.seats, fuel: nextProfile.fuel, categoryIds: [nextProfile.category] } : nextBook}
           onDone={() => setNotice(tr("Vehicle compliance profile saved."))}
         >{tr("Save vehicle compliance")}</CommandButton>
       </article>
 
+      {/* Live: the registration is a car document, reviewed in LiveVehicleDocuments above. */}
+      {isLiveData() ? null : (
       <article className="panel vh-panel">
         <h3>{tr("Registration review")}</h3>
         <p>{trn("Current state: {0}.", profile.registrationStatus)}</p>
@@ -293,6 +295,7 @@ export function VehicleDetailPage() {
           })}
         </div>
       </article>
+      )}
 
       <article className="panel vh-panel">
         <h3>{tr("Driver assignment")}</h3>
@@ -314,6 +317,7 @@ export function VehicleDetailPage() {
           after={driverId || "unassigned"}
           collection="vehicles"
           patch={{ driverId: driverId || null, name: selectedDriver?.name ?? record.name }}
+          value={isLiveData() ? { driverId: driverId || null } : undefined}
           onDone={() => setNotice(driverId ? tr("Vehicle linked to {0}.", [driverId]) : tr("Vehicle unassigned."))}
         >{tr("Save driver assignment")}</CommandButton>
       </article>

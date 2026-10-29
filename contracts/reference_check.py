@@ -519,4 +519,10 @@ if 'waiting_for_movera' not in c['documentStatus']['values'] or _do['infoSession
 if not set(_do['reminders']['levels']) == {'blocks_online', 'due_soon', 'waiting'} or 'fleet_no_approved_car' not in _do['reminders']['kinds']: bad += 1; print('REMINDERS')
 if set(_do['signUpReminders']['text']['title']) != {'sv', 'fr', 'en'} or _do['signUpReminders']['text']['title']['en'] != 'Finish your sign-up': bad += 1; print('SIGN-UP reminder text')
 if _do['documentExpiry']['validityHints']['urssaf_certificate']['months'] != 6 or 'vehicle_photos_needed' not in _do['reminders']['kinds'] or set(_do['reminders']['texts']['vehicle_photos_needed']) != {'sv', 'fr', 'en'}: bad += 1; print('v0.18.0 photos / URSSAF')
+# v0.17.1 (CONTRACT.md §9): the admin saves their own language.
+_ml = c['auth']['admin'].get('meLanguage') or {}
+if 'PATCH /admin/auth/me' not in c['auth']['admin']['paths'] or 'every role' not in _ml.get('permission', '') or c['languages']['values'] != ['en', 'fr', 'sv']: bad += 1; print('ADMIN ME LANGUAGE')
+_aa = c['driverOnboarding']['adminActions']
+if _aa['bankType'] not in c['driverOnboarding']['documents']['types'] or 'Approve all' not in _aa['note'] or any(k not in _aa for k in ['updateVehicle', 'linkDriver', 'driverCategories', 'bankReview']): bad += 1; print('ADMIN ACTIONS v0.18.0')
+if c['driverOnboarding']['carDocuments']['reason'] != 'fleet_owner_only': bad += 1; print('CAR DOCUMENTS owner only')
 print('OK' if not bad else f'{bad} mismatches'); sys.exit(1 if bad else 0)

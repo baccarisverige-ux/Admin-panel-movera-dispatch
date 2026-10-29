@@ -7185,6 +7185,17 @@ export const en = {
   "Could not load crashes and errors. It is tried again in 30 seconds.": "Could not load crashes and errors. It is tried again in 30 seconds.",
   "Could not change the status. Try again.": "Could not change the status. Try again.",
   "{0} groups": "{0} groups",
+  "The car does not fit that category: {0}.": "The car does not fit that category: {0}.",
+  "Another car already has this plate.": "Another car already has this plate.",
+  "That driver is not in the car's fleet.": "That driver is not in the car's fleet.",
+  "The car is not approved yet.": "The car is not approved yet.",
+  "The car's documents are not approved yet.": "The car's documents are not approved yet.",
+  "The car is in use by another driver.": "The car is in use by another driver.",
+  "The driver is online. Try again when the driver is offline.": "The driver is online. Try again when the driver is offline.",
+  "The driver has no car, so no category can be set.": "The driver has no car, so no category can be set.",
+  "The driver has not uploaded bank details yet.": "The driver has not uploaded bank details yet.",
+  "Write a note: the driver sees why the bank details were rejected.": "Write a note: the driver sees why the bank details were rejected.",
+  "Keep at least one category on.": "Keep at least one category on.",
 } as const;
 
 export type MessageKey = keyof typeof en;

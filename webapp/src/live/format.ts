@@ -140,6 +140,17 @@ export function errorText(error: unknown): string {
   if (error.status === 403) return tr("Your role cannot do that.");
   if (error.status === 401) return tr("Sign in again.");
   if (error.status === 409 && error.code === "version_mismatch") return tr("Someone else changed this record. It was reloaded; check it and try again.");
+  // v0.18.0 (owner 2026-10-29, live audit): car details, the car's driver, categories and the bank review.
+  if (error.reason === "category_not_allowed") return tr("The car does not fit that category: {0}.", [error.details.join(", ") || "—"]);
+  if (error.reason === "plate_taken") return tr("Another car already has this plate.");
+  if (error.reason === "driver_not_in_fleet") return tr("That driver is not in the car's fleet.");
+  if (error.reason === "vehicle_not_approved") return tr("The car is not approved yet.");
+  if (error.reason === "vehicle_documents_not_approved") return tr("The car's documents are not approved yet.");
+  if (error.reason === "vehicle_in_use") return tr("The car is in use by another driver.");
+  if (error.reason === "driver_online") return tr("The driver is online. Try again when the driver is offline.");
+  if (error.reason === "no_vehicle") return tr("The driver has no car, so no category can be set.");
+  if (error.reason === "bank_not_uploaded") return tr("The driver has not uploaded bank details yet.");
+  if (error.reason === "note_required") return tr("Write a note: the driver sees why the bank details were rejected.");
   // v0.17.0 (owner item 1): approving a document that expires needs its date.
   if (error.status === 400 && error.reason === "expiry_required") return tr("This document expires: type the expiry date from the document (after today).");
   if (error.status === 400 && error.reason === "expiry_in_past") return tr("The expiry date must be after today.");
