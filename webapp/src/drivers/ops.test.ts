@@ -95,3 +95,17 @@ assert(JSON.stringify(driverScheduledRides(turnedOn.book.drivers.D0006, accessNo
 assert(driverScheduledRides(turnedOn.book.drivers.D0006, accessNow + 4 * 86_400_000) === null && driverScheduledRides(undefined, accessNow) === null, "no choice in force: nothing, the zone switch and the late-cancel rule decide");
 
 console.log("driver ops ok");
+
+// Owner G2 R1 (2026-10-30): a real ULID car id must not crash the Vehicles and driver pages (RangeError Invalid
+// time value); live cars show the real end dates of their approved registration and insurance, else nothing.
+const ulidCar = { id: "01JBXK7Q2M9V4T8RZ5N3W6Y1CD", status: "pending", year: 2012, seats: 4, fuel: "hybrid", category: "economy", fleetId: "01JBXK7Q2M9V4T8RZ5N3W6Y1FE" };
+const ulidProfile = vehicleOps(emptyDriverOpsBook(), ulidCar);
+assert(ulidProfile.inspectionExpiresAt === "" && ulidProfile.insuranceExpiresAt === "", "a real car id gets no invented dates");
+const liveCar = { ...ulidCar, liveVehicleDocs: { documents: [
+  { type: "vehicle_registration", status: "approved", expiresAt: "2027-05-31T00:00:00.000Z" },
+  { type: "insurance", status: "in_review", expiresAt: "2027-01-01" },
+] } };
+const liveProfile = vehicleOps(emptyDriverOpsBook(), liveCar);
+assert(liveProfile.inspectionExpiresAt === "2027-05-31", "registration end date from the approved document");
+assert(liveProfile.insuranceExpiresAt === "", "an insurance still in review gives no date");
+console.log("ULID car ids ok");

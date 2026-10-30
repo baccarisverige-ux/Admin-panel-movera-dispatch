@@ -412,7 +412,7 @@ function ApplicantView({ settings, driver, rules, country, now, reviewNote, setR
           {carRecord && car ? (
             <>
               <p>{trn("{0} · {1} {2} · {3} · {4} · {5} · {6} seats · {7}.", carRecord.plate, carRecord.make ?? tr("Vehicle"), carRecord.model ?? "", car.year, car.category, car.fuel, car.seats, car.status)}</p>
-              <p className="vh-help">{trn("Inspection expires {0}. Insurance expires {1}. Registration {2}.{3}", car.inspectionExpiresAt, car.insuranceExpiresAt, car.registrationStatus, vehicleBlock({ year: car.year, seats: car.seats, fuel: car.fuel, category: car.category }) ?? tr(" Vehicle rule check passed."))}</p>
+              <p className="vh-help">{trn("Inspection expires {0}. Insurance expires {1}. Registration {2}.{3}", car.inspectionExpiresAt || "—", car.insuranceExpiresAt || "—", car.registrationStatus, vehicleBlock({ year: car.year, seats: car.seats, fuel: car.fuel, category: car.category }) ?? tr(" Vehicle rule check passed."))}</p>
               <Link className="vh-help" to={`/vehicles/${carRecord.id}`}>{tr("Open the vehicle")}</Link>
             </>
           ) : <p className="state-line">{tr("No vehicle linked. Activation is blocked.")}</p>}

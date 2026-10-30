@@ -543,7 +543,7 @@ export function DriverDetailPage() {
                 <div>
                   <Link to={`/vehicles/${record.id}`}><strong>{record.plate ?? record.id}</strong></Link>
                   <p>{trn("{0} {1} · {2} · {3} seats · {4} · {5}", record.make ?? tr("Vehicle"), record.model ?? "", vehicle.year, vehicle.seats, vehicle.fuel, vehicle.category)}</p>
-                  {liveData ? <small>{statusLabel(record.status)}</small> : <small>{trn("Inspection until {0} · insurance until {1} · {2}", vehicle.inspectionExpiresAt, vehicle.insuranceExpiresAt, statusLabel(record.status))}</small>}
+                  {liveData ? <small>{statusLabel(record.status)}</small> : <small>{trn("Inspection until {0} · insurance until {1} · {2}", vehicle.inspectionExpiresAt || "—", vehicle.insuranceExpiresAt || "—", statusLabel(record.status))}</small>}
                   <VehicleBlocked missing={record.liveVehicleMissing} country={record.liveVehicleDocs?.country} />
                 </div>
               </div>
