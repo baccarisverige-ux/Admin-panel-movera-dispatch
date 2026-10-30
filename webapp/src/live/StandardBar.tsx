@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { Layers, RotateCcw } from "lucide-react";
-import { isStandardZone, zoneById, type MarketId } from "../markets/markets";
+import { isStandardZone, market, marketOfZone, zoneById, type MarketId } from "../markets/markets";
+import { countryOfStandard } from "./configDocs.ts";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trx } from "../i18n";
 import { copyTargets, standardMarks, unpublishedMarks } from "./liveSettings.ts";
@@ -43,6 +44,8 @@ export function UnpublishedLine({ zoneId, canEdit }: { zoneId: string; canEdit: 
 /** G3-D8: copies the driver app settings shown here to every other zone of the country (confirm lists them), then publishes. */
 export function CopyToAllZones({ zoneId, zoneName, canEdit }: { zoneId: string; zoneName: string; canEdit: boolean }) {
   const zones = copyTargets(zoneId).map((id) => zoneById(id)?.name ?? id);
+  // The copy takes the zone's saved draft: say so when it holds changes the drivers do not have yet.
+  const pending = useUnpublished("driver_app_config", zoneId);
   if (!zones.length) return null;
   return (
     <div className="standard-bar" data-testid="copy-all-zones">
@@ -55,7 +58,7 @@ export function CopyToAllZones({ zoneId, zoneName, canEdit }: { zoneId: string; 
         after={tr("Same as {0}", [zoneName])}
         confirmTarget={false}
         disabled={!canEdit}
-        summary={tr("The driver app settings of {0} are copied to these zones and published to their drivers: {1}.", [zoneName, zones.join(", ")])}
+        summary={<span data-testid="sure-copy"><strong>{tr("Are you sure?")}</strong> {tr("The settings of {0} will be copied into every zone of {1} and sent to their drivers. Each zone's current values are replaced. Zones affected: {2}.", [zoneName, trx(countryNameOf(zoneId)), zones.join(", ")])}{pending?.length ? <> <strong data-testid="sure-copy-pending">{tr("This zone has changes not yet sent to drivers; they will be copied and sent to all zones too.")}</strong></> : null}</span>}
       >
         {tr("Copy to all zones")}
       </CommandButton>
@@ -99,7 +102,7 @@ function standardBar({ docs, zoneId, zoneName, country, countryName, canEdit }: 
         confirmTarget={false}
         value={{ docs }}
         disabled={!canEdit}
-        summary={tr("{0} will use the Standard for {1} again. Its own settings stay in History.", [zoneName, trx(countryName)])}
+        summary={<span data-testid="sure-standard"><strong>{tr("Are you sure?")}</strong> {tr("{0} will stop using its own settings and follow the {1} Standard. Its own values will be deleted (an old copy stays in History). Zones affected: {0}.", [zoneName, trx(countryName)])}</span>}
       >
         <RotateCcw size={13} aria-hidden="true" /> {tr("Go back to Standard")}
       </CommandButton>
@@ -108,11 +111,34 @@ function standardBar({ docs, zoneId, zoneName, country, countryName, canEdit }: 
 }
 
 /** The publish dialog's line in the live panel: exactly which zones (and Standard) get the change. */
-export function PublishTargetsLine({ zoneIds }: { zoneIds: readonly string[] }) {
+export function PublishTargetsLine({ zoneIds, doc = "driver_app_config" }: { zoneIds: readonly string[]; doc?: ConfigDocName }) {
   const names = zoneIds.map((id) => zoneById(id)?.name ?? id);
+  const standards = zoneIds.filter((id) => countryOfStandard(id));
   return (
     <span data-testid="publish-targets">
       {names.length ? tr("Publishes to: {0}. No other zone changes.", [names.join(", ")]) : tr("Nothing is chosen at the top: choose the zones first.")}
+      {standards.map((id) => <StandardPublishNote key={id} standardId={id} doc={doc} chosen={zoneIds} />)}
+    </span>
+  );
+}
+
+/** The country's name for a zone or a standard-<CC> key. */
+function countryNameOf(id: string): string {
+  const country = countryOfStandard(id);
+  return country ? market(country as MarketId).name : marketOfZone(id)?.name ?? id;
+}
+
+/** G3-D9: publishing a country Standard: who gets it now and which zones with their own settings do not. */
+function StandardPublishNote({ standardId, doc, chosen }: { standardId: string; doc: ConfigDocName; chosen: readonly string[] }) {
+  const country = countryOfStandard(standardId) as MarketId;
+  const zones = market(country).zones.filter((zone) => !chosen.includes(zone.id));
+  const known = zones.some((zone) => standardMarks.get(doc, zone.id) !== undefined);
+  const own = zones.filter((zone) => standardMarks.get(doc, zone.id) === false).map((zone) => zone.name);
+  return (
+    <span className="sure-standard-publish" data-testid="sure-standard-publish">
+      {" "}<strong>{tr("Are you sure?")}</strong>{" "}
+      {tr("Drivers in all {0} zones that follow the Standard get this change now.", [trx(market(country).name)])}{" "}
+      {own.length ? tr("Zones with their own settings are NOT changed: {0}.", [own.join(", ")]) : known ? tr("No zone has settings of its own: every zone gets it.") : tr("Zones with their own settings are NOT changed.")}
     </span>
   );
 }

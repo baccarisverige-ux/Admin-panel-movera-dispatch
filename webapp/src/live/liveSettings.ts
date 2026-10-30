@@ -522,7 +522,11 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       if (sliceKey === ZONE_RULES_KEY) return readZoneRules();
       if (sliceKey === ONBOARDING_SETTINGS_KEY) return readOnboarding(fallback);
       // Settings' draft lives in this session until it is published (the server keeps the published documents).
-      if (sliceKey === CONFIG_KEY) return Promise.resolve(slices.get(CONFIG_KEY) ?? fallback);
+      if (sliceKey === CONFIG_KEY) {
+        // G3-D9: which zones have driver app settings of their own, for the "Are you sure?" of a Standard publish.
+        void Promise.all(readScopes().filter((id) => !countryOfStandard(id)).map((id) => draft("driver_app_config", id).catch(() => null)));
+        return Promise.resolve(slices.get(CONFIG_KEY) ?? fallback);
+      }
       return null;
     },
     command(action, input) {

@@ -194,3 +194,12 @@ test("French and Swedish load on first use; English needs no dictionary", async 
 test("G2 R10: the dead 'Approve all remaining' text is gone from every dictionary", () => {
   assert.equal(Object.hasOwn(en, "Approve all remaining"), false);
 });
+
+// Checker G3-D9: the Copy to all zones / Publish to drivers errors and the pending-changes warning read sv and fr.
+test("G3-D9: copy and publish-to-drivers texts are in sv and fr", async () => {
+  const { sv } = await import("./sv.ts");
+  const { fr } = await import("./fr.ts");
+  for (const key of ["Nothing to copy.", "Choose a zone first.", "This zone has changes not yet sent to drivers; they will be copied and sent to all zones too."]) {
+    for (const dict of [sv, fr] as Record<string, string>[]) assert.ok(dict[key] && dict[key] !== key, `${key} translated`);
+  }
+});

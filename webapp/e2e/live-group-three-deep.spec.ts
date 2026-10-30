@@ -113,3 +113,49 @@ test("G3-D8: Dispatch has Copy to all zones; the confirm lists the zones; each g
   await expect.poll(() => settings.sent.some((call) => call.method === "POST" && call.path.endsWith("/driver_app_config/publish") && call.body?.["zoneId"] === "Z001")).toBe(true);
   expect(settings.sent.some((call) => call.path.includes("use-standard"))).toBe(false);
 });
+
+// Owner G3-D9 (2026-10-30): "So add are u sure popup and explain before set standard or copy to all zone".
+test("G3-D9: Go back to Standard and Copy to all zones explain what happens and list the zones; Cancel changes nothing", async ({ page }) => {
+  await start(page);
+  const settings = await fakeSettings(page);
+  await page.goto("/dispatch/radar?zone=Z002");
+  await page.getByRole("button", { name: "Go back to Standard" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByTestId("sure-standard")).toContainText("Are you sure? Södermalm will stop using its own settings and follow the Sweden Standard. Its own values will be deleted");
+  await expect(dialog).toContainText("Zones affected: Södermalm.");
+  await shot(page, "sure-go-back-to-standard");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await page.getByTestId("copy-all-zones").getByRole("button", { name: "Copy to all zones" }).click();
+  await expect(dialog.getByTestId("sure-copy")).toContainText("will be copied into every zone of Sweden and sent to their drivers. Each zone's current values are replaced. Zones affected: Stockholm County");
+  await shot(page, "sure-copy-all-zones");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  expect(settings.sent.filter((call) => call.method !== "GET")).toEqual([]);
+});
+
+test("G3-D9: publishing the country Standard says who gets it and names the zones with their own settings", async ({ page }) => {
+  await start(page, {}, "Dashboard");
+  await fakeSettings(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/settings?scope=standard-SE");
+  await page.locator("article.panel", { has: page.getByRole("heading", { name: "Features", exact: true }) }).locator("label.check-row input[type=checkbox]").first().click();
+  await page.getByRole("button", { name: "Save draft" }).first().click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
+  const note = page.getByRole("dialog").getByTestId("sure-standard-publish");
+  await expect(note).toContainText("Are you sure? Drivers in all Sweden zones that follow the Standard get this change now.");
+  await expect(note).toContainText("Zones with their own settings are NOT changed: Södermalm.");
+  await shot(page, "sure-standard-publish");
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+});
+
+test("G3-D9: Copy to all zones warns when the zone has changes not yet sent to drivers", async ({ page }) => {
+  await start(page);
+  const settings = await fakeSettings(page);
+  const entry = settings.docs.get("driver_app_config:Z002")!;
+  settings.docs.set("driver_app_config:Z002", { ...entry, live: { ...entry.document, offers: { old: true } } });
+  await page.goto("/dispatch/radar?zone=Z002");
+  await expect(page.getByTestId("unpublished-driver-app")).toContainText("not live yet");
+  await page.getByTestId("copy-all-zones").getByRole("button", { name: "Copy to all zones" }).click();
+  await expect(page.getByRole("dialog").getByTestId("sure-copy-pending")).toHaveText("This zone has changes not yet sent to drivers; they will be copied and sent to all zones too.");
+  await shot(page, "sure-copy-pending");
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+});
