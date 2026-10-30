@@ -214,10 +214,11 @@ export function effectiveVehicleRules(slice: unknown, book: SettingsBook, live: 
  * Live (owner G2 R1, 2026-10-30): the car's papers as the server has them, registration and insurance with their real
  * status and end date; nothing assumed approved, no inspection the server does not keep.
  */
-export function liveCarDocs(documents: readonly { type: string; status: string; expiresAt?: string }[] | undefined, now: number, warnDays = EXPIRY_WARNING_DAYS): CarDoc[] {
+export function liveCarDocs(documents: readonly { type: string; status: string; expiresAt?: string; renewalOf?: string }[] | undefined, now: number, warnDays = EXPIRY_WARNING_DAYS): CarDoc[] {
   const status: Record<string, DocStatus> = { approved: "approved", in_review: "in_review", rejected: "rejected", expired: "expired" };
   const one = (id: CarDoc["id"], label: string, types: string[]): CarDoc => {
-    const doc = [...(documents ?? [])].reverse().find((item) => types.includes(item.type));
+    // v0.18.5 (G2-D1): a renewal never hides the approved paper it renews.
+    const doc = [...(documents ?? [])].filter((item) => !item.renewalOf).reverse().find((item) => types.includes(item.type));
     const expiresAt = doc?.expiresAt ? doc.expiresAt.slice(0, 10) : "";
     const health = docHealth({ status: doc ? status[doc.status] ?? "needed" : "needed", expiresAt }, now, warnDays);
     return { id, label, expiresAt, health: health.health, text: health.label };

@@ -50,7 +50,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { SensitiveValue } from "../ui/SensitiveValue";
 import { TabPanel, Tabs } from "../ui/Tabs";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
-import { auditActionText, auditActorText, auditDetailText } from "../live/format";
+import { auditActionText, auditActorText, auditDetailText, mainDocuments, renewalFor } from "../live/format";
 
 const TABS = ["Overview", "Documents", "Performance", "Earnings", "Trips", "Vehicles", "Messages", "Notes", "Activity"];
 const CATEGORIES: Vehicle["category"][] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
@@ -86,6 +86,7 @@ export function DriverDetailPage() {
     return () => window.removeEventListener("popstate", restore);
   }, []);
   const [accountNote, setAccountNote] = useState("");
+  const [bankNote, setBankNote] = useState("");
   const [privateNote, setPrivateNote] = useState("");
   const [notice, setNotice] = useState("");
   const [refused, setRefused] = useState<string[] | null>(null);
@@ -129,12 +130,30 @@ export function DriverDetailPage() {
   // Live (owner rule, part 3): the server decides activation and holds the documents; nothing from local demo stores.
   const liveData = isLiveData();
   // Live (v0.18.0): the bank details are the bank_statement document; its status is the bank review.
-  const liveBank = driver?.liveAccount?.documents.find((doc) => doc.type === "bank_statement")?.status ?? "missing";
+  // v0.18.5 (owner G2-D1): new bank details uploaded over approved ones wait as a renewal; Approved / Rejected decide
+  // the new ones (POST …/bank/review) while the current ones stay valid. G2-D5.7: a rejection needs the admin's words.
+  const liveDocs = driver?.liveAccount?.documents ?? [];
+  const bankDoc = mainDocuments(liveDocs).find((doc) => doc.type === "bank_statement");
+  const bankRenewal = renewalFor(liveDocs, bankDoc?.documentId);
+  const bankRenewalWaiting = bankRenewal?.status === "in_review";
+  const liveBank = bankDoc?.status ?? "missing";
   const bankBox = !driver ? null : (
   <section className="fd-box">
     <h3>{tr("Bank account")}</h3>
     {liveData ? <p data-testid="live-bank-status"><strong>{statusLabel(liveBank, "documentStatus")}</strong></p> : <p>{ops.bank.holder} · •••• {ops.bank.last4} · <strong>{statusLabel(ops.bank.status, "documentStatus")}</strong></p>}
+    {liveData && bankRenewal ? (
+      <p className="fd-banner amber" data-testid="bank-renewal">
+        {bankRenewalWaiting ? tr("New bank details are waiting for review. The current ones stay valid until a decision; Approved or Rejected below decides the new ones.") : tr("The new bank details were rejected. The current ones stay valid.")}{" "}
+        <button data-command="admin.server.documentOpen" type="button" className="link-action" onClick={() => selectTab("documents")}>{tr("Compare in Documents")}</button>
+      </p>
+    ) : null}
     {!liveData && ops.bank.note ? <p className="state-line">{trn("Review note: {0}", ops.bank.note)}</p> : null}
+    {liveData ? (
+      <label className="fd-reason">
+        <span>{tr("Why rejected (required to reject; the driver sees it)")}</span>
+        <textarea value={bankNote} maxLength={1000} rows={2} onChange={(event) => setBankNote(event.target.value)} data-testid="bank-note" />
+      </label>
+    ) : null}
     <div className="fd-action-row">
       {(liveData ? (["approved", "rejected"] as const) : (["approved", "rejected", "in_review"] as const)).map((status) => (
         <CommandButton
@@ -149,9 +168,10 @@ export function DriverDetailPage() {
           after={status}
           expectedSliceRev={store.value.draftRev}
           sliceKey="driverOps"
-          value={liveData ? { note: accountNote } : setBankReview(store.value, driverSeed, status, agent?.id ?? "", accountNote)}
-          disabled={(liveData ? liveBank : ops.bank.status) === status}
-          onDone={() => setNotice(tr("Bank details marked {0}.", [statusLabel(status, "documentStatus").toLowerCase()]))}
+          value={liveData ? { note: bankNote.trim() } : setBankReview(store.value, driverSeed, status, agent?.id ?? "", accountNote)}
+          disabled={liveData ? (status === "rejected" && !bankNote.trim()) || (!bankRenewalWaiting && liveBank === status) : ops.bank.status === status}
+          title={liveData && status === "rejected" && !bankNote.trim() ? tr("Write why: the driver sees the reason.") : undefined}
+          onDone={() => { setBankNote(""); setNotice(tr("Bank details marked {0}.", [statusLabel(status, "documentStatus").toLowerCase()])); }}
         >
           {statusLabel(status, "documentStatus")}
         </CommandButton>

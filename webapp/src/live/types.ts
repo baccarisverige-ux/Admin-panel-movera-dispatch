@@ -33,7 +33,11 @@ export type DriverOnlineStatus = "offline" | "going_online" | "online" | "on_tri
 export type DocumentStatus = "missing" | "in_review" | "approved" | "rejected" | "expired";
 export type ReviewStatus = "pending" | "approved" | "rejected" | "blocked";
 
-export type DocumentSummary = { documentId: string; type: string; status: DocumentStatus; expiresAt?: string };
+/**
+ * v0.18.5 (owner G2-D1 "Keep old until new approved (Recommended)"): renewalOf = the approved document this upload
+ * renews; it is listed right after that one and reviewed with its own documentId.
+ */
+export type DocumentSummary = { documentId: string; type: string; status: DocumentStatus; expiresAt?: string; renewalOf?: string };
 
 export type DocumentRecord = {
   documentId: string;
@@ -48,6 +52,8 @@ export type DocumentRecord = {
   mediaType?: string;
   uploadedAt?: string;
   reviewedAt?: string;
+  /** v0.18.5 (G2-D1): set on a renewal. */
+  renewalOf?: string;
 };
 
 export type FleetLink = { fleetId: string; name: string; role: "owner" | "member"; status: ReviewStatus; linkedAt: string };
@@ -136,6 +142,8 @@ export type Vehicle = {
   fuel?: "petrol" | "diesel" | "hybrid" | "electric";
   /** v0.18.3 (R2): "<category>:<problem>" while the car breaks the country's rules; Approve is 409 vehicle_rules_not_met. */
   ruleProblems?: string[];
+  /** v0.18.5 (owner G2-D5.3): the ride categories and extras this car fits now; the admin gives some of them on approval. */
+  fitCategories?: string[];
 };
 
 export type FleetInvitationStatus = "pending" | "accepted" | "declined" | "cancelled" | "expired";

@@ -136,7 +136,7 @@ export type LiveAccountFacts = {
   country?: string;
   fleetRole?: "owner" | "member";
   vehicleId?: string;
-  documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string }[];
+  documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string; renewalOf?: string }[];
   requiredDocuments?: string[];
   requiredFleetDocuments?: string[];
   /** v0.18.0: the categories the admin allows (PUT /admin/drivers/{id}/categories). */

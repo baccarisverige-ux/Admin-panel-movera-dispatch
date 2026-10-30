@@ -1,5 +1,6 @@
 import type { DemoRecord } from "../api/seed.ts";
 import { REQUIRED_DOCUMENTS } from "../live/onboardingContract.ts";
+import { mainDocuments } from "../live/format.ts";
 import { docHealth, type HealthCount } from "./documents.ts";
 
 /**
@@ -14,7 +15,7 @@ export function liveCompanyDocs(facts: DemoRecord["liveAccount"] | undefined, co
   const required = facts?.requiredFleetDocuments ?? REQUIRED_DOCUMENTS[country ?? facts?.country ?? ""]?.fleet ?? [];
   const counts: HealthCount = { valid: 0, expiring: 0, invalid: 0, review: 0 };
   for (const type of required) {
-    const doc = [...(facts?.documents ?? [])].reverse().find((item) => item.type === type);
+    const doc = [...mainDocuments(facts?.documents)].reverse().find((item) => item.type === type);
     const health = docHealth({ status: STATUS[doc?.status ?? "missing"] ?? "needed", expiresAt: doc?.expiresAt?.slice(0, 10) ?? "" }, nowMs, warnDays).health;
     counts[health] += 1;
   }
@@ -27,7 +28,7 @@ export function liveDriverDocs(facts: DemoRecord["liveAccount"] | undefined, now
   const required = facts.requiredDocuments ?? REQUIRED_DOCUMENTS[facts.country ?? ""]?.driver ?? [];
   const counts: HealthCount = { valid: 0, expiring: 0, invalid: 0, review: 0 };
   for (const type of required) {
-    const doc = [...facts.documents].reverse().find((item) => item.type === type);
+    const doc = [...mainDocuments(facts.documents)].reverse().find((item) => item.type === type);
     counts[docHealth({ status: STATUS[doc?.status ?? "missing"] ?? "needed", expiresAt: doc?.expiresAt?.slice(0, 10) ?? "" }, nowMs, warnDays).health] += 1;
   }
   return { counts, total: required.length };

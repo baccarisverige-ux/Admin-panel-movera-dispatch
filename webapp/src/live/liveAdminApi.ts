@@ -28,7 +28,7 @@ import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, pa
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
 import { vehicleMissing } from "./activation.ts";
-import { errorText, requiredForVehicle } from "./format.ts";
+import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { tr } from "../i18n/index.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 
@@ -78,7 +78,9 @@ function fullName(first: string, last?: string): string {
 }
 
 /** The demo's one-word document state of a person or car. */
-export function docState(documents: readonly DocumentSummary[] = [], required: readonly string[] = []): string {
+export function docState(all: readonly DocumentSummary[] = [], required: readonly string[] = []): string {
+  // v0.18.5 (G2-D1): a renewal waiting or refused does not change the state of the approved document.
+  const documents = mainDocuments(all);
   if (documents.some((doc) => doc.status === "rejected")) return "rejected";
   if (documents.some((doc) => doc.status === "expired")) return "expired";
   const have = new Set(documents.filter((doc) => doc.status !== "missing").map((doc) => doc.type));
@@ -557,6 +559,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const decision = input.after === "approved" || input.after === "rejected" ? input.after : null;
       if (!decision) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
       const note = ((input.value as { note?: string } | undefined)?.note ?? "").trim();
+      // v0.18.5 (owner G2-D5.7): a rejection needs the admin's own words; the driver sees them.
+      if (decision === "rejected" && !note) throw new ApiError(400, tr("Write why: the driver sees the reason."), { code: "invalid_request", reason: "note_required", retryable: false });
       await client.post(`/admin/drivers/${encodeURIComponent(input.targetId)}/bank/review`, { decision, ...(note ? { note: note.slice(0, 1000) } : {}) }).catch(explained);
       return done("Saved.");
     }

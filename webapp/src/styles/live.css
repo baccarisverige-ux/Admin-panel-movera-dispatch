@@ -70,3 +70,11 @@ tr.live-open td { background: #f6f7fb; }
 .live-onboarding-grid tr.active td { background: var(--doc-valid-soft, #eef6ee); }
 @media (max-width: 900px) { .live-onboarding-grid { grid-template-columns: 1fr; } }
 .live-onboarding-grid .link-button { background: none; border: 0; padding: 0; color: var(--accent, #2a78d6); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+
+/* v0.18.5 (owner G2-D1): a renewal under the approved document, and both files side by side. */
+.live-renewal-row td { background: #fff8e8; font-size: 13px; }
+.live-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.live-compare-side { margin: 0; border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-width: 0; }
+.live-compare-side figcaption { font-size: 13px; margin-bottom: 8px; }
+.live-compare-side .live-file { max-height: 55vh; }
+@media (max-width: 720px) { .live-compare { grid-template-columns: 1fr; } }

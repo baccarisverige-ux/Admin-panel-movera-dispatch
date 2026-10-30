@@ -7,7 +7,7 @@ import { Modal } from "../ui/Modal";
 import { tr, trx, uiLocale } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { errorText, shortDate, shortDateTime } from "./format";
-import { endDateFrom } from "../drivers/onboardingSettings";
+import { EXPIRY_MAX_YEARS_AHEAD as EXPIRY_YEARS, endDateFrom, endDateTooFar, maxEndDate } from "../drivers/onboardingSettings";
 import type { Page } from "./types";
 
 /** A failed call, in words: the server's message, "Your role cannot do that." on 403, the request id when unexpected. */
@@ -164,13 +164,17 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
   const today = new Date().toISOString().slice(0, 10);
   const issuedInFuture = expiry && Boolean(issuedAt) && issuedAt > today;
   const expiryMissing = expiry && expiryRequired && (!expiresAt || expiresAt < tomorrow);
+  // v0.18.5 (owner G2-D5.8): at most 15 years from today; later is "Check the end date" and is not sent.
+  const latestEnd = maxEndDate();
+  const expiryTooFar = expiry && Boolean(expiresAt) && endDateTooFar(expiresAt);
+  const blocked = noteMissing || tooLong || expiryMissing || expiryTooFar || issuedInFuture || busy;
   return (
     <Modal open={open} title={title} onClose={onClose}>
       <form
         className="live-dialog"
         onSubmit={async (event) => {
           event.preventDefault();
-          if (noteMissing || tooLong || expiryMissing || issuedInFuture || busy) return;
+          if (blocked) return;
           setBusy(true);
           setError(null);
           try {
@@ -206,13 +210,14 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         {expiry ? (
           <label>
             {expiryRequired ? tr("Valid until (required)") : tr("Valid until (optional)")}
-            <input type="date" value={expiresAt} min={expiryRequired ? tomorrow : undefined} required={expiryRequired} aria-invalid={expiryMissing} onChange={(event) => { setTypedEnd(true); setExpiresAt(event.target.value); }} />
+            <input type="date" data-testid="expires-at" value={expiresAt} min={expiryRequired ? tomorrow : undefined} max={latestEnd} required={expiryRequired} aria-invalid={expiryMissing || expiryTooFar} onChange={(event) => { setTypedEnd(true); setExpiresAt(event.target.value); }} />
           </label>
         ) : null}
+        {expiryTooFar ? <p className="vh-help live-error" role="alert" data-testid="expiry-too-far">{tr("Check the end date")} · {tr("At most {0} years from today.", [EXPIRY_YEARS])}</p> : null}
         {expiryMissing ? <p className="vh-help" data-testid="expiry-required">{tr("This document expires: type the expiry date from the document (after today).")}</p> : null}
         {error ? <ErrorLine error={error} /> : null}
         <div className="actions">
-          <button data-command="admin.server.dialogConfirm" type="submit" className={danger ? "primary-btn live-danger" : "primary-btn"} disabled={noteMissing || tooLong || expiryMissing || issuedInFuture || busy}>
+          <button data-command="admin.server.dialogConfirm" type="submit" className={danger ? "primary-btn live-danger" : "primary-btn"} disabled={blocked}>
             {busy ? tr("Sending.") : confirmLabel}
           </button>
           <button data-command="admin.server.dialogCancel" type="button" className="secondary-btn" onClick={onClose} disabled={busy}>{tr("Cancel")}</button>

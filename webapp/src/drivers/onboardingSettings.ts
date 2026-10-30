@@ -329,6 +329,25 @@ export function setValidMonths(doc: SettingsDoc, type: string, months: number | 
 }
 
 /** The end date the review dialog proposes: issue date + N months (YYYY-MM-DD, the month's last day when it is shorter), "" when unknown. */
+/**
+ * v0.18.5 (owner G2-D5.8 "Max 15 years ahead (Recommended)", contract.json#driverOnboarding.documentExpiry.maxYearsAhead):
+ * an end date more than 15 years after today is refused by the server (400 expiry_too_far, "Check the end date"). The
+ * date picker stops at today + 15 years (UTC, like the server), and a date after it is not sent.
+ */
+export const EXPIRY_MAX_YEARS_AHEAD = 15;
+
+/** The last end date the server accepts today, as yyyy-mm-dd. */
+export function maxEndDate(now: Date | number = Date.now()): string {
+  const max = new Date(typeof now === "number" ? now : now.getTime());
+  max.setUTCFullYear(max.getUTCFullYear() + EXPIRY_MAX_YEARS_AHEAD);
+  return max.toISOString().slice(0, 10);
+}
+
+/** True for an end date (yyyy-mm-dd) after maxEndDate: the panel says "Check the end date" and does not send it. */
+export function endDateTooFar(date: string, now: Date | number = Date.now()): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && date > maxEndDate(now);
+}
+
 export function endDateFrom(issuedAt: string, months: number | undefined): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(issuedAt);
   if (!match || !months) return "";
