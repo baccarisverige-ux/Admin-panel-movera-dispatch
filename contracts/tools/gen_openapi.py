@@ -226,7 +226,7 @@ S["Driver"] = obj({"driverId": ref("Id"), "accountStatus": ref("DriverAccountSta
                    "moving": b("Mirror of the latest GeoFix.moving the driver app sent (contract.json#driverMotion, v0.5.0); decides the offer limits while driving."),
                    "firstName": s(), "rating": n(minimum=0, maximum=5), "zoneIds": arr(ref("Id")),
                    "categoryIds": arr(ref("CategoryId")), "vehicleId": ref("Id"), "documents": arr(ref("DocumentSummary")),
-                   "activeTripId": ref("Id"), "scheduledRides": ref("DriverScheduledRides"), "version": i(minimum=1),
+                   "activeTripId": ref("Id"), "scheduledRides": {"allOf": [ref("DriverScheduledRides")], "description": C["driverHome"]["scheduledRidesPerDriver"]}, "version": i(minimum=1),
                    "location": {"allOf": [ref("GeoFix")], "description": "v0.5.1, admin view only: the latest fix (CONTRACT.md §12)."},
                    "lastFixAt": {"allOf": [ref("Timestamp")], "description": "v0.5.1, admin view only: when the latest fix was received."}},
                   ["driverId", "accountStatus", "onlineStatus", "firstName", "zoneIds", "categoryIds", "documents", "version"])
@@ -281,6 +281,8 @@ S["FleetDriverEarnings"] = obj({"driverId": ref("Id"), "firstName": s(), "lastNa
 S["FleetEarnings"] = obj({"from": ref("Timestamp"), "to": ref("Timestamp"), "items": arr(ref("FleetDriverEarnings")), "total": ref("Money")},
                          ["from", "to", "items", "total"], "v0.5.3: every driver's earnings in the period, for the fleet owner.")
 S["Driver"]["properties"].update({
+    "outsideArea": b("v0.18.4 (G3-R2), driver view: the latest position is outside all of Driver.zoneIds; missing with no position. The app shows contract.json#driverHome.outsideArea.text."),
+    "areaZones": arr(ref("AreaZone"), description="v0.18.4: with outsideArea true, the driver's own zones (names for the popup)."),
     "accountType": {"allOf": [ref("DriverAccountType")], "description": "v0.5.3; missing before POST /driver/onboarding."},
     "lastName": s("v0.5.3"), "dateOfBirth": s("v0.5.3: YYYY-MM-DD; at least contract.json#driverOnboarding.minAge years.", format="date"),
     "email": s("v0.5.3", format="email"), "country": {"allOf": [ref("DriverCountry")], "description": "v0.5.3"},
@@ -473,7 +475,10 @@ S["EarningsPeriod"] = obj({"periodStart": ref("Timestamp"), "periodEnd": ref("Ti
                           ["periodStart", "periodEnd", "tripCount", "gross", "commission", "tips", "adjustments", "net"])
 S["EarningsReport"] = obj({"driverId": ref("Id"), "period": s(enum=["day", "week", "month"]), "timeZone": s(),
                            "periods": arr(ref("EarningsPeriod"))}, ["driverId", "period", "periods"])
-S["DriverLocationAck"] = obj({"accepted": i(minimum=0), "serverTime": ref("Timestamp")}, ["accepted", "serverTime"])
+S["AreaZone"] = obj({"zoneId": ref("Id"), "name": s()}, ["zoneId", "name"], "v0.18.4: one of the driver's own zones.")
+S["DriverLocationAck"] = obj({"accepted": i(minimum=0), "serverTime": ref("Timestamp"),
+                              "outsideArea": b("v0.18.4 (G3-R2): the driver's latest position is outside all his zones (no trips there). " + C["driverHome"]["outsideArea"]["note"]),
+                              "areaZones": arr(ref("AreaZone"), description="v0.18.4: with outsideArea true, the driver's own zones.")}, ["accepted", "serverTime"])
 S["PinCode"] = obj({"tripId": ref("Id"), "pin": s(pattern=r"^\d{4}$"), "expiresAt": ref("Timestamp")},
                    ["tripId", "pin", "expiresAt"], "Per-trip PIN shown to the rider when pinRequired.")
 S["PinVerification"] = obj({"verifiedPinToken": s("Short-lived proof passed to `board`; the raw PIN is never stored or logged.", minLength=16),
@@ -729,6 +734,7 @@ S["DriverAppConfig"] = obj(OrderedDict(list(CONFIG_HEAD.items()) + [
                                   "additionalProperties": {"type": "boolean"}},
                     "exclusiveReasons": arr(obj({"id": s(pattern="^[a-z][a-z0-9_-]{0,63}$"), "text": s(), "on": b()}, ["id", "text", "on"])),
                     "autoOffline": obj({"missedExclusive": i("Missed or declined exclusive offers in a row before the driver is set offline (default 10, owner decision 35; 3 before v0.5.6). " + C["autoOffline"]["note"], minimum=0),
+                                        "noFixMinutes": i("v0.18.4 (G3-R1): no position for this many minutes while online (not on a trip) → the server sets the driver offline (default 5; 0 = never). " + C["driverHome"]["setOffline"]["note"], minimum=0),
                                         "hiddenComesBackMin": n(minimum=0)})})),
     ("pickupPay", ref("DriverPickupPay")),
     ("driverBonus", ref("DriverBonusLimits")),
@@ -935,7 +941,10 @@ S["LiveDriver"] = obj(OrderedDict([("driverId", ref("Id")), ("firstName", s()), 
                                    ("stale", b(f"No fix for more than staleAfterSeconds ({LD['staleAfterSeconds']} s).")), ("activeTripId", ref("Id")),
                                    ("tripStatus", ref("TripStatus")), ("vehicleId", ref("Id")), ("plate", s()), ("zoneId", ref("Id"))]),
                       ["driverId", "firstName", "onlineStatus", "stale", "zoneId"])
-S["LiveDriverList"] = obj({"items": arr(ref("LiveDriver")), "staleAfterSeconds": {**i(minimum=1), "default": LD["staleAfterSeconds"]}, "serverTime": ref("Timestamp")},
+S["ZoneRidersOnline"] = obj({"zoneId": ref("Id"), "count": i(minimum=0)}, ["zoneId", "count"], "v0.18.4 (G3-R4): " + C["driverHome"]["ridersOnline"]["note"])
+S["LiveDriverList"] = obj({"items": arr(ref("LiveDriver")), "staleAfterSeconds": {**i(minimum=1), "default": LD["staleAfterSeconds"]}, "serverTime": ref("Timestamp"),
+                           "ridersOnline": arr(ref("ZoneRidersOnline"), description="v0.18.4 (G3-R4): real riders online per zone of the admin, the Dashboard's 'Riders online'."),
+                           "ridersOnlineWindowSeconds": {**i(minimum=1), "default": C["driverHome"]["ridersOnline"]["windowSeconds"]}},
                           ["items", "staleAfterSeconds", "serverTime"], f"Drivers on the admin live map; the panel polls about every {LD['pollSeconds']} s.")
 S["TripTrace"] = obj({"tripId": ref("Id"), "fixes": arr(ref("GeoFix"), description="In time order."), "keptUntil": ref("Timestamp")}, ["tripId", "fixes"],
                      f"The trip's GPS trace; deleted {LD['traceKeepDays']} days after the trip (owner decision 11).")
@@ -1397,7 +1406,9 @@ op("post", "/support/tickets", "createTicket", "Open a support ticket", ["rider"
 op("post", "/driver/availability", "setDriverAvailability", "Go online / offline", ["driver"], "Driver · Session",
    body="AvailabilityRequest", ok=(200, "Driver"), mutation=True,
    desc="409 when on a trip, account not active, documents expired or driving limit reached (projection = Driver). v0.14.0: a car whose Vehicle.requiredDocuments are not all approved → 409 documents_not_approved (reason vehicle_documents_not_approved, details). "
-        "v0.18.0: " + C["driverOnboarding"]["documentExpiry"]["block"] + " With no car picked: reason fleet_no_approved_car when the fleet has no car that can be picked, else no_vehicle (contract.json#driverOnboarding.reminders).")
+        "v0.18.0: " + C["driverOnboarding"]["documentExpiry"]["block"] + " With no car picked: reason fleet_no_approved_car when the fleet has no car that can be picked, else no_vehicle (contract.json#driverOnboarding.reminders). "
+        "v0.18.4: " + C["driverHome"]["locationRequired"]["note"] + " Outside the driver's zones going online still works and the Driver carries outsideArea: true (contract.json#driverHome.outsideArea). "
+        "Slow server: contract.json#auth.slowStart covers this call.")
 op("post", "/driver/location", "postDriverLocation", "Upload a batch of GPS fixes", ["driver"], "Driver · Session",
    body="LocationBatch", ok=(200, "DriverLocationAck"), mutation=True,
    desc="Fixes are fanned out as kind=location on the active trip's stream; they never change the projection version.")
@@ -1856,6 +1867,17 @@ S["DocumentReviewCommand"]["description"] += " v0.18.0: " + C["driverOnboarding"
 S["DocumentReviewCommand"]["properties"]["issuedAt"] = ref("Timestamp")
 S["Vehicle"]["properties"]["ruleProblems"] = arr(s(), description="v0.18.3 (admin and fleet-owner views): " + C["driverOnboarding"]["vehicleRules"]["approval"] + " " + C["driverOnboarding"]["vehicleRules"]["baseYear"])
 S["Notification"]["description"] = "v0.18.3 review notices: " + C["driverOnboarding"]["reviewNotices"]["note"]
+# ---- v0.18.3 (R7): push to a closed phone through Firebase Cloud Messaging
+PD = AU["devices"]
+S["PushWebConfig"] = obj({"apiKey": s("Public Firebase web API key (not a secret)."), "appId": s(), "messagingSenderId": s(), "projectId": s(),
+                          "authDomain": s()}, ["apiKey", "appId", "messagingSenderId", "projectId"], "v0.18.3: the Firebase web app's public settings.")
+S["PushConfig"] = obj({"provider": s(enum=["fcm"]), "enabled": b("False when the server has no Firebase settings; the app then skips push."),
+                       "projectId": s(), "webConfig": ref("PushWebConfig")}, ["provider", "enabled"], PD["config"]["note"])
+o = op("get", "/push/config", "getPushConfig", "Public push settings for the app (Firebase web config)", ["rider", "driver"], "Auth",
+       params=[{"name": "app", "in": "query", "required": True, "schema": s(enum=PD["config"]["apps"])}], ok=(200, "PushConfig"),
+       desc=PD["config"]["note"] + " " + PD["appFlow"])
+o["security"] = []
+PATHS["/push/devices"]["post"]["description"] += " v0.18.3: " + PD["sending"]["note"] + " " + PD["sending"]["riderConsent"]
 
 # ---- v0.18.0: group 2 admin actions on live (contract.json#driverOnboarding.adminActions)
 AA = C["driverOnboarding"]["adminActions"]
