@@ -18,6 +18,7 @@ import { ApiError } from "../api/httpClient.ts";
 import type { ApprovalRow, AuditRow, DemoRecord, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
+import { ridersOnlineRecords } from "../dashboard/riders.ts";
 import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
@@ -421,6 +422,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return rows.map((row) => driverRecord(row, presence.get(row.driverId)));
     }
     if (name === "riders") return (await readRiders(true, filter)).map(riderRecord);
+    // G3-R4 (v0.18.4): real riders online per zone of the admin (the server counts open apps and open requests).
+    if (name === "ridersOnline") {
+      const query = new URLSearchParams(filter.params).toString();
+      return ridersOnlineRecords(await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`));
+    }
     if (name === "payments") {
       const rows = await paged<Payment>(client, "payments", "/admin/payments", filter);
       return rows.map((row) => paymentRecord(row, trips.get(row.tripId)?.zoneId ?? ""));

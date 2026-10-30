@@ -54,7 +54,7 @@ import { PeriodPicker } from "../dashboard/PeriodPicker";
 import { parsePeriod, periodParams, periodWindow, type Period } from "../dashboard/period";
 import { RideTable } from "../dashboard/RideTable";
 import { DashboardAccessContext, HIDDEN_DRIVER, dashboardAccess, maskBookings, maskDrivers, maskRequests, maskRiders, maskTrip } from "../dashboard/access";
-import { candidatesFor, rideRequests, riderCounts, type RideRequest } from "../dashboard/riders";
+import { candidatesFor, rideRequests, riderCounts, ridersOnlineIn, type RideRequest } from "../dashboard/riders";
 import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
 import { useAlertSignals, type Signal } from "../dashboard/useAlertSignals";
@@ -198,6 +198,7 @@ export function DashboardPage() {
   const vehicles = useRecords("vehicles", undefined, { refetchMs: SLOW_MS });
   const payouts = useRecords("payouts", undefined, { refetchMs: SLOW_MS });
   const riders = useRecords("riders", undefined, { refetchMs: SLOW_MS });
+  const ridersOnline = useRecords("ridersOnline", undefined, { refetchMs: LIVE_MS });
   const bonuses = useRecords("bonuses", undefined, { refetchMs: SLOW_MS });
   const fleets = useRecords("fleets");
   const audit = useAudit(LIVE_MS);
@@ -283,7 +284,8 @@ export function DashboardPage() {
   };
   // Offers only count when they went to a driver who could really take them.
   const requests = useMemo(() => maskRequests(rideRequests(tripRows, riderRows, (driverId) => onlineIds.has(driverId)), access), [tripRows, riderRows, onlineIds, access]);
-  const riderStats = riderCounts(requests, live, riderRows);
+  // G3-R4 (owner "Real numbers only"): live, the server's riders online in the zones in view; demo, no invented share.
+  const riderStats = riderCounts(requests, live, riderRows, liveData ? ridersOnlineIn(ridersOnline.data ?? [], scope.zones.length ? scope.zones : market.zones.map((zone) => zone.id)) : null);
   // Rides a driver just accepted: listed apart under the waiting riders and kept on the map (never counted as waiting).
   const allOnTheWay = useOnTheWay();
   const onTheWay = useMemo(() => maskRequests(allOnTheWay.filter((item) => !requests.some((request) => request.tripId === item.tripId)), access).map((item) => ({ ...item, driverName: access.drivers ? item.driverName : HIDDEN_DRIVER })), [allOnTheWay, requests, access]);

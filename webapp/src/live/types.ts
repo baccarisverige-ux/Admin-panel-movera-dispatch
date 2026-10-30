@@ -217,7 +217,7 @@ export type LiveDriverRow = {
   plate?: string;
   zoneId?: string;
 };
-export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string };
+export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string; ridersOnline?: { zoneId: string; count: number }[]; ridersOnlineWindowSeconds?: number };
 
 /** GET /admin/trips/{tripId}/trace: the car's positions on the trip (kept 30 days). */
 export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; measuredAt: string }[]; keptUntil: string };

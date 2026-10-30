@@ -4,8 +4,9 @@ import { CATEGORIES } from "../domain/contract.ts";
 import { zoneById } from "../markets/markets.ts";
 import type { LiveDriver } from "./live.ts";
 import type { LatLng } from "./route.ts";
+import type { LiveDriverList } from "../live/types.ts";
 
-/** Riders on the live map: waiting for a driver, being picked up, on a trip, or just browsing. */
+/** Riders on the live map: waiting for a driver, being picked up or on a trip; riders online from the server. */
 
 export type RideRequest = {
   tripId: string;
@@ -125,15 +126,30 @@ export function candidatesFor(request: RideRequest, drivers: readonly LiveDriver
     .sort((a, b) => Number(b.categoryOk) - Number(a.categoryOk) || a.km - b.km);
 }
 
-export function riderCounts(requests: readonly RideRequest[], drivers: readonly LiveDriver[], riders: readonly DemoRecord[]): RiderCounts {
+/**
+ * Owner G3-R4 (2026-10-30, "Real numbers only"): `serverOnline` is the server's riders online in the zones in view
+ * (LiveDriverList.ridersOnline). Without it: riders on a trip, being picked up or waiting. Nothing is invented.
+ */
+export function riderCounts(requests: readonly RideRequest[], drivers: readonly LiveDriver[], _riders: readonly DemoRecord[], serverOnline: number | null = null): RiderCounts {
   const onTrip = drivers.filter((driver) => driver.state === "trip" || driver.state === "sos").length;
   const beingPickedUp = drivers.filter((driver) => driver.state === "pickup").length;
-  const browsing = Math.round(riders.filter((row) => row.status === "active").length * 0.05);
   return {
-    online: browsing + onTrip + beingPickedUp + requests.length,
+    online: serverOnline ?? onTrip + beingPickedUp + requests.length,
     onTrip,
     beingPickedUp,
     waiting: requests.length,
     longWait: requests.filter((request) => request.waitingMin > LONG_WAIT_MIN).length,
   };
+}
+
+/** G3-R4: GET /admin/live/drivers → ridersOnline [{ zoneId, count }] as records (one per zone, zones with 0 included). */
+export function ridersOnlineRecords(list: Partial<LiveDriverList>): DemoRecord[] {
+  return (list.ridersOnline ?? []).map((row) => ({ id: `riders-online-${row.zoneId}`, name: "", phone: "", zoneId: row.zoneId, status: "online", count: row.count }));
+}
+
+/** G3-R4: riders online in the zones in view (all rows when none is picked); null when the server sent none. */
+export function ridersOnlineIn(rows: readonly DemoRecord[], zones: readonly string[]): number | null {
+  if (!rows.length) return null;
+  const picked = zones.length ? new Set(zones) : null;
+  return rows.filter((row) => !picked || picked.has(row.zoneId)).reduce((sum, row) => sum + (row.count ?? 0), 0);
 }

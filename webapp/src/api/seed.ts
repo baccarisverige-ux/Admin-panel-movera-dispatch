@@ -38,6 +38,8 @@ export type DemoRecord = {
   make?: string;
   model?: string;
   waitingMin?: number;
+  /** G3-R4: riders online in a zone (LiveDriverList.ridersOnline, list "ridersOnline"). */
+  count?: number;
   previousStatus?: string;
   /** Trips: when a driver accepted an admin offer (the assign tool), for the "Driver on the way" list. */
   acceptedAt?: string;

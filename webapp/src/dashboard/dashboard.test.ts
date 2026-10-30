@@ -141,3 +141,18 @@ test("rides a driver just accepted stay listed as on the way for 15 minutes, nev
   // Once the driver arrived (or the rider is on board) it leaves the list.
   assert.equal(onTheWayRequests([{ ...accepted, status: "arrived" }], db.riders, names, now).length, 0);
 });
+
+// Owner G3-R4 (2026-10-30, contract v0.18.4): "Real numbers only". Riders online come from the server
+// (LiveDriverList.ridersOnline per zone); no invented 5 % of the active riders "browsing".
+test("G3-R4: riders online are the server's per-zone numbers, never 5 % of the active riders", async () => {
+  const riders = await import("./riders.ts");
+  const active = Array.from({ length: 100 }, (_, index) => ({ id: `R${index}`, name: "", phone: "", zoneId: "Z001", status: "active" }));
+  assert.equal(riders.riderCounts([], [], active).online, 0, "no request, no trip: nobody is invented");
+  const { ridersOnlineRecords, ridersOnlineIn } = riders;
+  const rows = ridersOnlineRecords({ items: [], staleAfterSeconds: 120, serverTime: "2026-10-30T10:00:00Z", ridersOnline: [{ zoneId: "Z001", count: 3 }, { zoneId: "Z002", count: 0 }, { zoneId: "FR-PC", count: 2 }], ridersOnlineWindowSeconds: 120 });
+  assert.deepEqual(rows.map((row) => [row.zoneId, row.count]), [["Z001", 3], ["Z002", 0], ["FR-PC", 2]]);
+  assert.equal(ridersOnlineIn(rows, ["Z001", "Z002"]), 3, "only the zones in view");
+  assert.equal(ridersOnlineIn(rows, []), 5, "no zone picked: all the admin's zones");
+  assert.equal(ridersOnlineIn([], ["Z001"]), null, "an older server without ridersOnline: no number, not a guess");
+  assert.equal(riders.riderCounts([], [], active, 4).online, 4, "the server's number wins");
+});
