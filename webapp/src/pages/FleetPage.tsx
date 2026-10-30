@@ -16,6 +16,7 @@ import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } fro
 import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
 import { DataTable } from "../ui/DataTable";
 import { tr, trn, trx } from "../i18n";
+import { categoryName } from "../riders/profile";
 import { COUNTRY_LABEL } from "../i18n/countries";
 
 const VIEWS = [
@@ -86,6 +87,7 @@ export function FleetPage() {
     return row.record.status === id;
   };
   const shown = rows.filter((row) => inView(row, view));
+  const fleetName = (id: string) => (fleets.data ?? []).find((fleet) => fleet.id === id)?.name ?? id;
   const set = (patch: Record<string, string | null>) => setParams(() => {
     const next = new URLSearchParams(globalThis.location.search);
     for (const [key, value] of Object.entries(patch)) {
@@ -130,7 +132,7 @@ export function FleetPage() {
         cards={[
           { id: "all", label: "Vehicles", value: rows.length, previous: null, format: "count", info: "Every car in your country and zones." },
           { id: "ok", label: "Eligible", value: rows.filter((row) => row.record.status === "eligible").length, previous: null, format: "count", info: "Cars that can take rides now." },
-          { id: "soon", label: "Papers expire soon", value: rows.filter((row) => row.health === "expiring").length, previous: null, format: "count", info: `Insurance or inspection runs out within the warning time (${rules.countries[scope.market.id].warnDays} days).`, goodDown: true },
+          { id: "soon", label: "Papers expire soon", value: rows.filter((row) => row.health === "expiring").length, previous: null, format: "count", info: tr("Insurance or inspection runs out within the warning time ({0} days).", [rules.countries[scope.market.id].warnDays]), goodDown: true },
           { id: "bad", label: "Papers missing or expired", value: rows.filter((row) => row.health === "invalid").length, previous: null, format: "count", info: "Insurance, inspection or registration is missing, wrong or expired.", goodDown: true },
           { id: "hold", label: "Should be on hold", value: rows.filter((row) => row.hold && row.record.status !== "on_hold").length, previous: null, format: "count", info: "Expired insurance or inspection, still in service. Auto hold is in Vehicle rules.", goodDown: true },
           { id: "photos", label: "Photos to review", value: rows.filter((row) => row.photosWaiting > 0).length, previous: null, format: "count", info: "Cars with a photo waiting or rejected." },
@@ -146,7 +148,7 @@ export function FleetPage() {
         ))}
       </nav>
 
-      <p className="state-line vh-help">{trn("Fleet partners: {0}.", (fleets.data ?? []).map((fleet) => `${fleet.id} ${fleet.name}`).join(" · ") || tr("none in scope"))}</p>
+      <p className="state-line vh-help">{trn("Fleet partners: {0}.", (fleets.data ?? []).map((fleet) => fleet.name || fleet.id).join(" · ") || tr("none in scope"))}</p>
 
       <LiveListBar list="vehicles" />
       <DataTable
@@ -158,8 +160,9 @@ export function FleetPage() {
           row.record.plate ?? row.record.id,
           `${row.record.make ?? ""} ${row.record.model ?? ""}`.trim() || "–",
           row.driver ? row.driver.name : row.record.driverId ?? "Unassigned",
-          row.profile.fleetId || row.record.fleetId || "Independent",
-          CATEGORY_LABELS[row.profile.category] ?? row.profile.category,
+          fleetName(row.profile.fleetId || row.record.fleetId || "") || tr("Independent"),
+          // Live (owner G2c): the car's categories as the server has them, by name.
+          live ? (row.record.liveCategoryIds ?? []).map((item) => categoryName(item)).join(", ") || "—" : trx(CATEGORY_LABELS[row.profile.category] ?? row.profile.category),
           row.fitsList.map((id) => CATEGORY_LABELS[id]).join(", ") || "None",
           row.profile.year,
           HEALTH_TEXT[row.health] + (row.photosWaiting ? ` · ${row.photosWaiting} photo${row.photosWaiting === 1 ? "" : "s"}` : ""),

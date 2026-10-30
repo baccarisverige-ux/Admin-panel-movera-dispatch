@@ -73,6 +73,8 @@ export type Driver = {
   requiredDocuments?: string[];
   requiredFleetDocuments?: string[];
   termsAcceptedAt?: string;
+  /** When the account was created, if the server sends it (not in the contract yet: read when present). */
+  createdAt?: string;
   /** Pending invitations waiting for this account's answer (a driver's incoming invites, an owner's incoming requests). */
   pendingFleetInvitations?: number;
   version: number;

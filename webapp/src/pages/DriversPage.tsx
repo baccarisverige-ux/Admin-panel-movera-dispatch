@@ -22,6 +22,10 @@ import { formatMoney, marketOfZone, zoneById } from "../markets/markets";
 import { useMarketScope } from "../markets/useMarketScope";
 import { DataTable } from "../ui/DataTable";
 import { tr, trn, trx, uiLocale } from "../i18n";
+import { isLiveData, liveDriverOf } from "../live/realData";
+import { liveDriverMonth, liveJoinedDays, orDash } from "../live/driverFacts";
+import { liveDriverDocs } from "../fleet/liveOwner";
+import { categoryName } from "../riders/profile";
 
 const VIEWS = [
   { id: "all", get label() { return tr("All"); } },
@@ -52,6 +56,7 @@ export function DriversPage() {
   const [view, setView] = useState<View>("all");
   const [type, setType] = useState("all");
   const [now] = useState(() => Date.now());
+  const live = isLiveData();
   const month = useMemo(() => periodWindow({ kind: "month" }, now, scope.market.timeZone, uiLocale()), [now, scope.market]);
 
   const presence = useMemo(() => new Map(liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0).map((row) => [row.id, row.state as Presence])), [drivers.data, vehicles.data, trips.data, incidents.data]);
@@ -60,14 +65,23 @@ export function DriversPage() {
     .filter((driver) => !agent?.scope.fleetPartnerId || driver.fleetId === agent.scope.fleetPartnerId)
     .map((driver) => {
       const ops = driverOps(store.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status, kind: driver.kind });
-      const docs = DRIVER_DOCUMENTS.filter((id) => !(driver.fleetId && id === "company_registration")).map((id) => ops.documents[id]);
-      const counts = countHealth(docs, now, warnDaysFor(driver.zoneId));
-      const perf = driverPerformance({ id: driver.id, zoneId: driver.zoneId, status: driver.status, stars: ops.ratings.stars, acceptancePct: ops.ratings.acceptancePct, cancellationPct: ops.ratings.cancellationPct }, month, false).current;
       const car = (vehicles.data ?? []).find((row) => row.driverId === driver.id);
       const fleet = (fleets.data ?? []).find((row) => row.id === driver.fleetId);
-      const cats = CATEGORIES.filter((category) => ops.categories[category.id]).map((category) => category.label);
-      return { driver, counts, total: docs.length, perf, car, fleet, cats, code: driverCode(driver), online: presence.get(driver.id) ?? ("offline" as Presence) };
-    }), [drivers.data, vehicles.data, fleets.data, store.value, agent, now, month, presence, warnDaysFor]);
+      const online = presence.get(driver.id) ?? ("offline" as Presence);
+      if (live) {
+        // Owner G2c: only the server's facts. Documents and categories as the server has them; rating = Driver.rating;
+        // trips, cancel rate and earnings are not sent per driver, so "—". Nothing from the id.
+        const docs = liveDriverDocs(driver.liveAccount, now, warnDaysFor(driver.zoneId));
+        const cats = (driver.liveAccount?.categoryIds ?? []).map((id) => categoryName(id));
+        return { driver, counts: docs?.counts ?? { valid: 0, expiring: 0, invalid: 0, review: 0 }, total: docs?.total ?? 0, perf: liveDriverMonth(liveDriverOf(driver)), car, fleet, cats, code: driverCode(driver), online };
+      }
+      const docs = DRIVER_DOCUMENTS.filter((id) => !(driver.fleetId && id === "company_registration")).map((id) => ops.documents[id]);
+      const counts = countHealth(docs, now, warnDaysFor(driver.zoneId));
+      const demo = driverPerformance({ id: driver.id, zoneId: driver.zoneId, status: driver.status, stars: ops.ratings.stars, acceptancePct: ops.ratings.acceptancePct, cancellationPct: ops.ratings.cancellationPct }, month, false).current;
+      const perf = { rating: demo.rating || null, trips: demo.trips, cancellationPct: demo.trips ? demo.cancellationPct : null, netMinor: demo.netMinor || null };
+      const cats = CATEGORIES.filter((category) => ops.categories[category.id]).map((category) => trx(category.label));
+      return { driver, counts, total: docs.length, perf, car, fleet, cats, code: driverCode(driver), online };
+    }), [drivers.data, vehicles.data, fleets.data, store.value, agent, now, month, presence, warnDaysFor, live]);
 
   const counts = {
     all: enriched.length,
@@ -98,13 +112,16 @@ export function DriversPage() {
       let seed = 0;
       for (const char of row.driver.id) seed = (seed * 31 + char.charCodeAt(0)) >>> 0;
       return {
-        facts: { id: row.driver.id, fleetId: row.driver.fleetId ?? null, status: row.driver.status, rating: ops.ratings.stars, joinedDays: seed % 400 },
+        // Live: the server's rating and sign-up date only; a driver without them is in no "top" or "new" audience.
+        facts: live
+          ? { id: row.driver.id, fleetId: row.driver.fleetId ?? null, status: row.driver.status, rating: row.perf.rating ?? 0, joinedDays: liveJoinedDays(row.driver.liveAccount, now) ?? Number.MAX_SAFE_INTEGER }
+          : { id: row.driver.id, fleetId: row.driver.fleetId ?? null, status: row.driver.status, rating: ops.ratings.stars, joinedDays: seed % 400 },
         name: row.driver.name,
         code: row.code,
         zoneId: row.driver.zoneId,
         home: zoneById(row.driver.zoneId)?.center ?? scope.market.center,
       };
-    }), [enriched, store.value, scope.country, scope.market.center]);
+    }), [enriched, store.value, scope.country, scope.market.center, live, now]);
 
   function go(next: "drivers" | "bonuses") {
     const copy = new URLSearchParams(params);
@@ -185,16 +202,16 @@ export function DriversPage() {
           code,
           driver.name,
           <OnlinePill key={`${driver.id}-online`} presence={online} />,
-          fleet ? fleet.name : "Independent",
+          fleet ? fleet.name : tr("Independent"),
           driver.status,
           zoneById(driver.zoneId)?.name ?? driver.zoneId,
-          car ? `${car.make ?? ""} ${car.model ?? ""} · ${car.plate ?? car.id}`.trim() : "No vehicle",
-          cats.join(", ") || "None",
+          car ? `${car.make ?? ""} ${car.model ?? ""} · ${car.plate ?? car.id}`.trim() : tr("No vehicle"),
+          cats.join(", ") || tr("None"),
           <DocSummary key={`${driver.id}-docs`} counts={docCounts} total={total} />,
-          perf.rating ? perf.rating.toFixed(2) : "—",
-          String(perf.trips),
-          perf.trips ? `${perf.cancellationPct}%` : "—",
-          perf.netMinor ? money(perf.netMinor) : "—",
+          orDash(perf.rating, (value) => value.toFixed(2)),
+          orDash(perf.trips),
+          orDash(perf.cancellationPct, (value) => `${value}%`),
+          orDash(perf.netMinor, money),
           <ContactActions
             key={`${driver.id}-contact`}
             kind="driver"

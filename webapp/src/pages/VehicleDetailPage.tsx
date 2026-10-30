@@ -20,9 +20,11 @@ import {
 import { can } from "../auth/permissions";
 import { HealthPill } from "../fleet/ui";
 import { formatMoney } from "../markets/markets";
-import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { CATEGORY_LABELS, PHOTO_SIDES, fuelLabel, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { CommandButton } from "../ui/CommandButton";
-import { tr, trn } from "../i18n";
+import { tr, trn, trSentences, trx } from "../i18n";
+import { categoryName } from "../riders/profile";
+import { zoneById } from "../markets/markets";
 import { statusLabel } from "../domain/labels";
 
 export function VehicleDetailPage() {
@@ -122,14 +124,23 @@ export function VehicleDetailPage() {
   const photos = photosOf(rules, record.id);
   const car = { year: profile.year, seats: profile.seats, fuel: profile.fuel, category: profile.category };
   const fitsList = fits(car, countryRules);
-  const list = checks(car, docs, photos, countryRules, profile.category);
+  // v0.18.3 (owner G2 R2): the server's Vehicle.ruleProblems; while there are any the car cannot be approved.
+  const ruleProblems = record.liveRuleProblems ?? [];
+  // Live (owner G2c): the car's own categories from the server and its rule problems; no demo category or seeded photos.
+  const liveCats = isLiveData() ? record.liveCategoryIds ?? [] : null;
+  const list = liveCats
+    ? [
+        { label: tr("Fits {0}", [liveCats.map((item) => categoryName(item)).join(", ") || "—"]), ok: ruleProblems.length === 0, detail: ruleProblems.length ? ruleProblems.map((item) => ruleProblemText(item)).join(" · ") : tr("{0}, {1} seats, {2}", [profile.year, profile.seats, fuelLabel(profile.fuel).toLowerCase()]) },
+        ...docs.map((doc) => ({ label: doc.label, ok: doc.health === "valid" || doc.health === "expiring", detail: doc.text })),
+      ]
+    : checks(car, docs, photos, countryRules, profile.category);
+  const fleetName = (fleetRef: string) => (fleets.data ?? []).find((item) => item.id === fleetRef)?.name ?? fleetRef;
+  const zoneName = zoneById(record.zoneId)?.name ?? record.zoneId;
   const earnings = carEarnings(trips.data ?? [], record.driverId);
   // Live: the server takes cars off the road itself; no simulated hold warning.
   const hold = !isLiveData() && shouldHold(docs, countryRules) && record.status !== "on_hold";
   const money = (minor: number) => formatMoney(minor, country);
   const canEdit = Boolean(agent && can(agent.role, "vehicles.edit"));
-  // v0.18.3 (owner G2 R2): the server's Vehicle.ruleProblems; while there are any the car cannot be approved.
-  const ruleProblems = record.liveRuleProblems ?? [];
 
   return (
     <div className="dx-page vh-page">
@@ -137,12 +148,12 @@ export function VehicleDetailPage() {
         <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/vehicles"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
           <h2>{record.plate ?? record.id}</h2>
-          <p>{trn("{0} · {1} {2} · {3} · zone {4}.{5}", record.id, record.make ?? tr("Vehicle"), record.model ?? "", record.status, record.zoneId, record.driverId ? tr(" Driver {0}.", [record.driverId]) : tr(" Unassigned."))}</p>
+          <p data-testid="vehicle-head-line">{trn("{0} {1} · {2} · {3}.{4}", record.make ?? tr("Vehicle"), record.model ?? "", statusLabel(record.status), zoneName || "—", record.driverId ? tr(" Driver {0}.", [driver?.name || "—"]) : tr(" Unassigned."))}</p>
         </div>
         <Link className="dash-btn small ghost" to="/vehicles">{tr("Back to vehicles")}</Link>
       </header>
 
-      <p className="state-line">{notice} {store.message}</p>
+      <p className="state-line">{trSentences(notice)} {trSentences(store.message ?? "")}</p>
       {hold ? <p className="vh-warn"><AlertTriangle size={14} aria-hidden="true" />{" "}{tr("Insurance or inspection has expired. Vehicle rules say this car should be on hold.")}</p> : null}
 
       {ruleProblems.length ? (
@@ -156,11 +167,11 @@ export function VehicleDetailPage() {
         <span className="vh-car-icon" aria-hidden="true"><CarFront size={30} /></span>
         <span className="vh-hero-text">
           <b>{record.make ?? tr("Vehicle")} {record.model ?? ""} · {profile.year}</b>
-          <small>{trn("{0} seats · {1} · {2}", profile.seats, profile.fuel, profile.fleetId || record.fleetId ? tr("Fleet {0}", [profile.fleetId || record.fleetId]) : tr("Independent"))}</small>
+          <small>{trn("{0} seats · {1} · {2}", profile.seats, fuelLabel(profile.fuel).toLowerCase(), profile.fleetId || record.fleetId ? tr("Fleet {0}", [fleetName(profile.fleetId || record.fleetId || "")]) : tr("Independent"))}</small>
           <span>{trn("Driver {0}", driver ? <Link to={`/drivers/${driver.id}`}>{driver.name}</Link> : tr("not linked"))}</span>
         </span>
         <span className="vh-fits" aria-label={tr("Categories it fits")}>
-          {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((id) => <span key={id} className={fitsList.includes(id) ? "on" : undefined} title={fitsList.includes(id) ? tr("Fits") : tr("Does not fit")}>{CATEGORY_LABELS[id]}</span>)}
+          {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((id) => <span key={id} className={fitsList.includes(id) ? "on" : undefined} title={fitsList.includes(id) ? tr("Fits") : tr("Does not fit")}>{trx(CATEGORY_LABELS[id])}</span>)}
         </span>
       </section>
 
@@ -237,6 +248,10 @@ export function VehicleDetailPage() {
               <option value="electric">{tr("Electric")}</option>
             </select>
           </label>
+          {liveCats ? (
+          <label>{tr("Category")}<output className="vh-cats" data-testid="vehicle-categories">{liveCats.map((item) => categoryName(item)).join(", ") || "—"}</output>
+          </label>
+          ) : (
           <label>{tr("Category")}<select value={category} onChange={(event) => setCategory(event.target.value as Vehicle["category"])}>
               <option value="economy">Movera</option>
               <option value="comfort">{tr("Comfort")}</option>
@@ -247,10 +262,11 @@ export function VehicleDetailPage() {
               <option value="pet">{tr("Pet")}</option>
             </select>
           </label>
+          )}
           <label>{tr("Fleet partner")}<select value={fleetId} onChange={(event) => setFleetId(event.target.value)}>
               <option value="">{tr("Independent")}</option>
               {(fleets.data ?? []).map((fleet) => (
-                <option key={fleet.id} value={fleet.id}>{fleet.id} · {fleet.name}</option>
+                <option key={fleet.id} value={fleet.id}>{fleet.name || fleet.id}</option>
               ))}
             </select>
           </label>
@@ -327,7 +343,7 @@ export function VehicleDetailPage() {
         <label>{tr("Linked driver")}<select value={driverId} onChange={(event) => setDriverId(event.target.value)}>
             <option value="">{tr("Unassigned")}</option>
             {driverOptions.map((driver) => (
-              <option key={driver.id} value={driver.id}>{driver.id} · {driver.name}</option>
+              <option key={driver.id} value={driver.id}>{driver.name || driver.id}</option>
             ))}
           </select>
         </label>

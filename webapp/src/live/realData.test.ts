@@ -153,3 +153,8 @@ test("G2 R10: no Not connected yet badge on the live driver, onboarding, fleet o
   for (const id of ["drivers", "onboarding", "fleets", "vehicles"]) assert.equal(connectionOf(id).state, "connected", id);
   assert.equal(connectionOf("reports").state, "partly");
 });
+
+test("G2c: the live Content page reads and publishes the server's content, so it shows no Not connected yet badge", async () => {
+  const { connectionOf } = await import("./connection.ts");
+  assert.equal(connectionOf("content").state, "connected");
+});
