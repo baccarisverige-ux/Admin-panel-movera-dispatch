@@ -7221,6 +7221,11 @@ export const en = {
   "Add a line": "Add a line",
   "Issue date (on the document)": "Issue date (on the document)",
   "Valid {0} months from the issue date; the end date fills itself and can be changed.": "Valid {0} months from the issue date; the end date fills itself and can be changed.",
+  "Active drivers": "Active drivers",
+  "valid": "valid",
+  "expiring": "expiring",
+  "missing or wrong": "missing or wrong",
+  "waiting review": "waiting review",
 } as const;
 
 export type MessageKey = keyof typeof en;

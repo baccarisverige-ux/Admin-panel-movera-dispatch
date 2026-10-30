@@ -40,10 +40,15 @@ test("the live menu is the whole demo menu; no demo banner, a Not connected yet 
   // System, Release gates and Design stay hidden until Super admin turns on developer pages, as in the demo.
   for (const item of MENU.filter((row) => !(DEV_PAGES as readonly string[]).includes(row.id))) await expect(nav.locator(`a[href="${item.path}"]`).first()).toBeVisible();
   await expect(page.getByTestId("demo-banner")).toHaveCount(0);
-  for (const path of ["/payments", "/zones", "/riders", "/drivers"]) {
+  for (const path of ["/payments", "/zones", "/riders"]) {
     await page.goto(path);
     await expect(page.getByTestId("not-connected")).toHaveText("Not connected yet");
     await expect(page.getByTestId("demo-banner")).toHaveCount(0);
+  }
+  // Owner G2 R10 (2026-10-30): the live pages (drivers, onboarding, fleet owners, vehicles) carry no marker.
+  for (const path of ["/onboarding", "/fleets", "/vehicles"]) {
+    await page.goto(path);
+    await expect(page.getByTestId("not-connected")).toHaveCount(0);
   }
 });
 

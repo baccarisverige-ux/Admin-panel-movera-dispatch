@@ -7223,4 +7223,9 @@ export const fr: Record<MessageKey, string> = {
   "Add a line": "Ajouter une ligne",
   "Issue date (on the document)": "Date de délivrance (sur le document)",
   "Valid {0} months from the issue date; the end date fills itself and can be changed.": "Valable {0} mois à partir de la date de délivrance ; la date de fin se remplit seule et peut être modifiée.",
+  "Active drivers": "Chauffeurs actifs",
+  "valid": "valides",
+  "expiring": "expirent bientôt",
+  "missing or wrong": "manquants ou erronés",
+  "waiting review": "en attente de vérification",
 };

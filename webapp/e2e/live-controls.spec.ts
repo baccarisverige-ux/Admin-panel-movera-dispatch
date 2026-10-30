@@ -112,6 +112,9 @@ for (const [language, dashboard, fleets, marker] of [
     await expect(page.locator("nav").getByRole("link", { name: fleets })).toBeVisible();
     await page.goto("/drivers");
     await expect(page.getByRole("cell", { name: "Anna Berg", exact: true }).first()).toBeVisible();
+    // Owner G2 R10 (2026-10-30): the drivers page is live, so it has no marker; a partly connected page keeps it.
+    await expect(page.getByTestId("not-connected")).toHaveCount(0);
+    await page.goto("/trips");
     await expect(page.getByTestId("not-connected")).toHaveText(marker);
   });
 }

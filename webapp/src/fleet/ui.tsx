@@ -6,7 +6,7 @@ import type { ThreadMessage } from "../drivers/ops";
 import { CommandButton } from "../ui/CommandButton";
 import { DOC_CHOICES, docHealth, docLabel, type DocHealth, type HealthCount } from "./documents";
 import { statusLabel, type StatusFamily } from "../domain/labels";
-import { uiLocale, trx, tr, trn } from "../i18n";
+import { uiLocale, trx, tr, trn, type MessageKey } from "../i18n";
 
 export function Avatar({ name, size = 56 }: { name: string; size?: number }) {
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
@@ -19,7 +19,7 @@ export function Avatar({ name, size = 56 }: { name: string; size?: number }) {
   );
 }
 
-const HEALTH_LABEL: Record<DocHealth, string> = { valid: "valid", expiring: "expiring", invalid: "missing or wrong", review: "waiting review" };
+const HEALTH_LABEL: Record<DocHealth, MessageKey> = { valid: "valid", expiring: "expiring", invalid: "missing or wrong", review: "waiting review" };
 
 export function HealthPill({ health, children }: { health: DocHealth; children: ReactNode }) {
   return <span className={`fd-health h-${health}`}><i aria-hidden="true" />{children}</span>;
@@ -33,7 +33,7 @@ export function DocSummary({ counts, total }: { counts: HealthCount; total: numb
       {counts.expiring ? <span className="h-expiring"><i aria-hidden="true" />{counts.expiring}</span> : null}
       {counts.invalid ? <span className="h-invalid"><i aria-hidden="true" />{counts.invalid}</span> : null}
       {counts.review ? <span className="h-review"><i aria-hidden="true" />{counts.review}</span> : null}
-      <span className="sr-only">{(["valid", "expiring", "invalid", "review"] as const).map((key) => `${counts[key]} ${HEALTH_LABEL[key]}`).join(", ")}</span>
+      <span className="sr-only">{(["valid", "expiring", "invalid", "review"] as const).map((key) => `${counts[key]} ${tr(HEALTH_LABEL[key])}`).join(", ")}</span>
     </span>
   );
 }

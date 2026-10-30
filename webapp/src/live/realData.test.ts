@@ -147,3 +147,9 @@ test("live Reports › Money (contract v0.10.3): per currency apart, net = Mover
   const totals = totalsOf([day("2026-10-26", "Z001", "SEK", 10000)], ["Z001"], ["2026-10-26"]);
   assert.deepEqual([totals.tipsMinor, totals.refundsMinor, totals.netMinor], [200, 100, 2400]);
 });
+
+test("G2 R10: no Not connected yet badge on the live driver, onboarding, fleet owner and vehicle pages", async () => {
+  const { connectionOf } = await import("./connection.ts");
+  for (const id of ["drivers", "onboarding", "fleets", "vehicles"]) assert.equal(connectionOf(id).state, "connected", id);
+  assert.equal(connectionOf("reports").state, "partly");
+});

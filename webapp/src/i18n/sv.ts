@@ -7223,4 +7223,9 @@ export const sv: Record<MessageKey, string> = {
   "Add a line": "Lägg till en rad",
   "Issue date (on the document)": "Utfärdandedatum (på dokumentet)",
   "Valid {0} months from the issue date; the end date fills itself and can be changed.": "Giltig {0} månader från utfärdandedatum; slutdatumet fylls i av sig självt och kan ändras.",
+  "Active drivers": "Aktiva förare",
+  "valid": "giltiga",
+  "expiring": "går snart ut",
+  "missing or wrong": "saknas eller fel",
+  "waiting review": "väntar på granskning",
 };

@@ -161,6 +161,7 @@ export function ownerRecord(fleet: Fleet, zoneId: string): DemoRecord {
     company: fleet.name,
     orgNumber: fleet.orgNumber,
     joinedAt: fleet.createdAt,
+    ...(fleet.code ? { liveFleetCode: fleet.code } : {}),
     ...(fleet.ownerEmail ? { email: fleet.ownerEmail } : {}),
   };
 }
