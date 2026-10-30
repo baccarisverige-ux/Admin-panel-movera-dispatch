@@ -7287,4 +7287,6 @@ export const fr: Record<MessageKey, string> = {
   "Longer in the step than the limit set in Steps and papers.": "Plus longtemps dans l'étape que la limite fixée dans Étapes et papiers.",
   "Finish, 30 days": "Terminé, 30 jours",
   "Of everyone who signed up in the last 30 days, the share who got to the last step. Demo history.": "Parmi les inscrits des 30 derniers jours, la part arrivée à la dernière étape. Historique de démo.",
+  "1 time": "1 fois",
+  "1 number": "1 numéro",
 };

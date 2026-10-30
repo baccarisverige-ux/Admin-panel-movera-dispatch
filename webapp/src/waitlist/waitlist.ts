@@ -1,3 +1,5 @@
+import { formatDateTime, tr } from "../i18n/core.ts";
+
 /**
  * Contract v0.15.0 §24 (owner 2026-10-29, decision 5): the sign-in waiting list. A number the server answered
  * 403 sign_in_restricted joined it from the rider or driver app; GET /admin/waitlist lists them, newest first.
@@ -26,4 +28,22 @@ export function displayPhone(e164: string): string {
 /** Counts per app for the cards above the list. */
 export function waitlistCounts(items: readonly WaitlistEntry[]): { all: number; rider: number; driver: number } {
   return { all: items.length, rider: items.filter((i) => i.app === "rider").length, driver: items.filter((i) => i.app === "driver").length };
+}
+
+/**
+ * Owner G1-B6 (2026-10-30, "Fix all three (Recommended)"): "1 gång / 3 gånger", "1 fois / 3 fois", "1 time / 3 times";
+ * never "1 gånger" or "1 times".
+ */
+export function askedTimes(count: number): string {
+  return count === 1 ? tr("1 time") : tr("{0} times", [count]);
+}
+
+/** "1 number" / "3 numbers" above the list, in the panel's language. */
+export function numbersCount(count: number): string {
+  return count === 1 ? tr("1 number") : tr("{0} numbers", [count]);
+}
+
+/** A date and time of the list in the panel's language (not the browser's). */
+export function waitlistTime(iso: string): string {
+  return formatDateTime(iso, { dateStyle: "short", timeStyle: "short" });
 }

@@ -7287,4 +7287,6 @@ export const sv: Record<MessageKey, string> = {
   "Longer in the step than the limit set in Steps and papers.": "Längre i steget än gränsen i Steg och papper.",
   "Finish, 30 days": "Slutför, 30 dagar",
   "Of everyone who signed up in the last 30 days, the share who got to the last step. Demo history.": "Av alla som registrerade sig de senaste 30 dagarna, andelen som nådde sista steget. Demohistorik.",
+  "1 time": "1 gång",
+  "1 number": "1 nummer",
 };

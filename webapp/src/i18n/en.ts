@@ -7285,6 +7285,8 @@ export const en = {
   "Longer in the step than the limit set in Steps and papers.": "Longer in the step than the limit set in Steps and papers.",
   "Finish, 30 days": "Finish, 30 days",
   "Of everyone who signed up in the last 30 days, the share who got to the last step. Demo history.": "Of everyone who signed up in the last 30 days, the share who got to the last step. Demo history.",
+  "1 time": "1 time",
+  "1 number": "1 number",
 } as const;
 
 export type MessageKey = keyof typeof en;

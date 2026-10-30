@@ -17,6 +17,9 @@ test("Waiting list: the numbers from both apps, a filter per app, new ones appea
   await expect(page.getByText("+46 70 555 12 34")).toBeVisible();
   await expect(page.getByText("+33 6 12 34 56 78")).toBeVisible();
   await expect(page.getByText("2 times")).toBeVisible();
+  // Owner G1-B6: one ask reads "1 time", never "1 times".
+  await expect(page.getByText("1 time", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 times")).toHaveCount(0);
   await page.getByRole("button", { name: "Driver", exact: true }).click();
   await expect.poll(() => state.calls.some((call) => call.path === "/api/v1/admin/waitlist?limit=200&app=driver")).toBe(true);
   await expect(page.getByText("+33 6 12 34 56 78")).toHaveCount(0);
