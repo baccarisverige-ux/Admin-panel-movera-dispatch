@@ -291,7 +291,7 @@ export type ZoneDispatch = {
    */
   radarApp: { fullOn: boolean; full: number; fullLockWhileDriving: boolean; popupOn: boolean; popup: number; popupSplitByDriving: boolean; popupWhileDriving: number };
   /** After this many offers in a row not accepted, the driver goes offline. */
-  autoOffline: { on: boolean; after: number };
+  autoOffline: { on: boolean; after: number; noFixMinutes: number };
   /** Q14: what the offer cards show in the driver app (Radar, Exclusive and the reservation popup). */
   offerCard: OfferCardDetails;
   /** Q15: the short text that says why an offer is Exclusive. */
@@ -471,7 +471,8 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     radarApp: { fullOn: true, full: 8, fullLockWhileDriving: true, popupOn: true, popup: 2, popupSplitByDriving: false, popupWhileDriving: 1 },
     // Owner decision 35 (2026-10-26, contract v0.5.6): offline after 10 missed or declined Exclusive offers in a row
     // (contract.json#configDefaults; Q46 had 3).
-    autoOffline: { on: true, after: 10 },
+    // G3-R1 (2026-10-30, contract v0.18.4): offline after 5 min with no position (0 = never), independent of the switch.
+    autoOffline: { on: true, after: 10, noFixMinutes: CONFIG_DEFAULTS.noFixMinutesBeforeOffline },
     offerCard: offerCardDefault(),
     exclusiveReasons: exclusiveReasonsDefault(),
     hiddenComesBackMin: 2,
@@ -803,6 +804,7 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (zone.radar.on && zone.radarApp.popupOn && (zone.radarApp.popup < 1 || zone.radarApp.popup > 5)) issues.push("Radar in the driver app: the popup must show 1 to 5 offers.");
   if (zone.radar.on && !zone.radarApp.fullOn && !zone.radarApp.popupOn) issues.push("Radar in the driver app: switch on the full screen or the popup, or drivers cannot see Radar offers.");
   if (zone.radar.on && zone.radarApp.popupOn && zone.radarApp.popupSplitByDriving && (zone.radarApp.popupWhileDriving < 1 || zone.radarApp.popupWhileDriving > zone.radarApp.popup || !Number.isInteger(zone.radarApp.popupWhileDriving))) issues.push("Radar in the driver app: offer cards while driving must be 1 to the number shown while stopped.");
+  if (!Number.isInteger(zone.autoOffline.noFixMinutes) || zone.autoOffline.noFixMinutes < 0 || zone.autoOffline.noFixMinutes > 120) issues.push("Set offline without position: must be 0 to 120 minutes (0 = never).");
   if (zone.autoOffline.on && (zone.autoOffline.after < 1 || zone.autoOffline.after > 99 || !Number.isInteger(zone.autoOffline.after))) issues.push("Go offline automatically: must be after 1 to 99 offers.");
   if (zone.exclusive.on && zone.exclusiveWhileDriving.on && (zone.exclusiveWhileDriving.count < 1 || zone.exclusiveWhileDriving.count > 5)) issues.push("Exclusive while driving: must be 1 to 5 offers at a time.");
   if (zone.radar.on && (zone.hiddenComesBackMin < 1 || zone.hiddenComesBackMin > 60)) issues.push("Radar in the driver app: a hidden trip can come back after 1 to 60 minutes.");
@@ -1029,7 +1031,7 @@ const LABELS: Record<string, string> = {
   "exclusive.on": "Exclusive", "exclusive.seconds": "Exclusive time to accept", "exclusive.drivers": "Exclusive drivers to try", "exclusive.then": "After Exclusive",
   "radarApp.fullOn": "Radar full screen", "radarApp.full": "Offers on full-screen radar", "radarApp.popupOn": "Radar popup", "radarApp.popup": "Offers in the popup",
   "radarApp.fullLockWhileDriving": "Full-screen radar locked while driving", "radarApp.popupSplitByDriving": "Own card limit while driving", "radarApp.popupWhileDriving": "Offer cards while driving",
-  "radarApp.drivingOn": "Radar offers while driving", "radarApp.driving": "Offers while driving", "autoOffline.on": "Go offline automatically", "autoOffline.after": "Offline after offers not accepted",
+  "radarApp.drivingOn": "Radar offers while driving", "radarApp.driving": "Offers while driving", "autoOffline.on": "Go offline automatically", "autoOffline.after": "Offline after offers not accepted", "autoOffline.noFixMinutes": "Set offline after minutes without position",
   "reservation.on": "Reservations", "reservation.searchBeforeMin": "Reservation search starts", "reservation.assignEarly": "Assign early", "reservation.assignHoursBefore": "Assign hours before",
   "reservation.backup": "Backup driver", "reservation.toExclusive": "Reservation to Exclusive", "reservation.exclusiveBeforeMin": "Exclusive before pickup",
   "reservation.listTo": "Scheduled rides go to", "reservation.listMinRating": "Lowest rating for Scheduled rides",
@@ -1615,7 +1617,7 @@ export function rulesFile(book: DispatchBook, country: MarketId, at: string, thr
       busy: "Waiting requests divided by free online drivers in the zone.",
       score: "Each factor gives 0 to its weight; drivers are offered in order of total score.",
       radarApp: "The most Radar offers one driver sees at once, one setting per screen: the full-screen radar list (full; fullLockWhileDriving = the list cannot be opened while the car is moving, it opens again once stopped) and the offer cards over the map (popup while stopped; with popupSplitByDriving, popupWhileDriving while the car is moving). The app waits about 10 s before switching between stopped and driving, and cards never pop over navigation. No Radar offers while driving a rider.",
-      autoOffline: "After this many Exclusive (one-driver) offers in a row that the driver did not accept, the driver is set offline (1 to 99). Radar trips never count, here or in the acceptance rate.",
+      autoOffline: "After this many Exclusive (one-driver) offers in a row that the driver did not accept, the driver is set offline (1 to 99). Radar trips never count, here or in the acceptance rate. noFixMinutes: no position for this many minutes (not during a trip) and the server sets the driver offline (0 = never, default 5).",
       offerCard: "What the driver app's offer cards show (Radar, Exclusive, the reservation popup): netFare = the driver's share instead of the full fare; dropoffAreaOnly = only the area of the drop-off; the other switches show or hide pickup address, stops, rider rating and trips, trip minutes and km, distance to pickup and badges.",
       exclusiveReasons: "Why an offer is Exclusive, by id (best-match, favourite, finishing-nearby, airport-queue, pickup-soon, nearby): a short text and on/off. Off = no reason text on the card. Rides given by Movera always say Assigned by Movera.",
       hiddenComesBackMin: "A trip the driver hid with × in the Live list can come back after this many minutes if nobody took it and it is still in Radar. It never counts against the driver.",

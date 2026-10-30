@@ -122,7 +122,7 @@ test("the exporters read every new setting instead of the defaults", () => {
   const dispatch = emptyDispatchBook();
   const zone = draftRules(dispatch, "Z001");
   const country = draftCountry(dispatch, "SE");
-  const live = publish(dispatch, { Z001: { ...zone, stops: { ...zone.stops, max: 2 }, pickupMove: { maxMeters: 300 }, autoOffline: { on: true, after: 5 } } }, { SE: { ...country, noShowDriverSharePct: 60 } }, ["Z001"], "nora", NOW, "").book;
+  const live = publish(dispatch, { Z001: { ...zone, stops: { ...zone.stops, max: 2 }, pickupMove: { maxMeters: 300 }, autoOffline: { on: true, after: 5, noFixMinutes: 5 } } }, { SE: { ...country, noShowDriverSharePct: 60 } }, ["Z001"], "nora", NOW, "").book;
   const state = appConfigState({ now: NOW, countrySettings: settings, dispatch: live });
   const rider = riderAppConfig("Z001", state);
   assert.deepEqual(rider.tips, [{ amount: { amountMinor: 1500, currency: "SEK" }, enabled: true }, { amount: { amountMinor: 2500, currency: "SEK" }, enabled: false }, { amount: { amountMinor: 5000, currency: "SEK" }, enabled: true }]);
@@ -135,6 +135,7 @@ test("the exporters read every new setting instead of the defaults", () => {
   assert.deepEqual(driver.driverBonus, { defaultLimit: { amountMinor: 30000, currency: "SEK" }, hardMax: { amountMinor: 100000, currency: "SEK" } });
   assert.deepEqual(driver.booking, { maxStops: 2, maxPickupMoveMeters: 300 });
   assert.equal(driver.offers.autoOffline.missedExclusive, 5);
+  assert.equal(driver.offers.autoOffline.noFixMinutes, 5, "G3-R1: the driver app gets minutes without position per zone");
   assert.equal(driver.waiting.driverSharePct, 60, "Q44: the country's no-show share");
   assert.equal(driver.waiting.driverShareWaitPct, 100, "Q43: fixed");
   assert.deepEqual(driver.languages.default, { rider: "en", driver: "fr", admin: "sv" });

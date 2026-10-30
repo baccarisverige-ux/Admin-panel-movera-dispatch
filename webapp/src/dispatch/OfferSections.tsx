@@ -59,6 +59,12 @@ export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
           <Num label={tr("Offline after offers not accepted")} value={zone.autoOffline.after} unit="offers" min={1} max={99} disabled={disabled || !zone.autoOffline.on} onChange={(after) => set({ autoOffline: { ...zone.autoOffline, after: Math.round(after) } })} />
         </Row>
       </Card>
+
+      <Card title={tr("Set offline without position")} tone="red" icon={<Power size={18} />} help={tr("A driver online whose phone sends no position for this long (not during a trip) is set offline by the server and told so. 0 = never.")}>
+        <Row label={tr("Set offline after minutes without position")} help={tr("Default 5 minutes. The driver can go online again at once. Each automatic set offline is in the audit log.")}>
+          <Num label={tr("Set offline after minutes without position")} value={zone.autoOffline.noFixMinutes} unit="min" min={0} max={120} disabled={disabled} onChange={(noFixMinutes) => set({ autoOffline: { ...zone.autoOffline, noFixMinutes: Math.round(noFixMinutes) } })} />
+        </Row>
+      </Card>
     </>
   );
 }

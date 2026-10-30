@@ -177,6 +177,7 @@
     "autoOffline": {
       "on": true,
       "missedExclusive": 10,
+      "noFixMinutes": 5,
       "hiddenComesBackMin": 2
     },
     "radarApp": {

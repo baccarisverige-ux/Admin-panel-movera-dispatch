@@ -197,9 +197,11 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     if (d.exclusiveWhileDriving) zone.exclusiveWhileDriving = { ...d.exclusiveWhileDriving };
     if (Array.isArray(d.waiting)) zone.waiting = d.waiting.map((step) => ({ ...step, ...(step.extraMin === null ? { extraMin: undefined } : {}) })).map(({ extraMin, ...rest }) => (extraMin === undefined ? rest : { ...rest, extraMin }));
   }
-  const offers = (driver?.["offers"] ?? null) as { radarApp?: ZoneDispatch["radarApp"]; autoOffline?: { on?: boolean; missedExclusive?: number } } | null;
+  const offers = (driver?.["offers"] ?? null) as { radarApp?: ZoneDispatch["radarApp"]; autoOffline?: { on?: boolean; missedExclusive?: number; noFixMinutes?: number } } | null;
   if (offers?.radarApp) zone.radarApp = { ...zone.radarApp, ...offers.radarApp };
-  if (offers?.autoOffline && typeof offers.autoOffline.missedExclusive === "number") zone.autoOffline = { on: offers.autoOffline.on ?? true, after: offers.autoOffline.missedExclusive };
+  if (offers?.autoOffline && typeof offers.autoOffline.missedExclusive === "number") zone.autoOffline = { ...zone.autoOffline, on: offers.autoOffline.on ?? true, after: offers.autoOffline.missedExclusive };
+  // G3-R1 (v0.18.4): minutes without a position before the server sets the driver offline (0 = never).
+  if (offers?.autoOffline && typeof offers.autoOffline.noFixMinutes === "number") zone.autoOffline = { ...zone.autoOffline, noFixMinutes: offers.autoOffline.noFixMinutes };
   const share = (driver?.["cancelFees"] as { driverSharePct?: number } | undefined)?.driverSharePct;
   if (typeof share === "number") zone.riderCancel = { ...zone.riderCancel, driverSharePct: share };
   return zone;

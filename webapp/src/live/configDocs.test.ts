@@ -79,6 +79,9 @@ test("DispatchDocument from the zone's rules, the same keys as the contract samp
   assert.deepEqual(Object.keys(doc).sort(), Object.keys(sample("dispatch_document")).sort());
   const back = rulesOfDispatch(doc, { offers: { autoOffline: { on: true, missedExclusive: 10 } }, cancelFees: { driverSharePct: 60 } }, zoneDefault("Z001"));
   assert.equal(back.autoOffline.after, 10);
+  assert.equal(back.autoOffline.noFixMinutes, 5, "G3-R1: without the key the default 5 minutes stays");
+  const fromServer = rulesOfDispatch(doc, { offers: { autoOffline: { on: true, missedExclusive: 10, noFixMinutes: 0 } } }, zoneDefault("Z001"));
+  assert.equal(fromServer.autoOffline.noFixMinutes, 0, "G3-R1: 0 = never is read back from driver_app_config");
   assert.equal(back.riderCancel.driverSharePct, 60);
   assert.deepEqual(back.radar, zone.radar);
 });

@@ -333,3 +333,27 @@ export function liveRowHealth(row: { status: string; document: { expiresAt?: str
   if (end < nowMs) return "invalid";
   return end - nowMs <= warnDays * 86_400_000 ? "expiring" : "valid";
 }
+
+/* ---------------------------------------------------------------- audit lines written by the server itself (v0.18.4) */
+
+/** Server-written audit actions with a readable name (G3-R1: contract.json#driverHome.setOffline.auditAction). */
+const AUDIT_ACTIONS: Record<string, MessageKey> = { "driver.auto_offline": "Set offline automatically" };
+
+/** The audit action in the panel's language; actions without a text keep their command name. */
+export function auditActionText(action: string): string {
+  const key = AUDIT_ACTIONS[action];
+  return key ? tr(key) : action;
+}
+
+/** "system" (no admin, admin_id null on the server) reads as Movera itself. */
+export function auditActorText(actorId: string): string {
+  return !actorId || actorId === "system" ? tr("Movera (automatic)") : actorId;
+}
+
+/** G3-R1: driver.auto_offline detail { reason: no_position, lastFixAt, minutes } as one line; null for other actions. */
+export function auditDetailText(row: { action: string; after: string }): string | null {
+  if (row.action !== "driver.auto_offline") return null;
+  let detail: { reason?: unknown; minutes?: unknown } = {};
+  try { detail = row.after ? (JSON.parse(row.after) as typeof detail) : {}; } catch { detail = {}; }
+  return typeof detail.minutes === "number" ? tr("No position for {0} min", [detail.minutes]) : tr("No position");
+}

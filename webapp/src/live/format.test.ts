@@ -19,7 +19,7 @@ type Contract = {
 const contract = contractJson<Contract>("contract.json");
 
 test("the onboarding constants equal contract.json#driverOnboarding (v0.5.3)", () => {
-  assert.equal(contract.version, "0.18.3");
+  assert.equal(contract.version, "0.18.4");
   assert.deepEqual(DOCUMENT_TYPES, contract.driverOnboarding.documents.types);
   assert.deepEqual(REQUIRED_DOCUMENTS, contract.driverOnboarding.documents.required);
   assert.deepEqual(ONBOARDING_COUNTRIES, contract.driverOnboarding.countries);
@@ -225,4 +225,29 @@ test("G2 R10: the live driver page's expiring list comes from the server's end d
   assert.equal(liveRowHealth({ status: "approved", document: {} }, now, 30), "valid");
   assert.equal(liveRowHealth({ status: "in_review", document: null }, now, 30), "review");
   assert.equal(liveRowHealth({ status: "missing", document: null }, now, 30), "invalid");
+});
+
+test("G3-R1: an automatic set offline (driver.auto_offline) reads in sv, fr and en; the actor is Movera, not an admin", async () => {
+  const { auditActionText, auditDetailText, auditActorText } = await import("./format.ts");
+  const { auditRow } = await import("./liveAdminApi.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  registerDictionary("sv", sv);
+  registerDictionary("fr", fr);
+  const row = auditRow({ auditId: "a1", at: "2026-10-30T10:00:00Z", actor: "system", actorId: "system", action: "driver.auto_offline", targetType: "driver", targetId: "drv_1", reason: "no_position", result: "committed", requestId: "r1", after: { reason: "no_position", lastFixAt: "2026-10-30T09:54:00Z", minutes: 5 } });
+  assert.equal(row.targetId, "drv_1");
+  assert.equal(auditActionText(row.action), "Set offline automatically");
+  assert.equal(auditDetailText(row), "No position for 5 min");
+  assert.equal(auditActorText(row.actorId), "Movera (automatic)");
+  try {
+    setLanguage("sv");
+    assert.equal(auditActionText(row.action), "Satt offline automatiskt");
+    assert.equal(auditDetailText(row), "Ingen position på 5 min");
+    setLanguage("fr");
+    assert.equal(auditActionText(row.action), "Mis hors ligne automatiquement");
+    assert.equal(auditDetailText(row), "Aucune position depuis 5 min");
+  } finally {
+    setLanguage("en");
+  }
+  assert.equal(auditActionText("trip.refund"), "trip.refund", "other actions keep their name");
+  assert.equal(auditActorText("adm_1"), "adm_1");
 });

@@ -50,6 +50,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { SensitiveValue } from "../ui/SensitiveValue";
 import { TabPanel, Tabs } from "../ui/Tabs";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { auditActionText, auditActorText, auditDetailText } from "../live/format";
 
 const TABS = ["Overview", "Documents", "Performance", "Earnings", "Trips", "Vehicles", "Messages", "Notes", "Activity"];
 const CATEGORIES: Vehicle["category"][] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
@@ -609,7 +610,7 @@ export function DriverDetailPage() {
             <section className="fd-box">
               <h3>{tr("Audited actions")}</h3>
               {driverAudits.length === 0 ? <p className="state-line">{tr("No audited action on this driver yet.")}</p> : (
-                <ul className="fd-timeline">{driverAudits.map((item) => <li key={item.id}>{item.at.slice(0, 16).replace("T", " ")} · {item.action} · {item.result} · {item.actorId}</li>)}</ul>
+                <ul className="fd-timeline">{driverAudits.map((item) => <li key={item.id}>{item.at.slice(0, 16).replace("T", " ")} · {auditActionText(item.action)}{auditDetailText(item) ? ` · ${auditDetailText(item)}` : ""} · {item.result} · {auditActorText(item.actorId)}</li>)}</ul>
               )}
               <h3>{tr("Support and safety")}</h3>
               <ul className="fd-timeline">

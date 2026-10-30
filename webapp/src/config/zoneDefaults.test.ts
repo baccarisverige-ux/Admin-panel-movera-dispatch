@@ -19,7 +19,7 @@ type Contract = {
   tripStatus: { driverAssigned: string[]; terminal: string[] };
   configDefaults: {
     maxStops: number; maxPickupMoveMeters: number; freeWaitMin: { default: number; xl: number };
-    waitingDriverSharePct: number; noShowDriverSharePct: number; missedExclusiveBeforeOffline: number;
+    waitingDriverSharePct: number; noShowDriverSharePct: number; missedExclusiveBeforeOffline: number; noFixMinutesBeforeOffline: number;
     countries: Record<string, Country>;
   };
 };
@@ -29,7 +29,7 @@ const NOW = "2026-10-19T08:00:00Z";
 const state = () => appConfigState({ now: NOW });
 
 test("contract v0.7.2: version, X-Api-Version, payment methods, languages and ratings", () => {
-  assert.equal(contract.version, "0.18.3");
+  assert.equal(contract.version, "0.18.4");
   assert.equal(contract.headers["X-Api-Version"], "0.5");
   assert.deepEqual([...PAYMENT_METHODS], contract.paymentMethods);
   assert.ok(!contract.paymentMethods.includes("swish") && !contract.paymentMethods.includes("d17"));
@@ -50,6 +50,7 @@ test("CONFIG_DEFAULTS equal contract.json#configDefaults", () => {
   assert.equal(CONFIG_DEFAULTS.waitingDriverSharePct, theirs.waitingDriverSharePct);
   assert.equal(CONFIG_DEFAULTS.noShowDriverSharePct, theirs.noShowDriverSharePct);
   assert.equal(CONFIG_DEFAULTS.missedExclusiveBeforeOffline, theirs.missedExclusiveBeforeOffline);
+  assert.equal(CONFIG_DEFAULTS.noFixMinutesBeforeOffline, theirs.noFixMinutesBeforeOffline, "G3-R1");
   assert.deepEqual(Object.keys(CONFIG_DEFAULTS.countries).sort(), Object.keys(theirs.countries).sort());
   for (const [id, country] of Object.entries(theirs.countries)) {
     const ours = CONFIG_DEFAULTS.countries[id as keyof typeof CONFIG_DEFAULTS.countries];
