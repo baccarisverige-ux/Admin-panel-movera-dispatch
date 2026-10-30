@@ -106,3 +106,13 @@ export function draftChanged(draft: LegalDraft, from: LegalVersion): boolean {
   const base = draftFrom(from);
   return JSON.stringify({ ...publishBody(draft), reaccept: false }) !== JSON.stringify({ ...publishBody(base), reaccept: false }) || draft.reaccept;
 }
+
+/**
+ * The newest version that asked everyone to accept again (live or in the history), or null. Server rule (v0.18.5
+ * checker note): a person must accept the newest version at or after it, so a new version published without the tick
+ * still has to be accepted by everyone who has not accepted that version yet.
+ */
+export function latestReacceptVersion(live: LegalVersion, history: readonly LegalVersion[]): number | null {
+  const versions = [live, ...history].filter((item) => item.reaccept && item.source === "admin").map((item) => item.version);
+  return versions.length ? Math.max(...versions) : null;
+}

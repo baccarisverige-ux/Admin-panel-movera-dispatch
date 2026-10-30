@@ -7386,4 +7386,5 @@ export const sv: Record<MessageKey, string> = {
   "The support e-mail is not an e-mail address.": "Supportens e-post är ingen e-postadress.",
   "The support phone must start with + and the country code, for example +46 8 123 456 78.": "Supportens telefon måste börja med + och landsnumret, till exempel +46 8 123 456 78.",
   "{0} vehicles in this view. State, papers and car rules come from the server; the admin gives the categories when approving a car.": "{0} fordon i vyn. Läge, papper och bilregler kommer från servern; admin ger kategorierna när en bil godkänns.",
+  "People who have not accepted version {0} yet will still be asked to accept the new texts.": "De som ännu inte har godkänt version {0} ombeds ändå godkänna de nya texterna.",
 };

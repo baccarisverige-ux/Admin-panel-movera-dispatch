@@ -16,6 +16,7 @@ import {
   draftChanged,
   draftFrom,
   isLegalCountry,
+  latestReacceptVersion,
   legalPath,
   legalProblems,
   publishBody,
@@ -97,6 +98,7 @@ function LiveLegal({ country, onCountry, onNotice }: { country: LegalCountry; on
   const patchDoc = (id: LegalDocumentId, part: "title" | "text", value: string) => setDraft({ ...draft, [id]: { ...draft[id], [part]: { ...draft[id][part], [language]: value } } });
   const patchCompany = (field: LegalCompanyField, value: string) => setDraft({ ...draft, company: { ...draft.company, [field]: value } });
   const countryName = trx(COUNTRY_LABEL[country]);
+  const askedBefore = latestReacceptVersion(current, history);
 
   return (
     <section className="panel gr-panel legal-editor" data-testid="legal-editor">
@@ -173,7 +175,7 @@ function LiveLegal({ country, onCountry, onNotice }: { country: LegalCountry; on
       <DecisionDialog
         open={confirm}
         title={tr("Publish terms and privacy")}
-        summary={<>{tr("Version {0} for {1} goes live in the rider and driver apps at their next start.", [String(current.version + 1), countryName])}{draft.reaccept ? <> {tr("Everyone is asked to accept it again.")}</> : null}</>}
+        summary={<>{tr("Version {0} for {1} goes live in the rider and driver apps at their next start.", [String(current.version + 1), countryName])}{draft.reaccept ? <> {tr("Everyone is asked to accept it again.")}</> : askedBefore !== null ? <> <span data-testid="legal-still-asked">{tr("People who have not accepted version {0} yet will still be asked to accept the new texts.", [String(askedBefore)])}</span></> : null}</>}
         confirmLabel={tr("Publish")}
         note="none"
         onClose={() => setConfirm(false)}

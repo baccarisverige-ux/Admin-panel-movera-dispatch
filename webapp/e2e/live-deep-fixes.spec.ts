@@ -287,7 +287,7 @@ test("G9: a role without support.reply is told it cannot see the chat; nothing i
 
 const DOC = (title: string, text: string) => ({ title: { sv: `${title} sv`, fr: `${title} fr`, en: title }, text: { sv: `${text} (sv)`, fr: `${text} (fr)`, en: text } });
 const LEGAL_SE = { country: "SE", version: 0, source: "default", reaccept: false, terms: DOC("Terms of use", "Draft – to be reviewed by a lawyer before launch.\n\nMovera is run by {companyName}."), privacy: DOC("Privacy policy", "Draft – to be reviewed by a lawyer before launch."), company: {} };
-const LEGAL_FR = { ...LEGAL_SE, country: "FR", version: 2, source: "admin", publishedAt: "2026-10-30T10:00:00Z", publishedBy: "A1", company: { companyName: "Movera SAS" } };
+const LEGAL_FR = { ...LEGAL_SE, country: "FR", version: 2, source: "admin", publishedAt: "2026-10-30T10:00:00Z", publishedBy: "A1", reaccept: false, company: { companyName: "Movera SAS" } };
 
 async function legalServer(page: Page, permissions = ["overview.read", "settings.read", "settings.edit", "settings.publish", "zones.read"], language = "en") {
   await fakeTripServer(page, { admin: { permissions, language } });
@@ -359,4 +359,20 @@ test("G1-B2: a role without settings.publish can read but not publish", async ({
   const editor = page.getByTestId("legal-editor");
   await expect(editor.getByText("Your role can read these texts but not publish them.")).toBeVisible();
   await expect(editor.getByRole("button", { name: "Publish for Sweden" })).toBeDisabled();
+});
+
+test("G1-B2: publishing without the tick after a re-accept version says those who have not accepted are still asked", async ({ page }) => {
+  LEGAL_FR.reaccept = true;
+  try {
+    await legalServer(page);
+    await page.goto("/content?view=legal");
+    const editor = page.getByTestId("legal-editor");
+    await editor.getByTestId("legal-country").getByRole("button", { name: "France" }).click();
+    await editor.getByTestId("legal-language").getByRole("button", { name: "English" }).click();
+    await editor.getByLabel("Privacy policy text (English)").fill("Updated privacy text.");
+    await editor.getByRole("button", { name: "Publish for France" }).click();
+    await expect(page.locator(".modal.open").last().getByTestId("legal-still-asked")).toHaveText("People who have not accepted version 2 yet will still be asked to accept the new texts.");
+  } finally {
+    LEGAL_FR.reaccept = false;
+  }
 });

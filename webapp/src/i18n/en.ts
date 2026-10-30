@@ -7384,6 +7384,7 @@ export const en = {
   "The support e-mail is not an e-mail address.": "The support e-mail is not an e-mail address.",
   "The support phone must start with + and the country code, for example +46 8 123 456 78.": "The support phone must start with + and the country code, for example +46 8 123 456 78.",
   "{0} vehicles in this view. State, papers and car rules come from the server; the admin gives the categories when approving a car.": "{0} vehicles in this view. State, papers and car rules come from the server; the admin gives the categories when approving a car.",
+  "People who have not accepted version {0} yet will still be asked to accept the new texts.": "People who have not accepted version {0} yet will still be asked to accept the new texts.",
 } as const;
 
 export type MessageKey = keyof typeof en;

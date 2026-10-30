@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { contractJson } from "../contract/load.ts";
-import { LEGAL_COUNTRIES, LEGAL_PLACEHOLDERS, draftChanged, draftFrom, legalPath, legalProblems, publishBody, unknownPlaceholders, type LegalVersion } from "./legal.ts";
+import { LEGAL_COUNTRIES, LEGAL_PLACEHOLDERS, draftChanged, latestReacceptVersion, draftFrom, legalPath, legalProblems, publishBody, unknownPlaceholders, type LegalVersion } from "./legal.ts";
 
 /**
  * Owner G1-B2 (2026-10-30, "Real texts from admin (Recommended)"): draft terms + privacy for SE and FR (sv/fr/en),
@@ -62,4 +62,14 @@ test("G1-B2: a published version keeps its company details in the editor; re-acc
   assert.equal(draft.company.companyName, "Movera AB");
   assert.equal(draft.company.address, "");
   assert.equal(draft.reaccept, false);
+});
+
+// Checker (v0.18.5): a version published without the tick after one with "Ask everyone to accept again" — people who
+// have not accepted that one are still asked (server: newest version at or after the latest re-accept version).
+test("G1-B2: the latest re-accept version is found in the live version and the history", () => {
+  const v = (version: number, reaccept: boolean): LegalVersion => ({ ...drafts("SE"), version, source: "admin", reaccept });
+  assert.equal(latestReacceptVersion(drafts("SE"), []), null);
+  assert.equal(latestReacceptVersion(v(3, true), [v(3, true), v(2, false)]), 3);
+  assert.equal(latestReacceptVersion(v(4, false), [v(4, false), v(3, true), v(2, true)]), 3);
+  assert.equal(latestReacceptVersion(v(2, false), [v(2, false), v(1, false)]), null);
 });

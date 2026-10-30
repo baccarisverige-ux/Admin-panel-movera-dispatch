@@ -68,7 +68,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.tripRefund", label: "Refund a trip", reason: false, permission: "payments.refund" },
   { id: "admin.server.vehicleDocuments", label: "Show vehicle documents", reason: false, permission: "drivers.read" },
   // v0.18.5 (owner G1-B2): Content › Legal per country, published on the server (POST /admin/legal/{country}/publish).
-  { id: "admin.server.legalPublish", label: "Publish terms and privacy", reason: false, permission: "settings.edit" },
+  { id: "admin.server.legalPublish", label: "Publish terms and privacy", reason: false, permission: "settings.publish" },
   // v0.18.5 (owner G9): the trip's chat in the trip details (GET /trips/{tripId}/messages, support.reply).
   { id: "admin.server.tripChat", label: "Show the trip chat", reason: false, permission: "trips.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },
