@@ -36,7 +36,14 @@ export type SettingsDoc = {
   vehicles: { categories: CategoryRule[]; warnDays: number; autoHold: boolean; photosNeeded: boolean };
   customTypes?: CustomType[];
   texts?: Record<string, { name?: LocalText; help?: LocalText }>;
+  /** v0.18.3 (R8): the upload guide per type in this country; an empty list falls back to the app's own text. */
+  guides?: Record<string, Guide>;
+  /** v0.18.3 (R9): months a document of that type is valid from its issue date (1 to 120; FR urssaf_certificate 6). */
+  validMonths?: Record<string, number>;
 };
+
+export type Guide = { checklist: LocalText[]; tips: LocalText[] };
+export const GUIDE_LIMITS = { lines: 10, lineChars: 300 } as const;
 
 /** One country as the page holds it: the server's draft version (PUT's expectedVersion), the live version and the document. */
 export type CountryEntry = { draftVersion: number; liveVersion: number; document: SettingsDoc };
@@ -44,7 +51,7 @@ export type SettingsBook = { draftRev: number; countries: Record<MarketId, Count
 
 export const STEP_IDS: readonly StepId[] = ["signup", "documents", "checks", "training", "ready"];
 export const PHOTO_TYPES = ["vehicle_photo_front", "vehicle_photo_back", "vehicle_photo_side", "vehicle_photo_inside"] as const;
-export const LIMITS = { stepDays: [1, 60], remindEveryDays: [1, 30], stuckAfterDays: [2, 90], warnDays: [1, 90], vehicleWarnDays: [1, 120], minYear: [1990, 2030], minSeats: [1, 9] } as const;
+export const LIMITS = { stepDays: [1, 60], remindEveryDays: [1, 30], stuckAfterDays: [2, 90], warnDays: [1, 90], vehicleWarnDays: [1, 120], minYear: [1990, 2030], minSeats: [1, 9], validMonths: [1, 120] } as const;
 export const CUSTOM_ID = /^custom_[a-z0-9]{10}$/;
 export const DRAFT_REF = "draft:";
 /** The country is open for sign-ups (contract.json#driverOnboarding.countries): Tunisia is shown but closed. */
@@ -73,7 +80,7 @@ const STEPS = (): SettingsDoc["steps"] => [
 
 /** contract.json#driverOnboarding.settings.defaults (src/drivers/onboardingSettings.test.ts checks they are equal). */
 export function contractDefaults(): Record<MarketId, Omit<SettingsDoc, "version" | "country" | "publishedAt">> {
-  const common = (base: number) => ({ steps: STEPS(), signUpReminders: { on: true, everyDays: 2, stuckAfterDays: 10 }, expiry: { warnDays: [30, 7, 1], blockAtExpiry: true }, vehicles: { categories: categories(base), warnDays: 30, autoHold: true, photosNeeded: true }, customTypes: [], texts: {} });
+  const common = (base: number) => ({ steps: STEPS(), signUpReminders: { on: true, everyDays: 2, stuckAfterDays: 10 }, expiry: { warnDays: [30, 7, 1], blockAtExpiry: true }, vehicles: { categories: categories(base), warnDays: 30, autoHold: true, photosNeeded: true }, customTypes: [], texts: {}, guides: {}, validMonths: {} });
   return {
     SE: {
       documents: { driver: ["terms", "info_session", "driving_license", "profile_photo", "taxi_driver_license"], fleet: ["company_registration", "taxi_traffic_permit", "tax_settings", "bank_statement"], vehicle: ["vehicle_registration", "insurance"] },
@@ -84,6 +91,7 @@ export function contractDefaults(): Record<MarketId, Omit<SettingsDoc, "version"
       documents: { driver: ["terms", "info_session", "vtc_card", "driving_license", "national_id", "profile_photo"], fleet: ["company_registration", "vtc_register_certificate", "rc_pro_insurance", "urssaf_certificate", "national_id", "bank_statement"], vehicle: ["vehicle_registration", "insurance", "vtc_sticker"] },
       expiringTypes: ["driving_license", "national_id", "vtc_card", "vehicle_registration", "insurance", "rc_pro_insurance", "urssaf_certificate", "vtc_sticker", "vtc_register_certificate"],
       ...common(2016),
+      validMonths: { urssaf_certificate: 6 },
     },
     TN: { documents: { driver: [], fleet: [], vehicle: [] }, expiringTypes: [], ...common(2012) },
   };
@@ -219,6 +227,14 @@ export function settingsProblem(doc: SettingsDoc): string | null {
     if (rule.on && rule.fuels.length === 0) return "A category that is on needs at least one fuel.";
   }
   if (!within(doc.vehicles.warnDays, LIMITS.vehicleWarnDays)) return "Car paper warning: 1 to 120 days.";
+  for (const months of Object.values(doc.validMonths ?? {})) if (!within(months, LIMITS.validMonths)) return "Valid months: 1 to 120.";
+  for (const guide of Object.values(doc.guides ?? {})) {
+    for (const list of [guide.checklist, guide.tips]) {
+      if (list.length > GUIDE_LIMITS.lines) return "A guide has at most 10 lines in each list.";
+      if (list.some((line) => !fullText(line))) return "Every guide line must be written in Swedish, French and English.";
+      if (list.some((line) => [line.sv, line.fr, line.en].some((text) => text.length > GUIDE_LIMITS.lineChars))) return "A guide line has at most 300 characters.";
+    }
+  }
   return null;
 }
 
@@ -291,3 +307,35 @@ export function firstWarning(doc: SettingsDoc): number {
 /** The demo board's document ids as contract types (src/drivers/gate.ts DRIVER_DOCUMENTS). */
 export const DEMO_DOC_TYPE: Readonly<Record<string, string>> = { driver_license: "driving_license", virtual_session: "info_session", vehicle_insurance: "insurance" };
 export const contractTypeOf = (demoId: string): string => DEMO_DOC_TYPE[demoId] ?? demoId;
+
+/* ---------------------------------------------------------------- guides and valid months (v0.18.3, owner G2 R8, R9) */
+
+/** Set the upload guide of a type in this country; blank lines are dropped and an empty guide is removed (the app's text). */
+export function setGuide(doc: SettingsDoc, type: string, guide: Guide): SettingsDoc {
+  const clean = (list: LocalText[]) => list.map(trimText).filter((line) => line.sv || line.fr || line.en);
+  const next = { checklist: clean(guide.checklist), tips: clean(guide.tips) };
+  const guides = { ...(doc.guides ?? {}) };
+  if (next.checklist.length || next.tips.length) guides[type] = next;
+  else delete guides[type];
+  return { ...doc, guides };
+}
+
+/** Set how many months a type is valid from its issue date; null removes it (the admin types the end date). */
+export function setValidMonths(doc: SettingsDoc, type: string, months: number | null): SettingsDoc {
+  const validMonths = { ...(doc.validMonths ?? {}) };
+  if (months === null) delete validMonths[type];
+  else validMonths[type] = months;
+  return { ...doc, validMonths };
+}
+
+/** The end date the review dialog proposes: issue date + N months (YYYY-MM-DD, the month's last day when it is shorter), "" when unknown. */
+export function endDateFrom(issuedAt: string, months: number | undefined): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(issuedAt);
+  if (!match || !months) return "";
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1 + months;
+  const day = Number(match[3]);
+  const last = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const date = new Date(Date.UTC(year, month, Math.min(day, last)));
+  return date.toISOString().slice(0, 10);
+}

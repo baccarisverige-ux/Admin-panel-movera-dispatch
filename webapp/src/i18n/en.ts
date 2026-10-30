@@ -7208,6 +7208,19 @@ export const en = {
   "Registration": "Registration",
   "Insurance": "Insurance",
   "Rule check: {0}.": "Rule check: {0}.",
+  "Valid months: 1 to 120.": "Valid months: 1 to 120.",
+  "A guide has at most 10 lines in each list.": "A guide has at most 10 lines in each list.",
+  "Every guide line must be written in Swedish, French and English.": "Every guide line must be written in Swedish, French and English.",
+  "A guide line has at most 300 characters.": "A guide line has at most 300 characters.",
+  "Checklist: what must be visible": "Checklist: what must be visible",
+  "Tips for a good photo": "Tips for a good photo",
+  "Valid for (months from the issue date)": "Valid for (months from the issue date)",
+  "Not set: the admin types the end date": "Not set: the admin types the end date",
+  "Shown in the driver app's upload guide. Empty: the app's own text is shown.": "Shown in the driver app's upload guide. Empty: the app's own text is shown.",
+  "Line {0} ({1})": "Line {0} ({1})",
+  "Add a line": "Add a line",
+  "Issue date (on the document)": "Issue date (on the document)",
+  "Valid {0} months from the issue date; the end date fills itself and can be changed.": "Valid {0} months from the issue date; the end date fills itself and can be changed.",
 } as const;
 
 export type MessageKey = keyof typeof en;

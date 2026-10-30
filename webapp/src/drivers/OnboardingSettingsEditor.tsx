@@ -23,9 +23,12 @@ import {
   localName,
   normalizeSettingsBook,
   removeFromList,
+  setGuide,
+  setValidMonths,
   settingsProblem,
   stagePublish,
   typeInfo,
+  type Guide,
   type LocalText,
   type Scope,
   type SettingsDoc,
@@ -207,6 +210,14 @@ function TypeDialog({ editing, doc, onClose, onSave }: { editing: Editing; doc: 
   const needsHelp = isNew || info?.custom;
   const missing = (["sv", "fr", "en"] as const).some((lang) => !form.name[lang].trim()) || (needsHelp && (["sv", "fr", "en"] as const).some((lang) => !form.help[lang].trim()));
   const langs: { id: keyof LocalText; label: MessageKey }[] = [{ id: "sv", label: "Swedish" }, { id: "fr", label: "French" }, { id: "en", label: "English" }];
+  // v0.18.3 (owner G2 R8, R9): the upload guide and the valid months of this type in this country.
+  const type = editing.mode === "edit" ? editing.type : null;
+  const [guide, setGuideForm] = useState<Guide>(() => structuredClone(type ? doc.guides?.[type] ?? { checklist: [], tips: [] } : { checklist: [], tips: [] }));
+  const [months, setMonths] = useState<string>(type && doc.validMonths?.[type] ? String(doc.validMonths[type]) : "");
+  const monthsNumber = months.trim() === "" ? null : Number(months);
+  const badMonths = monthsNumber !== null && !(Number.isInteger(monthsNumber) && monthsNumber >= LIMITS.validMonths[0] && monthsNumber <= LIMITS.validMonths[1]);
+  const guideLists: { id: keyof Guide; title: MessageKey }[] = [{ id: "checklist", title: "Checklist: what must be visible" }, { id: "tips", title: "Tips for a good photo" }];
+  const setLine = (list: keyof Guide, index: number, lang: keyof LocalText, value: string) => setGuideForm({ ...guide, [list]: guide[list].map((line, at) => (at === index ? { ...line, [lang]: value } : line)) });
   return (
     <Modal open title={isNew ? tr("New document type") : tr("Edit document type")} onClose={onClose}>
       <form
@@ -216,7 +227,11 @@ function TypeDialog({ editing, doc, onClose, onSave }: { editing: Editing; doc: 
           event.preventDefault();
           if (missing) return;
           if (editing.mode === "new") onSave(addCustomType(doc, { owner: editing.scope, kind: form.kind, expires: form.expires, name: form.name, help: form.help }, `n${Date.now().toString(36)}`));
-          else onSave(editType(doc, editing.type, { name: form.name, help: form.help, expires: form.expires, ...(info?.custom ? { kind: form.kind } : {}) }));
+          else {
+            if (badMonths) return;
+            const edited = editType(doc, editing.type, { name: form.name, help: form.help, expires: form.expires, ...(info?.custom ? { kind: form.kind } : {}) });
+            onSave(setValidMonths(setGuide(edited, editing.type, guide), editing.type, form.expires ? monthsNumber : null));
+          }
         }}
       >
         <p className="vh-help">{tr(SCOPE_LABEL[editing.scope].title)}</p>
@@ -238,9 +253,29 @@ function TypeDialog({ editing, doc, onClose, onSave }: { editing: Editing; doc: 
           </label>
         ) : null}
         <label className="ob-check-line"><input type="checkbox" checked={form.expires} onChange={(event) => setForm({ ...form, expires: event.target.checked })} /> {tr("Expires: the admin types the expiry date when approving")}</label>
+        {type && form.expires ? (
+          <label data-testid="valid-months">
+            {tr("Valid for (months from the issue date)")}
+            <input type="number" min={LIMITS.validMonths[0]} max={LIMITS.validMonths[1]} value={months} placeholder={tr("Not set: the admin types the end date")} onChange={(event) => setMonths(event.target.value)} />
+            {badMonths ? <small className="vh-help">{tr("Valid months: 1 to 120.")}</small> : null}
+          </label>
+        ) : null}
+        {type && (info?.kind ?? "file") === "file" ? guideLists.map((list) => (
+          <fieldset key={list.id} data-testid={`guide-${list.id}`}>
+            <legend>{tr(list.title)}</legend>
+            <p className="vh-help">{tr("Shown in the driver app's upload guide. Empty: the app's own text is shown.")}</p>
+            {guide[list.id].map((line, index) => (
+              <div key={index} className="ob-guide-line">
+                {langs.map((lang) => <label key={lang.id}>{tr("Line {0} ({1})", [index + 1, tr(lang.label)])}<input value={line[lang.id]} maxLength={300} onChange={(event) => setLine(list.id, index, lang.id, event.target.value)} /></label>)}
+                <button data-command="admin.onboarding.editTypes" type="button" className="dash-btn small danger-ghost" onClick={() => setGuideForm({ ...guide, [list.id]: guide[list.id].filter((_, at) => at !== index) })}><Trash2 size={13} aria-hidden="true" />{" "}{tr("Remove")}</button>
+              </div>
+            ))}
+            <button data-command="admin.onboarding.editTypes" type="button" className="dash-btn small ghost" disabled={guide[list.id].length >= 10} onClick={() => setGuideForm({ ...guide, [list.id]: [...guide[list.id], { sv: "", fr: "", en: "" }] })}><Plus size={13} aria-hidden="true" />{" "}{tr("Add a line")}</button>
+          </fieldset>
+        )) : null}
         {missing ? <p className="vh-help">{needsHelp ? tr("Write the name and the help text in Swedish, French and English.") : tr("Write the name in Swedish, French and English.")}</p> : null}
         <div className="actions">
-          <button data-command="admin.onboarding.editTypes" type="submit" className="primary-btn" disabled={missing}>{isNew ? tr("Add the document") : tr("Save")}</button>
+          <button data-command="admin.onboarding.editTypes" type="submit" className="primary-btn" disabled={missing || badMonths}>{isNew ? tr("Add the document") : tr("Save")}</button>
           <button data-command="admin.onboarding.editTypes" type="button" className="secondary-btn" onClick={onClose}>{tr("Cancel")}</button>
         </div>
       </form>
