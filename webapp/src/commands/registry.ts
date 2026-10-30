@@ -72,6 +72,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.refundPolicy.save", label: "Save refund second-admin limits", reason: true, permission: "settings.publish" },
   { id: "admin.config.publish", label: "Publish configuration", reason: true, permission: "settings.publish" },
   { id: "admin.config.useStandard", label: "Go back to Standard", reason: true, permission: "settings.publish" },
+  { id: "admin.config.publishAppDraft", label: "Publish the driver app settings", reason: true, permission: "settings.publish" },
   { id: "admin.config.approve", label: "Approve configuration", reason: true, permission: "settings.publish" },
   { id: "admin.config.review", label: "Send configuration for approval", reason: true, permission: "settings.edit" },
   { id: "admin.config.rollback", label: "Roll back configuration", reason: true, permission: "settings.publish" },
@@ -548,6 +549,7 @@ const ALLOWED_STATES: Record<string, readonly string[]> = {
 const DESTRUCTIVE = new Set([
   "admin.shell.reset",
   "admin.config.useStandard",
+  "admin.config.publishAppDraft",
   "admin.config.publish",
   "admin.config.rollback",
   "admin.content.publish",

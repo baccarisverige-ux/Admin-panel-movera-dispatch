@@ -50,6 +50,8 @@ export function useAlerts() {
   const dispatchBook = useMemo(() => normalizeDispatchBook(dispatchSlice.value), [dispatchSlice.value]);
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const drivers = useRecords("drivers", undefined, { refetchMs: 15_000 });
+  // G3-D5: live, the server's supply per zone (every online driver counted in his zone, position or not).
+  const zoneSupply = useRecords("zoneSupply", undefined, { refetchMs: 15_000 });
   const trips = useRecords("trips", undefined, { refetchMs: 15_000 });
   const incidents = useRecords("incidents", undefined, { refetchMs: 10_000 });
   const reservations = useRecords("reservations", undefined, { refetchMs: 30_000 });
@@ -115,6 +117,7 @@ export function useAlerts() {
       }),
       requests: requests.map((request) => ({ tripId: request.tripId, rider: request.rider, zoneId: request.zoneId, waitingMin: request.waitingMin, searching: request.status === "searching" })),
       freeByZone,
+      ...(liveData ? { supplyByZone: Object.fromEntries((zoneSupply.data ?? []).filter((row) => row.supply).map((row) => [row.zoneId, { free: row.supply!.free, waiting: row.supply!.waiting }])) } : {}),
       dispatch: (zoneId) => {
         const alerts = liveRules(dispatchBook, zoneId).alerts;
         const pick = (id: "long_wait" | "few_drivers" | "no_driver") => {
@@ -164,7 +167,7 @@ export function useAlerts() {
       money,
     };
     // money depends only on the market, which is already a dependency.
-  }, [now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, approvals.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks]);
+  }, [now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, approvals.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks, zoneSupply.data]);
 
   const all = useMemo(() => computeAlerts(facts, book.settings, book.rules.filter((rule) => rule.country === market.id)), [facts, book.settings, book.rules, market.id]);
   const sosOwner = (incidentId: string) => safety.value.incidents[incidentId]?.owner ?? null;

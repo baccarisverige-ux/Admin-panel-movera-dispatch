@@ -52,6 +52,9 @@ export type DocumentRecord = {
 
 export type FleetLink = { fleetId: string; name: string; role: "owner" | "member"; status: ReviewStatus; linkedAt: string };
 
+/** v0.18.4 (G3-D2): the driver's own numbers over the last windowDays days; null while there are too few. */
+export type DriverPerformance = { windowDays: number; from: string; offersAnswerable: number; offersAccepted: number; tripsCancelled: number; ratingCount: number; acceptancePct: number | null; cancellationPct: number | null; rating: number | null };
+
 export type Driver = {
   driverId: string;
   accountStatus: DriverAccountStatus;
@@ -81,6 +84,8 @@ export type Driver = {
   location?: { lat: number; lng: number; measuredAt: string };
   lastFixAt?: string;
   rating?: number;
+  /** v0.18.4 (G3-D2): on GET /admin/drivers/{driverId} (not on the list). */
+  performance?: DriverPerformance;
 };
 
 export type Fleet = {
@@ -217,7 +222,9 @@ export type LiveDriverRow = {
   plate?: string;
   zoneId?: string;
 };
-export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string; ridersOnline?: { zoneId: string; count: number }[]; ridersOnlineWindowSeconds?: number };
+export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string; ridersOnline?: { zoneId: string; count: number }[]; ridersOnlineWindowSeconds?: number; zoneSupply?: ZoneSupplyRow[] };
+/** v0.18.4 (G3-D5): GET /admin/live/drivers → zoneSupply, one row per zone. */
+export type ZoneSupplyRow = { zoneId: string; online: number; free: number; busy: number; waiting: number; level: "ok" | "tight" | "short"; shortage: boolean };
 
 /** GET /admin/trips/{tripId}/trace: the car's positions on the trip (kept 30 days). */
 export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; measuredAt: string }[]; keptUntil: string };

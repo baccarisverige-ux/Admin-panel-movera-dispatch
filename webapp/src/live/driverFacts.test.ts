@@ -51,3 +51,16 @@ test("G2c: the car checks, papers and scheduled rides read Swedish and French, n
     setLanguage("en");
   }
 });
+
+// Owner G3-D2 (2026-10-30, "Real numbers", contract v0.18.4 Driver.performance): the admin sees the same rating,
+// acceptance % and cancellation % as the driver; null (too few offers, trips or ratings) is "—".
+test("G3-D2: live month shows Driver.performance; null stays —", async () => {
+  const performance = { acceptancePct: 91, cancellationPct: 3, rating: 4.87 };
+  assert.deepEqual(liveDriverMonth(facts, performance), { rating: 4.87, trips: null, cancellationPct: 3, acceptancePct: 91, onlineHours: null, netMinor: null });
+  assert.deepEqual(liveDriverMonth({ ...facts, performance }), liveDriverMonth(facts, performance), "a list row that carries performance shows it too");
+  const empty = liveDriverMonth(facts, { acceptancePct: null, cancellationPct: null, rating: null });
+  assert.deepEqual([orDash(empty.rating), orDash(empty.acceptancePct), orDash(empty.cancellationPct)], [DASH, DASH, DASH], "below the minimums: no number, not the old Driver.rating");
+  const { driverRecord } = await import("./liveAdminApi.ts");
+  const record = driverRecord({ driverId: "D1", accountStatus: "active", onlineStatus: "offline", firstName: "Anna", zoneIds: ["Z001"], rating: 4.1, performance: { windowDays: 30, from: "2026-09-30T10:00:00Z", offersAnswerable: 20, offersAccepted: 18, tripsCancelled: 1, ratingCount: 12, acceptancePct: 90, cancellationPct: 6, rating: 4.75 } } as never);
+  assert.deepEqual(liveDriverMonth(record.liveDriver), { rating: 4.75, trips: null, cancellationPct: 6, acceptancePct: 90, onlineHours: null, netMinor: null });
+});

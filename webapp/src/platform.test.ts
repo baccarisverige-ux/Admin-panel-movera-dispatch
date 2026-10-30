@@ -23,6 +23,9 @@ test("audit: search, filters, what changed and export", () => {
   assert.match(csv, /Waiting for a second admin/);
   assert.equal(auditCounts(rows).waiting, 1);
   assert.equal(auditCounts(rows).admins, 2);
+  // G3 (owner 2026-10-30): the Admins count never counts "system" (auto-offline lines) or a driver/rider actor.
+  const withSystem = [...rows, row("s", { actorId: "system", action: "driver.auto_offline" }), row("t", { actorId: "SYS", actor: "system" }), row("u", { actorId: "D1001", actor: "driver" })] as never[];
+  assert.equal(auditCounts(withSystem).admins, 2);
 });
 
 test("menu: developer pages only for the Super admin with the switch on", () => {

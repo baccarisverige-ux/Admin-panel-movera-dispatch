@@ -40,7 +40,8 @@ import { useAlertsMaybe } from "../alerts/AlertsContext";
 import { DriversMap, REQUEST_COLOR, STATE_COLOR } from "../dashboard/DriversMap";
 import { EarningsChart } from "../dashboard/EarningsChart";
 import { change, COMMISSION_PLACEHOLDER, earningsReport, type Share } from "../dashboard/earnings";
-import { activeBoosts, airportQueues, cancellations, ratings, supplyDemand } from "../dashboard/insights";
+import { activeBoosts, airportQueues, cancellations, ratings, shortageZones } from "../dashboard/insights";
+import { useSupply } from "../dashboard/useSupply";
 import { countStates, LIVE_STATES, liveDrivers, type LiveState } from "../dashboard/live";
 import { LiveRiders } from "../dashboard/LiveRiders";
 import { RiderQuickActions, useDispatchBook } from "../dispatch/HandlePanel";
@@ -292,7 +293,9 @@ export function DashboardPage() {
   const onTheWay = useMemo(() => maskRequests(allOnTheWay.filter((item) => !requests.some((request) => request.tripId === item.tripId)), access).map((item) => ({ ...item, driverName: access.drivers ? item.driverName : HIDDEN_DRIVER })), [allOnTheWay, requests, access]);
   const ridersOnMap = useMemo(() => (onTheWay.length ? [...requests, ...onTheWay] : requests), [requests, onTheWay]);
   const candidatesOf = (request: RideRequest) => candidatesFor(request, live, allowedCategories);
-  const balance = useMemo(() => supplyDemand(country, scope.zones, requests, live), [country, scope.zones, requests, live]);
+  // G3-D5: the rows, the shortage alert, surge rows and boosts all read these same numbers (live: the server's zoneSupply).
+  const balance = useSupply(country, scope.zones, requests, live);
+  const shortage = shortageZones(balance);
   const pricingSlice = useSlice<unknown>(SLICE_KEY, emptyPricingStore());
   const pricing = useMemo(() => normalizeStore(pricingSlice.value), [pricingSlice.value]);
   const surgePref = useSurgePref("dashboard", { shown: false, style: "zones" });
@@ -346,7 +349,8 @@ export function DashboardPage() {
   const alerts = [
     { id: "sos", tone: "critical", icon: <Siren size={16} aria-hidden="true" />, permission: "incidents.read", count: sos.length, text: sos.length === 1 ? `SOS from ${driverName(sos[0].driverId) ?? sos[0].name}` : "SOS alerts waiting for a responder", path: "/incidents" },
     { id: "late", tone: "critical", icon: <CalendarClock size={16} aria-hidden="true" />, permission: "trips.read", count: urgentRides.length, text: "scheduled rides start within the hour with no driver", path: "/reservations" },
-    { id: "wait", tone: "serious", icon: <Clock size={16} aria-hidden="true" />, permission: "trips.read", count: longWaits.length, text: "riders waiting over 5 min for a driver", path: "/?tab=live" },
+    // G3-D5 (owner "Fix it"): only when riders wait and free drivers are short, with the same numbers as the Supply & demand rows.
+    { id: "shortage", tone: "serious", icon: <Clock size={16} aria-hidden="true" />, permission: "trips.read", count: shortage.length, text: tr(shortage.length === 1 ? "zone short of free drivers: {0}" : "zones short of free drivers: {0}", [shortage.map((row) => `${row.name} (${tr("{0} waiting · {1} free", [row.waiting, row.free])})`).join(", ")]), path: "/?tab=live" },
     { id: "pay", tone: "serious", icon: <CreditCard size={16} aria-hidden="true" />, permission: "finance.read", count: failures.count, text: `failed payments · ${failures.rider} rider · ${failures.system} system · ${money(failures.owedMinor)}`, path: "/payments" },
     { id: "support", tone: "warning", icon: <LifeBuoy size={16} aria-hidden="true" />, permission: "support.reply", count: openTickets.length, text: "open support tickets", path: "/support" },
   ].filter((alert) => alert.count > 0 && can(role, alert.permission));

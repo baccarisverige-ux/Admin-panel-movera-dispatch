@@ -15,11 +15,12 @@ export { zoneFilterOf, type ZoneFilter };
 import type { AdminApi, CommandInput, CommandResult } from "../api/create.ts";
 import type { TripOffersView } from "../api/dispatchSim.ts";
 import { ApiError } from "../api/httpClient.ts";
-import type { ApprovalRow, AuditRow, DemoRecord, LiveTripFacts, ZoneScope } from "../api/seed.ts";
+import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
 import { ridersOnlineRecords } from "../dashboard/riders.ts";
-import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
+import { zoneSupplyRecords } from "../dashboard/insights.ts";
+import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
@@ -86,6 +87,11 @@ export function docState(documents: readonly DocumentSummary[] = [], required: r
   return "approved";
 }
 
+/** G3-D2: the three numbers the panel shows from Driver.performance (null stays null → "—"). */
+export function performanceFacts(performance: DriverPerformance): NonNullable<LiveDriverFacts["performance"]> {
+  return { acceptancePct: performance.acceptancePct ?? null, cancellationPct: performance.cancellationPct ?? null, rating: performance.rating ?? null };
+}
+
 export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
   const location = live?.location ?? driver.location;
   return {
@@ -118,6 +124,7 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       lastFixAt: live?.lastFixAt ?? driver.lastFixAt ?? null,
       stale: live ? live.stale : null,
       activeTripId: live?.activeTripId ?? null,
+      ...(driver.performance ? { performance: performanceFacts(driver.performance) } : {}),
     },
   };
 }
@@ -304,6 +311,7 @@ export function auditRow(entry: AuditEntry): AuditRow {
     operationId: entry.requestId,
     at: entry.at,
     actorId: entry.actorId,
+    ...(entry.actor === "rider" || entry.actor === "driver" || entry.actor === "admin" || entry.actor === "system" ? { actor: entry.actor } : {}),
     action: entry.action,
     targetId: entry.targetId,
     scope: zone,
@@ -426,6 +434,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     if (name === "ridersOnline") {
       const query = new URLSearchParams(filter.params).toString();
       return ridersOnlineRecords(await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`));
+    }
+    // G3-D5 (v0.18.4): the server's supply and demand per zone (every online driver counted, position or not).
+    if (name === "zoneSupply") {
+      const query = new URLSearchParams(filter.params).toString();
+      return zoneSupplyRecords(await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`));
     }
     if (name === "payments") {
       const rows = await paged<Payment>(client, "payments", "/admin/payments", filter);

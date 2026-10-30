@@ -156,3 +156,31 @@ test("G3-R4: riders online are the server's per-zone numbers, never 5 % of the a
   assert.equal(ridersOnlineIn([], ["Z001"]), null, "an older server without ridersOnline: no number, not a guess");
   assert.equal(riders.riderCounts([], [], active, 4).online, 4, "the server's number wins");
 });
+
+// Owner G3-D5 (2026-10-30, "Fix it", contract v0.18.4 LiveDriverList.zoneSupply): every online driver counts in his
+// zone, also without a fresh position; the alert only when free drivers are short; alert and rows same numbers.
+test("G3-D5: supply rows count every online driver in his zone and the shortage alert uses the same rows", async () => {
+  const insights = await import("./insights.ts");
+  const base = { name: "", zoneName: "", lat: 0, lng: 0, lastSeenMin: 0, vehicle: null, plate: null, route: null, progress: 0 };
+  const drivers = [
+    { ...base, id: "D1", zoneId: "Z001", state: "free" as const, tripId: null },
+    { ...base, id: "D2", zoneId: "Z001", state: "stale" as const, tripId: null, lastSeenMin: 14 },
+    { ...base, id: "D3", zoneId: "Z001", state: "trip" as const, tripId: "T9" },
+  ];
+  const waiting = (id: string, zoneId: string) => ({ tripId: id, zoneId, status: "searching" }) as never;
+  const rows = insights.supplyDemand("SE", ["Z001"], [waiting("T1", "Z001"), waiting("T2", "Z001")], drivers);
+  assert.deepEqual([rows[0].online, rows[0].free, rows[0].busy, rows[0].waiting, rows[0].level], [3, 2, 1, 2, "tight"], "the driver without a fresh fix is online and free in Z001");
+  assert.deepEqual(insights.shortageZones(rows), [], "2 waiting, 2 free: tight, no shortage alert");
+
+  // Live: the server's zoneSupply rows are the rows, the alert and the surge counts.
+  const records = insights.zoneSupplyRecords({ items: [], staleAfterSeconds: 120, serverTime: "2026-10-30T10:00:00Z", zoneSupply: [
+    { zoneId: "Z001", online: 4, free: 1, busy: 3, waiting: 3, level: "short", shortage: true },
+    { zoneId: "Z002", online: 2, free: 2, busy: 0, waiting: 0, level: "ok", shortage: false },
+  ] });
+  const live = insights.serverSupply("SE", [], records);
+  assert.deepEqual(live.map((row) => [row.zoneId, row.online, row.free, row.waiting, row.level]), [["Z001", 4, 1, 3, "short"], ["Z002", 2, 2, 0, "ok"]]);
+  assert.deepEqual(insights.shortageZones(live).map((row) => [row.zoneId, row.waiting, row.free]), [["Z001", 3, 1]], "alert = the short rows, same numbers");
+  assert.deepEqual(insights.serverSupply("SE", ["Z002"], records).map((row) => row.zoneId), ["Z002"], "only the zones in view");
+  assert.deepEqual(insights.serverSupply("SE", [], insights.zoneSupplyRecords({ items: [] })), [], "older server: no rows, never a guess");
+  assert.deepEqual(insights.activeBoosts([], live).map((row) => [row.zoneId, row.kind, row.detail]), [["Z001", "Surge suggested", "3 waiting · 1 free"]]);
+});

@@ -21,6 +21,9 @@ import {
   restoreVersion,
   saveDraftOnly,
   savePublish,
+  savePublishLive,
+  liveDocumentOf,
+  unpublishedKeys,
   type HistoryEntry,
   countryOfStandard,
   standardKey,
@@ -34,6 +37,7 @@ import {
 } from "./configDocs.ts";
 import { ONBOARDING_SETTINGS_KEY, OPEN, normalizeSettingsBook, wireDocument, type SettingsBook, type SettingsDoc } from "../drivers/onboardingSettings.ts";
 import { registerCountryTypes } from "./format.ts";
+import { tr } from "../i18n/core.ts";
 
 /** Every zone of the admin's markets and each country's Standard. */
 export function settingsScopes(): string[] {
@@ -63,6 +67,29 @@ export const standardMarks = (() => {
     },
     /** true: uses its country's Standard; false: has its own; undefined: not known (demo, or nothing on the server). */
     get(doc: ConfigDocName, zoneId: string): boolean | undefined {
+      return marks.get(`${doc}:${zoneId}`);
+    },
+    subscribe(listener: Listener) {
+      listeners.add(listener);
+      return () => void listeners.delete(listener);
+    },
+  };
+})();
+
+/**
+ * G3: the parts of a zone's rider/driver app document that are saved on the server but not live (keys only).
+ * [] = nothing waiting; undefined = not known (a Standard, the demo, or not read yet).
+ */
+export const unpublishedMarks = (() => {
+  const marks = new Map<string, string[]>();
+  const listeners = new Set<Listener>();
+  return {
+    set(doc: ConfigDocName, zoneId: string, keys: string[] | undefined) {
+      if (keys === undefined) marks.delete(`${doc}:${zoneId}`);
+      else marks.set(`${doc}:${zoneId}`, keys);
+      listeners.forEach((listener) => listener());
+    },
+    get(doc: ConfigDocName, zoneId: string): string[] | undefined {
       return marks.get(`${doc}:${zoneId}`);
     },
     subscribe(listener: Listener) {
@@ -183,6 +210,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const rules = await draft("dispatch", id, true);
       const driver = unknownZones.has(id) ? null : await draft("driver_app_config", id, true);
       drivers.set(id, driver?.document ?? null);
+      // G3: what of the zone's app documents is saved but not live (shown above the editor).
+      if (driver && !countryOfStandard(id)) await markUnpublished("driver_app_config", id, driver).catch(() => undefined);
       if (rules || driver) live[id] = rulesOfDispatch(rules?.document ?? null, driver?.document ?? null, liveRules(book, id));
     }));
     // Owner 2026-10-28: History shows the server's published versions, so "Ångra" can put the one before back.
@@ -256,15 +285,51 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return zones;
   }
 
-  /** The rider and driver documents a page owns parts of, built by the admin's exporters, over the server's. */
-  async function publishAppParts(id: string, owned: { rider: string[]; driver: string[] }, state: ReturnType<typeof appConfigState>): Promise<void> {
+  /** G3: compares a zone's app draft with its live document and remembers what is not published (keys only). */
+  async function markUnpublished(doc: ConfigDocName, id: string, current: Draft | null): Promise<Doc | null | undefined> {
+    const live = await liveDocumentOf(http, doc, id);
+    unpublishedMarks.set(doc, id, current && live && !current.usesStandard ? unpublishedKeys(current.document, live) : live === null && current && !current.usesStandard ? Object.keys(current.document).filter((k) => k !== "version" && k !== "publishedAt") : undefined);
+    return live;
+  }
+
+  /**
+   * The rider and driver documents a page owns parts of, built by the admin's exporters, over the server's.
+   * G3 (owner: every admin setting must work on live): compared with what is LIVE, not with the draft, so a draft
+   * that already holds the change is published too; a scope with nothing on the server gets the admin's full
+   * document (it was skipped before, so the change never reached the apps). `source` builds the parts from another
+   * scope (a zone that follows its country's Standard rules gets the Standard's parts).
+   */
+  async function publishAppParts(id: string, owned: { rider: string[]; driver: string[] }, state: ReturnType<typeof appConfigState>, source = id): Promise<void> {
     for (const [doc, keys, build] of [["rider_app_config", owned.rider, riderAppConfig], ["driver_app_config", owned.driver, driverAppConfig]] as const) {
       if (!keys.length) continue;
       const current = await draft(doc, id, true);
-      if (!current) continue; // Nothing on the server for this scope yet: the admin publishes the first document in Settings.
-      const built = build(id, state) as unknown as Doc;
-      await savePublish(http, doc, id, current, withOwned(current.document, built, keys));
+      const built = build(source, state) as unknown as Doc;
+      const document = current ? withOwned(current.document, built, keys) : { ...built, ...("zoneId" in built && !countryOfStandard(id) ? { zoneId: id } : {}) };
+      const live = current ? await liveDocumentOf(http, doc, id) : null;
+      await savePublishLive(http, doc, id, current, document, live);
+      drafts.delete(key(doc, id));
+      unpublishedMarks.set(doc, id, countryOfStandard(id) ? undefined : []);
+      if (current?.usesStandard) standardMarks.set(doc, id, false);
     }
+  }
+
+  /**
+   * G3: a zone with its own app document never sees its country's Standard (the server serves the zone's row). When
+   * the Standard's Dispatch rules are published, the zones whose Dispatch rules follow the Standard but whose app
+   * documents are their own get the Standard's parts too, so their drivers really get the change.
+   */
+  async function followers(standardId: string, rulesDoc: ConfigDocName): Promise<string[]> {
+    const country = countryOfStandard(standardId);
+    if (!country) return [];
+    const zones = readScopes().filter((id) => marketOfZone(id)?.id === country && !countryOfStandard(id) && !unknownZones.has(id));
+    const out: string[] = [];
+    for (const id of zones) {
+      const rules = await draft(rulesDoc, id).catch(() => null);
+      if (rules?.usesStandard !== true) continue;
+      const app = await draft("driver_app_config", id).catch(() => null);
+      if (app && app.usesStandard !== true) out.push(id);
+    }
+    return out;
   }
 
   const stateWith = (patch: Record<string, unknown>) => appConfigState({ pricing: slices.get(PRICING_KEY), dispatch: slices.get(DISPATCH_KEY), countrySettings: slices.get(COUNTRY_SETTINGS_KEY), ...patch, now: now() });
@@ -313,6 +378,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const current = await draft("dispatch", id, true);
       await savePublish(http, "dispatch", id, current, dispatchDocumentOf(liveRules(book, id), id, current?.document ?? null));
       await publishAppParts(id, OWNED.dispatch, state);
+      for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, OWNED.dispatch, state, id);
     }
     return "Published.";
   }
@@ -325,6 +391,15 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     if (!targets.length) throw new Error("Choose the zones at the top first.");
     const state = stateWith({ config: value });
     for (const id of targets) await publishAppParts(id, OWNED.settings, state);
+    // G3: say which zones of a chosen Standard keep their own app settings (their drivers do not get this change).
+    const own: string[] = [];
+    for (const standard of targets.filter((id) => countryOfStandard(id))) {
+      for (const id of readScopes().filter((zone) => marketOfZone(zone)?.id === countryOfStandard(standard) && !countryOfStandard(zone) && !targets.includes(zone) && !unknownZones.has(zone))) {
+        const app = await draft("driver_app_config", id).catch(() => null);
+        if (app && app.usesStandard !== true) own.push(zoneById(id)?.name ?? id);
+      }
+    }
+    if (own.length) return tr("Published. These zones have their own driver app settings and did not get it: {0}. Choose them at the top and publish again, or set them back to the Standard.", [own.join(", ")]);
     return "Published.";
   }
 
@@ -384,6 +459,22 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return "Published.";
   }
 
+  /** G3: publishes what the server already holds as the zone's driver app draft (owner decides; nothing else changes). */
+  async function publishAppDraft(zoneId: string): Promise<string> {
+    if (countryOfStandard(zoneId) || !settingsScopes().includes(zoneId)) throw new Error("Choose a zone first.");
+    const current = await readDraft(http, "driver_app_config", zoneId);
+    if (!current || current.usesStandard) throw new Error("Nothing to publish.");
+    try {
+      await http.post("/admin/config/driver_app_config/publish", { expectedVersion: current.version, zoneId });
+    } catch (error) {
+      if ((error as { status?: number } | null)?.status === 409) throw new SettingsChanged();
+      throw error;
+    }
+    drafts.delete(key("driver_app_config", zoneId));
+    unpublishedMarks.set("driver_app_config", zoneId, []);
+    return "Published. The drivers get it now.";
+  }
+
   async function backToStandard(zoneId: string, docs: readonly ConfigDocName[]): Promise<string> {
     for (const doc of docs) {
       const current = await draft(doc, zoneId, true);
@@ -428,6 +519,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         return publishSettings(input.value, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
       }
       if (action === "admin.pricing.saveCountry") return saveCountries(input.value as CountrySettingsBook, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
+      if (action === "admin.config.publishAppDraft") return publishAppDraft(input.targetId);
       if (action === "admin.config.useStandard") return backToStandard(input.targetId, ((input.value as { docs?: string[] } | undefined)?.docs ?? ["pricing"]) as ConfigDocName[]);
       return null;
     },

@@ -54,6 +54,7 @@ export function auditCounts(rows: readonly AuditRow[]): { total: number; today: 
     today: rows.filter((row) => row.at.slice(0, 10) === today).length,
     failed: rows.filter((row) => row.result === "rejected" || row.result === "denied" || row.result === "conflict").length,
     waiting: rows.filter((row) => row.result === "pending_approval").length,
-    admins: new Set(rows.map((row) => row.actorId)).size,
+    // G3: only admins count; the server ("system", e.g. driver.auto_offline), drivers and riders are not admins.
+    admins: new Set(rows.filter((row) => (row.actor ?? "admin") === "admin" && row.actorId !== "system").map((row) => row.actorId)).size,
   };
 }

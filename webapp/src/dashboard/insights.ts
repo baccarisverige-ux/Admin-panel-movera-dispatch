@@ -3,12 +3,14 @@ import type { Totals } from "./earnings.ts";
 import type { LiveDriver } from "./live.ts";
 import type { RideRequest } from "./riders.ts";
 import { isLiveData } from "../live/realData.ts";
+import type { DemoRecord } from "../api/seed.ts";
+import type { LiveDriverList } from "../live/types.ts";
 
 /** Smaller dashboard views built from the live state and the period totals. */
 
 export type Level = "ok" | "tight" | "short";
 
-export type ZoneBalance = { zoneId: string; name: string; center: [number, number]; waiting: number; free: number; busy: number; level: Level };
+export type ZoneBalance = { zoneId: string; name: string; center: [number, number]; waiting: number; free: number; busy: number; level: Level; online?: number; shortage?: boolean };
 
 function hash(text: string): number {
   let value = 2166136261;
@@ -16,19 +18,53 @@ function hash(text: string): number {
   return value >>> 0;
 }
 
-/** Riders waiting against free drivers in every zone, worst first. */
+const worstFirst = (a: ZoneBalance, b: ZoneBalance) => (b.waiting - b.free) - (a.waiting - a.free) || b.waiting - a.waiting;
+
+/**
+ * Riders waiting against the online drivers of every zone, worst first (demo; live uses the server's zoneSupply).
+ * G3-D5: every online driver counts in his zone, also without a fresh position ("No GPS"): free = no trip, busy = on a
+ * trip or heading to a pickup. Same rule as the server: ok when nobody waits, tight when waiting ≤ free, short otherwise.
+ */
 export function supplyDemand(id: MarketId, zoneIds: readonly string[], requests: readonly RideRequest[], drivers: readonly LiveDriver[]): ZoneBalance[] {
   const shown = new Set(zoneIds);
   return market(id).zones
     .filter((zone) => !shown.size || shown.has(zone.id))
     .map((zone) => {
       const waiting = requests.filter((request) => request.zoneId === zone.id && request.status === "searching").length;
-      const free = drivers.filter((driver) => driver.zoneId === zone.id && driver.state === "free").length;
-      const busy = drivers.filter((driver) => driver.zoneId === zone.id && (driver.state === "trip" || driver.state === "pickup")).length;
+      const inZone = drivers.filter((driver) => driver.zoneId === zone.id);
+      const busy = inZone.filter((driver) => driver.state === "trip" || driver.state === "pickup" || driver.tripId !== null).length;
+      const online = inZone.length;
+      const free = online - busy;
       const level: Level = waiting === 0 ? "ok" : free >= waiting ? "tight" : "short";
-      return { zoneId: zone.id, name: zone.name, center: zone.center, waiting, free, busy, level };
+      return { zoneId: zone.id, name: zone.name, center: zone.center, waiting, free, busy, online, level, shortage: level === "short" };
     })
-    .sort((a, b) => (b.waiting - b.free) - (a.waiting - a.free) || b.waiting - a.waiting);
+    .sort(worstFirst);
+}
+
+/** G3-D5: GET /admin/live/drivers → zoneSupply as records (list "zoneSupply"); an older server without it gives none. */
+export function zoneSupplyRecords(list: Partial<LiveDriverList>): DemoRecord[] {
+  return (list.zoneSupply ?? []).map((row) => ({
+    id: `zone-supply-${row.zoneId}`, name: "", phone: "", zoneId: row.zoneId, status: row.level,
+    supply: { online: row.online, free: row.free, busy: row.busy, waiting: row.waiting, level: row.level, shortage: row.shortage },
+  }));
+}
+
+/** G3-D5: the server's rows for the zones in view (all the country's zones when none is picked), worst first. */
+export function serverSupply(id: MarketId, zoneIds: readonly string[], rows: readonly DemoRecord[]): ZoneBalance[] {
+  const shown = new Set(zoneIds);
+  return market(id).zones
+    .filter((zone) => !shown.size || shown.has(zone.id))
+    .flatMap((zone): ZoneBalance[] => {
+      const supply = rows.find((row) => row.zoneId === zone.id)?.supply;
+      if (!supply) return [];
+      return [{ zoneId: zone.id, name: zone.name, center: zone.center, waiting: supply.waiting, free: supply.free, busy: supply.busy, online: supply.online, level: supply.level, shortage: supply.shortage }];
+    })
+    .sort(worstFirst);
+}
+
+/** G3-D5: the zones short of free drivers, the same rows the Supply & demand card shows; the alert names these. */
+export function shortageZones(balance: readonly ZoneBalance[]): ZoneBalance[] {
+  return balance.filter((row) => row.shortage ?? row.level === "short");
 }
 
 export type AirportQueue = { zoneId: string; name: string; waiting: number; waitMin: number; pickupsLastHour: number };

@@ -25,7 +25,7 @@ import {
 import { useRecords, useSlice } from "../api/hooks";
 import { can, canUseZone } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
-import { supplyDemand } from "../dashboard/insights";
+import { useSupply } from "../dashboard/useSupply";
 import { liveDrivers } from "../dashboard/live";
 import { rideRequests } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
@@ -182,7 +182,8 @@ export function PricingPage() {
   const live = useMemo(() => liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0), [drivers.data, vehicles.data, trips.data, incidents.data]);
   const online = useMemo(() => new Set(live.map((driver) => driver.id)), [live]);
   const requests = useMemo(() => rideRequests(trips.data ?? [], riders.data ?? [], (id) => online.has(id)), [trips.data, riders.data, online]);
-  const counts = useMemo(() => new Map(supplyDemand(country, [], requests, live).map((row) => [row.zoneId, { waiting: row.waiting, free: row.free }])), [country, requests, live]);
+  const supply = useSupply(country, [], requests, live);
+  const counts = useMemo(() => new Map(supply.map((row) => [row.zoneId, { waiting: row.waiting, free: row.free }])), [supply]);
   const zoneKey = countryZoneIds.join(",");
   // Contract v0.7.2 (owner 2026-10-28, contract.json#surgeLive): the live panel shows the server's surge only
   // (GET /admin/surge/now, the chosen zone's GET …/surge/history on the Surge tab); the demo keeps its model.
