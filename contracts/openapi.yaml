@@ -11839,6 +11839,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/Timestamp'
           description: 'v0.5.1, admin view only: when the latest fix was received.'
+        performance:
+          allOf:
+          - $ref: '#/components/schemas/DriverPerformance'
+          description: 'v0.18.4 (G3-D2): on GET /driver/profile and GET /admin/drivers/{driverId} only.'
         outsideArea:
           type: boolean
           description: 'v0.18.4 (G3-R2), driver view: the latest position is outside all of Driver.zoneIds; missing with no
@@ -12312,6 +12316,70 @@ components:
             $ref: '#/components/schemas/FleetDriverEarnings'
         total:
           $ref: '#/components/schemas/Money'
+    DriverPerformance:
+      type: object
+      description: 'v0.18.4 (G3-D2): G3-D2 (owner 2026-10-30, ''Real numbers''). The server computes the driver''s own numbers
+        over the last windowDays days (rolling, server clock) and sends them as Driver.performance on GET /driver/profile
+        (the driver himself) and GET /admin/drivers/{driverId} (admin). Same counts as the dispatch score inputs (CONTRACT.md
+        §3.6 factors acceptance and cancel): offersAnswerable = the driver''s offers of kind exclusive or assigned sent in
+        the window that ended claimed, declined or expired (withdrawn and claimed_elsewhere are not counted: he could not
+        answer them); offersAccepted = those claimed; acceptancePct = round(offersAccepted / offersAnswerable × 100); tripsCancelled
+        = the driver''s cancels after accepting (driver_cancels) in the window; cancellationPct = round(min(100, tripsCancelled
+        / offersAccepted × 100)). acceptancePct is null while offersAnswerable < minOffers; cancellationPct is null while
+        offersAccepted < minTrips. rating = the average of the riders'' visible ratings (hidden ratings not counted, 2 decimals),
+        null while ratingCount < minRatings. The app shows ''—'' for null (sv/fr/en: same dash). Dispatch (§3.6) uses these
+        same counts unrounded as soon as there is any data (the minimums only decide what the apps show); with no data at
+        all it uses the §3.6 defaults (rating 4.7, acceptance 85 %, cancels 5 %).'
+      required:
+      - windowDays
+      - from
+      - offersAnswerable
+      - offersAccepted
+      - tripsCancelled
+      - ratingCount
+      - acceptancePct
+      - cancellationPct
+      - rating
+      properties:
+        windowDays:
+          type: integer
+          minimum: 1
+          default: 30
+        from:
+          $ref: '#/components/schemas/Timestamp'
+        offersAnswerable:
+          type: integer
+          minimum: 0
+        offersAccepted:
+          type: integer
+          minimum: 0
+        tripsCancelled:
+          type: integer
+          minimum: 0
+        ratingCount:
+          type: integer
+          minimum: 0
+        acceptancePct:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 100
+          description: null while offersAnswerable < 10.
+        cancellationPct:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 100
+          description: null while offersAccepted < 10.
+        rating:
+          type:
+          - number
+          - 'null'
+          minimum: 0
+          maximum: 5
+          description: null while ratingCount < 1.
     PaymentIntent:
       type: object
       description: tripId is required for purpose=trip|tip and absent for wallet_topup.
@@ -16667,6 +16735,47 @@ components:
         count:
           type: integer
           minimum: 0
+    ZoneSupply:
+      type: object
+      description: 'v0.18.4 (G3-D5): G3-D5 (owner 2026-10-30, ''Fix it''). LiveDriverList.zoneSupply on GET /admin/live/drivers:
+        one row per zone of the answer, the Dashboard''s supply/demand rows AND its shortage alert use these same numbers.
+        Every driver online or on_trip counts in his zone (LiveDriver.zoneId: the zone of his latest position, else his first
+        own zone), stale position included. online = those drivers; free = online drivers with onlineStatus online and no
+        active trip; busy = online − free; waiting = trips of the zone in status requested, searching or offered with no driver
+        yet (live rides only, not reservations before their search starts). level: ok when waiting = 0; tight when 0 < waiting
+        <= free; short when waiting > free. shortage = level short. The panel shows the shortage alert only when at least
+        one row has shortage true and names those rows.'
+      required:
+      - zoneId
+      - online
+      - free
+      - busy
+      - waiting
+      - level
+      - shortage
+      properties:
+        zoneId:
+          $ref: '#/components/schemas/Id'
+        online:
+          type: integer
+          minimum: 0
+        free:
+          type: integer
+          minimum: 0
+        busy:
+          type: integer
+          minimum: 0
+        waiting:
+          type: integer
+          minimum: 0
+        level:
+          type: string
+          enum:
+          - ok
+          - tight
+          - short
+        shortage:
+          type: boolean
     LiveDriverList:
       type: object
       description: Drivers on the admin live map; the panel polls about every 5 s.
@@ -16675,6 +16784,11 @@ components:
       - staleAfterSeconds
       - serverTime
       properties:
+        zoneSupply:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneSupply'
+          description: 'v0.18.4 (G3-D5): supply and demand per zone; the Dashboard''s rows and shortage alert.'
         items:
           type: array
           items:
@@ -16728,12 +16842,12 @@ components:
           type: number
           minimum: -90
           maximum: 90
-          description: Rounded to 4 decimals.
+          description: Moved 100–200 m (v0.18.4, G3-D4), then rounded to 4 decimals.
         lng:
           type: number
           minimum: -180
           maximum: 180
-          description: Rounded to 4 decimals.
+          description: Moved 100–200 m (v0.18.4, G3-D4), then rounded to 4 decimals.
         heading:
           type: number
           minimum: 0
@@ -16742,7 +16856,13 @@ components:
     NearbyVehicleList:
       type: object
       description: 'CONTRACT.md §13: v0.5.2 (CONTRACT.md §13): the free cars near the rider, drawn on the rider''s map while
-        it chooses a ride. No driver id, name, plate or trip; positions rounded; the key changes every day.'
+        it chooses a ride. No driver id, name, plate or trip; positions rounded; the key changes every day. v0.18.4 (G3-D4):
+        positions moved 100–200 m, stable per 10 min (contract.json#driverHome.nearbyBlur). G3-D4 (owner 2026-10-30, ''Slightly
+        moved''). GET /rider/nearby-vehicles never gives a driver''s exact position: each car is moved by an offset of minMeters..maxMeters
+        in a direction, both taken from an HMAC of the driver id and the time slot of stableMinutes (server clock), so a car
+        does not jump between answers inside a slot; the offset changes at the next slot. The answer still carries no identity
+        (opaque key, contract.json#riderNearby). The exact position is shown only to the rider of a trip a driver accepted,
+        through the existing trip views (TripProjection driver location).'
       required:
       - items
       - refreshSeconds

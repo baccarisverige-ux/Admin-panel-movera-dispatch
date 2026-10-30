@@ -280,7 +280,16 @@ S["FleetDriverEarnings"] = obj({"driverId": ref("Id"), "firstName": s(), "lastNa
                                ["driverId", "firstName", "trips", "earnings"])
 S["FleetEarnings"] = obj({"from": ref("Timestamp"), "to": ref("Timestamp"), "items": arr(ref("FleetDriverEarnings")), "total": ref("Money")},
                          ["from", "to", "items", "total"], "v0.5.3: every driver's earnings in the period, for the fleet owner.")
+PF = C["driverHome"]["performance"]
+S["DriverPerformance"] = obj(OrderedDict([
+    ("windowDays", {**i(minimum=1), "default": PF["windowDays"]}), ("from", ref("Timestamp")),
+    ("offersAnswerable", i(minimum=0)), ("offersAccepted", i(minimum=0)), ("tripsCancelled", i(minimum=0)), ("ratingCount", i(minimum=0)),
+    ("acceptancePct", {"type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": f"null while offersAnswerable < {PF['minOffers']}."}),
+    ("cancellationPct", {"type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": f"null while offersAccepted < {PF['minTrips']}."}),
+    ("rating", {"type": ["number", "null"], "minimum": 0, "maximum": 5, "description": f"null while ratingCount < {PF['minRatings']}."}),
+]), ["windowDays", "from", "offersAnswerable", "offersAccepted", "tripsCancelled", "ratingCount", "acceptancePct", "cancellationPct", "rating"], "v0.18.4 (G3-D2): " + PF["note"])
 S["Driver"]["properties"].update({
+    "performance": {"allOf": [ref("DriverPerformance")], "description": "v0.18.4 (G3-D2): on GET /driver/profile and GET /admin/drivers/{driverId} only."},
     "outsideArea": b("v0.18.4 (G3-R2), driver view: the latest position is outside all of Driver.zoneIds; missing with no position. The app shows contract.json#driverHome.outsideArea.text."),
     "areaZones": arr(ref("AreaZone"), description="v0.18.4: with outsideArea true, the driver's own zones (names for the popup)."),
     "accountType": {"allOf": [ref("DriverAccountType")], "description": "v0.5.3; missing before POST /driver/onboarding."},
@@ -942,7 +951,11 @@ S["LiveDriver"] = obj(OrderedDict([("driverId", ref("Id")), ("firstName", s()), 
                                    ("tripStatus", ref("TripStatus")), ("vehicleId", ref("Id")), ("plate", s()), ("zoneId", ref("Id"))]),
                       ["driverId", "firstName", "onlineStatus", "stale", "zoneId"])
 S["ZoneRidersOnline"] = obj({"zoneId": ref("Id"), "count": i(minimum=0)}, ["zoneId", "count"], "v0.18.4 (G3-R4): " + C["driverHome"]["ridersOnline"]["note"])
-S["LiveDriverList"] = obj({"items": arr(ref("LiveDriver")), "staleAfterSeconds": {**i(minimum=1), "default": LD["staleAfterSeconds"]}, "serverTime": ref("Timestamp"),
+DS = C["driverHome"]["zoneSupply"]
+S["ZoneSupply"] = obj(OrderedDict([("zoneId", ref("Id")), ("online", i(minimum=0)), ("free", i(minimum=0)), ("busy", i(minimum=0)), ("waiting", i(minimum=0)),
+                                   ("level", s(enum=DS["levels"])), ("shortage", b())]),
+                      ["zoneId", "online", "free", "busy", "waiting", "level", "shortage"], "v0.18.4 (G3-D5): " + DS["note"])
+S["LiveDriverList"] = obj({"zoneSupply": arr(ref("ZoneSupply"), description="v0.18.4 (G3-D5): supply and demand per zone; the Dashboard's rows and shortage alert."),"items": arr(ref("LiveDriver")), "staleAfterSeconds": {**i(minimum=1), "default": LD["staleAfterSeconds"]}, "serverTime": ref("Timestamp"),
                            "ridersOnline": arr(ref("ZoneRidersOnline"), description="v0.18.4 (G3-R4): real riders online per zone of the admin, the Dashboard's 'Riders online'."),
                            "ridersOnlineWindowSeconds": {**i(minimum=1), "default": C["driverHome"]["ridersOnline"]["windowSeconds"]}},
                           ["items", "staleAfterSeconds", "serverTime"], f"Drivers on the admin live map; the panel polls about every {LD['pollSeconds']} s.")
@@ -951,14 +964,14 @@ S["TripTrace"] = obj({"tripId": ref("Id"), "fixes": arr(ref("GeoFix"), descripti
 RN = C["riderNearby"]
 S["NearbyVehicle"] = obj(OrderedDict([
     ("key", s("Opaque, the same for one car through the day (it changes every day), so the app can move the car smoothly between answers. Not a driver or vehicle id.", minLength=6, maxLength=32)),
-    ("lat", n(f"Rounded to {RN['roundDecimals']} decimals.", minimum=-90, maximum=90)),
-    ("lng", n(f"Rounded to {RN['roundDecimals']} decimals.", minimum=-180, maximum=180)),
+    ("lat", n(f"Moved {C['driverHome']['nearbyBlur']['minMeters']}–{C['driverHome']['nearbyBlur']['maxMeters']} m (v0.18.4, G3-D4), then rounded to {RN['roundDecimals']} decimals.", minimum=-90, maximum=90)),
+    ("lng", n(f"Moved {C['driverHome']['nearbyBlur']['minMeters']}–{C['driverHome']['nearbyBlur']['maxMeters']} m (v0.18.4, G3-D4), then rounded to {RN['roundDecimals']} decimals.", minimum=-180, maximum=180)),
     ("heading", n("Degrees clockwise from north, from the latest fix; absent when unknown.", minimum=0, maximum=360)),
 ]), ["key", "lat", "lng"], "A free car near the rider (v0.5.2). Nothing that tells who drives it.")
 S["NearbyVehicleList"] = obj({"items": arr(ref("NearbyVehicle"), maxItems=RN["maxVehicles"], description="Nearest first."),
                               "refreshSeconds": {**i(minimum=1), "default": RN["refreshSeconds"]},
                               "radiusMeters": {**i(minimum=1), "default": RN["radiusMeters"]}},
-                             ["items", "refreshSeconds"], "CONTRACT.md §13: " + RN["note"])
+                             ["items", "refreshSeconds"], "CONTRACT.md §13: " + RN["note"] + " " + C["driverHome"]["nearbyBlur"]["note"])
 S["AccountDeletion"] = obj({"status": s(enum=C["accountDeletion"]["status"])}, ["status"], C["accountDeletion"]["note"])
 S["RiderConsents"] = obj({"rideUpdates": b(), "emailUpdates": b(), "promotions": b()})
 
