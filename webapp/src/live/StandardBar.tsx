@@ -3,7 +3,7 @@ import { Layers, RotateCcw } from "lucide-react";
 import { isStandardZone, zoneById, type MarketId } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trx } from "../i18n";
-import { standardMarks, unpublishedMarks } from "./liveSettings.ts";
+import { copyTargets, standardMarks, unpublishedMarks } from "./liveSettings.ts";
 import type { ConfigDocName } from "./configDocs.ts";
 
 /** Re-renders when the server's "Uses standard" marks change. */
@@ -40,6 +40,29 @@ export function UnpublishedLine({ zoneId, canEdit }: { zoneId: string; canEdit: 
   );
 }
 
+/** G3-D8: copies the driver app settings shown here to every other zone of the country (confirm lists them), then publishes. */
+export function CopyToAllZones({ zoneId, zoneName, canEdit }: { zoneId: string; zoneName: string; canEdit: boolean }) {
+  const zones = copyTargets(zoneId).map((id) => zoneById(id)?.name ?? id);
+  if (!zones.length) return null;
+  return (
+    <div className="standard-bar" data-testid="copy-all-zones">
+      <span>{tr("Each zone keeps driver app settings of its own. Copy these to every zone of the country when they should all be the same.")}</span>
+      <CommandButton
+        command="admin.config.copyAppToZones"
+        className="dash-btn small"
+        targetId={zoneId}
+        before={tr("Own settings")}
+        after={tr("Same as {0}", [zoneName])}
+        confirmTarget={false}
+        disabled={!canEdit}
+        summary={tr("The driver app settings of {0} are copied to these zones and published to their drivers: {1}.", [zoneName, zones.join(", ")])}
+      >
+        {tr("Copy to all zones")}
+      </CommandButton>
+    </div>
+  );
+}
+
 /** The small "Uses standard" chip on a zone pill (live panel only). */
 export function UsesStandardChip({ doc, zoneId }: { doc: ConfigDocName; zoneId: string }) {
   const mark = useStandardMark(doc, zoneId);
@@ -52,7 +75,7 @@ export function UsesStandardChip({ doc, zoneId }: { doc: ConfigDocName; zoneId: 
  * for a zone with its own settings (confirm step; its own settings stay in History).
  */
 export function StandardBar(props: { doc: ConfigDocName; docs: readonly ConfigDocName[]; zoneId: string; zoneName: string; country: MarketId; countryName: string; canEdit: boolean }) {
-  return <>{standardBar(props, useStandardMark(props.doc, props.zoneId))}{props.docs.includes("driver_app_config") ? <UnpublishedLine zoneId={props.zoneId} canEdit={props.canEdit} /> : null}</>;
+  return <>{standardBar(props, useStandardMark(props.doc, props.zoneId))}{props.docs.includes("driver_app_config") ? <><UnpublishedLine zoneId={props.zoneId} canEdit={props.canEdit} /><CopyToAllZones zoneId={props.zoneId} zoneName={props.zoneName} canEdit={props.canEdit} /></> : null}</>;
 }
 
 function standardBar({ docs, zoneId, zoneName, country, countryName, canEdit }: { doc: ConfigDocName; docs: readonly ConfigDocName[]; zoneId: string; zoneName: string; country: MarketId; countryName: string; canEdit: boolean }, mark: boolean | undefined) {

@@ -346,3 +346,25 @@ test("G3: Publish to drivers publishes the zone's saved driver app draft as it i
   assert.deepEqual(unpublishedMarks.get("driver_app_config", "Z001"), []);
   await assert.rejects(Promise.resolve(settings.command("admin.config.publishAppDraft", { targetId: "standard-SE" })));
 });
+
+// Owner G3-D8 (2026-10-30): "Keep each zone own setting and add copy all zone botton".
+test("G3-D8: Copy to all zones copies the driver app settings to every zone of the country and publishes; zones keep their own", async () => {
+  const live = await import("./liveSettings.ts");
+  const app = (id: string, extra: Doc = {}) => ({ ...sample("driver_app_config"), zoneId: id, ...extra });
+  const server = fakeServer({
+    "driver_app_config:Z001": { version: 3, liveVersion: 1, usesStandard: false, document: app("Z001", { offers: { source: true }, features: { wallet: false } }) },
+    "driver_app_config:Z002": { version: 3, liveVersion: 1, usesStandard: false, document: app("Z002") },
+    "driver_app_config:Z003": { version: 1, liveVersion: 0, usesStandard: true, document: app("Z003") },
+  });
+  const settings = createLiveSettings(server.http, () => "2026-10-30T10:00:00Z");
+  assert.ok(live.copyTargets("Z001").includes("Z002") && !live.copyTargets("Z001").includes("Z001") && !live.copyTargets("Z001").includes("FR-PC"));
+  assert.match(await settings.command("admin.config.copyAppToZones", { targetId: "Z001" })!, /Copied/);
+  const puts = server.calls.filter((c) => c.method === "PUT").map((c) => c.body as { zoneId: string; document: Doc });
+  for (const zone of ["Z002", "Z003"]) {
+    const sent = puts.find((b) => b.zoneId === zone)!;
+    assert.deepEqual([sent.document["offers"], sent.document["features"], sent.document["zoneId"]], [{ source: true }, { wallet: false }, zone]);
+  }
+  assert.ok(!puts.some((b) => b.zoneId === "Z001"));
+  assert.ok(server.calls.some((c) => c.method === "POST" && (c.body as { zoneId?: string }).zoneId === "Z003"), "published to the drivers");
+  assert.ok(!server.calls.some((c) => c.path.includes("use-standard")), "no zone is set back to the Standard");
+});

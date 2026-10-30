@@ -54,6 +54,12 @@ export function readScopes(): string[] {
 
 type Listener = () => void;
 
+/** G3-D8: the zones "Copy to all zones" changes: every open zone of the source's country except the source. */
+export function copyTargets(sourceId: string): string[] {
+  const country = countryOfStandard(sourceId) ?? marketOfZone(sourceId)?.id;
+  return readScopes().filter((id) => id !== sourceId && !countryOfStandard(id) && marketOfZone(id)?.id === country);
+}
+
 const CONFIG_KEY = "config";
 
 /** "Uses standard" marks per document and zone, read from the server's drafts (usesStandard). */
@@ -475,6 +481,29 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return "Published. The drivers get it now.";
   }
 
+  /**
+   * G3-D8 (owner: "Keep each zone own setting and add copy all zone botton"): the driver app settings of the zone or
+   * Standard being viewed are copied to every other zone of its country and published to their drivers. Each zone
+   * keeps a document of its own (never set back to the Standard); the waiting money stays each zone's (pricing).
+   */
+  async function copyAppToZones(sourceId: string): Promise<string> {
+    const country = countryOfStandard(sourceId) ?? marketOfZone(sourceId)?.id;
+    if (!country) throw new Error("Choose a zone first.");
+    const source = await readDraft(http, "driver_app_config", sourceId);
+    if (!source) throw new Error("Nothing to copy.");
+    const keys = [...new Set([...OWNED.dispatch.driver, ...OWNED.settings.driver, ...OWNED.content.driver])];
+    const zones = copyTargets(sourceId).filter((id) => !unknownZones.has(id));
+    for (const id of zones) {
+      const current = await draft("driver_app_config", id, true);
+      const document = current ? withOwned(current.document, source.document, keys) : { ...source.document, zoneId: id };
+      await savePublishLive(http, "driver_app_config", id, current ? { ...current, usesStandard: false } : null, document, current ? await liveDocumentOf(http, "driver_app_config", id) : null);
+      drafts.delete(key("driver_app_config", id));
+      unpublishedMarks.set("driver_app_config", id, []);
+      standardMarks.set("driver_app_config", id, false);
+    }
+    return "Copied to every zone and published to their drivers.";
+  }
+
   async function backToStandard(zoneId: string, docs: readonly ConfigDocName[]): Promise<string> {
     for (const doc of docs) {
       const current = await draft(doc, zoneId, true);
@@ -519,6 +548,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         return publishSettings(input.value, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
       }
       if (action === "admin.pricing.saveCountry") return saveCountries(input.value as CountrySettingsBook, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
+      if (action === "admin.config.copyAppToZones") return copyAppToZones(input.targetId);
       if (action === "admin.config.publishAppDraft") return publishAppDraft(input.targetId);
       if (action === "admin.config.useStandard") return backToStandard(input.targetId, ((input.value as { docs?: string[] } | undefined)?.docs ?? ["pricing"]) as ConfigDocName[]);
       return null;

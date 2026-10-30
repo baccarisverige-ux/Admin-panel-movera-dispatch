@@ -94,3 +94,22 @@ test("G3: the Audit Admins count does not count the server (system)", async ({ p
   const card = page.getByRole("region", { name: "Numbers" }).locator(".rp-card").filter({ has: page.getByRole("button", { name: "What is Admins?" }) });
   await expect(card).toHaveText(/^Admins\s*1\b/);
 });
+
+test("G3-D8: Dispatch has Copy to all zones; the confirm lists the zones; each gets the settings and a publish", async ({ page }) => {
+  await start(page);
+  const settings = await fakeSettings(page);
+  await page.goto("/dispatch/radar?zone=Z002");
+  const copy = page.getByTestId("copy-all-zones");
+  await expect(copy).toBeVisible();
+  await copy.scrollIntoViewIfNeeded();
+  await shot(page, "copy-all-zones");
+  await copy.getByRole("button", { name: "Copy to all zones" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Stockholm County");
+  await shot(page, "copy-all-zones-confirm");
+  const reason = dialog.getByRole("textbox").first();
+  if (await reason.isVisible().catch(() => false)) await reason.fill("Same settings everywhere");
+  await dialog.getByRole("button", { name: /Confirm|Copy/ }).last().click();
+  await expect.poll(() => settings.sent.some((call) => call.method === "POST" && call.path.endsWith("/driver_app_config/publish") && call.body?.["zoneId"] === "Z001")).toBe(true);
+  expect(settings.sent.some((call) => call.path.includes("use-standard"))).toBe(false);
+});
