@@ -279,3 +279,81 @@ test("G9: a role without support.reply is told it cannot see the chat; nothing i
   await expect(page.getByTestId("trip-chat")).toContainText("Your role cannot see messages between riders and drivers.");
   expect(asked).toBe(false);
 });
+
+/* ---------------------------------------------------------------------------------- G1-B2 Content › Legal per country */
+
+const DOC = (title: string, text: string) => ({ title: { sv: `${title} sv`, fr: `${title} fr`, en: title }, text: { sv: `${text} (sv)`, fr: `${text} (fr)`, en: text } });
+const LEGAL_SE = { country: "SE", version: 0, source: "default", reaccept: false, terms: DOC("Terms of use", "Draft – to be reviewed by a lawyer before launch.\n\nMovera is run by {companyName}."), privacy: DOC("Privacy policy", "Draft – to be reviewed by a lawyer before launch."), company: {} };
+const LEGAL_FR = { ...LEGAL_SE, country: "FR", version: 2, source: "admin", publishedAt: "2026-10-30T10:00:00Z", publishedBy: "A1", company: { companyName: "Movera SAS" } };
+
+async function legalServer(page: Page, permissions = ["overview.read", "settings.read", "settings.edit", "settings.publish", "zones.read"], language = "en") {
+  await fakeTripServer(page, { admin: { permissions, language } });
+  const sent: Sent[] = [];
+  await page.route(/\/api\/v1\/admin\/legal\/(SE|FR)(\/publish)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+    const path = new URL(request.url()).pathname.replace("/api/v1", "");
+    const country = path.split("/")[3]!;
+    const live = country === "SE" ? LEGAL_SE : LEGAL_FR;
+    const reply = (body: unknown) => route.fulfill({ status: 200, headers: { ...CORS, "content-type": "application/json", "idempotency-key": request.headers()["idempotency-key"] ?? "" }, body: JSON.stringify(body) });
+    if (request.method() === "GET") return reply({ live, history: live.version ? [live] : [] });
+    const body = request.postDataJSON() as Record<string, unknown>;
+    sent.push({ method: "POST", path, body: { ...body, idempotencyKey: Boolean(request.headers()["idempotency-key"]) } });
+    return reply({ ...live, ...body, version: live.version + 1, source: "admin", publishedAt: "2026-10-30T12:00:00Z", publishedBy: "A1" });
+  });
+  await signIn(page, language === "sv" ? "Kontrollpanel" : "Dashboard");
+  return sent;
+}
+
+test("G1-B2: Content › Legal per country: SE drafts, lawyer note, edit sv/fr/en, company fields, ask again, publish", async ({ page }) => {
+  const sent = await legalServer(page);
+  await page.goto("/content?view=legal");
+  const editor = page.getByTestId("legal-editor");
+  await expect(editor.getByTestId("legal-lawyer-note")).toHaveText(/Drafts – a lawyer must review the texts before launch\./);
+  await expect(editor.getByTestId("legal-live-version")).toContainText("Movera's draft texts (version 0)");
+  await expect(page.getByText("Not connected yet")).toHaveCount(0);
+  // Two editors (Terms, Privacy) × three languages.
+  await expect(editor.getByLabel("Terms of use title (Svenska)")).toHaveValue("Terms of use sv");
+  await editor.getByTestId("legal-language").getByRole("button", { name: "English" }).click();
+  await editor.getByLabel("Terms of use title (English)").fill("Terms of use 2026");
+  await editor.getByLabel("Privacy policy text (English)").fill("We keep your data safe.");
+  await editor.locator('[data-company="companyName"]').fill("Movera AB");
+  await editor.locator('[data-company="supportPhone"]').fill("+46 8 123 456 78");
+  await editor.locator('[data-company="supportEmail"]').fill("not-an-email");
+  await expect(editor.getByTestId("legal-problems")).toContainText("The support e-mail is not an e-mail address.");
+  await expect(editor.getByRole("button", { name: "Publish for Sweden" })).toBeDisabled();
+  await editor.locator('[data-company="supportEmail"]').fill("");
+  await editor.getByTestId("legal-reaccept").check();
+  await shot(page, "g1-b2-legal-se-editor");
+  await editor.getByRole("button", { name: "Publish for Sweden" }).click();
+  const modal = page.locator(".modal.open").last();
+  await expect(modal).toContainText("Version 1 for Sweden goes live");
+  await modal.getByRole("button", { name: "Publish", exact: true }).click();
+  await expect.poll(() => sent.at(-1)?.path).toBe("/admin/legal/SE/publish");
+  const body = sent.at(-1)!.body as { terms: { title: Record<string, string> }; privacy: { text: Record<string, string> }; company: Record<string, string>; reaccept: boolean; idempotencyKey: boolean };
+  expect(body.terms.title).toEqual({ sv: "Terms of use sv", fr: "Terms of use fr", en: "Terms of use 2026" });
+  expect(body.privacy.text.en).toBe("We keep your data safe.");
+  expect(body.company).toEqual({ companyName: "Movera AB", supportPhone: "+46812345678" });
+  expect(body.reaccept).toBe(true);
+  expect(body.idempotencyKey).toBe(true);
+});
+
+test("G1-B2: France has its own texts and history; the page is in Swedish for a Swedish admin", async ({ page }) => {
+  await legalServer(page, undefined, "sv");
+  await page.goto("/content?view=legal");
+  const editor = page.getByTestId("legal-editor");
+  await editor.getByTestId("legal-country").getByRole("button", { name: "Frankrike" }).click();
+  await expect(editor.getByTestId("legal-live-version")).toContainText("version 2");
+  await expect(editor.locator('[data-company="companyName"]')).toHaveValue("Movera SAS");
+  await expect(editor.getByTestId("legal-history")).toContainText("Version 2");
+  await expect(editor.getByTestId("legal-lawyer-note")).toContainText("en jurist måste granska texterna före lansering");
+  await shot(page, "g1-b2-legal-fr-sv-ui");
+});
+
+test("G1-B2: a role without settings.publish can read but not publish", async ({ page }) => {
+  await legalServer(page, ["overview.read", "settings.read", "zones.read"]);
+  await page.goto("/content?view=legal");
+  const editor = page.getByTestId("legal-editor");
+  await expect(editor.getByText("Your role can read these texts but not publish them.")).toBeVisible();
+  await expect(editor.getByRole("button", { name: "Publish for Sweden" })).toBeDisabled();
+});

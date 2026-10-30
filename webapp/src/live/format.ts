@@ -179,6 +179,8 @@ export function ruleProblemText(detail: string): string {
 /** The text a screen shows for a failed call: plain for the known cases, with the request id for the unexpected ones. */
 export function errorText(error: unknown): string {
   if (!(error instanceof ApiError)) return error instanceof Error && error.message ? error.message : tr("Something failed.");
+  // v0.18.5 (G1-B2): e.g. Content › Legal of a country with none of the admin's zones, or a trip of another zone.
+  if (error.status === 403 && error.reason === "zone_out_of_scope") return tr("This is outside your zones.");
   if (error.status === 403) return tr("Your role cannot do that.");
   if (error.status === 401) return tr("Sign in again.");
   if (error.status === 409 && error.code === "version_mismatch") return tr("Someone else changed this record. It was reloaded; check it and try again.");
