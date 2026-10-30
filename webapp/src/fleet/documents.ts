@@ -1,5 +1,6 @@
 import type { DocStatus } from "../drivers/gate.ts";
 import { statusLabel } from "../domain/labels.ts";
+import { tr } from "../i18n/core.ts";
 
 /** Colour a document shows: green valid, orange expiring soon, red missing / wrong / expired, blue waiting review. */
 export type DocHealth = "valid" | "expiring" | "invalid" | "review";
@@ -32,7 +33,7 @@ export function docHealth(doc: DocState, nowMs: number, warnDays = EXPIRY_WARNIN
   if (doc.status === "expired" || (days !== null && days < 0)) return { health: "invalid", label: word("expired") };
   if (doc.status === "in_review") return { health: "review", label: word("in_review") };
   if (doc.status === "expiring" || (days !== null && days <= warnDays)) {
-    return { health: "expiring", label: days === null ? word("expiring") : `Expires in ${days} day${days === 1 ? "" : "s"}` };
+    return { health: "expiring", label: days === null ? word("expiring") : days === 1 ? tr("Expires in 1 day") : tr("Expires in {0} days", [days]) };
   }
   return { health: "valid", label: word("approved") };
 }

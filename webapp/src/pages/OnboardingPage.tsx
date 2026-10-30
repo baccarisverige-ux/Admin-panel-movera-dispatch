@@ -52,7 +52,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
 import { CommandButton } from "../ui/CommandButton";
 import { DataTable } from "../ui/DataTable";
-import { tr, trn, trx } from "../i18n";
+import { tr, trn, trSentences, trx } from "../i18n";
 import { COUNTRY_LABEL } from "../i18n/countries";
 import { statusLabel } from "../domain/labels";
 
@@ -181,7 +181,7 @@ function DemoOnboardingPage() {
           { id: "all", label: "Applicants", value: placed.length, previous: null, format: "count", info: "Sign-ups and applications not active yet." },
           { id: "ready", label: "All approved", value: placed.filter((row) => row.step === "ready").length, previous: null, format: "count", info: "Everything approved. Waiting for an admin to press Activate." },
           { id: "late", label: "Late in their step", value: placed.filter((row) => row.time.late).length, previous: null, format: "count", info: "Longer in the step than the limit set in Steps and papers.", goodDown: true },
-          { id: "stuck", label: "Stuck", value: placed.filter((row) => row.time.stuck).length, previous: null, format: "count", info: `In the same step for ${countryRules.stuckAfterDays} days or more.`, goodDown: true },
+          { id: "stuck", label: "Stuck", value: placed.filter((row) => row.time.stuck).length, previous: null, format: "count", info: tr("In the same step for {0} days or more.", [countryRules.stuckAfterDays]), goodDown: true },
           { id: "finish", label: "Finish, 30 days", value: flow.at(-1)?.pct ?? 0, previous: null, format: "pct", info: "Of everyone who signed up in the last 30 days, the share who got to the last step. Demo history." },
         ]}
       />
@@ -223,7 +223,7 @@ function DemoOnboardingPage() {
       </section>
 
       <p className="state-line">
-        {notice} {store.message}
+        {trSentences(notice)} {trSentences(store.message ?? "")}
       </p>
 
       {lead ? (

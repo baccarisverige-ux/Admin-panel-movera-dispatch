@@ -3,6 +3,7 @@ import type { DemoRecord } from "../api/seed.ts";
 import type { DocStatus, Vehicle } from "../drivers/gate.ts";
 import { EXPIRY_WARNING_DAYS, docHealth, type DocHealth } from "../fleet/documents.ts";
 import { MARKETS, marketOfZone, type MarketId } from "../markets/markets.ts";
+import { tr, trx } from "../i18n/core.ts";
 
 /**
  * Vehicles: which car fits which category in each country, the documents and photos of
@@ -20,6 +21,11 @@ export const FUELS: { id: Fuel; label: string }[] = [
   { id: "hybrid", label: "Hybrid" },
   { id: "electric", label: "Electric" },
 ];
+
+/** A fuel in the admin's language ("Hybrid", "Hybride"). */
+export function fuelLabel(id: string): string {
+  return trx(FUELS.find((fuel) => fuel.id === id)?.label ?? id);
+}
 
 export const CATEGORY_LABELS: Record<CategoryId, string> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "Movera XL", electric: "Electric", pet: "Pet" };
 
@@ -78,10 +84,10 @@ export type CarFacts = { year: number; seats: number; fuel: Fuel; category: Cate
 
 /** Why a car does not fit a category, or null when it fits. */
 export function categoryProblem(car: CarFacts, rule: CatRule): string | null {
-  if (!rule.on) return "This category is off in the country.";
-  if (car.year < rule.minYear) return `Built ${car.year}, needs ${rule.minYear} or newer.`;
-  if (car.seats < rule.minSeats) return `${car.seats} seats, needs ${rule.minSeats}.`;
-  if (!rule.fuels.includes(car.fuel)) return `${FUELS.find((fuel) => fuel.id === car.fuel)?.label ?? car.fuel} is not allowed.`;
+  if (!rule.on) return tr("This category is off in the country.");
+  if (car.year < rule.minYear) return tr("Built {0}, needs {1} or newer.", [car.year, rule.minYear]);
+  if (car.seats < rule.minSeats) return tr("{0} seats, needs {1}.", [car.seats, rule.minSeats]);
+  if (!rule.fuels.includes(car.fuel)) return tr("{0} is not allowed.", [fuelLabel(car.fuel)]);
   return null;
 }
 
@@ -112,9 +118,9 @@ export function carDocs(
   const regStatus: DocStatus = profile.registrationStatus === "approved" ? "approved" : profile.registrationStatus === "rejected" ? "rejected" : "in_review";
   const registration = worse({ ...docHealth({ status: regStatus, expiresAt: "" }, now, warnDays), expiresAt: "" }, fromDriver(driverDocs.vehicle_registration));
   return [
-    { id: "insurance", label: "Insurance", expiresAt: insurance.expiresAt, health: insurance.health, text: insurance.label },
-    { id: "inspection", label: "Inspection", expiresAt: inspection.expiresAt, health: inspection.health, text: inspection.label },
-    { id: "registration", label: "Registration and permit", expiresAt: registration.expiresAt, health: registration.health, text: registration.label },
+    { id: "insurance", label: tr("Insurance"), expiresAt: insurance.expiresAt, health: insurance.health, text: insurance.label },
+    { id: "inspection", label: tr("Inspection"), expiresAt: inspection.expiresAt, health: inspection.health, text: inspection.label },
+    { id: "registration", label: tr("Registration and permit"), expiresAt: registration.expiresAt, health: registration.health, text: registration.label },
   ];
 }
 
@@ -139,14 +145,14 @@ export type Check = { label: string; ok: boolean; detail: string };
 /** Everything that decides if the car can drive, as a checklist. */
 export function checks(car: CarFacts, docs: readonly CarDoc[], photos: Record<PhotoSide, Photo>, rules: CountryRules, chosen: CategoryId): Check[] {
   const rule = rules.categories.find((item) => item.category === chosen);
-  const problem = rule ? categoryProblem(car, rule) : "Unknown category.";
+  const problem = rule ? categoryProblem(car, rule) : tr("Unknown category.");
   const list: Check[] = [
-    { label: `Fits ${CATEGORY_LABELS[chosen]}`, ok: !problem, detail: problem ?? `${car.year}, ${car.seats} seats, ${car.fuel}` },
+    { label: tr("Fits {0}", [trx(CATEGORY_LABELS[chosen])]), ok: !problem, detail: problem ?? tr("{0}, {1} seats, {2}", [car.year, car.seats, fuelLabel(car.fuel).toLowerCase()]) },
     ...docs.map((doc) => ({ label: doc.label, ok: doc.health === "valid" || doc.health === "expiring", detail: doc.text })),
   ];
   if (rules.photosNeeded) {
     const waiting = Object.values(photos).filter((photo) => photo.status !== "approved").length;
-    list.push({ label: "Photos", ok: waiting === 0, detail: waiting ? `${waiting} of 4 not approved` : "All 4 approved" });
+    list.push({ label: tr("Photos"), ok: waiting === 0, detail: waiting ? tr("{0} of 4 not approved", [waiting]) : tr("All 4 approved") });
   }
   return list;
 }
@@ -216,5 +222,5 @@ export function liveCarDocs(documents: readonly { type: string; status: string; 
     const health = docHealth({ status: doc ? status[doc.status] ?? "needed" : "needed", expiresAt }, now, warnDays);
     return { id, label, expiresAt, health: health.health, text: health.label };
   };
-  return [one("registration", "Registration and permit", ["vehicle_registration"]), one("insurance", "Insurance", ["insurance", "vehicle_insurance"])];
+  return [one("registration", tr("Registration and permit"), ["vehicle_registration"]), one("insurance", tr("Insurance"), ["insurance", "vehicle_insurance"])];
 }

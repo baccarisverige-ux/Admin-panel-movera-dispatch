@@ -40,6 +40,14 @@ export function settingsScopes(): string[] {
   return MARKETS.flatMap((market) => [standardZoneId(market.id), ...market.zones.map((zone) => zone.id)]);
 }
 
+/**
+ * The scopes the live panel reads: the open countries only. A closed country (TN, OPEN false) has nothing on the
+ * server, so asking for it only gave 404s on every page load (owner G2c, 2026-10-30).
+ */
+export function readScopes(): string[] {
+  return MARKETS.filter((market) => OPEN[market.id]).flatMap((market) => [standardZoneId(market.id), ...market.zones.map((zone) => zone.id)]);
+}
+
 type Listener = () => void;
 
 const CONFIG_KEY = "config";
@@ -103,12 +111,12 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   async function readPricing(fallback: unknown): Promise<PricingStore> {
     const store = normalizeStore(fallback);
     const zones = { ...store.zones };
-    await Promise.all(settingsScopes().map(async (id) => {
+    await Promise.all(readScopes().map(async (id) => {
       const found = await draft("pricing", id, true);
       if (found) zones[id] = bookOfPricing(found.document, zoneBook(store, id));
     }));
     // v0.7.1: the car type catalog, the running manual surges and the pricing history come from the server too.
-    const known = settingsScopes().filter((id) => !unknownZones.has(id) && drafts.get(key("pricing", id)));
+    const known = readScopes().filter((id) => !unknownZones.has(id) && drafts.get(key("pricing", id)));
     const extras = await readPricingExtras(http, normalizeStore({ ...store, zones }), known);
     historyIndex = extras.index;
     surgeVersions = extras.surgeVersions;
@@ -170,7 +178,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const book = normalizeDispatchBook(fallback);
     const live = { ...book.live };
     const drivers = new Map<string, Doc | null>();
-    await Promise.all(settingsScopes().map(async (id) => {
+    await Promise.all(readScopes().map(async (id) => {
       // One read first tells whether the server knows the zone at all.
       const rules = await draft("dispatch", id, true);
       const driver = unknownZones.has(id) ? null : await draft("driver_app_config", id, true);
@@ -179,7 +187,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     }));
     // Owner 2026-10-28: History shows the server's published versions, so "Ångra" can put the one before back.
     const rows: Array<HistoryEntry & { zoneId: string }> = [];
-    await Promise.all(Object.keys(live).filter((id) => !countryOfStandard(id)).map(async (id) => {
+    await Promise.all(Object.keys(live).filter((id) => !countryOfStandard(id) && readScopes().includes(id)).map(async (id) => {
       const page = await http.json<{ items?: HistoryEntry[] }>(`/admin/config/dispatch/history?zoneId=${encodeURIComponent(id)}&limit=10`).catch(() => null);
       for (const item of page?.items ?? []) rows.push({ ...item, zoneId: id });
     }));
@@ -222,7 +230,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   async function readCountries(fallback: unknown): Promise<CountrySettingsBook> {
     const book = fallback as CountrySettingsBook;
     const countries = { ...book.countries };
-    await Promise.all(MARKETS.map(async (market) => {
+    await Promise.all(MARKETS.filter((market) => OPEN[market.id]).map(async (market) => {
       const found = await draft("country_rules", standardKey(market.id), true);
       if (found) countries[market.id] = settingsOfRules(countrySettingsOf(book, market.id), market, found.document);
     }));
@@ -238,7 +246,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   async function readZoneRules(): Promise<Record<string, CountrySettings>> {
     const book = (slices.get(COUNTRY_SETTINGS_KEY) as CountrySettingsBook | undefined) ?? { draftRev: 0, countries: {} as CountrySettingsBook["countries"] };
     const zones: Record<string, CountrySettings> = {};
-    await Promise.all(settingsScopes().map(async (id) => {
+    await Promise.all(readScopes().map(async (id) => {
       const market = marketOfZone(id);
       if (!market) return;
       // A zone the server cannot answer for keeps its country's values (the tab still opens).

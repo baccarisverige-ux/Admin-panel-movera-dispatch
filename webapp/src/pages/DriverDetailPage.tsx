@@ -1,6 +1,6 @@
 import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { isLiveData, liveDriverOf } from "../live/realData";
-import { NotConnected } from "../live/NotConnected";
+import { DASH, liveDriverMonth, liveJoinedAt, liveLastOnline, orDash } from "../live/driverFacts";
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { LiveDocBox } from "../live/LiveDocBox";
@@ -178,7 +178,7 @@ export function DriverDetailPage() {
   const perf = report.current;
   const prev = report.previous;
   const sinceMonth = driverPerformance(profile, periodWindow({ kind: "month" }, now, market.timeZone, uiLocale()), false).current;
-  const email = liveData ? driver.email ?? tr("Not connected yet") : `${driver.name.toLowerCase().normalize("NFD").replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, ".")}@${country === "SE" ? "mail.se" : country === "FR" ? "mail.fr" : "mail.tn"}`;
+  const email = liveData ? driver.email ?? DASH : `${driver.name.toLowerCase().normalize("NFD").replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, ".")}@${country === "SE" ? "mail.se" : country === "FR" ? "mail.fr" : "mail.tn"}`;
   const seed = Number(driver.id.replace(/\D/g, "")) || 1;
   const joined = driver.joinedAt ?? new Date(Date.parse("2026-10-05T00:00:00Z") - (60 + (seed * 37) % 800) * 86_400_000).toISOString();
   const live = liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0).find((row) => row.id === driver.id);
@@ -186,7 +186,10 @@ export function DriverDetailPage() {
   const code = driverCode(driver);
   const mapTo = live ? `/?country=${country}&focus=${driver.id}` : null;
   const current = live ? liveTrip(live, { trips: trips.data ?? [], reservations: reservations.data ?? [], vehicles: vehicles.data ?? [], fleets: fleets.data ?? [], riders: riders.data ?? [] }, now, demoShift(now, api.demo)) : null;
-  const lastOnline = liveData ? (live ? tr("Online now") : liveFacts?.lastFixAt ? dateFormat.format(Date.parse(liveFacts.lastFixAt)) : tr("Not connected yet")) : live ? tr("Online now") : driver.status === "active" ? (seed % 3 === 0 ? tr("Online now") : tr("{0} min ago", [5 + (seed % 50)])) : driver.status === "pending" ? tr("Never") : tr("{0} days ago", [7 + (seed % 9)]);
+  // Live (owner G2c): joined and last online only from the server (sign-up / terms date, last position), else "—".
+  const liveJoined = liveData ? liveJoinedAt(driver.liveAccount) : null;
+  const liveSeen = liveData ? liveLastOnline(liveFacts, Boolean(live)) : null;
+  const lastOnline = liveData ? (liveSeen === "now" ? tr("Online now") : liveSeen ? dateFormat.format(Date.parse(liveSeen)) : DASH) : live ? tr("Online now") : driver.status === "active" ? (seed % 3 === 0 ? tr("Online now") : tr("{0} min ago", [5 + (seed % 50)])) : driver.status === "pending" ? tr("Never") : tr("{0} days ago", [7 + (seed % 9)]);
 
   function selectTab(id: string) {
     setTab(id);
@@ -269,7 +272,7 @@ export function DriverDetailPage() {
               {fleet ? (
                 <Link className="fd-chip fleet" to={`/fleets/${fleet.ownerId ?? ""}`}><Building2 size={13} aria-hidden="true" />{fleet.name}</Link>
               ) : <span className="fd-chip">{tr("Independent driver")}</span>}
-              <span className="fd-chip"><Star size={13} aria-hidden="true" />{liveData ? (liveFacts?.rating != null ? liveFacts.rating.toFixed(2) : tr("Not connected yet")) : ops.ratings.stars.toFixed(2)}</span>
+              <span className="fd-chip"><Star size={13} aria-hidden="true" />{liveData ? orDash(liveFacts?.rating, (value) => value.toFixed(2)) : ops.ratings.stars.toFixed(2)}</span>
               {liveData ? null : <DocSummary counts={health} total={required.length} />}
             </div>
             <p className="fd-sub">{driver.id} · {statusLabel(driver.status)} · {zoneById(driver.zoneId)?.name ?? driver.zoneId}, {trx(market.name)}</p>
@@ -309,8 +312,8 @@ export function DriverDetailPage() {
           <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> {email}</Field>
           <Field label={tr("Zone")}>{zoneById(driver.zoneId)?.name ?? driver.zoneId}</Field>
           <Field label={tr("Vehicle")}><Car size={13} aria-hidden="true" /> {carRecord ? `${carRecord.make ?? ""} ${carRecord.model ?? ""} · ${carRecord.plate ?? carRecord.id}` : tr("No vehicle linked")}</Field>
-          <Field label={tr("Payouts go to")}>{fleet ? tr("{0} (fleet)", [fleet.name]) : liveData ? tr("Not connected yet") : tr("The driver · bank •••• {0}", [ops.bank.last4])}</Field>
-          <Field label={tr("Joined")}>{liveData ? tr("Not connected yet") : dateFormat.format(Date.parse(joined))}</Field>
+          <Field label={tr("Payouts go to")}>{fleet ? tr("{0} (fleet)", [fleet.name]) : liveData ? DASH : tr("The driver · bank •••• {0}", [ops.bank.last4])}</Field>
+          <Field label={tr("Joined")}>{liveData ? (liveJoined ? dateFormat.format(Date.parse(liveJoined)) : DASH) : dateFormat.format(Date.parse(joined))}</Field>
           <Field label={tr("Last online")}>{lastOnline}</Field>
 
         </dl>
@@ -407,6 +410,7 @@ export function DriverDetailPage() {
             </section>
             <section className="fd-box">
               <h3>{tr("This month")}</h3>
+              {liveData ? <LiveMonth facts={liveFacts} /> : (
               <div className="fd-stats compact">
                 <Stat label={tr("Rating")} value={sinceMonth.rating ? sinceMonth.rating.toFixed(2) : "—"} warn={performanceWarning("rating", sinceMonth.rating)} />
                 <Stat label={tr("Trips")} value={String(sinceMonth.trips)} />
@@ -414,7 +418,7 @@ export function DriverDetailPage() {
                 <Stat label={tr("Cancel rate")} value={`${ops.ratings.cancellationPct}%`} warn={performanceWarning("cancellationPct", ops.ratings.cancellationPct)} />
                 <Stat label={tr("Online")} value={`${sinceMonth.onlineHours} h`} />
                 <Stat label={tr("Net earnings")} value={compact(sinceMonth.netMinor)} />
-              </div>
+              </div>)}
               <button type="button" data-command="admin.ui.dashboardTab" className="link-action" onClick={() => selectTab("performance")}>{tr("Open performance →")}</button>
             </section>
           </div>
@@ -450,7 +454,7 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="performance" activeId={tab}>
-          {liveData ? <NotConnected block /> : <>
+          {liveData ? <LiveMonth facts={liveFacts} /> : <>
           <div className="fd-section-head">
             <div><h3>{tr("Performance")}</h3><p>{trx(span.label)} · {span.compareLabel}</p></div>
             <PeriodPicker key={`${period.kind}${period.on ?? ""}${period.from ?? ""}`} period={period} today={localDay(now, market.timeZone)} onChange={(next) => setParams(periodParams(next, params))} />
@@ -485,7 +489,7 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="earnings" activeId={tab}>
-          {liveData ? <><NotConnected block />{bankBox}</> : <>
+          {liveData ? <><LiveMonth facts={liveFacts} earnings />{bankBox}</> : <>
           <div className="fd-section-head">
             <div><h3>{tr("Earnings")}</h3><p>{trx(span.label)} · {fleet ? tr("paid to {0}", [fleet.name]) : tr("paid to the driver")}</p></div>
             <div className="fd-head-tools">
@@ -617,6 +621,23 @@ export function DriverDetailPage() {
           </div>
         </TabPanel>
       </div>
+    </div>
+  );
+}
+
+/** Live (owner G2c): the server's rating; trips, rates, hours and earnings per driver are not sent yet, so "—". */
+function LiveMonth({ facts, earnings = false }: { facts: ReturnType<typeof liveDriverOf>; earnings?: boolean }) {
+  const month = liveDriverMonth(facts);
+  return (
+    <div className="fd-stats compact" data-testid="live-driver-month">
+      {earnings ? null : <>
+        <Stat label={tr("Rating")} value={orDash(month.rating, (value) => value.toFixed(2))} warn={month.rating === null ? null : performanceWarning("rating", month.rating)} />
+        <Stat label={tr("Trips")} value={orDash(month.trips)} />
+        <Stat label={tr("Acceptance")} value={orDash(month.acceptancePct, (value) => `${value}%`)} />
+        <Stat label={tr("Cancel rate")} value={orDash(month.cancellationPct, (value) => `${value}%`)} />
+        <Stat label={tr("Online")} value={orDash(month.onlineHours, (value) => `${value} h`)} />
+      </>}
+      <Stat label={tr("Net earnings")} value={orDash(month.netMinor)} />
     </div>
   );
 }

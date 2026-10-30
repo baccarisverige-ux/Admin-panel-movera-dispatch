@@ -107,6 +107,8 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       ...(driver.requiredDocuments ? { requiredDocuments: driver.requiredDocuments } : {}),
       ...(driver.requiredFleetDocuments ? { requiredFleetDocuments: driver.requiredFleetDocuments } : {}),
       ...(driver.categoryIds ? { categoryIds: [...driver.categoryIds] } : {}),
+      ...(driver.createdAt ? { createdAt: driver.createdAt } : {}),
+      ...(driver.termsAcceptedAt ? { termsAcceptedAt: driver.termsAcceptedAt } : {}),
     },
     liveDriver: {
       onlineStatus: live?.onlineStatus ?? driver.onlineStatus,
@@ -141,6 +143,7 @@ export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Dri
     ...(vehicle.fuel ? { fuel: vehicle.fuel } : {}),
     ...(RIDE_CATEGORIES.includes(vehicle.categoryIds?.[0] ?? "") ? { category: vehicle.categoryIds[0] as NonNullable<DemoRecord["category"]> } : {}),
     liveRuleProblems: [...(vehicle.ruleProblems ?? [])],
+    liveCategoryIds: [...(vehicle.categoryIds ?? [])],
     liveVehicleDocs: { documents: [...(vehicle.documents ?? [])], required: requiredForVehicle(vehicle, driver?.country), ...(driver?.country ? { country: driver.country } : {}) },
   };
 }

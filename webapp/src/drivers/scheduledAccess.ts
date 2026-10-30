@@ -1,4 +1,5 @@
 import type { ReservationRules } from "../dispatch/rules.ts";
+import { tr } from "../i18n/core.ts";
 
 /**
  * Scheduled rides access per driver (Round 3, Q11). An admin can turn scheduled rides on or off for one driver,
@@ -127,12 +128,16 @@ const dateLabel = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /** "Scheduled rides on", "Paused until 2026-10-21 (2 late cancels in 7 days)", "Off until 2026-10-22 (set by nora)". */
 export function accessLabel(state: AccessState, entry: AccessEntry | undefined, rule: LateRule): string {
+  // Owner G2c: in the admin's language (sv/fr/en); the panel shows it as it is.
   if (state.source === "admin" && entry) {
-    const until = state.until === null ? "always" : `until ${dateLabel(state.until)}`;
-    return `${entry.on ? "On" : "Off"} ${until}, set by ${entry.by}${entry.on && state.pausedByRule ? ". The late-cancel pause is skipped" : ""}`;
+    const by = entry.by;
+    const text = state.until === null
+      ? (entry.on ? tr("On always, set by {0}", [by]) : tr("Off always, set by {0}", [by]))
+      : (entry.on ? tr("On until {0}, set by {1}", [dateLabel(state.until), by]) : tr("Off until {0}, set by {1}", [dateLabel(state.until), by]));
+    return entry.on && state.pausedByRule ? `${text}${tr(". The late-cancel pause is skipped")}` : text;
   }
-  if (state.source === "rule") return `Paused until ${dateLabel(state.until!)}: ${state.lateInPeriod.length} late cancels in ${rule.latePeriodDays} days`;
-  return "Scheduled rides on";
+  if (state.source === "rule") return tr("Paused until {0}: {1} late cancels in {2} days", [dateLabel(state.until!), state.lateInPeriod.length, rule.latePeriodDays]);
+  return tr("Scheduled rides on");
 }
 
 export function choiceError(choice: AccessChoice, nowMs: number): string | null {

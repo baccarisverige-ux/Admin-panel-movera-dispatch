@@ -20,9 +20,10 @@ const PARTLY: Record<string, string> = {
 
 /**
  * Pages that read and write the server for what they show (owner G2 R10, 2026-10-30: no "Not connected yet" badge
- * where the page is live): drivers, onboarding (documents reviewed live), fleet owners and vehicles.
+ * where the page is live): drivers, onboarding (documents reviewed live), fleet owners and vehicles; content (owner G2c:
+ * slots, history and restore come from the server).
  */
-const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding"]);
+const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding", "content"]);
 
 export function connectionOf(id: string): Connection {
   if (CONNECTED.has(id)) return { state: "connected" };

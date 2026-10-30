@@ -46,8 +46,8 @@ export function Num({ label, value, unit, onChange, min = 0, max, step = 1, disa
   const invalid = value < min || (max !== undefined && value > max);
   return (
     <span className="dx-num" style={{ "--u": (unit ?? "").length } as CSSProperties}>
-      {before ? <small>{before}</small> : null}
-      <NumberField label={label} value={value} unit={unit} min={min} max={max} step={step} disabled={disabled} invalid={invalid} onChange={onChange} />
+      {before ? <small>{trx(before)}</small> : null}
+      <NumberField label={label} value={value} unit={trx(unit)} min={min} max={max} step={step} disabled={disabled} invalid={invalid} onChange={onChange} />
     </span>
   );
 }

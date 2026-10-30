@@ -15,6 +15,13 @@ export const TEXT_PROPS = new Set([
   "heading", "subtitle", "caption", "emptyText", "empty", "confirmLabel", "description", "tooltip", "legend",
 ]);
 
+/** Props read by a person only on these components (Num's "Every … days", owner G2c 2026-10-30). */
+export const TEXT_PROPS_OF: Record<string, ReadonlySet<string>> = { Num: new Set(["before", "unit"]) };
+
+/** JSX props holding a list of cards whose label and info are read by a person (the Vehicles page cards, owner G2c). */
+const CARD_LIST_PROPS = new Set(["cards"]);
+const CARD_TEXT_KEYS = new Set(["label", "info"]);
+
 /** Calls whose first text argument is shown to a person. */
 export const NOTICE_CALLS = new Set(["notify", "toast", "showToast", "setNotice", "onNotice", "setToast", "setCopied", "onRestored", "flash"]);
 
@@ -79,7 +86,27 @@ function isCsvCall(node: ts.Node | undefined): boolean {
   return Boolean(node && ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "useCsv");
 }
 
-export function scanSource(file: string, code: string, known?: ReadonlySet<string>): Finding[] {
+/** A { label, info } object inside a cards={[…]} prop. */
+function inCardList(node: ts.Node, source: ts.SourceFile): boolean {
+  const list = node.parent?.parent;
+  const holder = list?.parent?.parent;
+  return Boolean(list && ts.isArrayLiteralExpression(list) && holder && ts.isJsxAttribute(holder) && CARD_LIST_PROPS.has(holder.name.getText(source)));
+}
+
+/** useState(...) whose state is named like a notice: [notice, setNotice]. */
+function isNoticeState(call: ts.CallExpression): boolean {
+  const declaration = call.parent;
+  if (!declaration || !ts.isVariableDeclaration(declaration) || !ts.isArrayBindingPattern(declaration.name)) return false;
+  const first = declaration.name.elements[0];
+  return Boolean(first && ts.isBindingElement(first) && ts.isIdentifier(first.name) && /^(notice|message|status)$/i.test(first.name.text));
+}
+
+/**
+ * extended (owner G2c, 2026-10-30): texts the component translates itself at run time (trx) also need a dictionary
+ * entry: Num's before/unit, a cards={[…]} label/info, the first value of a notice state. A text without an entry is
+ * shown in English in sv and fr, so it is a finding.
+ */
+export function scanSource(file: string, code: string, known?: ReadonlySet<string>, extended = false): Finding[] {
   const source = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const findings: Finding[] = [];
   const add = (node: ts.Node, where: string, text = literalText(node, source)) => {
@@ -87,12 +114,22 @@ export function scanSource(file: string, code: string, known?: ReadonlySet<strin
     if (/i18n-ignore/.test(code.split("\n")[source.getLineAndCharacterOfPosition(node.getStart(source)).line] ?? "")) return;
     findings.push({ file, line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1, text: text.replace(/\s+/g, " ").trim(), where });
   };
+  const addUnknown = (node: ts.Node, where: string) => {
+    if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && known?.has(node.text)) return;
+    add(node, where);
+  };
   const visit = (node: ts.Node) => {
     if (ts.isJsxText(node)) add(node, "JSX text", node.text);
     else if (ts.isJsxExpression(node) && node.expression && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))) {
       for (const text of textsOf(node.expression)) add(text, "JSX value");
     } else if (ts.isJsxAttribute(node) && node.initializer) {
       const name = node.name.getText(source);
+      const tag = node.parent.parent;
+      const tagName = ts.isJsxSelfClosingElement(tag) || ts.isJsxOpeningElement(tag) ? tag.tagName.getText(source) : "";
+      if (extended && TEXT_PROPS_OF[tagName]?.has(name) && node.initializer) {
+        if (ts.isStringLiteral(node.initializer)) addUnknown(node.initializer, `${name}=`);
+        else if (ts.isJsxExpression(node.initializer) && node.initializer.expression) for (const text of textsOf(node.initializer.expression)) addUnknown(text, `${name}=`);
+      }
       if (TEXT_PROPS.has(name)) {
         if (ts.isStringLiteral(node.initializer)) add(node.initializer, `${name}=`);
         else if (ts.isJsxExpression(node.initializer) && node.initializer.expression) for (const text of textsOf(node.initializer.expression)) add(text, `${name}=`);
@@ -101,10 +138,15 @@ export function scanSource(file: string, code: string, known?: ReadonlySet<strin
       const callee = node.expression;
       const name = ts.isIdentifier(callee) ? callee.text : ts.isPropertyAccessExpression(callee) ? callee.name.text : "";
       if (NOTICE_CALLS.has(name) && node.arguments[0]) for (const text of textsOf(node.arguments[0])) add(text, `${name}()`);
+      // const [notice, setNotice] = useState("…"): the first notice is read like any other (extended).
+      if (extended && name === "useState" && node.arguments[0] && isNoticeState(node)) for (const text of textsOf(node.arguments[0])) addUnknown(text, "notice state");
       if (name === "csvOf" || name === "toCsv") {
         const header = node.arguments[0];
         if (header && ts.isArrayLiteralExpression(header)) for (const item of header.elements) for (const text of textsOf(item as ts.Expression)) add(text, "CSV header");
       }
+    } else if (extended && ts.isPropertyAssignment(node) && CARD_TEXT_KEYS.has(node.name.getText(source)) && inCardList(node, source)) {
+      for (const text of textsOf(node.initializer)) addUnknown(text, `card ${node.name.getText(source)}`);
+
     } else if (ts.isPropertyAssignment(node) && node.name.getText(source) === "head" && ts.isArrayLiteralExpression(node.initializer) && isCsvCall(node.parent.parent)) {
       // CSV headers are translated when the file is made (csvOf in ReportsPage), so each one needs an entry.
       for (const item of node.initializer.elements) {
@@ -120,14 +162,14 @@ export function scanSource(file: string, code: string, known?: ReadonlySet<strin
 }
 
 /** Every .tsx under src (tests, the dictionaries and this scanner left out). */
-export function scanTree(root: string, known?: ReadonlySet<string>): Finding[] {
+export function scanTree(root: string, known?: ReadonlySet<string>, extended = false): Finding[] {
   const findings: Finding[] = [];
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) walk(path);
       else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$|\.d\.ts$/.test(entry.name) && !path.includes(`${join("src", "i18n")}`)) {
-        findings.push(...scanSource(relative(root, path), readFileSync(path, "utf8"), known));
+        findings.push(...scanSource(relative(root, path), readFileSync(path, "utf8"), known, extended));
       }
     }
   };
