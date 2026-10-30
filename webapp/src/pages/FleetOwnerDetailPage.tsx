@@ -34,11 +34,13 @@ import {
 import { combine, driverPerformance, performanceWarning } from "../fleet/performance";
 import { liveDrivers } from "../dashboard/live";
 import { driverCode, ownerCode } from "../fleet/codes";
+import { liveAverageRating, liveCompanyDocs, liveDriverDocs, liveFleetCode } from "../fleet/liveOwner";
+import { COUNTRY_LABEL } from "../i18n/countries";
 import { AccountChip, Avatar, ContactActions, DocSummary, DocumentsTable, Field, MessagesPanel, OnlinePill, Stat, type DocRow, type Presence } from "../fleet/ui";
 import { formatMoney, market as marketById, marketOfZone, zoneById } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { TabPanel, Tabs } from "../ui/Tabs";
-import { uiLocale, tr, trn } from "../i18n";
+import { uiLocale, tr, trn, trx } from "../i18n";
 
 const TABS = ["Overview", "Fleets", "Documents", "Performance", "Earnings", "Messages", "Notes", "Activity"];
 const TEMPLATES = [
@@ -84,12 +86,19 @@ export function FleetOwnerDetailPage() {
     return (drivers.data ?? []).filter((driver) => driver.fleetId && ids.has(driver.fleetId));
   }, [drivers.data, ownFleets]);
   const presence = useMemo(() => new Map(liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0).map((row) => [row.id, row.state as Presence])), [drivers.data, vehicles.data, trips.data, incidents.data]);
+  const live = isLiveData();
   const crewStats = useMemo(() => crew.map((driver) => {
+    if (live) {
+      // Live (owner G2 R3): the server's documents and rating only; trips and earnings are not sent, so they read "—".
+      const docs = liveDriverDocs(driver.liveAccount, now, warnDaysFor(driver.zoneId)) ?? { counts: { valid: 0, expiring: 0, invalid: 0, review: 0 }, total: 0 };
+      const zero = combine([]);
+      return { driver, counts: docs.counts, total: docs.total, perf: zero, prev: zero, rating: driver.liveDriver?.rating ?? null };
+    }
     const ops = driverOps(driverStore.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status, kind: driver.kind });
     const docs = DRIVER_DOCUMENTS.filter((id) => id !== "company_registration").map((id) => ops.documents[id]);
     const report = driverPerformance({ id: driver.id, zoneId: driver.zoneId, status: driver.status, stars: ops.ratings.stars, acceptancePct: ops.ratings.acceptancePct, cancellationPct: ops.ratings.cancellationPct }, span, false);
-    return { driver, counts: countHealth(docs, now, warnDaysFor(driver.zoneId)), total: docs.length, perf: report.current, prev: report.previous };
-  }), [crew, driverStore.value, span, now, warnDaysFor]);
+    return { driver, counts: countHealth(docs, now, warnDaysFor(driver.zoneId)), total: docs.length, perf: report.current, prev: report.previous, rating: report.current.rating || null };
+  }), [crew, driverStore.value, span, now, warnDaysFor, live]);
 
   if (owners.isLoading || store.loading) return <p className="state-line">{tr("Loading fleet owner.")}</p>;
   if (!owner) {
@@ -101,9 +110,13 @@ export function FleetOwnerDetailPage() {
   const ops = ownerOps(store.value, seed);
   const docRows: DocRow[] = OWNER_DOCUMENTS.map((id) => ops.documents[id]);
   const warnDays = warnDaysFor(owner.zoneId);
-  const health = countHealth(docRows, now, warnDays);
   // Live: the company is approved only when its documents are (the server's facts, not the demo's papers).
   const ownerFacts = (drivers.data ?? []).find((item) => item.id === owner.id)?.liveAccount;
+  // Live (owner G2 R3): the country's real company documents ("1/4"), never the demo's seven.
+  const liveDocs = live ? liveCompanyDocs(ownerFacts, country, now, warnDays) : null;
+  const health = liveDocs ? liveDocs.counts : countHealth(docRows, now, warnDays);
+  const docTotal = liveDocs ? liveDocs.total : docRows.length;
+  const crewRating = live ? liveAverageRating(crew) : null;
   const liveCompanyMissing = ownerFacts ? groupMissing(activationMissing(ownerFacts)).fleet.length > 0 : true;
   const money = (minor: number) => formatMoney(minor, country);
   const compact = (minor: number) => formatMoney(minor, country, { compact: true });
@@ -173,12 +186,12 @@ export function FleetOwnerDetailPage() {
             <h2>{owner.name}</h2>
             <div className="fd-chips">
               <AccountChip status={owner.status} />
-              <span className="fd-chip code"><Hash size={13} aria-hidden="true" />{ownerCode(owner)}</span>
+              <span className="fd-chip code"><Hash size={13} aria-hidden="true" />{live ? liveFleetCode(owner) : ownerCode(owner)}</span>
               <span className="fd-chip fleet"><Building2 size={13} aria-hidden="true" />{owner.company}</span>
               <span className="fd-chip"><Users size={13} aria-hidden="true" />{trn("{0} drivers", crew.length)}</span>
-              <DocSummary counts={health} total={docRows.length} />
+              <DocSummary counts={health} total={docTotal} />
             </div>
-            <p className="fd-sub">{trn("{0} · Fleet owner · {1}", owner.id, market.name)}</p>
+            <p className="fd-sub">{trn("{0} · Fleet owner · {1}", owner.id, trx(COUNTRY_LABEL[country]))}</p>
           </div>
           <div className="fd-hero-actions">
             <label className="fd-reason">
@@ -186,8 +199,8 @@ export function FleetOwnerDetailPage() {
               <input value={accountNote} onChange={(event) => setAccountNote(event.target.value)} placeholder={tr("For example: fleet insurance expired")} />
             </label>
             <div className="fd-action-row">
-              {accountAction("admin.fleetOwner.activate", "active", "Activate", owner.status === "active" || (isLiveData() ? liveCompanyMissing : health.invalid > 0), health.invalid === 0 && owner.status !== "active" ? "" : "ghost")}
-              {accountAction("admin.fleetOwner.onHold", "on_hold", "Put on hold", owner.status === "on_hold")}
+              {accountAction("admin.fleetOwner.activate", "active", tr("Activate"), owner.status === "active" || (live ? liveCompanyMissing : health.invalid > 0), health.invalid === 0 && owner.status !== "active" ? "" : "ghost")}
+              {accountAction("admin.fleetOwner.onHold", "on_hold", tr("Put on hold"), owner.status === "on_hold")}
               <CommandButton
                 command="admin.fleetOwner.call"
                 className="dash-btn ghost"
@@ -228,9 +241,16 @@ export function FleetOwnerDetailPage() {
             <Stat label={tr("Fleets")} value={String(ownFleets.length)} />
             <Stat label={tr("Drivers")} value={String(crew.length)} hint={tr("{0} active · {1} on hold", [crew.filter((driver) => driver.status === "active").length, crew.filter((driver) => driver.status === "on_hold").length])} />
             <Stat label={tr("Drivers with document problems")} value={String(crewStats.filter((row) => row.counts.invalid).length)} warn={crewStats.some((row) => row.counts.invalid) ? "red" : null} />
+            {live ? <>
+              {/* Live (owner G2 R3): the server sends no fleet trips or income yet: "—", never a seeded number. */}
+              <Stat label={tr("Trips · {0}", [span.label])} value="—" />
+              <Stat label={tr("Average rating")} value={crewRating === null ? "—" : crewRating.toFixed(2)} warn={crewRating === null ? null : performanceWarning("rating", crewRating)} />
+              <Stat label={tr("Net earnings · {0}", [span.label])} value="—" />
+            </> : <>
             <Stat label={tr("Trips · {0}", [span.label])} value={String(total.trips)} delta={change(total.trips, before.trips)} />
             <Stat label={tr("Average rating")} value={total.rating ? total.rating.toFixed(2) : "—"} warn={performanceWarning("rating", total.rating)} />
             <Stat label={tr("Net earnings · {0}", [span.label])} value={compact(total.netMinor)} delta={change(total.netMinor, before.netMinor)} />
+            </>}
           </div>
           <button type="button" data-command="admin.ui.dashboardTab" className="link-action" onClick={() => selectTab("fleets")}>{tr("See every fleet and its drivers →")}</button>
         </TabPanel>
@@ -254,14 +274,14 @@ export function FleetOwnerDetailPage() {
                 </div>
                 <ul className="fd-crew" aria-label={tr("Drivers in {0}", [fleet.name])}>
                   <li className="fd-crew-head" aria-hidden="true"><span>{tr("Driver")}</span><span>{tr("Account")}</span><span>{tr("Online")}</span><span>{tr("Documents")}</span><span>{tr("Rating")}</span><span>{tr("Trips")}</span><span>{tr("Earnings")}</span><span>{tr("Contact")}</span></li>
-                  {members.length === 0 ? <li className="state-line">{tr("No drivers in this fleet yet.")}</li> : members.map(({ driver, counts, total: docTotal, perf }) => (
+                  {members.length === 0 ? <li className="state-line">{tr("No drivers in this fleet yet.")}</li> : members.map(({ driver, counts, total: crewDocs, perf, rating }) => (
                     <li key={driver.id}>
-                      <Link to={`/drivers/${driver.id}`} className="fd-crew-name"><Avatar name={driver.name} size={30} /><span><strong>{driver.name}</strong><small>{driverCode(driver)}</small></span></Link>
+                      <Link to={`/drivers/${driver.id}`} className="fd-crew-name"><Avatar name={driver.name} size={30} /><span><strong>{driver.name}</strong><small>{live ? driver.id : driverCode(driver)}</small></span></Link>
                       <span><AccountChip status={driver.status} family="driverAccountStatus" /></span>
                       <span><OnlinePill presence={presence.get(driver.id) ?? "offline"} /></span>
-                      <span><DocSummary counts={counts} total={docTotal} /></span>
-                      <span>{perf.rating ? perf.rating.toFixed(2) : "—"}</span>
-                      <span>{perf.trips}</span>
+                      <span><DocSummary counts={counts} total={crewDocs} /></span>
+                      <span>{rating ? rating.toFixed(2) : "—"}</span>
+                      <span>{live ? "—" : perf.trips}</span>
                       <span className="num">{perf.netMinor ? compact(perf.netMinor) : "—"}</span>
                       <ContactActions kind="driver" compact id={driver.id} name={driver.name} phone={driver.phone} zoneId={driver.zoneId} messageTo={`/drivers/${driver.id}?tab=messages`} mapTo={presence.has(driver.id) ? `/?country=${country}&focus=${driver.id}` : null} />
                     </li>

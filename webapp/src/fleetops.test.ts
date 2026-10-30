@@ -1,3 +1,4 @@
+import { liveAverageRating, liveCompanyDocs, liveFleetCode } from "./fleet/liveOwner.ts";
 import { DRIVER_DOCUMENTS, type DocStatus } from "./drivers/gate.ts";
 import { docHealth, countHealth } from "./fleet/documents.ts";
 import { countryActivationIssue, demoLeads, docProgress, driverMessage, emptyOnboardingRules, firstWarningDays, funnel, neededDocs, normalizeOnboardingRules, remind, reminderDue, rulesError as onboardingError, stepOf, type Applicant } from "./drivers/onboarding.ts";
@@ -74,3 +75,21 @@ assert(docHealth(in20, at).health === "expiring" && docHealth(in20, at, 14).heal
 assert(countHealth([in20, in20], at, 14).valid === 2 && countHealth([in20], at, 30).expiring === 1, "counts follow the warning days");
 
 console.log("fleet ops ok");
+
+// Owner G2 R3 (2026-10-30): live fleet owners show only the server's facts, with the country's real document count.
+{
+  const at = Date.parse("2026-10-30T12:00:00Z");
+  const seFacts = { accountStatus: "on_hold", country: "SE", documents: [
+    { documentId: "d1", type: "company_registration", status: "approved" as const },
+    { documentId: "d2", type: "tax_settings", status: "in_review" as const },
+  ] };
+  const se = liveCompanyDocs(seFacts, "SE", at, 30);
+  assert(se.total === 4, `SE has 4 company documents, not 7 (got ${se.total})`);
+  assert(se.counts.valid === 1 && se.counts.review === 1 && se.counts.invalid === 2, "approved, in review and 2 missing");
+  assert(liveCompanyDocs(undefined, "FR", at, 30).total === 6, "FR has 6 company documents");
+  assert(liveCompanyDocs({ ...seFacts, requiredFleetDocuments: ["company_registration"] }, "SE", at, 30).total === 1, "the server's list wins");
+  assert(liveAverageRating([{ id: "a", name: "", phone: "", zoneId: "", status: "active" }]) === null, "no rating from the server: null (—), never invented");
+  assert(liveAverageRating([{ id: "a", name: "", phone: "", zoneId: "", status: "active", liveDriver: { onlineStatus: "offline", rating: 4.5, location: null, lastFixAt: null, stale: null, activeTripId: null } }]) === 4.5, "the server's rating");
+  assert(liveFleetCode({}) === "—" && liveFleetCode({ liveFleetCode: "MV-7KQ2" }) === "MV-7KQ2", "the server's fleet code or —");
+  console.log("live fleet owners ok");
+}

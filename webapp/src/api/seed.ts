@@ -77,6 +77,10 @@ export type DemoRecord = {
   liveVehicleMissing?: string[];
   /** Live builds: the car's documents as the server sent them (v0.17.0: reviewed on the car page, expiry typed). */
   liveVehicleDocs?: { documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string }[]; required: string[]; country?: string };
+  /** Live fleet owners (Fleet.code): the fleet's Movera code; missing until the fleet is approved. */
+  liveFleetCode?: string;
+  /** Live cars (contract v0.18.3 R2): Vehicle.ruleProblems, "<category>:<problem>" while the car breaks the rules. */
+  liveRuleProblems?: string[];
   /** Live riders: the server's rating, wallet and unpaid fees (AdminRider). */
   liveRider?: LiveRiderFacts;
   /** Live ratings (GET /admin/ratings, contract v0.9.0). */

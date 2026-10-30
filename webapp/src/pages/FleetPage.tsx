@@ -1,5 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { LiveListBar } from "../live/LiveListBar";
+import { isLiveData } from "../live/realData";
+import { ruleProblemText } from "../live/format";
 import { useNavigate, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Camera, Car, CheckCircle2, FileWarning, PauseCircle, Settings2 } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
@@ -9,11 +11,12 @@ import { vehicleBlock } from "../drivers/gate";
 import { overallHealth, type DocHealth } from "../fleet/documents";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
-import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, withVehicleSettings, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
 import { DataTable } from "../ui/DataTable";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
+import { COUNTRY_LABEL } from "../i18n/countries";
 
 const VIEWS = [
   { id: "all", label: "All" },
@@ -49,7 +52,9 @@ export function FleetPage() {
   const store = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const rulesSlice = useSlice<VehicleRules>(VEHICLE_RULES_KEY, emptyVehicleRules());
   const settingsSlice = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
-  const rules = withVehicleSettings(normalizeVehicleRules(rulesSlice.value), normalizeSettingsBook(settingsSlice.value));
+  const live = isLiveData();
+  // Live: the published onboarding config only (owner G2 R2/R10), never the browser's demo slice.
+  const rules = effectiveVehicleRules(rulesSlice.value, normalizeSettingsBook(settingsSlice.value), live);
   const view = (VIEWS.find((item) => item.id === params.get("show"))?.id ?? "all") as ViewId;
   const [now] = useState(() => Date.now());
 
@@ -62,15 +67,16 @@ export function FleetPage() {
         const profile = vehicleOps(store.value, record);
         const driver = record.driverId ? byId.get(record.driverId) : undefined;
         const dops = driver ? driverOps(store.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status }) : null;
-        const docs = carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, rules.countries[countryOfZone(record.zoneId)].warnDays);
-        const health = overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
+        const docs = live ? liveCarDocs(record.liveVehicleDocs?.documents, now, rules.countries[countryOfZone(record.zoneId)].warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, rules.countries[countryOfZone(record.zoneId)].warnDays);
+        // Live: the server's missing car documents decide; nothing is assumed approved (owner G2 R1).
+        const health = live ? (record.liveVehicleMissing?.length ? "invalid" as const : "valid" as const) : overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
         const country = rules.countries[countryOfZone(record.zoneId)];
         const car = { year: profile.year, seats: profile.seats, fuel: profile.fuel, category: profile.category };
         const photos = photosOf(rules, record.id);
-        const photosWaiting = Object.values(photos).filter((photo) => photo.status !== "approved").length;
-        return { record, profile, driver, docs, health, fitsList: fits(car, country), photosWaiting, hold: shouldHold(docs, country), issue: vehicleBlock(car) };
+        const photosWaiting = live ? 0 : Object.values(photos).filter((photo) => photo.status !== "approved").length;
+        return { record, profile, driver, docs, health, fitsList: fits(car, country), photosWaiting, hold: !live && shouldHold(docs, country), issue: live ? (record.liveRuleProblems ?? []).map(ruleProblemText).join(", ") || null : vehicleBlock(car) };
       });
-  }, [agent?.scope.fleetPartnerId, vehicles.data, drivers.data, store.value, rules, now]);
+  }, [agent?.scope.fleetPartnerId, vehicles.data, drivers.data, store.value, rules, now, live]);
 
   const inView = (row: (typeof rows)[number], id: ViewId) => {
     if (id === "all") return true;
@@ -97,7 +103,7 @@ export function FleetPage() {
         <header className="dx-head">
           <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => set({ view: null })}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
           <div className="dx-head-text">
-            <h2>{trn("Vehicle rules for {0}", scope.market.name)}</h2>
+            <h2>{trn("Vehicle rules for {0}", trx(COUNTRY_LABEL[scope.market.id]))}</h2>
             <p>{tr("Which car fits which category, when papers count as expiring, and what happens when they run out.")}</p>
           </div>
         </header>
@@ -135,7 +141,7 @@ export function FleetPage() {
         {VIEWS.map((item) => (
           <button key={item.id} data-command="admin.table.filter" type="button" className={`vh-group ${VIEW_TONE[item.id]}${view === item.id ? " active" : ""}`} aria-pressed={view === item.id} onClick={() => set({ show: item.id === "all" ? null : item.id })}>
             <span className="vh-group-icon" aria-hidden="true">{VIEW_ICON[item.id]}</span>
-            <span className="vh-group-text"><b>{item.label}</b><small>{rows.filter((row) => inView(row, item.id)).length}</small></span>
+            <span className="vh-group-text"><b>{tr(item.label)}</b><small>{rows.filter((row) => inView(row, item.id)).length}</small></span>
           </button>
         ))}
       </nav>
@@ -145,7 +151,7 @@ export function FleetPage() {
       <LiveListBar list="vehicles" />
       <DataTable
           serverSearch="vehicles"
-        head={["Vehicle", "Plate", "Car", "Driver", "Fleet", "Category", "Fits", "Year", "Papers", "Status", "Rule check"]}
+        head={[tr("Vehicle"), tr("Plate"), tr("Car"), tr("Driver"), tr("Fleet"), tr("Category"), tr("Fits"), tr("Year"), tr("Papers"), tr("Status"), tr("Rule check")]}
         rowIds={shown.map((row) => row.record.id)}
         rows={shown.map((row) => [
           row.record.id,
@@ -158,7 +164,7 @@ export function FleetPage() {
           row.profile.year,
           HEALTH_TEXT[row.health] + (row.photosWaiting ? ` · ${row.photosWaiting} photo${row.photosWaiting === 1 ? "" : "s"}` : ""),
           row.record.status,
-          row.issue ?? (row.profile.registrationStatus === "approved" ? "Eligible" : `Registration ${row.profile.registrationStatus}`),
+          row.issue ? <span className="vh-rule-bad" key="rule">{row.issue}</span> : (row.profile.registrationStatus === "approved" ? "Eligible" : `Registration ${row.profile.registrationStatus}`),
         ])}
         state={vehicles.isError ? "error" : "ready"}
         onRetry={() => void vehicles.refetch()}

@@ -135,13 +135,15 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
         note={decision?.kind === "rejected" ? "required" : "optional"}
         expiry={decision?.kind === "approved"}
         expiryRequired={Boolean(decision && expiring.has(decision.row.type))}
+        {...(decision && countryDoc?.validMonths?.[decision.row.type] ? { validMonths: countryDoc.validMonths[decision.row.type] } : {})}
         danger={decision?.kind === "rejected"}
         onClose={() => setDecision(null)}
-        onConfirm={async ({ note, expiresAt }) => {
+        onConfirm={async ({ note, expiresAt, issuedAt }) => {
           if (!decision?.row.document) return;
           await client.post<DocumentRecord>(`/admin/documents/${encodeURIComponent(decision.row.document.documentId)}/review`, {
             decision: decision.kind,
             ...(note ? { note } : {}),
+            ...(issuedAt ? { issuedAt: new Date(`${issuedAt}T00:00:00Z`).toISOString() } : {}),
             ...(expiresAt ? { expiresAt } : {}),
           });
           setViewer(null);

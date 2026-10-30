@@ -14,7 +14,7 @@ export function refusedDetails(error: unknown): string[] | null {
  * Contract v0.10.1: the server refused Activate because required documents are not approved. Lists them grouped as
  * Driver / Company / Car with the contract's document names in the panel's language.
  */
-export function ActivationRefused({ details }: { details: readonly string[] }) {
+export function ActivationRefused({ details, country }: { details: readonly string[]; country?: string }) {
   const groups = groupMissing(details);
   const sections = [
     { id: "driver", title: tr("Driver"), types: groups.driver },
@@ -27,7 +27,7 @@ export function ActivationRefused({ details }: { details: readonly string[] }) {
       {sections.length === 0 ? <p>{tr("The server did not say which documents.")}</p> : sections.map((section) => (
         <div key={section.id} data-missing-scope={section.id}>
           <strong>{section.title}</strong>
-          <ul>{section.types.map((type) => <li key={type} data-document-type={type}>{documentTypeName(type)}</li>)}</ul>
+          <ul>{section.types.map((type) => <li key={type} data-document-type={type}>{documentTypeName(type, undefined, country)}</li>)}</ul>
         </div>
       ))}
     </div>
@@ -35,12 +35,12 @@ export function ActivationRefused({ details }: { details: readonly string[] }) {
 }
 
 /** A car whose required documents are not all approved: nobody can pick or drive it. */
-export function VehicleBlocked({ missing }: { missing: readonly string[] | undefined }) {
+export function VehicleBlocked({ missing, country }: { missing: readonly string[] | undefined; country?: string }) {
   if (!missing?.length) return null;
   return (
     <p className="live-vehicle-blocked" data-testid="vehicle-blocked">
       <AlertTriangle size={14} aria-hidden="true" /> <strong>{tr("Can't be driven – documents missing")}</strong>{" "}
-      {tr("Upload and approve:")} {missing.map((type) => documentTypeName(type)).join(", ")}
+      {tr("Upload and approve:")} {missing.map((type) => documentTypeName(type, undefined, country)).join(", ")}
     </p>
   );
 }

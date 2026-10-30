@@ -4,7 +4,8 @@ import { ArrowLeft, Car, CheckCircle2, Settings2 } from "lucide-react";
 import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
 import { LiveCompanyReview } from "./LiveCompanyReview";
 import { useRecords } from "../api/hooks";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
+import { COUNTRY_LABEL } from "../i18n/countries";
 import { useMarketScope } from "../markets/useMarketScope";
 import { statusLabel } from "../domain/labels";
 import { activationMissing, groupMissing, liveFunnel, type FunnelStep } from "./activation";
@@ -51,8 +52,8 @@ export function LiveOnboarding() {
     <header className="dx-head">
       {steps ? <button data-command="admin.onboarding.view" type="button" className="dash-btn ghost dx-back" onClick={() => view(null)}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button> : null}
       <div className="dx-head-text">
-        <h2>{steps ? tr("Onboarding steps for {0}", [scope.market.name]) : tr("Onboarding queue")}</h2>
-        <p>{steps ? tr("The steps new drivers go through, the papers they need, how long each step may take and the reminders they get.") : trn("{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.", queue.length, scope.market.name)}</p>
+        <h2>{steps ? tr("Onboarding steps for {0}", [trx(COUNTRY_LABEL[country])]) : tr("Onboarding queue")}</h2>
+        <p>{steps ? tr("The steps new drivers go through, the papers they need, how long each step may take and the reminders they get.") : trn("{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.", queue.length, trx(COUNTRY_LABEL[country]))}</p>
       </div>
       {!steps ? <button data-command="admin.onboarding.view" type="button" className="dash-btn small ghost" onClick={() => view("steps")}><Settings2 size={14} aria-hidden="true" />{" "}{tr("Steps and papers")}</button> : null}
     </header>
@@ -129,8 +130,8 @@ function Selected({ account, kind, cars }: { account: Account; kind: string; car
       ) : (
         <div className="fd-banner amber live-activation-refused">
           <p><strong>{tr("Still missing or not approved:")}</strong></p>
-          {groups.driver.length ? <div data-missing-scope="driver"><strong>{tr("Driver")}</strong><ul>{groups.driver.map((type) => <li key={type}>{documentTypeName(type)}</li>)}</ul></div> : null}
-          {groups.fleet.length ? <div data-missing-scope="fleet"><strong>{tr("Company")}</strong><ul>{groups.fleet.map((type) => <li key={type}>{documentTypeName(type)}</li>)}</ul></div> : null}
+          {groups.driver.length ? <div data-missing-scope="driver"><strong>{tr("Driver")}</strong><ul>{groups.driver.map((type) => <li key={type}>{documentTypeName(type, undefined, account.facts.country)}</li>)}</ul></div> : null}
+          {groups.fleet.length ? <div data-missing-scope="fleet"><strong>{tr("Company")}</strong><ul>{groups.fleet.map((type) => <li key={type}>{documentTypeName(type, undefined, account.facts.country)}</li>)}</ul></div> : null}
         </div>
       )}
       {account.facts.accountType === "fleet" && account.fleetId ? <LiveCompanyReview fleetId={account.fleetId} /> : null}
@@ -141,7 +142,7 @@ function Selected({ account, kind, cars }: { account: Account; kind: string; car
           {cars.map((car) => (
             <li key={car.id} data-vehicle-id={car.id}>
               <Car size={16} aria-hidden="true" /> <Link to={`/vehicles/${encodeURIComponent(car.id)}`}><strong>{car.plate ?? car.id}</strong></Link> {[car.make, car.model].filter(Boolean).join(" ")} · {statusLabel(car.status)}
-              <VehicleBlocked missing={car.liveVehicleMissing} />
+              <VehicleBlocked missing={car.liveVehicleMissing} country={car.liveVehicleDocs?.country} />
             </li>
           ))}
         </ul>

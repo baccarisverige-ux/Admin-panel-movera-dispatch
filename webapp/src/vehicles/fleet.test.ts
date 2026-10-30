@@ -1,4 +1,6 @@
 import { fleetStatus, type FleetCar } from "./fleet.ts";
+import { effectiveVehicleRules, liveCarDocs } from "./rules.ts";
+import { emptySettingsBook } from "../drivers/onboardingSettings.ts";
 
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
@@ -13,3 +15,29 @@ assert(fleetStatus(old).reason?.includes("older"), "old car refused");
 assert(fleetStatus(xl).reason?.includes("6 seats"), "XL seats");
 
 console.log("fleet ok");
+
+// Owner G2 R2/R10 (2026-10-30): live pages use the onboarding config from the server, not the browser's demo slice.
+{
+  const browserSlice = { countries: { SE: { warnDays: 99, categories: [{ category: "economy", minYear: 2001 }] } }, photos: { V1: { front: { status: "approved", by: "nora", at: "", note: "" } } } };
+  const book = emptySettingsBook();
+  book.countries.SE.document.vehicles.warnDays = 21;
+  const live = effectiveVehicleRules(browserSlice, book, true);
+  assert(live.countries.SE.warnDays === 21, "live: the server's warn days");
+  assert(live.countries.SE.categories.find((rule) => rule.category === "economy")?.minYear === 2015, "live: the browser slice's year is ignored");
+  assert(Object.keys(live.photos).length === 0, "live: no simulated photo state from the browser");
+  const demo = effectiveVehicleRules(browserSlice, emptySettingsBook(), false);
+  assert(demo.countries.SE.categories.find((rule) => rule.category === "economy")?.minYear !== undefined, "demo still reads its slice");
+  assert(Object.keys(demo.photos).length === 1, "demo keeps its photos");
+  console.log("live car rules ok");
+}
+
+// Owner G2 R1: live car papers come from the server (no invented approved inspection or expired insurance).
+{
+  const now = Date.parse("2026-10-30T12:00:00Z");
+  const docs = liveCarDocs([{ type: "vehicle_registration", status: "approved", expiresAt: "2027-05-31T00:00:00Z" }, { type: "insurance", status: "in_review" }], now, 30);
+  assert(docs.map((doc) => doc.id).join() === "registration,insurance", "registration and insurance only");
+  assert(docs[0]!.health === "valid" && docs[0]!.expiresAt === "2027-05-31", "approved registration with its end date");
+  assert(docs[1]!.health === "review" && docs[1]!.expiresAt === "", "insurance in review, no date");
+  assert(liveCarDocs(undefined, now)[1]!.health === "invalid", "nothing uploaded is missing");
+  console.log("live car papers ok");
+}

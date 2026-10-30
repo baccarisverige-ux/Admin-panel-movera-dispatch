@@ -119,6 +119,7 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
   };
 }
 
+const RIDE_CATEGORIES: string[] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
 const VEHICLE_STATUS: Record<string, string> = { approved: "eligible", pending: "pending", rejected: "ineligible", blocked: "on_hold" };
 
 export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Driver>): DemoRecord {
@@ -137,6 +138,9 @@ export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Dri
     make: vehicle.make,
     model: vehicle.model,
     liveVehicleMissing: vehicleMissing(vehicle, driver?.country),
+    ...(vehicle.fuel ? { fuel: vehicle.fuel } : {}),
+    ...(RIDE_CATEGORIES.includes(vehicle.categoryIds?.[0] ?? "") ? { category: vehicle.categoryIds[0] as NonNullable<DemoRecord["category"]> } : {}),
+    liveRuleProblems: [...(vehicle.ruleProblems ?? [])],
     liveVehicleDocs: { documents: [...(vehicle.documents ?? [])], required: requiredForVehicle(vehicle, driver?.country), ...(driver?.country ? { country: driver.country } : {}) },
   };
 }
@@ -157,6 +161,7 @@ export function ownerRecord(fleet: Fleet, zoneId: string): DemoRecord {
     company: fleet.name,
     orgNumber: fleet.orgNumber,
     joinedAt: fleet.createdAt,
+    ...(fleet.code ? { liveFleetCode: fleet.code } : {}),
     ...(fleet.ownerEmail ? { email: fleet.ownerEmail } : {}),
   };
 }

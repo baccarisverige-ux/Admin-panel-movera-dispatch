@@ -21,6 +21,9 @@ import {
   normalizeSettingsBook,
   prepareSettings,
   removeFromList,
+  endDateFrom,
+  setGuide,
+  setValidMonths,
   settingsProblem,
   stagePublish,
   typeInfo,
@@ -190,4 +193,32 @@ test("note check: the demo board and car pages follow the published settings (st
   const cars = withVehicleSettings(emptyVehicleRules(), next);
   assert.equal(cars.countries.FR.warnDays, 60);
   assert.equal(cars.countries.FR.categories.find((rule) => rule.category === "economy")?.minYear, 2018);
+});
+
+test("G2 R8: the admin writes the upload guide per country and document (sv/fr/en, at most 10 lines of 300 characters)", () => {
+  const line = { sv: "Hela kortet syns", fr: "Toute la carte est visible", en: "The whole card is visible" };
+  const doc = setGuide(defaultDoc("SE"), "driving_license", { checklist: [line, { sv: " ", fr: "", en: "" }], tips: [] });
+  assert.deepEqual(doc.guides?.["driving_license"], { checklist: [line], tips: [] }, "blank lines are dropped");
+  assert.equal(settingsProblem(doc), null);
+  assert.equal(settingsProblem(setGuide(doc, "insurance", { checklist: [{ ...line, fr: "" }], tips: [] })), "Every guide line must be written in Swedish, French and English.");
+  assert.equal(settingsProblem(setGuide(doc, "insurance", { checklist: Array.from({ length: 11 }, () => line), tips: [] })), "A guide has at most 10 lines in each list.");
+  assert.equal(setGuide(doc, "driving_license", { checklist: [], tips: [] }).guides?.["driving_license"], undefined, "an empty guide falls back to the app's text");
+});
+
+test("G2 R9: valid months per document (FR URSSAF 6 by default), the end date is issue date + months", () => {
+  assert.equal(defaultDoc("FR").validMonths?.["urssaf_certificate"], 6);
+  assert.equal(endDateFrom("2026-10-15", 6), "2027-04-15");
+  assert.equal(endDateFrom("2026-08-31", 6), "2027-02-28", "a shorter month ends on its last day");
+  assert.equal(endDateFrom("", 6), "");
+  assert.equal(endDateFrom("2026-10-15", undefined), "");
+  assert.equal(settingsProblem(setValidMonths(defaultDoc("FR"), "urssaf_certificate", 121)), "Valid months: 1 to 120.");
+  assert.equal(setValidMonths(defaultDoc("FR"), "urssaf_certificate", null).validMonths?.["urssaf_certificate"], undefined);
+});
+
+test("G2 R10: the closed country (TN) is not asked for its onboarding settings (404 config_not_found on live)", async () => {
+  const server = fakeServer({ SE: defaultDoc("SE"), FR: defaultDoc("FR") });
+  const live = createLiveSettings(server.http);
+  const book = normalizeSettingsBook(await live.readSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook()));
+  assert.deepEqual(server.calls.filter((call) => call.path.includes("country=TN")), []);
+  assert.deepEqual(book.countries.TN.document.documents, { driver: [], fleet: [], vehicle: [] }, "TN keeps its closed defaults");
 });

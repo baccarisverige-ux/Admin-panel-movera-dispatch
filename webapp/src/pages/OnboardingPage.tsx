@@ -53,6 +53,7 @@ import { Cards } from "../reports/ui";
 import { CommandButton } from "../ui/CommandButton";
 import { DataTable } from "../ui/DataTable";
 import { tr, trn, trx } from "../i18n";
+import { COUNTRY_LABEL } from "../i18n/countries";
 import { statusLabel } from "../domain/labels";
 
 const REVIEW: { status: DocStatus; label: string }[] = [
@@ -139,7 +140,7 @@ function DemoOnboardingPage() {
     <header className="dx-head">
       <button data-command="admin.onboarding.view" type="button" className="dash-btn ghost dx-back" onClick={() => (params.get("view") ? set({ view: null }) : globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
       <div className="dx-head-text">
-        <h2>{params.get("view") === "steps" ? tr("Onboarding steps for {0}", [scope.market.name]) : tr("Onboarding queue")}</h2>
+        <h2>{params.get("view") === "steps" ? tr("Onboarding steps for {0}", [trx(COUNTRY_LABEL[scope.market.id])]) : tr("Onboarding queue")}</h2>
         <p>
           {params.get("view") === "steps"
             ? tr("The steps new drivers go through, the papers they need, how long each step may take and the reminders they get.")
@@ -412,7 +413,7 @@ function ApplicantView({ settings, driver, rules, country, now, reviewNote, setR
           {carRecord && car ? (
             <>
               <p>{trn("{0} · {1} {2} · {3} · {4} · {5} · {6} seats · {7}.", carRecord.plate, carRecord.make ?? tr("Vehicle"), carRecord.model ?? "", car.year, car.category, car.fuel, car.seats, car.status)}</p>
-              <p className="vh-help">{trn("Inspection expires {0}. Insurance expires {1}. Registration {2}.{3}", car.inspectionExpiresAt, car.insuranceExpiresAt, car.registrationStatus, vehicleBlock({ year: car.year, seats: car.seats, fuel: car.fuel, category: car.category }) ?? tr(" Vehicle rule check passed."))}</p>
+              <p className="vh-help">{trn("Inspection expires {0}. Insurance expires {1}. Registration {2}.{3}", car.inspectionExpiresAt || "—", car.insuranceExpiresAt || "—", car.registrationStatus, vehicleBlock({ year: car.year, seats: car.seats, fuel: car.fuel, category: car.category }) ?? tr(" Vehicle rule check passed."))}</p>
               <Link className="vh-help" to={`/vehicles/${carRecord.id}`}>{tr("Open the vehicle")}</Link>
             </>
           ) : <p className="state-line">{tr("No vehicle linked. Activation is blocked.")}</p>}

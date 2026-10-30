@@ -190,3 +190,7 @@ test("French and Swedish load on first use; English needs no dictionary", async 
   assert.equal(translate("en", "Cancel"), "Cancel");
   assert.equal(translate("fr", "A text nobody wrote"), "A text nobody wrote");
 });
+
+test("G2 R10: the dead 'Approve all remaining' text is gone from every dictionary", () => {
+  assert.equal(Object.hasOwn(en, "Approve all remaining"), false);
+});

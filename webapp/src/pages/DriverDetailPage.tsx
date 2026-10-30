@@ -316,7 +316,7 @@ export function DriverDetailPage() {
         </dl>
       </section>
 
-      {refused ? <ActivationRefused details={refused} /> : null}
+      {refused ? <ActivationRefused details={refused} country={driver?.liveAccount?.country} /> : null}
       {notice || store.message ? <p className="fd-notice" role="status">{trSentences(notice)} {trSentences(store.message)}</p> : null}
       {liveData ? null : driver.status === "active" && health.invalid ? (
         <p className="fd-banner red">{trn("{0} {1} document{2} missing, wrong or expired. Consider putting the account on hold.", <AlertTriangle size={16} aria-hidden="true" />, health.invalid, health.invalid > 1 ? tr("s are") : tr(" is"))}</p>
@@ -422,6 +422,8 @@ export function DriverDetailPage() {
 
         <TabPanel id="documents" activeId={tab}>
           <LiveDriverDocuments driverId={driver.id} />
+          {/* Live (owner G2 R10): only the server's documents above; the demo table and its expiring list are demo only. */}
+          {liveData ? null : <>
           <div className="fd-section-head">
             <div>
               <h3>{tr("Documents")}</h3>
@@ -444,6 +446,7 @@ export function DriverDetailPage() {
             onSaved={setNotice}
             expiring={expiringDemo}
           />
+          </>}
         </TabPanel>
 
         <TabPanel id="performance" activeId={tab}>
@@ -543,8 +546,8 @@ export function DriverDetailPage() {
                 <div>
                   <Link to={`/vehicles/${record.id}`}><strong>{record.plate ?? record.id}</strong></Link>
                   <p>{trn("{0} {1} · {2} · {3} seats · {4} · {5}", record.make ?? tr("Vehicle"), record.model ?? "", vehicle.year, vehicle.seats, vehicle.fuel, vehicle.category)}</p>
-                  {liveData ? <small>{statusLabel(record.status)}</small> : <small>{trn("Inspection until {0} · insurance until {1} · {2}", vehicle.inspectionExpiresAt, vehicle.insuranceExpiresAt, statusLabel(record.status))}</small>}
-                  <VehicleBlocked missing={record.liveVehicleMissing} />
+                  {liveData ? <small>{statusLabel(record.status)}</small> : <small>{trn("Inspection until {0} · insurance until {1} · {2}", vehicle.inspectionExpiresAt || "—", vehicle.insuranceExpiresAt || "—", statusLabel(record.status))}</small>}
+                  <VehicleBlocked missing={record.liveVehicleMissing} country={record.liveVehicleDocs?.country} />
                 </div>
               </div>
             );

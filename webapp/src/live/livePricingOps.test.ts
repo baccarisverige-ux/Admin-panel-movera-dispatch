@@ -113,3 +113,21 @@ test("a manual surge and the server schedule read the same", () => {
   assert.deepEqual(scheduleOf(manual, 1)["points"], [{ atMin: 0, multiplier: 3 }, { atMin: 30, multiplier: 1.5 }]);
   assert.equal(manualOf({ scheduleId: "s", zoneId: "Z001", startAt: AT, endAt: AT, cap: 2, points: [], status: "ended", version: 1 }), null);
 });
+
+test("G2 R10: a country's Standard is not a zone: no /admin/zones/standard-XX/surge call (404 on live)", async () => {
+  const server = fakeServer();
+  const json = server.http.json;
+  // The server answers every pricing draft, the countries' Standards included.
+  server.http.json = async <T,>(path: string) => {
+    if (path.startsWith("/admin/config/pricing?") && !path.includes("Z001")) {
+      server.calls.push({ method: "GET", path });
+      return { doc: "pricing", version: 1, liveVersion: 1, document: {}, usesStandard: false } as T;
+    }
+    return json<T>(path);
+  };
+  const settings = createLiveSettings(server.http, () => AT);
+  await settings.readSlice("zonePricing", null);
+  const surgeCalls = server.calls.filter((call) => call.path.includes("/surge")).map((call) => call.path);
+  assert.ok(surgeCalls.includes("/admin/zones/Z001/surge"), "a real zone still reads its surge");
+  assert.deepEqual(surgeCalls.filter((path) => path.includes("standard-")), []);
+});

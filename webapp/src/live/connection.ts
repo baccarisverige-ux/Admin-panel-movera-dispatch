@@ -13,16 +13,19 @@ const PARTLY: Record<string, string> = {
   pricing: "Prices, fees, surge settings, commission and pickup pay of each zone and each country's Standard, and Tips & limits, from the server; manual surges and undo are not connected yet.",
   settings: "Feature switches and app updates go to the apps at once; scheduled publish, expiry and overrides are not connected yet.",
   offers: "Trips and their offers from the server; sending offers is not connected yet.",
-  drivers: "Drivers and their account status from the server; documents, notes and bonuses are not connected yet.",
-  fleets: "Fleet companies and owners from the server; owner documents and notes are not connected yet.",
-  vehicles: "Vehicles and their review from the server; photos and rules are not connected yet.",
-  onboarding: "Drivers and their account status from the server; document review is not connected yet.",
   incidents: "SOS and car-lost cases with Take, Solve and False alarm from the server; contact log, levels and calls are not connected yet.",
   alerts: "SOS and car-lost alerts from the server; the other alerts are not connected yet.",
   zones: "Zones, outlines, names and open or closed from the server; traffic on the map, rules and pickup points are not connected yet.",
 };
 
+/**
+ * Pages that read and write the server for what they show (owner G2 R10, 2026-10-30: no "Not connected yet" badge
+ * where the page is live): drivers, onboarding (documents reviewed live), fleet owners and vehicles.
+ */
+const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding"]);
+
 export function connectionOf(id: string): Connection {
+  if (CONNECTED.has(id)) return { state: "connected" };
   const what = PARTLY[id];
   return what ? { state: "partly", what } : { state: "not" };
 }

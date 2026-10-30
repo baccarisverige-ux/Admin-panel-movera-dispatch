@@ -6,7 +6,7 @@ import type { Agent } from "../auth/permissions.ts";
 import type { MarketId } from "../markets/markets.ts";
 import { ApiError } from "../api/httpClient.ts";
 import { CURRENCIES, formatMoney, type CurrencyCode, type Money } from "../domain/money.ts";
-import { currentLanguage, tr } from "../i18n/index.ts";
+import { currentLanguage, tr, type MessageKey } from "../i18n/index.ts";
 import { DOCUMENT_TYPES, ONBOARDING_COUNTRIES, REQUIRED_DOCUMENTS } from "./onboardingContract.ts";
 import type { AdminMe, DocumentStatus, DocumentSummary, Driver, Vehicle } from "./types.ts";
 
@@ -42,7 +42,8 @@ function registered(type: string, country?: string): { name?: LocalName; kind?: 
 /** The document type's name in the panel's language (contract.json#driverOnboarding.documents.types, or the country's own); the id when unknown. */
 export function documentTypeName(type: string, language: string = currentLanguage(), country?: string): string {
   const lang = language === "sv" || language === "fr" ? language : "en";
-  const name = registered(type, country).name ?? DOCUMENT_TYPES[type]?.name;
+  // v0.18.3 (R5): the admin's text of that country, else the contract's name in that country, else the type's name.
+  const name = registered(type, country).name ?? (country ? DOCUMENT_TYPES[type]?.nameByCountry?.[country] : undefined) ?? DOCUMENT_TYPES[type]?.name;
   if (!name) return type;
   return name[lang] || name.en;
 }
@@ -134,12 +135,35 @@ export function listQuery(params: Record<string, string | number | null | undefi
   return text ? `?${text}` : "";
 }
 
+const CATEGORY_NAMES: Record<string, MessageKey> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "XL", electric: "Electric", pet: "Pet" };
+const RULE_PROBLEMS: Record<string, MessageKey> = {
+  category_off: "the category is turned off",
+  year_too_old: "the car is too old",
+  too_few_seats: "too few seats",
+  fuel_not_allowed: "fuel not allowed",
+  fuel_required: "the fuel is missing",
+  extra_needs_ride: "an extra needs a ride category too",
+};
+
+/** v0.18.3 (R2): Vehicle.ruleProblems / 409 vehicle_rules_not_met details ("<category>:<problem>") in the panel's language. */
+export function ruleProblemText(detail: string): string {
+  const [category = "", problem = ""] = detail.includes(":") ? detail.split(":", 2) : ["", detail];
+  const what = RULE_PROBLEMS[problem] ? tr(RULE_PROBLEMS[problem]) : problem;
+  if (!category) return what;
+  const name = category === "car" ? tr("Car") : category === "child_seat" ? tr("Child seat") : (CATEGORY_NAMES[category] ? tr(CATEGORY_NAMES[category]) : category);
+  return `${name}: ${what}`;
+}
+
 /** The text a screen shows for a failed call: plain for the known cases, with the request id for the unexpected ones. */
 export function errorText(error: unknown): string {
   if (!(error instanceof ApiError)) return error instanceof Error && error.message ? error.message : tr("Something failed.");
   if (error.status === 403) return tr("Your role cannot do that.");
   if (error.status === 401) return tr("Sign in again.");
   if (error.status === 409 && error.code === "version_mismatch") return tr("Someone else changed this record. It was reloaded; check it and try again.");
+  // v0.18.3 (R2): approving a car that breaks the country's car rules.
+  if (error.reason === "vehicle_rules_not_met") return tr("The car does not meet the country's car rules: {0}.", [error.details.map(ruleProblemText).join(", ") || "—"]);
+  // v0.18.3 (R9): the issue date of a document cannot be in the future.
+  if (error.reason === "issued_in_future") return tr("The issue date cannot be in the future.");
   // v0.18.0 (owner 2026-10-29, live audit): car details, the car's driver, categories and the bank review.
   if (error.reason === "category_not_allowed") return tr("The car does not fit that category: {0}.", [error.details.join(", ") || "—"]);
   if (error.reason === "plate_taken") return tr("Another car already has this plate.");
@@ -294,4 +318,18 @@ export const FARE_LINE_LABEL = {
 export function fareLineLabel(code: string): string {
   const label = (FARE_LINE_LABEL as Record<string, (typeof FARE_LINE_LABEL)[keyof typeof FARE_LINE_LABEL]>)[code];
   return label ? tr(label) : code;
+}
+
+const ROW_HEALTH: Record<string, string> = { approved: "valid", in_review: "review", expired: "invalid", rejected: "invalid", missing: "invalid" };
+
+/**
+ * The health of one live document row: an approved document whose end date is within the warning days is "expiring"
+ * (owner G2 R10: the driver page's expiring list comes from the server's dates, not the demo).
+ */
+export function liveRowHealth(row: { status: string; document: { expiresAt?: string } | null }, nowMs: number, warnDays: number): string {
+  const base = ROW_HEALTH[row.status] ?? "invalid";
+  const end = row.document?.expiresAt ? Date.parse(row.document.expiresAt) : NaN;
+  if (base !== "valid" || !Number.isFinite(end)) return base;
+  if (end < nowMs) return "invalid";
+  return end - nowMs <= warnDays * 86_400_000 ? "expiring" : "valid";
 }

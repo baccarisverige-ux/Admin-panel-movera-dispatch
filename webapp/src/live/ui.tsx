@@ -7,6 +7,7 @@ import { Modal } from "../ui/Modal";
 import { tr, trx, uiLocale } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { errorText, shortDate, shortDateTime } from "./format";
+import { endDateFrom } from "../drivers/onboardingSettings";
 import type { Page } from "./types";
 
 /** A failed call, in words: the server's message, "Your role cannot do that." on 403, the request id when unexpected. */
@@ -131,21 +132,27 @@ export type DecisionDialogProps = {
    * must be typed (the server answers 400 expiry_required without it) and be in the future (expiry_in_past).
    */
   expiryRequired?: boolean;
+  /** v0.18.3 (owner G2 R9): months the type is valid from its issue date in this country; the end date fills itself (editable). */
+  validMonths?: number;
   danger?: boolean;
   onClose: () => void;
-  onConfirm: (input: { note: string; expiresAt?: string }) => Promise<void>;
+  onConfirm: (input: { note: string; expiresAt?: string; issuedAt?: string }) => Promise<void>;
 };
 
 /** One dialog for every live decision: a summary, a note when the contract needs one, Confirm and Cancel. */
-export function DecisionDialog({ open, title, summary, confirmLabel, note, noteLabel, expiry = false, expiryRequired = false, danger = false, onClose, onConfirm }: DecisionDialogProps) {
+export function DecisionDialog({ open, title, summary, confirmLabel, note, noteLabel, expiry = false, expiryRequired = false, validMonths, danger = false, onClose, onConfirm }: DecisionDialogProps) {
   const [text, setText] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [issuedAt, setIssuedAt] = useState("");
+  const [typedEnd, setTypedEnd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   useEffect(() => {
     if (open) {
       setText("");
       setExpiresAt("");
+      setIssuedAt("");
+      setTypedEnd(false);
       setError(null);
       setBusy(false);
     }
@@ -154,6 +161,8 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
   const noteMissing = note === "required" && trimmed.length === 0;
   const tooLong = trimmed.length > 1000;
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  const issuedInFuture = expiry && Boolean(issuedAt) && issuedAt > today;
   const expiryMissing = expiry && expiryRequired && (!expiresAt || expiresAt < tomorrow);
   return (
     <Modal open={open} title={title} onClose={onClose}>
@@ -161,11 +170,11 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         className="live-dialog"
         onSubmit={async (event) => {
           event.preventDefault();
-          if (noteMissing || tooLong || expiryMissing || busy) return;
+          if (noteMissing || tooLong || expiryMissing || issuedInFuture || busy) return;
           setBusy(true);
           setError(null);
           try {
-            await onConfirm({ note: trimmed, ...(expiry && expiresAt ? { expiresAt: new Date(`${expiresAt}T00:00:00Z`).toISOString() } : {}) });
+            await onConfirm({ note: trimmed, ...(expiry && issuedAt ? { issuedAt } : {}), ...(expiry && expiresAt ? { expiresAt: new Date(`${expiresAt}T00:00:00Z`).toISOString() } : {}) });
             onClose();
           } catch (caught) {
             setError(caught);
@@ -183,14 +192,27 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         ) : null}
         {expiry ? (
           <label>
+            {tr("Issue date (on the document)")}
+            <input type="date" data-testid="issued-at" value={issuedAt} max={today} aria-invalid={issuedInFuture} onChange={(event) => {
+              const next = event.target.value;
+              setIssuedAt(next);
+              // The end date follows the issue date until the admin types one (owner G2 R9: "Auto 6 months, editable").
+              if (!typedEnd && validMonths) setExpiresAt(endDateFrom(next, validMonths));
+            }} />
+            {validMonths ? <small className="vh-help">{tr("Valid {0} months from the issue date; the end date fills itself and can be changed.", [validMonths])}</small> : null}
+          </label>
+        ) : null}
+        {issuedInFuture ? <p className="vh-help" data-testid="issued-in-future">{tr("The issue date cannot be in the future.")}</p> : null}
+        {expiry ? (
+          <label>
             {expiryRequired ? tr("Valid until (required)") : tr("Valid until (optional)")}
-            <input type="date" value={expiresAt} min={expiryRequired ? tomorrow : undefined} required={expiryRequired} aria-invalid={expiryMissing} onChange={(event) => setExpiresAt(event.target.value)} />
+            <input type="date" value={expiresAt} min={expiryRequired ? tomorrow : undefined} required={expiryRequired} aria-invalid={expiryMissing} onChange={(event) => { setTypedEnd(true); setExpiresAt(event.target.value); }} />
           </label>
         ) : null}
         {expiryMissing ? <p className="vh-help" data-testid="expiry-required">{tr("This document expires: type the expiry date from the document (after today).")}</p> : null}
         {error ? <ErrorLine error={error} /> : null}
         <div className="actions">
-          <button data-command="admin.server.dialogConfirm" type="submit" className={danger ? "primary-btn live-danger" : "primary-btn"} disabled={noteMissing || tooLong || expiryMissing || busy}>
+          <button data-command="admin.server.dialogConfirm" type="submit" className={danger ? "primary-btn live-danger" : "primary-btn"} disabled={noteMissing || tooLong || expiryMissing || issuedInFuture || busy}>
             {busy ? tr("Sending.") : confirmLabel}
           </button>
           <button data-command="admin.server.dialogCancel" type="button" className="secondary-btn" onClick={onClose} disabled={busy}>{tr("Cancel")}</button>

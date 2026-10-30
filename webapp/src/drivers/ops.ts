@@ -96,11 +96,26 @@ export type VehicleSeed = {
   fuel?: string;
   category?: string;
   fleetId?: string | null;
+  /** Live only: the car's documents from the server (the real end dates come from the approved ones). */
+  liveVehicleDocs?: { documents: { type: string; status: string; expiresAt?: string }[] };
 };
+
+/** A demo seed number from a short demo id ("veh-12" → 12). Real ULID ids are not demo ids: 0 (owner G2 R1, 2026-10-30). */
+export function demoSeed(id: string): number {
+  if (!/^[a-z]+[-_]?\d{1,4}$/i.test(id)) return 0;
+  return Number(id.replace(/\D/g, "")) || 0;
+}
+
+/** The end date of the car's approved document of one of these types, "" when there is none. */
+export function approvedEndDate(docs: { type: string; status: string; expiresAt?: string }[] | undefined, types: string[]): string {
+  const doc = (docs ?? []).find((item) => types.includes(item.type) && item.status === "approved" && item.expiresAt);
+  return doc?.expiresAt ? doc.expiresAt.slice(0, 10) : "";
+}
 
 const CATEGORY_IDS: Vehicle["category"][] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
 
 function isoDate(offsetDays: number): string {
+  if (!Number.isFinite(offsetDays) || Math.abs(offsetDays) > 36500) return "";
   const base = new Date("2026-10-06T00:00:00.000Z");
   base.setUTCDate(base.getUTCDate() + offsetDays);
   return base.toISOString().slice(0, 10);
@@ -190,7 +205,9 @@ export function driverOps(book: DriverOpsBook, driver: DriverSeed): DriverOps {
 export function vehicleOps(book: DriverOpsBook, vehicle: VehicleSeed): VehicleOps {
   const stored = book.vehicles[vehicle.id];
   if (stored) return stored;
-  const suffix = Number(vehicle.id.replace(/\D/g, "")) || 1;
+  const seed = demoSeed(vehicle.id);
+  const suffix = seed || 1;
+  const live = vehicle.liveVehicleDocs;
   const category = CATEGORY_IDS.includes(vehicle.category as Vehicle["category"])
     ? vehicle.category as Vehicle["category"]
     : suffix % 7 === 0
@@ -212,8 +229,9 @@ export function vehicleOps(book: DriverOpsBook, vehicle: VehicleSeed): VehicleOp
     fuel,
     category,
     fleetId: vehicle.fleetId ?? "",
-    inspectionExpiresAt: isoDate(90 + suffix),
-    insuranceExpiresAt: isoDate(180 + suffix),
+    // Live: the real end dates of the approved registration and insurance; no invented dates (owner G2 R1).
+    inspectionExpiresAt: live ? approvedEndDate(live.documents, ["vehicle_registration"]) : seed ? isoDate(90 + seed) : "",
+    insuranceExpiresAt: live ? approvedEndDate(live.documents, ["insurance", "vehicle_insurance"]) : seed ? isoDate(180 + seed) : "",
     registrationStatus: "approved",
     note: "",
   };
