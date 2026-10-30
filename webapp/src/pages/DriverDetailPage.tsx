@@ -6,7 +6,6 @@ import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { LiveDocBox } from "../live/LiveDocBox";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
-import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Building2, Car, CheckCircle2, Hash, Mail, MapPin, MessageSquare, Phone, Star, StickyNote } from "lucide-react";
@@ -375,7 +374,6 @@ export function DriverDetailPage() {
               })}
             </div>
           </section>
-          <ScheduledAccessCard driverId={driver.id} />
           {current ? (
             <div className="fd-current">
               <h3>{tr("Current trip")}</h3>

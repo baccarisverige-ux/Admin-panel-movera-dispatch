@@ -13,7 +13,6 @@ import {
 } from "../api/hooks";
 import { DataTable } from "../ui/DataTable";
 import { market, marketOfZone } from "../markets/markets";
-import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
 import { tr, trn } from "../i18n";
 
 const VIEWS = [
@@ -119,10 +118,6 @@ export function ReservationsPage() {
           if (id) navigate(`/reservations/${id}`);
         }}
       />
-
-      <div className="resv-access">
-        <ScheduledAccessCard />
-      </div>
     </>
   );
 }

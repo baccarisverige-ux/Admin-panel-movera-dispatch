@@ -303,7 +303,6 @@ body.dx-no-scroll { overflow: hidden; }
 .dx-reason-texts small { font-size: 11px; color: var(--muted); }
 
 /* Round 3, A3: scheduled rides access, offer log, cash, driver texts and notifications */
-.resv-access { margin-top: 16px; }
 .sa-list { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 6px; }
 .sa-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
 .sa-list li.off { border-color: #f3d1a8; background: #fffaf3; }

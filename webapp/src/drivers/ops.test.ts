@@ -1,4 +1,3 @@
-import { accessLabel, accessState, choiceError, clearAccess, driverScheduledRides, emptyAccessBook, lateCancelsFor, normalizeAccessBook, setAccess } from "./scheduledAccess.ts";
 import {
   approveRequiredDocuments,
   driverActivationIssue,
@@ -68,32 +67,7 @@ assert(driverOps(setDriverNote(book, independent, "x".repeat(3000), "lena"), ind
 const badVehicleBook = updateVehicleOps(book, vehicleSeed, { category: "xl", seats: 4 });
 assert(driverActivationIssue(badVehicleBook, independent, vehicleOps(badVehicleBook, vehicleSeed))?.includes("6 seats"), "vehicle rule blocks activation");
 
-// Q11: scheduled rides on or off per driver, the late cancels and the pause by the rule.
-const lateRule = { latePause: true, latePauseAfter: 2, latePeriodDays: 7, latePauseDays: 7, driverLateCancelHours: 1 };
-const accessNow = Date.parse("2026-10-15T12:00:00Z");
-const twoLate = lateCancelsFor("D0006", accessNow);
-assert(twoLate.length === 2 && lateCancelsFor("D0001", accessNow).length === 0, "demo late cancels: every 6th driver has 2 this week");
-const paused = accessState(undefined, twoLate, lateRule, accessNow);
-assert(!paused.allowed && paused.source === "rule" && paused.pausedByRule && paused.lateInPeriod.length === 2, "2 late cancels in 7 days pause scheduled rides");
-assert(accessLabel(paused, undefined, lateRule).startsWith("Paused until 2026-10-2") && accessLabel(paused, undefined, lateRule).endsWith("2 late cancels in 7 days"), "the pause says until when and why");
-assert(accessState(undefined, twoLate, { ...lateRule, latePause: false }, accessNow).allowed && accessState(undefined, twoLate, { ...lateRule, latePauseAfter: 3 }, accessNow).allowed, "the rule can be off or need more late cancels");
-assert(accessState(undefined, lateCancelsFor("D0007", accessNow), lateRule, accessNow).lateInPeriod.length === 0, "a late cancel before the period does not count");
-const accessIso = new Date(accessNow).toISOString();
-const turnedOn = setAccess(emptyAccessBook(), "D0006", { on: true, period: "days", days: 3, until: "" }, "nora", accessIso);
-const onState = accessState(turnedOn.book.drivers.D0006, twoLate, lateRule, accessNow);
-assert(!turnedOn.error && onState.allowed && onState.source === "admin" && onState.pausedByRule && turnedOn.book.draftRev === 2 && turnedOn.book.log[0].line === "Scheduled rides on for 3 days", "an admin can turn scheduled rides on over the pause");
-assert(accessState(turnedOn.book.drivers.D0006, twoLate, lateRule, accessNow + 4 * 86_400_000).source === "rule", "after the days the rule decides again, and the pause lasts its 7 days");
-assert(accessState(undefined, twoLate, lateRule, accessNow + 7 * 86_400_000).allowed, "the pause ends 7 days after the late cancel that reached the limit");
-const turnedOff = setAccess(emptyAccessBook(), "D0001", { on: false, period: "always", days: 7, until: "" }, "nora", accessIso).book;
-assert(!accessState(turnedOff.drivers.D0001, [], lateRule, accessNow + 400 * 86_400_000).allowed && accessLabel(accessState(turnedOff.drivers.D0001, [], lateRule, accessNow), turnedOff.drivers.D0001, lateRule) === "Off always, set by nora", "off always stays off");
-assert(setAccess(emptyAccessBook(), "D0001", { on: false, period: "until", days: 7, until: "2026-10-01" }, "nora", accessIso).error === "The last day must be in the future." && choiceError({ on: true, period: "days", days: 0, until: "" }, accessNow) === "Choose 1 to 365 days.", "the period is checked");
-const back = clearAccess(turnedOff, "D0001", "nora", accessIso);
-assert(!back.drivers.D0001 && back.log[0].line === "Back to the late-cancel rule" && normalizeAccessBook(null).draftRev === 1, "back to the rule");
-// Owner decision 2 (contract v0.4.2): the admin's choice reaches the driver app as Driver.scheduledRides.
-assert(JSON.stringify(driverScheduledRides(turnedOff.drivers.D0001, accessNow)) === JSON.stringify({ on: false, until: null }), "off always: no new reservations until an admin turns them on");
-assert(JSON.stringify(driverScheduledRides(turnedOn.book.drivers.D0006, accessNow)) === JSON.stringify({ on: true, until: "2026-10-18T12:00:00.000Z" }), "on for 3 days: until when, in UTC");
-assert(driverScheduledRides(turnedOn.book.drivers.D0006, accessNow + 4 * 86_400_000) === null && driverScheduledRides(undefined, accessNow) === null, "no choice in force: nothing, the zone switch and the late-cancel rule decide");
-
+// Q11 (per-driver scheduled rides) was removed by owner G3-R3: see the G3-R3 block at the end of this file.
 console.log("driver ops ok");
 
 // Owner G2 R1 (2026-10-30): a real ULID car id must not crash the Vehicles and driver pages (RangeError Invalid
@@ -109,3 +83,21 @@ const liveProfile = vehicleOps(emptyDriverOpsBook(), liveCar);
 assert(liveProfile.inspectionExpiresAt === "2027-05-31", "registration end date from the approved document");
 assert(liveProfile.insuranceExpiresAt === "", "an insurance still in review gives no date");
 console.log("ULID car ids ok");
+
+// Owner G3-R3 (2026-10-30, contract v0.18.4): "Remove the switch". The per-driver "Scheduled driver access" card, its
+// demo late cancels and its command are gone; every driver can take booked rides (the zone's reservations.on decides).
+{
+  const { existsSync, readdirSync, readFileSync, statSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const { commandById, SLICE_WRITERS } = await import("../commands/registry.ts");
+  const { en } = await import("../i18n/en.ts");
+  const src = fileURLToPath(new URL("..", import.meta.url));
+  assert(commandById("admin.driver.scheduledAccess") === undefined && !("scheduledAccess" in SLICE_WRITERS), "G3-R3: no command writes per-driver scheduled access");
+  assert(!existsSync(join(src, "drivers", "ScheduledAccess.tsx")) && !existsSync(join(src, "drivers", "scheduledAccess.ts")), "G3-R3: the card and its demo late cancels are removed");
+  const walk = (dir: string): string[] => readdirSync(dir).flatMap((name) => (statSync(join(dir, name)).isDirectory() ? walk(join(dir, name)) : [join(dir, name)]));
+  const users = walk(src).filter((file) => /\.tsx?$/.test(file) && !file.endsWith("ops.test.ts") && /ScheduledAccessCard|scheduledAccess["']|lateCancelsFor/.test(readFileSync(file, "utf8")));
+  assert(users.length === 0, `G3-R3: nothing uses the per-driver switch any more: ${users.join(", ")}`);
+  assert(!("Drivers' access to scheduled rides" in en), "G3-R3: its texts are removed");
+  console.log("G3-R3 ok");
+}

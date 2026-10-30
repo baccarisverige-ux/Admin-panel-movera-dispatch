@@ -16,51 +16,25 @@ async function confirm(page: Page) {
 
 const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
-test("a driver's scheduled rides: late cancels, the pause by the rule and an admin choice", async ({ page }) => {
+// Owner G3-R3 (2026-10-30): "Remove the switch". The per-driver scheduled rides control (Q11) is gone everywhere;
+// every driver can take booked rides and the zone's Reservations switch decides.
+test("G3-R3: a driver's page has no per-driver scheduled rides switch", async ({ page }) => {
   await session(page);
   await page.goto("/drivers/D0006");
-  const card = page.getByRole("region", { name: "Scheduled rides for this driver" });
-  const state = card.getByTestId("scheduled-access").getByRole("status").first();
-  await expect(state).toHaveText(/Paused until \d{4}-\d{2}-\d{2}: 2 late cancels in 7 days/);
-  await expect(card.getByRole("list", { name: "Late cancels in the period" }).getByRole("listitem")).toHaveCount(2);
-  await expect(card).toContainText("Rule: 2 late cancels in 7 days pause scheduled rides for 7 days.");
-  await expect(card.getByRole("radiogroup", { name: "Scheduled rides for the driver" }).getByRole("radio", { name: "On" })).toBeChecked();
-  await card.getByLabel("Days", { exact: true }).fill("3");
-  await card.getByRole("button", { name: "Save for Ingrid Lund" }).click();
-  await confirm(page);
-  await expect(state).toHaveText(`On until ${day(3)}, set by nora. The late-cancel pause is skipped.`);
-  await page.reload();
-  await expect(state).toContainText(`On until ${day(3)}, set by nora`);
-  await expect(card.getByRole("list", { name: "Scheduled rides changes" })).toContainText("Scheduled rides on for 3 days · nora");
-  await card.getByRole("button", { name: "Back to the rule" }).click();
-  await confirm(page);
-  await expect(state).toHaveText(/Paused until/);
+  await expect(page.getByRole("heading").first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Scheduled rides for this driver" })).toHaveCount(0);
+  await expect(page.getByTestId("scheduled-access")).toHaveCount(0);
 });
 
-test("the same scheduled rides control is in Reservations and Dispatch", async ({ page }) => {
+test("G3-R3: Reservations and Dispatch › Reservations have no Drivers' access to scheduled rides card", async ({ page }) => {
   await session(page);
   await page.goto("/reservations");
-  const desk = page.getByRole("region", { name: "Drivers' access to scheduled rides" });
-  const list = desk.getByRole("list", { name: "Drivers paused or off" });
-  await expect(list).toContainText("Ingrid Lund");
-  await expect(list).toContainText("2 late cancels in 7 days");
-  await desk.getByLabel("Driver for scheduled rides").selectOption("D0002");
-  await desk.getByRole("radiogroup", { name: "Scheduled rides for the driver" }).getByText("Off", { exact: true }).click();
-  await desk.getByRole("radiogroup", { name: "How long" }).getByText("Until a date").click();
-  await desk.getByLabel("Last day").fill(day(-1));
-  await expect(desk.getByRole("alert")).toHaveText("The last day must be in the future.");
-  await desk.getByLabel("Last day").fill(day(10));
-  await desk.getByRole("button", { name: "Save for Sara Nyström" }).click();
-  await confirm(page);
-  await expect(list.getByRole("listitem").first()).toContainText(`Sara Nyström`);
-  await expect(list.getByRole("listitem").first()).toContainText(`Off until ${day(10)}, set by nora`);
-
+  await expect(page.getByRole("heading").first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Drivers' access to scheduled rides" })).toHaveCount(0);
   await page.goto("/dispatch?zone=Z001&tab=reservations");
-  const same = page.getByRole("region", { name: "Drivers' access to scheduled rides" });
-  await expect(same.getByRole("list", { name: "Drivers paused or off" }).getByRole("listitem").first()).toContainText(`Off until ${day(10)}, set by nora`);
-  await same.getByRole("list", { name: "Drivers paused or off" }).getByRole("listitem").first().getByRole("link", { name: "Open driver" }).click();
-  await expect(page).toHaveURL(/\/drivers\/D0002/);
-  await expect(page.getByRole("region", { name: "Scheduled rides for this driver" }).getByTestId("scheduled-access")).toContainText(`Off until ${day(10)}`);
+  await expect(page.getByRole("heading").first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Drivers' access to scheduled rides" })).toHaveCount(0);
+  await expect(page.getByText("Drivers paused or off")).toHaveCount(0);
 });
 
 test("the trip page shows the offer log and the cash of a cash trip, and the payout takes it off", async ({ page }) => {
