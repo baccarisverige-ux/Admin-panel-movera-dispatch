@@ -107,3 +107,12 @@ const owedAll = cashOwed(seed.trips, doneTrips[0].driverId!, () => fakeSplit, ()
 assert(owedAll.minor === owedAll.trips * 6_000, "a driver's cash owed adds up the trips");
 
 console.log("present ok");
+
+// Owner G3-R5 (2026-10-30, "Fix all"): on live the Dispatch live map has only what the server sends — online drivers
+// and their stale positions, trips and open requests; no airport queue or boosts (no server source), no demo activity.
+{
+  const { liveBoardLayers } = await import("./present.ts");
+  assert(JSON.stringify(liveBoardLayers(true)) === JSON.stringify(["driver", "stale", "trip", "request"]), "live: no airport queue or boosts layer");
+  assert(liveBoardLayers(false).includes("queue") && liveBoardLayers(false).includes("boost"), "the demo keeps its queue and boosts");
+  console.log("G3-R5 live map layers ok");
+}

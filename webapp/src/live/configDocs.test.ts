@@ -79,6 +79,9 @@ test("DispatchDocument from the zone's rules, the same keys as the contract samp
   assert.deepEqual(Object.keys(doc).sort(), Object.keys(sample("dispatch_document")).sort());
   const back = rulesOfDispatch(doc, { offers: { autoOffline: { on: true, missedExclusive: 10 } }, cancelFees: { driverSharePct: 60 } }, zoneDefault("Z001"));
   assert.equal(back.autoOffline.after, 10);
+  assert.equal(back.autoOffline.noFixMinutes, 5, "G3-R1: without the key the default 5 minutes stays");
+  const fromServer = rulesOfDispatch(doc, { offers: { autoOffline: { on: true, missedExclusive: 10, noFixMinutes: 0 } } }, zoneDefault("Z001"));
+  assert.equal(fromServer.autoOffline.noFixMinutes, 0, "G3-R1: 0 = never is read back from driver_app_config");
   assert.equal(back.riderCancel.driverSharePct, 60);
   assert.deepEqual(back.radar, zone.radar);
 });
@@ -245,4 +248,123 @@ test("live Dispatch (owner 2026-10-28): Spara utkast keeps a server draft; Ångr
   assert.match(await settings.command("admin.dispatch.undo", { targetId: "version 2" })!, /Undone/);
   assert.deepEqual(calls.at(-1), { method: "POST", path: "/admin/config/dispatch/restore", body: { zoneId: "Z001", version: 4, expectedVersion: 5 } });
   await assert.rejects(Promise.resolve(settings.command("admin.dispatch.undo", { targetId: "version 1" })), /no earlier version/);
+});
+
+// G3 (owner 2026-10-30: "every admin setting must work on live"). On live the zones' driver_app_config drafts were
+// "version 3" against "live version 1": a draft that already held a change was compared with itself and skipped, a
+// scope with nothing on the server was skipped, and a zone's own app document hid every Standard publish.
+test("G3: app settings are published when they differ from what is LIVE, also when the draft already holds them", async () => {
+  const { savePublishLive, unpublishedKeys } = await import("./configDocs.ts");
+  const live: Doc = { ...sample("driver_app_config"), zoneId: "Z001" };
+  const changed = { ...live, features: { ...(live["features"] as Doc), newThing: true } };
+  const draft = { version: 3, liveVersion: 1, usesStandard: false, document: changed };
+  const server = fakeServer({});
+  assert.deepEqual(await savePublishLive(server.http, "driver_app_config", "Z001", draft, changed, live), { version: 7 }, "the draft holds the change, drivers still have v1: publish");
+  assert.deepEqual(server.calls.map((c) => `${c.method} ${c.path}`), ["PUT /admin/config/driver_app_config", "POST /admin/config/driver_app_config/publish"]);
+  assert.equal((server.calls[0]!.body as { expectedVersion: number }).expectedVersion, 3);
+  const same = fakeServer({});
+  assert.equal(await savePublishLive(same.http, "driver_app_config", "Z001", { ...draft, document: live }, live, live), null, "same as live: nothing sent");
+  assert.deepEqual(unpublishedKeys(changed, live), ["features"]);
+  assert.deepEqual(unpublishedKeys({ ...live, version: 9, publishedAt: "x" }, live), []);
+});
+
+test("G3: live Settings publish reaches a zone whose draft already holds the change and a scope with nothing on the server", async () => {
+  const live = { ...sample("driver_app_config"), zoneId: "Z002" };
+  // What the Settings exporter builds for Z002 is already the draft; live is still the older document.
+  const probe = fakeServer({ "driver_app_config:Z002": { version: 1, liveVersion: 0, usesStandard: true, document: live } });
+  await createLiveSettings(probe.http, () => "2026-10-27T10:00:00Z").command("admin.config.publish", { targetId: "configuration", value: null, scope: "Z002" });
+  const built = (probe.calls.find((c) => c.method === "PUT" && c.path.includes("driver_app_config"))!.body as { document: Doc }).document;
+  const server = fakeServer({ "driver_app_config:Z002": { version: 3, liveVersion: 1, usesStandard: false, document: built } });
+  const http = { ...server.http, json: async <T,>(path: string) => (path.includes("/history") ? ({ items: [{ version: 1, publishedAt: "2026-10-25T23:13:11Z", action: "publish", document: { ...built, features: {} } }] } as T) : server.http.json<T>(path)) };
+  await createLiveSettings(http, () => "2026-10-27T10:00:00Z").command("admin.config.publish", { targetId: "configuration", value: null, scope: "Z002" });
+  assert.ok(server.calls.some((c) => c.method === "POST" && c.path === "/admin/config/driver_app_config/publish"), "published although the draft equals the built document");
+  // Nothing on the server for the scope (not even a Standard): the admin's document is published, not skipped.
+  const empty = fakeServer({});
+  await createLiveSettings(empty.http, () => "2026-10-27T10:00:00Z").command("admin.config.publish", { targetId: "configuration", value: null, scope: "Z003" });
+  assert.ok(empty.calls.some((c) => c.method === "POST" && c.path === "/admin/config/driver_app_config/publish"), "first document published");
+});
+
+test("G3: a Standard Dispatch publish reaches the drivers of zones that follow the Standard rules but have their own app document", async () => {
+  const book0 = emptyDispatchBook();
+  const book = { ...book0, draftRev: 9, versions: [{ rev: 9, at: "2026-10-30T10:00:00Z", actorId: "A1", note: "", zoneIds: ["standard-SE"], lines: [], live: book0.live, liveCountries: book0.liveCountries }, ...book0.versions] };
+  const rules = (id: string) => dispatchDocumentOf(liveRules(book0, id), id, null);
+  const app = (id: string) => ({ ...sample("driver_app_config"), zoneId: id });
+  const server = fakeServer({
+    "dispatch:standard-SE": { version: 2, liveVersion: 1, document: rules("standard-SE") },
+    "driver_app_config:standard-SE": { version: 4, liveVersion: 2, document: { ...app("standard-SE"), offers: { changed: true } } },
+    "dispatch:Z001": { version: 1, liveVersion: 0, usesStandard: true, document: rules("Z001") },
+    "driver_app_config:Z001": { version: 3, liveVersion: 1, usesStandard: false, document: app("Z001") },
+    "dispatch:Z002": { version: 2, liveVersion: 1, usesStandard: false, document: rules("Z002") },
+    "driver_app_config:Z002": { version: 3, liveVersion: 1, usesStandard: false, document: app("Z002") },
+  });
+  const settings = createLiveSettings(server.http, () => "2026-10-30T10:00:00Z");
+  await settings.command("admin.dispatch.publish", { targetId: "dispatch", value: book });
+  const published = server.calls.filter((c) => c.method === "POST").map((c) => `${c.path} ${JSON.stringify(c.body)}`);
+  assert.ok(published.some((line) => line.startsWith("/admin/config/driver_app_config/publish") && line.includes('"country":"SE"')), published.join("\n"));
+  assert.ok(published.some((line) => line.startsWith("/admin/config/driver_app_config/publish") && line.includes('"zoneId":"Z001"')), "Z001 follows the Standard rules: its drivers get them");
+  assert.ok(!published.some((line) => line.includes('"zoneId":"Z002"')), "Z002 has its own rules: untouched");
+});
+
+test("G3: a Settings publish to the Standard names the zones that keep their own driver app settings", async () => {
+  const app = (id: string) => ({ ...sample("driver_app_config"), zoneId: id });
+  const server = fakeServer({
+    "driver_app_config:standard-SE": { version: 4, liveVersion: 2, document: app("standard-SE") },
+    "rider_app_config:standard-SE": { version: 4, liveVersion: 2, document: { ...sample("rider_app_config"), zoneId: "standard-SE" } },
+    "driver_app_config:Z001": { version: 3, liveVersion: 1, usesStandard: false, document: app("Z001") },
+    "driver_app_config:Z002": { version: 1, liveVersion: 0, usesStandard: true, document: app("Z002") },
+  });
+  const message = await createLiveSettings(server.http, () => "2026-10-30T10:00:00Z").command("admin.config.publish", { targetId: "configuration", value: null, scope: "standard-SE" });
+  assert.match(message!, /own driver app settings and did not get it: Norrmalm\./);
+  assert.ok(!/Södermalm/.test(message!), "Z002 uses the Standard: it got the change");
+});
+
+test("G3: reading Dispatch tells which parts of a zone's driver app settings are saved but not live", async () => {
+  const { unpublishedMarks } = await import("./liveSettings.ts");
+  const live = { ...sample("driver_app_config"), zoneId: "Z001" };
+  const server = fakeServer({
+    "dispatch:Z001": { version: 2, liveVersion: 1, usesStandard: false, document: dispatchDocumentOf(liveRules(emptyDispatchBook(), "Z001"), "Z001", null) },
+    "driver_app_config:Z001": { version: 3, liveVersion: 1, usesStandard: false, document: { ...live, offers: { changed: true } } },
+    "driver_app_config:Z002": { version: 3, liveVersion: 1, usesStandard: false, document: { ...live, zoneId: "Z002" } },
+    "dispatch:Z002": { version: 2, liveVersion: 1, usesStandard: false, document: dispatchDocumentOf(liveRules(emptyDispatchBook(), "Z002"), "Z002", null) },
+  });
+  const http = { ...server.http, json: async <T,>(path: string) => {
+    if (path.startsWith("/admin/config/driver_app_config/history?zoneId=Z001")) return { items: [{ version: 1, publishedAt: "2026-10-25T23:13:11Z", action: "publish", document: live }] } as T;
+    if (path.startsWith("/admin/config/driver_app_config/history?zoneId=Z002")) return { items: [{ version: 1, publishedAt: "2026-10-25T23:13:11Z", action: "publish", document: { ...live, zoneId: "Z002" } }] } as T;
+    return server.http.json<T>(path);
+  } };
+  await createLiveSettings(http, () => "2026-10-30T10:00:00Z").readSlice("dispatchRules", null);
+  assert.deepEqual(unpublishedMarks.get("driver_app_config", "Z001"), ["offers"]);
+  assert.deepEqual(unpublishedMarks.get("driver_app_config", "Z002"), [], "draft version 3 vs live 1 with the same content: nothing waiting");
+});
+
+test("G3: Publish to drivers publishes the zone's saved driver app draft as it is", async () => {
+  const { unpublishedMarks } = await import("./liveSettings.ts");
+  const server = fakeServer({ "driver_app_config:Z001": { version: 3, liveVersion: 1, usesStandard: false, document: { ...sample("driver_app_config"), zoneId: "Z001" } } });
+  const settings = createLiveSettings(server.http, () => "2026-10-30T10:00:00Z");
+  assert.match(await settings.command("admin.config.publishAppDraft", { targetId: "Z001" })!, /Published/);
+  assert.deepEqual(server.calls.filter((c) => c.method !== "GET"), [{ method: "POST", path: "/admin/config/driver_app_config/publish", body: { expectedVersion: 3, zoneId: "Z001" } }]);
+  assert.deepEqual(unpublishedMarks.get("driver_app_config", "Z001"), []);
+  await assert.rejects(Promise.resolve(settings.command("admin.config.publishAppDraft", { targetId: "standard-SE" })));
+});
+
+// Owner G3-D8 (2026-10-30): "Keep each zone own setting and add copy all zone botton".
+test("G3-D8: Copy to all zones copies the driver app settings to every zone of the country and publishes; zones keep their own", async () => {
+  const live = await import("./liveSettings.ts");
+  const app = (id: string, extra: Doc = {}) => ({ ...sample("driver_app_config"), zoneId: id, ...extra });
+  const server = fakeServer({
+    "driver_app_config:Z001": { version: 3, liveVersion: 1, usesStandard: false, document: app("Z001", { offers: { source: true }, features: { wallet: false } }) },
+    "driver_app_config:Z002": { version: 3, liveVersion: 1, usesStandard: false, document: app("Z002") },
+    "driver_app_config:Z003": { version: 1, liveVersion: 0, usesStandard: true, document: app("Z003") },
+  });
+  const settings = createLiveSettings(server.http, () => "2026-10-30T10:00:00Z");
+  assert.ok(live.copyTargets("Z001").includes("Z002") && !live.copyTargets("Z001").includes("Z001") && !live.copyTargets("Z001").includes("FR-PC"));
+  assert.match(await settings.command("admin.config.copyAppToZones", { targetId: "Z001" })!, /Copied/);
+  const puts = server.calls.filter((c) => c.method === "PUT").map((c) => c.body as { zoneId: string; document: Doc });
+  for (const zone of ["Z002", "Z003"]) {
+    const sent = puts.find((b) => b.zoneId === zone)!;
+    assert.deepEqual([sent.document["offers"], sent.document["features"], sent.document["zoneId"]], [{ source: true }, { wallet: false }, zone]);
+  }
+  assert.ok(!puts.some((b) => b.zoneId === "Z001"));
+  assert.ok(server.calls.some((c) => c.method === "POST" && (c.body as { zoneId?: string }).zoneId === "Z003"), "published to the drivers");
+  assert.ok(!server.calls.some((c) => c.path.includes("use-standard")), "no zone is set back to the Standard");
 });

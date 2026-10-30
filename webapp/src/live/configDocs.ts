@@ -197,9 +197,11 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     if (d.exclusiveWhileDriving) zone.exclusiveWhileDriving = { ...d.exclusiveWhileDriving };
     if (Array.isArray(d.waiting)) zone.waiting = d.waiting.map((step) => ({ ...step, ...(step.extraMin === null ? { extraMin: undefined } : {}) })).map(({ extraMin, ...rest }) => (extraMin === undefined ? rest : { ...rest, extraMin }));
   }
-  const offers = (driver?.["offers"] ?? null) as { radarApp?: ZoneDispatch["radarApp"]; autoOffline?: { on?: boolean; missedExclusive?: number } } | null;
+  const offers = (driver?.["offers"] ?? null) as { radarApp?: ZoneDispatch["radarApp"]; autoOffline?: { on?: boolean; missedExclusive?: number; noFixMinutes?: number } } | null;
   if (offers?.radarApp) zone.radarApp = { ...zone.radarApp, ...offers.radarApp };
-  if (offers?.autoOffline && typeof offers.autoOffline.missedExclusive === "number") zone.autoOffline = { on: offers.autoOffline.on ?? true, after: offers.autoOffline.missedExclusive };
+  if (offers?.autoOffline && typeof offers.autoOffline.missedExclusive === "number") zone.autoOffline = { ...zone.autoOffline, on: offers.autoOffline.on ?? true, after: offers.autoOffline.missedExclusive };
+  // G3-R1 (v0.18.4): minutes without a position before the server sets the driver offline (0 = never).
+  if (offers?.autoOffline && typeof offers.autoOffline.noFixMinutes === "number") zone.autoOffline = { ...zone.autoOffline, noFixMinutes: offers.autoOffline.noFixMinutes };
   const share = (driver?.["cancelFees"] as { driverSharePct?: number } | undefined)?.driverSharePct;
   if (typeof share === "number") zone.riderCancel = { ...zone.riderCancel, driverSharePct: share };
   return zone;
@@ -305,6 +307,38 @@ export async function savePublish(http: ConfigHttp, doc: ConfigDocName, id: stri
     if (isStatus(error, 409)) throw new SettingsChanged();
     throw error;
   }
+}
+
+/**
+ * G3 (owner: "every admin setting must work on live"): an app document's draft and live versions count apart, so
+ * "draft version 3, live version 1" alone does not mean unpublished. What drivers get is the live document: compare
+ * with it. `live` is the scope's newest published document (a Doc), null when the scope has none of its own, or
+ * undefined when the server cannot say (a country Standard has no history read): then a server draft row (version
+ * above 1) may hold unpublished changes, so it is published rather than skipped.
+ */
+export async function savePublishLive(http: ConfigHttp, doc: ConfigDocName, id: string, draft: Draft | null, document: Doc, live: Doc | null | undefined): Promise<{ version: number } | null> {
+  if (draft && draft.liveVersion > 0 && !draft.usesStandard) {
+    if (live && sameDocument(live, document)) return null;
+    if (live === undefined && draft.version <= 1 && sameDocument(draft.document, document)) return null;
+  }
+  // The skip is decided above; savePublish only takes the draft's version from here.
+  return savePublish(http, doc, id, draft ? { ...draft, liveVersion: 0 } : null, document);
+}
+
+const META_KEYS = new Set(["version", "publishedAt", "usesStandard"]);
+
+/** The top-level parts that differ between a draft and the live document (keys only, never values). */
+export function unpublishedKeys(draft: Doc, live: Doc): string[] {
+  const keys = new Set([...Object.keys(draft), ...Object.keys(live)]);
+  return [...keys].filter((key) => !META_KEYS.has(key) && JSON.stringify(draft[key]) !== JSON.stringify(live[key])).sort();
+}
+
+/** The newest published document of a zone (GET …/history?zoneId&limit=1); undefined for a Standard or when unreadable. */
+export async function liveDocumentOf(http: ConfigHttp, doc: ConfigDocName, id: string): Promise<Doc | null | undefined> {
+  if (countryOfStandard(id)) return undefined;
+  const page = await http.json<{ items?: HistoryEntry[] }>(`/admin/config/${doc}/history?zoneId=${encodeURIComponent(id)}&limit=1`).catch(() => undefined);
+  if (!page) return undefined;
+  return page.items?.[0]?.document ?? null;
 }
 
 /** Owner 2026-10-28: Dispatch "Spara utkast" keeps the draft on the server without making it live. */

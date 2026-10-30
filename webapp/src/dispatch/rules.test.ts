@@ -145,21 +145,21 @@ assert(zoneIssues({ ...base, radarApp: { ...base.radarApp, popupSplitByDriving: 
 const oldScreens = normalizeDispatchBook(JSON.parse(JSON.stringify({ ...emptyDispatchBook(), live: { Z001: { ...base, radarApp: { fullOn: true, full: 6, popupOn: true, popup: 3 } } } })));
 const oldApp = liveRules(oldScreens, "Z001").radarApp;
 assert(oldApp.full === 6 && oldApp.popup === 3 && oldApp.fullLockWhileDriving === true && oldApp.popupSplitByDriving === false && oldApp.popupWhileDriving === 1, "an older save gets the new radar screen settings from the defaults");
-assert(copyParts({ ...base, radar: { ...base.radar, seconds: 44 }, autoOffline: { on: true, after: 7 } }, zoneDefault("Z002"), ["radar"]).radar.seconds === 44, "copying the Radar tab copies the Radar rules");
-assert(copyParts({ ...base, autoOffline: { on: true, after: 7 } }, zoneDefault("Z002"), ["radar"]).autoOffline.after === 7, "going offline automatically belongs to the Radar tab");
+assert(copyParts({ ...base, radar: { ...base.radar, seconds: 44 }, autoOffline: { on: true, after: 7, noFixMinutes: 5 } }, zoneDefault("Z002"), ["radar"]).radar.seconds === 44, "copying the Radar tab copies the Radar rules");
+assert(copyParts({ ...base, autoOffline: { on: true, after: 7, noFixMinutes: 5 } }, zoneDefault("Z002"), ["radar"]).autoOffline.after === 7, "going offline automatically belongs to the Radar tab");
 assert(copyParts({ ...base, exclusive: { ...base.exclusive, seconds: 33 } }, zoneDefault("Z002"), ["exclusive"]).exclusive.seconds === 33, "copying the Exclusive tab copies the Exclusive rules");
 assert(copyParts({ ...base, exclusive: { ...base.exclusive, seconds: 33 } }, zoneDefault("Z002"), ["modes"]).exclusive.seconds !== 33, "the Modes tab no longer carries Exclusive");
 const offline = rankDrivers(base, country, request, [driver("quiet", { noInRow: 10 })]);
 assert(offline[0].out?.includes("offline"), "driver goes offline after offers not accepted");
 assert(!rankDrivers(base, country, request, [driver("quiet", { noInRow: 9 })])[0].out?.includes("offline"), "owner decision 35: 9 offers not accepted in a row is not yet offline (10 is)");
-assert(!rankDrivers({ ...base, autoOffline: { on: false, after: 5 } }, country, request, [driver("quiet", { noInRow: 6 })])[0].out?.includes("offline"), "auto offline can be off");
+assert(!rankDrivers({ ...base, autoOffline: { on: false, after: 5, noFixMinutes: 5 } }, country, request, [driver("quiet", { noInRow: 6 })])[0].out?.includes("offline"), "auto offline can be off");
 const busyDriver = driver("busy", { finishing: { inMin: 2, dropKm: 0.5 } });
 // Q18: a driver with a rider gets Exclusive offers only, never Radar.
 assert(!simulate(base, rankDrivers(base, country, request, [busyDriver]), "radar")[0].detail.includes("busy"), "no Radar offers while driving a rider");
 assert(simulate(base, rankDrivers(base, country, request, [busyDriver]), "exclusive")[0].title === "Exclusive to busy", "Exclusive while driving reaches a driver with a rider");
 const noDriving = { ...base, exclusiveWhileDriving: { on: false, count: 1 } };
 assert(simulate(noDriving, rankDrivers(noDriving, country, request, [busyDriver]), "exclusive")[0].title !== "Exclusive to busy", "no offers while driving when Exclusive while driving is off");
-assert(changeLines(base, { ...base, autoOffline: { on: true, after: 8 } })[0] === "Offline after offers not accepted: 10 → 8", "change line for auto offline");
+assert(changeLines(base, { ...base, autoOffline: { on: true, after: 8, noFixMinutes: 5 } })[0] === "Offline after offers not accepted: 10 → 8", "change line for auto offline");
 
 // Ride check: four triggers, each on or off, with their numbers.
 const rcDefault = base.rideCheck;
@@ -401,8 +401,8 @@ assert(exclusiveReasonText({ ...base.exclusiveReasons, favourite: { text: "Your 
 assert(zoneIssues({ ...base, exclusiveReasons: { ...base.exclusiveReasons, "best-match": { text: " ", on: true } } }).some((line) => line.includes("needs a short text")), "a reason that is on needs a text");
 assert(zoneIssues({ ...base, exclusiveReasons: { ...base.exclusiveReasons, nearby: { text: "Only for you because you are very close", on: true } } }).some((line) => line.includes("too long")), "a reason is short");
 assert(zoneIssues({ ...base, exclusiveReasons: { ...base.exclusiveReasons, nearby: { text: "", on: false } } }).length === 0, "a reason that is off needs no text");
-assert(zoneIssues({ ...base, autoOffline: { on: true, after: 1 } }).length === 0 && zoneIssues({ ...base, autoOffline: { on: true, after: 99 } }).length === 0, "going offline allows 1 to 99 offers");
-assert(zoneIssues({ ...base, autoOffline: { on: true, after: 100 } })[0] === "Go offline automatically: must be after 1 to 99 offers.", "100 is too many");
+assert(zoneIssues({ ...base, autoOffline: { on: true, after: 1, noFixMinutes: 5 } }).length === 0 && zoneIssues({ ...base, autoOffline: { on: true, after: 99, noFixMinutes: 5 } }).length === 0, "going offline allows 1 to 99 offers");
+assert(zoneIssues({ ...base, autoOffline: { on: true, after: 100, noFixMinutes: 5 } })[0] === "Go offline automatically: must be after 1 to 99 offers.", "100 is too many");
 assert(base.hiddenComesBackMin === 2 && zoneIssues({ ...base, hiddenComesBackMin: 0 }).some((line) => line.includes("come back after 1 to 60")), "a hidden trip comes back after 2 min by default");
 assert(base.exclusiveWhileDriving.on && base.exclusiveWhileDriving.count === 1 && !("drivingOn" in base.radarApp), "Exclusive while driving replaces Radar offers while driving");
 assert(zoneIssues({ ...base, exclusiveWhileDriving: { on: true, count: 6 } })[0] === "Exclusive while driving: must be 1 to 5 offers at a time.", "while driving has a limit");
@@ -487,3 +487,9 @@ const oldSafety = liveRules({ ...emptyDispatchBook(), live: { Z001: { safety: { 
 assert(!("cancelAbove" in oldSafety.safety) && oldSafety.safety.maxCancel && !("cancelAbove" in zoneDefault("Z001").safety), "the old zone cancel rate number is gone");
 
 console.log("dispatch rules ok");
+
+// G3-R1 (2026-10-30, contract v0.18.4): no position for noFixMinutes minutes → set offline; default 5, 0 = never, at most 120.
+assert(zoneDefault("Z001").autoOffline.noFixMinutes === 5, "set offline without position: 5 minutes by default");
+assert(zoneIssues({ ...base, autoOffline: { ...base.autoOffline, noFixMinutes: 0 } }).length === 0, "0 = never is allowed");
+assert(zoneIssues({ ...base, autoOffline: { ...base.autoOffline, noFixMinutes: 121 } })[0] === "Set offline without position: must be 0 to 120 minutes (0 = never).", "more than 120 minutes is refused");
+assert(changeLines(base, { ...base, autoOffline: { ...base.autoOffline, noFixMinutes: 8 } })[0] === "Set offline after minutes without position: 5 → 8", "change line for minutes without position");

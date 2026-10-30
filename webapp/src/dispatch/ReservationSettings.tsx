@@ -5,7 +5,6 @@ import type { MarketId } from "../markets/markets";
 import { Card, Choice, Num, Row, Switch } from "./fields";
 import { ReservationTimelinePreview, spanLabel } from "./Previews";
 import { BookingPolicyCard } from "./BookingPolicy";
-import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
 import {
   HOME_POPUP_TO, LATE_ETA_REASSIGN_TO, leaveNowBeforeMin, raiseCap, raiseSplit, RESERVATION_CANCEL_TO, RESERVATION_LIST_TO, RIDE_TYPES, smartGapMin,
   type DriverGroup, type LateEtaRules, type ReservationRules, type RideTypeId, type RideTypeRule, type ZoneDispatch,
@@ -57,7 +56,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
   return (
     <div className="dx-cards">
       <Card title={tr("Reservations")} tone="orange" icon={<CalendarClock size={18} />} help={tr("Rides booked for later. Nobody took it yet: Scheduled rides, then the Home popup, then Exclusive, then Radar trips.")} off={!resv.on} aside={<Switch label={tr("Reservations")} on={resv.on} disabled={disabled} onChange={(on) => setResv({ on })} />}>
-        {!resv.on ? <p className="dx-note warn" role="status">{trn("{0} Reservations are off for every driver in this zone: nobody gets new reservations. Rides drivers already accepted still run. To pause one driver, use Drivers' access to scheduled rides below.", <AlertTriangle size={13} aria-hidden="true" />)}</p> : null}
+        {!resv.on ? <p className="dx-note warn" role="status">{trn("{0} Reservations are off for every driver in this zone: nobody gets new reservations. Rides drivers already accepted still run.", <AlertTriangle size={13} aria-hidden="true" />)}</p> : null}
         <Row label={tr("Start looking for a driver")} help={tr("Before the pickup time.")}>
           <Num label={tr("Reservation search starts")} value={resv.searchBeforeMin} unit="min before" min={5} max={240} disabled={off} onChange={(searchBeforeMin) => setResv({ searchBeforeMin })} />
         </Row>
@@ -170,8 +169,6 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
         </Row>
         <p className="dx-note">{trn("{0} Drivers never pay. Every driver cancel counts in the cancel rate{1}.", <UserX size={13} aria-hidden="true" />, resv.latePause ? tr("; {0} late cancel{1} in {2} days pause scheduled rides for {3} days", [resv.latePauseAfter, resv.latePauseAfter === 1 ? "" : "s", resv.latePeriodDays, resv.latePauseDays]) : "")}</p>
       </Card>
-
-      <ScheduledAccessCard />
 
       <Card title={tr("No driver near pickup")} tone="orange" icon={<Bell size={18} />} help={tr("Nobody took it and pickup is close.")} off={!resv.on}>
         <Row label={tr("Admin alert")} help={tr("The ride shows in Live and in Alerts as “Booked ride soon with no driver”, so you can give it to a driver.")}>

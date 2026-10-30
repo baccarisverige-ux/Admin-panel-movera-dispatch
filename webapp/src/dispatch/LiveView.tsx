@@ -9,7 +9,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { RiderQuickActions, RiderRowActions } from "./HandlePanel";
 import { OnTheWayGroup, useOnTheWay } from "./RideProgress";
 import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
-import { supplyDemand } from "../dashboard/insights";
+import { useSupply } from "../dashboard/useSupply";
 import { LiveMapLayerChips, LiveMapQuickPopup, useLiveMapExtras, type QuickTarget } from "../pricing/LiveMapExtras";
 import { DriverSurgeLegend, SurgeLegend } from "../pricing/SurgeControls";
 import { MapPanel } from "./maps";
@@ -63,7 +63,9 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
   const [quick, setQuick] = useState<QuickTarget>(null);
   // Live: the zones' switches are the server's (GET/PUT /admin/zones/{zoneId}/dispatch-control).
   const liveControls = useLiveDispatchControls(zones.map((zone) => zone.id));
-  const extras = useLiveMapExtras({ prefKey: "dispatch", country: market.id, market, zoneIds: zones.map((zone) => zone.id), balance: supplyDemand(market.id, zones.map((zone) => zone.id), waiting, drivers), now: Date.now() });
+  // G3-D5: one supply/demand source (live: the server's zoneSupply, every online driver counted in his zone).
+  const balance = useSupply(market.id, zones.map((zone) => zone.id), waiting, drivers);
+  const extras = useLiveMapExtras({ prefKey: "dispatch", country: market.id, market, zoneIds: zones.map((zone) => zone.id), balance, now: Date.now() });
   // Rides a driver just accepted: listed apart and still on the map, so "See on map" shows who is on the way.
   const allOnTheWay = useOnTheWay();
   const onTheWay = allOnTheWay.filter((item) => ids.has(item.zoneId) && !waiting.some((request) => request.tripId === item.tripId));
@@ -72,7 +74,7 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
   for (const zone of zones) {
     const rules = rulesOf(zone.id);
     const zoneWaiting = waiting.filter((request) => request.zoneId === zone.id && !handled.has(request.tripId));
-    const free = drivers.filter((driver) => driver.zoneId === zone.id && driver.state === "free").length;
+    const free = balance.find((row) => row.zoneId === zone.id)?.free ?? 0;
     for (const alert of rules.alerts.filter((item) => item.on && item.panel)) {
       if (alert.id === "long_wait") for (const request of zoneWaiting.filter((item) => item.waitingMin >= alert.limit)) alerts.push({ id: `${alert.id}:${request.tripId}`, zoneId: zone.id, tone: "red", text: `${request.rider} has waited ${request.waitingMin} min in ${zone.name}`, tripId: request.tripId });
       if (alert.id === "few_drivers" && free <= alert.limit) alerts.push({ id: `${alert.id}:${zone.id}`, zoneId: zone.id, tone: "orange", text: `Only ${free} free driver${free === 1 ? "" : "s"} in ${zone.name}` });
@@ -80,7 +82,6 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
     }
   }
 
-  const balance = supplyDemand(market.id, zones.map((zone) => zone.id), waiting, drivers);
   const surgeLink = (zoneId: string) => (role && can(role, "settings.read") ? withScope(`/pricing?zone=${zoneId}&tab=surge`) : null);
 
   return (

@@ -1,12 +1,12 @@
 import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { isLiveData, liveDriverOf } from "../live/realData";
+import { useDriverPerformance } from "../live/useDriverPerformance";
 import { DASH, liveDriverMonth, liveJoinedAt, liveLastOnline, orDash } from "../live/driverFacts";
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { LiveDocBox } from "../live/LiveDocBox";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
-import { ScheduledAccessCard } from "../drivers/ScheduledAccess";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Building2, Car, CheckCircle2, Hash, Mail, MapPin, MessageSquare, Phone, Star, StickyNote } from "lucide-react";
@@ -50,6 +50,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { SensitiveValue } from "../ui/SensitiveValue";
 import { TabPanel, Tabs } from "../ui/Tabs";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { auditActionText, auditActorText, auditDetailText } from "../live/format";
 
 const TABS = ["Overview", "Documents", "Performance", "Earnings", "Trips", "Vehicles", "Messages", "Notes", "Activity"];
 const CATEGORIES: Vehicle["category"][] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
@@ -272,7 +273,7 @@ export function DriverDetailPage() {
               {fleet ? (
                 <Link className="fd-chip fleet" to={`/fleets/${fleet.ownerId ?? ""}`}><Building2 size={13} aria-hidden="true" />{fleet.name}</Link>
               ) : <span className="fd-chip">{tr("Independent driver")}</span>}
-              <span className="fd-chip"><Star size={13} aria-hidden="true" />{liveData ? orDash(liveFacts?.rating, (value) => value.toFixed(2)) : ops.ratings.stars.toFixed(2)}</span>
+              <span className="fd-chip"><Star size={13} aria-hidden="true" />{liveData ? <LiveRating driverId={driver.id} facts={liveFacts} /> : ops.ratings.stars.toFixed(2)}</span>
               {liveData ? null : <DocSummary counts={health} total={required.length} />}
             </div>
             <p className="fd-sub">{driver.id} · {statusLabel(driver.status)} · {zoneById(driver.zoneId)?.name ?? driver.zoneId}, {trx(market.name)}</p>
@@ -374,7 +375,6 @@ export function DriverDetailPage() {
               })}
             </div>
           </section>
-          <ScheduledAccessCard driverId={driver.id} />
           {current ? (
             <div className="fd-current">
               <h3>{tr("Current trip")}</h3>
@@ -410,7 +410,7 @@ export function DriverDetailPage() {
             </section>
             <section className="fd-box">
               <h3>{tr("This month")}</h3>
-              {liveData ? <LiveMonth facts={liveFacts} /> : (
+              {liveData ? <LiveMonth driverId={driver.id} facts={liveFacts} /> : (
               <div className="fd-stats compact">
                 <Stat label={tr("Rating")} value={sinceMonth.rating ? sinceMonth.rating.toFixed(2) : "—"} warn={performanceWarning("rating", sinceMonth.rating)} />
                 <Stat label={tr("Trips")} value={String(sinceMonth.trips)} />
@@ -454,7 +454,7 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="performance" activeId={tab}>
-          {liveData ? <LiveMonth facts={liveFacts} /> : <>
+          {liveData ? <LiveMonth driverId={driver.id} facts={liveFacts} /> : <>
           <div className="fd-section-head">
             <div><h3>{tr("Performance")}</h3><p>{trx(span.label)} · {span.compareLabel}</p></div>
             <PeriodPicker key={`${period.kind}${period.on ?? ""}${period.from ?? ""}`} period={period} today={localDay(now, market.timeZone)} onChange={(next) => setParams(periodParams(next, params))} />
@@ -489,7 +489,7 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="earnings" activeId={tab}>
-          {liveData ? <><LiveMonth facts={liveFacts} earnings />{bankBox}</> : <>
+          {liveData ? <><LiveMonth driverId={driver.id} facts={liveFacts} earnings />{bankBox}</> : <>
           <div className="fd-section-head">
             <div><h3>{tr("Earnings")}</h3><p>{trx(span.label)} · {fleet ? tr("paid to {0}", [fleet.name]) : tr("paid to the driver")}</p></div>
             <div className="fd-head-tools">
@@ -609,7 +609,7 @@ export function DriverDetailPage() {
             <section className="fd-box">
               <h3>{tr("Audited actions")}</h3>
               {driverAudits.length === 0 ? <p className="state-line">{tr("No audited action on this driver yet.")}</p> : (
-                <ul className="fd-timeline">{driverAudits.map((item) => <li key={item.id}>{item.at.slice(0, 16).replace("T", " ")} · {item.action} · {item.result} · {item.actorId}</li>)}</ul>
+                <ul className="fd-timeline">{driverAudits.map((item) => <li key={item.id}>{item.at.slice(0, 16).replace("T", " ")} · {auditActionText(item.action)}{auditDetailText(item) ? ` · ${auditDetailText(item)}` : ""} · {item.result} · {auditActorText(item.actorId)}</li>)}</ul>
               )}
               <h3>{tr("Support and safety")}</h3>
               <ul className="fd-timeline">
@@ -625,16 +625,22 @@ export function DriverDetailPage() {
   );
 }
 
-/** Live (owner G2c): the server's rating; trips, rates, hours and earnings per driver are not sent yet, so "—". */
-function LiveMonth({ facts, earnings = false }: { facts: ReturnType<typeof liveDriverOf>; earnings?: boolean }) {
-  const month = liveDriverMonth(facts);
+/** Live (owner G3-D2): the server's Driver.performance (rating, acceptance %, cancel %, last 30 days); "—" when null. */
+function LiveRating({ driverId, facts }: { driverId: string; facts: ReturnType<typeof liveDriverOf> }) {
+  const month = liveDriverMonth(facts, useDriverPerformance(driverId));
+  return <>{orDash(month.rating, (value) => value.toFixed(2))}</>;
+}
+
+/** Live (owner G2c, G3-D2): rating, acceptance and cancel rate from Driver.performance; trips, hours and earnings per driver are not sent yet, so "—". */
+function LiveMonth({ driverId, facts, earnings = false }: { driverId: string; facts: ReturnType<typeof liveDriverOf>; earnings?: boolean }) {
+  const month = liveDriverMonth(facts, useDriverPerformance(driverId));
   return (
     <div className="fd-stats compact" data-testid="live-driver-month">
       {earnings ? null : <>
         <Stat label={tr("Rating")} value={orDash(month.rating, (value) => value.toFixed(2))} warn={month.rating === null ? null : performanceWarning("rating", month.rating)} />
         <Stat label={tr("Trips")} value={orDash(month.trips)} />
-        <Stat label={tr("Acceptance")} value={orDash(month.acceptancePct, (value) => `${value}%`)} />
-        <Stat label={tr("Cancel rate")} value={orDash(month.cancellationPct, (value) => `${value}%`)} />
+        <Stat label={tr("Acceptance")} value={orDash(month.acceptancePct, (value) => `${value}%`)} warn={month.acceptancePct === null ? null : performanceWarning("acceptancePct", month.acceptancePct)} />
+        <Stat label={tr("Cancel rate")} value={orDash(month.cancellationPct, (value) => `${value}%`)} warn={month.cancellationPct === null ? null : performanceWarning("cancellationPct", month.cancellationPct)} />
         <Stat label={tr("Online")} value={orDash(month.onlineHours, (value) => `${value} h`)} />
       </>}
       <Stat label={tr("Net earnings")} value={orDash(month.netMinor)} />

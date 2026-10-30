@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { NotConnected } from "../live/NotConnected";
-import { PublishTargetsLine } from "../live/StandardBar";
+import { CopyToAllZones, PublishTargetsLine } from "../live/StandardBar";
+import { zoneById as zoneNameOf } from "../markets/markets";
 import { publishTargets } from "../markets/scope";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -207,6 +208,9 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
 
       {/* Owner 2026-10-28: one admin is enough everywhere, so the live panel has no second-admin limit. */}
       {liveAdmin ? null : <RefundPolicyPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setRefundDirty} />}
+
+      {/* G3-D8: one zone (or the Standard) chosen at the top: its driver app settings can be copied to every zone. */}
+      {liveSession && settingsTargets.length === 1 ? <CopyToAllZones zoneId={settingsTargets[0]} zoneName={zoneNameOf(settingsTargets[0])?.name ?? settingsTargets[0]} canEdit={Boolean(agent && can(agent.role, "settings.publish"))} /> : null}
 
       <CountryAppsPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setCountryDirty} />
 

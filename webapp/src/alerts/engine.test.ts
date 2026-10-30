@@ -71,6 +71,15 @@ assert(by("sos:I1")?.level === "critical" && by("sos:I1")?.incidentId === "I1", 
 assert(by("sos:I2")?.title.includes("not solved after 40 min"), "SOS taken 40 min ago stays, marked not solved");
 assert(by("long_wait:T1")?.level === "important" && by("long_wait:T2")?.level === "critical" && !by("long_wait:T3"), "wait levels use the Dispatch limit");
 assert(by("few_drivers:Z001:2026-10-12") && !by("few_drivers:Z002:2026-10-12"), "few drivers per zone");
+// G3-D5 (owner 2026-10-30 "Fix it"): no rider waiting, or enough free drivers for those waiting: no "few drivers" alert;
+// live, the server's zoneSupply numbers (every online driver counted) are the ones used.
+{
+  const quiet = computeAlerts({ ...facts, requests: [], freeByZone: { Z001: 0, Z002: 0 } }, book.settings, book.rules);
+  assert(!quiet.some((alert) => alert.kind === "few_drivers"), "nobody waits: no few-drivers alert");
+  const served = computeAlerts({ ...facts, supplyByZone: { Z001: { free: 2, waiting: 2 }, Z002: { free: 0, waiting: 1 } } }, book.settings, book.rules);
+  assert(!served.some((alert) => alert.id === "few_drivers:Z001:2026-10-12"), "server: 2 waiting, 2 free: no shortage");
+  assert(served.find((alert) => alert.id === "few_drivers:Z002:2026-10-12")?.title === "Only 0 free drivers in Södermalm", "server: 1 waiting, 0 free: shortage");
+}
 assert(by("late_reservation:R1")?.level === "critical", "booked ride with 15 min left");
 assert(by("doc_expiring:D1:Driving licence")?.level === "important" && !by("doc_expiring:D2:Insurance"), "documents by days left");
 assert(by("low_rating:D3")?.level === "important", "low rating");

@@ -457,7 +457,7 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
       assignAcceptSeconds: zone.reservation.assignAcceptSec,
       offerCard: { ...zone.offerCard },
       exclusiveReasons: exclusiveReasonList(zone.exclusiveReasons),
-      autoOffline: { on: zone.autoOffline.on, missedExclusive: zone.autoOffline.after, hiddenComesBackMin: zone.hiddenComesBackMin },
+      autoOffline: { on: zone.autoOffline.on, missedExclusive: zone.autoOffline.after, noFixMinutes: zone.autoOffline.noFixMinutes, hiddenComesBackMin: zone.hiddenComesBackMin },
       radarApp: { ...zone.radarApp },
       exclusiveWhileDriving: { ...zone.exclusiveWhileDriving },
       // Radar zones drawn inside this zone and the rules that apply to them (Radar · Exclusive · Reservations). Additive keys.

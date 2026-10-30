@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import { isLiveData } from "../live/realData";
+import { useLiveZoneList } from "../live/LiveZones";
+import { shapeOfServerZone } from "../zones/live";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { Link } from "react-router";
 import { useDrivers, useRecords, useSlice, useTrips } from "../api/hooks";
 import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
 import { market } from "../markets/markets";
 import {
+  liveBoardLayers,
   liveMarkers,
   moveMarker,
   offerBlock,
@@ -16,7 +20,7 @@ import {
 import { CommandButton } from "../ui/CommandButton";
 import { stockholmZones } from "../zones/releases";
 import { ZoneCanvas } from "./ZoneCanvas";
-import { tr, trx } from "../i18n";
+import { currentLanguage, tr, trx } from "../i18n";
 
 const LAYERS: { id: LiveKind | "stale"; label: string }[] = [
   { id: "driver", label: "Online drivers" },
@@ -34,19 +38,28 @@ function visible(marker: LiveMarker, layers: Record<string, boolean>): boolean {
 }
 
 export function LivePage() {
+  // G3-R5 (owner 2026-10-30): on live the zone map draws the server's zones (GET /admin/zones) and none of the demo
+  // activity (drivers, trips, requests, airport queue, boosts, events); those are on the live board above from the server.
+  const live = isLiveData();
+  const serverZones = useLiveZoneList();
+  const zones = useMemo(() => (live ? (serverZones ?? []).map((zone) => shapeOfServerZone(zone, currentLanguage())) : stockholmZones()), [live, serverZones]);
+  const activity = !live;
   return (
     <>
       <LiveBoard />
-      <ZoneCanvas
-        zones={stockholmZones()}
-        selectedId="op-norrmalm"
-        mode="select"
-        layers={{ drivers: true, trips: true, requests: true, demandHour: false, demand7d: false, pickups: true, queue: true, boosts: true, events: true, gaps: false, before: false, districts: false, satellite: false }}
-        focus={null}
-        selectionNonce={0}
-        onDrawn={() => undefined}
-        onEdited={() => undefined}
-      />
+      <div data-testid="live-zone-map" data-zone-ids={zones.map((zone) => zone.id).join(",")} data-activity={activity ? "on" : "off"}>
+        <ZoneCanvas
+          zones={zones}
+          selectedId={live ? "" : "op-norrmalm"}
+          mode="select"
+          layers={{ drivers: activity, trips: activity, requests: activity, demandHour: false, demand7d: false, pickups: activity, queue: activity, boosts: activity, events: activity, gaps: false, before: false, districts: false, satellite: false }}
+          focus={null}
+          selectionNonce={0}
+          onDrawn={() => undefined}
+          onEdited={() => undefined}
+          {...(live ? { fitIds: zones.map((zone) => zone.id), viewKey: zones.map((zone) => zone.id).join(",") } : {})}
+        />
+      </div>
       <DispatchLink />
     </>
   );
@@ -74,6 +87,8 @@ function LiveBoard() {
     return () => window.clearInterval(id);
   }, []);
 
+  const live = isLiveData();
+  const shownLayers = LAYERS.filter((layer) => liveBoardLayers(live).includes(layer.id));
   const markers = liveMarkers(drivers.data ?? [], trips.data ?? []).map((marker) => moveMarker(marker, tick));
   const selected = markers.find((marker) => marker.id === selectedId) ?? null;
   const selectedTripId = selected?.kind === "request"
@@ -109,17 +124,19 @@ function LiveBoard() {
       <div className="page-heading">
         <div>
           <h2>{tr("Live map")}</h2>
-          <p>{tr("OpenStreetMap. Positions refresh in the demo. Stale markers stay grey and cannot be selected as dispatch candidates.")}</p>
+          <p>{live ? tr("OpenStreetMap. Positions from the server. Stale markers stay grey and cannot be selected as dispatch candidates.") : tr("OpenStreetMap. Positions refresh in the demo. Stale markers stay grey and cannot be selected as dispatch candidates.")}</p>
         </div>
       </div>
 
       <p className="state-line" data-live="counts" data-testid="live-tick" data-tick={tick}>
-        {tr("Drivers {0}. Trips in the book {1}. Online {2}. Stale {3}. Trips on the map {4} of {5} active. Open requests plotted {6} of {7}. Airport queue {8}. Boosts {9}.", [drivers.data?.length ?? 0, trips.data?.length ?? 0, online.length, stale.length, tripMarks.length, activeAll, requests.length, openAll, queue.length, boosts.length])}
+        {live
+          ? tr("Drivers {0}. Trips in the book {1}. Online {2}. Stale {3}. Trips on the map {4} of {5} active. Open requests plotted {6} of {7}.", [drivers.data?.length ?? 0, trips.data?.length ?? 0, online.length, stale.length, tripMarks.length, activeAll, requests.length, openAll])
+          : tr("Drivers {0}. Trips in the book {1}. Online {2}. Stale {3}. Trips on the map {4} of {5} active. Open requests plotted {6} of {7}. Airport queue {8}. Boosts {9}.", [drivers.data?.length ?? 0, trips.data?.length ?? 0, online.length, stale.length, tripMarks.length, activeAll, requests.length, openAll, queue.length, boosts.length])}
         {notice ? ` ${notice}` : ""}
       </p>
 
       <div className="actions" aria-label={tr("Map layers")}>
-        {LAYERS.map((layer) => (
+        {shownLayers.map((layer) => (
           <label key={layer.id} className="check-row">
             <input
               type="checkbox"
@@ -209,7 +226,7 @@ function LiveBoard() {
               ) : null}
             </>
           ) : (
-            <p>{tr("Choose a driver, trip, request, queue or boost.")}</p>
+            <p>{live ? tr("Choose a driver, trip or request.") : tr("Choose a driver, trip, request, queue or boost.")}</p>
           )}
         </aside>
       </div>
@@ -237,7 +254,7 @@ function LiveBoard() {
         </article>
 
         <article className="panel">
-          <h3>{tr("Open requests, airport queue and boosts")}</h3>
+          <h3>{live ? tr("Open requests") : tr("Open requests, airport queue and boosts")}</h3>
           <ul aria-label={tr("Open requests")}>
             {requests.map((marker) => (
               <li key={marker.id}>
@@ -255,6 +272,7 @@ function LiveBoard() {
               </li>
             ))}
           </ul>
+          {live ? null : <>
           <ul aria-label={tr("Airport queue")}>
             {queue.map((marker) => (
               <li key={marker.id}>
@@ -269,6 +287,7 @@ function LiveBoard() {
               </li>
             ))}
           </ul>
+          </>}
         </article>
       </div>
     </>

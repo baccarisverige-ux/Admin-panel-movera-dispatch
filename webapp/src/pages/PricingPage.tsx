@@ -25,7 +25,7 @@ import {
 import { useRecords, useSlice } from "../api/hooks";
 import { can, canUseZone } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
-import { supplyDemand } from "../dashboard/insights";
+import { useSupply } from "../dashboard/useSupply";
 import { liveDrivers } from "../dashboard/live";
 import { rideRequests } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
@@ -182,7 +182,8 @@ export function PricingPage() {
   const live = useMemo(() => liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0), [drivers.data, vehicles.data, trips.data, incidents.data]);
   const online = useMemo(() => new Set(live.map((driver) => driver.id)), [live]);
   const requests = useMemo(() => rideRequests(trips.data ?? [], riders.data ?? [], (id) => online.has(id)), [trips.data, riders.data, online]);
-  const counts = useMemo(() => new Map(supplyDemand(country, [], requests, live).map((row) => [row.zoneId, { waiting: row.waiting, free: row.free }])), [country, requests, live]);
+  const supply = useSupply(country, [], requests, live);
+  const counts = useMemo(() => new Map(supply.map((row) => [row.zoneId, { waiting: row.waiting, free: row.free }])), [supply]);
   const zoneKey = countryZoneIds.join(",");
   // Contract v0.7.2 (owner 2026-10-28, contract.json#surgeLive): the live panel shows the server's surge only
   // (GET /admin/surge/now, the chosen zone's GET …/surge/history on the Surge tab); the demo keeps its model.
@@ -423,7 +424,7 @@ export function PricingPage() {
             <small>{fieldErrors.first ?? (dirtyProblems.length ? dirtyProblems[0].message : tr("{0} change{1} · riders see them after you publish", [publish.changes.length, publish.changes.length === 1 ? "" : "s"]))}</small>
           </div>
           <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice(tr("Changes discarded.")); }}>{tr("Discard")}</button>
-          <CommandButton command="admin.pricing.publish" summary={liveSession ? <PublishTargetsLine zoneIds={dirty.map((draft) => draft.zoneId)} /> : undefined} className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(tr("Published as pricing revision {0}.", [publish.store.draftRev])); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
+          <CommandButton command="admin.pricing.publish" summary={liveSession ? <PublishTargetsLine zoneIds={dirty.map((draft) => draft.zoneId)} doc="pricing" /> : undefined} className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={!canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(tr("Published as pricing revision {0}.", [publish.store.draftRev])); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
         </div>
       ) : null}
 

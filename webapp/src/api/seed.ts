@@ -38,6 +38,10 @@ export type DemoRecord = {
   make?: string;
   model?: string;
   waitingMin?: number;
+  /** G3-R4: riders online in a zone (LiveDriverList.ridersOnline, list "ridersOnline"). */
+  count?: number;
+  /** G3-D5: supply and demand of a zone (LiveDriverList.zoneSupply, list "zoneSupply"). */
+  supply?: { online: number; free: number; busy: number; waiting: number; level: "ok" | "tight" | "short"; shortage: boolean };
   previousStatus?: string;
   /** Trips: when a driver accepted an admin offer (the assign tool), for the "Driver on the way" list. */
   acceptedAt?: string;
@@ -150,6 +154,8 @@ export type LiveDriverFacts = {
   lastFixAt: string | null;
   stale: boolean | null;
   activeTripId: string | null;
+  /** v0.18.4 (G3-D2): Driver.performance when the server sent it (GET /admin/drivers/{driverId}). */
+  performance?: { acceptancePct: number | null; cancellationPct: number | null; rating: number | null };
 };
 export type LiveRiderFacts = { rating: number | null; walletMinor: number | null; outstandingMinor: number | null; currency: string | null; deletionRequestedAt: string | null };
 
@@ -166,6 +172,8 @@ export type AuditRow = {
   operationId: string;
   at: string;
   actorId: string;
+  /** Live: AuditEntry.actor (rider, driver, admin, system); demo rows are all admins. */
+  actor?: "rider" | "driver" | "admin" | "system";
   action: string;
   targetId: string;
   scope: string;

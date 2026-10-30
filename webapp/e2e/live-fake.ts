@@ -265,6 +265,14 @@ export type TripState = {
   refundPayouts: (typeof REFUND_PAYOUTS)[number][];
   /** v0.17.2: more rows of GET /admin/live/drivers (e.g. a driver in Paris). */
   liveDrivers: Record<string, unknown>[];
+  /** G3 (v0.18.4): nobody online on the server (no Anna either). */
+  noLiveDrivers?: boolean;
+  /** G3-R4 (v0.18.4): LiveDriverList.ridersOnline. */
+  ridersOnline?: { zoneId: string; count: number }[];
+  /** G3-D5 (v0.18.4): LiveDriverList.zoneSupply. */
+  zoneSupply?: { zoneId: string; online: number; free: number; busy: number; waiting: number; level: "ok" | "tight" | "short"; shortage: boolean }[];
+  /** G3-R1 (v0.18.4): more GET /admin/audit lines (e.g. driver.auto_offline). */
+  audit?: Record<string, unknown>[];
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
@@ -369,9 +377,9 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, state.vehicles[index]);
     }
     if (p === "/api/v1/admin/riders") return json(route, 200, { items: inZones(state.riders, (rider) => state.trips.filter((trip) => trip.riderId === rider["riderId"]).map((trip) => String(trip.zoneId)).concat(state.trips.some((trip) => trip.riderId === rider["riderId"]) ? [] : ["Z001"])), nextCursor: null });
-    if (p === "/api/v1/admin/live/drivers") return json(route, 200, { ...LIVE_DRIVERS, items: inZones([...LIVE_DRIVERS.items, ...state.liveDrivers], zoneField) });
+    if (p === "/api/v1/admin/live/drivers") return json(route, 200, { ...LIVE_DRIVERS, items: inZones([...(state.noLiveDrivers ? [] : LIVE_DRIVERS.items), ...state.liveDrivers], zoneField), ...(state.ridersOnline ? { ridersOnline: inZones(state.ridersOnline, zoneField), ridersOnlineWindowSeconds: 120 } : {}), ...(state.zoneSupply ? { zoneSupply: inZones(state.zoneSupply, zoneField) } : {}) });
     if (p === "/api/v1/admin/payments") return json(route, 200, { items: inZones(PAYMENTS, (item) => [tripZone(item.tripId)]), nextCursor: null });
-    if (p === "/api/v1/admin/audit") return json(route, 200, { items: AUDIT, nextCursor: null });
+    if (p === "/api/v1/admin/audit") return json(route, 200, { items: [...(state.audit ?? []), ...AUDIT], nextCursor: null });
     if (p === "/api/v1/admin/approvals") return json(route, 200, { items: state.approvals, nextCursor: null });
     const decided = /^\/api\/v1\/admin\/approvals\/([^/]+)\/(approve|reject)$/.exec(p);
     if (decided) {
@@ -579,7 +587,7 @@ const CONFIG_CORS = { "access-control-allow-origin": "*", "access-control-allow-
 const configJson = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CONFIG_CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
 const sample = (name: string) => JSON.parse(readFileSync(new URL(`../../contracts/fixtures/config/${name}.json`, import.meta.url), "utf8")) as Record<string, unknown>;
 
-type Entry = { version: number; liveVersion: number; usesStandard?: boolean; document: Record<string, unknown> };
+type Entry = { version: number; liveVersion: number; usesStandard?: boolean; document: Record<string, unknown>; /** G3: the live document when it differs from the draft (History's newest row). */ live?: Record<string, unknown> };
 type Sent = { method: string; path: string; body: Record<string, unknown> | null };
 
 /** The config documents of the live settings flow (contract v0.8.0): Sweden's Standard, Z001 on the Standard, Z002 with its own. */
@@ -606,6 +614,13 @@ export async function fakeSettings(page: Page) {
     const body = (request.postDataJSON?.() ?? null) as Record<string, unknown> | null;
     sent.push({ method: request.method(), path: url.pathname + url.search, body });
     const scope = (q: { zoneId?: unknown; country?: unknown }) => (q.zoneId ? String(q.zoneId) : `standard-${String(q.country)}`);
+    if (request.method() === "GET" && action === "history") {
+      // G3: History is per zone; its newest row is what the apps have (live). A Standard has no history read.
+      const zone = url.searchParams.get("zoneId") ?? "";
+      const entry = docs.get(`${doc}:${zone}`);
+      if (zone.startsWith("standard-")) return configJson(route, 404, { code: "not_found", message: "No such zone.", requestId: "r-404", retryable: false, reason: "zone_not_found" });
+      return configJson(route, 200, { items: entry && entry.liveVersion > 0 && !entry.usesStandard ? [{ version: entry.liveVersion, publishedAt: "2026-10-25T23:13:11Z", publishedBy: "seed", action: "publish", document: entry.live ?? entry.document }] : [], nextCursor: null });
+    }
     if (request.method() === "GET") {
       const entry = docs.get(`${doc}:${scope({ zoneId: url.searchParams.get("zoneId"), country: url.searchParams.get("country") })}`);
       return entry ? configJson(route, 200, { doc, ...entry, updatedAt: "2026-10-27T09:00:00Z" }) : configJson(route, 404, { code: "not_found", message: "No such zone.", requestId: "r-404", retryable: false, reason: "zone_not_found" });
@@ -621,7 +636,7 @@ export async function fakeSettings(page: Page) {
       docs.set(key, { ...entry, version: entry.version + 1, document: body["document"] as Record<string, unknown> });
       return configJson(route, 200, { doc, ...docs.get(key), updatedAt: "2026-10-27T10:00:00Z" });
     }
-    docs.set(key, { ...entry, version: entry.version + 1, liveVersion: entry.liveVersion + 1, usesStandard: false });
+    docs.set(key, { ...entry, version: entry.version + 1, liveVersion: entry.liveVersion + 1, usesStandard: false, live: entry.document });
     return configJson(route, 200, { doc, version: entry.liveVersion + 1, publishedAt: "2026-10-27T10:00:00Z" });
   });
   return { docs, sent };

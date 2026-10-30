@@ -16,9 +16,17 @@ export type LiveDriverMonth = {
 
 export const DASH = "—";
 
-export function liveDriverMonth(facts: LiveDriverFacts | null | undefined): LiveDriverMonth {
-  const rating = typeof facts?.rating === "number" && Number.isFinite(facts.rating) ? facts.rating : null;
-  return { rating, trips: null, cancellationPct: null, acceptancePct: null, onlineHours: null, netMinor: null };
+const num = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null);
+
+/**
+ * G3-D2 (owner "Real numbers"): with Driver.performance (GET /admin/drivers/{driverId}, last 30 days) the rating,
+ * acceptance % and cancellation % are the server's; null there stays "—" (too few offers, trips or ratings).
+ * `performance` overrides what the list row carries (the list has no performance).
+ */
+export function liveDriverMonth(facts: LiveDriverFacts | null | undefined, performance?: LiveDriverFacts["performance"] | null): LiveDriverMonth {
+  const perf = performance ?? facts?.performance ?? null;
+  const rating = perf ? num(perf.rating) : num(facts?.rating);
+  return { rating, trips: null, cancellationPct: perf ? num(perf.cancellationPct) : null, acceptancePct: perf ? num(perf.acceptancePct) : null, onlineHours: null, netMinor: null };
 }
 
 /** A number as text, "—" when the server sent none. */

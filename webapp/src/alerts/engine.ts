@@ -205,6 +205,8 @@ export type Facts = {
   rideChecks: { id: string; incidentId: string; zoneId: string; status: string; title: string; detail: string; since: number }[];
   requests: { tripId: string; rider: string; zoneId: string; waitingMin: number; searching: boolean }[];
   freeByZone: Record<string, number>;
+  /** G3-D5 (live): the server's zoneSupply per zone; wins over freeByZone and the request count. */
+  supplyByZone?: Record<string, { free: number; waiting: number }>;
   dispatch: (zoneId: string) => { long_wait: { on: boolean; limit: number }; few_drivers: { on: boolean; limit: number }; no_driver: { on: boolean; limit: number } };
   lateRides: { id: string; rider: string; zoneId: string; minutesLeft: number }[];
   documents: { driverId: string; driver: string; zoneId: string; doc: string; days: number }[];
@@ -311,8 +313,12 @@ export function computeAlerts(facts: Facts, settings: AlertSettings, rules: read
         if (level) push({ id: `long_wait:${request.tripId}`, kind: "long_wait", level, title: tr("{0} has waited {1} min", [request.rider, request.waitingMin]), detail: `${zone.name} · ${request.tripId}`, zoneId: zone.id, since: ago(request.waitingMin) });
       }
     }
-    const free = facts.freeByZone[zone.id] ?? 0;
-    if (k("few_drivers").on && limits.few_drivers.on && free <= limits.few_drivers.limit) {
+    const supply = facts.supplyByZone?.[zone.id];
+    const free = supply?.free ?? facts.freeByZone[zone.id] ?? 0;
+    // G3-D5 (owner "Fix it"): only when riders really wait and the free drivers are short (waiting > free), with the
+    // same numbers as the Dashboard's supply rows; a quiet zone with few drivers is no alert.
+    const riders = supply?.waiting ?? waiting.length;
+    if (k("few_drivers").on && limits.few_drivers.on && free <= limits.few_drivers.limit && riders > free) {
       push({ id: `few_drivers:${zone.id}:${facts.day}`, kind: "few_drivers", level: k("few_drivers").level, title: free === 1 ? tr("Only 1 free driver in {0}", [zone.name]) : tr("Only {0} free drivers in {1}", [free, zone.name]), detail: tr("Limit {0} (Dispatch)", [limits.few_drivers.limit]), zoneId: zone.id, since: seeded(`few:${zone.id}`, 30) });
     }
     if (k("no_driver").on && limits.no_driver.on && waiting.length >= limits.no_driver.limit) {

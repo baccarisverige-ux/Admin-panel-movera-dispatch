@@ -12,6 +12,7 @@ import { Cards } from "../reports/ui";
 import { DataTable } from "../ui/DataTable";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn } from "../i18n";
+import { auditActionText, auditActorText, auditDetailText } from "../live/format";
 
 const PAGE = 50;
 
@@ -123,23 +124,25 @@ export function AuditPage() {
         {audit.isLoading ? <p className="pl-help">{tr("Loading the audit.")}</p> : shown.length ? (
           <ol className="pl-log" aria-label={tr("Audit log")}>
             {shown.slice(0, limit).map((row) => {
-              const change = changeOf(row);
+              // G3-R1: a line the server wrote itself (driver.auto_offline) reads as words, not JSON.
+              const change = auditDetailText(row) ?? changeOf(row);
+              const system = row.actorId === "system";
               return (
                 <li key={row.id} className={`pl-log-row ${row.result}`}>
                   <button data-command="admin.auditLog.view" type="button" aria-expanded={open === row.id} onClick={() => setOpen(open === row.id ? null : row.id)}>
                     <time dateTime={row.at}>{new Date(row.at).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" })}</time>
-                    <span className="pl-who">{nameOf(row.actorId)}</span>
-                    <span className="pl-what">{trn("{0} on {1}{2}", <b>{row.action}</b>, row.targetId || "—", change ? <small className="pl-change">{change}</small> : null)}</span>
+                    <span className="pl-who">{system ? auditActorText(row.actorId) : nameOf(row.actorId)}</span>
+                    <span className="pl-what">{trn("{0} on {1}{2}", <b>{auditActionText(row.action)}</b>, row.targetId || "—", change ? <small className="pl-change">{change}</small> : null)}</span>
                     <span className={`pl-result ${row.result}`}>{RESULT_LABEL[row.result] ?? row.result}</span>
                   </button>
                   {open === row.id ? (
                     <dl className="pl-detail">
-                      <dt>{tr("Admin")}</dt><dd><Link to={`/team/${row.actorId}`}>{nameOf(row.actorId)}</Link> · <Link to={`/reports?tab=work&admin=${row.actorId}`}>{tr("All their work")}</Link></dd>
+                      <dt>{tr("Admin")}</dt><dd>{system ? auditActorText(row.actorId) : <><Link to={`/team/${row.actorId}`}>{nameOf(row.actorId)}</Link> · <Link to={`/reports?tab=work&admin=${row.actorId}`}>{tr("All their work")}</Link></>}</dd>
                       <dt>{tr("Section")}</dt><dd>{areaOf(row.action)}</dd>
                       <dt>{tr("Scope")}</dt><dd>{row.scope || "—"}</dd>
                       <dt>{tr("Before")}</dt><dd>{row.before || tr("(empty)")}</dd>
                       <dt>{tr("After")}</dt><dd>{row.after || tr("(empty)")}</dd>
-                      <dt>{tr("Reason")}</dt><dd>{row.reason || "—"}</dd>
+                      <dt>{tr("Reason")}</dt><dd>{auditDetailText(row) ?? (row.reason || "—")}</dd>
                       <dt>{tr("Operation")}</dt><dd><code>{row.operationId}</code></dd>
                     </dl>
                   ) : null}
@@ -156,7 +159,7 @@ export function AuditPage() {
         <DataTable
           head={["When", "Operation", "Agent", "Action", "Target", "Scope", "Before", "After", "Reason", "Result"]}
           rowIds={rows.map((entry) => entry.id)}
-          rows={rows.map((entry) => [entry.at, entry.operationId, entry.actorId, entry.action, entry.targetId, entry.scope, entry.before, entry.after, entry.reason, entry.result])}
+          rows={rows.map((entry) => [entry.at, entry.operationId, auditActorText(entry.actorId), auditActionText(entry.action), entry.targetId, entry.scope, entry.before, auditDetailText(entry) ?? entry.after, auditDetailText(entry) ? auditDetailText(entry) ?? "" : entry.reason, entry.result])}
           state={audit.isLoading ? "loading" : audit.isError ? "error" : "ready"}
           onRetry={() => void audit.refetch()}
         />

@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { kpiReport, localDay as kpiDay } from "../live/kpis";
 import type { KpiDay } from "../live/types";
-import { NotConnected } from "../live/NotConnected";
 import { isLiveData } from "../live/realData";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -41,7 +40,8 @@ import { useAlertsMaybe } from "../alerts/AlertsContext";
 import { DriversMap, REQUEST_COLOR, STATE_COLOR } from "../dashboard/DriversMap";
 import { EarningsChart } from "../dashboard/EarningsChart";
 import { change, COMMISSION_PLACEHOLDER, earningsReport, type Share } from "../dashboard/earnings";
-import { activeBoosts, airportQueues, cancellations, ratings, supplyDemand } from "../dashboard/insights";
+import { activeBoosts, airportQueues, cancellations, ratings, shortageZones } from "../dashboard/insights";
+import { useSupply } from "../dashboard/useSupply";
 import { countStates, LIVE_STATES, liveDrivers, type LiveState } from "../dashboard/live";
 import { LiveRiders } from "../dashboard/LiveRiders";
 import { RiderQuickActions, useDispatchBook } from "../dispatch/HandlePanel";
@@ -54,7 +54,7 @@ import { PeriodPicker } from "../dashboard/PeriodPicker";
 import { parsePeriod, periodParams, periodWindow, type Period } from "../dashboard/period";
 import { RideTable } from "../dashboard/RideTable";
 import { DashboardAccessContext, HIDDEN_DRIVER, dashboardAccess, maskBookings, maskDrivers, maskRequests, maskRiders, maskTrip } from "../dashboard/access";
-import { candidatesFor, rideRequests, riderCounts, type RideRequest } from "../dashboard/riders";
+import { candidatesFor, rideRequests, riderCounts, ridersOnlineIn, type RideRequest } from "../dashboard/riders";
 import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
 import { useAlertSignals, type Signal } from "../dashboard/useAlertSignals";
@@ -198,6 +198,7 @@ export function DashboardPage() {
   const vehicles = useRecords("vehicles", undefined, { refetchMs: SLOW_MS });
   const payouts = useRecords("payouts", undefined, { refetchMs: SLOW_MS });
   const riders = useRecords("riders", undefined, { refetchMs: SLOW_MS });
+  const ridersOnline = useRecords("ridersOnline", undefined, { refetchMs: LIVE_MS });
   const bonuses = useRecords("bonuses", undefined, { refetchMs: SLOW_MS });
   const fleets = useRecords("fleets");
   const audit = useAudit(LIVE_MS);
@@ -211,7 +212,8 @@ export function DashboardPage() {
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const bonusSlice = useSlice<BonusBook>(BONUS_KEY, emptyBonusBook());
   const bonusMinute = Math.floor(now / 60_000);
-  const bonusAreas: BonusMapArea[] = useMemo(() => normalizeBonusBook(bonusSlice.value).bonuses
+  // G3-R5: driver bonus areas live only in the panel's demo book (no server source): none on live.
+  const bonusAreas: BonusMapArea[] = useMemo(() => (isLiveData() ? [] : normalizeBonusBook(bonusSlice.value).bonuses)
     .filter((bonus) => bonus.country === country && bonus.kind === "area")
     .map((bonus) => ({ bonus, state: bonusState(bonus, bonusMinute * 60_000, market.timeZone) }))
     .filter((item) => item.state === "live" || item.state === "today")
@@ -266,7 +268,8 @@ export function DashboardPage() {
   const prevAvgFare = previous.trips ? previous.grossMinor / previous.trips : 0;
   const numberFormat = new Intl.NumberFormat(uiLocale());
   // Live: a total without a source is NaN and reads "Not connected yet" (owner rule, part 3).
-  const number = { format: (value: number) => (Number.isFinite(value) ? numberFormat.format(value) : tr("Not connected yet")) };
+  // G3-R5: no "Not connected yet" on the live Dashboard; a value without a source reads "—".
+  const number = { format: (value: number) => (Number.isFinite(value) ? numberFormat.format(value) : "—") };
   const liveData = isLiveData();
 
   const live = useMemo(
@@ -283,13 +286,16 @@ export function DashboardPage() {
   };
   // Offers only count when they went to a driver who could really take them.
   const requests = useMemo(() => maskRequests(rideRequests(tripRows, riderRows, (driverId) => onlineIds.has(driverId)), access), [tripRows, riderRows, onlineIds, access]);
-  const riderStats = riderCounts(requests, live, riderRows);
+  // G3-R4 (owner "Real numbers only"): live, the server's riders online in the zones in view; demo, no invented share.
+  const riderStats = riderCounts(requests, live, riderRows, liveData ? ridersOnlineIn(ridersOnline.data ?? [], scope.zones.length ? scope.zones : market.zones.map((zone) => zone.id)) : null);
   // Rides a driver just accepted: listed apart under the waiting riders and kept on the map (never counted as waiting).
   const allOnTheWay = useOnTheWay();
   const onTheWay = useMemo(() => maskRequests(allOnTheWay.filter((item) => !requests.some((request) => request.tripId === item.tripId)), access).map((item) => ({ ...item, driverName: access.drivers ? item.driverName : HIDDEN_DRIVER })), [allOnTheWay, requests, access]);
   const ridersOnMap = useMemo(() => (onTheWay.length ? [...requests, ...onTheWay] : requests), [requests, onTheWay]);
   const candidatesOf = (request: RideRequest) => candidatesFor(request, live, allowedCategories);
-  const balance = useMemo(() => supplyDemand(country, scope.zones, requests, live), [country, scope.zones, requests, live]);
+  // G3-D5: the rows, the shortage alert, surge rows and boosts all read these same numbers (live: the server's zoneSupply).
+  const balance = useSupply(country, scope.zones, requests, live);
+  const shortage = shortageZones(balance);
   const pricingSlice = useSlice<unknown>(SLICE_KEY, emptyPricingStore());
   const pricing = useMemo(() => normalizeStore(pricingSlice.value), [pricingSlice.value]);
   const surgePref = useSurgePref("dashboard", { shown: false, style: "zones" });
@@ -343,7 +349,8 @@ export function DashboardPage() {
   const alerts = [
     { id: "sos", tone: "critical", icon: <Siren size={16} aria-hidden="true" />, permission: "incidents.read", count: sos.length, text: sos.length === 1 ? `SOS from ${driverName(sos[0].driverId) ?? sos[0].name}` : "SOS alerts waiting for a responder", path: "/incidents" },
     { id: "late", tone: "critical", icon: <CalendarClock size={16} aria-hidden="true" />, permission: "trips.read", count: urgentRides.length, text: "scheduled rides start within the hour with no driver", path: "/reservations" },
-    { id: "wait", tone: "serious", icon: <Clock size={16} aria-hidden="true" />, permission: "trips.read", count: longWaits.length, text: "riders waiting over 5 min for a driver", path: "/?tab=live" },
+    // G3-D5 (owner "Fix it"): only when riders wait and free drivers are short, with the same numbers as the Supply & demand rows.
+    { id: "shortage", tone: "serious", icon: <Clock size={16} aria-hidden="true" />, permission: "trips.read", count: shortage.length, text: tr(shortage.length === 1 ? "zone short of free drivers: {0}" : "zones short of free drivers: {0}", [shortage.map((row) => `${row.name} (${tr("{0} waiting · {1} free", [row.waiting, row.free])})`).join(", ")]), path: "/?tab=live" },
     { id: "pay", tone: "serious", icon: <CreditCard size={16} aria-hidden="true" />, permission: "finance.read", count: failures.count, text: `failed payments · ${failures.rider} rider · ${failures.system} system · ${money(failures.owedMinor)}`, path: "/payments" },
     { id: "support", tone: "warning", icon: <LifeBuoy size={16} aria-hidden="true" />, permission: "support.reply", count: openTickets.length, text: "open support tickets", path: "/support" },
   ].filter((alert) => alert.count > 0 && can(role, alert.permission));
@@ -550,8 +557,8 @@ export function DashboardPage() {
               value={loading ? "…" : number.format(liveCounts.free + busy + liveCounts.sos)}
               hint={<>{trn("{0} free · {1} busy{2}", liveCounts.free, busy, liveCounts.sos ? <> · <b className="sos-text">{trn("{0} SOS", liveCounts.sos)}</b></> : null)}</>}
             />
-            <Kpi icon={<XCircle size={18} />} tone="red" label={tr("Cancellation rate")} value={Number.isFinite(cancelRate) ? `${cancelRate.toFixed(1)}%` : tr("Not connected yet")} delta={<Delta value={change(cancelRate, prevCancelRate)} inverse label={shownSpan.compareLabel} />} />
-            <Kpi icon={<Clock size={18} />} tone="amber" label={tr("Avg pickup wait")} value={Number.isFinite(avgWait) ? `${avgWait.toFixed(1)} min` : tr("Not connected yet")} delta={<Delta value={change(avgWait, prevWait)} inverse label={shownSpan.compareLabel} />} />
+            <Kpi icon={<XCircle size={18} />} tone="red" label={tr("Cancellation rate")} value={Number.isFinite(cancelRate) ? `${cancelRate.toFixed(1)}%` : "—"} delta={<Delta value={change(cancelRate, prevCancelRate)} inverse label={shownSpan.compareLabel} />} />
+            <Kpi icon={<Clock size={18} />} tone="amber" label={tr("Avg pickup wait")} value={Number.isFinite(avgWait) ? `${avgWait.toFixed(1)} min` : "—"} delta={<Delta value={change(avgWait, prevWait)} inverse label={shownSpan.compareLabel} />} />
             <Kpi icon={<Users size={18} />} tone="violet" label={tr("New riders")} value={number.format(totals.newRiders)} delta={<Delta value={change(totals.newRiders, previous.newRiders)} label={shownSpan.compareLabel} />} />
             <Kpi icon={<UserPlus size={18} />} tone="aqua" label={tr("New drivers")} value={number.format(totals.newDrivers)} delta={<Delta value={previous.newDrivers < 5 ? null : change(totals.newDrivers, previous.newDrivers)} label={shownSpan.compareLabel} />} />
           </section>
@@ -588,7 +595,7 @@ export function DashboardPage() {
                 })}
                 <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showRequests} className={showRequests ? "state-chip" : "state-chip off"} onClick={() => setShowRequests((value) => !value)}>{trn("{0}Riders waiting{1}", <i className="rider" style={{ background: REQUEST_COLOR.waiting }} />, <strong>{requests.length}</strong>)}</button>
                 <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBalance} className={showBalance ? "state-chip" : "state-chip off"} onClick={() => setShowBalance((value) => !value)}>{trn("{0}Supply vs demand", <i style={{ background: "linear-gradient(90deg,#0ca30c,#eda100,#d03b3b)" }} />)}</button>
-                <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBonus} className={showBonus ? "state-chip" : "state-chip off"} onClick={() => setShowBonus((value) => !value)}>{trn("{0}Driver bonus areas{1}", <i style={{ background: "#f2994a" }} />, <strong>{bonusAreas.length}</strong>)}</button>
+                {liveData ? null : <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBonus} className={showBonus ? "state-chip" : "state-chip off"} onClick={() => setShowBonus((value) => !value)}>{trn("{0}Driver bonus areas{1}", <i style={{ background: "#f2994a" }} />, <strong>{bonusAreas.length}</strong>)}</button>}
                 <SurgeControls compact shown={surgePref.shown} style={surgePref.style} onShown={surgePref.setShown} onStyle={surgePref.setStyle} noStyle={Boolean(liveSurge)} />
               </div>
               {liveNotice ? <p className="fd-notice" role="status">{liveNotice}</p> : null}
@@ -638,7 +645,7 @@ export function DashboardPage() {
                 }}
               />
               {surgePref.shown ? (liveSurge ? <DriverSurgeLegend failed={liveSurge.state === "failed"} /> : <SurgeLegend />) : null}
-              <p className="fine-print">{trn("{0}Drivers move every 5 seconds; data reloads every 10 seconds.", api.demo ? tr("Simulated positions from demo data. ") : "")}</p>
+              {liveData ? null : <p className="fine-print">{trn("{0}Drivers move every 5 seconds; data reloads every 10 seconds.", api.demo ? tr("Simulated positions from demo data. ") : "")}</p>}
             </section>
 
             <SupplyDemandDrill rows={balance} showOnMap={showBalance} onToggleMap={() => setShowBalance((value) => !value)} surgeLink={surgeLink} drivers={live} requests={requests} radarZones={supplyBook.radarZones} onLocate={setLocate} radarZoneLink={can(role, "trips.read") ? (zoneId) => withScope(offersLink("radar", zoneId)) : null} />
@@ -655,7 +662,8 @@ export function DashboardPage() {
           />
 
           <div className="dash-grid-2">
-            <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />
+            {/* G3-R5: the airport queue has no server source: hidden on live. */}
+            {liveData ? null : <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />}
             <BoostCard rows={activeBoosts(bonuses.data ?? [], balance, surge)} surgeLink={surgeLink} />
           </div>
         </>
@@ -743,7 +751,7 @@ export function DashboardPage() {
                 </button>
               ))}
             </div>
-            {liveData && (shareTab !== "zone" || !report.byZone.length) ? <NotConnected block /> : totals.grossMinor ? <ShareBars rows={shareTab === "zone" ? report.byZone : shareTab === "category" ? report.byCategory : report.byMethod} format={compact} /> : <p className="state-line">{tr("No earnings in this period yet.")}</p>}
+            {liveData && (shareTab !== "zone" || !report.byZone.length) ? <p className="dx-calm" data-testid="value-no-data">{tr("No data yet.")}</p> : totals.grossMinor ? <ShareBars rows={shareTab === "zone" ? report.byZone : shareTab === "category" ? report.byCategory : report.byMethod} format={compact} /> : <p className="state-line">{tr("No earnings in this period yet.")}</p>}
           </section>
         </div>
       ) : null}
