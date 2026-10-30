@@ -8,7 +8,6 @@ const PARTLY: Record<string, string> = {
   reports: "Trips from the server; the rest is not connected yet.",
   trips: "Trips, trip page, offers and full refund from the server; chat, ride check and other actions are not connected yet.",
   live: "Drivers and trips from the server; positions are not connected yet.",
-  dispatch: "Trips, drivers, each zone's and each country's Standard rules from the server, published at once; dispatch actions on trips are not connected yet.",
   pricing: "Prices, fees, surge settings, commission and pickup pay of each zone and each country's Standard, and Tips & limits, from the server; manual surges and undo are not connected yet.",
   settings: "Feature switches and app updates go to the apps at once; scheduled publish, expiry and overrides are not connected yet.",
   offers: "Trips and their offers from the server; sending offers is not connected yet.",
@@ -23,7 +22,9 @@ const PARTLY: Record<string, string> = {
  * slots, history and restore come from the server).
  */
 // Owner G3-R5 (2026-10-30): the Dashboard shows only the server's data on live (no demo parts), so no badge either.
-const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding", "content", "dashboard"]);
+// Driver 03c (live test 2026-10-30): Dispatch is live too (trips, drivers, rules, Standard, controls, assign and radar
+// group go to the server), so its header carries no badge either.
+const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding", "content", "dashboard", "dispatch"]);
 
 export function connectionOf(id: string): Connection {
   if (CONNECTED.has(id)) return { state: "connected" };

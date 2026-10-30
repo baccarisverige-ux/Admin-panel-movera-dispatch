@@ -184,3 +184,20 @@ test("G3-D5: supply rows count every online driver in his zone and the shortage 
   assert.deepEqual(insights.serverSupply("SE", [], insights.zoneSupplyRecords({ items: [] })), [], "older server: no rows, never a guess");
   assert.deepEqual(insights.activeBoosts([], live).map((row) => [row.zoneId, row.kind, row.detail]), [["Z001", "Surge suggested", "3 waiting · 1 free"]]);
 });
+
+test("03c (live test 2026-10-30): a ride booked for another day is no rider waiting; due and live requests are", async () => {
+  const { setLiveData } = await import("../live/realData.ts");
+  const db = createSeed();
+  const now = Date.parse(SEED_NOW);
+  const base = db.trips.find((row) => row.status === "searching")!;
+  const booked = { ...base, id: "trp_booked_nov1", status: "requested", pickupAt: new Date(now + 2 * 24 * 3_600_000).toISOString() };
+  const due = { ...base, id: "trp_due", status: "requested", pickupAt: new Date(now - 60_000).toISOString() };
+  const live = { ...base, id: "trp_live", status: "searching" };
+  setLiveData(true);
+  try {
+    const ids = rideRequests([booked, due, live], db.riders, () => true, now).map((row) => row.tripId).sort();
+    assert.deepEqual(ids, ["trp_due", "trp_live"], "the booking for Nov 1 is not waiting");
+  } finally {
+    setLiveData(false);
+  }
+});

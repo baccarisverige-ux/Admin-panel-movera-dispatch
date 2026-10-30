@@ -1,4 +1,3 @@
-import { NotConnected } from "../live/NotConnected";
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { AlertTriangle, ArrowLeft, Bell, Flag, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
@@ -149,7 +148,8 @@ export function RulesView(props: Props) {
           </div>
         </header>
 
-        {!results || !preview ? <section className="dx-results" aria-label={tr("{0} results today", [zone.name])}><NotConnected block /></section> : <section className="dx-results" aria-label={tr("{0} results today", [zone.name])}>
+        {/* Live: the server reports no dispatch results yet, so the box is left out (owner rule: no "Not connected yet" on a live page). */}
+        {!results || !preview ? null : <section className="dx-results" aria-label={tr("{0} results today", [zone.name])}>
           <div><Timer size={15} aria-hidden="true" /><span><b>{trn("{0} s", results.findSec)}</b><small>{tr("Time to find a driver")}</small></span>{changed.has(zone.id) ? delta(results.findSec, preview.findSec, true) : null}</div>
           <div><CheckCircle2 size={15} aria-hidden="true" /><span><b>{results.acceptedPct}%</b><small>{tr("Requests accepted")}</small></span>{changed.has(zone.id) ? delta(results.acceptedPct, preview.acceptedPct, false) : null}</div>
           <div className="warn"><AlertTriangle size={15} aria-hidden="true" /><span><b>{results.noDriverPct}%</b><small>{tr("No driver found")}</small></span>{changed.has(zone.id) ? delta(results.noDriverPct, preview.noDriverPct, true) : null}</div>
