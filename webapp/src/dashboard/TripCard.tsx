@@ -24,7 +24,7 @@ export function TripCard({ trip, timeZone, routeShown, onToggleRoute, routeLink,
     <section className="trip-card" aria-label={tr("Current trip")}>
       <div className="trip-card-head">
         <span className={toPickup ? "trip-phase pickup" : "trip-phase onboard"}>{toPickup ? tr("Going to pickup {0}", [trip.rider]) : tr("Going to drop-off with {0}", [trip.rider])}</span>
-        <span className="trip-eta">{trip.etaMin === null ? <>{tr("ETA")}: {tr("Not connected yet")}</> : trn("{0}{1} min to {2}", <Clock size={14} aria-hidden="true" />, trip.etaMin, toPickup ? tr("pickup") : tr("drop-off"))}</span>
+        <span className="trip-eta">{trip.etaMin === null ? <>{tr("ETA")}: —</> : trn("{0}{1} min to {2}", <Clock size={14} aria-hidden="true" />, trip.etaMin, toPickup ? tr("pickup") : tr("drop-off"))}</span>
       </div>
       {trip.progressPct === null ? null : (
         <div className="trip-progress" role="progressbar" aria-label={toPickup ? tr("Way to pickup") : tr("Trip progress")} aria-valuenow={trip.progressPct} aria-valuemin={0} aria-valuemax={100}>
@@ -37,7 +37,7 @@ export function TripCard({ trip, timeZone, routeShown, onToggleRoute, routeLink,
       </ol>
       <dl className="trip-facts">
         <div><dt>{trn("{0}Rider", <User size={13} aria-hidden="true" />)}</dt><dd>{trip.riderId ? <Link to={`/riders/${trip.riderId}`}>{trip.rider}</Link> : trip.rider}</dd></div>
-        <div><dt>{trn("{0}Category · distance", <Route size={13} aria-hidden="true" />)}</dt><dd>{trip.distanceKm === null ? <><span className="cat-chip ride">{trip.category}</span> {tr("Not connected yet")}</> : trn("{0} {1} km", <span className="cat-chip ride">{trip.category}</span>, trip.distanceKm)}</dd></div>
+        <div><dt>{trn("{0}Category · distance", <Route size={13} aria-hidden="true" />)}</dt><dd>{trip.distanceKm === null ? <><span className="cat-chip ride">{trip.category}</span> —</> : trn("{0} {1} km", <span className="cat-chip ride">{trip.category}</span>, trip.distanceKm)}</dd></div>
         <div><dt>{trn("{0}Fare", <CreditCard size={13} aria-hidden="true" />)}</dt><dd>{trip.fare} · {trip.payment}</dd></div>
         <div><dt>{trn("{0}Started", <Clock size={13} aria-hidden="true" />)}</dt><dd>{time.format(trip.startedAtMs)} · {trip.tripId}</dd></div>
       </dl>

@@ -265,6 +265,12 @@ export type TripState = {
   refundPayouts: (typeof REFUND_PAYOUTS)[number][];
   /** v0.17.2: more rows of GET /admin/live/drivers (e.g. a driver in Paris). */
   liveDrivers: Record<string, unknown>[];
+  /** G3 (v0.18.4): nobody online on the server (no Anna either). */
+  noLiveDrivers?: boolean;
+  /** G3-R4 (v0.18.4): LiveDriverList.ridersOnline. */
+  ridersOnline?: { zoneId: string; count: number }[];
+  /** G3-R1 (v0.18.4): more GET /admin/audit lines (e.g. driver.auto_offline). */
+  audit?: Record<string, unknown>[];
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
@@ -369,9 +375,9 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, state.vehicles[index]);
     }
     if (p === "/api/v1/admin/riders") return json(route, 200, { items: inZones(state.riders, (rider) => state.trips.filter((trip) => trip.riderId === rider["riderId"]).map((trip) => String(trip.zoneId)).concat(state.trips.some((trip) => trip.riderId === rider["riderId"]) ? [] : ["Z001"])), nextCursor: null });
-    if (p === "/api/v1/admin/live/drivers") return json(route, 200, { ...LIVE_DRIVERS, items: inZones([...LIVE_DRIVERS.items, ...state.liveDrivers], zoneField) });
+    if (p === "/api/v1/admin/live/drivers") return json(route, 200, { ...LIVE_DRIVERS, items: inZones([...(state.noLiveDrivers ? [] : LIVE_DRIVERS.items), ...state.liveDrivers], zoneField), ...(state.ridersOnline ? { ridersOnline: inZones(state.ridersOnline, zoneField), ridersOnlineWindowSeconds: 120 } : {}) });
     if (p === "/api/v1/admin/payments") return json(route, 200, { items: inZones(PAYMENTS, (item) => [tripZone(item.tripId)]), nextCursor: null });
-    if (p === "/api/v1/admin/audit") return json(route, 200, { items: AUDIT, nextCursor: null });
+    if (p === "/api/v1/admin/audit") return json(route, 200, { items: [...(state.audit ?? []), ...AUDIT], nextCursor: null });
     if (p === "/api/v1/admin/approvals") return json(route, 200, { items: state.approvals, nextCursor: null });
     const decided = /^\/api\/v1\/admin\/approvals\/([^/]+)\/(approve|reject)$/.exec(p);
     if (decided) {

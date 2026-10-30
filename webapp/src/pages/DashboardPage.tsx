@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { kpiReport, localDay as kpiDay } from "../live/kpis";
 import type { KpiDay } from "../live/types";
-import { NotConnected } from "../live/NotConnected";
 import { isLiveData } from "../live/realData";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -212,7 +211,8 @@ export function DashboardPage() {
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const bonusSlice = useSlice<BonusBook>(BONUS_KEY, emptyBonusBook());
   const bonusMinute = Math.floor(now / 60_000);
-  const bonusAreas: BonusMapArea[] = useMemo(() => normalizeBonusBook(bonusSlice.value).bonuses
+  // G3-R5: driver bonus areas live only in the panel's demo book (no server source): none on live.
+  const bonusAreas: BonusMapArea[] = useMemo(() => (isLiveData() ? [] : normalizeBonusBook(bonusSlice.value).bonuses)
     .filter((bonus) => bonus.country === country && bonus.kind === "area")
     .map((bonus) => ({ bonus, state: bonusState(bonus, bonusMinute * 60_000, market.timeZone) }))
     .filter((item) => item.state === "live" || item.state === "today")
@@ -267,7 +267,8 @@ export function DashboardPage() {
   const prevAvgFare = previous.trips ? previous.grossMinor / previous.trips : 0;
   const numberFormat = new Intl.NumberFormat(uiLocale());
   // Live: a total without a source is NaN and reads "Not connected yet" (owner rule, part 3).
-  const number = { format: (value: number) => (Number.isFinite(value) ? numberFormat.format(value) : tr("Not connected yet")) };
+  // G3-R5: no "Not connected yet" on the live Dashboard; a value without a source reads "—".
+  const number = { format: (value: number) => (Number.isFinite(value) ? numberFormat.format(value) : "—") };
   const liveData = isLiveData();
 
   const live = useMemo(
@@ -552,8 +553,8 @@ export function DashboardPage() {
               value={loading ? "…" : number.format(liveCounts.free + busy + liveCounts.sos)}
               hint={<>{trn("{0} free · {1} busy{2}", liveCounts.free, busy, liveCounts.sos ? <> · <b className="sos-text">{trn("{0} SOS", liveCounts.sos)}</b></> : null)}</>}
             />
-            <Kpi icon={<XCircle size={18} />} tone="red" label={tr("Cancellation rate")} value={Number.isFinite(cancelRate) ? `${cancelRate.toFixed(1)}%` : tr("Not connected yet")} delta={<Delta value={change(cancelRate, prevCancelRate)} inverse label={shownSpan.compareLabel} />} />
-            <Kpi icon={<Clock size={18} />} tone="amber" label={tr("Avg pickup wait")} value={Number.isFinite(avgWait) ? `${avgWait.toFixed(1)} min` : tr("Not connected yet")} delta={<Delta value={change(avgWait, prevWait)} inverse label={shownSpan.compareLabel} />} />
+            <Kpi icon={<XCircle size={18} />} tone="red" label={tr("Cancellation rate")} value={Number.isFinite(cancelRate) ? `${cancelRate.toFixed(1)}%` : "—"} delta={<Delta value={change(cancelRate, prevCancelRate)} inverse label={shownSpan.compareLabel} />} />
+            <Kpi icon={<Clock size={18} />} tone="amber" label={tr("Avg pickup wait")} value={Number.isFinite(avgWait) ? `${avgWait.toFixed(1)} min` : "—"} delta={<Delta value={change(avgWait, prevWait)} inverse label={shownSpan.compareLabel} />} />
             <Kpi icon={<Users size={18} />} tone="violet" label={tr("New riders")} value={number.format(totals.newRiders)} delta={<Delta value={change(totals.newRiders, previous.newRiders)} label={shownSpan.compareLabel} />} />
             <Kpi icon={<UserPlus size={18} />} tone="aqua" label={tr("New drivers")} value={number.format(totals.newDrivers)} delta={<Delta value={previous.newDrivers < 5 ? null : change(totals.newDrivers, previous.newDrivers)} label={shownSpan.compareLabel} />} />
           </section>
@@ -590,7 +591,7 @@ export function DashboardPage() {
                 })}
                 <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showRequests} className={showRequests ? "state-chip" : "state-chip off"} onClick={() => setShowRequests((value) => !value)}>{trn("{0}Riders waiting{1}", <i className="rider" style={{ background: REQUEST_COLOR.waiting }} />, <strong>{requests.length}</strong>)}</button>
                 <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBalance} className={showBalance ? "state-chip" : "state-chip off"} onClick={() => setShowBalance((value) => !value)}>{trn("{0}Supply vs demand", <i style={{ background: "linear-gradient(90deg,#0ca30c,#eda100,#d03b3b)" }} />)}</button>
-                <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBonus} className={showBonus ? "state-chip" : "state-chip off"} onClick={() => setShowBonus((value) => !value)}>{trn("{0}Driver bonus areas{1}", <i style={{ background: "#f2994a" }} />, <strong>{bonusAreas.length}</strong>)}</button>
+                {liveData ? null : <button data-command="admin.ui.mapLayer" type="button" aria-pressed={showBonus} className={showBonus ? "state-chip" : "state-chip off"} onClick={() => setShowBonus((value) => !value)}>{trn("{0}Driver bonus areas{1}", <i style={{ background: "#f2994a" }} />, <strong>{bonusAreas.length}</strong>)}</button>}
                 <SurgeControls compact shown={surgePref.shown} style={surgePref.style} onShown={surgePref.setShown} onStyle={surgePref.setStyle} noStyle={Boolean(liveSurge)} />
               </div>
               {liveNotice ? <p className="fd-notice" role="status">{liveNotice}</p> : null}
@@ -640,7 +641,7 @@ export function DashboardPage() {
                 }}
               />
               {surgePref.shown ? (liveSurge ? <DriverSurgeLegend failed={liveSurge.state === "failed"} /> : <SurgeLegend />) : null}
-              <p className="fine-print">{trn("{0}Drivers move every 5 seconds; data reloads every 10 seconds.", api.demo ? tr("Simulated positions from demo data. ") : "")}</p>
+              {liveData ? null : <p className="fine-print">{trn("{0}Drivers move every 5 seconds; data reloads every 10 seconds.", api.demo ? tr("Simulated positions from demo data. ") : "")}</p>}
             </section>
 
             <SupplyDemandDrill rows={balance} showOnMap={showBalance} onToggleMap={() => setShowBalance((value) => !value)} surgeLink={surgeLink} drivers={live} requests={requests} radarZones={supplyBook.radarZones} onLocate={setLocate} radarZoneLink={can(role, "trips.read") ? (zoneId) => withScope(offersLink("radar", zoneId)) : null} />
@@ -657,7 +658,8 @@ export function DashboardPage() {
           />
 
           <div className="dash-grid-2">
-            <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />
+            {/* G3-R5: the airport queue has no server source: hidden on live. */}
+            {liveData ? null : <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />}
             <BoostCard rows={activeBoosts(bonuses.data ?? [], balance, surge)} surgeLink={surgeLink} />
           </div>
         </>
@@ -745,7 +747,7 @@ export function DashboardPage() {
                 </button>
               ))}
             </div>
-            {liveData && (shareTab !== "zone" || !report.byZone.length) ? <NotConnected block /> : totals.grossMinor ? <ShareBars rows={shareTab === "zone" ? report.byZone : shareTab === "category" ? report.byCategory : report.byMethod} format={compact} /> : <p className="state-line">{tr("No earnings in this period yet.")}</p>}
+            {liveData && (shareTab !== "zone" || !report.byZone.length) ? <p className="dx-calm" data-testid="value-no-data">{tr("No data yet.")}</p> : totals.grossMinor ? <ShareBars rows={shareTab === "zone" ? report.byZone : shareTab === "category" ? report.byCategory : report.byMethod} format={compact} /> : <p className="state-line">{tr("No earnings in this period yet.")}</p>}
           </section>
         </div>
       ) : null}

@@ -1,4 +1,3 @@
-import { NotConnected } from "../live/NotConnected";
 import { useEffect, useState, type ReactNode } from "react";
 import { useDashboardAccess } from "./access";
 import { Link } from "react-router";
@@ -75,7 +74,7 @@ export function AirportCard({ rows }: { rows: AirportQueue[] | null }) {
         <h3 id="airport-title">{trn("{0} Airport queue", <Plane size={16} aria-hidden="true" />)}</h3>
         <LiveTag />
       </div>
-      {rows === null ? <NotConnected block /> : rows.length === 0 ? <p className="state-line">{tr("No airport in this selection.")}</p> : (
+      {rows === null ? <NoServerData /> : rows.length === 0 ? <p className="state-line">{tr("No airport in this selection.")}</p> : (
         <ul className="mini-list">
           {rows.map((row) => (
             <li key={row.zoneId}>
@@ -171,7 +170,7 @@ export function InsightsCard({ tab, onTab, top, cancel, rating, periodLabel, top
           </button>
         ))}
       </div>
-      {tab === "drivers" && !rankingConnected ? <NotConnected block /> : tab === "cancellations" && cancel === null ? <NotConnected block /> : tab === "ratings" && rating === null ? <NotConnected block /> : tab === "drivers" ? (
+      {tab === "drivers" && !rankingConnected ? <NoServerData /> : tab === "cancellations" && cancel === null ? <NoServerData /> : tab === "ratings" && rating === null ? <NoServerData /> : tab === "drivers" ? (
         top ? (
           <div className="rank-grid">
             <Rank title={tr("Best rating")} icon={<Star size={14} aria-hidden="true" />} rows={top.rated} value={(row) => row.rating.toFixed(2)} />
@@ -219,4 +218,9 @@ function Rank({ title, icon, rows, value, warn = false }: { title: string; icon:
       )}
     </div>
   );
+}
+
+/** G3-R5 (owner 2026-10-30): live, a block the server sends nothing for reads "No data yet.", never "Not connected yet". */
+function NoServerData() {
+  return <p className="dx-calm" data-testid="value-no-data">{tr("No data yet.")}</p>;
 }

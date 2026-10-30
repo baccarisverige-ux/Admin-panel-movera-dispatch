@@ -5,7 +5,6 @@
 export type Connection = { state: "connected" | "partly" | "not"; what?: string };
 
 const PARTLY: Record<string, string> = {
-  dashboard: "Drivers and trips from the server; the rest is not connected yet.",
   reports: "Trips from the server; the rest is not connected yet.",
   trips: "Trips, trip page, offers and full refund from the server; chat, ride check and other actions are not connected yet.",
   live: "Drivers and trips from the server; positions are not connected yet.",
@@ -23,7 +22,8 @@ const PARTLY: Record<string, string> = {
  * where the page is live): drivers, onboarding (documents reviewed live), fleet owners and vehicles; content (owner G2c:
  * slots, history and restore come from the server).
  */
-const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding", "content"]);
+// Owner G3-R5 (2026-10-30): the Dashboard shows only the server's data on live (no demo parts), so no badge either.
+const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding", "content", "dashboard"]);
 
 export function connectionOf(id: string): Connection {
   if (CONNECTED.has(id)) return { state: "connected" };

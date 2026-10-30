@@ -159,7 +159,7 @@ export function AuditPage() {
         <DataTable
           head={["When", "Operation", "Agent", "Action", "Target", "Scope", "Before", "After", "Reason", "Result"]}
           rowIds={rows.map((entry) => entry.id)}
-          rows={rows.map((entry) => [entry.at, entry.operationId, entry.actorId, entry.action, entry.targetId, entry.scope, entry.before, entry.after, entry.reason, entry.result])}
+          rows={rows.map((entry) => [entry.at, entry.operationId, auditActorText(entry.actorId), auditActionText(entry.action), entry.targetId, entry.scope, entry.before, auditDetailText(entry) ?? entry.after, auditDetailText(entry) ? auditDetailText(entry) ?? "" : entry.reason, entry.result])}
           state={audit.isLoading ? "loading" : audit.isError ? "error" : "ready"}
           onRetry={() => void audit.refetch()}
         />

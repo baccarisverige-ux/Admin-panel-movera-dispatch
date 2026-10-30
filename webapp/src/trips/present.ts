@@ -499,3 +499,8 @@ export function countTrips(trips: readonly DemoRecord[], status: string): number
 }
 
 export { statusLabel, TRIP_STATUSES };
+
+/** The live map's layers. G3-R5: live has no airport queue or boosts (the server sends neither), only real data. */
+export function liveBoardLayers(live: boolean): (LiveKind | "stale")[] {
+  return live ? ["driver", "stale", "trip", "request"] : ["driver", "stale", "trip", "request", "queue", "boost"];
+}
