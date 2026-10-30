@@ -43,3 +43,8 @@ assert(!mustChooseReason("admin.confirm.cancel"), "closing a dialog is not a can
 assert(initialReason("admin.pricing.publish") === CHANGE_REASONS[0] && initialReason("admin.driver.suspend") === SUSPEND_REASONS[0], "other dialogs keep the first reason");
 assert(auditReason("", "typed anyway") === "", "no reason picked is no reason, so Confirm stays disabled");
 console.log("command reasons ok");
+
+// Owner G2 R10 (2026-10-30; decision 18 removed the button): no "Approve all remaining" command or text is left.
+assert(reasonFamily("admin.driver.approveAll") !== "document", "the removed approve-all command has no document reasons");
+assert(!COMMANDS.some((command) => command.id.endsWith(".approveAll")), "no approve-all command in the registry");
+console.log("approve all removed ok");

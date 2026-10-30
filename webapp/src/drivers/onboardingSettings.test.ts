@@ -214,3 +214,11 @@ test("G2 R9: valid months per document (FR URSSAF 6 by default), the end date is
   assert.equal(settingsProblem(setValidMonths(defaultDoc("FR"), "urssaf_certificate", 121)), "Valid months: 1 to 120.");
   assert.equal(setValidMonths(defaultDoc("FR"), "urssaf_certificate", null).validMonths?.["urssaf_certificate"], undefined);
 });
+
+test("G2 R10: the closed country (TN) is not asked for its onboarding settings (404 config_not_found on live)", async () => {
+  const server = fakeServer({ SE: defaultDoc("SE"), FR: defaultDoc("FR") });
+  const live = createLiveSettings(server.http);
+  const book = normalizeSettingsBook(await live.readSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook()));
+  assert.deepEqual(server.calls.filter((call) => call.path.includes("country=TN")), []);
+  assert.deepEqual(book.countries.TN.document.documents, { driver: [], fleet: [], vehicle: [] }, "TN keeps its closed defaults");
+});

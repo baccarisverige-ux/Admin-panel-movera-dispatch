@@ -10,7 +10,7 @@
  */
 import type { CategoryDef, ManualSurge, PricingStore, Revision, ZoneLive } from "../pricing/zonePricing.ts";
 import { zoneBook } from "../pricing/zonePricing.ts";
-import { zoneById } from "../markets/markets.ts";
+import { isStandardZone, zoneById } from "../markets/markets.ts";
 import { bookOfPricing, type ConfigHttp, type Doc } from "./configDocs.ts";
 
 type Lines = { sv: string; fr: string; en: string };
@@ -98,7 +98,8 @@ export async function readPricingExtras(http: ConfigHttp, store: PricingStore, z
   const liveVersions: Record<string, number> = {};
   await Promise.all(
     zoneIds.map(async (zoneId) => {
-      const schedule = await quiet(http.json<Schedule>(`/admin/zones/${encodeURIComponent(zoneId)}/surge`));
+      // A country's Standard (standard-XX) is a config key, not a zone: it has no surge schedule (owner G2 R10, 404s).
+      const schedule = isStandardZone(zoneId) ? null : await quiet(http.json<Schedule>(`/admin/zones/${encodeURIComponent(zoneId)}/surge`));
       const manual = manualOf(schedule && typeof schedule === "object" && "scheduleId" in schedule ? schedule : null);
       if (schedule && typeof schedule === "object" && "version" in schedule) surgeVersions[zoneId] = manual ? schedule.version : 0;
       next.live[zoneId] = { manual } satisfies ZoneLive;

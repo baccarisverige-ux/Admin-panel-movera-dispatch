@@ -319,3 +319,17 @@ export function fareLineLabel(code: string): string {
   const label = (FARE_LINE_LABEL as Record<string, (typeof FARE_LINE_LABEL)[keyof typeof FARE_LINE_LABEL]>)[code];
   return label ? tr(label) : code;
 }
+
+const ROW_HEALTH: Record<string, string> = { approved: "valid", in_review: "review", expired: "invalid", rejected: "invalid", missing: "invalid" };
+
+/**
+ * The health of one live document row: an approved document whose end date is within the warning days is "expiring"
+ * (owner G2 R10: the driver page's expiring list comes from the server's dates, not the demo).
+ */
+export function liveRowHealth(row: { status: string; document: { expiresAt?: string } | null }, nowMs: number, warnDays: number): string {
+  const base = ROW_HEALTH[row.status] ?? "invalid";
+  const end = row.document?.expiresAt ? Date.parse(row.document.expiresAt) : NaN;
+  if (base !== "valid" || !Number.isFinite(end)) return base;
+  if (end < nowMs) return "invalid";
+  return end - nowMs <= warnDays * 86_400_000 ? "expiring" : "valid";
+}

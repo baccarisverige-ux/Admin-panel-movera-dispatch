@@ -89,7 +89,7 @@ const LISTS: Record<ReasonFamily, readonly string[]> = {
 const RULES: [ReasonFamily, RegExp][] = [
   ["sensitive", /revealSensitive$/],
   ["people", /^admin\.team\./],
-  ["document", /^admin\.(driver|fleetOwner|vehicle|payment|rider)\.(review|approveAll|requestInfo|reviewRegistration|bankReview|approveBank|rejectBank|identity|update)$/],
+  ["document", /^admin\.(driver|fleetOwner|vehicle|payment|rider)\.(review|requestInfo|reviewRegistration|bankReview|approveBank|rejectBank|identity|update)$/],
   ["approval", /^admin\.approval\.|^admin\.(dispatch|config)\.(approve|decline)$|^admin\.payout\.approveRun$/],
   // Saving the refund limits in Settings is a settings change, not a refund.
   ["change", /^admin\.refundPolicy\./],

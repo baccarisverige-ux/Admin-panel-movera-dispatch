@@ -36,6 +36,7 @@ const SLOT_LABEL: Record<string, Parameters<typeof tr>[0]> = {
   help: "Help pages",
   legal: "Terms and privacy",
   "app-versions": "App versions",
+  "driver-info-session": "Driver app · how to book the info session",
 };
 
 function slotLabel(id: string): string {

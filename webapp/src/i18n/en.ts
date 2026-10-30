@@ -1019,7 +1019,6 @@ export const en = {
   "Approve": "Approve",
   "Approve a dispatch change": "Approve a dispatch change",
   "Approve a payout run": "Approve a payout run",
-  "Approve all remaining": "Approve all remaining",
   "Approve bank details": "Approve bank details",
   "Approve configuration": "Approve configuration",
   "Approve or decline trip money": "Approve or decline trip money",
@@ -7226,6 +7225,13 @@ export const en = {
   "expiring": "expiring",
   "missing or wrong": "missing or wrong",
   "waiting review": "waiting review",
+  "Driver app · how to book the info session": "Driver app · how to book the info session",
+  "Eligible": "Eligible",
+  "Ineligible": "Ineligible",
+  "Papers expire soon": "Papers expire soon",
+  "Papers missing or expired": "Papers missing or expired",
+  "Photos to review": "Photos to review",
+  "Rule check": "Rule check",
 } as const;
 
 export type MessageKey = keyof typeof en;

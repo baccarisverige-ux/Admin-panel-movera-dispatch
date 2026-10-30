@@ -4,7 +4,7 @@ import { ApiError } from "../api/httpClient.ts";
 import { contractJson } from "../contract/load.ts";
 import { registerDictionary, setLanguage } from "../i18n/core.ts";
 import { sv } from "../i18n/sv.ts";
-import { adminCan, agentFromAdmin, documentCounts, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, liveMoney, parseMinor, placeLabel, registerCountryTypes, ruleProblemText, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, tripTimeline, viewableMediaType } from "./format.ts";
+import { adminCan, agentFromAdmin, documentCounts, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, liveMoney, parseMinor, liveRowHealth, placeLabel, registerCountryTypes, ruleProblemText, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, tripTimeline, viewableMediaType } from "./format.ts";
 import { DOCUMENT_TYPES, FLEET_CODE, ONBOARDING_COUNTRIES, REQUIRED_DOCUMENTS } from "./onboardingContract.ts";
 import type { AdminMe, DocumentSummary } from "./types.ts";
 
@@ -215,4 +215,14 @@ test("G2 R2: a car breaking the rules is explained (Vehicle.ruleProblems, 409 ve
   } finally {
     setLanguage("en");
   }
+});
+
+test("G2 R10: the live driver page's expiring list comes from the server's end dates", () => {
+  const now = Date.parse("2026-10-30T12:00:00Z");
+  assert.equal(liveRowHealth({ status: "approved", document: { expiresAt: "2026-11-10T00:00:00Z" } }, now, 30), "expiring");
+  assert.equal(liveRowHealth({ status: "approved", document: { expiresAt: "2027-06-01T00:00:00Z" } }, now, 30), "valid");
+  assert.equal(liveRowHealth({ status: "approved", document: { expiresAt: "2026-10-01T00:00:00Z" } }, now, 30), "invalid");
+  assert.equal(liveRowHealth({ status: "approved", document: {} }, now, 30), "valid");
+  assert.equal(liveRowHealth({ status: "in_review", document: null }, now, 30), "review");
+  assert.equal(liveRowHealth({ status: "missing", document: null }, now, 30), "invalid");
 });

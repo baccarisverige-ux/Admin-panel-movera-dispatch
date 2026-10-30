@@ -1,4 +1,4 @@
-export const STUDIO_SLOTS=["driver-home","driver-event","rider-banner-1","rider-banner-2","rider-banner-3","rider-banner-4","rider-banner-5","rider-banner-6","help","legal","app-versions"] as const;
+export const STUDIO_SLOTS=["driver-home","driver-event","rider-banner-1","rider-banner-2","rider-banner-3","rider-banner-4","rider-banner-5","rider-banner-6","help","legal","app-versions","driver-info-session"] as const;
 /** Contract v0.10.0 §19: a text in sv, fr and en (all required); app versions as two pairs (rider and driver app). */
 export type StudioText={title:string;sv:string;fr:string;en:string;image:string;expiresAt:string;riderMin:string;riderRecommended:string;driverMin:string;driverRecommended:string;reaccept:boolean};
 export type StudioSlot={author:string;draft:StudioText;published:StudioText|null;history:{version:number;at:string;actor:string;text:StudioText;action:"publish"|"rollback"}[]};

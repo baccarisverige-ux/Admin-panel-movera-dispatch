@@ -32,7 +32,7 @@ import {
   type Doc,
   type Draft,
 } from "./configDocs.ts";
-import { ONBOARDING_SETTINGS_KEY, normalizeSettingsBook, wireDocument, type SettingsBook, type SettingsDoc } from "../drivers/onboardingSettings.ts";
+import { ONBOARDING_SETTINGS_KEY, OPEN, normalizeSettingsBook, wireDocument, type SettingsBook, type SettingsDoc } from "../drivers/onboardingSettings.ts";
 import { registerCountryTypes } from "./format.ts";
 
 /** Every zone of the admin's markets and each country's Standard. */
@@ -348,7 +348,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   async function readOnboarding(fallback: unknown): Promise<SettingsBook> {
     const book = normalizeSettingsBook(fallback);
     const countries = { ...book.countries };
-    await Promise.all(MARKETS.map(async (market) => {
+    // A closed country (TN) has nothing published and asks for no documents: it keeps its defaults, no call (owner G2 R10).
+    await Promise.all(MARKETS.filter((market) => OPEN[market.id]).map(async (market) => {
       // Read directly: a country whose zone documents are missing still has onboarding settings (defaults at least).
       const found = await readDraft(http, "onboarding", standardKey(market.id)).catch(() => null);
       if (!found) return;

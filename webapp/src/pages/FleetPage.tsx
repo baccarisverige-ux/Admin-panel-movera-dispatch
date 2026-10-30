@@ -15,7 +15,8 @@ import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, effectiveVe
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
 import { DataTable } from "../ui/DataTable";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
+import { COUNTRY_LABEL } from "../i18n/countries";
 
 const VIEWS = [
   { id: "all", label: "All" },
@@ -102,7 +103,7 @@ export function FleetPage() {
         <header className="dx-head">
           <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => set({ view: null })}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
           <div className="dx-head-text">
-            <h2>{trn("Vehicle rules for {0}", scope.market.name)}</h2>
+            <h2>{trn("Vehicle rules for {0}", trx(COUNTRY_LABEL[scope.market.id]))}</h2>
             <p>{tr("Which car fits which category, when papers count as expiring, and what happens when they run out.")}</p>
           </div>
         </header>
@@ -140,7 +141,7 @@ export function FleetPage() {
         {VIEWS.map((item) => (
           <button key={item.id} data-command="admin.table.filter" type="button" className={`vh-group ${VIEW_TONE[item.id]}${view === item.id ? " active" : ""}`} aria-pressed={view === item.id} onClick={() => set({ show: item.id === "all" ? null : item.id })}>
             <span className="vh-group-icon" aria-hidden="true">{VIEW_ICON[item.id]}</span>
-            <span className="vh-group-text"><b>{item.label}</b><small>{rows.filter((row) => inView(row, item.id)).length}</small></span>
+            <span className="vh-group-text"><b>{tr(item.label)}</b><small>{rows.filter((row) => inView(row, item.id)).length}</small></span>
           </button>
         ))}
       </nav>
@@ -150,7 +151,7 @@ export function FleetPage() {
       <LiveListBar list="vehicles" />
       <DataTable
           serverSearch="vehicles"
-        head={["Vehicle", "Plate", "Car", "Driver", "Fleet", "Category", "Fits", "Year", "Papers", "Status", "Rule check"]}
+        head={[tr("Vehicle"), tr("Plate"), tr("Car"), tr("Driver"), tr("Fleet"), tr("Category"), tr("Fits"), tr("Year"), tr("Papers"), tr("Status"), tr("Rule check")]}
         rowIds={shown.map((row) => row.record.id)}
         rows={shown.map((row) => [
           row.record.id,

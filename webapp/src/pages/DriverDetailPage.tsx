@@ -422,6 +422,8 @@ export function DriverDetailPage() {
 
         <TabPanel id="documents" activeId={tab}>
           <LiveDriverDocuments driverId={driver.id} />
+          {/* Live (owner G2 R10): only the server's documents above; the demo table and its expiring list are demo only. */}
+          {liveData ? null : <>
           <div className="fd-section-head">
             <div>
               <h3>{tr("Documents")}</h3>
@@ -444,6 +446,7 @@ export function DriverDetailPage() {
             onSaved={setNotice}
             expiring={expiringDemo}
           />
+          </>}
         </TabPanel>
 
         <TabPanel id="performance" activeId={tab}>
