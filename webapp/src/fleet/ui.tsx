@@ -1,3 +1,4 @@
+import { maxEndDate } from "../drivers/onboardingSettings";
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 import { ArrowDownRight, ArrowUpRight, FileText, MapPin, MessageSquare, Phone, Send } from "lucide-react";
@@ -139,7 +140,7 @@ function DocumentRow({ row, nowMs, warnDays, canEdit, targetId, scope, sliceKey,
       </label>
       <label className="fd-doc-field">
         <span>{tr("Expires")}</span>
-        <input type="date" aria-label={tr("{0} expiry date", [name])} value={expiresAt} disabled={!canEdit} onChange={(event) => setExpiresAt(event.target.value)} />
+        <input type="date" aria-label={tr("{0} expiry date", [name])} value={expiresAt} max={maxEndDate()} disabled={!canEdit} onChange={(event) => setExpiresAt(event.target.value)} />
       </label>
       {status === "rejected" || status === "needed" || note ? (
         <label className="fd-doc-field wide">
