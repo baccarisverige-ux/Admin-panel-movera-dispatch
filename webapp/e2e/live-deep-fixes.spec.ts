@@ -186,6 +186,9 @@ test("G2-D5.4: the Vehicles page shows each car's true state; G2-D5.3: no owner-
   await expect(state("OLD 004")).toHaveText("Blocked");
   await expect(page.getByRole("row").filter({ hasText: "TST 001" })).toContainText("Passed");
   await expect(page.getByRole("row").filter({ hasText: "NEW 001" })).toContainText("Given at approval");
+  await expect(page.getByRole("row").filter({ hasText: "NEW 001" })).toContainText("Waiting review");
+  await expect(page.getByRole("row").filter({ hasText: "NEW 002" })).toContainText("Missing or expired");
+  await expect(page.getByRole("row").filter({ hasText: "TST 001" })).toContainText("Papers OK");
   await expect(page.getByText("Should be on hold")).toHaveCount(0);
   await expect(page.getByText("Photos to review")).toHaveCount(0);
   await shot(page, "g2-d5-4-vehicles-en");

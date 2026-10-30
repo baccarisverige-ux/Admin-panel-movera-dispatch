@@ -128,7 +128,7 @@ function LiveLegal({ country, onCountry, onNotice }: { country: LegalCountry; on
 
         <h4>{tr("Company details")}</h4>
         <p className="gr-help">{trn("The texts use {0}. In the apps each one is replaced by the value below; a paragraph whose value is empty is left out, so nothing empty is shown.", <code>{LEGAL_PLACEHOLDERS.map((name) => `{${name}}`).join(" ")}</code>)}</p>
-        <div className="field-grid">
+        <div className="legal-company">
           {LEGAL_PLACEHOLDERS.map((field) => (
             <label key={field}>{tr(COMPANY_LABEL[field])}
               <input value={draft.company[field]} type={field === "supportEmail" ? "email" : field === "supportPhone" ? "tel" : "text"} placeholder={field === "supportPhone" ? "+46 8 123 456 78" : undefined} onChange={(event) => patchCompany(field, event.target.value)} data-company={field} />

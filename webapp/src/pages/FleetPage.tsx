@@ -75,7 +75,14 @@ export function FleetPage() {
         const dops = driver ? driverOps(store.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status }) : null;
         const docs = live ? liveCarDocs(record.liveVehicleDocs?.documents, now, rules.countries[countryOfZone(record.zoneId)].warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, rules.countries[countryOfZone(record.zoneId)].warnDays);
         // Live: the server's missing car documents decide; nothing is assumed approved (owner G2 R1).
-        const health = live ? (record.liveVehicleMissing?.length ? "invalid" as const : "valid" as const) : overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
+        // v0.18.5 (G2-D5.4): live papers = missing/rejected/expired (the owner must act), waiting review, or OK.
+        const liveHealth = (): DocHealth => {
+          if (!record.liveVehicleMissing?.length) return "valid";
+          const sent = (record.liveVehicleDocs?.documents ?? []).filter((doc) => !doc.renewalOf);
+          const stuck = record.liveVehicleMissing.some((type) => { const doc = sent.find((item) => item.type === type); return !doc || doc.status === "rejected" || doc.status === "expired" || doc.status === "missing"; });
+          return stuck ? "invalid" : "review";
+        };
+        const health = live ? liveHealth() : overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
         const country = rules.countries[countryOfZone(record.zoneId)];
         const car = { year: profile.year, seats: profile.seats, fuel: profile.fuel, category: profile.category };
         const photos = photosOf(rules, record.id);
@@ -127,7 +134,7 @@ export function FleetPage() {
         <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
           <h2>{tr("Vehicles")}</h2>
-          <p>{trn("{0} vehicles in this view. Eligibility uses year, seats, fuel/category rules, registration review and account state.{1}", shown.length, agent?.scope.fleetPartnerId ? tr(" Fleet partner scope: {0}.", [agent.scope.fleetPartnerId]) : "")}</p>
+          <p>{live ? tr("{0} vehicles in this view. State, papers and car rules come from the server; the admin gives the categories when approving a car.", [shown.length]) : trn("{0} vehicles in this view. Eligibility uses year, seats, fuel/category rules, registration review and account state.{1}", shown.length, agent?.scope.fleetPartnerId ? tr(" Fleet partner scope: {0}.", [agent.scope.fleetPartnerId]) : "")}</p>
         </div>
         <button data-command="admin.vehicle.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "rules" })}><Settings2 size={14} aria-hidden="true" />{" "}{tr("Vehicle rules")}</button>
       </header>
@@ -202,7 +209,7 @@ export function FleetPage() {
             fleetName(row.record.fleetId || "") || tr("Independent"),
             <span key="state" data-testid="vehicle-state-cell" data-state={row.state ?? ""}>{row.state ? liveCarStateLabel(row.state) : "—"}</span>,
             // G2-D5.3: the categories the admin gave on approval; none are shown before that.
-            row.record.liveVehicleStatus === "approved" ? (row.record.liveCategoryIds ?? []).map((item) => categoryName(item)).join(", ") || "—" : tr("Given at approval"),
+            row.record.liveVehicleStatus === "approved" || row.record.liveVehicleStatus === "blocked" ? (row.record.liveCategoryIds ?? []).map((item) => categoryName(item)).join(", ") || "—" : tr("Given at approval"),
             (row.record.liveFitCategories ?? []).map((item) => categoryName(item)).join(", ") || "—",
             row.record.year ?? "—",
             tr(HEALTH_TEXT[row.health]),

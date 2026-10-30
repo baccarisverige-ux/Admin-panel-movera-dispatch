@@ -7385,4 +7385,5 @@ export const fr: Record<MessageKey, string> = {
   "{0}: the text in {1} is longer than {2} characters.": "{0} : le texte en {1} dépasse {2} caractères.",
   "The support e-mail is not an e-mail address.": "L’e-mail du support n’est pas une adresse e-mail.",
   "The support phone must start with + and the country code, for example +46 8 123 456 78.": "Le téléphone du support doit commencer par + et l’indicatif du pays, par exemple +33 1 23 45 67 89.",
+  "{0} vehicles in this view. State, papers and car rules come from the server; the admin gives the categories when approving a car.": "{0} véhicules dans cette vue. L’état, les documents et les règles viennent du serveur ; l’admin donne les catégories en approuvant un véhicule.",
 };

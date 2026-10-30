@@ -211,7 +211,9 @@
 .legal-docs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .legal-doc { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .legal-doc h4 { margin: 0; }
-.legal-doc label { display: flex; flex-direction: column; gap: 4px; }
+.legal-doc label, .legal-company label { display: flex; flex-direction: column; align-items: stretch; text-align: left; gap: 4px; }
+.legal-doc input, .legal-company input { width: 100%; box-sizing: border-box; }
+.legal-company { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .legal-doc textarea { min-height: 280px; font: inherit; line-height: 1.45; }
 .legal-reaccept { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .legal-problems { margin: 0; padding-left: 18px; color: #a02020; }
