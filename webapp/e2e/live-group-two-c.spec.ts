@@ -108,6 +108,7 @@ test("4: Onboarding steps and the driver page in Swedish: no days, Every, and, S
   await expect(page.getByRole("heading", { level: 2, name: /Anna/ })).toBeVisible();
   await expect(page.locator("main")).not.toContainText("Scheduled rides on");
   await expect(page.locator("main")).not.toContainText("No vehicle");
-  await page.getByText("Bokade resor för den här föraren", { exact: true }).scrollIntoViewIfNeeded();
+  // Owner G3-R3 (2026-10-30): the per-driver scheduled rides card ("Bokade resor för den här föraren") is removed.
+  await expect(page.getByText("Bokade resor för den här föraren", { exact: true })).toHaveCount(0);
   await shot(page, "driver-sv");
 });
