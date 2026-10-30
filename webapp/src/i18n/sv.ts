@@ -7289,4 +7289,10 @@ export const sv: Record<MessageKey, string> = {
   "Of everyone who signed up in the last 30 days, the share who got to the last step. Demo history.": "Av alla som registrerade sig de senaste 30 dagarna, andelen som nådde sista steget. Demohistorik.",
   "1 time": "1 gång",
   "1 number": "1 nummer",
+  "Choose the sign-in page language": "Välj språk för inloggningssidan",
+  "Publish terms and privacy": "Publicera villkor och integritet",
+  "Show the trip chat": "Visa resans chatt",
+  "Language: {0}": "Språk: {0}",
+  "You were signed out because the panel was not used for a while. Sign in again.": "Du loggades ut eftersom panelen inte användes på en stund. Logga in igen.",
+  "Your session has ended. Sign in again.": "Din session har avslutats. Logga in igen.",
 };

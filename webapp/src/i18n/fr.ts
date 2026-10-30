@@ -7289,4 +7289,10 @@ export const fr: Record<MessageKey, string> = {
   "Of everyone who signed up in the last 30 days, the share who got to the last step. Demo history.": "Parmi les inscrits des 30 derniers jours, la part arrivée à la dernière étape. Historique de démo.",
   "1 time": "1 fois",
   "1 number": "1 numéro",
+  "Choose the sign-in page language": "Choisir la langue de la page de connexion",
+  "Publish terms and privacy": "Publier les conditions et la confidentialité",
+  "Show the trip chat": "Afficher la discussion de la course",
+  "Language: {0}": "Langue : {0}",
+  "You were signed out because the panel was not used for a while. Sign in again.": "Vous avez été déconnecté car le panneau n’a pas été utilisé pendant un moment. Reconnectez-vous.",
+  "Your session has ended. Sign in again.": "Votre session est terminée. Reconnectez-vous.",
 };

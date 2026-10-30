@@ -15,6 +15,11 @@ export type LiveSessionValue = {
   signOut: () => void;
   /** The server's expanded permission list decides, never the panel's role tables. */
   can: (permission: string) => boolean;
+  /**
+   * Owner G1-D2: why the admin is on the sign-in page without having pressed Sign out — "idle" after
+   * idleTimeoutSeconds without use, "ended" when the server ended the session. null after the admin's own Sign out.
+   */
+  signedOut: "idle" | "ended" | null;
 };
 
 const LiveSessionContext = createContext<LiveSessionValue | null>(null);
@@ -31,6 +36,8 @@ export function LiveSessionProvider({ children, baseUrl = liveBaseUrl(import.met
   const [admin, setAdmin] = useState<AdminMe | null>(() => client.admin());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [signedOut, setSignedOut] = useState<"idle" | "ended" | null>(null);
+  const idleSignOut = useRef(false);
   // In live mode "agents" is the signed-in admin alone, built from the server's AdminMe.
   const [agents, setAgentsState] = useState<Agent[]>(() => (admin ? [agentFromAdmin(admin)] : []));
   const lastActivity = useRef(Date.now());
@@ -42,9 +49,11 @@ export function LiveSessionProvider({ children, baseUrl = liveBaseUrl(import.met
   }), [client]);
 
   useEffect(() => {
-    signedOutBy.current = () => {
+    signedOutBy.current = (reason) => {
       queryClient.clear();
       setError(null);
+      setSignedOut(reason === "refresh_failed" ? "ended" : idleSignOut.current ? "idle" : null);
+      idleSignOut.current = false;
     };
   }, [queryClient]);
 
@@ -56,7 +65,10 @@ export function LiveSessionProvider({ children, baseUrl = liveBaseUrl(import.met
     const events = ["pointerdown", "keydown"] as const;
     events.forEach((name) => window.addEventListener(name, mark));
     const timer = window.setInterval(() => {
-      if (idleExpired(lastActivity.current, Date.now(), admin.idleTimeoutSeconds)) void client.signOut();
+      if (idleExpired(lastActivity.current, Date.now(), admin.idleTimeoutSeconds)) {
+        idleSignOut.current = true;
+        void client.signOut();
+      }
     }, 15_000);
     return () => {
       events.forEach((name) => window.removeEventListener(name, mark));
@@ -67,6 +79,7 @@ export function LiveSessionProvider({ children, baseUrl = liveBaseUrl(import.met
   const signIn = useCallback(async (email: string, password: string) => {
     setBusy(true);
     setError(null);
+    setSignedOut(null);
     try {
       const me = await client.signIn(email, password);
       lastActivity.current = Date.now();
@@ -89,7 +102,8 @@ export function LiveSessionProvider({ children, baseUrl = liveBaseUrl(import.met
     signIn,
     signOut,
     can: (permission) => adminCan(admin, permission),
-  }), [admin, client, error, busy, signIn, signOut]);
+    signedOut,
+  }), [admin, client, error, busy, signIn, signOut, signedOut]);
 
   const agent = agents[0] ?? null;
   const legacy = useMemo<SessionValue>(() => ({

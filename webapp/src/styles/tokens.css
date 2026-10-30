@@ -315,6 +315,76 @@ textarea:focus {
   font-size: 14px
 }
 
+/* Owner G1-D2: the globe (sv / fr / en) at the top of the pages before sign-in. */
+.login-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px
+}
+
+.login-top .crumb {
+  margin: 0
+}
+
+.login-globe {
+  position: relative
+}
+
+.login-globe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer
+}
+
+.login-globe-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 5;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
+  min-width: 140px
+}
+
+.login-globe-list button {
+  width: 100%;
+  text-align: left;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  cursor: pointer
+}
+
+.login-globe-list button.active,
+.login-globe-list button:hover {
+  background: #eef2ee
+}
+
+.login-signed-out {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff6e5;
+  font-size: 14px
+}
+
 .login-help summary {
   cursor: pointer
 }

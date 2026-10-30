@@ -4,6 +4,7 @@ import { useSession } from "../auth/SessionContext";
 import { SIGN_IN_LOG_KEY, readSignInLog, withSignIn } from "../auth/signInLog";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn } from "../i18n";
+import { SignInLanguageGlobe } from "../i18n/SignInLanguageGlobe";
 
 export function LoginPage() {
   const session = useSession();
@@ -26,7 +27,10 @@ export function LoginPage() {
           );
         }}
       >
-        <p className="crumb">{tr("Movera Admin · Demo")}</p>
+        <div className="login-top">
+          <p className="crumb">{tr("Movera Admin · Demo")}</p>
+          <SignInLanguageGlobe />
+        </div>
         <h1>{tr("Sign in")}</h1>
         <p>{trn("Demo password {0} and code {1}. This is not a production login.", <strong>{DEMO_PASSWORD}</strong>, <strong>{DEMO_CODE}</strong>)}</p>
         <label>

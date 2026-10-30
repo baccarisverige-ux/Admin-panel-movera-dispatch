@@ -7287,6 +7287,12 @@ export const en = {
   "Of everyone who signed up in the last 30 days, the share who got to the last step. Demo history.": "Of everyone who signed up in the last 30 days, the share who got to the last step. Demo history.",
   "1 time": "1 time",
   "1 number": "1 number",
+  "Choose the sign-in page language": "Choose the sign-in page language",
+  "Publish terms and privacy": "Publish terms and privacy",
+  "Show the trip chat": "Show the trip chat",
+  "Language: {0}": "Language: {0}",
+  "You were signed out because the panel was not used for a while. Sign in again.": "You were signed out because the panel was not used for a while. Sign in again.",
+  "Your session has ended. Sign in again.": "Your session has ended. Sign in again.",
 } as const;
 
 export type MessageKey = keyof typeof en;
