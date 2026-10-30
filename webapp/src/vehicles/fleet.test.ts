@@ -1,5 +1,5 @@
 import { fleetStatus, type FleetCar } from "./fleet.ts";
-import { effectiveVehicleRules } from "./rules.ts";
+import { effectiveVehicleRules, liveCarDocs } from "./rules.ts";
 import { emptySettingsBook } from "../drivers/onboardingSettings.ts";
 
 const assert = (ok: unknown, message: string) => {
@@ -29,4 +29,15 @@ console.log("fleet ok");
   assert(demo.countries.SE.categories.find((rule) => rule.category === "economy")?.minYear !== undefined, "demo still reads its slice");
   assert(Object.keys(demo.photos).length === 1, "demo keeps its photos");
   console.log("live car rules ok");
+}
+
+// Owner G2 R1: live car papers come from the server (no invented approved inspection or expired insurance).
+{
+  const now = Date.parse("2026-10-30T12:00:00Z");
+  const docs = liveCarDocs([{ type: "vehicle_registration", status: "approved", expiresAt: "2027-05-31T00:00:00Z" }, { type: "insurance", status: "in_review" }], now, 30);
+  assert(docs.map((doc) => doc.id).join() === "registration,insurance", "registration and insurance only");
+  assert(docs[0]!.health === "valid" && docs[0]!.expiresAt === "2027-05-31", "approved registration with its end date");
+  assert(docs[1]!.health === "review" && docs[1]!.expiresAt === "", "insurance in review, no date");
+  assert(liveCarDocs(undefined, now)[1]!.health === "invalid", "nothing uploaded is missing");
+  console.log("live car papers ok");
 }

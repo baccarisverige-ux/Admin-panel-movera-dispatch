@@ -20,7 +20,7 @@ import {
 import { can } from "../auth/permissions";
 import { HealthPill } from "../fleet/ui";
 import { formatMoney } from "../markets/markets";
-import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn } from "../i18n";
 import { statusLabel } from "../domain/labels";
@@ -117,13 +117,15 @@ export function VehicleDetailPage() {
   const countryRules = rules.countries[country];
   const driver = drivers.data?.find((item) => item.id === record.driverId);
   const dops = driver ? driverOps(store.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status }) : null;
-  const docs = carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, countryRules.warnDays);
+  // Live (owner G2 R1): the server's car papers; the demo keeps its simulated ones.
+  const docs = isLiveData() ? liveCarDocs(record.liveVehicleDocs?.documents, now, countryRules.warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, countryRules.warnDays);
   const photos = photosOf(rules, record.id);
   const car = { year: profile.year, seats: profile.seats, fuel: profile.fuel, category: profile.category };
   const fitsList = fits(car, countryRules);
   const list = checks(car, docs, photos, countryRules, profile.category);
   const earnings = carEarnings(trips.data ?? [], record.driverId);
-  const hold = shouldHold(docs, countryRules) && record.status !== "on_hold";
+  // Live: the server takes cars off the road itself; no simulated hold warning.
+  const hold = !isLiveData() && shouldHold(docs, countryRules) && record.status !== "on_hold";
   const money = (minor: number) => formatMoney(minor, country);
   const canEdit = Boolean(agent && can(agent.role, "vehicles.edit"));
   // v0.18.3 (owner G2 R2): the server's Vehicle.ruleProblems; while there are any the car cannot be approved.

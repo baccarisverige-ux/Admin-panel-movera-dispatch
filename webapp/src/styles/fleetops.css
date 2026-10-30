@@ -157,5 +157,7 @@
 /* G2 R2: a car that breaks the country rules (Vehicle.ruleProblems). */
 .vh-rule-bad { color: #b42318; font-weight: 600; }
 .vh-rule-problems ul { margin: 4px 0 0 20px; }
-.ob-guide-line { display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 6px; align-items: end; margin-bottom: 6px; }
+.ob-guide-line { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 6px; align-items: end; margin-bottom: 6px; }
+.ob-guide-line label { min-width: 0; }
+.ob-guide-line input { width: 100%; min-width: 0; box-sizing: border-box; }
 @media (max-width: 700px) { .ob-guide-line { grid-template-columns: 1fr; } }

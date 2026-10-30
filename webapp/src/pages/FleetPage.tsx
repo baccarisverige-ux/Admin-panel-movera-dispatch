@@ -11,7 +11,7 @@ import { vehicleBlock } from "../drivers/gate";
 import { overallHealth, type DocHealth } from "../fleet/documents";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
-import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, photosOf, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
 import { DataTable } from "../ui/DataTable";
@@ -67,7 +67,7 @@ export function FleetPage() {
         const profile = vehicleOps(store.value, record);
         const driver = record.driverId ? byId.get(record.driverId) : undefined;
         const dops = driver ? driverOps(store.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status }) : null;
-        const docs = carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, rules.countries[countryOfZone(record.zoneId)].warnDays);
+        const docs = live ? liveCarDocs(record.liveVehicleDocs?.documents, now, rules.countries[countryOfZone(record.zoneId)].warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, rules.countries[countryOfZone(record.zoneId)].warnDays);
         // Live: the server's missing car documents decide; nothing is assumed approved (owner G2 R1).
         const health = live ? (record.liveVehicleMissing?.length ? "invalid" as const : "valid" as const) : overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
         const country = rules.countries[countryOfZone(record.zoneId)];
