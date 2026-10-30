@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fakeTripServer, signIn } from "./live-fake";
+import { VEHICLE, fakeTripServer, signIn } from "./live-fake";
 
 /**
  * Contract v0.18.5 deep fixes of driver groups 1 and 2 (admin part). Each test names the owner decision it covers
@@ -149,4 +149,88 @@ test("G2-D1: an active driver with a renewal waiting is in the review queue", as
   await expect(page.getByTestId("queue-renewal-banner")).toBeVisible();
   await expect(page.getByTestId("onboarding-selected").getByTestId("renewal-row")).toBeVisible();
   await shot(page, "g2-d1-review-queue");
+});
+
+/* ---------------------------------------------------------------------------------- G2-D5.3 / D5.4 vehicles */
+
+const CAR_DOCS = [
+  { documentId: "VD1", type: "vehicle_registration", status: "approved", expiresAt: "2027-05-31T00:00:00Z" },
+  { documentId: "VD2", type: "insurance", status: "in_review" },
+];
+const CARS = [
+  // A new car: every paper sent, waiting for the admin; the owner's old app still sent a category (never shown).
+  { ...VEHICLE, vehicleId: "V1", plate: "NEW 001", year: 2021, seats: 4, fuel: "hybrid", categoryIds: [], status: "pending", documents: CAR_DOCS, requiredDocuments: ["vehicle_registration", "insurance"], fitCategories: ["economy", "comfort", "child_seat"] },
+  // Papers missing.
+  { ...VEHICLE, vehicleId: "V2", plate: "NEW 002", categoryIds: [], status: "pending", documents: [CAR_DOCS[0]], requiredDocuments: ["vehicle_registration", "insurance"], fitCategories: ["economy"] },
+  // TST 001 after migration 0038: 7 seats, electric, approved, no rule problems.
+  { ...VEHICLE, vehicleId: "V3", plate: "TST 001", year: 2022, seats: 7, fuel: "electric", categoryIds: ["xl", "electric"], status: "approved", documents: CAR_DOCS.map((doc) => ({ ...doc, status: "approved" })), requiredDocuments: ["vehicle_registration", "insurance"], fitCategories: ["economy", "xl", "electric"] },
+  { ...VEHICLE, vehicleId: "V4", plate: "OLD 004", categoryIds: ["economy"], status: "blocked", documents: [], requiredDocuments: ["vehicle_registration", "insurance"], fitCategories: [] },
+];
+
+async function carServer(page: Page, language = "en") {
+  const state = await fakeTripServer(page, {
+    vehicles: CARS.map((car) => ({ ...car })) as unknown as (typeof VEHICLE)[],
+    admin: { permissions: ["overview.read", "drivers.read", "drivers.activate", "documents.approve", "vehicles.edit", "trips.read", "zones.read"], language },
+  });
+  await signIn(page, language === "sv" ? "Kontrollpanel" : "Dashboard");
+  return state;
+}
+
+test("G2-D5.4: the Vehicles page shows each car's true state; G2-D5.3: no owner-chosen categories before approval", async ({ page }) => {
+  await carServer(page);
+  await page.goto("/vehicles");
+  const state = (plate: string) => page.getByRole("row").filter({ hasText: plate }).getByTestId("vehicle-state-cell");
+  await expect(state("NEW 001")).toHaveText("Waiting for admin");
+  await expect(state("NEW 002")).toHaveText("Waiting for papers");
+  await expect(state("TST 001")).toHaveText("Approved");
+  await expect(state("OLD 004")).toHaveText("Blocked");
+  await expect(page.getByRole("row").filter({ hasText: "TST 001" })).toContainText("Passed");
+  await expect(page.getByRole("row").filter({ hasText: "NEW 001" })).toContainText("Given at approval");
+  await expect(page.getByText("Should be on hold")).toHaveCount(0);
+  await expect(page.getByText("Photos to review")).toHaveCount(0);
+  await shot(page, "g2-d5-4-vehicles-en");
+  await page.getByTestId("live-vehicle-views").getByRole("button", { name: /Waiting for papers/ }).click();
+  await expect(page.getByRole("row").filter({ hasText: "NEW 001" })).toHaveCount(0);
+  await expect(page.getByRole("row").filter({ hasText: "NEW 002" })).toHaveCount(1);
+});
+
+test("G2-D5.4: the Vehicles page states are in Swedish", async ({ page }) => {
+  await carServer(page, "sv");
+  await page.goto("/vehicles");
+  await expect(page.getByRole("row").filter({ hasText: "NEW 002" }).getByTestId("vehicle-state-cell")).toHaveText("Väntar på papper");
+  await expect(page.getByRole("row").filter({ hasText: "NEW 001" }).getByTestId("vehicle-state-cell")).toHaveText("Väntar på admin");
+  await shot(page, "g2-d5-4-vehicles-sv");
+});
+
+test("G2-D5.3: the admin gives the categories when approving, only the ones the car fits, at least one ride category", async ({ page }) => {
+  const state = await carServer(page);
+  await page.goto("/vehicles/V1");
+  const box = page.getByTestId("vehicle-approval");
+  await expect(box.getByTestId("vehicle-state")).toContainText("Waiting for admin");
+  await expect(box.getByRole("checkbox")).toHaveCount(3);
+  const approve = box.getByRole("button", { name: "Approve car" });
+  await expect(approve).toBeDisabled();
+  await expect(box.getByTestId("approve-why")).toHaveText("Give the car at least one ride category.");
+  await box.getByLabel(/Child Seat/).check();
+  await expect(approve).toBeDisabled();
+  await box.getByLabel("Comfort").check();
+  await expect(approve).toBeEnabled();
+  await shot(page, "g2-d5-3-approve-with-categories");
+  await approve.click();
+  const modal = page.locator(".modal.open").last();
+  const typed = modal.getByLabel(/^Type .* to confirm/);
+  if (await typed.count()) await typed.fill((await typed.getAttribute("aria-label"))?.match(/Type (.*) to confirm/)?.[1] ?? "V1");
+  await modal.getByRole("button", { name: "Confirm" }).click();
+  await expect.poll(() => state.calls.find((call) => call.method === "POST" && call.path === "/api/v1/admin/vehicles/V1/review")?.body).toMatchObject({ expectedVersion: 1, decision: "approved", categoryIds: ["child_seat", "comfort"] });
+});
+
+test("G2-D5.7: putting a car on hold always sends a reason", async ({ page }) => {
+  const state = await carServer(page);
+  await page.goto("/vehicles/V3");
+  await page.getByTestId("vehicle-approval").getByRole("button", { name: "Put on hold" }).click();
+  const modal = page.locator(".modal.open").last();
+  const typed = modal.getByLabel(/^Type .* to confirm/);
+  if (await typed.count()) await typed.fill((await typed.getAttribute("aria-label"))?.match(/Type (.*) to confirm/)?.[1] ?? "V3");
+  await modal.getByRole("button", { name: "Confirm" }).click();
+  await expect.poll(() => state.calls.find((call) => call.method === "POST" && call.path === "/api/v1/admin/vehicles/V3/review")?.body).toMatchObject({ decision: "blocked", note: expect.stringMatching(/\S/) });
 });

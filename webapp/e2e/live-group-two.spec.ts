@@ -39,9 +39,10 @@ test("R1: the Vehicles page and the car page open with a real (ULID) car id; rea
   const dates = page.getByTestId("vehicle-end-dates");
   await expect(dates).toContainText("2027-05-31");
   await expect(dates).toContainText("—");
-  // R2: the server's rule problems in red, Return to service disabled, no simulated text.
+  // R2: the server's rule problems in red, approval disabled, no simulated text. v0.18.5 (G2-D5.3): the live button
+  // is "Approve car" with the categories the admin gives.
   await expect(page.getByTestId("vehicle-rule-problems")).toContainText("Movera: the car is too old");
-  await expect(page.getByRole("button", { name: "Return to service" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve car" })).toBeDisabled();
   await expect(page.getByText(/simulated vehicle state/)).toHaveCount(0);
   await expect(page.getByText(/should be on hold/)).toHaveCount(0);
   await shot(page, "after-vehicle-detail");

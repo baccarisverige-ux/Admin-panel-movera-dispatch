@@ -26,6 +26,7 @@ import { tr, trn, trSentences, trx } from "../i18n";
 import { categoryName } from "../riders/profile";
 import { zoneById } from "../markets/markets";
 import { statusLabel } from "../domain/labels";
+import { approvalBlock, approvalChoices, initialApprovalPick, liveCarState, liveCarStateLabel } from "../vehicles/liveState";
 
 export function VehicleDetailPage() {
   const { id = "" } = useParams();
@@ -54,6 +55,8 @@ export function VehicleDetailPage() {
   const [note, setNote] = useState("");
   const [driverId, setDriverId] = useState("");
   const [notice, setNotice] = useState("Vehicle changes are not live until a command is confirmed.");
+  // v0.18.5 (owner G2-D5.3): the categories the admin gives on approval (null = the car's own that it still fits).
+  const [picked, setPicked] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (!profile || !record) return;
@@ -130,7 +133,7 @@ export function VehicleDetailPage() {
   const liveCats = isLiveData() ? record.liveCategoryIds ?? [] : null;
   const list = liveCats
     ? [
-        { label: tr("Fits {0}", [liveCats.map((item) => categoryName(item)).join(", ") || "—"]), ok: ruleProblems.length === 0, detail: ruleProblems.length ? ruleProblems.map((item) => ruleProblemText(item)).join(" · ") : tr("{0}, {1} seats, {2}", [profile.year, profile.seats, fuelLabel(profile.fuel).toLowerCase()]) },
+        { label: tr("Car rules"), ok: ruleProblems.length === 0, detail: ruleProblems.length ? ruleProblems.map((item) => ruleProblemText(item)).join(" · ") : tr("{0}, {1} seats, {2}", [profile.year, profile.seats, fuelLabel(profile.fuel).toLowerCase()]) },
         ...docs.map((doc) => ({ label: doc.label, ok: doc.health === "valid" || doc.health === "expiring", detail: doc.text })),
       ]
     : checks(car, docs, photos, countryRules, profile.category);
@@ -141,6 +144,13 @@ export function VehicleDetailPage() {
   const hold = !isLiveData() && shouldHold(docs, countryRules) && record.status !== "on_hold";
   const money = (minor: number) => formatMoney(minor, country);
   const canEdit = Boolean(agent && can(agent.role, "vehicles.edit"));
+  // v0.18.5 (owner G2-D5.4): the car's true state from the server; G2-D5.3: the categories the admin may give.
+  const carState = liveCats ? liveCarState({ status: record.liveVehicleStatus ?? "pending", documents: record.liveVehicleDocs?.documents ?? [], requiredDocuments: record.liveVehicleDocs?.required ?? [] }) : null;
+  const choices = approvalChoices(record.liveFitCategories);
+  const pick = picked ?? initialApprovalPick(liveCats ?? [], record.liveFitCategories);
+  const carTooOld = ruleProblems.some((item) => item.startsWith("car:"));
+  const approveWhy = carTooOld ? ruleProblems.filter((item) => item.startsWith("car:")).map(ruleProblemText).join(", ") : approvalBlock(pick);
+  const togglePick = (id: string, on: boolean) => setPicked(on ? [...new Set([...pick, id])] : pick.filter((item) => item !== id));
 
   return (
     <div className="dx-page vh-page">
@@ -148,7 +158,7 @@ export function VehicleDetailPage() {
         <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/vehicles"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
           <h2>{record.plate ?? record.id}</h2>
-          <p data-testid="vehicle-head-line">{trn("{0} {1} · {2} · {3}.{4}", record.make ?? tr("Vehicle"), record.model ?? "", statusLabel(record.status), zoneName || "—", record.driverId ? tr(" Driver {0}.", [driver?.name || "—"]) : tr(" Unassigned."))}</p>
+          <p data-testid="vehicle-head-line">{trn("{0} {1} · {2} · {3}.{4}", record.make ?? tr("Vehicle"), record.model ?? "", carState ? liveCarStateLabel(carState) : statusLabel(record.status), zoneName || "—", record.driverId ? tr(" Driver {0}.", [driver?.name || "—"]) : tr(" Unassigned."))}</p>
         </div>
         <Link className="dash-btn small ghost" to="/vehicles">{tr("Back to vehicles")}</Link>
       </header>
@@ -170,9 +180,16 @@ export function VehicleDetailPage() {
           <small>{trn("{0} seats · {1} · {2}", profile.seats, fuelLabel(profile.fuel).toLowerCase(), profile.fleetId || record.fleetId ? tr("Fleet {0}", [fleetName(profile.fleetId || record.fleetId || "")]) : tr("Independent"))}</small>
           <span>{trn("Driver {0}", driver ? <Link to={`/drivers/${driver.id}`}>{driver.name}</Link> : tr("not linked"))}</span>
         </span>
+        {liveCats ? (
+          // Live (G2-D5.3): the server's Vehicle.fitCategories, never the demo's own rule check.
+          <span className="vh-fits" aria-label={tr("Categories it fits")} data-testid="vehicle-fits">
+            {[...choices.rides, ...choices.extras].length ? [...choices.rides, ...choices.extras].map((id) => <span key={id} className="on" title={tr("Fits")}>{categoryName(id)}</span>) : <span>{tr("No category fits this car")}</span>}
+          </span>
+        ) : (
         <span className="vh-fits" aria-label={tr("Categories it fits")}>
           {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((id) => <span key={id} className={fitsList.includes(id) ? "on" : undefined} title={fitsList.includes(id) ? tr("Fits") : tr("Does not fit")}>{trx(CATEGORY_LABELS[id])}</span>)}
         </span>
+        )}
       </section>
 
       <LiveVehicleDocuments record={record} />
@@ -249,7 +266,7 @@ export function VehicleDetailPage() {
             </select>
           </label>
           {liveCats ? (
-          <label>{tr("Category")}<output className="vh-cats" data-testid="vehicle-categories">{liveCats.map((item) => categoryName(item)).join(", ") || "—"}</output>
+          <label>{tr("Category")}<output className="vh-cats" data-testid="vehicle-categories">{record.liveVehicleStatus === "approved" ? liveCats.map((item) => categoryName(item)).join(", ") || "—" : tr("Given by the admin when the car is approved")}</output>
           </label>
           ) : (
           <label>{tr("Category")}<select value={category} onChange={(event) => setCategory(event.target.value as Vehicle["category"])}>
@@ -296,7 +313,9 @@ export function VehicleDetailPage() {
           patch={{ status: savedStatus, fleetId: fleetId || null }}
           expectedSliceRev={store.value.draftRev}
           sliceKey="driverOps"
-          value={isLiveData() ? { year: nextProfile.year, seats: nextProfile.seats, fuel: nextProfile.fuel, categoryIds: [nextProfile.category] } : nextBook}
+          // Live: year, seats and (when set or changed) the fuel. v0.18.5 (owner G2-D5.3): never the categories here;
+          // the admin gives them when approving, below.
+          value={isLiveData() ? { year: nextProfile.year, seats: nextProfile.seats, ...(record.fuel || nextProfile.fuel !== profile.fuel ? { fuel: nextProfile.fuel } : {}) } : nextBook}
           onDone={() => setNotice(tr("Vehicle compliance profile saved."))}
         >{tr("Save vehicle compliance")}</CommandButton>
       </article>
@@ -363,6 +382,53 @@ export function VehicleDetailPage() {
         >{tr("Save driver assignment")}</CommandButton>
       </article>
 
+      {liveCats && carState ? (
+      <article className="panel vh-panel" data-testid="vehicle-approval">
+        <h3>{tr("Service state")}</h3>
+        <p data-testid="vehicle-state"><strong>{liveCarStateLabel(carState)}</strong>{carState === "approved" ? <> · {tr("Categories: {0}", [liveCats.map(categoryName).join(", ") || "—"])}</> : null}</p>
+        <fieldset className="vh-approve-cats" disabled={!canEdit}>
+          <legend>{carState === "approved" ? tr("Categories of this car (only the ones it fits)") : tr("Give the categories when approving (only the ones it fits)")}</legend>
+          {choices.rides.length + choices.extras.length === 0 ? <p className="vh-help" data-testid="no-fit-categories">{tr("No category fits this car: check its year, seats and fuel against Vehicle rules.")}</p> : null}
+          {[...choices.rides, ...choices.extras].map((id) => (
+            <label key={id} className="vh-approve-cat"><input type="checkbox" checked={pick.includes(id)} onChange={(event) => togglePick(id, event.target.checked)} /> {categoryName(id)}{choices.extras.includes(id) ? <small> · {tr("extra, only with a ride category")}</small> : null}</label>
+          ))}
+        </fieldset>
+        {approveWhy ? <p className="vh-help" data-testid="approve-why">{approveWhy}</p> : null}
+        <div className="actions">
+          <CommandButton
+            command="admin.vehicle.activate"
+            className="primary-btn"
+            type="button"
+            targetId={record.id}
+            entityState={record.status}
+            scope={record.zoneId}
+            before={`${record.liveVehicleStatus ?? record.status} ${liveCats.join(",")}`}
+            after={`approved ${pick.join(",")}`}
+            collection="vehicles"
+            patch={{ status: "eligible" }}
+            value={{ categoryIds: pick }}
+            disabled={Boolean(approveWhy)}
+            title={approveWhy ?? undefined}
+            onDone={() => { setPicked(null); setNotice(tr("Car approved with {0}.", [pick.map(categoryName).join(", ")])); }}
+          >{carState === "approved" ? tr("Save categories") : tr("Approve car")}</CommandButton>
+          <CommandButton
+            command="admin.vehicle.hold"
+            className="secondary-btn"
+            type="button"
+            targetId={record.id}
+            entityState={record.status}
+            scope={record.zoneId}
+            before={record.liveVehicleStatus ?? record.status}
+            after="blocked"
+            collection="vehicles"
+            patch={{ status: "on_hold" }}
+            disabled={carState === "blocked"}
+            onDone={() => setNotice(tr("Vehicle placed on hold."))}
+          >{tr("Put on hold")}</CommandButton>
+        </div>
+        <p className="vh-help">{tr("Putting a car on hold asks for a reason; the fleet owner sees it.")}</p>
+      </article>
+      ) : (
       <article className="panel vh-panel">
         <h3>{tr("Service state")}</h3>
         <div className="actions">
@@ -397,6 +463,7 @@ export function VehicleDetailPage() {
           >{tr("Return to service")}</CommandButton>
         </div>
       </article>
+      )}
     </div>
   );
 }

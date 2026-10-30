@@ -154,6 +154,8 @@ export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Dri
     ...(RIDE_CATEGORIES.includes(vehicle.categoryIds?.[0] ?? "") ? { category: vehicle.categoryIds[0] as NonNullable<DemoRecord["category"]> } : {}),
     liveRuleProblems: [...(vehicle.ruleProblems ?? [])],
     liveCategoryIds: [...(vehicle.categoryIds ?? [])],
+    liveVehicleStatus: vehicle.status,
+    ...(vehicle.fitCategories ? { liveFitCategories: [...vehicle.fitCategories] } : {}),
     liveVehicleDocs: { documents: [...(vehicle.documents ?? [])], required: requiredForVehicle(vehicle, driver?.country), ...(driver?.country ? { country: driver.country } : {}) },
   };
 }
@@ -492,6 +494,10 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
 
   async function command(input: CommandInput): Promise<CommandResult> {
     const done = (message: string, status: CommandResult["status"] = "committed"): CommandResult => ({ message, operationId: input.idempotencyKey ?? input.action, status, rev: 0 });
+    const explained = (error: unknown): never => {
+      if (error instanceof ApiError) throw new ApiError(error.status, errorText(error), { code: error.code, reason: error.reason ?? undefined, details: [...error.details], requestId: error.requestId ?? undefined, retryable: false });
+      throw error;
+    };
     const toStatus = STATUS_COMMANDS[input.action];
     if (toStatus) {
       const driver = drivers.get(input.targetId) ?? (await client.json<Driver>(`/admin/drivers/${encodeURIComponent(input.targetId)}`));
@@ -509,7 +515,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     if (decision) {
       const vehicle = vehicles.get(input.targetId);
       if (!vehicle) throw new ApiError(404, "No such vehicle.", { code: "not_found" });
-      const next = await client.post<Vehicle>(`/admin/vehicles/${encodeURIComponent(vehicle.vehicleId)}/review`, { expectedVersion: vehicle.version, decision, note: input.reason });
+      // v0.18.5 (owner G2-D5.3): the admin gives the categories on approval (only fitCategories, ≥ 1 ride category);
+      // G2-D5.7: a block always carries the admin's reason as the note.
+      const picked = (input.value as { categoryIds?: unknown } | undefined)?.categoryIds;
+      const categoryIds = decision === "approved" && Array.isArray(picked) ? picked.filter((id): id is string => typeof id === "string") : undefined;
+      const note = input.reason?.trim();
+      const next = await client.post<Vehicle>(`/admin/vehicles/${encodeURIComponent(vehicle.vehicleId)}/review`, { expectedVersion: vehicle.version, decision, ...(note ? { note: note.slice(0, 1000) } : {}), ...(categoryIds ? { categoryIds } : {}) }).catch(explained);
       if (next?.vehicleId) vehicles.set(next.vehicleId, next);
       return done("Saved.");
     }
@@ -525,10 +536,6 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     // Contract v0.18.0 (owner 2026-10-29, live audit): car details, the car's driver, the driver's categories and the
     // bank review go to the server; its refusals are explained (errorText) in the admin's language.
-    const explained = (error: unknown): never => {
-      if (error instanceof ApiError) throw new ApiError(error.status, errorText(error), { code: error.code, reason: error.reason ?? undefined, details: [...error.details], requestId: error.requestId ?? undefined, retryable: false });
-      throw error;
-    };
     if (input.action === "admin.vehicle.update" || input.action === "admin.vehicle.link") {
       const vehicle = vehicles.get(input.targetId) ?? (await paged<Vehicle>(client, "vehicles", "/admin/vehicles")).find((row) => row.vehicleId === input.targetId);
       if (!vehicle) throw new ApiError(404, "No such vehicle.", { code: "not_found" });
