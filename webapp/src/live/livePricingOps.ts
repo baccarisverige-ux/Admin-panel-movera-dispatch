@@ -103,7 +103,8 @@ export async function readPricingExtras(http: ConfigHttp, store: PricingStore, z
       const manual = manualOf(schedule && typeof schedule === "object" && "scheduleId" in schedule ? schedule : null);
       if (schedule && typeof schedule === "object" && "version" in schedule) surgeVersions[zoneId] = manual ? schedule.version : 0;
       next.live[zoneId] = { manual } satisfies ZoneLive;
-      const page = await quiet(http.json<{ items: HistoryEntry[] }>(`/admin/config/pricing/history?zoneId=${encodeURIComponent(zoneId)}&limit=20`));
+      // A Standard's history is not served per standard-XX key (404s on every load, owner G2c): only real zones are asked.
+      const page = isStandardZone(zoneId) ? null : await quiet(http.json<{ items: HistoryEntry[] }>(`/admin/config/pricing/history?zoneId=${encodeURIComponent(zoneId)}&limit=20`));
       if (page?.items?.length) {
         entries.push(...page.items.map((item) => ({ ...item, zoneId })));
         liveVersions[zoneId] = Math.max(...page.items.map((item) => item.version));
