@@ -4,7 +4,7 @@ import { ApiError } from "../api/httpClient.ts";
 import { contractJson } from "../contract/load.ts";
 import { registerDictionary, setLanguage } from "../i18n/core.ts";
 import { sv } from "../i18n/sv.ts";
-import { adminCan, agentFromAdmin, documentCounts, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, liveMoney, parseMinor, placeLabel, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, tripTimeline, viewableMediaType } from "./format.ts";
+import { adminCan, agentFromAdmin, documentCounts, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, liveMoney, parseMinor, placeLabel, registerCountryTypes, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, tripTimeline, viewableMediaType } from "./format.ts";
 import { DOCUMENT_TYPES, FLEET_CODE, ONBOARDING_COUNTRIES, REQUIRED_DOCUMENTS } from "./onboardingContract.ts";
 import type { AdminMe, DocumentSummary } from "./types.ts";
 
@@ -19,7 +19,7 @@ type Contract = {
 const contract = contractJson<Contract>("contract.json");
 
 test("the onboarding constants equal contract.json#driverOnboarding (v0.5.3)", () => {
-  assert.equal(contract.version, "0.18.0");
+  assert.equal(contract.version, "0.18.3");
   assert.deepEqual(DOCUMENT_TYPES, contract.driverOnboarding.documents.types);
   assert.deepEqual(REQUIRED_DOCUMENTS, contract.driverOnboarding.documents.required);
   assert.deepEqual(ONBOARDING_COUNTRIES, contract.driverOnboarding.countries);
@@ -187,4 +187,17 @@ test("trip money, typed amounts and the timeline (audit phase 5)", () => {
   assert.equal(parseMinor("abc", "SEK"), null);
   const rows = tripTimeline({ createdAt: "2026-10-26T07:00:00Z", updatedAt: "2026-10-26T07:04:00Z", cancellation: { at: "2026-10-26T07:04:00Z" } });
   assert.deepEqual(rows.map((row) => row.label), ["Created", "Cancelled"]);
+});
+
+test("G2 R5: a document's name follows the country (nameByCountry), the admin's own text still wins", () => {
+  assert.equal(documentTypeName("bank_statement", "fr", "SE"), "Relevé bancaire de l’entreprise");
+  assert.equal(documentTypeName("bank_statement", "fr", "FR"), "RIB de la société");
+  assert.equal(documentTypeName("bank_statement", "sv", "FR"), "Företagets bankuppgifter (RIB)");
+  assert.equal(documentTypeName("driving_license", "fr", "SE"), "Permis de conduire", "no country name: the type's name");
+  registerCountryTypes("SE", { texts: { bank_statement: { name: { sv: "Eget namn", fr: "Nom propre", en: "Own name" } } } });
+  try {
+    assert.equal(documentTypeName("bank_statement", "fr", "SE"), "Nom propre");
+  } finally {
+    registerCountryTypes("SE", {});
+  }
 });

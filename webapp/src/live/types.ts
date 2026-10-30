@@ -125,6 +125,10 @@ export type Vehicle = {
   inUse?: boolean;
   documents?: DocumentSummary[];
   requiredDocuments?: string[];
+  /** v0.18.0: the car's fuel. */
+  fuel?: "petrol" | "diesel" | "hybrid" | "electric";
+  /** v0.18.3 (R2): "<category>:<problem>" while the car breaks the country's rules; Approve is 409 vehicle_rules_not_met. */
+  ruleProblems?: string[];
 };
 
 export type FleetInvitationStatus = "pending" | "accepted" | "declined" | "cancelled" | "expired";

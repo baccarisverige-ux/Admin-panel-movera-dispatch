@@ -129,8 +129,8 @@ function Selected({ account, kind, cars }: { account: Account; kind: string; car
       ) : (
         <div className="fd-banner amber live-activation-refused">
           <p><strong>{tr("Still missing or not approved:")}</strong></p>
-          {groups.driver.length ? <div data-missing-scope="driver"><strong>{tr("Driver")}</strong><ul>{groups.driver.map((type) => <li key={type}>{documentTypeName(type)}</li>)}</ul></div> : null}
-          {groups.fleet.length ? <div data-missing-scope="fleet"><strong>{tr("Company")}</strong><ul>{groups.fleet.map((type) => <li key={type}>{documentTypeName(type)}</li>)}</ul></div> : null}
+          {groups.driver.length ? <div data-missing-scope="driver"><strong>{tr("Driver")}</strong><ul>{groups.driver.map((type) => <li key={type}>{documentTypeName(type, undefined, account.facts.country)}</li>)}</ul></div> : null}
+          {groups.fleet.length ? <div data-missing-scope="fleet"><strong>{tr("Company")}</strong><ul>{groups.fleet.map((type) => <li key={type}>{documentTypeName(type, undefined, account.facts.country)}</li>)}</ul></div> : null}
         </div>
       )}
       {account.facts.accountType === "fleet" && account.fleetId ? <LiveCompanyReview fleetId={account.fleetId} /> : null}
@@ -141,7 +141,7 @@ function Selected({ account, kind, cars }: { account: Account; kind: string; car
           {cars.map((car) => (
             <li key={car.id} data-vehicle-id={car.id}>
               <Car size={16} aria-hidden="true" /> <Link to={`/vehicles/${encodeURIComponent(car.id)}`}><strong>{car.plate ?? car.id}</strong></Link> {[car.make, car.model].filter(Boolean).join(" ")} · {statusLabel(car.status)}
-              <VehicleBlocked missing={car.liveVehicleMissing} />
+              <VehicleBlocked missing={car.liveVehicleMissing} country={car.liveVehicleDocs?.country} />
             </li>
           ))}
         </ul>

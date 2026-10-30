@@ -316,7 +316,7 @@ export function DriverDetailPage() {
         </dl>
       </section>
 
-      {refused ? <ActivationRefused details={refused} /> : null}
+      {refused ? <ActivationRefused details={refused} country={driver?.liveAccount?.country} /> : null}
       {notice || store.message ? <p className="fd-notice" role="status">{trSentences(notice)} {trSentences(store.message)}</p> : null}
       {liveData ? null : driver.status === "active" && health.invalid ? (
         <p className="fd-banner red">{trn("{0} {1} document{2} missing, wrong or expired. Consider putting the account on hold.", <AlertTriangle size={16} aria-hidden="true" />, health.invalid, health.invalid > 1 ? tr("s are") : tr(" is"))}</p>
@@ -544,7 +544,7 @@ export function DriverDetailPage() {
                   <Link to={`/vehicles/${record.id}`}><strong>{record.plate ?? record.id}</strong></Link>
                   <p>{trn("{0} {1} · {2} · {3} seats · {4} · {5}", record.make ?? tr("Vehicle"), record.model ?? "", vehicle.year, vehicle.seats, vehicle.fuel, vehicle.category)}</p>
                   {liveData ? <small>{statusLabel(record.status)}</small> : <small>{trn("Inspection until {0} · insurance until {1} · {2}", vehicle.inspectionExpiresAt, vehicle.insuranceExpiresAt, statusLabel(record.status))}</small>}
-                  <VehicleBlocked missing={record.liveVehicleMissing} />
+                  <VehicleBlocked missing={record.liveVehicleMissing} country={record.liveVehicleDocs?.country} />
                 </div>
               </div>
             );

@@ -24,7 +24,7 @@ export function LiveDocBox({ driverId }: { driverId: string }) {
         <span className="h-review">{trn("{0}Waiting review", <strong>{count("review")}</strong>)}</span>
       </div>
       <ul className="fd-mini-docs">
-        {rows.filter((row) => row.status !== "approved").map((row) => <li key={row.type} className={`h-${HEALTH[row.status] ?? "invalid"}`}><i aria-hidden="true" />{documentTypeName(row.type)} · {statusLabel(row.status, "documentStatus")}</li>)}
+        {rows.filter((row) => row.status !== "approved").map((row) => <li key={row.type} className={`h-${HEALTH[row.status] ?? "invalid"}`}><i aria-hidden="true" />{documentTypeName(row.type, undefined, query.data.country)} · {statusLabel(row.status, "documentStatus")}</li>)}
       </ul>
     </div>
   );

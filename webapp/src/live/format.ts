@@ -42,7 +42,8 @@ function registered(type: string, country?: string): { name?: LocalName; kind?: 
 /** The document type's name in the panel's language (contract.json#driverOnboarding.documents.types, or the country's own); the id when unknown. */
 export function documentTypeName(type: string, language: string = currentLanguage(), country?: string): string {
   const lang = language === "sv" || language === "fr" ? language : "en";
-  const name = registered(type, country).name ?? DOCUMENT_TYPES[type]?.name;
+  // v0.18.3 (R5): the admin's text of that country, else the contract's name in that country, else the type's name.
+  const name = registered(type, country).name ?? (country ? DOCUMENT_TYPES[type]?.nameByCountry?.[country] : undefined) ?? DOCUMENT_TYPES[type]?.name;
   if (!name) return type;
   return name[lang] || name.en;
 }
