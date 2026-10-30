@@ -89,7 +89,8 @@ test("4, 5: the car page in Swedish: no English, the car's categories, plate and
   for (const english of ["Vehicle changes are not live", "Fits Movera", "Built 2012", "Registration and permit", "Insurance", "Photos", "All 4 approved"]) await expect(main).not.toContainText(english);
   await expect(page.getByTestId("vehicle-head-line")).not.toContainText(CAR_ID);
   await expect(page.getByTestId("vehicle-head-line")).toContainText("Toyota Prius");
-  await expect(page.getByTestId("vehicle-categories")).toHaveText("Movera, Barnstol");
+  // v0.18.5 (owner G2-D5.3 "The owner never decide"): a car not yet approved shows no owner-chosen categories.
+  await expect(page.getByTestId("vehicle-categories")).toHaveText("Ges av admin när bilen godkänns");
   await page.goto("/vehicles");
   await expect(page.getByRole("cell", { name: "TST G2A" })).toBeVisible();
   await shot(page, "vehicles-sv");
