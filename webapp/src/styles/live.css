@@ -56,7 +56,8 @@ tr.live-open td { background: #f6f7fb; }
 .standard-bar.standard { background: rgba(37, 99, 235, 0.06); }
 .standard-bar.uses { background: rgba(22, 163, 74, 0.06); }
 .standard-bar.unpublished { background: rgba(217, 119, 6, 0.1); border-color: rgba(217, 119, 6, 0.5); font-weight: 600; }
-.standard-bar span { display: inline-flex; align-items: center; gap: 6px; }
+/* Only the bar's own line: the confirm dialog opened from the bar sits inside it, and its summary must flow as text (03c). */
+.standard-bar > span { display: inline-flex; align-items: center; gap: 6px; }
 .uses-standard { font-style: normal; font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: rgba(22, 163, 74, 0.12); color: #166534; }
 
 /* Contract v0.10.1: activation refused (missing documents) and blocked cars. */

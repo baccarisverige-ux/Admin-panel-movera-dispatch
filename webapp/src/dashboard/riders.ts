@@ -47,12 +47,23 @@ function distanceKm(a: LatLng, b: LatLng): number {
   return Math.sqrt(x * x + y * y) * 111.32 * 1.25;
 }
 
+/**
+ * Live test 2026-10-30 (driver 03c): a ride booked for later (status requested, pickup time still ahead) is no rider
+ * waiting now. The panel counts live requests and bookings whose pickup time has come (due); the server's zoneSupply
+ * counts live requests only, so a due booking can make the panel's count one higher than zoneSupply's. The chips,
+ * the alerts, the waiting list and the Live map's open requests all use this rule.
+ */
+export function scheduledNotDue(trip: Pick<DemoRecord, "pickupAt">, now: number): boolean {
+  const at = trip.pickupAt ? Date.parse(trip.pickupAt) : NaN;
+  return Number.isFinite(at) && at > now;
+}
+
 /** `canTake` says whether a driver could really have the ride offered (active and online). */
-export function rideRequests(trips: readonly DemoRecord[], riders: readonly DemoRecord[], canTake: (driverId: string) => boolean = () => true): RideRequest[] {
+export function rideRequests(trips: readonly DemoRecord[], riders: readonly DemoRecord[], canTake: (driverId: string) => boolean = () => true, now: number = Date.now()): RideRequest[] {
   return trips
     // Older demo requests are long gone; about one in seven is still waiting right now.
     // Live: every trip the server says is waiting; demo: about one in seven old demo requests.
-    .filter((trip) => WAITING.has(trip.status) && zoneById(trip.zoneId) && (isLiveData() || (hash(`wait:${trip.id}`) >>> 4) % 7 === 0))
+    .filter((trip) => WAITING.has(trip.status) && !scheduledNotDue(trip, now) && zoneById(trip.zoneId) && (isLiveData() || (hash(`wait:${trip.id}`) >>> 4) % 7 === 0))
     .map((trip) => requestOf(trip, riders, trip.status === "offered" && trip.driverId && canTake(trip.driverId) ? trip.driverId : null))
     .sort((a, b) => b.waitingMin - a.waitingMin);
 }

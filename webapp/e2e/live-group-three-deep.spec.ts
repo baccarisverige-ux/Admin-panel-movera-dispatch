@@ -132,6 +132,32 @@ test("G3-D9: Go back to Standard and Copy to all zones explain what happens and 
   expect(settings.sent.filter((call) => call.method !== "GET")).toEqual([]);
 });
 
+// Driver 03c (live test 2026-10-30): "Inte kopplad än" on the live Dispatch header and zone panel; the "Are you sure?"
+// heading squeezed into a narrow left column of the popup.
+test("03c: live Dispatch shows no Not connected yet (header, zone panel); Are you sure? flows with its text across the popup", async ({ page }) => {
+  await start(page);
+  await fakeSettings(page);
+  await page.goto("/dispatch/radar?zone=Z002");
+  await expect(page.getByTestId("copy-all-zones")).toBeVisible();
+  await expect(page.getByTestId("not-connected")).toHaveCount(0);
+  await expect(page.getByTestId("value-not-connected")).toHaveCount(0);
+  await expect(page.getByText("Not connected yet")).toHaveCount(0);
+  for (const [open, id] of [[() => page.getByRole("button", { name: "Go back to Standard" }).click(), "sure-standard"], [() => page.getByTestId("copy-all-zones").getByRole("button", { name: "Copy to all zones" }).click(), "sure-copy"]] as const) {
+    await open();
+    const dialog = page.getByRole("dialog");
+    const summary = dialog.getByTestId(id);
+    await expect(summary).toHaveCSS("display", "inline");
+    const heading = await summary.locator("strong").first().boundingBox();
+    const text = await summary.boundingBox();
+    const card = await dialog.locator("form").first().boundingBox();
+    // One paragraph: the text starts on the heading's line and uses the popup's width, not a column beside it.
+    expect(heading && text && Math.abs(heading.y - text.y)).toBeLessThan(4);
+    expect(text && card && text.width).toBeGreaterThan(card!.width * 0.6);
+    await shot(page, `${id}-layout`);
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+  }
+});
+
 test("G3-D9: publishing the country Standard says who gets it and names the zones with their own settings", async ({ page }) => {
   await start(page, {}, "Dashboard");
   await fakeSettings(page);

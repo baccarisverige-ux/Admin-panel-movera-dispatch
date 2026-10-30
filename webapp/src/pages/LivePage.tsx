@@ -8,6 +8,7 @@ import { useDrivers, useRecords, useSlice, useTrips } from "../api/hooks";
 import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
 import { market } from "../markets/markets";
 import {
+  isOpenRequest,
   liveBoardLayers,
   liveMarkers,
   moveMarker,
@@ -114,7 +115,8 @@ function LiveBoard() {
   const requests = markers.filter((marker) => marker.kind === "request");
   const queue = markers.filter((marker) => marker.kind === "queue");
   const boosts = markers.filter((marker) => marker.kind === "boost");
-  const openAll = (trips.data ?? []).filter((trip) => trip.status === "requested" || trip.status === "searching").length;
+  // The same rule as the plotted requests and the Dashboard's waiting riders: a booking not yet due is not open.
+  const openAll = (trips.data ?? []).filter((trip) => isOpenRequest(trip)).length;
   const activeAll = (trips.data ?? []).filter((trip) =>
     ["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"].includes(trip.status),
   ).length;
