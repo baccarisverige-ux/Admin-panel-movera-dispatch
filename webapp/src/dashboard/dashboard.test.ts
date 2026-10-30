@@ -201,3 +201,26 @@ test("03c (live test 2026-10-30): a ride booked for another day is no rider wait
     setLiveData(false);
   }
 });
+
+test("03c fix: the Live map's open requests (count and markers) leave out a booking whose pickup is still ahead, as rideRequests does", async () => {
+  const present = await import("../trips/present.ts");
+  const db = createSeed();
+  const now = Date.parse(SEED_NOW);
+  const base = db.trips.find((row) => row.status === "searching")!;
+  const booked = { ...base, id: "trp_booked_nov1", status: "requested", pickupAt: new Date(now + 2 * 24 * 3_600_000).toISOString() };
+  const due = { ...base, id: "trp_due", status: "requested", pickupAt: new Date(now - 60_000).toISOString() };
+  const live = { ...base, id: "trp_live", status: "searching" };
+  const trips = [booked, due, live];
+  const plotted = present.liveMarkers(db.drivers, trips, now).filter((marker) => marker.kind === "request").map((marker) => marker.id).sort();
+  assert.deepEqual(plotted, ["req-trp_due", "req-trp_live"], "the booking for Nov 1 is not plotted as an open request");
+  // LivePage's "Open requests plotted {6} of {7}": the total uses the same rule.
+  assert.equal(typeof present.isOpenRequest, "function", "one rule for the Live map's open requests");
+  assert.equal(trips.filter((trip) => present.isOpenRequest(trip, now)).length, 2);
+  const { setLiveData } = await import("../live/realData.ts");
+  setLiveData(true);
+  try {
+    assert.deepEqual(trips.filter((trip) => present.isOpenRequest(trip, now)).map((trip) => trip.id).sort(), rideRequests(trips, db.riders, () => true, now).map((row) => row.tripId).sort(), "same trips as the waiting riders (live)");
+  } finally {
+    setLiveData(false);
+  }
+});

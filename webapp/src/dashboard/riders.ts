@@ -48,8 +48,10 @@ function distanceKm(a: LatLng, b: LatLng): number {
 }
 
 /**
- * Live test 2026-10-30 (driver 03c): a ride booked for later (status requested, pickup on another day) is no rider
- * waiting now. The server's zoneSupply counts only live requests; the chips, the alerts and the waiting list follow.
+ * Live test 2026-10-30 (driver 03c): a ride booked for later (status requested, pickup time still ahead) is no rider
+ * waiting now. The panel counts live requests and bookings whose pickup time has come (due); the server's zoneSupply
+ * counts live requests only, so a due booking can make the panel's count one higher than zoneSupply's. The chips,
+ * the alerts, the waiting list and the Live map's open requests all use this rule.
  */
 export function scheduledNotDue(trip: Pick<DemoRecord, "pickupAt">, now: number): boolean {
   const at = trip.pickupAt ? Date.parse(trip.pickupAt) : NaN;

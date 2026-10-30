@@ -9,6 +9,7 @@ import { STEP_MS, startedAt, tripIndex } from "./clock.ts";
 import { tr, uiLocale } from "../i18n/core.ts";
 import { NOT_CONNECTED_TEXT, isLiveData, liveDriverOf, liveRiderIdOf, liveTripOf } from "../live/realData.ts";
 import type { LivePlace } from "../api/seed.ts";
+import { scheduledNotDue } from "../dashboard/riders.ts";
 
 export { startedAt, tripIndex };
 
@@ -401,7 +402,15 @@ function serverMarkers(drivers: readonly DemoRecord[]): LiveMarker[] {
   });
 }
 
-export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecord[]): LiveMarker[] {
+/**
+ * An open request on the Live map: requested or searching, and not a booking whose pickup time is still ahead (the
+ * same rule as the waiting riders, rideRequests in dashboard/riders.ts).
+ */
+export function isOpenRequest(trip: Pick<DemoRecord, "status" | "pickupAt">, now: number = Date.now()): boolean {
+  return (trip.status === "requested" || trip.status === "searching") && !scheduledNotDue(trip, now);
+}
+
+export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecord[], now: number = Date.now()): LiveMarker[] {
   if (isLiveData()) return serverMarkers(drivers);
   const driverMarks: LiveMarker[] = drivers.map((driver, index) => {
     const stale = index % 5 === 3;
@@ -437,7 +446,7 @@ export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly Demo
       };
     });
   const requests: LiveMarker[] = trips
-    .filter((trip) => trip.status === "requested" || trip.status === "searching")
+    .filter((trip) => isOpenRequest(trip, now))
     .slice(0, 16)
     .map((trip) => {
       const [lat, lng] = jitter(tripIndex(trip.id) + 2, ...(ZONE_CENTER[trip.zoneId] ?? [59.33, 18.07]));
