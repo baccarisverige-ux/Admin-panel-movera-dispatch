@@ -1,11 +1,11 @@
-# Movera API v0.18.0 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.3 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.0
+  version: 0.18.3
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.0 in this folder; this file must agree with them.
+    v0.18.3 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -80,7 +80,7 @@ tags:
   description: 'Zones from the server: list, create, outline, open and close (v0.11.0)'
 x-contract:
   name: movera
-  version: 0.18.0
+  version: 0.18.3
   source: contract.json
 paths:
   /auth/otp/request:
@@ -6289,7 +6289,10 @@ paths:
         3; note check): the admin types the expiry date when approving (POST /admin/documents/{documentId}/review { decision:
         approved, expiresAt }). For a type in settings.expiringTypes of the driver''s country, approving without expiresAt
         is 400 invalid_request (reason expiry_required) and a date not in the future is 400 (reason expiry_in_past); other
-        types keep expiresAt optional. A driver may send expiresAt on upload; the admin''s date wins.'
+        types keep expiresAt optional. A driver may send expiresAt on upload; the admin''s date wins. v0.18.3 (R9): the review
+        may send issuedAt instead of expiresAt for a type with settings.validMonths: expiresAt = issuedAt + validMonths months
+        (an issuedAt in the future is 400 invalid_request, reason issued_in_future; an issuedAt whose computed date is already
+        past is 400 expiry_in_past).'
       tags:
       - Admin · People
       x-actor:
@@ -8187,6 +8190,59 @@ paths:
           $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
+  /driver/trips/{tripId}/complete-preview:
+    get:
+      operationId: previewCompleteTrip
+      summary: The final price before completing (read-only)
+      description: 'v0.18.1 (CONTRACT.md §26): the trip''s own driver (anyone else 404 not_found); only while the trip is
+        on board (rider_onboard, in_trip, approaching_dropoff), else 409 invalid_transition, reason trip_not_on_board. No
+        Idempotency-Key; the wallet is not touched; the trip''s version does not change. Each call freezes its price for freezeSeconds
+        and replaces the trip''s earlier preview. total and fareLines are computed by the same code as POST /trips/{tripId}/complete
+        would at that moment with the driver''s latest fix (pricing.driverEndsEarly): earlyEnd is true when the driver is
+        farther than pricing.completeNearDropoffMeters from the drop-off. cashDue = total − the part the rider''s wallet would
+        pay. driverEarnings = the driver''s part of that total (as TripProjection.driverEarnings after complete), for the
+        sheet''s cash balance. POST /trips/{tripId}/complete { expectedVersion, previewId, cashCollected } with the trip''s
+        latest previewId before expiresAt: complete uses the frozen price exactly (total, fareLines, driverEarnings, earlyEnd):
+        no early-end flip, no extra minutes or waiting. On a cash trip cashCollected must equal its cashDue (and the wallet
+        part must be unchanged); otherwise 409 conflict, reason price_changed, with a fresh preview in the error''s preview
+        field. The app sends POST /trips/{tripId}/complete { expectedVersion, previewId, cashCollected = the cashDue it showed
+        } on a cash trip. On 409 price_changed it shows the sheet again with error.preview (never resends the old amount).
+        After completing the app shows the fare of the returned TripProjection. An older server without the preview (404)
+        leaves the app on the old flow (complete without cashCollected).'
+      tags:
+      - Driver · Trip
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/TripId'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompletePreview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /admin/zones/{zoneId}/dispatch-control:
     get:
       operationId: adminGetDispatchControl
@@ -8499,7 +8555,9 @@ paths:
         defaults; version 0 = defaults), so the app offers only the car categories a car fits, asks the photos and shows the
         warnings the server uses. A driver with no country yet names it: ?country=SE. v0.18.0 (item 14): the answer also has
         documentTypes: { [type]: { owner, kind, expires, name, help? } } for every type in the country''s lists, contract
-        types with the admin''s texts and the custom types, so the app renders a type it does not know from this data.'
+        types with the admin''s texts and the custom types, so the app renders a type it does not know from this data. v0.18.3:
+        DocumentTypeInfo.name is the country''s name (documents.namesByCountry); DocumentTypeInfo.guide (R8) and validMonths
+        (R9) when the country has them.'
       tags:
       - Driver · Account
       x-actor:
@@ -11882,6 +11940,22 @@ components:
           - hybrid
           - electric
           description: 'v0.18.0: the car''s fuel (contract.json#driverOnboarding.settings.fuels).'
+        ruleProblems:
+          type: array
+          items:
+            type: string
+          description: 'v0.18.3 (admin and fleet-owner views): v0.18.3 (owner decisions of 2026-10-30, driver group 2 re-check
+            R2: "admin sees a red warning and cannot approve a rule-breaking car"): POST /admin/vehicles/{vehicleId}/review
+            { decision: approved } of a car that breaks the rules now (base year, a category problem, an extra alone) is 409
+            invalid_transition, reason vehicle_rules_not_met, details "<category>:<problem>"; rejected and blocked are always
+            allowed. Vehicle.ruleProblems (admin and fleet-owner views) lists the same details while the car breaks the rules,
+            so the panel shows them in red and disables Approve. Server migration 0035 put every approved car below its country''s
+            base year back to pending (the 2012 test car TST G2A included). v0.18.3 (owner decisions of 2026-10-30, driver
+            group 2 re-check R2 "Year rule for every car (Recommended)"): every car must be built in or after the country''s
+            base year whatever its categories: the smallest minYear among the country''s settings.vehicles.categories that
+            are on and are not extraCategories (defaults: SE 2015, FR 2016, TN 2012). An older car is 400 invalid_request,
+            reason category_not_allowed, with details "<category>:year_too_old" for each of its categories ("car:year_too_old"
+            when it has none), on POST /driver/vehicles and PATCH /admin/vehicles/{vehicleId}.'
         pickable:
           type: boolean
           description: 'v0.18.0: the asking driver can pick this car now. v0.18.0 (owner decision 19: "Driver dont see documents
@@ -12428,6 +12502,14 @@ components:
           $ref: '#/components/schemas/Id'
         deepLink:
           type: string
+      description: 'v0.18.3 review notices: v0.18.3 (owner decisions of 2026-10-30, driver group 2 re-check R6 "Update + notice
+        (Recommended)"): every admin decision on a document (POST /admin/documents/{documentId}/review, POST /admin/drivers/{driverId}/documents/{type}/check,
+        POST /admin/drivers/{driverId}/bank/review) and on a car (POST /admin/vehicles/{vehicleId}/review) writes one in-app
+        notice (GET /notifications, the bell) to the account concerned, in its language (sv / fr / en, else en), with the
+        reason (the admin''s note) when there is one. A document goes to the account it belongs to (a car document to the
+        car''s fleet owner); a car to its fleet owner (a car without fleet: its driver). The driver app also re-reads documents
+        and reminders when a screen comes back and every 60 s while open (no server change). Push to a closed phone follows
+        the push decision (R7, not part of 0.18.3).'
     Message:
       type: object
       description: 'A trip chat message. v0.13.0 (CONTRACT.md §23): kept 90 days (longer when the trip has a safety case);
@@ -16035,6 +16117,50 @@ components:
         keptUntil:
           $ref: '#/components/schemas/Timestamp'
       additionalProperties: false
+    CompletePreview:
+      type: object
+      description: 'v0.18.1 (CONTRACT.md §26): the final price complete would set now, frozen for 120 s. total and fareLines
+        are computed by the same code as POST /trips/{tripId}/complete would at that moment with the driver''s latest fix
+        (pricing.driverEndsEarly): earlyEnd is true when the driver is farther than pricing.completeNearDropoffMeters from
+        the drop-off. cashDue = total − the part the rider''s wallet would pay. driverEarnings = the driver''s part of that
+        total (as TripProjection.driverEarnings after complete), for the sheet''s cash balance.'
+      required:
+      - previewId
+      - expiresAt
+      - tripId
+      - total
+      - cashDue
+      - driverEarnings
+      - earlyEnd
+      - fareLines
+      properties:
+        previewId:
+          $ref: '#/components/schemas/Id'
+        expiresAt:
+          allOf:
+          - $ref: '#/components/schemas/Timestamp'
+          description: The frozen price holds until then (freezeSeconds after the call).
+        tripId:
+          $ref: '#/components/schemas/Id'
+        total:
+          $ref: '#/components/schemas/Money'
+        cashDue:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'What the driver collects in cash: total less what the rider''s wallet would pay. Send it as cashCollected
+            on complete.'
+        driverEarnings:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The driver's part of total (TripProjection.driverEarnings after complete).
+        earlyEnd:
+          type: boolean
+          description: 'The driver is farther than 300 m from the drop-off: priced as what was driven (owner decision 28).'
+        fareLines:
+          type: array
+          items:
+            $ref: '#/components/schemas/FareLine'
+      additionalProperties: false
     RouteRequest:
       type: object
       required:
@@ -16670,6 +16796,11 @@ components:
           - $ref: '#/components/schemas/Vehicle'
           - $ref: '#/components/schemas/ConfigDraft'
           - $ref: '#/components/schemas/Incident'
+        preview:
+          allOf:
+          - $ref: '#/components/schemas/CompletePreview'
+          description: 'v0.18.1: with reason price_changed on POST /trips/{tripId}/complete, the fresh frozen price to show
+            and collect (CONTRACT.md §26).'
     ConflictError:
       allOf:
       - $ref: '#/components/schemas/Error'
@@ -16966,8 +17097,23 @@ components:
       - $ref: '#/components/schemas/TripCommand'
       - type: object
         properties:
+          previewId:
+            allOf:
+            - $ref: '#/components/schemas/Id'
+            description: 'v0.18.1: the latest complete-preview''s previewId. POST /trips/{tripId}/complete { expectedVersion,
+              previewId, cashCollected } with the trip''s latest previewId before expiresAt: complete uses the frozen price
+              exactly (total, fareLines, driverEarnings, earlyEnd): no early-end flip, no extra minutes or waiting. On a cash
+              trip cashCollected must equal its cashDue (and the wallet part must be unchanged); otherwise 409 conflict, reason
+              price_changed, with a fresh preview in the error''s preview field. previewId missing, unknown or expired: complete
+              prices the trip as now. If the app sent previewId with cashCollected and that no longer equals the cash part
+              of the new price: 409 conflict, reason price_changed, with a fresh preview (error.preview); the trip is not
+              completed and the driver is never trapped by a 400. Without previewId (older apps) cashCollected keeps its old
+              rule (at most the fare less the wallet, else 400 cash_above_fare).'
           cashCollected:
-            $ref: '#/components/schemas/Money'
+            allOf:
+            - $ref: '#/components/schemas/Money'
+            description: 'v0.18.1: on a cash trip the cashDue of GET /driver/trips/{tripId}/complete-preview that the app
+              showed; at most the fare less the wallet (else 400 cash_above_fare). Absent: the fare less the wallet.'
     NoShowCommand:
       allOf:
       - $ref: '#/components/schemas/TripCommand'
@@ -17473,7 +17619,8 @@ components:
         settings.vehicles of the fleet''s country. Each categoryId must fit: the category on, year ≥ minYear, seats ≥ minSeats,
         fuel in fuels; else 400 invalid_request, reason category_not_allowed, details "<category>:<problem>" with problem
         category_off, year_too_old, too_few_seats, fuel_not_allowed or fuel_required (fuel missing while the category does
-        not allow every fuel). A category with no rule in the document (e.g. child_seat) is not checked. With photosNeeded
+        not allow every fuel). v0.18.3: a category with no rule in the document (e.g. child_seat) is no longer skipped: the
+        car must still meet the base year (baseYear) and an extra needs a ride category (extraCategories). With photosNeeded
         the four photo types (settings.photoTypes) are added to Vehicle.requiredDocuments, uploaded like other car documents
         (POST /driver/documents, ownerId = vehicleId) and approved by an admin; the car cannot be picked or driven without
         them.'
@@ -17850,7 +17997,9 @@ components:
         approving (POST /admin/documents/{documentId}/review { decision: approved, expiresAt }). For a type in settings.expiringTypes
         of the driver''s country, approving without expiresAt is 400 invalid_request (reason expiry_required) and a date not
         in the future is 400 (reason expiry_in_past); other types keep expiresAt optional. A driver may send expiresAt on
-        upload; the admin''s date wins.'
+        upload; the admin''s date wins. v0.18.3 (R9): the review may send issuedAt instead of expiresAt for a type with settings.validMonths:
+        expiresAt = issuedAt + validMonths months (an issuedAt in the future is 400 invalid_request, reason issued_in_future;
+        an issuedAt whose computed date is already past is 400 expiry_in_past).'
       required:
       - decision
       properties:
@@ -17864,6 +18013,8 @@ components:
         note:
           type: string
           maxLength: 1000
+        issuedAt:
+          $ref: '#/components/schemas/Timestamp'
     FleetCompany:
       type: object
       description: 'v0.5.3: the company of a fleet account.'
@@ -18275,6 +18426,19 @@ components:
           $ref: '#/components/schemas/LocalText'
         help:
           $ref: '#/components/schemas/LocalText'
+        guide:
+          $ref: '#/components/schemas/DocumentGuide'
+        validMonths:
+          type: integer
+          minimum: 1
+          maximum: 120
+          description: 'v0.18.3 (R9): months from the issue date (settings.validMonths).'
+      description: 'v0.18.3: name is the country''s (v0.18.3 (owner decisions of 2026-10-30, driver group 2 re-check R5 "Name
+        per country (Recommended)"): a type may carry nameByCountry[country] = { en, sv, fr }; the name shown for a document
+        is, in order: the admin''s settings.texts[type].name of the country, nameByCountry[country], name. So the Swedish
+        bank statement reads "Relevé bancaire de l’entreprise" in French and the French one "RIB de la société"; the Swedish
+        company registration is not called Kbis. The server already puts the country''s name in DocumentTypeInfo.name (GET
+        /driver/onboarding/settings documentTypes) and in its notices; the admin panel shows and edits names per country (settings.texts).)'
     AdminCheckCommand:
       type: object
       description: 'v0.18.0 (owner items 8 and 13): an admin marks a kind admin_check document (the info session, or a custom
@@ -18314,7 +18478,9 @@ components:
         each smaller than the one before. vehicles.categories: each category of the catalog at most once; minYear, minSeats
         within limits; a category that is on allows at least one fuel of fuels; vehicles.warnDays within limits.vehicleWarnDays.
         customTypes: ids unique and of idPattern; the scope list a custom type is in matches its owner (driver → documents.driver,
-        fleet → documents.fleet, vehicle → documents.vehicle); names and help in sv, fr and en.'
+        fleet → documents.fleet, vehicle → documents.vehicle); names and help in sv, fr and en. v0.18.3: guides and validMonths
+        keys are types of the country (contract types or its customTypes); guide lines within guideLimits; validMonths within
+        limits.validMonths.'
       required:
       - version
       - country
@@ -18428,7 +18594,8 @@ components:
             a car fits, asks the photos and shows the warnings the server uses. A driver with no country yet names it: ?country=SE.
             v0.18.0 (item 14): the answer also has documentTypes: { [type]: { owner, kind, expires, name, help? } } for every
             type in the country''s lists, contract types with the admin''s texts and the custom types, so the app renders
-            a type it does not know from this data.'
+            a type it does not know from this data. v0.18.3: DocumentTypeInfo.name is the country''s name (documents.namesByCountry);
+            DocumentTypeInfo.guide (R8) and validMonths (R9) when the country has them.'
           additionalProperties:
             $ref: '#/components/schemas/DocumentTypeInfo'
         vehicles:
@@ -18437,7 +18604,8 @@ components:
             settings.vehicles of the fleet''s country. Each categoryId must fit: the category on, year ≥ minYear, seats ≥
             minSeats, fuel in fuels; else 400 invalid_request, reason category_not_allowed, details "<category>:<problem>"
             with problem category_off, year_too_old, too_few_seats, fuel_not_allowed or fuel_required (fuel missing while
-            the category does not allow every fuel). A category with no rule in the document (e.g. child_seat) is not checked.
+            the category does not allow every fuel). v0.18.3: a category with no rule in the document (e.g. child_seat) is
+            no longer skipped: the car must still meet the base year (baseYear) and an extra needs a ride category (extraCategories).
             With photosNeeded the four photo types (settings.photoTypes) are added to Vehicle.requiredDocuments, uploaded
             like other car documents (POST /driver/documents, ownerId = vehicleId) and approved by an admin; the car cannot
             be picked or driven without them.'
@@ -18461,6 +18629,28 @@ components:
             photosNeeded:
               type: boolean
               description: The four photo types are required car documents.
+        guides:
+          type: object
+          description: 'v0.18.3 (owner decisions of 2026-10-30, driver group 2 re-check R8 "Admin edits all text (Recommended)"):
+            guides[type] = { checklist: LocalText[], tips: LocalText[] } (each 0 to 10 lines, every line in sv, fr and en,
+            at most 300 characters) is the upload guide of that document type in this country (a contract type or the country''s
+            own custom type; any other key is 400 invalid_document). The driver app shows the admin''s lines; a type with
+            no guide (or an empty list) falls back to the app''s built-in text; the drawing stays Movera''s. Served to the
+            app in DocumentTypeInfo.guide.'
+          additionalProperties:
+            $ref: '#/components/schemas/DocumentGuide'
+        validMonths:
+          type: object
+          description: 'v0.18.3 (owner decisions of 2026-10-30, driver group 2 re-check R9 "Auto 6 months, editable (Recommended)"):
+            validMonths[type] = N (1 to 120) is how long a document of that type is valid from its issue date in this country
+            (default FR urssaf_certificate 6). When an admin approves it with issuedAt (the date on the paper, not in the
+            future) and no expiresAt, the server sets expiresAt = issuedAt + N months; an expiresAt the admin types wins.
+            A type of expiringTypes still needs one of the two (400 expiry_required). Any key must be a type of the country
+            (400 invalid_document).'
+          additionalProperties:
+            type: integer
+            minimum: 1
+            maximum: 120
       x-server-only: true
       x-defaults:
         SE:
@@ -18578,6 +18768,8 @@ components:
             photosNeeded: true
           customTypes: []
           texts: {}
+          validMonths: {}
+          guides: {}
         FR:
           documents:
             driver:
@@ -18701,6 +18893,9 @@ components:
             photosNeeded: true
           customTypes: []
           texts: {}
+          validMonths:
+            urssaf_certificate: 6
+          guides: {}
         TN:
           documents:
             driver: []
@@ -18800,6 +18995,60 @@ components:
             photosNeeded: true
           customTypes: []
           texts: {}
+          validMonths: {}
+          guides: {}
+    DocumentGuide:
+      type: object
+      description: 'v0.18.3 (owner decisions of 2026-10-30, driver group 2 re-check R8 "Admin edits all text (Recommended)"):
+        guides[type] = { checklist: LocalText[], tips: LocalText[] } (each 0 to 10 lines, every line in sv, fr and en, at
+        most 300 characters) is the upload guide of that document type in this country (a contract type or the country''s
+        own custom type; any other key is 400 invalid_document). The driver app shows the admin''s lines; a type with no guide
+        (or an empty list) falls back to the app''s built-in text; the drawing stays Movera''s. Served to the app in DocumentTypeInfo.guide.'
+      properties:
+        checklist:
+          type: array
+          items:
+            type: object
+            required:
+            - sv
+            - fr
+            - en
+            properties:
+              sv:
+                type: string
+                minLength: 1
+                maxLength: 300
+              fr:
+                type: string
+                minLength: 1
+                maxLength: 300
+              en:
+                type: string
+                minLength: 1
+                maxLength: 300
+          maxItems: 10
+        tips:
+          type: array
+          items:
+            type: object
+            required:
+            - sv
+            - fr
+            - en
+            properties:
+              sv:
+                type: string
+                minLength: 1
+                maxLength: 300
+              fr:
+                type: string
+                minLength: 1
+                maxLength: 300
+              en:
+                type: string
+                minLength: 1
+                maxLength: 300
+          maxItems: 10
     ReminderFix:
       type: object
       description: 'Where a tap on the line goes: document = the upload guide of documentType (vehicleId for a car); info_session
@@ -18814,6 +19063,8 @@ components:
           - info_session
           - fleet_vehicles
           - pick_vehicle
+          - join_fleet
+          - start_company
         documentType:
           $ref: '#/components/schemas/DocumentType'
         scope:
@@ -18836,13 +19087,18 @@ components:
         (fix: document). document_in_review: waiting: uploaded, Movera reviews it (no fix). info_session_waiting: waiting:
         the info session (kind admin_check) is not marked held yet; status waiting_for_movera; fix: info_session (content
         slot driver-info-session "How to book your info session"). account_not_active: blocks_online: the account is pending
-        / on_hold / suspended and every document is done; Movera activates it (no fix). fleet_not_approved: blocks_online:
-        the fleet is pending / rejected / blocked (no fix). fleet_no_approved_car: blocks_online: the fleet has no car that
-        can be picked (approved, every car document approved); owner fix: fleet_vehicles (add / finish a car); member: no
-        fix ("Your fleet has no approved car yet…"). no_vehicle: blocks_online: the fleet has a car that can be picked but
-        this driver has none picked (fix: pick_vehicle). admin_check_waiting: waiting: a custom admin_check document not marked
-        yet; status waiting_for_movera (no fix). vehicle_photos_needed: blocks_online: a car''s four photos are not all uploaded
-        and approved (fix: document, the first photo missing); text "Add 4 photos of your car".'
+        / on_hold / suspended and every document is done (v0.18.3 R10: no line document_needed, document_rejected, document_expired,
+        document_in_review, info_session_waiting, admin_check_waiting or vehicle_photos_needed is left); Movera activates
+        it (no fix). fleet_not_approved: blocks_online: the fleet is pending / rejected / blocked (no fix). no_fleet: v0.18.3
+        (owner decisions of 2026-10-30, driver group 2 re-check R4 "Red ''Join a fleet'' line (Recommended)"): blocks_online:
+        an account of type driver that is in no fleet; text texts.no_fleet; fix join_fleet (My fleet › Join a fleet) and actions
+        [join_fleet, start_company] (two buttons, labels texts.actions); the line goes once the driver is in a fleet (or his
+        account becomes a fleet). fleet_no_approved_car: blocks_online: the fleet has no car that can be picked (approved,
+        every car document approved); owner fix: fleet_vehicles (add / finish a car); member: no fix ("Your fleet has no approved
+        car yet…"). no_vehicle: blocks_online: the fleet has a car that can be picked but this driver has none picked (fix:
+        pick_vehicle). admin_check_waiting: waiting: a custom admin_check document not marked yet; status waiting_for_movera
+        (no fix). vehicle_photos_needed: blocks_online: a car''s four photos are not all uploaded and approved (fix: document,
+        the first photo missing); text "Add 4 photos of your car".'
       required:
       - kind
       - level
@@ -18858,6 +19114,7 @@ components:
           - info_session_waiting
           - account_not_active
           - fleet_not_approved
+          - no_fleet
           - fleet_no_approved_car
           - no_vehicle
           - admin_check_waiting
@@ -18902,6 +19159,14 @@ components:
           type: string
         fix:
           $ref: '#/components/schemas/ReminderFix'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReminderFix'
+          description: 'v0.18.3: v0.18.3 (owner decisions of 2026-10-30, driver group 2 re-check R4): DriverReminder.actions,
+            when present, are the buttons of the line in order (each a ReminderFix); fix stays the tap on the line itself.
+            join_fleet = My fleet › Join a fleet (code, owner''s name and e-mail); start_company = My fleet › Start my own
+            company (POST /driver/fleet/start-company).'
     DriverReminderList:
       type: object
       description: 'v0.18.0 (owner items 2 and 3: "add on the home page sheet that reminder ! Dont copy it''s only example";

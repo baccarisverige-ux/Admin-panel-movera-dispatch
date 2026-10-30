@@ -887,6 +887,15 @@ S["TripPath"] = obj({"tripId": ref("Id"), "source": s(enum=TPATH["sources"], des
                      "keptUntil": ref("Timestamp")},
                     ["tripId", "source", "points", "pickup", "dropoff", "stops"],
                     "v0.17.0 (CONTRACT.md §25): the route of an ended trip. " + TPATH["retention"], addl=False)
+CPV = C["completePreview"]
+S["CompletePreview"] = obj({"previewId": ref("Id"), "expiresAt": {"allOf": [ref("Timestamp")], "description": "The frozen price holds until then (freezeSeconds after the call)."},
+                            "tripId": ref("Id"), "total": ref("Money"),
+                            "cashDue": {"allOf": [ref("Money")], "description": "What the driver collects in cash: total less what the rider's wallet would pay. Send it as cashCollected on complete."},
+                            "driverEarnings": {"allOf": [ref("Money")], "description": "The driver's part of total (TripProjection.driverEarnings after complete)."},
+                            "earlyEnd": {"type": "boolean", "description": "The driver is farther than " + str(C["pricing"]["completeNearDropoffMeters"]) + " m from the drop-off: priced as what was driven (owner decision 28)."},
+                            "fareLines": arr(ref("FareLine"))},
+                           ["previewId", "expiresAt", "tripId", "total", "cashDue", "driverEarnings", "earlyEnd", "fareLines"],
+                           "v0.18.1 (CONTRACT.md §26): the final price complete would set now, frozen for " + str(CPV["freezeSeconds"]) + " s. " + CPV["same"], addl=False)
 S["RouteRequest"] = obj({"mode": s(enum=MP["routeModes"]), "from": ref("LatLng"), "to": ref("LatLng")}, ["mode", "from", "to"])
 S["RoadRoute"] = obj({"points": arr(ref("LatLng"), minItems=2, description="The road geometry, in order."), "distanceMeters": i(minimum=0),
                       "durationSeconds": ref("DurationSeconds"), "provider": s(examples=["osrm"])}, ["points"],
@@ -980,7 +989,8 @@ S["Error"] = obj({"code": ref("ErrorCode"), "message": s(), "requestId": s(), "r
                   "details": {"type": "array", "items": s(), "description": C["errors"]["details"]},
                   "projection": {"description": "Current authoritative resource. Always present for version_mismatch and invalid_transition "
                                                  "(TripProjection for trip commands; Offer / Driver / Rider / Vehicle / ConfigDraft for their commands).",
-                                 "anyOf": [ref("TripProjection"), ref("Offer"), ref("Driver"), ref("Rider"), ref("Vehicle"), ref("ConfigDraft"), ref("Incident")]}},
+                                 "anyOf": [ref("TripProjection"), ref("Offer"), ref("Driver"), ref("Rider"), ref("Vehicle"), ref("ConfigDraft"), ref("Incident")]},
+                  "preview": {"allOf": [ref("CompletePreview")], "description": "v0.18.1: with reason price_changed on POST /trips/{tripId}/complete, the fresh frozen price to show and collect (CONTRACT.md §26)."}},
                  ["code", "message", "requestId", "retryable"])
 S["ConflictError"] = {"allOf": [ref("Error")],
                       "if": {"properties": {"code": {"enum": ["version_mismatch", "invalid_transition"]}}, "required": ["code"]},
@@ -1001,7 +1011,7 @@ for p in PAGES:
 EV = {"expectedVersion": i("Version the caller last saw; stale → 409 version_mismatch.", minimum=1)}
 S["TripCommand"] = obj(dict(EV, location=ref("GeoFix")), ["expectedVersion"], "Body of driver trip commands.")
 S["BoardCommand"] = {"allOf": [ref("TripCommand"), obj({"verifiedPinToken": s("Required when the trip has pinRequired=true.")})]}
-S["CompleteCommand"] = {"allOf": [ref("TripCommand"), obj({"cashCollected": ref("Money")})]}
+S["CompleteCommand"] = {"allOf": [ref("TripCommand"), obj({"previewId": {"allOf": [ref("Id")], "description": "v0.18.1: the latest complete-preview's previewId. " + C["completePreview"]["frozen"] + " " + C["completePreview"]["unfrozen"]}, "cashCollected": {"allOf": [ref("Money")], "description": "v0.18.1: on a cash trip the cashDue of GET /driver/trips/{tripId}/complete-preview that the app showed; at most the fare less the wallet (else 400 cash_above_fare). Absent: the fare less the wallet."}})]}
 S["NoShowCommand"] = {"allOf": [ref("TripCommand"), obj({"reasonCode": ref("NoShowReasonCode")})]}
 S["CancelCommand"] = obj(dict(EV, reasonCode=ref("CancelReasonCode"), note=s(maxLength=1000), location=ref("GeoFix")),
                          ["expectedVersion", "reasonCode"],
@@ -1744,6 +1754,9 @@ op("post", "/account/deletion", "requestAccountDeletion", "Ask to delete the rid
 op("get", "/trips/{tripId}/path", "getTripPath", "The route of an ended trip (driven or planned)", ["rider", "driver"], "Trips",
    params=TID, ok=(200, "TripPath"),
    desc="v0.17.0 (CONTRACT.md §25): " + TPATH["actors"] + ". " + TPATH["driven"] + " " + TPATH["planned"])["responses"]["409"] = rref("Conflict")
+op("get", "/driver/trips/{tripId}/complete-preview", "previewCompleteTrip", "The final price before completing (read-only)", ["driver"], "Driver · Trip",
+   params=TID, ok=(200, "CompletePreview"),
+   desc="v0.18.1 (CONTRACT.md §26): " + CPV["actors"] + " " + CPV["same"] + " " + CPV["frozen"] + " " + CPV["cashCollected"])["responses"]["409"] = rref("Conflict")
 # Admin: dispatch control, live drivers, trip trace
 op("get", "/admin/zones/{zoneId}/dispatch-control", "adminGetDispatchControl", "The zone's live dispatch switch", ["admin"], "Admin · Dispatch",
    params=[pref("ZoneId")], ok=(200, "DispatchControl"), permission="trips.read")
@@ -1803,6 +1816,15 @@ S["OnboardingSettings"] = obj(OrderedDict([
                      C["driverOnboarding"]["vehicleRules"]["note"])),
 ]), ["version", "country", "documents", "expiringTypes", "steps", "signUpReminders", "expiry", "vehicles"],
     "v0.18.0, per country only: " + DOS["note"] + " Rules: " + " ".join(DOS["rules"]), **{"x-server-only": True, "x-defaults": DOS["defaults"]})
+# ---- v0.18.3 (R8 upload guides, R9 valid months, R5 names per country)
+GL = DOS["guideLimits"]
+GUIDE_LINE = obj({"sv": s(minLength=1, maxLength=GL["lineChars"]), "fr": s(minLength=1, maxLength=GL["lineChars"]), "en": s(minLength=1, maxLength=GL["lineChars"])}, ["sv", "fr", "en"])
+S["DocumentGuide"] = obj({"checklist": arr(GUIDE_LINE, maxItems=GL["lines"]), "tips": arr(GUIDE_LINE, maxItems=GL["lines"])}, [], DOS["guides"])
+S["OnboardingSettings"]["properties"]["guides"] = {"type": "object", "description": DOS["guides"], "additionalProperties": ref("DocumentGuide")}
+S["OnboardingSettings"]["properties"]["validMonths"] = {"type": "object", "description": DOS["validMonths"], "additionalProperties": rng("validMonths")}
+S["DocumentTypeInfo"]["properties"]["guide"] = ref("DocumentGuide")
+S["DocumentTypeInfo"]["properties"]["validMonths"] = rng("validMonths", "v0.18.3 (R9): months from the issue date (settings.validMonths).")
+S["DocumentTypeInfo"]["description"] = "v0.18.3: name is the country's (" + C["driverOnboarding"]["documents"]["namesByCountry"] + ")"
 op("get", "/driver/onboarding/settings", "getDriverOnboardingSettings", "The onboarding settings of the driver's country", ["driver"], "Driver · Account",
    params=[q("country", ref("CountryCode"), "Only for an account with no country yet.")], ok=(200, "OnboardingSettings"), desc="v0.18.0: " + DOS["driverRead"])
 RM = C["driverOnboarding"]["reminders"]
@@ -1814,6 +1836,7 @@ S["DriverReminder"] = obj({"kind": s(enum=list(RM["kinds"].keys())), "level": s(
                            "status": s("The shown document state (contract.json#documentStatus), e.g. waiting_for_movera.", enum=C["documentStatus"]["values"]),
                            "expiresAt": ref("Timestamp"), "daysLeft": i(C["driverOnboarding"]["documentExpiry"]["daysLeft"], minimum=0), "reviewNote": s(),
                            "fix": ref("ReminderFix")}, ["kind", "level"], "v0.18.0: " + " ".join(f"{k}: {v}." for k, v in RM["kinds"].items()))
+S["DriverReminder"]["properties"]["actions"] = arr(ref("ReminderFix"), description="v0.18.3: " + RM["actions"])
 S["DriverReminderList"] = obj({"items": arr(ref("DriverReminder")), "blocksOnline": i("Lines with level blocks_online.", minimum=0)}, ["items", "blocksOnline"], RM["note"])
 op("get", "/driver/reminders", "getDriverReminders", "Important reminders for the Home sheet", ["driver"], "Driver · Account", ok=(200, "DriverReminderList"),
    desc="v0.18.0: " + RM["note"])
@@ -1830,6 +1853,9 @@ S["Driver"]["properties"]["signUp"] = obj({"since": ref("Timestamp"), "stuck": b
                                            "remindersSent": i(minimum=0), "lastReminderAt": ref("Timestamp")}, ["since", "stuck", "remindersSent"],
                                           "v0.18.0, admin view only, while the account is pending or on_hold: " + C["driverOnboarding"]["signUpReminders"]["note"])
 S["DocumentReviewCommand"]["description"] += " v0.18.0: " + C["driverOnboarding"]["documentExpiry"]["note"]
+S["DocumentReviewCommand"]["properties"]["issuedAt"] = ref("Timestamp")
+S["Vehicle"]["properties"]["ruleProblems"] = arr(s(), description="v0.18.3 (admin and fleet-owner views): " + C["driverOnboarding"]["vehicleRules"]["approval"] + " " + C["driverOnboarding"]["vehicleRules"]["baseYear"])
+S["Notification"]["description"] = "v0.18.3 review notices: " + C["driverOnboarding"]["reviewNotices"]["note"]
 
 # ---- v0.18.0: group 2 admin actions on live (contract.json#driverOnboarding.adminActions)
 AA = C["driverOnboarding"]["adminActions"]
