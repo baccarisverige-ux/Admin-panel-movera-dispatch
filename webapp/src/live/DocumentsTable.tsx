@@ -50,12 +50,11 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
       if (url) URL.revokeObjectURL(url);
     };
   }, [viewer?.url]);
-  useEffect(() => {
-    const urls = [compare?.current.url, compare?.next.url];
-    return () => {
-      for (const url of urls) if (url) URL.revokeObjectURL(url);
-    };
-  }, [compare?.current.url, compare?.next.url]);
+  const currentUrl = compare?.current.url;
+  const nextUrl = compare?.next.url;
+  useEffect(() => () => {
+    for (const url of [currentUrl, nextUrl]) if (url) URL.revokeObjectURL(url);
+  }, [currentUrl, nextUrl]);
 
   async function fileOf(documentId: string): Promise<FileView> {
     try {
