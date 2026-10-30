@@ -234,3 +234,48 @@ test("G2-D5.7: putting a car on hold always sends a reason", async ({ page }) =>
   await modal.getByRole("button", { name: "Confirm" }).click();
   await expect.poll(() => state.calls.find((call) => call.method === "POST" && call.path === "/api/v1/admin/vehicles/V3/review")?.body).toMatchObject({ decision: "blocked", note: expect.stringMatching(/\S/) });
 });
+
+/* ---------------------------------------------------------------------------------- G9 trip chat in the trip details */
+
+test("G9: the trip details page shows the trip's chat after the trip (no Not connected yet), only on Show messages", async ({ page }) => {
+  await fakeTripServer(page, { admin: { permissions: ["overview.read", "drivers.read", "trips.read", "riders.read", "zones.read", "support.reply"] } });
+  const asked: string[] = [];
+  await page.route(/\/api\/v1\/trips\/T2001\/messages/, async (route) => {
+    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+    asked.push(new URL(route.request().url()).pathname + new URL(route.request().url()).search);
+    return route.fulfill({
+      status: 200,
+      headers: { ...CORS, "content-type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          { messageId: "M2", tripId: "T2001", from: "rider", text: "I'm at the main door", at: "2026-10-25T08:05:00Z" },
+          { messageId: "M1", tripId: "T2001", from: "driver", text: "I'm outside, black Volvo", at: "2026-10-25T08:04:00Z" },
+        ],
+        nextCursor: null,
+      }),
+    });
+  });
+  await signIn(page);
+  await page.goto("/trips/T2001");
+  const chat = page.getByTestId("trip-chat");
+  await expect(chat).toBeVisible();
+  await expect(chat.getByText("Not connected yet")).toHaveCount(0);
+  expect(asked).toEqual([]);
+  await chat.getByRole("button", { name: "Show messages" }).click();
+  const lines = chat.getByTestId("trip-chat-messages").locator("li");
+  await expect(lines).toHaveCount(2);
+  await expect(lines.first()).toContainText("I'm outside, black Volvo");
+  await expect(lines.nth(1)).toContainText("I'm at the main door");
+  expect(asked[0]).toBe("/api/v1/trips/T2001/messages?limit=200");
+  await shot(page, "g9-trip-chat");
+});
+
+test("G9: a role without support.reply is told it cannot see the chat; nothing is read", async ({ page }) => {
+  await fakeTripServer(page);
+  let asked = false;
+  await page.route(/\/api\/v1\/trips\/T2001\/messages/, (route) => { asked = true; return route.fallback(); });
+  await signIn(page);
+  await page.goto("/trips/T2001");
+  await expect(page.getByTestId("trip-chat")).toContainText("Your role cannot see messages between riders and drivers.");
+  expect(asked).toBe(false);
+});

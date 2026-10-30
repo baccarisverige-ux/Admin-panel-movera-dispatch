@@ -7340,6 +7340,10 @@ export const en = {
   "Cars that can take rides with the categories the admin gave.": "Cars that can take rides with the categories the admin gave.",
   "Cars put on hold or rejected by an admin.": "Cars put on hold or rejected by an admin.",
   "The server's car rules check finds a problem (year, seats or fuel).": "The server's car rules check finds a problem (year, seats or fuel).",
+  "Calls through Movera are not on yet: rider and driver use the chat.": "Calls through Movera are not on yet: rider and driver use the chat.",
+  "No driver was assigned, so there was no chat.": "No driver was assigned, so there was no chat.",
+  "Show messages": "Show messages",
+  "Kept 90 days, only for admins. The rider and driver apps keep no copy after the trip.": "Kept 90 days, only for admins. The rider and driver apps keep no copy after the trip.",
 } as const;
 
 export type MessageKey = keyof typeof en;

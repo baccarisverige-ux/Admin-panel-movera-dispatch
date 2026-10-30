@@ -7342,4 +7342,8 @@ export const fr: Record<MessageKey, string> = {
   "Cars that can take rides with the categories the admin gave.": "Véhicules qui peuvent faire des courses avec les catégories données par l’admin.",
   "Cars put on hold or rejected by an admin.": "Véhicules mis en pause ou refusés par un admin.",
   "The server's car rules check finds a problem (year, seats or fuel).": "La vérification des règles du serveur trouve un problème (année, places ou carburant).",
+  "Calls through Movera are not on yet: rider and driver use the chat.": "Les appels via Movera ne sont pas encore actifs : passager et chauffeur utilisent la discussion.",
+  "No driver was assigned, so there was no chat.": "Aucun chauffeur n’a été attribué, il n’y a donc pas eu de discussion.",
+  "Show messages": "Afficher les messages",
+  "Kept 90 days, only for admins. The rider and driver apps keep no copy after the trip.": "Conservés 90 jours, uniquement pour les admins. Les applis passager et chauffeur ne gardent aucune copie après la course.",
 };

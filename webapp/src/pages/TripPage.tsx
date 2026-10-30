@@ -1,4 +1,6 @@
 import { NotConnected } from "../live/NotConnected";
+import { LiveTripChat } from "../live/LiveTripChat";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { fareLineLabel } from "../live/format";
 import { Link, useNavigate, useParams } from "react-router";
 import { useLiveRefund } from "../live/LiveRefund";
@@ -115,6 +117,7 @@ export function TripPage() {
   const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: canSafety });
   const incidentOps = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: canSafety });
   const trip = trips.data?.find((item) => item.id === tripId);
+  const live = Boolean(useLiveSessionMaybe());
   const dispatchOffers = useTripOffers(tripId, can(role, "trips.read"));
   const clock = useNow();
   const [driverId, setDriverId] = useState("");
@@ -363,7 +366,8 @@ export function TripPage() {
       </div>
 
       <Section id="chat" title={tr("Chat and calls")} icon={<MessagesSquare size={16} />} wide>
-        <ChatCalls chat={chat} calls={calls} revealed={revealed} allowed={allowed} reveal={reveal} country={country} riderName={trip.name} driverName={driver?.name ?? "The driver"} />
+        {/* v0.18.5 (owner G9): live, the trip's chat from the server (admins only; the apps keep no copy). */}
+        {live ? <LiveTripChat tripId={trip.id} hadDriver={Boolean(trip.driverId)} riderName={trip.name || tr("Rider")} driverName={driver?.name || tr("Driver")} /> : <ChatCalls chat={chat} calls={calls} revealed={revealed} allowed={allowed} reveal={reveal} country={country} riderName={trip.name} driverName={driver?.name ?? "The driver"} />}
       </Section>
 
       <Section id="waybill" title={tr("Waybill")} icon={<FileText size={16} />} testId="trip-waybill" wide>

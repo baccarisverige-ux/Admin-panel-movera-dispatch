@@ -7342,4 +7342,8 @@ export const sv: Record<MessageKey, string> = {
   "Cars that can take rides with the categories the admin gave.": "Bilar som kan ta resor med de kategorier admin gav.",
   "Cars put on hold or rejected by an admin.": "Bilar som pausats eller avvisats av en admin.",
   "The server's car rules check finds a problem (year, seats or fuel).": "Serverns kontroll av bilreglerna hittar ett problem (årsmodell, platser eller bränsle).",
+  "Calls through Movera are not on yet: rider and driver use the chat.": "Samtal via Movera är inte på än: resenär och förare använder chatten.",
+  "No driver was assigned, so there was no chat.": "Ingen förare tilldelades, så det fanns ingen chatt.",
+  "Show messages": "Visa meddelanden",
+  "Kept 90 days, only for admins. The rider and driver apps keep no copy after the trip.": "Sparas i 90 dagar, bara för admins. Resenärs- och förarapparna sparar ingen kopia efter resan.",
 };
