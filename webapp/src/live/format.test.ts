@@ -4,7 +4,7 @@ import { ApiError } from "../api/httpClient.ts";
 import { contractJson } from "../contract/load.ts";
 import { registerDictionary, setLanguage } from "../i18n/core.ts";
 import { sv } from "../i18n/sv.ts";
-import { adminCan, agentFromAdmin, documentCounts, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, liveMoney, parseMinor, placeLabel, registerCountryTypes, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, tripTimeline, viewableMediaType } from "./format.ts";
+import { adminCan, agentFromAdmin, documentCounts, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, liveMoney, parseMinor, placeLabel, registerCountryTypes, ruleProblemText, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, tripTimeline, viewableMediaType } from "./format.ts";
 import { DOCUMENT_TYPES, FLEET_CODE, ONBOARDING_COUNTRIES, REQUIRED_DOCUMENTS } from "./onboardingContract.ts";
 import type { AdminMe, DocumentSummary } from "./types.ts";
 
@@ -199,5 +199,20 @@ test("G2 R5: a document's name follows the country (nameByCountry), the admin's 
     assert.equal(documentTypeName("bank_statement", "fr", "SE"), "Nom propre");
   } finally {
     registerCountryTypes("SE", {});
+  }
+});
+
+test("G2 R2: a car breaking the rules is explained (Vehicle.ruleProblems, 409 vehicle_rules_not_met), sv/fr/en", () => {
+  assert.equal(ruleProblemText("child_seat:year_too_old"), "Child seat: the car is too old");
+  assert.equal(ruleProblemText("car:year_too_old"), "Car: the car is too old");
+  assert.equal(ruleProblemText("child_seat:extra_needs_ride"), "Child seat: an extra needs a ride category too");
+  const refused = new ApiError(409, "x", { code: "invalid_transition", reason: "vehicle_rules_not_met", details: ["economy:year_too_old"] });
+  assert.equal(errorText(refused), "The car does not meet the country's car rules: Movera: the car is too old.");
+  registerDictionary("sv", sv);
+  try {
+    setLanguage("sv");
+    assert.match(errorText(refused), /^Bilen uppfyller inte landets bilregler: .*bilen är för gammal\.$/);
+  } finally {
+    setLanguage("en");
   }
 });

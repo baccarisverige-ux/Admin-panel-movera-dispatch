@@ -1,5 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { LiveListBar } from "../live/LiveListBar";
+import { isLiveData } from "../live/realData";
+import { ruleProblemText } from "../live/format";
 import { useNavigate, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Camera, Car, CheckCircle2, FileWarning, PauseCircle, Settings2 } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
@@ -9,7 +11,7 @@ import { vehicleBlock } from "../drivers/gate";
 import { overallHealth, type DocHealth } from "../fleet/documents";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
-import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, withVehicleSettings, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, photosOf, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
 import { DataTable } from "../ui/DataTable";
@@ -49,7 +51,9 @@ export function FleetPage() {
   const store = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const rulesSlice = useSlice<VehicleRules>(VEHICLE_RULES_KEY, emptyVehicleRules());
   const settingsSlice = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
-  const rules = withVehicleSettings(normalizeVehicleRules(rulesSlice.value), normalizeSettingsBook(settingsSlice.value));
+  const live = isLiveData();
+  // Live: the published onboarding config only (owner G2 R2/R10), never the browser's demo slice.
+  const rules = effectiveVehicleRules(rulesSlice.value, normalizeSettingsBook(settingsSlice.value), live);
   const view = (VIEWS.find((item) => item.id === params.get("show"))?.id ?? "all") as ViewId;
   const [now] = useState(() => Date.now());
 
@@ -63,14 +67,15 @@ export function FleetPage() {
         const driver = record.driverId ? byId.get(record.driverId) : undefined;
         const dops = driver ? driverOps(store.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status }) : null;
         const docs = carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, rules.countries[countryOfZone(record.zoneId)].warnDays);
-        const health = overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
+        // Live: the server's missing car documents decide; nothing is assumed approved (owner G2 R1).
+        const health = live ? (record.liveVehicleMissing?.length ? "invalid" as const : "valid" as const) : overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
         const country = rules.countries[countryOfZone(record.zoneId)];
         const car = { year: profile.year, seats: profile.seats, fuel: profile.fuel, category: profile.category };
         const photos = photosOf(rules, record.id);
-        const photosWaiting = Object.values(photos).filter((photo) => photo.status !== "approved").length;
-        return { record, profile, driver, docs, health, fitsList: fits(car, country), photosWaiting, hold: shouldHold(docs, country), issue: vehicleBlock(car) };
+        const photosWaiting = live ? 0 : Object.values(photos).filter((photo) => photo.status !== "approved").length;
+        return { record, profile, driver, docs, health, fitsList: fits(car, country), photosWaiting, hold: !live && shouldHold(docs, country), issue: live ? (record.liveRuleProblems ?? []).map(ruleProblemText).join(", ") || null : vehicleBlock(car) };
       });
-  }, [agent?.scope.fleetPartnerId, vehicles.data, drivers.data, store.value, rules, now]);
+  }, [agent?.scope.fleetPartnerId, vehicles.data, drivers.data, store.value, rules, now, live]);
 
   const inView = (row: (typeof rows)[number], id: ViewId) => {
     if (id === "all") return true;
@@ -158,7 +163,7 @@ export function FleetPage() {
           row.profile.year,
           HEALTH_TEXT[row.health] + (row.photosWaiting ? ` · ${row.photosWaiting} photo${row.photosWaiting === 1 ? "" : "s"}` : ""),
           row.record.status,
-          row.issue ?? (row.profile.registrationStatus === "approved" ? "Eligible" : `Registration ${row.profile.registrationStatus}`),
+          row.issue ? <span className="vh-rule-bad" key="rule">{row.issue}</span> : (row.profile.registrationStatus === "approved" ? "Eligible" : `Registration ${row.profile.registrationStatus}`),
         ])}
         state={vehicles.isError ? "error" : "ready"}
         onRetry={() => void vehicles.refetch()}

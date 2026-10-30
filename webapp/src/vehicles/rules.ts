@@ -195,3 +195,11 @@ export function withVehicleSettings(rules: VehicleRules, book: SettingsBook): Ve
   }
   return { ...rules, countries };
 }
+
+/**
+ * The car rules a page uses. Live (owner G2 R2/R10, 2026-10-30): only the onboarding config the server holds
+ * (GET /admin/config/onboarding?country), never the browser's demo slice; the demo keeps its slice under the settings.
+ */
+export function effectiveVehicleRules(slice: unknown, book: SettingsBook, live: boolean): VehicleRules {
+  return withVehicleSettings(normalizeVehicleRules(live ? null : slice), book);
+}

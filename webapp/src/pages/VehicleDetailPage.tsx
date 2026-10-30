@@ -1,4 +1,5 @@
 import { isLiveData } from "../live/realData";
+import { ruleProblemText } from "../live/format";
 import { LiveVehicleDocuments } from "../live/LiveVehicleDocuments";
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { useEffect, useMemo, useState } from "react";
@@ -19,7 +20,7 @@ import {
 import { can } from "../auth/permissions";
 import { HealthPill } from "../fleet/ui";
 import { formatMoney } from "../markets/markets";
-import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, emptyVehicleRules, fits, normalizeVehicleRules, photosOf, withVehicleSettings, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { CATEGORY_LABELS, PHOTO_SIDES, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn } from "../i18n";
 import { statusLabel } from "../domain/labels";
@@ -33,7 +34,8 @@ export function VehicleDetailPage() {
   const store = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const rulesSlice = useSlice<VehicleRules>(VEHICLE_RULES_KEY, emptyVehicleRules());
   const settingsSlice = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
-  const rules = withVehicleSettings(normalizeVehicleRules(rulesSlice.value), normalizeSettingsBook(settingsSlice.value));
+  // Live: the published onboarding config only (owner G2 R2/R10), never the browser's demo slice.
+  const rules = effectiveVehicleRules(rulesSlice.value, normalizeSettingsBook(settingsSlice.value), isLiveData());
   const trips = useRecords("trips", null);
   const navigate = useNavigate();
   const [now] = useState(() => Date.now());
@@ -124,6 +126,8 @@ export function VehicleDetailPage() {
   const hold = shouldHold(docs, countryRules) && record.status !== "on_hold";
   const money = (minor: number) => formatMoney(minor, country);
   const canEdit = Boolean(agent && can(agent.role, "vehicles.edit"));
+  // v0.18.3 (owner G2 R2): the server's Vehicle.ruleProblems; while there are any the car cannot be approved.
+  const ruleProblems = record.liveRuleProblems ?? [];
 
   return (
     <div className="dx-page vh-page">
@@ -138,6 +142,13 @@ export function VehicleDetailPage() {
 
       <p className="state-line">{notice} {store.message}</p>
       {hold ? <p className="vh-warn"><AlertTriangle size={14} aria-hidden="true" />{" "}{tr("Insurance or inspection has expired. Vehicle rules say this car should be on hold.")}</p> : null}
+
+      {ruleProblems.length ? (
+        <div className="fd-banner red vh-rule-problems" role="alert" data-testid="vehicle-rule-problems">
+          <p><AlertTriangle size={16} aria-hidden="true" /> <strong>{tr("This car breaks the country's car rules and cannot be approved:")}</strong></p>
+          <ul>{ruleProblems.map((item) => <li key={item}>{ruleProblemText(item)}</li>)}</ul>
+        </div>
+      ) : null}
 
       <section className="vh-hero" aria-label={tr("Car")}>
         <span className="vh-car-icon" aria-hidden="true"><CarFront size={30} /></span>
@@ -162,9 +173,17 @@ export function VehicleDetailPage() {
         </section>
         <section className="vh-section" aria-label={tr("Papers")}>
           <h3><FileText size={16} aria-hidden="true" />{" "}{tr("Papers")}</h3>
+          {isLiveData() ? (
+            // Live (owner G2 R1): the end dates of the approved registration and insurance, else "—"; nothing invented.
+            <ul className="vh-docs" data-testid="vehicle-end-dates">
+              <li><span><b>{tr("Registration")}</b><small>{profile.inspectionExpiresAt ? trn("Until {0}", profile.inspectionExpiresAt) : "—"}</small></span></li>
+              <li><span><b>{tr("Insurance")}</b><small>{profile.insuranceExpiresAt ? trn("Until {0}", profile.insuranceExpiresAt) : "—"}</small></span></li>
+            </ul>
+          ) : (
           <ul className="vh-docs">
             {docs.map((doc) => <li key={doc.id}><span><b>{doc.label}</b>{doc.expiresAt ? <small>{trn("Until {0}", doc.expiresAt)}</small> : null}</span><HealthPill health={doc.health}>{doc.text}</HealthPill></li>)}
           </ul>
+          )}
           <p className="vh-help">{trn("Warnings start {0} days before papers expire.", countryRules.warnDays)}</p>
         </section>
         <section className="vh-section" aria-label={tr("Trips and earnings")}>
@@ -233,14 +252,18 @@ export function VehicleDetailPage() {
               ))}
             </select>
           </label>
+          {isLiveData() ? null : <>
           <label>{tr("Inspection expires")}<input type="date" value={inspectionExpiresAt} onChange={(event) => setInspectionExpiresAt(event.target.value)} />
           </label>
           <label>{tr("Insurance expires")}<input type="date" value={insuranceExpiresAt} onChange={(event) => setInsuranceExpiresAt(event.target.value)} />
           </label>
+          </>}
           <label>{tr("Private fleet note")}<input value={note} onChange={(event) => setNote(event.target.value)} />
           </label>
         </div>
-        <p className="state-line">{trn("Rule check: {0}. Registration: {1}. Saving this form will set the simulated vehicle state to {2}.", ruleIssue ?? tr("passed"), profile.registrationStatus, savedStatus)}</p>
+        {isLiveData()
+          ? <p className="state-line">{trn("Rule check: {0}.", ruleProblems.length ? ruleProblems.map(ruleProblemText).join(", ") : tr("passed"))}</p>
+          : <p className="state-line">{trn("Rule check: {0}. Registration: {1}. Saving this form will set the simulated vehicle state to {2}.", ruleIssue ?? tr("passed"), profile.registrationStatus, savedStatus)}</p>}
         <CommandButton
           command="admin.vehicle.update"
           className="primary-btn"
@@ -350,8 +373,8 @@ export function VehicleDetailPage() {
             after="eligible"
             collection="vehicles"
             patch={{ status: "eligible" }}
-            disabled={Boolean(ruleIssue) || profile.registrationStatus !== "approved" || record.status === "eligible"}
-            title={ruleIssue ?? (profile.registrationStatus !== "approved" ? tr("Registration must be approved.") : undefined)}
+            disabled={ruleProblems.length > 0 || Boolean(ruleIssue) || profile.registrationStatus !== "approved" || record.status === "eligible"}
+            title={ruleProblems.length ? ruleProblems.map(ruleProblemText).join(", ") : ruleIssue ?? (profile.registrationStatus !== "approved" ? tr("Registration must be approved.") : undefined)}
             onDone={() => setNotice(tr("Vehicle returned to service."))}
           >{tr("Return to service")}</CommandButton>
         </div>

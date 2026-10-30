@@ -153,3 +153,7 @@
 .ob-type-form label { display: grid; gap: 4px; }
 .ob-check-line { display: flex !important; align-items: center; gap: 8px; }
 .ob-expiry { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+
+/* G2 R2: a car that breaks the country rules (Vehicle.ruleProblems). */
+.vh-rule-bad { color: #b42318; font-weight: 600; }
+.vh-rule-problems ul { margin: 4px 0 0 20px; }

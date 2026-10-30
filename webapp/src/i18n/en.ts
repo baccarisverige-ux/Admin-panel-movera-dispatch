@@ -7196,6 +7196,18 @@ export const en = {
   "The driver has not uploaded bank details yet.": "The driver has not uploaded bank details yet.",
   "Write a note: the driver sees why the bank details were rejected.": "Write a note: the driver sees why the bank details were rejected.",
   "Keep at least one category on.": "Keep at least one category on.",
+  "the category is turned off": "the category is turned off",
+  "the car is too old": "the car is too old",
+  "too few seats": "too few seats",
+  "fuel not allowed": "fuel not allowed",
+  "the fuel is missing": "the fuel is missing",
+  "an extra needs a ride category too": "an extra needs a ride category too",
+  "The car does not meet the country's car rules: {0}.": "The car does not meet the country's car rules: {0}.",
+  "The issue date cannot be in the future.": "The issue date cannot be in the future.",
+  "This car breaks the country's car rules and cannot be approved:": "This car breaks the country's car rules and cannot be approved:",
+  "Registration": "Registration",
+  "Insurance": "Insurance",
+  "Rule check: {0}.": "Rule check: {0}.",
 } as const;
 
 export type MessageKey = keyof typeof en;
