@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import { dispatchDocumentOf, rulesOfDispatch } from "../live/configDocs.ts";
-import { AUTO_OFFLINE_COUNTS, AUTO_OFFLINE_DEFAULT, autoOfflineText, RAISE_FACTOR_RANGE, RAISE_MAX_FACTOR_DEFAULT, raiseFactorLabel, RIDER_RATING_DEFAULT, validRaiseFactor } from "./offerRules.ts";
+import { numberInputError } from "../pricing/numberInput.ts";
+import { AUTO_OFFLINE_COUNTS, AUTO_OFFLINE_DEFAULT, autoOfflineText, RAISE_FACTOR_RANGE, RAISE_FACTOR_STEP, RAISE_MAX_FACTOR_DEFAULT, raiseFactorField, raiseFactorLabel, RIDER_RATING_DEFAULT, validRaiseFactor } from "./offerRules.ts";
 import { defaultZone, emptyDispatchBook, rulesFile, zoneIssues } from "./rules.ts";
 
 /**
@@ -80,4 +82,19 @@ test("G4-E2/E3: the limit is 10 and the rule text says hand-sent offers count, i
   // The rules file for the backend team says the same: hand-sent offers count, offers during a trip do not.
   const glossary = rulesFile(emptyDispatchBook(), "SE", "now").glossary.autoOffline;
   assert.ok(glossary.includes("hand-sent") && glossary.includes("during a trip never count"));
+});
+
+test("G4 live fix: the Rider raise limit box carries the contract's min, max and step and refuses a value outside them before any send", () => {
+  assert.deepEqual(raiseFactorField(), { min: contract.dispatch.ranges["raisePrice.maxFactor"][0], max: contract.dispatch.ranges["raisePrice.maxFactor"][1], step: RAISE_FACTOR_STEP });
+  assert.deepEqual([raiseFactorField().min, raiseFactorField().max], [1, 3]);
+  const card = readFileSync(new URL("./OfferSettings.tsx", import.meta.url), "utf8");
+  assert.ok(card.includes("raiseFactorField()") && card.includes("min={low} max={high} step={step}"), "the card's Num field takes the contract's bounds");
+  assert.ok(!card.includes("step={0.1}"), "no step written by hand");
+  const field = readFileSync(new URL("../pricing/NumberField.tsx", import.meta.url), "utf8");
+  for (const attribute of ["min={min}", "max={max}", "step={step}"]) assert.ok(field.includes(attribute), `the input has ${attribute}`);
+  // Typed out of range: the box says so and the value is not passed on (numberInputError), like the other rule cards.
+  assert.equal(numberInputError("0.5", 1, 3, "×"), "Min 1 ×.");
+  assert.equal(numberInputError("4", 1, 3, "×"), "Max 3 ×.");
+  assert.equal(numberInputError("2,5", 1, 3, "×"), null);
+  for (const maxFactor of [0.9, 3.1]) assert.ok(zoneIssues({ ...zone(), raisePrice: { maxFactor } }).includes("Rider raise limit: must be 1× to 3× the booked price."));
 });

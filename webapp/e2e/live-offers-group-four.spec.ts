@@ -63,6 +63,8 @@ async function fakeTools(page: Page, trips: Array<Record<string, unknown>>) {
     const key = ID_KEY[kind];
     if (request.method() === "GET") return json(route, 200, { items: list });
     if (request.method() === "POST") {
+      // A live server answers in its own time: over the panel's 900 ms "Checking…" line, which must still end as Done.
+      if (kind === "groups") await new Promise((resolve) => setTimeout(resolve, 1100));
       const item = { ...body, [key]: `${kind.slice(0, 3)}_new${++seq}`, version: 1, createdAt: at, updatedAt: at, ...(kind === "radar-zones" ? { country: "SE" } : {}) };
       list.push(item);
       return json(route, 201, item);
@@ -126,6 +128,12 @@ test("G4-E4 and decision 3: the zone's rider raise limit and rider rating switch
   const raise = page.getByRole("region", { name: "Rider raise limit" });
   await expect(raise.getByLabel("Rider raise limit")).toHaveValue("1.5");
   await expect(raise).toContainText("From 1× to 3×.");
+  // Live bug 2026-10-31: the box carries the contract's bounds and refuses a value outside them before any send.
+  await expect(raise.getByLabel("Rider raise limit")).toHaveAttribute("min", "1");
+  await expect(raise.getByLabel("Rider raise limit")).toHaveAttribute("max", "3");
+  await expect(raise.getByLabel("Rider raise limit")).toHaveAttribute("step", "0.1");
+  await raise.getByLabel("Rider raise limit").fill("4");
+  await expect(raise).toContainText("Max 3 ×.");
   await expect(page.getByRole("region", { name: "Offer card" }).getByLabel("Show rider rating on offers on")).not.toBeChecked();
   await shot(page, "live-dispatch-raise-limit-rating");
   await raise.getByLabel("Rider raise limit").fill("2.5");
@@ -210,7 +218,10 @@ test("G4-F3/F4: driver groups and radar zones are the server's; new and deleted 
   await groups.getByRole("button", { name: "Save group" }).click();
   await confirm(page);
   await expect.poll(() => sent.find((s) => s.method === "POST" && s.path.endsWith("/groups"))?.body).toMatchObject({ country: "SE", name: "Airport team", driverIds: [] });
+  // Live bug 2026-10-31: the new row shows and the editor closes right after the save; a slow answer is never "no record of it".
   await expect(groups).toContainText("Airport team");
+  await expect(groups.getByLabel("Group name")).toHaveCount(0);
+  await expect(page.getByText(/no record of it/)).toHaveCount(0);
   await groups.getByRole("button", { name: "Delete Night drivers" }).click();
   await confirm(page);
   await expect.poll(() => sent.some((s) => s.method === "DELETE" && s.path.endsWith("/groups/grp_night?expectedVersion=1"))).toBe(true);

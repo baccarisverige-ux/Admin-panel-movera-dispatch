@@ -371,6 +371,15 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   const trips = new Map<string, Trip>();
   const incidents = new Map<string, ServerIncident>();
   const settings = createLiveSettings({ json: (path) => client.json(path), put: (path, body) => client.put(path, body), post: (path, body) => client.post(path, body), del: (path) => client.del(path) });
+  // The api outlives a session (it is made once per client): what was read for one admin is forgotten when they
+  // sign out or another admin signs in, so the next admin's first read is the server's, never the last one's lists.
+  let settingsAdmin = client.admin()?.adminId ?? null;
+  client.subscribe((state) => {
+    const adminId = state?.admin.adminId ?? null;
+    if (adminId === settingsAdmin) return;
+    settingsAdmin = adminId;
+    settings.forget();
+  });
   let currency: string = CURRENCY;
 
   async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER): Promise<Driver[]> {
@@ -605,7 +614,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value, ...(input.scope ? { scope: input.scope } : {}) });
     if (settingsCall) {
       try {
-        return done(await settingsCall);
+        const answer = await settingsCall;
+        return typeof answer === "string" ? done(answer) : { ...done(answer.message), slice: answer.slice };
       } catch (error) {
         if (error instanceof SettingsChanged) throw new ApiError(409, error.message, { code: "version_mismatch", retryable: false });
         throw error;

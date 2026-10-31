@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { applyPreset, emptyDispatchBook, zoneDefault, type DispatchEvent } from "../dispatch/rules.ts";
-import { eventBody, eventIssue, eventOf, localToUtc, openRing, presetOf, radarRepeatOf, readDispatchTools, toolCalls, toolRefusal, toolsOf, utcToLocal, type DispatchTools, type ServerEvent, type ToolsHttp } from "./dispatchTools.ts";
+import { applyToolAnswer, eventBody, eventIssue, eventOf, localToUtc, openRing, presetOf, radarRepeatOf, readDispatchTools, sendToolCalls, toolCalls, toolRefusal, toolsOf, utcToLocal, type DispatchTools, type ServerEvent, type ToolsHttp } from "./dispatchTools.ts";
 
 /**
  * Driver group 4 admin features on live (contract v0.18.6 §32 dispatchTools; owner G4-F2 presets per country, F3 driver
@@ -135,4 +135,49 @@ test("G4 checker: the running repeat is read from the server's trip (radarZoneSe
   assert.equal(radarRepeatOf({ tripId: "T1", radarZoneSend: "junk" }), null);
   assert.equal(radarRepeatOf({ tripId: "T1" }), undefined, "an older server says nothing: the session's own state stands");
   assert.equal(radarRepeatOf(null), undefined);
+});
+
+test("G4 live fix: a save applies the server's answers to the list (201 item, 200 item, 204 nothing), so a deleted row goes and a new one shows at once", async () => {
+  const before: DispatchTools = {
+    ...none,
+    presets: [{ id: "prs_1", name: "Nights", note: "", builtIn: false, values: zoneDefault("Z001"), country: "SE", version: 1 }],
+    groups: [{ id: "grp_1", country: "SE", name: "Night", driverIds: ["D1"], version: 2 }, { id: "grp_2", country: "SE", name: "Old", driverIds: [], version: 1 }],
+    radarZoneRules: [{ id: "rr_1", country: "SE", name: "Fast", radarZoneIds: "all", seconds: 20, maxDrivers: 5, repeat: true, version: 1 }],
+  };
+  const after: DispatchTools = { ...before, presets: [], groups: [{ ...before.groups[0]!, driverIds: ["D1", "D2"] }, { id: "G-new", country: "SE", name: "Airport", driverIds: ["D3"] }], radarZoneRules: [] };
+  const calls = toolCalls(before, after);
+  assert.deepEqual(calls.map((call) => call.method), ["POST", "PUT", "DELETE", "DELETE", "DELETE"]);
+  const sent: string[] = [];
+  const http: ToolsHttp = {
+    json: async () => { throw new Error("no list read is needed after a save"); },
+    post: async <T,>(path: string, body: unknown) => { sent.push(`POST ${path}`); return { ...(body as object), groupId: "grp_9", version: 1, createdAt: "2026-10-31T09:00:00Z" } as T; },
+    put: async <T,>(path: string, body: unknown) => { sent.push(`PUT ${path}`); const { expectedVersion, ...rest } = body as { expectedVersion: number }; return { ...rest, groupId: "grp_1", country: "SE", version: expectedVersion + 1 } as T; },
+    // DELETE answers 204 with no body: that is not a missing record, the row is simply gone.
+    del: async (path) => { sent.push(`DELETE ${path}`); return undefined; },
+  };
+  const applied = await sendToolCalls(http, calls, before);
+  assert.ok(applied, "every answer was applied");
+  assert.deepEqual(applied.groups, [{ id: "grp_1", country: "SE", name: "Night", driverIds: ["D1", "D2"], version: 3 }, { id: "grp_9", country: "SE", name: "Airport", driverIds: ["D3"], version: 1 }]);
+  assert.deepEqual(applied.presets, []);
+  assert.deepEqual(applied.radarZoneRules, []);
+  assert.equal(sent.length, 5);
+  // An older server that answers a POST without the item: the caller must read the lists instead.
+  assert.equal(applyToolAnswer(before, calls[0]!, {}), null);
+  assert.equal(applyToolAnswer(before, { method: "POST", path: "/admin/dispatch/unknown", body: {} }, { x: 1 }), null);
+  // A delete of a preset, like the radar zone's, takes just that row out.
+  assert.deepEqual(applyToolAnswer(before, { method: "DELETE", path: "/admin/dispatch/presets/prs_1?expectedVersion=1" }, undefined)?.presets, []);
+  assert.deepEqual(applyToolAnswer(before, { method: "DELETE", path: "/admin/dispatch/radar-rules/rr_1?expectedVersion=1" }, undefined)?.radarZoneRules, []);
+});
+
+test("G4 live fix: a 201 that is not the whole item (only its id and version) is not applied; the lists are read instead of a crash", async () => {
+  const before: DispatchTools = { ...none, groups: [{ id: "grp_1", country: "SE", name: "Night", driverIds: ["D1"], version: 1 }] };
+  const post = { method: "POST" as const, path: "/admin/dispatch/groups", body: { country: "SE", name: "Airport", driverIds: ["D3"] } };
+  assert.equal(applyToolAnswer(before, post, { groupId: "grp_9", version: 1, createdAt: "2026-10-31T09:00:00Z" }), null);
+  assert.equal(applyToolAnswer(before, { ...post, path: "/admin/dispatch/radar-zones" }, { radarZoneId: "rz_9", version: 1, name: "x", zoneId: "Z001", country: "SE" }), null);
+  assert.equal(applyToolAnswer(before, { ...post, path: "/admin/dispatch/events" }, { eventId: "ev_9", version: 1, name: "x", country: "SE" }), null);
+  assert.equal(applyToolAnswer(before, { ...post, path: "/admin/dispatch/presets" }, { presetId: "prs_9", version: 1, name: "x", country: "SE" }), null);
+  assert.equal(applyToolAnswer(before, { ...post, path: "/admin/dispatch/radar-rules" }, { ruleId: "rr_9", version: 1, name: "x", country: "SE", radarZoneIds: "all" }), null);
+  // sendToolCalls then answers null (no throw) and the caller reads the server.
+  const http: ToolsHttp = { json: async () => { throw new Error("not here"); }, post: async <T,>() => ({ groupId: "grp_9", version: 1 }) as T, put: async <T,>() => ({}) as T, del: async () => undefined };
+  assert.equal(await sendToolCalls(http, [post], before), null);
 });

@@ -266,14 +266,68 @@ export function toolCalls(before: DispatchTools, after: DispatchTools): ToolCall
   return calls;
 }
 
-/** Sends the calls one by one; the first refusal stops (what was sent before it stays, the page reads the server again). */
-export async function sendToolCalls(http: ToolsHttp, calls: readonly ToolCall[]): Promise<number> {
-  for (const call of calls) {
-    if (call.method === "POST") await http.post(call.path, call.body);
-    else if (call.method === "PUT") await http.put(call.path, call.body);
-    else await http.del(call.path);
+const KIND_OF_PATH = new Map<string, Kind>((Object.keys(PATHS) as Kind[]).map((kind) => [PATHS[kind], kind]));
+const ITEM_OF: Record<Kind, (item: never) => Item> = { presets: presetOf, groups: groupOf, radarZones: radarZoneOf, radarZoneRules: radarRuleOf, events: eventOf };
+const ID_FIELD: Record<Kind, string> = { presets: "presetId", groups: "groupId", radarZones: "radarZoneId", radarZoneRules: "ruleId", events: "eventId" };
+
+/** The kind and the item id a call's path names ("/admin/dispatch/groups/grp_1?expectedVersion=2" → groups, grp_1). */
+function target(call: ToolCall): { kind: Kind; id: string | null } | null {
+  const [, rest = ""] = call.path.split(`${BASE}/`);
+  const [kindPath = "", idPart] = rest.split("?")[0]!.split("/");
+  const kind = KIND_OF_PATH.get(kindPath);
+  return kind ? { kind, id: idPart ? decodeURIComponent(idPart) : null } : null;
+}
+
+const isText = (value: unknown): value is EventText => Boolean(value) && typeof value === "object" && ["sv", "fr", "en"].every((lang) => typeof (value as Record<string, unknown>)[lang] === "string");
+
+/** Whether the answer carries every field the kind's converter reads (a `201 { groupId, version }` alone does not). */
+function hasItemFields(kind: Kind, raw: Record<string, unknown>): boolean {
+  if (typeof raw["name"] !== "string" || (kind !== "radarZones" && typeof raw["country"] !== "string")) return false;
+  if (kind === "presets") return Boolean(raw["values"]) && typeof raw["values"] === "object";
+  if (kind === "groups") return Array.isArray(raw["driverIds"]);
+  if (kind === "radarZones") return typeof raw["zoneId"] === "string" && typeof raw["country"] === "string" && Array.isArray(raw["polygon"]);
+  if (kind === "radarZoneRules") return (raw["radarZoneIds"] === "all" || Array.isArray(raw["radarZoneIds"])) && typeof raw["seconds"] === "number" && typeof raw["maxDrivers"] === "number" && typeof raw["repeat"] === "boolean";
+  const location = raw["location"] as Record<string, unknown> | null;
+  const details = raw["details"] as Record<string, unknown> | null;
+  return Boolean(location) && typeof location?.["lat"] === "number" && typeof location["lng"] === "number" && typeof raw["startsAt"] === "string" && typeof raw["endsAt"] === "string" && typeof raw["on"] === "boolean" && Boolean(details) && isText(details?.["title"]) && isText(details["description"]);
+}
+
+/**
+ * The tools after one answered call: a POST adds the server's item (its id and version), a PUT replaces it, a DELETE
+ * (204, no body) takes it out. Null when the answer is not the item the contract promises (an older server), so the
+ * caller reads the server's lists instead of guessing.
+ */
+export function applyToolAnswer(tools: DispatchTools, call: ToolCall, answer: unknown): DispatchTools | null {
+  const at = target(call);
+  if (!at) return null;
+  const { kind } = at;
+  const items = tools[kind] as Item[];
+  if (call.method === "DELETE") return at.id === null ? null : { ...tools, [kind]: items.filter((item) => item.id !== at.id) };
+  const raw = answer as Record<string, unknown> | null;
+  if (!raw || typeof raw !== "object" || typeof raw[ID_FIELD[kind]] !== "string" || typeof raw["version"] !== "number" || !hasItemFields(kind, raw)) return null;
+  let item: Item;
+  try {
+    item = ITEM_OF[kind](raw as never);
+  } catch {
+    // The contract promises the item, but only the preset's body is fully checked here: anything odd means a re-read.
+    return null;
   }
-  return calls.length;
+  const known = items.some((other) => other.id === item.id);
+  return { ...tools, [kind]: known ? items.map((other) => (other.id === item.id ? item : other)) : [...items, item] };
+}
+
+/**
+ * Sends the calls one by one and applies every answer to `before`, so the page's list is the server's right after a
+ * save without a second read (G4 live: a deleted row stayed, a new one waited for a reload). The first refusal stops
+ * (what was sent before it stays; the caller reads the server again). Null when an answer could not be applied.
+ */
+export async function sendToolCalls(http: ToolsHttp, calls: readonly ToolCall[], before: DispatchTools): Promise<DispatchTools | null> {
+  let tools: DispatchTools | null = before;
+  for (const call of calls) {
+    const answer = call.method === "POST" ? await http.post<unknown>(call.path, call.body) : call.method === "PUT" ? await http.put<unknown>(call.path, call.body) : await http.del(call.path);
+    tools = tools && applyToolAnswer(tools, call, answer);
+  }
+  return tools;
 }
 
 /** The book's dispatch tools. */
