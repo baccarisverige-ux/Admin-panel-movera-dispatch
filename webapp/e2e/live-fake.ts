@@ -480,17 +480,34 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (state.listFails) return json(route, state.listFails, { code: "internal", message: "The server failed.", requestId: "r-500", retryable: true });
       const statuses = url.searchParams.getAll("status");
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
-      const items = inZones(state.trips, (trip) => [String(trip.zoneId)]).filter((trip) => (!statuses.length || statuses.includes(String(trip.status))) && (!q || JSON.stringify(trip).toLowerCase().includes(q)));
+      const riderId = url.searchParams.get("riderId");
+      const items = inZones(state.trips, (trip) => [String(trip.zoneId)]).filter((trip) => (!statuses.length || statuses.includes(String(trip.status))) && (!riderId || trip.riderId === riderId) && (!q || JSON.stringify(trip).toLowerCase().includes(q)));
       const cursor = url.searchParams.get("cursor");
       if (!cursor && items.length > 2) return json(route, 200, { items: items.slice(0, 2), nextCursor: "c2" });
       return json(route, 200, { items: cursor ? items.slice(2) : items, nextCursor: null });
     }
-    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund)?$/.exec(p);
+    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/adjust)?$/.exec(p);
     if (one) {
       const trip = state.trips.find((item) => item.tripId === one[1]);
       if (!trip) return json(route, 404, { code: "not_found", message: "No such trip.", requestId: "r-404t", retryable: false });
       if (!one[2]) return json(route, 200, trip);
       if (one[2] === "/offers") return json(route, 200, { items: OFFERS.filter((offer) => offer.tripId === trip.tripId), nextCursor: null });
+      if (one[2] === "/adjust") {
+        // v0.18.7 (G5): POST /admin/trips/{tripId}/adjust waiveCancelFee: the owed fee is waived; the rider's debt in that currency drops.
+        if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409a", retryable: false, projection: trip });
+        if (!body.reason) return json(route, 400, { code: "invalid_request", message: "reason is required", requestId: "r-400a", retryable: false });
+        const cancellation = trip.cancellation as { fee?: { amountMinor: number; currency: string } | null; feeStatus?: string } | undefined;
+        if (body.waiveCancelFee && cancellation?.fee) {
+          cancellation.feeStatus = "waived";
+          const rider = state.riders.find((item) => item["riderId"] === trip.riderId) as { outstanding?: { amountMinor: number; currency: string } | null; outstandingByCurrency?: { amountMinor: number; currency: string }[] } | undefined;
+          if (rider) {
+            rider.outstandingByCurrency = (rider.outstandingByCurrency ?? (rider.outstanding ? [rider.outstanding] : [])).map((money) => (money.currency === cancellation.fee!.currency ? { ...money, amountMinor: Math.max(0, money.amountMinor - cancellation.fee!.amountMinor) } : money)).filter((money) => money.amountMinor > 0);
+            rider.outstanding = rider.outstandingByCurrency[0] ?? null;
+          }
+        }
+        trip.version = Number(trip.version) + 1;
+        return json(route, 200, trip);
+      }
       await wait(state.refundDelayMs);
       if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409", retryable: false, projection: trip });
       const fare = trip.fare as { amountMinor: number };

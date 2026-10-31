@@ -21,6 +21,8 @@ import { RiderAssignName } from "../dispatch/AssignPanel";
 import { canAssign as canAssignTrip } from "../dispatch/assign";
 import { Modal } from "../ui/Modal";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { isLiveData, liveTripOf } from "../live/realData";
+import { ETA_EVERY_SECONDS, etaIsStale, etaLine, isLiveWithDriver } from "../live/tripLive";
 
 const PAYMENTS: PaymentState[] = ["pending", "authorized", "captured", "failed", "refunded"];
 
@@ -44,7 +46,8 @@ export function TripsPage() {
   const { agent } = useSession();
   const scope = useMarketScope();
   const country = scope.market.id;
-  const trips = useTrips(params.get("scope"));
+  // v0.18.7 (G5, adminLiveRow): live rows carry the server's ETA, refreshed every 30 s, so the list follows at that pace.
+  const trips = useTrips(params.get("scope"), isLiveData() ? { refetchMs: ETA_EVERY_SECONDS * 1000 } : {});
   const drivers = useDrivers(params.get("scope"));
   const slice = useSlice<TripOps>(TRIP_OPS_KEY, emptyTripOps(), { enabled: Boolean(agent && can(agent.role, "trips.read")) });
   const ops = normalizeTripOps(slice.value);
@@ -270,7 +273,7 @@ export function TripsPage() {
             // Q13: a waiting rider's name opens the assign panel.
             canAssignTrip(trip.status) && canIntervene ? { text: trip.name, node: <RiderAssignName tripId={trip.id} rider={trip.name} /> } : trip.name,
             trip.driverId ? driverNames.get(trip.driverId) ?? "Driver" : "No driver yet",
-            trip.status,
+            liveStatusCell(trip),
             zoneById(trip.zoneId)?.name ?? trip.zoneId,
             fact(trip).category.label,
             fact(trip).price,
@@ -291,6 +294,28 @@ export function TripsPage() {
       <SaveViewDialog open={saveOpen} onClose={() => setSaveOpen(false)} ops={ops} query={filterQuery()} country={country} by={agent?.id ?? ""} onSaved={(name) => setNotice(tr("View {0} saved.", [name]))} />
     </div>
   );
+}
+
+/**
+ * v0.18.7 (G5 status item 10, contract.json#pickupWaiting.adminLiveRow): a trip going on with a driver shows
+ * "driver_to_pickup · 4 min · 1,2 km" from the server's ETA and a link to the map with the car's position.
+ */
+function liveStatusCell(trip: DemoRecord): string | { text: string; node: ReactNode } {
+  const live = liveTripOf(trip);
+  if (!live || !isLiveWithDriver(trip.status, trip.driverId)) return trip.status;
+  const eta = live.eta;
+  const line = eta ? etaLine(eta, uiLocale()) : null;
+  const text = line ? `${trip.status} · ${line}` : trip.status;
+  return {
+    text,
+    node: (
+      <span className="op-live-cell" data-testid={`trip-live-${trip.id}`}>
+        <span>{trip.status}</span>
+        {line ? <small className={eta && etaIsStale(eta, Date.now()) ? "op-eta stale" : "op-eta"} title={eta?.source === "estimate" ? tr("Straight-line estimate, no road route yet.") : undefined}>{line}</small> : <small className="op-eta">{tr("No position yet")}</small>}
+        {live.driverLocation ? <Link to={`/trips/${trip.id}#route`} onClick={(event) => event.stopPropagation()} aria-label={tr("Map of {0}", [trip.id])}>{tr("Map")}</Link> : null}
+      </span>
+    ),
+  };
 }
 
 function Peek({ trip, driverName, money, flagged, onClose }: { trip: DemoRecord; driverName: string; money: (minor: number) => string; flagged: boolean; onClose: () => void }) {

@@ -1,6 +1,7 @@
 import type { MarketId } from "../markets/markets.ts";
 import { currencySymbol, fromSek, isLargePriceChange } from "../pricing/zonePricing.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
+import { CANCEL_AFTER_ARRIVED_DEFAULT } from "./offerRules.ts";
 
 /**
  * Round 3 offer and trip rules (Q14–Q22): what the offer card shows, why an offer is Exclusive,
@@ -110,6 +111,11 @@ export type WaitRideType = "scheduled" | "airport" | "event";
  * fee share is a country rule (CountryDispatch.noShowDriverSharePct, Q44). Only the extra rules below are per zone.
  */
 export type PickupWait = {
+  /**
+   * v0.18.7 (G5 Q2, owner "admin can adjust"): a rider cancel after the driver arrived (past the free minutes after
+   * accept) is charged the no-show fee. DriverAppConfig.waiting.cancelAfterArrivedIsNoShow; default on.
+   */
+  cancelAfterArrivedIsNoShow: boolean;
   /** Pickups farther than farPickupKm get the far rule. */
   farPickupOn: boolean;
   farPickupKm: number;
@@ -138,6 +144,7 @@ const none = (): WaitOverride => ({ freeWaitMin: null, perMin: null, noShowAfter
 
 export function pickupWaitDefault(country: MarketId = "SE"): PickupWait {
   return {
+    cancelAfterArrivedIsNoShow: CANCEL_AFTER_ARRIVED_DEFAULT,
     farPickupOn: true,
     farPickupKm: 5,
     farPickup: { ...none(), freeWaitMin: 1, noShowFee: fromSek(85, country) },
@@ -166,6 +173,7 @@ export function completePickupWait(base: PickupWait, stored: unknown): PickupWai
   const num = (value: unknown, fallback: number) => (typeof value === "number" && Number.isFinite(value) ? value : fallback);
   const types = (raw.rideTypes && typeof raw.rideTypes === "object" ? raw.rideTypes : {}) as Partial<PickupWait["rideTypes"]>;
   return {
+    cancelAfterArrivedIsNoShow: typeof raw.cancelAfterArrivedIsNoShow === "boolean" ? raw.cancelAfterArrivedIsNoShow : base.cancelAfterArrivedIsNoShow,
     farPickupOn: typeof raw.farPickupOn === "boolean" ? raw.farPickupOn : base.farPickupOn,
     farPickupKm: num(raw.farPickupKm, base.farPickupKm),
     farPickup: completeOverride(base.farPickup, raw.farPickup),

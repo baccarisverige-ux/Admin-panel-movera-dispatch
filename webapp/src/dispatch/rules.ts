@@ -1,7 +1,7 @@
 import { market, MARKETS, zoneById, type MarketId, type MarketZone } from "../markets/markets.ts";
 import { currencySymbol, fromSek } from "../pricing/zonePricing.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
-import { RAISE_MAX_FACTOR_DEFAULT, validRaiseFactor } from "./offerRules.ts";
+import { PICKUP_MOVE_RANGE, RAISE_MAX_FACTOR_DEFAULT, validRaiseFactor } from "./offerRules.ts";
 import { rulesOfDispatch } from "../live/configDocs.ts";
 import {
   DEFAULT_FEE_CATEGORIES, RESERVATION_FREE_MAX_MIN, cancelFeeAmount, cancelFeeDefaults, cancelFeeIssues, completeCancelFees, feeRow, legacyCancelFees,
@@ -122,8 +122,8 @@ export const RIDE_TYPES: { id: RideTypeId; label: string; help: string }[] = [
 
 /** Highest fare raise for a ride nobody takes, in Sweden. Other countries get the same value in their own money. */
 export const RAISE_CAP_SEK = 500;
-/** Q40: the pickup move limit after accept can be set up to this many metres. */
-export const PICKUP_MOVE_MAX_METERS = 5_000;
+/** Q40: the pickup move limit after accept can be set up to this many metres (v0.18.7: the contract's range, 2000). */
+export const PICKUP_MOVE_MAX_METERS = PICKUP_MOVE_RANGE[1];
 /** Longest free-cancel window the rider app accepts: one week. */
 export const RIDER_FREE_CANCEL_MAX_MIN = RESERVATION_FREE_MAX_MIN;
 
@@ -1101,6 +1101,7 @@ Object.assign(LABELS, {
   "raisePrice.maxFactor": "Rider raise limit",
   hiddenComesBackMin: "Hidden Radar trip comes back after", "exclusiveWhileDriving.on": "Exclusive while driving", "exclusiveWhileDriving.count": "Exclusive offers while driving",
     "pickupWait.farPickupOn": "Rule for far pickups", "pickupWait.farPickupKm": "Far pickup from",
+    "pickupWait.cancelAfterArrivedIsNoShow": "Cancel after the driver arrived counts as a no-show",
 });
 for (const reason of EXCLUSIVE_REASON_LIST) {
   LABELS[`exclusiveReasons.${reason.id}.text`] = `Exclusive reason (${reason.when.toLowerCase()})`;

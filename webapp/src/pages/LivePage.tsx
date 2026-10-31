@@ -4,13 +4,15 @@ import { useLiveZoneList } from "../live/LiveZones";
 import { shapeOfServerZone } from "../zones/live";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { Link } from "react-router";
-import { useDrivers, useRecords, useSlice, useTrips } from "../api/hooks";
+import { useRecords, useSlice, useTrips } from "../api/hooks";
 import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
 import { market } from "../markets/markets";
 import {
+  frameOf,
   isOpenRequest,
   liveBoardLayers,
   liveMarkers,
+  MAP_BOUNDS,
   moveMarker,
   offerBlock,
   offersFor,
@@ -18,6 +20,7 @@ import {
   type LiveKind,
   type LiveMarker,
 } from "../trips/present";
+import { ETA_EVERY_SECONDS } from "../live/tripLive";
 import { CommandButton } from "../ui/CommandButton";
 import { stockholmZones } from "../zones/releases";
 import { ZoneCanvas } from "./ZoneCanvas";
@@ -67,8 +70,10 @@ export function LivePage() {
 }
 
 function LiveBoard() {
-  const drivers = useDrivers(null);
-  const trips = useTrips(null);
+  // G5 (live map bug 2026-10-30): on live the board follows the server at the ETA pace (every 30 s).
+  const follow = isLiveData() ? { refetchMs: ETA_EVERY_SECONDS * 1000 } : {};
+  const drivers = useRecords("drivers", null, follow);
+  const trips = useTrips(null, follow);
   const vehicles = useRecords("vehicles", null);
   const [tick, setTick] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -91,6 +96,8 @@ function LiveBoard() {
   const live = isLiveData();
   const shownLayers = LAYERS.filter((layer) => liveBoardLayers(live).includes(layer.id));
   const markers = liveMarkers(drivers.data ?? [], trips.data ?? []).map((marker) => moveMarker(marker, tick));
+  // Live: the frame fits the server's markers (Stockholm or Paris); the demo keeps its Stockholm box.
+  const frame = live ? frameOf(markers) : MAP_BOUNDS;
   const selected = markers.find((marker) => marker.id === selectedId) ?? null;
   const selectedTripId = selected?.kind === "request"
     ? selected.id.replace(/^req-/, "")
@@ -153,7 +160,7 @@ function LiveBoard() {
       <div className="split">
         <div className="ops-map" data-testid="live-map">
           {markers.filter((marker) => marker.onMap && visible(marker, layers)).map((marker) => {
-            const point = projectMarker(marker.lat, marker.lng);
+            const point = projectMarker(marker.lat, marker.lng, frame);
             return (
               <button
                 key={marker.id}

@@ -1,3 +1,4 @@
+import type { LiveTripFacts } from "./seed.ts";
 import { COUNTRY_SETTINGS_KEY, countrySettingsOf, driverBonusHardMax, normalizeCountrySettingsBook } from "../config/countrySettings.ts";
 import { liveDrivers } from "../dashboard/live.ts";
 import { CATEGORIES, DRIVER_ASSIGNED_STATUSES, nextStatus } from "../domain/contract.ts";
@@ -70,6 +71,8 @@ export type TripOffersView = {
    * not say (older server), null = none running.
    */
   radarRepeat?: { sendId: string; radarZoneId: string; seconds: number; maxDrivers: number; rounds: number; startedAt: string } | null;
+  /** v0.18.7 (G5): live only, the trip's own facts from this read of GET /admin/trips/{tripId} (ETA, position, rider, terms, cancel). */
+  live?: LiveTripFacts;
 };
 
 export type AcceptedDriver = {

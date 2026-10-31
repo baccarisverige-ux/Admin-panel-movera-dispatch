@@ -216,7 +216,7 @@
   },
   "booking": {
     "maxStops": 3,
-    "maxPickupMoveMeters": 500,
+    "maxPickupMoveMeters": 200,
     "bookingHorizonDays": 7
   },
   "cancelFees": {
@@ -473,7 +473,8 @@
           "currency": "SEK"
         }
       }
-    }
+    },
+    "cancelAfterArrivedIsNoShow": true
   },
   "cancelReasons": [
     {

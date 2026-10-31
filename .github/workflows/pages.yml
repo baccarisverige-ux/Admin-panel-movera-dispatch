@@ -77,7 +77,8 @@ jobs:
             cp -r webapp/dist-live/. _site/live/
             # The server's password link opens /live/setup-password; other unknown /live/ paths go to the live start.
             cp _site/live/index.html _site/live/setup-password/index.html
-            sed -i 's#<head>#<head><script>if(location.pathname.indexOf("/Admin-panel-movera-dispatch/live/")===0)location.replace("/Admin-panel-movera-dispatch/live/")</script>#' _site/404.html
+            # G5 admin bug (deep link opened the Dashboard): the page asked for is kept in ?p= and the app restores it (src/ui/deepLink.ts).
+            sed -i 's#<head>#<head><script>(function(){var b="/Admin-panel-movera-dispatch/live/";if(location.pathname.indexOf(b)===0){var p="/"+location.pathname.slice(b.length)+location.search+location.hash;location.replace(b+"?p="+encodeURIComponent(p))}})()</script>#' _site/404.html
           fi
           printf '%s\n' '<!doctype html><meta http-equiv="refresh" content="0;url=/Admin-panel-movera-dispatch/"><link rel="canonical" href="/Admin-panel-movera-dispatch/"><script>location.replace("/Admin-panel-movera-dispatch/")</script>' > _site/app/index.html
           echo "${BUILD_SHA}" > _site/version.txt

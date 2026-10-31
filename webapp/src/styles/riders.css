@@ -486,3 +486,7 @@
 .rd-picker .rd-audience-list li label { flex-direction: row; align-items: center; color: var(--text); font-size: 13px; font-weight: 500; }
 .rd-picker label.rd-search { flex-direction: row; align-items: center; height: 40px; flex: none; }
 .rd-picker .rd-audience-list { grid-template-columns: minmax(0, 1fr); }
+
+/* Driver group 5 (v0.18.7, Q3): the owed fees per trip under the "Owes …" banner, each with its Waive button. */
+.rd-owed-trips { flex: 1 1 100%; list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; font-weight: 500; }
+.rd-owed-trips li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

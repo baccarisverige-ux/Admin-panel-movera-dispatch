@@ -50,3 +50,38 @@ export const AUTO_OFFLINE_DEFAULT: number = contract.configDefaults.missedExclus
 
 /** contract.json#configDefaults.offerCardRiderRating: the rider rating shows on offers unless the admin turns it off. */
 export const RIDER_RATING_DEFAULT: boolean = contract.configDefaults.offerCardRiderRating;
+
+/* ---------- Driver group 5 (contract v0.18.7, Rules decisions/driver-g5.md) ---------- */
+
+/**
+ * Status item 4 + note check (owner "200 m default, admin can change"): how far the rider may move the pickup after
+ * booking. DriverAppConfig.booking.maxPickupMoveMeters per zone or country standard; the server refuses a bigger move
+ * (400 pickup_move_too_far). Default 200 (was 500), range 0–2000 (contract.json#pickupWaiting.pickupMove).
+ */
+const PICKUP_MOVE = contract.pickupWaiting.pickupMove;
+export const PICKUP_MOVE_DEFAULT: number = PICKUP_MOVE.default;
+export const PICKUP_MOVE_RANGE: readonly [number, number] = [PICKUP_MOVE.range[0], PICKUP_MOVE.range[1]];
+/** Whole metres, in steps of 10 (what the box moves by). */
+export const PICKUP_MOVE_STEP = 10;
+
+/** The "Pickup move limit" field's bounds from the contract (min, max, step), so the box refuses 2500 m before any send. */
+export const pickupMoveField = (): { min: number; max: number; step: number } => ({ min: PICKUP_MOVE_RANGE[0], max: PICKUP_MOVE_RANGE[1], step: PICKUP_MOVE_STEP });
+
+/** The limit when it is a whole number inside the contract's range, else null. */
+export function validPickupMove(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= PICKUP_MOVE_RANGE[0] && value <= PICKUP_MOVE_RANGE[1] ? value : null;
+}
+
+/**
+ * Q2 (owner 2026-10-31 "This can be adjusted by admin"): "Cancel after the driver arrived counts as a no-show",
+ * DriverAppConfig.waiting.cancelAfterArrivedIsNoShow per zone or country standard, default on. The server copies it to
+ * the rider document when serving (contract.json#pickupWaiting.servedConfig.cancelAfterArrivedIsNoShow).
+ */
+const CANCEL_AFTER_ARRIVED = contract.pickupWaiting.servedConfig.cancelAfterArrivedIsNoShow;
+export const CANCEL_AFTER_ARRIVED_DEFAULT: boolean = CANCEL_AFTER_ARRIVED.default;
+const CANCEL_AFTER_ARRIVED_TEXT: Record<AppLanguage, string> = CANCEL_AFTER_ARRIVED.adminText;
+
+/** The switch's own words in the panel's language, from the contract (sv / fr / en), never retyped. */
+export function cancelAfterArrivedText(language: AppLanguage = currentLanguage()): string {
+  return CANCEL_AFTER_ARRIVED_TEXT[language] ?? CANCEL_AFTER_ARRIVED_TEXT.en;
+}

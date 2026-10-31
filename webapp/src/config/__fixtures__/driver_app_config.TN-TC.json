@@ -124,7 +124,7 @@
   ],
   "booking": {
     "maxStops": 3,
-    "maxPickupMoveMeters": 500
+    "maxPickupMoveMeters": 200
   },
   "offers": {
     "radarSeconds": 15,
@@ -650,6 +650,7 @@
     },
     "driverSharePct": 80,
     "driverShareWaitPct": 100,
+    "cancelAfterArrivedIsNoShow": true,
     "byCategory": {
       "economy": {
         "freeWaitMin": 5,

@@ -98,6 +98,11 @@ export type AdminApi = {
   readSlice: <T>(key: string, fallback: T, context?: ReadContext) => Promise<T>;
   /** GET /admin/trips/{id}/offers: the admin offers of a trip, its radar groups, the lock and the driver bonus. */
   tripOffers: (tripId: string) => Promise<TripOffersView>;
+  /**
+   * v0.18.7 (G5 deep-link bug): one trip by id (GET /admin/trips/{tripId}) for the trip page when the trip is not on
+   * the list's loaded pages; null when the server has no such trip. The demo answers from its own list.
+   */
+  trip?: (tripId: string) => Promise<DemoRecord | null>;
   /** GET /admin/trips/{id}/nearby-drivers?scope&radiusKm: active drivers near the pickup. */
   nearbyDrivers: (tripId: string, query: NearbyQuery) => Promise<NearbyDriverList>;
   /** GET /admin/dispatch/stream (JSON page): dispatch events after a sequence number. */

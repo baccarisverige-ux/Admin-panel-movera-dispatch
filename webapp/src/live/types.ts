@@ -175,6 +175,17 @@ export type Page<T> = { items: T[]; nextCursor: string | null };
 export type LiveMoney = { amountMinor: number; currency: string };
 export type TripPlace = { address?: string; lat: number; lng: number };
 
+/** v0.18.7 (G5 Q4): the server's road-route ETA, refreshed every 30 s while a driver is on the way or driving. */
+export type TripEta = { etaSeconds: number; distanceMeters: number; target: "pickup" | "dropoff"; at: string; source: "osrm" | "estimate" | "stale" };
+/** v0.18.7 (G5 Q1): the rider as the driver and admin see them from accept to the end (never the rider's own view). */
+export type RiderSummary = { firstName: string; rating?: number };
+/** v0.18.7: the rules a trip is charged by (booking snapshot + the zone's switches at booking time). */
+export type TripTerms = { currency: string; freeWaitMin: number; waitPerMin: LiveMoney; noShowAfterMin: number; noShowFee: LiveMoney; noShowDriverSharePct: number; cancelRule: { freeMin?: number; fee?: LiveMoney | null; [key: string]: unknown } | null; cancelDriverSharePct: number; cancelAfterArrivedIsNoShow: boolean; maxPickupMoveMeters: number };
+/** contract Waiting (+ v0.18.7 Q5/Q6 amounts). */
+export type TripWaiting = { arrivedAt: string; freeUntil: string; noShowAt: string; chargedSeconds: number; noShowFee?: LiveMoney; noShowDriverShare?: LiveMoney; chargedSecondsNow?: number; chargedSoFar?: LiveMoney };
+/** contract Cancellation (+ v0.18.7 Q2/Q6 feeKind and driverShare). */
+export type TripCancellation = { actor: string; reasonCode: string; at: string; fee: LiveMoney | null; note?: string; feeStatus?: "paid" | "owed" | "waived" | string; feeKind?: "cancel" | "no_show" | string; driverShare?: LiveMoney };
+
 /** contract TripProjection as GET /admin/trips and GET /admin/trips/{tripId} send it (the fields the panel reads). */
 export type Trip = {
   tripId: string;
@@ -206,7 +217,14 @@ export type Trip = {
   paymentMethod: string;
   paymentStatus?: string;
   driver?: { driverId: string; firstName: string; vehicle?: { vehicleId?: string; make?: string; model?: string; color?: string; plate?: string } };
-  cancellation?: { actor: string; reasonCode: string; at: string; fee: LiveMoney | null; note?: string; feeStatus?: string };
+  cancellation?: TripCancellation;
+  /** v0.18.7 (contract.json#pickupWaiting.adminLiveRow): on a trip going on with a driver, list rows and the trip page alike. */
+  driverLocation?: { lat: number; lng: number; measuredAt: string; accuracy?: number; heading?: number; moving?: boolean };
+  etaSeconds?: number;
+  eta?: TripEta;
+  rider?: RiderSummary;
+  terms?: TripTerms;
+  waiting?: TripWaiting;
 };
 
 /** contract Offer (GET /admin/trips/{tripId}/offers). */
@@ -247,6 +265,8 @@ export type Rider = {
   status: string;
   version: number;
   outstanding: LiveMoney | null;
+  /** v0.18.7 (G5 Q3): every currency the rider owes in, oldest debt first; outstanding is the first of them. */
+  outstandingByCurrency?: LiveMoney[];
   wallet?: LiveMoney;
   language?: string;
   deletionRequestedAt?: string;

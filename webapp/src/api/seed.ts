@@ -133,6 +133,18 @@ export type LiveTripFacts = {
   driverSilentAlert: { at?: string; [key: string]: unknown } | null;
   ratingStatus: string | null;
   updatedAt: string;
+  /** v0.18.7 (G5): the driver's last position while the trip goes on with a driver (contract.json#pickupWaiting.adminLiveRow). */
+  driverLocation: { lat: number; lng: number; measuredAt: string } | null;
+  /** v0.18.7 (G5 Q4): the server's road-route ETA to the pickup or the drop-off; null while arrived or after the end. */
+  eta: { etaSeconds: number; distanceMeters: number; target: "pickup" | "dropoff"; at: string; source: "osrm" | "estimate" | "stale" } | null;
+  /** v0.18.7 (G5 Q1): the rider's first name and rating from accept to the end. */
+  rider: { firstName: string; rating: number | null } | null;
+  /** v0.18.7: the rules the trip is charged by. */
+  terms: { currency: string; freeWaitMin: number; waitPerMinMinor: number; noShowAfterMin: number; noShowFeeMinor: number; noShowDriverSharePct: number; cancelFreeMin: number | null; cancelDriverSharePct: number; cancelAfterArrivedIsNoShow: boolean; maxPickupMoveMeters: number } | null;
+  /** v0.18.7 (G5 Q5/Q6): the waiting at the pickup with the no-show amounts and the running cost. */
+  waiting: { arrivedAt: string; freeUntil: string; noShowAt: string; chargedSeconds: number; noShowFeeMinor: number | null; noShowDriverShareMinor: number | null; chargedSecondsNow: number | null; chargedSoFarMinor: number | null } | null;
+  /** The cancel as the server recorded it: who, the reason code, the fee, whether it is paid / owed / waived, which rule set it, and the driver's share. */
+  cancellation: { actor: string; reasonCode: string; at: string; feeMinor: number | null; feeStatus: string | null; feeKind: string | null; driverShareMinor: number | null; note: string | null } | null;
 };
 export type LiveAccountFacts = {
   accountStatus: string;
@@ -161,7 +173,15 @@ export type LiveDriverFacts = {
   /** v0.18.4 (G3-D2): Driver.performance when the server sent it (GET /admin/drivers/{driverId}). */
   performance?: { acceptancePct: number | null; cancellationPct: number | null; rating: number | null };
 };
-export type LiveRiderFacts = { rating: number | null; walletMinor: number | null; outstandingMinor: number | null; currency: string | null; deletionRequestedAt: string | null };
+export type LiveRiderFacts = {
+  rating: number | null;
+  walletMinor: number | null;
+  outstandingMinor: number | null;
+  currency: string | null;
+  deletionRequestedAt: string | null;
+  /** v0.18.7 (G5 Q3): what the rider owes in every currency (unpaid cancel / no-show fees), oldest debt first. */
+  outstandingByCurrency: { amountMinor: number; currency: string }[];
+};
 
 /** A trip row: a DemoRecord whose status is a contract TripStatus. */
 export type TripRecord = Omit<DemoRecord, "status" | "previousStatus"> & {

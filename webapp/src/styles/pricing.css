@@ -612,3 +612,9 @@
 .cx-country-table td { text-align: center; }
 .cx-country-table th[scope="row"] { color: var(--dash-ink-2); font-size: 12px; }
 .cx-country-table select { height: 30px; border-radius: 8px; border: 1px solid #dfe3e5; padding: 0 6px; font: inherit; font-size: 12px; background: #fff; }
+
+/* Driver group 5 (v0.18.7): the terms the apps get with the quote (Test a ride). */
+.test-ride-terms { margin: 0; display: grid; gap: 4px; font-size: 12px; border-top: 1px dashed #cdd6e6; padding-top: 8px; }
+.test-ride-terms div { display: flex; justify-content: space-between; gap: 10px; }
+.test-ride-terms dt { color: var(--dash-ink-2); }
+.test-ride-terms dd { margin: 0; font-weight: 600; text-align: right; }

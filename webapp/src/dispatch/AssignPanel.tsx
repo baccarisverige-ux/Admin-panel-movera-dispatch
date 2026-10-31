@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lock, MapPin, Radar, Send, Star, Target, UserRound, X, Zap } from "lucide-react";
@@ -24,7 +24,7 @@ import {
   type AdminOffer,
   type NearbyQuery,
 } from "./assign";
-import { AssignPanelContext, useAssignPanel, type AssignExtras } from "./assignContext";
+import { useAssignPanel } from "./assignContext";
 import { DriverBonusBox, EMPTY_MONEY, moneyForSend, seesLabel, seesSentence, useClock, useTripOffers, type MoneyDraft } from "./DriverBonusBox";
 import { AcceptedCard, OfferStatus, OffersSection } from "./RideProgress";
 import { handledOf } from "./handle";
@@ -44,19 +44,6 @@ export { OfferStatus, OffersSection } from "./RideProgress";
  */
 
 const CATEGORY_LABEL = new Map(CATEGORIES.map((category) => [category.id, category.label]));
-
-/** One assign panel for the whole admin: any screen opens it with useAssignPanel().open(tripId). */
-export function AssignPanelProvider({ children }: { children: ReactNode }) {
-  const [opened, setOpened] = useState<{ tripId: string; extras: AssignExtras } | null>(null);
-  const open = useCallback((id: string, extras: AssignExtras = {}) => setOpened({ tripId: id, extras }), []);
-  const value = useMemo(() => ({ open }), [open]);
-  return (
-    <AssignPanelContext.Provider value={value}>
-      {children}
-      {opened ? <AssignPanel key={opened.tripId} tripId={opened.tripId} candidates={opened.extras.candidates ?? []} onClose={() => setOpened(null)} /> : null}
-    </AssignPanelContext.Provider>
-  );
-}
 
 /** Opens the assign panel for a waiting rider. */
 export function NearbyButton({ tripId, rider, candidates, className = "dash-btn small" }: { tripId: string; rider: string; candidates?: Candidate[]; className?: string }) {

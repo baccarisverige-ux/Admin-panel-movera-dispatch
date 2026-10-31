@@ -5,6 +5,7 @@ import { emptyReservationBook, normalizeReservationBook, useSlice, type Reservat
 import type { MarketId } from "../markets/markets";
 import { Card, Check, Num, Row, Switch } from "./fields";
 import { driverNoShowShare, pickupTerms, WAIT_FIELDS, WAIT_RIDE_TYPES, WAITING_DRIVER_SHARE_PCT, type PickupWait, type WaitBase, type WaitOverride } from "./offers";
+import { cancelAfterArrivedText } from "./offerRules";
 import type { CountryDispatch, ZoneDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
 
@@ -67,7 +68,7 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
     <Card title={tr("Waiting at pickup")} tone="green" icon={<Hourglass size={18} />} help={tr("Free wait, then a price per minute. When the free wait ends the driver can also cancel for no-show and the rider pays the no-show fee. Extra rules change only the values you tick.")}>
       <div className="dx-sub" role="group" aria-label={tr("Waiting from Pricing")}>
         <b>{trn("{0} Per category, from Pricing", <Wallet size={13} aria-hidden="true" />)}</b>
-        <small>{tr("Free wait, price per minute and the no-show fee are the Pricing values of this zone, so there is one place to change them. The free wait is also the no-show wait: the driver can cancel for no-show when it ends.")}</small>
+        <small>{tr("Free wait, price per minute and the no-show fee are the Pricing values of this zone, so there is one place to change them. The free wait is also the no-show wait: the driver can cancel for no-show when it ends.")} {tr("The driver and rider apps always get these Pricing values in the zone's currency, whatever an older app document says: Pricing wins.")}</small>
         <table className="dx-wait-table">
           <thead><tr><th>{tr("Category")}</th><th>{tr("Free wait = no-show wait")}</th><th>{tr("Then per minute")}</th><th>{tr("No-show fee")}</th></tr></thead>
           <tbody>
@@ -76,6 +77,8 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
         </table>
         <Link className="dash-btn small ghost" to={`/pricing?country=${countryId}&zone=${zone.zoneId}`}>{tr("Change in Pricing")}</Link>
       </div>
+      {/* v0.18.7 (G5 Q2, owner "admin can adjust"): the no-show fee for a cancel after arrival, per zone, default on. */}
+      <Row label={tr("Cancel after the driver arrived counts as a no-show")} help={tr("{0} Inside the free minutes after accept the rider always cancels free; before the free waiting at the pickup is over it is the normal cancel fee. Off: the normal cancel fee applies after arrival too.", [cancelAfterArrivedText()])} on={wait.cancelAfterArrivedIsNoShow} disabled={disabled} onToggle={(cancelAfterArrivedIsNoShow) => set({ cancelAfterArrivedIsNoShow })} />
       <Row label={tr("Driver's share")} help={tr("The waiting money always goes {0}% to the driver. The no-show fee share is one rule for all of {1}. The no-show reason never counts in the cancel rate.", [WAITING_DRIVER_SHARE_PCT, countryName])}>
         <span className="dx-override on" data-testid="wait-share-fixed"><small>{trn("waiting money {0}% (fixed)", WAITING_DRIVER_SHARE_PCT)}</small></span>
         <Num label={tr("Driver's share of the no-show fee")} before={`no-show, all of ${countryName}`} value={country.noShowDriverSharePct} unit="%" min={0} max={100} disabled={disabled} onChange={(noShowDriverSharePct) => onCountry({ ...country, noShowDriverSharePct: Math.round(noShowDriverSharePct) })} />

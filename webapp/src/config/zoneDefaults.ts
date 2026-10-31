@@ -30,7 +30,8 @@ const tnd = money("TND");
 
 export const CONFIG_DEFAULTS = {
   maxStops: 3,
-  maxPickupMoveMeters: 500,
+  /** v0.18.7 (owner 2026-10-29 "200 m default, admin can change"): was 500. */
+  maxPickupMoveMeters: 200,
   freeWaitMin: { default: 5, xl: 3 },
   waitingDriverSharePct: 100,
   noShowDriverSharePct: 80,

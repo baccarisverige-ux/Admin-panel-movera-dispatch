@@ -311,7 +311,9 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     booking: { ...booking(base), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays },
     cancelFees: cancelFees(base),
     cancelCheck: { on: base.zone.riderCancel.on, closerPct: base.zone.riderCancel.closerPct },
-    waiting: waiting(base),
+    // v0.18.7 (G5 Q2): the same switch as the driver document (contract RiderAppConfig.waiting); the server copies the
+    // driver zone's value when serving, so the rider's Terms can show the rule. Set in Dispatch › Waiting at pickup.
+    waiting: { ...waiting(base), cancelAfterArrivedIsNoShow: base.zone.pickupWait.cancelAfterArrivedIsNoShow },
     cancelReasons: base.country.cancelReasons.groups.rider.map((item) => ({ code: item.code, title: reasonText(item.title, state.riderLang) })),
     rideCheck: rideCheck(base, state),
     appUpdate: appUpdate(base, "rider"),
@@ -473,6 +475,8 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     cancelFees: driverCancelFees(base),
     waiting: {
       freeWaitMin: wait.freeWaitMin, perMin: wait.perMin, noShowAfterMin: wait.noShowAfterMin, noShowFee: wait.noShowFee, ...share,
+      // v0.18.7 (G5 Q2): the server copies it into the rider document when serving GET /rider/config.
+      cancelAfterArrivedIsNoShow: zone.pickupWait.cancelAfterArrivedIsNoShow,
       byCategory: wait.byCategory,
       farPickup: { on: zone.pickupWait.farPickupOn, km: zone.pickupWait.farPickupKm, ...waitOverride(zone.pickupWait.farPickup, currency) },
       rideTypes: {

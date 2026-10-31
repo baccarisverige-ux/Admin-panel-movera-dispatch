@@ -12,7 +12,7 @@ import { marketOfZone } from "../markets/markets.ts";
 import type { CategoryPrice, ZoneBook } from "../pricing/zonePricing.ts";
 import type { ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
-import { validRaiseFactor } from "../dispatch/offerRules.ts";
+import { validPickupMove, validRaiseFactor } from "../dispatch/offerRules.ts";
 
 export type ConfigDocName = "rider_app_config" | "driver_app_config" | "pricing" | "dispatch" | "country_rules" | "onboarding";
 export type Doc = Record<string, unknown>;
@@ -213,6 +213,12 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   if (offers?.autoOffline && typeof offers.autoOffline.noFixMinutes === "number") zone.autoOffline = { ...zone.autoOffline, noFixMinutes: offers.autoOffline.noFixMinutes };
   const share = (driver?.["cancelFees"] as { driverSharePct?: number } | undefined)?.driverSharePct;
   if (typeof share === "number") zone.riderCancel = { ...zone.riderCancel, driverSharePct: share };
+  // v0.18.7 (G5 Q2): "Cancel after the driver arrived counts as a no-show" as the zone's drivers get it (default on).
+  const afterArrived = (driver?.["waiting"] as { cancelAfterArrivedIsNoShow?: unknown } | undefined)?.cancelAfterArrivedIsNoShow;
+  if (typeof afterArrived === "boolean") zone.pickupWait = { ...zone.pickupWait, cancelAfterArrivedIsNoShow: afterArrived };
+  // v0.18.7 (G5 item 4): the pickup move limit the server checks (booking.maxPickupMoveMeters, 0–2000; migration 0041 moved 500 to 200).
+  const move = validPickupMove((driver?.["booking"] as { maxPickupMoveMeters?: unknown } | undefined)?.maxPickupMoveMeters);
+  if (move !== null) zone.pickupMove = { maxMeters: move };
   return zone;
 }
 
@@ -233,7 +239,8 @@ export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc
     if (key === "waiting") {
       const own = (server["waiting"] ?? {}) as Doc;
       const made = built["waiting"] as Doc;
-      next["waiting"] = { ...own, driverSharePct: made["driverSharePct"], driverShareWaitPct: made["driverShareWaitPct"], farPickup: made["farPickup"], rideTypes: made["rideTypes"] };
+      // v0.18.7 (G5 Q2): the cancel-after-arrived switch is the admin's; the money stays pricing's (servedConfig).
+      next["waiting"] = { ...own, driverSharePct: made["driverSharePct"], driverShareWaitPct: made["driverShareWaitPct"], cancelAfterArrivedIsNoShow: made["cancelAfterArrivedIsNoShow"], farPickup: made["farPickup"], rideTypes: made["rideTypes"] };
       continue;
     }
     next[key] = structuredClone(built[key]);

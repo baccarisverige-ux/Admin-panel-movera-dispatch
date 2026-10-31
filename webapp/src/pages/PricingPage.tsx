@@ -29,7 +29,7 @@ import { useSupply } from "../dashboard/useSupply";
 import { liveDrivers } from "../dashboard/live";
 import { rideRequests } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
-import { standardZone, standardZoneId, zoneById } from "../markets/markets";
+import { standardZone, standardZoneId, zoneById, type MarketId } from "../markets/markets";
 import { publishTargets } from "../markets/scope";
 import { useMarketScope } from "../markets/useMarketScope";
 import { CategoryManager } from "../pricing/CategoryManager";
@@ -44,6 +44,7 @@ import { alertsFor, surgeRows } from "../pricing/rows";
 import { LEVEL_COLOR } from "../pricing/surge";
 import { SurgePanel } from "../pricing/SurgePanel";
 import { TestRide } from "../pricing/TestRide";
+import { DISPATCH_KEY, emptyDispatchBook, liveCountry, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
 import { useSurgePref } from "../pricing/useSurgePref";
 import {
   SLICE_KEY,
@@ -100,6 +101,12 @@ function useNow(stepMs: number): number {
   return now;
 }
 
+/** The zone's live Dispatch switches that go to the apps with the quote (a Standard reads its country's rules). */
+function testTerms(book: DispatchBook, zoneId: string, country: MarketId): { cancelAfterArrivedIsNoShow: boolean; maxPickupMoveMeters: number; noShowDriverSharePct: number } {
+  const rules = liveRules(book, zoneId);
+  return { cancelAfterArrivedIsNoShow: rules.pickupWait.cancelAfterArrivedIsNoShow, maxPickupMoveMeters: rules.pickupMove.maxMeters, noShowDriverSharePct: liveCountry(book, country).noShowDriverSharePct };
+}
+
 export function PricingPage() {
   const { agent } = useSession();
   const navigate = useNavigate();
@@ -110,6 +117,8 @@ export function PricingPage() {
   const canPublish = can(role, "settings.publish");
   const slice = useSlice<unknown>(SLICE_KEY, emptyPricingStore());
   const store = useMemo(() => normalizeStore(slice.value), [slice.value]);
+  // v0.18.7 (G5): Test a ride also shows the Dispatch switches the apps get with these prices.
+  const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
   const [drafts, setDrafts] = useState<Record<string, ZoneBook>>({});
   const [notice, setNotice] = useState("");
   const [testOpen, setTestOpen] = useState(false);
@@ -413,7 +422,7 @@ export function PricingPage() {
             </section>
           ) : null}
         </div>
-        {testOpen ? <TestRide zoneName={zone?.name ?? zoneId} currency={currency} categories={categories} book={book} liveSurge={currentSurge?.multiplier ?? 1} draft={dirty.some((draft) => draft.zoneId === zoneId)} onClose={() => setTestOpen(false)} /> : null}
+        {testOpen ? <TestRide zoneName={zone?.name ?? zoneId} currency={currency} categories={categories} book={book} liveSurge={currentSurge?.multiplier ?? 1} draft={dirty.some((draft) => draft.zoneId === zoneId)} onClose={() => setTestOpen(false)} terms={testTerms(normalizeDispatchBook(dispatchSlice.value), zoneId, country)} /> : null}
       </div>
 
       {changedCount ? (
