@@ -381,6 +381,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.confirm.cancel", label: "Cancel dialog", reason: false, permission: "overview.read" },
   { id: "admin.trip.reassign", label: "Reassign trip", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.refund", label: "Refund trip", reason: true, permission: "payments.refund" },
+  // v0.18.7 (G5 Q2/Q3): waive an owed cancel or no-show fee (POST /admin/trips/{tripId}/adjust waiveCancelFee).
+  { id: "admin.trip.waiveFee", label: "Waive the cancel fee", reason: true, permission: "trips.intervene" },
   { id: "admin.dispatch.save", label: "Save dispatch rules", reason: true, permission: "trips.intervene" },
   { id: "admin.dispatch.restore", label: "Restore dispatch version", reason: true, permission: "trips.intervene" },
   { id: "admin.dispatch.view", label: "Dispatch view", reason: false, permission: "trips.read" },

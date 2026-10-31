@@ -16,6 +16,8 @@ type Props = {
   invalid?: boolean;
   title?: string;
   className?: string;
+  /** The input's id, so a deep link can focus exactly this box. */
+  id?: string;
 };
 
 /**
@@ -23,7 +25,7 @@ type Props = {
  * Text that is not a number or is outside min/max is kept as typed and marked invalid with a message; it is
  * never changed silently, and the last valid value stays in the draft until the text is fixed.
  */
-export function NumberField({ value, onChange, label, unit, step = 1, min = 0, max, disabled = false, changed = false, invalid = false, title, className }: Props) {
+export function NumberField({ value, onChange, label, unit, step = 1, min = 0, max, disabled = false, changed = false, invalid = false, title, className, id }: Props) {
   const [text, setText] = useState(String(value));
   const errorId = useId();
   const report = useFieldErrorReport();
@@ -41,6 +43,7 @@ export function NumberField({ value, onChange, label, unit, step = 1, min = 0, m
         <input
           type="text"
           inputMode="decimal"
+          id={id}
           aria-label={trx(label)}
           aria-invalid={invalid || Boolean(error) || undefined}
           aria-describedby={error ? errorId : undefined}

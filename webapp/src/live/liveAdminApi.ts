@@ -8,7 +8,7 @@
 import { catalogFor } from "../data/catalog.ts";
 import { CURRENCY, TIME_ZONE } from "../domain/contract.ts";
 import { isCurrency } from "../domain/money.ts";
-import { MARKETS } from "../markets/markets.ts";
+import { MARKETS, marketOfZone } from "../markets/markets.ts";
 import { NO_FILTER, zoneFilterOf, type ZoneFilter } from "./zoneFilter.ts";
 
 export { zoneFilterOf, type ZoneFilter };
@@ -29,6 +29,7 @@ import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
 import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
+import { liveBonusLimits } from "./tripLive.ts";
 import { vehicleMissing } from "./activation.ts";
 import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { tr } from "../i18n/index.ts";
@@ -41,11 +42,11 @@ const PAGE_LIMIT = 100;
 export const LIST_PAGE = 50;
 const MAX_PAGES = 20;
 
-async function all<T>(client: LiveClient, path: string, filter: ZoneFilter = NO_FILTER): Promise<T[]> {
+async function all<T>(client: LiveClient, path: string, filter: ZoneFilter = NO_FILTER, extra: Record<string, string> = {}): Promise<T[]> {
   const items: T[] = [];
   let cursor: string | null = null;
   for (let index = 0; index < MAX_PAGES; index += 1) {
-    const query = new URLSearchParams({ limit: String(PAGE_LIMIT), ...(cursor ? { cursor } : {}) });
+    const query = new URLSearchParams({ limit: String(PAGE_LIMIT), ...extra, ...(cursor ? { cursor } : {}) });
     for (const [key, value] of filter.params) query.set(key, value);
     const page: Page<T> = await client.json<Page<T>>(`${path}?${query.toString()}`);
     items.push(...page.items);
@@ -213,6 +214,17 @@ export function tripFacts(trip: Trip): LiveTripFacts {
     driverSilentAlert: trip.driverSilentAlert ?? null,
     ratingStatus: trip.ratingStatus ?? null,
     updatedAt: trip.updatedAt,
+    // v0.18.7 (driver group 5): the live row's position and ETA, the rider summary, the terms, the waiting amounts and the cancel.
+    driverLocation: trip.driverLocation ? { lat: trip.driverLocation.lat, lng: trip.driverLocation.lng, measuredAt: trip.driverLocation.measuredAt } : null,
+    eta: trip.eta && Number.isFinite(trip.eta.etaSeconds) && Number.isFinite(trip.eta.distanceMeters) ? { etaSeconds: trip.eta.etaSeconds, distanceMeters: trip.eta.distanceMeters, target: trip.eta.target === "dropoff" ? "dropoff" : "pickup", at: trip.eta.at, source: trip.eta.source === "osrm" ? "osrm" : trip.eta.source === "stale" ? "stale" : "estimate" } : null,
+    rider: trip.rider?.firstName ? { firstName: trip.rider.firstName, rating: typeof trip.rider.rating === "number" ? trip.rider.rating : null } : null,
+    terms: trip.terms ? {
+      currency: trip.terms.currency, freeWaitMin: trip.terms.freeWaitMin, waitPerMinMinor: trip.terms.waitPerMin?.amountMinor ?? 0, noShowAfterMin: trip.terms.noShowAfterMin, noShowFeeMinor: trip.terms.noShowFee?.amountMinor ?? 0,
+      noShowDriverSharePct: trip.terms.noShowDriverSharePct, cancelFreeMin: typeof trip.terms.cancelRule?.freeMin === "number" ? trip.terms.cancelRule.freeMin : null, cancelDriverSharePct: trip.terms.cancelDriverSharePct,
+      cancelAfterArrivedIsNoShow: Boolean(trip.terms.cancelAfterArrivedIsNoShow), maxPickupMoveMeters: trip.terms.maxPickupMoveMeters,
+    } : null,
+    waiting: trip.waiting ? { arrivedAt: trip.waiting.arrivedAt, freeUntil: trip.waiting.freeUntil, noShowAt: trip.waiting.noShowAt, chargedSeconds: trip.waiting.chargedSeconds, noShowFeeMinor: minorOf(trip.waiting.noShowFee), noShowDriverShareMinor: minorOf(trip.waiting.noShowDriverShare), chargedSecondsNow: typeof trip.waiting.chargedSecondsNow === "number" ? trip.waiting.chargedSecondsNow : null, chargedSoFarMinor: minorOf(trip.waiting.chargedSoFar) } : null,
+    cancellation: trip.cancellation ? { actor: trip.cancellation.actor, reasonCode: trip.cancellation.reasonCode, at: trip.cancellation.at, feeMinor: minorOf(trip.cancellation.fee), feeStatus: trip.cancellation.feeStatus ?? null, feeKind: trip.cancellation.feeKind ?? null, driverShareMinor: minorOf(trip.cancellation.driverShare), note: trip.cancellation.note ?? null } : null,
   };
 }
 
@@ -254,6 +266,8 @@ export function riderRecord(rider: Rider): DemoRecord {
       outstandingMinor: rider.outstanding ? rider.outstanding.amountMinor : null,
       currency: rider.wallet?.currency ?? rider.outstanding?.currency ?? null,
       deletionRequestedAt: rider.deletionRequestedAt ?? null,
+      // v0.18.7 (G5 Q3): every owed currency; an older server sends only outstanding (one currency).
+      outstandingByCurrency: Array.isArray(rider.outstandingByCurrency) && rider.outstandingByCurrency.length ? rider.outstandingByCurrency.filter((money) => Number.isFinite(money?.amountMinor)).map((money) => ({ amountMinor: money.amountMinor, currency: money.currency })) : rider.outstanding ? [{ amountMinor: rider.outstanding.amountMinor, currency: rider.outstanding.currency }] : [],
     },
   };
 }
@@ -379,7 +393,28 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     if (adminId === settingsAdmin) return;
     settingsAdmin = adminId;
     settings.forget();
+    bonusRules.clear();
   });
+  /**
+   * Checker round 2 (M1): the country_rules read behind the driver bonus limits, per zone, kept 5 minutes (the trip
+   * page re-reads its offers every second). A refusal (403 without settings.read) is kept for the session, so it is
+   * not asked again every second. Cleared on sign-out / another admin and after any settings publish.
+   */
+  const bonusRules = new Map<string, { at: number; document: unknown; refused: boolean }>();
+  const BONUS_RULES_TTL_MS = 5 * 60_000;
+  async function bonusRulesOf(zoneId: string): Promise<unknown> {
+    const kept = bonusRules.get(zoneId);
+    if (kept && (kept.refused || Date.now() - kept.at < BONUS_RULES_TTL_MS)) return kept.document;
+    try {
+      const answer = await client.json<{ document?: unknown }>(`/admin/config/country_rules?zoneId=${encodeURIComponent(zoneId)}`);
+      bonusRules.set(zoneId, { at: Date.now(), document: answer?.document ?? null, refused: false });
+      return answer?.document ?? null;
+    } catch (error) {
+      const refused = error instanceof ApiError && (error.status === 403 || error.status === 404);
+      bonusRules.set(zoneId, { at: Date.now(), document: null, refused });
+      return null;
+    }
+  }
   let currency: string = CURRENCY;
 
   async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER): Promise<Driver[]> {
@@ -486,6 +521,15 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const fleets = await readFleets();
       const zones = await fleetZones(fleets);
       return fleets.map((fleet) => (name === "fleets" ? fleetRecord : ownerRecord)(fleet, zones.get(fleet.fleetId) ?? ""));
+    }
+    // v0.18.7 (G5 Q3): the rider page's own trips (GET /admin/trips?riderId=…, every page), so the owed fees are all there.
+    if (name.startsWith("tripsOfRider:")) {
+      const riderId = name.slice("tripsOfRider:".length);
+      if (!riderId) return [];
+      const rows = await all<Trip>(client, "/admin/trips", filter, { riderId });
+      rows.forEach((row) => trips.set(row.tripId, row));
+      if (!riders.has(riderId)) await readRiders().catch(() => []);
+      return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
     }
     if (name === "trips") {
       const rows = await paged<Trip>(client, "trips", "/admin/trips", filter);
@@ -599,6 +643,23 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/refund`, { expectedVersion: trip.version, amount: trip.fare, reason: input.reason });
       return done("Refunded.");
     }
+    if (input.action === "admin.trip.waiveFee") {
+      // v0.18.7 (G5 Q2/Q3): an owed cancel or no-show fee is waived on the trip (POST /admin/trips/{tripId}/adjust
+      // waiveCancelFee); the rider's outstanding amount in that currency drops at once.
+      // Checker round 1: the admin's own reason, never a default; refused before any send.
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write why the fee is waived."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
+      // A retry after a lost answer finds the fee already waived: that is done, not "changed".
+      if (trip.cancellation?.feeStatus === "waived") {
+        trips.set(trip.tripId, trip);
+        return done("This fee is already waived.");
+      }
+      // The command's own Idempotency-Key, so a resend of the same click is the same operation on the server.
+      const next = await client.json<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/adjust`, { method: "POST", body: JSON.stringify({ expectedVersion: trip.version, waiveCancelFee: true, reason: reason.slice(0, 1000) }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) });
+      trips.set(trip.tripId, next?.tripId ? next : { ...trip, cancellation: trip.cancellation ? { ...trip.cancellation, feeStatus: "waived" } : trip.cancellation });
+      return done("Fee waived. The rider owes nothing for this trip.");
+    }
     if (input.action === "admin.dispatch.control") {
       // Dispatch › Live: pause, force a mode, resume or back to the rules (PUT /admin/zones/{zoneId}/dispatch-control).
       const value = controlValueOf(input.after);
@@ -615,6 +676,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     if (settingsCall) {
       try {
         const answer = await settingsCall;
+        bonusRules.clear();
         return typeof answer === "string" ? done(answer) : { ...done(answer.message), slice: answer.slice };
       } catch (error) {
         if (error instanceof SettingsChanged) throw new ApiError(409, error.message, { code: "version_mismatch", retryable: false });
@@ -745,6 +807,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     trips.set(trip.tripId, trip);
     const page = await client.json<Page<TripOffer & { version?: number }>>(`/admin/trips/${encodeURIComponent(tripId)}/offers?limit=50`);
     const tripCurrency = isCurrency(trip.fare.currency) ? trip.fare.currency : CURRENCY;
+    // Owner 2026-10-31: the country's real driver bonus limits (country_rules of the trip's zone; else the contract
+    // default), not 0. An admin without settings.read gets the default.
+    // M2: the country from the zone, else from the trip's currency (each market has its own); unknown → no limits shown.
+    const limitCountry = marketOfZone(trip.zoneId)?.id ?? MARKETS.find((item) => item.currency === trip.fare.currency)?.id ?? null;
+    const limits = limitCountry ? liveBonusLimits(await bonusRulesOf(trip.zoneId), limitCountry) : null;
     return {
       tripId,
       status: trip.status,
@@ -778,12 +845,15 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       lockedTo: null,
       events: [],
       timers: { exclusiveSeconds: 0, radarSeconds: 0 },
-      limits: { limitMinor: 0, hardMaxMinor: 0 },
+      limits: limits ?? { limitMinor: Number.MAX_SAFE_INTEGER, hardMaxMinor: Number.MAX_SAFE_INTEGER },
+      limitsKnown: limits !== null,
       fareMinor: trip.fare.amountMinor,
       driverNetMinor: trip.driverEarnings?.amountMinor ?? 0,
       commissionMinor: trip.commission?.amountMinor ?? 0,
       accepted: null,
       radarRepeat: radarRepeatOf(trip),
+      // v0.18.7 (G5): the trip page follows this read (ETA every 30 s, the car's position, the cancel fee).
+      live: tripFacts(trip),
     } as unknown as TripOffersView;
   }
 
@@ -813,6 +883,18 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return bookFrom(incidents.values()) as typeof fallback;
     },
     tripOffers,
+    trip: async (tripId) => {
+      const found = await client.json<Trip>(`/admin/trips/${encodeURIComponent(tripId)}`).catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) return null;
+        throw error;
+      });
+      if (!found) return null;
+      trips.set(found.tripId, found);
+      if (!riders.has(found.riderId)) await readRiders().catch(() => []);
+      const record = tripRecord(found, riders.get(found.riderId));
+      remember([record]);
+      return record;
+    },
     nearbyDrivers: async (tripId, query) => {
       const params = new URLSearchParams({ scope: query.scope, ...(query.radiusKm !== undefined ? { radiusKm: String(query.radiusKm) } : {}) });
       const answer = await client.json<{ items: NearbyDriver[]; scope: typeof query.scope; radiusKm?: number }>(`/admin/trips/${encodeURIComponent(tripId)}/nearby-drivers?${params.toString()}`);

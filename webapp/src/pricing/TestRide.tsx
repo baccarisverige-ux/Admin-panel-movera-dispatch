@@ -15,10 +15,12 @@ type Props = {
   liveSurge: number;
   draft: boolean;
   onClose: () => void;
+  /** v0.18.7 (G5): the zone's Dispatch switches the apps get with the quote (terms the ride is charged by). */
+  terms?: { cancelAfterArrivedIsNoShow: boolean; maxPickupMoveMeters: number; noShowDriverSharePct: number };
 };
 
 /** Price preview with the current draft, so changes can be checked before they go live. */
-export function TestRide({ zoneName, currency, categories, book, liveSurge, draft, onClose }: Props) {
+export function TestRide({ zoneName, currency, categories, book, liveSurge, draft, onClose, terms }: Props) {
   const enabled = categories.filter((category) => book.prices[category.id]?.enabled);
   const [input, setInput] = useState<QuoteInput>({
     categoryId: enabled[0]?.id ?? "economy", km: 8, minutes: 18, waitMin: 0, stops: 0, stopWaitMin: 0,
@@ -28,6 +30,7 @@ export function TestRide({ zoneName, currency, categories, book, liveSurge, draf
   const set = (patch: Partial<QuoteInput>) => setInput((current) => ({ ...current, ...patch }));
   const quote = quoteRide(book, input);
   const routes = book.routes.filter((route) => route.categoryId === input.categoryId);
+  const price = book.prices[input.categoryId];
   return (
     <aside className="test-ride" role="dialog" aria-label={tr("Test a ride")} data-testid="quote-preview">
       <div className="test-ride-head">
@@ -84,6 +87,15 @@ export function TestRide({ zoneName, currency, categories, book, liveSurge, draf
             <span>{trn("{0}Movera {1}", <i className="movera" />, money(quote.moveraGets, currency))}</span>
           </div>
           <small>{tr("VAT included. Tips are not part of the price.")}</small>
+          {/* v0.18.7 (G5): what the driver and rider apps get as the terms of this ride, from this Pricing (servedConfig) and Dispatch. */}
+          {price ? (
+            <dl className="test-ride-terms" data-testid="quote-terms" aria-label={tr("Terms the apps get")}>
+              <div><dt>{tr("Free wait, then per minute")}</dt><dd>{trn("{0} min · {1}/min", price.freeWaitMin, money(price.waitPerMin, currency))}</dd></div>
+              <div><dt>{tr("No-show")}</dt><dd>{terms ? trn("after {0} min · {1} (driver gets {2}%)", price.freeWaitMin, money(price.noShowFee, currency), terms.noShowDriverSharePct) : trn("after {0} min · {1}", price.freeWaitMin, money(price.noShowFee, currency))}</dd></div>
+              {terms ? <div><dt>{tr("Cancel after the driver arrived")}</dt><dd>{terms.cancelAfterArrivedIsNoShow ? tr("counts as a no-show") : tr("normal cancel fee")}</dd></div> : null}
+              {terms ? <div><dt>{tr("Pickup move")}</dt><dd>{trn("up to {0} m", terms.maxPickupMoveMeters)}</dd></div> : null}
+            </dl>
+          ) : null}
         </div>
       )}
     </aside>

@@ -7,6 +7,7 @@ import { useLiveRefund } from "../live/LiveRefund";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Banknote, Car, Clock3, Coins, Eye, FileText, Flag, History, ListOrdered, Lock, MapPinned, MessagesSquare, Radar, Route as RouteIcon, ShieldCheck, Star, Users, Wrench } from "lucide-react";
 import { useAdminApi } from "../api/AdminApiContext";
 import { emptySafety, useAudit, useDrivers, useRecords, useSlice, useTrips, type SafetyBook } from "../api/hooks";
@@ -72,6 +73,8 @@ import { DriverBonusBox, NearbyButton, OffersSection, useTripOffers } from "../d
 import { canAssign as canAssignTrip, isLocked } from "../dispatch/assign";
 import { StatusDot } from "../ui/kit";
 import { currentLanguage, tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { liveTripOf } from "../live/realData";
+import { approachOf, canWaiveFee, driverPointOf, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, reasonWords, tripMoney } from "../live/tripLive";
 
 type TimelineEvent = { at: string; text: string; tone: "status" | "good" | "muted" | "call" | "check" | "alert"; link?: { to: string; label: string } };
 
@@ -116,8 +119,16 @@ export function TripPage() {
   const incidents = useRecords("incidents", null);
   const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: canSafety });
   const incidentOps = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: canSafety });
-  const trip = trips.data?.find((item) => item.id === tripId);
+  const listed = trips.data?.find((item) => item.id === tripId);
   const live = Boolean(useLiveSessionMaybe());
+  // v0.18.7 (G5 deep-link bug): a trip that is not on the list's loaded pages (an older one, a link from the apps)
+  // is read by id, so the page opens it instead of "Trip not found".
+  const single = useQuery({
+    queryKey: ["trip-record", tripId, agent?.id ?? "signed-out"],
+    queryFn: () => (api.trip ? api.trip(tripId) : Promise.resolve(null)),
+    enabled: Boolean(tripId) && !trips.isLoading && !listed && Boolean(api.trip),
+  });
+  const trip = listed ?? (single.data as NonNullable<typeof trips.data>[number] | null | undefined) ?? undefined;
   const dispatchOffers = useTripOffers(tripId, can(role, "trips.read"));
   const clock = useNow();
   const [driverId, setDriverId] = useState("");
@@ -134,8 +145,11 @@ export function TripPage() {
   );
   const route = useMemo(() => (trip ? routeOf(trip) : null), [trip]);
   const chosen = driverId || eligible[0]?.id || "";
+  // v0.18.7 (G5): the trip's live facts follow the page's own read of GET /admin/trips/{tripId} (ETA every 30 s,
+  // the car's position, the rider summary, the terms and the cancel fee); the list's copy is the fallback.
+  const facts = dispatchOffers.data?.live ?? (trip ? liveTripOf(trip) : null);
 
-  if (trips.isLoading || drivers.isLoading || vehicles.isLoading) return <p className="state-line">{tr("Loading trip.")}</p>;
+  if (trips.isLoading || drivers.isLoading || vehicles.isLoading || (!listed && single.isLoading)) return <p className="state-line">{tr("Loading trip.")}</p>;
   if (!trip || !route) {
     return <NotFoundRecord kind="Trip" id={tripId} list="/trips" listLabel="trips" />;
   }
@@ -143,6 +157,16 @@ export function TripPage() {
   const country = countryOf(trip.zoneId);
   const place = market(country);
   const money = (minor: number) => formatMoney(minor, country);
+  const tripCurrency = facts?.currency ?? place.currency;
+  const liveMoney = (minor: number) => tripMoney(minor, tripCurrency);
+  const eta = facts && isLiveWithDriver(trip.status, trip.driverId) ? facts.eta : null;
+  const etaStale = eta ? etaIsStale(eta, Date.now()) : false;
+  const cancelFacts = facts?.cancellation ?? null;
+  const feeKind = feeKindOf(cancelFacts);
+  const feeStatus = feeStatusOf(cancelFacts);
+  const feeKindText = feeKind === "no_show" ? tr("no-show fee") : feeKind === "cancel" ? tr("cancel fee") : "";
+  const feeStatusText = feeStatus === "paid" ? tr("paid") : feeStatus === "owed" ? tr("owed, charged on the rider's next trip in this currency") : feeStatus === "waived" ? tr("waived") : "";
+  const riderName = facts?.rider?.firstName || trip.name;
   const legacyMoney = (minor: number) => formatTripMoney({ amountMinor: minor, currency: (trip.liveTrip?.currency as typeof place.currency | undefined) ?? place.currency });
   const driver = drivers.data?.find((item) => item.id === trip.driverId);
   const vehicle = vehicles.data?.find((item) => item.driverId === trip.driverId);
@@ -246,8 +270,15 @@ export function TripPage() {
           { id: "paid", label: split.state === "estimate" ? tr("Rider pays (estimate)") : tr("Rider paid"), value: split.riderPaid, previous: null, format: "money", info: tr("The trip price, minus promotions and refunds, plus the tip.") },
           { id: "driver", label: tr("Driver gets"), value: split.driverGets, previous: null, format: "money", info: tr("The ride price minus Movera's commission (and the fleet owner's share), plus the tip.") },
           { id: "movera", label: tr("Movera keeps"), value: split.moveraKeeps, previous: null, format: "money", info: tr("Commission and app fee, minus promotions and refunds Movera paid.") },
-          { id: "km", label: tr("Distance, km"), value: route.km, previous: null, format: "count", info: tr("Distance charged, in km.") },
-          { id: "min", label: tr("Ride time"), value: route.minutes, previous: null, format: "min", info: tr("Minutes from pickup to drop-off.") },
+          ...(eta
+            ? [
+              { id: "km", label: eta.target === "dropoff" ? tr("To the drop-off, km") : tr("To the pickup, km"), value: Math.floor(eta.distanceMeters / 100) / 10, previous: null, format: "count" as const, info: tr("Road distance from the car right now, from the server (every 30 s).") },
+              { id: "min", label: eta.target === "dropoff" ? tr("Minutes to the drop-off") : tr("Minutes to the pickup"), value: etaMinutes(eta.etaSeconds), previous: null, format: "min" as const, info: tr("The same ETA the rider and driver apps show.") },
+            ]
+            : [
+              { id: "km", label: tr("Distance, km"), value: route.km, previous: null, format: "count" as const, info: tr("Distance charged, in km.") },
+              { id: "min", label: tr("Ride time"), value: route.minutes, previous: null, format: "min" as const, info: tr("Minutes from pickup to drop-off.") },
+            ]),
         ]}
       />
 
@@ -258,14 +289,19 @@ export function TripPage() {
               <li key={`${event.at}-${index}`} className={event.tone}><time>{time(event.at)}</time><i aria-hidden="true" /><span>{event.text}{event.link ? <> · <Link to={event.link.to}>{trx(event.link.label)}</Link></> : null}</span></li>
             ))}
           </ol>
-          <p className="op-help">{trn("Who cancelled: {0}. Reason: {1}{2}.", cancelledBy(trip.status), cancelReason(trip), trip.cancelReasonCode ? ` (${trip.cancelReasonCode})` : "")}</p>
+          <p className="op-help" data-testid="trip-cancel-words">{trn("Who cancelled: {0}. Reason: {1}{2}.", cancelledBy(trip.status), facts && trip.cancelReasonCode ? reasonWords(trip.cancelReasonCode, liveCountry(normalizeDispatchBook(dispatchSlice.value), country).cancelReasons, currentLanguage()) : cancelReason(trip), trip.cancelReasonCode ? ` (${trip.cancelReasonCode})` : "")}</p>
+          {cancelFacts && cancelFacts.feeMinor !== null ? (
+            <p className="op-help" data-testid="trip-cancel-fee-line">{trn("Fee {0} ({1}) · {2}{3}", liveMoney(cancelFacts.feeMinor), feeKindText, feeStatusText, cancelFacts.driverShareMinor !== null ? tr(" · driver gets {0}", [liveMoney(cancelFacts.driverShareMinor)]) : "")}</p>
+          ) : cancelFacts ? <p className="op-help" data-testid="trip-cancel-fee-line">{tr("No fee.")}</p> : null}
         </Section>
 
         <Section id="people" title={tr("People and car")} icon={<Users size={16} />} aside={allowed && !revealed ? reveal : revealed ? <span className="dx-tag">{trn("{0} Shown, logged in Reports", <Eye size={11} aria-hidden="true" />)}</span> : null}>
           <div className="op-people">
             <div className="op-person rider">
               <small>{tr("Rider")}</small>
-              <Link to={`/riders/${riderId}`}><b>{trip.name}</b></Link>
+              <Link to={`/riders/${riderId}`}><b>{riderName}</b></Link>
+              {/* v0.18.7 (G5 Q1): the rider's first name and rating as the driver sees them, from accept to the end. */}
+              {facts?.rider?.rating != null ? <span className="dx-tag" data-testid="trip-rider-rating">{trn("{0} {1} rider rating", <Star size={11} aria-hidden="true" />, facts.rider.rating.toLocaleString(uiLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }))}</span> : null}
               {canAssignTrip(trip.status) && can(role, "trips.intervene") ? <NearbyButton tripId={trip.id} rider={trip.name} className="dash-btn small" /> : null}
               <span>{allowed ? phone(trip.phone) : <>{trn("{0} Number hidden", <Lock size={11} aria-hidden="true" />)}</>}</span>
             </div>
@@ -313,7 +349,7 @@ export function TripPage() {
       <Section id="route" title={tr("Route")} icon={<RouteIcon size={16} />} testId="trip-route" wide>
         <div className="op-route-grid">
           <MapPanel title={tr("Map")} note={<span className="op-legend">{trn("{0} Ride {1} Driver to pickup {2} Pickup {3} Stop {4} Drop-off", <i className="ride" />, <i className="approach" />, <i className="pickup" />, <i className="stop" />, <i className="dropoff" />)}</span>}>
-            <RouteMap stops={route.stops} path={route.path} approach={trip.driverId ? route.approach : []} label={tr("Route of trip {0}", [trip.id])} />
+            <RouteMap stops={route.stops} path={route.path} approach={facts ? approachOf(facts) : trip.driverId ? route.approach : []} points={facts ? driverPointOf(facts, driver?.name ?? tr("Driver")) : []} label={tr("Route of trip {0}", [trip.id])} />
           </MapPanel>
           <div>
             <ol className="op-stops" data-testid="trip-stops">
@@ -321,9 +357,19 @@ export function TripPage() {
                 <li key={`${stop.kind}-${index}`} className={stop.kind}><i aria-hidden="true" />{stop.kind === "pickup" ? tr("Pickup") : stop.kind === "dropoff" ? tr("Drop-off") : tr("Stop")} · {trx(stop.label)}</li>
               ))}
             </ol>
-            <dl className="op-facts">
-              <div><dt>{tr("Distance")}</dt><dd>{Number.isFinite(route.km) ? trn("{0} km", route.km) : <NotConnected />}</dd></div>
-              <div><dt>{tr("Ride time")}</dt><dd>{Number.isFinite(route.minutes) ? trn("{0} min", route.minutes) : <NotConnected />}</dd></div>
+            <dl className="op-facts" data-testid="trip-route-facts">
+              {eta ? (
+                <>
+                  <div><dt>{eta.target === "dropoff" ? tr("To the drop-off") : tr("To the pickup")}</dt><dd data-testid="trip-eta" className={etaStale ? "op-eta stale" : undefined}>{etaLine(eta, uiLocale())}{etaStale ? ` · ${tr("old position")}` : ""}{eta.source === "estimate" ? ` · ${tr("estimate")}` : ""}</dd></div>
+                  <div><dt>{tr("Distance")}</dt><dd>{formatDistance(eta.distanceMeters, uiLocale())}</dd></div>
+                </>
+              ) : (
+                <>
+                  <div><dt>{tr("Distance")}</dt><dd>{Number.isFinite(route.km) ? trn("{0} km", route.km) : <NotConnected />}</dd></div>
+                  <div><dt>{tr("Ride time")}</dt><dd>{Number.isFinite(route.minutes) ? trn("{0} min", route.minutes) : <NotConnected />}</dd></div>
+                </>
+              )}
+              {facts && isLiveWithDriver(trip.status, trip.driverId) && !facts.driverLocation ? <div><dt>{tr("Driver")}</dt><dd>{tr("No position yet")}</dd></div> : null}
               <div><dt>{tr("Stops")}</dt><dd>{route.stops.length - 2}</dd></div>
             </dl>
           </div>
@@ -348,6 +394,41 @@ export function TripPage() {
         </Section>
         <Section id="split" title={tr("Who gets what")} icon={<Banknote size={16} />}>
           <SplitView split={split} money={money} />
+          {cancelFacts ? (
+            <div className="op-cash" data-testid="trip-cancel-fee">
+              <b>{trn("{0} Cancel fee", <Coins size={13} aria-hidden="true" />)}</b>
+              {cancelFacts.feeMinor !== null ? (
+                <dl className="op-split-lines">
+                  <div><dt>{feeKind === "no_show" ? tr("No-show fee") : tr("Cancel fee")}</dt><dd>{liveMoney(cancelFacts.feeMinor)}</dd></div>
+                  <div><dt>{tr("State")}</dt><dd data-testid="trip-fee-status">{feeStatusText || <NotConnected />}</dd></div>
+                  {cancelFacts.driverShareMinor !== null ? <div className="plus"><dt>{tr("Driver gets")}</dt><dd>{liveMoney(cancelFacts.driverShareMinor)}</dd></div> : null}
+                </dl>
+              ) : <p className="op-help">{tr("No fee.")}</p>}
+              {live && canWaiveFee(cancelFacts) && can(role, "trips.intervene") ? (
+                <CommandButton command="admin.trip.waiveFee" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before={feeStatus ?? "fee"} after="waived" onDone={() => { setNotice(tr("Fee waived. The rider owes nothing for this trip.")); void dispatchOffers.refetch(); void trips.refetch(); }}>{tr("Waive the fee")}</CommandButton>
+              ) : null}
+            </div>
+          ) : null}
+          {facts?.waiting ? (
+            <dl className="op-split-lines" data-testid="trip-waiting-facts">
+              <div><dt>{tr("Driver arrived")}</dt><dd>{time(facts.waiting.arrivedAt)}</dd></div>
+              <div><dt>{tr("Free until")}</dt><dd>{time(facts.waiting.freeUntil)}</dd></div>
+              {facts.waiting.chargedSoFarMinor !== null ? <div><dt>{tr("Waiting charged so far")}</dt><dd>{liveMoney(facts.waiting.chargedSoFarMinor)}</dd></div> : null}
+              {facts.waiting.noShowFeeMinor !== null ? <div><dt>{tr("No-show fee")}</dt><dd>{liveMoney(facts.waiting.noShowFeeMinor)}{facts.waiting.noShowDriverShareMinor !== null ? ` · ${tr("driver gets {0}", [liveMoney(facts.waiting.noShowDriverShareMinor)])}` : ""}</dd></div> : null}
+            </dl>
+          ) : null}
+          {facts?.terms ? (
+            <div className="op-cash" data-testid="trip-terms">
+              <b>{trn("{0} Rules this trip is charged by", <ListOrdered size={13} aria-hidden="true" />)}</b>
+              <dl className="op-split-lines">
+                <div><dt>{tr("Free wait, then per minute")}</dt><dd>{trn("{0} min · {1}/min", facts.terms.freeWaitMin, liveMoney(facts.terms.waitPerMinMinor))}</dd></div>
+                <div><dt>{tr("No-show")}</dt><dd>{trn("after {0} min · {1} (driver gets {2}%)", facts.terms.noShowAfterMin, liveMoney(facts.terms.noShowFeeMinor), facts.terms.noShowDriverSharePct)}</dd></div>
+                <div><dt>{tr("Rider cancel")}</dt><dd>{facts.terms.cancelFreeMin !== null ? trn("free {0} min after accept · driver gets {1}% of a fee", facts.terms.cancelFreeMin, facts.terms.cancelDriverSharePct) : tr("no fee rule")}</dd></div>
+                <div><dt>{tr("Cancel after the driver arrived")}</dt><dd>{facts.terms.cancelAfterArrivedIsNoShow ? tr("counts as a no-show") : tr("normal cancel fee")}</dd></div>
+                <div><dt>{tr("Pickup move")}</dt><dd>{trn("up to {0} m", facts.terms.maxPickupMoveMeters)}</dd></div>
+              </dl>
+            </div>
+          ) : null}
           {cashTrip ? (
             <div className="op-cash" data-testid="trip-cash">
               <b>{trn("{0} Cash trip", <Coins size={13} aria-hidden="true" />)}</b>

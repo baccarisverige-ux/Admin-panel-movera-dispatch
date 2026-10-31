@@ -5,7 +5,7 @@ import contract from "../../../contracts/contract.json" with { type: "json" };
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import { dispatchDocumentOf, rulesOfDispatch } from "../live/configDocs.ts";
 import { numberInputError } from "../pricing/numberInput.ts";
-import { AUTO_OFFLINE_COUNTS, AUTO_OFFLINE_DEFAULT, autoOfflineText, RAISE_FACTOR_RANGE, RAISE_FACTOR_STEP, RAISE_MAX_FACTOR_DEFAULT, raiseFactorField, raiseFactorLabel, RIDER_RATING_DEFAULT, validRaiseFactor } from "./offerRules.ts";
+import { AUTO_OFFLINE_COUNTS, AUTO_OFFLINE_DEFAULT, autoOfflineText, CANCEL_AFTER_ARRIVED_DEFAULT, cancelAfterArrivedText, PICKUP_MOVE_DEFAULT, PICKUP_MOVE_RANGE, pickupMoveField, RAISE_FACTOR_RANGE, RAISE_FACTOR_STEP, RAISE_MAX_FACTOR_DEFAULT, raiseFactorField, raiseFactorLabel, RIDER_RATING_DEFAULT, validPickupMove, validRaiseFactor } from "./offerRules.ts";
 import { defaultZone, emptyDispatchBook, rulesFile, zoneIssues } from "./rules.ts";
 
 /**
@@ -97,4 +97,33 @@ test("G4 live fix: the Rider raise limit box carries the contract's min, max and
   assert.equal(numberInputError("4", 1, 3, "×"), "Max 3 ×.");
   assert.equal(numberInputError("2,5", 1, 3, "×"), null);
   for (const maxFactor of [0.9, 3.1]) assert.ok(zoneIssues({ ...zone(), raisePrice: { maxFactor } }).includes("Rider raise limit: must be 1× to 3× the booked price."));
+});
+
+/* ---------- Driver group 5 (contract v0.18.7, Rules decisions/driver-g5.md) ---------- */
+
+test("G5 item 4: the pickup move limit is 200 m by default, 0–2000 in steps of 10, as the contract says; the exporter writes it", () => {
+  assert.equal(PICKUP_MOVE_DEFAULT, 200);
+  assert.deepEqual(PICKUP_MOVE_RANGE, [0, 2000]);
+  assert.equal(contract.configDefaults.maxPickupMoveMeters, PICKUP_MOVE_DEFAULT);
+  assert.deepEqual(pickupMoveField(), { min: 0, max: 2000, step: 10 });
+  assert.equal(zone().pickupMove.maxMeters, 200);
+  assert.equal(validPickupMove(350), 350);
+  for (const bad of [-1, 2001, 12.5, Number.NaN, "200", null]) assert.equal(validPickupMove(bad), null, String(bad));
+  assert.ok(zoneIssues({ ...zone(), pickupMove: { maxMeters: 2500 } }).some((issue) => issue.startsWith("Pickup move after accept: 0 to 2000 m")));
+  assert.equal(driverAppConfig("Z001", appConfigState({ now: NOW })).booking.maxPickupMoveMeters, 200);
+  assert.equal(riderAppConfig("FR-PC", appConfigState({ now: NOW })).booking.maxPickupMoveMeters, 200, "France too");
+});
+
+test("G5 Q2: 'Cancel after the driver arrived counts as a no-show' is on by default, with the contract's words in sv, fr and en, and goes out with the driver document", () => {
+  assert.equal(CANCEL_AFTER_ARRIVED_DEFAULT, true);
+  assert.equal(contract.configDefaults.cancelAfterArrivedIsNoShow, true);
+  assert.equal(zone().pickupWait.cancelAfterArrivedIsNoShow, true);
+  const texts = contract.pickupWaiting.servedConfig.cancelAfterArrivedIsNoShow.adminText;
+  assert.equal(cancelAfterArrivedText("sv"), texts.sv);
+  assert.equal(cancelAfterArrivedText("fr"), texts.fr);
+  assert.equal(cancelAfterArrivedText("en"), texts.en);
+  assert.ok(texts.sv !== texts.en && texts.fr !== texts.en, "three languages");
+  const driver = driverAppConfig("Z001", appConfigState({ now: NOW }));
+  assert.equal(driver.waiting.cancelAfterArrivedIsNoShow, true);
+  assert.equal(riderAppConfig("Z001", appConfigState({ now: NOW })).waiting.cancelAfterArrivedIsNoShow, true, "the rider document carries the same switch (the server copies the driver zone's value when serving)");
 });

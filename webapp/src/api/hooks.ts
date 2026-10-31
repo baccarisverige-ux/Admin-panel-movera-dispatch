@@ -64,8 +64,8 @@ export function useRiders(scope: string | null) {
   return useRecords("riders", scope);
 }
 
-export function useTrips(scope: string | null) {
-  const query = useRecords("trips", scope);
+export function useTrips(scope: string | null, options: { refetchMs?: number } = {}) {
+  const query = useRecords("trips", scope, options);
   return { ...query, data: query.data as TripRecord[] | undefined };
 }
 

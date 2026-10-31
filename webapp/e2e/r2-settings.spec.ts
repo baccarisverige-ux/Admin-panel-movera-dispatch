@@ -129,14 +129,14 @@ test("Q39/Q40/Q44/Q46: max stops, pickup move after accept, no-show share and mi
   await expect(stops.getByLabel("Max stops")).toHaveValue("3");
   await stops.getByLabel("Max stops").fill("4");
   const move = page.getByRole("region", { name: "Pickup move after accept" });
-  await expect(move.getByLabel("Pickup move limit")).toHaveValue("500");
+  await expect(move.getByLabel("Pickup move limit")).toHaveValue("200");
   await move.getByLabel("Pickup move limit").fill("300");
   const wait = page.getByRole("region", { name: "Waiting at pickup" });
   await wait.getByLabel("Driver's share of the no-show fee").fill("70");
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
   const list = page.getByRole("list", { name: "Changes not live yet" });
-  await expect(list).toContainText("Pickup move after accept (m): 500 → 300");
+  await expect(list).toContainText("Pickup move after accept (m): 200 → 300");
   await expect(list).toContainText("Driver's share of the no-show fee: 80% → 70%");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await dialog(page).getByRole("button", { name: "Confirm" }).click();

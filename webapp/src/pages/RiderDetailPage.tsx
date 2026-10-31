@@ -22,7 +22,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useAudit, useSlice } from "../api/hooks";
+import { useAudit, useRecords, useSlice } from "../api/hooks";
 import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
@@ -56,7 +56,8 @@ import { advanceRiderPrivacy, emptyRiderOpsBook, revokeRiderSessions, riderOps, 
 import { BOOKING_LABEL, categoryName, type Booking } from "../riders/profile";
 import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
-import { isLiveData } from "../live/realData";
+import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
+import { feeKindOf, owedByCurrency, owedText, tripMoney } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
 import { NOTE_MAX } from "../domain/labels";
@@ -106,6 +107,8 @@ export function RiderDetailPage() {
   const [note, setNote] = useState("");
   const { care, now } = data;
   const row = data.rows.find((item) => item.rider.id === riderId);
+  // v0.18.7 (G5 Q3): live, the rider's own trips from the server (every page), so every owed fee can be waived here.
+  const riderTrips = useRecords(`tripsOfRider:${riderId}`, null, { refetchMs: 30_000 });
   const paidBookings = useMemo(() => (row?.bookings ?? []).filter((booking) => booking.fareMinor > 0 && booking.status !== "scheduled"), [row]);
 
   function openTab(id: string) {
@@ -121,6 +124,10 @@ export function RiderDetailPage() {
 
   const { rider, profile } = row;
   const country = profile.country;
+  // v0.18.7 (G5 Q3): what the rider owes per currency (unpaid cancel / no-show fees); the owed trips can be waived.
+  const owed = isLiveData() ? owedByCurrency(liveRiderOf(rider)) : [];
+  const known = new Map([...liveTripsOfRider(rider.id), ...(riderTrips.data ?? [])].map((trip) => [trip.id, trip]));
+  const owedTrips = isLiveData() ? [...known.values()].filter((trip) => trip.liveTrip?.cancellation?.feeStatus === "owed" && (trip.liveTrip.cancellation.feeMinor ?? 0) > 0).sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")) : [];
   const place = market(country);
   const symbol = CURRENCY_SYMBOL[country];
   const date = new Intl.DateTimeFormat(uiLocale(), { dateStyle: "medium", timeZone: place.timeZone });
@@ -230,7 +237,25 @@ export function RiderDetailPage() {
       </section>
 
       {notice || data.careSlice.message || opsSlice.message ? <p className="fd-notice" role="status">{trSentences(notice)} {trSentences(data.careSlice.message)} {trSentences(opsSlice.message)}</p> : null}
-      {row.unpaidMinor > 0 ? (
+      {owed.length ? (
+        <div className="fd-banner red rd-banner" role="alert" data-testid="rider-owed">
+          <Wallet size={16} aria-hidden="true" />
+          <span>{trn("{0} Unpaid cancel or no-show fees. Each is charged on the rider's next trip in the same currency, never in another country.", <b>{trn("Owes {0}.", owedText(owed))}</b>)}</span>
+          {owedTrips.length ? (
+            <ul className="rd-owed-trips" aria-label={tr("Owed fees")}>
+              {owedTrips.map((trip) => {
+                const fee = trip.liveTrip!.cancellation!;
+                return (
+                  <li key={trip.id}>
+                    <Link to={`/trips/${trip.id}#split`}>{trip.id}</Link> · {tripMoney(fee.feeMinor ?? 0, trip.liveTrip!.currency)} ({feeKindOf(fee) === "no_show" ? tr("no-show fee") : tr("cancel fee")})
+                    {can(role, "trips.intervene") ? <CommandButton command="admin.trip.waiveFee" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="owed" after="waived" onDone={() => { setNotice(tr("Fee waived. The rider owes nothing for this trip.")); data.refetch?.(); void riderTrips.refetch(); }}>{tr("Waive the fee")}</CommandButton> : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
+      ) : row.unpaidMinor > 0 && !isLiveData() ? (
         <div className="fd-banner red rd-banner" role="alert">
           <Wallet size={16} aria-hidden="true" />
           <span>{trn("{0} A payment failed on the rider's side. New rides are blocked until it is paid.", <b>{trn("Unpaid balance {0}.", money(row.unpaidMinor, country))}</b>)}</span>

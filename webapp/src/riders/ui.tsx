@@ -5,6 +5,8 @@ import type { PromoTicket } from "./care";
 import { categoryName } from "./profile";
 import type { LiveState, RiderRow } from "./segments";
 import { tr, trn, uiLocale, trx } from "../i18n";
+import { isLiveData, liveRiderOf } from "../live/realData";
+import { owedByCurrency, owedText } from "../live/tripLive";
 
 export const CURRENCY_SYMBOL: Record<MarketId, string> = { SE: "kr", FR: "€", TN: "DT" };
 
@@ -39,7 +41,10 @@ export function RiderBadges({ row, compact = false }: { row: RiderRow; compact?:
   if (row.isNew) items.push(<span key="new" className="rd-badge new">{trn("{0}New", <Sparkles size={11} aria-hidden="true" />)}</span>);
   if (row.segments.has("top")) items.push(<span key="top" className="rd-badge top">{trn("{0}Top", <Crown size={11} aria-hidden="true" />)}</span>);
   if (row.waitingMin !== null) items.push(<span key="reply" className={`rd-badge reply t-${row.waitingMin < 60 ? "green" : row.waitingMin < 240 ? "orange" : "red"}`}>{trn("{0}Reply waiting{1}", <MessageCircleWarning size={11} aria-hidden="true" />, compact ? "" : ` · ${waitText(row.waitingMin)}`)}</span>);
-  if (row.unpaidMinor > 0) items.push(<span key="unpaid" className="rd-badge unpaid">{trn("{0}Unpaid", <Wallet size={11} aria-hidden="true" />)}</span>);
+  // v0.18.7 (G5 Q3): live, the owed fees per currency ("Owes 100,00 kr · 10,00 €"), never one sum across currencies.
+  const owed = isLiveData() ? owedByCurrency(liveRiderOf(row.rider)) : [];
+  if (owed.length) items.push(<span key="unpaid" className="rd-badge unpaid" data-testid="rider-owed-badge">{trn("{0}Owes {1}", <Wallet size={11} aria-hidden="true" />, owedText(owed))}</span>);
+  else if (row.unpaidMinor > 0) items.push(<span key="unpaid" className="rd-badge unpaid">{trn("{0}Unpaid", <Wallet size={11} aria-hidden="true" />)}</span>);
   if (row.promos.length) items.push(<span key="promo" className="rd-badge promo">{trn("{0}Promo", <Gift size={11} aria-hidden="true" />)}</span>);
   if (row.profile.fraudFlags.length && !compact) items.push(<span key="flag" className="rd-badge flag">{trn("{0}Check", <AlertTriangle size={11} aria-hidden="true" />)}</span>);
   return items.length ? <span className="rd-badges">{items}</span> : null;

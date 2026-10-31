@@ -1,7 +1,7 @@
 import { isTerminal } from "./contract.ts";
 
 /** contract.json#realtime: the trip event gate every app runs (cases in contracts/fixtures/events.json). */
-export const EVENT_KINDS = ["trip_projection", "rider_cancelled", "driver_cancelled", "location", "driver_arrived", "rider_on_the_way", "payment_updated", "rating_updated", "message"] as const;
+export const EVENT_KINDS = ["trip_projection", "rider_cancelled", "driver_cancelled", "location", "driver_arrived", "rider_on_the_way", "payment_updated", "rating_updated", "message", "pickup_moved"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 /** Kinds that still pass after a terminal lifecycle status: payment and rating are fields, not statuses. */
 export const AFTER_TERMINAL_KINDS: readonly EventKind[] = ["payment_updated", "rating_updated", "message"];

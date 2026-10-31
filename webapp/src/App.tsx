@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
-import { AssignPanelProvider } from "./dispatch/AssignPanel";
+import { AssignPanelProvider } from "./dispatch/AssignPanelHost";
 import { IncidentAlarm } from "./live/IncidentAlarm";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { can, canUseZone } from "./auth/permissions";

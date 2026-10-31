@@ -5,7 +5,7 @@ import { remember, setLiveData } from "./realData.ts";
 import { isOnline } from "../api/presence.ts";
 import { cashFigures, isCashTrip } from "../trips/cash.ts";
 import { callsOf, chatOf, moneySplit, offersOf, routeOf } from "../trips/file.ts";
-import { categoryOf, fareBreakdown, liveMarkers, pinVerified, ratingLabel, riderIdFor, startedAt, stopsOf, timelineOf } from "../trips/present.ts";
+import { categoryOf, fareBreakdown, frameOf, liveMarkers, pinVerified, ratingLabel, riderIdFor, startedAt, stopsOf, timelineOf } from "../trips/present.ts";
 import { formatMoney } from "../domain/money.ts";
 import type { Driver, Trip } from "./types.ts";
 
@@ -57,7 +57,23 @@ test("live: online means the server's onlineStatus; the map shows only server po
   assert.equal(isOnline(offline), false);
   assert.equal(isOnline({ id: "D0001", status: "active" }), false, "no hash in live");
   const marks = liveMarkers([online, offline], [tripRecord({ ...TRIP, status: "in_trip" })]);
-  assert.deepEqual(marks.map((mark) => [mark.id, mark.lat, mark.lng]), [["drv_a", 59.33, 18.06]]);
+  assert.deepEqual(marks.map((mark) => [mark.id, mark.lat, mark.lng]), [["drv_a", 59.33, 18.06]], "a trip without a position is not plotted; an offline driver is not online");
+  // G5 (live map bug 2026-10-30): an offline driver's old position is not "online"; trips going on with a driver are
+  // plotted at the car with the server's ETA; open requests at their pickup; a Paris car fits the frame too.
+  const offlineWithFix = driverRecord({ ...base, driverId: "drv_c", onlineStatus: "offline", location: { lat: 59.34, lng: 18.07, measuredAt: "2026-10-26T08:00:00Z" } });
+  const paris = driverRecord({ ...base, driverId: "drv_p", onlineStatus: "on_trip", zoneIds: ["FR-PC"], location: { lat: 48.86, lng: 2.35, measuredAt: "2026-10-26T09:00:00Z" } });
+  const going = tripRecord({ ...TRIP, tripId: "trp_go", status: "driver_to_pickup", driverLocation: { lat: 59.331, lng: 18.061, measuredAt: "2026-10-26T09:00:00Z" }, eta: { etaSeconds: 230, distanceMeters: 1249, target: "pickup", at: "2026-10-26T09:00:00Z", source: "osrm" } });
+  const open = tripRecord({ ...TRIP, tripId: "trp_open", status: "searching", driverId: undefined });
+  const g5 = liveMarkers([online, offlineWithFix, paris], [going, open], Date.parse("2026-10-26T09:00:30Z"));
+  assert.deepEqual(g5.map((mark) => mark.id), ["drv_a", "drv_p", "trp_go", "req-trp_open"]);
+  const tripMark = g5.find((mark) => mark.id === "trp_go")!;
+  assert.equal(tripMark.kind, "trip");
+  assert.deepEqual([tripMark.lat, tripMark.lng], [59.331, 18.061]);
+  assert.match(tripMark.name, /4 min · 1[.,]2 km$/);
+  assert.ok(g5.every((mark) => mark.onMap), "every server marker is on the live map");
+  const frame = frameOf(g5);
+  assert.ok(frame.south < 48.86 && frame.north > 59.34 && frame.west < 2.35 && frame.east > 18.07, "the frame holds Stockholm and Paris");
+  assert.equal(g5.filter((mark) => mark.kind === "driver" && !mark.stale).length, 2, "online = online drivers with a position, not offline ones");
   setLiveData(false);
   assert.equal(typeof isOnline({ id: "D0001", status: "active" }), "boolean");
 });

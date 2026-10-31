@@ -87,6 +87,15 @@ test("DispatchDocument from the zone's rules, the same keys as the contract samp
   assert.equal(fromServer.autoOffline.noFixMinutes, 0, "G3-R1: 0 = never is read back from driver_app_config");
   assert.equal(back.riderCancel.driverSharePct, 60);
   assert.deepEqual(back.radar, zone.radar);
+  // v0.18.7 (G5): the cancel-after-arrived switch and the pickup move limit come back from the driver document.
+  assert.equal(back.pickupWait.cancelAfterArrivedIsNoShow, true, "default on");
+  assert.equal(back.pickupMove.maxMeters, 200, "contract default 200 m");
+  const g5 = rulesOfDispatch(doc, { waiting: { cancelAfterArrivedIsNoShow: false }, booking: { maxStops: 3, maxPickupMoveMeters: 350 } }, zoneDefault("Z001"));
+  assert.equal(g5.pickupWait.cancelAfterArrivedIsNoShow, false);
+  assert.equal(g5.pickupMove.maxMeters, 350);
+  const bad = rulesOfDispatch(doc, { waiting: { cancelAfterArrivedIsNoShow: "yes" }, booking: { maxPickupMoveMeters: 5000 } }, zoneDefault("Z001"));
+  assert.equal(bad.pickupWait.cancelAfterArrivedIsNoShow, true, "a bad value keeps the default");
+  assert.equal(bad.pickupMove.maxMeters, 200, "outside 0–2000 keeps the default");
 });
 
 test("a page writes only its own parts of an app document; the waiting money stays the server's", () => {
@@ -97,6 +106,10 @@ test("a page writes only its own parts of an app document; the waiting money sta
   assert.deepEqual(next["texts"], server.texts);
   assert.deepEqual((next["waiting"] as Doc)["perMin"], server.waiting.perMin);
   assert.equal((next["waiting"] as Doc)["driverSharePct"], 70);
+  // v0.18.7 (G5 Q2): the admin's switch is written with the waiting part; the money still stays the server's.
+  const withSwitch = withOwned({ ...server, waiting: { ...server.waiting, cancelAfterArrivedIsNoShow: true } }, { ...built, waiting: { ...built.waiting, cancelAfterArrivedIsNoShow: false } }, ["waiting"]);
+  assert.equal((withSwitch["waiting"] as Doc)["cancelAfterArrivedIsNoShow"], false);
+  assert.deepEqual((withSwitch["waiting"] as Doc)["perMin"], server.waiting.perMin);
 });
 
 test("save and publish: nothing when equal, at once when changed (no second admin), a 409 asks to reload", async () => {

@@ -10,6 +10,7 @@ import { tr, uiLocale } from "../i18n/core.ts";
 import { NOT_CONNECTED_TEXT, isLiveData, liveDriverOf, liveRiderIdOf, liveTripOf } from "../live/realData.ts";
 import type { LivePlace } from "../api/seed.ts";
 import { scheduledNotDue } from "../dashboard/riders.ts";
+import { etaLine } from "../live/tripLive.ts";
 
 export { startedAt, tripIndex };
 
@@ -383,23 +384,56 @@ export function insideFrame(lat: number, lng: number): boolean {
   return lat <= MAP_BOUNDS.north && lat >= MAP_BOUNDS.south && lng >= MAP_BOUNDS.west && lng <= MAP_BOUNDS.east;
 }
 
-export function projectMarker(lat: number, lng: number): { left: string; top: string } {
-  const x = (lng - MAP_BOUNDS.west) / (MAP_BOUNDS.east - MAP_BOUNDS.west);
-  const y = (MAP_BOUNDS.north - lat) / (MAP_BOUNDS.north - MAP_BOUNDS.south);
+export type MapFrame = { north: number; south: number; west: number; east: number };
+
+export function projectMarker(lat: number, lng: number, frame: MapFrame = MAP_BOUNDS): { left: string; top: string } {
+  const x = (lng - frame.west) / (frame.east - frame.west);
+  const y = (frame.north - lat) / (frame.north - frame.south);
   return { left: `${x * 100}%`, top: `${y * 100}%` };
 }
 
-const ACTIVE = new Set(["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"]);
+/**
+ * G5 (live map bug 2026-10-30): the frame around the server's markers, so Paris cars are on the map too, not only
+ * Stockholm's fixed box; a little room around them, and never thinner than about a kilometre.
+ */
+export function frameOf(markers: readonly Pick<LiveMarker, "lat" | "lng">[]): MapFrame {
+  if (!markers.length) return MAP_BOUNDS;
+  const lats = markers.map((marker) => marker.lat);
+  const lngs = markers.map((marker) => marker.lng);
+  const padLat = Math.max(0.01, (Math.max(...lats) - Math.min(...lats)) * 0.15);
+  const padLng = Math.max(0.02, (Math.max(...lngs) - Math.min(...lngs)) * 0.15);
+  return { north: Math.max(...lats) + padLat, south: Math.min(...lats) - padLat, west: Math.min(...lngs) - padLng, east: Math.max(...lngs) + padLng };
+}
 
-/** Live build: only drivers with a server position; no trip, queue or boost markers without a source. */
-function serverMarkers(drivers: readonly DemoRecord[]): LiveMarker[] {
-  return drivers.flatMap((driver) => {
+const ACTIVE = new Set(["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"]);
+const ONLINE = new Set(["online", "on_trip", "going_online"]);
+
+/**
+ * Live build: only what the server sends. Drivers who are online and have a position (an offline driver's old
+ * position is not "online"); trips going on with a driver at the car's position with the server's ETA
+ * (contract.json#pickupWaiting.adminLiveRow); open requests at their pickup. No queue or boost markers.
+ */
+function serverMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecord[], now: number): LiveMarker[] {
+  const driverMarks = drivers.flatMap((driver) => {
     const live = liveDriverOf(driver);
-    if (!live?.location) return [];
+    if (!live?.location || !ONLINE.has(live.onlineStatus)) return [];
     const { lat, lng } = live.location;
     const stale = live.stale === true;
-    return [{ id: driver.id, kind: "driver" as const, name: driver.name, lat, lng, stale, lastSeen: live.lastFixAt ?? live.location.measuredAt, href: `/drivers/${driver.id}`, onMap: insideFrame(lat, lng) }];
+    return [{ id: driver.id, kind: "driver" as const, name: driver.name, lat, lng, stale, lastSeen: live.lastFixAt ?? live.location.measuredAt, href: `/drivers/${driver.id}`, onMap: true }];
   });
+  const tripMarks = trips.flatMap((trip) => {
+    const live = liveTripOf(trip);
+    if (!live?.driverLocation || !ACTIVE.has(trip.status) || !trip.driverId) return [];
+    const { lat, lng, measuredAt } = live.driverLocation;
+    const line = live.eta ? ` · ${etaLine(live.eta, uiLocale())}` : "";
+    return [{ id: trip.id, kind: "trip" as const, name: `${trip.id} · ${statusLabel(trip.status)}${line}`, lat, lng, stale: false, lastSeen: measuredAt, href: `/trips/${trip.id}`, onMap: true }];
+  });
+  const requests = trips.flatMap((trip) => {
+    const live = liveTripOf(trip);
+    if (!live || !isOpenRequest(trip, now)) return [];
+    return [{ id: `req-${trip.id}`, kind: "request" as const, name: tr("Open {0}", [trip.id]), lat: live.pickup.lat, lng: live.pickup.lng, stale: false, lastSeen: "now", href: `/trips/${trip.id}`, onMap: true }];
+  });
+  return [...driverMarks, ...tripMarks, ...requests];
 }
 
 /**
@@ -411,7 +445,7 @@ export function isOpenRequest(trip: Pick<DemoRecord, "status" | "pickupAt">, now
 }
 
 export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecord[], now: number = Date.now()): LiveMarker[] {
-  if (isLiveData()) return serverMarkers(drivers);
+  if (isLiveData()) return serverMarkers(drivers, trips, now);
   const driverMarks: LiveMarker[] = drivers.map((driver, index) => {
     const stale = index % 5 === 3;
     const [baseLat, baseLng] = ZONE_CENTER[driver.zoneId] ?? [59.33, 18.06];
