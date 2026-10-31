@@ -104,7 +104,8 @@ test("Q2 + item 4: the zone's cancel-after-arrived switch and pickup move limit 
 test("status item 10: the live trips row shows the server's ETA and distance with a map link; a rider still searching shows no ETA", async ({ page }) => {
   await open(page, "/trips");
   const row = page.getByTestId("trip-live-T2002");
-  await expect(row).toContainText("driver_to_pickup");
+  await expect(row).toContainText("Driver to pickup");
+  await expect(row).not.toContainText("driver_to_pickup");
   await expect(row).toContainText("4 min · 1.2 km");
   await row.getByRole("link", { name: "Map of T2002" }).click();
   await expect(page).toHaveURL(/\/trips\/T2002#route$/);

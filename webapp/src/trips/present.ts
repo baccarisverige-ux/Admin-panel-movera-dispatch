@@ -204,11 +204,12 @@ export function ratingLabel(trip: DemoRecord): string {
 }
 
 export function cancelledBy(status: string): string {
-  if (status === "cancelled_by_rider") return "Rider";
-  if (status === "cancelled_by_driver") return "Driver";
-  if (status === "cancelled_by_admin") return "Admin";
-  if (status === "cancelled_by_system") return "System";
-  if (status === "no_show") return "No-show";
+  // G5 live test: the words in the admin's language (FR "Passager"), not English.
+  if (status === "cancelled_by_rider") return tr("Rider");
+  if (status === "cancelled_by_driver") return tr("Driver");
+  if (status === "cancelled_by_admin") return tr("Admin");
+  if (status === "cancelled_by_system") return tr("System");
+  if (status === "no_show") return tr("No-show");
   return tr("Not cancelled");
 }
 

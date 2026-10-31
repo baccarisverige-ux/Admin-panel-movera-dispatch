@@ -9,6 +9,8 @@ import type { LatLng } from "../dashboard/route.ts";
 import type { LiveTripFacts } from "../api/seed.ts";
 import type { CancelReasonBook, LangId } from "../dispatch/offers.ts";
 import { reasonText } from "../dispatch/offers.ts";
+import { translate } from "../i18n/core.ts";
+import type { AppLanguage } from "../i18n/languages.ts";
 import { formatMoney, isCurrency } from "../domain/money.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
 
@@ -107,7 +109,9 @@ export function reasonWords(code: string | undefined | null, book: CancelReasonB
     if (text) return text;
   }
   const plain = code.replace(/^(admin_|system_|next_trip_|scheduled_)/, "").replaceAll("_", " ").trim();
-  return plain ? plain.charAt(0).toUpperCase() + plain.slice(1) : code;
+  // G5 live test: a rider's reason the book does not list ("something_else") reads in the admin's language
+  // when the panel has words for it (FR "Autre chose"), else as English words.
+  return plain ? translate(lang as AppLanguage, plain.charAt(0).toUpperCase() + plain.slice(1)) : code;
 }
 
 /** The amounts a rider owes, one per currency (Q3): the server's list, else the one outstanding amount, else none. */
