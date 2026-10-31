@@ -27,7 +27,7 @@ export type OfferCardDetails = {
 export const OFFER_CARD_DETAILS: { id: Exclude<keyof OfferCardDetails, "netFare" | "dropoffAreaOnly">; label: string; help: string }[] = [
   { id: "pickupAddress", label: "Pickup address", help: "Off: the card says “Pickup nearby”." },
   { id: "stops", label: "Stops", help: "How many stops the trip has." },
-  { id: "riderRating", label: "Rider rating and trips", help: "For example 4.9 · 120 trips." },
+  { id: "riderRating", label: "Show rider rating on offers", help: "The rider's average rating with a star, for example 4.8. A rider with no rating yet shows nothing. Off: drivers in this zone see no rating." },
   { id: "tripMinutesKm", label: "Trip minutes and km", help: "How long the trip is." },
   { id: "pickupDistance", label: "Distance to pickup", help: "How far the pickup is, in km and minutes." },
   { id: "badges", label: "Badges", help: "Cash, Reservation, extras like a child seat, and a fare boost." },

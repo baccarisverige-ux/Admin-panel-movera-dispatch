@@ -5,7 +5,7 @@ import type { PickupRate } from "../pricing/pickupPay.ts";
 import { liveCountry, liveRules, normalizeDispatchBook, type DispatchBook, type RideTypeId, type ZoneDispatch } from "../dispatch/rules.ts";
 import { radarRuleFor, radarZonesOf } from "../dispatch/radarZones.ts";
 import { feeRow, type CancelFeeKind, type CancelFeeRow, type CancelFeeTable } from "../dispatch/cancelFees.ts";
-import { exclusiveReasonList, LANGS, reasonText, type CancelReason, type LangId, type WaitOverride } from "../dispatch/offers.ts";
+import { LANGS, reasonText, type CancelReason, type LangId, type WaitOverride } from "../dispatch/offers.ts";
 import { destinationModeForDriverApp, nextTripsForDriverApp } from "../dispatch/tripRules.ts";
 import { advanceConfigClock, effectiveValue, normalizeConfig, type AppId, type AppUpdate, type ConfigBook } from "./book.ts";
 import { normalizeFinanceBook, paymentPolicy, type FinanceBook } from "../payments/finance.ts";
@@ -315,6 +315,11 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     cancelReasons: base.country.cancelReasons.groups.rider.map((item) => ({ code: item.code, title: reasonText(item.title, state.riderLang) })),
     rideCheck: rideCheck(base, state),
     appUpdate: appUpdate(base, "rider"),
+    /**
+     * v0.18.6 (owner G4-E4): the zone's Dispatch rider raise limit (contract.json#configDocs.mustMatch). The server
+     * writes the same value when Dispatch is published and when it serves GET /rider/config.
+     */
+    raisePrice: { maxFactor: base.zone.raisePrice.maxFactor },
     sourceRevisions: sourceRevisions(state),
   };
 }
@@ -456,7 +461,7 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
       exclusiveOn: zone.exclusive.on,
       assignAcceptSeconds: zone.reservation.assignAcceptSec,
       offerCard: { ...zone.offerCard },
-      exclusiveReasons: exclusiveReasonList(zone.exclusiveReasons),
+      // v0.18.6 (owner G4-E7): no exclusiveReasons any more (deprecated and ignored, contract.json#driverOffers.whyYouRemoved).
       autoOffline: { on: zone.autoOffline.on, missedExclusive: zone.autoOffline.after, noFixMinutes: zone.autoOffline.noFixMinutes, hiddenComesBackMin: zone.hiddenComesBackMin },
       radarApp: { ...zone.radarApp },
       exclusiveWhileDriving: { ...zone.exclusiveWhileDriving },

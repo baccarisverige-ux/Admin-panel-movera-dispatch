@@ -12,7 +12,7 @@ import { BonusAreaMap } from "../drivers/BonusAreaMap";
 import { Card, Check, Choice, Num, Row, Switch } from "./fields";
 import { ReservationSettings } from "./ReservationSettings";
 import { DestinationSettings } from "./DestinationSettings";
-import { CancelRateCard, OfferCardSettings } from "./OfferSettings";
+import { CancelRateCard, OfferCardSettings, RaiseLimitCard } from "./OfferSettings";
 import { ExclusiveRules, RadarRules } from "./OfferSections";
 import { MovedCard, offersLink } from "./MovedCard";
 import { PickupWaitCard, type WaitBaseRow } from "./PickupWaitCard";
@@ -93,6 +93,7 @@ function Modes({ zone, onChange, busy, disabled }: Props) {
       ]} />
 
       <OfferCardSettings zone={zone} onChange={onChange} disabled={disabled} />
+      <RaiseLimitCard zone={zone} onChange={onChange} disabled={disabled} />
 
       <Card title={tr("Which mode runs")} tone="green" icon={<Gauge size={18} />} help={tr("Let the system choose by how busy the zone is, or choose yourself.")}>
         <Row label={tr("How to choose")}>
