@@ -142,38 +142,6 @@
       "pickupDistance": true,
       "badges": true
     },
-    "exclusiveReasons": [
-      {
-        "id": "best-match",
-        "text": "Best match",
-        "on": true
-      },
-      {
-        "id": "favourite",
-        "text": "Rider's favourite",
-        "on": true
-      },
-      {
-        "id": "finishing-nearby",
-        "text": "Finishing nearby",
-        "on": true
-      },
-      {
-        "id": "airport-queue",
-        "text": "Airport queue",
-        "on": true
-      },
-      {
-        "id": "pickup-soon",
-        "text": "Pickup soon",
-        "on": true
-      },
-      {
-        "id": "nearby",
-        "text": "Only for you · nearby",
-        "on": true
-      }
-    ],
     "autoOffline": {
       "on": true,
       "missedExclusive": 10,

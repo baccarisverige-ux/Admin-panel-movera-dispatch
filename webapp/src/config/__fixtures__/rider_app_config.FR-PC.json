@@ -548,6 +548,9 @@
       }
     }
   },
+  "raisePrice": {
+    "maxFactor": 2
+  },
   "sourceRevisions": {
     "dispatch": 1,
     "pricing": 1,

@@ -1,13 +1,15 @@
 import { market, MARKETS, zoneById, type MarketId, type MarketZone } from "../markets/markets.ts";
 import { currencySymbol, fromSek } from "../pricing/zonePricing.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
+import { RAISE_MAX_FACTOR_DEFAULT, validRaiseFactor } from "./offerRules.ts";
+import { rulesOfDispatch } from "../live/configDocs.ts";
 import {
   DEFAULT_FEE_CATEGORIES, RESERVATION_FREE_MAX_MIN, cancelFeeAmount, cancelFeeDefaults, cancelFeeIssues, completeCancelFees, feeRow, legacyCancelFees,
   type CancelFeeKind, type CancelFeeTable, type CancelFeeType, type FeeCategory,
 } from "./cancelFees.ts";
 import { RIDE_CHECK_SETTINGS_DEFAULT, rideCheckThresholds, type RideCheckThresholds } from "../safety/rideCheckSettings.ts";
 import {
-  CANCEL_RATE_LIMIT_DEFAULT, EXCLUSIVE_REASONS as EXCLUSIVE_REASON_LIST, LANGS as LANG_LIST, WAIT_FIELDS as WAIT_FIELD_LIST, cancelReasonsFor, exclusiveReasonList, cancelReasonIssues, cancelReasonLines, cancelReasonsDefault, completeCancelReasons, completeExclusiveReasons, completeOfferCard,
+  CANCEL_RATE_LIMIT_DEFAULT, EXCLUSIVE_REASONS as EXCLUSIVE_REASON_LIST, LANGS as LANG_LIST, WAIT_FIELDS as WAIT_FIELD_LIST, cancelReasonsFor, cancelReasonIssues, cancelReasonLines, cancelReasonsDefault, completeCancelReasons, completeExclusiveReasons, completeOfferCard,
   completePickupWait, exclusiveReasonIssues, exclusiveReasonsDefault, offerCardDefault, pickupWaitDefault, pickupWaitIssues,
   type CancelReasonBook, type ExclusiveReason, type ExclusiveReasonId, type OfferCardDetails, type PickupWait,
 } from "./offers.ts";
@@ -294,8 +296,17 @@ export type ZoneDispatch = {
   autoOffline: { on: boolean; after: number; noFixMinutes: number };
   /** Q14: what the offer cards show in the driver app (Radar, Exclusive and the reservation popup). */
   offerCard: OfferCardDetails;
-  /** Q15: the short text that says why an offer is Exclusive. */
+  /**
+   * Q15: the short text that said why an offer is Exclusive. v0.18.6 (owner G4-E7 "Remove short line explain"): no
+   * longer shown in the driver app, not sent to it and no editor in the panel (contract.json#driverOffers.whyYouRemoved).
+   * Kept only so older saved books still read.
+   */
   exclusiveReasons: Record<ExclusiveReasonId, ExclusiveReason>;
+  /**
+   * v0.18.6 (owner G4-E4 "2×, admin can change"): the rider may raise the fare to at most maxFactor × the booked fare
+   * (DispatchDocument.raisePrice.maxFactor, contract range 1–3, default 2). The server copies it to the rider app.
+   */
+  raisePrice: { maxFactor: number };
   /** Q17: a trip hidden with × in the Live list can come back after this many minutes if it is still in Radar. */
   hiddenComesBackMin: number;
   /** Q18: while driving a rider only Exclusive offers come, at most `count` at a time. */
@@ -358,10 +369,26 @@ export type DispatchEvent = {
   radarDrivers: number;
   pickupNote: string;
   driverMessage: string;
+  /**
+   * v0.18.6 (owner G4-F6, contract.json#dispatchTools.events): the exact point where the drivers' event icon stands
+   * ([lat, lng]); `ring` is the optional area. `from` / `until` are local times of the country ("YYYY-MM-DDTHH:MM").
+   */
+  location?: [number, number] | null;
+  /** G4-F6: what drivers read when they tap the icon, in sv / fr / en (pickup note optional). */
+  details?: { title: EventText; description: EventText; pickupNote: EventText };
+  /** The server's version (live), for the next change or delete. */
+  version?: number;
 };
 
-export type DriverGroup = { id: string; country: MarketId; name: string; driverIds: string[] };
-export type Preset = { id: string; name: string; note: string; builtIn: boolean; values: Omit<ZoneDispatch, "zoneId"> };
+export type EventText = { sv: string; fr: string; en: string };
+
+/** A saved driver group (G4-F3: per country on the server; the server sends to its free members, nearest first, max 10). */
+export type DriverGroup = { id: string; country: MarketId; name: string; driverIds: string[]; version?: number };
+/**
+ * A dispatch preset. G4-F2 (owner "Per country only"): saved ones are per country on the server; `doc` is the server's
+ * values (a dispatch document's parts) and applying it only changes those parts of a zone.
+ */
+export type Preset = { id: string; name: string; note: string; builtIn: boolean; values: Omit<ZoneDispatch, "zoneId">; country?: MarketId; doc?: Record<string, unknown>; version?: number };
 
 export type Control = { paused: boolean; mode: OfferMode | null; by: string; at: string };
 
@@ -405,6 +432,8 @@ export type RadarZone = {
   /** [lat, lng] ring, like a bonus area. */
   ring: [number, number][];
   createdAt: string;
+  /** The server's version (live, G4-F4). */
+  version?: number;
 };
 
 /** A radar rule for one or more radar zones; "all" is the default and a rule naming a zone wins over it. */
@@ -420,6 +449,8 @@ export type RadarZoneRule = {
   maxDrivers: number;
   /** Send again by itself when nobody accepts. */
   repeat: boolean;
+  /** The server's version (live, G4-F4). */
+  version?: number;
 };
 
 export type DispatchBook = {
@@ -475,6 +506,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     autoOffline: { on: true, after: 10, noFixMinutes: CONFIG_DEFAULTS.noFixMinutesBeforeOffline },
     offerCard: offerCardDefault(),
     exclusiveReasons: exclusiveReasonsDefault(),
+    raisePrice: { maxFactor: RAISE_MAX_FACTOR_DEFAULT },
     hiddenComesBackMin: 2,
     exclusiveWhileDriving: { on: true, count: 1 },
     pickupWait: pickupWaitDefault(),
@@ -808,6 +840,8 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (zone.autoOffline.on && (zone.autoOffline.after < 1 || zone.autoOffline.after > 99 || !Number.isInteger(zone.autoOffline.after))) issues.push("Go offline automatically: must be after 1 to 99 offers.");
   if (zone.exclusive.on && zone.exclusiveWhileDriving.on && (zone.exclusiveWhileDriving.count < 1 || zone.exclusiveWhileDriving.count > 5)) issues.push("Exclusive while driving: must be 1 to 5 offers at a time.");
   if (zone.radar.on && (zone.hiddenComesBackMin < 1 || zone.hiddenComesBackMin > 60)) issues.push("Radar in the driver app: a hidden trip can come back after 1 to 60 minutes.");
+  // v0.18.6 (G4-E4): contract.json#dispatch.raisePrice.range; the server answers 400 invalid_document outside it.
+  if (validRaiseFactor(zone.raisePrice.maxFactor) === null) issues.push("Rider raise limit: must be 1× to 3× the booked price.");
   issues.push(...exclusiveReasonIssues(zone.exclusiveReasons));
   issues.push(...pickupWaitIssues(zone.pickupWait, countryOfZone(zone.zoneId)));
   if (zone.exclusive.on && (zone.exclusive.drivers < 1 || zone.exclusive.drivers > 10)) issues.push("Exclusive: drivers to try must be 1 to 10.");
@@ -1062,8 +1096,9 @@ const LABELS: Record<string, string> = {
 /** Labels for the offer and waiting settings (Round 3, Q14–Q20). */
 Object.assign(LABELS, {
   "offerCard.netFare": "Offer card shows the driver's share", "offerCard.pickupAddress": "Offer card: pickup address", "offerCard.dropoffAreaOnly": "Offer card: drop-off area only",
-  "offerCard.stops": "Offer card: stops", "offerCard.riderRating": "Offer card: rider rating and trips", "offerCard.tripMinutesKm": "Offer card: trip minutes and km",
+  "offerCard.stops": "Offer card: stops", "offerCard.riderRating": "Show rider rating on offers", "offerCard.tripMinutesKm": "Offer card: trip minutes and km",
   "offerCard.pickupDistance": "Offer card: distance to pickup", "offerCard.badges": "Offer card: badges",
+  "raisePrice.maxFactor": "Rider raise limit",
   hiddenComesBackMin: "Hidden Radar trip comes back after", "exclusiveWhileDriving.on": "Exclusive while driving", "exclusiveWhileDriving.count": "Exclusive offers while driving",
     "pickupWait.farPickupOn": "Rule for far pickups", "pickupWait.farPickupKm": "Far pickup from",
 });
@@ -1297,11 +1332,11 @@ export function undoTo(book: DispatchBook, rev: number, actorId: string, at: str
 }
 
 /** Live switch from the Live tab: pause a zone or force a mode. Big ones wait for a second admin. */
-export function requestControl(book: DispatchBook, zoneId: string, value: Omit<Control, "at" | "by">, actorId: string, at: string): { book: DispatchBook; waiting: boolean } {
+export function requestControl(book: DispatchBook, zoneId: string, value: Omit<Control, "at" | "by">, actorId: string, at: string, options: { direct?: boolean } = {}): { book: DispatchBook; waiting: boolean } {
   const current = book.control[zoneId] ?? { paused: false, mode: null, by: "", at: "" };
   const big = value.paused !== current.paused || value.mode !== current.mode;
   const resume = !value.paused && !value.mode;
-  if (!big || resume) return { book: { ...book, draftRev: book.draftRev + 1, control: { ...book.control, [zoneId]: { ...value, by: actorId, at } } }, waiting: false };
+  if (!big || resume || options.direct) return { book: { ...book, draftRev: book.draftRev + 1, control: { ...book.control, [zoneId]: { ...value, by: actorId, at } } }, waiting: false };
   const lines = [`${zoneById(zoneId)?.name ?? zoneId}: ${value.paused ? "pause dispatch" : `use ${modeLabel(value.mode ?? "none")} now`}`];
   const approvals = [...book.approvals.filter((item) => !(item.kind === "control" && item.control?.zoneId === zoneId)), { id: `AP-${book.draftRev + 1}`, kind: "control" as const, zoneIds: [zoneId], lines, by: actorId, at, control: { zoneId, value: { ...value, by: actorId, at } } }];
   return { book: { ...book, draftRev: book.draftRev + 1, approvals }, waiting: true };
@@ -1310,9 +1345,9 @@ export function requestControl(book: DispatchBook, zoneId: string, value: Omit<C
 export type CopyPart = TabId;
 
 const PART_KEYS: Record<TabId, (keyof ZoneDispatch)[]> = {
-  modes: ["choose", "rulesFrom", "offerCard"],
+  modes: ["choose", "rulesFrom", "offerCard", "raisePrice"],
   radar: ["radar", "radarApp", "hiddenComesBackMin", "autoOffline"],
-  exclusive: ["exclusive", "exclusiveReasons", "exclusiveWhileDriving"],
+  exclusive: ["exclusive", "exclusiveWhileDriving"],
   reservations: ["reservation"],
   best: ["factors", "radius", "batching", "finishing", "favourite"],
   waiting: ["waiting"],
@@ -1330,6 +1365,8 @@ export function copyParts(from: ZoneDispatch, to: ZoneDispatch, parts: readonly 
 }
 
 export function applyPreset(zone: ZoneDispatch, preset: Preset, country: MarketId): ZoneDispatch {
+  // G4-F2: a preset saved on the server holds a dispatch document's parts; only those parts of the zone change.
+  if (preset.doc) return rulesOfDispatch(preset.doc, null, zone);
   const money = feeDefaults(country);
   // Presets saved before newer settings existed get those settings from the defaults.
   const values = complete(zone.zoneId, clone(preset.values) as Partial<ZoneDispatch>);
@@ -1617,15 +1654,16 @@ export function rulesFile(book: DispatchBook, country: MarketId, at: string, thr
       busy: "Waiting requests divided by free online drivers in the zone.",
       score: "Each factor gives 0 to its weight; drivers are offered in order of total score.",
       radarApp: "The most Radar offers one driver sees at once, one setting per screen: the full-screen radar list (full; fullLockWhileDriving = the list cannot be opened while the car is moving, it opens again once stopped) and the offer cards over the map (popup while stopped; with popupSplitByDriving, popupWhileDriving while the car is moving). The app waits about 10 s before switching between stopped and driving, and cards never pop over navigation. No Radar offers while driving a rider.",
-      autoOffline: "After this many Exclusive (one-driver) offers in a row that the driver did not accept, the driver is set offline (1 to 99). Radar trips never count, here or in the acceptance rate. noFixMinutes: no position for this many minutes (not during a trip) and the server sets the driver offline (0 = never, default 5).",
-      offerCard: "What the driver app's offer cards show (Radar, Exclusive, the reservation popup): netFare = the driver's share instead of the full fare; dropoffAreaOnly = only the area of the drop-off; the other switches show or hide pickup address, stops, rider rating and trips, trip minutes and km, distance to pickup and badges.",
-      exclusiveReasons: "Why an offer is Exclusive, by id (best-match, favourite, finishing-nearby, airport-queue, pickup-soon, nearby): a short text and on/off. Off = no reason text on the card. Rides given by Movera always say Assigned by Movera.",
+      autoOffline: "After this many Exclusive or hand-sent (assigned, Dispatch › send offer) offers of live trips in a row that the driver declined or let run out, sent while the driver was free, the driver is set offline (1 to 99, default 10; contract.json#autoOffline, owner G4-E2/E3). Radar offers (also admin radar groups), reservation offers and offers sent during a trip never count. Any accept or going online starts again from 0. noFixMinutes: no position for this many minutes (not during a trip) and the server sets the driver offline (0 = never, default 5).",
+      offerCard: "What the driver app's offer cards show (Radar, Exclusive, the reservation popup): netFare = the driver's share instead of the full fare; dropoffAreaOnly = only the area of the drop-off; the other switches show or hide pickup address, stops, the rider's rating (riderRating: off = the server sends none; a rider with no rating shows nothing), trip minutes and km, distance to pickup and badges.",
+      raisePrice: "raisePrice.maxFactor: the rider may raise the fare to at most this many times the booked fare while searching (1 to 3, default 2; owner G4-E4). The server refuses a higher raise (400 raise_too_high) and copies the limit into the zone's rider app config.",
+      exclusiveReasons: "Not used since v0.18.6 (owner G4-E7): the driver app shows no 'why you' line and the server no longer sends Offer.reasonCode.",
       hiddenComesBackMin: "A trip the driver hid with × in the Live list can come back after this many minutes if nobody took it and it is still in Radar. It never counts against the driver.",
       exclusiveWhileDriving: "While driving a rider the driver gets Exclusive offers only (at most count at a time), never Radar trips.",
       pickupWait: "Waiting at pickup. Free wait, price per minute and the no-show fee come from Pricing per category (one source); the driver can cancel for no-show when the free wait ends (Q41). Then rideTypes (scheduled, airport, event; a scheduled ride's free wait is the reservation policy's included waiting) and farPickup (pickups over farPickupKm). A later rule wins where it sets a value; null = same as before. The waiting money goes 100% to the driver; country.noShowDriverSharePct is the driver's part of the no-show fee.",
       destinationMode: "driverApp.destinationMode[zoneId]: enabled = the whole Destination mode. timeLimitOn/timeLimitHours: how long a destination stays active. dailyLimitOn/destinationsPerDay: destinations one driver can set per day. corridorOn/corridorKm: a trip qualifies when its drop-off is within corridorKm of the driver's road route to the destination AND the trip brings the driver closer. focusFinalDestinationOn: trips ending near the destination; focusOnTheWayOn: trips along the route; focus = both, final, onTheWay or none. A part whose switch is off has no limit.",
       nextTrips: "driverApp.nextTrips[zoneId]: while driving a rider only Exclusive offers and Exclusive reservations come as next trips (offerTypes), never Radar cards, and only on the way to the final drop-off, never while heading to a stop or before pickup. Offers start within withinKmOfDropoff km (withinKmOfDropoffOn) or withinMinutesOfDropoff minutes (withinMinutesOfDropoffOn) of the final drop-off, whichever comes first (startWhen either); both off = the whole last leg (startWhen wholeLastLeg). A destination the driver sets during a trip uses destinationMode. The demo keeps today's next-trip behaviour (no limits).",
-      driverApp: "driverApp has the same values in the driver app's shapes: exclusiveReasons per zone as a list, and cancelReasons per language with English filled in where a language is empty.",
+      driverApp: "driverApp has the same values in the driver app's shapes: cancelReasons per language with English filled in where a language is empty, destinationMode and nextTrips per zone.",
       countryRules: "country.rest: work and rest hours, warnings warnFirstMin and warnLastMin before the limit, blockOnline at the limit. country.cancelRateLimitPct: the cancel rate drivers should stay under, never shown to drivers (they see a rule text). It is the only cancel rate number: in zones where safety.maxCancel is on, drivers over it get no requests. Only normal-trip cancels count, without pause or fee; reasons with counts=false never count. country.cancelReasons: per group and language (en, sv, fr, ar); an empty language uses English.",
       reservationWho: "listTo group = only the drivers of the saved group listGroupId (groups below). homePopupTo: list = the same drivers as the list, zone = every online driver in the zone. popupClosedExclusive: a driver who closed the Home popup with × can get it back as an Exclusive if nobody took it.",
       smartGap: "A driver cannot hold two scheduled rides whose times are the same or close. Gap = the first ride's trip time + the drive to the next pickup + types[kind].spareMin. With hideClashing, once a driver takes one, the rides that do not fit leave that driver's list (they still see them all before taking one).",
@@ -1646,7 +1684,6 @@ export function rulesFile(book: DispatchBook, country: MarketId, at: string, thr
     groups: book.groups.filter((group) => group.country === country),
     riderApp: Object.fromEntries(info.zones.map((zone) => [zone.id, riderScheduledRules(liveRules(book, zone.id).reservation, country, categories)])),
     driverApp: {
-      exclusiveReasons: Object.fromEntries(info.zones.map((zone) => [zone.id, exclusiveReasonList(liveRules(book, zone.id).exclusiveReasons)])),
       cancelReasons: Object.fromEntries(LANG_LIST.map((lang) => [lang.id, cancelReasonsFor(liveCountry(book, country).cancelReasons, lang.id)])),
       destinationMode: Object.fromEntries(info.zones.map((zone) => [zone.id, destinationModeForDriverApp(liveRules(book, zone.id).destinationMode)])),
       nextTrips: Object.fromEntries(info.zones.map((zone) => [zone.id, nextTripsForDriverApp(liveRules(book, zone.id).nextTrips)])),

@@ -28,7 +28,7 @@ import { AllFeaturesView } from "../dispatch/AllFeaturesView";
 import { largeCancelFeeChanges } from "../dispatch/cancelFees";
 import { CancelReasonsView } from "../dispatch/CancelReasonsView";
 import { EventsView } from "../dispatch/EventsView";
-import { Approvals, HistoryView } from "../dispatch/HistoryView";
+import { HistoryView } from "../dispatch/HistoryView";
 import { LiveView } from "../dispatch/LiveView";
 import { RulesView } from "../dispatch/RulesView";
 import { TestView } from "../dispatch/TestView";
@@ -59,6 +59,12 @@ const VIEWS = [
   { id: "history", get label() { return tr("History"); }, icon: History },
 ] as const;
 
+/**
+ * G4-F5 (owner "Later, with new rule"): cancel checks are built with group 5, so on live that tab is not offered (no
+ * demo data, no "Not connected yet"). Events and driver groups are the server's since v0.18.6 (G4-F3, F6).
+ */
+const LIVE_HIDDEN_VIEWS: ReadonlySet<string> = new Set(["cancels"]);
+
 /** Views opened from a header button rather than a tab. */
 const EXTRA_VIEWS = ["activity", "features"] as const;
 
@@ -82,7 +88,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const scope = useMarketScope();
   const market = scope.market;
   const country = scope.country;
-  const view: View = !offers && (VIEWS.some((item) => item.id === params.get("view")) || (EXTRA_VIEWS as readonly string[]).includes(params.get("view") ?? "")) ? (params.get("view") as View) : "rules";
+  const asked = params.get("view") ?? "";
+  const view: View = !offers && !(isLiveData() && LIVE_HIDDEN_VIEWS.has(asked)) && (VIEWS.some((item) => item.id === asked) || (EXTRA_VIEWS as readonly string[]).includes(asked)) ? (asked as View) : "rules";
   const tab: TabId = tabs.some((item) => item.id === params.get("tab")) ? (params.get("tab") as TabId) : defaultTab;
   // The reservation tab moved to Radar · Exclusive · Reservations: an old Dispatch link lands there, same zone.
   useEffect(() => {
@@ -152,7 +159,6 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
     setParams(next, { replace: true });
   }, [offers, zoneId, zones, params, setParams]);
   const canEditRole = Boolean(agent && can(agent.role, "dispatch.edit"));
-  const canApprove = Boolean(agent && can(agent.role, "dispatch.approve"));
   const canControl = Boolean(agent && can(agent.role, "trips.intervene"));
   const canEdit = useCallback((id: string) => canEditRole && Boolean(agent && (agent.scope.zones === "all" || agent.scope.zones.includes(id))), [canEditRole, agent]);
   const symbol = SYMBOL[country];
@@ -171,7 +177,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const lineCount = changes.reduce((sum, change) => sum + change.lines.length, 0) + countryChanged.length;
   const at = new Date(now).toISOString();
   const countries = { ...(book.countries[country] ? { [country]: draftCountry(book, country) } : {}), ...(workingCountry[country] ? { [country]: countryRules } : {}) };
-  const published = agent ? publish(book, allRules, countries, zoneIds, agent.id, at, note.trim(), { direct: Boolean(liveSession) }) : { book, live: [], waiting: [], error: "Sign in again." };
+  const published = agent ? publish(book, allRules, countries, zoneIds, agent.id, at, note.trim(), { direct: true }) : { book, live: [], waiting: [], error: "Sign in again." };
   const drafted = saveDraft(book, working, workingCountry);
 
   const live = useMemo(() => liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], tick), [drivers.data, vehicles.data, trips.data, incidents.data, tick]);
@@ -190,6 +196,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
     return Math.round((waiting / Math.max(1, free)) * 10) / 10;
   };
   const countryLive = useMemo(() => live.filter((driver) => market.zones.some((zone) => zone.id === driver.zoneId)), [live, market]);
+  // v0.18.6 (G4-F3): a group takes any driver of the country (online or not); the server refuses drivers of another country.
+  const groupDrivers = useMemo(() => (drivers.data ?? []).filter((row) => market.zones.some((zone) => zone.id === row.zoneId)).map((row) => ({ id: row.id, name: row.name, zoneName: market.zones.find((zone) => zone.id === row.zoneId)?.name ?? row.zoneId })), [drivers.data, market]);
   const factsFor = useCallback((pickup: [number, number]) => onlyFinishingNearby(driverFacts(countryLive, statsOf, pickup)), [countryLive, statsOf]);
   const [loadedAt] = useState(() => Date.now());
   const sharedAlerts = useAlertsMaybe();
@@ -298,18 +306,16 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
       </header>
 
       {offers ? null : <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Dispatch sections")}>
-        {VIEWS.map((item) => {
+        {VIEWS.filter((item) => !(isLiveData() && LIVE_HIDDEN_VIEWS.has(item.id))).map((item) => {
           const Icon = item.icon;
-          const count = item.id === "history" ? book.approvals.length : 0;
           return (
             <button data-command="admin.dispatch.view" key={item.id} type="button" role="tab" aria-selected={view === item.id} className={view === item.id ? "active" : undefined} onClick={() => go({ view: item.id === "rules" ? null : item.id })}>
-              <Icon size={15} aria-hidden="true" /> {trx(item.label)}{count ? <span className="tab-count">{count}</span> : null}
+              <Icon size={15} aria-hidden="true" /> {trx(item.label)}
             </button>
           );
         })}
       </div>}
 
-      {view !== "history" ? <Approvals book={book} agentId={agent?.id ?? ""} canApprove={canApprove} onNotice={say} compact /> : null}
 
       {view === "rules" || view === "test" || view === "reasons" ? (
         <section className={changes.length || countryChanged.length ? "dx-publish has-changes" : "dx-publish"} aria-label={tr("Publish")}>
@@ -350,7 +356,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
               <ul aria-label={tr("Changes not live yet")}>
                 {changes.map((change) => (
                   <li key={change.zoneId}>
-                    <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>{change.big && !liveSession ? <span className="dx-dot waiting">{tr("Needs a second admin")}</span> : null}
+                    <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>
                     <ul>{change.lines.map((line) => <li key={line}>{line}</li>)}</ul>
                   </li>
                 ))}
@@ -390,7 +396,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
             <div className="dx-cards dx-radar-extra">
               <RadarZonesCard book={book} market={market} zone={zones.find((zone) => zone.id === id) ?? zones[0]} drivers={countryLive} canEdit={canEdit(id)} onNotice={say} />
               <RadarZoneRulesCard book={book} market={market} canEdit={canEditRole} onNotice={say} />
-              <DriverGroupsCard book={book} market={market} drivers={countryLive.map((driver) => ({ id: driver.id, name: driver.name, zoneName: driver.zoneName }))} canEdit={canEditRole} onNotice={say} />
+              <DriverGroupsCard book={book} market={market} drivers={groupDrivers} canEdit={canEditRole} onNotice={say} />
             </div>
           ) : null) : undefined}
           rulesOf={rulesOf}
@@ -420,7 +426,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
       {!slice.loading && view === "cancels" ? <CancelView book={book} market={market} records={records} categories={activeCategories(pricing)} rulesOf={liveOf} canDecide={canControl} agentId={agent?.id ?? ""} money={money} onNotice={say} /> : null}
       {view === "activity" ? <ActivityView timeZone={market.timeZone} /> : null}
       {view === "features" ? <AllFeaturesView zoneId={zoneId || zones[0]?.id || ""} /> : null}
-      {!slice.loading && view === "history" ? <HistoryView book={book} market={market} agentId={agent?.id ?? ""} canEdit={canEditRole} canApprove={canApprove} rulesOf={liveOf} onNotice={say} /> : null}
+      {!slice.loading && view === "history" ? <HistoryView book={book} market={market} agentId={agent?.id ?? ""} canEdit={canEditRole} rulesOf={liveOf} onNotice={say} /> : null}
     </div>
   );
 }

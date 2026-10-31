@@ -68,27 +68,25 @@ test("change Radar, publish now, see it in history, then undo", async ({ page })
   await expect(page.getByLabel("Radar drivers")).toHaveValue("5");
 });
 
-test("a big change waits for a second admin, who approves it", async ({ page }) => {
+test("G4-F1: a big change goes live at once — no second admin, no waiting box; History keeps it with Undo", async ({ page }) => {
   await session(page);
   await page.goto("/dispatch?zone=Z002");
   await page.getByRole("radiogroup", { name: "How the mode is chosen" }).getByText("By hand").click();
   await page.getByRole("radiogroup", { name: "Main mode" }).getByText("Radar").click();
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
-  await expect(page.getByRole("list", { name: "Changes not live yet" })).toContainText("Needs a second admin");
+  await expect(page.getByRole("list", { name: "Changes not live yet" })).toContainText("How the mode is chosen: Automatic → By hand");
+  await expect(page.getByRole("list", { name: "Changes not live yet" })).not.toContainText("Needs a second admin");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await confirm(page);
-  await expect(page.getByText("Waiting for a second admin: Södermalm.")).toBeVisible();
-  const approvals = page.getByRole("region", { name: "Waiting for a second admin" });
-  await expect(approvals).toContainText("How the mode is chosen: Automatic → By hand");
-  await expect(approvals.getByRole("button", { name: "Approve" })).toBeDisabled();
-
-  await page.evaluate(() => localStorage.setItem("movera-admin-session", "lena"));
-  await page.reload();
-  await page.getByRole("region", { name: "Waiting for a second admin" }).getByRole("button", { name: "Approve" }).click();
-  await confirm(page);
+  await expect(page.getByText("Live now: Södermalm.")).toBeVisible();
   await expect(page.getByRole("region", { name: "Waiting for a second admin" })).toHaveCount(0);
   await expect(zone(page, "Södermalm")).toContainText("Radar");
+  const views = page.getByRole("tablist", { name: "Dispatch sections" });
+  await expect(views.getByRole("tab", { name: "History" })).toHaveText("History");
+  await views.getByRole("tab", { name: "History" }).click();
+  await expect(page.getByRole("list", { name: "Versions" })).toContainText("How the mode is chosen: Automatic → By hand");
+  await expect(page.getByRole("button", { name: "Undo this version" })).toBeVisible();
 });
 
 test("save a draft, test a ride with my changes, map full screen and hide", async ({ page }) => {
@@ -136,13 +134,13 @@ test("rider waiting steps: change the message and see it in the rider app", asyn
   await expect(page.getByRole("region", { name: "Publish" }).getByRole("button", { name: "Publish now" })).toBeDisabled();
 });
 
-test("live: alerts, pause a zone needs approval, send a rider to a radar", async ({ page }) => {
+test("live: alerts, pause a zone at once (G4-F1), send a rider to a radar", async ({ page }) => {
   await session(page);
   await page.goto("/dispatch?view=live");
   await expect(page.getByRole("region", { name: "Alerts" })).toContainText(/waited|free driver/);
   await page.getByRole("button", { name: "Pause Norrmalm" }).click();
   await confirm(page);
-  await expect(page.getByText("Pause Norrmalm: waiting for a second admin to approve.")).toBeVisible();
+  await expect(page.getByText("Norrmalm: pause done.")).toBeVisible();
   const list = page.getByRole("list", { name: "Riders waiting" });
   const first = list.getByRole("listitem").first();
   await first.getByRole("button", { name: /Nearby drivers for / }).click();
@@ -458,19 +456,21 @@ test("a viewer can look but not change", async ({ page }) => {
   await expect(page.getByLabel("Radar on", { exact: true })).toBeDisabled();
 });
 
-test("offer card details, Exclusive reasons, hidden Radar trips and going offline after 1 to 99 offers", async ({ page }) => {
+test("offer card details, no Exclusive reasons (G4-E7), rider raise limit (G4-E4), hidden Radar trips and going offline after 1 to 99 offers", async ({ page }) => {
   await session(page);
   await page.goto("/dispatch?zone=Z001");
   const phone = page.getByLabel("Driver offer preview");
   const offer = phone.getByLabel("Offer card");
-  await expect(offer).toContainText("4.9 · 120 trips");
+  // v0.18.6 (owner decision 3): the rider's rating with one decimal, no trip count.
+  await expect(offer).toContainText("rider rating");
+  await expect(offer.getByTestId("preview-rider-rating")).toHaveText("4.8 rider rating");
   const card = page.getByRole("region", { name: "Offer card" });
   await card.getByRole("radiogroup", { name: "Fare on the offer card" }).getByText("Driver's share").click();
   await expect(offer).toContainText("your share");
   await card.getByRole("radiogroup", { name: "Drop-off on the offer card" }).getByText("Area only").click();
   await expect(offer).toContainText("Drop-off area: Vasastan");
-  await card.getByLabel("Rider rating and trips on").uncheck();
-  await expect(offer).not.toContainText("120 trips");
+  await card.getByLabel("Show rider rating on offers on").uncheck();
+  await expect(offer.getByTestId("preview-rider-rating")).toHaveCount(0);
   await card.getByLabel("Pickup address on").uncheck();
   await expect(offer).toContainText("Pickup nearby");
   const bar = page.getByRole("region", { name: "Publish" });
@@ -478,32 +478,43 @@ test("offer card details, Exclusive reasons, hidden Radar trips and going offlin
   const list = page.getByRole("list", { name: "Changes not live yet" });
   await expect(list).toContainText("Offer card shows the driver's share: off → on");
   await expect(list).toContainText("Offer card: drop-off area only: off → on");
-  await expect(list).toContainText("Offer card: rider rating and trips: on → off");
+  await expect(list).toContainText("Show rider rating on offers: on → off");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await confirm(page);
   await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
 
+  // v0.18.6 (owner G4-E4 "2×, admin can change"): the rider raise limit per zone, 1× to 3×.
+  const raise = page.getByRole("region", { name: "Rider raise limit" });
+  await expect(raise.getByLabel("Rider raise limit")).toHaveValue("2");
+  await raise.getByLabel("Rider raise limit").fill("3.5");
+  await raise.getByLabel("Rider raise limit").blur();
+  await expect(raise.getByLabel("Rider raise limit")).toHaveAttribute("aria-invalid", "true");
+  await expect(raise.getByText(/^Max 3\b/)).toBeVisible();
+  await raise.getByLabel("Rider raise limit").fill("1.5");
+  await expect(raise.getByLabel("Rider raise limit")).not.toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toHaveCount(0);
+  await bar.getByRole("button", { name: "See changes" }).click();
+  await expect(list).toContainText("Rider raise limit: 2 → 1.5");
+  await bar.getByRole("button", { name: "Publish now" }).click();
+  await confirm(page);
+  await expect(bar).toContainText("Everything is live");
+
+  // v0.18.6 (owner G4-E7 "Remove short line explain"): no "why you" reasons editor and no reason on the card.
   await page.goto("/offers?zone=Z001&tab=exclusive");
   const tabs = page.getByRole("tablist", { name: "Zone settings" });
-  const reasons = page.getByRole("region", { name: "Exclusive reasons" });
+  await expect(page.getByRole("region", { name: "Exclusive" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Exclusive reasons" })).toHaveCount(0);
   await phone.getByRole("tab", { name: "Exclusive" }).click();
-  await expect(offer).toContainText("Best match");
-  await reasons.getByLabel("Exclusive reason text: The best driver by the rules").fill("Top match");
-  await expect(offer).toContainText("Top match");
-  await reasons.getByLabel("Exclusive reason text: Any other Exclusive offer").fill("Only for you because you are the closest driver");
-  const alert = page.getByLabel("Norrmalm rules").getByRole("alert");
-  await expect(alert).toContainText("is too long");
-  await reasons.getByLabel("Exclusive reason text: Any other Exclusive offer").fill("Only for you · nearby");
-  await expect(alert).toHaveCount(0);
-  await reasons.getByLabel("Exclusive reason Best match on").uncheck();
-  await expect(offer).toContainText("Only for you · nearby");
+  await expect(offer).not.toContainText("Best match");
+  await expect(offer).not.toContainText("Only for you");
   await phone.getByRole("button", { name: "While driving" }).click();
-  await expect(offer).toContainText("Finishing nearby");
+  await expect(offer).not.toContainText("Finishing nearby");
   await expect(offer).toContainText("you are driving a rider");
 
   await tabs.getByRole("tab", { name: "Radar" }).click();
   await page.getByLabel("Hidden Radar trip comes back after").fill("5");
-  await expect(page.getByRole("region", { name: "Go offline automatically" })).toContainText("Radar trips never count");
+  // v0.18.6 (owner G4-E2/E3): the contract's rule text with the zone's limit: hand-sent offers count, Radar does not.
+  await expect(page.getByRole("region", { name: "Go offline automatically" })).toContainText("The driver goes offline after 10 missed or declined Exclusive or hand-sent offers in a row (Radar does not count).");
   await page.getByLabel("Offline after offers not accepted").fill("1");
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toHaveCount(0);
   await page.getByLabel("Offline after offers not accepted").fill("150");
@@ -514,15 +525,13 @@ test("offer card details, Exclusive reasons, hidden Radar trips and going offlin
   await expect(page.getByLabel("Offline after offers not accepted")).not.toHaveAttribute("aria-invalid", "true");
 
   await bar.getByRole("button", { name: "See changes" }).click();
-  await expect(list).toContainText("Exclusive reason (the best driver by the rules): Best match → Top match");
-  await expect(list).toContainText("Exclusive reason “Best match”: on → off");
   await expect(list).toContainText("Hidden Radar trip comes back after: 2 → 5");
   await expect(list).toContainText("Offline after offers not accepted: 10 → 99");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await confirm(page);
   await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
-  await page.goto("/offers?zone=Z001&tab=exclusive");
-  await expect(page.getByRole("region", { name: "Exclusive reasons" }).getByLabel("Exclusive reason text: The best driver by the rules")).toHaveValue("Top match");
+  await page.goto("/dispatch?zone=Z001");
+  await expect(page.getByRole("region", { name: "Rider raise limit" }).getByLabel("Rider raise limit")).toHaveValue("1.5");
 });
 
 test("waiting at pickup: Pricing's values per category, ride type and distance rules, driver's share, all zones", async ({ page }) => {

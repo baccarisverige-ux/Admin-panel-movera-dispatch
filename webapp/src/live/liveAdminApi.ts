@@ -15,6 +15,8 @@ export { zoneFilterOf, type ZoneFilter };
 import type { AdminApi, CommandInput, CommandResult } from "../api/create.ts";
 import type { TripOffersView } from "../api/dispatchSim.ts";
 import { ApiError } from "../api/httpClient.ts";
+import { radarRepeatOf, toolRefusal, type RadarZoneSend } from "./dispatchTools.ts";
+import { rememberSendTarget, sendTarget, setActiveRadarSend } from "../dispatch/radarSends.ts";
 import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
@@ -368,7 +370,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   const vehicles = new Map<string, Vehicle>();
   const trips = new Map<string, Trip>();
   const incidents = new Map<string, ServerIncident>();
-  const settings = createLiveSettings({ json: (path) => client.json(path), put: (path, body) => client.put(path, body), post: (path, body) => client.post(path, body) });
+  const settings = createLiveSettings({ json: (path) => client.json(path), put: (path, body) => client.put(path, body), post: (path, body) => client.post(path, body), del: (path) => client.del(path) });
   let currency: string = CURRENCY;
 
   async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER): Promise<Driver[]> {
@@ -613,12 +615,38 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // Exclusive offer or radar group (contract §9 /admin/trips/{id}/assign and /radar-group), with the trip's version.
       const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
       trips.set(trip.tripId, trip);
-      const params = (input.value ?? {}) as { driverId?: string; driverIds?: string[]; driverBonusMinor?: number; priority?: boolean };
+      const params = (input.value ?? {}) as { driverId?: string; driverIds?: string[]; groupId?: string; radarZoneId?: string; ruleId?: string; target?: string; radarZoneName?: string; driverBonusMinor?: number; priority?: boolean };
       const bonus = params.driverBonusMinor ? { driverBonus: { amountMinor: params.driverBonusMinor, currency: trip.fare.currency } } : {};
       const common = { expectedVersion: trip.version, ...(input.reason ? { note: input.reason } : {}), ...bonus, ...(params.priority ? { priority: true } : {}) };
-      if (input.action === "admin.trip.assign") await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/assign`, { ...common, driverId: params.driverId });
-      else await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/radar-group`, { ...common, driverIds: params.driverIds ?? [] });
-      return done(input.action === "admin.trip.assign" ? "Exclusive offer sent." : "Sent to the radar group.");
+      if (input.action === "admin.trip.assign") {
+        await client.post(`/admin/trips/${encodeURIComponent(trip.tripId)}/assign`, { ...common, driverId: params.driverId });
+        return done("Exclusive offer sent.");
+      }
+      // v0.18.6 (G4-F3, F4): a driver group or a radar zone with its rule; the server picks the free drivers.
+      const target = params.groupId ? { groupId: params.groupId } : params.radarZoneId && params.ruleId ? { radarZoneId: params.radarZoneId, ruleId: params.ruleId } : { driverIds: params.driverIds ?? [] };
+      const answer = await client.post<{ groupId?: string; offers?: unknown[]; radarZoneSend?: RadarZoneSend }>(`/admin/trips/${encodeURIComponent(trip.tripId)}/radar-group`, { ...common, ...target }).catch((error: unknown) => {
+        const text = toolRefusal(error);
+        if (text && error instanceof ApiError) throw new ApiError(error.status, text, { code: error.code, reason: error.reason ?? undefined, retryable: false });
+        throw error;
+      });
+      if (answer?.groupId && params.target) rememberSendTarget(answer.groupId, params.target);
+      const send = answer?.radarZoneSend;
+      setActiveRadarSend(send?.active ? { tripId: trip.tripId, sendId: send.sendId, radarZoneName: params.radarZoneName ?? params.target ?? "", seconds: send.seconds, maxDrivers: send.maxDrivers, rounds: send.rounds, startedAt: send.startedAt } : null, trip.tripId);
+      if (send?.active && !(answer?.offers ?? []).length) return done("Nobody is free inside yet. The radar goes out again by itself.");
+      return done(send?.active ? "Sent. The radar goes out again by itself until a driver accepts." : "Sent to the radar group.");
+    }
+    if (input.action === "admin.trip.radarZoneStop") {
+      // v0.18.6 (G4-F4): stop a radar zone send that goes out again by itself.
+      try {
+        await client.post(`/admin/trips/${encodeURIComponent(input.targetId)}/radar-zone/stop`, input.reason ? { note: input.reason } : {});
+      } catch (error) {
+        setActiveRadarSend(null, input.targetId);
+        const text = toolRefusal(error);
+        if (text && error instanceof ApiError) throw new ApiError(error.status, text, { code: error.code, reason: error.reason ?? undefined, retryable: false });
+        throw error;
+      }
+      setActiveRadarSend(null, input.targetId);
+      return done("Stopped. The radar does not go out again.");
     }
     if (input.action === "admin.growthOps.moderate") {
       // Admin › Reviews: hide or show again (POST /admin/ratings/{tripId}/{from}/hide|restore). targetId is tripId~from.
@@ -681,8 +709,30 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return driver ? fullName(driver.firstName, driver.lastName) : driverId;
   }
 
+  /** The radar sends of a trip from its offers: one per groupId, numbered in order, named when this session sent it. */
+  function radarGroupsOf(offers: ReadonlyArray<TripOffer & { groupId?: string; driverId?: string; expiresAt: string }>, tripId: string) {
+    const byGroup = new Map<string, { driverIds: string[]; expiresAt: string }>();
+    for (const offer of offers) {
+      if (offer.kind !== "radar" || !offer.groupId) continue;
+      const entry = byGroup.get(offer.groupId) ?? { driverIds: [], expiresAt: offer.expiresAt };
+      if (offer.driverId) entry.driverIds.push(offer.driverId);
+      if (offer.expiresAt > entry.expiresAt) entry.expiresAt = offer.expiresAt;
+      byGroup.set(offer.groupId, entry);
+    }
+    return [...byGroup.entries()].reverse().map(([groupId, entry], index) => {
+      const named = sendTarget(groupId);
+      return { groupId, tripId, number: index + 1, driverIds: entry.driverIds, sentAt: entry.expiresAt, expiresAt: entry.expiresAt, by: "", ...(named ? { target: named.target, ...(named.maxDrivers ? { maxDrivers: named.maxDrivers } : {}) } : {}) };
+    });
+  }
+
   async function tripOffers(tripId: string): Promise<TripOffersView> {
-    const trip = trips.get(tripId) ?? (await client.json<Trip>(`/admin/trips/${encodeURIComponent(tripId)}`));
+    // The trip is read each time (not the list's copy): its radarZoneSend says whether a repeat still runs (G4-F4).
+    const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(tripId)}`).catch((error: unknown) => {
+      const cached = trips.get(tripId);
+      if (cached) return cached;
+      throw error;
+    });
+    trips.set(trip.tripId, trip);
     const page = await client.json<Page<TripOffer & { version?: number }>>(`/admin/trips/${encodeURIComponent(tripId)}/offers?limit=50`);
     const tripCurrency = isCurrency(trip.fare.currency) ? trip.fare.currency : CURRENCY;
     return {
@@ -708,7 +758,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         ...(offer.groupId ? { groupId: offer.groupId } : {}),
         by: offer.source ?? "",
       })),
-      groups: [],
+      // v0.18.6 (G4-F3, F4): radar offers grouped by their send, named after the driver group or radar zone when this
+      // session sent it ("group Night drivers", "radar Södermalm").
+      groups: radarGroupsOf(page.items, tripId),
       bonusMinor: trip.driverBonus?.amountMinor ?? 0,
       bonusExclusiveMinor: 0,
       bonusRadarMinor: 0,
@@ -721,6 +773,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       driverNetMinor: trip.driverEarnings?.amountMinor ?? 0,
       commissionMinor: trip.commission?.amountMinor ?? 0,
       accepted: null,
+      radarRepeat: radarRepeatOf(trip),
     } as unknown as TripOffersView;
   }
 

@@ -28,16 +28,17 @@ export const FEATURE_INDEX: readonly FeatureEntry[] = [
   { id: "radar-full-lock", phrase: "Full-screen radar list locked while driving", section: "Radar · Exclusive · Reservations › Radar", keywords: "lock driving moving stopped list", ...offers("radar", "Radar in the driver app") },
   { id: "radar-cards-driving", phrase: "Offer cards on the map: limit while driving", section: "Radar · Exclusive · Reservations › Radar", keywords: "cards popup driving stopped moving limit", ...offers("radar", "Radar in the driver app") },
   { id: "radar-group-timer", phrase: "Radar group timer (the zone's radar time)", section: "Radar · Exclusive · Reservations › Radar", keywords: "countdown seconds radar group assign", ...offers("radar", "Radar") },
-  { id: "auto-offline", phrase: "Go offline after N missed exclusive offers", section: "Radar · Exclusive · Reservations › Radar", keywords: "auto offline missed declined exclusive offers in a row", ...offers("radar", "Go offline automatically") },
+  { id: "auto-offline", phrase: "Go offline after N missed Exclusive or hand-sent offers", section: "Radar · Exclusive · Reservations › Radar", keywords: "auto offline missed declined exclusive assigned hand-sent offers in a row 10", ...offers("radar", "Go offline automatically") },
   { id: "radar-zones", phrase: "Radar zones drawn on the map", section: "Radar · Exclusive · Reservations › Radar", keywords: "area draw map södermalm overlap free drivers inside", ...offers("radar", "Radar zones") },
   { id: "radar-zone-rules", phrase: "Rules per radar zone: time, drivers, repeat", section: "Radar · Exclusive · Reservations › Radar", keywords: "all radar zones several one wins", ...offers("radar", "Radar zone rules") },
   { id: "driver-groups", phrase: "Driver groups for sending a ride", section: "Radar · Exclusive · Reservations › Radar", keywords: "group hand-picked drivers radar send", ...offers("radar", "Driver groups") },
   // Radar · Exclusive · Reservations › Exclusive
   { id: "exclusive", phrase: "Exclusive: one driver at a time", section: "Radar · Exclusive · Reservations › Exclusive", keywords: "offer seconds while driving", ...offers("exclusive", "Exclusive") },
-  { id: "exclusive-reasons", phrase: "Exclusive reasons on the offer", section: "Radar · Exclusive · Reservations › Exclusive", ...offers("exclusive", "Exclusive reasons") },
   // Dispatch › Rules › Modes
   { id: "mode-runs", phrase: "Which mode runs, by time or how busy", section: "Dispatch › Modes", ...rules("modes", "Which mode runs") },
   { id: "offer-card", phrase: "What the driver's offer card shows", section: "Dispatch › Modes", ...rules("modes", "Offer card") },
+  // v0.18.6 (owner G4-E4): how far a rider may raise the fare while waiting (the "why you" reasons are gone, G4-E7).
+  { id: "rider-raise-limit", phrase: "Rider raise limit (times the booked price)", section: "Dispatch › Modes", keywords: "offer more raise price max factor 2x rider rating", ...rules("modes", "Rider raise limit") },
   { id: "whose-rules", phrase: "Whose rules across zone borders", section: "Dispatch › Modes", ...rules("modes", "Whose rules") },
   // Radar · Exclusive · Reservations › Reservations
   { id: "reservations", phrase: "Scheduled rides (reservations) on or off", section: "Radar · Exclusive · Reservations › Reservations", keywords: "book later scheduled rides reservations row", ...offers("reservations", "Reservations") },

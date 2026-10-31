@@ -16,6 +16,9 @@ import { RideProgress } from "./RideProgress";
 import { actionKindFor, defaultTarget, driversInTarget, groupIssue, handledOf, nearestAble, radarTimerFor, radarZonesFor, recordLiveAction, targetName, zoneChoicesFor, type RadarScope, type RadarTarget } from "./handle";
 import { DISPATCH_KEY, emptyDispatchBook, normalizeDispatchBook, type DispatchBook, type LiveAction } from "./rules";
 import { tr, trn, trx } from "../i18n";
+import { isLiveData } from "../live/realData";
+import { radarRuleFor } from "./radarZones";
+import { useActiveRadarSend } from "./radarSends";
 
 /**
  * The ONE "Handle" system for a rider waiting for a driver. The same pieces are used in four places: the Dispatch ›
@@ -69,7 +72,10 @@ function useRecordSend() {
   const book = useDispatchBook();
   const { agent } = useSession();
   const send = useCommand("admin.dispatch.send");
-  return (ride: HandledRide, kind: LiveAction["kind"], target: string) =>
+  return (ride: HandledRide, kind: LiveAction["kind"], target: string) => {
+    // G4 (live admin): on live the server keeps the offers sent by hand (GET /admin/trips/{id}/offers shows them in
+    // "Offers sent"); the demo's own record has no server path, so it is not sent there.
+    if (isLiveData()) return;
     void send.run({
       targetId: ride.tripId,
       scope: ride.zoneId,
@@ -80,6 +86,7 @@ function useRecordSend() {
       expectedSliceRev: book.draftRev,
       value: recordLiveAction(book, { tripId: ride.tripId, kind, target, by: agent?.id ?? "", at: new Date().toISOString() }),
     });
+  };
 }
 
 /** An exclusive offer to the nearest free driver who may drive the requested category. */
@@ -167,6 +174,7 @@ type Mode = RadarTarget["kind"];
  */
 export function RadarTargetPicker({ ride, book, candidates, value, onChange, max, onMax, compact = false }: PickerProps) {
   const [scope, setScope] = useState<RadarScope>("zone");
+  const live = isLiveData();
   const mode: Mode = value.kind;
   const radarZones = radarZonesFor(book.radarZones, ride.zoneId, scope);
   const zones = zoneChoicesFor(ride.zoneId);
@@ -243,11 +251,17 @@ export function RadarTargetPicker({ ride, book, candidates, value, onChange, max
         </label>
       ) : null}
       <div className="hq-timer">
-        <label className="hq-field inline">
-          <span>{tr("Max drivers who can see it")}</span>
-          <input type="number" min={1} max={RADAR_GROUP_MAX} step={1} value={max} aria-label={tr("Max drivers who can see it")} onChange={(event) => onMax(Math.min(RADAR_GROUP_MAX, Math.max(1, Math.round(Number(event.target.value) || 1))))} />
-        </label>
-        <small>{trn("{0} Timer {1} s{2}", <Clock size={11} aria-hidden="true" />, timer.seconds, timer.ruleName ? tr(" · rule “{0}”", [timer.ruleName]) : tr(" · the zone's radar"))}</small>
+        {/* v0.18.6 (G4-F3, F4): on live the server picks the drivers of a group (free ones, nearest first, up to 10) and
+            of a radar zone (its rule's most drivers), so only a radar to whole zones takes a number here. */}
+        {live && mode !== "zone" ? (
+          <small data-testid="radar-server-picks">{mode === "group" ? tr("The free drivers of the group get it, nearest first, up to {0}.", [RADAR_GROUP_MAX]) : timer.ruleName ? tr("Up to {0} free drivers inside get it.", [timer.maxDrivers]) : tr("This radar zone has no rule yet. Make one in Radar zone rules.")}</small>
+        ) : (
+          <label className="hq-field inline">
+            <span>{tr("Max drivers who can see it")}</span>
+            <input type="number" min={1} max={RADAR_GROUP_MAX} step={1} value={max} aria-label={tr("Max drivers who can see it")} onChange={(event) => onMax(Math.min(RADAR_GROUP_MAX, Math.max(1, Math.round(Number(event.target.value) || 1))))} />
+          </label>
+        )}
+        <small>{trn("{0} Timer {1} s{2}", <Clock size={11} aria-hidden="true" />, timer.seconds, timer.ruleName ? tr(" · rule “{0}”", [timer.ruleName]) : tr(" · the zone's radar"))}{timer.repeat ? tr(" · sends again by itself") : ""}</small>
       </div>
     </div>
   );
@@ -282,7 +296,14 @@ export function SendRadarButton({ ride, book, candidates, target, max, onNotice,
   const money = moneyForSend(draft, view, ride.zoneId, "radar");
   const sees = seesLabel(money, ride.zoneId);
   const status = view?.status ?? ride.status;
-  const issue = target.kind === "group" ? groupIssue(book.groups.find((group) => group.id === target.id)) : target.kind === "zone" && target.ids.length === 0 ? "Pick at least one zone." : !name ? "Choose where the radar goes." : !canAssign(status) ? "This trip cannot be assigned now." : money.blocked;
+  const live = isLiveData();
+  const country = marketOfZone(ride.zoneId)?.id;
+  // v0.18.6 (G4-F4): a radar zone is sent with the rule that covers it; the server needs both.
+  const rule = target.kind === "radar_zone" && country ? radarRuleFor(book, target.id, country) : null;
+  const issue = target.kind === "group" ? groupIssue(book.groups.find((group) => group.id === target.id)) : target.kind === "zone" && target.ids.length === 0 ? "Pick at least one zone." : !name ? "Choose where the radar goes." : target.kind === "radar_zone" && live && !rule ? "This radar zone has no rule yet. Make one in Radar zone rules." : !canAssign(status) ? "This trip cannot be assigned now." : money.blocked;
+  // On live, a group or a radar zone goes to the server as it is (it picks the free drivers); whole zones as the drivers.
+  const serverTarget = !live ? {} : target.kind === "group" ? { groupId: target.id } : target.kind === "radar_zone" && rule ? { radarZoneId: target.id, ruleId: rule.id, radarZoneName: name } : {};
+  const byServer = Object.keys(serverTarget).length > 0;
   return (
     <CommandButton
       command="admin.trip.radarGroup"
@@ -295,9 +316,9 @@ export function SendRadarButton({ ride, book, candidates, target, max, onNotice,
       patch={{ status: "offered" }}
       before={status}
       after={`radar ${label}: ${drivers.map((item) => item.driver.id).join(", ") || "nobody inside yet"}`}
-      value={{ driverIds: drivers.map((item) => item.driver.id), target: label, maxDrivers: max, ...money.params }}
-      disabled={Boolean(issue)}
-      title={issue ? trx(issue) : drivers.length ? tr("{0} free driver(s) inside right now get the radar", [String(drivers.length)]) : tr("No free driver inside right now. The radar still goes out and reaches drivers who come in.")}
+      value={byServer ? { ...serverTarget, target: label, ...money.params } : { driverIds: drivers.map((item) => item.driver.id), target: label, maxDrivers: max, ...money.params }}
+      disabled={Boolean(issue) || (live && !byServer && drivers.length === 0)}
+      title={issue ? trx(issue) : drivers.length ? tr("{0} free driver(s) inside right now get the radar", [String(drivers.length)]) : !live ? tr("No free driver inside right now. The radar still goes out and reaches drivers who come in.") : rule?.repeat ? tr("Nobody free inside right now. It goes out again every {0} s and reaches drivers who come in.", [rule.seconds]) : byServer ? tr("Nobody seems free right now; the server checks again when you send.") : tr("No free driver inside right now.")}
       summary={<>{trn("Send {0}'s ride to the radar for {1}: up to {2} drivers see it, {3} right now.", <b>{ride.rider}</b>, <b>{name}</b>, max, drivers.length)}{sees ? ` ${seesSentence(money, ride.zoneId)}` : ""}</>}
       onDone={() => {
         record(ride, kind, label);
@@ -308,9 +329,32 @@ export function SendRadarButton({ ride, book, candidates, target, max, onNotice,
   );
 }
 
+/**
+ * v0.18.6 (owner G4-F4 "Repeat until taken"): while a radar zone send goes out again by itself (its rule repeats), the
+ * panel says so and offers Stop. The server also stops it when a driver accepts or the rider's search ends (8 min).
+ */
+export function RadarRepeatLine({ tripId, book, view, onNotice }: { tripId: string; book: Pick<DispatchBook, "radarZones">; view?: TripOffersView; onNotice: (text: string) => void }) {
+  const local = useActiveRadarSend(tripId);
+  const canAct = useCanHandle();
+  // The server's trip decides (it survives a reload and shows other admins' sends); what this session just sent is
+  // only the instant state until the next read. An older server that says nothing leaves this session's state.
+  const server = view?.radarRepeat;
+  const send = server ? { radarZoneName: book.radarZones.find((zone) => zone.id === server.radarZoneId)?.name ?? local?.radarZoneName ?? server.radarZoneId, seconds: server.seconds, rounds: server.rounds } : server === null ? null : local;
+  if (!send) return null;
+  return (
+    <div className="hq-repeat" data-testid="radar-repeat" role="status">
+      <span>{trn("{0} {1}: sending again every {2} s to the free drivers inside, newcomers too{3}", <Radar size={12} aria-hidden="true" />, send.radarZoneName, send.seconds, send.rounds > 1 ? tr(" · round {0}", [send.rounds]) : "")}</span>
+      <CommandButton command="admin.trip.radarZoneStop" className="dash-btn small ghost danger" targetId={tripId} confirmTarget={false} before="repeating" after="stopped" disabled={!canAct} onDone={() => onNotice(tr("The radar for {0} was stopped.", [send.radarZoneName]))}>{tr("Stop")}</CommandButton>
+    </div>
+  );
+}
+
 /** Cancels the waiting request; recorded like every Handle action. */
 export function CancelRequestButton({ ride, book, onNotice, className = "dash-btn small ghost danger" }: { ride: HandledRide; book: DispatchBook; onNotice: (text: string) => void; className?: string }) {
   const { agent } = useSession();
+  // G4 (live admin): this button only records the cancel in the demo's book; the trip page's admin cancel (with a
+  // reason) is the real one (driver group 7). Not offered on live, so it never says "Not connected yet".
+  if (isLiveData()) return null;
   const next = recordLiveAction(book, { tripId: ride.tripId, kind: "cancel", target: "cancel", by: agent?.id ?? "", at: new Date().toISOString() });
   return (
     <CommandButton command="admin.dispatch.send" className={className} targetId={ride.tripId} confirmTarget={false} scope={ride.zoneId} before={ride.status} after="cancel" expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={next} onDone={() => onNotice(tr("{0}'s request was cancelled.", [ride.rider]))}>
@@ -331,6 +375,7 @@ export function RadarSender({ ride, book, candidates, onNotice, compact = false,
     <div className="hq-block" data-testid="radar-sender">
       <RadarTargetPicker ride={ride} book={book} candidates={candidates} value={target} onChange={change} max={max} onMax={setMax} compact={compact} />
       <SendRadarButton ride={ride} book={book} candidates={candidates} target={target} max={max} onNotice={onNotice} view={view} draft={draft} onSent={onSent} />
+      <RadarRepeatLine tripId={ride.tripId} book={book} view={view} onNotice={onNotice} />
     </div>
   );
 }

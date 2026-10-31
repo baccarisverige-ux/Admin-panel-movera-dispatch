@@ -1,0 +1,138 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import contract from "../../../contracts/contract.json" with { type: "json" };
+import { applyPreset, emptyDispatchBook, zoneDefault, type DispatchEvent } from "../dispatch/rules.ts";
+import { eventBody, eventIssue, eventOf, localToUtc, openRing, presetOf, radarRepeatOf, readDispatchTools, toolCalls, toolRefusal, toolsOf, utcToLocal, type DispatchTools, type ServerEvent, type ToolsHttp } from "./dispatchTools.ts";
+
+/**
+ * Driver group 4 admin features on live (contract v0.18.6 §32 dispatchTools; owner G4-F2 presets per country, F3 driver
+ * groups, F4 radar zones + rules, F6 events): the panel's saves become the server's calls, the server's items come back.
+ */
+
+const none: DispatchTools = { presets: [], groups: [], radarZones: [], radarZoneRules: [], events: [] };
+const ring: [number, number][] = [[59.31, 18.06], [59.31, 18.08], [59.32, 18.08], [59.32, 18.06]];
+
+test("G4-F6: event times are the country's local time on screen and UTC on the wire (SE and FR, summer and winter)", () => {
+  assert.equal(localToUtc("2026-07-01T20:00", "Europe/Stockholm"), "2026-07-01T18:00:00.000Z");
+  assert.equal(localToUtc("2026-12-01T20:00", "Europe/Stockholm"), "2026-12-01T19:00:00.000Z");
+  assert.equal(localToUtc("2026-12-01T20:00", "Europe/Paris"), "2026-12-01T19:00:00.000Z");
+  assert.equal(utcToLocal("2026-07-01T18:00:00Z", "Europe/Paris"), "2026-07-01T20:00");
+  assert.equal(localToUtc("not a time", "Europe/Paris"), null);
+});
+
+const SERVER_EVENT: ServerEvent = {
+  eventId: "ev_1", country: "FR", name: "Finale", location: { lat: 48.8924, lng: 2.3933 }, polygon: ring, startsAt: "2026-11-07T19:00:00Z", endsAt: "2026-11-07T22:30:00Z", on: true,
+  details: { title: { sv: "Final", fr: "Finale", en: "Final" }, description: { sv: "Match", fr: "Match", en: "Match" }, pickupNote: { sv: "Port B", fr: "Porte B", en: "Gate B" } }, version: 3,
+};
+
+test("G4-F6: a server event reads into the editor and goes back the same (point, area, local times, sv/fr/en)", () => {
+  const event = eventOf(SERVER_EVENT);
+  assert.deepEqual(event.location, [48.8924, 2.3933]);
+  assert.equal(event.from, "2026-11-07T20:00");
+  assert.equal(event.until, "2026-11-07T23:30");
+  assert.equal(event.version, 3);
+  const body = eventBody(event);
+  assert.deepEqual(body, { name: "Finale", location: { lat: 48.8924, lng: 2.3933 }, polygon: ring, startsAt: "2026-11-07T19:00:00.000Z", endsAt: "2026-11-07T22:30:00.000Z", on: true, details: SERVER_EVENT.details });
+  assert.equal(eventIssue(event), null);
+});
+
+test("G4-F6: an event needs a pin, an end after the start and every text in sv, fr and en (the pickup note is optional)", () => {
+  const event = eventOf(SERVER_EVENT);
+  assert.equal(eventIssue({ ...event, location: null }), "Put the event's pin on the map.");
+  assert.equal(eventIssue({ ...event, until: event.from }), "The end must be after the start.");
+  assert.equal(eventIssue({ ...event, details: { ...event.details!, title: { sv: "", fr: "Finale", en: "Final" } } }), "Write the title in Swedish, French and English.");
+  const noNote: DispatchEvent = { ...event, details: { ...event.details!, pickupNote: { sv: "", fr: "", en: "" } } };
+  assert.equal(eventIssue(noNote), null);
+  assert.ok(!("pickupNote" in (eventBody(noNote)["details"] as object)), "an empty pickup note is not sent");
+  assert.equal(eventIssue({ ...event, details: { ...event.details!, pickupNote: { sv: "Port B", fr: "", en: "" } } }), "Write the pickup note in all three languages, or leave it empty.");
+});
+
+test("G4-F3/F4/F6: a save becomes one POST per new item, one PUT per changed item (with its version), one DELETE per removed item", () => {
+  const before: DispatchTools = {
+    ...none,
+    groups: [{ id: "grp_1", country: "SE", name: "Night", driverIds: ["D1"], version: 2 }, { id: "grp_2", country: "SE", name: "Old", driverIds: [], version: 1 }],
+    radarZones: [{ id: "rz_1", country: "SE", zoneId: "Z002", name: "Söder", ring, createdAt: "", version: 4 }],
+    radarZoneRules: [{ id: "rr_1", country: "SE", name: "Fast", radarZoneIds: ["rz_1"], seconds: 20, maxDrivers: 5, repeat: true, version: 1 }],
+  };
+  const after: DispatchTools = {
+    ...before,
+    groups: [{ ...before.groups[0]!, driverIds: ["D1", "D2"] }, { id: "G-new", country: "SE", name: "Airport", driverIds: ["D3"] }],
+    radarZoneRules: [],
+    radarZones: [],
+  };
+  assert.deepEqual(toolCalls(before, after), [
+    { method: "POST", path: "/admin/dispatch/groups", body: { country: "SE", name: "Airport", driverIds: ["D3"] } },
+    { method: "PUT", path: "/admin/dispatch/groups/grp_1", body: { expectedVersion: 2, name: "Night", driverIds: ["D1", "D2"] } },
+    { method: "DELETE", path: "/admin/dispatch/groups/grp_2?expectedVersion=1" },
+    // A rule is deleted before the radar zone it lists (the server refuses the zone first: radar_zone_in_use).
+    { method: "DELETE", path: "/admin/dispatch/radar-rules/rr_1?expectedVersion=1" },
+    { method: "DELETE", path: "/admin/dispatch/radar-zones/rz_1?expectedVersion=4" },
+  ]);
+  assert.deepEqual(toolCalls(before, before), [], "nothing changed, nothing sent");
+});
+
+test("G4-F4: a new radar zone is sent with its zone and an open outline; a rule with its zones, time, drivers and repeat", () => {
+  const after: DispatchTools = { ...none, radarZones: [{ id: "RZ-x", country: "FR", zoneId: "FR-PC", name: " Bastille ", ring: [...ring, ring[0]!], createdAt: "" }], radarZoneRules: [{ id: "RR-x", country: "FR", name: "Soir", radarZoneIds: "all", seconds: 30, maxDrivers: 8, repeat: true }] };
+  assert.deepEqual(toolCalls(none, after), [
+    { method: "POST", path: "/admin/dispatch/radar-zones", body: { zoneId: "FR-PC", name: "Bastille", polygon: ring } },
+    { method: "POST", path: "/admin/dispatch/radar-rules", body: { country: "FR", name: "Soir", radarZoneIds: "all", seconds: 30, maxDrivers: 8, repeat: true } },
+  ]);
+  assert.deepEqual(openRing(ring), ring);
+  assert.deepEqual(contract.dispatchTools.radarZones.ranges, { seconds: [5, 120], maxDrivers: [1, 10] });
+});
+
+test("G4-F2: a preset is saved per country with the dispatch document's values (no stamps); applying it changes only those parts", () => {
+  const zone = { ...zoneDefault("Z001"), radar: { ...zoneDefault("Z001").radar, drivers: 9 } };
+  const { zoneId: _drop, ...values } = zone;
+  void _drop;
+  const calls = toolCalls(none, { ...none, presets: [{ id: "P-2", name: "Nights", note: "", builtIn: false, values, country: "SE" }] });
+  assert.equal(calls.length, 1);
+  const body = calls[0]!.body as { country: string; name: string; values: Record<string, unknown> };
+  assert.equal(body.country, "SE");
+  assert.equal((body.values["radar"] as { drivers: number }).drivers, 9);
+  for (const key of ["version", "publishedAt", "zoneId", "country", "timeZone", "usesStandard"]) assert.ok(!(key in body.values), key);
+  // Back from the server: applied to a zone, the zone's offer card (not a dispatch document part) stays its own.
+  const preset = presetOf({ presetId: "prs_1", country: "SE", name: "Nights", values: body.values, version: 1 });
+  const target = { ...zoneDefault("Z002"), offerCard: { ...zoneDefault("Z002").offerCard, riderRating: false } };
+  const applied = applyPreset(target, preset, "SE");
+  assert.equal(applied.radar.drivers, 9);
+  assert.equal(applied.offerCard.riderRating, false);
+  assert.equal(applied.zoneId, "Z002");
+  // Rename and delete go to the same preset with its version.
+  assert.deepEqual(toolCalls({ ...none, presets: [preset] }, { ...none, presets: [{ ...preset, name: "Late nights" }] })[0], { method: "PUT", path: "/admin/dispatch/presets/prs_1", body: { expectedVersion: 1, name: "Late nights", values: body.values } });
+  assert.deepEqual(toolCalls({ ...none, presets: [preset] }, none), [{ method: "DELETE", path: "/admin/dispatch/presets/prs_1?expectedVersion=1" }]);
+});
+
+test("the server's items are read for every country in scope; a 403 is an empty list, never the demo's samples", async () => {
+  const http: ToolsHttp = {
+    json: async <T,>(path: string) => {
+      if (path.endsWith("/groups")) return { items: [{ groupId: "grp_1", country: "SE", name: "Night", driverIds: ["D1"], version: 1 }] } as T;
+      if (path.endsWith("/events")) return { items: [SERVER_EVENT] } as T;
+      throw Object.assign(new Error("no"), { status: 403 });
+    },
+    post: async () => ({}) as never,
+    put: async () => ({}) as never,
+    del: async () => undefined,
+  };
+  const tools = await readDispatchTools(http);
+  assert.deepEqual(tools.groups, [{ id: "grp_1", country: "SE", name: "Night", driverIds: ["D1"], version: 1 }]);
+  assert.equal(tools.events[0]!.name, "Finale");
+  assert.deepEqual(tools.presets, []);
+  assert.ok(!toolsOf(emptyDispatchBook()).presets.some((preset) => preset.builtIn));
+});
+
+test("the server's refusals are said in the panel's words (contract.json#dispatchTools.reasons)", () => {
+  for (const reason of contract.dispatchTools.reasons) assert.ok(toolRefusal({ status: 409, reason }), reason);
+  assert.match(toolRefusal({ status: 409, code: "version_mismatch" }) ?? "", /Someone changed this/);
+  assert.equal(toolRefusal({ status: 500, reason: "boom" }), null);
+});
+
+test("G4 checker: the running repeat is read from the server's trip (radarZoneSend), defensively", () => {
+  const send = { sendId: "rzs_1", tripId: "T1", radarZoneId: "rz_1", ruleId: "rr_1", seconds: 20, maxDrivers: 5, repeat: true, active: true, rounds: 3, startedAt: "2026-10-31T09:00:00Z" };
+  assert.deepEqual(radarRepeatOf({ tripId: "T1", radarZoneSend: send }), { sendId: "rzs_1", radarZoneId: "rz_1", seconds: 20, maxDrivers: 5, rounds: 3, startedAt: "2026-10-31T09:00:00Z" });
+  assert.equal(radarRepeatOf({ tripId: "T1", radarZoneSend: { ...send, active: false } }), null, "stopped = nothing runs");
+  assert.equal(radarRepeatOf({ tripId: "T1", radarZoneSend: null }), null);
+  assert.equal(radarRepeatOf({ tripId: "T1", radarZoneSend: "junk" }), null);
+  assert.equal(radarRepeatOf({ tripId: "T1" }), undefined, "an older server says nothing: the session's own state stands");
+  assert.equal(radarRepeatOf(null), undefined);
+});

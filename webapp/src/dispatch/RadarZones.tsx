@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { ArrowLeft, ListChecks, MapPinned, Pencil, Plus, Radar, Trash2, Users } from "lucide-react";
 import { BonusAreaMap } from "../drivers/BonusAreaMap";
 import type { Market, MarketZone } from "../markets/markets";
@@ -27,6 +29,17 @@ export function RadarZonesCard({ book, market, zone, drivers, canEdit, onNotice 
   const [editing, setEditing] = useState<RadarZone | null>(null);
   const zones = radarZonesOf(book, zone.id);
   const free = drivers.filter((driver) => driver.state === "free");
+  const live = useLiveSessionMaybe();
+  // v0.18.6 (G4-F4): on live the server counts the free drivers inside each saved radar zone right now.
+  const saved = zones.filter((item) => item.version !== undefined).map((item) => item.id);
+  const serverFree = useQuery({
+    queryKey: ["live", "radar-zone-free", saved.join(",")],
+    enabled: Boolean(live) && saved.length > 0,
+    refetchInterval: 15_000,
+    queryFn: async () => Object.fromEntries(await Promise.all(saved.map(async (id) => [id, (await live!.client.json<{ free: number }>(`/admin/dispatch/radar-zones/${encodeURIComponent(id)}/free`).catch(() => null))?.free ?? null] as const))) as Record<string, number | null>,
+  });
+  const freeInside = (item: RadarZone): number | null => (live ? serverFree.data?.[item.id] ?? null : driversInRadarZone(item, free).length);
+  const usedBy = (item: RadarZone) => book.radarZoneRules.filter((rule) => Array.isArray(rule.radarZoneIds) && rule.radarZoneIds.includes(item.id));
 
   if (editing) {
     const exists = book.radarZones.some((item) => item.id === editing.id);
@@ -39,9 +52,10 @@ export function RadarZonesCard({ book, market, zone, drivers, canEdit, onNotice 
         </div>
         <div className="dx-event-grid">
           <div className="dx-event-fields">
-            <label className="field">{trn("Radar zone name{0}", <input aria-label={tr("Radar zone name")} maxLength={60} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Södermalm")} />)}</label>
+            <label className="field">{trn("Radar zone name{0}", <input aria-label={tr("Radar zone name")} maxLength={40} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Södermalm")} />)}</label>
             <p className="dx-note">{trn("{0} Draw it on the map like a zone: shape, rectangle, circle or free hand. It belongs to {1}. Radar zones may overlap; a radar sent to this one goes to the free drivers inside it at that moment.", <MapPinned size={13} aria-hidden="true" />, <b>{zone.name}</b>)}</p>
-            {editing.ring.length >= 3 ? <p className="dx-note">{trn("{0} km² · {1} free driver{2} inside right now", ringAreaKm(editing.ring).toFixed(2), driversInRadarZone(editing, free).length, driversInRadarZone(editing, free).length === 1 ? "" : tr("s"))}</p> : null}
+            {editing.ring.length >= 3 && !live ? <p className="dx-note">{trn("{0} km² · {1} free driver{2} inside right now", ringAreaKm(editing.ring).toFixed(2), driversInRadarZone(editing, free).length, driversInRadarZone(editing, free).length === 1 ? "" : tr("s"))}</p> : null}
+            {editing.ring.length >= 3 && live ? <p className="dx-note">{trn("{0} km²", ringAreaKm(editing.ring).toFixed(2))}</p> : null}
             {error ? <p className="dx-issues" role="alert">{trSentences(error)}</p> : null}
             <div className="dx-modal-actions">
               <CommandButton command="admin.dispatch.radarZone" className="dash-btn" targetId={editing.name.trim() || "radar zone"} confirmTarget={false} scope={zone.id} before={exists ? "radar zone" : "none"} after={`${editing.ring.length} points`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={withRadarZone(book, editing)} disabled={!canEdit || Boolean(error)} onDone={() => { onNotice(tr("Radar zone {0} saved.", [editing.name.trim()])); setEditing(null); }}>{tr("Save radar zone")}</CommandButton>
@@ -65,8 +79,10 @@ export function RadarZonesCard({ book, market, zone, drivers, canEdit, onNotice 
       {zones.length === 0 ? <p className="dx-calm">{trn("No radar zone yet in {0}.", zone.name)}</p> : (
         <ul className="dx-event-list dx-radar-zones" aria-label={tr("Radar zones")}>
           {zones.map((item) => {
-            const inside = driversInRadarZone(item, free).length;
+            const inside = freeInside(item);
             const rule = radarRuleFor(book, item.id, market.id);
+            // The server refuses to delete a radar zone a rule lists (409 radar_zone_in_use); on live the button says why.
+            const listed = live ? usedBy(item) : [];
             return (
               <li key={item.id} className="dx-event on">
                 <span className="dx-event-icon" aria-hidden="true"><Radar size={18} /></span>
@@ -74,10 +90,10 @@ export function RadarZonesCard({ book, market, zone, drivers, canEdit, onNotice 
                   <b>{item.name}</b>
                   <small>{trn("{0} km² · {1}", ringAreaKm(item.ring).toFixed(2), rule ? trn("rule {0}: {1} s, up to {2} drivers", <b>{rule.name}</b>, rule.seconds, rule.maxDrivers) : tr("the zone's normal radar time and drivers"))}</small>
                 </span>
-                <span className={inside ? "dx-state on" : "dx-state off"} data-testid={`radar-zone-free-${item.id}`}>{trn("{0} {1} free", <Users size={11} aria-hidden="true" />, inside)}</span>
+                <span className={inside ? "dx-state on" : "dx-state off"} data-testid={`radar-zone-free-${item.id}`}>{trn("{0} {1} free", <Users size={11} aria-hidden="true" />, inside ?? "–")}</span>
                 <span className="dx-event-actions">
                   <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => setEditing(item)}>{trn("{0} Edit", <Pencil size={13} aria-hidden="true" />)}</button>
-                  <CommandButton command="admin.dispatch.radarZone" className="icon-ghost" targetId={item.name} confirmTarget={false} scope={zone.id} before="radar zone" after="removed" expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={withoutRadarZone(book, item.id)} disabled={!canEdit} aria-label={tr("Remove {0}", [item.name])} onDone={() => onNotice(tr("Radar zone {0} removed.", [item.name]))}>
+                  <CommandButton command="admin.dispatch.radarZone" className="icon-ghost" targetId={item.name} confirmTarget={false} scope={zone.id} before="radar zone" after="removed" expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={withoutRadarZone(book, item.id)} disabled={!canEdit || listed.length > 0} title={listed.length ? tr("The rule {0} lists this radar zone. Change the rule first.", [listed.map((rule) => rule.name).join(", ")]) : undefined} aria-label={tr("Remove {0}", [item.name])} onDone={() => onNotice(tr("Radar zone {0} removed.", [item.name]))}>
                     <Trash2 size={14} aria-hidden="true" />
                   </CommandButton>
                 </span>
@@ -151,7 +167,7 @@ export function RadarZoneRulesCard({ book, market, canEdit, onNotice }: RulesPro
               <label className="field">{trn("Time on the radar{0}", <Num label={tr("Rule radar time")} value={editing.seconds} unit="s" min={RADAR_RULE_LIMITS.seconds.min} max={RADAR_RULE_LIMITS.seconds.max} onChange={(seconds) => setEditing({ ...editing, seconds })} />)}</label>
               <label className="field">{trn("Most drivers who see it{0}", <Num label={tr("Rule most drivers")} before="up to" value={editing.maxDrivers} unit="drivers" min={RADAR_RULE_LIMITS.maxDrivers.min} max={RADAR_RULE_LIMITS.maxDrivers.max} onChange={(maxDrivers) => setEditing({ ...editing, maxDrivers: Math.round(maxDrivers) })} />)}</label>
             </div>
-            <div className="dx-row"><span className="dx-row-text"><b>{tr("Send again by itself")}</b><small>{tr("When the time runs out and nobody accepted, the same radar goes out again until an admin stops it or a driver accepts.")}</small></span><Switch label={tr("Send again by itself")} on={editing.repeat} onChange={(repeat) => setEditing({ ...editing, repeat })} /></div>
+            <div className="dx-row"><span className="dx-row-text"><b>{tr("Send again by itself")}</b><small>{tr("When the time runs out and nobody accepted, it goes out again to whoever is free inside then, drivers who came in too, until a driver accepts, an admin stops it or the rider's search ends (8 min).")}</small></span><Switch label={tr("Send again by itself")} on={editing.repeat} onChange={(repeat) => setEditing({ ...editing, repeat })} /></div>
             {error ? <p className="dx-issues" role="alert">{trSentences(error)}</p> : null}
             <div className="dx-modal-actions">
               <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => setEditing(null)}>{tr("Cancel")}</button>

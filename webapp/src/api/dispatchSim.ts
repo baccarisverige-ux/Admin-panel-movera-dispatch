@@ -65,6 +65,11 @@ export type TripOffersView = {
   commissionMinor: number;
   /** The driver who accepted, with what the admin needs to follow the pickup. */
   accepted: AcceptedDriver | null;
+  /**
+   * v0.18.6 (G4-F4): the radar zone send still going out by itself, from the server's trip. undefined = the server did
+   * not say (older server), null = none running.
+   */
+  radarRepeat?: { sendId: string; radarZoneId: string; seconds: number; maxDrivers: number; rounds: number; startedAt: string } | null;
 };
 
 export type AcceptedDriver = {

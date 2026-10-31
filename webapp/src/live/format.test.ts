@@ -20,7 +20,7 @@ type Contract = {
 const contract = contractJson<Contract>("contract.json");
 
 test("the onboarding constants equal contract.json#driverOnboarding (v0.5.3)", () => {
-  assert.equal(contract.version, "0.18.5");
+  assert.equal(contract.version, "0.18.6");
   assert.deepEqual(DOCUMENT_TYPES, contract.driverOnboarding.documents.types);
   assert.deepEqual(REQUIRED_DOCUMENTS, contract.driverOnboarding.documents.required);
   assert.deepEqual(ONBOARDING_COUNTRIES, contract.driverOnboarding.countries);

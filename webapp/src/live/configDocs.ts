@@ -11,6 +11,8 @@ import { fromMajor } from "../domain/money.ts";
 import { marketOfZone } from "../markets/markets.ts";
 import type { CategoryPrice, ZoneBook } from "../pricing/zonePricing.ts";
 import type { ZoneDispatch } from "../dispatch/rules.ts";
+import { completeOfferCard } from "../dispatch/offers.ts";
+import { validRaiseFactor } from "../dispatch/offerRules.ts";
 
 export type ConfigDocName = "rider_app_config" | "driver_app_config" | "pricing" | "dispatch" | "country_rules" | "onboarding";
 export type Doc = Record<string, unknown>;
@@ -178,6 +180,8 @@ export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | n
     favourite: { on: zone.favourite.on, maxKm: zone.favourite.maxKm },
     exclusiveWhileDriving: { ...zone.exclusiveWhileDriving },
     waiting: zone.waiting.map((step) => ({ id: step.id, kind: step.kind, on: step.on, afterMin: step.afterMin, message: step.message, extraMin: step.extraMin ?? null })),
+    // v0.18.6 (owner G4-E4): the rider raise limit; publishing it also writes the zone's rider app config (server).
+    raisePrice: { maxFactor: zone.raisePrice.maxFactor },
   };
 }
 
@@ -195,10 +199,15 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     if (d.finishing) zone.finishing = { ...zone.finishing, ...d.finishing };
     if (d.favourite) zone.favourite = { ...zone.favourite, ...d.favourite };
     if (d.exclusiveWhileDriving) zone.exclusiveWhileDriving = { ...d.exclusiveWhileDriving };
+    // v0.18.6 (G4-E4): the rider raise limit as the server has it; a missing or bad value keeps the contract default.
+    const factor = validRaiseFactor((doc["raisePrice"] as { maxFactor?: unknown } | undefined)?.maxFactor);
+    if (factor !== null) zone.raisePrice = { maxFactor: factor };
     if (Array.isArray(d.waiting)) zone.waiting = d.waiting.map((step) => ({ ...step, ...(step.extraMin === null ? { extraMin: undefined } : {}) })).map(({ extraMin, ...rest }) => (extraMin === undefined ? rest : { ...rest, extraMin }));
   }
-  const offers = (driver?.["offers"] ?? null) as { radarApp?: ZoneDispatch["radarApp"]; autoOffline?: { on?: boolean; missedExclusive?: number; noFixMinutes?: number } } | null;
+  const offers = (driver?.["offers"] ?? null) as { radarApp?: ZoneDispatch["radarApp"]; offerCard?: unknown; autoOffline?: { on?: boolean; missedExclusive?: number; noFixMinutes?: number } } | null;
   if (offers?.radarApp) zone.radarApp = { ...zone.radarApp, ...offers.radarApp };
+  // v0.18.6 (owner decision 3): the offer card switches as the zone's drivers get them (riderRating among them).
+  if (offers?.offerCard && typeof offers.offerCard === "object") zone.offerCard = completeOfferCard({ ...zone.offerCard, ...(offers.offerCard as object) });
   if (offers?.autoOffline && typeof offers.autoOffline.missedExclusive === "number") zone.autoOffline = { ...zone.autoOffline, on: offers.autoOffline.on ?? true, after: offers.autoOffline.missedExclusive };
   // G3-R1 (v0.18.4): minutes without a position before the server sets the driver offline (0 = never).
   if (offers?.autoOffline && typeof offers.autoOffline.noFixMinutes === "number") zone.autoOffline = { ...zone.autoOffline, noFixMinutes: offers.autoOffline.noFixMinutes };
@@ -265,6 +274,8 @@ export type ConfigHttp = {
   json: <T>(path: string) => Promise<T>;
   put: <T>(path: string, body: unknown) => Promise<T>;
   post: <T>(path: string, body: unknown) => Promise<T>;
+  /** DELETE with a fresh Idempotency-Key (v0.18.6 dispatch tools); optional so older test fakes still fit. */
+  del?: (path: string) => Promise<unknown>;
 };
 
 /** A 409 from the server: someone changed the settings since this page read them. */

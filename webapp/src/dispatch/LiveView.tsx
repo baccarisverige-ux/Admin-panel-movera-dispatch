@@ -110,7 +110,6 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
             const mode = modeNow(rules, control, busyOf(zone.id), hhmm);
             const free = drivers.filter((driver) => driver.zoneId === zone.id && driver.state === "free").length;
             const count = waiting.filter((request) => request.zoneId === zone.id && !handled.has(request.tripId)).length;
-            const pending = liveControls ? undefined : book.approvals.find((item) => item.kind === "control" && item.control?.zoneId === zone.id);
             const button = (label: string, value: { paused: boolean; mode: "radar" | "exclusive" | null }, icon: ReactNode, className = "dash-btn small ghost") => {
               const before = control?.paused ? "paused" : control?.mode ?? "rules";
               const after = value.paused ? "paused" : value.mode ?? "rules";
@@ -122,9 +121,10 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
                   </CommandButton>
                 );
               }
-              const result = requestControl(book, zone.id, value, agentId, now);
+              // G4-F1 (owner "Live now, remove box"): the switch applies at once, no second admin.
+              const result = requestControl(book, zone.id, value, agentId, now, { direct: true });
               return (
-                <CommandButton command="admin.dispatch.control" className={className} targetId={zone.id} confirmTarget={false} scope={zone.id} before={before} after={after} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={result.book} disabled={!canSwitch || Boolean(pending)} aria-label={`${label} ${zone.name}`} onDone={() => onNotice(result.waiting ? tr("{0} {1}: waiting for a second admin to approve.", [label, zone.name]) : tr("{0}: {1} done.", [zone.name, label.toLowerCase()]))}>
+                <CommandButton command="admin.dispatch.control" className={className} targetId={zone.id} confirmTarget={false} scope={zone.id} before={before} after={after} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={result.book} disabled={!canSwitch} aria-label={`${label} ${zone.name}`} onDone={() => onNotice(result.waiting ? tr("{0} {1}: waiting for a second admin to approve.", [label, zone.name]) : tr("{0}: {1} done.", [zone.name, label.toLowerCase()]))}>
                   {icon} {trx(label)}
                 </CommandButton>
               );
@@ -137,7 +137,6 @@ export function LiveView({ book, market, zones, drivers, requests, candidatesOf,
                 </div>
                 <small>{trx(mode.why)}</small>
                 <span className="dx-control-facts"><span>{trn("{0} {1} free", <Car size={12} aria-hidden="true" />, free)}</span><span>{trn("{0} {1} waiting", <UserRound size={12} aria-hidden="true" />, count)}</span><span>{trn("{0} {1} per driver", <Clock size={12} aria-hidden="true" />, busyOf(zone.id).toFixed(1))}</span></span>
-                {pending ? <span className="dx-dot waiting">{trn("Waiting for a second admin: {0}", pending.lines[0])}</span> : null}
                 <span className="dx-control-actions">
                   {control?.paused ? button("Resume", { paused: false, mode: null }, <Play size={12} aria-hidden="true" />, "dash-btn small") : button("Pause", { paused: true, mode: null }, <Pause size={12} aria-hidden="true" />)}
                   {!control?.paused && control?.mode !== "radar" && rules.radar.on ? button("Radar now", { paused: false, mode: "radar" }, <Radar size={12} aria-hidden="true" />) : null}

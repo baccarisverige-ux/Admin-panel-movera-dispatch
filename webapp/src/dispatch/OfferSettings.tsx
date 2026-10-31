@@ -1,7 +1,8 @@
 import { Link } from "react-router";
-import { CreditCard, EyeOff, MessageSquareText, Percent, RotateCcw } from "lucide-react";
+import { CreditCard, EyeOff, HandCoins, MessageSquareText, Percent, RotateCcw } from "lucide-react";
 import { Card, Choice, Num, Row, Switch } from "./fields";
 import { CANCEL_RATE_DRIVER_TEXT, EXCLUSIVE_REASON_MAX, EXCLUSIVE_REASONS, OFFER_CARD_DETAILS, type OfferCardDetails } from "./offers";
+import { RAISE_FACTOR_RANGE, raiseFactorLabel } from "./offerRules";
 import type { CountryDispatch, ZoneDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
 
@@ -26,7 +27,27 @@ export function OfferCardSettings({ zone, onChange, disabled }: Props) {
   );
 }
 
-/** Q15: the short text that says why an offer is Exclusive (Radar · Exclusive · Reservations › Exclusive). */
+/**
+ * v0.18.6 (owner G4-E4 "2×, admin can change (Recommended)"): how far a rider may raise the fare while searching, per
+ * zone or the country standard (DispatchDocument.raisePrice.maxFactor, contract range 1–3, default 2). The rider app
+ * hides every raise button over it and the server refuses a higher raise. Same in Sweden and France.
+ */
+export function RaiseLimitCard({ zone, onChange, disabled }: Props) {
+  const factor = zone.raisePrice.maxFactor;
+  const [low, high] = RAISE_FACTOR_RANGE;
+  return (
+    <Card title={tr("Rider raise limit")} tone="green" icon={<HandCoins size={18} />} help={tr("While a rider waits for a driver they can offer more. This is the most they can offer, as times the booked price. The rider app hides the amounts above it.")}>
+      <Row label={tr("Highest price a rider can offer")} help={tr("For example 2× on a trip booked at 200: at most 400. From {0} to {1}.", [raiseFactorLabel(low), raiseFactorLabel(high)])}>
+        <Num label={tr("Rider raise limit")} value={factor} unit="×" min={low} max={high} step={0.1} disabled={disabled} onChange={(maxFactor) => onChange({ ...zone, raisePrice: { maxFactor: Math.round(maxFactor * 10) / 10 } })} />
+      </Row>
+    </Card>
+  );
+}
+
+/**
+ * Q15: the short text that said why an offer is Exclusive. v0.18.6 (owner G4-E7 "Remove short line explain"): not shown
+ * in the panel any more (the driver app shows no such line and the server sends none); kept for the demo's old books.
+ */
 export function ExclusiveReasonsCard({ zone, onChange, disabled }: Props) {
   const reasons = zone.exclusiveReasons;
   return (

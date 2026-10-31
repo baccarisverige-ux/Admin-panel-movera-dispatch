@@ -475,7 +475,7 @@ assert(completeCancelReasons({ groups: { rider: [{ code: "x", title: { en: "X", 
 const publishedCountry = publish(emptyDispatchBook(), {}, { SE: { ...se, cancelRateLimitPct: 25 } }, ["Z001"], "nora", "2026-10-15T10:00", "");
 assert(!publishedCountry.error && liveCountry(publishedCountry.book, "SE").cancelRateLimitPct === 25 && publishedCountry.book.versions[0].lines.includes("Sweden: Cancel rate limit: 30% → 25%"), "country rules publish with a version line");
 const a2File = rulesFile(emptyDispatchBook(), "SE", "now");
-assert(a2File.driverApp.cancelReasons.sv.groups.rider.length === 8 && a2File.driverApp.exclusiveReasons.Z001[0].id === "best-match", "the rules file has the driver app's shapes");
+assert(a2File.driverApp.cancelReasons.sv.groups.rider.length === 8 && !("exclusiveReasons" in a2File.driverApp), "the rules file has the driver app's shapes; v0.18.6 (owner G4-E7): no 'why you' reasons any more");
 assert(a2File.country.cancelRateLimitPct === 30 && a2File.glossary.pickupWait.includes("Pricing") && a2File.zones[0].rules.offerCard.badges, "the rules file has the new settings");
 
 // Round 3, A3: one cancel rate number. Safety's switch uses the country's cancel rate limit (30%).

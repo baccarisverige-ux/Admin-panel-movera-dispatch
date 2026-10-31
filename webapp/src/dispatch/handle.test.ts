@@ -45,10 +45,10 @@ test("zone choices start with the pickup zone, then the zones near it", () => {
   assert.deepEqual(zoneChoicesFor("nowhere"), []);
 });
 
-test("the radar timer follows the rule of the radar zone the ride is sent to, else the pickup zone's radar", () => {
+test("the radar timer follows the rule of the radar zone the ride is sent to, else the pickup zone's radar; v0.18.6 G4-F4: it says whether it sends again by itself", () => {
   const own = book();
-  assert.deepEqual(radarTimerFor(own, { kind: "radar_zone", id: "RZ2" }, "Z002"), { seconds: 20, maxDrivers: 3, ruleName: "East fast" });
-  assert.deepEqual(radarTimerFor(own, { kind: "radar_zone", id: "RZ1" }, "Z002"), { seconds: 40, maxDrivers: 6, ruleName: "Default" });
+  assert.deepEqual(radarTimerFor(own, { kind: "radar_zone", id: "RZ2" }, "Z002"), { seconds: 20, maxDrivers: 3, ruleName: "East fast", repeat: true });
+  assert.deepEqual(radarTimerFor(own, { kind: "radar_zone", id: "RZ1" }, "Z002"), { seconds: 40, maxDrivers: 6, ruleName: "Default", repeat: false });
   const zone = radarTimerFor(own, { kind: "zone", ids: ["Z002"] }, "Z002");
   assert.equal(zone.ruleName, null);
   assert.ok(zone.seconds > 0 && zone.maxDrivers >= 1 && zone.maxDrivers <= 10);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Plus, Users } from "lucide-react";
+import { Pencil, Plus, Trash2, Users } from "lucide-react";
 import type { Market } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { DISPATCH_KEY, type DispatchBook, type DriverGroup } from "./rules";
@@ -24,7 +24,7 @@ export function DriverGroupsCard({ book, market, drivers, canEdit, onNotice }: P
         <h3 id="dx-groups-title">{trn("{0} Driver groups", <Users size={16} aria-hidden="true" />)}</h3>
         <button data-command="admin.dispatch.edit" type="button" className="dash-btn small" disabled={!canEdit} onClick={() => setGroup({ id: `G-${Date.now().toString(36)}`, country: market.id, name: "", driverIds: [] })}>{trn("{0} New group", <Plus size={14} aria-hidden="true" />)}</button>
       </div>
-      <p className="dx-modal-help">{tr("Save drivers as a group, then send a waiting ride to the group or put it on the group's radar from Live or the Dashboard.")}</p>
+      <p className="dx-modal-help">{tr("Save drivers of this country as a group, then put a waiting ride on the group's radar from Live or the Dashboard: its free drivers get it, nearest first, up to 10. Drivers are not told they are in a group.")}</p>
       {groups.length === 0 ? <p className="dx-calm">{tr("No group yet.")}</p> : (
         <ul className="dx-group-list" aria-label={tr("Driver groups")}>
           {groups.map((item) => (
@@ -32,6 +32,10 @@ export function DriverGroupsCard({ book, market, drivers, canEdit, onNotice }: P
               <span className="dx-avatar"><Users size={15} aria-hidden="true" /></span>
               <span><b>{item.name}</b><small>{trn("{0} driver{1}{2}", item.driverIds.length, item.driverIds.length === 1 ? "" : tr("s"), item.driverIds.length ? `: ${item.driverIds.slice(0, 3).map((id) => drivers.find((row) => row.id === id)?.name ?? id).join(", ")}${item.driverIds.length > 3 ? "…" : ""}` : "")}</small></span>
               <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={!canEdit} onClick={() => setGroup(item)}>{trn("{0} Edit", <Pencil size={13} aria-hidden="true" />)}</button>
+              {/* v0.18.6 (G4-F3): a group can be deleted (kept in the audit log). */}
+              <CommandButton command="admin.dispatch.group" className="icon-ghost" targetId={item.name} confirmTarget={false} scope="all" before="group" after="removed" expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={{ ...book, draftRev: book.draftRev + 1, groups: book.groups.filter((other) => other.id !== item.id) }} disabled={!canEdit} aria-label={tr("Delete {0}", [item.name])} onDone={() => { if (group?.id === item.id) setGroup(null); onNotice(tr("Group {0} deleted.", [item.name])); }}>
+                <Trash2 size={14} aria-hidden="true" />
+              </CommandButton>
             </li>
           ))}
         </ul>

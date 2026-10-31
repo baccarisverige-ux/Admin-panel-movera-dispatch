@@ -38,6 +38,8 @@ import {
 import { ONBOARDING_SETTINGS_KEY, OPEN, normalizeSettingsBook, wireDocument, type SettingsBook, type SettingsDoc } from "../drivers/onboardingSettings.ts";
 import { registerCountryTypes } from "./format.ts";
 import { tr } from "../i18n/core.ts";
+import { ApiError } from "../api/httpClient.ts";
+import { readDispatchTools, sendToolCalls, toolCalls, toolRefusal, toolsOf, type DispatchTools } from "./dispatchTools.ts";
 
 /** Every zone of the admin's markets and each country's Standard. */
 export function settingsScopes(): string[] {
@@ -245,7 +247,11 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         liveCountries: book.liveCountries,
       };
     });
-    const next = { ...book, live, ...(versions.length ? { versions } : {}) };
+    // v0.18.6 (owner G4-F2..F4, F6): saved presets, driver groups, radar zones and their rules, and events are the
+    // server's (contract.json#dispatchTools), never the demo's samples. Dispatch changes never wait for a second admin
+    // (G4-F1) and cancel checks are built with group 5 (G4-F5), so neither has anything on live.
+    const tools = await readTools();
+    const next = { ...book, live, ...tools, approvals: [], cancelChecks: {}, ...(versions.length ? { versions } : {}) };
     slices.set(DISPATCH_KEY, next);
     return next;
   }
@@ -348,6 +354,35 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     }
     slices.set(PRICING_KEY, store);
     return "Published.";
+  }
+
+  const toolsHttp = { json: http.json, post: http.post, put: http.put, del: (path: string) => (http.del ? http.del(path) : Promise.reject(new Error("DELETE is not available."))) };
+
+  /** The server's dispatch tools; what the last read saw is what the next save is compared with. */
+  let lastTools: DispatchTools = { presets: [], groups: [], radarZones: [], radarZoneRules: [], events: [] };
+  async function readTools(): Promise<DispatchTools> {
+    lastTools = await readDispatchTools(toolsHttp);
+    return lastTools;
+  }
+
+  /**
+   * v0.18.6 (G4-F2..F4, F6): a save from Presets, Driver groups, Radar zones, Radar zone rules or Events. The page
+   * hands the whole book; each item that differs from what the server had becomes one POST / PUT / DELETE with its
+   * version. Afterwards the server's items are read again (new ids and versions).
+   */
+  async function saveTools(book: DispatchBook, done: string): Promise<string> {
+    const calls = toolCalls(lastTools, toolsOf(book));
+    try {
+      await sendToolCalls(toolsHttp, calls);
+    } catch (error) {
+      const text = toolRefusal(error);
+      await readTools().catch(() => undefined);
+      if (text && error instanceof ApiError) throw new ApiError(error.status, text, { code: error.code, reason: error.reason ?? undefined, retryable: false });
+      throw error;
+    }
+    const fresh = await readTools();
+    slices.set(DISPATCH_KEY, { ...normalizeDispatchBook(book), ...fresh });
+    return calls.length ? done : "Nothing changed.";
   }
 
   /** Owner 2026-10-28: "Spara utkast" keeps the changed zones' rules on the server as a draft, not live. */
@@ -543,6 +578,12 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       if (action === "admin.dispatch.publish") return publishDispatch(normalizeDispatchBook(input.value));
       if (action === "admin.dispatch.saveDraft") return saveDispatchDraft(normalizeDispatchBook(input.value), input.scope);
       if (action === "admin.dispatch.undo") return undoDispatch(input.targetId);
+      // v0.18.6 (G4-F2..F4, F6): the dispatch tools are the server's.
+      if (action === "admin.dispatch.preset") return saveTools(normalizeDispatchBook(input.value), "Preset saved.");
+      if (action === "admin.dispatch.group") return saveTools(normalizeDispatchBook(input.value), "Group saved.");
+      if (action === "admin.dispatch.radarZone") return saveTools(normalizeDispatchBook(input.value), "Radar zone saved.");
+      if (action === "admin.dispatch.radarRule") return saveTools(normalizeDispatchBook(input.value), "Rule saved.");
+      if (action === "admin.dispatch.event") return saveTools(normalizeDispatchBook(input.value), "Event saved.");
       if (action === "admin.config.save") {
         slices.set(CONFIG_KEY, input.value);
         return Promise.resolve("Draft saved in this session. Publish sends it to the chosen zones.");

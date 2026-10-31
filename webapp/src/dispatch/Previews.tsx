@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { AlertTriangle, CalendarClock, Car, Clock, Flag, Home, List, MapPin, Navigation, Radar, Route, ShieldCheck, Sparkles, Star, Target, TrendingUp, UserCheck, UserRound, Users, X } from "lucide-react";
-import { exclusiveReasonText } from "./offers";
 import type { MarketId } from "../markets/markets";
 import { Choice } from "./fields";
 import { riderSeesLine } from "./cancelFees";
@@ -8,7 +7,7 @@ import {
   EXTRAS, homePopupSkippedBelowMin, leaveNowBeforeMin, RESERVATION_STEP_LABEL, reservationTimeline, stepAfterDriverCancel, WAIT_KINDS,
   type DriverGroup, type OfferMode, type ReservationTimelineStep, type ZoneDispatch,
 } from "./rules";
-import { tr, trn, trx, trSentences } from "../i18n";
+import { tr, trn, trx, trSentences, uiLocale } from "../i18n";
 
 /** How the rules look on the phones: the driver's offer card and the rider's waiting screen. */
 
@@ -36,7 +35,6 @@ export function DriverOfferPreview({ zone, money, country, commissionPct = 20 }:
   const seconds = shown === "radar" ? zone.radar.seconds : zone.exclusive.seconds;
   const badges = card.badges ? zone.extras.filter((extra) => extra.on && extra.badge && (extra.id === "child_seat" || extra.id === "long_trip")).map((extra) => EXTRAS.find((item) => item.id === extra.id)!.badge) : [];
   const stops = card.stops && zone.stops.on ? Math.min(1, zone.stops.max) : 0;
-  const reason = current === "driving" ? exclusiveReasonText(zone.exclusiveReasons, "finishing-nearby") : exclusiveReasonText(zone.exclusiveReasons, "best-match") || exclusiveReasonText(zone.exclusiveReasons, "nearby");
   const fare = card.netFare ? Math.round(sample.price * (1 - commissionPct / 100) * 100) / 100 : sample.price;
   return (
     <figure className="dp-phone dx-phone" aria-label={tr("Driver offer preview")}>
@@ -79,11 +77,12 @@ export function DriverOfferPreview({ zone, money, country, commissionPct = 20 }:
         {stack > 1 ? <span className="dx-offer-stack" aria-label={tr("{0} offers stacked", [stack])}>{Array.from({ length: Math.min(stack - 1, 3) }, (_, index) => <i key={index} style={{ bottom: `${16 + (index + 1) * 7}px`, left: `${14 + (index + 1) * 6}px`, right: `${14 + (index + 1) * 6}px` }} />)}</span> : null}
         {current !== "full" && stack ? <div className={`dx-offer ${shown}`} aria-label={tr("Offer card")}>
           <div className="dx-offer-top">
-            <span className={`dx-mode-tag ${shown}`}>{shown === "radar" ? <>{trn("{0} Radar · {1} drivers see it", <Radar size={11} aria-hidden="true" />, zone.radar.drivers)}</> : <><Target size={11} aria-hidden="true" /> {reason || tr("Exclusive")}</>}</span>
+            <span className={`dx-mode-tag ${shown}`}>{shown === "radar" ? <>{trn("{0} Radar · {1} drivers see it", <Radar size={11} aria-hidden="true" />, zone.radar.drivers)}</> : <><Target size={11} aria-hidden="true" /> {tr("Exclusive")}</>}</span>
             <span className="dx-offer-timer" aria-label={tr("{0} seconds to accept", [seconds])}>{trn("{0}s", seconds)}</span>
           </div>
           <b className="dx-offer-price">{money(fare)}{card.netFare ? <small className="dx-offer-net">{" "}{tr("your share")}</small> : null}</b>
-          {card.riderRating ? <span className="dx-offer-line">{trn("{0} 4.9 · 120 trips", <Star size={11} aria-hidden="true" />)}</span> : null}
+          {/* v0.18.6 (owner decision 3): the rider's real average with one decimal; nothing for a rider with no rating. */}
+          {card.riderRating ? <span className="dx-offer-line" data-testid="preview-rider-rating">{trn("{0} {1} rider rating", <Star size={11} aria-hidden="true" />, (4.8).toLocaleString(uiLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }))}</span> : null}
           {card.pickupDistance ? <span className="dx-offer-line">{trn("{0} 1.8 km · 4 min to pickup", <Navigation size={11} aria-hidden="true" />)}</span> : null}
           <span className="dx-offer-line"><MapPin size={11} aria-hidden="true" /> {card.pickupAddress ? tr("Pickup: {0}", [sample.pickup]) : tr("Pickup nearby")}</span>
           {stops ? <span className="dx-offer-line">{trn("{0} 1 stop{1}", <Route size={11} aria-hidden="true" />, card.pickupAddress ? `: ${sample.stop}` : "")}</span> : null}

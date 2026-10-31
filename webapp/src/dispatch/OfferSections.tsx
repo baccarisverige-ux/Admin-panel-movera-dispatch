@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { Car, Layers, Power, Radar, Route, Smartphone, Target } from "lucide-react";
 import { Card, Choice, Num, Row, Switch } from "./fields";
-import { ExclusiveReasonsCard } from "./OfferSettings";
+import { autoOfflineText } from "./offerRules";
 import type { ZoneDispatch } from "./rules";
 import { tr, trn } from "../i18n";
 
@@ -55,7 +55,7 @@ export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
       </Card>
 
       <Card title={tr("Go offline automatically")} tone="red" icon={<Power size={18} />} help={tr("A driver who does not accept offers is set offline, so riders are not kept waiting.")} off={!zone.autoOffline.on} aside={<Switch label={tr("Go offline automatically")} on={zone.autoOffline.on} disabled={disabled} onChange={(on) => set({ autoOffline: { ...zone.autoOffline, on } })} />}>
-        <Row label={tr("After offers not accepted in a row")} help={tr("Exclusive and other one-driver offers, declined or left to run out, also rides given by Movera and offers while driving. Radar trips never count, here or in the acceptance rate. The driver can go online again at once.")}>
+        <Row label={tr("After offers not accepted in a row")} help={`${autoOfflineText(zone.autoOffline.after)} ${tr("Offers sent during a trip do not count. The driver can go online again at once.")}`}>
           <Num label={tr("Offline after offers not accepted")} value={zone.autoOffline.after} unit="offers" min={1} max={99} disabled={disabled || !zone.autoOffline.on} onChange={(after) => set({ autoOffline: { ...zone.autoOffline, after: Math.round(after) } })} />
         </Row>
       </Card>
@@ -69,7 +69,7 @@ export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
   );
 }
 
-/** Radar · Exclusive · Reservations › Exclusive: the zone's Exclusive rules and the reason texts. */
+/** Radar · Exclusive · Reservations › Exclusive: the zone's Exclusive rules (v0.18.6 G4-E7: no reason texts). */
 export function ExclusiveRules({ zone, onChange, disabled, zoneId }: Props) {
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   const off = disabled || !zone.exclusive.on;
@@ -90,7 +90,6 @@ export function ExclusiveRules({ zone, onChange, disabled, zoneId }: Props) {
         </Row>
         <p className="dx-note">{trn("{0} The best driver, drivers finishing a ride nearby and favourite drivers are in {1}. What the offer card shows is in {2}.", <Target size={13} aria-hidden="true" />, <Link to={`/dispatch?tab=best&zone=${zoneId}`}>{tr("Dispatch › Best driver")}</Link>, <Link to={`/dispatch?zone=${zoneId}&card=Offer+card`}>{tr("Dispatch › Modes")}</Link>)}</p>
       </Card>
-      <ExclusiveReasonsCard zone={zone} onChange={onChange} disabled={disabled} />
     </>
   );
 }
