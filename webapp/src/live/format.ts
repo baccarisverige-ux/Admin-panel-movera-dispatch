@@ -58,27 +58,49 @@ export function isAdminCheck(type: string): boolean {
   return (registered(type).kind ?? DOCUMENT_TYPES[type]?.kind) === "admin_check";
 }
 
-export type DocumentRow = { type: string; status: DocumentStatus; document: DocumentSummary | null; required: boolean };
+/**
+ * One document type on a page. v0.18.5 (owner G2-D1 "Keep old until new approved (Recommended)"): `document` is the
+ * approved (or current) one; `renewal` is a newer upload waiting for review (or rejected) that renews it.
+ */
+export type DocumentRow = { type: string; status: DocumentStatus; document: DocumentSummary | null; required: boolean; renewal: DocumentSummary | null };
+
+/** The documents without the renewals (DocumentSummary.renewalOf), so a renewal never hides the approved one. */
+export function mainDocuments<T extends { renewalOf?: string | undefined }>(documents: readonly T[] | undefined): T[] {
+  return (documents ?? []).filter((document) => !document.renewalOf);
+}
+
+/** The renewal waiting for (or refused at) review for this document, if any. */
+export function renewalFor<T extends { renewalOf?: string | undefined }>(documents: readonly T[] | undefined, documentId: string | undefined): T | null {
+  if (!documentId) return null;
+  return (documents ?? []).find((document) => document.renewalOf === documentId) ?? null;
+}
+
+/** True when a renewal of this account waits for an admin (the review queue shows the account). */
+export function hasRenewalWaiting(documents: readonly { renewalOf?: string | undefined; status: string }[] | undefined): boolean {
+  return (documents ?? []).some((document) => Boolean(document.renewalOf) && document.status === "in_review");
+}
 
 /**
  * One row per required type (in the contract's order), with status "missing" when nothing was uploaded, then any
- * uploaded document of a type that is not required. The latest document of a type wins when the server sent several.
+ * uploaded document of a type that is not required. The latest document of a type wins when the server sent several;
+ * a renewal never replaces the document it renews (it is the row's `renewal`).
  */
 export function documentRows(required: readonly string[] | undefined, documents: readonly DocumentSummary[] | undefined): DocumentRow[] {
+  const main = mainDocuments(documents);
   const byType = new Map<string, DocumentSummary>();
-  for (const document of documents ?? []) byType.set(document.type, document);
+  for (const document of main) byType.set(document.type, document);
   const rows: DocumentRow[] = [];
   const seen = new Set<string>();
+  const row = (type: string, document: DocumentSummary | null, isRequired: boolean): DocumentRow => ({ type, status: document?.status ?? "missing", document, required: isRequired, renewal: renewalFor(documents, document?.documentId) });
   for (const type of required ?? []) {
     if (seen.has(type)) continue;
     seen.add(type);
-    const document = byType.get(type) ?? null;
-    rows.push({ type, status: document?.status ?? "missing", document, required: true });
+    rows.push(row(type, byType.get(type) ?? null, true));
   }
-  for (const document of documents ?? []) {
+  for (const document of main) {
     if (seen.has(document.type)) continue;
     seen.add(document.type);
-    rows.push({ type: document.type, status: document.status, document, required: false });
+    rows.push(row(document.type, byType.get(document.type) ?? document, false));
   }
   return rows;
 }
@@ -157,6 +179,8 @@ export function ruleProblemText(detail: string): string {
 /** The text a screen shows for a failed call: plain for the known cases, with the request id for the unexpected ones. */
 export function errorText(error: unknown): string {
   if (!(error instanceof ApiError)) return error instanceof Error && error.message ? error.message : tr("Something failed.");
+  // v0.18.5 (G1-B2): e.g. Content › Legal of a country with none of the admin's zones, or a trip of another zone.
+  if (error.status === 403 && error.reason === "zone_out_of_scope") return tr("This is outside your zones.");
   if (error.status === 403) return tr("Your role cannot do that.");
   if (error.status === 401) return tr("Sign in again.");
   if (error.status === 409 && error.code === "version_mismatch") return tr("Someone else changed this record. It was reloaded; check it and try again.");
@@ -174,7 +198,12 @@ export function errorText(error: unknown): string {
   if (error.reason === "driver_online") return tr("The driver is online. Try again when the driver is offline.");
   if (error.reason === "no_vehicle") return tr("The driver has no car, so no category can be set.");
   if (error.reason === "bank_not_uploaded") return tr("The driver has not uploaded bank details yet.");
-  if (error.reason === "note_required") return tr("Write a note: the driver sees why the bank details were rejected.");
+  // v0.18.5 (owner G2-D5.7 "Reason always (Recommended)"): every rejection or block says why.
+  if (error.reason === "note_required") return tr("Write why: the driver sees the reason.");
+  // v0.18.5 (owner G2-D5.8): an end date more than 15 years ahead (contract documentExpiry.texts.expiry_too_far).
+  if (error.reason === "expiry_too_far") return tr("Check the end date");
+  // v0.18.5 (owner G2-D5.3): a car is approved with at least one ride category given by the admin.
+  if (error.reason === "categories_required") return tr("Give the car at least one ride category.");
   // v0.17.0 (owner item 1): approving a document that expires needs its date.
   if (error.status === 400 && error.reason === "expiry_required") return tr("This document expires: type the expiry date from the document (after today).");
   if (error.status === 400 && error.reason === "expiry_in_past") return tr("The expiry date must be after today.");

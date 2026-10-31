@@ -80,13 +80,17 @@ export type DemoRecord = {
   /** Live cars (contract v0.10.1): the required car documents not approved yet; non-empty means the car can't be picked or driven. */
   liveVehicleMissing?: string[];
   /** Live builds: the car's documents as the server sent them (v0.17.0: reviewed on the car page, expiry typed). */
-  liveVehicleDocs?: { documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string }[]; required: string[]; country?: string };
+  liveVehicleDocs?: { documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string; renewalOf?: string }[]; required: string[]; country?: string };
   /** Live fleet owners (Fleet.code): the fleet's Movera code; missing until the fleet is approved. */
   liveFleetCode?: string;
   /** Live cars: the categories the car is registered for (Vehicle.categoryIds), as the server sent them. */
   liveCategoryIds?: string[];
   /** Live cars (contract v0.18.3 R2): Vehicle.ruleProblems, "<category>:<problem>" while the car breaks the rules. */
   liveRuleProblems?: string[];
+  /** Live cars (v0.18.5 G2-D5.4): the server's review status (pending, approved, rejected, blocked). */
+  liveVehicleStatus?: string;
+  /** Live cars (v0.18.5 G2-D5.3): Vehicle.fitCategories, the categories the admin may give on approval. */
+  liveFitCategories?: string[];
   /** Live riders: the server's rating, wallet and unpaid fees (AdminRider). */
   liveRider?: LiveRiderFacts;
   /** Live ratings (GET /admin/ratings, contract v0.9.0). */
@@ -136,7 +140,7 @@ export type LiveAccountFacts = {
   country?: string;
   fleetRole?: "owner" | "member";
   vehicleId?: string;
-  documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string }[];
+  documents: { documentId: string; type: string; status: "missing" | "in_review" | "approved" | "rejected" | "expired"; expiresAt?: string; renewalOf?: string }[];
   requiredDocuments?: string[];
   requiredFleetDocuments?: string[];
   /** v0.18.0: the categories the admin allows (PUT /admin/drivers/{id}/categories). */

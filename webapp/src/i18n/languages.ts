@@ -29,7 +29,8 @@ export function homeCountry(scope: { countries?: readonly MarketId[] } | undefin
   return scope?.countries?.[0] ?? "SE";
 }
 
-export type LanguageSource = "chosen" | "country" | "build";
+/** "computer": before sign-in, the computer's language (owner G1-D2). */
+export type LanguageSource = "chosen" | "country" | "build" | "computer";
 
 export type LanguageInput = {
   /** What the admin picked in their profile, if anything. */

@@ -22,6 +22,9 @@ import {
   prepareSettings,
   removeFromList,
   endDateFrom,
+  endDateTooFar,
+  maxEndDate,
+  EXPIRY_MAX_YEARS_AHEAD,
   setGuide,
   setValidMonths,
   settingsProblem,
@@ -221,4 +224,18 @@ test("G2 R10: the closed country (TN) is not asked for its onboarding settings (
   const book = normalizeSettingsBook(await live.readSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook()));
   assert.deepEqual(server.calls.filter((call) => call.path.includes("country=TN")), []);
   assert.deepEqual(book.countries.TN.document.documents, { driver: [], fleet: [], vehicle: [] }, "TN keeps its closed defaults");
+});
+
+// Owner G2-D5.8 (2026-10-30, "Max 15 years ahead (Recommended)"): the date picker stops at today + 15 years.
+test("G2-D5.8: the last end date is today + 15 years (the contract's maxYearsAhead)", () => {
+  const contract = contractJson<{ driverOnboarding: { documentExpiry: { maxYearsAhead: number; texts: { expiry_too_far: Record<string, string> } } } }>("contract.json");
+  assert.equal(EXPIRY_MAX_YEARS_AHEAD, contract.driverOnboarding.documentExpiry.maxYearsAhead);
+  assert.equal(contract.driverOnboarding.documentExpiry.texts.expiry_too_far.en, "Check the end date");
+  const now = Date.parse("2026-10-30T12:00:00Z");
+  assert.equal(maxEndDate(now), "2041-10-30");
+  assert.equal(endDateTooFar("2041-10-30", now), false);
+  assert.equal(endDateTooFar("2041-10-31", now), true);
+  assert.equal(endDateTooFar("2099-01-01", now), true);
+  assert.equal(endDateTooFar("2027-01-01", now), false);
+  assert.equal(endDateTooFar("", now), false);
 });

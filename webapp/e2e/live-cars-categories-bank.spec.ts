@@ -111,16 +111,19 @@ test("FR: driver categories are PUT on the server; the last one cannot be switch
 });
 
 for (const [country, id, path] of [["SE", "D1001", "/drivers/D1001?tab=earnings"], ["FR", "D3001", "/drivers/D3001?tab=earnings&country=FR"]] as const) {
-  test(`${country}: bank review is sent to the server; a rejection without a note is explained`, async ({ page }) => {
+  // v0.18.5 (owner G2-D5.7 "Reason always"): Rejected stays off until the admin writes why; the words are sent as the note.
+  test(`${country}: bank review is sent to the server; a rejection needs the admin's own note`, async ({ page }) => {
     const f = await fake(page, (p, body) => (p.endsWith("/bank/review") && body?.["decision"] === "rejected" && !body["note"] ? (route) => refuse(route, 400, "invalid_request", "note_required") : "ok"));
     await signIn(page);
     await page.goto(path);
     await page.getByRole("button", { name: "Approved", exact: true }).click();
     await confirm(page);
     await expect.poll(() => f.sent.find((call) => call.path === `/admin/drivers/${id}/bank/review`)?.body).toEqual({ decision: "approved" });
+    await expect(page.getByRole("button", { name: "Rejected", exact: true })).toBeDisabled();
+    await page.getByTestId("bank-note").fill("The account holder is not the company");
     await page.getByRole("button", { name: "Rejected", exact: true }).click();
     await confirm(page);
-    await expect(page.getByText("Write a note: the driver sees why the bank details were rejected.").first()).toBeVisible();
+    await expect.poll(() => f.sent.filter((call) => call.path === `/admin/drivers/${id}/bank/review`).at(-1)?.body).toEqual({ decision: "rejected", note: "The account holder is not the company" });
   });
 }
 

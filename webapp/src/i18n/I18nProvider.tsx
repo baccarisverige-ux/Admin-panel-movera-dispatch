@@ -1,10 +1,11 @@
-import { createContext, Fragment, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, Fragment, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { COUNTRY_SETTINGS_KEY, normalizeCountrySettingsBook } from "../config/countrySettings";
 import type { MarketId } from "../markets/markets";
 import { isLanguageLoaded, loadLanguage, setLanguage } from "./core";
 import { homeCountry, resolveAdminLanguage, type AppLanguage, type LanguageSource } from "./languages";
+import { signInLanguage, subscribeSignInLanguage } from "./signInLanguage";
 
 type I18nValue = {
   language: AppLanguage;
@@ -31,11 +32,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const slice = useSlice<unknown>(COUNTRY_SETTINGS_KEY, null, { enabled: Boolean(agent) });
   const book = useMemo(() => normalizeCountrySettingsBook(slice.value), [slice.value]);
   const country = homeCountry(me?.scope);
-  const resolved = resolveAdminLanguage({
-    chosen: me?.language,
-    countryDefault: me ? book.countries[country].languages.admin : undefined,
-    buildDefault: import.meta.env.VITE_ADMIN_LANGUAGE,
-  });
+  // Owner G1-D2: nobody signed in (sign-in, forgot password, set password, signed out) → the computer's language or
+  // the globe's choice on this computer; signed in → the admin's own language, as before.
+  const beforeSignIn = useSyncExternalStore(subscribeSignInLanguage, signInLanguage, signInLanguage);
+  const resolved: { language: AppLanguage; source: LanguageSource; defaultLanguage: AppLanguage } = me
+    ? resolveAdminLanguage({
+      chosen: me.language,
+      countryDefault: book.countries[country].languages.admin,
+      buildDefault: import.meta.env.VITE_ADMIN_LANGUAGE,
+    })
+    : { language: beforeSignIn.language, source: beforeSignIn.source === "chosen" ? "chosen" : "computer", defaultLanguage: beforeSignIn.language };
   // French and Swedish load on first use; until then the page waits a moment (English never waits).
   const ready = isLanguageLoaded(resolved.language);
   const [, setLoaded] = useState(0);

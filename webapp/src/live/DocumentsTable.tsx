@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Modal } from "../ui/Modal";
 import { tr, trn } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
@@ -23,6 +23,10 @@ type Props = {
 };
 
 type Viewer = { row: DocumentRow; url: string | null; mediaType: string; error: unknown; loading: boolean };
+type FileView = { url: string | null; mediaType: string; error: unknown; loading: boolean };
+/** v0.18.5 (owner G2-D1): the approved document and its renewal, side by side. */
+type Compare = { row: DocumentRow; current: FileView; next: FileView };
+const LOADING: FileView = { url: null, mediaType: "", error: null, loading: true };
 
 /**
  * One row per required document type (plus any extra upload): status, expiry and, for uploads, Open (the file is
@@ -37,7 +41,8 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
   const mayReview = can("documents.approve");
   const rows = documentRows(required, documents);
   const [viewer, setViewer] = useState<Viewer | null>(null);
-  const [decision, setDecision] = useState<{ row: DocumentRow; kind: "approved" | "rejected" } | null>(null);
+  const [decision, setDecision] = useState<{ row: DocumentRow; kind: "approved" | "rejected"; renewal?: boolean } | null>(null);
+  const [compare, setCompare] = useState<Compare | null>(null);
 
   useEffect(() => {
     const url = viewer?.url;
@@ -45,6 +50,28 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
       if (url) URL.revokeObjectURL(url);
     };
   }, [viewer?.url]);
+  const currentUrl = compare?.current.url;
+  const nextUrl = compare?.next.url;
+  useEffect(() => () => {
+    for (const url of [currentUrl, nextUrl]) if (url) URL.revokeObjectURL(url);
+  }, [currentUrl, nextUrl]);
+
+  async function fileOf(documentId: string): Promise<FileView> {
+    try {
+      const { blob, mediaType } = await client.blob(`/admin/documents/${encodeURIComponent(documentId)}/file`);
+      return { url: URL.createObjectURL(blob), mediaType: mediaType || blob.type, error: null, loading: false };
+    } catch (error) {
+      return { url: null, mediaType: "", error, loading: false };
+    }
+  }
+
+  /** G2-D1: the current (approved) file and the new one side by side; the new one is reviewed with its own id. */
+  async function openCompare(row: DocumentRow) {
+    if (!row.document || !row.renewal) return;
+    setCompare({ row, current: LOADING, next: LOADING });
+    const [current, next] = await Promise.all([fileOf(row.document.documentId), fileOf(row.renewal.documentId)]);
+    setCompare((value) => (value && value.row.type === row.type ? { row, current, next } : value));
+  }
 
   async function open(row: DocumentRow) {
     if (!row.document) return;
@@ -82,11 +109,15 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
                 const uploaded = row.document && row.status !== "missing";
                 const adminCheck = isAdminCheck(row.type);
                 const canOpen = Boolean(uploaded && documentHasFile(row.type));
-                const canDecide = Boolean(uploaded && mayReview && row.status !== "approved" && !adminCheck);
+                // G2-D1: with a renewal the new upload is reviewed (Compare and review), not the current document.
+                const canDecide = Boolean(uploaded && mayReview && row.status !== "approved" && !adminCheck && !row.renewal);
                 // v0.17.0 (owner items 8, 13): the info session is held by Movera; the driver sees "Waiting for Movera".
                 const canMarkHeld = Boolean(adminCheck && mayReview && driverId && row.status !== "approved");
+                const renewal = row.renewal;
+                const renewalWaiting = renewal?.status === "in_review";
                 return (
-                  <tr key={row.type} data-document-type={row.type}>
+                  <Fragment key={row.type}>
+                  <tr data-document-type={row.type}>
                     <td>
                       {name(row)}
                       {!row.required ? <span className="chip">{tr("Extra")}</span> : null}
@@ -99,8 +130,20 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
                       {canDecide ? <button data-command="admin.server.documentReview" type="button" className="link-action" onClick={() => setDecision({ row, kind: "approved" })}>{tr("Approve")}</button> : null}
                       {canDecide ? <button data-command="admin.server.documentReview" type="button" className="link-action live-danger-link" onClick={() => setDecision({ row, kind: "rejected" })}>{tr("Reject")}</button> : null}
                       {!uploaded && !adminCheck ? <span className="live-muted">{tr("Nothing uploaded yet")}</span> : null}
+                      {renewal && mayReview ? <button data-command="admin.server.documentOpen" type="button" className="link-action" onClick={() => void openCompare(row)}>{renewalWaiting ? tr("Compare and review") : tr("Compare")}</button> : null}
                     </td>
                   </tr>
+                  {renewal ? (
+                    <tr className="live-renewal-row" data-renewal-of={row.type} data-testid="renewal-row">
+                      <td colSpan={4}>
+                        <span className={renewalWaiting ? "chip warn" : "chip"}>{renewalWaiting ? tr("Renewal waiting") : tr("Renewal rejected")}</span>{" "}
+                        {renewalWaiting
+                          ? trn("New document waiting for review – the current one stays valid until {0}.", <DateText value={row.document?.expiresAt} />)
+                          : trn("The new document was rejected – the current one stays valid until {0}.", <DateText value={row.document?.expiresAt} />)}
+                      </td>
+                    </tr>
+                  ) : null}
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -127,10 +170,35 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
         ) : null}
       </Modal>
 
+      <Modal open={Boolean(compare)} title={compare ? tr("{0}: current and new", [name(compare.row)]) : ""} onClose={() => setCompare(null)}>
+        {compare ? (
+          <div className="live-compare" data-testid="renewal-compare">
+            <figure className="live-compare-side" data-side="current">
+              <figcaption><strong>{tr("Current")}</strong> · <Status code={compare.row.status} /> · {trn("valid until {0}", <DateText value={compare.row.document?.expiresAt} />)}</figcaption>
+              <FilePreview view={compare.current} name={name(compare.row)} type={compare.row.type} />
+            </figure>
+            <figure className="live-compare-side" data-side="new">
+              <figcaption><strong>{tr("New")}</strong> · <Status code={compare.row.renewal?.status ?? "in_review"} />{compare.row.renewal?.expiresAt ? <> · {trn("end date sent: {0}", <DateText value={compare.row.renewal.expiresAt} />)}</> : null}</figcaption>
+              <FilePreview view={compare.next} name={name(compare.row)} type={compare.row.type} />
+            </figure>
+          </div>
+        ) : null}
+        {compare && mayReview && compare.row.renewal?.status === "in_review" ? (
+          <div className="actions">
+            <button data-command="admin.server.documentReview" type="button" className="primary-btn" onClick={() => setDecision({ row: compare.row, kind: "approved", renewal: true })}>{tr("Approve the new one")}</button>
+            <button data-command="admin.server.documentReview" type="button" className="secondary-btn" onClick={() => setDecision({ row: compare.row, kind: "rejected", renewal: true })}>{tr("Reject the new one")}</button>
+          </div>
+        ) : null}
+      </Modal>
+
       <DecisionDialog
         open={Boolean(decision)}
         title={decision?.kind === "rejected" ? tr("Reject document") : tr("Approve document")}
-        summary={decision ? (decision.kind === "rejected" ? trn("Reject {0}. The driver sees the note and uploads again.", <strong>{name(decision.row)}</strong>) : trn("Approve {0}.", <strong>{name(decision.row)}</strong>)) : null}
+        summary={decision ? (decision.renewal
+          ? (decision.kind === "rejected"
+            ? trn("Reject the new {0}. The current one stays valid until {1}; the driver sees the note.", <strong>{name(decision.row)}</strong>, <DateText value={decision.row.document?.expiresAt} />)
+            : trn("Approve the new {0}. It replaces the current one (valid until {1}).", <strong>{name(decision.row)}</strong>, <DateText value={decision.row.document?.expiresAt} />))
+          : (decision.kind === "rejected" ? trn("Reject {0}. The driver sees the note and uploads again.", <strong>{name(decision.row)}</strong>) : trn("Approve {0}.", <strong>{name(decision.row)}</strong>))) : null}
         confirmLabel={decision?.kind === "rejected" ? tr("Reject") : tr("Approve")}
         note={decision?.kind === "rejected" ? "required" : "optional"}
         expiry={decision?.kind === "approved"}
@@ -139,14 +207,18 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
         danger={decision?.kind === "rejected"}
         onClose={() => setDecision(null)}
         onConfirm={async ({ note, expiresAt, issuedAt }) => {
-          if (!decision?.row.document) return;
-          await client.post<DocumentRecord>(`/admin/documents/${encodeURIComponent(decision.row.document.documentId)}/review`, {
+          // G2-D1: a renewal is reviewed with its own documentId; approving it moves its file onto the approved one.
+          if (!decision) return;
+          const target = decision.renewal ? decision.row.renewal : decision.row.document;
+          if (!target) return;
+          await client.post<DocumentRecord>(`/admin/documents/${encodeURIComponent(target.documentId)}/review`, {
             decision: decision.kind,
             ...(note ? { note } : {}),
             ...(issuedAt ? { issuedAt: new Date(`${issuedAt}T00:00:00Z`).toISOString() } : {}),
             ...(expiresAt ? { expiresAt } : {}),
           });
           setViewer(null);
+          setCompare(null);
           onChanged();
         }}
       />
@@ -164,5 +236,21 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
         }}
       />
     </section>
+  );
+}
+
+/** One file in the window: a picture, a PDF, or a download link for anything else. */
+function FilePreview({ view, name, type }: { view: FileView; name: string; type: string }) {
+  if (view.loading) return <p className="state-line">{tr("Loading the file.")}</p>;
+  if (view.error) return <ErrorLine error={view.error} />;
+  if (!view.url) return null;
+  const kind = viewableMediaType(view.mediaType);
+  if (kind === "image") return <img className="live-file" src={view.url} alt={name} />;
+  if (kind === "pdf") return <iframe className="live-file live-pdf" src={view.url} title={name} />;
+  return (
+    <p className="state-line">
+      {tr("This file type cannot be shown here.")}{" "}
+      <a className="link-action" href={view.url} download={type}>{tr("Download")}</a>
+    </p>
   );
 }

@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { tr } from "../i18n";
+import { SignInLanguageGlobe } from "../i18n/SignInLanguageGlobe";
 import { useLiveSession } from "./LiveSessionContext";
 
-/** The live sign-in (contract §9): e-mail and password through the server; no code field, no demo agent picker. */
+/**
+ * The live sign-in (contract §9): e-mail and password through the server; no code field, no demo agent picker.
+ * Owner G1-D2: in the computer's language (sv / fr / en, else English) with the globe to pick another; after an idle
+ * sign-out or a session the server ended, the page says so.
+ */
 export function LiveLoginPage() {
   const live = useLiveSession();
   const [email, setEmail] = useState("");
@@ -18,7 +23,15 @@ export function LiveLoginPage() {
           void live.signIn(email, password);
         }}
       >
-        <p className="crumb">Movera Admin</p>
+        <div className="login-top">
+          <p className="crumb">Movera Admin</p>
+          <SignInLanguageGlobe />
+        </div>
+        {live.signedOut ? (
+          <p className="login-signed-out" role="status" data-testid="signed-out-notice">
+            {live.signedOut === "idle" ? tr("You were signed out because the panel was not used for a while. Sign in again.") : tr("Your session has ended. Sign in again.")}
+          </p>
+        ) : null}
         <h1>{tr("Sign in")}</h1>
         <p>{tr("Sign in with your Movera admin e-mail and password.")}</p>
         <label>

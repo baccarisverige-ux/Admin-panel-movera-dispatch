@@ -43,6 +43,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.shell.closeSearch", label: "Close search", reason: false, permission: "overview.read" },
   { id: "admin.auth.signIn", label: "Sign in", reason: false, permission: "overview.read" },
   { id: "admin.auth.pickAgent", label: "Pick demo agent", reason: false, permission: "overview.read" },
+  // Owner G1-D2: the globe on the pages before sign-in (sv / fr / en, remembered on this computer).
+  { id: "admin.auth.signInLanguage", label: "Choose the sign-in page language", reason: false, permission: "overview.read" },
   // Live mode (src/live): the server decides and writes the audit; the note travels in the request body.
   { id: "admin.server.signIn", label: "Sign in to the server", reason: false, permission: "overview.read" },
   { id: "admin.server.setupPassword", label: "Choose the first password", reason: false, permission: "overview.read" },
@@ -65,6 +67,10 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.vehicleReview", label: "Decide a vehicle", reason: false, permission: "vehicles.edit" },
   { id: "admin.server.tripRefund", label: "Refund a trip", reason: false, permission: "payments.refund" },
   { id: "admin.server.vehicleDocuments", label: "Show vehicle documents", reason: false, permission: "drivers.read" },
+  // v0.18.5 (owner G1-B2): Content › Legal per country, published on the server (POST /admin/legal/{country}/publish).
+  { id: "admin.server.legalPublish", label: "Publish terms and privacy", reason: false, permission: "settings.publish" },
+  // v0.18.5 (owner G9): the trip's chat in the trip details (GET /trips/{tripId}/messages, support.reply).
+  { id: "admin.server.tripChat", label: "Show the trip chat", reason: false, permission: "trips.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },
   // The id is kept for older audit rows; the demo amount is above the default 500 kr second-admin limit.
   { id: "admin.audit.refund250", label: "Refund 600 kr", reason: true, permission: "payments.refund" },

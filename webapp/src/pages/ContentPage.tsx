@@ -13,6 +13,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { CommandButton } from "../ui/CommandButton";
 import { DiffTable } from "../content/DiffTable";
 import { DriverTextsView } from "../content/DriverTexts";
+import { LegalEditor } from "../content/LegalEditor";
 import { emptyStudioText, publishBody, validateStudio } from "../content/studio";
 import { tr, trn } from "../i18n";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
@@ -50,7 +51,7 @@ export function ContentPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const view = params.get("view") === "driver-texts" ? "driver-texts" : "slots";
+  const view = params.get("view") === "driver-texts" ? "driver-texts" : params.get("view") === "legal" ? "legal" : "slots";
   const scope = useMarketScope();
   const store = useSlice<StudioBook>("studioOps", emptyStudio());
   const extraSlice = useSlice<ContentOps>(CONTENT_OPS_KEY, emptyContentOps());
@@ -107,17 +108,18 @@ export function ContentPage() {
         <button data-command="admin.content.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> {tr("Back")}</button>
         <div className="dx-head-text">
           <h2>{tr("Content")}</h2>
-          <p>{view === "driver-texts" ? tr("Island, offer and button texts in the driver app, in English, Swedish, French and Arabic.") : live ? tr("Texts in Swedish, French and English for the apps. Publish sends them to the zones chosen at the top; one admin is enough. History and rollback come from the server.") : tr("Content studio in Swedish, French and English. A second agent must publish. Originals and every publication remain in history. Simulation only.")}</p>
+          <p>{view === "legal" ? tr("Terms of use and privacy policy per country, in Swedish, French and English, with the company details and a version history.") : view === "driver-texts" ? tr("Island, offer and button texts in the driver app, in English, Swedish, French and Arabic.") : live ? tr("Texts in Swedish, French and English for the apps. Publish sends them to the zones chosen at the top; one admin is enough. History and rollback come from the server.") : tr("Content studio in Swedish, French and English. A second agent must publish. Originals and every publication remain in history. Simulation only.")}</p>
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Content sections")}>
-        {([["slots", tr("Content slots")], ["driver-texts", tr("Driver app texts")]] as const).map(([tabId, label]) => (
+        {([["slots", tr("Content slots")], ["driver-texts", tr("Driver app texts")], ["legal", tr("Legal")]] as const).map(([tabId, label]) => (
           <button data-command="admin.content.view" key={tabId} type="button" role="tab" aria-selected={view === tabId} className={view === tabId ? "active" : undefined} onClick={() => { setNotice(""); setParams(() => { const next = new URLSearchParams(globalThis.location.search); if (tabId === "slots") next.delete("view"); else next.set("view", tabId); return next; }, { replace: true }); }}>{label}</button>
         ))}
       </div>
       <p role="status" className="gr-status">{notice}</p>
 
-      {view === "driver-texts" ? <DriverTextsView editable={editable} onNotice={setNotice} /> : (
+      {/* v0.18.5 (owner G1-B2): Content › Legal, the terms and privacy per country (SE, FR). */}
+      {view === "legal" ? <LegalEditor country={scope.market.id} onNotice={setNotice} /> : view === "driver-texts" ? <DriverTextsView editable={editable} onNotice={setNotice} /> : (
       <div className="gr-content">
         <nav className="gr-slots" aria-label={tr("All slots")}>
           {STUDIO_SLOTS.map((item) => {
@@ -155,6 +157,7 @@ export function ContentPage() {
                     <p className="gr-help">{tr("Below the minimum the app shows \"Update the app\" and is blocked (after a trip; SOS always works). Below the recommended version a message the user can close.")}</p>
                   </>
                 ) : null}
+                {id === "legal" && live ? <p className="gr-warn" data-testid="legacy-legal-note">{tr("Only older app builds read this zone text. Terms and privacy per country are edited in Content › Legal.")}</p> : null}
                 {id === "legal" ? (
                   <Row label={tr("Users must accept again")} help={tr("At the next app start (never during a trip) riders and drivers see the new terms with \"I accept\". Until then the rider cannot book and the driver cannot go online.")}>
                     <Switch label={tr("Users must accept again")} on={text.reaccept} disabled={!editable} onChange={(reaccept) => patch({ reaccept })} />

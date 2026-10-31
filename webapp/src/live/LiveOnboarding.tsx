@@ -14,7 +14,7 @@ import { LiveDriverDocuments } from "./LiveDriverDocuments";
 import { LiveListBar } from "./LiveListBar";
 import { DataTable } from "../ui/DataTable";
 import type { DemoRecord, LiveAccountFacts } from "../api/seed";
-import { documentCounts, documentTypeName } from "./format";
+import { documentCounts, documentTypeName, hasRenewalWaiting } from "./format";
 import { Status } from "./ui";
 
 type Account = { id: string; name: string; fleetId: string | null; facts: LiveAccountFacts };
@@ -45,15 +45,19 @@ export function LiveOnboarding() {
   }, { replace: true });
 
   const inCountry = useMemo<Account[]>(() => (drivers.data ?? []).flatMap((record: DemoRecord) => (record.liveAccount && (!record.liveAccount.country || record.liveAccount.country === country) ? [{ id: record.id, name: record.name || record.id, fleetId: record.fleetId ?? null, facts: record.liveAccount }] : [])), [drivers.data, country]);
-  const queue = useMemo(() => inCountry.filter((item) => item.facts.accountStatus === "pending" || item.facts.accountStatus === "on_hold")
+  // v0.18.5 (owner G2-D1): an account with a renewal waiting (an active driver's new licence, new bank details…) is in
+  // the queue too; its current documents stay valid meanwhile.
+  const queue = useMemo(() => inCountry.filter((item) => item.facts.accountStatus === "pending" || item.facts.accountStatus === "on_hold" || hasRenewalWaiting(item.facts.documents))
     .sort((left, right) => Number(right.facts.accountType === "fleet") - Number(left.facts.accountType === "fleet") || left.id.localeCompare(right.id)), [inCountry]);
 
+  const renewals = queue.filter((item) => hasRenewalWaiting(item.facts.documents)).length;
   const header = (
     <header className="dx-head">
       {steps ? <button data-command="admin.onboarding.view" type="button" className="dash-btn ghost dx-back" onClick={() => view(null)}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button> : null}
       <div className="dx-head-text">
         <h2>{steps ? tr("Onboarding steps for {0}", [trx(COUNTRY_LABEL[country])]) : tr("Onboarding queue")}</h2>
-        <p>{steps ? tr("The steps new drivers go through, the papers they need, how long each step may take and the reminders they get.") : trn("{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.", queue.length, trx(COUNTRY_LABEL[country]))}</p>
+        <p>{steps ? tr("The steps new drivers go through, the papers they need, how long each step may take and the reminders they get.") : trn("{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.", queue.filter((item) => item.facts.accountStatus !== "active").length, trx(COUNTRY_LABEL[country]))}</p>
+        {!steps && renewals > 0 ? <p data-testid="queue-renewals">{tr("Renewals to review: {0}. The current documents stay valid until you decide.", [renewals])}</p> : null}
       </div>
       {!steps ? <button data-command="admin.onboarding.view" type="button" className="dash-btn small ghost" onClick={() => view("steps")}><Settings2 size={14} aria-hidden="true" />{" "}{tr("Steps and papers")}</button> : null}
     </header>
@@ -98,12 +102,14 @@ export function LiveOnboarding() {
             rows={queue.map((item) => {
               const counts = documentCounts({ ...item.facts, documents: item.facts.documents });
               const ready = activationMissing(asDriver(item.facts)).length === 0;
+              const renewal = hasRenewalWaiting(item.facts.documents);
+              const inactive = item.facts.accountStatus !== "active";
               return [
                 <button key="name" data-command="admin.onboarding.view" type="button" className="link-button" data-driver-id={item.id} onClick={() => setSelectedId(item.id)}>{item.name}</button>,
                 kindOf(item),
                 <Status key="status" code={item.facts.accountStatus} />,
                 trn("{0} of {1} approved", counts.approved, counts.required),
-                ready ? tr("Ready to activate") : tr("Documents missing"),
+                <span key="activation" data-testid="queue-activation">{inactive ? (ready ? tr("Ready to activate") : tr("Documents missing")) : null}{inactive && renewal ? " · " : null}{renewal ? <span className="chip warn">{tr("Renewal waiting")}</span> : null}</span>,
               ];
             })}
           />
@@ -117,6 +123,7 @@ export function LiveOnboarding() {
 
 function Selected({ account, kind, cars }: { account: Account; kind: string; cars: readonly DemoRecord[] }) {
   const groups = groupMissing(activationMissing(asDriver(account.facts)));
+  const active = account.facts.accountStatus === "active";
   const name = account.name;
   const driver = { driverId: account.id };
   return (
@@ -125,7 +132,9 @@ function Selected({ account, kind, cars }: { account: Account; kind: string; car
         <h3>{name}</h3>
         <p>{kind} · <Link to={`/drivers/${encodeURIComponent(driver.driverId)}?tab=documents`}>{tr("Open the driver to activate")}</Link></p>
       </div>
-      {groups.driver.length + groups.fleet.length === 0 ? (
+      {active ? (
+        <p className="fd-banner amber" data-testid="queue-renewal-banner">{tr("Active account with a renewal waiting. Use Compare and review below; the current document stays valid until you decide.")}</p>
+      ) : groups.driver.length + groups.fleet.length === 0 ? (
         <p className="fd-banner green"><CheckCircle2 size={16} aria-hidden="true" /> {tr("Every required document is approved. The account can be activated.")}</p>
       ) : (
         <div className="fd-banner amber live-activation-refused">

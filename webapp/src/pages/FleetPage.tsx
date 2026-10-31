@@ -18,6 +18,7 @@ import { DataTable } from "../ui/DataTable";
 import { tr, trn, trx } from "../i18n";
 import { categoryName } from "../riders/profile";
 import { COUNTRY_LABEL } from "../i18n/countries";
+import { LIVE_CAR_STATES, liveCarState, liveCarStateLabel, type LiveCarState } from "../vehicles/liveState";
 
 const VIEWS = [
   { id: "all", label: "All" },
@@ -40,7 +41,10 @@ const VIEW_ICON: Record<ViewId, ReactNode> = {
   photos: <Camera size={16} />,
 };
 const VIEW_TONE: Record<ViewId, string> = { all: "blue", eligible: "green", ineligible: "orange", on_hold: "grey", expiring: "amber", invalid: "red", photos: "violet" };
-const HEALTH_TEXT: Record<DocHealth, string> = { valid: "Papers OK", expiring: "Expires soon", invalid: "Missing or expired", review: "Waiting review" };
+const HEALTH_TEXT: Record<DocHealth, Parameters<typeof tr>[0]> = { valid: "Papers OK", expiring: "Expires soon", invalid: "Missing or expired", review: "Waiting review" };
+/** v0.18.5 (owner G2-D5.4): live views = the car's true state. */
+const LIVE_VIEW_TONE: Record<LiveCarState, string> = { waiting_papers: "orange", waiting_admin: "amber", approved: "green", blocked: "grey", rejected: "red" };
+const LIVE_VIEW_ICON: Record<LiveCarState, ReactNode> = { waiting_papers: <FileWarning size={16} />, waiting_admin: <AlertTriangle size={16} />, approved: <CheckCircle2 size={16} />, blocked: <PauseCircle size={16} />, rejected: <AlertTriangle size={16} /> };
 
 export function FleetPage() {
   const navigate = useNavigate();
@@ -57,6 +61,7 @@ export function FleetPage() {
   // Live: the published onboarding config only (owner G2 R2/R10), never the browser's demo slice.
   const rules = effectiveVehicleRules(rulesSlice.value, normalizeSettingsBook(settingsSlice.value), live);
   const view = (VIEWS.find((item) => item.id === params.get("show"))?.id ?? "all") as ViewId;
+  const liveView = (LIVE_CAR_STATES as readonly string[]).includes(params.get("show") ?? "") ? params.get("show") as LiveCarState : null;
   const [now] = useState(() => Date.now());
 
   const rows = useMemo(() => {
@@ -70,12 +75,21 @@ export function FleetPage() {
         const dops = driver ? driverOps(store.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status }) : null;
         const docs = live ? liveCarDocs(record.liveVehicleDocs?.documents, now, rules.countries[countryOfZone(record.zoneId)].warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, rules.countries[countryOfZone(record.zoneId)].warnDays);
         // Live: the server's missing car documents decide; nothing is assumed approved (owner G2 R1).
-        const health = live ? (record.liveVehicleMissing?.length ? "invalid" as const : "valid" as const) : overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
+        // v0.18.5 (G2-D5.4): live papers = missing/rejected/expired (the owner must act), waiting review, or OK.
+        const liveHealth = (): DocHealth => {
+          if (!record.liveVehicleMissing?.length) return "valid";
+          const sent = (record.liveVehicleDocs?.documents ?? []).filter((doc) => !doc.renewalOf);
+          const stuck = record.liveVehicleMissing.some((type) => { const doc = sent.find((item) => item.type === type); return !doc || doc.status === "rejected" || doc.status === "expired" || doc.status === "missing"; });
+          return stuck ? "invalid" : "review";
+        };
+        const health = live ? liveHealth() : overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
         const country = rules.countries[countryOfZone(record.zoneId)];
         const car = { year: profile.year, seats: profile.seats, fuel: profile.fuel, category: profile.category };
         const photos = photosOf(rules, record.id);
         const photosWaiting = live ? 0 : Object.values(photos).filter((photo) => photo.status !== "approved").length;
-        return { record, profile, driver, docs, health, fitsList: fits(car, country), photosWaiting, hold: !live && shouldHold(docs, country), issue: live ? (record.liveRuleProblems ?? []).map(ruleProblemText).join(", ") || null : vehicleBlock(car) };
+        // Live (G2-D5.4): the true state from the server's status and papers.
+        const state = live ? liveCarState({ status: record.liveVehicleStatus ?? "pending", documents: record.liveVehicleDocs?.documents ?? [], requiredDocuments: record.liveVehicleDocs?.required ?? [] }) : null;
+        return { record, profile, driver, docs, health, state, fitsList: fits(car, country), photosWaiting, hold: !live && shouldHold(docs, country), issue: live ? (record.liveRuleProblems ?? []).map(ruleProblemText).join(", ") || null : vehicleBlock(car) };
       });
   }, [agent?.scope.fleetPartnerId, vehicles.data, drivers.data, store.value, rules, now, live]);
 
@@ -86,7 +100,7 @@ export function FleetPage() {
     if (id === "photos") return row.photosWaiting > 0;
     return row.record.status === id;
   };
-  const shown = rows.filter((row) => inView(row, view));
+  const shown = live ? rows.filter((row) => !liveView || row.state === liveView) : rows.filter((row) => inView(row, view));
   const fleetName = (id: string) => (fleets.data ?? []).find((fleet) => fleet.id === id)?.name ?? id;
   const set = (patch: Record<string, string | null>) => setParams(() => {
     const next = new URLSearchParams(globalThis.location.search);
@@ -120,11 +134,41 @@ export function FleetPage() {
         <button data-command="admin.vehicle.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
           <h2>{tr("Vehicles")}</h2>
-          <p>{trn("{0} vehicles in this view. Eligibility uses year, seats, fuel/category rules, registration review and account state.{1}", shown.length, agent?.scope.fleetPartnerId ? tr(" Fleet partner scope: {0}.", [agent.scope.fleetPartnerId]) : "")}</p>
+          <p>{live ? tr("{0} vehicles in this view. State, papers and car rules come from the server; the admin gives the categories when approving a car.", [shown.length]) : trn("{0} vehicles in this view. Eligibility uses year, seats, fuel/category rules, registration review and account state.{1}", shown.length, agent?.scope.fleetPartnerId ? tr(" Fleet partner scope: {0}.", [agent.scope.fleetPartnerId]) : "")}</p>
         </div>
         <button data-command="admin.vehicle.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "rules" })}><Settings2 size={14} aria-hidden="true" />{" "}{tr("Vehicle rules")}</button>
       </header>
 
+      {live ? (
+        <>
+          <Cards
+            compare={false}
+            compareLabel=""
+            fmt={(value) => String(value)}
+            cards={[
+              { id: "all", label: "Vehicles", value: rows.length, previous: null, format: "count", info: "Every car in your country and zones." },
+              { id: "papers", label: "Waiting for papers", value: rows.filter((row) => row.state === "waiting_papers").length, previous: null, format: "count", info: "A required car document is missing, rejected or expired: the fleet owner must send it.", goodDown: true },
+              { id: "admin", label: "Waiting for admin", value: rows.filter((row) => row.state === "waiting_admin").length, previous: null, format: "count", info: "Every paper is sent: review the papers and approve the car with its categories.", goodDown: true },
+              { id: "ok", label: "Approved", value: rows.filter((row) => row.state === "approved").length, previous: null, format: "count", info: "Cars that can take rides with the categories the admin gave." },
+              { id: "hold", label: "Blocked", value: rows.filter((row) => row.state === "blocked" || row.state === "rejected").length, previous: null, format: "count", info: "Cars put on hold or rejected by an admin.", goodDown: true },
+              { id: "rules", label: "Breaks car rules", value: rows.filter((row) => (row.record.liveRuleProblems ?? []).length > 0).length, previous: null, format: "count", info: "The server's car rules check finds a problem (year, seats or fuel).", goodDown: true },
+            ]}
+          />
+          <nav className="vh-groups" aria-label={tr("Vehicle views")} data-testid="live-vehicle-views">
+            <button data-command="admin.table.filter" type="button" className={`vh-group blue${liveView ? "" : " active"}`} aria-pressed={!liveView} onClick={() => set({ show: null })}>
+              <span className="vh-group-icon" aria-hidden="true"><Car size={16} /></span>
+              <span className="vh-group-text"><b>{tr("All")}</b><small>{rows.length}</small></span>
+            </button>
+            {LIVE_CAR_STATES.map((state) => (
+              <button key={state} data-command="admin.table.filter" type="button" className={`vh-group ${LIVE_VIEW_TONE[state]}${liveView === state ? " active" : ""}`} aria-pressed={liveView === state} onClick={() => set({ show: state })}>
+                <span className="vh-group-icon" aria-hidden="true">{LIVE_VIEW_ICON[state]}</span>
+                <span className="vh-group-text"><b>{liveCarStateLabel(state)}</b><small>{rows.filter((row) => row.state === state).length}</small></span>
+              </button>
+            ))}
+          </nav>
+        </>
+      ) : (
+        <>
       <Cards
         compare={false}
         compareLabel=""
@@ -147,10 +191,38 @@ export function FleetPage() {
           </button>
         ))}
       </nav>
+        </>
+      )}
 
       <p className="state-line vh-help">{trn("Fleet partners: {0}.", (fleets.data ?? []).map((fleet) => fleet.name || fleet.id).join(" · ") || tr("none in scope"))}</p>
 
       <LiveListBar list="vehicles" />
+      {live ? (
+        <DataTable
+          serverSearch="vehicles"
+          head={[tr("Plate"), tr("Car"), tr("Driver"), tr("Fleet"), tr("State"), tr("Categories"), tr("Fits"), tr("Year"), tr("Papers"), tr("Rule check")]}
+          rowIds={shown.map((row) => row.record.id)}
+          rows={shown.map((row) => [
+            row.record.plate ?? row.record.id,
+            `${row.record.make ?? ""} ${row.record.model ?? ""}`.trim() || "—",
+            row.driver ? row.driver.name : tr("Unassigned"),
+            fleetName(row.record.fleetId || "") || tr("Independent"),
+            <span key="state" data-testid="vehicle-state-cell" data-state={row.state ?? ""}>{row.state ? liveCarStateLabel(row.state) : "—"}</span>,
+            // G2-D5.3: the categories the admin gave on approval; none are shown before that.
+            row.record.liveVehicleStatus === "approved" || row.record.liveVehicleStatus === "blocked" ? (row.record.liveCategoryIds ?? []).map((item) => categoryName(item)).join(", ") || "—" : tr("Given at approval"),
+            (row.record.liveFitCategories ?? []).map((item) => categoryName(item)).join(", ") || "—",
+            row.record.year ?? "—",
+            tr(HEALTH_TEXT[row.health]),
+            row.issue ? <span className="vh-rule-bad" key="rule">{row.issue}</span> : tr("Passed"),
+          ])}
+          state={vehicles.isError ? "error" : "ready"}
+          onRetry={() => void vehicles.refetch()}
+          onRow={(index) => {
+            const id = shown[index]?.record.id;
+            if (id) navigate(`/vehicles/${id}`);
+          }}
+        />
+      ) : (
       <DataTable
           serverSearch="vehicles"
         head={[tr("Vehicle"), tr("Plate"), tr("Car"), tr("Driver"), tr("Fleet"), tr("Category"), tr("Fits"), tr("Year"), tr("Papers"), tr("Status"), tr("Rule check")]}
@@ -159,13 +231,13 @@ export function FleetPage() {
           row.record.id,
           row.record.plate ?? row.record.id,
           `${row.record.make ?? ""} ${row.record.model ?? ""}`.trim() || "–",
-          row.driver ? row.driver.name : row.record.driverId ?? "Unassigned",
+          row.driver ? row.driver.name : row.record.driverId ?? tr("Unassigned"),
           fleetName(row.profile.fleetId || row.record.fleetId || "") || tr("Independent"),
           // Live (owner G2c): the car's categories as the server has them, by name.
           live ? (row.record.liveCategoryIds ?? []).map((item) => categoryName(item)).join(", ") || "—" : trx(CATEGORY_LABELS[row.profile.category] ?? row.profile.category),
-          row.fitsList.map((id) => CATEGORY_LABELS[id]).join(", ") || "None",
+          row.fitsList.map((id) => trx(CATEGORY_LABELS[id])).join(", ") || tr("None"),
           row.profile.year,
-          HEALTH_TEXT[row.health] + (row.photosWaiting ? ` · ${row.photosWaiting} photo${row.photosWaiting === 1 ? "" : "s"}` : ""),
+          tr(HEALTH_TEXT[row.health]) + (row.photosWaiting ? ` · ${row.photosWaiting} photo${row.photosWaiting === 1 ? "" : "s"}` : ""),
           row.record.status,
           row.issue ? <span className="vh-rule-bad" key="rule">{row.issue}</span> : (row.profile.registrationStatus === "approved" ? "Eligible" : `Registration ${row.profile.registrationStatus}`),
         ])}
@@ -176,6 +248,7 @@ export function FleetPage() {
           if (id) navigate(`/vehicles/${id}`);
         }}
       />
+      )}
     </div>
   );
 }

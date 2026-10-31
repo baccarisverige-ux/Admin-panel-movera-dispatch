@@ -4,9 +4,10 @@ import { ApiError } from "../api/httpClient.ts";
 import { contractJson } from "../contract/load.ts";
 import { registerDictionary, setLanguage } from "../i18n/core.ts";
 import { sv } from "../i18n/sv.ts";
-import { adminCan, agentFromAdmin, documentCounts, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, liveMoney, parseMinor, liveRowHealth, placeLabel, registerCountryTypes, ruleProblemText, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, tripTimeline, viewableMediaType } from "./format.ts";
+import { adminCan, agentFromAdmin, documentCounts, hasRenewalWaiting, mainDocuments, renewalFor, documentHasFile, documentRows, documentTypeName, errorText, fullName, listQuery, liveBaseUrl, liveMoney, parseMinor, liveRowHealth, placeLabel, registerCountryTypes, ruleProblemText, requiredFor, requiredForVehicle, shortDate, signInErrorText, splitDocuments, tripTimeline, viewableMediaType } from "./format.ts";
 import { DOCUMENT_TYPES, FLEET_CODE, ONBOARDING_COUNTRIES, REQUIRED_DOCUMENTS } from "./onboardingContract.ts";
 import type { AdminMe, DocumentSummary } from "./types.ts";
+import { docState } from "./liveAdminApi.ts";
 
 type Contract = {
   version: string;
@@ -19,7 +20,7 @@ type Contract = {
 const contract = contractJson<Contract>("contract.json");
 
 test("the onboarding constants equal contract.json#driverOnboarding (v0.5.3)", () => {
-  assert.equal(contract.version, "0.18.4");
+  assert.equal(contract.version, "0.18.5");
   assert.deepEqual(DOCUMENT_TYPES, contract.driverOnboarding.documents.types);
   assert.deepEqual(REQUIRED_DOCUMENTS, contract.driverOnboarding.documents.required);
   assert.deepEqual(ONBOARDING_COUNTRIES, contract.driverOnboarding.countries);
@@ -250,4 +251,51 @@ test("G3-R1: an automatic set offline (driver.auto_offline) reads in sv, fr and 
   }
   assert.equal(auditActionText("trip.refund"), "trip.refund", "other actions keep their name");
   assert.equal(auditActorText("adm_1"), "adm_1");
+});
+
+// Owner G2-D1 (2026-10-30, "Keep old until new approved (Recommended)", contract v0.18.5 documentRenewal): the
+// approved document stays the row's document; the new upload is its renewal, never the row itself.
+test("G2-D1: a renewal never replaces the approved document in the documents table", () => {
+  const documents: DocumentSummary[] = [
+    { documentId: "D1", type: "driving_license", status: "approved", expiresAt: "2026-11-20T00:00:00Z" },
+    { documentId: "R1", type: "driving_license", status: "in_review", expiresAt: "2036-11-20T00:00:00Z", renewalOf: "D1" },
+    { documentId: "D2", type: "terms", status: "approved" },
+  ];
+  const rows = documentRows(["terms", "driving_license"], documents);
+  assert.equal(rows.length, 2);
+  const licence = rows.find((row) => row.type === "driving_license")!;
+  assert.equal(licence.status, "approved");
+  assert.equal(licence.document?.documentId, "D1");
+  assert.equal(licence.renewal?.documentId, "R1");
+  assert.equal(rows.find((row) => row.type === "terms")!.renewal, null);
+  assert.deepEqual(mainDocuments(documents).map((doc) => doc.documentId), ["D1", "D2"]);
+  assert.equal(renewalFor(documents, "D1")?.documentId, "R1");
+  assert.equal(hasRenewalWaiting(documents), true);
+  assert.equal(hasRenewalWaiting([{ ...documents[1]!, status: "rejected" }]), false);
+  // The approved count is not lowered by a renewal waiting.
+  assert.deepEqual(documentCounts({ documents, requiredDocuments: ["terms", "driving_license"], accountType: "driver", country: "SE" }), { approved: 2, required: 2 });
+});
+
+test("G2-D1: a rejected renewal leaves the driver's document state approved", () => {
+  const documents: DocumentSummary[] = [
+    { documentId: "D1", type: "driving_license", status: "approved" },
+    { documentId: "R1", type: "driving_license", status: "rejected", renewalOf: "D1" },
+  ];
+  assert.equal(docState(documents, ["driving_license"]), "approved");
+  assert.equal(docState([{ documentId: "D1", type: "driving_license", status: "rejected" }], ["driving_license"]), "rejected");
+});
+
+// Owner G2-D5.7 / D5.8 (2026-10-30): a reason for every rejection, an end date at most 15 years ahead.
+test("G2-D5.7 / D5.8 / D5.3: the server's refusals are said in the admin's words", () => {
+  const refuse = (reason: string) => new ApiError(400, "x", { code: "invalid_request", reason, details: [], requestId: "r", retryable: false });
+  assert.equal(errorText(refuse("note_required")), "Write why: the driver sees the reason.");
+  assert.equal(errorText(refuse("expiry_too_far")), "Check the end date");
+  assert.equal(errorText(refuse("categories_required")), "Give the car at least one ride category.");
+  registerDictionary("sv", sv);
+  setLanguage("sv");
+  try {
+    assert.equal(errorText(refuse("expiry_too_far")), "Kontrollera slutdatumet");
+  } finally {
+    setLanguage("en");
+  }
 });

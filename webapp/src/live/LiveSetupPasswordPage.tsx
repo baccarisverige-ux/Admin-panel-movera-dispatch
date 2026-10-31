@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { tr } from "../i18n";
+import { SignInLanguageGlobe } from "../i18n/SignInLanguageGlobe";
 import { errorText } from "./format";
 import { useLiveSession } from "./LiveSessionContext";
 
@@ -60,7 +61,10 @@ export function LiveSetupPasswordPage() {
           );
         }}
       >
-        <p className="crumb">Movera Admin</p>
+        <div className="login-top">
+          <p className="crumb">Movera Admin</p>
+          <SignInLanguageGlobe />
+        </div>
         <h1>{tr("Choose your password")}</h1>
         {linkError ? (
           <p className="state-line" role="alert">{linkError}</p>
