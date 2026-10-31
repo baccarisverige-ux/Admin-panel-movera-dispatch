@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fr } from "../i18n/fr.ts";
+import { sv } from "../i18n/sv.ts";
+import { registerDictionary, setLanguage } from "../i18n/core.ts";
+import { cancelledBy } from "../trips/present.ts";
 import { readFileSync } from "node:fs";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { cancelReasonsDefault } from "../dispatch/offers.ts";
@@ -90,4 +94,18 @@ test("owner 2026-10-31: the driver bonus limits come from the server's country r
   assert.deepEqual(liveBonusLimits({ driverBonus: { defaultLimit: sek(0), hardMax: sek(100000) } }, "SE"), { limitMinor: 0, hardMaxMinor: 100000 }, "0 only when the admin set 0");
   assert.equal(driverBonusSettingLink("FR"), "/pricing?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=FR");
   assert.equal(driverBonusSettingLink("SE", "Z002"), "/pricing?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=SE&zone=Z002&scope=Z002");
+});
+
+test("G5 live test: a rider reason outside the dispatch book and who cancelled read in the admin's language", () => {
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  assert.equal(reasonWords("something_else", null, "fr"), "Autre chose");
+  assert.equal(reasonWords("something_else", null, "sv"), "Något annat");
+  assert.equal(reasonWords("something_else", null, "en"), "Something else");
+  setLanguage("fr");
+  try {
+    assert.equal(cancelledBy("cancelled_by_rider"), "Passager");
+  } finally {
+    setLanguage("en");
+  }
 });

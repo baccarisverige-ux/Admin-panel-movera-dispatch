@@ -305,12 +305,14 @@ function liveStatusCell(trip: DemoRecord): string | { text: string; node: ReactN
   if (!live || !isLiveWithDriver(trip.status, trip.driverId)) return trip.status;
   const eta = live.eta;
   const line = eta ? etaLine(eta, uiLocale()) : null;
-  const text = line ? `${trip.status} · ${line}` : trip.status;
+  // G5 live test: the words of the status (sv/fr/en), never the raw code.
+  const words = statusLabel(trip.status);
+  const text = line ? `${words} · ${line}` : words;
   return {
     text,
     node: (
       <span className="op-live-cell" data-testid={`trip-live-${trip.id}`}>
-        <span>{trip.status}</span>
+        <span>{words}</span>
         {line ? <small className={eta && etaIsStale(eta, Date.now()) ? "op-eta stale" : "op-eta"} title={eta?.source === "estimate" ? tr("Straight-line estimate, no road route yet.") : undefined}>{line}</small> : <small className="op-eta">{tr("No position yet")}</small>}
         {live.driverLocation ? <Link to={`/trips/${trip.id}#route`} onClick={(event) => event.stopPropagation()} aria-label={tr("Map of {0}", [trip.id])}>{tr("Map")}</Link> : null}
       </span>
