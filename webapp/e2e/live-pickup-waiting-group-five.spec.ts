@@ -175,3 +175,28 @@ test("live map bug: the trip is plotted at the car with its ETA and the online c
   await expect(page).toHaveURL(/\/trips\/T2001$/);
   await expect(page.getByRole("heading", { level: 2, name: "Trip T2001" })).toBeVisible();
 });
+
+test("owner 2026-10-31: the driver bonus box shows the country's real limits from the server and 'Change limit' opens that field, focused", async ({ page }) => {
+  const searching = { ...ACTIVE_TRIP, tripId: "T2004", status: "searching", version: 2, driverId: undefined, driver: undefined, acceptedAt: undefined, riderId: "R501", createdAt: new Date(Date.now() - 2 * 60_000).toISOString() };
+  const { settings } = await open(page, "/trips/T2004", [{ ...searching }]);
+  const box = page.getByTestId("driver-bonus-box");
+  // fakeSettings' country_rules: driverBonus 200 kr per trip, hard max 1 000 kr (never 0 any more).
+  await expect(box.getByTestId("driver-bonus-limit")).toContainText("200,00 kr");
+  await expect(box.getByTestId("driver-bonus-limit")).toContainText("1 000,00 kr");
+  await expect(box.getByLabel("Money for the driver")).toHaveAttribute("placeholder", /200,00 kr/);
+  expect(settings.sent.some((s) => s.method === "GET" && s.path.startsWith("/api/v1/admin/config/country_rules?zoneId=Z001"))).toBe(true);
+  await box.getByTestId("driver-bonus-change-limit").click();
+  await expect(page).toHaveURL(/\/pricing\?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=SE/);
+  await expect(page.getByLabel("Driver bonus limit")).toBeFocused();
+});
+
+test("owner 2026-10-31: an admin who cannot change Pricing sees the limit text but no Change limit button", async ({ page }) => {
+  const searching = { ...ACTIVE_TRIP, tripId: "T2004", status: "searching", version: 2, driverId: undefined, driver: undefined, acceptedAt: undefined, riderId: "R501", createdAt: new Date(Date.now() - 2 * 60_000).toISOString() };
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await fakeTripServer(page, { admin: { permissions: [...ADMIN.permissions, "trips.intervene"] }, trips: [searching] as never });
+  await fakeSettings(page);
+  await signIn(page, "Dashboard");
+  await page.goto("/trips/T2004");
+  await expect(page.getByTestId("driver-bonus-limit")).toContainText("200,00 kr");
+  await expect(page.getByTestId("driver-bonus-change-limit")).toHaveCount(0);
+});

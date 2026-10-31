@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { cancelReasonsDefault } from "../dispatch/offers.ts";
-import { approachOf, canWaiveFee, distanceDisplay, driverPointOf, ETA_EVERY_SECONDS, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, owedByCurrency, owedText, reasonWords, tripMoney } from "./tripLive.ts";
+import { driverBonusSettingLink, liveBonusLimits, approachOf, canWaiveFee, distanceDisplay, driverPointOf, ETA_EVERY_SECONDS, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, owedByCurrency, owedText, reasonWords, tripMoney } from "./tripLive.ts";
 
 /**
  * Driver group 5 (contract v0.18.7): the admin shows the server's ETA and distance as the apps do, the cancel fee in
@@ -79,4 +79,14 @@ test("Q3: the rider's debt per currency: the server's list, else the one amount,
   assert.deepEqual(owedByCurrency({ outstandingMinor: 4900, currency: "SEK" }), [{ amountMinor: 4900, currency: "SEK" }], "an older server: outstanding only");
   assert.deepEqual(owedByCurrency({ outstandingByCurrency: [], outstandingMinor: null, currency: "SEK" }), []);
   assert.deepEqual(owedByCurrency(null), []);
+});
+
+test("owner 2026-10-31: the driver bonus limits come from the server's country rules, else the contract default, never 0 by accident", () => {
+  const sek = (amountMinor: number) => ({ amountMinor, currency: "SEK" });
+  assert.deepEqual(liveBonusLimits({ driverBonus: { defaultLimit: sek(30000), hardMax: sek(100000) } }, "SE"), { limitMinor: 30000, hardMaxMinor: 100000 });
+  assert.deepEqual(liveBonusLimits(null, "SE"), { limitMinor: 20000, hardMaxMinor: 100000 }, "no document: contract default 200 kr / 1000 kr");
+  assert.deepEqual(liveBonusLimits({}, "FR"), { limitMinor: 2000, hardMaxMinor: 9500 }, "France in euro");
+  assert.deepEqual(liveBonusLimits({ driverBonus: { defaultLimit: sek(500000), hardMax: sek(100000) } }, "SE"), { limitMinor: 100000, hardMaxMinor: 100000 }, "never over the hard max");
+  assert.deepEqual(liveBonusLimits({ driverBonus: { defaultLimit: sek(0), hardMax: sek(100000) } }, "SE"), { limitMinor: 0, hardMaxMinor: 100000 }, "0 only when the admin set 0");
+  assert.equal(driverBonusSettingLink("FR"), "/pricing?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=FR");
 });

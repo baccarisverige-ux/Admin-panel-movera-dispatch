@@ -7488,6 +7488,7 @@ export const en = {
   "Waive the cancel fee": "Waive the cancel fee",
   "Write why the fee is waived.": "Write why the fee is waived.",
   "This fee is already waived.": "This fee is already waived.",
+  "{0} Change limit": "{0} Change limit",
 } as const;
 
 export type MessageKey = keyof typeof en;

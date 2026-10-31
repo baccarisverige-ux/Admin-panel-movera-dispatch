@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeDollarSign } from "lucide-react";
+import { BadgeDollarSign, Pencil } from "lucide-react";
+import { useSession } from "../auth/SessionContext";
+import { can } from "../auth/permissions";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { driverBonusSettingLink } from "../live/tripLive";
 import { useAdminApi } from "../api/AdminApiContext";
 import type { TripOffersView } from "../api/dispatchSim";
 import { formatMoney, market } from "../markets/markets";
@@ -10,7 +14,6 @@ import { CommandButton } from "../ui/CommandButton";
 import { BONUS_SCOPES, bonusInScope, bonusIssue, bonusOf, canAssign, scopeCovers, type AdminOffer, type BonusIssue, type BonusScope } from "./assign";
 import { tr, trn, trSentences, trx } from "../i18n";
 
-const PRICING_LINK = "/pricing?tab=extras&section=driver-bonus";
 
 /** The admin offers of a trip, read every second while the panel is open (countdowns, answers, the lock). */
 export function useTripOffers(tripId: string, enabled = true) {
@@ -106,6 +109,11 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
   const country = countryOf(trip.zoneId);
   const place = market(country);
   const money = (minor: number) => formatMoney(minor, country);
+  // Owner 2026-10-31: a small button straight to this country's "Driver bonus limit" field (admins who may change Pricing).
+  const role = useSession().agent?.role;
+  const liveSession = useLiveSessionMaybe();
+  const canEditLimit = liveSession ? liveSession.can("settings.publish") : Boolean(role && can(role, "settings.publish"));
+  const settingLink = driverBonusSettingLink(country);
   const [own, setOwn] = useState<MoneyDraft>(EMPTY_MONEY);
   const draft = controlled ?? own;
   const set = (patch: Partial<MoneyDraft>) => (onDraft ? onDraft({ ...draft, ...patch }) : setOwn({ ...draft, ...patch }));
@@ -153,10 +161,13 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
       </div>
       {issue ? (
         <p className="pl-warn" role="alert" data-testid="driver-bonus-issue">
-          {trSentences(issue.message)}{issue.code === "over_limit" ? <> <Link to={PRICING_LINK}>{tr("Open Pricing › Tips & limits")}</Link></> : null}
+          {trSentences(issue.message)}{issue.code === "over_limit" ? <> <Link to={settingLink}>{tr("Open Pricing › Tips & limits")}</Link></> : null}
         </p>
       ) : (
-        <p className="as-help">{trn("Limit {0} per trip, set in {1} (hard max {2}).", money(view.limits.limitMinor), <Link to={PRICING_LINK}>{tr("Pricing › Tips & limits")}</Link>, money(view.limits.hardMaxMinor))}</p>
+        <p className="as-help" data-testid="driver-bonus-limit">
+          {trn("Limit {0} per trip, set in {1} (hard max {2}).", money(view.limits.limitMinor), <Link to={settingLink}>{tr("Pricing › Tips & limits")}</Link>, money(view.limits.hardMaxMinor))}
+          {canEditLimit ? <> <Link className="dash-btn small ghost" to={settingLink} data-testid="driver-bonus-change-limit">{trn("{0} Change limit", <Pencil size={12} aria-hidden="true" />)}</Link></> : null}
+        </p>
       )}
       {addMinor > 0 ? <p className="as-pending" data-testid="driver-bonus-pending">{trn("{0} goes with the next {1} send.", <b>{money(addMinor)}</b>, draft.scope === "both" ? tr("Exclusive or Radar") : trx(SCOPE_LABEL[draft.scope]))}</p> : null}
       {compact ? null : (

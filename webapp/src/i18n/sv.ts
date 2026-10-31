@@ -7490,4 +7490,5 @@ export const sv: Record<MessageKey, string> = {
   "Waive the cancel fee": "Efterskänk avbokningsavgiften",
   "Write why the fee is waived.": "Skriv varför avgiften efterskänks.",
   "This fee is already waived.": "Avgiften är redan efterskänkt.",
+  "{0} Change limit": "{0} Ändra gräns",
 };

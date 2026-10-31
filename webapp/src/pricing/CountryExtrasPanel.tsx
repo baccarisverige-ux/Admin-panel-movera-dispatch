@@ -86,6 +86,8 @@ type Props = {
   canEdit: boolean;
   /** The section to scroll to when the tab opens (from the Dispatch shortcut or All features). */
   section: string | null;
+  /** "driverBonusLimit": that field gets the focus once the section is in view (the trip page's Change limit). */
+  focus?: string | null;
   onDirty: (dirty: boolean) => void;
   onNotice: (text: string) => void;
   /**
@@ -102,7 +104,7 @@ type Props = {
  * (Q5, Q6), the promo cap (Q10) and the driver bonus limit (Q17). Nothing is saved until Save; a change of more than
  * 50 % asks "Are you sure?" (Q29). The rider and driver app configs read the saved values.
  */
-export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotice, targets, zoneId: shownZone }: Props) {
+export function CountryExtrasPanel({ country, canEdit, section, focus = null, onDirty, onNotice, targets, zoneId: shownZone }: Props) {
   const { book, loading: bookLoading } = useCountrySettings();
   const zoneId = targets ? (shownZone && targets.includes(shownZone) ? shownZone : targets[0]) : undefined;
   // v0.8.1 live: each zone's (or Standard's) own Tips & limits, read when this tab opens.
@@ -132,10 +134,11 @@ export function CountryExtrasPanel({ country, canEdit, section, onDirty, onNotic
     const node = document.getElementById(`extras-${section}`);
     if (!node) return;
     node.scrollIntoView({ block: "start" });
+    if (focus === "driverBonusLimit") node.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
     node.classList.add("pl-flash");
     const timer = window.setTimeout(() => node.classList.remove("pl-flash"), 1600);
     return () => window.clearTimeout(timer);
-  }, [section, loading]);
+  }, [section, focus, loading]);
 
   if (loading) return <p className="state-line">{tr("Loading the country settings.")}</p>;
 

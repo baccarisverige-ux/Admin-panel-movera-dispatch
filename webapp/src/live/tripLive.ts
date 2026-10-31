@@ -10,6 +10,7 @@ import type { LiveTripFacts } from "../api/seed.ts";
 import type { CancelReasonBook, LangId } from "../dispatch/offers.ts";
 import { reasonText } from "../dispatch/offers.ts";
 import { formatMoney, isCurrency } from "../domain/money.ts";
+import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
 
 export type LiveEta = NonNullable<LiveTripFacts["eta"]>;
 export type LiveCancellation = NonNullable<LiveTripFacts["cancellation"]>;
@@ -125,4 +126,24 @@ export function owedText(owed: readonly { amountMinor: number; currency: string 
 /** A trip going on with a driver (the live rows that carry a position and an ETA). */
 export function isLiveWithDriver(status: string, driverId: string | null | undefined): boolean {
   return Boolean(driverId) && ["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"].includes(status);
+}
+
+/**
+ * Owner 2026-10-31 (live trip page said "Up to 0,00 kr … hard max 0,00 kr"): the driver bonus limits of a trip's
+ * country from the server's country_rules document (GET /admin/config/country_rules?zoneId=… → document.driverBonus
+ * { defaultLimit, hardMax }, CONTRACT.md §6.5), else the contract's configDefaults for the country. Never 0 unless the
+ * server says 0; the limit never passes the hard max.
+ */
+export function liveBonusLimits(doc: unknown, country: string): { limitMinor: number; hardMaxMinor: number } {
+  const defaults = (CONFIG_DEFAULTS.countries as Record<string, { driverBonus: { defaultLimit: { amountMinor: number }; hardMax: { amountMinor: number } } }>)[country]?.driverBonus;
+  const bonus = (doc as { driverBonus?: { defaultLimit?: { amountMinor?: unknown }; hardMax?: { amountMinor?: unknown } } } | null | undefined)?.driverBonus;
+  const minor = (value: unknown, fallback: number) => (typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : fallback);
+  const hardMaxMinor = minor(bonus?.hardMax?.amountMinor, defaults?.hardMax.amountMinor ?? 0);
+  const limitMinor = Math.min(hardMaxMinor, minor(bonus?.defaultLimit?.amountMinor, defaults?.defaultLimit.amountMinor ?? 0));
+  return { limitMinor, hardMaxMinor };
+}
+
+/** Pricing › Tips & limits of a country with the "Driver bonus limit" field scrolled to and focused. */
+export function driverBonusSettingLink(country: string): string {
+  return `/pricing?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=${encodeURIComponent(country)}`;
 }

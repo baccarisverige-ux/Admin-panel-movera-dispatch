@@ -410,7 +410,7 @@ export function PricingPage() {
             />
           ) : null}
 
-          {tab === "extras" ? <CountryExtrasPanel key={liveSession ? `${country}:${[...targets].join(",")}` : country} country={country} canEdit={canPublish} section={params.get("section")} onDirty={setExtrasDirty} onNotice={setNotice} {...(liveSession ? { targets: [...targets], zoneId } : {})} /> : null}
+          {tab === "extras" ? <CountryExtrasPanel key={liveSession ? `${country}:${[...targets].join(",")}` : country} country={country} canEdit={canPublish} section={params.get("section")} focus={params.get("focus")} onDirty={setExtrasDirty} onNotice={setNotice} {...(liveSession ? { targets: [...targets], zoneId } : {})} /> : null}
 
           {tab === "history" ? (
             <section className="dash-card" aria-labelledby="history-title">

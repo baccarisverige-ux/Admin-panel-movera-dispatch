@@ -8,7 +8,7 @@
 import { catalogFor } from "../data/catalog.ts";
 import { CURRENCY, TIME_ZONE } from "../domain/contract.ts";
 import { isCurrency } from "../domain/money.ts";
-import { MARKETS } from "../markets/markets.ts";
+import { MARKETS, marketOfZone } from "../markets/markets.ts";
 import { NO_FILTER, zoneFilterOf, type ZoneFilter } from "./zoneFilter.ts";
 
 export { zoneFilterOf, type ZoneFilter };
@@ -29,6 +29,7 @@ import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
 import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
+import { liveBonusLimits } from "./tripLive.ts";
 import { vehicleMissing } from "./activation.ts";
 import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { tr } from "../i18n/index.ts";
@@ -784,6 +785,10 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     trips.set(trip.tripId, trip);
     const page = await client.json<Page<TripOffer & { version?: number }>>(`/admin/trips/${encodeURIComponent(tripId)}/offers?limit=50`);
     const tripCurrency = isCurrency(trip.fare.currency) ? trip.fare.currency : CURRENCY;
+    // Owner 2026-10-31: the country's real driver bonus limits (country_rules of the trip's zone; else the contract
+    // default), not 0. An admin without settings.read gets the default.
+    const rules = await client.json<{ document?: unknown }>(`/admin/config/country_rules?zoneId=${encodeURIComponent(trip.zoneId)}`).catch(() => null);
+    const limits = liveBonusLimits(rules?.document ?? null, marketOfZone(trip.zoneId)?.id ?? (tripCurrency === "EUR" ? "FR" : "SE"));
     return {
       tripId,
       status: trip.status,
@@ -817,7 +822,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       lockedTo: null,
       events: [],
       timers: { exclusiveSeconds: 0, radarSeconds: 0 },
-      limits: { limitMinor: 0, hardMaxMinor: 0 },
+      limits,
       fareMinor: trip.fare.amountMinor,
       driverNetMinor: trip.driverEarnings?.amountMinor ?? 0,
       commissionMinor: trip.commission?.amountMinor ?? 0,
