@@ -14,6 +14,7 @@ import {
   type CountryDispatch, type DispatchBook, type TabId, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx } from "../i18n";
+import { isLiveData } from "../live/realData";
 
 type Props = {
   book: DispatchBook;
@@ -275,7 +276,7 @@ function CopyDialog({ open, tabs, onClose, from, zones, onApply }: { open: boole
 
 function PresetDialog({ open, onClose, book, zone, zoneName, countryId, agentId, onUse, onSaved }: { open: boolean; onClose: () => void; book: DispatchBook; zone: ZoneDispatch; zoneName: string; countryId: Market["id"]; agentId: string; onUse: (next: ZoneDispatch, name: string) => void; onSaved: (name: string) => void }) {
   const [name, setName] = useState("");
-  const presets = [...BUILT_IN_PRESETS, ...book.presets];
+  const presets = [...BUILT_IN_PRESETS, ...(isLiveData() ? [] : book.presets)];
   const saved = presetFrom(zone, name.trim(), `P-${book.draftRev + 1}`);
   return (
     <Modal open={open} title={tr("Presets")} onClose={onClose}>
@@ -289,11 +290,14 @@ function PresetDialog({ open, onClose, book, zone, zoneName, countryId, agentId,
           </li>
         ))}
       </ul>
+      {/* G4 (live admin): saved presets have no server path yet, so on live only the ready-made ones are offered. */}
+      {isLiveData() ? null : <>
       <h5 className="dx-modal-h">{trn("Save {0}'s settings as a preset", zoneName)}</h5>
       <div className="dx-modal-row">
         <label className="field">{trn("Preset name{0}", <input aria-label={tr("Preset name")} value={name} maxLength={40} onChange={(event) => setName(event.target.value)} placeholder={tr("For example Weekend nights")} />)}</label>
         <CommandButton command="admin.dispatch.preset" className="dash-btn" targetId={name.trim() || "preset"} confirmTarget={false} scope="all" before={`${book.presets.length} presets`} after={`${book.presets.length + 1} presets`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={{ ...book, draftRev: book.draftRev + 1, presets: [...book.presets, { ...saved, note: `${saved.note} by ${agentId}` }] }} disabled={!name.trim() || presets.some((item) => item.name.toLowerCase() === name.trim().toLowerCase())} onDone={() => { onSaved(name.trim()); setName(""); }}>{tr("Save preset")}</CommandButton>
       </div>
+      </>}
     </Modal>
   );
 }

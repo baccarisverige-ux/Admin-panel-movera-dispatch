@@ -241,7 +241,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
                         <span className="as-cats">{row.categoryIds.map((id) => <span key={id} className={id === categoryOf(tripId).id ? "fd-chip on" : "fd-chip"}>{CATEGORY_LABEL.get(id as never) ?? id}</span>)}</span>
                         {!row.categoryOk ? <small className="as-warn">{trn("Not {0}", trx(categoryOf(tripId).label))}</small> : null}
                       </td>
-                      <td><Star size={11} aria-hidden="true" /> {row.rating === null ? tr("Not connected yet") : row.rating.toFixed(1)}</td>
+                      <td>{row.rating === null ? <span className="as-none">–</span> : <><Star size={11} aria-hidden="true" /> {row.rating.toFixed(1)}</>}</td>
                       <td><StatusDot tone={free ? "green" : "amber"}>{statusLabel(row.onlineStatus)}</StatusDot></td>
                       <td>{offer ? <OfferStatus offer={offer} now={now} /> : <span className="as-none">–</span>}</td>
                     </tr>

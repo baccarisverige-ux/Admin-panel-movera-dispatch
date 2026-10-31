@@ -279,7 +279,7 @@ export type NearbyDriver = {
   categoryIds: string[];
   /** The trip's category is one this driver may drive. */
   categoryOk: boolean;
-  /** Null when the server sent no rating (live): the page shows "Not connected yet". */
+  /** Null when the server sent no rating (live): the page shows a dash. */
   rating: number | null;
   /** The open admin offer this driver has for the trip, if any. */
   openOfferId?: string;

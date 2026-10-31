@@ -245,7 +245,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         liveCountries: book.liveCountries,
       };
     });
-    const next = { ...book, live, ...(versions.length ? { versions } : {}) };
+    // G4 (live admin): events, driver groups, radar zones and their rules, saved presets, second-admin approvals and
+    // cancel checks are not kept on the server, so the demo's samples (a demo concert, demo groups) never show on live.
+    const next = { ...book, live, events: [], groups: [], presets: [], radarZones: [], radarZoneRules: [], approvals: [], cancelChecks: {}, ...(versions.length ? { versions } : {}) };
     slices.set(DISPATCH_KEY, next);
     return next;
   }

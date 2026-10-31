@@ -16,6 +16,7 @@ import { RideProgress } from "./RideProgress";
 import { actionKindFor, defaultTarget, driversInTarget, groupIssue, handledOf, nearestAble, radarTimerFor, radarZonesFor, recordLiveAction, targetName, zoneChoicesFor, type RadarScope, type RadarTarget } from "./handle";
 import { DISPATCH_KEY, emptyDispatchBook, normalizeDispatchBook, type DispatchBook, type LiveAction } from "./rules";
 import { tr, trn, trx } from "../i18n";
+import { isLiveData } from "../live/realData";
 
 /**
  * The ONE "Handle" system for a rider waiting for a driver. The same pieces are used in four places: the Dispatch ›
@@ -69,7 +70,10 @@ function useRecordSend() {
   const book = useDispatchBook();
   const { agent } = useSession();
   const send = useCommand("admin.dispatch.send");
-  return (ride: HandledRide, kind: LiveAction["kind"], target: string) =>
+  return (ride: HandledRide, kind: LiveAction["kind"], target: string) => {
+    // G4 (live admin): on live the server keeps the offers sent by hand (GET /admin/trips/{id}/offers shows them in
+    // "Offers sent"); the demo's own record has no server path, so it is not sent there.
+    if (isLiveData()) return;
     void send.run({
       targetId: ride.tripId,
       scope: ride.zoneId,
@@ -80,6 +84,7 @@ function useRecordSend() {
       expectedSliceRev: book.draftRev,
       value: recordLiveAction(book, { tripId: ride.tripId, kind, target, by: agent?.id ?? "", at: new Date().toISOString() }),
     });
+  };
 }
 
 /** An exclusive offer to the nearest free driver who may drive the requested category. */
@@ -167,6 +172,7 @@ type Mode = RadarTarget["kind"];
  */
 export function RadarTargetPicker({ ride, book, candidates, value, onChange, max, onMax, compact = false }: PickerProps) {
   const [scope, setScope] = useState<RadarScope>("zone");
+  const live = isLiveData();
   const mode: Mode = value.kind;
   const radarZones = radarZonesFor(book.radarZones, ride.zoneId, scope);
   const zones = zoneChoicesFor(ride.zoneId);
@@ -186,9 +192,10 @@ export function RadarTargetPicker({ ride, book, candidates, value, onChange, max
   return (
     <div className={compact ? "hq-radar compact" : "hq-radar"} data-testid="radar-target">
       <div className="as-chips" role="group" aria-label={tr("Radar for")}>
-        {chip(tr("Radar zones"), mode === "radar_zone", () => setMode("radar_zone"))}
+        {/* G4 (live admin): radar zones and driver groups are not kept on the server yet, so on live only whole zones. */}
+        {live ? null : chip(tr("Radar zones"), mode === "radar_zone", () => setMode("radar_zone"))}
         {chip(tr("Zones"), mode === "zone", () => setMode("zone"))}
-        {chip(tr("Driver groups"), mode === "group", () => setMode("group"))}
+        {live ? null : chip(tr("Driver groups"), mode === "group", () => setMode("group"))}
       </div>
       {mode === "radar_zone" ? (
         <div className="hq-list">
@@ -311,6 +318,9 @@ export function SendRadarButton({ ride, book, candidates, target, max, onNotice,
 /** Cancels the waiting request; recorded like every Handle action. */
 export function CancelRequestButton({ ride, book, onNotice, className = "dash-btn small ghost danger" }: { ride: HandledRide; book: DispatchBook; onNotice: (text: string) => void; className?: string }) {
   const { agent } = useSession();
+  // G4 (live admin): this button only records the cancel in the demo's book; the trip page's admin cancel (with a
+  // reason) is the real one (driver group 7). Not offered on live, so it never says "Not connected yet".
+  if (isLiveData()) return null;
   const next = recordLiveAction(book, { tripId: ride.tripId, kind: "cancel", target: "cancel", by: agent?.id ?? "", at: new Date().toISOString() });
   return (
     <CommandButton command="admin.dispatch.send" className={className} targetId={ride.tripId} confirmTarget={false} scope={ride.zoneId} before={ride.status} after="cancel" expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={next} onDone={() => onNotice(tr("{0}'s request was cancelled.", [ride.rider]))}>

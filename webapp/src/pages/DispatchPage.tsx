@@ -59,6 +59,12 @@ const VIEWS = [
   { id: "history", get label() { return tr("History"); }, icon: History },
 ] as const;
 
+/**
+ * G4 (live admin, Rules decisions/admin-fake-by-group.md): events, driver groups and cancel checks have no server path
+ * yet, so on live these tabs are not offered (no demo data, no "Not connected yet").
+ */
+const LIVE_HIDDEN_VIEWS: ReadonlySet<string> = new Set(["events", "cancels"]);
+
 /** Views opened from a header button rather than a tab. */
 const EXTRA_VIEWS = ["activity", "features"] as const;
 
@@ -82,7 +88,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const scope = useMarketScope();
   const market = scope.market;
   const country = scope.country;
-  const view: View = !offers && (VIEWS.some((item) => item.id === params.get("view")) || (EXTRA_VIEWS as readonly string[]).includes(params.get("view") ?? "")) ? (params.get("view") as View) : "rules";
+  const asked = params.get("view") ?? "";
+  const view: View = !offers && !(isLiveData() && LIVE_HIDDEN_VIEWS.has(asked)) && (VIEWS.some((item) => item.id === asked) || (EXTRA_VIEWS as readonly string[]).includes(asked)) ? (asked as View) : "rules";
   const tab: TabId = tabs.some((item) => item.id === params.get("tab")) ? (params.get("tab") as TabId) : defaultTab;
   // The reservation tab moved to Radar · Exclusive · Reservations: an old Dispatch link lands there, same zone.
   useEffect(() => {
@@ -298,7 +305,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
       </header>
 
       {offers ? null : <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Dispatch sections")}>
-        {VIEWS.map((item) => {
+        {VIEWS.filter((item) => !(isLiveData() && LIVE_HIDDEN_VIEWS.has(item.id))).map((item) => {
           const Icon = item.icon;
           const count = item.id === "history" ? book.approvals.length : 0;
           return (
@@ -386,7 +393,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
             }
             go({ tab: next === defaultTab ? null : next });
           }}
-          below={offers ? (id, open) => (open === "radar" ? (
+          below={offers && !isLiveData() ? (id, open) => (open === "radar" ? (
             <div className="dx-cards dx-radar-extra">
               <RadarZonesCard book={book} market={market} zone={zones.find((zone) => zone.id === id) ?? zones[0]} drivers={countryLive} canEdit={canEdit(id)} onNotice={say} />
               <RadarZoneRulesCard book={book} market={market} canEdit={canEditRole} onNotice={say} />

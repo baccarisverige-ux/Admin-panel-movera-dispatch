@@ -5,6 +5,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { zoneResults } from "./demo";
 import { approve, decline, DISPATCH_KEY, undoTo, type DispatchBook, type ZoneDispatch } from "./rules";
 import { tr, trn, uiLocale } from "../i18n";
+import { isLiveData } from "../live/realData";
 
 type Props = {
   book: DispatchBook;
@@ -18,7 +19,9 @@ type Props = {
 
 /** Waiting approvals at the top, then every published version with undo. */
 export function Approvals({ book, agentId, canApprove, onNotice, compact = false }: { book: DispatchBook; agentId: string; canApprove: boolean; onNotice: (text: string) => void; compact?: boolean }) {
-  if (!book.approvals.length) return null;
+  // G4 (live admin): one admin publishes at once on live (contract.json#auth.admin.oneAdmin); dispatch changes never
+  // wait for a second admin there, so approve / turn down is a demo-only tool.
+  if (!book.approvals.length || isLiveData()) return null;
   const at = new Date().toISOString();
   return (
     <section className={compact ? "dx-approvals compact" : "dx-approvals"} aria-label={tr("Waiting for a second admin")}>
