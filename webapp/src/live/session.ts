@@ -196,6 +196,11 @@ export function createLiveClient(options: Options) {
       return json<T>(path, { method: "PUT", body: JSON.stringify(body), idempotencyKey: newKey() });
     },
 
+    /** DELETE with a fresh Idempotency-Key (v0.18.6: /admin/dispatch/* items, ?expectedVersion= in the path). */
+    del<T>(path: string): Promise<T> {
+      return json<T>(path, { method: "DELETE", idempotencyKey: newKey() });
+    },
+
     /** PATCH with a JSON body and a fresh Idempotency-Key (v0.18.0: PATCH /admin/vehicles/{vehicleId}). */
     patch<T>(path: string, body: unknown): Promise<T> {
       return json<T>(path, { method: "PATCH", body: JSON.stringify(body), idempotencyKey: newKey() });

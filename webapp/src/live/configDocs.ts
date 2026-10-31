@@ -274,6 +274,8 @@ export type ConfigHttp = {
   json: <T>(path: string) => Promise<T>;
   put: <T>(path: string, body: unknown) => Promise<T>;
   post: <T>(path: string, body: unknown) => Promise<T>;
+  /** DELETE with a fresh Idempotency-Key (v0.18.6 dispatch tools); optional so older test fakes still fit. */
+  del?: (path: string) => Promise<unknown>;
 };
 
 /** A 409 from the server: someone changed the settings since this page read them. */

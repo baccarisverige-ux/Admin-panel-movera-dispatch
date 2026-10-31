@@ -17,6 +17,8 @@ import { actionKindFor, defaultTarget, driversInTarget, groupIssue, handledOf, n
 import { DISPATCH_KEY, emptyDispatchBook, normalizeDispatchBook, type DispatchBook, type LiveAction } from "./rules";
 import { tr, trn, trx } from "../i18n";
 import { isLiveData } from "../live/realData";
+import { radarRuleFor } from "./radarZones";
+import { useActiveRadarSend } from "./radarSends";
 
 /**
  * The ONE "Handle" system for a rider waiting for a driver. The same pieces are used in four places: the Dispatch ›
@@ -192,10 +194,9 @@ export function RadarTargetPicker({ ride, book, candidates, value, onChange, max
   return (
     <div className={compact ? "hq-radar compact" : "hq-radar"} data-testid="radar-target">
       <div className="as-chips" role="group" aria-label={tr("Radar for")}>
-        {/* G4 (live admin): radar zones and driver groups are not kept on the server yet, so on live only whole zones. */}
-        {live ? null : chip(tr("Radar zones"), mode === "radar_zone", () => setMode("radar_zone"))}
+        {chip(tr("Radar zones"), mode === "radar_zone", () => setMode("radar_zone"))}
         {chip(tr("Zones"), mode === "zone", () => setMode("zone"))}
-        {live ? null : chip(tr("Driver groups"), mode === "group", () => setMode("group"))}
+        {chip(tr("Driver groups"), mode === "group", () => setMode("group"))}
       </div>
       {mode === "radar_zone" ? (
         <div className="hq-list">
@@ -250,11 +251,17 @@ export function RadarTargetPicker({ ride, book, candidates, value, onChange, max
         </label>
       ) : null}
       <div className="hq-timer">
-        <label className="hq-field inline">
-          <span>{tr("Max drivers who can see it")}</span>
-          <input type="number" min={1} max={RADAR_GROUP_MAX} step={1} value={max} aria-label={tr("Max drivers who can see it")} onChange={(event) => onMax(Math.min(RADAR_GROUP_MAX, Math.max(1, Math.round(Number(event.target.value) || 1))))} />
-        </label>
-        <small>{trn("{0} Timer {1} s{2}", <Clock size={11} aria-hidden="true" />, timer.seconds, timer.ruleName ? tr(" · rule “{0}”", [timer.ruleName]) : tr(" · the zone's radar"))}</small>
+        {/* v0.18.6 (G4-F3, F4): on live the server picks the drivers of a group (free ones, nearest first, up to 10) and
+            of a radar zone (its rule's most drivers), so only a radar to whole zones takes a number here. */}
+        {live && mode !== "zone" ? (
+          <small data-testid="radar-server-picks">{mode === "group" ? tr("The free drivers of the group get it, nearest first, up to {0}.", [RADAR_GROUP_MAX]) : timer.ruleName ? tr("Up to {0} free drivers inside get it.", [timer.maxDrivers]) : tr("This radar zone has no rule yet. Make one in Radar zone rules.")}</small>
+        ) : (
+          <label className="hq-field inline">
+            <span>{tr("Max drivers who can see it")}</span>
+            <input type="number" min={1} max={RADAR_GROUP_MAX} step={1} value={max} aria-label={tr("Max drivers who can see it")} onChange={(event) => onMax(Math.min(RADAR_GROUP_MAX, Math.max(1, Math.round(Number(event.target.value) || 1))))} />
+          </label>
+        )}
+        <small>{trn("{0} Timer {1} s{2}", <Clock size={11} aria-hidden="true" />, timer.seconds, timer.ruleName ? tr(" · rule “{0}”", [timer.ruleName]) : tr(" · the zone's radar"))}{timer.repeat ? tr(" · sends again by itself") : ""}</small>
       </div>
     </div>
   );
@@ -289,7 +296,14 @@ export function SendRadarButton({ ride, book, candidates, target, max, onNotice,
   const money = moneyForSend(draft, view, ride.zoneId, "radar");
   const sees = seesLabel(money, ride.zoneId);
   const status = view?.status ?? ride.status;
-  const issue = target.kind === "group" ? groupIssue(book.groups.find((group) => group.id === target.id)) : target.kind === "zone" && target.ids.length === 0 ? "Pick at least one zone." : !name ? "Choose where the radar goes." : !canAssign(status) ? "This trip cannot be assigned now." : money.blocked;
+  const live = isLiveData();
+  const country = marketOfZone(ride.zoneId)?.id;
+  // v0.18.6 (G4-F4): a radar zone is sent with the rule that covers it; the server needs both.
+  const rule = target.kind === "radar_zone" && country ? radarRuleFor(book, target.id, country) : null;
+  const issue = target.kind === "group" ? groupIssue(book.groups.find((group) => group.id === target.id)) : target.kind === "zone" && target.ids.length === 0 ? "Pick at least one zone." : !name ? "Choose where the radar goes." : target.kind === "radar_zone" && live && !rule ? "This radar zone has no rule yet. Make one in Radar zone rules." : !canAssign(status) ? "This trip cannot be assigned now." : money.blocked;
+  // On live, a group or a radar zone goes to the server as it is (it picks the free drivers); whole zones as the drivers.
+  const serverTarget = !live ? {} : target.kind === "group" ? { groupId: target.id } : target.kind === "radar_zone" && rule ? { radarZoneId: target.id, ruleId: rule.id, radarZoneName: name } : {};
+  const byServer = Object.keys(serverTarget).length > 0;
   return (
     <CommandButton
       command="admin.trip.radarGroup"
@@ -302,9 +316,9 @@ export function SendRadarButton({ ride, book, candidates, target, max, onNotice,
       patch={{ status: "offered" }}
       before={status}
       after={`radar ${label}: ${drivers.map((item) => item.driver.id).join(", ") || "nobody inside yet"}`}
-      value={{ driverIds: drivers.map((item) => item.driver.id), target: label, maxDrivers: max, ...money.params }}
-      disabled={Boolean(issue)}
-      title={issue ? trx(issue) : drivers.length ? tr("{0} free driver(s) inside right now get the radar", [String(drivers.length)]) : tr("No free driver inside right now. The radar still goes out and reaches drivers who come in.")}
+      value={byServer ? { ...serverTarget, target: label, ...money.params } : { driverIds: drivers.map((item) => item.driver.id), target: label, maxDrivers: max, ...money.params }}
+      disabled={Boolean(issue) || (live && !byServer && drivers.length === 0)}
+      title={issue ? trx(issue) : drivers.length ? tr("{0} free driver(s) inside right now get the radar", [String(drivers.length)]) : !live ? tr("No free driver inside right now. The radar still goes out and reaches drivers who come in.") : rule?.repeat ? tr("Nobody free inside right now. It goes out again every {0} s and reaches drivers who come in.", [rule.seconds]) : byServer ? tr("Nobody seems free right now; the server checks again when you send.") : tr("No free driver inside right now.")}
       summary={<>{trn("Send {0}'s ride to the radar for {1}: up to {2} drivers see it, {3} right now.", <b>{ride.rider}</b>, <b>{name}</b>, max, drivers.length)}{sees ? ` ${seesSentence(money, ride.zoneId)}` : ""}</>}
       onDone={() => {
         record(ride, kind, label);
@@ -312,6 +326,22 @@ export function SendRadarButton({ ride, book, candidates, target, max, onNotice,
         onNotice(tr("{0}'s ride was sent to {1}.", [ride.rider, kind === "group" ? name : tr("the radar for {0}", [name])]));
       }}
     >{trn("{0} Send radar", <Send size={12} aria-hidden="true" />)}{sees ? <small className="hq-sees"> · {sees}</small> : null}</CommandButton>
+  );
+}
+
+/**
+ * v0.18.6 (owner G4-F4 "Repeat until taken"): while a radar zone send goes out again by itself (its rule repeats), the
+ * panel says so and offers Stop. The server also stops it when a driver accepts or the rider's search ends (8 min).
+ */
+export function RadarRepeatLine({ tripId, onNotice }: { tripId: string; onNotice: (text: string) => void }) {
+  const send = useActiveRadarSend(tripId);
+  const canAct = useCanHandle();
+  if (!send) return null;
+  return (
+    <div className="hq-repeat" data-testid="radar-repeat" role="status">
+      <span>{trn("{0} {1}: sending again every {2} s to the free drivers inside, newcomers too", <Radar size={12} aria-hidden="true" />, send.radarZoneName, send.seconds)}</span>
+      <CommandButton command="admin.trip.radarZoneStop" className="dash-btn small ghost danger" targetId={tripId} confirmTarget={false} before="repeating" after="stopped" disabled={!canAct} onDone={() => onNotice(tr("The radar for {0} was stopped.", [send.radarZoneName]))}>{tr("Stop")}</CommandButton>
+    </div>
   );
 }
 
@@ -341,6 +371,7 @@ export function RadarSender({ ride, book, candidates, onNotice, compact = false,
     <div className="hq-block" data-testid="radar-sender">
       <RadarTargetPicker ride={ride} book={book} candidates={candidates} value={target} onChange={change} max={max} onMax={setMax} compact={compact} />
       <SendRadarButton ride={ride} book={book} candidates={candidates} target={target} max={max} onNotice={onNotice} view={view} draft={draft} onSent={onSent} />
+      <RadarRepeatLine tripId={ride.tripId} onNotice={onNotice} />
     </div>
   );
 }

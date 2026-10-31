@@ -7,8 +7,11 @@ import { CommandButton } from "../ui/CommandButton";
 import { Choice, Num, Switch } from "./fields";
 import { giveBonusPrefill } from "./prefill";
 import { MovedCard, offersLink } from "./MovedCard";
-import { DISPATCH_KEY, modeLabel, type DispatchBook, type DispatchEvent } from "./rules";
-import { tr, trn, trx, trSentences } from "../i18n";
+import { DISPATCH_KEY, modeLabel, type DispatchBook, type DispatchEvent, type EventText } from "./rules";
+import { PointMap } from "./PointMap";
+import { eventIssue } from "../live/dispatchTools";
+import { isLiveData } from "../live/realData";
+import { currentLanguage, tr, trn, trx, trSentences } from "../i18n";
 
 type Props = {
   book: DispatchBook;
@@ -29,20 +32,63 @@ function eventState(event: DispatchEvent, now: number): "on" | "soon" | "done" |
 
 const STATE_TEXT = { on: "Running now", soon: "Coming", done: "Done", off: "Off" } as const;
 
+const EMPTY_TEXT: EventText = { sv: "", fr: "", en: "" };
+const LANGS = [{ id: "sv", label: "Svenska" }, { id: "fr", label: "Français" }, { id: "en", label: "English" }] as const;
+
 function blankEvent(country: Market["id"], id: string): DispatchEvent {
   const day = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
-  return { id, country, name: "", ring: [], from: `${day}T20:00`, until: `${day}T23:30`, on: true, mode: "radar", radarDrivers: 10, pickupNote: "", driverMessage: "" };
+  return { id, country, name: "", ring: [], from: `${day}T20:00`, until: `${day}T23:30`, on: true, mode: "radar", radarDrivers: 10, pickupNote: "", driverMessage: "", location: null, details: { title: { ...EMPTY_TEXT }, description: { ...EMPTY_TEXT }, pickupNote: { ...EMPTY_TEXT } } };
+}
+
+/** The event's details with every text present (older demo events have none). */
+function detailsOf(event: DispatchEvent): NonNullable<DispatchEvent["details"]> {
+  return event.details ?? { title: { ...EMPTY_TEXT }, description: { ...EMPTY_TEXT }, pickupNote: { ...EMPTY_TEXT } };
+}
+
+/** One text in sv / fr / en (G4-F6: drivers read it in their language). */
+function TextTriple({ label, value, multiline = false, max, onChange }: { label: string; value: EventText; multiline?: boolean; max: number; onChange: (next: EventText) => void }) {
+  return (
+    <fieldset className="dx-text-triple" aria-label={label}>
+      <legend>{label}</legend>
+      {LANGS.map((lang) => (
+        <label key={lang.id} className="field">
+          <small>{lang.label}</small>
+          {multiline
+            ? <textarea aria-label={`${label} (${lang.id})`} rows={2} maxLength={max} value={value[lang.id]} onChange={(event) => onChange({ ...value, [lang.id]: event.target.value })} />
+            : <input aria-label={`${label} (${lang.id})`} maxLength={max} value={value[lang.id]} onChange={(event) => onChange({ ...value, [lang.id]: event.target.value })} />}
+        </label>
+      ))}
+    </fieldset>
+  );
 }
 
 export function EventsView({ book, market, canEdit, canBonus, onNotice }: Props) {
   const navigate = useNavigate();
-  const [editing, setEditing] = useState<DispatchEvent | null>(null);
+  const [editing, setEditingRaw] = useState<DispatchEvent | null>(null);
+  // The latitude and longitude as typed, so one can be typed before the other (the pin needs both).
+  const [typed, setTyped] = useState<{ lat: string; lng: string }>({ lat: "", lng: "" });
+  const setEditing = (next: DispatchEvent | null) => {
+    if (next && next.id !== editing?.id) setTyped({ lat: next.location ? String(next.location[0]) : "", lng: next.location ? String(next.location[1]) : "" });
+    setEditingRaw(next);
+  };
   const [now] = useState(() => Date.now());
   const events = book.events.filter((event) => event.country === market.id);
 
+  const live = isLiveData();
+
   if (editing) {
     const exists = book.events.some((event) => event.id === editing.id);
-    const error = !editing.name.trim() ? "Give the event a name." : editing.ring.length < 3 ? "Draw the event area on the map." : !(Date.parse(editing.until) > Date.parse(editing.from)) ? "The end must be after the start." : null;
+    const details = detailsOf(editing);
+    const setDetails = (patch: Partial<typeof details>) => setEditing({ ...editing, details: { ...details, ...patch } });
+    // v0.18.6 (G4-F6): on live an event needs its pin, its times and its texts in sv / fr / en; the area is optional.
+    const error = live ? eventIssue(editing) : !editing.name.trim() ? "Give the event a name." : editing.ring.length < 3 ? "Draw the event area on the map." : !(Date.parse(editing.until) > Date.parse(editing.from)) ? "The end must be after the start." : null;
+    const point = (lat: string, lng: string) => {
+      setTyped({ lat, lng });
+      const a = Number(lat);
+      const b = Number(lng);
+      setEditing({ ...editing, location: lat.trim() && lng.trim() && Number.isFinite(a) && Number.isFinite(b) && Math.abs(a) <= 90 && Math.abs(b) <= 180 ? [a, b] : null });
+    };
+    const setPoint = (lat: number, lng: number) => point(String(lat), String(lng));
     const next: DispatchBook = { ...book, draftRev: book.draftRev + 1, events: exists ? book.events.map((event) => (event.id === editing.id ? editing : event)) : [...book.events, editing] };
     return (
       <section className="dash-card dx-event-edit" aria-label={tr("Event")}>
@@ -52,26 +98,40 @@ export function EventsView({ book, market, canEdit, canBonus, onNotice }: Props)
         </div>
         <div className="dx-event-grid">
           <div className="dx-event-fields">
-            <label className="field">{trn("Event name{0}", <input aria-label={tr("Event name")} maxLength={60} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Football final")} />)}</label>
+            <label className="field">{trn("Event name{0}", <input aria-label={tr("Event name")} maxLength={80} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Football final")} />)}</label>
             <div className="dx-modal-row">
               <label className="field">{trn("Starts{0}", <input type="datetime-local" aria-label={tr("Event starts")} value={editing.from} onChange={(event) => setEditing({ ...editing, from: event.target.value })} />)}</label>
               <label className="field">{trn("Ends{0}", <input type="datetime-local" aria-label={tr("Event ends")} value={editing.until} onChange={(event) => setEditing({ ...editing, until: event.target.value })} />)}</label>
             </div>
-            <div className="field">{trn("Dispatch in the area{0}", <Choice label={tr("Event mode")} value={editing.mode} onChange={(mode) => setEditing({ ...editing, mode })} options={[{ id: "radar", label: tr("Radar") }, { id: "exclusive", label: tr("Exclusive") }]} />)}</div>
-            {editing.mode === "radar" ? <label className="field">{trn("Drivers who see each request{0}", <Num label={tr("Event radar drivers")} value={editing.radarDrivers} unit="drivers" min={1} max={30} onChange={(radarDrivers) => setEditing({ ...editing, radarDrivers })} />)}</label> : null}
-            <label className="field">{trn("Pickup point for riders{0}", <input aria-label={tr("Event pickup note")} maxLength={100} value={editing.pickupNote} onChange={(event) => setEditing({ ...editing, pickupNote: event.target.value })} placeholder={tr("For example North gate, lane P2")} />)}</label>
-            <label className="field">{trn("Message to drivers before the event{0}", <textarea aria-label={tr("Event driver message")} rows={2} maxLength={140} value={editing.driverMessage} onChange={(event) => setEditing({ ...editing, driverMessage: event.target.value })} placeholder={tr("For example Concert ends at 22:30. Wait at the north gate.")} />)}</label>
+            <p className="dx-note">{tr("Times are local time in {0} ({1}).", [trx(market.name), market.timeZone])}</p>
+            <div className="dx-modal-row">
+              <label className="field">{trn("Latitude{0}", <input type="number" step="0.000001" aria-label={tr("Event latitude")} value={typed.lat} onChange={(event) => point(event.target.value, typed.lng)} />)}</label>
+              <label className="field">{trn("Longitude{0}", <input type="number" step="0.000001" aria-label={tr("Event longitude")} value={typed.lng} onChange={(event) => point(typed.lat, event.target.value)} />)}</label>
+            </div>
+            <TextTriple label={tr("Title for drivers")} value={details.title} max={80} onChange={(title) => setDetails({ title })} />
+            <TextTriple label={tr("Description for drivers")} value={details.description} max={1000} multiline onChange={(description) => setDetails({ description })} />
+            <TextTriple label={tr("Pickup note (optional)")} value={details.pickupNote} max={300} onChange={(pickupNote) => setDetails({ pickupNote })} />
+            <p className="dx-note">{tr("Drivers see a small event icon at the pin on their map; a tap shows the title, the time, the place, the description and the pickup note. Events change no dispatch rules.")}</p>
+            {live ? null : <>
+              <div className="field">{trn("Dispatch in the area{0}", <Choice label={tr("Event mode")} value={editing.mode} onChange={(mode) => setEditing({ ...editing, mode })} options={[{ id: "radar", label: tr("Radar") }, { id: "exclusive", label: tr("Exclusive") }]} />)}</div>
+              {editing.mode === "radar" ? <label className="field">{trn("Drivers who see each request{0}", <Num label={tr("Event radar drivers")} value={editing.radarDrivers} unit="drivers" min={1} max={30} onChange={(radarDrivers) => setEditing({ ...editing, radarDrivers })} />)}</label> : null}
+              <label className="field">{trn("Pickup point for riders{0}", <input aria-label={tr("Event pickup note")} maxLength={100} value={editing.pickupNote} onChange={(event) => setEditing({ ...editing, pickupNote: event.target.value })} placeholder={tr("For example North gate, lane P2")} />)}</label>
+              <label className="field">{trn("Message to drivers before the event{0}", <textarea aria-label={tr("Event driver message")} rows={2} maxLength={140} value={editing.driverMessage} onChange={(event) => setEditing({ ...editing, driverMessage: event.target.value })} placeholder={tr("For example Concert ends at 22:30. Wait at the north gate.")} />)}</label>
+            </>}
             <div className="dx-row"><span className="dx-row-text"><b>{tr("Event is on")}</b></span><Switch label={tr("Event")} on={editing.on} onChange={(on) => setEditing({ ...editing, on })} /></div>
             {error ? <p className="dx-issues" role="alert">{trSentences(error)}</p> : null}
             <div className="dx-modal-actions">
               <CommandButton command="admin.dispatch.event" className="dash-btn" targetId={editing.name.trim() || "event"} confirmTarget={false} scope="all" before={exists ? "event" : "none"} after={editing.on ? "on" : "off"} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={next} disabled={!canEdit || Boolean(error)} onDone={() => { onNotice(tr("Event {0} saved.", [editing.name])); setEditing(null); }}>{tr("Save event")}</CommandButton>
-              <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" disabled={!canBonus || editing.ring.length < 3} title={tr("Opens the driver bonus builder with the same area and time")} onClick={() => {
+              {/* G10 builds driver bonuses on live; the shortcut is demo-only until then. */}
+              {live ? null : <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" disabled={!canBonus || editing.ring.length < 3} title={tr("Opens the driver bonus builder with the same area and time")} onClick={() => {
                 giveBonusPrefill({ name: editing.name || "Event bonus", ring: editing.ring, from: editing.from, until: editing.until, note: editing.driverMessage });
                 navigate(`/drivers?view=bonuses&country=${market.id}&prefill=event`);
-              }}>{trn("{0} Also make a driver bonus", <Flame size={14} aria-hidden="true" />)}</button>
+              }}>{trn("{0} Also make a driver bonus", <Flame size={14} aria-hidden="true" />)}</button>}
             </div>
           </div>
           <div className="dx-event-map">
+            <PointMap market={market} point={editing.location ?? null} ring={editing.ring} onPick={([lat, lng]) => setPoint(lat, lng)} />
+            <p className="dx-note">{tr("Area (optional): draw it below.")}</p>
             <BonusAreaMap country={market.id} areas={editing.ring.length ? [{ id: "event", name: editing.name || "Event area", ring: editing.ring }] : []} onChange={(areas) => setEditing({ ...editing, ring: areas[areas.length - 1]?.ring ?? [] })} />
           </div>
         </div>
@@ -86,7 +146,7 @@ export function EventsView({ book, market, canEdit, canBonus, onNotice }: Props)
           <h3 id="dx-events-title">{trn("{0} Events in {1}", <CalendarDays size={16} aria-hidden="true" />, trx(market.name))}</h3>
           <button data-command="admin.dispatch.edit" type="button" className="dash-btn small" disabled={!canEdit} onClick={() => setEditing(blankEvent(market.id, `EV-${Date.now().toString(36)}`))}>{trn("{0} New event", <Plus size={14} aria-hidden="true" />)}</button>
         </div>
-        <p className="dx-modal-help">{tr("A concert or a match: draw the area and set the time. During the event, these dispatch rules apply in that area.")}</p>
+        <p className="dx-modal-help">{live ? tr("A concert or a match: put the pin on the exact place, set the time and write what drivers should know. Drivers see a small event icon there on their map.") : tr("A concert or a match: draw the area and set the time. During the event, these dispatch rules apply in that area.")}</p>
         {events.length === 0 ? <p className="dx-calm">{trn("No event yet in {0}.", trx(market.name))}</p> : (
           <ul className="dx-event-list" aria-label={tr("Events")}>
             {events.map((event) => {
@@ -98,9 +158,11 @@ export function EventsView({ book, market, canEdit, canBonus, onNotice }: Props)
                   <span className="dx-event-icon" aria-hidden="true">{event.mode === "radar" ? <Radar size={18} /> : <Target size={18} />}</span>
                   <span className="dx-event-main">
                     <b>{event.name}</b>
-                    <small>{event.from.replace("T", " ")} – {event.until.slice(11)} · {modeLabel(event.mode)}{event.mode === "radar" ? tr(", {0} drivers", [event.radarDrivers]) : ""}</small>
-                    {event.pickupNote ? <small><MapPin size={11} aria-hidden="true" /> {event.pickupNote}</small> : null}
-                    {event.driverMessage ? <small className="dx-quote">“{event.driverMessage}”</small> : null}
+                    <small>{event.from.replace("T", " ")} – {event.until.slice(0, 10) === event.from.slice(0, 10) ? event.until.slice(11) : event.until.replace("T", " ")}{live ? "" : ` · ${modeLabel(event.mode)}${event.mode === "radar" ? tr(", {0} drivers", [event.radarDrivers]) : ""}`}</small>
+                    {event.details?.title[currentLanguage()] ? <small>{event.details.title[currentLanguage()]}</small> : null}
+                    {event.location ? <small><MapPin size={11} aria-hidden="true" /> {event.location[0].toFixed(5)}, {event.location[1].toFixed(5)}</small> : null}
+                    {event.details?.pickupNote[currentLanguage()] ? <small>{tr("Pickup: {0}", [event.details.pickupNote[currentLanguage()]])}</small> : !live && event.pickupNote ? <small><MapPin size={11} aria-hidden="true" /> {event.pickupNote}</small> : null}
+                    {!live && event.driverMessage ? <small className="dx-quote">“{event.driverMessage}”</small> : null}
                   </span>
                   <span className={`dx-state ${state}`}>{trx(STATE_TEXT[state])}</span>
                   <span className="dx-event-actions">

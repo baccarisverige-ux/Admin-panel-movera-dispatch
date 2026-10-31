@@ -68,27 +68,25 @@ test("change Radar, publish now, see it in history, then undo", async ({ page })
   await expect(page.getByLabel("Radar drivers")).toHaveValue("5");
 });
 
-test("a big change waits for a second admin, who approves it", async ({ page }) => {
+test("G4-F1: a big change goes live at once — no second admin, no waiting box; History keeps it with Undo", async ({ page }) => {
   await session(page);
   await page.goto("/dispatch?zone=Z002");
   await page.getByRole("radiogroup", { name: "How the mode is chosen" }).getByText("By hand").click();
   await page.getByRole("radiogroup", { name: "Main mode" }).getByText("Radar").click();
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
-  await expect(page.getByRole("list", { name: "Changes not live yet" })).toContainText("Needs a second admin");
+  await expect(page.getByRole("list", { name: "Changes not live yet" })).toContainText("How the mode is chosen: Automatic → By hand");
+  await expect(page.getByRole("list", { name: "Changes not live yet" })).not.toContainText("Needs a second admin");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await confirm(page);
-  await expect(page.getByText("Waiting for a second admin: Södermalm.")).toBeVisible();
-  const approvals = page.getByRole("region", { name: "Waiting for a second admin" });
-  await expect(approvals).toContainText("How the mode is chosen: Automatic → By hand");
-  await expect(approvals.getByRole("button", { name: "Approve" })).toBeDisabled();
-
-  await page.evaluate(() => localStorage.setItem("movera-admin-session", "lena"));
-  await page.reload();
-  await page.getByRole("region", { name: "Waiting for a second admin" }).getByRole("button", { name: "Approve" }).click();
-  await confirm(page);
+  await expect(page.getByText("Live now: Södermalm.")).toBeVisible();
   await expect(page.getByRole("region", { name: "Waiting for a second admin" })).toHaveCount(0);
   await expect(zone(page, "Södermalm")).toContainText("Radar");
+  const views = page.getByRole("tablist", { name: "Dispatch sections" });
+  await expect(views.getByRole("tab", { name: "History" })).toHaveText("History");
+  await views.getByRole("tab", { name: "History" }).click();
+  await expect(page.getByRole("list", { name: "Versions" })).toContainText("How the mode is chosen: Automatic → By hand");
+  await expect(page.getByRole("button", { name: "Undo this version" })).toBeVisible();
 });
 
 test("save a draft, test a ride with my changes, map full screen and hide", async ({ page }) => {
@@ -136,13 +134,13 @@ test("rider waiting steps: change the message and see it in the rider app", asyn
   await expect(page.getByRole("region", { name: "Publish" }).getByRole("button", { name: "Publish now" })).toBeDisabled();
 });
 
-test("live: alerts, pause a zone needs approval, send a rider to a radar", async ({ page }) => {
+test("live: alerts, pause a zone at once (G4-F1), send a rider to a radar", async ({ page }) => {
   await session(page);
   await page.goto("/dispatch?view=live");
   await expect(page.getByRole("region", { name: "Alerts" })).toContainText(/waited|free driver/);
   await page.getByRole("button", { name: "Pause Norrmalm" }).click();
   await confirm(page);
-  await expect(page.getByText("Pause Norrmalm: waiting for a second admin to approve.")).toBeVisible();
+  await expect(page.getByText("Norrmalm: pause done.")).toBeVisible();
   const list = page.getByRole("list", { name: "Riders waiting" });
   const first = list.getByRole("listitem").first();
   await first.getByRole("button", { name: /Nearby drivers for / }).click();

@@ -38,13 +38,13 @@ export function zoneChoicesFor(zoneId: string): { id: string; name: string; near
 }
 
 /** The timer and size a radar to this target runs with: the radar zone's rule, else the pickup zone's radar settings. */
-export function radarTimerFor(book: DispatchBook, target: RadarTarget, pickupZoneId: string): { seconds: number; maxDrivers: number; ruleName: string | null } {
+export function radarTimerFor(book: DispatchBook, target: RadarTarget, pickupZoneId: string): { seconds: number; maxDrivers: number; ruleName: string | null; repeat: boolean } {
   const zone = liveRules(book, pickupZoneId);
-  const fallback = { seconds: zone.radar.seconds, maxDrivers: Math.min(RADAR_GROUP_MAX, Math.max(1, zone.radar.drivers)), ruleName: null };
+  const fallback = { seconds: zone.radar.seconds, maxDrivers: Math.min(RADAR_GROUP_MAX, Math.max(1, zone.radar.drivers)), ruleName: null, repeat: false };
   if (target.kind !== "radar_zone") return fallback;
   const rule = radarRuleFor(book.radarZoneRules, target.id);
   if (!rule) return fallback;
-  return { seconds: rule.seconds, maxDrivers: Math.min(RADAR_GROUP_MAX, Math.max(1, rule.maxDrivers)), ruleName: rule.name };
+  return { seconds: rule.seconds, maxDrivers: Math.min(RADAR_GROUP_MAX, Math.max(1, rule.maxDrivers)), ruleName: rule.name, repeat: rule.repeat };
 }
 
 type Positioned = { driver: { id: string; zoneId: string; lat: number; lng: number } };

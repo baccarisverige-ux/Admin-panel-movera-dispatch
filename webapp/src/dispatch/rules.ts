@@ -2,6 +2,7 @@ import { market, MARKETS, zoneById, type MarketId, type MarketZone } from "../ma
 import { currencySymbol, fromSek } from "../pricing/zonePricing.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
 import { RAISE_MAX_FACTOR_DEFAULT, validRaiseFactor } from "./offerRules.ts";
+import { rulesOfDispatch } from "../live/configDocs.ts";
 import {
   DEFAULT_FEE_CATEGORIES, RESERVATION_FREE_MAX_MIN, cancelFeeAmount, cancelFeeDefaults, cancelFeeIssues, completeCancelFees, feeRow, legacyCancelFees,
   type CancelFeeKind, type CancelFeeTable, type CancelFeeType, type FeeCategory,
@@ -368,10 +369,26 @@ export type DispatchEvent = {
   radarDrivers: number;
   pickupNote: string;
   driverMessage: string;
+  /**
+   * v0.18.6 (owner G4-F6, contract.json#dispatchTools.events): the exact point where the drivers' event icon stands
+   * ([lat, lng]); `ring` is the optional area. `from` / `until` are local times of the country ("YYYY-MM-DDTHH:MM").
+   */
+  location?: [number, number] | null;
+  /** G4-F6: what drivers read when they tap the icon, in sv / fr / en (pickup note optional). */
+  details?: { title: EventText; description: EventText; pickupNote: EventText };
+  /** The server's version (live), for the next change or delete. */
+  version?: number;
 };
 
-export type DriverGroup = { id: string; country: MarketId; name: string; driverIds: string[] };
-export type Preset = { id: string; name: string; note: string; builtIn: boolean; values: Omit<ZoneDispatch, "zoneId"> };
+export type EventText = { sv: string; fr: string; en: string };
+
+/** A saved driver group (G4-F3: per country on the server; the server sends to its free members, nearest first, max 10). */
+export type DriverGroup = { id: string; country: MarketId; name: string; driverIds: string[]; version?: number };
+/**
+ * A dispatch preset. G4-F2 (owner "Per country only"): saved ones are per country on the server; `doc` is the server's
+ * values (a dispatch document's parts) and applying it only changes those parts of a zone.
+ */
+export type Preset = { id: string; name: string; note: string; builtIn: boolean; values: Omit<ZoneDispatch, "zoneId">; country?: MarketId; doc?: Record<string, unknown>; version?: number };
 
 export type Control = { paused: boolean; mode: OfferMode | null; by: string; at: string };
 
@@ -415,6 +432,8 @@ export type RadarZone = {
   /** [lat, lng] ring, like a bonus area. */
   ring: [number, number][];
   createdAt: string;
+  /** The server's version (live, G4-F4). */
+  version?: number;
 };
 
 /** A radar rule for one or more radar zones; "all" is the default and a rule naming a zone wins over it. */
@@ -430,6 +449,8 @@ export type RadarZoneRule = {
   maxDrivers: number;
   /** Send again by itself when nobody accepts. */
   repeat: boolean;
+  /** The server's version (live, G4-F4). */
+  version?: number;
 };
 
 export type DispatchBook = {
@@ -1311,11 +1332,11 @@ export function undoTo(book: DispatchBook, rev: number, actorId: string, at: str
 }
 
 /** Live switch from the Live tab: pause a zone or force a mode. Big ones wait for a second admin. */
-export function requestControl(book: DispatchBook, zoneId: string, value: Omit<Control, "at" | "by">, actorId: string, at: string): { book: DispatchBook; waiting: boolean } {
+export function requestControl(book: DispatchBook, zoneId: string, value: Omit<Control, "at" | "by">, actorId: string, at: string, options: { direct?: boolean } = {}): { book: DispatchBook; waiting: boolean } {
   const current = book.control[zoneId] ?? { paused: false, mode: null, by: "", at: "" };
   const big = value.paused !== current.paused || value.mode !== current.mode;
   const resume = !value.paused && !value.mode;
-  if (!big || resume) return { book: { ...book, draftRev: book.draftRev + 1, control: { ...book.control, [zoneId]: { ...value, by: actorId, at } } }, waiting: false };
+  if (!big || resume || options.direct) return { book: { ...book, draftRev: book.draftRev + 1, control: { ...book.control, [zoneId]: { ...value, by: actorId, at } } }, waiting: false };
   const lines = [`${zoneById(zoneId)?.name ?? zoneId}: ${value.paused ? "pause dispatch" : `use ${modeLabel(value.mode ?? "none")} now`}`];
   const approvals = [...book.approvals.filter((item) => !(item.kind === "control" && item.control?.zoneId === zoneId)), { id: `AP-${book.draftRev + 1}`, kind: "control" as const, zoneIds: [zoneId], lines, by: actorId, at, control: { zoneId, value: { ...value, by: actorId, at } } }];
   return { book: { ...book, draftRev: book.draftRev + 1, approvals }, waiting: true };
@@ -1344,6 +1365,8 @@ export function copyParts(from: ZoneDispatch, to: ZoneDispatch, parts: readonly 
 }
 
 export function applyPreset(zone: ZoneDispatch, preset: Preset, country: MarketId): ZoneDispatch {
+  // G4-F2: a preset saved on the server holds a dispatch document's parts; only those parts of the zone change.
+  if (preset.doc) return rulesOfDispatch(preset.doc, null, zone);
   const money = feeDefaults(country);
   // Presets saved before newer settings existed get those settings from the defaults.
   const values = complete(zone.zoneId, clone(preset.values) as Partial<ZoneDispatch>);

@@ -269,6 +269,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   // Assign tool (owner Q13–Q18, contract §3.1): direct assign (exclusive offer), radar groups, money for the driver.
   { id: "admin.trip.assign", label: "Assign to a driver (exclusive offer)", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.radarGroup", label: "Send to a radar group", reason: false, permission: "trips.intervene" },
+  // v0.18.6 (G4-F4): stop a radar zone send that goes out again by itself (POST /admin/trips/{tripId}/radar-zone/stop).
+  { id: "admin.trip.radarZoneStop", label: "Stop a radar that sends again by itself", reason: false, permission: "trips.intervene" },
   { id: "admin.trip.driverBonus", label: "Add money for driver", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.noShow", label: "Mark rider no-show", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.complete", label: "Complete trip", reason: true, permission: "trips.intervene" },

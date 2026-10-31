@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
-import { AlertTriangle, ArrowLeft, Bell, Flag, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bell, Flag, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, Trash2, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
 import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { Modal } from "../ui/Modal";
@@ -14,7 +14,6 @@ import {
   type CountryDispatch, type DispatchBook, type TabId, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx } from "../i18n";
-import { isLiveData } from "../live/realData";
 
 type Props = {
   book: DispatchBook;
@@ -83,7 +82,6 @@ export function RulesView(props: Props) {
             {group.zones.map((item) => {
               const rules = rulesOf(item.id);
               const paused = Boolean(book.control[item.id]?.paused);
-              const waiting = book.approvals.some((entry) => entry.zoneIds.includes(item.id));
               return (
                 <li key={item.id}>
                   <button data-command="admin.dispatch.view" type="button" aria-current={item.id === zoneId ? "true" : undefined} className={item.id === zoneId ? "dx-rail-zone on" : "dx-rail-zone"} onClick={() => onZone(item.id)}>
@@ -91,7 +89,6 @@ export function RulesView(props: Props) {
                     <span className="dx-rail-tags">
                       <ModeBadge zone={rules} paused={paused} />
                       {changed.has(item.id) ? <span className="dx-dot changed" title={tr("Changed, not live yet")}>{tr("Changed")}</span> : null}
-                      {waiting ? <span className="dx-dot waiting" title={tr("Waiting for a second admin")}>{tr("Waiting")}</span> : null}
                       {zoneIssues(rules, props.feeCategoriesOf(item.id)).length ? <AlertTriangle size={13} className="dx-warn" aria-label={tr("Has a problem")} /> : null}
                     </span>
                   </button>
@@ -234,7 +231,7 @@ export function RulesView(props: Props) {
         props.onNotice(tr("Copied {0} part{1} from {2} to {3} zone{4}. Not live yet.", [parts.length, parts.length === 1 ? "" : "s", zone.name, ids.length, ids.length === 1 ? "" : "s"]));
         setCopyOpen(false);
       }} />
-      <PresetDialog open={presetOpen} onClose={() => setPresetOpen(false)} book={book} zone={rules} zoneName={zone.name} countryId={market.id} agentId={props.agentId} onUse={(next, name) => {
+      <PresetDialog open={presetOpen} onClose={() => setPresetOpen(false)} book={book} zone={rules} zoneName={zone.name} countryId={market.id} agentId={props.agentId} canEdit={editable} onUse={(next, name) => {
         onRules(zone.id, next);
         props.onNotice(tr("Preset {0} used for {1}. Not live yet.", [name, zone.name]));
         setPresetOpen(false);
@@ -274,30 +271,45 @@ function CopyDialog({ open, tabs, onClose, from, zones, onApply }: { open: boole
   );
 }
 
-function PresetDialog({ open, onClose, book, zone, zoneName, countryId, agentId, onUse, onSaved }: { open: boolean; onClose: () => void; book: DispatchBook; zone: ZoneDispatch; zoneName: string; countryId: Market["id"]; agentId: string; onUse: (next: ZoneDispatch, name: string) => void; onSaved: (name: string) => void }) {
+function PresetDialog({ open, onClose, book, zone, zoneName, countryId, agentId, canEdit, onUse, onSaved }: { open: boolean; onClose: () => void; book: DispatchBook; zone: ZoneDispatch; zoneName: string; countryId: Market["id"]; agentId: string; canEdit: boolean; onUse: (next: ZoneDispatch, name: string) => void; onSaved: (name: string) => void }) {
   const [name, setName] = useState("");
-  const presets = [...BUILT_IN_PRESETS, ...(isLiveData() ? [] : book.presets)];
-  const saved = presetFrom(zone, name.trim(), `P-${book.draftRev + 1}`);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  // v0.18.6 (owner G4-F2 "Per country only"): saved presets belong to a country; on live they are the server's.
+  const own = book.presets.filter((preset) => !preset.country || preset.country === countryId);
+  const presets = [...BUILT_IN_PRESETS, ...own];
+  const taken = (value: string, except?: string) => presets.some((item) => item.id !== except && item.name.trim().toLowerCase() === value.trim().toLowerCase());
+  const saved = { ...presetFrom(zone, name.trim(), `P-${book.draftRev + 1}`), country: countryId };
+  const withPresets = (next: typeof book.presets) => ({ ...book, draftRev: book.draftRev + 1, presets: next });
   return (
     <Modal open={open} title={tr("Presets")} onClose={onClose}>
       <p className="dx-modal-help">{trn("Start from a ready-made set of rules. It replaces the settings of {0}; nothing goes live until you publish.", zoneName)}</p>
       <ul className="dx-presets" aria-label={tr("Presets")}>
         {presets.map((preset) => (
           <li key={preset.id}>
-            <span><b>{preset.name}</b><small>{preset.note}</small></span>
-            {preset.builtIn ? <span className="dx-tag">{tr("Ready-made")}</span> : <span className="dx-tag mine">{tr("Yours")}</span>}
+            {renaming?.id === preset.id ? (
+              <span className="dx-preset-rename">
+                <input aria-label={tr("New name for {0}", [preset.name])} value={renaming.name} maxLength={40} onChange={(event) => setRenaming({ id: preset.id, name: event.target.value })} />
+                <CommandButton command="admin.dispatch.preset" className="dash-btn small" targetId={preset.name} confirmTarget={false} scope="all" before={preset.name} after={renaming.name.trim()} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={withPresets(book.presets.map((item) => (item.id === preset.id ? { ...item, name: renaming.name.trim() } : item)))} disabled={!canEdit || !renaming.name.trim() || taken(renaming.name, preset.id)} onDone={() => { onSaved(renaming.name.trim()); setRenaming(null); }}>{tr("Save name")}</CommandButton>
+                <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => setRenaming(null)}>{tr("Cancel")}</button>
+              </span>
+            ) : <span><b>{preset.name}</b><small>{preset.note}</small></span>}
+            {preset.builtIn ? <span className="dx-tag">{tr("Ready-made")}</span> : <span className="dx-tag mine">{tr("Saved")}</span>}
             <button data-command="admin.dispatch.edit" type="button" className="dash-btn small" onClick={() => onUse(applyPreset(zone, preset, countryId), preset.name)}>{tr("Use")}</button>
+            {preset.builtIn || renaming?.id === preset.id ? null : <>
+              <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={!canEdit} aria-label={tr("Rename {0}", [preset.name])} onClick={() => setRenaming({ id: preset.id, name: preset.name })}>{tr("Rename")}</button>
+              <CommandButton command="admin.dispatch.preset" className="icon-ghost" targetId={preset.name} confirmTarget={false} scope="all" before="preset" after="removed" expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={withPresets(book.presets.filter((item) => item.id !== preset.id))} disabled={!canEdit} aria-label={tr("Delete {0}", [preset.name])} onDone={() => onSaved(preset.name)}>
+                <Trash2 size={14} aria-hidden="true" />
+              </CommandButton>
+            </>}
           </li>
         ))}
       </ul>
-      {/* G4 (live admin): saved presets have no server path yet, so on live only the ready-made ones are offered. */}
-      {isLiveData() ? null : <>
       <h5 className="dx-modal-h">{trn("Save {0}'s settings as a preset", zoneName)}</h5>
       <div className="dx-modal-row">
         <label className="field">{trn("Preset name{0}", <input aria-label={tr("Preset name")} value={name} maxLength={40} onChange={(event) => setName(event.target.value)} placeholder={tr("For example Weekend nights")} />)}</label>
-        <CommandButton command="admin.dispatch.preset" className="dash-btn" targetId={name.trim() || "preset"} confirmTarget={false} scope="all" before={`${book.presets.length} presets`} after={`${book.presets.length + 1} presets`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={{ ...book, draftRev: book.draftRev + 1, presets: [...book.presets, { ...saved, note: `${saved.note} by ${agentId}` }] }} disabled={!name.trim() || presets.some((item) => item.name.toLowerCase() === name.trim().toLowerCase())} onDone={() => { onSaved(name.trim()); setName(""); }}>{tr("Save preset")}</CommandButton>
+        <CommandButton command="admin.dispatch.preset" className="dash-btn" targetId={name.trim() || "preset"} confirmTarget={false} scope="all" before={`${own.length} presets`} after={`${own.length + 1} presets`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={withPresets([...book.presets, { ...saved, note: `${saved.note} by ${agentId}` }])} disabled={!canEdit || !name.trim() || taken(name)} onDone={() => { onSaved(name.trim()); setName(""); }}>{tr("Save preset")}</CommandButton>
       </div>
-      </>}
+      <p className="dx-note">{tr("Saved presets are for the whole country. Anyone who may edit Dispatch can save, rename or delete them; every change is in the audit log.")}</p>
     </Modal>
   );
 }
