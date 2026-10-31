@@ -89,4 +89,5 @@ test("owner 2026-10-31: the driver bonus limits come from the server's country r
   assert.deepEqual(liveBonusLimits({ driverBonus: { defaultLimit: sek(500000), hardMax: sek(100000) } }, "SE"), { limitMinor: 100000, hardMaxMinor: 100000 }, "never over the hard max");
   assert.deepEqual(liveBonusLimits({ driverBonus: { defaultLimit: sek(0), hardMax: sek(100000) } }, "SE"), { limitMinor: 0, hardMaxMinor: 100000 }, "0 only when the admin set 0");
   assert.equal(driverBonusSettingLink("FR"), "/pricing?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=FR");
+  assert.equal(driverBonusSettingLink("SE", "Z002"), "/pricing?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=SE&zone=Z002&scope=Z002");
 });

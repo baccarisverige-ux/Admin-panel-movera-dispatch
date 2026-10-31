@@ -73,6 +73,8 @@ export type TripOffersView = {
   radarRepeat?: { sendId: string; radarZoneId: string; seconds: number; maxDrivers: number; rounds: number; startedAt: string } | null;
   /** v0.18.7 (G5): live only, the trip's own facts from this read of GET /admin/trips/{tripId} (ETA, position, rider, terms, cancel). */
   live?: LiveTripFacts;
+  /** Live: false when the trip's country is unknown; the limit line and its button are hidden (the server still checks). */
+  limitsKnown?: boolean;
 };
 
 export type AcceptedDriver = {

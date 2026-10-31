@@ -1,3 +1,4 @@
+import { DRIVER_BONUS_LIMIT_INPUT_ID } from "../live/tripLive";
 import { useEffect, useState } from "react";
 import { BadgeDollarSign, Gift, HandHeart, Plus, Save, TrendingUp } from "lucide-react";
 import { market, zoneById, type MarketId } from "../markets/markets";
@@ -134,7 +135,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
     const node = document.getElementById(`extras-${section}`);
     if (!node) return;
     node.scrollIntoView({ block: "start" });
-    if (focus === "driverBonusLimit") node.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+    if (focus === "driverBonusLimit") document.getElementById(DRIVER_BONUS_LIMIT_INPUT_ID)?.focus({ preventScroll: true });
     node.classList.add("pl-flash");
     const timer = window.setTimeout(() => node.classList.remove("pl-flash"), 1600);
     return () => window.clearTimeout(timer);
@@ -185,7 +186,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <strong>{trn("{0} Driver bonus limit", <BadgeDollarSign size={14} aria-hidden="true" />)}</strong>
                 <small>{tr("The most an admin can add to one trip for the driver. Movera pays it; the rider never does. Above it the admin sees “adjust the limit in Pricing”.")}</small>
               </div>
-              <NumberField label={tr("Driver bonus limit")} value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
+              <NumberField id={DRIVER_BONUS_LIMIT_INPUT_ID} label={tr("Driver bonus limit")} value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
           </div>

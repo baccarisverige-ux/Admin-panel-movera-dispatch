@@ -184,10 +184,12 @@ test("owner 2026-10-31: the driver bonus box shows the country's real limits fro
   await expect(box.getByTestId("driver-bonus-limit")).toContainText("200,00 kr");
   await expect(box.getByTestId("driver-bonus-limit")).toContainText("1 000,00 kr");
   await expect(box.getByLabel("Money for the driver")).toHaveAttribute("placeholder", /200,00 kr/);
-  expect(settings.sent.some((s) => s.method === "GET" && s.path.startsWith("/api/v1/admin/config/country_rules?zoneId=Z001"))).toBe(true);
+  // Checker round 2 (M1): the offers are re-read every second, the country rules once (kept 5 min).
+  await page.waitForTimeout(4000);
+  expect(settings.sent.filter((s) => s.method === "GET" && s.path.startsWith("/api/v1/admin/config/country_rules?zoneId=Z001")).length).toBe(1);
   await box.getByTestId("driver-bonus-change-limit").click();
-  await expect(page).toHaveURL(/\/pricing\?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=SE/);
-  await expect(page.getByLabel("Driver bonus limit")).toBeFocused();
+  await expect(page).toHaveURL(/\/pricing\?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=SE&zone=Z001/);
+  await expect(page.locator("#driver-bonus-limit-input")).toBeFocused();
 });
 
 test("owner 2026-10-31: an admin who cannot change Pricing sees the limit text but no Change limit button", async ({ page }) => {
@@ -199,4 +201,12 @@ test("owner 2026-10-31: an admin who cannot change Pricing sees the limit text b
   await page.goto("/trips/T2004");
   await expect(page.getByTestId("driver-bonus-limit")).toContainText("200,00 kr");
   await expect(page.getByTestId("driver-bonus-change-limit")).toHaveCount(0);
+});
+
+test("checker round 2 (M2): a zone the panel does not know takes its country from the trip's currency (euro → France), never Swedish values", async ({ page }) => {
+  const odd = { ...ACTIVE_TRIP, tripId: "T2005", zoneId: "FR-ZZ", status: "searching", version: 2, driverId: undefined, driver: undefined, acceptedAt: undefined, riderId: "R501", fare: { amountMinor: 1500, currency: "EUR" }, fareLines: [], createdAt: new Date(Date.now() - 60_000).toISOString() };
+  await open(page, "/trips/T2005", [{ ...odd }]);
+  const line = page.getByTestId("driver-bonus-limit");
+  await expect(line).toContainText("€");
+  await expect(line).not.toContainText("kr");
 });

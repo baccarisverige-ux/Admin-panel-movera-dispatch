@@ -8,7 +8,7 @@ import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { driverBonusSettingLink } from "../live/tripLive";
 import { useAdminApi } from "../api/AdminApiContext";
 import type { TripOffersView } from "../api/dispatchSim";
-import { formatMoney, market } from "../markets/markets";
+import { formatMoney, market, marketOfCurrency, marketOfZone, MARKETS, type Market } from "../markets/markets";
 import { countryOf } from "../trips/file";
 import { CommandButton } from "../ui/CommandButton";
 import { BONUS_SCOPES, bonusInScope, bonusIssue, bonusOf, canAssign, scopeCovers, type AdminOffer, type BonusIssue, type BonusScope } from "./assign";
@@ -106,14 +106,16 @@ export function seesSentence(money: { seesMinor: number | null; bonusMinor: numb
  * trip may not pass the country's limit from Pricing › Tips & limits.
  */
 export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, draft: controlled, onDraft }: { trip: { id: string; zoneId: string; status: string }; view: TripOffersView; canAct: boolean; onDone?: (text: string) => void; compact?: boolean; draft?: MoneyDraft; onDraft?: (draft: MoneyDraft) => void }) {
-  const country = countryOf(trip.zoneId);
+  // Checker round 2 (M2): a zone the panel does not know takes its country from the trip's currency.
+  const country = marketOfZone(trip.zoneId)?.id ?? (MARKETS.some((item) => item.currency === view.currency) ? marketOfCurrency(view.currency as Market["currency"]) : countryOf(trip.zoneId));
   const place = market(country);
   const money = (minor: number) => formatMoney(minor, country);
   // Owner 2026-10-31: a small button straight to this country's "Driver bonus limit" field (admins who may change Pricing).
   const role = useSession().agent?.role;
   const liveSession = useLiveSessionMaybe();
   const canEditLimit = liveSession ? liveSession.can("settings.publish") : Boolean(role && can(role, "settings.publish"));
-  const settingLink = driverBonusSettingLink(country);
+  const settingLink = driverBonusSettingLink(country, trip.zoneId);
+  const limitsKnown = view.limitsKnown !== false;
   const [own, setOwn] = useState<MoneyDraft>(EMPTY_MONEY);
   const draft = controlled ?? own;
   const set = (patch: Partial<MoneyDraft>) => (onDraft ? onDraft({ ...draft, ...patch }) : setOwn({ ...draft, ...patch }));
@@ -135,7 +137,7 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
         </p>
       ) : null}
       <div className="as-bonus-row">
-        <label>{trn("Amount ({0}){1}", place.currency, <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={draft.amount} disabled={!canAct || !open} onChange={(event) => set({ amount: event.target.value })} placeholder={tr("Up to {0}", [money(Math.max(0, view.limits.limitMinor - already))])} />)}</label>
+        <label>{trn("Amount ({0}){1}", place.currency, <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={draft.amount} disabled={!canAct || !open} onChange={(event) => set({ amount: event.target.value })} placeholder={limitsKnown ? tr("Up to {0}", [money(Math.max(0, view.limits.limitMinor - already))]) : undefined} />)}</label>
         <div className="as-chips" role="group" aria-label={tr("Apply to")} data-testid="driver-bonus-scope">
           <span className="as-chips-label">{tr("Apply to")}</span>
           {BONUS_SCOPES.map((scope) => (
@@ -163,7 +165,7 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
         <p className="pl-warn" role="alert" data-testid="driver-bonus-issue">
           {trSentences(issue.message)}{issue.code === "over_limit" ? <> <Link to={settingLink}>{tr("Open Pricing › Tips & limits")}</Link></> : null}
         </p>
-      ) : (
+      ) : !limitsKnown ? null : (
         <p className="as-help" data-testid="driver-bonus-limit">
           {trn("Limit {0} per trip, set in {1} (hard max {2}).", money(view.limits.limitMinor), <Link to={settingLink}>{tr("Pricing › Tips & limits")}</Link>, money(view.limits.hardMaxMinor))}
           {canEditLimit ? <> <Link className="dash-btn small ghost" to={settingLink} data-testid="driver-bonus-change-limit">{trn("{0} Change limit", <Pencil size={12} aria-hidden="true" />)}</Link></> : null}

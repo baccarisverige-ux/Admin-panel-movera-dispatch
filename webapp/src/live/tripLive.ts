@@ -144,6 +144,9 @@ export function liveBonusLimits(doc: unknown, country: string): { limitMinor: nu
 }
 
 /** Pricing › Tips & limits of a country with the "Driver bonus limit" field scrolled to and focused. */
-export function driverBonusSettingLink(country: string): string {
-  return `/pricing?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=${encodeURIComponent(country)}`;
+export function driverBonusSettingLink(country: string, zoneId?: string): string {
+  return `/pricing?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=${encodeURIComponent(country)}${zoneId ? `&zone=${encodeURIComponent(zoneId)}&scope=${encodeURIComponent(zoneId)}` : ""}`;
 }
+
+/** The id of the "Driver bonus limit" input in Pricing › Tips & limits (the deep link focuses exactly this field). */
+export const DRIVER_BONUS_LIMIT_INPUT_ID = "driver-bonus-limit-input";

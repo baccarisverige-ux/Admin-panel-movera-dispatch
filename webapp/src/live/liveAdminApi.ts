@@ -393,7 +393,28 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     if (adminId === settingsAdmin) return;
     settingsAdmin = adminId;
     settings.forget();
+    bonusRules.clear();
   });
+  /**
+   * Checker round 2 (M1): the country_rules read behind the driver bonus limits, per zone, kept 5 minutes (the trip
+   * page re-reads its offers every second). A refusal (403 without settings.read) is kept for the session, so it is
+   * not asked again every second. Cleared on sign-out / another admin and after any settings publish.
+   */
+  const bonusRules = new Map<string, { at: number; document: unknown; refused: boolean }>();
+  const BONUS_RULES_TTL_MS = 5 * 60_000;
+  async function bonusRulesOf(zoneId: string): Promise<unknown> {
+    const kept = bonusRules.get(zoneId);
+    if (kept && (kept.refused || Date.now() - kept.at < BONUS_RULES_TTL_MS)) return kept.document;
+    try {
+      const answer = await client.json<{ document?: unknown }>(`/admin/config/country_rules?zoneId=${encodeURIComponent(zoneId)}`);
+      bonusRules.set(zoneId, { at: Date.now(), document: answer?.document ?? null, refused: false });
+      return answer?.document ?? null;
+    } catch (error) {
+      const refused = error instanceof ApiError && (error.status === 403 || error.status === 404);
+      bonusRules.set(zoneId, { at: Date.now(), document: null, refused });
+      return null;
+    }
+  }
   let currency: string = CURRENCY;
 
   async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER): Promise<Driver[]> {
@@ -655,6 +676,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     if (settingsCall) {
       try {
         const answer = await settingsCall;
+        bonusRules.clear();
         return typeof answer === "string" ? done(answer) : { ...done(answer.message), slice: answer.slice };
       } catch (error) {
         if (error instanceof SettingsChanged) throw new ApiError(409, error.message, { code: "version_mismatch", retryable: false });
@@ -787,8 +809,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     const tripCurrency = isCurrency(trip.fare.currency) ? trip.fare.currency : CURRENCY;
     // Owner 2026-10-31: the country's real driver bonus limits (country_rules of the trip's zone; else the contract
     // default), not 0. An admin without settings.read gets the default.
-    const rules = await client.json<{ document?: unknown }>(`/admin/config/country_rules?zoneId=${encodeURIComponent(trip.zoneId)}`).catch(() => null);
-    const limits = liveBonusLimits(rules?.document ?? null, marketOfZone(trip.zoneId)?.id ?? (tripCurrency === "EUR" ? "FR" : "SE"));
+    // M2: the country from the zone, else from the trip's currency (each market has its own); unknown → no limits shown.
+    const limitCountry = marketOfZone(trip.zoneId)?.id ?? MARKETS.find((item) => item.currency === trip.fare.currency)?.id ?? null;
+    const limits = limitCountry ? liveBonusLimits(await bonusRulesOf(trip.zoneId), limitCountry) : null;
     return {
       tripId,
       status: trip.status,
@@ -822,7 +845,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       lockedTo: null,
       events: [],
       timers: { exclusiveSeconds: 0, radarSeconds: 0 },
-      limits,
+      limits: limits ?? { limitMinor: Number.MAX_SAFE_INTEGER, hardMaxMinor: Number.MAX_SAFE_INTEGER },
+      limitsKnown: limits !== null,
       fareMinor: trip.fare.amountMinor,
       driverNetMinor: trip.driverEarnings?.amountMinor ?? 0,
       commissionMinor: trip.commission?.amountMinor ?? 0,
