@@ -279,6 +279,26 @@ export async function sendToolCalls(http: ToolsHttp, calls: readonly ToolCall[])
 /** The book's dispatch tools. */
 export const toolsOf = (book: DispatchBook): DispatchTools => ({ presets: book.presets.filter((item) => !item.builtIn), groups: book.groups, radarZones: book.radarZones, radarZoneRules: book.radarZoneRules, events: book.events });
 
+/* ---------------------------------------------------------------- the running repeat of a trip */
+
+/** A radar zone send that still goes out by itself (RadarZoneSend with active true), as the Handle panel shows it. */
+export type RadarRepeat = { sendId: string; radarZoneId: string; seconds: number; maxDrivers: number; rounds: number; startedAt: string };
+
+/**
+ * G4 checker: the running repeat comes from the server's trip (`radarZoneSend` on GET /admin/trips/{id}), so it
+ * survives a reload and shows for every admin. Read defensively: undefined when the server does not send the field
+ * (an older server; the panel then falls back to what this session sent), null when it is there but nothing runs.
+ */
+export function radarRepeatOf(trip: unknown): RadarRepeat | null | undefined {
+  if (!trip || typeof trip !== "object" || !("radarZoneSend" in trip)) return undefined;
+  const raw = (trip as { radarZoneSend?: unknown }).radarZoneSend;
+  if (!raw || typeof raw !== "object") return null;
+  const send = raw as Partial<RadarZoneSend>;
+  if (send.active !== true || typeof send.sendId !== "string" || typeof send.radarZoneId !== "string") return null;
+  const num = (value: unknown, fallback: number) => (typeof value === "number" && Number.isFinite(value) ? value : fallback);
+  return { sendId: send.sendId, radarZoneId: send.radarZoneId, seconds: num(send.seconds, 0), maxDrivers: num(send.maxDrivers, 0), rounds: num(send.rounds, 1), startedAt: typeof send.startedAt === "string" ? send.startedAt : "" };
+}
+
 /* ---------------------------------------------------------------- the server's refusals, in the panel's words */
 
 const REASON_TEXT: Record<string, string> = {

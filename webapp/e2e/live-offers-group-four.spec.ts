@@ -31,8 +31,10 @@ type Tools = Record<"presets" | "groups" | "radar-zones" | "radar-rules" | "even
 const ID_KEY = { presets: "presetId", groups: "groupId", "radar-zones": "radarZoneId", "radar-rules": "ruleId", events: "eventId" } as const;
 
 /** /admin/dispatch/* (contract.json#dispatchTools) in memory, with versions, plus the trip's nearby drivers and sends. */
-async function fakeTools(page: Page) {
+async function fakeTools(page: Page, trips: Array<Record<string, unknown>>) {
   const at = "2026-10-31T09:00:00Z";
+  const SEND = { sendId: "rzs_1", tripId: "T2003", radarZoneId: "rz_city", ruleId: "rr_fast", seconds: 20, maxDrivers: 5, repeat: true, rounds: 1, startedAt: at };
+  const trip = () => trips.find((item) => item["tripId"] === "T2003")!;
   const tools: Tools = {
     presets: [
       { presetId: "prs_se", country: "SE", name: "Weekend nights", values: { radar: { on: true, drivers: 9, seconds: 15, then: "widen_then_exclusive" } }, version: 1, createdAt: at, updatedAt: at, createdBy: "A1" },
@@ -88,10 +90,15 @@ async function fakeTools(page: Page) {
     }
     const body = (request.postDataJSON?.() ?? null) as Record<string, unknown> | null;
     sends.push({ method: request.method(), path: url.pathname, body });
-    if (url.pathname.endsWith("/radar-zone/stop")) return json(route, 200, { sendId: "rzs_1", tripId: "T2003", radarZoneId: "rz_city", ruleId: "rr_fast", seconds: 20, maxDrivers: 5, repeat: true, active: false, rounds: 2, startedAt: at, stoppedAt: at, stopReason: "admin" });
+    if (url.pathname.endsWith("/radar-zone/stop")) {
+      // The server's trip stops carrying the running send (GET /admin/trips/{id} radarZoneSend).
+      trip()["radarZoneSend"] = { ...SEND, active: false, rounds: 2, stoppedAt: at, stopReason: "admin" };
+      return json(route, 200, trip()["radarZoneSend"]);
+    }
     if (url.pathname.endsWith("/radar-group")) {
       const zone = Boolean(body?.["radarZoneId"]);
-      return json(route, 200, { groupId: "rg_1", tripId: "T2003", offers: [], expiresAt: new Date(Date.now() + 20_000).toISOString(), projection: { ...SEARCHING, status: "offered", version: 3 }, pickedFrom: zone ? "radar_zone" : "group", ...(zone ? { radarZoneSend: { sendId: "rzs_1", tripId: "T2003", radarZoneId: "rz_city", ruleId: "rr_fast", seconds: 20, maxDrivers: 5, repeat: true, active: true, rounds: 1, startedAt: at } } : {}) });
+      if (zone) trip()["radarZoneSend"] = { ...SEND, active: true, rounds: 3 };
+      return json(route, 200, { groupId: "rg_1", tripId: "T2003", offers: [], expiresAt: new Date(Date.now() + 20_000).toISOString(), projection: { ...SEARCHING, status: "offered", version: 3 }, pickedFrom: zone ? "radar_zone" : "group", ...(zone ? { radarZoneSend: { ...SEND, active: true } } : {}) });
     }
     return json(route, 200, { ...SEARCHING, status: "offered", version: 3 });
   });
@@ -100,9 +107,9 @@ async function fakeTools(page: Page) {
 
 async function open(page: Page, path: string) {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await fakeTripServer(page, { admin: G4_ADMIN, trips: [{ ...SEARCHING }] as never });
+  const state = await fakeTripServer(page, { admin: G4_ADMIN, trips: [{ ...SEARCHING }] as never });
   const settings = await fakeSettings(page);
-  const server = await fakeTools(page);
+  const server = await fakeTools(page, state.trips);
   // Södermalm (Z002) has its own documents on the server: raise limit 1.5×, rider rating off.
   const dispatch = settings.docs.get("dispatch:Z002")!;
   settings.docs.set("dispatch:Z002", { ...dispatch, document: { ...dispatch.document, raisePrice: { maxFactor: 1.5 } } });
@@ -231,10 +238,15 @@ test("G4-F3/F4 send: Driver groups sends the groupId (the server picks); Radar z
   expect(sends.filter((s) => s.path.endsWith("/radar-group"))[1]!.body).toMatchObject({ radarZoneId: "rz_city", ruleId: "rr_fast" });
   const repeat = panel.getByTestId("radar-repeat");
   await expect(repeat).toContainText("City core: sending again every 20 s to the free drivers inside, newcomers too");
+  // The server's trip says the send runs (round 3 there): the line follows it and survives a reload.
+  await expect(repeat).toContainText("round 3");
   await shot(page, "live-radar-repeat");
-  await repeat.getByRole("button", { name: "Stop" }).click();
+  await page.reload();
+  await page.getByRole("button", { name: /^Nearby drivers for / }).first().click();
+  await expect(page.getByTestId("assign-panel").getByTestId("radar-repeat")).toContainText("City core: sending again every 20 s");
+  await page.getByTestId("assign-panel").getByTestId("radar-repeat").getByRole("button", { name: "Stop" }).click();
   await expect.poll(() => sends.some((s) => s.path.endsWith("/radar-zone/stop"))).toBe(true);
-  await expect(panel.getByTestId("radar-repeat")).toHaveCount(0);
+  await expect(page.getByTestId("assign-panel").getByTestId("radar-repeat")).toHaveCount(0);
   await expect(page.getByText("Not connected yet")).toHaveCount(0);
 });
 

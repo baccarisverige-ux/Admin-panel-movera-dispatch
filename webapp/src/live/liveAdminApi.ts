@@ -15,7 +15,7 @@ export { zoneFilterOf, type ZoneFilter };
 import type { AdminApi, CommandInput, CommandResult } from "../api/create.ts";
 import type { TripOffersView } from "../api/dispatchSim.ts";
 import { ApiError } from "../api/httpClient.ts";
-import { toolRefusal, type RadarZoneSend } from "./dispatchTools.ts";
+import { radarRepeatOf, toolRefusal, type RadarZoneSend } from "./dispatchTools.ts";
 import { rememberSendTarget, sendTarget, setActiveRadarSend } from "../dispatch/radarSends.ts";
 import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
@@ -726,7 +726,13 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   }
 
   async function tripOffers(tripId: string): Promise<TripOffersView> {
-    const trip = trips.get(tripId) ?? (await client.json<Trip>(`/admin/trips/${encodeURIComponent(tripId)}`));
+    // The trip is read each time (not the list's copy): its radarZoneSend says whether a repeat still runs (G4-F4).
+    const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(tripId)}`).catch((error: unknown) => {
+      const cached = trips.get(tripId);
+      if (cached) return cached;
+      throw error;
+    });
+    trips.set(trip.tripId, trip);
     const page = await client.json<Page<TripOffer & { version?: number }>>(`/admin/trips/${encodeURIComponent(tripId)}/offers?limit=50`);
     const tripCurrency = isCurrency(trip.fare.currency) ? trip.fare.currency : CURRENCY;
     return {
@@ -767,6 +773,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       driverNetMinor: trip.driverEarnings?.amountMinor ?? 0,
       commissionMinor: trip.commission?.amountMinor ?? 0,
       accepted: null,
+      radarRepeat: radarRepeatOf(trip),
     } as unknown as TripOffersView;
   }
 

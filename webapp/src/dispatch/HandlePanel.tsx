@@ -333,13 +333,17 @@ export function SendRadarButton({ ride, book, candidates, target, max, onNotice,
  * v0.18.6 (owner G4-F4 "Repeat until taken"): while a radar zone send goes out again by itself (its rule repeats), the
  * panel says so and offers Stop. The server also stops it when a driver accepts or the rider's search ends (8 min).
  */
-export function RadarRepeatLine({ tripId, onNotice }: { tripId: string; onNotice: (text: string) => void }) {
-  const send = useActiveRadarSend(tripId);
+export function RadarRepeatLine({ tripId, book, view, onNotice }: { tripId: string; book: Pick<DispatchBook, "radarZones">; view?: TripOffersView; onNotice: (text: string) => void }) {
+  const local = useActiveRadarSend(tripId);
   const canAct = useCanHandle();
+  // The server's trip decides (it survives a reload and shows other admins' sends); what this session just sent is
+  // only the instant state until the next read. An older server that says nothing leaves this session's state.
+  const server = view?.radarRepeat;
+  const send = server ? { radarZoneName: book.radarZones.find((zone) => zone.id === server.radarZoneId)?.name ?? local?.radarZoneName ?? server.radarZoneId, seconds: server.seconds, rounds: server.rounds } : server === null ? null : local;
   if (!send) return null;
   return (
     <div className="hq-repeat" data-testid="radar-repeat" role="status">
-      <span>{trn("{0} {1}: sending again every {2} s to the free drivers inside, newcomers too", <Radar size={12} aria-hidden="true" />, send.radarZoneName, send.seconds)}</span>
+      <span>{trn("{0} {1}: sending again every {2} s to the free drivers inside, newcomers too{3}", <Radar size={12} aria-hidden="true" />, send.radarZoneName, send.seconds, send.rounds > 1 ? tr(" · round {0}", [send.rounds]) : "")}</span>
       <CommandButton command="admin.trip.radarZoneStop" className="dash-btn small ghost danger" targetId={tripId} confirmTarget={false} before="repeating" after="stopped" disabled={!canAct} onDone={() => onNotice(tr("The radar for {0} was stopped.", [send.radarZoneName]))}>{tr("Stop")}</CommandButton>
     </div>
   );
@@ -371,7 +375,7 @@ export function RadarSender({ ride, book, candidates, onNotice, compact = false,
     <div className="hq-block" data-testid="radar-sender">
       <RadarTargetPicker ride={ride} book={book} candidates={candidates} value={target} onChange={change} max={max} onMax={setMax} compact={compact} />
       <SendRadarButton ride={ride} book={book} candidates={candidates} target={target} max={max} onNotice={onNotice} view={view} draft={draft} onSent={onSent} />
-      <RadarRepeatLine tripId={ride.tripId} onNotice={onNotice} />
+      <RadarRepeatLine tripId={ride.tripId} book={book} view={view} onNotice={onNotice} />
     </div>
   );
 }

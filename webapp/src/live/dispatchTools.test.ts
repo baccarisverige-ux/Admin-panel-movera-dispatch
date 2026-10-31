@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { applyPreset, emptyDispatchBook, zoneDefault, type DispatchEvent } from "../dispatch/rules.ts";
-import { eventBody, eventIssue, eventOf, localToUtc, openRing, presetOf, readDispatchTools, toolCalls, toolRefusal, toolsOf, utcToLocal, type DispatchTools, type ServerEvent, type ToolsHttp } from "./dispatchTools.ts";
+import { eventBody, eventIssue, eventOf, localToUtc, openRing, presetOf, radarRepeatOf, readDispatchTools, toolCalls, toolRefusal, toolsOf, utcToLocal, type DispatchTools, type ServerEvent, type ToolsHttp } from "./dispatchTools.ts";
 
 /**
  * Driver group 4 admin features on live (contract v0.18.6 §32 dispatchTools; owner G4-F2 presets per country, F3 driver
@@ -125,4 +125,14 @@ test("the server's refusals are said in the panel's words (contract.json#dispatc
   for (const reason of contract.dispatchTools.reasons) assert.ok(toolRefusal({ status: 409, reason }), reason);
   assert.match(toolRefusal({ status: 409, code: "version_mismatch" }) ?? "", /Someone changed this/);
   assert.equal(toolRefusal({ status: 500, reason: "boom" }), null);
+});
+
+test("G4 checker: the running repeat is read from the server's trip (radarZoneSend), defensively", () => {
+  const send = { sendId: "rzs_1", tripId: "T1", radarZoneId: "rz_1", ruleId: "rr_1", seconds: 20, maxDrivers: 5, repeat: true, active: true, rounds: 3, startedAt: "2026-10-31T09:00:00Z" };
+  assert.deepEqual(radarRepeatOf({ tripId: "T1", radarZoneSend: send }), { sendId: "rzs_1", radarZoneId: "rz_1", seconds: 20, maxDrivers: 5, rounds: 3, startedAt: "2026-10-31T09:00:00Z" });
+  assert.equal(radarRepeatOf({ tripId: "T1", radarZoneSend: { ...send, active: false } }), null, "stopped = nothing runs");
+  assert.equal(radarRepeatOf({ tripId: "T1", radarZoneSend: null }), null);
+  assert.equal(radarRepeatOf({ tripId: "T1", radarZoneSend: "junk" }), null);
+  assert.equal(radarRepeatOf({ tripId: "T1" }), undefined, "an older server says nothing: the session's own state stands");
+  assert.equal(radarRepeatOf(null), undefined);
 });
