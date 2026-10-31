@@ -10,7 +10,9 @@ export function restoredPath(search: string, base: string): string | null {
   const wanted = params.get("p");
   if (!wanted || !wanted.startsWith("/") || wanted.startsWith("//") || wanted.includes("://")) return null;
   params.delete("p");
-  const [pathAndQuery, hash = ""] = wanted.split("#");
+  const cut = wanted.indexOf("#");
+  const pathAndQuery = cut < 0 ? wanted : wanted.slice(0, cut);
+  const hash = cut < 0 ? "" : wanted.slice(cut + 1);
   const [path, query = ""] = pathAndQuery.split("?");
   const merged = new URLSearchParams(query);
   for (const [key, value] of params) if (!merged.has(key)) merged.set(key, value);

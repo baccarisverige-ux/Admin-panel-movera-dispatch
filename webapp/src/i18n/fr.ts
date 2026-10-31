@@ -7488,4 +7488,6 @@ export const fr: Record<MessageKey, string> = {
   "{0} min · {1}/min": "{0} min · {1}/min",
   "{0}Owes {1}": "{0}Doit {1}",
   "Waive the cancel fee": "Annuler les frais d’annulation",
+  "Write why the fee is waived.": "Écrivez pourquoi les frais sont annulés.",
+  "This fee is already waived.": "Ces frais sont déjà annulés.",
 };

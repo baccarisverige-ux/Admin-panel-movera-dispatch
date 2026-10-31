@@ -7,6 +7,7 @@ test("the page kept in ?p= comes back under the base, with its own query and has
   assert.equal(restoredPath("?p=%2Ftrips%2FT123", "/Admin-panel-movera-dispatch/live/"), "/Admin-panel-movera-dispatch/live/trips/T123");
   assert.equal(restoredPath("?p=%2Ftrips%2FT123%3Fscope%3DZ001%23route", "/live"), "/live/trips/T123?scope=Z001#route");
   assert.equal(restoredPath("?p=%2Friders%2FR1&country=SE", "/"), "/riders/R1?country=SE", "other start-page params ride along");
+  assert.equal(restoredPath("?p=%2Ftrips%2FT1%23a%23b", "/"), "/trips/T1#a#b", "a '#' inside the hash is kept");
   assert.equal(restoredPath("?country=SE", "/"), null, "nothing to restore");
   assert.equal(restoredPath("?p=https%3A%2F%2Fevil.example", "/"), null, "never another site");
   assert.equal(restoredPath("?p=%2F%2Fevil.example", "/"), null, "never a protocol-relative URL");

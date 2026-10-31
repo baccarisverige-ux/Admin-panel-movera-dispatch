@@ -624,8 +624,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     if (input.action === "admin.trip.waiveFee") {
       // v0.18.7 (G5 Q2/Q3): an owed cancel or no-show fee is waived on the trip (POST /admin/trips/{tripId}/adjust
       // waiveCancelFee); the rider's outstanding amount in that currency drops at once.
+      // Checker round 1: the admin's own reason, never a default; refused before any send.
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write why the fee is waived."), { code: "invalid_request", reason: "reason_required", retryable: false });
       const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
-      const next = await client.post<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/adjust`, { expectedVersion: trip.version, waiveCancelFee: true, reason: (input.reason ?? "").trim() || "Fee waived by an admin" });
+      // A retry after a lost answer finds the fee already waived: that is done, not "changed".
+      if (trip.cancellation?.feeStatus === "waived") {
+        trips.set(trip.tripId, trip);
+        return done("This fee is already waived.");
+      }
+      // The command's own Idempotency-Key, so a resend of the same click is the same operation on the server.
+      const next = await client.json<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/adjust`, { method: "POST", body: JSON.stringify({ expectedVersion: trip.version, waiveCancelFee: true, reason: reason.slice(0, 1000) }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) });
       trips.set(trip.tripId, next?.tripId ? next : { ...trip, cancellation: trip.cancellation ? { ...trip.cancellation, feeStatus: "waived" } : trip.cancellation });
       return done("Fee waived. The rider owes nothing for this trip.");
     }

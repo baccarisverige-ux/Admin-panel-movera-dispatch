@@ -148,7 +148,9 @@ test("Q2 / Q6 / Q3: the cancelled trip shows the reason in words, the no-show fe
   const sent = state.calls.find((call) => call.method === "POST" && call.path.endsWith("/admin/trips/T2003/adjust"))!.body as Record<string, unknown>;
   expect(sent["waiveCancelFee"]).toBe(true);
   expect(sent["expectedVersion"]).toBe(4);
-  expect(String(sent["reason"]).length).toBeGreaterThan(0);
+  expect(sent["reason"]).toBe("Planned change"); // the reason the admin picked in the dialog, sent as is
+  const waiveCall = state.calls.find((call) => call.method === "POST" && call.path.endsWith("/admin/trips/T2003/adjust"))!;
+  expect(waiveCall.headers["idempotency-key"]).toBeTruthy();
   await expect(page.getByRole("status")).toContainText("Fee waived");
   await page.goto("/trips/T2003");
   await expect(page.getByTestId("trip-cancel-fee").getByTestId("trip-fee-status")).toContainText("waived");
