@@ -90,6 +90,9 @@ test("admin work shows who did what, with a page per admin", async ({ page }) =>
 });
 
 test("only Super admin and Operations see everyone, and the Super admin can add roles", async ({ page }) => {
+  // The demo's admin work is dated a few days back from now: on the first days of a month it falls in the month before
+  // and "This month" is empty (failed on 1 Nov). Run the page at mid-month so the test does not depend on today's date.
+  await page.clock.install({ time: new Date("2026-10-15T12:00:00Z") });
   await session(page, "astrid");
   await page.goto("/reports?tab=work&period=month");
   await expect(page.getByText("You see your own work.")).toBeVisible();
