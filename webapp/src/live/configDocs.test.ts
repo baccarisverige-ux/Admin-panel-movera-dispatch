@@ -371,3 +371,31 @@ test("G3-D8: Copy to all zones copies the driver app settings to every zone of t
   assert.ok(server.calls.some((c) => c.method === "POST" && (c.body as { zoneId?: string }).zoneId === "Z003"), "published to the drivers");
   assert.ok(!server.calls.some((c) => c.path.includes("use-standard")), "no zone is set back to the Standard");
 });
+
+test("G4 live fix: the dispatch tools read for one admin are forgotten on forget() (sign-out, another admin), and reused within 10 s otherwise", async () => {
+  const { DISPATCH_KEY, emptyDispatchBook: empty } = await import("../dispatch/rules.ts");
+  let groups = [{ groupId: "grp_se", country: "SE", name: "SE night", driverIds: [], version: 1 }];
+  let reads = 0;
+  const http: ConfigHttp = {
+    json: async <T,>(path: string) => {
+      if (path === "/admin/dispatch/groups") { reads += 1; return { items: groups } as T; }
+      if (path.startsWith("/admin/dispatch/")) return { items: [] } as T;
+      throw Object.assign(new Error("not found"), { status: 404 });
+    },
+    put: async <T,>() => ({}) as T,
+    post: async <T,>() => ({}) as T,
+    del: async () => undefined,
+  };
+  const settings = createLiveSettings(http, () => "2026-10-31T10:00:00Z");
+  const first = (await settings.readSlice(DISPATCH_KEY, empty())) as { groups: { id: string }[] };
+  assert.deepEqual(first.groups.map((g) => g.id), ["grp_se"]);
+  // A second read right after reuses the state (the page's re-read after a save).
+  await settings.readSlice(DISPATCH_KEY, empty());
+  assert.equal(reads, 1);
+  // The next admin must not see it.
+  groups = [{ groupId: "grp_fr", country: "FR", name: "Paris nuit", driverIds: [], version: 1 }];
+  settings.forget();
+  const next = (await settings.readSlice(DISPATCH_KEY, empty())) as { groups: { id: string }[] };
+  assert.equal(reads, 2);
+  assert.deepEqual(next.groups.map((g) => g.id), ["grp_fr"]);
+});

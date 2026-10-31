@@ -111,6 +111,8 @@ export const unpublishedMarks = (() => {
 export type SettingsAnswer = { message: string; slice: { key: string; value: unknown } };
 
 export type LiveSettings = {
+  /** Drops everything read for the signed-in admin (the dispatch tools, the zone drafts, the session's slices). */
+  forget: () => void;
   readSlice: (key: string, fallback: unknown) => Promise<unknown> | null;
   command: (action: string, input: { targetId: string; value?: unknown; scope?: string }) => Promise<string | SettingsAnswer> | null;
 };
@@ -365,12 +367,24 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   let lastTools: DispatchTools = { presets: [], groups: [], radarZones: [], radarZoneRules: [], events: [] };
   let toolsAt = 0;
   async function readTools(): Promise<DispatchTools> {
-    // Like the zone drafts, a fresh state is reused for 10 s: the page's re-read right after a save shows what the
-    // save's answers made, never a list the server has not caught up with yet.
+    // Deliberate, like the zone drafts: a state fresher than 10 s is reused, so the page's re-read right after a save
+    // shows what the save's answers made, never a list the server has not caught up with yet. It heals itself: a
+    // refusal (409 version_mismatch, 404) or a failed read drops the window and the next read asks the server.
     if (Date.now() - toolsAt < 10_000) return lastTools;
+    toolsAt = 0;
     lastTools = await readDispatchTools(toolsHttp);
     toolsAt = Date.now();
     return lastTools;
+  }
+
+  /** Another admin (or none) is signed in: nothing read for the one before may be shown or compared with. */
+  function forget(): void {
+    lastTools = { presets: [], groups: [], radarZones: [], radarZoneRules: [], events: [] };
+    toolsAt = 0;
+    drafts.clear();
+    readAt.clear();
+    unknownZones.clear();
+    slices.clear();
   }
 
   /**
@@ -570,6 +584,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   }
 
   return {
+    forget,
     readSlice(sliceKey, fallback) {
       if (sliceKey === PRICING_KEY) return readPricing(fallback);
       if (sliceKey === DISPATCH_KEY) return readDispatch(fallback);

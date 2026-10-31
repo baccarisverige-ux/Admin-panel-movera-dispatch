@@ -168,3 +168,16 @@ test("G4 live fix: a save applies the server's answers to the list (201 item, 20
   assert.deepEqual(applyToolAnswer(before, { method: "DELETE", path: "/admin/dispatch/presets/prs_1?expectedVersion=1" }, undefined)?.presets, []);
   assert.deepEqual(applyToolAnswer(before, { method: "DELETE", path: "/admin/dispatch/radar-rules/rr_1?expectedVersion=1" }, undefined)?.radarZoneRules, []);
 });
+
+test("G4 live fix: a 201 that is not the whole item (only its id and version) is not applied; the lists are read instead of a crash", async () => {
+  const before: DispatchTools = { ...none, groups: [{ id: "grp_1", country: "SE", name: "Night", driverIds: ["D1"], version: 1 }] };
+  const post = { method: "POST" as const, path: "/admin/dispatch/groups", body: { country: "SE", name: "Airport", driverIds: ["D3"] } };
+  assert.equal(applyToolAnswer(before, post, { groupId: "grp_9", version: 1, createdAt: "2026-10-31T09:00:00Z" }), null);
+  assert.equal(applyToolAnswer(before, { ...post, path: "/admin/dispatch/radar-zones" }, { radarZoneId: "rz_9", version: 1, name: "x", zoneId: "Z001", country: "SE" }), null);
+  assert.equal(applyToolAnswer(before, { ...post, path: "/admin/dispatch/events" }, { eventId: "ev_9", version: 1, name: "x", country: "SE" }), null);
+  assert.equal(applyToolAnswer(before, { ...post, path: "/admin/dispatch/presets" }, { presetId: "prs_9", version: 1, name: "x", country: "SE" }), null);
+  assert.equal(applyToolAnswer(before, { ...post, path: "/admin/dispatch/radar-rules" }, { ruleId: "rr_9", version: 1, name: "x", country: "SE", radarZoneIds: "all" }), null);
+  // sendToolCalls then answers null (no throw) and the caller reads the server.
+  const http: ToolsHttp = { json: async () => { throw new Error("not here"); }, post: async <T,>() => ({ groupId: "grp_9", version: 1 }) as T, put: async <T,>() => ({}) as T, del: async () => undefined };
+  assert.equal(await sendToolCalls(http, [post], before), null);
+});

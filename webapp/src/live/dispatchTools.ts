@@ -278,6 +278,20 @@ function target(call: ToolCall): { kind: Kind; id: string | null } | null {
   return kind ? { kind, id: idPart ? decodeURIComponent(idPart) : null } : null;
 }
 
+const isText = (value: unknown): value is EventText => Boolean(value) && typeof value === "object" && ["sv", "fr", "en"].every((lang) => typeof (value as Record<string, unknown>)[lang] === "string");
+
+/** Whether the answer carries every field the kind's converter reads (a `201 { groupId, version }` alone does not). */
+function hasItemFields(kind: Kind, raw: Record<string, unknown>): boolean {
+  if (typeof raw["name"] !== "string" || (kind !== "radarZones" && typeof raw["country"] !== "string")) return false;
+  if (kind === "presets") return Boolean(raw["values"]) && typeof raw["values"] === "object";
+  if (kind === "groups") return Array.isArray(raw["driverIds"]);
+  if (kind === "radarZones") return typeof raw["zoneId"] === "string" && typeof raw["country"] === "string" && Array.isArray(raw["polygon"]);
+  if (kind === "radarZoneRules") return (raw["radarZoneIds"] === "all" || Array.isArray(raw["radarZoneIds"])) && typeof raw["seconds"] === "number" && typeof raw["maxDrivers"] === "number" && typeof raw["repeat"] === "boolean";
+  const location = raw["location"] as Record<string, unknown> | null;
+  const details = raw["details"] as Record<string, unknown> | null;
+  return Boolean(location) && typeof location?.["lat"] === "number" && typeof location["lng"] === "number" && typeof raw["startsAt"] === "string" && typeof raw["endsAt"] === "string" && typeof raw["on"] === "boolean" && Boolean(details) && isText(details?.["title"]) && isText(details["description"]);
+}
+
 /**
  * The tools after one answered call: a POST adds the server's item (its id and version), a PUT replaces it, a DELETE
  * (204, no body) takes it out. Null when the answer is not the item the contract promises (an older server), so the
@@ -290,8 +304,14 @@ export function applyToolAnswer(tools: DispatchTools, call: ToolCall, answer: un
   const items = tools[kind] as Item[];
   if (call.method === "DELETE") return at.id === null ? null : { ...tools, [kind]: items.filter((item) => item.id !== at.id) };
   const raw = answer as Record<string, unknown> | null;
-  if (!raw || typeof raw !== "object" || typeof raw[ID_FIELD[kind]] !== "string" || typeof raw["version"] !== "number") return null;
-  const item = ITEM_OF[kind](raw as never);
+  if (!raw || typeof raw !== "object" || typeof raw[ID_FIELD[kind]] !== "string" || typeof raw["version"] !== "number" || !hasItemFields(kind, raw)) return null;
+  let item: Item;
+  try {
+    item = ITEM_OF[kind](raw as never);
+  } catch {
+    // The contract promises the item, but only the preset's body is fully checked here: anything odd means a re-read.
+    return null;
+  }
   const known = items.some((other) => other.id === item.id);
   return { ...tools, [kind]: known ? items.map((other) => (other.id === item.id ? item : other)) : [...items, item] };
 }

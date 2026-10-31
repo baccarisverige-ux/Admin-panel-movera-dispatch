@@ -46,6 +46,7 @@ export function NumberField({ value, onChange, label, unit, step = 1, min = 0, m
           aria-describedby={error ? errorId : undefined}
           value={text}
           disabled={disabled}
+          // Inert on type="text" (the box checks the range itself, with a message); written so tests and tools can read the bounds.
           min={min}
           max={max}
           step={step}
