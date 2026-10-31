@@ -12840,6 +12840,11 @@ components:
           - $ref: '#/components/schemas/DriverSilentAlert'
           description: 'v0.7.0 (CONTRACT.md §15), admin view only: the rider is on board and the server has had no driver
             position for 30 min ("car lost"). Gone when positions come back. Changing it does not change version.'
+        radarZoneSend:
+          allOf:
+          - $ref: '#/components/schemas/RadarZoneSend'
+          description: 'v0.18.6 (G4-F4), admin view of GET /admin/trips/{tripId} only: the trip''s repeating radar-zone send
+            while it is active; absent once a driver accepted, an admin stopped it, the search ended or the trip ended.'
     DriverSilentAlert:
       type: object
       description: 'v0.7.0: documents the server''s alert of 2026-10-26: no position for 30 min with the rider on board; the
@@ -22571,13 +22576,18 @@ components:
             $ref: '#/components/schemas/RadarZoneRule'
     RadarZoneSend:
       type: object
-      description: v0.18.6 (F4)
+      description: 'v0.18.6 (F4): Every admin sees a running send: GET /admin/trips/{tripId} carries TripProjection.radarZoneSend
+        (RadarZoneSend: sendId, radarZoneId, ruleId, intervalSeconds, rounds, startedAt, active …) while it is active, and
+        nothing once it ended. The send ends at once (not at the next interval) when a driver accepts (stopReason accepted),
+        the trip is cancelled or ends (trip_over), the rider''s search ends (search_ended), an admin stops it (admin) or a
+        new radar-zone send replaces it (replaced).'
       required:
       - sendId
       - tripId
       - radarZoneId
       - ruleId
       - seconds
+      - intervalSeconds
       - maxDrivers
       - repeat
       - active
@@ -22594,6 +22604,9 @@ components:
           $ref: '#/components/schemas/Id'
         seconds:
           type: integer
+        intervalSeconds:
+          type: integer
+          description: 'Same as seconds: the time between rounds.'
         maxDrivers:
           type: integer
         repeat:

@@ -2151,10 +2151,11 @@ S["RadarZoneRule"] = obj(dict({"ruleId": ref("Id"), "country": ref("CountryCode"
 S["RadarZoneRuleCreate"] = obj(dict({"country": ref("CountryCode")}, **RULE), ["country", "name", "radarZoneIds", "seconds", "maxDrivers", "repeat"])
 S["RadarZoneRuleUpdate"] = obj(dict({"expectedVersion": i(minimum=1)}, **RULE), ["expectedVersion"])
 S["RadarZoneRuleList"] = obj({"items": arr(ref("RadarZoneRule"))}, ["items"])
-S["RadarZoneSend"] = obj({"sendId": ref("Id"), "tripId": ref("Id"), "radarZoneId": ref("Id"), "ruleId": ref("Id"), "seconds": i(), "maxDrivers": i(), "repeat": b(), "active": b(),
+S["RadarZoneSend"] = obj({"sendId": ref("Id"), "tripId": ref("Id"), "radarZoneId": ref("Id"), "ruleId": ref("Id"), "seconds": i(), "intervalSeconds": i("Same as seconds: the time between rounds."), "maxDrivers": i(), "repeat": b(), "active": b(),
                           "rounds": i(minimum=1), "startedAt": ref("Timestamp"), "stoppedAt": ref("Timestamp"),
                           "stopReason": s(enum=["admin", "accepted", "search_ended", "trip_over", "replaced"])},
-                         ["sendId", "tripId", "radarZoneId", "ruleId", "seconds", "maxDrivers", "repeat", "active", "rounds", "startedAt"], "v0.18.6 (F4)")
+                         ["sendId", "tripId", "radarZoneId", "ruleId", "seconds", "intervalSeconds", "maxDrivers", "repeat", "active", "rounds", "startedAt"], "v0.18.6 (F4): " + DT["radarZones"]["sendView"])
+S["TripProjection"]["properties"]["radarZoneSend"] = {"allOf": [ref("RadarZoneSend")], "description": "v0.18.6 (G4-F4), admin view of GET /admin/trips/{tripId} only: the trip's repeating radar-zone send while it is active; absent once a driver accepted, an admin stopped it, the search ended or the trip ended."}
 S["RadarZoneFree"] = obj({"radarZoneId": ref("Id"), "free": i(minimum=0), "at": ref("Timestamp")}, ["radarZoneId", "free", "at"], "v0.18.6 (F4): free drivers inside the radar zone now.")
 S["RadarZoneStopCommand"] = obj({"note": s(maxLength=1000)})
 S["LocalizedText"] = obj({"sv": s(minLength=1), "fr": s(minLength=1), "en": s(minLength=1)}, ["sv", "fr", "en"])

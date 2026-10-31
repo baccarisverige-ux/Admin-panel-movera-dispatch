@@ -4911,7 +4911,8 @@
           1,
           10
         ]
-      }
+      },
+      "sendView": "Every admin sees a running send: GET /admin/trips/{tripId} carries TripProjection.radarZoneSend (RadarZoneSend: sendId, radarZoneId, ruleId, intervalSeconds, rounds, startedAt, active …) while it is active, and nothing once it ended. The send ends at once (not at the next interval) when a driver accepts (stopReason accepted), the trip is cancelled or ends (trip_over), the rider's search ends (search_ended), an admin stops it (admin) or a new radar-zone send replaces it (replaced)."
     },
     "events": {
       "note": "F6 (owner 'small premium icon at the exact location of the event; tap → all details'): events per country made by the admin: name, the exact point (location { lat, lng }, where the icon stands), an optional area (polygon), startsAt / endsAt (UTC, endsAt after startsAt), on/off and details in sv / fr / en (title, description, pickupNote; each language required, title ≤ 80, description ≤ 1000, pickupNote ≤ 300). Drivers: GET /driver/events → { items: DriverEvent[], at } = the events that are on and not ended (running or upcoming within upcomingDays) of the driver's country (the country of his zones), soonest first, the texts in the driver's language (else English, else the country's language). The driver app shows a small premium event icon on the Home map at location; a tap shows name, time, place and the details. Refresh: when an event of his country is created, changed or deleted, every driver config stream of that country gets a config_published with doc 'events' (zoneId = the stream's zone); the app then reads GET /driver/events again (also on start and coming back to the front). No dispatch change, no rider change, no notice (owner did not ask). The driver app's built-in demo events are removed on live.",
