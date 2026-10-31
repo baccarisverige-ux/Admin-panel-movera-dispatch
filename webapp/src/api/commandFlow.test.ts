@@ -76,3 +76,14 @@ test("C-10: a read that overlaps a commit records the revision of the data it en
   assert.equal(await readTracked(noRev, ["records", "trips"], async () => "x"), "x");
   assert.equal(readAt.has(JSON.stringify(["records", "trips"])), false);
 });
+
+test("G4 live fix: a slow command whose own answer arrived is Done with that answer, even where the server keeps no operation record", () => {
+  // Live: api.operation() is always null; the late answer "Preset saved." must not become "Failed. The server has no record of it".
+  const late = outcomeOf(null, "Preset saved.", { status: "committed", message: "Preset saved." });
+  assert.deepEqual(late, { phase: "committed", message: "Preset saved.", retrySameKey: false });
+  const waiting = outcomeOf(null, "", { status: "pending_approval", message: "Waiting for a second admin to approve." });
+  assert.equal(waiting.phase, "pending_approval");
+  // The server's record still wins when it has one (the demo's slow fault), and no answer at all stays Failed.
+  assert.match(outcomeOf(op("committed", "Saved in demo."), "x", { status: "committed", message: "x" }).message, /^Done\. Saved in demo\./);
+  assert.match(outcomeOf(null, "Offline.", null).message, /^Failed\. The server has no record of it/);
+});

@@ -15,6 +15,11 @@ import { currentLanguage, fill } from "../i18n/core.ts";
 const RAISE = contract.dispatch.raisePrice;
 export const RAISE_MAX_FACTOR_DEFAULT: number = RAISE.maxFactor;
 export const RAISE_FACTOR_RANGE: readonly [number, number] = [RAISE.range[0], RAISE.range[1]];
+/** The field moves in tenths (1.5×, 2×): what the admin can type and what raiseFactorLabel shows. */
+export const RAISE_FACTOR_STEP = 0.1;
+
+/** The "Rider raise limit" field's bounds from the contract (min, max, step), so the box refuses 0.5× or 4× before any send. */
+export const raiseFactorField = (): { min: number; max: number; step: number } => ({ min: RAISE_FACTOR_RANGE[0], max: RAISE_FACTOR_RANGE[1], step: RAISE_FACTOR_STEP });
 
 /** The factor when it is a number inside the contract's range, else null. */
 export function validRaiseFactor(value: unknown): number | null {

@@ -5,7 +5,7 @@ import { canUseZone } from "../auth/permissions.ts";
 import { useSession } from "../auth/SessionContext.tsx";
 import { commandById } from "../commands/registry.ts";
 import { useAdminApi } from "./AdminApiContext.tsx";
-import type { CommandInput } from "./create.ts";
+import type { CommandInput, CommandResult } from "./create.ts";
 import type { TripRecord } from "./seed.ts";
 import { useMarketScope } from "../markets/useMarketScope.ts";
 import { parseZoneList } from "../markets/markets.ts";
@@ -228,9 +228,9 @@ export function useCommands() {
     const actorId = session.agent?.id ?? "signed-out";
 
     /** Asks the server what happened to this operation key. */
-    async function recheck(fallback: string) {
+    async function recheck(fallback: string, answer?: CommandResult) {
       try {
-        const outcome = outcomeOf(await api.operation(idempotencyKey, actorId), fallback);
+        const outcome = outcomeOf(await api.operation(idempotencyKey, actorId), fallback, answer);
         setPhase(outcome.phase);
         setMessage(outcome.message);
         retrySameKey.current = outcome.retrySameKey;
@@ -262,11 +262,13 @@ export function useCommands() {
         patch: extra.patch,
       });
       clearTimeout(timer);
-      if (slow) await recheck(result.message);
+      if (slow) await recheck(result.message, result);
       else {
         setPhase(result.status);
         setMessage(result.message);
       }
+      // A command that answers with the slice (live settings) shows it now; the re-read below confirms it.
+      if (result.slice) client.setQueriesData({ queryKey: ["slice", result.slice.key] }, result.slice.value);
       await refresh(spec, extra, expectedRev, result.rev);
       return result;
     } catch (error) {

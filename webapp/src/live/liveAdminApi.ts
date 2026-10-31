@@ -605,7 +605,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value, ...(input.scope ? { scope: input.scope } : {}) });
     if (settingsCall) {
       try {
-        return done(await settingsCall);
+        const answer = await settingsCall;
+        return typeof answer === "string" ? done(answer) : { ...done(answer.message), slice: answer.slice };
       } catch (error) {
         if (error instanceof SettingsChanged) throw new ApiError(409, error.message, { code: "version_mismatch", retryable: false });
         throw error;

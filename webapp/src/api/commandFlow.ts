@@ -47,7 +47,10 @@ export type Outcome = { phase: "committed" | "pending_approval" | "rejected"; me
  * What a slow or lost command really did, from the server's record of its operation key (C-14).
  * `null` means the server has no record of it: it never arrived, so nothing changed.
  */
-export function outcomeOf(operation: OperationRow | null, fallback: string): Outcome {
+export function outcomeOf(operation: OperationRow | null, fallback: string, answer?: { status: "committed" | "pending_approval"; message: string } | null): Outcome {
+  // The command's own answer arrived (only late): it is the outcome. A live server keeps no operation record to ask
+  // (G4 live: a slow preset save said "Failed. The server has no record of it" although it had just saved it).
+  if (!operation && answer) return { phase: answer.status, message: answer.message, retrySameKey: false };
   if (!operation) return { phase: "rejected", message: `Failed. The server has no record of it, so nothing changed. ${fallback} Retry uses the same operation key.`.replace(/\s+/g, " ").trim(), retrySameKey: true };
   if (operation.status === "committed") return { phase: "committed", message: `Done. ${operation.message}`, retrySameKey: false };
   if (operation.status === "pending_approval") return { phase: "pending_approval", message: operation.message, retrySameKey: false };

@@ -107,9 +107,12 @@ export const unpublishedMarks = (() => {
   };
 })();
 
+/** A command's answer that also carries the slice as it is now, so the page shows it at once (CommandResult.slice). */
+export type SettingsAnswer = { message: string; slice: { key: string; value: unknown } };
+
 export type LiveSettings = {
   readSlice: (key: string, fallback: unknown) => Promise<unknown> | null;
-  command: (action: string, input: { targetId: string; value?: unknown; scope?: string }) => Promise<string> | null;
+  command: (action: string, input: { targetId: string; value?: unknown; scope?: string }) => Promise<string | SettingsAnswer> | null;
 };
 
 const notFound = (error: unknown) => (error as { status?: number } | null)?.status === 404;
@@ -358,10 +361,15 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
 
   const toolsHttp = { json: http.json, post: http.post, put: http.put, del: (path: string) => (http.del ? http.del(path) : Promise.reject(new Error("DELETE is not available."))) };
 
-  /** The server's dispatch tools; what the last read saw is what the next save is compared with. */
+  /** The server's dispatch tools; what the last read (or save) saw is what the next save is compared with. */
   let lastTools: DispatchTools = { presets: [], groups: [], radarZones: [], radarZoneRules: [], events: [] };
+  let toolsAt = 0;
   async function readTools(): Promise<DispatchTools> {
+    // Like the zone drafts, a fresh state is reused for 10 s: the page's re-read right after a save shows what the
+    // save's answers made, never a list the server has not caught up with yet.
+    if (Date.now() - toolsAt < 10_000) return lastTools;
     lastTools = await readDispatchTools(toolsHttp);
+    toolsAt = Date.now();
     return lastTools;
   }
 
@@ -370,19 +378,31 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
    * hands the whole book; each item that differs from what the server had becomes one POST / PUT / DELETE with its
    * version. Afterwards the server's items are read again (new ids and versions).
    */
-  async function saveTools(book: DispatchBook, done: string): Promise<string> {
+  async function saveTools(book: DispatchBook, done: string): Promise<string | SettingsAnswer> {
     const calls = toolCalls(lastTools, toolsOf(book));
+    let applied: DispatchTools | null;
     try {
-      await sendToolCalls(toolsHttp, calls);
+      applied = await sendToolCalls(toolsHttp, calls, lastTools);
     } catch (error) {
       const text = toolRefusal(error);
+      toolsAt = 0;
       await readTools().catch(() => undefined);
       if (text && error instanceof ApiError) throw new ApiError(error.status, text, { code: error.code, reason: error.reason ?? undefined, retryable: false });
       throw error;
     }
-    const fresh = await readTools();
-    slices.set(DISPATCH_KEY, { ...normalizeDispatchBook(book), ...fresh });
-    return calls.length ? done : "Nothing changed.";
+    // The server's answers (201 item, 200 item, 204) are the new state; only an answer that is not the item makes a re-read.
+    if (applied) {
+      lastTools = applied;
+      toolsAt = Date.now();
+    } else {
+      toolsAt = 0;
+      await readTools();
+    }
+    const next = { ...normalizeDispatchBook(book), ...lastTools };
+    slices.set(DISPATCH_KEY, next);
+    if (!calls.length) return "Nothing changed.";
+    // The page gets the new list with the answer, so the row is gone (or there) before the slice is read again.
+    return { message: done, slice: { key: DISPATCH_KEY, value: next } };
   }
 
   /** Owner 2026-10-28: "Spara utkast" keeps the changed zones' rules on the server as a draft, not live. */

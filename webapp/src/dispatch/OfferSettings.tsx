@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { CreditCard, EyeOff, HandCoins, MessageSquareText, Percent, RotateCcw } from "lucide-react";
 import { Card, Choice, Num, Row, Switch } from "./fields";
 import { CANCEL_RATE_DRIVER_TEXT, EXCLUSIVE_REASON_MAX, EXCLUSIVE_REASONS, OFFER_CARD_DETAILS, type OfferCardDetails } from "./offers";
-import { RAISE_FACTOR_RANGE, raiseFactorLabel } from "./offerRules";
+import { raiseFactorField, raiseFactorLabel } from "./offerRules";
 import type { CountryDispatch, ZoneDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
 
@@ -34,11 +34,11 @@ export function OfferCardSettings({ zone, onChange, disabled }: Props) {
  */
 export function RaiseLimitCard({ zone, onChange, disabled }: Props) {
   const factor = zone.raisePrice.maxFactor;
-  const [low, high] = RAISE_FACTOR_RANGE;
+  const { min: low, max: high, step } = raiseFactorField();
   return (
     <Card title={tr("Rider raise limit")} tone="green" icon={<HandCoins size={18} />} help={tr("While a rider waits for a driver they can offer more. This is the most they can offer, as times the booked price. The rider app hides the amounts above it.")}>
       <Row label={tr("Highest price a rider can offer")} help={tr("For example 2× on a trip booked at 200: at most 400. From {0} to {1}.", [raiseFactorLabel(low), raiseFactorLabel(high)])}>
-        <Num label={tr("Rider raise limit")} value={factor} unit="×" min={low} max={high} step={0.1} disabled={disabled} onChange={(maxFactor) => onChange({ ...zone, raisePrice: { maxFactor: Math.round(maxFactor * 10) / 10 } })} />
+        <Num label={tr("Rider raise limit")} value={factor} unit="×" min={low} max={high} step={step} disabled={disabled} onChange={(maxFactor) => onChange({ ...zone, raisePrice: { maxFactor: Math.round(maxFactor * 10) / 10 } })} />
       </Row>
     </Card>
   );

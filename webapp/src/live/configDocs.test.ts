@@ -4,7 +4,10 @@ import { readFileSync } from "node:fs";
 import { emptyPricingStore, publishZones, zoneBook } from "../pricing/zonePricing.ts";
 import { emptyDispatchBook, liveRules, publish, zoneDefault } from "../dispatch/rules.ts";
 import { SettingsChanged, bookOfPricing, countryRulesOf, dispatchDocumentOf, pricingDocumentOf, rulesOfDispatch, savePublish, withOwned, zoneFacts, type ConfigHttp, type Doc } from "./configDocs.ts";
-import { createLiveSettings, standardMarks } from "./liveSettings.ts";
+import { type SettingsAnswer, createLiveSettings, standardMarks } from "./liveSettings.ts";
+
+/** A settings command's words (a save of the dispatch tools answers with the slice too). */
+const said = (answer: string | SettingsAnswer | null) => (typeof answer === "string" ? answer : answer?.message ?? "");
 
 /** Contract v0.8.0 settings flow (owner 2026-10-27): exporters, the Standard per country, publish without a second admin. */
 
@@ -241,11 +244,11 @@ test("live Dispatch (owner 2026-10-28): Spara utkast keeps a server draft; Ångr
 
   const edited = { ...book, draft: { Z001: { ...liveRules(book, "Z001"), radar: { ...liveRules(book, "Z001").radar, seconds: 33 } } } };
   calls.length = 0;
-  assert.match(await settings.command("admin.dispatch.saveDraft", { targetId: "dispatch draft", value: edited })!, /Draft saved/);
+  assert.match(said(await settings.command("admin.dispatch.saveDraft", { targetId: "dispatch draft", value: edited })), /Draft saved/);
   assert.deepEqual(calls.filter((c) => c.method !== "GET").map((c) => `${c.method} ${c.path}`), ["PUT /admin/config/dispatch"]);
 
   calls.length = 0;
-  assert.match(await settings.command("admin.dispatch.undo", { targetId: "version 2" })!, /Undone/);
+  assert.match(said(await settings.command("admin.dispatch.undo", { targetId: "version 2" })), /Undone/);
   assert.deepEqual(calls.at(-1), { method: "POST", path: "/admin/config/dispatch/restore", body: { zoneId: "Z001", version: 4, expectedVersion: 5 } });
   await assert.rejects(Promise.resolve(settings.command("admin.dispatch.undo", { targetId: "version 1" })), /no earlier version/);
 });
@@ -313,9 +316,9 @@ test("G3: a Settings publish to the Standard names the zones that keep their own
     "driver_app_config:Z001": { version: 3, liveVersion: 1, usesStandard: false, document: app("Z001") },
     "driver_app_config:Z002": { version: 1, liveVersion: 0, usesStandard: true, document: app("Z002") },
   });
-  const message = await createLiveSettings(server.http, () => "2026-10-30T10:00:00Z").command("admin.config.publish", { targetId: "configuration", value: null, scope: "standard-SE" });
-  assert.match(message!, /own driver app settings and did not get it: Norrmalm\./);
-  assert.ok(!/Södermalm/.test(message!), "Z002 uses the Standard: it got the change");
+  const message = said((await createLiveSettings(server.http, () => "2026-10-30T10:00:00Z").command("admin.config.publish", { targetId: "configuration", value: null, scope: "standard-SE" }))!);
+  assert.match(message, /own driver app settings and did not get it: Norrmalm\./);
+  assert.ok(!/Södermalm/.test(message), "Z002 uses the Standard: it got the change");
 });
 
 test("G3: reading Dispatch tells which parts of a zone's driver app settings are saved but not live", async () => {
@@ -341,7 +344,7 @@ test("G3: Publish to drivers publishes the zone's saved driver app draft as it i
   const { unpublishedMarks } = await import("./liveSettings.ts");
   const server = fakeServer({ "driver_app_config:Z001": { version: 3, liveVersion: 1, usesStandard: false, document: { ...sample("driver_app_config"), zoneId: "Z001" } } });
   const settings = createLiveSettings(server.http, () => "2026-10-30T10:00:00Z");
-  assert.match(await settings.command("admin.config.publishAppDraft", { targetId: "Z001" })!, /Published/);
+  assert.match(said(await settings.command("admin.config.publishAppDraft", { targetId: "Z001" })), /Published/);
   assert.deepEqual(server.calls.filter((c) => c.method !== "GET"), [{ method: "POST", path: "/admin/config/driver_app_config/publish", body: { expectedVersion: 3, zoneId: "Z001" } }]);
   assert.deepEqual(unpublishedMarks.get("driver_app_config", "Z001"), []);
   await assert.rejects(Promise.resolve(settings.command("admin.config.publishAppDraft", { targetId: "standard-SE" })));
@@ -358,7 +361,7 @@ test("G3-D8: Copy to all zones copies the driver app settings to every zone of t
   });
   const settings = createLiveSettings(server.http, () => "2026-10-30T10:00:00Z");
   assert.ok(live.copyTargets("Z001").includes("Z002") && !live.copyTargets("Z001").includes("Z001") && !live.copyTargets("Z001").includes("FR-PC"));
-  assert.match(await settings.command("admin.config.copyAppToZones", { targetId: "Z001" })!, /Copied/);
+  assert.match(said(await settings.command("admin.config.copyAppToZones", { targetId: "Z001" })), /Copied/);
   const puts = server.calls.filter((c) => c.method === "PUT").map((c) => c.body as { zoneId: string; document: Doc });
   for (const zone of ["Z002", "Z003"]) {
     const sent = puts.find((b) => b.zoneId === zone)!;

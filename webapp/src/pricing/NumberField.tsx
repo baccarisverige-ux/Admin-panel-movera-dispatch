@@ -46,6 +46,9 @@ export function NumberField({ value, onChange, label, unit, step = 1, min = 0, m
           aria-describedby={error ? errorId : undefined}
           value={text}
           disabled={disabled}
+          min={min}
+          max={max}
+          step={step}
           data-step={step}
           onChange={(event) => {
             const next = event.target.value;
