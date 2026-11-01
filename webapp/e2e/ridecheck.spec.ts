@@ -60,6 +60,8 @@ test("Dispatch › Safety: Ride check triggers with their numbers, limits and ch
   await page.goto("/risk");
   await expect(page.getByRole("complementary", { name: "Zones" })).toContainText("Ride check (Dispatch)");
   await expect(page.getByRole("complementary", { name: "Zones" })).toContainText("stop over 2 min");
+  await expect(page.getByRole("complementary", { name: "Zones" })).toContainText(/finished over \d+ m from drop-off/);
+  await expect(page.getByRole("complementary", { name: "Zones" })).not.toContainText("km from drop-off");
   await expect(page.getByRole("complementary", { name: "Zones" })).not.toContainText("possible crash");
 });
 
@@ -72,12 +74,10 @@ test("Ride check triggers: one shared setting edited from Dispatch Live and the 
 
   await page.goto("/dispatch?view=live");
   const triggers = page.getByRole("region", { name: "Ride check triggers" });
-  await expect(triggers.getByLabel("Finished far from drop-off")).toHaveValue("3");
+  // The retired shared "Finished far from drop-off" (km) is gone; the zone's endFarMeters is the only one.
+  await expect(triggers.getByLabel("Finished far from drop-off")).toHaveCount(0);
   await expect(triggers.getByLabel("Unexpected long stop")).toHaveValue("2");
-  await triggers.getByLabel("Finished far from drop-off").fill("0");
-  await expect(triggers).toContainText("must be more than 0 km");
   await expect(triggers.getByRole("button", { name: "Save" })).toBeDisabled();
-  await triggers.getByLabel("Finished far from drop-off").fill("5");
   await triggers.getByLabel("Unexpected long stop").fill("10");
   await triggers.getByRole("button", { name: "Save" }).click();
   await confirm(page);
@@ -85,7 +85,7 @@ test("Ride check triggers: one shared setting edited from Dispatch Live and the 
 
   await page.goto("/?tab=work");
   const dash = page.getByRole("region", { name: "Ride check triggers" });
-  await expect(dash.getByLabel("Finished far from drop-off")).toHaveValue("5");
+  await expect(dash.getByLabel("Finished far from drop-off")).toHaveCount(0);
   await expect(dash.getByLabel("Unexpected long stop")).toHaveValue("10");
   await dash.getByLabel("Unexpected long stop").fill("8");
   await dash.getByRole("button", { name: "Save" }).click();
@@ -93,7 +93,6 @@ test("Ride check triggers: one shared setting edited from Dispatch Live and the 
   await expect(dash).toContainText("Everything is saved");
 
   await page.goto("/dispatch?view=live");
-  await expect(page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Finished far from drop-off")).toHaveValue("5");
   await expect(page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Unexpected long stop")).toHaveValue("8");
 });
 

@@ -86,6 +86,8 @@ function Tools({ tripId, facts, hasDriver }: { tripId: string; facts: LiveTripFa
     setNotice("");
     try {
       setNotice(await work());
+      // G7 live fix: "Who did what" (the audit) shows this action at once.
+      void queryClient.invalidateQueries({ queryKey: ["audit"] });
     } catch (caught) {
       setError(caught);
     } finally {

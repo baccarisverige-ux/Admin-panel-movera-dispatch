@@ -307,9 +307,20 @@ export function liveTriggerLabel(trigger: string): string {
   return trigger === "dropped_far" ? tr("Dropped far from the destination") : trigger === "long_stop" ? tr("Long stop") : trigger === "off_route" ? tr("Off the route") : trigger === "possible_crash" ? tr("Possible crash") : trigger;
 }
 
-/** What the Ride check said: "I need help", "No answer in 2 minutes", and a late answer when one came. */
+/** The time to answer as the admin reads it: "2 min", "150 s". Null without one. */
+export function answerTimeText(seconds: number | undefined): string | null {
+  if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) return null;
+  return seconds % 60 === 0 ? tr("{0} min", [seconds / 60]) : tr("{0} s", [Math.round(seconds)]);
+}
+
+/** What the Ride check said: "I need help", "No answer in 150 s" (the zone's time), and a late answer when one came. */
 export function liveAnswerLabel(check: LiveRideCheck): string {
-  const answer = check.answer === "need_help" ? tr("I need help") : tr("No answer in 2 minutes");
+  const seconds = check.answerSeconds;
+  const answer = check.answer === "need_help"
+    ? tr("I need help")
+    : seconds !== undefined && seconds > 0
+      ? seconds % 60 === 0 ? tr("No answer in {0} min", [seconds / 60]) : tr("No answer in {0} s", [Math.round(seconds)])
+      : tr("No answer in 2 minutes");
   if (!check.lateAnswer) return answer;
   return `${answer} · ${check.lateAnswer === "ok" ? tr("Late answer: I'm OK") : tr("Late answer: I need help")}`;
 }

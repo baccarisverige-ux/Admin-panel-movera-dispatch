@@ -13,6 +13,21 @@ function answerOf(row: RideCheckRow | undefined): Answer | null {
   return { at: row.answeredAt ?? row.shownAt ?? String(row["createdAt"] ?? ""), choice };
 }
 
+/**
+ * G7 live fix: the server's measured value (RideCheckRow.measured) in the list's unit: metres from the drop-off,
+ * minutes stopped, km off the route. Null when the server did not measure (an app check).
+ */
+export function measuredValue(trigger: Trigger, rows: readonly RideCheckRow[]): number | null {
+  for (const row of rows) {
+    const m = row["measured"] as { value?: unknown; unit?: unknown } | undefined;
+    if (!m || typeof m.value !== "number" || !Number.isFinite(m.value)) continue;
+    if (trigger === "far") return m.unit === "km" ? m.value * 1000 : m.value;
+    if (trigger === "route") return m.unit === "m" ? m.value / 1000 : m.value;
+    return m.value;
+  }
+  return null;
+}
+
 export function rideCheckRecords(rows: readonly RideCheckRow[], trips: (tripId: string) => { riderId?: string; driverId?: string; riderName?: string } | undefined): RideCheck[] {
   const byCheck = new Map<string, RideCheckRow[]>();
   for (const row of rows) {
@@ -40,7 +55,7 @@ export function rideCheckRecords(rows: readonly RideCheckRow[], trips: (tripId: 
       riderId: trip?.riderId ?? "",
       vehicleId: null,
       trigger,
-      value: 0,
+      value: measuredValue(trigger, sides),
       place: "",
       at: first.shownAt ?? String(first["createdAt"] ?? ""),
       driver: answerOf(driver),

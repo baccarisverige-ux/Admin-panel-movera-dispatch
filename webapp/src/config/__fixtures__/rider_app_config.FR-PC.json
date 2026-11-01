@@ -553,7 +553,6 @@
     "noAnswerAlarm": false,
     "stopMinutes": 2,
     "offRouteKm": 2,
-    "finishFarFromDropoffKm": 3,
     "farOn": true,
     "stopOn": true,
     "routeOn": true,

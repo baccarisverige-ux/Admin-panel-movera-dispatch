@@ -4216,7 +4216,6 @@ export const en = {
   "The driver sees “Rest until 04:30” and can go online again after {0} h of rest.": "The driver sees “Rest until 04:30” and can go online again after {0} h of rest.",
   "The driver sees only these in the app and can switch some of them off, for example drive Comfort but not Movera. Offers follow the driver's choice. The driver can never switch on a category that is off here.": "The driver sees only these in the app and can switch some of them off, for example drive Comfort but not Movera. Offers follow the driver's choice. The driver can never switch on a category that is off here.",
   "The driver taps Finish far from the drop-off. Ride check starts right after finish.": "The driver taps Finish far from the drop-off. Ride check starts right after finish.",
-  "The driver taps Finish this far from the drop-off point. Ride check starts right after finish.": "The driver taps Finish this far from the drop-off point. Ride check starts right after finish.",
   "The driver's share, after Movera's commission.": "The driver's share, after Movera's commission.",
   "The driver's zone": "The driver's zone",
   "The end day must be after the start day.": "The end day must be after the start day.",
@@ -8139,7 +8138,7 @@ export const en = {
   "scheduled rides start within the hour with no driver": "scheduled rides start within the hour with no driver",
   "no-show, all of {0}": "no-show, all of {0}",
   " and ": " and ",
-  "finished over {0} km from drop-off": "finished over {0} km from drop-off",
+  "finished over {0} m from drop-off": "finished over {0} m from drop-off",
   "stop over {0} min": "stop over {0} min",
   "{0}% longer": "{0}% longer",
   "possible crash": "possible crash",
@@ -8219,6 +8218,10 @@ export const en = {
   "jumps": "jumps",
   "accounts": "accounts",
   "codes": "codes",
+  "No answer in {0} min": "No answer in {0} min",
+  "No answer in {0} s": "No answer in {0} s",
+  "Movera opened the case: {0} did not answer the Ride check in {1}.": "Movera opened the case: {0} did not answer the Ride check in {1}.",
+  "Price per minute: {0}": "Price per minute: {0}",
 } as const;
 
 export type MessageKey = keyof typeof en;
