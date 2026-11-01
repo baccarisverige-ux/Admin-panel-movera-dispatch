@@ -308,6 +308,10 @@ test("owner bug 2026-11-01 (French panel): a radar to a driver who already sees 
   try {
     await send.click();
     await expect(page.getByRole("status").filter({ hasText: "1 chauffeur voit déjà la course et garde l’offre." }).first()).toBeVisible({ timeout: 30_000 });
+    // Checker M1: counted from the answer — 1 got it, 2 could not.
+    radarReply = { status: 200, body: { groupId: "rg_3", tripId: "T2003", offers: [{ offerId: "O10", tripId: "T2003", kind: "radar", source: "admin", groupId: "rg_3", status: "open", version: 1 }], skipped: [{ driverId: "D1", reason: "driver_not_available" }, { driverId: "D2", reason: "driver_on_trip" }], expiresAt: new Date(Date.now() + 20_000).toISOString(), projection: { ...SEARCHING, status: "offered", version: 3 }, pickedFrom: "group" } };
+    await send.click();
+    await expect(page.getByRole("status").filter({ hasText: "Envoyé à 1 chauffeur · 2 ne pouvaient pas la prendre (hors ligne / en course)." }).first()).toBeVisible({ timeout: 30_000 });
     radarReply = { status: 409, body: { code: "conflict", message: "Test already has this ride.", reason: "offer_already_open", retryable: false } };
     await send.click();
     await expect(page.getByText("Le chauffeur voit déjà cette course.").first()).toBeVisible({ timeout: 30_000 });

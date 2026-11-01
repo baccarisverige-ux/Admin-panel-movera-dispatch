@@ -200,11 +200,14 @@ test("owner bug 2026-11-01: a raise to drivers who already saw the ride and assi
       assert.notEqual(trSentences(english!), english, `${reason} is translated in French`);
     }
     assert.equal(trSentences(toolRefusal({ status: 409, reason: "offer_already_open" })!), "Le chauffeur voit déjà cette course.");
+    assert.equal(refreshedNotice(0, 1, false, 2), "Envoyé à 1 chauffeur · 2 ne pouvaient pas la prendre (hors ligne / en course).");
     setLanguage("sv");
+    assert.equal(refreshedNotice(0, 1, false, 1), "Skickat till 1 förare · 1 kunde inte ta den (offline / kör en resa).");
     assert.equal(refreshedNotice(2, 0, true), "Priset höjt för 2 förare som redan såg resan.");
     assert.equal(trSentences(toolRefusal({ status: 409, reason: "driver_not_available" })!), "Ingen vald förare kan ta en resa nu (offline eller ingen ny position).");
   } finally {
     setLanguage("en");
   }
   assert.equal(refreshedNotice(1, 0, true), "Price raised for 1 driver who already saw the ride.");
+  assert.equal(refreshedNotice(0, 1, true, 2), "Sent to 1 driver · 2 drivers could not take it (offline / on a trip).");
 });

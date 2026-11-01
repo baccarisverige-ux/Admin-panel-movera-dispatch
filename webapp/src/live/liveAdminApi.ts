@@ -701,11 +701,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       }
       // v0.18.6 (G4-F3, F4): a driver group or a radar zone with its rule; the server picks the free drivers.
       const target = params.groupId ? { groupId: params.groupId } : params.radarZoneId && params.ruleId ? { radarZoneId: params.radarZoneId, ruleId: params.ruleId } : { driverIds: params.driverIds ?? [] };
-      const answer = await client.post<{ groupId?: string; offers?: Array<{ groupId?: string | null }>; radarZoneSend?: RadarZoneSend }>(`/admin/trips/${encodeURIComponent(trip.tripId)}/radar-group`, { ...common, ...target }).catch(refused);
+      const answer = await client.post<{ groupId?: string; offers?: Array<{ groupId?: string | null }>; skipped?: Array<{ driverId: string; reason: string }>; radarZoneSend?: RadarZoneSend }>(`/admin/trips/${encodeURIComponent(trip.tripId)}/radar-group`, { ...common, ...target }).catch(refused);
       // A driver who already saw the ride keeps that offer, now with the raise: the server lists it outside the new group.
       const offers = answer?.offers ?? [];
       const refreshed = offers.filter((offer) => offer.groupId !== answer?.groupId).length;
-      const notice = refreshedNotice(refreshed, offers.length - refreshed, Boolean(params.driverBonusMinor || params.priority));
+      const notice = refreshedNotice(refreshed, offers.length - refreshed, Boolean(params.driverBonusMinor || params.priority), answer?.skipped?.length ?? 0);
       if (answer?.groupId && params.target) rememberSendTarget(answer.groupId, params.target);
       const send = answer?.radarZoneSend;
       setActiveRadarSend(send?.active ? { tripId: trip.tripId, sendId: send.sendId, radarZoneName: params.radarZoneName ?? params.target ?? "", seconds: send.seconds, maxDrivers: send.maxDrivers, rounds: send.rounds, startedAt: send.startedAt } : null, trip.tripId);
@@ -926,10 +926,13 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
 }
 
 /** What the admin reads when some chosen drivers already saw the ride (owner bug 2026-11-01), in the admin's language. */
-export function refreshedNotice(refreshed: number, sent: number, raised: boolean): string | null {
-  if (refreshed === 0) return null;
+export function refreshedNotice(refreshed: number, sent: number, raised: boolean, skipped = 0): string | null {
+  if (refreshed === 0 && skipped === 0) return null;
+  // Counted from the server's answer, never from the drivers ticked (checker M1).
+  const out = skipped ? tr(skipped === 1 ? "{0} driver could not take it (offline / on a trip)." : "{0} drivers could not take it (offline / on a trip).", [skipped]) : "";
+  if (refreshed === 0) return `${tr(sent === 1 ? "Sent to {0} driver" : "Sent to {0} drivers", [sent])} · ${out}`;
   const first = raised
     ? tr(refreshed === 1 ? "Price raised for {0} driver who already saw the ride." : "Price raised for {0} drivers who already saw the ride.", [refreshed])
     : tr(refreshed === 1 ? "{0} driver already sees the ride and keeps the offer." : "{0} drivers already see the ride and keep the offer.", [refreshed]);
-  return sent > 0 ? `${first} ${tr(sent === 1 ? "Also sent to {0} new driver." : "Also sent to {0} new drivers.", [sent])}` : first;
+  return [first, sent > 0 ? tr(sent === 1 ? "Also sent to {0} new driver." : "Also sent to {0} new drivers.", [sent]) : "", out].filter(Boolean).join(" ");
 }
