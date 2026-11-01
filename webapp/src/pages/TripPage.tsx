@@ -166,7 +166,7 @@ export function TripPage() {
   const feeKind = feeKindOf(cancelFacts);
   const feeStatus = feeStatusOf(cancelFacts);
   const feeKindText = feeKind === "no_show" ? tr("no-show fee") : feeKind === "cancel" ? tr("cancel fee") : "";
-  const feeStatusText = feeStatus === "paid" ? tr("paid") : feeStatus === "owed" ? tr("owed, charged on the rider's next trip in this currency") : feeStatus === "waived" ? tr("waived") : feeStatus === "refunded" ? tr("refunded to the rider's wallet") : "";
+  const feeStatusText = feeStatus === "paid" ? tr("paid") : feeStatus === "owed" ? tr("owed, charged on the rider's next trip in this currency") : feeStatus === "waived" ? tr("waived") : "";
   const riderName = facts?.rider?.firstName || trip.name;
   const legacyMoney = (minor: number) => formatTripMoney({ amountMinor: minor, currency: (trip.liveTrip?.currency as typeof place.currency | undefined) ?? place.currency });
   const driver = drivers.data?.find((item) => item.id === trip.driverId);
@@ -401,7 +401,7 @@ export function TripPage() {
               {cancelFacts.feeMinor !== null ? (
                 <dl className="op-split-lines">
                   <div><dt>{feeKind === "no_show" ? tr("No-show fee") : tr("Cancel fee")}</dt><dd>{liveMoney(cancelFacts.feeMinor)}</dd></div>
-                  <div><dt>{tr("State")}</dt><dd data-testid="trip-fee-status">{feeStatusText || <NotConnected />}</dd></div>
+                  <div><dt>{tr("State")}</dt><dd data-testid="trip-fee-status">{cancelFacts.refundedToWallet ? tr("Refunded to the rider's wallet") : feeStatusText || <NotConnected />}</dd></div>
                   {cancelFacts.driverShareMinor !== null ? <div className="plus"><dt>{tr("Driver gets")}</dt><dd>{liveMoney(cancelFacts.driverShareMinor)}</dd></div> : null}
                 </dl>
               ) : <p className="op-help">{tr("No fee.")}</p>}
@@ -434,7 +434,11 @@ export function TripPage() {
                 <div><dt>{tr("Code")}</dt><dd data-testid="trip-pin-code">{facts.pin.code ?? "—"}</dd></div>
                 <div><dt>{tr("Entered by the driver")}</dt><dd>{facts.pin.verified ? tr("Yes") : tr("Not yet")}</dd></div>
                 {facts.pin.attempts !== null ? <div><dt>{tr("Wrong tries")}</dt><dd>{facts.pin.attempts}</dd></div> : null}
+                {facts.pin.blocked ? <div><dt>{tr("State")}</dt><dd data-testid="trip-pin-blocked">{tr("Blocked after too many wrong codes")}</dd></div> : null}
               </dl>
+              {live && facts.pin.blocked && can(role, "trips.intervene") ? (
+                <CommandButton command="admin.trip.pinUnlock" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="blocked" after="unlocked" onDone={(result) => { setNotice(result?.message ?? tr("PIN unlocked. The driver can enter the code again.")); void dispatchOffers.refetch(); void trips.refetch(); }}>{tr("Unlock PIN")}</CommandButton>
+              ) : null}
               <p className="op-help">{tr("Read the code to the driver only when you have checked who is calling.")}</p>
             </div>
           ) : null}

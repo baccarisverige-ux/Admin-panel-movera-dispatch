@@ -486,7 +486,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (!cursor && items.length > 2) return json(route, 200, { items: items.slice(0, 2), nextCursor: "c2" });
       return json(route, 200, { items: cursor ? items.slice(2) : items, nextCursor: null });
     }
-    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/adjust|\/reverse-no-show)?$/.exec(p);
+    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/adjust|\/reverse-no-show|\/pin\/unlock)?$/.exec(p);
     if (one) {
       const trip = state.trips.find((item) => item.tripId === one[1]);
       if (!trip) return json(route, 404, { code: "not_found", message: "No such trip.", requestId: "r-404t", retryable: false });
@@ -508,6 +508,12 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
         trip.version = Number(trip.version) + 1;
         return json(route, 200, trip);
       }
+      if (one[2] === "/pin/unlock") {
+        if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409p", retryable: false, projection: trip });
+        if (!body.reason) return json(route, 400, { code: "invalid_request", message: "reason is required", requestId: "r-400p", retryable: false });
+        Object.assign(trip, { pinBlocked: false, pinAttempts: 0, version: Number(trip.version) + 1 });
+        return json(route, 200, trip);
+      }
       if (one[2] === "/reverse-no-show") {
         // v0.18.8 (G6): POST /admin/trips/{tripId}/reverse-no-show: idempotent; the status stays no_show.
         const cancellation = trip.cancellation as { feeStatus?: string; reversal?: unknown } | undefined;
@@ -516,7 +522,8 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
         if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409r", retryable: false, projection: trip });
         if (!body.reason) return json(route, 400, { code: "invalid_request", message: "reason is required", requestId: "r-400r", retryable: false });
         if (cancellation) {
-          cancellation.feeStatus = cancellation.feeStatus === "paid" ? "refunded" : "waived";
+          if (cancellation.feeStatus === "paid") Object.assign(cancellation, { refundedAt: "2026-10-26T10:00:00Z", refundedToWallet: true });
+          cancellation.feeStatus = "waived";
           cancellation.reversal = { at: "2026-10-26T10:00:00Z", by: "A1", reason: body.reason, driverShareTakenBack: Boolean(body.takeBackDriverShare) };
         }
         trip.fare = { ...(trip.fare as object), amountMinor: 0 };

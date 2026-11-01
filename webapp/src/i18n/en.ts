@@ -7495,7 +7495,6 @@ export const en = {
   "Add paragraphs 3.1–3.5": "Add paragraphs 3.1–3.5",
   "Rider PIN before Start": "Rider PIN before Start",
   "The driver must enter the rider’s 4-digit code before the trip starts.": "The driver must enter the rider’s 4-digit code before the trip starts.",
-  "Turn this on only when the driver app with the PIN step is live in this zone. A driver app without it cannot start the trips of this zone.": "Turn this on only when the driver app with the PIN step is live in this zone. A driver app without it cannot start the trips of this zone.",
   "Wrong tries before lock": "Wrong tries before lock",
   "1 to 10. After this many wrong codes in a row the driver must wait.": "1 to 10. After this many wrong codes in a row the driver must wait.",
   "Lock minutes": "Lock minutes",
@@ -7532,7 +7531,14 @@ export const en = {
   "Booked ride": "Booked ride",
   "Other rule": "Other rule",
   "No PIN for this trip": "No PIN for this trip",
-  "refunded to the rider's wallet": "refunded to the rider's wallet",
+  "The PIN is not locked.": "The PIN is not locked.",
+  "PIN unlocked. The driver can enter the code again.": "PIN unlocked. The driver can enter the code again.",
+  "Unlock PIN": "Unlock PIN",
+  "Blocked after too many wrong codes": "Blocked after too many wrong codes",
+  "The PIN can only be checked while the driver is at the pickup.": "The PIN can only be checked while the driver is at the pickup.",
+  "Too many wrong codes: the PIN is blocked until an admin unlocks it.": "Too many wrong codes: the PIN is blocked until an admin unlocks it.",
+  "Refunded to the rider's wallet": "Refunded to the rider's wallet",
+  "Only trips whose driver uses the new driver app ask for the PIN.": "Only trips whose driver uses the new driver app ask for the PIN.",
 } as const;
 
 export type MessageKey = keyof typeof en;

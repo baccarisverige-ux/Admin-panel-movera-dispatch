@@ -184,7 +184,7 @@ export type TripTerms = { currency: string; freeWaitMin: number; waitPerMin: Liv
 /** contract Waiting (+ v0.18.7 Q5/Q6 amounts). */
 export type TripWaiting = { arrivedAt: string; freeUntil: string; noShowAt: string; chargedSeconds: number; noShowFee?: LiveMoney; noShowDriverShare?: LiveMoney; chargedSecondsNow?: number; chargedSoFar?: LiveMoney; /** v0.18.8 (G6): whole paid minutes (rounded up), the applied rule ids and the effective minutes. */ paidMinutes?: number; rules?: string[]; freeWaitMin?: number; noShowAfterMin?: number };
 /** contract Cancellation (+ v0.18.7 Q2/Q6 feeKind and driverShare). */
-export type TripCancellation = { actor: string; reasonCode: string; at: string; fee: LiveMoney | null; note?: string; feeStatus?: "paid" | "owed" | "waived" | string; feeKind?: "cancel" | "no_show" | string; driverShare?: LiveMoney; /** v0.18.8 (G6): the admin's reverse of a no-show. */ reversal?: { at: string; by?: string; reason?: string; driverShareTakenBack: boolean } };
+export type TripCancellation = { actor: string; reasonCode: string; at: string; fee: LiveMoney | null; note?: string; feeStatus?: "paid" | "owed" | "waived" | string; feeKind?: "cancel" | "no_show" | string; driverShare?: LiveMoney; /** v0.18.8 (G6): the admin's reverse of a no-show. */ reversal?: { at: string; by?: string; reason?: string; driverShareTakenBack: boolean }; /** v0.18.8 round 1: a paid fee refunded to the wallet (feeStatus stays waived). */ refundedAt?: string; refundedToWallet?: boolean };
 
 /** contract TripProjection as GET /admin/trips and GET /admin/trips/{tripId} send it (the fields the panel reads). */
 export type Trip = {
@@ -230,6 +230,8 @@ export type Trip = {
   pickupPin?: string;
   pinVerified?: boolean;
   pinAttempts?: number;
+  /** v0.18.8 round 1: 3 × maxAttempts wrong tries in all; only an admin unlock (POST /admin/trips/{id}/pin/unlock) clears it. */
+  pinBlocked?: boolean;
 };
 
 /** contract Offer (GET /admin/trips/{tripId}/offers). */

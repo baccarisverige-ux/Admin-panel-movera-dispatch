@@ -85,15 +85,15 @@ export function feeKindOf(cancellation: Pick<LiveCancellation, "feeMinor" | "fee
   return cancellation.feeKind === "no_show" ? "no_show" : "cancel";
 }
 
-/** paid / owed / waived / refunded (v0.18.8 reversed no-show) as the server says; an older server without feeStatus answers null. */
-export function feeStatusOf(cancellation: Pick<LiveCancellation, "feeMinor" | "feeStatus"> | null): "paid" | "owed" | "waived" | "refunded" | null {
+/** paid / owed / waived as the server says (a refunded fee stays waived, v0.18.8); an older server without feeStatus answers null. */
+export function feeStatusOf(cancellation: Pick<LiveCancellation, "feeMinor" | "feeStatus"> | null): "paid" | "owed" | "waived" | null {
   if (!cancellation || cancellation.feeMinor === null) return null;
-  return cancellation.feeStatus === "paid" || cancellation.feeStatus === "owed" || cancellation.feeStatus === "waived" || cancellation.feeStatus === "refunded" ? cancellation.feeStatus : null;
+  return cancellation.feeStatus === "paid" || cancellation.feeStatus === "owed" || cancellation.feeStatus === "waived" ? cancellation.feeStatus : null;
 }
 
 /** The fee can be waived while it is on the trip and not waived yet (POST /admin/trips/{tripId}/adjust waiveCancelFee). */
 export function canWaiveFee(cancellation: Pick<LiveCancellation, "feeMinor" | "feeStatus"> | null): boolean {
-  return Boolean(cancellation && cancellation.feeMinor !== null && cancellation.feeMinor > 0 && cancellation.feeStatus !== "waived" && cancellation.feeStatus !== "refunded");
+  return Boolean(cancellation && cancellation.feeMinor !== null && cancellation.feeMinor > 0 && cancellation.feeStatus !== "waived");
 }
 
 /**

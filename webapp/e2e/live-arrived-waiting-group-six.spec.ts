@@ -45,7 +45,7 @@ test("PIN switch + stop free wait: read from the driver document, off by default
   await page.goto("/dispatch?zone=Z002&tab=safety");
   const card = page.getByRole("region", { name: "Rider PIN before Start" });
   await expect(card).toContainText("The driver must enter the rider’s 4-digit code before the trip starts.");
-  await expect(card.getByTestId("pickup-pin-compat")).toContainText("only when the driver app with the PIN step is live");
+  await expect(card.getByTestId("pickup-pin-compat")).toContainText("Only trips whose driver uses the new driver app ask for the PIN.");
   const toggle = card.getByLabel("Rider PIN before Start on");
   await expect(toggle).not.toBeChecked();
   await toggle.check();
@@ -96,9 +96,28 @@ test("trip page: paid waiting minutes, the airport rule, the PIN for admins; Rev
   await page.reload();
   await expect(page.getByTestId("trip-no-show-reversal")).toContainText("Rider waited at the other terminal door");
   await expect(page.getByTestId("trip-no-show-reversal")).toContainText("driver's share taken back");
-  await expect(page.getByTestId("trip-fee-status")).toContainText(/refunded/i);
+  await expect(page.getByTestId("trip-fee-status")).toHaveText("Refunded to the rider's wallet");
   await expect(page.getByRole("button", { name: "Reverse no-show" })).toHaveCount(0);
   for (const id of ["trip-waiting-facts", "trip-pin-box", "trip-cancel-fee"]) await expect(page.getByTestId(id)).not.toContainText("Not connected yet");
+});
+
+test("Unlock PIN: a blocked PIN shows the state and Unlock sends the reason with an Idempotency-Key", async ({ page }) => {
+  const arrived = { ...structuredClone(NO_SHOW), tripId: "T2007", status: "arrived", pinBlocked: true, pinAttempts: 15, cancellation: undefined };
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const state = await fakeTripServer(page, { admin: G6_ADMIN, trips: [arrived] as never, riders: [{ ...RIDERS[1] }] });
+  await fakeSettings(page);
+  await signIn(page, "Dashboard");
+  await page.goto("/trips/T2007");
+  await expect(page.getByTestId("trip-pin-blocked")).toHaveText("Blocked after too many wrong codes");
+  await page.getByRole("button", { name: "Unlock PIN" }).click();
+  await page.locator(".modal.open").last().getByRole("button", { name: "Confirm" }).click();
+  await expect.poll(() => state.calls.some((call) => call.method === "POST" && call.path.endsWith("/admin/trips/T2007/pin/unlock"))).toBe(true);
+  const call = state.calls.find((item) => item.method === "POST" && item.path.endsWith("/admin/trips/T2007/pin/unlock"))!;
+  expect((call.body as Record<string, unknown>)["expectedVersion"]).toBe(6);
+  expect(String((call.body as Record<string, unknown>)["reason"])).not.toBe("");
+  expect(call.headers["idempotency-key"]).toBeTruthy();
+  await page.reload();
+  await expect(page.getByTestId("trip-pin-blocked")).toHaveCount(0);
 });
 
 test("trip page in French: the waiting box, the PIN and the dialog have no English and no raw codes", async ({ page }) => {

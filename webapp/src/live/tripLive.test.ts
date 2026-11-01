@@ -61,8 +61,6 @@ test("Q2 / Q6: the fee in words: which rule set it, paid or owed, and whether it
   assert.equal(canWaiveFee({ ...noShow, feeStatus: "waived" }), false);
   assert.equal(canWaiveFee({ ...noShow, feeMinor: 0 }), false);
   assert.equal(canWaiveFee(null), false);
-  assert.equal(feeStatusOf({ ...noShow, feeStatus: "refunded" }), "refunded", "v0.18.8 reversed no-show");
-  assert.equal(canWaiveFee({ ...noShow, feeStatus: "refunded" }), false);
   assert.equal(tripMoney(6500, "SEK"), "65,00 kr");
   assert.equal(tripMoney(650, "EUR"), "6,50 €");
   assert.equal(tripMoney(650, "XYZ"), "6.50 XYZ");

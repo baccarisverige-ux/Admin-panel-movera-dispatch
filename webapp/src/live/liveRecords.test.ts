@@ -36,7 +36,7 @@ test("v0.18.8 (G6): paid waiting minutes, the applied rule, the PIN (admin view)
     cancellation: { actor: "driver", reasonCode: "no_show", at: "2026-10-25T08:31:00Z", fee: SEK(6500), feeStatus: "refunded", feeKind: "no_show", reversal: { at: "2026-10-25T09:00:00Z", by: "A1", reason: "Rider was at the other door", driverShareTakenBack: false } } });
   const facts = (base as { liveTrip: ReturnType<typeof tripFacts> }).liveTrip;
   assert.deepEqual([facts.waiting?.paidMinutes, facts.waiting?.rules, facts.waiting?.freeWaitMin, facts.waiting?.noShowAfterMin], [3, ["airport"], 15, 20]);
-  assert.deepEqual(facts.pin, { code: "0427", verified: false, attempts: 2 });
+  assert.deepEqual(facts.pin, { code: "0427", verified: false, attempts: 2, blocked: false });
   assert.deepEqual(facts.cancellation?.reversal, { at: "2026-10-25T09:00:00Z", by: "A1", reason: "Rider was at the other door", driverShareTakenBack: false });
   assert.equal((base as { waitingMin?: number }).waitingMin, 3, "Trips list minutes from waiting.paidMinutes");
 });
@@ -58,7 +58,7 @@ test("v0.18.7 (G5): a live trip keeps the car's position, the server's ETA, the 
   assert.equal(facts.terms?.cancelFreeMin, 2);
   assert.equal(facts.terms?.maxPickupMoveMeters, 200);
   assert.deepEqual([facts.waiting?.noShowFeeMinor, facts.waiting?.noShowDriverShareMinor, facts.waiting?.chargedSecondsNow, facts.waiting?.chargedSoFarMinor], [6500, 5200, 30, 613]);
-  assert.deepEqual(facts.cancellation, { actor: "rider", reasonCode: "plans_changed", at: "2026-10-25T08:16:00Z", feeMinor: 6500, feeStatus: "owed", feeKind: "no_show", driverShareMinor: 5200, note: null, reversal: null });
+  assert.deepEqual(facts.cancellation, { actor: "rider", reasonCode: "plans_changed", at: "2026-10-25T08:16:00Z", feeMinor: 6500, feeStatus: "owed", feeKind: "no_show", driverShareMinor: 5200, note: null, reversal: null, refundedToWallet: false });
   const older = tripRecord(TRIP).liveTrip!;
   assert.deepEqual([older.driverLocation, older.eta, older.rider, older.terms, older.waiting, older.cancellation], [null, null, null, null, null, null], "an older server: nothing invented");
 });
