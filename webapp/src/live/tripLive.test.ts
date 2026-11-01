@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
-import { registerDictionary, setLanguage } from "../i18n/core.ts";
+import { currentLanguage, registerDictionary, setLanguage } from "../i18n/core.ts";
 import { cancelBlock, cancelledBy } from "../trips/present.ts";
 import { readFileSync } from "node:fs";
 import contract from "../../../contracts/contract.json" with { type: "json" };
@@ -125,4 +125,16 @@ test("G5 live re-test: the trip page reason line has no raw code for a known rea
   } finally {
     setLanguage("en");
   }
+});
+
+test("G5 live re-test round 2: a book reason with only an English title reads in the UI language (FR page)", () => {
+  registerDictionary("fr", fr);
+  const book = cancelReasonsDefault();
+  setLanguage("fr");
+  try {
+    assert.equal(reasonLine("something_else", book, currentLanguage()), "Autre chose");
+  } finally {
+    setLanguage("en");
+  }
+  assert.equal(reasonLine("something_else", book, currentLanguage()), "Something else");
 });
