@@ -13,7 +13,7 @@ import { Cards } from "../reports/ui";
 import { CARE_KEY, emptyRiderCare, normalizeCare, type RiderCare } from "../riders/care";
 import { CommandButton } from "../ui/CommandButton";
 import { GrowthPage } from "./GrowthPage";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
 
 const KINDS: { id: HubKind | "all"; label: string }[] = [
   { id: "all", label: "All" },
@@ -65,7 +65,7 @@ export function PromotionsPage() {
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Promotion sections")}>
-        {([["all", "All promotions"], ["vouchers", "Voucher codes"], ["referral", "Invite a friend"], ["rules", "Growth rules"]] as const).map(([id, label]) => <button data-command="admin.promo.view" key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : undefined} onClick={() => selectTab(id)}>{label}</button>)}
+        {([["all", "All promotions"], ["vouchers", "Voucher codes"], ["referral", "Invite a friend"], ["rules", "Growth rules"]] as const).map(([id, label]) => <button data-command="admin.promo.view" key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : undefined} onClick={() => selectTab(id)}>{trx(label)}</button>)}
       </div>
       <p role="status" className="gr-status">{notice}</p>
 
@@ -88,7 +88,7 @@ export function PromotionsPage() {
             <p className="gr-help">{ops.autoStop ? tr("On: promotions stop when the budget is used up.") : tr("Off: promotions keep running past their budget.")}</p>
           </Card>
           <div className="gr-chips" role="group" aria-label={tr("Promotion kind")}>
-            {KINDS.map((item) => <button data-command="admin.promo.view" key={item.id} type="button" aria-pressed={kind === item.id} className={kind === item.id ? "gr-chip on" : "gr-chip"} onClick={() => setKind(item.id)}>{item.label} <small>{item.id === "all" ? items.length : items.filter((row) => row.kind === item.id).length}</small></button>)}
+            {KINDS.map((item) => <button data-command="admin.promo.view" key={item.id} type="button" aria-pressed={kind === item.id} className={kind === item.id ? "gr-chip on" : "gr-chip"} onClick={() => setKind(item.id)}>{trx(item.label)} <small>{item.id === "all" ? items.length : items.filter((row) => row.kind === item.id).length}</small></button>)}
           </div>
           <ul className="gr-hub" aria-label={tr("Promotions")}>
             {shown.map((item) => {
@@ -96,7 +96,7 @@ export function PromotionsPage() {
               return (
                 <li key={item.id} className={`gr-hub-row ${item.kind}`}>
                   <span className="gr-hub-icon" aria-hidden="true">{item.kind === "rider" ? <Gift size={15} /> : item.kind === "driver" ? <Wallet size={15} /> : item.kind === "voucher" ? <Ticket size={15} /> : <Share2 size={15} />}</span>
-                  <span className="gr-hub-title"><b>{item.title}</b><small>{trn("{0}{1} · made in {2}", KINDS.find((row) => row.id === item.kind)?.label, item.code ? ` · ${item.code}` : "", item.madeIn)}</small></span>
+                  <span className="gr-hub-title"><b>{item.title}</b><small>{trn("{0}{1} · made in {2}", trx(KINDS.find((row) => row.id === item.kind)?.label), item.code ? ` · ${item.code}` : "", item.madeIn)}</small></span>
                   <span className={`gr-state ${item.status}`}>{STATE_LABEL[item.status]}</span>
                   <span className="gr-budget" title={item.budget ? tr("{0}% of the budget used", [used]) : tr("No budget limit")}>
                     <span className="gr-budget-bar"><span style={{ width: `${used}%` }} /></span>

@@ -168,7 +168,7 @@ test("sign-out forgets the tokens first and revokes on the server (204); a 204 j
 
 test("a stored session is restored from sessionStorage; a broken one is ignored", async () => {
   const storage = memoryStorage();
-  storage.setItem(LIVE_SESSION_KEY, JSON.stringify({ accessToken: "a", refreshToken: "r", expiresAt: 1, admin: ADMIN }));
+  storage.setItem(LIVE_SESSION_KEY, JSON.stringify({ accessToken: "a", refreshToken: "r", expiresAt: Date.now() + 600_000, admin: ADMIN }));
   const server = fakeServer([() => respond(204, null)]);
   const client = createLiveClient({ baseUrl: "http://api.test", fetchImpl: server.fetchImpl, storage });
   assert.equal(client.admin()?.adminId, "A1");
@@ -249,4 +249,64 @@ test("contract v0.16.1: updateMyLanguage PATCHes /admin/auth/me with a key, keep
   await client.updateMyLanguage(null);
   assert.deepEqual(server.calls[2]!.body, { language: null });
   assert.deepEqual(seen, ["sv", undefined]);
+});
+
+/* Page audit 2026-11-01: 401s after ~20 min on trips, drivers and config (the refresh / retry path). */
+
+test("a 401 that arrives after another call refreshed is retried with the new token, without a second refresh", async () => {
+  let releaseLate: (value: FetchResponse) => void = () => {};
+  const late = new Promise<FetchResponse>((resolve) => { releaseLate = resolve; });
+  const server = fakeServer([
+    () => respond(200, session("access-1", "refresh-1")),
+    () => respond(401, { code: "unauthenticated", message: "expired", requestId: "r1", retryable: false }),
+    // The second call was sent with access-1 too; its 401 only comes back after the refresh below.
+    () => late as unknown as FetchResponse,
+    () => respond(200, session("access-2", "refresh-2")),
+    () => respond(200, { items: [], nextCursor: null }),
+    () => respond(200, { items: [1], nextCursor: null }),
+  ]);
+  const client = createLiveClient({ baseUrl: "http://api.test", fetchImpl: server.fetchImpl, storage: null });
+  await client.signIn("owner@movera.se", "secret");
+  const first = client.json("/admin/drivers");
+  const second = client.json<{ items: unknown[] }>("/admin/trips");
+  await first;
+  releaseLate(respond(401, { code: "unauthenticated", message: "expired", requestId: "r2", retryable: false }));
+  assert.deepEqual((await second).items, [1]);
+  assert.equal(server.calls.filter((call) => call.url.endsWith("/admin/auth/refresh")).length, 1, "one rotation only");
+  assert.equal(server.calls.at(-1)!.headers.get("Authorization"), "Bearer access-2");
+});
+
+test("a refresh that fails for a passing reason (503) keeps the session; the next call refreshes again", async () => {
+  const reasons: string[] = [];
+  const server = fakeServer([
+    () => respond(200, session("access-1", "refresh-1")),
+    () => respond(401, { code: "unauthenticated", message: "expired", requestId: "r1", retryable: false }),
+    () => respond(503, { code: "unavailable", message: "waking up", requestId: "r2", retryable: true }),
+    () => respond(401, { code: "unauthenticated", message: "expired", requestId: "r3", retryable: false }),
+    () => respond(200, session("access-2", "refresh-2")),
+    () => respond(200, { items: [], nextCursor: null }),
+  ]);
+  const client = createLiveClient({ baseUrl: "http://api.test", fetchImpl: server.fetchImpl, storage: null, onSignedOut: (reason) => reasons.push(reason) });
+  await client.signIn("owner@movera.se", "secret");
+  await assert.rejects(client.json("/admin/config/dispatch"));
+  assert.equal(client.state()?.refreshToken, "refresh-1", "still signed in");
+  assert.deepEqual(reasons, []);
+  await client.json("/admin/config/dispatch");
+  assert.equal(client.state()?.refreshToken, "refresh-2");
+  assert.equal(server.calls.at(-1)!.headers.get("Authorization"), "Bearer access-2");
+});
+
+test("the token is refreshed shortly before it runs out, so the call never goes out with a dead token", async () => {
+  let clock = 1_000_000;
+  const server = fakeServer([
+    () => respond(200, session("access-1", "refresh-1")),
+    () => respond(200, session("access-2", "refresh-2")),
+    () => respond(200, { items: [], nextCursor: null }),
+  ]);
+  const client = createLiveClient({ baseUrl: "http://api.test", fetchImpl: server.fetchImpl, storage: null, now: () => clock });
+  await client.signIn("owner@movera.se", "secret");
+  clock += 890_000; // 900 s token, 10 s left
+  await client.json("/admin/trips");
+  assert.equal(server.calls[1]!.url, "http://api.test/api/v1/admin/auth/refresh");
+  assert.equal(server.calls[2]!.headers.get("Authorization"), "Bearer access-2");
 });

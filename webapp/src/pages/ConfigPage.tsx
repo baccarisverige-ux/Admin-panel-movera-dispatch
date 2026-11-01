@@ -52,7 +52,7 @@ import { LanguageQuickSwitch } from "../i18n/LanguageQuickSwitch";
 const LEVELS: OverrideLevel[] = ["market", "zone", "category", "app", "platform", "appVersion", "cohort"];
 
 function platformName(app: string, platform: string): string {
-  return `${app === "rider" ? "Rider" : "Driver"} ${platform === "ios" ? "iOS" : "Android"}`;
+  return `${app === "rider" ? tr("Rider") : tr("Driver")} ${platform === "ios" ? "iOS" : "Android"}`;
 }
 
 function defaultTarget(level: OverrideLevel, zoneId: string, book: ConfigBook): string {

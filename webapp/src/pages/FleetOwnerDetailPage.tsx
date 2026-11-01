@@ -102,7 +102,7 @@ export function FleetOwnerDetailPage() {
 
   if (owners.isLoading || store.loading) return <p className="state-line">{tr("Loading fleet owner.")}</p>;
   if (!owner) {
-    return <NotFoundRecord kind="Fleet owner" id={ownerId} list="/fleets" listLabel="fleet owners" />;
+    return <NotFoundRecord kind="Fleet owner" id={ownerId} list="/fleets" back={tr("Back to fleet owners")} />;
   }
 
   const role = agent?.role ?? "viewer";

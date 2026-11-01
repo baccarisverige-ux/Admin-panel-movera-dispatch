@@ -78,7 +78,7 @@ export function VehicleDetailPage() {
 
   if (vehicles.isLoading || drivers.isLoading || fleets.isLoading || store.loading) return <p className="state-line">{tr("Loading vehicle.")}</p>;
   if (!record || !profile) {
-    return <NotFoundRecord kind="Vehicle" id={id} list="/vehicles" listLabel="vehicles" />;
+    return <NotFoundRecord kind="Vehicle" id={id} list="/vehicles" back={tr("Back to vehicles")} />;
   }
   if (agent?.scope.fleetPartnerId && record.fleetId !== agent.scope.fleetPartnerId) {
     return (

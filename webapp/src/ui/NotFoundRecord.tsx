@@ -8,7 +8,7 @@ import { tr, trn, trx } from "../i18n";
  * The one "Not found" page for every detail address (Q23, UI-15): a title, a search box and a link back to
  * the list. Used when the id does not exist or is outside the admin's country or zones.
  */
-export function NotFoundRecord({ kind, id, list, listLabel }: { kind: string; id?: string; list: string; listLabel: string }) {
+export function NotFoundRecord({ kind, id, list, back }: { kind: string; id?: string; list: string; back: string }) {
   const [query, setQuery] = useState("");
   const search = useSearch(query);
   const hits = search.data ?? [];
@@ -30,7 +30,7 @@ export function NotFoundRecord({ kind, id, list, listLabel }: { kind: string; id
             </ul>
           ) : <p className="state-line">{search.isLoading ? tr("Searching.") : tr("Nothing matches.")}</p>
         ) : null}
-        <Link className="dash-btn small ghost not-found-back" to={list}>{trn("{0} Back to {1}", <ArrowLeft size={13} aria-hidden="true" />, trx(listLabel))}</Link>
+        <Link className="dash-btn small ghost not-found-back" to={list}><ArrowLeft size={13} aria-hidden="true" /> {back}</Link>
       </div>
     </div>
   );

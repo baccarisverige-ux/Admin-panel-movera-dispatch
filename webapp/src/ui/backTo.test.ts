@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { backPlace, decodeMapAt, decodeMapOpen, encodeMapAt, encodeMapOpen, safeBack, searchWithMap, withBack } from "./backTo.ts";
+import { backPlace, decodeMapAt, decodeMapOpen, encodeMapAt, encodeMapOpen, safeBack, searchWithMap, stripBase, withBack } from "./backTo.ts";
 
 test("map view round-trips through the address", () => {
   const text = encodeMapAt({ lat: 59.334591, lng: 18.06324, zoom: 12.456 });
@@ -43,4 +43,16 @@ test("the back button names the screen it returns to", () => {
   assert.equal(backPlace("/dispatch/bookings"), "offers");
   assert.equal(backPlace("/dispatch/rules?tab=best"), "dispatch");
   assert.equal(backPlace("/pricing"), "other");
+});
+
+test("map pop-up links drop the router basename so they never double it (live: Page not found)", () => {
+  const base = "/Admin-panel-movera-dispatch/live/";
+  assert.equal(stripBase("/Admin-panel-movera-dispatch/live/drivers/d1", base), "/drivers/d1");
+  assert.equal(stripBase("/Admin-panel-movera-dispatch/live", base), "/");
+  assert.equal(stripBase("/Admin-panel-movera-dispatch/live/?x=1", base), "/?x=1");
+  assert.equal(stripBase("/Admin-panel-movera-dispatch/livex/a", base), "/Admin-panel-movera-dispatch/livex/a");
+  assert.equal(stripBase("/drivers/d1", "/"), "/drivers/d1");
+  const href = withBack(stripBase("/Admin-panel-movera-dispatch/live/drivers/d1", base), stripBase("/Admin-panel-movera-dispatch/live/dispatch/map", base) + "?mapAt=1,2,3");
+  assert.equal(href.split("?")[0], "/drivers/d1");
+  assert.equal(backPlace(new URLSearchParams(href.split("?")[1]).get("back") ?? ""), "live");
 });

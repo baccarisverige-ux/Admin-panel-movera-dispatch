@@ -280,7 +280,7 @@ function GroupMessage({ care, rows, agentId, now, onClose, onSent }: { care: Rid
       <div className="modal-card rd-modal">
         <h3>{trn("Message {0} rider{1}", rows.length, rows.length === 1 ? "" : tr("s"))}</h3>
         <p className="fine">{rows.slice(0, 6).map((row) => row.rider.name).join(", ")}{rows.length > 6 ? tr(" and {0} more", [rows.length - 6]) : ""}</p>
-        <div className="fd-templates">{REPLY_TEMPLATES.map((item) => <button key={item} data-command="admin.ui.quickAction" type="button" className="fd-template" onClick={() => setText(item)}>{item}</button>)}</div>
+        <div className="fd-templates">{REPLY_TEMPLATES.map((item) => <button key={item} data-command="admin.ui.quickAction" type="button" className="fd-template" onClick={() => setText(trx(item))}>{trx(item)}</button>)}</div>
         <textarea aria-label={tr("Group message")} rows={4} value={text} onChange={(event) => setText(event.target.value)} placeholder={tr("Write to the selected riders")} />
         <div className="cat-actions end">
           <button data-command="admin.confirm.cancel" type="button" className="dash-btn ghost" onClick={onClose}>{tr("Cancel")}</button>

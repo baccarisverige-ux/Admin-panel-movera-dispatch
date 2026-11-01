@@ -15,7 +15,7 @@ import { ACTIONS, RISK_KEY, RULES, emptyRiskOps, flagged, normalizeRiskOps, peop
 import { useQuery } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import type { Page, RiskPerson } from "../live/types";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
 import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
 import type { RideCheckThresholds } from "../safety/rideCheckSettings";
 import { agentName } from "../trips/TripParts";
@@ -35,13 +35,13 @@ const NUMBERS: { key: keyof SafetyPolicy; label: string; title: string; help: st
 /** What Ride check asks on in a zone, in one line. Set in Dispatch → Safety. */
 function rideCheckLine(check: RideCheckRules, shared: RideCheckThresholds): string {
   const on = [
-    check.farOn ? `finished over ${shared.finishFarFromDropoffKm} km from drop-off` : "",
-    check.stopOn ? `stop over ${shared.longStopMinutes} min` : "",
-    check.routeOn ? `${check.routeKm} km off the route` : "",
-    check.longerOn ? `${check.longerPct}% longer` : "",
-    check.crashOn ? "possible crash" : "",
+    check.farOn ? tr("finished over {0} km from drop-off", [shared.finishFarFromDropoffKm]) : "",
+    check.stopOn ? tr("stop over {0} min", [shared.longStopMinutes]) : "",
+    check.routeOn ? tr("{0} km off the route", [check.routeKm]) : "",
+    check.longerOn ? tr("{0}% longer", [check.longerPct]) : "",
+    check.crashOn ? tr("possible crash") : "",
   ].filter(Boolean);
-  return on.length ? `Asks on: ${on.join(", ")}.` : "Off in this zone.";
+  return on.length ? tr("Asks on: {0}.", [on.join(", ")]) : tr("Off in this zone.");
 }
 
 const SWITCHES: { key: "pin" | "sharing" | "audio"; label: string; help: string }[] = [
@@ -83,7 +83,7 @@ export function RiskPage() {
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Risk sections")}>
-        {TABS.map((item) => <button data-command="admin.risk.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => set({ tab: item.id === "safety" ? null : item.id })}>{item.label}</button>)}
+        {TABS.map((item) => <button data-command="admin.risk.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => set({ tab: item.id === "safety" ? null : item.id })}>{trx(item.label)}</button>)}
       </div>
       {!editable ? <p className="dx-readonly">{tr("You can look, but only the safety team can change rules.")}</p> : null}
       {tab === "safety" ? <SafetyRules editable={editable} /> : tab === "fraud" ? <FraudRules editable={editable} /> : <FlaggedPeople editable={editable} />}
@@ -137,7 +137,7 @@ function SafetyRules({ editable }: { editable: boolean }) {
           <Card title={tr("Numbers for {0}", [zoneById(id)?.name ?? id])} icon={<Gauge size={18} />} tone="blue">
             {NUMBERS.map((item) => (
               <Row key={item.key} label={item.title} help={item.help}>
-                <span className="op-unit-input"><input aria-label={item.label} type="number" min="0" value={Number(policy[item.key])} onChange={(event) => setDraft({ ...policy, [item.key]: Number(event.target.value) })} /><small>{item.unit}</small></span>
+                <span className="op-unit-input"><input aria-label={trx(item.label)} type="number" min="0" value={Number(policy[item.key])} onChange={(event) => setDraft({ ...policy, [item.key]: Number(event.target.value) })} /><small>{trx(item.unit)}</small></span>
               </Row>
             ))}
           </Card>
@@ -213,7 +213,7 @@ function FraudRules({ editable }: { editable: boolean }) {
             const rule = rules.find((item) => item.id === def.id)!;
             const count = counts.byRule.find((item) => item.id === def.id);
             return (
-              <Row key={def.id} label={def.label} help={live && LATER.includes(def.id) ? `${def.help} ${tr("Not connected yet")}.` : tr("{0} For {1}. Flags {2}{3}.", [def.help, def.who.map((item) => `${item}s`).join(" and "), count?.after ?? 0, count && count.after !== count.now ? ` (now ${count.now})` : ""])} on={rule.on} onToggle={(on) => patch(def.id, { on })}>
+              <Row key={def.id} label={def.label} help={live && LATER.includes(def.id) ? `${def.help} ${tr("Not connected yet")}.` : tr("{0} For {1}. Flags {2}{3}.", [def.help, def.who.map((item) => (item === "driver" ? tr("drivers") : tr("riders"))).join(tr(" and ")), count?.after ?? 0, count && count.after !== count.now ? tr(" (now {0})", [count.now]) : ""])} on={rule.on} onToggle={(on) => patch(def.id, { on })}>
                 <Num label={tr("{0} limit", [def.label])} before={def.worse === "up" ? "From" : "Below"} value={rule.limit} unit={def.unit} min={def.min} max={def.max} step={def.step} onChange={(value) => patch(def.id, { limit: value })} />
                 <Choice label={tr("{0} action", [def.label])} value={rule.action} options={ACTIONS.map((item) => ({ id: item.id, label: item.label, hint: item.help }))} onChange={(action) => patch(def.id, { action })} />
               </Row>
@@ -284,14 +284,14 @@ function FlaggedPeople({ editable }: { editable: boolean }) {
             <span className="op-score" style={{ "--s": person.score } as CSSProperties} aria-label={tr("Score {0} of 100", [person.score])}><b>{person.score}</b></span>
             <span className="op-flag-main">
               <span className="op-flag-name">{person.who === "driver" ? <Car size={13} aria-hidden="true" /> : <UserRound size={13} aria-hidden="true" />} <Link to={`/${person.who}s/${person.id}`}>{person.name}</Link> <small>{person.who} · {zoneById(person.zoneId)?.name ?? person.zoneId}</small></span>
-              <span className="op-hits">{person.hits.map((hit) => <span key={hit.rule.id} className={`op-hit ${hit.action}`} title={hit.rule.help}>{hit.rule.label}: {hit.value} {hit.rule.unit}</span>)}</span>
+              <span className="op-hits">{person.hits.map((hit) => <span key={hit.rule.id} className={`op-hit ${hit.action}`} title={trx(hit.rule.help)}>{trx(hit.rule.label)}: {hit.value} {trx(hit.rule.unit)}</span>)}</span>
               {person.review ? <small className="op-help"><ShieldAlert size={11} aria-hidden="true" />{" "}{trn("{0} by {1}{2}", DECISIONS.find((item) => item.id === person.review?.decision)?.label, agentName(person.review.by), person.review.note ? `: ${person.review.note}` : "")}</small> : null}
             </span>
             {editable ? (
               <span className="op-flag-actions">
                 <input aria-label={tr("Note about {0}", [person.name])} placeholder={tr("Note (optional)")} value={notes[person.key] ?? ""} onChange={(event) => setNotes({ ...notes, [person.key]: event.target.value })} />
                 {DECISIONS.map((item) => (
-                  <CommandButton key={item.id} command="admin.risk.review" className={item.id === "blocked" ? "dash-btn small danger-ghost" : "dash-btn small ghost"} targetId={person.id} scope={person.zoneId} confirmTarget={false} before={person.review?.decision ?? "not checked"} after={item.id} sliceKey={RISK_KEY} value={review(ops, person.key, item.id, notes[person.key] ?? "", agent?.id ?? "", new Date().toISOString())} expectedSliceRev={ops.draftRev} title={item.help} onDone={() => setNotes({ ...notes, [person.key]: "" })}>{item.label}</CommandButton>
+                  <CommandButton key={item.id} command="admin.risk.review" className={item.id === "blocked" ? "dash-btn small danger-ghost" : "dash-btn small ghost"} targetId={person.id} scope={person.zoneId} confirmTarget={false} before={person.review?.decision ?? "not checked"} after={item.id} sliceKey={RISK_KEY} value={review(ops, person.key, item.id, notes[person.key] ?? "", agent?.id ?? "", new Date().toISOString())} expectedSliceRev={ops.draftRev} title={trx(item.help)} onDone={() => setNotes({ ...notes, [person.key]: "" })}>{trx(item.label)}</CommandButton>
                 ))}
               </span>
             ) : null}

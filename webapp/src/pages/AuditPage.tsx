@@ -11,8 +11,8 @@ import { logExport } from "../reports/activityLog";
 import { Cards } from "../reports/ui";
 import { DataTable } from "../ui/DataTable";
 import { CommandButton } from "../ui/CommandButton";
-import { tr, trn } from "../i18n";
-import { auditActionText, auditActorText, auditDetailText } from "../live/format";
+import { tr, trn, trx } from "../i18n";
+import { auditActionText, auditActorText, auditDetailText, auditValueText } from "../live/format";
 
 const PAGE = 50;
 
@@ -119,7 +119,7 @@ export function AuditPage() {
           <label className="pl-date"><span>{tr("From")}</span><input type="date" aria-label={tr("From date")} value={filters.from} onChange={(e) => patch({ from: e.target.value })} /></label>
           <label className="pl-date"><span>{tr("To")}</span><input type="date" aria-label={tr("To date")} value={filters.to} onChange={(e) => patch({ to: e.target.value })} /></label>
           {filtered ? <button data-command="admin.auditLog.view" type="button" className="dash-btn small ghost" onClick={() => patch(EMPTY_FILTERS)}>{tr("Clear filters")}</button> : null}
-          <CommandButton command="admin.auditLog.export" className="dash-btn small" type="button" confirmTarget={false} disabled={!shown.length} onDone={exportCsv}><Download size={13} aria-hidden="true" />{" "}{trn("Export {0} rows", shown.length)}</CommandButton>
+          <CommandButton command="admin.auditLog.export" className="dash-btn small" type="button" confirmTarget={false} disabled={!shown.length} onDone={exportCsv}><Download size={13} aria-hidden="true" />{" "}{trn(shown.length === 1 ? "Export {0} row" : "Export {0} rows", shown.length)}</CommandButton>
         </div>
         {audit.isLoading ? <p className="pl-help">{tr("Loading the audit.")}</p> : shown.length ? (
           <ol className="pl-log" aria-label={tr("Audit log")}>
@@ -138,10 +138,10 @@ export function AuditPage() {
                   {open === row.id ? (
                     <dl className="pl-detail">
                       <dt>{tr("Admin")}</dt><dd>{system ? auditActorText(row.actorId) : <><Link to={`/team/${row.actorId}`}>{nameOf(row.actorId)}</Link> · <Link to={`/reports?tab=work&admin=${row.actorId}`}>{tr("All their work")}</Link></>}</dd>
-                      <dt>{tr("Section")}</dt><dd>{areaOf(row.action)}</dd>
+                      <dt>{tr("Section")}</dt><dd>{trx(areaOf(row.action))}</dd>
                       <dt>{tr("Scope")}</dt><dd>{row.scope || "—"}</dd>
-                      <dt>{tr("Before")}</dt><dd>{row.before || tr("(empty)")}</dd>
-                      <dt>{tr("After")}</dt><dd>{row.after || tr("(empty)")}</dd>
+                      <dt>{tr("Before")}</dt><dd>{row.before ? auditValueText(row.before) : tr("(empty)")}</dd>
+                      <dt>{tr("After")}</dt><dd>{row.after ? auditValueText(row.after) : tr("(empty)")}</dd>
                       <dt>{tr("Reason")}</dt><dd>{auditDetailText(row) ?? (row.reason || "—")}</dd>
                       <dt>{tr("Operation")}</dt><dd><code>{row.operationId}</code></dd>
                     </dl>

@@ -104,7 +104,7 @@ export function DriverDetailPage() {
 
   if (drivers.isLoading || vehicles.isLoading || store.loading) return <p className="state-line">{tr("Loading driver.")}</p>;
   if (!driver) {
-    return <NotFoundRecord kind="Driver" id={driverId} list="/drivers" listLabel="drivers" />;
+    return <NotFoundRecord kind="Driver" id={driverId} list="/drivers" back={tr("Back to drivers")} />;
   }
   if (agent?.scope.fleetPartnerId && driver.fleetId !== agent.scope.fleetPartnerId) {
     return (
@@ -171,7 +171,7 @@ export function DriverDetailPage() {
           value={liveData ? { note: bankNote.trim() } : setBankReview(store.value, driverSeed, status, agent?.id ?? "", accountNote)}
           disabled={liveData ? (status === "rejected" && !bankNote.trim()) || (!bankRenewalWaiting && liveBank === status) : ops.bank.status === status}
           title={liveData && status === "rejected" && !bankNote.trim() ? tr("Write why: the driver sees the reason.") : undefined}
-          onDone={() => { setBankNote(""); setNotice(tr("Bank details marked {0}.", [statusLabel(status, "documentStatus").toLowerCase()])); }}
+          onDone={() => { if (status === "rejected") setBankNote(""); setNotice(tr("Bank details marked {0}.", [statusLabel(status, "documentStatus").toLowerCase()])); }}
         >
           {statusLabel(status, "documentStatus")}
         </CommandButton>

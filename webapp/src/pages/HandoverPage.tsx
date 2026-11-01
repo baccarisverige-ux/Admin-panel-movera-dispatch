@@ -13,7 +13,8 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { agentName } from "../trips/TripParts";
 import { CommandButton } from "../ui/CommandButton";
 import { DataTable } from "../ui/DataTable";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
+import { isLiveData } from "../live/realData";
 
 const NAMES: Record<string, string> = {
   "payment-failure": "Payment failure",
@@ -56,7 +57,7 @@ export function HandoverPage() {
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Handover sections")}>
-        {TABS.map((item) => <button data-command="admin.shift.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => select(item.id)}>{item.label}{item.id === "shift" && waiting.length ? <span className="dx-count">{waiting.length}</span> : null}</button>)}
+        {TABS.map((item) => <button data-command="admin.shift.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => select(item.id)}>{trx(item.label)}{item.id === "shift" && waiting.length ? <span className="dx-count">{waiting.length}</span> : null}</button>)}
       </div>
       {tab === "shift" ? <ShiftTab ops={ops} waiting={waiting} /> : tab === "past" ? <PastTab ops={ops} /> : <RunbooksTab />}
     </div>
@@ -220,18 +221,19 @@ function RunbooksTab() {
   const [drills, setDrills] = useState<DrillResult[] | null>(null);
   return (
     <>
-      <p className="op-help">{tr("The role matrix and the five runbooks. Drills run on the demo, not on staging.")}</p>
+      <p className="op-help">{isLiveData() ? tr("The role matrix and the five runbooks. Drills are a practice run in the panel; they change nothing on the server.") : tr("The role matrix and the five runbooks. Drills run on the demo, not on staging.")}</p>
       <article className="panel">
         <h3>{tr("Health")}</h3>
         <ul>
-          {healthAlerts().map((alert) => (
-            <li key={alert.id}>{alert.text}</li>
-          ))}
+          {/* Page audit 2026-11-01: the live admin never shows the demo's health notes ("…the demo adapter"). */}
+          {isLiveData()
+            ? <li>{tr("Health checks of the live apps are not connected yet.")}</li>
+            : healthAlerts().map((alert) => <li key={alert.id}>{trx(alert.text)}</li>)}
         </ul>
       </article>
       <article className="panel">
         <h3>{tr("Role matrix")}</h3>
-        <DataTable head={["Role", "Permissions"]} rows={roleMatrix().map((row) => [row.role, row.permissions.join(", ")])} />
+        <DataTable head={[tr("Role"), tr("Permissions")]} rows={roleMatrix().map((row) => [row.role, row.permissions.join(", ")])} />
       </article>
       <article className="panel">
         <h3>{tr("Drills")}</h3>

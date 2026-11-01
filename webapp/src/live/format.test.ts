@@ -249,7 +249,7 @@ test("G3-R1: an automatic set offline (driver.auto_offline) reads in sv, fr and 
   } finally {
     setLanguage("en");
   }
-  assert.equal(auditActionText("trip.refund"), "trip.refund", "other actions keep their name");
+  assert.equal(auditActionText("trip.something_new"), "trip.something_new", "an action without words keeps its name");
   assert.equal(auditActorText("adm_1"), "adm_1");
 });
 
@@ -298,4 +298,18 @@ test("G2-D5.7 / D5.8 / D5.3: the server's refusals are said in the admin's words
   } finally {
     setLanguage("en");
   }
+});
+
+test("page audit 2026-11-01: audit actions read as words and JSON details as fields, in the panel's language", async () => {
+  const { auditActionText, auditValueText } = await import("./format.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  registerDictionary("fr", fr);
+  setLanguage("fr");
+  assert.equal(auditActionText("dispatch.group.delete"), "Groupe de chauffeurs supprimé");
+  assert.equal(auditValueText('{"note":"No driver is taking the ride","total":200}'), "Note: No driver is taking the ride · Total: 200");
+  setLanguage("en");
+  assert.equal(auditActionText("dispatch.group.delete"), "Driver group removed");
+  assert.equal(auditValueText('{"note":"Rider asked support","sentTo":["rider"]}'), "Note: Rider asked support · Sent to: rider");
+  assert.equal(auditValueText("open"), "open", "plain text stays");
+  assert.equal(auditValueText("{broken"), "{broken");
 });

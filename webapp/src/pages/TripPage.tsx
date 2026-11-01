@@ -154,7 +154,7 @@ export function TripPage() {
 
   if (trips.isLoading || drivers.isLoading || vehicles.isLoading || (!listed && single.isLoading)) return <p className="state-line">{tr("Loading trip.")}</p>;
   if (!trip || !route) {
-    return <NotFoundRecord kind="Trip" id={tripId} list="/trips" listLabel="trips" />;
+    return <NotFoundRecord kind="Trip" id={tripId} list="/trips" back={tr("Back to trips")} />;
   }
 
   const country = countryOf(trip.zoneId);
@@ -230,8 +230,12 @@ export function TripPage() {
   const events: TimelineEvent[] = [
     ...rideEvents,
     ...timelineOf(trip).map((event) => ({ at: event.at, text: event.label, tone: "status" as const })),
-    ...offers.map((offer) => ({ at: offer.at, text: offer.answer === "accepted" ? `${driverName(offer.driverId)} said yes` : `Asked ${driverName(offer.driverId)}: ${offer.answer}`, tone: offer.answer === "accepted" ? "good" as const : "muted" as const })),
-    ...(calls ?? []).map((call) => ({ at: call.at, text: `${call.from === "driver" ? "The driver called the rider" : "The rider called the driver"}${call.answered ? "" : " (not answered)"}`, tone: "call" as const })),
+    // G6 live fix: the offer answers and calls in the admin's language (they were English in French).
+    ...offers.map((offer) => ({ at: offer.at, text: offer.answer === "accepted" ? tr("{0} said yes", [driverName(offer.driverId)]) : tr("Asked {0}: {1}", [driverName(offer.driverId), trx(offer.answer)]), tone: offer.answer === "accepted" ? "good" as const : "muted" as const })),
+    ...(calls ?? []).map((call) => {
+      const who = call.from === "driver" ? tr("The driver called the rider") : tr("The rider called the driver");
+      return { at: call.at, text: call.answered ? who : tr("{0} (not answered)", [who]), tone: "call" as const };
+    }),
   ].sort((a, b) => a.at.localeCompare(b.at));
 
   const reveal = ops.settings.reasonToShow ? (

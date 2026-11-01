@@ -16,7 +16,8 @@ import {
   limitOf, noticeChanges, noticeDef, noticeIssues, noticeText, normalizeDriverNoticeBook, promoToday, sendNotice, targetDrivers,
   type DriverNoticeBook, type NoticeArea, type NoticeKind, type NoticeLang, type NoticeLimits, type NoticeReach, type NoticeSetting,
 } from "./driverNotices";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
+import { PlaceholderChips } from "../ui/PlaceholderChips";
 
 /** The island text each kind uses, from Content › Driver app texts. */
 const ISLAND_KEY: Partial<Record<NoticeKind, string>> = {
@@ -68,20 +69,20 @@ export function DriverNoticesView({ country, editable, onNotice }: { country: Ma
       <div className="dn-layout">
         <div className="dn-main">
           {NOTICE_GROUPS.map((group) => (
-            <Card key={group.id} title={`${group.code} ${group.label}`} tone={group.id === "rideAlerts" ? "blue" : group.id === "demand" ? "orange" : "green"} icon={group.id === "rideAlerts" ? <BellRing size={18} /> : group.id === "demand" ? <Megaphone size={18} /> : <WalletCards size={18} />} help={group.help}>
+            <Card key={group.id} title={`${group.code} ${trx(group.label)}`} tone={group.id === "rideAlerts" ? "blue" : group.id === "demand" ? "orange" : "green"} icon={group.id === "rideAlerts" ? <BellRing size={18} /> : group.id === "demand" ? <Megaphone size={18} /> : <WalletCards size={18} />} help={trx(group.help)}>
               <ul className="dn-kinds" aria-label={tr("{0} notifications", [group.label])}>
                 {NOTICE_KINDS.filter((item) => item.group === group.id).map((item) => {
                   const kind = current.kinds[item.kind];
                   const text = noticeText(kind, item.kind, lang);
                   return (
-                    <li key={item.kind} className={`${kind.on ? "on" : "off"}${item.kind === selected ? " picked" : ""}`} aria-label={item.label}>
+                    <li key={item.kind} className={`${kind.on ? "on" : "off"}${item.kind === selected ? " picked" : ""}`} aria-label={trx(item.label)}>
                       <span className="dn-kind">
-                        <b>{item.label}{limitOf(item.kind) === "always" ? <em className="dn-tag">{tr("Always goes through")}</em> : null}</b>
+                        <b>{trx(item.label)}{limitOf(item.kind) === "always" ? <em className="dn-tag">{tr("Always goes through")}</em> : null}</b>
                         <small>{item.when} · {item.kind}</small>
                         <span className="dn-line" dir={rtl ? "rtl" : undefined}>{fillNotice(text.title)} · {fillNotice(text.body)}{text.own ? "" : tr(" (default)")}</span>
                       </span>
                       <span className="dn-tools">
-                        <Switch label={item.label} on={kind.on} disabled={!editable} onChange={(on) => setKind(item.kind, { on })} />
+                        <Switch label={trx(item.label)} on={kind.on} disabled={!editable} onChange={(on) => setKind(item.kind, { on })} />
                         <Check label={tr("Island")} on={kind.island} disabled={!editable || !kind.on} onChange={(island) => setKind(item.kind, { island })} />
                         <Check label={tr("Also offline")} on={kind.offline} disabled={!editable || !kind.on} onChange={(offline) => setKind(item.kind, { offline })} />
                         <button data-command="admin.campaigns.view" type="button" className={item.kind === selected ? "dash-btn small" : "dash-btn small ghost"} aria-pressed={item.kind === selected} onClick={() => setSelected(item.kind)}><Pencil size={12} aria-hidden="true" />{" "}{tr("Text")}</button>
@@ -118,10 +119,11 @@ export function DriverNoticesView({ country, editable, onNotice }: { country: Ma
         </div>
 
         <aside className="gr-phone dn-preview" aria-label={tr("Notification text")}>
-          <h3><Smartphone size={15} aria-hidden="true" /> {def.label}</h3>
+          <h3><Smartphone size={15} aria-hidden="true" /> {trx(def.label)}</h3>
           <Choice<NoticeLang> label={tr("Notification language")} value={lang} onChange={setLang} options={NOTICE_LANGS} />
-          <label className="gr-field dn-field"><span>{tr("Title")}</span><input aria-label={tr("Notification title")} dir={rtl ? "rtl" : undefined} placeholder={def.title} maxLength={TITLE_MAX + 20} value={setting.texts[lang]?.title ?? ""} disabled={!editable} onChange={(event) => setText("title", event.target.value)} /></label>
-          <label className="gr-field dn-field"><span>{tr("Text")}</span><textarea aria-label={tr("Notification text")} dir={rtl ? "rtl" : undefined} rows={2} placeholder={def.body} value={setting.texts[lang]?.body ?? ""} disabled={!editable} onChange={(event) => setText("body", event.target.value)} /></label>
+          <label className="gr-field dn-field"><span>{tr("Title")}</span><input aria-label={tr("Notification title")} dir={rtl ? "rtl" : undefined} placeholder={trx(def.title)} maxLength={TITLE_MAX + 20} value={setting.texts[lang]?.title ?? ""} disabled={!editable} onChange={(event) => setText("title", event.target.value)} /></label>
+          <label className="gr-field dn-field"><span>{tr("Text")}</span><textarea aria-label={tr("Notification text")} dir={rtl ? "rtl" : undefined} rows={2} placeholder={trx(def.body)} value={setting.texts[lang]?.body ?? ""} disabled={!editable} onChange={(event) => setText("body", event.target.value)} /></label>
+          <PlaceholderChips text={`${setting.texts[lang]?.title || def.title} ${setting.texts[lang]?.body || def.body}`} />
           <p className="gr-help">{trn("Empty means the app's default. Values: {0}.", [...new Set(`${def.title} ${def.body}`.match(/\{\w+\}/g) ?? [])].join(" ") || tr("none"))}</p>
           {shown.own ? <button data-command="admin.campaigns.view" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setKind(selected, { texts: { ...setting.texts, [lang]: {} } })}><RotateCcw size={12} aria-hidden="true" />{" "}{tr("Use the default")}</button> : null}
           <div className={setting.on ? "dn-phone" : "dn-phone off"} dir={rtl ? "rtl" : undefined}>

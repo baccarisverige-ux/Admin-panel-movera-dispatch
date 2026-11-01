@@ -9,7 +9,7 @@ import { trn, tr } from "../i18n";
 type Kind = "payouts" | "incidents";
 
 /** Detail address of a payout or an incident (linked from drivers, riders and alerts). */
-export function RecordPage({ kind, label, list }: { kind: Kind; label: string; list: string }) {
+export function RecordPage({ kind, label, list, back }: { kind: Kind; label: string; list: string; back: string }) {
   const params = useParams();
   const id = params.id ?? "";
   const records = useRecords(kind, null);
@@ -18,7 +18,7 @@ export function RecordPage({ kind, label, list }: { kind: Kind; label: string; l
   if (records.isLoading) return <p className="state-line">{trn("Loading {0}.", label.toLowerCase())}</p>;
 
   if (!row) {
-    return <NotFoundRecord kind={label} id={id} list={list} listLabel={`${label.toLowerCase()}s`} />;
+    return <NotFoundRecord kind={label} id={id} list={list} back={back} />;
   }
 
   const tone = row.status === "blocked" || row.status === "failed" || row.status?.includes("cancel") ? "red" : row.status === "queued" ? "amber" : "green";
