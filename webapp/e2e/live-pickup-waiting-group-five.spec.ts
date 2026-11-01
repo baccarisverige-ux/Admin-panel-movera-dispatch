@@ -215,6 +215,19 @@ test("live test 2026-11-01: the limits are the ones the server enforces (zone's 
   expect(settings.sent.filter((s) => s.path.includes("/admin/config/country_rules")).length).toBe(0);
 });
 
+test("checker 2026-11-01: a zone back on its country's standard shows the standard's limits, not its old own history", async ({ page }) => {
+  const searching = { ...ACTIVE_TRIP, tripId: "T2004", status: "searching", version: 2, driverId: undefined, driver: undefined, acceptedAt: undefined, riderId: "R501", createdAt: new Date(Date.now() - 2 * 60_000).toISOString() };
+  const { settings } = await open(page, "/", [{ ...searching }]);
+  const z001 = settings.docs.get("driver_app_config:Z001")!;
+  const standard = { ...(z001.document as Record<string, unknown>), driverBonus: { defaultLimit: { amountMinor: 15000, currency: "SEK" }, hardMax: { amountMinor: 80000, currency: "SEK" } } };
+  const oldOwn = { ...(z001.document as Record<string, unknown>), driverBonus: { defaultLimit: { amountMinor: 30000, currency: "SEK" }, hardMax: { amountMinor: 99000, currency: "SEK" } } };
+  settings.docs.set("driver_app_config:Z001", { ...z001, version: 1, liveVersion: 0, usesStandard: true, document: standard, staleHistory: oldOwn });
+  await page.goto("/trips/T2004");
+  const box = page.getByTestId("driver-bonus-box");
+  await expect(box.getByTestId("driver-bonus-limit")).toContainText("150,00 kr");
+  await expect(box.getByTestId("driver-bonus-limit")).not.toContainText("300,00 kr");
+});
+
 test("owner 2026-10-31: an admin who cannot change Pricing sees the limit text but no Change limit button", async ({ page }) => {
   const searching = { ...ACTIVE_TRIP, tripId: "T2004", status: "searching", version: 2, driverId: undefined, driver: undefined, acceptedAt: undefined, riderId: "R501", createdAt: new Date(Date.now() - 2 * 60_000).toISOString() };
   await page.setViewportSize({ width: 1440, height: 900 });

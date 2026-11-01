@@ -435,14 +435,18 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   async function readBonusRules(zoneId: string): Promise<unknown> {
     try {
       const zone = encodeURIComponent(zoneId);
-      const page = await client.json<{ items?: { document?: unknown }[] }>(`/admin/config/driver_app_config/history?zoneId=${zone}&limit=1`);
-      let document: unknown = page?.items?.[0]?.document ?? null;
-      if (document === null) {
-        const draft = await client.json<{ document?: unknown; usesStandard?: boolean; liveVersion?: number }>(`/admin/config/driver_app_config?zoneId=${zone}`).catch((error: unknown) => {
-          if (error instanceof ApiError && error.status === 404) return null;
-          throw error;
-        });
-        document = draft?.usesStandard === true ? draft.document ?? null : null;
+      // Checker: a zone back on its country's standard keeps old history rows (useStandard deletes only the live
+      // document), so ask first whether the zone uses the standard; read its own history only when it does not.
+      const draft = await client.json<{ document?: unknown; usesStandard?: boolean; liveVersion?: number }>(`/admin/config/driver_app_config?zoneId=${zone}`).catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) return null;
+        throw error;
+      });
+      let document: unknown = null;
+      if (draft?.usesStandard === true) {
+        document = draft.document ?? null;
+      } else if ((draft?.liveVersion ?? 0) > 0) {
+        const page = await client.json<{ items?: { document?: unknown }[] }>(`/admin/config/driver_app_config/history?zoneId=${zone}&limit=1`);
+        document = page?.items?.[0]?.document ?? null;
       }
       bonusRules.set(zoneId, { at: Date.now(), document, refused: false });
       return document;
