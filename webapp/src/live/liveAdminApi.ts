@@ -428,9 +428,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     zoneDocs.set(key, { at: Date.now(), document });
     return document;
   }
-  async function timersOf(zoneId: string): Promise<{ exclusiveSeconds: number; radarSeconds: number }> {
-    const [driverDoc, dispatchDoc] = await Promise.all([zoneDocOf("driver_app_config", zoneId), zoneDocOf("dispatch", zoneId)]);
-    return offerTimers(driverDoc, dispatchDoc);
+  async function timersOf(trip: Trip): Promise<{ timers: { exclusiveSeconds: number; radarSeconds: number }; pickupPayOn: { assigned: boolean; radar: boolean } }> {
+    const [driverDoc, dispatchDoc] = await Promise.all([zoneDocOf("driver_app_config", trip.zoneId), zoneDocOf("dispatch", trip.zoneId)]);
+    // Checker M3: a running radar-zone send counts down its rule's own seconds.
+    const send = radarRepeatOf(trip);
+    return { timers: offerTimers(driverDoc, dispatchDoc, send?.seconds), pickupPayOn: pickupPayOn(driverDoc, trip.categoryId) };
   }
   let currency: string = CURRENCY;
 
@@ -862,7 +864,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         currency: tripCurrency,
         fareMinor: offer.fare.amountMinor,
         // What the driver app shows as his share: earnings (bonus included) + the pickup pay of this offer.
-        driverEarningsMinor: (offer.driverEarnings?.amountMinor ?? 0) + ((offer as { pickupPay?: { amountMinor?: number } }).pickupPay?.amountMinor ?? 0),
+        driverEarningsMinor: (offer.driverEarnings?.amountMinor ?? 0) + (offer.pickupPay?.amountMinor ?? 0),
         driverBonusMinor: offer.driverBonus?.amountMinor ?? 0,
         priority: Boolean(offer.priority),
         ...(offer.groupId ? { groupId: offer.groupId } : {}),
@@ -878,7 +880,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       priority: Boolean((trip as { priority?: boolean }).priority),
       lockedTo: null,
       events: [],
-      timers: await timersOf(trip.zoneId),
+      ...(await timersOf(trip)),
       limits: limits ?? { limitMinor: Number.MAX_SAFE_INTEGER, hardMaxMinor: Number.MAX_SAFE_INTEGER },
       limitsKnown: limits !== null,
       fareMinor: trip.fare.amountMinor,
@@ -973,11 +975,19 @@ function positiveSeconds(...values: unknown[]): number {
 }
 
 /** The offer timers an admin send runs on, as the server picks them (dispatch/runtime.ts sendAdminOffers). */
-export function offerTimers(driverDoc: unknown, dispatchDoc: unknown): { exclusiveSeconds: number; radarSeconds: number } {
+export function offerTimers(driverDoc: unknown, dispatchDoc: unknown, radarRuleSeconds?: number): { exclusiveSeconds: number; radarSeconds: number } {
   const offers = ((driverDoc as { offers?: Record<string, unknown> } | null)?.offers ?? {}) as Record<string, unknown>;
   const dispatch = (dispatchDoc ?? {}) as { radar?: { seconds?: unknown }; exclusive?: { seconds?: unknown } };
   return {
     exclusiveSeconds: positiveSeconds(offers["assignAcceptSeconds"], offers["exclusiveSeconds"], dispatch.exclusive?.seconds, 30),
-    radarSeconds: positiveSeconds(offers["radarSeconds"], dispatch.radar?.seconds, 15),
+    radarSeconds: positiveSeconds(radarRuleSeconds, offers["radarSeconds"], dispatch.radar?.seconds, 15),
   };
+}
+
+/** Whether the zone's live driver document pays pickup pay on assigned / radar offers of this category (contract PickupPayOffers). */
+export function pickupPayOn(driverDoc: unknown, categoryId: string): { assigned: boolean; radar: boolean } {
+  const pay = ((driverDoc as { pickupPay?: unknown } | null)?.pickupPay ?? {}) as { offers?: Record<string, unknown>; byCategory?: Record<string, { enabled?: unknown; ranges?: unknown[] }> };
+  const rate = pay.byCategory?.[categoryId];
+  const on = Boolean(rate && rate.enabled === true && Array.isArray(rate.ranges) && rate.ranges.length > 0);
+  return { assigned: on && pay.offers?.["assigned"] === true, radar: on && pay.offers?.["radar"] === true };
 }

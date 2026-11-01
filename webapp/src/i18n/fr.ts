@@ -7509,4 +7509,6 @@ export const fr: Record<MessageKey, string> = {
   "{0} already sees this ride: the radar raises his offer.": "{0} voit déjà cette course : le radar augmente son offre.",
   "Money added for the driver.": "Argent ajouté pour le chauffeur.",
   "Type an amount above 0.": "Saisissez un montant supérieur à 0.",
+  "Set to the default because it was 0": "Remis à la valeur par défaut car elle était à 0",
+  "+ pickup pay": "+ paiement d’approche",
 };

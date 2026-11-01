@@ -21,6 +21,7 @@ export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
         </Row>
         <Row label={tr("Time on the radar")} help={tr("How long the request stays before the next step. A radar group sent from Live or the Dashboard counts down this time too.")}>
           <Num label={tr("Radar time")} value={zone.radar.seconds} unit="s" min={5} max={120} disabled={off} onChange={(seconds) => set({ radar: { ...zone.radar, seconds } })} />
+          {zone.secondsDefaulted?.includes("radar") ? <small className="as-help" data-testid="radar-seconds-defaulted">{tr("Set to the default because it was 0")}</small> : null}
         </Row>
         <Row label={tr("If nobody accepts")}>
           <Choice label={tr("After Radar")} value={zone.radar.then} disabled={off} onChange={(then) => set({ radar: { ...zone.radar, then } })} options={[{ id: "widen", label: tr("Wider area") }, { id: "exclusive", label: tr("Exclusive") }, { id: "widen_then_exclusive", label: tr("Wider area, then Exclusive") }]} />
@@ -78,6 +79,7 @@ export function ExclusiveRules({ zone, onChange, disabled, zoneId }: Props) {
       <Card title={tr("Exclusive")} tone="blue" icon={<Target size={18} />} help={tr("One request goes to one driver at a time, the best first.")} off={!zone.exclusive.on} aside={<Switch label={tr("Exclusive")} on={zone.exclusive.on} disabled={disabled} onChange={(on) => set({ exclusive: { ...zone.exclusive, on } })} />}>
         <Row label={tr("Time to accept")} help={tr("Each driver has this long to say yes.")}>
           <Num label={tr("Exclusive time")} value={zone.exclusive.seconds} unit="s" min={5} max={60} disabled={off} onChange={(seconds) => set({ exclusive: { ...zone.exclusive, seconds } })} />
+          {zone.secondsDefaulted?.includes("exclusive") ? <small className="as-help" data-testid="exclusive-seconds-defaulted">{tr("Set to the default because it was 0")}</small> : null}
         </Row>
         <Row label={tr("Drivers to try")} help={tr("One after the other, before the next step.")}>
           <Num label={tr("Exclusive drivers")} value={zone.exclusive.drivers} unit="drivers" min={1} max={10} disabled={off} onChange={(drivers) => set({ exclusive: { ...zone.exclusive, drivers } })} />

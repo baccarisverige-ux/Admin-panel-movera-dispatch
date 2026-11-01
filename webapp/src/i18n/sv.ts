@@ -7509,4 +7509,6 @@ export const sv: Record<MessageKey, string> = {
   "{0} already sees this ride: the radar raises his offer.": "{0} ser redan resan: radarn höjer erbjudandet.",
   "Money added for the driver.": "Pengar tillagda för föraren.",
   "Type an amount above 0.": "Skriv ett belopp över 0.",
+  "Set to the default because it was 0": "Satt till standardvärdet eftersom det var 0",
+  "+ pickup pay": "+ betalning för körning till upphämtning",
 };

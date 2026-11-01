@@ -412,3 +412,17 @@ test("G4 live fix: the dispatch tools read for one admin are forgotten on forget
   assert.equal(reads, 2);
   assert.deepEqual(next.groups.map((g) => g.id), ["grp_fr"]);
 });
+
+test("checker HIGH (live 2026-11-01): a zone loaded with Exclusive off and 0 s gets the defaults, a note, and publishes", async () => {
+  const { rulesOfDispatch } = await import("./configDocs.ts");
+  const { zoneIssues } = await import("../dispatch/rules.ts");
+  const base = liveRules(emptyDispatchBook(), "Z001");
+  const loaded = rulesOfDispatch({ radar: { ...base.radar, seconds: 0 }, exclusive: { ...base.exclusive, on: false, seconds: 0 } } as never, null, base);
+  assert.equal(loaded.exclusive.seconds, 30);
+  assert.equal(loaded.radar.seconds, 15);
+  assert.deepEqual(loaded.secondsDefaulted, ["radar", "exclusive"]);
+  assert.deepEqual(zoneIssues(loaded).filter((issue) => /seconds/.test(issue)), []);
+  // The strict check stays while the mode is on.
+  assert.ok(zoneIssues({ ...loaded, exclusive: { ...loaded.exclusive, on: true, seconds: 3 } }).some((issue) => issue.startsWith("Exclusive:")));
+  assert.ok(!zoneIssues({ ...loaded, exclusive: { ...loaded.exclusive, on: false, seconds: 3 } }).some((issue) => issue.startsWith("Exclusive:")));
+});

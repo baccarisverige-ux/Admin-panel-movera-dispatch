@@ -7507,6 +7507,8 @@ export const en = {
   "{0} already sees this ride: the radar raises his offer.": "{0} already sees this ride: the radar raises his offer.",
   "Money added for the driver.": "Money added for the driver.",
   "Type an amount above 0.": "Type an amount above 0.",
+  "Set to the default because it was 0": "Set to the default because it was 0",
+  "+ pickup pay": "+ pickup pay",
 } as const;
 
 export type MessageKey = keyof typeof en;

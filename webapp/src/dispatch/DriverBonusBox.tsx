@@ -64,8 +64,8 @@ export function draftMoney(draft: MoneyDraft, view: Bonused, zoneId: string): { 
  * What one send carries for the driver: the typed money when it applies to this kind of offer, the fare the driver
  * will see (with the money already added for this kind), and a reason not to send when the typed amount is wrong.
  */
-export function moneyForSend(draft: MoneyDraft, view: (Bonused & Pick<TripOffersView, "fareMinor" | "driverNetMinor">) | undefined, zoneId: string, kind: AdminOffer["kind"]) {
-  if (!view) return { params: {} as Record<string, unknown>, used: false, seesMinor: null as number | null, bonusMinor: 0, blocked: null as string | null };
+export function moneyForSend(draft: MoneyDraft, view: (Bonused & Pick<TripOffersView, "fareMinor" | "driverNetMinor" | "pickupPayOn">) | undefined, zoneId: string, kind: AdminOffer["kind"]) {
+  if (!view) return { params: {} as Record<string, unknown>, used: false, seesMinor: null as number | null, bonusMinor: 0, blocked: null as string | null, plusPickupPay: false };
   const covers = scopeCovers(draft.scope, kind);
   const { addMinor, issue } = draftMoney(draft, view, zoneId);
   const used = covers && addMinor > 0;
@@ -77,24 +77,27 @@ export function moneyForSend(draft: MoneyDraft, view: (Bonused & Pick<TripOffers
     seesMinor: view.driverNetMinor + bonusMinor,
     bonusMinor,
     blocked: covers && issue ? issue.message : null,
+    // Checker M1: the pickup pay is per driver (his distance), so it is only named, never guessed.
+    plusPickupPay: Boolean(view.pickupPayOn?.[kind === "assigned" ? "assigned" : "radar"]),
   };
 }
 
-function seesAmount(money: { seesMinor: number | null; bonusMinor: number }, zoneId: string): string {
+function seesAmount(money: { seesMinor: number | null; bonusMinor: number; plusPickupPay?: boolean }, zoneId: string): string {
   if (money.seesMinor === null) return "";
   const country = countryOf(zoneId);
   const total = formatMoney(money.seesMinor, country);
-  return money.bonusMinor ? `${total} (+${formatMoney(money.bonusMinor, country)})` : total;
+  const base = money.bonusMinor ? `${total} (+${formatMoney(money.bonusMinor, country)})` : total;
+  return money.plusPickupPay ? `${base} ${tr("+ pickup pay")}` : base;
 }
 
 /** "driver sees 103,00 kr (+50,00 kr)" for a send button. */
-export function seesLabel(money: { seesMinor: number | null; bonusMinor: number }, zoneId: string): string {
+export function seesLabel(money: { seesMinor: number | null; bonusMinor: number; plusPickupPay?: boolean }, zoneId: string): string {
   const amount = seesAmount(money, zoneId);
   return amount ? tr("driver sees {0}", [amount]) : "";
 }
 
 /** "The driver sees 103,00 kr (+50,00 kr)." for a confirm dialog. */
-export function seesSentence(money: { seesMinor: number | null; bonusMinor: number }, zoneId: string): string {
+export function seesSentence(money: { seesMinor: number | null; bonusMinor: number; plusPickupPay?: boolean }, zoneId: string): string {
   const amount = seesAmount(money, zoneId);
   return amount ? tr("The driver sees {0}.", [amount]) : "";
 }

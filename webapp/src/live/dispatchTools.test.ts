@@ -223,3 +223,12 @@ test("owner live test 2026-11-01: timers never 0, the radar counts drivers from 
   assert.equal(candidates.length, 1, "a driver with this trip's open offer still counts");
   assert.equal(driversInTarget({ kind: "zone", ids: ["Z001"] }, candidates, { radarZones: [], groups: [] }).length, 1);
 });
+
+test("checker M1/M3: pickup pay is named when the zone pays it; a radar-zone rule's own seconds win", async () => {
+  const { offerTimers, pickupPayOn } = await import("./liveAdminApi.ts");
+  const doc = { offers: { radarSeconds: 15 }, pickupPay: { offers: { radar: true, assigned: false }, byCategory: { standard: { enabled: true, ranges: [{ fromKm: 2 }] } } } };
+  assert.deepEqual(pickupPayOn(doc, "standard"), { assigned: false, radar: true });
+  assert.deepEqual(pickupPayOn(doc, "comfort"), { assigned: false, radar: false });
+  assert.equal(offerTimers(doc, null, 25).radarSeconds, 25);
+  assert.equal(offerTimers(doc, null, 0).radarSeconds, 15);
+});
