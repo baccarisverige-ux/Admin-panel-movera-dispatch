@@ -1,4 +1,5 @@
 import type { MarketId } from "../markets/markets.ts";
+import { tr } from "../i18n/core.ts";
 
 /**
  * Driver notifications (Round 3, Q31 + Q31b). Admin sets each kind on or off, its text per language, whether it pops up
@@ -190,9 +191,9 @@ export function inQuiet(limits: NoticeLimits, time: string): boolean {
 
 /** When a message of this kind goes out if it is sent now. */
 export function deliveryLine(kind: NoticeKind, limits: NoticeLimits, time: string): string {
-  if (limitOf(kind) === "always") return "Always goes through, also in quiet hours.";
-  if (inQuiet(limits, time)) return `Quiet hours now: it goes out at ${limits.quiet.to}.`;
-  return "Goes out now.";
+  if (limitOf(kind) === "always") return tr("Always goes through, also in quiet hours.");
+  if (inQuiet(limits, time)) return tr("Quiet hours now: it goes out at {0}.", [limits.quiet.to]);
+  return tr("Goes out now.");
 }
 
 function hash(text: string): number {

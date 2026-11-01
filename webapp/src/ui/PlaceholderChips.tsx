@@ -19,3 +19,9 @@ export function PlaceholderChips({ text }: { text: string }) {
     </span>
   );
 }
+
+/** Page audit round 2: a text with its {name} values shown as chips in place (the Driver notifications list), not filled with sample words. */
+export function TextWithChips({ text }: { text: string }) {
+  const parts = (text ?? "").split(/(\{[A-Za-z_][A-Za-z0-9_]*\})/g).filter(Boolean);
+  return <>{parts.map((part, index) => (/^\{[A-Za-z_][A-Za-z0-9_]*\}$/.test(part) ? <code key={index} className="ph-chip">{part}</code> : part))}</>;
+}
