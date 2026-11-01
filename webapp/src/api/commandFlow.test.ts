@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { commandById } from "../commands/registry.ts";
 import { ApiError } from "./httpClient.ts";
-import { outcomeOf, queryRetry, queryTouched, readAt, readTracked, touchedBy } from "./commandFlow.ts";
+import { atMost, outcomeOf, queryRetry, queryTouched, readAt, readTracked, REFRESH_WAIT_MS, touchedBy } from "./commandFlow.ts";
 import type { OperationRow } from "./seed.ts";
 
 test("C-18: 401/403/422 are not retried; offline and 503 are retried twice at most", () => {
@@ -86,4 +86,15 @@ test("G4 live fix: a slow command whose own answer arrived is Done with that ans
   // The server's record still wins when it has one (the demo's slow fault), and no answer at all stays Failed.
   assert.match(outcomeOf(op("committed", "Saved in demo."), "x", { status: "committed", message: "x" }).message, /^Done\. Saved in demo\./);
   assert.match(outcomeOf(null, "Offline.", null).message, /^Failed\. The server has no record of it/);
+});
+
+test("G6 live fix: a command's follow-up waits for the re-read at most a moment, and a failed re-read is ignored", async () => {
+  const started = Date.now();
+  await atMost(new Promise(() => undefined), 50);
+  assert.ok(Date.now() - started < 1000, "a re-read that never ends does not hold the command");
+  let done = false;
+  await atMost(new Promise<void>((resolve) => setTimeout(() => { done = true; resolve(); }, 10)), 1000);
+  assert.equal(done, true, "a quick re-read is waited for");
+  await atMost(Promise.reject(new Error("offline")), 1000);
+  assert.ok(REFRESH_WAIT_MS <= 2000);
 });

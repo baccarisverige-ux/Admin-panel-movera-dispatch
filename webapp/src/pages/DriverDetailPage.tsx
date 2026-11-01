@@ -171,7 +171,7 @@ export function DriverDetailPage() {
           value={liveData ? { note: bankNote.trim() } : setBankReview(store.value, driverSeed, status, agent?.id ?? "", accountNote)}
           disabled={liveData ? (status === "rejected" && !bankNote.trim()) || (!bankRenewalWaiting && liveBank === status) : ops.bank.status === status}
           title={liveData && status === "rejected" && !bankNote.trim() ? tr("Write why: the driver sees the reason.") : undefined}
-          onDone={() => { setBankNote(""); setNotice(tr("Bank details marked {0}.", [statusLabel(status, "documentStatus").toLowerCase()])); }}
+          onDone={() => { if (status === "rejected") setBankNote(""); setNotice(tr("Bank details marked {0}.", [statusLabel(status, "documentStatus").toLowerCase()])); }}
         >
           {statusLabel(status, "documentStatus")}
         </CommandButton>

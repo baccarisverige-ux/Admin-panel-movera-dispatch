@@ -10,7 +10,7 @@ import type { TripRecord } from "./seed.ts";
 import { useMarketScope } from "../markets/useMarketScope.ts";
 import { parseZoneList } from "../markets/markets.ts";
 import { ApiError } from "./httpClient.ts";
-import { BUSY_MESSAGE, CHECKING_MESSAGE, UNREACHABLE_MESSAGE, outcomeOf, queryTouched, readAt, readTracked, touchedBy } from "./commandFlow.ts";
+import { BUSY_MESSAGE, CHECKING_MESSAGE, UNREACHABLE_MESSAGE, atMost, outcomeOf, queryTouched, REFRESH_WAIT_MS, readAt, readTracked, touchedBy } from "./commandFlow.ts";
 
 export { markPaid, PAYMENT_METHODS, setMethod } from "../payments/book.ts";
 export type { BankAccount, PaymentMethod, Payout } from "../payments/book.ts";
@@ -269,7 +269,12 @@ export function useCommands() {
       }
       // A command that answers with the slice (live settings) shows it now; the re-read below confirms it.
       if (result.slice) client.setQueriesData({ queryKey: ["slice", result.slice.key] }, result.slice.value);
-      await refresh(spec, extra, expectedRev, result.rev);
+      // G6 live fix (owner live test 2026-11-01): the command is done once the server answered. The buttons stop
+      // waiting now ("Please wait" stayed while a live command's full re-read ran), and the screen's own follow-up
+      // (onDone: notice, clearing the typed money) does not wait longer than a moment for that re-read.
+      lock.current = false;
+      setGlobalCommandBusy(false);
+      await atMost(refresh(spec, extra, expectedRev, result.rev), REFRESH_WAIT_MS);
       return result;
     } catch (error) {
       clearTimeout(timer);
