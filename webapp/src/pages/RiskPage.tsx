@@ -214,7 +214,7 @@ function FraudRules({ editable }: { editable: boolean }) {
             const count = counts.byRule.find((item) => item.id === def.id);
             return (
               <Row key={def.id} label={def.label} help={live && LATER.includes(def.id) ? `${trx(def.help)} ${tr("Not connected yet")}.` : tr("{0} For {1}. Flags {2}{3}.", [trx(def.help), def.who.map((item) => (item === "driver" ? tr("drivers") : tr("riders"))).join(tr(" and ")), count?.after ?? 0, count && count.after !== count.now ? tr(" (now {0})", [count.now]) : ""])} on={rule.on} onToggle={(on) => patch(def.id, { on })}>
-                <Num label={tr("{0} limit", [trx(def.label)])} before={def.worse === "up" ? "From" : "Below"} value={rule.limit} unit={def.unit} min={def.min} max={def.max} step={def.step} onChange={(value) => patch(def.id, { limit: value })} />
+                <Num label={tr("{0} limit", [trx(def.label)])} before={def.worse === "up" ? "At least" : "Below"} value={rule.limit} unit={def.unit} min={def.min} max={def.max} step={def.step} onChange={(value) => patch(def.id, { limit: value })} />
                 <Choice label={tr("{0} action", [trx(def.label)])} value={rule.action} options={ACTIONS.map((item) => ({ id: item.id, label: item.label, hint: item.help }))} onChange={(action) => patch(def.id, { action })} />
               </Row>
             );

@@ -297,9 +297,9 @@ export function waybill(trip: DemoRecord, driverName: string, plate: string, veh
     pickup: stops[0]?.label ?? "",
     dropoff: stops[stops.length - 1]?.label ?? "",
     source: live ? (live.kind === "scheduled" ? "Reservation" : "Rider app") : ["Rider app", "Reservation", "Airport desk", "Street hail"][tripIndex(trip.id) % 4],
-    driverName: driverName || "Unassigned",
-    vehicle: plate ? (live ? vehicleName || tr(NOT_CONNECTED_TEXT) : "Volvo XC40") : "Unassigned",
-    plate: plate || "Unassigned",
+    driverName,
+    vehicle: plate ? (live ? vehicleName || tr(NOT_CONNECTED_TEXT) : "Volvo XC40") : "",
+    plate,
     seats: category.seats === null ? tr(NOT_CONNECTED_TEXT) : String(category.seats),
   };
 }

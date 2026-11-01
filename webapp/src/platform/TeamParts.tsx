@@ -67,7 +67,7 @@ export function RolesView({ editable, by, onNotice }: { editable: boolean; by: s
             <button data-command="admin.team.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{tr("Close")}</button>
           </div>
         ) : null}
-        <NotEnforced>{tr("Custom roles are saved here. The backend applies them when it signs an admin in; in the demo an admin keeps the permissions of their built-in role.")}</NotEnforced>
+        <NotEnforced>{tr("Custom roles are saved here. The server applies them when an admin signs in; until it does, an admin keeps the permissions of their built-in role.")}</NotEnforced>
       </Card>
     </div>
   );

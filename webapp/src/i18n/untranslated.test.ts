@@ -206,3 +206,16 @@ test("country names follow the admin's language (fr Suède/France, sv Sverige/Fr
 test("the seed driver group names have sv/fr texts (admin-made names stay as typed)", () => {
   assertTranslated(emptyDispatchBook().groups.map((group) => group.name), "seed driver group");
 });
+
+/* Coordinator, page audit round 3: trip sheet "None assigned", risk rule units and "At least", and live-honest team roles note. */
+import { waybill } from "../trips/present.ts";
+
+test("risk rule units, the trip sheet's empty driver and the team roles note read in sv/fr, without demo wording", () => {
+  assertTranslated(["None assigned", "At least", ...RULES.map((rule) => rule.unit).filter((unit) => /[a-z]/.test(unit) && unit !== "codes" /* French "codes" is the same word */)], "page audit round 3");
+  assert.equal(fr["None assigned"], "Non attribué");
+  assert.equal(sv["None assigned"], "Inte tilldelad");
+  assert.equal(fr.accounts, "comptes");
+  const note = "Custom roles are saved here. The server applies them when an admin signs in; until it does, an admin keeps the permissions of their built-in role.";
+  for (const text of [note, fr[note as keyof typeof fr], sv[note as keyof typeof sv]]) assert.doesNotMatch(String(text), /demo|démo/i);
+  assert.equal(typeof waybill, "function");
+});

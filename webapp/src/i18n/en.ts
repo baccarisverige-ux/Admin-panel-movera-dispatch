@@ -6731,7 +6731,7 @@ export const en = {
   "Role {0} saved.": "Role {0} saved.",
   "Role {0} deleted.": "Role {0} deleted.",
   "Delete role": "Delete role",
-  "Custom roles are saved here. The backend applies them when it signs an admin in; in the demo an admin keeps the permissions of their built-in role.": "Custom roles are saved here. The backend applies them when it signs an admin in; in the demo an admin keeps the permissions of their built-in role.",
+  "Custom roles are saved here. The server applies them when an admin signs in; until it does, an admin keeps the permissions of their built-in role.": "Custom roles are saved here. The server applies them when an admin signs in; until it does, an admin keeps the permissions of their built-in role.",
   "Limits per role": "Limits per role",
   "The most one admin with this role can give in one go. Above the country's second-admin limit (Settings), a second admin must approve.": "The most one admin with this role can give in one go. Above the country's second-admin limit (Settings), a second admin must approve.",
   "Limits for role": "Limits for role",
@@ -8214,6 +8214,11 @@ export const en = {
   "22 Oct": "22 Oct",
   "Airport drivers": "Airport drivers",
   "Comfort drivers": "Comfort drivers",
+  "None assigned": "None assigned",
+  "At least": "At least",
+  "jumps": "jumps",
+  "accounts": "accounts",
+  "codes": "codes",
 } as const;
 
 export type MessageKey = keyof typeof en;

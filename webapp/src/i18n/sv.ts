@@ -6733,7 +6733,7 @@ export const sv: Record<MessageKey, string> = {
   "Role {0} saved.": "Roll {0} sparad.",
   "Role {0} deleted.": "Roll {0} borttagen.",
   "Delete role": "Ta bort roll",
-  "Custom roles are saved here. The backend applies them when it signs an admin in; in the demo an admin keeps the permissions of their built-in role.": "Egna roller sparas här. Backend tillämpar dem när en admin loggar in; i demon behåller en admin behörigheterna från sin inbyggda roll.",
+  "Custom roles are saved here. The server applies them when an admin signs in; until it does, an admin keeps the permissions of their built-in role.": "Egna roller sparas här. Servern tillämpar dem när en admin loggar in; till dess behåller en admin behörigheterna från sin inbyggda roll.",
   "Limits per role": "Gränser per roll",
   "The most one admin with this role can give in one go. Above the country's second-admin limit (Settings), a second admin must approve.": "Det mesta en admin med den här rollen kan ge på en gång. Över landets gräns för andra admin (Inställningar) måste en andra admin godkänna.",
   "Limits for role": "Gränser för rollen",
@@ -8216,4 +8216,9 @@ export const sv: Record<MessageKey, string> = {
   "22 Oct": "22 okt.",
   "Airport drivers": "Flygplatsförare",
   "Comfort drivers": "Comfort-förare",
+  "None assigned": "Inte tilldelad",
+  "At least": "Från",
+  "jumps": "hopp",
+  "accounts": "konton",
+  "codes": "koder",
 };
