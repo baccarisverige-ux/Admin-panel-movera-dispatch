@@ -241,7 +241,8 @@ export function asTrip(trip: DemoRecord | TripRecord): Trip {
 
 export function cancelBlock(status: string): string | null {
   const error = cancelTrip({ id: "x", status: status as TripStatus, category: "economy", fareOre: 1, ruleVersion: "v", driverId: null }, "check").error;
-  return error && error !== "A reason is required." ? error : null;
+  // G5 live re-test: in the admin's language, with the status in words (not "cancelled_by_rider").
+  return error && error !== "A reason is required." ? tr("Cannot cancel a trip in {0}.", [statusLabel(status)]) : null;
 }
 
 export function offerBlock(status: string): string | null {

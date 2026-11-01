@@ -10,6 +10,7 @@ import type { LiveTripFacts } from "../api/seed.ts";
 import type { CancelReasonBook, LangId } from "../dispatch/offers.ts";
 import { reasonText } from "../dispatch/offers.ts";
 import { translate } from "../i18n/core.ts";
+import { en } from "../i18n/en.ts";
 import type { AppLanguage } from "../i18n/languages.ts";
 import { formatMoney, isCurrency } from "../domain/money.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
@@ -112,6 +113,19 @@ export function reasonWords(code: string | undefined | null, book: CancelReasonB
   // G5 live test: a rider's reason the book does not list ("something_else") reads in the admin's language
   // when the panel has words for it (FR "Autre chose"), else as English words.
   return plain ? translate(lang as AppLanguage, plain.charAt(0).toUpperCase() + plain.slice(1)) : code;
+}
+
+/**
+ * G5 live re-test: the trip page's "Reason: …" line. A reason the admin's book or the panel's words know reads as words
+ * only (FR "Autre chose"); an unknown code keeps the code in parentheses so it can still be looked up.
+ */
+export function reasonLine(code: string | undefined | null, book: CancelReasonBook | null, lang: LangId): string {
+  if (!code) return "";
+  const words = reasonWords(code, book, lang);
+  const inBook = Boolean(book && [...Object.values(book.groups).flat(), book.noShow].some((item) => item.code === code));
+  const plain = code.replace(/^(admin_|system_|next_trip_|scheduled_)/, "").replaceAll("_", " ").trim();
+  const known = inBook || Object.hasOwn(en, plain.charAt(0).toUpperCase() + plain.slice(1));
+  return known ? words : `${words} (${code})`;
 }
 
 /** The amounts a rider owes, one per currency (Q3): the server's list, else the one outstanding amount, else none. */
