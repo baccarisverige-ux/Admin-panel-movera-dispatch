@@ -8221,4 +8221,8 @@ export const fr: Record<MessageKey, string> = {
   "jumps": "sauts",
   "accounts": "comptes",
   "codes": "codes",
+  "No answer in {0} min": "Pas de réponse en {0} min",
+  "No answer in {0} s": "Pas de réponse en {0} s",
+  "Movera opened the case: {0} did not answer the Ride check in {1}.": "Movera a ouvert le cas : {0} n'a pas répondu au contrôle de trajet en {1}.",
+  "Price per minute: {0}": "Prix par minute : {0}",
 };

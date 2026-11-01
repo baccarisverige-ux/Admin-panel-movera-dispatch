@@ -8221,4 +8221,8 @@ export const sv: Record<MessageKey, string> = {
   "jumps": "hopp",
   "accounts": "konton",
   "codes": "koder",
+  "No answer in {0} min": "Inget svar på {0} min",
+  "No answer in {0} s": "Inget svar på {0} s",
+  "Movera opened the case: {0} did not answer the Ride check in {1}.": "Movera öppnade ärendet: {0} svarade inte på resekontrollen inom {1}.",
+  "Price per minute: {0}": "Pris per minut: {0}",
 };

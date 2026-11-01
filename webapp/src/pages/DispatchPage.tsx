@@ -281,7 +281,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const largeDraftChanges = largeChangesIn(zoneIds.filter((id) => id in working));
   const waitBasesOf = (id: string) => {
     const prices = zoneBook(pricing, id).prices;
-    return activeCategories(pricing).filter((category) => prices[category.id]?.enabled).map((category) => ({ id: category.id, label: category.label, base: { freeWaitMin: prices[category.id].freeWaitMin, perMin: prices[category.id].waitPerMin, noShowFee: prices[category.id].noShowFee } }));
+    return activeCategories(pricing).filter((category) => prices[category.id]?.enabled).map((category) => ({ id: category.id, label: category.label, base: { freeWaitMin: prices[category.id].freeWaitMin, perMin: prices[category.id].waitPerMin, noShowFee: prices[category.id].noShowFee }, stopPerMin: prices[category.id].stopWaitPerMin }));
   };
   const scopeLabel = (ids: string[]) => (ids.length === 1 ? ids[0] : "all");
 

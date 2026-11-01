@@ -8219,6 +8219,10 @@ export const en = {
   "jumps": "jumps",
   "accounts": "accounts",
   "codes": "codes",
+  "No answer in {0} min": "No answer in {0} min",
+  "No answer in {0} s": "No answer in {0} s",
+  "Movera opened the case: {0} did not answer the Ride check in {1}.": "Movera opened the case: {0} did not answer the Ride check in {1}.",
+  "Price per minute: {0}": "Price per minute: {0}",
 } as const;
 
 export type MessageKey = keyof typeof en;

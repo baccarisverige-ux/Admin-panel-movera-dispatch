@@ -25,6 +25,7 @@ import {
   lateText,
   linkedTrip,
   liveAnswerLabel,
+  answerTimeText,
   liveTriggerLabel,
   logCall,
   normalizeIncidentOps,
@@ -341,7 +342,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
   const events = [
     ...rideEvents,
     ...(!check && item.rideCheck?.answeredAt && item.rideCheck.answer === "need_help" ? [{ at: Date.parse(item.rideCheck.answeredAt), text: tr("{0} answered the Ride check: {1}", [item.rideCheck.by === "rider" ? tr("The rider") : tr("The driver"), tr("I need help")]), who: "" }] : []),
-    { at: item.openedAt, text: check ? tr("Alert sent by {0}. Ride check incident opened.", [personLabel(raisedBy)]) : item.rideCheck?.answer === "no_answer" ? tr("Movera opened the case: {0} did not answer the Ride check in 2 minutes.", [item.rideCheck.by === "rider" ? tr("The rider") : tr("The driver")]) : item.rideCheck ? `${trx(KINDS.find((kind) => kind.id === item.kind)?.label)} · ${liveAnswerLabel(item.rideCheck)}` : item.raisedBy === "system" ? tr("Movera opened the case: no car position for 30 min with the rider on board.") : tr("{0} raised the case ({1})", [item.raisedBy === "rider" ? tr("The rider") : tr("The driver"), trx(KINDS.find((kind) => kind.id === item.kind)?.label)]), who: "" },
+    { at: item.openedAt, text: check ? tr("Alert sent by {0}. Ride check incident opened.", [personLabel(raisedBy)]) : item.rideCheck?.answer === "no_answer" ? (answerTimeText(item.rideCheck.answerSeconds) ? tr("Movera opened the case: {0} did not answer the Ride check in {1}.", [item.rideCheck.by === "rider" ? tr("The rider") : tr("The driver"), answerTimeText(item.rideCheck.answerSeconds)!]) : tr("Movera opened the case: {0} did not answer the Ride check in 2 minutes.", [item.rideCheck.by === "rider" ? tr("The rider") : tr("The driver")])) : item.rideCheck ? `${trx(KINDS.find((kind) => kind.id === item.kind)?.label)} · ${liveAnswerLabel(item.rideCheck)}` : item.raisedBy === "system" ? tr("Movera opened the case: no car position for 30 min with the rider on board.") : tr("{0} raised the case ({1})", [item.raisedBy === "rider" ? tr("The rider") : tr("The driver"), trx(KINDS.find((kind) => kind.id === item.kind)?.label)]), who: "" },
     ...(item.escalatedAt ? [{ at: Date.parse(item.escalatedAt), text: tr("Nobody took it in 2 minutes: every signed-in admin is alerted."), who: "" }] : []),
     ...item.events.map((event) => ({ at: Date.parse(event.at), text: event.kind === "take" ? tr("Took the case") : event.kind === "resolve" ? `${tr("Solved")}: ${event.text}` : event.kind === "dismiss" ? `${tr("False alarm")}: ${event.text}` : tr("Contact: {0}", [event.text]), who: agentName(event.actor) })),
     ...(caseInfo?.levelAt ? [{ at: Date.parse(caseInfo.levelAt), text: tr("Level set to {0}", [trx(LEVELS.find((row) => row.id === caseInfo.level)?.label)]) + (caseInfo.levelWhy ? `: ${caseInfo.levelWhy}` : ""), who: agentName(caseInfo.levelBy ?? "") }] : []),

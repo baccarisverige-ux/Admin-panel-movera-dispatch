@@ -269,7 +269,6 @@ function rideCheck(base: Common, state: AppConfigState) {
     on: rules.on, endFarMeters: rules.endFarMeters, noAnswerSeconds: rules.noAnswerSeconds, repeatMinutes: rules.repeatMinutes, noAnswerAlarm: rules.noAnswerAlarm,
     stopMinutes: rules.stopMinutes ?? state.rideCheck.longStopMinutes,
     offRouteKm: rules.routeKm,
-    finishFarFromDropoffKm: state.rideCheck.finishFarFromDropoffKm,
     farOn: rules.farOn, stopOn: rules.stopOn, routeOn: rules.routeOn, longerOn: rules.longerOn, longerPct: rules.longerPct, crashOn: rules.crashOn,
   };
 }

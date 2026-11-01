@@ -101,6 +101,9 @@ function useNow(): number {
   return now;
 }
 
+/** How often the trip page reads the audit again (ms). */
+const TRIP_AUDIT_REFRESH_MS = 15_000;
+
 export function TripPage() {
   const { tripId = "" } = useParams();
   const navigate = useNavigate();
@@ -110,7 +113,8 @@ export function TripPage() {
   const trips = useTrips(null);
   const drivers = useDrivers(null);
   const vehicles = useRecords("vehicles", null);
-  const audit = useAudit();
+  // G7 live fix: "Who did what" follows new admin work on the trip without a reload (actions here invalidate it too).
+  const audit = useAudit(TRIP_AUDIT_REFRESH_MS);
   const opsSlice = useSlice<TripOps>(TRIP_OPS_KEY, emptyTripOps(), { enabled: can(role, "trips.read") });
   const pricing = useSlice<unknown>(PRICING_KEY, emptyPricingStore());
   const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());

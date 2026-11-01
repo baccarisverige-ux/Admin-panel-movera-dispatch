@@ -9,7 +9,8 @@ import { cancelAfterArrivedText } from "./offerRules";
 import type { CountryDispatch, ZoneDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
 
-export type WaitBaseRow = { id: string; label: string; base: WaitBase };
+/** stopPerMin (G7 live fix): Pricing's stopWaitPerMin of the car type, shown in Stops. */
+export type WaitBaseRow = { id: string; label: string; base: WaitBase; stopPerMin?: number };
 
 type Props = {
   zone: ZoneDispatch;
