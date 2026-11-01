@@ -2,6 +2,7 @@ import type { DemoRecord } from "../api/seed.ts";
 import { timelineOf } from "./present.ts";
 import { isLiveData, liveTripOf } from "../live/realData.ts";
 import { OFFER_STATUS_LABEL, type AdminOffer } from "../dispatch/assign.ts";
+import { trx } from "../i18n/core.ts";
 
 /**
  * The offer log of a trip (Round 3, Q28): one line per step, with times. Scheduled rides → Home popup →
@@ -10,7 +11,7 @@ import { OFFER_STATUS_LABEL, type AdminOffer } from "../dispatch/assign.ts";
  */
 
 export type OfferStepKind = "list" | "home" | "exclusive" | "radar" | "tried" | "won" | "lost" | "none";
-export type OfferStep = { at: string; kind: OfferStepKind; title: string; detail: string; driverIds: string[] };
+export type OfferStep = { at: string; kind: OfferStepKind; title: string; detail: string; driverIds: string[]; status?: AdminOffer["status"] };
 
 export const OFFER_STEP_LABEL: Record<OfferStepKind, string> = {
   list: "Scheduled rides",
@@ -46,7 +47,8 @@ export function offerLogFromServer(offers: readonly AdminOffer[]): OfferStep[] {
     .map((offer) => {
       const kind: OfferStepKind = offer.status === "claimed" ? "won" : offer.kind === "radar" ? "radar" : "exclusive";
       const who = offer.driverName || offer.driverId;
-      return { at: offer.expiresAt, kind, title: OFFER_STEP_LABEL[kind], detail: `${who ? `${who} · ` : ""}${OFFER_STATUS_LABEL[offer.status] ?? offer.status}`, driverIds: offer.driverId ? [offer.driverId] : [] };
+      // G6 live fix: the status word in the admin's language ("Expired", "Sent" stayed English in French).
+      return { at: offer.expiresAt, kind, title: OFFER_STEP_LABEL[kind], detail: `${who ? `${who} · ` : ""}${trx(OFFER_STATUS_LABEL[offer.status] ?? offer.status)}`, driverIds: offer.driverId ? [offer.driverId] : [], status: offer.status };
     });
 }
 
@@ -111,7 +113,7 @@ export function timelineOffers(steps: readonly OfferStep[]): TimelineOffer[] {
   return steps.flatMap((step): TimelineOffer[] => {
     if (step.kind === "won") return [{ at: step.at, driverId: step.driverIds[0] ?? "", answer: "accepted" }];
     if (step.kind === "radar") return [];
-    if (step.kind === "exclusive" && !step.detail.endsWith("accepted")) return [{ at: step.at, driverId: step.driverIds[0] ?? "", answer: step.detail.endsWith("said no") || step.detail.endsWith(OFFER_STATUS_LABEL.declined) ? "declined" : "no answer" }];
+    if (step.kind === "exclusive" && !step.detail.endsWith("accepted")) return [{ at: step.at, driverId: step.driverIds[0] ?? "", answer: step.status === "declined" || step.detail.endsWith("said no") ? "declined" : "no answer" }];
     return [];
   });
 }

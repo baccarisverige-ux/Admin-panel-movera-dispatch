@@ -32,6 +32,8 @@ type Tools = Record<"presets" | "groups" | "radar-zones" | "radar-rules" | "even
 let radarReply: { status: number; body: unknown } | null = null;
 /** Anna already has the trip's open automatic offer. */
 let nearbyOpenOffer = false;
+/** The dispatch tools read slowly (a live re-read of every screen after a command takes its time). */
+let slowReads = 0;
 const ID_KEY = { presets: "presetId", groups: "groupId", "radar-zones": "radarZoneId", "radar-rules": "ruleId", events: "eventId" } as const;
 
 /** /admin/dispatch/* (contract.json#dispatchTools) in memory, with versions, plus the trip's nearby drivers and sends. */
@@ -61,6 +63,7 @@ async function fakeTools(page: Page, trips: Array<Record<string, unknown>>) {
     const id = parts[1] ? decodeURIComponent(parts[1]) : null;
     const body = (request.postDataJSON?.() ?? null) as Record<string, unknown> | null;
     if (request.method() !== "GET") sent.push({ method: request.method(), path: url.pathname + url.search, body });
+    else if (slowReads) await new Promise((resolve) => setTimeout(resolve, slowReads));
     if (parts[2] === "free") return json(route, 200, { radarZoneId: id, free: 2, at });
     const list = tools[kind];
     if (!list) return json(route, 404, { code: "not_found", message: "No.", requestId: "r", retryable: false });
@@ -350,5 +353,28 @@ test("owner live test 2026-11-01: from the trip page a driver with the trip's op
     await expect(box.getByTestId("driver-bonus-now")).toContainText("50");
   } finally {
     nearbyOpenOffer = false;
+  }
+});
+
+test("G6 live fix (French panel): after a radar send with money, no \"Veuillez patienter\" stays, the notice is French and the typed money is cleared (no double count)", async ({ page }) => {
+  await open(page, "/dispatch?view=live", "fr");
+  await page.getByRole("button", { name: /^Chauffeurs à proximité de / }).first().click();
+  const panel = page.getByTestId("assign-panel");
+  await expect(panel).toBeVisible();
+  const box = panel.getByTestId("driver-bonus-box");
+  await box.locator("input[type=number]").first().fill("50");
+  await panel.getByTestId("radar-target").getByRole("button", { name: "Groupes de chauffeurs" }).click();
+  const send = panel.getByTestId("radar-sender").getByRole("button", { name: /Envoyer le radar/ });
+  await expect(send).toContainText("+50,00");
+  slowReads = 8000;
+  try {
+    await send.click();
+    await expect(page.getByText("Envoyé au groupe radar.").first()).toBeVisible({ timeout: 5_000 });
+    await expect(panel.getByTestId("command-wait")).toHaveCount(0, { timeout: 4_000 });
+    await expect(box.locator("input[type=number]").first()).toHaveValue("", { timeout: 4_000 });
+    await expect(send).not.toContainText("+100");
+    await expect(page.getByText("Sent to the radar group.")).toHaveCount(0);
+  } finally {
+    slowReads = 0;
   }
 });

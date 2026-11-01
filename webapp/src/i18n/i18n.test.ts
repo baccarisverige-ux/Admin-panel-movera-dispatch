@@ -15,6 +15,8 @@ import { statusLabel } from "../domain/labels.ts";
 import { COMMANDS } from "../commands/registry.ts";
 import { FEATURE_INDEX } from "../dispatch/featureIndex.ts";
 import { OFFER_STATUS_LABEL, EVENT_LABEL } from "../dispatch/assign.ts";
+import { OFFER_STEP_LABEL } from "../trips/offerLog.ts";
+import { readFileSync } from "node:fs";
 import { STATUS_LABEL } from "../platform/myActivity.ts";
 import { defaultCountrySettings, saveCountrySettings, emptyCountrySettingsBook, LANGUAGE_LABEL } from "../config/countrySettings.ts";
 import { shortDateTime } from "../domain/time.ts";
@@ -77,6 +79,18 @@ test("labels kept in data modules have an entry (menu, statuses, commands, All f
   ];
   assert.deepEqual(labels.filter((label) => !hasMessage(label)), []);
   for (const code of ["driver_to_pickup", "in_trip", "cancelled_by_admin", "no_show", "approaching_dropoff"]) assert.ok(hasMessage(statusLabel(code)), code);
+});
+
+test("G6 live fix: every live command notice and offer status word has a French and Swedish text", () => {
+  // Owner live test 2026-11-01: "Sent to the radar group.", "Exclusive offer sent.", "Expired", "Sent" stayed English.
+  const source = readFileSync(new URL("../live/liveAdminApi.ts", import.meta.url), "utf8");
+  const notices = source.split("\n").flatMap((line) => (line.includes("done(") ? [...line.slice(line.indexOf("done(")).matchAll(/"([^"]*[.!?])"/g)].map((match) => match[1]!) : []));
+  assert.ok(notices.includes("Exclusive offer sent.") && notices.includes("Sent to the radar group."));
+  const words = [...notices, ...Object.values(OFFER_STATUS_LABEL), ...Object.values(OFFER_STEP_LABEL), "{0} said yes", "Asked {0}: {1}", "no answer", "declined", "Custom", "Zone + neighbours"];
+  for (const [name, dictionary] of [["fr", fr], ["sv", sv]] as const) {
+    const missing = words.filter((word) => !Object.hasOwn(dictionary, word) && !(word.split(/(?<=[.!?…])\s+/).every((part) => Object.hasOwn(dictionary, part))));
+    assert.deepEqual(missing, [], name);
+  }
 });
 
 test("tr, trx and status words follow the chosen language; unknown texts stay as they are", () => {
