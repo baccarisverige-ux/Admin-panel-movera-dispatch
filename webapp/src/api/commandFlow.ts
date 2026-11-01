@@ -92,3 +92,17 @@ export async function readTracked<T>(api: { revision: () => Promise<number> }, k
   if (before !== undefined) readAt.set(id, before);
   return data;
 }
+
+/** How long a finished command waits for the screen's re-read before its follow-up runs (the re-read goes on). */
+export const REFRESH_WAIT_MS = 1500;
+
+/**
+ * G6 live fix (owner live test 2026-11-01): waits for [work] but never longer than [ms]; a failure is ignored (the
+ * re-read is only a refresh). A live command answers without a revision, so its re-read reads every screen again,
+ * which can take long; the "Please wait" and the screen's follow-up (clearing the typed money) must not wait for it.
+ */
+export async function atMost(work: Promise<unknown>, ms: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([work.catch(() => undefined), new Promise<void>((resolve) => { timer = setTimeout(resolve, ms); })]);
+  clearTimeout(timer);
+}
