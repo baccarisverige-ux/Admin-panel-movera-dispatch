@@ -6733,7 +6733,7 @@ export const fr: Record<MessageKey, string> = {
   "Role {0} saved.": "Rôle {0} enregistré.",
   "Role {0} deleted.": "Rôle {0} supprimé.",
   "Delete role": "Supprimer le rôle",
-  "Custom roles are saved here. The backend applies them when it signs an admin in; in the demo an admin keeps the permissions of their built-in role.": "Les rôles personnalisés sont enregistrés ici. Le backend les applique à la connexion d'un admin ; dans la démo, un admin garde les droits de son rôle intégré.",
+  "Custom roles are saved here. The server applies them when an admin signs in; until it does, an admin keeps the permissions of their built-in role.": "Les rôles personnalisés sont enregistrés ici. Le serveur les applique à la connexion d'un admin ; en attendant, un admin garde les droits de son rôle intégré.",
   "Limits per role": "Limites par rôle",
   "The most one admin with this role can give in one go. Above the country's second-admin limit (Settings), a second admin must approve.": "Le maximum qu'un admin avec ce rôle peut accorder en une fois. Au-delà du seuil de second admin du pays (Réglages), un second admin doit approuver.",
   "Limits for role": "Limites du rôle",
@@ -8143,4 +8143,9 @@ export const fr: Record<MessageKey, string> = {
   "22 Oct": "22 oct.",
   "Airport drivers": "Chauffeurs aéroport",
   "Comfort drivers": "Chauffeurs Comfort",
+  "None assigned": "Non attribué",
+  "At least": "À partir de",
+  "jumps": "sauts",
+  "accounts": "comptes",
+  "codes": "codes",
 };
