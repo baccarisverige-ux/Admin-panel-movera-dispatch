@@ -105,8 +105,12 @@ export function reasonWords(code: string | undefined | null, book: CancelReasonB
   if (book) {
     const all = [...Object.values(book.groups).flat(), book.noShow];
     const hit = all.find((item) => item.code === code);
+    const own = hit ? (hit.title[lang] ?? "").trim() : "";
+    if (own) return own;
+    // G5 live re-test round 2: a title with no text in this language reads through the panel's own words for its
+    // English (FR "Autre chose" for "Something else"), the same language tr() uses; English only without them.
     const text = hit ? reasonText(hit.title, lang) : "";
-    if (text) return text;
+    if (text) return translate(lang as AppLanguage, text);
   }
   const plain = code.replace(/^(admin_|system_|next_trip_|scheduled_)/, "").replaceAll("_", " ").trim();
   // G5 live test: a rider's reason the book does not list ("something_else") reads in the admin's language
