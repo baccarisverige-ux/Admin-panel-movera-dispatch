@@ -269,12 +269,13 @@ export function useCommands() {
       }
       // A command that answers with the slice (live settings) shows it now; the re-read below confirms it.
       if (result.slice) client.setQueriesData({ queryKey: ["slice", result.slice.key] }, result.slice.value);
-      // G6 live fix (owner live test 2026-11-01): the command is done once the server answered. The buttons stop
-      // waiting now ("Please wait" stayed while a live command's full re-read ran), and the screen's own follow-up
-      // (onDone: notice, clearing the typed money) does not wait longer than a moment for that re-read.
-      lock.current = false;
-      setGlobalCommandBusy(false);
-      await atMost(refresh(spec, extra, expectedRev, result.rev), REFRESH_WAIT_MS);
+      // G6 live fix (owner live test 2026-11-01): "Please wait" and the screen's follow-up (onDone: notice, clearing
+      // the typed money) wait for the re-read at most a moment; a live command's full re-read can take long.
+      // Live only: a demo command answers with its revision and the next command needs the fresh slice revision,
+      // so the demo waits for the whole re-read as before.
+      const reread = refresh(spec, extra, expectedRev, result.rev);
+      if (api.kind === "http") await atMost(reread, REFRESH_WAIT_MS);
+      else await reread;
       return result;
     } catch (error) {
       clearTimeout(timer);
