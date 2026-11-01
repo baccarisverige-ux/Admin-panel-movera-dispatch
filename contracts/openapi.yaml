@@ -12594,7 +12594,10 @@ paths:
         } (finance.edit, Idempotency-Key) on an ended trip with a driver → 200 TripProjection (admin): an earnings entry kind
         adjustment of change (paid with the next payout), trip.driverAdjustments += change, driverTotal moves; audit trip.driver_pay
         with before / after / reason; the driver gets a bell notice kind driver_pay_changed (texts.payChanged). Errors: driver_pay_not_ended,
-        driver_pay_no_driver, driver_pay_below_zero (driverTotal would go below 0), currency_mismatch.'
+        driver_pay_no_driver, driver_pay_below_zero (driverTotal would go below 0), currency_mismatch. Checker: the size of
+        one change (plus or minus) is at most CountryRules.driverPayChangeMax of the trip''s zone (Admin › Tips & limits,
+        per zone or country; default SE 1000 kr, FR 100 €) → else 400 driver_pay_above_max. A refund taken from the driver
+        never takes more than his one number on the trip (never below 0).'
       tags:
       - Admin · Trips
       x-actor:
@@ -15256,6 +15259,8 @@ components:
         comment:
           type: string
           maxLength: 2000
+        tipError:
+          $ref: '#/components/schemas/RatingTipError'
     RatingTag:
       type: string
       enum:
@@ -16490,6 +16495,11 @@ components:
             $ref: '#/components/schemas/AmountOption'
         driverBonus:
           $ref: '#/components/schemas/DriverBonusLimits'
+        driverPayChangeMax:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.10 checker: the largest single change of a driver''s pay on a trip (POST /admin/trips/{tripId}/driver-pay).
+            Default SE 1000 kr, FR 100 €.'
       x-server-only: true
     FeeRule:
       type: object
@@ -25027,7 +25037,8 @@ components:
         country standard; missing / out of range = default. cashAfterTrip false: a cash tip is only accepted while the rider
         is still in the car = within cashInCarMinutes after the trip ended (the finish screen); later → 409 tip_cash_after_trip_off
         (card / Apple Pay tips are not limited). customAmount true: besides the preset amounts the rider may type any whole
-        amount from 1 up to customMax (above → 400 tip_above_max); false: presets only (400 tip_amount_not_allowed).'
+        amount from 1 up to customMax (above → 400 tip_above_max); false: presets only (400 tip_amount_not_allowed). customMax
+        never unlimited: a document without one uses the country default, else 20 × the highest preset amount.'
       properties:
         cashAfterTrip:
           type: boolean
@@ -25042,6 +25053,21 @@ components:
           default: false
         customMax:
           $ref: '#/components/schemas/Money'
+    RatingTipError:
+      type: object
+      description: 'v0.18.10: RatingRequest.tip: the rating is saved first; a tip that cannot be given does not lose the stars:
+        the answer is the rating (201, or 200 with only tipError for a skip) with tipError { code, reason, message } and no
+        tip.'
+      required:
+      - code
+      - reason
+      properties:
+        code:
+          type: string
+        reason:
+          type: string
+        message:
+          type: string
     TipMethod:
       type: string
       enum:
@@ -25159,9 +25185,11 @@ components:
           description: The viewer may still rate (its rating status is pending).
     MoneySplit:
       type: object
-      description: 'v0.18.10: admin view only. Admin view: TripProjection.moneySplit { riderPaid, driverTotal, movera (= commission),
-        debtCollected, tip?, refunded } — ''Who gets what'': riderPaid = fare (+ tip) − refunded; driverTotal + movera + debtCollected
-        (+ tip) = fare (+ tip) before refunds.'
+      description: 'v0.18.10: admin view only. Admin view only: TripProjection.moneySplit { riderPaid, driverTotal, movera,
+        debtCollected, tip?, refunded } — ''Who gets what''. riderPaid = fare + tip − refunded; driverTotal is the driver''s
+        one number (incl. tip, Movera''s pay changes and refunds taken from him); movera = riderPaid − driverTotal − debtCollected,
+        so driverTotal + movera + debtCollected = riderPaid always (a refund Movera pays and a pay change lower Movera''s
+        part; the tip is never Movera''s).'
       required:
       - riderPaid
       - driverTotal

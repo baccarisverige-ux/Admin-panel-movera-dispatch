@@ -8260,4 +8260,5 @@ export const fr: Record<MessageKey, string> = {
   "jumps": "sauts",
   "accounts": "comptes",
   "codes": "codes",
+  "Largest change of a driver's pay on one trip": "Modification maximale de la rémunération du chauffeur sur une course",
 };

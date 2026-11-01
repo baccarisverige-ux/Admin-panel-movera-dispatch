@@ -270,6 +270,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       ...(doc.tips ? { tips: options(doc.tips, "t") } : {}),
       ...(doc.raiseSteps ? { raiseSteps: options(doc.raiseSteps, "r") } : {}),
       ...(doc.driverBonus?.defaultLimit ? { driverBonusLimit: doc.driverBonus.defaultLimit.amountMinor / market.minorUnits } : {}),
+      ...((document as { driverPayChangeMax?: { amountMinor: number } }).driverPayChangeMax ? { driverPayChangeMax: (document as { driverPayChangeMax: { amountMinor: number } }).driverPayChangeMax.amountMinor / market.minorUnits } : {}),
     };
   }
 
@@ -504,7 +505,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const current = await draft("country_rules", id, true);
       const facts = zoneFacts(id);
       const hardMax = driverBonusHardMax(market.id as MarketId);
-      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax } }, current?.document ?? null);
+      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax }, current?.document ?? null);
       await savePublish(http, "country_rules", id, current, doc);
       standardMarks.set("country_rules", id, false);
       // v0.18.10 (G8): the tip rules (cash after the trip, typed amount + max) live in the rider app document.

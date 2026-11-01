@@ -194,6 +194,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <small>{tr("The most an admin can add to one trip for the driver. Movera pays it; the rider never does. Above it the admin sees “adjust the limit in Pricing”.")}</small>
               </div>
               <NumberField id={DRIVER_BONUS_LIMIT_INPUT_ID} label={tr("Driver bonus limit")} value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
+              <NumberField label={tr("Largest change of a driver's pay on one trip")} value={shown.driverPayChangeMax} unit={symbol} step={moneyStep(country)} max={hardMax * 10} disabled={!canEdit} changed={shown.driverPayChangeMax !== saved.driverPayChangeMax} onChange={(driverPayChangeMax) => edit({ driverPayChangeMax })} />
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
           </div>

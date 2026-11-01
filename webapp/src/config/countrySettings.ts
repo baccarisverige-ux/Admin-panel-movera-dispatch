@@ -32,7 +32,10 @@ export type CountrySettings = {
    * only in the car), a typed amount (default off) and its maximum in local money (SE 200 kr, FR 20 €).
    */
   tipRules: TipRules;
+  /** v0.18.10 checker: the largest single change of a driver's pay on a trip (CountryRules.driverPayChangeMax), local money. */
+  driverPayChangeMax: number;
 };
+export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 300 };
 export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number };
 /** contract.json#configDefaults.tipRules.customMax (major units); TN (closed) like FR in its own money. */
 export const TIP_CUSTOM_MAX: Record<MarketId, number> = { SE: 200, FR: 20, TN: 60 };
@@ -47,7 +50,7 @@ export type CountrySettingsBook = { draftRev: number; countries: Record<MarketId
 /** v0.8.1: the live panel's Tips & limits per zone and Standard (read when the tab opens). */
 export const ZONE_RULES_KEY = "countrySettingsZones";
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "driverPayChangeMax"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "languages"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -90,6 +93,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, true])) as Record<ZonePaymentMethod, boolean>,
     languages: { rider: defaults.defaultLanguage, driver: defaults.defaultLanguage, admin: defaults.defaultLanguage },
     tipRules: { cashAfterTrip: false, customAmount: false, customMax: TIP_CUSTOM_MAX[country] },
+    driverPayChangeMax: DRIVER_PAY_CHANGE_MAX[country],
   };
 }
 
@@ -124,6 +128,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, typeof methods[method] === "boolean" ? methods[method] : base.paymentMethods[method]])) as Record<ZonePaymentMethod, boolean>,
     languages: Object.fromEntries(APP_IDS.map((app) => [app, (APP_LANGUAGES as readonly unknown[]).includes(languages[app]) ? languages[app] : base.languages[app]])) as Record<LanguageApp, AppLanguage>,
     tipRules: completeTipRules(raw.tipRules, base.tipRules),
+    driverPayChangeMax: finite(raw.driverPayChangeMax) && raw.driverPayChangeMax > 0 ? raw.driverPayChangeMax : base.driverPayChangeMax,
   };
 }
 

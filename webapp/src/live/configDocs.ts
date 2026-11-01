@@ -312,7 +312,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number } };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
@@ -325,6 +325,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     tips: input.tips.map(option),
     raiseSteps: input.raiseSteps.map(option),
     driverBonus: { defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
+    // v0.18.10 checker: the largest single change of a driver's pay (Change pay on the trip page).
+    ...(input.driverPayChangeMax !== undefined ? { driverPayChangeMax: toMinor(input.driverPayChangeMax, currency) } : {}),
   };
 }
 

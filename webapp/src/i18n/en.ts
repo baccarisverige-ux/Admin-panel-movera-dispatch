@@ -8258,6 +8258,7 @@ export const en = {
   "jumps": "jumps",
   "accounts": "accounts",
   "codes": "codes",
+  "Largest change of a driver's pay on one trip": "Largest change of a driver's pay on one trip",
 } as const;
 
 export type MessageKey = keyof typeof en;

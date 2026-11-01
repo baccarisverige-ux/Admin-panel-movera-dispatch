@@ -473,6 +473,8 @@ test("G8 (v0.18.10): payment methods go to the server per country (no Google Pay
   assert.deepEqual(zone.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 8 });
   const back = rulesOfDispatch(null, { cancelFees: { earlyEnd: { repriceOverKm: 5, repriceOverMin: 999 } } }, zone);
   assert.deepEqual(back.riderCancel.earlyEnd, { repriceOverKm: 5, repriceOverMin: 8 }, "out of range reads as the default");
+  // Checker (2): the pay-change cap per country goes into the country rules (default SE 1000 kr).
+  assert.deepEqual(countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 }, driverPayChangeMax: 1000 }, null)["driverPayChangeMax"], { amountMinor: 100000, currency: "SEK" });
   const state = appConfigState({ now: "2026-11-01T10:00:00Z" });
   assert.deepEqual((driverAppConfig("Z001", state) as unknown as { cancelFees: { earlyEnd: unknown } }).cancelFees.earlyEnd, { repriceOverKm: 2, repriceOverMin: 8 });
 });

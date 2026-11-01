@@ -8260,4 +8260,5 @@ export const sv: Record<MessageKey, string> = {
   "jumps": "hopp",
   "accounts": "konton",
   "codes": "koder",
+  "Largest change of a driver's pay on one trip": "Största ändring av förarens ersättning på en resa",
 };

@@ -2422,6 +2422,9 @@ S["EarlyEndSettings"] = obj(OrderedDict([
 S["CancelFees"]["properties"]["earlyEnd"] = {"allOf": [ref("EarlyEndSettings")], "description": "DriverAppConfig only. " + C["cancelFees"]["earlyEnd"]}
 S["TipRules"] = obj(OrderedDict([("cashAfterTrip", {**b(), "default": False}), ("cashInCarMinutes", {**i(minimum=0, maximum=60), "default": 5}), ("customAmount", {**b(), "default": False}), ("customMax", ref("Money"))]), desc="v0.18.10: " + _FT["settings"])
 S["RiderAppConfig"]["properties"]["tipRules"] = ref("TipRules")
+S["CountryRules"]["properties"]["driverPayChangeMax"] = {"allOf": [ref("Money")], "description": "v0.18.10 checker: the largest single change of a driver's pay on a trip (POST /admin/trips/{tripId}/driver-pay). Default SE 1000 kr, FR 100 €."}
+S["RatingTipError"] = obj({"code": s(), "reason": s(), "message": s()}, ["code", "reason"], "v0.18.10: " + _FT["withRating"])
+S["Rating"]["properties"]["tipError"] = ref("RatingTipError")
 S["TipMethod"] = s("v0.18.10: " + _FT["rules"], enum=_FP["values"])
 S["TripTip"] = obj({"amount": ref("Money"), "method": ref("TipMethod"), "driverShare": {"allOf": [ref("Money")], "description": _FT["driverShare"]}, "at": ref("Timestamp")}, ["amount", "method", "at"], "v0.18.10: " + _FT["projection"])
 S["TipRequest"] = obj({"amount": ref("Money"), "method": ref("TipMethod")}, ["amount", "method"], "v0.18.10: " + _FT["endpoint"] + " " + _FT["rules"])
