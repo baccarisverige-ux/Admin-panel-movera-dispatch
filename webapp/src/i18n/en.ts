@@ -7587,6 +7587,8 @@ export const en = {
   "{0} already sees this ride: an exclusive offer replaces it.": "{0} already sees this ride: an exclusive offer replaces it.",
   "{0} already sees this ride: the radar raises his offer.": "{0} already sees this ride: the radar raises his offer.",
   "Money added for the driver.": "Money added for the driver.",
+  "Above the limit of {0} per trip: adjust the limit in Pricing.": "Above the limit of {0} per trip: adjust the limit in Pricing.",
+  "Above the hard max of {0} per trip. No limit can go higher.": "Above the hard max of {0} per trip. No limit can go higher.",
   "Type an amount above 0.": "Type an amount above 0.",
   "Set to the default because it was 0": "Set to the default because it was 0",
   "+ pickup pay": "+ pickup pay",

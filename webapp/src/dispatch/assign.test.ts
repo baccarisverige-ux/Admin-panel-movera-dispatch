@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
+import { loadLanguage, setLanguage } from "../i18n/core.ts";
 import { contractJson } from "../contract/load.ts";
 import { nextStatus, type Actor, type TripCommand } from "../domain/contract.ts";
 import { writeSession } from "../auth/sessionStore.ts";
@@ -147,6 +148,24 @@ test("Q17 driver bonus: above the country's limit → adjust the limit in Pricin
   assert.equal(bonusIssue(150_000, 0, limits, fmt)?.code, "over_hard_max");
   assert.equal(bonusIssue(0, 0, limits, fmt)?.code, "invalid");
   assert.equal(bonusIssue(12.5, 0, limits, fmt)?.code, "invalid");
+});
+
+test("live test 2026-11-01: the over-limit and hard-max messages are in Swedish and French too", async () => {
+  const limits = { limitMinor: 1_800, hardMaxMinor: 9_000 };
+  const fmt = (minor: number) => `${minor / 100} €`;
+  try {
+    await loadLanguage("fr");
+    setLanguage("fr");
+    assert.equal(bonusIssue(2_000, 0, limits, fmt)?.message, "Au-delà de la limite de 18 € par course : modifiez la limite dans Tarifs.");
+    assert.equal(bonusIssue(10_000, 0, limits, fmt)?.message, "Au-delà du maximum absolu de 90 € par course. Aucune limite ne peut aller plus haut.");
+    await loadLanguage("sv");
+    setLanguage("sv");
+    assert.equal(bonusIssue(2_000, 0, limits, fmt)?.message, "Över gränsen på 18 € per resa: ändra gränsen i Priser.");
+    assert.equal(bonusIssue(10_000, 0, limits, fmt)?.message, "Över det hårda taket på 90 € per resa. Ingen gräns kan gå högre.");
+  } finally {
+    setLanguage("en");
+  }
+  assert.match(bonusIssue(2_000, 0, limits, fmt)?.message ?? "", /^Above the limit of 18 € per trip: adjust the limit in Pricing\.$/);
 });
 
 test("Q18 offers carry driverBonus and priority, included in the fare and earnings the driver sees", () => {

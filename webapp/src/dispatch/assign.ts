@@ -2,6 +2,7 @@ import type { LiveDriver } from "../dashboard/live.ts";
 import type { LatLng } from "../dashboard/route.ts";
 import { DRIVER_ASSIGNED_STATUSES, TERMINAL_STATUSES } from "../domain/contract.ts";
 import type { CurrencyCode } from "../domain/money.ts";
+import { tr } from "../i18n/core.ts";
 import { marketOfZone, zoneById } from "../markets/markets.ts";
 
 /**
@@ -507,10 +508,10 @@ export type BonusIssue = { code: "invalid" | "over_limit" | "over_hard_max"; mes
  * passes the hard max. Above the limit the admin is sent to Pricing.
  */
 export function bonusIssue(addMinor: number, alreadyMinor: number, limits: BonusLimits, format: (minor: number) => string): BonusIssue | null {
-  if (!Number.isFinite(addMinor) || !Number.isInteger(addMinor) || addMinor <= 0) return { code: "invalid", message: "Type an amount above 0." };
+  if (!Number.isFinite(addMinor) || !Number.isInteger(addMinor) || addMinor <= 0) return { code: "invalid", message: tr("Type an amount above 0.") };
   const total = alreadyMinor + addMinor;
-  if (total > limits.hardMaxMinor) return { code: "over_hard_max", message: `Above the hard max of ${format(limits.hardMaxMinor)} per trip. No limit can go higher.` };
-  if (total > limits.limitMinor) return { code: "over_limit", message: `Above the limit of ${format(limits.limitMinor)} per trip: adjust the limit in Pricing.` };
+  if (total > limits.hardMaxMinor) return { code: "over_hard_max", message: tr("Above the hard max of {0} per trip. No limit can go higher.", [format(limits.hardMaxMinor)]) };
+  if (total > limits.limitMinor) return { code: "over_limit", message: tr("Above the limit of {0} per trip: adjust the limit in Pricing.", [format(limits.limitMinor)]) };
   return null;
 }
 
