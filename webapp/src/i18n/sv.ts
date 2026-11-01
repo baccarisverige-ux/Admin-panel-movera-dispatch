@@ -8056,4 +8056,5 @@ export const sv: Record<MessageKey, string> = {
   "We miss you": "Vi saknar dig",
   "Thanks for the first ride": "Tack för första resan",
   "Paper expires soon": "Dokument går snart ut",
+  "{0} added for the driver.": "{0} tillagt för föraren.",
 };

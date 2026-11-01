@@ -8054,6 +8054,7 @@ export const en = {
   "We miss you": "We miss you",
   "Thanks for the first ride": "Thanks for the first ride",
   "Paper expires soon": "Paper expires soon",
+  "{0} added for the driver.": "{0} added for the driver.",
 } as const;
 
 export type MessageKey = keyof typeof en;

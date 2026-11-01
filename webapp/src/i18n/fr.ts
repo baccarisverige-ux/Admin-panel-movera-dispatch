@@ -8056,4 +8056,5 @@ export const fr: Record<MessageKey, string> = {
   "We miss you": "Vous nous manquez",
   "Thanks for the first ride": "Merci pour la première course",
   "Paper expires soon": "Document bientôt expiré",
+  "{0} added for the driver.": "{0} ajouté pour le chauffeur.",
 };
