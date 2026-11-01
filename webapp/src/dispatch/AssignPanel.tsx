@@ -274,7 +274,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
               value={{ driverIds: selected, ...radarMoney.params }}
               disabled={!assignable || selected.length === 0 || Boolean(radarMoney.blocked)}
               title={!assignable ? tr("This trip cannot be assigned now.") : selected.length === 0 ? tr("Tick 1 to 10 drivers first.") : radarMoney.blocked ? trx(radarMoney.blocked) : radarSees || undefined}
-              onDone={() => { if (radarMoney.used) sent(); setNotice(tr("Sent to the radar of {0} driver{1}.", [selected.length, selected.length === 1 ? "" : "s"])); setPicked([]); refresh(); }}
+              onDone={(result) => { if (radarMoney.used) sent(); setNotice(result?.notice ?? tr("Sent to the radar of {0} driver{1}.", [selected.length, selected.length === 1 ? "" : "s"])); setPicked([]); refresh(); }}
             >{trn("{0} Send to radar", <Send size={13} aria-hidden="true" />)}</CommandButton>
           </div>
         </section>

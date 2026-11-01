@@ -367,6 +367,10 @@ const REASON_TEXT: Record<string, string> = {
   invalid_polygon: "The outline is not valid. Draw it again.",
   ends_before_start: "The end must be after the start.",
   zone_out_of_scope: "This country is outside your zones.",
+  // Owner bug 2026-11-01: assign / radar refusals by reason code, never the server's English sentence.
+  offer_already_open: "The driver already sees this ride.",
+  driver_on_trip: "The driver is on a trip and cannot take this ride now.",
+  driver_not_available: "No chosen driver can take a ride now (offline or no recent position).",
 };
 
 /** The panel's sentence for a dispatch-tools refusal, or null when the server's own message should stay. */

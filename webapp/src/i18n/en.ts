@@ -7490,6 +7490,15 @@ export const en = {
   "Write why the fee is waived.": "Write why the fee is waived.",
   "This fee is already waived.": "This fee is already waived.",
   "{0} Change limit": "{0} Change limit",
+  "The driver already sees this ride.": "The driver already sees this ride.",
+  "The driver is on a trip and cannot take this ride now.": "The driver is on a trip and cannot take this ride now.",
+  "No chosen driver can take a ride now (offline or no recent position).": "No chosen driver can take a ride now (offline or no recent position).",
+  "Price raised for {0} driver who already saw the ride.": "Price raised for {0} driver who already saw the ride.",
+  "Price raised for {0} drivers who already saw the ride.": "Price raised for {0} drivers who already saw the ride.",
+  "{0} driver already sees the ride and keeps the offer.": "{0} driver already sees the ride and keeps the offer.",
+  "{0} drivers already see the ride and keep the offer.": "{0} drivers already see the ride and keep the offer.",
+  "Also sent to {0} new driver.": "Also sent to {0} new driver.",
+  "Also sent to {0} new drivers.": "Also sent to {0} new drivers.",
 } as const;
 
 export type MessageKey = keyof typeof en;
