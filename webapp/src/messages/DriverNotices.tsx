@@ -218,7 +218,7 @@ function SendCard({ book, country, editable, onNotice }: { book: DriverNoticeBoo
             <Row label={tr("Driver group")}>
               <select className="dx-select" aria-label={tr("Driver group")} value={groupId} onChange={(event) => setGroupId(event.target.value)}>
                 <option value="">{tr("All drivers in the zone")}</option>
-                {groups.map((item) => <option key={item.id} value={item.id}>{trn("{0} · {1} drivers", item.name, item.driverIds.length)}</option>)}
+                {groups.map((item) => <option key={item.id} value={item.id}>{trn("{0} · {1} drivers", trx(item.name), item.driverIds.length)}</option>)}
               </select>
             </Row>
             <Row label={tr("Drivers")}>

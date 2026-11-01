@@ -8139,6 +8139,8 @@ export const en = {
   "Driving licence": "Driving licence",
   "in 7 days": "in 7 days",
   "22 Oct": "22 Oct",
+  "Airport drivers": "Airport drivers",
+  "Comfort drivers": "Comfort drivers",
 } as const;
 
 export type MessageKey = keyof typeof en;

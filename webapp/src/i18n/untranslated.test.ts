@@ -181,3 +181,28 @@ test("the reservation steps (Dispatch → Bookings) are written in the admin's l
     setLanguage("en");
   }
 });
+
+/* Coordinator, page audit round 2: country names in headings ("Risque en Sweden") read in the admin's language; seed driver groups too. */
+import { MARKETS } from "../markets/markets.ts";
+import { emptyDispatchBook } from "../dispatch/rules.ts";
+
+test("country names follow the admin's language (fr Suède/France, sv Sverige/Frankrike)", () => {
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  const name = (id: string) => MARKETS.find((item) => item.id === id)!.name;
+  try {
+    setLanguage("fr");
+    assert.equal(name("SE"), "Suède");
+    assert.equal(name("FR"), "France");
+    setLanguage("sv");
+    assert.equal(name("SE"), "Sverige");
+    assert.equal(name("FR"), "Frankrike");
+  } finally {
+    setLanguage("en");
+  }
+  assert.equal(name("SE"), "Sweden");
+});
+
+test("the seed driver group names have sv/fr texts (admin-made names stay as typed)", () => {
+  assertTranslated(emptyDispatchBook().groups.map((group) => group.name), "seed driver group");
+});

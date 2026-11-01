@@ -8141,4 +8141,6 @@ export const sv: Record<MessageKey, string> = {
   "Driving licence": "Körkort",
   "in 7 days": "om 7 dagar",
   "22 Oct": "22 okt.",
+  "Airport drivers": "Flygplatsförare",
+  "Comfort drivers": "Comfort-förare",
 };

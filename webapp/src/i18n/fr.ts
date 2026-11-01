@@ -8141,4 +8141,6 @@ export const fr: Record<MessageKey, string> = {
   "Driving licence": "Permis de conduire",
   "in 7 days": "dans 7 jours",
   "22 Oct": "22 oct.",
+  "Airport drivers": "Chauffeurs aéroport",
+  "Comfort drivers": "Chauffeurs Comfort",
 };
