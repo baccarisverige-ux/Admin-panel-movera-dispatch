@@ -14,6 +14,9 @@ async function signInAs(page: Page, id: string) {
 }
 
 test("country first, then zones, then period drive the dashboard", async ({ page }) => {
+  // "Today" just after midnight holds a minute of rides, so every zone reads 0 and picking one cannot change the number
+  // (failed in CI at 00:01 Stockholm). Run at midday; e2e/midnight.spec.ts covers the minutes around midnight.
+  await page.clock.install({ time: new Date("2026-10-14T12:00:00Z") });
   await signInAs(page, "nora");
   await page.goto("/");
   await expect(page.getByTestId("gross-bookings")).toContainText("kr");
