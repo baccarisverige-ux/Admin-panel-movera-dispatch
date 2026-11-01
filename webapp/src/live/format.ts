@@ -434,6 +434,12 @@ export function auditActorText(actorId: string): string {
   return !actorId || actorId === "system" ? tr("Movera (automatic)") : actorId;
 }
 
+/** G7 live fix 2: who did it, by the admin's name from the team list (the id when the admin is not in it). */
+export function auditActorName(actorId: string, agents: readonly { id: string; name: string }[]): string {
+  if (!actorId || actorId === "system") return auditActorText(actorId);
+  return agents.find((item) => item.id === actorId)?.name || actorId;
+}
+
 /** G3-R1: driver.auto_offline detail { reason: no_position, lastFixAt, minutes } as one line; null for other actions. */
 export function auditDetailText(row: { action: string; after: string }): string | null {
   if (row.action !== "driver.auto_offline") return null;

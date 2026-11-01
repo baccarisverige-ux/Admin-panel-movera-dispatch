@@ -98,3 +98,14 @@ test("G6 live fix: a command's follow-up waits for the re-read at most a moment,
   await atMost(Promise.reject(new Error("offline")), 1000);
   assert.ok(REFRESH_WAIT_MS <= 2000);
 });
+
+test("G7 live fix 2: a live command with no answer and no record never says nothing changed", async () => {
+  const { LIVE_UNCONFIRMED_MESSAGE } = await import("./commandFlow.ts");
+  const outcome = outcomeOf(null, "Timed out.", null, true);
+  assert.equal(outcome.phase, "rejected");
+  assert.equal(outcome.message, LIVE_UNCONFIRMED_MESSAGE);
+  assert.ok(outcome.retrySameKey);
+  assert.doesNotMatch(outcome.message, /nothing changed/);
+  // The late answer still wins on live.
+  assert.equal(outcomeOf(null, "x", { status: "committed", message: "Published." }, true).phase, "committed");
+});

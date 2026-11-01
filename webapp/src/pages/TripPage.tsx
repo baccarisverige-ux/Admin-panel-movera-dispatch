@@ -1,7 +1,7 @@
 import { NotConnected } from "../live/NotConnected";
 import { LiveTripChat } from "../live/LiveTripChat";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { fareLineLabel } from "../live/format";
+import { auditActionText, auditActorName, fareLineLabel } from "../live/format";
 import { Link, useNavigate, useParams } from "react-router";
 import { useLiveRefund } from "../live/LiveRefund";
 import { LiveTripTools } from "../live/LiveTripTools";
@@ -107,7 +107,7 @@ const TRIP_AUDIT_REFRESH_MS = 15_000;
 export function TripPage() {
   const { tripId = "" } = useParams();
   const navigate = useNavigate();
-  const { agent } = useSession();
+  const { agent, agents } = useSession();
   const role = agent?.role ?? "viewer";
   const liveRefund = useLiveRefund(tripId);
   const trips = useTrips(null);
@@ -126,7 +126,8 @@ export function TripPage() {
   const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: canSafety });
   const incidentOps = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: canSafety });
   const listed = trips.data?.find((item) => item.id === tripId);
-  const live = Boolean(useLiveSessionMaybe());
+  const liveSession = useLiveSessionMaybe();
+  const live = Boolean(liveSession);
   // v0.18.7 (G5 deep-link bug): a trip that is not on the list's loaded pages (an older one, a link from the apps)
   // is read by id, so the page opens it instead of "Trip not found".
   const single = useQuery({
@@ -725,7 +726,7 @@ export function TripPage() {
         ) : (
           <ul aria-label={tr("Trip intervention audit")} className="op-history">
             {tripAudits.map((item) => (
-              <li key={item.id}><time>{item.at}</time><b>{agentName(item.actorId)}</b><span>{item.action} · {trx(item.result)} · {item.actorId} · {trx(item.reason)}</span></li>
+              <li key={item.id}><time dateTime={item.at}>{zoneTimeLabel(item.at, trip.zoneId)}</time><b>{auditActorName(item.actorId, liveSession?.admin ? [...agents, { id: liveSession.admin.adminId, name: liveSession.admin.name }] : agents)}</b><span>{auditActionText(item.action)} · {trx(item.result)}{item.reason ? <> · {trx(item.reason)}</> : null}</span></li>
             ))}
           </ul>
         )}

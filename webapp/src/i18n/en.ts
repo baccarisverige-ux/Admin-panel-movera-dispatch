@@ -8236,6 +8236,18 @@ export const en = {
   "No answer in {0} s": "No answer in {0} s",
   "Movera opened the case: {0} did not answer the Ride check in {1}.": "Movera opened the case: {0} did not answer the Ride check in {1}.",
   "Price per minute: {0}": "Price per minute: {0}",
+  "Free cancel for {0} min after the driver accepts": "Free cancel for {0} min after the driver accepts",
+  "No free cancel after the driver accepts": "No free cancel after the driver accepts",
+  "Free cancel until {0}": "Free cancel until {0}",
+  "Free cancel until {0}, the day before": "Free cancel until {0}, the day before",
+  "Free cancel until {0}, {1} days before": "Free cancel until {0}, {1} days before",
+  "{0} · then {1}": "{0} · then {1}",
+  "{0} · no fee after": "{0} · no fee after",
+  "between {0} and {1}": "between {0} and {1}",
+  "at least {0}": "at least {0}",
+  "at most {0}": "at most {0}",
+  "The server did not confirm it in time.": "The server did not confirm it in time.",
+  "Part of it may be saved but not live yet: check the page and press it again.": "Part of it may be saved but not live yet: check the page and press it again.",
 } as const;
 
 export type MessageKey = keyof typeof en;

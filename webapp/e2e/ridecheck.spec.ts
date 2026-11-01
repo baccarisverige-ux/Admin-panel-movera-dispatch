@@ -145,6 +145,8 @@ test("a dispatcher sees the banner too and opens the trip", async ({ page }) => 
 });
 
 test("ride check log: every check with filters, repeats, and links to the trip", async ({ page }) => {
+  // G7 live fix 2: at 1440 px the table stays inside its card (the rider-answer column was cut off).
+  await page.setViewportSize({ width: 1440, height: 900 });
   await session(page);
   await page.goto("/incidents");
   await page.getByRole("tab", { name: /Ride checks/ }).click();
@@ -154,6 +156,12 @@ test("ride check log: every check with filters, repeats, and links to the trip",
   await expect.poll(() => rows.count()).toBeGreaterThanOrEqual(12);
   const all = await rows.count();
   expect(all).toBeGreaterThanOrEqual(12);
+  const fits = await page.locator(".rc-table-wrap").evaluate((wrap) => {
+    const card = wrap.getBoundingClientRect();
+    const answer = wrap.querySelector("thead th:nth-child(4)")!.getBoundingClientRect();
+    return { pageScroll: document.documentElement.scrollWidth <= window.innerWidth, inCard: card.right <= window.innerWidth, scrollsInCard: answer.right <= card.right || wrap.scrollWidth > wrap.clientWidth };
+  });
+  expect(fits).toEqual({ pageScroll: true, inCard: true, scrollsInCard: true });
   await page.getByLabel("Trigger", { exact: true }).selectOption({ label: "Dropped far away" });
   await expect(rows).toHaveCount(3);
   await expect(rows.first()).toContainText("Dropped far away");

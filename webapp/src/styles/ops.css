@@ -417,3 +417,7 @@
 .op-live-cell .op-eta { color: var(--dash-ink-2); font-weight: 600; white-space: nowrap; }
 .op-eta.stale { color: #8a8f99; font-style: italic; }
 .op-facts dd.op-eta.stale { color: #8a8f99; }
+/* G7 live fix 2: the ride-check table stays inside its card at 1440 px (grid items shrink; wide content scrolls in the card). */
+.rc-log, .rc-log > * { min-width: 0; }
+.rc-table-wrap { max-width: 100%; overflow-x: auto; }
+.rc-table td small, .rc-table td a { overflow-wrap: anywhere; }
