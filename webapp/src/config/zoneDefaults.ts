@@ -38,6 +38,8 @@ export const CONFIG_DEFAULTS = {
   missedExclusiveBeforeOffline: 10,
   /** G3-R1 (v0.18.4): no position for this many minutes → the server sets the driver offline (0 = never). */
   noFixMinutesBeforeOffline: 5,
+  /** v0.18.8 (G6): Rider PIN before Start — off, 5 wrong tries, then 5 min lock. */
+  pickupPin: { required: false, maxAttempts: 5, lockMinutes: 5 },
   countries: {
     SE: { currency: "SEK", defaultLanguage: "sv", tips: [sek(1000), sek(2000), sek(3000)], raiseSteps: [sek(5000), sek(10000), sek(15000), sek(20000)], driverBonus: { defaultLimit: sek(20000), hardMax: sek(100000) } },
     FR: { currency: "EUR", defaultLanguage: "fr", tips: [eur(100), eur(200), eur(500)], raiseSteps: [eur(200), eur(400), eur(600), eur(800)], driverBonus: { defaultLimit: eur(2000), hardMax: eur(9500) } },

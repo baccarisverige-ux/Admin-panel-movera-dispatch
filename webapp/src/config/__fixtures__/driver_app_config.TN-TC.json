@@ -782,7 +782,13 @@
         "noShowAfterMin": null,
         "noShowFee": null
       }
-    }
+    },
+    "stopFreeWaitMin": 3
+  },
+  "pickupPin": {
+    "required": false,
+    "maxAttempts": 5,
+    "lockMinutes": 5
   },
   "destinationMode": {
     "perDay": 2,

@@ -69,6 +69,7 @@ import { cashFigures, isCashTrip } from "../trips/cash";
 import { offerLog, timelineOffers } from "../trips/offerLog";
 import { adjustFare, waitingMinutes } from "../trips/rules";
 import { CommandButton } from "../ui/CommandButton";
+import { ReverseNoShowButton } from "../trips/ReverseNoShow";
 import { DriverBonusBox, NearbyButton, OffersSection, useTripOffers } from "../dispatch/AssignPanel";
 import { canAssign as canAssignTrip, isLocked } from "../dispatch/assign";
 import { StatusDot } from "../ui/kit";
@@ -316,7 +317,7 @@ export function TripPage() {
             <p>{trn("{0} Vehicle {1}", <Car size={13} aria-hidden="true" />, vehicle ? `${vehicle.plate} · ${vehicle.make ?? ""} ${vehicle.model ?? ""}` : tr("Unassigned"))}</p>
             <p data-testid="trip-payment">{trn("{0} Payment {1} · {2}", <Banknote size={13} aria-hidden="true" />, statusLabel(payment), cashTrip ? tr("Cash") : tr("In the app"))}</p>
             <p data-testid="trip-rating">{trn("{0} Rating {1}", <Star size={13} aria-hidden="true" />, ratingLabel(trip))}</p>
-            <p data-testid="trip-pin">{trn("PIN verified {0}", pinVerified(trip.id))}</p>
+            <p data-testid="trip-pin">{trn("PIN verified {0}", facts?.pin ? (facts.pin.verified ? tr("Yes") : tr("Not yet")) : live ? tr("No PIN for this trip") : pinVerified(trip.id))}</p>
           </div>
         </Section>
       </div>
@@ -400,10 +401,16 @@ export function TripPage() {
               {cancelFacts.feeMinor !== null ? (
                 <dl className="op-split-lines">
                   <div><dt>{feeKind === "no_show" ? tr("No-show fee") : tr("Cancel fee")}</dt><dd>{liveMoney(cancelFacts.feeMinor)}</dd></div>
-                  <div><dt>{tr("State")}</dt><dd data-testid="trip-fee-status">{feeStatusText || <NotConnected />}</dd></div>
+                  <div><dt>{tr("State")}</dt><dd data-testid="trip-fee-status">{cancelFacts.refundedToWallet ? tr("Refunded to the rider's wallet") : feeStatusText || <NotConnected />}</dd></div>
                   {cancelFacts.driverShareMinor !== null ? <div className="plus"><dt>{tr("Driver gets")}</dt><dd>{liveMoney(cancelFacts.driverShareMinor)}</dd></div> : null}
                 </dl>
               ) : <p className="op-help">{tr("No fee.")}</p>}
+              {cancelFacts.reversal ? (
+                <p className="op-help" data-testid="trip-no-show-reversal">{tr("Reversed {0} by {1}: {2}", [time(cancelFacts.reversal.at), cancelFacts.reversal.by ?? "—", cancelFacts.reversal.reason ?? "—"])}{cancelFacts.reversal.driverShareTakenBack ? ` · ${tr("driver's share taken back")}` : ` · ${tr("driver keeps his share")}`}</p>
+              ) : null}
+              {live && trip.status === "no_show" && !cancelFacts.reversal && can(role, "trips.intervene") ? (
+                <ReverseNoShowButton tripId={trip.id} zoneId={trip.zoneId} onDone={(message) => { setNotice(message); void dispatchOffers.refetch(); void trips.refetch(); }} />
+              ) : null}
               {live && canWaiveFee(cancelFacts) && can(role, "trips.intervene") ? (
                 <CommandButton command="admin.trip.waiveFee" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before={feeStatus ?? "fee"} after="waived" onDone={() => { setNotice(tr("Fee waived. The rider owes nothing for this trip.")); void dispatchOffers.refetch(); void trips.refetch(); }}>{tr("Waive the fee")}</CommandButton>
               ) : null}
@@ -414,8 +421,26 @@ export function TripPage() {
               <div><dt>{tr("Driver arrived")}</dt><dd>{time(facts.waiting.arrivedAt)}</dd></div>
               <div><dt>{tr("Free until")}</dt><dd>{time(facts.waiting.freeUntil)}</dd></div>
               {facts.waiting.chargedSoFarMinor !== null ? <div><dt>{tr("Waiting charged so far")}</dt><dd>{liveMoney(facts.waiting.chargedSoFarMinor)}</dd></div> : null}
+              {facts.waiting.freeWaitMin !== null && facts.waiting.noShowAfterMin !== null ? <div><dt>{tr("Free wait, then no-show after")}</dt><dd>{trn("{0} min · {1} min", facts.waiting.freeWaitMin, facts.waiting.noShowAfterMin)}</dd></div> : null}
+              {facts.waiting.rules.length ? <div><dt>{tr("Rule applied")}</dt><dd data-testid="trip-waiting-rules">{facts.waiting.rules.map(waitingRuleLabel).join(", ")}</dd></div> : null}
+              {facts.waiting.paidMinutes !== null ? <div><dt>{tr("Paid waiting")}</dt><dd data-testid="trip-paid-minutes">{trn("{0} min", facts.waiting.paidMinutes)}</dd></div> : null}
               {facts.waiting.noShowFeeMinor !== null ? <div><dt>{tr("No-show fee")}</dt><dd>{liveMoney(facts.waiting.noShowFeeMinor)}{facts.waiting.noShowDriverShareMinor !== null ? ` · ${tr("driver gets {0}", [liveMoney(facts.waiting.noShowDriverShareMinor)])}` : ""}</dd></div> : null}
             </dl>
+          ) : null}
+          {facts?.pin ? (
+            <div className="op-cash" data-testid="trip-pin-box">
+              <b>{trn("{0} Rider PIN", <Lock size={13} aria-hidden="true" />)}</b>
+              <dl className="op-split-lines">
+                <div><dt>{tr("Code")}</dt><dd data-testid="trip-pin-code">{facts.pin.code ?? "—"}</dd></div>
+                <div><dt>{tr("Entered by the driver")}</dt><dd>{facts.pin.verified ? tr("Yes") : tr("Not yet")}</dd></div>
+                {facts.pin.attempts !== null ? <div><dt>{tr("Wrong tries")}</dt><dd>{facts.pin.attempts}</dd></div> : null}
+                {facts.pin.blocked ? <div><dt>{tr("State")}</dt><dd data-testid="trip-pin-blocked">{tr("Blocked after too many wrong codes")}</dd></div> : null}
+              </dl>
+              {live && facts.pin.blocked && can(role, "trips.intervene") ? (
+                <CommandButton command="admin.trip.pinUnlock" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="blocked" after="unlocked" onDone={(result) => { setNotice(result?.message ?? tr("PIN unlocked. The driver can enter the code again.")); void dispatchOffers.refetch(); void trips.refetch(); }}>{tr("Unlock PIN")}</CommandButton>
+              ) : null}
+              <p className="op-help">{tr("Read the code to the driver only when you have checked who is calling.")}</p>
+            </div>
           ) : null}
           {facts?.terms ? (
             <div className="op-cash" data-testid="trip-terms">
@@ -698,4 +723,13 @@ export function TripPage() {
       </Section>
     </div>
   );
+}
+
+/** v0.18.8 (G6, contract.json#arrivedWaiting.rules.texts): the applied waiting rule in the panel's language. */
+function waitingRuleLabel(id: string): string {
+  if (id === "airport") return tr("Airport pickup");
+  if (id === "scheduled") return tr("Booked ride");
+  if (id === "event") return tr("Event pickup");
+  if (id === "far_pickup") return tr("Far pickup");
+  return tr("Other rule");
 }

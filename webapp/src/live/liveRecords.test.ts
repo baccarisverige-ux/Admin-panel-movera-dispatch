@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { approvalRow, auditRow, driverRecord, nearbyRow, paymentRecord, refundPayoutRecord, riderRecord, tripRecord } from "./liveAdminApi.ts";
+import { approvalRow, auditRow, driverRecord, nearbyRow, paymentRecord, refundPayoutRecord, riderRecord, tripFacts, tripRecord } from "./liveAdminApi.ts";
 import { isLiveData, liveDriverOf, liveTripOf, remember, setLiveData } from "./realData.ts";
 import type { Driver, Trip } from "./types.ts";
 
@@ -29,6 +29,18 @@ test("a live trip keeps every server fact: method, places, stops, money lines, s
   assert.equal(facts.driverSilentAlert?.at, "2026-10-25T08:20:00Z");
 });
 
+test("v0.18.8 (G6): paid waiting minutes, the applied rule, the PIN (admin view) and a reversed no-show are kept; the list row gets the server's minutes", () => {
+  const base = tripRecord({ tripId: "T-G6", status: "no_show", version: 4, kind: "live", createdAt: "2026-10-25T08:00:00Z", updatedAt: "2026-10-25T08:20:00Z", riderId: "R1", zoneId: "Z001", categoryId: "economy", pickup: { lat: 59.33, lng: 18.06 }, dropoff: { lat: 59.34, lng: 18.07 }, stops: [], fare: SEK(0), paymentMethod: "card",
+    pinRequired: true, pickupPin: "0427", pinVerified: false, pinAttempts: 2,
+    waiting: { arrivedAt: "2026-10-25T08:10:00Z", freeUntil: "2026-10-25T08:25:00Z", noShowAt: "2026-10-25T08:30:00Z", chargedSeconds: 130, paidMinutes: 3, rules: ["airport"], freeWaitMin: 15, noShowAfterMin: 20 },
+    cancellation: { actor: "driver", reasonCode: "no_show", at: "2026-10-25T08:31:00Z", fee: SEK(6500), feeStatus: "refunded", feeKind: "no_show", reversal: { at: "2026-10-25T09:00:00Z", by: "A1", reason: "Rider was at the other door", driverShareTakenBack: false } } });
+  const facts = (base as { liveTrip: ReturnType<typeof tripFacts> }).liveTrip;
+  assert.deepEqual([facts.waiting?.paidMinutes, facts.waiting?.rules, facts.waiting?.freeWaitMin, facts.waiting?.noShowAfterMin], [3, ["airport"], 15, 20]);
+  assert.deepEqual(facts.pin, { code: "0427", verified: false, attempts: 2, blocked: false });
+  assert.deepEqual(facts.cancellation?.reversal, { at: "2026-10-25T09:00:00Z", by: "A1", reason: "Rider was at the other door", driverShareTakenBack: false });
+  assert.equal((base as { waitingMin?: number }).waitingMin, 3, "Trips list minutes from waiting.paidMinutes");
+});
+
 test("v0.18.7 (G5): a live trip keeps the car's position, the server's ETA, the rider summary, the terms, the waiting amounts and the cancel fee", () => {
   const facts = tripRecord({
     ...TRIP, status: "driver_to_pickup",
@@ -46,7 +58,7 @@ test("v0.18.7 (G5): a live trip keeps the car's position, the server's ETA, the 
   assert.equal(facts.terms?.cancelFreeMin, 2);
   assert.equal(facts.terms?.maxPickupMoveMeters, 200);
   assert.deepEqual([facts.waiting?.noShowFeeMinor, facts.waiting?.noShowDriverShareMinor, facts.waiting?.chargedSecondsNow, facts.waiting?.chargedSoFarMinor], [6500, 5200, 30, 613]);
-  assert.deepEqual(facts.cancellation, { actor: "rider", reasonCode: "plans_changed", at: "2026-10-25T08:16:00Z", feeMinor: 6500, feeStatus: "owed", feeKind: "no_show", driverShareMinor: 5200, note: null });
+  assert.deepEqual(facts.cancellation, { actor: "rider", reasonCode: "plans_changed", at: "2026-10-25T08:16:00Z", feeMinor: 6500, feeStatus: "owed", feeKind: "no_show", driverShareMinor: 5200, note: null, reversal: null, refundedToWallet: false });
   const older = tripRecord(TRIP).liveTrip!;
   assert.deepEqual([older.driverLocation, older.eta, older.rider, older.terms, older.waiting, older.cancellation], [null, null, null, null, null, null], "an older server: nothing invented");
 });

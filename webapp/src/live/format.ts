@@ -207,6 +207,12 @@ export function errorText(error: unknown): string {
   // v0.17.0 (owner item 1): approving a document that expires needs its date.
   if (error.status === 400 && error.reason === "expiry_required") return tr("This document expires: type the expiry date from the document (after today).");
   if (error.status === 400 && error.reason === "expiry_in_past") return tr("The expiry date must be after today.");
+  // v0.18.8 (G6): Reverse no-show and Waive the fee.
+  if (error.reason === "not_a_no_show") return tr("This trip is not a no-show.");
+  if (error.reason === "fee_on_running_trip") return tr("The fee is part of a ride going on now. Try again when that ride has ended.");
+  if (error.reason === "pin_not_now") return tr("The PIN can only be checked while the driver is at the pickup.");
+  if (error.reason === "pin_blocked") return tr("Too many wrong codes: the PIN is blocked until an admin unlocks it.");
+  if (error.reason === "reason_required") return tr("Write a reason.");
   if (error.status === 409 && error.reason === "on_trip") return tr("The driver is on a trip. Try again when the trip has ended.");
   if (error.status === 409 && error.reason === "invitation_expired") return tr("This invitation has expired.");
   if (error.status === 409 && error.reason === "invitation_closed") return tr("This invitation was already answered or withdrawn.");
