@@ -20,12 +20,13 @@ import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { DataTable } from "../ui/DataTable";
 import { CommandButton } from "../ui/CommandButton";
-import { tr } from "../i18n";
+import { tr, trx } from "../i18n";
+import { isLiveData } from "../live/realData";
 
 const ROLES = Object.keys(ROLE_LABELS) as Role[];
 
 function scopeLabel(zones: "all" | string[]): string {
-  return zones === "all" ? "All Stockholm" : zones.join(", ");
+  return zones === "all" ? tr("All zones") : zones.join(", ");
 }
 
 function AdminsTable() {
@@ -35,7 +36,7 @@ function AdminsTable() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("viewer");
   const [desiredRoles, setDesiredRoles] = useState<Record<string, Role>>({});
-  const [notice, setNotice] = useState("Role and scope changes take effect from the stored demo team record.");
+  const [notice, setNotice] = useState(() => (isLiveData() ? tr("Only your own admin account is shown. Inviting and changing other admins is not connected yet.") : tr("Role and scope changes take effect from the stored demo team record.")));
 
   if (!actor) return null;
 
@@ -62,7 +63,7 @@ function AdminsTable() {
             <input type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} />
           </label>
           <label>{tr("Role")}<select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as Role)}>
-              {ROLES.map((role) => <option key={role} value={role}>{ROLE_LABELS[role]}</option>)}
+              {ROLES.map((role) => <option key={role} value={role}>{trx(ROLE_LABELS[role])}</option>)}
             </select>
           </label>
         </div>
@@ -87,7 +88,7 @@ function AdminsTable() {
 
       <article className="panel">
         <DataTable
-          head={["Name", "Email", "Role", "Presence", "Scope", "Status", "Actions"]}
+          head={[tr("Name"), tr("Email"), tr("Role"), tr("Presence"), tr("Scope"), tr("Status"), tr("Actions")]}
           rowIds={session.agents.map((agent) => agent.id)}
           rows={session.agents.map((agent) => {
             const desired = desiredRoles[agent.id] ?? agent.role;
@@ -101,28 +102,28 @@ function AdminsTable() {
                   disabled={actor.role !== "super" || actor.id === agent.id}
                   onChange={(event) => setDesiredRoles((current) => ({ ...current, [agent.id]: event.target.value as Role }))}
                 >
-                  {ROLES.map((role) => <option key={role} value={role}>{ROLE_LABELS[role]}</option>)}
+                  {ROLES.map((role) => <option key={role} value={role}>{trx(ROLE_LABELS[role])}</option>)}
                 </select>
                 <CommandButton
                   command="admin.team.editRole"
                   className="link-action"
                   type="button"
                   disabled={desired === agent.role || actor.id === agent.id}
-                  onDone={() => apply(changeAgentRole(session.agents, agent.id, desired, actor), `${agent.name} is now ${ROLE_LABELS[desired]}.`)}
+                  onDone={() => apply(changeAgentRole(session.agents, agent.id, desired, actor), tr("{0} is now {1}.", [agent.name, trx(ROLE_LABELS[desired])]))}
                 >{tr("Apply")}</CommandButton>
               </span>,
               <span key={`${agent.id}-presence`}>
-                {agent.presence}
+                {trx(agent.presence)}
                 <CommandButton
                   command="admin.team.presence"
                   className="link-action"
                   type="button"
                   disabled={actor.role !== "super"}
-                  onDone={() => apply(setAgentPresence(session.agents, agent.id, agent.presence === "online" ? "away" : "online", actor), `${agent.name} presence changed.`)}
+                  onDone={() => apply(setAgentPresence(session.agents, agent.id, agent.presence === "online" ? "away" : "online", actor), tr("{0} presence changed.", [agent.name]))}
                 >{tr("Toggle")}</CommandButton>
               </span>,
               scopeLabel(agent.scope.zones),
-              agent.active ? "active" : "inactive",
+              agent.active ? tr("active") : tr("inactive"),
               <span key={agent.id}>
                 <CommandButton
                   command="admin.team.resetCode"
@@ -130,7 +131,7 @@ function AdminsTable() {
                   className="link-action"
                   disabled={agent.id === actor.id}
                   targetId={agent.id}
-                  onDone={() => apply(resetAgentCode(session.agents, agent.id, actor), `2-step code reset for ${agent.name}.`)}
+                  onDone={() => apply(resetAgentCode(session.agents, agent.id, actor), tr("2-step code reset for {0}.", [agent.name]))}
                 >{tr("Reset 2-step")}</CommandButton>
                 {agent.active ? (
                   <CommandButton
@@ -139,7 +140,7 @@ function AdminsTable() {
                     className="link-action danger-text"
                     disabled={agent.id === actor.id}
                     targetId={agent.id}
-                    onDone={() => apply(deactivateAgent(session.agents, agent.id, actor), `${agent.name} deactivated.`)}
+                    onDone={() => apply(deactivateAgent(session.agents, agent.id, actor), tr("{0} deactivated.", [agent.name]))}
                   >{tr("Deactivate")}</CommandButton>
                 ) : (
                   <CommandButton
@@ -147,7 +148,7 @@ function AdminsTable() {
                     type="button"
                     className="link-action"
                     targetId={agent.id}
-                    onDone={() => apply(reactivateAgent(session.agents, agent.id, actor), `${agent.name} reactivated.`)}
+                    onDone={() => apply(reactivateAgent(session.agents, agent.id, actor), tr("{0} reactivated.", [agent.name]))}
                   >{tr("Reactivate")}</CommandButton>
                 )}
               </span>,
@@ -187,7 +188,7 @@ export function TeamPage() {
     return next;
   }, { replace: true });
   const q = query.trim().toLowerCase();
-  const list = useMemo(() => session.agents.filter((agent) => (!role || agent.role === role) && (!q || `${agent.name} ${agent.email} ${ROLE_LABELS[agent.role]}`.toLowerCase().includes(q))), [session.agents, role, q]);
+  const list = useMemo(() => session.agents.filter((agent) => (!role || agent.role === role) && (!q || `${agent.name} ${agent.email} ${trx(ROLE_LABELS[agent.role])}`.toLowerCase().includes(q))), [session.agents, role, q]);
   if (!actor) return null;
   return (
     <div className="dx-page pl-page">
@@ -196,12 +197,12 @@ export function TeamPage() {
           <button data-command="admin.team.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
           <div>
             <h2>{tr("Team and roles")}</h2>
-            <p>{tr("Eleven planned admin roles are represented. Changes are permission-gated and stored in the demo session.")}</p>
+            <p>{isLiveData() ? tr("Eleven admin roles. Changes are permission-gated.") : tr("Eleven planned admin roles are represented. Changes are permission-gated and stored in the demo session.")}</p>
           </div>
         </div>
       </div>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Team sections")}>
-        {TEAM_TABS.map((item) => <button data-command="admin.team.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => selectTab(item.id)}>{item.label}</button>)}
+        {TEAM_TABS.map((item) => <button data-command="admin.team.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => selectTab(item.id)}>{trx(item.label)}</button>)}
       </div>
       {notice ? <p role="status" className="pl-status">{notice}</p> : null}
       {tab === "roles" ? <RolesView editable={editable} by={actor.id} onNotice={setNotice} /> : null}
@@ -223,7 +224,7 @@ export function TeamPage() {
           <Card title={tr("Admins")} icon={<Users size={15} />} tone="blue" help={tr("Open an admin to see what they can do and what they did.")}>
             <div className="pl-filters">
               <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label={tr("Search admins")} placeholder={tr("Name, email or role")} value={query} onChange={(e) => setQuery(e.target.value)} /></label>
-              <select aria-label={tr("Filter by role")} value={role} onChange={(e) => setRole(e.target.value as Role | "")}><option value="">{tr("Every role")}</option>{ROLES.map((item) => <option key={item} value={item}>{ROLE_LABELS[item]}</option>)}</select>
+              <select aria-label={tr("Filter by role")} value={role} onChange={(e) => setRole(e.target.value as Role | "")}><option value="">{tr("Every role")}</option>{ROLES.map((item) => <option key={item} value={item}>{trx(ROLE_LABELS[item])}</option>)}</select>
             </div>
             <ul className="pl-admins" aria-label={tr("Admin list")}>
               {list.map((agent) => {
@@ -233,7 +234,7 @@ export function TeamPage() {
                     <Link to={`/team/${agent.id}`}>
                       <span className={`pl-avatar ${agent.presence}`} aria-hidden="true">{agent.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</span>
                       <span className="pl-admin-text"><b>{agent.name}</b><small>{agent.email}</small></span>
-                      <span className="pl-role-pill">{custom ? custom.name : ROLE_LABELS[agent.role]}</span>
+                      <span className="pl-role-pill">{custom ? custom.name : trx(ROLE_LABELS[agent.role])}</span>
                       <small className="pl-admin-place">{placeOf(agent.scope)} · {agent.active ? agent.presence : tr("deactivated")}</small>
                     </Link>
                   </li>

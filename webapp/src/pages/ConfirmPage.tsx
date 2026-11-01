@@ -10,7 +10,7 @@ import { OPEN_VALUES } from "../config/confirm";
 import { CONFIRM_OPS_KEY, decisionError, emptyConfirmOps, inboxItems, normalizeConfirmOps, type ConfirmOps, type InboxKind } from "../platform/inbox";
 import { Cards } from "../reports/ui";
 import { CommandButton } from "../ui/CommandButton";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
 
 const KIND_LABEL: Record<InboxKind, string> = { money: "Money", settings: "Settings", value: "Product value" };
 
@@ -81,7 +81,7 @@ export function ConfirmPage() {
             {shown.map((item) => (
               <li key={item.id} className={`pl-inbox-row ${item.kind}`}>
                 <span className="pl-inbox-icon" aria-hidden="true">{item.kind === "money" ? <Banknote size={15} /> : item.kind === "settings" ? <Settings2 size={15} /> : <CheckCircle2 size={15} />}</span>
-                <span className="pl-inbox-text"><b>{item.title}</b><small>{item.detail}{item.by ? tr(" · asked by {0}", [item.by]) : ""}</small></span>
+                <span className="pl-inbox-text"><b>{trx(item.title)}</b><small>{trx(item.detail)}{item.by ? tr(" · asked by {0}", [item.by]) : ""}</small></span>
                 <span className="actions">
                   {item.kind === "money" ? (
                     <>
@@ -107,7 +107,7 @@ export function ConfirmPage() {
             return (
               <div className="confirm-field pl-value" key={item.id} id={`value-${item.id}`}>
                 <label>
-                  {item.label}
+                  {trx(item.label)}
                   <input readOnly value={item.today} />
                 </label>
                 {item.link ? <Link className="link-action" to={item.link}>{item.link.startsWith("/dispatch") ? tr("Open in Dispatch") : tr("Open")}</Link> : null}

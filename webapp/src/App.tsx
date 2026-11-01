@@ -5,7 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
 import { AppShell } from "./layout/AppShell";
-import { MENU, isRedirectPath, menuItem, pageForPath, type MenuItem } from "./nav";
+import { MENU, menuItem, pageForPath, redirectTarget, type MenuItem } from "./nav";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundRecord } from "./ui/NotFoundRecord";
 import { I18nProvider } from "./i18n/I18nProvider";
@@ -29,7 +29,6 @@ const ConfirmPage = lazyPage(() => import("./pages/ConfirmPage"), "ConfirmPage")
 const ContentPage = lazyPage(() => import("./pages/ContentPage"), "ContentPage");
 const DashboardPage = lazyPage(() => import("./pages/DashboardPage"), "DashboardPage");
 const DispatchSectionPage = lazyPage(() => import("./pages/DispatchSectionPage"), "DispatchSectionPage");
-const DispatchRedirect = lazyPage(() => import("./pages/DispatchSectionPage"), "DispatchRedirect");
 const AlertsPage = lazyPage(() => import("./pages/AlertsPage"), "AlertsPage");
 const DesignPage = lazyPage(() => import("./pages/DesignPage"), "DesignPage");
 const DriverDetailPage = lazyPage(() => import("./pages/DriverDetailPage"), "DriverDetailPage");
@@ -129,7 +128,7 @@ function NoAccess() {
   );
 }
 
-function Shell({ page, children, forceNoAccess = false, redirect = false }: { page: MenuItem | undefined; children: ReactNode; forceNoAccess?: boolean; redirect?: boolean }) {
+function Shell({ page, children, forceNoAccess = false }: { page: MenuItem | undefined; children: ReactNode; forceNoAccess?: boolean }) {
   const { agent } = useSession();
   const live = useLiveSessionMaybe();
   // Default deny: a route with no page entry (and so no permission) never renders its screen.
@@ -154,7 +153,7 @@ function Shell({ page, children, forceNoAccess = false, redirect = false }: { pa
             </p>
           ) : null}
           {live ? <IncidentAlarm /> : null}
-          {denied ? <NoAccess /> : page || redirect ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>{children}</Suspense> : <NotFound />}
+          {denied ? <NoAccess /> : page ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>{children}</Suspense> : <NotFound />}
         </section>
       </AssignPanelProvider>
     </AppShell>
@@ -178,11 +177,14 @@ function Authed() {
     const first = MENU.find((item) => live.can(item.permission));
     if (first && first.path !== "/") return <Navigate to={first.path} replace />;
   }
+  // Old addresses go to their page at once, before the shell draws a title (never "Page not found" in between).
+  const redirectTo = redirectTarget(location.pathname, location.search, location.hash);
+  if (redirectTo) return <Navigate to={redirectTo} replace />;
   const page = pageForPath(location.pathname);
   const scope = new URLSearchParams(location.search).get("scope");
   const scopeDenied = Boolean(agent && scope && !canUseZone(agent, scope));
   return (
-    <Shell page={page} forceNoAccess={scopeDenied} redirect={isRedirectPath(location.pathname)}>
+    <Shell page={page} forceNoAccess={scopeDenied}>
       <Routes>
         <Route index element={<Screen id="dashboard" />} />
         <Route path="reports" element={<Screen id="reports" />} />
@@ -192,13 +194,10 @@ function Authed() {
         <Route path="reservations" element={<Screen id="reservations" />} />
         <Route path="reservations/:id" element={<ReservationDetailPage />} />
         {/* Dispatch: one section with four tabs; the old Live map and Radar · Exclusive · Reservations pages open their tab. */}
-        <Route path="dispatch" element={<DispatchRedirect />} />
         <Route path="dispatch/map" element={<Screen id="dispatch" />} />
         <Route path="dispatch/radar" element={<Screen id="dispatch" />} />
         <Route path="dispatch/bookings" element={<Screen id="dispatch" />} />
         <Route path="dispatch/rules" element={<Screen id="dispatch" />} />
-        <Route path="live" element={<DispatchRedirect />} />
-        <Route path="offers" element={<DispatchRedirect />} />
         <Route path="alerts" element={<Screen id="alerts" />} />
         <Route path="drivers" element={<Screen id="drivers" />} />
         <Route path="drivers/:driverId" element={<DriverDetailPage />} />
@@ -236,7 +235,6 @@ function Authed() {
         <Route path="system" element={<Screen id="system" />} />
         <Route path="gates" element={<Screen id="gates" />} />
         <Route path="design" element={<Screen id="design" />} />
-        <Route path="users" element={<Navigate to="/drivers" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Shell>

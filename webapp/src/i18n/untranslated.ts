@@ -33,7 +33,7 @@ export const ALLOW = new Set([
   "Movera", "Movera Admin", "Google", "Google Maps", "MapLibre", "OpenStreetMap", "Stripe", "Swish", "Klarna", "Apple Pay",
   "Google Pay", "Visa", "Mastercard", "iOS", "Android", "SMS", "API", "CSV", "JSON", "PDF", "QR", "ID", "OK", "km", "min",
   "km/h", "kr", "SEK", "EUR", "TND", "€", "h", "s", "m", "x", "×", "WhatsApp", "FR", "SV", "EN",
-  "SE", "TN", "XL", "GPS", "VAT", "PIN", "IBAN", "BIC", "URL", "UTC", "ms", "MB", "kB", "px", "%", "SOS", "OTP",
+  "SE", "TN", "XL", "GPS", "Svenska", "Français", "English", "VAT", "PIN", "IBAN", "BIC", "URL", "UTC", "ms", "MB", "kB", "px", "%", "SOS", "OTP",
 ]);
 
 /** A text that needs a translation: it has a word, and is not an id, a code, a symbol or a brand. */
@@ -170,6 +170,45 @@ export function scanTree(root: string, known?: ReadonlySet<string>, extended = f
       if (entry.isDirectory()) walk(path);
       else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$|\.d\.ts$/.test(entry.name) && !path.includes(`${join("src", "i18n")}`)) {
         findings.push(...scanSource(relative(root, path), readFileSync(path, "utf8"), known, extended));
+      }
+    }
+  };
+  walk(join(root, "src"));
+  return findings;
+}
+
+/** Keys of data objects whose string value a component shows through trx() (tabs, rows, cards, menus, chips). */
+const DATA_TEXT_KEYS = new Set(["label", "help", "title", "info", "hint", "text", "what"]);
+
+/**
+ * Page audit 2026-11-01 (English left in FR/SV on Team, Handover, Messages, Promotions, Risk, Confirm…): a text kept in
+ * a data object ({ id, label: "Roles and permissions" }) is shown through trx(), so it needs an en/fr/sv entry or sv and
+ * fr read English. A data text that is not a dictionary key is a finding.
+ */
+export function scanDataTexts(file: string, code: string, known: ReadonlySet<string>): Finding[] {
+  const source = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const findings: Finding[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isPropertyAssignment(node) && DATA_TEXT_KEYS.has(node.name.getText(source)) && (ts.isStringLiteral(node.initializer) || ts.isNoSubstitutionTemplateLiteral(node.initializer))) {
+      const text = node.initializer.text;
+      const line = source.getLineAndCharacterOfPosition(node.getStart(source)).line;
+      if (needsTranslation(text) && !known.has(text) && !/i18n-ignore/.test(code.split("\n")[line] ?? "")) findings.push({ file, line: line + 1, text, where: `data ${node.name.getText(source)}` });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return findings;
+}
+
+/** scanDataTexts over every .ts/.tsx under src (tests and dictionaries left out). */
+export function scanDataTree(root: string, known: ReadonlySet<string>): Finding[] {
+  const findings: Finding[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$|\.d\.ts$/.test(entry.name) && !path.includes(`${join("src", "i18n")}`)) {
+        findings.push(...scanDataTexts(relative(root, path), readFileSync(path, "utf8"), known));
       }
     }
   };

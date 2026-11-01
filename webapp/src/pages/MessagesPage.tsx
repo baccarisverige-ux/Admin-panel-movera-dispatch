@@ -11,7 +11,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { DriverNoticesView } from "../messages/DriverNotices";
 import { Cards } from "../reports/ui";
 import { CommandButton } from "../ui/CommandButton";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
 import { categoryName } from "../riders/profile";
 
 type Tab = "campaigns" | "auto" | "rules" | "drivers";
@@ -61,7 +61,7 @@ export function MessagesPage() {
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Message sections")}>
-        {([["campaigns", "Campaigns"], ["auto", "Automatic messages"], ["rules", "Limits and quiet hours"], ["drivers", "Driver notifications"]] as const).map(([id, label]) => <button data-command="admin.campaigns.view" key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : undefined} onClick={() => selectTab(id)}>{label}</button>)}
+        {([["campaigns", "Campaigns"], ["auto", "Automatic messages"], ["rules", "Limits and quiet hours"], ["drivers", "Driver notifications"]] as const).map(([id, label]) => <button data-command="admin.campaigns.view" key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : undefined} onClick={() => selectTab(id)}>{trx(label)}</button>)}
       </div>
       <p role="status" className="gr-status">{notice}</p>
 
@@ -119,7 +119,7 @@ export function MessagesPage() {
                   <div className="gr-extra">
                     <label className="gr-field"><span>{tr("Who gets it")}</span>
                       <select aria-label={tr("Audience group")} value={campaignExtra.group} disabled={!editable} onChange={(e) => setExtra({ ...campaignExtra, group: e.target.value })}>
-                        {GROUPS.filter((group) => group.app === c.app).map((group) => <option key={group.id} value={group.id}>{group.label}</option>)}
+                        {GROUPS.filter((group) => group.app === c.app).map((group) => <option key={group.id} value={group.id}>{trx(group.label)}</option>)}
                       </select>
                     </label>
                     {langs.filter((lang) => lang !== "sv" && lang !== "en").map((lang) => (
@@ -163,7 +163,7 @@ function AutoMessages({ ops, country, editable, onNotice }: { ops: MessageOps; c
       <ul className="gr-autos" aria-label={tr("Automatic messages")}>
         {list.map((item) => (
           <li key={item.id} className={item.on ? "on" : "off"}>
-            <span><b>{item.name}</b><small>{TRIGGERS.find((trigger) => trigger.id === item.trigger)?.label}{TRIGGERS.find((trigger) => trigger.id === item.trigger)?.days ? tr(" · {0} days", [item.days]) : ""} · {item.channel} · {item.app === "driver" ? tr("Drivers") : tr("Riders")}</small><em>{item.text}</em></span>
+            <span><b>{trx(item.name)}</b><small>{trx(TRIGGERS.find((trigger) => trigger.id === item.trigger)?.label)}{TRIGGERS.find((trigger) => trigger.id === item.trigger)?.days ? tr(" · {0} days", [item.days]) : ""} · {item.channel} · {item.app === "driver" ? tr("Drivers") : tr("Riders")}</small><em>{trx(item.text)}</em></span>
             <CommandButton command="admin.campaigns.auto" className="dash-btn small ghost" sliceKey={MSG_OPS_KEY} value={save({ ...item, on: !item.on })} expectedSliceRev={ops.draftRev} targetId={item.id} confirmTarget={false} before={item.on ? "on" : "off"} after={item.on ? "off" : "on"} disabled={!editable} onDone={() => onNotice(tr("{0} turned {1}.", [item.name, item.on ? tr("off") : tr("on")]))}>{item.on ? tr("Turn off") : tr("Turn on")}</CommandButton>
             <button data-command="admin.campaigns.view" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setDraft(item)}>{tr("Change")}</button>
           </li>
@@ -173,7 +173,7 @@ function AutoMessages({ ops, country, editable, onNotice }: { ops: MessageOps; c
       {draft ? (
         <section className="gr-editor gr-auto-edit" aria-label={tr("Automatic message")}>
           <label className="gr-field"><span>{tr("Name")}</span><input aria-label={tr("Automatic message name")} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
-          <label className="gr-field"><span>{tr("When")}</span><select aria-label={tr("When it is sent")} value={draft.trigger} onChange={(e) => { const trigger = TRIGGERS.find((item) => item.id === e.target.value)!; setDraft({ ...draft, trigger: trigger.id, app: trigger.app }); }}>{TRIGGERS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+          <label className="gr-field"><span>{tr("When")}</span><select aria-label={tr("When it is sent")} value={draft.trigger} onChange={(e) => { const trigger = TRIGGERS.find((item) => item.id === e.target.value)!; setDraft({ ...draft, trigger: trigger.id, app: trigger.app }); }}>{TRIGGERS.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}</select></label>
           {TRIGGERS.find((item) => item.id === draft.trigger)?.days ? <label className="gr-field"><span>{tr("Days")}</span><input aria-label={tr("Days")} type="number" value={draft.days} onChange={(e) => setDraft({ ...draft, days: Number(e.target.value) })} /></label> : null}
           <label className="gr-field"><span>{tr("Channel")}</span><select aria-label={tr("Automatic channel")} value={draft.channel} onChange={(e) => setDraft({ ...draft, channel: e.target.value as AutoMessage["channel"] })}><option value="push">{tr("Push")}</option><option value="sms">SMS</option></select></label>
           <label className="gr-field wide"><span>{tr("Message")}</span><textarea aria-label={tr("Automatic message text")} rows={2} value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} /></label>

@@ -81,7 +81,7 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
       <Row label={tr("Cancel after the driver arrived counts as a no-show")} help={tr("{0} Inside the free minutes after accept the rider always cancels free; before the free waiting at the pickup is over it is the normal cancel fee. Off: the normal cancel fee applies after arrival too.", [cancelAfterArrivedText()])} on={wait.cancelAfterArrivedIsNoShow} disabled={disabled} onToggle={(cancelAfterArrivedIsNoShow) => set({ cancelAfterArrivedIsNoShow })} />
       <Row label={tr("Driver's share")} help={tr("The waiting money always goes {0}% to the driver. The no-show fee share is one rule for all of {1}. The no-show reason never counts in the cancel rate.", [WAITING_DRIVER_SHARE_PCT, countryName])}>
         <span className="dx-override on" data-testid="wait-share-fixed"><small>{trn("waiting money {0}% (fixed)", WAITING_DRIVER_SHARE_PCT)}</small></span>
-        <Num label={tr("Driver's share of the no-show fee")} before={`no-show, all of ${countryName}`} value={country.noShowDriverSharePct} unit="%" min={0} max={100} disabled={disabled} onChange={(noShowDriverSharePct) => onCountry({ ...country, noShowDriverSharePct: Math.round(noShowDriverSharePct) })} />
+        <Num label={tr("Driver's share of the no-show fee")} before={tr("no-show, all of {0}", [countryName])} value={country.noShowDriverSharePct} unit="%" min={0} max={100} disabled={disabled} onChange={(noShowDriverSharePct) => onCountry({ ...country, noShowDriverSharePct: Math.round(noShowDriverSharePct) })} />
       </Row>
 
       <div className="dx-sub" role="group" aria-label={tr("Far pickups")}>

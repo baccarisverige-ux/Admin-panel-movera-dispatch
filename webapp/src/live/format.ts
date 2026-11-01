@@ -372,7 +372,56 @@ export function liveRowHealth(row: { status: string; document: { expiresAt?: str
 /* ---------------------------------------------------------------- audit lines written by the server itself (v0.18.4) */
 
 /** Server-written audit actions with a readable name (G3-R1: contract.json#driverHome.setOffline.auditAction). */
-const AUDIT_ACTIONS: Record<string, MessageKey> = { "driver.auto_offline": "Set offline automatically" };
+/** Page audit 2026-11-01: the server's audit actions as words (fr/sv/en), never the raw key. */
+const AUDIT_ACTIONS: Record<string, MessageKey> = {
+  "driver.auto_offline": "Set offline automatically",
+  "category.archive": "Car type archived", "category.create": "Car type added", "category.edit": "Car type changed", "category.restore": "Car type restored",
+  "config.draft": "Settings draft saved", "config.publish": "Settings published", "config.use_standard": "Zone set back to the standard",
+  "content.publish": "Texts published", "content.rollback": "Texts rolled back", "legal.publish": "Legal text published",
+  "dispatch.event.create": "Event added", "dispatch.event.delete": "Event removed", "dispatch.event.update": "Event changed",
+  "dispatch.group.create": "Driver group added", "dispatch.group.delete": "Driver group removed", "dispatch.group.update": "Driver group changed",
+  "dispatch.preset.create": "Preset added", "dispatch.preset.delete": "Preset removed", "dispatch.preset.update": "Preset changed",
+  "dispatch.radar_rule.create": "Radar rule added", "dispatch.radar_rule.delete": "Radar rule removed", "dispatch.radar_rule.update": "Radar rule changed",
+  "dispatch.radar_zone.create": "Radar zone added", "dispatch.radar_zone.delete": "Radar zone removed", "dispatch.radar_zone.update": "Radar zone changed",
+  "document.check": "Document checked", "document.file": "Document opened", "document.review": "Document reviewed",
+  "driver.categories": "Driver car types changed", "driver.status": "Driver status changed", "rider.status": "Rider status changed",
+  "fleet.code": "Fleet code changed", "fleet.remove_driver": "Driver removed from fleet", "fleet.review": "Fleet reviewed",
+  "incident.open": "Incident opened", "incident.resolve": "Incident solved",
+  "payout.create": "Payout made", "payout.paid": "Payout marked paid", "refund.paid": "Refund paid",
+  "rating.hide": "Review hidden", "rating.restore": "Review shown again",
+  "support.reply": "Support answered", "ticket.reply": "Ticket answered",
+  "surge.end": "Surge ended", "surge.schedule": "Surge planned",
+  "trip.adjust": "Trip price changed", "trip.assign": "Driver assigned", "trip.cancel": "Trip cancelled", "trip.complete": "Trip completed",
+  "trip.driver_bonus": "Driver bonus added to trip", "trip.no_show": "No-show recorded", "trip.pin_unlock": "Pickup PIN unlocked",
+  "trip.radar_group": "Trip sent to a driver group", "trip.radar_zone_stop": "Radar zone stopped for trip", "trip.reassign": "Driver changed",
+  "trip.refund": "Trip refunded", "trip.reverse_no_show": "No-show undone",
+  "vehicle.link_driver": "Vehicle linked to driver", "vehicle.review": "Vehicle reviewed", "vehicle.update": "Vehicle changed",
+  "zone.create": "Zone added", "zone.update": "Zone changed",
+};
+
+/** Words for the fields of an audit detail; other fields are split into plain words. */
+const AUDIT_FIELDS: Record<string, MessageKey> = {
+  note: "Note", total: "Total", status: "Status", reason: "Reason", sentTo: "Sent to", amountMinor: "Amount", name: "Name",
+  version: "Version", zoneId: "Zone", driverId: "Driver", riderId: "Rider", tripId: "Trip", minutes: "Minutes", country: "Country",
+};
+
+/**
+ * Page audit 2026-11-01: an audit "before/after" that is JSON reads as "Note: …, Total: 200" instead of raw JSON.
+ * Text that is not a JSON object is returned as it is.
+ */
+export function auditValueText(raw: string): string {
+  const text = (raw ?? "").trim();
+  if (!text.startsWith("{")) return raw;
+  let value: unknown;
+  try { value = JSON.parse(text); } catch { return raw; }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return raw;
+  const parts = Object.entries(value as Record<string, unknown>).filter(([, item]) => item !== null && item !== undefined && item !== "").map(([key, item]) => {
+    const label = AUDIT_FIELDS[key] ? tr(AUDIT_FIELDS[key]) : key.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, (_, a: string, b: string) => `${a} ${b}`).toLowerCase();
+    const shown = typeof item === "object" ? (Array.isArray(item) ? item.map(String).join(", ") : Object.keys(item as object).length + "") : String(item);
+    return `${label}: ${shown}`;
+  });
+  return parts.length ? parts.join(" · ") : "—";
+}
 
 /** The audit action in the panel's language; actions without a text keep their command name. */
 export function auditActionText(action: string): string {

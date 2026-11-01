@@ -186,7 +186,7 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
           </tbody>
         </table>
       )}
-      <p className="state-line">{trn("{0} rows · page {1} of {2}{3}{4}", sorted.length, safePage + 1, pageCount, <CommandButton command="admin.table.previous" className="link-action" type="button" disabled={safePage === 0} onDone={() => setPage(safePage - 1)}>{tr("Previous")}</CommandButton>, <CommandButton command="admin.table.next" className="link-action" type="button" disabled={safePage >= pageCount - 1} onDone={() => setPage(safePage + 1)}>{tr("Next")}</CommandButton>)}</p>
+      <p className="state-line">{trn(sorted.length === 1 ? "{0} row · page {1} of {2}{3}{4}" : "{0} rows · page {1} of {2}{3}{4}", sorted.length, safePage + 1, pageCount, <CommandButton command="admin.table.previous" className="link-action" type="button" disabled={safePage === 0} onDone={() => setPage(safePage - 1)}>{tr("Previous")}</CommandButton>, <CommandButton command="admin.table.next" className="link-action" type="button" disabled={safePage >= pageCount - 1} onDone={() => setPage(safePage + 1)}>{tr("Next")}</CommandButton>)}</p>
     </div>
   );
 }

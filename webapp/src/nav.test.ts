@@ -1,6 +1,6 @@
 import { can } from "./auth/permissions.ts";
 import { readFileSync } from "node:fs";
-import { MENU, MENU_GROUPS, REDIRECT_PATHS, pageForPath } from "./nav.ts";
+import { MENU, MENU_GROUPS, REDIRECT_PATHS, pageForPath, redirectTarget } from "./nav.ts";
 
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
@@ -34,5 +34,14 @@ assert(!can("viewer", pageForPath("/team/nora")!.permission), "viewer cannot ope
 const routes = [...readFileSync(new URL("./App.tsx", import.meta.url), "utf8").matchAll(/<Route path="([^"*]+)"/g)].map((match) => `/${match[1]}`.replace(/:[^/]+/g, "x"));
 assert(routes.length > 30, "found the routes");
 for (const route of routes) assert(pageForPath(route) || REDIRECT_PATHS.includes(route), `route ${route} has no page entry`);
+
+// Page audit 2026-11-01: old addresses are redirected at once (no lazy chunk, never "Page not found" in between).
+assert(redirectTarget("/users") === "/drivers", "/users opens Drivers");
+assert(redirectTarget("/users/", "?q=1") === "/drivers?q=1", "/users keeps its search");
+assert(redirectTarget("/live") === "/dispatch/map", "/live opens the live map");
+assert(redirectTarget("/offers") === "/dispatch/radar", "/offers opens Radar");
+assert(redirectTarget("/offers", "?tab=reservations") === "/dispatch/bookings", "/offers?tab=reservations opens Bookings");
+assert(redirectTarget("/drivers") === null, "a real page is not redirected");
+for (const path of REDIRECT_PATHS) assert(redirectTarget(path) && pageForPath(redirectTarget(path)!.split("?")[0]!), `${path} lands on a page`);
 
 console.log("admin nav ok");

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PlaceholderChips } from "../ui/PlaceholderChips";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileCheck, History, Scale, TriangleAlert } from "lucide-react";
 import { tr, trn, trx } from "../i18n";
@@ -133,6 +134,7 @@ function LiveLegal({ country, onCountry, onNotice }: { country: LegalCountry; on
               <h4>{tr(DOCUMENT_NAME[id])} · {LANGUAGE_NAME[language]}</h4>
               <label>{tr("Title")}<input lang={language} value={draft[id].title[language]} maxLength={TITLE_MAX} onChange={(event) => patchDoc(id, "title", event.target.value)} aria-label={tr("{0} title ({1})", [tr(DOCUMENT_NAME[id]), LANGUAGE_NAME[language]])} /></label>
               <label>{tr("Text")}<textarea lang={language} rows={16} value={draft[id].text[language]} maxLength={TEXT_MAX} onChange={(event) => patchDoc(id, "text", event.target.value)} aria-label={tr("{0} text ({1})", [tr(DOCUMENT_NAME[id]), LANGUAGE_NAME[language]])} /></label>
+              <PlaceholderChips text={draft[id].text[language]} />
               <small className="gr-help">{tr("{0} of {1} characters. A blank line starts a new paragraph.", [draft[id].text[language].length, TEXT_MAX])}</small>
             </div>
           ))}

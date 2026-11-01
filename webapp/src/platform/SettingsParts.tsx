@@ -64,7 +64,7 @@ export function SettingsElsewhere() {
             <h4>{section}</h4>
             <ul>
               {ELSEWHERE.filter((item) => item.section === section).map((item) => (
-                <li key={item.path}><Link to={item.path}><b>{trx(item.label)}</b><small>{item.what}</small><ArrowRight size={13} aria-hidden="true" /></Link></li>
+                <li key={item.path}><Link to={item.path}><b>{trx(item.label)}</b><small>{trx(item.what)}</small><ArrowRight size={13} aria-hidden="true" /></Link></li>
               ))}
             </ul>
           </section>

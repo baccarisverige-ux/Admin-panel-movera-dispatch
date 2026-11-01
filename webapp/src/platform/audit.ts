@@ -1,5 +1,7 @@
 import type { AuditRow } from "../api/seed.ts";
 import { toCsv } from "../reports/csv.ts";
+import { tr } from "../i18n/index.ts";
+import { auditValueText } from "../live/format.ts";
 
 /** Audit: search and filters over every recorded command, what changed, and a CSV export. */
 
@@ -37,7 +39,7 @@ export function filterAudit(rows: readonly AuditRow[], filters: AuditFilters): A
 export function changeOf(row: Pick<AuditRow, "before" | "after">): string | null {
   if (!row.before && !row.after) return null;
   if (row.before === row.after) return null;
-  return `${row.before || "(empty)"} → ${row.after || "(empty)"}`;
+  return `${row.before ? auditValueText(row.before) : tr("(empty)")} → ${row.after ? auditValueText(row.after) : tr("(empty)")}`;
 }
 
 export function auditCsv(rows: readonly AuditRow[]): string {

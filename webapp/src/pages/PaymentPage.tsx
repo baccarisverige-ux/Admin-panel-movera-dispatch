@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useNavigate, useParams } from "react-router";
-import { ArrowLeft, Gavel, RefreshCcw } from "lucide-react";
+import { ArrowLeft, Copy, Gavel, RefreshCcw } from "lucide-react";
 import { useApprovals, useRecords, useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { formatMoney, market } from "../markets/markets";
@@ -25,6 +25,7 @@ export function PaymentPage() {
   const opsSlice = useSlice<PayOps>(PAY_OPS_KEY, emptyPayOps());
   const { policy: refundPolicy } = useRefundPolicy();
   const [now] = useState(() => Date.now());
+  const [copied, setCopied] = useState(false);
   const row = payments.data?.find((item) => item.id === id);
   if (payments.isLoading) return <p className="state-line">{tr("Loading payment.")}</p>;
   if (!row) {
@@ -60,7 +61,9 @@ export function PaymentPage() {
       <header className="dx-head">
         <button data-command="admin.payment.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/payments"))}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
         <div className="dx-head-text">
-          <h2>{trn("Payment {0}", payment.id)}</h2>
+          <h2 className="pm-id-title">{trn("Payment {0}", <span className="pm-id" title={payment.id}>{payment.id}</span>)}
+            <button data-command="admin.payment.view" type="button" className="dash-btn small ghost pm-copy" aria-label={tr("Copy payment id")} title={copied ? tr("Copied") : tr("Copy payment id")} onClick={() => { void navigator.clipboard?.writeText(payment.id).then(() => setCopied(true)).catch(() => undefined); }}><Copy size={13} aria-hidden="true" /></button>
+          </h2>
           <p>{statusLabel(payment.status)} · {money(amount)} · {payment.zoneId}</p>
         </div>
         <Link className="dash-btn small ghost" to="/payments">{tr("Back to payments")}</Link>
@@ -73,7 +76,7 @@ export function PaymentPage() {
         cards={[
           { id: "driver", label: tr("Driver gets"), value: split.driver, previous: null, format: "money", info: tr("The price minus Movera's commission.") },
           { id: "movera", label: tr("Movera keeps"), value: split.movera, previous: null, format: "money", info: tr("Commission (20% until the price book is linked).") },
-          { id: "vat", label: `VAT inside (${Math.round(split.vatRate * 100)}%)`, value: split.vat, previous: null, format: "money", info: tr("VAT included in the price. Rates are placeholders to confirm.") },
+          { id: "vat", label: Number.isFinite(split.vatRate) ? tr("VAT inside ({0}%)", [Math.round(split.vatRate * 100)]) : tr("VAT inside"), value: split.vat, previous: null, format: "money", info: tr("VAT included in the price. Rates are placeholders to confirm.") },
         ]}
       />
 
