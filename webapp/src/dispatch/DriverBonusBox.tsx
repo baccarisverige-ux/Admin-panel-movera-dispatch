@@ -166,7 +166,7 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
           disabled={!canAct || !open || addMinor <= 0 || Boolean(issue)}
           title={!open ? tr("Money can be added only while the trip is requested, searching or offered.") : issue?.message ?? tr("Adds it now to the offers already out, and keeps it for the next sends.")}
           summary={<>{trn("Add {0} for the driver on {1} ({2}). Movera pays it; the rider’s price does not change.", <b>{money(addMinor)}</b>, trip.id, trx(SCOPE_LABEL[draft.scope]))}</>}
-          onDone={() => { set({ amount: "" }); void queryClient.invalidateQueries({ queryKey: ["assign-offers", trip.id] }); onDone?.(outNow ? tr("{0} added for the driver.", [money(addMinor)]) : `${tr("{0} added for the driver.", [money(addMinor)])} ${draft.scope === "exclusive" ? tr("No Exclusive offer is out now: it goes with the next Exclusive offer.") : draft.scope === "radar" ? tr("No Radar offer is out now: it goes with the next Radar offer.") : tr("No offer is out now: it goes with the next offer.")}`); }}
+          onDone={(result) => { set({ amount: "" }); void queryClient.invalidateQueries({ queryKey: ["assign-offers", trip.id] }); onDone?.(result?.notice ? `${tr("{0} added for the driver.", [money(addMinor)])} ${result.notice}` : outNow ? tr("{0} added for the driver.", [money(addMinor)]) : `${tr("{0} added for the driver.", [money(addMinor)])} ${draft.scope === "exclusive" ? tr("No Exclusive offer is out now: it goes with the next Exclusive offer.") : draft.scope === "radar" ? tr("No Radar offer is out now: it goes with the next Radar offer.") : tr("No offer is out now: it goes with the next offer.")}`); }}
         >{tr("Add money")}</CommandButton>
       </div>
       {issue ? (

@@ -2367,6 +2367,7 @@ S["TripRouteChange"] = obj(OrderedDict([
 ]), ["changeId", "status", "dropoff", "stops", "total", "difference", "askedAt", "answerBy"], "v0.18.9: " + _RX["projection"] + " " + _RX["price"])
 S["TripProjection"]["properties"]["rideCheck"] = ref("TripRideCheck")
 S["DriverBonusOfKind"] = obj({"amountMinor": i(minimum=0), "currency": s(pattern="^[A-Z]{3}$"), "priority": b()}, ["amountMinor", "currency", "priority"], "The admin's money and Priority badge for one kind of offer.")
+S["TripProjection"]["properties"]["moneySend"] = obj({"exclusiveTo": {"oneOf": [ref("Id"), {"type": "null"}]}, "radarTo": arr(ref("Id"))}, ["exclusiveTo", "radarTo"], "Answer of POST /admin/trips/{tripId}/driver-bonus with applyTo only: who got an offer with the money at once.")
 S["TripProjection"]["properties"]["driverBonusByKind"] = obj({"exclusive": ref("DriverBonusOfKind"), "radar": ref("DriverBonusOfKind")}, ["exclusive", "radar"], "Admin view only (owner bug 2026-11-01): " + C["adminDispatch"]["driverBonus"]["applyTo"]["note"])
 S["TripProjection"]["properties"]["routeChange"] = ref("TripRouteChange")
 S["AdminTripFlag"] = obj({"flagged": b(), "reason": s(maxLength=500), "by": ref("Id"), "at": ref("Timestamp")}, ["flagged", "by", "at"], "v0.18.9: " + OT["adminTrip"]["new"]["flag"])

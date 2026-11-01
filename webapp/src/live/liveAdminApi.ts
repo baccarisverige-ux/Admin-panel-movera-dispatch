@@ -799,8 +799,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (!params.amountMinor || params.amountMinor <= 0) throw new ApiError(400, "Type an amount above 0.", { code: "invalid_request", retryable: false });
       const next = await client.post<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/driver-bonus`, { expectedVersion: trip.version, amount: { amountMinor: params.amountMinor, currency: trip.fare.currency }, ...(params.priority !== undefined ? { priority: params.priority } : {}), ...(params.bonusScope ? { applyTo: params.bonusScope } : {}), ...(input.reason ? { note: input.reason } : {}) }).catch(explained);
       if (next?.tripId) trips.set(next.tripId, next);
-      // Owner bug 2026-11-01 ("Exclusif" arrived as Radar): applyTo sends the chosen kind; the server keeps the money per kind.
-      return done("Money added for the driver.");
+      // Owner bug 2026-11-01 ("Exclusif" arrived as Radar): applyTo sends the chosen kind; the server keeps the money per
+      // kind and (owner decision) sends it at once: exclusive to the nearest, radar to the others (moneySend).
+      const send = (next as { moneySend?: { exclusiveTo: string | null; radarTo: string[] } } | undefined)?.moneySend;
+      const notice = send && params.bonusScope ? moneySendNotice(send, params.bonusScope) : null;
+      return { ...done("Money added for the driver."), ...(notice ? { notice } : {}) };
     }
     if (input.action === "admin.trip.assign" || input.action === "admin.trip.radarGroup") {
       // Exclusive offer or radar group (contract §9 /admin/trips/{id}/assign and /radar-group), with the trip's version.
@@ -1051,6 +1054,18 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
 }
 
 /** What the admin reads when some chosen drivers already saw the ride (owner bug 2026-11-01), in the admin's language. */
+/** Owner decision 2026-11-01: what "Add money" sent at once, in the admin's language. */
+export function moneySendNotice(send: { exclusiveTo: string | null; radarTo: string[] }, scope: "exclusive" | "radar" | "both"): string {
+  const parts = [
+    send.exclusiveTo ? tr("Sent now as an Exclusive offer to the nearest free driver.") : "",
+    send.radarTo.length ? tr(send.radarTo.length === 1 ? "Sent now as Radar to {0} driver." : "Sent now as Radar to {0} drivers.", [send.radarTo.length]) : "",
+  ].filter(Boolean);
+  if (parts.length) return parts.join(" ");
+  if (scope === "exclusive") return tr("Already on the Exclusive offer, or nobody free nearby: it goes with the next Exclusive offer.");
+  if (scope === "radar") return tr("Already on the Radar offers, or nobody free nearby: it goes with the next Radar offer.");
+  return tr("Already on the offers out, or nobody free nearby: it goes with the next offer.");
+}
+
 export function refreshedNotice(refreshed: number, sent: number, raised: boolean, skipped = 0): string | null {
   if (refreshed === 0 && skipped === 0) return null;
   // Counted from the server's answer, never from the drivers ticked (checker M1).
