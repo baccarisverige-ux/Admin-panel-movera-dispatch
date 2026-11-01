@@ -7,7 +7,7 @@ import { cancelBlock, cancelledBy } from "../trips/present.ts";
 import { readFileSync } from "node:fs";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { cancelReasonsDefault } from "../dispatch/offers.ts";
-import { driverBonusSettingLink, liveBonusLimits, approachOf, canWaiveFee, distanceDisplay, driverPointOf, ETA_EVERY_SECONDS, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, owedByCurrency, owedText, reasonLine, reasonWords, tripMoney } from "./tripLive.ts";
+import { bonusByKind, commissionBeforeBonus, driverBonusSettingLink, liveBonusLimits, approachOf, canWaiveFee, distanceDisplay, driverPointOf, ETA_EVERY_SECONDS, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, owedByCurrency, owedText, reasonLine, reasonWords, tripMoney } from "./tripLive.ts";
 
 /**
  * Driver group 5 (contract v0.18.7): the admin shows the server's ETA and distance as the apps do, the cancel fee in
@@ -137,4 +137,19 @@ test("G5 live re-test round 2: a book reason with only an English title reads in
     setLanguage("en");
   }
   assert.equal(reasonLine("something_else", book, currentLanguage()), "Something else");
+});
+
+test("owner bug 2026-11-01: Add money per kind of offer and Movera's commission counted once (SE and FR)", () => {
+  const sek = (amountMinor: number) => ({ amountMinor, currency: "SEK" });
+  const eur = (amountMinor: number) => ({ amountMinor, currency: "EUR" });
+  // Exclusive 200 kr, radar 0: the server's driverBonus is the larger one.
+  const se = { driverBonus: sek(20000), commission: sek(-15380), driverBonusByKind: { exclusive: { ...sek(20000), priority: true }, radar: { ...sek(0), priority: false } } };
+  assert.deepEqual(bonusByKind(se), { exclusiveMinor: 20000, radarMinor: 0 });
+  // The owner's photo: commission 46,20 kr before the bonus; the box shows "Movera pays 153,80 kr more", not 353,80.
+  assert.equal(commissionBeforeBonus(se), 4620);
+  assert.equal(commissionBeforeBonus(se) - 20000, -15380);
+  // An older server: one bonus for both kinds.
+  assert.deepEqual(bonusByKind({ driverBonus: eur(500), commission: eur(300) }), { exclusiveMinor: 500, radarMinor: 500 });
+  assert.equal(commissionBeforeBonus({ driverBonus: eur(500), commission: eur(300) }), 800);
+  assert.deepEqual(bonusByKind({}), { exclusiveMinor: 0, radarMinor: 0 });
 });

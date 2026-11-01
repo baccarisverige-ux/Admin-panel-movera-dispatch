@@ -61,7 +61,7 @@ export function PromotionsPage() {
         <button data-command="admin.promo.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
         <div className="dx-head-text">
           <h2>{tr("Promotions")}</h2>
-          <p>{trn("Every rider promotion, driver bonus, voucher code and invite reward in {0}, with budget and results. Results are demo numbers until rides are counted per promotion.", scope.market.name)}</p>
+          <p>{trn("Every rider promotion, driver bonus, voucher code and invite reward in {0}, with budget and results. Results are not counted yet: rides are not yet counted per promotion.", scope.market.name)}</p>
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Promotion sections")}>

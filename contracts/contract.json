@@ -757,7 +757,15 @@
     ],
     "driverBonus": {
       "paidBy": "movera",
-      "note": "Movera-paid extra for the driver (\"add money to trip\"). The rider never pays it. It is included in Offer.fare and Offer.driverEarnings as the driver sees them; TripProjection.fare (rider) never includes it. Above driver.driverBonus.defaultLimit the server answers 400 invalid_request (\"adjust the limit in Pricing\"); the limit itself can never exceed driverBonus.hardMax."
+      "note": "Movera-paid extra for the driver (\"add money to trip\"). The rider never pays it. It is included in Offer.fare and Offer.driverEarnings as the driver sees them; TripProjection.fare (rider) never includes it. Above driver.driverBonus.defaultLimit the server answers 400 invalid_request (\"adjust the limit in Pricing\"); the limit itself can never exceed driverBonus.hardMax.",
+      "applyTo": {
+        "values": [
+          "exclusive",
+          "radar",
+          "both"
+        ],
+        "note": "Owner bug 2026-11-01 (admin \"Add money\", Apply to: Exclusive arrived on a Radar offer). Optional applyTo on driver-bonus, assign and radar-group says which kind of offer the money and the Priority badge are for: exclusive = exclusive offers (admin assign kind=assigned and automatic kind=exclusive), radar = radar offers, both = both. Default: driver-bonus both (older callers unchanged); assign exclusive; radar-group radar. Open offers of the chosen kind get offer_updated at once; the other kind keeps its money. Owner decision 2026-11-01: driver-bonus WITH applyTo also sends at once (same rules and timers as the admin's Exclusive / Radar sends; a driver who cannot take it is skipped): exclusive → if no exclusive offer is out, an exclusive (assigned) offer to the nearest free driver of the trip's category; radar → the trip's open exclusive offers become radar offers and, if no radar offer is out, the nearest free drivers (up to the radar group size) get one; both → exclusive to the nearest and radar to the others. The answer adds moneySend { exclusiveTo: driverId | null, radarTo: [driverId] }. Nobody free → 200, the money waits for the next offer of that kind. Without applyTo (older callers) nothing is sent. The limit counts per kind (a driver gets one kind). On accept the trip keeps the money of the kind he took (driverBonus, commission). A driver kept in a radar-group send with an open automatic exclusive offer has it turned into a radar offer (offer_updated). Once a driver took the trip, driver-bonus goes to him whatever applyTo says. Admin view only: TripProjection.driverBonusByKind { exclusive, radar: amountMinor, currency, priority } while money or the badge is set; TripProjection.driverBonus is the larger of the two until accept."
+      }
     },
     "nearbyScopes": [
       "radius",
@@ -5527,7 +5535,7 @@
       },
       "adminList": {
         "endpoint": "GET /admin/ride-checks?zoneId=&tripId=&trigger=&answer=&origin=&from=&to=&cursor=&limit= (incidents.read; the admin's zones)",
-        "row": "RideCheckRow { tripId, zoneId, side: rider | driver, checkId, origin: server | app, trigger, shownAt?, answer?: ok | need_help, answeredAt?, noAnswerAt?, incidentId?, position?, createdAt }, newest first; nextCursor.",
+        "row": "RideCheckRow { tripId, zoneId, side: rider | driver, checkId, origin: server | app, trigger, shownAt?, answer?: ok | need_help, answeredAt?, noAnswerAt?, incidentId?, position?, measured?: { value, unit: min | km | m } (server checks: minutes stopped, km off the route, metres from the drop-off when asked), answerSeconds? (the zone's noAnswerSeconds when asked), createdAt }, newest first; nextCursor. A served DriverAppConfig / RiderAppConfig rideCheck never carries the pre-v0.18.9 finishFarFromDropoffKm; endFarMeters is the one setting.",
         "answerFilter": "answer = ok | need_help | no_answer | waiting (no answer yet, not timed out)."
       },
       "texts": {
@@ -5745,11 +5753,11 @@
       "existing": {
         "cancel": "POST /admin/trips/{tripId}/cancel { expectedVersion, reasonCode, note?, driverBonus? } (trips.intervene)",
         "reassign": "POST /admin/trips/{tripId}/reassign { expectedVersion, reasonCode, note?, driverBonus? } (trips.intervene)",
-        "assign": "POST /admin/trips/{tripId}/assign { expectedVersion, driverId, note?, driverBonus?, priority? } (trips.intervene)",
+        "assign": "POST /admin/trips/{tripId}/assign { expectedVersion, driverId, note?, driverBonus?, priority?, applyTo? } (trips.intervene)",
         "noShow": "POST /admin/trips/{tripId}/no-show { expectedVersion, note?, waiveFee? } (trips.intervene)",
         "complete": "POST /admin/trips/{tripId}/complete { expectedVersion, note?, fare? } (trips.intervene)",
         "adjust": "POST /admin/trips/{tripId}/adjust { expectedVersion, fare?, waitingSeconds?, waiveCancelFee?, reason? } (trips.intervene): price adjust and waiting (waitingSeconds = the pickup waiting that is charged).",
-        "driverBonus": "POST /admin/trips/{tripId}/driver-bonus { expectedVersion, amount, priority?, note? } (trips.intervene)",
+        "driverBonus": "POST /admin/trips/{tripId}/driver-bonus { expectedVersion, amount, priority?, note?, applyTo? } (trips.intervene)",
         "reverseNoShow": "POST /admin/trips/{tripId}/reverse-no-show (v0.18.8)",
         "pinUnlock": "POST /admin/trips/{tripId}/pin/unlock (v0.18.8)"
       },

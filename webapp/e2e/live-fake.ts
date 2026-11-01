@@ -688,7 +688,7 @@ const CONFIG_CORS = { "access-control-allow-origin": "*", "access-control-allow-
 const configJson = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CONFIG_CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
 const sample = (name: string) => JSON.parse(readFileSync(new URL(`../../contracts/fixtures/config/${name}.json`, import.meta.url), "utf8")) as Record<string, unknown>;
 
-type Entry = { version: number; liveVersion: number; usesStandard?: boolean; document: Record<string, unknown>; /** G3: the live document when it differs from the draft (History's newest row). */ live?: Record<string, unknown> };
+type Entry = { version: number; liveVersion: number; usesStandard?: boolean; document: Record<string, unknown>; /** G3: the live document when it differs from the draft (History's newest row). */ live?: Record<string, unknown>; /** Checker: old own history rows the server keeps after "use standard". */ staleHistory?: Record<string, unknown> };
 type Sent = { method: string; path: string; body: Record<string, unknown> | null };
 
 /** The config documents of the live settings flow (contract v0.8.0): Sweden's Standard, Z001 on the Standard, Z002 with its own. */
@@ -720,6 +720,7 @@ export async function fakeSettings(page: Page) {
       const zone = url.searchParams.get("zoneId") ?? "";
       const entry = docs.get(`${doc}:${zone}`);
       if (zone.startsWith("standard-")) return configJson(route, 404, { code: "not_found", message: "No such zone.", requestId: "r-404", retryable: false, reason: "zone_not_found" });
+      if (entry?.staleHistory) return configJson(route, 200, { items: [{ version: 9, publishedAt: "2026-10-20T10:00:00Z", publishedBy: "seed", action: "publish", document: entry.staleHistory }], nextCursor: null });
       return configJson(route, 200, { items: entry && entry.liveVersion > 0 && !entry.usesStandard ? [{ version: entry.liveVersion, publishedAt: "2026-10-25T23:13:11Z", publishedBy: "seed", action: "publish", document: entry.live ?? entry.document }] : [], nextCursor: null });
     }
     if (request.method() === "GET") {

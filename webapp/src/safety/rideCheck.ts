@@ -84,8 +84,8 @@ export type RideCheck = {
   riderId: string;
   vehicleId: string | null;
   trigger: Trigger;
-  /** What the trigger measured: metres from the drop-off, minutes stopped, km off the route, % longer. */
-  value: number;
+  /** What the trigger measured: metres from the drop-off, minutes stopped, km off the route, % longer; null = not measured. */
+  value: number | null;
   place: string;
   /** When the card opened in both apps. */
   at: string;
@@ -108,6 +108,8 @@ export function distanceText(metres: number): string {
 /** The reason line the card shows, e.g. "Stopped for 4 min · Odenplan". */
 export function reasonText(check: Pick<RideCheck, "trigger" | "value" | "place">): string {
   const at = check.place ? ` · ${check.place}` : "";
+  // G7 live fix: no measured number (never a made-up "0 min" / "0 km").
+  if (check.value === null) return triggerLabel(check.trigger) + at;
   if (check.trigger === "far") return tr("Trip ended {0} from the drop-off", [distanceText(check.value)]) + at;
   if (check.trigger === "stop") return tr("Stopped for {0} min", [check.value]) + at;
   if (check.trigger === "route") return tr("{0} km off the route", [check.value]) + at;

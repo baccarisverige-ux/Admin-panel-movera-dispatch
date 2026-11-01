@@ -164,7 +164,7 @@ export function PaymentsPage() {
         <button data-command="admin.payment.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
         <div className="dx-head-text">
           <h2>{tr("Payments")}</h2>
-          <p data-testid="payment-count">{live ? tr("{0} payments from the server. Amounts are in each record's own currency.", [rows.length]) : trn("{0} payments in the demo ledger. Amounts are in each record's own currency; totals are for the chosen country. Wallet vouchers are constrained to 100, 200 and 500 kr. Finance revision {1}.", rows.length, finance.draftRev)}</p>
+          <p data-testid="payment-count">{live ? tr("{0} payments from the server. Amounts are in each record's own currency.", [rows.length]) : trn("{0} payments in the ledger. Amounts are in each record's own currency; totals are for the chosen country. Wallet vouchers are constrained to 100, 200 and 500 kr. Finance revision {1}.", rows.length, finance.draftRev)}</p>
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Payment sections")}>

@@ -107,6 +107,8 @@ export type LiveRideCheck = {
   shownAt?: string;
   answeredAt?: string;
   lateAnswer?: "ok" | "need_help" | string;
+  /** G7 live fix: the time the person had to answer (the zone's noAnswerSeconds when asked). */
+  answerSeconds?: number;
 };
 
 export type LiveRatingFacts = { tripId: string; from: "rider" | "driver"; stars: number; tags: string[]; comment: string | null; at: string; riderId: string; riderName: string | null; driverId: string | null; driverName: string | null; zoneId: string; hidden: boolean; hiddenBy: string | null; hiddenAt: string | null; hideReason: string | null };
