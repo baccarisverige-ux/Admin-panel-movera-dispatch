@@ -97,7 +97,6 @@ const RETIRED_SWITCHES = new Set(["swish"]);
 export const RIDER_SWITCHES: FeatureSwitch[] = [
   { id: "cash", app: "rider", label: "Cash", on: true },
   { id: "applePay", app: "rider", label: "Apple Pay", on: true },
-  { id: "googlePay", app: "rider", label: "Google Pay", on: true },
   { id: "scheduled", app: "rider", label: "Scheduled rides", on: true },
   { id: "wallet", app: "rider", label: "Wallet", on: true },
   { id: "pin", app: "rider", label: "PIN", on: true },

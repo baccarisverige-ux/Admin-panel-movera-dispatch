@@ -4,7 +4,7 @@ import { formatMoney } from "./money.ts";
 export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
-export const CONTRACT_VERSION = "0.18.9" as const;
+export const CONTRACT_VERSION = "0.18.10" as const;
 
 /** The 19 trip statuses of contract v0.3.0 (contract.json#tripStatus.values), in lifecycle order. */
 export const TRIP_STATUSES = [
@@ -205,7 +205,6 @@ export const categoryIdSchema = z.enum([
 export const PAYMENT_METHODS = [
   "card",
   "apple_pay",
-  "google_pay",
   "cash",
   "wallet",
 ] as const;

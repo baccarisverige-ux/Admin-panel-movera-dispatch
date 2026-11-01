@@ -162,6 +162,13 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
         <div className="fee-grid">
           <div id="extras-tips" className="cx-anchor">
             <AmountList title={tr("Tips")} help={tr("Buttons the rider sees after the ride.")} item="Tip" prefix="tip" list={shown.tips} saved={saved.tips} max={tipMax(country)} country={country} canEdit={canEdit} onChange={(tips) => edit({ tips })} />
+            <div className="fee-card" aria-label={tr("Tip rules")}>
+              <p className="dx-note">{tr("The whole tip goes to the driver.")}</p>
+              <label className="check-row"><input type="checkbox" checked={shown.tipRules.cashAfterTrip} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, cashAfterTrip: e.target.checked } })} /> {tr("Allow cash tips after the trip")}</label>
+              <p className="dx-note">{tr("Off: a cash tip is only possible in the car, in the first 5 minutes after the trip.")}</p>
+              <label className="check-row"><input type="checkbox" checked={shown.tipRules.customAmount} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, customAmount: e.target.checked } })} /> {tr("Rider may type an amount")}</label>
+              {shown.tipRules.customAmount ? <NumberField label={tr("Highest typed tip")} value={shown.tipRules.customMax} unit={symbol} step={moneyStep(country)} max={tipMax(country) * 10} disabled={!canEdit} changed={shown.tipRules.customMax !== saved.tipRules.customMax} onChange={(customMax) => edit({ tipRules: { ...shown.tipRules, customMax } })} /> : null}
+            </div>
           </div>
           <div id="extras-raise-steps" className="cx-anchor">
             <AmountList title={tr("Raise-offer quick steps")} help={tr("Quick “+” buttons while the rider waits for a driver.")} item="Raise step" prefix="raise" plus list={shown.raiseSteps} saved={saved.raiseSteps} max={raiseStepMax(country)} country={country} canEdit={canEdit} onChange={(raiseSteps) => edit({ raiseSteps })} />

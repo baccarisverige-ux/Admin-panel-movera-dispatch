@@ -27,7 +27,15 @@ export type CountrySettings = {
   driverBonusLimit: number;
   paymentMethods: Record<ZonePaymentMethod, boolean>;
   languages: Record<LanguageApp, AppLanguage>;
+  /**
+   * v0.18.10 (G8, contract.json#finish.tips.settings → RiderAppConfig.tipRules): cash tips after the trip (default off =
+   * only in the car), a typed amount (default off) and its maximum in local money (SE 200 kr, FR 20 €).
+   */
+  tipRules: TipRules;
 };
+export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number };
+/** contract.json#configDefaults.tipRules.customMax (major units); TN (closed) like FR in its own money. */
+export const TIP_CUSTOM_MAX: Record<MarketId, number> = { SE: 200, FR: 20, TN: 60 };
 
 /**
  * `zones` (contract v0.8.1, owner 2026-10-28, live panel): Tips & limits of a zone or a country's Standard, by its
@@ -39,10 +47,10 @@ export type CountrySettingsBook = { draftRev: number; countries: Record<MarketId
 /** v0.8.1: the live panel's Tips & limits per zone and Standard (read when the tab opens). */
 export const ZONE_RULES_KEY = "countrySettingsZones";
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "languages"] as const satisfies readonly (keyof CountrySettings)[];
 
-export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Cash", card: "Card", apple_pay: "Apple Pay", google_pay: "Google Pay" };
+export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
 export const LANGUAGE_LABEL: Record<AppLanguage, string> = { en: "English", fr: "French", sv: "Swedish" };
 export const APP_LABEL: Record<LanguageApp, string> = { rider: "Rider app", driver: "Driver app", admin: "Admin panel" };
 
@@ -81,6 +89,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     driverBonusLimit: toMajor(defaults.driverBonus.defaultLimit.amountMinor, country),
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, true])) as Record<ZonePaymentMethod, boolean>,
     languages: { rider: defaults.defaultLanguage, driver: defaults.defaultLanguage, admin: defaults.defaultLanguage },
+    tipRules: { cashAfterTrip: false, customAmount: false, customMax: TIP_CUSTOM_MAX[country] },
   };
 }
 
@@ -114,6 +123,16 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     driverBonusLimit: finite(raw.driverBonusLimit) ? raw.driverBonusLimit : base.driverBonusLimit,
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, typeof methods[method] === "boolean" ? methods[method] : base.paymentMethods[method]])) as Record<ZonePaymentMethod, boolean>,
     languages: Object.fromEntries(APP_IDS.map((app) => [app, (APP_LANGUAGES as readonly unknown[]).includes(languages[app]) ? languages[app] : base.languages[app]])) as Record<LanguageApp, AppLanguage>,
+    tipRules: completeTipRules(raw.tipRules, base.tipRules),
+  };
+}
+
+function completeTipRules(stored: unknown, base: TipRules): TipRules {
+  const raw = (stored && typeof stored === "object" ? stored : {}) as Partial<TipRules>;
+  return {
+    cashAfterTrip: typeof raw.cashAfterTrip === "boolean" ? raw.cashAfterTrip : base.cashAfterTrip,
+    customAmount: typeof raw.customAmount === "boolean" ? raw.customAmount : base.customAmount,
+    customMax: finite(raw.customMax) ? raw.customMax : base.customMax,
   };
 }
 
@@ -181,6 +200,7 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   else if (hasMoreDecimals(settings.driverBonusLimit, country)) issues.push(`${name} driver bonus limit: too many decimals.`);
   if (!ZONE_PAYMENT_METHODS.some((method) => settings.paymentMethods[method])) issues.push(`${name}: at least one payment method must be on.`);
   for (const app of APP_IDS) if (!(APP_LANGUAGES as readonly string[]).includes(settings.languages[app])) issues.push(`${name}: choose a language for the ${APP_LABEL[app].toLowerCase()}.`);
+  if (!(settings.tipRules.customMax > 0) || settings.tipRules.customMax > TIP_CUSTOM_MAX[country] * 10) issues.push(`${name}: the highest typed tip must be more than 0 and at most ${TIP_CUSTOM_MAX[country] * 10}.`);
   return issues;
 }
 
@@ -194,6 +214,7 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   if (JSON.stringify(before.raiseSteps) !== JSON.stringify(after.raiseSteps)) lines.push(`Raise-offer steps: +${amounts(before.raiseSteps, symbol)} → +${amounts(after.raiseSteps, symbol)}`);
   if (before.promoCap !== after.promoCap) lines.push(`Promo cap: ${before.promoCap === null ? "none" : `${short(before.promoCap)} ${symbol}`} → ${after.promoCap === null ? "none" : `${short(after.promoCap)} ${symbol}`}`);
   if (before.driverBonusLimit !== after.driverBonusLimit) lines.push(`Driver bonus limit: ${short(before.driverBonusLimit)} → ${short(after.driverBonusLimit)} ${symbol}`);
+  if (JSON.stringify(before.tipRules) !== JSON.stringify(after.tipRules)) lines.push(`Tip rules: cash after the trip ${after.tipRules.cashAfterTrip ? "on" : "off"}, typed amount ${after.tipRules.customAmount ? "on" : "off"} (max ${after.tipRules.customMax})`);
   for (const method of ZONE_PAYMENT_METHODS) if (before.paymentMethods[method] !== after.paymentMethods[method]) lines.push(`${PAYMENT_METHOD_LABEL[method]}: ${before.paymentMethods[method] ? "on" : "off"} → ${after.paymentMethods[method] ? "on" : "off"}`);
   for (const app of APP_IDS) if (before.languages[app] !== after.languages[app]) lines.push(`${APP_LABEL[app]} default language: ${before.languages[app]} → ${after.languages[app]}`);
   return lines;

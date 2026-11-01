@@ -233,8 +233,12 @@ test("live Tips & limits (v0.8.1, owner 2026-10-28): read per zone, saved only t
   const shown = { ...book.zones["Z002"]!, tips: [{ id: "t1", amount: 40, enabled: true }] };
   const value = { ...book, draftRev: 1, zones: { ...book.zones, Z001: shown, Z002: shown } };
   assert.equal(await settings.command("admin.pricing.saveCountry", { targetId: "SE tips and limits", value, scope: "Z001,Z002" }), "Saved for the chosen zones.");
-  const puts = server.calls.filter((c) => c.method === "PUT");
+  const puts = server.calls.filter((c) => c.method === "PUT" && c.path.includes("country_rules"));
   assert.deepEqual(puts.map((c) => (c.body as { zoneId?: string }).zoneId), ["Z001", "Z002"]);
+  // v0.18.10 (G8): the tip rules go to the same zones' rider documents (cash after the trip off, typed amount off, max 200 kr).
+  const riderPuts = server.calls.filter((c) => c.method === "PUT" && c.path.includes("rider_app_config"));
+  assert.deepEqual(riderPuts.map((c) => (c.body as { zoneId?: string }).zoneId), ["Z001", "Z002"]);
+  assert.deepEqual(((riderPuts[0]!.body as { document: Doc }).document)["tipRules"], { cashAfterTrip: false, cashInCarMinutes: 5, customAmount: false, customMax: { amountMinor: 20000, currency: "SEK" } });
   assert.deepEqual(((puts[0]!.body as { document: Doc }).document)["tips"], [{ amount: { amountMinor: 4000, currency: "SEK" }, enabled: true }]);
   // Nothing went to the Standard or another zone, and nothing goes without a choice at the top.
   assert.equal(server.calls.some((c) => c.path.includes("country=SE") && c.method !== "GET"), false);
@@ -449,4 +453,26 @@ test("v0.18.9 (G7): ride check, route change and max stops are read from the dri
   assert.deepEqual([bad.rideCheck.stopMinutes, bad.rideCheck.endFarMeters, bad.stops.answerSeconds, bad.stops.fixedPriceTrips], [2, 500, 60, "block"]);
   const next = withOwned({}, { rideCheck: { on: true }, routeChange: { on: true } }, OWNED.dispatch.driver);
   assert.deepEqual([next["rideCheck"], next["routeChange"]], [{ on: true }, { on: true }]);
+});
+
+test("G8 (v0.18.10): payment methods go to the server per country (no Google Pay); early-end km / min round-trip through the driver document", async () => {
+  const { emptyCountrySettingsBook } = await import("../config/countrySettings.ts");
+  const { appConfigState, driverAppConfig } = await import("../config/appConfigs.ts");
+  const server = fakeServer({});
+  const settings = createLiveSettings(server.http, () => "2026-11-01T10:00:00Z");
+  const book = emptyCountrySettingsBook();
+  const value = { ...book, draftRev: 2, countries: { ...book.countries, FR: { ...book.countries.FR, paymentMethods: { cash: true, card: false, apple_pay: true } } } };
+  assert.equal(await settings.command("admin.config.saveCountry", { targetId: "payment methods and languages", value, scope: "" }), "Payment methods published to every zone.");
+  const puts = server.calls.filter((c) => c.method === "PUT");
+  assert.ok(puts.length > 0);
+  for (const put of puts) assert.equal(JSON.stringify(put.body).includes("google_pay"), false, "never Google Pay");
+  const paris = puts.find((c) => c.path.includes("rider_app_config") && (c.body as { zoneId?: string }).zoneId === "FR-PC");
+  assert.deepEqual(((paris!.body as { document: Doc }).document)["paymentMethods"], ["cash", "apple_pay"]);
+  // Dispatch › Cancellation: the driver's early end re-prices only over these numbers (defaults 2 km / 8 min).
+  const zone = zoneDefault("Z001");
+  assert.deepEqual(zone.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 8 });
+  const back = rulesOfDispatch(null, { cancelFees: { earlyEnd: { repriceOverKm: 5, repriceOverMin: 999 } } }, zone);
+  assert.deepEqual(back.riderCancel.earlyEnd, { repriceOverKm: 5, repriceOverMin: 8 }, "out of range reads as the default");
+  const state = appConfigState({ now: "2026-11-01T10:00:00Z" });
+  assert.deepEqual((driverAppConfig("Z001", state) as unknown as { cancelFees: { earlyEnd: unknown } }).cancelFees.earlyEnd, { repriceOverKm: 2, repriceOverMin: 8 });
 });

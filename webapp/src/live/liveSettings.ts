@@ -279,6 +279,19 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     await Promise.all(MARKETS.filter((market) => OPEN[market.id]).map(async (market) => {
       const found = await draft("country_rules", standardKey(market.id), true);
       if (found) countries[market.id] = settingsOfRules(countrySettingsOf(book, market.id), market, found.document);
+      // v0.18.10 (G8): payment methods and tip rules as the country's Standard rider document has them.
+      const rider = await draft("rider_app_config", standardKey(market.id), true).catch(() => null);
+      const doc = rider?.document as { paymentMethods?: unknown; tipRules?: { cashAfterTrip?: unknown; customAmount?: unknown; customMax?: { amountMinor?: number } } } | undefined;
+      const base = countries[market.id] ?? countrySettingsOf(book, market.id);
+      if (doc) {
+        const on = Array.isArray(doc.paymentMethods) ? (doc.paymentMethods as string[]) : null;
+        const tr0 = doc.tipRules;
+        countries[market.id] = {
+          ...base,
+          ...(on ? { paymentMethods: { cash: on.includes("cash"), card: on.includes("card"), apple_pay: on.includes("apple_pay") } } : {}),
+          ...(tr0 ? { tipRules: { cashAfterTrip: tr0.cashAfterTrip === true, customAmount: tr0.customAmount === true, customMax: typeof tr0.customMax?.amountMinor === "number" ? tr0.customMax.amountMinor / market.minorUnits : base.tipRules.customMax } } : {}),
+        };
+      }
     }));
     const next = { ...book, countries };
     slices.set(COUNTRY_SETTINGS_KEY, next);
@@ -494,9 +507,22 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax } }, current?.document ?? null);
       await savePublish(http, "country_rules", id, current, doc);
       standardMarks.set("country_rules", id, false);
+      // v0.18.10 (G8): the tip rules (cash after the trip, typed amount + max) live in the rider app document.
+      await publishAppParts(id, { rider: ["tipRules"], driver: [] }, stateWith({ countrySettings: { ...book, countries: { ...book.countries, [market.id]: next } } }));
     }
     slices.set(COUNTRY_SETTINGS_KEY, book);
     return "Saved for the chosen zones.";
+  }
+
+  /**
+   * v0.18.10 (G8 item 2): Settings › Payment methods per country go to the server: the rider and driver documents of the
+   * country's Standard and of every open zone of the country (paymentMethods = the ticked ones; never Google Pay).
+   */
+  async function saveMethods(book: CountrySettingsBook): Promise<string> {
+    const state = stateWith({ countrySettings: book });
+    for (const id of readScopes()) await publishAppParts(id, { rider: ["paymentMethods"], driver: ["paymentMethods"] }, state);
+    slices.set(COUNTRY_SETTINGS_KEY, book);
+    return "Payment methods published to every zone.";
   }
 
   /**
@@ -627,6 +653,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         slices.set(CONFIG_KEY, input.value);
         return publishSettings(input.value, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
       }
+      if (action === "admin.config.saveCountry") return saveMethods(input.value as CountrySettingsBook);
       if (action === "admin.pricing.saveCountry") return saveCountries(input.value as CountrySettingsBook, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
       if (action === "admin.config.copyAppToZones") return copyAppToZones(input.targetId);
       if (action === "admin.config.publishAppDraft") return publishAppDraft(input.targetId);
