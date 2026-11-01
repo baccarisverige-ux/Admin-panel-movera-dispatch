@@ -414,21 +414,40 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     bonusRules.clear();
   });
   /**
-   * Checker round 2 (M1): the country_rules read behind the driver bonus limits, per zone, kept 5 minutes (the trip
-   * page re-reads its offers every second). A refusal (403 without settings.read) is kept for the session, so it is
-   * not asked again every second. Cleared on sign-out / another admin and after any settings publish.
+   * Live test 2026-11-01 (FR showed 20 € / 95 € while the server refused above 18 €): the driver bonus limits come from
+   * the document the server enforces them with — the zone's LIVE driver_app_config.driverBonus, else (a zone on its
+   * country's standard) the standard's, as GET /admin/config/driver_app_config?zoneId=… gives it with usesStandard.
+   * country_rules is not read here any more (its 404 made the panel fall back to the contract defaults silently).
+   * Per zone, kept 5 minutes (the trip page re-reads its offers every second). A refusal (403 without settings.read)
+   * is kept for the session. Cleared on sign-out / another admin and after any settings publish.
    */
   const bonusRules = new Map<string, { at: number; document: unknown; refused: boolean }>();
   const BONUS_RULES_TTL_MS = 5 * 60_000;
-  async function bonusRulesOf(zoneId: string): Promise<unknown> {
+  const bonusRulesReading = new Map<string, Promise<unknown>>();
+  function bonusRulesOf(zoneId: string): Promise<unknown> {
     const kept = bonusRules.get(zoneId);
-    if (kept && (kept.refused || Date.now() - kept.at < BONUS_RULES_TTL_MS)) return kept.document;
+    if (kept && (kept.refused || Date.now() - kept.at < BONUS_RULES_TTL_MS)) return Promise.resolve(kept.document);
+    // One read at a time per zone (the offers are re-read every second, the read takes two calls).
+    const reading = bonusRulesReading.get(zoneId) ?? readBonusRules(zoneId).finally(() => bonusRulesReading.delete(zoneId));
+    bonusRulesReading.set(zoneId, reading);
+    return reading;
+  }
+  async function readBonusRules(zoneId: string): Promise<unknown> {
     try {
-      const answer = await client.json<{ document?: unknown }>(`/admin/config/country_rules?zoneId=${encodeURIComponent(zoneId)}`);
-      bonusRules.set(zoneId, { at: Date.now(), document: answer?.document ?? null, refused: false });
-      return answer?.document ?? null;
+      const zone = encodeURIComponent(zoneId);
+      const page = await client.json<{ items?: { document?: unknown }[] }>(`/admin/config/driver_app_config/history?zoneId=${zone}&limit=1`);
+      let document: unknown = page?.items?.[0]?.document ?? null;
+      if (document === null) {
+        const draft = await client.json<{ document?: unknown; usesStandard?: boolean; liveVersion?: number }>(`/admin/config/driver_app_config?zoneId=${zone}`).catch((error: unknown) => {
+          if (error instanceof ApiError && error.status === 404) return null;
+          throw error;
+        });
+        document = draft?.usesStandard === true ? draft.document ?? null : null;
+      }
+      bonusRules.set(zoneId, { at: Date.now(), document, refused: false });
+      return document;
     } catch (error) {
-      const refused = error instanceof ApiError && (error.status === 403 || error.status === 404);
+      const refused = error instanceof ApiError && error.status === 403;
       bonusRules.set(zoneId, { at: Date.now(), document: null, refused });
       return null;
     }
@@ -760,6 +779,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       try {
         const answer = await settingsCall;
         bonusRules.clear();
+        zoneDocs.clear();
         return typeof answer === "string" ? done(answer) : { ...done(answer.message), slice: answer.slice };
       } catch (error) {
         if (error instanceof SettingsChanged) throw new ApiError(409, error.message, { code: "version_mismatch", retryable: false });
@@ -935,8 +955,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     trips.set(trip.tripId, trip);
     const page = await client.json<Page<TripOffer & { version?: number }>>(`/admin/trips/${encodeURIComponent(tripId)}/offers?limit=50`);
     const tripCurrency = isCurrency(trip.fare.currency) ? trip.fare.currency : CURRENCY;
-    // Owner 2026-10-31: the country's real driver bonus limits (country_rules of the trip's zone; else the contract
-    // default), not 0. An admin without settings.read gets the default.
+    // The driver bonus limits the server enforces (driver_app_config.driverBonus of the trip's zone, live; else the
+    // contract default, as the server), not 0. An admin without settings.read gets the default.
     // M2: the country from the zone, else from the trip's currency (each market has its own); unknown → no limits shown.
     const limitCountry = marketOfZone(trip.zoneId)?.id ?? MARKETS.find((item) => item.currency === trip.fare.currency)?.id ?? null;
     const limits = limitCountry ? liveBonusLimits(await bonusRulesOf(trip.zoneId), limitCountry) : null;

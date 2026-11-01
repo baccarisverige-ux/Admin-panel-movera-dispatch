@@ -42,7 +42,8 @@ export function useClock(): number {
 /** The money an admin is about to add for the driver: typed once, used by the next Exclusive or Radar send. */
 export type MoneyDraft = { amount: string; scope: BonusScope; priority: boolean };
 
-export const EMPTY_MONEY: MoneyDraft = { amount: "", scope: "both", priority: true };
+// Live test 2026-11-01: the Priority badge is asked for, never on by default (no owner decision says otherwise).
+export const EMPTY_MONEY: MoneyDraft = { amount: "", scope: "both", priority: false };
 
 export const SCOPE_LABEL: Record<BonusScope, string> = { exclusive: "Exclusive", radar: "Radar", both: "Both" };
 

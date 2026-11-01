@@ -131,6 +131,9 @@ test("Add money for driver: Q17 limits with a link to Pricing, Movera pays it ev
   await box.getByLabel("Money for the driver").fill("250");
   await shot(page, "07-bonus-over-limit");
   await box.getByLabel("Money for the driver").fill("150");
+  // Live test 2026-11-01: the Priority badge is off until the admin asks for it.
+  await expect(box.getByLabel("Priority badge")).not.toBeChecked();
+  await box.getByLabel("Priority badge").check();
   await expect(box.getByTestId("driver-bonus-beyond")).toContainText("more than its commission");
   await box.getByRole("button", { name: "Add money" }).click();
   await expect(confirmDialog(page)).toContainText("Add 150,00 kr for the driver on T0004");

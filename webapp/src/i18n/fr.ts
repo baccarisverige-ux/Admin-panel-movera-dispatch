@@ -7585,6 +7585,8 @@ export const fr: Record<MessageKey, string> = {
   "{0} already sees this ride: an exclusive offer replaces it.": "{0} voit déjà cette course : une offre exclusive la remplace.",
   "{0} already sees this ride: the radar raises his offer.": "{0} voit déjà cette course : le radar augmente son offre.",
   "Money added for the driver.": "Argent ajouté pour le chauffeur.",
+  "Above the limit of {0} per trip: adjust the limit in Pricing.": "Au-delà de la limite de {0} par course : modifiez la limite dans Tarifs.",
+  "Above the hard max of {0} per trip. No limit can go higher.": "Au-delà du maximum absolu de {0} par course. Aucune limite ne peut aller plus haut.",
   "Type an amount above 0.": "Saisissez un montant supérieur à 0.",
   "Set to the default because it was 0": "Remis à la valeur par défaut car elle était à 0",
   "+ pickup pay": "+ paiement d’approche",

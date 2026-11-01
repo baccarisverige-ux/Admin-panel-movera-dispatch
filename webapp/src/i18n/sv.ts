@@ -7585,6 +7585,8 @@ export const sv: Record<MessageKey, string> = {
   "{0} already sees this ride: an exclusive offer replaces it.": "{0} ser redan resan: ett exklusivt erbjudande ersätter det.",
   "{0} already sees this ride: the radar raises his offer.": "{0} ser redan resan: radarn höjer erbjudandet.",
   "Money added for the driver.": "Pengar tillagda för föraren.",
+  "Above the limit of {0} per trip: adjust the limit in Pricing.": "Över gränsen på {0} per resa: ändra gränsen i Priser.",
+  "Above the hard max of {0} per trip. No limit can go higher.": "Över det hårda taket på {0} per resa. Ingen gräns kan gå högre.",
   "Type an amount above 0.": "Skriv ett belopp över 0.",
   "Set to the default because it was 0": "Satt till standardvärdet eftersom det var 0",
   "+ pickup pay": "+ betalning för körning till upphämtning",
