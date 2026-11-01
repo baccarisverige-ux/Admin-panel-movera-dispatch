@@ -130,6 +130,9 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
   const total = already + addMinor;
   const moveraKeeps = view.commissionMinor - total;
   const same = view.bonusExclusiveMinor === view.bonusRadarMinor;
+  const left = Math.max(0, view.limits.limitMinor - already);
+  // Owner bug 2026-11-01: say so when no offer of the chosen kind is out (the money waits for the next one).
+  const outNow = view.offers.some((offer) => offer.status === "open" && scopeCovers(draft.scope, offer.kind));
   return (
     <section className={compact ? "as-section as-bonus compact" : "as-section as-bonus"} aria-label={tr("Add money for driver")} data-testid="driver-bonus-box">
       <h4>{trn("{0} Add money for driver", <BadgeDollarSign size={14} aria-hidden="true" />)}</h4>
@@ -142,7 +145,7 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
         </p>
       ) : null}
       <div className="as-bonus-row">
-        <label>{trn("Amount ({0}){1}", place.currency, <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={draft.amount} disabled={!canAct || !open} onChange={(event) => set({ amount: event.target.value })} placeholder={limitsKnown ? tr("Up to {0}", [money(Math.max(0, view.limits.limitMinor - already))]) : undefined} />)}</label>
+        <label>{trn("Amount ({0}){1}", place.currency, <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={draft.amount} disabled={!canAct || !open} onChange={(event) => set({ amount: event.target.value })} placeholder={limitsKnown ? (left > 0 ? tr("Up to {0}", [money(left)]) : tr("Limit reached")) : undefined} />)}</label>
         <div className="as-chips" role="group" aria-label={tr("Apply to")} data-testid="driver-bonus-scope">
           <span className="as-chips-label">{tr("Apply to")}</span>
           {BONUS_SCOPES.map((scope) => (
@@ -163,7 +166,7 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
           disabled={!canAct || !open || addMinor <= 0 || Boolean(issue)}
           title={!open ? tr("Money can be added only while the trip is requested, searching or offered.") : issue?.message ?? tr("Adds it now to the offers already out, and keeps it for the next sends.")}
           summary={<>{trn("Add {0} for the driver on {1} ({2}). Movera pays it; the rider’s price does not change.", <b>{money(addMinor)}</b>, trip.id, trx(SCOPE_LABEL[draft.scope]))}</>}
-          onDone={() => { set({ amount: "" }); void queryClient.invalidateQueries({ queryKey: ["assign-offers", trip.id] }); onDone?.(tr("{0} added for the driver.", [money(addMinor)])); }}
+          onDone={(result) => { set({ amount: "" }); void queryClient.invalidateQueries({ queryKey: ["assign-offers", trip.id] }); onDone?.(result?.notice ? `${tr("{0} added for the driver.", [money(addMinor)])} ${result.notice}` : outNow ? tr("{0} added for the driver.", [money(addMinor)]) : `${tr("{0} added for the driver.", [money(addMinor)])} ${draft.scope === "exclusive" ? tr("No Exclusive offer is out now: it goes with the next Exclusive offer.") : draft.scope === "radar" ? tr("No Radar offer is out now: it goes with the next Radar offer.") : tr("No offer is out now: it goes with the next offer.")}`); }}
         >{tr("Add money")}</CommandButton>
       </div>
       {issue ? (

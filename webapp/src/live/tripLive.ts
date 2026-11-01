@@ -172,3 +172,23 @@ export function driverBonusSettingLink(country: string, zoneId?: string): string
 
 /** The id of the "Driver bonus limit" input in Pricing › Tips & limits (the deep link focuses exactly this field). */
 export const DRIVER_BONUS_LIMIT_INPUT_ID = "driver-bonus-limit-input";
+
+type MoneyLike = { amountMinor: number } | null | undefined;
+type BonusTrip = { driverBonus?: MoneyLike; commission?: MoneyLike; driverBonusByKind?: { exclusive?: MoneyLike; radar?: MoneyLike } | null };
+
+/**
+ * Owner bug 2026-11-01 ("Exclusif" arrived as Radar): the server keeps the admin's money per kind of offer
+ * (TripProjection.driverBonusByKind); an older server sends one driverBonus for both kinds.
+ */
+export function bonusByKind(trip: BonusTrip): { exclusiveMinor: number; radarMinor: number } {
+  const one = trip.driverBonus?.amountMinor ?? 0;
+  return { exclusiveMinor: trip.driverBonusByKind?.exclusive?.amountMinor ?? one, radarMinor: trip.driverBonusByKind?.radar?.amountMinor ?? one };
+}
+
+/**
+ * Movera's commission before any bonus: the server's commission already has the bonus taken off, and the Add money box
+ * takes it off itself (owner photo 2026-11-01: "Movera paie 353,80 kr de plus" counted the 200 kr twice).
+ */
+export function commissionBeforeBonus(trip: BonusTrip): number {
+  return (trip.commission?.amountMinor ?? 0) + (trip.driverBonus?.amountMinor ?? 0);
+}
