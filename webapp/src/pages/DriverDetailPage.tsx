@@ -104,7 +104,7 @@ export function DriverDetailPage() {
 
   if (drivers.isLoading || vehicles.isLoading || store.loading) return <p className="state-line">{tr("Loading driver.")}</p>;
   if (!driver) {
-    return <NotFoundRecord kind="Driver" id={driverId} list="/drivers" listLabel="drivers" />;
+    return <NotFoundRecord kind="Driver" id={driverId} list="/drivers" back={tr("Back to drivers")} />;
   }
   if (agent?.scope.fleetPartnerId && driver.fleetId !== agent.scope.fleetPartnerId) {
     return (

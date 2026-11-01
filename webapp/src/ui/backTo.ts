@@ -57,6 +57,19 @@ export function safeBack(raw: string | null | undefined, here: string): string |
 }
 
 /** `href` with `back` set to `here` (an internal link opened from a map pop-up). */
+/**
+ * A rendered link's href and window.location both carry the router's basename (on the live site
+ * "/Admin-panel-movera-dispatch/live"); navigate() and ?back= want the in-app path, or the basename doubles up
+ * and the page opens as "Page not found".
+ */
+export function stripBase(path: string, base: string): string {
+  const root = base.replace(/\/$/, "");
+  if (!root || !path.startsWith(root)) return path;
+  const rest = path.slice(root.length);
+  if (rest === "") return "/";
+  return rest.startsWith("/") || rest.startsWith("?") || rest.startsWith("#") ? (rest.startsWith("/") ? rest : `/${rest}`) : path;
+}
+
 export function withBack(href: string, here: string): string {
   const [pathPart, hash = ""] = href.split("#");
   const [path, query = ""] = pathPart.split("?");

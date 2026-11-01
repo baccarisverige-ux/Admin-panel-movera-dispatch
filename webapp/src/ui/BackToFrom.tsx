@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import type * as maplibregl from "maplibre-gl";
 import { tr } from "../i18n";
-import { BACK_PARAM, backPlace, decodeMapAt, decodeMapOpen, MAP_AT_PARAM, MAP_OPEN_PARAM, safeBack, searchWithMap, withBack, type MapOpen } from "./backTo";
+import { BACK_PARAM, backPlace, decodeMapAt, decodeMapOpen, MAP_AT_PARAM, MAP_OPEN_PARAM, safeBack, searchWithMap, stripBase, withBack, type MapOpen } from "./backTo";
 
 /**
  * "← Back to …" on any page opened from a map pop-up (it carries `?back=`). Without `back`, nothing shows and the
@@ -42,7 +42,8 @@ export function useBackLinks() {
     if (!href || !href.startsWith("/") || href.startsWith("//")) return;
     if (new URLSearchParams(href.split("?")[1] ?? "").has(BACK_PARAM)) return;
     event.preventDefault();
-    navigate(withBack(href, window.location.pathname + window.location.search));
+    const base = import.meta.env.BASE_URL;
+    navigate(withBack(stripBase(href, base), stripBase(window.location.pathname, base) + window.location.search));
   };
 }
 
