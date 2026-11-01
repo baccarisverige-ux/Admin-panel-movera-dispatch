@@ -6,7 +6,7 @@ import { formatMoney } from "../domain/money.ts";
 import { market, marketOfZone } from "../markets/markets.ts";
 import { canAdjustFare, canComplete, canNoShow, canOffer, canReassign, canRefundTrip, canSetWaiting, cancelTrip, eligibleDrivers, type OfferDriver, type Trip } from "./rules.ts";
 import { STEP_MS, startedAt, tripIndex } from "./clock.ts";
-import { tr, uiLocale } from "../i18n/core.ts";
+import { hasMessage, tr, trx, uiLocale } from "../i18n/core.ts";
 import { NOT_CONNECTED_TEXT, isLiveData, liveDriverOf, liveRiderIdOf, liveTripOf } from "../live/realData.ts";
 import type { LivePlace } from "../api/seed.ts";
 import { scheduledNotDue } from "../dashboard/riders.ts";
@@ -241,7 +241,11 @@ export function asTrip(trip: DemoRecord | TripRecord): Trip {
 
 export function cancelBlock(status: string): string | null {
   const error = cancelTrip({ id: "x", status: status as TripStatus, category: "economy", fareOre: 1, ruleVersion: "v", driverId: null }, "check").error;
-  return error && error !== "A reason is required." ? error : null;
+  // G5 live re-test: in the admin's language, with the status in words (not "cancelled_by_rider").
+  if (!error || error === "A reason is required.") return null;
+  // Only the status refusal is rebuilt (status in words); any other error keeps its own text, translated when known.
+  if (error.startsWith("Cannot cancel a trip in ")) return tr("Cannot cancel a trip in {0}.", [statusLabel(status)]);
+  return hasMessage(error) ? trx(error) : error;
 }
 
 export function offerBlock(status: string): string | null {

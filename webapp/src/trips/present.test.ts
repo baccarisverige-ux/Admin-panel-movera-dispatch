@@ -1,4 +1,5 @@
 import { createSeed } from "../api/seed.ts";
+import { statusLabel } from "../domain/labels.ts";
 import { cashFigures, cashOwed, isCashTrip } from "./cash.ts";
 import { offerLog, timelineOffers } from "./offerLog.ts";
 import { TRIP_STATUSES } from "../domain/contract.ts";
@@ -36,7 +37,7 @@ const completed = seed.trips.find((trip) => trip.id === "T0012")!;
 const cancelledAdmin = seed.trips.find((trip) => trip.status === "cancelled_by_admin")!;
 
 assert(!cancelBlock(searching.status), "searching can be cancelled");
-assert(cancelBlock(completed.status)?.includes("completed"), "completed cannot be cancelled");
+assert(cancelBlock(completed.status)?.includes(statusLabel("completed")), "completed cannot be cancelled (in words, G5 live re-test)");
 assert(offerBlock(requested.status) === null, "requested can be offered");
 assert(offerBlock(arrived.status) !== null, "arrived cannot be newly offered");
 assert(reassignBlock(arrived.status) === null, "arrived can be reassigned");

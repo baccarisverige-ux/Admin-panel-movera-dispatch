@@ -61,7 +61,7 @@ test("trips list uses all 600 and a trip page is complete", async ({ page }) => 
   }
 
   await page.goto("/trips/T0012");
-  await expect(page.getByTestId("cancel-block")).toContainText("completed");
+  await expect(page.getByTestId("cancel-block")).toContainText("Completed");
   await page.goto("/trips/T0004");
   await page.getByRole("button", { name: "Cancel trip" }).click();
   // Only one dialog opens: the reason code and the optional note.

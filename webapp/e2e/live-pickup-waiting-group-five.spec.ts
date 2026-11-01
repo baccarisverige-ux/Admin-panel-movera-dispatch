@@ -129,7 +129,8 @@ test("Q2 / Q6 / Q3: the cancelled trip shows the reason in words, the no-show fe
   const { state } = await open(page, "/trips/T2003");
   await expect(page.getByTestId("trip-cancel-words")).toContainText("Rider");
   await expect(page.getByTestId("trip-cancel-words")).not.toContainText("Not connected yet");
-  await expect(page.getByTestId("trip-cancel-words")).toContainText("(plans_changed)");
+  await expect(page.getByTestId("trip-cancel-words")).toContainText("Plans changed");
+  await expect(page.getByTestId("trip-cancel-words")).not.toContainText("plans_changed");
   const fee = page.getByTestId("trip-cancel-fee");
   await expect(fee).toContainText("No-show fee");
   await expect(fee).toContainText("65,00 kr");

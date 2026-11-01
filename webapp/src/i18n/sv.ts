@@ -1251,6 +1251,7 @@ export const sv: Record<MessageKey, string> = {
   "Cancel checks": "Avbokningskontroller",
   "Cancel checks: decide disputed cancels": "Avbokningskontroller: avgör omtvistade avbokningar",
   "Cancel dialog": "Avbokningsdialog",
+  "Cannot cancel a trip in {0}.": "Det går inte att avboka en resa med status {0}.",
   "Cancel is allowed in this state.": "Avbokning är tillåten i den här statusen.",
   "Cancel new category": "Avbryt ny kategori",
   "Cancel or no-show rate above 20%, or 3+ no-shows": "Avboknings- eller uteblivandegrad över 20 %, eller 3+ uteblivna",

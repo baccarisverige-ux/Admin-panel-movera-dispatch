@@ -74,7 +74,7 @@ import { canAssign as canAssignTrip, isLocked } from "../dispatch/assign";
 import { StatusDot } from "../ui/kit";
 import { currentLanguage, tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { liveTripOf } from "../live/realData";
-import { approachOf, canWaiveFee, driverPointOf, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, reasonWords, tripMoney } from "../live/tripLive";
+import { approachOf, canWaiveFee, driverPointOf, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, reasonLine, tripMoney } from "../live/tripLive";
 
 type TimelineEvent = { at: string; text: string; tone: "status" | "good" | "muted" | "call" | "check" | "alert"; link?: { to: string; label: string } };
 
@@ -289,7 +289,7 @@ export function TripPage() {
               <li key={`${event.at}-${index}`} className={event.tone}><time>{time(event.at)}</time><i aria-hidden="true" /><span>{event.text}{event.link ? <> · <Link to={event.link.to}>{trx(event.link.label)}</Link></> : null}</span></li>
             ))}
           </ol>
-          <p className="op-help" data-testid="trip-cancel-words">{trn("Who cancelled: {0}. Reason: {1}{2}.", cancelledBy(trip.status), facts && trip.cancelReasonCode ? reasonWords(trip.cancelReasonCode, liveCountry(normalizeDispatchBook(dispatchSlice.value), country).cancelReasons, currentLanguage()) : cancelReason(trip), trip.cancelReasonCode ? ` (${trip.cancelReasonCode})` : "")}</p>
+          <p className="op-help" data-testid="trip-cancel-words">{trn("Who cancelled: {0}. Reason: {1}{2}.", cancelledBy(trip.status), trip.cancelReasonCode ? reasonLine(trip.cancelReasonCode, liveCountry(normalizeDispatchBook(dispatchSlice.value), country).cancelReasons, currentLanguage()) : cancelReason(trip), trip.cancelReasonCode && trip.notes ? ` — ${trip.notes}` : "")}</p>
           {cancelFacts && cancelFacts.feeMinor !== null ? (
             <p className="op-help" data-testid="trip-cancel-fee-line">{trn("Fee {0} ({1}) · {2}{3}", liveMoney(cancelFacts.feeMinor), feeKindText, feeStatusText, cancelFacts.driverShareMinor !== null ? tr(" · driver gets {0}", [liveMoney(cancelFacts.driverShareMinor)]) : "")}</p>
           ) : cancelFacts ? <p className="op-help" data-testid="trip-cancel-fee-line">{tr("No fee.")}</p> : null}

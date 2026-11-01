@@ -3,11 +3,11 @@ import test from "node:test";
 import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
 import { registerDictionary, setLanguage } from "../i18n/core.ts";
-import { cancelledBy } from "../trips/present.ts";
+import { cancelBlock, cancelledBy } from "../trips/present.ts";
 import { readFileSync } from "node:fs";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { cancelReasonsDefault } from "../dispatch/offers.ts";
-import { driverBonusSettingLink, liveBonusLimits, approachOf, canWaiveFee, distanceDisplay, driverPointOf, ETA_EVERY_SECONDS, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, owedByCurrency, owedText, reasonWords, tripMoney } from "./tripLive.ts";
+import { driverBonusSettingLink, liveBonusLimits, approachOf, canWaiveFee, distanceDisplay, driverPointOf, ETA_EVERY_SECONDS, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, owedByCurrency, owedText, reasonLine, reasonWords, tripMoney } from "./tripLive.ts";
 
 /**
  * Driver group 5 (contract v0.18.7): the admin shows the server's ETA and distance as the apps do, the cancel fee in
@@ -105,6 +105,23 @@ test("G5 live test: a rider reason outside the dispatch book and who cancelled r
   setLanguage("fr");
   try {
     assert.equal(cancelledBy("cancelled_by_rider"), "Passager");
+  } finally {
+    setLanguage("en");
+  }
+});
+
+test("G5 live re-test: the trip page reason line has no raw code for a known reason, and the cancel block is translated", () => {
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  assert.equal(reasonLine("something_else", null, "fr"), "Autre chose");
+  assert.equal(reasonLine("something_else", null, "sv"), "Något annat");
+  assert.equal(reasonLine("something_else", null, "en"), "Something else");
+  assert.equal(reasonLine("zz_unknown_code", null, "fr"), "Zz unknown code (zz_unknown_code)", "an unknown code keeps its code");
+  setLanguage("fr");
+  try {
+    const block = cancelBlock("cancelled_by_rider") ?? "";
+    assert.ok(!block.includes("Cannot cancel"), block);
+    assert.ok(!block.includes("cancelled_by_rider"), block);
   } finally {
     setLanguage("en");
   }

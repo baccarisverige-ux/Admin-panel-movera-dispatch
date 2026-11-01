@@ -1249,6 +1249,7 @@ export const en = {
   "Cancel checks": "Cancel checks",
   "Cancel checks: decide disputed cancels": "Cancel checks: decide disputed cancels",
   "Cancel dialog": "Cancel dialog",
+  "Cannot cancel a trip in {0}.": "Cannot cancel a trip in {0}.",
   "Cancel is allowed in this state.": "Cancel is allowed in this state.",
   "Cancel new category": "Cancel new category",
   "Cancel or no-show rate above 20%, or 3+ no-shows": "Cancel or no-show rate above 20%, or 3+ no-shows",

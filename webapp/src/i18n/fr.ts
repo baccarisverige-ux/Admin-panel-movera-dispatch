@@ -1251,6 +1251,7 @@ export const fr: Record<MessageKey, string> = {
   "Cancel checks": "Contrôles d’annulation",
   "Cancel checks: decide disputed cancels": "Contrôles d’annulation : trancher les annulations contestées",
   "Cancel dialog": "Fenêtre d’annulation",
+  "Cannot cancel a trip in {0}.": "Impossible d’annuler une course à l’état {0}.",
   "Cancel is allowed in this state.": "L’annulation est autorisée dans cet état.",
   "Cancel new category": "Annuler la nouvelle catégorie",
   "Cancel or no-show rate above 20%, or 3+ no-shows": "Taux d’annulation ou d’absence supérieur à 20 %, ou 3 absences et plus",
