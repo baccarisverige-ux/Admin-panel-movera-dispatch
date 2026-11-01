@@ -17,7 +17,7 @@ import {
   type DriverNoticeBook, type NoticeArea, type NoticeKind, type NoticeLang, type NoticeLimits, type NoticeReach, type NoticeSetting,
 } from "./driverNotices";
 import { tr, trn, trx } from "../i18n";
-import { PlaceholderChips, TextWithChips } from "../ui/PlaceholderChips";
+import { PlaceholderChips } from "../ui/PlaceholderChips";
 
 /** The island text each kind uses, from Content › Driver app texts. */
 const ISLAND_KEY: Partial<Record<NoticeKind, string>> = {
@@ -82,7 +82,7 @@ export function DriverNoticesView({ country, editable, onNotice }: { country: Ma
                       <span className="dn-kind">
                         <b>{trx(item.label)}{limitOf(item.kind) === "always" ? <em className="dn-tag">{tr("Always goes through")}</em> : null}</b>
                         <small>{trx(item.when)} · {item.kind}</small>
-                        <span className="dn-line" dir={rtl ? "rtl" : undefined}><TextWithChips text={text.own ? text.title : trx(text.title)} /> · <TextWithChips text={text.own ? text.body : trx(text.body)} />{text.own ? "" : tr(" (default)")}</span>
+                        <span className="dn-line" dir={rtl ? "rtl" : undefined}>{fillNotice(text.own ? text.title : trx(text.title), sample)} · {fillNotice(text.own ? text.body : trx(text.body), sample)}{text.own ? "" : tr(" (default)")}</span>
                       </span>
                       <span className="dn-tools">
                         <Switch label={trx(item.label)} on={kind.on} disabled={!editable} onChange={(on) => setKind(item.kind, { on })} />
