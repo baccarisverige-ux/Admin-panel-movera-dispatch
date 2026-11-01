@@ -90,7 +90,7 @@ test("audit: search, filters, details with who and before/after, and export", as
   await expect(log.getByRole("link", { name: "All their work" })).toHaveAttribute("href", "/reports?tab=work&admin=nora");
   await expect(log.getByRole("link", { name: "Nora Lind" })).toBeVisible();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: /^Export \d+ rows$/ }).click();
+  await page.getByRole("button", { name: /^Export \d+ rows?$/ }).click();
   expect((await download).suggestedFilename()).toMatch(/^movera-audit-.*\.csv$/);
   await page.getByLabel("Search the audit", { exact: true }).fill("nothing-like-this");
   await expect(page.getByText("No action matches these filters.")).toBeVisible();

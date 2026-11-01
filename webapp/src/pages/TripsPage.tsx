@@ -277,7 +277,7 @@ export function TripsPage() {
             trip.id,
             // Q13: a waiting rider's name opens the assign panel.
             canAssignTrip(trip.status) && canIntervene ? { text: trip.name, node: <RiderAssignName tripId={trip.id} rider={trip.name} /> } : trip.name,
-            trip.driverId ? driverNames.get(trip.driverId) ?? "Driver" : "No driver yet",
+            trip.driverId ? driverNames.get(trip.driverId) ?? tr("Driver") : tr("No driver yet"),
             liveStatusCell(trip),
             zoneById(trip.zoneId)?.name ?? trip.zoneId,
             fact(trip).category.label,
