@@ -28,7 +28,7 @@ export function PaymentPage() {
   const row = payments.data?.find((item) => item.id === id);
   if (payments.isLoading) return <p className="state-line">{tr("Loading payment.")}</p>;
   if (!row) {
-    return <NotFoundRecord kind="Payment" id={id} list="/payments" listLabel="payments" />;
+    return <NotFoundRecord kind="Payment" id={id} list="/payments" back={tr("Back to payments")} />;
   }
 
   const payment = row;
