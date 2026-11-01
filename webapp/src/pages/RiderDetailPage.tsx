@@ -119,7 +119,7 @@ export function RiderDetailPage() {
 
   if (data.loading) return <p className="state-line">{tr("Loading rider.")}</p>;
   if (!row) {
-    return <NotFoundRecord kind="Rider" id={riderId} list="/riders" listLabel="riders" />;
+    return <NotFoundRecord kind="Rider" id={riderId} list="/riders" back={tr("Back to riders")} />;
   }
 
   const { rider, profile } = row;

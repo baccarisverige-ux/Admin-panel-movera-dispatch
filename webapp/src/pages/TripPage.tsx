@@ -152,7 +152,7 @@ export function TripPage() {
 
   if (trips.isLoading || drivers.isLoading || vehicles.isLoading || (!listed && single.isLoading)) return <p className="state-line">{tr("Loading trip.")}</p>;
   if (!trip || !route) {
-    return <NotFoundRecord kind="Trip" id={tripId} list="/trips" listLabel="trips" />;
+    return <NotFoundRecord kind="Trip" id={tripId} list="/trips" back={tr("Back to trips")} />;
   }
 
   const country = countryOf(trip.zoneId);

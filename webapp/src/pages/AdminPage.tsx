@@ -24,7 +24,7 @@ export function AdminPage() {
   const [notice, setNotice] = useState("");
   const editable = Boolean(session.agent && can(session.agent.role, "team.edit"));
   if (!agent) {
-    return <NotFoundRecord kind="Admin" id={adminId} list="/team" listLabel="the team" />;
+    return <NotFoundRecord kind="Admin" id={adminId} list="/team" back={tr("Back to the team")} />;
   }
   const assigned = custom ?? ops.assigned[agent.id] ?? "";
   const customRole = ops.customRoles.find((item) => item.id === assigned);

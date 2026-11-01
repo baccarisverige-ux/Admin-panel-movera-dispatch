@@ -107,7 +107,7 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
   );
 
   // An unknown ticket address says so (Q23), instead of quietly opening the first ticket.
-  if (id && !view && rows.data && !all.some((item) => item.row.id === id)) return <div className="dx-page sp-page">{header}<NotFoundRecord kind="Ticket" id={id} list={chat ? "/chat" : "/support"} listLabel={chat ? "chat" : "support"} /></div>;
+  if (id && !view && rows.data && !all.some((item) => item.row.id === id)) return <div className="dx-page sp-page">{header}<NotFoundRecord kind="Ticket" id={id} list={chat ? "/chat" : "/support"} back={chat ? tr("Back to chat") : tr("Back to support")} /></div>;
   if (view === "settings") return <div className="dx-page sp-page">{header}<SupportSettings desk={desk} country={scope.market.id} editable={Boolean(agent && can(agent.role, "settings.edit"))} /></div>;
   if (view === "team") {
     const team = teamNumbers(all.map((item) => item.facts));

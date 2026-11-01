@@ -115,7 +115,7 @@ export function routerBasename(): string {
 }
 
 function NotFound() {
-  return <NotFoundRecord kind="Page" list="/" listLabel="the dashboard" />;
+  return <NotFoundRecord kind="Page" list="/" back={tr("Back to the dashboard")} />;
 }
 
 function NoAccess() {
@@ -212,7 +212,7 @@ function Authed() {
         <Route path="payments" element={<Screen id="payments" />} />
         <Route path="payments/:id" element={<PaymentPage />} />
         <Route path="payouts" element={<Screen id="payouts" />} />
-        <Route path="payouts/:id" element={<RecordPage kind="payouts" label={tr("Payout")} list="/payouts" />} />
+        <Route path="payouts/:id" element={<RecordPage kind="payouts" label={tr("Payout")} list="/payouts" back={tr("Back to payouts")} />} />
         <Route path="zones" element={<Screen id="zones" />} />
         <Route path="zones/:zoneId" element={<ZoneDetailPage />} />
         <Route path="pricing" element={<Screen id="pricing" />} />
@@ -220,7 +220,7 @@ function Authed() {
         <Route path="tickets/:id" element={<SupportPage />} />
         <Route path="chat" element={<Screen id="chat" />} />
         <Route path="incidents" element={<Screen id="incidents" />} />
-        <Route path="incidents/:id" element={<RecordPage kind="incidents" label={tr("Incident")} list="/incidents" />} />
+        <Route path="incidents/:id" element={<RecordPage kind="incidents" label={tr("Incident")} list="/incidents" back={tr("Back to incidents")} />} />
         <Route path="risk" element={<Screen id="risk" />} />
         <Route path="waitlist" element={<Screen id="waitlist" />} />
         <Route path="errors" element={<Screen id="errors" />} />
