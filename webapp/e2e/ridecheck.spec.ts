@@ -26,8 +26,11 @@ test("Dispatch › Safety: Ride check triggers with their numbers, limits and ch
   await page.goto("/dispatch?zone=Z001&tab=safety");
   const card = page.getByRole("region", { name: "Ride check", exact: true });
   await expect(card).toContainText("Finished far from drop-off");
-  await expect(card.getByTestId("ride-check-far")).toContainText("More than 3 km");
-  await expect(card.getByTestId("ride-check-stop")).toContainText("More than 2 min");
+  // v0.18.9 (G7): every ride check number is this zone's (DriverAppConfig.rideCheck), edited and published here.
+  await expect(card.getByLabel("Ended far from the drop-off")).toHaveValue("500");
+  await expect(card.getByLabel("Long stop", { exact: true })).toHaveValue("2");
+  await expect(card.getByLabel("Time to answer")).toHaveValue("120");
+  await expect(card.getByLabel("Ask again after")).toHaveValue("10");
   await expect(card.getByLabel("Off the route from")).toHaveValue("2");
   await expect(card.getByLabel("Longer than expected from")).toHaveValue("50");
   await expect(card.getByLabel("Possible crash on")).toBeChecked();
@@ -39,17 +42,20 @@ test("Dispatch › Safety: Ride check triggers with their numbers, limits and ch
   await expect(card.getByLabel("Off the route from")).toHaveAttribute("aria-invalid", "true");
   await expect(card.locator(".num-field-error")).toContainText("Max 20");
   await card.getByLabel("Off the route from").fill("3");
+  await card.getByLabel("Ended far from the drop-off").fill("800");
   await card.getByLabel("Possible crash on").uncheck();
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
   const changes = page.getByRole("list", { name: "Changes not live yet" });
   await expect(changes).toContainText("Off the route from (km): 2 → 3");
   await expect(changes).toContainText("Ride check on a possible crash: on → off");
+  await expect(changes).toContainText("Ended far from the drop-off (m): 500 → 800");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await confirm(page);
   await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
   await page.reload();
   await expect(page.getByRole("region", { name: "Ride check", exact: true }).getByLabel("Off the route from")).toHaveValue("3");
+  await expect(page.getByRole("region", { name: "Ride check", exact: true }).getByLabel("Ended far from the drop-off")).toHaveValue("800");
 
   await page.goto("/risk");
   await expect(page.getByRole("complementary", { name: "Zones" })).toContainText("Ride check (Dispatch)");
@@ -57,9 +63,14 @@ test("Dispatch › Safety: Ride check triggers with their numbers, limits and ch
   await expect(page.getByRole("complementary", { name: "Zones" })).not.toContainText("possible crash");
 });
 
-test("Ride check triggers: one shared setting edited from Dispatch Safety, Dispatch Live and the Dashboard", async ({ page }) => {
+test("Ride check triggers: one shared setting edited from Dispatch Live and the Dashboard; Dispatch Safety keeps the zone's own numbers", async ({ page }) => {
   await session(page);
+  // v0.18.9 (G7): Dispatch › Safety shows only this zone's ride check (per zone), not the shared triggers card.
   await page.goto("/dispatch?zone=Z001&tab=safety");
+  await expect(page.getByRole("region", { name: "Ride check", exact: true }).getByLabel("Long stop", { exact: true })).toHaveValue("2");
+  await expect(page.getByRole("region", { name: "Ride check triggers" })).toHaveCount(0);
+
+  await page.goto("/dispatch?view=live");
   const triggers = page.getByRole("region", { name: "Ride check triggers" });
   await expect(triggers.getByLabel("Finished far from drop-off")).toHaveValue("3");
   await expect(triggers.getByLabel("Unexpected long stop")).toHaveValue("2");
@@ -71,16 +82,17 @@ test("Ride check triggers: one shared setting edited from Dispatch Safety, Dispa
   await triggers.getByRole("button", { name: "Save" }).click();
   await confirm(page);
   await expect(triggers).toContainText("Everything is saved");
-  await expect(page.getByRole("region", { name: "Ride check", exact: true }).getByTestId("ride-check-far")).toContainText("More than 5 km");
-
-  await page.goto("/dispatch?view=live");
-  await expect(page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Unexpected long stop")).toHaveValue("10");
-  await page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Unexpected long stop").fill("8");
-  await page.getByRole("region", { name: "Ride check triggers" }).getByRole("button", { name: "Save" }).click();
-  await confirm(page);
-  await expect(page.getByRole("region", { name: "Ride check triggers" })).toContainText("Everything is saved");
 
   await page.goto("/?tab=work");
+  const dash = page.getByRole("region", { name: "Ride check triggers" });
+  await expect(dash.getByLabel("Finished far from drop-off")).toHaveValue("5");
+  await expect(dash.getByLabel("Unexpected long stop")).toHaveValue("10");
+  await dash.getByLabel("Unexpected long stop").fill("8");
+  await dash.getByRole("button", { name: "Save" }).click();
+  await confirm(page);
+  await expect(dash).toContainText("Everything is saved");
+
+  await page.goto("/dispatch?view=live");
   await expect(page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Finished far from drop-off")).toHaveValue("5");
   await expect(page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Unexpected long stop")).toHaveValue("8");
 });
