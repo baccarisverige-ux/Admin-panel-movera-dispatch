@@ -9,8 +9,7 @@ import type { LatLng } from "../dashboard/route.ts";
 import type { LiveTripFacts } from "../api/seed.ts";
 import type { CancelReasonBook, LangId } from "../dispatch/offers.ts";
 import { reasonText } from "../dispatch/offers.ts";
-import { translate } from "../i18n/core.ts";
-import { en } from "../i18n/en.ts";
+import { hasMessage, translate } from "../i18n/core.ts";
 import type { AppLanguage } from "../i18n/languages.ts";
 import { formatMoney, isCurrency } from "../domain/money.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
@@ -117,14 +116,15 @@ export function reasonWords(code: string | undefined | null, book: CancelReasonB
 
 /**
  * G5 live re-test: the trip page's "Reason: …" line. A reason the admin's book or the panel's words know reads as words
- * only (FR "Autre chose"); an unknown code keeps the code in parentheses so it can still be looked up.
+ * only (FR "Autre chose"); an unknown code keeps the code in parentheses so it can still be looked up. English has no
+ * dictionary (the keys are English), so there the words alone are shown.
  */
 export function reasonLine(code: string | undefined | null, book: CancelReasonBook | null, lang: LangId): string {
   if (!code) return "";
   const words = reasonWords(code, book, lang);
   const inBook = Boolean(book && [...Object.values(book.groups).flat(), book.noShow].some((item) => item.code === code));
   const plain = code.replace(/^(admin_|system_|next_trip_|scheduled_)/, "").replaceAll("_", " ").trim();
-  const known = inBook || Object.hasOwn(en, plain.charAt(0).toUpperCase() + plain.slice(1));
+  const known = inBook || (() => { const key = plain.charAt(0).toUpperCase() + plain.slice(1); return lang === "en" || translate(lang as AppLanguage, key) !== key || hasMessage(key); })();
   return known ? words : `${words} (${code})`;
 }
 
