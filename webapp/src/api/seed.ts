@@ -146,6 +146,10 @@ export type LiveTripFacts = {
   /** v0.18.8 (G6): the rider PIN when the trip needs one (the admin reads it to the driver on the phone). */
   pin: { code: string | null; verified: boolean; attempts: number | null; blocked: boolean } | null;
   /** The cancel as the server recorded it: who, the reason code, the fee, whether it is paid / owed / waived, which rule set it, and the driver's share. */
+  /** v0.18.9 (G7): the server's ride check, the latest route change (with the driver's money) and the admin flag. */
+  rideCheck?: { checkId: string; trigger: string; askedAt: string; answerBy: string; answers: { rider?: string; driver?: string }; alertedAt: string | null } | null;
+  routeChange?: { status: string; dropoff: LivePlace; stops: LivePlace[]; totalMinor: number; differenceMinor: number; askedAt: string; answerBy: string; answeredBy: string | null; driverEarningsMinor: number | null; earningsDifferenceMinor: number | null } | null;
+  adminFlag?: { flagged: boolean; reason: string | null; by: string | null; at: string | null } | null;
   cancellation: { actor: string; reasonCode: string; at: string; feeMinor: number | null; feeStatus: string | null; feeKind: string | null; driverShareMinor: number | null; note: string | null; reversal: { at: string; by: string | null; reason: string | null; driverShareTakenBack: boolean } | null; refundedToWallet: boolean } | null;
 };
 export type LiveAccountFacts = {

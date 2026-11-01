@@ -164,7 +164,10 @@ export function caseOf(row: DemoRecord, safety: SafetyBook, ops: IncidentOps, no
   const resolve = events.find((event) => event.kind === "resolve" || event.kind === "dismiss");
   const open = OPEN.has(row.status);
   const kind = kindOf(row, events.length > 0);
-  const level = ops.cases[row.id]?.level ?? KINDS.find((item) => item.id === kind)?.level ?? "low";
+  // v0.18.9 (G7): a live case carries the server's level (POST /admin/incidents/{id}/level); medium reads as high.
+  const severity = (row as { severity?: unknown }).severity;
+  const served: Level | undefined = severity === "critical" || severity === "high" || severity === "low" ? severity : severity === "medium" ? "high" : undefined;
+  const level = served ?? ops.cases[row.id]?.level ?? KINDS.find((item) => item.id === kind)?.level ?? "low";
   const seed = hash(row.id);
   const takenAt = take ? Date.parse(take.at) : null;
   // Same opening time as the SOS alert: two minutes before it was taken, or a few minutes ago.

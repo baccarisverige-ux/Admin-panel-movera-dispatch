@@ -1,5 +1,4 @@
 import { RideCheckCard } from "./RideCheckCard";
-import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import {
@@ -285,10 +284,17 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
       <Card title={tr("Stops")} tone="blue" icon={<MapPin size={18} />} help={tr("Riders can add stops. The driver sees every stop before accepting.")} off={!zone.stops.on} aside={<Switch label={tr("Stops")} on={zone.stops.on} disabled={disabled} onChange={(on) => set({ stops: { ...zone.stops, on } })} />}>
         <Row label={tr("Max stops")}><Num label={tr("Max stops")} value={zone.stops.max} unit="stops" min={1} max={5} disabled={disabled || !zone.stops.on} onChange={(max) => set({ stops: { ...zone.stops, max } })} /></Row>
         <Row label={tr("Free wait at each stop")} help={tr("Waiting at a stop is charged only after these minutes. The server charges by this number.")}><Num label={tr("Free wait per stop")} value={zone.stops.freeWaitMin} unit="min" min={0} max={20} disabled={disabled || !zone.stops.on} onChange={(freeWaitMin) => set({ stops: { ...zone.stops, freeWaitMin } })} /></Row>
-        <Row label={tr("Then, per minute")} help={tr("0 means no charge.")}><Num label={tr("Wait price per minute")} value={zone.stops.perMin} unit={`${symbol}/min`} step={0.1} min={0} max={100} disabled={disabled || !zone.stops.on} onChange={(perMin) => set({ stops: { ...zone.stops, perMin } })} /></Row>
+        {/* v0.18.9 (G7 decision 4): the price per minute at a stop is Pricing's stopWaitPerMin (one price, set there). */}
+        <Row label={tr("Then, per minute")} help={tr("Set in Pricing for each car type. The server charges this price.")}><Link className="dx-limit-link" to="/pricing" data-testid="stop-price-link">{tr("Price per minute: Pricing")}</Link></Row>
         <Row label={tr("Extra fee per stop")} help={tr("0 means no fee.")}><Num label={tr("Fee per stop")} value={zone.stops.perStop} unit={symbol} step={0.5} min={0} max={500} disabled={disabled || !zone.stops.on} onChange={(perStop) => set({ stops: { ...zone.stops, perStop } })} /></Row>
+        {/* v0.18.9 (G7 decision 3 + owner rule 16): DriverAppConfig.routeChange, read live by the server per zone. */}
         <Row label={tr("Rider can change the destination or add a stop during the trip")} on={zone.stops.changeDuring} disabled={disabled || !zone.stops.on} onToggle={(changeDuring) => set({ stops: { ...zone.stops, changeDuring } })} />
-        <Row label={tr("Driver can accept or refuse the change")} on={zone.stops.driverCanRefuse} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} onToggle={(driverCanRefuse) => set({ stops: { ...zone.stops, driverCanRefuse } })} />
+        <Row label={tr("Driver can accept or refuse the change")} help={tr("Off: the change applies at once and the driver is told.")} on={zone.stops.driverCanRefuse} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} onToggle={(driverCanRefuse) => set({ stops: { ...zone.stops, driverCanRefuse } })} />
+        <Row label={tr("Driver's time to answer")} help={tr("15 to 300 s. No answer keeps the old route.")}><Num label={tr("Driver's time to answer")} value={zone.stops.answerSeconds} unit="s" step={5} min={15} max={300} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring || !zone.stops.driverCanRefuse} onChange={(answerSeconds) => set({ stops: { ...zone.stops, answerSeconds: Math.round(answerSeconds) } })} /></Row>
+        <Row label={tr("Also before pickup")} help={tr("On: the rider can change the route while the driver is on the way. Off: only once in the car.")} on={zone.stops.beforePickup} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} onToggle={(beforePickup) => set({ stops: { ...zone.stops, beforePickup } })} />
+        <Row label={tr("Fixed-price trips")} help={tr("What happens when a trip with a fixed price changes its route.")}>
+          <Choice label={tr("Fixed-price trips")} value={zone.stops.fixedPriceTrips} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} options={[{ id: "block", label: tr("Cannot change") }, { id: "switch_to_normal", label: tr("Change at the normal price") }]} onChange={(fixedPriceTrips) => set({ stops: { ...zone.stops, fixedPriceTrips } })} />
+        </Row>
       </Card>
 
       <Card title={tr("Pickup move after accept")} tone="purple" icon={<Move size={18} />} help={tr("After a driver accepts, the rider can move the pickup point a little. A bigger move means cancel and book again. The driver is told about every move. The rider and driver apps read this.")}>
@@ -407,7 +413,6 @@ function Safety({ zone, onChange, disabled, country, countryName }: Props) {
         <p className="op-help">{tr("Riders see the code in their app. Admins see it on the trip page. The driver never gets it.")}</p>
       </Card>
       <RideCheckCard zone={zone} onChange={onChange} disabled={disabled} />
-      <div id="rc-triggers"><RideCheckSettingsCard where="rules" /></div>
     </div>
   );
 }

@@ -61,6 +61,12 @@ function Bar({ list, records, initialStatus }: { list: LiveListName; records: st
           {STATUSES[list].map((code) => <option key={code} value={code}>{statusLabel(code)}</option>)}
         </select>
       </label>
+      {list === "trips" ? (
+        <label className="live-status-filter">
+          <input type="checkbox" checked={Boolean(query.flagged)} onChange={(event) => change({ flagged: event.target.checked, pages: 1 })} />
+          {tr("Flagged only")}
+        </label>
+      ) : null}
       {query.hasMore && !rows.error ? (
         <button data-command="admin.server.loadMore" type="button" className="secondary-btn" disabled={rows.isFetching} onClick={() => change({ pages: query.pages + 1 })}>
           {rows.isFetching ? tr("Loading.") : tr("Load more")}

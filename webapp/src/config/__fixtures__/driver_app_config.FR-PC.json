@@ -783,7 +783,7 @@
         "noShowFee": null
       }
     },
-    "stopFreeWaitMin": 3
+    "stopFreeWaitMin": 0
   },
   "pickupPin": {
     "required": false,
@@ -930,6 +930,11 @@
     "blockOnline": true
   },
   "rideCheck": {
+    "on": true,
+    "endFarMeters": 500,
+    "noAnswerSeconds": 120,
+    "repeatMinutes": 10,
+    "noAnswerAlarm": false,
     "stopMinutes": 2,
     "offRouteKm": 2,
     "finishFarFromDropoffKm": 3,
@@ -939,6 +944,13 @@
     "longerOn": true,
     "longerPct": 50,
     "crashOn": true
+  },
+  "routeChange": {
+    "on": true,
+    "driverCanRefuse": true,
+    "answerSeconds": 60,
+    "beforePickup": true,
+    "fixedPriceTrips": "block"
   },
   "texts": {
     "byLanguage": {

@@ -273,6 +273,10 @@ export type TripState = {
   zoneSupply?: { zoneId: string; online: number; free: number; busy: number; waiting: number; level: "ok" | "tight" | "short"; shortage: boolean }[];
   /** G3-R1 (v0.18.4): more GET /admin/audit lines (e.g. driver.auto_offline). */
   audit?: Record<string, unknown>[];
+  /** v0.18.9 (G7): GET /admin/ride-checks rows, admin trip notes and opened cases. */
+  rideChecks?: Record<string, unknown>[];
+  notes?: Record<string, unknown>[];
+  cases?: Record<string, unknown>[];
 };
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
@@ -458,6 +462,19 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       }
       return json(route, 200, { items, nextCursor: null });
     }
+    if (p === "/api/v1/admin/ride-checks") return json(route, 200, { items: inZones(state.rideChecks ?? [], zoneField), nextCursor: null });
+    // v0.18.9 (G7): POST /admin/incidents/{id}/level.
+    const level = /^\/api\/v1\/admin\/incidents\/([^/]+)\/level$/.exec(p);
+    if (level) {
+      const index = state.incidents.findIndex((item) => item.incidentId === level[1]);
+      if (index < 0) return json(route, 404, { code: "not_found", message: "No such incident.", requestId: "r-404l", retryable: false });
+      const current = state.incidents[index];
+      if (body.expectedVersion !== current.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409l", retryable: false, projection: current });
+      const next: Incident = { ...current, severity: body.severity, version: current.version + 1 };
+      state.incidents[index] = next;
+      feed("incident_updated", next);
+      return json(route, 200, next);
+    }
     const incidentCall = /^\/api\/v1\/admin\/incidents\/([^/]+)(?:\/(take|resolve|dismiss))?$/.exec(p);
     if (incidentCall) {
       const index = state.incidents.findIndex((item) => item.incidentId === incidentCall[1]);
@@ -481,22 +498,56 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const statuses = url.searchParams.getAll("status");
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
       const riderId = url.searchParams.get("riderId");
-      const items = inZones(state.trips, (trip) => [String(trip.zoneId)]).filter((trip) => (!statuses.length || statuses.includes(String(trip.status))) && (!riderId || trip.riderId === riderId) && (!q || JSON.stringify(trip).toLowerCase().includes(q)));
+      const flaggedOnly = url.searchParams.get("flagged") === "true";
+      const items = inZones(state.trips, (trip) => [String(trip.zoneId)]).filter((trip) => (!statuses.length || statuses.includes(String(trip.status))) && (!riderId || trip.riderId === riderId) && (!q || JSON.stringify(trip).toLowerCase().includes(q)) && (!flaggedOnly || (trip.adminFlag as { flagged?: boolean } | undefined)?.flagged === true));
       const cursor = url.searchParams.get("cursor");
       if (!cursor && items.length > 2) return json(route, 200, { items: items.slice(0, 2), nextCursor: "c2" });
       return json(route, 200, { items: cursor ? items.slice(2) : items, nextCursor: null });
     }
-    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/adjust|\/reverse-no-show|\/pin\/unlock)?$/.exec(p);
+    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/adjust|\/reverse-no-show|\/pin\/unlock|\/flag|\/notes|\/case|\/reveal-contact|\/cancel|\/reassign|\/no-show|\/complete)?$/.exec(p);
     if (one) {
       const trip = state.trips.find((item) => item.tripId === one[1]);
       if (!trip) return json(route, 404, { code: "not_found", message: "No such trip.", requestId: "r-404t", retryable: false });
       if (!one[2]) return json(route, 200, trip);
+      // v0.18.9 (G7, contract.json#onTrip.adminTrip): flag, notes, case, reveal contact (no trip version change).
+      if (one[2] === "/flag") {
+        trip.adminFlag = body.flagged ? { flagged: true, ...(body.reason ? { reason: body.reason } : {}), by: "A1", at: "2026-10-26T10:00:00Z" } : { flagged: false, by: "A1", at: "2026-10-26T10:00:00Z" };
+        return json(route, 200, trip.adminFlag);
+      }
+      if (one[2] === "/notes") {
+        state.notes = state.notes ?? [];
+        if (method === "GET") return json(route, 200, { items: state.notes.filter((note) => note.tripId === trip.tripId), nextCursor: null });
+        if (!body?.text) return json(route, 400, { code: "invalid_request", message: "text is required", requestId: "r-400n", retryable: false });
+        const note = { noteId: `tno_${state.notes.length + 1}`, tripId: trip.tripId, text: body.text, adminId: "A1", adminName: "Sara", at: "2026-10-26T10:00:00Z" };
+        state.notes.unshift(note);
+        return json(route, 201, note);
+      }
+      if (one[2] === "/case") {
+        state.cases = state.cases ?? [];
+        const ticket = { ticketId: `tkt_${state.cases.length + 1}`, tripId: trip.tripId, openedBy: "admin", visibleToPerson: body.visibleToPerson === true, ...(body.about === "rider" ? { riderId: trip.riderId } : { driverId: trip.driverId }), category: body.category, subject: body.subject, status: "open", priority: body.category === "safety" ? "high" : "normal", createdAt: "2026-10-26T10:00:00Z", updatedAt: "2026-10-26T10:00:00Z", lastMessageAt: "2026-10-26T10:00:00Z", zoneId: trip.zoneId };
+        state.cases.push({ ...ticket, text: body.text, about: body.about });
+        return json(route, 201, ticket);
+      }
+      if (one[2] === "/reveal-contact") {
+        if (!body?.reason?.trim()) return json(route, 400, { code: "invalid_request", message: "reason is required", requestId: "r-400c", retryable: false });
+        return json(route, 200, { who: body.who, phone: body.who === "driver" ? "+46701110001" : "+46702220002", revealedAt: "2026-10-26T10:00:00Z" });
+      }
+      if (one[2] === "/cancel" || one[2] === "/reassign" || one[2] === "/no-show" || one[2] === "/complete") {
+        if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409s", retryable: false, projection: trip });
+        if (!body.note) return json(route, 400, { code: "invalid_request", message: "note is required", requestId: "r-400s", retryable: false });
+        const status = { "/cancel": "cancelled_by_admin", "/reassign": "searching", "/no-show": "no_show", "/complete": "completed" }[one[2]];
+        Object.assign(trip, { status, version: Number(trip.version) + 1, ...(one[2] === "/cancel" ? { cancellation: { actor: "admin", reasonCode: body.reasonCode, at: "2026-10-26T10:00:00Z", note: body.note } } : {}), ...(one[2] === "/reassign" ? { driverId: undefined } : {}) });
+        return json(route, 200, trip);
+      }
       if (one[2] === "/offers") return json(route, 200, { items: OFFERS.filter((offer) => offer.tripId === trip.tripId), nextCursor: null });
       if (one[2] === "/adjust") {
         // v0.18.7 (G5): POST /admin/trips/{tripId}/adjust waiveCancelFee: the owed fee is waived; the rider's debt in that currency drops.
         if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409a", retryable: false, projection: trip });
         if (!body.reason) return json(route, 400, { code: "invalid_request", message: "reason is required", requestId: "r-400a", retryable: false });
         const cancellation = trip.cancellation as { fee?: { amountMinor: number; currency: string } | null; feeStatus?: string } | undefined;
+        // v0.18.9 (G7): price adjust (fare) and the charged waiting (waitingSeconds).
+        if (body.fare) trip.fare = { ...(trip.fare as object), amountMinor: body.fare.amountMinor };
+        if (typeof body.waitingSeconds === "number") trip.waiting = { arrivedAt: "2026-10-26T09:12:00Z", freeUntil: "2026-10-26T09:15:00Z", noShowAt: "2026-10-26T09:20:00Z", rules: [], ...((trip.waiting as object | undefined) ?? {}), chargedSeconds: body.waitingSeconds, paidMinutes: Math.ceil(body.waitingSeconds / 60) };
         if (body.waiveCancelFee && cancellation?.fee) {
           cancellation.feeStatus = "waived";
           const rider = state.riders.find((item) => item["riderId"] === trip.riderId) as { outstanding?: { amountMinor: number; currency: string } | null; outstandingByCurrency?: { amountMinor: number; currency: string }[] } | undefined;

@@ -87,6 +87,8 @@ export function incidentRecord(incident: ServerIncident): DemoRecord {
     alarm: rings(incident),
     ...(incident.rideCheck ? { liveRideCheck: incident.rideCheck } : {}),
     ...(incident.version ? { version: incident.version } : {}),
+    // v0.18.9 (G7): the case level is the server's (its kind default, or what an admin set with Change level).
+    ...(incident.severity ? { severity: incident.severity } : {}),
   };
 }
 

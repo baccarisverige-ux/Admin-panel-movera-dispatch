@@ -262,6 +262,17 @@ export type Factor = { id: FactorId; on: boolean; weight: number };
  * The far-from-drop-off km and the long-stop minutes are shared by every zone (safety/rideCheckSettings).
  */
 export type RideCheckRules = {
+  /**
+   * v0.18.9 (G7, contract.json#onTrip.rideCheck): the server's own ride check, per zone (DriverAppConfig.rideCheck):
+   * on, long stop minutes, off-route km (routeKm), unexpected end metres, seconds to answer before the safety team is
+   * alerted, minutes before the same reason asks again, and whether a no-answer case rings.
+   */
+  on: boolean;
+  stopMinutes: number;
+  endFarMeters: number;
+  noAnswerSeconds: number;
+  repeatMinutes: number;
+  noAnswerAlarm: boolean;
   farOn: boolean;
   stopOn: boolean;
   routeOn: boolean;
@@ -274,11 +285,15 @@ export type RideCheckRules = {
 /** Lowest and highest value for each Ride check number, used by the fields and the checks. */
 export const RIDE_CHECK_LIMITS = {
   routeKm: { min: 0.5, max: 20 },
+  stopMinutes: { min: 1, max: 30 },
+  endFarMeters: { min: 100, max: 5000 },
+  noAnswerSeconds: { min: 30, max: 600 },
+  repeatMinutes: { min: 1, max: 120 },
   longerPct: { min: 10, max: 300 },
 } as const;
 
 export function rideCheckDefault(): RideCheckRules {
-  return { farOn: true, stopOn: true, routeOn: true, routeKm: 2, longerOn: true, longerPct: 50, crashOn: true };
+  return { on: true, stopMinutes: 2, endFarMeters: 500, noAnswerSeconds: 120, repeatMinutes: 10, noAnswerAlarm: false, farOn: true, stopOn: true, routeOn: true, routeKm: 2, longerOn: true, longerPct: 50, crashOn: true };
 }
 
 export type ZoneDispatch = {
@@ -330,7 +345,12 @@ export type ZoneDispatch = {
   riderCancel: { on: boolean; closerPct: number; priority: boolean; priorityMin: number; fees: CancelFeeTable; driverSharePct: number };
   extras: { id: ExtraId; on: boolean; badge: boolean }[];
   longTripKm: number;
-  stops: { on: boolean; max: number; freeWaitMin: number; perMin: number; perStop: number; changeDuring: boolean; driverCanRefuse: boolean };
+  /**
+   * v0.18.9 (G7): changeDuring / driverCanRefuse / answerSeconds / beforePickup / fixedPriceTrips are
+   * DriverAppConfig.routeChange; max is booking.maxStops (server-checked); freeWaitMin is waiting.stopFreeWaitMin
+   * (default 0: paid from minute 1); perMin is shown from Pricing (stopWaitPerMin), not set here.
+   */
+  stops: { on: boolean; max: number; freeWaitMin: number; perMin: number; perStop: number; changeDuring: boolean; driverCanRefuse: boolean; answerSeconds: number; beforePickup: boolean; fixedPriceTrips: "block" | "switch_to_normal" };
   /** Q40: after the driver accepts, the rider can move the pickup up to maxMeters; further means cancel and book again. The driver is told. */
   pickupMove: { maxMeters: number };
   airport: { on: boolean; order: "fifo" | "best"; maxQueueMin: number; queueAreas: { id: string; name: string; ring: [number, number][] }[] };
@@ -552,7 +572,8 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     extras: EXTRAS.map((extra) => ({ id: extra.id, on: true, badge: true })),
     longTripKm: 50,
     // Owner Q39: 3 stops at most by default (contract.json#configDefaults.maxStops).
-    stops: { on: true, max: CONFIG_DEFAULTS.maxStops, freeWaitMin: 3, perMin: 0, perStop: 0, changeDuring: true, driverCanRefuse: true },
+    // v0.18.9 (owner G7 decision 4): no free minutes at a middle stop by default (contract configDefaults.stopFreeWaitMin 0).
+    stops: { on: true, max: CONFIG_DEFAULTS.maxStops, freeWaitMin: 0, perMin: 0, perStop: 0, changeDuring: true, driverCanRefuse: true, answerSeconds: 60, beforePickup: true, fixedPriceTrips: "block" },
     pickupMove: { maxMeters: CONFIG_DEFAULTS.maxPickupMoveMeters },
     airport: { on: airport, order: "fifo", maxQueueMin: 120, queueAreas: [] },
     goingHome: { on: true, perDay: 2, maxOffDeg: 45 },
@@ -765,6 +786,12 @@ export function rideCheckIssues(check: RideCheckRules): string[] {
   const out = (value: number, limit: { min: number; max: number }) => !Number.isFinite(value) || value < limit.min || value > limit.max;
   if (check.routeOn && out(check.routeKm, RIDE_CHECK_LIMITS.routeKm)) issues.push(`Ride check: off the route must be ${RIDE_CHECK_LIMITS.routeKm.min} to ${RIDE_CHECK_LIMITS.routeKm.max} km.`);
   if (check.longerOn && out(check.longerPct, RIDE_CHECK_LIMITS.longerPct)) issues.push(`Ride check: longer than expected must be ${RIDE_CHECK_LIMITS.longerPct.min} to ${RIDE_CHECK_LIMITS.longerPct.max}%.`);
+  if (check.on) {
+    if (out(check.stopMinutes, RIDE_CHECK_LIMITS.stopMinutes)) issues.push(`Ride check: long stop must be ${RIDE_CHECK_LIMITS.stopMinutes.min} to ${RIDE_CHECK_LIMITS.stopMinutes.max} min.`);
+    if (out(check.endFarMeters, RIDE_CHECK_LIMITS.endFarMeters)) issues.push(`Ride check: ended far from the drop-off must be ${RIDE_CHECK_LIMITS.endFarMeters.min} to ${RIDE_CHECK_LIMITS.endFarMeters.max} m.`);
+    if (out(check.noAnswerSeconds, RIDE_CHECK_LIMITS.noAnswerSeconds)) issues.push(`Ride check: time to answer must be ${RIDE_CHECK_LIMITS.noAnswerSeconds.min} to ${RIDE_CHECK_LIMITS.noAnswerSeconds.max} s.`);
+    if (out(check.repeatMinutes, RIDE_CHECK_LIMITS.repeatMinutes)) issues.push(`Ride check: ask again after must be ${RIDE_CHECK_LIMITS.repeatMinutes.min} to ${RIDE_CHECK_LIMITS.repeatMinutes.max} min.`);
+  }
   return issues;
 }
 
@@ -873,6 +900,7 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (zone.riderCancel.on && (zone.riderCancel.closerPct < 5 || zone.riderCancel.closerPct > 100)) issues.push("Rider cancels: \"came closer\" must be 5 to 100%.");
   if (zone.riderCancel.on) issues.push(...cancelFeeIssues(zone.riderCancel.fees, "live", categories));
   if (zone.stops.on && (zone.stops.max < 1 || zone.stops.max > 5)) issues.push("Stops: max stops must be 1 to 5.");
+  if (!Number.isInteger(zone.stops.answerSeconds) || zone.stops.answerSeconds < 15 || zone.stops.answerSeconds > 300) issues.push("Route change: the driver's time to answer must be 15 to 300 s.");
   if (!Number.isInteger(zone.pickupMove.maxMeters) || zone.pickupMove.maxMeters < 0 || zone.pickupMove.maxMeters > PICKUP_MOVE_MAX_METERS) issues.push(`Pickup move after accept: 0 to ${PICKUP_MOVE_MAX_METERS} m, in whole metres.`);
   if (zone.longTripKm < 10 || zone.longTripKm > 500) issues.push("Long trip must be 10 to 500 km.");
   if (!Number.isInteger(zone.pickupPin.maxAttempts) || zone.pickupPin.maxAttempts < 1 || zone.pickupPin.maxAttempts > 10) issues.push("Rider PIN: wrong tries before lock must be 1 to 10.");
@@ -1068,6 +1096,8 @@ const LABELS: Record<string, string> = {
   "rideCheck.routeOn": "Ride check off the route", "rideCheck.routeKm": "Off the route from (km)",
   "rideCheck.longerOn": "Ride check when longer than expected", "rideCheck.longerPct": "Longer than expected from (%)",
   "rideCheck.crashOn": "Ride check on a possible crash",
+  "rideCheck.on": "Ride check by the server", "rideCheck.stopMinutes": "Long stop (min)", "rideCheck.endFarMeters": "Ended far from the drop-off (m)",
+  "rideCheck.noAnswerSeconds": "Time to answer (s)", "rideCheck.repeatMinutes": "Ask again after (min)", "rideCheck.noAnswerAlarm": "No answer rings the alarm",
   "radar.on": "Radar", "radar.drivers": "Radar drivers", "radar.seconds": "Radar time", "radar.then": "After Radar",
   "exclusive.on": "Exclusive", "exclusive.seconds": "Exclusive time to accept", "exclusive.drivers": "Exclusive drivers to try", "exclusive.then": "After Exclusive",
   "radarApp.fullOn": "Radar full screen", "radarApp.full": "Offers on full-screen radar", "radarApp.popupOn": "Radar popup", "radarApp.popup": "Offers in the popup",
@@ -1090,6 +1120,7 @@ const LABELS: Record<string, string> = {
   "riderCancel.priority": "Priority after rider cancel", "riderCancel.priorityMin": "Priority minutes",
   extras: "Special requests", longTripKm: "Long trip from", "stops.on": "Stops", "stops.max": "Max stops", "pickupMove.maxMeters": "Pickup move after accept (m)", "stops.freeWaitMin": "Free wait per stop",
   "stops.perMin": "Wait price per minute", "stops.perStop": "Fee per stop", "stops.changeDuring": "Change during the trip", "stops.driverCanRefuse": "Driver can refuse changes",
+  "stops.answerSeconds": "Driver's time to answer a change", "stops.beforePickup": "Change before pickup", "stops.fixedPriceTrips": "Fixed-price trips",
   "airport.on": "Airport queue", "airport.order": "Airport order", "airport.maxQueueMin": "Longest time in queue", "airport.queueAreas": "Queue area",
   "goingHome.on": "Going home", "goingHome.perDay": "Going home per day", "goingHome.maxOffDeg": "Going home direction",
   "fairness.idleBoost": "Boost for waiting drivers", "fairness.idlePoints": "Boost points", "fairness.hourCap": "Rides per hour cap", "fairness.hourRides": "Rides per hour",
