@@ -497,8 +497,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
         {([
           ["simulatedArrival", "Simulated arrival (test only)"],
           ["skipActivation", "Skip activation (test only)"],
-          ["demoPopup", "Demo popup (test only)"],
-          ["demoHint", "Demo hint (test only)"],
+          ["demoPopup", "Preview popup (test only)"],
+          ["demoHint", "Preview hint (test only)"],
         ] as const).map(([key, label]) => (
           <label className="check-row" key={key}>
             <input
