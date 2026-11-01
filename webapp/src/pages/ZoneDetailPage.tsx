@@ -210,7 +210,7 @@ export function ZoneDetailPage() {
   if (isLive && serverZones === null) return <p className="state-line">{tr("Loading.")}</p>;
   if (!zone) {
     // A deleted zone comes back with Undo or a roll back on the Zones page.
-    return <NotFoundRecord kind="Zone" id={zoneId} list="/zones" listLabel="zones" />;
+    return <NotFoundRecord kind="Zone" id={zoneId} list="/zones" back={tr("Back to zones")} />;
   }
 
   const issues = isLive ? liveIssues(ui.book.draft) : validateZones(ui.book.draft);

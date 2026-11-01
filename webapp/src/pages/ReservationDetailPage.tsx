@@ -70,7 +70,7 @@ export function ReservationDetailPage() {
     return <p className="state-line">{tr("Loading reservation.")}</p>;
   }
   if (!record) {
-    return <NotFoundRecord kind="Reservation" id={id} list="/reservations" listLabel="reservations" />;
+    return <NotFoundRecord kind="Reservation" id={id} list="/reservations" back={tr("Back to reservations")} />;
   }
 
   const ops = reservationOps(book, record);
