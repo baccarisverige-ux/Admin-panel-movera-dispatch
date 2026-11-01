@@ -78,3 +78,6 @@ tr.live-open td { background: #f6f7fb; }
 .live-compare-side figcaption { font-size: 13px; margin-bottom: 8px; }
 .live-compare-side .live-file { max-height: 55vh; }
 @media (max-width: 720px) { .live-compare { grid-template-columns: 1fr; } }
+/* Page audit round 2: the SOS sound button is white on dark red (contrast about 6.5:1), on every screen size. */
+.incident-alarm .incident-sound .dash-btn.danger { background: #b42318; border-color: #b42318; color: #fff; opacity: 1; }
+.incident-alarm .incident-sound .dash-btn.danger:hover, .incident-alarm .incident-sound .dash-btn.danger:focus-visible { background: #912018; border-color: #912018; color: #fff; }

@@ -17,7 +17,7 @@ import {
   type DriverNoticeBook, type NoticeArea, type NoticeKind, type NoticeLang, type NoticeLimits, type NoticeReach, type NoticeSetting,
 } from "./driverNotices";
 import { tr, trn, trx } from "../i18n";
-import { PlaceholderChips } from "../ui/PlaceholderChips";
+import { PlaceholderChips, TextWithChips } from "../ui/PlaceholderChips";
 
 /** The island text each kind uses, from Content › Driver app texts. */
 const ISLAND_KEY: Partial<Record<NoticeKind, string>> = {
@@ -55,10 +55,13 @@ export function DriverNoticesView({ country, editable, onNotice }: { country: Ma
   const now = localTime(market.timeZone);
   const def = noticeDef(selected);
   const setting = current.kinds[selected];
-  const shown = noticeText(setting, selected, lang);
+  const own = noticeText(setting, selected, lang);
+  // Page audit round 2: the default words and the sample values read in the admin's language.
+  const shown = own.own ? own : { ...own, title: trx(own.title), body: trx(own.body) };
+  const sample = Object.fromEntries(Object.entries(SAMPLE).map(([name, value]) => [name, trx(value)]));
   const rtl = lang === "ar";
   const islandKey = ISLAND_KEY[selected];
-  const islandText = islandKey ? textOf(texts, lang, islandKey, { ...SAMPLE_VALUES, area: "City" }).text : fillNotice(shown.title);
+  const islandText = islandKey ? textOf(texts, lang, islandKey, { ...SAMPLE_VALUES, area: "City" }).text : fillNotice(shown.title, sample);
   const setKind = (kind: NoticeKind, patch: Partial<NoticeSetting>) => setDraft({ ...current, kinds: { ...current.kinds, [kind]: { ...current.kinds[kind], ...patch } } });
   const setText = (part: "title" | "body", value: string) => setKind(selected, { texts: { ...setting.texts, [lang]: { ...setting.texts[lang], [part]: value } } });
   const setLimits = (patch: Partial<NoticeLimits>) => setDraft({ ...current, limits: { ...current.limits, [country]: { ...limits, ...patch } } });
@@ -70,7 +73,7 @@ export function DriverNoticesView({ country, editable, onNotice }: { country: Ma
         <div className="dn-main">
           {NOTICE_GROUPS.map((group) => (
             <Card key={group.id} title={`${group.code} ${trx(group.label)}`} tone={group.id === "rideAlerts" ? "blue" : group.id === "demand" ? "orange" : "green"} icon={group.id === "rideAlerts" ? <BellRing size={18} /> : group.id === "demand" ? <Megaphone size={18} /> : <WalletCards size={18} />} help={trx(group.help)}>
-              <ul className="dn-kinds" aria-label={tr("{0} notifications", [group.label])}>
+              <ul className="dn-kinds" aria-label={tr("{0} notifications", [trx(group.label)])}>
                 {NOTICE_KINDS.filter((item) => item.group === group.id).map((item) => {
                   const kind = current.kinds[item.kind];
                   const text = noticeText(kind, item.kind, lang);
@@ -78,8 +81,8 @@ export function DriverNoticesView({ country, editable, onNotice }: { country: Ma
                     <li key={item.kind} className={`${kind.on ? "on" : "off"}${item.kind === selected ? " picked" : ""}`} aria-label={trx(item.label)}>
                       <span className="dn-kind">
                         <b>{trx(item.label)}{limitOf(item.kind) === "always" ? <em className="dn-tag">{tr("Always goes through")}</em> : null}</b>
-                        <small>{item.when} · {item.kind}</small>
-                        <span className="dn-line" dir={rtl ? "rtl" : undefined}>{fillNotice(text.title)} · {fillNotice(text.body)}{text.own ? "" : tr(" (default)")}</span>
+                        <small>{trx(item.when)} · {item.kind}</small>
+                        <span className="dn-line" dir={rtl ? "rtl" : undefined}><TextWithChips text={text.own ? text.title : trx(text.title)} /> · <TextWithChips text={text.own ? text.body : trx(text.body)} />{text.own ? "" : tr(" (default)")}</span>
                       </span>
                       <span className="dn-tools">
                         <Switch label={trx(item.label)} on={kind.on} disabled={!editable} onChange={(on) => setKind(item.kind, { on })} />
@@ -124,16 +127,16 @@ export function DriverNoticesView({ country, editable, onNotice }: { country: Ma
           <label className="gr-field dn-field"><span>{tr("Title")}</span><input aria-label={tr("Notification title")} dir={rtl ? "rtl" : undefined} placeholder={trx(def.title)} maxLength={TITLE_MAX + 20} value={setting.texts[lang]?.title ?? ""} disabled={!editable} onChange={(event) => setText("title", event.target.value)} /></label>
           <label className="gr-field dn-field"><span>{tr("Text")}</span><textarea aria-label={tr("Notification text")} dir={rtl ? "rtl" : undefined} rows={2} placeholder={trx(def.body)} value={setting.texts[lang]?.body ?? ""} disabled={!editable} onChange={(event) => setText("body", event.target.value)} /></label>
           <PlaceholderChips text={`${setting.texts[lang]?.title || def.title} ${setting.texts[lang]?.body || def.body}`} />
-          <p className="gr-help">{trn("Empty means the app's default. Values: {0}.", [...new Set(`${def.title} ${def.body}`.match(/\{\w+\}/g) ?? [])].join(" ") || tr("none"))}</p>
+          <p className="gr-help">{tr("Empty means the app's default.")}</p>
           {shown.own ? <button data-command="admin.campaigns.view" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setKind(selected, { texts: { ...setting.texts, [lang]: {} } })}><RotateCcw size={12} aria-hidden="true" />{" "}{tr("Use the default")}</button> : null}
           <div className={setting.on ? "dn-phone" : "dn-phone off"} dir={rtl ? "rtl" : undefined}>
             <span className="dn-clock">{now}</span>
             {setting.island && setting.on ? <p className="dt-island" data-testid="notice-island">{islandText}</p> : null}
             <div className="dn-push" data-testid="notice-preview">
               <small>{tr("Movera Driver · now")}</small>
-              <b>{fillNotice(shown.title)}</b>
-              <span>{fillNotice(shown.body)}</span>
-              {def.action ? <i>{def.action}</i> : null}
+              <b>{fillNotice(shown.title, sample)}</b>
+              <span>{fillNotice(shown.body, sample)}</span>
+              {def.action ? <i>{trx(def.action)}</i> : null}
             </div>
             {!setting.on ? <p className="dn-off">{tr("Off: drivers do not get it.")}</p> : null}
           </div>
@@ -224,7 +227,7 @@ function SendCard({ book, country, editable, onNotice }: { book: DriverNoticeBoo
             <label className="gr-field dn-field"><span>{tr("Title")}</span><input aria-label={tr("Message title")} value={titleText} maxLength={TITLE_MAX + 20} disabled={!editable} onChange={(event) => setTitle(event.target.value)} /></label>
             <label className="gr-field dn-field"><span>{tr("Text")}</span><textarea aria-label={tr("Message text")} rows={2} value={bodyText} maxLength={BODY_MAX + 40} disabled={!editable} onChange={(event) => setBody(event.target.value)} /></label>
             <p className="dn-reach" role="status" data-testid="notice-reach">{trn("Reaches {0} driver{1}: {2} online, {3} offline.{4}{5} {6}", targets.length, targets.length === 1 ? "" : "s", online, targets.length - online, overLimit ? tr(" {0} already got {1} promo messages today and are left out.", [overLimit, limits.promoPerDay.max]) : "", !book.kinds[kind].offline && targets.length - online ? tr(" {0} does not reach offline drivers.", [noticeDef(kind).label]) : "", deliveryLine(kind, limits, time))}</p>
-            {result.error ? <p className="dx-issues" role="alert">{result.error}</p> : null}
+            {result.error ? <p className="dx-issues" role="alert">{trx(result.error)}</p> : null}
             <div className="dx-modal-actions">
               <CommandButton command="admin.driverNotices.send" className="dash-btn small" targetId={`${kind} ${zoneId}`} scope={zoneId} confirmTarget={false} before="" after={`${result.sent?.driverIds.length ?? 0} drivers`} sliceKey={DRIVER_NOTICES_KEY} value={result.book} expectedSliceRev={book.draftRev} disabled={!editable || Boolean(result.error)} title={result.error} onDone={() => { onNotice(tr("Sent “{0}” to {1} drivers{2}.", [titleText, result.sent?.driverIds.length ?? 0, result.sent?.sendsAt ? `. It goes out at ${result.sent.sendsAt}` : ""])); reset(); }}>
                 <Send size={13} aria-hidden="true" />{" "}{trn("Send to {0} drivers", result.sent?.driverIds.length ?? 0)}</CommandButton>

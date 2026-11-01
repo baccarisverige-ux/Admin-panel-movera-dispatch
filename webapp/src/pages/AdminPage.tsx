@@ -10,7 +10,7 @@ import { RESULT_LABEL, changeOf } from "../platform/audit";
 import { PERMISSION_GROUPS, TEAM_OPS_KEY, permissionsOf, placeOf } from "../platform/team";
 import { NotEnforced, useTeamOps } from "../platform/TeamParts";
 import { CommandButton } from "../ui/CommandButton";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
 
 /** One admin: who they are, what their role lets them do, where they work, and what they did lately. */
 export function AdminPage() {
@@ -39,7 +39,7 @@ export function AdminPage() {
           <span className={`pl-avatar big ${agent.presence}`} aria-hidden="true">{agent.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</span>
           <div>
             <h2>{agent.name}</h2>
-            <p>{agent.email} · {ROLE_LABELS[agent.role]}{customRole ? ` · ${customRole.name}` : ""} · {placeOf(agent.scope)} · {agent.active ? agent.presence : tr("deactivated")}</p>
+            <p>{agent.email} · {trx(ROLE_LABELS[agent.role])}{customRole ? ` · ${customRole.name}` : ""} · {placeOf(agent.scope)} · {agent.active ? trx(agent.presence) : tr("deactivated")}</p>
           </div>
         </div>
         <Link className="dash-btn small" to={`/reports?tab=work&admin=${agent.id}`}><BarChart3 size={14} aria-hidden="true" />{" "}{tr("All their work in Reports")}</Link>
@@ -49,22 +49,22 @@ export function AdminPage() {
         <Card title={tr("Role")} icon={<ShieldCheck size={15} />} tone="purple" help={tr("A custom role is saved for the backend. Change the built-in role on the Team page.")}>
           <label className="pl-field"><span>{tr("Custom role")}</span>
             <select aria-label={tr("Custom role")} value={assigned} disabled={!editable} onChange={(e) => setCustom(e.target.value)}>
-              <option value="">{trn("None, use {0}", ROLE_LABELS[agent.role])}</option>
+              <option value="">{trn("None, use {0}", trx(ROLE_LABELS[agent.role]))}</option>
               {ops.customRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
             </select>
           </label>
           <div className="actions">
-            <CommandButton command="admin.team.assign" confirmTarget={false} className="dash-btn small" sliceKey={TEAM_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, assigned: nextAssigned }} expectedSliceRev={ops.draftRev} targetId={agent.id} disabled={!editable || custom === null || slice.loading} onDone={() => { setCustom(null); setNotice(assigned ? tr("{0} now has {1}.", [agent.name, customRole?.name ?? "the custom role"]) : tr("{0} uses {1} again.", [agent.name, ROLE_LABELS[agent.role]])); }}>{tr("Save role")}</CommandButton>
+            <CommandButton command="admin.team.assign" confirmTarget={false} className="dash-btn small" sliceKey={TEAM_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, assigned: nextAssigned }} expectedSliceRev={ops.draftRev} targetId={agent.id} disabled={!editable || custom === null || slice.loading} onDone={() => { setCustom(null); setNotice(assigned ? tr("{0} now has {1}.", [agent.name, customRole?.name ?? "the custom role"]) : tr("{0} uses {1} again.", [agent.name, trx(ROLE_LABELS[agent.role])])); }}>{tr("Save role")}</CommandButton>
           </div>
           <p className="pl-help"><KeyRound size={12} aria-hidden="true" />{" "}{trn("2-step code {0} for this role. Sign out after {1}.", ops.security.twoStep[agent.role] ? tr("on") : tr("off"), ops.security.idle.on ? tr("{0} min idle", [ops.security.idle.minutes]) : tr("never"))}</p>
-          <NotEnforced>{tr("The custom role, the 2-step setting and the idle time are saved for the backend. In the demo {0} keeps the permissions of {1}, always gets the code and is signed out after 15 minutes.", [agent.name, ROLE_LABELS[agent.role]])}</NotEnforced>
+          <NotEnforced>{tr("The custom role, the 2-step setting and the idle time are saved for the backend. In the demo {0} keeps the permissions of {1}, always gets the code and is signed out after 15 minutes.", [agent.name, trx(ROLE_LABELS[agent.role])])}</NotEnforced>
         </Card>
         <Card title={tr("Can do")} icon={<KeyRound size={15} />} tone="green" help={tr("{0} permissions.", [allowed.length])}>
           <div className="pl-can">
             {PERMISSION_GROUPS.map((group) => (
-              <section key={group.label} aria-label={tr("{0} permissions", [group.label])}>
-                <h4>{group.label}</h4>
-                <ul>{group.items.map((item) => <li key={item.id} className={allowed.includes(item.id) ? "yes" : "no"}>{item.label}</li>)}</ul>
+              <section key={group.label} aria-label={tr("{0} permissions", [trx(group.label)])}>
+                <h4>{trx(group.label)}</h4>
+                <ul>{group.items.map((item) => <li key={item.id} className={allowed.includes(item.id) ? "yes" : "no"}>{trx(item.label)}</li>)}</ul>
               </section>
             ))}
           </div>
