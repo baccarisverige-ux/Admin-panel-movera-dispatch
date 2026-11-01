@@ -13,7 +13,7 @@ test("Waiting list: the numbers from both apps, a filter per app, new ones appea
   });
   await signIn(page);
   await page.goto("/waitlist");
-  await expect(page.getByRole("heading", { name: "Waiting list" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Waiting list", level: 2 })).toBeVisible();
   await expect(page.getByText("+46 70 555 12 34")).toBeVisible();
   await expect(page.getByText("+33 6 12 34 56 78")).toBeVisible();
   await expect(page.getByText("2 times")).toBeVisible();
