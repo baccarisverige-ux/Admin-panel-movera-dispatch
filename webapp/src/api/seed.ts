@@ -142,9 +142,11 @@ export type LiveTripFacts = {
   /** v0.18.7: the rules the trip is charged by. */
   terms: { currency: string; freeWaitMin: number; waitPerMinMinor: number; noShowAfterMin: number; noShowFeeMinor: number; noShowDriverSharePct: number; cancelFreeMin: number | null; cancelDriverSharePct: number; cancelAfterArrivedIsNoShow: boolean; maxPickupMoveMeters: number } | null;
   /** v0.18.7 (G5 Q5/Q6): the waiting at the pickup with the no-show amounts and the running cost. */
-  waiting: { arrivedAt: string; freeUntil: string; noShowAt: string; chargedSeconds: number; noShowFeeMinor: number | null; noShowDriverShareMinor: number | null; chargedSecondsNow: number | null; chargedSoFarMinor: number | null } | null;
+  waiting: { arrivedAt: string; freeUntil: string; noShowAt: string; chargedSeconds: number; noShowFeeMinor: number | null; noShowDriverShareMinor: number | null; chargedSecondsNow: number | null; chargedSoFarMinor: number | null; paidMinutes: number | null; rules: string[]; freeWaitMin: number | null; noShowAfterMin: number | null } | null;
+  /** v0.18.8 (G6): the rider PIN when the trip needs one (the admin reads it to the driver on the phone). */
+  pin: { code: string | null; verified: boolean; attempts: number | null } | null;
   /** The cancel as the server recorded it: who, the reason code, the fee, whether it is paid / owed / waived, which rule set it, and the driver's share. */
-  cancellation: { actor: string; reasonCode: string; at: string; feeMinor: number | null; feeStatus: string | null; feeKind: string | null; driverShareMinor: number | null; note: string | null } | null;
+  cancellation: { actor: string; reasonCode: string; at: string; feeMinor: number | null; feeStatus: string | null; feeKind: string | null; driverShareMinor: number | null; note: string | null; reversal: { at: string; by: string | null; reason: string | null; driverShareTakenBack: boolean } | null } | null;
 };
 export type LiveAccountFacts = {
   accountStatus: string;

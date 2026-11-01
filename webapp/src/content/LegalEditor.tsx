@@ -21,6 +21,8 @@ import {
   legalProblems,
   publishBody,
   unknownPlaceholders,
+  ZONE_PLACEHOLDER,
+  missesWaitingRules,
   type LegalAdminView,
   type LegalCompanyField,
   type LegalCountry,
@@ -117,6 +119,14 @@ function LiveLegal({ country, onCountry, onNotice }: { country: LegalCountry; on
             <button key={code} type="button" data-command="admin.content.view" lang={code} aria-pressed={code === language} className={code === language ? "active" : undefined} onClick={() => setLanguage(code)}>{LANGUAGE_NAME[code]}</button>
           ))}
         </div>
+        {/* v0.18.8 (G6): the terms keep {waitingRules} in 3.5; the server fills it per zone with the live waiting rules. */}
+        <p className="gr-help" data-testid="legal-waiting-help">{trn("Paragraph 3.5 of the terms keeps {0}: the apps show there the waiting, no-show and cancel rules of the rider's zone, with the zone's live numbers.", <code>{`{${ZONE_PLACEHOLDER}}`}</code>)}</p>
+        {missesWaitingRules(draft) ? (
+          <p className="fd-banner amber" data-testid="legal-waiting-missing">
+            <TriangleAlert size={14} aria-hidden="true" /> {tr("These terms do not have the waiting and no-show paragraphs 3.1–3.5 yet.")}{" "}
+            <button type="button" className="secondary-btn" data-command="admin.content.view" onClick={() => { void import("./legalWaiting").then(({ withWaitingParagraphs }) => setDraft((now) => (now ? withWaitingParagraphs(now, country) : now))); }}>{tr("Add paragraphs 3.1–3.5")}</button>
+          </p>
+        ) : null}
         <div className="legal-docs">
           {LEGAL_DOCUMENTS.map((id) => (
             <div key={id} className="legal-doc" data-document={id}>

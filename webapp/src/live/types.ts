@@ -182,9 +182,9 @@ export type RiderSummary = { firstName: string; rating?: number };
 /** v0.18.7: the rules a trip is charged by (booking snapshot + the zone's switches at booking time). */
 export type TripTerms = { currency: string; freeWaitMin: number; waitPerMin: LiveMoney; noShowAfterMin: number; noShowFee: LiveMoney; noShowDriverSharePct: number; cancelRule: { freeMin?: number; fee?: LiveMoney | null; [key: string]: unknown } | null; cancelDriverSharePct: number; cancelAfterArrivedIsNoShow: boolean; maxPickupMoveMeters: number };
 /** contract Waiting (+ v0.18.7 Q5/Q6 amounts). */
-export type TripWaiting = { arrivedAt: string; freeUntil: string; noShowAt: string; chargedSeconds: number; noShowFee?: LiveMoney; noShowDriverShare?: LiveMoney; chargedSecondsNow?: number; chargedSoFar?: LiveMoney };
+export type TripWaiting = { arrivedAt: string; freeUntil: string; noShowAt: string; chargedSeconds: number; noShowFee?: LiveMoney; noShowDriverShare?: LiveMoney; chargedSecondsNow?: number; chargedSoFar?: LiveMoney; /** v0.18.8 (G6): whole paid minutes (rounded up), the applied rule ids and the effective minutes. */ paidMinutes?: number; rules?: string[]; freeWaitMin?: number; noShowAfterMin?: number };
 /** contract Cancellation (+ v0.18.7 Q2/Q6 feeKind and driverShare). */
-export type TripCancellation = { actor: string; reasonCode: string; at: string; fee: LiveMoney | null; note?: string; feeStatus?: "paid" | "owed" | "waived" | string; feeKind?: "cancel" | "no_show" | string; driverShare?: LiveMoney };
+export type TripCancellation = { actor: string; reasonCode: string; at: string; fee: LiveMoney | null; note?: string; feeStatus?: "paid" | "owed" | "waived" | string; feeKind?: "cancel" | "no_show" | string; driverShare?: LiveMoney; /** v0.18.8 (G6): the admin's reverse of a no-show. */ reversal?: { at: string; by?: string; reason?: string; driverShareTakenBack: boolean } };
 
 /** contract TripProjection as GET /admin/trips and GET /admin/trips/{tripId} send it (the fields the panel reads). */
 export type Trip = {
@@ -225,6 +225,11 @@ export type Trip = {
   rider?: RiderSummary;
   terms?: TripTerms;
   waiting?: TripWaiting;
+  /** v0.18.8 (G6, contract.json#arrivedWaiting.pin): the rider PIN (admin view only: pickupPin, pinAttempts). */
+  pinRequired?: boolean;
+  pickupPin?: string;
+  pinVerified?: boolean;
+  pinAttempts?: number;
 };
 
 /** contract Offer (GET /admin/trips/{tripId}/offers). */

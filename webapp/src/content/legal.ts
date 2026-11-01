@@ -18,6 +18,12 @@ export type LegalDocumentId = (typeof LEGAL_DOCUMENTS)[number];
 export const LEGAL_PLACEHOLDERS = ["companyName", "orgNumber", "address", "supportEmail", "supportPhone"] as const;
 export type LegalCompanyField = (typeof LEGAL_PLACEHOLDERS)[number];
 
+/**
+ * v0.18.8 (G6, contract.json#arrivedWaiting.termsTexts): {waitingRules} in terms paragraph 3.5 is filled per zone by
+ * the server (GET /legal/{country}?zoneId=) with the zone's live waiting, no-show and cancel numbers. Not a company field.
+ */
+export const ZONE_PLACEHOLDER = "waitingRules" as const;
+
 /** The server's limits (POST /admin/legal/{country}/publish). */
 export const TITLE_MAX = 200;
 export const TEXT_MAX = 20000;
@@ -95,7 +101,7 @@ export function legalProblems(draft: LegalDraft): LegalProblem[] {
 
 /** {words} in a text that are not one of the company placeholders (shown as they are in the apps). */
 export function unknownPlaceholders(draft: LegalDraft): string[] {
-  const known = new Set<string>(LEGAL_PLACEHOLDERS);
+  const known = new Set<string>([...LEGAL_PLACEHOLDERS, ZONE_PLACEHOLDER]);
   const found = new Set<string>();
   for (const id of LEGAL_DOCUMENTS) for (const language of LEGAL_LANGUAGES) for (const match of draft[id].text[language].matchAll(/\{(\w+)\}/g)) if (!known.has(match[1]!)) found.add(match[1]!);
   return [...found];
@@ -115,4 +121,9 @@ export function draftChanged(draft: LegalDraft, from: LegalVersion): boolean {
 export function latestReacceptVersion(live: LegalVersion, history: readonly LegalVersion[]): number | null {
   const versions = [live, ...history].filter((item) => item.reaccept && item.source === "admin").map((item) => item.version);
   return versions.length ? Math.max(...versions) : null;
+}
+
+/** True when a terms text has no {waitingRules} yet (an admin version published before v0.18.8). */
+export function missesWaitingRules(draft: LegalDraft): boolean {
+  return LEGAL_LANGUAGES.some((language) => !draft.terms.text[language].includes(`{${ZONE_PLACEHOLDER}}`));
 }

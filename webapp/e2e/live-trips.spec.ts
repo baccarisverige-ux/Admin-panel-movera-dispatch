@@ -102,7 +102,8 @@ test("trip page: places, stops, money lines and payment come from the server; no
   await expect(split.getByTestId("split-tip")).toContainText("Not connected yet");
   await expect(page.getByTestId("trip-fare-lines")).toContainText("310,00 kr");
   await expect(page.getByTestId("trip-payment")).toContainText("Cash");
-  await expect(page.getByTestId("trip-pin")).toContainText("Not connected yet");
+  // v0.18.8 (G6): the PIN line is the server's (no PIN on this trip), not "Not connected yet".
+  await expect(page.getByTestId("trip-pin")).toContainText("No PIN for this trip");
   // v0.18.5 (owner G9): the trip chat is read from the server in the trip details (live-deep-fixes covers it).
   await expect(page.getByTestId("trip-chat")).toBeVisible();
   await expect(page.getByTestId("trip-chat-not-connected")).toHaveCount(0);
