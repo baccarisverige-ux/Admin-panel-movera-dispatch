@@ -100,6 +100,7 @@ export function TestView({ market, zones, zoneId, onZone, draftOf, liveOf, count
             <span className="dx-tag">{which === "draft" ? tr("My changes") : tr("Live rules")}</span>
           </div>
 
+          {rules.start.mode === "both" || rules.start.mode === "byDistance" ? <p className="dx-note" data-testid="test-start-note">{tr("The test shows one mode at a time. Start & order “{0}” is not simulated here: the server decides it on the first round.", [rules.start.mode === "both" ? tr("Both at the same time") : tr("By distance")])}</p> : null}
           <h4>{tr("Who gets it, in order")}</h4>
           {able.length === 0 ? <p className="dx-calm">{tr("No driver can take this ride. See why below.")}</p> : (
             <ol className="dx-ranked" aria-label={tr("Drivers in order")}>

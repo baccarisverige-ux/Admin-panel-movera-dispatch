@@ -306,7 +306,7 @@ export type ZoneDispatch = {
   exclusive: { on: boolean; seconds: number; drivers: number; then: "radar" | "widen" | "widen_then_radar"; steps?: number[] };
   /**
    * v0.18.9 (owner 2026-11-01 "choose which starts first", DispatchDocument.start): auto = Which mode runs decides (as before);
-   * radar / exclusive = that mode first; byDistance = Exclusive first when the best driver is within nearKm, else Radar;
+   * radar / exclusive = that mode first; byDistance = Exclusive first when the nearest not-yet-asked driver (smallest km, not the best score) is within nearKm, else Radar;
    * both = Exclusive to the best driver and Radar to the next ones at the same time.
    */
   start: { mode: StartMode; nearKm: number };
@@ -1620,16 +1620,20 @@ export function simulate(zone: ZoneDispatch, ranked: readonly Ranked[], start: O
   const asked = new Set<string>();
   const switched = new Set<OfferMode>();
   let guard = 0;
+  const stepCount = Math.max(zone.radius.steps.length, (zone.radar.steps ?? zone.radius.steps).length, (zone.exclusive.steps ?? zone.radius.steps).length);
+  const kmAt = (m: OfferMode, at: number) => { const list = zone[m].steps ?? zone.radius.steps; return list[Math.min(at, list.length - 1)]!; };
   while (t < limit && guard < 40) {
     guard += 1;
-    const km = zone.radius.steps[ring] ?? zone.radius.steps[zone.radius.steps.length - 1];
+    // v0.18.9: each mode uses its own steps (missing = the search distance); the step index is shared and a shorter
+    // list keeps its widest value (contract.json#dispatch.modeSteps).
+    const km = kmAt(mode, ring);
     // A driver with a rider gets Exclusive offers only, when Exclusive while driving is on (Q18). Never Radar.
     const inRing = able.filter((row) => row.km <= km && (!row.driver.finishing || (mode === "exclusive" && zone.finishing.exclusive && zone.exclusiveWhileDriving.on)));
     if (mode === "radar") {
       const shown = inRing.slice(0, zone.radar.drivers);
       steps.push({ atSec: t, who: "driver", title: `Radar, ${km} km`, detail: shown.length ? `Shown to ${shown.length} driver${shown.length === 1 ? "" : "s"} at once for ${zone.radar.seconds} s: ${shown.map((row) => row.driver.name).join(", ")}.` : `No driver within ${km} km.` });
       t += zone.radar.seconds;
-      const wider = ring < zone.radius.steps.length - 1;
+      const wider = ring < stepCount - 1;
       if ((zone.radar.then === "widen" || zone.radar.then === "widen_then_exclusive") && wider) ring += 1;
       else if ((zone.radar.then === "exclusive" || zone.radar.then === "widen_then_exclusive") && zone.exclusive.on && !switched.has("exclusive")) { switched.add("exclusive"); mode = "exclusive"; tried = 0; steps.push({ atSec: t, who: "system", title: "Switch to Exclusive", detail: "Nobody accepted on the radar." }); }
       else if (wider) ring += 1;
@@ -1643,8 +1647,8 @@ export function simulate(zone: ZoneDispatch, ranked: readonly Ranked[], start: O
         tried += 1;
         continue;
       }
-      const wider = ring < zone.radius.steps.length - 1;
-      if ((zone.exclusive.then === "widen" || zone.exclusive.then === "widen_then_radar") && wider) { ring += 1; tried = 0; steps.push({ atSec: t, who: "system", title: "Wider search", detail: `Now up to ${zone.radius.steps[ring]} km.${able.some((row) => row.km <= zone.radius.steps[ring] && !asked.has(row.driver.id)) ? "" : " No new driver in the wider area."}` }); }
+      const wider = ring < stepCount - 1;
+      if ((zone.exclusive.then === "widen" || zone.exclusive.then === "widen_then_radar") && wider) { ring += 1; tried = 0; steps.push({ atSec: t, who: "system", title: "Wider search", detail: `Now up to ${kmAt("exclusive", ring)} km.${able.some((row) => row.km <= kmAt("exclusive", ring) && !asked.has(row.driver.id)) ? "" : " No new driver in the wider area."}` }); }
       else if ((zone.exclusive.then === "radar" || zone.exclusive.then === "widen_then_radar") && zone.radar.on && !switched.has("radar")) { switched.add("radar"); mode = "radar"; steps.push({ atSec: t, who: "system", title: "Switch to Radar", detail: `${asked.size ? `${asked.size} driver${asked.size === 1 ? "" : "s"} said no.` : "No driver to try."} Many drivers see it now.` }); }
       else if (wider) { ring += 1; tried = 0; }
       else break;

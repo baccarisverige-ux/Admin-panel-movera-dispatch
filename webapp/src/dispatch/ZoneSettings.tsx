@@ -183,15 +183,15 @@ function Best({ zone, onChange, disabled, otherZones }: Props) {
       </Card>
 
       <Card title={tr("Pickup limits")} tone="blue" icon={<MapPin size={18} />} help={tr("No offer goes to a driver farther away or longer away than this, in Radar and Exclusive.")}>
-        <Row label={tr("Farthest pickup")} help={tr("0 = the widest search distance step ({0} km).", [String(Math.max(...steps, ...(zone.radar.steps ?? []), ...(zone.exclusive.steps ?? [])))])}>
+        <Row label={tr("Farthest pickup")} help={tr("0 = the widest search distance step ({0} km). A larger value has no effect: the widest step is always the limit.", [String(Math.max(...steps, ...(zone.radar.steps ?? []), ...(zone.exclusive.steps ?? [])))])}>
           <Num label={tr("Farthest pickup")} value={zone.limits.maxPickupKm} unit="km" step={0.5} min={0} max={50} disabled={disabled} onChange={(maxPickupKm) => set({ limits: { ...zone.limits, maxPickupKm } })} />
         </Row>
-        <Row label={tr("Longest pickup time")} help={tr("Minutes for the driver to reach the pickup. 0 = no limit.")}>
+        <Row label={tr("Longest pickup time")} help={tr("Minutes for the driver to reach the pickup, estimated from the distance at 24 km/h (not the live route). 0 = no limit.")}>
           <Num label={tr("Longest pickup time")} value={zone.limits.maxPickupEtaMin} unit="min" min={0} max={60} disabled={disabled} onChange={(maxPickupEtaMin) => set({ limits: { ...zone.limits, maxPickupEtaMin: Math.round(maxPickupEtaMin) } })} />
         </Row>
       </Card>
 
-      <Card title={tr("Neighbour zones")} tone="blue" icon={<Move size={18} />} help={tr("When nobody in this zone accepts, drivers of the chosen zones nearby can get the ride too.")} off={!zone.neighbours.on} aside={<Switch label={tr("Neighbour zones")} on={zone.neighbours.on} disabled={disabled} onChange={(on) => set({ neighbours: { ...zone.neighbours, on } })} />}>
+      <Card title={tr("Neighbour zones")} tone="blue" icon={<Move size={18} />} help={tr("When nobody in this zone accepts, drivers of the chosen zones nearby can get the ride too. Only zones in the same country and currency.")} off={!zone.neighbours.on} aside={<Switch label={tr("Neighbour zones")} on={zone.neighbours.on} disabled={disabled} onChange={(on) => set({ neighbours: { ...zone.neighbours, on } })} />}>
         <Row label={tr("Zones")}>
           <div className="dx-chips" role="group" aria-label={tr("Neighbour zones")}>
             {otherZones.length ? otherZones.map((other) => (

@@ -19,7 +19,7 @@ export function StartOrderCard({ zone, onChange, disabled, zoneId }: Props) {
     { id: "exclusive", label: tr("Exclusive first") },
     { id: "radar", label: tr("Radar first") },
     { id: "byDistance", label: tr("By distance"), hint: tr("Exclusive first when the nearest driver is close, else Radar first.") },
-    { id: "both", label: tr("Both at the same time"), hint: tr("Exclusive to the best driver and Radar to the next drivers at once. The first to accept gets it; the other offers are withdrawn.") },
+    { id: "both", label: tr("Both at the same time"), hint: tr("Exclusive to the best driver and Radar to the next drivers at once. The first to accept gets it; the other offers are withdrawn. A Radar driver of that first round can still get an Exclusive later.") },
   ];
   return (
     <Card title={tr("Start & order")} tone="green" icon={<ListOrdered size={18} />} help={tr("Which offer goes out first when a ride is booked in this zone. A time rule and a mode forced in Live still win.")}>
@@ -49,7 +49,7 @@ function ModeSteps({ zone, onChange, disabled, mode }: Props & { mode: OfferMode
   };
   const steps = own ?? shared;
   return (
-    <Row label={tr("Distance steps")} help={same ? tr("Same as the search distance in Best driver: {0} km.", [shared.join(" → ")]) : tr("Own steps for this mode. The search grows one step at a time.")}>
+    <Row label={tr("Distance steps")} help={same ? tr("Same as the search distance in Best driver: {0} km.", [shared.join(" → ")]) : tr("Own steps for this mode. The search grows one step at a time. Radar and Exclusive may have a different number of steps: the shorter list stays at its widest step.")}>
       <Switch label={tr("Same as search distance")} on={same} disabled={disabled} onChange={(on) => setSteps(on ? undefined : [...shared])} />
       {same ? null : (
         <div className="dx-steps" role="group" aria-label={tr("{0} distance steps", [tr(mode === "radar" ? "Radar" : "Exclusive")])}>

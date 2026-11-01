@@ -1392,21 +1392,21 @@
         "mode": "auto",
         "nearKm": 2
       },
-      "note": "v0.18.9 (owner 2026-11-01, rule 16, dispatch start/order): per zone, optional DispatchDocument.start { mode, nearKm }. Missing = { auto, 2 } = the behaviour before. auto: choose decides (busy level / manual main). radar / exclusive: that mode starts. byDistance: the best ranked driver in range within nearKm → Exclusive first, else Radar first. both: the first round sends an Exclusive offer to the best ranked driver and, at the same moment, a Radar round to the next radar.drivers (the Exclusive driver left out), both for their own seconds; the first accept wins and every other open offer is withdrawn (offer_withdrawn, claimed_elsewhere); after it the search goes on as Exclusive (then of exclusive). A paused zone, a forced control.mode and an on time rule still win over start. A mode that is off cannot start: both and byDistance need both modes on, else the mode that is on."
+      "note": "v0.18.9 (owner 2026-11-01, rule 16, dispatch start/order): per zone, optional DispatchDocument.start { mode, nearKm }. Missing = { auto, 2 } = the behaviour before. auto: choose decides (busy level / manual main). radar / exclusive: that mode starts. byDistance: the NEAREST driver in range not yet asked (smallest km, not the top score) within nearKm → Exclusive first, else Radar first. both: the first round sends an Exclusive offer to the best ranked driver and, at the same moment, a Radar round to the next radar.drivers (the Exclusive driver left out), both for their own seconds; the first accept wins and every other open offer is withdrawn (offer_withdrawn, claimed_elsewhere); after it the search goes on as Exclusive (then of exclusive); a driver who had the Radar offer of that first round may still get an Exclusive offer later in the search. A paused zone, a forced control.mode and an on time rule still win over start. A mode that is off cannot start: both and byDistance need both modes on, else the mode that is on."
     },
-    "modeSteps": "v0.18.9: radar.steps / exclusive.steps (optional, 1-5 km values, strictly increasing, each <= 50): that mode's own search steps; missing = radius.steps. The step index is shared: step i of the search uses steps[min(i, len-1)] of the mode that is offering; the steps are used up when the index passes the longest list.",
+    "modeSteps": "v0.18.9: radar.steps / exclusive.steps (optional, 1-5 km values, strictly increasing, each <= 50): that mode's own search steps; missing = radius.steps. The step index is shared: step i of the search uses steps[min(i, len-1)] of the mode that is offering; the steps are used up when the index passes the longest list. The two lists may have different lengths: a mode whose list is shorter keeps using its last (widest) value.",
     "limits": {
       "default": {
         "maxPickupEtaMin": 0
       },
-      "note": "v0.18.9: optional DispatchDocument.limits { maxPickupKm, maxPickupEtaMin }. A driver farther than maxPickupKm (missing = the widest step) or with etaMin above maxPickupEtaMin (0 / missing = off) is never offered the trip."
+      "note": "v0.18.9: optional DispatchDocument.limits { maxPickupKm, maxPickupEtaMin }. A driver farther than maxPickupKm (missing = the widest step) or with etaMin above maxPickupEtaMin (0 / missing = off) is never offered the trip. maxPickupKm can only narrow the search: a value above the widest step has no effect (the widest step stays the limit). etaMin here is an approximation (km ÷ the fixed score speed pickupKmh, 24 km/h), not the routing service's ETA."
     },
     "neighbours": {
       "default": {
         "on": false,
         "zoneIds": []
       },
-      "note": "v0.18.9: optional DispatchDocument.neighbours { on, zoneIds, afterStep }. on: from search step afterStep (1-based, missing = the last step) free drivers whose zones include one of zoneIds are candidates too (same ranking, same distance limits). Off / missing = only drivers of the pickup zone (as before)."
+      "note": "v0.18.9: optional DispatchDocument.neighbours { on, zoneIds, afterStep }. on: from search step afterStep (1-based, missing = the last step) free drivers whose zones include one of zoneIds are candidates too (same ranking, same distance limits). Off / missing = only drivers of the pickup zone (as before). Only zones of the same country and currency as the pickup zone lend drivers; other listed zones are ignored (a Swedish zone never borrows French drivers)."
     }
   },
   "maps": {

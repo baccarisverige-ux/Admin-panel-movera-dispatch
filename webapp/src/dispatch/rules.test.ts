@@ -92,6 +92,10 @@ assert(steps[0].title.startsWith("Radar"), "radar first");
 assert(steps.some((step) => step.title === "Switch to Exclusive"), "radar falls back to exclusive");
 assert(steps.some((step) => step.title === "Suggest a higher price"), "rider sees raise price");
 assert(steps[steps.length - 1].title === "Search stops", "search ends");
+// v0.18.9: the simulator uses each mode's own steps (a shorter list keeps its widest value).
+const own = simulate({ ...base, radar: { ...base.radar, steps: [1, 2, 4, 6, 9] }, exclusive: { ...base.exclusive, steps: [1.5] } }, ranked, "radar");
+assert(own[0].title === "Radar, 1 km", "radar uses its own first step");
+assert(own.filter((step) => step.title.startsWith("Radar, ")).some((step) => step.title === "Radar, 9 km"), "radar reaches its own widest step");
 
 const fee = cancelDecision({ id: "c", tripId: "t", zoneId: "Z001", rider: "r", driverId: "d", driver: "d", acceptedAt: "", cancelledAt: "", minutesAfterAccept: 4, atAccept: { km: 4, etaMin: 10 }, atCancel: { km: 2, etaMin: 5 }, path: [], pickup: [0, 0], category: "comfort", fare: 300 }, base);
 assert(fee.fee && fee.closerPct === 50 && fee.amount === 45 && fee.freeMin === 2, "driver came closer: the Comfort fee");
