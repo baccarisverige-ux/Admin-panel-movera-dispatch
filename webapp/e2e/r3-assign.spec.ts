@@ -87,7 +87,9 @@ test("Trip page: radar groups again and again until one accepts, then the assign
   await panel(page).getByRole("button", { name: "Send to radar" }).click();
   await expect(panel(page).getByText("Sent to the radar of 2 drivers.")).toBeVisible();
   await expect(panel(page).getByTestId("group-countdown-1")).toContainText(/0:1\d left/);
-  await expect(tick(page, "D0022")).toBeDisabled();
+  // A driver who already sees the ride stays tickable: sending again raises the offer (raise fix round 2).
+  await expect(tick(page, "D0022")).toBeEnabled();
+  await expect(tick(page, "D0022")).toHaveAttribute("title", /already sees this ride/);
   await shot(page, "04-radar-group-1");
   await expect(row(page, "D0006").locator("[data-status]")).toHaveAttribute("data-status", "declined", { timeout: 15_000 });
 

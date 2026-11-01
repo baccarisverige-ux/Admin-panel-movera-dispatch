@@ -211,3 +211,24 @@ test("owner bug 2026-11-01: a raise to drivers who already saw the ride and assi
   assert.equal(refreshedNotice(1, 0, true), "Price raised for 1 driver who already saw the ride.");
   assert.equal(refreshedNotice(0, 1, true, 2), "Sent to 1 driver · 2 drivers could not take it (offline / on a trip).");
 });
+
+test("owner live test 2026-11-01: timers never 0, the radar counts drivers from the nearby list", async () => {
+  const { offerTimers } = await import("./liveAdminApi.ts");
+  assert.deepEqual(offerTimers({ offers: { assignAcceptSeconds: 0, exclusiveSeconds: 0, radarSeconds: 0 } }, null), { exclusiveSeconds: 30, radarSeconds: 15 });
+  assert.deepEqual(offerTimers({ offers: { assignAcceptSeconds: 0, exclusiveSeconds: 20, radarSeconds: 0 } }, { radar: { seconds: 12 } }), { exclusiveSeconds: 20, radarSeconds: 12 });
+  const { candidatesFromNearby } = await import("../dispatch/assign.ts");
+  const { driversInTarget } = await import("../dispatch/handle.ts");
+  const rows = [{ driverId: "D1", name: "Test", onlineStatus: "online" as const, distanceMeters: 800, pickupEtaSeconds: 120, zoneId: "Z001", zoneName: "Stockholm", categoryIds: ["standard"], categoryOk: true, rating: null, openOfferId: "O1", at: [59.33, 18.06] as [number, number] }];
+  const candidates = candidatesFromNearby(rows);
+  assert.equal(candidates.length, 1, "a driver with this trip's open offer still counts");
+  assert.equal(driversInTarget({ kind: "zone", ids: ["Z001"] }, candidates, { radarZones: [], groups: [] }).length, 1);
+});
+
+test("checker M1/M3: pickup pay is named when the zone pays it; a radar-zone rule's own seconds win", async () => {
+  const { offerTimers, pickupPayOn } = await import("./liveAdminApi.ts");
+  const doc = { offers: { radarSeconds: 15 }, pickupPay: { offers: { radar: true, assigned: false }, byCategory: { standard: { enabled: true, ranges: [{ fromKm: 2 }] } } } };
+  assert.deepEqual(pickupPayOn(doc, "standard"), { assigned: false, radar: true });
+  assert.deepEqual(pickupPayOn(doc, "comfort"), { assigned: false, radar: false });
+  assert.equal(offerTimers(doc, null, 25).radarSeconds, 25);
+  assert.equal(offerTimers(doc, null, 0).radarSeconds, 15);
+});

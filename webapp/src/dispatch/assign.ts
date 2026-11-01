@@ -281,9 +281,26 @@ export type NearbyDriver = {
   categoryOk: boolean;
   /** Null when the server sent no rating (live): the page shows a dash. */
   rating: number | null;
-  /** The open admin offer this driver has for the trip, if any. */
+  /** The open offer this driver has for the trip, if any (automatic or admin): sending again raises / replaces it. */
   openOfferId?: string;
+  /** The driver's last position (live), for counting who is inside a radar target. */
+  at?: [number, number];
 };
+
+/**
+ * Candidates for the radar sender from the nearby list (owner live test 2026-11-01): the trip page opens the panel
+ * without the dashboard's candidates, so the radar counted nobody inside and greyed "Send radar".
+ */
+export function candidatesFromNearby(rows: readonly NearbyDriver[]): { driver: { id: string; name: string; zoneId: string; zoneName: string; state: "free"; lat: number; lng: number; lastSeenMin: number; vehicle: null; plate: null; tripId: null; route: null; progress: number }; km: number; etaMin: number; categoryOk: boolean }[] {
+  return rows
+    .filter((row) => row.onlineStatus === "online" && row.at)
+    .map((row) => ({
+      driver: { id: row.driverId, name: row.name, zoneId: row.zoneId, zoneName: row.zoneName, state: "free" as const, lat: row.at![0], lng: row.at![1], lastSeenMin: 0, vehicle: null, plate: null, tripId: null, route: null, progress: 0 },
+      km: Math.round(row.distanceMeters / 100) / 10,
+      etaMin: Math.max(1, Math.round(row.pickupEtaSeconds / 60)),
+      categoryOk: row.categoryOk,
+    }));
+}
 
 export type NearbyQuery = { scope: NearbyScope; radiusKm?: number };
 

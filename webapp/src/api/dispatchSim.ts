@@ -58,6 +58,9 @@ export type TripOffersView = {
   lockedTo: TripDispatch["lockedTo"];
   events: DispatchEvent[];
   timers: { exclusiveSeconds: number; radarSeconds: number };
+  /** Live: the zone pays pickup pay on this kind of offer for the trip's category (the amount depends on each driver's
+   * distance, so it is only known once the offer exists; the send button says "+ pickup pay"). */
+  pickupPayOn?: { assigned: boolean; radar: boolean };
   limits: BonusLimits;
   /** The fare the rider pays and the driver's net before any bonus, from Pricing (an estimate until the ride ends). */
   fareMinor: number;

@@ -185,6 +185,9 @@ export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | n
   };
 }
 
+/** Contract defaults for offer seconds a document holds as 0. */
+export const SECONDS_DEFAULT = { radar: 15, exclusive: 30 } as const;
+
 /** The Dispatch rules for a server dispatch document (+ the driver document's offer and cancel-share parts) over `fallback`. */
 export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: ZoneDispatch): ZoneDispatch {
   const zone = structuredClone(fallback);
@@ -192,6 +195,13 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     const d = doc as unknown as Partial<ZoneDispatch> & { finishing?: Partial<ZoneDispatch["finishing"]>; favourite?: Partial<ZoneDispatch["favourite"]> };
     if (d.radar) zone.radar = { ...zone.radar, ...d.radar };
     if (d.exclusive) zone.exclusive = { ...zone.exclusive, ...d.exclusive };
+    // Checker HIGH (live test 2026-11-01): a document holding 0 / missing seconds loads with the contract default
+    // (radar 15 s, exclusive 30 s) and the editor says so; it publishes fine whether the mode is on or off.
+    const defaulted: ("radar" | "exclusive")[] = [];
+    if (!(Number(zone.radar.seconds) >= 1)) { zone.radar = { ...zone.radar, seconds: SECONDS_DEFAULT.radar }; defaulted.push("radar"); }
+    if (!(Number(zone.exclusive.seconds) >= 1)) { zone.exclusive = { ...zone.exclusive, seconds: SECONDS_DEFAULT.exclusive }; defaulted.push("exclusive"); }
+    if (defaulted.length) zone.secondsDefaulted = defaulted;
+    else delete zone.secondsDefaulted;
     if (d.choose) zone.choose = structuredClone(d.choose);
     if (d.rulesFrom) zone.rulesFrom = d.rulesFrom;
     if (d.radius) zone.radius = structuredClone(d.radius);

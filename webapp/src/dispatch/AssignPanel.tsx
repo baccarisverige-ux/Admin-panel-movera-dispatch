@@ -18,6 +18,7 @@ import {
   RADAR_GROUP_MAX,
   RADIUS_PRESETS_KM,
   canAssign,
+  candidatesFromNearby,
   distanceLabel,
   isLocked,
   radiusIssue,
@@ -111,9 +112,11 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
   const drivers = nearby.data?.items ?? [];
   const pickable = (id: string) => {
     const row = drivers.find((item) => item.driverId === id);
-    return Boolean(row && row.onlineStatus === "online" && !row.openOfferId && assignable);
+    // A driver who already has this trip's offer can be picked again: radar raises his offer, exclusive replaces it.
+    return Boolean(row && row.onlineStatus === "online" && assignable);
   };
   const selected = picked.filter(pickable);
+  const radarCandidates = candidates.length ? candidates : (candidatesFromNearby(drivers) as unknown as Candidate[]);
   const presentation = statusPresentation(status);
   const timers = view?.timers;
   const refresh = () => {
@@ -214,7 +217,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
                           after={`exclusive offer to ${row.driverId}`}
                           value={{ driverId: row.driverId, ...exclusiveMoney.params }}
                           disabled={!pickable(row.driverId) || Boolean(exclusiveMoney.blocked)}
-                          title={!assignable ? tr("This trip cannot be assigned now.") : !free ? tr("{0} is on a trip.", [row.name]) : row.openOfferId ? tr("{0} already has an open offer.", [row.name]) : tr("Send an exclusive offer to {0}", [row.name])}
+                          title={!assignable ? tr("This trip cannot be assigned now.") : !free ? tr("{0} is on a trip.", [row.name]) : row.openOfferId ? tr("{0} already sees this ride: an exclusive offer replaces it.", [row.name]) : tr("Send an exclusive offer to {0}", [row.name])}
                           summary={<>{trn("Send an exclusive offer for {0} to {1}, {2} away. {3} has {4} s to accept or decline.", <b>{trip?.name ?? tripId}</b>, <b>{row.name}</b>, distanceLabel(row.distanceMeters), row.name, timers?.exclusiveSeconds ?? 15)}{exclusiveSees ? ` ${seesSentence(exclusiveMoney, zoneId)}` : ""}</>}
                           onDone={() => { if (exclusiveMoney.used) sent(); setNotice(tr("Exclusive offer sent to {0}.", [row.name])); refresh(); }}
                         >
@@ -242,7 +245,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
         <section className="as-section as-radar" aria-label={tr("Radar")} data-testid="assign-radar">
           <h4>{trn("{0} Radar · several drivers at once", <Radar size={14} aria-hidden="true" />)}</h4>
           <p className="as-help">{tr("Send the ride to a radar zone, to whole zones or to a driver group; or tick the drivers yourself. The first to accept takes it.")}</p>
-          {trip ? <RadarSender ride={ride} book={book} candidates={candidates} onNotice={say} view={view} draft={draft} onSent={sent} /> : null}
+          {trip ? <RadarSender ride={ride} book={book} candidates={radarCandidates} onNotice={say} view={view} draft={draft} onSent={sent} /> : null}
           <div className="as-pick">
             <b>{tr("Or tick drivers yourself")}</b>
             <div className="as-chips" role="group" aria-label={tr("Drivers for the radar")}>
@@ -251,7 +254,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
                 const checked = selected.includes(row.driverId);
                 const full = !checked && selected.length >= RADAR_GROUP_MAX;
                 return (
-                  <button key={row.driverId} data-driver={row.driverId} data-command="admin.dispatch.view" type="button" className={checked ? "as-chip active" : "as-chip"} role="checkbox" aria-checked={checked} aria-label={tr("Select {0} for the radar", [row.name])} disabled={!pickable(row.driverId) || full} title={full ? tr("At most {0} drivers in one radar group.", [RADAR_GROUP_MAX]) : row.openOfferId ? tr("{0} already has an open offer.", [row.name]) : undefined} onClick={() => setPicked((list) => (list.includes(row.driverId) ? list.filter((id) => id !== row.driverId) : [...list, row.driverId]))}>
+                  <button key={row.driverId} data-driver={row.driverId} data-command="admin.dispatch.view" type="button" className={checked ? "as-chip active" : "as-chip"} role="checkbox" aria-checked={checked} aria-label={tr("Select {0} for the radar", [row.name])} disabled={!pickable(row.driverId) || full} title={full ? tr("At most {0} drivers in one radar group.", [RADAR_GROUP_MAX]) : row.openOfferId ? tr("{0} already sees this ride: the radar raises his offer.", [row.name]) : undefined} onClick={() => setPicked((list) => (list.includes(row.driverId) ? list.filter((id) => id !== row.driverId) : [...list, row.driverId]))}>
                     {row.name} · {distanceLabel(row.distanceMeters)}
                   </button>
                 );

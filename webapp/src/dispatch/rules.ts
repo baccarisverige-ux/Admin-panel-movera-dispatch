@@ -282,6 +282,8 @@ export function rideCheckDefault(): RideCheckRules {
 }
 
 export type ZoneDispatch = {
+  /** Live test 2026-11-01: seconds the loaded document held as 0 or missing, set to the contract default on load (not published). */
+  secondsDefaulted?: ("radar" | "exclusive")[];
   zoneId: string;
   radar: { on: boolean; drivers: number; seconds: number; then: "widen" | "exclusive" | "widen_then_exclusive" };
   exclusive: { on: boolean; seconds: number; drivers: number; then: "radar" | "widen" | "widen_then_radar" };

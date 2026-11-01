@@ -235,7 +235,7 @@ export type Trip = {
 };
 
 /** contract Offer (GET /admin/trips/{tripId}/offers). */
-export type TripOffer = { offerId: string; driverId?: string; kind: string; status: string; expiresAt: string; fare: LiveMoney; driverEarnings?: LiveMoney; driverBonus?: LiveMoney; priority?: boolean; groupId?: string; source?: string };
+export type TripOffer = { offerId: string; driverId?: string; kind: string; status: string; expiresAt: string; fare: LiveMoney; driverEarnings?: LiveMoney; pickupPay?: LiveMoney; driverBonus?: LiveMoney; priority?: boolean; groupId?: string; source?: string };
 
 /** contract Refund (201 of POST /admin/trips/{tripId}/refund). */
 export type Refund = { refundId: string; amount: LiveMoney; status: string; reason: string };

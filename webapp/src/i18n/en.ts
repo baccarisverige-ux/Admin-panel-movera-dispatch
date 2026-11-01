@@ -7552,6 +7552,12 @@ export const en = {
   "Sent to {0} drivers": "Sent to {0} drivers",
   "{0} driver could not take it (offline / on a trip).": "{0} driver could not take it (offline / on a trip).",
   "{0} drivers could not take it (offline / on a trip).": "{0} drivers could not take it (offline / on a trip).",
+  "{0} already sees this ride: an exclusive offer replaces it.": "{0} already sees this ride: an exclusive offer replaces it.",
+  "{0} already sees this ride: the radar raises his offer.": "{0} already sees this ride: the radar raises his offer.",
+  "Money added for the driver.": "Money added for the driver.",
+  "Type an amount above 0.": "Type an amount above 0.",
+  "Set to the default because it was 0": "Set to the default because it was 0",
+  "+ pickup pay": "+ pickup pay",
 } as const;
 
 export type MessageKey = keyof typeof en;
