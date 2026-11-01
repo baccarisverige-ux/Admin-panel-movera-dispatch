@@ -202,7 +202,7 @@ export function MessagesPanel({ messages, contactName, command, targetId, scope,
         ))}
       </div>
       <div className="fd-templates" role="group" aria-label={tr("Message templates")}>
-        {templates.map((text) => <button key={text} type="button" data-command="admin.ui.quickAction" className="fd-template" onClick={() => setDraft(text)}>{text}</button>)}
+        {templates.map((text) => <button key={text} type="button" data-command="admin.ui.quickAction" className="fd-template" onClick={() => setDraft(trx(text))}>{trx(text)}</button>)}
       </div>
       <div className="fd-compose">
         <label className="sr-only" htmlFor={`compose-${targetId}`}>{tr("Message")}</label>

@@ -10,6 +10,7 @@ import {
   textChanges, textIssue, textKey, textOf, valuesIn, type DriverTextBook, type TextArea, type TextGroup, type TextLang, type Texts,
 } from "./driverTexts";
 import { tr, trn, trx } from "../i18n";
+import { PlaceholderChips } from "../ui/PlaceholderChips";
 
 type AreaPick = TextArea | "all";
 
@@ -63,7 +64,7 @@ export function DriverTextsView({ editable, onNotice }: { editable: boolean; onN
                 const values = valuesIn(key.english);
                 return (
                   <li key={key.id} className={key.id === focus ? "focus" : undefined}>
-                    <span className="dt-key"><b>{key.english}</b><small>{key.id}{values.length ? tr(" · values {0}", [values.map((name) => `{${name}}`).join(" ")]) : ""}</small></span>
+                    <span className="dt-key"><b>{key.english}</b><small>{key.id}</small>{values.length ? <PlaceholderChips text={key.english} /> : null}</span>
                     <span className="dt-input">
                       <input
                         aria-label={tr("{0} in {1}", [key.english, langName])}

@@ -88,6 +88,17 @@ export function createLiveClient(options: Options) {
     return result;
   }
 
+  /**
+   * Page audit 2026-11-01 (401s after ~20 min on trips, drivers, config): a refresh that failed for a passing reason
+   * (Render cold start 502/503, a timeout, a dropped connection) used to sign the admin out, so every later call
+   * answered 401. Only the server refusing the refresh token (400/401/403) ends the session now; a passing failure
+   * keeps the tokens, the call fails once and the next call refreshes again.
+   */
+  function refreshRefused(error: unknown): boolean {
+    if (!(error instanceof ApiError)) return false;
+    return error.status === 400 || error.status === 401 || error.status === 403 || (error.status === 0 && error.code === "internal");
+  }
+
   async function refreshOnce(): Promise<boolean> {
     if (refreshing) return refreshing;
     const token = state?.refreshToken;
@@ -97,7 +108,10 @@ export function createLiveClient(options: Options) {
         const session = await authCall("/admin/auth/refresh", { refreshToken: token });
         setState(fromSession(session));
         return true;
-      } catch {
+      } catch (error) {
+        if (!refreshRefused(error)) return false;
+        // Another client of this tab may have rotated the token meanwhile: keep its newer session.
+        if (state && state.refreshToken !== token) return true;
         setState(null);
         options.onSignedOut?.("refresh_failed");
         return false;
@@ -106,6 +120,13 @@ export function createLiveClient(options: Options) {
       }
     })();
     return refreshing;
+  }
+
+  /** Refreshes a little before the access token runs out, so calls do not go out with a dead token (no 401 storm). */
+  const EARLY_REFRESH_MS = 30_000;
+  async function freshToken(): Promise<string | null> {
+    if (state && state.expiresAt > 0 && now() >= state.expiresAt - EARLY_REFRESH_MS) await refreshOnce();
+    return state?.accessToken ?? null;
   }
 
   function withAuth(init: ApiRequestInit, token: string): ApiRequestInit {
@@ -122,11 +143,15 @@ export function createLiveClient(options: Options) {
     // The key is fixed before the first attempt, so a retry after a refresh is the same command to the server.
     const idempotencyKey = init.idempotencyKey ?? (method === "GET" || method === "HEAD" ? undefined : newKey());
     const request = { ...init, method, ...(idempotencyKey ? { idempotencyKey } : {}) };
+    const sent = await freshToken();
+    if (!sent) throw new ApiError(401, "Sign in again.", { code: "unauthenticated", retryable: false });
     try {
-      return await apiFetch(base, url, withAuth(request, state.accessToken), fetchImpl);
+      return await apiFetch(base, url, withAuth(request, sent), fetchImpl);
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 401) throw error;
-      const refreshed = await refreshOnce();
+      // A 401 that comes back after another call already refreshed is retried with the new token, without a
+      // second refresh (each refresh rotates the token; a lost rotation would end the session).
+      const refreshed = state && state.accessToken !== sent ? true : await refreshOnce();
       if (!refreshed || !state) throw error;
       return apiFetch(base, url, withAuth(request, state.accessToken), fetchImpl);
     }

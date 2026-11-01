@@ -1,3 +1,4 @@
+import { dispatchHref } from "./dispatch/section.ts";
 export const MENU_GROUPS = [
   "Overview",
   "Operations",
@@ -116,6 +117,18 @@ export const REDIRECT_PATHS: readonly string[] = ["/users", "/live", "/offers", 
 
 export function isRedirectPath(pathname: string): boolean {
   return REDIRECT_PATHS.includes(pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname);
+}
+
+/**
+ * Page audit 2026-11-01: where an old address goes, worked out at once. The redirect used to be a lazy page, so on a
+ * slow phone (or a chunk the host failed to send) the shell showed "Page not found" until the chunk arrived, or for
+ * good. /users is the old Drivers address; /live, /offers and /dispatch open their Dispatch tab.
+ */
+export function redirectTarget(pathname: string, search = "", hash = ""): string | null {
+  if (!isRedirectPath(pathname)) return null;
+  const path = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
+  if (path === "/users") return `/drivers${search}${hash}`;
+  return dispatchHref(`${path}${search}${hash}`);
 }
 
 export function menuItem(id: string): MenuItem | undefined {

@@ -252,7 +252,10 @@
 .rd-booking-more > button { justify-self: start; }
 
 .rd-money { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
-.rd-money .fd-box { display: grid; gap: 10px; align-content: start; }
+.rd-money .fd-box { display: grid; gap: 10px; align-content: start; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+/* Page audit 2026-11-01: a long ride name in "Pick a ride" made the refund card 440–470 px wider than the page. */
+.rd-refund .field { min-width: 0; }
+.rd-refund select { width: 100%; min-width: 0; max-width: 100%; text-overflow: ellipsis; }
 .rd-wallet-balance { font-size: 34px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .rd-limit { display: grid; gap: 4px; font-size: 12px; color: var(--dash-ink-2); }
 .rd-limit i { display: block; height: 8px; border-radius: 999px; background: #eef0f1; overflow: hidden; }
@@ -490,3 +493,12 @@
 /* Driver group 5 (v0.18.7, Q3): the owed fees per trip under the "Owes …" banner, each with its Waive button. */
 .rd-owed-trips { flex: 1 1 100%; list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; font-weight: 500; }
 .rd-owed-trips li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* Placeholder chips (content editors): values the app fills in. */
+.ph-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
+.ph-chips small { color: var(--muted, #6b7280); font-size: 11px; }
+.ph-chip { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+/* Page audit 2026-11-01: a long payment id wraps on a phone instead of widening the page; a copy button sits next to it. */
+.pm-id-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.pm-id { overflow-wrap: anywhere; word-break: break-all; min-width: 0; }
+.dx-head-text { min-width: 0; }
+@media (max-width: 520px) { .pm-id-title { font-size: 20px; } }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeDollarSign, Pencil } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
@@ -125,6 +125,7 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
   const set = (patch: Partial<MoneyDraft>) => (onDraft ? onDraft({ ...draft, ...patch }) : setOwn({ ...draft, ...patch }));
   const { addMinor, issue } = draftMoney(draft, view, trip.zoneId);
   const open = canAssign(trip.status);
+  const queryClient = useQueryClient();
   const already = bonusInScope(view, draft.scope);
   const total = already + addMinor;
   const moveraKeeps = view.commissionMinor - total;
@@ -162,7 +163,7 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
           disabled={!canAct || !open || addMinor <= 0 || Boolean(issue)}
           title={!open ? tr("Money can be added only while the trip is requested, searching or offered.") : issue?.message ?? tr("Adds it now to the offers already out, and keeps it for the next sends.")}
           summary={<>{trn("Add {0} for the driver on {1} ({2}). Movera pays it; the rider’s price does not change.", <b>{money(addMinor)}</b>, trip.id, trx(SCOPE_LABEL[draft.scope]))}</>}
-          onDone={() => { set({ amount: "" }); onDone?.(`${money(addMinor)} added for the driver.`); }}
+          onDone={() => { set({ amount: "" }); void queryClient.invalidateQueries({ queryKey: ["assign-offers", trip.id] }); onDone?.(tr("{0} added for the driver.", [money(addMinor)])); }}
         >{tr("Add money")}</CommandButton>
       </div>
       {issue ? (

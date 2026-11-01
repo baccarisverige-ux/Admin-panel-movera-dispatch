@@ -13,7 +13,7 @@ import { NotFoundRecord } from "./NotFoundRecord";
 import { shortDateTime } from "../domain/time";
 import { statusLabel } from "../domain/labels";
 import { zoneTimeZone } from "../markets/markets";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
 
 type Filter = "all" | "mine" | "new" | "late" | "waiting" | "solved";
 const FILTERS: { id: Filter; label: string; icon: ReactNode; tone: string }[] = [
@@ -162,7 +162,7 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
       <nav className="sp-filters" aria-label={tr("Ticket groups")}>
         {FILTERS.map((item) => (
           <button key={item.id} data-command="admin.ticket.view" type="button" className={`sp-filter ${item.tone}${filter === item.id ? " active" : ""}`} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>
-            <span aria-hidden="true">{item.icon}</span><b>{item.label}</b><small>{inThread.filter((entry) => passes(entry.facts, item.id)).length}</small>
+            <span aria-hidden="true">{item.icon}</span><b>{trx(item.label)}</b><small>{inThread.filter((entry) => passes(entry.facts, item.id)).length}</small>
           </button>
         ))}
       </nav>
@@ -171,7 +171,7 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
         <aside className="sp-list" aria-label={tr("Tickets")}>
           <label className="sp-field"><span>{tr("Search tickets")}</span><input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
           <div className="sp-list-filters">
-            <select aria-label={tr("Topic")} value={topicFilter} onChange={(event) => setTopicFilter(event.target.value)}><option value="">{tr("Every topic")}</option>{TOPICS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
+            <select aria-label={tr("Topic")} value={topicFilter} onChange={(event) => setTopicFilter(event.target.value)}><option value="">{tr("Every topic")}</option>{TOPICS.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}</select>
             <select aria-label={tr("Language")} value={langFilter} onChange={(event) => setLangFilter(event.target.value)}><option value="">{tr("Every language")}</option>{Object.entries(LANGS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select>
           </div>
           <label className="sp-field sr-only"><span>{tr("Ticket")}</span><select value={row?.id ?? ""} onChange={(event) => { setSelected(event.target.value); setAttachment(""); setOwner(""); }}>{list.map((item) => <option key={item.row.id} value={item.row.id}>{item.row.id} · {item.row.name} · {item.row.status}</option>)}</select></label>
@@ -182,7 +182,7 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
                   <span className="sp-ticket-top"><b>{item.row.name}</b><small>{ago(item.facts.openedAt)}</small></span>
                   <small className="sp-ticket-text">{item.facts.text}</small>
                   <span className="sp-ticket-tags">
-                    <span className={`sp-topic ${item.facts.topic}`}>{TOPICS.find((topic) => topic.id === item.facts.topic)?.label}</span>
+                    <span className={`sp-topic ${item.facts.topic}`}>{trx(TOPICS.find((topic) => topic.id === item.facts.topic)?.label)}</span>
                     <span className="sp-tag">{item.facts.lang.toUpperCase()}</span>
                     <span className="sp-tag">{item.facts.who === "driver" ? tr("Driver") : tr("Rider")}</span>
                     {item.facts.state === "solved" ? <span className="sp-tag good">{trn("Solved by {0}", agentName(item.facts.solvedBy))}</span> : item.facts.owner ? <span className="sp-tag">{agentName(item.facts.owner)}</span> : <span className="sp-tag warn">{tr("Nobody yet")}</span>}
@@ -203,10 +203,10 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
               <p data-testid="ticket-opened">{facts.who === "driver" ? tr("Driver") : tr("Rider")} {row.name} · {shortDateTime(facts.openedAt, zoneTimeZone(row.zoneId))}</p>
               <p className="sp-help" data-testid="ticket-owner">{trn("{0} · Due {1} · Priority {2}", facts.owner ? tr("{0} is working on it{1}", [agentName(facts.owner), ops.ownerUntil ? ` until ${shortDateTime(ops.ownerUntil, zoneTimeZone(row.zoneId))}` : ""]) : tr("Nobody is working on it yet"), shortDateTime(ops.dueAt, zoneTimeZone(row.zoneId)), ops.priority)}</p>
               <span className="sp-conv-meta">
-                <span className={`sp-topic ${facts.topic}`}>{TOPICS.find((item) => item.id === facts.topic)?.label}</span>
+                <span className={`sp-topic ${facts.topic}`}>{trx(TOPICS.find((item) => item.id === facts.topic)?.label)}</span>
                 <small className="sp-help">{tr("Not right? Move it to")}</small>
                 {TOPICS.filter((item) => item.id !== facts.topic && item.for.includes(facts.who)).slice(0, 3).map((item) => (
-                  <CommandButton key={item.id} command="admin.ticket.topic" className="dash-btn small ghost" sliceKey={SUPPORT_DESK_KEY} value={setTopic(desk, row.id, item.id as TopicId)} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before={facts.topic} after={item.id} onDone={() => setNotice(tr("Topic changed to {0}.", [item.label]))}>{item.label}</CommandButton>
+                  <CommandButton key={item.id} command="admin.ticket.topic" className="dash-btn small ghost" sliceKey={SUPPORT_DESK_KEY} value={setTopic(desk, row.id, item.id as TopicId)} expectedSliceRev={desk.draftRev} targetId={row.id} confirmTarget={false} before={facts.topic} after={item.id} onDone={() => setNotice(tr("Topic changed to {0}.", [trx(item.label)]))}>{trx(item.label)}</CommandButton>
                 ))}
                 <span className="sp-tag"><Languages size={11} aria-hidden="true" /> {LANGS[facts.lang]}</span>
                 <span className={facts.replyLate || facts.solveLate ? "sp-tag bad" : "sp-tag"}>{trn("Answer within {0} min · solve within {1} h", settings.limits[facts.topic].firstReplyMin, settings.limits[facts.topic].solveHours)}</span>
