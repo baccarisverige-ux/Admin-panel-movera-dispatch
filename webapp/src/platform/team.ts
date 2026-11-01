@@ -1,5 +1,6 @@
 import { ROLE_LABELS, ROLE_PERMISSIONS, type Role } from "../auth/permissions.ts";
 import { MARKETS } from "../markets/markets.ts";
+import { tr, trx } from "../i18n/core.ts";
 
 /**
  * Team: every permission with a plain name, custom roles built from switches, limits per role,
@@ -143,6 +144,6 @@ export function securityError(value: Security): string | null {
 /** Where an admin may work: every zone of some countries, or a list of zones. */
 export function placeOf(scope: { zones: "all" | string[]; countries?: string[] }): string {
   const countries = scope.countries?.length ? scope.countries : null;
-  const names = countries ? MARKETS.filter((item) => countries.includes(item.id)).map((item) => item.name).join(", ") : "Every country";
-  return scope.zones === "all" ? names : `${scope.zones.length} zone${scope.zones.length > 1 ? "s" : ""}`;
+  const names = countries ? MARKETS.filter((item) => countries.includes(item.id)).map((item) => trx(item.name)).join(", ") : tr("Every country");
+  return scope.zones === "all" ? names : scope.zones.length > 1 ? tr("{0} zones", [scope.zones.length]) : tr("{0} zone", [scope.zones.length]);
 }

@@ -75,7 +75,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
             groups.length ? (
               <select className="dx-select" aria-label={tr("Driver group for Scheduled rides")} value={group ? group.id : ""} disabled={off} onChange={(event) => setResv({ listGroupId: event.target.value })}>
                 {!group ? <option value="">{tr("Pick a group")}</option> : null}
-                {groups.map((item) => <option key={item.id} value={item.id}>{trn("{0} · {1} driver{2}", item.name, item.driverIds.length, item.driverIds.length === 1 ? "" : tr("s"))}</option>)}
+                {groups.map((item) => <option key={item.id} value={item.id}>{trn("{0} · {1} driver{2}", trx(item.name), item.driverIds.length, item.driverIds.length === 1 ? "" : tr("s"))}</option>)}
               </select>
             ) : <span className="dx-inline-note">{trn("No group yet. {0}", <Link to={`/dispatch?view=events&country=${countryId}`}>{tr("Make one in Events & groups")}</Link>)}</span>
           ) : null}

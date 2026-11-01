@@ -246,7 +246,7 @@ export function RadarTargetPicker({ ride, book, candidates, value, onChange, max
         <label className="hq-field">
           <span>{tr("Driver group")}</span>
           <select aria-label={tr("Driver group for {0}", [ride.rider])} value={value.kind === "group" ? value.id : ""} onChange={(event) => onChange({ kind: "group", id: event.target.value })}>
-            {groups.length ? groups.map((group) => <option key={group.id} value={group.id}>{trn("{0} · {1} drivers", group.name, group.driverIds.length)}</option>) : <option value="">{tr("No group yet")}</option>}
+            {groups.length ? groups.map((group) => <option key={group.id} value={group.id}>{trn("{0} · {1} drivers", trx(group.name), group.driverIds.length)}</option>) : <option value="">{tr("No group yet")}</option>}
           </select>
         </label>
       ) : null}

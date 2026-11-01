@@ -19,7 +19,7 @@ export function Cards({ cards, fmt, compareLabel, compare }: { cards: readonly C
               <small>{trx(card.label)}</small>
               <button data-command="admin.reports.view" type="button" className="rp-info" aria-label={tr("What is {0}?", [trx(card.label)])} aria-expanded={open === card.id} onClick={() => setOpen(open === card.id ? null : card.id)}><Info size={12} aria-hidden="true" /></button>
             </span>
-            <b>{fmt(card.value, card.format)}</b>
+            <b className={Number.isFinite(card.value) ? undefined : "rp-card-text"}>{fmt(card.value, card.format)}</b>
             {diff !== null ? (
               <span className={good ? "rp-change good" : "rp-change bad"}>{diff >= 0 ? <TrendingUp size={11} aria-hidden="true" /> : <TrendingDown size={11} aria-hidden="true" />} {diff > 0 ? "+" : ""}{diff}% <em>{compareLabel}</em></span>
             ) : <span className="rp-change none">{!compare ? "" : card.previous === null ? tr("Right now") : tr("No earlier number")}</span>}

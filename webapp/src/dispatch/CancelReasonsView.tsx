@@ -28,7 +28,7 @@ export function CancelReasonsView({ market, country, onCountry, canEdit }: Props
       <span className="dx-reason-texts">
         <input className={lang === "en" && !item.title.en?.trim() ? "dx-text invalid" : "dx-text"} dir={rtl ? "rtl" : undefined} aria-label={tr("Reason text {0}", [item.code])} value={item.title[lang] ?? ""} placeholder={lang === "en" ? tr("Short reason") : item.title.en ?? ""} maxLength={CANCEL_TITLE_MAX + 20} disabled={disabled} onChange={(event) => onItem({ ...item, title: { ...item.title, [lang]: event.target.value } })} />
         {subtitles ? <input className="dx-text soft" dir={rtl ? "rtl" : undefined} aria-label={tr("Second line {0}", [item.code])} value={item.subtitle[lang] ?? ""} placeholder={lang === "en" ? tr("Second line (optional)") : item.subtitle.en ?? ""} maxLength={CANCEL_SUBTITLE_MAX + 20} disabled={disabled} onChange={(event) => onItem({ ...item, subtitle: { ...item.subtitle, [lang]: event.target.value } })} /> : null}
-        <small><code>{item.code}</code>{fixedLabel ? ` · ${fixedLabel}` : ""}</small>
+        <small><code>{item.code}</code>{fixedLabel ? ` · ${trx(fixedLabel)}` : ""}</small>
       </span>
       <span className="dx-reason-tools">
         <Check label={tr("Doesn't count")} on={!item.counts} disabled={disabled} onChange={(free) => onItem({ ...item, counts: !free })} />

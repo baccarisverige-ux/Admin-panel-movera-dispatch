@@ -235,7 +235,7 @@ export function TeamPage() {
                       <span className={`pl-avatar ${agent.presence}`} aria-hidden="true">{agent.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</span>
                       <span className="pl-admin-text"><b>{agent.name}</b><small>{agent.email}</small></span>
                       <span className="pl-role-pill">{custom ? custom.name : trx(ROLE_LABELS[agent.role])}</span>
-                      <small className="pl-admin-place">{placeOf(agent.scope)} · {agent.active ? agent.presence : tr("deactivated")}</small>
+                      <small className="pl-admin-place">{placeOf(agent.scope)} · {agent.active ? trx(agent.presence) : tr("deactivated")}</small>
                     </Link>
                   </li>
                 );

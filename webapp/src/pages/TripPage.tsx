@@ -492,7 +492,7 @@ export function TripPage() {
             "Rider": sheet.riderName,
             "Pickup": sheet.pickup,
             "Drop-off": sheet.dropoff,
-            "Source": sheet.source,
+            "Source": trx(sheet.source),
             "Driver": sheet.driverName,
             "Vehicle": sheet.vehicle,
             "Licence plate": sheet.plate,
@@ -721,7 +721,7 @@ export function TripPage() {
         ) : (
           <ul aria-label={tr("Trip intervention audit")} className="op-history">
             {tripAudits.map((item) => (
-              <li key={item.id}><time>{item.at}</time><b>{agentName(item.actorId)}</b><span>{item.action} · {item.result} · {item.actorId} · {item.reason}</span></li>
+              <li key={item.id}><time>{item.at}</time><b>{agentName(item.actorId)}</b><span>{item.action} · {trx(item.result)} · {item.actorId} · {trx(item.reason)}</span></li>
             ))}
           </ul>
         )}

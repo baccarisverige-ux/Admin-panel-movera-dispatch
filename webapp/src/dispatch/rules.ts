@@ -992,18 +992,18 @@ export type ReservationTimelineStep = {
 };
 
 function listWho(resv: ReservationRules, groups: readonly DriverGroup[]): string {
-  if (resv.listTo === "category") return "Only drivers who drive the ride's category";
-  if (resv.listTo === "rating") return `Only drivers rated ${resv.listMinRating} or more`;
-  if (resv.listTo === "random") return `A random group of ${resv.listGroupSize} drivers`;
-  if (resv.listTo === "homeNear") return `Only drivers whose home is within ${resv.listHomeKm} km of the pickup`;
-  if (resv.listTo === "nearNow") return `Only drivers within ${resv.listNearKm} km of the pickup when the rider books`;
-  if (resv.listTo === "favourites") return "Only the rider's favourite drivers";
-  if (resv.listTo === "areaRegulars") return `Only drivers with ${resv.listAreaTrips}+ trips from the pickup area in 30 days`;
+  if (resv.listTo === "category") return tr("Only drivers who drive the ride's category");
+  if (resv.listTo === "rating") return tr("Only drivers rated {0} or more", [resv.listMinRating]);
+  if (resv.listTo === "random") return tr("A random group of {0} drivers", [resv.listGroupSize]);
+  if (resv.listTo === "homeNear") return tr("Only drivers whose home is within {0} km of the pickup", [resv.listHomeKm]);
+  if (resv.listTo === "nearNow") return tr("Only drivers within {0} km of the pickup when the rider books", [resv.listNearKm]);
+  if (resv.listTo === "favourites") return tr("Only the rider's favourite drivers");
+  if (resv.listTo === "areaRegulars") return tr("Only drivers with {0}+ trips from the pickup area in 30 days", [resv.listAreaTrips]);
   if (resv.listTo === "group") {
     const group = groups.find((item) => item.id === resv.listGroupId);
-    return group ? `Only drivers in the group ${group.name}` : "Only drivers in the chosen group";
+    return group ? tr("Only drivers in the group {0}", [group.name]) : tr("Only drivers in the chosen group");
   }
-  return "All drivers in the zone";
+  return tr("All drivers in the zone");
 }
 
 /** Exclusive and Radar steps only happen when the step and the zone's mode are both on. */
@@ -1026,17 +1026,17 @@ export function reservationTimeline(zone: ZoneDispatch, bookedBeforeMin: number,
     const at = Math.min(lead, Math.max(0, afterBookedMin));
     return { id, title, detail, afterBookedMin: at, beforePickupMin: lead - at, skipped };
   };
-  const homeSkip = !resv.homePopup ? "Off."
-    : resv.homePopupAfterMin >= Math.min(exclusiveAt, radarAt) ? `Skipped: it is already ${exclusiveAt <= radarAt ? "Exclusive" : "in Radar trips"} by then.`
-      : resv.homePopupAfterMin >= lead ? "Skipped: pickup comes first."
+  const homeSkip = !resv.homePopup ? tr("Off.")
+    : resv.homePopupAfterMin >= Math.min(exclusiveAt, radarAt) ? (exclusiveAt <= radarAt ? tr("Skipped: it is already Exclusive by then.") : tr("Skipped: it is already in Radar trips by then."))
+      : resv.homePopupAfterMin >= lead ? tr("Skipped: pickup comes first.")
         : null;
-  const modeSkip = (setting: boolean, mode: OfferMode) => (!setting ? "Off." : !zone[mode].on ? `Skipped: ${modeLabel(mode)} is off in this zone.` : null);
+  const modeSkip = (setting: boolean, mode: OfferMode) => (!setting ? tr("Off.") : !zone[mode].on ? tr("Skipped: {0} is off in this zone.", [trx(modeLabel(mode))]) : null);
   return [
-    step("list", RESERVATION_STEP_LABEL.list, `${listWho(resv, groups)} see it in Scheduled rides.${resv.listTo !== "all" && resv.listOpenAll ? ` Still untaken after ${resv.listOpenAllAfterMin} min: every driver in the zone sees it.` : ""}`, 0, null),
-    step("home", RESERVATION_STEP_LABEL.home, `Nobody took it yet, so it also pops up on Home for ${resv.homePopupTo === "zone" || resv.listTo === "all" ? "every online driver in the zone" : "the same drivers as the list"}. It stays in Scheduled rides.${resv.popupClosedExclusive && (resv.toExclusive && zone.exclusive.on) ? " A driver who closes it with × can get it back as an Exclusive if nobody took it." : ""}`, resv.homePopupAfterMin, homeSkip),
-    step("exclusive", RESERVATION_STEP_LABEL.exclusive, lead <= resv.exclusiveBeforeMin ? "Booked this close to pickup, so it is an Exclusive offer at once." : "Close to pickup it becomes an Exclusive offer, like today's Exclusive.", lead - resv.exclusiveBeforeMin, modeSkip(resv.toExclusive, "exclusive")),
-    step("radar", RESERVATION_STEP_LABEL.radar, "It also comes into Radar trips (Home deck and Live list) as a normal trip that needs a driver soon. Never labelled Exclusive there.", lead - resv.radarBeforeMin, modeSkip(resv.toRadar, "radar")),
-    step("pickup", "Pickup", "Pickup time.", lead, null),
+    step("list", RESERVATION_STEP_LABEL.list, resv.listTo !== "all" && resv.listOpenAll ? tr("{0} see it in Scheduled rides. Still untaken after {1} min: every driver in the zone sees it.", [listWho(resv, groups), resv.listOpenAllAfterMin]) : tr("{0} see it in Scheduled rides.", [listWho(resv, groups)]), 0, null),
+    step("home", RESERVATION_STEP_LABEL.home, [resv.homePopupTo === "zone" || resv.listTo === "all" ? tr("Nobody took it yet, so it also pops up on Home for every online driver in the zone. It stays in Scheduled rides.") : tr("Nobody took it yet, so it also pops up on Home for the same drivers as the list. It stays in Scheduled rides."), resv.popupClosedExclusive && (resv.toExclusive && zone.exclusive.on) ? tr("A driver who closes it with × can get it back as an Exclusive if nobody took it.") : ""].filter(Boolean).join(" "), resv.homePopupAfterMin, homeSkip),
+    step("exclusive", RESERVATION_STEP_LABEL.exclusive, lead <= resv.exclusiveBeforeMin ? tr("Booked this close to pickup, so it is an Exclusive offer at once.") : tr("Close to pickup it becomes an Exclusive offer, like today's Exclusive."), lead - resv.exclusiveBeforeMin, modeSkip(resv.toExclusive, "exclusive")),
+    step("radar", RESERVATION_STEP_LABEL.radar, tr("It also comes into Radar trips (Home deck and Live list) as a normal trip that needs a driver soon. Never labelled Exclusive there."), lead - resv.radarBeforeMin, modeSkip(resv.toRadar, "radar")),
+    step("pickup", "Pickup", tr("Pickup time."), lead, null),
   ];
 }
 

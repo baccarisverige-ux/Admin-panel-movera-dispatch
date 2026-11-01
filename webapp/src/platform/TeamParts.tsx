@@ -51,8 +51,8 @@ export function RolesView({ editable, by, onNotice }: { editable: boolean; by: s
             <section key={group.label} aria-label={trx(group.label)}>
               <h4>{trx(group.label)}</h4>
               {group.items.map((item) => (
-                <Row key={item.id} label={item.label}>
-                  <Switch label={item.label} on={shown.includes(item.id)} disabled={!draft || !editable} onChange={(on) => draft && setDraft({ ...draft, permissions: on ? [...draft.permissions, item.id] : draft.permissions.filter((id) => id !== item.id) })} />
+                <Row key={item.id} label={trx(item.label)}>
+                  <Switch label={trx(item.label)} on={shown.includes(item.id)} disabled={!draft || !editable} onChange={(on) => draft && setDraft({ ...draft, permissions: on ? [...draft.permissions, item.id] : draft.permissions.filter((id) => id !== item.id) })} />
                 </Row>
               ))}
             </section>
