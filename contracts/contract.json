@@ -1324,10 +1324,17 @@
         1,
         5
       ],
-      "other": "auto needs both modes on; manual main must be on; every on time rule needs from != to (HH:MM) and its mode on",
+      "other": "auto needs both modes on; manual main must be on; every on time rule needs from != to (HH:MM) and its mode on; start both / byDistance need both modes on",
       "raisePrice.maxFactor": [
         1,
         3
+      ],
+      "start.nearKm": "> 0 and <= 50",
+      "radar.steps / exclusive.steps": "1-5 values, > 0 and <= 50 km, strictly increasing",
+      "limits.maxPickupKm": "> 0 and <= 50",
+      "limits.maxPickupEtaMin": [
+        0,
+        60
       ]
     },
     "distance": "km = round1(equirectangular distance × 111.32 × roadFactor); a driver finishing a ride: km from the drop-off. round1(x) = floor(x × 10 + 0.5) / 10",
@@ -1335,7 +1342,7 @@
     "busy": "busy = round1(waiting / max(1, free)) once at search start: waiting = trips in the zone in requested, searching or offered (the new one included); free = online drivers in the zone with no rider and no trip",
     "reasonCodes": "Exclusive Offer.reasonCode: favourite when the favourite factor gave points; else finishing-nearby; else best-match for the top-ranked driver in range at that moment; else nearby",
     "rules": [
-      "mode at search start, first match: control.paused → no automatic offers; control.mode; the first on time rule (zone-local HH:MM in timeZone, [from, to), wraps midnight) whose mode is on; choose.how auto (both modes on) → radar when busy >= radarAbove else exclusive; else choose.main if on, else the mode that is on. choose.backup and rulesFrom are ignored (the pickup zone's document governs the search).",
+      "mode at search start, first match: control.paused → no automatic offers; control.mode; the first on time rule (zone-local HH:MM in timeZone, [from, to), wraps midnight) whose mode is on; start.mode radar / exclusive / both / byDistance (v0.18.9, contract.json#dispatch.start); choose.how auto (both modes on) → radar when busy >= radarAbove else exclusive; else choose.main if on, else the mode that is on. choose.backup (deprecated, optional) and rulesFrom are ignored (the pickup zone's document governs the search).",
       "candidates at each offer, ranked again each time: eligible first (category allowed, km <= widest step, a driver on a ride only when finishing within finishing.withinMin and withinKm and the finishing factor is on), then score descending, km ascending, driverId ascending. Radar never goes to a driver with a rider; Exclusive does only when finishing.exclusive and exclusiveWhileDriving.on.",
       "score = sum over the factors that are on of round(weight / (sum of on weights) × 100 × clamp01(ratio)): eta 1 − etaMin / etaFullMin; rating (rating − ratingFloor) / ratingSpan; acceptance pct / 100; cancel 1 − pct / cancelZeroPct; idle idleMin / idleFullMin; finishing 1 when finishing nearby; favourite 1 when the rider favourited the driver, favourite.on and km <= favourite.maxKm. A factor that does not apply still counts in the sum of weights.",
       "Radar round: the top radar.drivers in range at the current step, all at once, for radar.seconds; the first accept wins (others claimed_elsewhere). Radar adds nobody to asked: a driver who declined or missed may see the trip again on a later round (owner decision 23).",
@@ -1372,6 +1379,34 @@
         1,
         3
       ]
+    },
+    "start": {
+      "modes": [
+        "auto",
+        "radar",
+        "exclusive",
+        "both",
+        "byDistance"
+      ],
+      "default": {
+        "mode": "auto",
+        "nearKm": 2
+      },
+      "note": "v0.18.9 (owner 2026-11-01, rule 16, dispatch start/order): per zone, optional DispatchDocument.start { mode, nearKm }. Missing = { auto, 2 } = the behaviour before. auto: choose decides (busy level / manual main). radar / exclusive: that mode starts. byDistance: the best ranked driver in range within nearKm → Exclusive first, else Radar first. both: the first round sends an Exclusive offer to the best ranked driver and, at the same moment, a Radar round to the next radar.drivers (the Exclusive driver left out), both for their own seconds; the first accept wins and every other open offer is withdrawn (offer_withdrawn, claimed_elsewhere); after it the search goes on as Exclusive (then of exclusive). A paused zone, a forced control.mode and an on time rule still win over start. A mode that is off cannot start: both and byDistance need both modes on, else the mode that is on."
+    },
+    "modeSteps": "v0.18.9: radar.steps / exclusive.steps (optional, 1-5 km values, strictly increasing, each <= 50): that mode's own search steps; missing = radius.steps. The step index is shared: step i of the search uses steps[min(i, len-1)] of the mode that is offering; the steps are used up when the index passes the longest list.",
+    "limits": {
+      "default": {
+        "maxPickupEtaMin": 0
+      },
+      "note": "v0.18.9: optional DispatchDocument.limits { maxPickupKm, maxPickupEtaMin }. A driver farther than maxPickupKm (missing = the widest step) or with etaMin above maxPickupEtaMin (0 / missing = off) is never offered the trip."
+    },
+    "neighbours": {
+      "default": {
+        "on": false,
+        "zoneIds": []
+      },
+      "note": "v0.18.9: optional DispatchDocument.neighbours { on, zoneIds, afterStep }. on: from search step afterStep (1-based, missing = the last step) free drivers whose zones include one of zoneIds are candidates too (same ranking, same distance limits). Off / missing = only drivers of the pickup zone (as before)."
     }
   },
   "maps": {

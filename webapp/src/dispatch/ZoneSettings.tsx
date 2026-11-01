@@ -20,8 +20,8 @@ import { RiderCancelFeesCard } from "./CancelFeeTable";
 import type { CancelFeeKind, CancelFeeTable as FeeTable, FeeCategory } from "./cancelFees";
 import type { PickupWait } from "./offers";
 import {
-  ALERTS, EXTRAS, FACTORS, modeLabel, PICKUP_MOVE_MAX_METERS, WAIT_KINDS,
-  type CountryDispatch, type DriverGroup, type ExtraId, type OfferMode, type TabId, type WaitKind, type WaitStep, type ZoneDispatch,
+  ALERTS, EXTRAS, FACTORS, PICKUP_MOVE_MAX_METERS, WAIT_KINDS,
+  type CountryDispatch, type DriverGroup, type ExtraId, type TabId, type WaitKind, type WaitStep, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx } from "../i18n";
 
@@ -113,10 +113,8 @@ function Modes({ zone, onChange, busy, disabled }: Props) {
           </>
         ) : (
           <>
-            <Row label={tr("Main mode")}><Choice label={tr("Main mode")} value={choose.main} disabled={disabled} onChange={(main) => set({ choose: { ...choose, main, backup: choose.backup === main ? (main === "radar" ? "exclusive" : "radar") : choose.backup } })} options={[{ id: "radar", label: tr("Radar") }, { id: "exclusive", label: tr("Exclusive") }]} /></Row>
-            <Row label={tr("Backup mode")} help={tr("Used when the main mode finds nobody.")}>
-              <Choice label={tr("Backup mode")} value={choose.backup} disabled={disabled} onChange={(backup) => set({ choose: { ...choose, backup } })} options={[{ id: choose.main === "radar" ? "exclusive" : "radar", label: modeLabel(choose.main === "radar" ? "exclusive" : "radar") }, { id: "none", label: tr("No backup") }] as { id: OfferMode | "none"; label: string }[]} />
-            </Row>
+            {/* v0.18.9: Backup mode removed (the server never used it; If nobody accepts on each mode decides). */}
+            <Row label={tr("Main mode")}><Choice label={tr("Main mode")} value={choose.main} disabled={disabled} onChange={(main) => set({ choose: { ...choose, main } })} options={[{ id: "radar", label: tr("Radar") }, { id: "exclusive", label: tr("Exclusive") }]} /></Row>
           </>
         )}
         <div className="dx-sub">
@@ -147,7 +145,7 @@ function Modes({ zone, onChange, busy, disabled }: Props) {
   );
 }
 
-function Best({ zone, onChange, disabled }: Props) {
+function Best({ zone, onChange, disabled, otherZones }: Props) {
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   const total = zone.factors.filter((item) => item.on).reduce((sum, item) => sum + item.weight, 0) || 1;
   const steps = zone.radius.steps;
@@ -181,6 +179,28 @@ function Best({ zone, onChange, disabled }: Props) {
         </div>
         <Row label={tr("Longest search")} help={tr("After this, the search stops.")}>
           <Num label={tr("Longest search")} value={zone.radius.maxWaitMin} unit="min" min={1} max={30} disabled={disabled} onChange={(maxWaitMin) => set({ radius: { ...zone.radius, maxWaitMin } })} />
+        </Row>
+      </Card>
+
+      <Card title={tr("Pickup limits")} tone="blue" icon={<MapPin size={18} />} help={tr("No offer goes to a driver farther away or longer away than this, in Radar and Exclusive.")}>
+        <Row label={tr("Farthest pickup")} help={tr("0 = the widest search distance step ({0} km).", [String(Math.max(...steps, ...(zone.radar.steps ?? []), ...(zone.exclusive.steps ?? [])))])}>
+          <Num label={tr("Farthest pickup")} value={zone.limits.maxPickupKm} unit="km" step={0.5} min={0} max={50} disabled={disabled} onChange={(maxPickupKm) => set({ limits: { ...zone.limits, maxPickupKm } })} />
+        </Row>
+        <Row label={tr("Longest pickup time")} help={tr("Minutes for the driver to reach the pickup. 0 = no limit.")}>
+          <Num label={tr("Longest pickup time")} value={zone.limits.maxPickupEtaMin} unit="min" min={0} max={60} disabled={disabled} onChange={(maxPickupEtaMin) => set({ limits: { ...zone.limits, maxPickupEtaMin: Math.round(maxPickupEtaMin) } })} />
+        </Row>
+      </Card>
+
+      <Card title={tr("Neighbour zones")} tone="blue" icon={<Move size={18} />} help={tr("When nobody in this zone accepts, drivers of the chosen zones nearby can get the ride too.")} off={!zone.neighbours.on} aside={<Switch label={tr("Neighbour zones")} on={zone.neighbours.on} disabled={disabled} onChange={(on) => set({ neighbours: { ...zone.neighbours, on } })} />}>
+        <Row label={tr("Zones")}>
+          <div className="dx-chips" role="group" aria-label={tr("Neighbour zones")}>
+            {otherZones.length ? otherZones.map((other) => (
+              <Check key={other.id} label={other.name} on={zone.neighbours.zoneIds.includes(other.id)} disabled={disabled || !zone.neighbours.on} onChange={(on) => set({ neighbours: { ...zone.neighbours, zoneIds: on ? [...zone.neighbours.zoneIds, other.id] : zone.neighbours.zoneIds.filter((id) => id !== other.id) } })} />
+            )) : <small className="as-help">{tr("No other zone in this country.")}</small>}
+          </div>
+        </Row>
+        <Row label={tr("From search step")} help={tr("0 = the last step.")}>
+          <Num label={tr("Neighbours from search step")} value={zone.neighbours.afterStep} min={0} max={5} disabled={disabled || !zone.neighbours.on} onChange={(afterStep) => set({ neighbours: { ...zone.neighbours, afterStep: Math.round(afterStep) } })} />
         </Row>
       </Card>
 

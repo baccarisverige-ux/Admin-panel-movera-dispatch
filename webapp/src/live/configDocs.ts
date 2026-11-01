@@ -170,9 +170,14 @@ export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | n
     zoneId: id,
     country: facts.country,
     timeZone: facts.timeZone,
-    radar: { ...zone.radar },
-    exclusive: { on: zone.exclusive.on, drivers: zone.exclusive.drivers, seconds: zone.exclusive.seconds, then: zone.exclusive.then },
-    choose: structuredClone(zone.choose),
+    radar: { on: zone.radar.on, drivers: zone.radar.drivers, seconds: zone.radar.seconds, then: zone.radar.then, ...(zone.radar.steps?.length ? { steps: [...zone.radar.steps] } : {}) },
+    exclusive: { on: zone.exclusive.on, drivers: zone.exclusive.drivers, seconds: zone.exclusive.seconds, then: zone.exclusive.then, ...(zone.exclusive.steps?.length ? { steps: [...zone.exclusive.steps] } : {}) },
+    // choose.backup is deprecated (v0.18.9, never used); still sent so a server on an older contract copy accepts the document.
+    choose: { ...structuredClone(zone.choose), backup: zone.choose.backup ?? (zone.choose.main === "radar" ? "exclusive" : "radar") },
+    // v0.18.9 (owner 2026-11-01, rule 16): what starts first, pickup limits and neighbour zones (0 = contract default, left out).
+    start: { mode: zone.start.mode, nearKm: zone.start.nearKm },
+    limits: { ...(zone.limits.maxPickupKm > 0 ? { maxPickupKm: zone.limits.maxPickupKm } : {}), maxPickupEtaMin: zone.limits.maxPickupEtaMin },
+    neighbours: { on: zone.neighbours.on, zoneIds: [...zone.neighbours.zoneIds], ...(zone.neighbours.afterStep > 0 ? { afterStep: zone.neighbours.afterStep } : {}) },
     rulesFrom: zone.rulesFrom,
     radius: structuredClone(zone.radius),
     factors: structuredClone(zone.factors),
@@ -203,6 +208,17 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     if (defaulted.length) zone.secondsDefaulted = defaulted;
     else delete zone.secondsDefaulted;
     if (d.choose) zone.choose = structuredClone(d.choose);
+    // v0.18.9: a document without start / limits / neighbours / own steps keeps the defaults (today's behaviour).
+    const raw = doc as { radar?: { steps?: unknown }; exclusive?: { steps?: unknown }; start?: { mode?: unknown; nearKm?: unknown }; limits?: { maxPickupKm?: unknown; maxPickupEtaMin?: unknown }; neighbours?: { on?: unknown; zoneIds?: unknown; afterStep?: unknown } };
+    const kmList = (value: unknown) => (Array.isArray(value) && value.length > 0 && value.every((km) => typeof km === "number") ? (value as number[]) : undefined);
+    zone.radar = { ...zone.radar, steps: kmList(raw.radar?.steps) };
+    zone.exclusive = { ...zone.exclusive, steps: kmList(raw.exclusive?.steps) };
+    if (!zone.radar.steps) delete zone.radar.steps;
+    if (!zone.exclusive.steps) delete zone.exclusive.steps;
+    const modes = ["auto", "radar", "exclusive", "both", "byDistance"];
+    zone.start = { mode: modes.includes(raw.start?.mode as string) ? (raw.start!.mode as ZoneDispatch["start"]["mode"]) : "auto", nearKm: typeof raw.start?.nearKm === "number" ? raw.start.nearKm : 2 };
+    zone.limits = { maxPickupKm: typeof raw.limits?.maxPickupKm === "number" ? raw.limits.maxPickupKm : 0, maxPickupEtaMin: typeof raw.limits?.maxPickupEtaMin === "number" ? raw.limits.maxPickupEtaMin : 0 };
+    zone.neighbours = { on: raw.neighbours?.on === true, zoneIds: Array.isArray(raw.neighbours?.zoneIds) ? (raw.neighbours.zoneIds as unknown[]).filter((z): z is string => typeof z === "string") : [], afterStep: typeof raw.neighbours?.afterStep === "number" ? raw.neighbours.afterStep : 0 };
     if (d.rulesFrom) zone.rulesFrom = d.rulesFrom;
     if (d.radius) zone.radius = structuredClone(d.radius);
     if (d.factors) zone.factors = structuredClone(d.factors);

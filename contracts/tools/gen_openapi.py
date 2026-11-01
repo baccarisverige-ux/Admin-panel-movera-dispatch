@@ -828,13 +828,14 @@ S["PricingDocument"] = obj(OrderedDict([
     "Server-only (contract.json#configDocs): the zone's prices, read by the server's quote engine. Never served to the apps. " + PR["note"] + " Sample: fixtures/config/pricing_document.json.",
     **{"x-server-only": True})
 S["DispatchModeRules"] = obj({"on": b(), "drivers": i(minimum=1, maximum=30, description="radar: shown at once (1-30); exclusive: tried one after the other per radius step (1-10)."),
-                              "seconds": i(minimum=5, maximum=120, description="radar 5-120, exclusive 5-60."), "then": s(enum=sorted(set(DP["then"]["radar"] + DP["then"]["exclusive"])))},
+                              "seconds": i(minimum=5, maximum=120, description="radar 5-120, exclusive 5-60."), "then": s(enum=sorted(set(DP["then"]["radar"] + DP["then"]["exclusive"]))),
+                              "steps": arr(n(exclusiveMinimum=0, maximum=50), minItems=1, maxItems=5, description="v0.18.9 dispatch start: optional own search steps (km, strictly increasing) for this mode. Missing = radius.steps.")},
                              ["on", "drivers", "seconds", "then"], "Radar: then is widen | exclusive | widen_then_exclusive. Exclusive: then is radar | widen | widen_then_radar.")
 S["DispatchTimeRule"] = obj({"id": s(minLength=1), "on": b(), "from": s(pattern=r"^\d\d:\d\d$"), "to": s(pattern=r"^\d\d:\d\d$"), "mode": s(enum=DP["modes"])},
                             ["id", "on", "from", "to", "mode"], "Zone-local [from, to); wraps midnight when from > to.")
 S["DispatchChoose"] = obj({"how": s(enum=DP["chooseHow"]), "radarAbove": n("Busy level (requests per free driver) from which Auto uses Radar.", exclusiveMinimum=0, maximum=10),
-                           "main": s(enum=DP["modes"]), "backup": s(enum=DP["modes"] + ["none"], description="Ignored in v0.5.1: `then` decides fallbacks."),
-                           "times": arr(ref("DispatchTimeRule"))}, ["how", "radarAbove", "main", "backup", "times"])
+                           "main": s(enum=DP["modes"]), "backup": s(enum=DP["modes"] + ["none"], description="Deprecated (v0.18.9 dispatch start): optional, ignored; `then` decides fallbacks. The admin no longer shows it.", deprecated=True),
+                           "times": arr(ref("DispatchTimeRule"))}, ["how", "radarAbove", "main", "times"])
 S["DispatchFactor"] = obj({"id": s(enum=["eta", "rating", "acceptance", "cancel", "idle", "finishing", "favourite"]), "on": b(), "weight": n(minimum=0)}, ["id", "on", "weight"])
 S["DispatchWaitingStep"] = obj({"id": s(minLength=1), "kind": s(enum=DP["waitingKinds"], **{"x-skipped-in-test-week": DP["skippedWaitingKinds"]}), "on": b(),
                                 "afterMin": n("From search start.", minimum=0, maximum=30), "message": s(), "extraMin": {"type": ["number", "null"], "description": "keep_waiting: minutes added on Keep waiting."}},
@@ -853,6 +854,14 @@ S["DispatchDocument"] = obj(OrderedDict([
     ("raisePrice", obj({"maxFactor": n("v0.18.6 (owner G4-E4 '2×, admin can change'): the rider may raise the fare to at most maxFactor × the booked fare in this zone (default 2). "
                                        "Missing = 2. The server copies it into RiderAppConfig.raisePrice.maxFactor.",
                                        minimum=C["dispatch"]["raisePrice"]["range"][0], maximum=C["dispatch"]["raisePrice"]["range"][1])}, ["maxFactor"])),
+    ("start", obj({"mode": s("Which offer goes out first (contract.json#dispatch.start). Missing = auto (choose decides, as before).", enum=DP["start"]["modes"]),
+                   "nearKm": n("byDistance: the best ranked driver within nearKm gets Exclusive first, else Radar first. Default 2.", exclusiveMinimum=0, maximum=50)}, ["mode"],
+                  DP["start"]["note"])),
+    ("limits", obj({"maxPickupKm": n("No offer to a driver farther than this (km). Missing = the widest search step.", exclusiveMinimum=0, maximum=50),
+                    "maxPickupEtaMin": n("No offer to a driver whose pickup ETA (minutes, contract.json#dispatch.eta) is above this. 0 or missing = off.", minimum=0, maximum=60)}, [],
+                   DP["limits"]["note"])),
+    ("neighbours", obj({"on": b(), "zoneIds": arr(ref("Id"), uniqueItems=True), "afterStep": i("1-based search step from which drivers of zoneIds are also asked. Missing = the last step.", minimum=1)},
+                       ["on", "zoneIds"], DP["neighbours"]["note"])),
     ("usesStandard", b("v0.8.0: set by the server when it serves or uses the country standard for this zone (contract.json#configDocs.standard).")),
 ]), ["version", "publishedAt", "zoneId", "country", "timeZone", "radar", "exclusive", "choose", "radius", "factors", "finishing", "favourite", "exclusiveWhileDriving", "waiting"],
     "Server-only (contract.json#configDocs): the zone's automatic dispatch rules (admin Dispatch, a subset of the movera.dispatch.rules export, admin field names). "

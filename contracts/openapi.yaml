@@ -18045,6 +18045,16 @@ components:
           - widen
           - widen_then_exclusive
           - widen_then_radar
+        steps:
+          type: array
+          items:
+            type: number
+            exclusiveMinimum: 0
+            maximum: 50
+          minItems: 1
+          maxItems: 5
+          description: 'v0.18.9 dispatch start: optional own search steps (km, strictly increasing) for this mode. Missing
+            = radius.steps.'
     DispatchTimeRule:
       type: object
       description: Zone-local [from, to); wraps midnight when from > to.
@@ -18077,7 +18087,6 @@ components:
       - how
       - radarAbove
       - main
-      - backup
       - times
       properties:
         how:
@@ -18101,7 +18110,9 @@ components:
           - radar
           - exclusive
           - none
-          description: 'Ignored in v0.5.1: `then` decides fallbacks.'
+          description: 'Deprecated (v0.18.9 dispatch start): optional, ignored; `then` decides fallbacks. The admin no longer
+            shows it.'
+          deprecated: true
         times:
           type: array
           items:
@@ -18278,6 +18289,71 @@ components:
               maximum: 3
               description: 'v0.18.6 (owner G4-E4 ''2×, admin can change''): the rider may raise the fare to at most maxFactor
                 × the booked fare in this zone (default 2). Missing = 2. The server copies it into RiderAppConfig.raisePrice.maxFactor.'
+        start:
+          type: object
+          description: 'v0.18.9 (owner 2026-11-01, rule 16, dispatch start/order): per zone, optional DispatchDocument.start
+            { mode, nearKm }. Missing = { auto, 2 } = the behaviour before. auto: choose decides (busy level / manual main).
+            radar / exclusive: that mode starts. byDistance: the best ranked driver in range within nearKm → Exclusive first,
+            else Radar first. both: the first round sends an Exclusive offer to the best ranked driver and, at the same moment,
+            a Radar round to the next radar.drivers (the Exclusive driver left out), both for their own seconds; the first
+            accept wins and every other open offer is withdrawn (offer_withdrawn, claimed_elsewhere); after it the search
+            goes on as Exclusive (then of exclusive). A paused zone, a forced control.mode and an on time rule still win over
+            start. A mode that is off cannot start: both and byDistance need both modes on, else the mode that is on.'
+          required:
+          - mode
+          properties:
+            mode:
+              type: string
+              enum:
+              - auto
+              - radar
+              - exclusive
+              - both
+              - byDistance
+              description: Which offer goes out first (contract.json#dispatch.start). Missing = auto (choose decides, as before).
+            nearKm:
+              type: number
+              exclusiveMinimum: 0
+              maximum: 50
+              description: 'byDistance: the best ranked driver within nearKm gets Exclusive first, else Radar first. Default
+                2.'
+        limits:
+          type: object
+          description: 'v0.18.9: optional DispatchDocument.limits { maxPickupKm, maxPickupEtaMin }. A driver farther than
+            maxPickupKm (missing = the widest step) or with etaMin above maxPickupEtaMin (0 / missing = off) is never offered
+            the trip.'
+          properties:
+            maxPickupKm:
+              type: number
+              exclusiveMinimum: 0
+              maximum: 50
+              description: No offer to a driver farther than this (km). Missing = the widest search step.
+            maxPickupEtaMin:
+              type: number
+              minimum: 0
+              maximum: 60
+              description: No offer to a driver whose pickup ETA (minutes, contract.json#dispatch.eta) is above this. 0 or
+                missing = off.
+        neighbours:
+          type: object
+          description: 'v0.18.9: optional DispatchDocument.neighbours { on, zoneIds, afterStep }. on: from search step afterStep
+            (1-based, missing = the last step) free drivers whose zones include one of zoneIds are candidates too (same ranking,
+            same distance limits). Off / missing = only drivers of the pickup zone (as before).'
+          required:
+          - 'on'
+          - zoneIds
+          properties:
+            'on':
+              type: boolean
+            zoneIds:
+              type: array
+              items:
+                $ref: '#/components/schemas/Id'
+              uniqueItems: true
+            afterStep:
+              type: integer
+              minimum: 1
+              description: 1-based search step from which drivers of zoneIds are also asked. Missing = the last step.
         usesStandard:
           type: boolean
           description: 'v0.8.0: set by the server when it serves or uses the country standard for this zone (contract.json#configDocs.standard).'
@@ -18308,10 +18384,16 @@ components:
         - 1
         - 5
         other: auto needs both modes on; manual main must be on; every on time rule needs from != to (HH:MM) and its mode
-          on
+          on; start both / byDistance need both modes on
         raisePrice.maxFactor:
         - 1
         - 3
+        start.nearKm: '> 0 and <= 50'
+        radar.steps / exclusive.steps: 1-5 values, > 0 and <= 50 km, strictly increasing
+        limits.maxPickupKm: '> 0 and <= 50'
+        limits.maxPickupEtaMin:
+        - 0
+        - 60
     DispatchControl:
       type: object
       description: 'Live dispatch switch of a zone (outside publishing). DispatchControl { zoneId, paused, mode: radar | exclusive
