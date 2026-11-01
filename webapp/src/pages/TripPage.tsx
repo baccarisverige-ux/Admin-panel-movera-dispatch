@@ -322,8 +322,8 @@ export function TripPage() {
             </div>
           </div>
           <div className="op-facts-list">
-            <p>{trn("Driver {0}", driver ? <><Link to={`/drivers/${driver.id}`}>{driver.name}</Link> · {driver.id}</> : tr("Unassigned"))}</p>
-            <p>{trn("{0} Vehicle {1}", <Car size={13} aria-hidden="true" />, vehicle ? `${vehicle.plate} · ${vehicle.make ?? ""} ${vehicle.model ?? ""}` : tr("Unassigned"))}</p>
+            <p>{trn("Driver {0}", driver ? <><Link to={`/drivers/${driver.id}`}>{driver.name}</Link> · {driver.id}</> : tr("None assigned"))}</p>
+            <p>{trn("{0} Vehicle {1}", <Car size={13} aria-hidden="true" />, vehicle ? `${vehicle.plate} · ${vehicle.make ?? ""} ${vehicle.model ?? ""}` : tr("None assigned"))}</p>
             <p data-testid="trip-payment">{trn("{0} Payment {1} · {2}", <Banknote size={13} aria-hidden="true" />, statusLabel(payment), cashTrip ? tr("Cash") : tr("In the app"))}</p>
             <p data-testid="trip-rating">{trn("{0} Rating {1}", <Star size={13} aria-hidden="true" />, ratingLabel(trip))}</p>
             <p data-testid="trip-pin">{trn("PIN verified {0}", facts?.pin ? (facts.pin.verified ? tr("Yes") : tr("Not yet")) : live ? tr("No PIN for this trip") : pinVerified(trip.id))}</p>

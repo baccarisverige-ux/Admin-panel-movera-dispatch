@@ -472,7 +472,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
 
       <div className="op-case-split">
         {settings.liveMap && check && carPoint ? (
-          <MapPanel title={item.state === "solved" ? tr("Where the car was") : tr("Where the car is now")} note={<span className={stale ? "op-late" : "op-help"}><MapPin size={12} aria-hidden="true" /> {item.state === "solved" ? tr("At the ride check, {0}.", [time(clock(check.at))]) : stale ? tr("Location updated {0} s ago, older than {1} s: call to check.", [where.secondsAgo, policy.staleSeconds]) : tr("Location updated {0} s ago.", [where.secondsAgo])} {tr("Demo location until the apps send it.")}</span>}>
+          <MapPanel title={item.state === "solved" ? tr("Where the car was") : tr("Where the car is now")} note={<span className={stale ? "op-late" : "op-help"}><MapPin size={12} aria-hidden="true" /> {item.state === "solved" ? tr("At the ride check, {0}.", [time(clock(check.at))]) : stale ? tr("Location updated {0} s ago, older than {1} s: call to check.", [where.secondsAgo, policy.staleSeconds]) : tr("Location updated {0} s ago.", [where.secondsAgo])} {isLiveData() ? tr("Not connected yet") : tr("Demo location until the apps send it.")}</span>}>
             <RouteMap key={trip?.id ?? "no-trip"} stops={route?.stops ?? []} path={route?.path ?? []} points={[{ id: "car", label: `${vehicle?.plate ?? tr("Car")} · ${driver?.name ?? tr("Driver")}`, at: carPoint, tone: "alert" }]} label={tr("Where the car of {0} is", [item.id])} />
           </MapPanel>
         ) : settings.liveMap && where.live ? (
@@ -484,7 +484,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
             <NotConnected block />
           </MapPanel>
         ) : settings.liveMap ? (
-          <MapPanel title={tr("Where they are now")} note={<span className={stale ? "op-late" : "op-help"}><MapPin size={12} aria-hidden="true" /> {stale ? tr("Location updated {0} s ago, older than {1} s: call to check.", [where.secondsAgo, policy.staleSeconds]) : tr("Location updated {0} s ago.", [where.secondsAgo])} {tr("Demo location until the apps send it.")}</span>}>
+          <MapPanel title={tr("Where they are now")} note={<span className={stale ? "op-late" : "op-help"}><MapPin size={12} aria-hidden="true" /> {stale ? tr("Location updated {0} s ago, older than {1} s: call to check.", [where.secondsAgo, policy.staleSeconds]) : tr("Location updated {0} s ago.", [where.secondsAgo])} {isLiveData() ? tr("Not connected yet") : tr("Demo location until the apps send it.")}</span>}>
             <RouteMap stops={[]} path={[]} points={[{ id: "rider", label: item.who, at: where.rider, tone: item.raisedBy === "rider" ? "alert" : "rider" }, ...(where.driver ? [{ id: "driver", label: driver?.name ?? tr("Driver"), at: where.driver, tone: item.raisedBy === "driver" ? "alert" as const : "driver" as const }] : [])]} label={tr("Where the people of {0} are", [item.id])} />
           </MapPanel>
         ) : null}
