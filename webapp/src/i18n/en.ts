@@ -7539,6 +7539,19 @@ export const en = {
   "Too many wrong codes: the PIN is blocked until an admin unlocks it.": "Too many wrong codes: the PIN is blocked until an admin unlocks it.",
   "Refunded to the rider's wallet": "Refunded to the rider's wallet",
   "Only trips whose driver uses the new driver app ask for the PIN.": "Only trips whose driver uses the new driver app ask for the PIN.",
+  "The driver already sees this ride.": "The driver already sees this ride.",
+  "The driver is on a trip and cannot take this ride now.": "The driver is on a trip and cannot take this ride now.",
+  "No chosen driver can take a ride now (offline or no recent position).": "No chosen driver can take a ride now (offline or no recent position).",
+  "Price raised for {0} driver who already saw the ride.": "Price raised for {0} driver who already saw the ride.",
+  "Price raised for {0} drivers who already saw the ride.": "Price raised for {0} drivers who already saw the ride.",
+  "{0} driver already sees the ride and keeps the offer.": "{0} driver already sees the ride and keeps the offer.",
+  "{0} drivers already see the ride and keep the offer.": "{0} drivers already see the ride and keep the offer.",
+  "Also sent to {0} new driver.": "Also sent to {0} new driver.",
+  "Also sent to {0} new drivers.": "Also sent to {0} new drivers.",
+  "Sent to {0} driver": "Sent to {0} driver",
+  "Sent to {0} drivers": "Sent to {0} drivers",
+  "{0} driver could not take it (offline / on a trip).": "{0} driver could not take it (offline / on a trip).",
+  "{0} drivers could not take it (offline / on a trip).": "{0} drivers could not take it (offline / on a trip).",
 } as const;
 
 export type MessageKey = keyof typeof en;

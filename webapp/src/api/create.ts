@@ -73,6 +73,8 @@ export type CommandResult = {
   operationId: string;
   status: "committed" | "pending_approval";
   rev: number;
+  /** A sentence in the admin's language the screen shows instead of its own "sent" notice (e.g. a raise reached drivers who already saw the ride). */
+  notice?: string;
   /** A slice as it is after the command (live settings): the screen shows it at once, before the slice is read again. */
   slice?: { key: string; value: unknown };
 };

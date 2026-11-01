@@ -320,10 +320,10 @@ export function SendRadarButton({ ride, book, candidates, target, max, onNotice,
       disabled={Boolean(issue) || (live && !byServer && drivers.length === 0)}
       title={issue ? trx(issue) : drivers.length ? tr("{0} free driver(s) inside right now get the radar", [String(drivers.length)]) : !live ? tr("No free driver inside right now. The radar still goes out and reaches drivers who come in.") : rule?.repeat ? tr("Nobody free inside right now. It goes out again every {0} s and reaches drivers who come in.", [rule.seconds]) : byServer ? tr("Nobody seems free right now; the server checks again when you send.") : tr("No free driver inside right now.")}
       summary={<>{trn("Send {0}'s ride to the radar for {1}: up to {2} drivers see it, {3} right now.", <b>{ride.rider}</b>, <b>{name}</b>, max, drivers.length)}{sees ? ` ${seesSentence(money, ride.zoneId)}` : ""}</>}
-      onDone={() => {
+      onDone={(result) => {
         record(ride, kind, label);
         if (money.used) onSent?.();
-        onNotice(tr("{0}'s ride was sent to {1}.", [ride.rider, kind === "group" ? name : tr("the radar for {0}", [name])]));
+        onNotice(result?.notice ?? tr("{0}'s ride was sent to {1}.", [ride.rider, kind === "group" ? name : tr("the radar for {0}", [name])]));
       }}
     >{trn("{0} Send radar", <Send size={12} aria-hidden="true" />)}{sees ? <small className="hq-sees"> · {sees}</small> : null}</CommandButton>
   );

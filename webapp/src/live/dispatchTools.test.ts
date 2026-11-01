@@ -181,3 +181,33 @@ test("G4 live fix: a 201 that is not the whole item (only its id and version) is
   const http: ToolsHttp = { json: async () => { throw new Error("not here"); }, post: async <T,>() => ({ groupId: "grp_9", version: 1 }) as T, put: async <T,>() => ({}) as T, del: async () => undefined };
   assert.equal(await sendToolCalls(http, [post], before), null);
 });
+
+test("owner bug 2026-11-01: a raise to drivers who already saw the ride and assign/radar refusals read in the admin's language", async () => {
+  const { registerDictionary, setLanguage, trSentences } = await import("../i18n/core.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  const { refreshedNotice } = await import("./liveAdminApi.ts");
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  assert.equal(refreshedNotice(0, 2, true), null, "nobody kept an offer: the screen's own notice");
+  try {
+    setLanguage("fr");
+    assert.equal(refreshedNotice(1, 0, true), "Prix augmenté pour 1 chauffeur qui voyait déjà la course.");
+    assert.equal(refreshedNotice(1, 2, true), "Prix augmenté pour 1 chauffeur qui voyait déjà la course. Envoyé aussi à 2 nouveaux chauffeurs.");
+    for (const reason of ["offer_already_open", "driver_on_trip", "driver_not_available"]) {
+      const english = toolRefusal({ status: 409, code: "conflict", reason });
+      assert.ok(english, reason);
+      assert.notEqual(trSentences(english!), english, `${reason} is translated in French`);
+    }
+    assert.equal(trSentences(toolRefusal({ status: 409, reason: "offer_already_open" })!), "Le chauffeur voit déjà cette course.");
+    assert.equal(refreshedNotice(0, 1, false, 2), "Envoyé à 1 chauffeur · 2 ne pouvaient pas la prendre (hors ligne / en course).");
+    setLanguage("sv");
+    assert.equal(refreshedNotice(0, 1, false, 1), "Skickat till 1 förare · 1 kunde inte ta den (offline / kör en resa).");
+    assert.equal(refreshedNotice(2, 0, true), "Priset höjt för 2 förare som redan såg resan.");
+    assert.equal(trSentences(toolRefusal({ status: 409, reason: "driver_not_available" })!), "Ingen vald förare kan ta en resa nu (offline eller ingen ny position).");
+  } finally {
+    setLanguage("en");
+  }
+  assert.equal(refreshedNotice(1, 0, true), "Price raised for 1 driver who already saw the ride.");
+  assert.equal(refreshedNotice(0, 1, true, 2), "Sent to 1 driver · 2 drivers could not take it (offline / on a trip).");
+});

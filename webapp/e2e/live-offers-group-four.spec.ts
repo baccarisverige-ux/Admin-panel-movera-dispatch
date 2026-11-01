@@ -28,6 +28,8 @@ const confirm = async (page: Page) => {
 
 type Sent = { method: string; path: string; body: Record<string, unknown> | null };
 type Tools = Record<"presets" | "groups" | "radar-zones" | "radar-rules" | "events", Array<Record<string, unknown>>>;
+/** A test can answer radar-group itself (status + body); otherwise the default answer below. */
+let radarReply: { status: number; body: unknown } | null = null;
 const ID_KEY = { presets: "presetId", groups: "groupId", "radar-zones": "radarZoneId", "radar-rules": "ruleId", events: "eventId" } as const;
 
 /** /admin/dispatch/* (contract.json#dispatchTools) in memory, with versions, plus the trip's nearby drivers and sends. */
@@ -98,6 +100,7 @@ async function fakeTools(page: Page, trips: Array<Record<string, unknown>>) {
       return json(route, 200, trip()["radarZoneSend"]);
     }
     if (url.pathname.endsWith("/radar-group")) {
+      if (radarReply) return json(route, radarReply.status, radarReply.body);
       const zone = Boolean(body?.["radarZoneId"]);
       if (zone) trip()["radarZoneSend"] = { ...SEND, active: true, rounds: 3 };
       return json(route, 200, { groupId: "rg_1", tripId: "T2003", offers: [], expiresAt: new Date(Date.now() + 20_000).toISOString(), projection: { ...SEARCHING, status: "offered", version: 3 }, pickedFrom: zone ? "radar_zone" : "group", ...(zone ? { radarZoneSend: { ...SEND, active: true } } : {}) });
@@ -107,9 +110,9 @@ async function fakeTools(page: Page, trips: Array<Record<string, unknown>>) {
   return { tools, sent, sends };
 }
 
-async function open(page: Page, path: string) {
+async function open(page: Page, path: string, language?: "fr" | "sv") {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const state = await fakeTripServer(page, { admin: G4_ADMIN, trips: [{ ...SEARCHING }] as never });
+  const state = await fakeTripServer(page, { admin: { ...G4_ADMIN, ...(language ? { language } : {}) }, trips: [{ ...SEARCHING }] as never });
   const settings = await fakeSettings(page);
   const server = await fakeTools(page, state.trips);
   // Södermalm (Z002) has its own documents on the server: raise limit 1.5×, rider rating off.
@@ -118,7 +121,7 @@ async function open(page: Page, path: string) {
   const driver = settings.docs.get("driver_app_config:Z002")!;
   const offers = (driver.document["offers"] ?? {}) as Record<string, unknown>;
   settings.docs.set("driver_app_config:Z002", { ...driver, document: { ...driver.document, offers: { ...offers, offerCard: { ...((offers["offerCard"] ?? {}) as object), riderRating: false } } } });
-  await signIn(page, "Dashboard");
+  await signIn(page, language === "fr" ? "Tableau de bord" : language === "sv" ? "Kontrollpanel" : "Dashboard");
   await page.goto(path);
   return { settings, ...server };
 }
@@ -291,4 +294,29 @@ test("G4-F6: an event is made with its pin, local times and sv/fr/en texts and g
   await confirm(page);
   await expect.poll(() => sent.find((s) => s.method === "PUT" && s.path.includes("/events/"))?.body).toMatchObject({ expectedVersion: 1, on: false });
   void API;
+});
+
+test("owner bug 2026-11-01 (French panel): a radar to a driver who already sees the ride says so in French; a refusal reads the panel's French text, never the server's English", async ({ page }) => {
+  await open(page, "/dispatch?view=live", "fr");
+  await page.getByRole("button", { name: /^Chauffeurs à proximité de / }).first().click();
+  const panel = page.getByTestId("assign-panel");
+  await expect(panel).toBeVisible();
+  await panel.getByTestId("radar-target").getByRole("button", { name: "Groupes de chauffeurs" }).click();
+  const send = panel.getByTestId("radar-sender").getByRole("button", { name: /Envoyer le radar/ });
+  // The server kept the driver's automatic offer (outside the new group) and sent nobody new.
+  radarReply = { status: 200, body: { groupId: "rg_2", tripId: "T2003", offers: [{ offerId: "O9", tripId: "T2003", kind: "exclusive", source: "system", groupId: null, status: "open", version: 2 }], expiresAt: new Date(Date.now() + 20_000).toISOString(), projection: { ...SEARCHING, status: "offered", version: 3 }, pickedFrom: "group" } };
+  try {
+    await send.click();
+    await expect(page.getByRole("status").filter({ hasText: "1 chauffeur voit déjà la course et garde l’offre." }).first()).toBeVisible({ timeout: 30_000 });
+    // Checker M1: counted from the answer — 1 got it, 2 could not.
+    radarReply = { status: 200, body: { groupId: "rg_3", tripId: "T2003", offers: [{ offerId: "O10", tripId: "T2003", kind: "radar", source: "admin", groupId: "rg_3", status: "open", version: 1 }], skipped: [{ driverId: "D1", reason: "driver_not_available" }, { driverId: "D2", reason: "driver_on_trip" }], expiresAt: new Date(Date.now() + 20_000).toISOString(), projection: { ...SEARCHING, status: "offered", version: 3 }, pickedFrom: "group" } };
+    await send.click();
+    await expect(page.getByRole("status").filter({ hasText: "Envoyé à 1 chauffeur · 2 ne pouvaient pas la prendre (hors ligne / en course)." }).first()).toBeVisible({ timeout: 30_000 });
+    radarReply = { status: 409, body: { code: "conflict", message: "Test already has this ride.", reason: "offer_already_open", retryable: false } };
+    await send.click();
+    await expect(page.getByText("Le chauffeur voit déjà cette course.").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Test already has this ride.")).toHaveCount(0);
+  } finally {
+    radarReply = null;
+  }
 });
