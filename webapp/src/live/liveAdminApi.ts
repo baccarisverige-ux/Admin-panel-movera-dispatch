@@ -223,8 +223,13 @@ export function tripFacts(trip: Trip): LiveTripFacts {
       noShowDriverSharePct: trip.terms.noShowDriverSharePct, cancelFreeMin: typeof trip.terms.cancelRule?.freeMin === "number" ? trip.terms.cancelRule.freeMin : null, cancelDriverSharePct: trip.terms.cancelDriverSharePct,
       cancelAfterArrivedIsNoShow: Boolean(trip.terms.cancelAfterArrivedIsNoShow), maxPickupMoveMeters: trip.terms.maxPickupMoveMeters,
     } : null,
-    waiting: trip.waiting ? { arrivedAt: trip.waiting.arrivedAt, freeUntil: trip.waiting.freeUntil, noShowAt: trip.waiting.noShowAt, chargedSeconds: trip.waiting.chargedSeconds, noShowFeeMinor: minorOf(trip.waiting.noShowFee), noShowDriverShareMinor: minorOf(trip.waiting.noShowDriverShare), chargedSecondsNow: typeof trip.waiting.chargedSecondsNow === "number" ? trip.waiting.chargedSecondsNow : null, chargedSoFarMinor: minorOf(trip.waiting.chargedSoFar) } : null,
-    cancellation: trip.cancellation ? { actor: trip.cancellation.actor, reasonCode: trip.cancellation.reasonCode, at: trip.cancellation.at, feeMinor: minorOf(trip.cancellation.fee), feeStatus: trip.cancellation.feeStatus ?? null, feeKind: trip.cancellation.feeKind ?? null, driverShareMinor: minorOf(trip.cancellation.driverShare), note: trip.cancellation.note ?? null } : null,
+    waiting: trip.waiting ? { arrivedAt: trip.waiting.arrivedAt, freeUntil: trip.waiting.freeUntil, noShowAt: trip.waiting.noShowAt, chargedSeconds: trip.waiting.chargedSeconds, noShowFeeMinor: minorOf(trip.waiting.noShowFee), noShowDriverShareMinor: minorOf(trip.waiting.noShowDriverShare), chargedSecondsNow: typeof trip.waiting.chargedSecondsNow === "number" ? trip.waiting.chargedSecondsNow : null, chargedSoFarMinor: minorOf(trip.waiting.chargedSoFar),
+      paidMinutes: typeof trip.waiting.paidMinutes === "number" ? trip.waiting.paidMinutes : null, rules: Array.isArray(trip.waiting.rules) ? trip.waiting.rules : [],
+      freeWaitMin: typeof trip.waiting.freeWaitMin === "number" ? trip.waiting.freeWaitMin : null, noShowAfterMin: typeof trip.waiting.noShowAfterMin === "number" ? trip.waiting.noShowAfterMin : null } : null,
+    pin: trip.pinRequired ? { code: typeof trip.pickupPin === "string" ? trip.pickupPin : null, verified: Boolean(trip.pinVerified), attempts: typeof trip.pinAttempts === "number" ? trip.pinAttempts : null, blocked: trip.pinBlocked === true } : null,
+    cancellation: trip.cancellation ? { actor: trip.cancellation.actor, reasonCode: trip.cancellation.reasonCode, at: trip.cancellation.at, feeMinor: minorOf(trip.cancellation.fee), feeStatus: trip.cancellation.feeStatus ?? null, feeKind: trip.cancellation.feeKind ?? null, driverShareMinor: minorOf(trip.cancellation.driverShare), note: trip.cancellation.note ?? null,
+      reversal: trip.cancellation.reversal ? { at: trip.cancellation.reversal.at, by: trip.cancellation.reversal.by ?? null, reason: trip.cancellation.reversal.reason ?? null, driverShareTakenBack: Boolean(trip.cancellation.reversal.driverShareTakenBack) } : null,
+      refundedToWallet: trip.cancellation.refundedToWallet === true || Boolean(trip.cancellation.refundedAt) } : null,
   };
 }
 
@@ -243,6 +248,8 @@ export function tripRecord(trip: Trip, rider?: Rider): DemoRecord {
     ...(trip.scheduledAt ? { pickupAt: trip.scheduledAt } : {}),
     ...(paymentKind(trip.paymentStatus) ? { kind: paymentKind(trip.paymentStatus) } : {}),
     ...(trip.cancellation ? { cancelReasonCode: trip.cancellation.reasonCode } : {}),
+    // v0.18.8 (G6, admin-fake "Trips waiting minutes"): the server's paid waiting minutes, never a demo number.
+    ...(typeof trip.waiting?.paidMinutes === "number" ? { waitingMin: trip.waiting.paidMinutes } : {}),
     version: trip.version,
     live: true,
     liveTrip: tripFacts(trip),
@@ -678,6 +685,34 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const next = await client.json<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/adjust`, { method: "POST", body: JSON.stringify({ expectedVersion: trip.version, waiveCancelFee: true, reason: reason.slice(0, 1000) }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) });
       trips.set(trip.tripId, next?.tripId ? next : { ...trip, cancellation: trip.cancellation ? { ...trip.cancellation, feeStatus: "waived" } : trip.cancellation });
       return done("Fee waived. The rider owes nothing for this trip.");
+    }
+    if (input.action === "admin.trip.pinUnlock") {
+      // v0.18.8 round 1 (contract.json#arrivedWaiting.pin.admin): clears the lock, the block and the counts; the PIN stays.
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
+      if (!trip.pinBlocked && !trip.pinAttempts) {
+        trips.set(trip.tripId, trip);
+        return done("The PIN is not locked.");
+      }
+      const next = await client.json<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/pin/unlock`, { method: "POST", body: JSON.stringify({ expectedVersion: trip.version, reason: reason.slice(0, 1000) }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) });
+      if (next?.tripId) trips.set(next.tripId, next);
+      return done("PIN unlocked. The driver can enter the code again.");
+    }
+    if (input.action === "admin.trip.reverseNoShow") {
+      // v0.18.8 (G6, contract.json#arrivedWaiting.reverseNoShow): POST /admin/trips/{tripId}/reverse-no-show with the
+      // admin's reason and the "take back the driver's share" tick (default off). Idempotent on the server.
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write why the no-show is reversed."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      const takeBack = Boolean((input.value as { takeBackDriverShare?: boolean } | undefined)?.takeBackDriverShare);
+      const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
+      if (trip.cancellation?.reversal) {
+        trips.set(trip.tripId, trip);
+        return done("This no-show is already reversed.");
+      }
+      const next = await client.json<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/reverse-no-show`, { method: "POST", body: JSON.stringify({ expectedVersion: trip.version, reason: reason.slice(0, 1000), takeBackDriverShare: takeBack }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) });
+      if (next?.tripId) trips.set(next.tripId, next);
+      return done(takeBack ? "No-show reversed. The fee is gone and the driver's share is taken back." : "No-show reversed. The fee is gone; the driver keeps his share.");
     }
     if (input.action === "admin.dispatch.control") {
       // Dispatch › Live: pause, force a mode, resume or back to the rules (PUT /admin/zones/{zoneId}/dispatch-control).

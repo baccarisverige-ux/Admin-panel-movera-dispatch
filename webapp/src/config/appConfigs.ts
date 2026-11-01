@@ -229,6 +229,23 @@ function waiting(base: Common) {
   return { ...top, byCategory: Object.fromEntries(base.categoryIds.map((id) => [id, waitingFor(base, id)])) };
 }
 
+/**
+ * The extra waiting rules (far pickup, ride types) and v0.18.8 (G6) the free wait at each stop (Dispatch › Rides ›
+ * Stops, 0 while stops are off). The server enforces them from the driver document and copies them to the rider one.
+ */
+function waitingRules(base: Common, state: AppConfigState) {
+  const { zone, currency } = base;
+  return {
+    farPickup: { on: zone.pickupWait.farPickupOn, km: zone.pickupWait.farPickupKm, ...waitOverride(zone.pickupWait.farPickup, currency) },
+    rideTypes: {
+      scheduled: { on: zone.pickupWait.rideTypes.scheduled.on, ...waitOverride({ ...zone.pickupWait.rideTypes.scheduled, freeWaitMin: state.reservations.currentPolicy.includedWaitingMinutes }, currency) },
+      airport: { on: zone.pickupWait.rideTypes.airport.on, ...waitOverride(zone.pickupWait.rideTypes.airport, currency) },
+      event: { on: zone.pickupWait.rideTypes.event.on, ...waitOverride(zone.pickupWait.rideTypes.event, currency) },
+    },
+    stopFreeWaitMin: zone.stops.on ? zone.stops.freeWaitMin : 0,
+  };
+}
+
 function waitOverride(rule: WaitOverride, currency: CurrencyCode) {
   return { freeWaitMin: rule.freeWaitMin, perMin: rule.perMin === null ? null : wire(rule.perMin, currency), noShowAfterMin: rule.noShowAfterMin, noShowFee: rule.noShowFee === null ? null : wire(rule.noShowFee, currency) };
 }
@@ -313,7 +330,7 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     cancelCheck: { on: base.zone.riderCancel.on, closerPct: base.zone.riderCancel.closerPct },
     // v0.18.7 (G5 Q2): the same switch as the driver document (contract RiderAppConfig.waiting); the server copies the
     // driver zone's value when serving, so the rider's Terms can show the rule. Set in Dispatch › Waiting at pickup.
-    waiting: { ...waiting(base), cancelAfterArrivedIsNoShow: base.zone.pickupWait.cancelAfterArrivedIsNoShow },
+    waiting: { ...waiting(base), cancelAfterArrivedIsNoShow: base.zone.pickupWait.cancelAfterArrivedIsNoShow, ...waitingRules(base, state) },
     cancelReasons: base.country.cancelReasons.groups.rider.map((item) => ({ code: item.code, title: reasonText(item.title, state.riderLang) })),
     rideCheck: rideCheck(base, state),
     appUpdate: appUpdate(base, "rider"),
@@ -440,7 +457,7 @@ function driverReservations(zone: ZoneDispatch) {
 
 export function driverAppConfig(zoneId: string, state: AppConfigState) {
   const base = common(zoneId, state);
-  const { zone, country, currency } = base;
+  const { zone, country } = base;
   const wait = waiting(base);
   // Q43: the waiting fee is all the driver's; Q44: the no-show fee share is a country rule in Dispatch.
   const share = { driverSharePct: country.noShowDriverSharePct, driverShareWaitPct: CONFIG_DEFAULTS.waitingDriverSharePct };
@@ -478,13 +495,10 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
       // v0.18.7 (G5 Q2): the server copies it into the rider document when serving GET /rider/config.
       cancelAfterArrivedIsNoShow: zone.pickupWait.cancelAfterArrivedIsNoShow,
       byCategory: wait.byCategory,
-      farPickup: { on: zone.pickupWait.farPickupOn, km: zone.pickupWait.farPickupKm, ...waitOverride(zone.pickupWait.farPickup, currency) },
-      rideTypes: {
-        scheduled: { on: zone.pickupWait.rideTypes.scheduled.on, ...waitOverride({ ...zone.pickupWait.rideTypes.scheduled, freeWaitMin: state.reservations.currentPolicy.includedWaitingMinutes }, currency) },
-        airport: { on: zone.pickupWait.rideTypes.airport.on, ...waitOverride(zone.pickupWait.rideTypes.airport, currency) },
-        event: { on: zone.pickupWait.rideTypes.event.on, ...waitOverride(zone.pickupWait.rideTypes.event, currency) },
-      },
+      ...waitingRules(base, state),
     },
+    // v0.18.8 (G6, contract.json#arrivedWaiting.pin): Dispatch › Safety "Rider PIN before Start", per zone, default off.
+    pickupPin: { required: zone.pickupPin.required, maxAttempts: zone.pickupPin.maxAttempts, lockMinutes: zone.pickupPin.lockMinutes },
     destinationMode: { perDay: zone.destinationMode.perDay, ...destinationModeForDriverApp(zone.destinationMode) },
     nextTrips: { on: true, ...nextTripsForDriverApp(zone.nextTrips) },
     reservations: driverReservations(zone),

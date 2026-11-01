@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import {
   ArrowDown, ArrowUp, Baby, Bell, Clock, Gauge, Heart, Home, Layers, ListOrdered, Luggage, Mail, MapPin, MessageSquare,
   MonitorSmartphone, Moon, PawPrint, Plane, Plus, Route, Scale, Shield, ShieldAlert, Smartphone, Sparkles, Star, Timer, Trash2,
-  TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins, Move,
+  TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins, Move, KeyRound,
 } from "lucide-react";
 import type { MarketId } from "../markets/markets";
 import { BonusAreaMap } from "../drivers/BonusAreaMap";
@@ -284,7 +284,7 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
 
       <Card title={tr("Stops")} tone="blue" icon={<MapPin size={18} />} help={tr("Riders can add stops. The driver sees every stop before accepting.")} off={!zone.stops.on} aside={<Switch label={tr("Stops")} on={zone.stops.on} disabled={disabled} onChange={(on) => set({ stops: { ...zone.stops, on } })} />}>
         <Row label={tr("Max stops")}><Num label={tr("Max stops")} value={zone.stops.max} unit="stops" min={1} max={5} disabled={disabled || !zone.stops.on} onChange={(max) => set({ stops: { ...zone.stops, max } })} /></Row>
-        <Row label={tr("Free wait at each stop")}><Num label={tr("Free wait per stop")} value={zone.stops.freeWaitMin} unit="min" min={0} max={20} disabled={disabled || !zone.stops.on} onChange={(freeWaitMin) => set({ stops: { ...zone.stops, freeWaitMin } })} /></Row>
+        <Row label={tr("Free wait at each stop")} help={tr("Waiting at a stop is charged only after these minutes. The server charges by this number.")}><Num label={tr("Free wait per stop")} value={zone.stops.freeWaitMin} unit="min" min={0} max={20} disabled={disabled || !zone.stops.on} onChange={(freeWaitMin) => set({ stops: { ...zone.stops, freeWaitMin } })} /></Row>
         <Row label={tr("Then, per minute")} help={tr("0 means no charge.")}><Num label={tr("Wait price per minute")} value={zone.stops.perMin} unit={`${symbol}/min`} step={0.1} min={0} max={100} disabled={disabled || !zone.stops.on} onChange={(perMin) => set({ stops: { ...zone.stops, perMin } })} /></Row>
         <Row label={tr("Extra fee per stop")} help={tr("0 means no fee.")}><Num label={tr("Fee per stop")} value={zone.stops.perStop} unit={symbol} step={0.5} min={0} max={500} disabled={disabled || !zone.stops.on} onChange={(perStop) => set({ stops: { ...zone.stops, perStop } })} /></Row>
         <Row label={tr("Rider can change the destination or add a stop during the trip")} on={zone.stops.changeDuring} disabled={disabled || !zone.stops.on} onToggle={(changeDuring) => set({ stops: { ...zone.stops, changeDuring } })} />
@@ -398,6 +398,13 @@ function Safety({ zone, onChange, disabled, country, countryName }: Props) {
         </Row>
         <Row label={tr("Do not match list")} help={tr("A rider and a driver who reported each other never meet again.")} on={safety.doNotMatch} disabled={disabled} onToggle={(doNotMatch) => set({ doNotMatch })} />
         <Row label={tr("Women-only rides")} help={tr("A female rider can ask for a female driver.")} on={safety.womenOnly} disabled={disabled} onToggle={(womenOnly) => set({ womenOnly })} />
+      </Card>
+      {/* v0.18.8 (G6, contract.json#arrivedWaiting.pin): DriverAppConfig.pickupPin, kept on the trip at booking. */}
+      <Card title={tr("Rider PIN before Start")} tone="purple" icon={<KeyRound size={18} />} help={tr("The driver must enter the rider’s 4-digit code before the trip starts.")} off={!zone.pickupPin.required} aside={<Switch label={tr("Rider PIN before Start")} on={zone.pickupPin.required} disabled={disabled} onChange={(required) => onChange({ ...zone, pickupPin: { ...zone.pickupPin, required } })} />}>
+        <p className="fd-banner amber" data-testid="pickup-pin-compat">{tr("Only trips whose driver uses the new driver app ask for the PIN.")}</p>
+        <Row label={tr("Wrong tries before lock")} help={tr("1 to 10. After this many wrong codes in a row the driver must wait.")}><Num label={tr("Wrong tries before lock")} value={zone.pickupPin.maxAttempts} unit="" min={1} max={10} disabled={disabled || !zone.pickupPin.required} onChange={(maxAttempts) => onChange({ ...zone, pickupPin: { ...zone.pickupPin, maxAttempts: Math.round(maxAttempts) } })} /></Row>
+        <Row label={tr("Lock minutes")} help={tr("1 to 60. How long the driver waits after too many wrong codes.")}><Num label={tr("Lock minutes")} value={zone.pickupPin.lockMinutes} unit="min" min={1} max={60} disabled={disabled || !zone.pickupPin.required} onChange={(lockMinutes) => onChange({ ...zone, pickupPin: { ...zone.pickupPin, lockMinutes: Math.round(lockMinutes) } })} /></Row>
+        <p className="op-help">{tr("Riders see the code in their app. Admins see it on the trip page. The driver never gets it.")}</p>
       </Card>
       <RideCheckCard zone={zone} onChange={onChange} disabled={disabled} />
       <div id="rc-triggers"><RideCheckSettingsCard where="rules" /></div>

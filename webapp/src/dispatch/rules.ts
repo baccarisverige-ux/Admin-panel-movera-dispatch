@@ -343,6 +343,8 @@ export type ZoneDispatch = {
   decline: { on: boolean; countsAcceptance: boolean; pauseAfter: number; pauseMin: number; longTripFree: boolean; farPickupFree: boolean; farPickupKm: number };
   /** maxCancel: drivers over the country's cancel rate limit (CountryDispatch.cancelRateLimitPct) get no requests in this zone. */
   safety: { minRating: boolean; ratingBelow: number; maxCancel: boolean; doNotMatch: boolean; womenOnly: boolean };
+  /** v0.18.8 (G6): DriverAppConfig.pickupPin — the driver enters the rider's 4-digit code before Start (default off). */
+  pickupPin: { required: boolean; maxAttempts: number; lockMinutes: number };
   rideCheck: RideCheckRules;
   alerts: { id: AlertId; on: boolean; limit: number; panel: boolean; email: boolean; sms: boolean }[];
 };
@@ -559,6 +561,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     fairness: { idleBoost: true, idlePoints: 10, hourCap: false, hourRides: 4, skipPause: true, skips: 3, pauseMin: 5 },
     decline: { on: true, countsAcceptance: true, pauseAfter: 3, pauseMin: 5, longTripFree: true, farPickupFree: true, farPickupKm: 5 },
     safety: { minRating: true, ratingBelow: 4.3, maxCancel: true, doNotMatch: true, womenOnly: true },
+    pickupPin: { ...CONFIG_DEFAULTS.pickupPin },
     rideCheck: rideCheckDefault(),
     alerts: [
       { id: "long_wait", on: true, limit: 5, panel: true, email: false, sms: false },
@@ -872,6 +875,8 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (zone.stops.on && (zone.stops.max < 1 || zone.stops.max > 5)) issues.push("Stops: max stops must be 1 to 5.");
   if (!Number.isInteger(zone.pickupMove.maxMeters) || zone.pickupMove.maxMeters < 0 || zone.pickupMove.maxMeters > PICKUP_MOVE_MAX_METERS) issues.push(`Pickup move after accept: 0 to ${PICKUP_MOVE_MAX_METERS} m, in whole metres.`);
   if (zone.longTripKm < 10 || zone.longTripKm > 500) issues.push("Long trip must be 10 to 500 km.");
+  if (!Number.isInteger(zone.pickupPin.maxAttempts) || zone.pickupPin.maxAttempts < 1 || zone.pickupPin.maxAttempts > 10) issues.push("Rider PIN: wrong tries before lock must be 1 to 10.");
+  if (!Number.isInteger(zone.pickupPin.lockMinutes) || zone.pickupPin.lockMinutes < 1 || zone.pickupPin.lockMinutes > 60) issues.push("Rider PIN: lock minutes must be 1 to 60.");
   if (zone.safety.minRating && (zone.safety.ratingBelow < 1 || zone.safety.ratingBelow > 5)) issues.push("Safety: lowest rating must be 1 to 5.");
   issues.push(...rideCheckIssues(zone.rideCheck));
   issues.push(...destinationModeIssues(zone.destinationMode), ...nextTripsIssues(zone.nextTrips));
@@ -1091,7 +1096,7 @@ const LABELS: Record<string, string> = {
   "fairness.skipPause": "Pause after skips", "fairness.skips": "Skips in a row", "fairness.pauseMin": "Skip pause minutes",
   "decline.on": "Saying no rules", "decline.countsAcceptance": "No lowers acceptance", "decline.pauseAfter": "Pause after no's", "decline.pauseMin": "No pause minutes",
   "decline.longTripFree": "Long trips free to refuse", "decline.farPickupFree": "Far pickups free to refuse", "decline.farPickupKm": "Far pickup from",
-  "safety.minRating": "Lowest rating check", "safety.ratingBelow": "Lowest rating", "safety.maxCancel": "No requests over the cancel rate limit",
+  "safety.minRating": "Lowest rating check", "pickupPin.required": "Rider PIN before Start", "pickupPin.maxAttempts": "Wrong tries before lock", "pickupPin.lockMinutes": "Lock minutes", "safety.ratingBelow": "Lowest rating", "safety.maxCancel": "No requests over the cancel rate limit",
   "safety.doNotMatch": "Do not match list", "safety.womenOnly": "Women-only rides", alerts: "Alerts",
 };
 
@@ -1357,7 +1362,7 @@ const PART_KEYS: Record<TabId, (keyof ZoneDispatch)[]> = {
   rides: ["extras", "longTripKm", "stops", "pickupMove", "driverCancel", "riderCancel", "airport", "pickupWait"],
   drivers: ["goingHome", "fairness", "decline"],
   destination: ["destinationMode", "nextTrips"],
-  safety: ["safety", "rideCheck"],
+  safety: ["safety", "pickupPin", "rideCheck"],
   alerts: ["alerts"],
 };
 

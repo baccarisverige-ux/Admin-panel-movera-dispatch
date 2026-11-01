@@ -266,7 +266,7 @@ export function TripsPage() {
       <div className={peek ? "op-list-grid with-peek" : "op-list-grid"}>
         <DataTable
           serverSearch="trips"
-          head={[tr("Trip"), tr("Rider"), tr("Driver"), tr("Status"), tr("Zone"), tr("Category"), tr("Price"), tr("Payment"), tr("When"), tr("Quick look")]}
+          head={[tr("Trip"), tr("Rider"), tr("Driver"), tr("Status"), tr("Zone"), tr("Category"), tr("Paid waiting"), tr("Price"), tr("Payment"), tr("When"), tr("Quick look")]}
           rowIds={filtered.map((trip) => trip.id)}
           rows={filtered.map((trip) => [
             trip.id,
@@ -276,6 +276,7 @@ export function TripsPage() {
             liveStatusCell(trip),
             zoneById(trip.zoneId)?.name ?? trip.zoneId,
             fact(trip).category.label,
+            paidWaitingCell(trip),
             fact(trip).price,
             statusLabel(fact(trip).payment),
             fact(trip).when,
@@ -294,6 +295,15 @@ export function TripsPage() {
       <SaveViewDialog open={saveOpen} onClose={() => setSaveOpen(false)} ops={ops} query={filterQuery()} country={country} by={agent?.id ?? ""} onSaved={(name) => setNotice(tr("View {0} saved.", [name]))} />
     </div>
   );
+}
+
+/**
+ * v0.18.8 (G6, admin-fake "Trips waiting minutes"): the server's paid waiting minutes (TripProjection.waiting.paidMinutes,
+ * also on GET /admin/trips rows). No waiting yet, or a trip without the field: "–", never an invented number.
+ */
+function paidWaitingCell(trip: DemoRecord): string {
+  const minutes = liveTripOf(trip)?.waiting?.paidMinutes ?? trip.waitingMin;
+  return typeof minutes === "number" ? tr("{0} min", [minutes]) : "–";
 }
 
 /**

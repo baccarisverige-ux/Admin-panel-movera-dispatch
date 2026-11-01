@@ -112,6 +112,19 @@ test("a page writes only its own parts of an app document; the waiting money sta
   assert.deepEqual((withSwitch["waiting"] as Doc)["perMin"], server.waiting.perMin);
 });
 
+test("v0.18.8 (G6): the stop free wait and the Rider PIN switch are read from and written to the driver document", () => {
+  const doc = dispatchDocumentOf(zoneDefault("Z001"), "Z001", null);
+  const read = rulesOfDispatch(doc, { waiting: { stopFreeWaitMin: 4 }, pickupPin: { required: true, maxAttempts: 3, lockMinutes: 10 } }, zoneDefault("Z001"));
+  assert.equal(read.stops.freeWaitMin, 4);
+  assert.deepEqual(read.pickupPin, { required: true, maxAttempts: 3, lockMinutes: 10 });
+  const bad = rulesOfDispatch(doc, { waiting: { stopFreeWaitMin: 99 }, pickupPin: { required: "yes", maxAttempts: 50, lockMinutes: 0 } }, zoneDefault("Z001"));
+  assert.equal(bad.stops.freeWaitMin, 3, "outside 0–20 keeps the zone's value");
+  assert.deepEqual(bad.pickupPin, { required: false, maxAttempts: 5, lockMinutes: 5 }, "bad values keep the defaults, never switch it on");
+  const next = withOwned({ waiting: { perMin: { amountMinor: 1226, currency: "SEK" } } }, { waiting: { stopFreeWaitMin: 3 }, pickupPin: { required: true, maxAttempts: 5, lockMinutes: 5 } }, ["waiting", "pickupPin"]);
+  assert.equal((next["waiting"] as Doc)["stopFreeWaitMin"], 3);
+  assert.deepEqual(next["pickupPin"], { required: true, maxAttempts: 5, lockMinutes: 5 });
+});
+
 test("save and publish: nothing when equal, at once when changed (no second admin), a 409 asks to reload", async () => {
   const doc = pricingDocumentOf(zoneBook(emptyPricingStore(), "Z001"), "Z001", null);
   const same = fakeServer({});

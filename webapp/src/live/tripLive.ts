@@ -85,7 +85,7 @@ export function feeKindOf(cancellation: Pick<LiveCancellation, "feeMinor" | "fee
   return cancellation.feeKind === "no_show" ? "no_show" : "cancel";
 }
 
-/** paid / owed / waived as the server says; an older server without feeStatus answers null. */
+/** paid / owed / waived as the server says (a refunded fee stays waived, v0.18.8); an older server without feeStatus answers null. */
 export function feeStatusOf(cancellation: Pick<LiveCancellation, "feeMinor" | "feeStatus"> | null): "paid" | "owed" | "waived" | null {
   if (!cancellation || cancellation.feeMinor === null) return null;
   return cancellation.feeStatus === "paid" || cancellation.feeStatus === "owed" || cancellation.feeStatus === "waived" ? cancellation.feeStatus : null;

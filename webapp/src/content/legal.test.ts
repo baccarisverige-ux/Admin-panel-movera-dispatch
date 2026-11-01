@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { contractJson } from "../contract/load.ts";
-import { LEGAL_COUNTRIES, LEGAL_PLACEHOLDERS, draftChanged, latestReacceptVersion, draftFrom, legalPath, legalProblems, publishBody, unknownPlaceholders, type LegalVersion } from "./legal.ts";
+import { LEGAL_COUNTRIES, LEGAL_PLACEHOLDERS, draftChanged, missesWaitingRules, latestReacceptVersion, draftFrom, legalPath, legalProblems, publishBody, unknownPlaceholders, type LegalVersion } from "./legal.ts";
+import { withWaitingParagraphs } from "./legalWaiting.ts";
 
 /**
  * Owner G1-B2 (2026-10-30, "Real texts from admin (Recommended)"): draft terms + privacy for SE and FR (sv/fr/en),
@@ -72,4 +73,21 @@ test("G1-B2: the latest re-accept version is found in the live version and the h
   assert.equal(latestReacceptVersion(v(3, true), [v(3, true), v(2, false)]), 3);
   assert.equal(latestReacceptVersion(v(4, false), [v(4, false), v(3, true), v(2, true)]), 3);
   assert.equal(latestReacceptVersion(v(2, false), [v(2, false), v(1, false)]), null);
+});
+
+test("G6: {waitingRules} is a zone placeholder; paragraphs 3.1–3.5 are added to an older admin text before paragraph 4", () => {
+  for (const country of LEGAL_COUNTRIES) {
+    const draft = draftFrom(drafts(country));
+    assert.equal(missesWaitingRules(draft), false, country);
+    for (const language of ["sv", "fr", "en"] as const) {
+      const old = draft.terms.text[language].replace(/\n\n3\.1 [\s\S]*?(?=\n\n4\. )/, "");
+      assert.ok(!old.includes("{waitingRules}"));
+      draft.terms.text[language] = old;
+    }
+    assert.equal(missesWaitingRules(draft), true);
+    const fixed = withWaitingParagraphs(draft, country);
+    assert.equal(missesWaitingRules(fixed), false);
+    assert.equal(fixed.terms.text.en, drafts(country).terms.text.en, `${country}: same as Movera's text`);
+    assert.equal(withWaitingParagraphs(fixed, country).terms.text.sv, fixed.terms.text.sv, "added once");
+  }
 });

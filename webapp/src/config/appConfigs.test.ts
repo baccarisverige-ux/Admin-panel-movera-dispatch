@@ -251,3 +251,12 @@ test("fixtures under src/config/__fixtures__ are the current Admin output for th
     }
   }
 });
+
+test("v0.18.8 (G6): the driver document publishes the zone's stop free wait and the Rider PIN switch (default off)", () => {
+  for (const zoneId of ZONES) {
+    const driver = driverAppConfig(zoneId, state());
+    assert.deepEqual(driver.pickupPin, { required: false, maxAttempts: 5, lockMinutes: 5 }, zoneId);
+    assert.equal(driver.waiting.stopFreeWaitMin, 3, `${zoneId}: Dispatch › Stops free wait, not the server's 0`);
+    assert.equal(riderAppConfig(zoneId, state()).waiting.stopFreeWaitMin, 3);
+  }
+});

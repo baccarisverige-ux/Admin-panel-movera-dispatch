@@ -229,6 +229,15 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   // v0.18.7 (G5 item 4): the pickup move limit the server checks (booking.maxPickupMoveMeters, 0–2000; migration 0041 moved 500 to 200).
   const move = validPickupMove((driver?.["booking"] as { maxPickupMoveMeters?: unknown } | undefined)?.maxPickupMoveMeters);
   if (move !== null) zone.pickupMove = { maxMeters: move };
+  // v0.18.8 (G6): the free wait at each stop the server charges by (waiting.stopFreeWaitMin, 0–20; 0 while stops are off).
+  const stopFree = (driver?.["waiting"] as { stopFreeWaitMin?: unknown } | undefined)?.stopFreeWaitMin;
+  if (zone.stops.on && typeof stopFree === "number" && Number.isInteger(stopFree) && stopFree >= 0 && stopFree <= 20) zone.stops = { ...zone.stops, freeWaitMin: stopFree };
+  // v0.18.8 (G6): "Rider PIN before Start" as the zone's drivers get it (pickupPin; default off, 5 tries, 5 min).
+  const pin = driver?.["pickupPin"] as { required?: unknown; maxAttempts?: unknown; lockMinutes?: unknown } | undefined;
+  if (pin && typeof pin === "object") {
+    const whole = (value: unknown, min: number, max: number, fallback: number) => (typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : fallback);
+    zone.pickupPin = { required: pin.required === true, maxAttempts: whole(pin.maxAttempts, 1, 10, zone.pickupPin.maxAttempts), lockMinutes: whole(pin.lockMinutes, 1, 60, zone.pickupPin.lockMinutes) };
+  }
   return zone;
 }
 
@@ -236,7 +245,7 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
 
 /** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
 export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
-  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits"] },
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits"] },
   settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
   content: { rider: [], driver: ["texts", "notices"] },
 };
@@ -250,7 +259,8 @@ export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc
       const own = (server["waiting"] ?? {}) as Doc;
       const made = built["waiting"] as Doc;
       // v0.18.7 (G5 Q2): the cancel-after-arrived switch is the admin's; the money stays pricing's (servedConfig).
-      next["waiting"] = { ...own, driverSharePct: made["driverSharePct"], driverShareWaitPct: made["driverShareWaitPct"], cancelAfterArrivedIsNoShow: made["cancelAfterArrivedIsNoShow"], farPickup: made["farPickup"], rideTypes: made["rideTypes"] };
+      // v0.18.8 (G6): the free wait at each stop (Dispatch › Rides › Stops) is the admin's too.
+      next["waiting"] = { ...own, driverSharePct: made["driverSharePct"], driverShareWaitPct: made["driverShareWaitPct"], cancelAfterArrivedIsNoShow: made["cancelAfterArrivedIsNoShow"], farPickup: made["farPickup"], rideTypes: made["rideTypes"], stopFreeWaitMin: made["stopFreeWaitMin"] };
       continue;
     }
     next[key] = structuredClone(built[key]);
