@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { emptyPricingStore, publishZones, zoneBook } from "../pricing/zonePricing.ts";
 import { emptyDispatchBook, liveRules, publish, zoneDefault } from "../dispatch/rules.ts";
-import { SettingsChanged, bookOfPricing, countryRulesOf, dispatchDocumentOf, pricingDocumentOf, rulesOfDispatch, savePublish, withOwned, zoneFacts, type ConfigHttp, type Doc } from "./configDocs.ts";
+import { OWNED, SettingsChanged, bookOfPricing, countryRulesOf, dispatchDocumentOf, pricingDocumentOf, rulesOfDispatch, savePublish, withOwned, zoneFacts, type ConfigHttp, type Doc } from "./configDocs.ts";
 import { type SettingsAnswer, createLiveSettings, standardMarks } from "./liveSettings.ts";
 
 /** A settings command's words (a save of the dispatch tools answers with the slice too). */
@@ -118,7 +118,7 @@ test("v0.18.8 (G6): the stop free wait and the Rider PIN switch are read from an
   assert.equal(read.stops.freeWaitMin, 4);
   assert.deepEqual(read.pickupPin, { required: true, maxAttempts: 3, lockMinutes: 10 });
   const bad = rulesOfDispatch(doc, { waiting: { stopFreeWaitMin: 99 }, pickupPin: { required: "yes", maxAttempts: 50, lockMinutes: 0 } }, zoneDefault("Z001"));
-  assert.equal(bad.stops.freeWaitMin, 3, "outside 0–20 keeps the zone's value");
+  assert.equal(bad.stops.freeWaitMin, 0, "outside 0–20 keeps the zone's value (default 0, G7 decision 4)");
   assert.deepEqual(bad.pickupPin, { required: false, maxAttempts: 5, lockMinutes: 5 }, "bad values keep the defaults, never switch it on");
   const next = withOwned({ waiting: { perMin: { amountMinor: 1226, currency: "SEK" } } }, { waiting: { stopFreeWaitMin: 3 }, pickupPin: { required: true, maxAttempts: 5, lockMinutes: 5 } }, ["waiting", "pickupPin"]);
   assert.equal((next["waiting"] as Doc)["stopFreeWaitMin"], 3);
@@ -438,4 +438,15 @@ test("checker HIGH (live 2026-11-01): a zone loaded with Exclusive off and 0 s g
   // The strict check stays while the mode is on.
   assert.ok(zoneIssues({ ...loaded, exclusive: { ...loaded.exclusive, on: true, seconds: 3 } }).some((issue) => issue.startsWith("Exclusive:")));
   assert.ok(!zoneIssues({ ...loaded, exclusive: { ...loaded.exclusive, on: false, seconds: 3 } }).some((issue) => issue.startsWith("Exclusive:")));
+});
+
+test("v0.18.9 (G7): ride check, route change and max stops are read from the driver document; bad values keep the zone's", () => {
+  const doc = dispatchDocumentOf(zoneDefault("Z001"), "Z001", null);
+  const read = rulesOfDispatch(doc, { rideCheck: { on: false, stopMinutes: 4, offRouteKm: 3, endFarMeters: 800, noAnswerSeconds: 90, repeatMinutes: 15, noAnswerAlarm: true }, routeChange: { on: false, driverCanRefuse: false, answerSeconds: 45, beforePickup: false, fixedPriceTrips: "switch_to_normal" }, booking: { maxStops: 2 } }, zoneDefault("Z001"));
+  assert.deepEqual([read.rideCheck.on, read.rideCheck.stopMinutes, read.rideCheck.routeKm, read.rideCheck.endFarMeters, read.rideCheck.noAnswerSeconds, read.rideCheck.repeatMinutes, read.rideCheck.noAnswerAlarm], [false, 4, 3, 800, 90, 15, true]);
+  assert.deepEqual([read.stops.changeDuring, read.stops.driverCanRefuse, read.stops.answerSeconds, read.stops.beforePickup, read.stops.fixedPriceTrips, read.stops.max], [false, false, 45, false, "switch_to_normal", 2]);
+  const bad = rulesOfDispatch(doc, { rideCheck: { stopMinutes: 99, endFarMeters: 1 }, routeChange: { answerSeconds: 5, fixedPriceTrips: "meter" } }, zoneDefault("Z001"));
+  assert.deepEqual([bad.rideCheck.stopMinutes, bad.rideCheck.endFarMeters, bad.stops.answerSeconds, bad.stops.fixedPriceTrips], [2, 500, 60, "block"]);
+  const next = withOwned({}, { rideCheck: { on: true }, routeChange: { on: true } }, OWNED.dispatch.driver);
+  assert.deepEqual([next["rideCheck"], next["routeChange"]], [{ on: true }, { on: true }]);
 });

@@ -265,11 +265,19 @@ function driverCancelFees(base: Common) {
 function rideCheck(base: Common, state: AppConfigState) {
   const rules = base.zone.rideCheck;
   return {
-    stopMinutes: state.rideCheck.longStopMinutes,
+    // v0.18.9 (G7, contract.json#onTrip.rideCheck.settings): the server's per-zone ride check (stopMinutes, offRouteKm too).
+    on: rules.on, endFarMeters: rules.endFarMeters, noAnswerSeconds: rules.noAnswerSeconds, repeatMinutes: rules.repeatMinutes, noAnswerAlarm: rules.noAnswerAlarm,
+    stopMinutes: rules.stopMinutes ?? state.rideCheck.longStopMinutes,
     offRouteKm: rules.routeKm,
     finishFarFromDropoffKm: state.rideCheck.finishFarFromDropoffKm,
     farOn: rules.farOn, stopOn: rules.stopOn, routeOn: rules.routeOn, longerOn: rules.longerOn, longerPct: rules.longerPct, crashOn: rules.crashOn,
   };
+}
+
+/** v0.18.9 (G7, contract.json#onTrip.routeChange): Dispatch › Rides › Stops, per zone; off while stops are off. */
+function routeChange(base: Common) {
+  const stops = base.zone.stops;
+  return { on: stops.on && stops.changeDuring, driverCanRefuse: stops.driverCanRefuse, answerSeconds: stops.answerSeconds, beforePickup: stops.beforePickup, fixedPriceTrips: stops.fixedPriceTrips };
 }
 
 function semver(value: string): number[] {
@@ -333,6 +341,8 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     waiting: { ...waiting(base), cancelAfterArrivedIsNoShow: base.zone.pickupWait.cancelAfterArrivedIsNoShow, ...waitingRules(base, state) },
     cancelReasons: base.country.cancelReasons.groups.rider.map((item) => ({ code: item.code, title: reasonText(item.title, state.riderLang) })),
     rideCheck: rideCheck(base, state),
+    // v0.18.9 (G7): the server serves the driver document's routeChange to riders; the same value here.
+    routeChange: routeChange(base),
     appUpdate: appUpdate(base, "rider"),
     /**
      * v0.18.6 (owner G4-E4): the zone's Dispatch rider raise limit (contract.json#configDocs.mustMatch). The server
@@ -511,6 +521,7 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     },
     drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restHours * 60, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
     rideCheck: rideCheck(base, state),
+    routeChange: routeChange(base),
     texts: driverTexts(base, state),
     notices: driverAppNotices(state.driverNotices, base.info.id),
     appUpdate: appUpdate(base, "driver"),

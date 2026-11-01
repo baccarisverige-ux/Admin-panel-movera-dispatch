@@ -256,7 +256,24 @@ test("v0.18.8 (G6): the driver document publishes the zone's stop free wait and 
   for (const zoneId of ZONES) {
     const driver = driverAppConfig(zoneId, state());
     assert.deepEqual(driver.pickupPin, { required: false, maxAttempts: 5, lockMinutes: 5 }, zoneId);
-    assert.equal(driver.waiting.stopFreeWaitMin, 3, `${zoneId}: Dispatch › Stops free wait, not the server's 0`);
-    assert.equal(riderAppConfig(zoneId, state()).waiting.stopFreeWaitMin, 3);
+    // v0.18.9 (owner G7 decision 4): the Dispatch default is 0 free minutes at a stop (paid from minute 1).
+    assert.equal(driver.waiting.stopFreeWaitMin, 0, `${zoneId}: Dispatch › Stops free wait default 0`);
+    assert.equal(riderAppConfig(zoneId, state()).waiting.stopFreeWaitMin, 0);
+  }
+});
+
+test("v0.18.9 (G7): the driver document carries the zone's server ride check and route change switches (defaults)", () => {
+  for (const zoneId of ZONES) {
+    const driver = driverAppConfig(zoneId, state());
+    assert.deepEqual(driver.routeChange, { on: true, driverCanRefuse: true, answerSeconds: 60, beforePickup: true, fixedPriceTrips: "block" }, zoneId);
+    assert.deepEqual(riderAppConfig(zoneId, state()).routeChange, driver.routeChange);
+    assert.equal(driver.rideCheck.on, true);
+    assert.equal(driver.rideCheck.offRouteKm, 2);
+    assert.equal(driver.rideCheck.stopMinutes, 2);
+    assert.equal(driver.rideCheck.endFarMeters, 500);
+    assert.equal(driver.rideCheck.noAnswerSeconds, 120);
+    assert.equal(driver.rideCheck.repeatMinutes, 10);
+    assert.equal(driver.rideCheck.noAnswerAlarm, false);
+    assert.equal(driver.booking.maxStops, 3);
   }
 });

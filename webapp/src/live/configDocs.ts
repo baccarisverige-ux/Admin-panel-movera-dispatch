@@ -10,7 +10,7 @@ import type { CurrencyCode, Money } from "../domain/money.ts";
 import { fromMajor } from "../domain/money.ts";
 import { marketOfZone } from "../markets/markets.ts";
 import type { CategoryPrice, ZoneBook } from "../pricing/zonePricing.ts";
-import type { ZoneDispatch } from "../dispatch/rules.ts";
+import { RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
 import { validPickupMove, validRaiseFactor } from "../dispatch/offerRules.ts";
 
@@ -238,6 +238,38 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     const whole = (value: unknown, min: number, max: number, fallback: number) => (typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : fallback);
     zone.pickupPin = { required: pin.required === true, maxAttempts: whole(pin.maxAttempts, 1, 10, zone.pickupPin.maxAttempts), lockMinutes: whole(pin.lockMinutes, 1, 60, zone.pickupPin.lockMinutes) };
   }
+  // v0.18.9 (G7): the server's ride check, the route change switches and the max stops as the zone's drivers get them.
+  const check = driver?.["rideCheck"] as Record<string, unknown> | undefined;
+  if (check && typeof check === "object") {
+    const n = (key: string, limit: { min: number; max: number }, fallback: number) => (typeof check[key] === "number" && (check[key] as number) >= limit.min && (check[key] as number) <= limit.max ? (check[key] as number) : fallback);
+    const b = (key: string, fallback: boolean) => (typeof check[key] === "boolean" ? (check[key] as boolean) : fallback);
+    const rc = zone.rideCheck;
+    zone.rideCheck = {
+      ...rc,
+      on: b("on", rc.on), noAnswerAlarm: b("noAnswerAlarm", rc.noAnswerAlarm),
+      stopMinutes: n("stopMinutes", RIDE_CHECK_LIMITS.stopMinutes, rc.stopMinutes), routeKm: n("offRouteKm", RIDE_CHECK_LIMITS.routeKm, rc.routeKm),
+      endFarMeters: n("endFarMeters", RIDE_CHECK_LIMITS.endFarMeters, rc.endFarMeters), noAnswerSeconds: n("noAnswerSeconds", RIDE_CHECK_LIMITS.noAnswerSeconds, rc.noAnswerSeconds),
+      repeatMinutes: n("repeatMinutes", RIDE_CHECK_LIMITS.repeatMinutes, rc.repeatMinutes),
+    };
+  }
+  const change = driver?.["routeChange"] as Record<string, unknown> | undefined;
+  if (change && typeof change === "object") {
+    const answer = change["answerSeconds"];
+    const fixed = change["fixedPriceTrips"];
+    zone.stops = {
+      ...zone.stops,
+      ...(typeof change["on"] === "boolean" && zone.stops.on ? { changeDuring: change["on"] } : {}),
+      ...(typeof change["driverCanRefuse"] === "boolean" ? { driverCanRefuse: change["driverCanRefuse"] } : {}),
+      ...(typeof answer === "number" && Number.isInteger(answer) && answer >= 15 && answer <= 300 ? { answerSeconds: answer } : {}),
+      ...(typeof change["beforePickup"] === "boolean" ? { beforePickup: change["beforePickup"] } : {}),
+      ...(fixed === "block" || fixed === "switch_to_normal" ? { fixedPriceTrips: fixed } : {}),
+    };
+  }
+  const maxStops = (driver?.["booking"] as { maxStops?: unknown } | undefined)?.maxStops;
+  if (typeof maxStops === "number" && Number.isInteger(maxStops)) {
+    if (maxStops === 0) zone.stops = { ...zone.stops, on: false };
+    else if (maxStops >= 1 && maxStops <= 5) zone.stops = { ...zone.stops, on: true, max: maxStops };
+  }
   return zone;
 }
 
@@ -245,7 +277,7 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
 
 /** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
 export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
-  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits"] },
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange"] },
   settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
   content: { rider: [], driver: ["texts", "notices"] },
 };

@@ -164,7 +164,8 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
   const role = agent?.role ?? "viewer";
   const make = useEntry(ops);
   const { policy: refundPolicy } = useRefundPolicy();
-  const on = ops.settings.actions;
+  // v0.18.9 (G7): on live, note / flag / case / contact are the server's (LiveTripTools above); not shown twice here.
+  const on = liveSession ? { ...ops.settings.actions, note: false, flag: false, case: false } : ops.settings.actions;
   const minor = market(country).minorUnits;
   const symbol = { SE: "kr", FR: "€", TN: "DT" }[country];
   const [refund, setRefund] = useState("");

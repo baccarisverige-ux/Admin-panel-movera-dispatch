@@ -4,7 +4,7 @@
  * when it lists, and remembers whether the server has a next page.
  */
 export type LiveListName = "drivers" | "fleets" | "vehicles" | "trips" | "riders" | "payments";
-export type LiveListQuery = { q: string; status: string; pages: number; hasMore: boolean };
+export type LiveListQuery = { q: string; status: string; pages: number; hasMore: boolean; flagged?: boolean };
 
 const EMPTY: LiveListQuery = { q: "", status: "", pages: 1, hasMore: false };
 const state = new Map<LiveListName, LiveListQuery>();

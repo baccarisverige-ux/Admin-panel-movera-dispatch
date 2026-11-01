@@ -11,6 +11,10 @@ import { isCurrency } from "../domain/money.ts";
 import { MARKETS, marketOfZone } from "../markets/markets.ts";
 import { NO_FILTER, zoneFilterOf, type ZoneFilter } from "./zoneFilter.ts";
 
+/** v0.18.9 (G7): trip page commands and their server step (POST /admin/trips/{tripId}/{step}). */
+const TRIP_STEPS: Record<string, string> = { "admin.trip.cancel": "cancel", "admin.trip.reassign": "reassign", "admin.trip.noShow": "no-show", "admin.trip.complete": "complete", "admin.trip.adjust": "adjust", "admin.trip.waiting": "adjust" };
+const TRIP_STEP_DONE: Record<string, string> = { "admin.trip.cancel": "Trip cancelled.", "admin.trip.reassign": "The trip is looking for a new driver.", "admin.trip.noShow": "Marked as a no-show.", "admin.trip.complete": "Trip completed.", "admin.trip.adjust": "Price changed.", "admin.trip.waiting": "Waiting time saved." };
+
 export { zoneFilterOf, type ZoneFilter };
 import type { AdminApi, CommandInput, CommandResult } from "../api/create.ts";
 import type { TripOffersView } from "../api/dispatchSim.ts";
@@ -22,7 +26,7 @@ import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
 import { ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
-import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
+import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
@@ -33,6 +37,7 @@ import { liveBonusLimits } from "./tripLive.ts";
 import { vehicleMissing } from "./activation.ts";
 import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { tr } from "../i18n/index.ts";
+import { rideCheckRecords } from "./rideChecks.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
@@ -65,6 +70,8 @@ async function paged<T>(client: LiveClient, name: LiveListName, path: string, fi
     const params = new URLSearchParams({ limit: String(LIST_PAGE) });
     if (query.q) params.set("q", query.q);
     if (query.status) params.set(STATUS_PARAM[name], query.status);
+    // v0.18.9 (G7): the Trips list "Flagged only" filter (GET /admin/trips?flagged=true).
+    if (name === "trips" && query.flagged) params.set("flagged", "true");
     if (cursor) params.set("cursor", cursor);
     for (const [key, value] of filter.params) params.set(key, value);
     const page: Page<T> = await client.json<Page<T>>(`${path}?${params.toString()}`);
@@ -226,6 +233,9 @@ export function tripFacts(trip: Trip): LiveTripFacts {
     waiting: trip.waiting ? { arrivedAt: trip.waiting.arrivedAt, freeUntil: trip.waiting.freeUntil, noShowAt: trip.waiting.noShowAt, chargedSeconds: trip.waiting.chargedSeconds, noShowFeeMinor: minorOf(trip.waiting.noShowFee), noShowDriverShareMinor: minorOf(trip.waiting.noShowDriverShare), chargedSecondsNow: typeof trip.waiting.chargedSecondsNow === "number" ? trip.waiting.chargedSecondsNow : null, chargedSoFarMinor: minorOf(trip.waiting.chargedSoFar),
       paidMinutes: typeof trip.waiting.paidMinutes === "number" ? trip.waiting.paidMinutes : null, rules: Array.isArray(trip.waiting.rules) ? trip.waiting.rules : [],
       freeWaitMin: typeof trip.waiting.freeWaitMin === "number" ? trip.waiting.freeWaitMin : null, noShowAfterMin: typeof trip.waiting.noShowAfterMin === "number" ? trip.waiting.noShowAfterMin : null } : null,
+    rideCheck: trip.rideCheck ? { checkId: trip.rideCheck.checkId, trigger: trip.rideCheck.trigger, askedAt: trip.rideCheck.askedAt, answerBy: trip.rideCheck.answerBy, answers: { ...trip.rideCheck.answers }, alertedAt: trip.rideCheck.alertedAt ?? null } : null,
+    routeChange: trip.routeChange ? { status: trip.routeChange.status, dropoff: trip.routeChange.dropoff, stops: trip.routeChange.stops ?? [], totalMinor: trip.routeChange.total.amountMinor, differenceMinor: trip.routeChange.difference.amountMinor, askedAt: trip.routeChange.askedAt, answerBy: trip.routeChange.answerBy, answeredBy: trip.routeChange.answeredBy ?? null, driverEarningsMinor: minorOf(trip.routeChange.driverEarnings), earningsDifferenceMinor: minorOf(trip.routeChange.earningsDifference) } : null,
+    adminFlag: trip.adminFlag ? { flagged: trip.adminFlag.flagged, reason: trip.adminFlag.reason ?? null, by: trip.adminFlag.by ?? null, at: trip.adminFlag.at ?? null } : null,
     pin: trip.pinRequired ? { code: typeof trip.pickupPin === "string" ? trip.pickupPin : null, verified: Boolean(trip.pinVerified), attempts: typeof trip.pinAttempts === "number" ? trip.pinAttempts : null, blocked: trip.pinBlocked === true } : null,
     cancellation: trip.cancellation ? { actor: trip.cancellation.actor, reasonCode: trip.cancellation.reasonCode, at: trip.cancellation.at, feeMinor: minorOf(trip.cancellation.fee), feeStatus: trip.cancellation.feeStatus ?? null, feeKind: trip.cancellation.feeKind ?? null, driverShareMinor: minorOf(trip.cancellation.driverShare), note: trip.cancellation.note ?? null,
       reversal: trip.cancellation.reversal ? { at: trip.cancellation.reversal.at, by: trip.cancellation.reversal.by ?? null, reason: trip.cancellation.reversal.reason ?? null, driverShareTakenBack: Boolean(trip.cancellation.reversal.driverShareTakenBack) } : null,
@@ -564,6 +574,14 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (!riders.size) await readRiders().catch(() => []);
       return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
     }
+    // v0.18.9 (G7): Incidents › Ride checks from the server (GET /admin/ride-checks), both sides of a check on one row.
+    if (name === "rideChecks") {
+      const rows = await all<RideCheckRow>(client, "/admin/ride-checks", filter);
+      return rideCheckRecords(rows, (tripId) => {
+        const trip = trips.get(tripId);
+        return trip ? { riderId: trip.riderId, ...(trip.driverId ? { driverId: trip.driverId } : {}), ...(riders.get(trip.riderId)?.firstName ? { riderName: riders.get(trip.riderId)!.firstName } : {}) } : undefined;
+      }) as unknown as DemoRecord[];
+    }
     if (name === "incidents") {
       const rows = await all<ServerIncident>(client, "/admin/incidents", filter);
       rows.forEach((row) => incidents.set(row.incidentId, row));
@@ -652,6 +670,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       await client.post(`/admin/drivers/${encodeURIComponent(input.targetId)}/bank/review`, { decision, ...(note ? { note: note.slice(0, 1000) } : {}) }).catch(explained);
       return done("Saved.");
     }
+    if (input.action === "admin.incident.level") {
+      // v0.18.9 (G7, contract.json#onTrip.adminTrip.new.incidentLevel): the case level on the server (incident_updated).
+      const severity = input.after === "critical" || input.after === "high" || input.after === "medium" || input.after === "low" ? input.after : null;
+      if (!severity) throw new ApiError(400, tr("Choose a level."), { code: "invalid_request", retryable: false });
+      const incident = await client.json<ServerIncident>(`/admin/incidents/${encodeURIComponent(input.targetId)}`);
+      const note = (input.reason ?? "").trim();
+      const next = await client.post<ServerIncident>(`/admin/incidents/${encodeURIComponent(incident.incidentId)}/level`, { expectedVersion: incident.version ?? 1, severity, ...(note ? { note: note.slice(0, 1000) } : {}) }).catch(explained);
+      if (next?.incidentId) incidents.set(next.incidentId, next);
+      nudgeIncidentFeed();
+      return done("Level changed.");
+    }
     const step = INCIDENT_COMMANDS[input.action];
     if (step) {
       const incident = incidents.get(input.targetId) ?? (await client.json<ServerIncident>(`/admin/incidents/${encodeURIComponent(input.targetId)}`));
@@ -736,6 +765,31 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         if (error instanceof SettingsChanged) throw new ApiError(409, error.message, { code: "version_mismatch", retryable: false });
         throw error;
       }
+    }
+    // v0.18.9 (G7, contract.json#onTrip.adminTrip.existing): the trip page's cancel, reassign, no-show, complete, price
+    // adjust and waiting go to the server (they said "Not connected yet." on live). Refusals in the admin's language.
+    const tripStep = TRIP_STEPS[input.action];
+    if (tripStep) {
+      const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
+      const patch = input.patch ?? {};
+      const note = (input.reason ?? "").trim().slice(0, 1000) || tr("Done by an admin");
+      const path = `/admin/trips/${encodeURIComponent(trip.tripId)}/${tripStep}`;
+      let body: Record<string, unknown> = { expectedVersion: trip.version };
+      if (input.action === "admin.trip.cancel") body = { ...body, reasonCode: typeof patch["cancelReasonCode"] === "string" && patch["cancelReasonCode"] ? patch["cancelReasonCode"] : "admin_other", note };
+      else if (input.action === "admin.trip.reassign") body = { ...body, reasonCode: "admin_operational", note };
+      else if (input.action === "admin.trip.noShow" || input.action === "admin.trip.complete") body = { ...body, note };
+      else if (input.action === "admin.trip.adjust") {
+        const minor = Number(patch["fareOre"]);
+        if (!Number.isInteger(minor) || minor < 0) throw new ApiError(400, tr("Type a price."), { code: "invalid_request", retryable: false });
+        body = { ...body, fare: { amountMinor: minor, currency: trip.fare.currency }, reason: note };
+      } else if (input.action === "admin.trip.waiting") {
+        const minutes = Number(patch["waitingMin"]);
+        if (!Number.isFinite(minutes) || minutes < 0) throw new ApiError(400, tr("Type the waiting minutes."), { code: "invalid_request", retryable: false });
+        body = { ...body, waitingSeconds: Math.round(minutes * 60), reason: note };
+      }
+      const next = await client.json<Trip>(path, { method: "POST", body: JSON.stringify(body), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
+      if (next?.tripId) trips.set(next.tripId, next);
+      return done(TRIP_STEP_DONE[input.action] ?? "Saved.");
     }
     if (input.action === "admin.trip.driverBonus") {
       // Owner live test 2026-11-01: "Add money" had no live call ("Not connected yet"). POST /admin/trips/{id}/driver-bonus:

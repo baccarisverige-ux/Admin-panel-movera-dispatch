@@ -4,6 +4,7 @@ import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { fareLineLabel } from "../live/format";
 import { Link, useNavigate, useParams } from "react-router";
 import { useLiveRefund } from "../live/LiveRefund";
+import { LiveTripTools } from "../live/LiveTripTools";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useEffect, useMemo, useState } from "react";
@@ -300,7 +301,7 @@ export function TripPage() {
           ) : cancelFacts ? <p className="op-help" data-testid="trip-cancel-fee-line">{tr("No fee.")}</p> : null}
         </Section>
 
-        <Section id="people" title={tr("People and car")} icon={<Users size={16} />} aside={allowed && !revealed ? reveal : revealed ? <span className="dx-tag">{trn("{0} Shown, logged in Reports", <Eye size={11} aria-hidden="true" />)}</span> : null}>
+        <Section id="people" title={tr("People and car")} icon={<Users size={16} />} aside={live ? null : allowed && !revealed ? reveal : revealed ? <span className="dx-tag">{trn("{0} Shown, logged in Reports", <Eye size={11} aria-hidden="true" />)}</span> : null}>
           <div className="op-people">
             <div className="op-person rider">
               <small>{tr("Rider")}</small>
@@ -507,6 +508,7 @@ export function TripPage() {
 
       <Section id="actions" title={tr("Actions")} icon={<Wrench size={16} />} wide>
         <h4 className="op-sub">{tr("Admin actions")}</h4>
+        {live ? <LiveTripTools tripId={trip.id} facts={facts} hasDriver={Boolean(trip.driverId)} /> : null}
         <AdminActions trip={trip} ops={ops} split={split} money={money} country={country} riderId={riderId} onNotice={setNotice} />
         {ops.settings.actions.price || ops.settings.actions.refund ? (
           <div className="op-live">

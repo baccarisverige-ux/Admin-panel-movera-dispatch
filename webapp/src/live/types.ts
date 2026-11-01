@@ -232,7 +232,17 @@ export type Trip = {
   pinAttempts?: number;
   /** v0.18.8 round 1: 3 × maxAttempts wrong tries in all; only an admin unlock (POST /admin/trips/{id}/pin/unlock) clears it. */
   pinBlocked?: boolean;
+  /** v0.18.9 (G7, contract.json#onTrip): the server's ride check asked to both sides, the latest route change, the admin flag. */
+  rideCheck?: TripRideCheck;
+  routeChange?: TripRouteChange;
+  adminFlag?: AdminTripFlag;
 };
+export type TripRideCheck = { checkId: string; trigger: string; askedAt: string; answerBy: string; answers: { rider?: "ok" | "need_help"; driver?: "ok" | "need_help" }; alertedAt?: string };
+export type TripRouteChange = { changeId: string; status: "pending" | "accepted" | "refused" | "expired" | "withdrawn"; dropoff: TripPlace; stops: TripPlace[]; total: LiveMoney; difference: LiveMoney; askedAt: string; answerBy: string; answeredAt?: string; answeredBy?: "driver" | "rider" | "system"; driverEarnings?: LiveMoney; earningsDifference?: LiveMoney };
+export type AdminTripFlag = { flagged: boolean; reason?: string; by?: string; at?: string };
+export type AdminTripNote = { noteId: string; tripId: string; text: string; adminId: string; adminName?: string; at: string };
+/** GET /admin/ride-checks rows (contract.json#onTrip.rideCheck.adminList). */
+export type RideCheckRow = { tripId: string; zoneId?: string; checkId: string; side: "rider" | "driver"; trigger: string; origin: "server" | "app"; shownAt?: string; answer?: "ok" | "need_help" | "no_answer"; answeredAt?: string; incidentId?: string; [key: string]: unknown };
 
 /** contract Offer (GET /admin/trips/{tripId}/offers). */
 export type TripOffer = { offerId: string; driverId?: string; kind: string; status: string; expiresAt: string; fare: LiveMoney; driverEarnings?: LiveMoney; pickupPay?: LiveMoney; driverBonus?: LiveMoney; priority?: boolean; groupId?: string; source?: string };

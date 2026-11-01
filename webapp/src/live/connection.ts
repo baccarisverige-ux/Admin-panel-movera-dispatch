@@ -6,7 +6,7 @@ export type Connection = { state: "connected" | "partly" | "not"; what?: string 
 
 const PARTLY: Record<string, string> = {
   reports: "Trips from the server; the rest is not connected yet.",
-  trips: "Trips, trip page, offers and full refund from the server; chat, ride check and other actions are not connected yet.",
+  trips: "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions and full refund come from the server; part refund, driver pay and receipts are not connected yet.",
   live: "Drivers and trips from the server; positions are not connected yet.",
   pricing: "Prices, fees, surge settings, commission and pickup pay of each zone and each country's Standard, and Tips & limits, from the server; manual surges and undo are not connected yet.",
   settings: "Feature switches and app updates go to the apps at once; scheduled publish, expiry and overrides are not connected yet.",

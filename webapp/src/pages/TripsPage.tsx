@@ -51,7 +51,12 @@ export function TripsPage() {
   const drivers = useDrivers(params.get("scope"));
   const slice = useSlice<TripOps>(TRIP_OPS_KEY, emptyTripOps(), { enabled: Boolean(agent && can(agent.role, "trips.read")) });
   const ops = normalizeTripOps(slice.value);
-  const flagged = useMemo(() => flaggedIds(ops), [ops]);
+  // v0.18.9 (G7): on live the flag is the server's (adminFlag on each row); the demo keeps its own book.
+  const flagged = useMemo(() => {
+    const ids = flaggedIds(ops);
+    for (const trip of trips.data ?? []) if (trip.liveTrip?.adminFlag?.flagged) ids.add(trip.id);
+    return ids;
+  }, [ops, trips.data]);
   const view = params.get("view") === "settings" ? "settings" : "list";
   const group = (GROUPS.find((item) => item.id === params.get("group"))?.id ?? "all") as TripGroup;
   const status = params.get("status") ?? "all";
