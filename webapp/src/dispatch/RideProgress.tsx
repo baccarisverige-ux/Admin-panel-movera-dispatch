@@ -90,7 +90,7 @@ function OfferLine({ offer, now }: { offer: AdminOffer; now: number }) {
     <li data-offer={offer.offerId} data-driver={offer.driverId}>
       <span>{offer.driverName}</span>
       <OfferStatus offer={offer} now={now} />
-      <small>{trn("Driver sees {0}{1}", money(offer.fareMinor), offer.driverBonusMinor ? tr(" (incl. +{0})", [money(offer.driverBonusMinor)]) : "")}</small>
+      <small>{trn("Driver sees {0}{1}", money(offer.driverEarningsMinor), offer.driverBonusMinor ? tr(" (incl. +{0})", [money(offer.driverBonusMinor)]) : "")}</small>
       {offer.priority ? <span className="as-priority">{tr("Priority")}</span> : null}
     </li>
   );

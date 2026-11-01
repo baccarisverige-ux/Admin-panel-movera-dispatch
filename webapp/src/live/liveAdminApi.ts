@@ -295,6 +295,7 @@ export function nearbyRow(row: NearbyDriver, categoryId: string, rating: number 
     categoryIds: row.categoryIds,
     categoryOk: !categoryId || row.categoryIds.includes(categoryId),
     rating,
+    ...(row.location && Number.isFinite(row.location.lat) && Number.isFinite(row.location.lng) ? { at: [row.location.lat, row.location.lng] as [number, number] } : {}),
     ...(row.openOfferId ? { openOfferId: row.openOfferId } : {}),
   };
 }
@@ -414,6 +415,22 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       bonusRules.set(zoneId, { at: Date.now(), document: null, refused });
       return null;
     }
+  }
+  // Owner live test 2026-11-01: the drawer said "0 s to accept" — the live view had no timers. Read the zone's live
+  // driver and dispatch documents (cached like the bonus rules) and never show 0.
+  const zoneDocs = new Map<string, { at: number; document: unknown }>();
+  async function zoneDocOf(doc: "driver_app_config" | "dispatch", zoneId: string): Promise<unknown> {
+    const key = `${doc}:${zoneId}`;
+    const kept = zoneDocs.get(key);
+    if (kept && Date.now() - kept.at < BONUS_RULES_TTL_MS) return kept.document;
+    // The LIVE document (newest published), what the server sends offers with, not the draft.
+    const document = await client.json<{ items?: { document?: unknown }[] }>(`/admin/config/${doc}/history?zoneId=${encodeURIComponent(zoneId)}&limit=1`).then((page) => page?.items?.[0]?.document ?? null, () => null);
+    zoneDocs.set(key, { at: Date.now(), document });
+    return document;
+  }
+  async function timersOf(zoneId: string): Promise<{ exclusiveSeconds: number; radarSeconds: number }> {
+    const [driverDoc, dispatchDoc] = await Promise.all([zoneDocOf("driver_app_config", zoneId), zoneDocOf("dispatch", zoneId)]);
+    return offerTimers(driverDoc, dispatchDoc);
   }
   let currency: string = CURRENCY;
 
@@ -683,6 +700,16 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         throw error;
       }
     }
+    if (input.action === "admin.trip.driverBonus") {
+      // Owner live test 2026-11-01: "Add money" had no live call ("Not connected yet"). POST /admin/trips/{id}/driver-bonus:
+      // Movera pays it, open offers show the new money at once (offer_updated).
+      const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
+      const params = (input.value ?? {}) as { amountMinor?: number; priority?: boolean };
+      if (!params.amountMinor || params.amountMinor <= 0) throw new ApiError(400, "Type an amount above 0.", { code: "invalid_request", retryable: false });
+      const next = await client.post<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/driver-bonus`, { expectedVersion: trip.version, amount: { amountMinor: params.amountMinor, currency: trip.fare.currency }, ...(params.priority !== undefined ? { priority: params.priority } : {}), ...(input.reason ? { note: input.reason } : {}) }).catch(explained);
+      if (next?.tripId) trips.set(next.tripId, next);
+      return done("Money added for the driver.");
+    }
     if (input.action === "admin.trip.assign" || input.action === "admin.trip.radarGroup") {
       // Exclusive offer or radar group (contract §9 /admin/trips/{id}/assign and /radar-group), with the trip's version.
       const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
@@ -834,7 +861,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         expiresAt: offer.expiresAt,
         currency: tripCurrency,
         fareMinor: offer.fare.amountMinor,
-        driverEarningsMinor: offer.driverEarnings?.amountMinor ?? 0,
+        // What the driver app shows as his share: earnings (bonus included) + the pickup pay of this offer.
+        driverEarningsMinor: (offer.driverEarnings?.amountMinor ?? 0) + ((offer as { pickupPay?: { amountMinor?: number } }).pickupPay?.amountMinor ?? 0),
         driverBonusMinor: offer.driverBonus?.amountMinor ?? 0,
         priority: Boolean(offer.priority),
         ...(offer.groupId ? { groupId: offer.groupId } : {}),
@@ -844,12 +872,13 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // session sent it ("group Night drivers", "radar Södermalm").
       groups: radarGroupsOf(page.items, tripId),
       bonusMinor: trip.driverBonus?.amountMinor ?? 0,
-      bonusExclusiveMinor: 0,
-      bonusRadarMinor: 0,
-      priority: false,
+      // The server keeps one bonus for every offer of the trip: both scopes show it ("Added so far").
+      bonusExclusiveMinor: trip.driverBonus?.amountMinor ?? 0,
+      bonusRadarMinor: trip.driverBonus?.amountMinor ?? 0,
+      priority: Boolean((trip as { priority?: boolean }).priority),
       lockedTo: null,
       events: [],
-      timers: { exclusiveSeconds: 0, radarSeconds: 0 },
+      timers: await timersOf(trip.zoneId),
       limits: limits ?? { limitMinor: Number.MAX_SAFE_INTEGER, hardMaxMinor: Number.MAX_SAFE_INTEGER },
       limitsKnown: limits !== null,
       fareMinor: trip.fare.amountMinor,
@@ -935,4 +964,20 @@ export function refreshedNotice(refreshed: number, sent: number, raised: boolean
     ? tr(refreshed === 1 ? "Price raised for {0} driver who already saw the ride." : "Price raised for {0} drivers who already saw the ride.", [refreshed])
     : tr(refreshed === 1 ? "{0} driver already sees the ride and keeps the offer." : "{0} drivers already see the ride and keep the offer.", [refreshed]);
   return [first, sent > 0 ? tr(sent === 1 ? "Also sent to {0} new driver." : "Also sent to {0} new drivers.", [sent]) : "", out].filter(Boolean).join(" ");
+}
+
+/** The first whole number of seconds above 0 (the server does the same; contract defaults assign 30 s, radar 15 s). */
+function positiveSeconds(...values: unknown[]): number {
+  for (const value of values) if (typeof value === "number" && Number.isFinite(value) && value >= 1) return Math.round(value);
+  return 15;
+}
+
+/** The offer timers an admin send runs on, as the server picks them (dispatch/runtime.ts sendAdminOffers). */
+export function offerTimers(driverDoc: unknown, dispatchDoc: unknown): { exclusiveSeconds: number; radarSeconds: number } {
+  const offers = ((driverDoc as { offers?: Record<string, unknown> } | null)?.offers ?? {}) as Record<string, unknown>;
+  const dispatch = (dispatchDoc ?? {}) as { radar?: { seconds?: unknown }; exclusive?: { seconds?: unknown } };
+  return {
+    exclusiveSeconds: positiveSeconds(offers["assignAcceptSeconds"], offers["exclusiveSeconds"], dispatch.exclusive?.seconds, 30),
+    radarSeconds: positiveSeconds(offers["radarSeconds"], dispatch.radar?.seconds, 15),
+  };
 }

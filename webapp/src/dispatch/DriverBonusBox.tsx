@@ -64,7 +64,7 @@ export function draftMoney(draft: MoneyDraft, view: Bonused, zoneId: string): { 
  * What one send carries for the driver: the typed money when it applies to this kind of offer, the fare the driver
  * will see (with the money already added for this kind), and a reason not to send when the typed amount is wrong.
  */
-export function moneyForSend(draft: MoneyDraft, view: (Bonused & Pick<TripOffersView, "fareMinor">) | undefined, zoneId: string, kind: AdminOffer["kind"]) {
+export function moneyForSend(draft: MoneyDraft, view: (Bonused & Pick<TripOffersView, "fareMinor" | "driverNetMinor">) | undefined, zoneId: string, kind: AdminOffer["kind"]) {
   if (!view) return { params: {} as Record<string, unknown>, used: false, seesMinor: null as number | null, bonusMinor: 0, blocked: null as string | null };
   const covers = scopeCovers(draft.scope, kind);
   const { addMinor, issue } = draftMoney(draft, view, zoneId);
@@ -73,7 +73,8 @@ export function moneyForSend(draft: MoneyDraft, view: (Bonused & Pick<TripOffers
   return {
     params: used ? { driverBonusMinor: addMinor, bonusScope: draft.scope, priority: draft.priority } : {},
     used,
-    seesMinor: view.fareMinor + bonusMinor,
+    // Owner live test 2026-11-01: the driver app shows his share ("Din andel"), never the rider's fare.
+    seesMinor: view.driverNetMinor + bonusMinor,
     bonusMinor,
     blocked: covers && issue ? issue.message : null,
   };

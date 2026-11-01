@@ -830,8 +830,8 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   const issues: string[] = [];
   if (!zone.radar.on && !zone.exclusive.on) issues.push("Switch on Radar or Exclusive, or both. A zone needs a way to offer rides.");
   if (zone.radar.on && (zone.radar.drivers < 1 || zone.radar.drivers > 30)) issues.push("Radar: drivers who see a request must be 1 to 30.");
-  if (zone.radar.on && (zone.radar.seconds < 5 || zone.radar.seconds > 120)) issues.push("Radar: time on the radar must be 5 to 120 seconds.");
-  if (zone.exclusive.on && (zone.exclusive.seconds < 5 || zone.exclusive.seconds > 60)) issues.push("Exclusive: time to accept must be 5 to 60 seconds.");
+  if ((zone.radar.seconds < 5 || zone.radar.seconds > 120)) issues.push("Radar: time on the radar must be 5 to 120 seconds.");
+  if ((zone.exclusive.seconds < 5 || zone.exclusive.seconds > 60)) issues.push("Exclusive: time to accept must be 5 to 60 seconds.");
   if (zone.radar.on && zone.radarApp.fullOn && (zone.radarApp.full < 1 || zone.radarApp.full > 20)) issues.push("Radar in the driver app: full screen must show 1 to 20 offers.");
   if (zone.radar.on && zone.radarApp.popupOn && (zone.radarApp.popup < 1 || zone.radarApp.popup > 5)) issues.push("Radar in the driver app: the popup must show 1 to 5 offers.");
   if (zone.radar.on && !zone.radarApp.fullOn && !zone.radarApp.popupOn) issues.push("Radar in the driver app: switch on the full screen or the popup, or drivers cannot see Radar offers.");

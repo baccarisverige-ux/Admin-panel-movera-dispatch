@@ -30,6 +30,8 @@ type Sent = { method: string; path: string; body: Record<string, unknown> | null
 type Tools = Record<"presets" | "groups" | "radar-zones" | "radar-rules" | "events", Array<Record<string, unknown>>>;
 /** A test can answer radar-group itself (status + body); otherwise the default answer below. */
 let radarReply: { status: number; body: unknown } | null = null;
+/** Anna already has the trip's open automatic offer. */
+let nearbyOpenOffer = false;
 const ID_KEY = { presets: "presetId", groups: "groupId", "radar-zones": "radarZoneId", "radar-rules": "ruleId", events: "eventId" } as const;
 
 /** /admin/dispatch/* (contract.json#dispatchTools) in memory, with versions, plus the trip's nearby drivers and sends. */
@@ -85,12 +87,12 @@ async function fakeTools(page: Page, trips: Array<Record<string, unknown>>) {
     list[index] = { ...current, ...change, version: Number(current["version"]) + 1, updatedAt: at };
     return json(route, 200, list[index]);
   });
-  await page.route(/\/api\/v1\/admin\/trips\/[^/]+\/(nearby-drivers|assign|radar-group|radar-zone\/stop)(\?.*)?$/, async (route) => {
+  await page.route(/\/api\/v1\/admin\/trips\/[^/]+\/(nearby-drivers|assign|radar-group|radar-zone\/stop|driver-bonus)(\?.*)?$/, async (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
     const url = new URL(request.url());
     if (url.pathname.endsWith("/nearby-drivers")) {
-      return json(route, 200, { scope: "zone", items: [{ driverId: "D1001", firstName: "Anna", onlineStatus: "online", location: { lat: 59.333, lng: 18.064, measuredAt: new Date().toISOString() }, distanceMeters: 900, pickupEtaSeconds: 180, zoneId: "Z001", categoryIds: ["standard"] }] });
+      return json(route, 200, { scope: "zone", items: [{ driverId: "D1001", firstName: "Anna", onlineStatus: "online", location: { lat: 59.333, lng: 18.064, measuredAt: new Date().toISOString() }, distanceMeters: 900, pickupEtaSeconds: 180, zoneId: "Z001", categoryIds: ["standard"], ...(nearbyOpenOffer ? { openOfferId: "O_auto" } : {}) }] });
     }
     const body = (request.postDataJSON?.() ?? null) as Record<string, unknown> | null;
     sends.push({ method: request.method(), path: url.pathname, body });
@@ -98,6 +100,11 @@ async function fakeTools(page: Page, trips: Array<Record<string, unknown>>) {
       // The server's trip stops carrying the running send (GET /admin/trips/{id} radarZoneSend).
       trip()["radarZoneSend"] = { ...SEND, active: false, rounds: 2, stoppedAt: at, stopReason: "admin" };
       return json(route, 200, trip()["radarZoneSend"]);
+    }
+    if (url.pathname.endsWith("/driver-bonus")) {
+      const amount = (body?.["amount"] as { amountMinor: number } | undefined)?.amountMinor ?? 0;
+      Object.assign(trip(), { driverBonus: { amountMinor: amount, currency: "SEK" }, version: Number(trip()["version"]) + 1 });
+      return json(route, 200, trip());
     }
     if (url.pathname.endsWith("/radar-group")) {
       if (radarReply) return json(route, radarReply.status, radarReply.body);
@@ -318,5 +325,30 @@ test("owner bug 2026-11-01 (French panel): a radar to a driver who already sees 
     await expect(page.getByText("Test already has this ride.")).toHaveCount(0);
   } finally {
     radarReply = null;
+  }
+});
+
+test("owner live test 2026-11-01: from the trip page a driver with the trip's open offer can get the radar and an exclusive; Add money goes to the server", async ({ page }) => {
+  nearbyOpenOffer = true;
+  try {
+    const { sends } = await open(page, "/trips/T2003");
+    await page.getByRole("button", { name: /^Nearby drivers for / }).first().click();
+    const panel = page.getByTestId("assign-panel");
+    await expect(panel).toBeVisible();
+    // The radar counts Anna (from the nearby list) and the chip is not greyed.
+    await expect(panel.getByRole("checkbox", { name: "Select Anna for the radar" })).toBeEnabled();
+    await expect(panel.getByTestId("radar-sender").getByRole("button", { name: /Send radar/ })).toBeEnabled();
+    await expect(panel).not.toContainText(/(^|[^0-9])0 s\b/);
+    // Add money: the live call, "Added so far" from the server's trip.
+    const box = panel.getByTestId("driver-bonus-box");
+    await box.getByLabel("Money for the driver").fill("50");
+    await box.getByRole("button", { name: "Add money" }).click();
+    const confirmButton = page.getByRole("button", { name: "Confirm" });
+    if (await confirmButton.isVisible().catch(() => false)) await confirm(page);
+    await expect.poll(() => sends.find((s) => s.path.endsWith("/driver-bonus"))?.body).toMatchObject({ amount: { amountMinor: 5000, currency: "SEK" } });
+    await expect(panel.getByText(/Not connected yet/)).toHaveCount(0);
+    await expect(box.getByTestId("driver-bonus-now")).toContainText("50");
+  } finally {
+    nearbyOpenOffer = false;
   }
 });

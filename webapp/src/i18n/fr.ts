@@ -7505,4 +7505,8 @@ export const fr: Record<MessageKey, string> = {
   "Sent to {0} drivers": "Envoyé à {0} chauffeurs",
   "{0} driver could not take it (offline / on a trip).": "{0} ne pouvait pas la prendre (hors ligne / en course).",
   "{0} drivers could not take it (offline / on a trip).": "{0} ne pouvaient pas la prendre (hors ligne / en course).",
+  "{0} already sees this ride: an exclusive offer replaces it.": "{0} voit déjà cette course : une offre exclusive la remplace.",
+  "{0} already sees this ride: the radar raises his offer.": "{0} voit déjà cette course : le radar augmente son offre.",
+  "Money added for the driver.": "Argent ajouté pour le chauffeur.",
+  "Type an amount above 0.": "Saisissez un montant supérieur à 0.",
 };
