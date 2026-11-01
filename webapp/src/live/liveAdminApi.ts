@@ -33,7 +33,7 @@ import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
 import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
-import { liveBonusLimits } from "./tripLive.ts";
+import { bonusByKind, commissionBeforeBonus, liveBonusLimits } from "./tripLive.ts";
 import { vehicleMissing } from "./activation.ts";
 import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { tr } from "../i18n/index.ts";
@@ -795,18 +795,20 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // Owner live test 2026-11-01: "Add money" had no live call ("Not connected yet"). POST /admin/trips/{id}/driver-bonus:
       // Movera pays it, open offers show the new money at once (offer_updated).
       const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
-      const params = (input.value ?? {}) as { amountMinor?: number; priority?: boolean };
+      const params = (input.value ?? {}) as { amountMinor?: number; priority?: boolean; bonusScope?: "exclusive" | "radar" | "both" };
       if (!params.amountMinor || params.amountMinor <= 0) throw new ApiError(400, "Type an amount above 0.", { code: "invalid_request", retryable: false });
-      const next = await client.post<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/driver-bonus`, { expectedVersion: trip.version, amount: { amountMinor: params.amountMinor, currency: trip.fare.currency }, ...(params.priority !== undefined ? { priority: params.priority } : {}), ...(input.reason ? { note: input.reason } : {}) }).catch(explained);
+      const next = await client.post<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/driver-bonus`, { expectedVersion: trip.version, amount: { amountMinor: params.amountMinor, currency: trip.fare.currency }, ...(params.priority !== undefined ? { priority: params.priority } : {}), ...(params.bonusScope ? { applyTo: params.bonusScope } : {}), ...(input.reason ? { note: input.reason } : {}) }).catch(explained);
       if (next?.tripId) trips.set(next.tripId, next);
+      // Owner bug 2026-11-01 ("Exclusif" arrived as Radar): applyTo sends the chosen kind; the server keeps the money per kind.
       return done("Money added for the driver.");
     }
     if (input.action === "admin.trip.assign" || input.action === "admin.trip.radarGroup") {
       // Exclusive offer or radar group (contract §9 /admin/trips/{id}/assign and /radar-group), with the trip's version.
       const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
       trips.set(trip.tripId, trip);
-      const params = (input.value ?? {}) as { driverId?: string; driverIds?: string[]; groupId?: string; radarZoneId?: string; ruleId?: string; target?: string; radarZoneName?: string; driverBonusMinor?: number; priority?: boolean };
-      const bonus = params.driverBonusMinor ? { driverBonus: { amountMinor: params.driverBonusMinor, currency: trip.fare.currency } } : {};
+      const params = (input.value ?? {}) as { driverId?: string; driverIds?: string[]; groupId?: string; radarZoneId?: string; ruleId?: string; target?: string; radarZoneName?: string; driverBonusMinor?: number; priority?: boolean; bonusScope?: "exclusive" | "radar" | "both" };
+      // applyTo: "Both" also raises the other kind of offer; without it the server uses this send's kind.
+      const bonus = params.driverBonusMinor ? { driverBonus: { amountMinor: params.driverBonusMinor, currency: trip.fare.currency }, ...(params.bonusScope ? { applyTo: params.bonusScope } : {}) } : {};
       const common = { expectedVersion: trip.version, ...(input.reason ? { note: input.reason } : {}), ...bonus, ...(params.priority ? { priority: true } : {}) };
       const refused = (error: unknown): never => {
         const text = toolRefusal(error);
@@ -935,6 +937,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     // M2: the country from the zone, else from the trip's currency (each market has its own); unknown → no limits shown.
     const limitCountry = marketOfZone(trip.zoneId)?.id ?? MARKETS.find((item) => item.currency === trip.fare.currency)?.id ?? null;
     const limits = limitCountry ? liveBonusLimits(await bonusRulesOf(trip.zoneId), limitCountry) : null;
+    const byKind = bonusByKind(trip as Parameters<typeof bonusByKind>[0]);
     return {
       tripId,
       status: trip.status,
@@ -963,9 +966,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // session sent it ("group Night drivers", "radar Södermalm").
       groups: radarGroupsOf(page.items, tripId),
       bonusMinor: trip.driverBonus?.amountMinor ?? 0,
-      // The server keeps one bonus for every offer of the trip: both scopes show it ("Added so far").
-      bonusExclusiveMinor: trip.driverBonus?.amountMinor ?? 0,
-      bonusRadarMinor: trip.driverBonus?.amountMinor ?? 0,
+      // Owner bug 2026-11-01: the server keeps the money per kind of offer (driverBonusByKind); an older server, one for both.
+      bonusExclusiveMinor: byKind.exclusiveMinor,
+      bonusRadarMinor: byKind.radarMinor,
       priority: Boolean((trip as { priority?: boolean }).priority),
       lockedTo: null,
       events: [],
@@ -974,7 +977,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       limitsKnown: limits !== null,
       fareMinor: trip.fare.amountMinor,
       driverNetMinor: trip.driverEarnings?.amountMinor ?? 0,
-      commissionMinor: trip.commission?.amountMinor ?? 0,
+      // The server's commission already has the bonus taken off; the box takes it off itself, so it gets the commission
+      // before any bonus (owner photo 2026-11-01: "Movera paie 353,80 kr de plus" counted the 200 kr twice).
+      commissionMinor: commissionBeforeBonus(trip),
       accepted: null,
       radarRepeat: radarRepeatOf(trip),
       // v0.18.7 (G5): the trip page follows this read (ETA every 30 s, the car's position, the cancel fee).
