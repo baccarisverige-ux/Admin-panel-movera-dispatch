@@ -314,7 +314,7 @@ export function TripPage() {
             </div>
             <div className="op-person driver">
               <small>{tr("Driver")}</small>
-              {driver ? <Link to={`/drivers/${driver.id}`}><b>{driver.name}</b></Link> : <b>{tr("Not assigned")}</b>}
+              {driver ? <Link to={`/drivers/${driver.id}`}><b>{driver.name}</b></Link> : <b>{tr("None assigned")}</b>}
               <span>{driver ? (allowed ? phone(driver.phone) : <>{trn("{0} Number hidden", <Lock size={11} aria-hidden="true" />)}</>) : "–"}</span>
             </div>
           </div>
@@ -493,10 +493,10 @@ export function TripPage() {
             "Rider": sheet.riderName,
             "Pickup": sheet.pickup,
             "Drop-off": sheet.dropoff,
-            "Source": sheet.source,
-            "Driver": sheet.driverName,
-            "Vehicle": sheet.vehicle,
-            "Licence plate": sheet.plate,
+            "Source": trx(sheet.source),
+            "Driver": sheet.driverName || tr("None assigned"),
+            "Vehicle": sheet.vehicle || tr("None assigned"),
+            "Licence plate": sheet.plate || tr("None assigned"),
             "Passenger capacity": sheet.seats,
           }).map(([label, value]) => (
             <div key={label}>
@@ -723,7 +723,7 @@ export function TripPage() {
         ) : (
           <ul aria-label={tr("Trip intervention audit")} className="op-history">
             {tripAudits.map((item) => (
-              <li key={item.id}><time>{item.at}</time><b>{agentName(item.actorId)}</b><span>{item.action} · {item.result} · {item.actorId} · {item.reason}</span></li>
+              <li key={item.id}><time>{item.at}</time><b>{agentName(item.actorId)}</b><span>{item.action} · {trx(item.result)} · {item.actorId} · {trx(item.reason)}</span></li>
             ))}
           </ul>
         )}

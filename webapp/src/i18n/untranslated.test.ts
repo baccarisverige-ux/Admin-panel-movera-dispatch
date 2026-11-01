@@ -125,3 +125,97 @@ test("French avoids the 'à les / de les' wording the audit saw", () => {
   const bad = Object.entries(fr).filter(([, text]) => /(^|\s)(à|de) les\s/.test(text));
   assert.deepEqual(bad, []);
 });
+
+/* Page audit round 2 (2026-11-01): data texts that went to the screen without a translation. Each must have a real sv/fr text. */
+import { ROLE_LABELS } from "../auth/permissions.ts";
+import { PERMISSION_GROUPS } from "../platform/team.ts";
+import { paymentTimeline } from "../payments/ledger.ts";
+import { RULES } from "../safety/risk.ts";
+import { NOTICE_KINDS, SAMPLE } from "../messages/driverNotices.ts";
+import { registerDictionary, setLanguage } from "./core.ts";
+import { reservationTimeline, zoneDefault } from "../dispatch/rules.ts";
+
+const SAME_IN_ALL = new Set(["Radar", "Finance", "online", "{0} via {1}", "{0} zones", "{0} zone"]);
+function assertTranslated(texts: Iterable<string>, what: string) {
+  for (const text of new Set(texts)) {
+    if (!needsTranslation(text)) continue;
+    assert.ok(text in en, `${what}: "${text}" has no entry`);
+    if (SAME_IN_ALL.has(text)) continue;
+    assert.notEqual((fr as Record<string, string>)[text], text, `${what}: fr "${text}" is English`);
+    assert.notEqual((sv as Record<string, string>)[text], text, `${what}: sv "${text}" is English`);
+  }
+}
+
+test("permission labels, group names and role names have sv/fr texts (Team, admin page)", () => {
+  assertTranslated(PERMISSION_GROUPS.map((group) => group.label), "permission group");
+  assertTranslated(PERMISSION_GROUPS.flatMap((group) => group.items.map((item) => item.label)), "permission");
+  assertTranslated(Object.values(ROLE_LABELS), "role");
+  assertTranslated(["Every country", "online", "away", "No person affected"], "team");
+});
+
+test("payment timeline statuses have sv/fr texts", () => {
+  assertTranslated(["pending", "authorized", "captured", "refunded", "failed"].flatMap((status) => paymentTimeline(status)), "payment status");
+});
+
+test("trip sources (trip detail, waybill) have sv/fr texts", () => {
+  assertTranslated(["Rider app", "Reservation", "Airport desk", "Street hail", "Business account", "Independent driver"], "trip source");
+});
+
+test("fraud rules and driver notifications (when, title, body, action, sample values) have sv/fr texts", () => {
+  assertTranslated(RULES.flatMap((rule) => [rule.label, rule.help]), "fraud rule");
+  assertTranslated(NOTICE_KINDS.flatMap((kind) => [kind.label, kind.when, kind.title, kind.body, kind.action ?? ""]).filter(Boolean), "driver notification");
+  assertTranslated([SAMPLE.day!, SAMPLE.document!, SAMPLE.when!, SAMPLE.until!], "notification sample"); // the rest are places and amounts
+});
+
+test("the reservation steps (Dispatch → Bookings) are written in the admin's language", () => {
+  registerDictionary("fr", fr);
+  setLanguage("fr");
+  try {
+    const zone = zoneDefault("Z001");
+    const steps = reservationTimeline(zone, 180);
+    for (const step of steps) {
+      const shown = step.skipped ?? step.detail;
+      assert.doesNotMatch(shown, /\b(the|drivers?|see it|pickup|becomes|Skipped)\b/, `fr step ${step.id}: ${shown}`);
+    }
+  } finally {
+    setLanguage("en");
+  }
+});
+
+/* Coordinator, page audit round 2: country names in headings ("Risque en Sweden") read in the admin's language; seed driver groups too. */
+import { MARKETS } from "../markets/markets.ts";
+import { emptyDispatchBook } from "../dispatch/rules.ts";
+
+test("country names follow the admin's language (fr Suède/France, sv Sverige/Frankrike)", () => {
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  const name = (id: string) => MARKETS.find((item) => item.id === id)!.name;
+  try {
+    setLanguage("fr");
+    assert.equal(name("SE"), "Suède");
+    assert.equal(name("FR"), "France");
+    setLanguage("sv");
+    assert.equal(name("SE"), "Sverige");
+    assert.equal(name("FR"), "Frankrike");
+  } finally {
+    setLanguage("en");
+  }
+  assert.equal(name("SE"), "Sweden");
+});
+
+test("the seed driver group names have sv/fr texts (admin-made names stay as typed)", () => {
+  assertTranslated(emptyDispatchBook().groups.map((group) => group.name), "seed driver group");
+});
+
+/* Coordinator, page audit round 3: trip sheet "None assigned", risk rule units and "At least", and live-honest team roles note. */
+import { waybill } from "../trips/present.ts";
+
+test("risk rule units, the trip sheet's empty driver and the team roles note read in sv/fr, without demo wording", () => {
+  assertTranslated(["None assigned", "At least", ...RULES.map((rule) => rule.unit).filter((unit) => /[a-z]/.test(unit) && unit !== "codes" /* French "codes" is the same word */)], "page audit round 3");
+  assert.equal(fr["None assigned"], "Non attribué");
+  assert.equal(sv["None assigned"], "Inte tilldelad");
+  assert.equal(fr.accounts, "comptes");
+  const note = "Custom roles are saved here. The server applies them when an admin signs in; until it does, an admin keeps the permissions of their built-in role.";
+  for (const text of [note, fr[note as keyof typeof fr], sv[note as keyof typeof sv]]) assert.doesNotMatch(String(text), /demo|démo/i);
+  assert.equal(typeof waybill, "function");
+});

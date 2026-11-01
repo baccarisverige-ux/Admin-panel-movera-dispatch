@@ -1,4 +1,5 @@
 import { formatMoney as formatMinor } from "../domain/money.ts";
+import { tr } from "../i18n/core.ts";
 /** Countries Movera operates in, with their cities and zones. Sweden keeps the original zone ids. */
 
 export type MarketId = "SE" | "FR" | "TN";
@@ -31,7 +32,8 @@ function zones(city: string, rows: Array<[string, string, number, number, ("airp
 const SEED_MARKETS: readonly Market[] = [
   {
     id: "SE",
-    name: "Sweden",
+    // Page audit round 2: the country name reads in the admin's language (fr "Suède", sv "Sverige").
+    get name() { return tr("Sweden"); },
     currency: "SEK",
     minorUnits: 100,
     locale: "sv-SE",
@@ -54,7 +56,8 @@ const SEED_MARKETS: readonly Market[] = [
   },
   {
     id: "FR",
-    name: "France",
+    // Page audit round 2: the country name reads in the admin's language (fr "Suède", sv "Sverige").
+    get name() { return tr("France"); },
     currency: "EUR",
     minorUnits: 100,
     locale: "fr-FR",
@@ -76,7 +79,8 @@ const SEED_MARKETS: readonly Market[] = [
   },
   {
     id: "TN",
-    name: "Tunisia",
+    // Page audit round 2: the country name reads in the admin's language (fr "Suède", sv "Sverige").
+    get name() { return tr("Tunisia"); },
     currency: "TND",
     minorUnits: 1000,
     locale: "fr-TN",
@@ -130,6 +134,7 @@ export const hasLiveMarketZones = () => liveZones !== null;
 export const MARKETS: readonly Market[] = SEED_MARKETS.map((seed) => {
   const item = { ...seed } as Market;
   Object.defineProperty(item, "zones", { enumerable: true, get: () => liveZones?.get(seed.id) ?? seed.zones });
+  Object.defineProperty(item, "name", { enumerable: true, get: () => seed.name });
   return item;
 });
 

@@ -51,8 +51,8 @@ export function RolesView({ editable, by, onNotice }: { editable: boolean; by: s
             <section key={group.label} aria-label={trx(group.label)}>
               <h4>{trx(group.label)}</h4>
               {group.items.map((item) => (
-                <Row key={item.id} label={item.label}>
-                  <Switch label={item.label} on={shown.includes(item.id)} disabled={!draft || !editable} onChange={(on) => draft && setDraft({ ...draft, permissions: on ? [...draft.permissions, item.id] : draft.permissions.filter((id) => id !== item.id) })} />
+                <Row key={item.id} label={trx(item.label)}>
+                  <Switch label={trx(item.label)} on={shown.includes(item.id)} disabled={!draft || !editable} onChange={(on) => draft && setDraft({ ...draft, permissions: on ? [...draft.permissions, item.id] : draft.permissions.filter((id) => id !== item.id) })} />
                 </Row>
               ))}
             </section>
@@ -67,7 +67,7 @@ export function RolesView({ editable, by, onNotice }: { editable: boolean; by: s
             <button data-command="admin.team.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{tr("Close")}</button>
           </div>
         ) : null}
-        <NotEnforced>{tr("Custom roles are saved here. The backend applies them when it signs an admin in; in the demo an admin keeps the permissions of their built-in role.")}</NotEnforced>
+        <NotEnforced>{tr("Custom roles are saved here. The server applies them when an admin signs in; until it does, an admin keeps the permissions of their built-in role.")}</NotEnforced>
       </Card>
     </div>
   );

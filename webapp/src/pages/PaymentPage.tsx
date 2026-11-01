@@ -72,7 +72,8 @@ export function PaymentPage() {
       <Cards
         compare={false}
         compareLabel=""
-        fmt={(value) => money(value)}
+        // Live: the trip's split arrives with the trips list; until then the cards say "Loading…", never "Not connected yet".
+        fmt={(value) => (!Number.isFinite(value) && trips.isLoading ? tr("Loading…") : money(value))}
         cards={[
           { id: "driver", label: tr("Driver gets"), value: split.driver, previous: null, format: "money", info: tr("The price minus Movera's commission.") },
           { id: "movera", label: tr("Movera keeps"), value: split.movera, previous: null, format: "money", info: tr("Commission (20% until the price book is linked).") },
@@ -97,7 +98,7 @@ export function PaymentPage() {
       <article className="panel fn-panel" data-testid="payment-timeline">
         <h3>{tr("Timeline")}</h3>
         <ol className="version-list">
-          {paymentTimeline(payment.status).map((step) => <li key={step}>{step}</li>)}
+          {paymentTimeline(payment.status).map((step) => <li key={step}>{trx(step)}</li>)}
         </ol>
       </article>
 
