@@ -8417,4 +8417,5 @@ export const fr: Record<MessageKey, string> = {
   "The amount must be in the rider's currency.": "Le montant doit être dans la devise du passager.",
   "The rider's country is not known yet: money can be added after the first ride.": "Le pays du passager n’est pas encore connu : l’argent peut être ajouté après la première course.",
   "Add money to a wallet from the rider's page.": "Ajoutez de l’argent à un portefeuille depuis la page du passager.",
+  "Largest Add money to wallet at one time": "Ajout maximal au portefeuille en une fois",
 };

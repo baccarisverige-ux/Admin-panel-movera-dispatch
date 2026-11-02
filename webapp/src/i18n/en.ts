@@ -8415,6 +8415,7 @@ export const en = {
   "The amount must be in the rider's currency.": "The amount must be in the rider's currency.",
   "The rider's country is not known yet: money can be added after the first ride.": "The rider's country is not known yet: money can be added after the first ride.",
   "Add money to a wallet from the rider's page.": "Add money to a wallet from the rider's page.",
+  "Largest Add money to wallet at one time": "Largest Add money to wallet at one time",
 } as const;
 
 export type MessageKey = keyof typeof en;

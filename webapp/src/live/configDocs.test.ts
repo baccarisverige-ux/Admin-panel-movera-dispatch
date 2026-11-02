@@ -778,3 +778,11 @@ test("checker #204: a reordered keyed list follows the admin's order; repeated k
   assert.equal((fees.fees as unknown[]).length, 2);
   assert.deepEqual(fees.fees, [fee1, { kind: "late", amount: 25 }]);
 });
+
+test("v0.18.16 A2 (owner G12 Q-D): the wallet credit limit goes into CountryRules in the country's money (SE, FR)", () => {
+  const se = countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [20], driverBonus: { defaultLimit: 150, hardMax: 1000 }, walletCreditMax: 2900 }, null);
+  assert.deepEqual(se["walletCreditMax"], { amountMinor: 290_000, currency: "SEK" });
+  const fr = countryRulesOf("FR", "EUR", { tips: [1], raiseSteps: [2], driverBonus: { defaultLimit: 20, hardMax: 95 }, walletCreditMax: 250 }, null);
+  assert.deepEqual(fr["walletCreditMax"], { amountMinor: 25_000, currency: "EUR" });
+  assert.equal(countryRulesOf("FR", "EUR", { tips: [1], raiseSteps: [2], driverBonus: { defaultLimit: 20, hardMax: 95 } }, null)["walletCreditMax"], undefined);
+});

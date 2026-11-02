@@ -8417,4 +8417,5 @@ export const sv: Record<MessageKey, string> = {
   "The amount must be in the rider's currency.": "Beloppet måste vara i resenärens valuta.",
   "The rider's country is not known yet: money can be added after the first ride.": "Resenärens land är inte känt än: pengar kan läggas till efter första resan.",
   "Add money to a wallet from the rider's page.": "Lägg till pengar i en plånbok från resenärens sida.",
+  "Largest Add money to wallet at one time": "Största Lägg till pengar i plånboken på en gång",
 };

@@ -211,6 +211,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               </div>
               <NumberField id={DRIVER_BONUS_LIMIT_INPUT_ID} label={tr("Driver bonus limit")} value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
               <NumberField label={tr("Largest change of a driver's pay on one trip")} value={shown.driverPayChangeMax} unit={symbol} step={moneyStep(country)} max={hardMax * 10} disabled={!canEdit} changed={shown.driverPayChangeMax !== saved.driverPayChangeMax} onChange={(driverPayChangeMax) => edit({ driverPayChangeMax })} />
+              <NumberField label={tr("Largest Add money to wallet at one time")} value={shown.walletCreditMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit} changed={shown.walletCreditMax !== saved.walletCreditMax} onChange={(walletCreditMax) => edit({ walletCreditMax })} />
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
           </div>
