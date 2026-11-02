@@ -591,17 +591,29 @@ test("live G8 fix 1 (decision driver-g8.md #2): zones of a country that disagree
   const book = (await settings.readSlice(COUNTRY_SETTINGS_KEY, emptyCountrySettingsBook())) as ReturnType<typeof emptyCountrySettingsBook>;
   assert.deepEqual(book.countries.SE.paymentMethods, { cash: true, card: false, apple_pay: false });
   assert.deepEqual(book.countries.SE.mixedMethods, { card: ["Z004", "Z005"] }, "card is on in the other zones: mixed, off in Z004 and Z005");
-  // A language-only save publishes nothing: every zone keeps its own payment methods.
+  // Live G8 round 3 item 2: a language-only save writes the languages, and every zone keeps its own payment methods.
   const before = server.calls.length;
   const value = { ...book, draftRev: 2, countries: { ...book.countries, SE: { ...book.countries.SE, languages: { ...book.countries.SE.languages, rider: "fr" as const } } } };
-  assert.equal(await settings.command("admin.config.saveCountry", { targetId: "x", value, scope: "" }), "Saved. No payment method changed.");
-  assert.equal(server.calls.slice(before).filter((c) => c.method !== "GET").length, 0, "no PUT or publish");
+  assert.equal(await settings.command("admin.config.saveCountry", { targetId: "x", value, scope: "" }), "Languages published to every zone.");
+  const langPuts = server.calls.slice(before).filter((c) => c.method === "PUT");
+  assert.ok(langPuts.length > 0, "the language is written");
+  const z004lang = langPuts.find((c) => c.path.includes("rider_app_config") && (c.body as { zoneId?: string }).zoneId === "Z004");
+  assert.deepEqual(((z004lang!.body as { document: Doc }).document)["paymentMethods"], ["cash"], "Z004 keeps its own payment methods");
+  assert.equal((((z004lang!.body as { document: Doc }).document)["languages"] as { default: { rider: string } }).default.rider, "fr");
+  assert.equal(langPuts.some((c) => String((c.body as { zoneId?: string }).zoneId ?? "").startsWith("FR-")), false, "France is not touched");
+  // Saving with nothing changed never says saved.
+  await assert.rejects(settings.command("admin.config.saveCountry", { targetId: "x", value: { ...value, draftRev: 3 }, scope: "" })!, /Nothing to save/);
+  const langDoc = (lang: string) => ({ ...sample("rider_app_config"), paymentMethods: ["cash"], languages: { available: ["en", "fr", "sv"], default: { rider: lang, driver: "sv", admin: "sv" } } });
+  const reread = createLiveSettings(fakeServer({ "country_rules:standard-SE": { version: 2, liveVersion: 2, document: {} }, "rider_app_config:standard-SE": { version: 5, liveVersion: 5, document: langDoc("fr") } }).http);
+  const back = (await reread.readSlice(COUNTRY_SETTINGS_KEY, null)) as ReturnType<typeof emptyCountrySettingsBook>;
+  assert.equal(back.countries.SE.languages.rider, "fr", "the language reads back from what the zones serve");
   // Setting the mixed method makes it the same in the whole country (only SE is sent).
+  const afterLanguages = server.calls.length;
   const se = { ...book.countries.SE };
   delete se.mixedMethods;
-  const set = { ...book, draftRev: 3, countries: { ...book.countries, SE: { ...se, paymentMethods: { ...se.paymentMethods, card: true } } } };
+  const set = { ...book, draftRev: 4, countries: { ...book.countries, SE: { ...se, languages: value.countries.SE.languages, paymentMethods: { ...se.paymentMethods, card: true } } } };
   assert.equal(await settings.command("admin.config.saveCountry", { targetId: "x", value: set, scope: "" }), "Payment methods published to every zone.");
-  const puts = server.calls.filter((c) => c.method === "PUT");
+  const puts = server.calls.slice(afterLanguages).filter((c) => c.method === "PUT");
   const z004 = puts.find((c) => c.path.includes("rider_app_config") && (c.body as { zoneId?: string }).zoneId === "Z004");
   assert.deepEqual(((z004!.body as { document: Doc }).document)["paymentMethods"], ["cash", "card"]);
   assert.equal(puts.some((c) => String((c.body as { zoneId?: string }).zoneId ?? "").startsWith("FR-")), false, "France is not touched");
@@ -646,4 +658,25 @@ test("live G8 fix 2: a country Movera is not open in (Tunisia) is never said to 
   const both = { ...value, countries: { ...value.countries, SE: { ...book.countries.SE, paymentMethods: { cash: true, card: false, apple_pay: true } } } };
   await assert.rejects(settings.command("admin.config.saveCountry", { targetId: "x", value: both, scope: "" })!, /Tunisia/);
   assert.equal(server.calls.filter((c) => c.method !== "GET").length, 0);
+});
+
+test("live G8 round 3 item 1: tip rules read back from what the zones serve (a zone save is not lost after a reload)", async () => {
+  const { COUNTRY_SETTINGS_KEY, ZONE_RULES_KEY } = await import("../config/countrySettings.ts");
+  const rider = (zoneId: string | undefined, customAmount: boolean) => ({ ...sample("rider_app_config"), ...(zoneId ? { zoneId } : {}), paymentMethods: ["cash"], ...(customAmount ? { tipRules: { cashAfterTrip: false, customAmount: true, customMax: { amountMinor: 2000, currency: "EUR" } } } : {}) });
+  const server = fakeServer({
+    "country_rules:standard-FR": { version: 2, liveVersion: 2, document: {} },
+    "country_rules:FR-PC": { version: 1, liveVersion: 1, usesStandard: false, document: {} },
+    "rider_app_config:standard-FR": { version: 3, liveVersion: 3, document: rider(undefined, false) },
+    "rider_app_config:FR-PC": { version: 4, liveVersion: 4, usesStandard: false, document: rider("FR-PC", true) },
+  });
+  const settings = createLiveSettings(server.http);
+  const book = (await settings.readSlice(COUNTRY_SETTINGS_KEY, null)) as { countries: Record<string, { tipRules: { customAmount: boolean; customMax: number }; mixedTipRules?: Record<string, string[]> }> };
+  // The Standard alone has it off; FR-PC serves it on: the country is mixed, naming the zones where it is off.
+  assert.equal(book.countries.FR!.tipRules.customAmount, false);
+  assert.ok(book.countries.FR!.mixedTipRules?.customAmount?.length, "mixed when the zones differ");
+  assert.ok(!book.countries.FR!.mixedTipRules?.customAmount?.includes("FR-PC"), "FR-PC is not named as off");
+  const zones = (await settings.readSlice(ZONE_RULES_KEY, null)) as Record<string, { tipRules: { customAmount: boolean; customMax: number } }>;
+  assert.equal(zones["FR-PC"]!.tipRules.customAmount, true, "the zone that was saved reads back ticked");
+  assert.equal(zones["FR-PC"]!.tipRules.customMax, 20);
+  assert.equal(zones["standard-FR"]!.tipRules.customAmount, false);
 });
