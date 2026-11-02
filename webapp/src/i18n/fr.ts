@@ -8442,4 +8442,6 @@ export const fr: Record<MessageKey, string> = {
   "Warning message": "Message d'avertissement",
   "What the person reads when their average falls under the warning line. {average} is their average.": "Ce que la personne lit quand sa moyenne passe sous la limite d'avertissement. {average} est sa moyenne.",
   "Warning message in {0}": "Message d'avertissement en {0}",
+  "Leave ticket": "Laisser le ticket",
+  "You left the ticket. It waits for any admin again.": "Vous avez laissé le ticket. Il attend à nouveau n'importe quel admin.",
 };

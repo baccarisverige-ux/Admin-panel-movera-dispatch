@@ -251,6 +251,7 @@ export function LiveSupport() {
                   </ol>
                   <div className="op-inline wrap" aria-label={tr("Ticket tools")}>
                     <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={busy || solved || ticket.assignedTo?.adminId === admin?.adminId} onClick={() => desk("claim", {}, tr("Claimed. Other admins see that you work on it."))}>{tr("Claim")}</button>
+                    {ticket.assignedTo?.adminId === admin?.adminId && !solved ? <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={busy} onClick={() => desk("leave", {}, tr("You left the ticket. It waits for any admin again."))}>{tr("Leave ticket")}</button> : null}
                     <label className="field">{tr("Hand to")}
                       <select aria-label={tr("Hand to")} value={assignee} onChange={(event) => setAssignee(event.target.value)}>
                         <option value="">{tr("Choose")}</option>

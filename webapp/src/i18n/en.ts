@@ -8440,6 +8440,8 @@ export const en = {
   "Warning message": "Warning message",
   "What the person reads when their average falls under the warning line. {average} is their average.": "What the person reads when their average falls under the warning line. {average} is their average.",
   "Warning message in {0}": "Warning message in {0}",
+  "Leave ticket": "Leave ticket",
+  "You left the ticket. It waits for any admin again.": "You left the ticket. It waits for any admin again.",
 } as const;
 
 export type MessageKey = keyof typeof en;

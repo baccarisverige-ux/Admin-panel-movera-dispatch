@@ -450,12 +450,13 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const country = url.searchParams.get("country") ?? "SE";
       return json(route, 200, state.supportSettings && state.supportSettings["country"] === country ? state.supportSettings : { country, topics: ["ride_dispute", "help", "lost_item", "payment", "account", "safety", "other"].map((code) => ({ code, on: true, firstReplyMin: code === "safety" ? 5 : 60, solveHours: 24 })) });
     }
-    const deskVerb = /^\/api\/v1\/admin\/tickets\/([^/]+)\/(claim|assign|topic|waiting|solve|reopen|case)$/.exec(p);
+    const deskVerb = /^\/api\/v1\/admin\/tickets\/([^/]+)\/(claim|leave|assign|topic|waiting|solve|reopen|case)$/.exec(p);
     if (deskVerb) {
       const item = state.tickets.find((row) => row["ticketId"] === deskVerb[1]);
       if (!item) return json(route, 404, { code: "not_found", message: "No such ticket.", requestId: "r-404k", retryable: false });
       const verb = deskVerb[2];
       if (verb === "claim") item["assignedTo"] = { adminId: ADMIN.adminId, name: ADMIN.name };
+      if (verb === "leave") delete item["assignedTo"];
       if (verb === "assign") { if (body.adminId) item["assignedTo"] = { adminId: body.adminId, name: body.adminId }; else delete item["assignedTo"]; }
       if (verb === "topic") item["category"] = body.category;
       if (verb === "waiting") item["status"] = body.waiting ? "pending" : "open";

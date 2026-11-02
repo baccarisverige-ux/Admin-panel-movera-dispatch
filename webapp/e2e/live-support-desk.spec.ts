@@ -19,6 +19,12 @@ test("support desk: claim, topic, waiting, solve, reopen and safety case go to t
   await ticket.getByRole("button", { name: "Claim" }).click();
   await expect.poll(() => state.calls.some((call) => call.method === "POST" && call.path === "/api/v1/admin/tickets/TK1/claim")).toBe(true);
   await expect(ticket).toContainText(`Works on it: ${ADMIN.name}`);
+  // Owner "Leave ticket": the claiming admin gives it back to the queue, then claims it again.
+  await ticket.getByRole("button", { name: "Leave ticket" }).click();
+  await expect.poll(() => state.calls.some((call) => call.method === "POST" && call.path === "/api/v1/admin/tickets/TK1/leave")).toBe(true);
+  await expect(ticket).toContainText("Nobody works on it yet.");
+  await ticket.getByRole("button", { name: "Claim" }).click();
+  await expect(ticket).toContainText(`Works on it: ${ADMIN.name}`);
   await ticket.getByLabel("Ticket topic").selectOption("payment");
   await expect.poll(() => state.calls.find((call) => call.path === "/api/v1/admin/tickets/TK1/topic")?.body).toEqual({ category: "payment" });
   await ticket.getByRole("button", { name: "Waiting for them" }).click();

@@ -4,7 +4,7 @@ import type { SupportSettings } from "./types.ts";
 /** v0.18.15 support desk helpers for LiveSupport (contract.json#supportDesk). */
 
 /** The desk's command path and body for one button (contract.json#supportDesk.adminCommands). */
-export function deskCall(ticketId: string, verb: "claim" | "assign" | "topic" | "waiting" | "solve" | "reopen" | "case", body: Record<string, unknown> = {}): { path: string; body: Record<string, unknown> } {
+export function deskCall(ticketId: string, verb: "claim" | "leave" | "assign" | "topic" | "waiting" | "solve" | "reopen" | "case", body: Record<string, unknown> = {}): { path: string; body: Record<string, unknown> } {
   return { path: `/admin/tickets/${encodeURIComponent(ticketId)}/${verb}`, body };
 }
 

@@ -8442,4 +8442,6 @@ export const sv: Record<MessageKey, string> = {
   "Warning message": "Varningsmeddelande",
   "What the person reads when their average falls under the warning line. {average} is their average.": "Det personen läser när snittet hamnar under varningsgränsen. {average} är deras snitt.",
   "Warning message in {0}": "Varningsmeddelande på {0}",
+  "Leave ticket": "Lämna ärendet",
+  "You left the ticket. It waits for any admin again.": "Du lämnade ärendet. Det väntar på valfri admin igen.",
 };
