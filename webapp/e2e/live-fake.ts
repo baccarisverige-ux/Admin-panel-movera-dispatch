@@ -259,6 +259,7 @@ export type TripState = {
   riders: Record<string, unknown>[];
   payouts: Record<string, unknown>[];
   tickets: Record<string, unknown>[];
+  supportSettings?: Record<string, unknown>;
   ticketMessages: Record<string, unknown>[];
   ratings: Record<string, unknown>[];
   approvals: (typeof APPROVALS)[number][];
@@ -405,6 +406,26 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, item);
     }
     if (p === "/api/v1/admin/tickets") return json(route, 200, { items: inZones(state.tickets, zoneField).filter((item) => !url.searchParams.get("status") || item["status"] === url.searchParams.get("status")), nextCursor: null });
+    // v0.18.15 support desk (contract.json#supportDesk).
+    if (p === "/api/v1/admin/support/settings") {
+      if (method === "PUT") { state.supportSettings = { ...body, updatedAt: "2026-10-27T10:00:00Z" }; return json(route, 200, state.supportSettings); }
+      const country = url.searchParams.get("country") ?? "SE";
+      return json(route, 200, state.supportSettings && state.supportSettings["country"] === country ? state.supportSettings : { country, claimDays: 3, replyAfterSolved: "reopen", topics: ["ride_dispute", "help", "lost_item", "payment", "account", "safety", "other"].map((code) => ({ code, on: true, firstReplyMin: code === "safety" ? 5 : 60, solveHours: 24 })) });
+    }
+    const deskVerb = /^\/api\/v1\/admin\/tickets\/([^/]+)\/(claim|assign|topic|waiting|solve|reopen|case)$/.exec(p);
+    if (deskVerb) {
+      const item = state.tickets.find((row) => row["ticketId"] === deskVerb[1]);
+      if (!item) return json(route, 404, { code: "not_found", message: "No such ticket.", requestId: "r-404k", retryable: false });
+      const verb = deskVerb[2];
+      if (verb === "claim") item["assignedTo"] = { adminId: ADMIN.adminId, name: ADMIN.name };
+      if (verb === "assign") { if (body.adminId) item["assignedTo"] = { adminId: body.adminId, name: body.adminId }; else delete item["assignedTo"]; }
+      if (verb === "topic") item["category"] = body.category;
+      if (verb === "waiting") item["status"] = body.waiting ? "pending" : "open";
+      if (verb === "solve") item["status"] = "resolved";
+      if (verb === "reopen") item["status"] = "open";
+      if (verb === "case") item["incidentId"] = "inc_CASE1";
+      return json(route, 200, { ...item, messages: state.ticketMessages });
+    }
     const ticket = /^\/api\/v1\/admin\/tickets\/([^/]+)(\/reply)?$/.exec(p);
     if (ticket) {
       const item = state.tickets.find((row) => row["ticketId"] === ticket[1]);
