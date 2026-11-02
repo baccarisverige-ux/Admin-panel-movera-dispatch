@@ -30,7 +30,8 @@ export function DispatchSectionPage() {
   // The zone and country ride along between tabs, so switching keeps the same place.
   const params = new URLSearchParams(location.search);
   const keep = new URLSearchParams();
-  for (const key of ["country", "zone"]) {
+  // Live sweep 2026-11-02 M1: the header zone (scope) rides along too; opening Rules no longer resets it to All zones.
+  for (const key of ["country", "scope", "zone"]) {
     const value = params.get(key);
     if (value) keep.set(key, value);
   }

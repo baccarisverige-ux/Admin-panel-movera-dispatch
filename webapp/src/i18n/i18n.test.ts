@@ -252,3 +252,22 @@ test("G7 live fix 3: Dispatch publish line, the cancel-fee car type and the trip
   setLanguage("en");
   assert.equal(tr("Live now: {0}.", ["Norrmalm"]), "Live now: Norrmalm.");
 });
+
+test("live G8 round 3 item 3: the unsaved tip-rules line is in the admin's language", async () => {
+  const { countrySettingsLines, defaultCountrySettings } = await import("../config/countrySettings.ts");
+  const before = defaultCountrySettings("SE");
+  const after = { ...before, tipRules: { ...before.tipRules, customAmount: true, customMax: 20 } };
+  try {
+    setLanguage("sv");
+    assert.ok(countrySettingsLines("SE", before, after).includes("Regler för dricks: kontant efter resan av, eget belopp på (max 20)"));
+    setLanguage("fr");
+    assert.ok(countrySettingsLines("SE", before, after).includes("Règles du pourboire : espèces après la course désactivé, montant saisi activé (max 20)"));
+  } finally {
+    setLanguage("en");
+  }
+  assert.ok(countrySettingsLines("SE", before, after).includes("Tip rules: cash after the trip off, typed amount on (max 20)"));
+});
+
+test("live G8 round 3 item 5: the French cancel table names the mode Exclusif, as everywhere else", () => {
+  assert.match(fr["Booked now (Radar, Exclusive): free for a few minutes after the driver accepts, then the fee."], /\(Radar, Exclusif\)/);
+});

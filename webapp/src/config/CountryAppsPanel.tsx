@@ -127,8 +127,8 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
           sliceKey={COUNTRY_SETTINGS_KEY}
           value={{ ...shown, draftRev: book.draftRev + 1 }}
           expectedSliceRev={book.draftRev}
-          disabled={!editable || !dirty || issues.length > 0}
-          title={!editable ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : issues[0]}
+          disabled={!editable || loading || !dirty || issues.length > 0}
+          title={!editable ? tr("Your role cannot change this.") : loading ? tr("Loading…") : !dirty ? tr("No unsaved change.") : issues[0]}
           onDone={() => { setDraft(null); setNotice(tr("Payment methods and languages saved. The apps get them with the next app config.")); }}
         >{tr("Save payment methods and languages")}</CommandButton>
         <button data-command="admin.card.action" type="button" className="secondary-btn" disabled={!draft} onClick={() => setDraft(null)}>{tr("Discard")}</button>
