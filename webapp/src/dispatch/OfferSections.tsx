@@ -1,11 +1,70 @@
 import { Link } from "react-router";
-import { Car, Layers, Power, Radar, Route, Smartphone, Target } from "lucide-react";
+import { Car, Layers, ListOrdered, Plus, Power, Radar, Route, Smartphone, Target, Trash2 } from "lucide-react";
 import { Card, Choice, Num, Row, Switch } from "./fields";
 import { autoOfflineText } from "./offerRules";
-import type { ZoneDispatch } from "./rules";
+import type { OfferMode, StartMode, ZoneDispatch } from "./rules";
 import { tr, trn } from "../i18n";
 
 type Props = { zone: ZoneDispatch; onChange: (next: ZoneDispatch) => void; disabled: boolean; zoneId: string };
+
+/**
+ * v0.18.9 (owner 2026-11-01, rule 16): what goes out first in this zone (DispatchDocument.start). A time rule and a
+ * forced mode (Live) still win. Shown at the top of the Radar and the Exclusive tab.
+ */
+export function StartOrderCard({ zone, onChange, disabled, zoneId }: Props) {
+  const start = zone.start;
+  const setStart = (patch: Partial<ZoneDispatch["start"]>) => onChange({ ...zone, start: { ...start, ...patch } });
+  const options: { id: StartMode; label: string; hint?: string }[] = [
+    { id: "auto", label: tr("As Which mode runs"), hint: tr("By how busy the zone is, or the main mode you chose (as before).") },
+    { id: "exclusive", label: tr("Exclusive first") },
+    { id: "radar", label: tr("Radar first") },
+    { id: "byDistance", label: tr("By distance"), hint: tr("Exclusive first when the nearest driver is close, else Radar first.") },
+    { id: "both", label: tr("Both at the same time"), hint: tr("Exclusive to the best driver and Radar to the next drivers at once. The first to accept gets it; the other offers are withdrawn. A Radar driver of that first round can still get an Exclusive later.") },
+  ];
+  return (
+    <Card title={tr("Start & order")} tone="green" icon={<ListOrdered size={18} />} help={tr("Which offer goes out first when a ride is booked in this zone. A time rule and a mode forced in Live still win.")}>
+      <Row label={tr("What starts first")}>
+        <Choice label={tr("What starts first")} value={start.mode} disabled={disabled} onChange={(mode) => setStart({ mode })} options={options} />
+      </Row>
+      {start.mode === "byDistance" ? (
+        <Row label={tr("Exclusive first when the nearest driver is within")} help={tr("Farther away: Radar first.")}>
+          <Num label={tr("Exclusive first within")} value={start.nearKm} unit="km" step={0.5} min={0.5} max={50} disabled={disabled} onChange={(nearKm) => setStart({ nearKm })} />
+        </Row>
+      ) : null}
+      <p className="dx-note">{trn("{0} After the first offer each mode follows its own If nobody accepts. Busy level and time rules are in {1}.", <ListOrdered size={13} aria-hidden="true" />, <Link to={`/dispatch?zone=${zoneId}&card=Which+mode+runs`}>{tr("Dispatch › Modes")}</Link>)}</p>
+    </Card>
+  );
+}
+
+/** v0.18.9: a mode's own distance steps, or the shared search distance (Best driver) when "Same as search distance" is on. */
+function ModeSteps({ zone, onChange, disabled, mode }: Props & { mode: OfferMode }) {
+  const own = zone[mode].steps;
+  const shared = zone.radius.steps;
+  const same = !own;
+  const setSteps = (steps: number[] | undefined) => {
+    const next = { ...zone[mode] };
+    if (steps) next.steps = steps;
+    else delete next.steps;
+    onChange({ ...zone, [mode]: next });
+  };
+  const steps = own ?? shared;
+  return (
+    <Row label={tr("Distance steps")} help={same ? tr("Same as the search distance in Best driver: {0} km.", [shared.join(" → ")]) : tr("Own steps for this mode. The search grows one step at a time. Radar and Exclusive may have a different number of steps: the shorter list stays at its widest step.")}>
+      <Switch label={tr("Same as search distance")} on={same} disabled={disabled} onChange={(on) => setSteps(on ? undefined : [...shared])} />
+      {same ? null : (
+        <div className="dx-steps" role="group" aria-label={tr("{0} distance steps", [tr(mode === "radar" ? "Radar" : "Exclusive")])}>
+          {steps.map((km, index) => (
+            <span key={index} className="dx-step">
+              <Num label={tr("{0} step {1}", [tr(mode === "radar" ? "Radar" : "Exclusive"), index + 1])} value={km} unit="km" step={0.5} min={0.5} max={50} disabled={disabled} onChange={(next) => setSteps(steps.map((item, at) => (at === index ? next : item)))} />
+              {steps.length > 1 ? <button data-command="admin.dispatch.edit" type="button" className="icon-ghost" aria-label={tr("Remove step {0}", [index + 1])} disabled={disabled} onClick={() => setSteps(steps.filter((_, at) => at !== index))}><Trash2 size={13} aria-hidden="true" /></button> : null}
+            </span>
+          ))}
+          {steps.length < 5 ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled} onClick={() => setSteps([...steps, Math.min(50, (steps[steps.length - 1] ?? 1) + 2)])}>{trn("{0} Add a step", <Plus size={13} aria-hidden="true" />)}</button> : null}
+        </div>
+      )}
+    </Row>
+  );
+}
 
 /** Radar · Exclusive · Reservations › Radar: the zone's Radar rules and what the driver app shows. */
 export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
@@ -15,6 +74,7 @@ export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
   const off = disabled || !zone.radar.on;
   return (
     <>
+      <StartOrderCard zone={zone} onChange={onChange} disabled={disabled} zoneId={zoneId} />
       <Card title={tr("Radar")} tone="purple" icon={<Radar size={18} />} help={tr("One request is shown to several nearby drivers at once. The first to accept gets it.")} off={!zone.radar.on} aside={<Switch label={tr("Radar")} on={zone.radar.on} disabled={disabled} onChange={(on) => set({ radar: { ...zone.radar, on } })} />}>
         <Row label={tr("Drivers who see it")} help={tr("The nearest suitable drivers, all at the same time.")}>
           <Num label={tr("Radar drivers")} value={zone.radar.drivers} unit="drivers" min={1} max={30} disabled={off} onChange={(drivers) => set({ radar: { ...zone.radar, drivers } })} />
@@ -26,6 +86,7 @@ export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
         <Row label={tr("If nobody accepts")}>
           <Choice label={tr("After Radar")} value={zone.radar.then} disabled={off} onChange={(then) => set({ radar: { ...zone.radar, then } })} options={[{ id: "widen", label: tr("Wider area") }, { id: "exclusive", label: tr("Exclusive") }, { id: "widen_then_exclusive", label: tr("Wider area, then Exclusive") }]} />
         </Row>
+        <ModeSteps zone={zone} onChange={onChange} disabled={off} zoneId={zoneId} mode="radar" />
         <p className="dx-note">{trn("{0} Wider area: the search distance steps in {1}. Which mode runs, by time or how busy, is in {2}.", <Layers size={13} aria-hidden="true" />, <Link to={`/dispatch?tab=best&zone=${zoneId}&card=Search+distance`}>{tr("Dispatch › Best driver")}</Link>, <Link to={`/dispatch?zone=${zoneId}&card=Which+mode+runs`}>{tr("Dispatch › Modes")}</Link>)}</p>
       </Card>
 
@@ -76,6 +137,7 @@ export function ExclusiveRules({ zone, onChange, disabled, zoneId }: Props) {
   const off = disabled || !zone.exclusive.on;
   return (
     <>
+      <StartOrderCard zone={zone} onChange={onChange} disabled={disabled} zoneId={zoneId} />
       <Card title={tr("Exclusive")} tone="blue" icon={<Target size={18} />} help={tr("One request goes to one driver at a time, the best first.")} off={!zone.exclusive.on} aside={<Switch label={tr("Exclusive")} on={zone.exclusive.on} disabled={disabled} onChange={(on) => set({ exclusive: { ...zone.exclusive, on } })} />}>
         <Row label={tr("Time to accept")} help={tr("Each driver has this long to say yes.")}>
           <Num label={tr("Exclusive time")} value={zone.exclusive.seconds} unit="s" min={5} max={60} disabled={off} onChange={(seconds) => set({ exclusive: { ...zone.exclusive, seconds } })} />
@@ -87,6 +149,7 @@ export function ExclusiveRules({ zone, onChange, disabled, zoneId }: Props) {
         <Row label={tr("If all say no")}>
           <Choice label={tr("After Exclusive")} value={zone.exclusive.then} disabled={off} onChange={(then) => set({ exclusive: { ...zone.exclusive, then } })} options={[{ id: "radar", label: tr("Radar") }, { id: "widen", label: tr("Wider area") }, { id: "widen_then_radar", label: tr("Wider area, then Radar") }]} />
         </Row>
+        <ModeSteps zone={zone} onChange={onChange} disabled={off} zoneId={zoneId} mode="exclusive" />
         <Row label={tr("Exclusive while driving")} help={tr("Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no offers while driving a rider.")} on={zone.exclusiveWhileDriving.on} disabled={off} onToggle={(on) => set({ exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, on } })}>
           <Num label={tr("Exclusive offers while driving")} before="up to" value={zone.exclusiveWhileDriving.count} unit="at a time" min={1} max={5} disabled={off} onChange={(count) => set({ exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, count } })} />
         </Row>

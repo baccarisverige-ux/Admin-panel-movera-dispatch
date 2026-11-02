@@ -37,6 +37,7 @@ export function completeEarlyEnd(stored: unknown): EarlyEnd {
 export const DISPATCH_KEY = "dispatchRules";
 
 export type OfferMode = "radar" | "exclusive";
+export type StartMode = "auto" | "radar" | "exclusive" | "both" | "byDistance";
 export type FactorId = "eta" | "rating" | "acceptance" | "cancel" | "idle" | "finishing" | "favourite";
 export type ExtraId = "child_seat" | "pet" | "wheelchair" | "luggage" | "long_trip";
 export type WaitKind = "raise_price" | "upgrade" | "alert_admin" | "keep_waiting" | "busy";
@@ -313,8 +314,19 @@ export type ZoneDispatch = {
   /** Live test 2026-11-01: seconds the loaded document held as 0 or missing, set to the contract default on load (not published). */
   secondsDefaulted?: ("radar" | "exclusive")[];
   zoneId: string;
-  radar: { on: boolean; drivers: number; seconds: number; then: "widen" | "exclusive" | "widen_then_exclusive" };
-  exclusive: { on: boolean; seconds: number; drivers: number; then: "radar" | "widen" | "widen_then_radar" };
+  /** v0.18.9 (owner 2026-11-01, rule 16): steps = the mode's own search distance steps; missing = the shared search distance. */
+  radar: { on: boolean; drivers: number; seconds: number; then: "widen" | "exclusive" | "widen_then_exclusive"; steps?: number[] };
+  exclusive: { on: boolean; seconds: number; drivers: number; then: "radar" | "widen" | "widen_then_radar"; steps?: number[] };
+  /**
+   * v0.18.9 (owner 2026-11-01 "choose which starts first", DispatchDocument.start): auto = Which mode runs decides (as before);
+   * radar / exclusive = that mode first; byDistance = Exclusive first when the nearest not-yet-asked driver (smallest km, not the best score) is within nearKm, else Radar;
+   * both = Exclusive to the best driver and Radar to the next ones at the same time.
+   */
+  start: { mode: StartMode; nearKm: number };
+  /** v0.18.9: farthest pickup in km (0 = the widest search step) and longest pickup time in min (0 = off). */
+  limits: { maxPickupKm: number; maxPickupEtaMin: number };
+  /** v0.18.9: drivers of these zones also get offers from search step afterStep (0 = the last step). */
+  neighbours: { on: boolean; zoneIds: string[]; afterStep: number };
   /**
    * How many Radar offers a driver sees at once, one setting per screen. The full-screen list (full) and the offer cards
    * over the map (popup) are independent. fullLockWhileDriving: the list cannot be opened while the car is moving.
@@ -344,7 +356,8 @@ export type ZoneDispatch = {
   /** Q19/Q20: waiting at pickup. The free wait, price per minute and no-show fee per category come from Pricing. */
   pickupWait: PickupWait;
   reservation: ReservationRules;
-  choose: { how: "auto" | "manual"; radarAbove: number; main: OfferMode; backup: OfferMode | "none"; times: TimeRule[] };
+  /** backup: deprecated (v0.18.9), never used by the server; no longer shown. Kept so older saves and documents still read. */
+  choose: { how: "auto" | "manual"; radarAbove: number; main: OfferMode; backup?: OfferMode | "none"; times: TimeRule[] };
   rulesFrom: "driver" | "pickup";
   factors: Factor[];
   radius: { steps: number[]; maxWaitMin: number };
@@ -567,6 +580,9 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     },
     choose: { how: "auto", radarAbove: 1.5, main: "exclusive", backup: "radar", times: [{ id: "t1", on: false, from: "22:00", to: "04:00", mode: "radar" }] },
     rulesFrom: "driver",
+    start: { mode: "auto", nearKm: 2 },
+    limits: { maxPickupKm: 0, maxPickupEtaMin: 0 },
+    neighbours: { on: false, zoneIds: [], afterStep: 0 },
     factors: [
       { id: "eta", on: true, weight: 40 },
       { id: "rating", on: true, weight: 15 },
@@ -665,12 +681,12 @@ function presetValues(change: (zone: ZoneDispatch) => void): Omit<ZoneDispatch, 
 
 export const BUILT_IN_PRESETS: Preset[] = [
   { id: "busy", name: "Busy city", note: "Radar first, more drivers see each request, smart waiting on.", builtIn: true, values: presetValues((zone) => {
-    zone.choose = { ...zone.choose, how: "manual", main: "radar", backup: "exclusive" };
+    zone.choose = { ...zone.choose, how: "manual", main: "radar" };
     zone.radar = { ...zone.radar, drivers: 8, seconds: 12 };
     zone.batching = { on: true, seconds: 3, fromRatio: 1.5 };
   }) },
   { id: "calm", name: "Calm suburb", note: "Exclusive first, wider search, longer time to accept.", builtIn: true, values: presetValues((zone) => {
-    zone.choose = { ...zone.choose, how: "manual", main: "exclusive", backup: "radar" };
+    zone.choose = { ...zone.choose, how: "manual", main: "exclusive" };
     zone.exclusive = { ...zone.exclusive, seconds: 20, drivers: 4 };
     zone.radius = { steps: [4, 7, 12], maxWaitMin: 12 };
   }) },
@@ -680,7 +696,7 @@ export const BUILT_IN_PRESETS: Preset[] = [
     zone.radius = { steps: [3, 6, 10], maxWaitMin: 10 };
   }) },
   { id: "night", name: "Night", note: "Radar with a wider area, safety checks stricter.", builtIn: true, values: presetValues((zone) => {
-    zone.choose = { ...zone.choose, how: "manual", main: "radar", backup: "exclusive" };
+    zone.choose = { ...zone.choose, how: "manual", main: "radar" };
     zone.radius = { steps: [4, 8, 12], maxWaitMin: 12 };
     zone.safety = { ...zone.safety, ratingBelow: 4.5 };
   }) },
@@ -893,7 +909,18 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   issues.push(...pickupWaitIssues(zone.pickupWait, countryOfZone(zone.zoneId)));
   if (zone.exclusive.on && (zone.exclusive.drivers < 1 || zone.exclusive.drivers > 10)) issues.push("Exclusive: drivers to try must be 1 to 10.");
   if (zone.choose.how === "manual" && !zone[zone.choose.main].on) issues.push(`The main mode (${modeLabel(zone.choose.main)}) is off. Switch it on or pick the other mode.`);
-  if (zone.choose.how === "manual" && zone.choose.backup !== "none" && zone.choose.backup === zone.choose.main) issues.push("The backup mode must be different from the main mode.");
+  if ((zone.start.mode === "both" || zone.start.mode === "byDistance") && (!zone.radar.on || !zone.exclusive.on)) issues.push("Start & order: both at once and by distance need Radar and Exclusive on.");
+  if ((zone.start.mode === "radar" || zone.start.mode === "exclusive") && !zone[zone.start.mode].on) issues.push("Start & order: the mode that starts first is off. Switch it on or choose another start.");
+  if (zone.start.mode === "byDistance" && (!(zone.start.nearKm > 0) || zone.start.nearKm > 50)) issues.push("Start & order: the distance for Exclusive first must be above 0 and at most 50 km.");
+  for (const mode of ["radar", "exclusive"] as const) {
+    const own = zone[mode].steps;
+    if (!own) continue;
+    if (!own.length || own.length > 5 || own.some((km) => km <= 0 || km > 50)) issues.push("Own distance steps: 1 to 5 steps, each above 0 and at most 50 km.");
+    if (own.some((km, index) => index > 0 && km <= own[index - 1]!)) issues.push("Own distance steps: each step must be larger than the one before.");
+  }
+  if (zone.limits.maxPickupKm < 0 || zone.limits.maxPickupKm > 50) issues.push("Pickup limits: the farthest pickup must be 0 to 50 km (0 = the widest search step).");
+  if (zone.limits.maxPickupEtaMin < 0 || zone.limits.maxPickupEtaMin > 60) issues.push("Pickup limits: the longest pickup time must be 0 to 60 minutes (0 = off).");
+  if (zone.neighbours.on && zone.neighbours.zoneIds.length === 0) issues.push("Neighbour zones: choose at least one zone or switch it off.");
   if (zone.choose.how === "auto" && (!zone.radar.on || !zone.exclusive.on)) issues.push("Automatic choice needs both Radar and Exclusive on. Switch both on or choose by hand.");
   if (zone.choose.how === "auto" && (zone.choose.radarAbove <= 0 || zone.choose.radarAbove > 10)) issues.push("Automatic choice: the busy level must be above 0 and at most 10.");
   for (const rule of zone.choose.times.filter((item) => item.on)) {
@@ -1125,7 +1152,7 @@ const LABELS: Record<string, string> = {
   "reservation.listAreaTrips": "Trips from the area", "reservation.listOpenAll": "Open to all drivers", "reservation.listOpenAllAfterMin": "Open to all drivers after",
   "reservation.homePopup": "Reservation Home popup", "reservation.homePopupAfterMin": "Home popup after booking",
   "reservation.toRadar": "Reservation to Radar trips", "reservation.radarBeforeMin": "Radar trips before pickup", "reservation.onDriverCancel": "After a driver cancels",
-  "choose.how": "How the mode is chosen", "choose.radarAbove": "Busy level for Radar", "choose.main": "Main mode", "choose.backup": "Backup mode", "choose.times": "Time rules",
+  "choose.how": "How the mode is chosen", "choose.radarAbove": "Busy level for Radar", "choose.main": "Main mode", "start.mode": "Start & order", "start.nearKm": "Exclusive first within", "limits.maxPickupKm": "Farthest pickup", "limits.maxPickupEtaMin": "Longest pickup time", "neighbours.on": "Neighbour zones", "choose.times": "Time rules",
   rulesFrom: "Whose rules", "radius.steps": "Search distance steps", "radius.maxWaitMin": "Longest search",
   "batching.on": "Smart waiting", "batching.seconds": "Smart waiting seconds", "batching.fromRatio": "Smart waiting from busy level",
   "finishing.radar": "Finishing nearby on Radar", "finishing.exclusive": "Finishing nearby on Exclusive", "finishing.withinMin": "Finishing within minutes", "finishing.withinKm": "Finishing within km",
@@ -1608,16 +1635,20 @@ export function simulate(zone: ZoneDispatch, ranked: readonly Ranked[], start: O
   const asked = new Set<string>();
   const switched = new Set<OfferMode>();
   let guard = 0;
+  const stepCount = Math.max(zone.radius.steps.length, (zone.radar.steps ?? zone.radius.steps).length, (zone.exclusive.steps ?? zone.radius.steps).length);
+  const kmAt = (m: OfferMode, at: number) => { const list = zone[m].steps ?? zone.radius.steps; return list[Math.min(at, list.length - 1)]!; };
   while (t < limit && guard < 40) {
     guard += 1;
-    const km = zone.radius.steps[ring] ?? zone.radius.steps[zone.radius.steps.length - 1];
+    // v0.18.9: each mode uses its own steps (missing = the search distance); the step index is shared and a shorter
+    // list keeps its widest value (contract.json#dispatch.modeSteps).
+    const km = kmAt(mode, ring);
     // A driver with a rider gets Exclusive offers only, when Exclusive while driving is on (Q18). Never Radar.
     const inRing = able.filter((row) => row.km <= km && (!row.driver.finishing || (mode === "exclusive" && zone.finishing.exclusive && zone.exclusiveWhileDriving.on)));
     if (mode === "radar") {
       const shown = inRing.slice(0, zone.radar.drivers);
       steps.push({ atSec: t, who: "driver", title: `Radar, ${km} km`, detail: shown.length ? `Shown to ${shown.length} driver${shown.length === 1 ? "" : "s"} at once for ${zone.radar.seconds} s: ${shown.map((row) => row.driver.name).join(", ")}.` : `No driver within ${km} km.` });
       t += zone.radar.seconds;
-      const wider = ring < zone.radius.steps.length - 1;
+      const wider = ring < stepCount - 1;
       if ((zone.radar.then === "widen" || zone.radar.then === "widen_then_exclusive") && wider) ring += 1;
       else if ((zone.radar.then === "exclusive" || zone.radar.then === "widen_then_exclusive") && zone.exclusive.on && !switched.has("exclusive")) { switched.add("exclusive"); mode = "exclusive"; tried = 0; steps.push({ atSec: t, who: "system", title: "Switch to Exclusive", detail: "Nobody accepted on the radar." }); }
       else if (wider) ring += 1;
@@ -1631,8 +1662,8 @@ export function simulate(zone: ZoneDispatch, ranked: readonly Ranked[], start: O
         tried += 1;
         continue;
       }
-      const wider = ring < zone.radius.steps.length - 1;
-      if ((zone.exclusive.then === "widen" || zone.exclusive.then === "widen_then_radar") && wider) { ring += 1; tried = 0; steps.push({ atSec: t, who: "system", title: "Wider search", detail: `Now up to ${zone.radius.steps[ring]} km.${able.some((row) => row.km <= zone.radius.steps[ring] && !asked.has(row.driver.id)) ? "" : " No new driver in the wider area."}` }); }
+      const wider = ring < stepCount - 1;
+      if ((zone.exclusive.then === "widen" || zone.exclusive.then === "widen_then_radar") && wider) { ring += 1; tried = 0; steps.push({ atSec: t, who: "system", title: "Wider search", detail: `Now up to ${kmAt("exclusive", ring)} km.${able.some((row) => row.km <= kmAt("exclusive", ring) && !asked.has(row.driver.id)) ? "" : " No new driver in the wider area."}` }); }
       else if ((zone.exclusive.then === "radar" || zone.exclusive.then === "widen_then_radar") && zone.radar.on && !switched.has("radar")) { switched.add("radar"); mode = "radar"; steps.push({ atSec: t, who: "system", title: "Switch to Radar", detail: `${asked.size ? `${asked.size} driver${asked.size === 1 ? "" : "s"} said no.` : "No driver to try."} Many drivers see it now.` }); }
       else if (wider) { ring += 1; tried = 0; }
       else break;

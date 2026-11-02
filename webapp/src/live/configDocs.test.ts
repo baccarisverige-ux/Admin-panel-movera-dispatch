@@ -79,7 +79,8 @@ test("the Standard of a country is a scope of its own, in the country's money", 
 test("DispatchDocument from the zone's rules, the same keys as the contract sample, and back", () => {
   const zone = zoneDefault("Z001");
   const doc = dispatchDocumentOf(zone, "Z001", null);
-  assert.deepEqual(Object.keys(doc).sort(), Object.keys(sample("dispatch_document")).sort());
+  // v0.18.9: start, limits and neighbours are optional contract fields the sample (written before them) leaves out.
+  assert.deepEqual(Object.keys(doc).sort(), [...Object.keys(sample("dispatch_document")), "start", "limits", "neighbours"].sort());
   const back = rulesOfDispatch(doc, { offers: { autoOffline: { on: true, missedExclusive: 10 } }, cancelFees: { driverSharePct: 60 } }, zoneDefault("Z001"));
   assert.equal(back.autoOffline.after, 10);
   assert.equal(back.autoOffline.noFixMinutes, 5, "G3-R1: without the key the default 5 minutes stays");
@@ -453,6 +454,32 @@ test("v0.18.9 (G7): ride check, route change and max stops are read from the dri
   assert.deepEqual([bad.rideCheck.stopMinutes, bad.rideCheck.endFarMeters, bad.stops.answerSeconds, bad.stops.fixedPriceTrips], [2, 500, 60, "block"]);
   const next = withOwned({}, { rideCheck: { on: true }, routeChange: { on: true } }, OWNED.dispatch.driver);
   assert.deepEqual([next["rideCheck"], next["routeChange"]], [{ on: true }, { on: true }]);
+});
+
+test("v0.18.11 dispatch start & order: defaults keep today's behaviour; start, own steps, limits and neighbours publish and read back (SE + FR)", () => {
+  for (const zoneId of ["Z001", "FR-PC"]) {
+    const base = zoneDefault(zoneId);
+    const plain = dispatchDocumentOf(base, zoneId, null) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- test reads the document
+    assert.deepEqual(plain.start, { mode: "auto", nearKm: 2 });
+    assert.deepEqual(plain.limits, { maxPickupEtaMin: 0 });
+    assert.deepEqual(plain.neighbours, { on: false, zoneIds: [] });
+    assert.equal(plain.radar.steps, undefined);
+    assert.equal(plain.exclusive.steps, undefined);
+    const zone = { ...base, start: { mode: "both" as const, nearKm: 1.5 }, exclusive: { ...base.exclusive, steps: [1, 2] }, limits: { maxPickupKm: 6, maxPickupEtaMin: 12 }, neighbours: { on: true, zoneIds: ["Z002"], afterStep: 2 } };
+    const doc = dispatchDocumentOf(zone, zoneId, null);
+    const back = rulesOfDispatch(doc, null, zoneDefault(zoneId));
+    assert.deepEqual(back.start, zone.start);
+    assert.deepEqual(back.exclusive.steps, [1, 2]);
+    assert.equal(back.radar.steps, undefined);
+    assert.deepEqual(back.limits, zone.limits);
+    assert.deepEqual(back.neighbours, zone.neighbours);
+    // A document from before v0.18.9 (no start / limits / neighbours) reads as today's behaviour.
+    const old = sample("dispatch_document");
+    const read = rulesOfDispatch(old, null, zoneDefault(zoneId));
+    assert.deepEqual(read.start, { mode: "auto", nearKm: 2 });
+    assert.deepEqual(read.limits, { maxPickupKm: 0, maxPickupEtaMin: 0 });
+    assert.equal(read.neighbours.on, false);
+  }
 });
 
 test("G7 live fix 2: a slow server's unreadable live document never skips the publish (it said Published, drivers did not get it)", async () => {
