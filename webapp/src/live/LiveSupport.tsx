@@ -41,8 +41,7 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
   const { client, can } = useLiveSession();
   const queryClient = useQueryClient();
   const saved = useQuery({ queryKey: ["live", "supportSettings", country], queryFn: () => client.json<SupportSettings>(`/admin/support/settings?country=${country}`) });
-  // Owner "Yes, by topic": the admins of this country to send a topic's new tickets to.
-  const people = useQuery({ queryKey: ["live", "countryPeople", country], queryFn: () => client.json<{ people: { adminId: string; name: string }[] }>(`/admin/alerts/book?country=${country}`) });
+
   const [draft, setDraft] = useState<SupportSettings | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -90,7 +89,7 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
                 <td>
                   <select aria-label={tr("{0} goes to", [categoryLabel(t.code)])} value={t.assignTo ?? ""} onChange={(event) => setTopic(t.code, { assignTo: event.target.value || undefined })}>
                     <option value="">{tr("Nobody")}</option>
-                    {(people.data?.people ?? []).map((p) => <option key={p.adminId} value={p.adminId}>{p.name}</option>)}
+                    {(saved.data?.agents ?? []).map((p) => <option key={p.adminId} value={p.adminId}>{p.name}</option>)}
                   </select>
                 </td>
               </tr>

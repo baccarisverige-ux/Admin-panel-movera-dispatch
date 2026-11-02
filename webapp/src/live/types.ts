@@ -320,7 +320,9 @@ export type SupportTicket = { ticketId: string; tripId?: string; openedBy: "ride
 export type SupportTopicSetting = { code: string; on: boolean; firstReplyMin: number; solveHours: number; assignTo?: string | undefined };
 /** v0.18.15 (owner "Yes"): a ready reply in one language. */
 export type ReadyReply = { id: string; lang: "sv" | "fr" | "en"; title: string; text: string };
-export type SupportSettings = { country: "SE" | "FR" | "TN"; rev?: number; replies?: ReadyReply[]; topics: SupportTopicSetting[]; updatedAt?: string; updatedBy?: string };
+export type SupportSettings = { country: "SE" | "FR" | "TN"; rev?: number;
+  /** Read only (checker LOW): the admins a topic may send its tickets to. */
+  agents?: { adminId: string; name: string }[]; replies?: ReadyReply[]; topics: SupportTopicSetting[]; updatedAt?: string; updatedBy?: string };
 
 /** GET /admin/risk/signals (RiskPerson, contract v0.9.0). */
 export type RiskSignal = { value: number; count: number; total?: number };
