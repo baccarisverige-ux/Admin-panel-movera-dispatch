@@ -439,7 +439,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       }
       const mute = /^\/api\/v1\/admin\/alerts\/mutes\/([^/]+)$/.exec(p);
       if (mute) { if (method === "DELETE") delete book.mutes[mute[1]!]; else book.mutes[mute[1]!] = { until: "2099-01-01T00:00:00Z", by: ADMIN.adminId }; }
-      if (p === "/api/v1/admin/alerts/quiet") book.quiet = body;
+      if (p.startsWith("/api/v1/admin/alerts/quiet")) book.quiet = body;
       if (p === "/api/v1/admin/alerts/settings") { book.settings = body.settings; book.rev += 1; }
       if (p === "/api/v1/admin/alerts/rules") { book.rules = body.rules; book.rev += 1; }
       return json(route, 200, book);

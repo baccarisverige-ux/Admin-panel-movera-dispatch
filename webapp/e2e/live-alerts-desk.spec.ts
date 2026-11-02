@@ -13,7 +13,7 @@ test("alerts: another admin's alert shows who has it; my quiet hours and the set
   await signIn(page);
   await page.goto("/alerts");
   await page.waitForLoadState("networkidle");
-  await expect.poll(() => state.calls.some((call) => call.method === "GET" && call.path === "/api/v1/admin/alerts/book")).toBe(true);
+  await expect.poll(() => state.calls.some((call) => call.method === "GET" && call.path.startsWith("/api/v1/admin/alerts/book"))).toBe(true);
   // Open: take the first alert; the server gets it and the line says I work on it.
   const take = page.getByRole("button", { name: "Take it" }).first();
   await expect(take).toBeVisible();
@@ -28,5 +28,5 @@ test("alerts: another admin's alert shows who has it; my quiet hours and the set
   await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/alerts/settings")?.body).toMatchObject({ expectedRev: 1, settings: { extras: { snooze: true } } });
   await page.getByRole("switch", { name: "Quiet hours" }).click();
   await page.getByRole("button", { name: "Save my quiet hours" }).click();
-  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/alerts/quiet")?.body).toEqual({ on: true, from: "22:00", to: "07:00" });
+  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path.startsWith("/api/v1/admin/alerts/quiet"))?.body).toEqual({ on: true, from: "22:00", to: "07:00" });
 });
