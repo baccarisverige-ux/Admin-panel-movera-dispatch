@@ -19,7 +19,8 @@ test("trips list: the demo list shows the server trips, search in the page, open
   await page.getByRole("link", { name: "Trips", exact: true }).click();
   await expect(page.getByRole("heading", { level: 2, name: "Trips" })).toBeVisible();
   await expect(page.getByTestId("demo-banner")).toHaveCount(0);
-  await expect(page.getByTestId("not-connected")).toBeVisible();
+  // Live clean-up 1: Trips is mostly live, so no header badge.
+  await expect(page.getByTestId("not-connected")).toHaveCount(0);
   for (const id of ["T2001", "T2002"]) await expect(page.getByRole("cell", { name: id, exact: true })).toBeVisible();
   const row = page.getByRole("row").filter({ hasText: "T2001" });
   // The rider's first name from GET /admin/riders, not the id.
@@ -172,7 +173,7 @@ for (const [language, trips, marker] of [
     await page.goto("/trips");
     await expect(page.getByRole("heading", { level: 2, name: trips })).toBeVisible();
     await expect(page.getByRole("cell", { name: "T2001", exact: true })).toBeVisible();
-    await page.goto("/payments");
+    await page.goto("/handover");
     await expect(page.getByTestId("not-connected")).toHaveText(marker);
   });
 }

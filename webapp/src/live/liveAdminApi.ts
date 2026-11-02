@@ -44,13 +44,13 @@ export const NOT_CONNECTED = "Not connected yet.";
 
 /**
  * The live stand-in for a settings book the server does not keep yet: the demo default with every list emptied, so no
- * demo record (bonuses, vouchers, promotions, campaigns…) shows on live, and every `on` switch off (nothing the server
- * does not run is "on"). Other plain values keep their defaults.
+ * demo record (bonuses, vouchers, promotions, campaigns…) shows on live. Plain settings values (switches, limits) keep
+ * their defaults, since pages such as Alerts work them out from the server's data.
  */
 export function liveEmptyBook<T>(fallback: T): T {
   const strip = (value: unknown): unknown => {
     if (Array.isArray(value)) return [];
-    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, key === "on" && item === true ? false : strip(item)]));
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, strip(item)]));
     return value;
   };
   return strip(fallback) as T;
