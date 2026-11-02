@@ -61,7 +61,8 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
     setError(null);
     try {
       const { country: c, topics, replies } = current;
-      await client.put(`/admin/support/settings`, { country: c, topics, replies: replies ?? [] });
+      // Checker LOW: the revision read; someone else's newer save gives a clear error to reload.
+      await client.put(`/admin/support/settings`, { country: c, expectedRev: saved.data?.rev ?? 1, topics, replies: replies ?? [] });
       setDraft(null);
       setNotice(tr("Support settings saved."));
       void queryClient.invalidateQueries({ queryKey: ["live", "supportSettings", country] });

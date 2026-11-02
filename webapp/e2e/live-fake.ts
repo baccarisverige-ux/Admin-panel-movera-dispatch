@@ -448,7 +448,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     if (p === "/api/v1/admin/support/settings") {
       if (method === "PUT") { state.supportSettings = { ...body, updatedAt: "2026-10-27T10:00:00Z" }; return json(route, 200, state.supportSettings); }
       const country = url.searchParams.get("country") ?? "SE";
-      return json(route, 200, state.supportSettings && state.supportSettings["country"] === country ? state.supportSettings : { country, topics: ["ride_dispute", "help", "lost_item", "payment", "account", "safety", "other"].map((code) => ({ code, on: true, firstReplyMin: code === "safety" ? 5 : 60, solveHours: 24 })) });
+      return json(route, 200, state.supportSettings && state.supportSettings["country"] === country ? state.supportSettings : { country, rev: 1, topics: ["ride_dispute", "help", "lost_item", "payment", "account", "safety", "other"].map((code) => ({ code, on: true, firstReplyMin: code === "safety" ? 5 : 60, solveHours: 24 })) });
     }
     const deskVerb = /^\/api\/v1\/admin\/tickets\/([^/]+)\/(claim|leave|assign|topic|waiting|solve|reopen|case)$/.exec(p);
     if (deskVerb) {
