@@ -131,3 +131,23 @@ test("Tips & limits (v0.8.1, owner 2026-10-28): shown for the zone chosen at the
   await expect.poll(() => server.sent.filter((s) => s.method === "PUT" && s.path.includes("country_rules")).map((s) => s.body?.["zoneId"])).toEqual(["Z001", "Z002"]);
   expect(server.sent.some((s) => s.method !== "GET" && s.body?.["country"] === "SE")).toBe(false);
 });
+
+test("Live G8 fix 1: a language-only save sends no zone's payment methods, and the confirm step is in the panel's language", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  const { docs, sent } = await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/settings#country-apps");
+  const panel = page.getByTestId("country-apps");
+  await expect(panel.getByLabel("Sverige rider språk")).toBeEnabled();
+  const before = sent.length;
+  const z002 = JSON.stringify(docs.get("rider_app_config:Z002")!.document["paymentMethods"]);
+  await panel.getByLabel("Sverige rider språk").selectOption("fr");
+  await panel.getByRole("button", { name: "Spara betalmetoder och språk" }).click();
+  const modal = page.locator(".modal.open").last();
+  await expect(modal).toBeVisible();
+  await expect(modal).not.toContainText("payment methods and languages");
+  await confirm(page);
+  await expect(panel.getByRole("status")).toBeVisible();
+  expect(sent.slice(before).filter((call) => call.method !== "GET"), "no zone's payment methods are sent").toEqual([]);
+  expect(JSON.stringify(docs.get("rider_app_config:Z002")!.document["paymentMethods"])).toBe(z002);
+});

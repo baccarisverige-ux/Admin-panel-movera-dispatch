@@ -16,7 +16,7 @@ import {
   type CountrySettingsBook,
 } from "./countrySettings";
 import { useCountrySettings } from "./useCountrySettings";
-import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage } from "./zoneDefaults";
+import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePaymentMethod } from "./zoneDefaults";
 import { tr, trn, trx, trSentences } from "../i18n";
 
 /**
@@ -24,6 +24,14 @@ import { tr, trn, trx, trSentences } from "../i18n";
  * no Klarna, no PayPal) and the default language of the rider, driver and admin apps (Q49: en, fr, sv). The wallet is
  * kept: one balance per currency, used first. Nothing is saved until Save (Q33).
  */
+/** The mixed methods without [method] (set by the admin now); undefined when none is left. */
+function withoutMethod(mixed: CountrySettings["mixedMethods"], method: ZonePaymentMethod): CountrySettings["mixedMethods"] {
+  if (!mixed?.[method]) return mixed;
+  const rest = { ...mixed };
+  delete rest[method];
+  return Object.keys(rest).length ? rest : undefined;
+}
+
 export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onDirty?: (dirty: boolean) => void }) {
   const { book, loading } = useCountrySettings();
   const [draft, setDraft] = useState<CountrySettingsBook | null>(null);
@@ -64,11 +72,27 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
             return (
               <tr key={item.id}>
                 <th scope="row">{item.name}</th>
-                {ZONE_PAYMENT_METHODS.map((method) => (
-                  <td key={method}>
-                    <input type="checkbox" aria-label={`${item.name} ${trx(PAYMENT_METHOD_LABEL[method])}`} checked={settings.paymentMethods[method]} disabled={!editable || loading} onChange={(event) => edit(item.id, { paymentMethods: { ...settings.paymentMethods, [method]: event.target.checked } })} />
-                  </td>
-                ))}
+                {ZONE_PAYMENT_METHODS.map((method) => {
+                  // Live G8 fix 1 (decision driver-g8.md #2): zones of the country disagree: shown mixed, with the zones where it is off.
+                  const off = settings.mixedMethods?.[method];
+                  const noteId = `country-apps-mixed-${item.id}-${method}`;
+                  return (
+                    <td key={method}>
+                      <input
+                        type="checkbox"
+                        aria-label={`${item.name} ${trx(PAYMENT_METHOD_LABEL[method])}`}
+                        aria-describedby={off?.length ? noteId : undefined}
+                        aria-checked={off?.length ? "mixed" : undefined}
+                        data-mixed={off?.length ? "true" : undefined}
+                        ref={(node) => { if (node) node.indeterminate = Boolean(off?.length); }}
+                        checked={settings.paymentMethods[method]}
+                        disabled={!editable || loading}
+                        onChange={(event) => edit(item.id, { paymentMethods: { ...settings.paymentMethods, [method]: event.target.checked }, mixedMethods: withoutMethod(settings.mixedMethods, method) })}
+                      />
+                      {off?.length ? <small className="dx-note" id={noteId} data-testid={noteId}>{tr("Off in: {0} — Save makes it the same in the whole country", [off.join(", ")])}</small> : null}
+                    </td>
+                  );
+                })}
                 {APP_IDS.map((app) => (
                   <td key={app}>
                     <select aria-label={tr("{0} {1} language", [item.name, app])} value={settings.languages[app]} disabled={!editable || loading} onChange={(event) => edit(item.id, { languages: { ...settings.languages, [app]: event.target.value as AppLanguage } })}>
@@ -89,7 +113,7 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
         <CommandButton
           command="admin.config.saveCountry"
           className="primary-btn"
-          targetId="payment methods and languages"
+          targetId={tr("Payment methods and languages per country")}
           confirmTarget={false}
           summary={tr("This saves the payment methods and languages of every country and sends them to every zone. Keep this page open until it is done.")}
           before={settingsSummary(book)}

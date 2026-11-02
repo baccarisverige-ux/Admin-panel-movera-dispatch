@@ -550,3 +550,50 @@ test("live G8 6c: Payment methods save a few zones at a time, and the zones that
   assert.ok(published.has("Z001") && published.has("Z005") && !published.has("Z004"));
   assert.ok(Date.now() - started < 5000);
 });
+
+test("live G8 fix 1 (decision driver-g8.md #2): zones of a country that disagree read as mixed, naming the zones where it is off", async () => {
+  const { COUNTRY_SETTINGS_KEY, emptyCountrySettingsBook } = await import("../config/countrySettings.ts");
+  const rider = (methods: string[], zoneId?: string) => ({ ...sample("rider_app_config"), ...(zoneId ? { zoneId } : {}), paymentMethods: methods });
+  const server = fakeServer({
+    "country_rules:standard-SE": { version: 2, liveVersion: 2, document: {} },
+    "rider_app_config:standard-SE": { version: 3, liveVersion: 3, document: rider(["cash", "card"]) },
+    "rider_app_config:Z004": { version: 4, liveVersion: 4, usesStandard: false, document: rider(["cash"], "Z004") },
+    "rider_app_config:Z005": { version: 4, liveVersion: 4, usesStandard: false, document: rider(["cash"], "Z005") },
+  });
+  const settings = createLiveSettings(server.http);
+  const book = (await settings.readSlice(COUNTRY_SETTINGS_KEY, emptyCountrySettingsBook())) as ReturnType<typeof emptyCountrySettingsBook>;
+  assert.deepEqual(book.countries.SE.paymentMethods, { cash: true, card: false, apple_pay: false });
+  assert.deepEqual(book.countries.SE.mixedMethods, { card: ["Z004", "Z005"] }, "card is on in the other zones: mixed, off in Z004 and Z005");
+  // A language-only save publishes nothing: every zone keeps its own payment methods.
+  const before = server.calls.length;
+  const value = { ...book, draftRev: 2, countries: { ...book.countries, SE: { ...book.countries.SE, languages: { ...book.countries.SE.languages, rider: "fr" as const } } } };
+  assert.equal(await settings.command("admin.config.saveCountry", { targetId: "x", value, scope: "" }), "Saved. No payment method changed.");
+  assert.equal(server.calls.slice(before).filter((c) => c.method !== "GET").length, 0, "no PUT or publish");
+  // Setting the mixed method makes it the same in the whole country (only SE is sent).
+  const se = { ...book.countries.SE };
+  delete se.mixedMethods;
+  const set = { ...book, draftRev: 3, countries: { ...book.countries, SE: { ...se, paymentMethods: { ...se.paymentMethods, card: true } } } };
+  assert.equal(await settings.command("admin.config.saveCountry", { targetId: "x", value: set, scope: "" }), "Payment methods published to every zone.");
+  const puts = server.calls.filter((c) => c.method === "PUT");
+  const z004 = puts.find((c) => c.path.includes("rider_app_config") && (c.body as { zoneId?: string }).zoneId === "Z004");
+  assert.deepEqual(((z004!.body as { document: Doc }).document)["paymentMethods"], ["cash", "card"]);
+  assert.equal(puts.some((c) => String((c.body as { zoneId?: string }).zoneId ?? "").startsWith("FR-")), false, "France is not touched");
+});
+
+test("live G8 fix 1: a failed Standard is named by its country, translated (never \"Standard SE\")", async () => {
+  const { emptyCountrySettingsBook } = await import("../config/countrySettings.ts");
+  const base = fakeServer({});
+  const http: ConfigHttp = {
+    json: <T,>(path: string) => base.http.json<T>(path),
+    post: <T,>(path: string, body: unknown) => base.http.post<T>(path, body),
+    put: <T,>(path: string, body: unknown) => (path.includes("standard-SE") || (body as { zoneId?: string; country?: string }).country === "SE" && !(body as { zoneId?: string }).zoneId ? Promise.reject(Object.assign(new Error("Server error"), { status: 500 })) : base.http.put<T>(path, body)),
+  };
+  const settings = createLiveSettings(http);
+  const book = emptyCountrySettingsBook();
+  const value = { ...book, draftRev: 2, countries: { ...book.countries, SE: { ...book.countries.SE, paymentMethods: { cash: true, card: true, apple_pay: false } } } };
+  await assert.rejects(settings.command("admin.config.saveCountry", { targetId: "x", value, scope: "" })!, (error: Error) => {
+    assert.match(error.message, /Standard Sweden/);
+    assert.doesNotMatch(error.message, /Standard SE/);
+    return true;
+  });
+});
