@@ -8384,6 +8384,13 @@ export const en = {
   "Keep mine": "Keep mine",
   "Take theirs": "Take theirs",
   "Unpublished changes in Dispatch ({0})": "Unpublished changes in Dispatch ({0})",
+  "Hidden by an admin": "Hidden by an admin",
+  "Shown again by an admin": "Shown again by an admin",
+  "Saved as a draft. Then send it for review and publish it; one admin is enough.": "Saved as a draft. Then send it for review and publish it; one admin is enough.",
+  "Some actions here are not connected yet.": "Some actions here are not connected yet.",
+  "App versions are set in Content › App versions.": "App versions are set in Content › App versions.",
+  "Refund limits per role are set in Payments › Rules.": "Refund limits per role are set in Payments › Rules.",
+  "Edit in Payments": "Edit in Payments",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -1,4 +1,5 @@
 import { NOTE_MAX } from "../domain/labels.ts";
+import { isLiveData } from "../live/realData.ts";
 
 export type RiderPrivacyState = "none" | "new" | "processing" | "done";
 
@@ -67,6 +68,8 @@ export function emptyRiderOpsBook(): RiderOpsBook {
 }
 
 function defaultSessions(id: string): RiderSession[] {
+  // Live clean-up 1: the server sends no rider sessions yet, so live shows none (never an invented "iPhone").
+  if (isLiveData()) return [];
   const suffix = Number(id.replace(/\D/g, "")) || 1;
   return [
     {

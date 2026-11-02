@@ -95,6 +95,12 @@ export const MENU: MenuItem[] = [
   { id: "design", path: "/design", label: "Design", group: "Platform", permission: "system.read", icon: "Palette" },
 ];
 
+/**
+ * Pages the live build does not offer at all (not in the menu, "Page not found" by address). Owner 2026-11-02:
+ * Promotions stay hidden until later; Release gates and Design are demo tools (live clean-up 1).
+ */
+export const LIVE_HIDDEN_PAGES: ReadonlySet<string> = new Set(["promotions", "gates", "design"]);
+
 const DETAILS: { pattern: RegExp; id: string }[] = [
   { pattern: /^\/drivers\/[^/]+$/, id: "drivers" },
   { pattern: /^\/fleets\/[^/]+$/, id: "fleets" },

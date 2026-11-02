@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { CalendarClock, Clock, CreditCard, FileText, Navigation, Printer, Route, User, X } from "lucide-react";
 import type { LiveTrip, Waybill } from "./liveTrip";
 import { tr, trn, uiLocale, trx } from "../i18n";
+import { isLiveData } from "../live/realData";
 
 type Props = {
   trip: LiveTrip;
@@ -108,7 +109,7 @@ export function WaybillDialog({ waybill, onClose }: { waybill: Waybill; onClose:
           {rows.map(([label, value]) => <div key={label}><dt>{trx(label)}</dt><dd>{value}</dd></div>)}
         </dl>
         <div className="waybill-foot">
-          <small>{tr("Demo record. A live system issues the waybill from the booking when the driver accepts.")}</small>
+          {isLiveData() ? <span /> : <small>{tr("Demo record. A live system issues the waybill from the booking when the driver accepts.")}</small>}
           <button type="button" data-command="admin.ui.quickAction" className="dash-btn small" onClick={() => window.print()}>{trn("{0}Print", <Printer size={14} aria-hidden="true" />)}</button>
         </div>
       </div>

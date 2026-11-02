@@ -8,6 +8,8 @@ import { useSession } from "../auth/SessionContext";
 import { OTHER_REASON, auditReason, initialReason, mustChooseReason, reasonsFor } from "../commands/reasons";
 import { commandById } from "../commands/registry";
 import { tr, trn, trSentences, trx } from "../i18n";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { liveHandles } from "../live/liveCommands";
 
 type CommandButtonProps = {
   command: string;
@@ -119,6 +121,8 @@ export function CommandButton({
   // While any command runs, every command button waits (C-16, Q31): disabled, with a spinner and "Please wait".
   const waiting = commands.busy || commands.phase === "submitting";
   const blocked = disabled || waiting || !spec || denied;
+  // Live clean-up 1 (rule 1): the live build shows no button the server does not handle ("Not connected yet.").
+  const live = useLiveSessionMaybe();
 
   // Every opening starts clean: no half-typed id or reason carried over from a cancelled dialog.
   // Cancel and refund dialogs open with no reason, so Confirm waits until one is picked (A-O1).
@@ -157,10 +161,13 @@ export function CommandButton({
     });
   }
 
+  if (live && !liveHandles(command)) return null;
+
   return (
     <>
       <button
         data-command={command}
+        data-command-button=""
         className={className}
         type={type}
         aria-label={ariaLabel}

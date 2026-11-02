@@ -46,7 +46,7 @@ import { PANEL_OPS_KEY, emptyPanelOps, normalizePanelOps, showInMenu, type Panel
 import { AlertsProvider, useAlertsData } from "../alerts/AlertsContext";
 import { AlertBell } from "../alerts/AlertBell";
 import { RideCheckBanner } from "../alerts/RideCheckBanner";
-import { MENU, MENU_GROUPS, type MenuItem, type NavIcon } from "../nav";
+import { LIVE_HIDDEN_PAGES, MENU, MENU_GROUPS, type MenuItem, type NavIcon } from "../nav";
 import { CommandButton } from "../ui/CommandButton";
 import { useMarketScope } from "../markets/useMarketScope";
 import { MarketBar } from "./MarketBar";
@@ -126,7 +126,7 @@ function ShellInner({ page, children }: AppShellProps) {
   // A live build lists only the pages that read the server; the demo pages stay reachable by address, marked "not live".
   // Live: the server's expanded permission list decides (Chat needs support.reply, contract v0.13.0 §22).
   const live = useLiveSessionMaybe();
-  const visible = MENU.filter((item) => (!agent || (live ? live.can(item.permission) : can(agent.role, item.permission))) && showInMenu(item.id, agent?.role, panel));
+  const visible = MENU.filter((item) => (!agent || (live ? live.can(item.permission) : can(agent.role, item.permission))) && showInMenu(item.id, agent?.role, panel) && !(live && LIVE_HIDDEN_PAGES.has(item.id)));
   const groups = MENU_GROUPS.filter((group) => visible.some((item) => item.group === group));
   const env = api.kind === "http" ? "live" : import.meta.env.VITE_DATA || "demo";
   const scope = params.get("scope") ?? "";

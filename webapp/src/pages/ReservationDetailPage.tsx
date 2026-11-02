@@ -34,6 +34,7 @@ import { market, marketOfZone } from "../markets/markets";
 import { currencySymbol, emptyPricingStore, money as formatMajor, normalizeStore, SLICE_KEY as PRICING_KEY, zoneBook, type PricingStore } from "../pricing/zonePricing";
 import { CommandButton } from "../ui/CommandButton";
 import { SensitiveValue } from "../ui/SensitiveValue";
+import { isLiveData } from "../live/realData";
 import { tr, trn } from "../i18n";
 import { categoryName } from "../riders/profile";
 
@@ -215,7 +216,7 @@ export function ReservationDetailPage() {
                 >{tr("Driver said no (demo)")}</CommandButton>
               </div>
             ) : null}
-            {ask.state === "waiting" ? <p className="fine-print">{tr("Demo: in the live system the answer comes from the driver app.")}</p> : null}
+            {ask.state === "waiting" && !isLiveData() ? <p className="fine-print">{tr("Demo: in the live system the answer comes from the driver app.")}</p> : null}
           </div>
         ) : null}
         <label>{tr("Eligible driver")}<select

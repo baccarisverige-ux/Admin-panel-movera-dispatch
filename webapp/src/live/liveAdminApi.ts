@@ -42,6 +42,20 @@ import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
+/**
+ * The live stand-in for a settings book the server does not keep yet: the demo default with every list emptied, so no
+ * demo record (bonuses, vouchers, promotions, campaigns…) shows on live, and every `on` switch off (nothing the server
+ * does not run is "on"). Other plain values keep their defaults.
+ */
+export function liveEmptyBook<T>(fallback: T): T {
+  const strip = (value: unknown): unknown => {
+    if (Array.isArray(value)) return [];
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, key === "on" && item === true ? false : strip(item)]));
+    return value;
+  };
+  return strip(fallback) as T;
+}
+
 const PAGE_LIMIT = 100;
 /** One server page of a list page; "Load more" asks for the next one. */
 export const LIST_PAGE = 50;
@@ -887,7 +901,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const [tripId, from] = input.targetId.split("~");
       if (!tripId || (from !== "rider" && from !== "driver")) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
       const verb = input.after === "shown" ? "restore" : "hide";
-      await client.post(`/admin/ratings/${encodeURIComponent(tripId)}/${from}/${verb}`, { reason: input.reason || (verb === "hide" ? "Hidden by an admin" : "Shown again by an admin") });
+      await client.post(`/admin/ratings/${encodeURIComponent(tripId)}/${from}/${verb}`, { reason: input.reason || (verb === "hide" ? tr("Hidden by an admin") : tr("Shown again by an admin")) });
       return done(verb === "hide" ? "Hidden." : "Shown again.");
     }
     if (input.action === "admin.approval.approve" || input.action === "admin.approval.reject") {
@@ -1045,7 +1059,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     readSlice: async (key, fallback) => {
       const fromSettings = settings.readSlice(key, fallback);
       if (fromSettings) return (await fromSettings) as typeof fallback;
-      if (key !== "safetyOps") return fallback;
+      // Live clean-up 1 (rule 1): a book the server does not keep yet is empty on live, never the demo seed.
+      if (key !== "safetyOps") return liveEmptyBook(fallback);
       if (!incidents.size) await list("incidents").catch(() => []);
       return bookFrom(incidents.values()) as typeof fallback;
     },
