@@ -56,7 +56,9 @@ function LiveSplitView({ split, money }: { split: MoneySplit; money: (minor: num
         {facts.driverBonus !== null ? line(tr("Money added for the driver (paid by Movera)"), facts.driverBonus, "split-driver-bonus") : null}
         {facts.walletApplied !== null ? line(tr("Paid from the wallet"), facts.walletApplied, "split-wallet") : null}
         {facts.cashToCollect !== null ? line(tr("Cash to collect"), facts.cashToCollect, "split-cash") : null}
-        {line(tr("Tip (all to the driver)"), null, "split-tip")}
+        {facts.split ? line(tr("Driver gets"), facts.split.driverTotal, "split-driver-total") : null}
+        {/* Live G8 (6a): the tip is the server's (zero when none); "Not connected" only from a server without who-gets-what. */}
+        {line(tr("Tip (all to the driver)"), facts.split ? facts.split.tip : null, "split-tip")}
         {line(tr("Promotion (paid by Movera)"), null, "split-promo")}
       </dl>
     </div>

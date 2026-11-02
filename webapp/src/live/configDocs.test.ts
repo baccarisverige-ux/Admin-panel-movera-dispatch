@@ -519,3 +519,61 @@ test("G8 (v0.18.10): payment methods go to the server per country (no Google Pay
   const state = appConfigState({ now: "2026-11-01T10:00:00Z" });
   assert.deepEqual((driverAppConfig("Z001", state) as unknown as { cancelFees: { earlyEnd: unknown } }).cancelFees.earlyEnd, { repriceOverKm: 2, repriceOverMin: 8 });
 });
+
+test("live G8 6c: Payment methods read back what the zones serve, not only the country's Standard (Save could not turn a method back on)", async () => {
+  const { COUNTRY_SETTINGS_KEY, emptyCountrySettingsBook } = await import("../config/countrySettings.ts");
+  const rider = (methods: string[], zoneId?: string) => ({ ...sample("rider_app_config"), ...(zoneId ? { zoneId } : {}), paymentMethods: methods });
+  // Apple Pay was turned off: the zone serves cash + card, the Standard still lists Apple Pay.
+  const server = fakeServer({
+    "country_rules:standard-SE": { version: 2, liveVersion: 2, document: {} },
+    "rider_app_config:standard-SE": { version: 3, liveVersion: 3, document: rider(["cash", "card", "apple_pay"]) },
+    "rider_app_config:Z001": { version: 4, liveVersion: 4, usesStandard: false, document: rider(["cash", "card"], "Z001") },
+  });
+  const settings = createLiveSettings(server.http);
+  const book = (await settings.readSlice(COUNTRY_SETTINGS_KEY, emptyCountrySettingsBook())) as ReturnType<typeof emptyCountrySettingsBook>;
+  assert.deepEqual(book.countries.SE.paymentMethods, { cash: true, card: true, apple_pay: false }, "Apple Pay is off, as the riders get it");
+  // Every zone following the Standard: the Standard is what is served.
+  const follows = fakeServer({ "country_rules:standard-SE": { version: 2, liveVersion: 2, document: {} }, "rider_app_config:standard-SE": { version: 3, liveVersion: 3, document: rider(["cash"]) } });
+  const back = (await createLiveSettings(follows.http).readSlice(COUNTRY_SETTINGS_KEY, emptyCountrySettingsBook())) as ReturnType<typeof emptyCountrySettingsBook>;
+  assert.deepEqual(back.countries.SE.paymentMethods, { cash: true, card: false, apple_pay: false });
+});
+
+test("live G8 6c: Payment methods save a few zones at a time, and the zones that failed are named so Save can send them again", async () => {
+  const { emptyCountrySettingsBook } = await import("../config/countrySettings.ts");
+  const { METHODS_AT_ONCE } = await import("./liveSettings.ts");
+  const base = fakeServer({});
+  let running = 0;
+  let most = 0;
+  const slow = <T,>(work: () => Promise<T>) => async () => {
+    running += 1;
+    most = Math.max(most, running);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    try {
+      return await work();
+    } finally {
+      running -= 1;
+    }
+  };
+  const http: ConfigHttp = {
+    json: <T,>(path: string) => slow(() => base.http.json<T>(path))(),
+    post: <T,>(path: string, body: unknown) => slow(() => base.http.post<T>(path, body))(),
+    put: <T,>(path: string, body: unknown) => slow<T>(() => {
+      if ((body as { zoneId?: string }).zoneId === "Z004") return Promise.reject(Object.assign(new Error("Server error"), { status: 500 }));
+      return base.http.put<T>(path, body);
+    })(),
+  };
+  const settings = createLiveSettings(http);
+  const book = emptyCountrySettingsBook();
+  const value = { ...book, draftRev: 2, countries: { ...book.countries, SE: { ...book.countries.SE, paymentMethods: { cash: true, card: true, apple_pay: false } } } };
+  const started = Date.now();
+  await assert.rejects(settings.command("admin.config.saveCountry", { targetId: "payment methods and languages", value, scope: "" })!, (error: Error) => {
+    assert.match(error.message, /^Some zones were not updated\. Press Save again to update them\. /);
+    assert.equal(error.message.split(". ").pop(), "Kungsholmen", "only the failed zone is named");
+    return true;
+  });
+  assert.ok(most > 1 && most <= METHODS_AT_ONCE, `in parallel, at most ${METHODS_AT_ONCE} (was ${most})`);
+  // Every other zone was still published.
+  const published = new Set(base.calls.filter((c) => c.method === "POST" && c.path.endsWith("/publish")).map((c) => (c.body as { zoneId?: string; country?: string }).zoneId ?? `standard-${(c.body as { country?: string }).country}`));
+  assert.ok(published.has("Z001") && published.has("Z005") && !published.has("Z004"));
+  assert.ok(Date.now() - started < 5000);
+});

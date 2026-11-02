@@ -132,6 +132,8 @@ export type LiveTripFacts = {
   driverBonus: number | null;
   walletApplied: number | null;
   cashToCollect: number | null;
+  /** Live G8 (contract.json#finish): the server's who-gets-what; null from a server without it. */
+  split?: { riderPaid: number; driverTotal: number; movera: number; tip: number; refunded: number } | null;
   driverSilentAlert: { at?: string; [key: string]: unknown } | null;
   ratingStatus: string | null;
   updatedAt: string;

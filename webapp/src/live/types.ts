@@ -207,6 +207,10 @@ export type Trip = {
   fare: LiveMoney;
   fareLines?: { code: string; amount: LiveMoney }[];
   driverEarnings?: LiveMoney;
+  /** v0.18.10 (contract.json#finish): the driver's one number (earnings, pickup pay, bonus, tip, Movera changes) and who gets what. */
+  driverTotal?: LiveMoney;
+  moneySplit?: { riderPaid: LiveMoney; driverTotal: LiveMoney; movera: LiveMoney; debtCollected?: LiveMoney; tip?: LiveMoney; refunded?: LiveMoney };
+  tip?: { amount: LiveMoney; method: string; at: string };
   commission?: LiveMoney;
   driverBonus?: LiveMoney;
   pickupPay?: LiveMoney;

@@ -66,7 +66,7 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
                 <th scope="row">{item.name}</th>
                 {ZONE_PAYMENT_METHODS.map((method) => (
                   <td key={method}>
-                    <input type="checkbox" aria-label={`${item.name} ${PAYMENT_METHOD_LABEL[method]}`} checked={settings.paymentMethods[method]} disabled={!editable || loading} onChange={(event) => edit(item.id, { paymentMethods: { ...settings.paymentMethods, [method]: event.target.checked } })} />
+                    <input type="checkbox" aria-label={`${item.name} ${trx(PAYMENT_METHOD_LABEL[method])}`} checked={settings.paymentMethods[method]} disabled={!editable || loading} onChange={(event) => edit(item.id, { paymentMethods: { ...settings.paymentMethods, [method]: event.target.checked } })} />
                   </td>
                 ))}
                 {APP_IDS.map((app) => (
@@ -91,6 +91,7 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
           className="primary-btn"
           targetId="payment methods and languages"
           confirmTarget={false}
+          summary={tr("This saves the payment methods and languages of every country and sends them to every zone. Keep this page open until it is done.")}
           before={settingsSummary(book)}
           after={settingsSummary(shown)}
           sliceKey={COUNTRY_SETTINGS_KEY}

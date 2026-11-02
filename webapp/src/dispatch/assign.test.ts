@@ -436,3 +436,18 @@ test("on the server: a radar to a target with nobody inside goes out without off
     mock.timers.reset();
   }
 });
+
+test("live G8 8: money waits per kind — Radar money with no radar offer out says it waits for the next radar, an exclusive offer does not take it", async () => {
+  const { waitingMoney } = await import("./assign.ts");
+  const offer = (kind: "assigned" | "radar", status = "open") => ({ offerId: `o-${kind}`, tripId: "T1", driverId: "D1", kind, status }) as never;
+  assert.deepEqual(waitingMoney({ bonusExclusiveMinor: 0, bonusRadarMinor: 2_000, offers: [] }), { exclusive: 0, radar: 2_000 });
+  // The automatic exclusive offer is out: the radar money still waits for the radar.
+  assert.deepEqual(waitingMoney({ bonusExclusiveMinor: 0, bonusRadarMinor: 2_000, offers: [offer("assigned")] }), { exclusive: 0, radar: 2_000 });
+  // A radar offer is out: it carries the money, nothing waits.
+  assert.deepEqual(waitingMoney({ bonusExclusiveMinor: 500, bonusRadarMinor: 2_000, offers: [offer("radar"), offer("assigned", "declined")] }), { exclusive: 500, radar: 0 });
+  const { en } = await import("../i18n/en.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  assert.equal(sv["Waiting for the next radar: {0}"], "Väntar på nästa radar: {0}");
+  assert.ok(en["Waiting for the next radar: {0}"] && fr["Waiting for the next radar: {0}"]);
+});
