@@ -212,6 +212,7 @@ export function LiveSupport() {
                     {ticket.incidentId ? <> · <Link to="/incidents">{tr("Safety case {0}", [ticket.incidentId])}</Link></> : null}
                   </p>
                   {detail.error ? <ErrorLine error={detail.error} onRetry={() => void detail.refetch()} /> : null}
+                  {ticket.feedback ? <p className="op-help" data-testid="live-ticket-feedback"><b>{tr("Their comment after solving")}:</b> {ticket.feedback.text} · {when(ticket.feedback.at)}</p> : null}
                   <ol className="op-chat" aria-label={tr("Messages")}>
                     {(detail.data?.messages ?? []).map((message) => (
                       <li key={message.messageId} className={message.from === "support" ? "driver" : "rider"}>

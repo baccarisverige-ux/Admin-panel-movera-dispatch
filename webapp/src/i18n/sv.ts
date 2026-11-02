@@ -8432,4 +8432,5 @@ export const sv: Record<MessageKey, string> = {
   "To review": "Att granska",
   "What was done": "Vad som gjordes",
   "Tags": "Taggar",
+  "Their comment after solving": "Deras kommentar efter lösningen",
 };

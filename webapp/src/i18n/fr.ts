@@ -8432,4 +8432,5 @@ export const fr: Record<MessageKey, string> = {
   "To review": "À revoir",
   "What was done": "Ce qui a été fait",
   "Tags": "Étiquettes",
+  "Their comment after solving": "Leur commentaire après la résolution",
 };

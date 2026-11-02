@@ -196,7 +196,7 @@ export const PAYOUTS = [
 ];
 
 export const TICKETS = [
-  { ticketId: "TK1", tripId: "T2001", openedBy: "rider", riderId: "R501", category: "ride_dispute", subject: "Charged too much", status: "open", priority: "normal", createdAt: "2026-10-26T09:00:00Z", updatedAt: "2026-10-26T09:00:00Z", zoneId: "Z001", lastMessageAt: "2026-10-26T09:00:00Z" },
+  { ticketId: "TK1", tripId: "T2001", openedBy: "rider", riderId: "R501", category: "ride_dispute", subject: "Charged too much", status: "open", feedback: { text: "Quick help, thanks!", at: "2026-10-27T11:00:00Z" }, priority: "normal", createdAt: "2026-10-26T09:00:00Z", updatedAt: "2026-10-26T09:00:00Z", zoneId: "Z001", lastMessageAt: "2026-10-26T09:00:00Z" },
 ];
 export const TICKET_MESSAGES = [{ messageId: "M1", from: "rider", text: "The driver took a long way.", at: "2026-10-26T09:00:00Z" }];
 

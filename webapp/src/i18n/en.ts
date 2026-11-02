@@ -8430,6 +8430,7 @@ export const en = {
   "To review": "To review",
   "What was done": "What was done",
   "Tags": "Tags",
+  "Their comment after solving": "Their comment after solving",
 } as const;
 
 export type MessageKey = keyof typeof en;

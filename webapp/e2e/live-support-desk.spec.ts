@@ -14,6 +14,8 @@ test("support desk: claim, topic, waiting, solve, reopen and safety case go to t
   await page.goto("/support");
   const ticket = page.getByTestId("live-ticket");
   await expect(ticket).toContainText("Nobody works on it yet.");
+  // Owner: the person's optional comment after solving shows on the ticket.
+  await expect(ticket.getByTestId("live-ticket-feedback")).toContainText("Quick help, thanks!");
   await ticket.getByRole("button", { name: "Claim" }).click();
   await expect.poll(() => state.calls.some((call) => call.method === "POST" && call.path === "/api/v1/admin/tickets/TK1/claim")).toBe(true);
   await expect(ticket).toContainText(`Works on it: ${ADMIN.name}`);
