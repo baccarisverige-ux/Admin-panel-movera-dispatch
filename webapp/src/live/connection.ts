@@ -24,7 +24,8 @@ const PARTLY: Record<string, string> = {
 // Owner G3-R5 (2026-10-30): the Dashboard shows only the server's data on live (no demo parts), so no badge either.
 // Driver 03c (live test 2026-10-30): Dispatch is live too (trips, drivers, rules, Standard, controls, assign and radar
 // group go to the server), so its header carries no badge either.
-const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding", "content", "dashboard", "dispatch"]);
+// G9 live 2026-11-02: the Chat page reads and writes the trip chats on the server, so no badge.
+const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding", "content", "dashboard", "dispatch", "chat"]);
 
 export function connectionOf(id: string): Connection {
   if (CONNECTED.has(id)) return { state: "connected" };

@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { tr, uiLocale } from "../i18n";
-import { shortDateTime } from "./format";
+import { shortDateTime, shortId } from "./format";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine, Status } from "./ui";
 import type { Page, Trip } from "./types";
 import { useMarketScope } from "../markets/useMarketScope";
 import { zoneFilterOf } from "./zoneFilter";
+import { chatTripLabel } from "./tripChat";
 
 /**
  * Live builds only (contract v0.13.0 §22, owner "chat only support roles in their zones"): the trip chat between a
@@ -88,7 +89,8 @@ export function LiveChat() {
             {trips.map((trip) => (
               <li key={trip.tripId} className={trip.tripId === current?.tripId ? "selected" : undefined}>
                 <button type="button" className="link-action" data-command="admin.ticket.view" onClick={() => { setSelected(trip.tripId); setError(null); }}>
-                  <b>{trip.tripId}</b>
+                  <b>{chatTripLabel(trip).title}</b>
+                  <small title={trip.tripId}>{tr("Trip {0}", [chatTripLabel(trip).ref])}</small>
                   <small>{trip.pickup.address} → {trip.dropoff.address}</small>
                   <small><Status code={trip.status} /> · {chatOpen(trip.status) ? tr("Chat open") : tr("Chat closed for rider and driver")} · {when(trip.updatedAt)}</small>
                 </button>
@@ -97,9 +99,9 @@ export function LiveChat() {
           </ul>
           {current ? (
             <article className="panel" data-testid="live-chat-thread">
-              <h3>{current.tripId}</h3>
+              <h3 title={current.tripId}>{chatTripLabel(current).title}</h3>
               <p className="op-help">
-                <Link to={`/trips/${current.tripId}`}>{tr("Open trip")}</Link> · <Link to={`/riders/${current.riderId}`}>{tr("Rider")} {current.riderId}</Link>
+                <Link to={`/trips/${current.tripId}`}>{tr("Open trip")} ({chatTripLabel(current).ref})</Link> · <Link to={`/riders/${current.riderId}`}>{tr("Rider")} {current.rider?.firstName ?? shortId(current.riderId)}</Link>
                 {current.driverId ? <> · <Link to={`/drivers/${current.driverId}`}>{tr("Driver")} {current.driver?.firstName ?? current.driverId}</Link></> : null}
                 {" · "}{current.zoneId}
               </p>
