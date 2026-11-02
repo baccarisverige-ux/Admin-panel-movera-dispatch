@@ -23,12 +23,15 @@ test("R7 rider account, wallet, refund, promotion, notes and sessions persist", 
   await expect(page.getByRole("heading", { level: 2 })).toBeVisible();
 
   await page.getByLabel("Account reason").fill("Payment check");
-  await page.getByRole("button", { name: "Put on hold" }).click();
+  // Owner 2026-11-02 (build-spec Q3): no "Put on hold" and no ban list; Block / Unblock stay.
+  await expect(page.getByRole("button", { name: "Put on hold" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Ban phone number|Ban card/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Block" }).click();
   await confirm(page, "R0002");
-  await expect(page.locator(".fd-hero .fd-account")).toHaveText("On hold");
-  await page.getByRole("button", { name: "Activate" }).click();
+  await expect(page.locator(".fd-hero .fd-account")).toHaveText("Blocked");
+  await page.getByRole("button", { name: "Unblock" }).click();
   await confirm(page, "R0002");
-  await expect(page.getByRole("button", { name: "Put on hold" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Block" })).toBeVisible();
 
   await page.getByRole("tab", { name: "Wallet & refunds" }).click();
   await page.getByLabel("Wallet amount").fill("125");

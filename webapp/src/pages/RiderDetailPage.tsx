@@ -38,7 +38,6 @@ import {
   addLostItem,
   advanceLostItem,
   assign,
-  ban,
   creditedThisMonth,
   decideRefund,
   isBanned,
@@ -221,8 +220,6 @@ export function RiderDetailPage() {
             <label className="fd-reason"><span>{tr("Reason")}</span><input aria-label={tr("Account reason")} value={reason} onChange={(event) => setReason(event.target.value)} placeholder={tr("Stored in the rider's activity")} /></label>
             <div className="fd-action-row">
               {rider.status === "blocked" ? statusPatch("active", "Unblock", "admin.rider.unblock", "dash-btn") : null}
-              {rider.status === "on_hold" ? statusPatch("active", "Activate", "admin.rider.activate", "dash-btn") : null}
-              {rider.status === "active" ? statusPatch("on_hold", "Put on hold", "admin.rider.hold", "dash-btn ghost") : null}
               {rider.status !== "blocked" ? statusPatch("blocked", "Block", "admin.rider.block", "dash-btn danger") : null}
             </div>
             {liveData ? <LiveRiderModeration riderId={rider.id} moderation={liveRiderOf(rider)?.moderation ?? null} canEdit={can(role, "riders.block")} /> : null}
@@ -516,14 +513,7 @@ export function RiderDetailPage() {
               <ul className="rd-ledger" aria-label={tr("Rider sessions")}>{ops.sessions.map((session) => <li key={session.id}><b>{session.platform} · {session.device}</b><span>{session.active ? tr("Signed in") : tr("Signed out")}</span></li>)}</ul>
               <CommandButton command="admin.rider.signOut" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={`${activeSessions.length} active sessions`} after="0 active sessions" expectedSliceRev={book.draftRev} sliceKey="riderOps" value={revokeRiderSessions(book, seed, me)} disabled={activeSessions.length === 0} onDone={() => setNotice(tr("Signed out of every active rider session."))}>{tr("Sign out all sessions")}</CommandButton>
             </section>
-            <section className="fd-box">
-              <h3>{trn("{0} Ban list", <Ban size={16} aria-hidden="true" />)}</h3>
-              <p className="fine">{tr("A banned phone or card cannot open a new account.")}</p>
-              <div className="fd-action-row">
-                <CommandButton command="admin.rider.ban" className="dash-btn small danger" targetId={rider.id} scope={rider.zoneId} before="allowed" after="phone banned" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={ban(care, "phones", rider.phone, rider.id, reason || "Banned by admin", me, now).care} disabled={!can(role, "riders.block") || care.bans.phones.some((item) => item.value === rider.phone)} onDone={() => setNotice(tr("Phone number added to the ban list."))}>{tr("Ban phone number")}</CommandButton>
-                <CommandButton command="admin.rider.ban" className="dash-btn small danger" targetId={rider.id} scope={rider.zoneId} before="allowed" after="card banned" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={ban(care, "cards", profile.payment.method, rider.id, reason || "Banned by admin", me, now).care} disabled={!can(role, "riders.block") || care.bans.cards.some((item) => item.value === profile.payment.method)} onDone={() => setNotice(tr("Card added to the ban list."))}>{tr("Ban card")}</CommandButton>
-              </div>
-            </section>
+            {/* Owner 2026-11-02 (build-spec Q3): no on-hold state and no ban list; an unpaid fee goes on the next ride. */}
             <section className="fd-box">
               <h3>{trn("{0} Merge duplicate account", <Link2 size={16} aria-hidden="true" />)}</h3>
               <p className="fine">{tr("Same person with two accounts? Keep the other one; this one points to it.")}</p>
