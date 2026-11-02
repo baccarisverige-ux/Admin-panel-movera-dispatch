@@ -21,10 +21,10 @@ export async function readTripMessages(read: (path: string) => Promise<Page<Trip
 
 /**
  * G9 live 2026-11-02: how a trip chat is named on the Chat page — the rider's and the driver's first names
- * ("Anna ↔ Omar"), with a short trip reference for support; never the raw trip id as the title.
+ * ("Anna – Omar"), with a short trip reference for support; never the raw trip id as the title.
  */
 export function chatTripLabel(trip: { tripId: string; rider?: { firstName?: string }; driver?: { firstName?: string } | null }): { title: string; ref: string } {
   const rider = trip.rider?.firstName?.trim() || tr("Rider");
   const driver = trip.driver?.firstName?.trim() || tr("Driver");
-  return { title: `${rider} ↔ ${driver}`, ref: shortId(trip.tripId) };
+  return { title: `${rider} – ${driver}`, ref: shortId(trip.tripId) };
 }

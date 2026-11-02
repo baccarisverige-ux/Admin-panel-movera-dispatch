@@ -25,7 +25,7 @@ test("G9: every page of the trip's chat is read, oldest first", async () => {
 test("G9 live: a chat is titled by the rider's and the driver's first names, never by the raw trip id", async () => {
   const { chatTripLabel } = await import("./tripChat.ts");
   const label = chatTripLabel({ tripId: "trp_01M6DDWPQG6AS1HP46SNBAH8VP", rider: { firstName: "Anna" }, driver: { firstName: "Omar" } });
-  assert.equal(label.title, "Anna ↔ Omar");
+  assert.equal(label.title, "Anna – Omar");
   assert.ok(!label.title.includes("trp_"));
   assert.ok(label.ref.length < 16, "a short reference only");
   const unnamed = chatTripLabel({ tripId: "trp_01M6DDWPQG6AS1HP46SNBAH8VP" });
