@@ -318,7 +318,7 @@ export type SupportTicket = { ticketId: string; tripId?: string; openedBy: "ride
   assignedTo?: { adminId: string; name?: string }; claimedUntil?: string; solvedBy?: string; solvedAt?: string; incidentId?: string; firstReplyAt?: string; firstReplyDueAt?: string; solveDueAt?: string; late?: { reply: boolean; solve: boolean } };
 /** v0.18.15 GET|PUT /admin/support/settings (contract.json#supportDesk.settings). */
 export type SupportTopicSetting = { code: string; on: boolean; firstReplyMin: number; solveHours: number };
-export type SupportSettings = { country: "SE" | "FR" | "TN"; claimDays: number; replyAfterSolved: "reopen" | "blocked"; topics: SupportTopicSetting[]; updatedAt?: string; updatedBy?: string };
+export type SupportSettings = { country: "SE" | "FR" | "TN"; claimDays: number; topics: SupportTopicSetting[]; updatedAt?: string; updatedBy?: string };
 
 /** GET /admin/risk/signals (RiskPerson, contract v0.9.0). */
 export type RiskSignal = { value: number; count: number; total?: number };
