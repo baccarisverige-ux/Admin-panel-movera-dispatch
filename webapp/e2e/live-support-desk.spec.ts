@@ -40,8 +40,7 @@ test("support settings: topics and time limits per country are saved on the serv
   const box = page.getByTestId("live-support-settings");
   await expect(box).toContainText("Lost item");
   await box.getByLabel("Lost item on").uncheck();
-  await box.getByLabel("A claim lasts (days)").fill("2");
   await box.getByRole("button", { name: "Save settings" }).click();
-  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/support/settings")?.body).toMatchObject({ country: "SE", claimDays: 2, topics: expect.arrayContaining([expect.objectContaining({ code: "lost_item", on: false })]) });
+  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/support/settings")?.body).toMatchObject({ country: "SE", topics: expect.arrayContaining([expect.objectContaining({ code: "lost_item", on: false })]) });
   await expect(box).toContainText("Support settings saved.");
 });

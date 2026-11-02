@@ -57,8 +57,8 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
     setBusy(true);
     setError(null);
     try {
-      const { country: c, claimDays, topics } = current;
-      await client.put(`/admin/support/settings`, { country: c, claimDays, topics });
+      const { country: c, topics } = current;
+      await client.put(`/admin/support/settings`, { country: c, topics });
       setDraft(null);
       setNotice(tr("Support settings saved."));
       void queryClient.invalidateQueries({ queryKey: ["live", "supportSettings", country] });
@@ -87,7 +87,6 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
             ))}
           </tbody>
         </table>
-        <label className="field">{tr("A claim lasts (days)")}<input type="number" min={1} max={30} aria-label={tr("A claim lasts (days)")} value={current.claimDays} onChange={(event) => patch({ claimDays: Number(event.target.value) })} /></label>
       </fieldset>
       {issue ? <p className="error-line" role="alert">{issue}</p> : null}
       {error ? <ErrorLine error={error} onRetry={() => setError(null)} /> : null}

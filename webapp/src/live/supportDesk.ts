@@ -10,7 +10,6 @@ export function deskCall(ticketId: string, verb: "claim" | "assign" | "topic" | 
 
 /** Settings checks before Save (the server checks the same: contract.json#supportDesk.settings.limits). */
 export function settingsIssue(s: SupportSettings): string | null {
-  if (!Number.isInteger(s.claimDays) || s.claimDays < 1 || s.claimDays > 30) return tr("Claim days must be 1 to 30.");
   if (!s.topics.some((t) => t.on)) return tr("At least one topic must be on.");
   for (const t of s.topics) {
     if (!Number.isInteger(t.firstReplyMin) || t.firstReplyMin < 1 || t.firstReplyMin > 10080) return tr("First answer must be 1 to 10080 minutes.");

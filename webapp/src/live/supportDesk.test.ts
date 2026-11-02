@@ -11,9 +11,8 @@ test("every desk button calls its server command for the ticket", () => {
 });
 
 test("support settings are checked like the server checks them", () => {
-  const ok: SupportSettings = { country: "SE", claimDays: 3, topics: [{ code: "help", on: true, firstReplyMin: 120, solveHours: 48 }] };
+  const ok: SupportSettings = { country: "SE", topics: [{ code: "help", on: true, firstReplyMin: 120, solveHours: 48 }] };
   assert.equal(settingsIssue(ok), null);
-  assert.ok(settingsIssue({ ...ok, claimDays: 0 }));
   assert.ok(settingsIssue({ ...ok, topics: [{ ...ok.topics[0]!, on: false }] }));
   assert.ok(settingsIssue({ ...ok, topics: [{ ...ok.topics[0]!, firstReplyMin: 0 }] }));
   assert.ok(settingsIssue({ ...ok, topics: [{ ...ok.topics[0]!, solveHours: 721 }] }));
