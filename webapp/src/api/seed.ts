@@ -174,6 +174,8 @@ export type LiveAccountFacts = {
 };
 
 export type LiveDriverFacts = {
+  /** v0.18.16 A2 (owner Q4): this driver's payouts are paused (admin view). */
+  payoutHold?: { reason: string; at: string } | null;
   onlineStatus: string;
   rating: number | null;
   location: { lat: number; lng: number; measuredAt: string } | null;

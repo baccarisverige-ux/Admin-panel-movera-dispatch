@@ -144,6 +144,7 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       ...(driver.termsAcceptedAt ? { termsAcceptedAt: driver.termsAcceptedAt } : {}),
     },
     liveDriver: {
+      payoutHold: driver.payoutHold ? { reason: driver.payoutHold.reason, at: driver.payoutHold.at } : null,
       onlineStatus: live?.onlineStatus ?? driver.onlineStatus,
       rating: typeof driver.rating === "number" ? driver.rating : null,
       location: location ? { lat: location.lat, lng: location.lng, measuredAt: location.measuredAt } : null,
@@ -653,6 +654,15 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         }
         throw error;
       });
+      if (next?.driverId) drivers.set(next.driverId, next);
+      return done("Saved.");
+    }
+    // v0.18.16 A2 (owner Q4): pause / release one driver's payouts from his profile, with the reason.
+    if (input.action === "admin.driver.payoutHold") {
+      const held = (input.value as { held?: unknown } | undefined)?.held === true;
+      const reason = input.reason?.trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+      const next = await client.post<Driver>(`/admin/drivers/${encodeURIComponent(input.targetId)}/payout-hold`, { held, reason: reason.slice(0, 300) }).catch(explained);
       if (next?.driverId) drivers.set(next.driverId, next);
       return done("Saved.");
     }

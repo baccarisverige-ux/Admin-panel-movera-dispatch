@@ -84,7 +84,7 @@ test("money lines the server did not send stay null, never 0", () => {
 test("a live driver carries online status, rating and position from /admin/live/drivers", () => {
   const driver = { driverId: "drv_1", accountStatus: "active", onlineStatus: "offline", firstName: "Anna", zoneIds: ["Z001"], categoryIds: [], documents: [], version: 1, rating: 4.8 } as Driver;
   const record = driverRecord(driver, { driverId: "drv_1", firstName: "Anna", onlineStatus: "on_trip", stale: false, location: { lat: 59.3, lng: 18.0, measuredAt: "2026-10-26T09:00:00Z" }, lastFixAt: "2026-10-26T09:00:01Z", activeTripId: "trp_1" });
-  assert.deepEqual(record.liveDriver, { onlineStatus: "on_trip", rating: 4.8, location: { lat: 59.3, lng: 18.0, measuredAt: "2026-10-26T09:00:00Z" }, lastFixAt: "2026-10-26T09:00:01Z", stale: false, activeTripId: "trp_1" });
+  assert.deepEqual(record.liveDriver, { payoutHold: null, onlineStatus: "on_trip", rating: 4.8, location: { lat: 59.3, lng: 18.0, measuredAt: "2026-10-26T09:00:00Z" }, lastFixAt: "2026-10-26T09:00:01Z", stale: false, activeTripId: "trp_1" });
   const plain = driverRecord({ ...driver, rating: undefined });
   assert.equal(plain.liveDriver?.onlineStatus, "offline");
   assert.equal(plain.liveDriver?.rating, null);

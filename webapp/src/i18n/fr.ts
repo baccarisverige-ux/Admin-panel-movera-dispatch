@@ -8400,4 +8400,10 @@ export const fr: Record<MessageKey, string> = {
   "Warn, pause or ban": "Avertir, suspendre ou bloquer",
   "Pause days": "Nombre de jours de suspension",
   "Warn, pause or ban rider": "Avertir, suspendre ou bloquer le passager",
+  "Payouts paused": "Versements suspendus",
+  "Payouts run on the country's schedule.": "Les versements suivent le calendrier du pays.",
+  "On schedule": "Selon le calendrier",
+  "Release payouts": "Reprendre les versements",
+  "Pause payouts": "Suspendre les versements",
+  "Pause or release driver payouts": "Suspendre ou reprendre les versements du chauffeur",
 };

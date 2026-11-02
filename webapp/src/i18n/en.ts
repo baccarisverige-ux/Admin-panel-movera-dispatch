@@ -8398,6 +8398,12 @@ export const en = {
   "Warn, pause or ban": "Warn, pause or ban",
   "Pause days": "Pause days",
   "Warn, pause or ban rider": "Warn, pause or ban rider",
+  "Payouts paused": "Payouts paused",
+  "Payouts run on the country's schedule.": "Payouts run on the country's schedule.",
+  "On schedule": "On schedule",
+  "Release payouts": "Release payouts",
+  "Pause payouts": "Pause payouts",
+  "Pause or release driver payouts": "Pause or release driver payouts",
 } as const;
 
 export type MessageKey = keyof typeof en;

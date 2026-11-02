@@ -63,6 +63,8 @@ export type DriverPerformance = { windowDays: number; from: string; offersAnswer
 
 export type Driver = {
   driverId: string;
+  /** v0.18.16 A2 (owner Q4): payouts paused, admin view. */
+  payoutHold?: { reason: string; at: string; by?: string };
   accountStatus: DriverAccountStatus;
   onlineStatus: DriverOnlineStatus;
   firstName: string;

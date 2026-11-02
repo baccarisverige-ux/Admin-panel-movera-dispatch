@@ -295,6 +295,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.rider.ban", label: "Add to ban list", reason: true, permission: "riders.block" },
   { id: "admin.rider.merge", label: "Merge duplicate account", reason: true, permission: "riders.block" },
   { id: "admin.rider.identity", label: "Identity check", reason: true, permission: "riders.block" },
+  { id: "admin.driver.payoutHold", label: "Pause or release driver payouts", reason: true, permission: "finance.edit" },
   { id: "admin.rider.moderate", label: "Warn, pause or ban rider", reason: true, permission: "riders.block" },
   { id: "admin.rider.lostFound", label: "Lost and found", reason: false, permission: "support.reply" },
   { id: "admin.rider.tab", label: "Open rider section", reason: false, permission: "riders.read" },

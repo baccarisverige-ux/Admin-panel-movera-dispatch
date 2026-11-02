@@ -8400,4 +8400,10 @@ export const sv: Record<MessageKey, string> = {
   "Warn, pause or ban": "Varna, pausa eller spärra",
   "Pause days": "Antal dagar i paus",
   "Warn, pause or ban rider": "Varna, pausa eller spärra resenär",
+  "Payouts paused": "Utbetalningar pausade",
+  "Payouts run on the country's schedule.": "Utbetalningar görs enligt landets schema.",
+  "On schedule": "Enligt schema",
+  "Release payouts": "Släpp utbetalningar",
+  "Pause payouts": "Pausa utbetalningar",
+  "Pause or release driver payouts": "Pausa eller släpp förarens utbetalningar",
 };
