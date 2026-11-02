@@ -48,6 +48,9 @@ test("chat: support reads and writes the trip chats of its zones; closed after d
   await expect(trips.getByRole("listitem")).toHaveCount(2);
   await expect(trips.getByRole("listitem").first()).toContainText("T2002");
   await expect(trips).not.toContainText("T2003");
+  // G9 live 2026-11-02: titled by names ("Rider – Anna"), not the raw trip id; no "Not connected yet" badge.
+  await expect(trips.getByRole("listitem").first().locator("b")).toHaveText("Rider – Anna");
+  await expect(page.getByTestId("not-connected")).toHaveCount(0);
   const thread = page.getByTestId("live-chat-thread");
   await expect(thread).toContainText("Jag står vid entrén.");
   await expect(thread).toContainText("Jag är där om två minuter.");

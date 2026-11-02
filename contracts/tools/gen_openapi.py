@@ -1108,7 +1108,8 @@ S["AddPaymentMethodRequest"] = obj({"method": ref("PaymentMethod"), "pspToken": 
 S["DefaultPaymentMethodRequest"] = obj({"method": ref("PaymentMethod"), "paymentMethodId": ref("Id")}, ["method"])
 S["RiderProfileUpdate"] = obj(dict(EV, firstName=s(minLength=1), email=s(format="email"), language=s(pattern="^[a-z]{2}(-[A-Z]{2})?$"),
                                    consents=obj({"rideUpdates": b(), "emailUpdates": b(), "promotions": b()})), ["expectedVersion"])
-S["DriverProfileUpdate"] = obj(dict(EV, firstName=s(minLength=1), vehicleId=ref("Id"), categoryIds=arr(ref("CategoryId"))), ["expectedVersion"])
+S["DriverProfileUpdate"] = obj(dict(EV, firstName=s(minLength=1), vehicleId=ref("Id"), categoryIds=arr(ref("CategoryId")),
+                                    language=s(enum=["sv", "fr", "en"], description="v0.18.12: the driver app's language, saved to the account when the driver picks one (server notices follow it).")), ["expectedVersion"])
 S["SavedPlaceRequest"] = obj({"label": s(minLength=1, maxLength=80), "kind": s(enum=["home", "work", "other"]), "place": ref("Place")},
                              ["label", "kind", "place"])
 S["VehicleRequest"] = obj({"make": s(), "model": s(), "year": i(minimum=1950, maximum=2100), "color": s(), "plate": s(),
@@ -1495,7 +1496,7 @@ op("get", "/driver/payouts", "listDriverPayouts", "Payout history", ["driver"], 
 op("get", "/driver/profile", "getDriverProfile", "Own driver profile and status", ["driver"], "Driver · Account", ok=(200, "Driver"))
 op("patch", "/driver/profile", "updateDriverProfile", "Update own profile / active vehicle", ["driver"], "Driver · Account",
    body="DriverProfileUpdate", ok=(200, "Driver"), mutation=True,
-   desc="v0.14.0: picking a car (vehicleId) whose Vehicle.requiredDocuments are not all approved → 409 documents_not_approved (reason vehicle_documents_not_approved, details vehicle:<type>).")
+   desc="v0.18.12: language (sv | fr | en) saves the app language to the account, as the rider's PATCH /rider/profile does. v0.14.0: picking a car (vehicleId) whose Vehicle.requiredDocuments are not all approved → 409 documents_not_approved (reason vehicle_documents_not_approved, details vehicle:<type>).")
 op("get", "/driver/vehicles", "listDriverVehicles", "Own vehicles", ["driver"], "Driver · Account",
    params=[pref("Cursor"), pref("Limit")], ok=(200, "VehiclePage"))
 op("post", "/driver/vehicles", "addDriverVehicle", "Register a vehicle (status pending)", ["driver"], "Driver · Account",

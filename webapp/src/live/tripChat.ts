@@ -1,4 +1,6 @@
 import type { Page } from "./types.ts";
+import { tr } from "../i18n/index.ts";
+import { shortId } from "./format.ts";
 import type { TripMessage } from "./LiveChat.tsx";
 
 /** At most this many pages of 200 messages are read for one trip (a trip chat is short; 90 days kept). */
@@ -15,4 +17,14 @@ export async function readTripMessages(read: (path: string) => Promise<Page<Trip
     if (!cursor) break;
   }
   return items.sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/**
+ * G9 live 2026-11-02: how a trip chat is named on the Chat page — the rider's and the driver's first names
+ * ("Anna – Omar"), with a short trip reference for support; never the raw trip id as the title.
+ */
+export function chatTripLabel(trip: { tripId: string; rider?: { firstName?: string }; driver?: { firstName?: string } | null }): { title: string; ref: string } {
+  const rider = trip.rider?.firstName?.trim() || tr("Rider");
+  const driver = trip.driver?.firstName?.trim() || tr("Driver");
+  return { title: `${rider} – ${driver}`, ref: shortId(trip.tripId) };
 }

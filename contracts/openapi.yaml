@@ -1,11 +1,11 @@
-# Movera API v0.18.11 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.12 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.11
+  version: 0.18.12
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.11 in this folder; this file must agree with them.
+    v0.18.12 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -82,7 +82,7 @@ tags:
 - name: Driver · Home
 x-contract:
   name: movera
-  version: 0.18.11
+  version: 0.18.12
   source: contract.json
 paths:
   /auth/otp/request:
@@ -3168,7 +3168,8 @@ paths:
     patch:
       operationId: updateDriverProfile
       summary: Update own profile / active vehicle
-      description: 'v0.14.0: picking a car (vehicleId) whose Vehicle.requiredDocuments are not all approved → 409 documents_not_approved
+      description: 'v0.18.12: language (sv | fr | en) saves the app language to the account, as the rider''s PATCH /rider/profile
+        does. v0.14.0: picking a car (vehicleId) whose Vehicle.requiredDocuments are not all approved → 409 documents_not_approved
         (reason vehicle_documents_not_approved, details vehicle:<type>).'
       tags:
       - Driver · Account
@@ -20968,6 +20969,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CategoryId'
+        language:
+          type: string
+          enum:
+          - sv
+          - fr
+          - en
+          description: 'v0.18.12: the driver app''s language, saved to the account when the driver picks one (server notices
+            follow it).'
     SavedPlaceRequest:
       type: object
       required:
