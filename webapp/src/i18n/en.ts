@@ -8442,6 +8442,7 @@ export const en = {
   "Warning message in {0}": "Warning message in {0}",
   "Leave ticket": "Leave ticket",
   "You left the ticket. It waits for any admin again.": "You left the ticket. It waits for any admin again.",
+  "{0} works on this ticket. Only they can answer or change it until they leave it.": "{0} works on this ticket. Only they can answer or change it until they leave it.",
 } as const;
 
 export type MessageKey = keyof typeof en;

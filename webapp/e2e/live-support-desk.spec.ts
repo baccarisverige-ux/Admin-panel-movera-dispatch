@@ -68,3 +68,14 @@ test("support settings: topics and time limits per country are saved on the serv
   await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/support/settings")?.body).toMatchObject({ country: "SE", replies: [expect.objectContaining({ lang: "sv", title: "Första svar", text: "Hej! Vi tittar på det nu." })], topics: expect.arrayContaining([expect.objectContaining({ code: "lost_item", on: false, assignTo: "A2" })]) });
   await expect(box).toContainText("Support settings saved.");
 });
+
+test("checker MED1: another admin's claimed ticket is read-only here", async ({ page }) => {
+  const state = await fakeTripServer(page, ALL);
+  state.tickets[0]!["assignedTo"] = { adminId: "A2", name: "Erik Ek" };
+  await signIn(page);
+  await page.goto("/support");
+  const ticket = page.getByTestId("live-ticket");
+  await expect(ticket.getByTestId("live-ticket-others")).toContainText("Erik Ek works on this ticket");
+  await expect(ticket.getByRole("button", { name: "Mark solved" })).toBeDisabled();
+  await expect(ticket.getByRole("button", { name: "Send answer" })).toBeDisabled();
+});

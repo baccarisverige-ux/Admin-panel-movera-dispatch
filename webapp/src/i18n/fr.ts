@@ -8444,4 +8444,5 @@ export const fr: Record<MessageKey, string> = {
   "Warning message in {0}": "Message d'avertissement en {0}",
   "Leave ticket": "Laisser le ticket",
   "You left the ticket. It waits for any admin again.": "Vous avez laissé le ticket. Il attend à nouveau n'importe quel admin.",
+  "{0} works on this ticket. Only they can answer or change it until they leave it.": "{0} s'occupe de ce ticket. Seule cette personne peut répondre ou le modifier jusqu'à ce qu'elle le laisse.",
 };

@@ -181,6 +181,8 @@ export function LiveSupport() {
   const reply = () => void run(async () => { await client.post(`/admin/tickets/${encodeURIComponent(current!.ticketId)}/reply`, { text: text.trim(), status: after }); setText(""); }, tr("Answer sent. It shows in their app."));
   const ticket = detail.data ?? current;
   const solved = ticket ? ticket.status === "resolved" || ticket.status === "closed" : false;
+  // Checker MED1 (owner "Never" + "Leave ticket"): another admin's claimed ticket is read-only here.
+  const othersClaim = Boolean(ticket?.assignedTo && ticket.assignedTo.adminId !== admin?.adminId);
 
   return (
     <div className="dx-page sp-page" data-testid="live-support">
@@ -249,9 +251,10 @@ export function LiveSupport() {
                       </li>
                     ))}
                   </ol>
+                  {othersClaim ? <p className="dx-calm" data-testid="live-ticket-others">{tr("{0} works on this ticket. Only they can answer or change it until they leave it.", [ticket.assignedTo?.name ?? ticket.assignedTo?.adminId ?? ""])}</p> : null}
                   <div className="op-inline wrap" aria-label={tr("Ticket tools")}>
-                    <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={busy || solved || ticket.assignedTo?.adminId === admin?.adminId} onClick={() => desk("claim", {}, tr("Claimed. Other admins see that you work on it."))}>{tr("Claim")}</button>
-                    {ticket.assignedTo?.adminId === admin?.adminId && !solved ? <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={busy} onClick={() => desk("leave", {}, tr("You left the ticket. It waits for any admin again."))}>{tr("Leave ticket")}</button> : null}
+                    <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={othersClaim || busy || solved || ticket.assignedTo?.adminId === admin?.adminId} onClick={() => desk("claim", {}, tr("Claimed. Other admins see that you work on it."))}>{tr("Claim")}</button>
+                    {ticket.assignedTo?.adminId === admin?.adminId && !solved ? <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={othersClaim || busy} onClick={() => desk("leave", {}, tr("You left the ticket. It waits for any admin again."))}>{tr("Leave ticket")}</button> : null}
                     <label className="field">{tr("Hand to")}
                       <select aria-label={tr("Hand to")} value={assignee} onChange={(event) => setAssignee(event.target.value)}>
                         <option value="">{tr("Choose")}</option>
@@ -259,25 +262,25 @@ export function LiveSupport() {
                         <option value="-">{tr("Nobody")}</option>
                       </select>
                     </label>
-                    <button type="button" className="secondary-btn" data-command="admin.support.assign" disabled={busy || !assignee || !reason.trim()} title={!reason.trim() ? tr("Write a reason first.") : undefined} onClick={() => desk("assign", { adminId: assignee === "-" ? null : assignee, reason: reason.trim() }, tr("Ticket handed over."))}>{tr("Assign")}</button>
+                    <button type="button" className="secondary-btn" data-command="admin.support.assign" disabled={othersClaim || busy || !assignee || !reason.trim()} title={!reason.trim() ? tr("Write a reason first.") : undefined} onClick={() => desk("assign", { adminId: assignee === "-" ? null : assignee, reason: reason.trim() }, tr("Ticket handed over."))}>{tr("Assign")}</button>
                     <label className="field">{tr("Topic")}
-                      <select aria-label={tr("Ticket topic")} value={ticket.category} disabled={busy} onChange={(event) => desk("topic", { category: event.target.value }, tr("Topic changed to {0}.", [categoryLabel(event.target.value)]))} data-command="admin.ticket.topic">
+                      <select aria-label={tr("Ticket topic")} value={ticket.category} disabled={othersClaim || busy} onChange={(event) => desk("topic", { category: event.target.value }, tr("Topic changed to {0}.", [categoryLabel(event.target.value)]))} data-command="admin.ticket.topic">
                         {TOPIC_CODES.map((code) => <option key={code} value={code}>{categoryLabel(code)}</option>)}
                       </select>
                     </label>
-                    {!solved ? <button type="button" className="secondary-btn" data-command="admin.ticket.waiting" disabled={busy} onClick={() => desk("waiting", { waiting: ticket.status !== "pending" }, ticket.status === "pending" ? tr("Back in the queue.") : tr("Waiting for their answer."))}>{ticket.status === "pending" ? tr("They answered") : tr("Waiting for them")}</button> : null}
+                    {!solved ? <button type="button" className="secondary-btn" data-command="admin.ticket.waiting" disabled={othersClaim || busy} onClick={() => desk("waiting", { waiting: ticket.status !== "pending" }, ticket.status === "pending" ? tr("Back in the queue.") : tr("Waiting for their answer."))}>{ticket.status === "pending" ? tr("They answered") : tr("Waiting for them")}</button> : null}
                   </div>
                   <label className="field">{tr("Reason (assign, reopen, safety case)")}<input aria-label={tr("Reason")} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} /></label>
                   <div className="op-inline wrap">
                     {!solved ? (
                       <>
                         <label className="field">{tr("Private note (not sent to the app)")}<input aria-label={tr("Private note")} value={note} maxLength={2000} onChange={(event) => setNote(event.target.value)} /></label>
-                        <button type="button" className="primary-btn" data-command="admin.ticket.solve" disabled={busy} onClick={() => desk("solve", note.trim() ? { note: note.trim() } : {}, tr("Ticket solved."))}>{tr("Mark solved")}</button>
+                        <button type="button" className="primary-btn" data-command="admin.ticket.solve" disabled={othersClaim || busy} onClick={() => desk("solve", note.trim() ? { note: note.trim() } : {}, tr("Ticket solved."))}>{tr("Mark solved")}</button>
                       </>
                     ) : (
-                      <button type="button" className="secondary-btn" data-command="admin.ticket.reopen" disabled={busy || !reason.trim()} title={!reason.trim() ? tr("Write a reason first.") : undefined} onClick={() => desk("reopen", { reason: reason.trim() }, tr("Ticket opened again."))}>{tr("Reopen")}</button>
+                      <button type="button" className="secondary-btn" data-command="admin.ticket.reopen" disabled={othersClaim || busy || !reason.trim()} title={!reason.trim() ? tr("Write a reason first.") : undefined} onClick={() => desk("reopen", { reason: reason.trim() }, tr("Ticket opened again."))}>{tr("Reopen")}</button>
                     )}
-                    {ticket.tripId && !ticket.incidentId ? <button type="button" className="danger-btn" data-command="admin.ticket.case" disabled={busy || !reason.trim()} title={!reason.trim() ? tr("Write a reason first.") : undefined} onClick={() => desk("case", { reason: reason.trim() }, tr("Safety case opened. The safety team sees it in Incidents."))}>{tr("Open a safety case")}</button> : null}
+                    {ticket.tripId && !ticket.incidentId ? <button type="button" className="danger-btn" data-command="admin.ticket.case" disabled={othersClaim || busy || !reason.trim()} title={!reason.trim() ? tr("Write a reason first.") : undefined} onClick={() => desk("case", { reason: reason.trim() }, tr("Safety case opened. The safety team sees it in Incidents."))}>{tr("Open a safety case")}</button> : null}
                   </div>
                   {notice ? <p className="dx-calm" role="status">{notice}</p> : null}
                   {error ? <ErrorLine error={error} onRetry={() => setError(null)} /> : null}
@@ -299,7 +302,7 @@ export function LiveSupport() {
                           <option value="closed">{tr("Closed")}</option>
                         </select>
                       </label>
-                      <button type="button" className="primary-btn" data-command="admin.support.reply" disabled={busy || !text.trim()} onClick={reply}>{tr("Send answer")}</button>
+                      <button type="button" className="primary-btn" data-command="admin.support.reply" disabled={othersClaim || busy || !text.trim()} onClick={reply}>{tr("Send answer")}</button>
                     </div>
                   )}
                 </article>
