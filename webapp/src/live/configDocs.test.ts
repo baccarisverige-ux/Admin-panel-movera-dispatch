@@ -624,3 +624,26 @@ test("live G8 fix 1: a failed Standard is named by its country, translated (neve
     return true;
   });
 });
+
+test("live G8 fix 2: Payment methods are read from the server when the page asks with no fallback (it threw, every box showed ticked)", async () => {
+  const { COUNTRY_SETTINGS_KEY } = await import("../config/countrySettings.ts");
+  const rider = (methods: string[]) => ({ ...sample("rider_app_config"), paymentMethods: methods });
+  const server = fakeServer({ "country_rules:standard-SE": { version: 2, liveVersion: 2, document: {} }, "rider_app_config:standard-SE": { version: 3, liveVersion: 3, document: rider(["cash", "card"]) } });
+  const book = (await createLiveSettings(server.http).readSlice(COUNTRY_SETTINGS_KEY, null)) as { countries: Record<string, { paymentMethods: Record<string, boolean> }> };
+  assert.deepEqual(book.countries.SE.paymentMethods, { cash: true, card: true, apple_pay: false });
+  assert.ok(server.calls.some((c) => c.method === "GET" && c.path.includes("rider_app_config")), "rider_app_config is read");
+});
+
+test("live G8 fix 2: a country Movera is not open in (Tunisia) is never said to be saved without a write", async () => {
+  const { emptyCountrySettingsBook } = await import("../config/countrySettings.ts");
+  const server = fakeServer({});
+  const settings = createLiveSettings(server.http);
+  const book = emptyCountrySettingsBook();
+  const value = { ...book, draftRev: 2, countries: { ...book.countries, TN: { ...book.countries.TN, paymentMethods: { cash: true, card: true, apple_pay: false } } } };
+  await assert.rejects(settings.command("admin.config.saveCountry", { targetId: "x", value, scope: "" })!, /Not saved: Movera is not open in Tunisia yet/);
+  assert.equal(server.calls.filter((c) => c.method !== "GET").length, 0, "nothing is written");
+  // Sweden changed in the same save: still nothing is sent (no half save).
+  const both = { ...value, countries: { ...value.countries, SE: { ...book.countries.SE, paymentMethods: { cash: true, card: false, apple_pay: true } } } };
+  await assert.rejects(settings.command("admin.config.saveCountry", { targetId: "x", value: both, scope: "" })!, /Tunisia/);
+  assert.equal(server.calls.filter((c) => c.method !== "GET").length, 0);
+});

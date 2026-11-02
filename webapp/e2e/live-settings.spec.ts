@@ -188,3 +188,29 @@ test("Live fix 2026-11-02: a link to a zone of another country switches the coun
   await expect(page.getByTestId("zone-not-here")).toContainText("NOPE");
   await expect(page).toHaveURL(/zone=NOPE/);
 });
+
+test("Live G8 fix 2: Payment methods read what the server serves on open; a method turned off stays unticked after a reload", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  const { docs, sent } = await fakeSettings(page);
+  for (const id of ["standard-SE", "Z002"]) {
+    const entry = docs.get(`rider_app_config:${id}`)!;
+    docs.set(`rider_app_config:${id}`, { ...entry, document: { ...entry.document, paymentMethods: ["cash", "card"] } });
+  }
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/settings#country-apps");
+  const panel = page.getByTestId("country-apps");
+  await expect(panel.getByLabel("Sverige Apple Pay")).toBeEnabled();
+  await expect(panel.getByLabel("Sverige Apple Pay")).not.toBeChecked();
+  await expect(panel.getByLabel("Sverige Betala i bilen")).toBeChecked();
+  expect(sent.some((call) => call.method === "GET" && call.path.includes("/rider_app_config") && call.path.includes("country=SE")), "the Standard's rider document is read").toBe(true);
+  expect(sent.some((call) => call.method === "GET" && call.path.includes("/rider_app_config") && call.path.includes("zoneId=Z002")), "a zone's rider document is read").toBe(true);
+  await page.reload();
+  await expect(panel.getByLabel("Sverige Apple Pay")).toBeEnabled();
+  await expect(panel.getByLabel("Sverige Apple Pay")).not.toBeChecked();
+  // The method can be turned on again from the page (Save is on after the tick).
+  await panel.getByLabel("Sverige Apple Pay").check();
+  await expect(panel.getByRole("button", { name: "Spara betalmetoder och språk" })).toBeEnabled();
+  // Tunisia (Movera not open, no zones on the server): never "saved" without a write — its boxes cannot be changed, and say why.
+  await expect(panel.getByLabel("Tunisien Apple Pay")).toBeDisabled();
+  await expect(panel.getByTestId("country-apps-closed-TN")).toContainText("Movera är inte öppet i det här landet än");
+});

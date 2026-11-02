@@ -72,3 +72,19 @@ test("payments on live: no demo ledger; failed and disputes say why they are emp
   await page.getByRole("tab", { name: "Methods and tools" }).click();
   await expect(page.getByTestId("live-payments-tools")).toContainText("Settings › Payment methods");
 });
+
+test("Live G8 fix 2: no English left in SV — the price rule, the dispatch status line and the cancel fee table", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await fakeTripServer(page, { admin: { ...G8_ADMIN, language: "sv" }, trips: [structuredClone(FINISHED)] as never, riders: [{ ...RIDERS[0] }, { ...RIDERS[1] }] });
+  await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/trips/T2008");
+  await expect(page.getByTestId("trip-fare")).toContainText("Hur priset räknades fram · regel Inte kopplad än");
+  await page.goto("/dispatch?zone=Z002&tab=rides");
+  await expect(page.locator(".dx-fee-example")).toContainText("Bokad nu (Radar, Exklusiv)");
+  await expect(page.getByText("min after accept")).toHaveCount(0);
+  await expect(page.getByText(/Booked now|Exclusive/)).toHaveCount(0);
+  await page.goto("/dispatch?zone=Z002");
+  await expect(page.getByText(/Nya förfrågningar nu:/).first()).toBeVisible();
+  await expect(page.getByText(/Nya förfrågningar nu: (Exclusive|None)/)).toHaveCount(0);
+});
