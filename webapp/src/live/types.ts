@@ -279,6 +279,8 @@ export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; mea
 /** GET /admin/riders (AdminRider). */
 export type Rider = {
   riderId: string;
+  /** v0.18.16 A2 (G16 Q16-2): warning / pause / ban with its reason. */
+  moderation?: { level: "none" | "warning" | "paused" | "banned"; reason?: string; until: string | null; setAt?: string };
   firstName: string;
   phone: string;
   email?: string;

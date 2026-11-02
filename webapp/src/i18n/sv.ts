@@ -8393,4 +8393,11 @@ export const sv: Record<MessageKey, string> = {
   "App versions are set in Content › App versions.": "Appversioner ställs in under Innehåll › Appversioner.",
   "Refund limits per role are set in Payments › Rules.": "Återbetalningsgränser per roll ställs in under Betalningar › Regler.",
   "Edit in Payments": "Ändra i Betalningar",
+  "Warned": "Varnad",
+  "Banned": "Spärrad",
+  "Ban": "Spärra",
+  "No warning, pause or ban": "Ingen varning, paus eller spärr",
+  "Warn, pause or ban": "Varna, pausa eller spärra",
+  "Pause days": "Antal dagar i paus",
+  "Warn, pause or ban rider": "Varna, pausa eller spärra resenär",
 };

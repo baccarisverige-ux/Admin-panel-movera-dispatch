@@ -183,7 +183,12 @@ export type LiveDriverFacts = {
   /** v0.18.4 (G3-D2): Driver.performance when the server sent it (GET /admin/drivers/{driverId}). */
   performance?: { acceptancePct: number | null; cancellationPct: number | null; rating: number | null };
 };
+/** v0.18.16 A2 (G16 Q16-2): Rider.moderation. */
+export type LiveRiderModeration = { level: "none" | "warning" | "paused" | "banned"; reason?: string; until: string | null; setAt?: string };
+
 export type LiveRiderFacts = {
+  /** v0.18.16 A2: the rider's warning / pause / ban (null from an older server). */
+  moderation?: LiveRiderModeration | null;
   rating: number | null;
   walletMinor: number | null;
   outstandingMinor: number | null;

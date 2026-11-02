@@ -92,7 +92,7 @@ test("a live driver carries online status, rating and position from /admin/live/
 
 test("riders, payments, refunds to pay by hand, audit and approvals map from the server", () => {
   const rider = riderRecord({ riderId: "rdr_2", firstName: "Bo", phone: "+46700000002", rating: 4.5, status: "active", version: 3, outstanding: SEK(2500), wallet: SEK(1000) });
-  assert.deepEqual(rider.liveRider, { rating: 4.5, walletMinor: 1000, outstandingMinor: 2500, currency: "SEK", deletionRequestedAt: null, outstandingByCurrency: [{ amountMinor: 2500, currency: "SEK" }] });
+  assert.deepEqual(rider.liveRider, { rating: 4.5, walletMinor: 1000, outstandingMinor: 2500, currency: "SEK", deletionRequestedAt: null, moderation: null, outstandingByCurrency: [{ amountMinor: 2500, currency: "SEK" }] });
   const payment = paymentRecord({ paymentId: "pay_trp_1", tripId: "trp_1", amount: SEK(40000), method: "cash", purpose: "trip", status: "captured", createdAt: "2026-10-25T08:30:00Z" }, "Z001");
   assert.deepEqual([payment.name, payment.tripId, payment.fareOre, payment.zoneId], ["cash", "trp_1", 40000, "Z001"]);
   const refund = refundPayoutRecord({ refundId: "rfd_1", tripId: "trp_1", amount: SEK(3000), riderId: "rdr_2", riderName: "Bo", riderPhone: "+46700000002", payoutTo: { kind: "swish" }, reason: "Late" });
@@ -146,4 +146,11 @@ test("live G8 6a: the trips connection note no longer says refunds, driver pay a
   const { readFileSync } = await import("node:fs");
   const text = readFileSync(new URL("./connection.ts", import.meta.url), "utf8");
   assert.ok(!/not connected yet/.test(text.split("\n").find((line) => line.trim().startsWith("trips:")) ?? ""));
+});
+
+test("v0.18.16 A2: the rider's warning / pause / ban comes through on the record", () => {
+  const moderation = { level: "paused" as const, reason: "Unpaid fees", until: "2026-11-09T12:00:00Z" };
+  const rider = riderRecord({ riderId: "R9", firstName: "Ida", phone: "+46700000009", status: "suspended", version: 3, outstanding: null, moderation });
+  assert.deepEqual(rider.liveRider?.moderation, moderation);
+  assert.equal(rider.status, "suspended");
 });

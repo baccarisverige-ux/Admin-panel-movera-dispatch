@@ -17,6 +17,7 @@ export const LIVE_COMMANDS: ReadonlySet<string> = new Set([
   "admin.onboarding.publishSettings",
   "admin.pricing.archiveCategory", "admin.pricing.createCategory", "admin.pricing.editCategory", "admin.pricing.publish", "admin.pricing.restore", "admin.pricing.restoreCategory", "admin.pricing.saveCountry", "admin.pricing.startSurge", "admin.pricing.stopAllSurges", "admin.pricing.stopSurge", "admin.pricing.undo",
   "admin.refund.markPaid",
+  "admin.rider.moderate",
   "admin.safety.dismiss", "admin.safety.resolve", "admin.safety.take",
   "admin.studio.publish", "admin.studio.rollback",
   "admin.trip.adjust", "admin.trip.assign", "admin.trip.cancel", "admin.trip.complete", "admin.trip.driverBonus", "admin.trip.noShow", "admin.trip.pinUnlock", "admin.trip.radarGroup", "admin.trip.radarZoneStop", "admin.trip.reassign", "admin.trip.refund", "admin.trip.reverseNoShow", "admin.trip.waiting", "admin.trip.waiveFee",

@@ -8391,6 +8391,13 @@ export const en = {
   "App versions are set in Content › App versions.": "App versions are set in Content › App versions.",
   "Refund limits per role are set in Payments › Rules.": "Refund limits per role are set in Payments › Rules.",
   "Edit in Payments": "Edit in Payments",
+  "Warned": "Warned",
+  "Banned": "Banned",
+  "Ban": "Ban",
+  "No warning, pause or ban": "No warning, pause or ban",
+  "Warn, pause or ban": "Warn, pause or ban",
+  "Pause days": "Pause days",
+  "Warn, pause or ban rider": "Warn, pause or ban rider",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -305,6 +305,7 @@ export function riderRecord(rider: Rider): DemoRecord {
       outstandingMinor: rider.outstanding ? rider.outstanding.amountMinor : null,
       currency: rider.wallet?.currency ?? rider.outstanding?.currency ?? null,
       deletionRequestedAt: rider.deletionRequestedAt ?? null,
+      moderation: rider.moderation ?? null,
       // v0.18.7 (G5 Q3): every owed currency; an older server sends only outstanding (one currency).
       outstandingByCurrency: Array.isArray(rider.outstandingByCurrency) && rider.outstandingByCurrency.length ? rider.outstandingByCurrency.filter((money) => Number.isFinite(money?.amountMinor)).map((money) => ({ amountMinor: money.amountMinor, currency: money.currency })) : rider.outstanding ? [{ amountMinor: rider.outstanding.amountMinor, currency: rider.outstanding.currency }] : [],
     },
@@ -653,6 +654,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         throw error;
       });
       if (next?.driverId) drivers.set(next.driverId, next);
+      return done("Saved.");
+    }
+    // v0.18.16 A2 (owner G16 Q16-2): Warn → Pause → Ban with the admin's reason; level none clears it.
+    if (input.action === "admin.rider.moderate") {
+      const { level, pauseDays } = (input.value ?? {}) as { level?: string; pauseDays?: number };
+      const reason = input.reason?.trim();
+      if (!level || !reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+      const rider = riders.get(input.targetId) ?? (await client.json<{ items: Rider[] }>(`/admin/riders?q=${encodeURIComponent(input.targetId)}`)).items.find((row) => row.riderId === input.targetId);
+      if (!rider) throw new ApiError(404, "No such rider.", { code: "not_found" });
+      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(rider.riderId)}/moderation`, { expectedVersion: rider.version, level, reason: reason.slice(0, 300), ...(level === "paused" ? { pauseDays } : {}) }).catch(explained);
+      if (next?.riderId) riders.set(next.riderId, next);
       return done("Saved.");
     }
     const decision = VEHICLE_COMMANDS[input.action];

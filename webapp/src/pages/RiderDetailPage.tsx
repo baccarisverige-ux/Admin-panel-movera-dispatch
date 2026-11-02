@@ -57,6 +57,7 @@ import { BOOKING_LABEL, categoryName, type Booking } from "../riders/profile";
 import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
 import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
+import { LiveRiderModeration } from "../live/LiveRiderModeration";
 import { feeKindOf, owedByCurrency, owedText, tripMoney } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
@@ -223,6 +224,7 @@ export function RiderDetailPage() {
               {rider.status === "active" ? statusPatch("on_hold", "Put on hold", "admin.rider.hold", "dash-btn ghost") : null}
               {rider.status !== "blocked" ? statusPatch("blocked", "Block", "admin.rider.block", "dash-btn danger") : null}
             </div>
+            {liveData ? <LiveRiderModeration riderId={rider.id} moderation={liveRiderOf(rider)?.moderation ?? null} canEdit={can(role, "riders.block")} /> : null}
           </div>
         </div>
         <div className="rd-facts">

@@ -8393,4 +8393,11 @@ export const fr: Record<MessageKey, string> = {
   "App versions are set in Content › App versions.": "Les versions des apps se règlent dans Contenu › Versions des apps.",
   "Refund limits per role are set in Payments › Rules.": "Les limites de remboursement par rôle se règlent dans Paiements › Règles.",
   "Edit in Payments": "Modifier dans Paiements",
+  "Warned": "Averti",
+  "Banned": "Bloqué",
+  "Ban": "Bloquer",
+  "No warning, pause or ban": "Aucun avertissement, suspension ni blocage",
+  "Warn, pause or ban": "Avertir, suspendre ou bloquer",
+  "Pause days": "Nombre de jours de suspension",
+  "Warn, pause or ban rider": "Avertir, suspendre ou bloquer le passager",
 };
