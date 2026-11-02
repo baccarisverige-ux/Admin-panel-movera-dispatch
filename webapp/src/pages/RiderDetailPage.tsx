@@ -385,7 +385,7 @@ export function RiderDetailPage() {
                   </button>
                 ))}
               </div>
-              {refund.error && refundRide && refundReason ? <p className="rd-form-error">{trSentences(refund.error)}</p> : <small className="fine">{trn("Refunds above {0} {1} need a second admin to approve ({2}).", refundPolicy.aboveMajor[country], symbol, <Link to="/settings#refunds">{tr("set in Settings")}</Link>)}</small>}
+              {refund.error && refundRide && refundReason ? <p className="rd-form-error">{trSentences(refund.error)}</p> : null}
               <CommandButton command="admin.rider.refund" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(refundAmount * place.minorUnits)} before={refundRide?.id ?? ""} after={`${refundAmount} ${symbol} to ${refundTo}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={refund.care} disabled={!can(role, "finance.read") || Boolean(refund.error)} title={refund.error} onDone={() => { setNotice(refund.needsApproval ? tr("Refund of {0} {1} is waiting for a second admin to approve.", [refundAmount, symbol]) : tr("Refunded {0} {1} to the rider's {2}.", [refundAmount, symbol, DESTINATIONS.find((item) => item.id === refundTo)?.label.toLowerCase()])); setRefundReason(""); setRefundId(""); }}>{trn("{0} Refund {1}", <RotateCcw size={14} aria-hidden="true" />, refundAmount ? `${refundAmount} ${symbol}` : "")}</CommandButton>
             </section>
           </div>

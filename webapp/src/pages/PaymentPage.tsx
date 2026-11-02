@@ -7,7 +7,7 @@ import { useSession } from "../auth/SessionContext";
 import { formatMoney, market } from "../markets/markets";
 import { METHOD_LABELS, PAY_OPS_KEY, emptyPayOps, factsOf, normalizePayOps, paySplit, refundLimitMinor, retryPlan, type PayOps } from "../payments/desk";
 import { Cards } from "../reports/ui";
-import { needsSecondAdmin, refundAboveMinor } from "../payments/refundPolicy";
+import { refundAboveMinor } from "../payments/refundPolicy";
 import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { statusLabel } from "../domain/labels";
 import { paymentTimeline, refundRows } from "../payments/ledger";
@@ -39,7 +39,8 @@ export function PaymentPage() {
   const money = (minor: number) => formatMoney(minor, facts.country);
   // Q25: the one second-admin rule from Settings, per country (default above 500 kr, 50 €, 150 DT); the server applies the same setting.
   const threshold = refundAboveMinor(refundPolicy, facts.country);
-  const needsSecond = needsSecondAdmin(refundPolicy, facts.country, amount) && payment.status === "captured";
+  // Owner 2026-11-02 (build-spec Q1 "One admin always"): a refund never waits for a second admin.
+  const needsSecond = false;
   const pendingApproval = (approvals.data ?? []).find((item) => item.targetId === payment.id && item.action === "admin.payment.refund" && item.status === "pending");
   const split = paySplit(amount, facts.country, facts.tripId);
   const plan = payment.status === "failed" ? retryPlan(payment, facts, ops, now) : null;
@@ -131,7 +132,7 @@ export function PaymentPage() {
         </CommandButton>
 
         {pendingApproval ? <p><Link to="/audit">{tr("Open approval queue")}</Link></p> : null}
-        <p className="fn-help">{trn("{0} Refunds above {1} also need a second admin ({2}).", limit === null ? tr("You have no refund limit.") : tr("Your refund limit is {0}.", [money(limit)]), money(threshold), <Link to="/settings#refunds">{tr("set in Settings")}</Link>)}</p>
+        <p className="fn-help">{limit === null ? tr("You have no refund limit.") : tr("Your refund limit is {0}.", [money(limit)])}</p>
       </article>
     </div>
   );

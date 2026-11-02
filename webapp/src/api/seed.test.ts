@@ -156,7 +156,8 @@ const pending = await api.command({
   after: "refunded",
   amountOre: 60_000,
 });
-assert(pending.status === "pending_approval", "large refund waits for approval");
-assert((await api.approvals()).some((item) => item.targetId === "RF-LARGE" && item.status === "pending"), "approval queue stores high-impact action");
+// Owner 2026-11-02 (build-spec Q1 "One admin always"): a large refund is not filed for a second admin.
+assert(pending.status === "committed", "large refund runs at once (one admin always)");
+assert(!(await api.approvals()).some((item) => item.targetId === "RF-LARGE" && item.status === "pending"), "no approval is filed");
 
 console.log("seed ok");

@@ -8406,4 +8406,5 @@ export const fr: Record<MessageKey, string> = {
   "Release payouts": "Reprendre les versements",
   "Pause payouts": "Suspendre les versements",
   "Pause or release driver payouts": "Suspendre ou reprendre les versements du chauffeur",
+  "The most one admin with this role can give in one go.": "Le maximum qu’un admin avec ce rôle peut accorder en une fois.",
 };

@@ -1,5 +1,5 @@
 import type { DemoRecord } from "./api/seed.ts";
-import { addEntry, canSeePrivate, callSummary, decide, emptyTripOps, flaggedIds, groupOf, maskPhone, moneySplit, needsApproval, routeOf, withStatus } from "./trips/file.ts";
+import { addEntry, canSeePrivate, callSummary, emptyTripOps, flaggedIds, groupOf, maskPhone, moneySplit, needsApproval, routeOf, withStatus } from "./trips/file.ts";
 import { caseOf, clocks, defaultIncidentSettings, emptyIncidentOps, lateText, settingsError, setLevel, sortCases } from "./safety/cases.ts";
 import { defaultRules, emptyRiskOps, flagged, people, preview, review, ruleError } from "./safety/risk.ts";
 import { emptyHandoverOps, handOver, markRead, unread } from "./handover/shift.ts";
@@ -39,12 +39,11 @@ assert(maskPhone("+46 70 123 45 67") === "•••• 4567", "masked phone");
 const ops = emptyTripOps();
 assert(addEntry(ops, { tripId: "T0012", kind: "refund", text: "", amountMinor: 20_000 }, "nora", "2026-10-12T10:00:00Z", split).error === "That is more than the rider paid.", "refund up to what was paid");
 assert(addEntry(ops, { tripId: "T0012", kind: "note", text: " " }, "nora", "2026-10-12T10:00:00Z").error, "a note needs text");
-assert(needsApproval("pay", 60_000, "SE", defaultRefundPolicy()) && !needsApproval("pay", 10_000, "SE", defaultRefundPolicy()), "big pay changes need a second admin");
-const asked = withStatus(addEntry(ops, { tripId: "T0012", kind: "pay", text: "", amountMinor: 60_000 }, "nora", "2026-10-12T10:00:00Z", split), true);
-assert(asked.entry.status === "waiting", "waits for a second admin");
-assert(decide(asked.ops, asked.entry.id, "nora", true, "2026-10-12T10:05:00Z").error === "A second admin must decide.", "not the same admin");
-const approved = decide(asked.ops, asked.entry.id, "lena", true, "2026-10-12T10:05:00Z").ops;
-assert(moneySplit(done, book, false, approved.entries).payChange === 60_000, "approved pay counts");
+// Owner 2026-11-02 (build-spec Q1 "One admin always"): a big pay change never waits for a second admin.
+assert(!needsApproval("pay", 60_000, "SE", defaultRefundPolicy()) && !needsApproval("refund", 600_000, "FR", defaultRefundPolicy()), "no second admin, any amount");
+const asked = withStatus(addEntry(ops, { tripId: "T0012", kind: "pay", text: "", amountMinor: 60_000 }, "nora", "2026-10-12T10:00:00Z", split), needsApproval("pay", 60_000, "SE", defaultRefundPolicy()));
+assert(asked.entry.status !== "waiting", "runs at once");
+assert(moneySplit(done, book, false, asked.ops.entries).payChange === 60_000, "the pay change counts at once");
 const flaggedOps = addEntry(ops, { tripId: "T0012", kind: "flag", text: "Long route" }, "nora", "2026-10-12T10:00:00Z").ops;
 assert(flaggedIds(flaggedOps).has("T0012"), "flagged trips");
 assert(!flaggedIds(addEntry(flaggedOps, { tripId: "T0012", kind: "unflag", text: "Checked" }, "nora", "2026-10-12T11:00:00Z").ops).has("T0012"), "unflag");

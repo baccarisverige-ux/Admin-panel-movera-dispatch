@@ -41,7 +41,6 @@ import { CATEGORIES } from "../domain/contract";
 import { coreZones, stockholmZones } from "../zones/releases";
 import { CommandButton } from "../ui/CommandButton";
 import { useDirtyWarning } from "../ui/useDirtyWarning";
-import { RefundPolicyPanel } from "../payments/RefundPolicyPanel";
 import { CountryAppsPanel } from "../config/CountryAppsPanel";
 import { can } from "../auth/permissions";
 import { tr, trn, trx, trSentences } from "../i18n";
@@ -111,7 +110,6 @@ function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: 
 
 function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
   const { agent } = useSession();
-  const liveAdmin = Boolean(useLiveSessionMaybe());
   const store = useSlice<ConfigBook>("config", emptyConfig());
   const persisted = useMemo(() => normalizeConfig(store.value), [store.value]);
   const [book, setBook] = useState<ConfigBook>(() => emptyConfig());
@@ -144,13 +142,12 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
   }, [base, store.loading]);
 
   const dirty = !sameBook(book, base);
-  const [refundDirty, setRefundDirty] = useState(false);
   const [countryDirty, setCountryDirty] = useState(false);
-  useDirtyWarning(dirty || refundDirty || countryDirty);
+  useDirtyWarning(dirty || countryDirty);
   useEffect(() => {
-    onDirty?.(dirty || refundDirty || countryDirty);
+    onDirty?.(dirty || countryDirty);
     return () => onDirty?.(false);
-  }, [dirty, refundDirty, countryDirty, onDirty]);
+  }, [dirty, countryDirty, onDirty]);
   const missing = missingTranslations(book.draft.reasons);
   const staff = useRecords("staff", null);
   const diff = configDiff(book.published, book.draft);
@@ -201,7 +198,6 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       </p>
 
       {/* Owner 2026-10-28: one admin is enough everywhere, so the live panel has no second-admin limit. */}
-      {liveAdmin ? null : <RefundPolicyPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setRefundDirty} />}
 
       {/* G3-D8: one zone (or the Standard) chosen at the top: its driver app settings can be copied to every zone. */}
       {liveSession && settingsTargets.length === 1 ? <CopyToAllZones zoneId={settingsTargets[0]} zoneName={zoneNameOf(settingsTargets[0])?.name ?? settingsTargets[0]} canEdit={Boolean(agent && can(agent.role, "settings.publish"))} /> : null}

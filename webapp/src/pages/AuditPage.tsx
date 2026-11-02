@@ -1,11 +1,8 @@
 import { useMemo, useState } from "react";
-import { formatCurrencyMoney } from "../markets/markets";
 import { Link, useNavigate } from "react-router";
 import { ArrowLeft, Download, Search } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
-import { can } from "../auth/permissions";
-import { commandById } from "../commands/registry";
-import { useApprovals, useAudit, useRevision } from "../api/hooks";
+import { useAudit, useRevision } from "../api/hooks";
 import { EMPTY_FILTERS, RESULT_LABEL, areaOf, auditCounts, auditCsv, changeOf, filterAudit, type AuditFilters } from "../platform/audit";
 import { logExport } from "../reports/activityLog";
 import { Cards } from "../reports/ui";
@@ -20,17 +17,8 @@ export function AuditPage() {
   const { agent, agents } = useSession();
   const navigate = useNavigate();
   const audit = useAudit();
-  const approvals = useApprovals();
   const revision = useRevision();
   const rows = useMemo(() => audit.data ?? [], [audit.data]);
-  const pending = (approvals.data ?? []).filter((item) => item.status === "pending");
-  // The server refuses the requester and anyone whose role cannot do the action itself; say so on the button.
-  const decideBlock = (item: { action: string; requestedBy: string }, verb: "approve" | "decide") =>
-    item.requestedBy === agent?.id
-      ? `The requester cannot ${verb} their own action.`
-      : agent && !can(agent.role, commandById(item.action)?.permission ?? "*")
-        ? `Your role cannot do this action, so it cannot ${verb} it.`
-        : undefined;
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
   const [limit, setLimit] = useState(PAGE);
   const [open, setOpen] = useState<string | null>(null);
@@ -80,34 +68,9 @@ export function AuditPage() {
           { id: "today", label: "Today", value: counts.today, previous: null, format: "count", info: "Actions recorded today." },
           { id: "admins", label: "Admins", value: counts.admins, previous: null, format: "count", info: "Different admins who did something." },
           { id: "failed", label: "Stopped", value: counts.failed, previous: null, format: "count", info: "Not allowed, rejected or changed by someone else first." },
-          { id: "waiting", label: "Waiting for a second admin", value: pending.length, previous: null, format: "count", info: "Money actions that need a second admin. Decide them below or in To confirm." },
         ]}
       />
 
-      <article className="panel">
-        <h3>{tr("Pending approvals")}</h3>
-        {pending.length === 0 ? (
-          <p className="state-line">{tr("No pending approvals.")}</p>
-        ) : (
-          <DataTable
-            head={["Approval", "Action", "Target", "Requested by", "Amount", "Reason", "Status", "Decision"]}
-            rowIds={pending.map((item) => item.id)}
-            rows={pending.map((item) => [
-              item.id,
-              item.action,
-              item.targetId,
-              item.requestedBy,
-              formatCurrencyMoney(item.amountOre, item.currency),
-              item.reason,
-              item.status,
-              <div className="actions" key={`${item.id}-decision`}>
-                <CommandButton command="admin.approval.approve" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={Boolean(decideBlock(item, "approve"))} title={decideBlock(item, "approve")}>{tr("Approve")}</CommandButton>
-                <CommandButton command="admin.approval.reject" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={Boolean(decideBlock(item, "decide"))} title={decideBlock(item, "decide")}>{tr("Reject")}</CommandButton>
-              </div>,
-            ])}
-          />
-        )}
-      </article>
 
       <section className="panel pl-audit" aria-label={tr("Who did what")}>
         <h3>{tr("Who did what")}</h3>

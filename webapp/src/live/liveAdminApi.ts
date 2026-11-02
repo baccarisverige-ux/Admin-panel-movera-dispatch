@@ -926,11 +926,6 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       await client.post(`/admin/ratings/${encodeURIComponent(tripId)}/${from}/${verb}`, { reason: input.reason || (verb === "hide" ? tr("Hidden by an admin") : tr("Shown again by an admin")) });
       return done(verb === "hide" ? "Hidden." : "Shown again.");
     }
-    if (input.action === "admin.approval.approve" || input.action === "admin.approval.reject") {
-      const decision = input.action.endsWith("approve") ? "approve" : "reject";
-      await client.post(`/admin/approvals/${encodeURIComponent(input.targetId)}/${decision}`, { note: input.reason });
-      return done(decision === "approve" ? "Approved." : "Rejected.");
-    }
     if (input.action === "admin.refund.markPaid") {
       await client.post(`/admin/refunds/${encodeURIComponent(input.targetId)}/paid`, input.reason ? { note: input.reason } : {});
       return done("Marked as paid.");

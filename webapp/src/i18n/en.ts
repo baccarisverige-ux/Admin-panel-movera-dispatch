@@ -8404,6 +8404,7 @@ export const en = {
   "Release payouts": "Release payouts",
   "Pause payouts": "Pause payouts",
   "Pause or release driver payouts": "Pause or release driver payouts",
+  "The most one admin with this role can give in one go.": "The most one admin with this role can give in one go.",
 } as const;
 
 export type MessageKey = keyof typeof en;

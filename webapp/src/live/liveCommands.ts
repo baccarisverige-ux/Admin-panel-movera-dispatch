@@ -7,7 +7,6 @@ import { commandById } from "../commands/registry.ts";
  * add its id here (live/liveCommands.test.ts checks this list against the adapter's code).
  */
 export const LIVE_COMMANDS: ReadonlySet<string> = new Set([
-  "admin.approval.approve", "admin.approval.reject",
   "admin.config.copyAppToZones", "admin.config.publish", "admin.config.publishAppDraft", "admin.config.save", "admin.config.saveCountry", "admin.config.useStandard",
   "admin.dispatch.control", "admin.dispatch.event", "admin.dispatch.group", "admin.dispatch.preset", "admin.dispatch.publish", "admin.dispatch.radarRule", "admin.dispatch.radarZone", "admin.dispatch.saveDraft", "admin.dispatch.undo",
   "admin.driver.activate", "admin.driver.bankReview", "admin.driver.category", "admin.driver.onHold", "admin.driver.payoutHold", "admin.driver.reactivate", "admin.driver.suspend",

@@ -34,7 +34,7 @@ const refund = { action: "admin.payment.refund", targetId: "PAY0200", reason: "C
 const firstRev = await api.revision();
 const pending = await api.command({ ...refund, expectedRev: firstRev });
 const again = await api.command({ ...refund, expectedRev: firstRev });
-assert(pending.status === "pending_approval" && again.operationId === pending.operationId && (await api.audit()).filter((row) => row.operationId === pending.operationId).length === 1, "A03 one refund effect on retry");
+assert(pending.status === "committed" && again.operationId === pending.operationId && (await api.audit()).filter((row) => row.operationId === pending.operationId).length === 1, "A03 one refund effect on retry");
 
 // A04: the live Pricing quote (pricing/zonePricing.ts) adds up from its own lines, from the published Movera prices.
 const book = zoneBook(emptyPricingStore(), "Z001");

@@ -183,7 +183,8 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
   const refundMinor = Math.round(Number(refund.replace(",", ".")) * minor) || 0;
   const payMinor = Math.round(Number(pay.replace(",", ".")) * minor) || 0;
   // v0.7.2 (contract.json#auth.admin.oneAdmin): in the live panel one admin is enough, nothing waits for a second.
-  const oneAdmin = Boolean(liveSession);
+  // Owner 2026-11-02 (build-spec Q1 "One admin always"): never a second admin, demo or live.
+  const oneAdmin = true;
   const refundTry = withStatus(make({ tripId: trip.id, kind: "refund", text: `Refund ${money(refundMinor)}`, amountMinor: refundMinor }, split), !oneAdmin && needsApproval("refund", refundMinor, country, refundPolicy));
   const payTry = withStatus(make({ tripId: trip.id, kind: "pay", text: `Driver pay ${payMinor > 0 ? "+" : "−"}${money(Math.abs(payMinor))}`, amountMinor: payMinor }, split), !oneAdmin && needsApproval("pay", payMinor, country, refundPolicy));
   const noteTry = make({ tripId: trip.id, kind: "note", text: note.trim() });

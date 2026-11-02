@@ -8406,4 +8406,5 @@ export const sv: Record<MessageKey, string> = {
   "Release payouts": "Släpp utbetalningar",
   "Pause payouts": "Pausa utbetalningar",
   "Pause or release driver payouts": "Pausa eller släpp förarens utbetalningar",
+  "The most one admin with this role can give in one go.": "Det mesta en admin med den här rollen kan ge på en gång.",
 };

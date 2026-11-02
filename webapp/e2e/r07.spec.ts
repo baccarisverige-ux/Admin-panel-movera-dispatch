@@ -85,7 +85,7 @@ test("R7 rider account, wallet, refund, promotion, notes and sessions persist", 
   await expect(page.getByRole("list", { name: "Rider timeline" })).toContainText("Wallet +125 kr");
 });
 
-test("R7 big refunds wait for a second admin", async ({ page }) => {
+test("R7 big refunds go out at once (owner Q1: one admin always)", async ({ page }) => {
   test.setTimeout(60_000);
   await session(page);
   await page.goto("/riders?seg=top");
@@ -100,10 +100,10 @@ test("R7 big refunds wait for a second admin", async ({ page }) => {
   await page.getByLabel("Refund reason").fill("Charged twice");
   await page.getByRole("button", { name: /^Refund 550 kr/ }).click();
   await confirm(page);
-  await expect(page.getByText("Refund of 550 kr is waiting for a second admin to approve.")).toBeVisible();
+  await expect(page.getByText(/Refunded 550 kr to the rider/)).toBeVisible();
   const refunds = page.getByRole("list", { name: "Refunds" });
-  await expect(refunds).toContainText("Waiting for approval");
-  await expect(refunds.getByRole("button", { name: "Approve" })).toBeDisabled();
+  await expect(refunds).toContainText("Sent");
+  await expect(refunds.getByRole("button", { name: "Approve" })).toHaveCount(0);
 });
 
 test("R7 finance can open rider wallet without sensitive reveal permission", async ({ page }) => {

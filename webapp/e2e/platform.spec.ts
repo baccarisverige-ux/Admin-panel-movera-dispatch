@@ -81,7 +81,7 @@ test("audit: search, filters, details with who and before/after, and export", as
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText("Draft saved through AdminApi.")).toBeVisible();
   await page.goto("/audit");
-  await expect(page.getByRole("heading", { level: 3, name: "Pending approvals" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "Pending approvals" })).toHaveCount(0);
   await page.getByLabel("Search the audit", { exact: true }).fill("configuration");
   const log = page.getByRole("list", { name: "Audit log" });
   await expect(log.getByRole("listitem").first()).toContainText("admin.config.save");
@@ -96,7 +96,7 @@ test("audit: search, filters, details with who and before/after, and export", as
   await expect(page.getByText("No action matches these filters.")).toBeVisible();
 });
 
-test("to confirm: a money approval shows in the inbox and a product value is confirmed", async ({ page }) => {
+test("to confirm: a big refund runs at once (owner Q1), nothing to approve; a product value is confirmed", async ({ page }) => {
   await session(page);
   await page.goto("/audit");
   await page.getByRole("button", { name: "Refund 600 kr" }).click();
@@ -104,12 +104,9 @@ test("to confirm: a money approval shows in the inbox and a product value is con
   await modal.getByLabel("Type RF-LARGE to confirm").fill("RF-LARGE");
   await modal.getByLabel("Reason", { exact: true }).selectOption("Charged twice");
   await modal.getByRole("button", { name: "Confirm" }).click();
-  await expect(page.getByRole("heading", { level: 3, name: "Pending approvals" }).locator("..")).toContainText("RF-LARGE");
   await page.goto("/confirm");
   await expect(page.getByRole("heading", { level: 2, name: "To confirm" })).toBeVisible();
-  const inbox = page.getByRole("list", { name: "Inbox" });
-  await expect(inbox).toContainText("600,00 kr for RF-LARGE");
-  await expect(inbox.getByRole("button", { name: "Approve" }).first()).toBeDisabled();
+  await expect(page.getByText("600,00 kr for RF-LARGE")).toHaveCount(0);
   await page.getByRole("button", { name: "Confirm quote" }).click();
   await page.getByLabel("Value to confirm").fill("90 seconds");
   await page.getByLabel("Note for the team").fill("Decided in the October meeting");

@@ -1,22 +1,14 @@
 import { useState } from "react";
-import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { Banknote, EyeOff, ListChecks } from "lucide-react";
+import { EyeOff, ListChecks } from "lucide-react";
 import { ROLE_LABELS, type Role } from "../auth/permissions";
-import { Link } from "react-router";
 import { Card, Check, Row } from "../dispatch/fields";
-import { useRefundPolicy } from "../payments/useRefundPolicy";
-import { MARKETS } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { ACTIONS, PRIVATE_BASE, TRIP_OPS_KEY, saveSettings, type TripOps, type TripSettings } from "./file";
-import { tr, trn, trx, trSentences } from "../i18n";
-
-const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
+import { tr, trx, trSentences } from "../i18n";
 
 /** Super admin only: who sees private trip data, which actions exist, and the money limits. */
 export function TripSettingsView({ ops, rev, loading, editable }: { ops: TripOps; rev: number; loading: boolean; editable: boolean }) {
-  const live = Boolean(useLiveSessionMaybe());
   const [draft, setDraft] = useState<TripSettings | null>(null);
-  const { policy: refundPolicy } = useRefundPolicy();
   const settings = draft ?? ops.settings;
   const dirty = Boolean(draft) && JSON.stringify(draft) !== JSON.stringify(ops.settings);
   const result = saveSettings(ops, settings);
@@ -46,17 +38,7 @@ export function TripSettingsView({ ops, rev, loading, editable }: { ops: TripOps
         <Card title={tr("Actions on a trip")} icon={<ListChecks size={18} />} tone="blue" help={tr("Turn an action off and its button is gone from every trip page. Everything done is logged with the admin's name.")}>
           {ACTIONS.map((item) => <Row key={item.id} label={trx(item.label)} help={trx(item.help)} on={settings.actions[item.id]} onToggle={(on) => patch({ actions: { ...settings.actions, [item.id]: on } })} />)}
         </Card>
-        {/* Owner 2026-10-28: one admin is enough everywhere; the live panel has no second-admin limit. */}
-        {live ? null : (
-        <Card title={tr("Second admin for big amounts")} icon={<Banknote size={18} />} tone="green" help={tr("Refunds and driver pay changes above the amount wait until another admin approves them. One limit per country, the same everywhere (Q25).")}>
-          {MARKETS.map((item) => (
-            <Row key={item.id} label={item.name} help={tr("In {0}.", [item.currency])}>
-              <span className="dx-tag" data-testid={`trip-second-admin-${item.id}`}>{trn("Above {0} {1}", refundPolicy.aboveMajor[item.id], SYMBOL[item.id])}</span>
-            </Row>
-          ))}
-          <p className="dx-readonly"><Link to="/settings#refunds">{tr("Edit in Settings")}</Link></p>
-        </Card>
-        )}
+        {/* Owner 2026-11-02 (build-spec Q1 "One admin always"): no second-admin limit anywhere. */}
       </fieldset>
       {editable ? (
         <div className="dx-publish">

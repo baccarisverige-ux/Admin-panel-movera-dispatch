@@ -103,7 +103,6 @@ export const FEATURE_INDEX: readonly FeatureEntry[] = [
   { id: "promo-cap", phrase: "Promo cap per country", section: "Pricing › Tips & limits", keywords: "promotion discount maximum", path: "/pricing?tab=extras&section=promo-cap" },
   { id: "driver-bonus-limit", phrase: "Driver bonus limit per country", section: "Pricing › Tips & limits", keywords: "add money to trip hard max extra", path: "/pricing?tab=extras&section=driver-bonus" },
   { id: "pricing-history", phrase: "Pricing history, undo and restore", section: "Pricing", path: "/pricing?tab=history" },
-  { id: "refund-second-admin", phrase: "Refunds: when a second admin is needed", section: "Settings", keywords: "approval limit 500", path: "/settings#refunds" },
   { id: "app-features", phrase: "App features, versions and updates", section: "Settings", keywords: "wallet pin share trip", path: "/settings" },
   { id: "payment-methods", phrase: "Payment methods per country", section: "Settings", keywords: "cash card apple pay google pay wallet", path: "/settings#country-apps" },
   { id: "languages", phrase: "Default app languages per country", section: "Settings", keywords: "language english french swedish en fr sv rider driver admin", path: "/settings#country-apps" },

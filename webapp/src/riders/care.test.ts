@@ -64,9 +64,9 @@ const ride = rideRow.bookings.find((booking) => booking.status === "completed" &
 const small = requestRefund(care, rideRow.rider, ride, 100, "card", "Long route", "maja", NOW);
 assert(!small.error && !small.needsApproval && small.care.refunds[0].status === "sent", "small refund goes out");
 const big = requestRefund(care, rideRow.rider, ride, 550, "bank", "Charged twice", "maja", NOW);
-assert(big.needsApproval && big.care.refunds[0].status === "waiting", "big refund waits for approval");
-assert(decideRefund(big.care, big.care.refunds[0].id, true, "maja").error?.includes("Another admin"), "no self-approval");
-assert(decideRefund(big.care, big.care.refunds[0].id, true, "astrid").care.refunds[0].status === "sent", "second admin approves");
+// Owner 2026-11-02 (build-spec Q1 "One admin always"): a big refund goes out at once, nothing to decide.
+assert(!big.needsApproval && big.care.refunds[0].status === "sent", "big refund goes out at once");
+assert(decideRefund(big.care, big.care.refunds[0].id, true, "astrid").error, "nothing waits to be decided");
 assert(requestRefund(care, rideRow.rider, ride, ride.fareMinor / 100 + 1, "card", "x", "maja", NOW).error?.includes("paid"), "cannot refund more than paid");
 
 // Unpaid balance clears when paid.
