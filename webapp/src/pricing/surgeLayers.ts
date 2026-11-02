@@ -36,10 +36,13 @@ type State = { pills: maplibregl.Marker[]; pulse: number | null; onZone?: (zoneI
 const states = new WeakMap<maplibregl.Map, State>();
 
 /** Call once in the map's load handler. `beforeId` keeps drivers and riders above the surge. */
-/** A pulse tick that comes this late after its frame was asked for means the map cannot keep up (no GPU). */
-export const PULSE_LATE_MS = 250;
-/** This many late ticks in a row stop the pulse. */
-export const PULSE_LATE_TICKS = 3;
+/**
+ * A pulse frame that comes this late after it was asked for means the map cannot keep up: with a GPU the next frame
+ * comes within ~16 ms (two at 60 Hz: 33 ms); software WebGL needs 100-400 ms for a full map repaint.
+ */
+export const PULSE_LATE_MS = 45;
+/** This many late frames in a row stop the pulse (one slow frame, e.g. a tab switch, does not). */
+export const PULSE_LATE_TICKS = 4;
 
 export function installSurgeLayers(map: maplibregl.Map, onZone?: (zoneId: string) => void, beforeId?: string): void {
   const empty = { type: "FeatureCollection" as const, features: [] };
