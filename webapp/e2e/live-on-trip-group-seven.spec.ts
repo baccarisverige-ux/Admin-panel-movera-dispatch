@@ -197,3 +197,43 @@ test("trip page in French: the trip tools have no English", async ({ page }) => 
   await expect(tools).not.toContainText("Open case");
   await expect(tools).not.toContainText("Reveal phone");
 });
+
+// G7 live fix 3 (live re-check 2026-11-02, item 3): at 1440 px the ride-check table fits its card with long server
+// ids, and the SV panel has no English or raw codes in the timeline and in "Vem gjorde vad"; no e-mail as the actor.
+test("SV: ride-check log fits at 1440 px with long ids; trip timeline and Who did what in Swedish, no e-mail", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const tripId = "trp_01JBX7Q2M4N6P8R0S2T4V6W8YZ";
+  const rideChecks = [
+    { tripId, zoneId: "Z001", checkId: "srv_dropped_far_01JBX7Q2M4N6P8R0S2T4", side: "rider", trigger: "dropped_far", origin: "server", shownAt: "2026-10-26T09:20:00Z", createdAt: "2026-10-26T09:20:00Z", incidentId: "inc_01JBX7Q2M4N6P8R0S2T4V6W8" },
+    { tripId, zoneId: "Z001", checkId: "srv_dropped_far_01JBX7Q2M4N6P8R0S2T4", side: "driver", trigger: "dropped_far", origin: "server", shownAt: "2026-10-26T09:20:00Z", answer: "ok", answeredAt: "2026-10-26T09:20:30Z", createdAt: "2026-10-26T09:20:00Z" },
+  ];
+  const audit = [{ auditId: "g7f3", at: "2026-10-26T09:30:00Z", actor: "admin", actorId: "adm_01JBX7Q2M4N6P8R0S2", actorRole: "super", action: "trip.flag", targetType: "trip", targetId: tripId, result: "committed", requestId: "g7f3" }];
+  const admin = { ...G7_ADMIN, adminId: "adm_01JBX7Q2M4N6P8R0S2", name: "owner@movera.se", language: "sv" };
+  await fakeTripServer(page, { admin, trips: [{ ...structuredClone(ON_TRIP), tripId }] as never, riders: [{ ...RIDERS[0] }, { ...RIDERS[1] }], rideChecks, audit });
+  await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+
+  await page.goto("/incidents?view=ridechecks");
+  await expect(page.getByRole("table", { name: "Resekontrollogg" }).locator("tbody tr").first()).toBeVisible();
+  const fit = await page.locator(".rc-table-wrap").evaluate((wrap) => {
+    const card = wrap.getBoundingClientRect();
+    const incident = wrap.querySelector("thead th:last-child")!.getBoundingClientRect();
+    return { noScroll: wrap.scrollWidth <= wrap.clientWidth + 1, incidentInCard: incident.right <= card.right + 1 };
+  });
+  expect(fit).toEqual({ noScroll: true, incidentInCard: true });
+  const when = page.locator(".rc-table tbody tr").first().locator("td").first();
+  await expect(when).not.toContainText("~");
+  await expect(when).not.toContainText(tripId);
+
+  await page.goto(`/trips/${tripId}`);
+  const timeline = page.getByTestId("trip-timeline");
+  await expect(timeline).toContainText("Resekontroll, resenär: inget svar än");
+  await expect(timeline).not.toContainText("Ride check");
+  const history = page.locator("section#history");
+  await expect(history).toContainText("Resan flaggad · Klart");
+  await expect(history).not.toContainText("trip.flag");
+  await expect(history).not.toContainText("committed");
+  // The account has no name (only its e-mail): "Admin" and a short id, never the e-mail.
+  await expect(history).not.toContainText("@");
+  await expect(history).toContainText("Admin adm_…P8R0S2");
+});

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { tr, trx } from "../i18n/core";
+import { tr, trx, uiLocale } from "../i18n/core";
+import { shortId } from "../live/format";
 import { Link } from "react-router";
 import { Repeat, ShieldCheck, X } from "lucide-react";
 import type { DemoRecord } from "../api/seed";
@@ -54,7 +55,8 @@ export function RideCheckLog({ checks, timeOf, incidentState, drivers, zones, ma
   const [filter, setFilter] = useState<LogFilter>(EMPTY_FILTER);
   const set = (patch: Partial<LogFilter>) => setFilter((current) => ({ ...current, ...patch }));
   const day = (ms: number) => new Intl.DateTimeFormat("sv-SE", { timeZone: market.timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
-  const when = (ms: number) => new Intl.DateTimeFormat(market.locale, { timeZone: market.timeZone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(ms));
+  // G7 live fix 3: the time in the panel's language; ids are shortened (full id on hover) so the table fits.
+  const when = (ms: number) => new Intl.DateTimeFormat(uiLocale(), { timeZone: market.timeZone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(ms));
   const zoneName = (id: string) => zones.find((zone) => zone.id === id)?.name ?? id;
   const driverName = (id: string) => drivers.find((row) => row.id === id)?.name ?? id;
   const rows = filterChecks(checks, filter, timeOf, day).sort((a, b) => timeOf(b) - timeOf(a));
@@ -125,14 +127,14 @@ export function RideCheckLog({ checks, timeOf, incidentState, drivers, zones, ma
               const state = check.incidentId ? incidentState(check.incidentId) : null;
               return (
                 <tr key={check.id} className={outcomeOf(check) === "help" ? "rc-row help" : "rc-row"}>
-                  <td><time>{when(timeOf(check))}</time><small>{check.id}</small></td>
+                  <td><time dateTime={new Date(timeOf(check)).toISOString()}>{when(timeOf(check))}</time><small title={check.id}>{shortId(check.id.includes("~") ? check.id.split("~").slice(1).join("~") : check.id)}</small></td>
                   <td><span className="rc-cell"><b>{triggerLabel(check.trigger)}</b><small>{reasonText({ ...check, place: "" })}{check.place ? ` · ${check.place}` : ""}</small></span></td>
                   <td><AnswerCell who="driver" answer={check.driver} /></td>
                   <td><AnswerCell who="rider" answer={check.rider} /></td>
                   <td>{zoneName(check.zoneId)}</td>
                   <td><Link to={`/drivers/${check.driverId}`}>{driverName(check.driverId)}</Link></td>
-                  <td><Link to={`/trips/${check.tripId}`}>{check.tripId}</Link></td>
-                  <td>{check.incidentId ? <Link to={`/incidents?case=${check.incidentId}`}>{check.incidentId}</Link> : <span className="op-help">–</span>}{state ? <small>{state === "queued" ? tr("Not taken") : state === "taken" ? tr("Taken") : tr("Solved")}</small> : null}</td>
+                  <td><Link to={`/trips/${check.tripId}`} title={check.tripId} aria-label={check.tripId}>{shortId(check.tripId)}</Link></td>
+                  <td>{check.incidentId ? <Link to={`/incidents?case=${check.incidentId}`} title={check.incidentId} aria-label={check.incidentId}>{shortId(check.incidentId)}</Link> : <span className="op-help">–</span>}{state ? <small>{state === "queued" ? tr("Not taken") : state === "taken" ? tr("Taken") : tr("Solved")}</small> : null}</td>
                 </tr>
               );
             })}

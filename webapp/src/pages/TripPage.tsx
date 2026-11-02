@@ -1,7 +1,7 @@
 import { NotConnected } from "../live/NotConnected";
 import { LiveTripChat } from "../live/LiveTripChat";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { auditActionText, auditActorName, fareLineLabel } from "../live/format";
+import { auditActionText, auditActorName, auditResultText, fareLineLabel } from "../live/format";
 import { Link, useNavigate, useParams } from "react-router";
 import { useLiveRefund } from "../live/LiveRefund";
 import { LiveTripMoney } from "../live/LiveTripMoney";
@@ -65,7 +65,7 @@ import {
   waybill,
   zoneTimeLabel,
 } from "../trips/present";
-import { AdminActions, ChatCalls, Section, SplitView, Waiting, agentName, entryLine } from "../trips/TripParts";
+import { AdminActions, ChatCalls, Section, SplitView, Waiting, entryLine } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
 import { cashFigures, isCashTrip } from "../trips/cash";
 import { offerLog, timelineOffers } from "../trips/offerLog";
@@ -205,6 +205,8 @@ export function TripPage() {
   const driverName = (id: string) => drivers.data?.find((row) => row.id === id)?.name ?? "A driver";
   const allowed = canSeePrivate(role, ops.settings);
   const entries = entriesFor(ops, trip.id);
+  // G7 live fix 3: who did it by name, else "Admin" and a short id; never an e-mail address.
+  const team = liveSession?.admin ? [...agents, { id: liveSession.admin.adminId, name: liveSession.admin.name }] : agents;
   const flagged = isFlagged(ops, trip.id);
   const riderId = riderIdFor(trip);
   const zone = zoneById(trip.zoneId);
@@ -222,12 +224,14 @@ export function TripPage() {
     const at = (iso: string) => new Date(shifted(iso, shift)).toISOString();
     const link = check.incidentId && canSafety ? { to: `/incidents?case=${check.incidentId}`, label: check.incidentId } : undefined;
     return [
-      { at: at(check.at), text: `Ride check: ${triggerLabel(check.trigger)} · ${reasonText(check)}`, tone: "check", link },
+      // G7 live fix 3: in the panel's language (the SV timeline read "Ride check, rider: no answer yet").
+      { at: at(check.at), text: tr("Ride check: {0} · {1}", [triggerLabel(check.trigger), reasonText(check)]), tone: "check", link },
       ...(["driver", "rider"] as const).flatMap((who): TimelineEvent[] => {
         const answer = check[who];
-        if (!answer) return [{ at: at(check.at), text: `Ride check, ${who}: no answer yet`, tone: "muted" }];
+        if (!answer) return [{ at: at(check.at), text: who === "driver" ? tr("Ride check, driver: no answer yet") : tr("Ride check, rider: no answer yet"), tone: "muted" }];
         const extra = [...(answer.follow ?? []).map(followText), ...(answer.text ? [`“${answer.text}”`] : [])];
-        return [{ at: at(answer.at), text: `Ride check, ${who}: ${answerLabel(who, answer)}${extra.length ? ` · ${extra.join(" · ")}` : ""}`, tone: isRed(answer) ? "alert" : answer.choice === "ok" ? "good" : "check" }];
+        const said = `${answerLabel(who, answer)}${extra.length ? ` · ${extra.join(" · ")}` : ""}`;
+        return [{ at: at(answer.at), text: who === "driver" ? tr("Ride check, driver: {0}", [said]) : tr("Ride check, rider: {0}", [said]), tone: isRed(answer) ? "alert" : answer.choice === "ok" ? "good" : "check" }];
       }),
     ];
   });
@@ -718,7 +722,7 @@ export function TripPage() {
         {entries.length ? (
           <ul className="op-history" aria-label={tr("Admin work on this trip")}>
             {entries.map((entry) => (
-              <li key={entry.id}><time>{zoneTimeLabel(entry.at, trip.zoneId)}</time><b>{agentName(entry.actorId)}</b><span>{entryLine(entry, money)}</span></li>
+              <li key={entry.id}><time>{zoneTimeLabel(entry.at, trip.zoneId)}</time><b>{auditActorName(entry.actorId, team)}</b><span>{entryLine(entry, money)}</span></li>
             ))}
           </ul>
         ) : null}
@@ -728,7 +732,7 @@ export function TripPage() {
         ) : (
           <ul aria-label={tr("Trip intervention audit")} className="op-history">
             {tripAudits.map((item) => (
-              <li key={item.id}><time dateTime={item.at}>{zoneTimeLabel(item.at, trip.zoneId)}</time><b>{auditActorName(item.actorId, liveSession?.admin ? [...agents, { id: liveSession.admin.adminId, name: liveSession.admin.name }] : agents)}</b><span>{auditActionText(item.action)} · {trx(item.result)}{item.reason ? <> · {trx(item.reason)}</> : null}</span></li>
+              <li key={item.id}><time dateTime={item.at}>{zoneTimeLabel(item.at, trip.zoneId)}</time><b>{auditActorName(item.actorId, team)}</b><span>{auditActionText(item.action)} · {auditResultText(item.result)}{item.reason ? <> · {trx(item.reason)}</> : null}</span></li>
             ))}
           </ul>
         )}

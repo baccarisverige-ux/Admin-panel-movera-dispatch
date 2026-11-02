@@ -237,3 +237,18 @@ test("page audit round 4: the live page texts have no demo wording, and 'no driv
   for (const key of ["Unassigned", "Not assigned", "None assigned"]) assert.equal((fr as Record<string, string>)[key], "Non attribué", key);
   assert.equal((fr as Record<string, string>)["{0} Unassigned"], "{0} Non attribué");
 });
+
+test("G7 live fix 3: Dispatch publish line, the cancel-fee car type and the trip ride-check lines in SV and FR", () => {
+  registerDictionary("sv", sv);
+  registerDictionary("fr", fr);
+  setLanguage("sv");
+  assert.equal(tr("Live now: {0}.", ["Stockholms län"]), "Live nu: Stockholms län.");
+  assert.equal(trx("Comfort"), "Komfort");
+  assert.equal(tr("Ride check, rider: no answer yet"), "Resekontroll, resenär: inget svar än");
+  setLanguage("fr");
+  assert.equal(tr("Live now: {0}.", ["Comté de Stockholm"]), "En ligne maintenant : Comté de Stockholm.");
+  assert.equal(trx("Comfort"), "Confort");
+  assert.equal(tr("Waiting for a second admin: {0}.", ["Z001"]), "En attente d’un second admin : Z001.");
+  setLanguage("en");
+  assert.equal(tr("Live now: {0}.", ["Norrmalm"]), "Live now: Norrmalm.");
+});
