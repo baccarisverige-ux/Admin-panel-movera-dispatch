@@ -217,6 +217,15 @@ export function bonusInScope(trip: Bonuses, scope: BonusScope): number {
   return Math.max(trip.bonusExclusiveMinor, trip.bonusRadarMinor);
 }
 
+/**
+ * Live G8 8: where the added money waits when no offer of its kind is out (owner: nobody free → the money stays on the
+ * ride; money is per kind of offer, so Radar money rides only with the next Radar offer, never an automatic Exclusive).
+ */
+export function waitingMoney(trip: Bonuses & Pick<TripDispatch, "offers">): { exclusive: number; radar: number } {
+  const out = (kind: AdminOffer["kind"]) => trip.offers.some((offer) => offer.status === "open" && offer.kind === kind);
+  return { exclusive: out("assigned") ? 0 : trip.bonusExclusiveMinor, radar: out("radar") ? 0 : trip.bonusRadarMinor };
+}
+
 /** The trip's bonuses once `extra` is added with `scope`. */
 export function withBonus(trip: Bonuses, extra: number, scope: BonusScope): Bonuses & { bonusMinor: number } {
   const exclusive = trip.bonusExclusiveMinor + (scopeCovers(scope, "assigned") ? extra : 0);

@@ -7,7 +7,7 @@ import { MARKETS, marketOfZone, standardZoneId, zoneById, type MarketId } from "
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, draftRules, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
-import { COUNTRY_SETTINGS_KEY, ZONE_RULES_KEY, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, ZONE_RULES_KEY, methodsChanged, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
@@ -37,7 +37,9 @@ import {
 } from "./configDocs.ts";
 import { ONBOARDING_SETTINGS_KEY, OPEN, normalizeSettingsBook, wireDocument, type SettingsBook, type SettingsDoc } from "../drivers/onboardingSettings.ts";
 import { registerCountryTypes } from "./format.ts";
-import { tr } from "../i18n/core.ts";
+import { tr, trx } from "../i18n/core.ts";
+import { COUNTRY_LABEL } from "../i18n/countries.ts";
+import { ZONE_PAYMENT_METHODS, type ZonePaymentMethod } from "../config/zoneDefaults.ts";
 import { ApiError } from "../api/httpClient.ts";
 import { readDispatchTools, sendToolCalls, toolCalls, toolRefusal, toolsOf, type DispatchTools } from "./dispatchTools.ts";
 
@@ -118,6 +120,18 @@ export type LiveSettings = {
 };
 
 const notFound = (error: unknown) => (error as { status?: number } | null)?.status === 404;
+
+/** Live G8 6c: how many zones Settings › Payment methods publishes at the same time. */
+export const METHODS_AT_ONCE = 4;
+
+/** Runs `work` for every item, at most `limit` at the same time. */
+export async function inBatches<T>(items: readonly T[], limit: number, work: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const lane = async () => {
+    while (next < items.length) await work(items[next++]!);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
+}
 
 export function createLiveSettings(http: ConfigHttp, now: () => string = () => new Date().toISOString()): LiveSettings {
   const drafts = new Map<string, Draft | null>();
@@ -274,6 +288,30 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     };
   }
 
+  /** The payment methods every open zone of the country serves (its own document, else the Standard's); null if none is known. */
+  async function servedMethods(market: (typeof MARKETS)[number], standard: unknown): Promise<{ on: string[]; mixed: Partial<Record<ZonePaymentMethod, string[]>> } | null> {
+    const standardList = Array.isArray(standard) ? (standard as string[]) : null;
+    // Each zone's served list (its own document, else the Standard's), in the market's zone order.
+    const zoneLists = await Promise.all(market.zones.map(async (zone): Promise<[string, string[] | null]> => {
+      // Read directly: a zone without a rider document of its own is no reason to stop reading its other documents.
+      const found = unknownZones.has(zone.id) ? null : await readDraft(http, "rider_app_config", zone.id).catch(() => null);
+      if (!found || found.usesStandard) return [zone.id, standardList];
+      const list = (found.document as { paymentMethods?: unknown }).paymentMethods;
+      return [zone.id, Array.isArray(list) ? (list as string[]) : null];
+    }));
+    const known = zoneLists.filter((entry): entry is [string, string[]] => entry[1] !== null);
+    if (!known.length) return standardList ? { on: standardList, mixed: {} } : null;
+    const on = known.reduce((all, [, list]) => all.filter((method) => list.includes(method)), known[0][1]);
+    // Live G8 fix 1 (decision driver-g8.md #2): a method some zones serve and others do not is mixed, with the zones
+    // where it is off, so the page never shows one zone's choice as the whole country's.
+    const mixed: Partial<Record<ZonePaymentMethod, string[]>> = {};
+    for (const method of ZONE_PAYMENT_METHODS) {
+      if (on.includes(method) || !known.some(([, list]) => list.includes(method))) continue;
+      mixed[method] = known.filter(([, list]) => !list.includes(method)).map(([zone]) => zone);
+    }
+    return { on, mixed };
+  }
+
   async function readCountries(fallback: unknown): Promise<CountrySettingsBook> {
     const book = fallback as CountrySettingsBook;
     const countries = { ...book.countries };
@@ -284,12 +322,17 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const rider = await draft("rider_app_config", standardKey(market.id), true).catch(() => null);
       const doc = rider?.document as { paymentMethods?: unknown; tipRules?: { cashAfterTrip?: unknown; customAmount?: unknown; customMax?: { amountMinor?: number } } } | undefined;
       const base = countries[market.id] ?? countrySettingsOf(book, market.id);
-      if (doc) {
-        const on = Array.isArray(doc.paymentMethods) ? (doc.paymentMethods as string[]) : null;
-        const tr0 = doc.tipRules;
+      // Live G8 6c: a method is ticked only when the server serves it. The riders get their zone's own document (or the
+      // Standard when the zone follows it), so the zones' documents are read too: the Standard alone could still hold a
+      // method the zones no longer serve, and then the page showed it ticked and Save stayed off ("no unsaved change").
+      const served = await servedMethods(market, doc?.paymentMethods);
+      if (doc || served) {
+        const on = served?.on;
+        const mixed = served && Object.keys(served.mixed).length ? served.mixed : undefined;
+        const tr0 = doc?.tipRules;
         countries[market.id] = {
           ...base,
-          ...(on ? { paymentMethods: { cash: on.includes("cash"), card: on.includes("card"), apple_pay: on.includes("apple_pay") } } : {}),
+          ...(on ? { paymentMethods: { cash: on.includes("cash"), card: on.includes("card"), apple_pay: on.includes("apple_pay") }, mixedMethods: mixed } : {}),
           ...(tr0 ? { tipRules: { cashAfterTrip: tr0.cashAfterTrip === true, customAmount: tr0.customAmount === true, customMax: typeof tr0.customMax?.amountMinor === "number" ? tr0.customMax.amountMinor / market.minorUnits : base.tipRules.customMax } } : {}),
         };
       }
@@ -520,9 +563,43 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
    * country's Standard and of every open zone of the country (paymentMethods = the ticked ones; never Google Pay).
    */
   async function saveMethods(book: CountrySettingsBook): Promise<string> {
+    // Live G8 fix 1: only the countries whose payment methods changed are published (a language-only save leaves every
+    // zone's paymentMethods as it is); a mixed method that was set is made the same in the whole country.
+    const before = normalizeCountrySettingsBook(slices.get(COUNTRY_SETTINGS_KEY) ?? null);
+    const changed = new Set(MARKETS.filter((market) => methodsChanged(countrySettingsOf(before, market.id), countrySettingsOf(book, market.id))).map((market) => market.id));
+    if (!changed.size) {
+      slices.set(COUNTRY_SETTINGS_KEY, book);
+      return "Saved. No payment method changed.";
+    }
+    const scopes = readScopes().filter((id) => changed.has((countryOfStandard(id) ?? marketOfZone(id)?.id) as MarketId));
     const state = stateWith({ countrySettings: book });
-    for (const id of readScopes()) await publishAppParts(id, { rider: ["paymentMethods"], driver: ["paymentMethods"] }, state);
-    slices.set(COUNTRY_SETTINGS_KEY, book);
+    // Live G8 6c: about 30 documents. One by one took over a minute and a reload in the middle left zones not updated.
+    // Now a few at a time, the browser asks before the page is left while it runs, and the zones that failed are named;
+    // Save stays on, and pressing it again sends only what is not live yet (the same document is skipped).
+    const failed: string[] = [];
+    const leaving = (event: Event) => {
+      event.preventDefault();
+      Reflect.set(event, "returnValue", "");
+    };
+    globalThis.addEventListener?.("beforeunload", leaving);
+    try {
+      await inBatches(scopes, METHODS_AT_ONCE, async (id) => {
+        try {
+          await publishAppParts(id, { rider: ["paymentMethods"], driver: ["paymentMethods"] }, state);
+        } catch (error) {
+          if (error instanceof SettingsChanged) throw error;
+          failed.push(id);
+        }
+      });
+    } finally {
+      globalThis.removeEventListener?.("beforeunload", leaving);
+    }
+    if (failed.length) {
+      const standardName = (country: MarketId) => tr("Standard {0}", [trx(COUNTRY_LABEL[country])]);
+      const names = scopes.filter((id) => failed.includes(id)).map((id) => (countryOfStandard(id) ? standardName(countryOfStandard(id) as MarketId) : (zoneById(id)?.name ?? id)));
+      throw new Error(`${tr("Some zones were not updated.")} ${tr("Press Save again to update them.")} ${names.join(", ")}`);
+    }
+    slices.set(COUNTRY_SETTINGS_KEY, { ...book, countries: Object.fromEntries(Object.entries(book.countries).map(([country, settings]) => [country, changed.has(country as MarketId) ? { ...settings, mixedMethods: undefined } : settings])) });
     return "Payment methods published to every zone.";
   }
 

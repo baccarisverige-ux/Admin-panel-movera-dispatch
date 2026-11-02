@@ -3834,7 +3834,7 @@
     "arrive": "POST /driver/trips/{tripId}/stops/{stopIndex}/arrive { expectedVersion }: the assigned driver, trip in_trip or approaching_dropoff (else 409 invalid_transition, not_on_trip), stopIndex 0-based into TripProjection.stops; sets stops[i].arrivedAt (server time); version + 1, trip_projection. Again on the same stop: 409 invalid_transition (stop_already_arrived). Stops are taken in order: arriving at i while an earlier stop has no arrivedAt is 409 (stop_out_of_order).",
     "leave": "POST /driver/trips/{tripId}/stops/{stopIndex}/leave { expectedVersion }: sets stops[i].leftAt; before arrive: 409 invalid_transition (stop_not_arrived); twice: 409 (stop_already_left). version + 1.",
     "charge": "stop_waiting = Σ (leftAt − arrivedAt) seconds / 60 × stopWaitPerMin; an arrived stop with no leftAt counts until complete. A stop the driver never arrived at counts 0.",
-    "projection": "TripProjection.stops[i] gains arrivedAt?, leftAt? (Timestamp)."
+    "projection": "TripProjection.stops[i] gains arrivedAt?, leftAt? (Timestamp). This is the field the apps read (also after a reopen). Live fix 2026-11-02: the server also mirrors the same taps as TripProjection.stopVisits [{ stopIndex, arrivedAt, leftAt? }] for older readers; stops[i] is canonical."
   },
   "smartSurge": {
     "note": "v0.7.1 (owner 2026-10-27): smart surge as the admin demo's Surge tab describes it, run by the server per zone; OFF until the admin switches pricing.surge.smart.enabled on. Applies to every category of the zone. v0.7.2 (owner 2026-10-28): free drivers are only those in the zone now.",

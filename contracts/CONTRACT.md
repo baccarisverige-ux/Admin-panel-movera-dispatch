@@ -134,7 +134,8 @@ TripProjection {
   createdAt, updatedAt,
   acceptedAt: Timestamp | null,      // when a driver accepted (null before); the live free-cancel clock counts from it (owner Q12)
   riderId, driverId?, vehicleId?, zoneId, categoryId,
-  pickup: Place, dropoff: Place, stops: Place[],
+  pickup: Place, dropoff: Place, stops: Place[],   // stops[i].arrivedAt?, stops[i].leftAt? once the driver tapped (§3.8)
+  stopVisits?: [{ stopIndex, arrivedAt, leftAt? }],   // §3.8 mirror of the same taps; read stops[i]
   quote?: { quoteId, total: Money, expiresAt },
   fare: Money,                       // current authoritative fare (rider pays)
   fareLines?: [{ code, amount: Money }],   // contract.json#fareLines: base, distance, time, stops, waiting, pickup_fee, surge, discount, cancel_fee
@@ -716,7 +717,7 @@ Owner Pricing decisions of 2026-10-27; the machine-readable rules are in `contra
 
 ### 3.8 Waiting at a middle stop (v0.7.1)
 
-No free minutes. The driver app taps **Framme vid stoppet** (`POST /driver/trips/{tripId}/stops/{stopIndex}/arrive`) and, when the trip goes on, `…/leave`; both take `expectedVersion`, bump `version` and send `trip_projection` with `stopVisits`. `stop_waiting` = Σ (leftAt − arrivedAt) / 60 × `stopWaitPerMin`, 100 % the driver's. Errors: `409 invalid_transition` with reason `stop_already_arrived`, `stop_out_of_order`, `stop_not_arrived` or `stop_already_left`; a trip not `in_trip` / `approaching_dropoff`: `409` (`not_on_trip`); a stop the trip does not have: `404` (`stop_not_found`).
+No free minutes. The driver app taps **Framme vid stoppet** (`POST /driver/trips/{tripId}/stops/{stopIndex}/arrive`) and, when the trip goes on, `…/leave`; both take `expectedVersion`, bump `version` and send `trip_projection`. The arrival is on **`stops[i].arrivedAt`** (and `stops[i].leftAt` after leaving) — the field the apps read, also after a reopen; the same taps are mirrored as `stopVisits: [{ stopIndex, arrivedAt, leftAt? }]` (kept for older readers; `contract.json#stopWaits.projection`). `stop_waiting` = Σ (leftAt − arrivedAt) / 60 × `stopWaitPerMin`, 100 % the driver's. Errors: `409 invalid_transition` with reason `stop_already_arrived`, `stop_out_of_order`, `stop_not_arrived` or `stop_already_left`; a trip not `in_trip` / `approaching_dropoff`: `409` (`not_on_trip`); a stop the trip does not have: `404` (`stop_not_found`).
 
 ## 17. Real surge data and the driver's surge map (v0.7.2)
 
