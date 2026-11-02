@@ -1,4 +1,5 @@
 import { MARKETS, market, type MarketId } from "../markets/markets.ts";
+import { tr } from "../i18n/core.ts";
 import { fromSek, isLargePriceChange, roundTo, tipMax } from "../pricing/zonePricing.ts";
 import { RAISE_CAP_SEK } from "../dispatch/rules.ts";
 import { APP_LANGUAGES, CONFIG_DEFAULTS, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePaymentMethod } from "./zoneDefaults.ts";
@@ -37,11 +38,18 @@ export type CountrySettings = {
    * only in the car), a typed amount (default off) and its maximum in local money (SE 200 kr, FR 20 €).
    */
   tipRules: TipRules;
+  /**
+   * Live G8 round 3 item 1: a tip switch the zones (or the zones chosen at the top) disagree on, with the zones where
+   * it is off. Shown mixed; Save makes it the same in those zones.
+   */
+  mixedTipRules?: MixedTipRules;
   /** v0.18.10 checker: the largest single change of a driver's pay on a trip (CountryRules.driverPayChangeMax), local money. */
   driverPayChangeMax: number;
 };
 export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 300 };
 export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number };
+export const TIP_FLAGS = ["cashAfterTrip", "customAmount"] as const;
+export type MixedTipRules = Partial<Record<(typeof TIP_FLAGS)[number], string[]>>;
 /** contract.json#configDefaults.tipRules.customMax (major units); TN (closed) like FR in its own money. */
 export const TIP_CUSTOM_MAX: Record<MarketId, number> = { SE: 200, FR: 20, TN: 60 };
 
@@ -55,7 +63,7 @@ export type CountrySettingsBook = { draftRev: number; countries: Record<MarketId
 /** v0.8.1: the live panel's Tips & limits per zone and Standard (read when the tab opens). */
 export const ZONE_RULES_KEY = "countrySettingsZones";
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "driverPayChangeMax"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -135,7 +143,33 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     tipRules: completeTipRules(raw.tipRules, base.tipRules),
     driverPayChangeMax: finite(raw.driverPayChangeMax) && raw.driverPayChangeMax > 0 ? raw.driverPayChangeMax : base.driverPayChangeMax,
     ...mixedOf(raw.mixedMethods),
+    ...mixedTipOf(raw.mixedTipRules),
   };
+}
+
+function mixedTipOf(stored: unknown): Pick<CountrySettings, "mixedTipRules"> {
+  if (!stored || typeof stored !== "object") return {};
+  const raw = stored as Record<string, unknown>;
+  const entries = TIP_FLAGS.flatMap((flag) => {
+    const list = raw[flag];
+    return Array.isArray(list) && list.length ? [[flag, list.filter((zone): zone is string => typeof zone === "string")] as const] : [];
+  });
+  return entries.length ? { mixedTipRules: Object.fromEntries(entries) } : {};
+}
+
+/** Live G8 round 3 item 2: the default app languages differ between two settings of a country. */
+export function languagesChanged(before: CountrySettings, after: CountrySettings): boolean {
+  return APP_IDS.some((app) => before.languages[app] !== after.languages[app]);
+}
+
+/** Live G8 round 3 item 1: the tip switches the given zones disagree on, with the zones where each is off. */
+export function mixedTipAcross(zones: ReadonlyArray<readonly [string, TipRules]>): MixedTipRules | undefined {
+  const mixed: MixedTipRules = {};
+  for (const flag of TIP_FLAGS) {
+    if (zones.every(([, rules]) => rules[flag] === zones[0][1][flag])) continue;
+    mixed[flag] = zones.filter(([, rules]) => !rules[flag]).map(([zone]) => zone);
+  }
+  return Object.keys(mixed).length ? mixed : undefined;
 }
 
 function mixedOf(stored: unknown): Pick<CountrySettings, "mixedMethods"> {
@@ -240,7 +274,8 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   if (JSON.stringify(before.raiseSteps) !== JSON.stringify(after.raiseSteps)) lines.push(`Raise-offer steps: +${amounts(before.raiseSteps, symbol)} → +${amounts(after.raiseSteps, symbol)}`);
   if (before.promoCap !== after.promoCap) lines.push(`Promo cap: ${before.promoCap === null ? "none" : `${short(before.promoCap)} ${symbol}`} → ${after.promoCap === null ? "none" : `${short(after.promoCap)} ${symbol}`}`);
   if (before.driverBonusLimit !== after.driverBonusLimit) lines.push(`Driver bonus limit: ${short(before.driverBonusLimit)} → ${short(after.driverBonusLimit)} ${symbol}`);
-  if (JSON.stringify(before.tipRules) !== JSON.stringify(after.tipRules)) lines.push(`Tip rules: cash after the trip ${after.tipRules.cashAfterTrip ? "on" : "off"}, typed amount ${after.tipRules.customAmount ? "on" : "off"} (max ${after.tipRules.customMax})`);
+  // Live G8 round 3 item 3: in the admin's language (it was English in the SV and FR panels).
+  if (JSON.stringify(before.tipRules) !== JSON.stringify(after.tipRules) || JSON.stringify(before.mixedTipRules ?? {}) !== JSON.stringify(after.mixedTipRules ?? {})) lines.push(tr("Tip rules: cash after the trip {0}, typed amount {1} (max {2})", [tr(after.tipRules.cashAfterTrip ? "on" : "off"), tr(after.tipRules.customAmount ? "on" : "off"), short(after.tipRules.customMax)]));
   for (const method of ZONE_PAYMENT_METHODS) if (before.mixedMethods?.[method]?.length && !after.mixedMethods?.[method]?.length) lines.push(`${PAYMENT_METHOD_LABEL[method]}: mixed → ${after.paymentMethods[method] ? "on" : "off"}`);
     else if (before.paymentMethods[method] !== after.paymentMethods[method]) lines.push(`${PAYMENT_METHOD_LABEL[method]}: ${before.paymentMethods[method] ? "on" : "off"} → ${after.paymentMethods[method] ? "on" : "off"}`);
   for (const app of APP_IDS) if (before.languages[app] !== after.languages[app]) lines.push(`${APP_LABEL[app]} default language: ${before.languages[app]} → ${after.languages[app]}`);

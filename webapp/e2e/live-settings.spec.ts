@@ -132,7 +132,7 @@ test("Tips & limits (v0.8.1, owner 2026-10-28): shown for the zone chosen at the
   expect(server.sent.some((s) => s.method !== "GET" && s.body?.["country"] === "SE")).toBe(false);
 });
 
-test("Live G8 fix 1: a language-only save sends no zone's payment methods, and the confirm step is in the panel's language", async ({ page }) => {
+test("Live G8 round 3 item 2: a language-only save writes the languages (never \"saved\" without a write), keeps every zone's payment methods and reads back after a reload", async ({ page }) => {
   await fakeTripServer(page, { admin: SV_ADMIN });
   const { docs, sent } = await fakeSettings(page);
   await signIn(page, "Kontrollpanel");
@@ -148,8 +148,35 @@ test("Live G8 fix 1: a language-only save sends no zone's payment methods, and t
   await expect(modal).not.toContainText("payment methods and languages");
   await confirm(page);
   await expect(panel.getByRole("status")).toBeVisible();
-  expect(sent.slice(before).filter((call) => call.method !== "GET"), "no zone's payment methods are sent").toEqual([]);
-  expect(JSON.stringify(docs.get("rider_app_config:Z002")!.document["paymentMethods"])).toBe(z002);
+  await expect.poll(() => sent.slice(before).filter((call) => call.method === "PUT").length, "the languages are written").toBeGreaterThan(0);
+  expect(JSON.stringify(docs.get("rider_app_config:Z002")!.document["paymentMethods"]), "Z002 keeps its own payment methods").toBe(z002);
+  expect((docs.get("rider_app_config:Z002")!.document["languages"] as { default: { rider: string } }).default.rider).toBe("fr");
+  expect((docs.get("driver_app_config:Z002")!.document["languages"] as { default: { rider: string } }).default.rider).toBe("fr");
+  await page.reload();
+  await expect(panel.getByLabel("Sverige rider språk")).toBeEnabled();
+  await expect(panel.getByLabel("Sverige rider språk")).toHaveValue("fr");
+});
+
+test("Live G8 round 3 item 1: a zone's typed-tip switch reads back from the zone after a reload, mixed when the chosen zones differ, and the change line is Swedish", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  const server = await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/pricing?tab=extras&scope=Z002");
+  const panel = page.getByTestId("pricing-extras");
+  const box = panel.getByTestId("tip-customAmount");
+  await expect(box).not.toBeChecked();
+  await box.check();
+  await expect(panel.getByRole("list", { name: "Osparade ändringar" })).toContainText("Regler för dricks: kontant efter resan av, eget belopp på");
+  await panel.getByRole("button", { name: /Spara dricks och gränser/ }).click();
+  await confirm(page);
+  await expect.poll(() => (server.docs.get("rider_app_config:Z002")!.document["tipRules"] as { customAmount?: boolean } | undefined)?.customAmount).toBe(true);
+  expect((server.docs.get("rider_app_config:standard-SE")!.document["tipRules"] as { customAmount?: boolean } | undefined)?.customAmount ?? false, "the Standard is not touched").toBe(false);
+  await page.reload();
+  await expect(panel.getByTestId("tip-customAmount")).toBeChecked();
+  // Z001 follows the Standard (off), Z002 has it on: mixed, naming the zone where it is off.
+  await page.goto("/pricing?tab=extras&scope=Z001,Z002");
+  await expect(panel.getByTestId("tip-customAmount")).toHaveAttribute("aria-checked", "mixed");
+  await expect(panel.getByTestId("tip-mixed-customAmount")).toContainText("Av i: Stockholm län");
 });
 
 test("Live fix 2026-11-02: Start & order edits stay across Radar · Exclusive → Best driver, one publish covers both, the list is in Swedish", async ({ page }) => {
