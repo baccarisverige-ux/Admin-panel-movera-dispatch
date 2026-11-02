@@ -8433,4 +8433,8 @@ export const sv: Record<MessageKey, string> = {
   "What was done": "Vad som gjordes",
   "Tags": "Taggar",
   "Their comment after solving": "Deras kommentar efter lösningen",
+  "Ready replies": "Färdiga svar",
+  "Agents pick one, change it and send it. One list per language.": "Agenterna väljer ett, ändrar det och skickar det. En lista per språk.",
+  "Ready reply": "Färdigt svar",
+  "Each ready reply needs a title (up to 80) and a text (up to 2000).": "Varje färdigt svar behöver en rubrik (högst 80) och en text (högst 2000).",
 };

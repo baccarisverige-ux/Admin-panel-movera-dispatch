@@ -34,6 +34,17 @@ test("support desk: claim, topic, waiting, solve, reopen and safety case go to t
   await expect.poll(() => state.calls.find((call) => call.path === "/api/v1/admin/tickets/TK1/reopen")?.body).toEqual({ reason: "Rider wrote again" });
 });
 
+test("ready replies (owner \"Yes\"): an agent picks one into the answer", async ({ page }) => {
+  const state = await fakeTripServer(page, { ...ALL, supportSettings: { country: "SE", replies: [{ id: "hello-sv", lang: "sv", title: "Första svar", text: "Hej! Vi tittar på det nu." }], topics: [] } });
+  await signIn(page);
+  await page.goto("/support");
+  const ticket = page.getByTestId("live-ticket");
+  await ticket.getByLabel("Ready reply").selectOption("hello-sv");
+  await expect(ticket.getByLabel("Answer", { exact: true })).toHaveValue("Hej! Vi tittar på det nu.");
+  await ticket.getByRole("button", { name: "Send answer" }).click();
+  await expect.poll(() => state.calls.find((call) => call.path === "/api/v1/admin/tickets/TK1/reply")?.body).toMatchObject({ text: "Hej! Vi tittar på det nu." });
+});
+
 test("support settings: topics and time limits per country are saved on the server", async ({ page }) => {
   const state = await fakeTripServer(page, ALL);
   await signIn(page);
@@ -42,7 +53,10 @@ test("support settings: topics and time limits per country are saved on the serv
   const box = page.getByTestId("live-support-settings");
   await expect(box).toContainText("Lost item");
   await box.getByLabel("Lost item on").uncheck();
+  await box.getByRole("button", { name: "Add a reply" }).click();
+  await box.getByLabel("Reply 1 title").fill("Första svar");
+  await box.getByLabel("Reply 1 text").fill("Hej! Vi tittar på det nu.");
   await box.getByRole("button", { name: "Save settings" }).click();
-  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/support/settings")?.body).toMatchObject({ country: "SE", topics: expect.arrayContaining([expect.objectContaining({ code: "lost_item", on: false })]) });
+  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/support/settings")?.body).toMatchObject({ country: "SE", replies: [expect.objectContaining({ lang: "sv", title: "Första svar", text: "Hej! Vi tittar på det nu." })], topics: expect.arrayContaining([expect.objectContaining({ code: "lost_item", on: false })]) });
   await expect(box).toContainText("Support settings saved.");
 });

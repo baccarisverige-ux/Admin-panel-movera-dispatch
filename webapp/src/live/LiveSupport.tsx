@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { tr, uiLocale } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine } from "./ui";
-import type { Page, SupportSettings, SupportTicket } from "./types";
+import type { Page, ReadyReply, SupportSettings, SupportTicket } from "./types";
 import { useMarketScope } from "../markets/useMarketScope";
 import { zoneFilterOf } from "./zoneFilter";
 import { deskCall, settingsIssue } from "./supportDesk";
@@ -52,13 +52,14 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
   const issue = settingsIssue(current);
   const patch = (next: Partial<SupportSettings>) => setDraft({ ...current, ...next });
   const setTopic = (code: string, next: Partial<SupportSettings["topics"][number]>) => patch({ topics: current.topics.map((t) => (t.code === code ? { ...t, ...next } : t)) });
+  const setReply = (index: number, next: Partial<ReadyReply>) => patch({ replies: (current.replies ?? []).map((r, at) => (at === index ? { ...r, ...next } : r)) });
   async function save() {
     if (!current || issue) return;
     setBusy(true);
     setError(null);
     try {
-      const { country: c, topics } = current;
-      await client.put(`/admin/support/settings`, { country: c, topics });
+      const { country: c, topics, replies } = current;
+      await client.put(`/admin/support/settings`, { country: c, topics, replies: replies ?? [] });
       setDraft(null);
       setNotice(tr("Support settings saved."));
       void queryClient.invalidateQueries({ queryKey: ["live", "supportSettings", country] });
@@ -87,6 +88,21 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
             ))}
           </tbody>
         </table>
+        <h4>{tr("Ready replies")}</h4>
+        <p className="op-help">{tr("Agents pick one, change it and send it. One list per language.")}</p>
+        <ul className="pm-list" data-testid="live-support-replies">
+          {(current.replies ?? []).map((r, index) => (
+            <li key={r.id} className="op-inline wrap">
+              <select aria-label={tr("Reply {0} language", [index + 1])} value={r.lang} onChange={(event) => setReply(index, { lang: event.target.value as ReadyReply["lang"] })}>
+                <option value="sv">{tr("Swedish")}</option><option value="fr">{tr("French")}</option><option value="en">{tr("English")}</option>
+              </select>
+              <input aria-label={tr("Reply {0} title", [index + 1])} value={r.title} maxLength={80} onChange={(event) => setReply(index, { title: event.target.value })} />
+              <textarea aria-label={tr("Reply {0} text", [index + 1])} value={r.text} maxLength={2000} onChange={(event) => setReply(index, { text: event.target.value })} />
+              <button type="button" className="dash-btn small ghost" data-command="admin.ticket.view" onClick={() => patch({ replies: (current.replies ?? []).filter((_, at) => at !== index) })}>{tr("Remove {0}", [r.title || r.id])}</button>
+            </li>
+          ))}
+        </ul>
+        <button type="button" className="dash-btn small ghost" data-command="admin.ticket.view" onClick={() => patch({ replies: [...(current.replies ?? []), { id: `r${Date.now().toString(36)}`, lang: country === "FR" ? "fr" : country === "SE" ? "sv" : "fr", title: "", text: "" }] })}>{tr("Add a reply")}</button>
       </fieldset>
       {issue ? <p className="error-line" role="alert">{issue}</p> : null}
       {error ? <ErrorLine error={error} onRetry={() => setError(null)} /> : null}
@@ -120,6 +136,10 @@ export function LiveSupport() {
   // v0.17.2: the tickets of the country and zones picked in the top bar.
   const zoneFilter = zoneFilterOf(scope.effective);
   const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
+  const country = (["SE", "FR", "TN"] as const).find((c) => c === scope.market.id) ?? "SE";
+  // v0.18.15 (owner "Yes"): the country's ready replies, picked into the answer box.
+  const supportSettings = useQuery({ queryKey: ["live", "supportSettings", country], queryFn: () => client.json<SupportSettings>(`/admin/support/settings?country=${country}`) });
+  const readyReplies = supportSettings.data?.replies ?? [];
   const list = useQuery({ queryKey: ["live", "tickets", status, assigned, zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<SupportTicket>) : client.json<Page<SupportTicket>>(`/admin/tickets?limit=100${status ? `&status=${status}` : ""}${assigned ? `&assignedTo=${assigned}` : ""}${zoneQuery ? `&${zoneQuery}` : ""}`)) });
   const items = list.data?.items ?? [];
   const current = items.find((item) => item.ticketId === selected) ?? items[0];
@@ -153,7 +173,7 @@ export function LiveSupport() {
   const reply = () => void run(async () => { await client.post(`/admin/tickets/${encodeURIComponent(current!.ticketId)}/reply`, { text: text.trim(), status: after }); setText(""); }, tr("Answer sent. It shows in their app."));
   const ticket = detail.data ?? current;
   const solved = ticket ? ticket.status === "resolved" || ticket.status === "closed" : false;
-  const country = (["SE", "FR", "TN"] as const).find((c) => c === scope.market.id) ?? "SE";
+
   return (
     <div className="dx-page sp-page" data-testid="live-support">
       <header className="dx-head">
@@ -254,6 +274,14 @@ export function LiveSupport() {
                   {error ? <ErrorLine error={error} onRetry={() => setError(null)} /> : null}
                   {ticket.status === "closed" ? <p className="dx-calm">{tr("This ticket is closed.")}</p> : (
                     <div className="sp-reply">
+                      {readyReplies.length ? (
+                        <label className="field">{tr("Ready reply")}
+                          <select aria-label={tr("Ready reply")} value="" onChange={(event) => { const picked = readyReplies.find((r) => r.id === event.target.value); if (picked) setText(picked.text); }}>
+                            <option value="">{tr("Choose")}</option>
+                            {readyReplies.map((r) => <option key={r.id} value={r.id}>{r.lang} · {r.title}</option>)}
+                          </select>
+                        </label>
+                      ) : null}
                       <label className="field">{tr("Answer")}<textarea aria-label={tr("Answer")} value={text} maxLength={5000} onChange={(event) => setText(event.target.value)} /></label>
                       <label className="field">{tr("Then")}
                         <select aria-label={tr("Ticket status after the answer")} value={after} onChange={(event) => setAfter(event.target.value as typeof after)}>
