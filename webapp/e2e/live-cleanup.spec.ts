@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { ADMIN, fakeTripServer, signIn } from "./live-fake";
-import { liveHandles } from "../src/live/liveCommands";
+import { SCREEN_ONLY_COMMANDS, liveHandles } from "../src/live/liveCommands";
 
 /**
  * Live clean-up 1 (owner 2026-11-02, rule 1, full audit bugs 1–6 and 17): on live no button the server does not handle,
@@ -109,4 +109,37 @@ test("live: no link leads to the hidden Promotions page (Dashboard quick action,
   await expect(page.getByText("Payout schedule").first()).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('a[href*="/promotions"]')).toHaveCount(0);
   await expect(page.locator('a[href*="view=promotions"]')).toHaveCount(0);
+});
+
+test("live: screen-only buttons (Alerts view, Dispatch view, zone drawing tool, a filter) are shown and work (demo tour key finding 1)", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await fakeTripServer(page, { admin: { permissions: [...ADMIN.permissions, "zones.read", "zones.edit", "dispatch.read", "dispatch.edit", "settings.read", "settings.edit"] } });
+  await signInWarm(page);
+  // Alerts view: the bell opens its panel.
+  const bell = page.locator('[data-command="admin.alerts.view"].al-bell-btn');
+  await expect(bell).toBeVisible();
+  await bell.click();
+  await expect(bell).toHaveAttribute("aria-expanded", "true");
+  await bell.click();
+
+  // Dispatch view: the radar page's own view switches are there and none is a hidden server command.
+  await page.goto("/dispatch?view=radar");
+  await expect(page.locator('[data-command="admin.dispatch.view"]:visible').first()).toBeVisible({ timeout: 30_000 });
+  expect(await unhandled(page)).toEqual([]);
+
+  // Zone drawing tool and a filter chip on Zones.
+  await page.goto("/zones");
+  const tools = page.getByRole("toolbar", { name: "Drawing tools" }).locator('[data-command="admin.zone.tool"]:enabled');
+  await expect(tools.first()).toBeVisible({ timeout: 30_000 });
+  await tools.first().click();
+  await expect(tools.first()).toHaveAttribute("aria-pressed", "true");
+  const chip = page.locator('[data-command="admin.zone.filter"]').nth(1);
+  await expect(chip).toBeVisible();
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+
+  // Every screen-only button on these pages is classified as visible on live.
+  const shown = await page.locator("[data-command]:visible").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-command") ?? ""));
+  for (const id of shown.filter((item) => SCREEN_ONLY_COMMANDS.has(item))) expect(liveHandles(id), id).toBe(true);
 });

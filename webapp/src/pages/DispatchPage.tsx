@@ -153,7 +153,9 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   // Owner 2026-10-27: only what is chosen at the top; the Standard only when it is chosen there.
   const ruleZones = liveSession && scope.zones.includes(standardZoneId(country)) ? [standardZone(country), ...zones] : zones;
   const zoneParam = params.get("zone");
-  const zoneId = zoneParam && ruleZones.some((zone) => zone.id === zoneParam) ? zoneParam : "";
+  // Live sweep 2026-11-02 M1: one zone chosen at the top opens its rules straight away (no second zone pick).
+  const headerZone = !zoneParam && scope.zones.length === 1 && ruleZones.some((zone) => zone.id === scope.zones[0]) ? scope.zones[0] : "";
+  const zoneId = zoneParam && ruleZones.some((zone) => zone.id === zoneParam) ? zoneParam : headerZone;
   // Live fix 2026-11-02 (audit: ?zone=FR-PC with Sverige chosen silently opened Arlanda): a link to a zone of another
   // country switches the country at the top; a zone that cannot be opened here says so and never falls back to another.
   const zoneCountry = zoneParam && !zoneId ? marketOfZone(zoneParam)?.id : undefined;
@@ -268,7 +270,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
 
   function back() {
     if (view !== "rules") go({ view: null });
-    else if (zoneId) go({ zone: null });
+    else if (zoneParam) go({ zone: null });
     else if (window.history.length > 1) navigate(-1);
     else navigate("/");
   }
@@ -401,10 +403,10 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
               <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" aria-expanded={showChanges} onClick={() => setShowChanges((value) => !value)}>{showChanges ? tr("Hide changes") : tr("See changes")}</button>
               {unsaved ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => { forgetPublished(); setNotice(tr("Unsaved changes were thrown away.")); }}>{trn("{0} Discard", <Undo2 size={13} aria-hidden="true" />)}</button> : null}
               {unsaved ? (
-                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={baseRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole || conflicts.length > 0} largeChanges={largeDraftChanges} onDone={() => { forgetPublished(); setNotice(tr("Draft saved. Nothing is live yet. Test it in Test a ride, then publish.")); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
+                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={baseRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={slice.loading || !canEditRole || conflicts.length > 0} largeChanges={largeDraftChanges} onDone={() => { forgetPublished(); setNotice(tr("Draft saved. Nothing is live yet. Test it in Test a ride, then publish.")); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
               ) : null}
               {view !== "test" ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => go({ view: "test" })}>{trn("{0} Test it", <FlaskConical size={13} aria-hidden="true" />)}</button> : null}
-              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} summary={liveSession ? <PublishTargetsLine zoneIds={[...changed]} doc="dispatch" /> : undefined} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={baseRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error) || conflicts.length > 0} title={published.error} largeChanges={largeChanges} onDone={() => {
+              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} summary={liveSession ? <PublishTargetsLine zoneIds={[...changed]} doc="dispatch" /> : undefined} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={baseRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={slice.loading || !canEditRole || Boolean(published.error) || conflicts.length > 0} title={published.error} largeChanges={largeChanges} onDone={() => {
                 const liveNames = published.live.map((id) => zoneById(id)?.name ?? id);
                 const waitNames = published.waiting.map((id) => zoneById(id)?.name ?? id);
                 forgetPublished();
@@ -452,7 +454,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
             // A tab of the other section (Rider cancel fees from Reservations, and back): open it there, same zone.
             if (!tabs.some((item) => item.id === next)) {
               if (next === "radar" || next === "exclusive" || next === "reservations") navigate(offersLink(next, zoneId || undefined));
-              else navigate(dispatchHref(`/dispatch?${new URLSearchParams({ ...(zoneId ? { zone: zoneId } : {}), tab: next })}`));
+              else navigate(dispatchHref(`/dispatch?${new URLSearchParams({ ...Object.fromEntries(["country", "scope"].flatMap((key) => (params.get(key) ? [[key, params.get(key)!]] : []))), ...(zoneId ? { zone: zoneId } : {}), tab: next })}`));
               return;
             }
             go({ tab: next === defaultTab ? null : next });
