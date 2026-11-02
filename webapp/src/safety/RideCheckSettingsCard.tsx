@@ -16,7 +16,6 @@ import {
   type RideCheckThresholds,
 } from "./rideCheckSettings";
 import { tr, trn } from "../i18n";
-import { NotConnected } from "../live/NotConnected";
 import { isLiveData } from "../live/realData";
 
 /** The shared Ride check thresholds, read from the one store. */
@@ -40,9 +39,11 @@ export function RideCheckSettingsCard({ where }: { where: "dispatch" | "rules" }
   const issues = rideCheckSettingsIssues(shown);
   const next = saveRideCheckSettings(stored, shown);
   const patch = (value: Partial<RideCheckThresholds>) => setDraft({ ...shown, ...value });
-  // Live clean-up 1: the server does not keep these triggers yet, so live shows the values read-only with a marker.
+  // Live clean-up 1: the server does not keep these triggers yet. Live shows no card at all (no demo values, and no
+  // "Not connected yet" on a live page: it failed the G4-F3/F4 radar e2e in Dispatch › Live).
   const live = isLiveData();
   const disabled = !editable || slice.loading || live;
+  if (live) return null;
   return (
     <Card
       title={tr("Ride check triggers")}
@@ -53,7 +54,6 @@ export function RideCheckSettingsCard({ where }: { where: "dispatch" | "rules" }
       <Row label={tr("Unexpected long stop")} help={tr("The car stands still mid-trip, not at a planned stop and not in traffic. Ride check starts.")}>
         <Num label={tr("Unexpected long stop")} before="for more than" value={shown.longStopMinutes} unit="min" min={1} disabled={disabled} onChange={(longStopMinutes) => patch({ longStopMinutes })} />
       </Row>
-      {live ? <NotConnected control /> : null}
       {live ? null : !editable ? <p className="dx-readonly">{tr("Only the safety team can change these settings.")}</p> : (
         <div className="rc-settings-save">
           <span className="dx-publish-text">

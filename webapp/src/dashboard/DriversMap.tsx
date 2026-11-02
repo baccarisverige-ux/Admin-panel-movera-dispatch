@@ -21,6 +21,7 @@ import { installSurgeLayers, updateDriverSurgeLayers, updateSurgeLayers } from "
 import { along, type LatLng } from "./route";
 import { WaybillDialog } from "./TripCard";
 import { useEscape } from "../ui/useEscape";
+import { setDataIfChanged } from "../ui/mapData";
 import { tr, trn, trx } from "../i18n";
 import { addMapIcons, CAR_COLOR, carIcon, headingOf, remainingPath, RIDER_COLOR, RIDER_OFFERED_ICON, RIDER_WAITING_ICON } from "./mapIcons";
 import type { RideCheck } from "../safety/rideCheck";
@@ -344,12 +345,12 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
 
   useEffect(() => {
     const source = mapRef.current?.getSource("drivers") as GeoJSONSource | undefined;
-    if (ready && source) source.setData(geo(drivers, hidden));
+    if (ready && source) setDataIfChanged(source, geo(drivers, hidden));
   }, [drivers, hidden, ready]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource("dropoffs") as GeoJSONSource | undefined;
-    if (ready && source) source.setData(dropoffGeo(drivers, hidden, selectedId));
+    if (ready && source) setDataIfChanged(source, dropoffGeo(drivers, hidden, selectedId));
   }, [drivers, hidden, selectedId, ready]);
 
   const bonusKey = bonusShown ? JSON.stringify(bonusAreas.map((area) => [area.id, area.label, area.live, area.rings.length])) : "";
@@ -357,7 +358,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
     const map = mapRef.current;
     const source = map?.getSource("bonus-areas") as GeoJSONSource | undefined;
     if (!ready || !map || !source) return;
-    source.setData(bonusGeo(bonusAreas, bonusShown));
+    setDataIfChanged(source, bonusGeo(bonusAreas, bonusShown));
     bonusPins.current.forEach((marker) => marker.remove());
     bonusPins.current = [];
     if (!bonusShown) return;
@@ -381,7 +382,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
 
   useEffect(() => {
     const source = mapRef.current?.getSource("balance") as GeoJSONSource | undefined;
-    if (ready && source) source.setData(balanceGeo(balance, showBalance));
+    if (ready && source) setDataIfChanged(source, balanceGeo(balance, showBalance));
   }, [balance, showBalance, ready]);
 
   useEffect(() => {
@@ -393,7 +394,7 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
 
   useEffect(() => {
     const source = mapRef.current?.getSource("requests") as GeoJSONSource | undefined;
-    if (ready && source) source.setData(requestGeo(requests, showRequests));
+    if (ready && source) setDataIfChanged(source, requestGeo(requests, showRequests));
   }, [requests, showRequests, ready]);
 
   useEffect(() => {
@@ -510,10 +511,10 @@ export function DriversMap({ drivers, market, zones, hidden, withScope, focusId 
     for (const marker of pins.current) marker.remove();
     pins.current = [];
     if (!routeKey || !selected?.route || !trip) {
-      source.setData(routeGeo(null, null));
+      setDataIfChanged(source, routeGeo(null, null));
       return;
     }
-    source.setData(routeGeo(selected, trip));
+    setDataIfChanged(source, routeGeo(selected, trip));
     const add = (at: LatLng, letter: string, className: string) => pins.current.push(new maplibregl.Marker({ element: pin(letter, className), anchor: "bottom" }).setLngLat([at[1], at[0]]).addTo(map));
     add(selected.route.pickup, "A", "pin-a");
     add(selected.route.dropoff, "B", "pin-b");
