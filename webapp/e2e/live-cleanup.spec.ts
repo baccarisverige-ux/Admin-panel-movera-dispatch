@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fakeTripServer, signIn } from "./live-fake";
+import { ADMIN, fakeTripServer, signIn } from "./live-fake";
 import { liveHandles } from "../src/live/liveCommands";
 
 /**
@@ -92,4 +92,21 @@ test("live: no demo data (bonuses, bonus areas, promotions, rider sessions) and 
   await page.waitForTimeout(1500);
   await expect(page.getByRole("heading", { name: "App versions and lifecycle" })).toHaveCount(0);
   await expect(page.getByLabel("Rider iOS minimum")).toHaveCount(0);
+});
+
+test("live: no link leads to the hidden Promotions page (Dashboard quick action, Settings 'set elsewhere')", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await fakeTripServer(page, { admin: { permissions: [...ADMIN.permissions, "settings.edit", "settings.read"] } });
+  await signInWarm(page);
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 2, name: "Dashboard" })).toBeVisible({ timeout: 60_000 });
+  await page.waitForTimeout(1000);
+  await expect(page.locator('a[href*="/promotions"]')).toHaveCount(0);
+  await expect(page.getByText("Create promo")).toHaveCount(0);
+  await page.goto("/settings?tab=elsewhere");
+  await expect(page.getByRole("heading", { name: "Settings" }).first()).toBeVisible();
+  await expect(page.getByText("Payout schedule").first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('a[href*="/promotions"]')).toHaveCount(0);
+  await expect(page.locator('a[href*="view=promotions"]')).toHaveCount(0);
 });

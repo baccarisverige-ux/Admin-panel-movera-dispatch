@@ -362,7 +362,8 @@ export function DashboardPage() {
     { id: "payouts", label: tr("Approve payouts"), icon: <Banknote size={16} aria-hidden="true" />, path: "/payouts", permission: "finance.read" },
     { id: "surge", label: tr("Surge & boost"), icon: <Zap size={16} aria-hidden="true" />, path: "/pricing", permission: "settings.edit" },
     { id: "message", label: tr("Send message"), icon: <Megaphone size={16} aria-hidden="true" />, path: "/messages", permission: "settings.edit" },
-    { id: "promo", label: tr("Create promo"), icon: <Ticket size={16} aria-hidden="true" />, path: "/promotions", permission: "settings.edit" },
+    // Promotions are hidden on live until built (owner 2026-11-02).
+    ...(isLiveData() ? [] : [{ id: "promo", label: tr("Create promo"), icon: <Ticket size={16} aria-hidden="true" />, path: "/promotions", permission: "settings.edit" }]),
     { id: "export", label: tr("Export report"), icon: <Download size={16} aria-hidden="true" />, path: "/reports", permission: "overview.read" },
     {
       id: "search",

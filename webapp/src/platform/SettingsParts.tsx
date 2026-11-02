@@ -6,9 +6,10 @@ import { Card, Row, Switch } from "../dispatch/fields";
 import { CommandButton } from "../ui/CommandButton";
 import { PANEL_OPS_KEY, emptyPanelOps, normalizePanelOps, type PanelOps } from "./panel";
 import { tr, trn, trx } from "../i18n";
+import { isLiveData } from "../live/realData";
 
 /** Settings that live in their own section, so they can be found from one place. */
-export const ELSEWHERE: { label: string; what: string; path: string; section: string }[] = [
+export const ALL_ELSEWHERE: { label: string; what: string; path: string; section: string }[] = [
   { section: "Rides", get label() { return tr("Dispatch rules"); }, what: "Who gets a ride first, offer time, search radius", path: "/dispatch?view=rules" },
   { section: "Rides", get label() { return tr("Trip settings"); }, what: "What admins may change on a trip, call masking", path: "/trips?view=settings" },
   { section: "Rides", get label() { return tr("Pricing"); }, what: "Prices, fees and surge per zone", path: "/pricing" },
@@ -30,6 +31,12 @@ export const ELSEWHERE: { label: string; what: string; path: string; section: st
   { section: "Platform", get label() { return tr("Roles, limits and sign-in"); }, what: "Custom roles, money limits, 2-step and idle sign-out", path: "/team?tab=roles" },
 ];
 
+/** Promotions are hidden on live until built (owner 2026-11-02), so their links are too. */
+const PROMOTION_PATHS = ["/promotions", "/riders?view=promotions"];
+export function elsewhereLinks(): typeof ALL_ELSEWHERE {
+  return isLiveData() ? ALL_ELSEWHERE.filter((item) => !PROMOTION_PATHS.some((path) => item.path.startsWith(path))) : ALL_ELSEWHERE;
+}
+
 /** Jump to a section of the settings page, or to a setting kept in another section. */
 export function FindSetting({ onPick }: { onPick: (heading: string) => void }) {
   const [query, setQuery] = useState("");
@@ -41,7 +48,7 @@ export function FindSetting({ onPick }: { onPick: (heading: string) => void }) {
     return () => clearTimeout(timer);
   }, []);
   const here = headings.filter((text) => text && (!q || text.toLowerCase().includes(q)));
-  const other = q ? ELSEWHERE.filter((item) => `${item.label} ${item.what} ${item.section}`.toLowerCase().includes(q)) : [];
+  const other = q ? elsewhereLinks().filter((item) => `${item.label} ${item.what} ${item.section}`.toLowerCase().includes(q)) : [];
   return (
     <div className="pl-find">
       <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label={tr("Find a setting")} placeholder={tr("Find a setting, for example wallet, stops or prices")} value={query} onFocus={collect} onChange={(e) => { setQuery(e.target.value); collect(); }} /></label>
@@ -55,7 +62,7 @@ export function FindSetting({ onPick }: { onPick: (heading: string) => void }) {
 }
 
 export function SettingsElsewhere() {
-  const sections = [...new Set(ELSEWHERE.map((item) => item.section))];
+  const sections = [...new Set(elsewhereLinks().map((item) => item.section))];
   return (
     <Card title={tr("Settings in other sections")} icon={<LayoutGrid size={15} />} tone="blue" help={tr("Each section keeps its own settings next to its work. Open them from here.")}>
       <div className="pl-elsewhere">
@@ -63,7 +70,7 @@ export function SettingsElsewhere() {
           <section key={section} aria-label={section}>
             <h4>{section}</h4>
             <ul>
-              {ELSEWHERE.filter((item) => item.section === section).map((item) => (
+              {elsewhereLinks().filter((item) => item.section === section).map((item) => (
                 <li key={item.path}><Link to={item.path}><b>{trx(item.label)}</b><small>{trx(item.what)}</small><ArrowRight size={13} aria-hidden="true" /></Link></li>
               ))}
             </ul>
