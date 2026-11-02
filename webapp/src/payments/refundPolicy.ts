@@ -42,7 +42,10 @@ export function refundAboveMinor(policy: RefundPolicy, country: MarketId): numbe
 }
 
 /** True when a refund of this amount (minor units) in that country needs a second admin. */
-export function needsSecondAdmin(_policy: RefundPolicy, _country: MarketId, _amountMinor: number): boolean {
+export function needsSecondAdmin(policy: RefundPolicy, country: MarketId, amountMinor: number): boolean {
+  void policy;
+  void country;
+  void amountMinor;
   // Owner 2026-11-02 (build-spec Q1 "One admin always"): no second-admin approval anywhere; every admin acts alone
   // within his role's permissions. The stored limit is no longer read or shown.
   return false;

@@ -18,7 +18,7 @@ test("Q40: a Dispatch row opens its tab in a zone and names the card", () => {
   assert.equal(featureTarget(stops, "Z001"), "/dispatch/rules?tab=rides&zone=Z001&card=Stops");
   const activity = FEATURE_INDEX.find((entry) => entry.id === "my-activity")!;
   assert.equal(featureTarget(activity, "Z001"), "/dispatch/rules?view=activity");
-  assert.equal(featureTarget(FEATURE_INDEX.find((entry) => entry.id === "refund-second-admin")!, ""), "/settings#refunds");
+  assert.equal(FEATURE_INDEX.find((entry) => entry.id === "refund-second-admin"), undefined, "owner Q1: no second-admin setting");
 });
 
 test("Q40: every Dispatch card named in the list exists, so a click lands on it", () => {
@@ -37,7 +37,7 @@ test("Q40: every Dispatch card named in the list exists, so a click lands on it"
 test("Q40: the search box matches phrase, section and keywords, every word", () => {
   assert.ok(searchFeatures("max stops").some((entry) => entry.id === "stops"));
   assert.ok(searchFeatures("surge").some((entry) => entry.id === "surge"));
-  assert.ok(searchFeatures("second admin").some((entry) => entry.id === "refund-second-admin"));
+  assert.equal(searchFeatures("second admin").length, 0, "owner Q1: one admin always");
   assert.equal(searchFeatures("zzzz-nothing").length, 0);
   assert.equal(searchFeatures("").length, FEATURE_INDEX.length);
 });
