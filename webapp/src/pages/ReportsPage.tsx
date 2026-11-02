@@ -9,7 +9,7 @@ import { useRecords, useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { PeriodPicker } from "../dashboard/PeriodPicker";
 import { earningsReport } from "../dashboard/earnings";
-import { parsePeriod, periodParams, periodWindow, type Period } from "../dashboard/period";
+import { parsePeriod, periodParams, periodWindowUntil, type Period } from "../dashboard/period";
 import { localDay } from "../dashboard/time";
 import { CATEGORIES } from "../domain/contract";
 import { formatMoney } from "../markets/markets";
@@ -47,10 +47,12 @@ export function ReportsPage() {
     const timer = globalThis.setInterval(() => setTick((value) => value + 1), 30_000);
     return () => globalThis.clearInterval(timer);
   }, []);
-  const now = useMemo(() => Math.ceil(Date.now() / 60_000) * 60_000, [tick, tab, params.get("admin")]);
+  // The period is picked from the real now; only its end is rounded up (at 23:59 the rounded minute is tomorrow).
+  const clock = useMemo(() => Date.now(), [tick, tab, params.get("admin")]);
+  const now = Math.ceil(clock / 60_000) * 60_000;
   const access = useMemo(() => agent?.scope ?? { zones: "all" as const }, [agent?.scope]);
   const zones = useMemo(() => market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id))), [market, access, scope.zones]);
-  const window = useMemo(() => compareWindow(periodWindow(period, now, market.timeZone, uiLocale()), compare), [period.kind, period.on, period.from, period.to, now, market, compare]);
+  const window = useMemo(() => compareWindow(periodWindowUntil(period, clock, now, market.timeZone, uiLocale()), compare), [period.kind, period.on, period.from, period.to, clock, now, market, compare]);
   const slice = useSlice<ReportSettings>(REPORT_SETTINGS_KEY, emptyReportSettings());
   const settings = normalizeReportSettings(slice.value);
   const drivers = useRecords("drivers");
@@ -130,7 +132,7 @@ export function ReportsPage() {
       </div>
 
       <section className="rp-bar" aria-label={tr("Report settings")}>
-        <PeriodPicker key={`${period.kind}-${period.on ?? ""}-${period.from ?? ""}`} period={period} today={localDay(now, market.timeZone)} onChange={choosePeriod} />
+        <PeriodPicker key={`${period.kind}-${period.on ?? ""}-${period.from ?? ""}`} period={period} today={localDay(clock, market.timeZone)} onChange={choosePeriod} />
         <select aria-label={tr("Compare")} value={compare} onChange={(event) => set({ compare: event.target.value === "previous" ? null : event.target.value })}>
           {COMPARES.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
         </select>
