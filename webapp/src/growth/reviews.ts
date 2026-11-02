@@ -15,7 +15,9 @@ export type Direction = "rider" | "driver";
 export type Review = { id: string; tripId: string; zone: string; country: MarketId; from: Direction; byName: string; aboutId: string | null; aboutName: string; stars: number; tags: string[]; text: string; at: string };
 
 export type ReviewRule = { on: boolean; below: number };
-export type ReviewRules = { warn: ReviewRule; review: ReviewRule; block: ReviewRule; minReviews: number; badWords: { on: boolean; words: string[] }; riderTags: string[]; driverTags: string[] };
+export type ReviewRules = { warn: ReviewRule; review: ReviewRule; block: ReviewRule; minReviews: number; badWords: { on: boolean; words: string[] }; riderTags: string[]; driverTags: string[];
+  /** v0.18.15 live (owner "Softer"): the warning message per language, edited by the admin. */
+  warningText?: { sv: string; fr: string; en: string } };
 export type ReviewOps = { draftRev: number; rules: Record<MarketId, ReviewRules> };
 
 function rules(country: MarketId): ReviewRules {

@@ -16,10 +16,13 @@ test("reviews: rules saved on the server; the admin review list and Done", async
   const box = page.getByTestId("live-review-rules");
   await expect(box).not.toContainText("Not connected yet");
   await box.getByRole("textbox", { name: "Bad words" }).fill("idiot\nscam\nloser");
+  // Owner "No automatic pause": no Block line on live; owner "Softer": the warning text per language.
+  await expect(box.getByText("Block", { exact: true })).toHaveCount(0);
+  await box.getByLabel("Warning message in sv").fill("Ditt betyg har sjunkit. Här är några tips.");
   await box.getByRole("button", { name: "Save review rules" }).click();
   const dialog = page.getByRole("dialog");
   if (await dialog.isVisible().catch(() => false)) await dialog.getByRole("button", { name: "Confirm" }).click();
-  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/reviews/rules")?.body).toMatchObject({ country: "SE", warn: { on: true, below: 4.5 }, badWords: { on: true, words: ["idiot", "scam", "loser"] } });
+  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/reviews/rules")?.body).toMatchObject({ country: "SE", warn: { on: true, below: 4.5 }, badWords: { on: true, words: ["idiot", "scam", "loser"] }, warningText: { sv: "Ditt betyg har sjunkit. Här är några tips." } });
   const queue = page.getByTestId("live-review-queue");
   await expect(queue).toContainText("Anna Berg");
   await queue.getByLabel("What was done").fill("Called the driver");

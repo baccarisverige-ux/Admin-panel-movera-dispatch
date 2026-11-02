@@ -8439,4 +8439,7 @@ export const sv: Record<MessageKey, string> = {
   "Each ready reply needs a title (up to 80) and a text (up to 2000).": "Varje färdigt svar behöver en rubrik (högst 80) och en text (högst 2000).",
   "New tickets go to": "Nya ärenden går till",
   "{0} goes to": "{0} går till",
+  "Warning message": "Varningsmeddelande",
+  "What the person reads when their average falls under the warning line. {average} is their average.": "Det personen läser när snittet hamnar under varningsgränsen. {average} är deras snitt.",
+  "Warning message in {0}": "Varningsmeddelande på {0}",
 };

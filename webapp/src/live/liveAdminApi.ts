@@ -645,7 +645,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     const base = emptyReviewOps();
     for (const country of Object.keys(base.rules) as (keyof ReviewOps["rules"])[]) {
       const saved = await client.json<Partial<ReviewOps["rules"]["SE"]>>(`/admin/reviews/rules?country=${country}`);
-      base.rules[country] = { ...base.rules[country], warn: saved.warn ?? base.rules[country].warn, review: saved.review ?? base.rules[country].review, block: saved.block ?? base.rules[country].block, minReviews: saved.minReviews ?? base.rules[country].minReviews, badWords: saved.badWords ?? base.rules[country].badWords };
+      base.rules[country] = { ...base.rules[country], warn: saved.warn ?? base.rules[country].warn, review: saved.review ?? base.rules[country].review, block: { ...base.rules[country].block, on: false }, minReviews: saved.minReviews ?? base.rules[country].minReviews, badWords: saved.badWords ?? base.rules[country].badWords, ...(saved.warningText ? { warningText: saved.warningText } : {}) };
     }
     return base;
   }
@@ -820,7 +820,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const country = input.targetId as keyof ReviewOps["rules"];
       const rules = next.rules[country];
       if (!rules) throw new ApiError(400, tr("Nothing changed."), { code: "invalid_request", retryable: false });
-      await client.json("/admin/reviews/rules", { method: "PUT", body: JSON.stringify({ country, warn: rules.warn, review: rules.review, block: rules.block, minReviews: rules.minReviews, badWords: rules.badWords }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
+      await client.json("/admin/reviews/rules", { method: "PUT", body: JSON.stringify({ country, warn: rules.warn, review: rules.review, minReviews: rules.minReviews, badWords: rules.badWords, ...(rules.warningText ? { warningText: rules.warningText } : {}) }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
       return { ...done("Saved."), slice: { key: REVIEW_OPS_KEY, value: await liveReviewOps() } };
     }
     // v0.18.15 incidents (contract.json#incidentDesk): the shared settings, and an audit line for each case report.

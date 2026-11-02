@@ -8439,4 +8439,7 @@ export const fr: Record<MessageKey, string> = {
   "Each ready reply needs a title (up to 80) and a text (up to 2000).": "Chaque réponse prête a besoin d'un titre (80 max) et d'un texte (2000 max).",
   "New tickets go to": "Les nouveaux tickets vont à",
   "{0} goes to": "{0} va à",
+  "Warning message": "Message d'avertissement",
+  "What the person reads when their average falls under the warning line. {average} is their average.": "Ce que la personne lit quand sa moyenne passe sous la limite d'avertissement. {average} est sa moyenne.",
+  "Warning message in {0}": "Message d'avertissement en {0}",
 };

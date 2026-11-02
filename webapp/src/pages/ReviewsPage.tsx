@@ -152,9 +152,19 @@ function RulesView({ ops, country, editable, onNotice, live = false }: { ops: Re
       <Card title={tr("Low ratings")} icon={<ShieldAlert size={15} />} tone="orange" help={tr("What happens when a person's average falls under a line.")}>
         {line("warn", "Send a warning", "The person gets a message to improve.")}
         {line("review", "Admin review", "The person shows up for an admin to look at.")}
-        {line("block", "Block", "The person cannot use the app until an admin lets them back.")}
+        {/* Owner 2026-11-02 "No automatic pause": on live the rules never pause an account (no Block line). */}
+        {live ? null : line("block", "Block", "The person cannot use the app until an admin lets them back.")}
         <Row label={tr("Count after")} help={tr("Only people with at least this many reviews.")}><Num label={tr("Minimum reviews")} value={value.minReviews} min={1} unit="reviews" disabled={!editable} onChange={(minReviews) => patch({ minReviews })} /></Row>
       </Card>
+      {live ? (
+        <Card title={tr("Warning message")} icon={<ShieldAlert size={15} />} tone="orange" help={tr("What the person reads when their average falls under the warning line. {average} is their average.")}>
+          {(["sv", "fr", "en"] as const).map((lang) => (
+            <label key={lang} className="gr-field"><span>{lang === "sv" ? tr("Swedish") : lang === "fr" ? tr("French") : tr("English")}</span>
+              <textarea aria-label={tr("Warning message in {0}", [lang])} value={value.warningText?.[lang] ?? ""} maxLength={500} disabled={!editable} onChange={(e) => patch({ warningText: { sv: value.warningText?.sv ?? "", fr: value.warningText?.fr ?? "", en: value.warningText?.en ?? "", [lang]: e.target.value } })} />
+            </label>
+          ))}
+        </Card>
+      ) : null}
       <Card title={tr("Words and tags")} icon={<EyeOff size={15} />} tone="purple" help={tr("Comments with these words are hidden by themselves. An admin can restore them.")}>
         <Row label={tr("Hide bad words")}><Switch label={tr("Hide bad words")} on={value.badWords.on} disabled={!editable} onChange={(on) => patch({ badWords: { ...value.badWords, on } })} /></Row>
         <label className="gr-field"><span>{tr("Words, one per line")}</span><textarea aria-label={tr("Bad words")} value={value.badWords.words.join("\n")} disabled={!editable || !value.badWords.on} onChange={(e) => patch({ badWords: { ...value.badWords, words: e.target.value.split("\n") } })} /></label>

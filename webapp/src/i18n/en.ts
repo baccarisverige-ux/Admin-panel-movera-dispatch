@@ -8437,6 +8437,9 @@ export const en = {
   "Each ready reply needs a title (up to 80) and a text (up to 2000).": "Each ready reply needs a title (up to 80) and a text (up to 2000).",
   "New tickets go to": "New tickets go to",
   "{0} goes to": "{0} goes to",
+  "Warning message": "Warning message",
+  "What the person reads when their average falls under the warning line. {average} is their average.": "What the person reads when their average falls under the warning line. {average} is their average.",
+  "Warning message in {0}": "Warning message in {0}",
 } as const;
 
 export type MessageKey = keyof typeof en;

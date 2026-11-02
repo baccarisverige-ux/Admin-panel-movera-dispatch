@@ -415,7 +415,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const all = (state.reviewRules ??= {}) as Record<string, unknown>;
       if (method === "PUT") { all[body.country] = body; return json(route, 200, body); }
       const country = url.searchParams.get("country") ?? "SE";
-      return json(route, 200, all[country] ?? { country, warn: { on: true, below: 4.5 }, review: { on: true, below: 4.2 }, block: { on: false, below: 3.6 }, minReviews: 3, badWords: { on: true, words: ["idiot", "stupid", "scam"] } });
+      return json(route, 200, all[country] ?? { country, warn: { on: true, below: 4.5 }, review: { on: true, below: 4.2 }, minReviews: 3, badWords: { on: true, words: ["idiot", "stupid", "scam"] }, warningText: { sv: "Ditt betyg har sjunkit. Här är några tips för att få fler nöjda resenärer.", fr: "Votre note a baissé.", en: "Your rating has dropped." } });
     }
     if (p === "/api/v1/admin/reviews/queue") return json(route, 200, { items: state.reviewQueue ?? [] });
     const reviewDone = /^\/api\/v1\/admin\/reviews\/queue\/(driver|rider)\/([^/]+)\/done$/.exec(p);
