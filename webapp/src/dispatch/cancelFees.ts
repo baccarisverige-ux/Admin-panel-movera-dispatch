@@ -1,4 +1,5 @@
 import { market, type MarketId } from "../markets/markets.ts";
+import { tr } from "../i18n/core.ts";
 import { BUILT_IN_CATEGORIES, fromSek, isLargePriceChange } from "../pricing/zonePricing.ts";
 
 /**
@@ -159,17 +160,20 @@ function clockText(totalMin: number): string {
 export function riderSeesLine(kind: CancelFeeKind, row: CancelFeeRow, fare: number, country: MarketId, money: (value: number) => string, pickupMin = 14 * 60): { line: string; detail: string } {
   const amount = cancelFeeAmount(row, fare, country);
   let free: string;
-  if (kind === "live") free = row.freeMin > 0 ? `Free cancel for ${row.freeMin} min after the driver accepts` : "No free cancel after the driver accepts";
+  // G7 live fix 2: in the panel's language (the FR Dispatch page showed this line in English).
+  if (kind === "live") free = row.freeMin > 0 ? tr("Free cancel for {0} min after the driver accepts", [row.freeMin]) : tr("No free cancel after the driver accepts");
   else {
     const until = pickupMin - row.freeMin;
     const daysBefore = Math.ceil(-until / 1440);
-    free = `Free cancel until ${clockText(until)}${daysBefore > 0 ? `, ${daysBefore === 1 ? "the day" : `${daysBefore} days`} before` : ""}`;
+    free = daysBefore <= 0 ? tr("Free cancel until {0}", [clockText(until)])
+      : daysBefore === 1 ? tr("Free cancel until {0}, the day before", [clockText(until)])
+      : tr("Free cancel until {0}, {1} days before", [clockText(until), daysBefore]);
   }
-  const line = amount > 0 ? `${free} · then ${money(amount)}` : `${free} · no fee after`;
+  const line = amount > 0 ? tr("{0} · then {1}", [free, money(amount)]) : tr("{0} · no fee after", [free]);
   if (row.type === "fixed") return { line, detail: "" };
-  const limits = row.min !== null && row.max !== null ? `between ${money(row.min)} and ${money(row.max)}`
-    : row.min !== null ? `at least ${money(row.min)}`
-    : row.max !== null ? `at most ${money(row.max)}` : `of ${money(fare)}`;
+  const limits = row.min !== null && row.max !== null ? tr("between {0} and {1}", [money(row.min), money(row.max)])
+    : row.min !== null ? tr("at least {0}", [money(row.min)])
+    : row.max !== null ? tr("at most {0}", [money(row.max)]) : tr("of {0}", [money(fare)]);
   return { line, detail: `(${row.value}%${row.min !== null || row.max !== null ? ", " : " "}${limits})` };
 }
 

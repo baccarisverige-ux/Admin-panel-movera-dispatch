@@ -313,3 +313,11 @@ test("page audit 2026-11-01: audit actions read as words and JSON details as fie
   assert.equal(auditValueText("open"), "open", "plain text stays");
   assert.equal(auditValueText("{broken"), "{broken");
 });
+
+test("G7 live fix 2: Who did what names the admin, else keeps the id", async () => {
+  const { auditActorName } = await import("./format.ts");
+  const team = [{ id: "adm_01ABC", name: "Nora Lind" }];
+  assert.equal(auditActorName("adm_01ABC", team), "Nora Lind");
+  assert.equal(auditActorName("adm_other", team), "adm_other");
+  assert.equal(auditActorName("system", team), "Movera (automatic)");
+});

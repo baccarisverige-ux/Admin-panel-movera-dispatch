@@ -394,7 +394,9 @@ export async function savePublish(http: ConfigHttp, doc: ConfigDocName, id: stri
 export async function savePublishLive(http: ConfigHttp, doc: ConfigDocName, id: string, draft: Draft | null, document: Doc, live: Doc | null | undefined): Promise<{ version: number } | null> {
   if (draft && draft.liveVersion > 0 && !draft.usesStandard) {
     if (live && sameDocument(live, document)) return null;
-    if (live === undefined && draft.version <= 1 && sameDocument(draft.document, document)) return null;
+    // G7 live fix 2: a zone whose live document could not be read (a slow server) is published, never skipped: the
+    // skip answered "Published." while the drivers did not get the change. Only a Standard has no history to read.
+    if (live === undefined && countryOfStandard(id) && draft.version <= 1 && sameDocument(draft.document, document)) return null;
   }
   // The skip is decided above; savePublish only takes the draft's version from here.
   return savePublish(http, doc, id, draft ? { ...draft, liveVersion: 0 } : null, document);

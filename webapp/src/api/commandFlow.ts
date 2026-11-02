@@ -47,16 +47,21 @@ export type Outcome = { phase: "committed" | "pending_approval" | "rejected"; me
  * What a slow or lost command really did, from the server's record of its operation key (C-14).
  * `null` means the server has no record of it: it never arrived, so nothing changed.
  */
-export function outcomeOf(operation: OperationRow | null, fallback: string, answer?: { status: "committed" | "pending_approval"; message: string } | null): Outcome {
+export function outcomeOf(operation: OperationRow | null, fallback: string, answer?: { status: "committed" | "pending_approval"; message: string } | null, live = false): Outcome {
   // The command's own answer arrived (only late): it is the outcome. A live server keeps no operation record to ask
   // (G4 live: a slow preset save said "Failed. The server has no record of it" although it had just saved it).
   if (!operation && answer) return { phase: answer.status, message: answer.message, retrySameKey: false };
+  // G7 live fix 2: a live server keeps no operation record, so "nothing changed" is not known: a slow publish had
+  // saved the driver document but not made it live. Say so and ask for another try.
+  if (!operation && live) return { phase: "rejected", message: LIVE_UNCONFIRMED_MESSAGE, retrySameKey: true };
   if (!operation) return { phase: "rejected", message: `Failed. The server has no record of it, so nothing changed. ${fallback} Retry uses the same operation key.`.replace(/\s+/g, " ").trim(), retrySameKey: true };
   if (operation.status === "committed") return { phase: "committed", message: `Done. ${operation.message}`, retrySameKey: false };
   if (operation.status === "pending_approval") return { phase: "pending_approval", message: operation.message, retrySameKey: false };
   return { phase: "rejected", message: `Failed. ${operation.message}`, retrySameKey: false };
 }
 
+/** G7 live fix 2: a live command whose answer never came; part of it may be saved but not live. */
+export const LIVE_UNCONFIRMED_MESSAGE = "Failed. The server did not confirm it in time. Part of it may be saved but not live yet: check the page and press it again.";
 /** The line shown while a slow command is being confirmed with the server. */
 export const CHECKING_MESSAGE = "Checking… The server is taking longer than usual; this updates to Done or Failed.";
 /** Shown when another command is still running, instead of ignoring the click (C-16). */

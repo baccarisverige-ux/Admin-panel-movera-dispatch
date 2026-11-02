@@ -455,6 +455,20 @@ test("v0.18.9 (G7): ride check, route change and max stops are read from the dri
   assert.deepEqual([next["rideCheck"], next["routeChange"]], [{ on: true }, { on: true }]);
 });
 
+test("G7 live fix 2: a slow server's unreadable live document never skips the publish (it said Published, drivers did not get it)", async () => {
+  const doc = { ...sample("driver_app_config"), zoneId: "Z001" };
+  const server = fakeServer({ "driver_app_config:Z001": { version: 1, liveVersion: 3, usesStandard: false, document: doc } });
+  // The history read times out: the live document is unknown (undefined).
+  const { savePublishLive } = await import("./configDocs.ts");
+  const answer = await savePublishLive(server.http, "driver_app_config", "Z001", { version: 1, liveVersion: 3, usesStandard: false, document: doc } as never, doc, undefined);
+  assert.ok(answer, "published");
+  assert.ok(server.calls.some((c) => c.method === "POST" && c.path === "/admin/config/driver_app_config/publish"));
+  // The same document already live (read fine): still skipped.
+  const same = fakeServer({});
+  assert.equal(await savePublishLive(same.http, "driver_app_config", "Z001", { version: 4, liveVersion: 3, usesStandard: false, document: doc } as never, doc, doc), null);
+  assert.equal(same.calls.length, 0);
+});
+
 test("G8 (v0.18.10): payment methods go to the server per country (no Google Pay); early-end km / min round-trip through the driver document", async () => {
   const { emptyCountrySettingsBook } = await import("../config/countrySettings.ts");
   const { appConfigState, driverAppConfig } = await import("../config/appConfigs.ts");
