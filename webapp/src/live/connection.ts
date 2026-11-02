@@ -25,7 +25,14 @@ const PARTLY: Record<string, string> = {
 // Driver 03c (live test 2026-10-30): Dispatch is live too (trips, drivers, rules, Standard, controls, assign and radar
 // group go to the server), so its header carries no badge either.
 // G9 live 2026-11-02: the Chat page reads and writes the trip chats on the server, so no badge.
-const CONNECTED = new Set(["drivers", "fleets", "vehicles", "onboarding", "content", "dashboard", "dispatch", "chat"]);
+// Live clean-up 1 (owner 2026-11-02, audit bug 6): the live build hides every button the server does not handle
+// (live/liveCommands.ts) and shows no demo book, so what is left on these pages is the server's: no header badge. A part
+// that is really not connected carries its own small marker (live/NotConnected.tsx).
+const CONNECTED = new Set([
+  "drivers", "fleets", "vehicles", "onboarding", "content", "dashboard", "dispatch", "chat",
+  "alerts", "trips", "incidents", "risk", "riders", "waitlist", "payments", "payouts", "zones", "pricing", "support",
+  "reviews", "audit", "settings", "errors", "team",
+]);
 
 export function connectionOf(id: string): Connection {
   if (CONNECTED.has(id)) return { state: "connected" };

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { MENU } from "../src/nav";
+import { LIVE_HIDDEN_PAGES, MENU } from "../src/nav";
 import { DEV_PAGES } from "../src/platform/panel";
 import { fakeTripServer, signIn } from "./live-fake";
 
@@ -38,9 +38,12 @@ test("the live menu is the whole demo menu; no demo banner, a Not connected yet 
   await signIn(page);
   const nav = page.locator("nav");
   // System, Release gates and Design stay hidden until Super admin turns on developer pages, as in the demo.
-  for (const item of MENU.filter((row) => !(DEV_PAGES as readonly string[]).includes(row.id))) await expect(nav.locator(`a[href="${item.path}"]`).first()).toBeVisible();
+  for (const item of MENU.filter((row) => !(DEV_PAGES as readonly string[]).includes(row.id) && !LIVE_HIDDEN_PAGES.has(row.id))) await expect(nav.locator(`a[href="${item.path}"]`).first()).toBeVisible();
+  // Live clean-up 1: Promotions (owner: hidden until later), Release gates and Design are never in the live menu.
+  for (const id of LIVE_HIDDEN_PAGES) await expect(nav.locator(`a[href="/${id}"]`)).toHaveCount(0);
   await expect(page.getByTestId("demo-banner")).toHaveCount(0);
-  for (const path of ["/payments", "/zones", "/riders"]) {
+  // Live clean-up 1: mostly-live pages have no header badge; a page really not connected keeps it.
+  for (const path of ["/handover", "/messages"]) {
     await page.goto(path);
     await expect(page.getByTestId("not-connected")).toHaveText("Not connected yet");
     await expect(page.getByTestId("demo-banner")).toHaveCount(0);
@@ -125,15 +128,13 @@ test("vehicles: the demo list shows the server's car; the demo vehicle page puts
   expect(await page.evaluate(() => sessionStorage.getItem("movera-admin-live-session"))).toBeNull();
 });
 
-test("a command the server does not have yet is refused with Not connected yet, nothing is faked", async ({ page }) => {
+test("a command the server does not have yet has no button on live, nothing is faked", async ({ page }) => {
   await fakeTripServer(page);
   await signIn(page);
   await page.goto("/drivers/D1000");
   await page.getByRole("tab", { name: "Notes" }).click();
-  await page.getByLabel(/Private internal note/).fill("Checked");
-  await page.getByRole("button", { name: "Save private note" }).click();
-  if (await dialog(page).count()) await dialog(page).getByRole("button", { name: "Confirm" }).click();
-  await expect(page.getByText("Not connected yet.").first()).toBeVisible();
+  // Live clean-up 1 (rule 1): the button would only say "Not connected yet.", so live does not show it.
+  await expect(page.getByRole("button", { name: "Save private note" })).toHaveCount(0);
   await expect(page.getByText("Private driver note saved.")).toHaveCount(0);
 });
 

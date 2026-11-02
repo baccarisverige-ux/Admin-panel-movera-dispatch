@@ -16,6 +16,7 @@ import {
   type RideCheckThresholds,
 } from "./rideCheckSettings";
 import { tr, trn } from "../i18n";
+import { isLiveData } from "../live/realData";
 
 /** The shared Ride check thresholds, read from the one store. */
 export function useRideCheckSettings() {
@@ -27,7 +28,7 @@ export function useRideCheckSettings() {
  * The one editor for the Ride check thresholds. Shown on the Dashboard, in Dispatch → Live and in
  * Dispatch → Rules → Safety; every copy edits the same saved values.
  */
-export function RideCheckSettingsCard({ where }: { where: "dashboard" | "dispatch" | "rules" }) {
+export function RideCheckSettingsCard({ where }: { where: "dispatch" | "rules" }) {
   const { agent } = useSession();
   const slice = useSlice<RideCheckSettings>(RIDE_CHECK_SETTINGS_KEY, emptyRideCheckSettings());
   const stored = normalizeRideCheckSettings(slice.value);
@@ -38,7 +39,11 @@ export function RideCheckSettingsCard({ where }: { where: "dashboard" | "dispatc
   const issues = rideCheckSettingsIssues(shown);
   const next = saveRideCheckSettings(stored, shown);
   const patch = (value: Partial<RideCheckThresholds>) => setDraft({ ...shown, ...value });
-  const disabled = !editable || slice.loading;
+  // Live clean-up 1: the server does not keep these triggers yet. Live shows no card at all (no demo values, and no
+  // "Not connected yet" on a live page: it failed the G4-F3/F4 radar e2e in Dispatch › Live).
+  const live = isLiveData();
+  const disabled = !editable || slice.loading || live;
+  if (live) return null;
   return (
     <Card
       title={tr("Ride check triggers")}
@@ -49,7 +54,7 @@ export function RideCheckSettingsCard({ where }: { where: "dashboard" | "dispatc
       <Row label={tr("Unexpected long stop")} help={tr("The car stands still mid-trip, not at a planned stop and not in traffic. Ride check starts.")}>
         <Num label={tr("Unexpected long stop")} before="for more than" value={shown.longStopMinutes} unit="min" min={1} disabled={disabled} onChange={(longStopMinutes) => patch({ longStopMinutes })} />
       </Row>
-      {!editable ? <p className="dx-readonly">{tr("Only the safety team can change these settings.")}</p> : (
+      {live ? null : !editable ? <p className="dx-readonly">{tr("Only the safety team can change these settings.")}</p> : (
         <div className="rc-settings-save">
           <span className="dx-publish-text">
             <b>{dirty ? tr("Changes not saved") : tr("Everything is saved")}</b>

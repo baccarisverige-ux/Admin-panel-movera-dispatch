@@ -8390,4 +8390,11 @@ export const sv: Record<MessageKey, string> = {
   "Keep mine": "Behåll mitt",
   "Take theirs": "Ta deras",
   "Unpublished changes in Dispatch ({0})": "Opublicerade ändringar i Dispatch ({0})",
+  "Hidden by an admin": "Dold av en admin",
+  "Shown again by an admin": "Visas igen av en admin",
+  "Saved as a draft. Then send it for review and publish it; one admin is enough.": "Sparat som utkast. Skicka det sedan för granskning och publicera det; en admin räcker.",
+  "Some actions here are not connected yet.": "Vissa åtgärder här är inte kopplade än.",
+  "App versions are set in Content › App versions.": "Appversioner ställs in under Innehåll › Appversioner.",
+  "Refund limits per role are set in Payments › Rules.": "Återbetalningsgränser per roll ställs in under Betalningar › Regler.",
+  "Edit in Payments": "Ändra i Betalningar",
 };

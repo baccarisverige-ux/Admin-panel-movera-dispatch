@@ -5,7 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
 import { AppShell } from "./layout/AppShell";
-import { MENU, menuItem, pageForPath, redirectTarget, type MenuItem } from "./nav";
+import { LIVE_HIDDEN_PAGES, MENU, menuItem, pageForPath, redirectTarget, type MenuItem } from "./nav";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundRecord } from "./ui/NotFoundRecord";
 import { I18nProvider } from "./i18n/I18nProvider";
@@ -70,7 +70,8 @@ const LiveLoginPage = lazyPage(() => import("./live/LiveLoginPage"), "LiveLoginP
 const LiveSetupPasswordPage = lazyPage(() => import("./live/LiveSetupPasswordPage"), "LiveSetupPasswordPage");
 function Screen({ id }: { id: string }) {
   const item = menuItem(id);
-  if (!item) return <NotFound />;
+  const live = useLiveSessionMaybe();
+  if (!item || (live && LIVE_HIDDEN_PAGES.has(id))) return <NotFound />;
   if (item.coming) return <ComingPage title={trx(item.label)} order={item.coming} />;
   if (id === "audit") return <AuditPage />;
   if (id === "settings") return <ConfigPage />;
@@ -147,7 +148,7 @@ function Shell({ page, children, forceNoAccess = false }: { page: MenuItem | und
     <AppShell page={shown}>
       <AssignPanelProvider>
         <section className="page active" data-page={shown.id}>
-          {live && page && !denied && connectionOf(page.id).state !== "connected" ? (
+          {live && page && !denied && !LIVE_HIDDEN_PAGES.has(page.id) && connectionOf(page.id).state === "not" ? (
             <p className="live-not-connected" role="note" data-testid="not-connected" title={connectionOf(page.id).what ? tr(connectionOf(page.id).what as Parameters<typeof tr>[0]) : undefined}>
               {tr("Not connected yet")}
             </p>

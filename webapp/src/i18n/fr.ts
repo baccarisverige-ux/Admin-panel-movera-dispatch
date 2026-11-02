@@ -8390,4 +8390,11 @@ export const fr: Record<MessageKey, string> = {
   "Keep mine": "Garder le mien",
   "Take theirs": "Prendre le leur",
   "Unpublished changes in Dispatch ({0})": "Modifications non publiées dans Dispatch ({0})",
+  "Hidden by an admin": "Masqué par un admin",
+  "Shown again by an admin": "Affiché à nouveau par un admin",
+  "Saved as a draft. Then send it for review and publish it; one admin is enough.": "Enregistré comme brouillon. Envoyez-le ensuite pour validation et publiez-le ; un seul admin suffit.",
+  "Some actions here are not connected yet.": "Certaines actions ici ne sont pas encore connectées.",
+  "App versions are set in Content › App versions.": "Les versions des apps se règlent dans Contenu › Versions des apps.",
+  "Refund limits per role are set in Payments › Rules.": "Les limites de remboursement par rôle se règlent dans Paiements › Règles.",
+  "Edit in Payments": "Modifier dans Paiements",
 };

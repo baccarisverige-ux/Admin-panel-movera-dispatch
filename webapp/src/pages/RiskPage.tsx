@@ -1,3 +1,4 @@
+import { isLiveData } from "../live/realData";
 import { useDirtyWarning } from "../ui/useDirtyWarning";
 import { useMemo, useState, type CSSProperties } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -86,6 +87,8 @@ export function RiskPage() {
         {TABS.map((item) => <button data-command="admin.risk.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => set({ tab: item.id === "safety" ? null : item.id })}>{trx(item.label)}</button>)}
       </div>
       {!editable ? <p className="dx-readonly">{tr("You can look, but only the safety team can change rules.")}</p> : null}
+      {/* Live clean-up 1: the rules are not on the server yet, so the section carries the small marker. */}
+      {isLiveData() && tab !== "flagged" ? <p className="live-not-connected" role="note" data-testid="not-connected">{tr("Not connected yet")}</p> : null}
       {tab === "safety" ? <SafetyRules editable={editable} /> : tab === "fraud" ? <FraudRules editable={editable} /> : <FlaggedPeople editable={editable} />}
     </div>
   );

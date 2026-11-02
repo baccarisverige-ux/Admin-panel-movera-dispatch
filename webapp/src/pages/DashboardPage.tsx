@@ -58,7 +58,6 @@ import { candidatesFor, rideRequests, riderCounts, ridersOnlineIn, type RideRequ
 import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
 import { useAlertSignals, type Signal } from "../dashboard/useAlertSignals";
-import { RideCheckSettingsCard } from "../safety/RideCheckSettingsCard";
 import { ActivityFeed, AirportCard, BoostCard, InsightsCard, LiveStamp, LiveTag, SoundToggle, type ActivityItem, type DriverRank } from "../dashboard/Widgets";
 import { CATEGORIES } from "../domain/contract";
 import { statusLabel } from "../domain/labels";
@@ -363,7 +362,8 @@ export function DashboardPage() {
     { id: "payouts", label: tr("Approve payouts"), icon: <Banknote size={16} aria-hidden="true" />, path: "/payouts", permission: "finance.read" },
     { id: "surge", label: tr("Surge & boost"), icon: <Zap size={16} aria-hidden="true" />, path: "/pricing", permission: "settings.edit" },
     { id: "message", label: tr("Send message"), icon: <Megaphone size={16} aria-hidden="true" />, path: "/messages", permission: "settings.edit" },
-    { id: "promo", label: tr("Create promo"), icon: <Ticket size={16} aria-hidden="true" />, path: "/promotions", permission: "settings.edit" },
+    // Promotions are hidden on live until built (owner 2026-11-02).
+    ...(isLiveData() ? [] : [{ id: "promo", label: tr("Create promo"), icon: <Ticket size={16} aria-hidden="true" />, path: "/promotions", permission: "settings.edit" }]),
     { id: "export", label: tr("Export report"), icon: <Download size={16} aria-hidden="true" />, path: "/reports", permission: "overview.read" },
     {
       id: "search",
@@ -725,7 +725,6 @@ export function DashboardPage() {
             </section>
           </div>
           <ActivityFeed items={activity} format={activityTime} />
-          {can(role, "trips.read") || can(role, "safety.edit") ? <div className="dash-ridecheck"><RideCheckSettingsCard where="dashboard" /></div> : null}
         </>
       ) : null}
 

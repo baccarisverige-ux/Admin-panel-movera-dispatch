@@ -65,7 +65,7 @@ test("Dispatch › Safety: Ride check triggers with their numbers, limits and ch
   await expect(page.getByRole("complementary", { name: "Zones" })).not.toContainText("possible crash");
 });
 
-test("Ride check triggers: one shared setting edited from Dispatch Live and the Dashboard; Dispatch Safety keeps the zone's own numbers", async ({ page }) => {
+test("Ride check triggers: one shared setting edited in Dispatch Live only; Dispatch Safety keeps the zone's own numbers", async ({ page }) => {
   await session(page);
   // v0.18.9 (G7): Dispatch › Safety shows only this zone's ride check (per zone), not the shared triggers card.
   await page.goto("/dispatch?zone=Z001&tab=safety");
@@ -83,17 +83,12 @@ test("Ride check triggers: one shared setting edited from Dispatch Live and the 
   await confirm(page);
   await expect(triggers).toContainText("Everything is saved");
 
+  // Live clean-up 1 (owner "Never duplicate"): the triggers live only in Dispatch Live, not again on the Dashboard.
   await page.goto("/?tab=work");
-  const dash = page.getByRole("region", { name: "Ride check triggers" });
-  await expect(dash.getByLabel("Finished far from drop-off")).toHaveCount(0);
-  await expect(dash.getByLabel("Unexpected long stop")).toHaveValue("10");
-  await dash.getByLabel("Unexpected long stop").fill("8");
-  await dash.getByRole("button", { name: "Save" }).click();
-  await confirm(page);
-  await expect(dash).toContainText("Everything is saved");
+  await expect(page.getByRole("region", { name: "Ride check triggers" })).toHaveCount(0);
 
   await page.goto("/dispatch?view=live");
-  await expect(page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Unexpected long stop")).toHaveValue("8");
+  await expect(page.getByRole("region", { name: "Ride check triggers" }).getByLabel("Unexpected long stop")).toHaveValue("10");
 });
 
 test("a ride check alert: red banner on every page and in Live until opened, then the incident with both answers", async ({ page }) => {

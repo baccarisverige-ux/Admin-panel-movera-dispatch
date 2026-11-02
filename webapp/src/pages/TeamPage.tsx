@@ -53,7 +53,8 @@ function AdminsTable() {
     <>
       <p className="state-line">{notice}</p>
 
-      <article className="panel">
+      {/* Live clean-up 1: the server has no admin invite yet (owner 2026-11-02: Super admin + country managers), so live shows no form. */}
+      {isLiveData() ? null : <article className="panel">
         <h3>{tr("Invite agent")}</h3>
         <div className="field-grid">
           <label>{tr("Name")}<input value={inviteName} onChange={(event) => setInviteName(event.target.value)} />
@@ -84,7 +85,7 @@ function AdminsTable() {
             setNotice(tr("Agent invited in the demo team."));
           }}
         >{tr("Invite agent")}</CommandButton>
-      </article>
+      </article>}
 
       <article className="panel">
         <DataTable
@@ -95,7 +96,7 @@ function AdminsTable() {
             return [
               agent.name,
               agent.email,
-              <span key={`${agent.id}-role`}>
+              isLiveData() ? trx(ROLE_LABELS[agent.role]) : <span key={`${agent.id}-role`}>
                 <select
                   aria-label={tr("Role for {0}", [agent.name])}
                   value={desired}

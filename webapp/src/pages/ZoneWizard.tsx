@@ -410,7 +410,7 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay, live = fals
             </div>
             {goLive === "later" ? <label className="field">{trn("Start{0}", <input type="datetime-local" aria-label={tr("Go live at")} value={goLiveAt} onChange={(event) => setGoLiveAt(event.target.value)} />)}</label> : null}
           </fieldset>
-          <p className="fine">{tr("Saved as a draft. Then send it for review: a second admin publishes it.")}</p>
+          <p className="fine">{tr("Saved as a draft. Then send it for review and publish it; one admin is enough.")}</p>
           </>}
           {saveError ? <p className="rd-form-error" role="alert">{trSentences(saveError)}</p> : null}
           <div className="zn-step-foot">

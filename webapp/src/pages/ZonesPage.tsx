@@ -159,7 +159,7 @@ export function ZonesPage() {
         <ol className="zn-flow" aria-label={tr("How zones go live")}>
           <li className={!inReview ? "on" : "done"}><i>1</i><span><b>{tr("Edit")}</b><small>{tr("Drafts only riders don't see")}</small></span></li>
           <li className={inReview ? "on" : undefined}><i>2</i><span><b>{tr("Send for review")}</b><small>{tr("Checks must pass")}</small></span></li>
-          <li><i>3</i><span><b>{tr("Second admin publishes")}</b><small>{tr("Goes live for riders and drivers")}</small></span></li>
+          <li><i>3</i><span><b>{tr("Publish")}</b><small>{tr("Goes live for riders and drivers")}</small></span></li>
         </ol>
         <div className="zn-release-actions">
           <button data-command="admin.zone.changes" type="button" className="dash-btn small ghost" aria-expanded={changesOpen} onClick={() => setChangesOpen(!changesOpen)}>{trn("{0} {1} changes and impact ({2})", <ClipboardList size={13} aria-hidden="true" />, changesOpen ? tr("Hide") : tr("See"), changes.length)}</button>

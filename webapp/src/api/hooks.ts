@@ -3,6 +3,7 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "react-router";
 import { canUseZone } from "../auth/permissions.ts";
 import { useSession } from "../auth/SessionContext.tsx";
+import { liveClass, liveHandles } from "../live/liveCommands.ts";
 import { commandById } from "../commands/registry.ts";
 import { useAdminApi } from "./AdminApiContext.tsx";
 import type { CommandInput, CommandResult } from "./create.ts";
@@ -188,7 +189,10 @@ export function useCommands() {
     }
     // Live mode (src/live): the server has no demo command endpoint. A screen-only command (menu, sign out, tabs,
     // close a dialog) runs in the browser; the live screens send their own requests with the bearer token.
-    if (api.kind === "http" && spec.scope === "global") {
+    // Live clean-up 1 (rule 1): a command the live adapter does not handle is never sent, so it never ends in
+    // "Not connected yet." (its buttons are hidden by CommandButton; this also covers runs started by code).
+    if (api.kind === "http" && !liveHandles(id)) return undefined;
+    if (api.kind === "http" && liveClass(id) === "screen") {
       setPhase("committed");
       setMessage("");
       return { message: "", operationId: extra.idempotencyKey ?? newIdempotencyKey(id), status: "committed" as const, rev: 0 };

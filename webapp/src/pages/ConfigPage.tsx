@@ -22,8 +22,6 @@ import {
   removeOverride,
   REASON_GROUPS,
   rollbackConfig,
-  setAppUpdate,
-  setAppVersion,
   setEnvironment,
   setExpiry,
   setOverride,
@@ -50,10 +48,6 @@ import { tr, trn, trx, trSentences } from "../i18n";
 import { LanguageQuickSwitch } from "../i18n/LanguageQuickSwitch";
 
 const LEVELS: OverrideLevel[] = ["market", "zone", "category", "app", "platform", "appVersion", "cohort"];
-
-function platformName(app: string, platform: string): string {
-  return `${app === "rider" ? tr("Rider") : tr("Driver")} ${platform === "ios" ? "iOS" : "Android"}`;
-}
 
 function defaultTarget(level: OverrideLevel, zoneId: string, book: ConfigBook): string {
   if (level === "market") return "SE-STO";
@@ -273,56 +267,10 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       </article>
 
       <article className="panel">
-        <h3>{tr("App versions and lifecycle")}</h3>
+        <h3>{tr("Publish schedule")}</h3>
+        {/* G16-5 (owner: "One place"): app versions are set only in Content › App versions; no copy here. */}
+        <p className="state-line" data-testid="app-versions-elsewhere"><Link to="/content">{tr("App versions are set in Content › App versions.")}</Link></p>
         <div className="field-grid">
-          <label>{trn("Rider app{0}", <input
-              value={book.draft.versions.rider}
-              onChange={(event) => {
-                if (!agent) return;
-                edit((current) => setAppVersion(current, "rider", event.target.value, agent.id));
-                setContext((current) => ({ ...current, appVersion: event.target.value }));
-              }}
-            />)}</label>
-          <label>{trn("Driver app{0}", <input
-              value={book.draft.versions.driver}
-              onChange={(event) => agent && edit(
-                (current) => setAppVersion(current, "driver", event.target.value, agent.id),
-              )}
-            />)}</label>
-
-          {book.draft.updates.map((item) => {
-            const name = platformName(item.app, item.platform);
-            return (
-              <div key={`${item.app}-${item.platform}`}>
-                <label>{trn("{0} minimum{1}", name, <input
-                    value={item.minimumVersion}
-                    onChange={(event) => agent && edit(
-                      (current) => setAppUpdate(current, item.app, item.platform, { minimumVersion: event.target.value }, agent.id),
-                    )}
-                  />)}</label>
-                <label>{trn("{0} latest{1}", name, <input
-                    value={item.latestVersion}
-                    onChange={(event) => agent && edit(
-                      (current) => setAppUpdate(current, item.app, item.platform, { latestVersion: event.target.value }, agent.id),
-                    )}
-                  />)}</label>
-                <label>{trn("{0} message{1}", name, <input
-                    value={item.message}
-                    onChange={(event) => agent && edit(
-                      (current) => setAppUpdate(current, item.app, item.platform, { message: event.target.value }, agent.id),
-                    )}
-                  />)}</label>
-                <label className="check-row">{trn("{0}{1} mandatory", <input
-                    type="checkbox"
-                    checked={item.mandatory}
-                    onChange={(event) => agent && edit(
-                      (current) => setAppUpdate(current, item.app, item.platform, { mandatory: event.target.checked }, agent.id),
-                    )}
-                  />, name)}</label>
-              </div>
-            );
-          })}
-
           <label>{trn("Publish schedule{0}", <input
               aria-label={tr("Publish schedule")}
               type="datetime-local"
