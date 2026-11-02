@@ -218,6 +218,14 @@ export function tripFacts(trip: Trip): LiveTripFacts {
     driverBonus: minorOf(trip.driverBonus),
     walletApplied: minorOf(trip.walletApplied),
     cashToCollect: minorOf(trip.cashToCollect),
+    // Live G8 (6a): the trip page's top numbers and Money card use the server's who-gets-what, the same as its card.
+    split: trip.moneySplit ? {
+      riderPaid: trip.moneySplit.riderPaid.amountMinor,
+      driverTotal: trip.moneySplit.driverTotal.amountMinor,
+      movera: trip.moneySplit.movera.amountMinor,
+      tip: minorOf(trip.moneySplit.tip) ?? minorOf(trip.tip?.amount) ?? 0,
+      refunded: minorOf(trip.moneySplit.refunded) ?? 0,
+    } : null,
     driverSilentAlert: trip.driverSilentAlert ?? null,
     ratingStatus: trip.ratingStatus ?? null,
     updatedAt: trip.updatedAt,
