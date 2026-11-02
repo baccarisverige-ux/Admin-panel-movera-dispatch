@@ -250,3 +250,60 @@ test("owner decision 2026-11-01: Add money says what it sent at once (sv / fr)",
     setLanguage("en");
   }
 });
+
+test("live fix 2026-11-02 (audit 3c): Add money that reached nobody says so with the server's reasons (sv / fr)", async () => {
+  const { registerDictionary, setLanguage } = await import("../i18n/core.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  const { moneySendNotice } = await import("./liveAdminApi.ts");
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  try {
+    setLanguage("sv");
+    assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 2, busy: 0, far: 0 }, reachKm: 6 }, "exclusive"), "Pengarna väntar — ingen ledig förare inom 6 km (2 förare lät erbjudandet gå ut). Det följer med nästa Exklusiva erbjudande.");
+    assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 0, busy: 1, far: 3 }, reachKm: null }, "both"), "Pengarna väntar — ingen ledig förare (1 förare kunde inte ta den, 3 förare längre bort). Det följer med nästa erbjudande.");
+    setLanguage("fr");
+    assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 1, busy: 0, far: 0 }, reachKm: 2.5 }, "radar"), "L’argent attend — aucun chauffeur libre à moins de 2,5 km (1 chauffeur a laissé expirer l’offre). Il part avec la prochaine offre Radar.");
+    // Something was sent: no waiting text.
+    assert.doesNotMatch(moneySendNotice({ exclusiveTo: "drv_1", radarTo: [], skipped: { expired: 2, busy: 0, far: 0 }, reachKm: 6 }, "exclusive"), /attend/);
+  } finally {
+    setLanguage("en");
+  }
+});
+
+test("live fix 2026-11-02 (audit 1f): the 'See changes' list is in the panel's language; stored history lines stay English", async () => {
+  const { registerDictionary, setLanguage } = await import("../i18n/core.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const { changeLines, zoneDefault } = await import("../dispatch/rules.ts");
+  registerDictionary("sv", sv);
+  registerDictionary("fr", fr);
+  const before = zoneDefault("Z001");
+  const after = { ...before, start: { ...before.start, mode: "byDistance" as const }, radar: { ...before.radar, steps: [2, 4, 6] }, limits: { ...before.limits, maxPickupKm: 6 }, neighbours: { on: true, zoneIds: ["Z002"], afterStep: 2 } };
+  try {
+    setLanguage("sv");
+    const shown = changeLines(before, after, true);
+    assert.ok(shown.includes("Start & ordning: Automatisk → Efter avstånd"), shown.join(" | "));
+    assert.ok(shown.includes("Avståndssteg för Radar: Samma som sökavstånd → 2, 4, 6"), shown.join(" | "));
+    assert.ok(shown.includes("Längsta upphämtningsavstånd: ingen gräns → 6"), shown.join(" | "));
+    assert.ok(shown.includes("Lista över grannzoner ändrad"), shown.join(" | "));
+    assert.ok(shown.every((line) => !/radar\.steps|neighbours\.|limits\./.test(line)), shown.join(" | "));
+    setLanguage("fr");
+    assert.ok(changeLines(before, after, true).some((line) => line.startsWith("Paliers de distance Radar")));
+    assert.ok(changeLines(before, after).includes("Radar distance steps: Same as search distance → 2, 4, 6"));
+  } finally {
+    setLanguage("en");
+  }
+});
+
+test("live fix 2026-11-02 (audit 1e): unpublished dispatch edits are kept outside the page, per signed-in admin", async () => {
+  const { clearWorkingDraft, hasWorkingDraft, readWorkingDraft, updateWorkingDraft } = await import("../dispatch/workingDraft.ts");
+  clearWorkingDraft();
+  assert.equal(hasWorkingDraft(), false);
+  updateWorkingDraft<{ n: number }, never>(() => ({ zones: { Z001: { n: 1 } } }));
+  // A second page reading the store (Rules › Best driver after Radar · Exclusive) sees the same draft.
+  assert.deepEqual(readWorkingDraft<{ n: number }, never>().zones, { Z001: { n: 1 } });
+  assert.equal(hasWorkingDraft(), true);
+  clearWorkingDraft();
+  assert.equal(hasWorkingDraft(), false);
+});

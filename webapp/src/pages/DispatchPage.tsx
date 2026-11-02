@@ -13,10 +13,11 @@ import { activeCategories, emptyPricingStore, normalizeStore, SLICE_KEY as PRICI
 import { candidatesFor, rideRequests, type RideRequest } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
-import { standardZone, standardZoneId, zoneById } from "../markets/markets";
+import { marketOfZone, standardZone, standardZoneId, zoneById } from "../markets/markets";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { PublishTargetsLine, StandardBar } from "../live/StandardBar";
-import { zoneAllowed } from "../markets/scope";
+import { countryAllowed, zoneAllowed } from "../markets/scope";
+import { rememberCountry } from "../markets/useMarketScope";
 import { useMarketScope } from "../markets/useMarketScope";
 import { CommandButton } from "../ui/CommandButton";
 import { useAlertsMaybe } from "../alerts/AlertsContext";
@@ -46,6 +47,7 @@ import {
 import { DriverGroupsCard } from "../dispatch/DriverGroupsCard";
 import { RadarZoneRulesCard, RadarZonesCard } from "../dispatch/RadarZones";
 import { offersLink } from "../dispatch/MovedCard";
+import { useWorkingDraft } from "../dispatch/workingDraft";
 import { dispatchHref } from "../dispatch/section";
 import { tr, trn, trx, uiLocale, trSentences } from "../i18n";
 
@@ -119,8 +121,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const appSourcesReady = !slice.loading && !pricingSlice.loading && !slice.error && !pricingSlice.error && Object.values(appSources).every((source) => !source.loading && !source.error);
   const incidents = useRecords("incidents");
   const riders = useRecords("riders");
-  const [working, setWorking] = useState<Record<string, ZoneDispatch>>({});
-  const [workingCountry, setWorkingCountry] = useState<Record<string, CountryDispatch>>({});
+  // Live fix 2026-11-02: unpublished edits survive moving between the section's sub-pages (one publish covers all).
+  const { working, setWorking, workingCountry, setWorkingCountry } = useWorkingDraft<ZoneDispatch, CountryDispatch>(agent?.id ?? "");
   const [notice, setNotice] = useState("");
   const [note, setNote] = useState("");
   const [showChanges, setShowChanges] = useState(false);
@@ -151,13 +153,26 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const ruleZones = liveSession && scope.zones.includes(standardZoneId(country)) ? [standardZone(country), ...zones] : zones;
   const zoneParam = params.get("zone");
   const zoneId = zoneParam && ruleZones.some((zone) => zone.id === zoneParam) ? zoneParam : "";
+  // Live fix 2026-11-02 (audit: ?zone=FR-PC with Sverige chosen silently opened Arlanda): a link to a zone of another
+  // country switches the country at the top; a zone that cannot be opened here says so and never falls back to another.
+  const zoneCountry = zoneParam && !zoneId ? marketOfZone(zoneParam)?.id : undefined;
+  const switchCountry = Boolean(zoneCountry && zoneCountry !== country && zoneAllowed(access, zoneParam!) && countryAllowed(access, zoneCountry!));
+  const zoneMissing = Boolean(zoneParam && !zoneId && !switchCountry && !scope.denied);
+  useEffect(() => {
+    if (!switchCountry || !zoneCountry) return;
+    const next = new URLSearchParams(params);
+    next.set("country", zoneCountry);
+    next.delete("scope");
+    rememberCountry(agent?.id, zoneCountry);
+    setParams(next, { replace: true });
+  }, [switchCountry, zoneCountry, params, setParams, agent?.id]);
   // Radar · Exclusive · Reservations opens on the first zone, straight into its three tabs.
   useEffect(() => {
-    if (!offers || zoneId || !zones.length) return;
+    if (!offers || zoneId || zoneParam || !zones.length) return;
     const next = new URLSearchParams(params);
     next.set("zone", zones[0].id);
     setParams(next, { replace: true });
-  }, [offers, zoneId, zones, params, setParams]);
+  }, [offers, zoneId, zoneParam, zones, params, setParams]);
   const canEditRole = Boolean(agent && can(agent.role, "dispatch.edit"));
   const canControl = Boolean(agent && can(agent.role, "trips.intervene"));
   const canEdit = useCallback((id: string) => canEditRole && Boolean(agent && (agent.scope.zones === "all" || agent.scope.zones.includes(id))), [canEditRole, agent]);
@@ -171,9 +186,17 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const zoneIds = ruleZones.map((zone) => zone.id);
   const allRules = Object.fromEntries(zoneIds.map((id) => [id, rulesOf(id)]));
   const changes = pendingChanges(book, allRules, zoneIds);
+  const shownChanges = showChanges ? pendingChanges(book, allRules, zoneIds, true) : changes;
   const countryChanged = countryLines(liveCountry(book, country), countryRules);
   const changed = new Set(changes.map((change) => change.zoneId));
   const unsaved = Object.keys(working).some((id) => JSON.stringify(working[id]) !== JSON.stringify(draftRules(book, id))) || Boolean(workingCountry[country] && JSON.stringify(workingCountry[country]) !== JSON.stringify(draftCountry(book, country)));
+  // Live fix 2026-11-02: leaving the browser page with edits not saved or published asks first.
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [unsaved]);
   const lineCount = changes.reduce((sum, change) => sum + change.lines.length, 0) + countryChanged.length;
   const at = new Date(now).toISOString();
   const countries = { ...(book.countries[country] ? { [country]: draftCountry(book, country) } : {}), ...(workingCountry[country] ? { [country]: countryRules } : {}) };
@@ -355,7 +378,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
           {showChanges && (changes.length || countryChanged.length) ? (
             <div className="dx-changes">
               <ul aria-label={tr("Changes not live yet")}>
-                {changes.map((change) => (
+                {shownChanges.map((change) => (
                   <li key={change.zoneId}>
                     <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>
                     <ul>{change.lines.map((line) => <li key={line}>{line}</li>)}</ul>
@@ -370,6 +393,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
         </section>
       ) : null}
 
+      {zoneMissing ? <p className="pricing-notice" role="alert" data-testid="zone-not-here">{trSentences(tr("Zone {0} cannot be opened here. Choose it at the top, or pick a zone below.", [zoneById(zoneParam!)?.name ?? zoneParam!]))}</p> : null}
       {notice || slice.message ? <p className="pricing-notice" role="status">{trSentences(notice)} {trSentences(slice.message)}</p> : null}
       {slice.loading ? <p className="state-line">{tr("Loading dispatch rules.")}</p> : null}
 
