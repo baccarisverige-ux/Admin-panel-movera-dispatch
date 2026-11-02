@@ -90,3 +90,20 @@ test("M2: Pricing never opens on a closed zone, and Tips & limits for All zones 
   await expect(page.getByRole("navigation", { name: "Zones" }).getByRole("button", { name: /Arlanda/ })).toHaveCount(0);
   expect(settings.sent.some((s) => s.method !== "GET")).toBe(false);
 });
+
+test("checker #204: Save draft, then Publish now, still changes only the edited field", async ({ page }) => {
+  const { settings, riderDoc, driverDoc, dispatchDoc } = await open(page, "/dispatch?zone=Z002");
+  const raise = page.getByRole("region", { name: "Rider raise limit" });
+  await expect(raise.getByLabel("Rider raise limit")).toHaveValue("2");
+  await raise.getByLabel("Rider raise limit").fill("2.5");
+  const bar = page.getByRole("region", { name: "Publish" });
+  await bar.getByRole("button", { name: /Save draft/ }).click();
+  await confirm(page);
+  await expect.poll(() => settings.sent.filter((s) => s.method === "PUT").length).toBe(1);
+  await bar.getByRole("button", { name: "Publish now" }).click();
+  await confirm(page);
+  await expect.poll(() => settings.sent.filter((s) => s.method === "POST").map((s) => s.path)).toContain("/api/v1/admin/config/dispatch/publish");
+  expect(differences(dispatchDoc, settings.docs.get("dispatch:Z002")!.document)).toEqual(["raisePrice"]);
+  expect(differences(riderDoc, settings.docs.get("rider_app_config:Z002")!.document)).toEqual([]);
+  expect(differences(driverDoc, settings.docs.get("driver_app_config:Z002")!.document)).toEqual([]);
+});

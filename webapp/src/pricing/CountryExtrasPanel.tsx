@@ -230,7 +230,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
             sliceKey={COUNTRY_SETTINGS_KEY}
             value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...Object.fromEntries(targets.map((id) => [id, shown])) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
             expectedSliceRev={book.draftRev}
-            disabled={!canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
+            disabled={loading || !canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
             title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}
             largeChanges={large}
             onDone={() => { setDraft(null); if (targets) void zoneRules.refetch(); onNotice(targets ? tr("Tips & limits saved for {0}. No other zone changed.", [zoneNames]) : tr("Tips & limits saved for {0}. The rider and driver apps get them with the next app config.", [name])); }}

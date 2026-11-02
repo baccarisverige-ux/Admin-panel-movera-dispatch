@@ -343,14 +343,42 @@ const WAITING_OWNED = ["driverSharePct", "driverShareWaitPct", "cancelAfterArriv
 const isPlain = (value: unknown): value is Doc => typeof value === "object" && value !== null && !Array.isArray(value);
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-/** `target` with every leaf where `after` differs from `before` set to `after`'s value (arrays count as one leaf). */
+/** The key of a list item: lists of objects that all carry an id (or a code) are patched item by item. */
+const KEY_FIELDS = ["id", "code", "category", "kind"] as const;
+function itemKey(list: readonly unknown[]): string | null {
+  if (!list.length) return null;
+  return KEY_FIELDS.find((field) => list.every((item) => isPlain(item) && (typeof item[field] === "string" || typeof item[field] === "number"))) ?? null;
+}
+
+function applyList(target: unknown, before: readonly unknown[], after: readonly unknown[]): unknown {
+  const field = itemKey([...before, ...after]);
+  const server = Array.isArray(target) ? target : null;
+  // A list without keys (or one the server does not hold as a keyed list) is one value: the admin's, as changed.
+  if (!field || !server || (server.length && itemKey(server) !== field)) return structuredClone(after);
+  const id = (item: unknown) => String((item as Doc)[field]);
+  const was = new Map(before.map((item) => [id(item), item]));
+  const now = new Map(after.map((item) => [id(item), item]));
+  const next: unknown[] = [];
+  for (const item of server) {
+    const key = id(item);
+    if (was.has(key) && !now.has(key)) continue; // removed by the admin
+    next.push(now.has(key) ? applyChanges(item, was.get(key), now.get(key)) : item);
+  }
+  for (const [key, item] of now) if (!was.has(key) && !server.some((own) => id(own) === key)) next.push(structuredClone(item)); // added by the admin
+  return next;
+}
+
+/** `target` with every leaf where `after` differs from `before` set to `after`'s value; a missing `before` counts as empty. */
 function applyChanges(target: unknown, before: unknown, after: unknown): unknown {
-  if (!isPlain(before) || !isPlain(after)) return structuredClone(after);
+  if (same(before, after)) return target;
+  if (Array.isArray(after)) return applyList(target, Array.isArray(before) ? before : [], after);
+  if (!isPlain(after)) return structuredClone(after);
+  const was: Doc = isPlain(before) ? before : {};
   const next: Doc = isPlain(target) ? { ...target } : {};
-  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
-    if (same(before[key], after[key])) continue;
+  for (const key of new Set([...Object.keys(was), ...Object.keys(after)])) {
+    if (same(was[key], after[key])) continue;
     if (after[key] === undefined) delete next[key];
-    else next[key] = applyChanges(next[key], before[key], after[key]);
+    else next[key] = applyChanges(next[key], was[key], after[key]);
   }
   return next;
 }
