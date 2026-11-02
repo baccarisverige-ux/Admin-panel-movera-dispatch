@@ -4,6 +4,7 @@ import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { fareLineLabel } from "../live/format";
 import { Link, useNavigate, useParams } from "react-router";
 import { useLiveRefund } from "../live/LiveRefund";
+import { LiveTripMoney } from "../live/LiveTripMoney";
 import { LiveTripTools } from "../live/LiveTripTools";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
@@ -513,6 +514,7 @@ export function TripPage() {
       <Section id="actions" title={tr("Actions")} icon={<Wrench size={16} />} wide>
         <h4 className="op-sub">{tr("Admin actions")}</h4>
         {live ? <LiveTripTools tripId={trip.id} facts={facts} hasDriver={Boolean(trip.driverId)} /> : null}
+        {live ? <LiveTripMoney tripId={trip.id} /> : null}
         <AdminActions trip={trip} ops={ops} split={split} money={money} country={country} riderId={riderId} onNotice={setNotice} />
         {ops.settings.actions.price || ops.settings.actions.refund ? (
           <div className="op-live">

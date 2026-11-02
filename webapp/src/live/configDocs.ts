@@ -10,7 +10,7 @@ import type { CurrencyCode, Money } from "../domain/money.ts";
 import { fromMajor } from "../domain/money.ts";
 import { marketOfZone } from "../markets/markets.ts";
 import type { CategoryPrice, ZoneBook } from "../pricing/zonePricing.ts";
-import { RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
+import { completeEarlyEnd, RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
 import { validPickupMove, validRaiseFactor } from "../dispatch/offerRules.ts";
 
@@ -223,6 +223,9 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   if (offers?.autoOffline && typeof offers.autoOffline.noFixMinutes === "number") zone.autoOffline = { ...zone.autoOffline, noFixMinutes: offers.autoOffline.noFixMinutes };
   const share = (driver?.["cancelFees"] as { driverSharePct?: number } | undefined)?.driverSharePct;
   if (typeof share === "number") zone.riderCancel = { ...zone.riderCancel, driverSharePct: share };
+  // v0.18.10 (G8 Q2): the early-end re-price limits as the zone's drivers get them (default 2 km / 8 min).
+  const earlyEnd = (driver?.["cancelFees"] as { earlyEnd?: unknown } | undefined)?.earlyEnd;
+  if (earlyEnd && typeof earlyEnd === "object") zone.riderCancel = { ...zone.riderCancel, earlyEnd: completeEarlyEnd(earlyEnd) };
   // v0.18.7 (G5 Q2): "Cancel after the driver arrived counts as a no-show" as the zone's drivers get it (default on).
   const afterArrived = (driver?.["waiting"] as { cancelAfterArrivedIsNoShow?: unknown } | undefined)?.cancelAfterArrivedIsNoShow;
   if (typeof afterArrived === "boolean") zone.pickupWait = { ...zone.pickupWait, cancelAfterArrivedIsNoShow: afterArrived };
@@ -309,7 +312,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number } };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
@@ -322,6 +325,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     tips: input.tips.map(option),
     raiseSteps: input.raiseSteps.map(option),
     driverBonus: { defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
+    // v0.18.10 checker: the largest single change of a driver's pay (Change pay on the trip page).
+    ...(input.driverPayChangeMax !== undefined ? { driverPayChangeMax: toMinor(input.driverPayChangeMax, currency) } : {}),
   };
 }
 

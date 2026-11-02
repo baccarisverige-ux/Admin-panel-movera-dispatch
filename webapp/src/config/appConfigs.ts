@@ -4,6 +4,7 @@ import { activeCategories, normalizeStore, zoneBook, type PricingStore } from ".
 import type { PickupRate } from "../pricing/pickupPay.ts";
 import { liveCountry, liveRules, normalizeDispatchBook, type DispatchBook, type RideTypeId, type ZoneDispatch } from "../dispatch/rules.ts";
 import { radarRuleFor, radarZonesOf } from "../dispatch/radarZones.ts";
+import { completeEarlyEnd } from "../dispatch/rules.ts";
 import { feeRow, type CancelFeeKind, type CancelFeeRow, type CancelFeeTable } from "../dispatch/cancelFees.ts";
 import { LANGS, reasonText, type CancelReason, type LangId, type WaitOverride } from "../dispatch/offers.ts";
 import { destinationModeForDriverApp, nextTripsForDriverApp } from "../dispatch/tripRules.ts";
@@ -259,7 +260,7 @@ function cancelFees(base: Common) {
 
 /** DriverAppConfig.cancelFees (v0.8.0): the tables plus the driver's share of a rider's cancel fee (Dispatch, per zone). */
 function driverCancelFees(base: Common) {
-  return { ...cancelFees(base), driverSharePct: base.zone.riderCancel.driverSharePct ?? 100 };
+  return { ...cancelFees(base), driverSharePct: base.zone.riderCancel.driverSharePct ?? 100, earlyEnd: completeEarlyEnd(base.zone.riderCancel.earlyEnd) };
 }
 
 function rideCheck(base: Common, state: AppConfigState) {
@@ -304,7 +305,7 @@ function appUpdate(base: Common, app: AppId) {
 /* ---------- RiderAppConfig ---------- */
 
 /**
- * Contract v0.4 (owner Q7 FINAL): the zone's methods are a subset of cash, card, apple_pay, google_pay, in that order.
+ * Contract v0.4 (owner Q7 FINAL): the zone's methods are a subset of cash, card, apple_pay, in that order (v0.18.10: no google_pay).
  * A method is offered when it is ticked for the country (Settings › Payment methods) and Finance has it on for at least
  * one of the zone's categories on one platform. The wallet is separate (features.wallet, one balance per currency).
  */
@@ -328,6 +329,8 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     paymentMethods: paymentMethods(base, state, zoneId),
     wallet: { usedFirst: true },
     tips: amountOptions(base.settings.tips, base.currency),
+    // v0.18.10 (G8): Pricing › Tips & limits; cash tips only in the car (5 minutes) unless cashAfterTrip.
+    tipRules: { cashAfterTrip: base.settings.tipRules.cashAfterTrip, cashInCarMinutes: 5, customAmount: base.settings.tipRules.customAmount, customMax: wire(base.settings.tipRules.customMax, base.currency) },
     raiseSteps: amountOptions(base.settings.raiseSteps, base.currency),
     /** Owner Q10: set per country in Pricing › Tips & limits, in local money; null = no cap. */
     promoCap: base.settings.promoCap === null ? null : wire(base.settings.promoCap, base.currency),

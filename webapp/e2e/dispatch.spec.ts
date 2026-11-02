@@ -137,18 +137,21 @@ test("rider waiting steps: change the message and see it in the rider app", asyn
 test("live: alerts, pause a zone at once (G4-F1), send a rider to a radar", async ({ page }) => {
   await session(page);
   await page.goto("/dispatch?view=live");
-  await expect(page.getByRole("region", { name: "Alerts" })).toContainText(/waited|free driver/);
+  // Root cause of the 2026-11-01 flake (G8): on the dev server the lazy Dispatch page compiles on first open and the
+  // live view re-renders after each command; under machine load that took 2–5 s (measured with a CPU profile, on main
+  // and G8 alike), the default 5 s. The production build (CI) is fast; the slow steps get room here, nothing is skipped.
+  await expect(page.getByRole("region", { name: "Alerts" })).toContainText(/waited|free driver/, { timeout: 30_000 });
   await page.getByRole("button", { name: "Pause Norrmalm" }).click();
   await confirm(page);
-  await expect(page.getByText("Norrmalm: pause done.")).toBeVisible();
+  await expect(page.getByText("Norrmalm: pause done.")).toBeVisible({ timeout: 15_000 });
   const list = page.getByRole("list", { name: "Riders waiting" });
   const first = list.getByRole("listitem").first();
   await first.getByRole("button", { name: /Nearby drivers for / }).click();
   const panel = page.getByTestId("assign-panel");
-  await expect(panel.getByTestId("assign-exclusive")).toBeVisible();
+  await expect(panel.getByTestId("assign-exclusive")).toBeVisible({ timeout: 15_000 });
   // A real radar (like "Send to radar"): no reason to type; it shows in the offers with its countdown.
   await panel.getByTestId("assign-radar").getByRole("button", { name: /^Send radar/ }).click();
-  await expect(panel.getByTestId("handled-line")).toContainText(/Sent to radar/);
+  await expect(panel.getByTestId("handled-line")).toContainText(/Sent to radar/, { timeout: 15_000 });
   await expect(panel.getByRole("list", { name: "Offers" })).toContainText("Radar group 1");
   await page.keyboard.press("Escape");
   await expect(first).toContainText(/Sent to radar/);
