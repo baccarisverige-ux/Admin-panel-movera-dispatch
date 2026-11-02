@@ -1,6 +1,6 @@
 import { useDirtyWarning } from "../ui/useDirtyWarning";
 import { isLiveData } from "../live/realData";
-import { NotConnected } from "../live/NotConnected";
+import { LiveReviewQueue } from "../live/LiveReviewQueue";
 import { RATING_TAGS, ratingTagLabel } from "../live/ratingTags";
 import { tr, trn } from "../i18n";
 import { useMemo, useState } from "react";
@@ -97,7 +97,7 @@ export function ReviewsPage() {
         ]}
       />
 
-      {tab === "rules" && liveData ? <LiveRules /> : tab === "people" ? <PeopleView persons={persons} /> : tab === "rules" ? <RulesView ops={ops} country={country} editable={editable} onNotice={setNotice} /> : (
+      {tab === "rules" && liveData ? <LiveRules ops={ops} country={country} editable={editable} onNotice={setNotice} /> : tab === "people" ? <PeopleView persons={persons} /> : tab === "rules" ? <RulesView ops={ops} country={country} editable={editable} onNotice={setNotice} /> : (
         <>
           <div className="gr-filters">
             <label className="gr-search"><Search size={13} aria-hidden="true" /><input aria-label={tr("Search reviews")} placeholder={tr("Trip, name or words")} value={query} onChange={(e) => setQuery(e.target.value)} /></label>
@@ -136,7 +136,7 @@ export function ReviewsPage() {
   );
 }
 
-function RulesView({ ops, country, editable, onNotice }: { ops: ReviewOps; country: keyof ReviewOps["rules"]; editable: boolean; onNotice: (text: string) => void }) {
+function RulesView({ ops, country, editable, onNotice, live = false }: { ops: ReviewOps; country: keyof ReviewOps["rules"]; editable: boolean; onNotice: (text: string) => void; live?: boolean }) {
   const [draft, setDraft] = useState<ReviewRules | null>(null);
   useDirtyWarning(Boolean(draft));
   const value = draft ?? ops.rules[country];
@@ -158,8 +158,8 @@ function RulesView({ ops, country, editable, onNotice }: { ops: ReviewOps; count
       <Card title={tr("Words and tags")} icon={<EyeOff size={15} />} tone="purple" help={tr("Comments with these words are hidden by themselves. An admin can restore them.")}>
         <Row label={tr("Hide bad words")}><Switch label={tr("Hide bad words")} on={value.badWords.on} disabled={!editable} onChange={(on) => patch({ badWords: { ...value.badWords, on } })} /></Row>
         <label className="gr-field"><span>{tr("Words, one per line")}</span><textarea aria-label={tr("Bad words")} value={value.badWords.words.join("\n")} disabled={!editable || !value.badWords.on} onChange={(e) => patch({ badWords: { ...value.badWords, words: e.target.value.split("\n") } })} /></label>
-        <label className="gr-field"><span>{tr("Tags riders can give drivers, comma between")}</span><input aria-label={tr("Driver tags")} value={value.driverTags.join(", ")} disabled={!editable} onChange={(e) => patch({ driverTags: e.target.value.split(",").map((tag) => tag.trimStart()) })} /></label>
-        <label className="gr-field"><span>{tr("Tags drivers can give riders, comma between")}</span><input aria-label={tr("Rider tags")} value={value.riderTags.join(", ")} disabled={!editable} onChange={(e) => patch({ riderTags: e.target.value.split(",").map((tag) => tag.trimStart()) })} /></label>
+        {live ? null : <><label className="gr-field"><span>{tr("Tags riders can give drivers, comma between")}</span><input aria-label={tr("Driver tags")} value={value.driverTags.join(", ")} disabled={!editable} onChange={(e) => patch({ driverTags: e.target.value.split(",").map((tag) => tag.trimStart()) })} /></label>
+        <label className="gr-field"><span>{tr("Tags drivers can give riders, comma between")}</span><input aria-label={tr("Rider tags")} value={value.riderTags.join(", ")} disabled={!editable} onChange={(e) => patch({ riderTags: e.target.value.split(",").map((tag) => tag.trimStart()) })} /></label></>}
       </Card>
       <div className="gr-save">
         {error ? <p role="alert" className="gr-warn">{error}</p> : null}
@@ -170,20 +170,23 @@ function RulesView({ ops, country, editable, onNotice }: { ops: ReviewOps; count
   );
 }
 
-/** Live: the tag lists are fixed in the contract (contract.json#ratings.tags); the warning lines have no server source yet. */
-function LiveRules() {
+/**
+ * Live (contract v0.18.15 §40, contract.json#reviewRules; owner G14 Q6 "Make them real"): the warning, review and block
+ * lines and the bad words are the server's rules per country; the tags stay fixed in the contract (#ratings.tags).
+ */
+function LiveRules({ ops, country, editable, onNotice }: { ops: ReviewOps; country: keyof ReviewOps["rules"]; editable: boolean; onNotice: (text: string) => void }) {
   return (
-    <div className="gr-two" data-testid="live-review-rules">
-      <Card title={tr("Low ratings")} icon={<ShieldAlert size={15} />} tone="orange" help={tr("What happens when a person's average falls under a line.")}>
-        <NotConnected block />
-      </Card>
-      <Card title={tr("Words and tags")} icon={<EyeOff size={15} />} tone="purple" help={tr("The same tags in every country, set in the contract. Each app shows them in its own words.")}>
-        <p className="gr-help">{tr("Tags riders can give drivers")}</p>
-        <p className="gr-tags">{RATING_TAGS.aboutDriver.map((tag) => <span key={tag}>{ratingTagLabel(tag)}</span>)}</p>
-        <p className="gr-help">{tr("Tags drivers can give riders")}</p>
-        <p className="gr-tags">{RATING_TAGS.aboutRider.map((tag) => <span key={tag}>{ratingTagLabel(tag)}</span>)}</p>
-        <p className="gr-help">{tr("Bad words list")}: <NotConnected /></p>
-      </Card>
+    <div data-testid="live-review-rules">
+      <RulesView ops={ops} country={country} editable={editable} onNotice={onNotice} live />
+      <div className="gr-two">
+        <Card title={tr("Tags")} icon={<EyeOff size={15} />} tone="purple" help={tr("The same tags in every country, set in the contract. Each app shows them in its own words.")}>
+          <p className="gr-help">{tr("Tags riders can give drivers")}</p>
+          <p className="gr-tags">{RATING_TAGS.aboutDriver.map((tag) => <span key={tag}>{ratingTagLabel(tag)}</span>)}</p>
+          <p className="gr-help">{tr("Tags drivers can give riders")}</p>
+          <p className="gr-tags">{RATING_TAGS.aboutRider.map((tag) => <span key={tag}>{ratingTagLabel(tag)}</span>)}</p>
+        </Card>
+        <LiveReviewQueue />
+      </div>
     </div>
   );
 }

@@ -30,6 +30,7 @@ import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary,
 import { alertCall, bookFromServer, type AlertBookState } from "./liveAlerts.ts";
 import { ALERTS_KEY, normalizeAlertBook } from "../alerts/engine.ts";
 import { INCIDENT_OPS_KEY, emptyIncidentOps } from "../safety/cases.ts";
+import { REVIEW_OPS_KEY, emptyReviewOps, type ReviewOps } from "../growth/reviews.ts";
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
@@ -639,6 +640,15 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return [];
   }
 
+  /** v0.18.15: the server's review rules of every country (contract.json#reviewRules); the tags stay the contract's. */
+  async function liveReviewOps(): Promise<ReviewOps> {
+    const base = emptyReviewOps();
+    for (const country of Object.keys(base.rules) as (keyof ReviewOps["rules"])[]) {
+      const saved = await client.json<Partial<ReviewOps["rules"]["SE"]>>(`/admin/reviews/rules?country=${country}`);
+      base.rules[country] = { ...base.rules[country], warn: saved.warn ?? base.rules[country].warn, review: saved.review ?? base.rules[country].review, block: saved.block ?? base.rules[country].block, minReviews: saved.minReviews ?? base.rules[country].minReviews, badWords: saved.badWords ?? base.rules[country].badWords };
+    }
+    return base;
+  }
   async function command(input: CommandInput): Promise<CommandResult> {
     const done = (message: string, status: CommandResult["status"] = "committed"): CommandResult => ({ message, operationId: input.idempotencyKey ?? input.action, status, rev: 0 });
     const explained = (error: unknown): never => {
@@ -801,6 +811,15 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // v0.7.2: one admin is enough. A server that still files an approval answers 202 PendingApproval.
       if (isPendingApproval(answer)) return done("Waiting for a second admin to approve.", "pending_approval");
       return done("Saved.");
+    }
+    // v0.18.15 review rules (contract.json#reviewRules): the lines and bad words of one country go to the server.
+    if (input.action === "admin.review.rules") {
+      const next = input.value as ReviewOps;
+      const country = input.targetId as keyof ReviewOps["rules"];
+      const rules = next.rules[country];
+      if (!rules) throw new ApiError(400, tr("Nothing changed."), { code: "invalid_request", retryable: false });
+      await client.json("/admin/reviews/rules", { method: "PUT", body: JSON.stringify({ country, warn: rules.warn, review: rules.review, block: rules.block, minReviews: rules.minReviews, badWords: rules.badWords }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
+      return { ...done("Saved."), slice: { key: REVIEW_OPS_KEY, value: await liveReviewOps() } };
     }
     // v0.18.15 incidents (contract.json#incidentDesk): the shared settings, and an audit line for each case report.
     if (input.action === "admin.incident.settings") {
@@ -1081,6 +1100,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const fromSettings = settings.readSlice(key, fallback);
       if (fromSettings) return (await fromSettings) as typeof fallback;
       // Live clean-up 1 (rule 1): a book the server does not keep yet is empty on live, never the demo seed.
+      if (key === REVIEW_OPS_KEY) return (await liveReviewOps()) as typeof fallback;
       if (key === INCIDENT_OPS_KEY) {
         const saved = await client.json<{ rev: number; settings: Record<string, unknown> }>("/admin/incidents/settings");
         return { ...emptyIncidentOps(), draftRev: saved.rev, settings: { ...emptyIncidentOps().settings, ...saved.settings } } as typeof fallback;

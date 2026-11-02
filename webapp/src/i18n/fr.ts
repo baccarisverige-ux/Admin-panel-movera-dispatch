@@ -8431,4 +8431,10 @@ export const fr: Record<MessageKey, string> = {
   "Works on it: {0}": "S'en occupe : {0}",
   "Write a reason first.": "Écrivez d'abord un motif.",
   "Calls coming soon": "Appels bientôt disponibles",
+  "Admin review": "Revue par un admin",
+  "People under the review or block line. A blocked account is let back in on the Drivers or Riders page.": "Personnes sous la limite de revue ou de blocage. Un compte bloqué est réactivé sur la page Chauffeurs ou Passagers.",
+  "Nobody to review.": "Personne à revoir.",
+  "To review": "À revoir",
+  "What was done": "Ce qui a été fait",
+  "Tags": "Étiquettes",
 };

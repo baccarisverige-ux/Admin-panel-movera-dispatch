@@ -8429,6 +8429,12 @@ export const en = {
   "Works on it: {0}": "Works on it: {0}",
   "Write a reason first.": "Write a reason first.",
   "Calls coming soon": "Calls coming soon",
+  "Admin review": "Admin review",
+  "People under the review or block line. A blocked account is let back in on the Drivers or Riders page.": "People under the review or block line. A blocked account is let back in on the Drivers or Riders page.",
+  "Nobody to review.": "Nobody to review.",
+  "To review": "To review",
+  "What was done": "What was done",
+  "Tags": "Tags",
 } as const;
 
 export type MessageKey = keyof typeof en;

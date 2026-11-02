@@ -8431,4 +8431,10 @@ export const sv: Record<MessageKey, string> = {
   "Works on it: {0}": "Arbetar med det: {0}",
   "Write a reason first.": "Skriv en anledning först.",
   "Calls coming soon": "Samtal kommer snart",
+  "Admin review": "Granskning av admin",
+  "People under the review or block line. A blocked account is let back in on the Drivers or Riders page.": "Personer under gränsen för granskning eller spärr. Ett spärrat konto släpps in igen på sidan Förare eller Resenärer.",
+  "Nobody to review.": "Ingen att granska.",
+  "To review": "Att granska",
+  "What was done": "Vad som gjordes",
+  "Tags": "Taggar",
 };

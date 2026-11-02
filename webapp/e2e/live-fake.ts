@@ -262,6 +262,8 @@ export type TripState = {
   supportSettings?: Record<string, unknown>;
   alertBook?: Record<string, unknown>;
   incidentSettings?: Record<string, unknown>;
+  reviewRules?: Record<string, unknown>;
+  reviewQueue?: Record<string, unknown>[];
   ticketMessages: Record<string, unknown>[];
   ratings: Record<string, unknown>[];
   approvals: (typeof APPROVALS)[number][];
@@ -408,6 +410,16 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, item);
     }
     if (p === "/api/v1/admin/tickets") return json(route, 200, { items: inZones(state.tickets, zoneField).filter((item) => !url.searchParams.get("status") || item["status"] === url.searchParams.get("status")), nextCursor: null });
+    // v0.18.15 review rules (contract.json#reviewRules).
+    if (p === "/api/v1/admin/reviews/rules") {
+      const all = (state.reviewRules ??= {}) as Record<string, unknown>;
+      if (method === "PUT") { all[body.country] = body; return json(route, 200, body); }
+      const country = url.searchParams.get("country") ?? "SE";
+      return json(route, 200, all[country] ?? { country, warn: { on: true, below: 4.5 }, review: { on: true, below: 4.2 }, block: { on: false, below: 3.6 }, minReviews: 3, badWords: { on: true, words: ["idiot", "stupid", "scam"] } });
+    }
+    if (p === "/api/v1/admin/reviews/queue") return json(route, 200, { items: state.reviewQueue ?? [] });
+    const reviewDone = /^\/api\/v1\/admin\/reviews\/queue\/(driver|rider)\/([^/]+)\/done$/.exec(p);
+    if (reviewDone) { state.reviewQueue = (state.reviewQueue ?? []).filter((row) => row["personId"] !== reviewDone[2]); return json(route, 200, { items: state.reviewQueue }); }
     // v0.18.15 incidents (contract.json#incidentDesk).
     if (p === "/api/v1/admin/incidents/settings") {
       const doc = (state.incidentSettings ??= { rev: 1, settings: {} }) as { rev: number; settings: unknown };
