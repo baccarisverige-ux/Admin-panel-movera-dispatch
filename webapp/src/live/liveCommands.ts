@@ -14,7 +14,7 @@ export const LIVE_COMMANDS: ReadonlySet<string> = new Set([
   "admin.driver.activate", "admin.driver.bankReview", "admin.driver.category", "admin.driver.onHold", "admin.driver.reactivate", "admin.driver.suspend",
   "admin.fleetOwner.activate", "admin.fleetOwner.onHold",
   "admin.growthOps.moderate",
-  "admin.incident.level",
+  "admin.incident.level", "admin.incident.report", "admin.incident.settings",
   "admin.onboarding.publishSettings",
   "admin.pricing.archiveCategory", "admin.pricing.createCategory", "admin.pricing.editCategory", "admin.pricing.publish", "admin.pricing.restore", "admin.pricing.restoreCategory", "admin.pricing.saveCountry", "admin.pricing.startSurge", "admin.pricing.stopAllSurges", "admin.pricing.stopSurge", "admin.pricing.undo",
   "admin.refund.markPaid",

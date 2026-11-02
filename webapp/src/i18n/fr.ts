@@ -8430,4 +8430,5 @@ export const fr: Record<MessageKey, string> = {
   "Who works on it": "Qui s'en occupe",
   "Works on it: {0}": "S'en occupe : {0}",
   "Write a reason first.": "Écrivez d'abord un motif.",
+  "Calls coming soon": "Appels bientôt disponibles",
 };

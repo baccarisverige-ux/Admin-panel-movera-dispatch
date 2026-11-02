@@ -8430,4 +8430,5 @@ export const sv: Record<MessageKey, string> = {
   "Who works on it": "Vem arbetar med det",
   "Works on it: {0}": "Arbetar med det: {0}",
   "Write a reason first.": "Skriv en anledning först.",
+  "Calls coming soon": "Samtal kommer snart",
 };

@@ -29,6 +29,7 @@ import { zoneSupplyRecords } from "../dashboard/insights.ts";
 import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { alertCall, bookFromServer, type AlertBookState } from "./liveAlerts.ts";
 import { ALERTS_KEY, normalizeAlertBook } from "../alerts/engine.ts";
+import { INCIDENT_OPS_KEY, emptyIncidentOps } from "../safety/cases.ts";
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
@@ -801,6 +802,16 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (isPendingApproval(answer)) return done("Waiting for a second admin to approve.", "pending_approval");
       return done("Saved.");
     }
+    // v0.18.15 incidents (contract.json#incidentDesk): the shared settings, and an audit line for each case report.
+    if (input.action === "admin.incident.settings") {
+      const next = input.value as { draftRev: number; settings: Record<string, unknown> };
+      const saved = await client.json<{ rev: number; settings: Record<string, unknown> }>("/admin/incidents/settings", { method: "PUT", body: JSON.stringify({ expectedRev: next.draftRev - 1, settings: next.settings }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
+      return { ...done("Saved."), slice: { key: INCIDENT_OPS_KEY, value: { ...emptyIncidentOps(), draftRev: saved.rev, settings: { ...emptyIncidentOps().settings, ...saved.settings } } } };
+    }
+    if (input.action === "admin.incident.report") {
+      await client.post(`/admin/incidents/${encodeURIComponent(input.targetId)}/report`, {}).catch(explained);
+      return done("Saved.");
+    }
     // v0.18.15 alerts full flow (contract.json#alertDesk, owner Q5): take, done, snooze, pass, mute, quiet hours, settings, rules.
     if (["admin.alerts.take", "admin.alerts.done", "admin.alerts.snooze", "admin.alerts.pass", "admin.alerts.mute", "admin.alerts.quiet", "admin.alerts.settings", "admin.alerts.rule"].includes(input.action)) {
       const me = client.admin()?.adminId ?? "";
@@ -1070,6 +1081,10 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const fromSettings = settings.readSlice(key, fallback);
       if (fromSettings) return (await fromSettings) as typeof fallback;
       // Live clean-up 1 (rule 1): a book the server does not keep yet is empty on live, never the demo seed.
+      if (key === INCIDENT_OPS_KEY) {
+        const saved = await client.json<{ rev: number; settings: Record<string, unknown> }>("/admin/incidents/settings");
+        return { ...emptyIncidentOps(), draftRev: saved.rev, settings: { ...emptyIncidentOps().settings, ...saved.settings } } as typeof fallback;
+      }
       if (key === ALERTS_KEY) return bookFromServer(await client.json<AlertBookState>("/admin/alerts/book"), client.admin()?.adminId ?? null) as typeof fallback;
       if (key !== "safetyOps") return liveEmptyBook(fallback);
       if (!incidents.size) await list("incidents").catch(() => []);

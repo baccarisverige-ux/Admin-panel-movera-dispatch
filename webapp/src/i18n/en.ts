@@ -8428,6 +8428,7 @@ export const en = {
   "Who works on it": "Who works on it",
   "Works on it: {0}": "Works on it: {0}",
   "Write a reason first.": "Write a reason first.",
+  "Calls coming soon": "Calls coming soon",
 } as const;
 
 export type MessageKey = keyof typeof en;

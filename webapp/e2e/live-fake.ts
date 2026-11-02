@@ -261,6 +261,7 @@ export type TripState = {
   tickets: Record<string, unknown>[];
   supportSettings?: Record<string, unknown>;
   alertBook?: Record<string, unknown>;
+  incidentSettings?: Record<string, unknown>;
   ticketMessages: Record<string, unknown>[];
   ratings: Record<string, unknown>[];
   approvals: (typeof APPROVALS)[number][];
@@ -407,6 +408,13 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, item);
     }
     if (p === "/api/v1/admin/tickets") return json(route, 200, { items: inZones(state.tickets, zoneField).filter((item) => !url.searchParams.get("status") || item["status"] === url.searchParams.get("status")), nextCursor: null });
+    // v0.18.15 incidents (contract.json#incidentDesk).
+    if (p === "/api/v1/admin/incidents/settings") {
+      const doc = (state.incidentSettings ??= { rev: 1, settings: {} }) as { rev: number; settings: unknown };
+      if (method === "PUT") { doc.rev += 1; doc.settings = body.settings; }
+      return json(route, 200, doc);
+    }
+    if (/^\/api\/v1\/admin\/incidents\/[^/]+\/report$/.test(p)) return route.fulfill({ status: 204, headers: CORS });
     // v0.18.15 alerts full flow (contract.json#alertDesk).
     if (p.startsWith("/api/v1/admin/alerts/")) {
       const book = (state.alertBook ??= { rev: 1, settings: {}, rules: [], records: [], mutes: {}, quiet: { on: false, from: "22:00", to: "07:00" }, people: [{ adminId: ADMIN.adminId, name: ADMIN.name }, { adminId: "A2", name: "Erik Ek" }] }) as Record<string, any>;
