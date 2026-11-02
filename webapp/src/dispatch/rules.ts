@@ -1153,6 +1153,8 @@ const LABELS: Record<string, string> = {
   "reservation.homePopup": "Reservation Home popup", "reservation.homePopupAfterMin": "Home popup after booking",
   "reservation.toRadar": "Reservation to Radar trips", "reservation.radarBeforeMin": "Radar trips before pickup", "reservation.onDriverCancel": "After a driver cancels",
   "choose.how": "How the mode is chosen", "choose.radarAbove": "Busy level for Radar", "choose.main": "Main mode", "start.mode": "Start & order", "start.nearKm": "Exclusive first within", "limits.maxPickupKm": "Farthest pickup", "limits.maxPickupEtaMin": "Longest pickup time", "neighbours.on": "Neighbour zones", "choose.times": "Time rules",
+  // Live fix 2026-11-02 (audit 1f): the Start & order fields had no label, so "Se ändringar" showed raw keys.
+  "radar.steps": "Radar distance steps", "exclusive.steps": "Exclusive distance steps", "neighbours.zoneIds": "Neighbour zones list", "neighbours.afterStep": "Neighbours from step",
   rulesFrom: "Whose rules", "radius.steps": "Search distance steps", "radius.maxWaitMin": "Longest search",
   "batching.on": "Smart waiting", "batching.seconds": "Smart waiting seconds", "batching.fromRatio": "Smart waiting from busy level",
   "finishing.radar": "Finishing nearby on Radar", "finishing.exclusive": "Finishing nearby on Exclusive", "finishing.withinMin": "Finishing within minutes", "finishing.withinKm": "Finishing within km",
@@ -1251,8 +1253,15 @@ const PATH_WORDS: Record<string, Record<string, string>> = {
   "reservation.lateEta.reassignTo": { exclusive: "Exclusive offer to nearest driver", radar: "Radar", dispatch: "back to dispatch" },
 };
 
-function show(raw: string | undefined, path = ""): string {
-  if (raw === undefined) return "";
+function show(raw: string | undefined, path = "", shown = false): string {
+  // Live fix 2026-11-02: words in the panel's language for the "See changes" list (stored history stays English).
+  return shown ? trx(showWords(raw, path)) : showWords(raw, path);
+}
+
+function showWords(raw: string | undefined, path = ""): string {
+  if (raw === undefined) return /^(radar|exclusive)\.steps$/.test(path) ? "Same as search distance" : "";
+  if (/^limits\./.test(path) && raw === "0") return "no limit";
+  if (path === "neighbours.afterStep" && raw === "0") return "the last step";
   const value = JSON.parse(raw) as unknown;
   if (value === null) return /\.riderFees\.|\.fees\./.test(path) ? "none" : "same as the zone";
   if (/\.(riderFees|fees)\.\w+\.type$/.test(path) && typeof value === "string") return value === "percent" ? "% of price" : "fixed";
@@ -1263,14 +1272,15 @@ function show(raw: string | undefined, path = ""): string {
   if (value === "widen_then_exclusive") return "wider area, then Exclusive";
   if (value === "widen_then_radar") return "wider area, then Radar";
   if (value === "widen") return "wider area";
-  const words: Record<string, string> = { auto: "Automatic", manual: "By hand", driver: "the driver's zone", pickup: "the pickup zone", fifo: "first in the queue", best: "best driver", none: "none" };
+  const words: Record<string, string> = { byDistance: "By distance", both: "Both at the same time", auto: "Automatic", manual: "By hand", driver: "the driver's zone", pickup: "the pickup zone", fifo: "first in the queue", best: "best driver", none: "none" };
   if (typeof value === "string" && words[value]) return words[value];
   if (typeof value === "string") return value === "radar" || value === "exclusive" ? modeLabel(value) : value;
   return String(value);
 }
 
 /** What changed between two rule sets, in plain lines like "Radar drivers: 5 → 8". */
-export function changeLines(before: ZoneDispatch, after: ZoneDispatch): string[] {
+/** shown = in the panel's language, for the screen only (live fix 2026-11-02); the stored history lines stay English. */
+export function changeLines(before: ZoneDispatch, after: ZoneDispatch, shown = false): string[] {
   const withFees = (zone: ZoneDispatch, other: ZoneDispatch): ZoneDispatch => ({
     ...zone,
     riderCancel: { ...zone.riderCancel, fees: alignFees(zone.riderCancel.fees, other.riderCancel.fees) },
@@ -1281,8 +1291,10 @@ export function changeLines(before: ZoneDispatch, after: ZoneDispatch): string[]
   const lines: string[] = [];
   for (const [path, value] of b) {
     if (path === "zoneId" || a.get(path) === value) continue;
-    const label = LABELS[path] ?? feeLabel(path) ?? path;
-    lines.push(Array.isArray(JSON.parse(value)) && !(JSON.parse(value) as unknown[]).every((item) => typeof item === "number") ? `${label} changed` : `${label}: ${show(a.get(path), path)} → ${show(value, path)}`);
+    const english = LABELS[path] ?? feeLabel(path) ?? path;
+    const label = shown ? trx(english) : english;
+    const listChanged = Array.isArray(JSON.parse(value)) && !(JSON.parse(value) as unknown[]).every((item) => typeof item === "number");
+    lines.push(listChanged ? (shown ? tr("{0} changed", [label]) : `${label} changed`) : `${label}: ${show(a.get(path), path, shown)} → ${show(value, path, shown)}`);
   }
   return lines;
 }
@@ -1315,10 +1327,10 @@ export function isBigChange(before: ZoneDispatch, after: ZoneDispatch): boolean 
 export type ZoneChange = { zoneId: string; lines: string[]; big: boolean; issues: string[] };
 
 /** Zones whose working copy differs from what is live. */
-export function pendingChanges(book: DispatchBook, working: Record<string, ZoneDispatch>, zoneIds: readonly string[]): ZoneChange[] {
+export function pendingChanges(book: DispatchBook, working: Record<string, ZoneDispatch>, zoneIds: readonly string[], shown = false): ZoneChange[] {
   return zoneIds.flatMap((zoneId) => {
     const next = working[zoneId] ?? draftRules(book, zoneId);
-    const lines = changeLines(liveRules(book, zoneId), next);
+    const lines = changeLines(liveRules(book, zoneId), next, shown);
     return lines.length ? [{ zoneId, lines, big: isBigChange(liveRules(book, zoneId), next), issues: zoneIssues(next) }] : [];
   });
 }

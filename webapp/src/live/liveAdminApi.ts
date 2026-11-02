@@ -36,7 +36,7 @@ import { remember, setLiveData } from "./realData.ts";
 import { bonusByKind, commissionBeforeBonus, liveBonusLimits } from "./tripLive.ts";
 import { vehicleMissing } from "./activation.ts";
 import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
-import { tr } from "../i18n/index.ts";
+import { formatNumber, tr } from "../i18n/index.ts";
 import { rideCheckRecords } from "./rideChecks.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 
@@ -833,9 +833,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (next?.tripId) trips.set(next.tripId, next);
       // Owner bug 2026-11-01 ("Exclusif" arrived as Radar): applyTo sends the chosen kind; the server keeps the money per
       // kind and (owner decision) sends it at once: exclusive to the nearest, radar to the others (moneySend).
-      const send = (next as { moneySend?: { exclusiveTo: string | null; radarTo: string[] } } | undefined)?.moneySend;
+      const send = (next as { moneySend?: MoneySendAnswer } | undefined)?.moneySend;
       const notice = send && params.bonusScope ? moneySendNotice(send, params.bonusScope) : null;
-      return { ...done("Money added for the driver."), ...(notice ? { notice } : {}) };
+      // Live fix 2026-11-02: never "added for the driver" when the server sent nobody a new offer.
+      const nobody = send && !send.exclusiveTo && send.radarTo.length === 0;
+      return { ...done(nobody ? "Money added. No driver got a new offer yet." : "Money added for the driver."), ...(notice ? { notice } : {}) };
     }
     if (input.action === "admin.trip.assign" || input.action === "admin.trip.radarGroup") {
       // Exclusive offer or radar group (contract §9 /admin/trips/{id}/assign and /radar-group), with the trip's version.
@@ -1086,13 +1088,32 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
 }
 
 /** What the admin reads when some chosen drivers already saw the ride (owner bug 2026-11-01), in the admin's language. */
+/** The server's moneySend answer (contract.json#adminDispatch.driverBonus.applyTo); skipped/reachKm since the live fix 2026-11-02. */
+export type MoneySendAnswer = { exclusiveTo: string | null; radarTo: string[]; skipped?: { expired?: number; busy?: number; far?: number }; reachKm?: number | null };
+
 /** Owner decision 2026-11-01: what "Add money" sent at once, in the admin's language. */
-export function moneySendNotice(send: { exclusiveTo: string | null; radarTo: string[] }, scope: "exclusive" | "radar" | "both"): string {
+export function moneySendNotice(send: MoneySendAnswer, scope: "exclusive" | "radar" | "both"): string {
   const parts = [
     send.exclusiveTo ? tr("Sent now as an Exclusive offer to the nearest free driver.") : "",
     send.radarTo.length ? tr(send.radarTo.length === 1 ? "Sent now as Radar to {0} driver." : "Sent now as Radar to {0} drivers.", [send.radarTo.length]) : "",
   ].filter(Boolean);
   if (parts.length) return parts.join(" ");
+  // Live fix 2026-11-02 (audit 3c): nobody got it — say so honestly, with the server's reasons.
+  const expired = send.skipped?.expired ?? 0;
+  const busy = send.skipped?.busy ?? 0;
+  const far = send.skipped?.far ?? 0;
+  if (send.skipped) {
+    const why = [
+      expired ? tr(expired === 1 ? "{0} driver let the offer expire" : "{0} drivers let the offer expire", [expired]) : "",
+      busy ? tr(busy === 1 ? "{0} driver could not take it" : "{0} drivers could not take it", [busy]) : "",
+      far ? tr(far === 1 ? "{0} driver farther away" : "{0} drivers farther away", [far]) : "",
+    ].filter(Boolean);
+    const head = typeof send.reachKm === "number"
+      ? tr("The money waits — no free driver within {0} km", [formatNumber(send.reachKm, { maximumFractionDigits: 1 })])
+      : tr("The money waits — no free driver");
+    const next = scope === "exclusive" ? tr("It goes with the next Exclusive offer.") : scope === "radar" ? tr("It goes with the next Radar offer.") : tr("It goes with the next offer.");
+    return `${head}${why.length ? ` (${why.join(", ")})` : ""}. ${next}`;
+  }
   if (scope === "exclusive") return tr("Already on the Exclusive offer, or nobody free nearby: it goes with the next Exclusive offer.");
   if (scope === "radar") return tr("Already on the Radar offers, or nobody free nearby: it goes with the next Radar offer.");
   return tr("Already on the offers out, or nobody free nearby: it goes with the next offer.");

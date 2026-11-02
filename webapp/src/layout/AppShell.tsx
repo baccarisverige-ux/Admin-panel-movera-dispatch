@@ -54,6 +54,7 @@ import { tr, trn, trx, uiLocale } from "../i18n";
 import { ProfileMenu } from "../i18n/ProfileMenu";
 import { BackToFrom } from "../ui/BackToFrom";
 import { COUNTRY_LABEL } from "../i18n/countries";
+import { clearWorkingDraft, useWorkingDraftSummary } from "../dispatch/workingDraft";
 
 const ICONS: Record<NavIcon, typeof Menu> = {
   LayoutDashboard,
@@ -116,7 +117,10 @@ function ShellInner({ page, children }: AppShellProps) {
   const [inboxOpen, setInboxOpen] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { agent, signOut } = useSession();
+  const { agent, signOut: endSession } = useSession();
+  // Checker fix (PR #200): signing out throws away the unpublished Dispatch edits; the next admin starts empty.
+  const signOut = () => { clearWorkingDraft({ signOut: true }); endSession(); };
+  const pendingDispatch = useWorkingDraftSummary();
   const panel = normalizePanelOps(useSlice<PanelOps>(PANEL_OPS_KEY, emptyPanelOps(), { enabled: Boolean(agent) }).value);
   const api = useAdminApi();
   // A live build lists only the pages that read the server; the demo pages stay reachable by address, marked "not live".
@@ -285,6 +289,11 @@ function ShellInner({ page, children }: AppShellProps) {
           </div>
         </header>
         <RideCheckBanner />
+        {page.id !== "dispatch" && (pendingDispatch.zones.length || pendingDispatch.countries.length) ? (
+          <p className="state-line dispatch-pending" role="status">
+            <Link to={{ pathname: "/dispatch/rules", search: pendingDispatch.zones.length ? `?zone=${encodeURIComponent(pendingDispatch.zones[0])}` : "" }}>{trn("Unpublished changes in Dispatch ({0})", [...pendingDispatch.zones, ...pendingDispatch.countries].join(", "))}</Link>
+          </p>
+        ) : null}
         {scopeDenied ? <p className="state-line">{trn("No access to scope {0}. Choose an allowed zone.", scope)}</p> : null}
         {searchOpen ? (
           <div className="panel">

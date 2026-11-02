@@ -151,3 +151,40 @@ test("Live G8 fix 1: a language-only save sends no zone's payment methods, and t
   expect(sent.slice(before).filter((call) => call.method !== "GET"), "no zone's payment methods are sent").toEqual([]);
   expect(JSON.stringify(docs.get("rider_app_config:Z002")!.document["paymentMethods"])).toBe(z002);
 });
+
+test("Live fix 2026-11-02: Start & order edits stay across Radar · Exclusive → Best driver, one publish covers both, the list is in Swedish", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  const server = await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/offers?zone=Z002");
+  await page.getByRole("radio", { name: "Radar först" }).check();
+  const publish = page.getByRole("region", { name: "Publicera" });
+  await expect(publish).toContainText("inte live än");
+  await page.getByRole("link", { name: "Trafikledning › Bästa förare" }).first().click();
+  await expect(page).toHaveURL(/tab=best/);
+  // The new sub-page still holds the unpublished edit (it used to say "Allt är live").
+  await expect(publish).not.toContainText("Allt är live");
+  await expect(publish).toContainText("inte live än");
+  await publish.getByRole("button", { name: "Se ändringar" }).click();
+  await expect(publish.getByText("Start & ordning: Automatisk → Radar", { exact: true })).toBeVisible();
+  await expect(publish).not.toContainText("start.mode");
+  await publish.getByRole("button", { name: "Publicera nu" }).click();
+  await confirm(page);
+  await expect.poll(() => server.sent.filter((s) => s.method === "PUT" && s.path.endsWith("/dispatch")).length).toBe(1);
+  const put = server.sent.find((s) => s.method === "PUT" && s.path.endsWith("/dispatch"))!;
+  expect((put.body!["document"] as { start?: { mode?: string } }).start?.mode).toBe("radar");
+});
+
+test("Live fix 2026-11-02: a link to a zone of another country switches the country, never opens another zone", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/offers?country=SE&zone=FR-PC");
+  await expect(page).toHaveURL(/country=FR/);
+  await expect(page).toHaveURL(/zone=FR-PC/);
+  await expect(page.getByRole("heading", { name: "Radar · Exklusiv i Frankrike" })).toBeVisible();
+  // A zone that does not exist is named, and the page does not fall back to the country's first zone.
+  await page.goto("/offers?country=SE&zone=NOPE");
+  await expect(page.getByTestId("zone-not-here")).toContainText("NOPE");
+  await expect(page).toHaveURL(/zone=NOPE/);
+});

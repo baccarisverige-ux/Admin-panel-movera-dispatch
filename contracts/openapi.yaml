@@ -14066,6 +14066,30 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Id'
+            skipped:
+              type: object
+              description: 'Live fix 2026-11-02 (additive): free drivers left out. expired = declined or let an offer of this
+                trip expire; busy = refused when sent; far = beyond reachKm.'
+              required:
+              - expired
+              - busy
+              - far
+              properties:
+                expired:
+                  type: integer
+                  minimum: 0
+                busy:
+                  type: integer
+                  minimum: 0
+                far:
+                  type: integer
+                  minimum: 0
+            reachKm:
+              oneOf:
+              - type: number
+                minimum: 0
+              - type: 'null'
+              description: 'Live fix 2026-11-02 (additive): the widest reach used in km; null = no limit.'
         driverBonusByKind:
           type: object
           description: 'Admin view only (owner bug 2026-11-01): Owner bug 2026-11-01 (admin "Add money", Apply to: Exclusive
@@ -14078,16 +14102,22 @@ components:
             offer to the nearest free driver of the trip''s category; radar → the trip''s open exclusive offers become radar
             offers and, if no radar offer is out, the nearest free drivers (up to the radar group size) get one; both → exclusive
             to the nearest and radar to the others. The answer adds moneySend { exclusiveTo: driverId | null, radarTo: [driverId]
-            }. Nobody free → 200, the money waits for the next offer of that kind. Without applyTo (older callers) nothing
-            is sent. The limit counts per kind (a driver gets one kind). On accept the trip keeps the money of the kind he
-            took (driverBonus, commission). A driver kept in a radar-group send with an open automatic exclusive offer has
-            it turned into a radar offer (offer_updated). Once a driver took the trip, driver-bonus goes to him whatever applyTo
-            says. Admin view only: TripProjection.driverBonusByKind { exclusive, radar: amountMinor, currency, priority }
-            while money or the badge is set; TripProjection.driverBonus is the larger of the two until accept. v0.18.11 (owner
-            rule 16): the nearest free drivers of the immediate send follow the zone''s dispatch settings: in-zone drivers
-            first, drivers of same-country neighbour zones (neighbours on) only when no in-zone driver is free; never beyond
-            the widest step of that kind (exclusive.steps / radar.steps, else radius.steps), limits.maxPickupKm or limits.maxPickupEtaMin
-            (km / 24 km/h).'
+            }. Live fix 2026-11-02 (additive, same version): moneySend also has skipped { expired, busy, far } (free drivers
+            left out: expired = declined or let an offer of this trip expire, never asked again, same as automatic dispatch;
+            busy = refused when sent; far = beyond the reach) and reachKm (the widest reach used for this send in km, null
+            = no limit), so the admin can say honestly when nobody got the offer. How the counts combine (checker PR #200):
+            each count is of drivers, each driver once — expired and far are the larger count of the kinds looked at (Exclusive
+            and Radar look at the same nearby drivers, so Both never counts a driver twice); busy is the sum over the sends
+            (Both sends Exclusive and Radar to different drivers, so the sum is each driver once). Nobody free → 200, the
+            money waits for the next offer of that kind. Without applyTo (older callers) nothing is sent. The limit counts
+            per kind (a driver gets one kind). On accept the trip keeps the money of the kind he took (driverBonus, commission).
+            A driver kept in a radar-group send with an open automatic exclusive offer has it turned into a radar offer (offer_updated).
+            Once a driver took the trip, driver-bonus goes to him whatever applyTo says. Admin view only: TripProjection.driverBonusByKind
+            { exclusive, radar: amountMinor, currency, priority } while money or the badge is set; TripProjection.driverBonus
+            is the larger of the two until accept. v0.18.11 (owner rule 16): the nearest free drivers of the immediate send
+            follow the zone''s dispatch settings: in-zone drivers first, drivers of same-country neighbour zones (neighbours
+            on) only when no in-zone driver is free; never beyond the widest step of that kind (exclusive.steps / radar.steps,
+            else radius.steps), limits.maxPickupKm or limits.maxPickupEtaMin (km / 24 km/h).'
           required:
           - exclusive
           - radar
@@ -21107,17 +21137,23 @@ components:
             take it is skipped): exclusive → if no exclusive offer is out, an exclusive (assigned) offer to the nearest free
             driver of the trip''s category; radar → the trip''s open exclusive offers become radar offers and, if no radar
             offer is out, the nearest free drivers (up to the radar group size) get one; both → exclusive to the nearest and
-            radar to the others. The answer adds moneySend { exclusiveTo: driverId | null, radarTo: [driverId] }. Nobody free
-            → 200, the money waits for the next offer of that kind. Without applyTo (older callers) nothing is sent. The limit
-            counts per kind (a driver gets one kind). On accept the trip keeps the money of the kind he took (driverBonus,
-            commission). A driver kept in a radar-group send with an open automatic exclusive offer has it turned into a radar
-            offer (offer_updated). Once a driver took the trip, driver-bonus goes to him whatever applyTo says. Admin view
-            only: TripProjection.driverBonusByKind { exclusive, radar: amountMinor, currency, priority } while money or the
-            badge is set; TripProjection.driverBonus is the larger of the two until accept. v0.18.11 (owner rule 16): the
-            nearest free drivers of the immediate send follow the zone''s dispatch settings: in-zone drivers first, drivers
-            of same-country neighbour zones (neighbours on) only when no in-zone driver is free; never beyond the widest step
-            of that kind (exclusive.steps / radar.steps, else radius.steps), limits.maxPickupKm or limits.maxPickupEtaMin
-            (km / 24 km/h).'
+            radar to the others. The answer adds moneySend { exclusiveTo: driverId | null, radarTo: [driverId] }. Live fix
+            2026-11-02 (additive, same version): moneySend also has skipped { expired, busy, far } (free drivers left out:
+            expired = declined or let an offer of this trip expire, never asked again, same as automatic dispatch; busy =
+            refused when sent; far = beyond the reach) and reachKm (the widest reach used for this send in km, null = no limit),
+            so the admin can say honestly when nobody got the offer. How the counts combine (checker PR #200): each count
+            is of drivers, each driver once — expired and far are the larger count of the kinds looked at (Exclusive and Radar
+            look at the same nearby drivers, so Both never counts a driver twice); busy is the sum over the sends (Both sends
+            Exclusive and Radar to different drivers, so the sum is each driver once). Nobody free → 200, the money waits
+            for the next offer of that kind. Without applyTo (older callers) nothing is sent. The limit counts per kind (a
+            driver gets one kind). On accept the trip keeps the money of the kind he took (driverBonus, commission). A driver
+            kept in a radar-group send with an open automatic exclusive offer has it turned into a radar offer (offer_updated).
+            Once a driver took the trip, driver-bonus goes to him whatever applyTo says. Admin view only: TripProjection.driverBonusByKind
+            { exclusive, radar: amountMinor, currency, priority } while money or the badge is set; TripProjection.driverBonus
+            is the larger of the two until accept. v0.18.11 (owner rule 16): the nearest free drivers of the immediate send
+            follow the zone''s dispatch settings: in-zone drivers first, drivers of same-country neighbour zones (neighbours
+            on) only when no in-zone driver is free; never beyond the widest step of that kind (exclusive.steps / radar.steps,
+            else radius.steps), limits.maxPickupKm or limits.maxPickupEtaMin (km / 24 km/h).'
     AdminRadarGroupCommand:
       type: object
       description: 'Radar group: one radar offer per chosen driver on the zone''s normal timer; the first to accept wins.
@@ -21163,17 +21199,23 @@ components:
             take it is skipped): exclusive → if no exclusive offer is out, an exclusive (assigned) offer to the nearest free
             driver of the trip''s category; radar → the trip''s open exclusive offers become radar offers and, if no radar
             offer is out, the nearest free drivers (up to the radar group size) get one; both → exclusive to the nearest and
-            radar to the others. The answer adds moneySend { exclusiveTo: driverId | null, radarTo: [driverId] }. Nobody free
-            → 200, the money waits for the next offer of that kind. Without applyTo (older callers) nothing is sent. The limit
-            counts per kind (a driver gets one kind). On accept the trip keeps the money of the kind he took (driverBonus,
-            commission). A driver kept in a radar-group send with an open automatic exclusive offer has it turned into a radar
-            offer (offer_updated). Once a driver took the trip, driver-bonus goes to him whatever applyTo says. Admin view
-            only: TripProjection.driverBonusByKind { exclusive, radar: amountMinor, currency, priority } while money or the
-            badge is set; TripProjection.driverBonus is the larger of the two until accept. v0.18.11 (owner rule 16): the
-            nearest free drivers of the immediate send follow the zone''s dispatch settings: in-zone drivers first, drivers
-            of same-country neighbour zones (neighbours on) only when no in-zone driver is free; never beyond the widest step
-            of that kind (exclusive.steps / radar.steps, else radius.steps), limits.maxPickupKm or limits.maxPickupEtaMin
-            (km / 24 km/h).'
+            radar to the others. The answer adds moneySend { exclusiveTo: driverId | null, radarTo: [driverId] }. Live fix
+            2026-11-02 (additive, same version): moneySend also has skipped { expired, busy, far } (free drivers left out:
+            expired = declined or let an offer of this trip expire, never asked again, same as automatic dispatch; busy =
+            refused when sent; far = beyond the reach) and reachKm (the widest reach used for this send in km, null = no limit),
+            so the admin can say honestly when nobody got the offer. How the counts combine (checker PR #200): each count
+            is of drivers, each driver once — expired and far are the larger count of the kinds looked at (Exclusive and Radar
+            look at the same nearby drivers, so Both never counts a driver twice); busy is the sum over the sends (Both sends
+            Exclusive and Radar to different drivers, so the sum is each driver once). Nobody free → 200, the money waits
+            for the next offer of that kind. Without applyTo (older callers) nothing is sent. The limit counts per kind (a
+            driver gets one kind). On accept the trip keeps the money of the kind he took (driverBonus, commission). A driver
+            kept in a radar-group send with an open automatic exclusive offer has it turned into a radar offer (offer_updated).
+            Once a driver took the trip, driver-bonus goes to him whatever applyTo says. Admin view only: TripProjection.driverBonusByKind
+            { exclusive, radar: amountMinor, currency, priority } while money or the badge is set; TripProjection.driverBonus
+            is the larger of the two until accept. v0.18.11 (owner rule 16): the nearest free drivers of the immediate send
+            follow the zone''s dispatch settings: in-zone drivers first, drivers of same-country neighbour zones (neighbours
+            on) only when no in-zone driver is free; never beyond the widest step of that kind (exclusive.steps / radar.steps,
+            else radius.steps), limits.maxPickupKm or limits.maxPickupEtaMin (km / 24 km/h).'
         groupId:
           $ref: '#/components/schemas/Id'
         radarZoneId:
@@ -21245,17 +21287,23 @@ components:
             take it is skipped): exclusive → if no exclusive offer is out, an exclusive (assigned) offer to the nearest free
             driver of the trip''s category; radar → the trip''s open exclusive offers become radar offers and, if no radar
             offer is out, the nearest free drivers (up to the radar group size) get one; both → exclusive to the nearest and
-            radar to the others. The answer adds moneySend { exclusiveTo: driverId | null, radarTo: [driverId] }. Nobody free
-            → 200, the money waits for the next offer of that kind. Without applyTo (older callers) nothing is sent. The limit
-            counts per kind (a driver gets one kind). On accept the trip keeps the money of the kind he took (driverBonus,
-            commission). A driver kept in a radar-group send with an open automatic exclusive offer has it turned into a radar
-            offer (offer_updated). Once a driver took the trip, driver-bonus goes to him whatever applyTo says. Admin view
-            only: TripProjection.driverBonusByKind { exclusive, radar: amountMinor, currency, priority } while money or the
-            badge is set; TripProjection.driverBonus is the larger of the two until accept. v0.18.11 (owner rule 16): the
-            nearest free drivers of the immediate send follow the zone''s dispatch settings: in-zone drivers first, drivers
-            of same-country neighbour zones (neighbours on) only when no in-zone driver is free; never beyond the widest step
-            of that kind (exclusive.steps / radar.steps, else radius.steps), limits.maxPickupKm or limits.maxPickupEtaMin
-            (km / 24 km/h).'
+            radar to the others. The answer adds moneySend { exclusiveTo: driverId | null, radarTo: [driverId] }. Live fix
+            2026-11-02 (additive, same version): moneySend also has skipped { expired, busy, far } (free drivers left out:
+            expired = declined or let an offer of this trip expire, never asked again, same as automatic dispatch; busy =
+            refused when sent; far = beyond the reach) and reachKm (the widest reach used for this send in km, null = no limit),
+            so the admin can say honestly when nobody got the offer. How the counts combine (checker PR #200): each count
+            is of drivers, each driver once — expired and far are the larger count of the kinds looked at (Exclusive and Radar
+            look at the same nearby drivers, so Both never counts a driver twice); busy is the sum over the sends (Both sends
+            Exclusive and Radar to different drivers, so the sum is each driver once). Nobody free → 200, the money waits
+            for the next offer of that kind. Without applyTo (older callers) nothing is sent. The limit counts per kind (a
+            driver gets one kind). On accept the trip keeps the money of the kind he took (driverBonus, commission). A driver
+            kept in a radar-group send with an open automatic exclusive offer has it turned into a radar offer (offer_updated).
+            Once a driver took the trip, driver-bonus goes to him whatever applyTo says. Admin view only: TripProjection.driverBonusByKind
+            { exclusive, radar: amountMinor, currency, priority } while money or the badge is set; TripProjection.driverBonus
+            is the larger of the two until accept. v0.18.11 (owner rule 16): the nearest free drivers of the immediate send
+            follow the zone''s dispatch settings: in-zone drivers first, drivers of same-country neighbour zones (neighbours
+            on) only when no in-zone driver is free; never beyond the widest step of that kind (exclusive.steps / radar.steps,
+            else radius.steps), limits.maxPickupKm or limits.maxPickupEtaMin (km / 24 km/h).'
     NearbyDriver:
       type: object
       required:

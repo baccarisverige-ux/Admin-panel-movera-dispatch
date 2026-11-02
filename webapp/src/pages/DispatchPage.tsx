@@ -13,10 +13,11 @@ import { activeCategories, emptyPricingStore, normalizeStore, SLICE_KEY as PRICI
 import { candidatesFor, rideRequests, type RideRequest } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
-import { standardZone, standardZoneId, zoneById } from "../markets/markets";
+import { marketOfZone, standardZone, standardZoneId, zoneById, type MarketId } from "../markets/markets";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { PublishTargetsLine, StandardBar } from "../live/StandardBar";
-import { zoneAllowed } from "../markets/scope";
+import { countryAllowed, zoneAllowed } from "../markets/scope";
+import { rememberCountry } from "../markets/useMarketScope";
 import { useMarketScope } from "../markets/useMarketScope";
 import { CommandButton } from "../ui/CommandButton";
 import { useAlertsMaybe } from "../alerts/AlertsContext";
@@ -46,6 +47,7 @@ import {
 import { DriverGroupsCard } from "../dispatch/DriverGroupsCard";
 import { RadarZoneRulesCard, RadarZonesCard } from "../dispatch/RadarZones";
 import { offersLink } from "../dispatch/MovedCard";
+import { applyPatch, makePatch, rebasePatch, resolveConflict, useWorkingDraft, withEntry, type Patch } from "../dispatch/workingDraft";
 import { dispatchHref } from "../dispatch/section";
 import { tr, trn, trx, uiLocale, trSentences } from "../i18n";
 
@@ -119,8 +121,9 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const appSourcesReady = !slice.loading && !pricingSlice.loading && !slice.error && !pricingSlice.error && Object.values(appSources).every((source) => !source.loading && !source.error);
   const incidents = useRecords("incidents");
   const riders = useRecords("riders");
-  const [working, setWorking] = useState<Record<string, ZoneDispatch>>({});
-  const [workingCountry, setWorkingCountry] = useState<Record<string, CountryDispatch>>({});
+  // Live fix 2026-11-02: unpublished edits survive moving between the section's sub-pages (one publish covers all).
+  // Checker fix (PR #200): only the changed fields are kept, with the revision they were made against (see workingDraft.ts).
+  const { patches, setPatches, countryPatches, setCountryPatches } = useWorkingDraft(agent?.id ?? "");
   const [notice, setNotice] = useState("");
   const [note, setNote] = useState("");
   const [showChanges, setShowChanges] = useState(false);
@@ -151,13 +154,26 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const ruleZones = liveSession && scope.zones.includes(standardZoneId(country)) ? [standardZone(country), ...zones] : zones;
   const zoneParam = params.get("zone");
   const zoneId = zoneParam && ruleZones.some((zone) => zone.id === zoneParam) ? zoneParam : "";
+  // Live fix 2026-11-02 (audit: ?zone=FR-PC with Sverige chosen silently opened Arlanda): a link to a zone of another
+  // country switches the country at the top; a zone that cannot be opened here says so and never falls back to another.
+  const zoneCountry = zoneParam && !zoneId ? marketOfZone(zoneParam)?.id : undefined;
+  const switchCountry = Boolean(zoneCountry && zoneCountry !== country && zoneAllowed(access, zoneParam!) && countryAllowed(access, zoneCountry!));
+  const zoneMissing = Boolean(zoneParam && !zoneId && !switchCountry && !scope.denied);
+  useEffect(() => {
+    if (!switchCountry || !zoneCountry) return;
+    const next = new URLSearchParams(params);
+    next.set("country", zoneCountry);
+    next.delete("scope");
+    rememberCountry(agent?.id, zoneCountry);
+    setParams(next, { replace: true });
+  }, [switchCountry, zoneCountry, params, setParams, agent?.id]);
   // Radar · Exclusive · Reservations opens on the first zone, straight into its three tabs.
   useEffect(() => {
-    if (!offers || zoneId || !zones.length) return;
+    if (!offers || zoneId || zoneParam || !zones.length) return;
     const next = new URLSearchParams(params);
     next.set("zone", zones[0].id);
     setParams(next, { replace: true });
-  }, [offers, zoneId, zones, params, setParams]);
+  }, [offers, zoneId, zoneParam, zones, params, setParams]);
   const canEditRole = Boolean(agent && can(agent.role, "dispatch.edit"));
   const canControl = Boolean(agent && can(agent.role, "trips.intervene"));
   const canEdit = useCallback((id: string) => canEditRole && Boolean(agent && (agent.scope.zones === "all" || agent.scope.zones.includes(id))), [canEditRole, agent]);
@@ -165,15 +181,49 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const money = (value: number) => `${new Intl.NumberFormat(market.locale, { maximumFractionDigits: 2 }).format(value)} ${symbol}`;
   const hhmm = new Intl.DateTimeFormat(uiLocale(), { timeZone: market.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(now));
 
+  // Another admin published meanwhile: re-apply my changes on the new book; a field we both changed is a conflict.
+  const rebased = useMemo(() => Object.fromEntries(Object.entries(patches).map(([id, patch]) => [id, rebasePatch(patch, draftRules(book, id), book.draftRev)]).filter((entry): entry is [string, Patch] => Boolean(entry[1]))), [patches, book]);
+  const rebasedCountry = useMemo(() => Object.fromEntries(Object.entries(countryPatches).map(([id, patch]) => [id, rebasePatch(patch, draftCountry(book, id as MarketId), book.draftRev)]).filter((entry): entry is [string, Patch] => Boolean(entry[1]))), [countryPatches, book]);
+  useEffect(() => {
+    const moved = (a: Record<string, Patch>, b: Record<string, Patch>) => Object.keys(a).length !== Object.keys(b).length || Object.keys(a).some((id) => a[id] !== b[id]);
+    if (moved(patches, rebased)) setPatches(rebased);
+    if (moved(countryPatches, rebasedCountry)) setCountryPatches(rebasedCountry);
+  }, [patches, rebased, countryPatches, rebasedCountry, setPatches, setCountryPatches]);
+  const working = useMemo<Record<string, ZoneDispatch>>(() => Object.fromEntries(Object.entries(rebased).map(([id, patch]) => [id, applyPatch(draftRules(book, id), patch)])), [rebased, book]);
+  const workingCountry = useMemo<Record<string, CountryDispatch>>(() => Object.fromEntries(Object.entries(rebasedCountry).map(([id, patch]) => [id, applyPatch(draftCountry(book, id as MarketId), patch)])), [rebasedCountry, book]);
+  const editZone = (id: string, next: ZoneDispatch) => setPatches((current) => withEntry(current, id, makePatch(draftRules(book, id), next, book.draftRev, rebased[id])));
+  const editCountry = (next: CountryDispatch) => setCountryPatches((current) => withEntry(current, country, makePatch(draftCountry(book, country), next, book.draftRev, rebasedCountry[country])));
+  const conflicts = [
+    ...Object.entries(rebased).flatMap(([id, patch]) => Object.entries(patch.conflicts).map(([path, c]) => ({ kind: "zone" as const, id, path, ...c }))),
+    ...Object.entries(rebasedCountry).filter(([id]) => id === country).flatMap(([id, patch]) => Object.entries(patch.conflicts).map(([path, c]) => ({ kind: "country" as const, id, path, ...c }))),
+  ];
+  const resolve = (item: (typeof conflicts)[number], choice: "mine" | "theirs") => {
+    if (item.kind === "zone") setPatches((current) => withEntry(current, item.id, current[item.id] && resolveConflict(rebased[item.id] ?? current[item.id], item.path, choice)));
+    else setCountryPatches((current) => withEntry(current, item.id, current[item.id] && resolveConflict(rebasedCountry[item.id] ?? current[item.id], item.path, choice)));
+  };
+  // The revision my edits are based on (after a re-apply that is the latest; publish waits while a conflict is open).
+  const baseRev = Math.min(book.draftRev, ...Object.values(rebased).map((patch) => patch.baseRev), ...Object.values(rebasedCountry).map((patch) => patch.baseRev));
+  const forgetPublished = () => {
+    setPatches((current) => Object.fromEntries(Object.entries(current).filter(([id]) => !zoneIds.includes(id))));
+    setCountryPatches((current) => withEntry(current, country, undefined));
+  };
   const rulesOf = useCallback((id: string) => working[id] ?? draftRules(book, id), [working, book]);
   const liveOf = useCallback((id: string) => liveRules(book, id), [book]);
   const countryRules = workingCountry[country] ?? draftCountry(book, country);
   const zoneIds = ruleZones.map((zone) => zone.id);
   const allRules = Object.fromEntries(zoneIds.map((id) => [id, rulesOf(id)]));
   const changes = pendingChanges(book, allRules, zoneIds);
+  const shownChanges = showChanges ? pendingChanges(book, allRules, zoneIds, true) : changes;
   const countryChanged = countryLines(liveCountry(book, country), countryRules);
   const changed = new Set(changes.map((change) => change.zoneId));
   const unsaved = Object.keys(working).some((id) => JSON.stringify(working[id]) !== JSON.stringify(draftRules(book, id))) || Boolean(workingCountry[country] && JSON.stringify(workingCountry[country]) !== JSON.stringify(draftCountry(book, country)));
+  // Live fix 2026-11-02: leaving the browser page with edits not saved or published asks first.
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [unsaved]);
   const lineCount = changes.reduce((sum, change) => sum + change.lines.length, 0) + countryChanged.length;
   const at = new Date(now).toISOString();
   const countries = { ...(book.countries[country] ? { [country]: draftCountry(book, country) } : {}), ...(workingCountry[country] ? { [country]: countryRules } : {}) };
@@ -317,6 +367,20 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
       </div>}
 
 
+      {conflicts.length ? (
+        <section className="dx-conflicts state-line" role="alert" aria-label={tr("Changed by another admin")}>
+          <b>{tr("Another admin published while you were editing. These fields were changed by both of you — choose which value to keep. Everything else you changed is kept.")}</b>
+          <ul>
+            {conflicts.map((item) => (
+              <li key={`${item.kind}-${item.id}-${item.path}`} data-conflict={`${item.id}:${item.path.split("\u0001").join(".")}`}>
+                <span>{item.kind === "zone" ? zoneById(item.id)?.name ?? item.id : market.name} · {item.path.split("\u0001").join(" › ")}: {trn("yours {0}, theirs {1}", JSON.stringify(item.mine), JSON.stringify(item.theirs))}</span>{" "}
+                <button data-command="admin.dispatch.edit" type="button" className="dash-btn small" onClick={() => resolve(item, "mine")}>{tr("Keep mine")}</button>{" "}
+                <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => resolve(item, "theirs")}>{tr("Take theirs")}</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {view === "rules" || view === "test" || view === "reasons" ? (
         <section className={changes.length || countryChanged.length ? "dx-publish has-changes" : "dx-publish"} aria-label={tr("Publish")}>
           <div className="dx-publish-text">
@@ -335,16 +399,15 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
           {changes.length || countryChanged.length ? (
             <div className="dx-publish-actions">
               <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" aria-expanded={showChanges} onClick={() => setShowChanges((value) => !value)}>{showChanges ? tr("Hide changes") : tr("See changes")}</button>
-              {unsaved ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => { setWorking({}); setWorkingCountry({}); setNotice(tr("Unsaved changes were thrown away.")); }}>{trn("{0} Discard", <Undo2 size={13} aria-hidden="true" />)}</button> : null}
+              {unsaved ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" onClick={() => { forgetPublished(); setNotice(tr("Unsaved changes were thrown away.")); }}>{trn("{0} Discard", <Undo2 size={13} aria-hidden="true" />)}</button> : null}
               {unsaved ? (
-                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole} largeChanges={largeDraftChanges} onDone={() => { setWorking({}); setWorkingCountry({}); setNotice(tr("Draft saved. Nothing is live yet. Test it in Test a ride, then publish.")); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
+                <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={baseRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={!canEditRole || conflicts.length > 0} largeChanges={largeDraftChanges} onDone={() => { forgetPublished(); setNotice(tr("Draft saved. Nothing is live yet. Test it in Test a ride, then publish.")); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
               ) : null}
               {view !== "test" ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => go({ view: "test" })}>{trn("{0} Test it", <FlaskConical size={13} aria-hidden="true" />)}</button> : null}
-              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} summary={liveSession ? <PublishTargetsLine zoneIds={[...changed]} doc="dispatch" /> : undefined} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error)} title={published.error} largeChanges={largeChanges} onDone={() => {
+              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} summary={liveSession ? <PublishTargetsLine zoneIds={[...changed]} doc="dispatch" /> : undefined} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={baseRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={!canEditRole || Boolean(published.error) || conflicts.length > 0} title={published.error} largeChanges={largeChanges} onDone={() => {
                 const liveNames = published.live.map((id) => zoneById(id)?.name ?? id);
                 const waitNames = published.waiting.map((id) => zoneById(id)?.name ?? id);
-                setWorking({});
-                setWorkingCountry({});
+                forgetPublished();
                 setNote("");
                 setShowChanges(false);
                 // G7 live fix 3: in the panel's language (FR and SV read "Live now: …").
@@ -355,7 +418,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
           {showChanges && (changes.length || countryChanged.length) ? (
             <div className="dx-changes">
               <ul aria-label={tr("Changes not live yet")}>
-                {changes.map((change) => (
+                {shownChanges.map((change) => (
                   <li key={change.zoneId}>
                     <b>{zoneById(change.zoneId)?.name ?? change.zoneId}</b>
                     <ul>{change.lines.map((line) => <li key={line}>{line}</li>)}</ul>
@@ -370,6 +433,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
         </section>
       ) : null}
 
+      {zoneMissing ? <p className="pricing-notice" role="alert" data-testid="zone-not-here">{trSentences(tr("Zone {0} cannot be opened here. Choose it at the top, or pick a zone below.", [zoneById(zoneParam!)?.name ?? zoneParam!]))}</p> : null}
       {notice || slice.message ? <p className="pricing-notice" role="status">{trSentences(notice)} {trSentences(slice.message)}</p> : null}
       {slice.loading ? <p className="state-line">{tr("Loading dispatch rules.")}</p> : null}
 
@@ -401,9 +465,9 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
             </div>
           ) : null) : undefined}
           rulesOf={rulesOf}
-          onRules={(id, next) => setWorking((current) => ({ ...current, [id]: next }))}
+          onRules={(id, next) => editZone(id, next)}
           country={countryRules}
-          onCountry={(next) => setWorkingCountry((current) => ({ ...current, [country]: next }))}
+          onCountry={(next) => editCountry(next)}
           changed={changed}
           canEdit={canEdit}
           busyOf={busyOf}
@@ -423,7 +487,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
       {!slice.loading && view === "test" && isLiveData() ? <NotConnected block /> : null}
       {!slice.loading && view === "test" && !isLiveData() ? <TestView market={market} zones={zones} zoneId={zoneId || zones[0]?.id || ""} onZone={(id) => go({ zone: id })} draftOf={rulesOf} liveOf={liveOf} countryDraft={countryRules} countryLive={liveCountry(book, country)} controlOf={(id) => book.control[id]} factsFor={factsFor} busyOf={busyOf} hhmm={hhmm} hasChanges={changes.length > 0 || countryChanged.length > 0} events={book.events.filter((event) => event.country === country)} /> : null}
       {!slice.loading && view === "events" ? <EventsView book={book} market={market} canEdit={canEditRole} canBonus={Boolean(agent && can(agent.role, "drivers.bonuses"))} onNotice={say} /> : null}
-      {!slice.loading && view === "reasons" ? <CancelReasonsView market={market} country={countryRules} onCountry={(next) => setWorkingCountry((current) => ({ ...current, [country]: next }))} canEdit={canEditRole} /> : null}
+      {!slice.loading && view === "reasons" ? <CancelReasonsView market={market} country={countryRules} onCountry={(next) => editCountry(next)} canEdit={canEditRole} /> : null}
       {!slice.loading && view === "cancels" ? <CancelView book={book} market={market} records={records} categories={activeCategories(pricing)} rulesOf={liveOf} canDecide={canControl} agentId={agent?.id ?? ""} money={money} onNotice={say} /> : null}
       {view === "activity" ? <ActivityView timeZone={market.timeZone} /> : null}
       {view === "features" ? <AllFeaturesView zoneId={zoneId || zones[0]?.id || ""} /> : null}

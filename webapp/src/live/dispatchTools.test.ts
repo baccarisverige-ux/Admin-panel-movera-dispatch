@@ -250,3 +250,97 @@ test("owner decision 2026-11-01: Add money says what it sent at once (sv / fr)",
     setLanguage("en");
   }
 });
+
+test("live fix 2026-11-02 (audit 3c): Add money that reached nobody says so with the server's reasons (sv / fr)", async () => {
+  const { registerDictionary, setLanguage } = await import("../i18n/core.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  const { moneySendNotice } = await import("./liveAdminApi.ts");
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  try {
+    setLanguage("sv");
+    assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 2, busy: 0, far: 0 }, reachKm: 6 }, "exclusive"), "Pengarna väntar — ingen ledig förare inom 6 km (2 förare lät erbjudandet gå ut). Det följer med nästa Exklusiva erbjudande.");
+    assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 0, busy: 1, far: 3 }, reachKm: null }, "both"), "Pengarna väntar — ingen ledig förare (1 förare kunde inte ta den, 3 förare längre bort). Det följer med nästa erbjudande.");
+    setLanguage("fr");
+    assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 1, busy: 0, far: 0 }, reachKm: 2.5 }, "radar"), "L’argent attend — aucun chauffeur libre à moins de 2,5 km (1 chauffeur a laissé expirer l’offre). Il part avec la prochaine offre Radar.");
+    // Something was sent: no waiting text.
+    assert.doesNotMatch(moneySendNotice({ exclusiveTo: "drv_1", radarTo: [], skipped: { expired: 2, busy: 0, far: 0 }, reachKm: 6 }, "exclusive"), /attend/);
+  } finally {
+    setLanguage("en");
+  }
+});
+
+test("live fix 2026-11-02 (audit 1f): the 'See changes' list is in the panel's language; stored history lines stay English", async () => {
+  const { registerDictionary, setLanguage } = await import("../i18n/core.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const { changeLines, zoneDefault } = await import("../dispatch/rules.ts");
+  registerDictionary("sv", sv);
+  registerDictionary("fr", fr);
+  const before = zoneDefault("Z001");
+  const after = { ...before, start: { ...before.start, mode: "byDistance" as const }, radar: { ...before.radar, steps: [2, 4, 6] }, limits: { ...before.limits, maxPickupKm: 6 }, neighbours: { on: true, zoneIds: ["Z002"], afterStep: 2 } };
+  try {
+    setLanguage("sv");
+    const shown = changeLines(before, after, true);
+    assert.ok(shown.includes("Start & ordning: Automatisk → Efter avstånd"), shown.join(" | "));
+    assert.ok(shown.includes("Avståndssteg för Radar: Samma som sökavstånd → 2, 4, 6"), shown.join(" | "));
+    assert.ok(shown.includes("Längsta upphämtningsavstånd: ingen gräns → 6"), shown.join(" | "));
+    assert.ok(shown.includes("Lista över grannzoner ändrad"), shown.join(" | "));
+    assert.ok(shown.every((line) => !/radar\.steps|neighbours\.|limits\./.test(line)), shown.join(" | "));
+    setLanguage("fr");
+    assert.ok(changeLines(before, after, true).some((line) => line.startsWith("Paliers de distance Radar")));
+    assert.ok(changeLines(before, after).includes("Radar distance steps: Same as search distance → 2, 4, 6"));
+  } finally {
+    setLanguage("en");
+  }
+});
+
+test("live fix 2026-11-02 (audit 1e): unpublished dispatch edits are kept outside the page, per signed-in admin", async () => {
+  const { clearWorkingDraft, hasWorkingDraft, makePatch, readWorkingDraft, updateWorkingDraft } = await import("../dispatch/workingDraft.ts");
+  clearWorkingDraft();
+  assert.equal(hasWorkingDraft(), false);
+  const patch = makePatch({ n: 0, m: 1 }, { n: 1, m: 1 }, 7)!;
+  updateWorkingDraft(() => ({ zones: { Z001: patch } }));
+  // A second page reading the store (Rules › Best driver after Radar · Exclusive) sees the same draft.
+  assert.deepEqual(readWorkingDraft().zones, { Z001: { baseRev: 7, base: { n: 0 }, changes: { n: 1 }, conflicts: {} } });
+  assert.equal(hasWorkingDraft(), true);
+  clearWorkingDraft();
+  assert.equal(hasWorkingDraft(), false);
+});
+
+test("checker PR #200: two admins — my patch re-applies on the other admin's publish; a field we both changed is a conflict, never overwritten", async () => {
+  const { applyPatch, makePatch, rebasePatch, resolveConflict } = await import("../dispatch/workingDraft.ts");
+  const rev1 = { radar: { km: 2, seconds: 30 }, exclusive: { seconds: 15 }, limits: [1, 2] };
+  // Admin A changes radar.km and exclusive.seconds against rev 1.
+  const mine = makePatch(rev1, { radar: { km: 5, seconds: 30 }, exclusive: { seconds: 20 }, limits: [1, 2] }, 1)!;
+  assert.deepEqual(Object.keys(mine.changes).sort(), ["exclusive\u0001seconds", "radar\u0001km"]);
+  // Admin B publishes rev 2: radar.seconds and limits (untouched by A) and exclusive.seconds (also changed by A).
+  const rev2 = { radar: { km: 2, seconds: 45 }, exclusive: { seconds: 10 }, limits: [3] };
+  const rebased = rebasePatch(mine, rev2, 2)!;
+  assert.equal(rebased.baseRev, 2);
+  // B's untouched-by-A fields stay; A's other change stays; the shared field keeps A's value but is flagged.
+  assert.deepEqual(applyPatch(rev2, rebased), { radar: { km: 5, seconds: 45 }, exclusive: { seconds: 20 }, limits: [3] });
+  assert.deepEqual(rebased.conflicts, { "exclusive\u0001seconds": { mine: 20, theirs: 10 } });
+  // Take theirs: B's value, A's radar.km still applied.
+  const theirs = resolveConflict(rebased, "exclusive\u0001seconds", "theirs")!;
+  assert.deepEqual(applyPatch(rev2, theirs), { radar: { km: 5, seconds: 45 }, exclusive: { seconds: 10 }, limits: [3] });
+  assert.deepEqual(theirs.conflicts, {});
+  // Keep mine: A's value, conflict closed.
+  const kept = resolveConflict(rebased, "exclusive\u0001seconds", "mine")!;
+  assert.deepEqual(applyPatch(rev2, kept).exclusive, { seconds: 20 });
+  assert.deepEqual(kept.conflicts, {});
+  // B set the same value A did: nothing left to publish for that field, no conflict.
+  const same = rebasePatch(mine, { ...rev2, radar: { km: 5, seconds: 45 }, exclusive: { seconds: 15 } }, 3)!;
+  assert.deepEqual(Object.keys(same.changes), ["exclusive\u0001seconds"]);
+  assert.deepEqual(same.conflicts, {});
+});
+
+test("checker PR #200: sign-out throws the unpublished dispatch edits away and forgets their admin", async () => {
+  const { clearWorkingDraft, hasWorkingDraft, makePatch, readWorkingDraft, updateWorkingDraft } = await import("../dispatch/workingDraft.ts");
+  updateWorkingDraft(() => ({ owner: "admin-a", zones: { Z001: makePatch({ n: 0 }, { n: 1 }, 1)! } }));
+  assert.equal(hasWorkingDraft(), true);
+  clearWorkingDraft({ signOut: true });
+  assert.equal(hasWorkingDraft(), false);
+  assert.equal(readWorkingDraft().owner, "");
+});
