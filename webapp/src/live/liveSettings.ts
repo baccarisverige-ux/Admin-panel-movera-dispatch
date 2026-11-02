@@ -265,6 +265,18 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       for (const item of page?.items ?? []) rows.push({ ...item, zoneId: id });
     }));
     rows.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt) || b.version - a.version);
+    // Checker #204: a zone whose server draft is newer than what is live (Save draft) shows the LIVE document as live
+    // and the draft as its draft, so Publish now still has something to publish (it read the draft as live before).
+    const draftsOf: Record<string, ReturnType<typeof liveRules>> = {};
+    for (const id of Object.keys(live)) {
+      const rules = drafts.get(key("dispatch", id));
+      if (!rules || rules.usesStandard || rules.version <= rules.liveVersion || rules.liveVersion < 1) continue;
+      const newest = rows.filter((row) => row.zoneId === id).sort((a, b) => b.version - a.version)[0];
+      if (!newest) continue;
+      const shown = live[id]!;
+      live[id] = rulesOfDispatch(newest.document, drivers.get(id) ?? null, liveRules(book, id));
+      if (JSON.stringify(shown) !== JSON.stringify(live[id])) draftsOf[id] = shown;
+    }
     dispatchVersions.clear();
     const versions: DispatchBook["versions"] = rows.map((row, i) => {
       const rev = rows.length - i;
@@ -287,7 +299,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     // server's (contract.json#dispatchTools), never the demo's samples. Dispatch changes never wait for a second admin
     // (G4-F1) and cancel checks are built with group 5 (G4-F5), so neither has anything on live.
     const tools = await readTools();
-    const next = { ...book, live, ...tools, approvals: [], cancelChecks: {}, ...(versions.length ? { versions } : {}) };
+    const next = { ...book, live, draft: { ...book.draft, ...draftsOf }, ...tools, approvals: [], cancelChecks: {}, ...(versions.length ? { versions } : {}) };
     slices.set(DISPATCH_KEY, next);
     baseline.dispatch = next;
     return next;
@@ -592,7 +604,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const current = await draft("dispatch", id, true);
       const built = dispatchDocumentOf(liveRules(book, id), id, current?.document ?? null);
       const document = current ? patchChanged(current.document, dispatchDocumentOf(liveRules(normalizeDispatchBook(prior), id), id, current.document), built) : built;
-      await savePublish(http, "dispatch", id, current, document);
+      // Checker #204: compared with what is LIVE, so a saved draft that already holds the change is still published.
+      await savePublishLive(http, "dispatch", id, current, document, current ? await liveDocumentOf(http, "dispatch", id) : null);
+      drafts.delete(key("dispatch", id));
       await publishAppParts(id, OWNED.dispatch, state, id, before);
       for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, OWNED.dispatch, state, id, before);
     }
