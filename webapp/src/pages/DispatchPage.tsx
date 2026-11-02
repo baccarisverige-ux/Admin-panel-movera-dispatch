@@ -153,7 +153,9 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   // Owner 2026-10-27: only what is chosen at the top; the Standard only when it is chosen there.
   const ruleZones = liveSession && scope.zones.includes(standardZoneId(country)) ? [standardZone(country), ...zones] : zones;
   const zoneParam = params.get("zone");
-  const zoneId = zoneParam && ruleZones.some((zone) => zone.id === zoneParam) ? zoneParam : "";
+  // Live sweep 2026-11-02 M1: one zone chosen at the top opens its rules straight away (no second zone pick).
+  const headerZone = !zoneParam && scope.zones.length === 1 && ruleZones.some((zone) => zone.id === scope.zones[0]) ? scope.zones[0] : "";
+  const zoneId = zoneParam && ruleZones.some((zone) => zone.id === zoneParam) ? zoneParam : headerZone;
   // Live fix 2026-11-02 (audit: ?zone=FR-PC with Sverige chosen silently opened Arlanda): a link to a zone of another
   // country switches the country at the top; a zone that cannot be opened here says so and never falls back to another.
   const zoneCountry = zoneParam && !zoneId ? marketOfZone(zoneParam)?.id : undefined;
@@ -268,7 +270,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
 
   function back() {
     if (view !== "rules") go({ view: null });
-    else if (zoneId) go({ zone: null });
+    else if (zoneParam) go({ zone: null });
     else if (window.history.length > 1) navigate(-1);
     else navigate("/");
   }
@@ -452,7 +454,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
             // A tab of the other section (Rider cancel fees from Reservations, and back): open it there, same zone.
             if (!tabs.some((item) => item.id === next)) {
               if (next === "radar" || next === "exclusive" || next === "reservations") navigate(offersLink(next, zoneId || undefined));
-              else navigate(dispatchHref(`/dispatch?${new URLSearchParams({ ...(zoneId ? { zone: zoneId } : {}), tab: next })}`));
+              else navigate(dispatchHref(`/dispatch?${new URLSearchParams({ ...Object.fromEntries(["country", "scope"].flatMap((key) => (params.get(key) ? [[key, params.get(key)!]] : []))), ...(zoneId ? { zone: zoneId } : {}), tab: next })}`));
               return;
             }
             go({ tab: next === defaultTab ? null : next });

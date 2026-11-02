@@ -93,7 +93,7 @@ export function shapeOfServerZone(zone: ServerZone, language: string): ZoneShape
 /** The top bar's entry of a server zone (grouped under its city, airports apart). */
 export function marketZoneOf(zone: ServerZone, language: string): MarketZone & { country: string } {
   const city = CITIES.find((item) => item.id === cityOfZone(zone));
-  return { id: zone.zoneId, name: zoneName(zone.names, language), city: city?.name ?? zone.country, kind: kindOf(zone.kind), center: [zone.center.lat, zone.center.lng], country: zone.country };
+  return { id: zone.zoneId, name: zoneName(zone.names, language), city: city?.name ?? zone.country, kind: kindOf(zone.kind), center: [zone.center.lat, zone.center.lng], country: zone.country, open: zone.open };
 }
 
 /** Problems the server would refuse a new zone for (400), checked before sending. Empty when it can go. */

@@ -335,6 +335,53 @@ export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc
   return next;
 }
 
+const META_KEYS = new Set(["version", "publishedAt", "usesStandard"]);
+
+/** The waiting parts the admin owns (the money stays pricing's, see withOwned). */
+const WAITING_OWNED = ["driverSharePct", "driverShareWaitPct", "cancelAfterArrivedIsNoShow", "farPickup", "rideTypes", "stopFreeWaitMin"] as const;
+
+const isPlain = (value: unknown): value is Doc => typeof value === "object" && value !== null && !Array.isArray(value);
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** `target` with every leaf where `after` differs from `before` set to `after`'s value (arrays count as one leaf). */
+function applyChanges(target: unknown, before: unknown, after: unknown): unknown {
+  if (!isPlain(before) || !isPlain(after)) return structuredClone(after);
+  const next: Doc = isPlain(target) ? { ...target } : {};
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (same(before[key], after[key])) continue;
+    if (after[key] === undefined) delete next[key];
+    else next[key] = applyChanges(next[key], before[key], after[key]);
+  }
+  return next;
+}
+
+/**
+ * Live sweep 2026-11-02 H1: publishing one Dispatch rule rewrote unrelated live settings (booking horizon, cancel
+ * reasons, the driver document's rest minutes…) because the owned parts were copied whole from the admin's model,
+ * where fields the page never shows hold defaults. Now the server's document is the start and ONLY what the admin
+ * changed is written: `before` and `after` are the admin's exporter output for the state before and after the edit;
+ * a leaf that is the same in both is left exactly as the server has it.
+ */
+export function patchChanged(server: Doc, before: Doc, after: Doc, keys?: readonly string[]): Doc {
+  const pick = (doc: Doc, key: string): unknown => {
+    const value = doc[key];
+    if (key !== "waiting" || !isPlain(value)) return value;
+    return Object.fromEntries(WAITING_OWNED.filter((part) => part in value).map((part) => [part, value[part]]));
+  };
+  let next: Doc = structuredClone(server);
+  for (const key of keys ?? [...new Set([...Object.keys(before), ...Object.keys(after)])]) {
+    if (META_KEYS.has(key)) continue;
+    const b = pick(before, key);
+    const a = pick(after, key);
+    if (same(b, a)) continue;
+    next = { ...next };
+    if (a === undefined) delete next[key];
+    else next[key] = applyChanges(next[key], b, a);
+  }
+  delete next["usesStandard"];
+  return next;
+}
+
 /** Equal for publishing: the server's stamps and marks do not count. */
 export function sameDocument(a: Doc, b: Doc): boolean {
   const strip = (doc: Doc) => JSON.stringify({ ...doc, version: 0, publishedAt: "", usesStandard: undefined });
@@ -433,7 +480,6 @@ export async function savePublishLive(http: ConfigHttp, doc: ConfigDocName, id: 
   return savePublish(http, doc, id, draft ? { ...draft, liveVersion: 0 } : null, document);
 }
 
-const META_KEYS = new Set(["version", "publishedAt", "usesStandard"]);
 
 /** The top-level parts that differ between a draft and the live document (keys only, never values). */
 export function unpublishedKeys(draft: Doc, live: Doc): string[] {

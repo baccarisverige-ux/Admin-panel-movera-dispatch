@@ -680,3 +680,16 @@ test("live G8 round 3 item 1: tip rules read back from what the zones serve (a z
   assert.equal(zones["FR-PC"]!.tipRules.customMax, 20);
   assert.equal(zones["standard-FR"]!.tipRules.customAmount, false);
 });
+
+test("live sweep 2026-11-02 H1: patchChanged writes only what changed between before and after over the server's document", async () => {
+  const { patchChanged } = await import("./configDocs.ts");
+  const server = { version: 4, booking: { maxStops: 3, bookingHorizonDays: 14 }, cancelReasons: [{ code: "own" }], drivingLimits: { restMinutes: 30 }, raisePrice: { maxFactor: 2 }, waiting: { perMin: 5, driverSharePct: 50 } };
+  // The admin's model holds defaults where the page shows nothing (7 days, 360 min, default reasons).
+  const before = { version: 1, booking: { maxStops: 3, bookingHorizonDays: 7 }, cancelReasons: [{ code: "default" }], drivingLimits: { restMinutes: 360 }, raisePrice: { maxFactor: 2 }, waiting: { perMin: 0, driverSharePct: 50 } };
+  const after = { ...before, raisePrice: { maxFactor: 2.5 }, booking: { maxStops: 4, bookingHorizonDays: 7 }, waiting: { perMin: 9, driverSharePct: 60 } };
+  const next = patchChanged(server, before, after);
+  assert.deepEqual(next, { version: 4, booking: { maxStops: 4, bookingHorizonDays: 14 }, cancelReasons: [{ code: "own" }], drivingLimits: { restMinutes: 30 }, raisePrice: { maxFactor: 2.5 }, waiting: { perMin: 5, driverSharePct: 60 } });
+  // Nothing changed: the server's document comes back as it is; keys limit what may be written.
+  assert.deepEqual(patchChanged(server, before, before), server);
+  assert.deepEqual(patchChanged(server, before, after, ["raisePrice"]).booking, server.booking);
+});

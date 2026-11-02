@@ -29,7 +29,7 @@ import { useSupply } from "../dashboard/useSupply";
 import { liveDrivers } from "../dashboard/live";
 import { rideRequests } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
-import { standardZone, standardZoneId, zoneById, type MarketId } from "../markets/markets";
+import { isClosedZone, standardZone, standardZoneId, zoneById, type MarketId } from "../markets/markets";
 import { publishTargets } from "../markets/scope";
 import { useMarketScope } from "../markets/useMarketScope";
 import { CategoryManager } from "../pricing/CategoryManager";
@@ -141,7 +141,7 @@ export function PricingPage() {
     ? [...(targets.has(standardZoneId(country)) ? [standardZone(country)] : []), ...ownZones.filter((zone) => targets.has(zone.id))]
     : ownZones;
   const requested = params.get("zone");
-  const zoneId = zones.find((zone) => zone.id === requested)?.id ?? (scopedZones.length === 1 && zones.some((zone) => zone.id === scopedZones[0]) ? scopedZones[0] : zones[0]?.id ?? "Z001");
+  const zoneId = zones.find((zone) => zone.id === requested)?.id ?? (scopedZones.length === 1 && zones.some((zone) => zone.id === scopedZones[0]) ? scopedZones[0] : (zones.find((item) => !isClosedZone(item.id)) ?? zones[0])?.id ?? "Z001");
   const zone = zones.find((item) => item.id === zoneId);
   const tab: Tab = TABS.find((item) => item.id === params.get("tab"))?.id ?? "prices";
   const currency = currencyOf(zoneId);
