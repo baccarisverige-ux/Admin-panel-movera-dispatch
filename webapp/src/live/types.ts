@@ -317,7 +317,7 @@ export type SupportTicket = { ticketId: string; tripId?: string; openedBy: "ride
   /** v0.18.15 support desk (contract.json#supportDesk.adminView). */
   assignedTo?: { adminId: string; name?: string }; solvedBy?: string; solvedAt?: string; incidentId?: string; feedback?: { text: string; at: string }; firstReplyAt?: string; firstReplyDueAt?: string; solveDueAt?: string; late?: { reply: boolean; solve: boolean } };
 /** v0.18.15 GET|PUT /admin/support/settings (contract.json#supportDesk.settings). */
-export type SupportTopicSetting = { code: string; on: boolean; firstReplyMin: number; solveHours: number };
+export type SupportTopicSetting = { code: string; on: boolean; firstReplyMin: number; solveHours: number; assignTo?: string | undefined };
 /** v0.18.15 (owner "Yes"): a ready reply in one language. */
 export type ReadyReply = { id: string; lang: "sv" | "fr" | "en"; title: string; text: string };
 export type SupportSettings = { country: "SE" | "FR" | "TN"; replies?: ReadyReply[]; topics: SupportTopicSetting[]; updatedAt?: string; updatedBy?: string };

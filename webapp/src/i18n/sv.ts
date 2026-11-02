@@ -8437,4 +8437,6 @@ export const sv: Record<MessageKey, string> = {
   "Agents pick one, change it and send it. One list per language.": "Agenterna väljer ett, ändrar det och skickar det. En lista per språk.",
   "Ready reply": "Färdigt svar",
   "Each ready reply needs a title (up to 80) and a text (up to 2000).": "Varje färdigt svar behöver en rubrik (högst 80) och en text (högst 2000).",
+  "New tickets go to": "Nya ärenden går till",
+  "{0} goes to": "{0} går till",
 };

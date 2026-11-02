@@ -53,10 +53,12 @@ test("support settings: topics and time limits per country are saved on the serv
   const box = page.getByTestId("live-support-settings");
   await expect(box).toContainText("Lost item");
   await box.getByLabel("Lost item on").uncheck();
+  // Owner "Yes, by topic": lost items go to one admin.
+  await box.getByLabel("Lost item goes to").selectOption("A2");
   await box.getByRole("button", { name: "Add a reply" }).click();
   await box.getByLabel("Reply 1 title").fill("Första svar");
   await box.getByLabel("Reply 1 text").fill("Hej! Vi tittar på det nu.");
   await box.getByRole("button", { name: "Save settings" }).click();
-  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/support/settings")?.body).toMatchObject({ country: "SE", replies: [expect.objectContaining({ lang: "sv", title: "Första svar", text: "Hej! Vi tittar på det nu." })], topics: expect.arrayContaining([expect.objectContaining({ code: "lost_item", on: false })]) });
+  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/support/settings")?.body).toMatchObject({ country: "SE", replies: [expect.objectContaining({ lang: "sv", title: "Första svar", text: "Hej! Vi tittar på det nu." })], topics: expect.arrayContaining([expect.objectContaining({ code: "lost_item", on: false, assignTo: "A2" })]) });
   await expect(box).toContainText("Support settings saved.");
 });

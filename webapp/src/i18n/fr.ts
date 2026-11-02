@@ -8437,4 +8437,6 @@ export const fr: Record<MessageKey, string> = {
   "Agents pick one, change it and send it. One list per language.": "Les agents en choisissent une, la modifient et l'envoient. Une liste par langue.",
   "Ready reply": "Réponse prête",
   "Each ready reply needs a title (up to 80) and a text (up to 2000).": "Chaque réponse prête a besoin d'un titre (80 max) et d'un texte (2000 max).",
+  "New tickets go to": "Les nouveaux tickets vont à",
+  "{0} goes to": "{0} va à",
 };

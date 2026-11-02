@@ -8435,6 +8435,8 @@ export const en = {
   "Agents pick one, change it and send it. One list per language.": "Agents pick one, change it and send it. One list per language.",
   "Ready reply": "Ready reply",
   "Each ready reply needs a title (up to 80) and a text (up to 2000).": "Each ready reply needs a title (up to 80) and a text (up to 2000).",
+  "New tickets go to": "New tickets go to",
+  "{0} goes to": "{0} goes to",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -41,6 +41,8 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
   const { client, can } = useLiveSession();
   const queryClient = useQueryClient();
   const saved = useQuery({ queryKey: ["live", "supportSettings", country], queryFn: () => client.json<SupportSettings>(`/admin/support/settings?country=${country}`) });
+  // Owner "Yes, by topic": the admins of this country to send a topic's new tickets to.
+  const people = useQuery({ queryKey: ["live", "countryPeople", country], queryFn: () => client.json<{ people: { adminId: string; name: string }[] }>(`/admin/alerts/book?country=${country}`) });
   const [draft, setDraft] = useState<SupportSettings | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -76,7 +78,7 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
       {!editable ? <p className="dx-readonly">{tr("Only admins who can edit settings can change these.")}</p> : null}
       <fieldset className="sp-fieldset" disabled={!editable || busy}>
         <table className="op-table">
-          <thead><tr><th>{tr("Topic")}</th><th>{tr("On")}</th><th>{tr("First answer (min)")}</th><th>{tr("Solve within (h)")}</th></tr></thead>
+          <thead><tr><th>{tr("Topic")}</th><th>{tr("On")}</th><th>{tr("First answer (min)")}</th><th>{tr("Solve within (h)")}</th><th>{tr("New tickets go to")}</th></tr></thead>
           <tbody>
             {current.topics.map((t) => (
               <tr key={t.code}>
@@ -84,6 +86,12 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
                 <td><input type="checkbox" aria-label={tr("{0} on", [categoryLabel(t.code)])} checked={t.on} onChange={(event) => setTopic(t.code, { on: event.target.checked })} /></td>
                 <td><input type="number" min={1} max={10080} aria-label={tr("{0} first answer", [categoryLabel(t.code)])} value={t.firstReplyMin} onChange={(event) => setTopic(t.code, { firstReplyMin: Number(event.target.value) })} /></td>
                 <td><input type="number" min={1} max={720} aria-label={tr("{0} solve", [categoryLabel(t.code)])} value={t.solveHours} onChange={(event) => setTopic(t.code, { solveHours: Number(event.target.value) })} /></td>
+                <td>
+                  <select aria-label={tr("{0} goes to", [categoryLabel(t.code)])} value={t.assignTo ?? ""} onChange={(event) => setTopic(t.code, { assignTo: event.target.value || undefined })}>
+                    <option value="">{tr("Nobody")}</option>
+                    {(people.data?.people ?? []).map((p) => <option key={p.adminId} value={p.adminId}>{p.name}</option>)}
+                  </select>
+                </td>
               </tr>
             ))}
           </tbody>
