@@ -563,6 +563,9 @@ test("live G8 6c: Payment methods save a few zones at a time, and the zones that
     })(),
   };
   const settings = createLiveSettings(http);
+  // The page reads before it saves (the save's baseline); only the save itself is counted.
+  await settings.readSlice((await import("../config/countrySettings.ts")).COUNTRY_SETTINGS_KEY, null);
+  most = 0;
   const book = emptyCountrySettingsBook();
   const value = { ...book, draftRev: 2, countries: { ...book.countries, SE: { ...book.countries.SE, paymentMethods: { cash: true, card: true, apple_pay: false } } } };
   const started = Date.now();
@@ -591,17 +594,29 @@ test("live G8 fix 1 (decision driver-g8.md #2): zones of a country that disagree
   const book = (await settings.readSlice(COUNTRY_SETTINGS_KEY, emptyCountrySettingsBook())) as ReturnType<typeof emptyCountrySettingsBook>;
   assert.deepEqual(book.countries.SE.paymentMethods, { cash: true, card: false, apple_pay: false });
   assert.deepEqual(book.countries.SE.mixedMethods, { card: ["Z004", "Z005"] }, "card is on in the other zones: mixed, off in Z004 and Z005");
-  // A language-only save publishes nothing: every zone keeps its own payment methods.
+  // Live G8 round 3 item 2: a language-only save writes the languages, and every zone keeps its own payment methods.
   const before = server.calls.length;
   const value = { ...book, draftRev: 2, countries: { ...book.countries, SE: { ...book.countries.SE, languages: { ...book.countries.SE.languages, rider: "fr" as const } } } };
-  assert.equal(await settings.command("admin.config.saveCountry", { targetId: "x", value, scope: "" }), "Saved. No payment method changed.");
-  assert.equal(server.calls.slice(before).filter((c) => c.method !== "GET").length, 0, "no PUT or publish");
+  assert.equal(await settings.command("admin.config.saveCountry", { targetId: "x", value, scope: "" }), "Languages published to every zone.");
+  const langPuts = server.calls.slice(before).filter((c) => c.method === "PUT");
+  assert.ok(langPuts.length > 0, "the language is written");
+  const z004lang = langPuts.find((c) => c.path.includes("rider_app_config") && (c.body as { zoneId?: string }).zoneId === "Z004");
+  assert.deepEqual(((z004lang!.body as { document: Doc }).document)["paymentMethods"], ["cash"], "Z004 keeps its own payment methods");
+  assert.equal((((z004lang!.body as { document: Doc }).document)["languages"] as { default: { rider: string } }).default.rider, "fr");
+  assert.equal(langPuts.some((c) => String((c.body as { zoneId?: string }).zoneId ?? "").startsWith("FR-")), false, "France is not touched");
+  // Saving with nothing changed never says saved.
+  await assert.rejects(settings.command("admin.config.saveCountry", { targetId: "x", value: { ...value, draftRev: 3 }, scope: "" })!, /Nothing to save/);
+  const langDoc = (lang: string) => ({ ...sample("rider_app_config"), paymentMethods: ["cash"], languages: { available: ["en", "fr", "sv"], default: { rider: lang, driver: "sv", admin: "sv" } } });
+  const reread = createLiveSettings(fakeServer({ "country_rules:standard-SE": { version: 2, liveVersion: 2, document: {} }, "rider_app_config:standard-SE": { version: 5, liveVersion: 5, document: langDoc("fr") } }).http);
+  const back = (await reread.readSlice(COUNTRY_SETTINGS_KEY, null)) as ReturnType<typeof emptyCountrySettingsBook>;
+  assert.equal(back.countries.SE.languages.rider, "fr", "the language reads back from what the zones serve");
   // Setting the mixed method makes it the same in the whole country (only SE is sent).
+  const afterLanguages = server.calls.length;
   const se = { ...book.countries.SE };
   delete se.mixedMethods;
-  const set = { ...book, draftRev: 3, countries: { ...book.countries, SE: { ...se, paymentMethods: { ...se.paymentMethods, card: true } } } };
+  const set = { ...book, draftRev: 4, countries: { ...book.countries, SE: { ...se, languages: value.countries.SE.languages, paymentMethods: { ...se.paymentMethods, card: true } } } };
   assert.equal(await settings.command("admin.config.saveCountry", { targetId: "x", value: set, scope: "" }), "Payment methods published to every zone.");
-  const puts = server.calls.filter((c) => c.method === "PUT");
+  const puts = server.calls.slice(afterLanguages).filter((c) => c.method === "PUT");
   const z004 = puts.find((c) => c.path.includes("rider_app_config") && (c.body as { zoneId?: string }).zoneId === "Z004");
   assert.deepEqual(((z004!.body as { document: Doc }).document)["paymentMethods"], ["cash", "card"]);
   assert.equal(puts.some((c) => String((c.body as { zoneId?: string }).zoneId ?? "").startsWith("FR-")), false, "France is not touched");
@@ -646,4 +661,120 @@ test("live G8 fix 2: a country Movera is not open in (Tunisia) is never said to 
   const both = { ...value, countries: { ...value.countries, SE: { ...book.countries.SE, paymentMethods: { cash: true, card: false, apple_pay: true } } } };
   await assert.rejects(settings.command("admin.config.saveCountry", { targetId: "x", value: both, scope: "" })!, /Tunisia/);
   assert.equal(server.calls.filter((c) => c.method !== "GET").length, 0);
+});
+
+test("live G8 round 3 item 1: tip rules read back from what the zones serve (a zone save is not lost after a reload)", async () => {
+  const { COUNTRY_SETTINGS_KEY, ZONE_RULES_KEY } = await import("../config/countrySettings.ts");
+  const rider = (zoneId: string | undefined, customAmount: boolean) => ({ ...sample("rider_app_config"), ...(zoneId ? { zoneId } : {}), paymentMethods: ["cash"], ...(customAmount ? { tipRules: { cashAfterTrip: false, customAmount: true, customMax: { amountMinor: 2000, currency: "EUR" } } } : {}) });
+  const server = fakeServer({
+    "country_rules:standard-FR": { version: 2, liveVersion: 2, document: {} },
+    "country_rules:FR-PC": { version: 1, liveVersion: 1, usesStandard: false, document: {} },
+    "rider_app_config:standard-FR": { version: 3, liveVersion: 3, document: rider(undefined, false) },
+    "rider_app_config:FR-PC": { version: 4, liveVersion: 4, usesStandard: false, document: rider("FR-PC", true) },
+  });
+  const settings = createLiveSettings(server.http);
+  const book = (await settings.readSlice(COUNTRY_SETTINGS_KEY, null)) as { countries: Record<string, { tipRules: { customAmount: boolean; customMax: number }; mixedTipRules?: Record<string, string[]> }> };
+  // The Standard alone has it off; FR-PC serves it on: the country is mixed, naming the zones where it is off.
+  assert.equal(book.countries.FR!.tipRules.customAmount, false);
+  assert.ok(book.countries.FR!.mixedTipRules?.customAmount?.length, "mixed when the zones differ");
+  assert.ok(!book.countries.FR!.mixedTipRules?.customAmount?.includes("FR-PC"), "FR-PC is not named as off");
+  const zones = (await settings.readSlice(ZONE_RULES_KEY, null)) as Record<string, { tipRules: { customAmount: boolean; customMax: number } }>;
+  assert.equal(zones["FR-PC"]!.tipRules.customAmount, true, "the zone that was saved reads back ticked");
+  assert.equal(zones["FR-PC"]!.tipRules.customMax, 20);
+  assert.equal(zones["standard-FR"]!.tipRules.customAmount, false);
+});
+
+test("live sweep 2026-11-02 H1: patchChanged writes only what changed between before and after over the server's document", async () => {
+  const { patchChanged } = await import("./configDocs.ts");
+  const server = { version: 4, booking: { maxStops: 3, bookingHorizonDays: 14 }, cancelReasons: [{ code: "own" }], drivingLimits: { restMinutes: 30 }, raisePrice: { maxFactor: 2 }, waiting: { perMin: 5, driverSharePct: 50 } };
+  // The admin's model holds defaults where the page shows nothing (7 days, 360 min, default reasons).
+  const before = { version: 1, booking: { maxStops: 3, bookingHorizonDays: 7 }, cancelReasons: [{ code: "default" }], drivingLimits: { restMinutes: 360 }, raisePrice: { maxFactor: 2 }, waiting: { perMin: 0, driverSharePct: 50 } };
+  const after = { ...before, raisePrice: { maxFactor: 2.5 }, booking: { maxStops: 4, bookingHorizonDays: 7 }, waiting: { perMin: 9, driverSharePct: 60 } };
+  const next = patchChanged(server, before, after);
+  assert.deepEqual(next, { version: 4, booking: { maxStops: 4, bookingHorizonDays: 14 }, cancelReasons: [{ code: "own" }], drivingLimits: { restMinutes: 30 }, raisePrice: { maxFactor: 2.5 }, waiting: { perMin: 5, driverSharePct: 60 } });
+  // Nothing changed: the server's document comes back as it is; keys limit what may be written.
+  assert.deepEqual(patchChanged(server, before, before), server);
+  assert.deepEqual(patchChanged(server, before, after, ["raisePrice"]).booking, server.booking);
+});
+
+test("checker #204 HIGH 1: a Dispatch draft saved before Publish still reaches the app documents, and only the edited field changes", async () => {
+  const { DISPATCH_KEY } = await import("../dispatch/rules.ts");
+  const rider = { ...sample("rider_app_config"), zoneId: "Z002", cancelReasons: [{ code: "own", title: "Own" }] };
+  const driver = { ...sample("driver_app_config"), zoneId: "Z002" };
+  const server = fakeServer({
+    "dispatch:Z002": { version: 2, liveVersion: 2, usesStandard: false, document: dispatchDocumentOf(liveRules(emptyDispatchBook(), "Z002"), "Z002", null) },
+    "rider_app_config:Z002": { version: 3, liveVersion: 3, usesStandard: false, document: rider },
+    "driver_app_config:Z002": { version: 3, liveVersion: 3, usesStandard: false, document: driver },
+  });
+  const settings = createLiveSettings(server.http, () => "2026-11-02T10:00:00Z");
+  const book = (await settings.readSlice(DISPATCH_KEY, emptyDispatchBook())) as ReturnType<typeof emptyDispatchBook>;
+  const zone = liveRules(book, "Z002");
+  const working = { Z002: { ...zone, stops: { ...zone.stops, on: true, max: 4 } } };
+  // Save draft first: it overwrites the session's Dispatch slot with the edited book.
+  await settings.command("admin.dispatch.saveDraft", { targetId: "dispatch draft", value: { ...book, draft: working } });
+  // A tools save hands the page's whole book (here one whose rules already show the edit): the slot is overwritten again.
+  await settings.command("admin.dispatch.preset", { targetId: "preset", value: { ...book, live: { ...book.live, ...working } } });
+  const published = publish({ ...book, draft: working }, working, {}, ["Z002"], "A1", "2026-11-02T10:00:00Z", "test", { direct: true }).book;
+  server.calls.length = 0;
+  await settings.command("admin.dispatch.publish", { targetId: "dispatch", value: published });
+  const put = (doc: string) => (server.calls.find((c) => c.method === "PUT" && c.path.endsWith(`/${doc}`))?.body as { document: Doc } | undefined)?.document;
+  const riderNow = put("rider_app_config");
+  assert.ok(riderNow, "the rider document gets the change");
+  assert.equal((riderNow!["booking"] as { maxStops: number }).maxStops, 4);
+  assert.equal((riderNow!["booking"] as { bookingHorizonDays: number }).bookingHorizonDays, 14, "not shown on the page: the server's");
+  assert.deepEqual(riderNow!["cancelReasons"], rider.cancelReasons);
+  const driverNow = put("driver_app_config");
+  assert.ok(driverNow, "the driver document gets the change");
+  assert.equal((driverNow!["drivingLimits"] as { restMinutes: number }).restMinutes, 30);
+});
+
+test("checker #204 HIGH 2: a Settings publish reaches every target, also one published to after another", async () => {
+  const { emptyConfig } = await import("../config/book.ts");
+  const doc = (id: string) => ({ ...sample("rider_app_config"), zoneId: id, features: { ...(sample("rider_app_config")["features"] as Doc), pin: true, serverOnly: "keep" }, booking: { maxStops: 3, bookingHorizonDays: 21, maxPickupMoveMeters: 200 } });
+  const server = fakeServer({
+    "rider_app_config:Z001": { version: 2, liveVersion: 2, usesStandard: false, document: doc("Z001") },
+    "rider_app_config:Z002": { version: 2, liveVersion: 2, usesStandard: false, document: doc("Z002") },
+    "driver_app_config:Z001": { version: 2, liveVersion: 2, usesStandard: false, document: { ...sample("driver_app_config"), zoneId: "Z001" } },
+    "driver_app_config:Z002": { version: 2, liveVersion: 2, usesStandard: false, document: { ...sample("driver_app_config"), zoneId: "Z002" } },
+  });
+  const settings = createLiveSettings(server.http, () => "2026-11-02T10:00:00Z");
+  const start = emptyConfig();
+  await settings.readSlice("config", start);
+  const value = { ...start, published: { ...start.published, switches: start.published.switches.map((item) => (item.app === "rider" && item.id === "pin" ? { ...item, on: false } : item)) } };
+  for (const scope of ["Z001", "Z002"]) await settings.command("admin.config.publish", { targetId: "configuration", value, scope });
+  for (const id of ["Z001", "Z002"]) {
+    const put = server.calls.find((c) => c.method === "PUT" && c.path.endsWith("/rider_app_config") && (c.body as { zoneId?: string }).zoneId === id);
+    assert.ok(put, `${id} gets the change`);
+    assert.equal(((put!.body as { document: Doc }).document["features"] as { pin: boolean }).pin, false);
+    assert.equal(((put!.body as { document: Doc }).document["features"] as { serverOnly?: string }).serverOnly, "keep", `${id}: a feature the page does not know stays`);
+    assert.equal(((put!.body as { document: Doc }).document["booking"] as { bookingHorizonDays: number }).bookingHorizonDays, 21, `${id}: not a Settings field`);
+  }
+  // Signing out forgets every baseline.
+  settings.forget();
+});
+
+test("checker #204 MED 3/4: a missing before patches leaves (server fields kept); keyed lists change item by item", async () => {
+  const { patchChanged } = await import("./configDocs.ts");
+  const server = { waiting: { perMin: 5, noShowFee: 10 }, cancelReasons: [{ code: "a", title: "A" }, { code: "own", title: "Own" }], steps: [{ id: "s1", min: 1 }, { id: "s2", min: 2 }] };
+  const before = { cancelReasons: [{ code: "a", title: "A" }, { code: "b", title: "B" }], steps: [{ id: "s1", min: 1 }, { id: "s2", min: 2 }] };
+  const after = { waiting: { driverSharePct: 60 }, cancelReasons: [{ code: "a", title: "A2" }, { code: "b", title: "B" }], steps: [{ id: "s1", min: 1 }, { id: "s2", min: 5 }, { id: "s3", min: 9 }] };
+  const next = patchChanged(server, before, after);
+  assert.deepEqual(next["waiting"], { perMin: 5, noShowFee: 10, driverSharePct: 60 }, "the server's waiting money is kept");
+  assert.deepEqual(next["cancelReasons"], [{ code: "a", title: "A2" }, { code: "own", title: "Own" }], "only the edited reason changes; the server's own reason stays");
+  assert.deepEqual(next["steps"], [{ id: "s1", min: 1 }, { id: "s2", min: 5 }, { id: "s3", min: 9 }]);
+});
+
+test("checker #204: a reordered keyed list follows the admin's order; repeated keys never merge two items", async () => {
+  const { patchChanged } = await import("./configDocs.ts");
+  const a = { code: "a", label: "A" };
+  const b = { code: "b", label: "B" };
+  const c = { code: "c", label: "C" };
+  const server = { reasons: [a, b, c] };
+  const reordered = patchChanged(server, { reasons: [a, b, c] }, { reasons: [c, a, b] });
+  assert.deepEqual((reordered.reasons as { code: string }[]).map((item) => item.code), ["c", "a", "b"]);
+  const fee1 = { kind: "late", amount: 10 };
+  const fee2 = { kind: "late", amount: 20 };
+  const fees = patchChanged({ fees: [fee1, fee2] }, { fees: [fee1, fee2] }, { fees: [fee1, { kind: "late", amount: 25 }] });
+  assert.equal((fees.fees as unknown[]).length, 2);
+  assert.deepEqual(fees.fees, [fee1, { kind: "late", amount: 25 }]);
 });

@@ -11,6 +11,9 @@ import {
   countrySettingsLines,
   countrySettingsOf,
   zoneSettingsOf,
+  mixedTipAcross,
+  TIP_FLAGS,
+  type MixedTipRules,
   ZONE_RULES_KEY,
   driverBonusHardMax,
   largeCountryChanges,
@@ -105,6 +108,14 @@ type Props = {
  * (Q5, Q6), the promo cap (Q10) and the driver bonus limit (Q17). Nothing is saved until Save; a change of more than
  * 50 % asks "Are you sure?" (Q29). The rider and driver app configs read the saved values.
  */
+/** The mixed tip switches without `flag` (set by the admin now); undefined when none is left. */
+function withoutTipFlag(mixed: MixedTipRules | undefined, flag: (typeof TIP_FLAGS)[number]): MixedTipRules | undefined {
+  if (!mixed?.[flag]) return mixed;
+  const rest = { ...mixed };
+  delete rest[flag];
+  return Object.keys(rest).length ? rest : undefined;
+}
+
 export function CountryExtrasPanel({ country, canEdit, section, focus = null, onDirty, onNotice, targets, zoneId: shownZone }: Props) {
   const { book, loading: bookLoading } = useCountrySettings();
   const zoneId = targets ? (shownZone && targets.includes(shownZone) ? shownZone : targets[0]) : undefined;
@@ -112,7 +123,10 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
   const zoneRules = useSlice<Record<string, CountrySettings>>(ZONE_RULES_KEY, {}, { enabled: Boolean(targets) });
   const zoneBook = { ...book, zones: zoneRules.value };
   const loading = bookLoading || (Boolean(targets) && zoneRules.loading);
-  const saved = zoneId ? zoneSettingsOf(zoneBook, country, zoneId) : countrySettingsOf(book, country);
+  const first = zoneId ? zoneSettingsOf(zoneBook, country, zoneId) : countrySettingsOf(book, country);
+  // Live G8 round 3 item 1: the chosen zones that disagree on a tip switch show it mixed, with the zones where it is off.
+  const mixedTip = targets && targets.length > 1 ? mixedTipAcross(targets.map((id) => [zoneById(id)?.name ?? id, zoneSettingsOf(zoneBook, country, id).tipRules] as const)) : first.mixedTipRules;
+  const saved: CountrySettings = { ...first, mixedTipRules: mixedTip, tipRules: { ...first.tipRules, ...Object.fromEntries(TIP_FLAGS.filter((flag) => mixedTip?.[flag]).map((flag) => [flag, false])) } };
   const [draft, setDraft] = useState<CountrySettings | null>(null);
   const shown = draft ?? saved;
   const dirty = draft !== null && JSON.stringify(sectionPart(draft, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
@@ -164,9 +178,11 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
             <AmountList title={tr("Tips")} help={tr("Buttons the rider sees after the ride.")} item="Tip" prefix="tip" list={shown.tips} saved={saved.tips} max={tipMax(country)} country={country} canEdit={canEdit} onChange={(tips) => edit({ tips })} />
             <div className="fee-card" aria-label={tr("Tip rules")}>
               <p className="dx-note">{tr("The whole tip goes to the driver.")}</p>
-              <label className="check-row"><input type="checkbox" checked={shown.tipRules.cashAfterTrip} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, cashAfterTrip: e.target.checked } })} /> {tr("Allow cash tips after the trip")}</label>
+              <label className="check-row"><input type="checkbox" data-testid="tip-cashAfterTrip" checked={shown.tipRules.cashAfterTrip} ref={(node) => { if (node) node.indeterminate = Boolean(shown.mixedTipRules?.cashAfterTrip?.length); }} aria-checked={shown.mixedTipRules?.cashAfterTrip?.length ? "mixed" : undefined} aria-describedby={shown.mixedTipRules?.cashAfterTrip?.length ? "tip-mixed-cashAfterTrip" : undefined} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, cashAfterTrip: e.target.checked }, mixedTipRules: withoutTipFlag(shown.mixedTipRules, "cashAfterTrip") })} /> {tr("Allow cash tips after the trip")}</label>
+              {shown.mixedTipRules?.cashAfterTrip?.length ? <small className="dx-note" id="tip-mixed-cashAfterTrip" data-testid="tip-mixed-cashAfterTrip">{tr("Off in: {0} — Save makes it the same in the chosen zones", [shown.mixedTipRules.cashAfterTrip.join(", ")])}</small> : null}
               <p className="dx-note">{tr("Off: a cash tip is only possible in the car, in the first 5 minutes after the trip.")}</p>
-              <label className="check-row"><input type="checkbox" checked={shown.tipRules.customAmount} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, customAmount: e.target.checked } })} /> {tr("Rider may type an amount")}</label>
+              <label className="check-row"><input type="checkbox" data-testid="tip-customAmount" checked={shown.tipRules.customAmount} ref={(node) => { if (node) node.indeterminate = Boolean(shown.mixedTipRules?.customAmount?.length); }} aria-checked={shown.mixedTipRules?.customAmount?.length ? "mixed" : undefined} aria-describedby={shown.mixedTipRules?.customAmount?.length ? "tip-mixed-customAmount" : undefined} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, customAmount: e.target.checked }, mixedTipRules: withoutTipFlag(shown.mixedTipRules, "customAmount") })} /> {tr("Rider may type an amount")}</label>
+              {shown.mixedTipRules?.customAmount?.length ? <small className="dx-note" id="tip-mixed-customAmount" data-testid="tip-mixed-customAmount">{tr("Off in: {0} — Save makes it the same in the chosen zones", [shown.mixedTipRules.customAmount.join(", ")])}</small> : null}
               {shown.tipRules.customAmount ? <NumberField label={tr("Highest typed tip")} value={shown.tipRules.customMax} unit={symbol} step={moneyStep(country)} max={tipMax(country) * 10} disabled={!canEdit} changed={shown.tipRules.customMax !== saved.tipRules.customMax} onChange={(customMax) => edit({ tipRules: { ...shown.tipRules, customMax } })} /> : null}
             </div>
           </div>
@@ -214,7 +230,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
             sliceKey={COUNTRY_SETTINGS_KEY}
             value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...Object.fromEntries(targets.map((id) => [id, shown])) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
             expectedSliceRev={book.draftRev}
-            disabled={!canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
+            disabled={loading || !canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
             title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}
             largeChanges={large}
             onDone={() => { setDraft(null); if (targets) void zoneRules.refetch(); onNotice(targets ? tr("Tips & limits saved for {0}. No other zone changed.", [zoneNames]) : tr("Tips & limits saved for {0}. The rider and driver apps get them with the next app config.", [name])); }}

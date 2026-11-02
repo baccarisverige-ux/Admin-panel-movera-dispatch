@@ -7,7 +7,7 @@ import { MARKETS, marketOfZone, standardZoneId, zoneById, type MarketId } from "
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, draftRules, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
-import { COUNTRY_SETTINGS_KEY, ZONE_RULES_KEY, methodsChanged, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
@@ -29,6 +29,7 @@ import {
   standardKey,
   goBackToStandard,
   withOwned,
+  patchChanged,
   zoneFacts,
   type ConfigDocName,
   type ConfigHttp,
@@ -39,7 +40,7 @@ import { ONBOARDING_SETTINGS_KEY, OPEN, normalizeSettingsBook, wireDocument, typ
 import { registerCountryTypes } from "./format.ts";
 import { tr, trx } from "../i18n/core.ts";
 import { COUNTRY_LABEL } from "../i18n/countries.ts";
-import { ZONE_PAYMENT_METHODS, type ZonePaymentMethod } from "../config/zoneDefaults.ts";
+import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePaymentMethod } from "../config/zoneDefaults.ts";
 import { ApiError } from "../api/httpClient.ts";
 import { readDispatchTools, sendToolCalls, toolCalls, toolRefusal, toolsOf, type DispatchTools } from "./dispatchTools.ts";
 
@@ -139,6 +140,21 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   const key = (doc: ConfigDocName, id: string) => `${doc}:${id}`;
 
   const unknownZones = new Set<string>();
+  /*
+   * Live sweep 2026-11-02 H1: what each page's model looked like when it was last READ FROM THE SERVER (or after a
+   * publish the server took). A publish writes only what differs between this baseline and the admin's edited model,
+   * over the server's document. Draft saves, tool saves and surges never move a baseline.
+   */
+  const baseline: { dispatch: DispatchBook | null; pricing: PricingStore | null; countries: CountrySettingsBook | null; zoneRules: Record<string, CountrySettings> | null; configStart: unknown; config: Map<string, unknown>; onboarding: Map<string, Doc> } = { dispatch: null, pricing: null, countries: null, zoneRules: null, configStart: undefined, config: new Map(), onboarding: new Map() };
+  const resetBaselines = () => {
+    baseline.dispatch = null;
+    baseline.pricing = null;
+    baseline.countries = null;
+    baseline.zoneRules = null;
+    baseline.configStart = undefined;
+    baseline.config.clear();
+    baseline.onboarding.clear();
+  };
   const readAt = new Map<string, number>();
   async function draft(doc: ConfigDocName, id: string, fresh = false): Promise<Draft | null> {
     // A zone the server does not have is not asked again in this session; a fresh read is reused for 10 s.
@@ -176,6 +192,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     surgeVersions = extras.surgeVersions;
     const next = extras.store;
     slices.set(PRICING_KEY, next);
+    baseline.pricing = next;
     return next;
   }
 
@@ -248,6 +265,18 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       for (const item of page?.items ?? []) rows.push({ ...item, zoneId: id });
     }));
     rows.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt) || b.version - a.version);
+    // Checker #204: a zone whose server draft is newer than what is live (Save draft) shows the LIVE document as live
+    // and the draft as its draft, so Publish now still has something to publish (it read the draft as live before).
+    const draftsOf: Record<string, ReturnType<typeof liveRules>> = {};
+    for (const id of Object.keys(live)) {
+      const rules = drafts.get(key("dispatch", id));
+      if (!rules || rules.usesStandard || rules.version <= rules.liveVersion || rules.liveVersion < 1) continue;
+      const newest = rows.filter((row) => row.zoneId === id).sort((a, b) => b.version - a.version)[0];
+      if (!newest) continue;
+      const shown = live[id]!;
+      live[id] = rulesOfDispatch(newest.document, drivers.get(id) ?? null, liveRules(book, id));
+      if (JSON.stringify(shown) !== JSON.stringify(live[id])) draftsOf[id] = shown;
+    }
     dispatchVersions.clear();
     const versions: DispatchBook["versions"] = rows.map((row, i) => {
       const rev = rows.length - i;
@@ -270,8 +299,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     // server's (contract.json#dispatchTools), never the demo's samples. Dispatch changes never wait for a second admin
     // (G4-F1) and cancel checks are built with group 5 (G4-F5), so neither has anything on live.
     const tools = await readTools();
-    const next = { ...book, live, ...tools, approvals: [], cancelChecks: {}, ...(versions.length ? { versions } : {}) };
+    const next = { ...book, live, draft: { ...book.draft, ...draftsOf }, ...tools, approvals: [], cancelChecks: {}, ...(versions.length ? { versions } : {}) };
     slices.set(DISPATCH_KEY, next);
+    baseline.dispatch = next;
     return next;
   }
 
@@ -288,17 +318,25 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     };
   }
 
-  /** The payment methods every open zone of the country serves (its own document, else the Standard's); null if none is known. */
-  async function servedMethods(market: (typeof MARKETS)[number], standard: unknown): Promise<{ on: string[]; mixed: Partial<Record<ZonePaymentMethod, string[]>> } | null> {
-    const standardList = Array.isArray(standard) ? (standard as string[]) : null;
-    // Each zone's served list (its own document, else the Standard's), in the market's zone order.
-    const zoneLists = await Promise.all(market.zones.map(async (zone): Promise<[string, string[] | null]> => {
-      // Read directly: a zone without a rider document of its own is no reason to stop reading its other documents.
-      const found = unknownZones.has(zone.id) ? null : await readDraft(http, "rider_app_config", zone.id).catch(() => null);
-      if (!found || found.usesStandard) return [zone.id, standardList];
-      const list = (found.document as { paymentMethods?: unknown }).paymentMethods;
-      return [zone.id, Array.isArray(list) ? (list as string[]) : null];
+  /**
+   * Each open zone's served `doc` (its own document, else the Standard's), in the market's zone order; null when nothing
+   * is known for the zone. Read directly: a zone without a document of its own is no reason to stop reading the others.
+   */
+  async function servedDocs(market: (typeof MARKETS)[number], doc: ConfigDocName, standard: Doc | null): Promise<Array<[string, Doc | null]>> {
+    return Promise.all(market.zones.map(async (zone): Promise<[string, Doc | null]> => {
+      const found = unknownZones.has(zone.id) ? null : await readDraft(http, doc, zone.id).catch(() => null);
+      if (!found || found.usesStandard) return [zone.id, standard];
+      return [zone.id, found.document];
     }));
+  }
+
+  /** The payment methods every open zone of the country serves; null if none is known. */
+  function servedMethods(zoneDocs: Array<[string, Doc | null]>, standard: unknown): { on: string[]; mixed: Partial<Record<ZonePaymentMethod, string[]>> } | null {
+    const standardList = Array.isArray(standard) ? (standard as string[]) : null;
+    const zoneLists = zoneDocs.map(([zone, doc]): [string, string[] | null] => {
+      const list = (doc as { paymentMethods?: unknown } | null)?.paymentMethods;
+      return [zone, Array.isArray(list) ? (list as string[]) : null];
+    });
     const known = zoneLists.filter((entry): entry is [string, string[]] => entry[1] !== null);
     if (!known.length) return standardList ? { on: standardList, mixed: {} } : null;
     const on = known.reduce((all, [, list]) => all.filter((method) => list.includes(method)), known[0][1]);
@@ -312,6 +350,37 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return { on, mixed };
   }
 
+  /** A served rider document's tip rules (contract RiderAppConfig.tipRules); absent = both off (the apps' default). */
+  function tipRulesOf(doc: Doc | null, market: (typeof MARKETS)[number], base: CountrySettings["tipRules"]): CountrySettings["tipRules"] {
+    const raw = (doc as { tipRules?: { cashAfterTrip?: unknown; customAmount?: unknown; customMax?: { amountMinor?: number } } } | null)?.tipRules;
+    return { cashAfterTrip: raw?.cashAfterTrip === true, customAmount: raw?.customAmount === true, customMax: typeof raw?.customMax?.amountMinor === "number" ? raw.customMax.amountMinor / market.minorUnits : base.customMax };
+  }
+
+  /**
+   * Live G8 round 3 item 1: the tip rules the zones serve. Tips & limits saves each chosen zone's rider document, so the
+   * Standard alone is not what the riders get. Zones that differ make a switch mixed, with the zones where it is off.
+   */
+  function servedTipRules(zoneDocs: Array<[string, Doc | null]>, market: (typeof MARKETS)[number], base: CountrySettings["tipRules"]): { rules: CountrySettings["tipRules"]; mixed?: MixedTipRules } | null {
+    const known = zoneDocs.filter((entry): entry is [string, Doc] => entry[1] !== null).map(([zone, doc]) => [zone, tipRulesOf(doc, market, base)] as const);
+    if (!known.length) return null;
+    const mixed = mixedTipAcross(known);
+    const rules = { ...known[0][1] };
+    for (const flag of TIP_FLAGS) if (mixed?.[flag]) rules[flag] = false;
+    return { rules, ...(mixed ? { mixed } : {}) };
+  }
+
+  /** Live G8 round 3 item 2: the default language the zones serve to `app` (the most common one); null if none is known. */
+  function servedLanguage(zoneDocs: Array<[string, Doc | null]>, app: "rider" | "driver" | "admin"): AppLanguage | null {
+    const counts = new Map<AppLanguage, number>();
+    for (const [, doc] of zoneDocs) {
+      const value = (doc as { languages?: { default?: Record<string, unknown> } } | null)?.languages?.default?.[app];
+      if ((APP_LANGUAGES as readonly unknown[]).includes(value)) counts.set(value as AppLanguage, (counts.get(value as AppLanguage) ?? 0) + 1);
+    }
+    let best: AppLanguage | null = null;
+    for (const [lang, count] of counts) if (best === null || count > (counts.get(best) ?? 0)) best = lang;
+    return best;
+  }
+
   async function readCountries(fallback: unknown): Promise<CountrySettingsBook> {
     // Live G8 fix 2: the pages ask with a null fallback (useCountrySettings, I18nProvider); reading `.countries` of it
     // threw before any request, so the page showed the defaults (every method ticked) instead of what the server serves.
@@ -320,27 +389,31 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     await Promise.all(MARKETS.filter((market) => OPEN[market.id]).map(async (market) => {
       const found = await draft("country_rules", standardKey(market.id), true);
       if (found) countries[market.id] = settingsOfRules(countrySettingsOf(book, market.id), market, found.document);
-      // v0.18.10 (G8): payment methods and tip rules as the country's Standard rider document has them.
+      // v0.18.10 (G8): payment methods, tip rules and languages as the riders and drivers of the country get them.
       const rider = await draft("rider_app_config", standardKey(market.id), true).catch(() => null);
-      const doc = rider?.document as { paymentMethods?: unknown; tipRules?: { cashAfterTrip?: unknown; customAmount?: unknown; customMax?: { amountMinor?: number } } } | undefined;
+      // Read directly: a Standard without a driver document is no reason to stop reading its other documents.
+      const driver = await readDraft(http, "driver_app_config", standardKey(market.id)).catch(() => null);
+      const doc = rider?.document ?? null;
       const base = countries[market.id] ?? countrySettingsOf(book, market.id);
       // Live G8 6c: a method is ticked only when the server serves it. The riders get their zone's own document (or the
       // Standard when the zone follows it), so the zones' documents are read too: the Standard alone could still hold a
       // method the zones no longer serve, and then the page showed it ticked and Save stayed off ("no unsaved change").
-      const served = await servedMethods(market, doc?.paymentMethods);
-      if (doc || served) {
-        const on = served?.on;
-        const mixed = served && Object.keys(served.mixed).length ? served.mixed : undefined;
-        const tr0 = doc?.tipRules;
-        countries[market.id] = {
-          ...base,
-          ...(on ? { paymentMethods: { cash: on.includes("cash"), card: on.includes("card"), apple_pay: on.includes("apple_pay") }, mixedMethods: mixed } : {}),
-          ...(tr0 ? { tipRules: { cashAfterTrip: tr0.cashAfterTrip === true, customAmount: tr0.customAmount === true, customMax: typeof tr0.customMax?.amountMinor === "number" ? tr0.customMax.amountMinor / market.minorUnits : base.tipRules.customMax } } : {}),
-        };
-      }
+      const [riderZones, driverZones] = await Promise.all([servedDocs(market, "rider_app_config", doc), servedDocs(market, "driver_app_config", driver?.document ?? null)]);
+      const served = servedMethods(riderZones, (doc as { paymentMethods?: unknown } | null)?.paymentMethods);
+      const tips = servedTipRules(riderZones, market, base.tipRules) ?? (doc ? { rules: tipRulesOf(doc, market, base.tipRules) } : null);
+      const lang = { rider: servedLanguage(riderZones, "rider"), driver: servedLanguage(driverZones, "driver"), admin: servedLanguage(riderZones, "admin") };
+      const on = served?.on;
+      const mixed = served && Object.keys(served.mixed).length ? served.mixed : undefined;
+      countries[market.id] = {
+        ...base,
+        ...(on ? { paymentMethods: { cash: on.includes("cash"), card: on.includes("card"), apple_pay: on.includes("apple_pay") }, mixedMethods: mixed } : {}),
+        ...(tips ? { tipRules: tips.rules, mixedTipRules: tips.mixed } : {}),
+        languages: { rider: lang.rider ?? base.languages.rider, driver: lang.driver ?? base.languages.driver, admin: lang.admin ?? base.languages.admin },
+      };
     }));
     const next = { ...book, countries };
     slices.set(COUNTRY_SETTINGS_KEY, next);
+    baseline.countries = next;
     return next;
   }
 
@@ -356,8 +429,16 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       if (!market) return;
       // A zone the server cannot answer for keeps its country's values (the tab still opens).
       const found = await draft("country_rules", id, true).catch(() => null);
-      if (found) zones[id] = settingsOfRules(countrySettingsOf(book, market.id), market, found.document);
+      const base = countrySettingsOf(book, market.id);
+      const settings = found ? settingsOfRules(base, market, found.document) : base;
+      // Live G8 round 3 item 1: the tip rules this scope's riders get (its own rider document, else the Standard's).
+      // The page read them only from the country's Standard, so after a zone save it showed the switch off.
+      const own = await draft("rider_app_config", id, true).catch(() => null);
+      const served = own && !own.usesStandard ? own : await draft("rider_app_config", standardKey(market.id), true).catch(() => null);
+      const rest = { ...settings, mixedTipRules: undefined };
+      if (found || served) zones[id] = served ? { ...rest, tipRules: tipRulesOf(served.document, market, base.tipRules) } : rest;
     }));
+    baseline.zoneRules = zones;
     return zones;
   }
 
@@ -375,12 +456,14 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
    * document (it was skipped before, so the change never reached the apps). `source` builds the parts from another
    * scope (a zone that follows its country's Standard rules gets the Standard's parts).
    */
-  async function publishAppParts(id: string, owned: { rider: string[]; driver: string[] }, state: ReturnType<typeof appConfigState>, source = id): Promise<void> {
+  async function publishAppParts(id: string, owned: { rider: string[]; driver: string[] }, state: ReturnType<typeof appConfigState>, source: string, before: ReturnType<typeof appConfigState>): Promise<void> {
     for (const [doc, keys, build] of [["rider_app_config", owned.rider, riderAppConfig], ["driver_app_config", owned.driver, driverAppConfig]] as const) {
       if (!keys.length) continue;
       const current = await draft(doc, id, true);
       const built = build(source, state) as unknown as Doc;
-      const document = current ? withOwned(current.document, built, keys) : { ...built, ...("zoneId" in built && !countryOfStandard(id) ? { zoneId: id } : {}) };
+      // Live sweep 2026-11-02 H1: with the state before the edit, only the fields the admin changed are written over
+      // the server's document; fields the page does not show (booking horizon, rest minutes…) stay the server's.
+      const document = current ? patchChanged(current.document, build(source, before) as unknown as Doc, built, keys) : { ...built, ...("zoneId" in built && !countryOfStandard(id) ? { zoneId: id } : {}) };
       const live = current ? await liveDocumentOf(http, doc, id) : null;
       await savePublishLive(http, doc, id, current, document, live);
       drafts.delete(key(doc, id));
@@ -412,11 +495,15 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
 
   async function publishPricing(store: PricingStore): Promise<string> {
     const zoneIds = store.history[0]?.rev === store.draftRev ? store.history[0].zoneIds : [];
+    // Live sweep 2026-11-02: only what the admin changed since the server read goes over the server's document.
+    const prior = baseline.pricing ?? (await readPricing(null));
     for (const id of zoneIds) {
       const current = await draft("pricing", id, true);
-      await savePublish(http, "pricing", id, current, pricingDocumentOf(zoneBook(store, id), id, current?.document ?? null));
+      const built = pricingDocumentOf(zoneBook(store, id), id, current?.document ?? null);
+      await savePublish(http, "pricing", id, current, current ? patchChanged(current.document, pricingDocumentOf(zoneBook(prior, id), id, current.document), built) : built);
     }
     slices.set(PRICING_KEY, store);
+    baseline.pricing = store;
     return "Published.";
   }
 
@@ -444,6 +531,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     readAt.clear();
     unknownZones.clear();
     slices.clear();
+    resetBaselines();
   }
 
   /**
@@ -506,14 +594,23 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   async function publishDispatch(book: DispatchBook): Promise<string> {
     const version = book.versions[0];
     const zoneIds = version && version.rev === book.draftRev ? version.zoneIds : [];
+    // Live sweep 2026-11-02 H1: the book as read from the server is the "before"; only what differs is written.
+    // Never the slice: draft and tool saves overwrite it with the edited book. Never read yet: read the server first.
+    const prior = baseline.dispatch ?? (await readDispatch(book));
+    const before = stateWith({ dispatch: prior });
     slices.set(DISPATCH_KEY, book);
     const state = stateWith({ dispatch: book });
     for (const id of zoneIds) {
       const current = await draft("dispatch", id, true);
-      await savePublish(http, "dispatch", id, current, dispatchDocumentOf(liveRules(book, id), id, current?.document ?? null));
-      await publishAppParts(id, OWNED.dispatch, state);
-      for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, OWNED.dispatch, state, id);
+      const built = dispatchDocumentOf(liveRules(book, id), id, current?.document ?? null);
+      const document = current ? patchChanged(current.document, dispatchDocumentOf(liveRules(normalizeDispatchBook(prior), id), id, current.document), built) : built;
+      // Checker #204: compared with what is LIVE, so a saved draft that already holds the change is still published.
+      await savePublishLive(http, "dispatch", id, current, document, current ? await liveDocumentOf(http, "dispatch", id) : null);
+      drafts.delete(key("dispatch", id));
+      await publishAppParts(id, OWNED.dispatch, state, id, before);
+      for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, OWNED.dispatch, state, id, before);
     }
+    baseline.dispatch = book;
     return "Published.";
   }
 
@@ -524,7 +621,11 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   async function publishSettings(value: unknown, targets: readonly string[]): Promise<string> {
     if (!targets.length) throw new Error("Choose the zones at the top first.");
     const state = stateWith({ config: value });
-    for (const id of targets) await publishAppParts(id, OWNED.settings, state);
+    // Per target: what this session last sent to it, else the book the page started from (Settings has no server read).
+    for (const id of targets) {
+      await publishAppParts(id, OWNED.settings, state, id, stateWith({ config: baseline.config.has(id) ? baseline.config.get(id) : baseline.configStart }));
+      baseline.config.set(id, structuredClone(value));
+    }
     // G3: say which zones of a chosen Standard keep their own app settings (their drivers do not get this change).
     const own: string[] = [];
     for (const standard of targets.filter((id) => countryOfStandard(id))) {
@@ -543,6 +644,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
    */
   async function saveCountries(book: CountrySettingsBook, targets: readonly string[]): Promise<string> {
     if (!targets.length) throw new Error("Choose the zones at the top first.");
+    const priorBook = baseline.countries ?? (await readCountries(null));
+    const priorZones = baseline.zoneRules ?? (await readZoneRules());
+    const prior: CountrySettingsBook = { ...priorBook, zones: { ...(priorBook as { zones?: Record<string, CountrySettings> }).zones, ...priorZones } } as CountrySettingsBook;
     for (const id of targets) {
       const market = marketOfZone(id);
       if (!market) continue;
@@ -554,9 +658,12 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       await savePublish(http, "country_rules", id, current, doc);
       standardMarks.set("country_rules", id, false);
       // v0.18.10 (G8): the tip rules (cash after the trip, typed amount + max) live in the rider app document.
-      await publishAppParts(id, { rider: ["tipRules"], driver: [] }, stateWith({ countrySettings: { ...book, countries: { ...book.countries, [market.id]: next } } }));
+      await publishAppParts(id, { rider: ["tipRules"], driver: [] }, stateWith({ countrySettings: { ...book, countries: { ...book.countries, [market.id]: next } } }), id, stateWith({ countrySettings: { ...prior, countries: { ...prior.countries, [market.id]: zoneSettingsOf(prior, market.id as MarketId, id) } } }));
     }
     slices.set(COUNTRY_SETTINGS_KEY, book);
+    // What the server took is the next baseline; the zones' rules are read again by the page.
+    baseline.countries = normalizeCountrySettingsBook(book);
+    baseline.zoneRules = null;
     return "Saved for the chosen zones.";
   }
 
@@ -567,18 +674,25 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   async function saveMethods(book: CountrySettingsBook): Promise<string> {
     // Live G8 fix 1: only the countries whose payment methods changed are published (a language-only save leaves every
     // zone's paymentMethods as it is); a mixed method that was set is made the same in the whole country.
-    const before = normalizeCountrySettingsBook(slices.get(COUNTRY_SETTINGS_KEY) ?? null);
-    const changed = new Set(MARKETS.filter((market) => methodsChanged(countrySettingsOf(before, market.id), countrySettingsOf(book, market.id))).map((market) => market.id));
-    if (!changed.size) {
-      slices.set(COUNTRY_SETTINGS_KEY, book);
-      return "Saved. No payment method changed.";
-    }
+    const before = normalizeCountrySettingsBook(baseline.countries ?? (await readCountries(null)));
+    const methodsIn = new Set(MARKETS.filter((market) => methodsChanged(countrySettingsOf(before, market.id), countrySettingsOf(book, market.id))).map((market) => market.id));
+    // Live G8 round 3 item 2: the default languages go to the zones' rider and driver documents (languages.default),
+    // where the apps and this panel read them. A language-only save sent nothing before and still said "saved".
+    const languagesIn = new Set(MARKETS.filter((market) => languagesChanged(countrySettingsOf(before, market.id), countrySettingsOf(book, market.id))).map((market) => market.id));
+    const changed = new Set([...methodsIn, ...languagesIn]);
+    if (!changed.size) throw new Error("Nothing to save: no payment method or language changed.");
     const scopes = readScopes().filter((id) => changed.has((countryOfStandard(id) ?? marketOfZone(id)?.id) as MarketId));
     // Live G8 fix 2: a country Movera is not open in (Tunisia) has no Standard or zones on the server, so nothing could be
     // written; it said "saved" and the box was ticked again after a reload. Nothing is sent, and the admin is told why.
     const unwritable = [...changed].filter((country) => !scopes.some((id) => (countryOfStandard(id) ?? marketOfZone(id)?.id) === country));
     if (unwritable.length) throw new Error(tr("Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to.", [unwritable.map((country) => trx(COUNTRY_LABEL[country])).join(", ")]));
+    const partsOf = (id: string) => {
+      const country = (countryOfStandard(id) ?? marketOfZone(id)?.id) as MarketId;
+      const keys = [...(methodsIn.has(country) ? ["paymentMethods"] : []), ...(languagesIn.has(country) ? ["languages"] : [])];
+      return { rider: keys, driver: keys };
+    };
     const state = stateWith({ countrySettings: book });
+    const beforeState = stateWith({ countrySettings: before });
     // Live G8 6c: about 30 documents. One by one took over a minute and a reload in the middle left zones not updated.
     // Now a few at a time, the browser asks before the page is left while it runs, and the zones that failed are named;
     // Save stays on, and pressing it again sends only what is not live yet (the same document is skipped).
@@ -591,7 +705,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     try {
       await inBatches(scopes, METHODS_AT_ONCE, async (id) => {
         try {
-          await publishAppParts(id, { rider: ["paymentMethods"], driver: ["paymentMethods"] }, state);
+          await publishAppParts(id, partsOf(id), state, id, beforeState);
         } catch (error) {
           if (error instanceof SettingsChanged) throw error;
           failed.push(id);
@@ -605,8 +719,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const names = scopes.filter((id) => failed.includes(id)).map((id) => (countryOfStandard(id) ? standardName(countryOfStandard(id) as MarketId) : (zoneById(id)?.name ?? id)));
       throw new Error(`${tr("Some zones were not updated.")} ${tr("Press Save again to update them.")} ${names.join(", ")}`);
     }
-    slices.set(COUNTRY_SETTINGS_KEY, { ...book, countries: Object.fromEntries(Object.entries(book.countries).map(([country, settings]) => [country, changed.has(country as MarketId) ? { ...settings, mixedMethods: undefined } : settings])) });
-    return "Payment methods published to every zone.";
+    slices.set(COUNTRY_SETTINGS_KEY, { ...book, countries: Object.fromEntries(Object.entries(book.countries).map(([country, settings]) => [country, methodsIn.has(country as MarketId) ? { ...settings, mixedMethods: undefined } : settings])) });
+    baseline.countries = normalizeCountrySettingsBook(slices.get(COUNTRY_SETTINGS_KEY) ?? null);
+    return methodsIn.size ? "Payment methods published to every zone." : "Languages published to every zone.";
   }
 
   /**
@@ -623,6 +738,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       if (!found) return;
       const document = found.document as unknown as SettingsDoc;
       countries[market.id] = { draftVersion: found.version, liveVersion: found.liveVersion, document };
+      baseline.onboarding.set(market.id, structuredClone(found.document));
       registerCountryTypes(market.id, document);
     }));
     const next = normalizeSettingsBook({ ...book, countries });
@@ -639,7 +755,12 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     if (!staged) throw new Error("Nothing to publish.");
     const id = standardKey(market.id);
     const current = await readDraft(http, "onboarding", id);
-    await savePublish(http, "onboarding", id, current, { ...wireDocument(staged), version: current?.document?.["version"] ?? staged.version, country: market.id } as unknown as Doc);
+    const built = { ...wireDocument(staged), version: current?.document?.["version"] ?? staged.version, country: market.id } as unknown as Doc;
+    if (!baseline.onboarding.has(market.id)) await readOnboarding(null);
+    const read = baseline.onboarding.get(market.id);
+    // Live sweep 2026-11-02: only what the admin changed since the server read goes over the server's document.
+    const document = current && read ? patchChanged(current.document, { ...wireDocument(read as unknown as typeof staged), version: built["version"], country: market.id } as unknown as Doc, built) : built;
+    await savePublish(http, "onboarding", id, current, document);
     await readOnboarding(value);
     return "Published.";
   }
@@ -705,6 +826,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       if (sliceKey === CONFIG_KEY) {
         // G3-D9: which zones have driver app settings of their own, for the "Are you sure?" of a Standard publish.
         void Promise.all(readScopes().filter((id) => !countryOfStandard(id)).map((id) => draft("driver_app_config", id).catch(() => null)));
+        if (baseline.configStart === undefined) baseline.configStart = structuredClone(fallback);
         return Promise.resolve(slices.get(CONFIG_KEY) ?? fallback);
       }
       return null;
