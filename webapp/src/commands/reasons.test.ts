@@ -36,7 +36,7 @@ assert(auditReason("Charged twice", "ignored") === "Charged twice", "a listed re
 // A-O1 (owner decision): every cancel and refund dialog starts with no reason; Confirm waits for a pick.
 const pickFirst = COMMANDS.filter((spec) => spec.reason && (reasonFamily(spec.id) === "cancel" || reasonFamily(spec.id) === "refund" || /[cC]ancel/.test(spec.id)) && !mustChooseReason(spec.id)).map((spec) => spec.id);
 assert(pickFirst.length === 0, `every cancel and refund dialog starts empty: ${pickFirst.join(", ")}`);
-for (const id of ["admin.trip.cancel", "admin.reservation.cancel", "admin.trip.noShow", "admin.payment.refund", "admin.trip.refund", "admin.trip.partRefund", "admin.rider.refund", "admin.rider.credit", "admin.campaign.cancel"]) {
+for (const id of ["admin.trip.cancel", "admin.reservation.cancel", "admin.trip.noShow", "admin.payment.refund", "admin.trip.refund", "admin.trip.partRefund", "admin.rider.refund", "admin.rider.walletCredit", "admin.campaign.cancel"]) {
   assert(mustChooseReason(id) && initialReason(id) === "", `${id} opens with no reason selected`);
 }
 assert(!mustChooseReason("admin.confirm.cancel"), "closing a dialog is not a cancel command");

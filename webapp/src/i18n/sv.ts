@@ -8411,4 +8411,10 @@ export const sv: Record<MessageKey, string> = {
   "Pause payouts": "Pausa utbetalningar",
   "Pause or release driver payouts": "Pausa eller släpp förarens utbetalningar",
   "The most one admin with this role can give in one go.": "Det mesta en admin med den här rollen kan ge på en gång.",
+  "The rider gets a notice and sees it in the wallet as Credit from Movera.": "Resenären får ett meddelande och ser det i plånboken som Kredit från Movera.",
+  "Added {0} {1} to the wallet.": "{0} {1} har lagts till i plånboken.",
+  "That is more than one credit may be in this country (Trip settings).": "Det är mer än en kredit får vara i det här landet (Reseinställningar).",
+  "The amount must be in the rider's currency.": "Beloppet måste vara i resenärens valuta.",
+  "The rider's country is not known yet: money can be added after the first ride.": "Resenärens land är inte känt än: pengar kan läggas till efter första resan.",
+  "Add money to a wallet from the rider's page.": "Lägg till pengar i en plånbok från resenärens sida.",
 };

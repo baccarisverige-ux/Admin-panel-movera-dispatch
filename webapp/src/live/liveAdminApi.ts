@@ -657,6 +657,16 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (next?.driverId) drivers.set(next.driverId, next);
       return done("Saved.");
     }
+    // v0.18.16 A2 (owner G12 Q5, build-spec Q2): Add money to wallet, in the rider's currency, with the reason.
+    if (input.action === "admin.rider.walletCredit") {
+      const amount = (input.value as { amount?: { amountMinor?: unknown; currency?: unknown } } | undefined)?.amount;
+      const reason = input.reason?.trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+      if (!amount || typeof amount.amountMinor !== "number" || !(amount.amountMinor > 0) || typeof amount.currency !== "string") throw new ApiError(400, tr("Enter an amount above 0."), { code: "invalid_request", retryable: false });
+      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(input.targetId)}/wallet-credit`, { amount: { amountMinor: amount.amountMinor, currency: amount.currency }, reason: reason.slice(0, 300) }).catch(explained);
+      if (next?.riderId) riders.set(next.riderId, next);
+      return done("Saved.");
+    }
     // v0.18.16 A2 (owner Q4): pause / release one driver's payouts from his profile, with the reason.
     if (input.action === "admin.driver.payoutHold") {
       const held = (input.value as { held?: unknown } | undefined)?.held === true;

@@ -8409,6 +8409,12 @@ export const en = {
   "Pause payouts": "Pause payouts",
   "Pause or release driver payouts": "Pause or release driver payouts",
   "The most one admin with this role can give in one go.": "The most one admin with this role can give in one go.",
+  "The rider gets a notice and sees it in the wallet as Credit from Movera.": "The rider gets a notice and sees it in the wallet as Credit from Movera.",
+  "Added {0} {1} to the wallet.": "Added {0} {1} to the wallet.",
+  "That is more than one credit may be in this country (Trip settings).": "That is more than one credit may be in this country (Trip settings).",
+  "The amount must be in the rider's currency.": "The amount must be in the rider's currency.",
+  "The rider's country is not known yet: money can be added after the first ride.": "The rider's country is not known yet: money can be added after the first ride.",
+  "Add money to a wallet from the rider's page.": "Add money to a wallet from the rider's page.",
 } as const;
 
 export type MessageKey = keyof typeof en;

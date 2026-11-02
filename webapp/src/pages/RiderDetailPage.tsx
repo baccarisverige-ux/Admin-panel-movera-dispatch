@@ -58,6 +58,7 @@ import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
 import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
 import { LiveRiderModeration } from "../live/LiveRiderModeration";
+import { LiveWalletCredit } from "../live/LiveWalletCredit";
 import { feeKindOf, owedByCurrency, owedText, tripMoney } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
@@ -344,6 +345,7 @@ export function RiderDetailPage() {
 
         <TabPanel id="wallet" activeId={tab}>
           <div className="rd-money">
+            {liveData ? <LiveWalletCredit riderId={rider.id} walletMinor={liveRiderOf(rider)?.walletMinor ?? null} currency={liveRiderOf(rider)?.currency ?? null} /> : (
             <section className="fd-box rd-wallet">
               <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
               <strong className="rd-wallet-balance">{money(row.walletMinor, country)}</strong>
@@ -363,6 +365,7 @@ export function RiderDetailPage() {
                 </ul>
               ) : null}
             </section>
+            )}
 
             <section className="fd-box rd-refund">
               <h3 id="refund-title">{trn("{0} Refund a ride", <RotateCcw size={16} aria-hidden="true" />)}</h3>

@@ -15,7 +15,7 @@ async function confirm(page: Page) {
   await modal.getByRole("button", { name: "Confirm" }).click();
 }
 
-test("R10 payment policy voucher and reconciliation persist", async ({ page }) => {
+test("R10 payment policy and reconciliation persist; no wallet voucher here (owner Q2)", async ({ page }) => {
   test.setTimeout(90_000);
   await session(page);
   await page.goto("/payments?tab=tools");
@@ -26,13 +26,8 @@ test("R10 payment policy voucher and reconciliation persist", async ({ page }) =
   await confirm(page);
   await expect(page.getByText("Payment-method policy saved. Existing authorisations continue.")).toBeVisible();
 
-  await page.getByLabel("Voucher rider").fill("R0001");
-  await page.getByLabel("Voucher amount").selectOption("20000");
-  await page.getByLabel("Voucher reason").fill("Service recovery");
-  await page.getByRole("button", { name: "Issue wallet voucher" }).click();
-  await confirm(page);
-  await expect(page.getByText(/Wallet voucher 200,00\skr posted for R0001/)).toBeVisible();
-  await expect(page.getByRole("list", { name: "Wallet ledger" })).toContainText("WV-1 · R0001 · 200,00 kr · posted");
+  await expect(page.getByRole("button", { name: "Issue wallet voucher" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Add money to a wallet from the rider's page." })).toHaveAttribute("href", "/riders");
 
   await page.getByLabel("Reconciliation note").fill("R10 daily close");
   await page.getByRole("button", { name: "Save reconciliation" }).click();
@@ -42,7 +37,6 @@ test("R10 payment policy voucher and reconciliation persist", async ({ page }) =
 
   await page.reload();
   await expect(page.getByLabel("cash method")).not.toBeChecked();
-  await expect(page.getByRole("list", { name: "Wallet ledger" })).toContainText("WV-1 · R0001 · 200,00 kr · posted");
   await expect(page.getByRole("list", { name: "Reconciliation history" })).toContainText("R10 daily close");
 });
 

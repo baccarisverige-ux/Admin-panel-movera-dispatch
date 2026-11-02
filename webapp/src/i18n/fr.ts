@@ -8411,4 +8411,10 @@ export const fr: Record<MessageKey, string> = {
   "Pause payouts": "Suspendre les versements",
   "Pause or release driver payouts": "Suspendre ou reprendre les versements du chauffeur",
   "The most one admin with this role can give in one go.": "Le maximum qu’un admin avec ce rôle peut accorder en une fois.",
+  "The rider gets a notice and sees it in the wallet as Credit from Movera.": "Le passager reçoit une notification et le voit dans son portefeuille comme Crédit de Movera.",
+  "Added {0} {1} to the wallet.": "{0} {1} ajouté(s) au portefeuille.",
+  "That is more than one credit may be in this country (Trip settings).": "C’est plus qu’un crédit autorisé dans ce pays (Réglages des courses).",
+  "The amount must be in the rider's currency.": "Le montant doit être dans la devise du passager.",
+  "The rider's country is not known yet: money can be added after the first ride.": "Le pays du passager n’est pas encore connu : l’argent peut être ajouté après la première course.",
+  "Add money to a wallet from the rider's page.": "Ajoutez de l’argent à un portefeuille depuis la page du passager.",
 };
