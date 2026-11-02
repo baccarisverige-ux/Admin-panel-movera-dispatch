@@ -71,7 +71,9 @@ type Props = {
 
 /** Rider cancel fees per car type for one zone: free minutes, then a fixed fee or a % of the price with an optional min and max. */
 export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money, countryId, otherZones, onCopyToZones, categories }: Props) {
-  const words = KIND_WORDS[kind];
+  // Live G8 fix 2: the words are translated (SV/FR showed "min after accept").
+  const raw = KIND_WORDS[kind];
+  const words = { ...raw, name: trx(raw.name), free: trx(raw.free), unit: trx(raw.unit) };
   const [sameOpen, setSameOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const [ids, setIds] = useState<string[]>([]);
@@ -188,7 +190,7 @@ export function RiderCancelFeesCard({ zone, onChange, disabled, symbol, money, c
             </button>
           ))}
         </div>
-        <p className="dx-fee-example" role="tabpanel" aria-label={trx(current.label)}>{current.example}</p>
+        <p className="dx-fee-example" role="tabpanel" aria-label={trx(current.label)}>{trx(current.example)}</p>
         {off ? <p className="dx-note warn">{live ? tr("The smart cancel check is off in this zone (Rider cancels: smart check), so live trips have no cancel fee.") : tr("Reservations are off in this zone.")}</p> : null}
         <CancelFeeTable
           key={tab}

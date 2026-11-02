@@ -193,7 +193,12 @@ test("owner 2026-10-31: the driver bonus box shows the country's real limits fro
   await page.waitForTimeout(4000);
   expect(reads()).toBe(before);
   // Live test 2026-11-01: country_rules is not the source any more (the server enforces driver_app_config.driverBonus).
-  expect(settings.sent.filter((s) => s.path.includes("/admin/config/country_rules")).length).toBe(0);
+  // (The app reads country_rules once for the country settings — languages, payment methods; the bonus box must not
+  // read it: the count stays the same while the offers are re-read.)
+  const ruleReads = () => settings.sent.filter((s) => s.path.includes("/admin/config/country_rules")).length;
+  const rulesBefore = ruleReads();
+  await page.waitForTimeout(3000);
+  expect(ruleReads()).toBe(rulesBefore);
   await box.getByTestId("driver-bonus-change-limit").click();
   await expect(page).toHaveURL(/\/pricing\?tab=extras&section=driver-bonus&focus=driverBonusLimit&country=SE&zone=Z001/);
   await expect(page.locator("#driver-bonus-limit-input")).toBeFocused();
@@ -212,7 +217,12 @@ test("live test 2026-11-01: the limits are the ones the server enforces (zone's 
   await expect(box.getByTestId("driver-bonus-limit")).toContainText("900,00 kr");
   await box.getByLabel("Money for the driver").fill("190");
   await expect(box.getByTestId("driver-bonus-issue")).toContainText("180,00 kr");
-  expect(settings.sent.filter((s) => s.path.includes("/admin/config/country_rules")).length).toBe(0);
+  // (The app reads country_rules once for the country settings — languages, payment methods; the bonus box must not
+  // read it: the count stays the same while the offers are re-read.)
+  const ruleReads = () => settings.sent.filter((s) => s.path.includes("/admin/config/country_rules")).length;
+  const rulesBefore = ruleReads();
+  await page.waitForTimeout(3000);
+  expect(ruleReads()).toBe(rulesBefore);
 });
 
 test("checker 2026-11-01: a zone back on its country's standard shows the standard's limits, not its old own history", async ({ page }) => {

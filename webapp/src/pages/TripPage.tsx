@@ -393,7 +393,7 @@ export function TripPage() {
       </Section>
 
       <div className="op-trip-grid">
-        <Section id="fare" title={tr("How the price was made · rule {0}", [fare.ruleVersion])} icon={<ListOrdered size={16} />} testId="trip-fare">
+        <Section id="fare" title={tr("How the price was made · rule {0}", [trx(fare.ruleVersion)])} icon={<ListOrdered size={16} />} testId="trip-fare">
           {fare.live ? (
             <ul className="op-lines" data-testid="trip-fare-lines">
               {fare.lines.length ? fare.lines.map((line) => <li key={line.code}><span>{fareLineLabel(line.code)}</span><b>{legacyMoney(line.amountMinor)}</b></li>) : <li><span>{tr("Fare lines")}</span><b><NotConnected /></b></li>}

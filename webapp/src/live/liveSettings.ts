@@ -313,7 +313,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   }
 
   async function readCountries(fallback: unknown): Promise<CountrySettingsBook> {
-    const book = fallback as CountrySettingsBook;
+    // Live G8 fix 2: the pages ask with a null fallback (useCountrySettings, I18nProvider); reading `.countries` of it
+    // threw before any request, so the page showed the defaults (every method ticked) instead of what the server serves.
+    const book = normalizeCountrySettingsBook(fallback ?? null);
     const countries = { ...book.countries };
     await Promise.all(MARKETS.filter((market) => OPEN[market.id]).map(async (market) => {
       const found = await draft("country_rules", standardKey(market.id), true);
@@ -572,6 +574,10 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       return "Saved. No payment method changed.";
     }
     const scopes = readScopes().filter((id) => changed.has((countryOfStandard(id) ?? marketOfZone(id)?.id) as MarketId));
+    // Live G8 fix 2: a country Movera is not open in (Tunisia) has no Standard or zones on the server, so nothing could be
+    // written; it said "saved" and the box was ticked again after a reload. Nothing is sent, and the admin is told why.
+    const unwritable = [...changed].filter((country) => !scopes.some((id) => (countryOfStandard(id) ?? marketOfZone(id)?.id) === country));
+    if (unwritable.length) throw new Error(tr("Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to.", [unwritable.map((country) => trx(COUNTRY_LABEL[country])).join(", ")]));
     const state = stateWith({ countrySettings: book });
     // Live G8 6c: about 30 documents. One by one took over a minute and a reload in the middle left zones not updated.
     // Now a few at a time, the browser asks before the page is left while it runs, and the zones that failed are named;

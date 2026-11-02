@@ -18,6 +18,8 @@ import {
 import { useCountrySettings } from "./useCountrySettings";
 import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePaymentMethod } from "./zoneDefaults";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { useAdminApi } from "../api/AdminApiContext";
+import { OPEN } from "../drivers/onboardingSettings";
 
 /**
  * Settings › Payment methods and languages per country: Pay in car (cash), Card and Apple Pay (v0.18.10: no Google Pay) (owner Q7 FINAL, no Swish,
@@ -34,6 +36,9 @@ function withoutMethod(mixed: CountrySettings["mixedMethods"], method: ZonePayme
 
 export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onDirty?: (dirty: boolean) => void }) {
   const { book, loading } = useCountrySettings();
+  // Live G8 fix 2: on live, a country Movera is not open in (Tunisia) has no zones on the server; its boxes cannot be saved.
+  const live = !useAdminApi().demo;
+  const closed = (country: MarketId) => live && !OPEN[country];
   const [draft, setDraft] = useState<CountrySettingsBook | null>(null);
   const [notice, setNotice] = useState("");
   const shown = draft ?? book;
@@ -86,9 +91,10 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
                         data-mixed={off?.length ? "true" : undefined}
                         ref={(node) => { if (node) node.indeterminate = Boolean(off?.length); }}
                         checked={settings.paymentMethods[method]}
-                        disabled={!editable || loading}
+                        disabled={!editable || loading || closed(item.id)}
                         onChange={(event) => edit(item.id, { paymentMethods: { ...settings.paymentMethods, [method]: event.target.checked }, mixedMethods: withoutMethod(settings.mixedMethods, method) })}
                       />
+                      {closed(item.id) && method === "cash" ? <small className="dx-note" data-testid={`country-apps-closed-${item.id}`}>{tr("Movera is not open in this country yet: its payment methods cannot be saved.")}</small> : null}
                       {off?.length ? <small className="dx-note" id={noteId} data-testid={noteId}>{tr("Off in: {0} — Save makes it the same in the whole country", [off.join(", ")])}</small> : null}
                     </td>
                   );

@@ -138,7 +138,7 @@ export function RulesView(props: Props) {
           <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost dx-back-zones" onClick={() => onZone(null)}>{trn("{0} All zones", <ArrowLeft size={14} aria-hidden="true" />)}</button>
           <div className="dx-zone-title">
             <h3>{zone.name} <code>{zone.id}</code></h3>
-            <p>{trn("{0} · New requests now: {1} · {2}", zone.kind === "airport" ? tr("Airport") : zone.city, <b>{now.mode ? modeLabel(now.mode) : tr("none")}</b>, trx(now.why))}</p>
+            <p>{trn("{0} · New requests now: {1} · {2}", zone.kind === "airport" ? tr("Airport") : zone.city, <b>{now.mode ? trx(modeLabel(now.mode)) : tr("none")}</b>, trx(now.why))}</p>
           </div>
           <div className="dx-zone-actions">
             <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => setPresetOpen(true)}>{trn("{0} Presets", <Wand2 size={14} aria-hidden="true" />)}</button>
