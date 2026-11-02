@@ -318,6 +318,32 @@ test("G7 live fix 2: Who did what names the admin, else keeps the id", async () 
   const { auditActorName } = await import("./format.ts");
   const team = [{ id: "adm_01ABC", name: "Nora Lind" }];
   assert.equal(auditActorName("adm_01ABC", team), "Nora Lind");
-  assert.equal(auditActorName("adm_other", team), "adm_other");
+  assert.equal(auditActorName("adm_other", team), "Admin adm_other");
   assert.equal(auditActorName("system", team), "Movera (automatic)");
+});
+
+test("G7 live fix 3: who-did-what never shows an e-mail; trip actions and results read as words", async () => {
+  const { auditActionText, auditActorName, auditResultText, shortId } = await import("./format.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  setLanguage("en");
+  const team = [{ id: "adm_01JABCDEFGHJKMNPQRSTV", name: "ops@example.test" }, { id: "adm_2", name: "Nora Lind" }];
+  assert.equal(auditActorName("adm_01JABCDEFGHJKMNPQRSTV", team), "Admin adm_…PQRSTV");
+  assert.equal(auditActorName("someone@example.test", team), "Admin");
+  assert.equal(auditActorName("adm_2", team), "Nora Lind");
+  assert.equal(auditActionText("trip.flag"), "Trip flagged");
+  assert.equal(auditActionText("trip.unflag"), "Flag removed");
+  assert.equal(auditActionText("trip.adjust.requested"), "Trip price changed (waiting for a second admin)");
+  assert.equal(auditResultText("committed"), "Done");
+  assert.equal(shortId("trp_01JXYZABCDEFGH~srv_dropped_far_1"), "trp_…CDEFGH");
+  assert.equal(shortId("T0138"), "T0138");
+  setLanguage("sv");
+  assert.equal(auditActionText("trip.flag"), "Resan flaggad");
+  assert.equal(auditResultText("committed"), "Klart");
+  assert.ok(!auditActorName("adm_01JABCDEFGHJKMNPQRSTV", team).includes("@"));
+  setLanguage("fr");
+  assert.equal(auditActionText("trip.flag"), "Course signalée");
+  assert.equal(auditResultText("pending_approval"), "En attente d’approbation");
+  setLanguage("en");
 });

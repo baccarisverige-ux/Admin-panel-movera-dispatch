@@ -421,3 +421,7 @@
 .rc-log, .rc-log > * { min-width: 0; }
 .rc-table-wrap { max-width: 100%; overflow-x: auto; }
 .rc-table td small, .rc-table td a { overflow-wrap: anywhere; }
+/* G7 live fix 3: at 1440 px the log fits its card (it was 1706 px in 1011 px): cells wrap, ids are short. */
+.rc-table { table-layout: auto; }
+.rc-table td { white-space: normal; overflow-wrap: anywhere; }
+.rc-table td time { white-space: nowrap; }

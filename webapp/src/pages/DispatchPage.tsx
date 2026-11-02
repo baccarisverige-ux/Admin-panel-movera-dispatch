@@ -264,7 +264,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   /** The car types Pricing offers in a zone (not deleted, switched on there), the same list as waiting at pickup. */
   const feeCategoriesOf = (id: string) => {
     const prices = zoneBook(pricing, id).prices;
-    return activeCategories(pricing).filter((category) => prices[category.id]?.enabled).map(({ id: categoryId, label }) => ({ id: categoryId, label }));
+    return activeCategories(pricing).filter((category) => prices[category.id]?.enabled).map(({ id: categoryId, label }) => ({ id: categoryId, label: trx(label) }));
   };
   // A cancel fee moving more than 50 % from its published value asks "Are you sure?" on Save and Publish (A-O3).
   const largeChangesIn = (ids: readonly string[]) => ids.flatMap((id) => {
@@ -347,7 +347,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
                 setWorkingCountry({});
                 setNote("");
                 setShowChanges(false);
-                setNotice([liveNames.length || countryChanged.length ? `Live now${liveNames.length ? `: ${liveNames.join(", ")}` : ` in ${market.name}`}.` : "", waitNames.length ? `Waiting for a second admin: ${waitNames.join(", ")}.` : ""].filter(Boolean).join(" "));
+                // G7 live fix 3: in the panel's language (FR and SV read "Live now: …").
+                setNotice([liveNames.length || countryChanged.length ? (liveNames.length ? tr("Live now: {0}.", [liveNames.join(", ")]) : tr("Live now in {0}.", [market.name])) : "", waitNames.length ? tr("Waiting for a second admin: {0}.", [waitNames.join(", ")]) : ""].filter(Boolean).join(" "));
               }}>{trn("{0} Publish now", <Send size={13} aria-hidden="true" />)}</CommandButton>
             </div>
           ) : null}

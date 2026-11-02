@@ -393,6 +393,8 @@ const AUDIT_ACTIONS: Record<string, MessageKey> = {
   "surge.end": "Surge ended", "surge.schedule": "Surge planned",
   "trip.adjust": "Trip price changed", "trip.assign": "Driver assigned", "trip.cancel": "Trip cancelled", "trip.complete": "Trip completed",
   "trip.driver_bonus": "Driver bonus added to trip", "trip.no_show": "No-show recorded", "trip.pin_unlock": "Pickup PIN unlocked",
+  "trip.flag": "Trip flagged", "trip.unflag": "Flag removed", "trip.note": "Note added", "trip.case": "Case opened",
+  "trip.reveal_contact": "Phone number shown", "trip.receipt_resend": "Receipt sent again", "trip.driver_pay": "Driver pay changed",
   "trip.radar_group": "Trip sent to a driver group", "trip.radar_zone_stop": "Radar zone stopped for trip", "trip.reassign": "Driver changed",
   "trip.refund": "Trip refunded", "trip.reverse_no_show": "No-show undone",
   "vehicle.link_driver": "Vehicle linked to driver", "vehicle.review": "Vehicle reviewed", "vehicle.update": "Vehicle changed",
@@ -426,7 +428,23 @@ export function auditValueText(raw: string): string {
 /** The audit action in the panel's language; actions without a text keep their command name. */
 export function auditActionText(action: string): string {
   const key = AUDIT_ACTIONS[action];
-  return key ? tr(key) : action;
+  if (key) return tr(key);
+  // A change that waits for a second admin is logged as "<action>.requested".
+  const asked = action.endsWith(".requested") ? AUDIT_ACTIONS[action.slice(0, -".requested".length)] : undefined;
+  return asked ? tr("{0} (waiting for a second admin)", [tr(asked)]) : action;
+}
+
+/** G7 live fix 3: the audit row's result in words ("committed" read as a code in the SV panel). */
+export function auditResultText(result: string): string {
+  if (result === "committed") return tr("Done");
+  if (result === "pending_approval") return tr("Waiting for approval");
+  return result;
+}
+
+/** A long server id shortened for a table cell ("trp_01JXYZ…~srv_…" → "trp_01…ABC123"); short ids stay as they are. */
+export function shortId(id: string): string {
+  const head = (id ?? "").split("~")[0];
+  return head.length <= 12 ? head : `${head.slice(0, 4)}…${head.slice(-6)}`;
 }
 
 /** "system" (no admin, admin_id null on the server) reads as Movera itself. */
@@ -434,10 +452,15 @@ export function auditActorText(actorId: string): string {
   return !actorId || actorId === "system" ? tr("Movera (automatic)") : actorId;
 }
 
-/** G7 live fix 2: who did it, by the admin's name from the team list (the id when the admin is not in it). */
+/**
+ * G7 live fix 2/3: who did it, by the admin's name from the team list. Without a name (or a "name" that is an e-mail
+ * address) it reads "Admin" and a short id; an e-mail address is never shown.
+ */
 export function auditActorName(actorId: string, agents: readonly { id: string; name: string }[]): string {
   if (!actorId || actorId === "system") return auditActorText(actorId);
-  return agents.find((item) => item.id === actorId)?.name || actorId;
+  const name = agents.find((item) => item.id === actorId)?.name?.trim();
+  if (name && !name.includes("@")) return name;
+  return actorId.includes("@") ? tr("Admin") : tr("Admin {0}", [shortId(actorId)]);
 }
 
 /** G3-R1: driver.auto_offline detail { reason: no_position, lastFixAt, minutes } as one line; null for other actions. */
