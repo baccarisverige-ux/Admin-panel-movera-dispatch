@@ -260,6 +260,7 @@ export type TripState = {
   payouts: Record<string, unknown>[];
   tickets: Record<string, unknown>[];
   supportSettings?: Record<string, unknown>;
+  alertBook?: Record<string, unknown>;
   ticketMessages: Record<string, unknown>[];
   ratings: Record<string, unknown>[];
   approvals: (typeof APPROVALS)[number][];
@@ -406,6 +407,23 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, item);
     }
     if (p === "/api/v1/admin/tickets") return json(route, 200, { items: inZones(state.tickets, zoneField).filter((item) => !url.searchParams.get("status") || item["status"] === url.searchParams.get("status")), nextCursor: null });
+    // v0.18.15 alerts full flow (contract.json#alertDesk).
+    if (p.startsWith("/api/v1/admin/alerts/")) {
+      const book = (state.alertBook ??= { rev: 1, settings: {}, rules: [], records: [], mutes: {}, quiet: { on: false, from: "22:00", to: "07:00" }, people: [{ adminId: ADMIN.adminId, name: ADMIN.name }, { adminId: "A2", name: "Erik Ek" }] }) as Record<string, any>;
+      const verb = /^\/api\/v1\/admin\/alerts\/([^/]+)\/(take|done|snooze|pass)$/.exec(p);
+      if (verb) {
+        const id = decodeURIComponent(verb[1]!);
+        book.records = book.records.filter((r: Record<string, unknown>) => r["alertId"] !== id);
+        const owner = verb[2] === "pass" ? body.to : ADMIN.adminId;
+        book.records.push({ alertId: id, kind: body.kind, level: body.level, title: body.title, since: body.since, status: verb[2] === "take" || verb[2] === "pass" ? "taken" : verb[2] === "done" ? "done" : "snoozed", owner, events: [{ at: "2026-10-27T10:00:00Z", by: ADMIN.adminId, kind: verb[2], text: "" }] });
+      }
+      const mute = /^\/api\/v1\/admin\/alerts\/mutes\/([^/]+)$/.exec(p);
+      if (mute) { if (method === "DELETE") delete book.mutes[mute[1]!]; else book.mutes[mute[1]!] = { until: "2099-01-01T00:00:00Z", by: ADMIN.adminId }; }
+      if (p === "/api/v1/admin/alerts/quiet") book.quiet = body;
+      if (p === "/api/v1/admin/alerts/settings") { book.settings = body.settings; book.rev += 1; }
+      if (p === "/api/v1/admin/alerts/rules") { book.rules = body.rules; book.rev += 1; }
+      return json(route, 200, book);
+    }
     // v0.18.15 support desk (contract.json#supportDesk).
     if (p === "/api/v1/admin/support/settings") {
       if (method === "PUT") { state.supportSettings = { ...body, updatedAt: "2026-10-27T10:00:00Z" }; return json(route, 200, state.supportSettings); }

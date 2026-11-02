@@ -27,6 +27,8 @@ import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./li
 import { ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
 import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
+import { alertCall, bookFromServer, type AlertBookState } from "./liveAlerts.ts";
+import { ALERTS_KEY, normalizeAlertBook } from "../alerts/engine.ts";
 import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
@@ -799,6 +801,14 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (isPendingApproval(answer)) return done("Waiting for a second admin to approve.", "pending_approval");
       return done("Saved.");
     }
+    // v0.18.15 alerts full flow (contract.json#alertDesk, owner Q5): take, done, snooze, pass, mute, quiet hours, settings, rules.
+    if (["admin.alerts.take", "admin.alerts.done", "admin.alerts.snooze", "admin.alerts.pass", "admin.alerts.mute", "admin.alerts.quiet", "admin.alerts.settings", "admin.alerts.rule"].includes(input.action)) {
+      const me = client.admin()?.adminId ?? "";
+      const call = alertCall(input.action, input.targetId, normalizeAlertBook(input.value), me, Date.now());
+      if (!call) throw new ApiError(400, tr("Nothing changed."), { code: "invalid_request", retryable: false });
+      const state = await client.json<AlertBookState>(call.path, { method: call.method, ...(call.body ? { body: JSON.stringify(call.body) } : {}), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
+      return { ...done("Saved."), slice: { key: ALERTS_KEY, value: bookFromServer(state, me) } };
+    }
     // Pricing, Dispatch, Settings and Tips & limits publish to the server's config documents (contract v0.8.0).
     const settingsCall = settings.command(input.action, { targetId: input.targetId, value: input.value, ...(input.scope ? { scope: input.scope } : {}) });
     if (settingsCall) {
@@ -1060,6 +1070,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const fromSettings = settings.readSlice(key, fallback);
       if (fromSettings) return (await fromSettings) as typeof fallback;
       // Live clean-up 1 (rule 1): a book the server does not keep yet is empty on live, never the demo seed.
+      if (key === ALERTS_KEY) return bookFromServer(await client.json<AlertBookState>("/admin/alerts/book"), client.admin()?.adminId ?? null) as typeof fallback;
       if (key !== "safetyOps") return liveEmptyBook(fallback);
       if (!incidents.size) await list("incidents").catch(() => []);
       return bookFrom(incidents.values()) as typeof fallback;
