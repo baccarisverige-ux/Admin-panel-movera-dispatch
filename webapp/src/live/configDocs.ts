@@ -347,7 +347,11 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 const KEY_FIELDS = ["id", "code", "category", "kind"] as const;
 function itemKey(list: readonly unknown[]): string | null {
   if (!list.length) return null;
+  // Checker: a key must be unique inside each list, else two items would merge into one (e.g. two rows of one kind).
   return KEY_FIELDS.find((field) => list.every((item) => isPlain(item) && (typeof item[field] === "string" || typeof item[field] === "number"))) ?? null;
+}
+function uniqueBy(items: readonly unknown[], field: string): boolean {
+  return new Set(items.map((item) => String((item as Doc)[field]))).size === items.length;
 }
 
 function applyList(target: unknown, before: readonly unknown[], after: readonly unknown[]): unknown {
@@ -355,6 +359,8 @@ function applyList(target: unknown, before: readonly unknown[], after: readonly 
   const server = Array.isArray(target) ? target : null;
   // A list without keys (or one the server does not hold as a keyed list) is one value: the admin's, as changed.
   if (!field || !server || (server.length && itemKey(server) !== field)) return structuredClone(after);
+  // Checker: a key repeated in any of the lists → treat the list as one value (never merge two items).
+  if (!uniqueBy(before, field) || !uniqueBy(after, field) || !uniqueBy(server, field)) return structuredClone(after);
   const id = (item: unknown) => String((item as Doc)[field]);
   const was = new Map(before.map((item) => [id(item), item]));
   const now = new Map(after.map((item) => [id(item), item]));
@@ -365,6 +371,12 @@ function applyList(target: unknown, before: readonly unknown[], after: readonly 
     next.push(now.has(key) ? applyChanges(item, was.get(key), now.get(key)) : item);
   }
   for (const [key, item] of now) if (!was.has(key) && !server.some((own) => id(own) === key)) next.push(structuredClone(item)); // added by the admin
+  // Checker: the admin reordered the list (same keys, new order) → follow the admin's order; items only the server holds stay at the end.
+  const order = (list: readonly unknown[]) => list.map(id).join("\u0000");
+  if (order(before.filter((item) => now.has(id(item)))) !== order(after.filter((item) => was.has(id(item))))) {
+    const rank = new Map(after.map((item, index) => [id(item), index]));
+    next.sort((a, b) => (rank.get(id(a)) ?? Number.MAX_SAFE_INTEGER) - (rank.get(id(b)) ?? Number.MAX_SAFE_INTEGER));
+  }
   return next;
 }
 

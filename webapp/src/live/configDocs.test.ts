@@ -763,3 +763,18 @@ test("checker #204 MED 3/4: a missing before patches leaves (server fields kept)
   assert.deepEqual(next["cancelReasons"], [{ code: "a", title: "A2" }, { code: "own", title: "Own" }], "only the edited reason changes; the server's own reason stays");
   assert.deepEqual(next["steps"], [{ id: "s1", min: 1 }, { id: "s2", min: 5 }, { id: "s3", min: 9 }]);
 });
+
+test("checker #204: a reordered keyed list follows the admin's order; repeated keys never merge two items", async () => {
+  const { patchChanged } = await import("./configDocs.ts");
+  const a = { code: "a", label: "A" };
+  const b = { code: "b", label: "B" };
+  const c = { code: "c", label: "C" };
+  const server = { reasons: [a, b, c] };
+  const reordered = patchChanged(server, { reasons: [a, b, c] }, { reasons: [c, a, b] });
+  assert.deepEqual((reordered.reasons as { code: string }[]).map((item) => item.code), ["c", "a", "b"]);
+  const fee1 = { kind: "late", amount: 10 };
+  const fee2 = { kind: "late", amount: 20 };
+  const fees = patchChanged({ fees: [fee1, fee2] }, { fees: [fee1, fee2] }, { fees: [fee1, { kind: "late", amount: 25 }] });
+  assert.equal((fees.fees as unknown[]).length, 2);
+  assert.deepEqual(fees.fees, [fee1, { kind: "late", amount: 25 }]);
+});
