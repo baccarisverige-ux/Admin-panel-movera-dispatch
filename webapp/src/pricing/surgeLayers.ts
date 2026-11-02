@@ -2,6 +2,7 @@ import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource } from "maplibre-gl";
 import type { ZoneSurge } from "./surge.ts";
 import { colouredZones, DRIVER_EDGE_PX, DRIVER_FILL_OPACITY, DRIVER_LEVEL_COLOR, driverSurgeLevel } from "../live/liveSurgeMap.ts";
+import { setDataIfChanged } from "../ui/mapData.ts";
 import { dotsGeo, glowGeo, hexGeo, pointsGeo, zonesGeo, type SurgeStyle } from "./surgeGeo.ts";
 
 /** Adds, updates and removes the surge layers on any MapLibre map (Pricing, the dashboard and Dispatch). */
@@ -35,6 +36,11 @@ type State = { pills: maplibregl.Marker[]; pulse: number | null; onZone?: (zoneI
 const states = new WeakMap<maplibregl.Map, State>();
 
 /** Call once in the map's load handler. `beforeId` keeps drivers and riders above the surge. */
+/** A pulse tick that comes this late after its frame was asked for means the map cannot keep up (no GPU). */
+export const PULSE_LATE_MS = 250;
+/** This many late ticks in a row stop the pulse. */
+export const PULSE_LATE_TICKS = 3;
+
 export function installSurgeLayers(map: maplibregl.Map, onZone?: (zoneId: string) => void, beforeId?: string): void {
   const empty = { type: "FeatureCollection" as const, features: [] };
   map.addSource("surge-zones", { type: "geojson", data: empty });
@@ -82,9 +88,27 @@ export function installSurgeLayers(map: maplibregl.Map, onZone?: (zoneId: string
   // Smart surge borders breathe softly so they read as "automatic, live".
   const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   if (!reduced) {
+    // A machine without a GPU (software WebGL: VMs, remote desktops, blocklisted drivers) needs 100-400 ms per frame
+    // of a full map. Breathing borders then keep the main thread busy all the time, so a click on the page waits for
+    // seconds (the Handle panel's Send, Stop and money box froze under load). The breathing is decoration: when the
+    // ticks come late several times in a row, it stops and the borders stay still at a readable opacity.
+    let last = performance.now();
+    let late = 0;
+    const settle = () => {
+      if (map.getLayer("surge-zone-pulse")) map.setPaintProperty("surge-zone-pulse", "line-opacity", 0.45);
+      if (map.getLayer("surge-rings")) map.setPaintProperty("surge-rings", "circle-stroke-opacity", 0.6);
+    };
     const tick = () => {
       if (!states.has(map) || !map.getLayer("surge-zone-pulse")) return;
-      const t = (performance.now() % 2400) / 2400;
+      const now = performance.now();
+      late = now - last > PULSE_LATE_MS ? late + 1 : 0;
+      last = now;
+      if (late >= PULSE_LATE_TICKS) {
+        state.pulse = null;
+        settle();
+        return;
+      }
+      const t = (now % 2400) / 2400;
       // Every setPaintProperty repaints the whole map. Only animate a layer that is on screen: the old loop also
       // repainted ~12 times a second while surge was hidden, which kept the page's main thread busy all the time
       // (no GPU: each frame costs 100-250 ms) and made clicks and key presses on map pages time out.
@@ -97,7 +121,10 @@ export function installSurgeLayers(map: maplibregl.Map, onZone?: (zoneId: string
         map.setPaintProperty("surge-rings", "circle-radius", ["interpolate", ["exponential", 2], ["zoom"], 8, ["*", ["get", "size"], 14 * grow], 11, ["*", ["get", "size"], 40 * grow], 14, ["*", ["get", "size"], 150 * grow]]);
         map.setPaintProperty("surge-rings", "circle-stroke-opacity", 0.9 * (1 - t));
       }
-      state.pulse = window.setTimeout(() => requestAnimationFrame(tick), 80);
+      state.pulse = window.setTimeout(() => {
+        last = performance.now();
+        requestAnimationFrame(tick);
+      }, 80);
     };
     tick();
   }
@@ -138,11 +165,11 @@ export function updateSurgeLayers(map: maplibregl.Map, rows: readonly ZoneSurge[
   const state = states.get(map);
   if (!state) return;
   state.onZone = onZone;
-  (map.getSource("surge-zones") as GeoJSONSource | undefined)?.setData(zonesGeo(shown && USES.zones.has(style) ? rows : [], selectedId));
-  (map.getSource("surge-glow") as GeoJSONSource | undefined)?.setData(glowGeo(shown && style === "glow" ? rows : []));
-  (map.getSource("surge-hex") as GeoJSONSource | undefined)?.setData(hexGeo(shown && USES.hex.has(style) ? rows : []));
-  (map.getSource("surge-points") as GeoJSONSource | undefined)?.setData(pointsGeo(shown && USES.points.has(style) ? rows : []));
-  (map.getSource("surge-dots") as GeoJSONSource | undefined)?.setData(dotsGeo(shown && USES.dots.has(style) ? rows : []));
+  setDataIfChanged(map.getSource("surge-zones") as GeoJSONSource | undefined, zonesGeo(shown && USES.zones.has(style) ? rows : [], selectedId));
+  setDataIfChanged(map.getSource("surge-glow") as GeoJSONSource | undefined, glowGeo(shown && style === "glow" ? rows : []));
+  setDataIfChanged(map.getSource("surge-hex") as GeoJSONSource | undefined, hexGeo(shown && USES.hex.has(style) ? rows : []));
+  setDataIfChanged(map.getSource("surge-points") as GeoJSONSource | undefined, pointsGeo(shown && USES.points.has(style) ? rows : []));
+  setDataIfChanged(map.getSource("surge-dots") as GeoJSONSource | undefined, dotsGeo(shown && USES.dots.has(style) ? rows : []));
   const visible = new Set(shown ? LAYERS[style] : []);
   for (const ids of Object.values(LAYERS)) {
     for (const id of ids) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible.has(id) ? "visible" : "none");
@@ -176,8 +203,8 @@ export function updateDriverSurgeLayers(map: maplibregl.Map, rows: readonly Zone
     const level = row ? driverSurgeLevel(row.multiplier) : null;
     feature.properties = { ...feature.properties, color: level ? DRIVER_LEVEL_COLOR[level] : "#000000", opacity: DRIVER_FILL_OPACITY, selected: false };
   }
-  (map.getSource("surge-zones") as GeoJSONSource | undefined)?.setData(geo);
-  for (const id of ["surge-glow", "surge-hex", "surge-points", "surge-dots"]) (map.getSource(id) as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: [] });
+  setDataIfChanged(map.getSource("surge-zones") as GeoJSONSource | undefined, geo);
+  for (const id of ["surge-glow", "surge-hex", "surge-points", "surge-dots"]) setDataIfChanged(map.getSource(id) as GeoJSONSource | undefined, { type: "FeatureCollection", features: [] });
   const visible = new Set(shown ? ["surge-zone-fill", "surge-zone-line"] : []);
   for (const ids of Object.values(LAYERS)) {
     for (const id of ids) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible.has(id) ? "visible" : "none");
