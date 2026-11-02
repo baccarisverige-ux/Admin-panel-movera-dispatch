@@ -297,13 +297,50 @@ test("live fix 2026-11-02 (audit 1f): the 'See changes' list is in the panel's l
 });
 
 test("live fix 2026-11-02 (audit 1e): unpublished dispatch edits are kept outside the page, per signed-in admin", async () => {
-  const { clearWorkingDraft, hasWorkingDraft, readWorkingDraft, updateWorkingDraft } = await import("../dispatch/workingDraft.ts");
+  const { clearWorkingDraft, hasWorkingDraft, makePatch, readWorkingDraft, updateWorkingDraft } = await import("../dispatch/workingDraft.ts");
   clearWorkingDraft();
   assert.equal(hasWorkingDraft(), false);
-  updateWorkingDraft<{ n: number }, never>(() => ({ zones: { Z001: { n: 1 } } }));
+  const patch = makePatch({ n: 0, m: 1 }, { n: 1, m: 1 }, 7)!;
+  updateWorkingDraft(() => ({ zones: { Z001: patch } }));
   // A second page reading the store (Rules › Best driver after Radar · Exclusive) sees the same draft.
-  assert.deepEqual(readWorkingDraft<{ n: number }, never>().zones, { Z001: { n: 1 } });
+  assert.deepEqual(readWorkingDraft().zones, { Z001: { baseRev: 7, base: { n: 0 }, changes: { n: 1 }, conflicts: {} } });
   assert.equal(hasWorkingDraft(), true);
   clearWorkingDraft();
   assert.equal(hasWorkingDraft(), false);
+});
+
+test("checker PR #200: two admins — my patch re-applies on the other admin's publish; a field we both changed is a conflict, never overwritten", async () => {
+  const { applyPatch, makePatch, rebasePatch, resolveConflict } = await import("../dispatch/workingDraft.ts");
+  const rev1 = { radar: { km: 2, seconds: 30 }, exclusive: { seconds: 15 }, limits: [1, 2] };
+  // Admin A changes radar.km and exclusive.seconds against rev 1.
+  const mine = makePatch(rev1, { radar: { km: 5, seconds: 30 }, exclusive: { seconds: 20 }, limits: [1, 2] }, 1)!;
+  assert.deepEqual(Object.keys(mine.changes).sort(), ["exclusive\u0001seconds", "radar\u0001km"]);
+  // Admin B publishes rev 2: radar.seconds and limits (untouched by A) and exclusive.seconds (also changed by A).
+  const rev2 = { radar: { km: 2, seconds: 45 }, exclusive: { seconds: 10 }, limits: [3] };
+  const rebased = rebasePatch(mine, rev2, 2)!;
+  assert.equal(rebased.baseRev, 2);
+  // B's untouched-by-A fields stay; A's other change stays; the shared field keeps A's value but is flagged.
+  assert.deepEqual(applyPatch(rev2, rebased), { radar: { km: 5, seconds: 45 }, exclusive: { seconds: 20 }, limits: [3] });
+  assert.deepEqual(rebased.conflicts, { "exclusive\u0001seconds": { mine: 20, theirs: 10 } });
+  // Take theirs: B's value, A's radar.km still applied.
+  const theirs = resolveConflict(rebased, "exclusive\u0001seconds", "theirs")!;
+  assert.deepEqual(applyPatch(rev2, theirs), { radar: { km: 5, seconds: 45 }, exclusive: { seconds: 10 }, limits: [3] });
+  assert.deepEqual(theirs.conflicts, {});
+  // Keep mine: A's value, conflict closed.
+  const kept = resolveConflict(rebased, "exclusive\u0001seconds", "mine")!;
+  assert.deepEqual(applyPatch(rev2, kept).exclusive, { seconds: 20 });
+  assert.deepEqual(kept.conflicts, {});
+  // B set the same value A did: nothing left to publish for that field, no conflict.
+  const same = rebasePatch(mine, { ...rev2, radar: { km: 5, seconds: 45 }, exclusive: { seconds: 15 } }, 3)!;
+  assert.deepEqual(Object.keys(same.changes), ["exclusive\u0001seconds"]);
+  assert.deepEqual(same.conflicts, {});
+});
+
+test("checker PR #200: sign-out throws the unpublished dispatch edits away and forgets their admin", async () => {
+  const { clearWorkingDraft, hasWorkingDraft, makePatch, readWorkingDraft, updateWorkingDraft } = await import("../dispatch/workingDraft.ts");
+  updateWorkingDraft(() => ({ owner: "admin-a", zones: { Z001: makePatch({ n: 0 }, { n: 1 }, 1)! } }));
+  assert.equal(hasWorkingDraft(), true);
+  clearWorkingDraft({ signOut: true });
+  assert.equal(hasWorkingDraft(), false);
+  assert.equal(readWorkingDraft().owner, "");
 });

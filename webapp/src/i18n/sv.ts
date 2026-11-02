@@ -8372,4 +8372,10 @@ export const sv: Record<MessageKey, string> = {
   "the last step": "sista steget",
   "{0} changed": "{0} ändrad",
   "Zone {0} cannot be opened here. Choose it at the top, or pick a zone below.": "Zonen {0} kan inte öppnas här. Välj den högst upp, eller välj en zon nedan.",
+  "Changed by another admin": "Ändrat av en annan admin",
+  "Another admin published while you were editing. These fields were changed by both of you — choose which value to keep. Everything else you changed is kept.": "En annan admin publicerade medan du redigerade. De här fälten ändrades av er båda – välj vilket värde som ska gälla. Allt annat du ändrade behålls.",
+  "yours {0}, theirs {1}": "ditt {0}, deras {1}",
+  "Keep mine": "Behåll mitt",
+  "Take theirs": "Ta deras",
+  "Unpublished changes in Dispatch ({0})": "Opublicerade ändringar i Dispatch ({0})",
 };

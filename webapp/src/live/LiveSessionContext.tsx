@@ -1,3 +1,4 @@
+import { clearWorkingDraft } from "../dispatch/workingDraft";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { SessionContext, type SessionValue } from "../auth/SessionContext";
@@ -51,6 +52,8 @@ export function LiveSessionProvider({ children, baseUrl = liveBaseUrl(import.met
   useEffect(() => {
     signedOutBy.current = (reason) => {
       queryClient.clear();
+      // Checker fix (PR #200): any sign-out (own, idle, ended by the server) drops the unpublished Dispatch edits.
+      clearWorkingDraft({ signOut: true });
       setError(null);
       setSignedOut(reason === "refresh_failed" ? "ended" : idleSignOut.current ? "idle" : null);
       idleSignOut.current = false;
@@ -92,7 +95,7 @@ export function LiveSessionProvider({ children, baseUrl = liveBaseUrl(import.met
     }
   }, [client]);
 
-  const signOut = useCallback(() => { void client.signOut(); }, [client]);
+  const signOut = useCallback(() => { clearWorkingDraft({ signOut: true }); void client.signOut(); }, [client]);
 
   const live = useMemo<LiveSessionValue>(() => ({
     admin,

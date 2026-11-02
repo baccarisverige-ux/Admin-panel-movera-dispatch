@@ -8372,4 +8372,10 @@ export const fr: Record<MessageKey, string> = {
   "the last step": "le dernier palier",
   "{0} changed": "{0} modifié",
   "Zone {0} cannot be opened here. Choose it at the top, or pick a zone below.": "La zone {0} ne peut pas être ouverte ici. Choisissez-la en haut, ou choisissez une zone ci-dessous.",
+  "Changed by another admin": "Modifié par un autre admin",
+  "Another admin published while you were editing. These fields were changed by both of you — choose which value to keep. Everything else you changed is kept.": "Un autre admin a publié pendant que vous modifiiez. Ces champs ont été modifiés par vous deux — choisissez la valeur à garder. Tout le reste de vos modifications est conservé.",
+  "yours {0}, theirs {1}": "le vôtre {0}, le leur {1}",
+  "Keep mine": "Garder le mien",
+  "Take theirs": "Prendre le leur",
+  "Unpublished changes in Dispatch ({0})": "Modifications non publiées dans Dispatch ({0})",
 };

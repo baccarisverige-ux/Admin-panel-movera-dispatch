@@ -8370,6 +8370,12 @@ export const en = {
   "the last step": "the last step",
   "{0} changed": "{0} changed",
   "Zone {0} cannot be opened here. Choose it at the top, or pick a zone below.": "Zone {0} cannot be opened here. Choose it at the top, or pick a zone below.",
+  "Changed by another admin": "Changed by another admin",
+  "Another admin published while you were editing. These fields were changed by both of you — choose which value to keep. Everything else you changed is kept.": "Another admin published while you were editing. These fields were changed by both of you — choose which value to keep. Everything else you changed is kept.",
+  "yours {0}, theirs {1}": "yours {0}, theirs {1}",
+  "Keep mine": "Keep mine",
+  "Take theirs": "Take theirs",
+  "Unpublished changes in Dispatch ({0})": "Unpublished changes in Dispatch ({0})",
 } as const;
 
 export type MessageKey = keyof typeof en;
