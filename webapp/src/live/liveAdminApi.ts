@@ -39,6 +39,7 @@ import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { formatNumber, tr } from "../i18n/index.ts";
 import { rideCheckRecords } from "./rideChecks.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
+import { readDraft, savePublish, standardKey } from "./configDocs.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
@@ -666,6 +667,23 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(input.targetId)}/wallet-credit`, { amount: { amountMinor: amount.amountMinor, currency: amount.currency }, reason: reason.slice(0, 300) }).catch(explained);
       if (next?.riderId) riders.set(next.riderId, next);
       return done("Saved.");
+    }
+    // v0.18.16 A2 (owner build-spec Q4, contract.json#payoutMode): one admin approves a manual country's run.
+    if (input.action === "admin.payout.approveRun") {
+      const { country, periodEnd } = (input.value ?? {}) as { country?: string; periodEnd?: string };
+      if (!country || !periodEnd) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      await client.post("/admin/payouts/runs/approve", { country, periodEnd }).catch(explained);
+      return done("Run approved: the payouts can be paid.");
+    }
+    // v0.18.16 A2 (owner Q4 + G10-2): the country's payout mode and schedule, in its Standard's CountryRules (kept otherwise).
+    if (input.action === "admin.payout.settings") {
+      const { country, mode, schedule } = (input.value ?? {}) as { country?: string; mode?: string; schedule?: unknown };
+      if (!country || (mode !== "automatic" && mode !== "manual") || !schedule) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const http = { json: <T,>(path: string) => client.json<T>(path), put: <T,>(path: string, body: unknown) => client.put<T>(path, body), post: <T,>(path: string, body: unknown) => client.post<T>(path, body), del: <T,>(path: string) => client.del<T>(path) };
+      const key = standardKey(country);
+      const draft = await readDraft(http, "country_rules", key).catch(explained);
+      await savePublish(http, "country_rules", key, draft, { ...(draft?.document ?? {}), country, payoutMode: mode, payoutSchedule: schedule }).catch(explained);
+      return done("Payout settings published.");
     }
     // v0.18.16 A2 (owner Q4): pause / release one driver's payouts from his profile, with the reason.
     if (input.action === "admin.driver.payoutHold") {

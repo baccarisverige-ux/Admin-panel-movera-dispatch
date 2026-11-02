@@ -8,6 +8,8 @@ import type { Driver, LiveMoney, Page } from "./types";
 import { NotConnected } from "./NotConnected";
 import { useMarketScope } from "../markets/useMarketScope";
 import { zoneFilterOf } from "./zoneFilter";
+import { LivePayoutSettings } from "./LivePayoutSettings";
+import { CommandButton } from "../ui/CommandButton";
 
 /**
  * Live builds only, in the demo Payouts page (contract v0.9.0 §16, owner real-data decisions part 3): the server's
@@ -62,10 +64,11 @@ function payoutTo(value: unknown): string {
 }
 
 export function LivePayouts() {
-  const { client } = useLiveSession();
+  const { client, can } = useLiveSession();
   const queryClient = useQueryClient();
   // v0.17.2: the payouts of the country and zones picked in the top bar.
-  const zoneFilter = zoneFilterOf(useMarketScope().effective);
+  const scope = useMarketScope();
+  const zoneFilter = zoneFilterOf(scope.effective);
   const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
   const payouts = useQuery({ queryKey: ["live", "payouts", zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<LivePayout>) : client.json<Page<LivePayout>>(`/admin/payouts?limit=100${zoneQuery ? `&${zoneQuery}` : ""}`)) });
   const refunds = useQuery({ queryKey: ["live", "refund-payouts"], queryFn: () => client.json<Page<RefundToSend>>("/admin/refunds/payouts?payoutStatus=pending") });
@@ -76,6 +79,13 @@ export function LivePayouts() {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ driverId: "", from: "", to: "", note: "" });
   const items = payouts.data?.items ?? [];
+  // v0.18.16 A2 (owner Q4): a manual country's runs wait for one admin's approval, one run per period end.
+  const waitingRuns = [...new Set(items.filter((item) => item.status === "pending_approval").map((item) => item.periodEnd))].sort().map((periodEnd) => {
+    const rows = items.filter((item) => item.status === "pending_approval" && item.periodEnd === periodEnd);
+    const totals = new Map<string, number>();
+    for (const row of rows) totals.set(row.amount.currency, (totals.get(row.amount.currency) ?? 0) + row.amount.amountMinor);
+    return { periodEnd, periodStart: rows[0]!.periodStart, count: rows.length, totals: [...totals].map(([currency, amountMinor]) => ({ amountMinor, currency }) as LiveMoney) };
+  });
   const selected = items.find((item) => item.payoutId === selectedId) ?? items[0];
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["live", "payouts"] });
@@ -104,6 +114,22 @@ export function LivePayouts() {
       {notice ? <p className="state-line" role="status">{notice}</p> : null}
       {error ? <ErrorLine error={error} onRetry={() => setError(null)} /> : null}
 
+      <LivePayoutSettings country={scope.market.id} countryName={scope.market.name} />
+
+      {waitingRuns.length ? (
+        <section className="panel fn-panel" aria-label={tr("Runs waiting for approval")} data-testid="live-payout-runs">
+          <h3>{tr("Runs waiting for approval")}</h3>
+          <ul className="pm-list">
+            {waitingRuns.map((runRow) => (
+              <li key={runRow.periodEnd} data-run={runRow.periodEnd}>
+                <span className="pm-main"><b>{day(runRow.periodStart)} – {day(runRow.periodEnd)}</b><small>{tr("{0} drivers", [runRow.count])} · {runRow.totals.map(liveMoney).join(" + ")}</small></span>
+                <CommandButton command="admin.payout.approveRun" className="dash-btn small" targetId={`${scope.market.id} ${day(runRow.periodEnd)}`} confirmTarget={false} before={tr("Waiting for approval")} after={tr("To pay")} value={{ country: scope.market.id, periodEnd: runRow.periodEnd }} disabled={!can("finance.edit")} onDone={() => { setNotice(tr("Run approved: the payouts can be paid.")); refresh(); }}>{tr("Approve run")}</CommandButton>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="panel fn-panel" aria-label={tr("Payouts")}>
         <h3>{tr("Payouts")}</h3>
         <p className="op-help">{tr("Every week (Monday to Monday) the server makes one payout per driver. Amount = trips + waiting + pickup pay + bonus + tips + fees − cash collected; below zero, the driver owes Movera.")}</p>
@@ -117,7 +143,7 @@ export function LivePayouts() {
                   <td>{item.driverName ?? item.driverId}</td>
                   <td>{item.tripCount}</td>
                   <td className={item.amount.amountMinor < 0 ? "minus" : undefined}>{liveMoney(item.amount)}</td>
-                  <td>{item.status === "paid" ? tr("Paid") : tr("To pay")}</td>
+                  <td>{item.status === "paid" ? tr("Paid") : item.status === "pending_approval" ? tr("Waiting for approval") : tr("To pay")}</td>
                   <td>{item.source === "weekly" ? tr("Weekly") : tr("By hand")}</td>
                 </tr>
               ))}
@@ -140,7 +166,7 @@ export function LivePayouts() {
           </dl>
           <p className="op-help">{selected.status === "paid" ? tr("Paid {0}.", [selected.paidAt ? day(selected.paidAt) : ""]) : tr("Not paid yet.")} {selected.note ?? ""}</p>
           <p className="op-help">{tr("Bank details")}: <NotConnected /></p>
-          <button type="button" className="primary-btn" data-command="admin.payment.markPaid" disabled={busy || selected.status === "paid"} onClick={() => void run(() => client.post(`/admin/payouts/${encodeURIComponent(selected.payoutId)}/paid`, {}), tr("Payout marked as paid."))}>{tr("Mark as paid")}</button>
+          <button type="button" className="primary-btn" data-command="admin.payment.markPaid" disabled={busy || selected.status === "paid" || selected.status === "pending_approval"} title={selected.status === "pending_approval" ? tr("Approve the run first.") : undefined} onClick={() => void run(() => client.post(`/admin/payouts/${encodeURIComponent(selected.payoutId)}/paid`, {}), tr("Payout marked as paid."))}>{tr("Mark as paid")}</button>
         </article>
       ) : null}
 

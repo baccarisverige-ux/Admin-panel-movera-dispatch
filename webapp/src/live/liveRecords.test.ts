@@ -154,3 +154,10 @@ test("v0.18.16 A2: the rider's warning / pause / ban comes through on the record
   assert.deepEqual(rider.liveRider?.moderation, moderation);
   assert.equal(rider.status, "suspended");
 });
+
+test("v0.18.16 A2 (owner Q4): payout settings read the Standard's mode and schedule, bad values fall back to the defaults", async () => {
+  const { payoutSettingsOf } = await import("./payoutSettings.ts");
+  assert.deepEqual(payoutSettingsOf(null), { mode: "automatic", schedule: { frequency: "weekly", day: "monday", time: "08:00" } });
+  assert.deepEqual(payoutSettingsOf({ payoutMode: "manual", payoutSchedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" } }), { mode: "manual", schedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" } });
+  assert.deepEqual(payoutSettingsOf({ payoutMode: "weird", payoutSchedule: { frequency: "daily", day: "someday", time: "25:00" } }), { mode: "automatic", schedule: { frequency: "weekly", day: "monday", time: "08:00" } });
+});
