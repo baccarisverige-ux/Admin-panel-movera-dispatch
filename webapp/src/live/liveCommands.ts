@@ -43,7 +43,7 @@ export const SCREEN_ONLY_COMMANDS: ReadonlySet<string> = new Set([
   "admin.drivers.bonusDraw", "admin.drivers.bonusForm", "admin.drivers.view",
   "admin.errors.status", "admin.errors.view",
   "admin.inbox.view",
-  "admin.incident.report", "admin.incident.view",
+  "admin.incident.view",
   "admin.live.focus",
   "admin.message.useText",
   "admin.onboarding.editTypes", "admin.onboarding.view",
