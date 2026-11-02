@@ -37,7 +37,7 @@ test("defaults are the contract defaults (Q5, Q6, Q7, Q10, Q17, Q49)", () => {
   assert.equal(se.promoCap, null);
   assert.deepEqual([se.driverBonusLimit, defaultCountrySettings("FR").driverBonusLimit, defaultCountrySettings("TN").driverBonusLimit], [200, 20, 60]);
   assert.deepEqual([driverBonusHardMax("SE"), driverBonusHardMax("FR"), driverBonusHardMax("TN")], [1000, 95, 300]);
-  assert.deepEqual(se.paymentMethods, { cash: true, card: true, apple_pay: true, google_pay: true });
+  assert.deepEqual(se.paymentMethods, { cash: true, card: true, apple_pay: true });
   assert.deepEqual(se.languages, { rider: "sv", driver: "sv", admin: "sv" });
   assert.deepEqual(defaultCountrySettings("TN").languages, { rider: "fr", driver: "fr", admin: "fr" });
 });
@@ -73,7 +73,7 @@ test("other checks: amounts above 0 and under the maximum, a promo cap above 0, 
   assert.match(countrySettingsIssues("SE", { ...se, raiseSteps: [{ id: "raise-1", amount: 600, enabled: true }] })[0], /at most 500 kr/);
   assert.match(countrySettingsIssues("TN", { ...defaultCountrySettings("TN"), tips: [{ id: "tip-1", amount: 1.2345, enabled: true }] })[0], /3 decimals/);
   assert.match(countrySettingsIssues("SE", { ...se, promoCap: 0 })[0], /promo cap/);
-  assert.match(countrySettingsIssues("SE", { ...se, paymentMethods: { cash: false, card: false, apple_pay: false, google_pay: false } })[0], /payment method/);
+  assert.match(countrySettingsIssues("SE", { ...se, paymentMethods: { cash: false, card: false, apple_pay: false } })[0], /payment method/);
   assert.match(countrySettingsIssues("SE", { ...se, languages: { ...se.languages, admin: "de" as "en" } })[0], /language/);
 });
 
@@ -87,7 +87,7 @@ test("Q29: tips, raise steps, promo cap and bonus limit moving more than 50 % as
 
 test("a save keeps only its section's fields, so Pricing and Settings never overwrite each other", () => {
   const current = emptyCountrySettingsBook();
-  const sent = withCountry("SE", { tips: [{ id: "tip-1", amount: 15, enabled: true }], paymentMethods: { cash: false, card: true, apple_pay: true, google_pay: true } });
+  const sent = withCountry("SE", { tips: [{ id: "tip-1", amount: 15, enabled: true }], paymentMethods: { cash: false, card: true, apple_pay: true } });
   const pricing = saveCountrySettings(current, sent, "pricing");
   assert.equal(pricing.error, undefined);
   assert.equal(pricing.book.draftRev, 2);
@@ -96,7 +96,7 @@ test("a save keeps only its section's fields, so Pricing and Settings never over
   const settings = saveCountrySettings(pricing.book, sent, "settings");
   assert.equal(countrySettingsOf(settings.book, "SE").paymentMethods.cash, false);
   assert.deepEqual(countrySettingsOf(settings.book, "SE").tips, [{ id: "tip-1", amount: 15, enabled: true }]);
-  assert.ok(settings.lines.includes("Sweden: Cash: on → off"));
+  assert.ok(settings.lines.includes("Sweden: Pay in car: on → off"));
   assert.equal(saveCountrySettings(settings.book, settings.book, "settings").error, "Nothing changed.");
   assert.match(saveCountrySettings(current, withCountry("FR", { driverBonusLimit: 200 }), "pricing").error ?? "", /hard max/);
 });
@@ -116,7 +116,7 @@ test("the exporters read every new setting instead of the defaults", () => {
     raiseSteps: [{ id: "raise-1", amount: 40, enabled: true }],
     promoCap: 75.5,
     driverBonusLimit: 300,
-    paymentMethods: { cash: false, card: true, apple_pay: true, google_pay: false },
+    paymentMethods: { cash: false, card: true, apple_pay: true },
     languages: { rider: "en", driver: "fr", admin: "sv" },
   });
   const dispatch = emptyDispatchBook();
@@ -173,7 +173,7 @@ test("the fixture server checks a save and keeps only the section's fields", asy
   };
   await refused(save("admin.pricing.saveCountry", withCountry("SE", { driverBonusLimit: 1001 }), "c-over"), 422);
   await refused(save("admin.pricing.saveCountry", withCountry("SE", { promoCap: 50 }), "c-role", "astrid"), 403);
-  await save("admin.pricing.saveCountry", withCountry("SE", { promoCap: 50, paymentMethods: { cash: false, card: true, apple_pay: true, google_pay: true } }), "c-ok");
+  await save("admin.pricing.saveCountry", withCountry("SE", { promoCap: 50, paymentMethods: { cash: false, card: true, apple_pay: true } }), "c-ok");
   const stored = normalizeCountrySettingsBook(await api.readSlice(COUNTRY_SETTINGS_KEY, null));
   assert.equal(stored.countries.SE.promoCap, 50);
   assert.equal(stored.countries.SE.paymentMethods.cash, true, "a Pricing save cannot change payment methods");

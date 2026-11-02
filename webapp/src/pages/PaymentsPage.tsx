@@ -25,6 +25,40 @@ import { accountOk, bicOk, clearingBank, ibanOk } from "../payments/ledger";
 import { CommandButton } from "../ui/CommandButton";
 import { PaymentsDesk } from "../payments/PaymentsDesk";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { Link } from "react-router";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { NotConnected } from "../live/NotConnected";
+
+/**
+ * v0.18.10 (G8, owner rule 1: no fake on live): the live panel shows only what the server has. Payments are the server's
+ * (GET /admin/payments). Movera takes only Pay in car (cash) today, so nothing can fail at a card company or be disputed;
+ * refund rules and the method / voucher / bank tools have no server source yet. Refunds are made on the trip page.
+ */
+function LivePaymentsTab({ tab }: { tab: string }) {
+  if (tab === "failed" || tab === "disputes") {
+    return (
+      <article className="panel" data-testid={`live-payments-${tab}`}>
+        <p>{tr("Movera takes only Pay in car (cash) today: no card payment can fail or be disputed. This tab fills when a payment company is connected.")}</p>
+        <NotConnected block />
+      </article>
+    );
+  }
+  if (tab === "rules") {
+    return (
+      <article className="panel" data-testid="live-payments-rules">
+        <p>{tr("One admin is enough for every refund on live. Refunds are made on the trip page (Give money back, with Take it from the driver's share).")}</p>
+        <NotConnected block />
+      </article>
+    );
+  }
+  return (
+    <article className="panel" data-testid="live-payments-tools">
+      <p>{tr("Payment methods are set per country in Settings › Payment methods (Pay in car, card, Apple Pay).")} <Link to="/settings#country-apps">{tr("Open Settings")}</Link></p>
+      <p>{tr("Refunds to send by Swish or bank are in Finance › Payouts.")}</p>
+      <p>{tr("Vouchers, reconciliation and bank accounts:")} <NotConnected /></p>
+    </article>
+  );
+}
 
 type Tab = "payments" | "failed" | "disputes" | "numbers" | "rules" | "tools";
 const TABS: { id: Tab; label: string }[] = [
@@ -40,6 +74,7 @@ export function PaymentsPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { agent } = useSession();
+  const liveSession = useLiveSessionMaybe();
   const payments = useRecords("payments", null);
   const zones = useRecords("zones", null);
   const riders = useRecords("riders", null);
@@ -115,6 +150,7 @@ export function PaymentsPage() {
   }
 
   const tab = (TABS.find((item) => item.id === params.get("tab"))?.id ?? "payments") as Tab;
+  const live = Boolean(liveSession);
   const selectTab = (id: Tab) => setParams(() => {
     const next = new URLSearchParams(globalThis.location.search);
     if (id === "payments") next.delete("tab");
@@ -128,13 +164,13 @@ export function PaymentsPage() {
         <button data-command="admin.payment.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}>{trn("{0} Back", <ArrowLeft size={16} aria-hidden="true" />)}</button>
         <div className="dx-head-text">
           <h2>{tr("Payments")}</h2>
-          <p data-testid="payment-count">{trn("{0} payments in the ledger. Amounts are in each record's own currency; totals are for the chosen country. Wallet vouchers are constrained to 100, 200 and 500 kr. Finance revision {1}.", rows.length, finance.draftRev)}</p>
+          <p data-testid="payment-count">{live ? tr("{0} payments from the server. Amounts are in each record's own currency.", [rows.length]) : trn("{0} payments in the ledger. Amounts are in each record's own currency; totals are for the chosen country. Wallet vouchers are constrained to 100, 200 and 500 kr. Finance revision {1}.", rows.length, finance.draftRev)}</p>
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Payment sections")}>
         {TABS.map((item) => <button data-command="admin.payment.view" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => selectTab(item.id)}>{trx(item.label)}</button>)}
       </div>
-      {tab !== "tools" ? <PaymentsDesk tab={tab} rows={rows} loading={payments.isLoading} /> : (
+      {live && tab !== "payments" && tab !== "numbers" ? <LivePaymentsTab tab={tab} /> : tab !== "tools" ? <PaymentsDesk tab={tab} rows={rows} loading={payments.isLoading} /> : (
       <>
       <p className="state-line">{trSentences(notice)} {trSentences(financeStore.message)}</p>
 

@@ -96,28 +96,28 @@ test("Q7 FINAL / Q49: payment methods and default languages per country in Setti
   await session(page);
   await page.goto("/settings");
   const panel = page.getByTestId("country-apps");
-  await expect(panel.getByRole("columnheader", { name: "Cash" })).toBeVisible();
-  await expect(panel).not.toContainText(/Swish|Klarna|PayPal/);
+  await expect(panel.getByRole("columnheader", { name: "Pay in car" })).toBeVisible();
+  await expect(panel).not.toContainText(/Swish|Klarna|PayPal|Google Pay/);
   await expect(panel).toContainText("one balance per currency");
   await expect(panel.getByLabel("Tunisia rider language")).toHaveValue("fr");
-  await panel.getByLabel("Sweden Cash").uncheck();
+  await panel.getByLabel("Sweden Pay in car").uncheck();
   await panel.getByLabel("Sweden rider language").selectOption("en");
   await panel.getByLabel("France admin language").selectOption("sv");
-  await expect(panel.getByRole("list", { name: "Unsaved payment and language changes" })).toContainText("Sweden: Cash: on → off");
+  await expect(panel.getByRole("list", { name: "Unsaved payment and language changes" })).toContainText("Sweden: Pay in car: on → off");
   await panel.getByRole("button", { name: "Save payment methods and languages" }).click();
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
   await expect(panel.getByText("Payment methods and languages saved.")).toBeVisible();
   await page.reload();
-  await expect(panel.getByLabel("Sweden Cash")).not.toBeChecked();
+  await expect(panel.getByLabel("Sweden Pay in car")).not.toBeChecked();
   await expect(panel.getByLabel("Sweden rider language")).toHaveValue("en");
 
   await page.goto("/dispatch?zone=Z001");
   const rider = await appConfig(page, "Rider");
-  expect(rider.paymentMethods).toEqual(["card", "apple_pay", "google_pay"]);
+  expect(rider.paymentMethods).toEqual(["card", "apple_pay"]);
   expect((rider.languages as { default: unknown }).default).toEqual({ rider: "en", driver: "sv", admin: "sv" });
   await page.goto("/dispatch?country=FR&zone=FR-PC");
   const driver = await appConfig(page, "Driver");
-  expect(driver.paymentMethods).toEqual(["cash", "card", "apple_pay", "google_pay"]);
+  expect(driver.paymentMethods).toEqual(["cash", "card", "apple_pay"]);
   expect((driver.languages as { default: unknown }).default).toEqual({ rider: "fr", driver: "fr", admin: "sv" });
 });
 

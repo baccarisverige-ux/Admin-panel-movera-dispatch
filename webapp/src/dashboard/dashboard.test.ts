@@ -4,7 +4,7 @@ import { createSeed, SEED_NOW } from "../api/seed.ts";
 import { marketZoneIds } from "../markets/markets.ts";
 import { change, earningsReport } from "./earnings.ts";
 import { countStates, liveDrivers } from "./live.ts";
-import { bucketStarts, parsePeriod, periodParams, periodWindow } from "./period.ts";
+import { bucketStarts, parsePeriod, periodParams, periodWindow, periodWindowUntil } from "./period.ts";
 import { rideCounts, scheduledRides } from "./scheduled.ts";
 import { ON_THE_WAY_MAX_MIN, onTheWayRequests, rideRequests } from "./riders.ts";
 
@@ -223,4 +223,21 @@ test("03c fix: the Live map's open requests (count and markers) leave out a book
   } finally {
     setLiveData(false);
   }
+});
+
+test("Today at 23:59 stays today when now is rounded up to the next minute (failed in CI at midnight)", () => {
+  const clock = Date.parse("2026-11-01T22:59:03Z"); // 23:59:03 Sunday in Stockholm
+  const until = Math.ceil(clock / 60_000) * 60_000; // 00:00 Monday
+  const today = periodWindowUntil({ kind: "today" }, clock, until, STOCKHOLM);
+  assert.equal(today.start, Date.parse("2026-10-31T23:00:00Z"), "today starts at Sunday 00:00 Stockholm");
+  assert.equal(today.end, until, "and runs to the rounded minute");
+  assert.ok(Date.parse("2026-11-01T22:59:01Z") >= today.start && Date.parse("2026-11-01T22:59:01Z") < today.end, "work at 23:59 is in Today");
+  assert.equal(today.prevEnd - today.prevStart, today.end - today.start, "the compare span is as long");
+  // Just after midnight: a new, one-minute day.
+  const after = Date.parse("2026-11-01T23:01:00Z");
+  const monday = periodWindowUntil({ kind: "today" }, after, Math.ceil((after + 1) / 60_000) * 60_000, STOCKHOLM);
+  assert.equal(monday.start, Date.parse("2026-11-01T23:00:00Z"));
+  assert.ok(monday.end > after);
+  // Never past the period's own end.
+  assert.equal(periodWindowUntil({ kind: "today" }, clock, clock + 3 * 3_600_000, STOCKHOLM).end, today.spanEnd);
 });

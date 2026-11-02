@@ -152,7 +152,7 @@ export function isLiveWithDriver(status: string, driverId: string | null | undef
 
 /**
  * Owner 2026-10-31 (live trip page said "Up to 0,00 kr … hard max 0,00 kr"): the driver bonus limits of a trip's
- * country from the server's country_rules document (GET /admin/config/country_rules?zoneId=… → document.driverBonus
+ * country from the document the server enforces them with (the zone's live driver_app_config → document.driverBonus
  * { defaultLimit, hardMax }, CONTRACT.md §6.5), else the contract's configDefaults for the country. Never 0 unless the
  * server says 0; the limit never passes the hard max.
  */
