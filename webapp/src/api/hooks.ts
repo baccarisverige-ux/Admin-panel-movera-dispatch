@@ -230,7 +230,7 @@ export function useCommands() {
     /** Asks the server what happened to this operation key. */
     async function recheck(fallback: string, answer?: CommandResult) {
       try {
-        const outcome = outcomeOf(await api.operation(idempotencyKey, actorId), fallback, answer);
+        const outcome = outcomeOf(await api.operation(idempotencyKey, actorId), fallback, answer, api.kind === "http");
         setPhase(outcome.phase);
         setMessage(outcome.message);
         retrySameKey.current = outcome.retrySameKey;

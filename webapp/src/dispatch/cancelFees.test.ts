@@ -114,3 +114,24 @@ test("A-O3: cancel fees moving more than 50 % from the published table are liste
   switched.economy = { ...switched.economy, type: "percent", value: 90 };
   assert.deepEqual(largeCancelFeeChanges(live, switched, cats, "x", "kr"), [], "a fixed to % switch has nothing to compare");
 });
+
+test("G7 live fix 2: the rider-sees line is in the panel's language (sv / fr / en)", async () => {
+  const { registerDictionary, setLanguage } = await import("../i18n/core.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  const comfort = zoneDefault("Z001").riderCancel.fees.comfort;
+  const eur = (value: number) => `${value} €`;
+  try {
+    setLanguage("fr");
+    assert.equal(riderSeesLine("live", comfort, 250, "FR", eur).line, "Annulation gratuite pendant 2 min après l'acceptation du chauffeur · puis 45 €");
+    setLanguage("sv");
+    assert.equal(riderSeesLine("live", comfort, 250, "SE", kr).line, "Gratis avbokning i 2 min efter att föraren accepterat · sedan 45 kr");
+    assert.equal(riderSeesLine("live", { ...comfort, freeMin: 0, value: 0 }, 250, "SE", kr).line, "Ingen gratis avbokning efter att föraren accepterat · ingen avgift efteråt");
+    setLanguage("en");
+    assert.equal(riderSeesLine("live", comfort, 250, "SE", kr).line, "Free cancel for 2 min after the driver accepts · then 45 kr");
+  } finally {
+    setLanguage("en");
+  }
+});
