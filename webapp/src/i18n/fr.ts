@@ -5228,7 +5228,7 @@ export const fr: Record<MessageKey, string> = {
   "Not connected yet": "Pas encore connecté",
   "Drivers and trips from the server; the rest is not connected yet.": "Chauffeurs et courses depuis le serveur ; le reste n'est pas encore connecté.",
   "Trips from the server; the rest is not connected yet.": "Courses depuis le serveur ; le reste n'est pas encore connecté.",
-  "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions and full refund come from the server; part refund, driver pay and receipts are not connected yet.": "Courses, page de course, offres, chat, contrôle de course, signalement, notes, dossiers, actions sur la course et remboursement complet viennent du serveur ; remboursement partiel, paie du chauffeur et reçus pas encore connectés.",
+  "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions, refunds (full and part), driver pay changes and receipts come from the server.": "Courses, page de course, offres, chat, contrôle de course, signalement, notes, dossiers, actions sur la course, remboursements (complets et partiels), changements de paie du chauffeur et reçus viennent du serveur.",
   "Drivers and trips from the server; positions are not connected yet.": "Chauffeurs et courses depuis le serveur ; les positions ne sont pas encore connectées.",
   "Trips and drivers from the server; dispatch actions are not connected yet.": "Courses et chauffeurs depuis le serveur ; les actions de dispatch ne sont pas encore connectées.",
   "Trips and their offers from the server; sending offers is not connected yet.": "Courses et leurs offres depuis le serveur ; l'envoi d'offres n'est pas encore connecté.",
@@ -8292,4 +8292,9 @@ export const fr: Record<MessageKey, string> = {
   "at most {0}": "au plus {0}",
   "The server did not confirm it in time.": "Le serveur ne l'a pas confirmé à temps.",
   "Part of it may be saved but not live yet: check the page and press it again.": "Une partie est peut-être enregistrée mais pas encore en ligne : vérifiez la page et appuyez à nouveau.",
+  "This saves the payment methods and languages of every country and sends them to every zone. Keep this page open until it is done.": "Cela enregistre les moyens de paiement et les langues de chaque pays et les envoie à chaque zone. Gardez cette page ouverte jusqu'à la fin.",
+  "Some zones were not updated.": "Certaines zones n'ont pas été mises à jour.",
+  "Press Save again to update them.": "Appuyez à nouveau sur Enregistrer pour les mettre à jour.",
+  "Waiting for the next radar: {0}": "En attente du prochain radar : {0}",
+  "Waiting for the next exclusive offer: {0}": "En attente de la prochaine offre exclusive : {0}",
 };

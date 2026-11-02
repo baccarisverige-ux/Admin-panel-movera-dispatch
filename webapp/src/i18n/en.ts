@@ -5226,7 +5226,7 @@ export const en = {
   "Not connected yet": "Not connected yet",
   "Drivers and trips from the server; the rest is not connected yet.": "Drivers and trips from the server; the rest is not connected yet.",
   "Trips from the server; the rest is not connected yet.": "Trips from the server; the rest is not connected yet.",
-  "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions and full refund come from the server; part refund, driver pay and receipts are not connected yet.": "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions and full refund come from the server; part refund, driver pay and receipts are not connected yet.",
+  "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions, refunds (full and part), driver pay changes and receipts come from the server.": "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions, refunds (full and part), driver pay changes and receipts come from the server.",
   "Drivers and trips from the server; positions are not connected yet.": "Drivers and trips from the server; positions are not connected yet.",
   "Trips and drivers from the server; dispatch actions are not connected yet.": "Trips and drivers from the server; dispatch actions are not connected yet.",
   "Trips and their offers from the server; sending offers is not connected yet.": "Trips and their offers from the server; sending offers is not connected yet.",
@@ -8290,6 +8290,11 @@ export const en = {
   "at most {0}": "at most {0}",
   "The server did not confirm it in time.": "The server did not confirm it in time.",
   "Part of it may be saved but not live yet: check the page and press it again.": "Part of it may be saved but not live yet: check the page and press it again.",
+  "This saves the payment methods and languages of every country and sends them to every zone. Keep this page open until it is done.": "This saves the payment methods and languages of every country and sends them to every zone. Keep this page open until it is done.",
+  "Some zones were not updated.": "Some zones were not updated.",
+  "Press Save again to update them.": "Press Save again to update them.",
+  "Waiting for the next radar: {0}": "Waiting for the next radar: {0}",
+  "Waiting for the next exclusive offer: {0}": "Waiting for the next exclusive offer: {0}",
 } as const;
 
 export type MessageKey = keyof typeof en;

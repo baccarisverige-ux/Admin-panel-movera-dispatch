@@ -11,7 +11,7 @@ import type { TripOffersView } from "../api/dispatchSim";
 import { formatMoney, market, marketOfCurrency, marketOfZone, MARKETS, type Market } from "../markets/markets";
 import { countryOf } from "../trips/file";
 import { CommandButton } from "../ui/CommandButton";
-import { BONUS_SCOPES, bonusInScope, bonusIssue, bonusOf, canAssign, scopeCovers, type AdminOffer, type BonusIssue, type BonusScope } from "./assign";
+import { BONUS_SCOPES, bonusInScope, bonusIssue, bonusOf, canAssign, scopeCovers, waitingMoney, type AdminOffer, type BonusIssue, type BonusScope } from "./assign";
 import { tr, trn, trSentences, trx } from "../i18n";
 
 
@@ -146,6 +146,16 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
             : trn("Added so far: Exclusive {0} · Radar {1}{2}", <b>{money(view.bonusExclusiveMinor)}</b>, <b>{money(view.bonusRadarMinor)}</b>, view.priority ? <span className="as-priority">{tr("Priority")}</span> : null)}
         </p>
       ) : null}
+      {(() => {
+        const waits = open ? waitingMoney(view) : { exclusive: 0, radar: 0 };
+        return waits.exclusive || waits.radar ? (
+          <p className="as-bonus-now" data-testid="driver-bonus-waiting">
+            {waits.radar ? <span>{trn("Waiting for the next radar: {0}", <b>{money(waits.radar)}</b>)}</span> : null}
+            {waits.radar && waits.exclusive ? " · " : null}
+            {waits.exclusive ? <span>{trn("Waiting for the next exclusive offer: {0}", <b>{money(waits.exclusive)}</b>)}</span> : null}
+          </p>
+        ) : null;
+      })()}
       <div className="as-bonus-row">
         <label>{trn("Amount ({0}){1}", place.currency, <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={draft.amount} disabled={!canAct || !open} onChange={(event) => set({ amount: event.target.value })} placeholder={limitsKnown ? (left > 0 ? tr("Up to {0}", [money(left)]) : tr("Limit reached")) : undefined} />)}</label>
         <div className="as-chips" role="group" aria-label={tr("Apply to")} data-testid="driver-bonus-scope">

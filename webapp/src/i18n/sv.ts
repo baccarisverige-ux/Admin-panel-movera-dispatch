@@ -5228,7 +5228,7 @@ export const sv: Record<MessageKey, string> = {
   "Not connected yet": "Inte kopplad än",
   "Drivers and trips from the server; the rest is not connected yet.": "Förare och resor från servern; resten är inte kopplat än.",
   "Trips from the server; the rest is not connected yet.": "Resor från servern; resten är inte kopplat än.",
-  "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions and full refund come from the server; part refund, driver pay and receipts are not connected yet.": "Resor, resesida, erbjudanden, chatt, resekontroll, flagga, anteckningar, ärenden, åtgärder på resan och full återbetalning kommer från servern; delåterbetalning, förarlön och kvitton är inte kopplade än.",
+  "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions, refunds (full and part), driver pay changes and receipts come from the server.": "Resor, resesida, erbjudanden, chatt, resekontroll, flagga, anteckningar, ärenden, åtgärder på resan, återbetalningar (hela och delar), ändrad förarlön och kvitton kommer från servern.",
   "Drivers and trips from the server; positions are not connected yet.": "Förare och resor från servern; positioner är inte kopplade än.",
   "Trips and drivers from the server; dispatch actions are not connected yet.": "Resor och förare från servern; utskicksåtgärder är inte kopplade än.",
   "Trips and their offers from the server; sending offers is not connected yet.": "Resor och deras erbjudanden från servern; att skicka erbjudanden är inte kopplat än.",
@@ -8292,4 +8292,9 @@ export const sv: Record<MessageKey, string> = {
   "at most {0}": "högst {0}",
   "The server did not confirm it in time.": "Servern bekräftade det inte i tid.",
   "Part of it may be saved but not live yet: check the page and press it again.": "En del kan vara sparad men inte live än: kontrollera sidan och tryck igen.",
+  "This saves the payment methods and languages of every country and sends them to every zone. Keep this page open until it is done.": "Detta sparar betalsätten och språken för varje land och skickar dem till varje zon. Håll sidan öppen tills det är klart.",
+  "Some zones were not updated.": "Några zoner uppdaterades inte.",
+  "Press Save again to update them.": "Tryck på Spara igen för att uppdatera dem.",
+  "Waiting for the next radar: {0}": "Väntar på nästa radar: {0}",
+  "Waiting for the next exclusive offer: {0}": "Väntar på nästa exklusiva erbjudande: {0}",
 };

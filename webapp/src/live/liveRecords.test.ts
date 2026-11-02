@@ -120,3 +120,30 @@ test("the live registry answers id-only helpers with server facts", () => {
   setLiveData(false);
   assert.equal(liveTripOf({ id: "trp_1" }), null);
 });
+
+test("live G8 6a: the trip page's top numbers and Money card use the server's who-gets-what (pickup pay in the driver's number, the tip shown)", async () => {
+  const { liveMoneySplit } = await import("../trips/file.ts");
+  const EUR = (amountMinor: number) => ({ amountMinor, currency: "EUR" });
+  const trip: Trip = {
+    ...TRIP, zoneId: "FR-PC", fare: EUR(480), driverEarnings: EUR(352), commission: EUR(128), pickupPay: EUR(10), driverBonus: undefined, walletApplied: undefined, cashToCollect: EUR(480),
+    driverTotal: EUR(362), tip: { amount: EUR(250), method: "cash", at: "2026-11-02T01:00:00Z" },
+    moneySplit: { riderPaid: EUR(730), driverTotal: EUR(612), movera: EUR(118), debtCollected: EUR(0), tip: EUR(250), refunded: EUR(0) },
+  };
+  const record = tripRecord(trip, { riderId: "rdr_1", firstName: "Ida", phone: "+46700000001", status: "active", version: 1, outstanding: null });
+  const split = liveMoneySplit(record, record.liveTrip!);
+  assert.equal(split.driverGets, 612, "the same number as the Who gets what card, not driverEarnings 3,52 €");
+  assert.equal(split.tip, 250);
+  assert.equal(split.riderPaid, 730);
+  assert.equal(split.moveraKeeps, 118);
+  assert.equal(split.live!.split!.tip, 250, "the Money card's tip line is the tip, not Not connected yet");
+  // A server without who-gets-what keeps the old lines.
+  const old = tripRecord(TRIP, { riderId: "rdr_1", firstName: "Ida", phone: "+46700000001", status: "active", version: 1, outstanding: null });
+  assert.equal(old.liveTrip!.split, null);
+  assert.equal(liveMoneySplit(old, old.liveTrip!).driverGets, 32000);
+});
+
+test("live G8 6a: the trips connection note no longer says refunds, driver pay and receipts are not connected", async () => {
+  const { readFileSync } = await import("node:fs");
+  const text = readFileSync(new URL("./connection.ts", import.meta.url), "utf8");
+  assert.ok(!/not connected yet/.test(text.split("\n").find((line) => line.trim().startsWith("trips:")) ?? ""));
+});

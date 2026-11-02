@@ -153,7 +153,10 @@ export function liveMoneySplit(trip: DemoRecord, facts: LiveTripFacts): MoneySpl
   const country = countryOf(trip.zoneId);
   const charged = trip.status === "completed" || trip.status === "no_show" || (trip.status.startsWith("cancelled") && facts.fare > 0);
   const state: MoneySplit["state"] = LIVE_ONBOARD.has(trip.status) ? "estimate" : charged ? (trip.status === "completed" ? "charged" : "cancel_fee") : "none";
-  const refunded = facts.paymentStatus === "refunded" ? facts.fare : facts.paymentStatus === "partially_refunded" ? NaN : 0;
+  const split = facts.split ?? null;
+  // Live G8 (6a): with the server's who-gets-what, every number on the page is that one (pickup pay, bonus, tip and
+  // Movera changes are in the driver's number), so the top and the Money card never disagree with "Who gets what".
+  const refunded = split ? split.refunded : facts.paymentStatus === "refunded" ? facts.fare : facts.paymentStatus === "partially_refunded" ? NaN : 0;
   const commission = facts.commission ?? NaN;
   return {
     country,
@@ -164,16 +167,16 @@ export function liveMoneySplit(trip: DemoRecord, facts: LiveTripFacts): MoneySpl
     commissionPct: facts.commission !== null && facts.fare > 0 ? Math.round((facts.commission / facts.fare) * 100) : NaN,
     commission,
     promo: NaN,
-    tip: NaN,
+    tip: split ? split.tip : NaN,
     refunded,
     payChange: NaN,
     vat: NaN,
     vatRate: NaN,
     fleetPct: NaN,
     fleet: NaN,
-    riderPaid: facts.fare - refunded,
-    driverGets: facts.driverEarnings ?? NaN,
-    moveraKeeps: commission,
+    riderPaid: split ? split.riderPaid : facts.fare - refunded,
+    driverGets: split ? split.driverTotal : facts.driverEarnings ?? NaN,
+    moveraKeeps: split ? split.movera : commission,
     driverBonus: facts.driverBonus ?? 0,
     live: facts,
   };
