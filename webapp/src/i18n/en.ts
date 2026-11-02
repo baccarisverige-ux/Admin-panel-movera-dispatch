@@ -8416,6 +8416,18 @@ export const en = {
   "The rider's country is not known yet: money can be added after the first ride.": "The rider's country is not known yet: money can be added after the first ride.",
   "Add money to a wallet from the rider's page.": "Add money to a wallet from the rider's page.",
   "Largest Add money to wallet at one time": "Largest Add money to wallet at one time",
+  "Payout settings": "Payout settings",
+  "Payout settings · {0}": "Payout settings · {0}",
+  "How payouts are made": "How payouts are made",
+  "Automatic: on the schedule": "Automatic: on the schedule",
+  "Manual: an admin approves each run": "Manual: an admin approves each run",
+  "Every 2 weeks": "Every 2 weeks",
+  "Local time of the country. A change applies to the next run.": "Local time of the country. A change applies to the next run.",
+  "Publish payout settings": "Publish payout settings",
+  "Payout settings published.": "Payout settings published.",
+  "Runs waiting for approval": "Runs waiting for approval",
+  "Approve run": "Approve run",
+  "Run approved: the payouts can be paid.": "Run approved: the payouts can be paid.",
 } as const;
 
 export type MessageKey = keyof typeof en;
