@@ -171,7 +171,7 @@ export function TripsPage() {
         <div className="dx-head-text">
           <h2>{tr("Trips")}</h2>
           <p data-testid="trip-count">
-            {trips.isLoading ? tr("Loading trips.") : tr("{0} trips in demo data, {1} match the filters, {2} statuses in this view.", [rows.length, filtered.length, statusCount])}
+            {trips.isLoading ? tr("Loading trips.") : tr("{0} trips, {1} match the filters, {2} statuses in this view.", [rows.length, filtered.length, statusCount])}
           </p>
         </div>
         {isSuper ? <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "settings" })}>{trn("{0} Settings", <Settings2 size={14} aria-hidden="true" />)}</button> : null}

@@ -78,7 +78,9 @@ test("Dispatch › Rides › Stops: route change switches, max stops and free mi
   await expect(stops.getByLabel("Driver's time to answer", { exact: true })).toHaveValue("60");
   await expect(stops.getByLabel("Also before pickup on")).toBeChecked();
   await expect(stops.getByRole("radio", { name: "Cannot change" })).toBeChecked();
-  await expect(stops.getByTestId("stop-price-link")).toHaveText("Price per minute: Pricing");
+  // G7 live fix: the amount from Pricing (stopWaitPerMin per car type), still a link to Pricing.
+  await expect(stops.getByTestId("stop-price-link")).toHaveText("Price per minute: 5 kr – 9 kr");
+  await expect(stops.getByTestId("stop-price-link")).toHaveAttribute("href", "/pricing");
   await stops.getByLabel("Also before pickup on").uncheck();
   await stops.getByRole("radio", { name: "Change at the normal price" }).check();
   await stops.getByLabel("Driver's time to answer", { exact: true }).fill("45");

@@ -81,3 +81,12 @@ tr.live-open td { background: #f6f7fb; }
 /* Page audit round 2: the SOS sound button is white on dark red (contrast about 6.5:1), on every screen size. */
 .incident-alarm .incident-sound .dash-btn.danger { background: #b42318; border-color: #b42318; color: #fff; opacity: 1; }
 .incident-alarm .incident-sound .dash-btn.danger:hover, .incident-alarm .incident-sound .dash-btn.danger:focus-visible { background: #912018; border-color: #912018; color: #fff; }
+/* Page audit round 4: on a phone the floated "Not connected yet" mark narrowed every page beside it (Risk › Fraud rules
+   cards 206 of 362 px, trip page 221 of 362 px). Below 560px the mark sits on its own line, right-aligned, and the page
+   below uses the full width (the round-3 payments fix, for every page). */
+@media (max-width: 560px) {
+  .live-not-connected:not(.inline) { float: none; display: table; margin: 0 0 8px auto; }
+  .op-trip .op-jump { flex-wrap: wrap; overflow-x: visible; }
+  .op-trip .dx-head { flex-wrap: wrap; }
+  .op-trip .dx-head-text { min-width: 0; overflow-wrap: anywhere; }
+}

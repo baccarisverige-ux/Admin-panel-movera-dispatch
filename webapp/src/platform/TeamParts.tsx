@@ -120,7 +120,7 @@ export function SecurityView({ editable, onNotice }: { editable: boolean; onNoti
         <CommandButton command="admin.team.security" confirmTarget={false} className="dash-btn small" sliceKey={TEAM_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, security: value }} expectedSliceRev={ops.draftRev} targetId="sign-in" disabled={!editable || !draft || Boolean(error) || slice.loading} onDone={() => { setDraft(null); onNotice(tr("Sign-in safety saved.")); }}>{tr("Save sign-in safety")}</CommandButton>
         {draft ? <button data-command="admin.team.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{tr("Undo changes")}</button> : null}
       </div>
-      <NotEnforced>{tr("Saved here for the backend. The demo sign-in always asks for the code and signs out after 15 minutes.")}</NotEnforced>
+      <NotEnforced>{tr("Saved here for the backend. Sign-in always asks for the code and signs out after 15 minutes.")}</NotEnforced>
     </Card>
   );
 }

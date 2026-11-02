@@ -33,7 +33,7 @@ import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
 import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
 import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
-import { liveBonusLimits } from "./tripLive.ts";
+import { bonusByKind, commissionBeforeBonus, liveBonusLimits } from "./tripLive.ts";
 import { vehicleMissing } from "./activation.ts";
 import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { tr } from "../i18n/index.ts";
@@ -414,21 +414,44 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     bonusRules.clear();
   });
   /**
-   * Checker round 2 (M1): the country_rules read behind the driver bonus limits, per zone, kept 5 minutes (the trip
-   * page re-reads its offers every second). A refusal (403 without settings.read) is kept for the session, so it is
-   * not asked again every second. Cleared on sign-out / another admin and after any settings publish.
+   * Live test 2026-11-01 (FR showed 20 € / 95 € while the server refused above 18 €): the driver bonus limits come from
+   * the document the server enforces them with — the zone's LIVE driver_app_config.driverBonus, else (a zone on its
+   * country's standard) the standard's, as GET /admin/config/driver_app_config?zoneId=… gives it with usesStandard.
+   * country_rules is not read here any more (its 404 made the panel fall back to the contract defaults silently).
+   * Per zone, kept 5 minutes (the trip page re-reads its offers every second). A refusal (403 without settings.read)
+   * is kept for the session. Cleared on sign-out / another admin and after any settings publish.
    */
   const bonusRules = new Map<string, { at: number; document: unknown; refused: boolean }>();
   const BONUS_RULES_TTL_MS = 5 * 60_000;
-  async function bonusRulesOf(zoneId: string): Promise<unknown> {
+  const bonusRulesReading = new Map<string, Promise<unknown>>();
+  function bonusRulesOf(zoneId: string): Promise<unknown> {
     const kept = bonusRules.get(zoneId);
-    if (kept && (kept.refused || Date.now() - kept.at < BONUS_RULES_TTL_MS)) return kept.document;
+    if (kept && (kept.refused || Date.now() - kept.at < BONUS_RULES_TTL_MS)) return Promise.resolve(kept.document);
+    // One read at a time per zone (the offers are re-read every second, the read takes two calls).
+    const reading = bonusRulesReading.get(zoneId) ?? readBonusRules(zoneId).finally(() => bonusRulesReading.delete(zoneId));
+    bonusRulesReading.set(zoneId, reading);
+    return reading;
+  }
+  async function readBonusRules(zoneId: string): Promise<unknown> {
     try {
-      const answer = await client.json<{ document?: unknown }>(`/admin/config/country_rules?zoneId=${encodeURIComponent(zoneId)}`);
-      bonusRules.set(zoneId, { at: Date.now(), document: answer?.document ?? null, refused: false });
-      return answer?.document ?? null;
+      const zone = encodeURIComponent(zoneId);
+      // Checker: a zone back on its country's standard keeps old history rows (useStandard deletes only the live
+      // document), so ask first whether the zone uses the standard; read its own history only when it does not.
+      const draft = await client.json<{ document?: unknown; usesStandard?: boolean; liveVersion?: number }>(`/admin/config/driver_app_config?zoneId=${zone}`).catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) return null;
+        throw error;
+      });
+      let document: unknown = null;
+      if (draft?.usesStandard === true) {
+        document = draft.document ?? null;
+      } else if ((draft?.liveVersion ?? 0) > 0) {
+        const page = await client.json<{ items?: { document?: unknown }[] }>(`/admin/config/driver_app_config/history?zoneId=${zone}&limit=1`);
+        document = page?.items?.[0]?.document ?? null;
+      }
+      bonusRules.set(zoneId, { at: Date.now(), document, refused: false });
+      return document;
     } catch (error) {
-      const refused = error instanceof ApiError && (error.status === 403 || error.status === 404);
+      const refused = error instanceof ApiError && error.status === 403;
       bonusRules.set(zoneId, { at: Date.now(), document: null, refused });
       return null;
     }
@@ -760,6 +783,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       try {
         const answer = await settingsCall;
         bonusRules.clear();
+        zoneDocs.clear();
         return typeof answer === "string" ? done(answer) : { ...done(answer.message), slice: answer.slice };
       } catch (error) {
         if (error instanceof SettingsChanged) throw new ApiError(409, error.message, { code: "version_mismatch", retryable: false });
@@ -795,18 +819,23 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // Owner live test 2026-11-01: "Add money" had no live call ("Not connected yet"). POST /admin/trips/{id}/driver-bonus:
       // Movera pays it, open offers show the new money at once (offer_updated).
       const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
-      const params = (input.value ?? {}) as { amountMinor?: number; priority?: boolean };
+      const params = (input.value ?? {}) as { amountMinor?: number; priority?: boolean; bonusScope?: "exclusive" | "radar" | "both" };
       if (!params.amountMinor || params.amountMinor <= 0) throw new ApiError(400, "Type an amount above 0.", { code: "invalid_request", retryable: false });
-      const next = await client.post<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/driver-bonus`, { expectedVersion: trip.version, amount: { amountMinor: params.amountMinor, currency: trip.fare.currency }, ...(params.priority !== undefined ? { priority: params.priority } : {}), ...(input.reason ? { note: input.reason } : {}) }).catch(explained);
+      const next = await client.post<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/driver-bonus`, { expectedVersion: trip.version, amount: { amountMinor: params.amountMinor, currency: trip.fare.currency }, ...(params.priority !== undefined ? { priority: params.priority } : {}), ...(params.bonusScope ? { applyTo: params.bonusScope } : {}), ...(input.reason ? { note: input.reason } : {}) }).catch(explained);
       if (next?.tripId) trips.set(next.tripId, next);
-      return done("Money added for the driver.");
+      // Owner bug 2026-11-01 ("Exclusif" arrived as Radar): applyTo sends the chosen kind; the server keeps the money per
+      // kind and (owner decision) sends it at once: exclusive to the nearest, radar to the others (moneySend).
+      const send = (next as { moneySend?: { exclusiveTo: string | null; radarTo: string[] } } | undefined)?.moneySend;
+      const notice = send && params.bonusScope ? moneySendNotice(send, params.bonusScope) : null;
+      return { ...done("Money added for the driver."), ...(notice ? { notice } : {}) };
     }
     if (input.action === "admin.trip.assign" || input.action === "admin.trip.radarGroup") {
       // Exclusive offer or radar group (contract §9 /admin/trips/{id}/assign and /radar-group), with the trip's version.
       const trip = await client.json<Trip>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
       trips.set(trip.tripId, trip);
-      const params = (input.value ?? {}) as { driverId?: string; driverIds?: string[]; groupId?: string; radarZoneId?: string; ruleId?: string; target?: string; radarZoneName?: string; driverBonusMinor?: number; priority?: boolean };
-      const bonus = params.driverBonusMinor ? { driverBonus: { amountMinor: params.driverBonusMinor, currency: trip.fare.currency } } : {};
+      const params = (input.value ?? {}) as { driverId?: string; driverIds?: string[]; groupId?: string; radarZoneId?: string; ruleId?: string; target?: string; radarZoneName?: string; driverBonusMinor?: number; priority?: boolean; bonusScope?: "exclusive" | "radar" | "both" };
+      // applyTo: "Both" also raises the other kind of offer; without it the server uses this send's kind.
+      const bonus = params.driverBonusMinor ? { driverBonus: { amountMinor: params.driverBonusMinor, currency: trip.fare.currency }, ...(params.bonusScope ? { applyTo: params.bonusScope } : {}) } : {};
       const common = { expectedVersion: trip.version, ...(input.reason ? { note: input.reason } : {}), ...bonus, ...(params.priority ? { priority: true } : {}) };
       const refused = (error: unknown): never => {
         const text = toolRefusal(error);
@@ -930,11 +959,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     trips.set(trip.tripId, trip);
     const page = await client.json<Page<TripOffer & { version?: number }>>(`/admin/trips/${encodeURIComponent(tripId)}/offers?limit=50`);
     const tripCurrency = isCurrency(trip.fare.currency) ? trip.fare.currency : CURRENCY;
-    // Owner 2026-10-31: the country's real driver bonus limits (country_rules of the trip's zone; else the contract
-    // default), not 0. An admin without settings.read gets the default.
+    // The driver bonus limits the server enforces (driver_app_config.driverBonus of the trip's zone, live; else the
+    // contract default, as the server), not 0. An admin without settings.read gets the default.
     // M2: the country from the zone, else from the trip's currency (each market has its own); unknown → no limits shown.
     const limitCountry = marketOfZone(trip.zoneId)?.id ?? MARKETS.find((item) => item.currency === trip.fare.currency)?.id ?? null;
     const limits = limitCountry ? liveBonusLimits(await bonusRulesOf(trip.zoneId), limitCountry) : null;
+    const byKind = bonusByKind(trip as Parameters<typeof bonusByKind>[0]);
     return {
       tripId,
       status: trip.status,
@@ -963,9 +993,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // session sent it ("group Night drivers", "radar Södermalm").
       groups: radarGroupsOf(page.items, tripId),
       bonusMinor: trip.driverBonus?.amountMinor ?? 0,
-      // The server keeps one bonus for every offer of the trip: both scopes show it ("Added so far").
-      bonusExclusiveMinor: trip.driverBonus?.amountMinor ?? 0,
-      bonusRadarMinor: trip.driverBonus?.amountMinor ?? 0,
+      // Owner bug 2026-11-01: the server keeps the money per kind of offer (driverBonusByKind); an older server, one for both.
+      bonusExclusiveMinor: byKind.exclusiveMinor,
+      bonusRadarMinor: byKind.radarMinor,
       priority: Boolean((trip as { priority?: boolean }).priority),
       lockedTo: null,
       events: [],
@@ -974,7 +1004,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       limitsKnown: limits !== null,
       fareMinor: trip.fare.amountMinor,
       driverNetMinor: trip.driverEarnings?.amountMinor ?? 0,
-      commissionMinor: trip.commission?.amountMinor ?? 0,
+      // The server's commission already has the bonus taken off; the box takes it off itself, so it gets the commission
+      // before any bonus (owner photo 2026-11-01: "Movera paie 353,80 kr de plus" counted the 200 kr twice).
+      commissionMinor: commissionBeforeBonus(trip),
       accepted: null,
       radarRepeat: radarRepeatOf(trip),
       // v0.18.7 (G5): the trip page follows this read (ETA every 30 s, the car's position, the cancel fee).
@@ -1046,6 +1078,18 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
 }
 
 /** What the admin reads when some chosen drivers already saw the ride (owner bug 2026-11-01), in the admin's language. */
+/** Owner decision 2026-11-01: what "Add money" sent at once, in the admin's language. */
+export function moneySendNotice(send: { exclusiveTo: string | null; radarTo: string[] }, scope: "exclusive" | "radar" | "both"): string {
+  const parts = [
+    send.exclusiveTo ? tr("Sent now as an Exclusive offer to the nearest free driver.") : "",
+    send.radarTo.length ? tr(send.radarTo.length === 1 ? "Sent now as Radar to {0} driver." : "Sent now as Radar to {0} drivers.", [send.radarTo.length]) : "",
+  ].filter(Boolean);
+  if (parts.length) return parts.join(" ");
+  if (scope === "exclusive") return tr("Already on the Exclusive offer, or nobody free nearby: it goes with the next Exclusive offer.");
+  if (scope === "radar") return tr("Already on the Radar offers, or nobody free nearby: it goes with the next Radar offer.");
+  return tr("Already on the offers out, or nobody free nearby: it goes with the next offer.");
+}
+
 export function refreshedNotice(refreshed: number, sent: number, raised: boolean, skipped = 0): string | null {
   if (refreshed === 0 && skipped === 0) return null;
   // Counted from the server's answer, never from the drivers ticked (checker M1).

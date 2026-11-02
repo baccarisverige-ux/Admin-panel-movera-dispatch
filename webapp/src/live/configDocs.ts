@@ -10,7 +10,7 @@ import type { CurrencyCode, Money } from "../domain/money.ts";
 import { fromMajor } from "../domain/money.ts";
 import { marketOfZone } from "../markets/markets.ts";
 import type { CategoryPrice, ZoneBook } from "../pricing/zonePricing.ts";
-import { RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
+import { completeEarlyEnd, RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
 import { validPickupMove, validRaiseFactor } from "../dispatch/offerRules.ts";
 
@@ -160,6 +160,23 @@ export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
 
 /* ---------------------------------------------------------------- dispatch */
 
+/**
+ * v0.18.11 start / limits / neighbours. A server document without one of them (written before v0.18.11) gets it only
+ * when the admin set something other than the default: an untouched zone then publishes the same document as before,
+ * so publishing another part (e.g. the driver's cancel share) does not re-publish unchanged dispatch rules.
+ */
+function startOrderParts(zone: ZoneDispatch, base: Doc | null): Doc {
+  const parts: Doc = {
+    start: { mode: zone.start.mode, nearKm: zone.start.nearKm },
+    limits: { ...(zone.limits.maxPickupKm > 0 ? { maxPickupKm: zone.limits.maxPickupKm } : {}), maxPickupEtaMin: zone.limits.maxPickupEtaMin },
+    neighbours: { on: zone.neighbours.on, zoneIds: [...zone.neighbours.zoneIds], ...(zone.neighbours.afterStep > 0 ? { afterStep: zone.neighbours.afterStep } : {}) },
+  };
+  if (base === null) return parts;
+  const defaults: Doc = { start: { mode: "auto", nearKm: 2 }, limits: { maxPickupEtaMin: 0 }, neighbours: { on: false, zoneIds: [] } };
+  for (const key of Object.keys(parts)) if (!(key in base) && JSON.stringify(parts[key]) === JSON.stringify(defaults[key])) delete parts[key];
+  return parts;
+}
+
 /** DispatchDocument (CONTRACT.md §6.3) from the zone's Dispatch rules (admin field names). */
 export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | null): Doc {
   const facts = zoneFacts(id);
@@ -172,12 +189,10 @@ export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | n
     timeZone: facts.timeZone,
     radar: { on: zone.radar.on, drivers: zone.radar.drivers, seconds: zone.radar.seconds, then: zone.radar.then, ...(zone.radar.steps?.length ? { steps: [...zone.radar.steps] } : {}) },
     exclusive: { on: zone.exclusive.on, drivers: zone.exclusive.drivers, seconds: zone.exclusive.seconds, then: zone.exclusive.then, ...(zone.exclusive.steps?.length ? { steps: [...zone.exclusive.steps] } : {}) },
-    // choose.backup is deprecated (v0.18.9, never used); still sent so a server on an older contract copy accepts the document.
+    // choose.backup is deprecated (v0.18.11, never used); still sent so a server on an older contract copy accepts the document.
     choose: { ...structuredClone(zone.choose), backup: zone.choose.backup ?? (zone.choose.main === "radar" ? "exclusive" : "radar") },
-    // v0.18.9 (owner 2026-11-01, rule 16): what starts first, pickup limits and neighbour zones (0 = contract default, left out).
-    start: { mode: zone.start.mode, nearKm: zone.start.nearKm },
-    limits: { ...(zone.limits.maxPickupKm > 0 ? { maxPickupKm: zone.limits.maxPickupKm } : {}), maxPickupEtaMin: zone.limits.maxPickupEtaMin },
-    neighbours: { on: zone.neighbours.on, zoneIds: [...zone.neighbours.zoneIds], ...(zone.neighbours.afterStep > 0 ? { afterStep: zone.neighbours.afterStep } : {}) },
+    // v0.18.11 (owner 2026-11-01, rule 16): what starts first, pickup limits and neighbour zones (0 = contract default, left out).
+    ...startOrderParts(zone, base),
     rulesFrom: zone.rulesFrom,
     radius: structuredClone(zone.radius),
     factors: structuredClone(zone.factors),
@@ -208,7 +223,7 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     if (defaulted.length) zone.secondsDefaulted = defaulted;
     else delete zone.secondsDefaulted;
     if (d.choose) zone.choose = structuredClone(d.choose);
-    // v0.18.9: a document without start / limits / neighbours / own steps keeps the defaults (today's behaviour).
+    // v0.18.11: a document without start / limits / neighbours / own steps keeps the defaults (today's behaviour).
     const raw = doc as { radar?: { steps?: unknown }; exclusive?: { steps?: unknown }; start?: { mode?: unknown; nearKm?: unknown }; limits?: { maxPickupKm?: unknown; maxPickupEtaMin?: unknown }; neighbours?: { on?: unknown; zoneIds?: unknown; afterStep?: unknown } };
     const kmList = (value: unknown) => (Array.isArray(value) && value.length > 0 && value.every((km) => typeof km === "number") ? (value as number[]) : undefined);
     zone.radar = { ...zone.radar, steps: kmList(raw.radar?.steps) };
@@ -239,6 +254,9 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   if (offers?.autoOffline && typeof offers.autoOffline.noFixMinutes === "number") zone.autoOffline = { ...zone.autoOffline, noFixMinutes: offers.autoOffline.noFixMinutes };
   const share = (driver?.["cancelFees"] as { driverSharePct?: number } | undefined)?.driverSharePct;
   if (typeof share === "number") zone.riderCancel = { ...zone.riderCancel, driverSharePct: share };
+  // v0.18.10 (G8 Q2): the early-end re-price limits as the zone's drivers get them (default 2 km / 8 min).
+  const earlyEnd = (driver?.["cancelFees"] as { earlyEnd?: unknown } | undefined)?.earlyEnd;
+  if (earlyEnd && typeof earlyEnd === "object") zone.riderCancel = { ...zone.riderCancel, earlyEnd: completeEarlyEnd(earlyEnd) };
   // v0.18.7 (G5 Q2): "Cancel after the driver arrived counts as a no-show" as the zone's drivers get it (default on).
   const afterArrived = (driver?.["waiting"] as { cancelAfterArrivedIsNoShow?: unknown } | undefined)?.cancelAfterArrivedIsNoShow;
   if (typeof afterArrived === "boolean") zone.pickupWait = { ...zone.pickupWait, cancelAfterArrivedIsNoShow: afterArrived };
@@ -325,7 +343,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number } };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
@@ -338,6 +356,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     tips: input.tips.map(option),
     raiseSteps: input.raiseSteps.map(option),
     driverBonus: { defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
+    // v0.18.10 checker: the largest single change of a driver's pay (Change pay on the trip page).
+    ...(input.driverPayChangeMax !== undefined ? { driverPayChangeMax: toMinor(input.driverPayChangeMax, currency) } : {}),
   };
 }
 

@@ -16,6 +16,7 @@ import { ExclusiveRules, RadarRules } from "./OfferSections";
 import { MovedCard, offersLink } from "./MovedCard";
 import { PICKUP_MOVE_DEFAULT, pickupMoveField } from "./offerRules";
 import { PickupWaitCard, type WaitBaseRow } from "./PickupWaitCard";
+import { stopPriceText } from "./stopPrice";
 import { RiderCancelFeesCard } from "./CancelFeeTable";
 import type { CancelFeeKind, CancelFeeTable as FeeTable, FeeCategory } from "./cancelFees";
 import type { PickupWait } from "./offers";
@@ -305,7 +306,7 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         <Row label={tr("Max stops")}><Num label={tr("Max stops")} value={zone.stops.max} unit="stops" min={1} max={5} disabled={disabled || !zone.stops.on} onChange={(max) => set({ stops: { ...zone.stops, max } })} /></Row>
         <Row label={tr("Free wait at each stop")} help={tr("Waiting at a stop is charged only after these minutes. The server charges by this number.")}><Num label={tr("Free wait per stop")} value={zone.stops.freeWaitMin} unit="min" min={0} max={20} disabled={disabled || !zone.stops.on} onChange={(freeWaitMin) => set({ stops: { ...zone.stops, freeWaitMin } })} /></Row>
         {/* v0.18.9 (G7 decision 4): the price per minute at a stop is Pricing's stopWaitPerMin (one price, set there). */}
-        <Row label={tr("Then, per minute")} help={tr("Set in Pricing for each car type. The server charges this price.")}><Link className="dx-limit-link" to="/pricing" data-testid="stop-price-link">{tr("Price per minute: Pricing")}</Link></Row>
+        <Row label={tr("Then, per minute")} help={tr("Set in Pricing for each car type. The server charges this price.")}><Link className="dx-limit-link" to="/pricing" data-testid="stop-price-link">{stopPriceText(waitBases, money)}</Link></Row>
         <Row label={tr("Extra fee per stop")} help={tr("0 means no fee.")}><Num label={tr("Fee per stop")} value={zone.stops.perStop} unit={symbol} step={0.5} min={0} max={500} disabled={disabled || !zone.stops.on} onChange={(perStop) => set({ stops: { ...zone.stops, perStop } })} /></Row>
         {/* v0.18.9 (G7 decision 3 + owner rule 16): DriverAppConfig.routeChange, read live by the server per zone. */}
         <Row label={tr("Rider can change the destination or add a stop during the trip")} on={zone.stops.changeDuring} disabled={disabled || !zone.stops.on} onToggle={(changeDuring) => set({ stops: { ...zone.stops, changeDuring } })} />
@@ -338,6 +339,11 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         </Row>
         <p className="dx-note">{trn("{0} Every decision is saved with the driver's route, so you can check it by hand in Cancel checks.", <UserCheck size={13} aria-hidden="true" />)}</p>
         <Row label={tr("Driver's share of the cancel fee")} help={tr("What the driver gets of a rider's cancel fee in this zone. Movera keeps the rest. Booked rides keep the share they were booked with.")}><Num label={tr("Driver's share of the cancel fee")} value={zone.riderCancel.driverSharePct ?? 100} unit="%" min={0} max={100} disabled={disabled} onChange={(driverSharePct) => set({ riderCancel: { ...zone.riderCancel, driverSharePct } })} /></Row>
+      </Card>
+
+      <Card title={tr("Driver ends the trip early")} tone="green" icon={<Shield size={18} />} help={tr("When the driver finishes or cancels with the rider on board before the drop-off, the paid stop waiting is always kept. The price is worked out again only when the trip is shorter than booked by more than these numbers; otherwise the booked price stands.")}>
+        <Row label={tr("New price only when shorter by more than (km)")} help={tr("Default 2 km.")}><Num label={tr("New price only when shorter by more than (km)")} value={zone.riderCancel.earlyEnd?.repriceOverKm ?? 2} unit="km" min={0} max={50} disabled={disabled} onChange={(repriceOverKm) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? { repriceOverKm: 2, repriceOverMin: 8 }), repriceOverKm } } })} /></Row>
+        <Row label={tr("… or shorter by more than (minutes)")} help={tr("Default 8 minutes.")}><Num label={tr("… or shorter by more than (minutes)")} value={zone.riderCancel.earlyEnd?.repriceOverMin ?? 8} unit="min" min={0} max={120} disabled={disabled} onChange={(repriceOverMin) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? { repriceOverKm: 2, repriceOverMin: 8 }), repriceOverMin } } })} /></Row>
       </Card>
 
       <RiderCancelFeesCard zone={zone} onChange={onChange} disabled={disabled} symbol={symbol} money={money} countryId={countryId} otherZones={otherZones} onCopyCancelFees={onCopyCancelFees} categories={feeCategories} tab={feeTab} onTab={onFeeTab} />

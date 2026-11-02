@@ -504,7 +504,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (!cursor && items.length > 2) return json(route, 200, { items: items.slice(0, 2), nextCursor: "c2" });
       return json(route, 200, { items: cursor ? items.slice(2) : items, nextCursor: null });
     }
-    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/adjust|\/reverse-no-show|\/pin\/unlock|\/flag|\/notes|\/case|\/reveal-contact|\/cancel|\/reassign|\/no-show|\/complete)?$/.exec(p);
+    const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/adjust|\/reverse-no-show|\/pin\/unlock|\/flag|\/notes|\/case|\/reveal-contact|\/cancel|\/reassign|\/no-show|\/complete|\/driver-pay|\/receipt\/resend)?$/.exec(p);
     if (one) {
       const trip = state.trips.find((item) => item.tripId === one[1]);
       if (!trip) return json(route, 404, { code: "not_found", message: "No such trip.", requestId: "r-404t", retryable: false });
@@ -538,6 +538,17 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
         const status = { "/cancel": "cancelled_by_admin", "/reassign": "searching", "/no-show": "no_show", "/complete": "completed" }[one[2]];
         Object.assign(trip, { status, version: Number(trip.version) + 1, ...(one[2] === "/cancel" ? { cancellation: { actor: "admin", reasonCode: body.reasonCode, at: "2026-10-26T10:00:00Z", note: body.note } } : {}), ...(one[2] === "/reassign" ? { driverId: undefined } : {}) });
         return json(route, 200, trip);
+      }
+      // v0.18.10 (G8, contract.json#finish): change the driver's pay (reason) and resend the receipt (reason).
+      if (one[2] === "/driver-pay") {
+        if (!body?.reason?.trim() || !body?.change?.amountMinor) return json(route, 400, { code: "invalid_request", message: "change and reason are required", requestId: "r-400p", retryable: false });
+        const total = (trip.driverTotal?.amountMinor ?? 0) + body.change.amountMinor;
+        Object.assign(trip, { version: Number(trip.version) + 1, driverTotal: { amountMinor: total, currency: body.change.currency }, ...(trip.moneySplit ? { moneySplit: { ...trip.moneySplit, driverTotal: { amountMinor: total, currency: body.change.currency } } } : {}) });
+        return json(route, 200, trip);
+      }
+      if (one[2] === "/receipt/resend") {
+        if (!body?.reason?.trim()) return json(route, 400, { code: "invalid_request", message: "reason is required", requestId: "r-400r", retryable: false });
+        return json(route, 200, { tripId: trip.tripId, notificationId: "ntf_1", sentAt: "2026-11-01T10:00:00Z" });
       }
       if (one[2] === "/offers") return json(route, 200, { items: OFFERS.filter((offer) => offer.tripId === trip.tripId), nextCursor: null });
       if (one[2] === "/adjust") {
@@ -677,7 +688,7 @@ const CONFIG_CORS = { "access-control-allow-origin": "*", "access-control-allow-
 const configJson = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CONFIG_CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
 const sample = (name: string) => JSON.parse(readFileSync(new URL(`../../contracts/fixtures/config/${name}.json`, import.meta.url), "utf8")) as Record<string, unknown>;
 
-type Entry = { version: number; liveVersion: number; usesStandard?: boolean; document: Record<string, unknown>; /** G3: the live document when it differs from the draft (History's newest row). */ live?: Record<string, unknown> };
+type Entry = { version: number; liveVersion: number; usesStandard?: boolean; document: Record<string, unknown>; /** G3: the live document when it differs from the draft (History's newest row). */ live?: Record<string, unknown>; /** Checker: old own history rows the server keeps after "use standard". */ staleHistory?: Record<string, unknown> };
 type Sent = { method: string; path: string; body: Record<string, unknown> | null };
 
 /** The config documents of the live settings flow (contract v0.8.0): Sweden's Standard, Z001 on the Standard, Z002 with its own. */
@@ -709,6 +720,7 @@ export async function fakeSettings(page: Page) {
       const zone = url.searchParams.get("zoneId") ?? "";
       const entry = docs.get(`${doc}:${zone}`);
       if (zone.startsWith("standard-")) return configJson(route, 404, { code: "not_found", message: "No such zone.", requestId: "r-404", retryable: false, reason: "zone_not_found" });
+      if (entry?.staleHistory) return configJson(route, 200, { items: [{ version: 9, publishedAt: "2026-10-20T10:00:00Z", publishedBy: "seed", action: "publish", document: entry.staleHistory }], nextCursor: null });
       return configJson(route, 200, { items: entry && entry.liveVersion > 0 && !entry.usesStandard ? [{ version: entry.liveVersion, publishedAt: "2026-10-25T23:13:11Z", publishedBy: "seed", action: "publish", document: entry.live ?? entry.document }] : [], nextCursor: null });
     }
     if (request.method() === "GET") {

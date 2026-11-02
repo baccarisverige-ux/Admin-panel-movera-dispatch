@@ -217,3 +217,23 @@ test("G3-D9: copy and publish-to-drivers texts are in sv and fr", async () => {
     for (const dict of [sv, fr] as Record<string, string>[]) assert.ok(dict[key] && dict[key] !== key, `${key} translated`);
   }
 });
+
+test("page audit round 4: the live page texts have no demo wording, and 'no driver' is 'Non attribué' in French", () => {
+  const keys = [
+    "{0} trips, {1} match the filters, {2} statuses in this view.",
+    "{0} payments in the ledger. Amounts are in each record's own currency; totals are for the chosen country. Wallet vouchers are constrained to 100, 200 and 500 kr. Finance revision {1}.",
+    "Every rider promotion, driver bonus, voucher code and invite reward in {0}, with budget and results. Results are not counted yet: rides are not yet counted per promotion.",
+    "Values the product owner has not confirmed. Today’s number is the current default, not a second policy.",
+    "Saved here for the backend. Sign-in always asks for the code and signs out after 15 minutes.",
+    "Simulated arrival (test only)", "Skip activation (test only)", "Preview popup (test only)", "Preview hint (test only)",
+  ];
+  for (const [name, dict] of [["en", en], ["fr", fr], ["sv", sv]] as const) {
+    for (const key of keys) {
+      const value = (dict as Record<string, string>)[key];
+      assert.ok(value, `${name}: ${key}`);
+      assert.doesNotMatch(value, /d[ée]mo/i, `${name}: ${value}`);
+    }
+  }
+  for (const key of ["Unassigned", "Not assigned", "None assigned"]) assert.equal((fr as Record<string, string>)[key], "Non attribué", key);
+  assert.equal((fr as Record<string, string>)["{0} Unassigned"], "{0} Non attribué");
+});

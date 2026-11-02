@@ -124,3 +124,14 @@ export function bucketLabel(at: number, bucket: Bucket, timeZone: string, locale
   if (bucket === "day") return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone }).format(at);
   return new Intl.DateTimeFormat(locale, { month: "short", timeZone }).format(at);
 }
+
+/**
+ * The window a period covers at `nowMs`, with its end pushed on to `untilMs` (never past the period's own end).
+ * Reports round "now" up to the next minute so work done after opening the page counts; the period itself must be
+ * chosen from the real now, or at 23:59 the rounded minute is 00:00 of the next day and "Today" is an empty window.
+ */
+export function periodWindowUntil(period: Period, nowMs: number, untilMs: number, timeZone: string, locale = "en-GB"): PeriodWindow {
+  const base = periodWindow(period, nowMs, timeZone, locale);
+  const end = Math.max(base.end, Math.min(base.spanEnd, untilMs));
+  return { ...base, end, prevEnd: base.prevStart + (end - base.start) };
+}

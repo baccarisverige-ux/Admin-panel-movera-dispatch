@@ -34,7 +34,7 @@ export function RideCheckSettingsCard({ where }: { where: "dashboard" | "dispatc
   const [draft, setDraft] = useState<RideCheckThresholds | null>(null);
   const shown = draft ?? stored;
   const editable = Boolean(agent && can(agent.role, "safety.edit"));
-  const dirty = Boolean(draft) && (draft!.finishFarFromDropoffKm !== stored.finishFarFromDropoffKm || draft!.longStopMinutes !== stored.longStopMinutes);
+  const dirty = Boolean(draft) && draft!.longStopMinutes !== stored.longStopMinutes;
   const issues = rideCheckSettingsIssues(shown);
   const next = saveRideCheckSettings(stored, shown);
   const patch = (value: Partial<RideCheckThresholds>) => setDraft({ ...shown, ...value });
@@ -46,9 +46,6 @@ export function RideCheckSettingsCard({ where }: { where: "dashboard" | "dispatc
       icon={<ShieldCheck size={18} />}
       help={tr("When the driver and rider apps ask \"Is everything OK?\". Same for every zone; the switches per zone are in Dispatch → Rules → Safety.")}
     >
-      <Row label={tr("Finished far from drop-off")} help={tr("The driver taps Finish this far from the drop-off point. Ride check starts right after finish.")}>
-        <Num label={tr("Finished far from drop-off")} before="more than" value={shown.finishFarFromDropoffKm} unit="km" step={0.5} min={0} disabled={disabled} onChange={(finishFarFromDropoffKm) => patch({ finishFarFromDropoffKm })} />
-      </Row>
       <Row label={tr("Unexpected long stop")} help={tr("The car stands still mid-trip, not at a planned stop and not in traffic. Ride check starts.")}>
         <Num label={tr("Unexpected long stop")} before="for more than" value={shown.longStopMinutes} unit="min" min={1} disabled={disabled} onChange={(longStopMinutes) => patch({ longStopMinutes })} />
       </Row>
@@ -59,7 +56,7 @@ export function RideCheckSettingsCard({ where }: { where: "dashboard" | "dispatc
             {issues.length ? <small role="alert" className="rc-settings-error">{issues.join(" ")}</small> : <small>{tr("The driver and rider apps use the new values on the next trip.")}</small>}
           </span>
           <button data-command="admin.rideCheck.view" type="button" className="dash-btn small ghost" disabled={!dirty} onClick={() => setDraft(null)}>{tr("Undo")}</button>
-          <CommandButton command="admin.rideCheck.settings" className="dash-btn small" targetId="ride check settings" confirmTarget={false} before={`${stored.finishFarFromDropoffKm} km, ${stored.longStopMinutes} min`} after={`${shown.finishFarFromDropoffKm} km, ${shown.longStopMinutes} min`} sliceKey={RIDE_CHECK_SETTINGS_KEY} value={next.value} expectedSliceRev={stored.draftRev} disabled={!dirty || issues.length > 0} onDone={() => setDraft(null)}>{tr("Save")}</CommandButton>
+          <CommandButton command="admin.rideCheck.settings" className="dash-btn small" targetId="ride check settings" confirmTarget={false} before={`${stored.longStopMinutes} min`} after={`${shown.longStopMinutes} min`} sliceKey={RIDE_CHECK_SETTINGS_KEY} value={next.value} expectedSliceRev={stored.draftRev} disabled={!dirty || issues.length > 0} onDone={() => setDraft(null)}>{tr("Save")}</CommandButton>
         </div>
       )}
       {where !== "rules" ? <p className="dx-note rc-note"><span>{trn("Other Ride check switches: {0}. Every check is in {1}.", <Link to="/dispatch?tab=safety">{tr("Dispatch → Rules → Safety")}</Link>, <Link to="/incidents?view=ridechecks">{tr("Incidents → Ride checks")}</Link>)}</span></p> : null}

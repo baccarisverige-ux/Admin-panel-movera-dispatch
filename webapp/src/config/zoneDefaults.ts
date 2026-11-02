@@ -11,8 +11,8 @@ import type { CurrencyCode, Money } from "../domain/money.ts";
 export const APP_LANGUAGES = ["en", "fr", "sv"] as const;
 export type AppLanguage = (typeof APP_LANGUAGES)[number];
 
-/** contract.json#zonePaymentMethods: every country offers these (owner Q7). The wallet is separate. */
-export const ZONE_PAYMENT_METHODS = ["cash", "card", "apple_pay", "google_pay"] as const;
+/** contract.json#zonePaymentMethods: at most these (owner Q7; v0.18.10 owner G8: no Google Pay). The wallet is separate. */
+export const ZONE_PAYMENT_METHODS = ["cash", "card", "apple_pay"] as const;
 export type ZonePaymentMethod = (typeof ZONE_PAYMENT_METHODS)[number];
 
 export type CountryDefaults = {
@@ -60,6 +60,5 @@ export function defaultFreeWaitMin(categoryId: string): number {
 export function zonePaymentMethodOf(method: string): ZonePaymentMethod | null {
   if (method === "cash" || method === "card") return method;
   if (method === "apple" || method === "apple_pay") return "apple_pay";
-  if (method === "google" || method === "google_pay") return "google_pay";
   return null;
 }

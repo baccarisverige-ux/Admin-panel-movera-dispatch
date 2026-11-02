@@ -20,7 +20,7 @@ import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage } from "./zoneDef
 import { tr, trn, trx, trSentences } from "../i18n";
 
 /**
- * Settings › Payment methods and languages per country: Cash, Card, Apple Pay and Google Pay (owner Q7 FINAL, no Swish,
+ * Settings › Payment methods and languages per country: Pay in car (cash), Card and Apple Pay (v0.18.10: no Google Pay) (owner Q7 FINAL, no Swish,
  * no Klarna, no PayPal) and the default language of the rider, driver and admin apps (Q49: en, fr, sv). The wallet is
  * kept: one balance per currency, used first. Nothing is saved until Save (Q33).
  */
@@ -47,13 +47,14 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
   return (
     <article className="panel" id="country-apps" data-testid="country-apps">
       <h3>{tr("Payment methods and languages per country")}</h3>
-      <p className="state-line">{tr("What the rider can pay with, and the language each app starts in. The same four methods are offered in every country; untick one to turn it off there. The wallet stays: one balance per currency, used first (Features › Wallet).")}</p>
+      <p className="state-line">{tr("What the rider can pay with, and the language each app starts in. Pay in car (cash), card and Apple Pay; untick one to turn it off in that country. The wallet stays: one balance per currency, used first (Features › Wallet).")}</p>
+      <p className="dx-note">{tr("Today Movera takes only Pay in car. Card and Apple Pay show as “Coming soon” in the rider app until a payment company is connected.")}</p>
       <div className="table-wrap">
       <table className="cx-country-table" aria-label={tr("Payment methods and languages per country")}>
         <thead>
           <tr>
             <th scope="col">{tr("Country")}</th>
-            {ZONE_PAYMENT_METHODS.map((method) => <th key={method} scope="col">{trx(PAYMENT_METHOD_LABEL[method])}</th>)}
+            {ZONE_PAYMENT_METHODS.map((method) => <th key={method} scope="col">{trx(PAYMENT_METHOD_LABEL[method])}{method === "cash" ? null : <small> · {tr("Coming soon")}</small>}</th>)}
             {APP_IDS.map((app) => <th key={app} scope="col">{trn("{0} language", trx(APP_LABEL[app]))}</th>)}
           </tr>
         </thead>

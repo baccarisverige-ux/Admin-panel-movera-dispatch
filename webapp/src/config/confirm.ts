@@ -22,7 +22,7 @@ export const OPEN_VALUES: OpenValue[] = [
   { id: "commission", label: "Commission", today: "none" },
   { id: "documents", label: "Required documents", today: "11 listed" },
   { id: "driving-hours", label: "Driving hours", today: "none" },
-  { id: "payments", label: "Payment methods", today: "Cash, card, Apple Pay, Google Pay; set per country in Settings", link: "/settings#country-apps" },
+  { id: "payments", label: "Payment methods", today: "Pay in car (cash), card, Apple Pay; set per country in Settings", link: "/settings#country-apps" },
   { id: "cash", label: "Cash rules", today: "open" },
   { id: "fleet", label: "Fleet partners at launch", today: "open" },
   { id: "thresholds", label: "Money approval thresholds", today: "open" },

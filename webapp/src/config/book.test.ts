@@ -106,7 +106,7 @@ assert(impact.changed > 0 && impact.scopes.includes("cohort:beta"), "impact prev
 const stops = setMaxStops(emptyConfig(), 2, "nora");
 assert(configDiff(stops.published, stops.draft).some((line) => line.includes("Max stops 3 → 2")), "max stops");
 const fresh = emptyConfig();
-assert(fresh.draft.switches.length === 12, "both apps");
+assert(fresh.draft.switches.length === 11, "both apps (G8: no Google Pay switch)");
 assert(!fresh.draft.switches.some((item) => item.id === "swish"), "Q7 FINAL: no Swish switch");
 assert(!normalizeConfig({ ...fresh, draft: { ...fresh.draft, switches: [...fresh.draft.switches, { id: "swish", app: "rider", label: "Swish", on: true }] } }).draft.switches.some((item) => item.id === "swish"), "an older save drops the Swish switch");
 assert(fresh.draft.reasons.length === 35, "reasons");

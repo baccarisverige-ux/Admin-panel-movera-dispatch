@@ -4,6 +4,7 @@ import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { fareLineLabel } from "../live/format";
 import { Link, useNavigate, useParams } from "react-router";
 import { useLiveRefund } from "../live/LiveRefund";
+import { LiveTripMoney } from "../live/LiveTripMoney";
 import { LiveTripTools } from "../live/LiveTripTools";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
@@ -101,6 +102,9 @@ function useNow(): number {
   return now;
 }
 
+/** How often the trip page reads the audit again (ms). */
+const TRIP_AUDIT_REFRESH_MS = 15_000;
+
 export function TripPage() {
   const { tripId = "" } = useParams();
   const navigate = useNavigate();
@@ -110,7 +114,8 @@ export function TripPage() {
   const trips = useTrips(null);
   const drivers = useDrivers(null);
   const vehicles = useRecords("vehicles", null);
-  const audit = useAudit();
+  // G7 live fix: "Who did what" follows new admin work on the trip without a reload (actions here invalidate it too).
+  const audit = useAudit(TRIP_AUDIT_REFRESH_MS);
   const opsSlice = useSlice<TripOps>(TRIP_OPS_KEY, emptyTripOps(), { enabled: can(role, "trips.read") });
   const pricing = useSlice<unknown>(PRICING_KEY, emptyPricingStore());
   const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
@@ -318,8 +323,8 @@ export function TripPage() {
             </div>
           </div>
           <div className="op-facts-list">
-            <p>{trn("Driver {0}", driver ? <><Link to={`/drivers/${driver.id}`}>{driver.name}</Link> · {driver.id}</> : tr("Unassigned"))}</p>
-            <p>{trn("{0} Vehicle {1}", <Car size={13} aria-hidden="true" />, vehicle ? `${vehicle.plate} · ${vehicle.make ?? ""} ${vehicle.model ?? ""}` : tr("Unassigned"))}</p>
+            <p>{trn("Driver {0}", driver ? <><Link to={`/drivers/${driver.id}`}>{driver.name}</Link> · {driver.id}</> : tr("None assigned"))}</p>
+            <p>{trn("{0} Vehicle {1}", <Car size={13} aria-hidden="true" />, vehicle ? `${vehicle.plate} · ${vehicle.make ?? ""} ${vehicle.model ?? ""}` : tr("None assigned"))}</p>
             <p data-testid="trip-payment">{trn("{0} Payment {1} · {2}", <Banknote size={13} aria-hidden="true" />, statusLabel(payment), cashTrip ? tr("Cash") : tr("In the app"))}</p>
             <p data-testid="trip-rating">{trn("{0} Rating {1}", <Star size={13} aria-hidden="true" />, ratingLabel(trip))}</p>
             <p data-testid="trip-pin">{trn("PIN verified {0}", facts?.pin ? (facts.pin.verified ? tr("Yes") : tr("Not yet")) : live ? tr("No PIN for this trip") : pinVerified(trip.id))}</p>
@@ -509,6 +514,7 @@ export function TripPage() {
       <Section id="actions" title={tr("Actions")} icon={<Wrench size={16} />} wide>
         <h4 className="op-sub">{tr("Admin actions")}</h4>
         {live ? <LiveTripTools tripId={trip.id} facts={facts} hasDriver={Boolean(trip.driverId)} /> : null}
+        {live ? <LiveTripMoney tripId={trip.id} /> : null}
         <AdminActions trip={trip} ops={ops} split={split} money={money} country={country} riderId={riderId} onNotice={setNotice} />
         {ops.settings.actions.price || ops.settings.actions.refund ? (
           <div className="op-live">

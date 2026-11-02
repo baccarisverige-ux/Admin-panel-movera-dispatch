@@ -232,3 +232,21 @@ test("checker M1/M3: pickup pay is named when the zone pays it; a radar-zone rul
   assert.equal(offerTimers(doc, null, 25).radarSeconds, 25);
   assert.equal(offerTimers(doc, null, 0).radarSeconds, 15);
 });
+
+test("owner decision 2026-11-01: Add money says what it sent at once (sv / fr)", async () => {
+  const { registerDictionary, setLanguage } = await import("../i18n/core.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  const { moneySendNotice } = await import("./liveAdminApi.ts");
+  registerDictionary("fr", fr);
+  registerDictionary("sv", sv);
+  try {
+    setLanguage("fr");
+    assert.equal(moneySendNotice({ exclusiveTo: "drv_1", radarTo: ["drv_2", "drv_3"] }, "both"), "Envoyé maintenant en offre Exclusive au chauffeur libre le plus proche. Envoyé maintenant en Radar à 2 chauffeurs.");
+    assert.match(moneySendNotice({ exclusiveTo: null, radarTo: [] }, "exclusive"), /prochaine offre Exclusive/);
+    setLanguage("sv");
+    assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: ["drv_2"] }, "radar"), "Skickat nu som Radar till 1 förare.");
+  } finally {
+    setLanguage("en");
+  }
+});

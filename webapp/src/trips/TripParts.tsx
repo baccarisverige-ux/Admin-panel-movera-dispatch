@@ -165,7 +165,8 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
   const make = useEntry(ops);
   const { policy: refundPolicy } = useRefundPolicy();
   // v0.18.9 (G7): on live, note / flag / case / contact are the server's (LiveTripTools above); not shown twice here.
-  const on = liveSession ? { ...ops.settings.actions, note: false, flag: false, case: false } : ops.settings.actions;
+  // v0.18.10 (G8): on live, refund / driver pay / resend receipt are the server's too (LiveTripMoney), never a local save.
+  const on = liveSession ? { ...ops.settings.actions, note: false, flag: false, case: false, refund: false, pay: false, receipt: false } : ops.settings.actions;
   const minor = market(country).minorUnits;
   const symbol = { SE: "kr", FR: "€", TN: "DT" }[country];
   const [refund, setRefund] = useState("");

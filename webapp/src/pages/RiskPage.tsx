@@ -35,7 +35,7 @@ const NUMBERS: { key: keyof SafetyPolicy; label: string; title: string; help: st
 /** What Ride check asks on in a zone, in one line. Set in Dispatch → Safety. */
 function rideCheckLine(check: RideCheckRules, shared: RideCheckThresholds): string {
   const on = [
-    check.farOn ? tr("finished over {0} km from drop-off", [shared.finishFarFromDropoffKm]) : "",
+    check.farOn ? tr("finished over {0} m from drop-off", [check.endFarMeters]) : "",
     check.stopOn ? tr("stop over {0} min", [shared.longStopMinutes]) : "",
     check.routeOn ? tr("{0} km off the route", [check.routeKm]) : "",
     check.longerOn ? tr("{0}% longer", [check.longerPct]) : "",

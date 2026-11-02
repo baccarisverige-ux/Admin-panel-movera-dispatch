@@ -98,7 +98,7 @@ function sameBook(a: ConfigBook, b: ConfigBook): boolean {
 /** Switches Dispatch owns (Q26, X18): scheduled rides. Shown read-only here, with a link to the real setting. */
 const DISPATCH_SWITCHES = new Set(["scheduled", "bookLater", "scheduledRides"]);
 /** Payment method switches (Q7 FINAL): one setting per country in "Payment methods and languages per country" below. */
-const PAYMENT_SWITCHES = new Set(["cash", "applePay", "googlePay"]);
+const PAYMENT_SWITCHES = new Set(["cash", "applePay"]);
 
 function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: boolean }; onChange: (on: boolean) => void }) {
   if (DISPATCH_SWITCHES.has(item.id)) {
@@ -497,8 +497,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
         {([
           ["simulatedArrival", "Simulated arrival (test only)"],
           ["skipActivation", "Skip activation (test only)"],
-          ["demoPopup", "Demo popup (test only)"],
-          ["demoHint", "Demo hint (test only)"],
+          ["demoPopup", "Preview popup (test only)"],
+          ["demoHint", "Preview hint (test only)"],
         ] as const).map(([key, label]) => (
           <label className="check-row" key={key}>
             <input

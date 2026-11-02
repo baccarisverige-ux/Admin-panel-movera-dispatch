@@ -53,7 +53,7 @@ export function ConfirmPage() {
           <button data-command="admin.inbox.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
           <div>
             <h2>{tr("To confirm")}</h2>
-            <p>{tr("Values the product owner has not confirmed. Today’s number is the demo default, not a second policy.")}</p>
+            <p>{tr("Values the product owner has not confirmed. Today’s number is the current default, not a second policy.")}</p>
           </div>
         </div>
       </div>

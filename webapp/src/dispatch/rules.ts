@@ -21,6 +21,19 @@ import { tr, trx } from "../i18n/core.ts";
 
 /** Dispatch rules: how a ride request finds its driver. One set per zone, plus country rules, events and driver groups. */
 
+/** v0.18.10 (G8 Q2, contract.json#finish.earlyEnd.settings): defaults and ranges. */
+export type EarlyEnd = { repriceOverKm: number; repriceOverMin: number };
+export const EARLY_END_DEFAULT: EarlyEnd = { repriceOverKm: 2, repriceOverMin: 8 };
+export const EARLY_END_LIMITS = { repriceOverKm: { min: 0, max: 50 }, repriceOverMin: { min: 0, max: 120 } } as const;
+export function completeEarlyEnd(stored: unknown): EarlyEnd {
+  const raw = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
+  const pick = (key: keyof EarlyEnd) => {
+    const v = raw[key];
+    return typeof v === "number" && Number.isFinite(v) && v >= EARLY_END_LIMITS[key].min && v <= EARLY_END_LIMITS[key].max ? v : EARLY_END_DEFAULT[key];
+  };
+  return { repriceOverKm: pick("repriceOverKm"), repriceOverMin: pick("repriceOverMin") };
+}
+
 export const DISPATCH_KEY = "dispatchRules";
 
 export type OfferMode = "radar" | "exclusive";
@@ -355,7 +368,8 @@ export type ZoneDispatch = {
   driverCancel: { on: boolean; commissionCutPct: number };
   /** Live trips (Radar and live Exclusive): the smart check, and per car type free minutes after accept, then the fee. */
   /** v0.8.0 (owner 2026-10-27): driverSharePct, the driver's share of the rider's cancel fee, per zone; default 100 %. */
-  riderCancel: { on: boolean; closerPct: number; priority: boolean; priorityMin: number; fees: CancelFeeTable; driverSharePct: number };
+  /** v0.18.10 (G8 Q2): earlyEnd = DriverAppConfig.cancelFees.earlyEnd — a driver's early end re-prices only when more than repriceOverKm km or repriceOverMin min shorter (default 2 / 8). */
+  riderCancel: { on: boolean; closerPct: number; priority: boolean; priorityMin: number; fees: CancelFeeTable; driverSharePct: number; earlyEnd: EarlyEnd };
   extras: { id: ExtraId; on: boolean; badge: boolean }[];
   longTripKm: number;
   /**
@@ -584,7 +598,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     favourite: { on: true, maxKm: 4, waitSec: 15 },
     waiting: waitingDefault(),
     driverCancel: { on: true, commissionCutPct: 5 },
-    riderCancel: { on: true, closerPct: 25, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live"), driverSharePct: 100 },
+    riderCancel: { on: true, closerPct: 25, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live"), driverSharePct: 100, earlyEnd: { ...EARLY_END_DEFAULT } },
     extras: EXTRAS.map((extra) => ({ id: extra.id, on: true, badge: true })),
     longTripKm: 50,
     // Owner Q39: 3 stops at most by default (contract.json#configDefaults.maxStops).
@@ -849,6 +863,7 @@ function complete(zoneId: string, stored: Partial<ZoneDispatch> | undefined): Zo
     : base.riderCancel.fees);
   const share = oldCancel.driverSharePct;
   riderCancel.driverSharePct = typeof share === "number" && share >= 0 && share <= 100 ? share : 100;
+  riderCancel.earlyEnd = completeEarlyEnd(oldCancel.earlyEnd);
   merged.riderCancel = riderCancel;
   merged.rideCheck = completeRideCheck(base.rideCheck, stored.rideCheck);
   merged.destinationMode = completeDestinationMode(stored.destinationMode);
@@ -1718,7 +1733,7 @@ export function rulesFile(book: DispatchBook, country: MarketId, at: string, thr
     rideCheckThresholds: rideCheckThresholds(thresholds),
     country: { id: country, name: info.name, currency: info.currency, timeZone: info.timeZone, ...liveCountry(book, country) },
     glossary: {
-      rideCheck: "When the driver and rider apps show \"Is everything OK?\". farOn: the driver tapped Finish more than rideCheckThresholds.finishFarFromDropoffKm km from the drop-off; the card opens right after finish. stopOn: no movement for more than rideCheckThresholds.longStopMinutes minutes mid-trip, not at a planned stop and not in traffic. The two numbers are the same for every zone. routeKm: this many km off the route; longerPct: the trip this much longer than expected. crashOn: a very hard stop or impact opens the card at once with Call 112 on top. Each part works only when its switch is on.",
+      rideCheck: "When the driver and rider apps show \"Is everything OK?\". farOn: the driver tapped Finish more than endFarMeters metres (this zone's own number) from the drop-off; the card opens right after finish. stopOn: no movement for more than rideCheckThresholds.longStopMinutes minutes mid-trip, not at a planned stop and not in traffic; that number is the same for every zone. routeKm: this many km off the route; longerPct: the trip this much longer than expected. crashOn: a very hard stop or impact opens the card at once with Call 112 on top. Each part works only when its switch is on.",
       radar: "One request shown to the N nearest suitable drivers at once. The first to accept gets it.",
       exclusive: "One request offered to one driver at a time, best first, for a few seconds each.",
       busy: "Waiting requests divided by free online drivers in the zone.",
