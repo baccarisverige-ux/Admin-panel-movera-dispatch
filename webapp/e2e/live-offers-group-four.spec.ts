@@ -242,9 +242,6 @@ test("G4-F3/F4: driver groups and radar zones are the server's; new and deleted 
 });
 
 test("G4-F3/F4 send: Driver groups sends the groupId (the server picks); Radar zones sends the zone with its rule, then 'sending again' with Stop", async ({ page }) => {
-  // CI 2026-11-02 (2/2 failed, also on main): after each command every screen reads again, so the server's next trip
-  // read (round 3, then the stop) can take more than 5 s on a slow runner. The behaviour is right; wait for it.
-  test.setTimeout(90_000);
   const { sends } = await open(page, "/dispatch?view=live");
   await page.getByRole("button", { name: /^Nearby drivers for / }).first().click();
   const panel = page.getByTestId("assign-panel");
@@ -266,14 +263,14 @@ test("G4-F3/F4 send: Driver groups sends the groupId (the server picks); Radar z
   const repeat = panel.getByTestId("radar-repeat");
   await expect(repeat).toContainText("City core: sending again every 20 s to the free drivers inside, newcomers too");
   // The server's trip says the send runs (round 3 there): the line follows it and survives a reload.
-  await expect(repeat).toContainText("round 3", { timeout: 30_000 });
+  await expect(repeat).toContainText("round 3");
   await shot(page, "live-radar-repeat");
   await page.reload();
-  await page.getByRole("button", { name: /^Nearby drivers for / }).first().click({ timeout: 30_000 });
-  await expect(page.getByTestId("assign-panel").getByTestId("radar-repeat")).toContainText("City core: sending again every 20 s", { timeout: 30_000 });
+  await page.getByRole("button", { name: /^Nearby drivers for / }).first().click();
+  await expect(page.getByTestId("assign-panel").getByTestId("radar-repeat")).toContainText("City core: sending again every 20 s");
   await page.getByTestId("assign-panel").getByTestId("radar-repeat").getByRole("button", { name: "Stop" }).click();
   await expect.poll(() => sends.some((s) => s.path.endsWith("/radar-zone/stop"))).toBe(true);
-  await expect(page.getByTestId("assign-panel").getByTestId("radar-repeat")).toHaveCount(0, { timeout: 30_000 });
+  await expect(page.getByTestId("assign-panel").getByTestId("radar-repeat")).toHaveCount(0);
   await expect(page.getByText("Not connected yet")).toHaveCount(0);
 });
 
@@ -310,8 +307,6 @@ test("G4-F6: an event is made with its pin, local times and sv/fr/en texts and g
 });
 
 test("owner bug 2026-11-01 (French panel): a radar to a driver who already sees the ride says so in French; a refusal reads the panel's French text, never the server's English", async ({ page }) => {
-  // Three sends, each followed by every screen reading again: ~25 s on a loaded runner (also on main), so 30 s was too tight.
-  test.setTimeout(90_000);
   await open(page, "/dispatch?view=live", "fr");
   await page.getByRole("button", { name: /^Chauffeurs à proximité de / }).first().click();
   const panel = page.getByTestId("assign-panel");
