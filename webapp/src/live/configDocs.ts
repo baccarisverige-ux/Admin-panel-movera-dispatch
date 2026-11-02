@@ -335,6 +335,93 @@ export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc
   return next;
 }
 
+const META_KEYS = new Set(["version", "publishedAt", "usesStandard"]);
+
+/** The waiting parts the admin owns (the money stays pricing's, see withOwned). */
+const WAITING_OWNED = ["driverSharePct", "driverShareWaitPct", "cancelAfterArrivedIsNoShow", "farPickup", "rideTypes", "stopFreeWaitMin"] as const;
+
+const isPlain = (value: unknown): value is Doc => typeof value === "object" && value !== null && !Array.isArray(value);
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** The key of a list item: lists of objects that all carry an id (or a code) are patched item by item. */
+const KEY_FIELDS = ["id", "code", "category", "kind"] as const;
+function itemKey(list: readonly unknown[]): string | null {
+  if (!list.length) return null;
+  // Checker: a key must be unique inside each list, else two items would merge into one (e.g. two rows of one kind).
+  return KEY_FIELDS.find((field) => list.every((item) => isPlain(item) && (typeof item[field] === "string" || typeof item[field] === "number"))) ?? null;
+}
+function uniqueBy(items: readonly unknown[], field: string): boolean {
+  return new Set(items.map((item) => String((item as Doc)[field]))).size === items.length;
+}
+
+function applyList(target: unknown, before: readonly unknown[], after: readonly unknown[]): unknown {
+  const field = itemKey([...before, ...after]);
+  const server = Array.isArray(target) ? target : null;
+  // A list without keys (or one the server does not hold as a keyed list) is one value: the admin's, as changed.
+  if (!field || !server || (server.length && itemKey(server) !== field)) return structuredClone(after);
+  // Checker: a key repeated in any of the lists → treat the list as one value (never merge two items).
+  if (!uniqueBy(before, field) || !uniqueBy(after, field) || !uniqueBy(server, field)) return structuredClone(after);
+  const id = (item: unknown) => String((item as Doc)[field]);
+  const was = new Map(before.map((item) => [id(item), item]));
+  const now = new Map(after.map((item) => [id(item), item]));
+  const next: unknown[] = [];
+  for (const item of server) {
+    const key = id(item);
+    if (was.has(key) && !now.has(key)) continue; // removed by the admin
+    next.push(now.has(key) ? applyChanges(item, was.get(key), now.get(key)) : item);
+  }
+  for (const [key, item] of now) if (!was.has(key) && !server.some((own) => id(own) === key)) next.push(structuredClone(item)); // added by the admin
+  // Checker: the admin reordered the list (same keys, new order) → follow the admin's order; items only the server holds stay at the end.
+  const order = (list: readonly unknown[]) => list.map(id).join("\u0000");
+  if (order(before.filter((item) => now.has(id(item)))) !== order(after.filter((item) => was.has(id(item))))) {
+    const rank = new Map(after.map((item, index) => [id(item), index]));
+    next.sort((a, b) => (rank.get(id(a)) ?? Number.MAX_SAFE_INTEGER) - (rank.get(id(b)) ?? Number.MAX_SAFE_INTEGER));
+  }
+  return next;
+}
+
+/** `target` with every leaf where `after` differs from `before` set to `after`'s value; a missing `before` counts as empty. */
+function applyChanges(target: unknown, before: unknown, after: unknown): unknown {
+  if (same(before, after)) return target;
+  if (Array.isArray(after)) return applyList(target, Array.isArray(before) ? before : [], after);
+  if (!isPlain(after)) return structuredClone(after);
+  const was: Doc = isPlain(before) ? before : {};
+  const next: Doc = isPlain(target) ? { ...target } : {};
+  for (const key of new Set([...Object.keys(was), ...Object.keys(after)])) {
+    if (same(was[key], after[key])) continue;
+    if (after[key] === undefined) delete next[key];
+    else next[key] = applyChanges(next[key], was[key], after[key]);
+  }
+  return next;
+}
+
+/**
+ * Live sweep 2026-11-02 H1: publishing one Dispatch rule rewrote unrelated live settings (booking horizon, cancel
+ * reasons, the driver document's rest minutes…) because the owned parts were copied whole from the admin's model,
+ * where fields the page never shows hold defaults. Now the server's document is the start and ONLY what the admin
+ * changed is written: `before` and `after` are the admin's exporter output for the state before and after the edit;
+ * a leaf that is the same in both is left exactly as the server has it.
+ */
+export function patchChanged(server: Doc, before: Doc, after: Doc, keys?: readonly string[]): Doc {
+  const pick = (doc: Doc, key: string): unknown => {
+    const value = doc[key];
+    if (key !== "waiting" || !isPlain(value)) return value;
+    return Object.fromEntries(WAITING_OWNED.filter((part) => part in value).map((part) => [part, value[part]]));
+  };
+  let next: Doc = structuredClone(server);
+  for (const key of keys ?? [...new Set([...Object.keys(before), ...Object.keys(after)])]) {
+    if (META_KEYS.has(key)) continue;
+    const b = pick(before, key);
+    const a = pick(after, key);
+    if (same(b, a)) continue;
+    next = { ...next };
+    if (a === undefined) delete next[key];
+    else next[key] = applyChanges(next[key], b, a);
+  }
+  delete next["usesStandard"];
+  return next;
+}
+
 /** Equal for publishing: the server's stamps and marks do not count. */
 export function sameDocument(a: Doc, b: Doc): boolean {
   const strip = (doc: Doc) => JSON.stringify({ ...doc, version: 0, publishedAt: "", usesStandard: undefined });
@@ -433,7 +520,6 @@ export async function savePublishLive(http: ConfigHttp, doc: ConfigDocName, id: 
   return savePublish(http, doc, id, draft ? { ...draft, liveVersion: 0 } : null, document);
 }
 
-const META_KEYS = new Set(["version", "publishedAt", "usesStandard"]);
 
 /** The top-level parts that differ between a draft and the live document (keys only, never values). */
 export function unpublishedKeys(draft: Doc, live: Doc): string[] {

@@ -10,6 +10,8 @@ export type MarketZone = {
   city: string;
   kind: "operating" | "airport";
   center: [lat: number, lng: number];
+  /** Live: false when the server's zone is closed to new rides (never an implicit editing or publish target). */
+  open?: boolean;
 };
 
 export type Market = {
@@ -176,6 +178,11 @@ export function zoneById(zoneId: string): MarketZone | undefined {
     if (found) return found;
   }
   return undefined;
+}
+
+/** Live sweep 2026-11-02 M2: a zone the server has closed (e.g. Arlanda) is never picked or written by default. */
+export function isClosedZone(zoneId: string): boolean {
+  return zoneById(zoneId)?.open === false;
 }
 
 export function marketZoneIds(id: MarketId): string[] {

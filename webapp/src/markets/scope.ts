@@ -1,4 +1,4 @@
-import { DEFAULT_MARKET, MARKETS, isMarketId, isStandardZone, marketOfZone, marketZoneIds, parseZoneList, type MarketId } from "./markets.ts";
+import { DEFAULT_MARKET, MARKETS, isClosedZone, isMarketId, isStandardZone, marketOfZone, marketZoneIds, parseZoneList, type MarketId } from "./markets.ts";
 
 /** The part of an agent's access that decides which countries and zones they can open. */
 export type ScopeAccess = {
@@ -72,5 +72,6 @@ export function resolveScope(access: ScopeAccess, input: { country?: string | nu
 export function publishTargets(scope: Pick<ResolvedScope, "zones" | "effective" | "denied">): string[] {
   if (scope.denied) return [];
   if (scope.zones.length) return [...scope.zones];
-  return Array.isArray(scope.effective) ? [...scope.effective] : [scope.effective];
+  // Live sweep 2026-11-02 M2: "All zones" never includes a closed zone (Arlanda); the admin picks it at the top to edit it.
+  return Array.isArray(scope.effective) ? scope.effective.filter((id) => !isClosedZone(id)) : [scope.effective];
 }
