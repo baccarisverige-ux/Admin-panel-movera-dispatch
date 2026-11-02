@@ -31,8 +31,8 @@ test("each Alerts button is one server call", () => {
   assert.equal(alertCall("admin.alerts.done", "x", done, "A1", 0)?.body?.["note"], "Sent a driver");
   const now = Date.parse("2026-10-26T09:00:00Z");
   const muted = muteKind(book, "few_drivers", "A1", 60, "2026-10-26T09:00:00Z");
-  assert.deepEqual(alertCall("admin.alerts.mute", "few_drivers", muted, "A1", now), { method: "PUT", path: "/admin/alerts/mutes/few_drivers", body: { minutes: 60 } });
-  assert.deepEqual(alertCall("admin.alerts.mute", "few_drivers", unmuteKind(muted, "few_drivers"), "A1", now), { method: "DELETE", path: "/admin/alerts/mutes/few_drivers" });
+  assert.deepEqual(alertCall("admin.alerts.mute", "few_drivers", muted, "A1", now), { method: "PUT", path: "/admin/alerts/mutes/few_drivers?country=SE", body: { minutes: 60 } });
+  assert.deepEqual(alertCall("admin.alerts.mute", "few_drivers", unmuteKind(muted, "few_drivers"), "A1", now), { method: "DELETE", path: "/admin/alerts/mutes/few_drivers?country=SE" });
   assert.deepEqual(alertCall("admin.alerts.settings", "s", { ...book, draftRev: 5 }, "A1", now)?.body?.["expectedRev"], 4);
   assert.equal(alertCall("admin.alerts.rule", "r", { ...book, draftRev: 2 }, "A1", now)?.path, "/admin/alerts/rules");
   assert.equal(alertCall("admin.alerts.take", "missing", book, "A1", now), null);

@@ -27,7 +27,7 @@ import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./li
 import { ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
 import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
-import { alertCall, bookFromServer, type AlertBookState } from "./liveAlerts.ts";
+import { alertCall, bookFromServer, liveCountry, type AlertBookState } from "./liveAlerts.ts";
 import { ALERTS_KEY, normalizeAlertBook } from "../alerts/engine.ts";
 import { INCIDENT_OPS_KEY, emptyIncidentOps } from "../safety/cases.ts";
 import { REVIEW_OPS_KEY, emptyReviewOps, type ReviewOps } from "../growth/reviews.ts";
@@ -649,6 +649,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     return base;
   }
+  /** v0.18.15: the top bar's country for the per-country alert and incident settings. */
+  const here = () => liveCountry(client.admin()?.scope.countries);
   async function command(input: CommandInput): Promise<CommandResult> {
     const done = (message: string, status: CommandResult["status"] = "committed"): CommandResult => ({ message, operationId: input.idempotencyKey ?? input.action, status, rev: 0 });
     const explained = (error: unknown): never => {
@@ -824,7 +826,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     // v0.18.15 incidents (contract.json#incidentDesk): the shared settings, and an audit line for each case report.
     if (input.action === "admin.incident.settings") {
       const next = input.value as { draftRev: number; settings: Record<string, unknown> };
-      const saved = await client.json<{ rev: number; settings: Record<string, unknown> }>("/admin/incidents/settings", { method: "PUT", body: JSON.stringify({ expectedRev: next.draftRev - 1, settings: next.settings }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
+      const saved = await client.json<{ rev: number; settings: Record<string, unknown> }>("/admin/incidents/settings", { method: "PUT", body: JSON.stringify({ country: here(), expectedRev: next.draftRev - 1, settings: next.settings }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
       return { ...done("Saved."), slice: { key: INCIDENT_OPS_KEY, value: { ...emptyIncidentOps(), draftRev: saved.rev, settings: { ...emptyIncidentOps().settings, ...saved.settings } } } };
     }
     if (input.action === "admin.incident.report") {
@@ -834,7 +836,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     // v0.18.15 alerts full flow (contract.json#alertDesk, owner Q5): take, done, snooze, pass, mute, quiet hours, settings, rules.
     if (["admin.alerts.take", "admin.alerts.done", "admin.alerts.snooze", "admin.alerts.pass", "admin.alerts.mute", "admin.alerts.quiet", "admin.alerts.settings", "admin.alerts.rule"].includes(input.action)) {
       const me = client.admin()?.adminId ?? "";
-      const call = alertCall(input.action, input.targetId, normalizeAlertBook(input.value), me, Date.now());
+      const call = alertCall(input.action, input.targetId, normalizeAlertBook(input.value), me, Date.now(), here());
       if (!call) throw new ApiError(400, tr("Nothing changed."), { code: "invalid_request", retryable: false });
       const state = await client.json<AlertBookState>(call.path, { method: call.method, ...(call.body ? { body: JSON.stringify(call.body) } : {}), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
       return { ...done("Saved."), slice: { key: ALERTS_KEY, value: bookFromServer(state, me) } };
@@ -1102,10 +1104,10 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // Live clean-up 1 (rule 1): a book the server does not keep yet is empty on live, never the demo seed.
       if (key === REVIEW_OPS_KEY) return (await liveReviewOps()) as typeof fallback;
       if (key === INCIDENT_OPS_KEY) {
-        const saved = await client.json<{ rev: number; settings: Record<string, unknown> }>("/admin/incidents/settings");
+        const saved = await client.json<{ rev: number; settings: Record<string, unknown> }>(`/admin/incidents/settings?country=${here()}`);
         return { ...emptyIncidentOps(), draftRev: saved.rev, settings: { ...emptyIncidentOps().settings, ...saved.settings } } as typeof fallback;
       }
-      if (key === ALERTS_KEY) return bookFromServer(await client.json<AlertBookState>("/admin/alerts/book"), client.admin()?.adminId ?? null) as typeof fallback;
+      if (key === ALERTS_KEY) return bookFromServer(await client.json<AlertBookState>(`/admin/alerts/book?country=${here()}`), client.admin()?.adminId ?? null) as typeof fallback;
       if (key !== "safetyOps") return liveEmptyBook(fallback);
       if (!incidents.size) await list("incidents").catch(() => []);
       return bookFrom(incidents.values()) as typeof fallback;

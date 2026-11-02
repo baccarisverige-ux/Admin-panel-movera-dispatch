@@ -16,6 +16,23 @@ export type AlertBookState = {
   people: { adminId: string; name: string }[];
 };
 
+/**
+ * The country the top bar shows (?country=, else the remembered one, else the admin's first country, else SE): the
+ * alert and incident settings are per country on the server (checker MED).
+ */
+export function liveCountry(adminCountries?: readonly string[]): "SE" | "FR" | "TN" {
+  const ok = (value: unknown): value is "SE" | "FR" | "TN" => value === "SE" || value === "FR" || value === "TN";
+  let remembered: string | null = null;
+  try {
+    remembered = globalThis.localStorage?.getItem("movera-admin-country") ?? null;
+  } catch {
+    remembered = null;
+  }
+  const fromUrl = typeof globalThis.location === "object" ? new URLSearchParams(globalThis.location.search).get("country") : null;
+  for (const candidate of [fromUrl, remembered, ...(adminCountries ?? [])]) if (ok(candidate)) return candidate;
+  return "SE";
+}
+
 /** Admin names the alert lines show ("Nora Lind is working on it"), and the admins one may pass to. */
 const names = new Map<string, string>();
 let passPeople: { id: string; name: string }[] = [];
@@ -57,7 +74,7 @@ export type AlertCall = { method: "POST" | "PUT" | "DELETE"; path: string; body?
  * The server call for one Alerts button: the button hands over the book as it would be after the command (the
  * demo engine's result); the call is read from it. null = nothing to send (the button's own guard said no).
  */
-export function alertCall(action: string, targetId: string, next: AlertBook, me: string, now: number): AlertCall | null {
+export function alertCall(action: string, targetId: string, next: AlertBook, me: string, now: number, country: "SE" | "FR" | "TN" = "SE"): AlertCall | null {
   const id = encodeURIComponent(targetId);
   const record = next.records[targetId];
   const base = record ? { kind: record.kind, level: record.level, title: record.title, since: record.since, ...(record.zoneId ? { zoneId: record.zoneId } : {}) } : null;
@@ -76,17 +93,17 @@ export function alertCall(action: string, targetId: string, next: AlertBook, me:
       return base && last?.to ? { method: "POST", path: `/admin/alerts/${id}/pass`, body: { ...base, to: last.to } } : null;
     case "admin.alerts.mute": {
       const mute = next.mutes[targetId];
-      if (!mute) return { method: "DELETE", path: `/admin/alerts/mutes/${id}` };
-      return { method: "PUT", path: `/admin/alerts/mutes/${id}`, body: { minutes: Math.max(1, Math.min(1440, Math.round((Date.parse(mute.until) - now) / 60_000))) } };
+      if (!mute) return { method: "DELETE", path: `/admin/alerts/mutes/${id}?country=${country}` };
+      return { method: "PUT", path: `/admin/alerts/mutes/${id}?country=${country}`, body: { minutes: Math.max(1, Math.min(1440, Math.round((Date.parse(mute.until) - now) / 60_000))) } };
     }
     case "admin.alerts.quiet": {
       const quiet = next.personal[me]?.quiet;
-      return quiet ? { method: "PUT", path: "/admin/alerts/quiet", body: { on: quiet.on, from: quiet.from, to: quiet.to } } : null;
+      return quiet ? { method: "PUT", path: `/admin/alerts/quiet?country=${country}`, body: { on: quiet.on, from: quiet.from, to: quiet.to } } : null;
     }
     case "admin.alerts.settings":
-      return { method: "PUT", path: "/admin/alerts/settings", body: { expectedRev: next.draftRev - 1, settings: next.settings } };
+      return { method: "PUT", path: "/admin/alerts/settings", body: { country, expectedRev: next.draftRev - 1, settings: next.settings } };
     case "admin.alerts.rule":
-      return { method: "PUT", path: "/admin/alerts/rules", body: { expectedRev: next.draftRev - 1, rules: next.rules } };
+      return { method: "PUT", path: "/admin/alerts/rules", body: { country, expectedRev: next.draftRev - 1, rules: next.rules } };
     default:
       return null;
   }
