@@ -196,7 +196,7 @@ export const PAYOUTS = [
 ];
 
 export const TICKETS = [
-  { ticketId: "TK1", tripId: "T2001", openedBy: "rider", riderId: "R501", category: "ride_dispute", subject: "Charged too much", status: "open", priority: "normal", createdAt: "2026-10-26T09:00:00Z", updatedAt: "2026-10-26T09:00:00Z", zoneId: "Z001", lastMessageAt: "2026-10-26T09:00:00Z" },
+  { ticketId: "TK1", tripId: "T2001", openedBy: "rider", riderId: "R501", category: "ride_dispute", subject: "Charged too much", status: "open", feedback: { text: "Quick help, thanks!", at: "2026-10-27T11:00:00Z" }, priority: "normal", createdAt: "2026-10-26T09:00:00Z", updatedAt: "2026-10-26T09:00:00Z", zoneId: "Z001", lastMessageAt: "2026-10-26T09:00:00Z" },
 ];
 export const TICKET_MESSAGES = [{ messageId: "M1", from: "rider", text: "The driver took a long way.", at: "2026-10-26T09:00:00Z" }];
 
@@ -259,6 +259,11 @@ export type TripState = {
   riders: Record<string, unknown>[];
   payouts: Record<string, unknown>[];
   tickets: Record<string, unknown>[];
+  supportSettings?: Record<string, unknown>;
+  alertBook?: Record<string, unknown>;
+  incidentSettings?: Record<string, unknown>;
+  reviewRules?: Record<string, unknown>;
+  reviewQueue?: Record<string, unknown>[];
   ticketMessages: Record<string, unknown>[];
   ratings: Record<string, unknown>[];
   approvals: (typeof APPROVALS)[number][];
@@ -405,6 +410,61 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, item);
     }
     if (p === "/api/v1/admin/tickets") return json(route, 200, { items: inZones(state.tickets, zoneField).filter((item) => !url.searchParams.get("status") || item["status"] === url.searchParams.get("status")), nextCursor: null });
+    // v0.18.15 review rules (contract.json#reviewRules).
+    if (p === "/api/v1/admin/reviews/rules") {
+      const all = (state.reviewRules ??= {}) as Record<string, unknown>;
+      if (method === "PUT") { all[body.country] = body; return json(route, 200, body); }
+      const country = url.searchParams.get("country") ?? "SE";
+      return json(route, 200, all[country] ?? { country, warn: { on: true, below: 4.5 }, review: { on: true, below: 4.2 }, minReviews: 3, badWords: { on: true, words: ["idiot", "stupid", "scam"] }, warningText: { sv: "Ditt betyg har sjunkit. Här är några tips för att få fler nöjda resenärer.", fr: "Votre note a baissé.", en: "Your rating has dropped." } });
+    }
+    if (p === "/api/v1/admin/reviews/queue") return json(route, 200, { items: state.reviewQueue ?? [] });
+    const reviewDone = /^\/api\/v1\/admin\/reviews\/queue\/(driver|rider)\/([^/]+)\/done$/.exec(p);
+    if (reviewDone) { state.reviewQueue = (state.reviewQueue ?? []).filter((row) => row["personId"] !== reviewDone[2]); return json(route, 200, { items: state.reviewQueue }); }
+    // v0.18.15 incidents (contract.json#incidentDesk).
+    if (p === "/api/v1/admin/incidents/settings") {
+      const doc = (state.incidentSettings ??= { rev: 1, settings: {} }) as { rev: number; settings: unknown };
+      if (method === "PUT") { doc.rev += 1; doc.settings = body.settings; }
+      return json(route, 200, doc);
+    }
+    if (/^\/api\/v1\/admin\/incidents\/[^/]+\/report$/.test(p)) return route.fulfill({ status: 204, headers: CORS });
+    // v0.18.15 alerts full flow (contract.json#alertDesk).
+    if (p.startsWith("/api/v1/admin/alerts/")) {
+      const book = (state.alertBook ??= { rev: 1, settings: {}, rules: [], records: [], mutes: {}, quiet: { on: false, from: "22:00", to: "07:00" }, people: [{ adminId: ADMIN.adminId, name: ADMIN.name }, { adminId: "A2", name: "Erik Ek" }] }) as Record<string, any>;
+      const verb = /^\/api\/v1\/admin\/alerts\/([^/]+)\/(take|done|snooze|pass)$/.exec(p);
+      if (verb) {
+        const id = decodeURIComponent(verb[1]!);
+        book.records = book.records.filter((r: Record<string, unknown>) => r["alertId"] !== id);
+        const owner = verb[2] === "pass" ? body.to : ADMIN.adminId;
+        book.records.push({ alertId: id, kind: body.kind, level: body.level, title: body.title, since: body.since, status: verb[2] === "take" || verb[2] === "pass" ? "taken" : verb[2] === "done" ? "done" : "snoozed", owner, events: [{ at: "2026-10-27T10:00:00Z", by: ADMIN.adminId, kind: verb[2], text: "" }] });
+      }
+      const mute = /^\/api\/v1\/admin\/alerts\/mutes\/([^/]+)$/.exec(p);
+      if (mute) { if (method === "DELETE") delete book.mutes[mute[1]!]; else book.mutes[mute[1]!] = { until: "2099-01-01T00:00:00Z", by: ADMIN.adminId }; }
+      if (p.startsWith("/api/v1/admin/alerts/quiet")) book.quiet = body;
+      if (p === "/api/v1/admin/alerts/settings") { book.settings = body.settings; book.rev += 1; }
+      if (p === "/api/v1/admin/alerts/rules") { book.rules = body.rules; book.rev += 1; }
+      return json(route, 200, book);
+    }
+    // v0.18.15 support desk (contract.json#supportDesk).
+    if (p === "/api/v1/admin/support/settings") {
+      if (method === "PUT") { state.supportSettings = { ...body, updatedAt: "2026-10-27T10:00:00Z" }; return json(route, 200, state.supportSettings); }
+      const country = url.searchParams.get("country") ?? "SE";
+      return json(route, 200, state.supportSettings && state.supportSettings["country"] === country ? state.supportSettings : { country, rev: 1, agents: [{ adminId: "A2", name: "Erik Ek" }], topics: ["ride_dispute", "help", "lost_item", "payment", "account", "safety", "other"].map((code) => ({ code, on: true, firstReplyMin: code === "safety" ? 5 : 60, solveHours: 24 })) });
+    }
+    const deskVerb = /^\/api\/v1\/admin\/tickets\/([^/]+)\/(claim|leave|assign|topic|waiting|solve|reopen|case)$/.exec(p);
+    if (deskVerb) {
+      const item = state.tickets.find((row) => row["ticketId"] === deskVerb[1]);
+      if (!item) return json(route, 404, { code: "not_found", message: "No such ticket.", requestId: "r-404k", retryable: false });
+      const verb = deskVerb[2];
+      if (verb === "claim") item["assignedTo"] = { adminId: ADMIN.adminId, name: ADMIN.name };
+      if (verb === "leave") delete item["assignedTo"];
+      if (verb === "assign") { if (body.adminId) item["assignedTo"] = { adminId: body.adminId, name: body.adminId }; else delete item["assignedTo"]; }
+      if (verb === "topic") item["category"] = body.category;
+      if (verb === "waiting") item["status"] = body.waiting ? "pending" : "open";
+      if (verb === "solve") item["status"] = "resolved";
+      if (verb === "reopen") item["status"] = "open";
+      if (verb === "case") item["incidentId"] = "inc_CASE1";
+      return json(route, 200, { ...item, messages: state.ticketMessages });
+    }
     const ticket = /^\/api\/v1\/admin\/tickets\/([^/]+)(\/reply)?$/.exec(p);
     if (ticket) {
       const item = state.tickets.find((row) => row["ticketId"] === ticket[1]);

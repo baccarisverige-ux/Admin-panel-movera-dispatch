@@ -373,10 +373,18 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
     link.remove();
     globalThis.setTimeout(() => URL.revokeObjectURL(url), 1000);
     logExport(agent?.id, `Incident report ${item.id}`, item.zoneId);
+    // v0.18.15 (contract.json#incidentDesk.report): on live the server records who downloaded the report.
+    if (isLiveData()) void commands.run("admin.incident.report", { targetId: item.id, scope: item.zoneId, before: "", after: "downloaded" }).catch(() => undefined);
     setNotice(tr("Case report downloaded."));
   }
 
-  const callButton = (to: string, number: string, key: string, primary = false, label?: string) => (
+  // Owner G9 Q6: no call company yet, so on live the rider / driver call buttons say "Calls coming soon"; an emergency
+  // number is dialled from the admin's own phone.
+  const callButton = (to: string, number: string, key: string, primary = false, label?: string) => isLiveData() ? (
+    to === "the rider" || to === "the driver"
+      ? <button key={key} type="button" data-command="admin.incident.view" className="dash-btn small ghost" disabled title={tr("Calls coming soon")}><PhoneCall size={13} aria-hidden="true" /> {trx(label ?? to)} <small>{tr("Calls coming soon")}</small></button>
+      : <a key={key} className={primary ? "dash-btn small danger" : "dash-btn small ghost"} href={`tel:${number.replace(/[^+\d]/g, "")}`}><PhoneCall size={13} aria-hidden="true" /> {trx(label ?? to)} <small>{number}</small></a>
+  ) : (
     <CommandButton key={key} command="admin.incident.call" className={primary ? "dash-btn small danger" : "dash-btn small ghost"} sliceKey={INCIDENT_OPS_KEY} value={logCall(ops, item.id, to, me, new Date().toISOString())} expectedSliceRev={ops.draftRev} targetId={item.id} scope={item.zoneId} confirmTarget={false} before="" after={`called ${to}`} disabled={!editable} title={!editable ? tr("Only the safety team can call from a case.") : undefined} onDone={() => call(to, number)}>
       <PhoneCall size={13} aria-hidden="true" /> {trx(label ?? to)} <small>{number}</small>
     </CommandButton>

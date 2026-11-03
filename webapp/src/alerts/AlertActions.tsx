@@ -10,10 +10,12 @@ import { useAlertsData } from "./AlertsContext";
 import { ALERTS_KEY, doneAlert, followsIncident, muteKind, passAlert, snoozeAlert, takeAlert, type OpenAlert } from "./engine";
 import { OpenRideCheck } from "./OpenRideCheck";
 import { tr, trn, trx } from "../i18n";
+import { isLiveData } from "../live/realData";
+import { liveAgentName, livePassPeople } from "../live/liveAlerts";
 
 export function agentName(id: string | null | undefined): string {
   if (!id) return "";
-  return AGENTS.find((agent) => agent.id === id)?.name ?? id;
+  return AGENTS.find((agent) => agent.id === id)?.name ?? liveAgentName(id) ?? id;
 }
 
 /** "Nora Lind is working on it" or "Not taken yet". */
@@ -101,7 +103,7 @@ export function AlertActions({ alert, compact = false, onDone }: { alert: OpenAl
         <span className="al-extra">
           <select aria-label={tr("Pass to")} value={passTo} onChange={(event) => setPassTo(event.target.value)}>
             <option value="">{tr("Pass to…")}</option>
-            {AGENTS.filter((item) => item.active && item.id !== me).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {(isLiveData() ? livePassPeople() : AGENTS.filter((item) => item.active)).filter((item) => item.id !== me).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
           <CommandButton command="admin.alerts.pass" className="dash-btn small ghost" targetId={alert.id} before={alert.owner ?? "new"} after={`passed to ${passTo}`} value={passed.book} disabled={!passTo || Boolean(passed.error)} title={passed.error} {...common} onDone={() => { say(tr("Passed to {0}.", [agentName(passTo)])); setPassTo(""); }}>{trn("{0} Pass", <Send size={13} aria-hidden="true" />)}</CommandButton>
         </span>

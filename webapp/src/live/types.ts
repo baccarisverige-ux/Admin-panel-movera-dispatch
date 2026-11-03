@@ -313,7 +313,16 @@ export type AdminRating = { tripId: string; from: "rider" | "driver"; stars: num
 
 /** GET /admin/tickets (SupportTicket, contract v0.9.0). */
 export type TicketMessage = { messageId: string; from: "rider" | "driver" | "support"; text: string; at: string; adminName?: string };
-export type SupportTicket = { ticketId: string; tripId?: string; openedBy: "rider" | "driver"; riderId?: string; driverId?: string; category: string; subject: string; status: "open" | "pending" | "resolved" | "closed"; priority?: string; createdAt: string; updatedAt: string; zoneId?: string; lastMessageAt?: string; messages?: TicketMessage[] };
+export type SupportTicket = { ticketId: string; tripId?: string; openedBy: "rider" | "driver" | "admin"; riderId?: string; driverId?: string; category: string; subject: string; status: "open" | "pending" | "resolved" | "closed"; priority?: string; createdAt: string; updatedAt: string; zoneId?: string; lastMessageAt?: string; messages?: TicketMessage[];
+  /** v0.18.15 support desk (contract.json#supportDesk.adminView). */
+  assignedTo?: { adminId: string; name?: string }; solvedBy?: string; solvedAt?: string; incidentId?: string; feedback?: { text: string; at: string }; firstReplyAt?: string; firstReplyDueAt?: string; solveDueAt?: string; late?: { reply: boolean; solve: boolean } };
+/** v0.18.15 GET|PUT /admin/support/settings (contract.json#supportDesk.settings). */
+export type SupportTopicSetting = { code: string; on: boolean; firstReplyMin: number; solveHours: number; assignTo?: string | undefined };
+/** v0.18.15 (owner "Yes"): a ready reply in one language. */
+export type ReadyReply = { id: string; lang: "sv" | "fr" | "en"; title: string; text: string };
+export type SupportSettings = { country: "SE" | "FR" | "TN"; rev?: number;
+  /** Read only (checker LOW): the admins a topic may send its tickets to. */
+  agents?: { adminId: string; name: string }[]; replies?: ReadyReply[]; topics: SupportTopicSetting[]; updatedAt?: string; updatedBy?: string };
 
 /** GET /admin/risk/signals (RiskPerson, contract v0.9.0). */
 export type RiskSignal = { value: number; count: number; total?: number };
