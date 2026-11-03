@@ -2,7 +2,7 @@ import { useDirtyWarning } from "../ui/useDirtyWarning";
 import { isLiveData } from "../live/realData";
 import { LiveReviewQueue } from "../live/LiveReviewQueue";
 import { RATING_TAGS, ratingTagLabel } from "../live/ratingTags";
-import { tr, trn } from "../i18n";
+import { tr, trn, trx } from "../i18n";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft, EyeOff, Search, ShieldAlert } from "lucide-react";
@@ -79,7 +79,7 @@ export function ReviewsPage() {
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Review sections")}>
-        {([["reviews", "Reviews"], ["people", "Ratings per person"], ["rules", "Rules"]] as const).map(([id, label]) => <button data-command="admin.review.view" key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : undefined} onClick={() => selectTab(id)}>{label}</button>)}
+        {([["reviews", "Reviews"], ["people", "Ratings per person"], ["rules", "Rules"]] as const).map(([id, label]) => <button data-command="admin.review.view" key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : undefined} onClick={() => selectTab(id)}>{trx(label)}</button>)}
       </div>
       <p role="status" className="gr-status">{notice}</p>
 
@@ -143,8 +143,8 @@ function RulesView({ ops, country, editable, onNotice, live = false }: { ops: Re
   const error = rulesError(value);
   const patch = (next: Partial<ReviewRules>) => setDraft({ ...value, ...next });
   const line = (key: "warn" | "review" | "block", label: string, help: string) => (
-    <Row label={label} help={help} on={value[key].on} onToggle={(on) => patch({ [key]: { ...value[key], on } })} disabled={!editable}>
-      <Num label={tr("{0} below", [label])} before="Below" value={value[key].below} step={0.1} min={1} max={5} disabled={!editable || !value[key].on} onChange={(below) => patch({ [key]: { ...value[key], below } })} />
+    <Row label={trx(label)} help={trx(help)} on={value[key].on} onToggle={(on) => patch({ [key]: { ...value[key], on } })} disabled={!editable}>
+      <Num label={tr("{0} below", [trx(label)])} before="Below" value={value[key].below} step={0.1} min={1} max={5} disabled={!editable || !value[key].on} onChange={(below) => patch({ [key]: { ...value[key], below } })} />
     </Row>
   );
   return (

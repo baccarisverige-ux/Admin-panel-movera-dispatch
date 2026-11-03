@@ -8447,4 +8447,12 @@ export const fr: Record<MessageKey, string> = {
   "{0} works on this ticket. Only they can answer or change it until they leave it.": "{0} s'occupe de ce ticket. Seule cette personne peut répondre ou le modifier jusqu'à ce qu'elle le laisse.",
   "Take over": "Reprendre",
   "You took over this ticket. It is written in the audit log.": "Vous avez repris ce ticket. C'est inscrit dans le journal d'audit.",
+  "Snoozed": "En pause",
+  "Muted": "En sourdine",
+  "Send a warning": "Envoyer un avertissement",
+  "The person gets a message to improve.": "La personne reçoit un message pour s'améliorer.",
+  "The person shows up for an admin to look at.": "La personne apparaît pour qu'un admin la regarde.",
+  "The person cannot use the app until an admin lets them back.": "La personne ne peut pas utiliser l'application tant qu'un admin ne la laisse pas revenir.",
+  "Saves the incident settings for every admin.": "Enregistre les paramètres des incidents pour tous les admins.",
+  "Saves the alert settings for every admin.": "Enregistre les paramètres des alertes pour tous les admins.",
 };

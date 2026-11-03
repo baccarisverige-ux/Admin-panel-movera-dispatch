@@ -8445,6 +8445,14 @@ export const en = {
   "{0} works on this ticket. Only they can answer or change it until they leave it.": "{0} works on this ticket. Only they can answer or change it until they leave it.",
   "Take over": "Take over",
   "You took over this ticket. It is written in the audit log.": "You took over this ticket. It is written in the audit log.",
+  "Snoozed": "Snoozed",
+  "Muted": "Muted",
+  "Send a warning": "Send a warning",
+  "The person gets a message to improve.": "The person gets a message to improve.",
+  "The person shows up for an admin to look at.": "The person shows up for an admin to look at.",
+  "The person cannot use the app until an admin lets them back.": "The person cannot use the app until an admin lets them back.",
+  "Saves the incident settings for every admin.": "Saves the incident settings for every admin.",
+  "Saves the alert settings for every admin.": "Saves the alert settings for every admin.",
 } as const;
 
 export type MessageKey = keyof typeof en;

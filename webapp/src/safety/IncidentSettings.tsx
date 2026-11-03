@@ -56,7 +56,7 @@ export function IncidentSettingsView({ ops, editable, loading }: { ops: Incident
         <div className="dx-publish">
           <span className="dx-publish-text"><b>{dirty ? tr("Changes not saved") : tr("Everything is saved")}</b><small>{error ?? tr("Changes apply to every case right away.")}</small></span>
           <button data-command="admin.incident.view" type="button" className="dash-btn small ghost" disabled={!dirty} onClick={() => setDraft(null)}>{tr("Undo changes")}</button>
-          <CommandButton command="admin.incident.settings" className="dash-btn small" targetId="incident settings" confirmTarget={false} before="saved" after="changed" sliceKey={INCIDENT_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, settings }} expectedSliceRev={ops.draftRev} disabled={!dirty || Boolean(error)} onDone={() => setDraft(null)}>{tr("Save settings")}</CommandButton>
+          <CommandButton command="admin.incident.settings" className="dash-btn small" targetId="incident settings" summary={tr("Saves the incident settings for every admin.")} confirmTarget={false} before="saved" after="changed" sliceKey={INCIDENT_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, settings }} expectedSliceRev={ops.draftRev} disabled={!dirty || Boolean(error)} onDone={() => setDraft(null)}>{tr("Save settings")}</CommandButton>
         </div>
       ) : null}
     </div>

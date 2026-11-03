@@ -8447,4 +8447,12 @@ export const sv: Record<MessageKey, string> = {
   "{0} works on this ticket. Only they can answer or change it until they leave it.": "{0} arbetar med det här ärendet. Bara hen kan svara eller ändra det tills hen lämnar det.",
   "Take over": "Ta över",
   "You took over this ticket. It is written in the audit log.": "Du tog över ärendet. Det står i granskningsloggen.",
+  "Snoozed": "Pausade",
+  "Muted": "Tystade",
+  "Send a warning": "Skicka en varning",
+  "The person gets a message to improve.": "Personen får ett meddelande om att bli bättre.",
+  "The person shows up for an admin to look at.": "Personen visas för en admin att titta på.",
+  "The person cannot use the app until an admin lets them back.": "Personen kan inte använda appen förrän en admin släpper in hen igen.",
+  "Saves the incident settings for every admin.": "Sparar incidentinställningarna för alla admins.",
+  "Saves the alert settings for every admin.": "Sparar larminställningarna för alla admins.",
 };
