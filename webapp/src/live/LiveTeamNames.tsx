@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { tr, trx } from "../i18n";
 import { useSession } from "../auth/SessionContext";
@@ -19,19 +19,25 @@ export function LiveTeamNames() {
   const session = useSession();
   const queryClient = useQueryClient();
   const [mine, setMine] = useState(admin?.firstName ?? "");
+  // Checker LOW7: the box follows the account when it loads after the page.
+  useEffect(() => {
+    setMine(admin?.firstName ?? "");
+  }, [admin?.firstName]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState("");
   const [error, setError] = useState<unknown>(null);
   const [notice, setNotice] = useState("");
   const others = useQuery({ queryKey: ["live", "agents"], queryFn: () => client.json<{ items: Agent[] }>("/admin/agents"), enabled: can("team.read") });
-  const invalid = (value: string) => !value.trim() || value.trim().length > 40 || value.includes("@");
+  // Checker LOW6: an empty box clears the name ("Admin" again).
+  const invalid = (value: string) => value.trim().length > 40 || value.includes("@");
+  const nameOrNull = (value: string) => (value.trim() ? value.trim() : null);
 
   async function saveMine() {
     if (invalid(mine)) return;
     setBusy("me");
     setError(null);
     try {
-      const me = await client.json<AdminMe>("/admin/auth/me", { method: "PATCH", body: JSON.stringify({ firstName: mine.trim() }) });
+      const me = await client.json<AdminMe>("/admin/auth/me", { method: "PATCH", body: JSON.stringify({ firstName: nameOrNull(mine) }) });
       if (session.agent) session.setAgents([{ ...session.agent, name: adminLabel(me.firstName) }]);
       setNotice(tr("First name saved."));
       void queryClient.invalidateQueries({ queryKey: ["live", "agents"] });
@@ -43,12 +49,12 @@ export function LiveTeamNames() {
   }
 
   async function saveOther(adminId: string) {
-    const value = drafts[adminId] ?? "";
+    const value = drafts[adminId] ?? others.data?.items.find((item) => item.adminId === adminId)?.firstName ?? "";
     if (invalid(value)) return;
     setBusy(adminId);
     setError(null);
     try {
-      await client.json(`/admin/agents/${encodeURIComponent(adminId)}`, { method: "PATCH", body: JSON.stringify({ firstName: value.trim() }) });
+      await client.json(`/admin/agents/${encodeURIComponent(adminId)}`, { method: "PATCH", body: JSON.stringify({ firstName: nameOrNull(value) }) });
       setNotice(tr("First name saved."));
       void queryClient.invalidateQueries({ queryKey: ["live", "agents"] });
     } catch (failure) {
@@ -70,13 +76,13 @@ export function LiveTeamNames() {
       {can("team.read") ? (
         others.isLoading ? <p className="state-line">{tr("Loading.")}</p> : others.error ? <ErrorLine error={others.error} onRetry={() => void others.refetch()} /> : (
           <ul className="pm-list" aria-label={tr("Admins")}>
-            {(others.data?.items ?? []).filter((item) => item.adminId !== admin?.adminId).map((item) => (
+            {[...(others.data?.items ?? [])].filter((item) => item.adminId !== admin?.adminId).sort((a, b) => adminLabel(a.firstName).localeCompare(adminLabel(b.firstName))).map((item) => (
               <li key={item.adminId} className="op-inline wrap">
                 <span>{adminLabel(item.firstName)} · {trx(ROLE_LABELS[item.role as keyof typeof ROLE_LABELS] ?? item.role)}</span>
                 {can("team.edit") ? (
                   <>
                     <input aria-label={tr("First name of {0}", [adminLabel(item.firstName)])} value={drafts[item.adminId] ?? item.firstName ?? ""} maxLength={40} onChange={(event) => setDrafts({ ...drafts, [item.adminId]: event.target.value })} />
-                    <button type="button" className="secondary-btn" data-command="admin.team.view" disabled={busy === item.adminId || invalid(drafts[item.adminId] ?? "")} onClick={() => void saveOther(item.adminId)}>{tr("Save")}</button>
+                    <button type="button" className="secondary-btn" data-command="admin.team.view" disabled={busy === item.adminId || drafts[item.adminId] === undefined || invalid(drafts[item.adminId] ?? "")} onClick={() => void saveOther(item.adminId)}>{tr("Save")}</button>
                   </>
                 ) : null}
               </li>
