@@ -218,15 +218,18 @@ export type BookingWindow = {
   /** BL-Q4 "Near pickup at that time": the last ride ends within this many km, at most this many minutes before. */
   listAtTimeKm: number;
   listAtTimeMin: number;
+  /** Owner (v0.18.19): arrive this many minutes before the pickup time; the server works out when to start (default 10). */
+  arriveEarlyMin: number;
 };
 
-export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30 };
+export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30, arriveEarlyMin: 10 };
 
 /** Limits for each booking window number (contract.json#bookLater, gen_openapi DriverReservations). */
 export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "maxTripKm">, { min: number; max: number }> = {
   minAheadMin: { min: 5, max: 240 }, maxAheadDays: { min: 1, max: 365 }, soonBeforeMin: { min: 0, max: 240 }, noticeMaxDrivers: { min: 1, max: 500 },
   noDriverAlertMin: { min: 1, max: 120 }, riderReminderMin: { min: 0, max: 1440 }, freeChangeBeforeMin: { min: 0, max: 1440 },
   changeAnswerMin: { min: 1, max: 120 }, listAtTimeKm: { min: 0.5, max: 50 }, listAtTimeMin: { min: 5, max: 240 },
+  arriveEarlyMin: { min: 0, max: 60 },
 };
 export const MAX_TRIP_KM_LIMIT = { min: 1, max: 1000 };
 
@@ -234,6 +237,7 @@ export const BOOKING_LABELS: Record<keyof typeof BOOKING_LIMITS, string> = {
   minAheadMin: "book from (minutes ahead)", maxAheadDays: "book up to (days ahead)", soonBeforeMin: "sent at once under (minutes ahead)", noticeMaxDrivers: "drivers who get the notice",
   noDriverAlertMin: "no-driver alert (minutes before pickup)", riderReminderMin: "rider reminder (minutes before pickup)", freeChangeBeforeMin: "free change or cancel (minutes before pickup)",
   changeAnswerMin: "time to answer a changed ride (minutes)", listAtTimeKm: "near pickup at that time (km)", listAtTimeMin: "near pickup at that time (minutes)",
+  arriveEarlyMin: "arrive before pickup (minutes)",
 };
 
 export function completeBookingWindow(raw: unknown): BookingWindow {

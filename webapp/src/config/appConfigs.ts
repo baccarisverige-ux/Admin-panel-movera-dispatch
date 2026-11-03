@@ -498,6 +498,7 @@ export function reservationBookingParts(resv: ZoneDispatch["reservation"]) {
     listAtTimeKm: b.listAtTimeKm,
     listAtTimeMin: b.listAtTimeMin,
     changeAnswerMin: b.changeAnswerMin,
+    arriveEarlyMin: b.arriveEarlyMin,
   };
 }
 

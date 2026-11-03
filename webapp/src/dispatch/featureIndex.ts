@@ -41,12 +41,12 @@ export const FEATURE_INDEX: readonly FeatureEntry[] = [
   { id: "rider-raise-limit", phrase: "Rider raise limit (times the booked price)", section: "Dispatch › Modes", keywords: "offer more raise price max factor 2x rider rating", ...rules("modes", "Rider raise limit") },
   { id: "whose-rules", phrase: "Whose rules across zone borders", section: "Dispatch › Modes", ...rules("modes", "Whose rules") },
   // Radar · Exclusive · Reservations › Reservations
-  { id: "reservations", phrase: "Scheduled rides (reservations) on or off", section: "Radar · Exclusive · Reservations › Reservations", keywords: "book later scheduled rides reservations row", ...offers("reservations", "Reservations") },
-  { id: "smart-gap", phrase: "Smart gap between reservations", section: "Radar · Exclusive · Reservations › Reservations", ...offers("reservations", "Smart gap") },
-  { id: "resv-running-late", phrase: "Running late to a reservation pickup", section: "Radar · Exclusive · Reservations › Reservations", keywords: "eta arrival late reassign offline backup leave now", ...offers("reservations", "Running late") },
-  { id: "resv-cancels", phrase: "Reservation cancels and late cancels", section: "Radar · Exclusive · Reservations › Reservations", ...offers("reservations", "Cancels") },
-  { id: "resv-no-driver", phrase: "No driver near pickup for a reservation", section: "Radar · Exclusive · Reservations › Reservations", ...offers("reservations", "No driver near pickup") },
-  { id: "resv-assign", phrase: "Movera gives a reservation to a driver", section: "Radar · Exclusive · Reservations › Reservations", keywords: "assign raise fare", ...offers("reservations", "Movera gives a ride to a driver") },
+  { id: "reservations", phrase: "Scheduled rides (reservations) on or off", section: "Radar · Exclusive · Reservations › Reservations", keywords: "book later scheduled rides reservations row", ...offers("reservations", "2 · Booked rides list — Reservations") },
+  { id: "smart-gap", phrase: "Smart gap between reservations", section: "Radar · Exclusive · Reservations › Reservations", ...offers("reservations", "5 · Driver start time — Smart gap") },
+  { id: "resv-running-late", phrase: "Running late to a reservation pickup", section: "Radar · Exclusive · Reservations › Reservations", keywords: "eta arrival late reassign offline backup leave now", ...offers("reservations", "5 · Running late") },
+  { id: "resv-cancels", phrase: "Reservation cancels and late cancels", section: "Radar · Exclusive · Reservations › Reservations", ...offers("reservations", "6 · Cancels") },
+  { id: "resv-no-driver", phrase: "No driver near pickup for a reservation", section: "Radar · Exclusive · Reservations › Reservations", ...offers("reservations", "8 · No driver near pickup") },
+  { id: "resv-assign", phrase: "Movera gives a reservation to a driver", section: "Radar · Exclusive · Reservations › Reservations", keywords: "assign raise fare", ...offers("reservations", "8 · Movera gives a ride to a driver") },
   // Best driver
   { id: "best-driver", phrase: "What makes the best driver", section: "Dispatch › Best driver", keywords: "rating acceptance eta weight", ...rules("best", "What makes the best driver") },
   { id: "search-distance", phrase: "Search distance, step by step", section: "Dispatch › Best driver", keywords: "radius km", ...rules("best", "Search distance") },

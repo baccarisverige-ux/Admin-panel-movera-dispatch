@@ -32,6 +32,8 @@ const CONNECTED = new Set([
   "drivers", "fleets", "vehicles", "onboarding", "content", "dashboard", "dispatch", "chat",
   "alerts", "trips", "incidents", "risk", "riders", "waitlist", "payments", "payouts", "zones", "pricing", "support",
   "reviews", "audit", "settings", "errors", "team",
+  // v0.18.17 Book later: Reservations reads the server (live test LOW 14).
+  "reservations",
 ]);
 
 export function connectionOf(id: string): Connection {

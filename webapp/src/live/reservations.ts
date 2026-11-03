@@ -20,7 +20,7 @@ export type ServerReservation = {
   pickup?: { address?: string };
   dropoff?: { address?: string };
   fare?: { amountMinor: number; currency: string };
-  reservation?: { mode: "now" | "list"; dispatchAt: string; freeChangeUntil: string; noDriver: boolean; overdue?: boolean; notStarted?: boolean; changeAsk?: { until: string; previousAt: string }; mustBeOnlineAt?: string };
+  reservation?: { mode: "now" | "list"; dispatchAt: string; freeChangeUntil: string; noDriver: boolean; overdue?: boolean; notStarted?: boolean; atRisk?: boolean; changeAsk?: { until: string; previousAt: string }; mustBeOnlineAt?: string };
 };
 
 export type ReservationAction = "dispatchNow" | "unassign" | "assign" | "offer" | "raise" | "noShow" | "contact" | "cancel" | "open";
@@ -112,3 +112,6 @@ export const isOverdue = (trip: ServerReservation): boolean => Boolean(trip.rese
 
 /** Checker M5: a driver holds it but did not start at its pickup time. */
 export const notStarted = (trip: ServerReservation): boolean => Boolean(trip.reservation?.notStarted) && trip.status === "accepted";
+
+/** Owner leave on time: the driver may be late for a held booked ride. */
+export const atRisk = (trip: ServerReservation): boolean => Boolean(trip.reservation?.atRisk) && trip.status === "accepted";
