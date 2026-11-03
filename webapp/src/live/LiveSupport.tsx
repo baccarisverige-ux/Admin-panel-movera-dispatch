@@ -254,6 +254,7 @@ export function LiveSupport() {
                   {othersClaim ? <p className="dx-calm" data-testid="live-ticket-others">{tr("{0} works on this ticket. Only they can answer or change it until they leave it.", [ticket.assignedTo?.name ?? ticket.assignedTo?.adminId ?? ""])}</p> : null}
                   <div className="op-inline wrap" aria-label={tr("Ticket tools")}>
                     <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={othersClaim || busy || solved || ticket.assignedTo?.adminId === admin?.adminId} onClick={() => desk("claim", {}, tr("Claimed. Other admins see that you work on it."))}>{tr("Claim")}</button>
+                    {othersClaim && admin?.role === "super" && !solved ? <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={busy} onClick={() => desk("claim", {}, tr("You took over this ticket. It is written in the audit log."))}>{tr("Take over")}</button> : null}
                     {ticket.assignedTo?.adminId === admin?.adminId && !solved ? <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={othersClaim || busy} onClick={() => desk("leave", {}, tr("You left the ticket. It waits for any admin again."))}>{tr("Leave ticket")}</button> : null}
                     <label className="field">{tr("Hand to")}
                       <select aria-label={tr("Hand to")} value={assignee} onChange={(event) => setAssignee(event.target.value)}>

@@ -79,3 +79,23 @@ test("checker MED1: another admin's claimed ticket is read-only here", async ({ 
   await expect(ticket.getByRole("button", { name: "Mark solved" })).toBeDisabled();
   await expect(ticket.getByRole("button", { name: "Send answer" })).toBeDisabled();
 });
+
+test("owner 2026-11-03: a Super admin can take over another admin's ticket", async ({ page }) => {
+  const state = await fakeTripServer(page, { admin: { ...ALL.admin, role: "super" } });
+  state.tickets[0]!["assignedTo"] = { adminId: "A2", name: "Erik Ek" };
+  await signIn(page);
+  await page.goto("/support");
+  const ticket = page.getByTestId("live-ticket");
+  await ticket.getByRole("button", { name: "Take over" }).click();
+  await expect.poll(() => state.calls.some((call) => call.method === "POST" && call.path === "/api/v1/admin/tickets/TK1/claim")).toBe(true);
+  await expect(ticket).toContainText(`Works on it: ${ADMIN.name}`);
+});
+
+test("a non-super admin sees no Take over", async ({ page }) => {
+  const state = await fakeTripServer(page, { admin: { ...ALL.admin, role: "support" } });
+  state.tickets[0]!["assignedTo"] = { adminId: "A2", name: "Erik Ek" };
+  await signIn(page);
+  await page.goto("/support");
+  await expect(page.getByTestId("live-ticket-others")).toBeVisible();
+  await expect(page.getByTestId("live-ticket").getByRole("button", { name: "Take over" })).toHaveCount(0);
+});
