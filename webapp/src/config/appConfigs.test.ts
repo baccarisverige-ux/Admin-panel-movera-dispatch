@@ -223,6 +223,24 @@ test("DriverAppConfig.reservations follows the published Dispatch › Reservatio
   assert.deepEqual(driverAppConfig("Z002", { ...base, dispatch: published.book }).reservations, driverAppConfig("Z002", base).reservations, "only that zone");
 });
 
+// v0.18.17 Book later (owner 2026-11-03 Q1–Q6): the zone's booking policy and who sees a booked ride go to the server in
+// the driver document, and the rider document gets the booking window. Before: not published, so the server never had them.
+test("v0.18.17: the booking policy per zone is published in DriverAppConfig.reservations and RiderAppConfig.booking (SE, FR, TN)", () => {
+  const base = state();
+  for (const zoneId of ["Z001", "FR-PC", "TN-TC"]) {
+    const zone = liveRules(base.dispatch, zoneId);
+    const next = { ...zone, reservation: { ...zone.reservation, listTo: "rating" as const, listMinRating: 4.8, booking: { ...zone.reservation.booking, minAheadMin: 30, maxAheadDays: 30, soonBeforeMin: 45, noticeMaxDrivers: 5, noDriverAlertMin: 15, riderReminderMin: 90, freeChangeBeforeMin: 120, maxTripKm: 80 } } };
+    const published = publish(base.dispatch, { [zoneId]: next }, {}, [zoneId], "nora", "2026-10-19T09:30:00.000Z", "");
+    assert.ok(!published.error, published.error ?? "");
+    const doc = driverAppConfig(zoneId, { ...base, dispatch: published.book }).reservations;
+    assert.deepEqual([doc.minAheadMin, doc.maxAheadDays, doc.soonBeforeMin, doc.noticeMaxDrivers, doc.noDriverAlertMin, doc.riderReminderMin, doc.freeChangeBeforeMin, doc.maxTripKm, doc.listTo, doc.listMinRating], [30, 30, 45, 5, 15, 90, 120, 80, "rating", 4.8], zoneId);
+    const rider = riderAppConfig(zoneId, { ...base, dispatch: published.book }).booking;
+    assert.deepEqual([rider.minAheadMin, rider.maxAheadDays, rider.freeChangeBeforeMin], [30, 30, 120], zoneId);
+  }
+  const defaults = driverAppConfig("Z001", base).reservations;
+  assert.deepEqual([defaults.minAheadMin, defaults.maxAheadDays, defaults.soonBeforeMin, defaults.noDriverAlertMin, defaults.riderReminderMin, defaults.freeChangeBeforeMin, defaults.rideTypes.normal.onlineBeforeMin, defaults.rideTypes.normal.reminderMin[0]], [15, 90, 30, 10, 60, 60, 60, 120], "owner defaults");
+});
+
 test("the legacy rules file is unchanged in shape", () => {
   const file = rulesFile(emptyDispatchBook(), "SE", NOW);
   assert.deepEqual(Object.keys(file), ["format", "version", "exportedAt", "revision", "rideCheckThresholds", "country", "glossary", "zones", "events", "groups", "riderApp", "driverApp"]);

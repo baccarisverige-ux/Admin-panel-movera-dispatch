@@ -14,6 +14,8 @@ import {
 import { DataTable } from "../ui/DataTable";
 import { market, marketOfZone } from "../markets/markets";
 import { tr, trn } from "../i18n";
+import { isLiveData } from "../live/realData";
+import { LiveReservations } from "../live/LiveReservations";
 
 const VIEWS = [
   { id: "all", label: "All" },
@@ -28,6 +30,31 @@ const VIEWS = [
 const timeZoneOf = (zoneId: string) => (marketOfZone(zoneId) ?? market("SE")).timeZone;
 
 export function ReservationsPage() {
+  // v0.18.17 Book later (owner 2026-11-03): on live the page reads the server's booked rides and its buttons call the server.
+  if (isLiveData()) return <LiveReservationsPage />;
+  return <DemoReservationsPage />;
+}
+
+function LiveReservationsPage() {
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <h2>{tr("Reservations")}</h2>
+          <p>{tr("Booked rides from the server. Pickup times are in each zone's local time.")}</p>
+        </div>
+      </div>
+      <p className="resv-settings-link" data-testid="reservation-settings-link">
+        <Settings2 size={14} aria-hidden="true" />
+        <span>{tr("Reservation settings and the booking policy of each zone are in Dispatch › Reservations.")}</span>
+        <Link className="dash-btn small ghost" to="/dispatch?tab=reservations">{tr("Open reservation settings")}</Link>
+      </p>
+      <LiveReservations />
+    </>
+  );
+}
+
+function DemoReservationsPage() {
   const navigate = useNavigate();
   const reservations = useRecords("reservations", null);
   const store = useSlice<ReservationBook>("reservationOps", emptyReservationBook());

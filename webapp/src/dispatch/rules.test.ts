@@ -305,8 +305,9 @@ assert(resvFile.zones[0].rules.reservation.homePopupAfterMin === 10 && resvFile.
 assert(resv.listGroupId === "" && resv.homePopupTo === "list" && resv.popupClosedExclusive, "Home popup goes to the list's drivers and a closed popup comes back as Exclusive by default");
 assert(resv.hideClashing && resv.lateWarn && resv.lateBackupAfterMin === 5 && resv.towardPickup, "smart gap parts are on by default");
 assert(Object.values(resv.types).every((type) => type.spareMin === 15), "spare minutes start at 15 for every kind of ride");
-assert(resv.types.normal.onlineBeforeMin === 30 && resv.types.airport.onlineBeforeMin === 60 && resv.types.long.onlineBeforeMin === 60 && resv.types.premium.onlineBeforeMin === 45 && resv.types.event.onlineBeforeMin === 45, "be online before: normal 30, airport 60, long trip 60, Comfort/Premium 45, events 45 (same as the driver app)");
-assert(resv.types.normal.remindFirstMin === 60 && resv.types.normal.remindLastMin === 15, "reminders 60 and 15 min before pickup");
+// v0.18.17 (owner Q5 2026-11-03 "Driver must be online 1 hour before or 30 m ... reminder like 2 hours before"): normal 30 → 60, first reminder 60 → 120.
+assert(resv.types.normal.onlineBeforeMin === 60 && resv.types.airport.onlineBeforeMin === 60 && resv.types.long.onlineBeforeMin === 60 && resv.types.premium.onlineBeforeMin === 45 && resv.types.event.onlineBeforeMin === 45, "be online before: normal 60, airport 60, long trip 60, Comfort/Premium 45, events 45 (same as the driver app)");
+assert(resv.types.normal.remindFirstMin === 120 && resv.types.normal.remindLastMin === 0, "owner M6-a: one reminder 2 h before pickup (second off)");
 assert(resv.riderFees.economy.freeMin === 60 && resv.riderFees.premium.freeMin === 120 && resv.driverLateCancelHours === 1 && resv.riderFees.economy.value === 50 && zoneDefault("FR-PC").reservation.riderFees.economy.value === 4.75 && zoneDefault("TN-TC").reservation.riderFees.economy.value === 15, "riders free until 60 min (Premium 120) before pickup, a late driver cancel is under 1 h, the fee is in the country's money");
 assert(resv.latePause && resv.latePauseAfter === 2 && resv.latePeriodDays === 7, "2 late cancels a week pause scheduled rides");
 assert(resv.showDriverOnAccept, "the rider sees the driver at once by default");
@@ -385,7 +386,7 @@ const r3Book = normalizeDispatchBook(JSON.parse(JSON.stringify({ ...emptyDispatc
 const r3Live = liveRules(r3Book, "FR-PC").reservation;
 assert(r3Live.homePopupTo === "list" && r3Live.popupClosedExclusive && r3Live.riderFees.comfort.value === 5.7 && r3Live.raiseMax === 47.5 && r3Live.assignAcceptSec === 30 && r3Live.riderFees.economy.freeMin === 60 && r3Live.showDriverOnAccept, "an old save gets the new settings in the country's money");
 assert(JSON.stringify(r3Live.lateEta) === JSON.stringify(zoneDefault("FR-PC").reservation.lateEta), "an old save gets running late from the defaults");
-assert(r3Live.types.airport.onlineBeforeMin === 75 && r3Live.types.airport.spareMin === 15 && r3Live.types.normal.onlineBeforeMin === 30 && r3Live.types.event.onlineBeforeMin === 45 && r3Live.types.premium.onlineBeforeMin === 45, "kinds of ride are filled in one by one");
+assert(r3Live.types.airport.onlineBeforeMin === 75 && r3Live.types.airport.spareMin === 15 && r3Live.types.normal.onlineBeforeMin === 60 && r3Live.types.event.onlineBeforeMin === 45 && r3Live.types.premium.onlineBeforeMin === 45, "kinds of ride are filled in one by one");
 assert(zoneIssues(liveRules(r3Book, "FR-PC")).length === 0, "an old save stays valid");
 assert(changeLines(liveRules(r3Book, "FR-PC"), draftRules(r3Book, "FR-PC")).length === 0, "an old save does not show as changed");
 const r3Preset = applyPreset(zoneDefault("TN-TC"), BUILT_IN_PRESETS[0], "TN");

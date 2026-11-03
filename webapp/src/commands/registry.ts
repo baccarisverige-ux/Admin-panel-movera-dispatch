@@ -223,6 +223,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.reservation.raise", label: "Raise the driver's fare", reason: true, permission: "trips.intervene" },
   { id: "admin.reservation.cancel", label: "Cancel reservation", reason: true, permission: "trips.intervene" },
   { id: "admin.reservation.noShow", label: "Mark reservation as no-show", reason: true, permission: "trips.intervene" },
+  // v0.18.17 Book later: send a booked ride to drivers now (POST /admin/trips/{tripId}/reservation/dispatch-now).
+  { id: "admin.reservation.dispatchNow", label: "Send reservation to drivers now", reason: false, permission: "trips.intervene" },
   { id: "admin.safetyOps.save", label: "Save safety policy", reason: true, permission: "safety.edit" },
   { id: "admin.safety.contact", label: "Log contact attempt", reason: true, permission: "safety.edit" },
   { id: "admin.safety.take", label: "Take incident", reason: true, permission: "safety.edit" },

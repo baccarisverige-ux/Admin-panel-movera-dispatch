@@ -225,7 +225,10 @@
   "booking": {
     "maxStops": 3,
     "maxPickupMoveMeters": 200,
-    "bookingHorizonDays": 7
+    "bookingHorizonDays": 7,
+    "minAheadMin": 15,
+    "maxAheadDays": 90,
+    "freeChangeBeforeMin": 60
   },
   "cancelFees": {
     "live": {

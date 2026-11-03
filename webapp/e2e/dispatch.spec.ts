@@ -355,6 +355,8 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(gap.getByLabel("Smart gap example")).toContainText("08:55");
   await expect(gap.getByLabel("Airport be online before")).toHaveValue("60");
   await expect(gap.getByLabel("Comfort and Premium be online before")).toHaveValue("45");
+  // Owner M6-a: the second reminder is off by default; switched on, the order is checked.
+  await gap.getByLabel("Airport second reminder").fill("15");
   await gap.getByLabel("Airport first reminder").fill("10");
   const alert = page.getByLabel("Norrmalm rules").getByRole("alert");
   await expect(alert).toContainText("Reservations, Airport: the first reminder must come before the second");
@@ -435,7 +437,9 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(list).toContainText("Home popup goes to: same drivers as the list → all drivers in the zone");
   await expect(list).toContainText("Closed popup comes back as Exclusive: on → off");
   await expect(list).toContainText("Normal rides: spare minutes: 15 → 20");
-  await expect(list).toContainText("Airport rides: first reminder: 60 → 90");
+  // Owner M6-a: the default first reminder is 2 h (120 min); the second one was switched on above.
+  await expect(list).toContainText("Airport rides: first reminder: 120 → 90");
+  await expect(list).toContainText("Airport rides: second reminder: 0 → 15");
   await expect(list).toContainText("Reservations, Movera: fee: 50 → 75");
   await expect(list).toContainText("Highest fare raise: 500 → 300");
   await expect(list).toContainText("Time to accept a ride assigned by Movera: 30 → 90");

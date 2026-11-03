@@ -4,7 +4,7 @@ import { formatMoney } from "./money.ts";
 export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
-export const CONTRACT_VERSION = "0.18.12" as const;
+export const CONTRACT_VERSION = "0.18.17" as const;
 
 /** The 19 trip statuses of contract v0.3.0 (contract.json#tripStatus.values), in lifecycle order. */
 export const TRIP_STATUSES = [
@@ -66,7 +66,9 @@ export type TripKind = "live" | "scheduled";
 export type TripCommand =
   | "quote" | "request" | "start_search" | "raise_price" | "send_offer" | "offer_lapsed" | "accept" | "assign"
   | "head_to_pickup" | "arrive" | "board" | "start_trip" | "near_dropoff" | "complete"
-  | "cancel" | "end_early" | "no_show" | "reassign" | "expire" | "system_cancel" | "fail";
+  | "cancel" | "end_early" | "no_show" | "reassign" | "expire" | "system_cancel" | "fail"
+  // v0.18.17 Book later.
+  | "release" | "unassign" | "reschedule";
 
 export type Transition = {
   command: TripCommand;
@@ -106,6 +108,10 @@ export const TRANSITIONS: readonly Transition[] = [
   { command: "cancel", actor: "driver", from: ["accepted", "driver_to_pickup", "arrived"], to: "searching", when: "live" },
   { command: "cancel", actor: "driver", from: ["accepted"], to: "requested", when: "scheduled" },
   { command: "cancel", actor: "driver", from: ["driver_to_pickup", "arrived"], to: "searching", when: "scheduled" },
+  // v0.18.17 Book later (contract.json#bookLater): offline driver loses it, admin unassign, rider change.
+  { command: "release", actor: "system", from: ["accepted"], to: "requested", when: "scheduled" },
+  { command: "unassign", actor: "admin", from: ["accepted"], to: "requested", when: "scheduled" },
+  { command: "reschedule", actor: "rider", from: ["requested"], to: "requested", when: "scheduled" },
   { command: "cancel", actor: "driver", from: ["rider_onboard", "in_trip", "approaching_dropoff"], to: "cancelled_by_driver" },
   { command: "no_show", actor: "driver", from: ["arrived"], to: "no_show" },
   { command: "no_show", actor: "admin", from: ["arrived", "accepted", "driver_to_pickup"], to: "no_show" },

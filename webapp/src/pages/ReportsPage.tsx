@@ -204,13 +204,13 @@ export function ReportsPage() {
       {tab === "promos" ? <PromosTab {...props} /> : null}
       </>}
 
-      <SaveViewDialog open={viewOpen} onClose={() => setViewOpen(false)} settings={settings} agentId={agent?.id ?? ""} build={(name, shared) => ({ id: `RV-${Date.now().toString(36)}`, name, by: agent?.id ?? "", shared, tab, period: periodParams(period, new URLSearchParams()).toString(), compare, filters, country: market.id, zones: scope.zones.join(",") })} onSaved={(name) => setNotice(tr("View {0} saved.", [name]))} />
-      <ScheduleDialog key={`${tab}-${scheduleOpen}`} open={scheduleOpen} onClose={() => setScheduleOpen(false)} settings={settings} agentId={agent?.id ?? ""} tab={tab} country={market.id} onSaved={setNotice} />
+      <SaveViewDialog loading={slice.loading} open={viewOpen} onClose={() => setViewOpen(false)} settings={settings} agentId={agent?.id ?? ""} build={(name, shared) => ({ id: `RV-${Date.now().toString(36)}`, name, by: agent?.id ?? "", shared, tab, period: periodParams(period, new URLSearchParams()).toString(), compare, filters, country: market.id, zones: scope.zones.join(",") })} onSaved={(name) => setNotice(tr("View {0} saved.", [name]))} />
+      <ScheduleDialog key={`${tab}-${scheduleOpen}`} loading={slice.loading} open={scheduleOpen} onClose={() => setScheduleOpen(false)} settings={settings} agentId={agent?.id ?? ""} tab={tab} country={market.id} onSaved={setNotice} />
     </div>
   );
 }
 
-function SaveViewDialog({ open, onClose, settings, agentId, build, onSaved }: { open: boolean; onClose: () => void; settings: ReportSettings; agentId: string; build: (name: string, shared: boolean) => ReportSettings["views"][number]; onSaved: (name: string) => void }) {
+function SaveViewDialog({ open, onClose, settings, agentId, build, onSaved, loading = false }: { loading?: boolean; open: boolean; onClose: () => void; settings: ReportSettings; agentId: string; build: (name: string, shared: boolean) => ReportSettings["views"][number]; onSaved: (name: string) => void }) {
   const [name, setName] = useState("");
   const [shared, setShared] = useState(false);
   const view = build(name.trim(), shared);
@@ -225,13 +225,13 @@ function SaveViewDialog({ open, onClose, settings, agentId, build, onSaved }: { 
       {mine.length ? <ul className="rp-saved" aria-label={tr("Your views")}>{mine.map((item) => <li key={item.id}><FileText size={13} aria-hidden="true" /> {item.name}{item.shared ? ` · ${tr("shared")}` : ""}</li>)}</ul> : null}
       <div className="dx-modal-actions">
         <button data-command="admin.reports.view" type="button" className="dash-btn ghost" onClick={onClose}>{tr("Cancel")}</button>
-        <CommandButton command="admin.reports.saveView" className="dash-btn" targetId={name.trim() || "view"} confirmTarget={false} scope="all" before={`${settings.views.length} views`} after={`${settings.views.length + 1} views`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, views: [...settings.views, view] }} disabled={!name.trim()} onDone={() => { onSaved(name.trim()); setName(""); onClose(); }}>{tr("Save view")}</CommandButton>
+        <CommandButton command="admin.reports.saveView" className="dash-btn" targetId={name.trim() || "view"} confirmTarget={false} scope="all" before={`${settings.views.length} views`} after={`${settings.views.length + 1} views`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, views: [...settings.views, view] }} disabled={!name.trim() || loading} onDone={() => { onSaved(name.trim()); setName(""); onClose(); }}>{tr("Save view")}</CommandButton>
       </div>
     </Modal>
   );
 }
 
-function ScheduleDialog({ open, onClose, settings, agentId, tab, country, onSaved }: { open: boolean; onClose: () => void; settings: ReportSettings; agentId: string; tab: ReportTab; country: string; onSaved: (text: string) => void }) {
+function ScheduleDialog({ open, onClose, settings, agentId, tab, country, onSaved, loading = false }: { loading?: boolean; open: boolean; onClose: () => void; settings: ReportSettings; agentId: string; tab: ReportTab; country: string; onSaved: (text: string) => void }) {
   const blank = (): Schedule => ({ id: `RS-${Date.now().toString(36)}`, name: "", by: agentId, on: true, tab, format: "pdf", every: "week", weekday: 0, time: "08:00", to: "", country });
   const [draft, setDraft] = useState<Schedule>(blank);
   const issues = scheduleIssues(draft);
@@ -265,7 +265,7 @@ function ScheduleDialog({ open, onClose, settings, agentId, tab, country, onSave
       {!issues.length ? <p className="dx-note">{scheduleLine(draft)}</p> : null}
       <div className="dx-modal-actions">
         <button data-command="admin.reports.view" type="button" className="dash-btn ghost" onClick={onClose}>{tr("Close")}</button>
-        <CommandButton command="admin.reports.schedule" className="dash-btn" targetId={draft.name.trim() || "schedule"} confirmTarget={false} scope="all" before={`${settings.schedules.length} schedules`} after={`${settings.schedules.length + 1} schedules`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, schedules: [...settings.schedules, { ...draft, name: draft.name.trim() }] }} disabled={Boolean(issues.length)} onDone={() => { onSaved(tr("Schedule {0} saved: {1}.", [draft.name.trim(), scheduleLine(draft)])); setDraft(blank()); }}>{tr("Save schedule")}</CommandButton>
+        <CommandButton command="admin.reports.schedule" className="dash-btn" targetId={draft.name.trim() || "schedule"} confirmTarget={false} scope="all" before={`${settings.schedules.length} schedules`} after={`${settings.schedules.length + 1} schedules`} expectedSliceRev={settings.draftRev} sliceKey={REPORT_SETTINGS_KEY} value={{ ...settings, draftRev: settings.draftRev + 1, schedules: [...settings.schedules, { ...draft, name: draft.name.trim() }] }} disabled={Boolean(issues.length) || loading} onDone={() => { onSaved(tr("Schedule {0} saved: {1}.", [draft.name.trim(), scheduleLine(draft)])); setDraft(blank()); }}>{tr("Save schedule")}</CommandButton>
       </div>
     </Modal>
   );

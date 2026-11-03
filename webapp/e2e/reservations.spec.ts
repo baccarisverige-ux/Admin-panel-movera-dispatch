@@ -34,10 +34,12 @@ test("reservation settings live in Radar · Exclusive · Reservations; the Reser
   await expect(page.getByRole("tab", { name: "Reservations" })).toHaveAttribute("aria-selected", "true");
   const policy = page.getByTestId("reservation-policy");
   await expect(policy).toContainText("Reservation policy · all zones · res-2");
-  await expect(policy.getByLabel("Booking horizon")).toHaveValue("7");
-  await expect(policy.getByLabel("Assignment lead")).toHaveValue("30");
-  await expect(policy.getByLabel("Give-up time")).toHaveValue("5");
+  // Owner BL-Q3 (permission given): Book up to, Assignment lead and Give-up time are gone; the window is per zone.
+  await expect(policy.getByLabel("Booking horizon")).toHaveCount(0);
+  await expect(policy.getByLabel("Assignment lead")).toHaveCount(0);
+  await expect(policy.getByLabel("Give-up time")).toHaveCount(0);
   await expect(policy.getByLabel("Included waiting")).toHaveValue("5");
+  await expect(page.getByTestId("booking-window").getByLabel("Book up to, days ahead")).toHaveValue("90");
   // Rider free cancel and fees are only in Rides & stops › Rider cancel fees, not in the policy.
   await expect(policy.getByLabel("Free cancel after accept")).toHaveCount(0);
   await expect(policy).not.toContainText("Free cancel");

@@ -336,6 +336,7 @@ export function DriverDetailPage() {
           <Field label={tr("Payouts go to")}>{fleet ? tr("{0} (fleet)", [fleet.name]) : liveData ? DASH : tr("The driver · bank •••• {0}", [ops.bank.last4])}</Field>
           <Field label={tr("Joined")}>{liveData ? (liveJoined ? dateFormat.format(Date.parse(liveJoined)) : DASH) : dateFormat.format(Date.parse(joined))}</Field>
           <Field label={tr("Last online")}>{lastOnline}</Field>
+          {liveData ? <Field label={tr("Home area")}>{liveFacts?.homeArea ? `${liveFacts.homeArea.label ? `${liveFacts.homeArea.label} · ` : ""}${liveFacts.homeArea.lat.toFixed(4)}, ${liveFacts.homeArea.lng.toFixed(4)}` : tr("Not set by the driver")}</Field> : null}
 
         </dl>
       </section>
