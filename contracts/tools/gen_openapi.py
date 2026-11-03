@@ -2716,6 +2716,7 @@ for _k, _sch in [("minAheadMin", i("v0.18.17 (owner Q1): the earliest pickup, mi
     S["DriverReservations"]["properties"][_k] = dflt(_sch, _RD[_k])
 for _k in ("minAheadMin", "maxAheadDays", "freeChangeBeforeMin"):
     S["RiderAppConfig"]["properties"]["booking"]["properties"][_k] = {**S["DriverReservations"]["properties"][_k], "description": "v0.18.17: written by the server from the zone's DriverAppConfig.reservations." + _k}
+S["RiderAppConfig"]["properties"]["booking"]["properties"]["reservationsOn"] = b("v0.18.19 (owner A): the zone's Book later switch (DriverAppConfig.reservations.on), written by the server. Off: the app still shows Book later and says 'Not available in this area yet' when tapped; the server refuses (403 reservations_off).")
 S["ReservationInfo"] = obj({"mode": s(enum=["now", "list"]), "dispatchAt": ref("Timestamp"), "freeChangeUntil": ref("Timestamp"), "noDriver": b(BL["noDriver"]), "overdue": b("BL-Q7: the pickup time passed with no driver."), "notStarted": b(), "atRisk": b("v0.18.19: the driver may be late."), "leaveAt": ref("Timestamp"), "driveSeconds": i(minimum=0),
                             "changeAsk": obj({"until": ref("Timestamp"), "previousAt": ref("Timestamp")}, ["until", "previousAt"], BL["rider"]["change"]),
                             "mustBeOnlineAt": {"allOf": [ref("Timestamp")], "description": "Driver and admin views of an accepted ride."}},

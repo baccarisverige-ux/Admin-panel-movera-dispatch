@@ -21572,6 +21572,11 @@ components:
               maximum: 1440
               description: 'v0.18.17: written by the server from the zone''s DriverAppConfig.reservations.freeChangeBeforeMin'
               default: 60
+            reservationsOn:
+              type: boolean
+              description: 'v0.18.19 (owner A): the zone''s Book later switch (DriverAppConfig.reservations.on), written by
+                the server. Off: the app still shows Book later and says ''Not available in this area yet'' when tapped; the
+                server refuses (403 reservations_off).'
         cancelFees:
           $ref: '#/components/schemas/CancelFees'
         waiting:
