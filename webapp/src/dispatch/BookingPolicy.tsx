@@ -28,15 +28,7 @@ export function BookingPolicyCard() {
   return (
     <div data-testid="reservation-policy">
       <Card title={tr("Reservation policy · all zones · {0}", [book.currentPolicy.version])} tone="green" icon={<ScrollText size={18} />} help={tr("Saved on its own as a new version. Rides already booked keep the version they were booked with.")}>
-        <Row label={tr("Book up to")} help={tr("How far ahead a rider can book.")}>
-          <Num label={tr("Booking horizon")} value={policy.bookingHorizonDays} unit="days ahead" min={1} max={30} disabled={off} onChange={(bookingHorizonDays) => patch({ bookingHorizonDays })} />
-        </Row>
-        <Row label={tr("Assignment lead")} help={tr("A ride with no driver this close to pickup needs attention.")}>
-          <Num label={tr("Assignment lead")} value={policy.assignmentLeadMinutes} unit="min before" min={5} max={240} disabled={off} onChange={(assignmentLeadMinutes) => patch({ assignmentLeadMinutes })} />
-        </Row>
-        <Row label={tr("Give-up time")} help={tr("Still no driver this close to pickup: the ride is given up.")}>
-          <Num label={tr("Give-up time")} value={policy.giveUpMinutes} unit="min before" min={1} max={60} disabled={off} onChange={(giveUpMinutes) => patch({ giveUpMinutes })} />
-        </Row>
+        {/* Owner BL-Q3 (permission given): "Book up to", "Assignment lead" and "Give-up time" are gone; the booking policy is per zone above. */}
         <Row label={tr("Included waiting")} help={tr("Free waiting at the pickup for a booked ride.")}>
           <Num label={tr("Included waiting")} value={policy.includedWaitingMinutes} unit="min" min={0} max={60} disabled={off} onChange={(includedWaitingMinutes) => patch({ includedWaitingMinutes })} />
         </Row>

@@ -7,7 +7,7 @@ import { ReservationTimelinePreview, spanLabel } from "./Previews";
 import { BookingPolicyCard } from "./BookingPolicy";
 import {
   HOME_POPUP_TO, LATE_ETA_REASSIGN_TO, leaveNowBeforeMin, raiseCap, raiseSplit, RESERVATION_CANCEL_TO, RESERVATION_LIST_TO, RIDE_TYPES, smartGapMin,
-  type DriverGroup, type LateEtaRules, type ReservationRules, type RideTypeId, type RideTypeRule, type ZoneDispatch,
+  type BookingWindow, type DriverGroup, type LateEtaRules, type ReservationRules, type RideTypeId, type RideTypeRule, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx } from "../i18n";
 
@@ -42,6 +42,8 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
   const setResv = (patch: Partial<ReservationRules>) => set({ reservation: { ...resv, ...patch } });
   const setType = (id: RideTypeId, patch: Partial<RideTypeRule>) => setResv({ types: { ...resv.types, [id]: { ...resv.types[id], ...patch } } });
   const setLate = (patch: Partial<LateEtaRules>) => setResv({ lateEta: { ...resv.lateEta, ...patch } });
+  const setBooking = (patch: Partial<BookingWindow>) => setResv({ booking: { ...resv.booking, ...patch } });
+  const bw = resv.booking;
   const off = disabled || !resv.on;
   const late = resv.lateEta;
   const lateTo = LATE_ETA_REASSIGN_TO.find((item) => item.id === late.reassignTo) ?? LATE_ETA_REASSIGN_TO[0];
@@ -55,6 +57,37 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
   const group = groups.find((item) => item.id === resv.listGroupId);
   return (
     <div className="dx-cards">
+      <Card title={tr("Booking policy · this zone")} tone="green" icon={<CalendarClock size={18} />} help={tr("Saved on the server with this zone's settings when you publish. Riders, drivers and the server all use these numbers.")} off={!resv.on}>
+        <div data-testid="booking-window">
+          <Row label={tr("How early and how far ahead")} help={tr("A rider can book a ride from this many minutes ahead, up to this many days ahead.")}>
+            <Num label={tr("Book from, minutes ahead")} before="from" value={bw.minAheadMin} unit="min ahead" min={5} max={240} disabled={off} onChange={(minAheadMin) => setBooking({ minAheadMin })} />
+            <Num label={tr("Book up to, days ahead")} before="up to" value={bw.maxAheadDays} unit="days ahead" min={1} max={365} disabled={off} onChange={(maxAheadDays) => setBooking({ maxAheadDays })} />
+          </Row>
+          <Row label={tr("Booked soon: send at once")} help={tr("Booked closer to pickup than this: it goes out at once like a normal ride (Exclusive, then Radar). Further ahead: it goes to Scheduled rides.")}>
+            <Num label={tr("Send at once when booked under")} before="under" value={bw.soonBeforeMin} unit="min ahead" min={0} max={240} disabled={off} onChange={(soonBeforeMin) => setBooking({ soonBeforeMin })} />
+          </Row>
+          <Row label={tr("Reservation notice")} help={tr("When a ride goes to Scheduled rides, the nearest drivers who can see it get a notice.")} on={bw.noticeOn} disabled={off} onToggle={(noticeOn) => setBooking({ noticeOn })}>
+            <Num label={tr("Drivers who get the notice")} before="up to" value={bw.noticeMaxDrivers} unit="drivers" min={1} max={500} disabled={off || !bw.noticeOn} onChange={(noticeMaxDrivers) => setBooking({ noticeMaxDrivers })} />
+          </Row>
+          <Row label={tr("No driver close to pickup")} help={tr("Still no driver this many minutes before pickup: you get an alert and the rider is told. The search goes on.")}>
+            <Num label={tr("No-driver alert, minutes before pickup")} before="at" value={bw.noDriverAlertMin} unit="min before" min={1} max={120} disabled={off} onChange={(noDriverAlertMin) => setBooking({ noDriverAlertMin })} />
+          </Row>
+          <Row label={tr("Rider reminder")} help={tr("The rider gets a reminder this many minutes before pickup. 0 = no reminder. The rider also gets a message when a driver takes the ride.")}>
+            <Num label={tr("Rider reminder, minutes before pickup")} before="at" value={bw.riderReminderMin} unit="min before" min={0} max={1440} disabled={off} onChange={(riderReminderMin) => setBooking({ riderReminderMin })} />
+          </Row>
+          <Row label={tr("Free change or cancel")} help={tr("More than this many minutes before pickup the rider can change the ride (new price shown) or cancel for free. Later: no change, and cancelling follows the reservation cancel fees.")}>
+            <Num label={tr("Free change or cancel until, minutes before pickup")} before="until" value={bw.freeChangeBeforeMin} unit="min before" min={0} max={1440} disabled={off} onChange={(freeChangeBeforeMin) => setBooking({ freeChangeBeforeMin })} />
+          </Row>
+          <Row label={tr("Longest booked ride")} help={tr("Off: no limit. On: a booked ride longer than this is refused when the rider asks for a price. Normal rides are not limited by it.")} on={bw.maxTripKm !== null} disabled={off} onToggle={(on) => setBooking({ maxTripKm: on ? 60 : null })}>
+            {bw.maxTripKm !== null ? <Num label={tr("Longest booked ride, km")} before="up to" value={bw.maxTripKm} unit="km" min={1} max={1000} disabled={off} onChange={(maxTripKm) => setBooking({ maxTripKm })} /> : null}
+          </Row>
+          <Row label={tr("Rider changes a ride a driver took")} help={tr("The driver is asked: Keep it at the new time? No, or no answer in time: the ride goes back to Scheduled rides.")}>
+            <Num label={tr("Time for the driver to answer, minutes")} before="within" value={bw.changeAnswerMin} unit="min" min={1} max={120} disabled={off} onChange={(changeAnswerMin) => setBooking({ changeAnswerMin })} />
+          </Row>
+          <p className="dx-note">{tr("Card payments are taken in full when the ride is booked (card payments are still coming soon).")}</p>
+        </div>
+      </Card>
+
       <Card title={tr("Reservations")} tone="orange" icon={<CalendarClock size={18} />} help={tr("Rides booked for later. Nobody took it yet: Scheduled rides, then the Home popup, then Exclusive, then Radar trips.")} off={!resv.on} aside={<Switch label={tr("Reservations")} on={resv.on} disabled={disabled} onChange={(on) => setResv({ on })} />}>
         {!resv.on ? <p className="dx-note warn" role="status">{trn("{0} Reservations are off for every driver in this zone: nobody gets new reservations. Rides drivers already accepted still run.", <AlertTriangle size={13} aria-hidden="true" />)}</p> : null}
         <Row label={tr("Start looking for a driver")} help={tr("Before the pickup time.")}>
@@ -70,6 +103,8 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
           {resv.listTo === "random" ? <Num label={tr("Random group size")} value={resv.listGroupSize} unit="drivers" min={1} max={500} disabled={off} onChange={(listGroupSize) => setResv({ listGroupSize })} /> : null}
           {resv.listTo === "homeNear" ? <Num label={tr("Home distance from pickup")} before="within" value={resv.listHomeKm} unit="km of pickup" step={0.5} min={0.5} max={50} disabled={off} onChange={(listHomeKm) => setResv({ listHomeKm })} /> : null}
           {resv.listTo === "nearNow" ? <Num label={tr("Distance from pickup now")} before="within" value={resv.listNearKm} unit="km of pickup" step={0.5} min={0.5} max={50} disabled={off} onChange={(listNearKm) => setResv({ listNearKm })} /> : null}
+          {resv.listTo === "nearAtTime" ? <Num label={tr("Last ride ends within, km")} before="within" value={bw.listAtTimeKm} unit="km of pickup" step={0.5} min={0.5} max={50} disabled={off} onChange={(listAtTimeKm) => setBooking({ listAtTimeKm })} /> : null}
+          {resv.listTo === "nearAtTime" ? <Num label={tr("Last ride ends at most, minutes before")} before="at most" value={bw.listAtTimeMin} unit="min before" min={5} max={240} disabled={off} onChange={(listAtTimeMin) => setBooking({ listAtTimeMin })} /> : null}
           {resv.listTo === "areaRegulars" ? <Num label={tr("Trips from the area")} before="at least" value={resv.listAreaTrips} unit="trips in 30 days" min={1} max={200} disabled={off} onChange={(listAreaTrips) => setResv({ listAreaTrips })} /> : null}
           {resv.listTo === "group" ? (
             groups.length ? (
@@ -131,7 +166,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
                     <Num label={tr("{0} be online before", [trx(type.label)])} before="online" value={rule.onlineBeforeMin} unit="min before" min={5} max={240} disabled={off} onChange={(onlineBeforeMin) => setType(type.id, { onlineBeforeMin })} />
                     <Num label={tr("{0} spare minutes", [trx(type.label)])} before="spare" value={rule.spareMin} unit="min" min={0} max={60} disabled={off} onChange={(spareMin) => setType(type.id, { spareMin })} />
                     <Num label={tr("{0} first reminder", [trx(type.label)])} before="reminders" value={rule.remindFirstMin} unit="min before" min={1} max={1440} disabled={off} onChange={(remindFirstMin) => setType(type.id, { remindFirstMin })} />
-                    <Num label={tr("{0} second reminder", [trx(type.label)])} before="and" value={rule.remindLastMin} unit="min before" min={1} max={1440} disabled={off} onChange={(remindLastMin) => setType(type.id, { remindLastMin })} />
+                    <Num label={tr("{0} second reminder", [trx(type.label)])} before="and" value={rule.remindLastMin} unit="min before" min={0} max={1440} disabled={off} onChange={(remindLastMin) => setType(type.id, { remindLastMin })} />
                   </span>
                 </li>
               );

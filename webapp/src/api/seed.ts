@@ -184,6 +184,8 @@ export type LiveDriverFacts = {
   activeTripId: string | null;
   /** v0.18.4 (G3-D2): Driver.performance when the server sent it (GET /admin/drivers/{driverId}). */
   performance?: { acceptancePct: number | null; cancellationPct: number | null; rating: number | null };
+  /** v0.18.17 (owner BL-Q4): the home area the driver set in the app. */
+  homeArea?: { lat: number; lng: number; label?: string } | null;
 };
 export type LiveRiderFacts = {
   rating: number | null;

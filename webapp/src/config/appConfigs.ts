@@ -335,7 +335,8 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     /** Owner Q10: set per country in Pricing › Tips & limits, in local money; null = no cap. */
     promoCap: base.settings.promoCap === null ? null : wire(base.settings.promoCap, base.currency),
     pickupFee: riderPickupFee(base),
-    booking: { ...booking(base), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays },
+    // v0.18.17: the booking window and free-change time per zone (the server serves the same from the driver document).
+    booking: { ...booking(base), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays, minAheadMin: base.zone.reservation.booking.minAheadMin, maxAheadDays: base.zone.reservation.booking.maxAheadDays, freeChangeBeforeMin: base.zone.reservation.booking.freeChangeBeforeMin },
     cancelFees: cancelFees(base),
     cancelCheck: { on: base.zone.riderCancel.on, closerPct: base.zone.riderCancel.closerPct },
     // v0.18.7 (G5 Q2): the same switch as the driver document (contract RiderAppConfig.waiting); the server copies the
@@ -461,9 +462,42 @@ function driverReservations(zone: ZoneDispatch) {
     assignAcceptSeconds: resv.assignAcceptSec,
     rideTypes: Object.fromEntries((Object.keys(RESERVATION_RIDE_TYPE_KEYS) as RideTypeId[]).map((id) => {
       const rule = resv.types[id];
-      return [RESERVATION_RIDE_TYPE_KEYS[id], { onlineBeforeMin: rule.onlineBeforeMin, spareMin: rule.spareMin, reminderMin: [rule.remindFirstMin, rule.remindLastMin] }];
+      return [RESERVATION_RIDE_TYPE_KEYS[id], { onlineBeforeMin: rule.onlineBeforeMin, spareMin: rule.spareMin, reminderMin: rule.remindLastMin > 0 ? [rule.remindFirstMin, rule.remindLastMin] : [rule.remindFirstMin] }];
     })) as Record<(typeof RESERVATION_RIDE_TYPE_KEYS)[RideTypeId], { onlineBeforeMin: number; spareMin: number; reminderMin: number[] }>,
     lateEta: { on: resv.lateEta.on, toleranceMin: resv.lateEta.toleranceMin, checkEverySeconds: resv.lateEta.checkEverySeconds, reassignTo: resv.lateEta.reassignTo },
+    // v0.18.17 Book later (contract.json#bookLater): the booking policy and who sees a booked ride, read by the server.
+    ...reservationBookingParts(resv),
+  };
+}
+
+/** v0.18.17 (contract.json#configDefaults.reservations): the Book later keys of DriverAppConfig.reservations. */
+export function reservationBookingParts(resv: ZoneDispatch["reservation"]) {
+  const b = resv.booking;
+  return {
+    minAheadMin: b.minAheadMin,
+    maxAheadDays: b.maxAheadDays,
+    soonBeforeMin: b.soonBeforeMin,
+    listTo: resv.listTo,
+    listMinRating: resv.listMinRating,
+    listGroupSize: resv.listGroupSize,
+    listNearKm: resv.listNearKm,
+    listAreaTrips: resv.listAreaTrips,
+    listGroupId: resv.listGroupId ? resv.listGroupId : null,
+    listOpenAll: resv.listOpenAll,
+    listOpenAllAfterMin: resv.listOpenAllAfterMin,
+    noticeOn: b.noticeOn,
+    noticeMaxDrivers: b.noticeMaxDrivers,
+    homePopup: resv.homePopup,
+    noDriverAlertMin: b.noDriverAlertMin,
+    riderReminderMin: b.riderReminderMin,
+    freeChangeBeforeMin: b.freeChangeBeforeMin,
+    maxTripKm: b.maxTripKm,
+    // Owner BL-Q2: "Start looking for a driver" (default 30) is the server's search start.
+    dispatchBeforeMin: resv.searchBeforeMin,
+    listHomeKm: resv.listHomeKm,
+    listAtTimeKm: b.listAtTimeKm,
+    listAtTimeMin: b.listAtTimeMin,
+    changeAnswerMin: b.changeAnswerMin,
   };
 }
 
@@ -521,7 +555,11 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
       scheduled: codes(country.cancelReasons.groups.scheduled),
       noShow: [country.cancelReasons.noShow.code],
     },
-    drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restHours * 60, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
+    // v0.18.13 (contract.json#drivingLimits): resetAfterOfflineHours has no admin control yet (backlog): the contract default 6.
+    drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restHours * 60, resetAfterOfflineHours: 6, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
+    // v0.18.13 (contract.json#pickupWaiting.headingCheck, G5-8): no admin control yet (backlog); the contract defaults, never
+    // published by Dispatch (not an OWNED key), so the server keeps its own value.
+    headingCheck: { on: true, headingPct: 80, notHeadingMinutes: 2, reassign: true },
     rideCheck: rideCheck(base, state),
     routeChange: routeChange(base),
     texts: driverTexts(base, state),

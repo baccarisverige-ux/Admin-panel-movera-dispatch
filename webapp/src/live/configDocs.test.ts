@@ -48,7 +48,10 @@ test("PricingDocument from the Pricing page: minor units, ONE seat fee on Child 
   const fixture = sample("pricing_document");
   // v0.7.1 (owner 2026-10-27): no free minutes at a stop and no separate surge maximum (the slider is the maximum).
   const gone = new Set(["stopFreeWaitMin"]);
-  assert.deepEqual(Object.keys(doc).sort(), Object.keys(fixture).filter((k) => !gone.has(k)).sort());
+  // v0.18.13 (contract.json#fleetShareRemoved): the sample has no fleetCommissionPct any more; "a document that still
+  // carries the key is accepted and the key ignored". The admin still sends it until the fleet % job (G10) removes it.
+  const legacy = new Set(["fleetCommissionPct"]);
+  assert.deepEqual(Object.keys(doc).filter((k) => !legacy.has(k)).sort(), Object.keys(fixture).filter((k) => !gone.has(k)).sort());
   assert.ok(!("stopFreeWaitMin" in doc));
   const surge = doc["surge"] as Doc;
   assert.ok(!("maxMultiplier" in surge));
@@ -777,4 +780,21 @@ test("checker #204: a reordered keyed list follows the admin's order; repeated k
   const fees = patchChanged({ fees: [fee1, fee2] }, { fees: [fee1, fee2] }, { fees: [fee1, { kind: "late", amount: 25 }] });
   assert.equal((fees.fees as unknown[]).length, 2);
   assert.deepEqual(fees.fees, [fee1, { kind: "late", amount: 25 }]);
+});
+
+// v0.18.17 Book later: on live, Dispatch › Reservations reads back what the server keeps (before: never read back, so a
+// reload showed the defaults again).
+test("v0.18.17: Dispatch › Reservations is read back from the zone's driver document", () => {
+  const fallback = zoneDefault("Z001");
+  const driver = { reservations: { minAheadMin: 20, maxAheadDays: 60, soonBeforeMin: 40, noticeOn: false, noDriverAlertMin: 12, freeChangeBeforeMin: 90, maxTripKm: 70, listTo: "group", listGroupId: "grp_1", homePopup: false, exclusiveBeforeMin: 25, rideTypes: { normal: { onlineBeforeMin: 30, spareMin: 10, reminderMin: [120, 20] } }, maxAheadDaysTypo: 1 } };
+  const zone = rulesOfDispatch(null, driver, fallback);
+  assert.deepEqual(zone.reservation.booking, { ...fallback.reservation.booking, minAheadMin: 20, maxAheadDays: 60, soonBeforeMin: 40, noticeOn: false, noDriverAlertMin: 12, freeChangeBeforeMin: 90, maxTripKm: 70 });
+  assert.equal(zone.reservation.listTo, "group");
+  assert.equal(zone.reservation.listGroupId, "grp_1");
+  assert.equal(zone.reservation.homePopup, false);
+  assert.equal(zone.reservation.exclusiveBeforeMin, 25);
+  assert.deepEqual(zone.reservation.types.normal, { onlineBeforeMin: 30, spareMin: 10, remindFirstMin: 120, remindLastMin: 20 });
+  const bad = rulesOfDispatch(null, { reservations: { minAheadMin: -4, listTo: "everyone" } }, fallback);
+  assert.equal(bad.reservation.booking.minAheadMin, 15, "a bad value keeps the default");
+  assert.equal(bad.reservation.listTo, fallback.reservation.listTo);
 });

@@ -24,11 +24,9 @@ test("R11 policy changes create a new version without rewriting existing reserva
   await page.goto("/dispatch?zone=Z001&tab=reservations");
   const policy = page.getByTestId("reservation-policy");
   await expect(policy).toContainText("res-2");
-  await policy.getByLabel("Give-up time").fill("40");
-  await expect(policy.getByRole("alert")).toContainText("Give-up time cannot exceed assignment lead time.");
+  // Owner BL-Q3: the old Give-up / Assignment lead / Booking horizon rows are gone; Included waiting makes the new version.
   await expect(policy.getByRole("button", { name: "Save reservation policy" })).toBeDisabled();
-  await policy.getByLabel("Give-up time").fill("5");
-  await policy.getByLabel("Booking horizon").fill("10");
+  await policy.getByLabel("Included waiting").fill("7");
   await policy.getByRole("button", { name: "Save reservation policy" }).click();
   await confirm(page);
   await expect(page.getByText(/Reservation policy saved as res-3/)).toBeVisible();
@@ -124,7 +122,7 @@ test("R11 Stockholm DST validation rejects spring gap and disambiguates fall ove
 test("R11 viewer can inspect but cannot mutate reservation policy or dispatch", async ({ page }) => {
   await session(page, "anna");
   await page.goto("/dispatch?zone=Z001&tab=reservations");
-  await expect(page.getByTestId("reservation-policy").getByLabel("Booking horizon")).toBeDisabled();
+  await expect(page.getByTestId("reservation-policy").getByLabel("Included waiting")).toBeDisabled();
   await expect(page.getByRole("button", { name: "Save reservation policy" })).toBeDisabled();
 
   await page.goto("/reservations/B021");

@@ -2,7 +2,7 @@ import { market, MARKETS, zoneById, type MarketId, type MarketZone } from "../ma
 import { currencySymbol, fromSek } from "../pricing/zonePricing.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
 import { PICKUP_MOVE_RANGE, RAISE_MAX_FACTOR_DEFAULT, validRaiseFactor } from "./offerRules.ts";
-import { rulesOfDispatch } from "../live/configDocs.ts";
+import { rulesOfDispatch } from "../live/dispatchDoc.ts";
 import {
   DEFAULT_FEE_CATEGORIES, RESERVATION_FREE_MAX_MIN, cancelFeeAmount, cancelFeeDefaults, cancelFeeIssues, completeCancelFees, feeRow, legacyCancelFees,
   type CancelFeeKind, type CancelFeeTable, type CancelFeeType, type FeeCategory,
@@ -96,7 +96,7 @@ export const ALERTS: { id: AlertId; label: string; unit: string; help: string }[
 ];
 
 /** Who gets a new reservation in the driver app's Scheduled rides list. */
-export type ReservationListTo = "all" | "category" | "rating" | "random" | "homeNear" | "nearNow" | "favourites" | "areaRegulars" | "group";
+export type ReservationListTo = "all" | "category" | "rating" | "random" | "homeNear" | "nearNow" | "favourites" | "areaRegulars" | "group" | "nearAtTime";
 /** Who sees the Home popup: the same drivers as the Scheduled rides list, or every online driver in the zone. */
 export type HomePopupTo = "list" | "zone";
 /** Kinds of scheduled ride, each with its own times before pickup. */
@@ -114,9 +114,10 @@ export const RESERVATION_LIST_TO: { id: ReservationListTo; label: string; help: 
   { id: "category", label: "Drivers of the category", help: "Only drivers who drive the ride's category, for example Comfort." },
   { id: "rating", label: "High rating only", help: "Only drivers with at least the rating you set." },
   { id: "random", label: "Random group", help: "A random group of drivers in the zone, as many as you set. A new group is picked for each reservation." },
-  { id: "homeNear", label: "Home near pickup", help: "Drivers whose home address is near the pickup, within the distance you set. Good for early-morning rides." },
+  { id: "homeNear", label: "Home near pickup", help: "Drivers whose home area (set by the driver in the app) is near the pickup, within the distance you set. Good for early-morning rides." },
   { id: "nearNow", label: "Near pickup now", help: "Drivers who are near the pickup when the rider books, within the distance you set." },
-  { id: "favourites", label: "Rider's favourites", help: "Drivers this rider marked as favourite or rated 5 stars before." },
+  { id: "favourites", label: "Rider's favourites", help: "Drivers this rider marked as favourite after a ride." },
+  { id: "nearAtTime", label: "Near pickup at that time", help: "Drivers whose last booked ride ends near the pickup just before its time, within the distance and minutes you set." },
   { id: "areaRegulars", label: "Often in the area", help: "Drivers who did at least the number of trips you set from the pickup area in the last 30 days." },
   { id: "group", label: "A driver group", help: "Only the drivers in one saved group. Groups are made in Events & groups." },
 ];
@@ -193,6 +194,62 @@ export type LateEtaRules = {
 
 export const RESERVATION_STEP_LABEL: Record<ReservationStep, string> = { list: "Scheduled rides", home: "Home popup", exclusive: "Exclusive", radar: "Radar trips" };
 
+/** v0.18.17 (contract.json#bookLater): the zone's booking policy, every value an admin setting with the owner's defaults. */
+export type BookingWindow = {
+  /** Q1: the earliest pickup, minutes after booking (default 15). */
+  minAheadMin: number;
+  /** Q1: the latest pickup, days after booking (default 90). */
+  maxAheadDays: number;
+  /** Q2: closer than this, the ride goes out at once like a live ride (default 30). */
+  soonBeforeMin: number;
+  /** Q2: the reservation notice at booking, to at most noticeMaxDrivers of the drivers who see it. */
+  noticeOn: boolean;
+  noticeMaxDrivers: number;
+  /** Q3: no driver this many minutes before pickup → admin alert + rider told (default 10). */
+  noDriverAlertMin: number;
+  /** Q5 rider: reminder this many minutes before pickup (default 60; 0 = off). */
+  riderReminderMin: number;
+  /** Q6: change or cancel free only more than this many minutes before pickup (default 60). */
+  freeChangeBeforeMin: number;
+  /** The demo admin's Max Trip Distance (Reservations): the longest booked ride; null = no limit (owner BL-Q5, default). */
+  maxTripKm: number | null;
+  /** BL-Q6: minutes the driver has to answer "Keep it at the new time?" (default 15). */
+  changeAnswerMin: number;
+  /** BL-Q4 "Near pickup at that time": the last ride ends within this many km, at most this many minutes before. */
+  listAtTimeKm: number;
+  listAtTimeMin: number;
+};
+
+export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30 };
+
+/** Limits for each booking window number (contract.json#bookLater, gen_openapi DriverReservations). */
+export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "maxTripKm">, { min: number; max: number }> = {
+  minAheadMin: { min: 5, max: 240 }, maxAheadDays: { min: 1, max: 365 }, soonBeforeMin: { min: 0, max: 240 }, noticeMaxDrivers: { min: 1, max: 500 },
+  noDriverAlertMin: { min: 1, max: 120 }, riderReminderMin: { min: 0, max: 1440 }, freeChangeBeforeMin: { min: 0, max: 1440 },
+  changeAnswerMin: { min: 1, max: 120 }, listAtTimeKm: { min: 0.5, max: 50 }, listAtTimeMin: { min: 5, max: 240 },
+};
+export const MAX_TRIP_KM_LIMIT = { min: 1, max: 1000 };
+
+export const BOOKING_LABELS: Record<keyof typeof BOOKING_LIMITS, string> = {
+  minAheadMin: "book from (minutes ahead)", maxAheadDays: "book up to (days ahead)", soonBeforeMin: "sent at once under (minutes ahead)", noticeMaxDrivers: "drivers who get the notice",
+  noDriverAlertMin: "no-driver alert (minutes before pickup)", riderReminderMin: "rider reminder (minutes before pickup)", freeChangeBeforeMin: "free change or cancel (minutes before pickup)",
+  changeAnswerMin: "time to answer a changed ride (minutes)", listAtTimeKm: "near pickup at that time (km)", listAtTimeMin: "near pickup at that time (minutes)",
+};
+
+export function completeBookingWindow(raw: unknown): BookingWindow {
+  const own = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const next = { ...BOOKING_WINDOW_DEFAULT };
+  if (typeof own["noticeOn"] === "boolean") next.noticeOn = own["noticeOn"];
+  // BL-Q5: null (or a missing value) = no limit.
+  const km = own["maxTripKm"];
+  next.maxTripKm = typeof km === "number" && Number.isFinite(km) && km >= MAX_TRIP_KM_LIMIT.min && km <= MAX_TRIP_KM_LIMIT.max ? km : null;
+  for (const [key, limit] of Object.entries(BOOKING_LIMITS) as [keyof typeof BOOKING_LIMITS, { min: number; max: number }][]) {
+    const value = own[key];
+    if (typeof value === "number" && Number.isFinite(value) && value >= limit.min && value <= limit.max) next[key] = value;
+  }
+  return next;
+}
+
 export type ReservationRules = {
   on: boolean;
   searchBeforeMin: number;
@@ -239,6 +296,8 @@ export type ReservationRules = {
   lateBackupAfterMin: number;
   /** Running late: an online driver who would arrive more than toleranceMin late loses the ride early (contract lateEta). */
   lateEta: LateEtaRules;
+  /** v0.18.17 Book later (owner 2026-11-03 Q1–Q6, contract.json#bookLater), saved on the server in the zone's driver document. */
+  booking: BookingWindow;
   /** Before the ride, offers head toward the scheduled pickup (like destination mode), from this many minutes before. */
   towardPickup: boolean;
   towardPickupBeforeMin: number;
@@ -536,11 +595,12 @@ function waitingDefault(): WaitStep[] {
 
 function rideTypesDefault(): Record<RideTypeId, RideTypeRule> {
   return {
-    normal: { onlineBeforeMin: 30, spareMin: 15, remindFirstMin: 60, remindLastMin: 15 },
-    airport: { onlineBeforeMin: 60, spareMin: 15, remindFirstMin: 60, remindLastMin: 15 },
-    long: { onlineBeforeMin: 60, spareMin: 15, remindFirstMin: 60, remindLastMin: 15 },
-    premium: { onlineBeforeMin: 45, spareMin: 15, remindFirstMin: 60, remindLastMin: 15 },
-    event: { onlineBeforeMin: 45, spareMin: 15, remindFirstMin: 60, remindLastMin: 15 },
+    // v0.18.17 (owner Q5 2026-11-03): online 60 min before a normal ride (the zone may set 30), first reminder 2 h before; owner M6-a: no second reminder by default (0 = off).
+    normal: { onlineBeforeMin: 60, spareMin: 15, remindFirstMin: 120, remindLastMin: 0 },
+    airport: { onlineBeforeMin: 60, spareMin: 15, remindFirstMin: 120, remindLastMin: 0 },
+    long: { onlineBeforeMin: 60, spareMin: 15, remindFirstMin: 120, remindLastMin: 0 },
+    premium: { onlineBeforeMin: 45, spareMin: 15, remindFirstMin: 120, remindLastMin: 0 },
+    event: { onlineBeforeMin: 45, spareMin: 15, remindFirstMin: 120, remindLastMin: 0 },
   };
 }
 
@@ -571,6 +631,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
       listGroupId: "", homePopupTo: "list", popupClosedExclusive: true,
       hideClashing: true, lateWarn: true, lateBackupAfterMin: 5, towardPickup: true, towardPickupBeforeMin: 60,
       lateEta: { on: true, toleranceMin: 3, checkEverySeconds: 60, reassignTo: "exclusive" },
+      booking: { ...BOOKING_WINDOW_DEFAULT },
       types: rideTypesDefault(),
       riderFees: cancelFeeDefaults("reservation"), driverLateCancelHours: 1,
       latePause: true, latePauseAfter: 2, latePeriodDays: 7, latePauseDays: 7,
@@ -780,6 +841,8 @@ export function completeReservation(base: ReservationRules, stored: unknown, leg
     checkEverySeconds: typeof lateEta.checkEverySeconds === "number" && Number.isFinite(lateEta.checkEverySeconds) ? lateEta.checkEverySeconds : base.lateEta.checkEverySeconds,
     reassignTo: LATE_ETA_REASSIGN_TO.some((item) => item.id === lateEta.reassignTo) ? lateEta.reassignTo as LateEtaReassignTo : base.lateEta.reassignTo,
   };
+  // v0.18.17: an older save has no booking policy yet: the owner's defaults.
+  next.booking = completeBookingWindow(raw.booking);
   // Every kind of ride gets its own times; kinds or times missing from an older save come from the defaults.
   const storedTypes = raw.types && typeof raw.types === "object" && !Array.isArray(raw.types) ? raw.types as Partial<Record<RideTypeId, Partial<RideTypeRule>>> : {};
   next.types = Object.fromEntries(RIDE_TYPES.map((type) => {
@@ -972,6 +1035,12 @@ function reservationIssues(resv: ReservationRules, zoneId: string, categories: r
   if (resv.onDriverCancel === "home" && !resv.homePopup) issues.push("Reservations: after a driver cancels it cannot go to the Home popup, because the Home popup is off.");
   if (resv.onDriverCancel === "exclusive" && !resv.toExclusive) issues.push("Reservations: after a driver cancels it cannot become Exclusive, because \"Becomes an Exclusive trip\" is off.");
   if (resv.listTo === "group" && !resv.listGroupId) issues.push("Reservations: pick the driver group that gets Scheduled rides.");
+  // v0.18.17 Book later: the booking policy numbers stay inside the contract's limits.
+  const bw = resv.booking ?? BOOKING_WINDOW_DEFAULT;
+  for (const [key, limit] of Object.entries(BOOKING_LIMITS) as [keyof typeof BOOKING_LIMITS, { min: number; max: number }][]) {
+    if (!(bw[key] >= limit.min && bw[key] <= limit.max)) issues.push(`Reservations: ${BOOKING_LABELS[key]} must be ${limit.min} to ${limit.max}.`);
+  }
+  if (bw.maxTripKm !== null && !(bw.maxTripKm >= MAX_TRIP_KM_LIMIT.min && bw.maxTripKm <= MAX_TRIP_KM_LIMIT.max)) issues.push("Reservations: longest booked ride must be 1 to 1000 km.");
   if (resv.lateBackupAfterMin < 1 || resv.lateBackupAfterMin > 60) issues.push("Reservations: an offline driver must lose the ride 1 to 60 minutes after Leave now.");
   if (resv.lateEta.on && (!Number.isInteger(resv.lateEta.toleranceMin) || resv.lateEta.toleranceMin < 0 || resv.lateEta.toleranceMin > 30)) issues.push("Reservations: minutes late allowed must be 0 to 30.");
   if (resv.lateEta.on && (!Number.isInteger(resv.lateEta.checkEverySeconds) || resv.lateEta.checkEverySeconds < 15 || resv.lateEta.checkEverySeconds > 600)) issues.push("Reservations: the arrival time must be checked every 15 to 600 seconds.");
@@ -980,8 +1049,8 @@ function reservationIssues(resv: ReservationRules, zoneId: string, categories: r
     const rule = resv.types[type.id];
     if (rule.onlineBeforeMin < 5 || rule.onlineBeforeMin > 240) issues.push(`Reservations, ${type.label}: be online before must be 5 to 240 minutes.`);
     if (rule.spareMin < 0 || rule.spareMin > 60) issues.push(`Reservations, ${type.label}: spare minutes must be 0 to 60.`);
-    if (rule.remindFirstMin < 1 || rule.remindFirstMin > 1440 || rule.remindLastMin < 1 || rule.remindLastMin > 1440) issues.push(`Reservations, ${type.label}: reminders must be 1 to 1440 minutes before pickup.`);
-    else if (rule.remindFirstMin <= rule.remindLastMin) issues.push(`Reservations, ${type.label}: the first reminder must come before the second (a larger number of minutes).`);
+    if (rule.remindFirstMin < 1 || rule.remindFirstMin > 1440 || rule.remindLastMin < 0 || rule.remindLastMin > 1440) issues.push(`Reservations, ${type.label}: reminders must be 1 to 1440 minutes before pickup (the second can be 0 = off).`);
+    else if (rule.remindLastMin > 0 && rule.remindFirstMin <= rule.remindLastMin) issues.push(`Reservations, ${type.label}: the first reminder must come before the second (a larger number of minutes).`);
   }
   issues.push(...cancelFeeIssues(resv.riderFees, "reservation", categories));
   if (resv.driverLateCancelHours < 0.5 || resv.driverLateCancelHours > 72) issues.push("Reservations: a driver's late cancel must be set 0.5 to 72 hours before pickup.");

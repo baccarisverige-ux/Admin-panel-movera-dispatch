@@ -5,6 +5,7 @@
  * starting value, so the page looks as in the demo with a "Not connected yet" marker (src/live/connection.ts).
  * Commands the server has (driver status, vehicle review, full refund) go to it; any other command is refused.
  */
+import { reservationCall, type ServerReservation } from "./reservations.ts";
 import { catalogFor } from "../data/catalog.ts";
 import { CURRENCY, TIME_ZONE } from "../domain/contract.ts";
 import { isCurrency } from "../domain/money.ts";
@@ -155,6 +156,8 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       stale: live ? live.stale : null,
       activeTripId: live?.activeTripId ?? null,
       ...(driver.performance ? { performance: performanceFacts(driver.performance) } : {}),
+      // v0.18.17 (owner BL-Q4): the home area the driver set (who sees "home nearby" booked rides).
+      ...((driver as { homeArea?: { lat: number; lng: number; label?: string } }).homeArea ? { homeArea: (driver as unknown as { homeArea: { lat: number; lng: number; label?: string } }).homeArea } : {}),
     },
   };
 }
@@ -812,6 +815,14 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const answer = await client.put<unknown>(path, controlBody(current, value, input.reason));
       // v0.7.2: one admin is enough. A server that still files an approval answers 202 PendingApproval.
       if (isPendingApproval(answer)) return done("Waiting for a second admin to approve.", "pending_approval");
+      return done("Saved.");
+    }
+    // v0.18.17 Book later (contract.json#bookLater.admin): a booked ride's buttons go to the server, with the trip's version.
+    const reservationAction = ({ "admin.reservation.dispatchNow": "dispatchNow", "admin.reservation.unassign": "unassign", "admin.reservation.assign": "assign", "admin.reservation.cancel": "cancel", "admin.reservation.offer": "offer", "admin.reservation.raise": "raise", "admin.reservation.noShow": "noShow", "admin.reservation.contact": "contact" } as const)[input.action as "admin.reservation.cancel"];
+    if (reservationAction) {
+      const trip = await client.json<ServerReservation>(`/admin/trips/${encodeURIComponent(input.targetId)}`);
+      const call = reservationCall(reservationAction, trip, { reason: input.reason, driverId: (input.value as { driverId?: string } | undefined)?.driverId ?? "", amountMinor: (input.value as { amountMinor?: number } | undefined)?.amountMinor ?? 0 });
+      await client.post(call.path, call.body).catch(explained);
       return done("Saved.");
     }
     // v0.18.15 review rules (contract.json#reviewRules): the lines and bad words of one country go to the server.
