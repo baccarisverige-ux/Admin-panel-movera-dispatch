@@ -154,4 +154,9 @@ const badDocs = { ...book.settings, kinds: { ...book.settings.kinds, doc_expirin
 assert(settingsIssues(badDocs)[0].includes("lowest"), "limits must be in order");
 assert(inQuiet({ on: true, from: "22:00", to: "07:00" }, "23:30") && !inQuiet({ on: true, from: "22:00", to: "07:00" }, "12:00"), "quiet hours");
 
+// A1 live fix (2026-11-03): a driver's support ticket alert is grouped with the drivers, a rider's with the riders.
+const ticketAlerts = computeAlerts({ ...facts, tickets: [{ id: "TKD", name: "Driver ticket", zoneId: "Z001", openedBy: "driver" }, { id: "TKR", name: "Rider ticket", zoneId: "Z001", openedBy: "rider" }] }, book.settings, book.rules);
+assert(ticketAlerts.find((alert) => alert.id === "ticket_open:TKD")?.group === "drivers", "a driver ticket alert is under drivers");
+assert(ticketAlerts.find((alert) => alert.id === "ticket_open:TKR")?.group === "riders", "a rider ticket alert stays under riders");
+
 console.log("alerts engine ok");

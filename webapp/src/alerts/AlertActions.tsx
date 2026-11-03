@@ -15,7 +15,8 @@ import { liveAgentName, livePassPeople } from "../live/liveAlerts";
 
 export function agentName(id: string | null | undefined): string {
   if (!id) return "";
-  return AGENTS.find((agent) => agent.id === id)?.name ?? liveAgentName(id) ?? id;
+  // Live (v0.18.18): the first name, else "Admin"; never an id or an e-mail.
+  return AGENTS.find((agent) => agent.id === id)?.name ?? liveAgentName(id) ?? (isLiveData() ? tr("Admin") : id);
 }
 
 /** "Nora Lind is working on it" or "Not taken yet". */

@@ -8,6 +8,7 @@ import type { Page, ReadyReply, SupportSettings, SupportTicket } from "./types";
 import { useMarketScope } from "../markets/useMarketScope";
 import { zoneFilterOf } from "./zoneFilter";
 import { deskCall, settingsIssue } from "./supportDesk";
+import { adminLabel } from "./format";
 
 /**
  * Live builds only (contract v0.9.0 §16; v0.18.15 §37 support desk, owner 2026-11-02 decisions/other-support-promos.md
@@ -89,7 +90,7 @@ function LiveSupportSettings({ country }: { country: "SE" | "FR" | "TN" }) {
                 <td>
                   <select aria-label={tr("{0} goes to", [categoryLabel(t.code)])} value={t.assignTo ?? ""} onChange={(event) => setTopic(t.code, { assignTo: event.target.value || undefined })}>
                     <option value="">{tr("Nobody")}</option>
-                    {(saved.data?.agents ?? []).map((p) => <option key={p.adminId} value={p.adminId}>{p.name}</option>)}
+                    {(saved.data?.agents ?? []).map((p) => <option key={p.adminId} value={p.adminId}>{adminLabel(p.name)}</option>)}
                   </select>
                 </td>
               </tr>
@@ -154,8 +155,8 @@ export function LiveSupport() {
   const detail = useQuery({ queryKey: ["live", "ticket", current?.ticketId], queryFn: () => client.json<SupportTicket>(`/admin/tickets/${encodeURIComponent(current!.ticketId)}`), enabled: Boolean(current) });
   // Admins to hand a ticket to: me and the admins already working on tickets in this list (the Team list is its own area).
   const people = new Map<string, string>();
-  if (admin) people.set(admin.adminId, admin.name);
-  for (const item of items) if (item.assignedTo) people.set(item.assignedTo.adminId, item.assignedTo.name ?? item.assignedTo.adminId);
+  if (admin) people.set(admin.adminId, adminLabel(admin.firstName));
+  for (const item of items) if (item.assignedTo) people.set(item.assignedTo.adminId, adminLabel(item.assignedTo.name));
 
   async function run(call: () => Promise<unknown>, done: string) {
     if (!current || busy) return;
@@ -219,7 +220,7 @@ export function LiveSupport() {
                       <b>{item.subject}</b>
                       <small>
                         {categoryLabel(item.category)} · {item.openedBy === "rider" ? tr("Rider") : tr("Driver")} · {tr(STATUS_LABEL[item.status] as Parameters<typeof tr>[0])} · {when(item.updatedAt)}
-                        {item.assignedTo ? <> · {item.assignedTo.name ?? item.assignedTo.adminId}</> : null}
+                        {item.assignedTo ? <> · {adminLabel(item.assignedTo.name)}</> : null}
                         {item.late?.reply || item.late?.solve ? <> · <b className="danger-text">{tr("Late")}</b></> : null}
                       </small>
                     </button>
@@ -234,7 +235,7 @@ export function LiveSupport() {
                     {ticket.tripId ? <> · <Link to={`/trips/${ticket.tripId}`}>{ticket.tripId}</Link></> : null} · {tr(STATUS_LABEL[ticket.status] as Parameters<typeof tr>[0])}
                   </p>
                   <p className="op-help" data-testid="live-ticket-desk">
-                    {ticket.assignedTo ? tr("Works on it: {0}", [ticket.assignedTo.name ?? ticket.assignedTo.adminId]) : tr("Nobody works on it yet.")}
+                    {ticket.assignedTo ? tr("Works on it: {0}", [adminLabel(ticket.assignedTo.name)]) : tr("Nobody works on it yet.")}
                     {ticket.firstReplyDueAt && !ticket.firstReplyAt ? <> · {tr("Answer by {0}", [when(ticket.firstReplyDueAt)])}</> : null}
                     {ticket.solveDueAt && !solved ? <> · {tr("Solve by {0}", [when(ticket.solveDueAt)])}</> : null}
                     {ticket.late?.reply ? <> · <b className="danger-text">{tr("First answer late")}</b></> : null}
@@ -251,7 +252,7 @@ export function LiveSupport() {
                       </li>
                     ))}
                   </ol>
-                  {othersClaim ? <p className="dx-calm" data-testid="live-ticket-others">{tr("{0} works on this ticket. Only they can answer or change it until they leave it.", [ticket.assignedTo?.name ?? ticket.assignedTo?.adminId ?? ""])}</p> : null}
+                  {othersClaim ? <p className="dx-calm" data-testid="live-ticket-others">{tr("{0} works on this ticket. Only they can answer or change it until they leave it.", [adminLabel(ticket.assignedTo?.name)])}</p> : null}
                   <div className="op-inline wrap" aria-label={tr("Ticket tools")}>
                     <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={othersClaim || busy || solved || ticket.assignedTo?.adminId === admin?.adminId} onClick={() => desk("claim", {}, tr("Claimed. Other admins see that you work on it."))}>{tr("Claim")}</button>
                     {othersClaim && admin?.role === "super" && !solved ? <button type="button" className="secondary-btn" data-command="admin.support.claim" disabled={busy} onClick={() => desk("claim", {}, tr("You took over this ticket. It is written in the audit log."))}>{tr("Take over")}</button> : null}

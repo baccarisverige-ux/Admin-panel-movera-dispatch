@@ -206,7 +206,8 @@ export function TripPage() {
   const allowed = canSeePrivate(role, ops.settings);
   const entries = entriesFor(ops, trip.id);
   // G7 live fix 3: who did it by name, else "Admin" and a short id; never an e-mail address.
-  const team = liveSession?.admin ? [...agents, { id: liveSession.admin.adminId, name: liveSession.admin.name }] : agents;
+  // v0.18.16 (checker MED2): the first name set in Team; without one "Admin" and a short id, never the e-mail.
+  const team = liveSession?.admin ? [...agents, { id: liveSession.admin.adminId, name: liveSession.admin.firstName ?? "" }] : agents;
   const flagged = isFlagged(ops, trip.id);
   const riderId = riderIdFor(trip);
   const zone = zoneById(trip.zoneId);

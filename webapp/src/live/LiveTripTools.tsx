@@ -4,7 +4,7 @@ import { Eye, Flag, Headset, ShieldCheck, Shuffle, StickyNote } from "lucide-rea
 import { tr } from "../i18n";
 import type { LiveTripFacts } from "../api/seed";
 import { useLiveSession, useLiveSessionMaybe } from "./LiveSessionContext";
-import { liveMoney } from "./format";
+import { liveMoney, adminLabel } from "./format";
 import { ErrorLine } from "./ui";
 import type { AdminTripFlag, AdminTripNote, Page } from "./types";
 
@@ -134,7 +134,7 @@ function Tools({ tripId, facts, hasDriver }: { tripId: string; facts: LiveTripFa
         <h4><StickyNote size={15} aria-hidden="true" /> {tr("Note for other admins")}</h4>
         {notes.error ? <ErrorLine error={notes.error} onRetry={() => void notes.refetch()} /> : null}
         <ul className="op-history" aria-label={tr("Notes on this trip")}>
-          {(notes.data?.items ?? []).map((item) => <li key={item.noteId}><time>{new Date(item.at).toLocaleString()}</time><b>{item.adminName ?? item.adminId}</b><span>{item.text}</span></li>)}
+          {(notes.data?.items ?? []).map((item) => <li key={item.noteId}><time>{new Date(item.at).toLocaleString()}</time><b>{adminLabel(item.adminName)}</b><span>{item.text}</span></li>)}
         </ul>
         <textarea aria-label={tr("Trip note")} rows={2} value={note} maxLength={2000} placeholder={tr("What happened, what you did")} onChange={(event) => setNote(event.target.value)} />
         <button data-command="admin.trip.note" type="button" className="dash-btn small" disabled={busy || !note.trim()} onClick={() => void run(async () => {

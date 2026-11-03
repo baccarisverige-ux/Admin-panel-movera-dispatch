@@ -157,7 +157,9 @@ const ME: AdminMe = {
 test("agentFromAdmin maps AdminMe onto the shell's Agent; adminCan reads the server's list, not the role tables", () => {
   const agent = agentFromAdmin(ME);
   assert.equal(agent.id, "A1");
-  assert.equal(agent.name, "Nora Lind");
+  // v0.18.18 (owner "Real name from Team"): the shell shows the first name set in Team, else "Admin" (never AdminMe.name, an e-mail on live).
+  assert.equal(agent.name, "Admin");
+  assert.equal(agentFromAdmin({ ...ME, firstName: "Nora" }).name, "Nora");
   assert.equal(agent.role, "compliance");
   assert.equal(agent.active, true);
   assert.equal(agent.password, "", "no secret is kept in the agent object");

@@ -1,4 +1,5 @@
 import type { AlertBook, AlertRecord } from "../alerts/engine.ts";
+import { adminLabel } from "./format.ts";
 
 /**
  * v0.18.15 alerts full flow (contract.json#alertDesk; owner 2026-11-02 Q5 "FULL FLOW"): the Alerts page's book on
@@ -13,7 +14,7 @@ export type ServerAlertRecord = Omit<AlertRecord, "id" | "zoneId" | "events" | "
 export type AlertBookState = {
   rev: number; settings: Record<string, unknown>; rules: unknown[]; records: ServerAlertRecord[];
   mutes: Record<string, { until: string; by: string }>; quiet: { on: boolean; from: string; to: string };
-  people: { adminId: string; name: string }[];
+  people: { adminId: string; name?: string }[];
 };
 
 /**
@@ -44,12 +45,12 @@ export function livePassPeople(): { id: string; name: string }[] {
 }
 
 export function bookFromServer(state: AlertBookState, me: string | null): AlertBook {
-  for (const person of state.people) names.set(person.adminId, person.name);
+  for (const person of state.people) names.set(person.adminId, adminLabel(person.name));
   for (const record of state.records) {
     if (record.owner && record.ownerName) names.set(record.owner, record.ownerName);
     for (const event of record.events) if (event.byName) names.set(event.by, event.byName);
   }
-  passPeople = state.people.map((person) => ({ id: person.adminId, name: person.name }));
+  passPeople = state.people.map((person) => ({ id: person.adminId, name: adminLabel(person.name) }));
   const records: Record<string, AlertRecord> = {};
   for (const r of state.records) {
     records[r.alertId] = {

@@ -12,6 +12,7 @@ export const ADMIN = {
   adminId: "A1",
   email: "owner@movera.se",
   name: "Nora Lind",
+  firstName: "Nora Lind",
   role: "super",
   permissions: ["overview.read", "drivers.read", "trips.read", "riders.read", "zones.read", "finance.read", "payments.refund"],
   scope: { zones: "all" },
@@ -312,7 +313,13 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     if (request.headers().authorization !== "Bearer access-1") return json(route, 401, { code: "unauthenticated", message: "Sign in again.", requestId: "r-401", retryable: false });
     // Contract v0.16.1 §9: the admin saves their own panel language; the next sign-in answers it too.
     if (p === "/api/v1/admin/auth/me" && method === "PATCH") {
-      const language = (body as { language?: string | null } | null)?.language;
+      const sent = (body ?? {}) as { language?: string | null; firstName?: string | null };
+      if (sent.firstName !== undefined) {
+        // v0.18.18: the own first name.
+        state.admin = { ...(state.admin ?? {}), firstName: sent.firstName ?? undefined };
+        return json(route, 200, { ...ADMIN, ...state.admin });
+      }
+      const language = sent.language;
       const { language: _old, ...rest } = state.admin ?? {};
       void _old;
       state.admin = language ? { ...rest, language } : rest;
@@ -410,6 +417,10 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       return json(route, 200, item);
     }
     if (p === "/api/v1/admin/tickets") return json(route, 200, { items: inZones(state.tickets, zoneField).filter((item) => !url.searchParams.get("status") || item["status"] === url.searchParams.get("status")), nextCursor: null });
+    // v0.18.18 admin first names (contract.json#adminNames).
+    if (p === "/api/v1/admin/agents") return json(route, 200, { items: [{ adminId: ADMIN.adminId, firstName: (state.admin?.firstName as string | undefined) ?? ADMIN.firstName, role: "super", zones: ["*"] }, { adminId: "A2", role: "support", zones: ["Z001"] }] });
+    const agentName = /^\/api\/v1\/admin\/agents\/([^/]+)$/.exec(p);
+    if (agentName && method === "PATCH") return json(route, 200, { adminId: agentName[1], firstName: body.firstName, role: "support", zones: ["Z001"] });
     // v0.18.15 review rules (contract.json#reviewRules).
     if (p === "/api/v1/admin/reviews/rules") {
       const all = (state.reviewRules ??= {}) as Record<string, unknown>;

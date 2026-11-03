@@ -156,7 +156,7 @@ export function useAlerts() {
       refunds: (approvals.data ?? []).filter((row) => row.status === "pending" && row.action.includes("refund")).map((row) => ({ id: row.id, title: `Refund ${row.targetId} waits for approval` })),
       payouts: (payouts.data ?? []).filter((row) => row.status === "scheduled").map((row) => ({ id: row.id, driver: (drivers.data ?? []).find((item) => item.id === row.driverId)?.name ?? row.name, zoneId: row.zoneId, amount: (row.fareOre ?? 0) / market.minorUnits })),
       riders: liveData ? [] : riders.rows.filter((row) => row.profile.country === market.id).map((row) => ({ id: row.rider.id, name: row.rider.name, flags: row.profile.fraudFlags, cancelRate: row.profile.cancelRate, rides: row.profile.completed + row.profile.cancelled + row.profile.noShows })),
-      tickets: (tickets.data ?? []).filter((row) => row.status === "open").map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })),
+      tickets: (tickets.data ?? []).filter((row) => row.status === "open").map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId, ...(row.openedBy ? { openedBy: row.openedBy } : {}) })),
       // Demo health: the map tiles are slow now and then; the backend reports real health later.
       system: liveData ? [] : [
         { id: "api", name: "Admin API", state: "ok", detail: "" },

@@ -50,7 +50,7 @@ export function SettingsView() {
           <div className="dx-publish-text"><b>{issues.length ? tr("Fix the settings first") : tr("Settings changed, not saved")}</b><small>{issues[0] ?? tr("Save to use them for everyone.")}</small></div>
           <div className="dx-publish-actions">
             <button data-command="admin.alerts.view" type="button" className="dash-btn small ghost" onClick={() => setDraft(null)}>{tr("Discard")}</button>
-            <CommandButton command="admin.alerts.settings" className="dash-btn small publish" targetId="alert settings" confirmTarget={false} scope="all" before={`rev ${data.book.draftRev}`} after={`rev ${data.book.draftRev + 1}`} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={{ ...data.book, draftRev: data.book.draftRev + 1, settings }} disabled={disabled || Boolean(issues.length)} onDone={() => { setDraft(null); setNotice(tr("Alert settings saved.")); }}>{tr("Save settings")}</CommandButton>
+            <CommandButton command="admin.alerts.settings" className="dash-btn small publish" targetId="alert settings" summary={tr("Saves the alert settings for every admin.")} confirmTarget={false} scope="all" before={`rev ${data.book.draftRev}`} after={`rev ${data.book.draftRev + 1}`} expectedSliceRev={data.book.draftRev} sliceKey={ALERTS_KEY} value={{ ...data.book, draftRev: data.book.draftRev + 1, settings }} disabled={disabled || Boolean(issues.length)} onDone={() => { setDraft(null); setNotice(tr("Alert settings saved.")); }}>{tr("Save settings")}</CommandButton>
           </div>
         </section>
       ) : null}
