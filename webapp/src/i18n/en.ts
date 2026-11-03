@@ -8453,6 +8453,7 @@ export const en = {
   "The person cannot use the app until an admin lets them back.": "The person cannot use the app until an admin lets them back.",
   "Saves the incident settings for every admin.": "Saves the incident settings for every admin.",
   "Saves the alert settings for every admin.": "Saves the alert settings for every admin.",
+  "Settings for country": "Settings for country",
 } as const;
 
 export type MessageKey = keyof typeof en;

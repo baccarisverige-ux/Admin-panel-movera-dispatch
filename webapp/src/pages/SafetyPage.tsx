@@ -9,7 +9,7 @@ import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { demoShift } from "../dashboard/scheduled";
 import { MapPanel } from "../dispatch/maps";
-import { market, zoneById } from "../markets/markets";
+import { MARKETS, market, zoneById } from "../markets/markets";
 import { useMarketScope } from "../markets/useMarketScope";
 import { logExport } from "../reports/activityLog";
 import { Cards } from "../reports/ui";
@@ -145,6 +145,13 @@ export function SafetyPage() {
             <h2>{tr("Incident settings")}</h2>
             <p>{tr("Time limits per level, what the case page shows, and the emergency numbers per country.")}</p>
           </div>
+          {isLiveData() ? (
+            <label className="field" data-testid="incident-settings-country">{tr("Country")}
+              <select aria-label={tr("Settings for country")} value={scope.market.id} onChange={(event) => { const country = event.target.value; setParams((current) => { const next = new URLSearchParams(current); next.set("country", country); next.delete("scope"); return next; }); }}>
+                {MARKETS.map((item) => <option key={item.id} value={item.id}>{trx(item.name)}</option>)}
+              </select>
+            </label>
+          ) : null}
         </header>
         <IncidentSettingsView ops={ops} editable={editable} loading={opsSlice.loading} />
       </div>

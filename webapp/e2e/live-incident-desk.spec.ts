@@ -24,3 +24,16 @@ test("incidents: settings saved on the server, report download recorded, calls c
   if (await dialog.isVisible().catch(() => false)) await dialog.getByRole("button", { name: "Confirm" }).click();
   await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/incidents/settings")?.body).toMatchObject({ expectedRev: 1, settings: { liveMap: false } });
 });
+
+test("A1 live fix 3: incident settings have a country choice and save for that country", async ({ page }) => {
+  const state = await fakeTripServer(page, { admin: { permissions: SAFETY } });
+  await signIn(page);
+  await page.goto("/incidents?view=settings");
+  await page.getByLabel("Settings for country").selectOption("FR");
+  await expect.poll(() => state.calls.some((call) => call.method === "GET" && call.path.includes("/admin/incidents/settings") && call.path.includes("country=FR"))).toBe(true);
+  await page.getByRole("switch", { name: /Live map on the case/ }).click();
+  await page.getByRole("button", { name: "Save settings" }).click();
+  const dialog = page.getByRole("dialog");
+  if (await dialog.isVisible().catch(() => false)) await dialog.getByRole("button", { name: "Confirm" }).click();
+  await expect.poll(() => state.calls.find((call) => call.method === "PUT" && call.path.includes("/admin/incidents/settings"))?.body).toMatchObject({ country: "FR" });
+});

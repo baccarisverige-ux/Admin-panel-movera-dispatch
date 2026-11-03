@@ -8455,4 +8455,5 @@ export const sv: Record<MessageKey, string> = {
   "The person cannot use the app until an admin lets them back.": "Personen kan inte använda appen förrän en admin släpper in hen igen.",
   "Saves the incident settings for every admin.": "Sparar incidentinställningarna för alla admins.",
   "Saves the alert settings for every admin.": "Sparar larminställningarna för alla admins.",
+  "Settings for country": "Inställningar för land",
 };

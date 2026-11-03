@@ -8455,4 +8455,5 @@ export const fr: Record<MessageKey, string> = {
   "The person cannot use the app until an admin lets them back.": "La personne ne peut pas utiliser l'application tant qu'un admin ne la laisse pas revenir.",
   "Saves the incident settings for every admin.": "Enregistre les paramètres des incidents pour tous les admins.",
   "Saves the alert settings for every admin.": "Enregistre les paramètres des alertes pour tous les admins.",
+  "Settings for country": "Paramètres pour le pays",
 };
