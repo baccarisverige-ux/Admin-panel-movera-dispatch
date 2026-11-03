@@ -13,6 +13,7 @@ const dist = path.resolve(process.argv[2] ?? "dist");
 const html = fs.readFileSync(path.join(dist, "index.html"), "utf8");
 const entries = [...html.matchAll(/(?:src|href)="([^"]*\/assets\/[^"]+\.(js|css))"/g)].map((m) => ({ file: m[1].replace(/^.*\/assets\//, "assets/"), kind: m[2] === "js" ? "script" : "style" }));
 let failed = entries.length === 0;
+const total = { raw: 0, gzip: 0 };
 for (const { file, kind } of entries) {
   const data = fs.readFileSync(path.join(dist, file));
   const gz = zlib.gzipSync(data, { level: 9 }).length;
@@ -20,7 +21,12 @@ for (const { file, kind } of entries) {
   const over = data.length > b.raw || gz > b.gzip;
   console.log(`${over ? "OVER" : "ok  "} ${kind} ${file}: ${data.length} B (budget ${b.raw}), gzip ${gz} B (budget ${b.gzip})`);
   failed ||= over;
+  total.raw += data.length;
+  total.gzip += gz;
 }
+// Since the vendor split (load-time job 2026-11-03) the first load is several scripts; the total is shown for
+// information only — each file keeps its own budget above.
+console.log(`info first load total: ${total.raw} B, gzip ${total.gzip} B (${entries.length} files)`);
 if (failed) {
   console.error("::error::the admin's first load is over its size budget (scripts/check-bundle.mjs)");
   process.exit(1);
