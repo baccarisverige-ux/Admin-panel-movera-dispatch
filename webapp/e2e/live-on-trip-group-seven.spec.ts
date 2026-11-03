@@ -208,7 +208,7 @@ test("SV: ride-check log fits at 1440 px with long ids; trip timeline and Who di
     { tripId, zoneId: "Z001", checkId: "srv_dropped_far_01JBX7Q2M4N6P8R0S2T4", side: "driver", trigger: "dropped_far", origin: "server", shownAt: "2026-10-26T09:20:00Z", answer: "ok", answeredAt: "2026-10-26T09:20:30Z", createdAt: "2026-10-26T09:20:00Z" },
   ];
   const audit = [{ auditId: "g7f3", at: "2026-10-26T09:30:00Z", actor: "admin", actorId: "adm_01JBX7Q2M4N6P8R0S2", actorRole: "super", action: "trip.flag", targetType: "trip", targetId: tripId, result: "committed", requestId: "g7f3" }];
-  const admin = { ...G7_ADMIN, adminId: "adm_01JBX7Q2M4N6P8R0S2", name: "owner@movera.se", language: "sv" };
+  const admin = { ...G7_ADMIN, adminId: "adm_01JBX7Q2M4N6P8R0S2", name: "owner@movera.se", firstName: undefined, language: "sv" };
   await fakeTripServer(page, { admin, trips: [{ ...structuredClone(ON_TRIP), tripId }] as never, riders: [{ ...RIDERS[0] }, { ...RIDERS[1] }], rideChecks, audit });
   await fakeSettings(page);
   await signIn(page, "Kontrollpanel");

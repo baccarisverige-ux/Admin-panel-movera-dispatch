@@ -8456,4 +8456,10 @@ export const sv: Record<MessageKey, string> = {
   "Saves the incident settings for every admin.": "Sparar incidentinställningarna för alla admins.",
   "Saves the alert settings for every admin.": "Sparar larminställningarna för alla admins.",
   "Settings for country": "Inställningar för land",
+  "First names": "Förnamn",
+  "First name saved.": "Förnamnet sparat.",
+  "The name other admins see on tickets and alerts. Until it is set they see \"Admin\". Never an e-mail.": "Namnet andra admins ser på ärenden och larm. Tills det är satt ser de \"Admin\". Aldrig en e-postadress.",
+  "My first name": "Mitt förnamn",
+  "A first name, not an e-mail.": "Ett förnamn, inte en e-postadress.",
+  "First name of {0}": "Förnamn för {0}",
 };

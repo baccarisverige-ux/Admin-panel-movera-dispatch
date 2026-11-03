@@ -237,6 +237,15 @@ export function signInErrorText(error: unknown): string {
 
 const MARKETS: readonly MarketId[] = ["SE", "FR", "TN"];
 
+/**
+ * v0.18.18 (owner 2026-11-03 "Real name from Team"): the name the admin shows for an admin: the first name set in
+ * Team, else "Admin". An e-mail is never shown as a name.
+ */
+export function adminLabel(name: string | null | undefined): string {
+  const clean = (name ?? "").trim();
+  return clean && !clean.includes("@") ? clean : tr("Admin");
+}
+
 /** The Agent the shell, the menu and the language picker read, built from the server's AdminMe (adminId = id). */
 export function agentFromAdmin(admin: AdminMe): Agent {
   const countries = admin.scope.countries?.filter((code): code is MarketId => (MARKETS as readonly string[]).includes(code));
@@ -244,7 +253,7 @@ export function agentFromAdmin(admin: AdminMe): Agent {
   return {
     id: admin.adminId,
     email: admin.email,
-    name: admin.name,
+    name: adminLabel(admin.firstName),
     password: "",
     code: "",
     role: admin.role,
@@ -459,7 +468,8 @@ export function auditActorText(actorId: string): string {
 export function auditActorName(actorId: string, agents: readonly { id: string; name: string }[]): string {
   if (!actorId || actorId === "system") return auditActorText(actorId);
   const name = agents.find((item) => item.id === actorId)?.name?.trim();
-  if (name && !name.includes("@")) return name;
+  // v0.18.18: "Admin" is the placeholder for an admin without a first name, not a name.
+  if (name && !name.includes("@") && name !== tr("Admin")) return name;
   return actorId.includes("@") ? tr("Admin") : tr("Admin {0}", [shortId(actorId)]);
 }
 

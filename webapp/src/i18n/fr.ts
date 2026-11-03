@@ -8456,4 +8456,10 @@ export const fr: Record<MessageKey, string> = {
   "Saves the incident settings for every admin.": "Enregistre les paramètres des incidents pour tous les admins.",
   "Saves the alert settings for every admin.": "Enregistre les paramètres des alertes pour tous les admins.",
   "Settings for country": "Paramètres pour le pays",
+  "First names": "Prénoms",
+  "First name saved.": "Prénom enregistré.",
+  "The name other admins see on tickets and alerts. Until it is set they see \"Admin\". Never an e-mail.": "Le nom que les autres admins voient sur les tickets et les alertes. Tant qu'il n'est pas défini, ils voient \"Admin\". Jamais une adresse e-mail.",
+  "My first name": "Mon prénom",
+  "A first name, not an e-mail.": "Un prénom, pas une adresse e-mail.",
+  "First name of {0}": "Prénom de {0}",
 };

@@ -22,6 +22,7 @@ import { DataTable } from "../ui/DataTable";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trx } from "../i18n";
 import { isLiveData } from "../live/realData";
+import { LiveTeamNames } from "../live/LiveTeamNames";
 
 const ROLES = Object.keys(ROLE_LABELS) as Role[];
 
@@ -52,6 +53,7 @@ function AdminsTable() {
   return (
     <>
       <p className="state-line">{notice}</p>
+      {isLiveData() ? <LiveTeamNames /> : null}
 
       {/* Live clean-up 1: the server has no admin invite yet (owner 2026-11-02: Super admin + country managers), so live shows no form. */}
       {isLiveData() ? null : <article className="panel">

@@ -11,6 +11,8 @@ export type AdminMe = {
   adminId: string;
   email: string;
   name: string;
+  /** v0.18.18: the first name set in Team (absent until set). */
+  firstName?: string;
   role: Role;
   /** Fully expanded: the panel's 34 permission ids. */
   permissions: string[];
