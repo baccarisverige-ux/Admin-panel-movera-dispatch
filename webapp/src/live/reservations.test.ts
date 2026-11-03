@@ -57,3 +57,8 @@ test("checker: every demo action the server can do works on live (offer, raise, 
   assert.deepEqual(reservationCall("contact", trip(), { reason: "Called rider" }), { path: "/admin/trips/trp_1/notes", body: { text: "Called rider" } });
   assert.equal(notStarted(trip({ status: "accepted", reservation: { ...trip().reservation!, notStarted: true } })), true);
 });
+
+test("raise without a fare on the row uses the zone's money (FR euro, TN dinar)", () => {
+  assert.equal((reservationCall("raise", trip({ zoneId: "FR-PC", fare: undefined }), { amountMinor: 500 }).body.amount as { currency: string }).currency, "EUR");
+  assert.equal((reservationCall("raise", trip({ zoneId: "TN-TC", fare: undefined }), { amountMinor: 500 }).body.amount as { currency: string }).currency, "TND");
+});

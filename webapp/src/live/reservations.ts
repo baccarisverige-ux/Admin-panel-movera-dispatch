@@ -1,3 +1,5 @@
+import { marketOfZone } from "../markets/markets.ts";
+
 /**
  * v0.18.17 Book later on live (contract.json#bookLater.admin; owner 2026-11-03): Admin › Reservations reads the server's
  * booked rides (GET /admin/trips?kind=scheduled) and each button calls the server. Pure functions, so node --test covers them.
@@ -88,7 +90,7 @@ export function reservationCall(action: Exclude<ReservationAction, "open">, trip
   if (action === "raise") {
     const amount = input.amountMinor ?? 0;
     if (!(amount > 0)) throw new Error("Write how much to add.");
-    return { path: `/admin/trips/${id}/driver-bonus`, body: { expectedVersion: trip.version, amount: { amountMinor: amount, currency: trip.fare?.currency ?? "SEK" }, ...(reason ? { note: reason } : {}) } };
+    return { path: `/admin/trips/${id}/driver-bonus`, body: { expectedVersion: trip.version, amount: { amountMinor: amount, currency: trip.fare?.currency ?? marketOfZone(trip.zoneId)?.currency ?? "SEK" }, ...(reason ? { note: reason } : {}) } };
   }
   if (action === "noShow") {
     if (!reason) throw new Error("Write why it is a no-show.");
