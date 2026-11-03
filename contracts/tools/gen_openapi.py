@@ -2725,7 +2725,8 @@ S["DriverReservation"] = obj(OrderedDict([("tripId", ref("Id")), ("version", i(m
                               ("rideType", s(BL["driver"]["rideType"], enum=["normal", "airport", "longTrip", "comfortPremium", "event"])),
                               ("pickup", ref("Place")), ("dropoff", ref("Place")), ("stops", i(minimum=0)), ("distanceMeters", i(minimum=0)), ("durationSeconds", i(minimum=0)),
                               ("earnings", ref("Money")), ("status", ref("TripStatus")), ("mustBeOnlineAt", ref("Timestamp")), ("canStartAt", ref("Timestamp")),
-                              ("popup", b("The Home popup step was reached (reservation_popup sent)."))]),
+                              ("popup", b("The Home popup step was reached (reservation_popup sent).")),
+                              ("reservation", {"allOf": [ref("ReservationInfo")], "description": "v0.18.19 (live test HIGH 2): the same reservation as the trip read, so the list knows changeAsk (Keep it at the new time?) and leaveAt."})]),
                              ["tripId", "version", "scheduledAt", "categoryId", "rideType", "pickup", "dropoff", "earnings", "status", "mustBeOnlineAt", "canStartAt"], "v0.18.17: one booked ride in the driver's lists.")
 S["DriverReservationPage"] = obj({"items": arr(ref("DriverReservation")), "nextCursor": {"oneOf": [s(), {"type": "null"}]}}, ["items", "nextCursor"], "v0.18.17.")
 S["ReservationAcceptCommand"] = obj({"expectedVersion": i(minimum=1)}, (), "v0.18.17.")

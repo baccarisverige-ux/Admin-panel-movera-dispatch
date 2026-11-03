@@ -30022,6 +30022,11 @@ components:
         popup:
           type: boolean
           description: The Home popup step was reached (reservation_popup sent).
+        reservation:
+          allOf:
+          - $ref: '#/components/schemas/ReservationInfo'
+          description: 'v0.18.19 (live test HIGH 2): the same reservation as the trip read, so the list knows changeAsk (Keep
+            it at the new time?) and leaveAt.'
     DriverReservationPage:
       type: object
       description: v0.18.17.
