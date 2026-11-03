@@ -114,3 +114,21 @@ test("R3: Dispatch › Bookings has no per-driver scheduled rides card on live",
   await shot(page, "dispatch-bookings");
   await expect(page.getByRole("region", { name: "Drivers' access to scheduled rides" })).toHaveCount(0);
 });
+
+test("owner 2026-11-03: ONE included waiting for all zones is read from and saved on the server", async ({ page }) => {
+  const state = await start(page, { reservationPolicy: { includedWaitingMinutes: 7, rev: 4 } });
+  await page.goto("/dispatch/bookings?zone=Z001");
+  const policy = page.getByTestId("reservation-policy");
+  await expect(policy.getByLabel("Included waiting")).toHaveValue("7");
+  await policy.getByLabel("Included waiting").fill("9");
+  await policy.getByRole("button", { name: "Save reservation policy" }).click();
+  const dialog = page.locator(".modal.open").last();
+  if (await dialog.isVisible().catch(() => false)) {
+    const reason = dialog.locator("textarea, input[type=text]").first();
+    if (await reason.isVisible().catch(() => false)) await reason.fill("Owner: one value for all zones");
+    await dialog.getByRole("button", { name: /Save|Confirm|Yes/ }).last().click();
+  }
+  await expect.poll(() => state.reservationPolicy).toEqual({ includedWaitingMinutes: 9, rev: 5 });
+  await page.reload();
+  await expect(page.getByTestId("reservation-policy").getByLabel("Included waiting")).toHaveValue("9");
+});

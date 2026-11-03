@@ -263,6 +263,7 @@ export type TripState = {
   supportSettings?: Record<string, unknown>;
   alertBook?: Record<string, unknown>;
   incidentSettings?: Record<string, unknown>;
+  reservationPolicy?: { includedWaitingMinutes: number; rev: number };
   reviewRules?: Record<string, unknown>;
   reviewQueue?: Record<string, unknown>[];
   ticketMessages: Record<string, unknown>[];
@@ -431,6 +432,15 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     if (p === "/api/v1/admin/reviews/queue") return json(route, 200, { items: state.reviewQueue ?? [] });
     const reviewDone = /^\/api\/v1\/admin\/reviews\/queue\/(driver|rider)\/([^/]+)\/done$/.exec(p);
     if (reviewDone) { state.reviewQueue = (state.reviewQueue ?? []).filter((row) => row["personId"] !== reviewDone[2]); return json(route, 200, { items: state.reviewQueue }); }
+    // v0.18.19 (owner): the all-zones reservation policy.
+    if (p === "/api/v1/admin/reservations/policy") {
+      const doc = (state.reservationPolicy ??= { includedWaitingMinutes: 5, rev: 1 });
+      if (method === "PUT") {
+        if (body.expectedRev !== doc.rev) return json(route, 409, { code: "version_mismatch", message: "Someone saved first." });
+        doc.rev += 1; doc.includedWaitingMinutes = body.includedWaitingMinutes;
+      }
+      return json(route, 200, { ...doc, updatedAt: "2026-11-03T10:00:00Z" });
+    }
     // v0.18.15 incidents (contract.json#incidentDesk).
     if (p === "/api/v1/admin/incidents/settings") {
       const doc = (state.incidentSettings ??= { rev: 1, settings: {} }) as { rev: number; settings: unknown };

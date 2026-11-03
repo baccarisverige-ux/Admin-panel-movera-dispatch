@@ -10,7 +10,7 @@ export const LIVE_COMMANDS: ReadonlySet<string> = new Set([
   "admin.alerts.done", "admin.alerts.mute", "admin.alerts.pass", "admin.alerts.quiet", "admin.alerts.rule", "admin.alerts.settings", "admin.alerts.snooze", "admin.alerts.take",
   "admin.approval.approve", "admin.approval.reject",
   // v0.18.17 Book later: Admin › Reservations on live calls the server (live/LiveReservations.tsx).
-  "admin.reservation.assign", "admin.reservation.cancel", "admin.reservation.contact", "admin.reservation.dispatchNow", "admin.reservation.noShow", "admin.reservation.offer", "admin.reservation.raise", "admin.reservation.unassign",
+  "admin.reservation.assign", "admin.reservation.cancel", "admin.reservation.savePolicy", "admin.reservation.contact", "admin.reservation.dispatchNow", "admin.reservation.noShow", "admin.reservation.offer", "admin.reservation.raise", "admin.reservation.unassign",
   "admin.config.copyAppToZones", "admin.config.publish", "admin.config.publishAppDraft", "admin.config.save", "admin.config.saveCountry", "admin.config.useStandard",
   "admin.dispatch.control", "admin.dispatch.event", "admin.dispatch.group", "admin.dispatch.preset", "admin.dispatch.publish", "admin.dispatch.radarRule", "admin.dispatch.radarZone", "admin.dispatch.saveDraft", "admin.dispatch.undo",
   "admin.driver.activate", "admin.driver.bankReview", "admin.driver.category", "admin.driver.onHold", "admin.driver.reactivate", "admin.driver.suspend",

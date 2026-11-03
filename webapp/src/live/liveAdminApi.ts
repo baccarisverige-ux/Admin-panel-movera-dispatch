@@ -1,3 +1,4 @@
+import { emptyReservationBook, type ReservationBook } from "../reservations/book.ts";
 /**
  * The demo pages against the Movera server: an AdminApi that the demo screens read and write unchanged. The
  * collections the server already serves (drivers, fleets, fleet owners, vehicles, trips, trip offers) come from it,
@@ -644,6 +645,15 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   }
 
   /** v0.18.15: the server's review rules of every country (contract.json#reviewRules); the tags stay the contract's. */
+  // v0.18.19: the server's reservation policy as the panel's book (its rev is what the next save expects).
+  let policyRev = 1;
+  async function livePolicyBook(): Promise<ReservationBook> {
+    const saved = await client.json<{ includedWaitingMinutes: number; rev: number }>("/admin/reservations/policy");
+    policyRev = saved.rev;
+    const book = emptyReservationBook();
+    return { ...book, draftRev: saved.rev, currentPolicy: { ...book.currentPolicy, version: `res-server-${saved.rev}`, includedWaitingMinutes: saved.includedWaitingMinutes } };
+  }
+
   async function liveReviewOps(): Promise<ReviewOps> {
     const base = emptyReviewOps();
     for (const country of Object.keys(base.rules) as (keyof ReviewOps["rules"])[]) {
@@ -833,6 +843,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (!rules) throw new ApiError(400, tr("Nothing changed."), { code: "invalid_request", retryable: false });
       await client.json("/admin/reviews/rules", { method: "PUT", body: JSON.stringify({ country, warn: rules.warn, review: rules.review, minReviews: rules.minReviews, badWords: rules.badWords, ...(rules.warningText ? { warningText: rules.warningText } : {}) }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
       return { ...done("Saved."), slice: { key: REVIEW_OPS_KEY, value: await liveReviewOps() } };
+    }
+    // v0.18.19 (owner): the all-zones reservation policy (included waiting) is saved on the server.
+    if (input.action === "admin.reservation.savePolicy") {
+      const next = input.value as ReservationBook;
+      await client.json("/admin/reservations/policy", { method: "PUT", body: JSON.stringify({ expectedRev: policyRev, includedWaitingMinutes: next.currentPolicy.includedWaitingMinutes }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
+      return { ...done("Saved."), slice: { key: "reservationOps", value: await livePolicyBook() } };
     }
     // v0.18.15 incidents (contract.json#incidentDesk): the shared settings, and an audit line for each case report.
     if (input.action === "admin.incident.settings") {
@@ -1118,6 +1134,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         const saved = await client.json<{ rev: number; settings: Record<string, unknown> }>(`/admin/incidents/settings?country=${here()}`);
         return { ...emptyIncidentOps(), draftRev: saved.rev, settings: { ...emptyIncidentOps().settings, ...saved.settings } } as typeof fallback;
       }
+      // v0.18.19 (owner: ONE included waiting for every zone): the reservation policy is the server's.
+      if (key === "reservationOps") return (await livePolicyBook()) as typeof fallback;
       if (key === ALERTS_KEY) return bookFromServer(await client.json<AlertBookState>(`/admin/alerts/book?country=${here()}`), client.admin()?.adminId ?? null) as typeof fallback;
       if (key !== "safetyOps") return liveEmptyBook(fallback);
       if (!incidents.size) await list("incidents").catch(() => []);
