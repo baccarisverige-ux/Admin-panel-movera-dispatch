@@ -23,6 +23,8 @@ export type DemoRecord = {
   id: string;
   name: string;
   phone: string;
+  /** Live support tickets (A1 live fix): who opened it, so a driver's ticket alert sits with the drivers. */
+  openedBy?: "rider" | "driver" | "admin";
   zoneId: string;
   status: string;
   plate?: string;

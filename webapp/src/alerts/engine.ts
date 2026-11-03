@@ -216,7 +216,7 @@ export type Facts = {
   refunds: { id: string; title: string }[];
   payouts: { id: string; driver: string; zoneId: string; amount: number }[];
   riders: { id: string; name: string; flags: string[]; cancelRate: number; rides: number }[];
-  tickets: { id: string; name: string; zoneId: string }[];
+  tickets: { id: string; name: string; zoneId: string; openedBy?: "rider" | "driver" | "admin" }[];
   system: { id: string; name: string; state: "ok" | "slow" | "down"; detail: string }[];
   money: (major: number) => string;
 };
@@ -276,9 +276,9 @@ export function computeAlerts(facts: Facts, settings: AlertSettings, rules: read
   const ago = (min: number) => facts.now - min * 60_000;
   // Live: an alert without its own time is dated when the panel first saw it, never a made-up "minutes ago".
   const seeded = (id: string, span = 50) => (isLiveData() ? firstSeen(id, facts.now) : ago(2 + (hash(id) % span)));
-  const push = (alert: Omit<Alert, "group" | "path"> & { path?: string }) => {
+  const push = (alert: Omit<Alert, "group" | "path"> & { path?: string; group?: GroupId }) => {
     const def = kindDef(alert.kind);
-    out.push({ ...alert, group: def?.group ?? "system", path: alert.path ?? def?.path ?? "/alerts" });
+    out.push({ ...alert, group: alert.group ?? def?.group ?? "system", path: alert.path ?? def?.path ?? "/alerts" });
   };
 
   // An SOS stays in the list from the moment it comes in until it is solved, with who works on it.
@@ -373,7 +373,7 @@ export function computeAlerts(facts: Facts, settings: AlertSettings, rules: read
     }
   }
   if (k("ticket_open").on) {
-    for (const row of facts.tickets.filter((item) => inZones.has(item.zoneId))) push({ id: `ticket_open:${row.id}`, kind: "ticket_open", level: k("ticket_open").level, title: tr("Support ticket from {0}", [row.name]), detail: `${zoneName(row.zoneId)} · ${row.id}`, zoneId: row.zoneId, since: seeded(row.id, 300), path: `/tickets/${row.id}` });
+    for (const row of facts.tickets.filter((item) => inZones.has(item.zoneId))) push({ id: `ticket_open:${row.id}`, kind: "ticket_open", ...(row.openedBy === "driver" ? { group: "drivers" as const } : {}), level: k("ticket_open").level, title: tr("Support ticket from {0}", [row.name]), detail: `${zoneName(row.zoneId)} · ${row.id}`, zoneId: row.zoneId, since: seeded(row.id, 300), path: `/tickets/${row.id}` });
   }
   if (k("system_health").on) {
     for (const row of facts.system.filter((item) => item.state !== "ok")) push({ id: `system_health:${row.id}:${facts.day}`, kind: "system_health", level: row.state === "down" ? "critical" : "important", title: row.state === "down" ? tr("{0} is down", [row.name]) : tr("{0} is slow", [row.name]), detail: row.detail, zoneId: null, since: seeded(row.id, 25) });
