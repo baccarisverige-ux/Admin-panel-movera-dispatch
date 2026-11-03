@@ -1011,8 +1011,9 @@
       "admin": "GET /admin/waitlist (overview.read) → WaitlistPage of WaitlistEntry { phone, app, locale?, firstAt, lastAt, count }, newest lastAt first; the admin's Waiting list page reads it again every 15 s (live)."
     },
     "testAccounts": {
-      "note": "v0.15.0 (owner 2026-10-29, decision 6, \"Only in test builds\"): GET /auth/test-accounts → TestAccountList { accounts: [TestAccount { phone, app, status, name? }] } lists the test numbers with each one's account status, so the sign-in screen of a staging or test build can show them. No bearer token. It exists only while MOVERA_ENV is not production: a production server answers 404 not_found and the store builds never call it.",
+      "note": "v0.15.0 (owner 2026-10-29, decision 6, \"Only in test builds\"): GET /auth/test-accounts → TestAccountList { accounts: [TestAccount { phone, app, status, name? }] } lists the test numbers with each one's account status, so the sign-in screen of a staging or test build can show them. No bearer token. It exists only while MOVERA_ENV is not production: a production server answers 404 not_found and the store builds never call it. v0.18.18 (owner 2026-11-03 \"Close it now\"): the list needs a signed-in admin with drivers.read (401 unauthenticated without a bearer token, 403 forbidden without the permission); the apps cannot fetch it signed out, so their Test numbers button shows \"Ask an admin for the test numbers\" (sv/fr/en) and typed test numbers still sign in with the test code.",
       "endpoint": "GET /auth/test-accounts",
+      "permission": "drivers.read",
       "statuses": [
         "test",
         "pending",
@@ -1058,7 +1059,6 @@
         "POST /auth/otp/verify",
         "POST /auth/provider",
         "POST /auth/waitlist",
-        "GET /auth/test-accounts",
         "POST /telemetry/logs",
         "POST /telemetry/analytics",
         "POST /telemetry/crashes",
@@ -6954,7 +6954,7 @@
       "raiseFare": "Owner C: a booked ride being searched (searching / offered) takes POST /trips/{tripId}/raise-price exactly like a live ride (same steps, raisePrice.maxFactor, same screens).",
       "driverShown": "Owner D: the rider sees the driver (name, photo, car: TripProjection.driver) only from driver_to_pickup on; while a driver holds the booked ride for later the rider view has driverAssigned true and no driver details, and reservation_driver_found names nobody. The admin switch 'Rider sees the driver at once' becomes this fixed rule.",
       "noEarlyAssign": "Owner E: no early auto-assign and no backup driver: an untaken or given-back booked ride stays on the list until dispatchBeforeMin (30) before pickup, then Exclusive + Radar. The admin fields for those show 'Coming soon'.",
-      "leaveOnTime": "Owner 2026-11-03: for a booked ride a driver holds, the server works out the drive from his live position to the pickup (the same estimate as an offer's pickupEtaSeconds: dispatch.score.pickupKmh) and when he must start to arrive arriveEarlyMin (zone setting, default 10) before the pickup time: TripProjection.reservation.leaveAt and driveSeconds (driver and admin views), recomputed every 2 minutes from 3 hours before pickup as he moves. At leaveAt he gets push kind reservation_leave_now (once); the driver app counts down to leaveAt. If he has not started 5 minutes after leaveAt, or his drive no longer fits before the pickup time, reservation.atRisk becomes true (admin alert 'Driver may be late for a booked ride') and he gets reservation_late_risk (once). Smart assign: when a booked ride is searched (dispatchBeforeMin, Exclusive), drivers who can arrive arriveEarlyMin before the pickup time are asked first. The rider sees the driver ('Driver on the way') from driver_to_pickup on (liveFixes.driverShown).",
+      "leaveOnTime": "Owner 2026-11-03: for a booked ride a driver holds, the server works out the drive from his live position to the pickup (by the real road route from the server's router, Movera's OSRM, else the straight-line estimate: the same live ETA source as a normal ride's pickupWaiting.eta) and when he must start to arrive arriveEarlyMin (zone setting, default 10) before the pickup time: TripProjection.reservation.leaveAt and driveSeconds (driver and admin views), recomputed every 2 minutes from 3 hours before pickup as he moves. At leaveAt he gets push kind reservation_leave_now (once); the driver app counts down to leaveAt. If he has not started 5 minutes after leaveAt, or his drive no longer fits before the pickup time, reservation.atRisk becomes true (admin alert 'Driver may be late for a booked ride') and he gets reservation_late_risk (once). Smart assign: when a booked ride is searched (dispatchBeforeMin, Exclusive), drivers who can arrive arriveEarlyMin before the pickup time are asked first. The rider sees the driver ('Driver on the way') from driver_to_pickup on (liveFixes.driverShown).",
       "badge": "Owner 2026-11-03: a booked ride always shows the reservation badge ('Booked ride' + pickup time) wherever a driver sees it: Booked rides, Home popup, Exclusive offer, Radar (Home and the Live list) and the accepted trip. Offer.reservation is true for every offer of a kind scheduled trip (with Offer.scheduledAt); TripProjection.kind scheduled for the trip."
     },
     "texts": {
