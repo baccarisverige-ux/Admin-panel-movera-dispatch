@@ -65,6 +65,9 @@ assert(levelFor(5, { info: 30, important: 7, critical: 0 }, "down") === "importa
 assert(levelFor(90, { info: 30, important: 7, critical: 0 }, "down") === null, "down: fine");
 
 let book = emptyAlertBook();
+// Owner 2026-11-04: "Booked ride soon with no driver" is off by default (booked ride at risk covers it); on when switched on.
+assert(book.settings.kinds.late_reservation.on === false && !computeAlerts(facts, book.settings, book.rules).some((alert) => alert.kind === "late_reservation"), "late_reservation off by default");
+book.settings.kinds.late_reservation.on = true;
 const alerts = computeAlerts(facts, book.settings, book.rules);
 const by = (id: string) => alerts.find((alert) => alert.id === id);
 assert(by("sos:I1")?.level === "critical" && by("sos:I1")?.incidentId === "I1", "SOS is critical and tied to the incident");

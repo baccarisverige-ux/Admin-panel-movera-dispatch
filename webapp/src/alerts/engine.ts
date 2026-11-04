@@ -50,6 +50,8 @@ export type KindDef = {
   limits?: Limits;
   /** Settings that live in Dispatch, per zone. */
   fromDispatch?: boolean;
+  /** Owner 2026-11-04: off until an admin switches it on (the kind stays). */
+  offByDefault?: boolean;
   /** Who may see it, when not only the group's permission: any one of these is enough. */
   anyOf?: string[];
   path: string;
@@ -63,7 +65,7 @@ export const KINDS: KindDef[] = [
   { id: "long_wait", group: "dispatch", label: "A rider waits too long", help: "Important from the live ride at-risk minutes set per zone (Zone limits). Critical from the number here.", mode: "limits", direction: "up", unit: "min", limits: { info: null, important: null, critical: 30 }, fromDispatch: true, path: "/dispatch?view=live" },
   { id: "few_drivers", group: "dispatch", label: "Few free drivers in a zone", help: "The limit is set per zone (Zone limits).", mode: "fixed", level: "important", fromDispatch: true, path: "/dispatch?view=live" },
   { id: "no_driver", group: "dispatch", label: "Many requests without a driver", help: "The limit is set per zone (Zone limits).", mode: "fixed", level: "critical", fromDispatch: true, path: "/dispatch?view=live" },
-  { id: "late_reservation", group: "dispatch", label: "Booked ride soon with no driver", help: "Minutes left before pickup.", mode: "limits", direction: "down", unit: "min left", limits: { info: null, important: 60, critical: 20 }, path: "/reservations" },
+  { id: "late_reservation", group: "dispatch", label: "Booked ride soon with no driver", help: "Minutes left before pickup.", mode: "limits", direction: "down", unit: "min left", limits: { info: null, important: 60, critical: 20 }, offByDefault: true, path: "/reservations" },
   // v0.18.20 (owner A1): booked rides, found by the server.
   { id: "booked_at_risk", group: "dispatch", label: "Booked ride at risk", help: "No driver this many minutes or less before pickup: the booked ride at-risk minutes set per zone (Zone limits).", mode: "fixed", level: "important", path: "/reservations" },
   { id: "booked_late", group: "dispatch", label: "Booked ride late", help: "The pickup time passed and the booked ride still has no driver.", mode: "fixed", level: "critical", path: "/reservations" },
@@ -197,7 +199,7 @@ export type AlertBook = {
 
 export function defaultKind(def: KindDef): KindSettings {
   return {
-    on: true,
+    on: !def.offByDefault,
     level: def.level ?? "important",
     limits: { ...(def.limits ?? { info: null, important: null, critical: null }) },
     who: "all",

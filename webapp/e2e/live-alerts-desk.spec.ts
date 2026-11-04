@@ -62,3 +62,14 @@ test("alerts: the server's alerts show; solved by itself is green with the new i
   await page.getByRole("dialog", { name: "Save alert settings" }).getByRole("button", { name: "Confirm" }).click();
   await expect.poll(() => (state.calls.find((call) => call.method === "PUT" && call.path === "/api/v1/admin/alerts/settings")?.body as { settings?: { zones?: Record<string, { bookedAtRiskMin?: number }> } } | undefined)?.settings?.zones?.["Z001"]?.bookedAtRiskMin).toBe(20);
 });
+
+// Owner 2026-11-04: on live the Dispatch → Alerts limits tab is hidden (the limits are in Alerts › Settings › Zone limits).
+test("dispatch: no Alerts limits tab on live", async ({ page }) => {
+  await fakeTripServer(page, ALL);
+  await signIn(page);
+  await page.goto("/dispatch/rules?zone=Z001&tab=alerts");
+  const tabs = page.getByRole("tablist", { name: "Zone settings" });
+  await expect(tabs).toBeVisible();
+  await expect(tabs.getByRole("tab", { name: "Rider waiting" })).toBeVisible();
+  await expect(tabs.getByRole("tab", { name: "Alerts", exact: true })).toHaveCount(0);
+});
