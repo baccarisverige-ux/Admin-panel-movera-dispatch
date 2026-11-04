@@ -22,7 +22,7 @@ export function AdminLiveEvents() {
   const state = useSyncExternalStore(watchLiveStream, liveStreamState, liveStreamState);
   if (!showsReconnecting(state)) return null;
   return (
-    <p className="live-not-connected live-reconnecting" role="status" data-testid="live-reconnecting">
+    <p className="live-not-connected live-reconnecting" role="note" aria-live="polite" data-testid="live-reconnecting">
       {tr("Reconnecting…")}
     </p>
   );
