@@ -121,15 +121,9 @@ assert(eventFeature?.properties?.color === "#123456", "GeoJSON export preserves 
 
 let book = emptyBook("nora");
 book = updateDraft(book, "op-norrmalm", [[59.326, 18.061], [59.326, 18.08], [59.34, 18.08], [59.34, 18.061]], "nora");
-const early = publishZones(book, "lena");
-assert(early.error === "Send the draft for review before publishing.", "review comes first");
-const reviewed = submitReview(book, "nora");
-assert(!reviewed.error && reviewed.book.status === "in_review", "author sends for review");
-book = reviewed.book;
-const blocked = publishZones(book, "nora");
-assert(blocked.error === "A second agent must publish.", "author cannot publish");
-const published = publishZones(book, "lena");
-assert(!published.error && published.book.versions.length === 2, "second agent publishes");
+// BASE B14 (owner Q1 "One admin always"): no review step and no second agent; the author publishes at once.
+const published = publishZones(book, "nora");
+assert(!published.error && published.book.versions.length === 2, "the author publishes at once");
 book = published.book;
 const rolled = rollbackZones(book, "lena");
 assert(rolled.versions.length === 3, "rollback creates a new immutable version");

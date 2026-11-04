@@ -14,7 +14,6 @@ import {
   Plus,
   Rocket,
   Search,
-  Send,
   ShieldCheck,
   Undo2,
   Users,
@@ -157,14 +156,13 @@ export function ZonesPage() {
       ) : (
       <section className="zn-release" aria-label={tr("Publish zones")}>
         <ol className="zn-flow" aria-label={tr("How zones go live")}>
-          <li className={!inReview ? "on" : "done"}><i>1</i><span><b>{tr("Edit")}</b><small>{tr("Drafts only riders don't see")}</small></span></li>
-          <li className={inReview ? "on" : undefined}><i>2</i><span><b>{tr("Send for review")}</b><small>{tr("Checks must pass")}</small></span></li>
-          <li><i>3</i><span><b>{tr("Publish")}</b><small>{tr("Goes live for riders and drivers")}</small></span></li>
+          {/* BASE B14 (owner Q1 "One admin always"): no review step; one admin publishes. */}
+          <li className="on"><i>1</i><span><b>{tr("Edit")}</b><small>{tr("Drafts only riders don't see")}</small></span></li>
+          <li><i>2</i><span><b>{tr("Publish")}</b><small>{tr("Goes live for riders and drivers")}</small></span></li>
         </ol>
         <div className="zn-release-actions">
           <button data-command="admin.zone.changes" type="button" className="dash-btn small ghost" aria-expanded={changesOpen} onClick={() => setChangesOpen(!changesOpen)}>{trn("{0} {1} changes and impact ({2})", <ClipboardList size={13} aria-hidden="true" />, changesOpen ? tr("Hide") : tr("See"), changes.length)}</button>
-          <CommandButton command="admin.zone.review" className="dash-btn small" type="button" disabled={!canEdit || inReview || (changes.length === 0 && otherChanges === 0)} onDone={() => { if (agent) zoneStore.review(agent.id); }}>{trn("{0} Send for review", <Send size={13} aria-hidden="true" />)}</CommandButton>
-          <CommandButton command="admin.zone.publish" className="dash-btn small publish" type="button" disabled={!canPublish || !inReview} onDone={() => { if (agent) zoneStore.publish(agent.id); }}>{trn("{0} Publish", <Rocket size={13} aria-hidden="true" />)}</CommandButton>
+          <CommandButton command="admin.zone.publish" className="dash-btn small publish" type="button" disabled={!canPublish || (changes.length === 0 && otherChanges === 0)} onDone={() => { if (agent) zoneStore.publish(agent.id); }}>{trn("{0} Publish", <Rocket size={13} aria-hidden="true" />)}</CommandButton>
           <CommandButton command="admin.zone.rollback" className="dash-btn small ghost" type="button" disabled={!canPublish || version < 2} onDone={() => zoneStore.rollback(agent?.id)}>{trn("{0} Undo last publish", <Undo2 size={13} aria-hidden="true" />)}</CommandButton>
         </div>
         {errors.length ? <p className="zn-alert bad">{trn("{0} {1} problem{2} block publishing: {3}", <AlertTriangle size={14} aria-hidden="true" />, errors.length, errors.length === 1 ? "" : tr("s"), errors[0]!.message)}</p> : null}

@@ -40,7 +40,6 @@ import {
   assign,
   ban,
   creditedThisMonth,
-  decideRefund,
   isBanned,
   markPaid,
   merge,
@@ -397,12 +396,7 @@ export function RiderDetailPage() {
                     <span>{trn("{0} · to {1} · {2}", item.bookingId, item.destination, item.reason)}</span>
                     <span className={`rd-refund-status r-${item.status}`}>{item.status === "waiting" ? tr("Waiting for approval") : item.status === "sent" ? tr("Sent") : tr("Rejected")}</span>
                     <small>{trn("Asked by {0} · {1}{2}", item.by, dateTime.format(Date.parse(item.at)), item.decidedBy ? tr(" · decided by {0}", [item.decidedBy]) : "")}</small>
-                    {item.status === "waiting" && can(role, "approval.decide") ? (
-                      <span className="rd-inline">
-                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="approved" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, true, me).care} disabled={Boolean(decideRefund(care, item.id, true, me).error)} title={decideRefund(care, item.id, true, me).error} onDone={() => setNotice(tr("Refund approved and sent."))}>{tr("Approve")}</CommandButton>
-                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small ghost" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="rejected" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, false, me).care} disabled={Boolean(decideRefund(care, item.id, false, me).error)} title={decideRefund(care, item.id, false, me).error} onDone={() => setNotice(tr("Refund rejected."))}>{tr("Reject")}</CommandButton>
-                      </span>
-                    ) : null}
+                    {/* BASE B14 (owner Q1 "One admin always"): no second-admin Approve / Reject; a refund is sent by the admin who asks. */}
                   </li>
                 ))}
               </ul>

@@ -8,11 +8,12 @@ test("Q25: one default per country, above 500 kr / 50 € / 150 DT", () => {
   assert.equal(refundAboveMinor(policy, "SE"), 50_000);
   assert.equal(refundAboveMinor(policy, "FR"), 5_000);
   assert.equal(refundAboveMinor(policy, "TN"), 150_000, "dinar has 1000 millimes");
-  assert.equal(needsSecondAdmin(policy, "SE", 50_000), false, "exactly 500 kr is not above");
-  assert.equal(needsSecondAdmin(policy, "SE", 50_001), true);
+  // BASE B14 (owner Q1 "One admin always", 2026-11-04 "Remove all 4"): no amount ever needs a second admin.
+  assert.equal(needsSecondAdmin(policy, "SE", 50_000), false);
+  assert.equal(needsSecondAdmin(policy, "SE", 50_001), false);
   assert.equal(needsSecondAdminIn(policy, "TND", 149_999), false);
-  assert.equal(needsSecondAdminIn(policy, "EUR", 5_001), true);
-  assert.equal(needsSecondAdmin(policy, "SE", -60_000), true, "a negative pay change counts by its size");
+  assert.equal(needsSecondAdminIn(policy, "EUR", 5_001), false);
+  assert.equal(needsSecondAdmin(policy, "SE", -60_000), false);
 });
 
 test("C-26: stored data is checked; a save is checked as sent", () => {
