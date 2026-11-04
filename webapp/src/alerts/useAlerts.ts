@@ -10,6 +10,7 @@ import { liveDrivers } from "../dashboard/live";
 import { rideRequests } from "../dashboard/riders";
 import { demoShift } from "../dashboard/scheduled";
 import { driverFacts } from "../dispatch/demo";
+import { autoOfflineRows } from "../live/dispatchFacts";
 import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
 import { DRIVER_DOCUMENTS } from "../drivers/gate";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
@@ -145,9 +146,12 @@ export function useAlerts() {
           return rating === null ? [] : [{ driverId: row.id, driver: row.name, zoneId: row.zoneId, rating }];
         })
         : activeDrivers.map((row) => ({ driverId: row.id, driver: row.name, zoneId: row.zoneId, rating: opsOf(row).ratings.stars })),
-      offline: liveData ? [] : driverFacts(live, () => ({ rating: 4.7, acceptancePct: 80, cancelPct: 5, categories: [] }), null)
-        .filter((row) => liveRules(dispatchBook, row.zoneId).autoOffline.on && row.noInRow >= liveRules(dispatchBook, row.zoneId).autoOffline.after)
-        .map((row) => ({ driverId: row.id, driver: row.name, zoneId: row.zoneId, count: row.noInRow })),
+      // Owner 2026-11-04 (real driver facts): no alert from a null fact (autoOfflineRows); on live the server raises
+      // auto-offline itself (it sets the driver offline), so the panel invents nothing here.
+      offline: liveData ? [] : autoOfflineRows(driverFacts(live, () => ({ rating: 4.7, acceptancePct: 80, cancelPct: 5, categories: [] }), null), (zoneId) => {
+        const rule = liveRules(dispatchBook, zoneId).autoOffline;
+        return rule.on ? rule.after : null;
+      }),
       payments: (payments.data ?? [])
         .filter((row) => row.status === "failed" && !failureHandled(row))
         .map((row) => {
