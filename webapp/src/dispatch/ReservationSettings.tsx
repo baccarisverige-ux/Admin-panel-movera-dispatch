@@ -57,46 +57,24 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
   const group = groups.find((item) => item.id === resv.listGroupId);
   return (
     <div className="dx-cards">
-      <Card title={tr("Booking policy · this zone")} tone="green" icon={<CalendarClock size={18} />} help={tr("Saved on the server with this zone's settings when you publish. Riders, drivers and the server all use these numbers.")} off={!resv.on}>
+      <Card title={tr("1 · Booking — booking policy of this zone")} tone="green" icon={<CalendarClock size={18} />} help={tr("When a rider can book a ride for later. Saved on the server when you publish.")} off={!resv.on}>
         <div data-testid="booking-window">
-          <Row label={tr("How early and how far ahead")} help={tr("A rider can book a ride from this many minutes ahead, up to this many days ahead.")}>
+          <Row label={tr("How early and how far ahead")} help={tr("Example: pickup at 10:00 can be booked until 09:45 at the latest, and up to 90 days ahead.")}>
             <Num label={tr("Book from, minutes ahead")} before="from" value={bw.minAheadMin} unit="min ahead" min={5} max={240} disabled={off} onChange={(minAheadMin) => setBooking({ minAheadMin })} />
             <Num label={tr("Book up to, days ahead")} before="up to" value={bw.maxAheadDays} unit="days ahead" min={1} max={365} disabled={off} onChange={(maxAheadDays) => setBooking({ maxAheadDays })} />
           </Row>
-          <Row label={tr("Booked soon: send at once")} help={tr("Booked closer to pickup than this: it goes out at once like a normal ride (Exclusive, then Radar). Further ahead: it goes to Scheduled rides.")}>
+          <Row label={tr("Booked soon: send at once")} help={tr("Example: booked at 09:35 for 10:00 (under 30 min) → it goes out at once like a normal ride.")}>
             <Num label={tr("Send at once when booked under")} before="under" value={bw.soonBeforeMin} unit="min ahead" min={0} max={240} disabled={off} onChange={(soonBeforeMin) => setBooking({ soonBeforeMin })} />
           </Row>
-          <Row label={tr("Reservation notice")} help={tr("When a ride goes to Scheduled rides, the nearest drivers who can see it get a notice.")} on={bw.noticeOn} disabled={off} onToggle={(noticeOn) => setBooking({ noticeOn })}>
-            <Num label={tr("Drivers who get the notice")} before="up to" value={bw.noticeMaxDrivers} unit="drivers" min={1} max={500} disabled={off || !bw.noticeOn} onChange={(noticeMaxDrivers) => setBooking({ noticeMaxDrivers })} />
-          </Row>
-          <Row label={tr("No driver close to pickup")} help={tr("Still no driver this many minutes before pickup: you get an alert and the rider is told. The search goes on.")}>
-            <Num label={tr("No-driver alert, minutes before pickup")} before="at" value={bw.noDriverAlertMin} unit="min before" min={1} max={120} disabled={off} onChange={(noDriverAlertMin) => setBooking({ noDriverAlertMin })} />
-          </Row>
-          <Row label={tr("Rider reminder")} help={tr("The rider gets a reminder this many minutes before pickup. 0 = no reminder. The rider also gets a message when a driver takes the ride.")}>
-            <Num label={tr("Rider reminder, minutes before pickup")} before="at" value={bw.riderReminderMin} unit="min before" min={0} max={1440} disabled={off} onChange={(riderReminderMin) => setBooking({ riderReminderMin })} />
-          </Row>
-          <Row label={tr("Free change or cancel")} help={tr("More than this many minutes before pickup the rider can change the ride (new price shown) or cancel for free. Later: no change, and cancelling follows the reservation cancel fees.")}>
-            <Num label={tr("Free change or cancel until, minutes before pickup")} before="until" value={bw.freeChangeBeforeMin} unit="min before" min={0} max={1440} disabled={off} onChange={(freeChangeBeforeMin) => setBooking({ freeChangeBeforeMin })} />
-          </Row>
-          <Row label={tr("Longest booked ride")} help={tr("Off: no limit. On: a booked ride longer than this is refused when the rider asks for a price. Normal rides are not limited by it.")} on={bw.maxTripKm !== null} disabled={off} onToggle={(on) => setBooking({ maxTripKm: on ? 60 : null })}>
+          <Row label={tr("Longest booked ride")} help={tr("Off = no limit. On: example 60 km → a booked ride of 70 km is refused.")} on={bw.maxTripKm !== null} disabled={off} onToggle={(on) => setBooking({ maxTripKm: on ? 60 : null })}>
             {bw.maxTripKm !== null ? <Num label={tr("Longest booked ride, km")} before="up to" value={bw.maxTripKm} unit="km" min={1} max={1000} disabled={off} onChange={(maxTripKm) => setBooking({ maxTripKm })} /> : null}
-          </Row>
-          <Row label={tr("Rider changes a ride a driver took")} help={tr("The driver is asked: Keep it at the new time? No, or no answer in time: the ride goes back to Scheduled rides.")}>
-            <Num label={tr("Time for the driver to answer, minutes")} before="within" value={bw.changeAnswerMin} unit="min" min={1} max={120} disabled={off} onChange={(changeAnswerMin) => setBooking({ changeAnswerMin })} />
           </Row>
           <p className="dx-note">{tr("Card payments are taken in full when the ride is booked (card payments are still coming soon).")}</p>
         </div>
       </Card>
 
-      <Card title={tr("Reservations")} tone="orange" icon={<CalendarClock size={18} />} help={tr("Rides booked for later. Nobody took it yet: Scheduled rides, then the Home popup, then Exclusive, then Radar trips.")} off={!resv.on} aside={<Switch label={tr("Reservations")} on={resv.on} disabled={disabled} onChange={(on) => setResv({ on })} />}>
+      <Card title={tr("2 · Booked rides list — Reservations")} tone="orange" icon={<CalendarClock size={18} />} help={tr("Who sees a booked ride in Booked rides, and who gets a notice. Example pickup 10:00, booked at 07:00.")} off={!resv.on} aside={<Switch label={tr("Reservations")} on={resv.on} disabled={disabled} onChange={(on) => setResv({ on })} />}>
         {!resv.on ? <p className="dx-note warn" role="status">{trn("{0} Reservations are off for every driver in this zone: nobody gets new reservations. Rides drivers already accepted still run.", <AlertTriangle size={13} aria-hidden="true" />)}</p> : null}
-        <Row label={tr("Start looking for a driver")} help={tr("Before the pickup time.")}>
-          <Num label={tr("Reservation search starts")} value={resv.searchBeforeMin} unit="min before" min={5} max={240} disabled={off} onChange={(searchBeforeMin) => setResv({ searchBeforeMin })} />
-        </Row>
-        <Row label={tr("Give the ride to a driver early")} help={tr("For example the night before.")} on={resv.assignEarly} disabled={off} onToggle={(assignEarly) => setResv({ assignEarly })}>
-          <Num label={tr("Assign hours before")} value={resv.assignHoursBefore} unit="h before" min={1} max={72} disabled={disabled} onChange={(assignHoursBefore) => setResv({ assignHoursBefore })} />
-        </Row>
-        <Row label={tr("Backup driver")} help={tr("A second driver is ready if the first cancels.")} on={resv.backup} disabled={off} onToggle={(backup) => setResv({ backup })} />
         <Row label={tr("Who gets it in Scheduled rides")} help={trx(RESERVATION_LIST_TO.find((item) => item.id === resv.listTo)?.help)}>
           <Choice label={tr("Scheduled rides go to")} value={resv.listTo} disabled={off} onChange={(listTo) => setResv({ listTo, listGroupId: listTo === "group" && !resv.listGroupId ? groups[0]?.id ?? "" : resv.listGroupId })} options={RESERVATION_LIST_TO.map((item) => ({ id: item.id, label: item.label, hint: item.help }))} />
           {resv.listTo === "rating" ? <Num label={tr("Lowest rating for Scheduled rides")} before="at least" value={resv.listMinRating} unit="stars" step={0.1} min={1} max={5} disabled={off} onChange={(listMinRating) => setResv({ listMinRating })} /> : null}
@@ -121,30 +99,44 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
             <Num label={tr("Open to all drivers after")} value={resv.listOpenAllAfterMin} unit="min after booking" min={1} max={1440} disabled={disabled} onChange={(listOpenAllAfterMin) => setResv({ listOpenAllAfterMin })} />
           </Row>
         ) : null}
-        <Row label={tr("Also show as the Home popup")} help={tr("If nobody took it from Scheduled rides yet. Counted from when the rider booked. It stays in the list too.")} on={resv.homePopup} disabled={off} onToggle={(homePopup) => setResv({ homePopup })}>
+        <Row label={tr("Reservation notice")} help={tr("Example: booked at 07:00 for 10:00 → the 20 nearest drivers who see it get a notice at 07:00.")} on={bw.noticeOn} disabled={off} onToggle={(noticeOn) => setBooking({ noticeOn })}>
+          <Num label={tr("Drivers who get the notice")} before="up to" value={bw.noticeMaxDrivers} unit="drivers" min={1} max={500} disabled={off || !bw.noticeOn} onChange={(noticeMaxDrivers) => setBooking({ noticeMaxDrivers })} />
+        </Row>
+      </Card>
+
+      <Card title={tr("3 · Home popup")} tone="orange" icon={<Bell size={18} />} help={tr("If nobody took it from Booked rides, it can also pop up on Home.")} off={!resv.on}>
+        <Row label={tr("Also show as the Home popup")} help={tr("Example: booked at 07:00, nobody took it by 07:10 → it also pops up on Home.")} on={resv.homePopup} disabled={off} onToggle={(homePopup) => setResv({ homePopup })}>
           <Num label={tr("Home popup after booking")} value={resv.homePopupAfterMin} unit="min after booking" min={1} max={1440} disabled={disabled} onChange={(homePopupAfterMin) => setResv({ homePopupAfterMin })} />
         </Row>
         <Row label={tr("Who sees the Home popup")} help={trx(HOME_POPUP_TO.find((item) => item.id === resv.homePopupTo)?.help)}>
           <Choice label={tr("Home popup goes to")} value={resv.homePopupTo} disabled={off || !resv.homePopup} onChange={(homePopupTo) => setResv({ homePopupTo })} options={HOME_POPUP_TO.map((item) => ({ id: item.id, label: item.label, hint: item.help }))} />
         </Row>
         <Row label={tr("Closed with ×: comes back as Exclusive if nobody took it")} help={tr("A driver who closes the Home popup can get the ride again as an Exclusive offer, when it reaches the Exclusive step.")} on={resv.popupClosedExclusive} disabled={off || !resv.homePopup} onToggle={(popupClosedExclusive) => setResv({ popupClosedExclusive })} />
-        <Row label={tr("Becomes an Exclusive trip")} help={tr("If nobody took it by then. Shown like today's Exclusive offer.")} on={resv.toExclusive} disabled={off} onToggle={(toExclusive) => setResv({ toExclusive })}>
+      </Card>
+
+      <Card title={tr("4 · 30 min before — the search")} tone="orange" icon={<Timer size={18} />} help={tr("Nobody took it: the server sends it out like a normal ride, best-placed drivers first.")} off={!resv.on}>
+        <Row label={tr("Start looking for a driver")} help={tr("Example: pickup 10:00 → at 09:30 the search starts: first drivers who can be there by 09:50, then by 10:00, then any near driver.")}>
+          <Num label={tr("Reservation search starts")} value={resv.searchBeforeMin} unit="min before" min={5} max={240} disabled={off} onChange={(searchBeforeMin) => setResv({ searchBeforeMin })} />
+        </Row>
+        <Row label={tr("Becomes an Exclusive trip")} help={tr("Example: still free at 09:40 → offered as Exclusive, one driver at a time.")} on={resv.toExclusive} disabled={off} onToggle={(toExclusive) => setResv({ toExclusive })}>
           <Num label={tr("Exclusive before pickup")} value={resv.exclusiveBeforeMin} unit="min before" min={1} max={180} disabled={disabled} onChange={(exclusiveBeforeMin) => setResv({ exclusiveBeforeMin })} />
         </Row>
-        <Row label={tr("Also goes to Radar trips")} help={tr("Home deck and Live list, as a normal trip that needs a driver soon. Never labelled Exclusive in Radar.")} on={resv.toRadar} disabled={off} onToggle={(toRadar) => setResv({ toRadar })}>
+        <Row label={tr("Also goes to Radar trips")} help={tr("Example: still free at 09:45 → also in Radar on Home and in the Live list, with the Booked ride badge.")} on={resv.toRadar} disabled={off} onToggle={(toRadar) => setResv({ toRadar })}>
           <Num label={tr("Radar trips before pickup")} value={resv.radarBeforeMin} unit="min before" min={1} max={180} disabled={disabled} onChange={(radarBeforeMin) => setResv({ radarBeforeMin })} />
         </Row>
         <Row label={tr("If the driver who took it cancels")} help={`${RESERVATION_CANCEL_TO.find((item) => item.id === resv.onDriverCancel)?.help ?? ""}${resv.onDriverCancel === "byTime" ? "" : " A step closer to pickup always wins."}`}>
           <Choice label={tr("After a driver cancels")} value={resv.onDriverCancel} disabled={off} onChange={(onDriverCancel) => setResv({ onDriverCancel })} options={RESERVATION_CANCEL_TO.map((item) => ({ id: item.id, label: item.label, hint: item.help }))} />
         </Row>
-        <Row label={tr("Rider sees the driver at once")} help={tr("Name, photo and car as soon as a driver accepts. If the driver changes, the rider sees the new one. Off: the rider sees the driver when they head to the pickup.")} on={resv.showDriverOnAccept} disabled={off} onToggle={(showDriverOnAccept) => setResv({ showDriverOnAccept })} />
         <p className="dx-note dx-resv-tie"><Users size={13} aria-hidden="true" /> <span>{tr("Two drivers take it at the same time → the first tap wins; exact same moment → the system picks one at random.")}</span></p>
         <ReservationTimelinePreview zone={zone} groups={groups} />
       </Card>
 
-      <Card title={tr("Smart gap")} tone="blue" icon={<Timer size={18} />} help={tr("Trip time + drive to the next pickup + spare minutes. It keeps a driver's scheduled rides apart and sends the driver off in time.")} off={!resv.on}>
+      <Card title={tr("5 · Driver start time — Smart gap")} tone="blue" icon={<Timer size={18} />} help={tr("Trip time + drive to the next pickup + spare minutes. It keeps a driver's scheduled rides apart and sends the driver off in time.")} off={!resv.on}>
+        <Row label={tr("Arrive before the pickup time")} help={tr("Example: 10 min → the driver must be there at 09:50; the server tells him when to start (\"Start now\") from where he is.")}>
+          <Num label={tr("Arrive before pickup, minutes")} before="arrive" value={bw.arriveEarlyMin} unit="min before" min={0} max={60} disabled={off} onChange={(arriveEarlyMin) => setBooking({ arriveEarlyMin })} />
+        </Row>
         <Row label={tr("Clashing rides leave the list")} help={tr("A driver can't hold two rides at the same or a close time. They see them all, but once they take one, the others that do not fit the smart gap leave their Scheduled rides.")} on={resv.hideClashing} disabled={off} onToggle={(hideClashing) => setResv({ hideClashing })} />
-        <p className="dx-note">{trn("{0} Leave now: the driver app's estimated drive time to the pickup + spare minutes (an estimate, not live traffic). Then the ride always lands on the driver's screen as the active trip with Head to pickup, even if they were driving away.", <Clock size={13} aria-hidden="true" />)}</p>
+        <p className="dx-note">{trn("{0} Leave now: the server takes the driver's live position and the real road route to the pickup (the same ETA as a normal ride) + spare minutes, and checks it again every 2 minutes as the driver moves. Then the ride always lands on the driver's screen as the active trip with Head to pickup, even if they were driving away.", <Clock size={13} aria-hidden="true" />)}</p>
         <Row label={tr("Late warning")} help={tr("Leave now cannot start the trip: the island says “Head to your 07:40 pickup”.")} on={resv.lateWarn} disabled={off} onToggle={(lateWarn) => setResv({ lateWarn })} />
         <Row label={tr("Trips toward the pickup before the ride")} help={tr("Like destination mode, aimed at the scheduled pickup. Every trip is checked with the smart gap, so the driver is still in time.")} on={resv.towardPickup} disabled={off} onToggle={(towardPickup) => setResv({ towardPickup })}>
           <Num label={tr("Trips toward the pickup from")} before="from" value={resv.towardPickupBeforeMin} unit="min before" min={15} max={240} disabled={disabled} onChange={(towardPickupBeforeMin) => setResv({ towardPickupBeforeMin })} />
@@ -176,7 +168,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
         </div>
       </Card>
 
-      <Card title={tr("Running late")} tone="red" icon={<Clock size={18} />} help={tr("From Leave now until the driver arrives, their arrival time is checked. If they would arrive more than the minutes allowed late, the ride goes to another driver early. Otherwise an online driver keeps the ride. Only an offline driver loses it, after the offline minutes.")} off={!resv.on}>
+      <Card title={tr("5 · Running late")} tone="red" icon={<Clock size={18} />} help={tr("From Leave now until the driver arrives, their arrival time is checked. If they would arrive more than the minutes allowed late, the ride goes to another driver early. Otherwise an online driver keeps the ride. Only an offline driver loses it, after the offline minutes.")} off={!resv.on}>
         <Row label={tr("Watch arrival time")} help={tr("Checks the driver's estimated arrival at the pickup, from Leave now until they are there.")} on={late.on} disabled={off} onToggle={(on) => setLate({ on })}>
           <Num label={tr("Minutes late allowed")} before="up to" value={late.toleranceMin} unit="min late" min={0} max={30} disabled={disabled} onChange={(toleranceMin) => setLate({ toleranceMin })} />
           <Num label={tr("Check every (seconds)")} before="every" value={late.checkEverySeconds} unit="s" min={15} max={600} disabled={disabled} onChange={(checkEverySeconds) => setLate({ checkEverySeconds })} />
@@ -192,7 +184,19 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
         {late.on ? <p className="dx-resv-foot" aria-label={tr("Running late example")}>{trn("Example: pickup {0}. At {1} the driver is {2} min away, so they would arrive at {3}: more than {4} min late. The ride goes to: {5}.", clock(SAMPLE_PICKUP, 0), clock(SAMPLE_PICKUP, -10), lateAway, <b>{clock(SAMPLE_PICKUP, late.toleranceMin + 1)}</b>, late.toleranceMin, trx(lateTo.label))}</p> : null}
       </Card>
 
-      <Card title={tr("Cancels")} tone="red" icon={<UserX size={18} />} help={tr("Drivers never pay a fee when they cancel. Every driver cancel counts in the driver's cancel rate.")} off={!resv.on}>
+      <Card title={tr("6 · Changes, cancel and reminders")} tone="blue" icon={<Clock size={18} />} help={tr("What the rider may change or cancel, and the reminders. Example pickup 10:00.")} off={!resv.on}>
+        <Row label={tr("Free change or cancel")} help={tr("Example: 60 min → the rider can change or cancel for free until 09:00; later no change, and cancel fees apply.")}>
+          <Num label={tr("Free change or cancel until, minutes before pickup")} before="until" value={bw.freeChangeBeforeMin} unit="min before" min={0} max={1440} disabled={off} onChange={(freeChangeBeforeMin) => setBooking({ freeChangeBeforeMin })} />
+        </Row>
+        <Row label={tr("Rider changes a ride a driver took")} help={tr("Example: the rider moves 10:00 to 11:00 → the driver is asked \"Keep it at the new time?\"; no answer within 15 min → back to the list.")}>
+          <Num label={tr("Time for the driver to answer, minutes")} before="within" value={bw.changeAnswerMin} unit="min" min={1} max={120} disabled={off} onChange={(changeAnswerMin) => setBooking({ changeAnswerMin })} />
+        </Row>
+        <Row label={tr("Rider reminder")} help={tr("Example: 60 min → the rider gets a reminder at 09:00. 0 = no reminder.")}>
+          <Num label={tr("Rider reminder, minutes before pickup")} before="at" value={bw.riderReminderMin} unit="min before" min={0} max={1440} disabled={off} onChange={(riderReminderMin) => setBooking({ riderReminderMin })} />
+        </Row>
+      </Card>
+
+      <Card title={tr("6 · Cancels")} tone="red" icon={<UserX size={18} />} help={tr("Drivers never pay a fee when they cancel. Every driver cancel counts in the driver's cancel rate.")} off={!resv.on}>
         <p className="dx-note">{trn("Rider free cancel and late cancel fees per car type: see Rider cancel fees in Rides & stops. {0}", <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={onOpenCancelFees}>{tr("Open Rider cancel fees")}</button>)}</p>
         <Row label={tr("A driver's late cancel")} help={tr("A driver cancel this close to pickup is a late cancel. The driver still pays nothing.")}>
           <Num label={tr("Driver late cancel, hours before pickup")} before="under" value={resv.driverLateCancelHours} unit="h before pickup" step={0.5} min={0.5} max={72} disabled={off} onChange={(driverLateCancelHours) => setResv({ driverLateCancelHours })} />
@@ -205,7 +209,15 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
         <p className="dx-note">{trn("{0} Drivers never pay. Every driver cancel counts in the cancel rate{1}.", <UserX size={13} aria-hidden="true" />, resv.latePause ? tr("; {0} late cancel{1} in {2} days pause scheduled rides for {3} days", [resv.latePauseAfter, resv.latePauseAfter === 1 ? "" : "s", resv.latePeriodDays, resv.latePauseDays]) : "")}</p>
       </Card>
 
-      <Card title={tr("No driver near pickup")} tone="orange" icon={<Bell size={18} />} help={tr("Nobody took it and pickup is close.")} off={!resv.on}>
+      <Card title={tr("7 · Pickup")} tone="green" icon={<UserCheck size={18} />} help={tr("Example pickup 10:00: free waiting counts from 10:00, not from when the driver arrives. A no-show is possible only after 10:00 + the free waiting.")} off={!resv.on}>
+        {/* Owner D (v0.18.19): a fixed rule now; the field is kept. */}
+        <Row label={tr("Rider sees the driver at once")} help={tr("Fixed rule: the rider sees \"Driver assigned\" when a driver takes the ride, and the name, photo and car when the driver starts driving to the pickup.")} on={false} disabled onToggle={(showDriverOnAccept) => setResv({ showDriverOnAccept })} />
+      </Card>
+
+      <Card title={tr("8 · No driver near pickup")} tone="orange" icon={<Bell size={18} />} help={tr("Nobody took it and pickup is close.")} off={!resv.on}>
+        <Row label={tr("No driver close to pickup")} help={tr("Example: 10 min → still no driver at 09:50: you get an alert and the rider is told; the search goes on, after 10:00 too.")}>
+          <Num label={tr("No-driver alert, minutes before pickup")} before="at" value={bw.noDriverAlertMin} unit="min before" min={1} max={120} disabled={off} onChange={(noDriverAlertMin) => setBooking({ noDriverAlertMin })} />
+        </Row>
         <Row label={tr("Admin alert")} help={tr("The ride shows in Live and in Alerts as “Booked ride soon with no driver”, so you can give it to a driver.")}>
           <Link className="dash-btn small ghost" to="/alerts">{tr("Alert times in Alerts")}</Link>
         </Row>
@@ -227,10 +239,18 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
         ) : null}
       </Card>
 
-      <Card title={tr("Movera gives a ride to a driver")} tone="blue" icon={<UserCheck size={18} />} help={tr("From a reservation's page you can give the ride to one driver. The driver must accept.")} off={!resv.on}>
+      <Card title={tr("8 · Movera gives a ride to a driver")} tone="blue" icon={<UserCheck size={18} />} help={tr("From a reservation's page you can give the ride to one driver. The driver must accept.")} off={!resv.on}>
         <Row label={tr("Time to accept")} help={tr("It comes like an Exclusive: “Assigned by Movera”, with Accept and a timer. Not accepted: you see it on the reservation and pick someone else.")}>
           <Num label={tr("Time to accept a ride assigned by Movera")} value={resv.assignAcceptSec} unit="s" min={10} max={600} disabled={off} onChange={(assignAcceptSec) => setResv({ assignAcceptSec })} />
         </Row>
+      </Card>
+
+      <Card title={tr("Coming soon")} tone="blue" icon={<Users size={18} />} help={tr("These settings are kept but not used yet.")} off={!resv.on}>
+        {/* Owner E (v0.18.19): no early auto-assign and no backup driver yet; kept, shown as Coming soon. */}
+        <Row label={tr("Give the ride to a driver early")} help={tr("Coming soon")} on={resv.assignEarly} disabled onToggle={(assignEarly) => setResv({ assignEarly })}>
+          <Num label={tr("Assign hours before")} value={resv.assignHoursBefore} unit="h before" min={1} max={72} disabled onChange={(assignHoursBefore) => setResv({ assignHoursBefore })} />
+        </Row>
+        <Row label={tr("Backup driver")} help={tr("Coming soon")} on={resv.backup} disabled onToggle={(backup) => setResv({ backup })} />
       </Card>
 
       <BookingPolicyCard />

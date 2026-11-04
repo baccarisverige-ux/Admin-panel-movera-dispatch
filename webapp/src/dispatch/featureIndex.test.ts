@@ -57,7 +57,7 @@ test("Round 2: every new per-country and zone setting is in All features and ope
   // Radar, Exclusive and reservation rules live in their own section: the rows open it, in the zone, on the card.
   assert.equal(target("radar"), "/dispatch/radar?zone=Z001&card=Radar");
   assert.equal(target("exclusive"), "/dispatch/radar?tab=exclusive&zone=Z001&card=Exclusive");
-  assert.equal(target("reservations"), "/dispatch/bookings?zone=Z001&card=Reservations");
+  assert.equal(target("reservations"), "/dispatch/bookings?zone=Z001&card=2+%C2%B7+Booked+rides+list+%E2%80%94+Reservations");
   assert.equal(target("radar-zones"), "/dispatch/radar?zone=Z001&card=Radar+zones");
   assert.equal(target("auto-offline"), "/dispatch/radar?zone=Z001&card=Go+offline+automatically");
   assert.ok(searchFeatures("locked while driving").some((entry) => entry.id === "radar-full-lock"));

@@ -147,6 +147,9 @@ export function reservationOfDriverDoc(doc: Record<string, unknown>, base: ZoneD
   next.booking = completeBookingWindow({ ...next.booking, ...doc, maxTripKm: "maxTripKm" in doc ? doc["maxTripKm"] : next.booking.maxTripKm });
   next.searchBeforeMin = n("dispatchBeforeMin", 5, 240, next.searchBeforeMin);
   next.listHomeKm = n("listHomeKm", 0.5, 50, next.listHomeKm);
+  // Owner C (v0.18.19): the booked-ride raise switch and highest raise, read back from the server.
+  next.raiseFare = b("raiseFare", next.raiseFare);
+  next.raiseMax = doc["raiseMax"] === null ? next.raiseMax : n("raiseMax", 0, 100000, next.raiseMax);
   const ADMIN_TYPE: Record<string, keyof typeof next.types> = { normal: "normal", airport: "airport", longTrip: "long", comfortPremium: "premium", event: "event" };
   const types = doc["rideTypes"] as Record<string, { onlineBeforeMin?: unknown; spareMin?: unknown; reminderMin?: unknown }> | undefined;
   if (types && typeof types === "object") {

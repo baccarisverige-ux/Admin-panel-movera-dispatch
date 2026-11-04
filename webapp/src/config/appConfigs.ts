@@ -1,4 +1,5 @@
 import { marketOfZone, type MarketId } from "../markets/markets.ts";
+import { raiseCap } from "../dispatch/rules.ts";
 import { fromMajor, type CurrencyCode, type Money } from "../domain/money.ts";
 import { activeCategories, normalizeStore, zoneBook, type PricingStore } from "../pricing/zonePricing.ts";
 import type { PickupRate } from "../pricing/pickupPay.ts";
@@ -441,7 +442,7 @@ export const RESERVATION_RIDE_TYPE_KEYS = { normal: "normal", airport: "airport"
  * Contract v0.4.1 DriverAppConfig.reservations: the zone's Dispatch › Reservations timings for the driver app
  * (CONTRACT.md §6.1). v0.4.2: no leaveNow, Leave now always opens the trip. lateBackupAfterMin is the offline rule (offlineBackupAfterMin); lateEta is the running-late ETA watch.
  */
-function driverReservations(zone: ZoneDispatch) {
+function driverReservations(zone: ZoneDispatch, market?: MarketId) {
   const resv = zone.reservation;
   return {
     on: resv.on,
@@ -466,12 +467,12 @@ function driverReservations(zone: ZoneDispatch) {
     })) as Record<(typeof RESERVATION_RIDE_TYPE_KEYS)[RideTypeId], { onlineBeforeMin: number; spareMin: number; reminderMin: number[] }>,
     lateEta: { on: resv.lateEta.on, toleranceMin: resv.lateEta.toleranceMin, checkEverySeconds: resv.lateEta.checkEverySeconds, reassignTo: resv.lateEta.reassignTo },
     // v0.18.17 Book later (contract.json#bookLater): the booking policy and who sees a booked ride, read by the server.
-    ...reservationBookingParts(resv),
+    ...reservationBookingParts(resv, market),
   };
 }
 
 /** v0.18.17 (contract.json#configDefaults.reservations): the Book later keys of DriverAppConfig.reservations. */
-export function reservationBookingParts(resv: ZoneDispatch["reservation"]) {
+export function reservationBookingParts(resv: ZoneDispatch["reservation"], country?: MarketId) {
   const b = resv.booking;
   return {
     minAheadMin: b.minAheadMin,
@@ -498,6 +499,11 @@ export function reservationBookingParts(resv: ZoneDispatch["reservation"]) {
     listAtTimeKm: b.listAtTimeKm,
     listAtTimeMin: b.listAtTimeMin,
     changeAnswerMin: b.changeAnswerMin,
+    arriveEarlyMin: b.arriveEarlyMin,
+    // Owner C (v0.18.19): the booked-ride raise is saved on the server; the live-ride bonus limit applies too.
+    raiseFare: resv.raiseFare,
+    // The country's highest (500 kr in Sweden) = no cap of its own: null, the live-ride limit only (contract default).
+    raiseMax: country && resv.raiseMax === raiseCap(country) ? null : resv.raiseMax,
   };
 }
 
@@ -547,7 +553,7 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     pickupPin: { required: zone.pickupPin.required, maxAttempts: zone.pickupPin.maxAttempts, lockMinutes: zone.pickupPin.lockMinutes },
     destinationMode: { perDay: zone.destinationMode.perDay, ...destinationModeForDriverApp(zone.destinationMode) },
     nextTrips: { on: true, ...nextTripsForDriverApp(zone.nextTrips) },
-    reservations: driverReservations(zone),
+    reservations: driverReservations(zone, base.info.id),
     cancelReasons: {
       driverBeforeTrip: codes(country.cancelReasons.groups.driverBeforeTrip),
       driverDuringTrip: codes(country.cancelReasons.groups.driverDuringTrip),

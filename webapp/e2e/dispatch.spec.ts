@@ -275,7 +275,8 @@ test("radar offers in the driver app and going offline automatically", async ({ 
 test("reservations: who gets them, the Home popup, Exclusive, Radar trips and a driver cancel", async ({ page }) => {
   await session(page);
   await page.goto("/dispatch?zone=Z001&tab=reservations");
-  const card = page.getByRole("region", { name: "Reservations" });
+  // Rows now sit in the timeline cards 1–8; look across all of them.
+  const card = page.locator("main");
   await expect(card).toContainText("Two drivers take it at the same time → the first tap wins; exact same moment → the system picks one at random.");
   const steps = card.getByRole("list", { name: "Reservation steps" }).getByRole("listitem");
   await expect(steps).toHaveCount(5);
@@ -321,7 +322,7 @@ test("reservations: who gets them, the Home popup, Exclusive, Radar trips and a 
   await confirm(page);
   await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("region", { name: "Reservations" }).getByLabel("Home popup after booking")).toHaveValue("15");
+  await expect(page.getByRole("region", { name: "Home popup" }).getByLabel("Home popup after booking")).toHaveValue("15");
 });
 
 test("reservations in one place: a driver group, the Home popup, smart gap, cancels, a fare raise and rides given by Movera", async ({ page }) => {
@@ -331,7 +332,8 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(page.getByRole("region", { name: "Reservations" })).toHaveCount(0);
   await page.getByTestId("dx-moved-modes").getByRole("link", { name: "Reservations" }).click();
   await expect(page).toHaveURL(/\/dispatch\/bookings\?/);
-  const card = page.getByRole("region", { name: "Reservations" });
+  // Rows now sit in the timeline cards 1–8; look across all of them.
+  const card = page.locator("main");
   const steps = card.getByRole("list", { name: "Reservation steps" }).getByRole("listitem");
 
   // Who gets it: one saved group from Events & groups. The Home popup can go wider.
@@ -452,7 +454,7 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(page.getByText("Live now: Norrmalm.")).toBeVisible();
   await page.reload();
   await expect(page.getByRole("region", { name: "Smart gap" }).getByLabel("Normal spare minutes")).toHaveValue("20");
-  await expect(page.getByRole("region", { name: "Reservations" }).getByLabel("Driver group for Scheduled rides")).toHaveValue("G-comfort");
+  await expect(page.getByRole("region", { name: "Booked rides list" }).getByLabel("Driver group for Scheduled rides")).toHaveValue("G-comfort");
   await expect(page.getByRole("region", { name: "Running late" }).getByLabel("Minutes late allowed")).toHaveValue("5");
 });
 

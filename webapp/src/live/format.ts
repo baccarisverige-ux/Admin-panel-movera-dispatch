@@ -190,6 +190,12 @@ export function errorText(error: unknown): string {
   if (error.reason === "issued_in_future") return tr("The issue date cannot be in the future.");
   // v0.18.0 (owner 2026-10-29, live audit): car details, the car's driver, categories and the bank review.
   if (error.reason === "category_not_allowed") return tr("The car does not fit that category: {0}.", [error.details.join(", ") || "—"]);
+  // v0.18.19 Book later (live test MED 7): the server's reasons in the panel's language.
+  if (error.reason === "driver_not_available") return tr("The driver cannot take a ride now (offline or no position). For a ride hours ahead you can still give it.");
+  if (error.reason === "driver_on_trip") return tr("The driver is on a trip now.");
+  if (error.reason === "no_show_too_early") return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");
+  if (error.reason === "no_free_driver") return tr("None of these drivers can take the ride now.");
+  if (error.reason === "currency_mismatch") return tr("The amount must be in the ride's currency.");
   if (error.reason === "plate_taken") return tr("Another car already has this plate.");
   if (error.reason === "driver_not_in_fleet") return tr("That driver is not in the car's fleet.");
   if (error.reason === "vehicle_not_approved") return tr("The car is not approved yet.");

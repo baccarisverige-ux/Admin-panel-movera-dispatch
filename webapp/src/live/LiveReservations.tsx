@@ -7,7 +7,7 @@ import { marketOfZone, market } from "../markets/markets";
 import { zonedLabel } from "../api/hooks";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine } from "./ui";
-import { inView, isOverdue, needsAttention, notStarted, reservationActions, reservationCall, reservationState, RESERVATIONS_PATH, sortReservations, type ReservationAction, type ServerReservation, type View } from "./reservations";
+import { atRisk, inView, isOverdue, needsAttention, notStarted, reservationActions, reservationCall, reservationState, RESERVATIONS_PATH, sortReservations, type ReservationAction, type ServerReservation, type View } from "./reservations";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "all", label: "All" },
@@ -38,6 +38,8 @@ const BUTTON: Record<Exclude<ReservationAction, "open">, string> = { dispatchNow
 export function LiveReservations() {
   const { client, can } = useLiveSession();
   const queryClient = useQueryClient();
+  // Live test MED 7: the admin picks drivers by name (the zone's drivers from the server), never a raw id.
+  const drivers = useQuery({ queryKey: ["live", "reservationDrivers"], queryFn: () => client.json<{ items: { driverId: string; firstName?: string; lastName?: string; onlineStatus?: string; zoneIds?: string[] }[] }>("/admin/drivers?accountStatus=active&limit=200"), staleTime: 60_000 });
   const list = useQuery({ queryKey: ["live", "reservations"], queryFn: () => client.json<{ items: ServerReservation[] }>(RESERVATIONS_PATH), refetchInterval: 30_000 });
   const [view, setView] = useState<View>("all");
   const [open, setOpen] = useState<{ tripId: string; action: Exclude<ReservationAction, "open"> } | null>(null);
@@ -92,6 +94,7 @@ export function LiveReservations() {
                 <td>{trip.driver ? <Link to={`/drivers/${trip.driver.driverId}`}>{trip.driver.firstName || trip.driver.driverId}</Link> : tr("No driver yet")}</td>
                 <td>
                   {trx(reservationState(trip))}
+                  {atRisk(trip) && !notStarted(trip) ? <span className="dx-note warn"> <AlertTriangle size={12} aria-hidden="true" /> {tr("Driver may be late for this booked ride")}</span> : null}
                   {notStarted(trip) ? <span className="dx-note warn"> <AlertTriangle size={12} aria-hidden="true" /> {tr("Pickup time, driver has not started: handle it")}</span> : null}
                   {isOverdue(trip) ? <span className="dx-note warn"> <AlertTriangle size={12} aria-hidden="true" /> {tr("Pickup time passed, no driver: handle it")}</span> : null}
                   {needsAttention(trip) && !isOverdue(trip) ? <span className="dx-note warn"> <AlertTriangle size={12} aria-hidden="true" /> {tr("Booked ride soon with no driver")}</span> : null}
@@ -106,7 +109,14 @@ export function LiveReservations() {
                   </span>
                   {open?.tripId === trip.tripId ? (
                     <span className="op-inline">
-                      {open.action === "assign" || open.action === "offer" ? <input aria-label={tr("Driver id")} value={driverId} maxLength={700} onChange={(event) => setDriverId(event.target.value)} /> : null}
+                      {open.action === "assign" || open.action === "offer" ? (
+                        <select aria-label={tr("Driver")} multiple={open.action === "offer"} value={open.action === "offer" ? driverId.split(",").filter(Boolean) : driverId} onChange={(event) => setDriverId(open.action === "offer" ? Array.from(event.target.selectedOptions).map((o) => o.value).slice(0, 10).join(",") : event.target.value)}>
+                          {open.action === "assign" ? <option value="">{tr("Pick a driver")}</option> : null}
+                          {(drivers.data?.items ?? []).filter((d) => !d.zoneIds || d.zoneIds.includes(trip.zoneId)).map((d) => (
+                            <option key={d.driverId} value={d.driverId}>{[d.firstName, d.lastName].filter(Boolean).join(" ") || d.driverId}{d.onlineStatus === "online" ? "" : ` · ${tr("offline")}`}</option>
+                          ))}
+                        </select>
+                      ) : null}
                       {open.action === "raise" ? <input aria-label={tr("Amount to add")} inputMode="decimal" value={amount} maxLength={10} onChange={(event) => setAmount(event.target.value)} /> : null}
                       <input aria-label={tr("Reason")} value={reason} maxLength={500} placeholder={open.action === "assign" || open.action === "offer" || open.action === "raise" ? tr("Note (optional)") : tr("Reason")} onChange={(event) => setReason(event.target.value)} />
                       <ActButton action={open.action} disabled={busy || (["unassign", "cancel", "noShow", "contact"].includes(open.action) && !reason.trim()) || ((open.action === "assign" || open.action === "offer") && !driverId.trim()) || (open.action === "raise" && !(Number(amount.replace(",", ".")) > 0))} onClick={() => void run(trip, open.action)}>{tr("Confirm")}</ActButton>
