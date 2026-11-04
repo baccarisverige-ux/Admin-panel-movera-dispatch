@@ -1,5 +1,5 @@
 import { tr } from "../i18n";
-import { yesNoOrDash } from "../live/dispatchFacts";
+import { missedText, yesNoOrDash } from "../live/dispatchFacts";
 import { orDash } from "../live/driverFacts";
 import { useLiveDriverFacts } from "../live/useLiveDriverFacts";
 
@@ -42,7 +42,7 @@ export function DriverFactsPanel({ zoneIds, nameOf }: Props) {
                   <td>{orDash(row.cancelPct, (value) => `${value} %`)}</td>
                   <td>{orDash(row.idleMin)}</td>
                   <td>{row.categoryIds.length ? row.categoryIds.join(", ") : "—"}</td>
-                  <td>{orDash(row.missedInRow)}</td>
+                  <td>{missedText(row.missedInRow)}</td>
                   <td>{orDash(row.ridesThisHour)}</td>
                   <td>{yesNoOrDash(row.restNeeded, yes, no)}</td>
                   <td>{orDash(row.finishingInMin)}</td>

@@ -79,3 +79,9 @@ export function autoOfflineRows(facts: readonly { id: string; name: string; zone
     return [{ driverId: row.id, driver: row.name, zoneId: row.zoneId, count: row.noInRow }];
   });
 }
+
+/** The server counts missed offers in a row up to 50 (contract v0.18.21 §45); at the cap the page writes "50+". */
+export const MISSED_IN_ROW_CAP = 50;
+export function missedText(value: number | null): string {
+  return value === null ? DASH : value >= MISSED_IN_ROW_CAP ? `${MISSED_IN_ROW_CAP}+` : String(value);
+}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { autoOfflineRows, driverFactsPath, parseDriverFacts, parseDriverFactsList, yesNoOrDash } from "./dispatchFacts.ts";
+import { autoOfflineRows, missedText, driverFactsPath, parseDriverFacts, parseDriverFactsList, yesNoOrDash } from "./dispatchFacts.ts";
 import { DASH, orDash } from "./driverFacts.ts";
 
 /** Owner 2026-11-04 (contract v0.18.21 §45): the Dispatch page shows the server's driver facts, "—" for null. */
@@ -35,4 +35,10 @@ test("auto-offline alert never fires on a null fact, nor with the switch off", (
   ];
   const rows = autoOfflineRows(facts, (zone) => (zone === "Z1" ? 10 : null));
   assert.deepEqual(rows, [{ driverId: "a", driver: "A", zoneId: "Z1", count: 10 }]);
+});
+
+test("missed in a row: the true count, 50+ at the server cap, — when null", () => {
+  assert.equal(missedText(5), "5");
+  assert.equal(missedText(50), "50+");
+  assert.equal(missedText(null), DASH);
 });
