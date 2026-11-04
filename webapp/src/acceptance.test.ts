@@ -2,7 +2,7 @@ import type { TripStatus } from "./domain/contract.ts";
 import { readFileSync } from "node:fs";
 import { can } from "./auth/permissions.ts";
 import { createFixtureAdminApi } from "./api/create.ts";
-import { signedInFixture } from "./api/fixtureSession.ts";
+import { signedInFixture } from "./testing/fixtureSession.ts";
 import { ApiError } from "./api/httpClient.ts";
 import { createSeed } from "./api/seed.ts";
 import { changeStudio, emptyStudio, studioSlot } from "./content/studio.ts";

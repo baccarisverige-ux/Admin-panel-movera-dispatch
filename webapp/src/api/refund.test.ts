@@ -1,5 +1,5 @@
 import { createFixtureAdminApi, type CommandInput } from "./create.ts";
-import { signedInFixture } from "./fixtureSession.ts";
+import { signedInFixture } from "../testing/fixtureSession.ts";
 import { ApiError } from "./httpClient.ts";
 
 /**
