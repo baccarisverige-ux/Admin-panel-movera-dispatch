@@ -33,8 +33,6 @@ import { HistoryView } from "../dispatch/HistoryView";
 import { LiveView } from "../dispatch/LiveView";
 import { RulesView } from "../dispatch/RulesView";
 import { TestView } from "../dispatch/TestView";
-// Owner 2026-11-04 (contract v0.18.21 §45): the real driver facts, loaded only on live Dispatch › Live.
-const DriverFactsPanel = lazy(() => import("../dispatch/DriverFactsPanel").then((module) => ({ default: module.DriverFactsPanel })));
 import { useRideCheckSettings } from "../safety/RideCheckSettingsCard";
 import { RIDE_CHECK_SETTINGS_KEY } from "../safety/rideCheckSettings";
 import { appConfigFileName, appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs";
@@ -52,6 +50,8 @@ import { offersLink } from "../dispatch/MovedCard";
 import { applyPatch, makePatch, rebasePatch, resolveConflict, useWorkingDraft, withEntry, type Patch } from "../dispatch/workingDraft";
 import { dispatchHref } from "../dispatch/section";
 import { tr, trn, trx, uiLocale, trSentences } from "../i18n";
+// Owner 2026-11-04 (contract v0.18.21 §45): the real driver facts, loaded only on live Dispatch › Live.
+const DriverFactsPanel = lazy(() => import("../dispatch/DriverFactsPanel").then((module) => ({ default: module.DriverFactsPanel })));
 
 const VIEWS = [
   { id: "rules", get label() { return tr("Rules"); }, icon: ScrollText },

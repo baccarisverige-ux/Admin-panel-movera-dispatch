@@ -8577,6 +8577,7 @@ export const en = {
   "What the server knows about each online driver. — = not tracked yet.": "What the server knows about each online driver. — = not tracked yet.",
   "Could not load driver facts.": "Could not load driver facts.",
   "No driver online in these zones.": "No driver online in these zones.",
+  "Some zones could not be loaded.": "Some zones could not be loaded.",
 } as const;
 
 export type MessageKey = keyof typeof en;

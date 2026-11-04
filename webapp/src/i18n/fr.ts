@@ -8579,4 +8579,5 @@ export const fr: Record<MessageKey, string> = {
   "What the server knows about each online driver. — = not tracked yet.": "Ce que le serveur sait de chaque chauffeur en ligne. — = pas encore suivi.",
   "Could not load driver facts.": "Impossible de charger les infos chauffeurs.",
   "No driver online in these zones.": "Aucun chauffeur en ligne dans ces zones.",
+  "Some zones could not be loaded.": "Certaines zones n'ont pas pu être chargées.",
 };

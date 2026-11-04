@@ -19,6 +19,7 @@ export function DriverFactsPanel({ zoneIds, nameOf }: Props) {
       <h2>{tr("Driver facts")}</h2>
       <p className="state-line">{tr("What the server knows about each online driver. — = not tracked yet.")}</p>
       {facts.failed ? <p className="state-line" role="alert">{tr("Could not load driver facts.")}</p> : null}
+      {facts.partial ? <p className="state-line" role="status">{tr("Some zones could not be loaded.")}</p> : null}
       {facts.loading ? <p className="state-line">{tr("Loading…")}</p> : null}
       {!facts.loading && !facts.failed && facts.rows.length === 0 ? <p className="state-line">{tr("No driver online in these zones.")}</p> : null}
       {facts.rows.length > 0 ? (

@@ -8579,4 +8579,5 @@ export const sv: Record<MessageKey, string> = {
   "What the server knows about each online driver. — = not tracked yet.": "Vad servern vet om varje förare online. — = spåras inte än.",
   "Could not load driver facts.": "Kunde inte hämta förarfakta.",
   "No driver online in these zones.": "Ingen förare online i de här zonerna.",
+  "Some zones could not be loaded.": "Några zoner kunde inte hämtas.",
 };
