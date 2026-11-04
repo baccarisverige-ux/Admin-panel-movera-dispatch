@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+// B7 admin real app preview: its tests run with this file (package.json is being changed by an open PR).
+import "./appPreview.test.ts";
 import { emptyPricingStore, publishZones, zoneBook } from "../pricing/zonePricing.ts";
 import { emptyDispatchBook, liveRules, publish, zoneDefault } from "../dispatch/rules.ts";
 import { OWNED, SettingsChanged, bookOfPricing, countryRulesOf, dispatchDocumentOf, pricingDocumentOf, rulesOfDispatch, savePublish, withOwned, zoneFacts, type ConfigHttp, type Doc } from "./configDocs.ts";
