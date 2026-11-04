@@ -1,7 +1,7 @@
 import { NotConnected } from "../live/NotConnected";
 import { isLiveData } from "../live/realData";
 import { logExport } from "../reports/activityLog";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, CalendarDays, Download, FlaskConical, HandHeart, History, ListX, Radio, Save, Scale, ListTree, ScrollText, Send, Undo2, UserRoundCheck } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
@@ -50,6 +50,8 @@ import { offersLink } from "../dispatch/MovedCard";
 import { applyPatch, makePatch, rebasePatch, resolveConflict, useWorkingDraft, withEntry, type Patch } from "../dispatch/workingDraft";
 import { dispatchHref } from "../dispatch/section";
 import { tr, trn, trx, uiLocale, trSentences } from "../i18n";
+// Owner 2026-11-04 (contract v0.18.21 §45): the real driver facts, loaded only on live Dispatch › Live.
+const DriverFactsPanel = lazy(() => import("../dispatch/DriverFactsPanel").then((module) => ({ default: module.DriverFactsPanel })));
 
 const VIEWS = [
   { id: "rules", get label() { return tr("Rules"); }, icon: ScrollText },
@@ -250,7 +252,9 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const countryLive = useMemo(() => live.filter((driver) => market.zones.some((zone) => zone.id === driver.zoneId)), [live, market]);
   // v0.18.6 (G4-F3): a group takes any driver of the country (online or not); the server refuses drivers of another country.
   const groupDrivers = useMemo(() => (drivers.data ?? []).filter((row) => market.zones.some((zone) => zone.id === row.zoneId)).map((row) => ({ id: row.id, name: row.name, zoneName: market.zones.find((zone) => zone.id === row.zoneId)?.name ?? row.zoneId })), [drivers.data, market]);
-  const factsFor = useCallback((pickup: [number, number]) => onlyFinishingNearby(driverFacts(countryLive, statsOf, pickup)), [countryLive, statsOf]);
+  // Owner 2026-11-04 (real driver facts): the made-up facts are for the demo test view only; on live they are never
+  // computed (the live facts come from the server, DriverFactsPanel).
+  const factsFor = useCallback((pickup: [number, number]) => (isLiveData() ? [] : onlyFinishingNearby(driverFacts(countryLive, statsOf, pickup))), [countryLive, statsOf]);
   const [loadedAt] = useState(() => Date.now());
   const sharedAlerts = useAlertsMaybe();
   // Ride checks still open on a live trip, pinned to the car on the live map (safety team and dispatchers).
@@ -486,6 +490,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
         </>
       ) : null}
       {!slice.loading && view === "live" ? <LiveView book={book} market={market} zones={zones} drivers={live.filter((driver) => zones.some((zone) => zone.id === driver.zoneId))} requests={requests} candidatesOf={candidatesOf} rulesOf={liveOf} busyOf={busyOf} hhmm={hhmm} canControl={canControl} agentId={agent?.id ?? ""} withScope={(path) => path} onNotice={say} sharedAlerts={ownAlerts ? undefined : <DispatchAlerts zoneIds={zones.map((zone) => zone.id)} />} rideChecks={mapRideChecks} /> : null}
+      {!slice.loading && view === "live" && isLiveData() ? <Suspense fallback={null}><DriverFactsPanel zoneIds={zones.map((zone) => zone.id)} nameOf={(id) => (drivers.data ?? []).find((row) => row.id === id)?.name ?? id} /></Suspense> : null}
       {!slice.loading && view === "test" && isLiveData() ? <NotConnected block /> : null}
       {!slice.loading && view === "test" && !isLiveData() ? <TestView market={market} zones={zones} zoneId={zoneId || zones[0]?.id || ""} onZone={(id) => go({ zone: id })} draftOf={rulesOf} liveOf={liveOf} countryDraft={countryRules} countryLive={liveCountry(book, country)} controlOf={(id) => book.control[id]} factsFor={factsFor} busyOf={busyOf} hhmm={hhmm} hasChanges={changes.length > 0 || countryChanged.length > 0} events={book.events.filter((event) => event.country === country)} /> : null}
       {!slice.loading && view === "events" ? <EventsView book={book} market={market} canEdit={canEditRole} canBonus={Boolean(agent && can(agent.role, "drivers.bonuses"))} onNotice={say} /> : null}

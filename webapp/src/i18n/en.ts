@@ -8569,6 +8569,16 @@ export const en = {
   "Example: 10 min → still no driver at 09:50: you get an alert and the rider is told; the search goes on, after 10:00 too.": "Example: 10 min → still no driver at 09:50: you get an alert and the rider is told; the search goes on, after 10:00 too.",
   "8 · Movera gives a ride to a driver": "8 · Movera gives a ride to a driver",
   "These settings are kept but not used yet.": "These settings are kept but not used yet.",
+  "Driver facts": "Driver facts",
+  "Idle (min)": "Idle (min)",
+  "Missed in a row": "Missed in a row",
+  "Rides this hour": "Rides this hour",
+  "Needs rest": "Needs rest",
+  "Finishing in (min)": "Finishing in (min)",
+  "What the server knows about each online driver. — = not tracked yet.": "What the server knows about each online driver. — = not tracked yet.",
+  "Could not load driver facts.": "Could not load driver facts.",
+  "No driver online in these zones.": "No driver online in these zones.",
+  "Some zones could not be loaded.": "Some zones could not be loaded.",
 } as const;
 
 export type MessageKey = keyof typeof en;
