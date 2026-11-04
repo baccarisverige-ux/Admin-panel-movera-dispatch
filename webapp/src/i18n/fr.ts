@@ -8581,4 +8581,13 @@ export const fr: Record<MessageKey, string> = {
   "Could not load driver facts.": "Impossible de charger les infos chauffeurs.",
   "No driver online in these zones.": "Aucun chauffeur en ligne dans ces zones.",
   "Some zones could not be loaded.": "Certaines zones n'ont pas pu être chargées.",
+  // B7 admin real app preview (contract v0.18.25 §47).
+  "Real app": "Vraie appli",
+  "Sample": "Exemple",
+  "Show draft settings": "Afficher les réglages en brouillon",
+  "Reload": "Recharger",
+  "The real app on the live server. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.": "La vraie appli sur le serveur en ligne. Rien n’est envoyé : Réserver, Accepter et Payer affichent « Aperçu – non envoyé ».",
+  "Opening the app…": "Ouverture de l’appli…",
+  "The real app could not open. Showing the sample.": "La vraie appli n’a pas pu s’ouvrir. L’exemple est affiché.",
+  "Rider app preview": "Aperçu de l’appli passager",
 };

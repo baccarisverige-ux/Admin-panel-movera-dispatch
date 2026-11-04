@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { currentLanguage } from "../i18n";
-import { previewText } from "../i18n/previewTexts";
+import { currentLanguage, tr } from "../i18n";
 import { zoneName } from "../zones/live";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { useLiveZoneList } from "../live/LiveZones";
@@ -42,32 +41,32 @@ export function RealAppPreview({ app, children }: { app: PreviewRole; children: 
   return (
     <div className="real-app-preview" data-app={app}>
       <div className="real-app-preview-bar" role="group">
-        <CommandButton command="admin.tabs.select" type="button" className={mode === "real" ? "chip active" : "chip"} aria-pressed={mode === "real"} onDone={() => setMode("real")}>{previewText("realApp")}</CommandButton>
-        <CommandButton command="admin.tabs.select" type="button" className={mode === "sample" ? "chip active" : "chip"} aria-pressed={mode === "sample"} onDone={() => setMode("sample")}>{previewText("sample")}</CommandButton>
+        <CommandButton command="admin.tabs.select" type="button" className={mode === "real" ? "chip active" : "chip"} aria-pressed={mode === "real"} onDone={() => setMode("real")}>{tr("Real app")}</CommandButton>
+        <CommandButton command="admin.tabs.select" type="button" className={mode === "sample" ? "chip active" : "chip"} aria-pressed={mode === "sample"} onDone={() => setMode("sample")}>{tr("Sample")}</CommandButton>
       </div>
       {mode === "sample" ? children : (
         <>
           <div className="real-app-preview-bar">
             <label>
-              {previewText("zone")}{" "}
+              {tr("Zone")}{" "}
               <select value={zone} onChange={(event) => setZoneId(event.target.value)}>
                 {(zones ?? []).map((item) => <option key={item.zoneId} value={item.zoneId}>{zoneName(item.names, currentLanguage())}</option>)}
               </select>
             </label>
-            <label><input type="checkbox" checked={draft} onChange={(event) => setDraft(event.target.checked)} /> {previewText("draft")}</label>
-            <CommandButton command="admin.ui.retry" type="button" className="link-action" onDone={() => setReloads((value) => value + 1)}>{previewText("reload")}</CommandButton>
+            <label><input type="checkbox" checked={draft} onChange={(event) => setDraft(event.target.checked)} /> {tr("Show draft settings")}</label>
+            <CommandButton command="admin.ui.retry" type="button" className="link-action" onDone={() => setReloads((value) => value + 1)}>{tr("Reload")}</CommandButton>
           </div>
-          <p className="muted real-app-preview-note">{previewText("note")}</p>
+          <p className="muted real-app-preview-note">{tr("The real app on the live server. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.")}</p>
           {session.isError ? (
             <>
-              <p role="alert" className="muted">{previewText("failed")}</p>
+              <p role="alert" className="muted">{tr("The real app could not open. Showing the sample.")}</p>
               {children}
             </>
           ) : session.data ? (
             <div className="real-app-phone">
               <iframe
                 key={`${session.data.token}-${reloads}`}
-                title={previewText(app === "rider" ? "riderTitle" : "driverTitle")}
+                title={app === "rider" ? tr("Rider app preview") : tr("Driver app preview")}
                 src={previewUrl(appWebUrl(app, ENV), session.data)}
                 sandbox="allow-scripts allow-same-origin allow-forms"
                 referrerPolicy="no-referrer"
@@ -75,7 +74,7 @@ export function RealAppPreview({ app, children }: { app: PreviewRole; children: 
               />
             </div>
           ) : (
-            <p className="muted" aria-busy="true">{previewText("opening")}</p>
+            <p className="muted" aria-busy="true">{tr("Opening the app…")}</p>
           )}
         </>
       )}

@@ -1,4 +1,6 @@
-# Movera shared contract v0.18.22
+# Movera shared contract v0.18.25
+
+v0.18.25 (BASE job admin real app preview, owner P1 a / P2 b / P3 a 2026-11-04; builds on v0.18.22 main; numbered after 0.18.23 (alerts #60) and 0.18.24 (rate limits), which are reserved; additive, X-Api-Version stays `0.5`): `POST /admin/preview-sessions` (`settings.read`) gives a 15-minute read-only preview token for the real rider or driver web app shown in a phone frame in the admin panel; every write with that token is refused (`403 forbidden`, reason `preview_blocked`); `GET /rider|driver/config?draft=1` serves the zone's saved draft to a preview token only; the apps show a "Preview" banner and "Preview – not sent" on Book / Accept / Pay. §47, `contract.json#previewSession`.
 
 v0.18.22 (BASE job admin live updates 2026-11-04; builds on v0.18.21 main; additive; 0.18.20 is taken by the open contracts PR #60): one admin event stream `GET /admin/events` (SSE, `AdminLiveEvent`: trip.changed, driver.status, zone.supply, alert.changed, ticket.changed, incident.changed, approval.changed, payment.failed, resync), zone-scoped, replay with Last-Event-ID; the admin panel drops its 15 s polling and shows a small "Reconnecting…" badge when the stream drops (owner L1). §46, `contract.json#adminLiveEvents`.
 
@@ -1077,3 +1079,14 @@ Owner L1 (2026-11-04, Rules `decisions/admin-fake-by-group.md`): a small "Reconn
 - **Replay**: `after` or `Last-Event-ID`; events kept 24 h; an older cursor gets one `resync` first.
 - **Admin panel**: one EventSource; each type invalidates its lists (`adminLiveEvents.client.invalidates`) on Overview, Alerts, Live map/Dispatch, Trips, Reservations, Support tickets, Incidents, Approvals, Payments. While the stream is open no timed polling; while it is not, a small "Reconnecting…" badge and a refresh every 60 s.
 - **Rider and driver apps**: no change (own streams).
+
+## 47. Admin real app preview — BASE job (v0.18.25)
+
+Owner (2026-11-04, Rules `decisions/admin-fake-by-group.md`): P1 a — tap through the real screens, Book / Accept / Pay show "Preview – not sent"; P2 b — the preview talks to the live server with every real action blocked; P3 a — every admin page that showed a drawn sample phone (Content, Design, Messages, Bonuses, Promos, Riders). `contract.json#previewSession`.
+
+- **Start**: `POST /admin/preview-sessions` `{role: rider|driver, zoneId, useDraft?}` (permission `settings.read`, zone scope `zone_out_of_scope`) → `201 PreviewSession {token, role, zoneId, useDraft, expiresAt, subjectId}`. The token is an access token with `actor = role`, `zones = [zoneId]`, `sub = preview:<role>:<zoneId>` and `pv = true`; 15 minutes, no refresh, no session row.
+- **Read only**: every POST / PUT / PATCH / DELETE with a preview token is refused before route code: `403 forbidden`, reason `preview_blocked`. Nothing is booked, accepted, paid, put online, paid out or saved.
+- **Empty reads** (owner 2026-11-04 "B: Empty screens"): own-account reads with a preview token answer what a brand-new account gets — empty lists, a blank profile, a zero wallet; never an error, never fake data. The apps show their usual "nothing yet" states.
+- **Draft**: `GET /rider/config` and `GET /driver/config` take `?draft=1`; with a preview token the zone's saved draft is served (live when there is no draft). Every other caller gets live.
+- **Hand-off**: the panel frames `<appWebUrl>#movera-preview=<token>&zone=<zoneId>&draft=<0|1>` (fragment: never in server logs) and can push a new token / draft with `postMessage({type: 'movera-preview', token, draft})`.
+- **Apps**: a preview token shows a "Preview" banner (sv "Förhandsvisning", fr "Aperçu"); the API client does not send any write and the action shows "Preview – not sent" (sv "Förhandsvisning – inte skickat", fr "Aperçu – non envoyé"). The web builds must allow being framed by the admin origin.

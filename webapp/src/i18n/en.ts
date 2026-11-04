@@ -8579,6 +8579,15 @@ export const en = {
   "Could not load driver facts.": "Could not load driver facts.",
   "No driver online in these zones.": "No driver online in these zones.",
   "Some zones could not be loaded.": "Some zones could not be loaded.",
+  // B7 admin real app preview (contract v0.18.25 §47).
+  "Real app": "Real app",
+  "Sample": "Sample",
+  "Show draft settings": "Show draft settings",
+  "Reload": "Reload",
+  "The real app on the live server. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.": "The real app on the live server. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.",
+  "Opening the app…": "Opening the app…",
+  "The real app could not open. Showing the sample.": "The real app could not open. Showing the sample.",
+  "Rider app preview": "Rider app preview",
 } as const;
 
 export type MessageKey = keyof typeof en;
