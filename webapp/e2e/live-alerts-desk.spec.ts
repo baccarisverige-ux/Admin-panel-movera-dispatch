@@ -9,7 +9,7 @@ import { ADMIN, fakeTripServer, signIn } from "./live-fake";
 const ALL = { admin: { permissions: [...ADMIN.permissions, "alerts.manage"] } };
 
 test("alerts: another admin's alert shows who has it; my quiet hours and the settings save on the server", async ({ page }) => {
-  const state = await fakeTripServer(page, ALL);
+  const state = await fakeTripServer(page, { ...ALL, serverAlerts: FOUND });
   await signIn(page);
   await page.goto("/alerts");
   await page.waitForLoadState("networkidle");
@@ -36,8 +36,13 @@ test("alerts: another admin's alert shows who has it; my quiet hours and the set
  * alerts the server found (never its own), a solved one green with what happened (A2), and the per-zone at-risk
  * minutes (A1) save with the alert settings. Fails before: the page worked the alerts out itself.
  */
+const FOUND = [
+  { alertId: "long_wait:T2002.k1", kind: "long_wait", level: "important", title: "Sara has waited 16 min", titleT: { t: "{0} has waited {1} min", a: ["Sara", 16] }, zoneId: "Z001", country: "SE", since: "2026-10-27T09:44:00Z", state: "open", ref: { tripId: "T2002" } },
+  { alertId: "booked_at_risk:T2003.k1", kind: "booked_at_risk", level: "important", title: "x", zoneId: "Z001", country: "SE", since: "2026-10-27T09:30:00Z", state: "solved", solvedAt: "2026-10-27T09:48:00Z", solvedText: "Driver Ali took it 10:48", solvedT: { t: "Driver {0} took it {1}", a: ["Ali", "10:48"] }, ref: { tripId: "T2003" } },
+];
+
 test("alerts: the server's alerts show; solved by itself is green with the new info; zone limits save on the server", async ({ page }) => {
-  const state = await fakeTripServer(page, ALL);
+  const state = await fakeTripServer(page, { ...ALL, serverAlerts: FOUND });
   await signIn(page);
   await page.goto("/alerts");
   await page.waitForLoadState("networkidle");

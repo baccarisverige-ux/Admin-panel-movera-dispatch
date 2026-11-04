@@ -262,7 +262,7 @@ export type TripState = {
   tickets: Record<string, unknown>[];
   supportSettings?: Record<string, unknown>;
   alertBook?: Record<string, unknown>;
-  /** v0.18.20: the alerts the fake server "found" (default: one long wait + one solved by itself), and those marked done. */
+  /** v0.18.20: the alerts the fake server "found" besides the open incidents (default none), and those marked done. */
   serverAlerts?: Record<string, unknown>[];
   closedAlerts?: string[];
   incidentSettings?: Record<string, unknown>;
@@ -471,13 +471,11 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const found = [
         ...state.incidents.filter((i) => (i.status === "open" || i.status === "investigating") && (i.kind !== "ride_check" || (i as { alarm?: boolean }).alarm)).map((i) => {
           const kind = i.kind === "driver_silent" ? "car_lost" : i.kind === "ride_check" ? "ride_check" : "sos";
-          const title = kind === "car_lost" ? { t: "Car lost: {0}", a: ["Ali"] } : kind === "ride_check" ? { t: "Ride check: {0}", a: ["Asked for help"], x: [0] } : { t: "SOS from {0}", a: ["Sara"] };
+          const who = String((i as { riderId?: string; driverId?: string }).riderId ?? (i as { driverId?: string }).driverId ?? "");
+          const title = kind === "car_lost" ? { t: "Car lost: {0}", a: [who] } : kind === "ride_check" ? { t: "Ride check: {0}", a: ["Asked for help"], x: [0] } : { t: "SOS from {0}", a: [who] };
           return { alertId: `${kind}:${i.incidentId}.k1`, kind, level: "critical", title: title.t.replace("{0}", String(title.a[0])), titleT: title, zoneId: i.zoneId, country: "SE", since: i.openedAt ?? "2026-10-27T09:50:00Z", state: "open", ref: { incidentId: i.incidentId, tripId: i.tripId } };
         }),
-        ...(state.serverAlerts ?? [
-          { alertId: "long_wait:T2002.k1", kind: "long_wait", level: "important", title: "Sara has waited 16 min", titleT: { t: "{0} has waited {1} min", a: ["Sara", 16] }, zoneId: "Z001", country: "SE", since: "2026-10-27T09:44:00Z", state: "open", ref: { tripId: "T2002" } },
-          { alertId: "booked_at_risk:T2003.k1", kind: "booked_at_risk", level: "important", title: "x", zoneId: "Z001", country: "SE", since: "2026-10-27T09:30:00Z", state: "solved", solvedAt: "2026-10-27T09:48:00Z", solvedText: "Driver Ali took it 10:48", solvedT: { t: "Driver {0} took it {1}", a: ["Ali", "10:48"] }, ref: { tripId: "T2003" } },
-        ]),
+        ...(state.serverAlerts ?? []),
       ].filter((a) => !(state.closedAlerts ?? []).includes(a.alertId));
       return json(route, 200, { ...book, alerts: found });
     }
