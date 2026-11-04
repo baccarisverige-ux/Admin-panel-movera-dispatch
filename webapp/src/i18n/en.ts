@@ -5223,6 +5223,7 @@ export const en = {
   "Partially refunded": "Partially refunded",
   "Claimed": "Claimed",
   "Refund a trip": "Refund a trip",
+  "Reconnecting…": "Reconnecting…",
   "Not connected yet": "Not connected yet",
   "Drivers and trips from the server; the rest is not connected yet.": "Drivers and trips from the server; the rest is not connected yet.",
   "Trips from the server; the rest is not connected yet.": "Trips from the server; the rest is not connected yet.",

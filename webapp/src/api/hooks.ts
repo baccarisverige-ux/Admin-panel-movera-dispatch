@@ -11,6 +11,7 @@ import type { TripRecord } from "./seed.ts";
 import { useMarketScope } from "../markets/useMarketScope.ts";
 import { parseZoneList } from "../markets/markets.ts";
 import { ApiError } from "./httpClient.ts";
+import { liveRefetchMs, liveStreamState, watchLiveStream } from "../live/adminEvents.ts";
 import { BUSY_MESSAGE, CHECKING_MESSAGE, UNREACHABLE_MESSAGE, atMost, outcomeOf, queryTouched, REFRESH_WAIT_MS, readAt, readTracked, touchedBy } from "./commandFlow.ts";
 
 export { markPaid, PAYMENT_METHODS, setMethod } from "../payments/book.ts";
@@ -34,19 +35,30 @@ function screenRevision(client: ReturnType<typeof useQueryClient>): number | und
   return revs.length ? Math.min(...revs) : undefined;
 }
 
-/** `refetchMs` keeps live screens up to date by reloading on a timer. */
+/**
+ * The timer of a live list (contract v0.18.22 §46, owner L1): the page's own in the demo; none while the admin
+ * events stream is open (its events refresh the list); every minute while it is reconnecting. `follow` (map
+ * positions, ETAs) keeps the page's pace: positions have no event.
+ */
+export function useLiveRefetch(name: string, refetchMs: number | undefined, follow = false): number | false | undefined {
+  const state = useSyncExternalStore(watchLiveStream, liveStreamState, liveStreamState);
+  return liveRefetchMs(state, name, refetchMs, follow);
+}
+
+/** `refetchMs` keeps live screens up to date by reloading on a timer (live: see useLiveRefetch). */
 /** `observe` watches the list without reading it again on mount (the live list bar beside a page that reads it). */
-export function useRecords(name: string, scope?: string | null, options: { refetchMs?: number; observe?: boolean } = {}) {
+export function useRecords(name: string, scope?: string | null, options: { refetchMs?: number; observe?: boolean; follow?: boolean } = {}) {
   const api = useAdminApi();
   const session = useSession();
   const resolved = useMarketScope(scope);
   const scopeDenied = resolved.denied;
   const effectiveScope = resolved.effective;
   const queryKey = ["records", name, JSON.stringify(effectiveScope), session.agent?.id ?? "signed-out"];
+  const refetchInterval = useLiveRefetch(name, options.refetchMs, options.follow);
   const query = useQuery({
     queryKey,
     queryFn: () => readTracked(api, queryKey, () => api.list(name, effectiveScope)),
-    refetchInterval: options.refetchMs,
+    refetchInterval,
     ...(options.observe ? { refetchOnMount: false, retryOnMount: false } : {}),
   });
   return { ...query, scopeDenied, effectiveScope };
@@ -65,7 +77,7 @@ export function useRiders(scope: string | null) {
   return useRecords("riders", scope);
 }
 
-export function useTrips(scope: string | null, options: { refetchMs?: number } = {}) {
+export function useTrips(scope: string | null, options: { refetchMs?: number; follow?: boolean } = {}) {
   const query = useRecords("trips", scope, options);
   return { ...query, data: query.data as TripRecord[] | undefined };
 }
@@ -105,7 +117,8 @@ export function useAudit(refetchMs?: number) {
 
 export function useApprovals(refetchMs?: number) {
   const api = useAdminApi();
-  return useQuery({ queryKey: ["approvals"], queryFn: () => readTracked(api, ["approvals"], () => api.approvals()), refetchInterval: refetchMs });
+  const refetchInterval = useLiveRefetch("approvals", refetchMs);
+  return useQuery({ queryKey: ["approvals"], queryFn: () => readTracked(api, ["approvals"], () => api.approvals()), refetchInterval });
 }
 
 export type CommandPhase = "idle" | "submitting" | "checking" | "committed" | "rejected" | "pending_approval";

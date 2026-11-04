@@ -15495,6 +15495,74 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /admin/events:
+    get:
+      operationId: adminStreamEvents
+      summary: Admin live updates (what changed, in the admin's zones)
+      tags:
+      - Realtime
+      x-actor:
+      - admin
+      x-permission: overview.read
+      parameters:
+      - $ref: '#/components/parameters/ZoneIdQuery'
+      - name: zoneIds
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Several zones, comma separated (inside the admin's zones).
+      - name: country
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^[A-Z]{2}$
+        description: Every zone of that country the admin covers.
+      - $ref: '#/components/parameters/After'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/LastEventId'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: 'Server-sent events. Accept: text/event-stream → SSE: `id:` is the sequence, `data:` one AdminLiveEvent,
+                  a heartbeat comment every 15 s. Without it: a JSON page AdminLiveEventPage of the events after `after` (polling
+                  fallback, same scope). An admin hears an event only for a zone he covers (token zones; ''*'' = all zones).
+                  An event with zoneId null (no zone) only reaches ''*'' admins — the same rule as the dispatch feed and the
+                  alert desk. Optional query zoneId / zoneIds / country narrows the stream inside the admin''s own zones (contract.json#adminListFilters
+                  rules: a named zone outside them is 403 zone_out_of_scope). An admin without a type''s permission never
+                  gets that type. Country managers (roles/zones job) are scoped by the same zone list; nothing on this stream
+                  changes when that job lands. `after` query or the Last-Event-ID header: the stream starts with every event
+                  after that sequence (in scope), then goes live. Events are kept retentionHours; an older cursor gets one
+                  `resync` event first, then live events. Each SSE `data:` line is one JSON AdminLiveEvent; `id:` is the sequence;
+                  heartbeat comments every 15 s.'
+              x-sse-data: '#/components/schemas/AdminLiveEvent'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminLiveEventPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 components:
   securitySchemes:
     bearerAuth:
@@ -30463,3 +30531,59 @@ components:
           type: integer
           minimum: 0
           maximum: 60
+    AdminLiveEventType:
+      type: string
+      enum:
+      - trip.changed
+      - driver.status
+      - zone.supply
+      - alert.changed
+      - ticket.changed
+      - incident.changed
+      - approval.changed
+      - payment.failed
+      - resync
+      description: 'v0.18.22: what changed; the panel reads the record again with the normal routes.'
+    AdminLiveEvent:
+      type: object
+      description: 'BASE job ''admin live updates'' (Rules plan/BASE-JOBS-SPEC-2026-11-04.md §3; owner L1 2026-11-04: a small
+        ''Reconnecting…'' badge, data still refreshes every minute). One admin stream instead of 15 s polling. An event only
+        says WHAT changed (type + id + zone); the admin panel then reads the record again with the normal list/detail routes
+        and their permissions. No names, money or text on the stream.'
+      required:
+      - sequence
+      - type
+      - entityId
+      - zoneId
+      - occurredAt
+      - serverTime
+      properties:
+        sequence:
+          type: integer
+          minimum: 1
+        type:
+          $ref: '#/components/schemas/AdminLiveEventType'
+        entityId:
+          $ref: '#/components/schemas/Id'
+        zoneId:
+          oneOf:
+          - $ref: '#/components/schemas/Id'
+          - type: 'null'
+        occurredAt:
+          $ref: '#/components/schemas/Timestamp'
+        serverTime:
+          $ref: '#/components/schemas/Timestamp'
+    AdminLiveEventPage:
+      type: object
+      required:
+      - items
+      - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminLiveEvent'
+        nextCursor:
+          type:
+          - string
+          - 'null'
