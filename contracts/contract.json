@@ -7352,7 +7352,7 @@
     "applies": "every POST, PUT, PATCH and DELETE under /api/v1; reads (GET, HEAD) and CORS preflights (OPTIONS) are never counted",
     "key": "a valid access token: its actor and user (sub), so many accounts behind one address never share a budget; no or an invalid token: the client address (the address the trusted proxy saw, TRUST_PROXY_HOPS)",
     "window": "fixed 60 s window per key, in the server's memory",
-    "signInOutsideProduction": "staging and development: POST /auth/otp/request and /auth/otp/verify are not counted per address (load test); the OTP limits still apply. Production counts them.",
+    "signInOutsideProduction": "Owner 2026-11-04: on staging only, a test number (auth.testSignIn, no real SMS) has no resend wait (otp.retryAfterSeconds; the challenge says retryAfterSeconds 0) and no hourly per-number or per-address code limit, under a cap of 30 codes per number per minute (429 otp_too_many); production keeps every OTP limit and has no test numbers. staging and development: POST /auth/otp/request and /auth/otp/verify are not counted per address (load test); the OTP limits still apply. Production counts them.",
     "defaults": {
       "production": {
         "userPerMinute": 120,
