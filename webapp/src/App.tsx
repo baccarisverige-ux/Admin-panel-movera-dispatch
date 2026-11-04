@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import { AssignPanelProvider } from "./dispatch/AssignPanelHost";
 import { IncidentAlarm } from "./live/IncidentAlarm";
+import { AdminLiveEvents } from "./live/AdminLiveEvents";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { can, canUseZone } from "./auth/permissions";
 import { SessionProvider, useSession } from "./auth/SessionContext";
@@ -154,6 +155,7 @@ function Shell({ page, children, forceNoAccess = false }: { page: MenuItem | und
             </p>
           ) : null}
           {live ? <IncidentAlarm /> : null}
+          {live ? <AdminLiveEvents /> : null}
           {denied ? <NoAccess /> : page ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>{children}</Suspense> : <NotFound />}
         </section>
       </AssignPanelProvider>
