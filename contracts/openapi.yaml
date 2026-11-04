@@ -10317,6 +10317,48 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /admin/zones/{zoneId}/driver-facts:
+    get:
+      operationId: adminDispatchDriverFacts
+      summary: Real dispatch facts of the zone's online drivers
+      description: 'v0.18.21 (contract.json#dispatchDriverFacts): Drivers of the zone (zone_ids contains zoneId) with account
+        active and online status online (state free) or on_trip (state trip), nearest-first order is the admin''s job; items
+        are sorted by driverId. The server does not track these yet: they are always null. The admin shows a dash (—) and
+        never invents a value; alerts never fire on a null fact. A zone outside the admin''s scope: 403 forbidden (zone_out_of_scope);
+        unknown zone: 404.'
+      tags:
+      - Admin · Dispatch
+      x-actor:
+      - admin
+      x-permission: trips.read
+      parameters:
+      - $ref: '#/components/parameters/ZoneId'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchDriverFactsList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /admin/trips/{tripId}/trace:
     get:
       operationId: adminTripTrace
@@ -25861,6 +25903,136 @@ components:
             minLength: 1
             maxLength: 40
           - type: 'null'
+    DispatchDriverFacts:
+      type: object
+      description: 'v0.18.21 (contract.json#dispatchDriverFacts): what dispatch knows about one online driver.'
+      required:
+      - driverId
+      - zoneId
+      - state
+      - rating
+      - acceptancePct
+      - cancelPct
+      - idleMin
+      - categoryIds
+      - missedInRow
+      - ridesThisHour
+      - restNeeded
+      - finishingInMin
+      - extras
+      - female
+      - skipsInRow
+      - favourite
+      - goingHome
+      - homeDirectionOk
+      - priorityUntilMin
+      - queuePos
+      properties:
+        driverId:
+          $ref: '#/components/schemas/Id'
+        zoneId:
+          $ref: '#/components/schemas/Id'
+        state:
+          type: string
+          enum:
+          - free
+          - trip
+        rating:
+          oneOf:
+          - type: number
+            minimum: 0
+            maximum: 5
+          - type: 'null'
+          description: Driver.performance.rating (contract.json#driverHome.performance; null below minRatings).
+        acceptancePct:
+          oneOf:
+          - type: number
+            minimum: 0
+            maximum: 100
+          - type: 'null'
+          description: Driver.performance.acceptancePct (null below minOffers).
+        cancelPct:
+          oneOf:
+          - type: number
+            minimum: 0
+            maximum: 100
+          - type: 'null'
+          description: Driver.performance.cancellationPct (null below minTrips).
+        idleMin:
+          oneOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+          description: Whole minutes since the driver was last free (drivers.last_free_at, the §3.6 idle factor); null on
+            a trip or when unknown.
+        categoryIds:
+          type: array
+          items:
+            type: string
+          description: The categories the driver may take (Driver.categoryIds).
+        missedInRow:
+          type: integer
+          minimum: 0
+          description: Exclusive or assigned offers of live trips missed in a row since going online, counted exactly as contract.json#autoOffline
+            (an accept resets it).
+        ridesThisHour:
+          type: integer
+          minimum: 0
+          description: Trips of this driver that ended completed in the last 60 minutes.
+        restNeeded:
+          type: boolean
+          description: true when the driving-time limit is reached (contract.json#drivingLimits).
+        finishingInMin:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        extras:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        female:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        skipsInRow:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        favourite:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        goingHome:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        homeDirectionOk:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        priorityUntilMin:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        queuePos:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+    DispatchDriverFactsList:
+      type: object
+      required:
+      - zoneId
+      - serverTime
+      - items
+      properties:
+        zoneId:
+          $ref: '#/components/schemas/Id'
+        serverTime:
+          $ref: '#/components/schemas/Timestamp'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DispatchDriverFacts'
     OnboardingDocumentLists:
       type: object
       description: 'v0.18.0 (owner item 10): the documents a person (driver), a company (fleet) and a car (vehicle) need in

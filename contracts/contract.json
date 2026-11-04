@@ -7003,6 +7003,34 @@
     "ownerQuestions": [
       "LOW 13: the driver give-back reason 'Vehicle issue · does not count' contradicts 'every give-back counts in the cancel rate' (left as it is)."
     ]
+  }
+,
+  "dispatchDriverFacts": {
+    "note": "v0.18.21 (owner 2026-11-04, BASE 'real driver facts'): the admin Dispatch page reads each online driver's dispatch facts from the server instead of making them up. GET /admin/zones/{zoneId}/driver-facts (trips.read; the zone must be in the admin's scope, else 403 zone_out_of_scope). Builds on v0.18.19; additive; X-Api-Version stays 0.5. Numbered after v0.18.20 (server alerts) so the two jobs do not share a number.",
+    "who": "Drivers of the zone (zone_ids contains zoneId) with account active and online status online (state free) or on_trip (state trip), nearest-first order is the admin's job; items are sorted by driverId.",
+    "real": {
+      "rating": "Driver.performance.rating (contract.json#driverHome.performance; null below minRatings).",
+      "acceptancePct": "Driver.performance.acceptancePct (null below minOffers).",
+      "cancelPct": "Driver.performance.cancellationPct (null below minTrips).",
+      "idleMin": "Whole minutes since the driver was last free (drivers.last_free_at, the §3.6 idle factor); null on a trip or when unknown.",
+      "categoryIds": "The categories the driver may take (Driver.categoryIds).",
+      "missedInRow": "Exclusive or assigned offers of live trips missed in a row since going online, counted exactly as contract.json#autoOffline (an accept resets it).",
+      "ridesThisHour": "Trips of this driver that ended completed in the last 60 minutes.",
+      "restNeeded": "true when the driving-time limit is reached (contract.json#drivingLimits)."
+    },
+    "notYet": [
+      "finishingInMin",
+      "extras",
+      "female",
+      "skipsInRow",
+      "favourite",
+      "goingHome",
+      "homeDirectionOk",
+      "priorityUntilMin",
+      "queuePos"
+    ],
+    "notYetRule": "The server does not track these yet: they are always null. The admin shows a dash (—) and never invents a value; alerts never fire on a null fact.",
+    "apps": "Driver and rider apps: no change (admin-only read)."
   },
   "adminLiveEvents": {
     "version": "0.18.22",
@@ -7064,6 +7092,18 @@
     ],
     "replay": "`after` query or the Last-Event-ID header: the stream starts with every event after that sequence (in scope), then goes live. Events are kept retentionHours; an older cursor gets one `resync` event first, then live events.",
     "retentionHours": 24,
+    "limits": {
+      "maxStreamsPerAdmin": 5,
+      "maxStreamsTotal": 2000,
+      "overLimit": "429 rate_limited, reason too_many_streams, Retry-After; the panel keeps polling every fallbackPollSeconds and tries again later",
+      "serverReads": "one shared read per change for all open streams (not one per stream)"
+    },
+    "reconnectBackoff": {
+      "firstMs": 1000,
+      "maxMs": 30000,
+      "jitter": "full jitter: a random wait between 0 and the current step",
+      "stopOn": ["401 unauthenticated", "sign-out"]
+    },
     "client": {
       "invalidates": {
         "trip.changed": [

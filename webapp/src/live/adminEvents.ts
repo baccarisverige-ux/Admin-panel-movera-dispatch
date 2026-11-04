@@ -14,8 +14,15 @@ export const ADMIN_EVENTS_PATH = "/admin/events";
 /** contract.json#adminLiveEvents.client.fallbackPollSeconds (owner L1: "data still refreshes every minute"). */
 export const FALLBACK_POLL_MS = 60_000;
 export const RECONNECTING_TEXT = "Reconnecting…";
-/** Wait before trying the stream again after it dropped (the server's heartbeat is 15 s). */
-export const RETRY_MS = 5_000;
+/** contract.json#adminLiveEvents.reconnectBackoff: 1 s doubling to 30 s, full jitter; no retry on 401 or sign-out. */
+export const BACKOFF_FIRST_MS = 1_000;
+export const BACKOFF_MAX_MS = 30_000;
+
+/** The wait before try `attempt` (0 = first retry): a random point between 0 and min(max, first × 2^attempt). */
+export function backoffMs(attempt: number, random: () => number = Math.random): number {
+  const step = Math.min(BACKOFF_MAX_MS, BACKOFF_FIRST_MS * 2 ** Math.min(attempt, 30));
+  return Math.floor(random() * step);
+}
 
 /** contract.json#adminLiveEvents.client.invalidates (a test keeps it equal to the contract). */
 export const INVALIDATES: Readonly<Record<string, readonly string[]>> = {
@@ -90,20 +97,25 @@ export function showsReconnecting(state: LiveStreamState): boolean {
 export type LiveEventSource = {
   onopen: (() => void) | null;
   onmessage: ((message: { data: string; lastEventId: string }) => void) | null;
-  onerror: (() => void) | null;
+  /** status 401 = the session is gone (or signed out): no retry. */
+  onerror: ((info?: { status?: number }) => void) | null;
+  /** An `id:` line with no data (the server moved the cursor past events not for this admin). */
+  oncursor?: ((id: string) => void) | null;
   close(): void;
 };
 /** Opens the stream after `lastEventId` (null = from now). The browser's EventSource cannot send the bearer token, so live uses fetchEventSource. */
 export type LiveSourceFactory = (lastEventId: string | null) => LiveEventSource;
 
-type ConnectOptions = { retryMs?: number; setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
+type ConnectOptions = { random?: () => number; setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
 
 /**
  * Keeps one stream open until stop is called: every event goes to onEvent once, in order; a drop sets
- * "reconnecting" and opens it again after retryMs with Last-Event-ID (the server replays what was missed).
+ * "reconnecting" and opens it again after a jittered backoff (1 s doubling to 30 s) with Last-Event-ID (the server
+ * replays what was missed). A 401 (session gone, signed out) stops it: state "off", no more tries.
  */
 export function connectAdminEvents(open: LiveSourceFactory, onEvent: (event: AdminLiveEvent) => void, onState: (state: LiveStreamState) => void = setLiveStreamState, options: ConnectOptions = {}): () => void {
-  const retryMs = options.retryMs ?? RETRY_MS;
+  const random = options.random ?? Math.random;
+  let attempt = 0;
   const setTimer = options.setTimer ?? ((fn: () => void, ms: number) => setTimeout(fn, ms));
   const clearTimer = options.clearTimer ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
   let stopped = false;
@@ -118,7 +130,13 @@ export function connectAdminEvents(open: LiveSourceFactory, onEvent: (event: Adm
     const mine = open(lastId);
     source = mine;
     mine.onopen = () => {
-      if (!stopped && source === mine) onState("open");
+      if (!stopped && source === mine) {
+        attempt = 0;
+        onState("open");
+      }
+    };
+    mine.oncursor = (id) => {
+      if (!stopped && source === mine && id) lastId = id;
     };
     mine.onmessage = (message) => {
       if (stopped || source !== mine) return;
@@ -137,12 +155,18 @@ export function connectAdminEvents(open: LiveSourceFactory, onEvent: (event: Adm
       }
       onEvent(event);
     };
-    mine.onerror = () => {
+    mine.onerror = (info) => {
       if (stopped || source !== mine) return;
       mine.close();
       source = null;
+      if (info?.status === 401) {
+        stopped = true;
+        onState("off");
+        return;
+      }
       onState("reconnecting");
-      timer = setTimer(start, retryMs);
+      timer = setTimer(start, backoffMs(attempt, random));
+      attempt += 1;
     };
   };
 
@@ -181,14 +205,19 @@ type StreamClient = { baseUrl: string; state(): { accessToken: string } | null }
 export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch = (input, init) => fetch(input, init)): LiveSourceFactory {
   return (lastEventId) => {
     const controller = new AbortController();
-    const source: LiveEventSource = { onopen: null, onmessage: null, onerror: null, close: () => controller.abort() };
+    const source: LiveEventSource = { onopen: null, onmessage: null, onerror: null, oncursor: null, close: () => controller.abort() };
+    let status: number | undefined;
     void (async () => {
       try {
         const token = client.state()?.accessToken;
-        if (!token) throw new Error("signed out");
+        if (!token) {
+          status = 401;
+          throw new Error("signed out");
+        }
         const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "text/event-stream", "X-Api-Version": "0.5" };
         if (lastEventId) headers["Last-Event-ID"] = lastEventId;
         const response = await fetchImpl(`${client.baseUrl.replace(/\/$/, "")}/api/v1${ADMIN_EVENTS_PATH}`, { headers, signal: controller.signal });
+        status = response.status;
         if (!response.ok || !response.body || !(response.headers.get("content-type") ?? "").includes("text/event-stream")) throw new Error(`stream ${response.status}`);
         source.onopen?.();
         const reader = response.body.getReader();
@@ -200,10 +229,12 @@ export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch =
           const parsed = parseSseMessages(buffer + decoder.decode(value, { stream: true }));
           buffer = parsed.rest;
           for (const message of parsed.messages) source.onmessage?.(message);
+          // id-only lines move the cursor too, so a reconnect does not read those events again.
+          if (parsed.lastId !== null) source.oncursor?.(parsed.lastId);
         }
         throw new Error("stream ended");
       } catch {
-        if (!controller.signal.aborted) source.onerror?.();
+        if (!controller.signal.aborted) source.onerror?.(status === 401 ? { status } : undefined);
       }
     })();
     return source;

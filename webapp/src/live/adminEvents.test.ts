@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { connectAdminEvents, FALLBACK_POLL_MS, INVALIDATES, keyMatches, liveRefetchMs, parseSseMessages, RECONNECTING_TEXT, showsReconnecting, type AdminLiveEvent, type LiveEventSource, type LiveStreamState } from "./adminEvents.ts";
+import { backoffMs, connectAdminEvents, FALLBACK_POLL_MS, INVALIDATES, keyMatches, liveRefetchMs, parseSseMessages, RECONNECTING_TEXT, showsReconnecting, type AdminLiveEvent, type LiveEventSource, type LiveStreamState } from "./adminEvents.ts";
 
 /** Contract v0.18.22 §46 (BASE job admin live updates, owner L1 "small Reconnecting… badge"). */
 const contract = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8")) as { adminLiveEvents: { types: Record<string, unknown>; client: { invalidates: Record<string, string[]>; fallbackPollSeconds: number; badgeText: string } } };
@@ -9,7 +9,8 @@ const contract = JSON.parse(readFileSync(new URL("../../../contracts/contract.js
 class FakeEventSource implements LiveEventSource {
   onopen: (() => void) | null = null;
   onmessage: ((message: { data: string; lastEventId: string }) => void) | null = null;
-  onerror: (() => void) | null = null;
+  onerror: ((info?: { status?: number }) => void) | null = null;
+  oncursor: ((id: string) => void) | null = null;
   closed = false;
   readonly lastEventId: string | null;
   constructor(lastEventId: string | null) {
@@ -28,6 +29,7 @@ function harness() {
   const states: LiveStreamState[] = [];
   const events: AdminLiveEvent[] = [];
   const timers: Array<() => void> = [];
+  const waits: number[] = [];
   const stop = connectAdminEvents(
     (lastEventId) => {
       const source = new FakeEventSource(lastEventId);
@@ -36,9 +38,9 @@ function harness() {
     },
     (event) => events.push(event),
     (state) => states.push(state),
-    { setTimer: (fn) => timers.push(fn), clearTimer: () => undefined },
+    { random: () => 1, setTimer: (fn, ms) => { waits.push(ms); return timers.push(fn); }, clearTimer: () => undefined },
   );
-  return { sources, states, events, timers, stop };
+  return { sources, states, events, timers, waits, stop };
 }
 
 test("the panel's event names, lists and fallback equal the contract's", () => {
@@ -110,4 +112,40 @@ test("the SSE text is split into messages with their ids", () => {
   assert.deepEqual(parsed.messages, [{ data: "{\"sequence\":7}", lastEventId: "7" }]);
   assert.equal(parsed.lastId, "9");
   assert.equal(parsed.rest, "id: 10\ndata: {\"seq");
+});
+
+test("reconnect: jittered backoff 1 s doubling, capped at 30 s, back to 1 s once open", () => {
+  assert.equal(backoffMs(0, () => 1), 1000);
+  assert.equal(backoffMs(3, () => 1), 8000);
+  assert.equal(backoffMs(10, () => 1), 30_000);
+  assert.equal(backoffMs(50, () => 0.5), 15_000);
+  assert.equal(backoffMs(2, () => 0), 0);
+  const h = harness();
+  for (let i = 0; i < 7; i += 1) {
+    h.sources.at(-1)!.onerror?.();
+    h.timers.shift()!();
+  }
+  assert.deepEqual(h.waits, [1000, 2000, 4000, 8000, 16000, 30000, 30000]);
+  h.sources.at(-1)!.onopen?.();
+  h.sources.at(-1)!.onerror?.();
+  assert.equal(h.waits.at(-1), 1000);
+  h.stop();
+});
+
+test("a 401 (session gone, signed out) stops: no retry, no badge", () => {
+  const h = harness();
+  h.sources[0]!.onerror?.({ status: 401 });
+  assert.equal(h.timers.length, 0);
+  assert.equal(h.states.at(-1), "off");
+  assert.equal(h.sources.length, 1);
+});
+
+test("id-only lines move the cursor: the reconnect starts after them", () => {
+  const h = harness();
+  h.sources[0]!.emit({ sequence: 3, type: "trip.changed", entityId: "T", zoneId: "Z001" });
+  h.sources[0]!.oncursor?.("12");
+  h.sources[0]!.onerror?.();
+  h.timers.shift()!();
+  assert.equal(h.sources[1]!.lastEventId, "12");
+  h.stop();
 });
