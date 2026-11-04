@@ -11,7 +11,6 @@ import { CompareVersions, FindSetting, PanelSettings, SettingsElsewhere } from "
 import { useSession } from "../auth/SessionContext";
 import {
   advanceConfigClock,
-  approveConfig,
   configDiff,
   effectiveValue,
   emptyConfig,
@@ -29,7 +28,6 @@ import {
   setSchedule,
   setSwitch,
   setZoneOverride,
-  submitConfigApproval,
   useRecords,
   useSlice,
   type ConfigBook,
@@ -175,9 +173,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
   const liveSession = useLiveSessionMaybe();
   // Owner 2026-10-27: a Settings publish reaches only the zones chosen at the top (the Standard when chosen).
   const settingsTargets = publishTargets(useMarketScope());
-  const review = agent ? submitConfigApproval(book, agent.id) : null;
-  const approval = agent ? approveConfig(book, agent.id) : null;
-  const publication = agent ? publishConfig(book, agent.id, new Date().toISOString(), { direct: Boolean(liveSession) }) : null;
+  // BASE B14 (owner Q1 "One admin always"): the demo publishes at once like live, no second agent.
+  const publication = agent ? publishConfig(book, agent.id, new Date().toISOString(), { direct: true }) : null;
   const rollback = agent ? rollbackConfig(book, agent.id, new Date().toISOString()) : book;
 
   if (store.loading) return <p className="state-line">{tr("Loading configuration.")}</p>;
@@ -486,47 +483,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       <article className="panel">
         <h3>{tr("Review and publish")}</h3>
         <div className="actions">
-          {liveSession ? null : <>
-          <CommandButton
-            command="admin.config.review"
-            confirmTarget={false}
-            className="secondary-btn"
-            type="button"
-            targetId="configuration"
-            before={book.status}
-            after="in_review"
-            disabled={dirty || !review || !!review.error}
-            title={dirty ? tr("Save the draft first.") : review?.error}
-            expectedSliceRev={persisted.draftRev}
-            sliceKey="config"
-            value={review?.book}
-            onDone={() => {
-              if (!review || review.error) return;
-              setBook(review.book);
-              setNotice(tr("Sent for approval."));
-            }}
-          >{tr("Send for approval")}</CommandButton>
-
-          <CommandButton
-            command="admin.config.approve"
-            confirmTarget={false}
-            className="secondary-btn"
-            type="button"
-            targetId="configuration"
-            before={book.status}
-            after="approved"
-            disabled={dirty || !approval || !!approval.error}
-            title={dirty ? tr("Save the draft first.") : approval?.error}
-            expectedSliceRev={persisted.draftRev}
-            sliceKey="config"
-            value={approval?.book}
-            onDone={() => {
-              if (!approval || approval.error) return;
-              setBook(approval.book);
-              setNotice(tr("Approved. A second agent can publish."));
-            }}
-          >{tr("Approve")}</CommandButton>
-          </>}
+          {/* BASE B14 (owner Q1 "One admin always", 2026-11-03): no "Send for approval" / "Approve" step; one admin
+              publishes. Archived in Rules/archive/second-admin-buttons. */}
 
           <CommandButton
             command="admin.config.publish"
