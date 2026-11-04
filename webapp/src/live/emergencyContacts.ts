@@ -4,7 +4,7 @@
  * server writes an audit line for every read, so the panel reads them only after the admin presses Show.
  */
 export type EmergencyContact = { name: string; phone: string; relation?: string };
-export type IncidentEmergencyContacts = { incidentId: string; driverId: string | null; items: EmergencyContact[]; updatedAt: string | null };
+export type IncidentEmergencyContacts = { incidentId: string; driverId: string | null; items: EmergencyContact[]; updatedAt: string | null; rider?: { riderId: string; items: EmergencyContact[]; updatedAt: string | null } | null };
 
 export function emergencyContactsPath(incidentId: string): string {
   return `/admin/incidents/${encodeURIComponent(incidentId)}/emergency-contacts`;
@@ -14,7 +14,10 @@ export function emergencyContactsPath(incidentId: string): string {
 export async function readEmergencyContacts(read: (path: string) => Promise<IncidentEmergencyContacts>, incidentId: string): Promise<IncidentEmergencyContacts> {
   const answer = await read(emergencyContactsPath(incidentId));
   const items = (answer.items ?? []).filter((c) => typeof c.name === "string" && c.name.trim() !== "" && typeof c.phone === "string" && c.phone.trim() !== "");
-  return { incidentId: answer.incidentId ?? incidentId, driverId: answer.driverId ?? null, items, updatedAt: answer.updatedAt ?? null };
+  const keep = (list: EmergencyContact[] | undefined) => (list ?? []).filter((c) => typeof c.name === "string" && c.name.trim() !== "" && typeof c.phone === "string" && c.phone.trim() !== "");
+  // Owner 2026-11-04 "Yes, same as drivers": the rider's contacts of the same open case.
+  const rider = answer.rider ? { riderId: answer.rider.riderId, items: keep(answer.rider.items), updatedAt: answer.rider.updatedAt ?? null } : null;
+  return { incidentId: answer.incidentId ?? incidentId, driverId: answer.driverId ?? null, items, updatedAt: answer.updatedAt ?? null, rider };
 }
 
 /** Owner 2026-11-04 "Read-only on profile": the rider's saved places and the driver's ride preferences. */

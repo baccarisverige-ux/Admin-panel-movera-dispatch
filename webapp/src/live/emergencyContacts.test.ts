@@ -37,3 +37,8 @@ test("owner 2026-11-04: profile reads use the contract routes; contacts only fro
   assert.equal(caseIsOpen("solved"), false);
   assert.equal(categoryLabel("child_seat"), "Child seat");
 });
+
+test("owner 2026-11-04: the rider's contacts of the case are read too", async () => {
+  const got = await readEmergencyContacts(async () => ({ incidentId: "i", driverId: null, items: [], updatedAt: null, rider: { riderId: "r", items: [{ name: "Mona", phone: "+46709999999" }, { name: "", phone: "1" }], updatedAt: null } }), "i");
+  assert.deepEqual(got.rider?.items, [{ name: "Mona", phone: "+46709999999" }]);
+});
