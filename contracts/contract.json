@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.21",
+  "version": "0.18.24",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -3692,7 +3692,7 @@
       "unavailable",
       "internal"
     ],
-    "reason": "optional machine-readable detail under a code (snake_case), e.g. invalid_request + invalid_phone, invalid_otp_code, invalid_otp_session; never shown to users as is. v0.15.0: the sign-in reasons are listed in auth.signInErrors. v0.18.5 reasons: invalid_file_content, categories_required, note_required, expiry_too_far, driver_photo_unavailable, legal_country_unknown. v0.18.7 reasons: pickup_move_too_far, pickup_fixed_after_arrival, route_change_not_available. v0.18.8 reasons: pin_required, pin_wrong, pin_locked, pin_not_required, pin_not_now, pin_blocked, pin_trip_over, not_a_no_show."
+    "reason": "optional machine-readable detail under a code (snake_case), e.g. invalid_request + invalid_phone, invalid_otp_code, invalid_otp_session; never shown to users as is. v0.15.0: the sign-in reasons are listed in auth.signInErrors. v0.18.5 reasons: invalid_file_content, categories_required, note_required, expiry_too_far, driver_photo_unavailable, legal_country_unknown. v0.18.7 reasons: pickup_move_too_far, pickup_fixed_after_arrival, route_change_not_available. v0.18.8 reasons: pin_required, pin_wrong, pin_locked, pin_not_required, pin_not_now, pin_blocked, pin_trip_over, not_a_no_show. v0.18.24 reason: too_many_requests (429 rate_limited, contract.json#rateLimit)."
   },
   "headers": {
     "Idempotency-Key": "required on every mutation, 16–128 chars",
@@ -6622,7 +6622,9 @@
       "wrongCodesPerDay": 15,
       "codesPerAddressPerHour": 60,
       "uploadsPerHour": 30,
-      "codesPerPhonePerHour": 10
+      "codesPerPhonePerHour": 10,
+      "writesPerUserPerMinute": 120,
+      "writesPerAddressPerMinute": 60
     },
     "ranges": {
       "wrongCodesPerDay": [
@@ -6640,13 +6642,23 @@
       "codesPerPhonePerHour": [
         3,
         60
+      ],
+      "writesPerUserPerMinute": [
+        30,
+        10000
+      ],
+      "writesPerAddressPerMinute": [
+        20,
+        10000
       ]
     },
     "fields": {
       "wrongCodesPerDay": "Wrong sign-in codes for one phone number from one client address in 24 h before that address is locked for that number (429 otp_locked_today) until the oldest leaves the window; admins can unlock.",
       "codesPerAddressPerHour": "Sign-in codes per client address (one wifi) per hour (429 otp_too_many).",
       "uploadsPerHour": "Document uploads per driver per hour (429 rate_limited reason upload_limit); the driver's country.",
-      "codesPerPhonePerHour": "Sign-in codes per phone number and app per hour (429 otp_too_many)."
+      "codesPerPhonePerHour": "Sign-in codes per phone number and app per hour (429 otp_too_many).",
+      "writesPerUserPerMinute": "v0.18.24 (owner 2026-11-04 \"Yes, admin setting\"): writes (POST/PUT/PATCH/DELETE) per signed-in user per minute (contract.json#rateLimit; 429 rate_limited reason too_many_requests); the user's country (first zone of the token).",
+      "writesPerAddressPerMinute": "v0.18.24: writes per client address per minute for callers without a valid token (sign-in, waiting list); the country of the server's default zone."
     }
   },
   "deepFix1": {
@@ -7031,5 +7043,161 @@
     ],
     "notYetRule": "The server does not track these yet: they are always null. The admin shows a dash (—) and never invents a value; alerts never fire on a null fact.",
     "apps": "Driver and rider apps: no change (admin-only read)."
+  },
+  "adminLiveEvents": {
+    "version": "0.18.22",
+    "note": "BASE job 'admin live updates' (Rules plan/BASE-JOBS-SPEC-2026-11-04.md §3; owner L1 2026-11-04: a small 'Reconnecting…' badge, data still refreshes every minute). One admin stream instead of 15 s polling. An event only says WHAT changed (type + id + zone); the admin panel then reads the record again with the normal list/detail routes and their permissions. No names, money or text on the stream.",
+    "path": "/admin/events",
+    "permission": "overview.read",
+    "transport": "Accept: text/event-stream → SSE: `id:` is the sequence, `data:` one AdminLiveEvent, a heartbeat comment every 15 s. Without it: a JSON page AdminLiveEventPage of the events after `after` (polling fallback, same scope).",
+    "envelope": [
+      "sequence",
+      "type",
+      "entityId",
+      "zoneId",
+      "occurredAt",
+      "serverTime"
+    ],
+    "types": {
+      "trip.changed": {
+        "permission": "trips.read",
+        "when": "a trip is created, or its status, driver, zone or payment status changes"
+      },
+      "driver.status": {
+        "permission": "drivers.read",
+        "when": "a driver's online status or account status changes (one event per zone of the driver)"
+      },
+      "zone.supply": {
+        "permission": "overview.read",
+        "when": "the free / busy driver count of a zone may have changed (a driver went online, offline, on or off a trip in it); entityId = zoneId"
+      },
+      "alert.changed": {
+        "permission": "overview.read",
+        "when": "an alert is created or taken, passed, done, snoozed (admin_alert_records)"
+      },
+      "ticket.changed": {
+        "permission": "support.reply",
+        "when": "a support ticket is created or its status, owner or last message changes"
+      },
+      "incident.changed": {
+        "permission": "incidents.read",
+        "when": "an incident is created or its status changes"
+      },
+      "approval.changed": {
+        "permission": "approval.decide",
+        "when": "an approval is asked for or decided"
+      },
+      "payment.failed": {
+        "permission": "finance.read",
+        "when": "a trip's payment status becomes failed; entityId = tripId (a trip.changed is sent as well)"
+      },
+      "resync": {
+        "permission": "overview.read",
+        "when": "the cursor is older than the kept events (retentionHours): the panel reloads every live list once; entityId = the admin's id, zoneId null"
+      }
+    },
+    "scope": [
+      "An admin hears an event only for a zone he covers (token zones; '*' = all zones). An event with zoneId null (no zone) only reaches '*' admins — the same rule as the dispatch feed and the alert desk.",
+      "Optional query zoneId / zoneIds / country narrows the stream inside the admin's own zones (contract.json#adminListFilters rules: a named zone outside them is 403 zone_out_of_scope).",
+      "An admin without a type's permission never gets that type.",
+      "Country managers (roles/zones job) are scoped by the same zone list; nothing on this stream changes when that job lands."
+    ],
+    "replay": "`after` query or the Last-Event-ID header: the stream starts with every event after that sequence (in scope), then goes live. Events are kept retentionHours; an older cursor gets one `resync` event first, then live events.",
+    "retentionHours": 24,
+    "limits": {
+      "maxStreamsPerAdmin": 5,
+      "maxStreamsTotal": 2000,
+      "overLimit": "429 rate_limited, reason too_many_streams, Retry-After; the panel keeps polling every fallbackPollSeconds and tries again later",
+      "serverReads": "one shared read per change for all open streams (not one per stream)"
+    },
+    "reconnectBackoff": {
+      "firstMs": 1000,
+      "maxMs": 30000,
+      "jitter": "full jitter: a random wait between 0 and the current step",
+      "stopOn": ["401 unauthenticated", "sign-out"]
+    },
+    "client": {
+      "invalidates": {
+        "trip.changed": [
+          "trips",
+          "reservations",
+          "overview",
+          "dispatch",
+          "payments"
+        ],
+        "driver.status": [
+          "drivers",
+          "dispatch",
+          "overview"
+        ],
+        "zone.supply": [
+          "zoneSupply",
+          "overview",
+          "dispatch"
+        ],
+        "alert.changed": [
+          "alerts",
+          "overview"
+        ],
+        "ticket.changed": [
+          "tickets"
+        ],
+        "incident.changed": [
+          "incidents",
+          "alerts"
+        ],
+        "approval.changed": [
+          "approvals"
+        ],
+        "payment.failed": [
+          "payments",
+          "alerts"
+        ],
+        "resync": [
+          "*"
+        ]
+      },
+      "pages": [
+        "Overview/Dashboard",
+        "Alerts",
+        "Live map/Dispatch",
+        "Trips",
+        "Reservations",
+        "Support tickets",
+        "Incidents",
+        "Approvals",
+        "Payments"
+      ],
+      "fallbackPollSeconds": 60,
+      "whileConnectedPollSeconds": 0,
+      "reconnect": "EventSource reconnects by itself with Last-Event-ID. While it is not open the panel shows a small 'Reconnecting…' badge (owner L1 a) and refreshes the live lists every fallbackPollSeconds; never a big warning banner.",
+      "badgeText": "Reconnecting…"
+    },
+    "apps": "Rider and driver apps: no change (they use their own trip / offer / config streams). RULE 0 check only."
+  },
+  "rateLimit": {
+    "version": "0.18.24",
+    "note": "BASE job B11 (architecture audit 2026-11-03 item 9): one general write limit on top of the existing sign-in limits (auth.limits, countryLimits, waitlist, admin sign-in), which stay as they are.",
+    "applies": "every POST, PUT, PATCH and DELETE under /api/v1; reads (GET, HEAD) and CORS preflights (OPTIONS) are never counted",
+    "key": "a valid access token: its actor and user (sub), so many accounts behind one address never share a budget; no or an invalid token: the client address (the address the trusted proxy saw, TRUST_PROXY_HOPS)",
+    "window": "fixed 60 s window per key, in the server's memory",
+    "signInOutsideProduction": "staging and development: POST /auth/otp/request and /auth/otp/verify are not counted per address (load test); the OTP limits still apply. Production counts them.",
+    "defaults": {
+      "production": {
+        "userPerMinute": 120,
+        "addressPerMinute": 60
+      },
+      "stagingAndDevelopment": {
+        "userPerMinute": 1200,
+        "addressPerMinute": 600
+      }
+    },
+    "settings": "v0.18.24 owner 2026-11-04 \"Yes, admin setting\": per country in CountryRules.limits of the country standard (contract.json#countryLimits writesPerUserPerMinute, writesPerAddressPerMinute; Admin › Settings › Request limits), applied within about 60 s without a server release. The server environment RATE_LIMIT_WRITES_PER_USER_PER_MINUTE / RATE_LIMIT_WRITES_PER_ADDRESS_PER_MINUTE is the fallback and the floor: the limit used is the higher of the two (staging keeps its higher env values); env 0 turns that limit off.",
+    "error": "429 rate_limited, reason too_many_requests, retryable true, header Retry-After = whole seconds until the window ends",
+    "clients": {
+      "driver": "ApiError.isRetryable is true for 429; the queued trip commands keep their Idempotency-Key and retry; account screens show the wait from Retry-After",
+      "rider": "riderErrorKind maps 429 / rate_limited / too_many_requests to rateLimited and shows the wait from Retry-After",
+      "admin": "ApiError.retryable from the body, Retry-After read into retryAfterSeconds; reads retry at most twice and wait Retry-After (at most 60 s) before retrying; message 'Too many attempts. Wait N s.'"
+    }
   }
 }
