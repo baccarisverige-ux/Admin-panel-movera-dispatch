@@ -25,3 +25,15 @@ test("the route is in the contract copy, read-only for incidents.read", () => {
   assert.doesNotMatch(block.split("\n  /")[0] ?? "", /\n {4}(put|post|patch|delete):/);
   assert.match(block, /x-permission: incidents\.read/);
 });
+
+test("owner 2026-11-04: profile reads use the contract routes; contacts only from an open case", async () => {
+  const { riderPlacesPath, driverPreferencesPath, caseIsOpen, categoryLabel } = await import("./emergencyContacts.ts");
+  const spec = readFileSync(new URL("../../../contracts/openapi.yaml", import.meta.url), "utf8");
+  assert.ok(spec.includes("  /admin/riders/{riderId}/saved-places:"));
+  assert.ok(spec.includes("  /admin/drivers/{driverId}/preferences:"));
+  assert.equal(riderPlacesPath("rdr 1"), "/admin/riders/rdr%201/saved-places");
+  assert.equal(driverPreferencesPath("drv_1"), "/admin/drivers/drv_1/preferences");
+  assert.equal(caseIsOpen("new"), true);
+  assert.equal(caseIsOpen("solved"), false);
+  assert.equal(categoryLabel("child_seat"), "Child seat");
+});

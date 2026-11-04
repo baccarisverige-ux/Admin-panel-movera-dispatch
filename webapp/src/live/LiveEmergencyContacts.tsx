@@ -11,14 +11,14 @@ import { readEmergencyContacts, type IncidentEmergencyContacts } from "./emergen
  * BASE B13 (owner 2026-11-03 "Phone-only data: Yes, all to server"; contract v0.18.26 §47): a safety case shows the
  * driver's own emergency contacts, read-only. Private: read only when the admin presses Show (the server audits it).
  */
-export function LiveEmergencyContacts({ incidentId, hasDriver }: { incidentId: string; hasDriver: boolean }) {
+export function LiveEmergencyContacts({ incidentId, hasDriver, open }: { incidentId: string; hasDriver: boolean; open: boolean }) {
   const { client, can } = useLiveSession();
   const [shown, setShown] = useState(false);
   const allowed = can("incidents.read");
   const contacts = useQuery({
     queryKey: ["live", "incident-emergency-contacts", incidentId],
     queryFn: () => readEmergencyContacts((path) => client.json<IncidentEmergencyContacts>(path), incidentId),
-    enabled: shown && allowed && hasDriver,
+    enabled: shown && allowed && hasDriver && open,
   });
   const refused = contacts.error instanceof ApiError && contacts.error.status === 403;
   const items = contacts.data?.items ?? [];
@@ -26,6 +26,7 @@ export function LiveEmergencyContacts({ incidentId, hasDriver }: { incidentId: s
     <div data-testid="incident-emergency-contacts">
       <h4 className="op-sub"><Phone size={13} aria-hidden="true" /> {tr("Driver's emergency contacts")}</h4>
       {!hasDriver ? <p className="op-help">{tr("No driver on this case.")}</p>
+        : !open ? <p className="op-help">{tr("Emergency contacts are shown only while the safety case is open.")}</p>
         : !allowed || refused ? <p className="op-help">{tr("Your role cannot see emergency contacts.")}</p>
         : !shown ? (
           <div className="op-locked">

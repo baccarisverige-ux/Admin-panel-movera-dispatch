@@ -1,5 +1,6 @@
 import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { isLiveData, liveDriverOf } from "../live/realData";
+import { LiveDriverPreferences } from "../live/LiveProfileData";
 import { useDriverPerformance } from "../live/useDriverPerformance";
 import { DASH, liveDriverMonth, liveJoinedAt, liveLastOnline, orDash } from "../live/driverFacts";
 import { logExport } from "../reports/activityLog";
@@ -641,6 +642,7 @@ export function DriverDetailPage() {
             </section>
           </div>
         </TabPanel>
+        {liveData ? <LiveDriverPreferences driverId={driver.id} /> : null}
       </div>
     </div>
   );

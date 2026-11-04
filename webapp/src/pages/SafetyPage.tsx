@@ -1,6 +1,7 @@
 import { isLiveData } from "../live/realData";
 import { NotConnected } from "../live/NotConnected";
 import { LiveEmergencyContacts } from "../live/LiveEmergencyContacts";
+import { caseIsOpen } from "../live/emergencyContacts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlertOctagon, ArrowLeft, Car, Clock3, FileDown, History, ListChecks, MapPin, Phone, PhoneCall, Settings2, ShieldAlert, ShieldCheck, Siren, UserRound, Users } from "lucide-react";
@@ -513,7 +514,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
             <p><Siren size={13} aria-hidden="true" /> {tr("Trip")} {trip ? <Link to={`/trips/${trip.id}`}>{trip.id}</Link> : tr("not linked")}</p>
             <p className="op-help">{trx(place.name)} · {zoneById(item.zoneId)?.city ?? ""}</p>
           </div>
-          {isLiveData() ? <LiveEmergencyContacts incidentId={item.id} hasDriver={Boolean(item.driverId ?? trip?.driverId)} /> : null}
+          {isLiveData() ? <LiveEmergencyContacts incidentId={item.id} hasDriver={Boolean(item.driverId ?? trip?.driverId)} open={caseIsOpen(item.state)} /> : null}
           {settings.pastCases ? (
             <>
               <h4 className="op-sub"><History size={13} aria-hidden="true" /> {tr("Earlier cases of {0}", [item.who])}</h4>
