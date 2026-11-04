@@ -314,6 +314,8 @@ export function riderRecord(rider: Rider): DemoRecord {
       currency: rider.wallet?.currency ?? rider.outstanding?.currency ?? null,
       deletionRequestedAt: rider.deletionRequestedAt ?? null,
       // v0.18.7 (G5 Q3): every owed currency; an older server sends only outstanding (one currency).
+      // v0.18.28 (owner Q4): every wallet balance in its own currency; an older server sends only wallet (one currency).
+      walletByCurrency: Array.isArray(rider.wallets) ? rider.wallets.filter((money) => Number.isFinite(money?.amountMinor) && money.amountMinor !== 0).map((money) => ({ amountMinor: money.amountMinor, currency: money.currency })) : rider.wallet && rider.wallet.amountMinor !== 0 ? [{ amountMinor: rider.wallet.amountMinor, currency: rider.wallet.currency }] : [],
       outstandingByCurrency: Array.isArray(rider.outstandingByCurrency) && rider.outstandingByCurrency.length ? rider.outstandingByCurrency.filter((money) => Number.isFinite(money?.amountMinor)).map((money) => ({ amountMinor: money.amountMinor, currency: money.currency })) : rider.outstanding ? [{ amountMinor: rider.outstanding.amountMinor, currency: rider.outstanding.currency }] : [],
     },
   };

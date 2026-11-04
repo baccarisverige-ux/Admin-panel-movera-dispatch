@@ -195,6 +195,8 @@ export type LiveRiderFacts = {
   deletionRequestedAt: string | null;
   /** v0.18.7 (G5 Q3): what the rider owes in every currency (unpaid cancel / no-show fees), oldest debt first. */
   outstandingByCurrency: { amountMinor: number; currency: string }[];
+  /** v0.18.28 (fix job 6, owner Q4): the wallet balances, one per currency (never added together). */
+  walletByCurrency?: { amountMinor: number; currency: string }[];
 };
 
 /** A trip row: a DemoRecord whose status is a contract TripStatus. */

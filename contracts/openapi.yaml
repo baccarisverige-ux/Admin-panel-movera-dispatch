@@ -1,11 +1,11 @@
-# Movera API v0.18.22 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.28 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.22
+  version: 0.18.28
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.22 in this folder; this file must agree with them.
+    v0.18.28 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -83,7 +83,7 @@ tags:
 - name: Driver · Home
 x-contract:
   name: movera
-  version: 0.18.22
+  version: 0.18.28
   source: contract.json
 paths:
   /auth/otp/request:
@@ -1850,6 +1850,7 @@ paths:
       x-actor:
       - rider
       parameters:
+      - $ref: '#/components/parameters/WalletCurrency'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
       responses:
@@ -6315,7 +6316,9 @@ paths:
         name }] }. records: only alerts of the admin''s zones in that country whose kind group the admin may see (kindGroups);
         an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
-        the country -> 403 zone_out_of_scope.'
+        the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
+        the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
+        may see (same filter as records).'
       tags:
       - Admin · Alerts
       x-actor:
@@ -15838,6 +15841,14 @@ components:
       schema:
         type: string
         maxLength: 200
+    WalletCurrency:
+      name: currency
+      in: query
+      required: false
+      description: 'v0.18.28: which balance is `balance` (ISO 4217, e.g. EUR). Default: the currency of the rider''s zone.'
+      schema:
+        type: string
+        pattern: ^[A-Z]{3}$
     CategoryIdPath:
       name: categoryId
       in: path
@@ -17364,6 +17375,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/RiderConsents'
           description: 'v0.5.1: the rider''s message consents.'
+        wallets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: 'v0.18.28 (admin rider view only, contract.json#walletCurrency.admin): every non-zero wallet balance,
+            one per currency.'
         outstandingByCurrency:
           type: array
           items:
@@ -18225,9 +18242,17 @@ components:
         ownerId:
           $ref: '#/components/schemas/Id'
         balance:
-          $ref: '#/components/schemas/Money'
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.28: the balance in the asked currency (query currency), else in the currency of the rider''s
+            zone.'
         updatedAt:
           $ref: '#/components/schemas/Timestamp'
+        balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: 'v0.18.28: every non-zero balance, one per currency, sorted by currency code. Never added across currencies.'
     SavedPaymentMethod:
       type: object
       required:
@@ -18922,7 +18947,9 @@ components:
         name }] }. records: only alerts of the admin''s zones in that country whose kind group the admin may see (kindGroups);
         an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
-        the country -> 403 zone_out_of_scope.'
+        the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
+        the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
+        may see (same filter as records).'
       required:
       - country
       - rev

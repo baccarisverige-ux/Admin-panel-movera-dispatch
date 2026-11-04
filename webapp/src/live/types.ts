@@ -291,6 +291,8 @@ export type Rider = {
   /** v0.18.7 (G5 Q3): every currency the rider owes in, oldest debt first; outstanding is the first of them. */
   outstandingByCurrency?: LiveMoney[];
   wallet?: LiveMoney;
+  /** v0.18.28 (fix job 6, owner Q4): every non-zero wallet balance, one per currency. */
+  wallets?: LiveMoney[];
   language?: string;
   deletionRequestedAt?: string;
 };
