@@ -5225,6 +5225,7 @@ export const fr: Record<MessageKey, string> = {
   "Partially refunded": "Partiellement remboursé",
   "Claimed": "Prise",
   "Refund a trip": "Rembourser une course",
+  "Reconnecting…": "Reconnexion…",
   "Not connected yet": "Pas encore connecté",
   "Drivers and trips from the server; the rest is not connected yet.": "Chauffeurs et courses depuis le serveur ; le reste n'est pas encore connecté.",
   "Trips from the server; the rest is not connected yet.": "Courses depuis le serveur ; le reste n'est pas encore connecté.",
