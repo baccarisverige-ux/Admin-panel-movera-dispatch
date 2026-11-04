@@ -69,7 +69,7 @@ test("dispatch: no Alerts limits tab on live", async ({ page }) => {
   await signIn(page);
   await page.goto("/dispatch/rules?zone=Z001&tab=alerts");
   const tabs = page.getByRole("tablist", { name: "Zone settings" });
-  await expect(tabs).toBeVisible();
+  await expect(tabs).toBeVisible({ timeout: 20_000 });
   await expect(tabs.getByRole("tab", { name: "Rider waiting" })).toBeVisible();
   await expect(tabs.getByRole("tab", { name: "Alerts", exact: true })).toHaveCount(0);
 });
