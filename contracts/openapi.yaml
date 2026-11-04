@@ -1,11 +1,11 @@
-# Movera API v0.18.20 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.23 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.20
+  version: 0.18.23
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.20 in this folder; this file must agree with them.
+    v0.18.23 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -83,7 +83,7 @@ tags:
 - name: Driver · Home
 x-contract:
   name: movera
-  version: 0.18.20
+  version: 0.18.23
   source: contract.json
 paths:
   /auth/otp/request:
@@ -6315,7 +6315,7 @@ paths:
         name }] }. records: only alerts of the admin''s zones in that country whose kind group the admin may see (kindGroups);
         an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
-        the country -> 403 zone_out_of_scope. v0.18.20: AlertBookState also carries alerts [LiveAlert] (serverDetection):
+        the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
         the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
         may see (same filter as records).'
       tags:
@@ -10307,6 +10307,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LiveDriverList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/zones/{zoneId}/driver-facts:
+    get:
+      operationId: adminDispatchDriverFacts
+      summary: Real dispatch facts of the zone's online drivers
+      description: 'v0.18.21 (contract.json#dispatchDriverFacts): Drivers of the zone (zone_ids contains zoneId) with account
+        active and online status online (state free) or on_trip (state trip), nearest-first order is the admin''s job; items
+        are sorted by driverId. The server does not track these yet: they are always null. The admin shows a dash (—) and
+        never invents a value; alerts never fire on a null fact. A zone outside the admin''s scope: 403 forbidden (zone_out_of_scope);
+        unknown zone: 404.'
+      tags:
+      - Admin · Dispatch
+      x-actor:
+      - admin
+      x-permission: trips.read
+      parameters:
+      - $ref: '#/components/parameters/ZoneId'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchDriverFactsList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -18814,7 +18856,7 @@ components:
         name }] }. records: only alerts of the admin''s zones in that country whose kind group the admin may see (kindGroups);
         an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
-        the country -> 403 zone_out_of_scope. v0.18.20: AlertBookState also carries alerts [LiveAlert] (serverDetection):
+        the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
         the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
         may see (same filter as records).'
       required:
@@ -25797,6 +25839,136 @@ components:
             minLength: 1
             maxLength: 40
           - type: 'null'
+    DispatchDriverFacts:
+      type: object
+      description: 'v0.18.21 (contract.json#dispatchDriverFacts): what dispatch knows about one online driver.'
+      required:
+      - driverId
+      - zoneId
+      - state
+      - rating
+      - acceptancePct
+      - cancelPct
+      - idleMin
+      - categoryIds
+      - missedInRow
+      - ridesThisHour
+      - restNeeded
+      - finishingInMin
+      - extras
+      - female
+      - skipsInRow
+      - favourite
+      - goingHome
+      - homeDirectionOk
+      - priorityUntilMin
+      - queuePos
+      properties:
+        driverId:
+          $ref: '#/components/schemas/Id'
+        zoneId:
+          $ref: '#/components/schemas/Id'
+        state:
+          type: string
+          enum:
+          - free
+          - trip
+        rating:
+          oneOf:
+          - type: number
+            minimum: 0
+            maximum: 5
+          - type: 'null'
+          description: Driver.performance.rating (contract.json#driverHome.performance; null below minRatings).
+        acceptancePct:
+          oneOf:
+          - type: number
+            minimum: 0
+            maximum: 100
+          - type: 'null'
+          description: Driver.performance.acceptancePct (null below minOffers).
+        cancelPct:
+          oneOf:
+          - type: number
+            minimum: 0
+            maximum: 100
+          - type: 'null'
+          description: Driver.performance.cancellationPct (null below minTrips).
+        idleMin:
+          oneOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+          description: Whole minutes since the driver was last free (drivers.last_free_at, the §3.6 idle factor); null on
+            a trip or when unknown.
+        categoryIds:
+          type: array
+          items:
+            type: string
+          description: The categories the driver may take (Driver.categoryIds).
+        missedInRow:
+          type: integer
+          minimum: 0
+          description: Exclusive or assigned offers of live trips missed in a row since going online, counted exactly as contract.json#autoOffline
+            (an accept resets it).
+        ridesThisHour:
+          type: integer
+          minimum: 0
+          description: Trips of this driver that ended completed in the last 60 minutes.
+        restNeeded:
+          type: boolean
+          description: true when the driving-time limit is reached (contract.json#drivingLimits).
+        finishingInMin:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        extras:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        female:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        skipsInRow:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        favourite:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        goingHome:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        homeDirectionOk:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        priorityUntilMin:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+        queuePos:
+          type: 'null'
+          description: 'The server does not track these yet: they are always null. The admin shows a dash (—) and never invents
+            a value; alerts never fire on a null fact.'
+    DispatchDriverFactsList:
+      type: object
+      required:
+      - zoneId
+      - serverTime
+      - items
+      properties:
+        zoneId:
+          $ref: '#/components/schemas/Id'
+        serverTime:
+          $ref: '#/components/schemas/Timestamp'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DispatchDriverFacts'
     OnboardingDocumentLists:
       type: object
       description: 'v0.18.0 (owner item 10): the documents a person (driver), a company (fleet) and a car (vehicle) need in

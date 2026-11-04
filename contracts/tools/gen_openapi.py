@@ -1934,6 +1934,21 @@ op("put", "/admin/zones/{zoneId}/dispatch-control", "adminPutDispatchControl", "
 op("get", "/admin/live/drivers", "adminLiveDrivers", "Driver positions for the admin live map", ["admin"], "Admin · Dispatch",
    params=ZF, ok=(200, "LiveDriverList"), permission="trips.read",
    desc="Limited to the zones in the admin's scope. stale = no fix for staleAfterSeconds." + ZF_DESC)
+DDF = C["dispatchDriverFacts"]
+def _nn(desc, **kw): return {"oneOf": [n(**kw), {"type": "null"}], "description": desc}
+def _ni(desc, **kw): return {"oneOf": [i(**kw), {"type": "null"}], "description": desc}
+S["DispatchDriverFacts"] = obj(OrderedDict([("driverId", ref("Id")), ("zoneId", ref("Id")), ("state", s(enum=["free", "trip"])),
+    ("rating", _nn(DDF["real"]["rating"], minimum=0, maximum=5)), ("acceptancePct", _nn(DDF["real"]["acceptancePct"], minimum=0, maximum=100)),
+    ("cancelPct", _nn(DDF["real"]["cancelPct"], minimum=0, maximum=100)), ("idleMin", _ni(DDF["real"]["idleMin"], minimum=0)),
+    ("categoryIds", arr(s(), description=DDF["real"]["categoryIds"])), ("missedInRow", i(DDF["real"]["missedInRow"], minimum=0)),
+    ("ridesThisHour", i(DDF["real"]["ridesThisHour"], minimum=0)), ("restNeeded", b(DDF["real"]["restNeeded"]))]
+    + [(k, {"type": "null", "description": DDF["notYetRule"]}) for k in DDF["notYet"]]),
+    required=["driverId", "zoneId", "state", "rating", "acceptancePct", "cancelPct", "idleMin", "categoryIds", "missedInRow", "ridesThisHour", "restNeeded"] + DDF["notYet"],
+    desc="v0.18.21 (contract.json#dispatchDriverFacts): what dispatch knows about one online driver.")
+S["DispatchDriverFactsList"] = obj({"zoneId": ref("Id"), "serverTime": ref("Timestamp"), "items": arr(ref("DispatchDriverFacts"))}, required=["zoneId", "serverTime", "items"])
+op("get", "/admin/zones/{zoneId}/driver-facts", "adminDispatchDriverFacts", "Real dispatch facts of the zone's online drivers", ["admin"], "Admin · Dispatch",
+   params=[pref("ZoneId")], ok=(200, "DispatchDriverFactsList"), permission="trips.read",
+   desc="v0.18.21 (contract.json#dispatchDriverFacts): " + DDF["who"] + " " + DDF["notYetRule"] + " A zone outside the admin's scope: 403 forbidden (zone_out_of_scope); unknown zone: 404.")
 op("get", "/admin/trips/{tripId}/trace", "adminTripTrace", "The trip's GPS trace", ["admin"], "Admin · Trips",
    params=TID, ok=(200, "TripTrace"), permission="trips.read", desc="Traces are deleted 30 days after the trip (owner decision 11): 404 after that.")
 

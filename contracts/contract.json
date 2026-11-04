@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.20",
+  "version": "0.18.23",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -4117,7 +4117,7 @@
   },
   "alertDesk": {
     "note": "v0.18.15 (build-all A1, owner 2026-11-02 Q5 'Alerts = FULL FLOW': take — the others see who has it, pass on, snooze, mute types, quiet hours, done). The admin panel finds the alerts from the live data (its alert engine, admin settings + rules); the SERVER keeps who works on each alert, the history, the mutes, every admin's quiet hours and the shared alert settings and rules, so every admin sees the same state on live.",
-    "book": "GET /admin/alerts/book?country=SE (overview.read) -> AlertBookState { country, rev, settings, rules, records [AlertRecord], mutes { kind: { until, by } }, quiet (the caller's own quiet hours), people [{ adminId, name }] }. records: only alerts of the admin's zones in that country whose kind group the admin may see (kindGroups); an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside the country -> 403 zone_out_of_scope. v0.18.20: AlertBookState also carries alerts [LiveAlert] (serverDetection): the alerts the server found, open or solved by itself, of the admin's zones in that country and the groups the admin may see (same filter as records).",
+    "book": "GET /admin/alerts/book?country=SE (overview.read) -> AlertBookState { country, rev, settings, rules, records [AlertRecord], mutes { kind: { until, by } }, quiet (the caller's own quiet hours), people [{ adminId, name }] }. records: only alerts of the admin's zones in that country whose kind group the admin may see (kindGroups); an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection): the alerts the server found, open or solved by itself, of the admin's zones in that country and the groups the admin may see (same filter as records).",
     "commands": {
       "take": "POST /admin/alerts/{alertId}/take { kind, level, title, zoneId?, since } -> AlertBookState of the alert's country: owner = the caller. The first command on an alert stores its zone; later commands use the stored zone, never the one sent. The zone must be the caller's (else 403 zone_out_of_scope); the kind must be in kindGroups (else 400 invalid_request, reason unknown_alert_kind) and the caller needs its act permission (else 403). Two admins taking at once: one wins, the other gets 409 conflict, reason alert_taken. Another admin's live owner -> 409 alert_taken. sos, car_lost, ride_check -> 409 invalid_transition, reason alert_in_incidents.",
       "done": "POST /admin/alerts/{alertId}/done { kind, level, title, zoneId?, since, note? } -> status done. Only the owner (or nobody owns it: the caller takes it and solves it) -> else 409 conflict, reason alert_taken.",
@@ -4129,16 +4129,16 @@
       "rules": "PUT /admin/alerts/rules { country, expectedRev, rules } (alerts.manage; same country check) -> rev + 1.",
       "export": "GET /admin/alerts/history?country=&from=&to= (overview.read) -> { items: AlertRecord[] } with the same filter as the book."
     },
-    "shapes": "settings and rules are the admin panel's own alert-engine documents (JSON objects, at most 256 KB); the server stores and serves them unchanged so every admin uses the same ones. AlertRecord { alertId, kind, level, title, zoneId?, since, status taken | done | snoozed, owner?, ownerName?, snoozeUntil?, events [{ at, by, byName?, kind take | done | snooze | pass | reopen, text, to? }] }. v0.18.20: settings may hold zones { zoneId: { bookedAtRiskMin, liveAtRiskMin, fewDriversLimit, noDriverLimit } } (serverDetection.settings); the server reads settings and rules to find the alerts.",
+    "shapes": "settings and rules are the admin panel's own alert-engine documents (JSON objects, at most 256 KB); the server stores and serves them unchanged so every admin uses the same ones. AlertRecord { alertId, kind, level, title, zoneId?, since, status taken | done | snoozed, owner?, ownerName?, snoozeUntil?, events [{ at, by, byName?, kind take | done | snooze | pass | reopen, text, to? }] }. v0.18.23: settings may hold zones { zoneId: { bookedAtRiskMin, liveAtRiskMin, fewDriversLimit, noDriverLimit } } (serverDetection.settings); the server reads settings and rules to find the alerts.",
     "audit": "Every command is audited: alert.take | done | snooze | pass | mute | unmute | quiet | settings | rules.",
     "incidentKinds": [
       "sos",
       "car_lost",
       "ride_check"
     ],
-    "next": "v0.18.20: the server finds every alert itself (serverDetection). Push to admins' phones is a later job; live updates to the panel come with the admin live-updates job (alert.changed).",
+    "next": "v0.18.23: the server finds every alert itself (serverDetection). Push to admins' phones is a later job; live updates to the panel come with the admin live-updates job (alert.changed).",
     "serverDetection": {
-      "note": "v0.18.20 (BASE job 4, owner 2026-11-04 A1-A3, Rules decisions/admin-fake-by-group.md). Alerts are SERVER-CREATED only: the server finds every alert kind from its own data, 24/7, with or without an admin panel open. The admin panel only reads them (AlertBookState.alerts) and acts on them (take, pass, snooze, done, mute). The panel never makes up an alert or a start time.",
+      "note": "v0.18.23 (BASE job 4, owner 2026-11-04 A1-A3, Rules decisions/admin-fake-by-group.md). Alerts are SERVER-CREATED only: the server finds every alert kind from its own data, 24/7, with or without an admin panel open. The admin panel only reads them (AlertBookState.alerts) and acts on them (take, pass, snooze, done, mute). The panel never makes up an alert or a start time.",
       "when": "A sweep every sweepSeconds (30) on the timer worker (one server instance at a time) and at once after events: an incident opened (SOS, car lost, ride check), a support ticket opened, a booked ride's no-driver / pickup-time timers. The sweep is idempotent: running it twice changes nothing.",
       "sweepSeconds": 30,
       "causeKey": "Each alert has one cause key (kind + what it is about, e.g. long_wait:<tripId>, few_drivers:<zoneId>, doc_expiring:<driverId>:<type>, rule:<ruleId>:<zoneId>). At most one open or solved alert per cause key: no duplicates. alertId = <causeKey>.<start in base 36> (characters outside A-Z a-z 0-9 _ : . - become _).",
@@ -7174,5 +7174,33 @@
     "ownerQuestions": [
       "LOW 13: the driver give-back reason 'Vehicle issue · does not count' contradicts 'every give-back counts in the cancel rate' (left as it is)."
     ]
+  }
+,
+  "dispatchDriverFacts": {
+    "note": "v0.18.21 (owner 2026-11-04, BASE 'real driver facts'): the admin Dispatch page reads each online driver's dispatch facts from the server instead of making them up. GET /admin/zones/{zoneId}/driver-facts (trips.read; the zone must be in the admin's scope, else 403 zone_out_of_scope). Builds on v0.18.19; additive; X-Api-Version stays 0.5. Numbered after v0.18.20 (server alerts) so the two jobs do not share a number.",
+    "who": "Drivers of the zone (zone_ids contains zoneId) with account active and online status online (state free) or on_trip (state trip), nearest-first order is the admin's job; items are sorted by driverId.",
+    "real": {
+      "rating": "Driver.performance.rating (contract.json#driverHome.performance; null below minRatings).",
+      "acceptancePct": "Driver.performance.acceptancePct (null below minOffers).",
+      "cancelPct": "Driver.performance.cancellationPct (null below minTrips).",
+      "idleMin": "Whole minutes since the driver was last free (drivers.last_free_at, the §3.6 idle factor); null on a trip or when unknown.",
+      "categoryIds": "The categories the driver may take (Driver.categoryIds).",
+      "missedInRow": "Exclusive or assigned offers of live trips missed in a row since going online, counted exactly as contract.json#autoOffline (an accept resets it).",
+      "ridesThisHour": "Trips of this driver that ended completed in the last 60 minutes.",
+      "restNeeded": "true when the driving-time limit is reached (contract.json#drivingLimits)."
+    },
+    "notYet": [
+      "finishingInMin",
+      "extras",
+      "female",
+      "skipsInRow",
+      "favourite",
+      "goingHome",
+      "homeDirectionOk",
+      "priorityUntilMin",
+      "queuePos"
+    ],
+    "notYetRule": "The server does not track these yet: they are always null. The admin shows a dash (—) and never invents a value; alerts never fire on a null fact.",
+    "apps": "Driver and rider apps: no change (admin-only read)."
   }
 }
