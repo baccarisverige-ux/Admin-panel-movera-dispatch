@@ -1,6 +1,6 @@
 # Movera shared contract v0.18.28
 
-v0.18.28 (fix job 6 "Wallet currency", ledger L11/R11, owner Q4 2026-11-04 "leave old wallet rows; show balances per currency from now on"; numbered after 0.18.24–0.18.27, reserved by other open jobs; builds on v0.18.23 main; X-Api-Version stays `0.5`, additive): **the rider's wallet keeps one balance per currency** — a France refund is a EUR balance, a trip is paid only from the balance in its own currency, nothing is converted or added. `GET /wallet?currency=EUR` → `Wallet { ownerId, balance, balances [Money], updatedAt }` (`balance` without `currency`: the rider's zone currency). Admin rider view adds `wallets [Money]`. Old rows untouched; the old single balance becomes the SEK balance. Driver app: no change. §47, `contract.json#walletCurrency`.
+v0.18.28 (fix job 6 "Wallet currency", ledger L11/R11, owner Q4 2026-11-04 "leave old wallet rows; show balances per currency from now on"; numbered after 0.18.24–0.18.27, reserved by other open jobs; builds on v0.18.23 main; X-Api-Version stays `0.5`, additive): **the rider's wallet keeps one balance per currency** — a France refund is a EUR balance, a trip is paid only from the balance in its own currency, nothing is converted or added. `GET /wallet?currency=EUR` → `Wallet { ownerId, balance, balances [Money], updatedAt }` (`balance` without `currency`: the rider's zone currency). Admin rider view adds `wallets [Money]`. Old rows untouched; the old single balance becomes the SEK balance. Driver app: no change. §51, `contract.json#walletCurrency`.
 
 v0.18.23 (BASE job 4 "Server-side alerts", owner 2026-11-04 A1–A3, Rules `decisions/admin-fake-by-group.md`; builds on v0.18.22; X-Api-Version stays `0.5`, additive; rider and driver apps: no change): **alerts are server-created only** — the server finds every alert kind itself every 30 s and right after key events (SOS / car lost / ride check opened, ticket opened, booked-ride timers), one alert per cause, no duplicates; `GET /admin/alerts/book` also returns `alerts [LiveAlert]`. New booked-ride kinds `booked_at_risk`, `booked_late`, `booked_not_started`. **At risk** is an admin setting per zone (owner A1): `settings.zones[zoneId].bookedAtRiskMin` and `liveAtRiskMin`, default 15 each. **Solved by itself** (owner A2): the alert stays, turns green with the new info ("Driver Ali took it 17:48"), an admin can still mark it done. **Custom rules** are checked by the server 24/7 (owner A3). §44, `contract.json#alertDesk.serverDetection`.
 
@@ -209,7 +209,7 @@ Document { documentId, ownerId, type, status: missing | in_review | approved | r
 PaymentIntent { paymentId, tripId, amount: Money, method, status: PaymentStatus, failureCode? }
 Refund { refundId, paymentId, amount: Money, reason, status: pending_approval | done | rejected }
 WalletEntry { entryId, ownerId, amount: Money, kind: topup | charge | refund | payout | adjustment, tripId?, at }
-Wallet { ownerId, balance: Money, balances: [Money], updatedAt }   (v0.18.28 §47: one balance per currency)
+Wallet { ownerId, balance: Money, balances: [Money], updatedAt }   (v0.18.28 §51: one balance per currency)
 Rating { tripId, from: rider | driver, stars: 1..5 (whole stars, integer), tags[], comment? }
 Notification { notificationId, audience: rider | driver, kind, title, body, at, read }
 Message { messageId, tripId, from: rider | driver | support, text, at }   (v0.13.0: §23)
@@ -1092,7 +1092,7 @@ Owner L1 (2026-11-04, Rules `decisions/admin-fake-by-group.md`): a small "Reconn
 - **Admin panel**: one EventSource; each type invalidates its lists (`adminLiveEvents.client.invalidates`) on Overview, Alerts, Live map/Dispatch, Trips, Reservations, Support tickets, Incidents, Approvals, Payments. While the stream is open no timed polling; while it is not, a small "Reconnecting…" badge and a refresh every 60 s.
 - **Rider and driver apps**: no change (own streams).
 
-## 47. Wallet per currency — fix job 6 (v0.18.28)
+## 51. Wallet per currency — fix job 6 (v0.18.28)
 Owner Q4 (2026-11-04, Rules `decisions/driver-g15.md` "Fix-plan Q4"): leave old wallet rows; balances per currency from now on. `contract.json#walletCurrency`.
 - **Rule**: one balance per rider and currency (SEK, EUR, TND). Money goes into the balance of its own currency; a trip is paid only from the balance in the trip's currency. Never converted, never added across currencies.
 - **Rider**: `GET /wallet?currency=XXX` → `Wallet { ownerId, balance, balances, updatedAt }`; `balance` is the asked currency (0 when none), without `currency` the currency of the rider's zone, else SEK; `balances` = every non-zero balance, sorted by code. Bad `currency` → 400.
