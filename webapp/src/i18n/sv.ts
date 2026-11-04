@@ -8580,4 +8580,11 @@ export const sv: Record<MessageKey, string> = {
   "Could not load driver facts.": "Kunde inte hämta förarfakta.",
   "No driver online in these zones.": "Ingen förare online i de här zonerna.",
   "Some zones could not be loaded.": "Några zoner kunde inte hämtas.",
+  "Driver's emergency contacts": "Förarens nödkontakter",
+  "No driver on this case.": "Ingen förare i det här ärendet.",
+  "Your role cannot see emergency contacts.": "Din roll kan inte se nödkontakter.",
+  "Emergency contacts are private. Each time you show them it is saved in the audit.": "Nödkontakter är privata. Varje gång du visar dem sparas det i loggen.",
+  "Show the driver's emergency contacts": "Visa förarens nödkontakter",
+  "Show contacts": "Visa kontakter",
+  "The driver has not added emergency contacts.": "Föraren har inte lagt till några nödkontakter.",
 };

@@ -71,6 +71,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.legalPublish", label: "Publish terms and privacy", reason: false, permission: "settings.publish" },
   // v0.18.5 (owner G9): the trip's chat in the trip details (GET /trips/{tripId}/messages, support.reply).
   { id: "admin.server.tripChat", label: "Show the trip chat", reason: false, permission: "trips.read" },
+  // BASE B13 (contract v0.18.26 §47): a safety case shows the driver's emergency contacts (read-only, audited by the server).
+  { id: "admin.server.emergencyContacts", label: "Show the driver's emergency contacts", reason: false, permission: "incidents.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },
   // The id is kept for older audit rows; the demo amount is above the default 500 kr second-admin limit.
   { id: "admin.audit.refund250", label: "Refund 600 kr", reason: true, permission: "payments.refund" },

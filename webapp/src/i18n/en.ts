@@ -8578,6 +8578,13 @@ export const en = {
   "Could not load driver facts.": "Could not load driver facts.",
   "No driver online in these zones.": "No driver online in these zones.",
   "Some zones could not be loaded.": "Some zones could not be loaded.",
+  "Driver's emergency contacts": "Driver's emergency contacts",
+  "No driver on this case.": "No driver on this case.",
+  "Your role cannot see emergency contacts.": "Your role cannot see emergency contacts.",
+  "Emergency contacts are private. Each time you show them it is saved in the audit.": "Emergency contacts are private. Each time you show them it is saved in the audit.",
+  "Show the driver's emergency contacts": "Show the driver's emergency contacts",
+  "Show contacts": "Show contacts",
+  "The driver has not added emergency contacts.": "The driver has not added emergency contacts.",
 } as const;
 
 export type MessageKey = keyof typeof en;

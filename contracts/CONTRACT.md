@@ -1,4 +1,8 @@
-# Movera shared contract v0.18.21
+# Movera shared contract v0.18.26
+
+v0.18.26 (BASE B13 "phone data to the server", owner 2026-11-03 "Phone-only data: Yes, all to server"; builds on v0.18.22, v0.18.23–0.18.25 are reserved by other open jobs; X-Api-Version stays `0.5`; additive except the never-served `SavedPlace`): the rider's **saved places** (`/rider/places` + `PUT /rider/places/{placeId}` + one-time `POST /rider/places/import`), the driver's **ride preferences** (`GET|PUT /driver/preferences`, `categoriesOff`; **dispatch no longer sends a switched-off category**) and the driver's **emergency contacts** (`GET|PUT /driver/emergency-contacts`) live on the server, each visible only to its owner; the admin reads a driver's emergency contacts read-only from a safety incident (`GET /admin/incidents/{incidentId}/emergency-contacts`, audited). §47, `contract.json#phoneDataToServer`.
+
+v0.18.22 (BASE job admin live updates 2026-11-04; builds on v0.18.21 main; additive; 0.18.20 is taken by the open contracts PR #60): one admin event stream `GET /admin/events` (SSE, `AdminLiveEvent`: trip.changed, driver.status, zone.supply, alert.changed, ticket.changed, incident.changed, approval.changed, payment.failed, resync), zone-scoped, replay with Last-Event-ID; the admin panel drops its 15 s polling and shows a small "Reconnecting…" badge when the stream drops (owner L1). §46, `contract.json#adminLiveEvents`.
 
 v0.18.21 (BASE real driver facts, owner 2026-11-04; builds on v0.18.19, numbered after v0.18.20 server alerts; additive, X-Api-Version stays `0.5`): `GET /admin/zones/{zoneId}/driver-facts` (`trips.read`, zone scope) gives the admin Dispatch page the real facts of each online driver (rating, acceptance %, cancel %, idle minutes, categories, missed offers in a row, rides this hour, rest needed); facts the server does not track yet are always `null` and the admin shows "—". §45, `contract.json#dispatchDriverFacts`.
 
@@ -1063,3 +1067,26 @@ Owner 2026-11-03 Q1–Q7 (Rules `decisions/driver-g15.md`, "Book later answers")
 ## 45. Dispatch driver facts — BASE real driver facts (v0.18.21)
 
 `GET /admin/zones/{zoneId}/driver-facts` → `DispatchDriverFactsList { zoneId, serverTime, items: DispatchDriverFacts[] }` (`trips.read`; a zone outside the admin's scope is `403 zone_out_of_scope`). One row per active driver of the zone who is online (`state: free`) or on a trip (`state: trip`). Real: `rating`, `acceptancePct`, `cancelPct` (the same numbers and minimums as `Driver.performance`, null below them), `idleMin` (null on a trip), `categoryIds`, `missedInRow` (counted as `contract.json#autoOffline`), `ridesThisHour`, `restNeeded` (driving-time limit). Not tracked yet, always `null`: `finishingInMin`, `extras`, `female`, `skipsInRow`, `favourite`, `goingHome`, `homeDirectionOk`, `priorityUntilMin`, `queuePos`. The admin shows "—" for null and no alert fires on a null fact. Driver and rider apps: no change.
+
+## 46. Admin live updates — BASE job (v0.18.22)
+
+Owner L1 (2026-11-04, Rules `decisions/admin-fake-by-group.md`): a small "Reconnecting…" badge, data still refreshes every minute. `contract.json#adminLiveEvents`.
+
+- **Stream**: `GET /admin/events` (permission `overview.read`). `Accept: text/event-stream` → SSE (`id:` = sequence, `data:` = `AdminLiveEvent {sequence, type, entityId, zoneId, occurredAt, serverTime}`, heartbeat every 15 s); otherwise a JSON page `AdminLiveEventPage` after `after` (fallback).
+- **Types**: `trip.changed` (trips.read), `driver.status` (drivers.read), `zone.supply` (overview.read), `alert.changed` (overview.read), `ticket.changed` (support.reply), `incident.changed` (incidents.read), `approval.changed` (approval.decide), `payment.failed` (finance.read), `resync`. An event says only what changed; the panel re-reads it with the normal routes. No names, money or text.
+- **Scope**: only zones the admin covers; zone null only for all-zone admins; optional `zoneId` / `zoneIds` / `country` narrows inside them (403 `zone_out_of_scope` outside). A type the admin lacks the permission for is never sent.
+- **Limits**: at most 5 open streams per admin and 2000 in total (`429 rate_limited`, reason `too_many_streams`); the server reads each change once for every stream. The panel reconnects with backoff 1 s doubling to 30 s with jitter and stops on 401 or sign-out.
+- **Replay**: `after` or `Last-Event-ID`; events kept 24 h; an older cursor gets one `resync` first.
+- **Admin panel**: one EventSource; each type invalidates its lists (`adminLiveEvents.client.invalidates`) on Overview, Alerts, Live map/Dispatch, Trips, Reservations, Support tickets, Incidents, Approvals, Payments. While the stream is open no timed polling; while it is not, a small "Reconnecting…" badge and a refresh every 60 s.
+- **Rider and driver apps**: no change (own streams).
+
+## 47. Phone data to the server — BASE B13 (v0.18.26)
+
+Owner 2026-11-03: "Phone-only data: Yes, all to server". `contract.json#phoneDataToServer`.
+
+- **Privacy**: each list is read and changed only by its owner. Another rider's place id is `404 place_not_found`. Admins see no saved places and no preference rows; a driver's emergency contacts only through one of his safety incidents, and every such read is audited (`incident.emergency_contacts_viewed`, without the numbers). Logs never carry addresses, names or numbers.
+- **Rider saved places**: `GET /rider/places` → `SavedPlacePage` (all places, `nextCursor` null); `POST /rider/places` → 201; `PUT /rider/places/{placeId}`; `DELETE /rider/places/{placeId}` → 204. `kind` home / work: one each (a new one replaces the old and keeps its `placeId`); `other` with an optional `type` (gym, mall, school, airport, family, restaurant, other). `place` is `SavedPlaceAddress { address, lat?, lng? }` because older phone data has only the address. At most 50 places (`409 too_many_places`). **One-time upload**: `POST /rider/places/import { items }` is applied only the first time for that rider; later calls change nothing and answer the server list.
+- **Driver ride preferences**: `GET /driver/preferences` → `DriverPreferences { categoriesOff, updatedAt }`, `PUT /driver/preferences { categoriesOff }` (unknown category `400 unknown_category`). **Dispatch** (automatic rounds, the admin's Add money through the zone dispatch, Scheduled rides list) skips a driver whose `categoriesOff` holds the trip's category. `Driver.categoryIds` (from the admin and the car) does not change. `updatedAt` null = never saved on the server → the app uploads its phone choice once.
+- **Driver emergency contacts**: `GET|PUT /driver/emergency-contacts` (whole list, at most 10, `400 too_many_contacts`); `EmergencyContact { name, phone, relation? }`; 112 stays built into the app and is never stored. `updatedAt` null → the app uploads its phone list once.
+- **Admin**: `GET /admin/incidents/{incidentId}/emergency-contacts` (`incidents.read`, incident zone in scope) → `IncidentEmergencyContacts`; Safety incident detail shows a read-only box behind a "Show" button. No admin screen for places or preferences.
+- **Apps**: rider Home / Saved places and driver Ride preferences / Emergency contacts read and write the server; the phone copy is only shown while offline and is cleared at sign-out.

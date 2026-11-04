@@ -8580,4 +8580,11 @@ export const fr: Record<MessageKey, string> = {
   "Could not load driver facts.": "Impossible de charger les infos chauffeurs.",
   "No driver online in these zones.": "Aucun chauffeur en ligne dans ces zones.",
   "Some zones could not be loaded.": "Certaines zones n'ont pas pu être chargées.",
+  "Driver's emergency contacts": "Contacts d'urgence du chauffeur",
+  "No driver on this case.": "Aucun chauffeur dans ce dossier.",
+  "Your role cannot see emergency contacts.": "Votre rôle ne permet pas de voir les contacts d'urgence.",
+  "Emergency contacts are private. Each time you show them it is saved in the audit.": "Les contacts d'urgence sont privés. Chaque affichage est enregistré dans le journal.",
+  "Show the driver's emergency contacts": "Afficher les contacts d'urgence du chauffeur",
+  "Show contacts": "Afficher les contacts",
+  "The driver has not added emergency contacts.": "Le chauffeur n'a pas ajouté de contacts d'urgence.",
 };
