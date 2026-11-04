@@ -5225,6 +5225,7 @@ export const sv: Record<MessageKey, string> = {
   "Partially refunded": "Delvis återbetald",
   "Claimed": "Tagen",
   "Refund a trip": "Återbetala en resa",
+  "Reconnecting…": "Ansluter igen…",
   "Not connected yet": "Inte kopplad än",
   "Drivers and trips from the server; the rest is not connected yet.": "Förare och resor från servern; resten är inte kopplat än.",
   "Trips from the server; the rest is not connected yet.": "Resor från servern; resten är inte kopplat än.",

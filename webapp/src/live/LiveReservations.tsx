@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CalendarClock } from "lucide-react";
 import { tr, trx } from "../i18n";
 import { marketOfZone, market } from "../markets/markets";
-import { zonedLabel } from "../api/hooks";
+import { useLiveRefetch, zonedLabel } from "../api/hooks";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine } from "./ui";
 import { atRisk, inView, isOverdue, needsAttention, notStarted, reservationActions, reservationCall, reservationState, RESERVATIONS_PATH, sortReservations, type ReservationAction, type ServerReservation, type View } from "./reservations";
@@ -40,7 +40,8 @@ export function LiveReservations() {
   const queryClient = useQueryClient();
   // Live test MED 7: the admin picks drivers by name (the zone's drivers from the server), never a raw id.
   const drivers = useQuery({ queryKey: ["live", "reservationDrivers"], queryFn: () => client.json<{ items: { driverId: string; firstName?: string; lastName?: string; onlineStatus?: string; zoneIds?: string[] }[] }>("/admin/drivers?accountStatus=active&limit=200"), staleTime: 60_000 });
-  const list = useQuery({ queryKey: ["live", "reservations"], queryFn: () => client.json<{ items: ServerReservation[] }>(RESERVATIONS_PATH), refetchInterval: 30_000 });
+  const refetchInterval = useLiveRefetch("reservations", 30_000);
+  const list = useQuery({ queryKey: ["live", "reservations"], queryFn: () => client.json<{ items: ServerReservation[] }>(RESERVATIONS_PATH), refetchInterval });
   const [view, setView] = useState<View>("all");
   const [open, setOpen] = useState<{ tripId: string; action: Exclude<ReservationAction, "open"> } | null>(null);
   const [reason, setReason] = useState("");
