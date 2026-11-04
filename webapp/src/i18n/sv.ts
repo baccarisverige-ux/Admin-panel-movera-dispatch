@@ -8570,4 +8570,13 @@ export const sv: Record<MessageKey, string> = {
   "Example: 10 min → still no driver at 09:50: you get an alert and the rider is told; the search goes on, after 10:00 too.": "Exempel: 10 min → fortfarande ingen förare kl. 09:50: du får ett larm och resenären får veta; sökningen fortsätter, även efter 10:00.",
   "8 · Movera gives a ride to a driver": "8 · Movera ger en resa till en förare",
   "These settings are kept but not used yet.": "De här inställningarna finns kvar men används inte än.",
+  "Driver facts": "Förarfakta",
+  "Idle (min)": "Ledig (min)",
+  "Missed in a row": "Missade i rad",
+  "Rides this hour": "Resor senaste timmen",
+  "Needs rest": "Behöver vila",
+  "Finishing in (min)": "Klar om (min)",
+  "What the server knows about each online driver. — = not tracked yet.": "Vad servern vet om varje förare online. — = spåras inte än.",
+  "Could not load driver facts.": "Kunde inte hämta förarfakta.",
+  "No driver online in these zones.": "Ingen förare online i de här zonerna.",
 };
