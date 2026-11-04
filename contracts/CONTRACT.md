@@ -1,4 +1,6 @@
-# Movera shared contract v0.18.19
+# Movera shared contract v0.18.20
+
+v0.18.20 (BASE job 4 "Server-side alerts", owner 2026-11-04 A1–A3, Rules `decisions/admin-fake-by-group.md`; builds on v0.18.19; X-Api-Version stays `0.5`, additive; rider and driver apps: no change): **alerts are server-created only** — the server finds every alert kind itself every 30 s and right after key events (SOS / car lost / ride check opened, ticket opened, booked-ride timers), one alert per cause, no duplicates; `GET /admin/alerts/book` also returns `alerts [LiveAlert]`. New booked-ride kinds `booked_at_risk`, `booked_late`, `booked_not_started`. **At risk** is an admin setting per zone (owner A1): `settings.zones[zoneId].bookedAtRiskMin` and `liveAtRiskMin`, default 15 each. **Solved by itself** (owner A2): the alert stays, turns green with the new info ("Driver Ali took it 17:48"), an admin can still mark it done. **Custom rules** are checked by the server 24/7 (owner A3). §44, `contract.json#alertDesk.serverDetection`.
 
 v0.18.19 (Book later live fixes 2026-11-03; builds on v0.18.18; additive): admin no-show of a booked ride only after the pickup time + no-show wait (`409 no_show_too_early`); owner defaults (online 60 min, one 2 h reminder) for zones still on the old built-in values; admin give / offer to an offline driver for a ride hours ahead, group offer skips who cannot take it; 'driver found' once per driver; rider reminder planned again after changes; `bookingHorizonDays` = `maxAheadDays`. §41, `contract.json#bookLater.liveFixes`.
 
@@ -1027,7 +1029,7 @@ Owner 2026-11-02 Q5 "Alerts = FULL FLOW" (take — the others see who has it, pa
 - **Commands** (overview.read): `POST /admin/alerts/{alertId}/take | done | snooze | pass` (owner rules: another admin's alert → `409 alert_taken`; SOS, car lost and ride check are taken in Incidents → `409 alert_in_incidents`; pass → an active admin in `people`, else `400 assignee_not_allowed`), `PUT | DELETE /admin/alerts/mutes/{kind}`, `PUT /admin/alerts/quiet` (own quiet hours).
 - **Settings and rules** (alerts.manage): `PUT /admin/alerts/settings | rules { expectedRev, … }` (stale rev → `409 version_mismatch`); stored as the panel's documents, at most 256 KB.
 - **Export**: `GET /admin/alerts/history?from=&to=` → `{ items }`; the panel makes the CSV. Every command is audited (`alert.*`).
-- **Next**: server-side detection and push to admins.
+- **Next**: server-side detection — done in v0.18.20 (§44); push to admins later.
 
 ## 39. Incidents settings, report, calls — build-all A1 (v0.18.15)
 
@@ -1057,3 +1059,12 @@ Owner 2026-11-03 Q1–Q7 (Rules `decisions/driver-g15.md`, "Book later answers")
 - **Owner follow-up BL-Q1..Q7 (2026-11-03)**: search starts `dispatchBeforeMin` (30) before pickup; `maxTripKm` default null = no limit; `listTo` homeNear (Driver.homeArea, `PUT|DELETE /driver/home-area`, `listHomeKm`), favourites (`GET /rider/favourite-drivers`, `PUT|DELETE /rider/favourite-drivers/{driverId}`) and new **nearAtTime** (last ride ends within `listAtTimeKm` of the pickup at most `listAtTimeMin` before); a rider change of a held ride asks the driver "Keep it at the new time?" (`POST /driver/reservations/{tripId}/keep { keep }`, `reservation.changeAsk`, timeout `changeAnswerMin` 15 → back to the list); a booked ride never expires: after the pickup time `reservation.overdue` (admin alert) and Exclusive offers only until a driver takes it or an admin acts.
 - **Owner M6 (2026-11-03)**: driver reminder only 2 h before (no 15-min one) plus a notice `reservation_assigned` when the ride becomes his; `changeAnswerMin` 15, nearAtTime 5 km / 30 min, `offlineBackupAfterMin` 5 kept; after the pickup time each round asks again drivers who declined; one smart gap for every ride type. `reservation_unassigned` (admin took him off) and `reservation.notStarted` (held ride not started at its pickup time, admin alert) added.
 - **Live fixes v0.18.19** (`bookLater.liveFixes`): no-show time check, owner-default backfill, offline give / group skip, driver found once, rider reminder re-plan, horizon = maxAheadDays.
+
+## 44. Server-side alerts — BASE job 4 (v0.18.20)
+Owner 2026-11-04 A1 "First answer and add 15 min by default also admin can set time risk for reservation and for live booking", A2 "Alert become green color with new info", A3 "Yes, server checks them". `contract.json#alertDesk.serverDetection`.
+- **Server-created only.** The server's sweep (every 30 s on the timer worker, and at once after an incident, a ticket or a booked-ride timer) finds every kind of `alertDesk.kindGroups` from its own data. The admin panel reads `AlertBookState.alerts` and never makes up an alert or its start time.
+- **One alert per cause** (`causeKey`); `since` = when the server first found it. States: `open`, `solved` (green, `solvedText`, still to be marked done), done (an `AlertRecord` with status done).
+- **Per-zone settings** in the country's alert settings: `zones[zoneId] { bookedAtRiskMin 15, liveAtRiskMin 15, fewDriversLimit 2, noDriverLimit 5 }`; the kinds' on / level / limits as before.
+- **Booked rides:** `booked_at_risk` (no driver ≤ bookedAtRiskMin before pickup), `booked_late` (pickup time passed, no driver), `booked_not_started` (driver holds it, leave time passed, not started).
+- **Custom rules** (metric, above / below, value, for N min, zone or all, level) are checked by the server on every sweep.
+- Rider and driver apps: no change.

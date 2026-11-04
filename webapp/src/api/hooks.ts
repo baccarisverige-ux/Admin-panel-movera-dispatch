@@ -314,7 +314,7 @@ export function useCommand(action: string) {
   };
 }
 
-export function useSlice<T>(key: string, fallback: T, options: { enabled?: boolean } = {}) {
+export function useSlice<T>(key: string, fallback: T, options: { enabled?: boolean; refetchMs?: number } = {}) {
   const api = useAdminApi();
   const { agent }=useSession();
   const [params]=useSearchParams();
@@ -322,7 +322,7 @@ export function useSlice<T>(key: string, fallback: T, options: { enabled?: boole
   const scope=agent ? { ...agent.scope, zones: requested ? canUseZone(agent,requested) ? parseZoneList(requested) : ["__scope-denied__"] : agent.scope.zones } : undefined;
   // A1 live fix 3: per-country books (alert, incident, review settings on live) are read again when the country changes.
   const queryKey = ["slice", key, agent?.id, JSON.stringify(scope), params.get("country") ?? ""];
-  const query = useQuery({ queryKey, queryFn: () => readTracked(api, queryKey, () => api.readSlice(key, fallback, agent && scope ? { actorId:agent.id,role:agent.role,scope } : undefined)), enabled:Boolean(agent) && options.enabled !== false });
+  const query = useQuery({ queryKey, queryFn: () => readTracked(api, queryKey, () => api.readSlice(key, fallback, agent && scope ? { actorId:agent.id,role:agent.role,scope } : undefined)), enabled:Boolean(agent) && options.enabled !== false, ...(options.refetchMs ? { refetchInterval: options.refetchMs } : {}) });
   const command = useCommand(`admin.${key}.save`);
   return {
     value: query.data ?? fallback,

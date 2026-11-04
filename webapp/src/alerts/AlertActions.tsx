@@ -21,6 +21,8 @@ export function agentName(id: string | null | undefined): string {
 
 /** "Nora Lind is working on it" or "Not taken yet". */
 export function StatusLine({ alert }: { alert: OpenAlert }) {
+  // v0.18.20 owner A2: solved by itself — green, with what happened; it stays until someone marks it done.
+  if (alert.solved && !alert.owner) return <span className="al-status solved">{trn("{0} Solved by itself: {1}", <CheckCircle2 size={12} aria-hidden="true" />, alert.solved.text)}</span>;
   if (alert.status === "snoozed") return <span className="al-status snoozed">{trn("{0} Snoozed by {1}", <TimerReset size={12} aria-hidden="true" />, agentName(alert.record?.events.at(-1)?.by))}</span>;
   if (alert.owner) return <span className="al-status taken">{trn("{0} {1} is working on it", <UserCheck size={12} aria-hidden="true" />, agentName(alert.owner))}</span>;
   return <span className="al-status new">{tr("Not taken yet")}</span>;

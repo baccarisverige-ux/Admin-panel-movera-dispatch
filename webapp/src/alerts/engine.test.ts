@@ -69,7 +69,13 @@ const alerts = computeAlerts(facts, book.settings, book.rules);
 const by = (id: string) => alerts.find((alert) => alert.id === id);
 assert(by("sos:I1")?.level === "critical" && by("sos:I1")?.incidentId === "I1", "SOS is critical and tied to the incident");
 assert(by("sos:I2")?.title.includes("not solved after 40 min"), "SOS taken 40 min ago stays, marked not solved");
-assert(by("long_wait:T1")?.level === "important" && by("long_wait:T2")?.level === "critical" && !by("long_wait:T3"), "wait levels use the Dispatch limit");
+assert(by("long_wait:T1")?.level === "important" && by("long_wait:T2")?.level === "important" && !by("long_wait:T3"), "wait levels use the Dispatch limit");
+// v0.18.20: Critical from 30 min by default (Important = the zone's live at-risk minutes on live); the number is a setting.
+{
+  const strict = emptyAlertBook().settings;
+  strict.kinds.long_wait.limits.critical = 15;
+  assert(computeAlerts(facts, strict, []).find((alert) => alert.id === "long_wait:T2")?.level === "critical", "Critical from the number set here");
+}
 assert(by("few_drivers:Z001:2026-10-12") && !by("few_drivers:Z002:2026-10-12"), "few drivers per zone");
 // G3-D5 (owner 2026-10-30 "Fix it"): no rider waiting, or enough free drivers for those waiting: no "few drivers" alert;
 // live, the server's zoneSupply numbers (every online driver counted) are the ones used.
