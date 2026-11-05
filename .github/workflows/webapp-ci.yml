@@ -68,10 +68,17 @@ jobs:
           docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.21.2 \
             detect --source /repo --redact --no-banner --exit-code 1
 
-  e2e:
-    name: Playwright e2e
+  # B15 (faster CI): the e2e suite (9 min in one job) runs in two parallel
+  # shards; the job named "Playwright e2e" (the old check name) passes only
+  # when both shards passed.
+  e2e-shard:
+    name: Playwright e2e (shard ${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -82,15 +89,26 @@ jobs:
       - run: npm ci
       # Installs the Chromium build that matches the pinned @playwright/test version.
       - run: npx playwright install --with-deps chromium
-      - run: npm run e2e
+      - run: npm run e2e -- --shard=${{ matrix.shard }}/2
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: e2e-report
+          name: e2e-report-${{ matrix.shard }}
           path: |
             webapp/playwright-report
             webapp/test-results
           retention-days: 7
+
+  e2e:
+    name: Playwright e2e
+    if: always()
+    needs: [e2e-shard]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Both shards passed
+        working-directory: .
+        run: test "${{ needs.e2e-shard.result }}" = success
 
   e2e-live:
     name: Playwright e2e (live, faked server)
