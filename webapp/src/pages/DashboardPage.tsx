@@ -81,6 +81,7 @@ import { LiveMapQuickPopup, type QuickTarget } from "../pricing/LiveMapExtras";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { zoneFilterOf } from "../live/zoneFilter";
 import { liveTabCounts } from "../dashboard/liveCounts";
+import { liveAllowedCategories, liveDriverInfo } from "../dashboard/liveDriverInfo";
 import { LIVE_CARD_LIST, liveCardRows, onlineTileValue } from "../dashboard/liveCard";
 
 const FIVE_MIN = 5 * 60_000;
@@ -290,6 +291,8 @@ export function DashboardPage() {
   const allowedCategories = (driverId: string) => {
     const record = driverRows.find((row) => row.id === driverId) ?? presenceRows.find((row) => row.id === driverId);
     if (!record) return [];
+    // A15: live, the server's Driver.categoryIds decide who can be assigned (never the seed).
+    if (liveData) return liveAllowedCategories(record);
     const ops = driverOps(driverStore.value, { id: record.id, name: record.name, fleetId: record.fleetId, status: record.status, kind: record.kind });
     return CATEGORIES.filter((category) => ops.categories[category.id]).map((category) => category.id);
   };
@@ -638,6 +641,8 @@ export function DashboardPage() {
                   if (!access.drivers) return null;
                   const record = driverRows.find((row) => row.id === driverId) ?? presenceRows.find((row) => row.id === driverId);
                   if (!record) return null;
+                  // A15: live, only server values (Driver.rating / performance / categoryIds); null shows "—".
+                  if (liveData) return liveDriverInfo(record, { account: statusLabel(record.status), fleet: (fleets.data ?? []).find((row) => row.id === record.fleetId)?.name ?? null });
                   const ops = driverOps(driverStore.value, { id: record.id, name: record.name, fleetId: record.fleetId, status: record.status, kind: record.kind });
                   const today = driverPerformance({ id: record.id, zoneId: record.zoneId, status: record.status, stars: ops.ratings.stars, acceptancePct: ops.ratings.acceptancePct, cancellationPct: ops.ratings.cancellationPct }, periodWindow({ kind: "today" }, now, market.timeZone, uiLocale()), false).current;
                   return {
