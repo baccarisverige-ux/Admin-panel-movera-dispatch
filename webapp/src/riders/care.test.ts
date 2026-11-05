@@ -1,4 +1,4 @@
-import { addCredit, validatePromo, autoState, parseEmails, promoMessage, promoReach, randomRiders, sendPromotion, setAutoPromos, setPopup, editPromotion, promoPrice, setPromotionOn, addLostItem, advanceLostItem, ban, createPromotion, decideRefund, emptyRiderCare, isBanned, markPaid, maxCost, merge, normalizeCare, promoResults, promoUsed, reply, requestRefund, saveFilter, threadOf, unpaidMinor, waitingMinutes, type PromoDraft } from "./care.ts";
+import { addCredit, validatePromo, autoState, parseEmails, promoMessage, promoReach, randomRiders, sendPromotion, setAutoPromos, setPopup, editPromotion, promoPrice, setPromotionOn, addLostItem, advanceLostItem, ban, createPromotion, emptyRiderCare, isBanned, markPaid, maxCost, merge, normalizeCare, promoResults, promoUsed, reply, requestRefund, saveFilter, threadOf, unpaidMinor, waitingMinutes, type PromoDraft } from "./care.ts";
 import { bookingCounts, joinedAt, riderBookings, riderCode, riderProfile, type RiderRecord } from "./profile.ts";
 import { buildRows, pickAudience, insights, matches, ridersCsv, segmentCounts, sortRows } from "./segments.ts";
 
@@ -52,7 +52,7 @@ const writer = people.find((rider) => waitingMinutes(threadOf(care, rider, NOW),
 const answered = reply(care, writer, "We are on it.", "maja", NOW);
 assert(waitingMinutes(threadOf(answered, writer, NOW), NOW) === null, "a reply clears the waiting badge");
 
-// Wallet credit limits and refunds with a second approver.
+// Wallet credit limits and refunds (one admin always).
 const credited = addCredit(care, people[1], 200, "Driver was late", "astrid", NOW);
 assert(!credited.error && credited.care.credits.length === 1, "credit added");
 assert(addCredit(care, people[1], 600, "Too much", "astrid", NOW).error?.includes("at most 500"), "one credit is capped");
@@ -64,9 +64,8 @@ const ride = rideRow.bookings.find((booking) => booking.status === "completed" &
 const small = requestRefund(care, rideRow.rider, ride, 100, "card", "Long route", "maja", NOW);
 assert(!small.error && !small.needsApproval && small.care.refunds[0].status === "sent", "small refund goes out");
 const big = requestRefund(care, rideRow.rider, ride, 550, "bank", "Charged twice", "maja", NOW);
-assert(big.needsApproval && big.care.refunds[0].status === "waiting", "big refund waits for approval");
-assert(decideRefund(big.care, big.care.refunds[0].id, true, "maja").error?.includes("Another admin"), "no self-approval");
-assert(decideRefund(big.care, big.care.refunds[0].id, true, "astrid").care.refunds[0].status === "sent", "second admin approves");
+// BASE B14 (owner Q1 "One admin always"): a big refund is sent at once by the admin who asks.
+assert(!big.needsApproval && big.care.refunds[0].status === "sent", "big refund goes out at once");
 assert(requestRefund(care, rideRow.rider, ride, ride.fareMinor / 100 + 1, "card", "x", "maja", NOW).error?.includes("paid"), "cannot refund more than paid");
 
 // Unpaid balance clears when paid.

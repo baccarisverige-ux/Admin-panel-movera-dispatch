@@ -26,7 +26,7 @@ export const OPEN_VALUES: OpenValue[] = [
   { id: "cash", label: "Cash rules", today: "open" },
   { id: "fleet", label: "Fleet partners at launch", today: "open" },
   { id: "thresholds", label: "Money approval thresholds", today: "open" },
-  { id: "refund", label: "Refund second person", today: "Set per country in Settings", link: "/settings#refunds" },
+  { id: "refund", label: "Refund second person", today: "none (one admin always)" },
   { id: "wallet-ceiling", label: "Wallet credit ceiling", today: "500 kr" },
   { id: "languages", label: "Languages", today: "English, French, Swedish; default per country in Settings", link: "/settings#country-apps" },
   { id: "app-languages", label: "App languages today", today: "English only" },

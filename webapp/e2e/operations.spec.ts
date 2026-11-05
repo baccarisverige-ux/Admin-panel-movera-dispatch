@@ -82,7 +82,7 @@ test("trip page: a viewer cannot see private data; super admin can turn actions 
   await expect(page.getByRole("button", { name: "Flag trip" })).toHaveCount(0);
 });
 
-test("trip page: refund part, flag, note, and a big pay change waits for a second admin", async ({ page }) => {
+test("trip page: refund part, flag, note, and a big pay change is done by one admin", async ({ page }) => {
   await session(page);
   await page.goto("/trips/T0012");
   await page.getByLabel("Refund amount").fill("10");
@@ -99,16 +99,11 @@ test("trip page: refund part, flag, note, and a big pay change waits for a secon
   await page.getByRole("button", { name: "Save note" }).click();
   await expect(page.getByRole("list", { name: "Admin work on this trip" })).toContainText("Note: Called the rider, all fine");
   await page.getByLabel("Driver pay change").fill("600");
-  await page.getByRole("button", { name: "Ask a second admin" }).click();
+  // BASE B14 (owner Q1 "One admin always"): the pay change is done at once; nobody else approves.
+  await page.getByRole("button", { name: "Change pay" }).click();
   await confirm(page);
-  const waiting = page.getByRole("region", { name: "Waiting for a second admin" });
-  await expect(waiting).toContainText("Asked by Nora Lind (you)");
-  await expect(waiting.getByRole("button", { name: "Approve" })).toBeDisabled();
-  await switchTo(page, "lena");
-  await page.goto("/trips/T0012");
-  await page.getByRole("region", { name: "Waiting for a second admin" }).getByRole("button", { name: "Approve" }).click();
-  await confirm(page);
-  await expect(page.getByRole("list", { name: "Admin work on this trip" })).toContainText("approved by Lena Berg");
+  await expect(page.getByRole("status")).toContainText("Driver pay changed.");
+  await expect(page.getByRole("region", { name: "Waiting for a second admin" })).toHaveCount(0);
   await page.goto("/trips?group=flagged");
   await expect(page.getByTestId("trip-count")).toContainText("1 match");
 });

@@ -65,7 +65,7 @@ import {
   waybill,
   zoneTimeLabel,
 } from "../trips/present";
-import { AdminActions, ChatCalls, Section, SplitView, Waiting, entryLine } from "../trips/TripParts";
+import { AdminActions, ChatCalls, Section, SplitView, entryLine } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
 import { cashFigures, isCashTrip } from "../trips/cash";
 import { offerLog, timelineOffers } from "../trips/offerLog";
@@ -277,7 +277,7 @@ export function TripPage() {
       </nav>
 
       {notice ? <p className="dx-note" role="status">{trSentences(notice)}</p> : null}
-      <Waiting trip={trip} ops={ops} money={money} onNotice={setNotice} />
+      {/* BASE B14 (owner Q1 "One admin always"): no "waits for a second admin" Approve / Decline. */}
 
       <Cards
         compare={false}

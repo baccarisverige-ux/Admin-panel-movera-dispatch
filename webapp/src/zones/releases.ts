@@ -587,11 +587,13 @@ export function submitReview(book: ZoneBook, actorId: string): { book: ZoneBook;
   return { book: { ...book, authorId: actorId, status: "in_review" } };
 }
 
+/**
+ * BASE B14 (owner Q1 "One admin always", 2026-11-04 "Remove all 4"): one admin publishes at once. There is no review
+ * step and no second agent; the checks of the old review (no blocking error, launch checklist) still run here.
+ */
 export function publishZones(book: ZoneBook, actorId: string): { book: ZoneBook; error?: string } {
-  if (book.status !== "in_review") return { book, error: "Send the draft for review before publishing." };
-  if (actorId === book.authorId) return { book, error: "A second agent must publish." };
-  const issue = blocking(book.draft);
-  if (issue) return { book, error: issue.message };
+  const checked = submitReview(book, actorId);
+  if (checked.error) return { book, error: checked.error };
   const snapshot = cloneZones(book.draft);
   return { book: { ...book, authorId: actorId, status: "draft", published: snapshot, versions: [...book.versions, snapshot] } };
 }

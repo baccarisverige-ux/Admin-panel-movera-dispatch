@@ -153,15 +153,8 @@ test("A05 draw Östermalm, cut a hole, add Arlanda pickups, review, publish, rel
   await page.getByRole("button", { name: "See changes and impact (2)" }).click();
   await expect(page.getByRole("region", { name: "Changes and impact" }).or(page.locator(".zn-changes"))).toContainText("Stockholm · Östermalm");
   await expect(page.locator(".zn-changes")).toContainText("pickup points");
-  await page.getByRole("button", { name: "Send for review" }).click();
-  await confirm(page);
-  await expect(notice(page)).toContainText("In review. A different agent can publish.");
-  await topbarMore(page);
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await page.getByRole("button", { name: "Lena Berg · ops" }).click();
-  await expect(page.getByLabel("Email")).toHaveValue("lena@movera.se");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.getByRole("link", { name: "Zones" }).click();
+  // BASE B14 (owner Q1 "One admin always"): no Send for review and no second agent; the same admin publishes.
+  await expect(page.getByRole("button", { name: "Send for review" })).toHaveCount(0);
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await confirm(page);
   await expect(notice(page)).toContainText("Published version 2.");

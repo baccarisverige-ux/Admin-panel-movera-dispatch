@@ -4,6 +4,7 @@ import { formatMoney, market, type MarketId } from "../markets/markets";
 import { promoPrice, type PromoTicket } from "./care";
 import type { CategoryPrice } from "./useCategoryPrices";
 import { CURRENCY_SYMBOL } from "./ui";
+import { RealAppPreview } from "../ui/RealAppPreview";
 import { tr, trn, trx } from "../i18n";
 
 /** Pictures the rider app already ships, used as the promotion's thumbnail. */
@@ -37,7 +38,14 @@ function money(value: number, country: MarketId): string {
  * The rider app with the promotion: on Home it is a small tab on top of the sheet;
  * on Choose ride every category it covers shows the old price crossed out and the new price.
  */
-export function RiderAppPreview({ promo, prices = [], zoneName = "", off = false, popup = false }: { promo: Promo; prices?: CategoryPrice[]; zoneName?: string; off?: boolean; popup?: boolean }) {
+type Props = { promo: Promo; prices?: CategoryPrice[]; zoneName?: string; off?: boolean; popup?: boolean };
+
+/** B7 (owner P3 a): the real rider app in a phone frame, with this drawn sample one tap away (kept until archived). */
+export function RiderAppPreview(props: Props) {
+  return <RealAppPreview app="rider"><RiderAppSample {...props} /></RealAppPreview>;
+}
+
+function RiderAppSample({ promo, prices = [], zoneName = "", off = false, popup = false }: Props) {
   const [picked, setScreen] = useState<"home" | "ride" | "popup">(popup ? "popup" : "home");
   const screen = picked === "popup" && !popup ? "home" : picked;
   const country = promo.country as MarketId;

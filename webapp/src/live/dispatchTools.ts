@@ -371,6 +371,7 @@ const REASON_TEXT: Record<string, string> = {
   offer_already_open: "The driver already sees this ride.",
   driver_on_trip: "The driver is on a trip and cannot take this ride now.",
   driver_not_available: "No chosen driver can take a ride now (offline or no recent position).",
+  category_switched_off: "This driver switched this ride type off in his ride preferences.",
 };
 
 /** The panel's sentence for a dispatch-tools refusal, or null when the server's own message should stay. */
