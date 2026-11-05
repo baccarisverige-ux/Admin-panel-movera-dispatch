@@ -57,6 +57,9 @@ import { candidatesFor, rideRequests, riderCounts, ridersOnlineIn, type RideRequ
 import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
 import { useAlertSignals, type Signal } from "../dashboard/useAlertSignals";
+import { airportCards } from "../live/airportQueue.ts";
+import { useAirportQueueFeed } from "../live/useAirportQueue";
+import { useLiveZoneList } from "../live/LiveZones";
 import { ActivityFeed, AirportCard, BoostCard, InsightsCard, LiveStamp, LiveTag, SoundToggle, type ActivityItem, type DriverRank } from "../dashboard/Widgets";
 import { CATEGORIES } from "../domain/contract";
 import { statusLabel } from "../domain/labels";
@@ -273,6 +276,10 @@ export function DashboardPage() {
   // G3-R5: no "Not connected yet" on the live Dashboard; a value without a source reads "—".
   const number = { format: (value: number) => (Number.isFinite(value) ? numberFormat.format(value) : "—") };
   const liveData = isLiveData();
+  // Fix job 9 (§60): the airport card's real numbers; names from the server's zone list.
+  const liveAirports = useAirportQueueFeed();
+  const serverZones = useLiveZoneList();
+  const airportName = (zoneId: string) => serverZones?.find((item) => item.zoneId === zoneId)?.names.en ?? zoneId;
 
   const live = useMemo(
     () => liveDrivers(presenceRows, vehicles.data ?? [], tripRows, incidents.data ?? [], tick),
@@ -665,8 +672,8 @@ export function DashboardPage() {
           />
 
           <div className="dash-grid-2">
-            {/* G3-R5: the airport queue has no server source: hidden on live. */}
-            {liveData ? null : <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />}
+            {/* Fix job 9 (§60): live reads the server's airport queues (GET /admin/airport-queues); the demo keeps its sample. */}
+            {liveData ? (liveAirports?.data ? <AirportCard rows={airportCards(liveAirports.data, airportName)} /> : null) : <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />}
             <BoostCard rows={activeBoosts(bonuses.data ?? [], balance, surge)} surgeLink={surgeLink} />
           </div>
         </>
