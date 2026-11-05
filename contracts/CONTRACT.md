@@ -1,4 +1,6 @@
-# Movera shared contract v0.18.23
+# Movera shared contract v0.18.29
+
+v0.18.29 (pre-merge B-j/P20 + owner Q-Bj 2026-11-05 "Never auto-close", Rules `decisions/driver-g15.md`; builds on v0.18.23; numbered after 0.18.24–0.18.28 (open PRs); X-Api-Version stays `0.5`, additive; rider and driver apps: no change): a **ride-check alert turns solved by itself** (green, kept) once its trip ended; **SOS and safety alerts never close by themselves** — after the trip ended + 24 h they stay open with `LiveAlert.old: true` / `oldSince` and the admin Alerts page shows them in an **"Old" tab**. §52, `contract.json#alertsOldList`.
 
 v0.18.23 (BASE job 4 "Server-side alerts", owner 2026-11-04 A1–A3, Rules `decisions/admin-fake-by-group.md`; builds on v0.18.22; X-Api-Version stays `0.5`, additive; rider and driver apps: no change): **alerts are server-created only** — the server finds every alert kind itself every 30 s and right after key events (SOS / car lost / ride check opened, ticket opened, booked-ride timers), one alert per cause, no duplicates; `GET /admin/alerts/book` also returns `alerts [LiveAlert]`. New booked-ride kinds `booked_at_risk`, `booked_late`, `booked_not_started`. **At risk** is an admin setting per zone (owner A1): `settings.zones[zoneId].bookedAtRiskMin` and `liveAtRiskMin`, default 15 each. **Solved by itself** (owner A2): the alert stays, turns green with the new info ("Driver Ali took it 17:48"), an admin can still mark it done. **Custom rules** are checked by the server 24/7 (owner A3). §44, `contract.json#alertDesk.serverDetection`.
 
@@ -1088,3 +1090,8 @@ Owner L1 (2026-11-04, Rules `decisions/admin-fake-by-group.md`): a small "Reconn
 - **Replay**: `after` or `Last-Event-ID`; events kept 24 h; an older cursor gets one `resync` first.
 - **Admin panel**: one EventSource; each type invalidates its lists (`adminLiveEvents.client.invalidates`) on Overview, Alerts, Live map/Dispatch, Trips, Reservations, Support tickets, Incidents, Approvals, Payments. While the stream is open no timed polling; while it is not, a small "Reconnecting…" badge and a refresh every 60 s.
 - **Rider and driver apps**: no change (own streams).
+
+## 52. Alerts — old SOS / safety list (v0.18.29)
+
+Pre-merge B-j/P20: a `ride_check` alert is solved (green, kept, owner A2) once its trip has ended (completed, cancelled, no-show, expired or an end time set); solvedT "Trip ended {0}".
+Owner Q-Bj 2026-11-05 "Never auto-close": `sos`, `sos_slow` and `car_lost` alerts are never closed or solved by the server while their incident is open; only an admin closes them. When their trip ended more than 24 h ago (`oldAfterHours`) the alert stays open and `LiveAlert` carries `old: true` and `oldSince` (trip end + 24 h). An alert without a trip never becomes old. Admin: an "Old" tab (sv Gamla, fr Anciennes, en Old) lists only these; the open list leaves them out. Rider and driver apps: no change. `contract.json#alertsOldList`.

@@ -20,7 +20,8 @@ export const LEVEL_ICON = { critical: AlertOctagon, important: AlertTriangle, in
 
 type Quick = "all" | Level | "mine" | "new";
 
-export function OpenView() {
+/** v0.18.29: with old, the same list for the Old tab (old SOS / safety cases, contract.json#alertsOldList). */
+export function OpenView({ old = false }: { old?: boolean } = {}) {
   const data = useAlertsData();
   const { agent } = useSession();
   const [quick, setQuick] = useState<Quick>("all");
@@ -29,7 +30,7 @@ export function OpenView() {
   const [state, setState] = useState<"open" | "snoozed" | "muted">("open");
   const [selected, setSelected] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
-  const list = data.open.filter((alert) => {
+  const list = (old ? data.old : data.open).filter((alert) => {
     if (state === "open" && (alert.status === "snoozed" || alert.muted)) return false;
     if (state === "snoozed" && alert.status !== "snoozed") return false;
     if (state === "muted" && !alert.muted) return false;

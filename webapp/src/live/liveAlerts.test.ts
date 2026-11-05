@@ -67,3 +67,32 @@ test("the server's alerts become the page's alerts: since from the server, solve
   assert.deepEqual(zoneLimits(defaultSettings(), "Z001"), { bookedAtRiskMin: 15, liveAtRiskMin: 15, fewDriversLimit: 2, noDriverLimit: 5 });
   assert.equal(zoneLimits({ ...defaultSettings(), zones: { Z001: { bookedAtRiskMin: 30 } } }, "Z001").bookedAtRiskMin, 30);
 });
+
+// v0.18.29 owner Q-Bj (contract.json#alertsOldList): SOS / safety cases never close by themselves; 24 h after the trip
+// ended the server marks them old and the panel lists them in the Old tab (sv Gamla, fr Anciennes), not in Open.
+test("old SOS / safety alerts leave the open list for the Old tab, still open; texts in sv / fr / en", async () => {
+  const { alertsFromServer, openAlerts, splitOld } = await import("../alerts/engine.ts");
+  const { en } = await import("../i18n/en.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const state: AlertBookState = {
+    ...STATE,
+    alerts: [
+      { alertId: "sos:I1.a", kind: "sos", level: "critical", title: "SOS from Lina", zoneId: "Z001", since: "2026-11-03T10:00:00Z", state: "open", old: true, oldSince: "2026-11-04T11:00:00Z", ref: { incidentId: "I1", tripId: "T1" } },
+      { alertId: "sos:I2.b", kind: "sos", level: "critical", title: "SOS from Omar", zoneId: "Z001", since: "2026-11-04T16:00:00Z", state: "open", ref: { incidentId: "I2", tripId: "T2" } },
+    ],
+  };
+  const book = bookFromServer(state, "A1");
+  const alerts = alertsFromServer(book.found ?? [], [{ id: "Z001" }]);
+  assert.deepEqual(alerts[0]!.old, { since: Date.parse("2026-11-04T11:00:00Z") });
+  assert.equal(alerts[1]!.old, undefined);
+  const { open, old } = splitOld(openAlerts(alerts, book, Date.parse("2026-11-04T16:50:00Z"), () => null));
+  assert.deepEqual(open.map((a) => a.id), ["sos:I2.b"]);
+  assert.deepEqual(old.map((a) => a.id), ["sos:I1.a"]);
+  assert.equal(old[0]!.solved, undefined, "an old case is never solved or closed by itself");
+  const d = (dict: Record<string, string>, key: string) => dict[key];
+  assert.equal(d(en, "Old"), "Old");
+  assert.equal(d(sv, "Old"), "Gamla");
+  assert.equal(d(fr, "Old"), "Anciennes");
+  assert.equal(d(sv, "Trip ended {0}"), "Resan slutade {0}");
+});

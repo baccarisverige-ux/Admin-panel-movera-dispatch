@@ -20,7 +20,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { failureCause, failureHandled } from "../payments/failures";
 import { useRidersData } from "../riders/useRidersData";
 import { RIDE_CHECK_KEY, alertBy, alertTitle, asRideChecks, emptyRideCheckOps, followText, normalizeRideCheckOps, reasonText, shiftOf, shifted, worries, type RideCheckOps } from "../safety/rideCheck";
-import { ALERTS_KEY, alertsFromServer, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
+import { ALERTS_KEY, alertsFromServer, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, splitOld, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
 import { tr } from "../i18n/core.ts";
 
 const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
@@ -185,7 +185,9 @@ export function useAlerts() {
   );
   const sosOwner = (incidentId: string) => safety.value.incidents[incidentId]?.owner ?? null;
   const viewer = agent ? { id: agent.id, role: agent.role, can: (permission: string) => can(agent.role, permission) } : null;
-  const open: OpenAlert[] = useMemo(() => openAlerts(all, book, now, (id) => safety.value.incidents[id]?.owner ?? null).filter((alert) => (viewer ? visibleTo(alert, book, viewer, now) : false)), [all, book, now, safety.value, viewer?.id, viewer?.role]);
+  const listed: OpenAlert[] = useMemo(() => openAlerts(all, book, now, (id) => safety.value.incidents[id]?.owner ?? null).filter((alert) => (viewer ? visibleTo(alert, book, viewer, now) : false)), [all, book, now, safety.value, viewer?.id, viewer?.role]);
+  // v0.18.29 owner Q-Bj: old SOS / safety cases (trip ended + 24 h) leave the open list for the Old tab; never closed by themselves.
+  const { open, old } = useMemo(() => splitOld(listed), [listed]);
   // Owner A2: a green (solved by itself) alert stays in the list but no longer counts or rings.
   const active = open.filter((alert) => alert.status !== "snoozed" && !alert.muted && !alert.solved);
   // The red banner: ride check alerts nobody has opened yet.
@@ -197,6 +199,7 @@ export function useAlerts() {
     facts,
     all,
     open,
+    old,
     active,
     zones,
     market,
