@@ -32,6 +32,7 @@ import { frC2ServerAlerts } from "./fr/c2-server-alerts.ts";
 import { frC5BookedRideLive } from "./fr/c5-booked-ride-live.ts";
 import { frC2AdminLiveDrivers } from "./fr/c2-admin-live-drivers.ts";
 import { frC6Job4TakeBack } from "./fr/c6-job4-take-back.ts";
+import { frC7AirportQueue } from "./fr/c7-airport-queue.ts";
 import { frC6InAppCalls } from "./fr/c6-in-app-calls.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
@@ -70,5 +71,6 @@ export const fr: Record<MessageKey, string> = {
   ...frC5BookedRideLive,
   ...frC2AdminLiveDrivers,
   ...frC6Job4TakeBack,
+  ...frC7AirportQueue,
   ...frC6InAppCalls,
 };

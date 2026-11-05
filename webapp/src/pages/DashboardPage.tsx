@@ -17,7 +17,6 @@ import {
   Download,
   LifeBuoy,
   Megaphone,
-  ReceiptText,
   RefreshCw,
   Repeat,
   Search,
@@ -32,7 +31,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAdminApi } from "../api/AdminApiContext";
-import { useApprovals, useAudit, useRecords, useSlice } from "../api/hooks";
+import { useAudit, useRecords, useSlice } from "../api/hooks";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { commandById } from "../commands/registry";
@@ -58,6 +57,9 @@ import { candidatesFor, rideRequests, riderCounts, ridersOnlineIn, type RideRequ
 import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
 import { useAlertSignals, type Signal } from "../dashboard/useAlertSignals";
+import { airportCards } from "../live/airportQueue.ts";
+import { useAirportQueueFeed } from "../live/useAirportQueue";
+import { useLiveZoneList } from "../live/LiveZones";
 import { ActivityFeed, AirportCard, BoostCard, InsightsCard, LiveStamp, LiveTag, SoundToggle, type ActivityItem, type DriverRank } from "../dashboard/Widgets";
 import { CATEGORIES } from "../domain/contract";
 import { statusLabel } from "../domain/labels";
@@ -212,7 +214,6 @@ export function DashboardPage() {
   const riderRows = useMemo(() => maskRiders(riders.data ?? [], access), [riders.data, access]);
   const tripRows = useMemo(() => maskBookings(trips.data ?? [], access), [trips.data, access]);
   const reservationRows = useMemo(() => maskBookings(reservations.data ?? [], access), [reservations.data, access]);
-  const approvals = useApprovals(LIVE_MS);
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const bonusSlice = useSlice<BonusBook>(BONUS_KEY, emptyBonusBook());
   const bonusMinute = Math.floor(now / 60_000);
@@ -275,6 +276,10 @@ export function DashboardPage() {
   // G3-R5: no "Not connected yet" on the live Dashboard; a value without a source reads "—".
   const number = { format: (value: number) => (Number.isFinite(value) ? numberFormat.format(value) : "—") };
   const liveData = isLiveData();
+  // Fix job 9 (§60): the airport card's real numbers; names from the server's zone list.
+  const liveAirports = useAirportQueueFeed();
+  const serverZones = useLiveZoneList();
+  const airportName = (zoneId: string) => serverZones?.find((item) => item.zoneId === zoneId)?.names.en ?? zoneId;
 
   const live = useMemo(
     () => liveDrivers(presenceRows, vehicles.data ?? [], tripRows, incidents.data ?? [], tick),
@@ -332,7 +337,6 @@ export function DashboardPage() {
   const pendingDrivers = (driverRows).filter((row) => row.status === "pending");
   const scheduledPayouts = (payouts.data ?? []).filter((row) => row.status === "scheduled");
   const failures = openFailures(payments.data ?? []);
-  const refundApprovals = (approvals.data ?? []).filter((row) => row.status === "pending" && row.action.includes("refund"));
   const urgentRides = rides.filter((ride) => ride.warning === "red");
   const longWaits = requests.filter((request) => request.waitingMin > 5 && request.status === "searching");
   // SOS responders (incidents.read) need the driver's name even without drivers.read.
@@ -388,7 +392,6 @@ export function DashboardPage() {
     { label: tr("Open support"), permission: "support.reply", count: openTickets.length, path: "/support", icon: <LifeBuoy size={16} />, tone: "warning" },
     { label: tr("Drivers to review"), permission: "drivers.read", count: pendingDrivers.length, path: "/onboarding", icon: <UserPlus size={16} />, tone: "info" },
     { label: tr("Rides without driver"), permission: "trips.read", count: unassigned.length, path: "/reservations", icon: <CalendarClock size={16} />, tone: "serious" },
-    { label: tr("Refunds waiting for approval"), permission: "approval.decide", count: refundApprovals.length, path: "/payments", icon: <ReceiptText size={16} />, tone: "serious" },
     { label: tr("Payouts scheduled"), permission: "finance.read", count: scheduledPayouts.length, path: "/payouts", icon: <Banknote size={16} />, tone: "good" },
   ].filter((queue) => can(role, queue.permission));
 
@@ -669,8 +672,8 @@ export function DashboardPage() {
           />
 
           <div className="dash-grid-2">
-            {/* G3-R5: the airport queue has no server source: hidden on live. */}
-            {liveData ? null : <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />}
+            {/* Fix job 9 (§60): live reads the server's airport queues (GET /admin/airport-queues); the demo keeps its sample. */}
+            {liveData ? (liveAirports?.data ? <AirportCard rows={airportCards(liveAirports.data, airportName)} /> : null) : <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />}
             <BoostCard rows={activeBoosts(bonuses.data ?? [], balance, surge)} surgeLink={surgeLink} />
           </div>
         </>

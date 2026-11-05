@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft, Copy, Gavel, RefreshCcw } from "lucide-react";
-import { useApprovals, useRecords, useSlice } from "../api/hooks";
+import { useRecords, useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { formatMoney, market } from "../markets/markets";
 import { METHOD_LABELS, PAY_OPS_KEY, emptyPayOps, factsOf, normalizePayOps, paySplit, refundLimitMinor, retryPlan, type PayOps } from "../payments/desk";
@@ -17,7 +17,6 @@ import { tr, trn, trx } from "../i18n";
 export function PaymentPage() {
   const { id = "" } = useParams();
   const payments = useRecords("payments", null);
-  const approvals = useApprovals();
   const navigate = useNavigate();
   const { agent } = useSession();
   const riders = useRecords("riders", null);
@@ -40,7 +39,6 @@ export function PaymentPage() {
   // Q25: the one second-admin rule from Settings, per country (default above 500 kr, 50 €, 150 DT); the server applies the same setting.
   const threshold = refundAboveMinor(refundPolicy, facts.country);
   const needsSecond = needsSecondAdmin(refundPolicy, facts.country, amount) && payment.status === "captured";
-  const pendingApproval = (approvals.data ?? []).find((item) => item.targetId === payment.id && item.action === "admin.payment.refund" && item.status === "pending");
   const split = paySplit(amount, facts.country, facts.tripId);
   const plan = payment.status === "failed" ? retryPlan(payment, facts, ops, now) : null;
   const limit = agent ? refundLimitMinor(agent.role, facts.country, ops) : 0;
@@ -49,9 +47,7 @@ export function PaymentPage() {
     ? "Already refunded."
     : payment.status !== "captured"
       ? "Refund is only available after capture."
-      : pendingApproval
-        ? `Pending second-agent approval ${pendingApproval.id}.`
-        : overLimit
+      : overLimit
           ? `Over your refund limit of ${money(limit ?? 0)}. Ask a finance admin.`
           : null;
   const matches = refundRows(payments.data ?? [], payment.id);
@@ -130,7 +126,6 @@ export function PaymentPage() {
           {needsSecond ? tr("Request refund approval") : tr("Refund payment")}
         </CommandButton>
 
-        {pendingApproval ? <p><Link to="/audit">{tr("Open approval queue")}</Link></p> : null}
         {/* BASE B14 (owner Q1 "One admin always"): no second admin for refunds; only the role's own limit is shown. */}
         <p className="fn-help">{limit === null ? tr("You have no refund limit.") : tr("Your refund limit is {0}.", [money(limit)])}</p>
       </article>

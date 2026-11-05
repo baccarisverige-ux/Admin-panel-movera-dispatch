@@ -27,7 +27,8 @@ const HINT: Partial<Record<DrawTool, string>> = {
 };
 
 /** Draw one or more bonus areas: tools on the map, or from a place, a zone, districts, a file or busy streets. */
-export function BonusAreaMap({ country, areas, onChange }: { country: MarketId; areas: BonusArea[]; onChange: (next: BonusArea[]) => void }) {
+/** view: the shape the map opens on (e.g. an airport queue area or the airport outline); else the country's main city. */
+export function BonusAreaMap({ country, areas, onChange, view }: { country: MarketId; areas: BonusArea[]; onChange: (next: BonusArea[]) => void; view?: [number, number][] }) {
   const ui = useZoneUi();
   const [tool, setTool] = useState<DrawTool>("render");
   const [focus, setFocus] = useState<ZoneFocus | null>(null);
@@ -38,7 +39,7 @@ export function BonusAreaMap({ country, areas, onChange }: { country: MarketId; 
   const [picked, setPicked] = useState<string[]>([]);
   const [cityId, setCityId] = useState(citiesOf(country)[0]?.id ?? "");
   const [notice, setNotice] = useState(tr("Pick a tool, then draw the area on the map."));
-  const [fitTo, setFitTo] = useState<[number, number][] | undefined>(undefined);
+  const [fitTo, setFitTo] = useState<[number, number][] | undefined>(view && view.length >= 3 ? view : undefined);
   const cities = citiesOf(country);
   const city = cities.find((item) => item.id === cityId) ?? cities[0];
   const zones = useMemo(() => ui.book.draft.filter((zone) => zone.country === country && !zone.archived && (zone.kind === "operating" || zone.kind === "airport")), [ui.book.draft, country]);

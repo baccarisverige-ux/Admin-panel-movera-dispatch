@@ -116,11 +116,7 @@ export function useAudit(refetchMs?: number) {
   return useQuery({ queryKey: ["audit"], queryFn: () => readTracked(api, ["audit"], () => api.audit()), refetchInterval: refetchMs });
 }
 
-export function useApprovals(refetchMs?: number) {
-  const api = useAdminApi();
-  const refetchInterval = useLiveRefetch("approvals", refetchMs);
-  return useQuery({ queryKey: ["approvals"], queryFn: () => readTracked(api, ["approvals"], () => api.approvals()), refetchInterval });
-}
+// A2 leftovers (owner Q1 "One admin always"): no second-admin approvals list is read any more.
 
 export type CommandPhase = "idle" | "submitting" | "checking" | "committed" | "rejected" | "pending_approval";
 

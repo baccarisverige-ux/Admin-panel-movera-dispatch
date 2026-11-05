@@ -5,7 +5,7 @@ import { Crosshair, MessageSquare, Phone, Siren, Star, UserRound, X } from "luci
 import { driverCode } from "../fleet/codes";
 import { Avatar } from "../fleet/ui";
 import { CommandButton } from "../ui/CommandButton";
-import { LIVE_STATES, type LiveDriver } from "./live";
+import { GOING_OFFLINE_CHIP_CLASS, LIVE_STATES, panelStatus, type LiveDriver } from "./live";
 import type { LiveTrip } from "./liveTrip";
 import { TripCard } from "./TripCard";
 import { TripMoneyTab } from "./TripMoneyTab";
@@ -48,6 +48,8 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
   const access = useDashboardAccess();
   useEscape(onClose);
   const state = LIVE_STATES.find((item) => item.id === driver.state)?.label ?? driver.state;
+  // Screenshot review 2026-11-05: the status stays one line; "Going offline after trips" is its own amber chip.
+  const status = panelStatus(driver, state, driver.lastSeenMin ? tr(" · last GPS {0} min ago", [driver.lastSeenMin]) : tr(" · live"));
   const [tab, setTab] = useState<"trip" | "money">("trip");
   const pickupKm = driver.route ? Math.round(lengthKm(driver.route.approach) * 10) / 10 : null;
   // The Money tab needs only the ride, so it shows on both maps even where the trip card has no details.
@@ -60,7 +62,8 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
         <div className="driver-panel-title">
           <strong>{driver.name}</strong>
           <small className="map-popup-code">{driverCode(driver)}</small>
-          <span className="map-popup-state"><i style={{ background: color }} />{state}{driver.lastSeenMin ? tr(" · last GPS {0} min ago", [driver.lastSeenMin]) : tr(" · live")}</span>
+          <span className="map-popup-state"><i style={{ background: color }} />{status.line}</span>
+          {status.chip ? <span className={GOING_OFFLINE_CHIP_CLASS} data-going-offline="true">{status.chip}</span> : null}
         </div>
         <button data-command="admin.ui.mapClose" type="button" className="map-popup-close" aria-label={tr("Close")} onClick={onClose}><X size={14} /></button>
       </div>
