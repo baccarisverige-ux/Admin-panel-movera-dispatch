@@ -85,7 +85,8 @@ export type AdminApi = {
   /** The default market's currency and time zone. Any contract currency is accepted (SE, FR and TN markets). */
   ready: () => Promise<{ currency: CurrencyCode; timeZone: string; demo: boolean }>;
   page: (pageId: string) => Promise<PageResult>;
-  list: (name: string, scope: ZoneScope) => Promise<DemoRecord[]>;
+  /** `signal` (v0.18.34 §65): react-query aborts it when the country / zones change, so old calls stop. */
+  list: (name: string, scope: ZoneScope, signal?: AbortSignal) => Promise<DemoRecord[]>;
   search: (query: string, scope: ZoneScope) => Promise<{ kind: string; id: string; label: string; path: string }[]>;
   command: (input: CommandInput) => Promise<CommandResult>;
   revision: () => Promise<number>;
@@ -337,7 +338,8 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       await pause(delayMs, fault);
       const status = faultStatus(fault);
       if (status !== null) throw new ApiError(status, classifyStatus(status));
-      return rowsFor(name === "trips" ? advanceDemoDispatch(loadDb()) : loadDb(), name, scope, fault);
+      // v0.18.34 §65: the live card's list is the demo drivers (their simulated presence).
+      return rowsFor(name === "trips" ? advanceDemoDispatch(loadDb()) : loadDb(), name === "liveDrivers" ? "drivers" : name, scope, fault);
     },
 
     async search(query, scope) {

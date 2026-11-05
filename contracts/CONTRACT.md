@@ -1,4 +1,6 @@
-# Movera shared contract v0.18.31
+# Movera shared contract v0.18.34
+
+v0.18.34 (fix plan A8/A10 "admin live drivers", proven cause, owner 2026-11-05 "proven parts now", Rules `plan/FIX-PLAN-RERUN-2026-11-05.md`; builds on v0.18.31 main, jobs 2 (0.18.32) and 5 (0.18.33) merge first; X-Api-Version stays `0.5`, additive, no migration; rider and driver apps: no change): **`GET /admin/live/drivers` is paged** (`limit` 1..1000, `cursor` → `nextCursor`, in driverId order) and carries **`total`**; zone counts always cover every driver. The admin live card, map and "Drivers online now" tile are built from these pages alone; the driver list only adds details; "…" while loading and "Could not load, retrying" on a failed read, never a false 0. See §65 and `contract.json#liveDriversPaging`.
 
 v0.18.31 (pre-merge B-j/P20 + owner Q-Bj 2026-11-05 "Never auto-close", Rules `decisions/driver-g15.md`; builds on v0.18.30 main; X-Api-Version stays `0.5`, additive; rider and driver apps: no change): a **ride-check alert turns solved by itself** (green, kept) once its trip ended; **SOS and safety alerts never close by themselves** — after the trip ended + 24 h they stay open with `LiveAlert.old: true` / `oldSince` and the admin Alerts page shows them in an **"Old" tab**. §54, `contract.json#alertsOldList`.
 
@@ -1174,3 +1176,11 @@ Owner G16 Q16-1/Q16-2, build-spec Q1–Q4 (2026-11-02) and the A2 answers of 202
 
 Pre-merge B-j/P20: a `ride_check` alert is solved (green, kept, owner A2) once its trip has ended (completed, cancelled, no-show, expired or an end time set); solvedT "Trip ended {0}".
 Owner Q-Bj 2026-11-05 "Never auto-close": `sos`, `sos_slow` and `car_lost` alerts are never closed or solved by the server while their incident is open; only an admin closes them. When their trip ended more than 24 h ago (`oldAfterHours`) the alert stays open and `LiveAlert` carries `old: true` and `oldSince` (trip end + 24 h). An alert without a trip never becomes old. Admin: an "Old" tab (sv Gamla, fr Anciennes, en Old) lists only these; the open list leaves them out. Rider and driver apps: no change. `contract.json#alertsOldList`.
+
+## 65. Admin live drivers, paged — fix plan A8/A10 (v0.18.34)
+
+Proven cause (checker 2026-11-05, rule 36): the Dashboard's live card needed BOTH `GET /admin/drivers` (only its first page of 50 rows) and `GET /admin/live/drivers`; a failed or slow driver list showed 0 drivers, a failed live read was swallowed as 0, and online drivers past row 50 were never shown.
+- **Paging**: `GET /admin/live/drivers?limit&cursor` (`limit` 1..1000; `cursor` = the `nextCursor` of the page before). With `limit` the items come in driverId order, at most `limit`, and `nextCursor` is the last driverId of the page (null on the last page). Without `limit` every matching driver comes back at once (older panels); `nextCursor` is null. Keyset paging keeps no server state, so any server copy answers any page (rule 33). `limit` 0 or over 1000, or an empty `cursor`, is `400 invalid_request`.
+- **`total`**: drivers not offline matching the zones / country / map box over all pages. `zoneSupply` and `ridersOnline` (no map box) count every driver, not only the page.
+- **Admin**: the live card, the live map and the "Drivers online now" tile read every page (limit 500) of `GET /admin/live/drivers` and nothing else decides who is shown; `GET /admin/drivers` only adds the full name and car when it has loaded. While loading the tile shows "…"; a failed live read shows "Could not load, retrying" (sv "Kunde inte laddas, försöker igen", fr "Chargement impossible, nouvel essai") and never 0. When the admin changes country, the calls for the old country are cancelled.
+- **Rider and driver apps**: no change (they never read this endpoint). `contract.json#liveDriversPaging`.

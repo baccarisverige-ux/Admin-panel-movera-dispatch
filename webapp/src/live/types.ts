@@ -273,7 +273,7 @@ export type LiveDriverRow = {
   plate?: string;
   zoneId?: string;
 };
-export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string; ridersOnline?: { zoneId: string; count: number }[]; ridersOnlineWindowSeconds?: number; zoneSupply?: ZoneSupplyRow[] };
+export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string; total?: number; nextCursor?: string | null; ridersOnline?: { zoneId: string; count: number }[]; ridersOnlineWindowSeconds?: number; zoneSupply?: ZoneSupplyRow[] };
 /** v0.18.4 (G3-D5): GET /admin/live/drivers → zoneSupply, one row per zone. */
 export type ZoneSupplyRow = { zoneId: string; online: number; free: number; busy: number; waiting: number; level: "ok" | "tight" | "short"; shortage: boolean };
 

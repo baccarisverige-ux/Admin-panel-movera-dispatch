@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.31",
+  "version": "0.18.34",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -7677,5 +7677,12 @@
     "oldAfterHours": 24,
     "admin": "The Alerts page shows old alerts only in a separate 'Old' tab (sv 'Gamla', fr 'Anciennes', en 'Old'), never in the open list; an admin can still take and close them there.",
     "apps": "Rider and driver apps: no change (RULE 0 check only)."
+  },
+  "liveDriversPaging": {
+    "note": "v0.18.34 §65 (Rules plan/FIX-PLAN-RERUN-2026-11-05.md A8/A10, proven cause; owner 2026-11-05 'proven parts now'). Builds on v0.18.31 main (jobs 2 = 0.18.32 and 5 = 0.18.33 merge first). Additive; X-Api-Version stays 0.5; no migration. Rider and driver apps: no change.",
+    "paging": "GET /admin/live/drivers takes optional limit (1..1000) and cursor (the nextCursor of the page before). Items are then in driverId order, at most limit, and the answer carries nextCursor (null on the last page). Without limit every matching driver comes back in one answer (older panels), also with nextCursor null. Keyset paging, no server state: any server copy answers any page (rule 33).",
+    "total": "LiveDriverList.total: how many drivers not offline match the filters (zones, country, map box) over ALL pages, so the panel can show the number before every page has arrived.",
+    "counts": "zoneSupply and ridersOnline (when no map box is given) always count every matching driver, not only the page.",
+    "adminLiveCard": "The admin Dashboard's live card, live map and 'Drivers online now' tile are built from GET /admin/live/drivers pages ALONE (limit 500, every page). GET /admin/drivers only adds details (full name, car) when it has loaded; it never decides who is shown. While the first answer is loading the tile shows '…' (Loading); when the live read fails it shows 'Could not load, retrying' (sv 'Kunde inte laddas, försöker igen', fr 'Chargement impossible, nouvel essai'), never 0. Calls for the country the admin left are cancelled when the country changes."
   }
 }
