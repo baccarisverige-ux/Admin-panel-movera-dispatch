@@ -109,6 +109,11 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   // live shows the server's values (before this the reservation settings were never read back from the server).
   const resv = driver?.["reservations"] as Record<string, unknown> | undefined;
   if (resv && typeof resv === "object") zone.reservation = reservationOfDriverDoc(resv, zone.reservation, zone);
+  // v0.18.35 job 4 (contract.json#bookedTakeBack): the "not driving to the rider" notice, read back from headingCheck.
+  const heading = driver?.["headingCheck"] as Record<string, unknown> | undefined;
+  if (heading && typeof heading === "object") {
+    zone.reservation = { ...zone.reservation, booking: completeBookingWindow({ ...zone.reservation.booking, notHeadingNotice: heading["notice"], notHeadingNoticeEveryMin: heading["noticeEveryMin"] }) };
+  }
   const maxStops = (driver?.["booking"] as { maxStops?: unknown } | undefined)?.maxStops;
   if (typeof maxStops === "number" && Number.isInteger(maxStops)) {
     if (maxStops === 0) zone.stops = { ...zone.stops, on: false };

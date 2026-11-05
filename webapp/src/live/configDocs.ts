@@ -207,7 +207,7 @@ export { SECONDS_DEFAULT, rulesOfDispatch, reservationOfDriverDoc } from "./disp
 
 /** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
 export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
-  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange"] },
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck"] },
   settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
   content: { rider: [], driver: ["texts", "notices"] },
 };
@@ -223,6 +223,13 @@ export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc
       // v0.18.7 (G5 Q2): the cancel-after-arrived switch is the admin's; the money stays pricing's (servedConfig).
       // v0.18.8 (G6): the free wait at each stop (Dispatch › Rides › Stops) is the admin's too.
       next["waiting"] = { ...own, driverSharePct: made["driverSharePct"], driverShareWaitPct: made["driverShareWaitPct"], cancelAfterArrivedIsNoShow: made["cancelAfterArrivedIsNoShow"], farPickup: made["farPickup"], rideTypes: made["rideTypes"], stopFreeWaitMin: made["stopFreeWaitMin"] };
+      continue;
+    }
+    if (key === "headingCheck") {
+      // v0.18.35 FIX JOB 4: the panel owns only the notice and reassign (always false, owner Q-A); the heading numbers stay the server's.
+      const own = (server["headingCheck"] ?? {}) as Doc;
+      const made = built["headingCheck"] as Doc;
+      next["headingCheck"] = { ...own, reassign: false, notice: made["notice"], noticeEveryMin: made["noticeEveryMin"] };
       continue;
     }
     next[key] = structuredClone(built[key]);

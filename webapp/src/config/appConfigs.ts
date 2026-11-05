@@ -506,6 +506,10 @@ export function reservationBookingParts(resv: ZoneDispatch["reservation"], count
     listAtTimeMin: b.listAtTimeMin,
     changeAnswerMin: b.changeAnswerMin,
     arriveEarlyMin: b.arriveEarlyMin,
+    // v0.18.35 FIX JOB 4 (contract.json#bookedTakeBack): Book later › Late driver.
+    takeBackLateMin: b.takeBackLateMin,
+    takeBackKeepIfDriveMin: b.takeBackKeepIfDriveMin,
+    takeBackUntilMinBeforePickup: b.takeBackUntilMinBeforePickup,
     // Owner C (v0.18.19): the booked-ride raise is saved on the server; the live-ride bonus limit applies too.
     raiseFare: resv.raiseFare,
     // The country's highest (500 kr in Sweden) = no cap of its own: null, the live-ride limit only (contract default).
@@ -569,9 +573,11 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     },
     // v0.18.13 (contract.json#drivingLimits): resetAfterOfflineHours has no admin control yet (backlog): the contract default 6.
     drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restHours * 60, resetAfterOfflineHours: 6, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
-    // v0.18.13 (contract.json#pickupWaiting.headingCheck, G5-8): no admin control yet (backlog); the contract defaults, never
-    // published by Dispatch (not an OWNED key), so the server keeps its own value.
-    headingCheck: { on: true, headingPct: 80, notHeadingMinutes: 2, reassign: true },
+    // v0.18.13 (contract.json#pickupWaiting.headingCheck, G5-8): on / headingPct / notHeadingMinutes have no admin control
+    // yet (backlog): the contract defaults, and publishing keeps the server's own values (configDocs withOwned).
+    // v0.18.35 (owner Q-A, FIX JOB 4): reassign is always false (a live ride is never taken back; read-only in the panel);
+    // the "not driving to the rider" notice is Dispatch › Book later › Late driver.
+    headingCheck: { on: true, headingPct: 80, notHeadingMinutes: 2, reassign: false, notice: zone.reservation.booking.notHeadingNotice, noticeEveryMin: zone.reservation.booking.notHeadingNoticeEveryMin },
     rideCheck: rideCheck(base, state),
     routeChange: routeChange(base),
     texts: driverTexts(base, state),
