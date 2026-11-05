@@ -8567,4 +8567,12 @@
 ["What the server knows about each online driver. — = not tracked yet.","What the server knows about each online driver. — = not tracked yet."],
 ["Could not load driver facts.","Could not load driver facts."],
 ["No driver online in these zones.","No driver online in these zones."],
-["Some zones could not be loaded.","Some zones could not be loaded."]]
+["Some zones could not be loaded.","Some zones could not be loaded."],
+["Searching {0} · Live {1}","Searching {0} · Live {1}"],
+["Not used yet","Not used yet"],
+["Not used yet: the apps get the booking window from Dispatch › Reservations (Max days ahead).","Not used yet: the apps get the booking window from Dispatch › Reservations (Max days ahead)."],
+["Shortest ride","Shortest ride"],
+["Shortest ride (m)","Shortest ride (m)"],
+["When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this.","When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this."],
+["0 means never warn. At most {0} m. Usual value {1} m.","0 means never warn. At most {0} m. Usual value {1} m."],
+["Shortest ride: 0 to 1000 m, in whole metres.","Shortest ride: 0 to 1000 m, in whole metres."]]

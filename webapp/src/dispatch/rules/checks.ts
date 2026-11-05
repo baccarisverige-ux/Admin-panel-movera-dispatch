@@ -1,5 +1,5 @@
 import { currencySymbol } from "../../pricing/zonePricing.ts";
-import { validRaiseFactor } from "../offerRules.ts";
+import { validRaiseFactor, validSamePoint } from "../offerRules.ts";
 import { DEFAULT_FEE_CATEGORIES, cancelFeeIssues, type FeeCategory } from "../cancelFees.ts";
 import { cancelReasonIssues, exclusiveReasonIssues, pickupWaitIssues } from "../offers.ts";
 import { destinationModeIssues, nextTripsIssues } from "../tripRules.ts";
@@ -65,6 +65,7 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (zone.stops.on && (zone.stops.max < 1 || zone.stops.max > 5)) issues.push("Stops: max stops must be 1 to 5.");
   if (!Number.isInteger(zone.stops.answerSeconds) || zone.stops.answerSeconds < 15 || zone.stops.answerSeconds > 300) issues.push("Route change: the driver's time to answer must be 15 to 300 s.");
   if (!Number.isInteger(zone.pickupMove.maxMeters) || zone.pickupMove.maxMeters < 0 || zone.pickupMove.maxMeters > PICKUP_MOVE_MAX_METERS) issues.push(`Pickup move after accept: 0 to ${PICKUP_MOVE_MAX_METERS} m, in whole metres.`);
+  if (zone.samePoint && validSamePoint(zone.samePoint.warnMeters) === null) issues.push("Shortest ride: 0 to 1000 m, in whole metres.");
   if (zone.longTripKm < 10 || zone.longTripKm > 500) issues.push("Long trip must be 10 to 500 km.");
   if (!Number.isInteger(zone.pickupPin.maxAttempts) || zone.pickupPin.maxAttempts < 1 || zone.pickupPin.maxAttempts > 10) issues.push("Rider PIN: wrong tries before lock must be 1 to 10.");
   if (!Number.isInteger(zone.pickupPin.lockMinutes) || zone.pickupPin.lockMinutes < 1 || zone.pickupPin.lockMinutes > 60) issues.push("Rider PIN: lock minutes must be 1 to 60.");

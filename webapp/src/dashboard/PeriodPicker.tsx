@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CalendarDays, CalendarRange } from "lucide-react";
 import type { Period, PeriodKind } from "./period";
 import { tr, trn, trx } from "../i18n";
+import { DateInput } from "../ui/DateInput";
 
 const PRESETS: { id: PeriodKind; label: string }[] = [
   { id: "today", get label() { return tr("Today"); } },
@@ -41,9 +42,8 @@ export function PeriodPicker({ period, today, onChange }: Props) {
       <label className={period.kind === "date" ? "date-chip active" : "date-chip"}>
         <CalendarDays size={15} aria-hidden="true" />
         <span className="sr-only">{tr("Pick a date")}</span>
-        <input
-          type="date"
-          value={period.kind === "date" ? period.on : ""}
+        <DateInput
+          value={period.kind === "date" ? period.on ?? "" : ""}
           max="2099-12-31"
           onChange={(event) => {
             if (!event.target.value) return;
@@ -61,8 +61,8 @@ export function PeriodPicker({ period, today, onChange }: Props) {
             if (!rangeError) onChange({ kind: "range", from, to });
           }}
         >
-          <label>{trn("From{0}", <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} required />)}</label>
-          <label>{trn("To{0}", <input type="date" value={to} onChange={(event) => setTo(event.target.value)} required />)}</label>
+          <label>{trn("From{0}", <DateInput value={from} onChange={(event) => setFrom(event.target.value)} required />)}</label>
+          <label>{trn("To{0}", <DateInput value={to} onChange={(event) => setTo(event.target.value)} required />)}</label>
           <button data-command="admin.ui.period" type="submit" className="dash-btn small" disabled={Boolean(rangeError)}>{tr("Apply")}</button>
           {rangeError ? <p role="alert">{rangeError}</p> : null}
         </form>

@@ -26,6 +26,7 @@ import {
   type RideCheck,
   type Trigger,
 } from "./rideCheck";
+import { DateInput } from "../ui/DateInput";
 
 type Props = {
   checks: readonly RideCheck[];
@@ -96,8 +97,8 @@ export function RideCheckLog({ checks, timeOf, incidentState, drivers, zones, ma
           <option value="">{tr("Every driver")}</option>
           {driverIds.map((id) => <option key={id} value={id}>{driverName(id)} · {id}</option>)}
         </select>
-        <label className="rc-date"><span>{tr("From")}</span><input type="date" aria-label={tr("From date")} value={filter.from} onChange={(event) => set({ from: event.target.value })} /></label>
-        <label className="rc-date"><span>{tr("To")}</span><input type="date" aria-label={tr("To date")} value={filter.to} onChange={(event) => set({ to: event.target.value })} /></label>
+        <label className="rc-date"><span>{tr("From")}</span><DateInput aria-label={tr("From date")} value={filter.from} onChange={(event) => set({ from: event.target.value })} /></label>
+        <label className="rc-date"><span>{tr("To")}</span><DateInput aria-label={tr("To date")} value={filter.to} onChange={(event) => set({ to: event.target.value })} /></label>
         {filtered ? <button data-command="admin.rideCheck.view" type="button" className="dash-btn small ghost" onClick={() => setFilter(EMPTY_FILTER)}><X size={13} aria-hidden="true" /> {tr("Clear filters")}</button> : null}
       </div>
 

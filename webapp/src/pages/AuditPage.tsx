@@ -13,6 +13,7 @@ import { DataTable } from "../ui/DataTable";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn, trx } from "../i18n";
 import { auditActionText, auditActorText, auditDetailText, auditValueText } from "../live/format";
+import { DateInput } from "../ui/DateInput";
 
 const PAGE = 50;
 
@@ -116,8 +117,8 @@ export function AuditPage() {
           <select aria-label={tr("Admin")} value={filters.actor} onChange={(e) => patch({ actor: e.target.value })}><option value="">{tr("Every admin")}</option>{actors.map((id) => <option key={id} value={id}>{nameOf(id)}</option>)}</select>
           <select aria-label={tr("Section")} value={filters.area} onChange={(e) => patch({ area: e.target.value })}><option value="">{tr("Every section")}</option>{areas.map((area) => <option key={area} value={area}>{area}</option>)}</select>
           <select aria-label={tr("Result")} value={filters.result} onChange={(e) => patch({ result: e.target.value })}><option value="">{tr("Any result")}</option>{Object.entries(RESULT_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>
-          <label className="pl-date"><span>{tr("From")}</span><input type="date" aria-label={tr("From date")} value={filters.from} onChange={(e) => patch({ from: e.target.value })} /></label>
-          <label className="pl-date"><span>{tr("To")}</span><input type="date" aria-label={tr("To date")} value={filters.to} onChange={(e) => patch({ to: e.target.value })} /></label>
+          <label className="pl-date"><span>{tr("From")}</span><DateInput aria-label={tr("From date")} value={filters.from} onChange={(e) => patch({ from: e.target.value })} /></label>
+          <label className="pl-date"><span>{tr("To")}</span><DateInput aria-label={tr("To date")} value={filters.to} onChange={(e) => patch({ to: e.target.value })} /></label>
           {filtered ? <button data-command="admin.auditLog.view" type="button" className="dash-btn small ghost" onClick={() => patch(EMPTY_FILTERS)}>{tr("Clear filters")}</button> : null}
           <CommandButton command="admin.auditLog.export" className="dash-btn small" type="button" confirmTarget={false} disabled={!shown.length} onDone={exportCsv}><Download size={13} aria-hidden="true" />{" "}{trn(shown.length === 1 ? "Export {0} row" : "Export {0} rows", shown.length)}</CommandButton>
         </div>

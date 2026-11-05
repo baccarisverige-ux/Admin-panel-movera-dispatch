@@ -32,6 +32,8 @@ export const CONFIG_DEFAULTS = {
   maxStops: 3,
   /** v0.18.7 (owner 2026-10-29 "200 m default, admin can change"): was 500. */
   maxPickupMoveMeters: 200,
+  /** v0.18.32 (owner Q9): pickup ≈ drop-off warning under this many metres (contract configDefaults.samePointWarnMeters). */
+  samePointWarnMeters: 100,
   freeWaitMin: { default: 5, xl: 3 },
   waitingDriverSharePct: 100,
   noShowDriverSharePct: 80,

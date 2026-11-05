@@ -8567,4 +8567,12 @@
 ["What the server knows about each online driver. — = not tracked yet.","Ce que le serveur sait de chaque chauffeur en ligne. — = pas encore suivi."],
 ["Could not load driver facts.","Impossible de charger les infos chauffeurs."],
 ["No driver online in these zones.","Aucun chauffeur en ligne dans ces zones."],
-["Some zones could not be loaded.","Certaines zones n'ont pas pu être chargées."]]
+["Some zones could not be loaded.","Certaines zones n'ont pas pu être chargées."],
+["Searching {0} · Live {1}","Recherche {0} · Live {1}"],
+["Not used yet","Pas encore utilisé"],
+["Not used yet: the apps get the booking window from Dispatch › Reservations (Max days ahead).","Pas encore utilisé : les applis prennent la fenêtre de réservation dans Dispatch › Réservations (jours maximum à l’avance)."],
+["Shortest ride","Course la plus courte"],
+["Shortest ride (m)","Course la plus courte (m)"],
+["When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this.","Quand la prise en charge et la dépose sont aussi proches, l’appli client prévient le client. Le client peut quand même réserver. Le serveur et l’appli client lisent ce réglage."],
+["0 means never warn. At most {0} m. Usual value {1} m.","0 signifie ne jamais prévenir. Au plus {0} m. Valeur habituelle {1} m."],
+["Shortest ride: 0 to 1000 m, in whole metres.","Course la plus courte : de 0 à 1000 m, en mètres entiers."]]

@@ -3,6 +3,7 @@ import { raiseCap } from "../dispatch/rules.ts";
 import { fromMajor, type CurrencyCode, type Money } from "../domain/money.ts";
 import { activeCategories, normalizeStore, zoneBook, type PricingStore } from "../pricing/zonePricing.ts";
 import type { PickupRate } from "../pricing/pickupPay.ts";
+import { validSamePoint } from "../dispatch/offerRules.ts";
 import { liveCountry, liveRules, normalizeDispatchBook, type DispatchBook, type RideTypeId, type ZoneDispatch } from "../dispatch/rules.ts";
 import { radarRuleFor, radarZonesOf } from "../dispatch/radarZones.ts";
 import { completeEarlyEnd } from "../dispatch/rules.ts";
@@ -180,9 +181,14 @@ function driverBonus(base: Common) {
   return { defaultLimit: limit.amountMinor > hardMax.amountMinor ? { ...hardMax } : limit, hardMax: { ...hardMax } };
 }
 
+/** v0.18.32 (owner Q9): the zone's "Shortest ride (m)", the default for rules saved before it existed. */
+function samePointWarnMeters(zone: ZoneDispatch): number {
+  return validSamePoint(zone.samePoint?.warnMeters) ?? CONFIG_DEFAULTS.samePointWarnMeters;
+}
+
 /** Q39/Q40: max stops and the pickup move limit after accept, from the zone's live Dispatch rules. */
 function booking(base: Common) {
-  return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: base.zone.pickupMove.maxMeters };
+  return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: base.zone.pickupMove.maxMeters, samePointWarnMeters: samePointWarnMeters(base.zone) };
 }
 
 /** v0.7.1/v0.7.2 contract sample: the sub-line goes to the rider app as { sv, fr, en } (contract.json#categoryCatalog). */

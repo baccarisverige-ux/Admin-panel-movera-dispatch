@@ -8,6 +8,7 @@ import type { Driver, LiveMoney, Page } from "./types";
 import { NotConnected } from "./NotConnected";
 import { useMarketScope } from "../markets/useMarketScope";
 import { zoneFilterOf } from "./zoneFilter";
+import { DateInput } from "../ui/DateInput";
 
 /**
  * Live builds only, in the demo Payouts page (contract v0.9.0 §16, owner real-data decisions part 3): the server's
@@ -154,8 +155,8 @@ export function LivePayouts() {
               {(drivers.data?.items ?? []).map((driver) => <option key={driver.driverId} value={driver.driverId}>{[driver.firstName, driver.lastName].filter(Boolean).join(" ")}</option>)}
             </select>
           </label>
-          <label>{tr("First day")}<input type="date" aria-label={tr("First day")} value={form.from} onChange={(event) => setForm({ ...form, from: event.target.value })} /></label>
-          <label>{tr("Up to (not included)")}<input type="date" aria-label={tr("Up to (not included)")} value={form.to} onChange={(event) => setForm({ ...form, to: event.target.value })} /></label>
+          <label>{tr("First day")}<DateInput aria-label={tr("First day")} value={form.from} onChange={(event) => setForm({ ...form, from: event.target.value })} /></label>
+          <label>{tr("Up to (not included)")}<DateInput aria-label={tr("Up to (not included)")} value={form.to} onChange={(event) => setForm({ ...form, to: event.target.value })} /></label>
           <label>{tr("Note")}<input aria-label={tr("Payout note")} value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
         </div>
         {formIssue ? <p className="op-help">{formIssue}</p> : null}

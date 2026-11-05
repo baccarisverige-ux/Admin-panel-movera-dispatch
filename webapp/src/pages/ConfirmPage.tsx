@@ -37,7 +37,7 @@ export function ConfirmPage() {
   const items = inboxItems({ approvals: approvals.data ?? [], config, values: OPEN_VALUES, decisions: ops.values, me, money: formatCurrencyMoney });
   const work = items.filter((item) => item.kind !== "value");
   const shown = (kind === "all" ? work : items.filter((item) => item.kind === kind));
-  const confirmed = OPEN_VALUES.filter((item) => ops.values[item.id]).length;
+  const confirmed = OPEN_VALUES.filter((item) => ops.values[item.id] || item.readOnly).length;
   const error = editing ? decisionError(value) : null;
 
   function start(id: string, today: string) {
@@ -108,10 +108,11 @@ export function ConfirmPage() {
               <div className="confirm-field pl-value" key={item.id} id={`value-${item.id}`}>
                 <label>
                   {trx(item.label)}
-                  <input readOnly value={item.today} />
+                  <input readOnly value={trx(item.today)} aria-readonly="true" />
                 </label>
                 {item.link ? <Link className="link-action" to={item.link}>{item.link.startsWith("/dispatch") ? tr("Open in Dispatch") : tr("Open")}</Link> : null}
-                {decision ? <span className="pl-confirmed">{trn("Confirmed: {0} · {1} · {2}{3}", decision.value, decision.by, decision.at.slice(0, 10), decision.note ? ` · ${decision.note}` : "")}</span> : <span className="badge-amber">{tr("To confirm")}</span>}
+                {item.readOnly ? <small className="pl-help">{trx(item.note ?? "Not used yet")}</small> : null}
+                {item.readOnly ? <span className="badge-grey">{tr("Not used yet")}</span> : decision ? <span className="pl-confirmed">{trn("Confirmed: {0} · {1} · {2}{3}", decision.value, decision.by, decision.at.slice(0, 10), decision.note ? ` · ${decision.note}` : "")}</span> : <span className="badge-amber">{tr("To confirm")}</span>}
                 {editing === item.id ? (
                   <div className="pl-value-edit">
                     <input aria-label={tr("Value to confirm")} value={value} onChange={(e) => setValue(e.target.value)} />
@@ -122,7 +123,7 @@ export function ConfirmPage() {
                       <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" onClick={() => setEditing(null)}>{tr("Cancel")}</button>
                     </span>
                   </div>
-                ) : canConfirm ? <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" aria-label={tr("Confirm {0}", [item.id])} onClick={() => start(item.id, item.today)}>{decision ? tr("Change") : tr("Confirm")}</button> : null}
+                ) : canConfirm && !item.readOnly ? <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" aria-label={tr("Confirm {0}", [item.id])} onClick={() => start(item.id, item.today)}>{decision ? tr("Change") : tr("Confirm")}</button> : null}
               </div>
             );
           })}

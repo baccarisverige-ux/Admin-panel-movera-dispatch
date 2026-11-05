@@ -8567,4 +8567,12 @@
 ["What the server knows about each online driver. — = not tracked yet.","Vad servern vet om varje förare online. — = spåras inte än."],
 ["Could not load driver facts.","Kunde inte hämta förarfakta."],
 ["No driver online in these zones.","Ingen förare online i de här zonerna."],
-["Some zones could not be loaded.","Några zoner kunde inte hämtas."]]
+["Some zones could not be loaded.","Några zoner kunde inte hämtas."],
+["Searching {0} · Live {1}","Söker {0} · Live {1}"],
+["Not used yet","Används inte än"],
+["Not used yet: the apps get the booking window from Dispatch › Reservations (Max days ahead).","Används inte än: apparna får bokningsfönstret från Dispatch › Bokningar (Max dagar framåt)."],
+["Shortest ride","Kortaste resa"],
+["Shortest ride (m)","Kortaste resa (m)"],
+["When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this.","När upphämtning och avlämning ligger så här nära varnar kundappen kunden. Kunden kan ändå boka. Servern och kundappen läser detta."],
+["0 means never warn. At most {0} m. Usual value {1} m.","0 betyder att aldrig varna. Högst {0} m. Vanligt värde {1} m."],
+["Shortest ride: 0 to 1000 m, in whole metres.","Kortaste resa: 0 till 1000 m, i hela meter."]]
