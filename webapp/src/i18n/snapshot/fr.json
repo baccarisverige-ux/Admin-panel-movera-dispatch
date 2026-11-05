@@ -8631,4 +8631,7 @@
 ["Offers on a trip from: {0} % → {1} %","Offres en course à partir de : {0} % → {1} %"],
 ["Offers on a trip","Offres en course"],
 ["A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.","Un chauffeur en course ne reçoit que des offres Exclusives (course immédiate ou réservée), et seulement après avoir parcouru cette part de son trajet jusqu'à la dépose."],
-["Offers on a trip from (% of the route to the drop-off)","Offres en course à partir de (% du trajet jusqu'à la dépose)"]]
+["Offers on a trip from (% of the route to the drop-off)","Offres en course à partir de (% du trajet jusqu'à la dépose)"],
+["{0}: free cancel of a next trip must start at 0 to 120 minutes.","{0} : l'annulation gratuite d'une course suivante doit commencer entre 0 et 120 minutes."],
+["Next trip free cancel after: {0} min → {1} min","Annulation gratuite de la course suivante après : {0} min → {1} min"],
+["Rider of a next trip may cancel free after (min)","Le passager d'une course suivante peut annuler gratuitement après (min)"]]

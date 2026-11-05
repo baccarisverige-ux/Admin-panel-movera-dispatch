@@ -184,4 +184,5 @@ test("the fixture server checks a save and keeps only the section's fields", asy
 test("v0.18.33 (owner 2026-11-05): on-trip offers start at 70 % of the route by default; 0–100 whole percent", () => {
   const se = countrySettingsOf(normalizeCountrySettingsBook(null), "SE");
   assert.equal(se.onTripMinDonePct, 70);
+  assert.equal(se.chainLateFreeCancelMin, 10);
 });

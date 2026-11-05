@@ -812,5 +812,7 @@ test("v0.18.17: Dispatch › Reservations is read back from the zone's driver do
 test("v0.18.33 (owner 2026-11-05): 'Offers on a trip from (% of the route)' goes to CountryRules.onTripOffers (default 70) (fail-before: never sent)", () => {
   const input = { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 } };
   assert.equal(countryRulesOf("SE", "SEK", input, null)["onTripOffers"], undefined, "nothing set: the server default 70");
-  assert.deepEqual(countryRulesOf("SE", "SEK", { ...input, onTripMinDonePct: 80 }, null)["onTripOffers"], { minRouteDonePct: 80 });
+  assert.deepEqual(countryRulesOf("SE", "SEK", { ...input, onTripMinDonePct: 80 }, null)["onTripOffers"], { minRouteDonePct: 80, lateFreeCancelMin: 10 });
+  // Owner Q5: the next trip's free cancel after (min), default 10.
+  assert.deepEqual(countryRulesOf("SE", "SEK", { ...input, onTripMinDonePct: 70, chainLateFreeCancelMin: 15 }, null)["onTripOffers"], { minRouteDonePct: 70, lateFreeCancelMin: 15 });
 });

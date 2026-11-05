@@ -8631,4 +8631,7 @@
 ["Offers on a trip from: {0} % → {1} %","Offers on a trip from: {0} % → {1} %"],
 ["Offers on a trip","Offers on a trip"],
 ["A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.","A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off."],
-["Offers on a trip from (% of the route to the drop-off)","Offers on a trip from (% of the route to the drop-off)"]]
+["Offers on a trip from (% of the route to the drop-off)","Offers on a trip from (% of the route to the drop-off)"],
+["{0}: free cancel of a next trip must start at 0 to 120 minutes.","{0}: free cancel of a next trip must start at 0 to 120 minutes."],
+["Next trip free cancel after: {0} min → {1} min","Next trip free cancel after: {0} min → {1} min"],
+["Rider of a next trip may cancel free after (min)","Rider of a next trip may cancel free after (min)"]]

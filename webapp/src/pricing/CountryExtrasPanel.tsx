@@ -221,6 +221,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <small>{tr("A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.")}</small>
               </div>
               <NumberField label={tr("Offers on a trip from (% of the route to the drop-off)")} value={shown.onTripMinDonePct} step={1} max={100} disabled={!canEdit} changed={shown.onTripMinDonePct !== saved.onTripMinDonePct} onChange={(value) => edit({ onTripMinDonePct: value })} />
+              <NumberField label={tr("Rider of a next trip may cancel free after (min)")} value={shown.chainLateFreeCancelMin} step={1} max={120} disabled={!canEdit} changed={shown.chainLateFreeCancelMin !== saved.chainLateFreeCancelMin} onChange={(value) => edit({ chainLateFreeCancelMin: value })} />
             </div>
           </div>
           <div id="extras-person-limits" className="cx-anchor">

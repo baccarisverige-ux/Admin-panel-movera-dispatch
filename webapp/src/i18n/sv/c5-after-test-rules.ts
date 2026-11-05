@@ -14,4 +14,7 @@ export const svC5AfterTestRules = {
   "Offers on a trip": "Erbjudanden under en resa",
   "A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.": "En förare som kör en resa får bara Exklusiva erbjudanden (en resa nu eller en bokad resa), och först när han har kört så stor del av sträckan till avlämningen.",
   "Offers on a trip from (% of the route to the drop-off)": "Erbjudanden under en resa från (% av sträckan till avlämningen)",
+  "{0}: free cancel of a next trip must start at 0 to 120 minutes.": "{0}: gratis avbokning av en nästa resa måste börja vid 0 till 120 minuter.",
+  "Next trip free cancel after: {0} min → {1} min": "Gratis avbokning av nästa resa efter: {0} min → {1} min",
+  "Rider of a next trip may cancel free after (min)": "Resenären för en nästa resa får avboka gratis efter (min)",
 } as const;
