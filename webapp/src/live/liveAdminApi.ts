@@ -26,6 +26,7 @@ import { rememberSendTarget, sendTarget, setActiveRadarSend } from "../dispatch/
 import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
+import { LIVE_CARD_LIST } from "../dashboard/liveCard.ts";
 import { ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
 import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
@@ -83,7 +84,7 @@ async function all<T>(client: LiveClient, path: string, filter: ZoneFilter = NO_
 }
 
 /** A list page's own rows: the server's search and status filter, as many pages as "Load more" asked for. */
-async function paged<T>(client: LiveClient, name: LiveListName, path: string, filter: ZoneFilter = NO_FILTER): Promise<T[]> {
+async function paged<T>(client: LiveClient, name: LiveListName, path: string, filter: ZoneFilter = NO_FILTER, signal?: AbortSignal): Promise<T[]> {
   const query = listQueryOf(name);
   const items: T[] = [];
   let cursor: string | null = null;
@@ -95,7 +96,7 @@ async function paged<T>(client: LiveClient, name: LiveListName, path: string, fi
     if (name === "trips" && query.flagged) params.set("flagged", "true");
     if (cursor) params.set("cursor", cursor);
     for (const [key, value] of filter.params) params.set(key, value);
-    const page: Page<T> = await client.json<Page<T>>(`${path}?${params.toString()}`);
+    const page: Page<T> = await client.json<Page<T>>(`${path}?${params.toString()}`, signal ? { signal } : {});
     items.push(...page.items);
     cursor = page.nextCursor;
     if (!cursor) break;
@@ -164,6 +165,17 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
     },
   };
 }
+
+/** v0.18.34 §65 (A8/A10): a live-card row from GET /admin/live/drivers alone; the driver list's row adds details when known. */
+export function presenceRecord(live: LiveDriverRow, detail?: Driver): DemoRecord {
+  if (detail) return driverRecord(detail, live);
+  const bare = { driverId: live.driverId, firstName: live.firstName ?? "", accountStatus: "active", onlineStatus: live.onlineStatus, zoneIds: live.zoneId ? [live.zoneId] : [], categoryIds: [], documents: [], version: 0, ...(live.vehicleId ? { vehicleId: live.vehicleId } : {}) } as unknown as Driver;
+  return driverRecord(bare, live);
+}
+
+/** v0.18.34 §65: the live card reads pages of this size, up to LIVE_MAX_PAGES (rule 33: more than 10,000 drivers). */
+export const LIVE_PAGE = 500;
+const LIVE_MAX_PAGES = 60;
 
 const RIDE_CATEGORIES: string[] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
 const VEHICLE_STATUS: Record<string, string> = { approved: "eligible", pending: "pending", rejected: "ineligible", blocked: "on_hold" };
@@ -511,8 +523,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   }
   let currency: string = CURRENCY;
 
-  async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER): Promise<Driver[]> {
-    const rows = own ? await paged<Driver>(client, "drivers", "/admin/drivers", filter) : await all<Driver>(client, "/admin/drivers");
+  async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER, signal?: AbortSignal): Promise<Driver[]> {
+    const rows = own ? await paged<Driver>(client, "drivers", "/admin/drivers", filter, signal) : await all<Driver>(client, "/admin/drivers");
     rows.forEach((row) => drivers.set(row.driverId, row));
     return rows;
   }
@@ -533,18 +545,37 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   }
 
   /** GET /admin/live/drivers: who is online now, with the last position (drivers not offline). */
-  async function readPresence(filter: ZoneFilter = NO_FILTER): Promise<void> {
-    const query = new URLSearchParams(filter.params).toString();
-    const answer = await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`);
+  async function readPresence(filter: ZoneFilter = NO_FILTER, signal?: AbortSignal): Promise<void> {
+    const rows = await readLivePages(filter, signal);
     presence.clear();
-    answer.items.forEach((row) => presence.set(row.driverId, row));
+    rows.forEach((row) => presence.set(row.driverId, row));
+  }
+
+  /** v0.18.34 §65 (A8/A10): every page of GET /admin/live/drivers (limit LIVE_PAGE, cursor) — who is online now. */
+  async function readLivePages(filter: ZoneFilter, signal?: AbortSignal): Promise<LiveDriverRow[]> {
+    const rows: LiveDriverRow[] = [];
+    let cursor: string | null = null;
+    for (let index = 0; index < LIVE_MAX_PAGES; index += 1) {
+      const params = new URLSearchParams([...filter.params, ["limit", String(LIVE_PAGE)], ...(cursor ? [["cursor", cursor] as [string, string]] : [])]);
+      const answer: LiveDriverList = await client.json<LiveDriverList>(`/admin/live/drivers?${params.toString()}`, signal ? { signal } : {});
+      rows.push(...answer.items);
+      cursor = answer.nextCursor ?? null;
+      if (!cursor) break;
+    }
+    return rows;
+  }
+
+  /** One small live read for the zone counts (they always cover every driver, v0.18.34 §65). */
+  function liveCounts(filter: ZoneFilter, signal?: AbortSignal): Promise<LiveDriverList> {
+    const params = new URLSearchParams([...filter.params, ["limit", "1"]]).toString();
+    return client.json<LiveDriverList>(`/admin/live/drivers?${params}`, signal ? { signal } : {});
   }
 
   /** v0.17.2: a list of the zones picked in the top bar; the server filters, the rows are checked again here. */
-  async function list(name: string, scope?: ZoneScope): Promise<DemoRecord[]> {
+  async function list(name: string, scope?: ZoneScope, signal?: AbortSignal): Promise<DemoRecord[]> {
     const filter = name === "zones" ? NO_FILTER : zoneFilterOf(scope);
     if (filter.denied) return [];
-    const read = await listRaw(name, filter);
+    const read = await listRaw(name, filter, signal);
     const zones = filter.zones;
     // A row without a zone (a rider, a refund without its trip) is the server's answer for those zones.
     const rows = zones ? read.filter((row) => !row.zoneId || zones.has(row.zoneId)) : read;
@@ -567,23 +598,20 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     ].slice(0, 8);
   }
 
-  async function listRaw(name: string, filter: ZoneFilter): Promise<DemoRecord[]> {
+  async function listRaw(name: string, filter: ZoneFilter, signal?: AbortSignal): Promise<DemoRecord[]> {
+    // v0.18.34 §65 (A8/A10, proven cause): the Dashboard's live card, map and online tile: every live page, nothing else.
+    if (name === LIVE_CARD_LIST) return (await readLivePages(filter, signal)).map((row) => presenceRecord(row, drivers.get(row.driverId)));
     if (name === "drivers") {
-      const rows = await readDrivers(true, filter);
-      await readPresence(filter).catch(() => undefined);
+      const rows = await readDrivers(true, filter, signal);
+      // A failed live read is an error, never "everyone offline" (A10: it was swallowed into 0).
+      await readPresence(filter, signal);
       return rows.map((row) => driverRecord(row, presence.get(row.driverId)));
     }
     if (name === "riders") return (await readRiders(true, filter)).map(riderRecord);
     // G3-R4 (v0.18.4): real riders online per zone of the admin (the server counts open apps and open requests).
-    if (name === "ridersOnline") {
-      const query = new URLSearchParams(filter.params).toString();
-      return ridersOnlineRecords(await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`));
-    }
+    if (name === "ridersOnline") return ridersOnlineRecords(await liveCounts(filter, signal));
     // G3-D5 (v0.18.4): the server's supply and demand per zone (every online driver counted, position or not).
-    if (name === "zoneSupply") {
-      const query = new URLSearchParams(filter.params).toString();
-      return zoneSupplyRecords(await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`));
-    }
+    if (name === "zoneSupply") return zoneSupplyRecords(await liveCounts(filter, signal));
     if (name === "payments") {
       const rows = await paged<Payment>(client, "payments", "/admin/payments", filter);
       return rows.map((row) => paymentRecord(row, trips.get(row.tripId)?.zoneId ?? ""));
@@ -1179,7 +1207,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     demo: false,
     ready: async () => ({ currency: isCurrency(currency) ? currency : CURRENCY, timeZone: TIME_ZONE, demo: false }),
     page: async (pageId) => catalogFor(pageId),
-    list: async (name, scope) => list(name, scope),
+    list: async (name, scope, signal) => list(name, scope, signal),
     search: async (query, scope) => search(query, scope),
     command,
     revision: async () => 0,

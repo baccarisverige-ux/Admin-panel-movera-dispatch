@@ -8727,6 +8727,7 @@
 ["SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents.","Les cas SOS et de sécurité ne se ferment jamais tout seuls. 24 h après la fin de la course, ils arrivent ici ; fermez-les dans Incidents."],
 ["Trip ended {0}","Course terminée {0}"],
 ["Booked ride · now live","Course réservée · en cours"],
+["Could not load, retrying","Chargement impossible, nouvel essai"],
 ["5 · Late driver — take the ride back","5 · Chauffeur en retard — la course lui est retirée"],
 ["The only case the system takes a ride from a driver: a booked ride he would reach too late while there is still time to find another driver. It counts on his cancel record. Drivers never pay a fee.","Le seul cas où le système retire une course à un chauffeur : une course réservée où il arriverait trop tard alors qu’il reste du temps pour trouver un autre chauffeur. Cela compte comme une annulation. Les chauffeurs ne paient jamais de frais."],
 ["Take back when late more than","Retirer si retard de plus de"],

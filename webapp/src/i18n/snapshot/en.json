@@ -8727,6 +8727,7 @@
 ["SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents.","SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents."],
 ["Trip ended {0}","Trip ended {0}"],
 ["Booked ride · now live","Booked ride · now live"],
+["Could not load, retrying","Could not load, retrying"],
 ["5 · Late driver — take the ride back","5 · Late driver — take the ride back"],
 ["The only case the system takes a ride from a driver: a booked ride he would reach too late while there is still time to find another driver. It counts on his cancel record. Drivers never pay a fee.","The only case the system takes a ride from a driver: a booked ride he would reach too late while there is still time to find another driver. It counts on his cancel record. Drivers never pay a fee."],
 ["Take back when late more than","Take back when late more than"],
