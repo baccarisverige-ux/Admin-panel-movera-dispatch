@@ -69,6 +69,8 @@ export type Driver = {
   payoutHold?: { reason: string; at: string; by?: string };
   accountStatus: DriverAccountStatus;
   onlineStatus: DriverOnlineStatus;
+  /** v0.18.37 §61: tapped Go offline during the trip. */
+  offlineAfterTrip?: boolean;
   firstName: string;
   lastName?: string;
   dateOfBirth?: string;
@@ -272,6 +274,8 @@ export type LiveDriverRow = {
   vehicleId?: string;
   plate?: string;
   zoneId?: string;
+  /** v0.18.37 §61: tapped Go offline during the trip; offline when his trips end. */
+  offlineAfterTrip?: boolean;
 };
 export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string; total?: number; nextCursor?: string | null; ridersOnline?: { zoneId: string; count: number }[]; ridersOnlineWindowSeconds?: number; zoneSupply?: ZoneSupplyRow[] };
 /** v0.18.4 (G3-D5): GET /admin/live/drivers → zoneSupply, one row per zone. */

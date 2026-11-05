@@ -5,7 +5,7 @@ import { Crosshair, MessageSquare, Phone, Siren, Star, UserRound, X } from "luci
 import { driverCode } from "../fleet/codes";
 import { Avatar } from "../fleet/ui";
 import { CommandButton } from "../ui/CommandButton";
-import { LIVE_STATES, type LiveDriver } from "./live";
+import { goingOfflineLabel, LIVE_STATES, type LiveDriver } from "./live";
 import type { LiveTrip } from "./liveTrip";
 import { TripCard } from "./TripCard";
 import { TripMoneyTab } from "./TripMoneyTab";
@@ -60,7 +60,7 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
         <div className="driver-panel-title">
           <strong>{driver.name}</strong>
           <small className="map-popup-code">{driverCode(driver)}</small>
-          <span className="map-popup-state"><i style={{ background: color }} />{state}{driver.lastSeenMin ? tr(" · last GPS {0} min ago", [driver.lastSeenMin]) : tr(" · live")}</span>
+          <span className="map-popup-state"><i style={{ background: color }} />{state}{goingOfflineLabel(driver) ? ` · ${goingOfflineLabel(driver)}` : ""}{driver.lastSeenMin ? tr(" · last GPS {0} min ago", [driver.lastSeenMin]) : tr(" · live")}</span>
         </div>
         <button data-command="admin.ui.mapClose" type="button" className="map-popup-close" aria-label={tr("Close")} onClick={onClose}><X size={14} /></button>
       </div>

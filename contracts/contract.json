@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.35",
+  "version": "0.18.37",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -5196,6 +5196,12 @@
           "sv": "Ett dokument har gått ut. Ladda upp det nya för att köra igen.",
           "fr": "Un document a expiré. Envoyez le nouveau pour rouler à nouveau.",
           "en": "A document has expired. Upload the new one to drive again."
+        },
+        "after_trip": {
+          "note": "v0.18.37 §61 (contract.json#goOfflineAfterTrips): he tapped Go offline during a trip; set when his last trip ended (current, queued next trip and a held booked ride that was due).",
+          "sv": "Du gick offline efter din resa",
+          "fr": "Vous êtes passé hors ligne après votre course",
+          "en": "You went offline after your trip"
         }
       },
       "text": {
@@ -5223,7 +5229,8 @@
         "fleet_removed",
         "account_status",
         "admin",
-        "documents_expired"
+        "documents_expired",
+        "after_trip"
       ]
     },
     "outsideArea": {
@@ -7817,5 +7824,19 @@
     "alert": "Alert kind booked_taken_back (group dispatch, level important): a taken-back booked ride with no new driver yet; solved when a driver takes it.",
     "admin": "Dispatch › Book later › 'Late driver': 'Take back when late more than (min)' 5, 'Keep if the driver is within (min drive)' 10, 'Only until (min before pickup)' 15; 'Not driving to the rider notice' on/off (headingCheck.notice) and 'every (min)' 1; the heading check's 'Take back a live ride' row shown OFF and read-only.",
     "apps": "Driver app: shows the push / bell kinds reservation_taken_back and heading_not_to_rider (texts from the server, sv/fr/en built-in fallbacks). Rider app: no new screen (the existing searching / driver-changed flow); contract copy only."
+  },
+  "goOfflineAfterTrips": {
+    "note": "v0.18.37 (owner 2026-11-05, Rules decisions/driver-g15.md + plan/GO-OFFLINE-AFTER-TRIPS-PLAN-2026-11-05.md). Builds on v0.18.35 main. Additive; X-Api-Version stays 0.5; server migration 0084 (drivers.offline_after_trip, offline_after_trip_at). §61.",
+    "owner": "Owner verbatim: 'When on trip and want go offline, that mean he is set offline after the trip ends and if he have ongoing trip and another one after so go offline mean after all trips finish'. Booked ride later the same day: 'Keep it, remind him'. Admin switch: 'No switch' (always on).",
+    "tap": "POST /driver/availability { onlineStatus: offline } while the driver has a current trip (onlineStatus on_trip) answers 200 (before v0.18.37: 409 invalid_transition on_trip). onlineStatus stays on_trip; Driver.offlineAfterTrip = true, Driver.offlineAfterTripSince = the tap time; Driver.version goes up. Tapping again answers the same (idempotent).",
+    "undo": "POST /driver/availability { onlineStatus: online } while on_trip with offlineAfterTrip true clears it (offlineAfterTrip false, version up). Without the flag it answers the Driver unchanged, as before.",
+    "noOffers": "From the tap: no new offers of any kind, the on-trip Exclusives after minRouteDonePct (contract.json#afterTestRules, live and booked) included. His open offers are withdrawn at once (the withdraw_driver_offers job, as when going offline). An accept that still reaches the server is refused 409 conflict reason going_offline. Admin sends skip him (he is on a trip).",
+    "end": "When a trip of his ends (completed, cancelled by anyone, no-show), in the SAME transaction as the trip release with the driver row locked (rule 33, safe with several server copies): a queued live trip (accepted while on the trip, nextAfterTripId) starts and he stays on_trip with the flag; else a held booked ride whose leaveAt has come starts and he stays on_trip with the flag (the server treats a queued live trip like a held booked ride); else he goes offline: onlineStatus offline, offlineReason after_trip, the set_offline notice (data.reason after_trip), offlineAfterTrip false.",
+    "bookedLater": "A booked ride he holds for later (not yet due) stays his; the normal reminders (reservation_reminder, reservation_go_online) tell him to go online for it.",
+    "blocks": "A block during the trip (account, car, fleet, expired document) still ends him offline with that reason (it wins over after_trip); the flag is cleared on every way to offline and on going online.",
+    "restart": "The state is on the server: GET /driver/profile carries offlineAfterTrip, so the driver app shows the banner again after a restart.",
+    "admin": "No setting. The admin driver view and the live drivers list carry offlineAfterTrip; the admin shows 'Going offline after trips' on an on-trip driver.",
+    "driverApp": "Go offline during a trip: one POST, keep sending location (the trip goes on), show the banner 'Going offline after this trip' with Undo (POST online). After the last trip the offline card shows reasons.after_trip.",
+    "riderApp": "No change: the rider's trip goes on as normal; the driver's plan is not shown to riders."
   }
 }

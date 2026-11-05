@@ -1,4 +1,6 @@
-# Movera shared contract v0.18.35
+# Movera shared contract v0.18.37
+
+v0.18.37 (go offline after trips, owner 2026-11-05, Rules `decisions/driver-g15.md`; builds on v0.18.35; X-Api-Version stays `0.5`, additive; server migration 0084; rider app: no change): **"Go offline" during a trip is scheduled offline.** `POST /driver/availability` offline while on a trip answers **200** (was 409 `on_trip`): he stays `on_trip` with `Driver.offlineAfterTrip` true; from the tap he gets **no new offers** (the 70 % on-trip Exclusives too; an accept in the race window is 409 `going_offline`); he finishes the current trip, a queued next trip and a held booked ride that is due, then goes offline with `offlineReason` `after_trip`. Undo = online while on the trip. Booked rides for later stay his. No admin switch. §61, `contract.json#goOfflineAfterTrips`.
 
 v0.18.35 (FIX JOB 4 "take-back", owner Q2 / Q-A / Q-B / fix-plan Q2 and job-4 Q2–Q4 of 2026-11-04, Rules `decisions/driver-g15.md`; builds on v0.18.34; X-Api-Version stays `0.5`, additive, no migration): the server takes a **booked** ride back from a late driver in ONE case only — he would reach the pickup **more than 5 min late**, he is **more than 10 min' drive** away, and the pickup is **at least 15 min** away (all three per zone in Dispatch › Book later, `DriverAppConfig.reservations.takeBackLateMin / takeBackKeepIfDriveMin / takeBackUntilMinBeforePickup`). It counts on his cancel record (`driver_cancels` reason `booked_late_taken_back`), never a fee; he gets `reservation_taken_back`. **Live rides are never taken back** (`headingCheck.reassign` read-only, ignored for live); a driver not heading to the pickup gets `heading_not_to_rider` every minute (`headingCheck.notice` / `noticeEveryMin`). The next driver of a booked ride starts with a clean leave state (L6). New alert kind `booked_taken_back`. §59, `contract.json#bookedTakeBack`.
 
@@ -1214,6 +1216,16 @@ Owner Q2 (2026-11-04, verbatim): "System take ride from driver only one case, wh
 - **Rider:** before the driver started: nothing (silent swap). After: "searching for a new driver" (status `searching`, push `driver_changed`), then the new driver like a normal trip. A late driver who keeps it: no rider message (owner Q3).
 - **Not heading notice:** `heading_not_to_rider` (bell + push) every `headingCheck.noticeEveryMin` (1) minutes while not heading for `notHeadingMinutes`; `headingCheck.notice` off = none. Live and booked trips. `headingCheck.reassign` defaults to false and is read-only.
 - **Admin:** Dispatch › Book later › "Late driver" (the 3 numbers, notice on/off and minutes; "Take back a live ride" shown off, read-only). **Driver app:** the two notice kinds. **Rider app:** no change beyond the contract copy.
+
+## 61. Go offline after trips (v0.18.37)
+
+Owner (2026-11-05, verbatim): "When on trip and want go offline, that mean he is set offline after the trip ends and if he have ongoing trip and another one after so go offline mean after all trips finish". Booked ride later the same day: "Keep it, remind him". Admin switch: "No switch". Full rules: `contract.json#goOfflineAfterTrips`.
+
+- **Tap:** `POST /driver/availability { onlineStatus: offline }` while on a trip → **200**, `onlineStatus` stays `on_trip`, `Driver.offlineAfterTrip: true`, `offlineAfterTripSince`. Idempotent. **Undo:** `{ onlineStatus: online }` while on the trip clears it.
+- **No offers from the tap:** none of any kind (the on-trip Exclusives after `minRouteDonePct` included); open offers withdrawn at once; a late accept → 409 `conflict` reason `going_offline`.
+- **End (rule 33):** in the trip-release transaction, driver row locked: a queued live trip starts (stays `on_trip`, flag kept), else a held booked ride that is due starts (same), else **offline**, `offlineReason` `after_trip`, `set_offline` notice (`data.reason` `after_trip`), flag cleared. A block during the trip wins (its own reason).
+- **Booked rides for later** stay his; the normal reminders tell him to go online.
+- **Admin:** no setting; driver view and live drivers carry `offlineAfterTrip` ("Going offline after trips"). **Driver app:** banner "Going offline after this trip" + Undo, location keeps going, offline card `after_trip`. **Rider app:** no change.
 
 ## 65. Admin live drivers, paged — fix plan A8/A10 (v0.18.34)
 
