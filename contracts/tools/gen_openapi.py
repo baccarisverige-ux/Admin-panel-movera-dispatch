@@ -2991,6 +2991,7 @@ S["CallView"] = obj({"callId": ref("Id"), "tripId": ref("Id"), "from": s(enum=IC
                      "startedAt": ref("Timestamp"), "answeredAt": nullable("Timestamp"), "endedAt": nullable("Timestamp"),
                      "endedReason": {"oneOf": [s(enum=IC["endedReasons"]), {"type": "null"}]}, "seconds": i("Talk time (answered → ended); 0 when never answered.", minimum=0)},
                     ["callId", "tripId", "from", "to", "state", "startedAt", "answeredAt", "endedAt", "endedReason", "seconds"], "v0.18.38: " + IC["noPhoneNumbers"])
+S["CallView"]["properties"]["ice"] = {"allOf": [S["TripCall"]["properties"]["ice"]], "description": "v0.18.38: on the answer of POST /calls/{callId}/answer only: the callee's ICE servers."}
 S["CallSignal"] = obj({"type": s(enum=["offer", "answer", "ice"]), "sdp": s(maxLength=20000), "candidate": obj({"candidate": s(maxLength=2000), "sdpMid": {"oneOf": [s(), {"type": "null"}]}, "sdpMLineIndex": {"oneOf": [i(minimum=0), {"type": "null"}]}}, ["candidate"])},
                       ["type"], "v0.18.38: " + IC["signalling"])
 S["CallSignalEvent"] = obj({"callId": ref("Id"), "from": s(enum=IC["who"]), "type": s(enum=["offer", "answer", "ice"]), "sdp": s(), "candidate": S["CallSignal"]["properties"]["candidate"]}, ["callId", "from", "type"])

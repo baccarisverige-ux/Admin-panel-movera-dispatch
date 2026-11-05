@@ -16503,8 +16503,8 @@ paths:
     post:
       operationId: callAnswer
       summary: Answer a ringing call (emits call_answered)
-      description: 'v0.18.38: POST /calls/{callId}/answer by the callee while ringing → 200 CallView (state answered), event
-        call_answered.'
+      description: 'v0.18.38: POST /calls/{callId}/answer by the callee while ringing → 200 CallView (state answered) with
+        ice { servers, ttlSeconds } (the callee''s STUN/TURN servers), event call_answered.'
       tags:
       - Notifications & messages
       x-actor:
@@ -32569,6 +32569,23 @@ components:
           type: integer
           minimum: 0
           description: Talk time (answered → ended); 0 when never answered.
+        ice:
+          allOf:
+          - type: object
+            description: 'v0.18.38, mode in_app: ice.servers come from the server environment (STUN/TURN URLs; TURN gets time-limited
+              credentials from a shared secret, valid ttlSeconds). No server state: any copy answers (rule 33).'
+            required:
+            - servers
+            - ttlSeconds
+            properties:
+              servers:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IceServer'
+              ttlSeconds:
+                type: integer
+                minimum: 0
+          description: 'v0.18.38: on the answer of POST /calls/{callId}/answer only: the callee''s ICE servers.'
     CallSignal:
       type: object
       description: 'v0.18.38: POST /calls/{callId}/signal { type: offer|answer|ice, sdp?, candidate? } by the call''s caller
