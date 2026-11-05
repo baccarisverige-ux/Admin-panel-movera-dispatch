@@ -9,4 +9,9 @@ export const frC5AfterTestRules = {
   "Driver on a trip can get a booked ride starting within (min)": "Un chauffeur en course peut recevoir une course réservée qui commence dans (min)",
   "Use wallet first": "Utiliser le portefeuille d'abord",
   "the rider can switch it off per ride": "le passager peut le désactiver par course",
+  "{0}: offers on a trip must start at a whole percent from 0 to 100.": "{0} : les offres en course doivent commencer à un pourcentage entier de 0 à 100.",
+  "Offers on a trip from: {0} % → {1} %": "Offres en course à partir de : {0} % → {1} %",
+  "Offers on a trip": "Offres en course",
+  "A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.": "Un chauffeur en course ne reçoit que des offres Exclusives (course immédiate ou réservée), et seulement après avoir parcouru cette part de son trajet jusqu'à la dépose.",
+  "Offers on a trip from (% of the route to the drop-off)": "Offres en course à partir de (% du trajet jusqu'à la dépose)",
 } as const;

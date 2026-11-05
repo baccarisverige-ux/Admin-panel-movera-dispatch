@@ -9,4 +9,9 @@ export const svC5AfterTestRules = {
   "Driver on a trip can get a booked ride starting within (min)": "Förare som kör en resa kan få en bokad resa som börjar inom (min)",
   "Use wallet first": "Använd plånboken först",
   "the rider can switch it off per ride": "resenären kan stänga av det per resa",
+  "{0}: offers on a trip must start at a whole percent from 0 to 100.": "{0}: erbjudanden under en resa måste börja vid en hel procent från 0 till 100.",
+  "Offers on a trip from: {0} % → {1} %": "Erbjudanden under en resa från: {0} % → {1} %",
+  "Offers on a trip": "Erbjudanden under en resa",
+  "A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.": "En förare som kör en resa får bara Exklusiva erbjudanden (en resa nu eller en bokad resa), och först när han har kört så stor del av sträckan till avlämningen.",
+  "Offers on a trip from (% of the route to the drop-off)": "Erbjudanden under en resa från (% av sträckan till avlämningen)",
 } as const;

@@ -214,6 +214,15 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
           </div>
+          <div id="extras-on-trip-offers" className="cx-anchor">
+            <div className="fee-card" data-testid="on-trip-offers">
+              <div>
+                <strong>{tr("Offers on a trip")}</strong>
+                <small>{tr("A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.")}</small>
+              </div>
+              <NumberField label={tr("Offers on a trip from (% of the route to the drop-off)")} value={shown.onTripMinDonePct} step={1} max={100} disabled={!canEdit} changed={shown.onTripMinDonePct !== saved.onTripMinDonePct} onChange={(value) => edit({ onTripMinDonePct: value })} />
+            </div>
+          </div>
           <div id="extras-person-limits" className="cx-anchor">
             <div className="fee-card" data-testid="person-limits">
               <div>

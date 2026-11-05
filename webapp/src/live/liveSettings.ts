@@ -316,6 +316,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       ...(doc.driverBonus?.defaultLimit ? { driverBonusLimit: doc.driverBonus.defaultLimit.amountMinor / market.minorUnits } : {}),
       // v0.18.26: per-person limits (CountryRules.limits).
       personLimits: personLimitsOf((document as { limits?: unknown }).limits),
+      // v0.18.33: CountryRules.onTripOffers (missing = 70).
+      onTripMinDonePct: (() => { const v = (document as { onTripOffers?: { minRouteDonePct?: unknown } }).onTripOffers?.minRouteDonePct; return typeof v === "number" && v >= 0 && v <= 100 ? v : 70; })(),
       ...((document as { driverPayChangeMax?: { amountMinor: number } }).driverPayChangeMax ? { driverPayChangeMax: (document as { driverPayChangeMax: { amountMinor: number } }).driverPayChangeMax.amountMinor / market.minorUnits } : {}),
     };
   }
@@ -658,7 +660,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const current = await draft("country_rules", id, true);
       const facts = zoneFacts(id);
       const hardMax = driverBonusHardMax(market.id as MarketId);
-      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, personLimits: next.personLimits }, current?.document ?? null);
+      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct }, current?.document ?? null);
       await savePublish(http, "country_rules", id, current, doc);
       standardMarks.set("country_rules", id, false);
       // v0.18.10 (G8): the tip rules (cash after the trip, typed amount + max) live in the rider app document.

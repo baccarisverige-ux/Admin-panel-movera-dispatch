@@ -9,4 +9,9 @@ export const enC5AfterTestRules = {
   "Driver on a trip can get a booked ride starting within (min)": "Driver on a trip can get a booked ride starting within (min)",
   "Use wallet first": "Use wallet first",
   "the rider can switch it off per ride": "the rider can switch it off per ride",
+  "{0}: offers on a trip must start at a whole percent from 0 to 100.": "{0}: offers on a trip must start at a whole percent from 0 to 100.",
+  "Offers on a trip from: {0} % → {1} %": "Offers on a trip from: {0} % → {1} %",
+  "Offers on a trip": "Offers on a trip",
+  "A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.": "A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.",
+  "Offers on a trip from (% of the route to the drop-off)": "Offers on a trip from (% of the route to the drop-off)",
 } as const;
