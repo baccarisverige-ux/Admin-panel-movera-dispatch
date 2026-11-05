@@ -12,7 +12,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
 import { MapPanel } from "../dispatch/maps";
 import { GROUPS, TRIP_OPS_KEY, emptyTripOps, flaggedIds, groupOf, listStats, normalizeTripOps, routeOf, saveView, type TripGroup, type TripOps } from "../trips/file";
-import { categoryOf, fareBreakdown, paymentOf, startedAt, statusLabel, TRIP_STATUSES, type PaymentState } from "../trips/present";
+import { bookedNowLive, categoryOf, fareBreakdown, paymentOf, startedAt, statusLabel, TRIP_STATUSES, type PaymentState } from "../trips/present";
 import { RouteMap } from "../trips/RouteMap";
 import { TripSettingsView } from "../trips/TripSettings";
 import { CommandButton } from "../ui/CommandButton";
@@ -329,6 +329,7 @@ function liveStatusCell(trip: DemoRecord): string | { text: string; node: ReactN
     node: (
       <span className="op-live-cell" data-testid={`trip-live-${trip.id}`}>
         <span>{words}</span>
+        {bookedNowLive(trip.status, live.kind) ? <small className="op-status scheduled" data-testid={`trip-booked-now-live-${trip.id}`}>{tr("Booked ride · now live")}</small> : null}
         {line ? <small className={eta && etaIsStale(eta, Date.now()) ? "op-eta stale" : "op-eta"} title={eta?.source === "estimate" ? tr("Straight-line estimate, no road route yet.") : undefined}>{line}</small> : <small className="op-eta">{tr("No position yet")}</small>}
         {live.driverLocation ? <Link to={`/trips/${trip.id}#route`} onClick={(event) => event.stopPropagation()} aria-label={tr("Map of {0}", [trip.id])}>{tr("Map")}</Link> : null}
       </span>

@@ -552,3 +552,8 @@ export { statusLabel, TRIP_STATUSES };
 export function liveBoardLayers(live: boolean): (LiveKind | "stale")[] {
   return live ? ["driver", "stale", "trip", "request"] : ["driver", "stale", "trip", "request", "queue", "boost"];
 }
+
+/** v0.18.32 (contract.json#bookedRideSeen.admin): a booked trip whose driver started driving is shown like a live trip, with a label. */
+export function bookedNowLive(status: string, kind: string | undefined): boolean {
+  return kind === "scheduled" && ["driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"].includes(status);
+}

@@ -24,9 +24,11 @@ import { enC1ContractV072Part4 } from "./en/c1-contract-v072-part4.ts";
 import { enC2RequestLimits } from "./en/c2-request-limits.ts";
 import { enC3RealAppPreview } from "./en/c3-real-app-preview.ts";
 import { enC4PhoneData } from "./en/c4-phone-data.ts";
+import { enC5AfterTestRules } from "./en/c5-after-test-rules.ts";
 import { enC2RidersPaymentsPayouts } from "./en/c2-riders-payments-payouts.ts";
 import { enC2Job7SmallFixes } from "./en/c2-job7-small-fixes.ts";
 import { enC2ServerAlerts } from "./en/c2-server-alerts.ts";
+import { enC5BookedRideLive } from "./en/c5-booked-ride-live.ts";
 import { enC2AdminLiveDrivers } from "./en/c2-admin-live-drivers.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
@@ -58,9 +60,11 @@ export const en = {
   ...enC2RequestLimits,
   ...enC3RealAppPreview,
   ...enC4PhoneData,
+  ...enC5AfterTestRules,
   ...enC2RidersPaymentsPayouts,
   ...enC2Job7SmallFixes,
   ...enC2ServerAlerts,
+  ...enC5BookedRideLive,
   ...enC2AdminLiveDrivers,
 } as const;
 

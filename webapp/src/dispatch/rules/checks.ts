@@ -23,6 +23,8 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (!Number.isInteger(zone.autoOffline.noFixMinutes) || zone.autoOffline.noFixMinutes < 0 || zone.autoOffline.noFixMinutes > 120) issues.push("Set offline without position: must be 0 to 120 minutes (0 = never).");
   if (zone.autoOffline.on && (zone.autoOffline.after < 1 || zone.autoOffline.after > 99 || !Number.isInteger(zone.autoOffline.after))) issues.push("Go offline automatically: must be after 1 to 99 offers.");
   if (zone.exclusive.on && zone.exclusiveWhileDriving.on && (zone.exclusiveWhileDriving.count < 1 || zone.exclusiveWhileDriving.count > 5)) issues.push("Exclusive while driving: must be 1 to 5 offers at a time.");
+  // v0.18.33 (fix job 5, owner Q7): DispatchDocument.bookedNext.withinMin, contract range 0–240.
+  if (zone.bookedNext.on && (!Number.isInteger(zone.bookedNext.withinMin) || zone.bookedNext.withinMin < 0 || zone.bookedNext.withinMin > 240)) issues.push("Booked ride for a driver on a trip: must be 0 to 240 minutes.");
   if (zone.radar.on && (zone.hiddenComesBackMin < 1 || zone.hiddenComesBackMin > 60)) issues.push("Radar in the driver app: a hidden trip can come back after 1 to 60 minutes.");
   // v0.18.6 (G4-E4): contract.json#dispatch.raisePrice.range; the server answers 400 invalid_document outside it.
   if (validRaiseFactor(zone.raisePrice.maxFactor) === null) issues.push("Rider raise limit: must be 1× to 3× the booked price.");
