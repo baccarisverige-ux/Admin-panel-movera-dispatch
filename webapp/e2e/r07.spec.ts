@@ -22,13 +22,11 @@ test("R7 rider account, wallet, refund, promotion, notes and sessions persist", 
   await page.goto("/riders/R0002");
   await expect(page.getByRole("heading", { level: 2 })).toBeVisible();
 
-  await page.getByLabel("Account reason").fill("Payment check");
-  await page.getByRole("button", { name: "Put on hold" }).click();
-  await confirm(page, "R0002");
-  await expect(page.locator(".fd-hero .fd-account")).toHaveText("On hold");
-  await page.getByRole("button", { name: "Activate" }).click();
-  await confirm(page, "R0002");
-  await expect(page.getByRole("button", { name: "Put on hold" })).toBeVisible();
+  // A2 leftovers (owner Q3 "Added to next ride"): no "Put on hold" and no ban list on the rider page.
+  await expect(page.getByRole("button", { name: "Put on hold" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Account" }).click();
+  await expect(page.getByRole("button", { name: "Ban phone number" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Ban card" })).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Wallet & refunds" }).click();
   await page.getByLabel("Wallet amount").fill("125");

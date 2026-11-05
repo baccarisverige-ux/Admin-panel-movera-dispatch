@@ -81,7 +81,8 @@ test("audit: search, filters, details with who and before/after, and export", as
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText("Draft saved through AdminApi.")).toBeVisible();
   await page.goto("/audit");
-  await expect(page.getByRole("heading", { level: 3, name: "Pending approvals" })).toBeVisible();
+  // A2 leftovers (owner Q1 "One admin always"): no second-admin approvals on the audit page.
+  await expect(page.getByRole("heading", { level: 3, name: "Pending approvals" })).toHaveCount(0);
   await page.getByLabel("Search the audit", { exact: true }).fill("configuration");
   const log = page.getByRole("list", { name: "Audit log" });
   await expect(log.getByRole("listitem").first()).toContainText("admin.config.save");

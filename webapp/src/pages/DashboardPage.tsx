@@ -17,7 +17,6 @@ import {
   Download,
   LifeBuoy,
   Megaphone,
-  ReceiptText,
   RefreshCw,
   Repeat,
   Search,
@@ -32,7 +31,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAdminApi } from "../api/AdminApiContext";
-import { useApprovals, useAudit, useRecords, useSlice } from "../api/hooks";
+import { useAudit, useRecords, useSlice } from "../api/hooks";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { commandById } from "../commands/registry";
@@ -208,7 +207,6 @@ export function DashboardPage() {
   const riderRows = useMemo(() => maskRiders(riders.data ?? [], access), [riders.data, access]);
   const tripRows = useMemo(() => maskBookings(trips.data ?? [], access), [trips.data, access]);
   const reservationRows = useMemo(() => maskBookings(reservations.data ?? [], access), [reservations.data, access]);
-  const approvals = useApprovals(LIVE_MS);
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const bonusSlice = useSlice<BonusBook>(BONUS_KEY, emptyBonusBook());
   const bonusMinute = Math.floor(now / 60_000);
@@ -328,7 +326,6 @@ export function DashboardPage() {
   const pendingDrivers = (driverRows).filter((row) => row.status === "pending");
   const scheduledPayouts = (payouts.data ?? []).filter((row) => row.status === "scheduled");
   const failures = openFailures(payments.data ?? []);
-  const refundApprovals = (approvals.data ?? []).filter((row) => row.status === "pending" && row.action.includes("refund"));
   const urgentRides = rides.filter((ride) => ride.warning === "red");
   const longWaits = requests.filter((request) => request.waitingMin > 5 && request.status === "searching");
   // SOS responders (incidents.read) need the driver's name even without drivers.read.
@@ -384,7 +381,6 @@ export function DashboardPage() {
     { label: tr("Open support"), permission: "support.reply", count: openTickets.length, path: "/support", icon: <LifeBuoy size={16} />, tone: "warning" },
     { label: tr("Drivers to review"), permission: "drivers.read", count: pendingDrivers.length, path: "/onboarding", icon: <UserPlus size={16} />, tone: "info" },
     { label: tr("Rides without driver"), permission: "trips.read", count: unassigned.length, path: "/reservations", icon: <CalendarClock size={16} />, tone: "serious" },
-    { label: tr("Refunds waiting for approval"), permission: "approval.decide", count: refundApprovals.length, path: "/payments", icon: <ReceiptText size={16} />, tone: "serious" },
     { label: tr("Payouts scheduled"), permission: "finance.read", count: scheduledPayouts.length, path: "/payouts", icon: <Banknote size={16} />, tone: "good" },
   ].filter((queue) => can(role, queue.permission));
 
