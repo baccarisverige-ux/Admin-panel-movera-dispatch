@@ -159,6 +159,8 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       lastFixAt: live?.lastFixAt ?? driver.lastFixAt ?? null,
       stale: live ? live.stale : null,
       activeTripId: live?.activeTripId ?? null,
+      // v0.18.37 §61: "Going offline after trips".
+      ...((live?.offlineAfterTrip ?? driver.offlineAfterTrip) ? { offlineAfterTrip: true } : {}),
       ...(driver.performance ? { performance: performanceFacts(driver.performance) } : {}),
       // v0.18.17 (owner BL-Q4): the home area the driver set (who sees "home nearby" booked rides).
       ...((driver as { homeArea?: { lat: number; lng: number; label?: string } }).homeArea ? { homeArea: (driver as unknown as { homeArea: { lat: number; lng: number; label?: string } }).homeArea } : {}),
