@@ -102,6 +102,7 @@ export const FEATURE_INDEX: readonly FeatureEntry[] = [
   { id: "raise-steps", phrase: "Raise-offer quick steps per country", section: "Pricing › Tips & limits", keywords: "raise fare plus steps searching", path: "/pricing?tab=extras&section=raise-steps" },
   { id: "promo-cap", phrase: "Promo cap per country", section: "Pricing › Tips & limits", keywords: "promotion discount maximum", path: "/pricing?tab=extras&section=promo-cap" },
   { id: "driver-bonus-limit", phrase: "Driver bonus limit per country", section: "Pricing › Tips & limits", keywords: "add money to trip hard max extra", path: "/pricing?tab=extras&section=driver-bonus" },
+  { id: "calls", phrase: "In-app calls per country", section: "Pricing › Tips & limits", keywords: "call phone ring window rider driver webrtc settings", path: "/pricing?tab=extras&section=calls" },
   { id: "pricing-history", phrase: "Pricing history, undo and restore", section: "Pricing", path: "/pricing?tab=history" },
   { id: "app-features", phrase: "App features, versions and updates", section: "Settings", keywords: "wallet pin share trip", path: "/settings" },
   { id: "payment-methods", phrase: "Payment methods per country", section: "Settings", keywords: "cash card apple pay google pay wallet", path: "/settings#country-apps" },

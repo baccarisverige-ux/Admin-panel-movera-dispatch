@@ -1,6 +1,7 @@
 import { DRIVER_BONUS_LIMIT_INPUT_ID } from "../live/tripLive";
 import { useEffect, useState } from "react";
-import { BadgeDollarSign, Gift, HandHeart, Plus, Save, TrendingUp } from "lucide-react";
+import { BadgeDollarSign, Gift, HandHeart, Phone, Plus, Save, TrendingUp } from "lucide-react";
+import { CALL_RANGES, callModeText } from "../config/callSettings";
 import { market, zoneById, type MarketId } from "../markets/markets";
 import { PublishTargetsLine } from "../live/StandardBar";
 import {
@@ -34,7 +35,7 @@ import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 
 /** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
-export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus"] as const;
+export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls"] as const;
 
 type ListProps = {
   title: string;
@@ -226,6 +227,30 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               </div>
               <NumberField label={tr("Offers on a trip from (% of the route to the drop-off)")} value={shown.onTripMinDonePct} step={1} max={100} disabled={!canEdit} changed={shown.onTripMinDonePct !== saved.onTripMinDonePct} onChange={(value) => edit({ onTripMinDonePct: value })} />
               <NumberField label={tr("Rider of a next trip may cancel free after (min)")} value={shown.chainLateFreeCancelMin} step={1} max={120} disabled={!canEdit} changed={shown.chainLateFreeCancelMin !== saved.chainLateFreeCancelMin} onChange={(value) => edit({ chainLateFreeCancelMin: value })} />
+            </div>
+          </div>
+          {/* v0.18.38 §62 (fix job 8, owner G15 "In-app calls only", "Both rider and driver"): CountryRules.calls. */}
+          <div id="extras-calls" className="cx-anchor">
+            <div className="fee-card" data-testid="call-settings">
+              <div>
+                <strong>{trn("{0} Calls (in the app)", <Phone size={14} aria-hidden="true" />)}</strong>
+                <small>{tr("Rider and driver call each other in the app, during the trip and for this many minutes after the drop-off. Nobody sees a phone number. Calls are not recorded.")}</small>
+              </div>
+              <label className="mini-switch big">
+                <input type="checkbox" aria-label={tr("Calls on")} data-testid="calls-on" checked={shown.calls.on} disabled={!canEdit} onChange={(event) => edit({ calls: { ...shown.calls, on: event.target.checked } })} />
+                <span aria-hidden="true"><i /></span>
+                {shown.calls.on ? tr("On") : tr("Off")}
+              </label>
+              <label className="check-row">{tr("Call mode")}{" "}
+                <select data-testid="calls-mode" value={shown.calls.mode} disabled={!canEdit || !shown.calls.on} onChange={(event) => edit({ calls: { ...shown.calls, mode: event.target.value === "phone" ? "phone" : "in_app" } })}>
+                  <option value="in_app">{callModeText("in_app")}</option>
+                  <option value="phone">{callModeText("phone")}</option>
+                </select>
+              </label>
+              <small className="dx-note">{tr("In the app: free internet calls. Phone mode needs a phone company; until one is chosen calls stay in the app.")}</small>
+              <NumberField label={tr("Call window after the trip (min)")} value={shown.calls.callWindowAfterTripMin} step={1} max={CALL_RANGES.callWindowAfterTripMin[1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls.callWindowAfterTripMin !== saved.calls.callWindowAfterTripMin} onChange={(value) => edit({ calls: { ...shown.calls, callWindowAfterTripMin: value } })} />
+              <NumberField label={tr("Ring time (s)")} value={shown.calls.ringSeconds} step={1} max={CALL_RANGES.ringSeconds[1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls.ringSeconds !== saved.calls.ringSeconds} onChange={(value) => edit({ calls: { ...shown.calls, ringSeconds: value } })} />
+              <NumberField label={tr("Longest call (min)")} value={shown.calls.maxCallMin} step={1} max={CALL_RANGES.maxCallMin[1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls.maxCallMin !== saved.calls.maxCallMin} onChange={(value) => edit({ calls: { ...shown.calls, maxCallMin: value } })} />
             </div>
           </div>
           <div id="extras-person-limits" className="cx-anchor">

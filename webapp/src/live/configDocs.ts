@@ -328,7 +328,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number } };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
@@ -351,6 +351,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     ...(base?.["limits"] || input.personLimits ? { limits: { ...((base?.["limits"] as Record<string, unknown> | undefined) ?? {}), ...(input.personLimits ?? {}) } } : {}),
     // v0.18.29 A2 (fix job 0) (owner G12 Q-D): the largest single Add money to wallet.
     ...(input.walletCreditMax !== undefined ? { walletCreditMax: toMinor(input.walletCreditMax, currency) } : {}),
+    // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.
+    ...(input.calls ? { calls: { ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
   };
 }
 
