@@ -8635,6 +8635,7 @@
 ["{0}: free cancel of a next trip must start at 0 to 120 minutes.","{0} : l'annulation gratuite d'une course suivante doit commencer entre 0 et 120 minutes."],
 ["Next trip free cancel after: {0} min → {1} min","Annulation gratuite de la course suivante après : {0} min → {1} min"],
 ["Rider of a next trip may cancel free after (min)","Le passager d'une course suivante peut annuler gratuitement après (min)"],
+["Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).","Offres pour la course suivante pendant une course. Seulement Exclusive, jamais Radar. Désactivé : plus d'Exclusives « termine à proximité » ; un chauffeur qui a parcouru la part du pays de son trajet (Réglages › Offres en course) reçoit quand même des courses Exclusives et réservées (propriétaire, sans interrupteur)."],
 ["Payouts paused","Versements suspendus"],
 ["Payouts run on the country's schedule.","Les versements suivent le calendrier du pays."],
 ["On schedule","Selon le calendrier"],

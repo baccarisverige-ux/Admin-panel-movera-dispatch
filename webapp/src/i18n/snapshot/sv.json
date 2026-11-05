@@ -8635,6 +8635,7 @@
 ["{0}: free cancel of a next trip must start at 0 to 120 minutes.","{0}: gratis avbokning av en nästa resa måste börja vid 0 till 120 minuter."],
 ["Next trip free cancel after: {0} min → {1} min","Gratis avbokning av nästa resa efter: {0} min → {1} min"],
 ["Rider of a next trip may cancel free after (min)","Resenären för en nästa resa får avboka gratis efter (min)"],
+["Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).","Erbjudanden om nästa resa under en resa. Bara Exklusiva, aldrig Radar. Av: inga fler Exklusiva för förare som snart är klara i närheten; en förare som kört landets andel av sin sträcka (Inställningar › Erbjudanden under en resa) får ändå Exklusiva resor och bokade resor (ägaren, ingen brytare)."],
 ["Payouts paused","Utbetalningar pausade"],
 ["Payouts run on the country's schedule.","Utbetalningar görs enligt landets schema."],
 ["On schedule","Enligt schema"],

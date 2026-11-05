@@ -17,4 +17,5 @@ export const enC5AfterTestRules = {
   "{0}: free cancel of a next trip must start at 0 to 120 minutes.": "{0}: free cancel of a next trip must start at 0 to 120 minutes.",
   "Next trip free cancel after: {0} min → {1} min": "Next trip free cancel after: {0} min → {1} min",
   "Rider of a next trip may cancel free after (min)": "Rider of a next trip may cancel free after (min)",
+  "Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).": "Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).",
 } as const;
