@@ -47,7 +47,7 @@ export function TripsPage() {
   const scope = useMarketScope();
   const country = scope.market.id;
   // v0.18.7 (G5, adminLiveRow): live rows carry the server's ETA, refreshed every 30 s, so the list follows at that pace.
-  const trips = useTrips(params.get("scope"), isLiveData() ? { refetchMs: ETA_EVERY_SECONDS * 1000 } : {});
+  const trips = useTrips(params.get("scope"), isLiveData() ? { refetchMs: ETA_EVERY_SECONDS * 1000, follow: true } : {});
   const drivers = useDrivers(params.get("scope"));
   const slice = useSlice<TripOps>(TRIP_OPS_KEY, emptyTripOps(), { enabled: Boolean(agent && can(agent.role, "trips.read")) });
   const ops = normalizeTripOps(slice.value);
