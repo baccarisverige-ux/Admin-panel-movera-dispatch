@@ -196,32 +196,19 @@ test("Q29: commission moved more than 50% asks Are you sure", async ({ page }) =
   await dialog(page).getByRole("button", { name: "Cancel" }).click();
 });
 
-test("Q25 / C-22: one second-admin limit per country, set in Settings, used by the payment page and the server", async ({ page }) => {
+test("Q25 / B14: one admin always, no second-admin refund limit in Payments, Settings, Team or the feature list", async ({ page }) => {
   await session(page);
   await page.goto("/payments/PAY0005");
   await expect(page.getByRole("button", { name: "Refund payment" })).toBeVisible();
-  await expect(page.getByText(/Refunds above 500,00 kr also need a second admin/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Request refund approval" })).toHaveCount(0);
+  await expect(page.getByText(/second admin/)).toHaveCount(0);
   await page.goto("/settings");
-  const panel = page.getByTestId("refund-policy");
-  await expect(panel.getByLabel("Sweden second admin above")).toHaveValue("500");
-  await expect(panel.getByLabel("France second admin above")).toHaveValue("50");
-  await expect(panel.getByLabel("Tunisia second admin above")).toHaveValue("150");
-  await panel.getByLabel("Sweden second admin above").fill("50");
-  await panel.getByRole("button", { name: "Save refund limits" }).click();
-  await expect(dialog(page).getByTestId("large-change-warning")).toContainText("Sweden");
-  await dialog(page).getByLabel("Yes, I'm sure").check();
-  await dialog(page).getByRole("button", { name: "Confirm" }).click();
-  await expect(panel.getByText("Refund limits saved.")).toBeVisible();
-  await page.goto("/payments/PAY0005");
-  await expect(page.getByRole("button", { name: "Request refund approval" })).toBeVisible();
-  await page.getByRole("button", { name: "Request refund approval" }).click();
-  await dialog(page).getByLabel("Type PAY0005 to confirm").fill("PAY0005");
-  await dialog(page).getByLabel("Reason", { exact: true }).selectOption("Charged twice");
-  await dialog(page).getByRole("button", { name: "Confirm" }).click();
-  await expect(page.getByText(/Pending approval/).first()).toBeVisible();
-  // Trip settings and Team show the same rule read-only, with a link to Settings.
+  await expect(page.getByRole("heading", { name: "Review and publish" })).toBeVisible();
+  await expect(page.getByTestId("refund-policy")).toHaveCount(0);
+  await expect(page.locator('a[href="/settings#refunds"]')).toHaveCount(0);
   await page.goto("/team?tab=limits");
-  await expect(page.getByRole("link", { name: "Edit in Settings" })).toHaveAttribute("href", "/settings#refunds");
+  await expect(page.getByRole("link", { name: "Edit in Payments" })).toHaveAttribute("href", "/payments?tab=rules");
+  await expect(page.locator('a[href="/settings#refunds"]')).toHaveCount(0);
 });
 
 test("Q40: All features lists every setting, filters with a search box and opens its section", async ({ page }) => {
@@ -237,10 +224,12 @@ test("Q40: All features lists every setting, filters with a search box and opens
   await expect(page).toHaveURL(/card=Stops/);
   await expect(page.getByRole("region", { name: "Stops", exact: true })).toBeInViewport();
   await page.goto("/dispatch?view=features");
+  // BASE B14 (owner Q1 "One admin always"): no second-admin setting is listed; the role refund limit still opens.
   await page.getByLabel("Find a setting").fill("second admin");
-  await list.getByRole("link", { name: /Refunds: when a second admin/ }).click();
-  await expect(page).toHaveURL(/\/settings#refunds/);
-  await expect(page.getByTestId("refund-policy")).toBeVisible();
+  await expect(list.getByRole("listitem")).toHaveCount(0);
+  await page.getByLabel("Find a setting").fill("refund limit per role");
+  await list.getByRole("link", { name: /refund limit per role/ }).click();
+  await expect(page).toHaveURL(/\/payments\?tab=rules/);
 });
 
 test("UI-16: no audio warning in the console before a click, and the favicon loads", async ({ page }) => {

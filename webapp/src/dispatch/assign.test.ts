@@ -5,7 +5,7 @@ import { contractJson } from "../contract/load.ts";
 import { nextStatus, type Actor, type TripCommand } from "../domain/contract.ts";
 import { writeSession } from "../auth/sessionStore.ts";
 import { createFixtureAdminApi, type CommandInput } from "../api/create.ts";
-import { signedInFixture } from "../api/fixtureSession.ts";
+import { signedInFixture } from "../testing/fixtureSession.ts";
 import { ApiError } from "../api/httpClient.ts";
 import { activityItems } from "../platform/myActivity.ts";
 import { commandById } from "../commands/registry.ts";

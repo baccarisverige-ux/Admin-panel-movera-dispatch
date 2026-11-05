@@ -193,6 +193,8 @@ export function errorText(error: unknown): string {
   // v0.18.19 Book later (live test MED 7): the server's reasons in the panel's language.
   if (error.reason === "driver_not_available") return tr("The driver cannot take a ride now (offline or no position). For a ride hours ahead you can still give it.");
   if (error.reason === "driver_on_trip") return tr("The driver is on a trip now.");
+  // v0.18.26 (owner 2026-11-04 "Yes, respect it"): his Ride preferences switch this ride type off.
+  if (error.reason === "category_switched_off") return tr("This driver switched this ride type off in his ride preferences.");
   if (error.reason === "no_show_too_early") return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");
   if (error.reason === "no_free_driver") return tr("None of these drivers can take the ride now.");
   if (error.reason === "currency_mismatch") return tr("The amount must be in the ride's currency.");
@@ -219,7 +221,7 @@ export function errorText(error: unknown): string {
   if (error.reason === "pin_not_now") return tr("The PIN can only be checked while the driver is at the pickup.");
   if (error.reason === "pin_blocked") return tr("Too many wrong codes: the PIN is blocked until an admin unlocks it.");
   if (error.reason === "reason_required") return tr("Write a reason.");
-  // v0.18.39 A2 (fix job 0) (contract.json#walletCredit): Add money to wallet.
+  // v0.18.29 A2 (fix job 0) (contract.json#walletCredit): Add money to wallet.
   if (error.reason === "wallet_credit_too_large") return tr("That is more than one credit may be in this country (Trip settings).");
   if (error.reason === "wallet_currency_mismatch") return tr("The amount must be in the rider's currency.");
   if (error.reason === "rider_country_unknown") return tr("The rider's country is not known yet: money can be added after the first ride.");

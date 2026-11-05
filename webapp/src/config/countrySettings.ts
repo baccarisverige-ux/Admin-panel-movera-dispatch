@@ -45,9 +45,26 @@ export type CountrySettings = {
   mixedTipRules?: MixedTipRules;
   /** v0.18.10 checker: the largest single change of a driver's pay on a trip (CountryRules.driverPayChangeMax), local money. */
   driverPayChangeMax: number;
-  /** v0.18.39 A2 (fix job 0) (owner G12 Q-D "Max 250 euro and equivalent"): the largest single Add money to wallet (CountryRules.walletCreditMax), local money. */
+  /**
+   * v0.18.26 (owner 2026-11-04): limits per person in this country (CountryRules.limits): saved places per rider and
+   * emergency contacts per rider or driver. Defaults 50 and 10.
+   */
+  personLimits: PersonLimits;
+  /** v0.18.29 A2 (fix job 0) (owner G12 Q-D "Max 250 euro and equivalent"): the largest single Add money to wallet (CountryRules.walletCreditMax), local money. */
   walletCreditMax: number;
 };
+export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };
+export const PERSON_LIMITS_DEFAULT: PersonLimits = { savedPlacesPerPerson: 50, emergencyContactsPerPerson: 10 };
+export const PERSON_LIMITS_RANGE: Record<keyof PersonLimits, [number, number]> = { savedPlacesPerPerson: [1, 500], emergencyContactsPerPerson: [1, 50] };
+export function personLimitsOf(raw: unknown): PersonLimits {
+  const value = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const pick = (key: keyof PersonLimits) => {
+    const v = value[key];
+    const [lo, hi] = PERSON_LIMITS_RANGE[key];
+    return typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi ? v : PERSON_LIMITS_DEFAULT[key];
+  };
+  return { savedPlacesPerPerson: pick("savedPlacesPerPerson"), emergencyContactsPerPerson: pick("emergencyContactsPerPerson") };
+}
 /** contract.json#walletCredit.defaultMax (major units). */
 export const WALLET_CREDIT_MAX: Record<MarketId, number> = { SE: 2900, FR: 250, TN: 800 };
 export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 300 };
@@ -67,7 +84,7 @@ export type CountrySettingsBook = { draftRev: number; countries: Record<MarketId
 /** v0.8.1: the live panel's Tips & limits per zone and Standard (read when the tab opens). */
 export const ZONE_RULES_KEY = "countrySettingsZones";
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "walletCreditMax"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "walletCreditMax"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -111,6 +128,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     languages: { rider: defaults.defaultLanguage, driver: defaults.defaultLanguage, admin: defaults.defaultLanguage },
     tipRules: { cashAfterTrip: false, customAmount: false, customMax: TIP_CUSTOM_MAX[country] },
     driverPayChangeMax: DRIVER_PAY_CHANGE_MAX[country],
+    personLimits: { ...PERSON_LIMITS_DEFAULT },
     walletCreditMax: WALLET_CREDIT_MAX[country],
   };
 }
@@ -147,6 +165,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     languages: Object.fromEntries(APP_IDS.map((app) => [app, (APP_LANGUAGES as readonly unknown[]).includes(languages[app]) ? languages[app] : base.languages[app]])) as Record<LanguageApp, AppLanguage>,
     tipRules: completeTipRules(raw.tipRules, base.tipRules),
     driverPayChangeMax: finite(raw.driverPayChangeMax) && raw.driverPayChangeMax > 0 ? raw.driverPayChangeMax : base.driverPayChangeMax,
+    personLimits: raw.personLimits ? { ...base.personLimits, ...(raw.personLimits as PersonLimits) } : base.personLimits,
     walletCreditMax: finite(raw.walletCreditMax) && raw.walletCreditMax > 0 ? raw.walletCreditMax : base.walletCreditMax,
     ...mixedOf(raw.mixedMethods),
     ...mixedTipOf(raw.mixedTipRules),
@@ -267,6 +286,12 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   if (!ZONE_PAYMENT_METHODS.some((method) => settings.paymentMethods[method] || settings.mixedMethods?.[method]?.length)) issues.push(`${name}: at least one payment method must be on.`);
   for (const app of APP_IDS) if (!(APP_LANGUAGES as readonly string[]).includes(settings.languages[app])) issues.push(`${name}: choose a language for the ${APP_LABEL[app].toLowerCase()}.`);
   if (!(settings.tipRules.customMax > 0) || settings.tipRules.customMax > TIP_CUSTOM_MAX[country] * 10) issues.push(`${name}: the highest typed tip must be more than 0 and at most ${TIP_CUSTOM_MAX[country] * 10}.`);
+  // v0.18.26: limits per person, whole numbers in their range.
+  for (const key of ["savedPlacesPerPerson", "emergencyContactsPerPerson"] as const) {
+    const value = settings.personLimits[key];
+    const [lo, hi] = PERSON_LIMITS_RANGE[key];
+    if (!Number.isInteger(value) || value < lo || value > hi) issues.push(tr("{0}: {1} per person must be a whole number from {2} to {3}.", [name, tr(key === "savedPlacesPerPerson" ? "Saved places" : "Emergency contacts"), lo, hi]));
+  }
   return issues;
 }
 
@@ -285,6 +310,8 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   for (const method of ZONE_PAYMENT_METHODS) if (before.mixedMethods?.[method]?.length && !after.mixedMethods?.[method]?.length) lines.push(`${PAYMENT_METHOD_LABEL[method]}: mixed → ${after.paymentMethods[method] ? "on" : "off"}`);
     else if (before.paymentMethods[method] !== after.paymentMethods[method]) lines.push(`${PAYMENT_METHOD_LABEL[method]}: ${before.paymentMethods[method] ? "on" : "off"} → ${after.paymentMethods[method] ? "on" : "off"}`);
   for (const app of APP_IDS) if (before.languages[app] !== after.languages[app]) lines.push(`${APP_LABEL[app]} default language: ${before.languages[app]} → ${after.languages[app]}`);
+  if (before.personLimits.savedPlacesPerPerson !== after.personLimits.savedPlacesPerPerson) lines.push(tr("Saved places per person: {0} → {1}", [before.personLimits.savedPlacesPerPerson, after.personLimits.savedPlacesPerPerson]));
+  if (before.personLimits.emergencyContactsPerPerson !== after.personLimits.emergencyContactsPerPerson) lines.push(tr("Emergency contacts per person: {0} → {1}", [before.personLimits.emergencyContactsPerPerson, after.personLimits.emergencyContactsPerPerson]));
   return lines;
 }
 

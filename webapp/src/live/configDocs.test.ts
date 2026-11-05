@@ -799,7 +799,7 @@ test("v0.18.17: Dispatch › Reservations is read back from the zone's driver do
   assert.equal(bad.reservation.listTo, fallback.reservation.listTo);
 });
 
-test("v0.18.39 A2 (fix job 0) (owner G12 Q-D): the wallet credit limit goes into CountryRules in the country's money (SE, FR)", () => {
+test("v0.18.29 A2 (fix job 0) (owner G12 Q-D): the wallet credit limit goes into CountryRules in the country's money (SE, FR)", () => {
   const se = countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [20], driverBonus: { defaultLimit: 150, hardMax: 1000 }, walletCreditMax: 2900 }, null);
   assert.deepEqual(se["walletCreditMax"], { amountMinor: 290_000, currency: "SEK" });
   const fr = countryRulesOf("FR", "EUR", { tips: [1], raiseSteps: [2], driverBonus: { defaultLimit: 20, hardMax: 95 }, walletCreditMax: 250 }, null);

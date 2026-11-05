@@ -1,4 +1,4 @@
-/** English dictionary, area c2: fix job 0 (A2) Riders / Payments / Payouts — moderation, payout hold, payout mode, Add money to wallet, Mark as paid (contract v0.18.39). Merged in ../en.ts in this order. */
+/** English dictionary, area c2: fix job 0 (A2) Riders / Payments / Payouts — moderation, payout hold, payout mode, Add money to wallet, Mark as paid (contract v0.18.29). Merged in ../en.ts in this order. */
 export const enC2RidersPaymentsPayouts = {
   "Payouts paused": "Payouts paused",
   "Payouts run on the country's schedule.": "Payouts run on the country's schedule.",

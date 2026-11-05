@@ -65,7 +65,7 @@ export type DriverPerformance = { windowDays: number; from: string; offersAnswer
 
 export type Driver = {
   driverId: string;
-  /** v0.18.39 A2 (fix job 0) (owner Q4): payouts paused, admin view. */
+  /** v0.18.29 A2 (fix job 0) (owner Q4): payouts paused, admin view. */
   payoutHold?: { reason: string; at: string; by?: string };
   accountStatus: DriverAccountStatus;
   onlineStatus: DriverOnlineStatus;
@@ -283,7 +283,7 @@ export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; mea
 /** GET /admin/riders (AdminRider). */
 export type Rider = {
   riderId: string;
-  /** v0.18.39 A2 (fix job 0) (G16 Q16-2): warning / pause / ban with its reason. */
+  /** v0.18.29 A2 (fix job 0) (G16 Q16-2): warning / pause / ban with its reason. */
   moderation?: { level: "none" | "warning" | "paused" | "banned"; reason?: string; until: string | null; setAt?: string };
   firstName: string;
   phone: string;

@@ -697,7 +697,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (next?.riderId) riders.set(next.riderId, next);
       return done("Marked as paid.");
     }
-    // v0.18.39 A2 (fix job 0) (owner G12 Q5, build-spec Q2): Add money to wallet, in the rider's currency, with the reason.
+    // v0.18.29 A2 (fix job 0) (owner G12 Q5, build-spec Q2): Add money to wallet, in the rider's currency, with the reason.
     if (input.action === "admin.rider.walletCredit") {
       const amount = (input.value as { amount?: { amountMinor?: unknown; currency?: unknown } } | undefined)?.amount;
       const reason = input.reason?.trim();
@@ -707,7 +707,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (next?.riderId) riders.set(next.riderId, next);
       return done("Saved.");
     }
-    // v0.18.39 A2 (fix job 0) (owner build-spec Q4, contract.json#payoutMode): one admin approves a manual country's run.
+    // v0.18.29 A2 (fix job 0) (owner build-spec Q4, contract.json#payoutMode): one admin approves a manual country's run.
     if (input.action === "admin.payout.approveRun") {
       const { country, periodEnd } = (input.value ?? {}) as { country?: string; periodEnd?: string };
       if (!country || !periodEnd) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
@@ -717,7 +717,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       await client.post("/admin/payouts/runs/approve", { country, periodEnd, reason: reason.slice(0, 300) }).catch(explained);
       return done("Run approved: the payouts can be paid.");
     }
-    // v0.18.39 A2 (fix job 0) (owner Q4 + G10-2): the country's payout mode and schedule, in its Standard's CountryRules (kept otherwise).
+    // v0.18.29 A2 (fix job 0) (owner Q4 + G10-2): the country's payout mode and schedule, in its Standard's CountryRules (kept otherwise).
     if (input.action === "admin.payout.settings") {
       const { country, mode, schedule } = (input.value ?? {}) as { country?: string; mode?: string; schedule?: unknown };
       if (!country || (mode !== "automatic" && mode !== "manual") || !schedule) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
@@ -727,7 +727,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       await savePublish(http, "country_rules", key, draft, { ...(draft?.document ?? {}), country, payoutMode: mode, payoutSchedule: schedule }).catch(explained);
       return done("Payout settings published.");
     }
-    // v0.18.39 A2 (fix job 0) (owner Q4): pause / release one driver's payouts from his profile, with the reason.
+    // v0.18.29 A2 (fix job 0) (owner Q4): pause / release one driver's payouts from his profile, with the reason.
     if (input.action === "admin.driver.payoutHold") {
       const held = (input.value as { held?: unknown } | undefined)?.held === true;
       const reason = input.reason?.trim();
@@ -736,7 +736,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (next?.driverId) drivers.set(next.driverId, next);
       return done("Saved.");
     }
-    // v0.18.39 A2 (fix job 0) (owner G16 Q16-2): Warn → Pause → Ban with the admin's reason; level none clears it.
+    // v0.18.29 A2 (fix job 0) (owner G16 Q16-2): Warn → Pause → Ban with the admin's reason; level none clears it.
     if (input.action === "admin.rider.moderate") {
       const { level, pauseDays } = (input.value ?? {}) as { level?: string; pauseDays?: number };
       const reason = input.reason?.trim();
@@ -1009,7 +1009,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // A driver who already saw the ride keeps that offer, now with the raise: the server lists it outside the new group.
       const offers = answer?.offers ?? [];
       const refreshed = offers.filter((offer) => offer.groupId !== answer?.groupId).length;
-      const notice = refreshedNotice(refreshed, offers.length - refreshed, Boolean(params.driverBonusMinor || params.priority), answer?.skipped?.length ?? 0);
+      const switchedOff = (answer?.skipped ?? []).filter((s) => s.reason === "category_switched_off").length;
+      const notice = [refreshedNotice(refreshed, offers.length - refreshed, Boolean(params.driverBonusMinor || params.priority), (answer?.skipped?.length ?? 0) - switchedOff), switchedOffNotice(switchedOff)].filter(Boolean).join(" ") || null;
       if (answer?.groupId && params.target) rememberSendTarget(answer.groupId, params.target);
       const send = answer?.radarZoneSend;
       setActiveRadarSend(send?.active ? { tripId: trip.tripId, sendId: send.sendId, radarZoneName: params.radarZoneName ?? params.target ?? "", seconds: send.seconds, maxDrivers: send.maxDrivers, rounds: send.rounds, startedAt: send.startedAt } : null, trip.tripId);
@@ -1273,6 +1274,12 @@ export function moneySendNotice(send: MoneySendAnswer, scope: "exclusive" | "rad
   if (scope === "exclusive") return tr("Already on the Exclusive offer, or nobody free nearby: it goes with the next Exclusive offer.");
   if (scope === "radar") return tr("Already on the Radar offers, or nobody free nearby: it goes with the next Radar offer.");
   return tr("Already on the offers out, or nobody free nearby: it goes with the next offer.");
+}
+
+/** v0.18.26 (owner "Yes, respect it"): drivers left out because their Ride preferences switch this ride type off. */
+export function switchedOffNotice(count: number): string | null {
+  if (!count) return null;
+  return tr(count === 1 ? "{0} driver switched this ride type off in his ride preferences." : "{0} drivers switched this ride type off in their ride preferences.", [count]);
 }
 
 export function refreshedNotice(refreshed: number, sent: number, raised: boolean, skipped = 0): string | null {

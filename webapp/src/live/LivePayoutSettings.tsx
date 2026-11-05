@@ -8,7 +8,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { DAYS, payoutSettingsOf, type PayoutScheduleValue } from "./payoutSettings";
 
 /**
- * v0.18.39 A2 (fix job 0) (owner build-spec Q4 "Admin can set automatic or manual", G10-2 payout schedule; contract.json#payoutMode,
+ * v0.18.29 A2 (fix job 0) (owner build-spec Q4 "Admin can set automatic or manual", G10-2 payout schedule; contract.json#payoutMode,
  * payouts.schedule): per country (its Standard country_rules) the payout mode and the schedule. Saved and published
  * at once (one admin, Q1). Everything else in the country's rules is kept as it is.
  */

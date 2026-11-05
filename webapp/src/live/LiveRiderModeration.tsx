@@ -7,7 +7,7 @@ import type { LiveRiderModeration as Moderation } from "../api/seed";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
 
 /**
- * v0.18.39 A2 (fix job 0) (owner G16 Q16-1 + Q16-2 "Warn → Pause → Ban", contract.json#riderModeration): the rider's level with
+ * v0.18.29 A2 (fix job 0) (owner G16 Q16-1 + Q16-2 "Warn → Pause → Ban", contract.json#riderModeration): the rider's level with
  * its reason, and the four steps. Every step asks for a reason (a suggested one or the admin's own); a pause needs
  * its days (1–365) and ends by itself; "Clear" undoes any level. POST /admin/riders/{riderId}/moderation.
  */

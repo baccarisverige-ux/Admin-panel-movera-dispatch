@@ -79,7 +79,7 @@ export function LivePayouts() {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ driverId: "", from: "", to: "", note: "" });
   const items = payouts.data?.items ?? [];
-  // v0.18.39 A2 (fix job 0) (owner Q4): a manual country's runs wait for one admin's approval, one run per period end.
+  // v0.18.29 A2 (fix job 0) (owner Q4): a manual country's runs wait for one admin's approval, one run per period end.
   const waitingRuns = [...new Set(items.filter((item) => item.status === "pending_approval").map((item) => item.periodEnd))].sort().map((periodEnd) => {
     const rows = items.filter((item) => item.status === "pending_approval" && item.periodEnd === periodEnd);
     const totals = new Map<string, number>();

@@ -1,4 +1,4 @@
-/** French dictionary, area c2: fix job 0 (A2) Riders / Payments / Payouts (contract v0.18.39). Merged in ../fr.ts in this order. */
+/** French dictionary, area c2: fix job 0 (A2) Riders / Payments / Payouts (contract v0.18.29). Merged in ../fr.ts in this order. */
 import type { enC2RidersPaymentsPayouts } from "../en/c2-riders-payments-payouts.ts";
 
 export const frC2RidersPaymentsPayouts: Record<keyof typeof enC2RidersPaymentsPayouts, string> = {

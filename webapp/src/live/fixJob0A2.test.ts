@@ -5,7 +5,7 @@ import type { LiveClient } from "./session.ts";
 import { countryRulesOf } from "./configDocs.ts";
 
 /**
- * Fix job 0 (A2, contract v0.18.39, owner answers 2026-11-05): A2-2 Mark as paid with a reason (no "Ask rider to pay"),
+ * Fix job 0 (A2, contract v0.18.29, owner answers 2026-11-05): A2-2 Mark as paid with a reason (no "Ask rider to pay"),
  * A2-3 a manual payout run is approved only with a reason, A2-1 the wallet limit is one value per country.
  */
 function fakeClient() {

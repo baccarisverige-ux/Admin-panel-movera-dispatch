@@ -1,4 +1,4 @@
-/** v0.18.39 A2 (fix job 0) (owner Q4, contract.json#payoutMode + payouts.schedule): the payout settings of a country Standard. */
+/** v0.18.29 A2 (fix job 0) (owner Q4, contract.json#payoutMode + payouts.schedule): the payout settings of a country Standard. */
 export type PayoutMode = "automatic" | "manual";
 export type PayoutScheduleValue = { frequency: "weekly" | "every_2_weeks"; day: string; time: string };
 export const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;

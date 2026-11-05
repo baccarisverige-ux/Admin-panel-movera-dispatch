@@ -5,7 +5,7 @@ import { tr, trn } from "../i18n";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
 
 /**
- * v0.18.39 A2 (fix job 0) (owner G12 Q5 "Real credit + limit", Q-D "Max 250 euro and equivalent", build-spec Q2 "One button on
+ * v0.18.29 A2 (fix job 0) (owner G12 Q5 "Real credit + limit", Q-D "Max 250 euro and equivalent", build-spec Q2 "One button on
  * rider page", Q1 "One admin always"; contract.json#walletCredit): the one way to give a rider money. The amount is
  * in the rider's currency; the server checks the country's limit (Trip settings) and tells the rider (push + history).
  */

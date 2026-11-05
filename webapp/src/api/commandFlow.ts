@@ -12,6 +12,16 @@ export function queryRetry(failureCount: number, error: unknown): boolean {
   return retryable && failureCount < 2;
 }
 
+/**
+ * v0.18.24 (contract.json#rateLimit): how long to wait before a retry. A 429 / 503 with Retry-After waits that long
+ * (at most 60 s); otherwise react-query's own backoff (1 s, 2 s, 4 s … up to 30 s).
+ */
+export function retryDelay(failureCount: number, error: unknown): number {
+  const seconds = error && typeof error === "object" ? (error as { retryAfterSeconds?: unknown }).retryAfterSeconds : undefined;
+  if (typeof seconds === "number" && Number.isFinite(seconds) && seconds > 0) return Math.min(seconds, 60) * 1000;
+  return Math.min(1000 * 2 ** failureCount, 30_000);
+}
+
 /** Collections and slices a command writes: what its registry entry declares, plus the ones the request names. */
 export type Touched = { all: boolean; collections: Set<string>; slices: Set<string> };
 

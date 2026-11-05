@@ -100,10 +100,11 @@ test("R7 big refunds wait for a second admin", async ({ page }) => {
   await page.getByLabel("Refund reason").fill("Charged twice");
   await page.getByRole("button", { name: /^Refund 550 kr/ }).click();
   await confirm(page);
-  await expect(page.getByText("Refund of 550 kr is waiting for a second admin to approve.")).toBeVisible();
+  // BASE B14 (owner Q1 "One admin always"): sent at once, no second admin.
+  await expect(page.getByText(/^Refunded 550 kr to the rider's/)).toBeVisible();
   const refunds = page.getByRole("list", { name: "Refunds" });
-  await expect(refunds).toContainText("Waiting for approval");
-  await expect(refunds.getByRole("button", { name: "Approve" })).toBeDisabled();
+  await expect(refunds).toContainText("Sent");
+  await expect(refunds.getByRole("button", { name: "Approve" })).toHaveCount(0);
 });
 
 test("R7 finance can open rider wallet without sensitive reveal permission", async ({ page }) => {

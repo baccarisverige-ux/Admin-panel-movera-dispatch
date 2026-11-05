@@ -148,14 +148,14 @@ test("live G8 6a: the trips connection note no longer says refunds, driver pay a
   assert.ok(!/not connected yet/.test(text.split("\n").find((line) => line.trim().startsWith("trips:")) ?? ""));
 });
 
-test("v0.18.39 A2 (fix job 0): the rider's warning / pause / ban comes through on the record", () => {
+test("v0.18.29 A2 (fix job 0): the rider's warning / pause / ban comes through on the record", () => {
   const moderation = { level: "paused" as const, reason: "Unpaid fees", until: "2026-11-09T12:00:00Z" };
   const rider = riderRecord({ riderId: "R9", firstName: "Ida", phone: "+46700000009", status: "suspended", version: 3, outstanding: null, moderation });
   assert.deepEqual(rider.liveRider?.moderation, moderation);
   assert.equal(rider.status, "suspended");
 });
 
-test("v0.18.39 A2 (fix job 0) (owner Q4): payout settings read the Standard's mode and schedule, bad values fall back to the defaults", async () => {
+test("v0.18.29 A2 (fix job 0) (owner Q4): payout settings read the Standard's mode and schedule, bad values fall back to the defaults", async () => {
   const { payoutSettingsOf } = await import("./payoutSettings.ts");
   assert.deepEqual(payoutSettingsOf(null), { mode: "automatic", schedule: { frequency: "weekly", day: "monday", time: "08:00" } });
   assert.deepEqual(payoutSettingsOf({ payoutMode: "manual", payoutSchedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" } }), { mode: "manual", schedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" } });

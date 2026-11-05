@@ -5,7 +5,7 @@ import { shortDate } from "./format";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
 
 /**
- * v0.18.39 A2 (fix job 0) (owner build-spec Q4, contract.json#payoutHold): pause or release this driver's scheduled payouts from
+ * v0.18.29 A2 (fix job 0) (owner build-spec Q4, contract.json#payoutHold): pause or release this driver's scheduled payouts from
  * his profile, always with a reason. POST /admin/drivers/{driverId}/payout-hold (finance.edit).
  */
 export function LivePayoutHold({ driverId, hold }: { driverId: string; hold: { reason: string; at: string } | null }) {
