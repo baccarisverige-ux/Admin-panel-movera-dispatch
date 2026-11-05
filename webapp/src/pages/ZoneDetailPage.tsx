@@ -58,6 +58,7 @@ import { useLiveZoneList, useLiveZonesFailure } from "../live/LiveZones";
 import { ErrorLine } from "../live/ui";
 import { liveIssues } from "../zones/liveIssues";
 import { LiveOpenClose, LiveZoneFields } from "./LiveZoneActions";
+import { LiveQueueArea } from "../live/LiveQueueArea";
 import { DateInput } from "../ui/DateInput";
 
 type TabId = "shape" | "settings" | "prices" | "dispatch" | "pickups" | "airport" | "hours" | "between" | "preview" | "history";
@@ -296,6 +297,8 @@ export function ZoneDetailPage() {
               <div className="zd-col">
                 {server ? <LiveZoneFields zone={server} disabled={!canEdit} /> : null}
                 <p className="fine">{tr("The outline is drawn on the map: Edit on the map, draw, then Save outline.")}</p>
+                {/* Fix job 9 (§60): an airport zone's real queue area (server), not the demo's queue settings. */}
+                {server ? <LiveQueueArea zone={server} disabled={!canEdit} /> : null}
               </div>
             ) : (
             <div className="zd-col">
