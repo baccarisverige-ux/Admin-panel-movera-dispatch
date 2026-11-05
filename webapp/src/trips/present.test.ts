@@ -117,3 +117,12 @@ console.log("present ok");
   assert(liveBoardLayers(false).includes("queue") && liveBoardLayers(false).includes("boost"), "the demo keeps its queue and boosts");
   console.log("G3-R5 live map layers ok");
 }
+
+{
+  // v0.18.32 (contract.json#bookedRideSeen.admin, fix job 2): a booked trip from driver_to_pickup on carries the "now live" label.
+  const { bookedNowLive } = await import("./present.ts");
+  assert(bookedNowLive("driver_to_pickup", "scheduled") && bookedNowLive("in_trip", "scheduled"), "a started booked trip is now live");
+  assert(!bookedNowLive("accepted", "scheduled") && !bookedNowLive("searching", "scheduled"), "not before the driver drives");
+  assert(!bookedNowLive("driver_to_pickup", "live") && !bookedNowLive("driver_to_pickup", undefined), "never a live trip");
+  console.log("job 2 booked now live label ok");
+}
