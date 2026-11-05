@@ -18,12 +18,17 @@ export default defineConfig({
     ...(process.env.PW_CHROMIUM ? { launchOptions: { executablePath: process.env.PW_CHROMIUM } } : {}),
   },
   webServer: {
-    command: process.env.CI
-      ? `npx vite build --outDir dist-live && npx vite preview --outDir dist-live --host 127.0.0.1 --port ${PORT} --strictPort`
-      : `npm run dev -- --host 127.0.0.1 --port ${PORT} --strictPort`,
+    // Always the production build, locally too (as CI). On the dev server the maps (live map, trip route map) start
+    // maplibre's module worker from node_modules, served "Cache-Control: no-cache": Chromium fetches that worker
+    // script twice and Playwright never sees the second fetch finish, so "networkidle" never comes and
+    // live-realdata.spec.ts timed out on /?tab=live, /live, /trips/T2001 and /trips/T2002. The build emits the worker
+    // as a hashed asset and both fetches finish. PW_LIVE_DEV=1 keeps the dev server (hot reload) for other work.
+    command: process.env.PW_LIVE_DEV && !process.env.CI
+      ? `npm run dev -- --host 127.0.0.1 --port ${PORT} --strictPort`
+      : `npx vite build --outDir dist-live && npx vite preview --outDir dist-live --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: !process.env.CI,
     env: { VITE_ADMIN_LANGUAGE: "en", VITE_ADMIN_API: "http://127.0.0.1:4310" },
-    timeout: process.env.CI ? 300_000 : 60_000,
+    timeout: 300_000,
   },
 });
