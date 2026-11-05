@@ -11,18 +11,20 @@ import { TripCard } from "./TripCard";
 import { TripMoneyTab } from "./TripMoneyTab";
 import { lengthKm } from "./route";
 import { useEscape } from "../ui/useEscape";
+import { driverPanelText } from "./liveDriverInfo";
 import { tr, trn, trx } from "../i18n";
 
 export type DriverInfo = {
   phone: string;
   account: string;
-  rating: number;
+  /** A15: null when the server sent none (shown "—"). */
+  rating: number | null;
   fleet: string | null;
-  todayTrips: number;
-  todayNet: string;
-  onlineHours: number;
-  acceptancePct: number;
-  cancellationPct: number;
+  todayTrips: number | null;
+  todayNet: string | null;
+  onlineHours: number | null;
+  acceptancePct: number | null;
+  cancellationPct: number | null;
   /** Categories the driver is allowed to drive. */
   categories: string[];
 };
@@ -50,6 +52,7 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
   const state = LIVE_STATES.find((item) => item.id === driver.state)?.label ?? driver.state;
   // Screenshot review 2026-11-05: the status stays one line; "Going offline after trips" is its own amber chip.
   const status = panelStatus(driver, state, driver.lastSeenMin ? tr(" · last GPS {0} min ago", [driver.lastSeenMin]) : tr(" · live"));
+  const text = info ? driverPanelText(info) : null;
   const [tab, setTab] = useState<"trip" | "money">("trip");
   const pickupKm = driver.route ? Math.round(lengthKm(driver.route.approach) * 10) / 10 : null;
   // The Money tab needs only the ride, so it shows on both maps even where the trip card has no details.
@@ -96,12 +99,12 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
         <div><dt>{tr("Vehicle")}</dt><dd>{driver.vehicle ?? "—"}{driver.plate ? ` · ${driver.plate}` : ""}</dd></div>
         {info ? (
           <>
-            <div><dt>{tr("Rating")}</dt><dd><Star size={12} aria-hidden="true" /> {info.rating.toFixed(2)}</dd></div>
+            <div><dt>{tr("Rating")}</dt><dd><Star size={12} aria-hidden="true" /> {text!.rating}</dd></div>
             <div><dt>{tr("Account")}</dt><dd>{info.account}</dd></div>
             <div><dt>{tr("Works for")}</dt><dd>{info.fleet ?? tr("Independent")}</dd></div>
-            <div><dt>{tr("Acceptance · cancel")}</dt><dd>{info.acceptancePct}% · {info.cancellationPct}%</dd></div>
-            <div><dt>{tr("Today")}</dt><dd>{trn("{0} trips · {1}", info.todayTrips, info.todayNet)}</dd></div>
-            <div><dt>{tr("Online today")}</dt><dd>{trn("{0} h", info.onlineHours)}</dd></div>
+            <div><dt>{tr("Acceptance · cancel")}</dt><dd>{text!.rates}</dd></div>
+            <div><dt>{tr("Today")}</dt><dd>{text!.today ?? trn("{0} trips · {1}", info.todayTrips, info.todayNet)}</dd></div>
+            <div><dt>{tr("Online today")}</dt><dd>{info.onlineHours === null ? "—" : trn("{0} h", info.onlineHours)}</dd></div>
             <div className="wide"><dt>{tr("Can drive")}</dt><dd className="cat-list">{info.categories.length ? info.categories.map((label) => <span key={label} className="cat-chip">{trx(label)}</span>) : tr("No category allowed")}</dd></div>
           </>
         ) : null}
