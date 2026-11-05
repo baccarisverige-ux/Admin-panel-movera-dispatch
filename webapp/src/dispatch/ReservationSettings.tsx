@@ -185,7 +185,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
       </Card>
 
       <Card title={tr("6 · Changes, cancel and reminders")} tone="blue" icon={<Clock size={18} />} help={tr("What the rider may change or cancel, and the reminders. Example pickup 10:00.")} off={!resv.on}>
-        <Row label={tr("Free change or cancel")} help={tr("Example: 60 min → the rider can change or cancel for free until 09:00; later no change, and cancel fees apply.")}>
+        <Row label={tr("Free change or cancel")} help={tr("Example: 60 min → the rider can change or cancel for free until 09:00; later no change, and cancel fees apply.") + " " + tr("Cancel under (min) costs the fee, even before a driver takes it. Movera keeps the fee when no driver has taken the ride yet.")}>
           <Num label={tr("Free change or cancel until, minutes before pickup")} before="until" value={bw.freeChangeBeforeMin} unit="min before" min={0} max={1440} disabled={off} onChange={(freeChangeBeforeMin) => setBooking({ freeChangeBeforeMin })} />
         </Row>
         <Row label={tr("Rider changes a ride a driver took")} help={tr("Example: the rider moves 10:00 to 11:00 → the driver is asked \"Keep it at the new time?\"; no answer within 15 min → back to the list.")}>

@@ -1,0 +1,21 @@
+/** French dictionary, area c5-after-test-rules: Fix job 5 after-test rules: early end BOTH, booked cancel fee, booked ride next, wallet first (contract v0.18.33) (add new keys at the end of this file). Merged in ../fr.ts in this order. */
+export const frC5AfterTestRules = {
+  "New price only when BOTH shorter by more than (km)": "Nouveau prix seulement si à la fois plus court de plus de (km)",
+  "… and shorter by more than (minutes)": "… et plus court de plus de (minutes)",
+  "Default 10 minutes. Both must be passed for a new price.": "Par défaut 10 minutes. Les deux doivent être dépassés pour un nouveau prix.",
+  "Cancel under (min) costs the fee, even before a driver takes it. Movera keeps the fee when no driver has taken the ride yet.": "Annuler sous (min) coûte les frais, même avant qu'un chauffeur la prenne. Movera garde les frais quand aucun chauffeur n'a encore pris la course.",
+  "Booked ride for a driver on a trip": "Course réservée pour un chauffeur en course",
+  "A driver on a trip gets only Exclusive offers. A booked ride can come to him as Exclusive when he can finish his trip and reach the pickup in time.": "Un chauffeur en course ne reçoit que des offres Exclusives. Une course réservée peut lui arriver en Exclusive s'il peut finir sa course et atteindre la prise en charge à temps.",
+  "Driver on a trip can get a booked ride starting within (min)": "Un chauffeur en course peut recevoir une course réservée qui commence dans (min)",
+  "Use wallet first": "Utiliser le portefeuille d'abord",
+  "the rider can switch it off per ride": "le passager peut le désactiver par course",
+  "{0}: offers on a trip must start at a whole percent from 0 to 100.": "{0} : les offres en course doivent commencer à un pourcentage entier de 0 à 100.",
+  "Offers on a trip from: {0} % → {1} %": "Offres en course à partir de : {0} % → {1} %",
+  "Offers on a trip": "Offres en course",
+  "A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.": "Un chauffeur en course ne reçoit que des offres Exclusives (course immédiate ou réservée), et seulement après avoir parcouru cette part de son trajet jusqu'à la dépose.",
+  "Offers on a trip from (% of the route to the drop-off)": "Offres en course à partir de (% du trajet jusqu'à la dépose)",
+  "{0}: free cancel of a next trip must start at 0 to 120 minutes.": "{0} : l'annulation gratuite d'une course suivante doit commencer entre 0 et 120 minutes.",
+  "Next trip free cancel after: {0} min → {1} min": "Annulation gratuite de la course suivante après : {0} min → {1} min",
+  "Rider of a next trip may cancel free after (min)": "Le passager d'une course suivante peut annuler gratuitement après (min)",
+  "Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).": "Offres pour la course suivante pendant une course. Seulement Exclusive, jamais Radar. Désactivé : plus d'Exclusives « termine à proximité » ; un chauffeur qui a parcouru la part du pays de son trajet (Réglages › Offres en course) reçoit quand même des courses Exclusives et réservées (propriétaire, sans interrupteur).",
+} as const;
