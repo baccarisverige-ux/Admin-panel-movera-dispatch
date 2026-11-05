@@ -27,6 +27,8 @@ export type CountrySettings = {
   /** The most an admin may add to a trip for the driver (Q16, Q17). Never above the country's hard max. */
   driverBonusLimit: number;
   paymentMethods: Record<ZonePaymentMethod, boolean>;
+  /** v0.18.33 (fix job 5, owner Q6): "Use wallet first" → RiderAppConfig.wallet.usedFirst of the country's zones (default on). */
+  walletFirst: boolean;
   languages: Record<LanguageApp, AppLanguage>;
   /**
    * Live G8 fix 1 (decision driver-g8.md #2, admin ticks real per country): a method some zones of the country serve
@@ -81,7 +83,7 @@ export type CountrySettingsBook = { draftRev: number; countries: Record<MarketId
 export const ZONE_RULES_KEY = "countrySettingsZones";
 
 export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits"] as const satisfies readonly (keyof CountrySettings)[];
-export const SETTINGS_FIELDS = ["paymentMethods", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
+export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
 export const LANGUAGE_LABEL: Record<AppLanguage, string> = { en: "English", fr: "French", sv: "Swedish" };
@@ -121,6 +123,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     promoCap: null,
     driverBonusLimit: toMajor(defaults.driverBonus.defaultLimit.amountMinor, country),
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, true])) as Record<ZonePaymentMethod, boolean>,
+    walletFirst: true,
     languages: { rider: defaults.defaultLanguage, driver: defaults.defaultLanguage, admin: defaults.defaultLanguage },
     tipRules: { cashAfterTrip: false, customAmount: false, customMax: TIP_CUSTOM_MAX[country] },
     driverPayChangeMax: DRIVER_PAY_CHANGE_MAX[country],
@@ -157,6 +160,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     promoCap: raw.promoCap === null ? null : finite(raw.promoCap) ? raw.promoCap : base.promoCap,
     driverBonusLimit: finite(raw.driverBonusLimit) ? raw.driverBonusLimit : base.driverBonusLimit,
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, typeof methods[method] === "boolean" ? methods[method] : base.paymentMethods[method]])) as Record<ZonePaymentMethod, boolean>,
+    walletFirst: typeof raw.walletFirst === "boolean" ? raw.walletFirst : base.walletFirst,
     languages: Object.fromEntries(APP_IDS.map((app) => [app, (APP_LANGUAGES as readonly unknown[]).includes(languages[app]) ? languages[app] : base.languages[app]])) as Record<LanguageApp, AppLanguage>,
     tipRules: completeTipRules(raw.tipRules, base.tipRules),
     driverPayChangeMax: finite(raw.driverPayChangeMax) && raw.driverPayChangeMax > 0 ? raw.driverPayChangeMax : base.driverPayChangeMax,
@@ -202,6 +206,11 @@ function mixedOf(stored: unknown): Pick<CountrySettings, "mixedMethods"> {
 }
 
 /** Live G8 fix 1: the methods whose value or mixed state differs between two settings of a country. */
+/** v0.18.33: "Use wallet first" changed for the country. */
+export function walletFirstChanged(before: CountrySettings, after: CountrySettings): boolean {
+  return before.walletFirst !== after.walletFirst;
+}
+
 export function methodsChanged(before: CountrySettings, after: CountrySettings): boolean {
   return ZONE_PAYMENT_METHODS.some((method) => before.paymentMethods[method] !== after.paymentMethods[method] || Boolean(before.mixedMethods?.[method]?.length) !== Boolean(after.mixedMethods?.[method]?.length));
 }

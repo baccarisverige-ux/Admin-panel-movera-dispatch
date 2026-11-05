@@ -21,7 +21,7 @@ import { RiderCancelFeesCard } from "./CancelFeeTable";
 import type { CancelFeeKind, CancelFeeTable as FeeTable, FeeCategory } from "./cancelFees";
 import type { PickupWait } from "./offers";
 import {
-  ALERTS, EXTRAS, FACTORS, PICKUP_MOVE_MAX_METERS, WAIT_KINDS,
+  ALERTS, EARLY_END_DEFAULT, EXTRAS, FACTORS, PICKUP_MOVE_MAX_METERS, WAIT_KINDS,
   type CountryDispatch, type DriverGroup, type ExtraId, type TabId, type WaitKind, type WaitStep, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx } from "../i18n";
@@ -342,8 +342,8 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
       </Card>
 
       <Card title={tr("Driver ends the trip early")} tone="green" icon={<Shield size={18} />} help={tr("When the driver finishes or cancels with the rider on board before the drop-off, the paid stop waiting is always kept. The price is worked out again only when the trip is shorter than booked by more than these numbers; otherwise the booked price stands.")}>
-        <Row label={tr("New price only when shorter by more than (km)")} help={tr("Default 2 km.")}><Num label={tr("New price only when shorter by more than (km)")} value={zone.riderCancel.earlyEnd?.repriceOverKm ?? 2} unit="km" min={0} max={50} disabled={disabled} onChange={(repriceOverKm) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? { repriceOverKm: 2, repriceOverMin: 8 }), repriceOverKm } } })} /></Row>
-        <Row label={tr("… or shorter by more than (minutes)")} help={tr("Default 8 minutes.")}><Num label={tr("… or shorter by more than (minutes)")} value={zone.riderCancel.earlyEnd?.repriceOverMin ?? 8} unit="min" min={0} max={120} disabled={disabled} onChange={(repriceOverMin) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? { repriceOverKm: 2, repriceOverMin: 8 }), repriceOverMin } } })} /></Row>
+        <Row label={tr("New price only when BOTH shorter by more than (km)")} help={tr("Default 2 km.")}><Num label={tr("New price only when BOTH shorter by more than (km)")} value={zone.riderCancel.earlyEnd?.repriceOverKm ?? 2} unit="km" min={0} max={50} disabled={disabled} onChange={(repriceOverKm) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? EARLY_END_DEFAULT), repriceOverKm } } })} /></Row>
+        <Row label={tr("… and shorter by more than (minutes)")} help={tr("Default 10 minutes. Both must be passed for a new price.")}><Num label={tr("… and shorter by more than (minutes)")} value={zone.riderCancel.earlyEnd?.repriceOverMin ?? EARLY_END_DEFAULT.repriceOverMin} unit="min" min={0} max={120} disabled={disabled} onChange={(repriceOverMin) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? EARLY_END_DEFAULT), repriceOverMin } } })} /></Row>
       </Card>
 
       <RiderCancelFeesCard zone={zone} onChange={onChange} disabled={disabled} symbol={symbol} money={money} countryId={countryId} otherZones={otherZones} onCopyCancelFees={onCopyCancelFees} categories={feeCategories} tab={feeTab} onTab={onFeeTab} />

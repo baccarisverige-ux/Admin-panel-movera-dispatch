@@ -9,7 +9,8 @@ import { type DestinationModeRules, type NextTripRules } from "../tripRules.ts";
 
 /** v0.18.10 (G8 Q2, contract.json#finish.earlyEnd.settings): defaults and ranges. */
 export type EarlyEnd = { repriceOverKm: number; repriceOverMin: number };
-export const EARLY_END_DEFAULT: EarlyEnd = { repriceOverKm: 2, repriceOverMin: 8 };
+/** v0.18.33 (fix job 5, owner fix-plan Q1): minutes default 10, and the rule is BOTH (km AND minutes). */
+export const EARLY_END_DEFAULT: EarlyEnd = { repriceOverKm: 2, repriceOverMin: 10 };
 export const EARLY_END_LIMITS = { repriceOverKm: { min: 0, max: 50 }, repriceOverMin: { min: 0, max: 120 } } as const;
 export function completeEarlyEnd(stored: unknown): EarlyEnd {
   const raw = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
@@ -402,6 +403,8 @@ export type ZoneDispatch = {
   hiddenComesBackMin: number;
   /** Q18: while driving a rider only Exclusive offers come, at most `count` at a time. */
   exclusiveWhileDriving: { on: boolean; count: number };
+  /** v0.18.33 (fix job 5, owner Q7): a driver on a trip can get a booked ride starting within withinMin minutes (Exclusive only). DispatchDocument.bookedNext. */
+  bookedNext: { on: boolean; withinMin: number };
   /** Q19/Q20: waiting at pickup. The free wait, price per minute and no-show fee per category come from Pricing. */
   pickupWait: PickupWait;
   reservation: ReservationRules;
@@ -417,7 +420,7 @@ export type ZoneDispatch = {
   driverCancel: { on: boolean; commissionCutPct: number };
   /** Live trips (Radar and live Exclusive): the smart check, and per car type free minutes after accept, then the fee. */
   /** v0.8.0 (owner 2026-10-27): driverSharePct, the driver's share of the rider's cancel fee, per zone; default 100 %. */
-  /** v0.18.10 (G8 Q2): earlyEnd = DriverAppConfig.cancelFees.earlyEnd — a driver's early end re-prices only when more than repriceOverKm km or repriceOverMin min shorter (default 2 / 8). */
+  /** v0.18.10 (G8 Q2): earlyEnd = DriverAppConfig.cancelFees.earlyEnd — a driver's early end re-prices only when more than repriceOverKm km AND more than repriceOverMin min shorter (v0.18.33 BOTH; default 2 / 10). */
   riderCancel: { on: boolean; closerPct: number; priority: boolean; priorityMin: number; fees: CancelFeeTable; driverSharePct: number; earlyEnd: EarlyEnd };
   extras: { id: ExtraId; on: boolean; badge: boolean }[];
   longTripKm: number;

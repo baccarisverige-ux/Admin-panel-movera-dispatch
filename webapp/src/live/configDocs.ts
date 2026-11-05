@@ -197,6 +197,8 @@ export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | n
     finishing: { exclusive: zone.finishing.exclusive, withinMin: zone.finishing.withinMin, withinKm: zone.finishing.withinKm },
     favourite: { on: zone.favourite.on, maxKm: zone.favourite.maxKm },
     exclusiveWhileDriving: { ...zone.exclusiveWhileDriving },
+    // v0.18.33 (fix job 5, owner Q7): booked ride next for a driver on a trip.
+    bookedNext: { on: zone.bookedNext.on, withinMin: zone.bookedNext.withinMin },
     waiting: zone.waiting.map((step) => ({ id: step.id, kind: step.kind, on: step.on, afterMin: step.afterMin, message: step.message, extraMin: step.extraMin ?? null })),
     // v0.18.6 (owner G4-E4): the rider raise limit; publishing it also writes the zone's rider app config (server).
     raisePrice: { maxFactor: zone.raisePrice.maxFactor },

@@ -153,6 +153,9 @@ export function ExclusiveRules({ zone, onChange, disabled, zoneId }: Props) {
         <Row label={tr("Exclusive while driving")} help={tr("Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no offers while driving a rider.")} on={zone.exclusiveWhileDriving.on} disabled={off} onToggle={(on) => set({ exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, on } })}>
           <Num label={tr("Exclusive offers while driving")} before="up to" value={zone.exclusiveWhileDriving.count} unit="at a time" min={1} max={5} disabled={off} onChange={(count) => set({ exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, count } })} />
         </Row>
+        <Row label={tr("Booked ride for a driver on a trip")} help={tr("A driver on a trip gets only Exclusive offers. A booked ride can come to him as Exclusive when he can finish his trip and reach the pickup in time.")} on={zone.bookedNext.on} disabled={off} onToggle={(on) => set({ bookedNext: { ...zone.bookedNext, on } })}>
+          <Num label={tr("Driver on a trip can get a booked ride starting within (min)")} value={zone.bookedNext.withinMin} unit="min" min={0} max={240} disabled={off || !zone.bookedNext.on} onChange={(withinMin) => set({ bookedNext: { ...zone.bookedNext, withinMin } })} />
+        </Row>
         <p className="dx-note">{trn("{0} The best driver, drivers finishing a ride nearby and favourite drivers are in {1}. What the offer card shows is in {2}.", <Target size={13} aria-hidden="true" />, <Link to={`/dispatch?tab=best&zone=${zoneId}`}>{tr("Dispatch › Best driver")}</Link>, <Link to={`/dispatch?zone=${zoneId}&card=Offer+card`}>{tr("Dispatch › Modes")}</Link>)}</p>
       </Card>
     </>

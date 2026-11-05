@@ -60,6 +60,7 @@ Object.assign(LABELS, {
   "offerCard.pickupDistance": "Offer card: distance to pickup", "offerCard.badges": "Offer card: badges",
   "raisePrice.maxFactor": "Rider raise limit",
   hiddenComesBackMin: "Hidden Radar trip comes back after", "exclusiveWhileDriving.on": "Exclusive while driving", "exclusiveWhileDriving.count": "Exclusive offers while driving",
+  "bookedNext.on": "Booked ride for a driver on a trip", "bookedNext.withinMin": "Driver on a trip can get a booked ride starting within (min)",
     "pickupWait.farPickupOn": "Rule for far pickups", "pickupWait.farPickupKm": "Far pickup from",
     "pickupWait.cancelAfterArrivedIsNoShow": "Cancel after the driver arrived counts as a no-show",
 });
@@ -318,7 +319,7 @@ export type CopyPart = TabId;
 const PART_KEYS: Record<TabId, (keyof ZoneDispatch)[]> = {
   modes: ["choose", "rulesFrom", "offerCard", "raisePrice"],
   radar: ["radar", "radarApp", "hiddenComesBackMin", "autoOffline"],
-  exclusive: ["exclusive", "exclusiveWhileDriving"],
+  exclusive: ["exclusive", "exclusiveWhileDriving", "bookedNext"],
   reservations: ["reservation"],
   best: ["factors", "radius", "batching", "finishing", "favourite"],
   waiting: ["waiting"],

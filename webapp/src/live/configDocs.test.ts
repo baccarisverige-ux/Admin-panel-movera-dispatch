@@ -72,6 +72,16 @@ test("PricingDocument from the Pricing page: minor units, ONE seat fee on Child 
   assert.deepEqual(bookOfPricing(doc, zoneBook(emptyPricingStore(), "Z001")), { ...book, version: 1 });
 });
 
+test("v0.18.33 (fix job 5, owner Q7): Dispatch › Exclusive 'Booked ride for a driver on a trip' (on, 60 min) goes to DispatchDocument.bookedNext and back (fail-before: not sent)", () => {
+  const zone = zoneDefault("Z001");
+  assert.deepEqual(zone.bookedNext, { on: true, withinMin: 60 });
+  const doc = dispatchDocumentOf({ ...zone, bookedNext: { on: false, withinMin: 45 } }, "Z001", null);
+  assert.deepEqual(doc["bookedNext"], { on: false, withinMin: 45 });
+  assert.deepEqual(rulesOfDispatch(doc, {}, zoneDefault("Z001")).bookedNext, { on: false, withinMin: 45 });
+  const bad = rulesOfDispatch({ ...doc, bookedNext: { on: "yes", withinMin: 999 } }, {}, zoneDefault("Z001"));
+  assert.deepEqual(bad.bookedNext, { on: true, withinMin: 60 }, "a bad value reads as the default");
+});
+
 test("the Standard of a country is a scope of its own, in the country's money", () => {
   assert.deepEqual(zoneFacts("standard-FR"), { id: "standard-FR", currency: "EUR", country: "FR", timeZone: "Europe/Paris", factor: 100 });
   const doc = pricingDocumentOf(zoneBook(emptyPricingStore(), "standard-FR"), "standard-FR", null);
@@ -512,15 +522,15 @@ test("G8 (v0.18.10): payment methods go to the server per country (no Google Pay
   for (const put of puts) assert.equal(JSON.stringify(put.body).includes("google_pay"), false, "never Google Pay");
   const paris = puts.find((c) => c.path.includes("rider_app_config") && (c.body as { zoneId?: string }).zoneId === "FR-PC");
   assert.deepEqual(((paris!.body as { document: Doc }).document)["paymentMethods"], ["cash", "apple_pay"]);
-  // Dispatch › Cancellation: the driver's early end re-prices only over these numbers (defaults 2 km / 8 min).
+  // Dispatch › Cancellation: the driver's early end re-prices only over BOTH numbers (defaults 2 km / 10 min, v0.18.33 fix job 5).
   const zone = zoneDefault("Z001");
-  assert.deepEqual(zone.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 8 });
+  assert.deepEqual(zone.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10 });
   const back = rulesOfDispatch(null, { cancelFees: { earlyEnd: { repriceOverKm: 5, repriceOverMin: 999 } } }, zone);
-  assert.deepEqual(back.riderCancel.earlyEnd, { repriceOverKm: 5, repriceOverMin: 8 }, "out of range reads as the default");
+  assert.deepEqual(back.riderCancel.earlyEnd, { repriceOverKm: 5, repriceOverMin: 10 }, "out of range reads as the default");
   // Checker (2): the pay-change cap per country goes into the country rules (default SE 1000 kr).
   assert.deepEqual(countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 }, driverPayChangeMax: 1000 }, null)["driverPayChangeMax"], { amountMinor: 100000, currency: "SEK" });
   const state = appConfigState({ now: "2026-11-01T10:00:00Z" });
-  assert.deepEqual((driverAppConfig("Z001", state) as unknown as { cancelFees: { earlyEnd: unknown } }).cancelFees.earlyEnd, { repriceOverKm: 2, repriceOverMin: 8 });
+  assert.deepEqual((driverAppConfig("Z001", state) as unknown as { cancelFees: { earlyEnd: unknown } }).cancelFees.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10 });
 });
 
 test("live G8 6c: Payment methods read back what the zones serve, not only the country's Standard (Save could not turn a method back on)", async () => {

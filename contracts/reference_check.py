@@ -301,7 +301,7 @@ def search(doc, case):
         nxt = max(declined.values()) if len(declined) == len(ids) else exp
         run_until(nxt)
         return nxt
-    t, step, cur, tried, asked, switched, repeat = 0, 0, mode, 0, set(), set(), False
+    t, step, cur, tried, asked, switched, repeat, again = 0, 0, mode, 0, set(), set(), False, False
     while mode:
         run_until(t)
         if S['outcome'] or t >= S['end']: break
@@ -309,10 +309,17 @@ def search(doc, case):
             km = steps[-1]; ex = in_range('exclusive', t, km); nxt = next((r for r in ex if r['id'] not in asked), None)
             shown = in_range('radar', t, km)[:doc['radar']['drivers']]
             if doc['exclusive']['on'] and nxt:
-                asked.add(nxt['id'])
+                asked.add(nxt['id']); again = False
                 t = offer('exclusive', t, km, [nxt['id']], 'favourite' if nxt['fav'] else 'finishing-nearby' if nxt['near'] else 'best-match' if nxt is ex[0] else 'nearby')
             elif doc['radar']['on'] and shown: t = offer('radar', t, km, [r['id'] for r in shown])
-            else: t += doc['radar']['seconds'] if doc['radar']['on'] else doc['exclusive']['seconds']
+            elif doc['exclusive']['on'] and not doc['radar']['on'] and ex and again:
+                # v0.18.27 (owner Q1 2026-11-04, BL M6-e): Radar off and everyone in range asked -> after one wait, a new Exclusive cycle
+                asked -= {r['id'] for r in ex}; again = False; first = ex[0]; asked.add(first['id'])
+                t = offer('exclusive', t, km, [first['id']], 'favourite' if first['fav'] else 'finishing-nearby' if first['near'] else 'best-match')
+            else:
+                if doc['exclusive']['on'] and not doc['radar']['on'] and ex:
+                    again = True; t += doc['exclusive'].get('reaskAfterSeconds', doc['exclusive']['seconds'])
+                else: t += doc['radar']['seconds'] if doc['radar']['on'] else doc['exclusive']['seconds']
             continue
         km = steps[step]; ring = in_range(cur, t, km); widest = step == len(steps) - 1
         if cur == 'radar':
@@ -687,7 +694,12 @@ if c['zonePaymentMethods']['values'] != ['cash', 'card', 'apple_pay'] or _fi['pa
 for _d in (rcfg, dcfg):
     if not set(_d['paymentMethods']) <= set(c['zonePaymentMethods']['values']): bad += 1; print('FIXTURE payment methods')
 if [t['amountMinor'] for t in c['configDefaults']['countries']['SE']['tips']] != [1000, 2000, 3000] or [t['amountMinor'] for t in c['configDefaults']['countries']['FR']['tips']] != [100, 200, 500]: bad += 1; print('TIP defaults SE 10/20/30 kr, FR 1/2/5 EUR')
-if c['configDefaults']['earlyEnd'] != {'repriceOverKm': 2, 'repriceOverMin': 8} or dcfg['cancelFees']['earlyEnd'] != c['configDefaults']['earlyEnd']: bad += 1; print('EARLY END defaults (owner G8 Q2: 2 km / 8 min)')
+if c['configDefaults']['earlyEnd'] != {'repriceOverKm': 2, 'repriceOverMin': 10} or dcfg['cancelFees']['earlyEnd'] != c['configDefaults']['earlyEnd']: bad += 1; print('EARLY END defaults (owner G8 Q2 2 km; v0.18.33 owner fix-plan Q1: 10 min)')
+# v0.18.33 (fix job 5): re-price only when BOTH limits are passed; booked next defaults; wallet first per ride.
+def _repriced(short_km, short_min, lim=c['configDefaults']['earlyEnd']): return short_km > lim['repriceOverKm'] and short_min > lim['repriceOverMin']
+if _repriced(3, 5) or not _repriced(3, 12) or _repriced(1, 30): bad += 1; print('EARLY END rule is BOTH (3 km/5 min no, 3 km/12 min yes)')
+if c['configDefaults']['dispatch']['zone'].get('bookedNext') != {'on': True, 'withinMin': 60}: bad += 1; print('BOOKED NEXT defaults on / 60 min (owner Q7)')
+if set(c['afterTestRules']) != {'note', 'earlyEnd', 'bookedCancel', 'bookedNext', 'walletFirst'}: bad += 1; print('afterTestRules sections')
 for _k, (_lo, _hi) in _fi['earlyEnd']['settings']['ranges'].items():
     if not (_lo <= c['configDefaults']['earlyEnd'][_k] <= _hi): bad += 1; print('EARLY END range', _k)
 if _fi['paymentMethods']['texts']['cash'] != {'sv': 'Betala i bilen', 'fr': 'Payer dans la voiture', 'en': 'Pay in car'}: bad += 1; print('CASH label (owner G8 item 2)')

@@ -7,7 +7,7 @@ import { MARKETS, marketOfZone, standardZoneId, zoneById, type MarketId } from "
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, draftRules, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
-import { COUNTRY_SETTINGS_KEY, personLimitsOf, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, personLimitsOf, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, walletFirstChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
@@ -410,6 +410,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         ...base,
         ...(on ? { paymentMethods: { cash: on.includes("cash"), card: on.includes("card"), apple_pay: on.includes("apple_pay") }, mixedMethods: mixed } : {}),
         ...(tips ? { tipRules: tips.rules, mixedTipRules: tips.mixed } : {}),
+        // v0.18.33 (owner Q6): "Use wallet first" is on unless the Standard or a zone of the country has it off.
+        walletFirst: [doc, ...riderZones.map(([, zoneDoc]) => zoneDoc)].every((d) => (d as { wallet?: { usedFirst?: unknown } } | null)?.wallet?.usedFirst !== false),
         languages: { rider: lang.rider ?? base.languages.rider, driver: lang.driver ?? base.languages.driver, admin: lang.admin ?? base.languages.admin },
       };
     }));
@@ -681,7 +683,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     // Live G8 round 3 item 2: the default languages go to the zones' rider and driver documents (languages.default),
     // where the apps and this panel read them. A language-only save sent nothing before and still said "saved".
     const languagesIn = new Set(MARKETS.filter((market) => languagesChanged(countrySettingsOf(before, market.id), countrySettingsOf(book, market.id))).map((market) => market.id));
-    const changed = new Set([...methodsIn, ...languagesIn]);
+    const walletIn = new Set(MARKETS.filter((market) => walletFirstChanged(countrySettingsOf(before, market.id), countrySettingsOf(book, market.id))).map((market) => market.id));
+    const changed = new Set([...methodsIn, ...languagesIn, ...walletIn]);
     if (!changed.size) throw new Error("Nothing to save: no payment method or language changed.");
     const scopes = readScopes().filter((id) => changed.has((countryOfStandard(id) ?? marketOfZone(id)?.id) as MarketId));
     // Live G8 fix 2: a country Movera is not open in (Tunisia) has no Standard or zones on the server, so nothing could be
@@ -691,7 +694,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const partsOf = (id: string) => {
       const country = (countryOfStandard(id) ?? marketOfZone(id)?.id) as MarketId;
       const keys = [...(methodsIn.has(country) ? ["paymentMethods"] : []), ...(languagesIn.has(country) ? ["languages"] : [])];
-      return { rider: keys, driver: keys };
+      return { rider: [...keys, ...(walletIn.has(country) ? ["wallet"] : [])], driver: keys };
     };
     const state = stateWith({ countrySettings: book });
     const beforeState = stateWith({ countrySettings: before });

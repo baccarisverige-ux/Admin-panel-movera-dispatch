@@ -25,6 +25,7 @@ import { svC1ContractV072Part4 } from "./sv/c1-contract-v072-part4.ts";
 import { svC2RequestLimits } from "./sv/c2-request-limits.ts";
 import { svC3RealAppPreview } from "./sv/c3-real-app-preview.ts";
 import { svC4PhoneData } from "./sv/c4-phone-data.ts";
+import { svC5AfterTestRules } from "./sv/c5-after-test-rules.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -55,4 +56,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC2RequestLimits,
   ...svC3RealAppPreview,
   ...svC4PhoneData,
+  ...svC5AfterTestRules,
 };
