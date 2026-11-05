@@ -40,7 +40,6 @@ import {
   assign,
   ban,
   creditedThisMonth,
-  decideRefund,
   isBanned,
   markPaid,
   merge,
@@ -384,7 +383,7 @@ export function RiderDetailPage() {
                   </button>
                 ))}
               </div>
-              {refund.error && refundRide && refundReason ? <p className="rd-form-error">{trSentences(refund.error)}</p> : <small className="fine">{trn("Refunds above {0} {1} need a second admin to approve ({2}).", refundPolicy.aboveMajor[country], symbol, <Link to="/settings#refunds">{tr("set in Settings")}</Link>)}</small>}
+              {refund.error && refundRide && refundReason ? <p className="rd-form-error">{trSentences(refund.error)}</p> : null}
               <CommandButton command="admin.rider.refund" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(refundAmount * place.minorUnits)} before={refundRide?.id ?? ""} after={`${refundAmount} ${symbol} to ${refundTo}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={refund.care} disabled={!can(role, "finance.read") || Boolean(refund.error)} title={refund.error} onDone={() => { setNotice(refund.needsApproval ? tr("Refund of {0} {1} is waiting for a second admin to approve.", [refundAmount, symbol]) : tr("Refunded {0} {1} to the rider's {2}.", [refundAmount, symbol, DESTINATIONS.find((item) => item.id === refundTo)?.label.toLowerCase()])); setRefundReason(""); setRefundId(""); }}>{trn("{0} Refund {1}", <RotateCcw size={14} aria-hidden="true" />, refundAmount ? `${refundAmount} ${symbol}` : "")}</CommandButton>
             </section>
           </div>
@@ -398,12 +397,7 @@ export function RiderDetailPage() {
                     <span>{trn("{0} · to {1} · {2}", item.bookingId, item.destination, item.reason)}</span>
                     <span className={`rd-refund-status r-${item.status}`}>{item.status === "waiting" ? tr("Waiting for approval") : item.status === "sent" ? tr("Sent") : tr("Rejected")}</span>
                     <small>{trn("Asked by {0} · {1}{2}", item.by, dateTime.format(Date.parse(item.at)), item.decidedBy ? tr(" · decided by {0}", [item.decidedBy]) : "")}</small>
-                    {item.status === "waiting" && can(role, "approval.decide") ? (
-                      <span className="rd-inline">
-                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="approved" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, true, me).care} disabled={Boolean(decideRefund(care, item.id, true, me).error)} title={decideRefund(care, item.id, true, me).error} onDone={() => setNotice(tr("Refund approved and sent."))}>{tr("Approve")}</CommandButton>
-                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small ghost" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="rejected" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, false, me).care} disabled={Boolean(decideRefund(care, item.id, false, me).error)} title={decideRefund(care, item.id, false, me).error} onDone={() => setNotice(tr("Refund rejected."))}>{tr("Reject")}</CommandButton>
-                      </span>
-                    ) : null}
+                    {/* BASE B14 (owner Q1 "One admin always"): no second-admin Approve / Reject; a refund is sent by the admin who asks. */}
                   </li>
                 ))}
               </ul>

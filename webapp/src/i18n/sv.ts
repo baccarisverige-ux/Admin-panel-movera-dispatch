@@ -22,6 +22,8 @@ import { svC1ContractV072Part1 } from "./sv/c1-contract-v072-part1.ts";
 import { svC1ContractV072Part2 } from "./sv/c1-contract-v072-part2.ts";
 import { svC1ContractV072Part3 } from "./sv/c1-contract-v072-part3.ts";
 import { svC1ContractV072Part4 } from "./sv/c1-contract-v072-part4.ts";
+import { svC2RequestLimits } from "./sv/c2-request-limits.ts";
+import { svC3RealAppPreview } from "./sv/c3-real-app-preview.ts";
 import { svC4PhoneData } from "./sv/c4-phone-data.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
@@ -50,5 +52,7 @@ export const sv: Record<MessageKey, string> = {
   ...svC1ContractV072Part2,
   ...svC1ContractV072Part3,
   ...svC1ContractV072Part4,
+  ...svC2RequestLimits,
+  ...svC3RealAppPreview,
   ...svC4PhoneData,
 };

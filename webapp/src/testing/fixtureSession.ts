@@ -1,6 +1,6 @@
 import { AGENTS, type Agent } from "../auth/permissions.ts";
 import { writeAgents, writeSession } from "../auth/sessionStore.ts";
-import type { AdminApi } from "./create.ts";
+import type { AdminApi } from "../api/create.ts";
 
 /**
  * For tests of the fixture server: every command is sent by the agent it names, signed in first,

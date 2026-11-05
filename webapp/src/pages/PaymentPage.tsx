@@ -131,7 +131,8 @@ export function PaymentPage() {
         </CommandButton>
 
         {pendingApproval ? <p><Link to="/audit">{tr("Open approval queue")}</Link></p> : null}
-        <p className="fn-help">{trn("{0} Refunds above {1} also need a second admin ({2}).", limit === null ? tr("You have no refund limit.") : tr("Your refund limit is {0}.", [money(limit)]), money(threshold), <Link to="/settings#refunds">{tr("set in Settings")}</Link>)}</p>
+        {/* BASE B14 (owner Q1 "One admin always"): no second admin for refunds; only the role's own limit is shown. */}
+        <p className="fn-help">{limit === null ? tr("You have no refund limit.") : tr("Your refund limit is {0}.", [money(limit)])}</p>
       </article>
     </div>
   );

@@ -21,6 +21,8 @@ import { enC1ContractV072Part1 } from "./en/c1-contract-v072-part1.ts";
 import { enC1ContractV072Part2 } from "./en/c1-contract-v072-part2.ts";
 import { enC1ContractV072Part3 } from "./en/c1-contract-v072-part3.ts";
 import { enC1ContractV072Part4 } from "./en/c1-contract-v072-part4.ts";
+import { enC2RequestLimits } from "./en/c2-request-limits.ts";
+import { enC3RealAppPreview } from "./en/c3-real-app-preview.ts";
 import { enC4PhoneData } from "./en/c4-phone-data.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
@@ -49,6 +51,8 @@ export const en = {
   ...enC1ContractV072Part2,
   ...enC1ContractV072Part3,
   ...enC1ContractV072Part4,
+  ...enC2RequestLimits,
+  ...enC3RealAppPreview,
   ...enC4PhoneData,
 } as const;
 
