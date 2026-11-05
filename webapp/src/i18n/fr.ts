@@ -26,6 +26,7 @@ import { frC2RequestLimits } from "./fr/c2-request-limits.ts";
 import { frC3RealAppPreview } from "./fr/c3-real-app-preview.ts";
 import { frC4PhoneData } from "./fr/c4-phone-data.ts";
 import { frC5AfterTestRules } from "./fr/c5-after-test-rules.ts";
+import { frC2RidersPaymentsPayouts } from "./fr/c2-riders-payments-payouts.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -57,4 +58,5 @@ export const fr: Record<MessageKey, string> = {
   ...frC3RealAppPreview,
   ...frC4PhoneData,
   ...frC5AfterTestRules,
+  ...frC2RidersPaymentsPayouts,
 };

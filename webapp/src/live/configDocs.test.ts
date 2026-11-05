@@ -816,3 +816,11 @@ test("v0.18.33 (owner 2026-11-05): 'Offers on a trip from (% of the route)' goes
   // Owner Q5: the next trip's free cancel after (min), default 10.
   assert.deepEqual(countryRulesOf("SE", "SEK", { ...input, onTripMinDonePct: 70, chainLateFreeCancelMin: 15 }, null)["onTripOffers"], { minRouteDonePct: 70, lateFreeCancelMin: 15 });
 });
+
+test("v0.18.29 A2 (fix job 0) (owner G12 Q-D): the wallet credit limit goes into CountryRules in the country's money (SE, FR)", () => {
+  const se = countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [20], driverBonus: { defaultLimit: 150, hardMax: 1000 }, walletCreditMax: 2900 }, null);
+  assert.deepEqual(se["walletCreditMax"], { amountMinor: 290_000, currency: "SEK" });
+  const fr = countryRulesOf("FR", "EUR", { tips: [1], raiseSteps: [2], driverBonus: { defaultLimit: 20, hardMax: 95 }, walletCreditMax: 250 }, null);
+  assert.deepEqual(fr["walletCreditMax"], { amountMinor: 25_000, currency: "EUR" });
+  assert.equal(countryRulesOf("FR", "EUR", { tips: [1], raiseSteps: [2], driverBonus: { defaultLimit: 20, hardMax: 95 } }, null)["walletCreditMax"], undefined);
+});

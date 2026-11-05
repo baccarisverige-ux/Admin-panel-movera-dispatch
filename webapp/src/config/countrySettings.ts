@@ -56,6 +56,8 @@ export type CountrySettings = {
   onTripMinDonePct: number;
   /** v0.18.33 (owner Q5 2026-11-05): minutes after accept from which the rider of a chained trip may cancel free (default 10). */
   chainLateFreeCancelMin: number;
+  /** v0.18.29 A2 (fix job 0) (owner G12 Q-D "Max 250 euro and equivalent"): the largest single Add money to wallet (CountryRules.walletCreditMax), local money. */
+  walletCreditMax: number;
 };
 export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };
 export const PERSON_LIMITS_DEFAULT: PersonLimits = { savedPlacesPerPerson: 50, emergencyContactsPerPerson: 10 };
@@ -69,6 +71,8 @@ export function personLimitsOf(raw: unknown): PersonLimits {
   };
   return { savedPlacesPerPerson: pick("savedPlacesPerPerson"), emergencyContactsPerPerson: pick("emergencyContactsPerPerson") };
 }
+/** contract.json#walletCredit.defaultMax (major units). */
+export const WALLET_CREDIT_MAX: Record<MarketId, number> = { SE: 2900, FR: 250, TN: 800 };
 export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 300 };
 export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number };
 export const TIP_FLAGS = ["cashAfterTrip", "customAmount"] as const;
@@ -91,7 +95,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -139,6 +143,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     personLimits: { ...PERSON_LIMITS_DEFAULT },
     onTripMinDonePct: ON_TRIP_MIN_DONE_PCT_DEFAULT,
     chainLateFreeCancelMin: CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT,
+    walletCreditMax: WALLET_CREDIT_MAX[country],
   };
 }
 
@@ -178,6 +183,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     personLimits: raw.personLimits ? { ...base.personLimits, ...(raw.personLimits as PersonLimits) } : base.personLimits,
     onTripMinDonePct: finite(raw.onTripMinDonePct) ? raw.onTripMinDonePct : base.onTripMinDonePct,
     chainLateFreeCancelMin: finite(raw.chainLateFreeCancelMin) ? raw.chainLateFreeCancelMin : base.chainLateFreeCancelMin,
+    walletCreditMax: finite(raw.walletCreditMax) && raw.walletCreditMax > 0 ? raw.walletCreditMax : base.walletCreditMax,
     ...mixedOf(raw.mixedMethods),
     ...mixedTipOf(raw.mixedTipRules),
   };
