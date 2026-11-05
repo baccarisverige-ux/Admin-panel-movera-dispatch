@@ -7509,7 +7509,7 @@
     },
     "bookedCancel": {
       "rule": "Owner fix-plan Q3: a rider who cancels a booked ride less than freeChangeBeforeMin minutes (default 60) before pickup always pays the reservation cancel fee of booking time (RiderAppConfig.cancelFees, reservation), also when no driver has taken the ride yet. More than freeChangeBeforeMin before pickup stays free.",
-      "noDriver": "Owner Q5 ('Movera keeps it'): with no driver yet the whole fee is Movera's (cancellation.driverShare 0, no driver earnings). TripProjection.cancellation { fee, feeStatus owed, feeKind cancel } as for any rider cancel fee; the fee is owed by the rider (outstandingFee).",
+      "noDriver": "Owner Q5 ('Movera keeps it'): with no driver yet the whole fee is Movera's (cancellation.driverShare 0, no driver earnings). TripProjection.cancellation { fee, feeStatus owed, feeKind cancel } as for any rider cancel fee; the fee is owed by the rider (outstandingFee). A booked ride whose pickup time has passed with still no driver is always free to cancel (Movera did not deliver it).",
       "apps": "Rider: the cancel sheet shows the fee under freeChangeBeforeMin minutes before pickup even with no driver (sv 'Avbokning mindre än {min} min före hämtning kostar {fee}', fr 'Annuler moins de {min} min avant la prise en charge coûte {fee}', en 'Cancelling less than {min} min before pickup costs {fee}'). Admin › Book later: freeChangeBeforeMin help text 'Cancel under (min) costs the fee, even before a driver takes it'."
     },
     "bookedNext": {
