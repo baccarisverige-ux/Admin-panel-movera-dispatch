@@ -25,7 +25,7 @@ export function driverCategoryFits(car: Pick<DemoRecord, "liveFitCategories"> | 
   return car.liveFitCategories ? car.liveFitCategories.includes(category) : null;
 }
 
-/** The driver page's History lines. Live: the server sends no such history yet (null = "Not connected yet"). */
+/** The driver page's History lines. Live: the server sends no such history yet (null = "—"). */
 export function driverHistoryShown(ops: { activity: readonly string[] }): readonly string[] | null {
   return isLiveData() ? null : ops.activity;
 }

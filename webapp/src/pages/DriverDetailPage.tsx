@@ -7,7 +7,6 @@ import { DASH, liveDriverMonth, liveJoinedAt, liveLastOnline, orDash } from "../
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { LiveDocBox } from "../live/LiveDocBox";
-import { NotConnected } from "../live/NotConnected";
 import { driverCategoryFits, driverHistoryShown } from "../live/realOnly";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
@@ -632,8 +631,8 @@ export function DriverDetailPage() {
           <div className="fd-grid-2">
             <section className="fd-box">
               <h3>{tr("History")}</h3>
-              {/* L-a (A15 item 6): the seeded demo history is never shown live. */}
-              {(() => { const history = driverHistoryShown(ops); return history ? <ul className="fd-timeline">{history.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul> : <p className="state-line" data-testid="driver-history-not-connected"><NotConnected /></p>; })()}
+              {/* L-a (A15 item 6): the seeded demo history is never shown live; "—" (owner G2c: no "Not connected yet" here). */}
+              {(() => { const history = driverHistoryShown(ops); return history ? <ul className="fd-timeline">{history.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul> : <p className="state-line" data-testid="driver-history-none">{DASH}</p>; })()}
             </section>
             <section className="fd-box">
               <h3>{tr("Audited actions")}</h3>
