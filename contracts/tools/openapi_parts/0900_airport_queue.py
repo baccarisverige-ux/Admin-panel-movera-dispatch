@@ -1,5 +1,5 @@
 # v0.18.39 §63 (fix job 9, contract.json#airportQueue): the airport queue.
-# Run by tools/gen_openapi.py with its globals (S, op, obj, ref, ...); rule 25: new surface goes in parts, not the big file.
+# A part of tools/gen_openapi.py (rule 25 split, contracts #78), run after 0600 with its globals.
 AQ = C["airportQueue"]
 AQD = AQ["defaults"]
 AQR = AQ["ranges"]

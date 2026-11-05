@@ -29,6 +29,7 @@ import { enC2RidersPaymentsPayouts } from "./en/c2-riders-payments-payouts.ts";
 import { enC2Job7SmallFixes } from "./en/c2-job7-small-fixes.ts";
 import { enC2ServerAlerts } from "./en/c2-server-alerts.ts";
 import { enC5BookedRideLive } from "./en/c5-booked-ride-live.ts";
+import { enC2AdminLiveDrivers } from "./en/c2-admin-live-drivers.ts";
 import { enC7AirportQueue } from "./en/c7-airport-queue.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
@@ -65,6 +66,7 @@ export const en = {
   ...enC2Job7SmallFixes,
   ...enC2ServerAlerts,
   ...enC5BookedRideLive,
+  ...enC2AdminLiveDrivers,
   ...enC7AirportQueue,
 } as const;
 

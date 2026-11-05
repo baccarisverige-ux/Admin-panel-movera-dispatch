@@ -8727,6 +8727,7 @@
 ["SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents.","Les cas SOS et de sécurité ne se ferment jamais tout seuls. 24 h après la fin de la course, ils arrivent ici ; fermez-les dans Incidents."],
 ["Trip ended {0}","Course terminée {0}"],
 ["Booked ride · now live","Course réservée · en cours"],
+["Could not load, retrying","Chargement impossible, nouvel essai"],
 ["Airport queue area","Zone de file d'attente de l'aéroport"],
 ["Drivers inside this area wait in line. The first in line gets the airport trips first.","Les chauffeurs dans cette zone attendent en file. Le premier de la file reçoit d'abord les courses de l'aéroport."],
 ["Could not load the queue area.","Impossible de charger la zone de file."],
