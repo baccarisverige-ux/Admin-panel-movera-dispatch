@@ -22,6 +22,7 @@ import { svC1ContractV072Part1 } from "./sv/c1-contract-v072-part1.ts";
 import { svC1ContractV072Part2 } from "./sv/c1-contract-v072-part2.ts";
 import { svC1ContractV072Part3 } from "./sv/c1-contract-v072-part3.ts";
 import { svC1ContractV072Part4 } from "./sv/c1-contract-v072-part4.ts";
+import { svC2RidersPaymentsPayouts } from "./sv/c2-riders-payments-payouts.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -49,4 +50,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC1ContractV072Part2,
   ...svC1ContractV072Part3,
   ...svC1ContractV072Part4,
+  ...svC2RidersPaymentsPayouts,
 };

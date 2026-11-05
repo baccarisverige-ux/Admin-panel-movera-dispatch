@@ -176,6 +176,8 @@ export type LiveAccountFacts = {
 };
 
 export type LiveDriverFacts = {
+  /** v0.18.39 A2 (fix job 0) (owner Q4): this driver's payouts are paused (admin view). */
+  payoutHold?: { reason: string; at: string } | null;
   onlineStatus: string;
   rating: number | null;
   location: { lat: number; lng: number; measuredAt: string } | null;
@@ -187,7 +189,12 @@ export type LiveDriverFacts = {
   /** v0.18.17 (owner BL-Q4): the home area the driver set in the app. */
   homeArea?: { lat: number; lng: number; label?: string } | null;
 };
+/** v0.18.39 A2 (fix job 0) (G16 Q16-2): Rider.moderation. */
+export type LiveRiderModeration = { level: "none" | "warning" | "paused" | "banned"; reason?: string; until: string | null; setAt?: string };
+
 export type LiveRiderFacts = {
+  /** v0.18.39 A2 (fix job 0): the rider's warning / pause / ban (null from an older server). */
+  moderation?: LiveRiderModeration | null;
   rating: number | null;
   walletMinor: number | null;
   outstandingMinor: number | null;
