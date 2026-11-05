@@ -3,4 +3,5 @@ import type { enC2AdminLiveDrivers } from "../en/c2-admin-live-drivers.ts";
 
 export const frC2AdminLiveDrivers: Record<keyof typeof enC2AdminLiveDrivers, string> = {
   "Could not load, retrying": "Chargement impossible, nouvel essai",
+  "Going offline after trips": "Passe hors ligne après les courses",
 };
