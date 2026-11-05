@@ -10,6 +10,7 @@ import { CURRENCY_SYMBOL, money, PromoTicketCard } from "./ui";
 import { CARD_IMAGES, RiderAppPreview, imageUrl } from "./RiderAppPreview";
 import { useCategoryPrices } from "./useCategoryPrices";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { DateInput } from "../ui/DateInput";
 
 const CATEGORIES = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet", "child_seat"];
 const QUICK: { id: SegmentId; label: string }[] = [
@@ -130,8 +131,8 @@ export function PromoBuilder({ country, care, agentId, canEdit, rows, preselecte
           <label className="field">{trn("For the next{0}", <NumberField label={tr("Promotion rides")} value={rides} unit="rides" max={100} onChange={(next) => setRides(Math.round(next))} />)}</label>
           {kind === "percent" ? <label className="field">{trn("Max per ride{0}", <NumberField label={tr("Promotion max per ride")} value={maxPerRide} unit={symbol} onChange={setMaxPerRide} />)}</label> : null}
           <label className="field">{trn("Min fare{0}", <NumberField label={tr("Promotion min fare")} value={minFare} unit={symbol} onChange={setMinFare} />)}</label>
-          <label className="field">{trn("Starts{0}", <input type="date" aria-label={tr("Promotion starts")} value={from} onChange={(event) => setFrom(event.target.value)} />)}</label>
-          <label className="field">{trn("Ends{0}", <input type="date" aria-label={tr("Promotion ends")} value={to} onChange={(event) => setTo(event.target.value)} />)}</label>
+          <label className="field">{trn("Starts{0}", <DateInput aria-label={tr("Promotion starts")} value={from} onChange={(event) => setFrom(event.target.value)} />)}</label>
+          <label className="field">{trn("Ends{0}", <DateInput aria-label={tr("Promotion ends")} value={to} onChange={(event) => setTo(event.target.value)} />)}</label>
           <label className="field">{trn("Budget (optional){0}", <NumberField label={tr("Promotion budget")} value={budget} unit={symbol} onChange={setBudget} />)}</label>
         </div>
         <fieldset className="rd-chips rd-pictures">

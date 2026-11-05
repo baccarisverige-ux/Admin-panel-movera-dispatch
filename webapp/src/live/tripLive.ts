@@ -140,6 +140,18 @@ export function owedByCurrency(facts: { outstandingByCurrency?: { amountMinor: n
   return facts.outstandingMinor && facts.outstandingMinor > 0 && facts.currency ? [{ amountMinor: facts.outstandingMinor, currency: facts.currency }] : [];
 }
 
+/** v0.18.28 (fix job 6, owner Q4): the rider's wallet balances, one per currency; an older server's one wallet amount. */
+export function walletByCurrency(facts: { walletByCurrency?: { amountMinor: number; currency: string }[]; walletMinor: number | null; currency: string | null } | null | undefined): { amountMinor: number; currency: string }[] {
+  if (!facts) return [];
+  if (facts.walletByCurrency) return facts.walletByCurrency.filter((money) => money.amountMinor !== 0);
+  return facts.walletMinor && facts.currency ? [{ amountMinor: facts.walletMinor, currency: facts.currency }] : [];
+}
+
+/** "65,00 € · 30,00 kr": each wallet balance in its own currency, never a sum; "0" in [fallback] when there is none. */
+export function walletText(balances: readonly { amountMinor: number; currency: string }[], fallback: string): string {
+  return balances.length ? owedText(balances) : tripMoney(0, fallback);
+}
+
 /** "100,00 kr · 10,00 €": every owed amount in its own currency. */
 export function owedText(owed: readonly { amountMinor: number; currency: string }[]): string {
   return owed.map((money) => tripMoney(money.amountMinor, money.currency)).join(" · ");

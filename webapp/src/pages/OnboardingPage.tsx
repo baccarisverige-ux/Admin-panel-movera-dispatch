@@ -55,6 +55,7 @@ import { DataTable } from "../ui/DataTable";
 import { tr, trn, trSentences, trx } from "../i18n";
 import { COUNTRY_LABEL } from "../i18n/countries";
 import { statusLabel } from "../domain/labels";
+import { DateInput } from "../ui/DateInput";
 
 const REVIEW: { status: DocStatus; label: string }[] = [
   { status: "approved", label: "Approve" },
@@ -340,7 +341,7 @@ function ApplicantView({ settings, driver, rules, country, now, reviewNote, setR
                   {expires && review.status !== "approved" ? (
                     <label className="ob-expiry">
                       <span>{tr("Valid until (required)")}</span>
-                      <input type="date" min={tomorrow} value={typed} aria-label={tr("Valid until for {0}", [docLabel(id)])} onChange={(event) => setExpiry({ ...expiry, [id]: event.target.value })} />
+                      <DateInput min={tomorrow} value={typed} aria-label={tr("Valid until for {0}", [docLabel(id)])} onChange={(event) => setExpiry({ ...expiry, [id]: event.target.value })} />
                     </label>
                   ) : null}
                   {adminCheck && review.status !== "approved" ? <span className="chip warn">{tr("Waiting for Movera")}</span> : null}

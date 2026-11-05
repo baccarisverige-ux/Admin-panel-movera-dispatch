@@ -25,6 +25,9 @@ import { frC1ContractV072Part4 } from "./fr/c1-contract-v072-part4.ts";
 import { frC2RequestLimits } from "./fr/c2-request-limits.ts";
 import { frC3RealAppPreview } from "./fr/c3-real-app-preview.ts";
 import { frC4PhoneData } from "./fr/c4-phone-data.ts";
+import { frC2RidersPaymentsPayouts } from "./fr/c2-riders-payments-payouts.ts";
+import { frC2Job7SmallFixes } from "./fr/c2-job7-small-fixes.ts";
+import { frC2ServerAlerts } from "./fr/c2-server-alerts.ts";
 import { frC5BookedRideLive } from "./fr/c5-booked-ride-live.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
@@ -56,5 +59,8 @@ export const fr: Record<MessageKey, string> = {
   ...frC2RequestLimits,
   ...frC3RealAppPreview,
   ...frC4PhoneData,
+  ...frC2RidersPaymentsPayouts,
+  ...frC2Job7SmallFixes,
+  ...frC2ServerAlerts,
   ...frC5BookedRideLive,
 };

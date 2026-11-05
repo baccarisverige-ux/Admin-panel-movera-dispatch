@@ -221,6 +221,10 @@ export function errorText(error: unknown): string {
   if (error.reason === "pin_not_now") return tr("The PIN can only be checked while the driver is at the pickup.");
   if (error.reason === "pin_blocked") return tr("Too many wrong codes: the PIN is blocked until an admin unlocks it.");
   if (error.reason === "reason_required") return tr("Write a reason.");
+  // v0.18.29 A2 (fix job 0) (contract.json#walletCredit): Add money to wallet.
+  if (error.reason === "wallet_credit_too_large") return tr("That is more than one credit may be in this country (Trip settings).");
+  if (error.reason === "wallet_currency_mismatch") return tr("The amount must be in the rider's currency.");
+  if (error.reason === "rider_country_unknown") return tr("The rider's country is not known yet: money can be added after the first ride.");
   if (error.status === 409 && error.reason === "on_trip") return tr("The driver is on a trip. Try again when the trip has ended.");
   if (error.status === 409 && error.reason === "invitation_expired") return tr("This invitation has expired.");
   if (error.status === 409 && error.reason === "invitation_closed") return tr("This invitation was already answered or withdrawn.");

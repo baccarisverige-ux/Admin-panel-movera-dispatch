@@ -65,6 +65,8 @@ export type DriverPerformance = { windowDays: number; from: string; offersAnswer
 
 export type Driver = {
   driverId: string;
+  /** v0.18.29 A2 (fix job 0) (owner Q4): payouts paused, admin view. */
+  payoutHold?: { reason: string; at: string; by?: string };
   accountStatus: DriverAccountStatus;
   onlineStatus: DriverOnlineStatus;
   firstName: string;
@@ -281,6 +283,8 @@ export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; mea
 /** GET /admin/riders (AdminRider). */
 export type Rider = {
   riderId: string;
+  /** v0.18.29 A2 (fix job 0) (G16 Q16-2): warning / pause / ban with its reason. */
+  moderation?: { level: "none" | "warning" | "paused" | "banned"; reason?: string; until: string | null; setAt?: string };
   firstName: string;
   phone: string;
   email?: string;
@@ -291,6 +295,8 @@ export type Rider = {
   /** v0.18.7 (G5 Q3): every currency the rider owes in, oldest debt first; outstanding is the first of them. */
   outstandingByCurrency?: LiveMoney[];
   wallet?: LiveMoney;
+  /** v0.18.28 (fix job 6, owner Q4): every non-zero wallet balance, one per currency. */
+  wallets?: LiveMoney[];
   language?: string;
   deletionRequestedAt?: string;
 };

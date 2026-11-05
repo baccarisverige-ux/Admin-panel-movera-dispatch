@@ -45,6 +45,7 @@ import { NumberField } from "../pricing/NumberField";
 import { CommandButton } from "../ui/CommandButton";
 import { useDialogFocus } from "../ui/useDialogFocus";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { DateInput } from "../ui/DateInput";
 
 type View = "riders" | "promotions" | "insights";
 
@@ -465,8 +466,8 @@ function AutoPromosCard({ care, rows, country, canEdit, onNotice, now }: { care:
                 ) : null}
                 <fieldset className="rd-when">
                   <legend>{trn("When it runs {0}", <small>{tr("(empty = always)")}</small>)}</legend>
-                  <label className="field">{trn("Starts{0}", <input type="date" aria-label={tr("{0} starts", [label])} value={auto[key].from} disabled={!canEdit} onChange={(event) => setAuto({ ...auto, [key]: { ...auto[key], from: event.target.value } })} />)}</label>
-                  <label className="field">{trn("Ends{0}", <input type="date" aria-label={tr("{0} ends", [label])} value={auto[key].to} disabled={!canEdit} onChange={(event) => setAuto({ ...auto, [key]: { ...auto[key], to: event.target.value } })} />)}</label>
+                  <label className="field">{trn("Starts{0}", <DateInput aria-label={tr("{0} starts", [label])} value={auto[key].from} disabled={!canEdit} onChange={(event) => setAuto({ ...auto, [key]: { ...auto[key], from: event.target.value } })} />)}</label>
+                  <label className="field">{trn("Ends{0}", <DateInput aria-label={tr("{0} ends", [label])} value={auto[key].to} disabled={!canEdit} onChange={(event) => setAuto({ ...auto, [key]: { ...auto[key], to: event.target.value } })} />)}</label>
                 </fieldset>
                 <fieldset className="rd-chips">
                   <legend>{trn("Categories {0}", <small>{tr("(none = all)")}</small>)}</legend>

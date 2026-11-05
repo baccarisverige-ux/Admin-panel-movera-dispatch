@@ -20,7 +20,8 @@ export const LEVEL_ICON = { critical: AlertOctagon, important: AlertTriangle, in
 
 type Quick = "all" | Level | "mine" | "new";
 
-export function OpenView() {
+/** v0.18.31: with old, the same list for the Old tab (old SOS / safety cases, contract.json#alertsOldList). */
+export function OpenView({ old = false }: { old?: boolean } = {}) {
   const data = useAlertsData();
   const { agent } = useSession();
   const [quick, setQuick] = useState<Quick>("all");
@@ -29,7 +30,7 @@ export function OpenView() {
   const [state, setState] = useState<"open" | "snoozed" | "muted">("open");
   const [selected, setSelected] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
-  const list = data.open.filter((alert) => {
+  const list = (old ? data.old : data.open).filter((alert) => {
     if (state === "open" && (alert.status === "snoozed" || alert.muted)) return false;
     if (state === "snoozed" && alert.status !== "snoozed") return false;
     if (state === "muted" && !alert.muted) return false;
@@ -89,7 +90,7 @@ export function OpenView() {
           {list.length === 0 ? <li className="al-empty">{state === "open" ? tr("Nothing here. Good work.") : state === "snoozed" ? tr("No snoozed alert.") : tr("No muted alert.")}</li> : list.map((alert) => {
             const Icon = LEVEL_ICON[alert.level];
             return (
-              <li key={alert.id} className={`al-row ${alert.level}${alert.id === selected ? " on" : ""}`}>
+              <li key={alert.id} className={`al-row ${alert.level}${alert.solved ? " solved" : ""}${alert.id === selected ? " on" : ""}`}>
                 <button data-command="admin.alerts.view" type="button" className="al-row-main" aria-pressed={alert.id === selected} onClick={() => setSelected(alert.id === selected ? null : alert.id)}>
                   <span className="al-level" aria-hidden="true"><Icon size={16} /></span>
                   <span className="al-row-text">
@@ -100,6 +101,7 @@ export function OpenView() {
                       <span><Clock size={11} aria-hidden="true" /> {ago(alert.since, data.now)}</span>
                     </small>
                     <StatusLine alert={alert} />
+                    {alert.solved && alert.owner ? <span className="al-status solved">{tr("Solved by itself: {0}", [alert.solved.text])}</span> : null}
                   </span>
                 </button>
                 <AlertActions alert={alert} compact onDone={setNotice} />
@@ -124,7 +126,7 @@ function Detail({ alert, onClose, onNotice }: { alert: OpenAlert; onClose: () =>
     : (alert.record?.events ?? []).map((event) => ({ at: event.at, by: event.by, text: event.kind === "take" ? "Working on it" : event.kind === "done" ? `Solved: ${event.text}` : event.text }));
   const time = (iso: string | number) => new Intl.DateTimeFormat(uiLocale(), { timeZone: data.market.timeZone, hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" }).format(new Date(iso));
   return (
-    <aside className={`al-detail ${alert.level}`} aria-label={tr("Alert details")}>
+    <aside className={`al-detail ${alert.level}${alert.solved ? " solved" : ""}`} aria-label={tr("Alert details")}>
       <header>
         <span className="al-level" aria-hidden="true"><Icon size={18} /></span>
         <span className="al-detail-title"><small>{trx(level.label)} · {trx(def?.label) ?? tr("Your rule")}</small><b>{trx(alert.title)}</b></span>
@@ -135,6 +137,7 @@ function Detail({ alert, onClose, onNotice }: { alert: OpenAlert; onClose: () =>
         <div><dt>{tr("Zone")}</dt><dd><MapPin size={12} aria-hidden="true" /> {data.zones.find((zone) => zone.id === alert.zoneId)?.name ?? tr("Whole country")}</dd></div>
         <div><dt>{tr("Started")}</dt><dd><Clock size={12} aria-hidden="true" /> {time(alert.since)} · {ago(alert.since, data.now)}</dd></div>
         <div><dt>{tr("Now")}</dt><dd><StatusLine alert={alert} /></dd></div>
+        {alert.solved ? <div><dt>{tr("Solved by itself")}</dt><dd className="al-solved-text">{alert.solved.text} · {time(alert.solved.at)}</dd></div> : null}
       </dl>
       <h4>{tr("Timeline")}</h4>
       <ol className="al-timeline" aria-label={tr("Timeline")}>

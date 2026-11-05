@@ -131,10 +131,10 @@ test("the exporters read every new setting instead of the defaults", () => {
   assert.deepEqual(rider.paymentMethods, ["card", "apple_pay"]);
   assert.deepEqual(rider.languages.default, { rider: "en", driver: "fr", admin: "sv" });
   // v0.18.17: the zone's booking window (Dispatch › Reservations › Booking policy) rides along, owner defaults here.
-  assert.deepEqual(rider.booking, { maxStops: 2, maxPickupMoveMeters: 300, bookingHorizonDays: rider.booking.bookingHorizonDays, minAheadMin: 15, maxAheadDays: 90, freeChangeBeforeMin: 60 });
+  assert.deepEqual(rider.booking, { maxStops: 2, maxPickupMoveMeters: 300, samePointWarnMeters: 100, bookingHorizonDays: rider.booking.bookingHorizonDays, minAheadMin: 15, maxAheadDays: 90, freeChangeBeforeMin: 60 });
   const driver = driverAppConfig("Z001", state);
   assert.deepEqual(driver.driverBonus, { defaultLimit: { amountMinor: 30000, currency: "SEK" }, hardMax: { amountMinor: 100000, currency: "SEK" } });
-  assert.deepEqual(driver.booking, { maxStops: 2, maxPickupMoveMeters: 300 });
+  assert.deepEqual(driver.booking, { maxStops: 2, maxPickupMoveMeters: 300, samePointWarnMeters: 100 });
   assert.equal(driver.offers.autoOffline.missedExclusive, 5);
   assert.equal(driver.offers.autoOffline.noFixMinutes, 5, "G3-R1: the driver app gets minutes without position per zone");
   assert.equal(driver.waiting.driverSharePct, 60, "Q44: the country's no-show share");

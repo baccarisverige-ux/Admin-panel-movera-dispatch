@@ -23,6 +23,7 @@ import { Modal } from "../ui/Modal";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { isLiveData, liveTripOf } from "../live/realData";
 import { ETA_EVERY_SECONDS, etaIsStale, etaLine, isLiveWithDriver } from "../live/tripLive";
+import { DateInput } from "../ui/DateInput";
 
 const PAYMENTS: PaymentState[] = ["pending", "authorized", "captured", "failed", "refunded"];
 
@@ -241,11 +242,11 @@ export function TripsPage() {
         </label>
         <label className="op-field">
           <span>{tr("From")}</span>
-          <input aria-label={tr("From date")} type="date" value={from} onChange={(event) => { setDates({ ...dates, from: event.target.value }); set({ from: event.target.value }); }} />
+          <DateInput aria-label={tr("From date")} value={from} onChange={(event) => { setDates({ ...dates, from: event.target.value }); set({ from: event.target.value }); }} />
         </label>
         <label className="op-field">
           <span>{tr("To")}</span>
-          <input aria-label={tr("To date")} type="date" value={to} onChange={(event) => { setDates({ ...dates, to: event.target.value }); set({ to: event.target.value }); }} />
+          <DateInput aria-label={tr("To date")} value={to} onChange={(event) => { setDates({ ...dates, to: event.target.value }); set({ to: event.target.value }); }} />
         </label>
         <span className="rp-bar-actions">
           {views.length ? (
