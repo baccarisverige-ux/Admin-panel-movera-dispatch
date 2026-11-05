@@ -66,3 +66,9 @@ export function airportCards(feed: QueueFeedItem[] | null, nameOf: (zoneId: stri
   if (feed === null) return null;
   return feed.filter((item) => item.on).map((item) => ({ zoneId: item.airportZoneId, name: nameOf(item.airportZoneId), waiting: item.waiting, waitMin: item.longestWaitMin, pickupsLastHour: item.pickupsLastHour }));
 }
+
+/** The shape the queue map opens on: the drawn queue area, else the airport outline (never the city preset). */
+export function queueMapView(area: [number, number][], airport: [number, number][]): [number, number][] | undefined {
+  if (area.length >= 3) return area;
+  return airport.length >= 3 ? airport : undefined;
+}

@@ -37,3 +37,12 @@ test("Dashboard airport card: the server feed (waiting, longest wait, pickups la
   assert.equal(parseQueueFeed({ nope: 1 }), null);
   assert.equal(airportCards(null, (id) => id), null);
 });
+
+test("the queue map opens on the drawn area, else on the airport outline", async () => {
+  const { queueMapView } = await import("./airportQueue.ts");
+  const area: [number, number][] = [[59.645, 17.91], [59.645, 17.93], [59.655, 17.93]];
+  const airport: [number, number][] = [[59.62, 17.85], [59.62, 17.97], [59.68, 17.97], [59.68, 17.85]];
+  assert.deepEqual(queueMapView(area, airport), area);
+  assert.deepEqual(queueMapView([], airport), airport);
+  assert.equal(queueMapView([], []), undefined);
+});

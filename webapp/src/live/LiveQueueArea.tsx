@@ -6,7 +6,7 @@ import { NumberField } from "../pricing/NumberField";
 import { tr, trn } from "../i18n";
 import type { ServerZone } from "../zones/live";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
-import { QUEUE_DEFAULTS, QUEUE_RANGES, queueAreaBody, queueAreaPath, type QueueAreaInput } from "./airportQueue.ts";
+import { QUEUE_DEFAULTS, QUEUE_RANGES, queueAreaBody, queueAreaPath, queueMapView, type QueueAreaInput } from "./airportQueue.ts";
 import { queueAreaKey, useQueueArea } from "./useAirportQueue";
 
 /**
@@ -49,15 +49,15 @@ export function LiveQueueArea({ zone, disabled }: { zone: ServerZone; disabled: 
         <span className="zd-switch" aria-hidden="true"><i /></span>
         <span><b>{tr("Airport queue on")}</b><small>{tr("Off until the area is drawn and saved.")}</small></span>
       </label>
-      <BonusAreaMap country={country} areas={draft.polygon.length ? [{ id: "queue", name: tr("Queue area"), ring: draft.polygon }] : []} onChange={(next) => set({ polygon: next[0]?.ring ?? [] })} />
+      <BonusAreaMap country={country} areas={draft.polygon.length ? [{ id: "queue", name: tr("Queue area"), ring: draft.polygon }] : []} onChange={(next) => set({ polygon: next[0]?.ring ?? [] })} view={queueMapView(draft.polygon, zone.polygon)} />
       <p className="fine">{draft.polygon.length ? trn("Queue area: {0} points", draft.polygon.length) : tr("No queue area drawn yet.")}</p>
       <div className="cat-actions">
         <button data-command="admin.zone.copyQueue" type="button" className="dash-btn small ghost" disabled={disabled} onClick={() => set({ polygon: zone.polygon.map((p) => [p[0], p[1]] as [number, number]) })}>{tr("Use the airport outline")}</button>
       </div>
       <div className="zd-fields">
-        <NumberField label={tr("Leave the queue after (outside the area)")} unit="min" value={draft.leaveGraceMin} min={QUEUE_RANGES.leaveGraceMin[0]} max={QUEUE_RANGES.leaveGraceMin[1]} disabled={disabled} onChange={(leaveGraceMin) => set({ leaveGraceMin })} />
-        <NumberField label={tr("Time to answer a queue offer")} unit="s" value={draft.offerSeconds} min={QUEUE_RANGES.offerSeconds[0]} max={QUEUE_RANGES.offerSeconds[1]} disabled={disabled} onChange={(offerSeconds) => set({ offerSeconds })} />
-        <NumberField label={tr("Queue offers before the nearest driver")} value={draft.maxQueueOffers} min={QUEUE_RANGES.maxQueueOffers[0]} max={QUEUE_RANGES.maxQueueOffers[1]} disabled={disabled} onChange={(maxQueueOffers) => set({ maxQueueOffers })} />
+        <label className="field"><span>{tr("Leave the queue after (outside the area)")}</span><NumberField label={tr("Leave the queue after (outside the area)")} unit="min" value={draft.leaveGraceMin} min={QUEUE_RANGES.leaveGraceMin[0]} max={QUEUE_RANGES.leaveGraceMin[1]} disabled={disabled} onChange={(leaveGraceMin) => set({ leaveGraceMin })} /></label>
+        <label className="field"><span>{tr("Time to answer a queue offer")}</span><NumberField label={tr("Time to answer a queue offer")} unit="s" value={draft.offerSeconds} min={QUEUE_RANGES.offerSeconds[0]} max={QUEUE_RANGES.offerSeconds[1]} disabled={disabled} onChange={(offerSeconds) => set({ offerSeconds })} /></label>
+        <label className="field"><span>{tr("Queue offers before the nearest driver")}</span><NumberField label={tr("Queue offers before the nearest driver")} value={draft.maxQueueOffers} min={QUEUE_RANGES.maxQueueOffers[0]} max={QUEUE_RANGES.maxQueueOffers[1]} disabled={disabled} onChange={(maxQueueOffers) => set({ maxQueueOffers })} /></label>
       </div>
       <label className={draft.keepPlaceAfterDecline ? "zd-toggle on" : "zd-toggle"}>
         <input type="checkbox" aria-label={tr("A driver who declines keeps his place")} checked={draft.keepPlaceAfterDecline} disabled={disabled} onChange={(event) => set({ keepPlaceAfterDecline: event.target.checked })} />
