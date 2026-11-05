@@ -57,6 +57,8 @@ import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
 import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
 import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
+import { LiveRiderModeration } from "../live/LiveRiderModeration";
+import { LiveWalletCredit } from "../live/LiveWalletCredit";
 import { feeKindOf, owedByCurrency, owedText, tripMoney, walletByCurrency, walletText } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
@@ -225,6 +227,7 @@ export function RiderDetailPage() {
               {rider.status === "active" ? statusPatch("on_hold", "Put on hold", "admin.rider.hold", "dash-btn ghost") : null}
               {rider.status !== "blocked" ? statusPatch("blocked", "Block", "admin.rider.block", "dash-btn danger") : null}
             </div>
+            {liveData ? <LiveRiderModeration riderId={rider.id} moderation={liveRiderOf(rider)?.moderation ?? null} canEdit={can(role, "riders.block")} /> : null}
           </div>
         </div>
         <div className="rd-facts">
@@ -251,6 +254,8 @@ export function RiderDetailPage() {
                   <li key={trip.id}>
                     <Link to={`/trips/${trip.id}#split`}>{trip.id}</Link> · {tripMoney(fee.feeMinor ?? 0, trip.liveTrip!.currency)} ({feeKindOf(fee) === "no_show" ? tr("no-show fee") : tr("cancel fee")})
                     {can(role, "trips.intervene") ? <CommandButton command="admin.trip.waiveFee" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="owed" after="waived" onDone={() => { setNotice(tr("Fee waived. The rider owes nothing for this trip.")); data.refetch?.(); void riderTrips.refetch(); }}>{tr("Waive the fee")}</CommandButton> : null}
+                    {/* Fix job 0 (owner A2-2): the rider paid Movera another way; reason required, logged. No "Ask rider to pay". */}
+                    {can(role, "finance.edit") ? <CommandButton command="admin.rider.feeMarkPaid" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="owed" after="paid" value={{ riderId: rider.id }} onDone={() => { setNotice(tr("Fee marked as paid. The rider owes nothing for this trip.")); data.refetch?.(); void riderTrips.refetch(); }}>{tr("Mark as paid")}</CommandButton> : null}
                   </li>
                 );
               })}
@@ -344,6 +349,7 @@ export function RiderDetailPage() {
 
         <TabPanel id="wallet" activeId={tab}>
           <div className="rd-money">
+            {liveData ? <LiveWalletCredit riderId={rider.id} walletMinor={liveRiderOf(rider)?.walletMinor ?? null} currency={liveRiderOf(rider)?.currency ?? null} /> : (
             <section className="fd-box rd-wallet">
               <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
               <strong className="rd-wallet-balance">{walletShown}</strong>
@@ -363,6 +369,7 @@ export function RiderDetailPage() {
                 </ul>
               ) : null}
             </section>
+            )}
 
             <section className="fd-box rd-refund">
               <h3 id="refund-title">{trn("{0} Refund a ride", <RotateCcw size={16} aria-hidden="true" />)}</h3>

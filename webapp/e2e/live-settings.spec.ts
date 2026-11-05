@@ -241,3 +241,18 @@ test("Live G8 fix 2: Payment methods read what the server serves on open; a meth
   await expect(panel.getByLabel("Tunisien Apple Pay")).toBeDisabled();
   await expect(panel.getByTestId("country-apps-closed-TN")).toContainText("Movera är inte öppet i det här landet än");
 });
+
+test("v0.18.16 A2 (owner G12 Q-D): Tips & limits sets the largest Add money to wallet; it is saved in the zone's CountryRules in kr", async ({ page }) => {
+  await fakeTripServer(page, { admin: SV_ADMIN });
+  const server = await fakeSettings(page);
+  await signIn(page, "Kontrollpanel");
+  await page.goto("/pricing?tab=extras&scope=standard-SE");
+  const panel = page.getByTestId("pricing-extras");
+  const field = panel.getByLabel("Största Lägg till pengar i plånboken på en gång", { exact: true });
+  await expect(field).toHaveValue("2900");
+  await field.fill("1500");
+  server.sent.length = 0;
+  await panel.getByRole("button", { name: /Spara dricks och gränser/ }).click();
+  await confirm(page);
+  await expect.poll(() => server.sent.filter((s) => s.method === "PUT" && s.path.includes("country_rules")).map((s) => (s.body?.["document"] as { walletCreditMax?: unknown } | undefined)?.walletCreditMax)).toEqual([{ amountMinor: 150_000, currency: "SEK" }]);
+});

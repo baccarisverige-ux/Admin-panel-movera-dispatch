@@ -45,6 +45,7 @@ import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { formatNumber, tr } from "../i18n/index.ts";
 import { rideCheckRecords } from "./rideChecks.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
+import { readDraft, savePublish, standardKey } from "./configDocs.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
@@ -150,6 +151,7 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       ...(driver.termsAcceptedAt ? { termsAcceptedAt: driver.termsAcceptedAt } : {}),
     },
     liveDriver: {
+      payoutHold: driver.payoutHold ? { reason: driver.payoutHold.reason, at: driver.payoutHold.at } : null,
       onlineStatus: live?.onlineStatus ?? driver.onlineStatus,
       rating: typeof driver.rating === "number" ? driver.rating : null,
       location: location ? { lat: location.lat, lng: location.lng, measuredAt: location.measuredAt } : null,
@@ -313,6 +315,7 @@ export function riderRecord(rider: Rider): DemoRecord {
       outstandingMinor: rider.outstanding ? rider.outstanding.amountMinor : null,
       currency: rider.wallet?.currency ?? rider.outstanding?.currency ?? null,
       deletionRequestedAt: rider.deletionRequestedAt ?? null,
+      moderation: rider.moderation ?? null,
       // v0.18.7 (G5 Q3): every owed currency; an older server sends only outstanding (one currency).
       // v0.18.28 (owner Q4): every wallet balance in its own currency; an older server sends only wallet (one currency).
       walletByCurrency: Array.isArray(rider.wallets) ? rider.wallets.filter((money) => Number.isFinite(money?.amountMinor) && money.amountMinor !== 0).map((money) => ({ amountMinor: money.amountMinor, currency: money.currency })) : rider.wallet && rider.wallet.amountMinor !== 0 ? [{ amountMinor: rider.wallet.amountMinor, currency: rider.wallet.currency }] : [],
@@ -683,6 +686,67 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         throw error;
       });
       if (next?.driverId) drivers.set(next.driverId, next);
+      return done("Saved.");
+    }
+    // Fix job 0 (owner A2-2 "Only mark and detect from next trip"): Mark as paid on an owed fee, with the reason. No
+    // "Ask rider to pay": a fee left owed is added by the server to the rider's next trip.
+    if (input.action === "admin.rider.feeMarkPaid") {
+      const riderId = (input.value as { riderId?: unknown } | undefined)?.riderId;
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      if (typeof riderId !== "string" || !riderId) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(riderId)}/fees/${encodeURIComponent(input.targetId)}/mark-paid`, { reason: reason.slice(0, 300) }).catch(explained);
+      if (next?.riderId) riders.set(next.riderId, next);
+      return done("Marked as paid.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner G12 Q5, build-spec Q2): Add money to wallet, in the rider's currency, with the reason.
+    if (input.action === "admin.rider.walletCredit") {
+      const amount = (input.value as { amount?: { amountMinor?: unknown; currency?: unknown } } | undefined)?.amount;
+      const reason = input.reason?.trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+      if (!amount || typeof amount.amountMinor !== "number" || !(amount.amountMinor > 0) || typeof amount.currency !== "string") throw new ApiError(400, tr("Enter an amount above 0."), { code: "invalid_request", retryable: false });
+      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(input.targetId)}/wallet-credit`, { amount: { amountMinor: amount.amountMinor, currency: amount.currency }, reason: reason.slice(0, 300) }).catch(explained);
+      if (next?.riderId) riders.set(next.riderId, next);
+      return done("Saved.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner build-spec Q4, contract.json#payoutMode): one admin approves a manual country's run.
+    if (input.action === "admin.payout.approveRun") {
+      const { country, periodEnd } = (input.value ?? {}) as { country?: string; periodEnd?: string };
+      if (!country || !periodEnd) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      // Fix job 0 (owner A2-3 "Yes, reason required"): the admin's own reason, kept in the server's audit.
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      await client.post("/admin/payouts/runs/approve", { country, periodEnd, reason: reason.slice(0, 300) }).catch(explained);
+      return done("Run approved: the payouts can be paid.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner Q4 + G10-2): the country's payout mode and schedule, in its Standard's CountryRules (kept otherwise).
+    if (input.action === "admin.payout.settings") {
+      const { country, mode, schedule } = (input.value ?? {}) as { country?: string; mode?: string; schedule?: unknown };
+      if (!country || (mode !== "automatic" && mode !== "manual") || !schedule) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const http = { json: <T,>(path: string) => client.json<T>(path), put: <T,>(path: string, body: unknown) => client.put<T>(path, body), post: <T,>(path: string, body: unknown) => client.post<T>(path, body), del: <T,>(path: string) => client.del<T>(path) };
+      const key = standardKey(country);
+      const draft = await readDraft(http, "country_rules", key).catch(explained);
+      await savePublish(http, "country_rules", key, draft, { ...(draft?.document ?? {}), country, payoutMode: mode, payoutSchedule: schedule }).catch(explained);
+      return done("Payout settings published.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner Q4): pause / release one driver's payouts from his profile, with the reason.
+    if (input.action === "admin.driver.payoutHold") {
+      const held = (input.value as { held?: unknown } | undefined)?.held === true;
+      const reason = input.reason?.trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+      const next = await client.post<Driver>(`/admin/drivers/${encodeURIComponent(input.targetId)}/payout-hold`, { held, reason: reason.slice(0, 300) }).catch(explained);
+      if (next?.driverId) drivers.set(next.driverId, next);
+      return done("Saved.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner G16 Q16-2): Warn → Pause → Ban with the admin's reason; level none clears it.
+    if (input.action === "admin.rider.moderate") {
+      const { level, pauseDays } = (input.value ?? {}) as { level?: string; pauseDays?: number };
+      const reason = input.reason?.trim();
+      if (!level || !reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+      const rider = riders.get(input.targetId) ?? (await client.json<{ items: Rider[] }>(`/admin/riders?q=${encodeURIComponent(input.targetId)}`)).items.find((row) => row.riderId === input.targetId);
+      if (!rider) throw new ApiError(404, "No such rider.", { code: "not_found" });
+      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(rider.riderId)}/moderation`, { expectedVersion: rider.version, level, reason: reason.slice(0, 300), ...(level === "paused" ? { pauseDays } : {}) }).catch(explained);
+      if (next?.riderId) riders.set(next.riderId, next);
       return done("Saved.");
     }
     const decision = VEHICLE_COMMANDS[input.action];
