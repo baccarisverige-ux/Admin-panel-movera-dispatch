@@ -71,6 +71,10 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.legalPublish", label: "Publish terms and privacy", reason: false, permission: "settings.publish" },
   // v0.18.5 (owner G9): the trip's chat in the trip details (GET /trips/{tripId}/messages, support.reply).
   { id: "admin.server.tripChat", label: "Show the trip chat", reason: false, permission: "trips.read" },
+  // BASE B13 (contract v0.18.26 §47): a safety case shows the driver's emergency contacts (read-only, audited by the server).
+  { id: "admin.server.riderSavedPlaces", label: "Show the rider's saved places", reason: false, permission: "riders.read" },
+  { id: "admin.server.driverPreferences", label: "Show the driver's ride preferences", reason: false, permission: "drivers.read" },
+  { id: "admin.server.emergencyContacts", label: "Show the driver's emergency contacts", reason: false, permission: "incidents.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },
   // The id is kept for older audit rows; the demo amount is above the default 500 kr second-admin limit.
   { id: "admin.audit.refund250", label: "Refund 600 kr", reason: true, permission: "payments.refund" },
@@ -290,6 +294,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.rider.askPay", label: "Ask rider to pay", reason: false, permission: "support.reply" },
   { id: "admin.rider.markPaid", label: "Mark unpaid balance as paid", reason: true, permission: "finance.edit" },
   { id: "admin.rider.walletCredit", label: "Add money to wallet", reason: true, permission: "finance.edit" },
+  { id: "admin.rider.feeMarkPaid", label: "Mark the owed fee as paid", reason: true, permission: "finance.edit" },
   { id: "admin.rider.refund", label: "Refund rider", reason: true, permission: "payments.refund" },
   { id: "admin.rider.refundDecide", label: "Approve or reject refund", reason: true, permission: "approval.decide" },
   { id: "admin.rider.hold", label: "Put rider on hold", reason: true, permission: "riders.block" },
@@ -297,6 +302,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.rider.ban", label: "Add to ban list", reason: true, permission: "riders.block" },
   { id: "admin.rider.merge", label: "Merge duplicate account", reason: true, permission: "riders.block" },
   { id: "admin.rider.identity", label: "Identity check", reason: true, permission: "riders.block" },
+  { id: "admin.driver.payoutHold", label: "Pause or release driver payouts", reason: true, permission: "finance.edit" },
+  { id: "admin.rider.moderate", label: "Warn, pause or ban rider", reason: true, permission: "riders.block" },
   { id: "admin.rider.lostFound", label: "Lost and found", reason: false, permission: "support.reply" },
   { id: "admin.rider.tab", label: "Open rider section", reason: false, permission: "riders.read" },
   { id: "admin.riders.view", label: "Choose riders view", reason: false, permission: "riders.read" },
@@ -464,8 +471,9 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.payment.rules", label: "Save payment rules", reason: true, permission: "approval.decide" },
   { id: "admin.payout.view", label: "Payouts view", reason: false, permission: "finance.read" },
   { id: "admin.payout.hold", label: "Hold or release a payout", reason: true, permission: "finance.edit" },
+  { id: "admin.payout.settings", label: "Publish payout settings", reason: false, permission: "settings.publish" },
   { id: "admin.payout.retry", label: "Retry a failed payout", reason: true, permission: "finance.edit" },
-  { id: "admin.payout.approveRun", label: "Approve a payout run", reason: true, permission: "approval.decide" },
+  { id: "admin.payout.approveRun", label: "Approve a payout run", reason: true, permission: "finance.edit" },
   { id: "admin.payout.schedule", label: "Save the payout schedule", reason: true, permission: "approval.decide" },
   { id: "admin.payout.bankFile", label: "Download the bank file", reason: false, permission: "finance.read" },
   { id: "admin.ui.country", label: "Choose country", reason: false, permission: "overview.read" },

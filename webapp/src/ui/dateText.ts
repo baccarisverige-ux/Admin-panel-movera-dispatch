@@ -1,7 +1,7 @@
 import type { AppLanguage } from "../i18n/languages.ts";
 
 /**
- * FIX JOB 7 B-l (contract v0.18.32, contract.json#smallFixes.adminLabels.dates): a native date box shows the
+ * FIX JOB 7 B-l (contract v0.18.30, contract.json#smallFixes.adminLabels.dates): a native date box shows the
  * BROWSER's format (mm/dd/yyyy on an English browser) even when the admin works in Swedish. Admin date boxes show
  * and take dates in the admin's language instead: sv YYYY-MM-DD, fr DD/MM/YYYY, en (en-GB) DD/MM/YYYY. The value
  * the page and the server use stays ISO YYYY-MM-DD.

@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { useState } from "react";
 import { KeyRound, Plus, ShieldCheck, Wallet } from "lucide-react";
 import { useSlice } from "../api/hooks";
@@ -88,8 +87,7 @@ export function LimitsView({ editable, currency, onNotice }: { editable: boolean
       {/* Live clean-up 1 (owner "Never duplicate"): the refund limit per role is set in one place, Payments › Rules. */}
       <Row label={tr("Money back on one payment")} help={tr("Refund limits per role are set in Payments › Rules.")}><Link to="/payments?tab=rules">{tr("Edit in Payments")}</Link></Row>
       <Row label={tr("Wallet credit to one rider")} on={value.credit.on} onToggle={(on) => patch({ credit: { ...value.credit, on } })} disabled={!editable}><Num label={tr("Credit limit")} value={value.credit.max} unit={currency} min={1} disabled={!editable || !value.credit.on} onChange={(max) => patch({ credit: { ...value.credit, max } })} /></Row>
-      {/* Owner 2026-10-28: one admin is enough everywhere (live panel). */}
-      {useLiveSessionMaybe() ? null : <Row label={tr("Second admin above")} help={tr("One limit per country for every role, set in Settings.")}><Link to="/settings#refunds">{tr("Edit in Settings")}</Link></Row>}
+      {/* BASE B14 (owner Q1 "One admin always"): no "second admin above" row. */}
       {error ? <p role="alert" className="pl-warn">{error}</p> : null}
       <NotEnforced>{tr("These limits are saved for the backend. Refunds and wallet credits do not check them yet.")}</NotEnforced>
       <div className="actions">

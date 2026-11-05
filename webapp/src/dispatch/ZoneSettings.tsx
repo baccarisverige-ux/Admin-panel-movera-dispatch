@@ -327,7 +327,7 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
       </Card>
 
       <Card title={tr("Shortest ride")} tone="purple" icon={<Move size={18} />} help={tr("When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this.")}>
-        {/* FIX JOB 7 (owner Q9 "Warn him but can accept booking", contract v0.18.32): default 100 m, 0 = never warn. */}
+        {/* FIX JOB 7 (owner Q9 "Warn him but can accept booking", contract v0.18.30): default 100 m, 0 = never warn. */}
         <Row label={tr("Shortest ride (m)")} help={tr("0 means never warn. At most {0} m. Usual value {1} m.", [SAME_POINT_RANGE[1], CONFIG_DEFAULTS.samePointWarnMeters])}>
           <Num label={tr("Shortest ride (m)")} value={zone.samePoint?.warnMeters ?? CONFIG_DEFAULTS.samePointWarnMeters} unit="m" step={10} min={SAME_POINT_RANGE[0]} max={SAME_POINT_RANGE[1]} disabled={disabled} onChange={(warnMeters) => set({ samePoint: { warnMeters: Math.round(warnMeters) } })} />
         </Row>

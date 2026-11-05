@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { can, type Role } from "../auth/permissions";
 import { CommandButton } from "./CommandButton";
 import { useDialogFocus } from "./useDialogFocus";
+import { RealAppPreview } from "./RealAppPreview";
 import { tr, trn, trx, uiLocale } from "../i18n";
 
 export function StatusDot({ tone, children }: { tone: "green" | "amber" | "red" | "muted"; children: ReactNode }) {
@@ -64,12 +65,15 @@ export function Timeline({ items }: { items: { at: string; text: string }[] }) {
   );
 }
 
+/** B7 (owner P3 a): the real app in a phone frame; the drawn sample stays one tap away until it is archived. */
 export function PhonePreview({ app, children }: { app: "rider" | "driver"; children: ReactNode }) {
   return (
-    <div className={`phone-preview ${app}`}>
-      <strong>{app === "rider" ? tr("Rider") : tr("Driver")}</strong>
-      <div>{children}</div>
-    </div>
+    <RealAppPreview app={app}>
+      <div className={`phone-preview ${app}`}>
+        <strong>{app === "rider" ? tr("Rider") : tr("Driver")}</strong>
+        <div>{children}</div>
+      </div>
+    </RealAppPreview>
   );
 }
 

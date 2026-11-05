@@ -1,4 +1,4 @@
-/** French dictionary, area c2-job7-small-fixes: FIX JOB 7 (contract v0.18.32): Shortest ride setting, read-only Confirm value, Live tab counts. Add new keys at the end of this file. Merged in ../fr.ts in this order. */
+/** French dictionary, area c2-job7-small-fixes: FIX JOB 7 (contract v0.18.30): Shortest ride setting, read-only Confirm value, Live tab counts. Add new keys at the end of this file. Merged in ../fr.ts in this order. */
 import type { enC2Job7SmallFixes } from "../en/c2-job7-small-fixes.ts";
 
 export const frC2Job7SmallFixes: Record<keyof typeof enC2Job7SmallFixes, string> = {

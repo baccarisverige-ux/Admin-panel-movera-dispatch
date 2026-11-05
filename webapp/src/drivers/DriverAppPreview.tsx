@@ -1,10 +1,18 @@
 import { useState } from "react";
 import { Car, ChevronRight, Clock, Flame, Info, MapPin, MessageSquare } from "lucide-react";
 import { maxPerDriver, ruleLines, rewardLine, timeLine, type DriverBonus } from "./bonus";
+import { RealAppPreview } from "../ui/RealAppPreview";
 import { tr, trn } from "../i18n";
 
+type Props = { bonus: DriverBonus; money: (value: number) => string; categoryName: (id: string) => string; done?: number };
+
+/** B7 (owner P3 a): the real driver app in a phone frame, with this drawn sample one tap away (kept until archived). */
+export function DriverAppPreview(props: Props) {
+  return <RealAppPreview app="driver"><DriverAppSample {...props} /></RealAppPreview>;
+}
+
 /** How the bonus looks in the driver app: the map with the glowing area, and the bonus card with progress. */
-export function DriverAppPreview({ bonus, money, categoryName, done = 1 }: { bonus: DriverBonus; money: (value: number) => string; categoryName: (id: string) => string; done?: number }) {
+function DriverAppSample({ bonus, money, categoryName, done = 1 }: Props) {
   const [screen, setScreen] = useState<"map" | "details">("map");
   const rules = ruleLines(bonus, money, categoryName);
   const most = maxPerDriver(bonus);

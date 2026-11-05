@@ -1,6 +1,6 @@
 /** `link`: where the value is set today. Values set in Dispatch point there, so there is one place to change them. */
 /**
- * `readOnly` (FIX JOB 7 L21, contract v0.18.32 contract.json#smallFixes.adminReadOnly): the server never reads this
+ * `readOnly` (FIX JOB 7 L21, contract v0.18.30 contract.json#smallFixes.adminReadOnly): the server never reads this
  * value. The row stays (owner rule 21: never delete), shown read-only with `note`, and cannot be confirmed.
  */
 export type OpenValue = { id: string; label: string; today: string; link?: string; readOnly?: true; note?: string };
@@ -30,7 +30,7 @@ export const OPEN_VALUES: OpenValue[] = [
   { id: "cash", label: "Cash rules", today: "open" },
   { id: "fleet", label: "Fleet partners at launch", today: "open" },
   { id: "thresholds", label: "Money approval thresholds", today: "open" },
-  { id: "refund", label: "Refund second person", today: "Set per country in Settings", link: "/settings#refunds" },
+  { id: "refund", label: "Refund second person", today: "none (one admin always)" },
   { id: "wallet-ceiling", label: "Wallet credit ceiling", today: "500 kr" },
   { id: "languages", label: "Languages", today: "English, French, Swedish; default per country in Settings", link: "/settings#country-apps" },
   { id: "app-languages", label: "App languages today", today: "English only" },

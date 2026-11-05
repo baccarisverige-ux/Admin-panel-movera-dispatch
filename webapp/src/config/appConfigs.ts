@@ -181,7 +181,7 @@ function driverBonus(base: Common) {
   return { defaultLimit: limit.amountMinor > hardMax.amountMinor ? { ...hardMax } : limit, hardMax: { ...hardMax } };
 }
 
-/** v0.18.32 (owner Q9): the zone's "Shortest ride (m)", the default for rules saved before it existed. */
+/** v0.18.30 (owner Q9): the zone's "Shortest ride (m)", the default for rules saved before it existed. */
 function samePointWarnMeters(zone: ZoneDispatch): number {
   return validSamePoint(zone.samePoint?.warnMeters) ?? CONFIG_DEFAULTS.samePointWarnMeters;
 }

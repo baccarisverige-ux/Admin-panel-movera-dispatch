@@ -10,7 +10,7 @@ import { zoneDefault, zoneIssues } from "../dispatch/rules.ts";
 import { inboxItems } from "../platform/inbox.ts";
 import { liveTabCounts } from "../dashboard/liveCounts.ts";
 
-/** FIX JOB 7 (contract v0.18.32, contract.json#smallFixes). */
+/** FIX JOB 7 (contract v0.18.30, contract.json#smallFixes). */
 const NOW = "2026-11-05T10:00:00Z";
 
 test("Shortest ride (m): default 100 from the contract, sent to both apps, Sweden and France (owner Q9)", () => {
@@ -23,7 +23,7 @@ test("Shortest ride (m): default 100 from the contract, sent to both apps, Swede
   assert.ok(zoneIssues({ ...zoneDefault("Z001"), samePoint: { warnMeters: 5000 } }).some((issue) => issue.startsWith("Shortest ride: 0 to 1000 m")));
   const before = { ...zoneDefault("Z001") };
   delete before.samePoint;
-  assert.equal(zoneIssues(before).some((issue) => issue.startsWith("Shortest ride")), false, "rules saved before v0.18.32 still load");
+  assert.equal(zoneIssues(before).some((issue) => issue.startsWith("Shortest ride")), false, "rules saved before v0.18.30 still load");
 });
 
 test("Shortest ride (m) comes back from the live driver document", () => {

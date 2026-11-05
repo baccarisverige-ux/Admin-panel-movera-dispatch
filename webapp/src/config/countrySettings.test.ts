@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createFixtureAdminApi } from "../api/create.ts";
-import { signedInFixture } from "../api/fixtureSession.ts";
+import { signedInFixture } from "../testing/fixtureSession.ts";
 import { ApiError } from "../api/httpClient.ts";
 import { COMMANDS, SLICE_WRITERS } from "../commands/registry.ts";
 import { publish, emptyDispatchBook, draftCountry, draftRules } from "../dispatch/rules.ts";

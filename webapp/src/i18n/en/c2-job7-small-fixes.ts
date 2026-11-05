@@ -1,4 +1,4 @@
-/** English dictionary, area c2-job7-small-fixes: FIX JOB 7 (contract v0.18.32): Shortest ride setting, read-only Confirm value, Live tab counts. Add new keys at the end of this file. Merged in ../en.ts in this order. */
+/** English dictionary, area c2-job7-small-fixes: FIX JOB 7 (contract v0.18.30): Shortest ride setting, read-only Confirm value, Live tab counts. Add new keys at the end of this file. Merged in ../en.ts in this order. */
 export const enC2Job7SmallFixes = {
   "Searching {0} · Live {1}": "Searching {0} · Live {1}",
   "Not used yet": "Not used yet",

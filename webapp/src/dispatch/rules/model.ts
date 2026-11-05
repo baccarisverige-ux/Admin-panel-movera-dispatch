@@ -430,9 +430,9 @@ export type ZoneDispatch = {
   /** Q40: after the driver accepts, the rider can move the pickup up to maxMeters; further means cancel and book again. The driver is told. */
   pickupMove: { maxMeters: number };
   /**
-   * FIX JOB 7 (owner Q9 "Warn him but can accept booking", contract v0.18.32 contract.json#smallFixes.samePoint):
+   * FIX JOB 7 (owner Q9 "Warn him but can accept booking", contract v0.18.30 contract.json#smallFixes.samePoint):
    * "Shortest ride (m)": the rider is warned (and can still book) when pickup and drop-off are this close. 0 = never warn.
-   * Optional so rules saved before v0.18.32 still load (the default is used then).
+   * Optional so rules saved before v0.18.30 still load (the default is used then).
    */
   samePoint?: { warnMeters: number };
   airport: { on: boolean; order: "fifo" | "best"; maxQueueMin: number; queueAreas: { id: string; name: string; ring: [number, number][] }[] };

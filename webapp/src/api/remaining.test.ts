@@ -1,6 +1,6 @@
 import {test} from "node:test";import assert from "node:assert/strict";
 import {createFixtureAdminApi,type CommandInput} from "./create.ts";
-import {signedInFixture} from "./fixtureSession.ts";
+import {signedInFixture} from "../testing/fixtureSession.ts";
 import {AGENTS} from "../auth/permissions.ts";
 import {emptySafety,safetyAction,type SafetyBook} from "../safety/ops.ts";
 import {emptySupport,supportChange,type SupportBook} from "../support/ops.ts";

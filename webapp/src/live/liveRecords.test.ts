@@ -73,6 +73,14 @@ test("v0.18.7 (G5 Q3): a live rider carries what is owed per currency; an older 
   assert.deepEqual(none.outstandingByCurrency, []);
 });
 
+test("fix job 6 (owner Q4): AdminRider.wallets keeps every wallet balance in its own currency", () => {
+  const eu = riderRecord({ riderId: "rdr_4", firstName: "Lucie", phone: "+33600000004", status: "active", version: 1, outstanding: null, wallet: { amountMinor: 6500, currency: "EUR" }, wallets: [{ amountMinor: 6500, currency: "EUR" }, SEK(3000)] }).liveRider!;
+  assert.deepEqual(eu.walletByCurrency, [{ amountMinor: 6500, currency: "EUR" }, { amountMinor: 3000, currency: "SEK" }]);
+  assert.equal(eu.currency, "EUR");
+  const older = riderRecord({ riderId: "rdr_5", firstName: "Bo", phone: "+46700000005", status: "active", version: 1, outstanding: null, wallet: SEK(2000) }).liveRider!;
+  assert.deepEqual(older.walletByCurrency, [{ amountMinor: 2000, currency: "SEK" }]);
+});
+
 test("money lines the server did not send stay null, never 0", () => {
   const facts = tripRecord({ ...TRIP, commission: undefined, pickupPay: undefined, walletApplied: undefined, driverSilentAlert: undefined }).liveTrip!;
   assert.equal(facts.commission, null);
@@ -84,7 +92,7 @@ test("money lines the server did not send stay null, never 0", () => {
 test("a live driver carries online status, rating and position from /admin/live/drivers", () => {
   const driver = { driverId: "drv_1", accountStatus: "active", onlineStatus: "offline", firstName: "Anna", zoneIds: ["Z001"], categoryIds: [], documents: [], version: 1, rating: 4.8 } as Driver;
   const record = driverRecord(driver, { driverId: "drv_1", firstName: "Anna", onlineStatus: "on_trip", stale: false, location: { lat: 59.3, lng: 18.0, measuredAt: "2026-10-26T09:00:00Z" }, lastFixAt: "2026-10-26T09:00:01Z", activeTripId: "trp_1" });
-  assert.deepEqual(record.liveDriver, { onlineStatus: "on_trip", rating: 4.8, location: { lat: 59.3, lng: 18.0, measuredAt: "2026-10-26T09:00:00Z" }, lastFixAt: "2026-10-26T09:00:01Z", stale: false, activeTripId: "trp_1" });
+  assert.deepEqual(record.liveDriver, { payoutHold: null, onlineStatus: "on_trip", rating: 4.8, location: { lat: 59.3, lng: 18.0, measuredAt: "2026-10-26T09:00:00Z" }, lastFixAt: "2026-10-26T09:00:01Z", stale: false, activeTripId: "trp_1" });
   const plain = driverRecord({ ...driver, rating: undefined });
   assert.equal(plain.liveDriver?.onlineStatus, "offline");
   assert.equal(plain.liveDriver?.rating, null);
@@ -92,7 +100,7 @@ test("a live driver carries online status, rating and position from /admin/live/
 
 test("riders, payments, refunds to pay by hand, audit and approvals map from the server", () => {
   const rider = riderRecord({ riderId: "rdr_2", firstName: "Bo", phone: "+46700000002", rating: 4.5, status: "active", version: 3, outstanding: SEK(2500), wallet: SEK(1000) });
-  assert.deepEqual(rider.liveRider, { rating: 4.5, walletMinor: 1000, outstandingMinor: 2500, currency: "SEK", deletionRequestedAt: null, outstandingByCurrency: [{ amountMinor: 2500, currency: "SEK" }] });
+  assert.deepEqual(rider.liveRider, { rating: 4.5, walletMinor: 1000, outstandingMinor: 2500, currency: "SEK", deletionRequestedAt: null, moderation: null, outstandingByCurrency: [{ amountMinor: 2500, currency: "SEK" }], walletByCurrency: [{ amountMinor: 1000, currency: "SEK" }] });
   const payment = paymentRecord({ paymentId: "pay_trp_1", tripId: "trp_1", amount: SEK(40000), method: "cash", purpose: "trip", status: "captured", createdAt: "2026-10-25T08:30:00Z" }, "Z001");
   assert.deepEqual([payment.name, payment.tripId, payment.fareOre, payment.zoneId], ["cash", "trp_1", 40000, "Z001"]);
   const refund = refundPayoutRecord({ refundId: "rfd_1", tripId: "trp_1", amount: SEK(3000), riderId: "rdr_2", riderName: "Bo", riderPhone: "+46700000002", payoutTo: { kind: "swish" }, reason: "Late" });
@@ -146,4 +154,18 @@ test("live G8 6a: the trips connection note no longer says refunds, driver pay a
   const { readFileSync } = await import("node:fs");
   const text = readFileSync(new URL("./connection.ts", import.meta.url), "utf8");
   assert.ok(!/not connected yet/.test(text.split("\n").find((line) => line.trim().startsWith("trips:")) ?? ""));
+});
+
+test("v0.18.29 A2 (fix job 0): the rider's warning / pause / ban comes through on the record", () => {
+  const moderation = { level: "paused" as const, reason: "Unpaid fees", until: "2026-11-09T12:00:00Z" };
+  const rider = riderRecord({ riderId: "R9", firstName: "Ida", phone: "+46700000009", status: "suspended", version: 3, outstanding: null, moderation });
+  assert.deepEqual(rider.liveRider?.moderation, moderation);
+  assert.equal(rider.status, "suspended");
+});
+
+test("v0.18.29 A2 (fix job 0) (owner Q4): payout settings read the Standard's mode and schedule, bad values fall back to the defaults", async () => {
+  const { payoutSettingsOf } = await import("./payoutSettings.ts");
+  assert.deepEqual(payoutSettingsOf(null), { mode: "automatic", schedule: { frequency: "weekly", day: "monday", time: "08:00" } });
+  assert.deepEqual(payoutSettingsOf({ payoutMode: "manual", payoutSchedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" } }), { mode: "manual", schedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" } });
+  assert.deepEqual(payoutSettingsOf({ payoutMode: "weird", payoutSchedule: { frequency: "daily", day: "someday", time: "25:00" } }), { mode: "automatic", schedule: { frequency: "weekly", day: "monday", time: "08:00" } });
 });

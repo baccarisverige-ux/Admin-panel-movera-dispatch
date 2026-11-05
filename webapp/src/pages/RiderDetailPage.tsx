@@ -40,7 +40,6 @@ import {
   assign,
   ban,
   creditedThisMonth,
-  decideRefund,
   isBanned,
   markPaid,
   merge,
@@ -57,7 +56,10 @@ import { BOOKING_LABEL, categoryName, type Booking } from "../riders/profile";
 import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
 import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
-import { feeKindOf, owedByCurrency, owedText, tripMoney } from "../live/tripLive";
+import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
+import { LiveRiderModeration } from "../live/LiveRiderModeration";
+import { LiveWalletCredit } from "../live/LiveWalletCredit";
+import { feeKindOf, owedByCurrency, owedText, tripMoney, walletByCurrency, walletText } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
 import { NOTE_MAX } from "../domain/labels";
@@ -126,6 +128,8 @@ export function RiderDetailPage() {
   const country = profile.country;
   // v0.18.7 (G5 Q3): what the rider owes per currency (unpaid cancel / no-show fees); the owed trips can be waived.
   const owed = isLiveData() ? owedByCurrency(liveRiderOf(rider)) : [];
+  // v0.18.28 (fix job 6, owner Q4): live, each wallet balance in its own currency (a France refund shows in €).
+  const walletShown = isLiveData() ? walletText(walletByCurrency(liveRiderOf(rider)), market(country).currency) : money(row.walletMinor, country);
   const known = new Map([...liveTripsOfRider(rider.id), ...(riderTrips.data ?? [])].map((trip) => [trip.id, trip]));
   const owedTrips = isLiveData() ? [...known.values()].filter((trip) => trip.liveTrip?.cancellation?.feeStatus === "owed" && (trip.liveTrip.cancellation.feeMinor ?? 0) > 0).sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")) : [];
   const place = market(country);
@@ -223,6 +227,7 @@ export function RiderDetailPage() {
               {rider.status === "active" ? statusPatch("on_hold", "Put on hold", "admin.rider.hold", "dash-btn ghost") : null}
               {rider.status !== "blocked" ? statusPatch("blocked", "Block", "admin.rider.block", "dash-btn danger") : null}
             </div>
+            {liveData ? <LiveRiderModeration riderId={rider.id} moderation={liveRiderOf(rider)?.moderation ?? null} canEdit={can(role, "riders.block")} /> : null}
           </div>
         </div>
         <div className="rd-facts">
@@ -232,7 +237,7 @@ export function RiderDetailPage() {
           <Stat label={tr("Cancel rate")} value={Number.isFinite(profile.cancelRate) ? `${profile.cancelRate}%` : tr("Not connected yet")} warn={profile.cancelRate > 20 ? "red" : profile.cancelRate > 12 ? "amber" : null} />
           <Stat label={tr("No-shows")} value={shown(profile.noShows)} warn={profile.noShows >= 3 ? "red" : null} />
           <Stat label={tr("Lifetime value")} value={money(lifetimeMinor, country, true)} hint={tr("spent − refunds − promotions")} />
-          <Stat label={tr("Wallet")} value={money(row.walletMinor, country)} />
+          <Stat label={tr("Wallet")} value={walletShown} />
         </div>
       </section>
 
@@ -249,6 +254,8 @@ export function RiderDetailPage() {
                   <li key={trip.id}>
                     <Link to={`/trips/${trip.id}#split`}>{trip.id}</Link> · {tripMoney(fee.feeMinor ?? 0, trip.liveTrip!.currency)} ({feeKindOf(fee) === "no_show" ? tr("no-show fee") : tr("cancel fee")})
                     {can(role, "trips.intervene") ? <CommandButton command="admin.trip.waiveFee" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="owed" after="waived" onDone={() => { setNotice(tr("Fee waived. The rider owes nothing for this trip.")); data.refetch?.(); void riderTrips.refetch(); }}>{tr("Waive the fee")}</CommandButton> : null}
+                    {/* Fix job 0 (owner A2-2): the rider paid Movera another way; reason required, logged. No "Ask rider to pay". */}
+                    {can(role, "finance.edit") ? <CommandButton command="admin.rider.feeMarkPaid" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="owed" after="paid" value={{ riderId: rider.id }} onDone={() => { setNotice(tr("Fee marked as paid. The rider owes nothing for this trip.")); data.refetch?.(); void riderTrips.refetch(); }}>{tr("Mark as paid")}</CommandButton> : null}
                   </li>
                 );
               })}
@@ -342,9 +349,10 @@ export function RiderDetailPage() {
 
         <TabPanel id="wallet" activeId={tab}>
           <div className="rd-money">
+            {liveData ? <LiveWalletCredit riderId={rider.id} walletMinor={liveRiderOf(rider)?.walletMinor ?? null} currency={liveRiderOf(rider)?.currency ?? null} /> : (
             <section className="fd-box rd-wallet">
               <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
-              <strong className="rd-wallet-balance">{money(row.walletMinor, country)}</strong>
+              <strong className="rd-wallet-balance">{walletShown}</strong>
               <div className="rd-limit">
                 <span>{trn("Given this month: {0} of {1} {2}", usedThisMonth, care.limits[country], symbol)}</span>
                 <i aria-hidden="true"><b style={{ width: `${Math.min(100, (usedThisMonth / care.limits[country]) * 100)}%` }} /></i>
@@ -354,13 +362,14 @@ export function RiderDetailPage() {
                 <label className="field">{trn("Why{0}", <input aria-label={tr("Wallet reason")} value={creditReason} onChange={(event) => setCreditReason(event.target.value)} placeholder={tr("Driver was late")} />)}</label>
               </div>
               {credit.error && (creditReason || creditAmount !== 100) ? <p className="rd-form-error">{trSentences(credit.error)}</p> : <small className="fine">{trn("At most {0} {1} at a time.", CREDIT_MAX[country], symbol)}</small>}
-              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={money(row.walletMinor, country)} after={`+${creditAmount} ${symbol}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(tr("Added {0} {1} to {2}'s wallet.", [creditAmount, symbol, rider.name])); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
+              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={walletShown} after={`+${creditAmount} ${symbol}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(tr("Added {0} {1} to {2}'s wallet.", [creditAmount, symbol, rider.name])); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
               {care.credits.filter((item) => item.riderId === rider.id).length ? (
                 <ul className="rd-ledger" aria-label={tr("Wallet credits")}>
                   {care.credits.filter((item) => item.riderId === rider.id).map((item) => <li key={item.id}><b>+{item.amount} {symbol}</b><span>{item.reason}</span><small>{dateTime.format(Date.parse(item.at))} · {item.by}</small></li>)}
                 </ul>
               ) : null}
             </section>
+            )}
 
             <section className="fd-box rd-refund">
               <h3 id="refund-title">{trn("{0} Refund a ride", <RotateCcw size={16} aria-hidden="true" />)}</h3>
@@ -383,7 +392,7 @@ export function RiderDetailPage() {
                   </button>
                 ))}
               </div>
-              {refund.error && refundRide && refundReason ? <p className="rd-form-error">{trSentences(refund.error)}</p> : <small className="fine">{trn("Refunds above {0} {1} need a second admin to approve ({2}).", refundPolicy.aboveMajor[country], symbol, <Link to="/settings#refunds">{tr("set in Settings")}</Link>)}</small>}
+              {refund.error && refundRide && refundReason ? <p className="rd-form-error">{trSentences(refund.error)}</p> : null}
               <CommandButton command="admin.rider.refund" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(refundAmount * place.minorUnits)} before={refundRide?.id ?? ""} after={`${refundAmount} ${symbol} to ${refundTo}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={refund.care} disabled={!can(role, "finance.read") || Boolean(refund.error)} title={refund.error} onDone={() => { setNotice(refund.needsApproval ? tr("Refund of {0} {1} is waiting for a second admin to approve.", [refundAmount, symbol]) : tr("Refunded {0} {1} to the rider's {2}.", [refundAmount, symbol, DESTINATIONS.find((item) => item.id === refundTo)?.label.toLowerCase()])); setRefundReason(""); setRefundId(""); }}>{trn("{0} Refund {1}", <RotateCcw size={14} aria-hidden="true" />, refundAmount ? `${refundAmount} ${symbol}` : "")}</CommandButton>
             </section>
           </div>
@@ -397,12 +406,7 @@ export function RiderDetailPage() {
                     <span>{trn("{0} · to {1} · {2}", item.bookingId, item.destination, item.reason)}</span>
                     <span className={`rd-refund-status r-${item.status}`}>{item.status === "waiting" ? tr("Waiting for approval") : item.status === "sent" ? tr("Sent") : tr("Rejected")}</span>
                     <small>{trn("Asked by {0} · {1}{2}", item.by, dateTime.format(Date.parse(item.at)), item.decidedBy ? tr(" · decided by {0}", [item.decidedBy]) : "")}</small>
-                    {item.status === "waiting" && can(role, "approval.decide") ? (
-                      <span className="rd-inline">
-                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="approved" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, true, me).care} disabled={Boolean(decideRefund(care, item.id, true, me).error)} title={decideRefund(care, item.id, true, me).error} onDone={() => setNotice(tr("Refund approved and sent."))}>{tr("Approve")}</CommandButton>
-                        <CommandButton command="admin.rider.refundDecide" className="dash-btn small ghost" targetId={item.id} confirmTarget={false} scope={rider.zoneId} before="waiting" after="rejected" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={decideRefund(care, item.id, false, me).care} disabled={Boolean(decideRefund(care, item.id, false, me).error)} title={decideRefund(care, item.id, false, me).error} onDone={() => setNotice(tr("Refund rejected."))}>{tr("Reject")}</CommandButton>
-                      </span>
-                    ) : null}
+                    {/* BASE B14 (owner Q1 "One admin always"): no second-admin Approve / Reject; a refund is sent by the admin who asks. */}
                   </li>
                 ))}
               </ul>
@@ -553,6 +557,7 @@ export function RiderDetailPage() {
             ...audits.map((item) => ({ at: Date.parse(item.at), text: `${item.action} · ${item.result} · ${item.actorId}`, tone: "grey" })),
           ]} format={(at) => dateTime.format(at)} />
         </TabPanel>
+        {liveData ? <LiveRiderSavedPlaces riderId={rider.id} /> : null}
       </div>
     </div>
   );

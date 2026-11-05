@@ -66,10 +66,7 @@ export function AuditPage() {
             <p>{trn("Generic command audit. Revision {0}. Every business command records actor, action, target, scope, before, after, reason and result.", revision.data ?? "…")}</p>
           </div>
         </div>
-        <div className="actions">
-          <CommandButton command="admin.audit.refund50" className="secondary-btn" type="button" targetId="RF-SMALL" before="open" after="refunded" amountOre={5_000}>{tr("Refund 50 kr")}</CommandButton>
-          <CommandButton command="admin.audit.refund250" className="primary-btn" type="button" targetId="RF-LARGE" before="open" after="pending approval" amountOre={60_000}>{tr("Refund 600 kr")}</CommandButton>
-        </div>
+        {/* BASE B14 (owner Q1 "One admin always"): the demo "Refund 50 kr / 600 kr" second-admin buttons are gone. */}
       </div>
 
       <Cards

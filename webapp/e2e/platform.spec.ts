@@ -96,20 +96,15 @@ test("audit: search, filters, details with who and before/after, and export", as
   await expect(page.getByText("No action matches these filters.")).toBeVisible();
 });
 
-test("to confirm: a money approval shows in the inbox and a product value is confirmed", async ({ page }) => {
+test("to confirm: no money waits for a second admin and a product value is confirmed", async ({ page }) => {
   await session(page);
+  // BASE B14 (owner Q1 "One admin always", 2026-11-04 "Remove all 4"): the Audit "Refund 50 kr / 600 kr" buttons are
+  // gone and no refund waits in the inbox; the old flow is archived in Rules/archive/second-admin-buttons/tests.
   await page.goto("/audit");
-  await page.getByRole("button", { name: "Refund 600 kr" }).click();
-  const modal = page.locator(".modal.open").last();
-  await modal.getByLabel("Type RF-LARGE to confirm").fill("RF-LARGE");
-  await modal.getByLabel("Reason", { exact: true }).selectOption("Charged twice");
-  await modal.getByRole("button", { name: "Confirm" }).click();
-  await expect(page.getByRole("heading", { level: 3, name: "Pending approvals" }).locator("..")).toContainText("RF-LARGE");
+  await expect(page.getByRole("button", { name: "Refund 600 kr" })).toHaveCount(0);
   await page.goto("/confirm");
   await expect(page.getByRole("heading", { level: 2, name: "To confirm" })).toBeVisible();
-  const inbox = page.getByRole("list", { name: "Inbox" });
-  await expect(inbox).toContainText("600,00 kr for RF-LARGE");
-  await expect(inbox.getByRole("button", { name: "Approve" }).first()).toBeDisabled();
+  await expect(page.getByText(/RF-LARGE/)).toHaveCount(0);
   await page.getByRole("button", { name: "Confirm quote" }).click();
   await page.getByLabel("Value to confirm").fill("90 seconds");
   await page.getByLabel("Note for the team").fill("Decided in the October meeting");

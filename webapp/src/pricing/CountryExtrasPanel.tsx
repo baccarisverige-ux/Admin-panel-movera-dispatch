@@ -119,6 +119,7 @@ function withoutTipFlag(mixed: MixedTipRules | undefined, flag: (typeof TIP_FLAG
 export function CountryExtrasPanel({ country, canEdit, section, focus = null, onDirty, onNotice, targets, zoneId: shownZone }: Props) {
   const { book, loading: bookLoading } = useCountrySettings();
   const zoneId = targets ? (shownZone && targets.includes(shownZone) ? shownZone : targets[0]) : undefined;
+  const onStandard = !zoneId || zoneId === `standard-${country}`;
   // v0.8.1 live: each zone's (or Standard's) own Tips & limits, read when this tab opens.
   const zoneRules = useSlice<Record<string, CountrySettings>>(ZONE_RULES_KEY, {}, { enabled: Boolean(targets) });
   const zoneBook = { ...book, zones: zoneRules.value };
@@ -211,7 +212,20 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               </div>
               <NumberField id={DRIVER_BONUS_LIMIT_INPUT_ID} label={tr("Driver bonus limit")} value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
               <NumberField label={tr("Largest change of a driver's pay on one trip")} value={shown.driverPayChangeMax} unit={symbol} step={moneyStep(country)} max={hardMax * 10} disabled={!canEdit} changed={shown.driverPayChangeMax !== saved.driverPayChangeMax} onChange={(driverPayChangeMax) => edit({ driverPayChangeMax })} />
+              {/* Fix job 0 (owner A2-1 "Per country, in Pricing"): one limit per country, set on the country Standard; a zone shows it read-only. */}
+              <NumberField label={tr("Largest Add money to wallet at one time")} value={shown.walletCreditMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit || !onStandard} changed={shown.walletCreditMax !== saved.walletCreditMax} onChange={(walletCreditMax) => edit({ walletCreditMax })} />
+              {onStandard ? null : <small data-testid="wallet-credit-max-country">{tr("One limit per country: change it on the country Standard.")}</small>}
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
+            </div>
+          </div>
+          <div id="extras-person-limits" className="cx-anchor">
+            <div className="fee-card" data-testid="person-limits">
+              <div>
+                <strong>{tr("Limits per person")}</strong>
+                <small>{tr("Per person, in this country: how many saved places one rider can keep, and how many emergency contacts one rider or one driver can keep. Keeps the server traffic small.")}</small>
+              </div>
+              <NumberField label={tr("Saved places per person")} value={shown.personLimits.savedPlacesPerPerson} step={1} max={500} disabled={!canEdit} changed={shown.personLimits.savedPlacesPerPerson !== saved.personLimits.savedPlacesPerPerson} onChange={(value) => edit({ personLimits: { ...shown.personLimits, savedPlacesPerPerson: value } })} />
+              <NumberField label={tr("Emergency contacts per person")} value={shown.personLimits.emergencyContactsPerPerson} step={1} max={50} disabled={!canEdit} changed={shown.personLimits.emergencyContactsPerPerson !== saved.personLimits.emergencyContactsPerPerson} onChange={(value) => edit({ personLimits: { ...shown.personLimits, emergencyContactsPerPerson: value } })} />
             </div>
           </div>
         </div>
