@@ -8579,4 +8579,12 @@
 ["Changes per internet address per minute (not signed in)","Changes per internet address per minute (not signed in)"],
 ["Enter a whole number.","Enter a whole number."],
 ["Between {0} and {1}.","Between {0} and {1}."],
-["Save request limits","Save request limits"]]
+["Save request limits","Save request limits"],
+["Real app","Real app"],
+["Sample","Sample"],
+["Show draft settings","Show draft settings"],
+["Reload","Reload"],
+["The real app on the live server. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.","The real app on the live server. Nothing is sent: Book, Accept and Pay show “Preview – not sent”."],
+["Opening the app…","Opening the app…"],
+["The real app could not open. Showing the sample.","The real app could not open. Showing the sample."],
+["Rider app preview","Rider app preview"]]

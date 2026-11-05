@@ -8579,4 +8579,12 @@
 ["Changes per internet address per minute (not signed in)","Modifications par adresse internet par minute (non connecté)"],
 ["Enter a whole number.","Saisissez un nombre entier."],
 ["Between {0} and {1}.","Entre {0} et {1}."],
-["Save request limits","Enregistrer les limites de requêtes"]]
+["Save request limits","Enregistrer les limites de requêtes"],
+["Real app","Vraie appli"],
+["Sample","Exemple"],
+["Show draft settings","Afficher les réglages en brouillon"],
+["Reload","Recharger"],
+["The real app on the live server. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.","La vraie appli sur le serveur en ligne. Rien n’est envoyé : Réserver, Accepter et Payer affichent « Aperçu – non envoyé »."],
+["Opening the app…","Ouverture de l’appli…"],
+["The real app could not open. Showing the sample.","La vraie appli n’a pas pu s’ouvrir. L’exemple est affiché."],
+["Rider app preview","Aperçu de l’appli passager"]]

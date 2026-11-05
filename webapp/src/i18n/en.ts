@@ -22,6 +22,7 @@ import { enC1ContractV072Part2 } from "./en/c1-contract-v072-part2.ts";
 import { enC1ContractV072Part3 } from "./en/c1-contract-v072-part3.ts";
 import { enC1ContractV072Part4 } from "./en/c1-contract-v072-part4.ts";
 import { enC2RequestLimits } from "./en/c2-request-limits.ts";
+import { enC3RealAppPreview } from "./en/c3-real-app-preview.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -50,6 +51,7 @@ export const en = {
   ...enC1ContractV072Part3,
   ...enC1ContractV072Part4,
   ...enC2RequestLimits,
+  ...enC3RealAppPreview,
 } as const;
 
 export type MessageKey = keyof typeof en;

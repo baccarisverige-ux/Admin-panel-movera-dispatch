@@ -21,6 +21,7 @@ import { PublishTargetsLine } from "../live/StandardBar";
 import { ErrorLine } from "../live/ui";
 import { AcceptanceTable, type Acceptance } from "../live/AcceptanceTable";
 import { publishTargets } from "../markets/scope";
+import { RealAppPreview } from "../ui/RealAppPreview";
 import { zoneById } from "../markets/markets";
 
 /** ContentItem of contract v0.10.0 §19 (as the server sends it). */
@@ -252,14 +253,16 @@ export function ContentPage() {
           <h3><Smartphone size={15} aria-hidden="true" /> {tr("Phone preview")}</h3>
           <Choice label={tr("Phone size")} value={phone} options={PHONES.map((item) => ({ id: item.id, label: tr(item.label as Parameters<typeof tr>[0]) }))} onChange={setPhone} />
           <Choice label={tr("Preview language")} value={lang} options={[{ id: "sv", label: tr("Swedish") }, { id: "fr", label: tr("French") }, { id: "en", label: tr("English") }]} onChange={setLang} />
-          <div className="gr-phone-frame" style={{ width: size.width, minHeight: size.height }}>
-            <span className="gr-phone-bar" />
-            {imageSrc ? <img className={`gr-phone-img ${extra.image?.fit ?? "fill"}`} src={imageSrc} alt="" /> : null}
-            <div className="gr-phone-card">
-              <p><b>{text.title}</b></p>
-              <p>{text[lang]}</p>
+          <RealAppPreview app={id.startsWith("driver") ? "driver" : "rider"}>
+            <div className="gr-phone-frame" style={{ width: size.width, minHeight: size.height }}>
+              <span className="gr-phone-bar" />
+              {imageSrc ? <img className={`gr-phone-img ${extra.image?.fit ?? "fill"}`} src={imageSrc} alt="" /> : null}
+              <div className="gr-phone-card">
+                <p><b>{text.title}</b></p>
+                <p>{text[lang]}</p>
+              </div>
             </div>
-          </div>
+          </RealAppPreview>
           {live ? <p className="gr-help"><PublishTargetsLine zoneIds={targets} /></p> : <p className="gr-help">{trn("Shown in {0}{1}.", extra.countries.length === MARKETS.length ? tr("every country") : MARKETS.filter((item) => extra.countries.includes(item.id)).map((item) => item.name).join(", ") || tr("no country"), extra.zones.length ? tr(", {0} zone{1}", [extra.zones.length, extra.zones.length > 1 ? "s" : ""]) : "")}</p>}
           {live ? null : <p className="gr-help">{trn("Published: {0}", slot.published?.en ?? tr("No publication"))}</p>}
         </aside>

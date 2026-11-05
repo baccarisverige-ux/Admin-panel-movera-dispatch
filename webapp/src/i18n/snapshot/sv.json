@@ -8579,4 +8579,12 @@
 ["Changes per internet address per minute (not signed in)","Ändringar per internetadress per minut (ej inloggad)"],
 ["Enter a whole number.","Ange ett heltal."],
 ["Between {0} and {1}.","Mellan {0} och {1}."],
-["Save request limits","Spara begäransgränser"]]
+["Save request limits","Spara begäransgränser"],
+["Real app","Riktig app"],
+["Sample","Exempel"],
+["Show draft settings","Visa utkastets inställningar"],
+["Reload","Ladda om"],
+["The real app on the live server. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.","Den riktiga appen mot liveservern. Inget skickas: Boka, Acceptera och Betala visar ”Förhandsvisning – inte skickat”."],
+["Opening the app…","Öppnar appen…"],
+["The real app could not open. Showing the sample.","Den riktiga appen kunde inte öppnas. Exemplet visas."],
+["Rider app preview","Förhandsvisning av passagerarappen"]]

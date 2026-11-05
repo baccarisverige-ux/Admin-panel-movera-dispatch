@@ -2827,6 +2827,21 @@ op("get", ALE["path"], "adminStreamEvents", "Admin live updates (what changed, i
    content=sse("Server-sent events. " + ALE["transport"] + " " + " ".join(ALE["scope"]) + " " + ALE["replay"], "AdminLiveEvent", "AdminLiveEventPage"),
    permission=ALE["permission"])
 
+# v0.18.25 admin real app preview (CONTRACT.md §47, contract.json#previewSession): a read-only preview token for the real apps.
+PVS = C["previewSession"]
+S["PreviewRole"] = s("v0.18.25: which real app the preview opens.", enum=PVS["roles"])
+S["PreviewSessionRequest"] = obj({"role": ref("PreviewRole"), "zoneId": ref("Id"), "useDraft": b("true: the app shows the zone's saved draft settings (GET .../config?draft=1).")},
+                                 ["role", "zoneId"], PVS["note"])
+S["PreviewSession"] = obj({"token": s(PVS["token"]), "role": ref("PreviewRole"), "zoneId": ref("Id"), "useDraft": b(),
+                           "expiresAt": ref("Timestamp"), "subjectId": s("preview:<role>:<zoneId>")},
+                          PVS["response"], PVS["handoff"] + " " + " ".join(PVS["rules"]))
+op("post", PVS["path"], "adminCreatePreviewSession", "Open a read-only preview of the real rider or driver app", ["admin"], "Config",
+   body="PreviewSessionRequest", ok=(201, "PreviewSession"), permission=PVS["permission"],
+   desc=" ".join(PVS["rules"]))
+for _p in ["/rider/config", "/driver/config"]:
+    for _m in PATHS[_p].values():
+        _m["parameters"].insert(0, q("draft", {"type": "string", "enum": ["0", "1"]}, "v0.18.25: '1' with a preview token (contract.json#previewSession) returns the zone's saved draft; ignored for every other token."))
+
 def to_plain(x):
     if isinstance(x, dict): return {k: to_plain(v) for k, v in x.items()}
     if isinstance(x, list): return [to_plain(v) for v in x]
