@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { LiveListBar } from "../live/LiveListBar";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { AlertTriangle, ArrowLeft, Bookmark, CarFront, CheckCircle2, Eye, Flag, Layers, Search, Settings2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bookmark, CarFront, CheckCircle2, Eye, Flag, Layers, MapPinOff, Search, Settings2, XCircle } from "lucide-react";
 import { useDrivers, useSlice, useTrips } from "../api/hooks";
 import type { TripRecord as DemoRecord } from "../trips/file";
 import { useSession } from "../auth/SessionContext";
@@ -21,6 +21,8 @@ import { RiderAssignName } from "../dispatch/AssignPanel";
 import { canAssign as canAssignTrip } from "../dispatch/assign";
 import { Modal } from "../ui/Modal";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { StatusDot } from "../ui/kit";
+import { statusPresentation } from "../domain/labels";
 import { isLiveData, liveTripOf } from "../live/realData";
 import { ETA_EVERY_SECONDS, etaIsStale, etaLine, isLiveWithDriver } from "../live/tripLive";
 import { DateInput } from "../ui/DateInput";
@@ -321,7 +323,9 @@ function liveStatusCell(trip: DemoRecord): string | { text: string; node: ReactN
   // v0.18.39 §63 (fix job N2): a searching trip whose rider was shown "No driver nearby".
   if (live && noDriverInReach(trip.status, live.searchStep)) {
     const words = statusLabel(trip.status);
-    return { text: `${words} · ${tr("No driver in reach")}`, node: <span className="op-live-cell"><span>{words}</span><small className="op-status problem" data-testid={`trip-no-driver-in-reach-${trip.id}`}>{tr("No driver in reach")}</small></span> };
+    const dot = statusPresentation(trip.status);
+    // Screenshot review (admin-239): keep the status dot; the mark is a small icon with a tooltip so the row never widens.
+    return { text: `${words} · ${tr("No driver in reach")}`, node: <span className="op-nd-cell"><span className="op-nd-mark" role="img" data-testid={`trip-no-driver-in-reach-${trip.id}`} title={tr("No driver in reach")} aria-label={tr("No driver in reach")}><MapPinOff size={14} aria-hidden="true" /></span>{dot ? <StatusDot tone={dot.tone}>{trx(dot.label)}</StatusDot> : words}</span> };
   }
   if (!live || !isLiveWithDriver(trip.status, trip.driverId)) return trip.status;
   const eta = live.eta;

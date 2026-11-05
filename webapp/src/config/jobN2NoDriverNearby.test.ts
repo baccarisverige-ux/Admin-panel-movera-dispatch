@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { appConfigState, driverAppConfig } from "./appConfigs.ts";
 import { dispatchDocumentOf, rulesOfDispatch } from "../live/configDocs.ts";
@@ -82,4 +83,27 @@ test("Dispatch: the busy-driver limit (reaskLimit) defaults to 2, is published p
   assert.equal(rulesOfDispatch({ ...doc, reaskLimit: 9 }, null, zone).reaskLimit, 2);
   assert.ok(zoneIssues({ ...zone, reaskLimit: 6 }).some((i) => /Ask one driver/.test(i)));
   assert.deepEqual(zoneIssues({ ...zone, reaskLimit: 3 }).filter((i) => /Ask one driver/.test(i)), []);
+});
+
+/** Screenshot review (admin-239): the marked trip row kept overflowing and lost its status dot; reaskLimit looked like part of "No driver nearby". */
+const src = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+const cardOf = (file: string, title: string) => {
+  const start = file.indexOf(`<Card title={tr("${title}")}`);
+  assert.ok(start >= 0, `card ${title}`);
+  return file.slice(start, file.indexOf("</Card>", start));
+};
+
+test("Trips row: 'No driver in reach' keeps the status dot and is a small icon with a tooltip, not a wide pill", () => {
+  const page = src("../pages/TripsPage.tsx");
+  const branch = page.slice(page.indexOf("noDriverInReach(trip.status"), page.indexOf("if (!live || !isLiveWithDriver"));
+  assert.match(branch, /<StatusDot\b/, "the row keeps its status dot");
+  assert.doesNotMatch(branch, /op-status problem/, "no wide text pill in the status column");
+  assert.match(branch, /title=\{tr\("No driver in reach"\)\}/, "the mark has a tooltip");
+  assert.match(branch, /aria-label=\{tr\("No driver in reach"\)\}/);
+});
+
+test("Dispatch: 'Ask one driver at most' is its own row in Pickup limits, not inside the No driver nearby card", () => {
+  const page = src("../dispatch/ZoneSettings.tsx");
+  assert.doesNotMatch(cardOf(page, "No driver nearby"), /reaskLimit/);
+  assert.match(cardOf(page, "Pickup limits"), /reaskLimit/);
 });
