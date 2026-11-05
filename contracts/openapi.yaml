@@ -1,11 +1,11 @@
-# Movera API v0.18.22 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.24 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.22
+  version: 0.18.24
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.22 in this folder; this file must agree with them.
+    v0.18.24 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -83,7 +83,7 @@ tags:
 - name: Driver · Home
 x-contract:
   name: movera
-  version: 0.18.22
+  version: 0.18.24
   source: contract.json
 paths:
   /auth/otp/request:
@@ -6315,7 +6315,9 @@ paths:
         name }] }. records: only alerts of the admin''s zones in that country whose kind group the admin may see (kindGroups);
         an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
-        the country -> 403 zone_out_of_scope.'
+        the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
+        the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
+        may see (same filter as records).'
       tags:
       - Admin · Alerts
       x-actor:
@@ -18922,7 +18924,9 @@ components:
         name }] }. records: only alerts of the admin''s zones in that country whose kind group the admin may see (kindGroups);
         an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
-        the country -> 403 zone_out_of_scope.'
+        the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
+        the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
+        may see (same filter as records).'
       required:
       - country
       - rev
@@ -24186,7 +24190,7 @@ components:
             auth.signInErrors. v0.18.5 reasons: invalid_file_content, categories_required, note_required, expiry_too_far,
             driver_photo_unavailable, legal_country_unknown. v0.18.7 reasons: pickup_move_too_far, pickup_fixed_after_arrival,
             route_change_not_available. v0.18.8 reasons: pin_required, pin_wrong, pin_locked, pin_not_required, pin_not_now,
-            pin_blocked, pin_trip_over, not_a_no_show.'
+            pin_blocked, pin_trip_over, not_a_no_show. v0.18.24 reason: too_many_requests (429 rate_limited, contract.json#rateLimit).'
         details:
           type: array
           items:
@@ -30189,6 +30193,21 @@ components:
           maximum: 60
           description: Sign-in codes per phone number and app per hour (429 otp_too_many). Range 3–60.
           default: 10
+        writesPerUserPerMinute:
+          type: integer
+          minimum: 30
+          maximum: 10000
+          description: 'v0.18.24 (owner 2026-11-04 "Yes, admin setting"): writes (POST/PUT/PATCH/DELETE) per signed-in user
+            per minute (contract.json#rateLimit; 429 rate_limited reason too_many_requests); the user''s country (first zone
+            of the token). Range 30–10000.'
+          default: 120
+        writesPerAddressPerMinute:
+          type: integer
+          minimum: 20
+          maximum: 10000
+          description: 'v0.18.24: writes per client address per minute for callers without a valid token (sign-in, waiting
+            list); the country of the server''s default zone. Range 20–10000.'
+          default: 60
     AccountPhoneChange:
       type: object
       required:

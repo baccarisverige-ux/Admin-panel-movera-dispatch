@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { NotConnected } from "../live/NotConnected";
 import { CopyToAllZones, PublishTargetsLine } from "../live/StandardBar";
@@ -43,6 +43,8 @@ import { CommandButton } from "../ui/CommandButton";
 import { useDirtyWarning } from "../ui/useDirtyWarning";
 import { RefundPolicyPanel } from "../payments/RefundPolicyPanel";
 import { CountryAppsPanel } from "../config/CountryAppsPanel";
+// v0.18.24: lazy, the admin bundle is at its size limit (architecture rule).
+const RequestLimitsPanel = lazy(() => import("../config/RequestLimitsPanel"));
 import { can } from "../auth/permissions";
 import { tr, trn, trx, trSentences } from "../i18n";
 import { LanguageQuickSwitch } from "../i18n/LanguageQuickSwitch";
@@ -207,6 +209,10 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       {liveSession && settingsTargets.length === 1 ? <CopyToAllZones zoneId={settingsTargets[0]} zoneName={zoneNameOf(settingsTargets[0])?.name ?? settingsTargets[0]} canEdit={Boolean(agent && can(agent.role, "settings.publish"))} /> : null}
 
       <CountryAppsPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} onDirty={setCountryDirty} />
+
+      <Suspense fallback={null}>
+        <RequestLimitsPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} />
+      </Suspense>
 
       <article className="panel" data-testid="config-impact">
         <h3>{tr("Impact preview")}</h3>

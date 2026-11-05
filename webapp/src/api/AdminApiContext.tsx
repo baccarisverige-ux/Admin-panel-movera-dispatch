@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { createAdminApi, type AdminApi } from "./create";
-import { queryRetry } from "./commandFlow";
+import { queryRetry, retryDelay } from "./commandFlow";
 
 export const AdminApiContext = createContext<AdminApi | null>(null);
 
@@ -22,7 +22,7 @@ export function useAdminPage(pageId: string) {
 export function AdminProviders({ children }: { children: ReactNode }) {
   // C-18: no 7 s of retries before "Your role cannot…" (only errors that can pass are retried, twice), and no
   // reload of every screen on window focus; live screens poll on their own timer.
-  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: queryRetry, refetchOnWindowFocus: false } } }));
+  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: queryRetry, retryDelay, refetchOnWindowFocus: false } } }));
   const [api] = useState(() =>
     createAdminApi({
       PROD: import.meta.env.PROD,
