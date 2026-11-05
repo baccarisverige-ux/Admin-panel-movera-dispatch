@@ -1,4 +1,6 @@
-# Movera shared contract v0.18.31
+# Movera shared contract v0.18.32
+
+v0.18.32 (fix plan Job 2 "Rider sees booked ride" + P21 / B-n; boss numbering v3, builds on v0.18.31 main; X-Api-Version stays `0.5`, additive, no migration): `GET /rider/trips/active` also returns a booked trip once its driver started driving to the pickup (owner Q5: from then on it is a regular ride); a live ride wins and the app shows a banner (owner Q1); after a driver change the rider sees "Searching for a new driver" only when the first driver had already started (Q2); no late message (Q3); `rider_trip_changed` on the rider config stream plus a Home poll, so a trip made elsewhere shows at once (P21); `reservation_leave_now` carries `riderFirstName`; the rider's booked-ride rules come from `/rider/config`; 409 `version_mismatch` → one retry with the projection's version. §53, `contract.json#bookedRideSeen`.
 
 v0.18.31 (pre-merge B-j/P20 + owner Q-Bj 2026-11-05 "Never auto-close", Rules `decisions/driver-g15.md`; builds on v0.18.30 main; X-Api-Version stays `0.5`, additive; rider and driver apps: no change): a **ride-check alert turns solved by itself** (green, kept) once its trip ended; **SOS and safety alerts never close by themselves** — after the trip ended + 24 h they stay open with `LiveAlert.old: true` / `oldSince` and the admin Alerts page shows them in an **"Old" tab**. §54, `contract.json#alertsOldList`.
 
@@ -1170,6 +1172,20 @@ Owner G16 Q16-1/Q16-2, build-spec Q1–Q4 (2026-11-02) and the A2 answers of 202
 - **Add money to wallet** (`walletCredit`): `POST /admin/riders/{riderId}/wallet-credit { amount, reason }` (finance.edit, audit `rider.wallet_credit`). **Limit per country** (owner A2-1 "Per country, in Pricing"): `CountryRules.walletCreditMax` on the country's Standard in Pricing › Tips & limits (a zone's own value is ignored), in the country's currency; the credit lands in the rider's balance of that currency (wallet per currency, fix job 6) and is never converted.
 - **Payouts Automatic / Manual** (`payoutMode`): `CountryRules.payoutMode` on the country Standard. A manual run waits (`pending_approval`) until `POST /admin/payouts/runs/approve { country, periodEnd, reason }` — **the reason is required** (owner A2-3) and kept in the audit `payout.run_approve`; empty = 400 `reason_required`.
 - **Owed fees** (`outstandingFee.adminMarkPaid`, owner A2-2): the admin has only **Mark as paid** — `POST /admin/riders/{riderId}/fees/{tripId}/mark-paid { reason }` (finance.edit, audit `rider.fee_mark_paid`). No "Ask rider to pay". A fee left owed is added by itself to the rider's next trip in the same currency (§3.7, §33); the rider app's receipt and the driver app's finished-trip screen show that line with `outstandingFee.receiptText`.
+## 53. Rider sees booked ride — fix plan Job 2 + P21 (v0.18.32)
+
+Owner: fix-plan Q5 2026-11-04; job-2 Q1 "Live ride + banner", Q2 (driver change), Q3 "no late message" 2026-11-05 (Rules `decisions/driver-g15.md`). `contract.json#bookedRideSeen`.
+
+- **Active trip**: `GET /rider/trips/active` = the live trip, else a booked trip that has reached `driver_to_pickup` (and is not over). Before that it stays under Upcoming.
+- **Both active**: the live trip stays on screen; banner "Your booked driver is on the way" while `GET /rider/trips?kind=scheduled&status=driver_to_pickup&status=arrived` lists one.
+- **Driver change**: before he started driving, the rider sees nothing; after, the normal "Searching for a new driver", then the new driver heading to the pickup.
+- **Late but kept**: no message to the rider.
+- **Trip made elsewhere (P21)**: `rider_trip_changed { tripId }` on `GET /rider/config/stream` for every event of the rider's trips; the Home also polls `GET /rider/trips/active` every 8 s while it shows no trip.
+- **Leave-now popup**: push `reservation_leave_now` has `data.riderFirstName`; title "Time to drive to pickup · {name}"; Start opens the normal trip screen.
+- **Rules**: the rider app reads `booking.freeChangeBeforeMin` and `cancelFees.reservation` from `/rider/config`; `GET /rider/scheduled-rides/rules` is not used.
+- **409**: `version_mismatch` carries `projection`; reschedule, cancel and raise-price retry once with its version.
+- **Admin**: Trips shows "Booked ride · now live" for a booked trip from `driver_to_pickup` on. No setting.
+
 ## 54. Alerts — old SOS / safety list (v0.18.31)
 
 Pre-merge B-j/P20: a `ride_check` alert is solved (green, kept, owner A2) once its trip has ended (completed, cancelled, no-show, expired or an end time set); solvedT "Trip ended {0}".

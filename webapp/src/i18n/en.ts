@@ -27,6 +27,7 @@ import { enC4PhoneData } from "./en/c4-phone-data.ts";
 import { enC2RidersPaymentsPayouts } from "./en/c2-riders-payments-payouts.ts";
 import { enC2Job7SmallFixes } from "./en/c2-job7-small-fixes.ts";
 import { enC2ServerAlerts } from "./en/c2-server-alerts.ts";
+import { enC5BookedRideLive } from "./en/c5-booked-ride-live.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -60,6 +61,7 @@ export const en = {
   ...enC2RidersPaymentsPayouts,
   ...enC2Job7SmallFixes,
   ...enC2ServerAlerts,
+  ...enC5BookedRideLive,
 } as const;
 
 export type MessageKey = keyof typeof en;

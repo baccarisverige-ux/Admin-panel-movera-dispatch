@@ -64,6 +64,7 @@ import {
   waitingBlock,
   waybill,
   zoneTimeLabel,
+  bookedNowLive,
 } from "../trips/present";
 import { AdminActions, ChatCalls, Section, SplitView, entryLine } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
@@ -263,6 +264,7 @@ export function TripPage() {
           <h2>{trn("Trip {0}", trip.id)}</h2>
           <p>
             <StatusDot tone={tone}>{statusLabel(trip.status)}</StatusDot>
+            {bookedNowLive(trip.status, facts?.kind) ? <span className="op-status scheduled" data-testid="trip-booked-now-live">{tr("Booked ride · now live")}</span> : null}
             {" "}{trip.name} · {zone?.name ?? trip.zoneId} · {trx(categoryOf(trip.id).label)} · {zoneTimeLabel(startedAt(trip.id), trip.zoneId)}
             {flagged ? <span className="op-status problem">{trn("{0} Flagged", <Flag size={11} aria-hidden="true" />)}</span> : null}
           </p>
