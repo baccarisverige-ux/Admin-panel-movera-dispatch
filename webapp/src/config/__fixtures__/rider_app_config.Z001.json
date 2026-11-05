@@ -225,6 +225,7 @@
   "booking": {
     "maxStops": 3,
     "maxPickupMoveMeters": 200,
+    "samePointWarnMeters": 100,
     "bookingHorizonDays": 7,
     "minAheadMin": 15,
     "maxAheadDays": 90,

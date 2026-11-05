@@ -156,7 +156,7 @@ test("Q39/Q40/Q44/Q46: max stops, pickup move after accept, no-show share and mi
   const missed = (config: Record<string, unknown>) => (config.offers as { autoOffline: { missedExclusive: number } }).autoOffline.missedExclusive;
   await expect.poll(async () => missed(await appConfig(page, "Driver")), { timeout: 15_000 }).toBe(5);
   const driver = await appConfig(page, "Driver");
-  expect(driver.booking).toEqual({ maxStops: 4, maxPickupMoveMeters: 300 });
+  expect(driver.booking).toEqual({ maxStops: 4, maxPickupMoveMeters: 300, samePointWarnMeters: 100 });
   expect(missed(driver)).toBe(5);
   const waiting = driver.waiting as { driverSharePct: number; driverShareWaitPct: number; byCategory: Record<string, { freeWaitMin: number; noShowAfterMin: number }> };
   expect([waiting.driverSharePct, waiting.driverShareWaitPct]).toEqual([70, 100]);

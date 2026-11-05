@@ -8652,4 +8652,12 @@
 ["Warn, pause or ban rider","Warn, pause or ban rider"],
 ["Mark the owed fee as paid","Mark the owed fee as paid"],
 ["Fee marked as paid. The rider owes nothing for this trip.","Fee marked as paid. The rider owes nothing for this trip."],
-["One limit per country: change it on the country Standard.","One limit per country: change it on the country Standard."]]
+["One limit per country: change it on the country Standard.","One limit per country: change it on the country Standard."],
+["Searching {0} · Live {1}","Searching {0} · Live {1}"],
+["Not used yet","Not used yet"],
+["Not used yet: the apps get the booking window from Dispatch › Reservations (Max days ahead).","Not used yet: the apps get the booking window from Dispatch › Reservations (Max days ahead)."],
+["Shortest ride","Shortest ride"],
+["Shortest ride (m)","Shortest ride (m)"],
+["When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this.","When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this."],
+["0 means never warn. At most {0} m. Usual value {1} m.","0 means never warn. At most {0} m. Usual value {1} m."],
+["Shortest ride: 0 to 1000 m, in whole metres.","Shortest ride: 0 to 1000 m, in whole metres."]]

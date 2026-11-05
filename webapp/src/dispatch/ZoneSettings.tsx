@@ -14,7 +14,8 @@ import { DestinationSettings } from "./DestinationSettings";
 import { CancelRateCard, OfferCardSettings, RaiseLimitCard } from "./OfferSettings";
 import { ExclusiveRules, RadarRules } from "./OfferSections";
 import { MovedCard, offersLink } from "./MovedCard";
-import { PICKUP_MOVE_DEFAULT, pickupMoveField } from "./offerRules";
+import { CONFIG_DEFAULTS } from "../config/zoneDefaults";
+import { PICKUP_MOVE_DEFAULT, pickupMoveField, SAME_POINT_RANGE } from "./offerRules";
 import { PickupWaitCard, type WaitBaseRow } from "./PickupWaitCard";
 import { stopPriceText } from "./stopPrice";
 import { RiderCancelFeesCard } from "./CancelFeeTable";
@@ -322,6 +323,13 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         {/* v0.18.7 (G5 item 4): default 200 m (was 500), range 0–2000 from the contract; the server refuses a bigger move. */}
         <Row label={tr("Rider can move the pickup up to")} help={tr("0 means the pickup cannot move after accept. At most {0} m. Usual value {1} m; the server refuses a bigger move from the booked pickup.", [PICKUP_MOVE_MAX_METERS, PICKUP_MOVE_DEFAULT])}>
           <Num label={tr("Pickup move limit")} before="up to" value={zone.pickupMove.maxMeters} unit="m" step={pickupMoveField().step} min={pickupMoveField().min} max={pickupMoveField().max} disabled={disabled} onChange={(maxMeters) => set({ pickupMove: { maxMeters: Math.round(maxMeters) } })} />
+        </Row>
+      </Card>
+
+      <Card title={tr("Shortest ride")} tone="purple" icon={<Move size={18} />} help={tr("When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this.")}>
+        {/* FIX JOB 7 (owner Q9 "Warn him but can accept booking", contract v0.18.30): default 100 m, 0 = never warn. */}
+        <Row label={tr("Shortest ride (m)")} help={tr("0 means never warn. At most {0} m. Usual value {1} m.", [SAME_POINT_RANGE[1], CONFIG_DEFAULTS.samePointWarnMeters])}>
+          <Num label={tr("Shortest ride (m)")} value={zone.samePoint?.warnMeters ?? CONFIG_DEFAULTS.samePointWarnMeters} unit="m" step={10} min={SAME_POINT_RANGE[0]} max={SAME_POINT_RANGE[1]} disabled={disabled} onChange={(warnMeters) => set({ samePoint: { warnMeters: Math.round(warnMeters) } })} />
         </Row>
       </Card>
 

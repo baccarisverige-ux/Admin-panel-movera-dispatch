@@ -55,7 +55,7 @@ test("R4, R5: the Dashboard reads riders online from the server; no Not connecte
   await expect(page.getByRole("heading", { level: 2, name: "Dashboard" })).toBeVisible();
   await page.waitForLoadState("networkidle");
   await shot(page, "dashboard");
-  await page.getByRole("tab", { name: "Live", exact: true }).click();
+  await page.getByRole("tab", { name: /^Live/ }).click();
   await page.waitForLoadState("networkidle");
   await shot(page, "dashboard-live");
   await page.getByText(/In the app now/).first().scrollIntoViewIfNeeded();
@@ -75,7 +75,7 @@ test("R5: the Swedish Dashboard has no Inte kopplad än and no Förarna flyttar 
   await start(page, { ridersOnline: [{ zoneId: "Z001", count: 1 }] }, "sv", "Kontrollpanel");
   await page.waitForLoadState("networkidle");
   await shot(page, "dashboard-sv");
-  await page.getByRole("tab", { name: "Live", exact: true }).click();
+  await page.getByRole("tab", { name: /^Live/ }).click();
   await page.waitForLoadState("networkidle");
   await shot(page, "dashboard-sv-live");
   await expect(page.getByText(/1\s*I appen nu/)).toBeVisible();

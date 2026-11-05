@@ -8,6 +8,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { DOC_CHOICES, docHealth, docLabel, type DocHealth, type HealthCount } from "./documents";
 import { statusLabel, type StatusFamily } from "../domain/labels";
 import { uiLocale, trx, tr, trn, type MessageKey } from "../i18n";
+import { DateInput } from "../ui/DateInput";
 
 export function Avatar({ name, size = 56 }: { name: string; size?: number }) {
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
@@ -140,7 +141,7 @@ function DocumentRow({ row, nowMs, warnDays, canEdit, targetId, scope, sliceKey,
       </label>
       <label className="fd-doc-field">
         <span>{tr("Expires")}</span>
-        <input type="date" aria-label={tr("{0} expiry date", [name])} value={expiresAt} max={maxEndDate()} disabled={!canEdit} onChange={(event) => setExpiresAt(event.target.value)} />
+        <DateInput aria-label={tr("{0} expiry date", [name])} value={expiresAt} max={maxEndDate()} disabled={!canEdit} onChange={(event) => setExpiresAt(event.target.value)} />
       </label>
       {status === "rejected" || status === "needed" || note ? (
         <label className="fd-doc-field wide">

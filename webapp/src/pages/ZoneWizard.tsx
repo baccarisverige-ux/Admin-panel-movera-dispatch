@@ -49,6 +49,7 @@ import { market } from "../markets/markets";
 import { LIVE_ZONES_KEY, useLiveZoneList } from "../live/LiveZones";
 import { createZoneProblem, outlineForServer, suggestZoneId, ZONE_ID, type CreateZoneBody, type ZoneNames } from "../zones/live";
 import { NamesFields } from "./LiveZoneActions";
+import { DateInput } from "../ui/DateInput";
 
 /** Live: only what the server refuses blocks saving (contract.json#zones.polygon); the demo's other checks only warn. */
 const SERVER_BLOCKS = /crosses itself|needs at least 3 points|not a closed polygon|Make the shape first/;
@@ -397,8 +398,8 @@ export function ZoneWizard({ country, startCity, onClose, onOverlay, live = fals
             {schedule === "weekly" ? <label className="field">{trn("Hours{0}", <input aria-label={tr("Hours")} value={hours} onChange={(event) => setHours(event.target.value)} placeholder="22:00–06:00" />)}</label> : null}
             {schedule === "range" ? (
               <div className="zn-row">
-                <label className="field">{trn("From{0}", <input type="date" aria-label={tr("From day")} value={from} onChange={(event) => setFrom(event.target.value)} />)}</label>
-                <label className="field">{trn("Until{0}", <input type="date" aria-label={tr("Until day")} value={until} onChange={(event) => setUntil(event.target.value)} />)}</label>
+                <label className="field">{trn("From{0}", <DateInput aria-label={tr("From day")} value={from} onChange={(event) => setFrom(event.target.value)} />)}</label>
+                <label className="field">{trn("Until{0}", <DateInput aria-label={tr("Until day")} value={until} onChange={(event) => setUntil(event.target.value)} />)}</label>
               </div>
             ) : null}
           </fieldset>
