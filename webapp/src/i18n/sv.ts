@@ -31,6 +31,7 @@ import { svC2Job7SmallFixes } from "./sv/c2-job7-small-fixes.ts";
 import { svC2ServerAlerts } from "./sv/c2-server-alerts.ts";
 import { svC5BookedRideLive } from "./sv/c5-booked-ride-live.ts";
 import { svC2AdminLiveDrivers } from "./sv/c2-admin-live-drivers.ts";
+import { svC6Job4TakeBack } from "./sv/c6-job4-take-back.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -67,4 +68,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC2ServerAlerts,
   ...svC5BookedRideLive,
   ...svC2AdminLiveDrivers,
+  ...svC6Job4TakeBack,
 };
