@@ -5,7 +5,7 @@ import { market, type MarketId } from "../markets/markets";
 import { NumberField } from "../pricing/NumberField";
 import { CommandButton } from "../ui/CommandButton";
 import { BonusAreaMap } from "./BonusAreaMap";
-import { DriverAppPreview } from "./DriverAppPreview";
+import { RealAppPreview } from "../ui/RealAppPreview";
 import {
   AUDIENCES,
   BONUS_KEY,
@@ -290,7 +290,7 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
       </div>
 
       <aside className="db-side">
-        <DriverAppPreview bonus={bonus} money={money} categoryName={categoryName} />
+        <RealAppPreview app="driver" />
         <dl className="rd-cost db-cost">
           <div><dt>{tr("Drivers in it")}</dt><dd>{audience.length}</dd></div>
           <div><dt>{tr("Most per driver, each time")}</dt><dd>{most === null ? tr("No limit") : money(most)}</dd></div>

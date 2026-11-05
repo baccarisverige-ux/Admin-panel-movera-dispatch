@@ -7,8 +7,8 @@ import { CARE_KEY, createPromotion, maxCost, promoReach, validatePromo, type Pro
 import { categoryName } from "./profile";
 import { pickAudience, type RiderRow, type SegmentId } from "./segments";
 import { CURRENCY_SYMBOL, money, PromoTicketCard } from "./ui";
-import { CARD_IMAGES, RiderAppPreview, imageUrl } from "./RiderAppPreview";
-import { useCategoryPrices } from "./useCategoryPrices";
+import { CARD_IMAGES, imageUrl } from "./cardImages";
+import { RealAppPreview } from "../ui/RealAppPreview";
 import { tr, trn, trx, trSentences } from "../i18n";
 
 const CATEGORIES = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet", "child_seat"];
@@ -71,7 +71,6 @@ export function PromoBuilder({ country, care, agentId, canEdit, rows, preselecte
   const [count, setCount] = useState(20);
   const [seed, setSeed] = useState(1);
   const [maxUses, setMaxUses] = useState(500);
-  const prices = useCategoryPrices(country);
 
   const draft: PromoDraft = {
     code: code.trim().toUpperCase(), title, kind, value, rides, maxPerRide: kind === "percent" ? maxPerRide : value, minFare,
@@ -163,7 +162,7 @@ export function PromoBuilder({ country, care, agentId, canEdit, rows, preselecte
       </div>
 
       <div className="rd-builder-side">
-        <RiderAppPreview promo={draft} prices={prices.rows} zoneName={prices.zoneName} />
+        <RealAppPreview app="rider" />
         <PromoTicketCard ticket={{ ...draft, status: "active" }} locale={market(country).locale} />
         <dl className="rd-cost">
           <div><dt>{mode === "code" ? tr("Can use it") : tr("Riders")}</dt><dd>{promoReach(draft)}</dd></div>

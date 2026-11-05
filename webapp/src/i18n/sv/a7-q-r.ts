@@ -245,7 +245,6 @@ export const svA7QR: Record<keyof typeof enA7QR, string> = {
   "Rider app": "Resenärsappen",
   "Rider app · booked ride": "Resenärsappen · bokad resa",
   "Rider app · while waiting": "Resenärsappen · medan man väntar",
-  "Rider app screen": "Skärm i resenärsappen",
   "Rider app{0}": "Resenärsappen{0}",
   "Rider asked support": "Resenären kontaktade supporten",
   "Rider blocked until paid": "Resenären spärrad tills betalning",

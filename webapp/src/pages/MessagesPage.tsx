@@ -135,12 +135,7 @@ export function MessagesPage() {
                 </article>
                 <aside className="gr-phone" aria-label={tr("Phone preview")}>
                   <h3><Smartphone size={15} aria-hidden="true" />{" "}{tr("Phone preview")}</h3>
-                  <RealAppPreview app={c.app === "driver" ? "driver" : "rider"}>
-                    <div className={`gr-phone-frame ${c.channel}`}>
-                      <span className="gr-phone-bar" />
-                      <div className="gr-phone-card"><b>Movera</b><p>{c.sv}</p><p>{c.en}</p>{langs.filter((lang) => lang !== "sv" && lang !== "en").map((lang) => campaignExtra.texts[lang] ? <p key={lang} dir={lang === "ar" ? "rtl" : undefined}>{campaignExtra.texts[lang]}</p> : null)}</div>
-                    </div>
-                  </RealAppPreview>
+                  <RealAppPreview app={c.app === "driver" ? "driver" : "rider"} />
                 </aside>
               </div>
             ) : <p className="dx-calm">{tr("Create or select a campaign.")}</p>}

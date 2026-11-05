@@ -245,7 +245,6 @@ export const frA7QR: Record<keyof typeof enA7QR, string> = {
   "Rider app": "Appli passager",
   "Rider app · booked ride": "Appli passager · course réservée",
   "Rider app · while waiting": "Appli passager · en attente",
-  "Rider app screen": "Écran de l’appli passager",
   "Rider app{0}": "Appli passager{0}",
   "Rider asked support": "Le passager a contacté l’assistance",
   "Rider blocked until paid": "Passager bloqué jusqu’au paiement",

@@ -49,15 +49,7 @@
 /* Phone preview */
 .gr-phone { display: grid; gap: 8px; justify-items: center; padding: 12px; border-radius: 16px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); align-content: start; }
 .gr-phone h3 { margin: 0; display: flex; gap: 6px; align-items: center; font-size: 14px; justify-self: start; }
-.gr-phone-frame { position: relative; width: 190px; min-height: 340px; max-width: 100%; display: grid; align-content: start; gap: 8px; padding: 22px 10px 12px; border-radius: 28px; background: linear-gradient(160deg, #1d2b3a, #0f1720); overflow: hidden; }
 .gr-phone-bar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 60px; height: 6px; border-radius: 999px; background: #33424f; }
-.gr-phone-card { display: grid; gap: 4px; padding: 10px; border-radius: 14px; background: #fff; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
-.gr-phone-card p { margin: 0; }
-.gr-phone-frame.banner .gr-phone-card { background: linear-gradient(135deg, #ffe7c2, #ffd0e0); }
-.gr-phone-frame.island .gr-phone-card { border-radius: 999px; background: #000; color: #fff; }
-.gr-phone-img { width: 100%; height: 110px; border-radius: 12px; background: #fff; }
-.gr-phone-img.fill { object-fit: cover; }
-.gr-phone-img.fit { object-fit: contain; }
 
 /* Content */
 .gr-content { display: grid; grid-template-columns: 200px minmax(0, 1fr) 240px; gap: 12px; align-items: start; }
