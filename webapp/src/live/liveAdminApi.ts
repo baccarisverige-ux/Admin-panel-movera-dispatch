@@ -263,6 +263,7 @@ export function tripFacts(trip: Trip): LiveTripFacts {
       refunded: minorOf(trip.moneySplit.refunded) ?? 0,
     } : null,
     driverSilentAlert: trip.driverSilentAlert ?? null,
+    searchStep: trip.searchStep?.kind ? { kind: trip.searchStep.kind } : null,
     ratingStatus: trip.ratingStatus ?? null,
     updatedAt: trip.updatedAt,
     // v0.18.7 (driver group 5): the live row's position and ETA, the rider summary, the terms, the waiting amounts and the cancel.

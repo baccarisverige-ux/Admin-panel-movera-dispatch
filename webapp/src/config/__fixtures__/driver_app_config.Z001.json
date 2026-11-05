@@ -908,6 +908,7 @@
     "takeBackLateMin": 5,
     "takeBackKeepIfDriveMin": 10,
     "takeBackUntilMinBeforePickup": 15,
+    "noDriverStopAfterMin": 15,
     "raiseFare": true,
     "raiseMax": null
   },

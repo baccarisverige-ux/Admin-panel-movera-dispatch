@@ -156,6 +156,8 @@ export type LiveTripFacts = {
   rideCheck?: { checkId: string; trigger: string; askedAt: string; answerBy: string; answers: { rider?: string; driver?: string }; alertedAt: string | null } | null;
   routeChange?: { status: string; dropoff: LivePlace; stops: LivePlace[]; totalMinor: number; differenceMinor: number; askedAt: string; answerBy: string; answeredBy: string | null; driverEarningsMinor: number | null; earningsDifferenceMinor: number | null } | null;
   adminFlag?: { flagged: boolean; reason: string | null; by: string | null; at: string | null } | null;
+  /** v0.18.39 §63: the rider's latest search step (no_driver_nearby → the trip row's "No driver in reach" mark). */
+  searchStep?: { kind: string } | null;
   cancellation: { actor: string; reasonCode: string; at: string; feeMinor: number | null; feeStatus: string | null; feeKind: string | null; driverShareMinor: number | null; note: string | null; reversal: { at: string; by: string | null; reason: string | null; driverShareTakenBack: boolean } | null; refundedToWallet: boolean } | null;
 };
 export type LiveAccountFacts = {

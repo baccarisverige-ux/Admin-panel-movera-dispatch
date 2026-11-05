@@ -179,7 +179,7 @@ function Best({ zone, onChange, disabled, otherZones }: Props) {
           ))}
           {steps.length < 5 ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled} onClick={() => set({ radius: { ...zone.radius, steps: [...steps, Math.min(50, (steps[steps.length - 1] ?? 3) + 3)] } })}>{trn("{0} Add a step", <Plus size={13} aria-hidden="true" />)}</button> : null}
         </div>
-        <Row label={tr("Longest search")} help={tr("After this, the search stops.")}>
+        <Row label={tr("Longest search")} help={tr("Booked rides: after this the search starts again. Live rides keep searching until the rider cancels.")}>
           <Num label={tr("Longest search")} value={zone.radius.maxWaitMin} unit="min" min={1} max={30} disabled={disabled} onChange={(maxWaitMin) => set({ radius: { ...zone.radius, maxWaitMin } })} />
         </Row>
       </Card>
@@ -190,6 +190,18 @@ function Best({ zone, onChange, disabled, otherZones }: Props) {
         </Row>
         <Row label={tr("Longest pickup time")} help={tr("Minutes for the driver to reach the pickup, estimated from the distance at 24 km/h (not the live route). 0 = no limit.")}>
           <Num label={tr("Longest pickup time")} value={zone.limits.maxPickupEtaMin} unit="min" min={0} max={60} disabled={disabled} onChange={(maxPickupEtaMin) => set({ limits: { ...zone.limits, maxPickupEtaMin: Math.round(maxPickupEtaMin) } })} />
+        </Row>
+        <Row label={tr("Far reach")} help={tr("When nobody new is free inside the widest step, the search tries one more step this far. The widest step or less = off.")}>
+          <Num label={tr("Far reach")} value={zone.limits.farReachKm} unit="km" step={0.5} min={0.5} max={50} disabled={disabled} onChange={(farReachKm) => set({ limits: { ...zone.limits, farReachKm } })} />
+        </Row>
+      </Card>
+
+      <Card title={tr("No driver nearby")} tone="blue" icon={<MapPin size={18} />} help={tr("A live ride with no driver after this time: the rider sees the message once, with Keep waiting and Cancel free. The search goes on until the rider cancels. Admins get an alert at the same moment.")} off={!zone.noDriverNearby.on} aside={<Switch label={tr("No driver nearby")} on={zone.noDriverNearby.on} disabled={disabled} onChange={(on) => set({ noDriverNearby: { ...zone.noDriverNearby, on } })} />}>
+        <Row label={tr("Show after")}>
+          <Num label={tr("Show 'No driver nearby' after")} value={Math.round(zone.noDriverNearby.afterSec / 60)} unit="min" min={1} max={30} disabled={disabled || !zone.noDriverNearby.on} onChange={(minutes) => set({ noDriverNearby: { ...zone.noDriverNearby, afterSec: Math.round(minutes) * 60 } })} />
+        </Row>
+        <Row label={tr("Message")} help={tr("The rider app shows it in the rider's language; this text is the fallback.")}>
+          <input className="dx-text" aria-label={tr("'No driver nearby' message")} value={zone.noDriverNearby.message} maxLength={300} disabled={disabled || !zone.noDriverNearby.on} onChange={(event) => set({ noDriverNearby: { ...zone.noDriverNearby, message: event.target.value } })} />
         </Row>
       </Card>
 

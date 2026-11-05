@@ -43,6 +43,10 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   }
   if (zone.limits.maxPickupKm < 0 || zone.limits.maxPickupKm > 50) issues.push("Pickup limits: the farthest pickup must be 0 to 50 km (0 = the widest search step).");
   if (zone.limits.maxPickupEtaMin < 0 || zone.limits.maxPickupEtaMin > 60) issues.push("Pickup limits: the longest pickup time must be 0 to 60 minutes (0 = off).");
+  // v0.18.39 §63 (contract.json#noDriverNearby.ranges): far reach > 0 and <= 50 km; "No driver nearby" 1–30 min.
+  if (!(zone.limits.farReachKm > 0 && zone.limits.farReachKm <= 50)) issues.push("Far reach: must be above 0 and at most 50 km (the widest step or less = off).");
+  if (zone.noDriverNearby.afterSec < 60 || zone.noDriverNearby.afterSec > 1800) issues.push("No driver nearby: the time must be 1 to 30 minutes.");
+  if (zone.noDriverNearby.on && !zone.noDriverNearby.message.trim()) issues.push("No driver nearby: write the message the rider sees.");
   if (zone.neighbours.on && zone.neighbours.zoneIds.length === 0) issues.push("Neighbour zones: choose at least one zone or switch it off.");
   if (zone.choose.how === "auto" && (!zone.radar.on || !zone.exclusive.on)) issues.push("Automatic choice needs both Radar and Exclusive on. Switch both on or choose by hand.");
   if (zone.choose.how === "auto" && (zone.choose.radarAbove <= 0 || zone.choose.radarAbove > 10)) issues.push("Automatic choice: the busy level must be above 0 and at most 10.");

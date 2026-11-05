@@ -27,7 +27,7 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     else delete zone.secondsDefaulted;
     if (d.choose) zone.choose = structuredClone(d.choose);
     // v0.18.11: a document without start / limits / neighbours / own steps keeps the defaults (today's behaviour).
-    const raw = doc as { radar?: { steps?: unknown }; exclusive?: { steps?: unknown }; start?: { mode?: unknown; nearKm?: unknown }; limits?: { maxPickupKm?: unknown; maxPickupEtaMin?: unknown }; neighbours?: { on?: unknown; zoneIds?: unknown; afterStep?: unknown } };
+    const raw = doc as { radar?: { steps?: unknown }; exclusive?: { steps?: unknown }; start?: { mode?: unknown; nearKm?: unknown }; limits?: { maxPickupKm?: unknown; maxPickupEtaMin?: unknown; farReachKm?: unknown }; noDriverNearby?: { on?: unknown; afterSec?: unknown; message?: unknown }; neighbours?: { on?: unknown; zoneIds?: unknown; afterStep?: unknown } };
     const kmList = (value: unknown) => (Array.isArray(value) && value.length > 0 && value.every((km) => typeof km === "number") ? (value as number[]) : undefined);
     zone.radar = { ...zone.radar, steps: kmList(raw.radar?.steps) };
     zone.exclusive = { ...zone.exclusive, steps: kmList(raw.exclusive?.steps) };
@@ -35,7 +35,15 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     if (!zone.exclusive.steps) delete zone.exclusive.steps;
     const modes = ["auto", "radar", "exclusive", "both", "byDistance"];
     zone.start = { mode: modes.includes(raw.start?.mode as string) ? (raw.start!.mode as ZoneDispatch["start"]["mode"]) : "auto", nearKm: typeof raw.start?.nearKm === "number" ? raw.start.nearKm : 2 };
-    zone.limits = { maxPickupKm: typeof raw.limits?.maxPickupKm === "number" ? raw.limits.maxPickupKm : 0, maxPickupEtaMin: typeof raw.limits?.maxPickupEtaMin === "number" ? raw.limits.maxPickupEtaMin : 0 };
+    // v0.18.39 §63: far reach (0 < km <= 50) and "No driver nearby" (60–1800 s); missing or bad = the zone default (contract).
+    const far = raw.limits?.farReachKm;
+    zone.limits = { maxPickupKm: typeof raw.limits?.maxPickupKm === "number" ? raw.limits.maxPickupKm : 0, maxPickupEtaMin: typeof raw.limits?.maxPickupEtaMin === "number" ? raw.limits.maxPickupEtaMin : 0, farReachKm: typeof far === "number" && far > 0 && far <= 50 ? far : zone.limits.farReachKm };
+    const nd = raw.noDriverNearby;
+    zone.noDriverNearby = {
+      on: typeof nd?.on === "boolean" ? nd.on : zone.noDriverNearby.on,
+      afterSec: typeof nd?.afterSec === "number" && nd.afterSec >= 60 && nd.afterSec <= 1800 ? nd.afterSec : zone.noDriverNearby.afterSec,
+      message: typeof nd?.message === "string" && nd.message.trim() ? nd.message : zone.noDriverNearby.message,
+    };
     zone.neighbours = { on: raw.neighbours?.on === true, zoneIds: Array.isArray(raw.neighbours?.zoneIds) ? (raw.neighbours.zoneIds as unknown[]).filter((z): z is string => typeof z === "string") : [], afterStep: typeof raw.neighbours?.afterStep === "number" ? raw.neighbours.afterStep : 0 };
     if (d.rulesFrom) zone.rulesFrom = d.rulesFrom;
     if (d.radius) zone.radius = structuredClone(d.radius);

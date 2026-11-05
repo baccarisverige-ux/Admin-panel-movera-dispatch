@@ -12,7 +12,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
 import { MapPanel } from "../dispatch/maps";
 import { GROUPS, TRIP_OPS_KEY, emptyTripOps, flaggedIds, groupOf, listStats, normalizeTripOps, routeOf, saveView, type TripGroup, type TripOps } from "../trips/file";
-import { bookedNowLive, categoryOf, fareBreakdown, paymentOf, startedAt, statusLabel, TRIP_STATUSES, type PaymentState } from "../trips/present";
+import { bookedNowLive, categoryOf, noDriverInReach, fareBreakdown, paymentOf, startedAt, statusLabel, TRIP_STATUSES, type PaymentState } from "../trips/present";
 import { RouteMap } from "../trips/RouteMap";
 import { TripSettingsView } from "../trips/TripSettings";
 import { CommandButton } from "../ui/CommandButton";
@@ -318,6 +318,11 @@ function paidWaitingCell(trip: DemoRecord): string {
  */
 function liveStatusCell(trip: DemoRecord): string | { text: string; node: ReactNode } {
   const live = liveTripOf(trip);
+  // v0.18.39 §63 (fix job N2): a searching trip whose rider was shown "No driver nearby".
+  if (live && noDriverInReach(trip.status, live.searchStep)) {
+    const words = statusLabel(trip.status);
+    return { text: `${words} · ${tr("No driver in reach")}`, node: <span className="op-live-cell"><span>{words}</span><small className="op-status problem" data-testid={`trip-no-driver-in-reach-${trip.id}`}>{tr("No driver in reach")}</small></span> };
+  }
   if (!live || !isLiveWithDriver(trip.status, trip.driverId)) return trip.status;
   const eta = live.eta;
   const line = eta ? etaLine(eta, uiLocale()) : null;
