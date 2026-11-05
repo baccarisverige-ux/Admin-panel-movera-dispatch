@@ -6335,7 +6335,9 @@ paths:
         name }] }. records: only alerts of the admin''s zones in that country whose kind group the admin may see (kindGroups);
         an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
-        the country -> 403 zone_out_of_scope.'
+        the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
+        the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
+        may see (same filter as records).'
       tags:
       - Admin · Alerts
       x-actor:
@@ -18994,7 +18996,9 @@ components:
         name }] }. records: only alerts of the admin''s zones in that country whose kind group the admin may see (kindGroups);
         an alert without zone only for a Super admin. people: active admins with a zone in the same country (Super admins
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
-        the country -> 403 zone_out_of_scope.'
+        the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
+        the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
+        may see (same filter as records).'
       required:
       - country
       - rev
