@@ -1,4 +1,4 @@
-/** English dictionary, area c7-airport-queue: fix job 9 airport queue (contract v0.18.39 §63) (add new keys at the end of this file). Merged in ../en.ts in this order. */
+/** English dictionary, area c7-airport-queue: fix job 9 airport queue (contract v0.18.36 §60) (add new keys at the end of this file). Merged in ../en.ts in this order. */
 export const enC7AirportQueue = {
   "Airport queue area": "Airport queue area",
   "Drivers inside this area wait in line. The first in line gets the airport trips first.": "Drivers inside this area wait in line. The first in line gets the airport trips first.",

@@ -1,4 +1,4 @@
-/** Swedish dictionary, area c7-airport-queue: fix job 9 airport queue (contract v0.18.39 §63) (add new keys at the end of this file). Merged in ../sv.ts in this order. */
+/** Swedish dictionary, area c7-airport-queue: fix job 9 airport queue (contract v0.18.36 §60) (add new keys at the end of this file). Merged in ../sv.ts in this order. */
 import type { enC7AirportQueue } from "../en/c7-airport-queue.ts";
 
 export const svC7AirportQueue: Record<keyof typeof enC7AirportQueue, string> = {

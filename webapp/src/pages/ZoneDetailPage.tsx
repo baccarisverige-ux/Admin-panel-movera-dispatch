@@ -297,7 +297,7 @@ export function ZoneDetailPage() {
               <div className="zd-col">
                 {server ? <LiveZoneFields zone={server} disabled={!canEdit} /> : null}
                 <p className="fine">{tr("The outline is drawn on the map: Edit on the map, draw, then Save outline.")}</p>
-                {/* Fix job 9 (§63): an airport zone's real queue area (server), not the demo's queue settings. */}
+                {/* Fix job 9 (§60): an airport zone's real queue area (server), not the demo's queue settings. */}
                 {server ? <LiveQueueArea zone={server} disabled={!canEdit} /> : null}
               </div>
             ) : (

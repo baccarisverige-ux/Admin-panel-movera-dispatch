@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
 import { AIRPORT_QUEUES_PATH, parseQueueArea, parseQueueFeed, queueAreaPath, type QueueArea, type QueueFeedItem } from "./airportQueue.ts";
 
-/** Fix job 9 (§63): the Dashboard feed, asked every 30 s (no push). null in the demo; data null while loading or failed. */
+/** Fix job 9 (§60): the Dashboard feed, asked every 30 s (no push). null in the demo; data null while loading or failed. */
 export function useAirportQueueFeed(): { data: QueueFeedItem[] | null; failed: boolean } | null {
   const live = useLiveSessionMaybe();
   const query = useQuery({

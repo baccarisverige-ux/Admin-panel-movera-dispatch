@@ -2,7 +2,7 @@ import contract from "../../../contracts/contract.json" with { type: "json" };
 import type { AirportQueue } from "../dashboard/insights.ts";
 
 /**
- * Fix job 9 (contract v0.18.39 §63, contract.json#airportQueue): an airport zone's queue area and the Dashboard feed.
+ * Fix job 9 (contract v0.18.36 §60, contract.json#airportQueue): an airport zone's queue area and the Dashboard feed.
  *  - GET|PUT /admin/zones/{zoneId}/queue-area (zones.read / zones.edit) → AirportQueueArea; 404 = none drawn yet.
  *  - GET /admin/airport-queues (zones.read) → { items: [{ areaId, airportZoneId, on, waiting, longestWaitMin, pickupsLastHour }] }.
  * Pure, so node --test covers it.

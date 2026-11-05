@@ -10,7 +10,7 @@ import { QUEUE_DEFAULTS, QUEUE_RANGES, queueAreaBody, queueAreaPath, type QueueA
 import { queueAreaKey, useQueueArea } from "./useAirportQueue";
 
 /**
- * Fix job 9 (contract v0.18.39 §63): Zones › airport zone › Queue area. The admin draws the waiting area on the map
+ * Fix job 9 (contract v0.18.36 §60): Zones › airport zone › Queue area. The admin draws the waiting area on the map
  * (or takes the airport outline), turns the queue on or off and sets its numbers; Save sends the whole area.
  */
 export function LiveQueueArea({ zone, disabled }: { zone: ServerZone; disabled: boolean }) {

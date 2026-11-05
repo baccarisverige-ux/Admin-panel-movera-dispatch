@@ -278,7 +278,7 @@ export function DashboardPage() {
   // G3-R5: no "Not connected yet" on the live Dashboard; a value without a source reads "—".
   const number = { format: (value: number) => (Number.isFinite(value) ? numberFormat.format(value) : "—") };
   const liveData = isLiveData();
-  // Fix job 9 (§63): the airport card's real numbers; names from the server's zone list.
+  // Fix job 9 (§60): the airport card's real numbers; names from the server's zone list.
   const liveAirports = useAirportQueueFeed();
   const serverZones = useLiveZoneList();
   const airportName = (zoneId: string) => serverZones?.find((item) => item.zoneId === zoneId)?.names.en ?? zoneId;
@@ -676,7 +676,7 @@ export function DashboardPage() {
           />
 
           <div className="dash-grid-2">
-            {/* Fix job 9 (§63): live reads the server's airport queues (GET /admin/airport-queues); the demo keeps its sample. */}
+            {/* Fix job 9 (§60): live reads the server's airport queues (GET /admin/airport-queues); the demo keeps its sample. */}
             {liveData ? (liveAirports?.data ? <AirportCard rows={airportCards(liveAirports.data, airportName)} /> : null) : <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />}
             <BoostCard rows={activeBoosts(bonuses.data ?? [], balance, surge)} surgeLink={surgeLink} />
           </div>

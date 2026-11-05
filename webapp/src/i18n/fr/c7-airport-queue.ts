@@ -1,4 +1,4 @@
-/** French dictionary, area c7-airport-queue: fix job 9 airport queue (contract v0.18.39 §63) (add new keys at the end of this file). Merged in ../fr.ts in this order. */
+/** French dictionary, area c7-airport-queue: fix job 9 airport queue (contract v0.18.36 §60) (add new keys at the end of this file). Merged in ../fr.ts in this order. */
 import type { enC7AirportQueue } from "../en/c7-airport-queue.ts";
 
 export const frC7AirportQueue: Record<keyof typeof enC7AirportQueue, string> = {
