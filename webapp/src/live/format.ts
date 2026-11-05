@@ -193,6 +193,8 @@ export function errorText(error: unknown): string {
   // v0.18.19 Book later (live test MED 7): the server's reasons in the panel's language.
   if (error.reason === "driver_not_available") return tr("The driver cannot take a ride now (offline or no position). For a ride hours ahead you can still give it.");
   if (error.reason === "driver_on_trip") return tr("The driver is on a trip now.");
+  // v0.18.26 (owner 2026-11-04 "Yes, respect it"): his Ride preferences switch this ride type off.
+  if (error.reason === "category_switched_off") return tr("This driver switched this ride type off in his ride preferences.");
   if (error.reason === "no_show_too_early") return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");
   if (error.reason === "no_free_driver") return tr("None of these drivers can take the ride now.");
   if (error.reason === "currency_mismatch") return tr("The amount must be in the ride's currency.");

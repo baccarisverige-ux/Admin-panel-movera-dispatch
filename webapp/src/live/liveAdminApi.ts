@@ -945,7 +945,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // A driver who already saw the ride keeps that offer, now with the raise: the server lists it outside the new group.
       const offers = answer?.offers ?? [];
       const refreshed = offers.filter((offer) => offer.groupId !== answer?.groupId).length;
-      const notice = refreshedNotice(refreshed, offers.length - refreshed, Boolean(params.driverBonusMinor || params.priority), answer?.skipped?.length ?? 0);
+      const switchedOff = (answer?.skipped ?? []).filter((s) => s.reason === "category_switched_off").length;
+      const notice = [refreshedNotice(refreshed, offers.length - refreshed, Boolean(params.driverBonusMinor || params.priority), (answer?.skipped?.length ?? 0) - switchedOff), switchedOffNotice(switchedOff)].filter(Boolean).join(" ") || null;
       if (answer?.groupId && params.target) rememberSendTarget(answer.groupId, params.target);
       const send = answer?.radarZoneSend;
       setActiveRadarSend(send?.active ? { tripId: trip.tripId, sendId: send.sendId, radarZoneName: params.radarZoneName ?? params.target ?? "", seconds: send.seconds, maxDrivers: send.maxDrivers, rounds: send.rounds, startedAt: send.startedAt } : null, trip.tripId);
@@ -1209,6 +1210,12 @@ export function moneySendNotice(send: MoneySendAnswer, scope: "exclusive" | "rad
   if (scope === "exclusive") return tr("Already on the Exclusive offer, or nobody free nearby: it goes with the next Exclusive offer.");
   if (scope === "radar") return tr("Already on the Radar offers, or nobody free nearby: it goes with the next Radar offer.");
   return tr("Already on the offers out, or nobody free nearby: it goes with the next offer.");
+}
+
+/** v0.18.26 (owner "Yes, respect it"): drivers left out because their Ride preferences switch this ride type off. */
+export function switchedOffNotice(count: number): string | null {
+  if (!count) return null;
+  return tr(count === 1 ? "{0} driver switched this ride type off in his ride preferences." : "{0} drivers switched this ride type off in their ride preferences.", [count]);
 }
 
 export function refreshedNotice(refreshed: number, sent: number, raised: boolean, skipped = 0): string | null {

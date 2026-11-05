@@ -326,7 +326,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number } };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
@@ -341,8 +341,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     driverBonus: { defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
     // v0.18.10 checker: the largest single change of a driver's pay (Change pay on the trip page).
     ...(input.driverPayChangeMax !== undefined ? { driverPayChangeMax: toMinor(input.driverPayChangeMax, currency) } : {}),
-    // v0.18.24: the Standard's limits (sign-in, uploads, request limits) are set elsewhere; this save keeps them.
-    ...(base?.["limits"] !== undefined ? { limits: base["limits"] } : {}),
+    // v0.18.26: the country's other limits (sign-in codes, uploads) are kept; the per-person ones come from the panel.
+    ...(base?.["limits"] || input.personLimits ? { limits: { ...((base?.["limits"] as Record<string, unknown> | undefined) ?? {}), ...(input.personLimits ?? {}) } } : {}),
   };
 }
 

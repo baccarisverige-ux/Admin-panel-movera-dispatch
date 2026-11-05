@@ -56,6 +56,7 @@ import { BOOKING_LABEL, categoryName, type Booking } from "../riders/profile";
 import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
 import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
+import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
 import { feeKindOf, owedByCurrency, owedText, tripMoney } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
@@ -547,6 +548,7 @@ export function RiderDetailPage() {
             ...audits.map((item) => ({ at: Date.parse(item.at), text: `${item.action} · ${item.result} · ${item.actorId}`, tone: "grey" })),
           ]} format={(at) => dateTime.format(at)} />
         </TabPanel>
+        {liveData ? <LiveRiderSavedPlaces riderId={rider.id} /> : null}
       </div>
     </div>
   );
