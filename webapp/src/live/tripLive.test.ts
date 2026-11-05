@@ -7,7 +7,7 @@ import { cancelBlock, cancelledBy } from "../trips/present.ts";
 import { readFileSync } from "node:fs";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { cancelReasonsDefault } from "../dispatch/offers.ts";
-import { bonusByKind, commissionBeforeBonus, driverBonusSettingLink, liveBonusLimits, approachOf, canWaiveFee, distanceDisplay, driverPointOf, ETA_EVERY_SECONDS, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, owedByCurrency, owedText, reasonLine, reasonWords, tripMoney } from "./tripLive.ts";
+import { bonusByKind, commissionBeforeBonus, driverBonusSettingLink, liveBonusLimits, approachOf, canWaiveFee, distanceDisplay, driverPointOf, ETA_EVERY_SECONDS, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, owedByCurrency, owedText, reasonLine, reasonWords, tripMoney, walletByCurrency, walletText } from "./tripLive.ts";
 
 /**
  * Driver group 5 (contract v0.18.7): the admin shows the server's ETA and distance as the apps do, the cancel fee in
@@ -152,4 +152,13 @@ test("owner bug 2026-11-01: Add money per kind of offer and Movera's commission 
   assert.deepEqual(bonusByKind({ driverBonus: eur(500), commission: eur(300) }), { exclusiveMinor: 500, radarMinor: 500 });
   assert.equal(commissionBeforeBonus({ driverBonus: eur(500), commission: eur(300) }), 800);
   assert.deepEqual(bonusByKind({}), { exclusiveMinor: 0, radarMinor: 0 });
+});
+
+test("fix job 6 (owner Q4): the wallet shows one balance per currency, never a sum; an older server's one amount still shows", () => {
+  const facts = { walletByCurrency: [{ amountMinor: 6500, currency: "EUR" }, { amountMinor: 3000, currency: "SEK" }], walletMinor: 6500, currency: "EUR" };
+  const balances = walletByCurrency(facts);
+  assert.deepEqual(balances, [{ amountMinor: 6500, currency: "EUR" }, { amountMinor: 3000, currency: "SEK" }]);
+  assert.equal(walletText(balances, "SEK"), `${tripMoney(6500, "EUR")} · ${tripMoney(3000, "SEK")}`);
+  assert.deepEqual(walletByCurrency({ walletMinor: 4000, currency: "SEK" }), [{ amountMinor: 4000, currency: "SEK" }]);
+  assert.equal(walletText(walletByCurrency({ walletByCurrency: [], walletMinor: 0, currency: "EUR" }), "EUR"), tripMoney(0, "EUR"));
 });

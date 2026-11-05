@@ -73,6 +73,14 @@ test("v0.18.7 (G5 Q3): a live rider carries what is owed per currency; an older 
   assert.deepEqual(none.outstandingByCurrency, []);
 });
 
+test("fix job 6 (owner Q4): AdminRider.wallets keeps every wallet balance in its own currency", () => {
+  const eu = riderRecord({ riderId: "rdr_4", firstName: "Lucie", phone: "+33600000004", status: "active", version: 1, outstanding: null, wallet: { amountMinor: 6500, currency: "EUR" }, wallets: [{ amountMinor: 6500, currency: "EUR" }, SEK(3000)] }).liveRider!;
+  assert.deepEqual(eu.walletByCurrency, [{ amountMinor: 6500, currency: "EUR" }, { amountMinor: 3000, currency: "SEK" }]);
+  assert.equal(eu.currency, "EUR");
+  const older = riderRecord({ riderId: "rdr_5", firstName: "Bo", phone: "+46700000005", status: "active", version: 1, outstanding: null, wallet: SEK(2000) }).liveRider!;
+  assert.deepEqual(older.walletByCurrency, [{ amountMinor: 2000, currency: "SEK" }]);
+});
+
 test("money lines the server did not send stay null, never 0", () => {
   const facts = tripRecord({ ...TRIP, commission: undefined, pickupPay: undefined, walletApplied: undefined, driverSilentAlert: undefined }).liveTrip!;
   assert.equal(facts.commission, null);
@@ -92,7 +100,7 @@ test("a live driver carries online status, rating and position from /admin/live/
 
 test("riders, payments, refunds to pay by hand, audit and approvals map from the server", () => {
   const rider = riderRecord({ riderId: "rdr_2", firstName: "Bo", phone: "+46700000002", rating: 4.5, status: "active", version: 3, outstanding: SEK(2500), wallet: SEK(1000) });
-  assert.deepEqual(rider.liveRider, { rating: 4.5, walletMinor: 1000, outstandingMinor: 2500, currency: "SEK", deletionRequestedAt: null, moderation: null, outstandingByCurrency: [{ amountMinor: 2500, currency: "SEK" }] });
+  assert.deepEqual(rider.liveRider, { rating: 4.5, walletMinor: 1000, outstandingMinor: 2500, currency: "SEK", deletionRequestedAt: null, moderation: null, outstandingByCurrency: [{ amountMinor: 2500, currency: "SEK" }], walletByCurrency: [{ amountMinor: 1000, currency: "SEK" }] });
   const payment = paymentRecord({ paymentId: "pay_trp_1", tripId: "trp_1", amount: SEK(40000), method: "cash", purpose: "trip", status: "captured", createdAt: "2026-10-25T08:30:00Z" }, "Z001");
   assert.deepEqual([payment.name, payment.tripId, payment.fareOre, payment.zoneId], ["cash", "trp_1", 40000, "Z001"]);
   const refund = refundPayoutRecord({ refundId: "rfd_1", tripId: "trp_1", amount: SEK(3000), riderId: "rdr_2", riderName: "Bo", riderPhone: "+46700000002", payoutTo: { kind: "swish" }, reason: "Late" });

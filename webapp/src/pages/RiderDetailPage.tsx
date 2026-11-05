@@ -59,7 +59,7 @@ import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
 import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
 import { LiveRiderModeration } from "../live/LiveRiderModeration";
 import { LiveWalletCredit } from "../live/LiveWalletCredit";
-import { feeKindOf, owedByCurrency, owedText, tripMoney } from "../live/tripLive";
+import { feeKindOf, owedByCurrency, owedText, tripMoney, walletByCurrency, walletText } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
 import { NOTE_MAX } from "../domain/labels";
@@ -128,6 +128,8 @@ export function RiderDetailPage() {
   const country = profile.country;
   // v0.18.7 (G5 Q3): what the rider owes per currency (unpaid cancel / no-show fees); the owed trips can be waived.
   const owed = isLiveData() ? owedByCurrency(liveRiderOf(rider)) : [];
+  // v0.18.28 (fix job 6, owner Q4): live, each wallet balance in its own currency (a France refund shows in €).
+  const walletShown = isLiveData() ? walletText(walletByCurrency(liveRiderOf(rider)), market(country).currency) : money(row.walletMinor, country);
   const known = new Map([...liveTripsOfRider(rider.id), ...(riderTrips.data ?? [])].map((trip) => [trip.id, trip]));
   const owedTrips = isLiveData() ? [...known.values()].filter((trip) => trip.liveTrip?.cancellation?.feeStatus === "owed" && (trip.liveTrip.cancellation.feeMinor ?? 0) > 0).sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")) : [];
   const place = market(country);
@@ -235,7 +237,7 @@ export function RiderDetailPage() {
           <Stat label={tr("Cancel rate")} value={Number.isFinite(profile.cancelRate) ? `${profile.cancelRate}%` : tr("Not connected yet")} warn={profile.cancelRate > 20 ? "red" : profile.cancelRate > 12 ? "amber" : null} />
           <Stat label={tr("No-shows")} value={shown(profile.noShows)} warn={profile.noShows >= 3 ? "red" : null} />
           <Stat label={tr("Lifetime value")} value={money(lifetimeMinor, country, true)} hint={tr("spent − refunds − promotions")} />
-          <Stat label={tr("Wallet")} value={money(row.walletMinor, country)} />
+          <Stat label={tr("Wallet")} value={walletShown} />
         </div>
       </section>
 
@@ -350,7 +352,7 @@ export function RiderDetailPage() {
             {liveData ? <LiveWalletCredit riderId={rider.id} walletMinor={liveRiderOf(rider)?.walletMinor ?? null} currency={liveRiderOf(rider)?.currency ?? null} /> : (
             <section className="fd-box rd-wallet">
               <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
-              <strong className="rd-wallet-balance">{money(row.walletMinor, country)}</strong>
+              <strong className="rd-wallet-balance">{walletShown}</strong>
               <div className="rd-limit">
                 <span>{trn("Given this month: {0} of {1} {2}", usedThisMonth, care.limits[country], symbol)}</span>
                 <i aria-hidden="true"><b style={{ width: `${Math.min(100, (usedThisMonth / care.limits[country]) * 100)}%` }} /></i>
@@ -360,7 +362,7 @@ export function RiderDetailPage() {
                 <label className="field">{trn("Why{0}", <input aria-label={tr("Wallet reason")} value={creditReason} onChange={(event) => setCreditReason(event.target.value)} placeholder={tr("Driver was late")} />)}</label>
               </div>
               {credit.error && (creditReason || creditAmount !== 100) ? <p className="rd-form-error">{trSentences(credit.error)}</p> : <small className="fine">{trn("At most {0} {1} at a time.", CREDIT_MAX[country], symbol)}</small>}
-              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={money(row.walletMinor, country)} after={`+${creditAmount} ${symbol}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(tr("Added {0} {1} to {2}'s wallet.", [creditAmount, symbol, rider.name])); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
+              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={walletShown} after={`+${creditAmount} ${symbol}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(tr("Added {0} {1} to {2}'s wallet.", [creditAmount, symbol, rider.name])); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
               {care.credits.filter((item) => item.riderId === rider.id).length ? (
                 <ul className="rd-ledger" aria-label={tr("Wallet credits")}>
                   {care.credits.filter((item) => item.riderId === rider.id).map((item) => <li key={item.id}><b>+{item.amount} {symbol}</b><span>{item.reason}</span><small>{dateTime.format(Date.parse(item.at))} · {item.by}</small></li>)}
