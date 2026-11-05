@@ -1,5 +1,6 @@
 import { MARKETS, market, type MarketId } from "../markets/markets.ts";
 import { tr } from "../i18n/core.ts";
+import { CALL_DEFAULTS, callSettingsIssues, callSettingsLines, callSettingsOf, type CallSettings } from "./callSettings.ts";
 import { fromSek, isLargePriceChange, roundTo, tipMax } from "../pricing/zonePricing.ts";
 import { RAISE_CAP_SEK } from "../dispatch/rules.ts";
 import { APP_LANGUAGES, CONFIG_DEFAULTS, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePaymentMethod } from "./zoneDefaults.ts";
@@ -58,6 +59,8 @@ export type CountrySettings = {
   chainLateFreeCancelMin: number;
   /** v0.18.29 A2 (fix job 0) (owner G12 Q-D "Max 250 euro and equivalent"): the largest single Add money to wallet (CountryRules.walletCreditMax), local money. */
   walletCreditMax: number;
+  /** v0.18.38 §62 (fix job 8, owner G15 "In-app calls only"): CountryRules.calls — on, mode, window after the trip, ring time, longest call. */
+  calls: CallSettings;
 };
 export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };
 export const PERSON_LIMITS_DEFAULT: PersonLimits = { savedPlacesPerPerson: 50, emergencyContactsPerPerson: 10 };
@@ -95,7 +98,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -144,6 +147,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     onTripMinDonePct: ON_TRIP_MIN_DONE_PCT_DEFAULT,
     chainLateFreeCancelMin: CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT,
     walletCreditMax: WALLET_CREDIT_MAX[country],
+    calls: { ...CALL_DEFAULTS },
   };
 }
 
@@ -184,6 +188,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     onTripMinDonePct: finite(raw.onTripMinDonePct) ? raw.onTripMinDonePct : base.onTripMinDonePct,
     chainLateFreeCancelMin: finite(raw.chainLateFreeCancelMin) ? raw.chainLateFreeCancelMin : base.chainLateFreeCancelMin,
     walletCreditMax: finite(raw.walletCreditMax) && raw.walletCreditMax > 0 ? raw.walletCreditMax : base.walletCreditMax,
+    calls: callSettingsOf(raw.calls),
     ...mixedOf(raw.mixedMethods),
     ...mixedTipOf(raw.mixedTipRules),
   };
@@ -311,6 +316,8 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   // v0.18.33: CountryRules.onTripOffers.minRouteDonePct, a whole percent 0–100.
   if (!Number.isInteger(settings.onTripMinDonePct) || settings.onTripMinDonePct < 0 || settings.onTripMinDonePct > 100) issues.push(tr("{0}: offers on a trip must start at a whole percent from 0 to 100.", [name]));
   if (!Number.isInteger(settings.chainLateFreeCancelMin) || settings.chainLateFreeCancelMin < 0 || settings.chainLateFreeCancelMin > 120) issues.push(tr("{0}: free cancel of a next trip must start at 0 to 120 minutes.", [name]));
+  // v0.18.38 §62: CountryRules.calls ranges.
+  issues.push(...callSettingsIssues(name, settings.calls));
   // v0.18.26: limits per person, whole numbers in their range.
   for (const key of ["savedPlacesPerPerson", "emergencyContactsPerPerson"] as const) {
     const value = settings.personLimits[key];
@@ -337,6 +344,7 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   for (const app of APP_IDS) if (before.languages[app] !== after.languages[app]) lines.push(`${APP_LABEL[app]} default language: ${before.languages[app]} → ${after.languages[app]}`);
   if (before.chainLateFreeCancelMin !== after.chainLateFreeCancelMin) lines.push(tr("Next trip free cancel after: {0} min → {1} min", [before.chainLateFreeCancelMin, after.chainLateFreeCancelMin]));
   if (before.onTripMinDonePct !== after.onTripMinDonePct) lines.push(tr("Offers on a trip from: {0} % → {1} %", [before.onTripMinDonePct, after.onTripMinDonePct]));
+  lines.push(...callSettingsLines(before.calls, after.calls));
   if (before.personLimits.savedPlacesPerPerson !== after.personLimits.savedPlacesPerPerson) lines.push(tr("Saved places per person: {0} → {1}", [before.personLimits.savedPlacesPerPerson, after.personLimits.savedPlacesPerPerson]));
   if (before.personLimits.emergencyContactsPerPerson !== after.personLimits.emergencyContactsPerPerson) lines.push(tr("Emergency contacts per person: {0} → {1}", [before.personLimits.emergencyContactsPerPerson, after.personLimits.emergencyContactsPerPerson]));
   return lines;

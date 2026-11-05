@@ -32,6 +32,7 @@ import { enC5BookedRideLive } from "./en/c5-booked-ride-live.ts";
 import { enC2AdminLiveDrivers } from "./en/c2-admin-live-drivers.ts";
 import { enC6Job4TakeBack } from "./en/c6-job4-take-back.ts";
 import { enC7AirportQueue } from "./en/c7-airport-queue.ts";
+import { enC6InAppCalls } from "./en/c6-in-app-calls.ts";
 import { enC8NoDriverNearby } from "./en/c8-no-driver-nearby.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
@@ -71,6 +72,7 @@ export const en = {
   ...enC2AdminLiveDrivers,
   ...enC6Job4TakeBack,
   ...enC7AirportQueue,
+  ...enC6InAppCalls,
   ...enC8NoDriverNearby,
 } as const;
 

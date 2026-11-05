@@ -33,6 +33,7 @@ import { svC5BookedRideLive } from "./sv/c5-booked-ride-live.ts";
 import { svC2AdminLiveDrivers } from "./sv/c2-admin-live-drivers.ts";
 import { svC6Job4TakeBack } from "./sv/c6-job4-take-back.ts";
 import { svC7AirportQueue } from "./sv/c7-airport-queue.ts";
+import { svC6InAppCalls } from "./sv/c6-in-app-calls.ts";
 import { svC8NoDriverNearby } from "./sv/c8-no-driver-nearby.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
@@ -72,5 +73,6 @@ export const sv: Record<MessageKey, string> = {
   ...svC2AdminLiveDrivers,
   ...svC6Job4TakeBack,
   ...svC7AirportQueue,
+  ...svC6InAppCalls,
   ...svC8NoDriverNearby,
 };
