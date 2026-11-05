@@ -246,7 +246,7 @@ test("v0.18.16 A2 (owner G12 Q-D): Tips & limits sets the largest Add money to w
   await fakeTripServer(page, { admin: SV_ADMIN });
   const server = await fakeSettings(page);
   await signIn(page, "Kontrollpanel");
-  await page.goto("/pricing?tab=extras&scope=Z002");
+  await page.goto("/pricing?tab=extras&scope=standard-SE");
   const panel = page.getByTestId("pricing-extras");
   const field = panel.getByLabel("Största Lägg till pengar i plånboken på en gång", { exact: true });
   await expect(field).toHaveValue("2900");

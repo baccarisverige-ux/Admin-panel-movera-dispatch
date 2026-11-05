@@ -74,7 +74,7 @@ test("a manual run waits: Mark as paid is off, Approve run sends country + perio
   await runs.getByRole("button", { name: "Approve run" }).click();
   await confirm(page);
   await expect.poll(() => approved.length).toBe(1);
-  expect(approved[0]).toEqual({ country: "SE", periodEnd: waiting.periodEnd });
+  expect(approved[0]).toEqual({ country: "SE", periodEnd: waiting.periodEnd, reason: "Amount and details are correct" });
   await expect(page.getByText("Run approved: the payouts can be paid.")).toBeVisible();
   await expect(page.getByTestId("live-payout-runs")).toHaveCount(0);
   await expect(page.getByTestId("live-payout-detail").getByRole("button", { name: "Mark as paid" })).toBeEnabled();
