@@ -30,6 +30,7 @@ import { frC2RidersPaymentsPayouts } from "./fr/c2-riders-payments-payouts.ts";
 import { frC2Job7SmallFixes } from "./fr/c2-job7-small-fixes.ts";
 import { frC2ServerAlerts } from "./fr/c2-server-alerts.ts";
 import { frC5BookedRideLive } from "./fr/c5-booked-ride-live.ts";
+import { frC7AirportQueue } from "./fr/c7-airport-queue.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -65,4 +66,5 @@ export const fr: Record<MessageKey, string> = {
   ...frC2Job7SmallFixes,
   ...frC2ServerAlerts,
   ...frC5BookedRideLive,
+  ...frC7AirportQueue,
 };
