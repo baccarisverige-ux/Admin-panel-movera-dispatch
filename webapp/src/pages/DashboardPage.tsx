@@ -79,6 +79,7 @@ import { LiveMapQuickPopup, type QuickTarget } from "../pricing/LiveMapExtras";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { zoneFilterOf } from "../live/zoneFilter";
 import { liveTabCounts } from "../dashboard/liveCounts";
+import { LIVE_CARD_LIST, liveCardRows, onlineTileValue } from "../dashboard/liveCard";
 
 const FIVE_MIN = 5 * 60_000;
 const DAY_MS = 86_400_000;
@@ -189,7 +190,9 @@ export function DashboardPage() {
   }, [moreOpen]);
 
   // Live parts reload every 10 seconds, slower parts every 30, until the backend pushes changes.
-  const drivers = useRecords("drivers", undefined, { refetchMs: LIVE_MS, follow: true });
+  // v0.18.34 §65 (A8/A10): the live card, map and online tile read the live pages alone; the driver list adds details.
+  const presence = useRecords(LIVE_CARD_LIST, undefined, { refetchMs: LIVE_MS, follow: true });
+  const drivers = useRecords("drivers", undefined, { refetchMs: LIVE_MS });
   const trips = useRecords("trips", undefined, { refetchMs: LIVE_MS });
   const incidents = useRecords("incidents", undefined, { refetchMs: LIVE_MS });
   const tickets = useRecords("tickets", undefined, { refetchMs: LIVE_MS });
@@ -205,6 +208,7 @@ export function DashboardPage() {
   // Names, phones and links follow the viewer's own read permissions (UI-06); counts and money stay.
   const access = useMemo(() => dashboardAccess(role), [role]);
   const driverRows = useMemo(() => maskDrivers(drivers.data ?? [], access), [drivers.data, access]);
+  const presenceRows = useMemo(() => maskDrivers(liveCardRows(presence.data, drivers.data), access), [presence.data, drivers.data, access]);
   const riderRows = useMemo(() => maskRiders(riders.data ?? [], access), [riders.data, access]);
   const tripRows = useMemo(() => maskBookings(trips.data ?? [], access), [trips.data, access]);
   const reservationRows = useMemo(() => maskBookings(reservations.data ?? [], access), [reservations.data, access]);
@@ -218,7 +222,7 @@ export function DashboardPage() {
     .map((bonus) => ({ bonus, state: bonusState(bonus, bonusMinute * 60_000, market.timeZone) }))
     .filter((item) => item.state === "live" || item.state === "today")
     .map(({ bonus, state }) => ({ id: bonus.id, label: state === "live" ? tr("Bonus now · {0}", [bonus.name]) : tr("{0} · from {1}", [bonus.name, bonus.start]), live: state === "live", rings: bonus.areas.map((area) => area.ring) })), [bonusSlice.value, country, bonusMinute, market.timeZone]);
-  const liveQueries = [drivers, trips, incidents, tickets, reservations, payments];
+  const liveQueries = [presence, drivers, trips, incidents, tickets, reservations, payments];
   const failed = liveQueries.find((query) => query.error);
   const updatedAt = Math.max(refreshedAt, ...liveQueries.map((query) => query.dataUpdatedAt || 0));
 
@@ -273,13 +277,13 @@ export function DashboardPage() {
   const liveData = isLiveData();
 
   const live = useMemo(
-    () => liveDrivers(driverRows, vehicles.data ?? [], tripRows, incidents.data ?? [], tick),
-    [driverRows, vehicles.data, tripRows, incidents.data, tick],
+    () => liveDrivers(presenceRows, vehicles.data ?? [], tripRows, incidents.data ?? [], tick),
+    [presenceRows, vehicles.data, tripRows, incidents.data, tick],
   );
   const liveCounts = countStates(live);
   const onlineIds = useMemo(() => new Set(live.map((driver) => driver.id)), [live]);
   const allowedCategories = (driverId: string) => {
-    const record = (driverRows).find((row) => row.id === driverId);
+    const record = driverRows.find((row) => row.id === driverId) ?? presenceRows.find((row) => row.id === driverId);
     if (!record) return [];
     const ops = driverOps(driverStore.value, { id: record.id, name: record.name, fleetId: record.fleetId, status: record.status, kind: record.kind });
     return CATEGORIES.filter((category) => ops.categories[category.id]).map((category) => category.id);
@@ -557,7 +561,7 @@ export function DashboardPage() {
               icon={<Car size={18} />}
               tone="green"
               label={tr("Drivers online now")}
-              value={loading ? "…" : number.format(liveCounts.free + busy + liveCounts.sos)}
+              value={trx(onlineTileValue(presence, liveCounts.free + busy + liveCounts.sos, number.format))}
               hint={<>{trn("{0} free · {1} busy{2}", liveCounts.free, busy, liveCounts.sos ? <> · <b className="sos-text">{trn("{0} SOS", liveCounts.sos)}</b></> : null)}</>}
             />
             <Kpi icon={<XCircle size={18} />} tone="red" label={tr("Cancellation rate")} value={Number.isFinite(cancelRate) ? `${cancelRate.toFixed(1)}%` : "—"} delta={<Delta value={change(cancelRate, prevCancelRate)} inverse label={shownSpan.compareLabel} />} />
@@ -629,7 +633,7 @@ export function DashboardPage() {
                 tripFor={(driver) => maskTrip(liveTrip(driver, { trips: tripRows, reservations: reservationRows, vehicles: vehicles.data ?? [], fleets: fleets.data ?? [], riders: riderRows }, now, shift), access)}
                 infoFor={(driverId) => {
                   if (!access.drivers) return null;
-                  const record = (driverRows).find((row) => row.id === driverId);
+                  const record = driverRows.find((row) => row.id === driverId) ?? presenceRows.find((row) => row.id === driverId);
                   if (!record) return null;
                   const ops = driverOps(driverStore.value, { id: record.id, name: record.name, fleetId: record.fleetId, status: record.status, kind: record.kind });
                   const today = driverPerformance({ id: record.id, zoneId: record.zoneId, status: record.status, stars: ops.ratings.stars, acceptancePct: ops.ratings.acceptancePct, cancellationPct: ops.ratings.cancellationPct }, periodWindow({ kind: "today" }, now, market.timeZone, uiLocale()), false).current;
