@@ -4,7 +4,7 @@
  */
 import { completeBookingWindow, completeEarlyEnd, RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
-import { validPickupMove, validRaiseFactor } from "../dispatch/offerRules.ts";
+import { validPickupMove, validRaiseFactor, validSamePoint } from "../dispatch/offerRules.ts";
 
 type Doc = Record<string, unknown>;
 
@@ -66,6 +66,9 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   // v0.18.7 (G5 item 4): the pickup move limit the server checks (booking.maxPickupMoveMeters, 0–2000; migration 0041 moved 500 to 200).
   const move = validPickupMove((driver?.["booking"] as { maxPickupMoveMeters?: unknown } | undefined)?.maxPickupMoveMeters);
   if (move !== null) zone.pickupMove = { maxMeters: move };
+  // v0.18.30 (owner Q9): "Shortest ride (m)" as the zone's drivers and the server get it (booking.samePointWarnMeters, 0–1000).
+  const samePoint = validSamePoint((driver?.["booking"] as { samePointWarnMeters?: unknown } | undefined)?.samePointWarnMeters);
+  if (samePoint !== null) zone.samePoint = { warnMeters: samePoint };
   // v0.18.8 (G6): the free wait at each stop the server charges by (waiting.stopFreeWaitMin, 0–20; 0 while stops are off).
   const stopFree = (driver?.["waiting"] as { stopFreeWaitMin?: unknown } | undefined)?.stopFreeWaitMin;
   if (zone.stops.on && typeof stopFree === "number" && Number.isInteger(stopFree) && stopFree >= 0 && stopFree <= 20) zone.stops = { ...zone.stops, freeWaitMin: stopFree };

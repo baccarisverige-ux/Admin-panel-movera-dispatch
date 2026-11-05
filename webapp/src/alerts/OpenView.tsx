@@ -20,7 +20,7 @@ export const LEVEL_ICON = { critical: AlertOctagon, important: AlertTriangle, in
 
 type Quick = "all" | Level | "mine" | "new";
 
-/** v0.18.33: with old, the same list for the Old tab (old SOS / safety cases, contract.json#alertsOldList). */
+/** v0.18.31: with old, the same list for the Old tab (old SOS / safety cases, contract.json#alertsOldList). */
 export function OpenView({ old = false }: { old?: boolean } = {}) {
   const data = useAlertsData();
   const { agent } = useSession();

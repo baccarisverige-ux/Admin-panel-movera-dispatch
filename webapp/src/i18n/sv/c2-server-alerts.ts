@@ -1,4 +1,4 @@
-/** Swedish dictionary, area c2-server-alerts: server-side alerts (v0.18.23 BASE job 4) and the Old list (v0.18.33). Merged in ../sv.ts in this order. */
+/** Swedish dictionary, area c2-server-alerts: server-side alerts (v0.18.23 BASE job 4) and the Old list (v0.18.31). Merged in ../sv.ts in this order. */
 export const svC2ServerAlerts = {
   // Server-side alerts
   "{0} Solved by itself: {1}": "{0} Löst av sig själv: {1}",
@@ -45,7 +45,7 @@ export const svC2ServerAlerts = {
   "Taken or answered in Support {0}": "Tagen eller besvarad i Support {0}",
   "The rule no longer holds {0}": "Regeln gäller inte längre {0}",
   "Solved by itself {0}": "Löst av sig själv {0}",
-  // Old list (v0.18.33, owner Q-Bj)
+  // Old list (v0.18.31, owner Q-Bj)
   "Old": "Gamla",
   "SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents.": "SOS- och säkerhetsärenden stängs aldrig av sig själva. 24 h efter att resan slutade flyttas de hit; stäng dem i Incidenter.",
   "Trip ended {0}": "Resan slutade {0}",

@@ -7,7 +7,7 @@ import { MARKETS, marketOfZone, standardZoneId, zoneById, type MarketId } from "
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, draftRules, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
-import { COUNTRY_SETTINGS_KEY, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, personLimitsOf, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
@@ -314,6 +314,10 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       ...(doc.tips ? { tips: options(doc.tips, "t") } : {}),
       ...(doc.raiseSteps ? { raiseSteps: options(doc.raiseSteps, "r") } : {}),
       ...(doc.driverBonus?.defaultLimit ? { driverBonusLimit: doc.driverBonus.defaultLimit.amountMinor / market.minorUnits } : {}),
+      // v0.18.26: per-person limits (CountryRules.limits).
+      personLimits: personLimitsOf((document as { limits?: unknown }).limits),
+      // Fix job 0 (owner A2-1): read on the Standard; the server ignores a zone's own value.
+      ...((document as { walletCreditMax?: { amountMinor: number } }).walletCreditMax ? { walletCreditMax: (document as { walletCreditMax: { amountMinor: number } }).walletCreditMax.amountMinor / market.minorUnits } : {}),
       ...((document as { driverPayChangeMax?: { amountMinor: number } }).driverPayChangeMax ? { driverPayChangeMax: (document as { driverPayChangeMax: { amountMinor: number } }).driverPayChangeMax.amountMinor / market.minorUnits } : {}),
     };
   }
@@ -654,7 +658,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const current = await draft("country_rules", id, true);
       const facts = zoneFacts(id);
       const hardMax = driverBonusHardMax(market.id as MarketId);
-      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax }, current?.document ?? null);
+      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, personLimits: next.personLimits, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax } : {}) }, current?.document ?? null);
       await savePublish(http, "country_rules", id, current, doc);
       standardMarks.set("country_rules", id, false);
       // v0.18.10 (G8): the tip rules (cash after the trip, typed amount + max) live in the rider app document.

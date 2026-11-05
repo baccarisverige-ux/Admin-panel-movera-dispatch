@@ -61,7 +61,8 @@ export function inboxItems(input: {
     mine: input.config.authorId === input.me,
     link: "/settings",
   }] : [];
-  const values = input.values.filter((item) => !input.decisions[item.id]).map((item) => ({
+  // FIX JOB 7 L21: a read-only value (the server never reads it) is not a task to confirm.
+  const values = input.values.filter((item) => !item.readOnly && !input.decisions[item.id]).map((item) => ({
     id: item.id,
     kind: "value" as const,
     title: item.label,

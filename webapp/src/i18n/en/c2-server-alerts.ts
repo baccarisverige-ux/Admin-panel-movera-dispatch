@@ -1,4 +1,4 @@
-/** English dictionary, area c2-server-alerts: server-side alerts (v0.18.23 BASE job 4) and the Old list (v0.18.33). Merged in ../en.ts in this order. */
+/** English dictionary, area c2-server-alerts: server-side alerts (v0.18.23 BASE job 4) and the Old list (v0.18.31). Merged in ../en.ts in this order. */
 export const enC2ServerAlerts = {
   // Server-side alerts
   "{0} Solved by itself: {1}": "{0} Solved by itself: {1}",
@@ -45,7 +45,7 @@ export const enC2ServerAlerts = {
   "Taken or answered in Support {0}": "Taken or answered in Support {0}",
   "The rule no longer holds {0}": "The rule no longer holds {0}",
   "Solved by itself {0}": "Solved by itself {0}",
-  // Old list (v0.18.33, owner Q-Bj)
+  // Old list (v0.18.31, owner Q-Bj)
   "Old": "Old",
   "SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents.": "SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents.",
   "Trip ended {0}": "Trip ended {0}",

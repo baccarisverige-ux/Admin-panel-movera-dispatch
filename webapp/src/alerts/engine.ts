@@ -183,7 +183,7 @@ export type FoundAlert = {
   solvedAt?: string;
   solvedText?: string;
   solvedT?: FoundText;
-  /** v0.18.33 (contract.json#alertsOldList, owner Q-Bj): an SOS / safety case whose trip ended 24 h ago; still open. */
+  /** v0.18.31 (contract.json#alertsOldList, owner Q-Bj): an SOS / safety case whose trip ended 24 h ago; still open. */
   old?: boolean;
   oldSince?: string;
   ref?: { tripId?: string; driverId?: string; riderId?: string; incidentId?: string; ticketId?: string; payoutId?: string; refundId?: string; ruleId?: string };
@@ -292,7 +292,7 @@ export type Alert = {
   ruleId?: string;
   /** v0.18.20 owner A2: the server saw the problem end by itself; the alert stays, green, until marked done. */
   solved?: { at: number; text: string };
-  /** v0.18.33 owner Q-Bj: never closed by itself; 24 h after its trip ended it moves to the Old tab. */
+  /** v0.18.31 owner Q-Bj: never closed by itself; 24 h after its trip ended it moves to the Old tab. */
   old?: { since: number };
 };
 
@@ -590,7 +590,7 @@ export function visibleTo(alert: Alert, book: AlertBook, viewer: Viewer, now: nu
 
 export type OpenAlert = Alert & { status: "new" | "taken" | "snoozed"; owner: string | null; record: AlertRecord | null; muted: boolean };
 
-/** v0.18.33 owner Q-Bj (contract.json#alertsOldList): old SOS / safety cases leave the open list for the Old tab. */
+/** v0.18.31 owner Q-Bj (contract.json#alertsOldList): old SOS / safety cases leave the open list for the Old tab. */
 export function splitOld<T extends Alert>(alerts: readonly T[]): { open: T[]; old: T[] } {
   return { open: alerts.filter((alert) => !alert.old), old: alerts.filter((alert) => alert.old) };
 }

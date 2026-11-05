@@ -1,4 +1,4 @@
-/** French dictionary, area c2-server-alerts: server-side alerts (v0.18.23 BASE job 4) and the Old list (v0.18.33). Merged in ../fr.ts in this order. */
+/** French dictionary, area c2-server-alerts: server-side alerts (v0.18.23 BASE job 4) and the Old list (v0.18.31). Merged in ../fr.ts in this order. */
 export const frC2ServerAlerts = {
   // Server-side alerts
   "{0} Solved by itself: {1}": "{0} Résolu tout seul : {1}",
@@ -45,7 +45,7 @@ export const frC2ServerAlerts = {
   "Taken or answered in Support {0}": "Pris ou répondu dans Support {0}",
   "The rule no longer holds {0}": "La règle n’est plus remplie {0}",
   "Solved by itself {0}": "Résolu tout seul {0}",
-  // Old list (v0.18.33, owner Q-Bj)
+  // Old list (v0.18.31, owner Q-Bj)
   "Old": "Anciennes",
   "SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents.": "Les cas SOS et de sécurité ne se ferment jamais tout seuls. 24 h après la fin de la course, ils arrivent ici ; fermez-les dans Incidents.",
   "Trip ended {0}": "Course terminée {0}",

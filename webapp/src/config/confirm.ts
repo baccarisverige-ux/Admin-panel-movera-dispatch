@@ -1,5 +1,9 @@
 /** `link`: where the value is set today. Values set in Dispatch point there, so there is one place to change them. */
-export type OpenValue = { id: string; label: string; today: string; link?: string };
+/**
+ * `readOnly` (FIX JOB 7 L21, contract v0.18.30 contract.json#smallFixes.adminReadOnly): the server never reads this
+ * value. The row stays (owner rule 21: never delete), shown read-only with `note`, and cannot be confirmed.
+ */
+export type OpenValue = { id: string; label: string; today: string; link?: string; readOnly?: true; note?: string };
 
 /** Unconfirmed product defaults. Today's value is the demo default. Do not invent a second number. */
 export const OPEN_VALUES: OpenValue[] = [
@@ -15,7 +19,7 @@ export const OPEN_VALUES: OpenValue[] = [
   { id: "adjustment", label: "Adjustment range", today: "65–180%" },
   { id: "cancel-fee", label: "Cancellation fee", today: "Set per zone and car type in Dispatch", link: "/dispatch?tab=rides" },
   { id: "free-cancel", label: "Free-cancel window", today: "Set per zone and car type in Dispatch", link: "/dispatch?tab=rides" },
-  { id: "horizon", label: "Reservation horizon", today: "7 days", link: "/dispatch?tab=reservations" },
+  { id: "horizon", label: "Reservation horizon", today: "Not used yet", link: "/dispatch?tab=reservations", readOnly: true, note: "Not used yet: the apps get the booking window from Dispatch › Reservations (Max days ahead)." },
   { id: "lead", label: "Assignment lead", today: "30 min", link: "/dispatch?tab=reservations" },
   { id: "give-up", label: "Give-up time", today: "5 min", link: "/dispatch?tab=reservations" },
   { id: "tips", label: "Tips", today: "Set per country in Pricing › Tips & limits", link: "/pricing?tab=extras&section=tips" },
@@ -26,7 +30,7 @@ export const OPEN_VALUES: OpenValue[] = [
   { id: "cash", label: "Cash rules", today: "open" },
   { id: "fleet", label: "Fleet partners at launch", today: "open" },
   { id: "thresholds", label: "Money approval thresholds", today: "open" },
-  { id: "refund", label: "Refund second person", today: "Set per country in Settings", link: "/settings#refunds" },
+  { id: "refund", label: "Refund second person", today: "none (one admin always)" },
   { id: "wallet-ceiling", label: "Wallet credit ceiling", today: "500 kr" },
   { id: "languages", label: "Languages", today: "English, French, Swedish; default per country in Settings", link: "/settings#country-apps" },
   { id: "app-languages", label: "App languages today", today: "English only" },

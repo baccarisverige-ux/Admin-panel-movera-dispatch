@@ -35,7 +35,7 @@ test("G3-D5: the Dashboard rows and the shortage alert show the server's zoneSup
   const strip = page.getByRole("region", { name: "Urgent" });
   await expect(strip).toContainText("Only 1 free driver in");
   await expect(strip).not.toContainText("Only 0 free drivers");
-  await page.getByRole("tab", { name: "Live", exact: true }).click();
+  await page.getByRole("tab", { name: /^Live/ }).click();
   const rows = page.getByRole("list", { name: "Zones by drivers needed" });
   await rows.scrollIntoViewIfNeeded();
   await shot(page, "dashboard-supply");

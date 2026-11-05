@@ -253,7 +253,8 @@ test("automatic promotions have start and end days", async ({ page }) => {
   await expect(page.getByText("Automatic promotions saved.")).toBeVisible();
   await page.reload();
   await page.getByRole("tab", { name: /Automatic/ }).click();
-  await expect(page.getByLabel("Birthday ends")).toHaveValue("2099-12-31");
+  // FIX JOB 7 B-l: shown in the admin language format (English: day first), saved as ISO.
+  await expect(page.getByLabel("Birthday ends")).toHaveValue("31/12/2099");
 });
 
 test("automatic promotions can go to random riders or riders I pick", async ({ page }) => {

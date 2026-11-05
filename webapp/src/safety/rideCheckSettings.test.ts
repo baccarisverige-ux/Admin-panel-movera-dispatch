@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createFixtureAdminApi, type CommandInput } from "../api/create.ts";
-import { signedInFixture } from "../api/fixtureSession.ts";
+import { signedInFixture } from "../testing/fixtureSession.ts";
 import { rulesFile, emptyDispatchBook } from "../dispatch/rules.ts";
 import {
   RIDE_CHECK_SETTINGS_DEFAULT,

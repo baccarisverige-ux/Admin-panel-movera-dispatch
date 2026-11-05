@@ -1,0 +1,31 @@
+/**
+ * BASE B13 (contract v0.18.26 §47, contract.json#phoneDataToServer.admin): the emergency contacts of a safety
+ * incident's driver, read-only, from GET /admin/incidents/{incidentId}/emergency-contacts (incidents.read). The
+ * server writes an audit line for every read, so the panel reads them only after the admin presses Show.
+ */
+export type EmergencyContact = { name: string; phone: string; relation?: string };
+export type IncidentEmergencyContacts = { incidentId: string; driverId: string | null; items: EmergencyContact[]; updatedAt: string | null; rider?: { riderId: string; items: EmergencyContact[]; updatedAt: string | null } | null };
+
+export function emergencyContactsPath(incidentId: string): string {
+  return `/admin/incidents/${encodeURIComponent(incidentId)}/emergency-contacts`;
+}
+
+/** The answer, cleaned: only rows with a name and a phone number. */
+export async function readEmergencyContacts(read: (path: string) => Promise<IncidentEmergencyContacts>, incidentId: string): Promise<IncidentEmergencyContacts> {
+  const answer = await read(emergencyContactsPath(incidentId));
+  const items = (answer.items ?? []).filter((c) => typeof c.name === "string" && c.name.trim() !== "" && typeof c.phone === "string" && c.phone.trim() !== "");
+  const keep = (list: EmergencyContact[] | undefined) => (list ?? []).filter((c) => typeof c.name === "string" && c.name.trim() !== "" && typeof c.phone === "string" && c.phone.trim() !== "");
+  // Owner 2026-11-04 "Yes, same as drivers": the rider's contacts of the same open case.
+  const rider = answer.rider ? { riderId: answer.rider.riderId, items: keep(answer.rider.items), updatedAt: answer.rider.updatedAt ?? null } : null;
+  return { incidentId: answer.incidentId ?? incidentId, driverId: answer.driverId ?? null, items, updatedAt: answer.updatedAt ?? null, rider };
+}
+
+/** Owner 2026-11-04 "Read-only on profile": the rider's saved places and the driver's ride preferences. */
+export type AdminRiderSavedPlaces = { riderId: string; items: { placeId: string; label: string; kind: "home" | "work" | "other"; type?: string; place: { address: string } }[] };
+export type AdminDriverPreferences = { driverId: string; categoriesOff: string[]; updatedAt: string | null };
+export const riderPlacesPath = (riderId: string) => `/admin/riders/${encodeURIComponent(riderId)}/saved-places`;
+export const driverPreferencesPath = (driverId: string) => `/admin/drivers/${encodeURIComponent(driverId)}/preferences`;
+/** A category id as a readable word ("child_seat" → "Child seat"). */
+export const categoryLabel = (id: string) => (id ? id[0]!.toUpperCase() + id.slice(1).replace(/_/g, " ") : id);
+/** Owner 2026-11-04: emergency contacts only from an OPEN safety case. */
+export const caseIsOpen = (state: string) => state !== "solved";

@@ -186,7 +186,7 @@ export function useAlerts() {
   const sosOwner = (incidentId: string) => safety.value.incidents[incidentId]?.owner ?? null;
   const viewer = agent ? { id: agent.id, role: agent.role, can: (permission: string) => can(agent.role, permission) } : null;
   const listed: OpenAlert[] = useMemo(() => openAlerts(all, book, now, (id) => safety.value.incidents[id]?.owner ?? null).filter((alert) => (viewer ? visibleTo(alert, book, viewer, now) : false)), [all, book, now, safety.value, viewer?.id, viewer?.role]);
-  // v0.18.33 owner Q-Bj: old SOS / safety cases (trip ended + 24 h) leave the open list for the Old tab; never closed by themselves.
+  // v0.18.31 owner Q-Bj: old SOS / safety cases (trip ended + 24 h) leave the open list for the Old tab; never closed by themselves.
   const { open, old } = useMemo(() => splitOld(listed), [listed]);
   // Owner A2: a green (solved by itself) alert stays in the list but no longer counts or rings.
   const active = open.filter((alert) => alert.status !== "snoozed" && !alert.muted && !alert.solved);

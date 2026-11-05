@@ -24,6 +24,7 @@ import {
   type RewardType,
 } from "./bonus";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { DateInput } from "../ui/DateInput";
 
 export type BonusDriver = { facts: DriverFacts; name: string; code: string; zoneId: string; home: [number, number] };
 
@@ -190,8 +191,8 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
             </span>
           </div>
           <div className="db-row">
-            <label className="field">{trn("First day{0}", <input type="date" aria-label={tr("First day")} value={bonus.from} onChange={(event) => set({ from: event.target.value })} />)}</label>
-            <label className="field">{trn("Last day {0}{1}", <small>{tr("(empty = no end)")}</small>, <input type="date" aria-label={tr("Last day")} value={bonus.until} onChange={(event) => set({ until: event.target.value })} />)}</label>
+            <label className="field">{trn("First day{0}", <DateInput aria-label={tr("First day")} value={bonus.from} onChange={(event) => set({ from: event.target.value })} />)}</label>
+            <label className="field">{trn("Last day {0}{1}", <small>{tr("(empty = no end)")}</small>, <DateInput aria-label={tr("Last day")} value={bonus.until} onChange={(event) => set({ until: event.target.value })} />)}</label>
           </div>
         </Section>
 
