@@ -27,4 +27,5 @@ export const frC6InAppCalls = {
   "Calls (in the app)": "Appels (dans l'appli)",
   "{0} Calls (in the app)": "{0} Appels (dans l'appli)",
   "In-app calls per country": "Appels dans l'appli par pays",
+  "Window after drop-off (min)": "Fenêtre après la dépose (min)",
 };

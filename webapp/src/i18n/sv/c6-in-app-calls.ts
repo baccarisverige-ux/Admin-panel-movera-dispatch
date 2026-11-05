@@ -27,4 +27,5 @@ export const svC6InAppCalls = {
   "Calls (in the app)": "Samtal (i appen)",
   "{0} Calls (in the app)": "{0} Samtal (i appen)",
   "In-app calls per country": "Samtal i appen per land",
+  "Window after drop-off (min)": "Fönster efter avlämning (min)",
 };

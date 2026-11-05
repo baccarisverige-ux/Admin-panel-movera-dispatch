@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Lock, Phone, PhoneMissed } from "lucide-react";
+import { Lock, Phone, PhoneMissed, PhoneOff } from "lucide-react";
 import { callLogLine, readTripCalls, type CallView } from "./tripCalls";
 import { ApiError } from "../api/httpClient";
 import { tr, trn, uiLocale } from "../i18n";
@@ -50,8 +50,8 @@ export function LiveTripChat({ tripId, hadDriver, riderName, driverName }: { tri
               {calls.data.map((call) => {
                 const line = callLogLine(call, riderName, driverName);
                 return (
-                  <li key={call.callId} className={line.answered ? "ok" : "missed"}>
-                    {line.answered ? <Phone size={14} aria-hidden="true" /> : <PhoneMissed size={14} aria-hidden="true" />}
+                  <li key={call.callId} className={line.tone === "ok" ? "ok" : "missed"} data-tone={line.tone}>
+                    {line.tone === "ok" ? <Phone size={14} aria-hidden="true" /> : line.tone === "failed" ? <PhoneOff size={14} aria-hidden="true" /> : <PhoneMissed size={14} aria-hidden="true" />}
                     <span><b>{line.who}</b><small>{shortDateTime(call.startedAt, uiLocale())} · {line.detail}</small></span>
                   </li>
                 );

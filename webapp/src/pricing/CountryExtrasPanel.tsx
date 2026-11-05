@@ -1,7 +1,7 @@
 import { DRIVER_BONUS_LIMIT_INPUT_ID } from "../live/tripLive";
 import { useEffect, useState } from "react";
 import { BadgeDollarSign, Gift, HandHeart, Phone, Plus, Save, TrendingUp } from "lucide-react";
-import { CALL_RANGES, callModeText } from "../config/callSettings";
+import { CALL_FIELDS, CALL_RANGES, callModeText } from "../config/callSettings";
 import { market, zoneById, type MarketId } from "../markets/markets";
 import { PublishTargetsLine } from "../live/StandardBar";
 import {
@@ -248,9 +248,9 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 </select>
               </label>
               <small className="dx-note">{tr("In the app: free internet calls. Phone mode needs a phone company; until one is chosen calls stay in the app.")}</small>
-              <NumberField label={tr("Call window after the trip (min)")} value={shown.calls.callWindowAfterTripMin} step={1} max={CALL_RANGES.callWindowAfterTripMin[1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls.callWindowAfterTripMin !== saved.calls.callWindowAfterTripMin} onChange={(value) => edit({ calls: { ...shown.calls, callWindowAfterTripMin: value } })} />
-              <NumberField label={tr("Ring time (s)")} value={shown.calls.ringSeconds} step={1} max={CALL_RANGES.ringSeconds[1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls.ringSeconds !== saved.calls.ringSeconds} onChange={(value) => edit({ calls: { ...shown.calls, ringSeconds: value } })} />
-              <NumberField label={tr("Longest call (min)")} value={shown.calls.maxCallMin} step={1} max={CALL_RANGES.maxCallMin[1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls.maxCallMin !== saved.calls.maxCallMin} onChange={(value) => edit({ calls: { ...shown.calls, maxCallMin: value } })} />
+              {CALL_FIELDS.map((field) => (
+                <label key={field.key} className="field"><span>{tr(field.label)}</span><NumberField label={tr(field.label)} value={shown.calls[field.key]} step={1} min={CALL_RANGES[field.key][0]} max={CALL_RANGES[field.key][1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls[field.key] !== saved.calls[field.key]} onChange={(value) => edit({ calls: { ...shown.calls, [field.key]: value } })} /></label>
+              ))}
             </div>
           </div>
           <div id="extras-person-limits" className="cx-anchor">

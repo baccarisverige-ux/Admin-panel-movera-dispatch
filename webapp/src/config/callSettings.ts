@@ -1,4 +1,4 @@
-import { tr } from "../i18n/core.ts";
+import { tr, type MessageKey } from "../i18n/core.ts";
 
 /**
  * v0.18.38 §62 (fix job 8, contract.json#inAppCalls.settings; owner G15 2026-11-05 "In-app calls only"): the call
@@ -10,6 +10,12 @@ export type CallSettings = { on: boolean; mode: CallMode; callWindowAfterTripMin
 export const CALL_DEFAULTS: CallSettings = { on: true, mode: "in_app", callWindowAfterTripMin: 60, ringSeconds: 30, maxCallMin: 15 };
 export const CALL_RANGES = { callWindowAfterTripMin: [0, 240], ringSeconds: [10, 120], maxCallMin: [1, 60] } as const;
 type RangeKey = keyof typeof CALL_RANGES;
+/** The 3 number boxes of the Calls card, each with a visible label (job 8 screenshot check). */
+export const CALL_FIELDS = [
+  { key: "callWindowAfterTripMin", label: "Window after drop-off (min)" },
+  { key: "ringSeconds", label: "Ring time (s)" },
+  { key: "maxCallMin", label: "Longest call (min)" },
+] as const satisfies readonly { key: RangeKey; label: MessageKey }[];
 
 const inRange = (key: RangeKey, v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= CALL_RANGES[key][0] && v <= CALL_RANGES[key][1];
 

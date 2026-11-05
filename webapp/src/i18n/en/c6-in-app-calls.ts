@@ -27,4 +27,5 @@ export const enC6InAppCalls = {
   "Calls (in the app)": "Calls (in the app)",
   "{0} Calls (in the app)": "{0} Calls (in the app)",
   "In-app calls per country": "In-app calls per country",
+  "Window after drop-off (min)": "Window after drop-off (min)",
 };

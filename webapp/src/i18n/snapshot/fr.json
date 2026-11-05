@@ -8798,4 +8798,5 @@
 ["Calls in the app: rider and driver never see each other's number. Calls are not recorded.","Appels dans l'appli : le passager et le chauffeur ne voient jamais le numéro de l'autre. Les appels ne sont pas enregistrés."],
 ["Calls (in the app)","Appels (dans l'appli)"],
 ["{0} Calls (in the app)","{0} Appels (dans l'appli)"],
-["In-app calls per country","Appels dans l'appli par pays"]]
+["In-app calls per country","Appels dans l'appli par pays"],
+["Window after drop-off (min)","Fenêtre après la dépose (min)"]]

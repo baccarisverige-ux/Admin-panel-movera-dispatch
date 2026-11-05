@@ -8798,4 +8798,5 @@
 ["Calls in the app: rider and driver never see each other's number. Calls are not recorded.","Samtal i appen: resenär och förare ser aldrig varandras nummer. Samtal spelas inte in."],
 ["Calls (in the app)","Samtal (i appen)"],
 ["{0} Calls (in the app)","{0} Samtal (i appen)"],
-["In-app calls per country","Samtal i appen per land"]]
+["In-app calls per country","Samtal i appen per land"],
+["Window after drop-off (min)","Fönster efter avlämning (min)"]]
