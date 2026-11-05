@@ -8726,4 +8726,5 @@
 ["Old","Old"],
 ["SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents.","SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents."],
 ["Trip ended {0}","Trip ended {0}"],
-["Booked ride · now live","Booked ride · now live"]]
+["Booked ride · now live","Booked ride · now live"],
+["Could not load, retrying","Could not load, retrying"]]

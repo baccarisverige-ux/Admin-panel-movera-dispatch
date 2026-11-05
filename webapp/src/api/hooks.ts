@@ -57,7 +57,8 @@ export function useRecords(name: string, scope?: string | null, options: { refet
   const refetchInterval = useLiveRefetch(name, options.refetchMs, options.follow);
   const query = useQuery({
     queryKey,
-    queryFn: () => readTracked(api, queryKey, () => api.list(name, effectiveScope)),
+    // v0.18.34 §65 (A10): the signal is aborted when the key (country / zones) changes, so the old calls stop.
+    queryFn: ({ signal }) => readTracked(api, queryKey, () => api.list(name, effectiveScope, signal)),
     refetchInterval,
     ...(options.observe ? { refetchOnMount: false, retryOnMount: false } : {}),
   });
