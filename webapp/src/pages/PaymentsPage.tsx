@@ -5,7 +5,6 @@ import { ArrowLeft } from "lucide-react";
 import {
   PAYMENT_METHODS,
   defaultFinanceBook,
-  issueWalletVoucher,
   normalizeFinanceBook,
   paymentPolicy,
   runReconciliation,
@@ -13,7 +12,6 @@ import {
   useRecords,
   useSlice,
   voidWalletVoucher,
-  WALLET_TOP_UPS_ORE,
   type FinanceBook,
   type PaymentMethod,
 } from "../api/hooks";
@@ -100,9 +98,6 @@ export function PaymentsPage() {
   const [account, setAccount] = useState("1234567");
   const [iban, setIban] = useState("SE4550000000058398257466");
   const [bic, setBic] = useState("ESSESESS");
-  const [voucherRider, setVoucherRider] = useState("R0001");
-  const [voucherAmountOre, setVoucherAmountOre] = useState(10_000);
-  const [voucherReason, setVoucherReason] = useState(tr("Service recovery"));
   const [reconciliationNote, setReconciliationNote] = useState(tr("Daily close"));
 
   const context = { zoneId: zone, category, platform };
@@ -125,11 +120,6 @@ export function PaymentsPage() {
   const walletOre = seededWalletOre + voucherWalletOre;
   const bankName = clearingBank(clearing);
 
-  const voucherRiderExists = Boolean((riders.data ?? []).some((rider) => rider.id === voucherRider.trim()));
-  const voucher = agent
-    ? issueWalletVoucher(finance, voucherRider, voucherAmountOre, agent.id, voucherReason, new Date().toISOString())
-    : { book: finance, error: "Sign in again." };
-  const voucherError = voucherRiderExists ? voucher.error : "Rider id was not found.";
   const reconciliation = agent
     ? runReconciliation(
         finance,
@@ -259,29 +249,7 @@ export function PaymentsPage() {
             ))}
           </ul>
 
-          <h4>{tr("Issue wallet voucher")}</h4>
-          <div className="field-grid">
-            <label>{trn("Rider id{0}", <input aria-label={tr("Voucher rider")} value={voucherRider} onChange={(event) => setVoucherRider(event.target.value)} />)}</label>
-            <label>{trn("Amount{0}", <select aria-label={tr("Voucher amount")} value={voucherAmountOre} onChange={(event) => setVoucherAmountOre(Number(event.target.value))}>
-                {WALLET_TOP_UPS_ORE.map((amount) => <option key={amount} value={amount}>{voucherMoney(amount, voucherRider)}</option>)}
-              </select>)}</label>
-            <label>{trn("Voucher reason{0}", <input aria-label={tr("Voucher reason")} value={voucherReason} onChange={(event) => setVoucherReason(event.target.value)} />)}</label>
-          </div>
-          <CommandButton
-            command="admin.payment.issueVoucher"
-            className="primary-btn"
-            type="button"
-            targetId={`voucher-${voucherRider}`}
-            confirmTarget={false}
-            before={`${finance.vouchers.length} vouchers`}
-            after={`${voucherRider} +${voucherMoney(voucherAmountOre, voucherRider)}`}
-            expectedSliceRev={finance.draftRev}
-            sliceKey="finance"
-            value={voucher.book}
-            disabled={Boolean(voucherError)}
-            title={voucherError}
-            onDone={() => setNotice(tr("Wallet voucher {0} posted for {1}.", [voucherMoney(voucherAmountOre, voucherRider), voucherRider]))}
-          >{tr("Issue wallet voucher")}</CommandButton>
+          {/* A2 leftovers (owner Q2): no "Issue wallet voucher"; Add money to wallet on the rider page is the one way. */}
         </article>
 
         <article className="panel" data-testid="reconciliation">
