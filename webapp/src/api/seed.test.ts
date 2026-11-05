@@ -1,5 +1,5 @@
 import { createFixtureAdminApi } from "./create.ts";
-import { signedInFixture } from "./fixtureSession.ts";
+import { signedInFixture } from "../testing/fixtureSession.ts";
 import { PHONE, PLATE, TRIP_ID, createSeed } from "./seed.ts";
 import { statusLabel } from "../domain/labels.ts";
 import { marketOfZone, marketZoneIds } from "../markets/markets.ts";
@@ -156,7 +156,8 @@ const pending = await api.command({
   after: "refunded",
   amountOre: 60_000,
 });
-assert(pending.status === "pending_approval", "large refund waits for approval");
-assert((await api.approvals()).some((item) => item.targetId === "RF-LARGE" && item.status === "pending"), "approval queue stores high-impact action");
+// BASE B14 (owner Q1 "One admin always"): no second admin; nothing waits in the approval queue.
+assert(pending.status === "committed", "a large refund is done at once");
+assert(!(await api.approvals()).some((item) => item.targetId === "RF-LARGE" && item.status === "pending"), "nothing waits for a second admin");
 
 console.log("seed ok");

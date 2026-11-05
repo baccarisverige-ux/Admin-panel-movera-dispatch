@@ -341,6 +341,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     driverBonus: { defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
     // v0.18.10 checker: the largest single change of a driver's pay (Change pay on the trip page).
     ...(input.driverPayChangeMax !== undefined ? { driverPayChangeMax: toMinor(input.driverPayChangeMax, currency) } : {}),
+    // v0.18.24: the Standard's limits (sign-in, uploads, request limits) are set elsewhere; this save keeps them.
+    ...(base?.["limits"] !== undefined ? { limits: base["limits"] } : {}),
   };
 }
 

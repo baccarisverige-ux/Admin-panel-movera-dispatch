@@ -2,7 +2,7 @@ import type { TripStatus } from "./domain/contract.ts";
 import { readFileSync } from "node:fs";
 import { can } from "./auth/permissions.ts";
 import { createFixtureAdminApi } from "./api/create.ts";
-import { signedInFixture } from "./api/fixtureSession.ts";
+import { signedInFixture } from "./testing/fixtureSession.ts";
 import { ApiError } from "./api/httpClient.ts";
 import { createSeed } from "./api/seed.ts";
 import { changeStudio, emptyStudio, studioSlot } from "./content/studio.ts";
@@ -34,7 +34,8 @@ const refund = { action: "admin.payment.refund", targetId: "PAY0200", reason: "C
 const firstRev = await api.revision();
 const pending = await api.command({ ...refund, expectedRev: firstRev });
 const again = await api.command({ ...refund, expectedRev: firstRev });
-assert(pending.status === "pending_approval" && again.operationId === pending.operationId && (await api.audit()).filter((row) => row.operationId === pending.operationId).length === 1, "A03 one refund effect on retry");
+// BASE B14 (owner Q1 "One admin always"): the refund is done at once, no second admin.
+assert(pending.status === "committed" && again.operationId === pending.operationId && (await api.audit()).filter((row) => row.operationId === pending.operationId).length === 1, "A03 one refund effect on retry");
 
 // A04: the live Pricing quote (pricing/zonePricing.ts) adds up from its own lines, from the published Movera prices.
 const book = zoneBook(emptyPricingStore(), "Z001");
@@ -66,7 +67,8 @@ const withTrip = riderRows.find((row) => row.rider.tripId);
 assert(withTrip && riderRows.filter((row) => matches(row, withTrip.rider.tripId!)).length >= 1 && matches(withTrip, withTrip.rider.tripId!), "A13 rider search");
 assert(csvCell("=1+1").startsWith("'"), "A14 csv guard");
 const zones = emptyBook("nora");
-assert(publishZones(zones, "nora").error, "A15 author cannot publish zones");
+// BASE B14 (owner Q1 "One admin always"): the author publishes zones himself.
+assert(!publishZones(zones, "nora").error, "A15 one admin publishes zones");
 
 const first = { ...studioSlot(emptyStudio(), "help").draft, sv: "Hej", en: "Hello" };
 let content = changeStudio(emptyStudio(), "help", first, "save", "nora").book;

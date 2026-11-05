@@ -70,42 +70,16 @@ test("R10 payout requires reviewed bank and stays paid once", async ({ page }) =
   await expect(page.getByRole("button", { name: "Mark paid" })).toBeDisabled();
 });
 
-test("R10 large refund requires and executes a second-agent decision", async ({ page }) => {
-  await session(page);
+test("R10 a large refund is done at once by one admin (owner Q1 one admin always)", async ({ page }) => {
+  // Nora (super) has no per-role refund limit; finance's own role limit is a different rule and stays.
+  await session(page, "nora");
   await page.goto("/payments/PAY0200");
   await expect(page.getByText("600,00 kr")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Request refund approval" })).toBeEnabled();
-
-  await page.getByRole("button", { name: "Request refund approval" }).click();
+  await expect(page.getByRole("button", { name: "Request refund approval" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Refund payment" }).click();
   await page.locator(".modal.open").getByLabel("Type PAY0200 to confirm").fill("PAY0200");
   await confirm(page);
-  await expect(page.getByText(/Pending approval/)).toBeVisible();
-
-  await page.goto("/audit");
-  const approvalsPanel = page.getByRole("heading", { level: 3, name: "Pending approvals" }).locator("..");
-  const row = approvalsPanel.getByRole("row", { name: /PAY0200/ });
-  await expect(row).toContainText("600,00 kr");
-  await expect(row.getByRole("button", { name: "Approve" })).toBeDisabled();
-
-  // Ops can decide approvals but cannot refund, so it cannot approve a refund (C-02).
-  const ops = await page.context().newPage();
-  await session(ops, "lena");
-  await ops.goto("/audit");
-  const opsRow = ops.getByRole("heading", { level: 3, name: "Pending approvals" }).locator("..").getByRole("row", { name: /PAY0200/ });
-  await expect(opsRow.getByRole("button", { name: "Approve" })).toBeDisabled();
-  await ops.close();
-
-  const reviewer = await page.context().newPage();
-  await session(reviewer, "nora");
-  await reviewer.goto("/audit");
-  const decisionPanel = reviewer.getByRole("heading", { level: 3, name: "Pending approvals" }).locator("..");
-  const decisionRow = decisionPanel.getByRole("row", { name: /PAY0200/ });
-  await expect(decisionRow.getByRole("button", { name: "Approve" })).toBeEnabled();
-  await decisionRow.getByRole("button", { name: "Approve" }).click();
-  await confirm(reviewer);
-  await expect(decisionPanel.getByRole("row", { name: /PAY0200/ })).toHaveCount(0);
-  await reviewer.close();
-
+  await expect(page.getByTestId("refund-count")).toHaveText("1");
   await page.goto("/payments/PAY0200");
   await expect(page.getByTestId("payment-timeline")).toContainText("Refunded");
   await expect(page.getByTestId("refund-count")).toHaveText("1");
