@@ -1,6 +1,6 @@
 import { isLiveData, liveDriverOf } from "../live/realData";
 import { useEffect, useMemo, useState } from "react";
-import { useApprovals, useRecords, useSlice } from "../api/hooks";
+import { useRecords, useSlice } from "../api/hooks";
 import { useAdminApi } from "../api/AdminApiContext";
 import { emptySafety, type SafetyBook } from "../safety/ops";
 import { INCIDENT_OPS_KEY, caseOf, emptyIncidentOps, lateText, normalizeIncidentOps, type IncidentOps } from "../safety/cases";
@@ -61,7 +61,6 @@ export function useAlerts() {
   const payouts = useRecords("payouts");
   const vehicles = useRecords("vehicles");
   const tickets = useRecords("tickets", undefined, { refetchMs: 30_000 });
-  const approvals = useApprovals(30_000);
   const riders = useRidersData("month");
   // Ride check alerts go to the safety team and to dispatchers.
   const canRideCheck = Boolean(agent && (can(agent.role, "incidents.read") || can(agent.role, "trips.intervene")));
@@ -158,7 +157,8 @@ export function useAlerts() {
           const cause = liveData ? { kind: "rider" as const, reason: "Not connected yet" } : failureCause(row);
           return { id: row.id, zoneId: row.zoneId, rider: row.name, amount: (row.fareOre ?? 0) / market.minorUnits, system: cause.kind === "system", reason: cause.reason, ...(row.createdAt ? { at: row.createdAt } : {}) };
         }),
-      refunds: (approvals.data ?? []).filter((row) => row.status === "pending" && row.action.includes("refund")).map((row) => ({ id: row.id, title: `Refund ${row.targetId} waits for approval` })),
+      // A2 leftovers (owner Q1 "One admin always"): no refund waits for a second admin.
+      refunds: [],
       payouts: (payouts.data ?? []).filter((row) => row.status === "scheduled").map((row) => ({ id: row.id, driver: (drivers.data ?? []).find((item) => item.id === row.driverId)?.name ?? row.name, zoneId: row.zoneId, amount: (row.fareOre ?? 0) / market.minorUnits })),
       riders: liveData ? [] : riders.rows.filter((row) => row.profile.country === market.id).map((row) => ({ id: row.rider.id, name: row.rider.name, flags: row.profile.fraudFlags, cancelRate: row.profile.cancelRate, rides: row.profile.completed + row.profile.cancelled + row.profile.noShows })),
       tickets: (tickets.data ?? []).filter((row) => row.status === "open").map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId, ...(row.openedBy ? { openedBy: row.openedBy } : {}) })),
@@ -172,7 +172,7 @@ export function useAlerts() {
       money,
     };
     // money depends only on the market, which is already a dependency.
-  }, [now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, approvals.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks, zoneSupply.data]);
+  }, [now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks, zoneSupply.data]);
 
   // v0.18.20 server-side alerts: on live the server finds every alert (owner A1–A3); the panel only reads them. The
   // panel's own engine stays for the demo (demo removal is its own job).
