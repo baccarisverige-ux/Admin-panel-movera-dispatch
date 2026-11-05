@@ -1,5 +1,5 @@
 import { createFixtureAdminApi } from "./create.ts";
-import { signedInFixture } from "./fixtureSession.ts";
+import { signedInFixture } from "../testing/fixtureSession.ts";
 import { PHONE, PLATE, TRIP_ID, createSeed } from "./seed.ts";
 import { statusLabel } from "../domain/labels.ts";
 import { marketOfZone, marketZoneIds } from "../markets/markets.ts";
