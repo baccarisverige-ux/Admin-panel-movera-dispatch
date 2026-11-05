@@ -41,9 +41,13 @@ export function refundAboveMinor(policy: RefundPolicy, country: MarketId): numbe
   return Math.round(policy.aboveMajor[country] * market(country).minorUnits);
 }
 
-/** True when a refund of this amount (minor units) in that country needs a second admin. */
-export function needsSecondAdmin(policy: RefundPolicy, country: MarketId, amountMinor: number): boolean {
-  return Math.abs(amountMinor) > refundAboveMinor(policy, country);
+/**
+ * BASE B14 (owner Q1 "One admin always", 2026-11-04 "Remove all 4"): no refund ever waits for a second admin; the
+ * admin who asks does it. Kept as a function so every caller reads the one rule.
+ */
+export function needsSecondAdmin(...asked: [policy: RefundPolicy, country: MarketId, amountMinor: number]): boolean {
+  void asked;
+  return false;
 }
 
 /** The same check for an amount stored with its currency (approvals, payments). */
