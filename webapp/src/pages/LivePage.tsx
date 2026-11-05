@@ -71,7 +71,7 @@ export function LivePage() {
 
 function LiveBoard() {
   // G5 (live map bug 2026-10-30): on live the board follows the server at the ETA pace (every 30 s).
-  const follow = isLiveData() ? { refetchMs: ETA_EVERY_SECONDS * 1000 } : {};
+  const follow = isLiveData() ? { refetchMs: ETA_EVERY_SECONDS * 1000, follow: true } : {};
   const drivers = useRecords("drivers", null, follow);
   const trips = useTrips(null, follow);
   const vehicles = useRecords("vehicles", null);

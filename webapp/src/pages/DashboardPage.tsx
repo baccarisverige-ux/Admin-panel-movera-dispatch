@@ -188,7 +188,7 @@ export function DashboardPage() {
   }, [moreOpen]);
 
   // Live parts reload every 10 seconds, slower parts every 30, until the backend pushes changes.
-  const drivers = useRecords("drivers", undefined, { refetchMs: LIVE_MS });
+  const drivers = useRecords("drivers", undefined, { refetchMs: LIVE_MS, follow: true });
   const trips = useRecords("trips", undefined, { refetchMs: LIVE_MS });
   const incidents = useRecords("incidents", undefined, { refetchMs: LIVE_MS });
   const tickets = useRecords("tickets", undefined, { refetchMs: LIVE_MS });
