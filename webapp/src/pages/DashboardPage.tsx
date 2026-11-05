@@ -78,6 +78,7 @@ import type { BonusMapArea } from "../dashboard/DriversMap";
 import { LiveMapQuickPopup, type QuickTarget } from "../pricing/LiveMapExtras";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { zoneFilterOf } from "../live/zoneFilter";
+import { liveTabCounts } from "../dashboard/liveCounts";
 
 const FIVE_MIN = 5 * 60_000;
 const DAY_MS = 86_400_000;
@@ -285,6 +286,7 @@ export function DashboardPage() {
   };
   // Offers only count when they went to a driver who could really take them.
   const requests = useMemo(() => maskRequests(rideRequests(tripRows, riderRows, (driverId) => onlineIds.has(driverId)), access), [tripRows, riderRows, onlineIds, access]);
+  const liveTabCount = useMemo(() => liveTabCounts(requests.length, tripRows), [requests.length, tripRows]);
   // G3-R4 (owner "Real numbers only"): live, the server's riders online in the zones in view; demo, no invented share.
   const riderStats = riderCounts(requests, live, riderRows, liveData ? ridersOnlineIn(ridersOnline.data ?? [], scope.zones.length ? scope.zones : market.zones.map((zone) => zone.id)) : null);
   // Rides a driver just accepted: listed apart under the waiting riders and kept on the map (never counted as waiting).
@@ -492,7 +494,8 @@ export function DashboardPage() {
         {TABS.map((item) => (
           <button data-command="admin.ui.dashboardTab" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => setTab(item.id)}>
             {trx(item.label)}
-            {item.id === "live" && requests.length ? <span className="tab-count">{requests.length}</span> : null}
+            {/* FIX JOB 7 B-k: "Searching N · Live M" (N waiting for a driver, M with a driver), not one number with two meanings. */}
+            {item.id === "live" && (liveTabCount.searching || liveTabCount.withDriver) ? <span className="tab-count">{tr("Searching {0} · Live {1}", [liveTabCount.searching, liveTabCount.withDriver])}</span> : null}
             {item.id === "work" && unassigned.length ? <span className="tab-count">{unassigned.length}</span> : null}
           </button>
         ))}

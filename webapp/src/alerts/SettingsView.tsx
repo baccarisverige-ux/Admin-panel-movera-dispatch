@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { AlertOctagon, BellRing, History, Layers, Moon, MousePointerClick, Users } from "lucide-react";
+import { AlertOctagon, BellRing, History, Layers, MapPin, Moon, MousePointerClick, Users } from "lucide-react";
+import { isLiveData } from "../live/realData";
 import { can, ROLE_LABELS, type Role } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { CommandButton } from "../ui/CommandButton";
 import { Card, Check, Choice, Num, Row, Switch } from "../dispatch/fields";
 import { useAlertsData } from "./AlertsContext";
-import { ALERTS_KEY, GROUPS, KINDS, LEVELS, settingsIssues, type AlertSettings, type KindDef, type KindSettings, type Level, type Limits } from "./engine";
+import { ALERTS_KEY, GROUPS, KINDS, LEVELS, settingsIssues, ZONE_LIMITS, zoneLimits, type AlertSettings, type KindDef, type KindSettings, type Level, type Limits, type ZoneLimits } from "./engine";
 import { tr, trn, trx, trSentences } from "../i18n";
 
 const ROLES = Object.keys(ROLE_LABELS) as Role[];
@@ -40,6 +41,9 @@ export function SettingsView() {
   const [quiet, setQuiet] = useState(mine);
   const setKind = (id: string, patch: Partial<KindSettings>) => setDraft({ ...settings, kinds: { ...settings.kinds, [id]: { ...settings.kinds[id], ...patch } } });
   const disabled = !canManage;
+  // v0.18.20 (owner A1): on live the server reads the per-zone limits from these settings (Zone limits card).
+  const live = isLiveData();
+  const setZone = (zoneId: string, key: keyof ZoneLimits, value: number) => setDraft({ ...settings, zones: { ...(settings.zones ?? {}), [zoneId]: { ...zoneLimits(settings, zoneId), [key]: value } } });
   const unit = (def: KindDef) => (def.unit === "money" ? ({ SE: "kr", FR: "€", TN: "DT" } as const)[data.market.id] : def.unit ?? "");
 
   return (
@@ -70,12 +74,12 @@ export function SettingsView() {
                 {item.on && def.mode === "limits" ? (
                   <div className="al-limits" role="group" aria-label={tr("{0} limits", [trx(def.label)])}>
                     <small>{def.direction === "up" ? tr("From") : tr("At or below")}:</small>
-                    {def.fromDispatch ? <span className="al-from-dispatch">{trn("Important: per zone in {0}", <Link to="/dispatch?tab=alerts">{tr("Dispatch → Alerts")}</Link>)}</span> : <LimitField label={tr("Info")} value={limits.info} unit={unit(def)} disabled={disabled} onChange={(value) => setLimit("info", value)} />}
+                    {def.fromDispatch ? <span className="al-from-dispatch">{live ? tr("Important: per zone in Zone limits below") : trn("Important: per zone in {0}", <Link to="/dispatch?tab=alerts">{tr("Dispatch → Alerts")}</Link>)}</span> : <LimitField label={tr("Info")} value={limits.info} unit={unit(def)} disabled={disabled} onChange={(value) => setLimit("info", value)} />}
                     {!def.fromDispatch ? <LimitField label={tr("Important")} value={limits.important} unit={unit(def)} disabled={disabled} onChange={(value) => setLimit("important", value)} /> : null}
                     <LimitField label={tr("Critical")} value={limits.critical} unit={unit(def)} disabled={disabled} onChange={(value) => setLimit("critical", value)} />
                   </div>
                 ) : null}
-                {item.on && def.fromDispatch && def.mode === "fixed" ? <p className="al-from-dispatch">{trn("The limit is set per zone in {0}.", <Link to="/dispatch?tab=alerts">{tr("Dispatch → Alerts")}</Link>)}</p> : null}
+                {item.on && def.fromDispatch && def.mode === "fixed" ? <p className="al-from-dispatch">{live ? tr("The limit is set per zone in Zone limits below.") : trn("The limit is set per zone in {0}.", <Link to="/dispatch?tab=alerts">{tr("Dispatch → Alerts")}</Link>)}</p> : null}
                 {item.on ? (
                   <details className="al-who">
                     <summary>{trn("{0} Who gets it: {1}{2}", <Users size={12} aria-hidden="true" />, item.who === "all" ? tr("every admin") : item.who.map((role) => ROLE_LABELS[role]).join(", "), item.escalate.on ? tr(" · then {0} after {1} min", [trx(ROLE_LABELS[item.escalate.to]), item.escalate.afterMin]) : "")}</summary>
@@ -106,6 +110,23 @@ export function SettingsView() {
           })}
         </Card>
       ))}
+
+      {live ? (
+        <Card title={tr("Zone limits")} tone="purple" icon={<MapPin size={18} />} help={tr("Per zone. The server checks every alert all the time, also when no admin panel is open.")}>
+          {data.zones.map((zone) => {
+            const limits = zoneLimits(settings, zone.id);
+            return (
+              <div key={zone.id} className="al-zone-limits" role="group" aria-label={tr("{0} limits", [zone.name])}>
+                <b>{zone.name}</b>
+                {ZONE_LIMITS.map((item) => (
+                  <Num key={item.id} before={item.label} label={`${trx(item.label)} · ${zone.name}`} value={limits[item.id]} unit={item.id.endsWith("Min") ? "min" : ""} min={item.min} max={item.max} disabled={disabled} onChange={(value) => setZone(zone.id, item.id, value)} />
+                ))}
+              </div>
+            );
+          })}
+          <p className="dx-note">{ZONE_LIMITS.map((item) => `${trx(item.label)}: ${trx(item.help)}`).join(" ")}</p>
+        </Card>
+      ) : null}
 
       <Card title={tr("How admins are told")} tone="orange" icon={<BellRing size={18} />} help={tr("Every alert shows in the panel and the bell. Pick what else each level does.")}>
         {LEVELS.map((level) => {

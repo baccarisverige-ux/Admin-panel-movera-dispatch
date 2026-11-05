@@ -6,6 +6,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { Check, Choice, Num } from "../dispatch/fields";
 import { useAlertsData } from "./AlertsContext";
 import { agentName } from "./AlertActions";
+import { isLiveData } from "../live/realData";
 import { ALERTS_KEY, LEVELS, METRICS, rulePreview, ruleIssues, type AlertRule, type Level, type Metric } from "./engine";
 import { tr, trn, trx, trSentences } from "../i18n";
 
@@ -31,6 +32,7 @@ export function RulesView() {
           <button data-command="admin.alerts.view" type="button" className="dash-btn small" disabled={!canManage} onClick={() => setEditing(blank())}>{trn("{0} New rule", <Plus size={13} aria-hidden="true" />)}</button>
         </div>
         <p className="dx-modal-help">{tr("For what is special to your business, like \"Arlanda below 3 free drivers\". Pick from the list: no formulas, nothing can break.")}</p>
+        {isLiveData() ? <p className="dx-note">{tr("The server checks your rules all the time, also when no admin panel is open.")}</p> : null}
         {notice ? <p className="pricing-notice" role="status">{trSentences(notice)}</p> : null}
         {rules.length === 0 ? <p className="dx-calm">{tr("No rule yet.")}</p> : (
           <ul className="al-rule-list" aria-label={tr("Your rules")}>

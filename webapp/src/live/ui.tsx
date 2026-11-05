@@ -9,6 +9,7 @@ import { useLiveSession } from "./LiveSessionContext";
 import { errorText, shortDate, shortDateTime } from "./format";
 import { EXPIRY_MAX_YEARS_AHEAD as EXPIRY_YEARS, endDateFrom, endDateTooFar, maxEndDate } from "../drivers/onboardingSettings";
 import type { Page } from "./types";
+import { DateInput } from "../ui/DateInput";
 
 /** A failed call, in words: the server's message, "Your role cannot do that." on 403, the request id when unexpected. */
 export function ErrorLine({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
@@ -197,7 +198,7 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         {expiry ? (
           <label>
             {tr("Issue date (on the document)")}
-            <input type="date" data-testid="issued-at" value={issuedAt} max={today} aria-invalid={issuedInFuture} onChange={(event) => {
+            <DateInput data-testid="issued-at" value={issuedAt} max={today} aria-invalid={issuedInFuture} onChange={(event) => {
               const next = event.target.value;
               setIssuedAt(next);
               // The end date follows the issue date until the admin types one (owner G2 R9: "Auto 6 months, editable").
@@ -210,7 +211,7 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         {expiry ? (
           <label>
             {expiryRequired ? tr("Valid until (required)") : tr("Valid until (optional)")}
-            <input type="date" data-testid="expires-at" value={expiresAt} min={expiryRequired ? tomorrow : undefined} max={latestEnd} required={expiryRequired} aria-invalid={expiryMissing || expiryTooFar} onChange={(event) => { setTypedEnd(true); setExpiresAt(event.target.value); }} />
+            <DateInput data-testid="expires-at" value={expiresAt} min={expiryRequired ? tomorrow : undefined} max={latestEnd} required={expiryRequired} aria-invalid={expiryMissing || expiryTooFar} onChange={(event) => { setTypedEnd(true); setExpiresAt(event.target.value); }} />
           </label>
         ) : null}
         {expiryTooFar ? <p className="vh-help live-error" role="alert" data-testid="expiry-too-far">{tr("Check the end date")} · {tr("At most {0} years from today.", [EXPIRY_YEARS])}</p> : null}

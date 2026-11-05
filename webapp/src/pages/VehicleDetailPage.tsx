@@ -27,6 +27,7 @@ import { categoryName } from "../riders/profile";
 import { zoneById } from "../markets/markets";
 import { statusLabel } from "../domain/labels";
 import { approvalBlock, approvalChoices, initialApprovalPick, liveCarState, liveCarStateLabel } from "../vehicles/liveState";
+import { DateInput } from "../ui/DateInput";
 
 export function VehicleDetailPage() {
   const { id = "" } = useParams();
@@ -288,9 +289,9 @@ export function VehicleDetailPage() {
             </select>
           </label>
           {isLiveData() ? null : <>
-          <label>{tr("Inspection expires")}<input type="date" value={inspectionExpiresAt} onChange={(event) => setInspectionExpiresAt(event.target.value)} />
+          <label>{tr("Inspection expires")}<DateInput value={inspectionExpiresAt} onChange={(event) => setInspectionExpiresAt(event.target.value)} />
           </label>
-          <label>{tr("Insurance expires")}<input type="date" value={insuranceExpiresAt} onChange={(event) => setInsuranceExpiresAt(event.target.value)} />
+          <label>{tr("Insurance expires")}<DateInput value={insuranceExpiresAt} onChange={(event) => setInsuranceExpiresAt(event.target.value)} />
           </label>
           </>}
           <label>{tr("Private fleet note")}<input value={note} onChange={(event) => setNote(event.target.value)} />

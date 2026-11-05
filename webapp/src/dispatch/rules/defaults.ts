@@ -95,6 +95,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     // v0.18.9 (owner G7 decision 4): no free minutes at a middle stop by default (contract configDefaults.stopFreeWaitMin 0).
     stops: { on: true, max: CONFIG_DEFAULTS.maxStops, freeWaitMin: 0, perMin: 0, perStop: 0, changeDuring: true, driverCanRefuse: true, answerSeconds: 60, beforePickup: true, fixedPriceTrips: "block" },
     pickupMove: { maxMeters: CONFIG_DEFAULTS.maxPickupMoveMeters },
+    samePoint: { warnMeters: CONFIG_DEFAULTS.samePointWarnMeters },
     airport: { on: airport, order: "fifo", maxQueueMin: 120, queueAreas: [] },
     goingHome: { on: true, perDay: 2, maxOffDeg: 45 },
     destinationMode: destinationModeDefault(),

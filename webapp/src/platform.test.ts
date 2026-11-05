@@ -51,7 +51,7 @@ test("to confirm: one inbox for money, settings and product values", () => {
   // Offer time and search distance are set in Dispatch only; the inbox points there and shows no second number.
   const dispatchValues = OPEN_VALUES.filter((item) => ["offer-time", "search-radius", "next-trip"].includes(item.id));
   assert.ok(dispatchValues.length === 3 && dispatchValues.every((item) => item.link?.startsWith("/dispatch") && !/\d/.test(item.today)));
-  const pointed = inboxItems({ approvals: [], config: { status: "draft", authorId: "nora", approverId: null, rev: 1 }, values: OPEN_VALUES.filter((item) => item.id === "offer-time" || item.id === "horizon" || item.id === "tips"), decisions: {}, me: "nora", money: String });
+  const pointed = inboxItems({ approvals: [], config: { status: "draft", authorId: "nora", approverId: null, rev: 1 }, values: OPEN_VALUES.filter((item) => item.id === "offer-time" || item.id === "lead" || item.id === "tips"), decisions: {}, me: "nora", money: String });
   // Round 2: tips have a real setting per country now, so the inbox points to Pricing › Tips & limits.
   assert.deepEqual(pointed.map((item) => item.link), ["/dispatch", "/dispatch?tab=reservations", "/pricing?tab=extras&section=tips"]);
 });

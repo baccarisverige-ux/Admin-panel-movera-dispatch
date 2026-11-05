@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams } from "react-router";
-import { ArrowLeft, Bell, History, Settings2, Wand2 } from "lucide-react";
+import { ArrowLeft, Archive, Bell, History, Settings2, Wand2 } from "lucide-react";
 import { useAlertsData } from "../alerts/AlertsContext";
 import { HistoryView } from "../alerts/HistoryView";
 import { OpenView } from "../alerts/OpenView";
@@ -9,6 +9,7 @@ import { tr, trn, trx } from "../i18n";
 
 const VIEWS = [
   { id: "open", get label() { return tr("Open"); }, icon: Bell },
+  { id: "old", get label() { return tr("Old"); }, icon: Archive },
   { id: "history", get label() { return tr("History & numbers"); }, icon: History },
   { id: "settings", get label() { return tr("Settings"); }, icon: Settings2 },
   { id: "rules", get label() { return tr("Your rules"); }, icon: Wand2 },
@@ -43,13 +44,14 @@ export function AlertsPage() {
           const Icon = item.icon;
           return (
             <button data-command="admin.alerts.view" key={item.id} type="button" role="tab" aria-selected={view === item.id} className={view === item.id ? "active" : undefined} onClick={() => go(item.id)}>
-              <Icon size={15} aria-hidden="true" /> {trx(item.label)}{item.id === "open" && data.active.length ? <span className="tab-count">{data.active.length}</span> : null}
+              <Icon size={15} aria-hidden="true" /> {trx(item.label)}{item.id === "open" && data.active.length ? <span className="tab-count">{data.active.length}</span> : null}{item.id === "old" && data.old.length ? <span className="tab-count">{data.old.length}</span> : null}
             </button>
           );
         })}
       </div>
       {data.loading ? <p className="state-line">{tr("Loading alerts.")}</p> : null}
       {view === "open" ? <OpenView /> : null}
+      {view === "old" ? <><p className="state-line">{tr("SOS and safety cases never close by themselves. 24 h after the trip ended they move here; close them in Incidents.")}</p><OpenView old /></> : null}
       {view === "history" ? <HistoryView /> : null}
       {view === "settings" ? <SettingsView /> : null}
       {view === "rules" ? <RulesView /> : null}
