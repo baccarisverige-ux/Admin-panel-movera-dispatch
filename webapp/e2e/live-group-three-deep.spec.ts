@@ -25,7 +25,8 @@ const SUPPLY = [
 ];
 
 test("G3-D5: the Dashboard rows and the shortage alert show the server's zoneSupply, same numbers", async ({ page }) => {
-  await start(page, { zoneSupply: SUPPLY });
+  // v0.18.20: the server finds the shortage alert (contract alertDesk.serverDetection) with the same numbers.
+  await start(page, { zoneSupply: SUPPLY, serverAlerts: [{ alertId: "few_drivers:Z001.k1", kind: "few_drivers", level: "important", title: "Only 1 free driver in Stockholm County", titleT: { t: "Only 1 free driver in {0}", a: ["Stockholm County"] }, zoneId: "Z001", country: "SE", since: "2026-10-27T09:50:00Z", state: "open", ref: {} }] });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 2, name: "Dashboard" })).toBeVisible();
   await page.waitForLoadState("networkidle");

@@ -1,4 +1,4 @@
-import type { AlertBook, AlertRecord } from "../alerts/engine.ts";
+import type { AlertBook, AlertRecord, FoundAlert } from "../alerts/engine.ts";
 import { adminLabel } from "./format.ts";
 
 /**
@@ -15,6 +15,8 @@ export type AlertBookState = {
   rev: number; settings: Record<string, unknown>; rules: unknown[]; records: ServerAlertRecord[];
   mutes: Record<string, { until: string; by: string }>; quiet: { on: boolean; from: string; to: string };
   people: { adminId: string; name?: string }[];
+  /** v0.18.20 (contract.json#alertDesk.serverDetection): the alerts the server found. */
+  alerts?: FoundAlert[];
 };
 
 /**
@@ -60,6 +62,7 @@ export function bookFromServer(state: AlertBookState, me: string | null): AlertB
     };
   }
   return {
+    found: state.alerts ?? [],
     draftRev: state.rev,
     settings: state.settings as AlertBook["settings"],
     rules: state.rules as AlertBook["rules"],
