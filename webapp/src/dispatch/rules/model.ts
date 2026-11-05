@@ -207,16 +207,28 @@ export type BookingWindow = {
   listAtTimeMin: number;
   /** Owner (v0.18.19): arrive this many minutes before the pickup time; the server works out when to start (default 10). */
   arriveEarlyMin: number;
+  /**
+   * v0.18.35 FIX JOB 4 (contract.json#bookedTakeBack, owner Q2 / Q-B / fix-plan Q2): a held booked ride is taken back only
+   * when the driver would be MORE than takeBackLateMin late, is MORE than takeBackKeepIfDriveMin minutes' drive away, and
+   * the pickup is at least takeBackUntilMinBeforePickup minutes away. Published in DriverAppConfig.reservations.
+   */
+  takeBackLateMin: number;
+  takeBackKeepIfDriveMin: number;
+  takeBackUntilMinBeforePickup: number;
+  /** v0.18.35 (owner Q-A, job 4 Q4): "You are not driving towards the rider" every N minutes; published in DriverAppConfig.headingCheck. */
+  notHeadingNotice: boolean;
+  notHeadingNoticeEveryMin: number;
 };
 
-export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30, arriveEarlyMin: 10 };
+export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30, arriveEarlyMin: 10, takeBackLateMin: 5, takeBackKeepIfDriveMin: 10, takeBackUntilMinBeforePickup: 15, notHeadingNotice: true, notHeadingNoticeEveryMin: 1 };
 
 /** Limits for each booking window number (contract.json#bookLater, gen_openapi DriverReservations). */
-export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "maxTripKm">, { min: number; max: number }> = {
+export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "maxTripKm" | "notHeadingNotice">, { min: number; max: number }> = {
   minAheadMin: { min: 5, max: 240 }, maxAheadDays: { min: 1, max: 365 }, soonBeforeMin: { min: 0, max: 240 }, noticeMaxDrivers: { min: 1, max: 500 },
   noDriverAlertMin: { min: 1, max: 120 }, riderReminderMin: { min: 0, max: 1440 }, freeChangeBeforeMin: { min: 0, max: 1440 },
   changeAnswerMin: { min: 1, max: 120 }, listAtTimeKm: { min: 0.5, max: 50 }, listAtTimeMin: { min: 5, max: 240 },
   arriveEarlyMin: { min: 0, max: 60 },
+  takeBackLateMin: { min: 1, max: 60 }, takeBackKeepIfDriveMin: { min: 0, max: 60 }, takeBackUntilMinBeforePickup: { min: 0, max: 180 }, notHeadingNoticeEveryMin: { min: 1, max: 10 },
 };
 export const MAX_TRIP_KM_LIMIT = { min: 1, max: 1000 };
 
@@ -225,12 +237,14 @@ export const BOOKING_LABELS: Record<keyof typeof BOOKING_LIMITS, string> = {
   noDriverAlertMin: "no-driver alert (minutes before pickup)", riderReminderMin: "rider reminder (minutes before pickup)", freeChangeBeforeMin: "free change or cancel (minutes before pickup)",
   changeAnswerMin: "time to answer a changed ride (minutes)", listAtTimeKm: "near pickup at that time (km)", listAtTimeMin: "near pickup at that time (minutes)",
   arriveEarlyMin: "arrive before pickup (minutes)",
+  takeBackLateMin: "take back when late more than (minutes)", takeBackKeepIfDriveMin: "keep if the driver is within (minutes' drive)", takeBackUntilMinBeforePickup: "take back only until (minutes before pickup)", notHeadingNoticeEveryMin: "not-heading notice every (minutes)",
 };
 
 export function completeBookingWindow(raw: unknown): BookingWindow {
   const own = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const next = { ...BOOKING_WINDOW_DEFAULT };
   if (typeof own["noticeOn"] === "boolean") next.noticeOn = own["noticeOn"];
+  if (typeof own["notHeadingNotice"] === "boolean") next.notHeadingNotice = own["notHeadingNotice"];
   // BL-Q5: null (or a missing value) = no limit.
   const km = own["maxTripKm"];
   next.maxTripKm = typeof km === "number" && Number.isFinite(km) && km >= MAX_TRIP_KM_LIMIT.min && km <= MAX_TRIP_KM_LIMIT.max ? km : null;

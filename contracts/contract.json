@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.39",
+  "version": "0.18.36",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -7819,7 +7819,7 @@
     "apps": "Driver app: shows the push / bell kinds reservation_taken_back and heading_not_to_rider (texts from the server, sv/fr/en built-in fallbacks). Rider app: no new screen (the existing searching / driver-changed flow); contract copy only."
   },
   "airportQueue": {
-    "note": "v0.18.39 §63 (fix job 9, R27, owner G15 Q5 2026-11-02 'Build it for real' + job 9 answers 2026-11-05, Rules decisions/driver-g15.md). Builds on v0.18.35 main. Additive; X-Api-Version stays 0.5; server migration 0086. Rider app: no change.",
+    "note": "v0.18.36 §60 (fix job 9, R27, owner G15 Q5 2026-11-02 'Build it for real' + job 9 answers 2026-11-05, Rules decisions/driver-g15.md). Builds on v0.18.35 main. Additive; X-Api-Version stays 0.5; server migration 0086. Rider app: no change.",
     "area": "AirportQueueArea { areaId, airportZoneId, polygon [[lat, lng], ...] (3-500 points, inside or around the airport), on, leaveGraceMin, offerSeconds, maxQueueOffers, keepPlaceAfterDecline, updatedAt }. One area per airport zone (Zone.kind airport). Off until an admin draws the area and turns it on.",
     "join": "A driver joins the queue when the server receives a position of his inside an area that is on while he is online (onlineStatus online, no current trip). His place is the order of joinedAt (then entryId). A driver who dropped a rider at the airport joins at once with his next position (owner job 9 Q5: 'Yes, join at once').",
     "leave": "He leaves the queue when: a position of his is outside the area for more than leaveGraceMin minutes in a row; he goes offline or goes online again later (a new online session never keeps the old place); he accepts any trip (queue or not); the area is turned off or removed. The others move up.",

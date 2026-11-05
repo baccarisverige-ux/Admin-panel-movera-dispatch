@@ -905,6 +905,9 @@
     "listAtTimeMin": 30,
     "changeAnswerMin": 15,
     "arriveEarlyMin": 10,
+    "takeBackLateMin": 5,
+    "takeBackKeepIfDriveMin": 10,
+    "takeBackUntilMinBeforePickup": 15,
     "raiseFare": true,
     "raiseMax": null
   },
@@ -959,7 +962,9 @@
     "on": true,
     "headingPct": 80,
     "notHeadingMinutes": 2,
-    "reassign": true
+    "reassign": false,
+    "notice": true,
+    "noticeEveryMin": 1
   },
   "rideCheck": {
     "on": true,
