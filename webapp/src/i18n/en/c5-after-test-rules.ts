@@ -1,0 +1,21 @@
+/** English dictionary, area c5-after-test-rules: Fix job 5 after-test rules: early end BOTH, booked cancel fee, booked ride next, wallet first (contract v0.18.33) (add new keys at the end of this file). Merged in ../en.ts in this order. */
+export const enC5AfterTestRules = {
+  "New price only when BOTH shorter by more than (km)": "New price only when BOTH shorter by more than (km)",
+  "… and shorter by more than (minutes)": "… and shorter by more than (minutes)",
+  "Default 10 minutes. Both must be passed for a new price.": "Default 10 minutes. Both must be passed for a new price.",
+  "Cancel under (min) costs the fee, even before a driver takes it. Movera keeps the fee when no driver has taken the ride yet.": "Cancel under (min) costs the fee, even before a driver takes it. Movera keeps the fee when no driver has taken the ride yet.",
+  "Booked ride for a driver on a trip": "Booked ride for a driver on a trip",
+  "A driver on a trip gets only Exclusive offers. A booked ride can come to him as Exclusive when he can finish his trip and reach the pickup in time.": "A driver on a trip gets only Exclusive offers. A booked ride can come to him as Exclusive when he can finish his trip and reach the pickup in time.",
+  "Driver on a trip can get a booked ride starting within (min)": "Driver on a trip can get a booked ride starting within (min)",
+  "Use wallet first": "Use wallet first",
+  "the rider can switch it off per ride": "the rider can switch it off per ride",
+  "{0}: offers on a trip must start at a whole percent from 0 to 100.": "{0}: offers on a trip must start at a whole percent from 0 to 100.",
+  "Offers on a trip from: {0} % → {1} %": "Offers on a trip from: {0} % → {1} %",
+  "Offers on a trip": "Offers on a trip",
+  "A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.": "A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.",
+  "Offers on a trip from (% of the route to the drop-off)": "Offers on a trip from (% of the route to the drop-off)",
+  "{0}: free cancel of a next trip must start at 0 to 120 minutes.": "{0}: free cancel of a next trip must start at 0 to 120 minutes.",
+  "Next trip free cancel after: {0} min → {1} min": "Next trip free cancel after: {0} min → {1} min",
+  "Rider of a next trip may cancel free after (min)": "Rider of a next trip may cancel free after (min)",
+  "Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).": "Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).",
+} as const;

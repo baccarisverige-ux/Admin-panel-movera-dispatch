@@ -9,6 +9,7 @@ import { emptyDispatchBook, liveRules, publish, rulesFile } from "../dispatch/ru
 import { market } from "../markets/markets.ts";
 import { savePaymentPolicy, defaultFinanceBook, defaultMethodPolicy } from "../payments/finance.ts";
 import { emptyConfig, setZoneOverride } from "./book.ts";
+import { normalizeCountrySettingsBook } from "./countrySettings.ts";
 import { appConfigFileName, appConfigState, driverAppConfig, feeFor, riderAppConfig, type FeeRule } from "./appConfigs.ts";
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -294,4 +295,12 @@ test("v0.18.9 (G7): the driver document carries the zone's server ride check and
     assert.equal(driver.rideCheck.noAnswerAlarm, false);
     assert.equal(driver.booking.maxStops, 3);
   }
+});
+
+test("v0.18.33 (fix job 5, owner Q6): Settings › Payment methods 'Use wallet first' (default on) → RiderAppConfig.wallet.usedFirst (fail-before: always true)", () => {
+  assert.deepEqual(riderAppConfig("Z001", state()).wallet, { usedFirst: true }, "default on");
+  const book = normalizeCountrySettingsBook(null);
+  const off = appConfigState({ now: NOW, countrySettings: { ...book, countries: { ...book.countries, SE: { ...book.countries.SE, walletFirst: false } } } });
+  assert.deepEqual(riderAppConfig("Z001", off).wallet, { usedFirst: false }, "Sweden off");
+  assert.deepEqual(riderAppConfig("FR-PC", off).wallet, { usedFirst: true }, "France keeps its own");
 });

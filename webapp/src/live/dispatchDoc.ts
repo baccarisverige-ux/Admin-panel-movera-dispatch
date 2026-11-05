@@ -43,6 +43,9 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     if (d.finishing) zone.finishing = { ...zone.finishing, ...d.finishing };
     if (d.favourite) zone.favourite = { ...zone.favourite, ...d.favourite };
     if (d.exclusiveWhileDriving) zone.exclusiveWhileDriving = { ...d.exclusiveWhileDriving };
+    // v0.18.33 (owner Q7): a missing or bad value keeps the default (on, 60 min).
+    const next = doc["bookedNext"] as { on?: unknown; withinMin?: unknown } | undefined;
+    if (next) zone.bookedNext = { on: typeof next.on === "boolean" ? next.on : zone.bookedNext.on, withinMin: typeof next.withinMin === "number" && next.withinMin >= 0 && next.withinMin <= 240 ? next.withinMin : zone.bookedNext.withinMin };
     // v0.18.6 (G4-E4): the rider raise limit as the server has it; a missing or bad value keeps the contract default.
     const factor = validRaiseFactor((doc["raisePrice"] as { maxFactor?: unknown } | undefined)?.maxFactor);
     if (factor !== null) zone.raisePrice = { maxFactor: factor };

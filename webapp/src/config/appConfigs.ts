@@ -334,7 +334,8 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
       shareTrip: switchOn(base, "rider", "shareTrip"),
     },
     paymentMethods: paymentMethods(base, state, zoneId),
-    wallet: { usedFirst: true },
+    // v0.18.33 (fix job 5, owner Q6): Settings › Payment methods "Use wallet first" (default on); the rider's per-ride switch starts on.
+    wallet: { usedFirst: base.settings.walletFirst !== false },
     tips: amountOptions(base.settings.tips, base.currency),
     // v0.18.10 (G8): Pricing › Tips & limits; cash tips only in the car (5 minutes) unless cashAfterTrip.
     tipRules: { cashAfterTrip: base.settings.tipRules.cashAfterTrip, cashInCarMinutes: 5, customAmount: base.settings.tipRules.customAmount, customMax: wire(base.settings.tipRules.customMax, base.currency) },

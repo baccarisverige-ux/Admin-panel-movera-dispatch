@@ -47,6 +47,8 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     raisePrice: { maxFactor: RAISE_MAX_FACTOR_DEFAULT },
     hiddenComesBackMin: 2,
     exclusiveWhileDriving: { on: true, count: 1 },
+    // v0.18.33 (fix job 5, owner Q7, contract.json#configDefaults.dispatch.zone.bookedNext): on, 60 min.
+    bookedNext: { on: true, withinMin: 60 },
     pickupWait: pickupWaitDefault(),
     reservation: {
       on: true, searchBeforeMin: 30, assignEarly: true, assignHoursBefore: 12, backup: true,
