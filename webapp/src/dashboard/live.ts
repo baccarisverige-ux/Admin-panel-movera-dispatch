@@ -35,6 +35,14 @@ export type LiveDriver = {
   goingOffline?: boolean;
 };
 
+/** v0.18.37 §61: the amber warning chip style (the same as an on-hold status), never the grey info chip. */
+export const GOING_OFFLINE_CHIP_CLASS = "fd-chip s-on_hold";
+
+/** The map panel's status: the one-line state + last-seen text, and the going-offline chip shown under it. */
+export function panelStatus(driver: Pick<LiveDriver, "goingOffline">, state: string, seen: string): { line: string; chip: string | null } {
+  return { line: `${state}${seen}`, chip: goingOfflineLabel(driver) };
+}
+
 /** v0.18.37 §61: the "Going offline after trips" status of an on-trip driver, or null. */
 export function goingOfflineLabel(driver: Pick<LiveDriver, "goingOffline">): string | null {
   return driver.goingOffline ? tr("Going offline after trips") : null;

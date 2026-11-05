@@ -32,3 +32,19 @@ test("§61: the label is translated (sv / fr)", () => {
   assert.equal(sv[key as keyof typeof sv], "Går offline efter resorna");
   assert.equal(fr[key as keyof typeof fr], "Passe hors ligne après les courses");
 });
+
+test("screenshot review: the chip uses the amber warning style, and the panel status line stays short (label in its own chip)", async () => {
+  const { GOING_OFFLINE_CHIP_CLASS, panelStatus } = await import("./live.ts");
+  const { readFileSync } = await import("node:fs");
+  assert.equal(GOING_OFFLINE_CHIP_CLASS, "fd-chip s-on_hold");
+  const css = readFileSync(new URL("../styles/fleet.css", import.meta.url), "utf8");
+  assert.match(css, /\.fd-chip\.s-on_hold[^{]*\{[^}]*var\(--doc-expiring-soft\)[^}]*var\(--doc-expiring\)/);
+  setLiveData(true);
+  const [driver] = liveDrivers([presenceRecord(row({ offlineAfterTrip: true }))], [], [], [], 0);
+  const status = panelStatus(driver!, "On trip", " · live");
+  assert.equal(status.line, "On trip · live");
+  assert.equal(status.chip, "Going offline after trips");
+  const plain = panelStatus(liveDrivers([presenceRecord(row({}))], [], [], [], 0)[0]!, "On trip", " · live");
+  assert.equal(plain.chip, null);
+  setLiveData(false);
+});

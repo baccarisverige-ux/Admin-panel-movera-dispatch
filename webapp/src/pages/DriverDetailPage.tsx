@@ -41,7 +41,7 @@ import { NOTE_MAX, statusLabel } from "../domain/labels";
 import { countHealth, docHealth } from "../fleet/documents";
 import { useDocWarnDays } from "../drivers/useDocWarnDays";
 import { driverPerformance, performanceWarning } from "../fleet/performance";
-import { goingOfflineLabel, liveDrivers } from "../dashboard/live";
+import { GOING_OFFLINE_CHIP_CLASS, goingOfflineLabel, liveDrivers } from "../dashboard/live";
 import { liveTrip } from "../dashboard/liveTrip";
 import { demoShift } from "../dashboard/scheduled";
 import { TripCard, WaybillDialog } from "../dashboard/TripCard";
@@ -291,7 +291,7 @@ export function DriverDetailPage() {
             <div className="fd-chips">
               <AccountChip status={driver.status} family="driverAccountStatus" />
               <OnlinePill presence={presence} />
-              {live && goingOfflineLabel(live) ? <span className="fd-chip" data-going-offline="true">{goingOfflineLabel(live)}</span> : null}
+              {live && goingOfflineLabel(live) ? <span className={GOING_OFFLINE_CHIP_CLASS} data-going-offline="true">{goingOfflineLabel(live)}</span> : null}
               <span className="fd-chip code"><Hash size={13} aria-hidden="true" />{code}</span>
               {fleet ? (
                 <Link className="fd-chip fleet" to={`/fleets/${fleet.ownerId ?? ""}`}><Building2 size={13} aria-hidden="true" />{fleet.name}</Link>
