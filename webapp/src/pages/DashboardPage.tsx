@@ -83,6 +83,7 @@ import { zoneFilterOf } from "../live/zoneFilter";
 import { liveTabCounts } from "../dashboard/liveCounts";
 import { liveAllowedCategories, liveDriverInfo } from "../dashboard/liveDriverInfo";
 import { LIVE_CARD_LIST, liveCardRows, onlineTileValue } from "../dashboard/liveCard";
+import { rankDriversInsights } from "../live/realOnly";
 
 const FIVE_MIN = 5 * 60_000;
 const DAY_MS = 86_400_000;
@@ -421,7 +422,8 @@ export function DashboardPage() {
   const rankSpan = useMemo(() => shownSpan.end - shownSpan.start > 31 * DAY_MS ? periodWindow({ kind: "month" }, reportNow, market.timeZone, uiLocale()) : shownSpan, [shownSpan, reportNow, market]);
   const weekSpan = useMemo(() => periodWindow({ kind: "week" }, reportNow, market.timeZone, uiLocale()), [reportNow, market]);
   const ranking = useMemo(() => {
-    if (tab !== "insights") return null;
+    // L-a (A15 item 3): live has no server ranking yet, so nothing is worked out from driverOps/driverPerformance.
+    if (!rankDriversInsights(tab)) return null;
     const active = (driverRows).filter((row) => row.status === "active");
     const rank = (span: typeof rankSpan): DriverRank[] => active.map((row) => {
       const ops = driverOps(driverStore.value, { id: row.id, name: row.name, fleetId: row.fleetId, status: row.status, kind: row.kind });

@@ -1,6 +1,7 @@
 import { isLiveData } from "../live/realData";
 import { ruleProblemText } from "../live/format";
 import { LiveVehicleDocuments } from "../live/LiveVehicleDocuments";
+import { carFuelShown } from "../live/realOnly";
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { useEffect, useMemo, useState } from "react";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
@@ -48,7 +49,8 @@ export function VehicleDetailPage() {
 
   const [year, setYear] = useState("2022");
   const [seats, setSeats] = useState("4");
-  const [fuel, setFuel] = useState<Vehicle["fuel"]>("hybrid");
+  // "" = live car whose fuel the server did not send (L-a, A15 item 7): shown "—", sent only once picked.
+  const [fuel, setFuel] = useState<Vehicle["fuel"] | "">("hybrid");
   const [category, setCategory] = useState<Vehicle["category"]>("economy");
   const [fleetId, setFleetId] = useState("");
   const [inspectionExpiresAt, setInspectionExpiresAt] = useState("");
@@ -63,7 +65,7 @@ export function VehicleDetailPage() {
     if (!profile || !record) return;
     setYear(String(profile.year));
     setSeats(String(profile.seats));
-    setFuel(profile.fuel);
+    setFuel(carFuelShown(record, profile) ?? "");
     setCategory(profile.category);
     setFleetId(profile.fleetId);
     setInspectionExpiresAt(profile.inspectionExpiresAt);
@@ -96,7 +98,7 @@ export function VehicleDetailPage() {
   const draftPatch: Partial<Omit<VehicleOps, "vehicleId">> = {
     year: Number(year) || profile.year,
     seats: Number(seats) || profile.seats,
-    fuel,
+    fuel: fuel || profile.fuel,
     category,
     fleetId,
     inspectionExpiresAt,
@@ -127,6 +129,7 @@ export function VehicleDetailPage() {
   const docs = isLiveData() ? liveCarDocs(record.liveVehicleDocs?.documents, now, countryRules.warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, countryRules.warnDays);
   const photos = photosOf(rules, record.id);
   const car = { year: profile.year, seats: profile.seats, fuel: profile.fuel, category: profile.category };
+  const fuelText = (() => { const shown = carFuelShown(record, profile); return shown ? fuelLabel(shown).toLowerCase() : "—"; })();
   const fitsList = fits(car, countryRules);
   // v0.18.3 (owner G2 R2): the server's Vehicle.ruleProblems; while there are any the car cannot be approved.
   const ruleProblems = record.liveRuleProblems ?? [];
@@ -134,7 +137,7 @@ export function VehicleDetailPage() {
   const liveCats = isLiveData() ? record.liveCategoryIds ?? [] : null;
   const list = liveCats
     ? [
-        { label: tr("Car rules"), ok: ruleProblems.length === 0, detail: ruleProblems.length ? ruleProblems.map((item) => ruleProblemText(item)).join(" · ") : tr("{0}, {1} seats, {2}", [profile.year, profile.seats, fuelLabel(profile.fuel).toLowerCase()]) },
+        { label: tr("Car rules"), ok: ruleProblems.length === 0, detail: ruleProblems.length ? ruleProblems.map((item) => ruleProblemText(item)).join(" · ") : tr("{0}, {1} seats, {2}", [profile.year, profile.seats, fuelText]) },
         ...docs.map((doc) => ({ label: doc.label, ok: doc.health === "valid" || doc.health === "expiring", detail: doc.text })),
       ]
     : checks(car, docs, photos, countryRules, profile.category);
@@ -178,7 +181,7 @@ export function VehicleDetailPage() {
         <span className="vh-car-icon" aria-hidden="true"><CarFront size={30} /></span>
         <span className="vh-hero-text">
           <b>{record.make ?? tr("Vehicle")} {record.model ?? ""} · {profile.year}</b>
-          <small>{trn("{0} seats · {1} · {2}", profile.seats, fuelLabel(profile.fuel).toLowerCase(), profile.fleetId || record.fleetId ? tr("Fleet {0}", [fleetName(profile.fleetId || record.fleetId || "")]) : tr("Independent"))}</small>
+          <small>{trn("{0} seats · {1} · {2}", profile.seats, fuelText, profile.fleetId || record.fleetId ? tr("Fleet {0}", [fleetName(profile.fleetId || record.fleetId || "")]) : tr("Independent"))}</small>
           <span>{trn("Driver {0}", driver ? <Link to={`/drivers/${driver.id}`}>{driver.name}</Link> : tr("not linked"))}</span>
         </span>
         {liveCats ? (
@@ -259,7 +262,8 @@ export function VehicleDetailPage() {
           </label>
           <label>{tr("Seats")}<input type="number" value={seats} onChange={(event) => setSeats(event.target.value)} />
           </label>
-          <label>{tr("Fuel")}<select value={fuel} onChange={(event) => setFuel(event.target.value as Vehicle["fuel"])}>
+          <label>{tr("Fuel")}<select value={fuel} onChange={(event) => setFuel(event.target.value as Vehicle["fuel"] | "")}>
+              {fuel === "" ? <option value="">—</option> : null}
               <option value="petrol">{tr("Petrol")}</option>
               <option value="diesel">{tr("Diesel")}</option>
               <option value="hybrid">{tr("Hybrid")}</option>
@@ -316,7 +320,7 @@ export function VehicleDetailPage() {
           sliceKey="driverOps"
           // Live: year, seats and (when set or changed) the fuel. v0.18.5 (owner G2-D5.3): never the categories here;
           // the admin gives them when approving, below.
-          value={isLiveData() ? { year: nextProfile.year, seats: nextProfile.seats, ...(record.fuel || nextProfile.fuel !== profile.fuel ? { fuel: nextProfile.fuel } : {}) } : nextBook}
+          value={isLiveData() ? { year: nextProfile.year, seats: nextProfile.seats, ...(fuel ? { fuel } : {}) } : nextBook}
           onDone={() => setNotice(tr("Vehicle compliance profile saved."))}
         >{tr("Save vehicle compliance")}</CommandButton>
       </article>
