@@ -68,7 +68,7 @@ test("the server's alerts become the page's alerts: since from the server, solve
   assert.equal(zoneLimits({ ...defaultSettings(), zones: { Z001: { bookedAtRiskMin: 30 } } }, "Z001").bookedAtRiskMin, 30);
 });
 
-// v0.18.29 owner Q-Bj (contract.json#alertsOldList): SOS / safety cases never close by themselves; 24 h after the trip
+// v0.18.33 owner Q-Bj (contract.json#alertsOldList): SOS / safety cases never close by themselves; 24 h after the trip
 // ended the server marks them old and the panel lists them in the Old tab (sv Gamla, fr Anciennes), not in Open.
 test("old SOS / safety alerts leave the open list for the Old tab, still open; texts in sv / fr / en", async () => {
   const { alertsFromServer, openAlerts, splitOld } = await import("../alerts/engine.ts");

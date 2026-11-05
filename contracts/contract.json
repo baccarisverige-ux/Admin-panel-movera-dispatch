@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.29",
+  "version": "0.18.33",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -4147,7 +4147,7 @@
         "solved": "Owner A2 'Alert become green color with new info': the cause ended by itself (e.g. a driver took the ride). The alert STAYS visible, shown GREEN with solvedText (e.g. 'Driver Ali took it 17:48'); an admin can still take it and mark it done. If the same cause comes back before anyone marks it done, the same alert is open again (solved info cleared).",
         "done": "An admin marked it done (AlertRecord status done): it leaves the open list. While the cause is still there no new alert is made for it; once the cause ended and comes back later, a new alert (new alertId) starts."
       },
-      "liveAlert": "LiveAlert { alertId, causeKey, kind, level critical | important | info, title, titleT { t, a[] }, detail, detailT? { t, a[] }, zoneId?, country, since, state open | solved, solvedAt?, solvedText?, solvedT? { t, a[] }, old? (v0.18.29, true only on an old SOS / safety case, see alertsOldList), oldSince? (v0.18.29), ref { tripId?, driverId?, riderId?, incidentId?, rideCheckId?, ticketId?, payoutId?, refundId?, ruleId? } }. title / detail / solvedText are English; titleT / detailT / solvedT are the same text as an English template with {0}, {1} places and its values, which the panel shows in sv / fr / en. Times in texts are HH:MM in the zone's time zone.",
+      "liveAlert": "LiveAlert { alertId, causeKey, kind, level critical | important | info, title, titleT { t, a[] }, detail, detailT? { t, a[] }, zoneId?, country, since, state open | solved, solvedAt?, solvedText?, solvedT? { t, a[] }, old? (v0.18.33, true only on an old SOS / safety case, see alertsOldList), oldSince? (v0.18.33), ref { tripId?, driverId?, riderId?, incidentId?, rideCheckId?, ticketId?, payoutId?, refundId?, ruleId? } }. title / detail / solvedText are English; titleT / detailT / solvedT are the same text as an English template with {0}, {1} places and its values, which the panel shows in sv / fr / en. Times in texts are HH:MM in the zone's time zone.",
       "settings": {
         "note": "The server reads the country's alert settings document (PUT /admin/alerts/settings): kinds[kind] { on, level, limits { info, important, critical } } and zones[zoneId] (below); missing values use the defaults here and in kindDefaults. A kind switched off makes no alerts; its open alerts are solved.",
         "zones": "zones[zoneId] { bookedAtRiskMin, liveAtRiskMin, fewDriversLimit, noDriverLimit } — owner A1: the at-risk minutes are an admin setting per zone, separate for booked and live rides.",
@@ -7335,7 +7335,7 @@
     "apps": "Rider and driver apps: no change (they use their own trip / offer / config streams). RULE 0 check only."
   },
   "alertsOldList": {
-    "note": "v0.18.29 (owner Q-Bj 2026-11-05 'Never auto-close', Rules decisions/driver-g15.md; pre-merge B-j/P20). Numbered after 0.18.24-0.18.28 (reserved by other open PRs). Additive; X-Api-Version stays 0.5.",
+    "note": "v0.18.33 (owner Q-Bj 2026-11-05 'Never auto-close', Rules decisions/driver-g15.md; pre-merge B-j/P20). Numbered after 0.18.24-0.18.32 (reserved by other open PRs and jobs 2/4/5/7). Additive; X-Api-Version stays 0.5.",
     "rideCheck": "A ride_check alert turns solved (green, kept, owner A2) once its trip has ended (trip status completed, cancelled_*, no_show or expired, or the trip's end time set). solvedT: 'Trip ended {0}'.",
     "neverAutoClose": "SOS and safety alerts (kinds sos, sos_slow, car_lost) are NEVER closed or solved by the server while their incident is open or investigating: only an admin closes them (Incidents) or marks them done.",
     "old": "When the alert's trip ended more than oldAfterHours ago, the alert stays open and LiveAlert carries old: true and oldSince (= trip end + oldAfterHours). An alert without a trip never becomes old. old is missing on every other alert.",
