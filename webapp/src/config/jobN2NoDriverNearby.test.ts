@@ -70,3 +70,16 @@ test("trip row mark 'No driver in reach': a searching trip whose searchStep is n
   assert.equal(noDriverInReach("cancelled_by_rider", { kind: "no_driver_nearby" }), false);
   assert.equal(noDriverInReach("searching", null), false);
 });
+
+test("Dispatch: the busy-driver limit (reaskLimit) defaults to 2, is published per zone, reads back, and must be 1–5", () => {
+  const C2 = contract as unknown as { noDriverNearby: { defaults: { reaskLimit: number } } };
+  const zone = zoneDefault("Z001");
+  assert.equal((dispatchDocumentOf(zone, "Z001", null) as { reaskLimit?: number }).reaskLimit, C2.noDriverNearby.defaults.reaskLimit);
+  assert.equal(C2.noDriverNearby.defaults.reaskLimit, 2);
+  const doc = dispatchDocumentOf({ ...zone, reaskLimit: 4 }, "Z001", null);
+  assert.equal((doc as { reaskLimit?: number }).reaskLimit, 4);
+  assert.equal(rulesOfDispatch(doc, null, zone).reaskLimit, 4);
+  assert.equal(rulesOfDispatch({ ...doc, reaskLimit: 9 }, null, zone).reaskLimit, 2);
+  assert.ok(zoneIssues({ ...zone, reaskLimit: 6 }).some((i) => /Ask one driver/.test(i)));
+  assert.deepEqual(zoneIssues({ ...zone, reaskLimit: 3 }).filter((i) => /Ask one driver/.test(i)), []);
+});

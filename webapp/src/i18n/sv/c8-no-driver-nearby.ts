@@ -24,4 +24,9 @@ export const svC8NoDriverNearby: Record<keyof typeof enC8NoDriverNearby, string>
   "No driver nearby after (s)": "Ingen förare i närheten efter (s)",
   "No driver nearby message": "Meddelande ingen förare i närheten",
   "stop a booked ride with no driver after pickup + (minutes)": "avsluta en bokad resa utan förare efter upphämtning + (minuter)",
+  "Ask one driver at most": "Fråga en förare högst",
+  "A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.": "En förare som har tackat nej till eller låtit så här många erbjudanden för samma resa gå ut tillfrågas inte igen om den. Standard 2.",
+  "Ask one driver at most, offers": "Fråga en förare högst, erbjudanden",
+  "offers": "erbjudanden",
+  "Ask one driver at most (offers)": "Fråga en förare högst (erbjudanden)",
 };

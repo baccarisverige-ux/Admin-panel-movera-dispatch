@@ -38,6 +38,8 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     // v0.18.39 §63: far reach (0 < km <= 50) and "No driver nearby" (60–1800 s); missing or bad = the zone default (contract).
     const far = raw.limits?.farReachKm;
     zone.limits = { maxPickupKm: typeof raw.limits?.maxPickupKm === "number" ? raw.limits.maxPickupKm : 0, maxPickupEtaMin: typeof raw.limits?.maxPickupEtaMin === "number" ? raw.limits.maxPickupEtaMin : 0, farReachKm: typeof far === "number" && far > 0 && far <= 50 ? far : zone.limits.farReachKm };
+    const ask = (doc as { reaskLimit?: unknown }).reaskLimit;
+    zone.reaskLimit = typeof ask === "number" && Number.isInteger(ask) && ask >= 1 && ask <= 5 ? ask : zone.reaskLimit;
     const nd = raw.noDriverNearby;
     zone.noDriverNearby = {
       on: typeof nd?.on === "boolean" ? nd.on : zone.noDriverNearby.on,

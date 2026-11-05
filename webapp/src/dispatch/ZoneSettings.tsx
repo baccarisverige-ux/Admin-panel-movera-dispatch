@@ -197,6 +197,9 @@ function Best({ zone, onChange, disabled, otherZones }: Props) {
       </Card>
 
       <Card title={tr("No driver nearby")} tone="blue" icon={<MapPin size={18} />} help={tr("A live ride with no driver after this time: the rider sees the message once, with Keep waiting and Cancel free. The search goes on until the rider cancels. Admins get an alert at the same moment.")} off={!zone.noDriverNearby.on} aside={<Switch label={tr("No driver nearby")} on={zone.noDriverNearby.on} disabled={disabled} onChange={(on) => set({ noDriverNearby: { ...zone.noDriverNearby, on } })} />}>
+        <Row label={tr("Ask one driver at most")} help={tr("A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.")}>
+          <Num label={tr("Ask one driver at most, offers")} value={zone.reaskLimit} unit="offers" min={1} max={5} disabled={disabled} onChange={(reaskLimit) => set({ reaskLimit: Math.round(reaskLimit) })} />
+        </Row>
         <Row label={tr("Show after")}>
           <Num label={tr("Show 'No driver nearby' after")} value={Math.round(zone.noDriverNearby.afterSec / 60)} unit="min" min={1} max={30} disabled={disabled || !zone.noDriverNearby.on} onChange={(minutes) => set({ noDriverNearby: { ...zone.noDriverNearby, afterSec: Math.round(minutes) * 60 } })} />
         </Row>

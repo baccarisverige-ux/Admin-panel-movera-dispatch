@@ -93,7 +93,7 @@ test("DispatchDocument from the zone's rules, the same keys as the contract samp
   const zone = zoneDefault("Z001");
   const doc = dispatchDocumentOf(zone, "Z001", null);
   // v0.18.9: start, limits and neighbours are optional contract fields the sample (written before them) leaves out.
-  assert.deepEqual(Object.keys(doc).sort(), [...Object.keys(sample("dispatch_document")), "start", "limits", "neighbours"].sort());
+  assert.deepEqual(Object.keys(doc).sort(), [...Object.keys(sample("dispatch_document")), "start", "limits", "neighbours", "reaskLimit"].sort());
   const back = rulesOfDispatch(doc, { offers: { autoOffline: { on: true, missedExclusive: 10 } }, cancelFees: { driverSharePct: 60 } }, zoneDefault("Z001"));
   assert.equal(back.autoOffline.after, 10);
   assert.equal(back.autoOffline.noFixMinutes, 5, "G3-R1: without the key the default 5 minutes stays");

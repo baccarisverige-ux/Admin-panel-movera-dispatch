@@ -10,7 +10,7 @@ import { EARLY_END_DEFAULT, completeEarlyEnd, EXTRAS, type RideTypeId, type Late
 
 /** Dispatch rules, part: Defaults, presets and filling older saves (was rules.ts lines 588–956). rules.ts re-exports everything; import from "../rules.ts" as before. */
 /** v0.18.39 §63: the contract defaults of the far reach and "No driver nearby" (one source). */
-const NO_DRIVER_NEARBY = (contract as unknown as { noDriverNearby: { defaults: { noDriverNearby: { on: boolean; afterSec: number; message: string }; farReachKm: number } } }).noDriverNearby.defaults;
+const NO_DRIVER_NEARBY = (contract as unknown as { noDriverNearby: { defaults: { noDriverNearby: { on: boolean; afterSec: number; message: string }; farReachKm: number; reaskLimit: number } } }).noDriverNearby.defaults;
 
 export const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -78,6 +78,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     // v0.18.39 §63 (contract.json#noDriverNearby.defaults): far reach 12 km; "No driver nearby" on, after 300 s.
     limits: { maxPickupKm: 0, maxPickupEtaMin: 0, farReachKm: NO_DRIVER_NEARBY.farReachKm },
     noDriverNearby: { ...NO_DRIVER_NEARBY.noDriverNearby },
+    reaskLimit: NO_DRIVER_NEARBY.reaskLimit,
     neighbours: { on: false, zoneIds: [], afterStep: 0 },
     factors: [
       { id: "eta", on: true, weight: 40 },

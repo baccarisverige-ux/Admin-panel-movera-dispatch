@@ -24,4 +24,9 @@ export const frC8NoDriverNearby: Record<keyof typeof enC8NoDriverNearby, string>
   "No driver nearby after (s)": "Aucun chauffeur à proximité après (s)",
   "No driver nearby message": "Message aucun chauffeur à proximité",
   "stop a booked ride with no driver after pickup + (minutes)": "arrêter une course réservée sans chauffeur après la prise en charge + (minutes)",
+  "Ask one driver at most": "Demander à un chauffeur au plus",
+  "A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.": "Un chauffeur qui a refusé ou laissé expirer autant d’offres pour la même course n’est plus sollicité pour elle. Par défaut 2.",
+  "Ask one driver at most, offers": "Demander à un chauffeur au plus, offres",
+  "offers": "offres",
+  "Ask one driver at most (offers)": "Demander à un chauffeur au plus (offres)",
 };

@@ -22,4 +22,9 @@ export const enC8NoDriverNearby = {
   "No driver nearby after (s)": "No driver nearby after (s)",
   "No driver nearby message": "No driver nearby message",
   "stop a booked ride with no driver after pickup + (minutes)": "stop a booked ride with no driver after pickup + (minutes)",
+  "Ask one driver at most": "Ask one driver at most",
+  "A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.": "A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.",
+  "Ask one driver at most, offers": "Ask one driver at most, offers",
+  "offers": "offers",
+  "Ask one driver at most (offers)": "Ask one driver at most (offers)",
 };

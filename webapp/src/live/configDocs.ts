@@ -200,6 +200,7 @@ export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | n
     // v0.18.33 (fix job 5, owner Q7): booked ride next for a driver on a trip.
     bookedNext: { on: zone.bookedNext.on, withinMin: zone.bookedNext.withinMin },
     // v0.18.39 §63 (owner N2): "No driver nearby" once, afterSec after the search started (live rides).
+    reaskLimit: zone.reaskLimit,
     noDriverNearby: { on: zone.noDriverNearby.on, afterSec: zone.noDriverNearby.afterSec, message: zone.noDriverNearby.message },
     waiting: zone.waiting.map((step) => ({ id: step.id, kind: step.kind, on: step.on, afterMin: step.afterMin, message: step.message, extraMin: step.extraMin ?? null })),
     // v0.18.6 (owner G4-E4): the rider raise limit; publishing it also writes the zone's rider app config (server).
