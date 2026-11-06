@@ -3,7 +3,7 @@ import { formatCurrencyMoney } from "../markets/markets";
 import { commandById } from "../commands/registry";
 import { Link, useNavigate } from "react-router";
 import { ArrowLeft, Banknote, CheckCircle2, ClipboardList, Settings2 } from "lucide-react";
-import { emptyConfig, normalizeConfig, useApprovals, useSlice, type ConfigBook } from "../api/hooks";
+import { emptyConfig, normalizeConfig, useSlice, type ConfigBook } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { OPEN_VALUES } from "../config/confirm";
@@ -14,10 +14,11 @@ import { tr, trn, trx } from "../i18n";
 
 const KIND_LABEL: Record<InboxKind, string> = { money: "Money", settings: "Settings", value: "Product value" };
 
+const NO_APPROVALS: Parameters<typeof inboxItems>[0]["approvals"] = [];
+
 export function ConfirmPage() {
   const { agent } = useSession();
   const navigate = useNavigate();
-  const approvals = useApprovals();
   const config = normalizeConfig(useSlice<ConfigBook>("config", emptyConfig()).value);
   const slice = useSlice<ConfirmOps>(CONFIRM_OPS_KEY, emptyConfirmOps());
   const ops = normalizeConfirmOps(slice.value);
@@ -29,15 +30,16 @@ export function ConfirmPage() {
   const me = agent?.id ?? "";
   const canDecide = Boolean(agent && can(agent.role, "approval.decide"));
   // A decider must also be allowed to do the action itself (the server checks it too).
+  // A2 leftovers (owner Q1 "One admin always"): no second-admin approvals are read, so no money item waits here.
   const canDo = (approvalId: string) => {
-    const action = (approvals.data ?? []).find((row) => row.id === approvalId)?.action;
+    const action = NO_APPROVALS.find((row) => row.id === approvalId)?.action;
     return Boolean(agent && action && can(agent.role, commandById(action)?.permission ?? "*"));
   };
   const canConfirm = Boolean(agent && can(agent.role, "settings.publish"));
-  const items = inboxItems({ approvals: approvals.data ?? [], config, values: OPEN_VALUES, decisions: ops.values, me, money: formatCurrencyMoney });
+  const items = inboxItems({ approvals: NO_APPROVALS, config, values: OPEN_VALUES, decisions: ops.values, me, money: formatCurrencyMoney });
   const work = items.filter((item) => item.kind !== "value");
   const shown = (kind === "all" ? work : items.filter((item) => item.kind === kind));
-  const confirmed = OPEN_VALUES.filter((item) => ops.values[item.id]).length;
+  const confirmed = OPEN_VALUES.filter((item) => ops.values[item.id] || item.readOnly).length;
   const error = editing ? decisionError(value) : null;
 
   function start(id: string, today: string) {
@@ -108,10 +110,11 @@ export function ConfirmPage() {
               <div className="confirm-field pl-value" key={item.id} id={`value-${item.id}`}>
                 <label>
                   {trx(item.label)}
-                  <input readOnly value={item.today} />
+                  <input readOnly value={trx(item.today)} aria-readonly="true" />
                 </label>
                 {item.link ? <Link className="link-action" to={item.link}>{item.link.startsWith("/dispatch") ? tr("Open in Dispatch") : tr("Open")}</Link> : null}
-                {decision ? <span className="pl-confirmed">{trn("Confirmed: {0} · {1} · {2}{3}", decision.value, decision.by, decision.at.slice(0, 10), decision.note ? ` · ${decision.note}` : "")}</span> : <span className="badge-amber">{tr("To confirm")}</span>}
+                {item.readOnly ? <small className="pl-help">{trx(item.note ?? "Not used yet")}</small> : null}
+                {item.readOnly ? <span className="badge-grey">{tr("Not used yet")}</span> : decision ? <span className="pl-confirmed">{trn("Confirmed: {0} · {1} · {2}{3}", decision.value, decision.by, decision.at.slice(0, 10), decision.note ? ` · ${decision.note}` : "")}</span> : <span className="badge-amber">{tr("To confirm")}</span>}
                 {editing === item.id ? (
                   <div className="pl-value-edit">
                     <input aria-label={tr("Value to confirm")} value={value} onChange={(e) => setValue(e.target.value)} />
@@ -122,7 +125,7 @@ export function ConfirmPage() {
                       <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" onClick={() => setEditing(null)}>{tr("Cancel")}</button>
                     </span>
                   </div>
-                ) : canConfirm ? <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" aria-label={tr("Confirm {0}", [item.id])} onClick={() => start(item.id, item.today)}>{decision ? tr("Change") : tr("Confirm")}</button> : null}
+                ) : canConfirm && !item.readOnly ? <button data-command="admin.inbox.view" type="button" className="dash-btn small ghost" aria-label={tr("Confirm {0}", [item.id])} onClick={() => start(item.id, item.today)}>{decision ? tr("Change") : tr("Confirm")}</button> : null}
               </div>
             );
           })}

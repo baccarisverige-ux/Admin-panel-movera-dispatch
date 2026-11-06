@@ -2,15 +2,21 @@ name: Webapp checks
 # The required gate for main. pages.yml deploys only after this workflow succeeds on a push to main.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: ["main"]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: webapp-ci-${{ github.ref }}
+  # A newer push cancels the older run of the same workflow on the same ref
+  # (pull request refs and branch refs are different groups).
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 defaults:
@@ -18,8 +24,39 @@ defaults:
     working-directory: webapp
 
 jobs:
+  # CI cost cut (owner 2026-11-06): docs-only pull requests and drafts skip the
+  # heavy jobs. paths-ignore is not used on pull_request here because the
+  # required checks would then never report and the PR would wait forever; a
+  # skipped job reports as passed, so branch protection still works.
+  changes:
+    name: Detect docs-only change
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - id: diff
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$PR" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          files="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[].filename')"
+          # Any file that is not *.md and not under docs/ counts as code.
+          if [ -z "$files" ] || printf '%s\n' "$files" | grep -qvE '(\.md$|^docs/)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "$files"
+
   checks:
     name: typecheck, lint, unit tests, build
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true' && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -73,6 +110,8 @@ jobs:
   # when both shards passed.
   e2e-shard:
     name: Playwright e2e (shard ${{ matrix.shard }}/2)
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true' && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -87,8 +126,17 @@ jobs:
           cache: npm
           cache-dependency-path: webapp/package-lock.json
       - run: npm ci
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('webapp/package-lock.json') }}
       # Installs the Chromium build that matches the pinned @playwright/test version.
-      - run: npx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - run: npm run e2e -- --shard=${{ matrix.shard }}/2
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -102,16 +150,27 @@ jobs:
   e2e:
     name: Playwright e2e
     if: always()
-    needs: [e2e-shard]
+    needs: [changes, e2e-shard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Both shards passed
+        # CI cost cut (owner 2026-11-06): the shards are skipped on purpose on
+        # drafts and docs-only changes; then a skip passes. changes must pass.
         working-directory: .
-        run: test "${{ needs.e2e-shard.result }}" = success
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          SHARDS: ${{ needs.e2e-shard.result }}
+          SKIP_OK: ${{ needs.changes.outputs.code != 'true' || github.event.pull_request.draft == true }}
+        run: |
+          echo "changes=$CHANGES shards=$SHARDS planned-skip=$SKIP_OK"
+          test "$CHANGES" = success
+          test "$SHARDS" = success || { test "$SHARDS" = skipped && test "$SKIP_OK" = true; }
 
   e2e-live:
     name: Playwright e2e (live, faked server)
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true' && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -122,7 +181,16 @@ jobs:
           cache: npm
           cache-dependency-path: webapp/package-lock.json
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('webapp/package-lock.json') }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - run: npm run e2e:live
       - uses: actions/upload-artifact@v4
         if: failure()

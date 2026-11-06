@@ -12,6 +12,7 @@ export type GroupId = "safety" | "dispatch" | "drivers" | "money" | "riders" | "
 export type KindId =
   | "sos" | "sos_slow" | "ride_check" | "car_lost"
   | "long_wait" | "few_drivers" | "no_driver" | "late_reservation"
+  | "booked_at_risk" | "booked_late" | "booked_not_started" | "booked_taken_back" | "no_driver_nearby" | "booked_no_driver_ended"
   | "doc_expiring" | "low_rating" | "auto_offline"
   | "payment_failed" | "refund_approval" | "payout_big"
   | "rider_fraud" | "rider_cancels" | "ticket_open"
@@ -49,6 +50,8 @@ export type KindDef = {
   limits?: Limits;
   /** Settings that live in Dispatch, per zone. */
   fromDispatch?: boolean;
+  /** Owner 2026-11-04: off until an admin switches it on (the kind stays). */
+  offByDefault?: boolean;
   /** Who may see it, when not only the group's permission: any one of these is enough. */
   anyOf?: string[];
   path: string;
@@ -59,10 +62,18 @@ export const KINDS: KindDef[] = [
   { id: "car_lost", group: "safety", label: "Car lost", help: "The rider is on board and the car sent no position for 30 min. Red with the repeating alarm until someone takes it in Incidents; it closes by itself when the car's position comes back.", mode: "fixed", level: "critical", path: "/incidents" },
   { id: "ride_check", group: "safety", label: "Ride check", help: "The driver or rider tapped Accident, Someone hurt or I feel unsafe. A later Yes or Not sure updates it. A red banner shows on every page until an admin opens it. Taken and solved in Incidents.", mode: "fixed", level: "critical", anyOf: ["incidents.read", "trips.intervene"], path: "/incidents" },
   { id: "sos_slow", group: "safety", label: "SOS taken but not solved", help: "Minutes since the SOS was taken. The SOS alert says it is not solved yet.", mode: "limits", direction: "up", unit: "min", limits: { info: null, important: 15, critical: 30 }, path: "/incidents" },
-  { id: "long_wait", group: "dispatch", label: "A rider waits too long", help: "Important from the limit set per zone in Dispatch → Alerts. Critical from the number here.", mode: "limits", direction: "up", unit: "min", limits: { info: null, important: null, critical: 15 }, fromDispatch: true, path: "/dispatch?view=live" },
-  { id: "few_drivers", group: "dispatch", label: "Few free drivers in a zone", help: "The limit is set per zone in Dispatch → Alerts.", mode: "fixed", level: "important", fromDispatch: true, path: "/dispatch?view=live" },
-  { id: "no_driver", group: "dispatch", label: "Many requests without a driver", help: "The limit is set per zone in Dispatch → Alerts.", mode: "fixed", level: "critical", fromDispatch: true, path: "/dispatch?view=live" },
-  { id: "late_reservation", group: "dispatch", label: "Booked ride soon with no driver", help: "Minutes left before pickup.", mode: "limits", direction: "down", unit: "min left", limits: { info: null, important: 60, critical: 20 }, path: "/reservations" },
+  { id: "long_wait", group: "dispatch", label: "A rider waits too long", help: "Important from the live ride at-risk minutes set per zone (Zone limits). Critical from the number here.", mode: "limits", direction: "up", unit: "min", limits: { info: null, important: null, critical: 30 }, fromDispatch: true, path: "/dispatch?view=live" },
+  { id: "few_drivers", group: "dispatch", label: "Few free drivers in a zone", help: "The limit is set per zone (Zone limits).", mode: "fixed", level: "important", fromDispatch: true, path: "/dispatch?view=live" },
+  { id: "no_driver", group: "dispatch", label: "Many requests without a driver", help: "The limit is set per zone (Zone limits).", mode: "fixed", level: "critical", fromDispatch: true, path: "/dispatch?view=live" },
+  { id: "late_reservation", group: "dispatch", label: "Booked ride soon with no driver", help: "Minutes left before pickup.", mode: "limits", direction: "down", unit: "min left", limits: { info: null, important: 60, critical: 20 }, offByDefault: true, path: "/reservations" },
+  // v0.18.20 (owner A1): booked rides, found by the server.
+  { id: "booked_at_risk", group: "dispatch", label: "Booked ride at risk", help: "No driver this many minutes or less before pickup: the booked ride at-risk minutes set per zone (Zone limits).", mode: "fixed", level: "important", path: "/reservations" },
+  { id: "booked_late", group: "dispatch", label: "Booked ride late", help: "The pickup time passed and the booked ride still has no driver.", mode: "fixed", level: "critical", path: "/reservations" },
+  { id: "booked_not_started", group: "dispatch", label: "Booked ride not started", help: "The driver holds the booked ride, his leave time passed and he has not started it.", mode: "fixed", level: "critical", path: "/reservations" },
+  { id: "booked_taken_back", group: "dispatch", label: "Booked ride taken from a late driver", help: "The server took the booked ride from a driver who would be too late (Dispatch › Book later › Late driver). It counts on his cancel record, no fee. Solved when a new driver takes it.", mode: "fixed", level: "important", path: "/reservations" },
+  // v0.18.39 §63 (contract.json#noDriverNearby.alerts): found by the server.
+  { id: "no_driver_nearby", group: "dispatch", label: "No driver nearby a waiting rider", help: "The rider of a live ride was shown 'No driver nearby' (Dispatch › No driver nearby). The search goes on. Solved when a driver takes it or the ride ends.", mode: "fixed", level: "important", path: "/trips" },
+  { id: "booked_no_driver_ended", group: "dispatch", label: "Booked ride ended: no driver found", help: "No driver took the booked ride by its pickup time + the minutes set in Dispatch › Book later. The server ended it, the rider pays nothing and was told. Shown for 24 h.", mode: "fixed", level: "important", path: "/reservations" },
   { id: "doc_expiring", group: "drivers", label: "Driver document expiring or expired", help: "Days left. 0 or less means expired.", mode: "limits", direction: "down", unit: "days", limits: { info: 30, important: 7, critical: 0 }, path: "/drivers" },
   { id: "low_rating", group: "drivers", label: "Driver rating is low", help: "Stars.", mode: "limits", direction: "down", unit: "stars", limits: { info: 4.5, important: 4.2, critical: null }, path: "/drivers" },
   { id: "auto_offline", group: "drivers", label: "Driver went offline after offers not accepted", help: "From Dispatch → Go offline automatically.", mode: "fixed", level: "info", path: "/drivers" },
@@ -90,8 +101,26 @@ export type KindSettings = {
 
 export type Channel = { sound: boolean; browser: boolean; email: boolean; sms: boolean };
 
+/** v0.18.20 (contract.json#alertDesk.serverDetection.settings, owner A1): per-zone limits the server uses. */
+export type ZoneLimits = { bookedAtRiskMin: number; liveAtRiskMin: number; fewDriversLimit: number; noDriverLimit: number };
+export const ZONE_LIMITS: { id: keyof ZoneLimits; label: string; help: string; min: number; max: number; def: number }[] = [
+  { id: "bookedAtRiskMin", label: "Booked ride at risk (minutes before pickup)", help: "No driver this many minutes or less before pickup.", min: 1, max: 240, def: 15 },
+  { id: "liveAtRiskMin", label: "Live ride at risk (minutes waiting)", help: "A rider has waited this many minutes with no driver.", min: 1, max: 240, def: 15 },
+  { id: "fewDriversLimit", label: "Few free drivers (at most)", help: "Free drivers at most this many while more riders wait.", min: 0, max: 100, def: 2 },
+  { id: "noDriverLimit", label: "Many requests without a driver (at least)", help: "This many live rides searching at once.", min: 1, max: 500, def: 5 },
+];
+export function zoneLimits(settings: AlertSettings, zoneId: string): ZoneLimits {
+  const saved = settings.zones?.[zoneId] ?? {};
+  return Object.fromEntries(ZONE_LIMITS.map((item) => {
+    const value = (saved as Partial<ZoneLimits>)[item.id];
+    return [item.id, typeof value === "number" && value >= item.min && value <= item.max ? value : item.def];
+  })) as ZoneLimits;
+}
+
 export type AlertSettings = {
   kinds: Record<string, KindSettings>;
+  /** Per zone (owner A1); missing zones use the defaults. */
+  zones?: Record<string, Partial<ZoneLimits>>;
   channels: Record<Level, Channel>;
   extras: { snooze: boolean; pass: boolean; mute: boolean; fixLink: boolean };
   /** Older parts of the panel that show alerts on their own. Off means they read from Alerts. */
@@ -139,7 +168,34 @@ export type AlertRecord = {
   events: AlertEvent[];
 };
 
+/** v0.18.20 (contract.json#alertDesk.serverDetection.liveAlert): a text as an English template and its values. */
+export type FoundText = { t: string; a: (string | number)[]; x?: number[] };
+/** An alert the SERVER found (AlertBookState.alerts): the panel only shows and acts on these on live. */
+export type FoundAlert = {
+  alertId: string;
+  causeKey?: string;
+  kind: KindId;
+  level: Level;
+  title: string;
+  titleT?: FoundText;
+  detail?: string;
+  detailT?: FoundText;
+  zoneId?: string;
+  country?: string;
+  since: string;
+  state: "open" | "solved";
+  solvedAt?: string;
+  solvedText?: string;
+  solvedT?: FoundText;
+  /** v0.18.31 (contract.json#alertsOldList, owner Q-Bj): an SOS / safety case whose trip ended 24 h ago; still open. */
+  old?: boolean;
+  oldSince?: string;
+  ref?: { tripId?: string; driverId?: string; riderId?: string; incidentId?: string; ticketId?: string; payoutId?: string; refundId?: string; ruleId?: string };
+};
+
 export type AlertBook = {
+  /** Live: the alerts the server found (open, or solved by itself). */
+  found?: FoundAlert[];
   draftRev: number;
   settings: AlertSettings;
   rules: AlertRule[];
@@ -150,7 +206,7 @@ export type AlertBook = {
 
 export function defaultKind(def: KindDef): KindSettings {
   return {
-    on: true,
+    on: !def.offByDefault,
     level: def.level ?? "important",
     limits: { ...(def.limits ?? { info: null, important: null, critical: null }) },
     who: "all",
@@ -181,12 +237,15 @@ export function normalizeAlertBook(value: unknown): AlertBook {
   const raw = value as Partial<AlertBook>;
   const settings = raw.settings ?? base.settings;
   return {
+    // v0.18.20: the server's alerts (live) pass through unchanged.
+    ...(Array.isArray(raw.found) ? { found: raw.found } : {}),
     draftRev: typeof raw.draftRev === "number" && raw.draftRev > 0 ? raw.draftRev : 1,
     settings: {
       kinds: Object.fromEntries(KINDS.map((def) => [def.id, { ...defaultKind(def), ...(settings.kinds?.[def.id] ?? {}) }])),
       channels: { ...base.settings.channels, ...(settings.channels ?? {}) },
       extras: { ...base.settings.extras, ...(settings.extras ?? {}) },
       legacy: { ...base.settings.legacy, ...(settings.legacy ?? {}) },
+      ...(settings.zones && typeof settings.zones === "object" ? { zones: settings.zones } : {}),
     },
     rules: Array.isArray(raw.rules) ? raw.rules : [],
     records: raw.records && typeof raw.records === "object" ? raw.records : {},
@@ -235,7 +294,64 @@ export type Alert = {
   incidentId?: string;
   rideCheckId?: string;
   ruleId?: string;
+  /** v0.18.20 owner A2: the server saw the problem end by itself; the alert stays, green, until marked done. */
+  solved?: { at: number; text: string };
+  /** v0.18.31 owner Q-Bj: never closed by itself; 24 h after its trip ended it moves to the Old tab. */
+  old?: { since: number };
 };
+
+/** A server text in the panel's language; the values marked x are texts too (a trigger, a unit, a rule's metric). */
+export function foundText(text: FoundText | undefined, fallback: string): string {
+  if (!text?.t) return fallback;
+  const args = text.a.map((value, index) => {
+    if (!text.x?.includes(index) || typeof value !== "string") return value;
+    return trx(METRICS.find((item) => item.id === value)?.label ?? value);
+  });
+  return trx(text.t, args);
+}
+
+function foundPath(alert: FoundAlert): string | undefined {
+  const ref = alert.ref ?? {};
+  if (ref.incidentId) return `/incidents?case=${ref.incidentId}`;
+  if (ref.tripId && (alert.kind.startsWith("booked_") || alert.kind === "late_reservation")) return `/reservations/${ref.tripId}`;
+  if (ref.payoutId) return `/payouts/${ref.payoutId}`;
+  if (ref.driverId && kindDef(alert.kind)?.group === "drivers") return `/drivers/${ref.driverId}`;
+  if (ref.riderId && alert.kind === "rider_cancels") return `/riders/${ref.riderId}`;
+  return undefined;
+}
+
+/**
+ * Live (v0.18.20, server-side alerts): the alerts are the server's, never worked out in the panel; only the zones the
+ * top bar shows. rideCheckOf finds the panel's ride check of an incident (for the red banner).
+ */
+export function alertsFromServer(found: readonly FoundAlert[], zones: readonly { id: string }[], rideCheckOf: (incidentId: string) => string | undefined = () => undefined): Alert[] {
+  const inZones = new Set(zones.map((zone) => zone.id));
+  return found
+    .filter((item) => KINDS.some((def) => def.id === item.kind) || item.kind === "rule")
+    .filter((item) => !item.zoneId || inZones.has(item.zoneId))
+    .map((item) => {
+      const def = kindDef(item.kind);
+      const incidentId = item.ref?.incidentId;
+      const rideCheckId = item.kind === "ride_check" && incidentId ? rideCheckOf(incidentId) : undefined;
+      const path = foundPath(item) ?? def?.path ?? "/alerts";
+      return {
+        id: item.alertId,
+        kind: item.kind,
+        group: def?.group ?? "system",
+        level: item.level,
+        title: foundText(item.titleT, item.title),
+        detail: foundText(item.detailT, item.detail ?? ""),
+        zoneId: item.zoneId ?? null,
+        since: Date.parse(item.since),
+        path,
+        ...(incidentId && followsIncident(item.kind) ? { incidentId } : {}),
+        ...(rideCheckId ? { rideCheckId } : {}),
+        ...(item.ref?.ruleId ? { ruleId: item.ref.ruleId } : {}),
+        ...(item.old ? { old: { since: Date.parse(item.oldSince ?? item.since) } } : {}),
+        ...(item.state === "solved" ? { solved: { at: Date.parse(item.solvedAt ?? item.since), text: foundText(item.solvedT, item.solvedText ?? tr("Solved by itself")) } } : {}),
+      };
+    });
+}
 
 /** SOS and Ride check alerts follow their incident: one owner, taken and solved in Incidents. */
 export function followsIncident(kind: KindId): boolean {
@@ -477,6 +593,11 @@ export function visibleTo(alert: Alert, book: AlertBook, viewer: Viewer, now: nu
 }
 
 export type OpenAlert = Alert & { status: "new" | "taken" | "snoozed"; owner: string | null; record: AlertRecord | null; muted: boolean };
+
+/** v0.18.31 owner Q-Bj (contract.json#alertsOldList): old SOS / safety cases leave the open list for the Old tab. */
+export function splitOld<T extends Alert>(alerts: readonly T[]): { open: T[]; old: T[] } {
+  return { open: alerts.filter((alert) => !alert.old), old: alerts.filter((alert) => alert.old) };
+}
 
 /** Join the alerts with who works on them. Done ones leave the open list; SOS follows Incidents. */
 export function openAlerts(alerts: readonly Alert[], book: AlertBook, now: number, sosOwner: (incidentId: string) => string | null): OpenAlert[] {

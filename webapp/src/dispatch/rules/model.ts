@@ -9,7 +9,8 @@ import { type DestinationModeRules, type NextTripRules } from "../tripRules.ts";
 
 /** v0.18.10 (G8 Q2, contract.json#finish.earlyEnd.settings): defaults and ranges. */
 export type EarlyEnd = { repriceOverKm: number; repriceOverMin: number };
-export const EARLY_END_DEFAULT: EarlyEnd = { repriceOverKm: 2, repriceOverMin: 8 };
+/** v0.18.33 (fix job 5, owner fix-plan Q1): minutes default 10, and the rule is BOTH (km AND minutes). */
+export const EARLY_END_DEFAULT: EarlyEnd = { repriceOverKm: 2, repriceOverMin: 10 };
 export const EARLY_END_LIMITS = { repriceOverKm: { min: 0, max: 50 }, repriceOverMin: { min: 0, max: 120 } } as const;
 export function completeEarlyEnd(stored: unknown): EarlyEnd {
   const raw = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
@@ -206,16 +207,31 @@ export type BookingWindow = {
   listAtTimeMin: number;
   /** Owner (v0.18.19): arrive this many minutes before the pickup time; the server works out when to start (default 10). */
   arriveEarlyMin: number;
+  /**
+   * v0.18.35 FIX JOB 4 (contract.json#bookedTakeBack, owner Q2 / Q-B / fix-plan Q2): a held booked ride is taken back only
+   * when the driver would be MORE than takeBackLateMin late, is MORE than takeBackKeepIfDriveMin minutes' drive away, and
+   * the pickup is at least takeBackUntilMinBeforePickup minutes away. Published in DriverAppConfig.reservations.
+   */
+  takeBackLateMin: number;
+  takeBackKeepIfDriveMin: number;
+  takeBackUntilMinBeforePickup: number;
+  /** v0.18.35 (owner Q-A, job 4 Q4): "You are not driving towards the rider" every N minutes; published in DriverAppConfig.headingCheck. */
+  notHeadingNotice: boolean;
+  /** v0.18.39 §63 (P17, owner "15 min after pickup past"): a booked ride with no driver ends this many minutes after its pickup time (no fee). */
+  noDriverStopAfterMin: number;
+  notHeadingNoticeEveryMin: number;
 };
 
-export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30, arriveEarlyMin: 10 };
+export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30, arriveEarlyMin: 10, takeBackLateMin: 5, takeBackKeepIfDriveMin: 10, takeBackUntilMinBeforePickup: 15, notHeadingNotice: true, notHeadingNoticeEveryMin: 1, noDriverStopAfterMin: 15 };
 
 /** Limits for each booking window number (contract.json#bookLater, gen_openapi DriverReservations). */
-export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "maxTripKm">, { min: number; max: number }> = {
+export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "maxTripKm" | "notHeadingNotice">, { min: number; max: number }> = {
   minAheadMin: { min: 5, max: 240 }, maxAheadDays: { min: 1, max: 365 }, soonBeforeMin: { min: 0, max: 240 }, noticeMaxDrivers: { min: 1, max: 500 },
   noDriverAlertMin: { min: 1, max: 120 }, riderReminderMin: { min: 0, max: 1440 }, freeChangeBeforeMin: { min: 0, max: 1440 },
   changeAnswerMin: { min: 1, max: 120 }, listAtTimeKm: { min: 0.5, max: 50 }, listAtTimeMin: { min: 5, max: 240 },
   arriveEarlyMin: { min: 0, max: 60 },
+  takeBackLateMin: { min: 1, max: 60 }, takeBackKeepIfDriveMin: { min: 0, max: 60 }, takeBackUntilMinBeforePickup: { min: 0, max: 180 }, notHeadingNoticeEveryMin: { min: 1, max: 10 },
+  noDriverStopAfterMin: { min: 1, max: 240 },
 };
 export const MAX_TRIP_KM_LIMIT = { min: 1, max: 1000 };
 
@@ -224,12 +240,15 @@ export const BOOKING_LABELS: Record<keyof typeof BOOKING_LIMITS, string> = {
   noDriverAlertMin: "no-driver alert (minutes before pickup)", riderReminderMin: "rider reminder (minutes before pickup)", freeChangeBeforeMin: "free change or cancel (minutes before pickup)",
   changeAnswerMin: "time to answer a changed ride (minutes)", listAtTimeKm: "near pickup at that time (km)", listAtTimeMin: "near pickup at that time (minutes)",
   arriveEarlyMin: "arrive before pickup (minutes)",
+  takeBackLateMin: "take back when late more than (minutes)", takeBackKeepIfDriveMin: "keep if the driver is within (minutes' drive)", takeBackUntilMinBeforePickup: "take back only until (minutes before pickup)", notHeadingNoticeEveryMin: "not-heading notice every (minutes)",
+  noDriverStopAfterMin: "stop a booked ride with no driver after pickup + (minutes)",
 };
 
 export function completeBookingWindow(raw: unknown): BookingWindow {
   const own = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const next = { ...BOOKING_WINDOW_DEFAULT };
   if (typeof own["noticeOn"] === "boolean") next.noticeOn = own["noticeOn"];
+  if (typeof own["notHeadingNotice"] === "boolean") next.notHeadingNotice = own["notHeadingNotice"];
   // BL-Q5: null (or a missing value) = no limit.
   const km = own["maxTripKm"];
   next.maxTripKm = typeof km === "number" && Number.isFinite(km) && km >= MAX_TRIP_KM_LIMIT.min && km <= MAX_TRIP_KM_LIMIT.max ? km : null;
@@ -373,7 +392,14 @@ export type ZoneDispatch = {
    */
   start: { mode: StartMode; nearKm: number };
   /** v0.18.9: farthest pickup in km (0 = the widest search step) and longest pickup time in min (0 = off). */
-  limits: { maxPickupKm: number; maxPickupEtaMin: number };
+  limits: { maxPickupKm: number; maxPickupEtaMin: number; farReachKm: number };
+  /**
+   * v0.18.39 §63 (owner N2 "'No driver nearby' after 5 min", per zone): a live ride still without a driver afterSec seconds
+   * after its search started shows the rider the message once (Keep waiting / Cancel free); the search goes on.
+   */
+  noDriverNearby: { on: boolean; afterSec: number; message: string };
+  /** v0.18.39 §63 (boss 1 for the owner): a driver who let this many offers of a trip pass is not asked again in that search (1–5, default 2). */
+  reaskLimit: number;
   /** v0.18.9: drivers of these zones also get offers from search step afterStep (0 = the last step). */
   neighbours: { on: boolean; zoneIds: string[]; afterStep: number };
   /**
@@ -402,6 +428,8 @@ export type ZoneDispatch = {
   hiddenComesBackMin: number;
   /** Q18: while driving a rider only Exclusive offers come, at most `count` at a time. */
   exclusiveWhileDriving: { on: boolean; count: number };
+  /** v0.18.33 (fix job 5, owner Q7): a driver on a trip can get a booked ride starting within withinMin minutes (Exclusive only). DispatchDocument.bookedNext. */
+  bookedNext: { on: boolean; withinMin: number };
   /** Q19/Q20: waiting at pickup. The free wait, price per minute and no-show fee per category come from Pricing. */
   pickupWait: PickupWait;
   reservation: ReservationRules;
@@ -417,7 +445,7 @@ export type ZoneDispatch = {
   driverCancel: { on: boolean; commissionCutPct: number };
   /** Live trips (Radar and live Exclusive): the smart check, and per car type free minutes after accept, then the fee. */
   /** v0.8.0 (owner 2026-10-27): driverSharePct, the driver's share of the rider's cancel fee, per zone; default 100 %. */
-  /** v0.18.10 (G8 Q2): earlyEnd = DriverAppConfig.cancelFees.earlyEnd — a driver's early end re-prices only when more than repriceOverKm km or repriceOverMin min shorter (default 2 / 8). */
+  /** v0.18.10 (G8 Q2): earlyEnd = DriverAppConfig.cancelFees.earlyEnd — a driver's early end re-prices only when more than repriceOverKm km AND more than repriceOverMin min shorter (v0.18.33 BOTH; default 2 / 10). */
   riderCancel: { on: boolean; closerPct: number; priority: boolean; priorityMin: number; fees: CancelFeeTable; driverSharePct: number; earlyEnd: EarlyEnd };
   extras: { id: ExtraId; on: boolean; badge: boolean }[];
   longTripKm: number;
@@ -429,6 +457,12 @@ export type ZoneDispatch = {
   stops: { on: boolean; max: number; freeWaitMin: number; perMin: number; perStop: number; changeDuring: boolean; driverCanRefuse: boolean; answerSeconds: number; beforePickup: boolean; fixedPriceTrips: "block" | "switch_to_normal" };
   /** Q40: after the driver accepts, the rider can move the pickup up to maxMeters; further means cancel and book again. The driver is told. */
   pickupMove: { maxMeters: number };
+  /**
+   * FIX JOB 7 (owner Q9 "Warn him but can accept booking", contract v0.18.30 contract.json#smallFixes.samePoint):
+   * "Shortest ride (m)": the rider is warned (and can still book) when pickup and drop-off are this close. 0 = never warn.
+   * Optional so rules saved before v0.18.30 still load (the default is used then).
+   */
+  samePoint?: { warnMeters: number };
   airport: { on: boolean; order: "fifo" | "best"; maxQueueMin: number; queueAreas: { id: string; name: string; ring: [number, number][] }[] };
   goingHome: { on: boolean; perDay: number; maxOffDeg: number };
   /** R13-9: Destination mode, each part on or off with its own number. */

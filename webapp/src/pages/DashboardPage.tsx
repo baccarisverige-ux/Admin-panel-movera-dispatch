@@ -17,7 +17,6 @@ import {
   Download,
   LifeBuoy,
   Megaphone,
-  ReceiptText,
   RefreshCw,
   Repeat,
   Search,
@@ -32,7 +31,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAdminApi } from "../api/AdminApiContext";
-import { useApprovals, useAudit, useRecords, useSlice } from "../api/hooks";
+import { useAudit, useRecords, useSlice } from "../api/hooks";
 import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { commandById } from "../commands/registry";
@@ -58,6 +57,9 @@ import { candidatesFor, rideRequests, riderCounts, ridersOnlineIn, type RideRequ
 import { demoShift, rideCounts, scheduledRides } from "../dashboard/scheduled";
 import { localDay, startOfLocalDay } from "../dashboard/time";
 import { useAlertSignals, type Signal } from "../dashboard/useAlertSignals";
+import { airportCards } from "../live/airportQueue.ts";
+import { useAirportQueueFeed } from "../live/useAirportQueue";
+import { useLiveZoneList } from "../live/LiveZones";
 import { ActivityFeed, AirportCard, BoostCard, InsightsCard, LiveStamp, LiveTag, SoundToggle, type ActivityItem, type DriverRank } from "../dashboard/Widgets";
 import { CATEGORIES } from "../domain/contract";
 import { statusLabel } from "../domain/labels";
@@ -78,6 +80,10 @@ import type { BonusMapArea } from "../dashboard/DriversMap";
 import { LiveMapQuickPopup, type QuickTarget } from "../pricing/LiveMapExtras";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { zoneFilterOf } from "../live/zoneFilter";
+import { liveTabCounts } from "../dashboard/liveCounts";
+import { liveAllowedCategories, liveDriverInfo } from "../dashboard/liveDriverInfo";
+import { LIVE_CARD_LIST, liveCardRows, onlineTileValue } from "../dashboard/liveCard";
+import { rankDriversInsights } from "../live/realOnly";
 
 const FIVE_MIN = 5 * 60_000;
 const DAY_MS = 86_400_000;
@@ -188,7 +194,9 @@ export function DashboardPage() {
   }, [moreOpen]);
 
   // Live parts reload every 10 seconds, slower parts every 30, until the backend pushes changes.
-  const drivers = useRecords("drivers", undefined, { refetchMs: LIVE_MS, follow: true });
+  // v0.18.34 §65 (A8/A10): the live card, map and online tile read the live pages alone; the driver list adds details.
+  const presence = useRecords(LIVE_CARD_LIST, undefined, { refetchMs: LIVE_MS, follow: true });
+  const drivers = useRecords("drivers", undefined, { refetchMs: LIVE_MS });
   const trips = useRecords("trips", undefined, { refetchMs: LIVE_MS });
   const incidents = useRecords("incidents", undefined, { refetchMs: LIVE_MS });
   const tickets = useRecords("tickets", undefined, { refetchMs: LIVE_MS });
@@ -204,10 +212,10 @@ export function DashboardPage() {
   // Names, phones and links follow the viewer's own read permissions (UI-06); counts and money stay.
   const access = useMemo(() => dashboardAccess(role), [role]);
   const driverRows = useMemo(() => maskDrivers(drivers.data ?? [], access), [drivers.data, access]);
+  const presenceRows = useMemo(() => maskDrivers(liveCardRows(presence.data, drivers.data), access), [presence.data, drivers.data, access]);
   const riderRows = useMemo(() => maskRiders(riders.data ?? [], access), [riders.data, access]);
   const tripRows = useMemo(() => maskBookings(trips.data ?? [], access), [trips.data, access]);
   const reservationRows = useMemo(() => maskBookings(reservations.data ?? [], access), [reservations.data, access]);
-  const approvals = useApprovals(LIVE_MS);
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const bonusSlice = useSlice<BonusBook>(BONUS_KEY, emptyBonusBook());
   const bonusMinute = Math.floor(now / 60_000);
@@ -217,7 +225,7 @@ export function DashboardPage() {
     .map((bonus) => ({ bonus, state: bonusState(bonus, bonusMinute * 60_000, market.timeZone) }))
     .filter((item) => item.state === "live" || item.state === "today")
     .map(({ bonus, state }) => ({ id: bonus.id, label: state === "live" ? tr("Bonus now · {0}", [bonus.name]) : tr("{0} · from {1}", [bonus.name, bonus.start]), live: state === "live", rings: bonus.areas.map((area) => area.ring) })), [bonusSlice.value, country, bonusMinute, market.timeZone]);
-  const liveQueries = [drivers, trips, incidents, tickets, reservations, payments];
+  const liveQueries = [presence, drivers, trips, incidents, tickets, reservations, payments];
   const failed = liveQueries.find((query) => query.error);
   const updatedAt = Math.max(refreshedAt, ...liveQueries.map((query) => query.dataUpdatedAt || 0));
 
@@ -270,21 +278,28 @@ export function DashboardPage() {
   // G3-R5: no "Not connected yet" on the live Dashboard; a value without a source reads "—".
   const number = { format: (value: number) => (Number.isFinite(value) ? numberFormat.format(value) : "—") };
   const liveData = isLiveData();
+  // Fix job 9 (§60): the airport card's real numbers; names from the server's zone list.
+  const liveAirports = useAirportQueueFeed();
+  const serverZones = useLiveZoneList();
+  const airportName = (zoneId: string) => serverZones?.find((item) => item.zoneId === zoneId)?.names.en ?? zoneId;
 
   const live = useMemo(
-    () => liveDrivers(driverRows, vehicles.data ?? [], tripRows, incidents.data ?? [], tick),
-    [driverRows, vehicles.data, tripRows, incidents.data, tick],
+    () => liveDrivers(presenceRows, vehicles.data ?? [], tripRows, incidents.data ?? [], tick),
+    [presenceRows, vehicles.data, tripRows, incidents.data, tick],
   );
   const liveCounts = countStates(live);
   const onlineIds = useMemo(() => new Set(live.map((driver) => driver.id)), [live]);
   const allowedCategories = (driverId: string) => {
-    const record = (driverRows).find((row) => row.id === driverId);
+    const record = driverRows.find((row) => row.id === driverId) ?? presenceRows.find((row) => row.id === driverId);
     if (!record) return [];
+    // A15: live, the server's Driver.categoryIds decide who can be assigned (never the seed).
+    if (liveData) return liveAllowedCategories(record);
     const ops = driverOps(driverStore.value, { id: record.id, name: record.name, fleetId: record.fleetId, status: record.status, kind: record.kind });
     return CATEGORIES.filter((category) => ops.categories[category.id]).map((category) => category.id);
   };
   // Offers only count when they went to a driver who could really take them.
   const requests = useMemo(() => maskRequests(rideRequests(tripRows, riderRows, (driverId) => onlineIds.has(driverId)), access), [tripRows, riderRows, onlineIds, access]);
+  const liveTabCount = useMemo(() => liveTabCounts(requests.length, tripRows), [requests.length, tripRows]);
   // G3-R4 (owner "Real numbers only"): live, the server's riders online in the zones in view; demo, no invented share.
   const riderStats = riderCounts(requests, live, riderRows, liveData ? ridersOnlineIn(ridersOnline.data ?? [], scope.zones.length ? scope.zones : market.zones.map((zone) => zone.id)) : null);
   // Rides a driver just accepted: listed apart under the waiting riders and kept on the map (never counted as waiting).
@@ -326,7 +341,6 @@ export function DashboardPage() {
   const pendingDrivers = (driverRows).filter((row) => row.status === "pending");
   const scheduledPayouts = (payouts.data ?? []).filter((row) => row.status === "scheduled");
   const failures = openFailures(payments.data ?? []);
-  const refundApprovals = (approvals.data ?? []).filter((row) => row.status === "pending" && row.action.includes("refund"));
   const urgentRides = rides.filter((ride) => ride.warning === "red");
   const longWaits = requests.filter((request) => request.waitingMin > 5 && request.status === "searching");
   // SOS responders (incidents.read) need the driver's name even without drivers.read.
@@ -382,7 +396,6 @@ export function DashboardPage() {
     { label: tr("Open support"), permission: "support.reply", count: openTickets.length, path: "/support", icon: <LifeBuoy size={16} />, tone: "warning" },
     { label: tr("Drivers to review"), permission: "drivers.read", count: pendingDrivers.length, path: "/onboarding", icon: <UserPlus size={16} />, tone: "info" },
     { label: tr("Rides without driver"), permission: "trips.read", count: unassigned.length, path: "/reservations", icon: <CalendarClock size={16} />, tone: "serious" },
-    { label: tr("Refunds waiting for approval"), permission: "approval.decide", count: refundApprovals.length, path: "/payments", icon: <ReceiptText size={16} />, tone: "serious" },
     { label: tr("Payouts scheduled"), permission: "finance.read", count: scheduledPayouts.length, path: "/payouts", icon: <Banknote size={16} />, tone: "good" },
   ].filter((queue) => can(role, queue.permission));
 
@@ -409,7 +422,8 @@ export function DashboardPage() {
   const rankSpan = useMemo(() => shownSpan.end - shownSpan.start > 31 * DAY_MS ? periodWindow({ kind: "month" }, reportNow, market.timeZone, uiLocale()) : shownSpan, [shownSpan, reportNow, market]);
   const weekSpan = useMemo(() => periodWindow({ kind: "week" }, reportNow, market.timeZone, uiLocale()), [reportNow, market]);
   const ranking = useMemo(() => {
-    if (tab !== "insights") return null;
+    // L-a (A15 item 3): live has no server ranking yet, so nothing is worked out from driverOps/driverPerformance.
+    if (!rankDriversInsights(tab)) return null;
     const active = (driverRows).filter((row) => row.status === "active");
     const rank = (span: typeof rankSpan): DriverRank[] => active.map((row) => {
       const ops = driverOps(driverStore.value, { id: row.id, name: row.name, fleetId: row.fleetId, status: row.status, kind: row.kind });
@@ -492,7 +506,8 @@ export function DashboardPage() {
         {TABS.map((item) => (
           <button data-command="admin.ui.dashboardTab" key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "active" : undefined} onClick={() => setTab(item.id)}>
             {trx(item.label)}
-            {item.id === "live" && requests.length ? <span className="tab-count">{requests.length}</span> : null}
+            {/* FIX JOB 7 B-k: "Searching N · Live M" (N waiting for a driver, M with a driver), not one number with two meanings. */}
+            {item.id === "live" && (liveTabCount.searching || liveTabCount.withDriver) ? <span className="tab-count">{tr("Searching {0} · Live {1}", [liveTabCount.searching, liveTabCount.withDriver])}</span> : null}
             {item.id === "work" && unassigned.length ? <span className="tab-count">{unassigned.length}</span> : null}
           </button>
         ))}
@@ -554,7 +569,7 @@ export function DashboardPage() {
               icon={<Car size={18} />}
               tone="green"
               label={tr("Drivers online now")}
-              value={loading ? "…" : number.format(liveCounts.free + busy + liveCounts.sos)}
+              value={trx(onlineTileValue(presence, liveCounts.free + busy + liveCounts.sos, number.format))}
               hint={<>{trn("{0} free · {1} busy{2}", liveCounts.free, busy, liveCounts.sos ? <> · <b className="sos-text">{trn("{0} SOS", liveCounts.sos)}</b></> : null)}</>}
             />
             <Kpi icon={<XCircle size={18} />} tone="red" label={tr("Cancellation rate")} value={Number.isFinite(cancelRate) ? `${cancelRate.toFixed(1)}%` : "—"} delta={<Delta value={change(cancelRate, prevCancelRate)} inverse label={shownSpan.compareLabel} />} />
@@ -626,8 +641,10 @@ export function DashboardPage() {
                 tripFor={(driver) => maskTrip(liveTrip(driver, { trips: tripRows, reservations: reservationRows, vehicles: vehicles.data ?? [], fleets: fleets.data ?? [], riders: riderRows }, now, shift), access)}
                 infoFor={(driverId) => {
                   if (!access.drivers) return null;
-                  const record = (driverRows).find((row) => row.id === driverId);
+                  const record = driverRows.find((row) => row.id === driverId) ?? presenceRows.find((row) => row.id === driverId);
                   if (!record) return null;
+                  // A15: live, only server values (Driver.rating / performance / categoryIds); null shows "—".
+                  if (liveData) return liveDriverInfo(record, { account: statusLabel(record.status), fleet: (fleets.data ?? []).find((row) => row.id === record.fleetId)?.name ?? null });
                   const ops = driverOps(driverStore.value, { id: record.id, name: record.name, fleetId: record.fleetId, status: record.status, kind: record.kind });
                   const today = driverPerformance({ id: record.id, zoneId: record.zoneId, status: record.status, stars: ops.ratings.stars, acceptancePct: ops.ratings.acceptancePct, cancellationPct: ops.ratings.cancellationPct }, periodWindow({ kind: "today" }, now, market.timeZone, uiLocale()), false).current;
                   return {
@@ -662,8 +679,8 @@ export function DashboardPage() {
           />
 
           <div className="dash-grid-2">
-            {/* G3-R5: the airport queue has no server source: hidden on live. */}
-            {liveData ? null : <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />}
+            {/* Fix job 9 (§60): live reads the server's airport queues (GET /admin/airport-queues); the demo keeps its sample. */}
+            {liveData ? (liveAirports?.data ? <AirportCard rows={airportCards(liveAirports.data, airportName)} /> : null) : <AirportCard rows={airportQueues(country, live, Math.floor(now / 3_600_000))} />}
             <BoostCard rows={activeBoosts(bonuses.data ?? [], balance, surge)} surgeLink={surgeLink} />
           </div>
         </>

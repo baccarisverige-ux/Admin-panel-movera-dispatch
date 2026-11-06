@@ -584,7 +584,7 @@ test("waiting at pickup: Pricing's values per category, ride type and distance r
   await expect(page.getByRole("region", { name: "Waiting at pickup" }).getByLabel("Driver's share of the no-show fee")).toHaveValue("100");
 });
 
-test("cancel reasons per language with Doesn't count, cancel rate limit and driving limit warnings", async ({ page }) => {
+test("cancel reasons per language (no \"Doesn't count\" box, L-c), cancel rate limit and driving limit warnings", async ({ page }) => {
   await session(page);
   await page.goto("/dispatch?view=reasons");
   await expect(page.getByRole("heading", { name: "Cancel reasons in Sweden" })).toBeVisible();
@@ -594,7 +594,9 @@ test("cancel reasons per language with Doesn't count, cancel rate limit and driv
   await expect(page.getByRole("list", { name: "Driver, during the trip reasons" }).getByRole("listitem")).toHaveCount(7);
   await expect(page.getByRole("list", { name: "Driver, scheduled rides reasons" }).getByRole("listitem")).toHaveCount(6);
   const notAtPickup = before.getByRole("listitem").filter({ has: page.getByLabel("Reason text rider_not_at_pickup") });
-  await notAtPickup.getByText("Doesn't count").click();
+  // L-c (owner 2026-11-06 "Remove it (Safe)"): every reason counts, the box is gone.
+  await expect(notAtPickup.getByRole("checkbox")).toHaveCount(0);
+  await expect(page.getByText("Doesn't count")).toHaveCount(0);
 
   await page.getByRole("radiogroup", { name: "Language" }).getByText("Swedish").click();
   const scheduled = page.getByRole("list", { name: "Driver, scheduled rides reasons" });
@@ -615,7 +617,7 @@ test("cancel reasons per language with Doesn't count, cancel rate limit and driv
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
   const list = page.getByRole("list", { name: "Changes not live yet" });
-  await expect(list).toContainText("Cancel reasons, driver, before the trip: “Rider not at pickup” counts → doesn't count");
+  await expect(list).not.toContainText("doesn't count");
   await expect(list).toContainText("Cancel reasons, driver, scheduled rides: “Other reason” Swedish text changed");
   await expect(list).toContainText("Cancel reasons, rider: added “Found another ride”");
   await expect(list).toContainText("Cancel reasons, rider: removed “Something else”");
@@ -631,6 +633,9 @@ test("cancel reasons per language with Doesn't count, cancel rate limit and driv
   await expect(rate.getByLabel("Cancel rate limit")).toHaveValue("30");
   await expect(rate).toContainText("Never shown to drivers");
   await expect(rate).toContainText("Keep your cancel rate low to keep full access to trips");
+  // L-c (owner 2026-11-06 "No need for text"): the cancel-rate note is gone.
+  await expect(rate).not.toContainText("Over the cancel rate limit");
+  await expect(rate.getByRole("link", { name: "Cancel reasons" })).toHaveCount(0);
   const rest = page.getByRole("region", { name: "Rest after long work · all of Sweden" });
   await expect(rest.getByLabel("First driving limit warning")).toHaveValue("30");
   await expect(rest.getByLabel("Second driving limit warning")).toHaveValue("10");

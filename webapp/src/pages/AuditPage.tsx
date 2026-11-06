@@ -1,11 +1,8 @@
 import { useMemo, useState } from "react";
-import { formatCurrencyMoney } from "../markets/markets";
 import { Link, useNavigate } from "react-router";
 import { ArrowLeft, Download, Search } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
-import { can } from "../auth/permissions";
-import { commandById } from "../commands/registry";
-import { useApprovals, useAudit, useRevision } from "../api/hooks";
+import { useAudit, useRevision } from "../api/hooks";
 import { EMPTY_FILTERS, RESULT_LABEL, areaOf, auditCounts, auditCsv, changeOf, filterAudit, type AuditFilters } from "../platform/audit";
 import { logExport } from "../reports/activityLog";
 import { Cards } from "../reports/ui";
@@ -13,6 +10,7 @@ import { DataTable } from "../ui/DataTable";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn, trx } from "../i18n";
 import { auditActionText, auditActorText, auditDetailText, auditValueText } from "../live/format";
+import { DateInput } from "../ui/DateInput";
 
 const PAGE = 50;
 
@@ -20,17 +18,8 @@ export function AuditPage() {
   const { agent, agents } = useSession();
   const navigate = useNavigate();
   const audit = useAudit();
-  const approvals = useApprovals();
   const revision = useRevision();
   const rows = useMemo(() => audit.data ?? [], [audit.data]);
-  const pending = (approvals.data ?? []).filter((item) => item.status === "pending");
-  // The server refuses the requester and anyone whose role cannot do the action itself; say so on the button.
-  const decideBlock = (item: { action: string; requestedBy: string }, verb: "approve" | "decide") =>
-    item.requestedBy === agent?.id
-      ? `The requester cannot ${verb} their own action.`
-      : agent && !can(agent.role, commandById(item.action)?.permission ?? "*")
-        ? `Your role cannot do this action, so it cannot ${verb} it.`
-        : undefined;
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
   const [limit, setLimit] = useState(PAGE);
   const [open, setOpen] = useState<string | null>(null);
@@ -61,7 +50,7 @@ export function AuditPage() {
         <div className="pl-head">
           <button data-command="admin.auditLog.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button>
           <div>
-            <h2>{tr("Audit and approvals")}</h2>
+            <h2>{tr("Audit")}</h2>
             <p>{trn("Generic command audit. Revision {0}. Every business command records actor, action, target, scope, before, after, reason and result.", revision.data ?? "…")}</p>
           </div>
         </div>
@@ -77,35 +66,10 @@ export function AuditPage() {
           { id: "today", label: "Today", value: counts.today, previous: null, format: "count", info: "Actions recorded today." },
           { id: "admins", label: "Admins", value: counts.admins, previous: null, format: "count", info: "Different admins who did something." },
           { id: "failed", label: "Stopped", value: counts.failed, previous: null, format: "count", info: "Not allowed, rejected or changed by someone else first." },
-          { id: "waiting", label: "Waiting for a second admin", value: pending.length, previous: null, format: "count", info: "Money actions that need a second admin. Decide them below or in To confirm." },
         ]}
       />
 
-      <article className="panel">
-        <h3>{tr("Pending approvals")}</h3>
-        {pending.length === 0 ? (
-          <p className="state-line">{tr("No pending approvals.")}</p>
-        ) : (
-          <DataTable
-            head={["Approval", "Action", "Target", "Requested by", "Amount", "Reason", "Status", "Decision"]}
-            rowIds={pending.map((item) => item.id)}
-            rows={pending.map((item) => [
-              item.id,
-              item.action,
-              item.targetId,
-              item.requestedBy,
-              formatCurrencyMoney(item.amountOre, item.currency),
-              item.reason,
-              item.status,
-              <div className="actions" key={`${item.id}-decision`}>
-                <CommandButton command="admin.approval.approve" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="approved" disabled={Boolean(decideBlock(item, "approve"))} title={decideBlock(item, "approve")}>{tr("Approve")}</CommandButton>
-                <CommandButton command="admin.approval.reject" className="secondary-btn" type="button" targetId={item.id} confirmTarget={false} before="pending" after="rejected" disabled={Boolean(decideBlock(item, "decide"))} title={decideBlock(item, "decide")}>{tr("Reject")}</CommandButton>
-              </div>,
-            ])}
-          />
-        )}
-      </article>
-
+      {/* A2 leftovers (owner Q1 "One admin always"): no list of money waiting for approval; nothing waits for a second admin. */}
       <section className="panel pl-audit" aria-label={tr("Who did what")}>
         <h3>{tr("Who did what")}</h3>
         <div className="pl-filters">
@@ -113,8 +77,8 @@ export function AuditPage() {
           <select aria-label={tr("Admin")} value={filters.actor} onChange={(e) => patch({ actor: e.target.value })}><option value="">{tr("Every admin")}</option>{actors.map((id) => <option key={id} value={id}>{nameOf(id)}</option>)}</select>
           <select aria-label={tr("Section")} value={filters.area} onChange={(e) => patch({ area: e.target.value })}><option value="">{tr("Every section")}</option>{areas.map((area) => <option key={area} value={area}>{area}</option>)}</select>
           <select aria-label={tr("Result")} value={filters.result} onChange={(e) => patch({ result: e.target.value })}><option value="">{tr("Any result")}</option>{Object.entries(RESULT_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>
-          <label className="pl-date"><span>{tr("From")}</span><input type="date" aria-label={tr("From date")} value={filters.from} onChange={(e) => patch({ from: e.target.value })} /></label>
-          <label className="pl-date"><span>{tr("To")}</span><input type="date" aria-label={tr("To date")} value={filters.to} onChange={(e) => patch({ to: e.target.value })} /></label>
+          <label className="pl-date"><span>{tr("From")}</span><DateInput aria-label={tr("From date")} value={filters.from} onChange={(e) => patch({ from: e.target.value })} /></label>
+          <label className="pl-date"><span>{tr("To")}</span><DateInput aria-label={tr("To date")} value={filters.to} onChange={(e) => patch({ to: e.target.value })} /></label>
           {filtered ? <button data-command="admin.auditLog.view" type="button" className="dash-btn small ghost" onClick={() => patch(EMPTY_FILTERS)}>{tr("Clear filters")}</button> : null}
           <CommandButton command="admin.auditLog.export" className="dash-btn small" type="button" confirmTarget={false} disabled={!shown.length} onDone={exportCsv}><Download size={13} aria-hidden="true" />{" "}{trn(shown.length === 1 ? "Export {0} row" : "Export {0} rows", shown.length)}</CommandButton>
         </div>

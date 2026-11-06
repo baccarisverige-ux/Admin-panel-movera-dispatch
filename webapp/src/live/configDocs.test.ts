@@ -72,6 +72,16 @@ test("PricingDocument from the Pricing page: minor units, ONE seat fee on Child 
   assert.deepEqual(bookOfPricing(doc, zoneBook(emptyPricingStore(), "Z001")), { ...book, version: 1 });
 });
 
+test("v0.18.33 (fix job 5, owner Q7): Dispatch › Exclusive 'Booked ride for a driver on a trip' (on, 60 min) goes to DispatchDocument.bookedNext and back (fail-before: not sent)", () => {
+  const zone = zoneDefault("Z001");
+  assert.deepEqual(zone.bookedNext, { on: true, withinMin: 60 });
+  const doc = dispatchDocumentOf({ ...zone, bookedNext: { on: false, withinMin: 45 } }, "Z001", null);
+  assert.deepEqual(doc["bookedNext"], { on: false, withinMin: 45 });
+  assert.deepEqual(rulesOfDispatch(doc, {}, zoneDefault("Z001")).bookedNext, { on: false, withinMin: 45 });
+  const bad = rulesOfDispatch({ ...doc, bookedNext: { on: "yes", withinMin: 999 } }, {}, zoneDefault("Z001"));
+  assert.deepEqual(bad.bookedNext, { on: true, withinMin: 60 }, "a bad value reads as the default");
+});
+
 test("the Standard of a country is a scope of its own, in the country's money", () => {
   assert.deepEqual(zoneFacts("standard-FR"), { id: "standard-FR", currency: "EUR", country: "FR", timeZone: "Europe/Paris", factor: 100 });
   const doc = pricingDocumentOf(zoneBook(emptyPricingStore(), "standard-FR"), "standard-FR", null);
@@ -83,7 +93,7 @@ test("DispatchDocument from the zone's rules, the same keys as the contract samp
   const zone = zoneDefault("Z001");
   const doc = dispatchDocumentOf(zone, "Z001", null);
   // v0.18.9: start, limits and neighbours are optional contract fields the sample (written before them) leaves out.
-  assert.deepEqual(Object.keys(doc).sort(), [...Object.keys(sample("dispatch_document")), "start", "limits", "neighbours"].sort());
+  assert.deepEqual(Object.keys(doc).sort(), [...Object.keys(sample("dispatch_document")), "start", "limits", "neighbours", "reaskLimit"].sort());
   const back = rulesOfDispatch(doc, { offers: { autoOffline: { on: true, missedExclusive: 10 } }, cancelFees: { driverSharePct: 60 } }, zoneDefault("Z001"));
   assert.equal(back.autoOffline.after, 10);
   assert.equal(back.autoOffline.noFixMinutes, 5, "G3-R1: without the key the default 5 minutes stays");
@@ -463,12 +473,13 @@ test("v0.18.11 dispatch start & order: defaults keep today's behaviour; start, o
   for (const zoneId of ["Z001", "FR-PC"]) {
     const base = zoneDefault(zoneId);
     const plain = dispatchDocumentOf(base, zoneId, null) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- test reads the document
+    // v0.18.39 §63: the far reach (contract default 12 km) is always written.
     assert.deepEqual(plain.start, { mode: "auto", nearKm: 2 });
-    assert.deepEqual(plain.limits, { maxPickupEtaMin: 0 });
+    assert.deepEqual(plain.limits, { maxPickupEtaMin: 0, farReachKm: 12 });
     assert.deepEqual(plain.neighbours, { on: false, zoneIds: [] });
     assert.equal(plain.radar.steps, undefined);
     assert.equal(plain.exclusive.steps, undefined);
-    const zone = { ...base, start: { mode: "both" as const, nearKm: 1.5 }, exclusive: { ...base.exclusive, steps: [1, 2] }, limits: { maxPickupKm: 6, maxPickupEtaMin: 12 }, neighbours: { on: true, zoneIds: ["Z002"], afterStep: 2 } };
+    const zone = { ...base, start: { mode: "both" as const, nearKm: 1.5 }, exclusive: { ...base.exclusive, steps: [1, 2] }, limits: { maxPickupKm: 6, maxPickupEtaMin: 12, farReachKm: 12 }, neighbours: { on: true, zoneIds: ["Z002"], afterStep: 2 } };
     const doc = dispatchDocumentOf(zone, zoneId, null);
     const back = rulesOfDispatch(doc, null, zoneDefault(zoneId));
     assert.deepEqual(back.start, zone.start);
@@ -480,7 +491,7 @@ test("v0.18.11 dispatch start & order: defaults keep today's behaviour; start, o
     const old = sample("dispatch_document");
     const read = rulesOfDispatch(old, null, zoneDefault(zoneId));
     assert.deepEqual(read.start, { mode: "auto", nearKm: 2 });
-    assert.deepEqual(read.limits, { maxPickupKm: 0, maxPickupEtaMin: 0 });
+    assert.deepEqual(read.limits, { maxPickupKm: 0, maxPickupEtaMin: 0, farReachKm: 12 });
     assert.equal(read.neighbours.on, false);
   }
 });
@@ -512,15 +523,15 @@ test("G8 (v0.18.10): payment methods go to the server per country (no Google Pay
   for (const put of puts) assert.equal(JSON.stringify(put.body).includes("google_pay"), false, "never Google Pay");
   const paris = puts.find((c) => c.path.includes("rider_app_config") && (c.body as { zoneId?: string }).zoneId === "FR-PC");
   assert.deepEqual(((paris!.body as { document: Doc }).document)["paymentMethods"], ["cash", "apple_pay"]);
-  // Dispatch › Cancellation: the driver's early end re-prices only over these numbers (defaults 2 km / 8 min).
+  // Dispatch › Cancellation: the driver's early end re-prices only over BOTH numbers (defaults 2 km / 10 min, v0.18.33 fix job 5).
   const zone = zoneDefault("Z001");
-  assert.deepEqual(zone.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 8 });
+  assert.deepEqual(zone.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10 });
   const back = rulesOfDispatch(null, { cancelFees: { earlyEnd: { repriceOverKm: 5, repriceOverMin: 999 } } }, zone);
-  assert.deepEqual(back.riderCancel.earlyEnd, { repriceOverKm: 5, repriceOverMin: 8 }, "out of range reads as the default");
+  assert.deepEqual(back.riderCancel.earlyEnd, { repriceOverKm: 5, repriceOverMin: 10 }, "out of range reads as the default");
   // Checker (2): the pay-change cap per country goes into the country rules (default SE 1000 kr).
   assert.deepEqual(countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 }, driverPayChangeMax: 1000 }, null)["driverPayChangeMax"], { amountMinor: 100000, currency: "SEK" });
   const state = appConfigState({ now: "2026-11-01T10:00:00Z" });
-  assert.deepEqual((driverAppConfig("Z001", state) as unknown as { cancelFees: { earlyEnd: unknown } }).cancelFees.earlyEnd, { repriceOverKm: 2, repriceOverMin: 8 });
+  assert.deepEqual((driverAppConfig("Z001", state) as unknown as { cancelFees: { earlyEnd: unknown } }).cancelFees.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10 });
 });
 
 test("live G8 6c: Payment methods read back what the zones serve, not only the country's Standard (Save could not turn a method back on)", async () => {
@@ -797,4 +808,20 @@ test("v0.18.17: Dispatch › Reservations is read back from the zone's driver do
   const bad = rulesOfDispatch(null, { reservations: { minAheadMin: -4, listTo: "everyone" } }, fallback);
   assert.equal(bad.reservation.booking.minAheadMin, 15, "a bad value keeps the default");
   assert.equal(bad.reservation.listTo, fallback.reservation.listTo);
+});
+
+test("v0.18.33 (owner 2026-11-05): 'Offers on a trip from (% of the route)' goes to CountryRules.onTripOffers (default 70) (fail-before: never sent)", () => {
+  const input = { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 } };
+  assert.equal(countryRulesOf("SE", "SEK", input, null)["onTripOffers"], undefined, "nothing set: the server default 70");
+  assert.deepEqual(countryRulesOf("SE", "SEK", { ...input, onTripMinDonePct: 80 }, null)["onTripOffers"], { minRouteDonePct: 80, lateFreeCancelMin: 10 });
+  // Owner Q5: the next trip's free cancel after (min), default 10.
+  assert.deepEqual(countryRulesOf("SE", "SEK", { ...input, onTripMinDonePct: 70, chainLateFreeCancelMin: 15 }, null)["onTripOffers"], { minRouteDonePct: 70, lateFreeCancelMin: 15 });
+});
+
+test("v0.18.29 A2 (fix job 0) (owner G12 Q-D): the wallet credit limit goes into CountryRules in the country's money (SE, FR)", () => {
+  const se = countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [20], driverBonus: { defaultLimit: 150, hardMax: 1000 }, walletCreditMax: 2900 }, null);
+  assert.deepEqual(se["walletCreditMax"], { amountMinor: 290_000, currency: "SEK" });
+  const fr = countryRulesOf("FR", "EUR", { tips: [1], raiseSteps: [2], driverBonus: { defaultLimit: 20, hardMax: 95 }, walletCreditMax: 250 }, null);
+  assert.deepEqual(fr["walletCreditMax"], { amountMinor: 25_000, currency: "EUR" });
+  assert.equal(countryRulesOf("FR", "EUR", { tips: [1], raiseSteps: [2], driverBonus: { defaultLimit: 20, hardMax: 95 } }, null)["walletCreditMax"], undefined);
 });

@@ -67,6 +67,12 @@ export const PICKUP_MOVE_STEP = 10;
 /** The "Pickup move limit" field's bounds from the contract (min, max, step), so the box refuses 2500 m before any send. */
 export const pickupMoveField = (): { min: number; max: number; step: number } => ({ min: PICKUP_MOVE_RANGE[0], max: PICKUP_MOVE_RANGE[1], step: PICKUP_MOVE_STEP });
 
+/** FIX JOB 7 (owner Q9, contract.json#smallFixes.samePoint): "Shortest ride (m)", whole metres 0–1000 (0 = never warn). */
+export const SAME_POINT_RANGE: readonly [number, number] = [0, 1000];
+export function validSamePoint(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= SAME_POINT_RANGE[0] && value <= SAME_POINT_RANGE[1] ? value : null;
+}
+
 /** The limit when it is a whole number inside the contract's range, else null. */
 export function validPickupMove(value: unknown): number | null {
   return typeof value === "number" && Number.isInteger(value) && value >= PICKUP_MOVE_RANGE[0] && value <= PICKUP_MOVE_RANGE[1] ? value : null;

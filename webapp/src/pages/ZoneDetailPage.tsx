@@ -58,6 +58,8 @@ import { useLiveZoneList, useLiveZonesFailure } from "../live/LiveZones";
 import { ErrorLine } from "../live/ui";
 import { liveIssues } from "../zones/liveIssues";
 import { LiveOpenClose, LiveZoneFields } from "./LiveZoneActions";
+import { LiveQueueArea } from "../live/LiveQueueArea";
+import { DateInput } from "../ui/DateInput";
 
 type TabId = "shape" | "settings" | "prices" | "dispatch" | "pickups" | "airport" | "hours" | "between" | "preview" | "history";
 
@@ -84,7 +86,8 @@ function TextField({ label, value, onCommit, type = "text", disabled, placeholde
   return (
     <label className="field">
       {trx(label)}
-      <input aria-label={label} type={type} value={text} disabled={disabled} placeholder={placeholder} onChange={(event) => setText(event.target.value)} onBlur={() => { if (text !== value) onCommit(text); }} onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }} />
+      {/* FIX JOB 7 B-l: a date in the admin's language format, saved at once (ISO). */}
+      {type === "date" ? <DateInput aria-label={label} value={value} disabled={disabled} onChange={(event) => { if (event.target.value !== value) onCommit(event.target.value); }} /> : <input aria-label={label} type={type} value={text} disabled={disabled} placeholder={placeholder} onChange={(event) => setText(event.target.value)} onBlur={() => { if (text !== value) onCommit(text); }} onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }} />}
     </label>
   );
 }
@@ -294,6 +297,8 @@ export function ZoneDetailPage() {
               <div className="zd-col">
                 {server ? <LiveZoneFields zone={server} disabled={!canEdit} /> : null}
                 <p className="fine">{tr("The outline is drawn on the map: Edit on the map, draw, then Save outline.")}</p>
+                {/* Fix job 9 (§60): an airport zone's real queue area (server), not the demo's queue settings. */}
+                {server ? <LiveQueueArea zone={server} disabled={!canEdit} /> : null}
               </div>
             ) : (
             <div className="zd-col">

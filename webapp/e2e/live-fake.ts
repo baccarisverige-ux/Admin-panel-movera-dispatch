@@ -262,6 +262,9 @@ export type TripState = {
   tickets: Record<string, unknown>[];
   supportSettings?: Record<string, unknown>;
   alertBook?: Record<string, unknown>;
+  /** v0.18.20: the alerts the fake server "found" besides the open incidents (default none), and those marked done. */
+  serverAlerts?: Record<string, unknown>[];
+  closedAlerts?: string[];
   incidentSettings?: Record<string, unknown>;
   reservationPolicy?: { includedWaitingMinutes: number; rev: number };
   reviewRules?: Record<string, unknown>;
@@ -463,7 +466,18 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (p.startsWith("/api/v1/admin/alerts/quiet")) book.quiet = body;
       if (p === "/api/v1/admin/alerts/settings") { book.settings = body.settings; book.rev += 1; }
       if (p === "/api/v1/admin/alerts/rules") { book.rules = body.rules; book.rev += 1; }
-      return json(route, 200, book);
+      // v0.18.20 server-side alerts (contract.json#alertDesk.serverDetection): the server finds them; done closes them.
+      if (verb && verb[2] === "done") state.closedAlerts = [...(state.closedAlerts ?? []), decodeURIComponent(verb[1]!)];
+      const found = [
+        ...state.incidents.filter((i) => (i.status === "open" || i.status === "investigating") && (i.kind !== "ride_check" || (i as { alarm?: boolean }).alarm)).map((i) => {
+          const kind = i.kind === "driver_silent" ? "car_lost" : i.kind === "ride_check" ? "ride_check" : "sos";
+          const who = String((i as { riderId?: string; driverId?: string }).riderId ?? (i as { driverId?: string }).driverId ?? "");
+          const title = kind === "car_lost" ? { t: "Car lost: {0}", a: [who] } : kind === "ride_check" ? { t: "Ride check: {0}", a: ["Asked for help"], x: [0] } : { t: "SOS from {0}", a: [who] };
+          return { alertId: `${kind}:${i.incidentId}.k1`, kind, level: "critical", title: title.t.replace("{0}", String(title.a[0])), titleT: title, zoneId: i.zoneId, country: "SE", since: i.openedAt ?? "2026-10-27T09:50:00Z", state: "open", ref: { incidentId: i.incidentId, tripId: i.tripId } };
+        }),
+        ...(state.serverAlerts ?? []),
+      ].filter((a) => !(state.closedAlerts ?? []).includes(a.alertId));
+      return json(route, 200, { ...book, alerts: found });
     }
     // v0.18.15 support desk (contract.json#supportDesk).
     if (p === "/api/v1/admin/support/settings") {

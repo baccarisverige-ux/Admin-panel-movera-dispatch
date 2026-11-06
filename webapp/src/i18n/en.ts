@@ -24,6 +24,18 @@ import { enC1ContractV072Part4 } from "./en/c1-contract-v072-part4.ts";
 import { enC2RequestLimits } from "./en/c2-request-limits.ts";
 import { enC3RealAppPreview } from "./en/c3-real-app-preview.ts";
 import { enC4PhoneData } from "./en/c4-phone-data.ts";
+import { enC5AfterTestRules } from "./en/c5-after-test-rules.ts";
+import { enC2RidersPaymentsPayouts } from "./en/c2-riders-payments-payouts.ts";
+import { enC2Job7SmallFixes } from "./en/c2-job7-small-fixes.ts";
+import { enC2ServerAlerts } from "./en/c2-server-alerts.ts";
+import { enC5BookedRideLive } from "./en/c5-booked-ride-live.ts";
+import { enC2AdminLiveDrivers } from "./en/c2-admin-live-drivers.ts";
+import { enC6Job4TakeBack } from "./en/c6-job4-take-back.ts";
+import { enC7AirportQueue } from "./en/c7-airport-queue.ts";
+import { enC6InAppCalls } from "./en/c6-in-app-calls.ts";
+import { enC8NoDriverNearby } from "./en/c8-no-driver-nearby.ts";
+import { enC9BlockedPairs } from "./en/c9-blocked-pairs.ts";
+import { enC9SameAddress } from "./en/c9-same-address.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -54,6 +66,18 @@ export const en = {
   ...enC2RequestLimits,
   ...enC3RealAppPreview,
   ...enC4PhoneData,
+  ...enC5AfterTestRules,
+  ...enC2RidersPaymentsPayouts,
+  ...enC2Job7SmallFixes,
+  ...enC2ServerAlerts,
+  ...enC5BookedRideLive,
+  ...enC2AdminLiveDrivers,
+  ...enC6Job4TakeBack,
+  ...enC7AirportQueue,
+  ...enC6InAppCalls,
+  ...enC8NoDriverNearby,
+  ...enC9BlockedPairs,
+  ...enC9SameAddress,
 } as const;
 
 export type MessageKey = keyof typeof en;

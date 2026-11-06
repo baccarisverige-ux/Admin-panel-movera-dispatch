@@ -8,6 +8,12 @@
 .al-status.new { color: #8a1f1f; }
 .al-status.taken { color: #13723f; }
 .al-status.snoozed { color: #5b47c9; }
+/* v0.18.20 owner A2: solved by itself = green, still in the list until marked done. */
+.al-status.solved { color: #13723f; }
+.al-row.solved { border-left-color: #1f9d55; background: #eefaf2; }
+.al-row.solved .al-level { color: #1f9d55; }
+.al-detail.solved { border-top: 4px solid #1f9d55; }
+.al-solved-text { color: #13723f; font-weight: 700; }
 .al-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .al-actions.compact { flex: none; }
 .al-actions .dash-btn.danger { background: var(--crit); border-color: var(--crit); color: #fff; }
@@ -209,3 +215,5 @@
 .dx-alerts li.rc-live .al-status { color: #fff; opacity: .9; }
 .dx-alerts li.rc-live .dash-btn.danger { background: #fff; border-color: #fff; color: #a51f1f; }
 .dx-alerts li.rc-live .state-line { color: #fff; font-size: 12px; }
+.al-zone-limits { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.al-zone-limits > b { flex: 1 0 100%; font-size: 13px; }

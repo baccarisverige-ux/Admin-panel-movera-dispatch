@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { LiveListBar } from "../live/LiveListBar";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { AlertTriangle, ArrowLeft, Bookmark, CarFront, CheckCircle2, Eye, Flag, Layers, Search, Settings2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bookmark, CarFront, CheckCircle2, Eye, Flag, Layers, MapPinOff, Search, Settings2, XCircle } from "lucide-react";
 import { useDrivers, useSlice, useTrips } from "../api/hooks";
 import type { TripRecord as DemoRecord } from "../trips/file";
 import { useSession } from "../auth/SessionContext";
@@ -12,7 +12,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
 import { MapPanel } from "../dispatch/maps";
 import { GROUPS, TRIP_OPS_KEY, emptyTripOps, flaggedIds, groupOf, listStats, normalizeTripOps, routeOf, saveView, type TripGroup, type TripOps } from "../trips/file";
-import { categoryOf, fareBreakdown, paymentOf, startedAt, statusLabel, TRIP_STATUSES, type PaymentState } from "../trips/present";
+import { bookedNowLive, categoryOf, noDriverInReach, fareBreakdown, paymentOf, startedAt, statusLabel, TRIP_STATUSES, type PaymentState } from "../trips/present";
 import { RouteMap } from "../trips/RouteMap";
 import { TripSettingsView } from "../trips/TripSettings";
 import { CommandButton } from "../ui/CommandButton";
@@ -21,8 +21,11 @@ import { RiderAssignName } from "../dispatch/AssignPanel";
 import { canAssign as canAssignTrip } from "../dispatch/assign";
 import { Modal } from "../ui/Modal";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { StatusDot } from "../ui/kit";
+import { statusPresentation } from "../domain/labels";
 import { isLiveData, liveTripOf } from "../live/realData";
 import { ETA_EVERY_SECONDS, etaIsStale, etaLine, isLiveWithDriver } from "../live/tripLive";
+import { DateInput } from "../ui/DateInput";
 
 const PAYMENTS: PaymentState[] = ["pending", "authorized", "captured", "failed", "refunded"];
 
@@ -241,11 +244,11 @@ export function TripsPage() {
         </label>
         <label className="op-field">
           <span>{tr("From")}</span>
-          <input aria-label={tr("From date")} type="date" value={from} onChange={(event) => { setDates({ ...dates, from: event.target.value }); set({ from: event.target.value }); }} />
+          <DateInput aria-label={tr("From date")} value={from} onChange={(event) => { setDates({ ...dates, from: event.target.value }); set({ from: event.target.value }); }} />
         </label>
         <label className="op-field">
           <span>{tr("To")}</span>
-          <input aria-label={tr("To date")} type="date" value={to} onChange={(event) => { setDates({ ...dates, to: event.target.value }); set({ to: event.target.value }); }} />
+          <DateInput aria-label={tr("To date")} value={to} onChange={(event) => { setDates({ ...dates, to: event.target.value }); set({ to: event.target.value }); }} />
         </label>
         <span className="rp-bar-actions">
           {views.length ? (
@@ -317,6 +320,13 @@ function paidWaitingCell(trip: DemoRecord): string {
  */
 function liveStatusCell(trip: DemoRecord): string | { text: string; node: ReactNode } {
   const live = liveTripOf(trip);
+  // v0.18.39 §63 (fix job N2): a searching trip whose rider was shown "No driver nearby".
+  if (live && noDriverInReach(trip.status, live.searchStep)) {
+    const words = statusLabel(trip.status);
+    const dot = statusPresentation(trip.status);
+    // Screenshot review (admin-239): keep the status dot; the mark is a small icon with a tooltip so the row never widens.
+    return { text: `${words} · ${tr("No driver in reach")}`, node: <span className="op-nd-cell"><span className="op-nd-mark" role="img" data-testid={`trip-no-driver-in-reach-${trip.id}`} title={tr("No driver in reach")} aria-label={tr("No driver in reach")}><MapPinOff size={14} aria-hidden="true" /></span>{dot ? <StatusDot tone={dot.tone}>{trx(dot.label)}</StatusDot> : words}</span> };
+  }
   if (!live || !isLiveWithDriver(trip.status, trip.driverId)) return trip.status;
   const eta = live.eta;
   const line = eta ? etaLine(eta, uiLocale()) : null;
@@ -328,6 +338,7 @@ function liveStatusCell(trip: DemoRecord): string | { text: string; node: ReactN
     node: (
       <span className="op-live-cell" data-testid={`trip-live-${trip.id}`}>
         <span>{words}</span>
+        {bookedNowLive(trip.status, live.kind) ? <small className="op-status scheduled" data-testid={`trip-booked-now-live-${trip.id}`}>{tr("Booked ride · now live")}</small> : null}
         {line ? <small className={eta && etaIsStale(eta, Date.now()) ? "op-eta stale" : "op-eta"} title={eta?.source === "estimate" ? tr("Straight-line estimate, no road route yet.") : undefined}>{line}</small> : <small className="op-eta">{tr("No position yet")}</small>}
         {live.driverLocation ? <Link to={`/trips/${trip.id}#route`} onClick={(event) => event.stopPropagation()} aria-label={tr("Map of {0}", [trip.id])}>{tr("Map")}</Link> : null}
       </span>

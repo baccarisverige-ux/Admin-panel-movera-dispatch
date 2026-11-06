@@ -57,7 +57,8 @@ export function useRecords(name: string, scope?: string | null, options: { refet
   const refetchInterval = useLiveRefetch(name, options.refetchMs, options.follow);
   const query = useQuery({
     queryKey,
-    queryFn: () => readTracked(api, queryKey, () => api.list(name, effectiveScope)),
+    // v0.18.34 §65 (A10): the signal is aborted when the key (country / zones) changes, so the old calls stop.
+    queryFn: ({ signal }) => readTracked(api, queryKey, () => api.list(name, effectiveScope, signal)),
     refetchInterval,
     ...(options.observe ? { refetchOnMount: false, retryOnMount: false } : {}),
   });
@@ -115,11 +116,7 @@ export function useAudit(refetchMs?: number) {
   return useQuery({ queryKey: ["audit"], queryFn: () => readTracked(api, ["audit"], () => api.audit()), refetchInterval: refetchMs });
 }
 
-export function useApprovals(refetchMs?: number) {
-  const api = useAdminApi();
-  const refetchInterval = useLiveRefetch("approvals", refetchMs);
-  return useQuery({ queryKey: ["approvals"], queryFn: () => readTracked(api, ["approvals"], () => api.approvals()), refetchInterval });
-}
+// A2 leftovers (owner Q1 "One admin always"): no second-admin approvals list is read any more.
 
 export type CommandPhase = "idle" | "submitting" | "checking" | "committed" | "rejected" | "pending_approval";
 
@@ -327,7 +324,7 @@ export function useCommand(action: string) {
   };
 }
 
-export function useSlice<T>(key: string, fallback: T, options: { enabled?: boolean } = {}) {
+export function useSlice<T>(key: string, fallback: T, options: { enabled?: boolean; refetchMs?: number } = {}) {
   const api = useAdminApi();
   const { agent }=useSession();
   const [params]=useSearchParams();
@@ -335,7 +332,7 @@ export function useSlice<T>(key: string, fallback: T, options: { enabled?: boole
   const scope=agent ? { ...agent.scope, zones: requested ? canUseZone(agent,requested) ? parseZoneList(requested) : ["__scope-denied__"] : agent.scope.zones } : undefined;
   // A1 live fix 3: per-country books (alert, incident, review settings on live) are read again when the country changes.
   const queryKey = ["slice", key, agent?.id, JSON.stringify(scope), params.get("country") ?? ""];
-  const query = useQuery({ queryKey, queryFn: () => readTracked(api, queryKey, () => api.readSlice(key, fallback, agent && scope ? { actorId:agent.id,role:agent.role,scope } : undefined)), enabled:Boolean(agent) && options.enabled !== false });
+  const query = useQuery({ queryKey, queryFn: () => readTracked(api, queryKey, () => api.readSlice(key, fallback, agent && scope ? { actorId:agent.id,role:agent.role,scope } : undefined)), enabled:Boolean(agent) && options.enabled !== false, ...(options.refetchMs ? { refetchInterval: options.refetchMs } : {}) });
   const command = useCommand(`admin.${key}.save`);
   return {
     value: query.data ?? fallback,

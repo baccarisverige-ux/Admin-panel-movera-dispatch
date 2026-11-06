@@ -1,5 +1,7 @@
 import { MARKETS, market, type MarketId } from "../markets/markets.ts";
 import { tr } from "../i18n/core.ts";
+import { CALL_DEFAULTS, callSettingsIssues, callSettingsLines, callSettingsOf, type CallSettings } from "./callSettings.ts";
+import { DONT_MATCH_DEFAULTS, dontMatchIssues, dontMatchLines, dontMatchOf, type DontMatchSettings } from "./dontMatchSettings.ts";
 import { fromSek, isLargePriceChange, roundTo, tipMax } from "../pricing/zonePricing.ts";
 import { RAISE_CAP_SEK } from "../dispatch/rules.ts";
 import { APP_LANGUAGES, CONFIG_DEFAULTS, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePaymentMethod } from "./zoneDefaults.ts";
@@ -27,6 +29,8 @@ export type CountrySettings = {
   /** The most an admin may add to a trip for the driver (Q16, Q17). Never above the country's hard max. */
   driverBonusLimit: number;
   paymentMethods: Record<ZonePaymentMethod, boolean>;
+  /** v0.18.33 (fix job 5, owner Q6): "Use wallet first" → RiderAppConfig.wallet.usedFirst of the country's zones (default on). */
+  walletFirst: boolean;
   languages: Record<LanguageApp, AppLanguage>;
   /**
    * Live G8 fix 1 (decision driver-g8.md #2, admin ticks real per country): a method some zones of the country serve
@@ -50,6 +54,16 @@ export type CountrySettings = {
    * emergency contacts per rider or driver. Defaults 50 and 10.
    */
   personLimits: PersonLimits;
+  /** v0.18.33 (owner 2026-11-05): a driver on a trip gets Exclusives only after this % of his route (CountryRules.onTripOffers, default 70). */
+  onTripMinDonePct: number;
+  /** v0.18.33 (owner Q5 2026-11-05): minutes after accept from which the rider of a chained trip may cancel free (default 10). */
+  chainLateFreeCancelMin: number;
+  /** v0.18.29 A2 (fix job 0) (owner G12 Q-D "Max 250 euro and equivalent"): the largest single Add money to wallet (CountryRules.walletCreditMax), local money. */
+  walletCreditMax: number;
+  /** v0.18.38 §62 (fix job 8, owner G15 "In-app calls only"): CountryRules.calls — on, mode, window after the trip, ring time, longest call. */
+  calls: CallSettings;
+  /** v0.18.43 §64 (fix job 10): CountryRules.dontMatchAgain — the 1-star "don't match again" tick in both apps. */
+  dontMatchAgain: DontMatchSettings;
 };
 export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };
 export const PERSON_LIMITS_DEFAULT: PersonLimits = { savedPlacesPerPerson: 50, emergencyContactsPerPerson: 10 };
@@ -63,6 +77,8 @@ export function personLimitsOf(raw: unknown): PersonLimits {
   };
   return { savedPlacesPerPerson: pick("savedPlacesPerPerson"), emergencyContactsPerPerson: pick("emergencyContactsPerPerson") };
 }
+/** contract.json#walletCredit.defaultMax (major units). */
+export const WALLET_CREDIT_MAX: Record<MarketId, number> = { SE: 2900, FR: 250, TN: 800 };
 export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 300 };
 export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number };
 export const TIP_FLAGS = ["cashAfterTrip", "customAmount"] as const;
@@ -80,8 +96,13 @@ export type CountrySettingsBook = { draftRev: number; countries: Record<MarketId
 /** v0.8.1: the live panel's Tips & limits per zone and Standard (read when the tab opens). */
 export const ZONE_RULES_KEY = "countrySettingsZones";
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits"] as const satisfies readonly (keyof CountrySettings)[];
-export const SETTINGS_FIELDS = ["paymentMethods", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
+/** v0.18.33 (owner answer 2026-11-05, contract.json#configDefaults.onTripOffers): 70 % of the route to the drop-off. */
+export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
+/** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
+export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
+
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "dontMatchAgain"] as const satisfies readonly (keyof CountrySettings)[];
+export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
 export const LANGUAGE_LABEL: Record<AppLanguage, string> = { en: "English", fr: "French", sv: "Swedish" };
@@ -121,10 +142,16 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     promoCap: null,
     driverBonusLimit: toMajor(defaults.driverBonus.defaultLimit.amountMinor, country),
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, true])) as Record<ZonePaymentMethod, boolean>,
+    walletFirst: true,
     languages: { rider: defaults.defaultLanguage, driver: defaults.defaultLanguage, admin: defaults.defaultLanguage },
     tipRules: { cashAfterTrip: false, customAmount: false, customMax: TIP_CUSTOM_MAX[country] },
     driverPayChangeMax: DRIVER_PAY_CHANGE_MAX[country],
     personLimits: { ...PERSON_LIMITS_DEFAULT },
+    onTripMinDonePct: ON_TRIP_MIN_DONE_PCT_DEFAULT,
+    chainLateFreeCancelMin: CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT,
+    walletCreditMax: WALLET_CREDIT_MAX[country],
+    calls: { ...CALL_DEFAULTS },
+    dontMatchAgain: { ...DONT_MATCH_DEFAULTS },
   };
 }
 
@@ -157,10 +184,16 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     promoCap: raw.promoCap === null ? null : finite(raw.promoCap) ? raw.promoCap : base.promoCap,
     driverBonusLimit: finite(raw.driverBonusLimit) ? raw.driverBonusLimit : base.driverBonusLimit,
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, typeof methods[method] === "boolean" ? methods[method] : base.paymentMethods[method]])) as Record<ZonePaymentMethod, boolean>,
+    walletFirst: typeof raw.walletFirst === "boolean" ? raw.walletFirst : base.walletFirst,
     languages: Object.fromEntries(APP_IDS.map((app) => [app, (APP_LANGUAGES as readonly unknown[]).includes(languages[app]) ? languages[app] : base.languages[app]])) as Record<LanguageApp, AppLanguage>,
     tipRules: completeTipRules(raw.tipRules, base.tipRules),
     driverPayChangeMax: finite(raw.driverPayChangeMax) && raw.driverPayChangeMax > 0 ? raw.driverPayChangeMax : base.driverPayChangeMax,
     personLimits: raw.personLimits ? { ...base.personLimits, ...(raw.personLimits as PersonLimits) } : base.personLimits,
+    onTripMinDonePct: finite(raw.onTripMinDonePct) ? raw.onTripMinDonePct : base.onTripMinDonePct,
+    chainLateFreeCancelMin: finite(raw.chainLateFreeCancelMin) ? raw.chainLateFreeCancelMin : base.chainLateFreeCancelMin,
+    walletCreditMax: finite(raw.walletCreditMax) && raw.walletCreditMax > 0 ? raw.walletCreditMax : base.walletCreditMax,
+    calls: callSettingsOf(raw.calls),
+    dontMatchAgain: dontMatchOf(raw.dontMatchAgain),
     ...mixedOf(raw.mixedMethods),
     ...mixedTipOf(raw.mixedTipRules),
   };
@@ -202,6 +235,11 @@ function mixedOf(stored: unknown): Pick<CountrySettings, "mixedMethods"> {
 }
 
 /** Live G8 fix 1: the methods whose value or mixed state differs between two settings of a country. */
+/** v0.18.33: "Use wallet first" changed for the country. */
+export function walletFirstChanged(before: CountrySettings, after: CountrySettings): boolean {
+  return before.walletFirst !== after.walletFirst;
+}
+
 export function methodsChanged(before: CountrySettings, after: CountrySettings): boolean {
   return ZONE_PAYMENT_METHODS.some((method) => before.paymentMethods[method] !== after.paymentMethods[method] || Boolean(before.mixedMethods?.[method]?.length) !== Boolean(after.mixedMethods?.[method]?.length));
 }
@@ -280,6 +318,12 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   if (!ZONE_PAYMENT_METHODS.some((method) => settings.paymentMethods[method] || settings.mixedMethods?.[method]?.length)) issues.push(`${name}: at least one payment method must be on.`);
   for (const app of APP_IDS) if (!(APP_LANGUAGES as readonly string[]).includes(settings.languages[app])) issues.push(`${name}: choose a language for the ${APP_LABEL[app].toLowerCase()}.`);
   if (!(settings.tipRules.customMax > 0) || settings.tipRules.customMax > TIP_CUSTOM_MAX[country] * 10) issues.push(`${name}: the highest typed tip must be more than 0 and at most ${TIP_CUSTOM_MAX[country] * 10}.`);
+  // v0.18.33: CountryRules.onTripOffers.minRouteDonePct, a whole percent 0–100.
+  if (!Number.isInteger(settings.onTripMinDonePct) || settings.onTripMinDonePct < 0 || settings.onTripMinDonePct > 100) issues.push(tr("{0}: offers on a trip must start at a whole percent from 0 to 100.", [name]));
+  if (!Number.isInteger(settings.chainLateFreeCancelMin) || settings.chainLateFreeCancelMin < 0 || settings.chainLateFreeCancelMin > 120) issues.push(tr("{0}: free cancel of a next trip must start at 0 to 120 minutes.", [name]));
+  // v0.18.38 §62: CountryRules.calls ranges.
+  issues.push(...callSettingsIssues(name, settings.calls));
+  issues.push(...dontMatchIssues(name, settings.dontMatchAgain));
   // v0.18.26: limits per person, whole numbers in their range.
   for (const key of ["savedPlacesPerPerson", "emergencyContactsPerPerson"] as const) {
     const value = settings.personLimits[key];
@@ -304,6 +348,10 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   for (const method of ZONE_PAYMENT_METHODS) if (before.mixedMethods?.[method]?.length && !after.mixedMethods?.[method]?.length) lines.push(`${PAYMENT_METHOD_LABEL[method]}: mixed → ${after.paymentMethods[method] ? "on" : "off"}`);
     else if (before.paymentMethods[method] !== after.paymentMethods[method]) lines.push(`${PAYMENT_METHOD_LABEL[method]}: ${before.paymentMethods[method] ? "on" : "off"} → ${after.paymentMethods[method] ? "on" : "off"}`);
   for (const app of APP_IDS) if (before.languages[app] !== after.languages[app]) lines.push(`${APP_LABEL[app]} default language: ${before.languages[app]} → ${after.languages[app]}`);
+  if (before.chainLateFreeCancelMin !== after.chainLateFreeCancelMin) lines.push(tr("Next trip free cancel after: {0} min → {1} min", [before.chainLateFreeCancelMin, after.chainLateFreeCancelMin]));
+  if (before.onTripMinDonePct !== after.onTripMinDonePct) lines.push(tr("Offers on a trip from: {0} % → {1} %", [before.onTripMinDonePct, after.onTripMinDonePct]));
+  lines.push(...callSettingsLines(before.calls, after.calls));
+  lines.push(...dontMatchLines(before.dontMatchAgain, after.dontMatchAgain));
   if (before.personLimits.savedPlacesPerPerson !== after.personLimits.savedPlacesPerPerson) lines.push(tr("Saved places per person: {0} → {1}", [before.personLimits.savedPlacesPerPerson, after.personLimits.savedPlacesPerPerson]));
   if (before.personLimits.emergencyContactsPerPerson !== after.personLimits.emergencyContactsPerPerson) lines.push(tr("Emergency contacts per person: {0} → {1}", [before.personLimits.emergencyContactsPerPerson, after.personLimits.emergencyContactsPerPerson]));
   return lines;

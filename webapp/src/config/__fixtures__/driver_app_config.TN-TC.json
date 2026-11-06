@@ -123,7 +123,8 @@
   ],
   "booking": {
     "maxStops": 3,
-    "maxPickupMoveMeters": 200
+    "maxPickupMoveMeters": 200,
+    "samePointWarnMeters": 100
   },
   "offers": {
     "radarSeconds": 15,
@@ -637,7 +638,7 @@
     "driverSharePct": 100,
     "earlyEnd": {
       "repriceOverKm": 2,
-      "repriceOverMin": 8
+      "repriceOverMin": 10
     }
   },
   "waiting": {
@@ -904,6 +905,10 @@
     "listAtTimeMin": 30,
     "changeAnswerMin": 15,
     "arriveEarlyMin": 10,
+    "takeBackLateMin": 5,
+    "takeBackKeepIfDriveMin": 10,
+    "takeBackUntilMinBeforePickup": 15,
+    "noDriverStopAfterMin": 15,
     "raiseFare": true,
     "raiseMax": null
   },
@@ -958,7 +963,9 @@
     "on": true,
     "headingPct": 80,
     "notHeadingMinutes": 2,
-    "reassign": true
+    "reassign": false,
+    "notice": true,
+    "noticeEveryMin": 1
   },
   "rideCheck": {
     "on": true,

@@ -14,14 +14,15 @@ import { DestinationSettings } from "./DestinationSettings";
 import { CancelRateCard, OfferCardSettings, RaiseLimitCard } from "./OfferSettings";
 import { ExclusiveRules, RadarRules } from "./OfferSections";
 import { MovedCard, offersLink } from "./MovedCard";
-import { PICKUP_MOVE_DEFAULT, pickupMoveField } from "./offerRules";
+import { CONFIG_DEFAULTS } from "../config/zoneDefaults";
+import { PICKUP_MOVE_DEFAULT, pickupMoveField, SAME_POINT_RANGE } from "./offerRules";
 import { PickupWaitCard, type WaitBaseRow } from "./PickupWaitCard";
 import { stopPriceText } from "./stopPrice";
 import { RiderCancelFeesCard } from "./CancelFeeTable";
 import type { CancelFeeKind, CancelFeeTable as FeeTable, FeeCategory } from "./cancelFees";
 import type { PickupWait } from "./offers";
 import {
-  ALERTS, EXTRAS, FACTORS, PICKUP_MOVE_MAX_METERS, WAIT_KINDS,
+  ALERTS, EARLY_END_DEFAULT, EXTRAS, FACTORS, PICKUP_MOVE_MAX_METERS, WAIT_KINDS,
   type CountryDispatch, type DriverGroup, type ExtraId, type TabId, type WaitKind, type WaitStep, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx } from "../i18n";
@@ -178,7 +179,7 @@ function Best({ zone, onChange, disabled, otherZones }: Props) {
           ))}
           {steps.length < 5 ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled} onClick={() => set({ radius: { ...zone.radius, steps: [...steps, Math.min(50, (steps[steps.length - 1] ?? 3) + 3)] } })}>{trn("{0} Add a step", <Plus size={13} aria-hidden="true" />)}</button> : null}
         </div>
-        <Row label={tr("Longest search")} help={tr("After this, the search stops.")}>
+        <Row label={tr("Longest search")} help={tr("Booked rides: after this the search starts again. Live rides keep searching until the rider cancels.")}>
           <Num label={tr("Longest search")} value={zone.radius.maxWaitMin} unit="min" min={1} max={30} disabled={disabled} onChange={(maxWaitMin) => set({ radius: { ...zone.radius, maxWaitMin } })} />
         </Row>
       </Card>
@@ -189,6 +190,21 @@ function Best({ zone, onChange, disabled, otherZones }: Props) {
         </Row>
         <Row label={tr("Longest pickup time")} help={tr("Minutes for the driver to reach the pickup, estimated from the distance at 24 km/h (not the live route). 0 = no limit.")}>
           <Num label={tr("Longest pickup time")} value={zone.limits.maxPickupEtaMin} unit="min" min={0} max={60} disabled={disabled} onChange={(maxPickupEtaMin) => set({ limits: { ...zone.limits, maxPickupEtaMin: Math.round(maxPickupEtaMin) } })} />
+        </Row>
+        <Row label={tr("Far reach")} help={tr("When nobody new is free inside the widest step, the search tries one more step this far. The widest step or less = off.")}>
+          <Num label={tr("Far reach")} value={zone.limits.farReachKm} unit="km" step={0.5} min={0.5} max={50} disabled={disabled} onChange={(farReachKm) => set({ limits: { ...zone.limits, farReachKm } })} />
+        </Row>
+        <Row label={tr("Ask one driver at most")} help={tr("A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.")}>
+          <Num label={tr("Ask one driver at most, offers")} value={zone.reaskLimit} unit="offers" min={1} max={5} disabled={disabled} onChange={(reaskLimit) => set({ reaskLimit: Math.round(reaskLimit) })} />
+        </Row>
+      </Card>
+
+      <Card title={tr("No driver nearby")} tone="blue" icon={<MapPin size={18} />} help={tr("A live ride with no driver after this time: the rider sees the message once, with Keep waiting and Cancel free. The search goes on until the rider cancels. Admins get an alert at the same moment.")} off={!zone.noDriverNearby.on} aside={<Switch label={tr("No driver nearby")} on={zone.noDriverNearby.on} disabled={disabled} onChange={(on) => set({ noDriverNearby: { ...zone.noDriverNearby, on } })} />}>
+        <Row label={tr("Show after")}>
+          <Num label={tr("Show 'No driver nearby' after")} value={Math.round(zone.noDriverNearby.afterSec / 60)} unit="min" min={1} max={30} disabled={disabled || !zone.noDriverNearby.on} onChange={(minutes) => set({ noDriverNearby: { ...zone.noDriverNearby, afterSec: Math.round(minutes) * 60 } })} />
+        </Row>
+        <Row label={tr("Message")} help={tr("The rider app shows it in the rider's language; this text is the fallback.")}>
+          <input className="dx-text" aria-label={tr("'No driver nearby' message")} value={zone.noDriverNearby.message} maxLength={300} disabled={disabled || !zone.noDriverNearby.on} onChange={(event) => set({ noDriverNearby: { ...zone.noDriverNearby, message: event.target.value } })} />
         </Row>
       </Card>
 
@@ -325,6 +341,13 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         </Row>
       </Card>
 
+      <Card title={tr("Shortest ride")} tone="purple" icon={<Move size={18} />} help={tr("When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this.")}>
+        {/* FIX JOB 7 (owner Q9 "Warn him but can accept booking", contract v0.18.30): default 100 m, 0 = never warn. */}
+        <Row label={tr("Shortest ride (m)")} help={tr("0 means never warn. At most {0} m. Usual value {1} m.", [SAME_POINT_RANGE[1], CONFIG_DEFAULTS.samePointWarnMeters])}>
+          <Num label={tr("Shortest ride (m)")} value={zone.samePoint?.warnMeters ?? CONFIG_DEFAULTS.samePointWarnMeters} unit="m" step={10} min={SAME_POINT_RANGE[0]} max={SAME_POINT_RANGE[1]} disabled={disabled} onChange={(warnMeters) => set({ samePoint: { warnMeters: Math.round(warnMeters) } })} />
+        </Row>
+      </Card>
+
       <Card title={tr("Driver cancels after accepting")} tone="orange" icon={<UserX size={18} />} help={tr("It only counts in the driver's cancel rate, and the ride searches again.")} off={!zone.driverCancel.on} aside={<Switch label={tr("Search again")} on={zone.driverCancel.on} disabled={disabled} onChange={(on) => set({ driverCancel: { ...zone.driverCancel, on } })} />}>
         <Row label={tr("Lower Movera's commission on that ride")} help={tr("The rider pays the same. The next driver earns more, so it is taken faster.")}>
           <Num label={tr("Lower commission after a driver cancel")} value={zone.driverCancel.commissionCutPct} unit="% lower" min={0} max={30} disabled={disabled || !zone.driverCancel.on} onChange={(commissionCutPct) => set({ driverCancel: { ...zone.driverCancel, commissionCutPct } })} />
@@ -342,8 +365,8 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
       </Card>
 
       <Card title={tr("Driver ends the trip early")} tone="green" icon={<Shield size={18} />} help={tr("When the driver finishes or cancels with the rider on board before the drop-off, the paid stop waiting is always kept. The price is worked out again only when the trip is shorter than booked by more than these numbers; otherwise the booked price stands.")}>
-        <Row label={tr("New price only when shorter by more than (km)")} help={tr("Default 2 km.")}><Num label={tr("New price only when shorter by more than (km)")} value={zone.riderCancel.earlyEnd?.repriceOverKm ?? 2} unit="km" min={0} max={50} disabled={disabled} onChange={(repriceOverKm) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? { repriceOverKm: 2, repriceOverMin: 8 }), repriceOverKm } } })} /></Row>
-        <Row label={tr("… or shorter by more than (minutes)")} help={tr("Default 8 minutes.")}><Num label={tr("… or shorter by more than (minutes)")} value={zone.riderCancel.earlyEnd?.repriceOverMin ?? 8} unit="min" min={0} max={120} disabled={disabled} onChange={(repriceOverMin) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? { repriceOverKm: 2, repriceOverMin: 8 }), repriceOverMin } } })} /></Row>
+        <Row label={tr("New price only when BOTH shorter by more than (km)")} help={tr("Default 2 km.")}><Num label={tr("New price only when BOTH shorter by more than (km)")} value={zone.riderCancel.earlyEnd?.repriceOverKm ?? 2} unit="km" min={0} max={50} disabled={disabled} onChange={(repriceOverKm) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? EARLY_END_DEFAULT), repriceOverKm } } })} /></Row>
+        <Row label={tr("… and shorter by more than (minutes)")} help={tr("Default 10 minutes. Both must be passed for a new price.")}><Num label={tr("… and shorter by more than (minutes)")} value={zone.riderCancel.earlyEnd?.repriceOverMin ?? EARLY_END_DEFAULT.repriceOverMin} unit="min" min={0} max={120} disabled={disabled} onChange={(repriceOverMin) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? EARLY_END_DEFAULT), repriceOverMin } } })} /></Row>
       </Card>
 
       <RiderCancelFeesCard zone={zone} onChange={onChange} disabled={disabled} symbol={symbol} money={money} countryId={countryId} otherZones={otherZones} onCopyCancelFees={onCopyCancelFees} categories={feeCategories} tab={feeTab} onTab={onFeeTab} />

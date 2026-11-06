@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   BadgeCheck,
-  Ban,
   CalendarDays,
   CreditCard,
   Gift,
@@ -38,9 +37,7 @@ import {
   addLostItem,
   advanceLostItem,
   assign,
-  ban,
   creditedThisMonth,
-  isBanned,
   markPaid,
   merge,
   promoUsed,
@@ -57,7 +54,10 @@ import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
 import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
 import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
-import { feeKindOf, owedByCurrency, owedText, tripMoney } from "../live/tripLive";
+import { LiveRiderModeration } from "../live/LiveRiderModeration";
+import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
+import { LiveWalletCredit } from "../live/LiveWalletCredit";
+import { feeKindOf, owedByCurrency, owedText, tripMoney, walletByCurrency, walletText } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
 import { NOTE_MAX } from "../domain/labels";
@@ -126,6 +126,8 @@ export function RiderDetailPage() {
   const country = profile.country;
   // v0.18.7 (G5 Q3): what the rider owes per currency (unpaid cancel / no-show fees); the owed trips can be waived.
   const owed = isLiveData() ? owedByCurrency(liveRiderOf(rider)) : [];
+  // v0.18.28 (fix job 6, owner Q4): live, each wallet balance in its own currency (a France refund shows in €).
+  const walletShown = isLiveData() ? walletText(walletByCurrency(liveRiderOf(rider)), market(country).currency) : money(row.walletMinor, country);
   const known = new Map([...liveTripsOfRider(rider.id), ...(riderTrips.data ?? [])].map((trip) => [trip.id, trip]));
   const owedTrips = isLiveData() ? [...known.values()].filter((trip) => trip.liveTrip?.cancellation?.feeStatus === "owed" && (trip.liveTrip.cancellation.feeMinor ?? 0) > 0).sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")) : [];
   const place = market(country);
@@ -150,7 +152,6 @@ export function RiderDetailPage() {
   const lost = care.lostFound[rider.id] ?? [];
   const audits = (audit.data ?? []).filter((item) => item.targetId === rider.id || item.targetId.startsWith(`${rider.id}-`)).slice(0, 30);
   const promos = care.promotions.filter((ticket) => ticket.riderIds.includes(rider.id));
-  const banned = isBanned(care, rider.phone, profile.payment.method);
   const mergedInto = care.merges[rider.id];
 
   // Money actions, prepared so the confirm button carries the exact change.
@@ -220,9 +221,10 @@ export function RiderDetailPage() {
             <div className="fd-action-row">
               {rider.status === "blocked" ? statusPatch("active", "Unblock", "admin.rider.unblock", "dash-btn") : null}
               {rider.status === "on_hold" ? statusPatch("active", "Activate", "admin.rider.activate", "dash-btn") : null}
-              {rider.status === "active" ? statusPatch("on_hold", "Put on hold", "admin.rider.hold", "dash-btn ghost") : null}
               {rider.status !== "blocked" ? statusPatch("blocked", "Block", "admin.rider.block", "dash-btn danger") : null}
             </div>
+            {liveData ? <LiveRiderModeration riderId={rider.id} moderation={liveRiderOf(rider)?.moderation ?? null} canEdit={can(role, "riders.block")} /> : null}
+            {liveData ? <LiveBlockedPairs person={{ riderId: rider.id }} /> : null}
           </div>
         </div>
         <div className="rd-facts">
@@ -232,7 +234,7 @@ export function RiderDetailPage() {
           <Stat label={tr("Cancel rate")} value={Number.isFinite(profile.cancelRate) ? `${profile.cancelRate}%` : tr("Not connected yet")} warn={profile.cancelRate > 20 ? "red" : profile.cancelRate > 12 ? "amber" : null} />
           <Stat label={tr("No-shows")} value={shown(profile.noShows)} warn={profile.noShows >= 3 ? "red" : null} />
           <Stat label={tr("Lifetime value")} value={money(lifetimeMinor, country, true)} hint={tr("spent − refunds − promotions")} />
-          <Stat label={tr("Wallet")} value={money(row.walletMinor, country)} />
+          <Stat label={tr("Wallet")} value={walletShown} />
         </div>
       </section>
 
@@ -249,6 +251,8 @@ export function RiderDetailPage() {
                   <li key={trip.id}>
                     <Link to={`/trips/${trip.id}#split`}>{trip.id}</Link> · {tripMoney(fee.feeMinor ?? 0, trip.liveTrip!.currency)} ({feeKindOf(fee) === "no_show" ? tr("no-show fee") : tr("cancel fee")})
                     {can(role, "trips.intervene") ? <CommandButton command="admin.trip.waiveFee" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="owed" after="waived" onDone={() => { setNotice(tr("Fee waived. The rider owes nothing for this trip.")); data.refetch?.(); void riderTrips.refetch(); }}>{tr("Waive the fee")}</CommandButton> : null}
+                    {/* Fix job 0 (owner A2-2): the rider paid Movera another way; reason required, logged. No "Ask rider to pay". */}
+                    {can(role, "finance.edit") ? <CommandButton command="admin.rider.feeMarkPaid" className="dash-btn small ghost" targetId={trip.id} scope={trip.zoneId} confirmTarget={false} before="owed" after="paid" value={{ riderId: rider.id }} onDone={() => { setNotice(tr("Fee marked as paid. The rider owes nothing for this trip.")); data.refetch?.(); void riderTrips.refetch(); }}>{tr("Mark as paid")}</CommandButton> : null}
                   </li>
                 );
               })}
@@ -271,7 +275,6 @@ export function RiderDetailPage() {
         </div>
       ) : null}
       {profile.fraudFlags.length ? <p className="fd-banner amber">{trn("{0} To check: {1}. Nothing happens automatically; a person decides.", <AlertTriangle size={16} aria-hidden="true" />, profile.fraudFlags.join(" · "))}</p> : null}
-      {banned ? <p className="fd-banner red">{trn("{0} This rider's phone or card is on the ban list.", <Ban size={16} aria-hidden="true" />)}</p> : null}
       {mergedInto ? <p className="fd-banner amber">{trn("{0} Merged into {1}. Use that account from now on.", <Link2 size={16} aria-hidden="true" />, <Link to={`/riders/${mergedInto}`}>{mergedInto}</Link>)}</p> : null}
 
       <Tabs tabs={TABS} activeId={tab} onChange={openTab} />
@@ -342,9 +345,10 @@ export function RiderDetailPage() {
 
         <TabPanel id="wallet" activeId={tab}>
           <div className="rd-money">
+            {liveData ? <LiveWalletCredit riderId={rider.id} walletMinor={liveRiderOf(rider)?.walletMinor ?? null} currency={liveRiderOf(rider)?.currency ?? null} /> : (
             <section className="fd-box rd-wallet">
               <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
-              <strong className="rd-wallet-balance">{money(row.walletMinor, country)}</strong>
+              <strong className="rd-wallet-balance">{walletShown}</strong>
               <div className="rd-limit">
                 <span>{trn("Given this month: {0} of {1} {2}", usedThisMonth, care.limits[country], symbol)}</span>
                 <i aria-hidden="true"><b style={{ width: `${Math.min(100, (usedThisMonth / care.limits[country]) * 100)}%` }} /></i>
@@ -354,13 +358,14 @@ export function RiderDetailPage() {
                 <label className="field">{trn("Why{0}", <input aria-label={tr("Wallet reason")} value={creditReason} onChange={(event) => setCreditReason(event.target.value)} placeholder={tr("Driver was late")} />)}</label>
               </div>
               {credit.error && (creditReason || creditAmount !== 100) ? <p className="rd-form-error">{trSentences(credit.error)}</p> : <small className="fine">{trn("At most {0} {1} at a time.", CREDIT_MAX[country], symbol)}</small>}
-              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={money(row.walletMinor, country)} after={`+${creditAmount} ${symbol}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(tr("Added {0} {1} to {2}'s wallet.", [creditAmount, symbol, rider.name])); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
+              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={walletShown} after={`+${creditAmount} ${symbol}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(tr("Added {0} {1} to {2}'s wallet.", [creditAmount, symbol, rider.name])); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
               {care.credits.filter((item) => item.riderId === rider.id).length ? (
                 <ul className="rd-ledger" aria-label={tr("Wallet credits")}>
                   {care.credits.filter((item) => item.riderId === rider.id).map((item) => <li key={item.id}><b>+{item.amount} {symbol}</b><span>{item.reason}</span><small>{dateTime.format(Date.parse(item.at))} · {item.by}</small></li>)}
                 </ul>
               ) : null}
             </section>
+            )}
 
             <section className="fd-box rd-refund">
               <h3 id="refund-title">{trn("{0} Refund a ride", <RotateCcw size={16} aria-hidden="true" />)}</h3>
@@ -505,14 +510,6 @@ export function RiderDetailPage() {
               <h3>{trn("{0} Sessions", <Smartphone size={16} aria-hidden="true" />)}</h3>
               <ul className="rd-ledger" aria-label={tr("Rider sessions")}>{ops.sessions.map((session) => <li key={session.id}><b>{session.platform} · {session.device}</b><span>{session.active ? tr("Signed in") : tr("Signed out")}</span></li>)}</ul>
               <CommandButton command="admin.rider.signOut" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={`${activeSessions.length} active sessions`} after="0 active sessions" expectedSliceRev={book.draftRev} sliceKey="riderOps" value={revokeRiderSessions(book, seed, me)} disabled={activeSessions.length === 0} onDone={() => setNotice(tr("Signed out of every active rider session."))}>{tr("Sign out all sessions")}</CommandButton>
-            </section>
-            <section className="fd-box">
-              <h3>{trn("{0} Ban list", <Ban size={16} aria-hidden="true" />)}</h3>
-              <p className="fine">{tr("A banned phone or card cannot open a new account.")}</p>
-              <div className="fd-action-row">
-                <CommandButton command="admin.rider.ban" className="dash-btn small danger" targetId={rider.id} scope={rider.zoneId} before="allowed" after="phone banned" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={ban(care, "phones", rider.phone, rider.id, reason || "Banned by admin", me, now).care} disabled={!can(role, "riders.block") || care.bans.phones.some((item) => item.value === rider.phone)} onDone={() => setNotice(tr("Phone number added to the ban list."))}>{tr("Ban phone number")}</CommandButton>
-                <CommandButton command="admin.rider.ban" className="dash-btn small danger" targetId={rider.id} scope={rider.zoneId} before="allowed" after="card banned" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={ban(care, "cards", profile.payment.method, rider.id, reason || "Banned by admin", me, now).care} disabled={!can(role, "riders.block") || care.bans.cards.some((item) => item.value === profile.payment.method)} onDone={() => setNotice(tr("Card added to the ban list."))}>{tr("Ban card")}</CommandButton>
-              </div>
             </section>
             <section className="fd-box">
               <h3>{trn("{0} Merge duplicate account", <Link2 size={16} aria-hidden="true" />)}</h3>

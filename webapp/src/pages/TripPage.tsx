@@ -1,5 +1,6 @@
 import { NotConnected } from "../live/NotConnected";
 import { LiveTripChat } from "../live/LiveTripChat";
+import { LiveBlockPair } from "../live/LiveBlockedPairs";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { auditActionText, auditActorName, auditResultText, fareLineLabel } from "../live/format";
 import { Link, useNavigate, useParams } from "react-router";
@@ -64,6 +65,7 @@ import {
   waitingBlock,
   waybill,
   zoneTimeLabel,
+  bookedNowLive,
 } from "../trips/present";
 import { AdminActions, ChatCalls, Section, SplitView, entryLine } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
@@ -263,6 +265,7 @@ export function TripPage() {
           <h2>{trn("Trip {0}", trip.id)}</h2>
           <p>
             <StatusDot tone={tone}>{statusLabel(trip.status)}</StatusDot>
+            {bookedNowLive(trip.status, facts?.kind) ? <span className="op-status scheduled" data-testid="trip-booked-now-live">{tr("Booked ride · now live")}</span> : null}
             {" "}{trip.name} · {zone?.name ?? trip.zoneId} · {trx(categoryOf(trip.id).label)} · {zoneTimeLabel(startedAt(trip.id), trip.zoneId)}
             {flagged ? <span className="op-status problem">{trn("{0} Flagged", <Flag size={11} aria-hidden="true" />)}</span> : null}
           </p>
@@ -490,6 +493,8 @@ export function TripPage() {
       <Section id="chat" title={tr("Chat and calls")} icon={<MessagesSquare size={16} />} wide>
         {/* v0.18.5 (owner G9): live, the trip's chat from the server (admins only; the apps keep no copy). */}
         {live ? <LiveTripChat tripId={trip.id} hadDriver={Boolean(trip.driverId)} riderName={trip.name || tr("Rider")} driverName={driver?.name || tr("Driver")} /> : <ChatCalls chat={chat} calls={calls} revealed={revealed} allowed={allowed} reveal={reveal} country={country} riderName={trip.name} driverName={driver?.name ?? "The driver"} />}
+        {/* v0.18.43 §64 (fix job 10): never match this rider and driver again (Support only undoes). */}
+        {live ? <LiveBlockPair tripId={trip.id} hasDriver={Boolean(trip.driverId)} /> : null}
       </Section>
 
       <Section id="waybill" title={tr("Waybill")} icon={<FileText size={16} />} testId="trip-waybill" wide>

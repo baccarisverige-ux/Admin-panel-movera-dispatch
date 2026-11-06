@@ -1,6 +1,8 @@
 import { DRIVER_BONUS_LIMIT_INPUT_ID } from "../live/tripLive";
 import { useEffect, useState } from "react";
-import { BadgeDollarSign, Gift, HandHeart, Plus, Save, TrendingUp } from "lucide-react";
+import { BadgeDollarSign, Gift, HandHeart, Phone, Plus, Save, TrendingUp } from "lucide-react";
+import { CALL_FIELDS, CALL_RANGES, callModeText } from "../config/callSettings";
+import { DONT_MATCH_STARS, dontMatchStarsText } from "../config/dontMatchSettings";
 import { market, zoneById, type MarketId } from "../markets/markets";
 import { PublishTargetsLine } from "../live/StandardBar";
 import {
@@ -34,7 +36,7 @@ import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 
 /** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
-export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus"] as const;
+export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls", "dont-match"] as const;
 
 type ListProps = {
   title: string;
@@ -119,6 +121,7 @@ function withoutTipFlag(mixed: MixedTipRules | undefined, flag: (typeof TIP_FLAG
 export function CountryExtrasPanel({ country, canEdit, section, focus = null, onDirty, onNotice, targets, zoneId: shownZone }: Props) {
   const { book, loading: bookLoading } = useCountrySettings();
   const zoneId = targets ? (shownZone && targets.includes(shownZone) ? shownZone : targets[0]) : undefined;
+  const onStandard = !zoneId || zoneId === `standard-${country}`;
   // v0.8.1 live: each zone's (or Standard's) own Tips & limits, read when this tab opens.
   const zoneRules = useSlice<Record<string, CountrySettings>>(ZONE_RULES_KEY, {}, { enabled: Boolean(targets) });
   const zoneBook = { ...book, zones: zoneRules.value };
@@ -211,7 +214,63 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               </div>
               <NumberField id={DRIVER_BONUS_LIMIT_INPUT_ID} label={tr("Driver bonus limit")} value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
               <NumberField label={tr("Largest change of a driver's pay on one trip")} value={shown.driverPayChangeMax} unit={symbol} step={moneyStep(country)} max={hardMax * 10} disabled={!canEdit} changed={shown.driverPayChangeMax !== saved.driverPayChangeMax} onChange={(driverPayChangeMax) => edit({ driverPayChangeMax })} />
+              {/* Fix job 0 (owner A2-1 "Per country, in Pricing"): one limit per country, set on the country Standard; a zone shows it read-only. */}
+              <NumberField label={tr("Largest Add money to wallet at one time")} value={shown.walletCreditMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit || !onStandard} changed={shown.walletCreditMax !== saved.walletCreditMax} onChange={(walletCreditMax) => edit({ walletCreditMax })} />
+              {onStandard ? null : <small data-testid="wallet-credit-max-country">{tr("One limit per country: change it on the country Standard.")}</small>}
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
+            </div>
+          </div>
+          <div id="extras-on-trip-offers" className="cx-anchor">
+            <div className="fee-card" data-testid="on-trip-offers">
+              <div>
+                <strong>{tr("Offers on a trip")}</strong>
+                <small>{tr("A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.")}</small>
+              </div>
+              <NumberField label={tr("Offers on a trip from (% of the route to the drop-off)")} value={shown.onTripMinDonePct} step={1} max={100} disabled={!canEdit} changed={shown.onTripMinDonePct !== saved.onTripMinDonePct} onChange={(value) => edit({ onTripMinDonePct: value })} />
+              <NumberField label={tr("Rider of a next trip may cancel free after (min)")} value={shown.chainLateFreeCancelMin} step={1} max={120} disabled={!canEdit} changed={shown.chainLateFreeCancelMin !== saved.chainLateFreeCancelMin} onChange={(value) => edit({ chainLateFreeCancelMin: value })} />
+            </div>
+          </div>
+          {/* v0.18.38 §62 (fix job 8, owner G15 "In-app calls only", "Both rider and driver"): CountryRules.calls. */}
+          <div id="extras-calls" className="cx-anchor">
+            <div className="fee-card" data-testid="call-settings">
+              <div>
+                <strong>{trn("{0} Calls (in the app)", <Phone size={14} aria-hidden="true" />)}</strong>
+                <small>{tr("Rider and driver call each other in the app, during the trip and for this many minutes after the drop-off. Nobody sees a phone number. Calls are not recorded.")}</small>
+              </div>
+              <label className="mini-switch big">
+                <input type="checkbox" aria-label={tr("Calls on")} data-testid="calls-on" checked={shown.calls.on} disabled={!canEdit} onChange={(event) => edit({ calls: { ...shown.calls, on: event.target.checked } })} />
+                <span aria-hidden="true"><i /></span>
+                {shown.calls.on ? tr("On") : tr("Off")}
+              </label>
+              <label className="check-row">{tr("Call mode")}{" "}
+                <select data-testid="calls-mode" value={shown.calls.mode} disabled={!canEdit || !shown.calls.on} onChange={(event) => edit({ calls: { ...shown.calls, mode: event.target.value === "phone" ? "phone" : "in_app" } })}>
+                  <option value="in_app">{callModeText("in_app")}</option>
+                  <option value="phone">{callModeText("phone")}</option>
+                </select>
+              </label>
+              <small className="dx-note">{tr("In the app: free internet calls. Phone mode needs a phone company; until one is chosen calls stay in the app.")}</small>
+              {CALL_FIELDS.map((field) => (
+                <label key={field.key} className="field"><span>{tr(field.label)}</span><NumberField label={tr(field.label)} value={shown.calls[field.key]} step={1} min={CALL_RANGES[field.key][0]} max={CALL_RANGES[field.key][1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls[field.key] !== saved.calls[field.key]} onChange={(value) => edit({ calls: { ...shown.calls, [field.key]: value } })} /></label>
+              ))}
+            </div>
+          </div>
+          {/* v0.18.43 §64 (fix job 10, owner G16 Q16-4, "Never told"): CountryRules.dontMatchAgain. */}
+          <div id="extras-dont-match" className="cx-anchor">
+            <div className="fee-card" data-testid="dont-match-settings">
+              <div>
+                <strong>{tr("Don't match again")}</strong>
+                <small>{tr("On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.")}</small>
+              </div>
+              <label className="mini-switch big">
+                <input type="checkbox" aria-label={tr("Don't match again")} data-testid="dont-match-on" checked={shown.dontMatchAgain.on} disabled={!canEdit} onChange={(event) => edit({ dontMatchAgain: { ...shown.dontMatchAgain, on: event.target.checked } })} />
+                <span aria-hidden="true"><i /></span>
+                {shown.dontMatchAgain.on ? tr("On") : tr("Off")}
+              </label>
+              <label className="check-row">{tr("Offer the tick at")}{" "}
+                <select data-testid="dont-match-stars" value={shown.dontMatchAgain.atStars} disabled={!canEdit || !shown.dontMatchAgain.on} onChange={(event) => edit({ dontMatchAgain: { ...shown.dontMatchAgain, atStars: Number(event.target.value) } })}>
+                  {DONT_MATCH_STARS.map((n) => <option key={n} value={n}>{dontMatchStarsText(n)}</option>)}
+                </select>
+              </label>
             </div>
           </div>
           <div id="extras-person-limits" className="cx-anchor">

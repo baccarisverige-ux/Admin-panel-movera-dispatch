@@ -65,8 +65,12 @@ export type DriverPerformance = { windowDays: number; from: string; offersAnswer
 
 export type Driver = {
   driverId: string;
+  /** v0.18.29 A2 (fix job 0) (owner Q4): payouts paused, admin view. */
+  payoutHold?: { reason: string; at: string; by?: string };
   accountStatus: DriverAccountStatus;
   onlineStatus: DriverOnlineStatus;
+  /** v0.18.37 §61: tapped Go offline during the trip. */
+  offlineAfterTrip?: boolean;
   firstName: string;
   lastName?: string;
   dateOfBirth?: string;
@@ -219,6 +223,8 @@ export type Trip = {
   walletApplied?: LiveMoney;
   cashToCollect?: LiveMoney;
   driverSilentAlert?: { at?: string; [key: string]: unknown };
+  /** v0.18.39 §63 (contract.json#dispatch.searchStep, admin view): the latest rider-waiting step while searching. */
+  searchStep?: { id?: string; kind: string; message?: string; at?: string } | null;
   ratingStatus?: string;
   paymentMethod: string;
   paymentStatus?: string;
@@ -270,8 +276,10 @@ export type LiveDriverRow = {
   vehicleId?: string;
   plate?: string;
   zoneId?: string;
+  /** v0.18.37 §61: tapped Go offline during the trip; offline when his trips end. */
+  offlineAfterTrip?: boolean;
 };
-export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string; ridersOnline?: { zoneId: string; count: number }[]; ridersOnlineWindowSeconds?: number; zoneSupply?: ZoneSupplyRow[] };
+export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string; total?: number; nextCursor?: string | null; ridersOnline?: { zoneId: string; count: number }[]; ridersOnlineWindowSeconds?: number; zoneSupply?: ZoneSupplyRow[] };
 /** v0.18.4 (G3-D5): GET /admin/live/drivers → zoneSupply, one row per zone. */
 export type ZoneSupplyRow = { zoneId: string; online: number; free: number; busy: number; waiting: number; level: "ok" | "tight" | "short"; shortage: boolean };
 
@@ -281,6 +289,8 @@ export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; mea
 /** GET /admin/riders (AdminRider). */
 export type Rider = {
   riderId: string;
+  /** v0.18.29 A2 (fix job 0) (G16 Q16-2): warning / pause / ban with its reason. */
+  moderation?: { level: "none" | "warning" | "paused" | "banned"; reason?: string; until: string | null; setAt?: string };
   firstName: string;
   phone: string;
   email?: string;
@@ -291,6 +301,8 @@ export type Rider = {
   /** v0.18.7 (G5 Q3): every currency the rider owes in, oldest debt first; outstanding is the first of them. */
   outstandingByCurrency?: LiveMoney[];
   wallet?: LiveMoney;
+  /** v0.18.28 (fix job 6, owner Q4): every non-zero wallet balance, one per currency. */
+  wallets?: LiveMoney[];
   language?: string;
   deletionRequestedAt?: string;
 };

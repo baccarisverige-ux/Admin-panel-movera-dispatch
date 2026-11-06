@@ -1,3 +1,4 @@
+import { isLiveData } from "../live/realData";
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { AlertTriangle, ArrowLeft, Bell, Flag, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, Trash2, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
@@ -57,7 +58,11 @@ function ModeBadge({ zone, paused }: { zone: ZoneDispatch; paused: boolean }) {
 }
 
 export function RulesView(props: Props) {
-  const { book, market, zones, zoneId, onZone, tab, onTab, rulesOf, onRules, changed, canEdit, busyOf, hhmm, money, symbol, tabs = TABS, below } = props;
+  const { book, market, zones, zoneId, onZone, tab: askedTab, onTab, rulesOf, onRules, changed, canEdit, busyOf, hhmm, money, symbol, tabs: allTabs = TABS, below } = props;
+  // Owner 2026-11-04: on live the alert limits are in Alerts › Settings › Zone limits; the Dispatch → Alerts tab is
+  // hidden there (kept for demo / test).
+  const tabs = isLiveData() ? allTabs.filter((item) => item.id !== "alerts") : allTabs;
+  const tab = isLiveData() && askedTab === "alerts" ? (tabs[0]?.id ?? askedTab) : askedTab;
   const [copyOpen, setCopyOpen] = useState(false);
   const [presetOpen, setPresetOpen] = useState(false);
   const [phone, setPhone] = useState<"auto" | "driver" | "rider">("auto");

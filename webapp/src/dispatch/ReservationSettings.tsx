@@ -184,8 +184,28 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
         {late.on ? <p className="dx-resv-foot" aria-label={tr("Running late example")}>{trn("Example: pickup {0}. At {1} the driver is {2} min away, so they would arrive at {3}: more than {4} min late. The ride goes to: {5}.", clock(SAMPLE_PICKUP, 0), clock(SAMPLE_PICKUP, -10), lateAway, <b>{clock(SAMPLE_PICKUP, late.toleranceMin + 1)}</b>, late.toleranceMin, trx(lateTo.label))}</p> : null}
       </Card>
 
+      <Card title={tr("5 · Late driver — take the ride back")} tone="red" icon={<UserX size={18} />} help={tr("The only case the system takes a ride from a driver: a booked ride he would reach too late while there is still time to find another driver. It counts on his cancel record. Drivers never pay a fee.")} off={!resv.on}>
+        <Row label={tr("Take back when late more than")} help={tr("Example: 5 min → a driver who would arrive at 10:06 for a 10:00 pickup loses the ride; at 10:05 he keeps it.")}>
+          <Num label={tr("Take back when late more than, minutes")} before="over" value={bw.takeBackLateMin} unit="min late" min={1} max={60} disabled={off} onChange={(takeBackLateMin) => setBooking({ takeBackLateMin })} />
+        </Row>
+        <Row label={tr("Keep if the driver is close")} help={tr("Example: 10 min → a driver 10 minutes' drive or less from the pickup always keeps the ride, even when late.")}>
+          <Num label={tr("Keep if the driver is within, minutes' drive")} before="within" value={bw.takeBackKeepIfDriveMin} unit="min drive" min={0} max={60} disabled={off} onChange={(takeBackKeepIfDriveMin) => setBooking({ takeBackKeepIfDriveMin })} />
+        </Row>
+        <Row label={tr("Only while there is time")} help={tr("Example: 15 min → from 09:45 on, for a 10:00 pickup, the driver keeps the ride: there is no time to find another one.")}>
+          <Num label={tr("Take back only until, minutes before pickup")} before="until" value={bw.takeBackUntilMinBeforePickup} unit="min before" min={0} max={180} disabled={off} onChange={(takeBackUntilMinBeforePickup) => setBooking({ takeBackUntilMinBeforePickup })} />
+        </Row>
+        <Row label={tr("“Not driving to the rider” notice")} help={tr("The driver is not heading to the pickup: he gets a notice, again every few minutes, until he heads there. The rider can then cancel for free.")} on={bw.notHeadingNotice} disabled={off} onToggle={(notHeadingNotice) => setBooking({ notHeadingNotice })}>
+          <Num label={tr("Notice again every, minutes")} before="every" value={bw.notHeadingNoticeEveryMin} unit="min" min={1} max={10} disabled={disabled || !bw.notHeadingNotice} onChange={(notHeadingNoticeEveryMin) => setBooking({ notHeadingNoticeEveryMin })} />
+        </Row>
+        <Row label={tr("Stop a booked ride with no driver")} help={tr("No driver by the pickup time + these minutes: the ride ends, the rider pays nothing and is told, and admins get an alert.")}>
+          <Num label={tr("Stop a booked ride with no driver after pickup +, minutes")} before="+" value={bw.noDriverStopAfterMin} unit="min" min={1} max={240} disabled={off} onChange={(noDriverStopAfterMin) => setBooking({ noDriverStopAfterMin })} />
+        </Row>
+        <Row label={tr("Take back a live ride")} help={tr("Always off: a live ride is never taken from the driver (owner rule). Read only.")} on={false} onToggle={() => undefined} disabled />
+        <p className="dx-resv-foot" aria-label={tr("Late driver example")}>{trn("Example: pickup {0}, the driver is {1} min away at {2} → he would arrive at {3}, {4} min late, and the pickup is still {5} min away: {6}.", clock(SAMPLE_PICKUP, 0), 26, clock(SAMPLE_PICKUP, -20), clock(SAMPLE_PICKUP, 6), 6, 20, <b>{6 > bw.takeBackLateMin && 26 > bw.takeBackKeepIfDriveMin && 20 >= bw.takeBackUntilMinBeforePickup ? tr("taken back, sent to another driver") : tr("he keeps it")}</b>)}</p>
+      </Card>
+
       <Card title={tr("6 · Changes, cancel and reminders")} tone="blue" icon={<Clock size={18} />} help={tr("What the rider may change or cancel, and the reminders. Example pickup 10:00.")} off={!resv.on}>
-        <Row label={tr("Free change or cancel")} help={tr("Example: 60 min → the rider can change or cancel for free until 09:00; later no change, and cancel fees apply.")}>
+        <Row label={tr("Free change or cancel")} help={tr("Example: 60 min → the rider can change or cancel for free until 09:00; later no change, and cancel fees apply.") + " " + tr("Cancel under (min) costs the fee, even before a driver takes it. Movera keeps the fee when no driver has taken the ride yet.")}>
           <Num label={tr("Free change or cancel until, minutes before pickup")} before="until" value={bw.freeChangeBeforeMin} unit="min before" min={0} max={1440} disabled={off} onChange={(freeChangeBeforeMin) => setBooking({ freeChangeBeforeMin })} />
         </Row>
         <Row label={tr("Rider changes a ride a driver took")} help={tr("Example: the rider moves 10:00 to 11:00 → the driver is asked \"Keep it at the new time?\"; no answer within 15 min → back to the list.")}>

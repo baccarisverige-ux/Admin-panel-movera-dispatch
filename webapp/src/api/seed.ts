@@ -156,6 +156,8 @@ export type LiveTripFacts = {
   rideCheck?: { checkId: string; trigger: string; askedAt: string; answerBy: string; answers: { rider?: string; driver?: string }; alertedAt: string | null } | null;
   routeChange?: { status: string; dropoff: LivePlace; stops: LivePlace[]; totalMinor: number; differenceMinor: number; askedAt: string; answerBy: string; answeredBy: string | null; driverEarningsMinor: number | null; earningsDifferenceMinor: number | null } | null;
   adminFlag?: { flagged: boolean; reason: string | null; by: string | null; at: string | null } | null;
+  /** v0.18.39 §63: the rider's latest search step (no_driver_nearby → the trip row's "No driver in reach" mark). */
+  searchStep?: { kind: string } | null;
   cancellation: { actor: string; reasonCode: string; at: string; feeMinor: number | null; feeStatus: string | null; feeKind: string | null; driverShareMinor: number | null; note: string | null; reversal: { at: string; by: string | null; reason: string | null; driverShareTakenBack: boolean } | null; refundedToWallet: boolean } | null;
 };
 export type LiveAccountFacts = {
@@ -176,18 +178,27 @@ export type LiveAccountFacts = {
 };
 
 export type LiveDriverFacts = {
+  /** v0.18.29 A2 (fix job 0) (owner Q4): this driver's payouts are paused (admin view). */
+  payoutHold?: { reason: string; at: string } | null;
   onlineStatus: string;
   rating: number | null;
   location: { lat: number; lng: number; measuredAt: string } | null;
   lastFixAt: string | null;
   stale: boolean | null;
   activeTripId: string | null;
+  /** v0.18.37 §61: on a trip and going offline when his trips end (Driver / LiveDriver.offlineAfterTrip). */
+  offlineAfterTrip?: boolean;
   /** v0.18.4 (G3-D2): Driver.performance when the server sent it (GET /admin/drivers/{driverId}). */
   performance?: { acceptancePct: number | null; cancellationPct: number | null; rating: number | null };
   /** v0.18.17 (owner BL-Q4): the home area the driver set in the app. */
   homeArea?: { lat: number; lng: number; label?: string } | null;
 };
+/** v0.18.29 A2 (fix job 0) (G16 Q16-2): Rider.moderation. */
+export type LiveRiderModeration = { level: "none" | "warning" | "paused" | "banned"; reason?: string; until: string | null; setAt?: string };
+
 export type LiveRiderFacts = {
+  /** v0.18.29 A2 (fix job 0): the rider's warning / pause / ban (null from an older server). */
+  moderation?: LiveRiderModeration | null;
   rating: number | null;
   walletMinor: number | null;
   outstandingMinor: number | null;
@@ -195,6 +206,8 @@ export type LiveRiderFacts = {
   deletionRequestedAt: string | null;
   /** v0.18.7 (G5 Q3): what the rider owes in every currency (unpaid cancel / no-show fees), oldest debt first. */
   outstandingByCurrency: { amountMinor: number; currency: string }[];
+  /** v0.18.28 (fix job 6, owner Q4): the wallet balances, one per currency (never added together). */
+  walletByCurrency?: { amountMinor: number; currency: string }[];
 };
 
 /** A trip row: a DemoRecord whose status is a contract TripStatus. */

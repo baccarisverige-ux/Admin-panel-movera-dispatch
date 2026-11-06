@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { ArrowRight, GitCompare, LayoutGrid, Search, Server } from "lucide-react";
 import { configDiff, emptyConfig, normalizeConfig, useSlice, type ConfigBook } from "../api/hooks";
@@ -42,15 +42,28 @@ export function FindSetting({ onPick }: { onPick: (heading: string) => void }) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const [headings, setHeadings] = useState<string[]>([]);
-  const collect = () => setHeadings([...document.querySelectorAll<HTMLHeadingElement>(".pl-settings-all article.panel > h3")].map((node) => node.textContent ?? ""));
+  const collect = () => {
+    const next = [...document.querySelectorAll<HTMLHeadingElement>(".pl-settings-all article.panel > h3")].map((node) => node.textContent ?? "");
+    // Same list: keep the old one, so the box's own re-render does not start another round.
+    setHeadings((old) => (old.length === next.length && old.every((text, index) => text === next[index]) ? old : next));
+  };
+  // C17: the sections can appear after the box (settings still loading, a slow browser or server). Read the headings
+  // again whenever the page under the box changes, so a word typed early still finds them.
+  const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const timer = setTimeout(collect, 400);
-    return () => clearTimeout(timer);
+    const root = box.current?.parentElement;
+    const observer = root && typeof MutationObserver !== "undefined" ? new MutationObserver(collect) : null;
+    if (root && observer) observer.observe(root, { childList: true, subtree: true });
+    return () => {
+      clearTimeout(timer);
+      observer?.disconnect();
+    };
   }, []);
   const here = headings.filter((text) => text && (!q || text.toLowerCase().includes(q)));
   const other = q ? elsewhereLinks().filter((item) => `${item.label} ${item.what} ${item.section}`.toLowerCase().includes(q)) : [];
   return (
-    <div className="pl-find">
+    <div className="pl-find" ref={box}>
       <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label={tr("Find a setting")} placeholder={tr("Find a setting, for example wallet, stops or prices")} value={query} onFocus={collect} onChange={(e) => { setQuery(e.target.value); collect(); }} /></label>
       <div className="pl-jumps" aria-label={tr("Sections on this page")}>
         {here.map((text) => <a key={text} href={`#${encodeURIComponent(text)}`} className="pl-jump" onClick={(event) => { event.preventDefault(); onPick(text); }}>{text}</a>)}

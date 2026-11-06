@@ -14,6 +14,7 @@ import { CARE_KEY, emptyRiderCare, normalizeCare, type RiderCare } from "../ride
 import { CommandButton } from "../ui/CommandButton";
 import { GrowthPage } from "./GrowthPage";
 import { tr, trn, trx } from "../i18n";
+import { DateInput } from "../ui/DateInput";
 
 const KINDS: { id: HubKind | "all"; label: string }[] = [
   { id: "all", label: "All" },
@@ -161,8 +162,8 @@ function Vouchers({ ops, country, editable, agentId, money, onNotice }: { ops: P
           <Row label={tr("Uses in total")}><Num label={tr("Uses in total")} value={draft.maxUses} min={1} disabled={!editable} onChange={(maxUses) => patch({ maxUses })} /></Row>
           <Row label={tr("Dates")}>
             <span className="gr-inline">
-              <input type="date" aria-label={tr("Starts")} value={draft.from} disabled={!editable} onChange={(e) => patch({ from: e.target.value })} />
-              <input type="date" aria-label={tr("Ends")} value={draft.to} disabled={!editable} onChange={(e) => patch({ to: e.target.value })} />
+              <DateInput aria-label={tr("Starts")} value={draft.from} disabled={!editable} onChange={(e) => patch({ from: e.target.value })} />
+              <DateInput aria-label={tr("Ends")} value={draft.to} disabled={!editable} onChange={(e) => patch({ to: e.target.value })} />
             </span>
           </Row>
           {error ? <p role="alert" className="gr-warn">{error}</p> : null}

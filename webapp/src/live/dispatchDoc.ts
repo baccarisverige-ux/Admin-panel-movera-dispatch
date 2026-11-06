@@ -4,7 +4,7 @@
  */
 import { completeBookingWindow, completeEarlyEnd, RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
-import { validPickupMove, validRaiseFactor } from "../dispatch/offerRules.ts";
+import { validPickupMove, validRaiseFactor, validSamePoint } from "../dispatch/offerRules.ts";
 
 type Doc = Record<string, unknown>;
 
@@ -27,7 +27,7 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     else delete zone.secondsDefaulted;
     if (d.choose) zone.choose = structuredClone(d.choose);
     // v0.18.11: a document without start / limits / neighbours / own steps keeps the defaults (today's behaviour).
-    const raw = doc as { radar?: { steps?: unknown }; exclusive?: { steps?: unknown }; start?: { mode?: unknown; nearKm?: unknown }; limits?: { maxPickupKm?: unknown; maxPickupEtaMin?: unknown }; neighbours?: { on?: unknown; zoneIds?: unknown; afterStep?: unknown } };
+    const raw = doc as { radar?: { steps?: unknown }; exclusive?: { steps?: unknown }; start?: { mode?: unknown; nearKm?: unknown }; limits?: { maxPickupKm?: unknown; maxPickupEtaMin?: unknown; farReachKm?: unknown }; noDriverNearby?: { on?: unknown; afterSec?: unknown; message?: unknown }; neighbours?: { on?: unknown; zoneIds?: unknown; afterStep?: unknown } };
     const kmList = (value: unknown) => (Array.isArray(value) && value.length > 0 && value.every((km) => typeof km === "number") ? (value as number[]) : undefined);
     zone.radar = { ...zone.radar, steps: kmList(raw.radar?.steps) };
     zone.exclusive = { ...zone.exclusive, steps: kmList(raw.exclusive?.steps) };
@@ -35,7 +35,17 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     if (!zone.exclusive.steps) delete zone.exclusive.steps;
     const modes = ["auto", "radar", "exclusive", "both", "byDistance"];
     zone.start = { mode: modes.includes(raw.start?.mode as string) ? (raw.start!.mode as ZoneDispatch["start"]["mode"]) : "auto", nearKm: typeof raw.start?.nearKm === "number" ? raw.start.nearKm : 2 };
-    zone.limits = { maxPickupKm: typeof raw.limits?.maxPickupKm === "number" ? raw.limits.maxPickupKm : 0, maxPickupEtaMin: typeof raw.limits?.maxPickupEtaMin === "number" ? raw.limits.maxPickupEtaMin : 0 };
+    // v0.18.39 §63: far reach (0 < km <= 50) and "No driver nearby" (60–1800 s); missing or bad = the zone default (contract).
+    const far = raw.limits?.farReachKm;
+    zone.limits = { maxPickupKm: typeof raw.limits?.maxPickupKm === "number" ? raw.limits.maxPickupKm : 0, maxPickupEtaMin: typeof raw.limits?.maxPickupEtaMin === "number" ? raw.limits.maxPickupEtaMin : 0, farReachKm: typeof far === "number" && far > 0 && far <= 50 ? far : zone.limits.farReachKm };
+    const ask = (doc as { reaskLimit?: unknown }).reaskLimit;
+    zone.reaskLimit = typeof ask === "number" && Number.isInteger(ask) && ask >= 1 && ask <= 5 ? ask : zone.reaskLimit;
+    const nd = raw.noDriverNearby;
+    zone.noDriverNearby = {
+      on: typeof nd?.on === "boolean" ? nd.on : zone.noDriverNearby.on,
+      afterSec: typeof nd?.afterSec === "number" && nd.afterSec >= 60 && nd.afterSec <= 1800 ? nd.afterSec : zone.noDriverNearby.afterSec,
+      message: typeof nd?.message === "string" && nd.message.trim() ? nd.message : zone.noDriverNearby.message,
+    };
     zone.neighbours = { on: raw.neighbours?.on === true, zoneIds: Array.isArray(raw.neighbours?.zoneIds) ? (raw.neighbours.zoneIds as unknown[]).filter((z): z is string => typeof z === "string") : [], afterStep: typeof raw.neighbours?.afterStep === "number" ? raw.neighbours.afterStep : 0 };
     if (d.rulesFrom) zone.rulesFrom = d.rulesFrom;
     if (d.radius) zone.radius = structuredClone(d.radius);
@@ -43,6 +53,9 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     if (d.finishing) zone.finishing = { ...zone.finishing, ...d.finishing };
     if (d.favourite) zone.favourite = { ...zone.favourite, ...d.favourite };
     if (d.exclusiveWhileDriving) zone.exclusiveWhileDriving = { ...d.exclusiveWhileDriving };
+    // v0.18.33 (owner Q7): a missing or bad value keeps the default (on, 60 min).
+    const next = doc["bookedNext"] as { on?: unknown; withinMin?: unknown } | undefined;
+    if (next) zone.bookedNext = { on: typeof next.on === "boolean" ? next.on : zone.bookedNext.on, withinMin: typeof next.withinMin === "number" && next.withinMin >= 0 && next.withinMin <= 240 ? next.withinMin : zone.bookedNext.withinMin };
     // v0.18.6 (G4-E4): the rider raise limit as the server has it; a missing or bad value keeps the contract default.
     const factor = validRaiseFactor((doc["raisePrice"] as { maxFactor?: unknown } | undefined)?.maxFactor);
     if (factor !== null) zone.raisePrice = { maxFactor: factor };
@@ -66,6 +79,9 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   // v0.18.7 (G5 item 4): the pickup move limit the server checks (booking.maxPickupMoveMeters, 0–2000; migration 0041 moved 500 to 200).
   const move = validPickupMove((driver?.["booking"] as { maxPickupMoveMeters?: unknown } | undefined)?.maxPickupMoveMeters);
   if (move !== null) zone.pickupMove = { maxMeters: move };
+  // v0.18.30 (owner Q9): "Shortest ride (m)" as the zone's drivers and the server get it (booking.samePointWarnMeters, 0–1000).
+  const samePoint = validSamePoint((driver?.["booking"] as { samePointWarnMeters?: unknown } | undefined)?.samePointWarnMeters);
+  if (samePoint !== null) zone.samePoint = { warnMeters: samePoint };
   // v0.18.8 (G6): the free wait at each stop the server charges by (waiting.stopFreeWaitMin, 0–20; 0 while stops are off).
   const stopFree = (driver?.["waiting"] as { stopFreeWaitMin?: unknown } | undefined)?.stopFreeWaitMin;
   if (zone.stops.on && typeof stopFree === "number" && Number.isInteger(stopFree) && stopFree >= 0 && stopFree <= 20) zone.stops = { ...zone.stops, freeWaitMin: stopFree };
@@ -106,6 +122,11 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   // live shows the server's values (before this the reservation settings were never read back from the server).
   const resv = driver?.["reservations"] as Record<string, unknown> | undefined;
   if (resv && typeof resv === "object") zone.reservation = reservationOfDriverDoc(resv, zone.reservation, zone);
+  // v0.18.35 job 4 (contract.json#bookedTakeBack): the "not driving to the rider" notice, read back from headingCheck.
+  const heading = driver?.["headingCheck"] as Record<string, unknown> | undefined;
+  if (heading && typeof heading === "object") {
+    zone.reservation = { ...zone.reservation, booking: completeBookingWindow({ ...zone.reservation.booking, notHeadingNotice: heading["notice"], notHeadingNoticeEveryMin: heading["noticeEveryMin"] }) };
+  }
   const maxStops = (driver?.["booking"] as { maxStops?: unknown } | undefined)?.maxStops;
   if (typeof maxStops === "number" && Number.isInteger(maxStops)) {
     if (maxStops === 0) zone.stops = { ...zone.stops, on: false };

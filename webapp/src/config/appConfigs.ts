@@ -3,6 +3,7 @@ import { raiseCap } from "../dispatch/rules.ts";
 import { fromMajor, type CurrencyCode, type Money } from "../domain/money.ts";
 import { activeCategories, normalizeStore, zoneBook, type PricingStore } from "../pricing/zonePricing.ts";
 import type { PickupRate } from "../pricing/pickupPay.ts";
+import { validSamePoint } from "../dispatch/offerRules.ts";
 import { liveCountry, liveRules, normalizeDispatchBook, type DispatchBook, type RideTypeId, type ZoneDispatch } from "../dispatch/rules.ts";
 import { radarRuleFor, radarZonesOf } from "../dispatch/radarZones.ts";
 import { completeEarlyEnd } from "../dispatch/rules.ts";
@@ -180,9 +181,14 @@ function driverBonus(base: Common) {
   return { defaultLimit: limit.amountMinor > hardMax.amountMinor ? { ...hardMax } : limit, hardMax: { ...hardMax } };
 }
 
+/** v0.18.30 (owner Q9): the zone's "Shortest ride (m)", the default for rules saved before it existed. */
+function samePointWarnMeters(zone: ZoneDispatch): number {
+  return validSamePoint(zone.samePoint?.warnMeters) ?? CONFIG_DEFAULTS.samePointWarnMeters;
+}
+
 /** Q39/Q40: max stops and the pickup move limit after accept, from the zone's live Dispatch rules. */
 function booking(base: Common) {
-  return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: base.zone.pickupMove.maxMeters };
+  return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: base.zone.pickupMove.maxMeters, samePointWarnMeters: samePointWarnMeters(base.zone) };
 }
 
 /** v0.7.1/v0.7.2 contract sample: the sub-line goes to the rider app as { sv, fr, en } (contract.json#categoryCatalog). */
@@ -328,7 +334,8 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
       shareTrip: switchOn(base, "rider", "shareTrip"),
     },
     paymentMethods: paymentMethods(base, state, zoneId),
-    wallet: { usedFirst: true },
+    // v0.18.33 (fix job 5, owner Q6): Settings › Payment methods "Use wallet first" (default on); the rider's per-ride switch starts on.
+    wallet: { usedFirst: base.settings.walletFirst !== false },
     tips: amountOptions(base.settings.tips, base.currency),
     // v0.18.10 (G8): Pricing › Tips & limits; cash tips only in the car (5 minutes) unless cashAfterTrip.
     tipRules: { cashAfterTrip: base.settings.tipRules.cashAfterTrip, cashInCarMinutes: 5, customAmount: base.settings.tipRules.customAmount, customMax: wire(base.settings.tipRules.customMax, base.currency) },
@@ -500,6 +507,12 @@ export function reservationBookingParts(resv: ZoneDispatch["reservation"], count
     listAtTimeMin: b.listAtTimeMin,
     changeAnswerMin: b.changeAnswerMin,
     arriveEarlyMin: b.arriveEarlyMin,
+    // v0.18.35 FIX JOB 4 (contract.json#bookedTakeBack): Book later › Late driver.
+    takeBackLateMin: b.takeBackLateMin,
+    takeBackKeepIfDriveMin: b.takeBackKeepIfDriveMin,
+    takeBackUntilMinBeforePickup: b.takeBackUntilMinBeforePickup,
+    // v0.18.39 §63 (P17): a booked ride with no driver ends at pickup + this many minutes.
+    noDriverStopAfterMin: b.noDriverStopAfterMin,
     // Owner C (v0.18.19): the booked-ride raise is saved on the server; the live-ride bonus limit applies too.
     raiseFare: resv.raiseFare,
     // The country's highest (500 kr in Sweden) = no cap of its own: null, the live-ride limit only (contract default).
@@ -563,9 +576,11 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     },
     // v0.18.13 (contract.json#drivingLimits): resetAfterOfflineHours has no admin control yet (backlog): the contract default 6.
     drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restHours * 60, resetAfterOfflineHours: 6, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
-    // v0.18.13 (contract.json#pickupWaiting.headingCheck, G5-8): no admin control yet (backlog); the contract defaults, never
-    // published by Dispatch (not an OWNED key), so the server keeps its own value.
-    headingCheck: { on: true, headingPct: 80, notHeadingMinutes: 2, reassign: true },
+    // v0.18.13 (contract.json#pickupWaiting.headingCheck, G5-8): on / headingPct / notHeadingMinutes have no admin control
+    // yet (backlog): the contract defaults, and publishing keeps the server's own values (configDocs withOwned).
+    // v0.18.35 (owner Q-A, FIX JOB 4): reassign is always false (a live ride is never taken back; read-only in the panel);
+    // the "not driving to the rider" notice is Dispatch › Book later › Late driver.
+    headingCheck: { on: true, headingPct: 80, notHeadingMinutes: 2, reassign: false, notice: zone.reservation.booking.notHeadingNotice, noticeEveryMin: zone.reservation.booking.notHeadingNoticeEveryMin },
     rideCheck: rideCheck(base, state),
     routeChange: routeChange(base),
     texts: driverTexts(base, state),

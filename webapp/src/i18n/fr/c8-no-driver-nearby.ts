@@ -1,0 +1,32 @@
+/** French dictionary, area c8-no-driver-nearby: fix job N2 + P17 + far rider (contract v0.18.39 §63): Dispatch › No driver nearby, far reach, Book later stop, alerts, trip mark. Add new keys at the end of this file. Merged in ../fr.ts in this order. */
+import type { enC8NoDriverNearby } from "../en/c8-no-driver-nearby.ts";
+
+export const frC8NoDriverNearby: Record<keyof typeof enC8NoDriverNearby, string> = {
+  "Far reach": "Portée étendue",
+  "When nobody new is free inside the widest step, the search tries one more step this far. The widest step or less = off.": "Quand aucun nouveau chauffeur n’est libre dans le plus grand palier, la recherche essaie un palier de plus jusqu’à cette distance. Le plus grand palier ou moins = désactivé.",
+  "No driver nearby": "Aucun chauffeur à proximité",
+  "A live ride with no driver after this time: the rider sees the message once, with Keep waiting and Cancel free. The search goes on until the rider cancels. Admins get an alert at the same moment.": "Une course immédiate sans chauffeur après ce délai : le passager voit le message une fois, avec Continuer d’attendre et Annuler gratuitement. La recherche continue jusqu’à ce que le passager annule. Les admins reçoivent une alerte au même moment.",
+  "Show after": "Afficher après",
+  "Show 'No driver nearby' after": "Afficher « Aucun chauffeur à proximité » après",
+  "The rider app shows it in the rider's language; this text is the fallback.": "L’app passager l’affiche dans la langue du passager ; ce texte sert sinon.",
+  "'No driver nearby' message": "Message « Aucun chauffeur à proximité »",
+  "Booked rides: after this the search starts again. Live rides keep searching until the rider cancels.": "Courses réservées : après ce délai, la recherche recommence. Les courses immédiates cherchent jusqu’à ce que le passager annule.",
+  "Stop a booked ride with no driver": "Arrêter une course réservée sans chauffeur",
+  "No driver by the pickup time + these minutes: the ride ends, the rider pays nothing and is told, and admins get an alert.": "Aucun chauffeur à l’heure de prise en charge + ces minutes : la course se termine, le passager ne paie rien et est prévenu, et les admins reçoivent une alerte.",
+  "Stop a booked ride with no driver after pickup +, minutes": "Arrêter une course réservée sans chauffeur après la prise en charge +, minutes",
+  "No driver in reach": "Aucun chauffeur à portée",
+  "No driver nearby a waiting rider": "Aucun chauffeur près d’un passager qui attend",
+  "The rider of a live ride was shown 'No driver nearby' (Dispatch › No driver nearby). The search goes on. Solved when a driver takes it or the ride ends.": "Le passager d’une course immédiate a vu « Aucun chauffeur à proximité » (Dispatch › Aucun chauffeur à proximité). La recherche continue. Résolu quand un chauffeur la prend ou que la course se termine.",
+  "Booked ride ended: no driver found": "Course réservée terminée : aucun chauffeur trouvé",
+  "No driver took the booked ride by its pickup time + the minutes set in Dispatch › Book later. The server ended it, the rider pays nothing and was told. Shown for 24 h.": "Aucun chauffeur n’a pris la course réservée avant l’heure de prise en charge + les minutes de Dispatch › Réserver. Le serveur l’a terminée, le passager ne paie rien et a été prévenu. Affiché 24 h.",
+  "{0} has no driver nearby ({1} min)": "{0} n’a aucun chauffeur à proximité ({1} min)",
+  "{0}'s booked ride at {1} ended: no driver found": "La course réservée de {0} à {1} est terminée : aucun chauffeur trouvé",
+  "No driver nearby after (s)": "Aucun chauffeur à proximité après (s)",
+  "No driver nearby message": "Message aucun chauffeur à proximité",
+  "stop a booked ride with no driver after pickup + (minutes)": "arrêter une course réservée sans chauffeur après la prise en charge + (minutes)",
+  "Ask one driver at most": "Demander à un chauffeur au plus",
+  "A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.": "Un chauffeur qui a refusé ou laissé expirer autant d’offres pour la même course n’est plus sollicité pour elle. Par défaut 2.",
+  "Ask one driver at most, offers": "Demander à un chauffeur au plus, offres",
+  "offers": "offres",
+  "Ask one driver at most (offers)": "Demander à un chauffeur au plus (offres)",
+};

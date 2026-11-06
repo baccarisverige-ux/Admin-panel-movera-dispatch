@@ -6,10 +6,12 @@
  * Owner 2026-10-27: a zone without its own settings uses its country's Standard ("Uses standard"); publishing has no
  * second admin; tips, raise steps and driver bonus limits are country rules (country_rules).
  */
+import contractJson from "../../../contracts/contract.json" with { type: "json" };
 import type { CurrencyCode, Money } from "../domain/money.ts";
 import { fromMajor } from "../domain/money.ts";
 import { marketOfZone } from "../markets/markets.ts";
 import type { CategoryPrice, ZoneBook } from "../pricing/zonePricing.ts";
+import { MIN_TRIP_METERS } from "../pricing/zonePricing.ts";
 import type { ZoneDispatch } from "../dispatch/rules.ts";
 
 export type ConfigDocName = "rider_app_config" | "driver_app_config" | "pricing" | "dispatch" | "country_rules" | "onboarding";
@@ -97,6 +99,9 @@ export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null):
       scheduled: structuredClone(book.scheduled),
     },
     fleetCommissionPct: book.fleetCommissionPct,
+    // v0.18.44 §67: written only when the server document has it or the admin changed it from the contract default, so
+    // an untouched zone republishes the same document (the server reads a missing value as 0 = off, owner Q9).
+    ...(base && "minTripMeters" in base) || book.fees.minTripMeters !== MIN_TRIP_METERS.default ? { minTripMeters: book.fees.minTripMeters } : {},
   };
 }
 
@@ -145,6 +150,7 @@ export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
     cleaningFee: toMajor(fees["cleaningFee"], f, book.fees.cleaningFee),
     tollsPassThrough: typeof fees["tollsPassThrough"] === "boolean" ? fees["tollsPassThrough"] : book.fees.tollsPassThrough,
     rounding: toMajor(doc["priceStep"], f, book.fees.rounding),
+    minTripMeters: wholeIn(doc["minTripMeters"], MIN_TRIP_METERS.min, MIN_TRIP_METERS.max) ?? book.fees.minTripMeters,
   };
   const routes = doc["fixedRoutes"] as Array<{ id: string; from: string; to: string; categoryId: string; price: Money }> | undefined;
   if (Array.isArray(routes)) book.routes = routes.map((route) => ({ id: route.id, from: route.from, to: route.to, categoryId: route.categoryId, price: route.price.amountMinor / f }));
@@ -166,13 +172,24 @@ export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
 function startOrderParts(zone: ZoneDispatch, base: Doc | null): Doc {
   const parts: Doc = {
     start: { mode: zone.start.mode, nearKm: zone.start.nearKm },
-    limits: { ...(zone.limits.maxPickupKm > 0 ? { maxPickupKm: zone.limits.maxPickupKm } : {}), maxPickupEtaMin: zone.limits.maxPickupEtaMin },
+    // v0.18.39 §63: farReachKm only when it is not the contract default (an untouched zone republishes the same limits).
+    limits: { ...(zone.limits.maxPickupKm > 0 ? { maxPickupKm: zone.limits.maxPickupKm } : {}), maxPickupEtaMin: zone.limits.maxPickupEtaMin, ...(zone.limits.farReachKm !== N2_DEFAULTS.farReachKm || base === null || hasKey(base, "limits", "farReachKm") ? { farReachKm: zone.limits.farReachKm } : {}) },
     neighbours: { on: zone.neighbours.on, zoneIds: [...zone.neighbours.zoneIds], ...(zone.neighbours.afterStep > 0 ? { afterStep: zone.neighbours.afterStep } : {}) },
   };
   if (base === null) return parts;
   const defaults: Doc = { start: { mode: "auto", nearKm: 2 }, limits: { maxPickupEtaMin: 0 }, neighbours: { on: false, zoneIds: [] } };
   for (const key of Object.keys(parts)) if (!(key in base) && JSON.stringify(parts[key]) === JSON.stringify(defaults[key])) delete parts[key];
   return parts;
+}
+
+const N2_DEFAULTS = (contractJson as unknown as { noDriverNearby: { defaults: { noDriverNearby: { on: boolean; afterSec: number; message: string }; farReachKm: number; reaskLimit: number } } }).noDriverNearby.defaults;
+const hasKey = (base: Doc, key: string, sub: string) => typeof base[key] === "object" && base[key] !== null && sub in (base[key] as object);
+function n2Parts(zone: ZoneDispatch, base: Doc | null): Doc {
+  const nd = { on: zone.noDriverNearby.on, afterSec: zone.noDriverNearby.afterSec, message: zone.noDriverNearby.message };
+  const out: Doc = {};
+  if (base === null || "reaskLimit" in base || zone.reaskLimit !== N2_DEFAULTS.reaskLimit) out["reaskLimit"] = zone.reaskLimit;
+  if (base === null || "noDriverNearby" in base || JSON.stringify(nd) !== JSON.stringify(N2_DEFAULTS.noDriverNearby)) out["noDriverNearby"] = nd;
+  return out;
 }
 
 /** DispatchDocument (CONTRACT.md §6.3) from the zone's Dispatch rules (admin field names). */
@@ -197,6 +214,11 @@ export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | n
     finishing: { exclusive: zone.finishing.exclusive, withinMin: zone.finishing.withinMin, withinKm: zone.finishing.withinKm },
     favourite: { on: zone.favourite.on, maxKm: zone.favourite.maxKm },
     exclusiveWhileDriving: { ...zone.exclusiveWhileDriving },
+    // v0.18.33 (fix job 5, owner Q7): booked ride next for a driver on a trip.
+    bookedNext: { on: zone.bookedNext.on, withinMin: zone.bookedNext.withinMin },
+    // v0.18.39 §63 (owner N2): "No driver nearby" once, afterSec after the search started (live rides).
+    // v0.18.39 §63: like start/limits, written only when the server document has it or the admin changed it from the default.
+    ...n2Parts(zone, base),
     waiting: zone.waiting.map((step) => ({ id: step.id, kind: step.kind, on: step.on, afterMin: step.afterMin, message: step.message, extraMin: step.extraMin ?? null })),
     // v0.18.6 (owner G4-E4): the rider raise limit; publishing it also writes the zone's rider app config (server).
     raisePrice: { maxFactor: zone.raisePrice.maxFactor },
@@ -207,7 +229,7 @@ export { SECONDS_DEFAULT, rulesOfDispatch, reservationOfDriverDoc } from "./disp
 
 /** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
 export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
-  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange"] },
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck"] },
   settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
   content: { rider: [], driver: ["texts", "notices"] },
 };
@@ -223,6 +245,13 @@ export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc
       // v0.18.7 (G5 Q2): the cancel-after-arrived switch is the admin's; the money stays pricing's (servedConfig).
       // v0.18.8 (G6): the free wait at each stop (Dispatch › Rides › Stops) is the admin's too.
       next["waiting"] = { ...own, driverSharePct: made["driverSharePct"], driverShareWaitPct: made["driverShareWaitPct"], cancelAfterArrivedIsNoShow: made["cancelAfterArrivedIsNoShow"], farPickup: made["farPickup"], rideTypes: made["rideTypes"], stopFreeWaitMin: made["stopFreeWaitMin"] };
+      continue;
+    }
+    if (key === "headingCheck") {
+      // v0.18.35 FIX JOB 4: the panel owns only the notice and reassign (always false, owner Q-A); the heading numbers stay the server's.
+      const own = (server["headingCheck"] ?? {}) as Doc;
+      const made = built["headingCheck"] as Doc;
+      next["headingCheck"] = { ...own, reassign: false, notice: made["notice"], noticeEveryMin: made["noticeEveryMin"] };
       continue;
     }
     next[key] = structuredClone(built[key]);
@@ -326,7 +355,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number } };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number }; dontMatchAgain?: { on: boolean; atStars: number } };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
@@ -342,7 +371,17 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     // v0.18.10 checker: the largest single change of a driver's pay (Change pay on the trip page).
     ...(input.driverPayChangeMax !== undefined ? { driverPayChangeMax: toMinor(input.driverPayChangeMax, currency) } : {}),
     // v0.18.26: the country's other limits (sign-in codes, uploads) are kept; the per-person ones come from the panel.
+    // v0.18.33 (owner 2026-11-05): Exclusives to a driver on a trip only after this % of his route.
+    ...(input.onTripMinDonePct !== undefined || input.chainLateFreeCancelMin !== undefined
+      ? { onTripOffers: { minRouteDonePct: input.onTripMinDonePct ?? 70, lateFreeCancelMin: input.chainLateFreeCancelMin ?? 10 } }
+      : {}),
     ...(base?.["limits"] || input.personLimits ? { limits: { ...((base?.["limits"] as Record<string, unknown> | undefined) ?? {}), ...(input.personLimits ?? {}) } } : {}),
+    // v0.18.29 A2 (fix job 0) (owner G12 Q-D): the largest single Add money to wallet.
+    ...(input.walletCreditMax !== undefined ? { walletCreditMax: toMinor(input.walletCreditMax, currency) } : {}),
+    // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.
+    ...(input.calls ? { calls: { ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
+    // v0.18.43 §64 (fix job 10): Tips & limits › Don't match again; a save without it keeps the stored block.
+    ...(input.dontMatchAgain ? { dontMatchAgain: { ...input.dontMatchAgain } } : base?.["dontMatchAgain"] ? { dontMatchAgain: base["dontMatchAgain"] } : {}),
   };
 }
 
@@ -465,4 +504,9 @@ export async function goBackToStandard(http: ConfigHttp, doc: ConfigDocName, zon
     if (isStatus(error, 409)) throw new SettingsChanged();
     throw error;
   }
+}
+
+/** v0.18.44 §67: a whole number inside [min, max], else null. */
+function wholeIn(value: unknown, min: number, max: number): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : null;
 }

@@ -1,6 +1,6 @@
 import { isLiveData, liveDriverOf } from "../live/realData";
 import { useEffect, useMemo, useState } from "react";
-import { useApprovals, useRecords, useSlice } from "../api/hooks";
+import { useRecords, useSlice } from "../api/hooks";
 import { useAdminApi } from "../api/AdminApiContext";
 import { emptySafety, type SafetyBook } from "../safety/ops";
 import { INCIDENT_OPS_KEY, caseOf, emptyIncidentOps, lateText, normalizeIncidentOps, type IncidentOps } from "../safety/cases";
@@ -20,7 +20,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { failureCause, failureHandled } from "../payments/failures";
 import { useRidersData } from "../riders/useRidersData";
 import { RIDE_CHECK_KEY, alertBy, alertTitle, asRideChecks, emptyRideCheckOps, followText, normalizeRideCheckOps, reasonText, shiftOf, shifted, worries, type RideCheckOps } from "../safety/rideCheck";
-import { ALERTS_KEY, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
+import { ALERTS_KEY, alertsFromServer, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, splitOld, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
 import { tr } from "../i18n/core.ts";
 
 const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
@@ -40,7 +40,8 @@ export function useAlerts() {
   const { agent } = useSession();
   const scope = useMarketScope();
   const market = scope.market;
-  const slice = useSlice<AlertBook>(ALERTS_KEY, emptyAlertBook());
+  // v0.18.20: on live the book carries the server's alerts; read again every 15 s (live updates come with the SSE job).
+  const slice = useSlice<AlertBook>(ALERTS_KEY, emptyAlertBook(), isLiveData() ? { refetchMs: 15_000 } : {});
   const book = useMemo(() => normalizeAlertBook(slice.value), [slice.value]);
   // Only read what the role may read: a refused read is retried and slows every save.
   const canSafety = Boolean(agent && can(agent.role, "incidents.read"));
@@ -60,7 +61,6 @@ export function useAlerts() {
   const payouts = useRecords("payouts");
   const vehicles = useRecords("vehicles");
   const tickets = useRecords("tickets", undefined, { refetchMs: 30_000 });
-  const approvals = useApprovals(30_000);
   const riders = useRidersData("month");
   // Ride check alerts go to the safety team and to dispatchers.
   const canRideCheck = Boolean(agent && (can(agent.role, "incidents.read") || can(agent.role, "trips.intervene")));
@@ -157,7 +157,8 @@ export function useAlerts() {
           const cause = liveData ? { kind: "rider" as const, reason: "Not connected yet" } : failureCause(row);
           return { id: row.id, zoneId: row.zoneId, rider: row.name, amount: (row.fareOre ?? 0) / market.minorUnits, system: cause.kind === "system", reason: cause.reason, ...(row.createdAt ? { at: row.createdAt } : {}) };
         }),
-      refunds: (approvals.data ?? []).filter((row) => row.status === "pending" && row.action.includes("refund")).map((row) => ({ id: row.id, title: `Refund ${row.targetId} waits for approval` })),
+      // A2 leftovers (owner Q1 "One admin always"): no refund waits for a second admin.
+      refunds: [],
       payouts: (payouts.data ?? []).filter((row) => row.status === "scheduled").map((row) => ({ id: row.id, driver: (drivers.data ?? []).find((item) => item.id === row.driverId)?.name ?? row.name, zoneId: row.zoneId, amount: (row.fareOre ?? 0) / market.minorUnits })),
       riders: liveData ? [] : riders.rows.filter((row) => row.profile.country === market.id).map((row) => ({ id: row.rider.id, name: row.rider.name, flags: row.profile.fraudFlags, cancelRate: row.profile.cancelRate, rides: row.profile.completed + row.profile.cancelled + row.profile.noShows })),
       tickets: (tickets.data ?? []).filter((row) => row.status === "open").map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId, ...(row.openedBy ? { openedBy: row.openedBy } : {}) })),
@@ -171,13 +172,24 @@ export function useAlerts() {
       money,
     };
     // money depends only on the market, which is already a dependency.
-  }, [now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, approvals.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks, zoneSupply.data]);
+  }, [now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks, zoneSupply.data]);
 
-  const all = useMemo(() => computeAlerts(facts, book.settings, book.rules.filter((rule) => rule.country === market.id)), [facts, book.settings, book.rules, market.id]);
+  // v0.18.20 server-side alerts: on live the server finds every alert (owner A1–A3); the panel only reads them. The
+  // panel's own engine stays for the demo (demo removal is its own job).
+  const liveFound = isLiveData();
+  const all = useMemo(
+    () => (liveFound
+      ? alertsFromServer(book.found ?? [], zones, (incidentId) => rideChecks.find((check) => check.incidentId === incidentId)?.id)
+      : computeAlerts(facts, book.settings, book.rules.filter((rule) => rule.country === market.id))),
+    [liveFound, book.found, zones, rideChecks, facts, book.settings, book.rules, market.id],
+  );
   const sosOwner = (incidentId: string) => safety.value.incidents[incidentId]?.owner ?? null;
   const viewer = agent ? { id: agent.id, role: agent.role, can: (permission: string) => can(agent.role, permission) } : null;
-  const open: OpenAlert[] = useMemo(() => openAlerts(all, book, now, (id) => safety.value.incidents[id]?.owner ?? null).filter((alert) => (viewer ? visibleTo(alert, book, viewer, now) : false)), [all, book, now, safety.value, viewer?.id, viewer?.role]);
-  const active = open.filter((alert) => alert.status !== "snoozed" && !alert.muted);
+  const listed: OpenAlert[] = useMemo(() => openAlerts(all, book, now, (id) => safety.value.incidents[id]?.owner ?? null).filter((alert) => (viewer ? visibleTo(alert, book, viewer, now) : false)), [all, book, now, safety.value, viewer?.id, viewer?.role]);
+  // v0.18.31 owner Q-Bj: old SOS / safety cases (trip ended + 24 h) leave the open list for the Old tab; never closed by themselves.
+  const { open, old } = useMemo(() => splitOld(listed), [listed]);
+  // Owner A2: a green (solved by itself) alert stays in the list but no longer counts or rings.
+  const active = open.filter((alert) => alert.status !== "snoozed" && !alert.muted && !alert.solved);
   // The red banner: ride check alerts nobody has opened yet.
   const unopened = rideSlice.loading ? [] : open.filter((alert) => alert.kind === "ride_check" && alert.rideCheckId && !rideOps.opened[alert.rideCheckId]);
   return {
@@ -187,6 +199,7 @@ export function useAlerts() {
     facts,
     all,
     open,
+    old,
     active,
     zones,
     market,
@@ -201,6 +214,7 @@ export function useAlerts() {
       info: active.filter((alert) => alert.level === "info").length,
       mine: open.filter((alert) => alert.owner === agent?.id).length,
       notTaken: active.filter((alert) => alert.status === "new").length,
+      solved: open.filter((alert) => alert.solved).length,
     },
   };
 }

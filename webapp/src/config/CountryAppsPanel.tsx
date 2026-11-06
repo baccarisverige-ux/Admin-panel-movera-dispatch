@@ -68,6 +68,7 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
           <tr>
             <th scope="col">{tr("Country")}</th>
             {ZONE_PAYMENT_METHODS.map((method) => <th key={method} scope="col">{trx(PAYMENT_METHOD_LABEL[method])}{method === "cash" ? null : <small> · {tr("Coming soon")}</small>}</th>)}
+            <th scope="col">{tr("Use wallet first")}<small> · {tr("the rider can switch it off per ride")}</small></th>
             {APP_IDS.map((app) => <th key={app} scope="col">{trn("{0} language", trx(APP_LABEL[app]))}</th>)}
           </tr>
         </thead>
@@ -99,6 +100,16 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
                     </td>
                   );
                 })}
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`${item.name} ${tr("Use wallet first")}`}
+                    data-testid={`country-apps-wallet-first-${item.id}`}
+                    checked={settings.walletFirst}
+                    disabled={!editable || loading || closed(item.id)}
+                    onChange={(event) => edit(item.id, { walletFirst: event.target.checked })}
+                  />
+                </td>
                 {APP_IDS.map((app) => (
                   <td key={app}>
                     <select aria-label={tr("{0} {1} language", [item.name, app])} value={settings.languages[app]} disabled={!editable || loading} onChange={(event) => edit(item.id, { languages: { ...settings.languages, [app]: event.target.value as AppLanguage } })}>

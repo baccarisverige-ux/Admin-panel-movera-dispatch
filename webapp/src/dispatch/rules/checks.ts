@@ -1,5 +1,5 @@
 import { currencySymbol } from "../../pricing/zonePricing.ts";
-import { validRaiseFactor } from "../offerRules.ts";
+import { validRaiseFactor, validSamePoint } from "../offerRules.ts";
 import { DEFAULT_FEE_CATEGORIES, cancelFeeIssues, type FeeCategory } from "../cancelFees.ts";
 import { cancelReasonIssues, exclusiveReasonIssues, pickupWaitIssues } from "../offers.ts";
 import { destinationModeIssues, nextTripsIssues } from "../tripRules.ts";
@@ -23,6 +23,8 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (!Number.isInteger(zone.autoOffline.noFixMinutes) || zone.autoOffline.noFixMinutes < 0 || zone.autoOffline.noFixMinutes > 120) issues.push("Set offline without position: must be 0 to 120 minutes (0 = never).");
   if (zone.autoOffline.on && (zone.autoOffline.after < 1 || zone.autoOffline.after > 99 || !Number.isInteger(zone.autoOffline.after))) issues.push("Go offline automatically: must be after 1 to 99 offers.");
   if (zone.exclusive.on && zone.exclusiveWhileDriving.on && (zone.exclusiveWhileDriving.count < 1 || zone.exclusiveWhileDriving.count > 5)) issues.push("Exclusive while driving: must be 1 to 5 offers at a time.");
+  // v0.18.33 (fix job 5, owner Q7): DispatchDocument.bookedNext.withinMin, contract range 0–240.
+  if (zone.bookedNext.on && (!Number.isInteger(zone.bookedNext.withinMin) || zone.bookedNext.withinMin < 0 || zone.bookedNext.withinMin > 240)) issues.push("Booked ride for a driver on a trip: must be 0 to 240 minutes.");
   if (zone.radar.on && (zone.hiddenComesBackMin < 1 || zone.hiddenComesBackMin > 60)) issues.push("Radar in the driver app: a hidden trip can come back after 1 to 60 minutes.");
   // v0.18.6 (G4-E4): contract.json#dispatch.raisePrice.range; the server answers 400 invalid_document outside it.
   if (validRaiseFactor(zone.raisePrice.maxFactor) === null) issues.push("Rider raise limit: must be 1× to 3× the booked price.");
@@ -41,6 +43,11 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   }
   if (zone.limits.maxPickupKm < 0 || zone.limits.maxPickupKm > 50) issues.push("Pickup limits: the farthest pickup must be 0 to 50 km (0 = the widest search step).");
   if (zone.limits.maxPickupEtaMin < 0 || zone.limits.maxPickupEtaMin > 60) issues.push("Pickup limits: the longest pickup time must be 0 to 60 minutes (0 = off).");
+  // v0.18.39 §63 (contract.json#noDriverNearby.ranges): far reach > 0 and <= 50 km; "No driver nearby" 1–30 min.
+  if (!(zone.limits.farReachKm > 0 && zone.limits.farReachKm <= 50)) issues.push("Far reach: must be above 0 and at most 50 km (the widest step or less = off).");
+  if (!Number.isInteger(zone.reaskLimit) || zone.reaskLimit < 1 || zone.reaskLimit > 5) issues.push("Ask one driver at most: 1 to 5 offers.");
+  if (zone.noDriverNearby.afterSec < 60 || zone.noDriverNearby.afterSec > 1800) issues.push("No driver nearby: the time must be 1 to 30 minutes.");
+  if (zone.noDriverNearby.on && !zone.noDriverNearby.message.trim()) issues.push("No driver nearby: write the message the rider sees.");
   if (zone.neighbours.on && zone.neighbours.zoneIds.length === 0) issues.push("Neighbour zones: choose at least one zone or switch it off.");
   if (zone.choose.how === "auto" && (!zone.radar.on || !zone.exclusive.on)) issues.push("Automatic choice needs both Radar and Exclusive on. Switch both on or choose by hand.");
   if (zone.choose.how === "auto" && (zone.choose.radarAbove <= 0 || zone.choose.radarAbove > 10)) issues.push("Automatic choice: the busy level must be above 0 and at most 10.");
@@ -65,6 +72,7 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (zone.stops.on && (zone.stops.max < 1 || zone.stops.max > 5)) issues.push("Stops: max stops must be 1 to 5.");
   if (!Number.isInteger(zone.stops.answerSeconds) || zone.stops.answerSeconds < 15 || zone.stops.answerSeconds > 300) issues.push("Route change: the driver's time to answer must be 15 to 300 s.");
   if (!Number.isInteger(zone.pickupMove.maxMeters) || zone.pickupMove.maxMeters < 0 || zone.pickupMove.maxMeters > PICKUP_MOVE_MAX_METERS) issues.push(`Pickup move after accept: 0 to ${PICKUP_MOVE_MAX_METERS} m, in whole metres.`);
+  if (zone.samePoint && validSamePoint(zone.samePoint.warnMeters) === null) issues.push("Shortest ride: 0 to 1000 m, in whole metres.");
   if (zone.longTripKm < 10 || zone.longTripKm > 500) issues.push("Long trip must be 10 to 500 km.");
   if (!Number.isInteger(zone.pickupPin.maxAttempts) || zone.pickupPin.maxAttempts < 1 || zone.pickupPin.maxAttempts > 10) issues.push("Rider PIN: wrong tries before lock must be 1 to 10.");
   if (!Number.isInteger(zone.pickupPin.lockMinutes) || zone.pickupPin.lockMinutes < 1 || zone.pickupPin.lockMinutes > 60) issues.push("Rider PIN: lock minutes must be 1 to 60.");

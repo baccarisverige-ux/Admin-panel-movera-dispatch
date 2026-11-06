@@ -115,12 +115,11 @@ test("G2-D1: the driver page shows the approved licence and the new one side by 
   await shot(page, "g2-d1-renewal-side-by-side");
   await page.getByRole("button", { name: "Approve the new one" }).click();
   // G2-D5.8: an end date more than 15 years ahead says "Check the end date" and is not sent.
-  await page.getByTestId("expires-at").fill("2099-01-01");
+  await page.getByTestId("expires-at").fill("01/01/2099");
   await expect(page.getByTestId("expiry-too-far")).toContainText("Check the end date");
   await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
-  await expect(page.getByTestId("expires-at")).toHaveAttribute("max", /^\d{4}-\d{2}-\d{2}$/);
   await shot(page, "g2-d5-8-check-end-date");
-  await page.getByTestId("expires-at").fill("2031-06-30");
+  await page.getByTestId("expires-at").fill("30/06/2031");
   await expect(page.getByTestId("expiry-too-far")).toHaveCount(0);
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect.poll(() => sent.at(-1)).toEqual({ method: "POST", path: "/admin/documents/REN2/review", body: { decision: "approved", expiresAt: "2031-06-30T00:00:00.000Z" } });

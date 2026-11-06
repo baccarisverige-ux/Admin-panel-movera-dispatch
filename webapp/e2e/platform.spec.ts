@@ -81,7 +81,8 @@ test("audit: search, filters, details with who and before/after, and export", as
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText("Draft saved through AdminApi.")).toBeVisible();
   await page.goto("/audit");
-  await expect(page.getByRole("heading", { level: 3, name: "Pending approvals" })).toBeVisible();
+  // A2 leftovers (owner Q1 "One admin always"): no second-admin approvals on the audit page.
+  await expect(page.getByRole("heading", { level: 3, name: "Pending approvals" })).toHaveCount(0);
   await page.getByLabel("Search the audit", { exact: true }).fill("configuration");
   const log = page.getByRole("list", { name: "Audit log" });
   await expect(log.getByRole("listitem").first()).toContainText("admin.config.save");
@@ -157,4 +158,17 @@ test("platform pages fit a phone", async ({ page }) => {
     await expect(page.getByRole("button", { name: "Back", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1), path).toBe(true);
   }
+});
+
+test("C17: Find a setting finds a section that shows after the search was typed (slow server)", async ({ page }) => {
+  // Proven cause of the WebKit/Firefox failure of the settings test above: the box read the section headings only on
+  // focus, on typing and once 400 ms after it appeared, so a word typed while the settings were still loading kept
+  // showing "Nothing found" after they appeared. A slow server makes that happen in every browser.
+  await session(page);
+  await page.addInitScript(() => localStorage.setItem("movera-demo-fault", "slow"));
+  await page.goto("/settings");
+  await page.getByLabel("Find a setting").fill("booking");
+  await expect(page.getByText("Loading configuration.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Booking rules" })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/Nothing found for/)).toHaveCount(0);
 });

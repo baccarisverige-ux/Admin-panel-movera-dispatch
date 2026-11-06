@@ -320,6 +320,13 @@ function MapLibreCanvas({ zones, selectedId, mode, layers, focus, selectionNonce
       return;
     }
     mapRef.current = map;
+    // The view's centre on the map box (data-map-center="lat,lng"), so a check can tell where a map opened.
+    const markCenter = () => {
+      const c = map.getCenter();
+      node.dataset.mapCenter = `${c.lat.toFixed(4)},${c.lng.toFixed(4)}`;
+    };
+    map.on("moveend", markCenter);
+    map.on("load", markCenter);
     const publish = () => {
       generation += 1;
       window.__moveraMap = {
@@ -448,7 +455,10 @@ function MapLibreCanvas({ zones, selectedId, mode, layers, focus, selectionNonce
       map.on("mouseenter", "zones-fill", () => { if (modeRef.current === "render" && pickRef.current) map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "zones-fill", () => { map.getCanvas().style.cursor = ""; });
       paintLabels(map);
-      const inner = (fitRef.current?.length ? boundsFor(zonesRef.current, fitRef.current) : boundsFor(zonesRef.current, INNER_IDS)) ?? boundsFor(zonesRef.current);
+      // A shape to show (overlays.fitTo, e.g. an airport queue area) opens the map on that shape, not on the city.
+      const shape = overlaysRef.current?.fitTo;
+      const shapeBounds = shape && shape.length >= 3 ? shape.reduce((b, [lat, lng]) => b.extend([lng, lat]), new maplibregl.LngLatBounds()) : null;
+      const inner = shapeBounds ?? (fitRef.current?.length ? boundsFor(zonesRef.current, fitRef.current) : boundsFor(zonesRef.current, INNER_IDS)) ?? boundsFor(zonesRef.current);
       // The test hook is published when the camera has settled ("moveend") and again on "idle" (drawn and settled).
       // "idle" alone also waits for every base-map tile, so with a slow tile server the hook (and the e2e that waits
       // for it) waited on the network; "moveend" does not.

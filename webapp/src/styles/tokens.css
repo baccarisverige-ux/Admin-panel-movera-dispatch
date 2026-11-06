@@ -1661,3 +1661,10 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 @media (max-width: 620px) {
   .profile-menu { position: fixed; right: 14px; left: 14px; top: calc(var(--topbar-h, 64px) + 4px); width: auto; }
 }
+
+/* FIX JOB 7 B-l: the admin date box (ui/DateInput.tsx): text in the admin's language + the browser's picker. */
+.date-input { position: relative; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+.date-input > input[type="text"] { min-width: 0; width: 11ch; flex: 1 1 auto; }
+.date-input-pick { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: inherit; padding: 2px; cursor: pointer; }
+.date-input-pick:disabled { cursor: default; opacity: .5; }
+.date-input-native { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }

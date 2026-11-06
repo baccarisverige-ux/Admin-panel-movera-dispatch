@@ -26,6 +26,7 @@ import { rememberSendTarget, sendTarget, setActiveRadarSend } from "../dispatch/
 import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
+import { LIVE_CARD_LIST } from "../dashboard/liveCard.ts";
 import { ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
 import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
@@ -45,6 +46,7 @@ import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { formatNumber, tr } from "../i18n/index.ts";
 import { rideCheckRecords } from "./rideChecks.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
+import { readDraft, savePublish, standardKey } from "./configDocs.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
@@ -82,7 +84,7 @@ async function all<T>(client: LiveClient, path: string, filter: ZoneFilter = NO_
 }
 
 /** A list page's own rows: the server's search and status filter, as many pages as "Load more" asked for. */
-async function paged<T>(client: LiveClient, name: LiveListName, path: string, filter: ZoneFilter = NO_FILTER): Promise<T[]> {
+async function paged<T>(client: LiveClient, name: LiveListName, path: string, filter: ZoneFilter = NO_FILTER, signal?: AbortSignal): Promise<T[]> {
   const query = listQueryOf(name);
   const items: T[] = [];
   let cursor: string | null = null;
@@ -94,7 +96,7 @@ async function paged<T>(client: LiveClient, name: LiveListName, path: string, fi
     if (name === "trips" && query.flagged) params.set("flagged", "true");
     if (cursor) params.set("cursor", cursor);
     for (const [key, value] of filter.params) params.set(key, value);
-    const page: Page<T> = await client.json<Page<T>>(`${path}?${params.toString()}`);
+    const page: Page<T> = await client.json<Page<T>>(`${path}?${params.toString()}`, signal ? { signal } : {});
     items.push(...page.items);
     cursor = page.nextCursor;
     if (!cursor) break;
@@ -150,18 +152,32 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       ...(driver.termsAcceptedAt ? { termsAcceptedAt: driver.termsAcceptedAt } : {}),
     },
     liveDriver: {
+      payoutHold: driver.payoutHold ? { reason: driver.payoutHold.reason, at: driver.payoutHold.at } : null,
       onlineStatus: live?.onlineStatus ?? driver.onlineStatus,
       rating: typeof driver.rating === "number" ? driver.rating : null,
       location: location ? { lat: location.lat, lng: location.lng, measuredAt: location.measuredAt } : null,
       lastFixAt: live?.lastFixAt ?? driver.lastFixAt ?? null,
       stale: live ? live.stale : null,
       activeTripId: live?.activeTripId ?? null,
+      // v0.18.37 §61: "Going offline after trips".
+      ...((live?.offlineAfterTrip ?? driver.offlineAfterTrip) ? { offlineAfterTrip: true } : {}),
       ...(driver.performance ? { performance: performanceFacts(driver.performance) } : {}),
       // v0.18.17 (owner BL-Q4): the home area the driver set (who sees "home nearby" booked rides).
       ...((driver as { homeArea?: { lat: number; lng: number; label?: string } }).homeArea ? { homeArea: (driver as unknown as { homeArea: { lat: number; lng: number; label?: string } }).homeArea } : {}),
     },
   };
 }
+
+/** v0.18.34 §65 (A8/A10): a live-card row from GET /admin/live/drivers alone; the driver list's row adds details when known. */
+export function presenceRecord(live: LiveDriverRow, detail?: Driver): DemoRecord {
+  if (detail) return driverRecord(detail, live);
+  const bare = { driverId: live.driverId, firstName: live.firstName ?? "", accountStatus: "active", onlineStatus: live.onlineStatus, zoneIds: live.zoneId ? [live.zoneId] : [], categoryIds: [], documents: [], version: 0, ...(live.vehicleId ? { vehicleId: live.vehicleId } : {}) } as unknown as Driver;
+  return driverRecord(bare, live);
+}
+
+/** v0.18.34 §65: the live card reads pages of this size, up to LIVE_MAX_PAGES (rule 33: more than 10,000 drivers). */
+export const LIVE_PAGE = 500;
+const LIVE_MAX_PAGES = 60;
 
 const RIDE_CATEGORIES: string[] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
 const VEHICLE_STATUS: Record<string, string> = { approved: "eligible", pending: "pending", rejected: "ineligible", blocked: "on_hold" };
@@ -249,6 +265,7 @@ export function tripFacts(trip: Trip): LiveTripFacts {
       refunded: minorOf(trip.moneySplit.refunded) ?? 0,
     } : null,
     driverSilentAlert: trip.driverSilentAlert ?? null,
+    searchStep: trip.searchStep?.kind ? { kind: trip.searchStep.kind } : null,
     ratingStatus: trip.ratingStatus ?? null,
     updatedAt: trip.updatedAt,
     // v0.18.7 (driver group 5): the live row's position and ETA, the rider summary, the terms, the waiting amounts and the cancel.
@@ -313,7 +330,10 @@ export function riderRecord(rider: Rider): DemoRecord {
       outstandingMinor: rider.outstanding ? rider.outstanding.amountMinor : null,
       currency: rider.wallet?.currency ?? rider.outstanding?.currency ?? null,
       deletionRequestedAt: rider.deletionRequestedAt ?? null,
+      moderation: rider.moderation ?? null,
       // v0.18.7 (G5 Q3): every owed currency; an older server sends only outstanding (one currency).
+      // v0.18.28 (owner Q4): every wallet balance in its own currency; an older server sends only wallet (one currency).
+      walletByCurrency: Array.isArray(rider.wallets) ? rider.wallets.filter((money) => Number.isFinite(money?.amountMinor) && money.amountMinor !== 0).map((money) => ({ amountMinor: money.amountMinor, currency: money.currency })) : rider.wallet && rider.wallet.amountMinor !== 0 ? [{ amountMinor: rider.wallet.amountMinor, currency: rider.wallet.currency }] : [],
       outstandingByCurrency: Array.isArray(rider.outstandingByCurrency) && rider.outstandingByCurrency.length ? rider.outstandingByCurrency.filter((money) => Number.isFinite(money?.amountMinor)).map((money) => ({ amountMinor: money.amountMinor, currency: money.currency })) : rider.outstanding ? [{ amountMinor: rider.outstanding.amountMinor, currency: rider.outstanding.currency }] : [],
     },
   };
@@ -506,8 +526,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   }
   let currency: string = CURRENCY;
 
-  async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER): Promise<Driver[]> {
-    const rows = own ? await paged<Driver>(client, "drivers", "/admin/drivers", filter) : await all<Driver>(client, "/admin/drivers");
+  async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER, signal?: AbortSignal): Promise<Driver[]> {
+    const rows = own ? await paged<Driver>(client, "drivers", "/admin/drivers", filter, signal) : await all<Driver>(client, "/admin/drivers");
     rows.forEach((row) => drivers.set(row.driverId, row));
     return rows;
   }
@@ -528,18 +548,37 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   }
 
   /** GET /admin/live/drivers: who is online now, with the last position (drivers not offline). */
-  async function readPresence(filter: ZoneFilter = NO_FILTER): Promise<void> {
-    const query = new URLSearchParams(filter.params).toString();
-    const answer = await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`);
+  async function readPresence(filter: ZoneFilter = NO_FILTER, signal?: AbortSignal): Promise<void> {
+    const rows = await readLivePages(filter, signal);
     presence.clear();
-    answer.items.forEach((row) => presence.set(row.driverId, row));
+    rows.forEach((row) => presence.set(row.driverId, row));
+  }
+
+  /** v0.18.34 §65 (A8/A10): every page of GET /admin/live/drivers (limit LIVE_PAGE, cursor) — who is online now. */
+  async function readLivePages(filter: ZoneFilter, signal?: AbortSignal): Promise<LiveDriverRow[]> {
+    const rows: LiveDriverRow[] = [];
+    let cursor: string | null = null;
+    for (let index = 0; index < LIVE_MAX_PAGES; index += 1) {
+      const params = new URLSearchParams([...filter.params, ["limit", String(LIVE_PAGE)], ...(cursor ? [["cursor", cursor] as [string, string]] : [])]);
+      const answer: LiveDriverList = await client.json<LiveDriverList>(`/admin/live/drivers?${params.toString()}`, signal ? { signal } : {});
+      rows.push(...answer.items);
+      cursor = answer.nextCursor ?? null;
+      if (!cursor) break;
+    }
+    return rows;
+  }
+
+  /** One small live read for the zone counts (they always cover every driver, v0.18.34 §65). */
+  function liveCounts(filter: ZoneFilter, signal?: AbortSignal): Promise<LiveDriverList> {
+    const params = new URLSearchParams([...filter.params, ["limit", "1"]]).toString();
+    return client.json<LiveDriverList>(`/admin/live/drivers?${params}`, signal ? { signal } : {});
   }
 
   /** v0.17.2: a list of the zones picked in the top bar; the server filters, the rows are checked again here. */
-  async function list(name: string, scope?: ZoneScope): Promise<DemoRecord[]> {
+  async function list(name: string, scope?: ZoneScope, signal?: AbortSignal): Promise<DemoRecord[]> {
     const filter = name === "zones" ? NO_FILTER : zoneFilterOf(scope);
     if (filter.denied) return [];
-    const read = await listRaw(name, filter);
+    const read = await listRaw(name, filter, signal);
     const zones = filter.zones;
     // A row without a zone (a rider, a refund without its trip) is the server's answer for those zones.
     const rows = zones ? read.filter((row) => !row.zoneId || zones.has(row.zoneId)) : read;
@@ -562,23 +601,20 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     ].slice(0, 8);
   }
 
-  async function listRaw(name: string, filter: ZoneFilter): Promise<DemoRecord[]> {
+  async function listRaw(name: string, filter: ZoneFilter, signal?: AbortSignal): Promise<DemoRecord[]> {
+    // v0.18.34 §65 (A8/A10, proven cause): the Dashboard's live card, map and online tile: every live page, nothing else.
+    if (name === LIVE_CARD_LIST) return (await readLivePages(filter, signal)).map((row) => presenceRecord(row, drivers.get(row.driverId)));
     if (name === "drivers") {
-      const rows = await readDrivers(true, filter);
-      await readPresence(filter).catch(() => undefined);
+      const rows = await readDrivers(true, filter, signal);
+      // A failed live read is an error, never "everyone offline" (A10: it was swallowed into 0).
+      await readPresence(filter, signal);
       return rows.map((row) => driverRecord(row, presence.get(row.driverId)));
     }
     if (name === "riders") return (await readRiders(true, filter)).map(riderRecord);
     // G3-R4 (v0.18.4): real riders online per zone of the admin (the server counts open apps and open requests).
-    if (name === "ridersOnline") {
-      const query = new URLSearchParams(filter.params).toString();
-      return ridersOnlineRecords(await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`));
-    }
+    if (name === "ridersOnline") return ridersOnlineRecords(await liveCounts(filter, signal));
     // G3-D5 (v0.18.4): the server's supply and demand per zone (every online driver counted, position or not).
-    if (name === "zoneSupply") {
-      const query = new URLSearchParams(filter.params).toString();
-      return zoneSupplyRecords(await client.json<LiveDriverList>(`/admin/live/drivers${query ? `?${query}` : ""}`));
-    }
+    if (name === "zoneSupply") return zoneSupplyRecords(await liveCounts(filter, signal));
     if (name === "payments") {
       const rows = await paged<Payment>(client, "payments", "/admin/payments", filter);
       return rows.map((row) => paymentRecord(row, trips.get(row.tripId)?.zoneId ?? ""));
@@ -681,6 +717,67 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         throw error;
       });
       if (next?.driverId) drivers.set(next.driverId, next);
+      return done("Saved.");
+    }
+    // Fix job 0 (owner A2-2 "Only mark and detect from next trip"): Mark as paid on an owed fee, with the reason. No
+    // "Ask rider to pay": a fee left owed is added by the server to the rider's next trip.
+    if (input.action === "admin.rider.feeMarkPaid") {
+      const riderId = (input.value as { riderId?: unknown } | undefined)?.riderId;
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      if (typeof riderId !== "string" || !riderId) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(riderId)}/fees/${encodeURIComponent(input.targetId)}/mark-paid`, { reason: reason.slice(0, 300) }).catch(explained);
+      if (next?.riderId) riders.set(next.riderId, next);
+      return done("Marked as paid.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner G12 Q5, build-spec Q2): Add money to wallet, in the rider's currency, with the reason.
+    if (input.action === "admin.rider.walletCredit") {
+      const amount = (input.value as { amount?: { amountMinor?: unknown; currency?: unknown } } | undefined)?.amount;
+      const reason = input.reason?.trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+      if (!amount || typeof amount.amountMinor !== "number" || !(amount.amountMinor > 0) || typeof amount.currency !== "string") throw new ApiError(400, tr("Enter an amount above 0."), { code: "invalid_request", retryable: false });
+      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(input.targetId)}/wallet-credit`, { amount: { amountMinor: amount.amountMinor, currency: amount.currency }, reason: reason.slice(0, 300) }).catch(explained);
+      if (next?.riderId) riders.set(next.riderId, next);
+      return done("Saved.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner build-spec Q4, contract.json#payoutMode): one admin approves a manual country's run.
+    if (input.action === "admin.payout.approveRun") {
+      const { country, periodEnd } = (input.value ?? {}) as { country?: string; periodEnd?: string };
+      if (!country || !periodEnd) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      // Fix job 0 (owner A2-3 "Yes, reason required"): the admin's own reason, kept in the server's audit.
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      await client.post("/admin/payouts/runs/approve", { country, periodEnd, reason: reason.slice(0, 300) }).catch(explained);
+      return done("Run approved: the payouts can be paid.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner Q4 + G10-2): the country's payout mode and schedule, in its Standard's CountryRules (kept otherwise).
+    if (input.action === "admin.payout.settings") {
+      const { country, mode, schedule } = (input.value ?? {}) as { country?: string; mode?: string; schedule?: unknown };
+      if (!country || (mode !== "automatic" && mode !== "manual") || !schedule) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
+      const http = { json: <T,>(path: string) => client.json<T>(path), put: <T,>(path: string, body: unknown) => client.put<T>(path, body), post: <T,>(path: string, body: unknown) => client.post<T>(path, body), del: <T,>(path: string) => client.del<T>(path) };
+      const key = standardKey(country);
+      const draft = await readDraft(http, "country_rules", key).catch(explained);
+      await savePublish(http, "country_rules", key, draft, { ...(draft?.document ?? {}), country, payoutMode: mode, payoutSchedule: schedule }).catch(explained);
+      return done("Payout settings published.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner Q4): pause / release one driver's payouts from his profile, with the reason.
+    if (input.action === "admin.driver.payoutHold") {
+      const held = (input.value as { held?: unknown } | undefined)?.held === true;
+      const reason = input.reason?.trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+      const next = await client.post<Driver>(`/admin/drivers/${encodeURIComponent(input.targetId)}/payout-hold`, { held, reason: reason.slice(0, 300) }).catch(explained);
+      if (next?.driverId) drivers.set(next.driverId, next);
+      return done("Saved.");
+    }
+    // v0.18.29 A2 (fix job 0) (owner G16 Q16-2): Warn → Pause → Ban with the admin's reason; level none clears it.
+    if (input.action === "admin.rider.moderate") {
+      const { level, pauseDays } = (input.value ?? {}) as { level?: string; pauseDays?: number };
+      const reason = input.reason?.trim();
+      if (!level || !reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+      const rider = riders.get(input.targetId) ?? (await client.json<{ items: Rider[] }>(`/admin/riders?q=${encodeURIComponent(input.targetId)}`)).items.find((row) => row.riderId === input.targetId);
+      if (!rider) throw new ApiError(404, "No such rider.", { code: "not_found" });
+      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(rider.riderId)}/moderation`, { expectedVersion: rider.version, level, reason: reason.slice(0, 300), ...(level === "paused" ? { pauseDays } : {}) }).catch(explained);
+      if (next?.riderId) riders.set(next.riderId, next);
       return done("Saved.");
     }
     const decision = VEHICLE_COMMANDS[input.action];
@@ -1113,7 +1210,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     demo: false,
     ready: async () => ({ currency: isCurrency(currency) ? currency : CURRENCY, timeZone: TIME_ZONE, demo: false }),
     page: async (pageId) => catalogFor(pageId),
-    list: async (name, scope) => list(name, scope),
+    list: async (name, scope, signal) => list(name, scope, signal),
     search: async (query, scope) => search(query, scope),
     command,
     revision: async () => 0,

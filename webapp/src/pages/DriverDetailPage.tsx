@@ -1,11 +1,14 @@
 import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { isLiveData, liveDriverOf } from "../live/realData";
 import { LiveDriverPreferences } from "../live/LiveProfileData";
+import { LivePayoutHold } from "../live/LivePayoutHold";
+import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
 import { useDriverPerformance } from "../live/useDriverPerformance";
 import { DASH, liveDriverMonth, liveJoinedAt, liveLastOnline, orDash } from "../live/driverFacts";
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { LiveDocBox } from "../live/LiveDocBox";
+import { activateEmphasised, driverCategoryFits, driverHistoryShown } from "../live/realOnly";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useEffect, useMemo, useState } from "react";
@@ -40,7 +43,7 @@ import { NOTE_MAX, statusLabel } from "../domain/labels";
 import { countHealth, docHealth } from "../fleet/documents";
 import { useDocWarnDays } from "../drivers/useDocWarnDays";
 import { driverPerformance, performanceWarning } from "../fleet/performance";
-import { liveDrivers } from "../dashboard/live";
+import { GOING_OFFLINE_CHIP_CLASS, goingOfflineLabel, liveDrivers } from "../dashboard/live";
 import { liveTrip } from "../dashboard/liveTrip";
 import { demoShift } from "../dashboard/scheduled";
 import { TripCard, WaybillDialog } from "../dashboard/TripCard";
@@ -290,6 +293,7 @@ export function DriverDetailPage() {
             <div className="fd-chips">
               <AccountChip status={driver.status} family="driverAccountStatus" />
               <OnlinePill presence={presence} />
+              {live && goingOfflineLabel(live) ? <span className={GOING_OFFLINE_CHIP_CLASS} data-going-offline="true">{goingOfflineLabel(live)}</span> : null}
               <span className="fd-chip code"><Hash size={13} aria-hidden="true" />{code}</span>
               {fleet ? (
                 <Link className="fd-chip fleet" to={`/fleets/${fleet.ownerId ?? ""}`}><Building2 size={13} aria-hidden="true" />{fleet.name}</Link>
@@ -305,7 +309,7 @@ export function DriverDetailPage() {
               <input value={accountNote} onChange={(event) => setAccountNote(event.target.value)} placeholder={tr("For example: insurance expired")} />
             </label>
             <div className="fd-action-row">
-              {accountAction("admin.driver.activate", "active", "Activate", Boolean(activationIssue) || driver.status === "active", allGreen && driver.status !== "active" ? "" : "ghost")}
+              {accountAction("admin.driver.activate", "active", "Activate", Boolean(activationIssue) || driver.status === "active", activateEmphasised(driver, allGreen) && driver.status !== "active" ? "" : "ghost")}
               {accountAction("admin.driver.onHold", "on_hold", "Put on hold", driver.status === "on_hold" || driver.status === "suspended")}
               {accountAction("admin.driver.suspend", "suspended", "Suspend", driver.status !== "active" && driver.status !== "on_hold")}
               {accountAction("admin.driver.reactivate", "active", "Reactivate", Boolean(activationIssue) || (driver.status !== "suspended" && driver.status !== "on_hold"))}
@@ -369,7 +373,8 @@ export function DriverDetailPage() {
                 // Live: the server's categories of the driver (PUT /admin/drivers/{id}/categories, v0.18.0).
                 const enabled = liveData ? (driver.liveAccount?.categoryIds ?? []).includes(category) : ops.categories[category];
                 const info = CATEGORY_INFO.find((item) => item.id === category);
-                const fits = !car ? false : category === "xl" ? car.seats >= 6 : category === "electric" ? car.fuel === "electric" : category === "premium" ? car.year >= 2020 : true;
+                // L-a (A15 item 7): live, the server's Vehicle.fitCategories only (null: unknown, no "does not fit").
+                const fits = driverCategoryFits(carRecord, category, !car ? false : category === "xl" ? car.seats >= 6 : category === "electric" ? car.fuel === "electric" : category === "premium" ? car.year >= 2020 : true);
                 return (
                   <CommandButton
                     command="admin.driver.category"
@@ -391,7 +396,7 @@ export function DriverDetailPage() {
                   >
                     <span className="cat-name">{trx(info?.label) ?? category}</span>
                     <span className="cat-switch" aria-hidden="true"><i /></span>
-                    <small>{trn("{0} seats{1}", info?.seats ?? 4, fits ? "" : tr(" · vehicle does not fit"))}</small>
+                    <small>{trn("{0} seats{1}", info?.seats ?? 4, fits === false ? tr(" · vehicle does not fit") : "")}</small>
                   </CommandButton>
                 );
               })}
@@ -430,6 +435,8 @@ export function DriverDetailPage() {
               </>)}
               <button type="button" data-command="admin.ui.dashboardTab" className="link-action" onClick={() => selectTab("documents")}>{tr("Open documents →")}</button>
             </section>
+            {liveData ? <LivePayoutHold driverId={driver.id} hold={liveFacts?.payoutHold ?? null} /> : null}
+            {liveData ? <LiveBlockedPairs person={{ driverId: driver.id }} /> : null}
             <section className="fd-box">
               <h3>{tr("This month")}</h3>
               {liveData ? <LiveMonth driverId={driver.id} facts={liveFacts} /> : (
@@ -626,7 +633,8 @@ export function DriverDetailPage() {
           <div className="fd-grid-2">
             <section className="fd-box">
               <h3>{tr("History")}</h3>
-              <ul className="fd-timeline">{ops.activity.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul>
+              {/* L-a (A15 item 6): the seeded demo history is never shown live; "—" (owner G2c: no "Not connected yet" here). */}
+              {(() => { const history = driverHistoryShown(ops); return history ? <ul className="fd-timeline">{history.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul> : <p className="state-line" data-testid="driver-history-none">{DASH}</p>; })()}
             </section>
             <section className="fd-box">
               <h3>{tr("Audited actions")}</h3>

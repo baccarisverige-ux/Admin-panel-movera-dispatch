@@ -660,6 +660,7 @@
 .driver-panel-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .driver-panel-head .map-popup-close { position: static; }
 .driver-panel-title { display: grid; gap: 2px; min-width: 0; }
+.driver-panel-title .fd-chip { justify-self: start; margin-top: 2px; }
 .driver-panel-title strong { font-size: 17px; }
 .driver-panel-sos { margin: 0; display: flex; gap: 6px; align-items: center; padding: 9px 12px; border-radius: 12px; background: #fdecec; color: #9b2020; font-size: 13px; font-weight: 600; }
 .driver-panel-actions { display: flex; flex-wrap: wrap; gap: 6px; }
