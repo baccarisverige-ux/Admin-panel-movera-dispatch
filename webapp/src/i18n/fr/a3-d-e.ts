@@ -111,7 +111,6 @@ export const frA3DE: Record<keyof typeof enA3DE, string> = {
   "Documents missing": "Documents manquants",
   "Documents missing or wrong": "Documents manquants ou erronés",
   "Documents that expire": "Documents qui expirent",
-  "Doesn't count": "Ne compte pas",
   "Done": "Terminé",
   "Done for today": "Terminé pour aujourd’hui",
   "Done.": "Terminé.",

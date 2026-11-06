@@ -111,7 +111,6 @@ export const svA3DE: Record<keyof typeof enA3DE, string> = {
   "Documents missing": "Dokument saknas",
   "Documents missing or wrong": "Dokument saknas eller är fel",
   "Documents that expire": "Dokument som går ut",
-  "Doesn't count": "Räknas inte",
   "Done": "Klart",
   "Done for today": "Klart för i dag",
   "Done.": "Klart.",

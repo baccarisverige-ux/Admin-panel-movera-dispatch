@@ -109,7 +109,6 @@ export const enA3DE = {
   "Documents missing": "Documents missing",
   "Documents missing or wrong": "Documents missing or wrong",
   "Documents that expire": "Documents that expire",
-  "Doesn't count": "Doesn't count",
   "Done": "Done",
   "Done for today": "Done for today",
   "Done.": "Done.",
