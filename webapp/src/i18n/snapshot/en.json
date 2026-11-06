@@ -3413,7 +3413,6 @@
 ["Refund part of a trip","Refund part of a trip"],
 ["Refund payment","Refund payment"],
 ["Refund reason","Refund reason"],
-["Refund request is allowed. Because it is {0} or more, the payment stays captured until a second authorised agent approves it.","Refund request is allowed. Because it is {0} or more, the payment stays captured until a second authorised agent approves it."],
 ["Refund rider","Refund rider"],
 ["Refund this payment","Refund this payment"],
 ["Refund to","Refund to"],

@@ -3413,7 +3413,6 @@
 ["Refund part of a trip","Rembourser une partie de la course"],
 ["Refund payment","Rembourser le paiement"],
 ["Refund reason","Motif du remboursement"],
-["Refund request is allowed. Because it is {0} or more, the payment stays captured until a second authorised agent approves it.","La demande de remboursement est autorisée. Comme elle atteint {0} ou plus, le paiement reste encaissé jusqu’à l’approbation d’un second agent autorisé."],
 ["Refund rider","Rembourser le passager"],
 ["Refund this payment","Rembourser ce paiement"],
 ["Refund to","Rembourser vers"],

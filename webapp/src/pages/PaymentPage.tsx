@@ -7,7 +7,7 @@ import { useSession } from "../auth/SessionContext";
 import { formatMoney, market } from "../markets/markets";
 import { METHOD_LABELS, PAY_OPS_KEY, emptyPayOps, factsOf, normalizePayOps, paySplit, refundLimitMinor, retryPlan, type PayOps } from "../payments/desk";
 import { Cards } from "../reports/ui";
-import { needsSecondAdmin, refundAboveMinor } from "../payments/refundPolicy";
+import { needsSecondAdmin } from "../payments/refundPolicy";
 import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { statusLabel } from "../domain/labels";
 import { paymentTimeline, refundRows } from "../payments/ledger";
@@ -37,7 +37,6 @@ export function PaymentPage() {
   const facts = factsOf(payment, riders.data ?? [], trips.data ?? [], ops, now);
   const money = (minor: number) => formatMoney(minor, facts.country);
   // Q25: the one second-admin rule from Settings, per country (default above 500 kr, 50 €, 150 DT); the server applies the same setting.
-  const threshold = refundAboveMinor(refundPolicy, facts.country);
   const needsSecond = needsSecondAdmin(refundPolicy, facts.country, amount) && payment.status === "captured";
   const split = paySplit(amount, facts.country, facts.tripId);
   const plan = payment.status === "failed" ? retryPlan(payment, facts, ops, now) : null;
@@ -101,9 +100,7 @@ export function PaymentPage() {
       <article className="panel fn-panel">
         <h3>{tr("Refund")}</h3>
         <p data-testid="refund-block">
-          {blocked ?? (needsSecond
-            ? tr("Refund request is allowed. Because it is {0} or more, the payment stays captured until a second authorised agent approves it.", [money(threshold)])
-            : tr("Refund is allowed. A double click still writes one ledger row."))}
+          {blocked ?? tr("Refund is allowed. A double click still writes one ledger row.")}
         </p>
         <p data-testid="refund-count">{matches.length}</p>
 
