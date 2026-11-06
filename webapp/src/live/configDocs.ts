@@ -100,7 +100,7 @@ export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null):
     },
     fleetCommissionPct: book.fleetCommissionPct,
     // v0.18.42 §67: written only when the server document has it or the admin changed it from the contract default, so
-    // an untouched zone republishes the same document (the server reads a missing value as 300).
+    // an untouched zone republishes the same document (the server reads a missing value as 0 = off, owner Q9).
     ...(base && "minTripMeters" in base) || book.fees.minTripMeters !== MIN_TRIP_METERS.default ? { minTripMeters: book.fees.minTripMeters } : {},
   };
 }

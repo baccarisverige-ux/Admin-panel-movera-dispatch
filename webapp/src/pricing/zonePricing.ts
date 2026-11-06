@@ -55,7 +55,8 @@ export type ZoneFees = {
 };
 
 /** v0.18.42 §67: the contract's default and range for minTripMeters. */
-export const MIN_TRIP_METERS = { default: 300, min: 0, max: 5000 } as const;
+/** Owner Q9 (v0.18.30, "Warn him but can accept booking") overrides the boss 300 m: off (0) unless the zone turns it on. */
+export const MIN_TRIP_METERS = { default: 0, min: 0, max: 5000 } as const;
 
 export type FixedRoute = { id: string; from: string; to: string; categoryId: string; price: number };
 

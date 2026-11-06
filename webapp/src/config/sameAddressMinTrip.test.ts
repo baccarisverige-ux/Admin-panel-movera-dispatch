@@ -11,9 +11,9 @@ import { BUILT_IN_CATEGORIES, defaultZoneBook, validateZoneBook, diffBooks } fro
  */
 const MT = (contract as unknown as { sameAddress: { minTripMeters: { default: number; range: [number, number] } } }).sameAddress.minTripMeters;
 
-test("the zone book carries minTripMeters, default 300 m (contract)", () => {
-  assert.equal(MT.default, 300);
-  assert.equal(defaultZoneBook("Z001").fees.minTripMeters, 300);
+test("the zone book carries minTripMeters, default 0 = off (contract; owner Q9 overrides the boss 300 m)", () => {
+  assert.equal(MT.default, 0);
+  assert.equal(defaultZoneBook("Z001").fees.minTripMeters, 0);
 });
 
 test("an untouched zone republishes the same pricing document (no minTripMeters added)", () => {
@@ -27,13 +27,10 @@ test("a changed value goes to the server and comes back from the server document
   const doc = pricingDocumentOf(book, "Z001", null) as { minTripMeters?: number };
   assert.equal(doc.minTripMeters, 450);
   assert.equal(bookOfPricing(doc as Record<string, unknown>, defaultZoneBook("Z001")).fees.minTripMeters, 450);
-  // A server document that already has the key keeps it, also at the default; 0 (off) is a value.
-  assert.equal((pricingDocumentOf(defaultZoneBook("Z001"), "Z001", { minTripMeters: 300 }) as { minTripMeters?: number }).minTripMeters, 300);
-  const off = defaultZoneBook("Z001");
-  off.fees.minTripMeters = 0;
-  assert.equal((pricingDocumentOf(off, "Z001", null) as { minTripMeters?: number }).minTripMeters, 0);
+  // A server document that already has the key keeps it, also when turned back to the default 0 (off).
+  assert.equal((pricingDocumentOf(defaultZoneBook("Z001"), "Z001", { minTripMeters: 300 }) as { minTripMeters?: number }).minTripMeters, 0);
   // A bad server value keeps the book's.
-  assert.equal(bookOfPricing({ minTripMeters: -5 }, defaultZoneBook("Z001")).fees.minTripMeters, 300);
+  assert.equal(bookOfPricing({ minTripMeters: -5 }, defaultZoneBook("Z001")).fees.minTripMeters, 0);
 });
 
 test("validation: whole metres from 0 to 5000", () => {
@@ -49,5 +46,5 @@ test("the change list names it", () => {
   const before = defaultZoneBook("Z001");
   const after = defaultZoneBook("Z001");
   after.fees.minTripMeters = 500;
-  assert.ok(diffBooks(before, after, BUILT_IN_CATEGORIES).some((line) => line.includes("Shortest trip") && line.includes("300") && line.includes("500")));
+  assert.ok(diffBooks(before, after, BUILT_IN_CATEGORIES).some((line) => line.includes("Shortest trip") && line.includes("0 → 500")));
 });
