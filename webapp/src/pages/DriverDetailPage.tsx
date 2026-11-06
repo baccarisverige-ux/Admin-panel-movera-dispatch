@@ -7,7 +7,7 @@ import { DASH, liveDriverMonth, liveJoinedAt, liveLastOnline, orDash } from "../
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { LiveDocBox } from "../live/LiveDocBox";
-import { driverCategoryFits, driverHistoryShown } from "../live/realOnly";
+import { activateEmphasised, driverCategoryFits, driverHistoryShown } from "../live/realOnly";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useEffect, useMemo, useState } from "react";
@@ -308,7 +308,7 @@ export function DriverDetailPage() {
               <input value={accountNote} onChange={(event) => setAccountNote(event.target.value)} placeholder={tr("For example: insurance expired")} />
             </label>
             <div className="fd-action-row">
-              {accountAction("admin.driver.activate", "active", "Activate", Boolean(activationIssue) || driver.status === "active", allGreen && driver.status !== "active" ? "" : "ghost")}
+              {accountAction("admin.driver.activate", "active", "Activate", Boolean(activationIssue) || driver.status === "active", activateEmphasised(driver, allGreen) && driver.status !== "active" ? "" : "ghost")}
               {accountAction("admin.driver.onHold", "on_hold", "Put on hold", driver.status === "on_hold" || driver.status === "suspended")}
               {accountAction("admin.driver.suspend", "suspended", "Suspend", driver.status !== "active" && driver.status !== "on_hold")}
               {accountAction("admin.driver.reactivate", "active", "Reactivate", Boolean(activationIssue) || (driver.status !== "suspended" && driver.status !== "on_hold"))}
