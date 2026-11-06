@@ -6,7 +6,7 @@ import { ArrowLeft, FileCheck, GitCompare, History, ImagePlus, MapPin, Smartphon
 import { STUDIO_SLOTS, emptyStudio, studioSlot, changeStudio, useSlice, type StudioBook, type StudioText } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
-import { CONTENT_OPS_KEY, PHONES, compare, emptyContentOps, extraError, normalizeContentOps, setExtra, slotExtra, type ContentOps, type SlotExtra } from "../content/extra";
+import { CONTENT_OPS_KEY, compare, emptyContentOps, extraError, normalizeContentOps, setExtra, slotExtra, type ContentOps, type SlotExtra } from "../content/extra";
 import { Card, Check, Choice, Row, Switch } from "../dispatch/fields";
 import { MARKETS } from "../markets/markets";
 import { useMarketScope } from "../markets/useMarketScope";
@@ -61,8 +61,6 @@ export function ContentPage() {
   const [draft, setDraft] = useState<StudioText | null>(null);
   const [extraDraft, setExtraDraft] = useState<SlotExtra | null>(null);
   const [notice, setNotice] = useState("");
-  const [phone, setPhone] = useState(PHONES[1].id);
-  const [lang, setLang] = useState<"sv" | "fr" | "en">("sv");
   const targets = publishTargets(scope);
   const [historyZonePick, setHistoryZone] = useState<string>("");
   const historyZone = targets.includes(historyZonePick) ? historyZonePick : targets[0] ?? "";
@@ -74,7 +72,6 @@ export function ContentPage() {
   const text = draft ?? (live ? (liveHistory[0] ? textFromItem(liveHistory[0]) : emptyStudioText()) : slot.draft);
   const extra = extraDraft ?? slotExtra(ops, id);
   const editable = live ? live.can("settings.publish") : Boolean(agent && can(agent.role, "settings.edit"));
-  const size = PHONES.find((item) => item.id === phone) ?? PHONES[1];
   const errorExtra = extraError(extra);
   const zonesHere = MARKETS.filter((item) => extra.countries.includes(item.id)).flatMap((item) => item.zones);
   const base = against === null ? slot.published : slot.history.find((item) => item.version === against)?.text ?? null;
@@ -101,7 +98,6 @@ export function ContentPage() {
   }
   useDirtyWarning(Boolean(draft || extraDraft));
   const publishError = live ? validateStudio(id, text) ?? (targets.length ? undefined : "Nothing is chosen at the top: choose the zones first.") : changeStudio(store.value, id, text, "publish", agent?.id ?? "").error;
-  const imageSrc = extra.image?.dataUrl || text.image;
 
   return (
     <div className="dx-page gr-page">
@@ -251,18 +247,7 @@ export function ContentPage() {
 
         <aside className="gr-phone" aria-label={tr("Phone preview")}>
           <h3><Smartphone size={15} aria-hidden="true" /> {tr("Phone preview")}</h3>
-          <Choice label={tr("Phone size")} value={phone} options={PHONES.map((item) => ({ id: item.id, label: tr(item.label as Parameters<typeof tr>[0]) }))} onChange={setPhone} />
-          <Choice label={tr("Preview language")} value={lang} options={[{ id: "sv", label: tr("Swedish") }, { id: "fr", label: tr("French") }, { id: "en", label: tr("English") }]} onChange={setLang} />
-          <RealAppPreview app={id.startsWith("driver") ? "driver" : "rider"}>
-            <div className="gr-phone-frame" style={{ width: size.width, minHeight: size.height }}>
-              <span className="gr-phone-bar" />
-              {imageSrc ? <img className={`gr-phone-img ${extra.image?.fit ?? "fill"}`} src={imageSrc} alt="" /> : null}
-              <div className="gr-phone-card">
-                <p><b>{text.title}</b></p>
-                <p>{text[lang]}</p>
-              </div>
-            </div>
-          </RealAppPreview>
+          <RealAppPreview app={id.startsWith("driver") ? "driver" : "rider"} />
           {live ? <p className="gr-help"><PublishTargetsLine zoneIds={targets} /></p> : <p className="gr-help">{trn("Shown in {0}{1}.", extra.countries.length === MARKETS.length ? tr("every country") : MARKETS.filter((item) => extra.countries.includes(item.id)).map((item) => item.name).join(", ") || tr("no country"), extra.zones.length ? tr(", {0} zone{1}", [extra.zones.length, extra.zones.length > 1 ? "s" : ""]) : "")}</p>}
           {live ? null : <p className="gr-help">{trn("Published: {0}", slot.published?.en ?? tr("No publication"))}</p>}
         </aside>

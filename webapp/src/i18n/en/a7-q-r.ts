@@ -242,7 +242,6 @@ export const enA7QR = {
   "Rider app": "Rider app",
   "Rider app · booked ride": "Rider app · booked ride",
   "Rider app · while waiting": "Rider app · while waiting",
-  "Rider app screen": "Rider app screen",
   "Rider app{0}": "Rider app{0}",
   "Rider asked support": "Rider asked support",
   "Rider blocked until paid": "Rider blocked until paid",

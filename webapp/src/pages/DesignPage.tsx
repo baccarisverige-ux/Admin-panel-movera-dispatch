@@ -3,7 +3,8 @@ import { useState } from "react";
 import { ACTION_REASONS } from "../domain/labels";
 import { useSession } from "../auth/SessionContext";
 import { DataTable } from "../ui/DataTable";
-import { Can, ConfirmDialog, DateTime, DetailLayout, DiffView, DocumentViewer, Drawer, Duration, EmptyState, ErrorState, Money, PhonePreview, StatusDot, Timeline, Toast, useDirty } from "../ui/kit";
+import { Can, ConfirmDialog, DateTime, DetailLayout, DiffView, DocumentViewer, Drawer, Duration, EmptyState, ErrorState, Money, StatusDot, Timeline, Toast, useDirty } from "../ui/kit";
+import { RealAppPreview } from "../ui/RealAppPreview";
 import { CommandButton } from "../ui/CommandButton";
 import { tr } from "../i18n";
 
@@ -34,8 +35,8 @@ export function DesignPage() {
         <ErrorState onRetry={() => setTableState("ready")} />
         <Can role={role} permission="system.read"><p>{tr("You can open design.")}</p></Can>
         <Timeline items={[{ at: "2026-10-05T12:00:00Z", text: "Published" }]} />
-        <PhonePreview app="rider">{tr("Book a ride in Stockholm.")}</PhonePreview>
-        <PhonePreview app="driver">{tr("Offer in Östermalm.")}</PhonePreview>
+        <RealAppPreview app="rider" />
+        <RealAppPreview app="driver" />
         <DiffView before="12 kr" after="14 kr" />
         <Toast text="Saved in demo." />
         <DocumentViewer />
