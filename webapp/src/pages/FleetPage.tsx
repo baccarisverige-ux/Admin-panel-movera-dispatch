@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { LiveListBar } from "../live/LiveListBar";
 import { isLiveData } from "../live/realData";
+import { vehicleRuleFitCounts } from "../live/realOnly";
 import { ruleProblemText } from "../live/format";
 import { useNavigate, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Camera, Car, CheckCircle2, FileWarning, PauseCircle, Settings2 } from "lucide-react";
@@ -123,7 +124,7 @@ export function FleetPage() {
             <p>{tr("Which car fits which category, when papers count as expiring, and what happens when they run out.")}</p>
           </div>
         </header>
-        <OnboardingSettingsEditor key={scope.market.id} country={scope.market.id} part="vehicles" cars={rows.filter((row) => countryOfZone(row.record.zoneId) === scope.market.id).map((row) => ({ year: row.profile.year, seats: row.profile.seats, fuel: row.profile.fuel, category: row.profile.category }))} />
+        <OnboardingSettingsEditor key={scope.market.id} country={scope.market.id} part="vehicles" cars={rows.filter((row) => countryOfZone(row.record.zoneId) === scope.market.id).map((row) => ({ year: row.profile.year, seats: row.profile.seats, fuel: row.profile.fuel, category: row.profile.category }))} liveFitCounts={vehicleRuleFitCounts(rows.filter((row) => countryOfZone(row.record.zoneId) === scope.market.id).map((row) => row.record))} />
       </div>
     );
   }

@@ -1,5 +1,6 @@
 import { tr } from "../i18n";
 import { isLiveData } from "../live/realData";
+import { workDemoNoteShown } from "../live/realOnly";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ArrowLeft, Bell, Download, Eye, KeyRound, LogIn, LogOut, Pencil, ShieldCheck, Timer, UserRound } from "lucide-react";
@@ -156,7 +157,7 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
         </Panel>
         {agent?.role === "super" ? <AccessCard settings={settings} /> : null}
       </div>
-      <p className="rp-foot"><KeyRound size={12} aria-hidden="true" />{" "}{tr("Sign-ins and downloads are recorded in this browser in the demo; the backend records them for real. Rows marked Demo are example history.")}</p>
+      {workDemoNoteShown() ? <p className="rp-foot"><KeyRound size={12} aria-hidden="true" />{" "}{tr("Sign-ins and downloads are recorded in this browser in the demo; the backend records them for real. Rows marked Demo are example history.")}</p> : null}
     </div>
   );
 }
