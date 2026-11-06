@@ -35,8 +35,7 @@ import { AUTO_AUDIENCES, CARE_KEY, REPLY_TEMPLATES, autoState, type AutoAudience
 import { PromoBuilder } from "../riders/PromoBuilder";
 import { PromoShare } from "../riders/PromoShare";
 import { RiderPicker } from "../riders/RiderPicker";
-import { RiderAppPreview } from "../riders/RiderAppPreview";
-import { useCategoryPrices } from "../riders/useCategoryPrices";
+import { RealAppPreview } from "../ui/RealAppPreview";
 import { categoryName } from "../riders/profile";
 import { PERIODS, SEGMENTS, SORTS, pickAudience, insights, matches, ridersCsv, segmentCounts, sortRows, type Period, type RiderRow, type SegmentId, type SortId } from "../riders/segments";
 import { LiveChip, PromoTicketCard, RiderBadges, Stars, money } from "../riders/ui";
@@ -300,7 +299,6 @@ function PromotionsView({ care, rows, country, agentId, canEdit, builder, onBuil
   const part = builder ? "list" : chosenPart;
   const [sharingId, setSharingId] = useState<string | null>(null);
   const sharing = care.promotions.find((ticket) => ticket.id === sharingId) ?? null;
-  const prices = useCategoryPrices(country);
   const byId = useMemo(() => new Map(rows.map((row) => [row.rider.id, row])), [rows]);
   const tickets = care.promotions.filter((ticket) => ticket.country === country);
   const locale = market(country).locale;
@@ -365,7 +363,7 @@ function PromotionsView({ care, rows, country, agentId, canEdit, builder, onBuil
                         </div>
                       </div>
                     ) : null}
-                    {previewId === ticket.id || draft ? <RiderAppPreview promo={draft ? { ...ticket, ...draft, maxPerRide: ticket.kind === "percent" ? draft.maxPerRide : draft.value } : ticket} prices={prices.rows} zoneName={prices.zoneName} off={ticket.status !== "active"} popup={ticket.popup} /> : null}
+                    {previewId === ticket.id || draft ? <RealAppPreview app="rider" /> : null}
                   </div>
                   <div className="rd-promo-stats">
                     {ticket.audience === "code"
@@ -424,7 +422,6 @@ function AutoPromosCard({ care, rows, country, canEdit, onNotice, now }: { care:
     const riderIds = audience === "random" ? randomIds(item.count, seed) : audience === "picked" ? item.riderIds : [];
     setAuto({ ...auto, [key]: { ...item, audience, riderIds } });
   }
-  const prices = useCategoryPrices(country);
   return (
         <section className="dash-card" aria-labelledby="auto-title">
           <div className="card-head">
@@ -479,7 +476,7 @@ function AutoPromosCard({ care, rows, country, canEdit, onNotice, now }: { care:
                 </fieldset>
                 <button data-command="admin.ui.quickAction" type="button" className="dash-btn small ghost" aria-pressed={preview === key} onClick={() => setPreview(preview === key ? null : key)}>{preview === key ? tr("Hide app preview") : tr("See in rider app")}</button>
                 {preview === key ? (
-                  <RiderAppPreview promo={{ title: label, kind: "percent", value: auto[key].percent, rides: auto[key].rides, maxPerRide: auto[key].maxPerRide, minFare: 0, country, categories: auto[key].categories }} prices={prices.rows} zoneName={prices.zoneName} off={!auto[key].on} />
+                  <RealAppPreview app="rider" />
                 ) : null}
               </div>
             ))}

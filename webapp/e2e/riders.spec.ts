@@ -160,18 +160,13 @@ test("existing promotions switch off and on, and their discount, max per ride an
   await expect(page.getByLabel("Come back rides")).toHaveValue("5");
 });
 
-test("the promotion shows on the rider app home sheet and as old and new prices on the categories it covers", async ({ page }) => {
+test("a new promotion shows the real rider app preview, and automatic promotions save", async ({ page }) => {
   await session(page);
   await page.goto("/riders?view=promotions");
   await page.getByRole("button", { name: "New promotion" }).last().click();
   await page.getByLabel("Promotion title").fill("Autumn offer");
-  await expect(page.getByLabel("Promotion in the rider app")).toContainText("30% off · Autumn offer");
-  await page.locator(".rd-builder-form").getByText("Movera", { exact: true }).click();
-  await page.getByRole("tab", { name: "Choose ride" }).click();
-  const cats = page.getByRole("list", { name: "Categories with prices" });
-  await expect(cats.getByRole("listitem").filter({ hasText: "Movera" }).locator("s")).toHaveCount(1);
-  await expect(cats.getByRole("listitem").filter({ hasText: "Premium" }).locator("s")).toHaveCount(0);
-  await expect(page.getByText("30% off applied on 1 category")).toBeVisible();
+  // B7b: the real rider app only (demo build: sign-in note); the drawn-sample price checks are archived in the Rules repo.
+  await expect(page.getByLabel("Rider app preview")).toHaveText("Sign in to the live server to see the real app.");
 
   await page.getByRole("button", { name: "Close promotion" }).click();
   await page.getByRole("tab", { name: /Automatic/ }).click();
@@ -215,7 +210,7 @@ test("a code anyone can use, sent by push, app message, popup and email, with a 
   await share.getByText("Email", { exact: true }).click();
   await share.getByLabel("Email addresses").fill("anna@mail.com, omar@mail.com, wrong");
   await expect(share).toContainText("2 valid · 1 not valid: wrong");
-  await expect(share.getByLabel("Popup in the rider app")).toContainText("CITY25");
+  await expect(share.getByLabel("Rider app preview")).toHaveText("Sign in to the live server to see the real app.");
   await share.getByRole("button", { name: "Send to 14" }).click();
   await confirm(page);
   await expect(page.getByText(/CITY25 sent to 14 by push notification, message in the app, popup in the app, email/)).toBeVisible();

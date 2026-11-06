@@ -6,9 +6,8 @@ import { CommandButton } from "../ui/CommandButton";
 import { useDialogFocus } from "../ui/useDialogFocus";
 import { CARE_KEY, SEND_CHANNELS, parseEmails, promoMessage, sendPromotion, setPopup, type PromoTicket, type RiderCare, type SendChannel } from "./care";
 import { PromoFlyer } from "./PromoFlyer";
-import { RiderAppPreview } from "./RiderAppPreview";
+import { RealAppPreview } from "../ui/RealAppPreview";
 import { AUDIENCE_KINDS, pickAudience, type AudienceKind, type RiderRow } from "./segments";
-import { useCategoryPrices } from "./useCategoryPrices";
 import { tr, trn, trx, trSentences } from "../i18n";
 
 const CHANNEL_ICON: Record<SendChannel, ReactNode> = {
@@ -37,7 +36,6 @@ type Props = {
 export function PromoShare({ ticket, care, rows, country, agentId, canEdit, now, onClose, onNotice }: Props) {
   const root = useDialogFocus(true, onClose);
   const locale = market(country).locale;
-  const prices = useCategoryPrices(country);
   const [tab, setTab] = useState<"send" | "flyer">("send");
   const [channels, setChannels] = useState<SendChannel[]>(["push", "inapp"]);
   const [to, setTo] = useState<To>(ticket.audience === "code" ? "all" : "holders");
@@ -119,7 +117,7 @@ export function PromoShare({ ticket, care, rows, country, agentId, canEdit, now,
             </div>
 
             <aside className="rd-share-side">
-              {channels.includes("popup") || ticket.popup ? <RiderAppPreview promo={ticket} prices={prices.rows} zoneName={prices.zoneName} popup /> : (
+              {channels.includes("popup") || ticket.popup ? <RealAppPreview app="rider" /> : (
                 <div className="rd-push-preview" aria-label={tr("Push preview")}>
                   <span className="rd-push-app">{tr("MOVERA · now")}</span>
                   <b>{trx(ticket.title)}</b>

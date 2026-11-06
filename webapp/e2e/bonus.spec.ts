@@ -43,14 +43,8 @@ test("a ride bonus: 4 rides from 15 to 17 earns 200 kr, rides back to back, seen
   await expect(page.getByLabel("Rides back to back on")).toBeChecked();
   await page.getByLabel("Rides back to back", { exact: true }).fill("15");
 
-  const phone = page.getByLabel("Driver app preview");
-  await expect(phone.getByLabel("Bonus card")).toContainText("Do 4 rides, earn 200 kr");
-  await expect(phone.getByLabel("Bonus card")).toContainText("Mon–Fri · 15:00–17:00");
-  await expect(phone).toContainText("1 of 4 rides");
-  await phone.getByRole("tab", { name: "Bonus details" }).click();
-  await expect(phone).toContainText("Rides back to back: max 15 min between rides");
-  await expect(phone).toContainText("Cancel rate 10% or less");
-  await expect(phone).toContainText("You can earn up to 200 kr");
+  // B7b: the real driver app only (demo build: sign-in note); the drawn-sample checks are archived in the Rules repo.
+  await expect(page.getByLabel("Driver app preview")).toHaveText("Sign in to the live server to see the real app.");
   await expect(page.locator(".db-cost")).toContainText("200 kr");
 
   await page.getByRole("button", { name: "Start bonus" }).click();
@@ -95,7 +89,7 @@ test("an area bonus drawn on the map: a place with a distance and a circle", asy
   await page.getByRole("button", { name: /New area bonus/ }).click();
   await page.getByLabel("Bonus name").fill("Station rush");
   await page.getByLabel("Message to drivers").fill("Trains arrive every 10 min. Wait at the taxi lane, exit 3.");
-  await expect(page.getByLabel("Driver app preview").getByLabel("Message on the map")).toHaveText("Trains arrive every 10 min. Wait at the taxi lane, exit 3.");
+  await expect(page.getByLabel("Driver app preview")).toHaveText("Sign in to the live server to see the real app.");
   await expect(page.getByRole("alert")).toHaveText("Draw at least one area on the map.");
   await page.getByRole("button", { name: /Around a place/ }).click();
   await page.getByLabel("Bonus place").selectOption("Stockholm Central Station");
@@ -127,10 +121,7 @@ test("an area bonus drawn on the map: a place with a distance and a circle", asy
   await expect(areas.getByLabel("Area 2 name")).toHaveValue("Area 2");
   await areas.getByLabel("Area 2 name").fill("Stureplan");
   await page.getByRole("radio", { name: "Drop-off inside" }).click();
-  await expect(page.getByLabel("Driver app preview")).toContainText("Stockholm Central Station");
-  await page.getByLabel("Driver app preview").getByRole("tab", { name: "Bonus details" }).click();
-  await expect(page.getByLabel("Driver app preview")).toContainText("Drop off inside the area");
-  await expect(page.getByLabel("Driver app preview")).toContainText("Stockholm Central Station, Stureplan");
+  await expect(page.getByLabel("Driver app preview")).toHaveText("Sign in to the live server to see the real app.");
   await areas.getByRole("button", { name: "Remove Stureplan" }).click();
   await expect(areas.getByRole("listitem")).toHaveCount(1);
 
@@ -141,9 +132,7 @@ test("an area bonus drawn on the map: a place with a distance and a circle", asy
   await expect(item).toContainText("Stockholm Central Station");
   await expect(item).toContainText("Wait at the taxi lane, exit 3.");
   await item.getByRole("button", { name: "See in driver app" }).click();
-  await expect(item.getByLabel("Message on the map")).toContainText("exit 3");
-  await item.getByRole("tab", { name: "Bonus details" }).click();
-  await expect(item.getByLabel("Message from Movera")).toContainText("exit 3");
+  await expect(item.getByLabel("Driver app preview")).toHaveText("Sign in to the live server to see the real app.");
 });
 
 test("switch a bonus off and on, change it, end it", async ({ page }) => {
@@ -182,7 +171,7 @@ test("bonuses follow the country, and the dashboard map has a bonus layer", asyn
   await expect(page.getByRole("heading", { name: "Driver bonuses in France" })).toBeVisible();
   await expect(page.getByText("No bonus here yet in France.")).toBeVisible();
   await page.getByRole("button", { name: /New ride bonus/ }).click();
-  await expect(page.getByLabel("Driver app preview").getByLabel("Bonus card")).toContainText("15 €");
+  await expect(page.getByLabel("Driver app preview")).toHaveText("Sign in to the live server to see the real app.");
   await page.goto("/?tab=live");
   await expect(page.getByRole("button", { name: /Driver bonus areas/ })).toHaveAttribute("aria-pressed", "true");
   await page.goto("/drivers");

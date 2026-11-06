@@ -3,8 +3,8 @@ import { Copy, Flame, MapPinned, Pencil, Plus, Radio, Trophy, Users, Wallet, Zap
 import { useSlice } from "../api/hooks";
 import { market, type MarketId } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
-import { BonusBuilder, categoryName, type BonusDriver } from "./BonusBuilder";
-import { DriverAppPreview } from "./DriverAppPreview";
+import { BonusBuilder, type BonusDriver } from "./BonusBuilder";
+import { RealAppPreview } from "../ui/RealAppPreview";
 import { bonusSummary } from "./bonusDemo";
 import { clearBonusPrefill, takeBonusPrefill } from "../dispatch/prefill";
 import { BONUS_KEY, bonusState, emptyBonusBook, newBonus, normalizeBonusBook, rewardLine, setBonusStatus, timeLine, type BonusBook, type DriverBonus } from "./bonus";
@@ -149,7 +149,7 @@ export function BonusesView({ country, drivers, fleets, agentId, canEdit }: { co
                       {used !== null ? <span className="rd-budget" aria-label={tr("{0}% of budget used", [Math.round(used)])}><i style={{ width: `${used}%` }} /></span> : null}
                     </dl>
                   ) : null}
-                  {previewId === bonus.id ? <div className="db-item-preview"><DriverAppPreview bonus={bonus} money={money} categoryName={categoryName} done={Math.max(1, Math.round((sum?.rows[0]?.result.counted ?? 1)))} /></div> : null}
+                  {previewId === bonus.id ? <div className="db-item-preview"><RealAppPreview app="driver" /></div> : null}
                   <footer className="db-item-foot">
                     <small>{trn("Made by {0}{1}{2}", bonus.createdBy, bonus.editedBy ? tr(" · changed by {0}", [bonus.editedBy]) : "", bonus.budget ? tr(" · budget {0}", [money(bonus.budget)]) : tr(" · no budget"))}</small>
                     {state !== "ended" ? (
