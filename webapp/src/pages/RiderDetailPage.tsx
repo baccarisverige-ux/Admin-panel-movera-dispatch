@@ -55,6 +55,7 @@ import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, mo
 import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
 import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
 import { LiveRiderModeration } from "../live/LiveRiderModeration";
+import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
 import { LiveWalletCredit } from "../live/LiveWalletCredit";
 import { feeKindOf, owedByCurrency, owedText, tripMoney, walletByCurrency, walletText } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
@@ -223,6 +224,7 @@ export function RiderDetailPage() {
               {rider.status !== "blocked" ? statusPatch("blocked", "Block", "admin.rider.block", "dash-btn danger") : null}
             </div>
             {liveData ? <LiveRiderModeration riderId={rider.id} moderation={liveRiderOf(rider)?.moderation ?? null} canEdit={can(role, "riders.block")} /> : null}
+            {liveData ? <LiveBlockedPairs person={{ riderId: rider.id }} /> : null}
           </div>
         </div>
         <div className="rd-facts">

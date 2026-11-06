@@ -2,6 +2,7 @@ import { DRIVER_BONUS_LIMIT_INPUT_ID } from "../live/tripLive";
 import { useEffect, useState } from "react";
 import { BadgeDollarSign, Gift, HandHeart, Phone, Plus, Save, TrendingUp } from "lucide-react";
 import { CALL_FIELDS, CALL_RANGES, callModeText } from "../config/callSettings";
+import { DONT_MATCH_STARS, dontMatchStarsText } from "../config/dontMatchSettings";
 import { market, zoneById, type MarketId } from "../markets/markets";
 import { PublishTargetsLine } from "../live/StandardBar";
 import {
@@ -35,7 +36,7 @@ import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 
 /** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
-export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls"] as const;
+export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls", "dont-match"] as const;
 
 type ListProps = {
   title: string;
@@ -251,6 +252,25 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               {CALL_FIELDS.map((field) => (
                 <label key={field.key} className="field"><span>{tr(field.label)}</span><NumberField label={tr(field.label)} value={shown.calls[field.key]} step={1} min={CALL_RANGES[field.key][0]} max={CALL_RANGES[field.key][1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls[field.key] !== saved.calls[field.key]} onChange={(value) => edit({ calls: { ...shown.calls, [field.key]: value } })} /></label>
               ))}
+            </div>
+          </div>
+          {/* v0.18.40 §64 (fix job 10, owner G16 Q16-4, "Never told"): CountryRules.dontMatchAgain. */}
+          <div id="extras-dont-match" className="cx-anchor">
+            <div className="fee-card" data-testid="dont-match-settings">
+              <div>
+                <strong>{tr("Don't match again")}</strong>
+                <small>{tr("On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.")}</small>
+              </div>
+              <label className="mini-switch big">
+                <input type="checkbox" aria-label={tr("Don't match again")} data-testid="dont-match-on" checked={shown.dontMatchAgain.on} disabled={!canEdit} onChange={(event) => edit({ dontMatchAgain: { ...shown.dontMatchAgain, on: event.target.checked } })} />
+                <span aria-hidden="true"><i /></span>
+                {shown.dontMatchAgain.on ? tr("On") : tr("Off")}
+              </label>
+              <label className="check-row">{tr("Offer the tick at")}{" "}
+                <select data-testid="dont-match-stars" value={shown.dontMatchAgain.atStars} disabled={!canEdit || !shown.dontMatchAgain.on} onChange={(event) => edit({ dontMatchAgain: { ...shown.dontMatchAgain, atStars: Number(event.target.value) } })}>
+                  {DONT_MATCH_STARS.map((n) => <option key={n} value={n}>{dontMatchStarsText(n)}</option>)}
+                </select>
+              </label>
             </div>
           </div>
           <div id="extras-person-limits" className="cx-anchor">

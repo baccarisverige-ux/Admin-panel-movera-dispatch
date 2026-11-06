@@ -2,6 +2,7 @@ import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSe
 import { isLiveData, liveDriverOf } from "../live/realData";
 import { LiveDriverPreferences } from "../live/LiveProfileData";
 import { LivePayoutHold } from "../live/LivePayoutHold";
+import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
 import { useDriverPerformance } from "../live/useDriverPerformance";
 import { DASH, liveDriverMonth, liveJoinedAt, liveLastOnline, orDash } from "../live/driverFacts";
 import { logExport } from "../reports/activityLog";
@@ -435,6 +436,7 @@ export function DriverDetailPage() {
               <button type="button" data-command="admin.ui.dashboardTab" className="link-action" onClick={() => selectTab("documents")}>{tr("Open documents →")}</button>
             </section>
             {liveData ? <LivePayoutHold driverId={driver.id} hold={liveFacts?.payoutHold ?? null} /> : null}
+            {liveData ? <LiveBlockedPairs person={{ driverId: driver.id }} /> : null}
             <section className="fd-box">
               <h3>{tr("This month")}</h3>
               {liveData ? <LiveMonth driverId={driver.id} facts={liveFacts} /> : (

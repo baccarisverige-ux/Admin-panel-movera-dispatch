@@ -34,6 +34,7 @@ import { enC6Job4TakeBack } from "./en/c6-job4-take-back.ts";
 import { enC7AirportQueue } from "./en/c7-airport-queue.ts";
 import { enC6InAppCalls } from "./en/c6-in-app-calls.ts";
 import { enC8NoDriverNearby } from "./en/c8-no-driver-nearby.ts";
+import { enC9BlockedPairs } from "./en/c9-blocked-pairs.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -74,6 +75,7 @@ export const en = {
   ...enC7AirportQueue,
   ...enC6InAppCalls,
   ...enC8NoDriverNearby,
+  ...enC9BlockedPairs,
 } as const;
 
 export type MessageKey = keyof typeof en;
