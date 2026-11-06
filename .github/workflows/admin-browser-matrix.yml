@@ -1,15 +1,35 @@
 name: Admin browser acceptance evidence
+# CI cost cut (owner 2026-11-06): the multi-browser run (Chromium, Firefox,
+# WebKit) runs only with the label `ready-to-merge` on a pull request (adding
+# the label starts it; every later push while the label is on runs it again),
+# on pushes to main, or manually. The fast Chromium e2e runs on every push in
+# webapp-ci.yml. (Before: it ran only for two old branches, r17 and r18.)
 on:
   pull_request:
-    branches: [admin/r17-dashboard-reports, admin/r18-quality]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+    branches: [main, admin/r17-dashboard-reports, admin/r18-quality]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
 concurrency:
-  group: admin-browser-matrix-${{ github.ref }}
+  # Adding some other label does not cancel a running matrix.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'ready-to-merge') && github.event.label.name || 'run' }}
   cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   browsers:
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft != true &&
+       contains(github.event.pull_request.labels.*.name, 'ready-to-merge') &&
+       (github.event.action != 'labeled' || github.event.label.name == 'ready-to-merge'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     defaults:
