@@ -425,3 +425,6 @@
 .rc-table { table-layout: auto; }
 .rc-table td { white-space: normal; overflow-wrap: anywhere; }
 .rc-table td time { white-space: nowrap; }
+/* v0.18.39 §63: Trips row "No driver in reach" — the status dot plus a small icon (tooltip), never wider than the status. */
+.op-nd-cell { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.op-nd-mark { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; background: #fdecec; color: #b42318; flex: none; }

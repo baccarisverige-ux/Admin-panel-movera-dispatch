@@ -197,6 +197,9 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
         <Row label={tr("“Not driving to the rider” notice")} help={tr("The driver is not heading to the pickup: he gets a notice, again every few minutes, until he heads there. The rider can then cancel for free.")} on={bw.notHeadingNotice} disabled={off} onToggle={(notHeadingNotice) => setBooking({ notHeadingNotice })}>
           <Num label={tr("Notice again every, minutes")} before="every" value={bw.notHeadingNoticeEveryMin} unit="min" min={1} max={10} disabled={disabled || !bw.notHeadingNotice} onChange={(notHeadingNoticeEveryMin) => setBooking({ notHeadingNoticeEveryMin })} />
         </Row>
+        <Row label={tr("Stop a booked ride with no driver")} help={tr("No driver by the pickup time + these minutes: the ride ends, the rider pays nothing and is told, and admins get an alert.")}>
+          <Num label={tr("Stop a booked ride with no driver after pickup +, minutes")} before="+" value={bw.noDriverStopAfterMin} unit="min" min={1} max={240} disabled={off} onChange={(noDriverStopAfterMin) => setBooking({ noDriverStopAfterMin })} />
+        </Row>
         <Row label={tr("Take back a live ride")} help={tr("Always off: a live ride is never taken from the driver (owner rule). Read only.")} on={false} onToggle={() => undefined} disabled />
         <p className="dx-resv-foot" aria-label={tr("Late driver example")}>{trn("Example: pickup {0}, the driver is {1} min away at {2} → he would arrive at {3}, {4} min late, and the pickup is still {5} min away: {6}.", clock(SAMPLE_PICKUP, 0), 26, clock(SAMPLE_PICKUP, -20), clock(SAMPLE_PICKUP, 6), 6, 20, <b>{6 > bw.takeBackLateMin && 26 > bw.takeBackKeepIfDriveMin && 20 >= bw.takeBackUntilMinBeforePickup ? tr("taken back, sent to another driver") : tr("he keeps it")}</b>)}</p>
       </Card>

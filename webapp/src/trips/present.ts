@@ -557,3 +557,11 @@ export function liveBoardLayers(live: boolean): (LiveKind | "stale")[] {
 export function bookedNowLive(status: string, kind: string | undefined): boolean {
   return kind === "scheduled" && ["driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"].includes(status);
 }
+
+/**
+ * v0.18.39 §63 (fix job N2, contract.json#noDriverNearby.alerts): Admin › Trips marks "No driver in reach" on a trip still
+ * searching whose rider was shown "No driver nearby" (TripProjection.searchStep.kind no_driver_nearby).
+ */
+export function noDriverInReach(status: string, searchStep: { kind: string } | null | undefined): boolean {
+  return (status === "searching" || status === "offered") && searchStep?.kind === "no_driver_nearby";
+}

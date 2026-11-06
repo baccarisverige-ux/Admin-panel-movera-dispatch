@@ -93,7 +93,7 @@ test("DispatchDocument from the zone's rules, the same keys as the contract samp
   const zone = zoneDefault("Z001");
   const doc = dispatchDocumentOf(zone, "Z001", null);
   // v0.18.9: start, limits and neighbours are optional contract fields the sample (written before them) leaves out.
-  assert.deepEqual(Object.keys(doc).sort(), [...Object.keys(sample("dispatch_document")), "start", "limits", "neighbours"].sort());
+  assert.deepEqual(Object.keys(doc).sort(), [...Object.keys(sample("dispatch_document")), "start", "limits", "neighbours", "reaskLimit"].sort());
   const back = rulesOfDispatch(doc, { offers: { autoOffline: { on: true, missedExclusive: 10 } }, cancelFees: { driverSharePct: 60 } }, zoneDefault("Z001"));
   assert.equal(back.autoOffline.after, 10);
   assert.equal(back.autoOffline.noFixMinutes, 5, "G3-R1: without the key the default 5 minutes stays");
@@ -473,12 +473,13 @@ test("v0.18.11 dispatch start & order: defaults keep today's behaviour; start, o
   for (const zoneId of ["Z001", "FR-PC"]) {
     const base = zoneDefault(zoneId);
     const plain = dispatchDocumentOf(base, zoneId, null) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- test reads the document
+    // v0.18.39 §63: the far reach (contract default 12 km) is always written.
     assert.deepEqual(plain.start, { mode: "auto", nearKm: 2 });
-    assert.deepEqual(plain.limits, { maxPickupEtaMin: 0 });
+    assert.deepEqual(plain.limits, { maxPickupEtaMin: 0, farReachKm: 12 });
     assert.deepEqual(plain.neighbours, { on: false, zoneIds: [] });
     assert.equal(plain.radar.steps, undefined);
     assert.equal(plain.exclusive.steps, undefined);
-    const zone = { ...base, start: { mode: "both" as const, nearKm: 1.5 }, exclusive: { ...base.exclusive, steps: [1, 2] }, limits: { maxPickupKm: 6, maxPickupEtaMin: 12 }, neighbours: { on: true, zoneIds: ["Z002"], afterStep: 2 } };
+    const zone = { ...base, start: { mode: "both" as const, nearKm: 1.5 }, exclusive: { ...base.exclusive, steps: [1, 2] }, limits: { maxPickupKm: 6, maxPickupEtaMin: 12, farReachKm: 12 }, neighbours: { on: true, zoneIds: ["Z002"], afterStep: 2 } };
     const doc = dispatchDocumentOf(zone, zoneId, null);
     const back = rulesOfDispatch(doc, null, zoneDefault(zoneId));
     assert.deepEqual(back.start, zone.start);
@@ -490,7 +491,7 @@ test("v0.18.11 dispatch start & order: defaults keep today's behaviour; start, o
     const old = sample("dispatch_document");
     const read = rulesOfDispatch(old, null, zoneDefault(zoneId));
     assert.deepEqual(read.start, { mode: "auto", nearKm: 2 });
-    assert.deepEqual(read.limits, { maxPickupKm: 0, maxPickupEtaMin: 0 });
+    assert.deepEqual(read.limits, { maxPickupKm: 0, maxPickupEtaMin: 0, farReachKm: 12 });
     assert.equal(read.neighbours.on, false);
   }
 });

@@ -223,6 +223,8 @@ export type Trip = {
   walletApplied?: LiveMoney;
   cashToCollect?: LiveMoney;
   driverSilentAlert?: { at?: string; [key: string]: unknown };
+  /** v0.18.39 §63 (contract.json#dispatch.searchStep, admin view): the latest rider-waiting step while searching. */
+  searchStep?: { id?: string; kind: string; message?: string; at?: string } | null;
   ratingStatus?: string;
   paymentMethod: string;
   paymentStatus?: string;

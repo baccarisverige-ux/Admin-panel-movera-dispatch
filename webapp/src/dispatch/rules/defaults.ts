@@ -1,4 +1,5 @@
 import { MARKETS, zoneById, type MarketId, type MarketZone } from "../../markets/markets.ts";
+import contract from "../../../../contracts/contract.json" with { type: "json" };
 import { fromSek } from "../../pricing/zonePricing.ts";
 import { CONFIG_DEFAULTS } from "../../config/zoneDefaults.ts";
 import { RAISE_MAX_FACTOR_DEFAULT } from "../offerRules.ts";
@@ -8,6 +9,9 @@ import { completeDestinationMode, completeNextTrips, destinationModeDefault, nex
 import { EARLY_END_DEFAULT, completeEarlyEnd, EXTRAS, type RideTypeId, type LateEtaReassignTo, type RideTypeRule, RESERVATION_LIST_TO, HOME_POPUP_TO, RIDE_TYPES, RAISE_CAP_SEK, RESERVATION_CANCEL_TO, LATE_ETA_REASSIGN_TO, type LateEtaRules, BOOKING_WINDOW_DEFAULT, completeBookingWindow, type ReservationRules, type WaitStep, type RideCheckRules, RIDE_CHECK_LIMITS, rideCheckDefault, type ZoneDispatch, type CountryDispatch, type DispatchEvent, type DriverGroup, type Preset, type DispatchBook } from "./model.ts";
 
 /** Dispatch rules, part: Defaults, presets and filling older saves (was rules.ts lines 588–956). rules.ts re-exports everything; import from "../rules.ts" as before. */
+/** v0.18.39 §63: the contract defaults of the far reach and "No driver nearby" (one source). */
+const NO_DRIVER_NEARBY = (contract as unknown as { noDriverNearby: { defaults: { noDriverNearby: { on: boolean; afterSec: number; message: string }; farReachKm: number; reaskLimit: number } } }).noDriverNearby.defaults;
+
 export const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 function waitingDefault(): WaitStep[] {
@@ -71,7 +75,10 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     choose: { how: "auto", radarAbove: 1.5, main: "exclusive", backup: "radar", times: [{ id: "t1", on: false, from: "22:00", to: "04:00", mode: "radar" }] },
     rulesFrom: "driver",
     start: { mode: "auto", nearKm: 2 },
-    limits: { maxPickupKm: 0, maxPickupEtaMin: 0 },
+    // v0.18.39 §63 (contract.json#noDriverNearby.defaults): far reach 12 km; "No driver nearby" on, after 300 s.
+    limits: { maxPickupKm: 0, maxPickupEtaMin: 0, farReachKm: NO_DRIVER_NEARBY.farReachKm },
+    noDriverNearby: { ...NO_DRIVER_NEARBY.noDriverNearby },
+    reaskLimit: NO_DRIVER_NEARBY.reaskLimit,
     neighbours: { on: false, zoneIds: [], afterStep: 0 },
     factors: [
       { id: "eta", on: true, weight: 40 },

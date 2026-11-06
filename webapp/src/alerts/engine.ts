@@ -12,7 +12,7 @@ export type GroupId = "safety" | "dispatch" | "drivers" | "money" | "riders" | "
 export type KindId =
   | "sos" | "sos_slow" | "ride_check" | "car_lost"
   | "long_wait" | "few_drivers" | "no_driver" | "late_reservation"
-  | "booked_at_risk" | "booked_late" | "booked_not_started" | "booked_taken_back"
+  | "booked_at_risk" | "booked_late" | "booked_not_started" | "booked_taken_back" | "no_driver_nearby" | "booked_no_driver_ended"
   | "doc_expiring" | "low_rating" | "auto_offline"
   | "payment_failed" | "refund_approval" | "payout_big"
   | "rider_fraud" | "rider_cancels" | "ticket_open"
@@ -71,6 +71,9 @@ export const KINDS: KindDef[] = [
   { id: "booked_late", group: "dispatch", label: "Booked ride late", help: "The pickup time passed and the booked ride still has no driver.", mode: "fixed", level: "critical", path: "/reservations" },
   { id: "booked_not_started", group: "dispatch", label: "Booked ride not started", help: "The driver holds the booked ride, his leave time passed and he has not started it.", mode: "fixed", level: "critical", path: "/reservations" },
   { id: "booked_taken_back", group: "dispatch", label: "Booked ride taken from a late driver", help: "The server took the booked ride from a driver who would be too late (Dispatch › Book later › Late driver). It counts on his cancel record, no fee. Solved when a new driver takes it.", mode: "fixed", level: "important", path: "/reservations" },
+  // v0.18.39 §63 (contract.json#noDriverNearby.alerts): found by the server.
+  { id: "no_driver_nearby", group: "dispatch", label: "No driver nearby a waiting rider", help: "The rider of a live ride was shown 'No driver nearby' (Dispatch › No driver nearby). The search goes on. Solved when a driver takes it or the ride ends.", mode: "fixed", level: "important", path: "/trips" },
+  { id: "booked_no_driver_ended", group: "dispatch", label: "Booked ride ended: no driver found", help: "No driver took the booked ride by its pickup time + the minutes set in Dispatch › Book later. The server ended it, the rider pays nothing and was told. Shown for 24 h.", mode: "fixed", level: "important", path: "/reservations" },
   { id: "doc_expiring", group: "drivers", label: "Driver document expiring or expired", help: "Days left. 0 or less means expired.", mode: "limits", direction: "down", unit: "days", limits: { info: 30, important: 7, critical: 0 }, path: "/drivers" },
   { id: "low_rating", group: "drivers", label: "Driver rating is low", help: "Stars.", mode: "limits", direction: "down", unit: "stars", limits: { info: 4.5, important: 4.2, critical: null }, path: "/drivers" },
   { id: "auto_offline", group: "drivers", label: "Driver went offline after offers not accepted", help: "From Dispatch → Go offline automatically.", mode: "fixed", level: "info", path: "/drivers" },

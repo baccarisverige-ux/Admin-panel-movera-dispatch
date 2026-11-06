@@ -217,10 +217,12 @@ export type BookingWindow = {
   takeBackUntilMinBeforePickup: number;
   /** v0.18.35 (owner Q-A, job 4 Q4): "You are not driving towards the rider" every N minutes; published in DriverAppConfig.headingCheck. */
   notHeadingNotice: boolean;
+  /** v0.18.39 §63 (P17, owner "15 min after pickup past"): a booked ride with no driver ends this many minutes after its pickup time (no fee). */
+  noDriverStopAfterMin: number;
   notHeadingNoticeEveryMin: number;
 };
 
-export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30, arriveEarlyMin: 10, takeBackLateMin: 5, takeBackKeepIfDriveMin: 10, takeBackUntilMinBeforePickup: 15, notHeadingNotice: true, notHeadingNoticeEveryMin: 1 };
+export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30, arriveEarlyMin: 10, takeBackLateMin: 5, takeBackKeepIfDriveMin: 10, takeBackUntilMinBeforePickup: 15, notHeadingNotice: true, notHeadingNoticeEveryMin: 1, noDriverStopAfterMin: 15 };
 
 /** Limits for each booking window number (contract.json#bookLater, gen_openapi DriverReservations). */
 export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "maxTripKm" | "notHeadingNotice">, { min: number; max: number }> = {
@@ -229,6 +231,7 @@ export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "m
   changeAnswerMin: { min: 1, max: 120 }, listAtTimeKm: { min: 0.5, max: 50 }, listAtTimeMin: { min: 5, max: 240 },
   arriveEarlyMin: { min: 0, max: 60 },
   takeBackLateMin: { min: 1, max: 60 }, takeBackKeepIfDriveMin: { min: 0, max: 60 }, takeBackUntilMinBeforePickup: { min: 0, max: 180 }, notHeadingNoticeEveryMin: { min: 1, max: 10 },
+  noDriverStopAfterMin: { min: 1, max: 240 },
 };
 export const MAX_TRIP_KM_LIMIT = { min: 1, max: 1000 };
 
@@ -238,6 +241,7 @@ export const BOOKING_LABELS: Record<keyof typeof BOOKING_LIMITS, string> = {
   changeAnswerMin: "time to answer a changed ride (minutes)", listAtTimeKm: "near pickup at that time (km)", listAtTimeMin: "near pickup at that time (minutes)",
   arriveEarlyMin: "arrive before pickup (minutes)",
   takeBackLateMin: "take back when late more than (minutes)", takeBackKeepIfDriveMin: "keep if the driver is within (minutes' drive)", takeBackUntilMinBeforePickup: "take back only until (minutes before pickup)", notHeadingNoticeEveryMin: "not-heading notice every (minutes)",
+  noDriverStopAfterMin: "stop a booked ride with no driver after pickup + (minutes)",
 };
 
 export function completeBookingWindow(raw: unknown): BookingWindow {
@@ -388,7 +392,14 @@ export type ZoneDispatch = {
    */
   start: { mode: StartMode; nearKm: number };
   /** v0.18.9: farthest pickup in km (0 = the widest search step) and longest pickup time in min (0 = off). */
-  limits: { maxPickupKm: number; maxPickupEtaMin: number };
+  limits: { maxPickupKm: number; maxPickupEtaMin: number; farReachKm: number };
+  /**
+   * v0.18.39 §63 (owner N2 "'No driver nearby' after 5 min", per zone): a live ride still without a driver afterSec seconds
+   * after its search started shows the rider the message once (Keep waiting / Cancel free); the search goes on.
+   */
+  noDriverNearby: { on: boolean; afterSec: number; message: string };
+  /** v0.18.39 §63 (boss 1 for the owner): a driver who let this many offers of a trip pass is not asked again in that search (1–5, default 2). */
+  reaskLimit: number;
   /** v0.18.9: drivers of these zones also get offers from search step afterStep (0 = the last step). */
   neighbours: { on: boolean; zoneIds: string[]; afterStep: number };
   /**
