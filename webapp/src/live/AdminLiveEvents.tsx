@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { tr } from "../i18n/core";
-import { connectAdminEvents, fetchEventSource, keyMatches, liveStreamState, showsReconnecting, watchLiveStream } from "./adminEvents";
+import { batchedInvalidator, connectAdminEvents, fetchEventSource, liveStreamState, showsReconnecting, watchLiveStream } from "./adminEvents";
 import { useLiveSession } from "./LiveSessionContext";
 
 /**
@@ -12,13 +12,16 @@ import { useLiveSession } from "./LiveSessionContext";
 export function AdminLiveEvents() {
   const { client } = useLiveSession();
   const queryClient = useQueryClient();
-  useEffect(
-    () =>
-      connectAdminEvents(fetchEventSource(client), (event) => {
-        void queryClient.invalidateQueries({ predicate: (query) => keyMatches(event, query.queryKey) });
-      }),
-    [client, queryClient],
-  );
+  useEffect(() => {
+    // 503 proof 2026-11-06: one reload per changed list per second, never one per event; a running read is not
+    // cancelled and started again (cancelRefetch false), so a burst of events cannot multiply the calls.
+    const batch = batchedInvalidator((match) => void queryClient.invalidateQueries({ predicate: (query) => match(query.queryKey) }, { cancelRefetch: false }));
+    const stop = connectAdminEvents(fetchEventSource(client), batch.push);
+    return () => {
+      stop();
+      batch.stop();
+    };
+  }, [client, queryClient]);
   const state = useSyncExternalStore(watchLiveStream, liveStreamState, liveStreamState);
   if (!showsReconnecting(state)) return null;
   return (
