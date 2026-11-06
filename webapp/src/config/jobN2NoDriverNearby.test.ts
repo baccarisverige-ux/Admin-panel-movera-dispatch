@@ -111,8 +111,9 @@ test("Dispatch: 'Ask one driver at most' is its own row in Pickup limits, not in
 test("an untouched zone publishes the same document: no farReachKm / reaskLimit / noDriverNearby added when the server document has none and the value is the default (e2e live-publish-safety)", () => {
   const zone = zoneDefault("Z001");
   const base = dispatchDocumentOf(zone, "Z001", null) as Record<string, unknown>;
-  const { reaskLimit: _r, noDriverNearby: _n, ...rest } = base;
-  const old = { ...rest, limits: { maxPickupEtaMin: 0 } };
+  const old: Record<string, unknown> = { ...base, limits: { maxPickupEtaMin: 0 } };
+  delete old.reaskLimit;
+  delete old.noDriverNearby;
   const doc = dispatchDocumentOf(zone, "Z001", old) as Record<string, unknown>;
   assert.equal("reaskLimit" in doc, false);
   assert.equal("noDriverNearby" in doc, false);
