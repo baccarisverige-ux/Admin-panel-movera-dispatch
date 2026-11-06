@@ -324,7 +324,6 @@ export const enA10UZ = {
   "Zones by drivers needed": "Zones by drivers needed",
   "Zones in {0}": "Zones in {0}",
   "Zones in {0} {1}": "Zones in {0} {1}",
-  "Zones with “Over the cancel rate limit” on in Safety send no requests to drivers over it. Every cancel reason counts ({0}). Scheduled rides also follow the late-cancel rule in Reservations. The acceptance rate has no rules.": "Zones with “Over the cancel rate limit” on in Safety send no requests to drivers over it. Every cancel reason counts ({0}). Scheduled rides also follow the late-cancel rule in Reservations. The acceptance rate has no rules.",
   "Zones, airports and zone rules": "Zones, airports and zone rules",
   "Zones: {0}": "Zones: {0}",
   "Zoom in": "Zoom in",

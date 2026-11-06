@@ -633,6 +633,9 @@ test("cancel reasons per language (no \"Doesn't count\" box, L-c), cancel rate l
   await expect(rate.getByLabel("Cancel rate limit")).toHaveValue("30");
   await expect(rate).toContainText("Never shown to drivers");
   await expect(rate).toContainText("Keep your cancel rate low to keep full access to trips");
+  // L-c (owner 2026-11-06 "No need for text"): the cancel-rate note is gone.
+  await expect(rate).not.toContainText("Over the cancel rate limit");
+  await expect(rate.getByRole("link", { name: "Cancel reasons" })).toHaveCount(0);
   const rest = page.getByRole("region", { name: "Rest after long work · all of Sweden" });
   await expect(rest.getByLabel("First driving limit warning")).toHaveValue("30");
   await expect(rest.getByLabel("Second driving limit warning")).toHaveValue("10");

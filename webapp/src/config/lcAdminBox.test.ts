@@ -25,3 +25,10 @@ test("the cancel-reasons help keeps its other sentences in sv, fr and en", () =>
   assert.ok(sv[key]?.startsWith("Det förare och resenärer väljer bland"));
   assert.ok(fr[key]?.startsWith("Ce que chauffeurs et passagers choisissent"));
 });
+
+test("owner \"No need for text\": the cancel-rate note is gone in sv, fr and en", () => {
+  for (const dictionary of [en, sv, fr]) {
+    const found = Object.keys(dictionary).filter((key) => key.startsWith("Zones with “Over the cancel rate limit” on in Safety"));
+    assert.deepEqual(found, []);
+  }
+});

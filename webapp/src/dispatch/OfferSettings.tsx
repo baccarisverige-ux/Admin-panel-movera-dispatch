@@ -1,4 +1,3 @@
-import { Link } from "react-router";
 import { CreditCard, EyeOff, HandCoins, MessageSquareText, Percent, RotateCcw } from "lucide-react";
 import { Card, Choice, Num, Row, Switch } from "./fields";
 import { CANCEL_RATE_DRIVER_TEXT, EXCLUSIVE_REASON_MAX, EXCLUSIVE_REASONS, OFFER_CARD_DETAILS, type OfferCardDetails } from "./offers";
@@ -82,7 +81,6 @@ export function CancelRateCard({ country, onCountry, countryName, disabled }: { 
         <Num label={tr("Cancel rate limit")} before="under" value={country.cancelRateLimitPct} unit="%" min={1} max={100} disabled={disabled} onChange={(cancelRateLimitPct) => onCountry({ ...country, cancelRateLimitPct: Math.round(cancelRateLimitPct) })} />
       </Row>
       <p className="dx-note dx-resv-tie"><EyeOff size={13} aria-hidden="true" /> <span>{trn("Never shown to drivers. Under their cancel rate they see: “{0}”.", CANCEL_RATE_DRIVER_TEXT)}</span></p>
-      <p className="dx-note"><span>{trn("Zones with “Over the cancel rate limit” on in Safety send no requests to drivers over it. Every cancel reason counts ({0}). Scheduled rides also follow the late-cancel rule in Reservations. The acceptance rate has no rules.", <Link to="/dispatch?view=reasons">{tr("Cancel reasons")}</Link>)}</span></p>
     </Card>
   );
 }

@@ -326,7 +326,6 @@ export const frA10UZ: Record<keyof typeof enA10UZ, string> = {
   "Zones by drivers needed": "Zones selon les chauffeurs nécessaires",
   "Zones in {0}": "Zones en {0}",
   "Zones in {0} {1}": "Zones en {0} {1}",
-  "Zones with “Over the cancel rate limit” on in Safety send no requests to drivers over it. Every cancel reason counts ({0}). Scheduled rides also follow the late-cancel rule in Reservations. The acceptance rate has no rules.": "Les zones où « Au-delà de la limite du taux d’annulation » est activé dans Sécurité n’envoient pas de demandes aux chauffeurs au-delà. Tous les motifs d’annulation comptent ({0}). Les courses réservées suivent aussi la règle d’annulation tardive des Réservations. Le taux d’acceptation n’a pas de règles.",
   "Zones, airports and zone rules": "Zones, aéroports et règles de zone",
   "Zones: {0}": "Zones : {0}",
   "Zoom in": "Zoom avant",
