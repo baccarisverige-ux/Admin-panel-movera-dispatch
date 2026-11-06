@@ -34,6 +34,7 @@ import { enC6Job4TakeBack } from "./en/c6-job4-take-back.ts";
 import { enC7AirportQueue } from "./en/c7-airport-queue.ts";
 import { enC6InAppCalls } from "./en/c6-in-app-calls.ts";
 import { enC8NoDriverNearby } from "./en/c8-no-driver-nearby.ts";
+import { enC9BlockedPairs } from "./en/c9-blocked-pairs.ts";
 import { enC9SameAddress } from "./en/c9-same-address.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
@@ -75,6 +76,7 @@ export const en = {
   ...enC7AirportQueue,
   ...enC6InAppCalls,
   ...enC8NoDriverNearby,
+  ...enC9BlockedPairs,
   ...enC9SameAddress,
 } as const;
 

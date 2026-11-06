@@ -1,0 +1,21 @@
+/** English dictionary, area c9-blocked-pairs: fix job 10 (contract v0.18.43 §64): Block this pair, Blocked pairs with Undo, Tips & limits › Don't match again. Add new keys at the end of this file. Merged in ../en.ts in this order. */
+export const enC9BlockedPairs = {
+  "Block this pair": "Block this pair",
+  "Never match this rider and driver again": "Never match this rider and driver again",
+  "Neither side is ever told. Only Support can undo a block.": "Neither side is ever told. Only Support can undo a block.",
+  "Pair blocked. Neither side is told.": "Pair blocked. Neither side is told.",
+  "Blocked pairs": "Blocked pairs",
+  "No blocked pairs.": "No blocked pairs.",
+  "Block removed.": "Block removed.",
+  "Blocked by the rider (1-star rating)": "Blocked by the rider (1-star rating)",
+  "Blocked by the driver (1-star rating)": "Blocked by the driver (1-star rating)",
+  "Blocked by Support": "Blocked by Support",
+  "Don't match again": "Don't match again",
+  "Offer the tick at": "Offer the tick at",
+  "1 star or fewer": "1 star or fewer",
+  "{0} stars or fewer": "{0} stars or fewer",
+  "Don't match again: {0} → {1}": "Don't match again: {0} → {1}",
+  "Don't match again offered at: {0} → {1}": "Don't match again offered at: {0} → {1}",
+  "{0}: \"Don't match again\" can be offered at 1 or 2 stars.": "{0}: \"Don't match again\" can be offered at 1 or 2 stars.",
+  "On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.": "On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.",
+};
