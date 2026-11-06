@@ -159,3 +159,16 @@ test("platform pages fit a phone", async ({ page }) => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1), path).toBe(true);
   }
 });
+
+test("C17: Find a setting finds a section that shows after the search was typed (slow server)", async ({ page }) => {
+  // Proven cause of the WebKit/Firefox failure of the settings test above: the box read the section headings only on
+  // focus, on typing and once 400 ms after it appeared, so a word typed while the settings were still loading kept
+  // showing "Nothing found" after they appeared. A slow server makes that happen in every browser.
+  await session(page);
+  await page.addInitScript(() => localStorage.setItem("movera-demo-fault", "slow"));
+  await page.goto("/settings");
+  await page.getByLabel("Find a setting").fill("booking");
+  await expect(page.getByText("Loading configuration.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Booking rules" })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/Nothing found for/)).toHaveCount(0);
+});

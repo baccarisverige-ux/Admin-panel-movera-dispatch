@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { dump, tracer } from "./zz-c17-trace"; // C17 DIAG (temporary)
 
 async function signIn(page: Page) {
   await page.goto("/");
@@ -10,6 +11,7 @@ async function signIn(page: Page) {
 }
 
 test("live map moves drivers and opens a stale position", async ({ page }) => {
+  await tracer(page); // C17 DIAG (temporary)
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await signIn(page);
@@ -36,6 +38,7 @@ test("live map moves drivers and opens a stale position", async ({ page }) => {
     const node = document.querySelector(".ops-marker.driver:not(.stale)");
     return !!node && node.getAttribute("data-lat") !== previous;
   }, lat);
+  await dump(page, "spec"); // C17 DIAG (temporary)
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
