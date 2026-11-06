@@ -170,7 +170,8 @@ test("Safety points to the one cancel rate limit, and document colours follow th
   await expect(page).toHaveURL(/tab=drivers/);
   const rate = page.getByRole("region", { name: "Cancel rate · all of Sweden" });
   await expect(rate.getByLabel("Cancel rate limit")).toHaveValue("30");
-  await expect(rate).toContainText("“Over the cancel rate limit” on in Safety");
+  // L-c (owner 2026-11-06 "No need for text"): the cancel-rate note is gone.
+  await expect(rate).not.toContainText("“Over the cancel rate limit” on in Safety");
 
   await page.goto("/drivers/D0002?tab=documents");
   const licence = page.getByTestId("doc-driver_license");

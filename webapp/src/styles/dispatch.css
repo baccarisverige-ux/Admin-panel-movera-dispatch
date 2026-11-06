@@ -298,7 +298,6 @@ body.dx-no-scroll { overflow: hidden; }
 .dx-lang { display: inline-flex; align-items: center; gap: 6px; color: var(--dash-ink-2); }
 .dx-reason-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
 .dx-reason { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: start; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
-.dx-reason.free { border-color: #cfe9d9; background: #f6fbf8; }
 .dx-reason-texts { display: grid; gap: 4px; min-width: 0; }
 .dx-reason-texts small { font-size: 11px; color: var(--muted); }
 
