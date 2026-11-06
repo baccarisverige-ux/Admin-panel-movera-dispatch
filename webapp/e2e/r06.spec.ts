@@ -46,6 +46,11 @@ async function approveOneByOne(page: Page) {
 }
 
 test("R6 onboarding activation persists into driver operations", async ({ page }) => {
+  // C17 (proven from runs 42171991522 / 42166535355): every failure of this test is "Test timeout of 30000ms exceeded"
+  // at a different step (inputValue, Confirm click, count), never a failed check. The flow approves 11 papers one by one,
+  // each through a confirm box and a 200 ms demo save: Chromium needs 18-31 s, Firefox and WebKit 31-33 s. It is one
+  // long flow, so it gets a longer budget; every check and its own wait stay the same.
+  test.setTimeout(90_000);
   await session(page);
   await page.goto("/onboarding");
   await expect(page.getByRole("heading", { level: 2, name: "Onboarding queue" })).toBeVisible();

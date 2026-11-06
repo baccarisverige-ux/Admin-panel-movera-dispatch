@@ -154,9 +154,20 @@ function ShellInner({ page, children }: AppShellProps) {
     const node = topbar.current;
     if (!node || typeof ResizeObserver === "undefined") return;
     const root = document.documentElement;
-    const observer = new ResizeObserver(() => root.style.setProperty("--topbar-h", `${node.offsetHeight}px`));
+    // C17 (proven in WebKit, run 42181520208): writing --topbar-h inside the observer's own callback changed the layout
+    // of the observed bar in the same frame, and WebKit then reported "ResizeObserver loop completed with undelivered
+    // notifications" as a page error. Write it in the next frame, and only when the height really changed.
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const height = `${node.offsetHeight}px`;
+        if (root.style.getPropertyValue("--topbar-h") !== height) root.style.setProperty("--topbar-h", height);
+      });
+    });
     observer.observe(node);
     return () => {
+      cancelAnimationFrame(frame);
       observer.disconnect();
       root.style.removeProperty("--topbar-h");
     };
