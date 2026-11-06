@@ -107,3 +107,18 @@ test("Dispatch: 'Ask one driver at most' is its own row in Pickup limits, not in
   assert.doesNotMatch(cardOf(page, "No driver nearby"), /reaskLimit/);
   assert.match(cardOf(page, "Pickup limits"), /reaskLimit/);
 });
+
+test("an untouched zone publishes the same document: no farReachKm / reaskLimit / noDriverNearby added when the server document has none and the value is the default (e2e live-publish-safety)", () => {
+  const zone = zoneDefault("Z001");
+  const base = dispatchDocumentOf(zone, "Z001", null) as Record<string, unknown>;
+  const { reaskLimit: _r, noDriverNearby: _n, ...rest } = base;
+  const old = { ...rest, limits: { maxPickupEtaMin: 0 } };
+  const doc = dispatchDocumentOf(zone, "Z001", old) as Record<string, unknown>;
+  assert.equal("reaskLimit" in doc, false);
+  assert.equal("noDriverNearby" in doc, false);
+  assert.deepEqual(doc.limits, { maxPickupEtaMin: 0 });
+  // A changed value is still written.
+  const changed = dispatchDocumentOf({ ...zone, reaskLimit: 3, limits: { ...zone.limits, farReachKm: 15 } }, "Z001", old) as Record<string, unknown>;
+  assert.equal(changed.reaskLimit, 3);
+  assert.equal((changed.limits as { farReachKm: number }).farReachKm, 15);
+});

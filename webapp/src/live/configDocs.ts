@@ -6,6 +6,7 @@
  * Owner 2026-10-27: a zone without its own settings uses its country's Standard ("Uses standard"); publishing has no
  * second admin; tips, raise steps and driver bonus limits are country rules (country_rules).
  */
+import contractJson from "../../../contracts/contract.json" with { type: "json" };
 import type { CurrencyCode, Money } from "../domain/money.ts";
 import { fromMajor } from "../domain/money.ts";
 import { marketOfZone } from "../markets/markets.ts";
@@ -166,13 +167,24 @@ export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
 function startOrderParts(zone: ZoneDispatch, base: Doc | null): Doc {
   const parts: Doc = {
     start: { mode: zone.start.mode, nearKm: zone.start.nearKm },
-    limits: { ...(zone.limits.maxPickupKm > 0 ? { maxPickupKm: zone.limits.maxPickupKm } : {}), maxPickupEtaMin: zone.limits.maxPickupEtaMin, farReachKm: zone.limits.farReachKm },
+    // v0.18.39 §63: farReachKm only when it is not the contract default (an untouched zone republishes the same limits).
+    limits: { ...(zone.limits.maxPickupKm > 0 ? { maxPickupKm: zone.limits.maxPickupKm } : {}), maxPickupEtaMin: zone.limits.maxPickupEtaMin, ...(zone.limits.farReachKm !== N2_DEFAULTS.farReachKm || base === null || hasKey(base, "limits", "farReachKm") ? { farReachKm: zone.limits.farReachKm } : {}) },
     neighbours: { on: zone.neighbours.on, zoneIds: [...zone.neighbours.zoneIds], ...(zone.neighbours.afterStep > 0 ? { afterStep: zone.neighbours.afterStep } : {}) },
   };
   if (base === null) return parts;
   const defaults: Doc = { start: { mode: "auto", nearKm: 2 }, limits: { maxPickupEtaMin: 0 }, neighbours: { on: false, zoneIds: [] } };
   for (const key of Object.keys(parts)) if (!(key in base) && JSON.stringify(parts[key]) === JSON.stringify(defaults[key])) delete parts[key];
   return parts;
+}
+
+const N2_DEFAULTS = (contractJson as unknown as { noDriverNearby: { defaults: { noDriverNearby: { on: boolean; afterSec: number; message: string }; farReachKm: number; reaskLimit: number } } }).noDriverNearby.defaults;
+const hasKey = (base: Doc, key: string, sub: string) => typeof base[key] === "object" && base[key] !== null && sub in (base[key] as object);
+function n2Parts(zone: ZoneDispatch, base: Doc | null): Doc {
+  const nd = { on: zone.noDriverNearby.on, afterSec: zone.noDriverNearby.afterSec, message: zone.noDriverNearby.message };
+  const out: Doc = {};
+  if (base === null || "reaskLimit" in base || zone.reaskLimit !== N2_DEFAULTS.reaskLimit) out["reaskLimit"] = zone.reaskLimit;
+  if (base === null || "noDriverNearby" in base || JSON.stringify(nd) !== JSON.stringify(N2_DEFAULTS.noDriverNearby)) out["noDriverNearby"] = nd;
+  return out;
 }
 
 /** DispatchDocument (CONTRACT.md §6.3) from the zone's Dispatch rules (admin field names). */
@@ -200,8 +212,8 @@ export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | n
     // v0.18.33 (fix job 5, owner Q7): booked ride next for a driver on a trip.
     bookedNext: { on: zone.bookedNext.on, withinMin: zone.bookedNext.withinMin },
     // v0.18.39 §63 (owner N2): "No driver nearby" once, afterSec after the search started (live rides).
-    reaskLimit: zone.reaskLimit,
-    noDriverNearby: { on: zone.noDriverNearby.on, afterSec: zone.noDriverNearby.afterSec, message: zone.noDriverNearby.message },
+    // v0.18.39 §63: like start/limits, written only when the server document has it or the admin changed it from the default.
+    ...n2Parts(zone, base),
     waiting: zone.waiting.map((step) => ({ id: step.id, kind: step.kind, on: step.on, afterMin: step.afterMin, message: step.message, extraMin: step.extraMin ?? null })),
     // v0.18.6 (owner G4-E4): the rider raise limit; publishing it also writes the zone's rider app config (server).
     raisePrice: { maxFactor: zone.raisePrice.maxFactor },
