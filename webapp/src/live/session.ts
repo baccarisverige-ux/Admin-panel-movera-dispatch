@@ -157,10 +157,26 @@ export function createLiveClient(options: Options) {
     }
   }
 
-  async function json<T>(path: string, init: ApiRequestInit = {}): Promise<T> {
+  async function read<T>(path: string, init: ApiRequestInit): Promise<T> {
     const response = await fetchAuthed(path, init);
     if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
+  }
+
+  // 503 proof 2026-11-06 (Rules plan/FIX-503-ADMIN-BURST-2026-11-06.md): bursts of the same list read (1200+ GET /admin/payments
+  // in 25 s) filled the server's database pool. A GET that is already running for the same path is joined, not sent again.
+  // Only plain GETs without a body or an abort signal are joined (a caller that may abort keeps its own call).
+  const inFlight = new Map<string, Promise<unknown>>();
+  function json<T>(path: string, init: ApiRequestInit = {}): Promise<T> {
+    const shareable = (init.method ?? "GET").toUpperCase() === "GET" && init.body == null && !init.signal;
+    if (!shareable) return read<T>(path, init);
+    const running = inFlight.get(path);
+    if (running) return running as Promise<T>;
+    const call = read<T>(path, init).finally(() => {
+      if (inFlight.get(path) === call) inFlight.delete(path);
+    });
+    inFlight.set(path, call);
+    return call;
   }
 
   return {
