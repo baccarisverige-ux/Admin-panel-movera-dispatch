@@ -1,4 +1,4 @@
-/** French dictionary, area c9-blocked-pairs: fix job 10 (contract v0.18.40 §64): Block this pair, Blocked pairs with Undo, Tips & limits › Don't match again. Add new keys at the end of this file. Merged in ../fr.ts in this order. */
+/** French dictionary, area c9-blocked-pairs: fix job 10 (contract v0.18.43 §64): Block this pair, Blocked pairs with Undo, Tips & limits › Don't match again. Add new keys at the end of this file. Merged in ../fr.ts in this order. */
 import type { enC9BlockedPairs } from "../en/c9-blocked-pairs.ts";
 
 export const frC9BlockedPairs: Record<keyof typeof enC9BlockedPairs, string> = {

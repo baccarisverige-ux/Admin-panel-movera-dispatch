@@ -7,7 +7,7 @@ import { blockPairCall, blockedPairsPath, pairByText, readBlockedPairs, unblockP
 import { sv } from "../i18n/sv.ts";
 import { fr } from "../i18n/fr.ts";
 
-// v0.18.40 §64 (fix job 10, owner G16 Q16-4; G15 2026-11-05 "Never told", "No, only Support"): Admin › Trips ›
+// v0.18.43 §64 (fix job 10, owner G16 Q16-4; G15 2026-11-05 "Never told", "No, only Support"): Admin › Trips ›
 // Block this pair, rider and driver pages › Blocked pairs with Undo, Pricing › Tips & limits › Don't match again.
 // Rule 36: fails on main (none of these modules exist, CountryRules has no dontMatchAgain).
 

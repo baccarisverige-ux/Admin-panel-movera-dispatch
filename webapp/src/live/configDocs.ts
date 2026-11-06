@@ -375,7 +375,7 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     ...(input.walletCreditMax !== undefined ? { walletCreditMax: toMinor(input.walletCreditMax, currency) } : {}),
     // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.
     ...(input.calls ? { calls: { ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
-    // v0.18.40 §64 (fix job 10): Tips & limits › Don't match again; a save without it keeps the stored block.
+    // v0.18.43 §64 (fix job 10): Tips & limits › Don't match again; a save without it keeps the stored block.
     ...(input.dontMatchAgain ? { dontMatchAgain: { ...input.dontMatchAgain } } : base?.["dontMatchAgain"] ? { dontMatchAgain: base["dontMatchAgain"] } : {}),
   };
 }

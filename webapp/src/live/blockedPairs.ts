@@ -1,7 +1,7 @@
 import { tr } from "../i18n/core.ts";
 
 /**
- * v0.18.40 §64 (fix job 10, contract.json#blockedPairs; owner "Never told", "No, only Support"): a rider and a driver
+ * v0.18.43 §64 (fix job 10, contract.json#blockedPairs; owner "Never told", "No, only Support"): a rider and a driver
  * who are never matched again. Admin › Trips › trip page: Block this pair (POST /admin/trips/{tripId}/block-pair,
  * riders.block). Admin › Rider and Driver pages: Blocked pairs (GET /admin/blocked-pairs, riders.read) with Undo
  * (DELETE /admin/blocked-pairs/{pairId}, riders.block) — the only undo; the apps have none.

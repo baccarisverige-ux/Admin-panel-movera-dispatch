@@ -8,7 +8,7 @@ import { ErrorLine } from "./ui";
 import { blockPairCall, blockedPairsKey, pairByText, readBlockedPairs, unblockPath, type BlockedPair, type PairPerson } from "./blockedPairs.ts";
 
 /**
- * v0.18.40 §64 (fix job 10; owner G16 Q16-4, G15 "Never told", "No, only Support"). Trip page: Block this pair.
+ * v0.18.43 §64 (fix job 10; owner G16 Q16-4, G15 "Never told", "No, only Support"). Trip page: Block this pair.
  * Rider and driver pages: Blocked pairs with Undo. Neither side is ever told; only Support (riders.block) undoes.
  */
 export function LiveBlockPair({ tripId, hasDriver }: { tripId: string; hasDriver: boolean }) {

@@ -62,7 +62,7 @@ export type CountrySettings = {
   walletCreditMax: number;
   /** v0.18.38 §62 (fix job 8, owner G15 "In-app calls only"): CountryRules.calls — on, mode, window after the trip, ring time, longest call. */
   calls: CallSettings;
-  /** v0.18.40 §64 (fix job 10): CountryRules.dontMatchAgain — the 1-star "don't match again" tick in both apps. */
+  /** v0.18.43 §64 (fix job 10): CountryRules.dontMatchAgain — the 1-star "don't match again" tick in both apps. */
   dontMatchAgain: DontMatchSettings;
 };
 export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };

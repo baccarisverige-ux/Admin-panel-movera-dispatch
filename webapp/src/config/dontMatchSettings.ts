@@ -1,7 +1,7 @@
 import { tr } from "../i18n/core.ts";
 
 /**
- * v0.18.40 §64 (fix job 10, contract.json#blockedPairs.settings; owner G16 Q16-4): CountryRules.dontMatchAgain of a
+ * v0.18.43 §64 (fix job 10, contract.json#blockedPairs.settings; owner G16 Q16-4): CountryRules.dontMatchAgain of a
  * country. Admin › Pricing › Tips & limits › Don't match again. The rider and driver apps show the tick
  * "Don't match me with this driver/rider again" only at atStars stars or fewer while on. Saved with Save tips & limits.
  */

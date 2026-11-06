@@ -322,7 +322,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       chainLateFreeCancelMin: (() => { const v = (document as { onTripOffers?: { lateFreeCancelMin?: unknown } }).onTripOffers?.lateFreeCancelMin; return typeof v === "number" && v >= 0 && v <= 120 ? v : 10; })(),
       // v0.18.38 §62: CountryRules.calls (missing = the defaults).
       calls: callSettingsOf((document as { calls?: unknown }).calls),
-      // v0.18.40 §64: CountryRules.dontMatchAgain (missing = the defaults).
+      // v0.18.43 §64: CountryRules.dontMatchAgain (missing = the defaults).
       dontMatchAgain: dontMatchOf((document as { dontMatchAgain?: unknown }).dontMatchAgain),
       onTripMinDonePct: (() => { const v = (document as { onTripOffers?: { minRouteDonePct?: unknown } }).onTripOffers?.minRouteDonePct; return typeof v === "number" && v >= 0 && v <= 100 ? v : 70; })(),
       // Fix job 0 (owner A2-1): read on the Standard; the server ignores a zone's own value.
