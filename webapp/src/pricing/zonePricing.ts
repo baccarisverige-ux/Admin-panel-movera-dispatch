@@ -50,11 +50,11 @@ export type ZoneFees = {
   tollsPassThrough: boolean;
   tips: number[];
   rounding: number;
-  /** v0.18.42 §67 (contract.json#sameAddress.minTripMeters): the shortest trip, straight-line metres pickup → drop-off (0 = off). */
+  /** v0.18.44 §67 (contract.json#sameAddress.minTripMeters): the shortest trip, straight-line metres pickup → drop-off (0 = off). */
   minTripMeters: number;
 };
 
-/** v0.18.42 §67: the contract's default and range for minTripMeters. */
+/** v0.18.44 §67: the contract's default and range for minTripMeters. */
 /** Owner Q9 (v0.18.30, "Warn him but can accept booking") overrides the boss 300 m: off (0) unless the zone turns it on. */
 export const MIN_TRIP_METERS = { default: 0, min: 0, max: 5000 } as const;
 

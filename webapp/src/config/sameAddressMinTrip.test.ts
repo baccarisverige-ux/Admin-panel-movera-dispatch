@@ -5,7 +5,7 @@ import { bookOfPricing, pricingDocumentOf } from "../live/configDocs.ts";
 import { BUILT_IN_CATEGORIES, defaultZoneBook, validateZoneBook, diffBooks } from "../pricing/zonePricing.ts";
 
 /**
- * Same-address fix (contract v0.18.42 §67, contract.json#sameAddress; boss answer decisions/driver-g15.md: "minTripMeters
+ * Same-address fix (contract v0.18.44 §67, contract.json#sameAddress; boss answer decisions/driver-g15.md: "minTripMeters
  * default 300 m per zone as an admin setting in the zone pricing page"). The server refuses /quotes and /trips with
  * dropoff_too_close below it; the admin sets it on Pricing › the zone's fees ("Shortest trip").
  */

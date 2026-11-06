@@ -99,7 +99,7 @@ export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null):
       scheduled: structuredClone(book.scheduled),
     },
     fleetCommissionPct: book.fleetCommissionPct,
-    // v0.18.42 §67: written only when the server document has it or the admin changed it from the contract default, so
+    // v0.18.44 §67: written only when the server document has it or the admin changed it from the contract default, so
     // an untouched zone republishes the same document (the server reads a missing value as 0 = off, owner Q9).
     ...(base && "minTripMeters" in base) || book.fees.minTripMeters !== MIN_TRIP_METERS.default ? { minTripMeters: book.fees.minTripMeters } : {},
   };
@@ -504,7 +504,7 @@ export async function goBackToStandard(http: ConfigHttp, doc: ConfigDocName, zon
   }
 }
 
-/** v0.18.42 §67: a whole number inside [min, max], else null. */
+/** v0.18.44 §67: a whole number inside [min, max], else null. */
 function wholeIn(value: unknown, min: number, max: number): number | null {
   return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : null;
 }

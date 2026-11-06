@@ -1,4 +1,4 @@
-/** French dictionary, area c9-same-address: same-address fix (contract v0.18.42 §67): Pricing › zone fees › Shortest trip (minTripMeters). Add new keys at the end of this file. Merged in ../fr.ts in this order. */
+/** French dictionary, area c9-same-address: same-address fix (contract v0.18.44 §67): Pricing › zone fees › Shortest trip (minTripMeters). Add new keys at the end of this file. Merged in ../fr.ts in this order. */
 import type { enC9SameAddress } from "../en/c9-same-address.ts";
 
 export const frC9SameAddress: Record<keyof typeof enC9SameAddress, string> = {
