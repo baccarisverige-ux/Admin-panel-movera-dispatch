@@ -11,6 +11,7 @@ import type { CurrencyCode, Money } from "../domain/money.ts";
 import { fromMajor } from "../domain/money.ts";
 import { marketOfZone } from "../markets/markets.ts";
 import type { CategoryPrice, ZoneBook } from "../pricing/zonePricing.ts";
+import { MIN_TRIP_METERS } from "../pricing/zonePricing.ts";
 import type { ZoneDispatch } from "../dispatch/rules.ts";
 
 export type ConfigDocName = "rider_app_config" | "driver_app_config" | "pricing" | "dispatch" | "country_rules" | "onboarding";
@@ -98,6 +99,9 @@ export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null):
       scheduled: structuredClone(book.scheduled),
     },
     fleetCommissionPct: book.fleetCommissionPct,
+    // v0.18.42 §67: written only when the server document has it or the admin changed it from the contract default, so
+    // an untouched zone republishes the same document (the server reads a missing value as 300).
+    ...(base && "minTripMeters" in base) || book.fees.minTripMeters !== MIN_TRIP_METERS.default ? { minTripMeters: book.fees.minTripMeters } : {},
   };
 }
 
@@ -146,6 +150,7 @@ export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
     cleaningFee: toMajor(fees["cleaningFee"], f, book.fees.cleaningFee),
     tollsPassThrough: typeof fees["tollsPassThrough"] === "boolean" ? fees["tollsPassThrough"] : book.fees.tollsPassThrough,
     rounding: toMajor(doc["priceStep"], f, book.fees.rounding),
+    minTripMeters: wholeIn(doc["minTripMeters"], MIN_TRIP_METERS.min, MIN_TRIP_METERS.max) ?? book.fees.minTripMeters,
   };
   const routes = doc["fixedRoutes"] as Array<{ id: string; from: string; to: string; categoryId: string; price: Money }> | undefined;
   if (Array.isArray(routes)) book.routes = routes.map((route) => ({ id: route.id, from: route.from, to: route.to, categoryId: route.categoryId, price: route.price.amountMinor / f }));
@@ -497,4 +502,9 @@ export async function goBackToStandard(http: ConfigHttp, doc: ConfigDocName, zon
     if (isStatus(error, 409)) throw new SettingsChanged();
     throw error;
   }
+}
+
+/** v0.18.42 §67: a whole number inside [min, max], else null. */
+function wholeIn(value: unknown, min: number, max: number): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : null;
 }

@@ -8825,4 +8825,7 @@
 ["Ask one driver at most","Demander à un chauffeur au plus"],
 ["A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.","Un chauffeur qui a refusé ou laissé expirer autant d’offres pour la même course n’est plus sollicité pour elle. Par défaut 2."],
 ["Ask one driver at most, offers","Demander à un chauffeur au plus, offres"],
-["Ask one driver at most (offers)","Demander à un chauffeur au plus (offres)"]]
+["Ask one driver at most (offers)","Demander à un chauffeur au plus (offres)"],
+["Shortest trip","Trajet le plus court"],
+["A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off.","Un point de dépose plus proche que cela du point de prise en charge est refusé : le passager voit « Le point de dépose est trop proche du point de prise en charge ». 0 = désactivé."],
+["Shortest trip must be whole metres from 0 to 5000.","Le trajet le plus court doit être en mètres entiers, de 0 à 5000."]]

@@ -8825,4 +8825,7 @@
 ["Ask one driver at most","Ask one driver at most"],
 ["A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.","A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2."],
 ["Ask one driver at most, offers","Ask one driver at most, offers"],
-["Ask one driver at most (offers)","Ask one driver at most (offers)"]]
+["Ask one driver at most (offers)","Ask one driver at most (offers)"],
+["Shortest trip","Shortest trip"],
+["A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off.","A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off."],
+["Shortest trip must be whole metres from 0 to 5000.","Shortest trip must be whole metres from 0 to 5000."]]
