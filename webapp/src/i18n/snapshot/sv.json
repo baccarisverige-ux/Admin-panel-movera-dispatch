@@ -8843,4 +8843,7 @@
 ["Don't match again: {0} → {1}","Matcha inte igen: {0} → {1}"],
 ["Don't match again offered at: {0} → {1}","Matcha inte igen visas vid: {0} → {1}"],
 ["{0}: \"Don't match again\" can be offered at 1 or 2 stars.","{0}: ”Matcha inte igen” kan visas vid 1 eller 2 stjärnor."],
-["On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.","Vid ett lågt betyg kan resenären och föraren kryssa i ”Matcha mig inte igen”. De matchas aldrig igen. Ingen av dem får veta det. Bara Support kan ta bort en blockering."]]
+["On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.","Vid ett lågt betyg kan resenären och föraren kryssa i ”Matcha mig inte igen”. De matchas aldrig igen. Ingen av dem får veta det. Bara Support kan ta bort en blockering."],
+["Shortest trip","Kortaste resa"],
+["A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off.","En avlämning närmare upphämtningen än så här nekas: resenären ser ”Avlämningen är för nära upphämtningen”. 0 = av."],
+["Shortest trip must be whole metres from 0 to 5000.","Kortaste resa måste vara hela meter från 0 till 5000."]]

@@ -50,7 +50,13 @@ export type ZoneFees = {
   tollsPassThrough: boolean;
   tips: number[];
   rounding: number;
+  /** v0.18.44 §67 (contract.json#sameAddress.minTripMeters): the shortest trip, straight-line metres pickup → drop-off (0 = off). */
+  minTripMeters: number;
 };
+
+/** v0.18.44 §67: the contract's default and range for minTripMeters. */
+/** Owner Q9 (v0.18.30, "Warn him but can accept booking") overrides the boss 300 m: off (0) unless the zone turns it on. */
+export const MIN_TRIP_METERS = { default: 0, min: 0, max: 5000 } as const;
 
 export type FixedRoute = { id: string; from: string; to: string; categoryId: string; price: number };
 
@@ -349,6 +355,7 @@ export function defaultZoneBook(zoneId: string, categories: readonly CategoryDef
       tollsPassThrough: id === "SE",
       tips: [...tips],
       rounding: step,
+      minTripMeters: MIN_TRIP_METERS.default,
     },
     routes: [],
     smart: defaultSmartSurge(),
@@ -456,7 +463,10 @@ export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDe
   }
   problems.push(...validatePickupPay(book.pickupPay, categories));
   if (book.fleetCommissionPct < 0 || book.fleetCommissionPct > 30) add("commission.fleet", "Fleet owner share must be between 0 and 30%.");
+  const minTrip = book.fees.minTripMeters;
+  if (!Number.isInteger(minTrip) || minTrip < MIN_TRIP_METERS.min || minTrip > MIN_TRIP_METERS.max) add("fees.minTripMeters", `Shortest trip must be whole metres from ${MIN_TRIP_METERS.min} to ${MIN_TRIP_METERS.max}.`);
   for (const [key, value] of Object.entries(book.fees)) {
+    if (key === "minTripMeters") continue;
     if (typeof value === "number" && (!Number.isFinite(value) || value < 0)) add(`fees.${key}`, "Fees must be 0 or more.");
     else if (key in FEE_MAX_SEK && typeof value === "number" && value > feeMax(key as keyof typeof FEE_MAX_SEK, currency)) add(`fees.${key}`, `Fees can be at most ${short(feeMax(key as keyof typeof FEE_MAX_SEK, currency))} ${currencySymbol(currency)}.`);
   }
@@ -598,7 +608,7 @@ export function diffBooks(before: ZoneBook, after: ZoneBook, categories: readonl
     if (before.commission[category.id] !== after.commission[category.id]) lines.push(`${category.label} · commission ${before.commission[category.id]}% → ${after.commission[category.id]}%`);
   }
   if (before.fleetCommissionPct !== after.fleetCommissionPct) lines.push(`Fleet owner share ${before.fleetCommissionPct}% → ${after.fleetCommissionPct}%`);
-  const feeLabels: Record<string, string> = { airportPickup: "Airport pickup fee", airportDropoff: "Airport drop-off fee", reservationFee: "Reservation fee", cleaningFee: "Cleaning fee", tollsPassThrough: "Tolls added to fare", rounding: "Rounding" };
+  const feeLabels: Record<string, string> = { airportPickup: "Airport pickup fee", airportDropoff: "Airport drop-off fee", reservationFee: "Reservation fee", cleaningFee: "Cleaning fee", tollsPassThrough: "Tolls added to fare", rounding: "Rounding", minTripMeters: "Shortest trip (m)" };
   for (const key of Object.keys(feeLabels) as (keyof ZoneFees)[]) {
     if (before.fees[key] !== after.fees[key]) lines.push(`${feeLabels[key]} ${String(before.fees[key])} → ${String(after.fees[key])}`);
   }

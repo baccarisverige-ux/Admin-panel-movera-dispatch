@@ -8843,4 +8843,7 @@
 ["Don't match again: {0} → {1}","Ne plus associer : {0} → {1}"],
 ["Don't match again offered at: {0} → {1}","Ne plus associer proposé à : {0} → {1}"],
 ["{0}: \"Don't match again\" can be offered at 1 or 2 stars.","{0} : « Ne plus associer » peut être proposé à 1 ou 2 étoiles."],
-["On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.","Avec une note basse, le passager et le chauffeur peuvent cocher « Ne plus me proposer ». Ils ne sont plus jamais associés. Aucun des deux n'est prévenu. Seul le Support peut annuler un blocage."]]
+["On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.","Avec une note basse, le passager et le chauffeur peuvent cocher « Ne plus me proposer ». Ils ne sont plus jamais associés. Aucun des deux n'est prévenu. Seul le Support peut annuler un blocage."],
+["Shortest trip","Trajet le plus court"],
+["A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off.","Un point de dépose plus proche que cela du point de prise en charge est refusé : le passager voit « Le point de dépose est trop proche du point de prise en charge ». 0 = désactivé."],
+["Shortest trip must be whole metres from 0 to 5000.","Le trajet le plus court doit être en mètres entiers, de 0 à 5000."]]

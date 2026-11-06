@@ -4,7 +4,7 @@ import { countrySettingsOf } from "../config/countrySettings";
 import { useCountrySettings } from "../config/useCountrySettings";
 import type { MarketId } from "../markets/markets";
 import { NumberField } from "./NumberField";
-import { currencySymbol, feeMax, inputStep, money, roundingOptions, routeMax, type CategoryDef, type FixedRoute, type Problem, type ZoneBook, type ZoneFees } from "./zonePricing";
+import { MIN_TRIP_METERS, currencySymbol, feeMax, inputStep, money, roundingOptions, routeMax, type CategoryDef, type FixedRoute, type Problem, type ZoneBook, type ZoneFees } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 
 type FeesProps = {
@@ -70,6 +70,13 @@ export function FeesPanel({ zoneName, airport, currency, book, published, proble
         <select aria-label={tr("Rounding")} value={book.fees.rounding} disabled={!canEdit} onChange={(event) => onChange({ rounding: Number(event.target.value) })}>
           {roundingOptions(currency).map((step) => <option key={step} value={step}>{step < 0.05 ? tr("No rounding") : tr("Nearest {0}", [money(step, currency)])}</option>)}
         </select>
+      </div>
+      <div className="fee-card" data-testid="fees-min-trip">
+        <div>
+          <strong>{tr("Shortest trip")}</strong>
+          <small>{tr("A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off.")}</small>
+        </div>
+        <NumberField label={tr("Shortest trip")} value={book.fees.minTripMeters} unit="m" step={10} min={MIN_TRIP_METERS.min} max={MIN_TRIP_METERS.max} disabled={!canEdit} changed={book.fees.minTripMeters !== published.fees.minTripMeters} invalid={bad.has("fees.minTripMeters")} onChange={(value) => onChange({ minTripMeters: Math.round(value) })} />
       </div>
     </div>
   );

@@ -8843,4 +8843,7 @@
 ["Don't match again: {0} → {1}","Don't match again: {0} → {1}"],
 ["Don't match again offered at: {0} → {1}","Don't match again offered at: {0} → {1}"],
 ["{0}: \"Don't match again\" can be offered at 1 or 2 stars.","{0}: \"Don't match again\" can be offered at 1 or 2 stars."],
-["On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.","On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block."]]
+["On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.","On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block."],
+["Shortest trip","Shortest trip"],
+["A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off.","A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off."],
+["Shortest trip must be whole metres from 0 to 5000.","Shortest trip must be whole metres from 0 to 5000."]]
