@@ -17,6 +17,11 @@ on:
       - '**.md'
       - 'docs/**'
   workflow_dispatch:
+    inputs:
+      grep:
+        description: 'Optional: run only the tests whose title matches (Playwright --grep). Empty runs all.'
+        required: false
+        default: ''
 concurrency:
   # Adding some other label does not cancel a running matrix.
   group: ${{ github.workflow }}-${{ github.ref }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'ready-to-merge') && github.event.label.name || 'run' }}
@@ -44,8 +49,9 @@ jobs:
           cache-dependency-path: webapp/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium firefox webkit
-      - run: xvfb-run --auto-servernum npx playwright test --config playwright.matrix.config.ts
+      - run: xvfb-run --auto-servernum npx playwright test --config playwright.matrix.config.ts ${GREP:+--grep "$GREP"}
         env:
+          GREP: ${{ github.event.inputs.grep || '' }}
           LIBGL_ALWAYS_SOFTWARE: "1"
       - uses: actions/upload-artifact@v4
         if: always()
