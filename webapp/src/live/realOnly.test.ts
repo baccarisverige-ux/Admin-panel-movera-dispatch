@@ -4,7 +4,7 @@ import type { Driver, Vehicle } from "./types.ts";
 import { vehicleRecord } from "./liveAdminApi.ts";
 import { setLiveData } from "./realData.ts";
 import { driverOps, emptyDriverOpsBook, vehicleOps } from "../drivers/ops.ts";
-import { carFuelShown, driverHistoryShown, driverCategoryFits, rankDriversInsights } from "./realOnly.ts";
+import { activateEmphasised, carFuelShown, driverHistoryShown, driverCategoryFits, rankDriversInsights, vehicleRuleFitCounts, workDemoNoteShown } from "./realOnly.ts";
 
 /**
  * L-a admin round 1 (A15 sweep items 3, 6, 7; rule 36, proven on a live build 2026-11-05 with a mocked server):
@@ -58,4 +58,40 @@ test("L-a item 3: the Insights driver ranking is not worked out from demo data l
   setLiveData(false);
   assert.equal(rankDriversInsights("insights"), true);
   assert.equal(rankDriversInsights("overview"), false);
+});
+
+/**
+ * L-a admin round 2 (boss answers 2026-11-06, decisions/driver-g15.md; rule 36, proven on main with a mocked live server):
+ * - Vehicles › Vehicle rules "N cars fit" (FleetPage :126) counted from vehicleOps' made-up year/seats/fuel, so a car
+ *   the server sent without fitCategories counted as fitting.
+ * - Driver page Activate (DriverDetailPage :310) was emphasised from the seeded driverOps documents, not the server's.
+ * - Reports › Work: "Rows marked Demo are example history" showed live, where there are no demo rows.
+ */
+test("L-a2 answer 1: live 'N cars fit' counts only the server's Vehicle.fitCategories", () => {
+  setLiveData(true);
+  const without = records(car());
+  const sent = records(car({ vehicleId: "veh_shot2", fitCategories: ["economy", "electric"] }));
+  const counts = vehicleRuleFitCounts([without, sent]);
+  assert.deepEqual(counts, { economy: 1, electric: 1 }, "the car without fitCategories fits nothing");
+  assert.equal(vehicleRuleFitCounts([without])?.economy ?? 0, 0);
+  setLiveData(false);
+  assert.equal(vehicleRuleFitCounts([without, sent]), null, "demo unchanged (the page's own rule check)");
+});
+
+test("L-a2 answer 2: live Activate emphasis follows the server's driver documents", () => {
+  setLiveData(true);
+  const docs = (status: string) => [{ documentId: "d1", type: "driver_license", status }];
+  const rec = (status: string) => ({ liveAccount: { accountStatus: "pending", documents: docs(status), requiredDocuments: ["driver_license"] } }) as never;
+  assert.equal(activateEmphasised(rec("approved"), false), true, "server says approved: emphasised even if seed says not");
+  assert.equal(activateEmphasised(rec("in_review"), true), false, "server says in review: not emphasised even if seed says green");
+  assert.equal(activateEmphasised({ liveAccount: { accountStatus: "pending", documents: [], requiredDocuments: ["driver_license"] } } as never, true), false, "missing required paper");
+  setLiveData(false);
+  assert.equal(activateEmphasised(rec("in_review"), true), true, "demo unchanged (seeded documents)");
+});
+
+test("L-a2 answer 3: the Work tab demo-rows note is hidden live", () => {
+  setLiveData(true);
+  assert.equal(workDemoNoteShown(), false);
+  setLiveData(false);
+  assert.equal(workDemoNoteShown(), true);
 });
