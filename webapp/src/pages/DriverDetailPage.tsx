@@ -7,6 +7,7 @@ import { DASH, liveDriverMonth, liveJoinedAt, liveLastOnline, orDash } from "../
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { LiveDocBox } from "../live/LiveDocBox";
+import { driverCategoryFits, driverHistoryShown } from "../live/realOnly";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useEffect, useMemo, useState } from "react";
@@ -371,7 +372,8 @@ export function DriverDetailPage() {
                 // Live: the server's categories of the driver (PUT /admin/drivers/{id}/categories, v0.18.0).
                 const enabled = liveData ? (driver.liveAccount?.categoryIds ?? []).includes(category) : ops.categories[category];
                 const info = CATEGORY_INFO.find((item) => item.id === category);
-                const fits = !car ? false : category === "xl" ? car.seats >= 6 : category === "electric" ? car.fuel === "electric" : category === "premium" ? car.year >= 2020 : true;
+                // L-a (A15 item 7): live, the server's Vehicle.fitCategories only (null: unknown, no "does not fit").
+                const fits = driverCategoryFits(carRecord, category, !car ? false : category === "xl" ? car.seats >= 6 : category === "electric" ? car.fuel === "electric" : category === "premium" ? car.year >= 2020 : true);
                 return (
                   <CommandButton
                     command="admin.driver.category"
@@ -393,7 +395,7 @@ export function DriverDetailPage() {
                   >
                     <span className="cat-name">{trx(info?.label) ?? category}</span>
                     <span className="cat-switch" aria-hidden="true"><i /></span>
-                    <small>{trn("{0} seats{1}", info?.seats ?? 4, fits ? "" : tr(" · vehicle does not fit"))}</small>
+                    <small>{trn("{0} seats{1}", info?.seats ?? 4, fits === false ? tr(" · vehicle does not fit") : "")}</small>
                   </CommandButton>
                 );
               })}
@@ -629,7 +631,8 @@ export function DriverDetailPage() {
           <div className="fd-grid-2">
             <section className="fd-box">
               <h3>{tr("History")}</h3>
-              <ul className="fd-timeline">{ops.activity.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul>
+              {/* L-a (A15 item 6): the seeded demo history is never shown live; "—" (owner G2c: no "Not connected yet" here). */}
+              {(() => { const history = driverHistoryShown(ops); return history ? <ul className="fd-timeline">{history.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul> : <p className="state-line" data-testid="driver-history-none">{DASH}</p>; })()}
             </section>
             <section className="fd-box">
               <h3>{tr("Audited actions")}</h3>
