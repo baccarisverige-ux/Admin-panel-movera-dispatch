@@ -1,5 +1,4 @@
 import { expect, test, type Page } from "@playwright/test";
-import { dump, tracer } from "./zz-c17-trace"; // C17 DIAG (temporary)
 
 /** Q24: at 1280 px and below the country picker, Inbox and Sign out are in the top bar's "⋯" menu. */
 async function topbarMore(page: Page) {
@@ -68,7 +67,6 @@ const notice = (page: Page) => page.locator(".zn-map-notice");
 const panel = (page: Page) => page.locator(".zn-side");
 
 test("zones follow the country bar, with drawing tools, layers and cities", async ({ page }) => {
-  await tracer(page); // C17 DIAG (temporary)
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await signIn(page);
@@ -100,13 +98,10 @@ test("zones follow the country bar, with drawing tools, layers and cities", asyn
   await topbarMore(page);
   await page.getByRole("radio", { name: "Tunisia" }).click();
   await expect(page.getByRole("button", { name: "Show Tunis · Tunis-Carthage on the map" })).toBeVisible();
-  await dump(page, "spec"); // C17 DIAG (temporary)
-  await dump(page, "spec"); // C17 DIAG (temporary)
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
 test("A05 draw Östermalm, cut a hole, add Arlanda pickups, review, publish, reload, roll back", async ({ page }) => {
-  await tracer(page); // C17 DIAG (temporary)
   test.setTimeout(90_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -177,8 +172,6 @@ test("A05 draw Östermalm, cut a hole, add Arlanda pickups, review, publish, rel
   await expect(page.locator("[data-pickups='0']")).toBeVisible();
   await page.getByRole("button", { name: "Show Stockholm · Östermalm on the map" }).click();
   await expect(page.locator("[data-holes='0']")).toBeVisible();
-  await dump(page, "spec"); // C17 DIAG (temporary)
-  await dump(page, "spec"); // C17 DIAG (temporary)
   expect(errors, errors.join("\n")).toEqual([]);
 });
 

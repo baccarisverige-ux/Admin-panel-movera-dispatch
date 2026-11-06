@@ -21,21 +21,25 @@ async function approveOneByOne(page: Page) {
   await expect(app.getByRole("button", { name: /^Approve (remaining|all)/ })).toHaveCount(0);
   const date = new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10);
   for (let round = 0; round < 30; round += 1) {
-    const fields = app.getByLabel(/^Valid until for /);
-    for (let index = 0; index < (await fields.count()); index += 1) {
-      const field = fields.nth(index);
-      if ((await field.inputValue()) === "") {
-        const label = (await field.getAttribute("aria-label"))!.replace("Valid until for ", "");
-        await expect(app.getByRole("button", { name: `Approve ${label}`, exact: true })).toBeDisabled();
-        await field.fill(date);
-      }
+    // C17 (proven, run 42182380407): the last approval can still be saving when its box has closed, so its date field
+    // goes away a moment later. Reading the fields by index (count, then nth(i)) then waited for ever on a field that
+    // was gone. Read the empty ones in one go and fill each by its own label: an empty field cannot be approved, so it
+    // stays.
+    const empty = await app.getByLabel(/^Valid until for /).evaluateAll((nodes) =>
+      nodes.filter((node) => (node as HTMLInputElement).value === "").map((node) => node.getAttribute("aria-label")!));
+    for (const name of empty) {
+      const label = name.replace("Valid until for ", "");
+      await expect(app.getByRole("button", { name: `Approve ${label}`, exact: true })).toBeDisabled();
+      await app.getByLabel(name, { exact: true }).fill(date);
     }
     const all = app.getByRole("button", { name: /^(Approve|Mark held) / });
     let button = null;
     // A running command disables every button for a moment: look twice before deciding nothing is left.
     for (let look = 0; look < 2 && !button; look += 1) {
       if (look) await page.waitForTimeout(1500);
-      for (let index = 0; index < (await all.count()); index += 1) if (await all.nth(index).isEnabled()) { button = all.nth(index); break; }
+      // One read of the list (the same index race as the date fields above).
+      const first = await all.evaluateAll((nodes) => nodes.findIndex((node) => !(node as HTMLButtonElement).disabled));
+      if (first >= 0) button = all.nth(first);
     }
     if (!button) return;
     await button.click();
@@ -46,10 +50,9 @@ async function approveOneByOne(page: Page) {
 }
 
 test("R6 onboarding activation persists into driver operations", async ({ page }) => {
-  // C17 (proven from runs 42171991522 / 42166535355): every failure of this test is "Test timeout of 30000ms exceeded"
-  // at a different step (inputValue, Confirm click, count), never a failed check. The flow approves 11 papers one by one,
-  // each through a confirm box and a 200 ms demo save: Chromium needs 18-31 s, Firefox and WebKit 31-33 s. It is one
-  // long flow, so it gets a longer budget; every check and its own wait stay the same.
+  // C17: the flow approves 11 papers one by one, each through a confirm box and a 200 ms demo save. It passes in 15-22 s
+  // on Chromium and Firefox but needs 40 s on WebKit (run 42182380407), over the 30 s default. One long flow, so a longer
+  // budget; every check and its own wait stay the same.
   test.setTimeout(90_000);
   await session(page);
   await page.goto("/onboarding");
