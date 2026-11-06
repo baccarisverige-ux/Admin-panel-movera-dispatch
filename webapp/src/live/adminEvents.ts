@@ -65,6 +65,40 @@ export function keyMatches(event: Pick<AdminLiveEvent, "type">, key: readonly un
 }
 
 /**
+ * 503 proof 2026-11-06 (Rules plan/FIX-503-ADMIN-BURST-2026-11-06.md): a stream opened without a cursor gets the last
+ * 24 h of events at once (5571 on staging), and reloading the lists for EACH event filled the server's database pool.
+ * Events are now collected for EVENT_BATCH_MS and each changed list is reloaded once per batch; a resync reloads all.
+ */
+export const EVENT_BATCH_MS = 1_000;
+export type KeyMatch = (key: readonly unknown[]) => boolean;
+type BatchOptions = { windowMs?: number; setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
+export function batchedInvalidator(invalidate: (match: KeyMatch) => void, options: BatchOptions = {}): { push: (event: Pick<AdminLiveEvent, "type">) => void; stop: () => void } {
+  const windowMs = options.windowMs ?? EVENT_BATCH_MS;
+  const setTimer = options.setTimer ?? ((fn: () => void, ms: number) => setTimeout(fn, ms));
+  const clearTimer = options.clearTimer ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
+  let types = new Set<string>();
+  let timer: unknown = null;
+  const flush = () => {
+    timer = null;
+    const batch = types.has("resync") ? ["resync"] : [...types];
+    types = new Set();
+    if (batch.length) invalidate((key) => batch.some((type) => keyMatches({ type }, key)));
+  };
+  return {
+    push(event) {
+      if (!INVALIDATES[event.type]) return;
+      types.add(event.type);
+      if (timer === null) timer = setTimer(flush, windowMs);
+    },
+    stop() {
+      if (timer !== null) clearTimer(timer);
+      timer = null;
+      types = new Set();
+    },
+  };
+}
+
+/**
  * The timer a live list should use. Demo / signed out: the page's own. Stream open: none (events refresh it).
  * Stream not open: every minute (owner L1). `follow` lists (map positions, ETAs) keep their pace: positions have no event.
  */
