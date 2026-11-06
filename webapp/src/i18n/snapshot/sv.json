@@ -3386,7 +3386,6 @@
 ["Refund part of a trip","Återbetala en del av resan"],
 ["Refund payment","Återbetala betalningen"],
 ["Refund reason","Skäl för återbetalning"],
-["Refund request is allowed. Because it is {0} or more, the payment stays captured until a second authorised agent approves it.","Begäran om återbetalning är tillåten. Eftersom den är {0} eller mer förblir betalningen debiterad tills en andra behörig handläggare godkänner den."],
 ["Refund rider","Återbetala resenären"],
 ["Refund this payment","Återbetala den här betalningen"],
 ["Refund to","Återbetala till"],
