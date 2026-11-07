@@ -59,6 +59,8 @@ import {
   ratingLabel,
   refundBlock,
   reassignBlock,
+  reassignHelp,
+  reassignTarget,
   riderIdFor,
   startedAt,
   timelineOf,
@@ -169,7 +171,7 @@ export function TripPage() {
   const money = (minor: number) => formatMoney(minor, country);
   const tripCurrency = facts?.currency ?? place.currency;
   const liveMoney = (minor: number) => tripMoney(minor, tripCurrency);
-  const eta = facts && isLiveWithDriver(trip.status, trip.driverId) ? facts.eta : null;
+  const eta = facts && isLiveWithDriver(trip.status, trip.driverId, facts?.kind) ? facts.eta : null;
   const etaStale = eta ? etaIsStale(eta, Date.now()) : false;
   const cancelFacts = facts?.cancellation ?? null;
   const feeKind = feeKindOf(cancelFacts);
@@ -186,7 +188,7 @@ export function TripPage() {
   const cancelWhy = cancelBlock(trip.status);
   const offerWhy = offerBlock(trip.status) ?? (eligible.length === 0 ? "No eligible driver with an eligible matching vehicle is free for this category." : null);
   const reassignWhy = reassignBlock(trip.status);
-  const noShowWhy = noShowBlock(trip.status);
+  const noShowWhy = noShowBlock(trip.status, { kind: facts?.kind, pickupAt: trip.pickupAt, noShowAfterMin: facts?.terms?.noShowAfterMin, noShowAt: facts?.waiting?.noShowAt }, clock);
   const completeWhy = completeBlock(trip.status);
   // Admin cancel reasons: contract admin_* codes, texts from Dispatch › Cancel reasons (the one editor).
   const adminReasons = liveCountry(normalizeDispatchBook(dispatchSlice.value), country).cancelReasons.groups.admin;
@@ -389,7 +391,7 @@ export function TripPage() {
                   <div><dt>{tr("Ride time")}</dt><dd>{Number.isFinite(route.minutes) ? trn("{0} min", route.minutes) : <NotConnected />}</dd></div>
                 </>
               )}
-              {facts && isLiveWithDriver(trip.status, trip.driverId) && !facts.driverLocation ? <div><dt>{tr("Driver")}</dt><dd>{tr("No position yet")}</dd></div> : null}
+              {facts && isLiveWithDriver(trip.status, trip.driverId, facts?.kind) && !facts.driverLocation ? <div><dt>{tr("Driver")}</dt><dd>{tr("No position yet")}</dd></div> : null}
               <div><dt>{tr("Stops")}</dt><dd>{route.stops.length - 2}</dd></div>
             </dl>
           </div>
@@ -588,7 +590,7 @@ export function TripPage() {
                 >{tr("Offer to driver")}</CommandButton>
               )}
 
-              <p data-testid="reassign-block">{reassignWhy ?? tr("Reassign takes the trip off its driver and sends it back to dispatch (searching). Then offer it to a driver.")}</p>
+              <p data-testid="reassign-block">{reassignHelp(trip.status, facts?.kind)}</p>
               {reassignWhy ? (
                 <button data-command="admin.trip.reassign" className="secondary-btn" type="button" disabled title={reassignWhy}>{tr("Reassign")}</button>
               ) : (
@@ -601,8 +603,8 @@ export function TripPage() {
                   scope={trip.zoneId}
                   collection="trips"
                   before={trip.driverId ?? "none"}
-                  after="searching"
-                  patch={{ driverId: null, status: "searching", previousStatus: trip.status }}
+                  after={reassignTarget(trip.status, facts?.kind)}
+                  patch={{ driverId: null, status: reassignTarget(trip.status, facts?.kind), previousStatus: trip.status }}
                 >{tr("Reassign")}</CommandButton>
               )}
 

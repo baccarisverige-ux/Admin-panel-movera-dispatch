@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { inView, needsAttention, reservationActions, reservationCall, reservationState, RESERVATIONS_PATH, sortReservations, type ServerReservation } from "./reservations.ts";
 
 // v0.18.17 Book later (owner 2026-11-03): Admin › Reservations reads the server (before: a browser-only book, empty on
@@ -18,6 +19,22 @@ test("state words and buttons follow the server status", () => {
   assert.deepEqual(reservationActions(trip({ status: "searching" })), ["assign", "offer", "raise", "contact", "cancel", "open"]);
   assert.deepEqual(reservationActions(trip({ status: "cancelled_by_rider" })), ["open"]);
   assert.equal(reservationState(trip({ status: "expired" })), "No driver found");
+});
+
+// Supervisor S7 R1–R3 (2026-11-07): from driver_to_pickup on, and for failed, the row says the contract's status words
+// (contract.json#statusWords.families.tripStatus), and those rides are in a view besides All.
+test("R1-R3: contract status words from driver_to_pickup on and for failed; on-board in Assigned, failed in Failed", () => {
+  const words = (JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8")) as { statusWords: { families: { tripStatus: Record<string, { en: string }> } } }).statusWords.families.tripStatus;
+  for (const status of ["driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff", "failed"]) {
+    assert.equal(reservationState(trip({ status })), words[status]!.en, status);
+  }
+  assert.notEqual(reservationState(trip({ status: "in_trip" })), "On the way");
+  assert.notEqual(reservationState(trip({ status: "failed" })), "Cancelled");
+  for (const status of ["rider_onboard", "in_trip", "approaching_dropoff"]) assert.equal(inView(trip({ status }), "assigned"), true, status);
+  assert.equal(inView(trip({ status: "failed" }), "failed"), true);
+  assert.equal(inView(trip({ status: "failed" }), "cancelled"), false);
+  assert.equal(reservationState(trip({ status: "cancelled_by_rider" })), "Cancelled");
+  assert.equal(reservationState(trip({ status: "accepted" })), "Driver holds it");
 });
 
 test("needs attention = the server's no-driver flag while nobody has it (owner Q3)", () => {
@@ -61,4 +78,44 @@ test("checker: every demo action the server can do works on live (offer, raise, 
 test("raise without a fare on the row uses the zone's money (FR euro, TN dinar)", () => {
   assert.equal((reservationCall("raise", trip({ zoneId: "FR-PC", fare: undefined }), { amountMinor: 500 }).body.amount as { currency: string }).currency, "EUR");
   assert.equal((reservationCall("raise", trip({ zoneId: "TN-TC", fare: undefined }), { amountMinor: 500 }).body.amount as { currency: string }).currency, "TND");
+});
+
+// Supervisor S7 R4 (2026-11-07): the server refuses a booked ride's no-show before the pickup time + the trip's no-show
+// wait (contract bookLater.liveFixes.noShowTime, 409 no_show_too_early); the admin must not offer it earlier.
+test("R4 Reservations: Mark no-show only from the pickup time + the trip's no-show wait", async () => {
+  const { bookedNoShowDue } = await import("./reservations.ts");
+  const at = Date.parse("2099-01-01T08:00:00Z");
+  const held = trip({ status: "accepted", scheduledAt: "2099-01-01T08:00:00Z", terms: { noShowAfterMin: 5 } });
+  assert.ok(!reservationActions(held, Date.parse("2026-11-07T10:00:00Z")).includes("noShow"), "a ride due in 2099 offers no-show");
+  assert.ok(!reservationActions(held, at + 4 * 60_000).includes("noShow"), "inside the wait");
+  assert.ok(reservationActions(held, at + 5 * 60_000).includes("noShow"), "pickup + wait reached");
+  assert.ok(reservationActions(trip({ status: "arrived", scheduledAt: "2099-01-01T08:00:00Z" }), at).includes("noShow"), "no terms: from the pickup time");
+  assert.equal(bookedNoShowDue("2099-01-01T08:00:00Z", 5, at + 299_999), false);
+  assert.equal(bookedNoShowDue("2099-01-01T08:00:00Z", 5, at + 300_000), true);
+});
+
+test("R4 trip page: a booked ride's no-show is blocked before pickup + wait, with the server's words", async () => {
+  const { noShowBlock } = await import("../trips/present.ts");
+  const at = Date.parse("2099-01-01T08:00:00Z");
+  const words = "A booked ride can be marked a no-show only after its pickup time and the waiting time.";
+  assert.equal(noShowBlock("accepted", { kind: "scheduled", pickupAt: "2099-01-01T08:00:00Z", noShowAfterMin: 5 }, Date.parse("2026-11-07T10:00:00Z")), words);
+  assert.equal(noShowBlock("accepted", { kind: "scheduled", pickupAt: "2099-01-01T08:00:00Z", noShowAfterMin: 5 }, at + 300_000), null);
+  assert.equal(noShowBlock("arrived", { kind: "live", pickupAt: undefined, noShowAfterMin: 5 }, at), null, "live rides keep their rule");
+  assert.equal(noShowBlock("arrived"), null);
+  assert.match(noShowBlock("in_trip") ?? "", /before the rider is in the car/);
+});
+
+// v0.18.51 §73 (contract #90, server #131): after the driver's Arrived the server's Waiting.noShowAt decides, i.e. the
+// later of arrival and pickup time + the wait. A driver who arrives late (08:07 for 08:00, wait 5) → 08:12, not 08:05.
+test("R4 + §73: once the driver arrived, Mark no-show follows the server's waiting.noShowAt", async () => {
+  const { noShowBlock } = await import("../trips/present.ts");
+  const pickup = "2099-01-01T08:00:00Z";
+  const noShowAt = "2099-01-01T08:12:00Z";
+  const at = (hhmm: string) => Date.parse(`2099-01-01T${hhmm}:00Z`);
+  const late = trip({ status: "arrived", scheduledAt: pickup, terms: { noShowAfterMin: 5 }, waiting: { noShowAt } });
+  assert.ok(!reservationActions(late, at("08:06")).includes("noShow"), "pickup + wait passed, but the server's noShowAt is 08:12");
+  assert.ok(reservationActions(late, at("08:12")).includes("noShow"));
+  assert.notEqual(noShowBlock("arrived", { kind: "scheduled", pickupAt: pickup, noShowAfterMin: 5, noShowAt }, at("08:06")), null);
+  assert.equal(noShowBlock("arrived", { kind: "scheduled", pickupAt: pickup, noShowAfterMin: 5, noShowAt }, at("08:12")), null);
+  assert.equal(noShowBlock("accepted", { kind: "scheduled", pickupAt: pickup, noShowAfterMin: 5, noShowAt: null }, at("08:05")), null, "before arrival: pickup + wait");
 });

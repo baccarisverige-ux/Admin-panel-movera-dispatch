@@ -179,7 +179,7 @@ export const frA2BC: Record<keyof typeof enA2BC, string> = {
   "Cancelled by system": "Annulée par le système",
   "Cancelled by the rider, the driver or an admin, or expired.": "Annulées par le passager, le chauffeur ou un administrateur, ou expirées.",
   "Cancelled or expired ÷ all trips in this list.": "Annulées ou expirées ÷ toutes les courses de cette liste.",
-  "Cancelling an accepted scheduled ride.": "Annuler une course réservée acceptée.",
+  "Cancelling an accepted scheduled ride.": "Annuler une course programmée acceptée.",
   "Cancelling the secured next trip while on a trip. The current trip goes on, the next goes back to dispatch.": "Annuler la course suivante garantie pendant une course. La course en cours continue, la suivante retourne à la répartition.",
   "Cancels": "Annulations",
   "Cap promo discounts": "Plafonner les réductions des promotions",

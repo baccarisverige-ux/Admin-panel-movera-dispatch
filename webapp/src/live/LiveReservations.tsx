@@ -7,7 +7,7 @@ import { marketOfZone, market } from "../markets/markets";
 import { useLiveRefetch, zonedLabel } from "../api/hooks";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine } from "./ui";
-import { atRisk, inView, isOverdue, needsAttention, notStarted, reservationActions, reservationCall, reservationState, RESERVATIONS_PATH, sortReservations, type ReservationAction, type ServerReservation, type View } from "./reservations";
+import { atRisk, inView, isOverdue, needsAttention, notStarted, reservationActions, reservationCall, reservationStateLabel, RESERVATIONS_PATH, sortReservations, type ReservationAction, type ServerReservation, type View } from "./reservations";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "all", label: "All" },
@@ -15,6 +15,7 @@ const VIEWS: { id: View; label: string }[] = [
   { id: "assigned", label: "Assigned" },
   { id: "warning", label: "Needs attention" },
   { id: "cancelled", label: "Cancelled" },
+  { id: "failed", label: "Failed" },
   { id: "no_show", label: "No-show" },
 ];
 
@@ -94,7 +95,7 @@ export function LiveReservations() {
                 <td>{trip.categoryId}</td>
                 <td>{trip.driver ? <Link to={`/drivers/${trip.driver.driverId}`}>{trip.driver.firstName || trip.driver.driverId}</Link> : tr("No driver yet")}</td>
                 <td>
-                  {trx(reservationState(trip))}
+                  {reservationStateLabel(trip)}
                   {atRisk(trip) && !notStarted(trip) ? <span className="dx-note warn"> <AlertTriangle size={12} aria-hidden="true" /> {tr("Driver may be late for this booked ride")}</span> : null}
                   {notStarted(trip) ? <span className="dx-note warn"> <AlertTriangle size={12} aria-hidden="true" /> {tr("Pickup time, driver has not started: handle it")}</span> : null}
                   {isOverdue(trip) ? <span className="dx-note warn"> <AlertTriangle size={12} aria-hidden="true" /> {tr("Pickup time passed, no driver: handle it")}</span> : null}
