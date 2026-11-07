@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { backoffMs, connectAdminEvents, FALLBACK_POLL_MS, INVALIDATES, keyMatches, liveRefetchMs, parseSseMessages, RECONNECTING_TEXT, showsReconnecting, type AdminLiveEvent, type LiveEventSource, type LiveStreamState } from "./adminEvents.ts";
+// Supervisor S7 M2 + E1: their own file, run with this one (no package.json change).
+import "./offeredAndOffers.test.ts";
 
 /** Contract v0.18.22 §46 (BASE job admin live updates, owner L1 "small Reconnecting… badge"). */
 const contract = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8")) as { adminLiveEvents: { types: Record<string, unknown>; client: { invalidates: Record<string, string[]>; fallbackPollSeconds: number; badgeText: string } } };

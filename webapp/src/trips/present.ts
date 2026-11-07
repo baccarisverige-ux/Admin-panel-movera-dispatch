@@ -442,11 +442,13 @@ function serverMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecor
 }
 
 /**
- * An open request on the Live map: requested or searching, and not a booking whose pickup time is still ahead (the
- * same rule as the waiting riders, rideRequests in dashboard/riders.ts).
+ * An open request on the Live map: a trip the server is searching for or has offered to a driver (S7 M2: offered
+ * trips and booked rides already searched for, pickup still ahead, were hidden), or a request that is not a booking
+ * whose pickup time is still ahead (a booked ride waiting in Scheduled rides; the same rule as rideRequests).
  */
 export function isOpenRequest(trip: Pick<DemoRecord, "status" | "pickupAt">, now: number = Date.now()): boolean {
-  return (trip.status === "requested" || trip.status === "searching") && !scheduledNotDue(trip, now);
+  if (trip.status === "searching" || trip.status === "offered") return true;
+  return trip.status === "requested" && !scheduledNotDue(trip, now);
 }
 
 export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecord[], now: number = Date.now()): LiveMarker[] {
