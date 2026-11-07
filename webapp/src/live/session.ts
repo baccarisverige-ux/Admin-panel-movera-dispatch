@@ -227,6 +227,10 @@ export function createLiveClient(options: Options) {
     fetch: fetchAuthed,
     json,
 
+    /** Finder D4: the admin events stream signs with a fresh token and renews it once after a 401. */
+    accessToken: freshToken,
+    refresh: refreshOnce,
+
     /** A mutation body as JSON with a fresh Idempotency-Key (uuid). */
     post<T>(path: string, body?: unknown): Promise<T> {
       return json<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body), idempotencyKey: newKey() });

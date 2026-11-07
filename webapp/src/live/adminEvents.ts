@@ -233,7 +233,11 @@ export function parseSseMessages(buffer: string): { messages: Array<{ data: stri
   return { messages, rest, lastId };
 }
 
-type StreamClient = { baseUrl: string; state(): { accessToken: string } | null };
+/**
+ * The session the stream signs with. Finder D4: `accessToken` is the session's fresh token (refreshed 30 s before it
+ * runs out, session.ts freshToken) and `refresh` renews it once after a 401; without them the stored token is sent.
+ */
+type StreamClient = { baseUrl: string; state(): { accessToken: string } | null; accessToken?: () => Promise<string | null>; refresh?: () => Promise<boolean> };
 
 /**
  * Finder D3: the server writes ": heartbeat" every 15 s (movera-server src/realtime/sse.ts). An open stream that sends
@@ -268,14 +272,24 @@ export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch =
     let status: number | undefined;
     void (async () => {
       try {
-        const token = client.state()?.accessToken;
+        const url = `${client.baseUrl.replace(/\/$/, "")}/api/v1${ADMIN_EVENTS_PATH}`;
+        const send = (token: string) => {
+          const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "text/event-stream", "X-Api-Version": "0.5" };
+          if (lastEventId) headers["Last-Event-ID"] = lastEventId;
+          return fetchImpl(url, { headers, signal: controller.signal });
+        };
+        const token = client.accessToken ? await client.accessToken() : client.state()?.accessToken;
         if (!token) {
           status = 401;
           throw new Error("signed out");
         }
-        const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "text/event-stream", "X-Api-Version": "0.5" };
-        if (lastEventId) headers["Last-Event-ID"] = lastEventId;
-        const response = await fetchImpl(`${client.baseUrl.replace(/\/$/, "")}/api/v1${ADMIN_EVENTS_PATH}`, { headers, signal: controller.signal });
+        let response = await send(token);
+        // D4: a dead token (the stream reconnects long after the last refresh) is renewed once; only a refused
+        // refresh (the session ended, the panel signs out) leaves the 401, which stops the stream.
+        if (response.status === 401 && client.refresh && !controller.signal.aborted && (await client.refresh())) {
+          const renewed = client.state()?.accessToken;
+          if (renewed && !controller.signal.aborted) response = await send(renewed);
+        }
         status = response.status;
         if (!response.ok || !response.body || !(response.headers.get("content-type") ?? "").includes("text/event-stream")) throw new Error(`stream ${response.status}`);
         source.onopen?.();
