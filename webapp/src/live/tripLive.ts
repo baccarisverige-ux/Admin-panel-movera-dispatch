@@ -174,14 +174,6 @@ export function isHeldBookedRide(status: string, kind: string | undefined): bool
 }
 
 /**
- * v0.18.50 §72 (L6) and supervisor S7 (M1, T1): a booked ride a driver holds for later (kind scheduled, accepted, not
- * started). It is not on the road yet: no ETA and no live trip on the map; Reassign puts it back in Scheduled rides.
- */
-export function isHeldBookedRide(status: string, kind: string | undefined): boolean {
-  return kind === "scheduled" && status === "accepted";
-}
-
-/**
  * Owner 2026-10-31 (live trip page said "Up to 0,00 kr … hard max 0,00 kr"): the driver bonus limits of a trip's
  * country from the document the server enforces them with (the zone's live driver_app_config → document.driverBonus
  * { defaultLimit, hardMax }, CONTRACT.md §6.5), else the contract's configDefaults for the country. Never 0 unless the
