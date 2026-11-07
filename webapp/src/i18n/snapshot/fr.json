@@ -8812,4 +8812,5 @@
 ["Shortest trip must be whole metres from 0 to 5000.","Le trajet le plus court doit être en mètres entiers, de 0 à 5000."],
 ["Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again.","Réattribuer retire cette course programmée à son chauffeur et la remet dans la liste Courses programmées ; le chauffeur peut la reprendre."],
 ["The booked ride is back in the Scheduled rides list; the driver may take it again.","La course programmée est de retour dans la liste Courses programmées ; le chauffeur peut la reprendre."],
-["Free waiting from","Attente gratuite à partir de"]]
+["Free waiting from","Attente gratuite à partir de"],
+["Booked ride: cancelling after the driver has arrived costs the booked-ride cancel fee","Course programmée : une annulation après l’arrivée du chauffeur coûte les frais d’annulation de la réservation"]]

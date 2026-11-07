@@ -150,6 +150,26 @@ test("Trips list: the paid waiting column is the server's waiting.paidMinutes, '
   await expect(other).toContainText("–");
 });
 
+// v0.18.51 §73 "Booked fees": a booked ride's rider cancel after arrival is the booking fee, never the no-show fee, even
+// though the server's terms still carry the zone's cancelAfterArrivedIsNoShow (on). The terms say so in the contract's words.
+test("booked ride at the pickup: the terms say a cancel after arrival costs the booked-ride cancel fee, not a no-show; the fees are the server's", async ({ page }) => {
+  const booked = {
+    ...structuredClone(NO_SHOW), tripId: "T2007", status: "arrived", kind: "scheduled", scheduledAt: "2026-10-26T07:15:00Z", cancellation: undefined, fareLines: [], fare: SEK(40000),
+    terms: { currency: "SEK", freeWaitMin: 15, waitPerMin: SEK(500), noShowAfterMin: 15, noShowFee: SEK(5000), noShowDriverSharePct: 80, cancelRule: { freeMin: 60, fee: SEK(5000) }, cancelDriverSharePct: 100, cancelAfterArrivedIsNoShow: true, maxPickupMoveMeters: 200 },
+    waiting: { arrivedAt: "2026-10-26T07:05:00Z", waitFrom: "2026-10-26T07:15:00Z", freeUntil: "2026-10-26T07:30:00Z", noShowAt: "2026-10-26T07:30:00Z", chargedSeconds: 0, freeWaitMin: 15, noShowAfterMin: 15, noShowFee: SEK(5000), noShowDriverShare: SEK(4000) },
+  };
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await fakeTripServer(page, { admin: G6_ADMIN, trips: [booked] as never, riders: [{ ...RIDERS[1] }] });
+  await fakeSettings(page);
+  await signIn(page, "Dashboard");
+  await page.goto("/trips/T2007");
+  const terms = page.getByTestId("trip-terms");
+  await expect(terms).toContainText("Booked ride: cancelling after the driver has arrived costs the booked-ride cancel fee");
+  await expect(terms).not.toContainText("counts as a no-show");
+  await expect(terms).toContainText("50,00 kr (driver gets 80%)");
+  await expect(page.getByTestId("trip-waiting-facts")).toContainText("50,00 kr · driver gets 40,00 kr");
+});
+
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS", "access-control-expose-headers": "*" };
 const OLD_TERMS = (lang: string) => `Terms ${lang}\n\n3. Price and payment.\n\n4. Behaviour. Be kind.`;
 const LEGAL_V2 = {

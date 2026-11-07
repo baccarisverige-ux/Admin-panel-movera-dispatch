@@ -59,6 +59,7 @@ import {
   ratingLabel,
   refundBlock,
   reassignBlock,
+  cancelAfterArrivedText,
   reassignHelp,
   reassignTarget,
   riderIdFor,
@@ -471,7 +472,7 @@ export function TripPage() {
                 <div><dt>{tr("Free wait, then per minute")}</dt><dd>{trn("{0} min · {1}/min", facts.terms.freeWaitMin, liveMoney(facts.terms.waitPerMinMinor))}</dd></div>
                 <div><dt>{tr("No-show")}</dt><dd>{trn("after {0} min · {1} (driver gets {2}%)", facts.terms.noShowAfterMin, liveMoney(facts.terms.noShowFeeMinor), facts.terms.noShowDriverSharePct)}</dd></div>
                 <div><dt>{tr("Rider cancel")}</dt><dd>{facts.terms.cancelFreeMin !== null ? trn("free {0} min after accept · driver gets {1}% of a fee", facts.terms.cancelFreeMin, facts.terms.cancelDriverSharePct) : tr("no fee rule")}</dd></div>
-                <div><dt>{tr("Cancel after the driver arrived")}</dt><dd>{facts.terms.cancelAfterArrivedIsNoShow ? tr("counts as a no-show") : tr("normal cancel fee")}</dd></div>
+                <div><dt>{tr("Cancel after the driver arrived")}</dt><dd data-testid="trip-terms-cancel-arrived">{cancelAfterArrivedText(facts.kind, facts.terms.cancelAfterArrivedIsNoShow)}</dd></div>
                 <div><dt>{tr("Pickup move")}</dt><dd>{trn("up to {0} m", facts.terms.maxPickupMoveMeters)}</dd></div>
               </dl>
             </div>

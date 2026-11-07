@@ -267,6 +267,16 @@ export function noShowBlock(status: string, booked?: { kind?: string; pickupAt?:
   return null;
 }
 
+/**
+ * The trip terms' « Cancel after the driver arrived » line. v0.18.51 §73 (owner "Booked fees"): a booked ride's rider
+ * cancel after arrival is the booking fee (feeKind cancel), never the no-show fee, so the zone's
+ * cancelAfterArrivedIsNoShow (which the server still sends on its terms) does not apply there; the contract's words.
+ */
+export function cancelAfterArrivedText(kind: string | undefined, cancelAfterArrivedIsNoShow: boolean): string {
+  if (kind === "scheduled") return tr("Booked ride: cancelling after the driver has arrived costs the booked-ride cancel fee");
+  return cancelAfterArrivedIsNoShow ? tr("counts as a no-show") : tr("normal cancel fee");
+}
+
 export function completeBlock(status: string): string | null {
   return canComplete(status) ? null : tr("Complete is only available once the rider is in the car.");
 }
