@@ -137,7 +137,7 @@ export const frA4FL: Record<keyof typeof enA4FL, string> = {
   "Free wait, price per minute and the no-show fee are the Pricing values of this zone, so there is one place to change them. The free wait is also the no-show wait: the driver can cancel for no-show when it ends.": "L’attente gratuite, le prix par minute et les frais de non-présentation du passager sont les valeurs Tarifs de cette zone, pour n’avoir qu’un seul endroit où les modifier. L’attente gratuite est aussi l’attente avant absence : le chauffeur peut annuler pour absence quand elle se termine.",
   "Free wait, then a price per minute. When the free wait ends the driver can also cancel for no-show and the rider pays the no-show fee. Extra rules change only the values you tick.": "Attente gratuite, puis un prix par minute. À la fin de l’attente gratuite, le chauffeur peut aussi annuler pour absence et le passager paie les frais de non-présentation du passager. Les règles supplémentaires ne changent que les valeurs cochées.",
   "Free waiting at pickup": "Attente gratuite à la prise en charge",
-  "Free waiting at the pickup for a booked ride.": "Attente gratuite à la prise en charge pour une course réservée.",
+  "Free waiting at the pickup for a booked ride.": "Attente gratuite à la prise en charge pour une course programmée.",
   "French": "Français",
   "Friday 16:00–19:00 ×1.4": "Vendredi 16:00–19:00 ×1,4",
   "Friends invited": "Amis invités",

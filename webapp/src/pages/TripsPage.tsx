@@ -95,7 +95,7 @@ export function TripsPage() {
     };
     return new Map(rows.map((trip) => {
       const started = new Date(startedAt(trip.id));
-      const tripGroup = groupOf(trip.status);
+      const tripGroup = groupOf(trip.status, liveTripOf(trip)?.kind);
       return [trip.id, {
         day: dayFormat.format(started),
         when: whenFormat.format(started),
@@ -327,7 +327,7 @@ function liveStatusCell(trip: DemoRecord): string | { text: string; node: ReactN
     // Screenshot review (admin-239): keep the status dot; the mark is a small icon with a tooltip so the row never widens.
     return { text: `${words} · ${tr("No driver in reach")}`, node: <span className="op-nd-cell"><span className="op-nd-mark" role="img" data-testid={`trip-no-driver-in-reach-${trip.id}`} title={tr("No driver in reach")} aria-label={tr("No driver in reach")}><MapPinOff size={14} aria-hidden="true" /></span>{dot ? <StatusDot tone={dot.tone}>{trx(dot.label)}</StatusDot> : words}</span> };
   }
-  if (!live || !isLiveWithDriver(trip.status, trip.driverId)) return trip.status;
+  if (!live || !isLiveWithDriver(trip.status, trip.driverId, live.kind)) return trip.status;
   const eta = live.eta;
   const line = eta ? etaLine(eta, uiLocale()) : null;
   // G5 live test: the words of the status (sv/fr/en), never the raw code.
@@ -352,7 +352,7 @@ function Peek({ trip, driverName, money, flagged, onClose }: { trip: DemoRecord;
     <aside className="op-peek" aria-label={tr("Quick look at {0}", [trip.id])}>
       <header>
         <span>
-          <b>{trip.id}</b> <span className={`op-status ${groupOf(trip.status)}`}>{statusLabel(trip.status)}</span>
+          <b>{trip.id}</b> <span className={`op-status ${groupOf(trip.status, liveTripOf(trip)?.kind)}`}>{statusLabel(trip.status)}</span>
           {flagged ? <span className="op-status problem">{trn("{0} Flagged", <Flag size={11} aria-hidden="true" />)}</span> : null}
         </span>
         <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={onClose}>{tr("Close")}</button>
@@ -367,7 +367,7 @@ function Peek({ trip, driverName, money, flagged, onClose }: { trip: DemoRecord;
       <dl className="op-facts">
         <div><dt>{tr("Distance")}</dt><dd>{trn("{0} km", route.km)}</dd></div>
         <div><dt>{tr("Time")}</dt><dd>{trn("{0} min", route.minutes)}</dd></div>
-        <div><dt>{tr("Price")}</dt><dd>{groupOf(trip.status) === "completed" ? money(fareBreakdown(trip).chargedOre) : "–"}</dd></div>
+        <div><dt>{tr("Price")}</dt><dd>{groupOf(trip.status, liveTripOf(trip)?.kind) === "completed" ? money(fareBreakdown(trip).chargedOre) : "–"}</dd></div>
       </dl>
       <Link className="dash-btn small" to={`/trips/${trip.id}`}>{tr("Open the full trip")}</Link>
     </aside>
