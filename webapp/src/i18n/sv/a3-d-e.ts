@@ -228,7 +228,7 @@ export const svA3DE: Record<keyof typeof enA3DE, string> = {
   "Drivers for the bonus": "Förare för bonusen",
   "Drivers get the highest step they reach, not all of them added up.": "Förare får det högsta steget de når, inte alla sammanlagt.",
   "Drivers I pick": "Förare jag väljer",
-  "Drivers in {0} set a destination and get trips that bring them closer. Each part has its own switch; a part that is off has no limit.": "Förare i {0} anger ett mål och får resor som tar dem närmare. Varje del har sin egen brytare; en del som är av har ingen gräns.",
+  "Drivers in {0} set a destination. They still get all trips; trips that bring them closer are marked “On your way”. Each part has its own switch; a part that is off has no limit.": "Förare i {0} anger ett mål. De får fortfarande alla resor; resor som tar dem närmare markeras ”På vägen”. Varje del har sin egen brytare; en del som är av har ingen gräns.",
   "Drivers in it": "Förare i den",
   "Drivers in order": "Förare i ordning",
   "Drivers in the group": "Förare i gruppen",

@@ -50,7 +50,7 @@ export const svA1A: Record<keyof typeof enA1A, string> = {
   "A stopped promotion cannot be changed.": "En stoppad kampanj kan inte ändras.",
   "A system error is shown as Critical, a rider's card as Important.": "Ett systemfel visas som Kritiskt, en resenärs kort som Viktigt.",
   "A time rule wins over the choice above while it runs.": "En tidsregel gäller före valet ovan medan den pågår.",
-  "A trip counts when its drop-off is this close to the driver's road route to the destination and the trip brings the driver closer.": "En resa räknas när avlämningen ligger så här nära förarens väg mot målet och resan tar föraren närmare.",
+  "A trip is marked “On your way” when its drop-off is this close to the driver's road route to the destination and the trip brings the driver closer.": "En resa markeras ”På vägen” när avlämningen ligger så här nära förarens väg mot målet och resan tar föraren närmare.",
   "A trip the driver hid in the Live list can come back if nobody took it and it is still in Radar. It never counts against the driver.": "En resa som föraren dolde i Live-listan kan komma tillbaka om ingen tog den och den fortfarande är i radar. Den räknas aldrig mot föraren.",
   "A very hard stop or impact. The card opens at once, with Call 112 on top.": "En mycket hård inbromsning eller krock. Kortet öppnas direkt, med Ring 112 överst.",
   "A5 size. Print it, put it in cars, at the airport or share the picture on social media.": "A5-format. Skriv ut den, lägg den i bilar, på flygplatsen eller dela bilden i sociala medier.",

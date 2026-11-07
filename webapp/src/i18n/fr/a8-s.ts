@@ -22,7 +22,7 @@ export const frA8S: Record<keyof typeof enA8S, string> = {
   "Same person with two accounts? Keep the other one; this one points to it.": "Même personne avec deux comptes ? Gardez l’autre ; celui-ci y renvoie.",
   "Same shape as a zone": "Même forme qu’une zone",
   "Sample action": "Action d’exemple",
-  "Sample booked ride {0}. Movera's commission here is {1}% = {2} (set in Pricing).": "Course réservée d’exemple {0}. La commission de Movera ici est de {1} % = {2} (réglée dans Tarifs).",
+  "Sample booked ride {0}. Movera's commission here is {1}% = {2} (set in Pricing).": "Course programmée d’exemple {0}. La commission de Movera ici est de {1} % = {2} (réglée dans Tarifs).",
   "Sample booking": "Réservation d’exemple",
   "Sample raise": "Hausse d’exemple",
   "Sample ride booked": "Course d’exemple réservée",

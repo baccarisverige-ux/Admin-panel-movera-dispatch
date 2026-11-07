@@ -131,7 +131,7 @@ export const svA6OP: Record<keyof typeof enA6OP, string> = {
   "Only the Super admin can change these settings.": "Bara superadmin kan ändra de här inställningarna.",
   "Only the Super admin can change this.": "Bara superadmin kan ändra detta.",
   "Only these pickup points": "Bara de här upphämtningsplatserna",
-  "Only trips that end near the destination.": "Bara resor som slutar nära målet.",
+  "Trips that end near the destination are marked.": "Resor som slutar nära målet markeras.",
   "Open": "Öppna",
   "Open {0}": "Öppna {0}",
   "Open a ride check alert": "Öppna ett larm från resekontrollen",

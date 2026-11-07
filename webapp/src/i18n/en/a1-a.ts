@@ -48,7 +48,7 @@ export const enA1A = {
   "A stopped promotion cannot be changed.": "A stopped promotion cannot be changed.",
   "A system error is shown as Critical, a rider's card as Important.": "A system error is shown as Critical, a rider's card as Important.",
   "A time rule wins over the choice above while it runs.": "A time rule wins over the choice above while it runs.",
-  "A trip counts when its drop-off is this close to the driver's road route to the destination and the trip brings the driver closer.": "A trip counts when its drop-off is this close to the driver's road route to the destination and the trip brings the driver closer.",
+  "A trip is marked “On your way” when its drop-off is this close to the driver's road route to the destination and the trip brings the driver closer.": "A trip is marked “On your way” when its drop-off is this close to the driver's road route to the destination and the trip brings the driver closer.",
   "A trip the driver hid in the Live list can come back if nobody took it and it is still in Radar. It never counts against the driver.": "A trip the driver hid in the Live list can come back if nobody took it and it is still in Radar. It never counts against the driver.",
   "A very hard stop or impact. The card opens at once, with Call 112 on top.": "A very hard stop or impact. The card opens at once, with Call 112 on top.",
   "A5 size. Print it, put it in cars, at the airport or share the picture on social media.": "A5 size. Print it, put it in cars, at the airport or share the picture on social media.",

@@ -1,7 +1,7 @@
 /** French dictionary, area c6-job4-take-back: FIX JOB 4 (contract v0.18.35 §59): Book later › Late driver, alert booked_taken_back. Add new keys at the end of this file. Merged in ../fr.ts in this order. */
 export const frC6Job4TakeBack = {
   "5 · Late driver — take the ride back": "5 · Chauffeur en retard — la course lui est retirée",
-  "The only case the system takes a ride from a driver: a booked ride he would reach too late while there is still time to find another driver. It counts on his cancel record. Drivers never pay a fee.": "Le seul cas où le système retire une course à un chauffeur : une course réservée où il arriverait trop tard alors qu’il reste du temps pour trouver un autre chauffeur. Cela compte comme une annulation. Les chauffeurs ne paient jamais de frais.",
+  "The only case the system takes a ride from a driver: a booked ride he would reach too late while there is still time to find another driver. It counts on his cancel record. Drivers never pay a fee.": "Le seul cas où le système retire une course à un chauffeur : une course programmée où il arriverait trop tard alors qu’il reste du temps pour trouver un autre chauffeur. Cela compte comme une annulation. Les chauffeurs ne paient jamais de frais.",
   "Take back when late more than": "Retirer si retard de plus de",
   "Example: 5 min → a driver who would arrive at 10:06 for a 10:00 pickup loses the ride; at 10:05 he keeps it.": "Exemple : 5 min → un chauffeur qui arriverait à 10:06 pour une prise en charge à 10:00 perd la course ; à 10:05 il la garde.",
   "Take back when late more than, minutes": "Retirer si retard de plus de, minutes",
@@ -21,9 +21,9 @@ export const frC6Job4TakeBack = {
   "taken back, sent to another driver": "retirée, envoyée à un autre chauffeur",
   "he keeps it": "il la garde",
   "min drive": "min de route",
-  "Booked ride taken from a late driver": "Course réservée retirée à un chauffeur en retard",
-  "The server took the booked ride from a driver who would be too late (Dispatch › Book later › Late driver). It counts on his cancel record, no fee. Solved when a new driver takes it.": "Le serveur a retiré la course réservée à un chauffeur qui serait arrivé trop tard (Dispatch › Réserver › Chauffeur en retard). Cela compte comme une annulation, sans frais. Résolu quand un nouveau chauffeur la prend.",
-  "{0}'s booked ride at {1} was taken from {2} (late)": "La course réservée de {0} à {1} a été retirée à {2} (retard)",
+  "Booked ride taken from a late driver": "Course programmée retirée à un chauffeur en retard",
+  "The server took the booked ride from a driver who would be too late (Dispatch › Book later › Late driver). It counts on his cancel record, no fee. Solved when a new driver takes it.": "Le serveur a retiré la course programmée à un chauffeur qui serait arrivé trop tard (Dispatch › Réserver › Chauffeur en retard). Cela compte comme une annulation, sans frais. Résolu quand un nouveau chauffeur la prend.",
+  "{0}'s booked ride at {1} was taken from {2} (late)": "La course programmée de {0} à {1} a été retirée à {2} (retard)",
   "take back when late more than (minutes)": "retirer si retard de plus de (minutes)",
   "keep if the driver is within (minutes' drive)": "garder si le chauffeur est à moins de (minutes de route)",
   "take back only until (minutes before pickup)": "retirer seulement jusqu’à (minutes avant la prise en charge)",
