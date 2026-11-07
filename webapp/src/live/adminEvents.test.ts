@@ -149,3 +149,13 @@ test("id-only lines move the cursor: the reconnect starts after them", () => {
   assert.equal(h.sources[1]!.lastEventId, "12");
   h.stop();
 });
+
+// Supervisor S7 R5 (2026-11-07): the Reservations warnings (no driver, may be late, not started, overdue) are set by the
+// server on the clock and its trips trigger does not fire on trips.reservation / scheduled_at, so no trip.changed comes.
+test("R5: Reservations keeps its 30 s refetch while the stream is open; other streamed lists still wait for events", () => {
+  assert.equal(liveRefetchMs("open", "reservations", 30_000), 30_000);
+  assert.equal(liveRefetchMs("reconnecting", "reservations", 30_000), 30_000);
+  assert.equal(liveRefetchMs("off", "reservations", 30_000), 30_000);
+  assert.equal(liveRefetchMs("open", "trips", 30_000), false);
+  assert.equal(liveRefetchMs("reconnecting", "trips", 30_000), FALLBACK_POLL_MS);
+});
