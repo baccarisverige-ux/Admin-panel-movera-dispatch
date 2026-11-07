@@ -9,6 +9,7 @@ import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook, type
 import { market } from "../markets/markets";
 import {
   frameOf,
+  isActiveOnRoad,
   isOpenRequest,
   liveBoardLayers,
   liveMarkers,
@@ -124,9 +125,8 @@ function LiveBoard() {
   const boosts = markers.filter((marker) => marker.kind === "boost");
   // The same rule as the plotted requests and the Dashboard's waiting riders: a booking not yet due is not open.
   const openAll = (trips.data ?? []).filter((trip) => isOpenRequest(trip)).length;
-  const activeAll = (trips.data ?? []).filter((trip) =>
-    ["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"].includes(trip.status),
-  ).length;
+  // S7 M1: a booked ride a driver holds for later is not active on the road.
+  const activeAll = (trips.data ?? []).filter((trip) => isActiveOnRoad(trip)).length;
 
   return (
     <>

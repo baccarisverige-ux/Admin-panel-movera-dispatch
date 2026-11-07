@@ -204,7 +204,7 @@ export const enA10UZ = {
   "Which offers get pickup pay": "Which offers get pickup pay",
   "Which phone": "Which phone",
   "Which rule wins when zones overlap": "Which rule wins when zones overlap",
-  "Which trips match a destination.": "Which trips match a destination.",
+  "Which trips get the “On your way” mark.": "Which trips get the “On your way” mark.",
   "While driving": "While driving",
   "Who cancelled: {0}. Reason: {1}{2}.": "Who cancelled: {0}. Reason: {1}{2}.",
   "Who did what": "Who did what",

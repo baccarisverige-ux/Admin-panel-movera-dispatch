@@ -2,5 +2,5 @@
 import type { enC5BookedRideLive } from "../en/c5-booked-ride-live.ts";
 
 export const frC5BookedRideLive: Record<keyof typeof enC5BookedRideLive, string> = {
-  "Booked ride · now live": "Course réservée · en cours",
+  "Booked ride · now live": "Course programmée · en cours",
 };

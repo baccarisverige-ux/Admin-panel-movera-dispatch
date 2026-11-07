@@ -1,3 +1,5 @@
+import { statusLabel } from "../domain/labels.ts";
+import { trx } from "../i18n/core.ts";
 import { marketOfZone } from "../markets/markets.ts";
 
 /**
@@ -21,6 +23,10 @@ export type ServerReservation = {
   dropoff?: { address?: string };
   fare?: { amountMinor: number; currency: string };
   reservation?: { mode: "now" | "list"; dispatchAt: string; freeChangeUntil: string; noDriver: boolean; overdue?: boolean; notStarted?: boolean; atRisk?: boolean; changeAsk?: { until: string; previousAt: string }; mustBeOnlineAt?: string };
+  /** The rules the trip is charged by (TripProjection.terms); noShowAfterMin = the no-show wait after the pickup time. */
+  terms?: { noShowAfterMin?: number };
+  /** From the driver's Arrived (TripProjection.waiting): noShowAt = the later of arrival and pickup time + the wait (v0.18.51 §73). */
+  waiting?: { noShowAt?: string } | null;
 };
 
 export type ReservationAction = "dispatchNow" | "unassign" | "assign" | "offer" | "raise" | "noShow" | "contact" | "cancel" | "open";
@@ -28,23 +34,54 @@ export type ReservationAction = "dispatchNow" | "unassign" | "assign" | "offer" 
 const TERMINAL = new Set(["completed", "cancelled_by_rider", "cancelled_by_driver", "cancelled_by_admin", "cancelled_by_system", "no_show", "expired", "failed"]);
 const NO_DRIVER = new Set(["requested", "searching", "offered"]);
 
-/** The plain-words state of a booked ride (English key; the page translates it). */
+/**
+ * Supervisor S7 R1–R3: from driver_to_pickup on, and for failed, the row shows the contract's status words
+ * (contract.json#statusWords.families.tripStatus, already in the admin's language). Before, it said "On the way" with
+ * the rider on board and "Cancelled" for failed.
+ */
+const CONTRACT_WORDED = new Set(["driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff", "failed"]);
+/** The page's own words (English keys, translated with trx). */
+const PAGE_WORDS = new Set(["Done", "No-show", "No driver found", "Cancelled", "In Scheduled rides", "Sent to drivers", "Driver asked to keep the new time", "Driver holds it"]);
+const ON_THE_ROAD = new Set(["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"]);
+
+/** The plain-words state of a booked ride (English key the page translates; contract words for CONTRACT_WORDED). */
 export function reservationState(trip: ServerReservation): string {
+  if (CONTRACT_WORDED.has(trip.status)) return statusLabel(trip.status, "tripStatus");
   if (TERMINAL.has(trip.status)) return trip.status === "completed" ? "Done" : trip.status === "no_show" ? "No-show" : trip.status === "expired" ? "No driver found" : "Cancelled";
   if (trip.status === "requested") return "In Scheduled rides";
   if (NO_DRIVER.has(trip.status)) return "Sent to drivers";
   if (trip.status === "accepted") return trip.reservation?.changeAsk ? "Driver asked to keep the new time" : "Driver holds it";
-  return "On the way";
+  return statusLabel(trip.status, "tripStatus");
+}
+
+/** The row's state in the admin's language: the contract words as they are, the page's own words through trx. */
+export function reservationStateLabel(trip: ServerReservation): string {
+  const words = reservationState(trip);
+  return PAGE_WORDS.has(words) ? trx(words) : words;
+}
+
+/**
+ * Supervisor S7 R4 (contract.json#bookLater.liveFixes.noShowTime; v0.18.51 §73): the server takes a booked ride's
+ * no-show only from Waiting.noShowAt (the later of the driver's arrival and the pickup time + noShowAfterMin; 409
+ * no_show_too_early before). Once the driver arrived the server's noShowAt decides; before that, the pickup time +
+ * the trip's no-show wait (the earliest it can be). Without any time the server decides alone (true).
+ */
+export function bookedNoShowDue(scheduledAt: string | undefined, noShowAfterMin: number | undefined, now: number = Date.now(), noShowAt?: string | null): boolean {
+  const serverAt = Date.parse(noShowAt ?? "");
+  if (Number.isFinite(serverAt)) return now >= serverAt;
+  const pickup = Date.parse(scheduledAt ?? "");
+  if (!Number.isFinite(pickup)) return true;
+  return now >= pickup + Math.max(0, noShowAfterMin ?? 0) * 60_000;
 }
 
 /** Which buttons a booked ride has now (the server checks again). */
-export function reservationActions(trip: ServerReservation): ReservationAction[] {
+export function reservationActions(trip: ServerReservation, now: number = Date.now()): ReservationAction[] {
   if (TERMINAL.has(trip.status)) return ["open"];
   const actions: ReservationAction[] = [];
   if (trip.status === "requested") actions.push("dispatchNow");
   if (trip.status === "accepted") actions.push("unassign");
   if (NO_DRIVER.has(trip.status)) actions.push("assign", "offer", "raise");
-  if (["accepted", "driver_to_pickup", "arrived"].includes(trip.status)) actions.push("noShow");
+  if (["accepted", "driver_to_pickup", "arrived"].includes(trip.status) && (trip.kind !== "scheduled" || bookedNoShowDue(trip.scheduledAt, trip.terms?.noShowAfterMin, now, trip.waiting?.noShowAt))) actions.push("noShow");
   actions.push("contact", "cancel", "open");
   return actions;
 }
@@ -52,12 +89,14 @@ export function reservationActions(trip: ServerReservation): ReservationAction[]
 /** Needs attention: no driver close to pickup (the server's no-driver flag, owner Q3). */
 export const needsAttention = (trip: ServerReservation): boolean => Boolean(trip.reservation?.noDriver) && NO_DRIVER.has(trip.status);
 
-export type View = "all" | "waiting" | "assigned" | "warning" | "cancelled" | "no_show";
+export type View = "all" | "waiting" | "assigned" | "warning" | "cancelled" | "failed" | "no_show";
 
 export function inView(trip: ServerReservation, view: View): boolean {
   if (view === "all") return true;
   if (view === "waiting") return NO_DRIVER.has(trip.status);
-  if (view === "assigned") return trip.status === "accepted" || trip.status === "driver_to_pickup" || trip.status === "arrived";
+  // S7 R3: a ride with its driver, also with the rider on board (before only under All).
+  if (view === "assigned") return ON_THE_ROAD.has(trip.status);
+  if (view === "failed") return trip.status === "failed";
   if (view === "warning") return needsAttention(trip);
   if (view === "no_show") return trip.status === "no_show";
   return trip.status.startsWith("cancelled") || trip.status === "expired";
