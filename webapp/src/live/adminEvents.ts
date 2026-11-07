@@ -256,14 +256,6 @@ type StreamClient = { baseUrl: string; state(): { accessToken: string } | null; 
 export const STREAM_SILENCE_MS = 45_000;
 type SilenceTimers = { setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
 
-/**
- * Finder D3: the server writes ": heartbeat" every 15 s (movera-server src/realtime/sse.ts). An open stream that sends
- * no bytes for this long is half-open (laptop sleep, Wi-Fi change): it is dropped, so connectAdminEvents shows
- * "Reconnecting…" (the lists poll again) and reopens it with Last-Event-ID. Before, it stayed "open" and the lists froze.
- */
-export const STREAM_SILENCE_MS = 45_000;
-type SilenceTimers = { setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
-
 /** An EventSource over fetch, so the request carries Authorization: Bearer (live builds). */
 export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch = (input, init) => fetch(input, init), timers: SilenceTimers = {}): LiveSourceFactory {
   const setTimer = timers.setTimer ?? ((fn: () => void, ms: number) => setTimeout(fn, ms));
