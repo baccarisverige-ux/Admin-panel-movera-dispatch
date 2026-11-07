@@ -3,6 +3,8 @@ import test from "node:test";
 import { ApiError, type FetchLike, type FetchResponse } from "../api/httpClient.ts";
 import { LIVE_SESSION_KEY, createLiveClient, idleExpired, resolveBase } from "./session.ts";
 import type { AdminMe, AdminSession } from "./types.ts";
+// Owner D8 "One shared sign-in" (2 tabs, 1 h): its own file, run with this one (no package.json change).
+import "./sharedSignIn.test.ts";
 
 const ADMIN: AdminMe = {
   adminId: "A1",

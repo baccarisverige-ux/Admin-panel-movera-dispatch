@@ -18,7 +18,9 @@ test("forgot password: the sign-in page says how to get a new password link", as
   await expect(page.getByText("Ask a Super admin for a new password link.", { exact: false })).toBeVisible();
 });
 
-test("wrong password gives one plain message; the tokens never reach localStorage", async ({ page }) => {
+// Owner D8 (2026-11-07, "One shared sign-in"): the sign-in is shared by the browser's tabs (localStorage), no longer
+// kept per tab in sessionStorage (each tab renewing its own copy ended the session).
+test("wrong password gives one plain message; the tokens are kept once for every tab (localStorage, not sessionStorage)", async ({ page }) => {
   await fakeTripServer(page);
   await page.goto("/");
   await page.getByLabel("Email").fill("owner@movera.se");
@@ -28,9 +30,9 @@ test("wrong password gives one plain message; the tokens never reach localStorag
   await page.getByLabel("Password").fill("correct-horse");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { level: 2, name: "Dashboard" })).toBeVisible();
-  const stored = await page.evaluate(() => ({ local: Object.keys(localStorage).join(","), session: sessionStorage.getItem("movera-admin-live-session") }));
-  expect(stored.local).not.toContain("live-session");
-  expect(stored.session).toContain("access-1");
+  const stored = await page.evaluate(() => ({ local: localStorage.getItem("movera-admin-live-session"), session: sessionStorage.getItem("movera-admin-live-session") }));
+  expect(stored.local).toContain("access-1");
+  expect(stored.session).toBeNull();
 });
 
 test("the live menu is the whole demo menu; no demo banner, a Not connected yet marker instead", async ({ page }) => {
