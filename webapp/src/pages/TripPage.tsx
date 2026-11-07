@@ -171,7 +171,7 @@ export function TripPage() {
   const money = (minor: number) => formatMoney(minor, country);
   const tripCurrency = facts?.currency ?? place.currency;
   const liveMoney = (minor: number) => tripMoney(minor, tripCurrency);
-  const eta = facts && isLiveWithDriver(trip.status, trip.driverId) ? facts.eta : null;
+  const eta = facts && isLiveWithDriver(trip.status, trip.driverId, facts?.kind) ? facts.eta : null;
   const etaStale = eta ? etaIsStale(eta, Date.now()) : false;
   const cancelFacts = facts?.cancellation ?? null;
   const feeKind = feeKindOf(cancelFacts);
@@ -391,7 +391,7 @@ export function TripPage() {
                   <div><dt>{tr("Ride time")}</dt><dd>{Number.isFinite(route.minutes) ? trn("{0} min", route.minutes) : <NotConnected />}</dd></div>
                 </>
               )}
-              {facts && isLiveWithDriver(trip.status, trip.driverId) && !facts.driverLocation ? <div><dt>{tr("Driver")}</dt><dd>{tr("No position yet")}</dd></div> : null}
+              {facts && isLiveWithDriver(trip.status, trip.driverId, facts?.kind) && !facts.driverLocation ? <div><dt>{tr("Driver")}</dt><dd>{tr("No position yet")}</dd></div> : null}
               <div><dt>{tr("Stops")}</dt><dd>{route.stops.length - 2}</dd></div>
             </dl>
           </div>

@@ -157,9 +157,12 @@ export function owedText(owed: readonly { amountMinor: number; currency: string 
   return owed.map((money) => tripMoney(money.amountMinor, money.currency)).join(" · ");
 }
 
-/** A trip going on with a driver (the live rows that carry a position and an ETA). */
-export function isLiveWithDriver(status: string, driverId: string | null | undefined): boolean {
-  return Boolean(driverId) && ["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"].includes(status);
+/**
+ * A trip going on with a driver (the live rows that carry a position and an ETA). With the trip `kind`, a booked ride
+ * the driver only holds for later (isHeldBookedRide) is not one yet (S7 M1/T1).
+ */
+export function isLiveWithDriver(status: string, driverId: string | null | undefined, kind?: string): boolean {
+  return Boolean(driverId) && ["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"].includes(status) && !isHeldBookedRide(status, kind);
 }
 
 /**

@@ -428,6 +428,11 @@ export function frameOf(markers: readonly Pick<LiveMarker, "lat" | "lng">[]): Ma
 }
 
 const ACTIVE = new Set(["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"]);
+
+/** A trip on the road with its driver (Live map trips, the "active" count); not a booked ride held for later (S7 M1). */
+export function isActiveOnRoad(trip: Pick<DemoRecord, "id" | "status" | "liveTrip">): boolean {
+  return ACTIVE.has(trip.status) && !isHeldBookedRide(trip.status, liveTripOf(trip)?.kind);
+}
 const ONLINE = new Set(["online", "on_trip", "going_online"]);
 
 /**
@@ -445,7 +450,7 @@ function serverMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecor
   });
   const tripMarks = trips.flatMap((trip) => {
     const live = liveTripOf(trip);
-    if (!live?.driverLocation || !ACTIVE.has(trip.status) || !trip.driverId) return [];
+    if (!live?.driverLocation || !isActiveOnRoad(trip) || !trip.driverId) return [];
     const { lat, lng, measuredAt } = live.driverLocation;
     const line = live.eta ? ` · ${etaLine(live.eta, uiLocale())}` : "";
     return [{ id: trip.id, kind: "trip" as const, name: `${trip.id} · ${statusLabel(trip.status)}${line}`, lat, lng, stale: false, lastSeen: measuredAt, href: `/trips/${trip.id}`, onMap: true }];
@@ -485,7 +490,7 @@ export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly Demo
     };
   });
   const tripMarks: LiveMarker[] = trips
-    .filter((trip) => ACTIVE.has(trip.status))
+    .filter((trip) => isActiveOnRoad(trip))
     .slice(0, 24)
     .map((trip) => {
       const [lat, lng] = jitter(tripIndex(trip.id), ...(ZONE_CENTER[trip.zoneId] ?? [59.33, 18.06]));
