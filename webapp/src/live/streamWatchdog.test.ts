@@ -13,11 +13,11 @@ test("D3: an open stream that goes silent (no heartbeat) is closed and opened ag
   const fakeFetch = (async () => { opens += 1; return new Response(new ReadableStream({ start() {} }), { status: 200, headers: { "content-type": "text/event-stream" } }); }) as typeof fetch;
   const states: LiveStreamState[] = [];
   const timers: Array<{ fn: () => void; ms: number; cleared: boolean }> = [];
-  const stop = connectAdminEvents(fetchEventSource(client, fakeFetch), () => {}, (s) => states.push(s), {
-    setTimer: (fn, ms) => { const t = { fn, ms, cleared: false }; timers.push(t); return t; },
-    clearTimer: (handle) => { (handle as { cleared: boolean }).cleared = true; },
-    random: () => 0,
-  });
+  const fake = {
+    setTimer: (fn: () => void, ms: number) => { const t = { fn, ms, cleared: false }; timers.push(t); return t; },
+    clearTimer: (handle: unknown) => { (handle as { cleared: boolean }).cleared = true; },
+  };
+  const stop = connectAdminEvents(fetchEventSource(client, fakeFetch, fake), () => {}, (s) => states.push(s), { ...fake, random: () => 0 });
   await tick();
   await tick();
   assert.equal(states.at(-1), "open");
@@ -39,10 +39,11 @@ test("D3: a heartbeat or event chunk keeps the stream open (the watchdog is re-a
   const fakeFetch = (async () => new Response(new ReadableStream({ start(c) { push = (text) => c.enqueue(new TextEncoder().encode(text)); } }), { status: 200, headers: { "content-type": "text/event-stream" } })) as typeof fetch;
   const states: LiveStreamState[] = [];
   const timers: Array<{ fn: () => void; ms: number; cleared: boolean }> = [];
-  const stop = connectAdminEvents(fetchEventSource(client, fakeFetch), () => {}, (s) => states.push(s), {
-    setTimer: (fn, ms) => { const t = { fn, ms, cleared: false }; timers.push(t); return t; },
-    clearTimer: (handle) => { (handle as { cleared: boolean }).cleared = true; },
-  });
+  const fake = {
+    setTimer: (fn: () => void, ms: number) => { const t = { fn, ms, cleared: false }; timers.push(t); return t; },
+    clearTimer: (handle: unknown) => { (handle as { cleared: boolean }).cleared = true; },
+  };
+  const stop = connectAdminEvents(fetchEventSource(client, fakeFetch, fake), () => {}, (s) => states.push(s), fake);
   await tick();
   await tick();
   const first = timers.filter((t) => t.ms === STREAM_SILENCE_MS).length;
