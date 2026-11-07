@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { batchedInvalidator, connectAdminEvents, type AdminLiveEvent, type KeyMatch, type LiveEventSource } from "./adminEvents.ts";
+// Finder D3 (stream silence watchdog): its own file, run with this one (no package.json change).
+import "./streamWatchdog.test.ts";
 
 /**
  * 503 proof 2026-11-06 (Rules plan/FIX-503-ADMIN-BURST-2026-11-06.md): GET /admin/events without a cursor sent 5571 events in
