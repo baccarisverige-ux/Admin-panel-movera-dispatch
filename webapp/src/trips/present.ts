@@ -9,6 +9,7 @@ import { STEP_MS, startedAt, tripIndex } from "./clock.ts";
 import { hasMessage, tr, trx, uiLocale } from "../i18n/core.ts";
 import { NOT_CONNECTED_TEXT, isLiveData, liveDriverOf, liveRiderIdOf, liveTripOf } from "../live/realData.ts";
 import type { LivePlace } from "../api/seed.ts";
+import { bookedNoShowDue } from "../live/reservations.ts";
 import { scheduledNotDue } from "../dashboard/riders.ts";
 import { etaLine, isHeldBookedRide } from "../live/tripLive.ts";
 
@@ -256,8 +257,14 @@ export function reassignBlock(status: string): string | null {
   return canReassign(status) ? null : tr("Reassign is only available from an offer until the driver has arrived, before the rider is in the car.");
 }
 
-export function noShowBlock(status: string): string | null {
-  return canNoShow(status) ? null : tr("No-show is only available once a driver has accepted and before the rider is in the car.");
+/**
+ * Why the trip page's no-show is off. A booked ride (kind scheduled) also waits for its pickup time + the trip's no-show
+ * wait, as the server does (S7 R4, 409 no_show_too_early); live rides keep their rule.
+ */
+export function noShowBlock(status: string, booked?: { kind?: string; pickupAt?: string; noShowAfterMin?: number; noShowAt?: string | null }, now: number = Date.now()): string | null {
+  if (!canNoShow(status)) return tr("No-show is only available once a driver has accepted and before the rider is in the car.");
+  if (booked?.kind === "scheduled" && !bookedNoShowDue(booked.pickupAt, booked.noShowAfterMin, now, booked.noShowAt)) return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");
+  return null;
 }
 
 export function completeBlock(status: string): string | null {

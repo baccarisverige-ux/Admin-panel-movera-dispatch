@@ -188,7 +188,7 @@ export function TripPage() {
   const cancelWhy = cancelBlock(trip.status);
   const offerWhy = offerBlock(trip.status) ?? (eligible.length === 0 ? "No eligible driver with an eligible matching vehicle is free for this category." : null);
   const reassignWhy = reassignBlock(trip.status);
-  const noShowWhy = noShowBlock(trip.status);
+  const noShowWhy = noShowBlock(trip.status, { kind: facts?.kind, pickupAt: trip.pickupAt, noShowAfterMin: facts?.terms?.noShowAfterMin, noShowAt: facts?.waiting?.noShowAt }, clock);
   const completeWhy = completeBlock(trip.status);
   // Admin cancel reasons: contract admin_* codes, texts from Dispatch › Cancel reasons (the one editor).
   const adminReasons = liveCountry(normalizeDispatchBook(dispatchSlice.value), country).cancelReasons.groups.admin;
