@@ -18,8 +18,8 @@ const FR = fr as Record<string, string>;
 const SV = sv as Record<string, string>;
 const EN = en as Record<string, string>;
 
-test("the admin pins the contract it carries (0.18.50)", () => {
-  assert.equal(C.version, "0.18.50");
+// The exact pin moved to sync0_18_51.test.ts with the 0.18.51 copy; the 0.18.50 rules below still hold.
+test("the admin pins the contract it carries (0.18.50 or later)", () => {
   assert.equal(CONTRACT_VERSION, C.version);
 });
 

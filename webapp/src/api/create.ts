@@ -424,8 +424,10 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       // invalid_transition, not a validation error from the action's own state list.
       const lifecycle = raw.collection === "trips" ? TRIP_LIFECYCLE[raw.action] : undefined;
       if (lifecycle) {
-        // The server derives the next status from the shared table; the client's patch cannot pick it.
-        const to = resolvedState ? nextStatus(resolvedState, lifecycle, "admin") : null;
+        // The server derives the next status from the shared table; the client's patch cannot pick it. The trip's kind
+        // picks the row where live and booked rides differ (v0.18.51 §73 L6: reassign of a held booked ride → requested).
+        const kind = targetRecord(db, raw.targetId, "trips")?.liveTrip?.kind === "scheduled" ? "scheduled" : "live";
+        const to = resolvedState ? nextStatus(resolvedState, lifecycle, "admin", kind) : null;
         if (!to) notAllowed(`${actionSpec.label} is not allowed while the trip is ${resolvedState ?? "unknown"}.`);
         raw = { ...raw, patch: { ...(raw.patch ?? {}), status: to } };
       } else if (raw.collection === "trips" && raw.patch && "status" in raw.patch) {

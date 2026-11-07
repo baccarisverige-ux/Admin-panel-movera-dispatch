@@ -6,7 +6,7 @@ import { AIRPORT_QUEUES_PATH, airportCards, parseQueueArea, parseQueueFeed, queu
 /** Fix job 9 (contract v0.18.36 §60): the admin's queue area and the Dashboard airport card come from the server. */
 
 test("contract v0.18.36 carries the airport queue with the owner's defaults (decline keeps the place)", () => {
-  assert.equal(contract.version, "0.18.50");
+  assert.equal(contract.version, "0.18.51");
   const aq = (contract as unknown as { airportQueue: { defaults: Record<string, unknown> } }).airportQueue;
   assert.deepEqual(aq.defaults, { on: false, leaveGraceMin: 3, offerSeconds: 30, maxQueueOffers: 3, keepPlaceAfterDecline: true });
   assert.deepEqual(QUEUE_DEFAULTS, aq.defaults);

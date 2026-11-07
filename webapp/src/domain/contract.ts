@@ -4,7 +4,7 @@ import { formatMoney } from "./money.ts";
 export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
-export const CONTRACT_VERSION = "0.18.50" as const;
+export const CONTRACT_VERSION = "0.18.51" as const;
 
 /** The 19 trip statuses of contract v0.3.0 (contract.json#tripStatus.values), in lifecycle order. */
 export const TRIP_STATUSES = [
@@ -115,7 +115,10 @@ export const TRANSITIONS: readonly Transition[] = [
   { command: "cancel", actor: "driver", from: ["rider_onboard", "in_trip", "approaching_dropoff"], to: "cancelled_by_driver" },
   { command: "no_show", actor: "driver", from: ["arrived"], to: "no_show" },
   { command: "no_show", actor: "admin", from: ["arrived", "accepted", "driver_to_pickup"], to: "no_show" },
-  { command: "reassign", actor: "admin", from: ["offered", "accepted", "driver_to_pickup", "arrived"], to: "searching" },
+  // v0.18.51 §73 (L6): admin reassign from accepted is split by kind; a held booked ride goes back to the list (requested).
+  { command: "reassign", actor: "admin", from: ["accepted"], to: "searching", when: "live" },
+  { command: "reassign", actor: "admin", from: ["accepted"], to: "requested", when: "scheduled" },
+  { command: "reassign", actor: "admin", from: ["offered", "driver_to_pickup", "arrived"], to: "searching" },
   { command: "cancel", actor: "admin", from: ["draft", "quoted", ...ACTIVE], to: "cancelled_by_admin" },
   { command: "expire", actor: "system", from: ["quoted", "requested", "searching", "offered"], to: "expired" },
   { command: "system_cancel", actor: "system", from: ["requested", "searching", "offered", "accepted"], to: "cancelled_by_system" },
