@@ -256,6 +256,20 @@ export function reassignBlock(status: string): string | null {
   return canReassign(status) ? null : tr("Reassign is only available from an offer until the driver has arrived, before the rider is in the car.");
 }
 
+export function noShowBlock(status: string): string | null {
+  return canNoShow(status) ? null : tr("No-show is only available once a driver has accepted and before the rider is in the car.");
+}
+
+export function completeBlock(status: string): string | null {
+  return canComplete(status) ? null : tr("Complete is only available once the rider is in the car.");
+}
+
+export function adjustBlock(status: string): string | null {
+  return canAdjustFare(status)
+    ? null
+    : tr("Fare adjustment is not allowed while the trip is {0}.", [statusLabel(status).toLowerCase()]);
+}
+
 /**
  * v0.18.50 §72 (L6, owner "Same as Unassign" + "Re-offer allowed"): Reassign takes a booked ride a driver holds for
  * later (isHeldBookedRide) back to the Scheduled rides list (requested), like Reservations › Unassign, and the driver may
@@ -271,20 +285,6 @@ export function reassignHelp(status: string, kind: string | undefined): string {
     ?? (isHeldBookedRide(status, kind)
       ? tr("Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again.")
       : tr("Reassign takes the trip off its driver and sends it back to dispatch (searching). Then offer it to a driver."));
-}
-
-export function noShowBlock(status: string): string | null {
-  return canNoShow(status) ? null : tr("No-show is only available once a driver has accepted and before the rider is in the car.");
-}
-
-export function completeBlock(status: string): string | null {
-  return canComplete(status) ? null : tr("Complete is only available once the rider is in the car.");
-}
-
-export function adjustBlock(status: string): string | null {
-  return canAdjustFare(status)
-    ? null
-    : tr("Fare adjustment is not allowed while the trip is {0}.", [statusLabel(status).toLowerCase()]);
 }
 
 export function waitingBlock(status: string): string | null {
