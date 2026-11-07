@@ -9,7 +9,8 @@ import { WAITING_PARAGRAPHS } from "../content/waitingParagraphs.ts";
 import { en } from "../i18n/en.ts";
 import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
-import { heldBookedRide, reassignHelp, reassignTarget } from "../trips/present.ts";
+import { reassignHelp, reassignTarget } from "../trips/present.ts";
+import { isHeldBookedRide } from "../live/tripLive.ts";
 import { CONTRACT_VERSION } from "../domain/contract.ts";
 
 const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
@@ -88,9 +89,9 @@ test("Q10: the free-change setting speaks of changes only", () => {
 });
 
 test("L6: Reassign on a held booked ride goes back to the Scheduled rides list; the driver may take it again", () => {
-  assert.equal(heldBookedRide("accepted", "scheduled"), true);
-  assert.equal(heldBookedRide("driver_to_pickup", "scheduled"), false);
-  assert.equal(heldBookedRide("accepted", "live"), false);
+  assert.equal(isHeldBookedRide("accepted", "scheduled"), true);
+  assert.equal(isHeldBookedRide("driver_to_pickup", "scheduled"), false);
+  assert.equal(isHeldBookedRide("accepted", "live"), false);
   assert.equal(reassignTarget("accepted", "scheduled"), "requested");
   assert.equal(reassignTarget("accepted", "live"), "searching");
   assert.equal(reassignTarget("driver_to_pickup", "scheduled"), "searching");

@@ -10,7 +10,7 @@ import { hasMessage, tr, trx, uiLocale } from "../i18n/core.ts";
 import { NOT_CONNECTED_TEXT, isLiveData, liveDriverOf, liveRiderIdOf, liveTripOf } from "../live/realData.ts";
 import type { LivePlace } from "../api/seed.ts";
 import { scheduledNotDue } from "../dashboard/riders.ts";
-import { etaLine } from "../live/tripLive.ts";
+import { etaLine, isHeldBookedRide } from "../live/tripLive.ts";
 
 export { startedAt, tripIndex };
 
@@ -257,23 +257,18 @@ export function reassignBlock(status: string): string | null {
 }
 
 /**
- * v0.18.50 §72 (L6, owner "Same as Unassign" + "Re-offer allowed"): a booked ride a driver holds for later (kind
- * scheduled, accepted, not started) goes back to the Scheduled rides list (requested) on Reassign, like Reservations ›
- * Unassign, and the driver may take it again. Any other trip goes back to dispatch (searching).
+ * v0.18.50 §72 (L6, owner "Same as Unassign" + "Re-offer allowed"): Reassign takes a booked ride a driver holds for
+ * later (isHeldBookedRide) back to the Scheduled rides list (requested), like Reservations › Unassign, and the driver may
+ * take it again. Any other trip goes back to dispatch (searching).
  */
-export function heldBookedRide(status: string, kind: string | undefined): boolean {
-  return kind === "scheduled" && status === "accepted";
-}
-
-/** Where Reassign takes this trip: requested for a held booked ride (L6), else searching. */
 export function reassignTarget(status: string, kind: string | undefined): "requested" | "searching" {
-  return heldBookedRide(status, kind) ? "requested" : "searching";
+  return isHeldBookedRide(status, kind) ? "requested" : "searching";
 }
 
 /** The trip page's Reassign text: why it is blocked, else what it does (L6 words for a held booked ride). */
 export function reassignHelp(status: string, kind: string | undefined): string {
   return reassignBlock(status)
-    ?? (heldBookedRide(status, kind)
+    ?? (isHeldBookedRide(status, kind)
       ? tr("Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again.")
       : tr("Reassign takes the trip off its driver and sends it back to dispatch (searching). Then offer it to a driver."));
 }
