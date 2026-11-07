@@ -5,7 +5,7 @@ export const frB7SurgeLiveMap: Record<keyof typeof enB7SurgeLiveMap, string> = {
   // Surge on the live map
   " · curve": " · courbe",
   " · until {0}": " · jusqu’à {0}",
-  "A ride keeps the price it was quoted. Big changes may need a second admin, like in Pricing.": "Une course garde le prix annoncé. Les gros changements peuvent demander un second admin, comme dans Tarifs.",
+  "A ride keeps the price it was quoted. Big changes may need a second admin, like in Pricing.": "Une course garde le prix annoncé. Les gros changements peuvent demander un second administrateur, comme dans Tarifs.",
   "At least per hour ({0})": "Au moins par heure ({0})",
   "Bonus amount ({0})": "Montant du bonus ({0})",
   "Bonus ends at": "Le bonus finit à",

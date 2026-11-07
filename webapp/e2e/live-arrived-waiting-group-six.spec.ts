@@ -130,7 +130,7 @@ test("trip page in French: the waiting box, the PIN and the dialog have no Engli
   await expect(waiting).toContainText("Attente payante");
   await expect(waiting.getByTestId("trip-waiting-rules")).toHaveText("Prise en charge à l’aéroport");
   await expect(page.getByTestId("trip-pin-box")).toContainText("Code PIN du passager");
-  await page.getByRole("button", { name: "Annuler le client absent" }).click();
+  await page.getByRole("button", { name: "Annuler une déclaration d’absence" }).click();
   const dialog = page.getByTestId("reverse-no-show-dialog");
   await expect(dialog).toContainText("Reprendre la part du chauffeur");
   await expect(dialog).toContainText("Motif (obligatoire)");

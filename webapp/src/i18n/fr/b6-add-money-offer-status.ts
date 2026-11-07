@@ -4,7 +4,7 @@ import type { enB6AddMoneyOfferStatus } from "../en/b6-add-money-offer-status.ts
 export const frB6AddMoneyOfferStatus: Record<keyof typeof enB6AddMoneyOfferStatus, string> = {
   // Add money and offer status
   "Accepted by {0}": "Acceptée par {0}",
-  "Add {0} for the driver on {1} ({2}). Movera pays it; the rider’s price does not change.": "Ajouter {0} pour le chauffeur sur {1} ({2}). Movera le paie ; le prix du passager ne change pas.",
+  "Add {0} for the driver on {1} ({2}). Movera pays it; the rider’s price does not change.": "Ajouter {0} pour le chauffeur sur {1} ({2}). Movera le paie ; le prix payé par le passager ne change pas.",
   "Added so far: Exclusive {0} · Radar {1}{2}": "Ajouté jusqu’ici : Exclusif {0} · Radar {1}{2}",
   "Adds it now to the offers already out, and keeps it for the next sends.": "L’ajoute tout de suite aux offres déjà envoyées et le garde pour les prochains envois.",
   "Apply to": "Appliquer à",

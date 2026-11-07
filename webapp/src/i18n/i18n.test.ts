@@ -97,7 +97,7 @@ test("tr, trx and status words follow the chosen language; unknown texts stay as
   try {
     setLanguage("fr");
     assert.equal(tr("Cancel"), fr.Cancel);
-    assert.equal(statusLabel("driver_to_pickup"), "Chauffeur vers la prise en charge");
+    assert.equal(statusLabel("driver_to_pickup"), "Chauffeur en route vers le lieu de prise en charge");
     assert.equal(statusLabel("in_trip"), "En course");
     assert.equal(trx("Dashboard"), "Tableau de bord");
     assert.equal(trx("A text nobody wrote"), "A text nobody wrote");
@@ -248,7 +248,7 @@ test("G7 live fix 3: Dispatch publish line, the cancel-fee car type and the trip
   setLanguage("fr");
   assert.equal(tr("Live now: {0}.", ["Comté de Stockholm"]), "En ligne maintenant : Comté de Stockholm.");
   assert.equal(trx("Comfort"), "Confort");
-  assert.equal(tr("Waiting for a second admin: {0}.", ["Z001"]), "En attente d’un second admin : Z001.");
+  assert.equal(tr("Waiting for a second admin: {0}.", ["Z001"]), "En attente d’un second administrateur : Z001.");
   setLanguage("en");
   assert.equal(tr("Live now: {0}.", ["Norrmalm"]), "Live now: Norrmalm.");
 });

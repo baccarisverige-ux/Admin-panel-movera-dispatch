@@ -28,5 +28,5 @@ export const frB2PickupPay: Record<keyof typeof enB2PickupPay, string> = {
   "of which fixed pickup fee": "dont frais d’approche fixes",
   "Fixed pickup fee (off)": "Frais d’approche fixes (désactivés)",
   "Movera covers": "Movera couvre",
-  "Movera's share before pickup pay is {0}. It gains when the driver is close and covers the difference when the driver came from far.": "La part de Movera avant la prime d’approche est de {0}. Elle gagne quand le chauffeur est proche et couvre la différence quand il vient de loin.",
+  "Movera's share before pickup pay is {0}. It gains when the driver is close and covers the difference when the driver came from far.": "La part de Movera avant rémunération d’approche est de {0}. Elle augmente lorsque le chauffeur est proche et couvre la différence lorsqu’il vient de plus loin.",
 };
