@@ -244,11 +244,36 @@ export function parseSseMessages(buffer: string): { messages: Array<{ data: stri
 
 type StreamClient = { baseUrl: string; state(): { accessToken: string } | null };
 
+/**
+ * Finder D3: the server writes ": heartbeat" every 15 s (movera-server src/realtime/sse.ts). An open stream that sends
+ * no bytes for this long is half-open (laptop sleep, Wi-Fi change): it is dropped, so connectAdminEvents shows
+ * "Reconnecting…" (the lists poll again) and reopens it with Last-Event-ID. Before, it stayed "open" and the lists froze.
+ */
+export const STREAM_SILENCE_MS = 45_000;
+type SilenceTimers = { setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
+
 /** An EventSource over fetch, so the request carries Authorization: Bearer (live builds). */
-export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch = (input, init) => fetch(input, init)): LiveSourceFactory {
+export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch = (input, init) => fetch(input, init), timers: SilenceTimers = {}): LiveSourceFactory {
+  const setTimer = timers.setTimer ?? ((fn: () => void, ms: number) => setTimeout(fn, ms));
+  const clearTimer = timers.clearTimer ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
   return (lastEventId) => {
     const controller = new AbortController();
-    const source: LiveEventSource = { onopen: null, onmessage: null, onerror: null, oncursor: null, close: () => controller.abort() };
+    let watchdog: unknown = null;
+    const disarm = () => {
+      if (watchdog !== null) clearTimer(watchdog);
+      watchdog = null;
+    };
+    let silent = false;
+    const arm = () => {
+      disarm();
+      watchdog = setTimer(() => {
+        watchdog = null;
+        silent = true;
+        controller.abort();
+        source.onerror?.();
+      }, STREAM_SILENCE_MS);
+    };
+    const source: LiveEventSource = { onopen: null, onmessage: null, onerror: null, oncursor: null, close: () => { disarm(); controller.abort(); } };
     let status: number | undefined;
     void (async () => {
       try {
@@ -263,12 +288,14 @@ export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch =
         status = response.status;
         if (!response.ok || !response.body || !(response.headers.get("content-type") ?? "").includes("text/event-stream")) throw new Error(`stream ${response.status}`);
         source.onopen?.();
+        arm();
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
+          arm();
           const parsed = parseSseMessages(buffer + decoder.decode(value, { stream: true }));
           buffer = parsed.rest;
           for (const message of parsed.messages) source.onmessage?.(message);
@@ -277,7 +304,8 @@ export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch =
         }
         throw new Error("stream ended");
       } catch {
-        if (!controller.signal.aborted) source.onerror?.(status === 401 ? { status } : undefined);
+        disarm();
+        if (!controller.signal.aborted && !silent) source.onerror?.(status === 401 ? { status } : undefined);
       }
     })();
     return source;
