@@ -129,7 +129,7 @@ export const enA6OP = {
   "Only the Super admin can change these settings.": "Only the Super admin can change these settings.",
   "Only the Super admin can change this.": "Only the Super admin can change this.",
   "Only these pickup points": "Only these pickup points",
-  "Only trips that end near the destination.": "Only trips that end near the destination.",
+  "Trips that end near the destination are marked.": "Trips that end near the destination are marked.",
   "Open": "Open",
   "Open {0}": "Open {0}",
   "Open a ride check alert": "Open a ride check alert",

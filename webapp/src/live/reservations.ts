@@ -21,6 +21,10 @@ export type ServerReservation = {
   dropoff?: { address?: string };
   fare?: { amountMinor: number; currency: string };
   reservation?: { mode: "now" | "list"; dispatchAt: string; freeChangeUntil: string; noDriver: boolean; overdue?: boolean; notStarted?: boolean; atRisk?: boolean; changeAsk?: { until: string; previousAt: string }; mustBeOnlineAt?: string };
+  /** The rules the trip is charged by (TripProjection.terms); noShowAfterMin = the no-show wait after the pickup time. */
+  terms?: { noShowAfterMin?: number };
+  /** From the driver's Arrived (TripProjection.waiting): noShowAt = the later of arrival and pickup time + the wait (v0.18.51 §73). */
+  waiting?: { noShowAt?: string } | null;
 };
 
 export type ReservationAction = "dispatchNow" | "unassign" | "assign" | "offer" | "raise" | "noShow" | "contact" | "cancel" | "open";
@@ -37,14 +41,28 @@ export function reservationState(trip: ServerReservation): string {
   return "On the way";
 }
 
+/**
+ * Supervisor S7 R4 (contract.json#bookLater.liveFixes.noShowTime; v0.18.51 §73): the server takes a booked ride's
+ * no-show only from Waiting.noShowAt (the later of the driver's arrival and the pickup time + noShowAfterMin; 409
+ * no_show_too_early before). Once the driver arrived the server's noShowAt decides; before that, the pickup time +
+ * the trip's no-show wait (the earliest it can be). Without any time the server decides alone (true).
+ */
+export function bookedNoShowDue(scheduledAt: string | undefined, noShowAfterMin: number | undefined, now: number = Date.now(), noShowAt?: string | null): boolean {
+  const serverAt = Date.parse(noShowAt ?? "");
+  if (Number.isFinite(serverAt)) return now >= serverAt;
+  const pickup = Date.parse(scheduledAt ?? "");
+  if (!Number.isFinite(pickup)) return true;
+  return now >= pickup + Math.max(0, noShowAfterMin ?? 0) * 60_000;
+}
+
 /** Which buttons a booked ride has now (the server checks again). */
-export function reservationActions(trip: ServerReservation): ReservationAction[] {
+export function reservationActions(trip: ServerReservation, now: number = Date.now()): ReservationAction[] {
   if (TERMINAL.has(trip.status)) return ["open"];
   const actions: ReservationAction[] = [];
   if (trip.status === "requested") actions.push("dispatchNow");
   if (trip.status === "accepted") actions.push("unassign");
   if (NO_DRIVER.has(trip.status)) actions.push("assign", "offer", "raise");
-  if (["accepted", "driver_to_pickup", "arrived"].includes(trip.status)) actions.push("noShow");
+  if (["accepted", "driver_to_pickup", "arrived"].includes(trip.status) && (trip.kind !== "scheduled" || bookedNoShowDue(trip.scheduledAt, trip.terms?.noShowAfterMin, now, trip.waiting?.noShowAt))) actions.push("noShow");
   actions.push("contact", "cancel", "open");
   return actions;
 }
