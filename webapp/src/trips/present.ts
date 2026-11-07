@@ -261,9 +261,9 @@ export function reassignBlock(status: string): string | null {
  * Why the trip page's no-show is off. A booked ride (kind scheduled) also waits for its pickup time + the trip's no-show
  * wait, as the server does (S7 R4, 409 no_show_too_early); live rides keep their rule.
  */
-export function noShowBlock(status: string, booked?: { kind?: string; pickupAt?: string; noShowAfterMin?: number }, now: number = Date.now()): string | null {
+export function noShowBlock(status: string, booked?: { kind?: string; pickupAt?: string; noShowAfterMin?: number; noShowAt?: string | null }, now: number = Date.now()): string | null {
   if (!canNoShow(status)) return tr("No-show is only available once a driver has accepted and before the rider is in the car.");
-  if (booked?.kind === "scheduled" && !bookedNoShowDue(booked.pickupAt, booked.noShowAfterMin, now)) return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");
+  if (booked?.kind === "scheduled" && !bookedNoShowDue(booked.pickupAt, booked.noShowAfterMin, now, booked.noShowAt)) return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");
   return null;
 }
 

@@ -87,3 +87,18 @@ test("R4 trip page: a booked ride's no-show is blocked before pickup + wait, wit
   assert.equal(noShowBlock("arrived"), null);
   assert.match(noShowBlock("in_trip") ?? "", /before the rider is in the car/);
 });
+
+// v0.18.51 §73 (contract #90, server #131): after the driver's Arrived the server's Waiting.noShowAt decides, i.e. the
+// later of arrival and pickup time + the wait. A driver who arrives late (08:07 for 08:00, wait 5) → 08:12, not 08:05.
+test("R4 + §73: once the driver arrived, Mark no-show follows the server's waiting.noShowAt", async () => {
+  const { noShowBlock } = await import("../trips/present.ts");
+  const pickup = "2099-01-01T08:00:00Z";
+  const noShowAt = "2099-01-01T08:12:00Z";
+  const at = (hhmm: string) => Date.parse(`2099-01-01T${hhmm}:00Z`);
+  const late = trip({ status: "arrived", scheduledAt: pickup, terms: { noShowAfterMin: 5 }, waiting: { noShowAt } });
+  assert.ok(!reservationActions(late, at("08:06")).includes("noShow"), "pickup + wait passed, but the server's noShowAt is 08:12");
+  assert.ok(reservationActions(late, at("08:12")).includes("noShow"));
+  assert.notEqual(noShowBlock("arrived", { kind: "scheduled", pickupAt: pickup, noShowAfterMin: 5, noShowAt }, at("08:06")), null);
+  assert.equal(noShowBlock("arrived", { kind: "scheduled", pickupAt: pickup, noShowAfterMin: 5, noShowAt }, at("08:12")), null);
+  assert.equal(noShowBlock("accepted", { kind: "scheduled", pickupAt: pickup, noShowAfterMin: 5, noShowAt: null }, at("08:05")), null, "before arrival: pickup + wait");
+});
