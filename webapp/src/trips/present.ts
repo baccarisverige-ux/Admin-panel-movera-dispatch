@@ -9,8 +9,9 @@ import { STEP_MS, startedAt, tripIndex } from "./clock.ts";
 import { hasMessage, tr, trx, uiLocale } from "../i18n/core.ts";
 import { NOT_CONNECTED_TEXT, isLiveData, liveDriverOf, liveRiderIdOf, liveTripOf } from "../live/realData.ts";
 import type { LivePlace } from "../api/seed.ts";
+import { bookedNoShowDue } from "../live/reservations.ts";
 import { scheduledNotDue } from "../dashboard/riders.ts";
-import { etaLine } from "../live/tripLive.ts";
+import { etaLine, isHeldBookedRide } from "../live/tripLive.ts";
 
 export { startedAt, tripIndex };
 
@@ -256,8 +257,14 @@ export function reassignBlock(status: string): string | null {
   return canReassign(status) ? null : tr("Reassign is only available from an offer until the driver has arrived, before the rider is in the car.");
 }
 
-export function noShowBlock(status: string): string | null {
-  return canNoShow(status) ? null : tr("No-show is only available once a driver has accepted and before the rider is in the car.");
+/**
+ * Why the trip page's no-show is off. A booked ride (kind scheduled) also waits for its pickup time + the trip's no-show
+ * wait, as the server does (S7 R4, 409 no_show_too_early); live rides keep their rule.
+ */
+export function noShowBlock(status: string, booked?: { kind?: string; pickupAt?: string; noShowAfterMin?: number; noShowAt?: string | null }, now: number = Date.now()): string | null {
+  if (!canNoShow(status)) return tr("No-show is only available once a driver has accepted and before the rider is in the car.");
+  if (booked?.kind === "scheduled" && !bookedNoShowDue(booked.pickupAt, booked.noShowAfterMin, now, booked.noShowAt)) return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");
+  return null;
 }
 
 export function completeBlock(status: string): string | null {
@@ -268,6 +275,23 @@ export function adjustBlock(status: string): string | null {
   return canAdjustFare(status)
     ? null
     : tr("Fare adjustment is not allowed while the trip is {0}.", [statusLabel(status).toLowerCase()]);
+}
+
+/**
+ * v0.18.50 §72 (L6, owner "Same as Unassign" + "Re-offer allowed"): Reassign takes a booked ride a driver holds for
+ * later (isHeldBookedRide) back to the Scheduled rides list (requested), like Reservations › Unassign, and the driver may
+ * take it again. Any other trip goes back to dispatch (searching).
+ */
+export function reassignTarget(status: string, kind: string | undefined): "requested" | "searching" {
+  return isHeldBookedRide(status, kind) ? "requested" : "searching";
+}
+
+/** The trip page's Reassign text: why it is blocked, else what it does (L6 words for a held booked ride). */
+export function reassignHelp(status: string, kind: string | undefined): string {
+  return reassignBlock(status)
+    ?? (isHeldBookedRide(status, kind)
+      ? tr("Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again.")
+      : tr("Reassign takes the trip off its driver and sends it back to dispatch (searching). Then offer it to a driver."));
 }
 
 export function waitingBlock(status: string): string | null {
@@ -411,6 +435,11 @@ export function frameOf(markers: readonly Pick<LiveMarker, "lat" | "lng">[]): Ma
 }
 
 const ACTIVE = new Set(["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"]);
+
+/** A trip on the road with its driver (Live map trips, the "active" count); not a booked ride held for later (S7 M1). */
+export function isActiveOnRoad(trip: Pick<DemoRecord, "id" | "status" | "liveTrip">): boolean {
+  return ACTIVE.has(trip.status) && !isHeldBookedRide(trip.status, liveTripOf(trip)?.kind);
+}
 const ONLINE = new Set(["online", "on_trip", "going_online"]);
 
 /**
@@ -428,7 +457,7 @@ function serverMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecor
   });
   const tripMarks = trips.flatMap((trip) => {
     const live = liveTripOf(trip);
-    if (!live?.driverLocation || !ACTIVE.has(trip.status) || !trip.driverId) return [];
+    if (!live?.driverLocation || !isActiveOnRoad(trip) || !trip.driverId) return [];
     const { lat, lng, measuredAt } = live.driverLocation;
     const line = live.eta ? ` · ${etaLine(live.eta, uiLocale())}` : "";
     return [{ id: trip.id, kind: "trip" as const, name: `${trip.id} · ${statusLabel(trip.status)}${line}`, lat, lng, stale: false, lastSeen: measuredAt, href: `/trips/${trip.id}`, onMap: true }];
@@ -442,11 +471,13 @@ function serverMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecor
 }
 
 /**
- * An open request on the Live map: requested or searching, and not a booking whose pickup time is still ahead (the
- * same rule as the waiting riders, rideRequests in dashboard/riders.ts).
+ * An open request on the Live map: a trip the server is searching for or has offered to a driver (S7 M2: offered
+ * trips and booked rides already searched for, pickup still ahead, were hidden), or a request that is not a booking
+ * whose pickup time is still ahead (a booked ride waiting in Scheduled rides; the same rule as rideRequests).
  */
 export function isOpenRequest(trip: Pick<DemoRecord, "status" | "pickupAt">, now: number = Date.now()): boolean {
-  return (trip.status === "requested" || trip.status === "searching") && !scheduledNotDue(trip, now);
+  if (trip.status === "searching" || trip.status === "offered") return true;
+  return trip.status === "requested" && !scheduledNotDue(trip, now);
 }
 
 export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly DemoRecord[], now: number = Date.now()): LiveMarker[] {
@@ -468,7 +499,7 @@ export function liveMarkers(drivers: readonly DemoRecord[], trips: readonly Demo
     };
   });
   const tripMarks: LiveMarker[] = trips
-    .filter((trip) => ACTIVE.has(trip.status))
+    .filter((trip) => isActiveOnRoad(trip))
     .slice(0, 24)
     .map((trip) => {
       const [lat, lng] = jitter(tripIndex(trip.id), ...(ZONE_CENTER[trip.zoneId] ?? [59.33, 18.06]));

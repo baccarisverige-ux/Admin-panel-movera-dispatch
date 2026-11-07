@@ -1,3 +1,4 @@
+import { liveTripOf } from "../live/realData.ts";
 import { isLiveWithDriver } from "../live/tripLive.ts";
 
 /**
@@ -6,6 +7,8 @@ import { isLiveWithDriver } from "../live/tripLive.ts";
  * N = the ride requests still looking for a driver (the same list the Live tab shows), M = trips with a driver
  * (accepted until the drop-off).
  */
-export function liveTabCounts(searching: number, trips: readonly { status: string; driverId?: string | null }[]): { searching: number; withDriver: number } {
-  return { searching, withDriver: trips.filter((trip) => isLiveWithDriver(trip.status, trip.driverId)).length };
+export function liveTabCounts(searching: number, trips: readonly { id?: string; status: string; driverId?: string | null }[]): { searching: number; withDriver: number } {
+  // S7 M1: a booked ride a driver holds for later is not a trip with a driver on the road yet.
+  const kind = (trip: { id?: string }) => (trip.id ? liveTripOf({ ...trip, id: trip.id })?.kind : undefined);
+  return { searching, withDriver: trips.filter((trip) => isLiveWithDriver(trip.status, trip.driverId, kind(trip))).length };
 }

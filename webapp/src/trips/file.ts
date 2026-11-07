@@ -8,6 +8,7 @@ import { market, marketOfZone, zoneById, type MarketId } from "../markets/market
 import type { ZoneBook } from "../pricing/zonePricing.ts";
 import { categoryOf, fareBreakdown, startedAt, stopsOf, timelineOf, tripIndex } from "./present.ts";
 import { isLiveData, liveTripOf } from "../live/realData.ts";
+import { isHeldBookedRide } from "../live/tripLive.ts";
 import type { LiveTripFacts } from "../api/seed.ts";
 
 /**
@@ -18,6 +19,8 @@ import type { LiveTripFacts } from "../api/seed.ts";
 export const TRIP_OPS_KEY = "tripOps";
 
 export type TripGroup = "all" | "live" | "searching" | "completed" | "cancelled" | "problem" | "flagged";
+/** A trip's own group. "booked" (S7 T1): a booked ride a driver holds for later; no tab of its own, so only under All trips. */
+export type TripListGroup = Exclude<TripGroup, "all" | "flagged"> | "booked";
 
 export const GROUPS: { id: TripGroup; label: string; help: string }[] = [
   { id: "all", label: "All trips", help: "Every trip in the chosen country and zones." },
@@ -33,7 +36,9 @@ const LIVE = ["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_tr
 const SEARCHING = ["draft", "quoted", "requested", "searching", "offered"];
 const CANCELLED = ["cancelled_by_rider", "cancelled_by_driver", "cancelled_by_admin", "cancelled_by_system", "expired"];
 
-export function groupOf(status: string): Exclude<TripGroup, "all" | "flagged"> {
+/** The Trips group of a status; with the trip `kind`, a held booked ride is "booked", not On the road (S7 T1). */
+export function groupOf(status: string, kind?: string): TripListGroup {
+  if (isHeldBookedRide(status, kind)) return "booked";
   if (LIVE.includes(status)) return "live";
   if (SEARCHING.includes(status)) return "searching";
   if (status === "completed") return "completed";
@@ -194,11 +199,11 @@ export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: bo
   const index = tripIndex(trip.id);
   const category = categoryOf(trip.id).id;
   const prices = book?.prices[category];
-  const group = groupOf(trip.status);
+  const group = groupOf(trip.status, liveTripOf(trip)?.kind);
   const fare = fareBreakdown(trip).chargedOre;
   let state: MoneySplit["state"] = "charged";
   let price = fare;
-  if (group === "searching") state = "estimate";
+  if (group === "searching" || group === "booked") state = "estimate";
   else if (group === "live") state = "estimate";
   else if (group === "cancelled" || trip.status === "no_show") {
     const riderFee = () => cancelFeeAmount(feeRow(liveCancelFees ?? cancelFeeDefaults("live", country), category), fare / minor, country);
@@ -471,12 +476,12 @@ export function saveView(ops: TripOps, view: Omit<TripView, "id">): { ops: TripO
 
 /* ------------------------------------------------------------------ list numbers */
 
-export type ListStats = { total: number; live: number; searching: number; completed: number; cancelled: number; problem: number; avgPrice: number; taken: number };
+export type ListStats = { total: number; live: number; searching: number; booked: number; completed: number; cancelled: number; problem: number; avgPrice: number; taken: number };
 
 export function listStats(trips: readonly DemoRecord[]): ListStats {
-  const stats: ListStats = { total: trips.length, live: 0, searching: 0, completed: 0, cancelled: 0, problem: 0, avgPrice: 0, taken: 0 };
+  const stats: ListStats = { total: trips.length, live: 0, searching: 0, booked: 0, completed: 0, cancelled: 0, problem: 0, avgPrice: 0, taken: 0 };
   for (const trip of trips) {
-    const group = groupOf(trip.status);
+    const group = groupOf(trip.status, liveTripOf(trip)?.kind);
     stats[group] += 1;
     if (group === "completed") stats.taken += fareBreakdown(trip).chargedOre;
   }
