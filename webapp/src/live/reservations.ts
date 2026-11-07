@@ -74,6 +74,20 @@ export function bookedNoShowDue(scheduledAt: string | undefined, noShowAfterMin:
   return now >= pickup + Math.max(0, noShowAfterMin ?? 0) * 60_000;
 }
 
+/**
+ * Supervisor S7 R4 (contract.json#bookLater.liveFixes.noShowTime; v0.18.51 §73): the server takes a booked ride's
+ * no-show only from Waiting.noShowAt (the later of the driver's arrival and the pickup time + noShowAfterMin; 409
+ * no_show_too_early before). Once the driver arrived the server's noShowAt decides; before that, the pickup time +
+ * the trip's no-show wait (the earliest it can be). Without any time the server decides alone (true).
+ */
+export function bookedNoShowDue(scheduledAt: string | undefined, noShowAfterMin: number | undefined, now: number = Date.now(), noShowAt?: string | null): boolean {
+  const serverAt = Date.parse(noShowAt ?? "");
+  if (Number.isFinite(serverAt)) return now >= serverAt;
+  const pickup = Date.parse(scheduledAt ?? "");
+  if (!Number.isFinite(pickup)) return true;
+  return now >= pickup + Math.max(0, noShowAfterMin ?? 0) * 60_000;
+}
+
 /** Which buttons a booked ride has now (the server checks again). */
 export function reservationActions(trip: ServerReservation, now: number = Date.now()): ReservationAction[] {
   if (TERMINAL.has(trip.status)) return ["open"];
