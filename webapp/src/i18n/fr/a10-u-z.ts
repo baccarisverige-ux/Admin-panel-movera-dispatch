@@ -206,7 +206,7 @@ export const frA10UZ: Record<keyof typeof enA10UZ, string> = {
   "Which offers get pickup pay": "Quelles offres reçoivent la rémunération d’approche",
   "Which phone": "Quel téléphone",
   "Which rule wins when zones overlap": "Quelle règle l’emporte quand des zones se chevauchent",
-  "Which trips match a destination.": "Quelles courses correspondent à une destination.",
+  "Which trips get the “On your way” mark.": "Quelles courses reçoivent la marque « Sur votre chemin ».",
   "While driving": "En conduisant",
   "Who cancelled: {0}. Reason: {1}{2}.": "Qui a annulé : {0}. Motif : {1}{2}.",
   "Who did what": "Qui a fait quoi",

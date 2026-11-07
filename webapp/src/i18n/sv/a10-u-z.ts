@@ -206,7 +206,7 @@ export const svA10UZ: Record<keyof typeof enA10UZ, string> = {
   "Which offers get pickup pay": "Vilka erbjudanden som får betalning för körning till upphämtning",
   "Which phone": "Vilken telefon",
   "Which rule wins when zones overlap": "Vilken regel som gäller när zoner överlappar",
-  "Which trips match a destination.": "Vilka resor som matchar ett mål.",
+  "Which trips get the “On your way” mark.": "Vilka resor som får märket ”På vägen”.",
   "While driving": "Under körning",
   "Who cancelled: {0}. Reason: {1}{2}.": "Vem som avbokade: {0}. Skäl: {1}{2}.",
   "Who did what": "Vem gjorde vad",

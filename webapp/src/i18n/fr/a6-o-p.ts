@@ -131,7 +131,7 @@ export const frA6OP: Record<keyof typeof enA6OP, string> = {
   "Only the Super admin can change these settings.": "Seul le Super administrateur peut modifier ces paramètres.",
   "Only the Super admin can change this.": "Seul le Super administrateur peut modifier cela.",
   "Only these pickup points": "Seulement ces points de prise en charge",
-  "Only trips that end near the destination.": "Seulement les courses qui se terminent près de la destination.",
+  "Trips that end near the destination are marked.": "Les courses qui se terminent près de la destination sont marquées.",
   "Open": "Ouvrir",
   "Open {0}": "Ouvrir {0}",
   "Open a ride check alert": "Ouvrir une alerte de contrôle de course",

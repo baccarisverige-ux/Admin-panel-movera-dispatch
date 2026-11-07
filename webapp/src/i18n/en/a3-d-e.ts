@@ -226,7 +226,7 @@ export const enA3DE = {
   "Drivers for the bonus": "Drivers for the bonus",
   "Drivers get the highest step they reach, not all of them added up.": "Drivers get the highest step they reach, not all of them added up.",
   "Drivers I pick": "Drivers I pick",
-  "Drivers in {0} set a destination and get trips that bring them closer. Each part has its own switch; a part that is off has no limit.": "Drivers in {0} set a destination and get trips that bring them closer. Each part has its own switch; a part that is off has no limit.",
+  "Drivers in {0} set a destination. They still get all trips; trips that bring them closer are marked “On your way”. Each part has its own switch; a part that is off has no limit.": "Drivers in {0} set a destination. They still get all trips; trips that bring them closer are marked “On your way”. Each part has its own switch; a part that is off has no limit.",
   "Drivers in it": "Drivers in it",
   "Drivers in order": "Drivers in order",
   "Drivers in the group": "Drivers in the group",

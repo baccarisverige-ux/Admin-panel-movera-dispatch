@@ -1001,6 +1001,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       }
       const next = await client.json<Trip>(path, { method: "POST", body: JSON.stringify(body), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) }).catch(explained);
       if (next?.tripId) trips.set(next.tripId, next);
+      // v0.18.50 §72 (L6): the server put a held booked ride back in the Scheduled rides list (requested), not in a search.
+      if (input.action === "admin.trip.reassign" && next?.status === "requested") return done("The booked ride is back in the Scheduled rides list; the driver may take it again.");
       return done(TRIP_STEP_DONE[input.action] ?? "Saved.");
     }
     if (input.action === "admin.trip.driverBonus") {
