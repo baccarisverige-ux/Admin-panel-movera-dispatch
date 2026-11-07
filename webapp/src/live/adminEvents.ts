@@ -242,33 +242,74 @@ export function parseSseMessages(buffer: string): { messages: Array<{ data: stri
   return { messages, rest, lastId };
 }
 
-type StreamClient = { baseUrl: string; state(): { accessToken: string } | null };
+/**
+ * The session the stream signs with. Finder D4: `accessToken` is the session's fresh token (refreshed 30 s before it
+ * runs out, session.ts freshToken) and `refresh` renews it once after a 401; without them the stored token is sent.
+ */
+type StreamClient = { baseUrl: string; state(): { accessToken: string } | null; accessToken?: () => Promise<string | null>; refresh?: () => Promise<boolean> };
+
+/**
+ * Finder D3: the server writes ": heartbeat" every 15 s (movera-server src/realtime/sse.ts). An open stream that sends
+ * no bytes for this long is half-open (laptop sleep, Wi-Fi change): it is dropped, so connectAdminEvents shows
+ * "Reconnecting…" (the lists poll again) and reopens it with Last-Event-ID. Before, it stayed "open" and the lists froze.
+ */
+export const STREAM_SILENCE_MS = 45_000;
+type SilenceTimers = { setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
 
 /** An EventSource over fetch, so the request carries Authorization: Bearer (live builds). */
-export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch = (input, init) => fetch(input, init)): LiveSourceFactory {
+export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch = (input, init) => fetch(input, init), timers: SilenceTimers = {}): LiveSourceFactory {
+  const setTimer = timers.setTimer ?? ((fn: () => void, ms: number) => setTimeout(fn, ms));
+  const clearTimer = timers.clearTimer ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
   return (lastEventId) => {
     const controller = new AbortController();
-    const source: LiveEventSource = { onopen: null, onmessage: null, onerror: null, oncursor: null, close: () => controller.abort() };
+    let watchdog: unknown = null;
+    const disarm = () => {
+      if (watchdog !== null) clearTimer(watchdog);
+      watchdog = null;
+    };
+    let silent = false;
+    const arm = () => {
+      disarm();
+      watchdog = setTimer(() => {
+        watchdog = null;
+        silent = true;
+        controller.abort();
+        source.onerror?.();
+      }, STREAM_SILENCE_MS);
+    };
+    const source: LiveEventSource = { onopen: null, onmessage: null, onerror: null, oncursor: null, close: () => { disarm(); controller.abort(); } };
     let status: number | undefined;
     void (async () => {
       try {
-        const token = client.state()?.accessToken;
+        const url = `${client.baseUrl.replace(/\/$/, "")}/api/v1${ADMIN_EVENTS_PATH}`;
+        const send = (token: string) => {
+          const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "text/event-stream", "X-Api-Version": "0.5" };
+          if (lastEventId) headers["Last-Event-ID"] = lastEventId;
+          return fetchImpl(url, { headers, signal: controller.signal });
+        };
+        const token = client.accessToken ? await client.accessToken() : client.state()?.accessToken;
         if (!token) {
           status = 401;
           throw new Error("signed out");
         }
-        const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "text/event-stream", "X-Api-Version": "0.5" };
-        if (lastEventId) headers["Last-Event-ID"] = lastEventId;
-        const response = await fetchImpl(`${client.baseUrl.replace(/\/$/, "")}/api/v1${ADMIN_EVENTS_PATH}`, { headers, signal: controller.signal });
+        let response = await send(token);
+        // D4: a dead token (the stream reconnects long after the last refresh) is renewed once; only a refused
+        // refresh (the session ended, the panel signs out) leaves the 401, which stops the stream.
+        if (response.status === 401 && client.refresh && !controller.signal.aborted && (await client.refresh())) {
+          const renewed = client.state()?.accessToken;
+          if (renewed && !controller.signal.aborted) response = await send(renewed);
+        }
         status = response.status;
         if (!response.ok || !response.body || !(response.headers.get("content-type") ?? "").includes("text/event-stream")) throw new Error(`stream ${response.status}`);
         source.onopen?.();
+        arm();
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
+          arm();
           const parsed = parseSseMessages(buffer + decoder.decode(value, { stream: true }));
           buffer = parsed.rest;
           for (const message of parsed.messages) source.onmessage?.(message);
@@ -277,7 +318,8 @@ export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch =
         }
         throw new Error("stream ended");
       } catch {
-        if (!controller.signal.aborted) source.onerror?.(status === 401 ? { status } : undefined);
+        disarm();
+        if (!controller.signal.aborted && !silent) source.onerror?.(status === 401 ? { status } : undefined);
       }
     })();
     return source;
