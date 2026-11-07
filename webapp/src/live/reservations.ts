@@ -21,6 +21,8 @@ export type ServerReservation = {
   dropoff?: { address?: string };
   fare?: { amountMinor: number; currency: string };
   reservation?: { mode: "now" | "list"; dispatchAt: string; freeChangeUntil: string; noDriver: boolean; overdue?: boolean; notStarted?: boolean; atRisk?: boolean; changeAsk?: { until: string; previousAt: string }; mustBeOnlineAt?: string };
+  /** The rules the trip is charged by (TripProjection.terms); noShowAfterMin = the no-show wait after the pickup time. */
+  terms?: { noShowAfterMin?: number };
 };
 
 export type ReservationAction = "dispatchNow" | "unassign" | "assign" | "offer" | "raise" | "noShow" | "contact" | "cancel" | "open";
@@ -37,14 +39,25 @@ export function reservationState(trip: ServerReservation): string {
   return "On the way";
 }
 
+/**
+ * Supervisor S7 R4 (contract.json#bookLater.liveFixes.noShowTime): the server takes a booked ride's no-show only from
+ * its pickup time + the trip's no-show wait (terms.noShowAfterMin; 409 no_show_too_early before). Without the pickup
+ * time the server decides alone (true); without the wait, from the pickup time.
+ */
+export function bookedNoShowDue(scheduledAt: string | undefined, noShowAfterMin: number | undefined, now: number = Date.now()): boolean {
+  const pickup = Date.parse(scheduledAt ?? "");
+  if (!Number.isFinite(pickup)) return true;
+  return now >= pickup + Math.max(0, noShowAfterMin ?? 0) * 60_000;
+}
+
 /** Which buttons a booked ride has now (the server checks again). */
-export function reservationActions(trip: ServerReservation): ReservationAction[] {
+export function reservationActions(trip: ServerReservation, now: number = Date.now()): ReservationAction[] {
   if (TERMINAL.has(trip.status)) return ["open"];
   const actions: ReservationAction[] = [];
   if (trip.status === "requested") actions.push("dispatchNow");
   if (trip.status === "accepted") actions.push("unassign");
   if (NO_DRIVER.has(trip.status)) actions.push("assign", "offer", "raise");
-  if (["accepted", "driver_to_pickup", "arrived"].includes(trip.status)) actions.push("noShow");
+  if (["accepted", "driver_to_pickup", "arrived"].includes(trip.status) && (trip.kind !== "scheduled" || bookedNoShowDue(trip.scheduledAt, trip.terms?.noShowAfterMin, now))) actions.push("noShow");
   actions.push("contact", "cancel", "open");
   return actions;
 }
