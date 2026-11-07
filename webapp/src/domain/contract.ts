@@ -4,7 +4,7 @@ import { formatMoney } from "./money.ts";
 export { CURRENCIES, formatMoney, isMoney, moneySchema, toMajorString, type CurrencyCode, type Money } from "./money.ts";
 
 /** Version of the shared Movera contract this admin follows (contracts/contract.json). */
-export const CONTRACT_VERSION = "0.18.48" as const;
+export const CONTRACT_VERSION = "0.18.50" as const;
 
 /** The 19 trip statuses of contract v0.3.0 (contract.json#tripStatus.values), in lifecycle order. */
 export const TRIP_STATUSES = [
@@ -120,6 +120,8 @@ export const TRANSITIONS: readonly Transition[] = [
   { command: "expire", actor: "system", from: ["quoted", "requested", "searching", "offered"], to: "expired" },
   { command: "system_cancel", actor: "system", from: ["requested", "searching", "offered", "accepted"], to: "cancelled_by_system" },
   { command: "fail", actor: "system", from: ACTIVE, to: "failed" },
+  // v0.18.50 §72 (L12): a live trip queued behind a trip that failed for silence goes back to dispatch without him.
+  { command: "release", actor: "system", from: ["accepted"], to: "searching", when: "live" },
 ];
 
 /**
@@ -138,12 +140,14 @@ export type RatingRule = { rater: "rider" | "driver"; status: TripStatus; comman
 
 /**
  * Who may rate a finished trip (contract.json#ratingAllowed, same order). The rider also rates a trip they ended early
- * (`end_early` → cancelled_by_rider); a plain rider `cancel` is never rated. Anything else is `invalid_transition`.
+ * (`end_early` → cancelled_by_rider), and so does the driver (v0.18.50 L5); a plain rider `cancel` is never rated. Anything else is `invalid_transition`.
  */
 export const RATING_ALLOWED: readonly RatingRule[] = [
   { rater: "rider", status: "completed" },
   { rater: "driver", status: "completed" },
   { rater: "rider", status: "cancelled_by_rider", command: "end_early" },
+  // v0.18.50 §72 (L5, owner G8 Q1): the driver rates a trip the rider ended early.
+  { rater: "driver", status: "cancelled_by_rider", command: "end_early" },
 ];
 
 /** Whether `rater` may rate a trip in `status` that `endedBy` (the command that ended it, when known) brought there. */

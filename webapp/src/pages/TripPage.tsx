@@ -59,6 +59,8 @@ import {
   ratingLabel,
   refundBlock,
   reassignBlock,
+  reassignHelp,
+  reassignTarget,
   riderIdFor,
   startedAt,
   timelineOf,
@@ -588,7 +590,7 @@ export function TripPage() {
                 >{tr("Offer to driver")}</CommandButton>
               )}
 
-              <p data-testid="reassign-block">{reassignWhy ?? tr("Reassign takes the trip off its driver and sends it back to dispatch (searching). Then offer it to a driver.")}</p>
+              <p data-testid="reassign-block">{reassignHelp(trip.status, facts?.kind)}</p>
               {reassignWhy ? (
                 <button data-command="admin.trip.reassign" className="secondary-btn" type="button" disabled title={reassignWhy}>{tr("Reassign")}</button>
               ) : (
@@ -601,8 +603,8 @@ export function TripPage() {
                   scope={trip.zoneId}
                   collection="trips"
                   before={trip.driverId ?? "none"}
-                  after="searching"
-                  patch={{ driverId: null, status: "searching", previousStatus: trip.status }}
+                  after={reassignTarget(trip.status, facts?.kind)}
+                  patch={{ driverId: null, status: reassignTarget(trip.status, facts?.kind), previousStatus: trip.status }}
                 >{tr("Reassign")}</CommandButton>
               )}
 
