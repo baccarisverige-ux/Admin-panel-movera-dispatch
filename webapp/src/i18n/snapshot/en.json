@@ -8811,4 +8811,5 @@
 ["A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off.","A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off."],
 ["Shortest trip must be whole metres from 0 to 5000.","Shortest trip must be whole metres from 0 to 5000."],
 ["Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again.","Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again."],
-["The booked ride is back in the Scheduled rides list; the driver may take it again.","The booked ride is back in the Scheduled rides list; the driver may take it again."]]
+["The booked ride is back in the Scheduled rides list; the driver may take it again.","The booked ride is back in the Scheduled rides list; the driver may take it again."],
+["Free waiting from","Free waiting from"]]

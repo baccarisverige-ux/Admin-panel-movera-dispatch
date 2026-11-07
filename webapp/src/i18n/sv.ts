@@ -38,6 +38,7 @@ import { svC8NoDriverNearby } from "./sv/c8-no-driver-nearby.ts";
 import { svC9BlockedPairs } from "./sv/c9-blocked-pairs.ts";
 import { svC9SameAddress } from "./sv/c9-same-address.ts";
 import { svC10Lifecycle } from "./sv/c10-lifecycle.ts";
+import { svC11BookedWaiting } from "./sv/c11-booked-waiting.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -81,4 +82,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC9BlockedPairs,
   ...svC9SameAddress,
   ...svC10Lifecycle,
+  ...svC11BookedWaiting,
 };

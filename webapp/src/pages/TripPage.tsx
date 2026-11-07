@@ -440,6 +440,7 @@ export function TripPage() {
           {facts?.waiting ? (
             <dl className="op-split-lines" data-testid="trip-waiting-facts">
               <div><dt>{tr("Driver arrived")}</dt><dd>{time(facts.waiting.arrivedAt)}</dd></div>
+              {facts.waiting.waitFrom ? <div><dt>{tr("Free waiting from")}</dt><dd data-testid="trip-wait-from">{time(facts.waiting.waitFrom)}</dd></div> : null}
               <div><dt>{tr("Free until")}</dt><dd>{time(facts.waiting.freeUntil)}</dd></div>
               {facts.waiting.chargedSoFarMinor !== null ? <div><dt>{tr("Waiting charged so far")}</dt><dd>{liveMoney(facts.waiting.chargedSoFarMinor)}</dd></div> : null}
               {facts.waiting.freeWaitMin !== null && facts.waiting.noShowAfterMin !== null ? <div><dt>{tr("Free wait, then no-show after")}</dt><dd>{trn("{0} min · {1} min", facts.waiting.freeWaitMin, facts.waiting.noShowAfterMin)}</dd></div> : null}

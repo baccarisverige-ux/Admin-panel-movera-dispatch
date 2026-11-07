@@ -20,7 +20,7 @@ const NO_SHOW = {
   ...CANCELLED_TRIP, tripId: "T2006", status: "no_show", version: 6, riderId: "R502", driverId: "D1001", vehicleId: "V1", driver: COMPLETED_TRIP.driver,
   acceptedAt: "2026-10-26T07:01:00Z", fare: SEK(8500), fareLines: [{ code: "no_show_fee", amount: SEK(8500) }], paymentMethod: "card", paymentStatus: "paid",
   pinRequired: true, pickupPin: "0427", pinVerified: false, pinAttempts: 2,
-  waiting: { arrivedAt: "2026-10-26T07:05:00Z", freeUntil: "2026-10-26T07:20:00Z", noShowAt: "2026-10-26T07:25:00Z", chargedSeconds: 130, paidMinutes: 3, rules: ["airport"], freeWaitMin: 15, noShowAfterMin: 20, noShowFee: SEK(8500), noShowDriverShare: SEK(6800) },
+  waiting: { arrivedAt: "2026-10-26T07:05:00Z", waitFrom: "2026-10-26T07:05:00Z", freeUntil: "2026-10-26T07:20:00Z", noShowAt: "2026-10-26T07:25:00Z", chargedSeconds: 130, paidMinutes: 3, rules: ["airport"], freeWaitMin: 15, noShowAfterMin: 20, noShowFee: SEK(8500), noShowDriverShare: SEK(6800) },
   cancellation: { actor: "driver", reasonCode: "no_show", at: "2026-10-26T07:28:00Z", fee: SEK(8500), feeStatus: "paid", feeKind: "no_show", driverShare: SEK(6800) },
 };
 
@@ -75,6 +75,9 @@ test("trip page: paid waiting minutes, the airport rule, the PIN for admins; Rev
   await expect(waiting.getByTestId("trip-paid-minutes")).toHaveText("3 min");
   await expect(waiting.getByTestId("trip-waiting-rules")).toHaveText("Airport pickup");
   await expect(waiting).toContainText("15 min · 20 min");
+  // v0.18.51 §73 (texts.adminWaitFrom): the server's waiting.waitFrom (a live ride: the driver's Arrived).
+  await expect(waiting).toContainText("Free waiting from");
+  await expect(waiting.getByTestId("trip-wait-from")).toHaveText(await waiting.locator("dt", { hasText: "Driver arrived" }).locator("xpath=following-sibling::dd").innerText());
   const pin = page.getByTestId("trip-pin-box");
   await expect(page.getByTestId("trip-pin")).toContainText("PIN verified Not yet");
   await expect(pin.getByTestId("trip-pin-code")).toHaveText("0427");
@@ -128,6 +131,7 @@ test("trip page in French: the waiting box, the PIN and the dialog have no Engli
   await page.goto("/trips/T2006");
   const waiting = page.getByTestId("trip-waiting-facts");
   await expect(waiting).toContainText("Attente payante");
+  await expect(waiting).toContainText("Attente gratuite à partir de");
   await expect(waiting.getByTestId("trip-waiting-rules")).toHaveText("Prise en charge à l’aéroport");
   await expect(page.getByTestId("trip-pin-box")).toContainText("Code PIN du passager");
   await page.getByRole("button", { name: "Annuler une déclaration d’absence" }).click();
