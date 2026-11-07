@@ -30,7 +30,7 @@ test("G2-D5.4: the states are words in sv / fr / en", () => {
     assert.equal(liveCarStateLabel("waiting_admin"), "Väntar på admin");
     assert.equal(liveCarStateLabel("approved"), "Godkänd");
     setLanguage("fr");
-    assert.equal(liveCarStateLabel("waiting_admin"), "En attente de l’admin");
+    assert.equal(liveCarStateLabel("waiting_admin"), "En attente de l’administrateur");
     assert.equal(liveCarStateLabel("blocked"), "Bloqué");
   } finally {
     setLanguage("en");

@@ -106,7 +106,7 @@ test("the profile picker shows codes; French is saved for this admin, logged in 
 
   // My activity lists the change with its before and after.
   await page.goto("/dispatch?view=activity");
-  const entry = page.locator("main").getByText("Changer ma langue du panneau").first();
+  const entry = page.locator("main").getByText("Changer ma langue de l’interface").first();
   await expect(entry).toBeVisible();
   await entry.click();
   // Before and after are audit data: kept as they were written, not translated.

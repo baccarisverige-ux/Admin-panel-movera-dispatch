@@ -242,8 +242,8 @@ test("owner decision 2026-11-01: Add money says what it sent at once (sv / fr)",
   registerDictionary("sv", sv);
   try {
     setLanguage("fr");
-    assert.equal(moneySendNotice({ exclusiveTo: "drv_1", radarTo: ["drv_2", "drv_3"] }, "both"), "Envoyé maintenant en offre Exclusive au chauffeur libre le plus proche. Envoyé maintenant en Radar à 2 chauffeurs.");
-    assert.match(moneySendNotice({ exclusiveTo: null, radarTo: [] }, "exclusive"), /prochaine offre Exclusive/);
+    assert.equal(moneySendNotice({ exclusiveTo: "drv_1", radarTo: ["drv_2", "drv_3"] }, "both"), "Envoyé maintenant en offre Exclusive au chauffeur disponible le plus proche. Envoyé maintenant en Radar à 2 chauffeurs.");
+    assert.match(moneySendNotice({ exclusiveTo: null, radarTo: [] }, "exclusive"), /prochaine offre exclusive/);
     setLanguage("sv");
     assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: ["drv_2"] }, "radar"), "Skickat nu som Radar till 1 förare.");
   } finally {
@@ -263,7 +263,7 @@ test("live fix 2026-11-02 (audit 3c): Add money that reached nobody says so with
     assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 2, busy: 0, far: 0 }, reachKm: 6 }, "exclusive"), "Pengarna väntar — ingen ledig förare inom 6 km (2 förare lät erbjudandet gå ut). Det följer med nästa Exklusiva erbjudande.");
     assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 0, busy: 1, far: 3 }, reachKm: null }, "both"), "Pengarna väntar — ingen ledig förare (1 förare kunde inte ta den, 3 förare längre bort). Det följer med nästa erbjudande.");
     setLanguage("fr");
-    assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 1, busy: 0, far: 0 }, reachKm: 2.5 }, "radar"), "L’argent attend — aucun chauffeur libre à moins de 2,5 km (1 chauffeur a laissé expirer l’offre). Il part avec la prochaine offre Radar.");
+    assert.equal(moneySendNotice({ exclusiveTo: null, radarTo: [], skipped: { expired: 1, busy: 0, far: 0 }, reachKm: 2.5 }, "radar"), "Complément financier en attente : aucun chauffeur disponible à moins de 2,5 km (1 chauffeur a laissé expirer l’offre). Le complément sera ajouté à la prochaine offre Radar.");
     // Something was sent: no waiting text.
     assert.doesNotMatch(moneySendNotice({ exclusiveTo: "drv_1", radarTo: [], skipped: { expired: 2, busy: 0, far: 0 }, reachKm: 6 }, "exclusive"), /attend/);
   } finally {
