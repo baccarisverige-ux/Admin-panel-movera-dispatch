@@ -8811,4 +8811,5 @@
 ["A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off.","En avlämning närmare upphämtningen än så här nekas: resenären ser ”Avlämningen är för nära upphämtningen”. 0 = av."],
 ["Shortest trip must be whole metres from 0 to 5000.","Kortaste resa måste vara hela meter från 0 till 5000."],
 ["Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again.","Tilldela om tar den här bokade resan från föraren och lägger tillbaka den i listan Bokade resor; föraren kan ta den igen."],
-["The booked ride is back in the Scheduled rides list; the driver may take it again.","Den bokade resan är tillbaka i listan Bokade resor; föraren kan ta den igen."]]
+["The booked ride is back in the Scheduled rides list; the driver may take it again.","Den bokade resan är tillbaka i listan Bokade resor; föraren kan ta den igen."],
+["Free waiting from","Fri väntetid från"]]
