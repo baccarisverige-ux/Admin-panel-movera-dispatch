@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { inView, needsAttention, reservationActions, reservationCall, reservationState, RESERVATIONS_PATH, sortReservations, type ServerReservation } from "./reservations.ts";
 
 // v0.18.17 Book later (owner 2026-11-03): Admin › Reservations reads the server (before: a browser-only book, empty on
@@ -18,6 +19,22 @@ test("state words and buttons follow the server status", () => {
   assert.deepEqual(reservationActions(trip({ status: "searching" })), ["assign", "offer", "raise", "contact", "cancel", "open"]);
   assert.deepEqual(reservationActions(trip({ status: "cancelled_by_rider" })), ["open"]);
   assert.equal(reservationState(trip({ status: "expired" })), "No driver found");
+});
+
+// Supervisor S7 R1–R3 (2026-11-07): from driver_to_pickup on, and for failed, the row says the contract's status words
+// (contract.json#statusWords.families.tripStatus), and those rides are in a view besides All.
+test("R1-R3: contract status words from driver_to_pickup on and for failed; on-board in Assigned, failed in Failed", () => {
+  const words = (JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8")) as { statusWords: { families: { tripStatus: Record<string, { en: string }> } } }).statusWords.families.tripStatus;
+  for (const status of ["driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff", "failed"]) {
+    assert.equal(reservationState(trip({ status })), words[status]!.en, status);
+  }
+  assert.notEqual(reservationState(trip({ status: "in_trip" })), "On the way");
+  assert.notEqual(reservationState(trip({ status: "failed" })), "Cancelled");
+  for (const status of ["rider_onboard", "in_trip", "approaching_dropoff"]) assert.equal(inView(trip({ status }), "assigned"), true, status);
+  assert.equal(inView(trip({ status: "failed" }), "failed"), true);
+  assert.equal(inView(trip({ status: "failed" }), "cancelled"), false);
+  assert.equal(reservationState(trip({ status: "cancelled_by_rider" })), "Cancelled");
+  assert.equal(reservationState(trip({ status: "accepted" })), "Driver holds it");
 });
 
 test("needs attention = the server's no-driver flag while nobody has it (owner Q3)", () => {
