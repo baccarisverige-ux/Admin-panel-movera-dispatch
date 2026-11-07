@@ -21,6 +21,8 @@ import {
   timelineOf,
   waitingBlock,
 } from "./present.ts";
+// S7 M1 + T1 (held booked ride not on the road): its own file, run with this one (no package.json change).
+import "./heldBooked.test.ts";
 
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
