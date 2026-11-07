@@ -237,7 +237,7 @@ export const MAX_TRIP_KM_LIMIT = { min: 1, max: 1000 };
 
 export const BOOKING_LABELS: Record<keyof typeof BOOKING_LIMITS, string> = {
   minAheadMin: "book from (minutes ahead)", maxAheadDays: "book up to (days ahead)", soonBeforeMin: "sent at once under (minutes ahead)", noticeMaxDrivers: "drivers who get the notice",
-  noDriverAlertMin: "no-driver alert (minutes before pickup)", riderReminderMin: "rider reminder (minutes before pickup)", freeChangeBeforeMin: "free change or cancel (minutes before pickup)",
+  noDriverAlertMin: "no-driver alert (minutes before pickup)", riderReminderMin: "rider reminder (minutes before pickup)", freeChangeBeforeMin: "free change (minutes before pickup)",
   changeAnswerMin: "time to answer a changed ride (minutes)", listAtTimeKm: "near pickup at that time (km)", listAtTimeMin: "near pickup at that time (minutes)",
   arriveEarlyMin: "arrive before pickup (minutes)",
   takeBackLateMin: "take back when late more than (minutes)", takeBackKeepIfDriveMin: "keep if the driver is within (minutes' drive)", takeBackUntilMinBeforePickup: "take back only until (minutes before pickup)", notHeadingNoticeEveryMin: "not-heading notice every (minutes)",

@@ -100,11 +100,19 @@ export function batchedInvalidator(invalidate: (match: KeyMatch) => void, option
 }
 
 /**
+ * Supervisor S7 R5: lists whose warnings the server sets on the clock (Reservations: no driver soon, may be late, not
+ * started, overdue). The server's trips trigger does not fire on trips.reservation / scheduled_at, so no event comes:
+ * they keep the page's own pace, also while the stream is open.
+ */
+const CLOCK_LISTS: ReadonlySet<string> = new Set(["reservations"]);
+
+/**
  * The timer a live list should use. Demo / signed out: the page's own. Stream open: none (events refresh it).
- * Stream not open: every minute (owner L1). `follow` lists (map positions, ETAs) keep their pace: positions have no event.
+ * Stream not open: every minute (owner L1). `follow` lists (map positions, ETAs) and CLOCK_LISTS keep their pace:
+ * positions and clock warnings have no event.
  */
 export function liveRefetchMs(state: LiveStreamState, name: string, pageMs: number | undefined, follow = false): number | false | undefined {
-  if (pageMs === undefined || follow || state === "off" || !STREAMED_LISTS.has(name)) return pageMs;
+  if (pageMs === undefined || follow || CLOCK_LISTS.has(name) || state === "off" || !STREAMED_LISTS.has(name)) return pageMs;
   return state === "open" ? false : FALLBACK_POLL_MS;
 }
 

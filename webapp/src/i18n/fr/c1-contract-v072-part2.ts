@@ -760,7 +760,7 @@ export const frC1ContractV072Part2: Record<keyof typeof enC1ContractV072Part2, s
   "Bookings in {0}": "Réservations à {0}",
   "Radar · Exclusive in {0}": "Radar · Exclusif à {0}",
   "Dispatch rules in {0}": "Règles de dispatch à {0}",
-  "Rules for booked rides in every zone: who gets the offer, when it goes out, and the cancel fees.": "Règles des courses réservées dans chaque zone : qui reçoit l’offre, quand elle part, et les frais d’annulation.",
+  "Rules for booked rides in every zone: who gets the offer, when it goes out, and the cancel fees.": "Règles des courses programmées dans chaque zone : qui reçoit l’offre, quand elle part, et les frais d’annulation.",
   "Radar and its radar zones, Exclusive offers and driver groups, for every zone.": "Le radar et ses zones radar, les offres exclusives et les groupes de chauffeurs, pour chaque zone.",
   "How ride requests find a driver, with rules for every zone. Radar, Exclusive and bookings have their own tabs.": "Comment les demandes de course trouvent un chauffeur, avec des règles pour chaque zone. Radar, Exclusif et réservations ont leurs propres onglets.",
   "Drivers {0}. Trips in the book {1}. Online {2}. Stale {3}. Trips on the map {4} of {5} active. Open requests plotted {6} of {7}. Airport queue {8}. Boosts {9}.": "Chauffeurs {0}. Courses enregistrées {1}. En ligne {2}. Positions anciennes {3}. Courses sur la carte {4} sur {5} actives. Demandes ouvertes affichées {6} sur {7}. File aéroport {8}. Boosts {9}.",
