@@ -135,10 +135,18 @@ export type LiveEventSource = {
   onerror: ((info?: { status?: number }) => void) | null;
   /** An `id:` line with no data (the server moved the cursor past events not for this admin). */
   oncursor?: ((id: string) => void) | null;
+  /** Any bytes from the server (an event or the ": heartbeat" comment): the connection is alive (finder D3). */
+  onactivity?: (() => void) | null;
   close(): void;
 };
 /** Opens the stream after `lastEventId` (null = from now). The browser's EventSource cannot send the bearer token, so live uses fetchEventSource. */
 export type LiveSourceFactory = (lastEventId: string | null) => LiveEventSource;
+
+/**
+ * Finder D3: the server writes ": heartbeat" every 15 s (movera-server src/realtime/sse.ts). An open stream silent for
+ * this long is half-open (laptop sleep, Wi-Fi change): it is closed and opened again, so the lists do not freeze.
+ */
+export const STREAM_SILENCE_MS = 45_000;
 
 type ConnectOptions = { random?: () => number; setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
 
@@ -157,17 +165,34 @@ export function connectAdminEvents(open: LiveSourceFactory, onEvent: (event: Adm
   let lastSequence = 0;
   let source: LiveEventSource | null = null;
   let timer: unknown = null;
+  let watchdog: unknown = null;
+  const disarm = () => {
+    if (watchdog !== null) clearTimer(watchdog);
+    watchdog = null;
+  };
 
   const start = () => {
     timer = null;
     if (stopped) return;
     const mine = open(lastId);
     source = mine;
+    // D3: (re)armed by the open and by every chunk; silence = a drop (backoff reconnect with Last-Event-ID).
+    const arm = () => {
+      disarm();
+      watchdog = setTimer(() => {
+        watchdog = null;
+        if (!stopped && source === mine) mine.onerror?.();
+      }, STREAM_SILENCE_MS);
+    };
     mine.onopen = () => {
       if (!stopped && source === mine) {
         attempt = 0;
         onState("open");
+        arm();
       }
+    };
+    mine.onactivity = () => {
+      if (!stopped && source === mine) arm();
     };
     mine.oncursor = (id) => {
       if (!stopped && source === mine && id) lastId = id;
@@ -191,6 +216,7 @@ export function connectAdminEvents(open: LiveSourceFactory, onEvent: (event: Adm
     };
     mine.onerror = (info) => {
       if (stopped || source !== mine) return;
+      disarm();
       mine.close();
       source = null;
       if (info?.status === 401) {
@@ -209,6 +235,7 @@ export function connectAdminEvents(open: LiveSourceFactory, onEvent: (event: Adm
   return () => {
     stopped = true;
     if (timer !== null) clearTimer(timer);
+    disarm();
     source?.close();
     source = null;
     onState("off");
@@ -239,7 +266,7 @@ type StreamClient = { baseUrl: string; state(): { accessToken: string } | null }
 export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch = (input, init) => fetch(input, init)): LiveSourceFactory {
   return (lastEventId) => {
     const controller = new AbortController();
-    const source: LiveEventSource = { onopen: null, onmessage: null, onerror: null, oncursor: null, close: () => controller.abort() };
+    const source: LiveEventSource = { onopen: null, onmessage: null, onerror: null, oncursor: null, onactivity: null, close: () => controller.abort() };
     let status: number | undefined;
     void (async () => {
       try {
@@ -260,6 +287,7 @@ export function fetchEventSource(client: StreamClient, fetchImpl: typeof fetch =
         for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
+          source.onactivity?.();
           const parsed = parseSseMessages(buffer + decoder.decode(value, { stream: true }));
           buffer = parsed.rest;
           for (const message of parsed.messages) source.onmessage?.(message);
