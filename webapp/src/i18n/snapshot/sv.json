@@ -8812,4 +8812,5 @@
 ["Shortest trip must be whole metres from 0 to 5000.","Kortaste resa måste vara hela meter från 0 till 5000."],
 ["Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again.","Tilldela om tar den här bokade resan från föraren och lägger tillbaka den i listan Bokade resor; föraren kan ta den igen."],
 ["The booked ride is back in the Scheduled rides list; the driver may take it again.","Den bokade resan är tillbaka i listan Bokade resor; föraren kan ta den igen."],
-["Free waiting from","Fri väntetid från"]]
+["Free waiting from","Fri väntetid från"],
+["Booked ride: cancelling after the driver has arrived costs the booked-ride cancel fee","Bokad resa: avbokning efter att föraren kommit fram kostar avbokningsavgiften för bokade resor"]]

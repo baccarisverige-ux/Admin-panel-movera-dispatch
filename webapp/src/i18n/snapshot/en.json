@@ -8812,4 +8812,5 @@
 ["Shortest trip must be whole metres from 0 to 5000.","Shortest trip must be whole metres from 0 to 5000."],
 ["Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again.","Reassign takes this booked ride off its driver and puts it back in the Scheduled rides list; the driver may take it again."],
 ["The booked ride is back in the Scheduled rides list; the driver may take it again.","The booked ride is back in the Scheduled rides list; the driver may take it again."],
-["Free waiting from","Free waiting from"]]
+["Free waiting from","Free waiting from"],
+["Booked ride: cancelling after the driver has arrived costs the booked-ride cancel fee","Booked ride: cancelling after the driver has arrived costs the booked-ride cancel fee"]]
