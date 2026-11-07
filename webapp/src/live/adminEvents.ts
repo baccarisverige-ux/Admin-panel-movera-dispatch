@@ -42,7 +42,8 @@ export const STREAMED_LISTS: ReadonlySet<string> = new Set(["trips", "reservatio
 
 /** Extra react-query keys behind a contract list name (besides ["records", name], ["live", name] and [name]). */
 const EXTRA_KEYS: Readonly<Record<string, ReadonlyArray<readonly unknown[]>>> = {
-  trips: [["trip-record"], ["live", "trip"], ["live", "chat-trips"], ["records", "rideChecks"]],
+  // S7 E1: ["assign-offers", tripId] is the trip page's offers + status read (else only its own 1 s / 15 s timer).
+  trips: [["trip-record"], ["live", "trip"], ["live", "chat-trips"], ["records", "rideChecks"], ["assign-offers"]],
   drivers: [["live", "driver"], ["live", "reservationDrivers"]],
   tickets: [["live", "ticket"]],
   alerts: [["slice", "alertOps"]],
