@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { FetchLike, FetchResponse } from "../api/httpClient.ts";
 import { createLiveClient } from "./session.ts";
+// Finder D4 (stream 401 → refresh and reconnect): its own file, run with this one (no package.json change).
+import "./stream401.test.ts";
 
 /** 503 proof 2026-11-06 (Rules plan/FIX-503-ADMIN-BURST-2026-11-06.md): 1200+ GET /admin/payments in 25 s from one admin filled the DB pool. */
 const ok = (body: unknown): FetchResponse => ({ ok: true, status: 200, json: async () => body, headers: { get: () => null }, blob: async () => new Blob([]) });
