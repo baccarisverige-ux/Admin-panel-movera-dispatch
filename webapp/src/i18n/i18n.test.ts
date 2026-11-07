@@ -97,7 +97,7 @@ test("tr, trx and status words follow the chosen language; unknown texts stay as
   try {
     setLanguage("fr");
     assert.equal(tr("Cancel"), fr.Cancel);
-    assert.equal(statusLabel("driver_to_pickup"), "Chauffeur vers la prise en charge");
+    assert.equal(statusLabel("driver_to_pickup"), "Chauffeur en route vers le lieu de prise en charge");
     assert.equal(statusLabel("in_trip"), "En course");
     assert.equal(trx("Dashboard"), "Tableau de bord");
     assert.equal(trx("A text nobody wrote"), "A text nobody wrote");

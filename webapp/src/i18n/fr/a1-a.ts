@@ -258,7 +258,7 @@ export const frA1A: Record<keyof typeof enA1A, string> = {
   "Apply preset": "Appliquer le préréglage",
   "Apply second preset": "Appliquer le deuxième préréglage",
   "Apply third preset": "Appliquer le troisième préréglage",
-  "Approaching drop-off": "À l’approche de la destination",
+  "Approaching drop-off": "Approche de la destination",
   "Approval itself is performed on the payout workspace for the payout driver.": "L’approbation elle-même se fait dans l’espace versements, pour le chauffeur concerné.",
   "Approval over": "Approbation au-delà de",
   "Approve": "Approuver",

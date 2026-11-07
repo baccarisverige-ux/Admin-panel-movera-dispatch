@@ -258,7 +258,7 @@ export const frA5MN: Record<keyof typeof enA5MN, string> = {
   "No disputes.": "Aucun litige.",
   "No driver": "Pas de chauffeur",
   "No driver can take this ride. See why below.": "Aucun chauffeur ne peut prendre cette course. Voir pourquoi ci-dessous.",
-  "No driver found": "Aucun chauffeur trouvé",
+  "No driver found": "Aucun chauffeur disponible pour le moment",
   "No driver is taking the ride": "Aucun chauffeur ne prend la course",
   "No driver near pickup": "Aucun chauffeur près de la prise en charge",
   "No driver near pickup for a reservation": "Aucun chauffeur près de la prise en charge pour une réservation",
