@@ -60,18 +60,29 @@ export function LiveSessionProvider({ children, baseUrl = liveBaseUrl(import.met
     };
   }, [queryClient]);
 
-  // Idle sign-out after idleTimeoutSeconds without a pointer or key event (contract §9: default 900 s).
+  // Idle sign-out after idleTimeoutSeconds without a pointer or key event (contract §9: default 900 s). Owner D8 (one
+  // shared sign-in): the last use in ANY tab counts, so a quiet tab never signs out the tab the admin works in; a
+  // browser reopened after the idle time is signed out at once.
   useEffect(() => {
     if (!admin) return;
-    const mark = () => { lastActivity.current = Date.now(); };
+    const idle = () => {
+      idleSignOut.current = true;
+      void client.signOut();
+    };
+    const shared = client.lastActive();
+    if (shared !== null && idleExpired(shared, Date.now(), admin.idleTimeoutSeconds)) {
+      idle();
+      return;
+    }
+    const mark = () => {
+      lastActivity.current = Date.now();
+      client.markActive(lastActivity.current);
+    };
     mark();
     const events = ["pointerdown", "keydown"] as const;
     events.forEach((name) => window.addEventListener(name, mark));
     const timer = window.setInterval(() => {
-      if (idleExpired(lastActivity.current, Date.now(), admin.idleTimeoutSeconds)) {
-        idleSignOut.current = true;
-        void client.signOut();
-      }
+      if (idleExpired(Math.max(lastActivity.current, client.lastActive() ?? 0), Date.now(), admin.idleTimeoutSeconds)) idle();
     }, 15_000);
     return () => {
       events.forEach((name) => window.removeEventListener(name, mark));

@@ -1,6 +1,9 @@
 /**
  * The live admin session (contract v0.5.1 §9): sign-in with e-mail and password, a rotating refresh token, sign-out
- * and `fetch` with the bearer token. Tokens live in memory and sessionStorage (never localStorage, never in a URL).
+ * and `fetch` with the bearer token. Tokens live in memory and localStorage (never in a URL). Owner D8 (2026-11-07,
+ * "One shared sign-in"): every tab of the browser shares the one sign-in (localStorage + the `storage` event) and
+ * only one tab renews it at a time (navigator.locks); the others take the renewed tokens. Before, each tab kept its own
+ * copy in sessionStorage, and two tabs renewing the same refresh token ended the session for both.
  * On a 401 the client refreshes once and retries; a failed refresh signs out. No React here: session.test.ts drives
  * it with a fake fetch.
  */
@@ -8,6 +11,12 @@ import { ApiError, apiFetch, type ApiRequestInit, type FetchLike, type FetchResp
 import type { AdminMe, AdminSession } from "./types.ts";
 
 export const LIVE_SESSION_KEY = "movera-admin-live-session";
+/** D8: the last pointer / key use in any tab, so the idle sign-out follows the whole browser, not one tab. */
+export const LIVE_ACTIVITY_KEY = "movera-admin-live-activity";
+const REFRESH_LOCK = "movera-admin-refresh";
+
+/** One holder at a time across the browser's tabs (navigator.locks.request). */
+export type LockLike = <T>(fn: () => Promise<T>) => Promise<T>;
 const API_PREFIX = "/api/v1";
 
 export type LiveSessionState = { accessToken: string; refreshToken: string; expiresAt: number; admin: AdminMe };
@@ -19,16 +28,32 @@ type Options = {
   fetchImpl?: FetchLike;
   storage?: StorageLike | null;
   now?: () => number;
-  /** Called when the session ends by itself (a refresh that failed, a 401 after it). */
+  /** Called when the session ends by itself (a refresh that failed, a 401 after it, a sign-out in another tab). */
   onSignedOut?: (reason: "refresh_failed" | "sign_out") => void;
+  /** The cross-tab renewal lock; default navigator.locks, null = none (one tab only). */
+  lock?: LockLike | null;
 };
 
+/** D8: localStorage, shared by the browser's tabs. A session an older build kept in sessionStorage moves over once. */
 function defaultStorage(): StorageLike | null {
   try {
-    return typeof sessionStorage !== "undefined" ? sessionStorage : null;
+    if (typeof localStorage === "undefined") return null;
+    try {
+      const old = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(LIVE_SESSION_KEY) : null;
+      if (old && !localStorage.getItem(LIVE_SESSION_KEY)) localStorage.setItem(LIVE_SESSION_KEY, old);
+      if (old) sessionStorage.removeItem(LIVE_SESSION_KEY);
+    } catch {
+      // No sessionStorage: nothing to move.
+    }
+    return localStorage;
   } catch {
     return null;
   }
+}
+
+function defaultLock(): LockLike | null {
+  const locks = (globalThis as { navigator?: { locks?: { request: (name: string, fn: () => Promise<unknown>) => Promise<unknown> } } }).navigator?.locks;
+  return locks ? (<T,>(fn: () => Promise<T>) => locks.request(REFRESH_LOCK, fn) as Promise<T>) : null;
 }
 
 function isAdminMe(value: unknown): value is AdminMe {
@@ -48,8 +73,11 @@ export type LiveClient = ReturnType<typeof createLiveClient>;
 export function createLiveClient(options: Options) {
   const fetchImpl: FetchLike = options.fetchImpl ?? ((input, init) => fetch(input, init));
   const storage = options.storage === undefined ? defaultStorage() : options.storage;
+  const lock = options.lock === undefined ? defaultLock() : options.lock;
   const now = options.now ?? (() => Date.now());
   const base = resolveBase(options.baseUrl);
+  /** True once the shared storage took a write: only then does an empty key mean "signed out in another tab". */
+  let storageWorks = false;
   let state: LiveSessionState | null = restore();
   let refreshing: Promise<boolean> | null = null;
   const listeners = new Set<(state: LiveSessionState | null) => void>();
@@ -58,6 +86,7 @@ export function createLiveClient(options: Options) {
     try {
       const raw = storage?.getItem(LIVE_SESSION_KEY);
       if (!raw) return null;
+      storageWorks = true;
       const parsed = JSON.parse(raw) as Partial<LiveSessionState>;
       if (typeof parsed.accessToken !== "string" || typeof parsed.refreshToken !== "string" || !isAdminMe(parsed.admin)) return null;
       return { accessToken: parsed.accessToken, refreshToken: parsed.refreshToken, expiresAt: Number(parsed.expiresAt) || 0, admin: parsed.admin };
@@ -67,13 +96,45 @@ export function createLiveClient(options: Options) {
   }
 
   function setState(next: LiveSessionState | null): void {
+    const signingIn = !state && next;
     state = next;
     try {
       if (next) storage?.setItem(LIVE_SESSION_KEY, JSON.stringify(next));
       else storage?.removeItem(LIVE_SESSION_KEY);
+      if (storage) storageWorks = true;
+      if (signingIn) storage?.setItem(LIVE_ACTIVITY_KEY, String(now()));
+      if (!next) storage?.removeItem(LIVE_ACTIVITY_KEY);
     } catch {
       // Blocked storage: the session then lives in memory for this page only.
+      storageWorks = false;
     }
+    for (const listener of listeners) listener(next);
+  }
+
+  /**
+   * D8: takes what another tab of the browser wrote: a renewed pair, a new sign-in, or its sign-out. Called before
+   * every token use and on the browser's `storage` event; never writes.
+   */
+  function sync(): void {
+    if (!storage) return;
+    let raw: string | null;
+    try {
+      raw = storage.getItem(LIVE_SESSION_KEY);
+    } catch {
+      return;
+    }
+    if (raw === null) {
+      if (state && storageWorks) {
+        state = null;
+        for (const listener of listeners) listener(null);
+        options.onSignedOut?.("sign_out");
+      }
+      return;
+    }
+    const next = restore();
+    if (!next) return;
+    if (state && next.refreshToken === state.refreshToken && next.accessToken === state.accessToken && JSON.stringify(next.admin) === JSON.stringify(state.admin)) return;
+    state = next;
     for (const listener of listeners) listener(next);
   }
 
@@ -99,22 +160,34 @@ export function createLiveClient(options: Options) {
     return error.status === 400 || error.status === 401 || error.status === 403 || (error.status === 0 && error.code === "internal");
   }
 
+  /** Renews `token` unless another tab already did (D8: called inside the cross-tab lock). */
+  async function renew(token: string): Promise<boolean> {
+    sync();
+    if (!state) return false;
+    if (state.refreshToken !== token) return true;
+    try {
+      const session = await authCall("/admin/auth/refresh", { refreshToken: token });
+      setState(fromSession(session));
+      return true;
+    } catch (error) {
+      if (!refreshRefused(error)) return false;
+      // Another client or tab may have rotated the token meanwhile: keep its newer session.
+      sync();
+      if (state && state.refreshToken !== token) return true;
+      setState(null);
+      options.onSignedOut?.("refresh_failed");
+      return false;
+    }
+  }
+
   async function refreshOnce(): Promise<boolean> {
     if (refreshing) return refreshing;
+    sync();
     const token = state?.refreshToken;
     if (!token) return false;
     refreshing = (async () => {
       try {
-        const session = await authCall("/admin/auth/refresh", { refreshToken: token });
-        setState(fromSession(session));
-        return true;
-      } catch (error) {
-        if (!refreshRefused(error)) return false;
-        // Another client of this tab may have rotated the token meanwhile: keep its newer session.
-        if (state && state.refreshToken !== token) return true;
-        setState(null);
-        options.onSignedOut?.("refresh_failed");
-        return false;
+        return await (lock ? lock(() => renew(token)) : renew(token));
       } finally {
         refreshing = null;
       }
@@ -125,6 +198,7 @@ export function createLiveClient(options: Options) {
   /** Refreshes a little before the access token runs out, so calls do not go out with a dead token (no 401 storm). */
   const EARLY_REFRESH_MS = 30_000;
   async function freshToken(): Promise<string | null> {
+    sync();
     if (state && state.expiresAt > 0 && now() >= state.expiresAt - EARLY_REFRESH_MS) await refreshOnce();
     return state?.accessToken ?? null;
   }
@@ -137,6 +211,7 @@ export function createLiveClient(options: Options) {
   }
 
   async function fetchAuthed(path: string, init: ApiRequestInit = {}): Promise<FetchResponse> {
+    sync();
     if (!state) throw new ApiError(401, "Sign in again.", { code: "unauthenticated", retryable: false });
     const url = `${API_PREFIX}${path}`;
     const method = (init.method ?? "GET").toUpperCase();
@@ -151,6 +226,7 @@ export function createLiveClient(options: Options) {
       if (!(error instanceof ApiError) || error.status !== 401) throw error;
       // A 401 that comes back after another call already refreshed is retried with the new token, without a
       // second refresh (each refresh rotates the token; a lost rotation would end the session).
+      sync();
       const refreshed = state && state.accessToken !== sent ? true : await refreshOnce();
       if (!refreshed || !state) throw error;
       return apiFetch(base, url, withAuth(request, state.accessToken), fetchImpl);
@@ -179,8 +255,35 @@ export function createLiveClient(options: Options) {
     return call;
   }
 
+  // D8: another tab renewed, signed in or signed out (the browser's storage event; only for the shared default storage).
+  if (options.storage === undefined && typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("storage", (event: StorageEvent) => {
+      if (event.key === LIVE_SESSION_KEY || event.key === null) sync();
+    });
+  }
+
   return {
     state: () => state,
+    /** D8: read the shared sign-in again now (the storage event does it in a browser). */
+    sync,
+    /** D8: the admin used the panel (pointer / key) in this tab; shared, at most one write per 5 s. */
+    markActive(at: number = now()): void {
+      try {
+        const last = Number(storage?.getItem(LIVE_ACTIVITY_KEY));
+        if (!(Number.isFinite(last) && at - last < 5_000)) storage?.setItem(LIVE_ACTIVITY_KEY, String(at));
+      } catch {
+        // Blocked storage: the tab's own timer decides.
+      }
+    },
+    /** D8: the last use in any tab of this browser, null when unknown. */
+    lastActive(): number | null {
+      try {
+        const last = Number(storage?.getItem(LIVE_ACTIVITY_KEY) ?? NaN);
+        return Number.isFinite(last) && last > 0 ? last : null;
+      } catch {
+        return null;
+      }
+    },
     admin: () => state?.admin ?? null,
     baseUrl: base,
     subscribe(listener: (state: LiveSessionState | null) => void): () => void {
