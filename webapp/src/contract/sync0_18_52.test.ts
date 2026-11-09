@@ -6,14 +6,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { CONTRACT_VERSION } from "../domain/contract.ts";
 
 const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
 
-test("the admin pins the contract it carries (0.18.52)", () => {
-  assert.equal(C.version, "0.18.52");
-  assert.equal(CONTRACT_VERSION, C.version);
-});
+// The exact pin moved to sync0_18_53.test.ts with the 0.18.53 copy; the §74 check below still holds.
 
 test("§74 is in the copy: offline no-trip fixes are accepted 0 by the server", () => {
   assert.equal(C.driverHome.offlineLocation.server.accepted, 0);
