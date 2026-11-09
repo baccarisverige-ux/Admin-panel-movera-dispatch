@@ -5,19 +5,13 @@
  * The demo store follows the same table (#253 noted the gap: it still said searching).
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
-import { CONTRACT_VERSION, nextStatus } from "../domain/contract.ts";
+import { nextStatus } from "../domain/contract.ts";
 import { createFixtureAdminApi } from "../api/create.ts";
 import { loadDb, saveDb } from "../api/demoStore.ts";
 import { signedInFixture } from "../testing/fixtureSession.ts";
 
-const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
-
-test("the admin pins the contract it carries (0.18.51)", () => {
-  assert.equal(C.version, "0.18.51");
-  assert.equal(CONTRACT_VERSION, C.version);
-});
+// The exact pin moved to sync0_18_52.test.ts with the 0.18.52 copy; the 0.18.51 rules below still hold.
 
 test("L6 rows (§73): admin reassign from accepted is split by kind; the other states still go to searching", () => {
   assert.equal(nextStatus("accepted", "reassign", "admin", "scheduled"), "requested");
