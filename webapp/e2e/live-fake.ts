@@ -250,6 +250,8 @@ export type TripState = {
   vehicles: (typeof VEHICLE)[];
   /** Answer GET /admin/drivers with this status instead of the list. */
   driversFail?: number;
+  /** Step 39 (0.28a): GET /admin/drivers and GET /admin/trips page by `limit` with a numeric cursor (the real server pages at 50). */
+  pagedLists?: boolean;
   /** Hold POST /admin/drivers/{id}/status this many ms. */
   statusDelayMs?: number;
   invitations: (typeof INVITATIONS)[number][];
@@ -288,6 +290,13 @@ export type TripState = {
   notes?: Record<string, unknown>[];
   cases?: Record<string, unknown>[];
 };
+
+/** Step 39: one server page (limit, numeric cursor = the next index), as the riders list has paged since step 33. */
+function pageOf<T>(all: T[], url: URL): { items: T[]; nextCursor: string | null } {
+  const limit = Number(url.searchParams.get("limit") ?? all.length) || all.length;
+  const start = Number(url.searchParams.get("cursor") ?? 0) || 0;
+  return { items: all.slice(start, start + limit), nextCursor: start + limit < all.length ? String(start + limit) : null };
+}
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
   const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), incidents: [], incidentEvents: [], riders: RIDERS.map((item) => ({ ...item })), payouts: PAYOUTS.map((item) => ({ ...item })), tickets: TICKETS.map((item) => ({ ...item })), ticketMessages: TICKET_MESSAGES.map((item) => ({ ...item })), ratings: RATINGS.map((item) => ({ ...item })), approvals: APPROVALS.map((item) => ({ ...item })), refundPayouts: REFUND_PAYOUTS.map((item) => ({ ...item })), liveDrivers: [], ...init };
@@ -336,7 +345,8 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (state.driversFail) return json(route, state.driversFail, { code: "unavailable", message: "The server is busy.", requestId: "r-503", retryable: false });
       const status = url.searchParams.get("accountStatus");
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
-      return json(route, 200, { items: inZones(state.drivers, (item) => item.zoneIds).filter((item) => (!status || item.accountStatus === status) && (!q || JSON.stringify(item).toLowerCase().includes(q))), nextCursor: null });
+      const all = inZones(state.drivers, (item) => item.zoneIds).filter((item) => (!status || item.accountStatus === status) && (!q || JSON.stringify(item).toLowerCase().includes(q)));
+      return json(route, 200, state.pagedLists ? pageOf(all, url) : { items: all, nextCursor: null });
     }
     const driver = /^\/api\/v1\/admin\/drivers\/([^/]+)(\/status)?$/.exec(p);
     if (driver) {
@@ -604,6 +614,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const riderId = url.searchParams.get("riderId");
       const flaggedOnly = url.searchParams.get("flagged") === "true";
       const items = inZones(state.trips, (trip) => [String(trip.zoneId)]).filter((trip) => (!statuses.length || statuses.includes(String(trip.status))) && (!riderId || trip.riderId === riderId) && (!q || JSON.stringify(trip).toLowerCase().includes(q)) && (!flaggedOnly || (trip.adminFlag as { flagged?: boolean } | undefined)?.flagged === true));
+      if (state.pagedLists) return json(route, 200, pageOf(items, url));
       const cursor = url.searchParams.get("cursor");
       if (!cursor && items.length > 2) return json(route, 200, { items: items.slice(0, 2), nextCursor: "c2" });
       return json(route, 200, { items: cursor ? items.slice(2) : items, nextCursor: null });

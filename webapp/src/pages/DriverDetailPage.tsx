@@ -1,5 +1,6 @@
 import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { isLiveData, liveDriverOf } from "../live/realData";
+import { DRIVER_BY_ID_LIST } from "../live/liveAdminApi";
 import { LiveDriverPreferences } from "../live/LiveProfileData";
 import { LivePayoutHold } from "../live/LivePayoutHold";
 import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
@@ -71,6 +72,9 @@ export function DriverDetailPage() {
   const [params, setParams] = useSearchParams();
   const { agent } = useSession();
   const drivers = useRecords("drivers", null);
+  // Step 39 (plan 0.28a, audit A15 N7): live, the driver is read by id (GET /admin/drivers/{driverId}), so a driver
+  // beyond the loaded list pages opens too; the demo reads the list.
+  const driverById = useRecords(isLiveData() ? `${DRIVER_BY_ID_LIST}${driverId}` : "drivers", null);
   const vehicles = useRecords("vehicles", null);
   const trips = useRecords("trips", null);
   const payouts = useRecords("payouts", null);
@@ -98,7 +102,9 @@ export function DriverDetailPage() {
   const [now] = useState(() => Date.now());
   const period = parsePeriodOr(params, { kind: "month" });
 
-  const driver = drivers.data?.find((item) => item.id === driverId);
+  const driver = driverById.data?.find((item) => item.id === driverId) ?? drivers.data?.find((item) => item.id === driverId);
+  // Step 34b's joins by driver id keep working when the driver is not in the loaded list.
+  const driverRows = useMemo(() => (driver && !drivers.data?.some((item) => item.id === driver.id) ? [driver, ...(drivers.data ?? [])] : drivers.data ?? []), [driver, drivers.data]);
   const country = driver ? marketOfZone(driver.zoneId)?.id ?? "SE" : "SE";
   const market = marketById(country);
   const onboardingSettings = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
@@ -107,7 +113,7 @@ export function DriverDetailPage() {
   const periodSearch = params.toString();
   const span = useMemo(() => periodWindow(parsePeriodOr(new URLSearchParams(periodSearch), { kind: "month" }), now, market.timeZone, uiLocale()), [periodSearch, now, market]);
 
-  if (drivers.isLoading || vehicles.isLoading || store.loading) return <p className="state-line">{tr("Loading driver.")}</p>;
+  if (drivers.isLoading || driverById.isLoading || vehicles.isLoading || store.loading) return <p className="state-line">{tr("Loading driver.")}</p>;
   if (!driver) {
     return <NotFoundRecord kind="Driver" id={driverId} list="/drivers" back={tr("Back to drivers")} />;
   }
@@ -207,7 +213,7 @@ export function DriverDetailPage() {
   const email = liveData ? driver.email ?? DASH : `${driver.name.toLowerCase().normalize("NFD").replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, ".")}@${country === "SE" ? "mail.se" : country === "FR" ? "mail.fr" : "mail.tn"}`;
   const seed = Number(driver.id.replace(/\D/g, "")) || 1;
   const joined = driver.joinedAt ?? new Date(Date.parse("2026-10-05T00:00:00Z") - (60 + (seed * 37) % 800) * 86_400_000).toISOString();
-  const live = liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0).find((row) => row.id === driver.id);
+  const live = liveDrivers(driverRows, vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0).find((row) => row.id === driver.id);
   const presence: Presence = live?.state ?? "offline";
   const code = driverCode(driver);
   const mapTo = live ? `/?country=${country}&focus=${driver.id}` : null;
@@ -644,8 +650,8 @@ export function DriverDetailPage() {
               )}
               <h3>{tr("Support and safety")}</h3>
               <ul className="fd-timeline">
-                {(tickets.data ?? []).filter((item) => belongsToDriver(item, driver, drivers.data ?? [])).map((ticket) => <li key={ticket.id}><Link to={`/tickets/${ticket.id}`}>{ticket.id}</Link> · {statusLabel(ticket.status, "ticketStatus")}</li>)}
-                {(incidents.data ?? []).filter((item) => belongsToDriver(item, driver, drivers.data ?? [])).map((incident) => <li key={incident.id}><Link to={`/incidents/${incident.id}`}>{incident.id}</Link> · {statusLabel(incident.status, "incidentStatus")}</li>)}
+                {(tickets.data ?? []).filter((item) => belongsToDriver(item, driver, driverRows)).map((ticket) => <li key={ticket.id}><Link to={`/tickets/${ticket.id}`}>{ticket.id}</Link> · {statusLabel(ticket.status, "ticketStatus")}</li>)}
+                {(incidents.data ?? []).filter((item) => belongsToDriver(item, driver, driverRows)).map((incident) => <li key={incident.id}><Link to={`/incidents/${incident.id}`}>{incident.id}</Link> · {statusLabel(incident.status, "incidentStatus")}</li>)}
                 <li><Link to="/support">{tr("Open support queue")}</Link> · <Link to="/incidents">{tr("Open incident center")}</Link></li>
               </ul>
             </section>

@@ -27,7 +27,7 @@ import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts,
 import type { LiveClient } from "./session.ts";
 import { STATUS_PARAM, listQueryOf, setListQuery, type LiveListName } from "./liveLists.ts";
 import { LIVE_CARD_LIST } from "../dashboard/liveCard.ts";
-import { ridersOnlineRecords } from "../dashboard/riders.ts";
+import { WAITING_STATUSES, ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
 import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { alertCall, bookFromServer, liveCountry, type AlertBookState } from "./liveAlerts.ts";
@@ -69,11 +69,12 @@ const PAGE_LIMIT = 100;
 export const LIST_PAGE = 50;
 const MAX_PAGES = 20;
 
-async function all<T>(client: LiveClient, path: string, filter: ZoneFilter = NO_FILTER, extra: Record<string, string> = {}): Promise<T[]> {
+async function all<T>(client: LiveClient, path: string, filter: ZoneFilter = NO_FILTER, extra: Record<string, string> | [string, string][] = {}): Promise<T[]> {
   const items: T[] = [];
   let cursor: string | null = null;
   for (let index = 0; index < MAX_PAGES; index += 1) {
-    const query = new URLSearchParams({ limit: String(PAGE_LIMIT), ...extra, ...(cursor ? { cursor } : {}) });
+    // Step 39: a repeated key (status=requested&status=searching) comes as entries.
+    const query = new URLSearchParams([["limit", String(PAGE_LIMIT)], ...(Array.isArray(extra) ? extra : Object.entries(extra)), ...(cursor ? [["cursor", cursor] as [string, string]] : [])]);
     for (const [key, value] of filter.params) query.set(key, value);
     const page: Page<T> = await client.json<Page<T>>(`${path}?${query.toString()}`);
     items.push(...page.items);
@@ -174,6 +175,10 @@ export function presenceRecord(live: LiveDriverRow, detail?: Driver): DemoRecord
   const bare = { driverId: live.driverId, firstName: live.firstName ?? "", accountStatus: "active", onlineStatus: live.onlineStatus, zoneIds: live.zoneId ? [live.zoneId] : [], categoryIds: [], documents: [], version: 0, ...(live.vehicleId ? { vehicleId: live.vehicleId } : {}) } as unknown as Driver;
   return driverRecord(bare, live);
 }
+
+/** Step 39: list names the Dashboard and the driver page read from the server (the demo keeps "trips" / "drivers"). */
+export const WAITING_TRIPS_LIST = "waitingTrips";
+export const DRIVER_BY_ID_LIST = "driverById:";
 
 /** v0.18.34 §65: the live card reads pages of this size, up to LIVE_MAX_PAGES (rule 33: more than 10,000 drivers). */
 export const LIVE_PAGE = 500;
@@ -658,6 +663,26 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       rows.forEach((row) => trips.set(row.tripId, row));
       if (!riders.has(riderId)) await readRiders().catch(() => []);
       return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
+    }
+    // Step 39 (plan 0.28a, audit A15 N5): the Dashboard's ride requests are every waiting trip the server has
+    // (GET /admin/trips?status=requested&status=searching&status=offered, all pages), never the first list page.
+    if (name === WAITING_TRIPS_LIST) {
+      const rows = await all<Trip>(client, "/admin/trips", filter, WAITING_STATUSES.map((status) => ["status", status] as [string, string]));
+      rows.forEach((row) => trips.set(row.tripId, row));
+      if (!riders.size) await readRiders().catch(() => []);
+      return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
+    }
+    // Step 39 (audit A15 N7): one driver by id (GET /admin/drivers/{driverId}), for a driver beyond the loaded pages.
+    if (name.startsWith(DRIVER_BY_ID_LIST)) {
+      const driverId = name.slice(DRIVER_BY_ID_LIST.length);
+      if (!driverId) return [];
+      const row = await client.json<Driver>(`/admin/drivers/${encodeURIComponent(driverId)}`).catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) return null;
+        throw error;
+      });
+      if (!row) return [];
+      drivers.set(row.driverId, row);
+      return [driverRecord(row, presence.get(row.driverId))];
     }
     if (name === "trips") {
       const rows = await paged<Trip>(client, "trips", "/admin/trips", filter);

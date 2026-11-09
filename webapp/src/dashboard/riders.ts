@@ -30,7 +30,9 @@ export type Candidate = { driver: LiveDriver; km: number; etaMin: number; catego
 
 export type RiderCounts = { online: number; onTrip: number; beingPickedUp: number; waiting: number; longWait: number };
 
-const WAITING = new Set(["requested", "searching", "offered"]);
+/** The trip statuses still looking for a driver (step 39: also the server filter of the Dashboard's waiting list). */
+export const WAITING_STATUSES: readonly string[] = ["requested", "searching", "offered"];
+const WAITING = new Set(WAITING_STATUSES);
 const LONG_WAIT_MIN = 5;
 /** A driver who accepted is "on the way" until the trip leaves these statuses, at most this long after accepting. */
 export const ON_THE_WAY_STATUSES: readonly string[] = ["accepted", "driver_to_pickup"];
