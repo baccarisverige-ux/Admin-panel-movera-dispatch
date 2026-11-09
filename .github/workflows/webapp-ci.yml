@@ -200,3 +200,38 @@ jobs:
             webapp/playwright-report
             webapp/test-results
           retention-days: 7
+
+  # Step 45 (2026-11-09, plan U5 prep): one job that is always there and green
+  # only when every job of this workflow passed or was skipped on purpose, so a
+  # branch ruleset can require exactly one check name ("gate"). changes, audit
+  # and secrets must always pass; e2e is the two shards' own aggregate; the
+  # other jobs may be skipped only on a draft or a docs-only change (CI cost
+  # cut, owner 2026-11-06). Same rule as the rider app's gate.
+  gate:
+    name: gate
+    if: always()
+    needs: [changes, checks, audit, secrets, e2e, e2e-live]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed on this commit
+        working-directory: .
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          CODE: ${{ needs.changes.outputs.code }}
+          DRAFT: ${{ github.event.pull_request.draft == true }}
+        run: |
+          echo "$RESULTS"
+          echo "$RESULTS" | python3 -c '
+          import json, os, sys
+          needs = {k: v["result"] for k, v in json.load(sys.stdin).items()}
+          skip_all = os.environ["CODE"] != "true" or os.environ["DRAFT"] == "true"
+          ok = bool(needs)
+          for job, result in needs.items():
+              if result == "success":
+                  continue
+              planned = result == "skipped" and job not in ("changes", "audit", "secrets") and skip_all
+              print(job, result, "planned skip" if planned else "FAIL")
+              ok = ok and planned
+          sys.exit(0 if ok else 1)
+          '
