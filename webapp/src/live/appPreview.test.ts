@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { APP_WEB_URLS, appWebUrl, parsePreviewSession, previewUrl } from "./appPreview.ts";
+import { APP_WEB_URLS, appWebUrl, openPreviewWindow, parsePreviewSession, previewUrl } from "./appPreview.ts";
 
 // Contract v0.18.25 §47 (BASE B7, owner P1 a / P2 b / P3 a).
 test("app preview: the server's session becomes the framed app's address, token in the fragment only", () => {
@@ -22,4 +22,16 @@ test("app preview: the build may point at another web build, https only", () => 
   assert.equal(appWebUrl("rider", { VITE_RIDER_APP_URL: "https://test.example/rider/" }), "https://test.example/rider/");
   assert.equal(appWebUrl("rider", { VITE_RIDER_APP_URL: "javascript:alert(1)" }), APP_WEB_URLS.rider);
   assert.equal(appWebUrl("driver"), APP_WEB_URLS.driver);
+});
+
+// Step 24 (owner Q31, 2026-11-09): the app opens in a new tab with noopener, never in a frame.
+test("app preview: opens the app in a new tab with noopener; refuses non-https; false only when open() throws", () => {
+  const calls: unknown[][] = [];
+  const win = { open: (...args: unknown[]) => { calls.push(args); return null; } } as unknown as Pick<Window, "open">;
+  assert.equal(openPreviewWindow("https://baccarisverige-ux.github.io/movera-rider-app/live/#movera-preview=a.b.c&zone=Z001&draft=0", win), true);
+  assert.deepEqual(calls, [["https://baccarisverige-ux.github.io/movera-rider-app/live/#movera-preview=a.b.c&zone=Z001&draft=0", "_blank", "noopener,noreferrer"]]);
+  assert.equal(openPreviewWindow("javascript:alert(1)", win), false);
+  assert.equal(calls.length, 1);
+  const refused = { open: () => { throw new Error("sandbox"); } } as unknown as Pick<Window, "open">;
+  assert.equal(openPreviewWindow("https://x.test/app/#movera-preview=t&zone=Z1&draft=0", refused), false);
 });

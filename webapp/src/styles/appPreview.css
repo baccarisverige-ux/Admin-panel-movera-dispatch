@@ -1,6 +1,5 @@
-/* B7 admin real app preview (contract v0.18.25 §47): the real rider / driver web app in a phone frame. */
+/* B7 admin real app preview (contract v0.18.25 §47). Step 24 (2026-11-09): the app opens in a new tab, no phone frame. */
 .real-app-preview { display: grid; gap: 8px; justify-items: start; }
 .real-app-preview-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
 .real-app-preview-note { font-size: 12px; max-width: 340px; margin: 0; }
-.real-app-phone { width: 340px; max-width: 100%; height: 680px; padding: 14px 10px; border-radius: 36px; background: linear-gradient(160deg, #1d2b3a, #0f1720); box-sizing: border-box; }
-.real-app-phone iframe { width: 100%; height: 100%; border: 0; border-radius: 26px; background: #fff; display: block; }
+.real-app-open { margin-top: 2px; }
