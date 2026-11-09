@@ -1,6 +1,9 @@
 import { isLiveData } from "../live/realData";
 import { logExport } from "../reports/activityLog";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { listQueryOf, setListQuery, subscribeLists } from "../live/liveLists";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   AlertTriangle,
@@ -89,6 +92,27 @@ export function RidersPage() {
   const [filterName, setFilterName] = useState<string | null>(null);
   const data = useRidersData(period);
   const { rows, care, now } = data;
+  // Step 33 (2026-11-09, plan U3 prep): on the live server the box searches ALL riders (GET /admin/riders?q=, phone, first
+  // name or id), not only the first page in memory; "Load more" asks for the next server page. Same pattern as DataTable.
+  const live = useLiveSessionMaybe();
+  const queryClient = useQueryClient();
+  const serverList = useSyncExternalStore(subscribeLists, () => listQueryOf("riders"), () => listQueryOf("riders"));
+  useEffect(() => {
+    if (live) setListQuery("riders", { q: "", pages: 1 });
+  }, [live]);
+  useEffect(() => {
+    if (!live) return;
+    const timer = window.setTimeout(() => {
+      if (listQueryOf("riders").q === query.trim()) return;
+      setListQuery("riders", { q: query.trim(), pages: 1 });
+      void queryClient.invalidateQueries({ queryKey: ["records", "riders"] });
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [query, live, queryClient]);
+  const loadMoreFromServer = () => {
+    setListQuery("riders", { pages: serverList.pages + 1 });
+    void queryClient.invalidateQueries({ queryKey: ["records", "riders"] });
+  };
   const counts = useMemo(() => segmentCounts(rows), [rows]);
   const filtered = useMemo(() => sortRows(rows.filter((row) => row.segments.has(segment) && matches(row, query)), sort), [rows, segment, query, sort]);
   const shown = filtered.slice(0, limit);
@@ -247,6 +271,7 @@ export function RidersPage() {
               </ul>
             )}
             {filtered.length > limit ? <button data-command="admin.table.filter" type="button" className="dash-btn ghost rd-more" onClick={() => setLimit((value) => value + PAGE)}>{trn("Show {0} more of {1}", Math.min(PAGE, filtered.length - limit), filtered.length - limit)}</button> : null}
+            {live && serverList.hasMore ? <button data-command="admin.server.loadMore" type="button" className="dash-btn ghost rd-more" disabled={data.loading} onClick={loadMoreFromServer}>{data.loading ? tr("Loading.") : tr("Load more")}</button> : null}
           </div>
         </>
       ) : null}

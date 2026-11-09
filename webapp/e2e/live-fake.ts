@@ -396,7 +396,16 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       state.vehicles[index] = { ...state.vehicles[index], status: body.decision, version: state.vehicles[index].version + 1 };
       return json(route, 200, state.vehicles[index]);
     }
-    if (p === "/api/v1/admin/riders") return json(route, 200, { items: inZones(state.riders, (rider) => state.trips.filter((trip) => trip.riderId === rider["riderId"]).map((trip) => String(trip.zoneId)).concat(state.trips.some((trip) => trip.riderId === rider["riderId"]) ? [] : ["Z001"])), nextCursor: null });
+    if (p === "/api/v1/admin/riders") {
+      // Step 33: the server's search (q: phone contains, first name contains, rider id exact) and cursor paging (limit; the cursor is the next index).
+      const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
+      const all = inZones(state.riders, (rider) => state.trips.filter((trip) => trip.riderId === rider["riderId"]).map((trip) => String(trip.zoneId)).concat(state.trips.some((trip) => trip.riderId === rider["riderId"]) ? [] : ["Z001"]))
+        .filter((rider) => !q || String(rider["phone"] ?? "").includes(q) || String(rider["firstName"] ?? "").toLowerCase().includes(q) || String(rider["riderId"]) === q);
+      const limit = Number(url.searchParams.get("limit") ?? all.length) || all.length;
+      const start = Number(url.searchParams.get("cursor") ?? 0) || 0;
+      const items = all.slice(start, start + limit);
+      return json(route, 200, { items, nextCursor: start + limit < all.length ? String(start + limit) : null });
+    }
     if (p === "/api/v1/admin/live/drivers") return json(route, 200, { ...LIVE_DRIVERS, items: inZones([...(state.noLiveDrivers ? [] : LIVE_DRIVERS.items), ...state.liveDrivers], zoneField), ...(state.ridersOnline ? { ridersOnline: inZones(state.ridersOnline, zoneField), ridersOnlineWindowSeconds: 120 } : {}), ...(state.zoneSupply ? { zoneSupply: inZones(state.zoneSupply, zoneField) } : {}) });
     if (p === "/api/v1/admin/payments") return json(route, 200, { items: inZones(PAYMENTS, (item) => [tripZone(item.tripId)]), nextCursor: null });
     if (p === "/api/v1/admin/audit") return json(route, 200, { items: [...(state.audit ?? []), ...AUDIT], nextCursor: null });
