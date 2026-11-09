@@ -2,7 +2,7 @@ import { rideRequests } from "../dashboard/riders.ts";
 import { caseOf, pastCases } from "../safety/cases.ts";
 import { emptySafety } from "../safety/ops.ts";
 import { emptyIncidentOps } from "../safety/cases.ts";
-import { belongsToRider, matchRider, sameRider } from "./match.ts";
+import { belongsToDriver, belongsToRider, matchDriver, matchRider, sameRider } from "./match.ts";
 import type { DemoRecord } from "../api/seed.ts";
 
 const assert = (ok: unknown, message: string) => {
@@ -49,3 +49,22 @@ assert(pastCases(c1, [c1, c2, c3]).map((item) => item.id).join() === "I3", `earl
 assert(sameRider({ phone: "+46 70 1", name: "Bo" }, { phone: "+46 70 1", name: "Eva" }), "demo rows without ids still pair by phone");
 
 console.log("riders/match: ok");
+
+// Step 34b: the same rule for drivers. Two drivers called Anna; a live ticket carries the server's driverId.
+const driverAnna1: DemoRecord = { id: "D1001", name: "Anna", phone: "", zoneId: "Z001", status: "active" };
+const driverAnna2: DemoRecord = { id: "D1002", name: "Anna", phone: "", zoneId: "Z001", status: "active" };
+const driverBo: DemoRecord = { id: "D1003", name: "Bo", phone: "+46 70 999 00 00", zoneId: "Z001", status: "active" };
+const driversAll = [driverAnna1, driverAnna2, driverBo];
+const driverTicket: DemoRecord = { id: "TK7", name: "Anna", phone: "", zoneId: "Z001", status: "open", openedBy: "driver", driverId: "D1002" };
+// Fail-before: the old DriverDetailPage join (item.name === driver.name) put this ticket on BOTH Annas.
+assert([driverAnna1, driverAnna2].filter((driver) => driverTicket.name === driver.name).length === 2, "old name join matched both Annas (documents the bug)");
+assert(belongsToDriver(driverTicket, driverAnna2, driversAll) && !belongsToDriver(driverTicket, driverAnna1, driversAll), "a ticket with driverId sits with that driver only");
+assert(matchDriver(driversAll, { driverId: "D1002", name: "Anna" })?.id === "D1002", "a record with a driver id picks that driver");
+assert(matchDriver(driversAll, { driverId: "D9999", name: "Anna" }) === undefined, "an unknown driver id matches nobody, the name does not step in");
+assert(matchDriver(driversAll, { name: "Anna" }) === undefined, "no id and an ambiguous name: nobody, not the first Anna");
+assert(matchDriver(driversAll, { phone: "+46 70 999 00 00" })?.id === "D1003", "no id and a unique phone still matches (demo data)");
+assert(matchDriver(driversAll, { phone: "", name: "Bo" })?.id === "D1003", "no id and a unique name still matches (demo data)");
+// Fail-before for SupportWorkspace: "first driver in the zone" was Anna 1 even for Anna 2's ticket.
+assert(driversAll.find((item) => item.zoneId === driverTicket.zoneId)?.id === "D1001", "old zone join picked the first driver in the zone (documents the bug)");
+
+console.log("riders/match: drivers ok");
