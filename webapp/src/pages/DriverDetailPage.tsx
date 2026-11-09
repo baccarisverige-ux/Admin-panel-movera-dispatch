@@ -11,6 +11,7 @@ import { LiveDocBox } from "../live/LiveDocBox";
 import { activateEmphasised, driverCategoryFits, driverHistoryShown } from "../live/realOnly";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
+import { belongsToDriver } from "../riders/match";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Building2, Car, CheckCircle2, Hash, Mail, MapPin, MessageSquare, Phone, Star, StickyNote } from "lucide-react";
@@ -643,8 +644,8 @@ export function DriverDetailPage() {
               )}
               <h3>{tr("Support and safety")}</h3>
               <ul className="fd-timeline">
-                {(tickets.data ?? []).filter((item) => item.name === driver.name).map((ticket) => <li key={ticket.id}><Link to={`/tickets/${ticket.id}`}>{ticket.id}</Link> · {statusLabel(ticket.status, "ticketStatus")}</li>)}
-                {(incidents.data ?? []).filter((item) => item.name === driver.name).map((incident) => <li key={incident.id}><Link to={`/incidents/${incident.id}`}>{incident.id}</Link> · {statusLabel(incident.status, "incidentStatus")}</li>)}
+                {(tickets.data ?? []).filter((item) => belongsToDriver(item, driver, drivers.data ?? [])).map((ticket) => <li key={ticket.id}><Link to={`/tickets/${ticket.id}`}>{ticket.id}</Link> · {statusLabel(ticket.status, "ticketStatus")}</li>)}
+                {(incidents.data ?? []).filter((item) => belongsToDriver(item, driver, drivers.data ?? [])).map((incident) => <li key={incident.id}><Link to={`/incidents/${incident.id}`}>{incident.id}</Link> · {statusLabel(incident.status, "incidentStatus")}</li>)}
                 <li><Link to="/support">{tr("Open support queue")}</Link> · <Link to="/incidents">{tr("Open incident center")}</Link></li>
               </ul>
             </section>
