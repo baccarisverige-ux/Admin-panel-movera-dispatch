@@ -1,3 +1,4 @@
+import { belongsToRider } from "../riders/match";
 import { useMemo, useState, type ReactNode } from "react";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useParams, useSearchParams } from "react-router";
@@ -147,8 +148,9 @@ export function RiderDetailPage() {
   const refundsMinor = refundsFor.filter((item) => item.status === "sent").reduce((sum, item) => sum + Math.round(item.amount * place.minorUnits), 0);
   const lifetimeMinor = profile.spentMinor - refundsMinor - profile.promoMinor;
   const tone = responseTone(row.waitingMin);
-  const tickets = (data.tickets.data ?? []).filter((item) => item.phone === rider.phone || item.name === rider.name);
-  const incidents = (data.incidents.data ?? []).filter((item) => item.phone === rider.phone || item.name === rider.name);
+  const everyRider = data.rows.map((item) => item.rider);
+  const tickets = (data.tickets.data ?? []).filter((item) => belongsToRider(item, rider, everyRider));
+  const incidents = (data.incidents.data ?? []).filter((item) => belongsToRider(item, rider, everyRider));
   const lost = care.lostFound[rider.id] ?? [];
   const audits = (audit.data ?? []).filter((item) => item.targetId === rider.id || item.targetId.startsWith(`${rider.id}-`)).slice(0, 30);
   const promos = care.promotions.filter((ticket) => ticket.riderIds.includes(rider.id));

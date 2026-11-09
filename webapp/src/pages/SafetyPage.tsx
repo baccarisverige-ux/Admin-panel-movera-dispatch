@@ -1,3 +1,4 @@
+import { matchRider } from "../riders/match";
 import { isLiveData } from "../live/realData";
 import { NotConnected } from "../live/NotConnected";
 import { LiveEmergencyContacts } from "../live/LiveEmergencyContacts";
@@ -305,7 +306,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
   const time2 = clocks(item, settings, now);
   const trip = linkedTrip(item, trips);
   const driver = drivers.find((row) => row.id === (item.driverId ?? trip?.driverId));
-  const rider = riders.find((row) => row.phone === item.phone) ?? riders.find((row) => row.name === item.who);
+  const rider = matchRider(riders, { riderId: item.riderId, phone: item.phone, name: item.who });
   const where = positions(item);
   const policy = store.policies[item.zoneId] ?? DEFAULT_SAFETY;
   const stale = where.secondsAgo > policy.staleSeconds;

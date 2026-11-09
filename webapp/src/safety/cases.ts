@@ -1,4 +1,5 @@
 import type { DemoRecord, LiveRideCheck } from "../api/seed.ts";
+import { sameRider } from "../riders/match.ts";
 import type { LatLng } from "../dashboard/route.ts";
 import { market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
 import type { IncidentEvent, SafetyBook } from "./ops.ts";
@@ -115,6 +116,8 @@ export type Case = {
   country: MarketId;
   who: string;
   phone: string;
+  /** U3 prep (step 34): the server's rider id; the rider is joined by it, phone and name only for demo rows. */
+  riderId: string | null;
   raisedBy: "rider" | "driver" | "system";
   kind: Kind;
   level: Level;
@@ -179,6 +182,7 @@ export function caseOf(row: DemoRecord, safety: SafetyBook, ops: IncidentOps, no
     country: marketOfZone(row.zoneId)?.id ?? "SE",
     who: row.name,
     phone: row.phone,
+    riderId: row.riderId ?? null,
     raisedBy: row.raisedBy ?? (seed % 3 === 0 ? "driver" : "rider"),
     kind,
     level,
@@ -249,7 +253,7 @@ export function sortCases(cases: readonly Case[]): Case[] {
 }
 
 export function pastCases(item: Case, all: readonly Case[]): Case[] {
-  return all.filter((other) => other.id !== item.id && (other.phone === item.phone || other.who === item.who));
+  return all.filter((other) => other.id !== item.id && sameRider({ riderId: other.riderId, phone: other.phone, name: other.who }, { riderId: item.riderId, phone: item.phone, name: item.who }));
 }
 
 /** The trip the case is about: the rider's live trip, or their latest one. */

@@ -29,6 +29,8 @@ export type DemoRecord = {
   status: string;
   plate?: string;
   tripId?: string;
+  /** U3 prep (step 34): the server's rider id on tickets, incidents and trips; the panel joins riders by it, never by phone. */
+  riderId?: string;
   driverId?: string | null;
   fareOre?: number;
   kind?: string;
