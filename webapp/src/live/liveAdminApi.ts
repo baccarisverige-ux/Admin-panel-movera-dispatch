@@ -303,6 +303,7 @@ export function tripRecord(trip: Trip, rider?: Rider): DemoRecord {
     fareOre: trip.fare.amountMinor,
     createdAt: trip.createdAt,
     tripId: trip.riderId,
+    riderId: trip.riderId,
     ...(trip.acceptedAt ? { acceptedAt: trip.acceptedAt } : {}),
     ...(trip.scheduledAt ? { pickupAt: trip.scheduledAt } : {}),
     ...(paymentKind(trip.paymentStatus) ? { kind: paymentKind(trip.paymentStatus) } : {}),
@@ -390,7 +391,7 @@ export function ratingRecord(rating: AdminRating): DemoRecord {
 
 /** A support ticket as the demo ticket record: the subject is the name, status open / pending / resolved / closed. */
 export function ticketRecord(ticket: SupportTicket): DemoRecord {
-  return { id: ticket.ticketId, name: ticket.subject, phone: "", openedBy: ticket.openedBy, zoneId: ticket.zoneId ?? "", status: ticket.status, ...(ticket.tripId ? { tripId: ticket.tripId } : {}), createdAt: ticket.createdAt, kind: ticket.category, ...(ticket.driverId ? { driverId: ticket.driverId } : {}), live: true };
+  return { id: ticket.ticketId, name: ticket.subject, phone: "", openedBy: ticket.openedBy, zoneId: ticket.zoneId ?? "", status: ticket.status, ...(ticket.tripId ? { tripId: ticket.tripId } : {}), ...(ticket.riderId ? { riderId: ticket.riderId } : {}), createdAt: ticket.createdAt, kind: ticket.category, ...(ticket.driverId ? { driverId: ticket.driverId } : {}), live: true };
 }
 
 export function auditRow(entry: AuditEntry): AuditRow {

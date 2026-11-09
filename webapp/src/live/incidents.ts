@@ -80,6 +80,7 @@ export function incidentRecord(incident: ServerIncident): DemoRecord {
     createdAt: incident.openedAt,
     live: true,
     ...(incident.tripId ? { tripId: incident.tripId } : {}),
+    ...(incident.riderId ? { riderId: incident.riderId } : {}),
     ...(incident.raisedBy ? { raisedBy: incident.raisedBy } : {}),
     ...flat("phone", position(incident.position)),
     ...flat("car", position(incident.driverPosition)),

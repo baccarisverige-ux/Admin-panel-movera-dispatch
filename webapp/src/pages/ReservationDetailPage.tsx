@@ -1,3 +1,4 @@
+import { matchRider } from "../riders/match";
 import { useEffect, useMemo, useState } from "react";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useParams } from "react-router";
@@ -80,7 +81,7 @@ export function ReservationDetailPage() {
   const candidates = reservationCandidates(record, ops, drivers.data ?? [], vehicles.data ?? []);
   const fresh = candidates.filter((item) => !said.has(item.id));
   const chosen = candidates.some((item) => item.id === driverId) ? driverId : fresh[0]?.id ?? candidates[0]?.id ?? "";
-  const rider = (riders.data ?? []).find((item) => item.phone === record.phone);
+  const rider = matchRider(riders.data ?? [], { riderId: record.riderId, phone: record.phone, name: record.name });
   const zoneRules = liveRules(normalizeDispatchBook(dispatchSlice.value), record.zoneId).reservation;
   const ask = currentAsk(ops, nowIso);
   const askName = ask ? (drivers.data ?? []).find((item) => item.id === ask.ask.driverId)?.name ?? ask.ask.driverId : "";

@@ -1,3 +1,4 @@
+import { matchRider } from "../riders/match";
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { AlarmClock, ArrowLeft, CarFront, CheckCircle2, Clock3, Inbox, Languages, Layers, MessageSquareText, RotateCcw, Settings2, Siren, Star, UserRound, Users } from "lucide-react";
@@ -130,8 +131,8 @@ export function SupportWorkspace({ chat = false }: { chat?: boolean }) {
 
   const open = inThread.filter((item) => item.facts.state !== "solved");
   const ratings = inThread.map((item) => item.facts.rating).filter((value): value is number => value !== null);
-  const person = facts ? (facts.who === "driver" ? (drivers.data ?? []).find((item) => item.zoneId === row?.zoneId) : (riders.data ?? []).find((item) => item.phone === row?.phone) ?? (riders.data ?? []).find((item) => item.name === row?.name)) : undefined;
-  const trip = row ? (trips.data ?? []).find((item) => item.name === row.name && item.zoneId === row.zoneId) : undefined;
+  const person = facts ? (facts.who === "driver" ? (drivers.data ?? []).find((item) => item.zoneId === row?.zoneId) : matchRider(riders.data ?? [], { riderId: row?.riderId, phone: row?.phone, name: row?.name })) : undefined;
+  const trip = row ? (row.tripId ? (trips.data ?? []).find((item) => item.id === row.tripId) : undefined) ?? (row.riderId ? undefined : (trips.data ?? []).find((item) => item.name === row.name && item.zoneId === row.zoneId)) : undefined;
   const replies = facts ? templatesFor(settings, facts.topic, facts.lang) : [];
   const time = (ms: number) => new Intl.DateTimeFormat(scope.market.locale, { timeZone: scope.market.timeZone, dateStyle: "short", timeStyle: "short" }).format(new Date(ms));
   const ago = (ms: number) => { const minutes = Math.round((now - ms) / 60_000); return minutes < 60 ? `${minutes} min` : minutes < 1440 ? `${Math.round(minutes / 60)} h` : `${Math.round(minutes / 1440)} d`; };

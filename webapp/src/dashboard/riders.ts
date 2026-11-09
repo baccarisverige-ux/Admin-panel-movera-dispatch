@@ -1,3 +1,4 @@
+import { matchRider } from "../riders/match.ts";
 import { isLiveData, liveTripOf } from "../live/realData.ts";
 import type { DemoRecord } from "../api/seed.ts";
 import { CATEGORIES } from "../domain/contract.ts";
@@ -94,7 +95,7 @@ function requestOf(trip: DemoRecord, riders: readonly DemoRecord[], offeredTo: s
   const angle = ((seed % 360) * Math.PI) / 180;
   const radius = (zone.kind === "airport" ? 0.004 : 0.012) * (0.3 + ((seed >>> 8) % 70) / 100);
   const category = CATEGORIES[seed % CATEGORIES.length];
-  const rider = riders.find((row) => row.phone === trip.phone) ?? null;
+  const rider = matchRider(riders, { riderId: trip.riderId, phone: trip.phone, name: trip.name }) ?? null;
   return {
     tripId: trip.id,
     riderId: rider?.id ?? null,
