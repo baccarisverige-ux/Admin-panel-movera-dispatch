@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Phone, ShieldAlert, X } from "lucide-react";
 import { answerLabel, isAlert, outcomeOf, shiftOf, shifted, triggerLabel, type RideCheck } from "./rideCheck";
 import { tr, trn, trx } from "../i18n";
+import { phoneHref } from "../live/masking";
 
 /** How serious an open check looks on the map: a red answer or 112 is red, no answer or a plain reason is amber. */
 export type RideCheckTone = "red" | "amber";
@@ -80,7 +81,8 @@ type Props = {
   onDismiss: () => void;
 };
 
-const tel = (phone: string) => `tel:${phone.replace(/[^+\d]/g, "")}`;
+// v0.18.54 §76: a server-masked phone ("+46•••••12") is text, never a tel: link.
+const tel = (phone: string) => phoneHref(phone) ?? undefined;
 
 /** The small card pinned to a driver's car while a ride check is open. */
 export function RideCheckMapPopup({ item, now, driverName, driverPhone, openTo, driverTo, onDismiss }: Props) {
@@ -99,8 +101,8 @@ export function RideCheckMapPopup({ item, now, driverName, driverPhone, openTo, 
         <small className="ride-check-who">{driverName} · {check.name}</small>
         <div className="ride-check-actions">
           <Link className="dash-btn small" to={openTo}>{tr("Open")}</Link>
-          {driverPhone ? <a className="dash-btn small ghost" href={tel(driverPhone)}>{trn("{0}Call driver", <Phone size={12} aria-hidden="true" />)}</a> : driverTo ? <Link className="dash-btn small ghost" to={driverTo}>{tr("Driver")}</Link> : null}
-          {check.phone ? <a className="dash-btn small ghost" href={tel(check.phone)}>{trn("{0}Call rider", <Phone size={12} aria-hidden="true" />)}</a> : null}
+          {driverPhone && tel(driverPhone) ? <a className="dash-btn small ghost" href={tel(driverPhone)}>{trn("{0}Call driver", <Phone size={12} aria-hidden="true" />)}</a> : driverTo ? <Link className="dash-btn small ghost" to={driverTo}>{tr("Driver")}</Link> : null}
+          {check.phone && tel(check.phone) ? <a className="dash-btn small ghost" href={tel(check.phone)}>{trn("{0}Call rider", <Phone size={12} aria-hidden="true" />)}</a> : null}
         </div>
       </section>
     </div>

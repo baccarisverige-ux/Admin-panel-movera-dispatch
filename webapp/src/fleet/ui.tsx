@@ -9,6 +9,7 @@ import { DOC_CHOICES, docHealth, docLabel, type DocHealth, type HealthCount } fr
 import { statusLabel, type StatusFamily } from "../domain/labels";
 import { uiLocale, trx, tr, trn, type MessageKey } from "../i18n";
 import { DateInput } from "../ui/DateInput";
+import { phoneHref } from "../live/masking";
 
 export function Avatar({ name, size = 56 }: { name: string; size?: number }) {
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
@@ -285,7 +286,9 @@ export function ContactActions({ kind, id, name, phone, zoneId, messageTo, mapTo
         aria-label={tr("Call {0}", [name])}
         title={tr("Call {0}", [name])}
         onDone={() => {
-          window.location.href = `tel:${phone.replace(/[^+\d]/g, "")}`;
+          // v0.18.54 §76: a server-masked phone cannot be dialled.
+          const href = phoneHref(phone);
+          if (href) window.location.href = href;
         }}
       >
         <Phone size={size} aria-hidden="true" />{compact ? null : tr("Call")}

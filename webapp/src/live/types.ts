@@ -73,7 +73,9 @@ export type Driver = {
   offlineAfterTrip?: boolean;
   firstName: string;
   lastName?: string;
+  /** v0.18.54 §76: YYYY-MM-DD, or the year only ("1990") when masked for this admin. */
   dateOfBirth?: string;
+  /** v0.18.54 §76: masked as "a•••@example.com" for an admin without drivers.viewSensitive. */
   email?: string;
   country?: string;
   cityId?: string;
@@ -98,6 +100,8 @@ export type Driver = {
   rating?: number;
   /** v0.18.4 (G3-D2): on GET /admin/drivers/{driverId} (not on the list). */
   performance?: DriverPerformance;
+  /** v0.18.54 §76 (contract.json#adminMasking): true when phone / email / dateOfBirth were masked for this admin; absent when full. */
+  sensitiveMasked?: boolean;
 };
 
 export type Fleet = {
@@ -109,7 +113,10 @@ export type Fleet = {
   cityId: string;
   ownerDriverId: string;
   ownerName: string;
+  /** v0.18.54 §76: masked as "b•••@example.com" for an admin without drivers.viewSensitive. */
   ownerEmail?: string;
+  /** v0.18.54 §76: true when ownerEmail was masked for this admin; absent when full. */
+  sensitiveMasked?: boolean;
   status: ReviewStatus;
   code?: string;
   driverCount: number;
@@ -292,8 +299,11 @@ export type Rider = {
   /** v0.18.29 A2 (fix job 0) (G16 Q16-2): warning / pause / ban with its reason. */
   moderation?: { level: "none" | "warning" | "paused" | "banned"; reason?: string; until: string | null; setAt?: string };
   firstName: string;
+  /** E.164, or v0.18.54 §76 masked ("+46•••••12") for an admin without riders.viewSensitive. */
   phone: string;
   email?: string;
+  /** v0.18.54 §76: true when phone / email were masked for this admin; absent when full. */
+  sensitiveMasked?: boolean;
   rating?: number;
   status: string;
   version: number;

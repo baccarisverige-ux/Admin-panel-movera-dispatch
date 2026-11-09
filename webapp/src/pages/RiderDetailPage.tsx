@@ -63,6 +63,8 @@ import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
 import { NOTE_MAX } from "../domain/labels";
 import { SensitiveValue } from "../ui/SensitiveValue";
+import { MaskedText, RevealSensitive } from "../live/LiveReveal";
+import type { Revealed } from "../live/masking";
 import { TabPanel, Tabs } from "../ui/Tabs";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 
@@ -88,6 +90,8 @@ export function RiderDetailPage() {
   const { riderId = "" } = useParams();
   const { agent } = useSession();
   const role = agent?.role ?? "viewer";
+  // v0.18.54 §76 (step 36): the full values after Reveal, for this page view only (never cached or stored).
+  const [revealed, setRevealed] = useState<Revealed | null>(null);
   const [params, setParams] = useSearchParams();
   const tab = TABS.find((item) => item.id === params.get("tab"))?.id ?? "overview";
   const data = useRidersData("month", null);
@@ -287,8 +291,18 @@ export function RiderDetailPage() {
             <section className="fd-box">
               <h3>{trn("{0} Profile", <UserCog size={16} aria-hidden="true" />)}</h3>
               <dl className="rd-dl">
-                <div><dt>{tr("Phone")}</dt><dd><SensitiveValue value={rider.phone} permission="riders.viewSensitive" command="admin.rider.revealSensitive" targetId={rider.id} label={tr("Phone")} /></dd></div>
-                <div><dt>{tr("Email")}</dt><dd><SensitiveValue value={profile.email} permission="riders.viewSensitive" command="admin.rider.revealSensitive" targetId={rider.id} label={tr("Email")} /></dd></div>
+                {rider.liveSensitiveMasked ? (
+                  // v0.18.54 §76: the server masked phone / e-mail for this admin (text, no tel: link); Reveal asks why and shows the full values once.
+                  <>
+                    <div><dt>{tr("Phone")}</dt><dd><MaskedText value={rider.phone} revealed={revealed?.phone} field="phone" /> {revealed ? null : <RevealSensitive kind="rider" id={rider.id} onRevealed={setRevealed} />}</dd></div>
+                    <div><dt>{tr("Email")}</dt><dd><MaskedText value={rider.email} revealed={revealed?.email} field="email" /></dd></div>
+                  </>
+                ) : (
+                  <>
+                    <div><dt>{tr("Phone")}</dt><dd><SensitiveValue value={rider.phone} permission="riders.viewSensitive" command="admin.rider.revealSensitive" targetId={rider.id} label={tr("Phone")} /></dd></div>
+                    <div><dt>{tr("Email")}</dt><dd><SensitiveValue value={profile.email} permission="riders.viewSensitive" command="admin.rider.revealSensitive" targetId={rider.id} label={tr("Email")} /></dd></div>
+                  </>
+                )}
                 <div><dt>{trn("{0} Language", <Languages size={13} aria-hidden="true" />)}</dt><dd>{profile.language}</dd></div>
                 <div><dt>{trn("{0} Home and work", <MapPin size={13} aria-hidden="true" />)}</dt><dd>{profile.homeArea} · {profile.workArea}</dd></div>
                 <div><dt>{trn("{0} Member since", <CalendarDays size={13} aria-hidden="true" />)}</dt><dd>{safeDate(profile.joinedAt)}</dd></div>

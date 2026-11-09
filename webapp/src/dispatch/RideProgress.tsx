@@ -12,6 +12,7 @@ import { EVENT_LABEL, OFFER_STATUS_LABEL, countdownLabel, offerProgress, seconds
 import { useMapFocus } from "./assignContext";
 import { useClock, useTripOffers } from "./DriverBonusBox";
 import { tr, trn, trx, uiLocale } from "../i18n";
+import { phoneHref } from "../live/masking";
 
 /**
  * How the offers sent for a waiting rider are going, the same in the big panel and the small pop-up on the map:
@@ -116,7 +117,8 @@ export function ProgressSummary({ view, now }: { view: TripOffersView; now: numb
   );
 }
 
-const tel = (phone: string) => `tel:${phone.replace(/[^+\d]/g, "")}`;
+// v0.18.54 §76: a server-masked phone ("+46•••••12") is text, never a tel: link.
+const tel = (phone: string) => phoneHref(phone) ?? undefined;
 
 /** "Driver on the way": who accepted, the car, the time to the pickup, how the ride reached them and the price. */
 export function AcceptedCard({ view }: { view: TripOffersView }) {
@@ -138,7 +140,7 @@ export function AcceptedCard({ view }: { view: TripOffersView }) {
       <div className="hq-actions">
         {focus ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => focus.focusDriver(driver.driverId)}>{trn("{0} Show on the map", <MapPin size={13} aria-hidden="true" />)}</button> : null}
         <Link className="dash-btn small ghost" to={`/drivers/${driver.driverId}`}>{trn("{0} Open driver", <UserRound size={13} aria-hidden="true" />)}</Link>
-        {driver.phone ? <a className="dash-btn small ghost" href={tel(driver.phone)}>{trn("{0} Call driver", <Phone size={13} aria-hidden="true" />)}</a> : null}
+        {driver.phone && tel(driver.phone) ? <a className="dash-btn small ghost" href={tel(driver.phone)}>{trn("{0} Call driver", <Phone size={13} aria-hidden="true" />)}</a> : null}
       </div>
     </section>
   );
