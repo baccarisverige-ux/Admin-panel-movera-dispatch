@@ -42,10 +42,10 @@ const FLEETS: Record<Exclude<MarketId, "SE">, [string, string, string][]> = {
 function fleetOwners(now: string): Built[] {
   const nowMs = Date.parse(now);
   const rows: [string, string, string, string, string, string, string, string][] = [
-    ["O1", "Johan Ekström", "Ekström Taxi AB", "559012-3456", "+46 70 555 12 34", "johan@ekstromtaxi.se", "Z007", "active"],
-    ["O2", "Sofia Lindqvist", "Söder Transport AB", "559077-8812", "+46 73 220 45 10", "sofia@sodertransport.se", "Z002", "active"],
-    ["O3", "Antoine Girard", "Paris Premium Cars SAS", "852 314 907", "+33 6 41 22 87 15", "antoine@parispremium.fr", "FR-OCE", "active"],
-    ["O4", "Claire Fontaine", "Seine Mobility SARL", "901 552 438", "+33 6 72 18 40 93", "claire@seinemobility.fr", "FR-BE", "on_hold"],
+    ["O1", "Johan Ekström", "Ekström Taxi AB", "559012-3456", "+46 70 174 06 34", "johan@ekstromtaxi.se", "Z007", "active"],
+    ["O2", "Sofia Lindqvist", "Söder Transport AB", "559077-8812", "+46 70 174 06 10", "sofia@sodertransport.se", "Z002", "active"],
+    ["O3", "Antoine Girard", "Paris Premium Cars SAS", "852 314 907", "+33 6 39 98 87 15", "antoine@parispremium.fr", "FR-OCE", "active"],
+    ["O4", "Claire Fontaine", "Seine Mobility SARL", "901 552 438", "+33 6 39 98 40 93", "claire@seinemobility.fr", "FR-BE", "on_hold"],
     ["O5", "Mehdi Ben Salah", "Carthage Transport SARL", "1784521/K", "+216 98 412 336", "mehdi@carthage-transport.tn", "TN-LAC", "active"],
     ["O6", "Leila Haddad", "Haddad Cars SUARL", "1823007/P", "+216 22 905 117", "leila@haddadcars.tn", "TN-AR", "pending"],
   ];
