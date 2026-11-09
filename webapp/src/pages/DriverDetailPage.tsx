@@ -99,6 +99,8 @@ export function DriverDetailPage() {
   const [accountNote, setAccountNote] = useState("");
   // v0.18.54 §76 (step 36): the full values after Reveal, for this page view only (never cached or stored).
   const [revealed, setRevealed] = useState<Revealed | null>(null);
+  // §76: a revealed value belongs to ONE record; the route element is reused when only the id changes, so reset it.
+  useEffect(() => setRevealed(null), [driverId]);
   const [bankNote, setBankNote] = useState("");
   const [privateNote, setPrivateNote] = useState("");
   const [notice, setNotice] = useState("");

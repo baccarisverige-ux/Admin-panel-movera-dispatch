@@ -91,6 +91,8 @@ export function FleetOwnerDetailPage() {
   const live = isLiveData();
   // v0.18.54 §76 (step 36): the fleet's full owner e-mail after Reveal, for this page view only.
   const [revealed, setRevealed] = useState<Revealed | null>(null);
+  // §76: a revealed value belongs to ONE record; the route element is reused when only the id changes, so reset it.
+  useEffect(() => setRevealed(null), [ownerId]);
   const crewStats = useMemo(() => crew.map((driver) => {
     if (live) {
       // Live (owner G2 R3): the server's documents and rating only; trips and earnings are not sent, so they read "—".

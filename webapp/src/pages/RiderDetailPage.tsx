@@ -1,5 +1,5 @@
 import { belongsToRider } from "../riders/match";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { Link, useParams, useSearchParams } from "react-router";
 import {
@@ -92,6 +92,8 @@ export function RiderDetailPage() {
   const role = agent?.role ?? "viewer";
   // v0.18.54 §76 (step 36): the full values after Reveal, for this page view only (never cached or stored).
   const [revealed, setRevealed] = useState<Revealed | null>(null);
+  // §76: a revealed value belongs to ONE record; the route element is reused when only the id changes, so reset it.
+  useEffect(() => setRevealed(null), [riderId]);
   const [params, setParams] = useSearchParams();
   const tab = TABS.find((item) => item.id === params.get("tab"))?.id ?? "overview";
   const data = useRidersData("month", null);
