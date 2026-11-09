@@ -138,6 +138,7 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
     kind: docState(driver.documents, driver.requiredDocuments),
     fleetId: driver.fleet?.fleetId ?? null,
     ...(driver.email ? { email: driver.email } : {}),
+    ...(driver.sensitiveMasked ? { liveSensitiveMasked: true } : {}),
     live: true,
     liveAccount: {
       accountStatus: driver.accountStatus,
@@ -151,6 +152,7 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       ...(driver.categoryIds ? { categoryIds: [...driver.categoryIds] } : {}),
       ...(driver.createdAt ? { createdAt: driver.createdAt } : {}),
       ...(driver.termsAcceptedAt ? { termsAcceptedAt: driver.termsAcceptedAt } : {}),
+      ...(driver.dateOfBirth ? { dateOfBirth: driver.dateOfBirth } : {}),
     },
     liveDriver: {
       payoutHold: driver.payoutHold ? { reason: driver.payoutHold.reason, at: driver.payoutHold.at } : null,
@@ -216,7 +218,7 @@ export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Dri
 const FLEET_STATUS: Record<string, string> = { approved: "active", pending: "pending", rejected: "on_hold", blocked: "suspended" };
 
 export function fleetRecord(fleet: Fleet, zoneId: string): DemoRecord {
-  return { id: fleet.fleetId, name: fleet.name, phone: "", zoneId, status: FLEET_STATUS[fleet.status] ?? fleet.status, ownerId: fleet.ownerDriverId };
+  return { id: fleet.fleetId, name: fleet.name, phone: "", zoneId, status: FLEET_STATUS[fleet.status] ?? fleet.status, ownerId: fleet.ownerDriverId, ...(fleet.sensitiveMasked ? { liveSensitiveMasked: true } : {}) };
 }
 
 export function ownerRecord(fleet: Fleet, zoneId: string): DemoRecord {
@@ -231,6 +233,7 @@ export function ownerRecord(fleet: Fleet, zoneId: string): DemoRecord {
     joinedAt: fleet.createdAt,
     ...(fleet.code ? { liveFleetCode: fleet.code } : {}),
     ...(fleet.ownerEmail ? { email: fleet.ownerEmail } : {}),
+    ...(fleet.sensitiveMasked ? { liveSensitiveMasked: true } : {}),
   };
 }
 
@@ -331,6 +334,7 @@ export function riderRecord(rider: Rider): DemoRecord {
     status: rider.status,
     version: rider.version,
     ...(rider.email ? { email: rider.email } : {}),
+    ...(rider.sensitiveMasked ? { liveSensitiveMasked: true } : {}),
     live: true,
     liveRider: {
       rating: typeof rider.rating === "number" ? rider.rating : null,

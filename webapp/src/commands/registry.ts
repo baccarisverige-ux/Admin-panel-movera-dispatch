@@ -75,6 +75,11 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.riderSavedPlaces", label: "Show the rider's saved places", reason: false, permission: "riders.read" },
   { id: "admin.server.driverPreferences", label: "Show the driver's ride preferences", reason: false, permission: "drivers.read" },
   { id: "admin.server.emergencyContacts", label: "Show the driver's emergency contacts", reason: false, permission: "incidents.read" },
+  // v0.18.54 §76 (step 36): Reveal with a reason on a server-masked record; one SOS reveal of both phones on an open case.
+  { id: "admin.server.revealRider", label: "Reveal a rider's full phone and e-mail (reason, audited)", reason: false, permission: "riders.read" },
+  { id: "admin.server.revealDriver", label: "Reveal a driver's full phone, e-mail and date of birth (reason, audited)", reason: false, permission: "drivers.read" },
+  { id: "admin.server.revealFleet", label: "Reveal a fleet's full owner e-mail (reason, audited)", reason: false, permission: "drivers.read" },
+  { id: "admin.server.revealIncidentContacts", label: "Reveal both phones of an open safety case (SOS, audited)", reason: false, permission: "incidents.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },
   // The id is kept for older audit rows; the demo amount is above the default 500 kr second-admin limit.
   { id: "admin.audit.refund250", label: "Refund 600 kr", reason: true, permission: "payments.refund" },

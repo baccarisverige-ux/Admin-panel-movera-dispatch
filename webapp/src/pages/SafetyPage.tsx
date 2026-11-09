@@ -2,6 +2,7 @@ import { matchRider } from "../riders/match";
 import { isLiveData } from "../live/realData";
 import { NotConnected } from "../live/NotConnected";
 import { LiveEmergencyContacts } from "../live/LiveEmergencyContacts";
+import { LiveRevealContacts } from "../live/LiveReveal";
 import { caseIsOpen } from "../live/emergencyContacts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -515,6 +516,8 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
             <p><Siren size={13} aria-hidden="true" /> {tr("Trip")} {trip ? <Link to={`/trips/${trip.id}`}>{trip.id}</Link> : tr("not linked")}</p>
             <p className="op-help">{trx(place.name)} · {zoneById(item.zoneId)?.city ?? ""}</p>
           </div>
+          {/* v0.18.54 §76 (owner Q41): one click on an OPEN case reveals both phones; hidden once the case is closed. */}
+          {isLiveData() ? <LiveRevealContacts incidentId={item.id} status={caseIsOpen(item.state) ? "open" : "closed"} /> : null}
           {isLiveData() ? <LiveEmergencyContacts incidentId={item.id} hasDriver={Boolean(item.driverId ?? trip?.driverId)} hasRider={Boolean(rider)} open={caseIsOpen(item.state)} /> : null}
           {settings.pastCases ? (
             <>

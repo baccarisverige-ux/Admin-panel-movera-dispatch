@@ -54,6 +54,8 @@ import { AccountChip, Avatar, DocSummary, DocumentsTable, Field, HealthPill, Mes
 import { formatMoney, market as marketById, marketOfZone, zoneById } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { SensitiveValue } from "../ui/SensitiveValue";
+import { MaskedText, RevealSensitive } from "../live/LiveReveal";
+import { dateOfBirthText, type Revealed } from "../live/masking";
 import { TabPanel, Tabs } from "../ui/Tabs";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { auditActionText, auditActorText, auditDetailText, mainDocuments, renewalFor } from "../live/format";
@@ -95,6 +97,10 @@ export function DriverDetailPage() {
     return () => window.removeEventListener("popstate", restore);
   }, []);
   const [accountNote, setAccountNote] = useState("");
+  // v0.18.54 §76 (step 36): the full values after Reveal, for this page view only (never cached or stored).
+  const [revealed, setRevealed] = useState<Revealed | null>(null);
+  // §76: a revealed value belongs to ONE record; the route element is reused when only the id changes, so reset it.
+  useEffect(() => setRevealed(null), [driverId]);
   const [bankNote, setBankNote] = useState("");
   const [privateNote, setPrivateNote] = useState("");
   const [notice, setNotice] = useState("");
@@ -191,6 +197,8 @@ export function DriverDetailPage() {
   </section>
   );
   const liveFacts = liveDriverOf(driver);
+  const masked = Boolean(liveData && driver.liveSensitiveMasked);
+  const dob = driver.liveAccount?.dateOfBirth;
   const activationIssue = liveData ? null : driverActivationIssue(store.value, driverSeed, car);
   const driverAudits = (audit.data ?? []).filter((item) => item.targetId === driver.id).slice(0, 20);
   const money = (minor: number) => formatMoney(minor, country);
@@ -341,8 +349,19 @@ export function DriverDetailPage() {
         </div>
         <dl className="fd-facts">
           <Field label={tr("Driver code")}><Hash size={13} aria-hidden="true" /> {code}</Field>
-          <Field label={tr("Phone")}><Phone size={13} aria-hidden="true" /> <SensitiveValue value={driver.phone} permission="drivers.viewSensitive" command="admin.driver.revealSensitive" targetId={driver.id} label={tr("Phone")} /></Field>
-          <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> {email}</Field>
+          {masked ? (
+            // v0.18.54 §76: the server masked this driver's phone / e-mail / date of birth for this admin; Reveal asks why and shows them once.
+            <>
+              <Field label={tr("Phone")}><Phone size={13} aria-hidden="true" /> <MaskedText value={driver.phone} revealed={revealed?.phone} field="phone" dash={DASH} /> {revealed ? null : <RevealSensitive kind="driver" id={driver.id} onRevealed={setRevealed} />}</Field>
+              <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> <MaskedText value={driver.email} revealed={revealed?.email} field="email" dash={DASH} /></Field>
+            </>
+          ) : (
+            <>
+              <Field label={tr("Phone")}><Phone size={13} aria-hidden="true" /> <SensitiveValue value={driver.phone} permission="drivers.viewSensitive" command="admin.driver.revealSensitive" targetId={driver.id} label={tr("Phone")} /></Field>
+              <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> {email}</Field>
+            </>
+          )}
+          {liveData && (dob || revealed?.dateOfBirth) ? <Field label={tr("Date of birth")}><MaskedText value={dateOfBirthText(dob, uiLocale(), DASH)} revealed={revealed?.dateOfBirth ? dateOfBirthText(revealed.dateOfBirth, uiLocale(), DASH) : null} field="dob" dash={DASH} /></Field> : null}
           <Field label={tr("Zone")}>{zoneById(driver.zoneId)?.name ?? driver.zoneId}</Field>
           <Field label={tr("Vehicle")}><Car size={13} aria-hidden="true" /> {carRecord ? `${carRecord.make ?? ""} ${carRecord.model ?? ""} · ${carRecord.plate ?? carRecord.id}` : tr("No vehicle linked")}</Field>
           <Field label={tr("Payouts go to")}>{fleet ? tr("{0} (fleet)", [fleet.name]) : liveData ? DASH : tr("The driver · bank •••• {0}", [ops.bank.last4])}</Field>

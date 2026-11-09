@@ -39,6 +39,8 @@ import { COUNTRY_LABEL } from "../i18n/countries";
 import { AccountChip, Avatar, ContactActions, DocSummary, DocumentsTable, Field, MessagesPanel, OnlinePill, Stat, type DocRow, type Presence } from "../fleet/ui";
 import { formatMoney, market as marketById, marketOfZone, zoneById } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
+import { MaskedText, RevealSensitive } from "../live/LiveReveal";
+import type { Revealed } from "../live/masking";
 import { TabPanel, Tabs } from "../ui/Tabs";
 import { uiLocale, tr, trn, trx } from "../i18n";
 
@@ -87,6 +89,10 @@ export function FleetOwnerDetailPage() {
   }, [drivers.data, ownFleets]);
   const presence = useMemo(() => new Map(liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0).map((row) => [row.id, row.state as Presence])), [drivers.data, vehicles.data, trips.data, incidents.data]);
   const live = isLiveData();
+  // v0.18.54 §76 (step 36): the fleet's full owner e-mail after Reveal, for this page view only.
+  const [revealed, setRevealed] = useState<Revealed | null>(null);
+  // §76: a revealed value belongs to ONE record; the route element is reused when only the id changes, so reset it.
+  useEffect(() => setRevealed(null), [ownerId]);
   const crewStats = useMemo(() => crew.map((driver) => {
     if (live) {
       // Live (owner G2 R3): the server's documents and rating only; trips and earnings are not sent, so they read "—".
@@ -220,7 +226,12 @@ export function FleetOwnerDetailPage() {
         </div>
         <dl className="fd-facts">
           <Field label={tr("Phone")}><Phone size={13} aria-hidden="true" /> {can(role, "drivers.viewSensitive") ? owner.phone : `•••• ${owner.phone.slice(-4)}`}</Field>
-          <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> {owner.email}</Field>
+          {live && owner.liveSensitiveMasked && ownFleets[0] ? (
+            // v0.18.54 §76: the server masked the owner e-mail for this admin; Reveal (fleet route) asks why and shows it once.
+            <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> <MaskedText value={owner.email} revealed={revealed?.ownerEmail} field="email" /> {revealed ? null : <RevealSensitive kind="fleet" id={ownFleets[0].id} onRevealed={setRevealed} />}</Field>
+          ) : (
+            <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> {owner.email}</Field>
+          )}
           <Field label={tr("Company number")}><Hash size={13} aria-hidden="true" /> {owner.orgNumber}</Field>
           <Field label={tr("Main zone")}>{zoneById(owner.zoneId)?.name ?? owner.zoneId}</Field>
           <Field label={tr("Fleets")}>{ownFleets.map((fleet) => fleet.name).join(", ") || tr("No fleet yet")}</Field>

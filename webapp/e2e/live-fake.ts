@@ -567,6 +567,33 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       state.refundPayouts = state.refundPayouts.filter((item) => item.refundId !== paid[1]);
       return json(route, 200, { refundId: paid[1], payoutStatus: "paid" });
     }
+    // v0.18.54 §76 (contract.json#adminMasking): Reveal with a reason (rider / driver / fleet) answers the full values once;
+    // the SOS reveal answers both phones of an OPEN case (reason optional, "SOS"). The fake keeps the full values in the seeds.
+    const reveal = /^\/api\/v1\/admin\/(riders|drivers|fleets)\/([^/]+)\/reveal$/.exec(p);
+    if (reveal && method === "POST") {
+      const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
+      if (reason.length < 3 || reason.length > 200) return json(route, 400, { code: "invalid_request", message: "reason is required", requestId: "r-400rv", retryable: false, reason: "reason_required" });
+      const revealedAt = "2026-10-26T10:00:00Z";
+      if (reveal[1] === "riders") {
+        const full = RIDERS.find((item) => item.riderId === reveal[2]);
+        if (!full || !state.riders.some((item) => item["riderId"] === reveal[2])) return json(route, 404, { code: "not_found", message: "No such rider.", requestId: "r-404rv", retryable: false });
+        return json(route, 200, { riderId: full.riderId, phone: full.phone, ...(full.email ? { email: full.email } : {}), revealedAt });
+      }
+      if (reveal[1] === "drivers") {
+        const full = [DRIVER, OWNER].find((item) => item.driverId === reveal[2]);
+        if (!full || !state.drivers.some((item) => item.driverId === reveal[2])) return json(route, 404, { code: "not_found", message: "No such driver.", requestId: "r-404dv", retryable: false });
+        return json(route, 200, { driverId: full.driverId, phone: "+46701110001", email: full.email, dateOfBirth: "1990-05-17", revealedAt });
+      }
+      if (!state.fleets.some((item) => item.fleetId === reveal[2])) return json(route, 404, { code: "not_found", message: "No such fleet.", requestId: "r-404fv", retryable: false });
+      return json(route, 200, { fleetId: reveal[2], ownerEmail: FLEET.ownerEmail, revealedAt });
+    }
+    const sosReveal = /^\/api\/v1\/admin\/incidents\/([^/]+)\/reveal-contacts$/.exec(p);
+    if (sosReveal && method === "POST") {
+      const current = state.incidents.find((item) => item.incidentId === sosReveal[1]);
+      if (!current) return json(route, 404, { code: "not_found", message: "No such incident.", requestId: "r-404sv", retryable: false });
+      if (!["open", "investigating"].includes(current.status)) return json(route, 409, { code: "invalid_transition", message: "The case is closed.", requestId: "r-409sv", retryable: false, reason: "incident_closed" });
+      return json(route, 200, { incidentId: current.incidentId, rider: current.riderId ? { phone: RIDERS.find((item) => item.riderId === current.riderId)?.phone ?? "+46700000599" } : null, driver: current.driverId ? { phone: "+46701110001" } : null, revealedAt: "2026-10-26T10:00:00Z" });
+    }
     if (p === "/api/v1/admin/incidents") return json(route, 200, { items: inZones(state.incidents, zoneField), nextCursor: null });
     if (p === "/api/v1/admin/incidents/stream") {
       const after = Number(url.searchParams.get("after") ?? 0);

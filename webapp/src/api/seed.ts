@@ -75,6 +75,11 @@ export type DemoRecord = {
   liveRideCheck?: LiveRideCheck;
   /** Live build: the record came from the Movera server. Nothing on it may be invented (owner rule, part 3). */
   live?: true;
+  /**
+   * v0.18.54 §76 (contract.json#adminMasking): the server masked this record's phone / e-mail / date of birth (or a
+   * fleet's owner e-mail) for this admin; the pages show Reveal with a reason (live/LiveReveal.tsx).
+   */
+  liveSensitiveMasked?: true;
   /** Live trips: the server's own facts (contract TripProjection), so no page derives them from the id. */
   liveTrip?: LiveTripFacts;
   /** Live drivers: the server's presence and rating (Driver, /admin/live/drivers). */
@@ -177,6 +182,8 @@ export type LiveAccountFacts = {
   createdAt?: string;
   /** When the driver accepted the terms (Driver.termsAcceptedAt). */
   termsAcceptedAt?: string;
+  /** v0.18.54 §76: Driver.dateOfBirth, YYYY-MM-DD or the year only when masked. */
+  dateOfBirth?: string;
 };
 
 export type LiveDriverFacts = {
