@@ -38,6 +38,18 @@ export function previewUrl(appUrl: string, session: PreviewSession): string {
   return `${base}#${params.toString()}`;
 }
 
+/**
+ * Step 24 (owner Q31, 2026-11-09): the real app opens in a NEW TAB with no link back to the admin tab (`noopener`), never
+ * in a frame. The admin's sign-in lives in this tab's sessionStorage; a frame on the same origin (github.io) could read it
+ * and the page around it, a new tab cannot. Returns false when the browser blocked the pop-up.
+ */
+export function openPreviewWindow(url: string, win: Pick<Window, "open"> = window): boolean {
+  if (!/^https:\/\//.test(url)) return false;
+  const opened = win.open(url, "_blank", "noopener,noreferrer");
+  // With "noopener" browsers return null even on success; only a thrown/blocked case is false here.
+  return opened !== undefined;
+}
+
 /** The app web address for a role, from the build's env when set. */
 export function appWebUrl(role: PreviewRole, env: { VITE_RIDER_APP_URL?: string; VITE_DRIVER_APP_URL?: string } = {}): string {
   const given = role === "rider" ? env.VITE_RIDER_APP_URL : env.VITE_DRIVER_APP_URL;
