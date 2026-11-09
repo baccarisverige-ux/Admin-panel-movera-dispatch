@@ -3,6 +3,7 @@ import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { kpiReport, localDay as kpiDay } from "../live/kpis";
 import type { KpiDay } from "../live/types";
 import { isLiveData } from "../live/realData";
+import { WAITING_TRIPS_LIST } from "../live/liveAdminApi";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
@@ -198,6 +199,9 @@ export function DashboardPage() {
   const presence = useRecords(LIVE_CARD_LIST, undefined, { refetchMs: LIVE_MS, follow: true });
   const drivers = useRecords("drivers", undefined, { refetchMs: LIVE_MS });
   const trips = useRecords("trips", undefined, { refetchMs: LIVE_MS });
+  // Step 39 (plan 0.28a, audit A15 N5): live, the ride requests are every waiting trip the server has (all pages of
+  // GET /admin/trips?status=…), not the first 50 trips; the demo (and a live read that failed) keeps the trip list.
+  const waitingTrips = useRecords(isLiveData() ? WAITING_TRIPS_LIST : "trips", undefined, { refetchMs: LIVE_MS });
   const incidents = useRecords("incidents", undefined, { refetchMs: LIVE_MS });
   const tickets = useRecords("tickets", undefined, { refetchMs: LIVE_MS });
   const reservations = useRecords("reservations", undefined, { refetchMs: LIVE_MS });
@@ -215,6 +219,7 @@ export function DashboardPage() {
   const presenceRows = useMemo(() => maskDrivers(liveCardRows(presence.data, drivers.data), access), [presence.data, drivers.data, access]);
   const riderRows = useMemo(() => maskRiders(riders.data ?? [], access), [riders.data, access]);
   const tripRows = useMemo(() => maskBookings(trips.data ?? [], access), [trips.data, access]);
+  const waitingRows = useMemo(() => (waitingTrips.data ? maskBookings(waitingTrips.data, access) : null), [waitingTrips.data, access]);
   const reservationRows = useMemo(() => maskBookings(reservations.data ?? [], access), [reservations.data, access]);
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const bonusSlice = useSlice<BonusBook>(BONUS_KEY, emptyBonusBook());
@@ -298,7 +303,7 @@ export function DashboardPage() {
     return CATEGORIES.filter((category) => ops.categories[category.id]).map((category) => category.id);
   };
   // Offers only count when they went to a driver who could really take them.
-  const requests = useMemo(() => maskRequests(rideRequests(tripRows, riderRows, (driverId) => onlineIds.has(driverId)), access), [tripRows, riderRows, onlineIds, access]);
+  const requests = useMemo(() => maskRequests(rideRequests(waitingRows ?? tripRows, riderRows, (driverId) => onlineIds.has(driverId)), access), [waitingRows, tripRows, riderRows, onlineIds, access]);
   const liveTabCount = useMemo(() => liveTabCounts(requests.length, tripRows), [requests.length, tripRows]);
   // G3-R4 (owner "Real numbers only"): live, the server's riders online in the zones in view; demo, no invented share.
   const riderStats = riderCounts(requests, live, riderRows, liveData ? ridersOnlineIn(ridersOnline.data ?? [], scope.zones.length ? scope.zones : market.zones.map((zone) => zone.id)) : null);
