@@ -13,5 +13,5 @@ export const svC3RealAppPreview: Record<keyof typeof enC3RealAppPreview, string>
   // Step 24 (owner Q31, 2026-11-09): the app opens in a new tab, not in a frame.
   "The real app opens in a new tab, read-only for 15 minutes. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.": "Den riktiga appen öppnas i en ny flik, skrivskyddad i 15 minuter. Inget skickas: Boka, Acceptera och Betala visar ”Förhandsvisning – inte skickat”.",
   "Open the real app in a new tab": "Öppna den riktiga appen i en ny flik",
-  "Your browser blocked the new tab. Allow pop-ups for this site and try again.": "Webbläsaren blockerade den nya fliken. Tillåt popup-fönster för den här webbplatsen och försök igen.",
+  "If no tab opened, allow pop-ups for this site and press the button again.": "Om ingen flik öppnades, tillåt popup-fönster för den här webbplatsen och tryck på knappen igen.",
 };

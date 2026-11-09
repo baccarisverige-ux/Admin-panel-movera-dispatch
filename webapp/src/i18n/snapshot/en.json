@@ -8553,7 +8553,7 @@
 ["The real app could not open. Press Reload to try again.","The real app could not open. Press Reload to try again."],
 ["The real app opens in a new tab, read-only for 15 minutes. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.","The real app opens in a new tab, read-only for 15 minutes. Nothing is sent: Book, Accept and Pay show “Preview – not sent”."],
 ["Open the real app in a new tab","Open the real app in a new tab"],
-["Your browser blocked the new tab. Allow pop-ups for this site and try again.","Your browser blocked the new tab. Allow pop-ups for this site and try again."],
+["If no tab opened, allow pop-ups for this site and press the button again.","If no tab opened, allow pop-ups for this site and press the button again."],
 ["Driver's emergency contacts","Driver's emergency contacts"],
 ["No driver on this case.","No driver on this case."],
 ["Your role cannot see emergency contacts.","Your role cannot see emergency contacts."],

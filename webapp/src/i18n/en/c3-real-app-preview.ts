@@ -11,5 +11,5 @@ export const enC3RealAppPreview = {
   // Step 24 (owner Q31, 2026-11-09): the app opens in a new tab, not in a frame.
   "The real app opens in a new tab, read-only for 15 minutes. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.": "The real app opens in a new tab, read-only for 15 minutes. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.",
   "Open the real app in a new tab": "Open the real app in a new tab",
-  "Your browser blocked the new tab. Allow pop-ups for this site and try again.": "Your browser blocked the new tab. Allow pop-ups for this site and try again.",
+  "If no tab opened, allow pop-ups for this site and press the button again.": "If no tab opened, allow pop-ups for this site and press the button again.",
 } as const;

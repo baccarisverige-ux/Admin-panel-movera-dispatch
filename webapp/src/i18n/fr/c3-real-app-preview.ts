@@ -13,5 +13,5 @@ export const frC3RealAppPreview: Record<keyof typeof enC3RealAppPreview, string>
   // Step 24 (owner Q31, 2026-11-09): the app opens in a new tab, not in a frame.
   "The real app opens in a new tab, read-only for 15 minutes. Nothing is sent: Book, Accept and Pay show “Preview – not sent”.": "La vraie appli s’ouvre dans un nouvel onglet, en lecture seule pendant 15 minutes. Rien n’est envoyé : Réserver, Accepter et Payer affichent « Aperçu – non envoyé ».",
   "Open the real app in a new tab": "Ouvrir la vraie appli dans un nouvel onglet",
-  "Your browser blocked the new tab. Allow pop-ups for this site and try again.": "Votre navigateur a bloqué le nouvel onglet. Autorisez les fenêtres pop-up pour ce site et réessayez.",
+  "If no tab opened, allow pop-ups for this site and press the button again.": "Si aucun onglet ne s’est ouvert, autorisez les fenêtres pop-up pour ce site et appuyez à nouveau sur le bouton.",
 };

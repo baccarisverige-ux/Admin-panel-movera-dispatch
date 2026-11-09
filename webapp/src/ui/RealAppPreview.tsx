@@ -24,7 +24,6 @@ export function RealAppPreview({ app }: { app: PreviewRole }) {
   const [zoneId, setZoneId] = useState<string>("");
   const [draft, setDraft] = useState(false);
   const [reloads, setReloads] = useState(0);
-  const [blocked, setBlocked] = useState(false);
   const allowed = Boolean(live) && (live?.can("settings.read") ?? false);
   const zone = zoneId || zones?.[0]?.zoneId || "";
   const session = useQuery({
@@ -42,8 +41,7 @@ export function RealAppPreview({ app }: { app: PreviewRole }) {
   const title = app === "rider" ? tr("Rider app preview") : tr("Driver app preview");
   if (!allowed) return <p className="muted real-app-preview-note" aria-label={title}>{tr("Sign in to the live server to see the real app.")}</p>;
   const open = () => {
-    if (!session.data) return;
-    setBlocked(!openPreviewWindow(previewUrl(appWebUrl(app, ENV), session.data)));
+    if (session.data) openPreviewWindow(previewUrl(appWebUrl(app, ENV), session.data));
   };
   return (
     <div className="real-app-preview" data-app={app} aria-label={title}>
@@ -63,7 +61,7 @@ export function RealAppPreview({ app }: { app: PreviewRole }) {
       ) : session.data ? (
         <>
           <button type="button" className="dash-btn small real-app-open" data-command="admin.ui.quickAction" onClick={open}>{tr("Open the real app in a new tab")}</button>
-          {blocked ? <p role="alert" className="muted real-app-preview-note">{tr("Your browser blocked the new tab. Allow pop-ups for this site and try again.")}</p> : null}
+          <p className="muted real-app-preview-note">{tr("If no tab opened, allow pop-ups for this site and press the button again.")}</p>
         </>
       ) : (
         <p className="muted" aria-busy="true">{tr("Opening the app…")}</p>
