@@ -122,7 +122,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.driver.note", label: "Save private driver note", reason: true, permission: "drivers.activate" },
   { id: "admin.driver.category", label: "Change driver category eligibility", reason: true, permission: "drivers.activate" },
   { id: "admin.driver.docExpiry", label: "Set document expiry date", reason: false, permission: "documents.approve" },
-  { id: "admin.driver.message", label: "Message driver", reason: false, permission: "drivers.read" },
+  { id: "admin.driver.message", label: "Message driver", reason: false, permission: "support.reply" },
   { id: "admin.driver.call", label: "Call driver", reason: false, permission: "drivers.viewSensitive" },
   { id: "admin.drivers.view", label: "Choose drivers view", reason: false, permission: "drivers.read" },
   { id: "admin.drivers.bonusCreate", label: "Create driver bonus", reason: true, permission: "drivers.bonuses" },

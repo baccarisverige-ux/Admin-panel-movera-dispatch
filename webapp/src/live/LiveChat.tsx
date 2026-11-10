@@ -1,20 +1,22 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tr, uiLocale } from "../i18n";
-import { shortDateTime, shortId } from "./format";
+import { shortDateTime } from "./format";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine, Status } from "./ui";
 import type { Page, Trip } from "./types";
+import { readAdminChats, joinChatPages, chatRowLabel, lastFromText, messageCountText, type AdminChatPage } from "./adminChats";
 import { useMarketScope } from "../markets/useMarketScope";
 import { zoneFilterOf } from "./zoneFilter";
-import { chatTripLabel } from "./tripChat";
 
 /**
  * Live builds only (contract v0.13.0 §22, owner "chat only support roles in their zones"): the trip chat between a
  * trip's rider and driver, read and written by support (`support.reply`) for trips in the admin's zones. The server
  * scopes GET /admin/trips to the admin's zones and answers 403 zone_out_of_scope on any other trip's messages. The
  * chat closes for the rider and the driver at drop-off; support may still write. No phone numbers are shown.
+ * v0.18.56 §78 (G9-2.16): the list is GET /admin/chats (open trips with messages, newest message first, cursor paging),
+ * not the newest 100 trips of any status; a row shows counts, last time, who wrote last and first names, never a text.
  */
 
 /** contract Message (GET|POST /trips/{tripId}/messages). */
@@ -56,9 +58,15 @@ export function LiveChat() {
   // v0.17.2: the trips of the country and zones picked in the top bar.
   const zoneFilter = zoneFilterOf(useMarketScope().effective);
   const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
-  const list = useQuery({ queryKey: ["live", "chat-trips", zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<Trip>) : client.json<Page<Trip>>(`/admin/trips?limit=100${zoneQuery ? `&${zoneQuery}` : ""}`)), refetchInterval: POLL_MS * 6 });
-  const trips = chatTrips(list.data?.items ?? []);
-  const current = trips.find((trip) => trip.tripId === selected) ?? trips[0];
+  const list = useInfiniteQuery({
+    queryKey: ["live", "admin-chats", zoneQuery],
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as AdminChatPage) : readAdminChats((path) => client.json<AdminChatPage>(path), zoneFilter.params, pageParam)),
+    getNextPageParam: (last) => last.nextCursor,
+    refetchInterval: POLL_MS * 6,
+  });
+  const rows = joinChatPages(list.data?.pages ?? []);
+  const current = rows.find((row) => row.tripId === selected) ?? rows[0];
   const messages = useQuery({
     queryKey: ["live", "trip-messages", current?.tripId],
     queryFn: () => client.json<Page<TripMessage>>(`/trips/${encodeURIComponent(current!.tripId)}/messages?limit=200`),
@@ -73,6 +81,7 @@ export function LiveChat() {
       await client.post(`/trips/${encodeURIComponent(current.tripId)}/messages`, { text: text.trim() });
       setText("");
       void queryClient.invalidateQueries({ queryKey: ["live", "trip-messages", current.tripId] });
+      void queryClient.invalidateQueries({ queryKey: ["live", "admin-chats"] });
     } catch (failure) {
       setError(failure);
     } finally {
@@ -82,28 +91,28 @@ export function LiveChat() {
   const items = [...(messages.data?.items ?? [])].sort((a, b) => a.at.localeCompare(b.at));
   return (
     <div className="dx-page sp-page" data-testid="live-chat">
-      <header className="dx-head"><div className="dx-head-text"><h2>{tr("Chat")}</h2><p>{tr("Trip chats between rider and driver in your zones. Support can read and write; messages are kept 90 days.")}</p></div></header>
-      {list.isLoading ? <p className="state-line">{tr("Loading.")}</p> : list.error ? <ErrorLine error={list.error} onRetry={() => void list.refetch()} /> : trips.length === 0 ? <p className="dx-calm">{tr("No trip chats in your zones.")}</p> : (
+      <header className="dx-head"><div className="dx-head-text"><h2>{tr("Chat")}</h2><p>{tr("Open trip chats between rider and driver in your zones, newest message first. Support can read and write.")}</p></div></header>
+      {list.isLoading ? <p className="state-line">{tr("Loading.")}</p> : list.error ? <ErrorLine error={list.error} onRetry={() => void list.refetch()} /> : rows.length === 0 ? <p className="dx-calm">{tr("No trip chats in your zones.")}</p> : (
         <div className="sp-grid">
-          <ul className="pm-list" aria-label={tr("Trips")} data-testid="live-chat-trips">
-            {trips.map((trip) => (
-              <li key={trip.tripId} className={trip.tripId === current?.tripId ? "selected" : undefined}>
-                <button type="button" className="link-action" data-command="admin.ticket.view" onClick={() => { setSelected(trip.tripId); setError(null); }}>
-                  <b>{chatTripLabel(trip).title}</b>
-                  <small title={trip.tripId}>{tr("Trip {0}", [chatTripLabel(trip).ref])}</small>
-                  <small>{trip.pickup.address} → {trip.dropoff.address}</small>
-                  <small><Status code={trip.status} /> · {chatOpen(trip.status) ? tr("Chat open") : tr("Chat closed for rider and driver")} · {when(trip.updatedAt)}</small>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div>
+            <ul className="pm-list" aria-label={tr("Trips")} data-testid="live-chat-trips">
+              {rows.map((row) => (
+                <li key={row.tripId} className={row.tripId === current?.tripId ? "selected" : undefined}>
+                  <button type="button" className="link-action" data-command="admin.ticket.view" onClick={() => { setSelected(row.tripId); setError(null); }}>
+                    <b>{chatRowLabel(row).title}</b>
+                    <small title={row.tripId}>{tr("Trip {0}", [chatRowLabel(row).ref])} · {row.zoneId}</small>
+                    <small><Status code={row.status} /> · {messageCountText(row.messageCount)} · {lastFromText(row)} · {when(row.lastMessageAt)}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {list.hasNextPage ? <button type="button" className="dash-btn small" data-command="admin.server.loadMore" data-testid="live-chat-more" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{tr("Show more")}</button> : null}
+          </div>
           {current ? (
             <article className="panel" data-testid="live-chat-thread">
-              <h3 title={current.tripId}>{chatTripLabel(current).title}</h3>
+              <h3 title={current.tripId}>{chatRowLabel(current).title}</h3>
               <p className="op-help">
-                <Link to={`/trips/${current.tripId}`}>{tr("Open trip")} ({chatTripLabel(current).ref})</Link> · <Link to={`/riders/${current.riderId}`}>{tr("Rider")} {current.rider?.firstName ?? shortId(current.riderId)}</Link>
-                {current.driverId ? <> · <Link to={`/drivers/${current.driverId}`}>{tr("Driver")} {current.driver?.firstName ?? current.driverId}</Link></> : null}
-                {" · "}{current.zoneId}
+                <Link to={`/trips/${current.tripId}`}>{tr("Open trip")} ({chatRowLabel(current).ref})</Link>{" · "}{current.zoneId}
               </p>
               {messages.error ? <ErrorLine error={messages.error} onRetry={() => void messages.refetch()} /> : null}
               {messages.isLoading ? <p className="state-line">{tr("Loading.")}</p> : items.length === 0 ? <p className="dx-calm">{tr("No messages yet.")}</p> : (

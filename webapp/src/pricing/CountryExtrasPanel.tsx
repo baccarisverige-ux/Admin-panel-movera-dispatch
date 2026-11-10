@@ -33,11 +33,12 @@ import { CommandButton } from "../ui/CommandButton";
 import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { NumberField } from "./NumberField";
 import { EmergencyNumbersEditor } from "./EmergencyNumbersEditor";
+import { ChatSettingsCard } from "./ChatSettingsCard";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 
 /** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
-export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls", "dont-match"] as const;
+export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls", "chat", "dont-match"] as const;
 
 type ListProps = {
   title: string;
@@ -255,6 +256,8 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               ))}
             </div>
           </div>
+          {/* v0.18.56 §78 (G9 part 2, owner Q79–Q85): CountryRules.chat. */}
+          <ChatSettingsCard shown={shown.chat} saved={saved.chat} canEdit={canEdit} onChange={(chat) => edit({ chat })} />
           {/* v0.18.43 §64 (fix job 10, owner G16 Q16-4, "Never told"): CountryRules.dontMatchAgain. */}
           <div id="extras-dont-match" className="cx-anchor">
             <div className="fee-card" data-testid="dont-match-settings">

@@ -2,6 +2,7 @@ import { MARKETS, market, type MarketId } from "../markets/markets.ts";
 import { tr } from "../i18n/core.ts";
 import { CALL_DEFAULTS, callSettingsIssues, callSettingsLines, callSettingsOf, type CallSettings } from "./callSettings.ts";
 import { emergencyDefaults, emergencyNumbersIssues, emergencyNumbersLines, emergencyNumbersOf, type EmergencyNumber } from "./emergencyNumbers.ts";
+import { chatSettingsIssues, chatSettingsLines, chatSettingsOf, defaultChatSettings, type ChatSettings } from "./chatSettings.ts";
 import { DONT_MATCH_DEFAULTS, dontMatchIssues, dontMatchLines, dontMatchOf, type DontMatchSettings } from "./dontMatchSettings.ts";
 import { fromSek, isLargePriceChange, roundTo, tipMax } from "../pricing/zonePricing.ts";
 import { RAISE_CAP_SEK } from "../dispatch/rules.ts";
@@ -63,6 +64,8 @@ export type CountrySettings = {
   walletCreditMax: number;
   /** v0.18.38 §62 (fix job 8, owner G15 "In-app calls only"): CountryRules.calls — on, mode, window after the trip, ring time, longest call. */
   calls: CallSettings;
+  /** v0.18.56 §78 (G9 part 2, owner Q79–Q85): CountryRules.chat — keep days, length, spam limit, sound, sheet, read aloud, translate, quick replies, auto "I've arrived". */
+  chat: ChatSettings;
   /** v0.18.43 §64 (fix job 10): CountryRules.dontMatchAgain — the 1-star "don't match again" tick in both apps. */
   dontMatchAgain: DontMatchSettings;
   /** v0.18.57 §79: CountryRules.emergencyNumbers (country standard only) — the call buttons of both apps and the case page. */
@@ -104,7 +107,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "dontMatchAgain", "emergencyNumbers"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -154,6 +157,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     chainLateFreeCancelMin: CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT,
     walletCreditMax: WALLET_CREDIT_MAX[country],
     calls: { ...CALL_DEFAULTS },
+    chat: defaultChatSettings(),
     dontMatchAgain: { ...DONT_MATCH_DEFAULTS },
     emergencyNumbers: emergencyDefaults(country),
   };
@@ -164,6 +168,12 @@ export function emptyCountrySettingsBook(): CountrySettingsBook {
 }
 
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+
+/** v0.18.56 §78: a saved chat block keeps its numbers as stored, for the checks to see. */
+function keptNumbers(raw: object): Partial<ChatSettings> {
+  const v = raw as Record<string, unknown>;
+  return Object.fromEntries((["keepDays", "maxLength", "spamPerMin"] as const).filter((key) => finite(v[key])).map((key) => [key, v[key]]));
+}
 
 function completeOptions(stored: unknown, fallback: AmountOption[]): AmountOption[] {
   if (!Array.isArray(stored)) return fallback.map((item) => ({ ...item }));
@@ -197,6 +207,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     chainLateFreeCancelMin: finite(raw.chainLateFreeCancelMin) ? raw.chainLateFreeCancelMin : base.chainLateFreeCancelMin,
     walletCreditMax: finite(raw.walletCreditMax) && raw.walletCreditMax > 0 ? raw.walletCreditMax : base.walletCreditMax,
     calls: callSettingsOf(raw.calls),
+    chat: raw.chat && typeof raw.chat === "object" ? { ...chatSettingsOf(raw.chat), ...keptNumbers(raw.chat) } : defaultChatSettings(),
     dontMatchAgain: dontMatchOf(raw.dontMatchAgain),
     emergencyNumbers: emergencyNumbersOf(raw.emergencyNumbers, country),
     ...mixedOf(raw.mixedMethods),
@@ -328,6 +339,7 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   if (!Number.isInteger(settings.chainLateFreeCancelMin) || settings.chainLateFreeCancelMin < 0 || settings.chainLateFreeCancelMin > 120) issues.push(tr("{0}: free cancel of a next trip must start at 0 to 120 minutes.", [name]));
   // v0.18.38 §62: CountryRules.calls ranges.
   issues.push(...callSettingsIssues(name, settings.calls));
+  issues.push(...chatSettingsIssues(name, settings.chat));
   issues.push(...dontMatchIssues(name, settings.dontMatchAgain));
   issues.push(...emergencyNumbersIssues(name, settings.emergencyNumbers));
   // v0.18.26: limits per person, whole numbers in their range.
@@ -357,6 +369,7 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   if (before.chainLateFreeCancelMin !== after.chainLateFreeCancelMin) lines.push(tr("Next trip free cancel after: {0} min → {1} min", [before.chainLateFreeCancelMin, after.chainLateFreeCancelMin]));
   if (before.onTripMinDonePct !== after.onTripMinDonePct) lines.push(tr("Offers on a trip from: {0} % → {1} %", [before.onTripMinDonePct, after.onTripMinDonePct]));
   lines.push(...callSettingsLines(before.calls, after.calls));
+  lines.push(...chatSettingsLines(before.chat, after.chat));
   lines.push(...dontMatchLines(before.dontMatchAgain, after.dontMatchAgain));
   lines.push(...emergencyNumbersLines(before.emergencyNumbers, after.emergencyNumbers));
   if (before.personLimits.savedPlacesPerPerson !== after.personLimits.savedPlacesPerPerson) lines.push(tr("Saved places per person: {0} → {1}", [before.personLimits.savedPlacesPerPerson, after.personLimits.savedPlacesPerPerson]));
