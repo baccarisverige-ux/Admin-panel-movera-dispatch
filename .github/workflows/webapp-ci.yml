@@ -71,6 +71,8 @@ jobs:
         run: npx tsc -b
       - name: Lint (fails on any error and on any warning above the documented baseline)
         run: npm run lint:ci
+      - name: Every test file is in npm test (step 51, owner Q45b)
+        run: npm run test:list
       - name: Unit tests
         run: npm test
       - name: Build
