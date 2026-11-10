@@ -66,6 +66,9 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: webapp/package-lock.json
+      - name: File size ratchet (Rule 25)
+        working-directory: .
+        run: python3 tools/size_ratchet.py
       - run: npm ci
       - name: Typecheck
         run: npx tsc -b
