@@ -8,17 +8,35 @@ import { type DestinationModeRules, type NextTripRules } from "../tripRules.ts";
 /** Dispatch rules: how a ride request finds its driver. One set per zone, plus country rules, events and driver groups. */
 
 /** v0.18.10 (G8 Q2, contract.json#finish.earlyEnd.settings): defaults and ranges. */
-export type EarlyEnd = { repriceOverKm: number; repriceOverMin: number };
+/** v0.18.58 §80: + arrivedWithinMeters (300, 50–2000) and airportArrivedWithinMeters (1000, 100–3000, never below the normal one). */
+export type EarlyEnd = { repriceOverKm: number; repriceOverMin: number; arrivedWithinMeters: number; airportArrivedWithinMeters: number };
 /** v0.18.33 (fix job 5, owner fix-plan Q1): minutes default 10, and the rule is BOTH (km AND minutes). */
-export const EARLY_END_DEFAULT: EarlyEnd = { repriceOverKm: 2, repriceOverMin: 10 };
-export const EARLY_END_LIMITS = { repriceOverKm: { min: 0, max: 50 }, repriceOverMin: { min: 0, max: 120 } } as const;
+export const EARLY_END_DEFAULT: EarlyEnd = { repriceOverKm: 2, repriceOverMin: 10, arrivedWithinMeters: 300, airportArrivedWithinMeters: 1000 };
+export const EARLY_END_LIMITS = { repriceOverKm: { min: 0, max: 50 }, repriceOverMin: { min: 0, max: 120 }, arrivedWithinMeters: { min: 50, max: 2000 }, airportArrivedWithinMeters: { min: 100, max: 3000 } } as const;
 export function completeEarlyEnd(stored: unknown): EarlyEnd {
   const raw = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
   const pick = (key: keyof EarlyEnd) => {
     const v = raw[key];
     return typeof v === "number" && Number.isFinite(v) && v >= EARLY_END_LIMITS[key].min && v <= EARLY_END_LIMITS[key].max ? v : EARLY_END_DEFAULT[key];
   };
-  return { repriceOverKm: pick("repriceOverKm"), repriceOverMin: pick("repriceOverMin") };
+  const arrived = pick("arrivedWithinMeters");
+  const airport = pick("airportArrivedWithinMeters");
+  const pair = airport >= arrived ? { arrivedWithinMeters: arrived, airportArrivedWithinMeters: airport } : { arrivedWithinMeters: EARLY_END_DEFAULT.arrivedWithinMeters, airportArrivedWithinMeters: EARLY_END_DEFAULT.airportArrivedWithinMeters };
+  return { repriceOverKm: pick("repriceOverKm"), repriceOverMin: pick("repriceOverMin"), ...pair };
+}
+
+/** v0.18.58 §80 (contract.json#arrivedDistance): the arrived distances out of range, or airport below normal (server 400 invalid_arrived_distance). */
+export function arrivedDistanceIssues(earlyEnd: Partial<EarlyEnd> | undefined): string[] {
+  if (!earlyEnd) return [];
+  const issues: string[] = [];
+  const inRange = (key: "arrivedWithinMeters" | "airportArrivedWithinMeters") => {
+    const v = earlyEnd[key];
+    return v === undefined || (Number.isInteger(v) && v >= EARLY_END_LIMITS[key].min && v <= EARLY_END_LIMITS[key].max);
+  };
+  if (!inRange("arrivedWithinMeters")) issues.push("Ended early: counts as arrived must be 50 to 2000 m.");
+  if (!inRange("airportArrivedWithinMeters")) issues.push("Ended early: at an airport, counts as arrived must be 100 to 3000 m.");
+  if ((earlyEnd.airportArrivedWithinMeters ?? EARLY_END_DEFAULT.airportArrivedWithinMeters) < (earlyEnd.arrivedWithinMeters ?? EARLY_END_DEFAULT.arrivedWithinMeters)) issues.push("Ended early: the airport distance must not be below the normal one.");
+  return issues;
 }
 
 export const DISPATCH_KEY = "dispatchRules";

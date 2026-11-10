@@ -18,4 +18,11 @@ export const enC5AfterTestRules = {
   "Next trip free cancel after: {0} min → {1} min": "Next trip free cancel after: {0} min → {1} min",
   "Rider of a next trip may cancel free after (min)": "Rider of a next trip may cancel free after (min)",
   "Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).": "Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).",
+  "Counts as arrived within (m)": "Counts as arrived within (m)",
+  "At an airport: counts as arrived within (m)": "At an airport: counts as arrived within (m)",
+  "Default 300 m. Closer than this to the drop-off, the driver's finish is a normal finish, not ended early.": "Default 300 m. Closer than this to the drop-off, the driver's finish is a normal finish, not ended early.",
+  "Default 1000 m. Used when the drop-off is in an airport zone. Never below the normal distance.": "Default 1000 m. Used when the drop-off is in an airport zone. Never below the normal distance.",
+  "Ended early: counts as arrived must be 50 to 2000 m.": "Ended early: counts as arrived must be 50 to 2000 m.",
+  "Ended early: at an airport, counts as arrived must be 100 to 3000 m.": "Ended early: at an airport, counts as arrived must be 100 to 3000 m.",
+  "Ended early: the airport distance must not be below the normal one.": "Ended early: the airport distance must not be below the normal one.",
 } as const;

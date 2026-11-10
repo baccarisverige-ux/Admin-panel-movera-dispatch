@@ -525,13 +525,13 @@ test("G8 (v0.18.10): payment methods go to the server per country (no Google Pay
   assert.deepEqual(((paris!.body as { document: Doc }).document)["paymentMethods"], ["cash", "apple_pay"]);
   // Dispatch › Cancellation: the driver's early end re-prices only over BOTH numbers (defaults 2 km / 10 min, v0.18.33 fix job 5).
   const zone = zoneDefault("Z001");
-  assert.deepEqual(zone.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10 });
+  assert.deepEqual(zone.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10, arrivedWithinMeters: 300, airportArrivedWithinMeters: 1000 });
   const back = rulesOfDispatch(null, { cancelFees: { earlyEnd: { repriceOverKm: 5, repriceOverMin: 999 } } }, zone);
-  assert.deepEqual(back.riderCancel.earlyEnd, { repriceOverKm: 5, repriceOverMin: 10 }, "out of range reads as the default");
+  assert.deepEqual(back.riderCancel.earlyEnd, { repriceOverKm: 5, repriceOverMin: 10, arrivedWithinMeters: 300, airportArrivedWithinMeters: 1000 }, "out of range reads as the default");
   // Checker (2): the pay-change cap per country goes into the country rules (default SE 1000 kr).
   assert.deepEqual(countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 }, driverPayChangeMax: 1000 }, null)["driverPayChangeMax"], { amountMinor: 100000, currency: "SEK" });
   const state = appConfigState({ now: "2026-11-01T10:00:00Z" });
-  assert.deepEqual((driverAppConfig("Z001", state) as unknown as { cancelFees: { earlyEnd: unknown } }).cancelFees.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10 });
+  assert.deepEqual((driverAppConfig("Z001", state) as unknown as { cancelFees: { earlyEnd: unknown } }).cancelFees.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10, arrivedWithinMeters: 300, airportArrivedWithinMeters: 1000 });
 });
 
 test("live G8 6c: Payment methods read back what the zones serve, not only the country's Standard (Save could not turn a method back on)", async () => {
@@ -824,4 +824,18 @@ test("v0.18.29 A2 (fix job 0) (owner G12 Q-D): the wallet credit limit goes into
   const fr = countryRulesOf("FR", "EUR", { tips: [1], raiseSteps: [2], driverBonus: { defaultLimit: 20, hardMax: 95 }, walletCreditMax: 250 }, null);
   assert.deepEqual(fr["walletCreditMax"], { amountMinor: 25_000, currency: "EUR" });
   assert.equal(countryRulesOf("FR", "EUR", { tips: [1], raiseSteps: [2], driverBonus: { defaultLimit: 20, hardMax: 95 } }, null)["walletCreditMax"], undefined);
+});
+
+test("v0.18.58 §80: Cancellation › Ended early keeps the counts-as-arrived distances (300 / 1000 m), range-checked, airport never below normal", async () => {
+  const { zoneIssues } = await import("../dispatch/rules/checks.ts");
+  const zone = zoneDefault("Z001");
+  const back = rulesOfDispatch(null, { cancelFees: { earlyEnd: { repriceOverKm: 2, repriceOverMin: 10, arrivedWithinMeters: 400, airportArrivedWithinMeters: 1500 } } }, zone);
+  assert.deepEqual(back.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10, arrivedWithinMeters: 400, airportArrivedWithinMeters: 1500 });
+  const broken = rulesOfDispatch(null, { cancelFees: { earlyEnd: { arrivedWithinMeters: 40, airportArrivedWithinMeters: 5000 } } }, zone);
+  assert.deepEqual(broken.riderCancel.earlyEnd, { repriceOverKm: 2, repriceOverMin: 10, arrivedWithinMeters: 300, airportArrivedWithinMeters: 1000 }, "out of range reads as the default");
+  const issues = (earlyEnd: Record<string, number>) => zoneIssues({ ...zone, riderCancel: { ...zone.riderCancel, earlyEnd: { ...zone.riderCancel.earlyEnd!, ...earlyEnd } } }).filter((t) => t.startsWith("Ended early"));
+  assert.deepEqual(issues({}), []);
+  assert.equal(issues({ arrivedWithinMeters: 49 }).length, 1);
+  assert.equal(issues({ airportArrivedWithinMeters: 3001 }).length, 1);
+  assert.deepEqual(issues({ arrivedWithinMeters: 800, airportArrivedWithinMeters: 500 }), ["Ended early: the airport distance must not be below the normal one."]);
 });
