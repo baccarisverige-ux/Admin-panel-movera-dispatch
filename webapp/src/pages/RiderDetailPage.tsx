@@ -58,6 +58,7 @@ import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
 import { LiveRiderModeration } from "../live/LiveRiderModeration";
 import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
 import { LiveWalletCredit } from "../live/LiveWalletCredit";
+import { LiveMessagePerson } from "../live/LiveMessagePerson";
 import { feeKindOf, owedByCurrency, owedText, tripMoney, walletByCurrency, walletText } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
 import { CommandButton } from "../ui/CommandButton";
@@ -452,7 +453,8 @@ export function RiderDetailPage() {
               <CommandButton command="admin.rider.assign" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={me} after="nobody" expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={assign(care, rider.id, null)} onDone={() => setNotice(tr("Conversation unassigned."))}>{tr("Unassign")}</CommandButton>
             )}
           </div>
-          <MessagesPanel
+          {/* v0.18.56 §78 (G9-2.12): live, Message opens a ticket in the rider's Support inbox. */}
+          {liveData ? <LiveMessagePerson kind="rider" id={rider.id} name={rider.name} /> : <MessagesPanel
             messages={row.thread}
             contactName={rider.name}
             command="admin.rider.message"
@@ -465,7 +467,7 @@ export function RiderDetailPage() {
             onSent={() => setNotice(tr("Message sent to {0}.", [rider.name]))}
             locale={place.locale}
             timeZone={place.timeZone}
-          />
+          />}
         </TabPanel>
 
         <TabPanel id="support" activeId={tab}>

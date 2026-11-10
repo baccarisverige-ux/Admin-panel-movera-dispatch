@@ -9,6 +9,7 @@ import { DASH, liveDriverMonth, liveJoinedAt, liveLastOnline, orDash } from "../
 import { logExport } from "../reports/activityLog";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { LiveDocBox } from "../live/LiveDocBox";
+import { LiveMessagePerson } from "../live/LiveMessagePerson";
 import { activateEmphasised, driverCategoryFits, driverHistoryShown } from "../live/realOnly";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
@@ -615,7 +616,8 @@ export function DriverDetailPage() {
         </TabPanel>
 
         <TabPanel id="messages" activeId={tab}>
-          <MessagesPanel
+          {/* v0.18.56 §78 (G9-2.12): live, Message opens a ticket in the driver's Support inbox. */}
+          {liveData ? <LiveMessagePerson kind="driver" id={driver.id} name={driver.name} /> : <MessagesPanel
             messages={ops.messages ?? []}
             contactName={driver.name}
             command="admin.driver.message"
@@ -628,7 +630,7 @@ export function DriverDetailPage() {
             onSent={() => setNotice(tr("Message sent to {0}.", [driver.name]))}
             locale={market.locale}
             timeZone={market.timeZone}
-          />
+          />}
         </TabPanel>
 
         <TabPanel id="notes" activeId={tab}>

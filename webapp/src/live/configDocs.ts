@@ -7,6 +7,7 @@
  * second admin; tips, raise steps and driver bonus limits are country rules (country_rules).
  */
 import contractJson from "../../../contracts/contract.json" with { type: "json" };
+import type { ChatSettings } from "../config/chatSettings.ts";
 import type { CurrencyCode, Money } from "../domain/money.ts";
 import { fromMajor } from "../domain/money.ts";
 import { marketOfZone } from "../markets/markets.ts";
@@ -355,7 +356,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number }; dontMatchAgain?: { on: boolean; atStars: number }; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }> };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }> };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
@@ -380,6 +381,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     ...(input.walletCreditMax !== undefined ? { walletCreditMax: toMinor(input.walletCreditMax, currency) } : {}),
     // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.
     ...(input.calls ? { calls: { ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
+    // v0.18.56 §78 (G9 part 2): Tips & limits › Chat; a save without it keeps the stored block.
+    ...(input.chat ? { chat: JSON.parse(JSON.stringify(input.chat)) as ChatSettings } : base?.["chat"] ? { chat: base["chat"] } : {}),
     // v0.18.43 §64 (fix job 10): Tips & limits › Don't match again; a save without it keeps the stored block.
     ...(input.dontMatchAgain ? { dontMatchAgain: { ...input.dontMatchAgain } } : base?.["dontMatchAgain"] ? { dontMatchAgain: base["dontMatchAgain"] } : {}),
     // v0.18.57 §79: Tips & limits › Emergency numbers, on the country standard only (a zone's own rules never carry it).
