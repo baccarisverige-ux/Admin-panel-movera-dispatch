@@ -9,7 +9,7 @@ import test from "node:test";
 
 const O = readFileSync(new URL("../../../contracts/openapi.yaml", import.meta.url), "utf8");
 
-// The exact pin moved to sync0_18_57.test.ts with the 0.18.57 copy; the §77 check below still holds.
+// The exact pin moved to sync0_18_59.test.ts with the 0.18.59 copy; the §77 check below still holds.
 
 test("§77 is in the copy: admin trip reads need trips.read and the trip's zone", () => {
   assert.match(O, /v0\.18\.55 §77/);
