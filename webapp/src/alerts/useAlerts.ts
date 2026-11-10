@@ -76,7 +76,8 @@ export function useAlerts() {
 
   const access = useMemo(() => agent?.scope ?? { zones: "all" as const }, [agent?.scope]);
   const zones = useMemo(() => market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id))), [market, access, scope.zones]);
-  const money = (major: number) => `${new Intl.NumberFormat(market.locale, { maximumFractionDigits: 2 }).format(major)} ${SYMBOL[market.id]}`;
+  // Contract v0.18.59 §81: the dinar with a dot and a space between thousands ("1 250.5 DT"), in every language.
+  const money = (major: number) => `${market.id === "TN" ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(major).replace(/,/g, " ") : new Intl.NumberFormat(market.locale, { maximumFractionDigits: 2 }).format(major)} ${SYMBOL[market.id]}`;
 
   const facts = useMemo((): Facts => {
     const live = liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0);

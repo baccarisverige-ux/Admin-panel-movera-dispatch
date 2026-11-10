@@ -27,7 +27,7 @@ test("Q35: trip statuses read as the contract names, the words the rider and dri
 test("C-23: one money formatter; every helper gives the same text", () => {
   const plain = (text: string) => text.replace(/\s/g, " ");
   assert.equal(formatMarketMoney(12_675, "SE"), formatMoney({ amountMinor: 12_675, currency: "SEK" }, "sv-SE"));
-  assert.equal(formatMarketMoney(12_500, "TN"), "12,500 DT");
+  assert.equal(formatMarketMoney(12_500, "TN"), "12.500 DT");
   assert.equal(formatMarketMoney(335, "FR"), "3,35 €");
   assert.equal(plain(pricingMoney(217, "SE")), "217,00 kr");
   assert.equal(pricingMoney(12.5, "TN"), formatMarketMoney(12_500, "TN"));

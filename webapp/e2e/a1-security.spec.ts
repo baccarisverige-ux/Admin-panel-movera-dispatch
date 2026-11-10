@@ -50,6 +50,6 @@ test("C-07: a Tunisia payment is shown in dinars with three decimals", async ({ 
   await page.goto("/payments/PAY2002?country=TN");
   const head = page.locator(".dx-head-text p");
   await expect(head).toContainText("DT");
-  await expect(head).toContainText("29,050");
+  await expect(head).toContainText("29.050");
   await expect(head).not.toContainText("kr");
 });

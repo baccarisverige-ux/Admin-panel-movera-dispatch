@@ -183,7 +183,7 @@ assert((await api.approvals()).filter((row) => row.targetId === "PAY0200").lengt
 const refundOf = async (targetId: string, key: string) =>
   api.command({ action: "admin.payment.refund", targetId, reason: "Charged twice", actorId: "nora", idempotencyKey: key, expectedRev: await api.revision(), collection: "payments", patch: { status: "refunded" }, before: "captured", after: "refunded" });
 assert((await refundOf("PAY1002", "fr-refund")).status === "committed", "a 58,10 € refund commits");
-assert((await refundOf("PAY2002", "tn-refund")).status === "committed", "a 29,050 DT refund commits");
+assert((await refundOf("PAY2002", "tn-refund")).status === "committed", "a 29.050 DT refund commits");
 const tripRefund = await api.command({ action: "admin.trip.refund", targetId: "T1013", reason: "Charged twice", actorId: "nora", idempotencyKey: "trip-refund", expectedRev: await api.revision(), collection: "trips", patch: { kind: "refunded" }, before: "", after: "refunded" });
 assert(tripRefund.status === "committed", "a 45,50 € trip refund commits");
 assert((await api.list("trips", null)).find((row) => row.id === "T1013")?.kind === "refunded", "the trip refund is applied at once");

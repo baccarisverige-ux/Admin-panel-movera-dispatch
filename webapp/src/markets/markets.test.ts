@@ -11,7 +11,7 @@ test("each country owns its zones and currency", () => {
   assert.equal(new Set(all).size, all.length, "zone ids are unique across countries");
   assert.match(formatMoney(123_450, "SE"), /1\s?234,50\s?kr/);
   assert.match(formatMoney(123_450, "FR"), /1\s?234,50\s?€/);
-  assert.match(formatMoney(1_234_500, "TN"), /1\s?234,500/);
+  assert.match(formatMoney(1_234_500, "TN"), /^1 234\.500 DT$/);
   assert.deepEqual(zoneGroups("FR").map((group) => group.label), ["Grand Paris", "Airports"]);
   assert.deepEqual(parseZoneList("Z001, Z002,,Z001"), ["Z001", "Z002"]);
 });
