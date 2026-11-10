@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lock, Phone, PhoneMissed, PhoneOff } from "lucide-react";
 import { callLogLine, readTripCalls, type CallView } from "./tripCalls";
 import { ApiError } from "../api/httpClient";
@@ -8,7 +8,7 @@ import { shortDateTime } from "./format";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine } from "./ui";
 import type { Page } from "./types";
-import type { TripMessage } from "./LiveChat";
+import { chatOpen, type TripMessage } from "./LiveChat";
 import { readTripMessages } from "./tripChat";
 
 /**
@@ -17,10 +17,16 @@ import { readTripMessages } from "./tripChat";
  * cancelled or still running, from the server (GET /trips/{tripId}/messages; admins keep it 90 days). Private: it is
  * read only when the admin presses Show messages. v0.18.38 §62 (fix job 8): the in-app calls of the trip from
  * GET /admin/trips/{tripId}/calls (trips.read): who called whom, when, how long, how it ended.
+ * §78 / §22: after drop-off the rider and the driver can no longer write; support (support.reply) still can, here
+ * (POST /trips/{tripId}/messages), since a finished trip leaves Admin › Chat.
  */
-export function LiveTripChat({ tripId, hadDriver, riderName, driverName }: { tripId: string; hadDriver: boolean; riderName: string; driverName: string }) {
+export function LiveTripChat({ tripId, status, hadDriver, riderName, driverName }: { tripId: string; status: string; hadDriver: boolean; riderName: string; driverName: string }) {
   const { client, can } = useLiveSession();
+  const queryClient = useQueryClient();
   const [shown, setShown] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState<unknown>(null);
   const allowed = can("support.reply");
   const messages = useQuery({
     queryKey: ["live", "trip-chat", tripId],
@@ -33,6 +39,20 @@ export function LiveTripChat({ tripId, hadDriver, riderName, driverName }: { tri
     queryFn: () => readTripCalls((path) => client.json<{ items: CallView[] }>(path), tripId),
     enabled: callsAllowed && hadDriver,
   });
+  async function send() {
+    if (busy || !text.trim()) return;
+    setBusy(true);
+    setSendError(null);
+    try {
+      await client.post(`/trips/${encodeURIComponent(tripId)}/messages`, { text: text.trim() });
+      setText("");
+      void queryClient.invalidateQueries({ queryKey: ["live", "trip-chat", tripId] });
+    } catch (failure) {
+      setSendError(failure);
+    } finally {
+      setBusy(false);
+    }
+  }
   const sender = (from: TripMessage["from"]) => (from === "rider" ? riderName : from === "driver" ? driverName : tr("Support"));
   const refused = messages.error instanceof ApiError && messages.error.status === 403;
   const items = messages.data ?? [];
@@ -85,6 +105,14 @@ export function LiveTripChat({ tripId, hadDriver, riderName, driverName }: { tri
               ))}
             </ol>
           )}
+        {shown && allowed && hadDriver && !refused && !messages.isLoading ? (
+          <div className="sp-reply" data-testid="trip-chat-reply">
+            {chatOpen(status) ? null : <p className="op-help">{tr("The trip has ended: the rider and the driver can no longer write. Support can still answer.")}</p>}
+            <label className="field">{tr("Message as Support")}<textarea aria-label={tr("Message as Support")} value={text} maxLength={2000} onChange={(event) => setText(event.target.value)} /></label>
+            {sendError ? <ErrorLine error={sendError} onRetry={() => setSendError(null)} /> : null}
+            <button type="button" className="primary-btn" data-command="admin.support.reply" disabled={busy || !text.trim()} onClick={() => void send()}>{tr("Send")}</button>
+          </div>
+        ) : null}
         {shown && allowed ? <p className="op-help">{tr("Kept 90 days, only for admins. The rider and driver apps keep no copy after the trip.")}</p> : null}
       </div>
     </div>
