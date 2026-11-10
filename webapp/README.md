@@ -3,7 +3,7 @@
 React + TypeScript + Vite on Node 22. Layout shell, URL routing, design tokens, and all
 admin screens; the live admin talks to movera-server (`VITE_ADMIN_API`). Typed mocks for
 the unit tests live in `src/data/catalog.ts`. The contract copy is `../contracts/`
-(version **0.18.55**, also `CONTRACT_VERSION` in `src/domain/contract.ts`).
+(version **0.18.57**, also `CONTRACT_VERSION` in `src/domain/contract.ts`).
 
 The live GitHub Pages site is this app, built by `.github/workflows/pages.yml` after
 "Webapp checks" succeeded on a push to `main`, at

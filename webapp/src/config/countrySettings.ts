@@ -1,6 +1,7 @@
 import { MARKETS, market, type MarketId } from "../markets/markets.ts";
 import { tr } from "../i18n/core.ts";
 import { CALL_DEFAULTS, callSettingsIssues, callSettingsLines, callSettingsOf, type CallSettings } from "./callSettings.ts";
+import { emergencyDefaults, emergencyNumbersIssues, emergencyNumbersLines, emergencyNumbersOf, type EmergencyNumber } from "./emergencyNumbers.ts";
 import { DONT_MATCH_DEFAULTS, dontMatchIssues, dontMatchLines, dontMatchOf, type DontMatchSettings } from "./dontMatchSettings.ts";
 import { fromSek, isLargePriceChange, roundTo, tipMax } from "../pricing/zonePricing.ts";
 import { RAISE_CAP_SEK } from "../dispatch/rules.ts";
@@ -64,6 +65,8 @@ export type CountrySettings = {
   calls: CallSettings;
   /** v0.18.43 §64 (fix job 10): CountryRules.dontMatchAgain — the 1-star "don't match again" tick in both apps. */
   dontMatchAgain: DontMatchSettings;
+  /** v0.18.57 §79: CountryRules.emergencyNumbers (country standard only) — the call buttons of both apps and the case page. */
+  emergencyNumbers: EmergencyNumber[];
 };
 export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };
 export const PERSON_LIMITS_DEFAULT: PersonLimits = { savedPlacesPerPerson: 50, emergencyContactsPerPerson: 10 };
@@ -101,7 +104,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "dontMatchAgain"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "dontMatchAgain", "emergencyNumbers"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -152,6 +155,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     walletCreditMax: WALLET_CREDIT_MAX[country],
     calls: { ...CALL_DEFAULTS },
     dontMatchAgain: { ...DONT_MATCH_DEFAULTS },
+    emergencyNumbers: emergencyDefaults(country),
   };
 }
 
@@ -194,6 +198,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     walletCreditMax: finite(raw.walletCreditMax) && raw.walletCreditMax > 0 ? raw.walletCreditMax : base.walletCreditMax,
     calls: callSettingsOf(raw.calls),
     dontMatchAgain: dontMatchOf(raw.dontMatchAgain),
+    emergencyNumbers: emergencyNumbersOf(raw.emergencyNumbers, country),
     ...mixedOf(raw.mixedMethods),
     ...mixedTipOf(raw.mixedTipRules),
   };
@@ -324,6 +329,7 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   // v0.18.38 §62: CountryRules.calls ranges.
   issues.push(...callSettingsIssues(name, settings.calls));
   issues.push(...dontMatchIssues(name, settings.dontMatchAgain));
+  issues.push(...emergencyNumbersIssues(name, settings.emergencyNumbers));
   // v0.18.26: limits per person, whole numbers in their range.
   for (const key of ["savedPlacesPerPerson", "emergencyContactsPerPerson"] as const) {
     const value = settings.personLimits[key];
@@ -352,6 +358,7 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   if (before.onTripMinDonePct !== after.onTripMinDonePct) lines.push(tr("Offers on a trip from: {0} % → {1} %", [before.onTripMinDonePct, after.onTripMinDonePct]));
   lines.push(...callSettingsLines(before.calls, after.calls));
   lines.push(...dontMatchLines(before.dontMatchAgain, after.dontMatchAgain));
+  lines.push(...emergencyNumbersLines(before.emergencyNumbers, after.emergencyNumbers));
   if (before.personLimits.savedPlacesPerPerson !== after.personLimits.savedPlacesPerPerson) lines.push(tr("Saved places per person: {0} → {1}", [before.personLimits.savedPlacesPerPerson, after.personLimits.savedPlacesPerPerson]));
   if (before.personLimits.emergencyContactsPerPerson !== after.personLimits.emergencyContactsPerPerson) lines.push(tr("Emergency contacts per person: {0} → {1}", [before.personLimits.emergencyContactsPerPerson, after.personLimits.emergencyContactsPerPerson]));
   return lines;

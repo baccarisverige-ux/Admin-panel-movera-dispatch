@@ -355,7 +355,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number }; dontMatchAgain?: { on: boolean; atStars: number } };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number }; dontMatchAgain?: { on: boolean; atStars: number }; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }> };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
@@ -382,6 +382,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     ...(input.calls ? { calls: { ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
     // v0.18.43 §64 (fix job 10): Tips & limits › Don't match again; a save without it keeps the stored block.
     ...(input.dontMatchAgain ? { dontMatchAgain: { ...input.dontMatchAgain } } : base?.["dontMatchAgain"] ? { dontMatchAgain: base["dontMatchAgain"] } : {}),
+    // v0.18.57 §79: Tips & limits › Emergency numbers, on the country standard only (a zone's own rules never carry it).
+    ...(input.emergencyNumbers ? { emergencyNumbers: input.emergencyNumbers.map((row) => ({ kind: row.kind, number: row.number, label: { ...row.label } })) } : {}),
   };
 }
 

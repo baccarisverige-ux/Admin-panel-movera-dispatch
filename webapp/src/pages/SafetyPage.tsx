@@ -4,6 +4,9 @@ import { NotConnected } from "../live/NotConnected";
 import { LiveEmergencyContacts } from "../live/LiveEmergencyContacts";
 import { LiveRevealContacts } from "../live/LiveReveal";
 import { caseIsOpen } from "../live/emergencyContacts";
+import { useCountrySettings } from "../config/useCountrySettings";
+import { countrySettingsOf } from "../config/countrySettings";
+import { emergencyLabel } from "../config/emergencyNumbers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlertOctagon, ArrowLeft, Car, Clock3, FileDown, History, ListChecks, MapPin, Phone, PhoneCall, Settings2, ShieldAlert, ShieldCheck, Siren, UserRound, Users } from "lucide-react";
@@ -70,7 +73,7 @@ import { routeOf } from "../trips/file";
 import { agentName } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
 import { CommandButton } from "../ui/CommandButton";
-import { tr, trx } from "../i18n/core";
+import { currentLanguage, tr, trx } from "../i18n/core";
 
 type Show = "open" | "all" | "solved";
 
@@ -304,6 +307,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
   const [notice, setNotice] = useState("");
   const [level, setLevelDraft] = useState<Level>(item.level);
   const settings = ops.settings;
+  const { book: countryBook } = useCountrySettings();
   const time2 = clocks(item, settings, now);
   const trip = linkedTrip(item, trips);
   const driver = drivers.find((row) => row.id === (item.driverId ?? trip?.driverId));
@@ -315,7 +319,8 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
   const calls = ops.calls.filter((call) => call.incidentId === item.id);
   const caseInfo = ops.cases[item.id];
   const place = market(item.country);
-  const emergency = settings.emergency[item.country] ?? [];
+  // v0.18.57 §79: the incident country's CountryRules.emergencyNumbers (the old incident-settings numbers are no longer read).
+  const emergency = countrySettingsOf(countryBook, item.country).emergencyNumbers.map((row) => ({ label: emergencyLabel(row, currentLanguage()), number: row.number }));
   const lateLine = lateText(item, settings, now);
   const vehicle = vehicles.find((row) => row.driverId === (driver?.id ?? item.driverId)) ?? (check?.vehicleId ? vehicles.find((row) => row.id === check.vehicleId) : undefined);
   // Ride check: the shift puts a live check's answers at the time the incident opened.

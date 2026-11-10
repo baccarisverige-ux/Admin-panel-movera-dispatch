@@ -5,6 +5,7 @@
  */
 import { callSettingsOf } from "../config/callSettings.ts";
 import { dontMatchOf } from "../config/dontMatchSettings.ts";
+import { emergencyNumbersOf } from "../config/emergencyNumbers.ts";
 import { MARKETS, marketOfZone, standardZoneId, zoneById, type MarketId } from "../markets/markets.ts";
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
@@ -324,6 +325,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       calls: callSettingsOf((document as { calls?: unknown }).calls),
       // v0.18.43 §64: CountryRules.dontMatchAgain (missing = the defaults).
       dontMatchAgain: dontMatchOf((document as { dontMatchAgain?: unknown }).dontMatchAgain),
+      // v0.18.57 §79: CountryRules.emergencyNumbers (missing = the country default).
+      emergencyNumbers: emergencyNumbersOf((document as { emergencyNumbers?: unknown }).emergencyNumbers, market.id as MarketId),
       onTripMinDonePct: (() => { const v = (document as { onTripOffers?: { minRouteDonePct?: unknown } }).onTripOffers?.minRouteDonePct; return typeof v === "number" && v >= 0 && v <= 100 ? v : 70; })(),
       // Fix job 0 (owner A2-1): read on the Standard; the server ignores a zone's own value.
       ...((document as { walletCreditMax?: { amountMinor: number } }).walletCreditMax ? { walletCreditMax: (document as { walletCreditMax: { amountMinor: number } }).walletCreditMax.amountMinor / market.minorUnits } : {}),
@@ -669,7 +672,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const current = await draft("country_rules", id, true);
       const facts = zoneFacts(id);
       const hardMax = driverBonusHardMax(market.id as MarketId);
-      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct, chainLateFreeCancelMin: next.chainLateFreeCancelMin, calls: next.calls, dontMatchAgain: next.dontMatchAgain, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax } : {}) }, current?.document ?? null);
+      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct, chainLateFreeCancelMin: next.chainLateFreeCancelMin, calls: next.calls, dontMatchAgain: next.dontMatchAgain, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax, emergencyNumbers: next.emergencyNumbers } : {}) }, current?.document ?? null);
       await savePublish(http, "country_rules", id, current, doc);
       standardMarks.set("country_rules", id, false);
       // v0.18.10 (G8): the tip rules (cash after the trip, typed amount + max) live in the rider app document.
