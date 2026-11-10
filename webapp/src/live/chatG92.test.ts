@@ -117,7 +117,7 @@ test("§78 admin Message: POST /admin/drivers|riders/{id}/message { text } opens
 test("§78 support.reply is a tick box per role in the role editor and guards the four routes", () => {
   const item = PERMISSIONS.find((p) => p.id === "support.reply");
   assert.ok(item);
-  assert.match(item.label, /chats/);
+  assert.equal(item.label, "Answer support");
   for (const op of ["adminChats", "adminMessageDriver", "adminMessageRider"]) {
     const at = O.indexOf(`operationId: ${op}`);
     assert.ok(at > 0, op);

@@ -30,7 +30,7 @@ export const PERMISSION_GROUPS: { label: string; items: { id: string; label: str
   { label: "Act", items: [
     { id: "trips.annotate", label: "Note, flag and open cases on trips" },
     { id: "trips.intervene", label: "Change or cancel trips" },
-    { id: "support.reply", label: "Answer support, read trip chats and message drivers and riders" },
+    { id: "support.reply", label: "Answer support" },
     { id: "safety.edit", label: "Handle safety" },
     { id: "riders.block", label: "Block riders" },
     { id: "riders.promotions", label: "Give rider promotions" },

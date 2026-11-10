@@ -51,5 +51,4 @@ export const svC13ChatG92 = {
   "Opens a support ticket in the person's Support inbox in the app. They answer there; the answer comes to Support.": "Öppnar ett supportärende i personens Support-inkorg i appen. Personen svarar där; svaret kommer till Support.",
   "Open trip chats between rider and driver in your zones, newest message first. Support can read and write.": "Öppna resechattar mellan resenär och förare i dina zoner, nyaste meddelandet först. Support kan läsa och skriva.",
   "Show more": "Visa fler",
-  "Answer support, read trip chats and message drivers and riders": "Svara på support, läsa resechattar och skicka meddelanden till förare och resenärer",
 };

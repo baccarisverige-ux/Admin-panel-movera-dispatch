@@ -51,5 +51,4 @@ export const frC13ChatG92 = {
   "Opens a support ticket in the person's Support inbox in the app. They answer there; the answer comes to Support.": "Ouvre un ticket dans la boîte Support de la personne dans l'application. Elle répond là ; la réponse arrive au Support.",
   "Open trip chats between rider and driver in your zones, newest message first. Support can read and write.": "Chats ouverts entre passager et chauffeur dans vos zones, message le plus récent d'abord. Le support peut lire et écrire.",
   "Show more": "Afficher plus",
-  "Answer support, read trip chats and message drivers and riders": "Répondre au support, lire les chats de course et écrire aux chauffeurs et passagers",
 };
