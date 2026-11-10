@@ -32,6 +32,7 @@ import { useSlice } from "../api/hooks";
 import { CommandButton } from "../ui/CommandButton";
 import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { NumberField } from "./NumberField";
+import { EmergencyNumbersEditor } from "./EmergencyNumbersEditor";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 
@@ -272,6 +273,10 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 </select>
               </label>
             </div>
+          </div>
+          {/* v0.18.57 §79 (owner 2026-11-10): CountryRules.emergencyNumbers, country standard only. */}
+          <div id="extras-emergency-numbers" className="cx-anchor">
+            <EmergencyNumbersEditor rows={onStandard ? shown.emergencyNumbers : countrySettingsOf(book, country).emergencyNumbers} canEdit={canEdit} onStandard={onStandard} onChange={(emergencyNumbers) => edit({ emergencyNumbers })} />
           </div>
           <div id="extras-person-limits" className="cx-anchor">
             <div className="fee-card" data-testid="person-limits">

@@ -6,15 +6,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { CONTRACT_VERSION } from "../domain/contract.ts";
 
-const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
 const O = readFileSync(new URL("../../../contracts/openapi.yaml", import.meta.url), "utf8");
 
-test("the admin pins the contract it carries (0.18.55)", () => {
-  assert.equal(C.version, "0.18.55");
-  assert.equal(CONTRACT_VERSION, C.version);
-});
+// The exact pin moved to sync0_18_57.test.ts with the 0.18.57 copy; the §77 check below still holds.
 
 test("§77 is in the copy: admin trip reads need trips.read and the trip's zone", () => {
   assert.match(O, /v0\.18\.55 §77/);

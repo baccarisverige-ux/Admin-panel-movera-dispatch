@@ -1,0 +1,20 @@
+/** English dictionary, area c13-emergency-numbers: contract v0.18.57 §79, Tips & limits › Emergency numbers and the safety case page. Add new keys at the end of this file. Merged in ../en.ts in this order. */
+export const enC13EmergencyNumbers = {
+  "{0} Emergency numbers": "{0} Emergency numbers",
+  "The call buttons on the safety screens of the rider and driver apps, and on the safety case page. The first number is the main one: SOS dials it.": "The call buttons on the safety screens of the rider and driver apps, and on the safety case page. The first number is the main one: SOS dials it.",
+  "Emergency numbers are set for the whole country, on the Standard.": "Emergency numbers are set for the whole country, on the Standard.",
+  "Emergency number {0} kind": "Emergency number {0} kind",
+  "Emergency number {0}": "Emergency number {0}",
+  "Emergency number {0}: {1}": "Emergency number {0}: {1}",
+  "Move emergency number {0} up": "Move emergency number {0} up",
+  "Move emergency number {0} down": "Move emergency number {0} down",
+  "Remove emergency number {0}": "Remove emergency number {0}",
+  "Add an emergency number": "Add an emergency number",
+  "Ambulance": "Ambulance",
+  "General": "General",
+  "{0}: keep at least one emergency number.": "{0}: keep at least one emergency number.",
+  "{0}: at most 6 emergency numbers.": "{0}: at most 6 emergency numbers.",
+  "{0}: emergency number {1} must be 2 to 15 digits (a + first is allowed).": "{0}: emergency number {1} must be 2 to 15 digits (a + first is allowed).",
+  "{0}: emergency number {1} needs a name in Swedish, French and English (1 to 40 characters).": "{0}: emergency number {1} needs a name in Swedish, French and English (1 to 40 characters).",
+  "Emergency numbers: {0} → {1}": "Emergency numbers: {0} → {1}",
+};
