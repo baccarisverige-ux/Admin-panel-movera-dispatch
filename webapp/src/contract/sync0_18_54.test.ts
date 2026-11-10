@@ -7,14 +7,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { CONTRACT_VERSION } from "../domain/contract.ts";
 
 const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
 
-test("the admin pins the contract it carries (0.18.54)", () => {
-  assert.equal(C.version, "0.18.54");
-  assert.equal(CONTRACT_VERSION, C.version);
-});
+// The exact pin moved to sync0_18_55.test.ts with the 0.18.55 copy; the §76 check below still holds.
 
 test("§76 is in the copy: masked shapes, the flag, the three reveal routes and the SOS reveal", () => {
   assert.match(C.adminMasking.shapes.flag, /sensitiveMasked: true/);
