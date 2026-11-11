@@ -151,6 +151,9 @@ function ShareBars({ rows, format }: { rows: Share[]; format: (minor: number) =>
 
 type Action = { id: string; label: string; icon: ReactNode; path?: string; permission: string; onRun?: () => void };
 
+/** The Dashboard activity card shows the newest 20 audit entries. */
+const DASHBOARD_AUDIT_ROWS = 20;
+
 export function DashboardPage() {
   const [params, setParams] = useSearchParams();
   const client = useQueryClient();
@@ -212,7 +215,8 @@ export function DashboardPage() {
   const ridersOnline = useRecords("ridersOnline", undefined, { refetchMs: LIVE_MS });
   const bonuses = useRecords("bonuses", undefined, { refetchMs: SLOW_MS });
   const fleets = useRecords("fleets");
-  const audit = useAudit(LIVE_MS);
+  // C6 (A15 §1): the card shows 20 rows, so it reads one page of 20 (GET /admin/audit?limit=20), not up to 20 pages.
+  const audit = useAudit(LIVE_MS, { limit: DASHBOARD_AUDIT_ROWS });
   // Names, phones and links follow the viewer's own read permissions (UI-06); counts and money stay.
   const access = useMemo(() => dashboardAccess(role), [role]);
   const driverRows = useMemo(() => maskDrivers(drivers.data ?? [], access), [drivers.data, access]);
@@ -451,7 +455,7 @@ export function DashboardPage() {
   }, [tab, driverRows, driverStore.value, rankSpan, shownSpan, weekSpan]);
 
   const activity: ActivityItem[] = [
-    ...(audit.data ?? []).slice(0, 20).map((row) => ({
+    ...(audit.data ?? []).slice(0, DASHBOARD_AUDIT_ROWS).map((row) => ({
       id: row.id,
       at: Date.parse(row.at),
       who: row.actorId,

@@ -52,3 +52,9 @@ test("C5 (N9): the trip page's audit is one page of 20 for that trip (GET /admin
   assert.equal(params(reads[0]!).get("limit"), "20");
   assert.equal(params(reads[0]!).get("cursor"), null);
 });
+
+test("C6 (§1): the Dashboard audit card reads one page of 20 (GET /admin/audit?limit=20)", async () => {
+  const { client, reads } = fakeClient(() => ({ items: [], nextCursor: "more" }));
+  await createLiveAdminApi(client).audit({ limit: 20 });
+  assert.deepEqual(reads, ["/admin/audit?limit=20"], "one page even when the server has more");
+});
