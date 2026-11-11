@@ -18,7 +18,9 @@ How it works
 
 Usage
   python3 tools/size_ratchet.py             check (CI step "File size ratchet (Rule 25)")
-  python3 tools/size_ratchet.py --update    rewrite size-ratchet.json from the tree
+  python3 tools/size_ratchet.py --update    tighten size-ratchet.json from the tree: it only LOWERS or
+                                            REMOVES entries; it refuses (exit 1, nothing written) to raise
+                                            a tracked count or add a new file (REMINDERS 19)
   python3 tools/size_ratchet.py --self-test prove the check on a temp tree (grow -> fail)
 """
 import json
@@ -83,6 +85,31 @@ def write_baseline(path, counts, limit):
     return over
 
 
+def update_baseline(root, baseline_path, quiet=False):
+    """--update: lower / remove entries only. Refuses (returns 1, writes nothing) when a tracked file grew or a new
+    file is over the limit: the fix is to shrink or split the file, never to raise the baseline."""
+    base = load_baseline(baseline_path)
+    limit, over = int(base.get("limit", LIMIT)), base.get("over", {})
+    counts = measure(root)
+    refused = []
+    for path, n in counts.items():
+        if path in over and n > over[path]:
+            refused.append(f"{path}: {n} lines, would RAISE its tracked {over[path]}")
+        elif path not in over and n > limit:
+            refused.append(f"{path}: {n} lines, would ADD a new file over the {limit}-line limit")
+    if refused:
+        if not quiet:
+            print("size_ratchet --update REFUSED (Rule 25: the baseline may only shrink; nothing was written):")
+            for line in refused:
+                print("  " + line)
+            print("Shrink or split these files instead of raising the baseline.")
+        return 1
+    new_over = write_baseline(baseline_path, counts, limit)
+    if not quiet:
+        print(f"baseline written: {len(new_over)} files over {limit} lines")
+    return 0
+
+
 def check(root, baseline_path, quiet=False):
     base = load_baseline(baseline_path)
     limit, over = int(base.get("limit", LIMIT)), base.get("over", {})
@@ -135,6 +162,22 @@ def self_test():
         with open(os.path.join(tmp, "src", "new.txt"), "w") as fh:
             fh.write("y\n" * (LIMIT + 1))
         assert check(tmp, bl, quiet=True) == 1, "a new file over the limit must fail"
+        # REMINDERS 19: --update never adds or raises; it refuses and writes nothing.
+        before = open(bl).read()
+        assert update_baseline(tmp, bl, quiet=True) == 1, "--update must refuse to add a new file"
+        assert open(bl).read() == before, "a refused --update writes nothing"
+        os.remove(os.path.join(tmp, "src", "new.txt"))
+        with open(big, "w") as fh:
+            fh.write("x\n" * (LIMIT + 2))
+        assert update_baseline(tmp, bl, quiet=True) == 0, "--update lowers a shrunk count"
+        assert load_baseline(bl)["over"] == {"src/big.txt": LIMIT + 2}
+        with open(big, "a") as fh:
+            fh.write("x\n")
+        assert update_baseline(tmp, bl, quiet=True) == 1, "--update must refuse to raise a tracked count"
+        assert load_baseline(bl)["over"] == {"src/big.txt": LIMIT + 2}
+        with open(big, "w") as fh:
+            fh.write("x\n" * 10)
+        assert update_baseline(tmp, bl, quiet=True) == 0 and load_baseline(bl)["over"] == {}, "--update removes"
     print("self-test OK")
     return 0
 
@@ -143,7 +186,5 @@ if __name__ == "__main__":
     if "--self-test" in sys.argv:
         sys.exit(self_test())
     if "--update" in sys.argv:
-        over = write_baseline(BASELINE, measure(ROOT), LIMIT)
-        print(f"baseline written: {len(over)} files over {LIMIT} lines")
-        sys.exit(0)
+        sys.exit(update_baseline(ROOT, BASELINE))
     sys.exit(check(ROOT, BASELINE))

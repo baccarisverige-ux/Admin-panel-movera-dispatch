@@ -74,3 +74,16 @@ test("the SOS reveal is offered only on an open case (open or investigating)", (
   assert.equal(incidentRevealAllowed("dismissed"), false);
   assert.equal(incidentRevealAllowed(undefined), false);
 });
+
+test("REMINDERS 14c: a Call button never dials a masked phone nor shows without viewSensitive", async () => {
+  const { callHref } = await import("./masking.ts");
+  assert.equal(callHref("+46•••••••12", true), null);
+  assert.equal(callHref("+46 70 123 45 12", false), null);
+  assert.equal(callHref("", true), null);
+  assert.equal(callHref("+46 70 123 45 12", true), "tel:+46701234512");
+  const driverPage = readFileSync(new URL("../pages/DriverDetailPage.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(driverPage, /tel:\$\{driver\.phone/, "the driver page never builds tel: from the raw phone");
+  assert.match(driverPage, /driverCallHref \? <CommandButton/, "the driver Call button is hidden without a dialable number");
+  const contact = readFileSync(new URL("../fleet/ui.tsx", import.meta.url), "utf8");
+  assert.match(contact, /href \? <CommandButton/, "the rider/driver contact Call button is hidden without a dialable number");
+});

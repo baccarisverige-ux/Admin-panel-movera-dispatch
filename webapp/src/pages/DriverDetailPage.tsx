@@ -12,6 +12,7 @@ import { LiveDocBox } from "../live/LiveDocBox";
 import { LiveMessagePerson } from "../live/LiveMessagePerson";
 import { activateEmphasised, driverCategoryFits, driverHistoryShown } from "../live/realOnly";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
+import { callHref } from "../live/masking";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { belongsToDriver } from "../riders/match";
 import { useEffect, useMemo, useState } from "react";
@@ -199,6 +200,8 @@ export function DriverDetailPage() {
   );
   const liveFacts = liveDriverOf(driver);
   const masked = Boolean(liveData && driver.liveSensitiveMasked);
+  // REMINDERS 14c: Call is hidden when the phone is masked or this admin lacks drivers.viewSensitive (never dials '•').
+  const driverCallHref = masked ? null : callHref(driver.phone, can(role, "drivers.viewSensitive"));
   const dob = driver.liveAccount?.dateOfBirth;
   const activationIssue = liveData ? null : driverActivationIssue(store.value, driverSeed, car);
   const driverAudits = (audit.data ?? []).filter((item) => item.targetId === driver.id).slice(0, 20);
@@ -331,7 +334,7 @@ export function DriverDetailPage() {
               {accountAction("admin.driver.reactivate", "active", "Reactivate", Boolean(activationIssue) || (driver.status !== "suspended" && driver.status !== "on_hold"))}
             </div>
             <div className="fd-action-row">
-              <CommandButton
+              {driverCallHref ? <CommandButton
                 command="admin.driver.call"
                 className="dash-btn ghost"
                 type="button"
@@ -340,8 +343,8 @@ export function DriverDetailPage() {
                 scope={driver.zoneId}
                 before="idle"
                 after="call started"
-                onDone={() => { window.location.href = `tel:${driver.phone.replace(/[^+\d]/g, "")}`; }}
-              >{trn("{0}Call", <Phone size={15} aria-hidden="true" />)}</CommandButton>
+                onDone={() => { window.location.href = driverCallHref; }}
+              >{trn("{0}Call", <Phone size={15} aria-hidden="true" />)}</CommandButton> : null}
               <button type="button" data-command="admin.ui.dashboardTab" className="dash-btn ghost" onClick={() => selectTab("messages")}>{trn("{0}Message", <MessageSquare size={15} aria-hidden="true" />)}</button>
               {mapTo ? <Link className="dash-btn ghost" to={mapTo}>{trn("{0}See on map", <MapPin size={15} aria-hidden="true" />)}</Link> : <span className="dash-btn ghost off" title={tr("The driver is offline")}>{trn("{0}Offline", <MapPin size={15} aria-hidden="true" />)}</span>}
               <button type="button" data-command="admin.ui.dashboardTab" className="dash-btn ghost" onClick={() => selectTab("notes")}>{trn("{0}Note", <StickyNote size={15} aria-hidden="true" />)}</button>
