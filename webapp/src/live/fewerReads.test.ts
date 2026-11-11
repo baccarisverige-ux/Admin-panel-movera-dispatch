@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createLiveAdminApi, RIDE_CHECK_ALERTS_LIST, RIDE_CHECKS_OF_TRIP_LIST } from "./liveAdminApi.ts";
+import { createLiveAdminApi, DUE_PAYOUTS_LIST, OPEN_TICKETS_LIST, RIDE_CHECK_ALERTS_LIST, RIDE_CHECKS_OF_TRIP_LIST } from "./liveAdminApi.ts";
+import { keyMatches } from "./adminEvents.ts";
 import type { LiveClient } from "./session.ts";
 
 /** Audit A15 (N9, N10, N12, N15, N20, §1): the admin reads one small filtered page where it used to read every page. */
@@ -57,4 +58,19 @@ test("C6 (§1): the Dashboard audit card reads one page of 20 (GET /admin/audit?
   const { client, reads } = fakeClient(() => ({ items: [], nextCursor: "more" }));
   await createLiveAdminApi(client).audit({ limit: 20 });
   assert.deepEqual(reads, ["/admin/audit?limit=20"], "one page even when the server has more");
+});
+
+test("C7 (N12): the Dashboard counts read only open tickets and unpaid payouts (server status filter)", async () => {
+  const { client, reads } = fakeClient();
+  const api = createLiveAdminApi(client);
+  await api.list(OPEN_TICKETS_LIST, null);
+  await api.list(DUE_PAYOUTS_LIST, null);
+  const tickets = reads.filter((path) => path.startsWith("/admin/tickets?"));
+  const payouts = reads.filter((path) => path.startsWith("/admin/payouts?"));
+  assert.deepEqual(tickets.map((path) => params(path).getAll("status")), [["open"]]);
+  assert.deepEqual(payouts.map((path) => params(path).getAll("status").sort()), [["failed", "held", "pending", "pending_approval"]]);
+});
+
+test("C7 (N12): ticket.changed refreshes the open-ticket count", () => {
+  assert.equal(keyMatches({ type: "ticket.changed" }, ["records", OPEN_TICKETS_LIST, "{}", "a1"]), true);
 });

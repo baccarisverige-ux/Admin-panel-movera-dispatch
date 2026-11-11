@@ -185,6 +185,10 @@ export const DRIVER_BY_ID_LIST = "driverById:";
 export const RIDE_CHECKS_OF_TRIP_LIST = "rideChecksOfTrip:";
 /** C4 (A15 N15): the checks behind ride-check alerts and the map (need_help, waiting, recent no_answer; both sides). */
 export const RIDE_CHECK_ALERTS_LIST = "rideCheckAlerts";
+/** C7 (A15 N12): the Dashboard counts: open tickets and not-yet-paid payouts, filtered by the server's status. */
+export const OPEN_TICKETS_LIST = "openTickets";
+export const DUE_PAYOUTS_LIST = "duePayouts";
+const DUE_PAYOUT_STATUSES = ["pending", "pending_approval", "failed", "held"] as const;
 /** No-answer checks older than this belong to trips long over (the map shows checks of trips going on now). */
 const OPEN_CHECK_WINDOW_MS = 6 * 3_600_000;
 
@@ -658,12 +662,14 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     if (name === "ratings") return (await all<AdminRating>(client, "/admin/ratings", filter)).map(ratingRecord);
     if (name === "tickets") return (await all<SupportTicket>(client, "/admin/tickets", filter)).map(ticketRecord);
+    if (name === OPEN_TICKETS_LIST) return (await all<SupportTicket>(client, "/admin/tickets", filter, { status: "open" })).map(ticketRecord);
     if (name === "refunds") {
       const rows = await all<{ refundId: string; tripId?: string; amount: LiveMoney; reason: string; status: string; createdAt?: string }>(client, "/admin/refunds", filter);
       return rows.map((row) => ({ id: row.refundId, name: row.tripId ? `pay_${row.tripId}` : "", phone: "", zoneId: row.tripId ? trips.get(row.tripId)?.zoneId ?? "" : "", status: row.status === "done" ? "refunded" : row.status, ...(row.tripId ? { tripId: row.tripId } : {}), fareOre: row.amount.amountMinor, ...(row.createdAt ? { createdAt: row.createdAt } : {}), notes: row.reason, live: true }));
     }
-    if (name === "payouts") {
-      const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string }>(client, "/admin/payouts", filter);
+    if (name === "payouts" || name === DUE_PAYOUTS_LIST) {
+      const statuses: [string, string][] = name === DUE_PAYOUTS_LIST ? DUE_PAYOUT_STATUSES.map((status) => ["status", status]) : [];
+      const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string }>(client, "/admin/payouts", filter, statuses);
       return rows.map((row) => ({
         id: row.payoutId, name: `${row.periodStart.slice(0, 10)} – ${row.periodEnd.slice(0, 10)}`, phone: "", zoneId: row.zoneId ?? "", status: row.status === "paid" ? "paid" : "scheduled", driverId: row.driverId, fareOre: row.amount.amountMinor, createdAt: row.createdAt, live: true,
         livePayout: { lines: (row.lines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor, ...(line.count !== undefined ? { count: line.count } : {}) })), source: row.source, periodStart: row.periodStart, periodEnd: row.periodEnd, tripCount: row.tripCount, currency: row.amount.currency },

@@ -431,7 +431,8 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       state.approvals = state.approvals.filter((item) => item.approvalId !== decided[1]);
       return json(route, 200, { approvalId: decided[1], status: decided[2] === "approve" ? "approved" : "rejected" });
     }
-    if (p === "/api/v1/admin/payouts" && method === "GET") return json(route, 200, { items: inZones(state.payouts, zoneField), nextCursor: null });
+    // C7 (A15 N12): the server's status filter (repeated status=…).
+    if (p === "/api/v1/admin/payouts" && method === "GET") return json(route, 200, { items: inZones(state.payouts, zoneField).filter((item) => !url.searchParams.getAll("status").length || url.searchParams.getAll("status").includes(String(item["status"]))), nextCursor: null });
     if (p === "/api/v1/admin/payouts" && method === "POST") {
       const made = { payoutId: `PY${state.payouts.length + 1}`, driverId: body.driverId, driverName: "Anna Berg", zoneId: "Z001", amount: { amountMinor: 41600, currency: "SEK" }, status: "pending", periodStart: body.from, periodEnd: body.to, createdAt: "2026-10-27T10:00:00Z", source: "manual", tripCount: 1, lines: [{ code: "trips", amount: { amountMinor: 41600, currency: "SEK" }, count: 1 }] };
       state.payouts.unshift(made);

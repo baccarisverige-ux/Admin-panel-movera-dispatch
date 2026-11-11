@@ -3,7 +3,7 @@ import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { kpiReport, localDay as kpiDay } from "../live/kpis";
 import type { KpiDay } from "../live/types";
 import { isLiveData } from "../live/realData";
-import { WAITING_TRIPS_LIST } from "../live/liveAdminApi";
+import { DUE_PAYOUTS_LIST, OPEN_TICKETS_LIST, WAITING_TRIPS_LIST } from "../live/liveAdminApi";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
@@ -206,11 +206,12 @@ export function DashboardPage() {
   // GET /admin/trips?status=…), not the first 50 trips; the demo (and a live read that failed) keeps the trip list.
   const waitingTrips = useRecords(isLiveData() ? WAITING_TRIPS_LIST : "trips", undefined, { refetchMs: LIVE_MS });
   const incidents = useRecords("incidents", undefined, { refetchMs: LIVE_MS });
-  const tickets = useRecords("tickets", undefined, { refetchMs: LIVE_MS });
+  // C7 (A15 N12): live, the server filters by status (open tickets, unpaid payouts), so the counts stay right past 2,000.
+  const tickets = useRecords(isLiveData() ? OPEN_TICKETS_LIST : "tickets", undefined, { refetchMs: LIVE_MS });
   const reservations = useRecords("reservations", undefined, { refetchMs: LIVE_MS });
   const payments = useRecords("payments", undefined, { refetchMs: LIVE_MS });
   const vehicles = useRecords("vehicles", undefined, { refetchMs: SLOW_MS });
-  const payouts = useRecords("payouts", undefined, { refetchMs: SLOW_MS });
+  const payouts = useRecords(isLiveData() ? DUE_PAYOUTS_LIST : "payouts", undefined, { refetchMs: SLOW_MS });
   const riders = useRecords("riders", undefined, { refetchMs: SLOW_MS });
   const ridersOnline = useRecords("ridersOnline", undefined, { refetchMs: LIVE_MS });
   const bonuses = useRecords("bonuses", undefined, { refetchMs: SLOW_MS });
