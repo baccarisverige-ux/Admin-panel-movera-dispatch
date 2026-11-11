@@ -1,3 +1,4 @@
+import { localDay } from "../dashboard/time";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router";
 import { Download, Search } from "lucide-react";
@@ -43,7 +44,7 @@ export function ActivityView({ timeZone }: { timeZone: string }) {
   const sessionOf = (item: ActivityItem) => (item.actorId === agent?.id && started !== null && Date.parse(item.at) >= started ? "This session" : "Earlier session");
 
   function exportCsv(rows: readonly ActivityItem[], what: string) {
-    download(`movera-activity-${what}-${new Date(now).toISOString().slice(0, 10)}.csv`, activityCsv(rows, nameOf));
+    download(`movera-activity-${what}-${localDay(now, timeZone)}.csv`, activityCsv(rows, nameOf));
     logExport(agent?.id, `${rows.length} activity rows (${what}, CSV)`);
   }
 

@@ -1,3 +1,5 @@
+import { addLocalDays, localDay } from "../dashboard/time";
+import { zoneTimeZone } from "../markets/markets";
 import { useEffect, useMemo, useState } from "react";
 import { LiveListBar } from "../live/LiveListBar";
 import { LiveOnboarding } from "../live/LiveOnboarding";
@@ -296,7 +298,7 @@ function ApplicantView({ settings, driver, rules, country, now, reviewNote, setR
   const required = new Set<DocId>([...neededDocs(countryRules, Boolean(driver.fleetId)), ...countryRules.docs.filter((id) => id === "terms" || id === "virtual_session")]);
   const [preview, setPreview] = useState<{ doc: DocId; action: "rejected" | "needed"; note: string } | null>(null);
   const [expiry, setExpiry] = useState<Partial<Record<DocId, string>>>({});
-  const tomorrow = new Date(now + 86_400_000).toISOString().slice(0, 10);
+  const tomorrow = addLocalDays(localDay(now, zoneTimeZone(driver.zoneId)), 1);
   return (
     <article className="vh-section ob-applicant" aria-label={tr("Application of {0}", [driver.name])}>
       <header className="ob-applicant-head">

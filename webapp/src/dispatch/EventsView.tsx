@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { ArrowLeft, CalendarDays, Flame, MapPin, Pencil, Plus, Radar, Target, Trash2 } from "lucide-react";
 import { BonusAreaMap } from "../drivers/BonusAreaMap";
 import type { Market } from "../markets/markets";
+import { addLocalDays, localDay } from "../dashboard/time";
 import { CommandButton } from "../ui/CommandButton";
 import { Choice, Num, Switch } from "./fields";
 import { giveBonusPrefill } from "./prefill";
@@ -35,8 +36,9 @@ const STATE_TEXT = { on: "Running now", soon: "Coming", done: "Done", off: "Off"
 const EMPTY_TEXT: EventText = { sv: "", fr: "", en: "" };
 const LANGS = [{ id: "sv", label: "Svenska" }, { id: "fr", label: "Français" }, { id: "en", label: "English" }] as const;
 
-function blankEvent(country: Market["id"], id: string): DispatchEvent {
-  const day = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+/** A new event defaults to tomorrow evening, "tomorrow" being the market's local day. */
+function blankEvent(country: Market["id"], id: string, timeZone: string, now = Date.now()): DispatchEvent {
+  const day = addLocalDays(localDay(now, timeZone), 1);
   return { id, country, name: "", ring: [], from: `${day}T20:00`, until: `${day}T23:30`, on: true, mode: "radar", radarDrivers: 10, pickupNote: "", driverMessage: "", location: null, details: { title: { ...EMPTY_TEXT }, description: { ...EMPTY_TEXT }, pickupNote: { ...EMPTY_TEXT } } };
 }
 
@@ -144,7 +146,7 @@ export function EventsView({ book, market, canEdit, canBonus, onNotice }: Props)
       <section className="dash-card" aria-labelledby="dx-events-title">
         <div className="card-head">
           <h3 id="dx-events-title">{trn("{0} Events in {1}", <CalendarDays size={16} aria-hidden="true" />, trx(market.name))}</h3>
-          <button data-command="admin.dispatch.edit" type="button" className="dash-btn small" disabled={!canEdit} onClick={() => setEditing(blankEvent(market.id, `EV-${Date.now().toString(36)}`))}>{trn("{0} New event", <Plus size={14} aria-hidden="true" />)}</button>
+          <button data-command="admin.dispatch.edit" type="button" className="dash-btn small" disabled={!canEdit} onClick={() => setEditing(blankEvent(market.id, `EV-${Date.now().toString(36)}`, market.timeZone))}>{trn("{0} New event", <Plus size={14} aria-hidden="true" />)}</button>
         </div>
         <p className="dx-modal-help">{live ? tr("A concert or a match: put the pin on the exact place, set the time and write what drivers should know. Drivers see a small event icon there on their map.") : tr("A concert or a match: draw the area and set the time. During the event, these dispatch rules apply in that area.")}</p>
         {events.length === 0 ? <p className="dx-calm">{trn("No event yet in {0}.", trx(market.name))}</p> : (

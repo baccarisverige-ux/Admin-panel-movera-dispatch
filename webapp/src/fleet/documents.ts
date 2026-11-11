@@ -1,6 +1,7 @@
 import type { DocStatus } from "../drivers/gate.ts";
 import { statusLabel } from "../domain/labels.ts";
 import { tr } from "../i18n/core.ts";
+import { localDay } from "../dashboard/time.ts";
 
 /** Colour a document shows: green valid, orange expiring soon, red missing / wrong / expired, blue waiting review. */
 export type DocHealth = "valid" | "expiring" | "invalid" | "review";
@@ -16,8 +17,10 @@ export const DOC_CHOICES: { status: DocStatus; readonly label: string }[] = (["a
 
 const DAY = 86_400_000;
 
-export function daysUntil(date: string, nowMs: number): number | null {
+/** Days from today to `date`; with `timeZone`, "today" is the local day there (a document expiring today stays valid until local midnight). */
+export function daysUntil(date: string, nowMs: number, timeZone?: string): number | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (timeZone) return Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${localDay(nowMs, timeZone)}T00:00:00Z`)) / DAY);
   return Math.floor((Date.parse(`${date}T23:59:59Z`) - nowMs) / DAY);
 }
 
@@ -25,8 +28,8 @@ export function daysUntil(date: string, nowMs: number): number | null {
  * The colour follows the chosen status, and the expiry date can only make it worse. warnDays: the country's first
  * expiry warning; from then the document shows orange.
  */
-export function docHealth(doc: DocState, nowMs: number, warnDays = EXPIRY_WARNING_DAYS): { health: DocHealth; label: string } {
-  const days = daysUntil(doc.expiresAt, nowMs);
+export function docHealth(doc: DocState, nowMs: number, warnDays = EXPIRY_WARNING_DAYS, timeZone?: string): { health: DocHealth; label: string } {
+  const days = daysUntil(doc.expiresAt, nowMs, timeZone);
   const word = (status: DocStatus) => statusLabel(status, "documentStatus");
   if (doc.status === "needed") return { health: "invalid", label: word("needed") };
   if (doc.status === "rejected") return { health: "invalid", label: word("rejected") };

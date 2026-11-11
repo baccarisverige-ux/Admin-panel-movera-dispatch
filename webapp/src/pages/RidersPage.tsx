@@ -1,3 +1,4 @@
+import { localDay } from "../dashboard/time";
 import { isLiveData } from "../live/realData";
 import { logExport } from "../reports/activityLog";
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -142,7 +143,7 @@ export function RidersPage() {
     const csv = ridersCsv(list, (row, minor) => money(minor, row.profile.country));
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    link.download = `movera-riders-${country}-${new Date(now).toISOString().slice(0, 10)}.csv`;
+    link.download = `movera-riders-${country}-${localDay(now, place.timeZone)}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
     logExport(agent?.id, `${list.length} riders (CSV)`);

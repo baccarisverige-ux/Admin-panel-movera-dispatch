@@ -502,6 +502,7 @@ export function DriverDetailPage() {
             rows={docRows}
             nowMs={now}
             warnDays={warnDays}
+            timeZone={market.timeZone}
             canEdit={canReview}
             targetId={driver.id}
             scope={driver.zoneId}

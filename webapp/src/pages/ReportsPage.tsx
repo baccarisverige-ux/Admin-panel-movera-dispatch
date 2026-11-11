@@ -101,7 +101,7 @@ export function ReportsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `movera-${csv.name}-${market.id}-${new Date(window.start).toISOString().slice(0, 10)}.csv`;
+    link.download = `movera-${csv.name}-${market.id}-${localDay(window.start, market.timeZone)}.csv`;
     document.body.append(link);
     link.click();
     link.remove();
