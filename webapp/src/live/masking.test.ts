@@ -12,7 +12,7 @@ const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", im
 
 test("the contract copy carries §76 (contract.json#adminMasking) with the shapes this module reads", () => {
   assert.ok(C.adminMasking, "adminMasking is in the copy");
-  assert.match(C.adminMasking.shapes.phone, /\+46•••••12/);
+  assert.match(C.adminMasking.shapes.phone, /\+46•••••••12/); // v0.18.60: one dot per hidden digit (7 for +46701234512)
   assert.match(C.adminMasking.shapes.email, /a•••@example\.com/);
   assert.match(C.adminMasking.shapes.dateOfBirth, /1990/);
   assert.match(C.adminMasking.reveal.rider, /\/admin\/riders\/\{riderId\}\/reveal/);

@@ -8914,4 +8914,7 @@
 ["Your role cannot send messages (Answer support).","Votre rôle ne peut pas envoyer de messages (Répondre au support)."],
 ["Opens a support ticket in the person's Support inbox in the app. They answer there; the answer comes to Support.","Ouvre un ticket dans la boîte Support de la personne dans l'application. Elle répond là ; la réponse arrive au Support."],
 ["Open trip chats between rider and driver in your zones, newest message first. Support can read and write.","Chats ouverts entre passager et chauffeur dans vos zones, message le plus récent d'abord. Le support peut lire et écrire."],
-["Show more","Afficher plus"]]
+["Show more","Afficher plus"],
+["Translate messages automatically","Traduire les messages automatiquement"],
+["Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.","Les messages arrivent traduits dans la langue du destinataire. « Voir l'original » affiche le texte tel qu'il a été écrit."],
+["Translate messages automatically: {0} → {1}","Traduire les messages automatiquement : {0} → {1}"]]

@@ -19,6 +19,8 @@ export type ChatSettings = {
   sheetAutoOpen: SheetAutoOpen;
   readAloudDefault: boolean;
   translation: boolean;
+  /** v0.18.64 §85 (owner 2026-11-11): messages arrive translated into the reader's language; "See original" under them. */
+  autoTranslate: boolean;
   quickRepliesOn: boolean;
   quickReplies: Record<ChatSide, QuickReply[]>;
   autoArrived: { on: boolean; text: ChatText };
@@ -31,7 +33,7 @@ export const AUTO_ARRIVED_TEXT_MAX = 200;
 export const QUICK_REPLY_ID = /^[a-z][a-z0-9_]{0,39}$/;
 type RangeKey = keyof typeof CHAT_RANGES;
 
-/** configDefaults.chat of contract v0.18.56 (checked against the copy in chatG92.test.ts). */
+/** configDefaults.chat of contract v0.18.56 + v0.18.64 autoTranslate (checked against the copy in chatG92.test.ts). */
 export const CHAT_DEFAULTS: ChatSettings = {
   keepDays: 90,
   maxLength: 2000,
@@ -40,6 +42,7 @@ export const CHAT_DEFAULTS: ChatSettings = {
   sheetAutoOpen: "new_message",
   readAloudDefault: false,
   translation: true,
+  autoTranslate: true,
   quickRepliesOn: true,
   quickReplies: {
     driver: [
@@ -100,6 +103,7 @@ export function chatSettingsOf(raw: unknown): ChatSettings {
     sheetAutoOpen: v["sheetAutoOpen"] === "off" || v["sheetAutoOpen"] === "new_message" ? v["sheetAutoOpen"] : CHAT_DEFAULTS.sheetAutoOpen,
     readAloudDefault: bool(v["readAloudDefault"], CHAT_DEFAULTS.readAloudDefault),
     translation: bool(v["translation"], CHAT_DEFAULTS.translation),
+    autoTranslate: bool(v["autoTranslate"], CHAT_DEFAULTS.autoTranslate),
     quickRepliesOn: bool(v["quickRepliesOn"], CHAT_DEFAULTS.quickRepliesOn),
     quickReplies: { driver: listOf(qr["driver"], CHAT_DEFAULTS.quickReplies.driver), rider: listOf(qr["rider"], CHAT_DEFAULTS.quickReplies.rider) },
     autoArrived: { on: bool(arrived["on"], CHAT_DEFAULTS.autoArrived.on), text: textOf(arrived["text"]) ?? copyText(CHAT_DEFAULTS.autoArrived.text) },
@@ -145,6 +149,7 @@ export function chatSettingsLines(before: ChatSettings, after: ChatSettings): st
   if (before.sheetAutoOpen !== after.sheetAutoOpen) lines.push(tr("Trip sheet opens by itself: {0} → {1}", [autoOpenText(before.sheetAutoOpen), autoOpenText(after.sheetAutoOpen)]));
   if (before.readAloudDefault !== after.readAloudDefault) lines.push(tr("Read messages aloud (start value): {0} → {1}", [onOff(before.readAloudDefault), onOff(after.readAloudDefault)]));
   if (before.translation !== after.translation) lines.push(tr("Translate link: {0} → {1}", [onOff(before.translation), onOff(after.translation)]));
+  if (before.autoTranslate !== after.autoTranslate) lines.push(tr("Translate messages automatically: {0} → {1}", [onOff(before.autoTranslate), onOff(after.autoTranslate)]));
   if (before.quickRepliesOn !== after.quickRepliesOn) lines.push(tr("Quick replies: {0} → {1}", [onOff(before.quickRepliesOn), onOff(after.quickRepliesOn)]));
   for (const side of ["driver", "rider"] as const) {
     if (JSON.stringify(before.quickReplies[side]) !== JSON.stringify(after.quickReplies[side])) lines.push(tr("Quick replies for the {0} changed ({1} → {2})", [sideText(side).toLowerCase(), before.quickReplies[side].length, after.quickReplies[side].length]));

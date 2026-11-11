@@ -8914,4 +8914,7 @@
 ["Your role cannot send messages (Answer support).","Your role cannot send messages (Answer support)."],
 ["Opens a support ticket in the person's Support inbox in the app. They answer there; the answer comes to Support.","Opens a support ticket in the person's Support inbox in the app. They answer there; the answer comes to Support."],
 ["Open trip chats between rider and driver in your zones, newest message first. Support can read and write.","Open trip chats between rider and driver in your zones, newest message first. Support can read and write."],
-["Show more","Show more"]]
+["Show more","Show more"],
+["Translate messages automatically","Translate messages automatically"],
+["Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.","Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written."],
+["Translate messages automatically: {0} → {1}","Translate messages automatically: {0} → {1}"]]
