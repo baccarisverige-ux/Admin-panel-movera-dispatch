@@ -34,6 +34,7 @@ import type { ApprovalRow, AuditRow, DemoDb, DemoRecord, InboxItem, OperationRow
 import { advanceDemoDispatch, dispatchBook, dispatchCommand, nearbyFor, tripOffersView, type NearbyDriverList, type TripOffersView } from "./dispatchSim.ts";
 import { ADMIN_DISPATCH_KEY, NEARBY_SCOPES, radiusIssue, type DispatchEvent, type NearbyQuery } from "../dispatch/assign.ts";
 
+export type AuditQuery = { targetId?: string; limit?: number };
 export type ApiEnv = {
   PROD: boolean;
   VITE_DATA?: string;
@@ -90,7 +91,8 @@ export type AdminApi = {
   search: (query: string, scope: ZoneScope) => Promise<{ kind: string; id: string; label: string; path: string }[]>;
   command: (input: CommandInput) => Promise<CommandResult>;
   revision: () => Promise<number>;
-  audit: () => Promise<AuditRow[]>;
+  /** C5/C6 (A15 N9, §1): `targetId` and `limit` read one small page (the server filters); none = every page. */
+  audit: (options?: AuditQuery) => Promise<AuditRow[]>;
   approvals: () => Promise<ApprovalRow[]>;
   operation: (idempotencyKey: string, actorId: string) => Promise<OperationRow | null>;
   reset: () => Promise<DemoDb>;
@@ -796,8 +798,9 @@ export function createFixtureAdminApi(delayMs = DEMO_DELAY_MS): AdminApi {
       return loadDb().rev;
     },
 
-    async audit() {
-      return loadDb().audits;
+    async audit(options?: AuditQuery) {
+      const rows = options?.targetId ? loadDb().audits.filter((row) => row.targetId === options.targetId) : loadDb().audits;
+      return options?.limit ? rows.slice(0, options.limit) : rows;
     },
 
     async approvals() {

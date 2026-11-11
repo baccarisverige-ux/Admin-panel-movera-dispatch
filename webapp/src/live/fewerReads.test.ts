@@ -42,3 +42,13 @@ test("C4 (N15): alert checks use the answer filter, then both sides of only thos
   assert.ok(params(checks.find((path) => params(path).get("answer") === "no_answer")!).get("from"), "no_answer only for recent checks");
   assert.deepEqual(checks.map((path) => params(path).get("tripId")).filter(Boolean).sort(), ["T1", "T2"]);
 });
+
+test("C5 (N9): the trip page's audit is one page of 20 for that trip (GET /admin/audit?targetId=&limit=20)", async () => {
+  const { client, reads } = fakeClient();
+  await createLiveAdminApi(client).audit({ targetId: "T1", limit: 20 });
+  assert.equal(reads.length, 1);
+  assert.equal(reads[0]!.split("?")[0], "/admin/audit");
+  assert.equal(params(reads[0]!).get("targetId"), "T1");
+  assert.equal(params(reads[0]!).get("limit"), "20");
+  assert.equal(params(reads[0]!).get("cursor"), null);
+});

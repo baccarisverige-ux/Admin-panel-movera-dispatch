@@ -18,7 +18,7 @@ const TRIP_STEPS: Record<string, string> = { "admin.trip.cancel": "cancel", "adm
 const TRIP_STEP_DONE: Record<string, string> = { "admin.trip.cancel": "Trip cancelled.", "admin.trip.reassign": "The trip is looking for a new driver.", "admin.trip.noShow": "Marked as a no-show.", "admin.trip.complete": "Trip completed.", "admin.trip.adjust": "Price changed.", "admin.trip.waiting": "Waiting time saved." };
 
 export { zoneFilterOf, type ZoneFilter };
-import type { AdminApi, CommandInput, CommandResult } from "../api/create.ts";
+import type { AdminApi, AuditQuery, CommandInput, CommandResult } from "../api/create.ts";
 import type { TripOffersView } from "../api/dispatchSim.ts";
 import { ApiError } from "../api/httpClient.ts";
 import { radarRepeatOf, toolRefusal, type RadarZoneSend } from "./dispatchTools.ts";
@@ -1275,7 +1275,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     search: async (query, scope) => search(query, scope),
     command,
     revision: async () => 0,
-    audit: async () => (await all<AuditEntry>(client, "/admin/audit")).map(auditRow),
+    // C5/C6 (A15 N9, §1): one page of `limit` rows, filtered by the server (GET /admin/audit?targetId=&limit=).
+    audit: async (options?: AuditQuery) => {
+      if (!options?.targetId && !options?.limit) return (await all<AuditEntry>(client, "/admin/audit")).map(auditRow);
+      const params = new URLSearchParams({ limit: String(options.limit ?? PAGE_LIMIT), ...(options.targetId ? { targetId: options.targetId } : {}) });
+      return (await client.json<Page<AuditEntry>>(`/admin/audit?${params.toString()}`)).items.map(auditRow);
+    },
     approvals: async () => (await all<Approval>(client, "/admin/approvals")).map(approvalRow).filter((row): row is ApprovalRow => row !== null),
     operation: async () => null,
     reset: async () => { throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false }); },

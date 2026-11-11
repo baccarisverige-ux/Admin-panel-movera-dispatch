@@ -418,7 +418,13 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     }
     if (p === "/api/v1/admin/live/drivers") return json(route, 200, { ...LIVE_DRIVERS, items: inZones([...(state.noLiveDrivers ? [] : LIVE_DRIVERS.items), ...state.liveDrivers], zoneField), ...(state.ridersOnline ? { ridersOnline: inZones(state.ridersOnline, zoneField), ridersOnlineWindowSeconds: 120 } : {}), ...(state.zoneSupply ? { zoneSupply: inZones(state.zoneSupply, zoneField) } : {}) });
     if (p === "/api/v1/admin/payments") return json(route, 200, { items: inZones(PAYMENTS, (item) => [tripZone(item.tripId)]), nextCursor: null });
-    if (p === "/api/v1/admin/audit") return json(route, 200, { items: [...(state.audit ?? []), ...AUDIT], nextCursor: null });
+    if (p === "/api/v1/admin/audit") {
+      // C5/C6 (A15 N9, §1): the server's targetId filter and page limit.
+      const targetId = url.searchParams.get("targetId");
+      const limit = Number(url.searchParams.get("limit") ?? 0);
+      const rows = [...(state.audit ?? []), ...AUDIT].filter((row) => !targetId || (row as { targetId?: string }).targetId === targetId);
+      return json(route, 200, { items: limit ? rows.slice(0, limit) : rows, nextCursor: null });
+    }
     if (p === "/api/v1/admin/approvals") return json(route, 200, { items: state.approvals, nextCursor: null });
     const decided = /^\/api\/v1\/admin\/approvals\/([^/]+)\/(approve|reject)$/.exec(p);
     if (decided) {

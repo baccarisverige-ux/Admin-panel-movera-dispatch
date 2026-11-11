@@ -6,7 +6,7 @@ import { useSession } from "../auth/SessionContext.tsx";
 import { liveClass, liveHandles } from "../live/liveCommands.ts";
 import { commandById } from "../commands/registry.ts";
 import { useAdminApi } from "./AdminApiContext.tsx";
-import type { CommandInput, CommandResult } from "./create.ts";
+import type { AuditQuery, CommandInput, CommandResult } from "./create.ts";
 import type { TripRecord } from "./seed.ts";
 import { useMarketScope } from "../markets/useMarketScope.ts";
 import { parseZoneList } from "../markets/markets.ts";
@@ -111,9 +111,11 @@ export function useRevision() {
   return useQuery({ queryKey: ["revision"], queryFn: () => api.revision() });
 }
 
-export function useAudit(refetchMs?: number) {
+export function useAudit(refetchMs?: number, options?: AuditQuery) {
   const api = useAdminApi();
-  return useQuery({ queryKey: ["audit"], queryFn: () => readTracked(api, ["audit"], () => api.audit()), refetchInterval: refetchMs });
+  // ["audit", …] keeps every invalidateQueries(["audit"]) after an action working (prefix match).
+  const queryKey = options ? ["audit", options] : ["audit"];
+  return useQuery({ queryKey, queryFn: () => readTracked(api, queryKey, () => api.audit(options)), refetchInterval: refetchMs });
 }
 
 // A2 leftovers (owner Q1 "One admin always"): no second-admin approvals list is read any more.
