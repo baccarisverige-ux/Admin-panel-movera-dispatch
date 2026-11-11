@@ -33,14 +33,21 @@ export type LiveDriver = {
   progress: number;
   /** v0.18.37 §61: on a trip and going offline when his trips end (no admin switch). */
   goingOffline?: boolean;
+  /** v0.18.65 §86: on a trip with next-trip offers stopped on his trip sheet's radar (no admin setting). */
+  nextTripsOff?: boolean;
 };
 
 /** v0.18.37 §61: the amber warning chip style (the same as an on-hold status), never the grey info chip. */
 export const GOING_OFFLINE_CHIP_CLASS = "fd-chip s-on_hold";
 
 /** The map panel's status: the one-line state + last-seen text, and the going-offline chip shown under it. */
-export function panelStatus(driver: Pick<LiveDriver, "goingOffline">, state: string, seen: string): { line: string; chip: string | null } {
-  return { line: `${state}${seen}`, chip: goingOfflineLabel(driver) };
+export function panelStatus(driver: Pick<LiveDriver, "goingOffline" | "nextTripsOff">, state: string, seen: string): { line: string; chip: string | null } {
+  return { line: `${state}${seen}`, chip: tripChipLabel(driver) };
+}
+
+/** v0.18.65 §86: the on-trip chip: "Going offline after trips" wins (it stops every offer), else "Next trips off". */
+export function tripChipLabel(driver: Pick<LiveDriver, "goingOffline" | "nextTripsOff">): string | null {
+  return goingOfflineLabel(driver) ?? (driver.nextTripsOff ? tr("Next trips off") : null);
 }
 
 /** v0.18.37 §61: the "Going offline after trips" status of an on-trip driver, or null. */
@@ -158,6 +165,7 @@ function serverDrivers(drivers: readonly DemoRecord[], vehicles: readonly DemoRe
       route: null,
       progress: 0,
       goingOffline: live.onlineStatus === "on_trip" && live.offlineAfterTrip === true,
+      nextTripsOff: live.onlineStatus === "on_trip" && live.nextTripsOff === true,
     }];
   });
 }

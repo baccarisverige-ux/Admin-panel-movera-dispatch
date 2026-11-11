@@ -71,6 +71,8 @@ export type Driver = {
   onlineStatus: DriverOnlineStatus;
   /** v0.18.37 §61: tapped Go offline during the trip. */
   offlineAfterTrip?: boolean;
+  /** v0.18.65 §86: stopped next-trip offers on the trip sheet's radar for his current trip. */
+  nextTripsOff?: boolean;
   firstName: string;
   lastName?: string;
   /** v0.18.54 §76: YYYY-MM-DD, or the year only ("1990") when masked for this admin. */
@@ -285,6 +287,8 @@ export type LiveDriverRow = {
   zoneId?: string;
   /** v0.18.37 §61: tapped Go offline during the trip; offline when his trips end. */
   offlineAfterTrip?: boolean;
+  /** v0.18.65 §86: on a trip with next-trip offers stopped (trip sheet radar). */
+  nextTripsOff?: boolean;
 };
 export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number; serverTime: string; total?: number; nextCursor?: string | null; ridersOnline?: { zoneId: string; count: number }[]; ridersOnlineWindowSeconds?: number; zoneSupply?: ZoneSupplyRow[] };
 /** v0.18.4 (G3-D5): GET /admin/live/drivers → zoneSupply, one row per zone. */

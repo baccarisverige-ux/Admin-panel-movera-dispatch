@@ -8702,6 +8702,7 @@
 ["Booked ride · now live","Booked ride · now live"],
 ["Could not load, retrying","Could not load, retrying"],
 ["Going offline after trips","Going offline after trips"],
+["Next trips off","Next trips off"],
 ["5 · Late driver — take the ride back","5 · Late driver — take the ride back"],
 ["The only case the system takes a ride from a driver: a booked ride he would reach too late while there is still time to find another driver. It counts on his cancel record. Drivers never pay a fee.","The only case the system takes a ride from a driver: a booked ride he would reach too late while there is still time to find another driver. It counts on his cancel record. Drivers never pay a fee."],
 ["Take back when late more than","Take back when late more than"],

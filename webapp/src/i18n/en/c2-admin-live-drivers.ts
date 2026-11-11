@@ -2,4 +2,5 @@
 export const enC2AdminLiveDrivers = {
   "Could not load, retrying": "Could not load, retrying",
   "Going offline after trips": "Going offline after trips",
+  "Next trips off": "Next trips off",
 } as const;
