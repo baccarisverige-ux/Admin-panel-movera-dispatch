@@ -86,5 +86,6 @@ const css = readFileSync(new URL("./styles/tokens.css", import.meta.url), "utf8"
 assert(css.includes("focus-visible"), "keyboard focus is visible");
 const login = readFileSync(new URL("./pages/LoginPage.tsx", import.meta.url), "utf8");
 assert(login.includes("<label>"), "login fields have labels");
+assert(/inputMode="numeric" autoComplete="one-time-code" value=\{code\}/.test(login), "OTP field offers one-time-code autofill (WCAG 3.3.8)");
 
 console.log("acceptance ok");
