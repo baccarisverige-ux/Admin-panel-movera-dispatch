@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { useCommandHidden } from "../live/useCommandHidden";
 import { statusLabel } from "../domain/labels";
 import { LiveListBar } from "../live/LiveListBar";
 import { useNavigate, useSearchParams } from "react-router";
@@ -43,7 +44,9 @@ type View = (typeof VIEWS)[number]["id"];
 export function DriversPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const tab = params.get("view") === "bonuses" ? "bonuses" : "drivers";
+  // C10 (A16 D1): live cannot save a bonus yet (its Save is hidden), so the Bonuses tab is hidden too.
+  const bonusesHidden = useCommandHidden("admin.drivers.bonusCreate");
+  const tab = params.get("view") === "bonuses" && !bonusesHidden ? "bonuses" : "drivers";
   const { agent } = useSession();
   const scope = useMarketScope();
   const drivers = useRecords("drivers", null);
@@ -133,7 +136,7 @@ export function DriversPage() {
   const tabs = (
     <div className="dash-tabs" role="tablist" aria-label={tr("Drivers sections")}>
       <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "drivers"} className={tab === "drivers" ? "active" : undefined} onClick={() => go("drivers")}>{trn("{0} Drivers", <Users size={15} aria-hidden="true" />)}</button>
-      <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "bonuses"} className={tab === "bonuses" ? "active" : undefined} onClick={() => go("bonuses")}>{trn("{0} Bonuses", <Flame size={15} aria-hidden="true" />)}</button>
+      {bonusesHidden ? null : <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "bonuses"} className={tab === "bonuses" ? "active" : undefined} onClick={() => go("bonuses")}>{trn("{0} Bonuses", <Flame size={15} aria-hidden="true" />)}</button>}
     </div>
   );
 

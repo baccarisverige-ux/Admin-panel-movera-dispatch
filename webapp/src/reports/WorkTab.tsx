@@ -1,4 +1,5 @@
 import { tr } from "../i18n";
+import { useCommandHidden } from "../live/useCommandHidden";
 import { isLiveData } from "../live/realData";
 import { workDemoNoteShown } from "../live/realOnly";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
@@ -34,6 +35,8 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
   const { agent } = useSession();
   const [params, setParams] = useSearchParams();
   const audit = useAudit(30_000);
+  // C10 (A16 D10): live cannot save "who sees other admins' work" yet (its Save is hidden): hide the card.
+  const accessHidden = useCommandHidden("admin.reports.access");
   const shared = useAlertsMaybe();
   const activity = useSyncExternalStore(subscribeActivity, readActivity, readActivity);
   const [kindFilter, setKindFilter] = useState<WorkKind | "all">("all");
@@ -155,7 +158,7 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
             return rows.length ? <Bars rows={rows} format={(value) => String(value)} /> : <p className="dx-calm">{tr("No change in this period.")}</p>;
           })()}
         </Panel>
-        {agent?.role === "super" ? <AccessCard settings={settings} /> : null}
+        {agent?.role === "super" && !accessHidden ? <AccessCard settings={settings} /> : null}
       </div>
       {workDemoNoteShown() ? <p className="rp-foot"><KeyRound size={12} aria-hidden="true" />{" "}{tr("Sign-ins and downloads are recorded in this browser in the demo; the backend records them for real. Rows marked Demo are example history.")}</p> : null}
     </div>

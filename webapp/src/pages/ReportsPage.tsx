@@ -1,4 +1,5 @@
 import { tr, trx } from "../i18n";
+import { useCommandHidden } from "../live/useCommandHidden";
 import { NotConnected } from "../live/NotConnected";
 import { LiveMoneyReport } from "../live/LiveMoneyReport";
 import { isLiveData } from "../live/realData";
@@ -62,6 +63,9 @@ export function ReportsPage() {
   const onCsv = useCallback((table: CsvTable) => setCsv(table), []);
   const [viewOpen, setViewOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  // C10 (A16 D4/D11): live cannot save a view or a schedule yet (their Save is hidden): hide the openers too.
+  const saveViewHidden = useCommandHidden("admin.reports.saveView");
+  const scheduleHidden = useCommandHidden("admin.reports.schedule");
   const [notice, setNotice] = useState("");
   const methods = useMemo(() => earningsReport(market.id, zones.map((zone) => zone.id), window).byMethod, [market.id, zones, window]);
 
@@ -174,10 +178,10 @@ export function ReportsPage() {
               {views.map((view) => <option key={view.id} value={view.id}>{view.name}{view.shared && view.by !== agent?.id ? ` ${tr("(shared)")}` : ""}</option>)}
             </select>
           ) : null}
-          <button data-command="admin.reports.saveView" type="button" className="dash-btn small ghost" onClick={() => setViewOpen(true)}><Bookmark size={13} aria-hidden="true" /> {tr("Save view")}</button>
+          {saveViewHidden ? null : <button data-command="admin.reports.saveView" type="button" className="dash-btn small ghost" onClick={() => setViewOpen(true)}><Bookmark size={13} aria-hidden="true" /> {tr("Save view")}</button>}
           <button data-command="admin.reports.download" type="button" className="dash-btn small ghost" disabled={!csv} onClick={downloadCsv}><FileDown size={13} aria-hidden="true" /> CSV</button>
           <button data-command="admin.reports.download" type="button" className="dash-btn small ghost" onClick={printPdf}><Printer size={13} aria-hidden="true" /> PDF</button>
-          <button data-command="admin.reports.view" type="button" className="dash-btn small" onClick={() => setScheduleOpen(true)}><CalendarClock size={13} aria-hidden="true" /> {tr("Schedule")}</button>
+          {scheduleHidden ? null : <button data-command="admin.reports.view" type="button" className="dash-btn small" onClick={() => setScheduleOpen(true)}><CalendarClock size={13} aria-hidden="true" /> {tr("Schedule")}</button>}
         </span>
       </section>
 
