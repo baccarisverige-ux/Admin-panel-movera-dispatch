@@ -91,7 +91,11 @@ test("timers: none while the stream is open, every minute while reconnecting, th
   assert.equal(liveRefetchMs("connecting", "incidents", 10_000), 60_000);
   assert.equal(liveRefetchMs("off", "trips", 15_000), 15_000);
   assert.equal(liveRefetchMs("open", "drivers", 30_000, true), 30_000);
-  assert.equal(liveRefetchMs("open", "rideChecks", 10_000), 10_000);
+  // C4 (A15 N15): ride checks follow the stream (trip.changed / incident.changed); a slow fallback while it is closed.
+  assert.equal(liveRefetchMs("open", "rideChecks", 10_000), false);
+  assert.equal(liveRefetchMs("open", "rideCheckAlerts", 10_000), false);
+  assert.equal(liveRefetchMs("reconnecting", "rideCheckAlerts", 10_000), 60_000);
+  assert.equal(liveRefetchMs("off", "rideChecks", 10_000), 10_000);
   assert.equal(liveRefetchMs("open", "trips", undefined), undefined);
 });
 
@@ -160,4 +164,11 @@ test("R5: Reservations keeps its 30 s refetch while the stream is open; other st
   assert.equal(liveRefetchMs("off", "reservations", 30_000), 30_000);
   assert.equal(liveRefetchMs("open", "trips", 30_000), false);
   assert.equal(liveRefetchMs("reconnecting", "trips", 30_000), FALLBACK_POLL_MS);
+});
+
+test("C4 (A15 N15): trip.changed refreshes a trip's own ride checks; incident.changed refreshes the alert checks", () => {
+  assert.equal(keyMatches({ type: "trip.changed" }, ["records", "rideChecksOfTrip:T1", "null", "a1"]), true);
+  assert.equal(keyMatches({ type: "ticket.changed" }, ["records", "rideChecksOfTrip:T1", "null", "a1"]), false);
+  assert.equal(keyMatches({ type: "incident.changed" }, ["records", "rideCheckAlerts", "{}", "a1"]), true);
+  assert.equal(keyMatches({ type: "trip.changed" }, ["records", "rideCheckAlerts", "{}", "a1"]), true);
 });

@@ -1,5 +1,6 @@
 import { matchRider } from "../riders/match";
 import { isLiveData } from "../live/realData";
+import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi";
 import { NotConnected } from "../live/NotConnected";
 import { LiveEmergencyContacts } from "../live/LiveEmergencyContacts";
 import { LiveRevealContacts } from "../live/LiveReveal";
@@ -88,7 +89,10 @@ export function SafetyPage() {
   const drivers = useRecords("drivers");
   const riders = useRecords("riders");
   const vehicles = useRecords("vehicles");
-  const rideCheckRows = useRecords("rideChecks", undefined, { refetchMs: 10_000 });
+  // C4 (A15 N15): live, the full ride-check log is read only on the Ride checks view; the cases need only the checks
+  // behind an alert. Both follow the stream (no 10 s timer while it is open, every minute while it is not).
+  const fullLog = !isLiveData() || params.get("view") === "ridechecks";
+  const rideCheckRows = useRecords(fullLog ? "rideChecks" : RIDE_CHECK_ALERTS_LIST, undefined, { refetchMs: 10_000 });
   const rideChecks = useMemo(() => asRideChecks(rideCheckRows.data), [rideCheckRows.data]);
   const rideSlice = useSlice<RideCheckOps>(RIDE_CHECK_KEY, emptyRideCheckOps());
   const rideOps = normalizeRideCheckOps(rideSlice.value);
@@ -126,7 +130,7 @@ export function SafetyPage() {
       {([["cases", tr("Cases")], ["ridechecks", tr("Ride checks")]] as const).map(([id, label]) => (
         <button data-command="admin.incident.view" key={id} type="button" role="tab" aria-selected={view === id} className={view === id ? "active" : undefined} onClick={() => set({ view: id === "cases" ? null : id, case: null })}>
           {id === "cases" ? <Siren size={15} aria-hidden="true" /> : <ListChecks size={15} aria-hidden="true" />} {label}
-          {id === "ridechecks" && rideChecks.length ? <span className="tab-count muted">{rideChecks.length}</span> : null}
+          {id === "ridechecks" && fullLog && rideChecks.length ? <span className="tab-count muted">{rideChecks.length}</span> : null}
         </button>
       ))}
     </div>

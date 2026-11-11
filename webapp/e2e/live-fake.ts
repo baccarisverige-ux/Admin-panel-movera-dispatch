@@ -418,14 +418,21 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     }
     if (p === "/api/v1/admin/live/drivers") return json(route, 200, { ...LIVE_DRIVERS, items: inZones([...(state.noLiveDrivers ? [] : LIVE_DRIVERS.items), ...state.liveDrivers], zoneField), ...(state.ridersOnline ? { ridersOnline: inZones(state.ridersOnline, zoneField), ridersOnlineWindowSeconds: 120 } : {}), ...(state.zoneSupply ? { zoneSupply: inZones(state.zoneSupply, zoneField) } : {}) });
     if (p === "/api/v1/admin/payments") return json(route, 200, { items: inZones(PAYMENTS, (item) => [tripZone(item.tripId)]), nextCursor: null });
-    if (p === "/api/v1/admin/audit") return json(route, 200, { items: [...(state.audit ?? []), ...AUDIT], nextCursor: null });
+    if (p === "/api/v1/admin/audit") {
+      // C5/C6 (A15 N9, §1): the server's targetId filter and page limit.
+      const targetId = url.searchParams.get("targetId");
+      const limit = Number(url.searchParams.get("limit") ?? 0);
+      const rows = [...(state.audit ?? []), ...AUDIT].filter((row) => !targetId || (row as { targetId?: string }).targetId === targetId);
+      return json(route, 200, { items: limit ? rows.slice(0, limit) : rows, nextCursor: null });
+    }
     if (p === "/api/v1/admin/approvals") return json(route, 200, { items: state.approvals, nextCursor: null });
     const decided = /^\/api\/v1\/admin\/approvals\/([^/]+)\/(approve|reject)$/.exec(p);
     if (decided) {
       state.approvals = state.approvals.filter((item) => item.approvalId !== decided[1]);
       return json(route, 200, { approvalId: decided[1], status: decided[2] === "approve" ? "approved" : "rejected" });
     }
-    if (p === "/api/v1/admin/payouts" && method === "GET") return json(route, 200, { items: inZones(state.payouts, zoneField), nextCursor: null });
+    // C7 (A15 N12): the server's status filter (repeated status=…).
+    if (p === "/api/v1/admin/payouts" && method === "GET") return json(route, 200, { items: inZones(state.payouts, zoneField).filter((item) => !url.searchParams.getAll("status").length || url.searchParams.getAll("status").includes(String(item["status"]))), nextCursor: null });
     if (p === "/api/v1/admin/payouts" && method === "POST") {
       const made = { payoutId: `PY${state.payouts.length + 1}`, driverId: body.driverId, driverName: "Anna Berg", zoneId: "Z001", amount: { amountMinor: 41600, currency: "SEK" }, status: "pending", periodStart: body.from, periodEnd: body.to, createdAt: "2026-10-27T10:00:00Z", source: "manual", tripCount: 1, lines: [{ code: "trips", amount: { amountMinor: 41600, currency: "SEK" }, count: 1 }] };
       state.payouts.unshift(made);
@@ -603,7 +610,16 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       }
       return json(route, 200, { items, nextCursor: null });
     }
-    if (p === "/api/v1/admin/ride-checks") return json(route, 200, { items: inZones(state.rideChecks ?? [], zoneField), nextCursor: null });
+    if (p === "/api/v1/admin/ride-checks") {
+      // C4 (A15 N15): the server's tripId / answer / from filters (contract GET /admin/ride-checks).
+      const want = { tripId: url.searchParams.get("tripId"), answer: url.searchParams.get("answer"), from: url.searchParams.get("from") };
+      const rows = inZones(state.rideChecks ?? [], zoneField).filter((row) => {
+        const item = row as { tripId?: string; answer?: string | null; shownAt?: string };
+        const answer = item.answer ?? "waiting";
+        return (!want.tripId || item.tripId === want.tripId) && (!want.answer || answer === want.answer) && (!want.from || !item.shownAt || item.shownAt >= want.from);
+      });
+      return json(route, 200, { items: rows, nextCursor: null });
+    }
     // v0.18.9 (G7): POST /admin/incidents/{id}/level.
     const level = /^\/api\/v1\/admin\/incidents\/([^/]+)\/level$/.exec(p);
     if (level) {

@@ -1,4 +1,5 @@
 import { isLiveData, liveDriverOf } from "../live/realData";
+import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi";
 import { useEffect, useMemo, useState } from "react";
 import { useRecords, useSlice } from "../api/hooks";
 import { useAdminApi } from "../api/AdminApiContext";
@@ -64,7 +65,8 @@ export function useAlerts() {
   const riders = useRidersData("month");
   // Ride check alerts go to the safety team and to dispatchers.
   const canRideCheck = Boolean(agent && (can(agent.role, "incidents.read") || can(agent.role, "trips.intervene")));
-  const rideCheckRows = useRecords("rideChecks", undefined, { refetchMs: 10_000 });
+  // C4 (A15 N15): live, only the checks behind an alert (need_help, both sides of those trips), never every check.
+  const rideCheckRows = useRecords(isLiveData() ? RIDE_CHECK_ALERTS_LIST : "rideChecks", undefined, { refetchMs: 10_000 });
   const rideChecks = useMemo(() => asRideChecks(rideCheckRows.data), [rideCheckRows.data]);
   const rideSlice = useSlice<RideCheckOps>(RIDE_CHECK_KEY, emptyRideCheckOps(), { enabled: canRideCheck });
   const rideOps = useMemo(() => normalizeRideCheckOps(rideSlice.value), [rideSlice.value]);

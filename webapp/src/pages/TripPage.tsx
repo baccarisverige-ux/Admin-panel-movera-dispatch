@@ -81,7 +81,8 @@ import { DriverBonusBox, NearbyButton, OffersSection, useTripOffers } from "../d
 import { canAssign as canAssignTrip, isLocked } from "../dispatch/assign";
 import { StatusDot } from "../ui/kit";
 import { currentLanguage, tr, trn, uiLocale, trx, trSentences } from "../i18n";
-import { liveTripOf } from "../live/realData";
+import { isLiveData, liveTripOf } from "../live/realData";
+import { RIDE_CHECKS_OF_TRIP_LIST } from "../live/liveAdminApi";
 import { approachOf, canWaiveFee, driverPointOf, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, reasonLine, tripMoney } from "../live/tripLive";
 
 type TimelineEvent = { at: string; text: string; tone: "status" | "good" | "muted" | "call" | "check" | "alert"; link?: { to: string; label: string } };
@@ -109,6 +110,8 @@ function useNow(): number {
 
 /** How often the trip page reads the audit again (ms). */
 const TRIP_AUDIT_REFRESH_MS = 15_000;
+/** The trip page shows this trip's newest 20 audit entries. */
+const TRIP_AUDIT_ROWS = 20;
 
 export function TripPage() {
   const { tripId = "" } = useParams();
@@ -120,14 +123,16 @@ export function TripPage() {
   const drivers = useDrivers(null);
   const vehicles = useRecords("vehicles", null);
   // G7 live fix: "Who did what" follows new admin work on the trip without a reload (actions here invalidate it too).
-  const audit = useAudit(TRIP_AUDIT_REFRESH_MS);
+  // C5 (A15 N9): only this trip's newest entries (GET /admin/audit?targetId=…&limit=20), not the whole log.
+  const audit = useAudit(TRIP_AUDIT_REFRESH_MS, { targetId: tripId, limit: TRIP_AUDIT_ROWS });
   const opsSlice = useSlice<TripOps>(TRIP_OPS_KEY, emptyTripOps(), { enabled: can(role, "trips.read") });
   const pricing = useSlice<unknown>(PRICING_KEY, emptyPricingStore());
   const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
   const ops = normalizeTripOps(opsSlice.value);
   const api = useAdminApi();
   const canSafety = can(role, "incidents.read");
-  const rideCheckRows = useRecords("rideChecks", null);
+  // C4 (A15 N9/N15): live, only this trip's ride checks (GET /admin/ride-checks?tripId=).
+  const rideCheckRows = useRecords(isLiveData() ? `${RIDE_CHECKS_OF_TRIP_LIST}${tripId}` : "rideChecks", null);
   const incidents = useRecords("incidents", null);
   const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: canSafety });
   const incidentOps = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: canSafety });
@@ -199,7 +204,7 @@ export function TripPage() {
   const waitingAttempt = waitingMinutes(trip.status, waitingValue);
   const waitingWhy = waitingBlock(trip.status) ?? waitingAttempt.error ?? null;
   const refundWhy = refundBlock(payment, trip.status);
-  const tripAudits = (audit.data ?? []).filter((item) => item.targetId === trip.id).slice(0, 20);
+  const tripAudits = (audit.data ?? []).filter((item) => item.targetId === trip.id).slice(0, TRIP_AUDIT_ROWS);
   const tone = trip.status.includes("cancel") || trip.status === "failed" ? "red" : trip.status === "completed" ? "green" : "amber";
   const store = normalizeStore(pricing.value);
   const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees, dispatchOffers.data?.bonusMinor ?? 0);

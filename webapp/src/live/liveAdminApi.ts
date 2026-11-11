@@ -18,7 +18,7 @@ const TRIP_STEPS: Record<string, string> = { "admin.trip.cancel": "cancel", "adm
 const TRIP_STEP_DONE: Record<string, string> = { "admin.trip.cancel": "Trip cancelled.", "admin.trip.reassign": "The trip is looking for a new driver.", "admin.trip.noShow": "Marked as a no-show.", "admin.trip.complete": "Trip completed.", "admin.trip.adjust": "Price changed.", "admin.trip.waiting": "Waiting time saved." };
 
 export { zoneFilterOf, type ZoneFilter };
-import type { AdminApi, CommandInput, CommandResult } from "../api/create.ts";
+import type { AdminApi, AuditQuery, CommandInput, CommandResult } from "../api/create.ts";
 import type { TripOffersView } from "../api/dispatchSim.ts";
 import { ApiError } from "../api/httpClient.ts";
 import { radarRepeatOf, toolRefusal, type RadarZoneSend } from "./dispatchTools.ts";
@@ -181,6 +181,16 @@ export function presenceRecord(live: LiveDriverRow, detail?: Driver): DemoRecord
 /** Step 39: list names the Dashboard and the driver page read from the server (the demo keeps "trips" / "drivers"). */
 export const WAITING_TRIPS_LIST = "waitingTrips";
 export const DRIVER_BY_ID_LIST = "driverById:";
+/** C4 (A15 N15): the ride checks of one trip (GET /admin/ride-checks?tripId=…). */
+export const RIDE_CHECKS_OF_TRIP_LIST = "rideChecksOfTrip:";
+/** C4 (A15 N15): the checks behind ride-check alerts and the map (need_help, waiting, recent no_answer; both sides). */
+export const RIDE_CHECK_ALERTS_LIST = "rideCheckAlerts";
+/** C7 (A15 N12): the Dashboard counts: open tickets and not-yet-paid payouts, filtered by the server's status. */
+export const OPEN_TICKETS_LIST = "openTickets";
+export const DUE_PAYOUTS_LIST = "duePayouts";
+const DUE_PAYOUT_STATUSES = ["pending", "pending_approval", "failed", "held"] as const;
+/** No-answer checks older than this belong to trips long over (the map shows checks of trips going on now). */
+const OPEN_CHECK_WINDOW_MS = 6 * 3_600_000;
 
 /** v0.18.34 §65: the live card reads pages of this size, up to LIVE_MAX_PAGES (rule 33: more than 10,000 drivers). */
 export const LIVE_PAGE = 500;
@@ -553,6 +563,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return new Map(fleets.map((fleet) => [fleet.fleetId, drivers.get(fleet.ownerDriverId)?.zoneIds[0] ?? ""]));
   }
 
+  /** C8 (A15 N10): riders the full riders read did not find (beyond its pages); not read again for them. */
+  const riderScanMissed = new Set<string>();
+
   async function readRiders(own = false, filter: ZoneFilter = NO_FILTER): Promise<Rider[]> {
     const rows = own ? await paged<Rider>(client, "riders", "/admin/riders", filter) : await all<Rider>(client, "/admin/riders");
     rows.forEach((row) => riders.set(row.riderId, row));
@@ -580,10 +593,36 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return rows;
   }
 
+  /** C4 (A15 N15): the ride-check rows behind one of the three ride-check lists. */
+  async function readRideChecks(name: string, filter: ZoneFilter): Promise<RideCheckRow[]> {
+    if (name.startsWith(RIDE_CHECKS_OF_TRIP_LIST)) {
+      const tripId = name.slice(RIDE_CHECKS_OF_TRIP_LIST.length);
+      return tripId ? all<RideCheckRow>(client, "/admin/ride-checks", filter, { tripId }) : [];
+    }
+    if (name !== RIDE_CHECK_ALERTS_LIST) return all<RideCheckRow>(client, "/admin/ride-checks", filter);
+    // need_help opens the alert (any age); waiting / no_answer are the map's amber checks of trips going on now.
+    const since = new Date(Date.now() - OPEN_CHECK_WINDOW_MS).toISOString();
+    const found = await Promise.all([
+      all<RideCheckRow>(client, "/admin/ride-checks", filter, { answer: "need_help" }),
+      all<RideCheckRow>(client, "/admin/ride-checks", filter, { answer: "waiting" }),
+      all<RideCheckRow>(client, "/admin/ride-checks", filter, { answer: "no_answer", from: since }),
+    ]);
+    const tripIds = [...new Set(found.flat().map((row) => row.tripId))];
+    // Both sides of each alert check (the other side's answer and follow-ups), one small read per trip.
+    return (await Promise.all(tripIds.map((tripId) => all<RideCheckRow>(client, "/admin/ride-checks", filter, { tripId })))).flat();
+  }
+
   /** One small live read for the zone counts (they always cover every driver, v0.18.34 §65). */
-  function liveCounts(filter: ZoneFilter, signal?: AbortSignal): Promise<LiveDriverList> {
+  // C11 (A15 N20): ridersOnline and zoneSupply need the same answer; one read in flight serves both (the signal is
+  // not passed on, so one caller leaving does not cancel the other's read).
+  const countsInFlight = new Map<string, Promise<LiveDriverList>>();
+  function liveCounts(filter: ZoneFilter): Promise<LiveDriverList> {
     const params = new URLSearchParams([...filter.params, ["limit", "1"]]).toString();
-    return client.json<LiveDriverList>(`/admin/live/drivers?${params}`, signal ? { signal } : {});
+    const running = countsInFlight.get(params);
+    if (running) return running;
+    const read = client.json<LiveDriverList>(`/admin/live/drivers?${params}`).finally(() => countsInFlight.delete(params));
+    countsInFlight.set(params, read);
+    return read;
   }
 
   /** v0.17.2: a list of the zones picked in the top bar; the server filters, the rows are checked again here. */
@@ -624,21 +663,23 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     if (name === "riders") return (await readRiders(true, filter)).map(riderRecord);
     // G3-R4 (v0.18.4): real riders online per zone of the admin (the server counts open apps and open requests).
-    if (name === "ridersOnline") return ridersOnlineRecords(await liveCounts(filter, signal));
+    if (name === "ridersOnline") return ridersOnlineRecords(await liveCounts(filter));
     // G3-D5 (v0.18.4): the server's supply and demand per zone (every online driver counted, position or not).
-    if (name === "zoneSupply") return zoneSupplyRecords(await liveCounts(filter, signal));
+    if (name === "zoneSupply") return zoneSupplyRecords(await liveCounts(filter));
     if (name === "payments") {
       const rows = await paged<Payment>(client, "payments", "/admin/payments", filter);
       return rows.map((row) => paymentRecord(row, trips.get(row.tripId)?.zoneId ?? ""));
     }
     if (name === "ratings") return (await all<AdminRating>(client, "/admin/ratings", filter)).map(ratingRecord);
     if (name === "tickets") return (await all<SupportTicket>(client, "/admin/tickets", filter)).map(ticketRecord);
+    if (name === OPEN_TICKETS_LIST) return (await all<SupportTicket>(client, "/admin/tickets", filter, { status: "open" })).map(ticketRecord);
     if (name === "refunds") {
       const rows = await all<{ refundId: string; tripId?: string; amount: LiveMoney; reason: string; status: string; createdAt?: string }>(client, "/admin/refunds", filter);
       return rows.map((row) => ({ id: row.refundId, name: row.tripId ? `pay_${row.tripId}` : "", phone: "", zoneId: row.tripId ? trips.get(row.tripId)?.zoneId ?? "" : "", status: row.status === "done" ? "refunded" : row.status, ...(row.tripId ? { tripId: row.tripId } : {}), fareOre: row.amount.amountMinor, ...(row.createdAt ? { createdAt: row.createdAt } : {}), notes: row.reason, live: true }));
     }
-    if (name === "payouts") {
-      const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string }>(client, "/admin/payouts", filter);
+    if (name === "payouts" || name === DUE_PAYOUTS_LIST) {
+      const statuses: [string, string][] = name === DUE_PAYOUTS_LIST ? DUE_PAYOUT_STATUSES.map((status) => ["status", status]) : [];
+      const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string }>(client, "/admin/payouts", filter, statuses);
       return rows.map((row) => ({
         id: row.payoutId, name: `${row.periodStart.slice(0, 10)} – ${row.periodEnd.slice(0, 10)}`, phone: "", zoneId: row.zoneId ?? "", status: row.status === "paid" ? "paid" : "scheduled", driverId: row.driverId, fareOre: row.amount.amountMinor, createdAt: row.createdAt, live: true,
         livePayout: { lines: (row.lines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor, ...(line.count !== undefined ? { count: line.count } : {}) })), source: row.source, periodStart: row.periodStart, periodEnd: row.periodEnd, tripCount: row.tripCount, currency: row.amount.currency },
@@ -665,7 +706,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (!riderId) return [];
       const rows = await all<Trip>(client, "/admin/trips", filter, { riderId });
       rows.forEach((row) => trips.set(row.tripId, row));
-      if (!riders.has(riderId)) await readRiders().catch(() => []);
+      // C8 (A15 N10): the contract has no GET /admin/riders/{riderId}; a rider outside the newest riders is looked
+      // for once, never again on every 30 s refresh.
+      if (!riders.has(riderId) && !riderScanMissed.has(riderId)) {
+        await readRiders().catch(() => []);
+        if (!riders.has(riderId)) riderScanMissed.add(riderId);
+      }
       return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
     }
     // Step 39 (plan 0.28a, audit A15 N5): the Dashboard's ride requests are every waiting trip the server has
@@ -696,8 +742,10 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
     }
     // v0.18.9 (G7): Incidents › Ride checks from the server (GET /admin/ride-checks), both sides of a check on one row.
-    if (name === "rideChecks") {
-      const rows = await all<RideCheckRow>(client, "/admin/ride-checks", filter);
+    // C4 (audit A15 N15): the ride checks of one trip (?tripId=) and the alert checks (need_help, then both sides of
+    // each of those trips) use the server's filters instead of every page of every check.
+    if (name === "rideChecks" || name === RIDE_CHECK_ALERTS_LIST || name.startsWith(RIDE_CHECKS_OF_TRIP_LIST)) {
+      const rows = await readRideChecks(name, filter);
       return rideCheckRecords(rows, (tripId) => {
         const trip = trips.get(tripId);
         return trip ? { riderId: trip.riderId, ...(trip.driverId ? { driverId: trip.driverId } : {}), ...(riders.get(trip.riderId)?.firstName ? { riderName: riders.get(trip.riderId)!.firstName } : {}) } : undefined;
@@ -1248,7 +1296,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     search: async (query, scope) => search(query, scope),
     command,
     revision: async () => 0,
-    audit: async () => (await all<AuditEntry>(client, "/admin/audit")).map(auditRow),
+    // C5/C6 (A15 N9, §1): one page of `limit` rows, filtered by the server (GET /admin/audit?targetId=&limit=).
+    audit: async (options?: AuditQuery) => {
+      if (!options?.targetId && !options?.limit) return (await all<AuditEntry>(client, "/admin/audit")).map(auditRow);
+      const params = new URLSearchParams({ limit: String(options.limit ?? PAGE_LIMIT), ...(options.targetId ? { targetId: options.targetId } : {}) });
+      return (await client.json<Page<AuditEntry>>(`/admin/audit?${params.toString()}`)).items.map(auditRow);
+    },
     approvals: async () => (await all<Approval>(client, "/admin/approvals")).map(approvalRow).filter((row): row is ApprovalRow => row !== null),
     operation: async () => null,
     reset: async () => { throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false }); },

@@ -38,20 +38,24 @@ export const INVALIDATES: Readonly<Record<string, readonly string[]>> = {
 };
 
 /** The lists whose timers the stream replaces (each has an event that says when it changed). */
-export const STREAMED_LISTS: ReadonlySet<string> = new Set(["trips", "reservations", "drivers", "zoneSupply", "incidents", "tickets", "payments", "approvals"]);
+// C4 (A15 N15): ride checks too: an answer is a trip projection (trip.changed) and need_help opens an incident.
+export const STREAMED_LISTS: ReadonlySet<string> = new Set(["trips", "reservations", "drivers", "zoneSupply", "incidents", "tickets", "payments", "approvals", "rideChecks", "rideCheckAlerts", "openTickets"]);
 
 /** Extra react-query keys behind a contract list name (besides ["records", name], ["live", name] and [name]). */
 const EXTRA_KEYS: Readonly<Record<string, ReadonlyArray<readonly unknown[]>>> = {
   // S7 E1: ["assign-offers", tripId] is the trip page's offers + status read (else only its own 1 s / 15 s timer).
-  trips: [["trip-record"], ["live", "trip"], ["live", "chat-trips"], ["records", "rideChecks"], ["assign-offers"]],
+  trips: [["trip-record"], ["live", "trip"], ["live", "chat-trips"], ["records", "rideChecks"], ["records", "rideCheckAlerts"], ["assign-offers"]],
   drivers: [["live", "driver"], ["live", "reservationDrivers"]],
-  tickets: [["live", "ticket"]],
+  tickets: [["live", "ticket"], ["records", "openTickets"]],
   alerts: [["slice", "alertOps"]],
-  incidents: [["slice", "safetyOps"], ["slice", "incidentOps"]],
+  incidents: [["slice", "safetyOps"], ["slice", "incidentOps"], ["records", "rideCheckAlerts"]],
   overview: [["live", "kpis"], ["records", "kpis"]],
   dispatch: [["live", "dispatch-control"], ["slice", "adminDispatch"]],
   approvals: [["records", "approvals"]],
 };
+
+/** C4 (A15 N15): per-id lists ("rideChecksOfTrip:<tripId>") that a list's event refreshes too. */
+const NAME_PREFIXES: Readonly<Record<string, readonly string[]>> = { trips: ["rideChecksOfTrip:"] };
 
 function startsWith(key: readonly unknown[], prefix: readonly unknown[]): boolean {
   return prefix.every((part, i) => key[i] === part);
@@ -62,7 +66,7 @@ export function keyMatches(event: Pick<AdminLiveEvent, "type">, key: readonly un
   const names = INVALIDATES[event.type];
   if (!names) return false;
   if (names.includes("*")) return true;
-  return names.some((name) => startsWith(key, ["records", name]) || startsWith(key, ["live", name]) || key[0] === name || (EXTRA_KEYS[name] ?? []).some((prefix) => startsWith(key, prefix)));
+  return names.some((name) => startsWith(key, ["records", name]) || startsWith(key, ["live", name]) || key[0] === name || (EXTRA_KEYS[name] ?? []).some((prefix) => startsWith(key, prefix)) || (key[0] === "records" && typeof key[1] === "string" && (NAME_PREFIXES[name] ?? []).some((prefix) => (key[1] as string).startsWith(prefix))));
 }
 
 /**

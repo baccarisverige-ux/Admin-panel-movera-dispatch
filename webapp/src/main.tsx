@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { AdminProviders } from "./api/AdminApiContext";
 import { App } from "./App";
 import { restoreDeepLink } from "./ui/deepLink";
+// C12 (audit A16 S4): Inter and Poppins from the app itself, no Google Fonts call (same files, weights, ranges).
+import "./styles/fonts/fonts.css";
 import "./styles/tokens.css";
 import "./styles/dashboard.css";
 import "./styles/fleet.css";

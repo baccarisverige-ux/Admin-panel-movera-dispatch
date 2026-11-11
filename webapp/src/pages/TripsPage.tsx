@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCommandHidden } from "../live/useCommandHidden";
 import { LiveListBar } from "../live/LiveListBar";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Bookmark, CarFront, CheckCircle2, Eye, Flag, Layers, MapPinOff, Search, Settings2, XCircle } from "lucide-react";
@@ -75,6 +76,9 @@ export function TripsPage() {
   const { from, to } = dates;
   const [peekId, setPeekId] = useState<string | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
+  // C10 (A16 D4/D9): live cannot save a view or the trip settings yet (their Save is hidden): hide the openers too.
+  const saveViewHidden = useCommandHidden("admin.trip.saveView");
+  const settingsHidden = useCommandHidden("admin.trip.settings");
   const [notice, setNotice] = useState("");
   const rows = useMemo(() => trips.data ?? [], [trips.data]);
   const zones = useMemo(() => [...new Set(rows.map((trip) => trip.zoneId))], [rows]);
@@ -152,7 +156,7 @@ export function TripsPage() {
     return next.toString();
   }
 
-  if (view === "settings") {
+  if (view === "settings" && !settingsHidden) {
     return (
       <div className="dx-page op-page">
         <header className="dx-head">
@@ -177,7 +181,7 @@ export function TripsPage() {
             {trips.isLoading ? tr("Loading trips.") : tr("{0} trips, {1} match the filters, {2} statuses in this view.", [rows.length, filtered.length, statusCount])}
           </p>
         </div>
-        {isSuper ? <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "settings" })}>{trn("{0} Settings", <Settings2 size={14} aria-hidden="true" />)}</button> : null}
+        {isSuper && !settingsHidden ? <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={() => set({ view: "settings" })}>{trn("{0} Settings", <Settings2 size={14} aria-hidden="true" />)}</button> : null}
       </header>
 
       <Cards
@@ -265,7 +269,7 @@ export function TripsPage() {
             </select>
           ) : null}
           {hasFilters ? <button data-command="admin.trip.view" type="button" className="dash-btn small ghost" onClick={() => { const next = new URLSearchParams(params); for (const key of FILTER_KEYS) next.delete(key); setParams(next, { replace: true }); }}>{tr("Clear filters")}</button> : null}
-          <button data-command="admin.trip.saveView" type="button" className="dash-btn small ghost" disabled={!hasFilters} title={hasFilters ? undefined : tr("Choose a filter first.")} onClick={() => setSaveOpen(true)}>{trn("{0} Save view", <Bookmark size={13} aria-hidden="true" />)}</button>
+          {saveViewHidden ? null : <button data-command="admin.trip.saveView" type="button" className="dash-btn small ghost" disabled={!hasFilters} title={hasFilters ? undefined : tr("Choose a filter first.")} onClick={() => setSaveOpen(true)}>{trn("{0} Save view", <Bookmark size={13} aria-hidden="true" />)}</button>}
         </span>
       </section>
       {notice ? <p className="dx-note" role="status">{trSentences(notice)}</p> : null}
