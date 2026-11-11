@@ -39,7 +39,7 @@ export function LoginPage() {
         </label>
         <label>{tr("Password")}<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
         </label>
-        <label>{tr("6-digit code")}<input inputMode="numeric" value={code} onChange={(event) => setCode(event.target.value)} />
+        <label>{tr("6-digit code")}<input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} />
         </label>
         {session.error ? <p className="state-line">{session.error}</p> : null}
         <button className="primary-btn" type="submit" data-command="admin.auth.signIn">{tr("Sign in")}</button>
