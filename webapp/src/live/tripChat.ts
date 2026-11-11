@@ -28,3 +28,15 @@ export function chatTripLabel(trip: { tripId: string; rider?: { firstName?: stri
   const driver = trip.driver?.firstName?.trim() || tr("Driver");
   return { title: `${rider} – ${driver}`, ref: shortId(trip.tripId) };
 }
+
+/**
+ * v0.18.66 §87 (owner 2026-11-11 "Original + translation"): the kept translations of one message, shown under the text
+ * as written, "Translation (EN)" (sv "Översättning (EN)", fr "Traduction (EN)"). Read-only: the admin never asks for a
+ * new translation. No translations (or an older server) → nothing.
+ */
+export function translationLines(message: Pick<TripMessage, "text" | "translations">): { label: string; text: string; lang: string }[] {
+  const list = Array.isArray(message.translations) ? message.translations : [];
+  return list
+    .filter((t) => t && typeof t.to === "string" && t.to.trim() && typeof t.text === "string" && t.text.trim())
+    .map((t) => ({ label: tr("Translation ({0})", [t.to.trim().toUpperCase()]), text: t.text, lang: t.to.trim().toLowerCase() }));
+}

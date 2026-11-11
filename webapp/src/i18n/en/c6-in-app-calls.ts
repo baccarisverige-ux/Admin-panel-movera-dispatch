@@ -28,4 +28,7 @@ export const enC6InAppCalls = {
   "{0} Calls (in the app)": "{0} Calls (in the app)",
   "In-app calls per country": "In-app calls per country",
   "Window after drop-off (min)": "Window after drop-off (min)",
+  "Connect time limit (s)": "Connect time limit (s)",
+  "Connect time limit: {0} s → {1} s": "Connect time limit: {0} s → {1} s",
+  "{0}: the connect time limit must be 10 to 60 seconds.": "{0}: the connect time limit must be 10 to 60 seconds.",
 };

@@ -28,4 +28,7 @@ export const svC6InAppCalls = {
   "{0} Calls (in the app)": "{0} Samtal (i appen)",
   "In-app calls per country": "Samtal i appen per land",
   "Window after drop-off (min)": "Fönster efter avlämning (min)",
+  "Connect time limit (s)": "Tid att ansluta (s)",
+  "Connect time limit: {0} s → {1} s": "Tid att ansluta: {0} s → {1} s",
+  "{0}: the connect time limit must be 10 to 60 seconds.": "{0}: tiden att ansluta måste vara 10 till 60 sekunder.",
 };

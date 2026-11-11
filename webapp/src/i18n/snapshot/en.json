@@ -8774,6 +8774,9 @@
 ["{0} Calls (in the app)","{0} Calls (in the app)"],
 ["In-app calls per country","In-app calls per country"],
 ["Window after drop-off (min)","Window after drop-off (min)"],
+["Connect time limit (s)","Connect time limit (s)"],
+["Connect time limit: {0} s → {1} s","Connect time limit: {0} s → {1} s"],
+["{0}: the connect time limit must be 10 to 60 seconds.","{0}: the connect time limit must be 10 to 60 seconds."],
 ["Far reach","Far reach"],
 ["When nobody new is free inside the widest step, the search tries one more step this far. The widest step or less = off.","When nobody new is free inside the widest step, the search tries one more step this far. The widest step or less = off."],
 ["No driver nearby","No driver nearby"],
@@ -8918,4 +8921,5 @@
 ["Show more","Show more"],
 ["Translate messages automatically","Translate messages automatically"],
 ["Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.","Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written."],
-["Translate messages automatically: {0} → {1}","Translate messages automatically: {0} → {1}"]]
+["Translate messages automatically: {0} → {1}","Translate messages automatically: {0} → {1}"],
+["Translation ({0})","Translation ({0})"]]

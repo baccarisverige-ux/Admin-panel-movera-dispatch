@@ -356,7 +356,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }> };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }> };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {

@@ -8774,6 +8774,9 @@
 ["{0} Calls (in the app)","{0} Samtal (i appen)"],
 ["In-app calls per country","Samtal i appen per land"],
 ["Window after drop-off (min)","Fönster efter avlämning (min)"],
+["Connect time limit (s)","Tid att ansluta (s)"],
+["Connect time limit: {0} s → {1} s","Tid att ansluta: {0} s → {1} s"],
+["{0}: the connect time limit must be 10 to 60 seconds.","{0}: tiden att ansluta måste vara 10 till 60 sekunder."],
 ["Far reach","Längre räckvidd"],
 ["When nobody new is free inside the widest step, the search tries one more step this far. The widest step or less = off.","När ingen ny förare är ledig inom det största steget provar sökningen ett steg till så här långt. Största steget eller mindre = av."],
 ["No driver nearby","Ingen förare i närheten"],
@@ -8918,4 +8921,5 @@
 ["Show more","Visa fler"],
 ["Translate messages automatically","Översätt meddelanden automatiskt"],
 ["Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.","Meddelanden kommer fram översatta till mottagarens språk. ”Visa original” visar texten som den skrevs."],
-["Translate messages automatically: {0} → {1}","Översätt meddelanden automatiskt: {0} → {1}"]]
+["Translate messages automatically: {0} → {1}","Översätt meddelanden automatiskt: {0} → {1}"],
+["Translation ({0})","Översättning ({0})"]]
