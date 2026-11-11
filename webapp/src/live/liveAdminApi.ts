@@ -613,9 +613,16 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   }
 
   /** One small live read for the zone counts (they always cover every driver, v0.18.34 §65). */
-  function liveCounts(filter: ZoneFilter, signal?: AbortSignal): Promise<LiveDriverList> {
+  // C11 (A15 N20): ridersOnline and zoneSupply need the same answer; one read in flight serves both (the signal is
+  // not passed on, so one caller leaving does not cancel the other's read).
+  const countsInFlight = new Map<string, Promise<LiveDriverList>>();
+  function liveCounts(filter: ZoneFilter): Promise<LiveDriverList> {
     const params = new URLSearchParams([...filter.params, ["limit", "1"]]).toString();
-    return client.json<LiveDriverList>(`/admin/live/drivers?${params}`, signal ? { signal } : {});
+    const running = countsInFlight.get(params);
+    if (running) return running;
+    const read = client.json<LiveDriverList>(`/admin/live/drivers?${params}`).finally(() => countsInFlight.delete(params));
+    countsInFlight.set(params, read);
+    return read;
   }
 
   /** v0.17.2: a list of the zones picked in the top bar; the server filters, the rows are checked again here. */
@@ -656,9 +663,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     if (name === "riders") return (await readRiders(true, filter)).map(riderRecord);
     // G3-R4 (v0.18.4): real riders online per zone of the admin (the server counts open apps and open requests).
-    if (name === "ridersOnline") return ridersOnlineRecords(await liveCounts(filter, signal));
+    if (name === "ridersOnline") return ridersOnlineRecords(await liveCounts(filter));
     // G3-D5 (v0.18.4): the server's supply and demand per zone (every online driver counted, position or not).
-    if (name === "zoneSupply") return zoneSupplyRecords(await liveCounts(filter, signal));
+    if (name === "zoneSupply") return zoneSupplyRecords(await liveCounts(filter));
     if (name === "payments") {
       const rows = await paged<Payment>(client, "payments", "/admin/payments", filter);
       return rows.map((row) => paymentRecord(row, trips.get(row.tripId)?.zoneId ?? ""));

@@ -84,3 +84,12 @@ test("C8 (N10): a rider beyond the riders' pages is looked for once, not on ever
   assert.equal(reads.filter((path) => path.startsWith("/admin/riders?")).length, 1);
   assert.equal(reads.filter((path) => path.startsWith("/admin/trips?")).length, 3);
 });
+
+test("C11 (N20): ridersOnline and zoneSupply at the same time share one GET /admin/live/drivers?limit=1", async () => {
+  const { client, reads } = fakeClient((path) => (path.startsWith("/admin/live/drivers") ? { items: [], nextCursor: null, zones: [] } : { items: [], nextCursor: null }));
+  const api = createLiveAdminApi(client);
+  await Promise.all([api.list("ridersOnline", null, new AbortController().signal), api.list("zoneSupply", null, new AbortController().signal)]);
+  assert.equal(reads.filter((path) => path.startsWith("/admin/live/drivers")).length, 1);
+  await api.list("zoneSupply", null);
+  assert.equal(reads.filter((path) => path.startsWith("/admin/live/drivers")).length, 2, "a later read is sent again");
+});
