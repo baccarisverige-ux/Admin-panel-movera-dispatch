@@ -603,7 +603,16 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       }
       return json(route, 200, { items, nextCursor: null });
     }
-    if (p === "/api/v1/admin/ride-checks") return json(route, 200, { items: inZones(state.rideChecks ?? [], zoneField), nextCursor: null });
+    if (p === "/api/v1/admin/ride-checks") {
+      // C4 (A15 N15): the server's tripId / answer / from filters (contract GET /admin/ride-checks).
+      const want = { tripId: url.searchParams.get("tripId"), answer: url.searchParams.get("answer"), from: url.searchParams.get("from") };
+      const rows = inZones(state.rideChecks ?? [], zoneField).filter((row) => {
+        const item = row as { tripId?: string; answer?: string | null; shownAt?: string };
+        const answer = item.answer ?? "waiting";
+        return (!want.tripId || item.tripId === want.tripId) && (!want.answer || answer === want.answer) && (!want.from || !item.shownAt || item.shownAt >= want.from);
+      });
+      return json(route, 200, { items: rows, nextCursor: null });
+    }
     // v0.18.9 (G7): POST /admin/incidents/{id}/level.
     const level = /^\/api\/v1\/admin\/incidents\/([^/]+)\/level$/.exec(p);
     if (level) {

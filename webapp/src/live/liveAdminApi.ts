@@ -181,6 +181,12 @@ export function presenceRecord(live: LiveDriverRow, detail?: Driver): DemoRecord
 /** Step 39: list names the Dashboard and the driver page read from the server (the demo keeps "trips" / "drivers"). */
 export const WAITING_TRIPS_LIST = "waitingTrips";
 export const DRIVER_BY_ID_LIST = "driverById:";
+/** C4 (A15 N15): the ride checks of one trip (GET /admin/ride-checks?tripId=…). */
+export const RIDE_CHECKS_OF_TRIP_LIST = "rideChecksOfTrip:";
+/** C4 (A15 N15): the checks behind ride-check alerts and the map (need_help, waiting, recent no_answer; both sides). */
+export const RIDE_CHECK_ALERTS_LIST = "rideCheckAlerts";
+/** No-answer checks older than this belong to trips long over (the map shows checks of trips going on now). */
+const OPEN_CHECK_WINDOW_MS = 6 * 3_600_000;
 
 /** v0.18.34 §65: the live card reads pages of this size, up to LIVE_MAX_PAGES (rule 33: more than 10,000 drivers). */
 export const LIVE_PAGE = 500;
@@ -580,6 +586,25 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return rows;
   }
 
+  /** C4 (A15 N15): the ride-check rows behind one of the three ride-check lists. */
+  async function readRideChecks(name: string, filter: ZoneFilter): Promise<RideCheckRow[]> {
+    if (name.startsWith(RIDE_CHECKS_OF_TRIP_LIST)) {
+      const tripId = name.slice(RIDE_CHECKS_OF_TRIP_LIST.length);
+      return tripId ? all<RideCheckRow>(client, "/admin/ride-checks", filter, { tripId }) : [];
+    }
+    if (name !== RIDE_CHECK_ALERTS_LIST) return all<RideCheckRow>(client, "/admin/ride-checks", filter);
+    // need_help opens the alert (any age); waiting / no_answer are the map's amber checks of trips going on now.
+    const since = new Date(Date.now() - OPEN_CHECK_WINDOW_MS).toISOString();
+    const found = await Promise.all([
+      all<RideCheckRow>(client, "/admin/ride-checks", filter, { answer: "need_help" }),
+      all<RideCheckRow>(client, "/admin/ride-checks", filter, { answer: "waiting" }),
+      all<RideCheckRow>(client, "/admin/ride-checks", filter, { answer: "no_answer", from: since }),
+    ]);
+    const tripIds = [...new Set(found.flat().map((row) => row.tripId))];
+    // Both sides of each alert check (the other side's answer and follow-ups), one small read per trip.
+    return (await Promise.all(tripIds.map((tripId) => all<RideCheckRow>(client, "/admin/ride-checks", filter, { tripId })))).flat();
+  }
+
   /** One small live read for the zone counts (they always cover every driver, v0.18.34 §65). */
   function liveCounts(filter: ZoneFilter, signal?: AbortSignal): Promise<LiveDriverList> {
     const params = new URLSearchParams([...filter.params, ["limit", "1"]]).toString();
@@ -696,8 +721,10 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
     }
     // v0.18.9 (G7): Incidents › Ride checks from the server (GET /admin/ride-checks), both sides of a check on one row.
-    if (name === "rideChecks") {
-      const rows = await all<RideCheckRow>(client, "/admin/ride-checks", filter);
+    // C4 (audit A15 N15): the ride checks of one trip (?tripId=) and the alert checks (need_help, then both sides of
+    // each of those trips) use the server's filters instead of every page of every check.
+    if (name === "rideChecks" || name === RIDE_CHECK_ALERTS_LIST || name.startsWith(RIDE_CHECKS_OF_TRIP_LIST)) {
+      const rows = await readRideChecks(name, filter);
       return rideCheckRecords(rows, (tripId) => {
         const trip = trips.get(tripId);
         return trip ? { riderId: trip.riderId, ...(trip.driverId ? { driverId: trip.driverId } : {}), ...(riders.get(trip.riderId)?.firstName ? { riderName: riders.get(trip.riderId)!.firstName } : {}) } : undefined;
