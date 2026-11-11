@@ -69,6 +69,8 @@ export function ChatSettingsCard({ shown, saved, canEdit, onChange }: Props) {
         <Toggle label={tr("Read new messages aloud (driver, start value)")} testId="chat-read-aloud" on={shown.readAloudDefault} disabled={!canEdit} onChange={(readAloudDefault) => set({ readAloudDefault })} />
         <Toggle label={tr("Translate link under messages")} testId="chat-translation" on={shown.translation} disabled={!canEdit} onChange={(translation) => set({ translation })} />
         <small className="dx-note">{tr("The link translates into the reader's own app language, with \"See original\" under a translated message. Until a translation service is set on the server the apps show \"Translation coming soon\".")}</small>
+        <Toggle label={tr("Translate messages automatically")} testId="chat-auto-translate" on={shown.translation && shown.autoTranslate} disabled={!canEdit || !shown.translation} onChange={(autoTranslate) => set({ autoTranslate })} />
+        <small className="dx-note">{tr("Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.")}</small>
         <Toggle label={tr("Quick replies")} testId="chat-quick-replies-on" on={shown.quickRepliesOn} disabled={!canEdit} onChange={(quickRepliesOn) => set({ quickRepliesOn })} />
         {(["driver", "rider"] as const).map((side) => {
           const list = shown.quickReplies[side];

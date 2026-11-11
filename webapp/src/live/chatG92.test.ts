@@ -134,3 +134,30 @@ test("§78 every new admin text has sv and fr", () => {
     assert.ok((fr as Record<string, string>)[key], `fr: ${key}`);
   }
 });
+
+// v0.18.64 §85 (owner 2026-11-11 "the language must arrive with the receiver language and the translate when click on it
+// must open original language"): the admin switch "Translate messages automatically" (CountryRules.chat.autoTranslate).
+test("§85 autoTranslate: default on from the contract copy, read from a stored block, saved and listed before Save", () => {
+  assert.equal(C.configDefaults.chat.autoTranslate, true);
+  assert.equal(CHAT_DEFAULTS.autoTranslate, true);
+  assert.equal(chatSettingsOf({}).autoTranslate, true, "never saved = on");
+  assert.equal(chatSettingsOf({ autoTranslate: false }).autoTranslate, false);
+  assert.equal(chatSettingsOf({ autoTranslate: "no" }).autoTranslate, true, "a wrong kind reads as the default");
+  assert.equal(completeCountrySettings("FR", { chat: { autoTranslate: false } }).chat.autoTranslate, false);
+  const input = { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 } };
+  const off = { ...CHAT_DEFAULTS, autoTranslate: false };
+  assert.equal((countryRulesOf("SE", "SEK", { ...input, chat: off }, null)["chat"] as { autoTranslate: boolean }).autoTranslate, false);
+  assert.deepEqual(chatSettingsLines(CHAT_DEFAULTS, off), ["Translate messages automatically: On → Off"]);
+  assert.deepEqual(chatSettingsIssues("Sweden", off), []);
+});
+
+test("§85 the switch's texts are in sv, fr and en and match the contract's admin texts", () => {
+  const T = C.chat.autoTranslate.texts;
+  const help = "Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.";
+  for (const [dict, lang] of [[sv, "sv"], [fr, "fr"], [en, "en"]] as const) {
+    const d = dict as Record<string, string>;
+    assert.equal(d["Translate messages automatically"], T.adminLabel[lang], `${lang} label`);
+    assert.equal(d[help], T.adminHelp[lang], `${lang} help`);
+    assert.ok(d["Translate messages automatically: {0} → {1}"], `${lang} save line`);
+  }
+});

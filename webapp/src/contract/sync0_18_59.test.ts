@@ -6,16 +6,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { CONTRACT_VERSION } from "../domain/contract.ts";
 
 const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
 const M = readFileSync(new URL("../../../contracts/CONTRACT.md", import.meta.url), "utf8");
 const O = readFileSync(new URL("../../../contracts/openapi.yaml", import.meta.url), "utf8");
 
-test("the admin pins the contract it carries (0.18.59)", () => {
-  assert.equal(C.version, "0.18.59");
-  assert.equal(CONTRACT_VERSION, C.version);
-});
+// The exact pin moved to sync0_18_64.test.ts with the 0.18.64 copy; the §78–§82 checks below still hold.
 
 test("§78 is in the copy: chat settings, admin chat list and admin Message", () => {
   assert.match(M, /## 78\. Chat & calls, G9 part 2/);
