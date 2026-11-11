@@ -28,4 +28,7 @@ export const frC6InAppCalls = {
   "{0} Calls (in the app)": "{0} Appels (dans l'appli)",
   "In-app calls per country": "Appels dans l'appli par pays",
   "Window after drop-off (min)": "Fenêtre après la dépose (min)",
+  "Connect time limit (s)": "Délai de connexion (s)",
+  "Connect time limit: {0} s → {1} s": "Délai de connexion : {0} s → {1} s",
+  "{0}: the connect time limit must be 10 to 60 seconds.": "{0} : le délai de connexion doit être de 10 à 60 secondes.",
 };

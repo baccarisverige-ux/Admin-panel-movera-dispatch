@@ -54,4 +54,5 @@ export const enC13ChatG92 = {
   "Translate messages automatically": "Translate messages automatically",
   "Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.": "Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.",
   "Translate messages automatically: {0} → {1}": "Translate messages automatically: {0} → {1}",
+  "Translation ({0})": "Translation ({0})",
 };

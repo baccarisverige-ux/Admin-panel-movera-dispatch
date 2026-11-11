@@ -54,4 +54,5 @@ export const svC13ChatG92 = {
   "Translate messages automatically": "Översätt meddelanden automatiskt",
   "Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.": "Meddelanden kommer fram översatta till mottagarens språk. ”Visa original” visar texten som den skrevs.",
   "Translate messages automatically: {0} → {1}": "Översätt meddelanden automatiskt: {0} → {1}",
+  "Translation ({0})": "Översättning ({0})",
 };

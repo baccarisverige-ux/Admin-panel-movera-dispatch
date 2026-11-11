@@ -9,6 +9,7 @@ import type { Page, Trip } from "./types";
 import { readAdminChats, joinChatPages, chatRowLabel, lastFromText, messageCountText, type AdminChatPage } from "./adminChats";
 import { useMarketScope } from "../markets/useMarketScope";
 import { zoneFilterOf } from "./zoneFilter";
+import { MessageBody } from "./MessageBody";
 
 /**
  * Live builds only (contract v0.13.0 §22, owner "chat only support roles in their zones"): the trip chat between a
@@ -20,7 +21,10 @@ import { zoneFilterOf } from "./zoneFilter";
  */
 
 /** contract Message (GET|POST /trips/{tripId}/messages). */
-export type TripMessage = { messageId: string; tripId: string; from: "rider" | "driver" | "support"; text: string; at: string };
+/** v0.18.66 §87: one translation the server already keeps for a message (admin reads only). */
+export type MessageTranslation = { to: string; text: string };
+/** v0.18.66 §87: `translations` comes only on an admin read, oldest first, [] when none. */
+export type TripMessage = { messageId: string; tripId: string; from: "rider" | "driver" | "support"; text: string; at: string; translations?: MessageTranslation[] };
 
 /** contract.json#tripStatus.driverAssigned: the statuses the chat is open in. */
 export const CHAT_OPEN = ["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff"] as const;
@@ -119,7 +123,7 @@ export function LiveChat() {
                 <ol className="op-chat" aria-label={tr("Messages")}>
                   {items.map((message) => (
                     <li key={message.messageId} className={message.from === "rider" ? "rider" : "driver"} data-from={message.from}>
-                      <span>{message.text}</span>
+                      <MessageBody message={message} />
                       <small>{sender(message.from)} · {when(message.at)}</small>
                     </li>
                   ))}

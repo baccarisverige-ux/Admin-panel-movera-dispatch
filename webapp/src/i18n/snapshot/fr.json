@@ -8774,6 +8774,9 @@
 ["{0} Calls (in the app)","{0} Appels (dans l'appli)"],
 ["In-app calls per country","Appels dans l'appli par pays"],
 ["Window after drop-off (min)","Fenêtre après la dépose (min)"],
+["Connect time limit (s)","Délai de connexion (s)"],
+["Connect time limit: {0} s → {1} s","Délai de connexion : {0} s → {1} s"],
+["{0}: the connect time limit must be 10 to 60 seconds.","{0} : le délai de connexion doit être de 10 à 60 secondes."],
 ["Far reach","Portée étendue"],
 ["When nobody new is free inside the widest step, the search tries one more step this far. The widest step or less = off.","Quand aucun nouveau chauffeur n’est libre dans le plus grand palier, la recherche essaie un palier de plus jusqu’à cette distance. Le plus grand palier ou moins = désactivé."],
 ["No driver nearby","Aucun chauffeur à proximité"],
@@ -8918,4 +8921,5 @@
 ["Show more","Afficher plus"],
 ["Translate messages automatically","Traduire les messages automatiquement"],
 ["Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.","Les messages arrivent traduits dans la langue du destinataire. « Voir l'original » affiche le texte tel qu'il a été écrit."],
-["Translate messages automatically: {0} → {1}","Traduire les messages automatiquement : {0} → {1}"]]
+["Translate messages automatically: {0} → {1}","Traduire les messages automatiquement : {0} → {1}"],
+["Translation ({0})","Traduction ({0})"]]

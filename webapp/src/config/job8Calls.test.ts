@@ -11,9 +11,9 @@ import { fr } from "../i18n/fr.ts";
 // Admin › Pricing › Tips & limits per country › Calls (CountryRules.calls) and Trip details › Calls (the call log).
 
 test("job 8: CountryRules.calls defaults are on, in-app, 60 min window, 30 s ring, 15 min longest call", () => {
-  assert.deepEqual(CALL_DEFAULTS, { on: true, mode: "in_app", callWindowAfterTripMin: 60, ringSeconds: 30, maxCallMin: 15 });
+  assert.deepEqual(CALL_DEFAULTS, { on: true, mode: "in_app", callWindowAfterTripMin: 60, ringSeconds: 30, maxCallMin: 15, connectTimeoutSeconds: 25 }); // §87 adds the connect time (v0.18.66)
   assert.deepEqual(callSettingsOf(undefined), CALL_DEFAULTS);
-  assert.deepEqual(callSettingsOf({ on: false, mode: "phone", callWindowAfterTripMin: 90, ringSeconds: 45, maxCallMin: 20 }), { on: false, mode: "phone", callWindowAfterTripMin: 90, ringSeconds: 45, maxCallMin: 20 });
+  assert.deepEqual(callSettingsOf({ on: false, mode: "phone", callWindowAfterTripMin: 90, ringSeconds: 45, maxCallMin: 20 }), { on: false, mode: "phone", callWindowAfterTripMin: 90, ringSeconds: 45, maxCallMin: 20, connectTimeoutSeconds: 25 });
   assert.deepEqual(callSettingsOf({ callWindowAfterTripMin: 999, ringSeconds: 2, mode: "radio" }), CALL_DEFAULTS, "out of range or unknown reads as the default");
   assert.deepEqual(defaultCountrySettings("SE").calls, CALL_DEFAULTS);
   assert.ok((PRICING_FIELDS as readonly string[]).includes("calls"), "saved with Save tips & limits");
@@ -67,6 +67,7 @@ test("job 8 shots: each Calls number box has a visible label (sv/fr/en), like th
     ["callWindowAfterTripMin", "Window after drop-off (min)"],
     ["ringSeconds", "Ring time (s)"],
     ["maxCallMin", "Longest call (min)"],
+    ["connectTimeoutSeconds", "Connect time limit (s)"], // v0.18.66 §87
   ]);
   for (const f of CALL_FIELDS) {
     assert.ok((sv as Record<string, string>)[f.label], `sv: ${f.label}`);

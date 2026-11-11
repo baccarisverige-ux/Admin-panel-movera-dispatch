@@ -10,6 +10,7 @@ import { ErrorLine } from "./ui";
 import type { Page } from "./types";
 import { chatOpen, type TripMessage } from "./LiveChat";
 import { readTripMessages } from "./tripChat";
+import { MessageBody } from "./MessageBody";
 
 /**
  * v0.18.5 (owner G9: "Never store messages between rider or driver in driver app or rider app !!!!!!' Only admin
@@ -99,7 +100,7 @@ export function LiveTripChat({ tripId, status, hadDriver, riderName, driverName 
             <ol className="op-chat" aria-label={tr("Messages between rider and driver")} data-testid="trip-chat-messages">
               {items.map((message) => (
                 <li key={message.messageId} className={message.from === "rider" ? "rider" : "driver"} data-from={message.from}>
-                  <span>{message.text}</span>
+                  <MessageBody message={message} />
                   <small>{sender(message.from)} · {shortDateTime(message.at, uiLocale())}</small>
                 </li>
               ))}

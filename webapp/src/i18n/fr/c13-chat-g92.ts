@@ -54,4 +54,5 @@ export const frC13ChatG92 = {
   "Translate messages automatically": "Traduire les messages automatiquement",
   "Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.": "Les messages arrivent traduits dans la langue du destinataire. « Voir l'original » affiche le texte tel qu'il a été écrit.",
   "Translate messages automatically: {0} → {1}": "Traduire les messages automatiquement : {0} → {1}",
+  "Translation ({0})": "Traduction ({0})",
 };
