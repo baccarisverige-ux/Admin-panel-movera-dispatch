@@ -236,6 +236,9 @@ export type TripState = {
   /** Contract v0.15.0 §24: GET /admin/waitlist answers these. */
   /** Contract v0.16.0 §11: GET /admin/errors and PATCH /admin/errors/{errorId} answer these. */
   errors?: { id: string; app: string; platform: string; appVersions: string[]; message: string; topFrame?: string; kind: string; count: number; devices: number; firstSeen: string; lastSeen: string; status: string; fixedAt?: string }[];
+  /** Owner 2026-11-11: phone numbers with a wrong-code sign-in lock; POST /admin/auth/sign-in-locks/unlock lifts them (unlocked keeps each call's phone). */
+  signInLocks?: string[];
+  unlocked?: string[];
   waitlist?: { phone: string; app: "rider" | "driver"; locale?: string; firstAt: string; lastAt: string; count: number }[];
   calls: Call[];
   /** Answer GET /admin/trips with this status (e.g. 500) instead of the list. */
@@ -573,6 +576,16 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     if (paid) {
       state.refundPayouts = state.refundPayouts.filter((item) => item.refundId !== paid[1]);
       return json(route, 200, { refundId: paid[1], payoutStatus: "paid" });
+    }
+    // Owner 2026-11-11: lift a number's wrong-code lock (settings.edit); the server answers { phone, lifted }.
+    if (p === "/api/v1/admin/auth/sign-in-locks/unlock" && method === "POST") {
+      if (!(state.admin?.permissions ?? ADMIN.permissions).includes("settings.edit")) return json(route, 403, { code: "forbidden", message: "Missing permission settings.edit.", requestId: "r-403ul", retryable: false });
+      const phone = typeof body?.phone === "string" ? body.phone : "";
+      if (!/^\+[1-9]\d{6,14}$/.test(phone)) return json(route, 400, { code: "invalid_request", reason: "invalid_phone", message: "Send the phone number in international form, e.g. +46701234567.", requestId: "r-400ul", retryable: false });
+      (state.unlocked ??= []).push(phone);
+      const lifted = (state.signInLocks ?? []).filter((item) => item === phone).length;
+      state.signInLocks = (state.signInLocks ?? []).filter((item) => item !== phone);
+      return json(route, 200, { phone, lifted });
     }
     // v0.18.54 §76 (contract.json#adminMasking): Reveal with a reason (rider / driver / fleet) answers the full values once;
     // the SOS reveal answers both phones of an OPEN case (reason optional, "SOS"). The fake keeps the full values in the seeds.

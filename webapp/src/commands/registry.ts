@@ -303,6 +303,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.rider.activate", label: "Activate rider", reason: true, permission: "riders.block" },
   { id: "admin.rider.merge", label: "Merge duplicate account", reason: true, permission: "riders.block" },
   { id: "admin.rider.identity", label: "Identity check", reason: true, permission: "riders.block" },
+  { id: "admin.auth.unlockSignIn", label: "Unlock sign-in", reason: true, permission: "settings.edit" },
   { id: "admin.driver.payoutHold", label: "Pause or release driver payouts", reason: true, permission: "finance.edit" },
   { id: "admin.rider.moderate", label: "Warn, pause or ban rider", reason: true, permission: "riders.block" },
   { id: "admin.rider.lostFound", label: "Lost and found", reason: false, permission: "support.reply" },

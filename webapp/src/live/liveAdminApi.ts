@@ -44,6 +44,8 @@ import { bonusByKind, commissionBeforeBonus, liveBonusLimits } from "./tripLive.
 import { vehicleMissing } from "./activation.ts";
 import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
 import { formatNumber, tr } from "../i18n/index.ts";
+import { revealPath, type Revealed } from "./masking.ts";
+import { UNLOCK_SIGN_IN_PATH, fullPhone, unlockMessage } from "./unlockSignIn.ts";
 import { rideCheckRecords } from "./rideChecks.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 import { readDraft, savePublish, standardKey } from "./configDocs.ts";
@@ -839,6 +841,21 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const draft = await readDraft(http, "country_rules", key).catch(explained);
       await savePublish(http, "country_rules", key, draft, { ...(draft?.document ?? {}), country, payoutMode: mode, payoutSchedule: schedule }).catch(explained);
       return done("Payout settings published.");
+    }
+    // Owner 2026-11-11 (AUDIT-A16 §7): lift a rider's / driver's wrong-code sign-in lock. The Driver record carries no
+    // phone and a masked rider phone cannot be sent, so then the number is revealed first (§76, audited with this reason).
+    if (input.action === "admin.auth.unlockSignIn") {
+      const { kind, phone } = (input.value ?? {}) as { kind?: "rider" | "driver"; phone?: string | null };
+      const reason = (input.reason ?? "").trim();
+      let number = fullPhone(phone);
+      if (!number) {
+        if ((kind !== "rider" && kind !== "driver") || reason.length < 3) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
+        const revealed = await client.post<Revealed>(revealPath(kind, input.targetId), { reason: reason.slice(0, 200) }).catch(explained);
+        number = fullPhone(revealed?.phone);
+      }
+      if (!number) throw new ApiError(404, tr("There is no phone number on this account."), { code: "not_found", retryable: false });
+      const answer = await client.post<unknown>(UNLOCK_SIGN_IN_PATH, { phone: number }).catch(explained);
+      return done(unlockMessage(answer));
     }
     // v0.18.29 A2 (fix job 0) (owner Q4): pause / release one driver's payouts from his profile, with the reason.
     if (input.action === "admin.driver.payoutHold") {
