@@ -74,3 +74,13 @@ test("C7 (N12): the Dashboard counts read only open tickets and unpaid payouts (
 test("C7 (N12): ticket.changed refreshes the open-ticket count", () => {
   assert.equal(keyMatches({ type: "ticket.changed" }, ["records", OPEN_TICKETS_LIST, "{}", "a1"]), true);
 });
+
+test("C8 (N10): a rider beyond the riders' pages is looked for once, not on every refresh of his trips", async () => {
+  const { client, reads } = fakeClient((path) => (path.startsWith("/admin/trips?") ? { items: [{ tripId: "T9", riderId: "R_old", status: "completed", fare: { amountMinor: 0, currency: "SEK" }, zoneId: "z1", createdAt: "2026-01-01T00:00:00Z" }], nextCursor: null } : { items: [], nextCursor: null }));
+  const api = createLiveAdminApi(client);
+  await api.list("tripsOfRider:R_old", null);
+  await api.list("tripsOfRider:R_old", null);
+  await api.list("tripsOfRider:R_old", null);
+  assert.equal(reads.filter((path) => path.startsWith("/admin/riders?")).length, 1);
+  assert.equal(reads.filter((path) => path.startsWith("/admin/trips?")).length, 3);
+});

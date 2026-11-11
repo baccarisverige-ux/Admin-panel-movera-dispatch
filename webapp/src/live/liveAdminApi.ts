@@ -563,6 +563,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return new Map(fleets.map((fleet) => [fleet.fleetId, drivers.get(fleet.ownerDriverId)?.zoneIds[0] ?? ""]));
   }
 
+  /** C8 (A15 N10): riders the full riders read did not find (beyond its pages); not read again for them. */
+  const riderScanMissed = new Set<string>();
+
   async function readRiders(own = false, filter: ZoneFilter = NO_FILTER): Promise<Rider[]> {
     const rows = own ? await paged<Rider>(client, "riders", "/admin/riders", filter) : await all<Rider>(client, "/admin/riders");
     rows.forEach((row) => riders.set(row.riderId, row));
@@ -696,7 +699,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (!riderId) return [];
       const rows = await all<Trip>(client, "/admin/trips", filter, { riderId });
       rows.forEach((row) => trips.set(row.tripId, row));
-      if (!riders.has(riderId)) await readRiders().catch(() => []);
+      // C8 (A15 N10): the contract has no GET /admin/riders/{riderId}; a rider outside the newest riders is looked
+      // for once, never again on every 30 s refresh.
+      if (!riders.has(riderId) && !riderScanMissed.has(riderId)) {
+        await readRiders().catch(() => []);
+        if (!riders.has(riderId)) riderScanMissed.add(riderId);
+      }
       return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
     }
     // Step 39 (plan 0.28a, audit A15 N5): the Dashboard's ride requests are every waiting trip the server has
