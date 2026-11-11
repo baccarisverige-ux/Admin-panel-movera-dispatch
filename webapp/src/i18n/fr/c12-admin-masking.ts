@@ -18,4 +18,11 @@ export const frC12AdminMasking: Record<keyof typeof enC12AdminMasking, string> =
   "Reveal a driver's full phone, e-mail and date of birth (reason, audited)": "Révéler le téléphone, l'e-mail et la date de naissance complets d'un chauffeur (motif, audité)",
   "Reveal a fleet's full owner e-mail (reason, audited)": "Révéler l'e-mail complet du propriétaire d'une flotte (motif, audité)",
   "Reveal both phones of an open safety case (SOS, audited)": "Révéler les deux téléphones d'un cas de sécurité ouvert (SOS, audité)",
+  "Unlock sign-in": "Débloquer la connexion",
+  "Sign-in lock": "Blocage de connexion",
+  "After too many wrong codes the number is locked for up to 24 hours.": "Après trop de codes erronés, le numéro est bloqué jusqu'à 24 heures.",
+  "Lift the wrong-code lock on this person's phone number so they can get a sign-in code again.": "Lever le blocage pour codes erronés sur le numéro de cette personne afin qu'elle puisse de nouveau recevoir un code de connexion.",
+  "Sign-in unlocked: the number can get codes again.": "Connexion débloquée : le numéro peut de nouveau recevoir des codes.",
+  "This number had no sign-in lock.": "Ce numéro n'avait aucun blocage de connexion.",
+  "There is no phone number on this account.": "Il n'y a aucun numéro de téléphone sur ce compte.",
 };

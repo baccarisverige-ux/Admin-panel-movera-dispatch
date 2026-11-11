@@ -18,4 +18,11 @@ export const svC12AdminMasking: Record<keyof typeof enC12AdminMasking, string> =
   "Reveal a driver's full phone, e-mail and date of birth (reason, audited)": "Visa en förares fullständiga telefon, e-post och födelsedatum (skäl, loggas)",
   "Reveal a fleet's full owner e-mail (reason, audited)": "Visa en flottas fullständiga ägar-e-post (skäl, loggas)",
   "Reveal both phones of an open safety case (SOS, audited)": "Visa båda telefonnumren i ett öppet säkerhetsärende (SOS, loggas)",
+  "Unlock sign-in": "Lås upp inloggning",
+  "Sign-in lock": "Inloggningsspärr",
+  "After too many wrong codes the number is locked for up to 24 hours.": "Efter för många fel koder är numret spärrat i upp till 24 timmar.",
+  "Lift the wrong-code lock on this person's phone number so they can get a sign-in code again.": "Ta bort spärren för fel koder på personens telefonnummer så att hen kan få en inloggningskod igen.",
+  "Sign-in unlocked: the number can get codes again.": "Inloggningen är upplåst: numret kan få koder igen.",
+  "This number had no sign-in lock.": "Numret hade ingen inloggningsspärr.",
+  "There is no phone number on this account.": "Det finns inget telefonnummer på kontot.",
 };

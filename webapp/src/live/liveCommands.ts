@@ -9,6 +9,7 @@ import { commandById } from "../commands/registry.ts";
 export const LIVE_COMMANDS: ReadonlySet<string> = new Set([
   "admin.alerts.done", "admin.alerts.mute", "admin.alerts.pass", "admin.alerts.quiet", "admin.alerts.rule", "admin.alerts.settings", "admin.alerts.snooze", "admin.alerts.take",
   "admin.approval.approve", "admin.approval.reject",
+  "admin.auth.unlockSignIn",
   // v0.18.17 Book later: Admin › Reservations on live calls the server (live/LiveReservations.tsx).
   "admin.reservation.assign", "admin.reservation.cancel", "admin.reservation.savePolicy", "admin.reservation.contact", "admin.reservation.dispatchNow", "admin.reservation.noShow", "admin.reservation.offer", "admin.reservation.raise", "admin.reservation.unassign",
   "admin.config.copyAppToZones", "admin.config.publish", "admin.config.publishAppDraft", "admin.config.save", "admin.config.saveCountry", "admin.config.useStandard",

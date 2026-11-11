@@ -16,4 +16,11 @@ export const enC12AdminMasking = {
   "Reveal a driver's full phone, e-mail and date of birth (reason, audited)": "Reveal a driver's full phone, e-mail and date of birth (reason, audited)",
   "Reveal a fleet's full owner e-mail (reason, audited)": "Reveal a fleet's full owner e-mail (reason, audited)",
   "Reveal both phones of an open safety case (SOS, audited)": "Reveal both phones of an open safety case (SOS, audited)",
+  "Unlock sign-in": "Unlock sign-in",
+  "Sign-in lock": "Sign-in lock",
+  "After too many wrong codes the number is locked for up to 24 hours.": "After too many wrong codes the number is locked for up to 24 hours.",
+  "Lift the wrong-code lock on this person's phone number so they can get a sign-in code again.": "Lift the wrong-code lock on this person's phone number so they can get a sign-in code again.",
+  "Sign-in unlocked: the number can get codes again.": "Sign-in unlocked: the number can get codes again.",
+  "This number had no sign-in lock.": "This number had no sign-in lock.",
+  "There is no phone number on this account.": "There is no phone number on this account.",
 };

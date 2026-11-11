@@ -58,6 +58,7 @@ import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
 import { LiveRiderModeration } from "../live/LiveRiderModeration";
 import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
 import { LiveWalletCredit } from "../live/LiveWalletCredit";
+import { LiveUnlockSignIn } from "../live/LiveUnlockSignIn";
 import { LiveMessagePerson } from "../live/LiveMessagePerson";
 import { feeKindOf, owedByCurrency, owedText, tripMoney, walletByCurrency, walletText } from "../live/tripLive";
 import { useRidersData } from "../riders/useRidersData";
@@ -312,6 +313,7 @@ export function RiderDetailPage() {
                 <div><dt>{tr("Last ride")}</dt><dd>{profile.lastRideAt ? dateTime.format(profile.lastRideAt) : liveData ? tr("Not connected yet") : tr("No ride yet")}</dd></div>
               </dl>
             </section>
+            {liveData ? <LiveUnlockSignIn kind="rider" id={rider.id} phone={revealed?.phone ?? (rider.liveSensitiveMasked ? null : rider.phone)} /> : null}
             <section className="fd-box">
               <h3>{trn("{0} Habits", <History size={16} aria-hidden="true" />)}</h3>
               <dl className="rd-dl">
