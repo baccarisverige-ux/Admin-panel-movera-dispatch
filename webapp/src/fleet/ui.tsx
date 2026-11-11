@@ -5,6 +5,8 @@ import { ArrowDownRight, ArrowUpRight, FileText, MapPin, MessageSquare, Phone, S
 import type { DocStatus } from "../drivers/gate";
 import type { ThreadMessage } from "../drivers/ops";
 import { CommandButton } from "../ui/CommandButton";
+import { localDay } from "../dashboard/time";
+import { DEFAULT_MARKET, market } from "../markets/markets";
 import { DOC_CHOICES, docHealth, docLabel, type DocHealth, type HealthCount } from "./documents";
 import { statusLabel, type StatusFamily } from "../domain/labels";
 import { uiLocale, trx, tr, trn, type MessageKey } from "../i18n";
@@ -85,6 +87,8 @@ type DocumentsProps = {
   nowMs: number;
   /** The country's first expiry warning in days: documents show orange from then. */
   warnDays?: number;
+  /** The record's local time zone: "today" for expiry dates is the local day there. */
+  timeZone?: string;
   canEdit: boolean;
   targetId: string;
   scope: string;
@@ -106,16 +110,16 @@ export function DocumentsTable(props: DocumentsProps) {
   );
 }
 
-function DocumentRow({ row, nowMs, warnDays, canEdit, targetId, scope, sliceKey, expectedSliceRev, build, onSaved, expiring }: DocumentsProps & { row: DocRow }) {
+function DocumentRow({ row, nowMs, warnDays, timeZone = market(DEFAULT_MARKET).timeZone, canEdit, targetId, scope, sliceKey, expectedSliceRev, build, onSaved, expiring }: DocumentsProps & { row: DocRow }) {
   const [status, setStatus] = useState<DocStatus>(row.status);
   const [expiresAt, setExpiresAt] = useState(row.expiresAt);
   const [note, setNote] = useState(row.note);
-  const shown = docHealth({ status, expiresAt }, nowMs, warnDays);
-  const saved = docHealth(row, nowMs, warnDays);
+  const shown = docHealth({ status, expiresAt }, nowMs, warnDays, timeZone);
+  const saved = docHealth(row, nowMs, warnDays, timeZone);
   const changed = status !== row.status || expiresAt !== row.expiresAt || note.trim() !== row.note;
   const save = changed ? build(row, { status, expiresAt, note }) : null;
   const name = docLabel(row.id);
-  const today = new Date(nowMs).toISOString().slice(0, 10);
+  const today = localDay(nowMs, timeZone);
   const needsDate = Boolean(expiring?.has(row.id)) && status === "approved" && status !== row.status && !(expiresAt > today);
 
   if (row.exempt) {
@@ -169,7 +173,7 @@ function DocumentRow({ row, nowMs, warnDays, canEdit, targetId, scope, sliceKey,
             sliceKey={sliceKey}
             value={save.value}
             aria-label={tr("Save {0}", [name])}
-            onDone={() => onSaved(`${name} saved: ${docHealth({ status, expiresAt }, nowMs, warnDays).label}.`)}
+            onDone={() => onSaved(`${name} saved: ${docHealth({ status, expiresAt }, nowMs, warnDays, timeZone).label}.`)}
           >{tr("Save")}</CommandButton>
         ) : null}
       </div>

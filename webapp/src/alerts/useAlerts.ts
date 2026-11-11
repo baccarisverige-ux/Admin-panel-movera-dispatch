@@ -17,6 +17,7 @@ import { DRIVER_DOCUMENTS } from "../drivers/gate";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
 import { daysUntil, DRIVER_DOC_LABELS } from "../fleet/documents";
 import { zoneAllowed } from "../markets/scope";
+import { localDay } from "../dashboard/time";
 import { useMarketScope } from "../markets/useMarketScope";
 import { failureCause, failureHandled } from "../payments/failures";
 import { useRidersData } from "../riders/useRidersData";
@@ -90,7 +91,7 @@ export function useAlerts() {
     const opsOf = (row: { id: string; name: string; fleetId?: string | null; status: string; kind?: string }) => driverOps(driverStore.value, { id: row.id, name: row.name, fleetId: row.fleetId ?? null, status: row.status, kind: row.kind });
     const activeDrivers = (drivers.data ?? []).filter((row) => row.status === "active");
     const shift = demoShift(now, api.demo);
-    const day = new Date(now).toISOString().slice(0, 10);
+    const day = localDay(now, market.timeZone);
     const zoneName = (id: string) => market.zones.find((zone) => zone.id === id)?.name ?? id;
     const hour = Math.floor(now / 3_600_000);
     // Live (owner rule, part 3): only facts the server sends; local demo stores and hashes give nothing.
@@ -138,7 +139,7 @@ export function useAlerts() {
         const ops = opsOf(row);
         return DRIVER_DOCUMENTS.filter((id) => !(row.fleetId && id === "company_registration")).flatMap((id) => {
           const doc = ops.documents[id];
-          const days = doc ? daysUntil(doc.expiresAt, now) : null;
+          const days = doc ? daysUntil(doc.expiresAt, now, market.timeZone) : null;
           return days === null ? [] : [{ driverId: row.id, driver: row.name, zoneId: row.zoneId, doc: DRIVER_DOC_LABELS[id] ?? id, days }];
         });
       }),

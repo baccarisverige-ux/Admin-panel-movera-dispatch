@@ -1,7 +1,8 @@
 import { booleanWithin } from "@turf/boolean-within";
 import { point, polygon } from "@turf/helpers";
 import kinks from "@turf/kinks";
-import type { MarketId } from "../markets/markets.ts";
+import { market, type MarketId } from "../markets/markets.ts";
+import { localDay } from "../dashboard/time.ts";
 
 /**
  * Driver bonuses. Two kinds:
@@ -99,7 +100,7 @@ export function defaultRules(country: MarketId): BonusRules {
 }
 
 export function newBonus(kind: BonusKind, country: MarketId, by: string, now: number): DriverBonus {
-  const today = new Date(now).toISOString().slice(0, 10);
+  const today = localDay(now, market(country).timeZone);
   const amount = { SE: 150, FR: 15, TN: 20 }[country];
   return {
     id: "",

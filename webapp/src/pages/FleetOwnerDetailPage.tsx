@@ -315,6 +315,7 @@ export function FleetOwnerDetailPage() {
             rows={docRows}
             nowMs={now}
             warnDays={warnDays}
+            timeZone={market.timeZone}
             canEdit={can(role, "documents.approve")}
             targetId={owner.id}
             scope={owner.zoneId}

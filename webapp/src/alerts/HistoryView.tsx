@@ -1,5 +1,6 @@
 import { logExport } from "../reports/activityLog";
 import { useMemo, useState } from "react";
+import { localDay } from "../dashboard/time";
 import { CheckCircle2, Copy, Download, Mail, Repeat, Search, Timer, Trophy } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
 import { useAlertsData } from "./AlertsContext";
@@ -28,7 +29,7 @@ export function HistoryView() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `movera-alerts-${data.market.id}-${new Date(data.now).toISOString().slice(0, 10)}.csv`;
+    link.download = `movera-alerts-${data.market.id}-${localDay(data.now, data.market.timeZone)}.csv`;
     document.body.append(link);
     link.click();
     link.remove();
