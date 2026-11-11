@@ -9,7 +9,9 @@ import { DOC_CHOICES, docHealth, docLabel, type DocHealth, type HealthCount } fr
 import { statusLabel, type StatusFamily } from "../domain/labels";
 import { uiLocale, trx, tr, trn, type MessageKey } from "../i18n";
 import { DateInput } from "../ui/DateInput";
-import { phoneHref } from "../live/masking";
+import { callHref } from "../live/masking";
+import { useSession } from "../auth/SessionContext";
+import { can } from "../auth/permissions";
 
 export function Avatar({ name, size = 56 }: { name: string; size?: number }) {
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
@@ -272,9 +274,14 @@ type ContactProps = {
 export function ContactActions({ kind, id, name, phone, zoneId, messageTo, mapTo, compact = false }: ContactProps) {
   const stop = (event: MouseEvent) => event.stopPropagation();
   const size = compact ? 15 : 16;
+  const { agent } = useSession();
+  const role = agent?.role ?? "viewer";
+  // REMINDERS 14c: no Call button for a masked phone or an admin without the person's viewSensitive permission.
+  const sensitive = kind === "driver" ? can(role, "drivers.viewSensitive") : kind === "rider" ? can(role, "riders.viewSensitive") : true;
+  const href = callHref(phone, sensitive);
   return (
     <span className={compact ? "fd-contact compact" : "fd-contact"} onClick={stop}>
-      <CommandButton
+      {href ? <CommandButton
         command={kind === "driver" ? "admin.driver.call" : kind === "rider" ? "admin.rider.call" : "admin.fleetOwner.call"}
         className={compact ? "fd-icon-btn" : "dash-btn ghost"}
         type="button"
@@ -285,14 +292,10 @@ export function ContactActions({ kind, id, name, phone, zoneId, messageTo, mapTo
         after="call started"
         aria-label={tr("Call {0}", [name])}
         title={tr("Call {0}", [name])}
-        onDone={() => {
-          // v0.18.54 §76: a server-masked phone cannot be dialled.
-          const href = phoneHref(phone);
-          if (href) window.location.href = href;
-        }}
+        onDone={() => { window.location.href = href; }}
       >
         <Phone size={size} aria-hidden="true" />{compact ? null : tr("Call")}
-      </CommandButton>
+      </CommandButton> : null}
       <Link className={compact ? "fd-icon-btn" : "dash-btn ghost"} to={messageTo} aria-label={tr("Message {0}", [name])} title={tr("Message {0}", [name])}>
         <MessageSquare size={size} aria-hidden="true" />{compact ? null : tr("Message")}
       </Link>

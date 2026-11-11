@@ -32,6 +32,14 @@ export function phoneHref(value: string | null | undefined): string | null {
 }
 
 /**
+ * REMINDERS 14c: the number a Call button may dial, or null when it must be hidden — the phone is masked ('•'), empty,
+ * or the admin lacks the person's viewSensitive permission. A Call button never dials a masked value.
+ */
+export function callHref(value: string | null | undefined, canViewSensitive: boolean): string | null {
+  return canViewSensitive ? phoneHref(value) : null;
+}
+
+/**
  * The text of a date of birth: a year-only value shows the year as sent; a full date is formatted for the admin's
  * locale; anything else (empty, unparsable) is the dash so no page ever prints "Invalid Date" or NaN.
  */
