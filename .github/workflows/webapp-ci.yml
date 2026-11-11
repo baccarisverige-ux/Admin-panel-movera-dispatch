@@ -139,9 +139,11 @@ jobs:
           key: pw-${{ runner.os }}-${{ hashFiles('webapp/package-lock.json') }}
       # Installs the Chromium build that matches the pinned @playwright/test version.
       - if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        # Ubuntu mirrors were unreachable on 11 Nov: fall back to the browser alone
+        # (the runner image already has Chromium's system libraries).
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
       - if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: npx playwright install-deps chromium || echo "::warning::apt unreachable; using the runner image's libraries"
       - run: npm run e2e -- --shard=${{ matrix.shard }}/2
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -193,9 +195,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: pw-${{ runner.os }}-${{ hashFiles('webapp/package-lock.json') }}
       - if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        # Ubuntu mirrors were unreachable on 11 Nov: fall back to the browser alone
+        # (the runner image already has Chromium's system libraries).
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
       - if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: npx playwright install-deps chromium || echo "::warning::apt unreachable; using the runner image's libraries"
       - run: npm run e2e:live
       - uses: actions/upload-artifact@v4
         if: failure()
