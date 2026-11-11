@@ -8702,6 +8702,7 @@
 ["Booked ride · now live","Bokad resa · nu pågående"],
 ["Could not load, retrying","Kunde inte laddas, försöker igen"],
 ["Going offline after trips","Går offline efter resorna"],
+["Next trips off","Nästa resor av"],
 ["5 · Late driver — take the ride back","5 · Sen förare — resan tas tillbaka"],
 ["The only case the system takes a ride from a driver: a booked ride he would reach too late while there is still time to find another driver. It counts on his cancel record. Drivers never pay a fee.","Det enda fallet då systemet tar en resa från en förare: en bokad resa han skulle komma för sent till medan det fortfarande finns tid att hitta en annan förare. Det räknas som en avbokning. Förare betalar aldrig någon avgift."],
 ["Take back when late more than","Ta tillbaka vid mer än så här sen"],
