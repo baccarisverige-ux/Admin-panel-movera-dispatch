@@ -1,5 +1,6 @@
 import { isLiveData, liveDriverOf } from "../live/realData";
 import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi";
+import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { useEffect, useMemo, useState } from "react";
 import { useRecords, useSlice } from "../api/hooks";
 import { useAdminApi } from "../api/AdminApiContext";
@@ -57,7 +58,8 @@ export function useAlerts() {
   // G3-D5: live, the server's supply per zone (every online driver counted in his zone, position or not).
   const zoneSupply = useRecords("zoneSupply", undefined, { refetchMs: 15_000 });
   const trips = useRecords("trips", undefined, { refetchMs: 15_000 });
-  const incidents = useRecords("incidents", undefined, { refetchMs: 10_000 });
+  // B1.26b: live, the open cases only (one small read), not every page of the case history.
+  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents", undefined, { refetchMs: 10_000 });
   const reservations = useRecords("reservations", undefined, { refetchMs: 30_000 });
   const payments = useRecords("payments", undefined, { refetchMs: 30_000 });
   const payouts = useRecords("payouts");

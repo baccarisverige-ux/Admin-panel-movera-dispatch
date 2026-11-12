@@ -54,6 +54,7 @@ import { BOOKING_LABEL, categoryName, type Booking } from "../riders/profile";
 import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
 import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
+import { ALL_INCIDENTS_LIST } from "../live/incidents";
 import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
 import { LiveRiderModeration } from "../live/LiveRiderModeration";
 import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
@@ -99,6 +100,9 @@ export function RiderDetailPage() {
   const [params, setParams] = useSearchParams();
   const tab = TABS.find((item) => item.id === params.get("tab"))?.id ?? "overview";
   const data = useRidersData("month", null);
+  // B1.26b: this page lists the rider's cases of every status. useRidersData no longer reads them (it runs on every
+  // page through the alerts); the server has no riderId filter, so live reads every case, here only.
+  const incidentRows = useRecords(isLiveData() ? ALL_INCIDENTS_LIST : "incidents", null);
   const audit = useAudit();
   const opsSlice = useSlice<RiderOpsBook>("riderOps", emptyRiderOpsBook());
   const { policy: refundPolicy } = useRefundPolicy();
@@ -158,7 +162,7 @@ export function RiderDetailPage() {
   const tone = responseTone(row.waitingMin);
   const everyRider = data.rows.map((item) => item.rider);
   const tickets = (data.tickets.data ?? []).filter((item) => belongsToRider(item, rider, everyRider));
-  const incidents = (data.incidents.data ?? []).filter((item) => belongsToRider(item, rider, everyRider));
+  const incidents = (incidentRows.data ?? []).filter((item) => belongsToRider(item, rider, everyRider));
   const lost = care.lostFound[rider.id] ?? [];
   const audits = (audit.data ?? []).filter((item) => item.targetId === rider.id || item.targetId.startsWith(`${rider.id}-`)).slice(0, 30);
   const promos = care.promotions.filter((ticket) => ticket.riderIds.includes(rider.id));

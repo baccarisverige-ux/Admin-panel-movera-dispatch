@@ -614,7 +614,15 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       if (!["open", "investigating"].includes(current.status)) return json(route, 409, { code: "invalid_transition", message: "The case is closed.", requestId: "r-409sv", retryable: false, reason: "incident_closed" });
       return json(route, 200, { incidentId: current.incidentId, rider: current.riderId ? { phone: RIDERS.find((item) => item.riderId === current.riderId)?.phone ?? "+46700000599" } : null, driver: current.driverId ? { phone: "+46701110001" } : null, revealedAt: "2026-10-26T10:00:00Z" });
     }
-    if (p === "/api/v1/admin/incidents") return json(route, 200, { items: inZones(state.incidents, zoneField), nextCursor: null });
+    if (p === "/api/v1/admin/incidents") {
+      // B1.26b: the server's status (repeated) and tripId filters, and cursor paging by limit (contract GET /admin/incidents).
+      const statuses = url.searchParams.getAll("status");
+      const tripId = url.searchParams.get("tripId");
+      const rows = inZones(state.incidents, zoneField).filter((item) => (!statuses.length || statuses.includes(item.status)) && (!tripId || item.tripId === tripId));
+      const from = Number(url.searchParams.get("cursor") ?? 0);
+      const end = from + Number(url.searchParams.get("limit") ?? 50);
+      return json(route, 200, { items: rows.slice(from, end), nextCursor: end < rows.length ? String(end) : null });
+    }
     if (p === "/api/v1/admin/incidents/stream") {
       const after = Number(url.searchParams.get("after") ?? 0);
       const items = state.incidentEvents.filter((event) => event.sequence > after);

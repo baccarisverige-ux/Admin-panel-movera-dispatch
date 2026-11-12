@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { OPEN_INCIDENTS_LIST } from "../live/incidents";
+import { isLiveData } from "../live/realData";
 import { Link } from "react-router";
 import { Car, Clock, MapPin, Phone, Radar, UserRound, Zap } from "lucide-react";
 import { useRecords } from "../api/hooks";
@@ -192,7 +194,8 @@ export function useFreeDriverIds(): Set<string> | null {
   const drivers = useRecords("drivers", null);
   const vehicles = useRecords("vehicles", null);
   const trips = useRecords("trips", null);
-  const incidents = useRecords("incidents", null);
+  // B1.26b: live, the open cases only (a driver on an open SOS is not free).
+  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents", null);
   return useMemo(() => {
     if (!drivers.data || !vehicles.data || !trips.data) return null;
     const live = liveDrivers(drivers.data as DemoRecord[], vehicles.data as DemoRecord[], trips.data as DemoRecord[], (incidents.data ?? []) as DemoRecord[], 0);

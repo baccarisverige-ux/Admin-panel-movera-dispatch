@@ -1,6 +1,7 @@
 import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { isLiveData, liveDriverOf } from "../live/realData";
 import { DRIVER_BY_ID_LIST } from "../live/liveAdminApi";
+import { ALL_INCIDENTS_LIST } from "../live/incidents";
 import { LiveDriverPreferences } from "../live/LiveProfileData";
 import { LivePayoutHold } from "../live/LivePayoutHold";
 import { LiveUnlockSignIn } from "../live/LiveUnlockSignIn";
@@ -85,7 +86,8 @@ export function DriverDetailPage() {
   const payouts = useRecords("payouts", null);
   const fleets = useRecords("fleets", null);
   const tickets = useRecords("tickets", null);
-  const incidents = useRecords("incidents", null);
+  // B1.26b: this page lists the driver's cases of every status (the server has no driverId filter): every case, here only.
+  const incidents = useRecords(isLiveData() ? ALL_INCIDENTS_LIST : "incidents", null);
   const reservations = useRecords("reservations", null);
   const riders = useRecords("riders", null);
   const api = useAdminApi();

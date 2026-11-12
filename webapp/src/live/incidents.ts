@@ -49,6 +49,25 @@ export type IncidentFeedEvent = {
   serverTime?: string;
 };
 
+/**
+ * B1.26b (server B1.26): the live incident lists. The pollers (Alerts, Dashboard, Pricing, driver states) read only
+ * the open cases; the Incidents page adds the history in pages of 50 ("Load more"); a trip reads its own cases and a
+ * case address its own case. The demo keeps one "incidents" list for all of them.
+ */
+export const OPEN_INCIDENTS_LIST = "openIncidents";
+export const INCIDENTS_OF_TRIP_LIST = "incidentsOfTrip:";
+export const INCIDENT_BY_ID_LIST = "incidentById:";
+/** Every case (all pages): only pages that list a driver's or rider's cases (the server has no driverId/riderId filter). */
+export const ALL_INCIDENTS_LIST = "everyIncident";
+/** The server statuses of a case that is not closed yet. */
+export const OPEN_INCIDENT_STATUSES = ["open", "investigating"] as const;
+
+/** Is this react-query list name one of the incident lists (the alarm and the event stream refresh them all)? */
+export function isIncidentList(name: unknown): boolean {
+  if (typeof name !== "string") return false;
+  return name === "incidents" || name === OPEN_INCIDENTS_LIST || name === ALL_INCIDENTS_LIST || name.startsWith(INCIDENTS_OF_TRIP_LIST) || name.startsWith(INCIDENT_BY_ID_LIST);
+}
+
 /** The demo page's words for the server's statuses. */
 export const DEMO_STATUS: Record<ServerIncident["status"], string> = { open: "queued", investigating: "taken", resolved: "resolved", dismissed: "dismissed" };
 

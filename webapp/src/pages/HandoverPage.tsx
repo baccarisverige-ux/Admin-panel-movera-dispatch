@@ -15,6 +15,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { DataTable } from "../ui/DataTable";
 import { tr, trn, trx } from "../i18n";
 import { isLiveData } from "../live/realData";
+import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 
 const NAMES: Record<string, string> = {
   "payment-failure": "Payment failure",
@@ -70,7 +71,8 @@ function ShiftTab({ ops, waiting }: { ops: HandoverOps; waiting: Handover[] }) {
   const country = scope.market.id;
   const alerts = useAlertsMaybe();
   const audit = useAudit(30_000);
-  const incidents = useRecords("incidents");
+  // B1.26b: live, the open cases only (the hand-over counts open incidents).
+  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents");
   const [text, setText] = useState("");
   const [todo, setTodo] = useState<string[]>([]);
   const [line, setLine] = useState("");

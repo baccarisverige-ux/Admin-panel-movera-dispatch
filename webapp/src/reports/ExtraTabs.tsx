@@ -6,6 +6,8 @@ import { emptySafety, emptySupport, useRecords, useSlice, type SafetyBook, type 
 import { isOnline } from "../api/presence";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
+import { ALL_INCIDENTS_LIST } from "../live/incidents";
+import { isLiveData } from "../live/realData";
 import { earningsReport } from "../dashboard/earnings";
 import { Card as SettingsCard, Num, Row, Switch } from "../dispatch/fields";
 import { BONUS_KEY, emptyBonusBook, normalizeBonusBook, type BonusBook } from "../drivers/bonus";
@@ -251,7 +253,8 @@ export function SurgeTab({ market: current, zones, window, compare, fmt, money, 
 export function CareTab({ market: current, zones, window, compare, fmt, onCsv }: TabProps) {
   const { agent } = useSession();
   const tickets = useRecords("tickets");
-  const incidents = useRecords("incidents");
+  // B1.26b: the report counts cases of every status in the period: every case, on this tab only.
+  const incidents = useRecords(isLiveData() ? ALL_INCIDENTS_LIST : "incidents");
   const support = useSlice<SupportBook>("supportOps", emptySupport(), { enabled: Boolean(agent && can(agent.role, "support.reply")) });
   const desk = normalizeDesk(useSlice<Desk>(SUPPORT_DESK_KEY, emptyDesk()).value);
   const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: Boolean(agent && can(agent.role, "incidents.read")) });

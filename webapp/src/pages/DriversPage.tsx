@@ -24,6 +24,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { DataTable } from "../ui/DataTable";
 import { tr, trn, trx, uiLocale } from "../i18n";
 import { isLiveData, liveDriverOf } from "../live/realData";
+import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { liveDriverMonth, liveJoinedDays, orDash } from "../live/driverFacts";
 import { liveDriverDocs } from "../fleet/liveOwner";
 import { categoryName } from "../riders/profile";
@@ -53,7 +54,8 @@ export function DriversPage() {
   const vehicles = useRecords("vehicles", null);
   const fleets = useRecords("fleets", null);
   const trips = useRecords("trips", null);
-  const incidents = useRecords("incidents", null);
+  // B1.26b: live, the open cases only (driver states: a driver on an open SOS).
+  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents", null);
   const store = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
   const warnDaysFor = useDocWarnDays();
   const [view, setView] = useState<View>("all");

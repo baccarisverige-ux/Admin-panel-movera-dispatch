@@ -1,5 +1,6 @@
 import { NotConnected } from "../live/NotConnected";
 import { isLiveData } from "../live/realData";
+import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { logExport } from "../reports/activityLog";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -121,7 +122,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
     countrySettings: useSlice<unknown>(COUNTRY_SETTINGS_KEY, null),
   };
   const appSourcesReady = !slice.loading && !pricingSlice.loading && !slice.error && !pricingSlice.error && Object.values(appSources).every((source) => !source.loading && !source.error);
-  const incidents = useRecords("incidents");
+  // B1.26b: live, the open cases only (driver states: a driver on an open SOS).
+  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents");
   const riders = useRecords("riders");
   // Live fix 2026-11-02: unpublished edits survive moving between the section's sub-pages (one publish covers all).
   // Checker fix (PR #200): only the changed fields are kept, with the revision they were made against (see workingDraft.ts).

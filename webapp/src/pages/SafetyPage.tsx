@@ -1,6 +1,9 @@
 import { matchRider } from "../riders/match";
 import { isLiveData } from "../live/realData";
 import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi";
+import { OPEN_INCIDENTS_LIST } from "../live/incidents";
+import { listQueryOf, setListQuery, subscribeLists } from "../live/liveLists";
+import { useQueryClient } from "@tanstack/react-query";
 import { NotConnected } from "../live/NotConnected";
 import { LiveEmergencyContacts } from "../live/LiveEmergencyContacts";
 import { LiveRevealContacts } from "../live/LiveReveal";
@@ -8,7 +11,7 @@ import { caseIsOpen } from "../live/emergencyContacts";
 import { useCountrySettings } from "../config/useCountrySettings";
 import { countrySettingsOf } from "../config/countrySettings";
 import { emergencyLabel } from "../config/emergencyNumbers";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlertOctagon, ArrowLeft, Car, Clock3, FileDown, History, ListChecks, MapPin, Phone, PhoneCall, Settings2, ShieldAlert, ShieldCheck, Siren, UserRound, Users } from "lucide-react";
 import { useAdminApi } from "../api/AdminApiContext";
@@ -78,13 +81,41 @@ import { currentLanguage, tr, trx } from "../i18n/core";
 
 type Show = "open" | "all" | "solved";
 
+/**
+ * B1.26b (server B1.26): live, the open cases (status=open&status=investigating, one small read every 10 s) and the
+ * case history in pages of 50 with "Load more" (owner item 109), merged by id; the demo reads its one list.
+ */
+function useIncidentCases() {
+  const live = isLiveData();
+  const queryClient = useQueryClient();
+  const open = useRecords(live ? OPEN_INCIDENTS_LIST : "incidents", undefined, { refetchMs: 10_000 });
+  const history = useRecords("incidents", undefined, { refetchMs: 10_000 });
+  const paging = useSyncExternalStore(subscribeLists, () => listQueryOf("incidents"), () => listQueryOf("incidents"));
+  // Each new history page brings closed cases whose owner and steps the safety book has not seen yet.
+  useEffect(() => {
+    if (live && history.dataUpdatedAt) void queryClient.invalidateQueries({ queryKey: ["slice", "safetyOps"] });
+  }, [live, history.dataUpdatedAt, queryClient]);
+  const data = useMemo(() => {
+    if (!open.data && !history.data) return undefined;
+    const byId = new Map((history.data ?? []).map((row) => [row.id, row]));
+    // The open list is read every 10 s: it is the newer word on an open case.
+    for (const row of open.data ?? []) byId.set(row.id, row);
+    return [...byId.values()];
+  }, [open.data, history.data]);
+  const loadMore = () => {
+    setListQuery("incidents", { pages: paging.pages + 1 });
+    void queryClient.invalidateQueries({ queryKey: ["records", "incidents"] });
+  };
+  return { data, isLoading: open.isLoading || (history.isLoading && !open.data), error: open.error ?? history.error, hasMore: live && paging.hasMore && !history.error, loadingMore: history.isFetching, loadMore };
+}
+
 export function SafetyPage() {
   const { agent } = useSession();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const scope = useMarketScope();
   const place = scope.market;
-  const rows = useRecords("incidents", undefined, { refetchMs: 10_000 });
+  const rows = useIncidentCases();
   const trips = useRecords("trips");
   const drivers = useRecords("drivers");
   const riders = useRecords("riders");
@@ -250,6 +281,7 @@ export function SafetyPage() {
             })}
             {!shown.length ? <li className="dx-calm">{rows.isLoading ? tr("Loading incidents…") : tr("No incidents in this scope.")}</li> : null}
           </ul>
+          {rows.hasMore ? <button data-command="admin.server.loadMore" type="button" className="dash-btn ghost rd-more" disabled={rows.loadingMore} onClick={rows.loadMore}>{rows.loadingMore ? tr("Loading.") : tr("Load more")}</button> : null}
         </aside>
         {item && record ? (
           <CaseView

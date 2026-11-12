@@ -10,7 +10,6 @@ export function useRidersData(period: Period, scope?: string | null) {
   const trips = useRecords("trips", scope, { refetchMs: 30_000 });
   const drivers = useRecords("drivers");
   const tickets = useRecords("tickets");
-  const incidents = useRecords("incidents");
   const careSlice = useSlice<unknown>(CARE_KEY, emptyRiderCare());
   const care = useMemo(() => normalizeCare(careSlice.value), [careSlice.value]);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 60_000) * 60_000);
@@ -21,5 +20,5 @@ export function useRidersData(period: Period, scope?: string | null) {
   const waiting = useMemo(() => new Set(rideRequests(trips.data ?? [], riders.data ?? []).map((request) => request.riderId).filter((id): id is string => Boolean(id))), [trips.data, riders.data]);
   const driverList = useMemo(() => (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })), [drivers.data]);
   const rows = useMemo(() => buildRows(riders.data ?? [], care, now, period, waiting, driverList), [riders.data, care, now, period, waiting, driverList]);
-  return { rows, care, careSlice, now, loading: riders.isLoading || careSlice.loading, error: riders.isError, refetch: riders.refetch, tickets, incidents };
+  return { rows, care, careSlice, now, loading: riders.isLoading || careSlice.loading, error: riders.isError, refetch: riders.refetch, tickets };
 }

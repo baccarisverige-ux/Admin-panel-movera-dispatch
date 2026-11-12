@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { OPEN_INCIDENTS_LIST } from "../live/incidents";
+import { isLiveData } from "../live/realData";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { PublishTargetsLine, StandardBar, UsesStandardChip } from "../live/StandardBar";
 import { liveSurgeRows, smartChangesLastHour } from "../live/liveSurge";
@@ -186,7 +188,8 @@ export function PricingPage() {
   const trips = useRecords("trips", undefined, { refetchMs: 30_000 });
   const riders = useRecords("riders");
   const vehicles = useRecords("vehicles");
-  const incidents = useRecords("incidents", undefined, { refetchMs: 30_000 });
+  // B1.26b: live, the open cases only (a driver on an open SOS is not free).
+  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents", undefined, { refetchMs: 30_000 });
   const reservations = useRecords("reservations");
   const live = useMemo(() => liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0), [drivers.data, vehicles.data, trips.data, incidents.data]);
   const online = useMemo(() => new Set(live.map((driver) => driver.id)), [live]);

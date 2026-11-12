@@ -4,6 +4,7 @@ import { kpiReport, localDay as kpiDay } from "../live/kpis";
 import type { KpiDay } from "../live/types";
 import { isLiveData } from "../live/realData";
 import { DUE_PAYOUTS_LIST, OPEN_TICKETS_LIST, WAITING_TRIPS_LIST } from "../live/liveAdminApi";
+import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
@@ -205,7 +206,8 @@ export function DashboardPage() {
   // Step 39 (plan 0.28a, audit A15 N5): live, the ride requests are every waiting trip the server has (all pages of
   // GET /admin/trips?status=…), not the first 50 trips; the demo (and a live read that failed) keeps the trip list.
   const waitingTrips = useRecords(isLiveData() ? WAITING_TRIPS_LIST : "trips", undefined, { refetchMs: LIVE_MS });
-  const incidents = useRecords("incidents", undefined, { refetchMs: LIVE_MS });
+  // B1.26b: live, the open cases only (the SOS tiles and driver states count open cases).
+  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents", undefined, { refetchMs: LIVE_MS });
   // C7 (A15 N12): live, the server filters by status (open tickets, unpaid payouts), so the counts stay right past 2,000.
   const tickets = useRecords(isLiveData() ? OPEN_TICKETS_LIST : "tickets", undefined, { refetchMs: LIVE_MS });
   const reservations = useRecords("reservations", undefined, { refetchMs: LIVE_MS });

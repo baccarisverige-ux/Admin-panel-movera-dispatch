@@ -1,5 +1,6 @@
 import { activationMissing, groupMissing } from "../live/activation";
 import { isLiveData } from "../live/realData";
+import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { NotConnected } from "../live/NotConnected";
 import { LiveDriverDocuments } from "../live/LiveDriverDocuments";
 import { useEffect, useMemo, useState } from "react";
@@ -60,7 +61,8 @@ export function FleetOwnerDetailPage() {
   const drivers = useRecords("drivers", null);
   const vehicles = useRecords("vehicles", null);
   const trips = useRecords("trips", null);
-  const incidents = useRecords("incidents", null);
+  // B1.26b: live, the open cases only (driver states: a driver on an open SOS).
+  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents", null);
   const audit = useAudit();
   const store = useSlice<OwnerOpsBook>("fleetOwnerOps", emptyOwnerOpsBook());
   const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
