@@ -2,6 +2,8 @@ import { Link, useParams } from "react-router";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { formatZoneMoney } from "../markets/markets";
 import { useRecords } from "../api/hooks";
+import { INCIDENT_BY_ID_LIST } from "../live/incidents";
+import { isLiveData } from "../live/realData";
 import { statusLabel } from "../domain/labels";
 import { StatusDot } from "../ui/kit";
 import { trn, tr } from "../i18n";
@@ -12,7 +14,8 @@ type Kind = "payouts" | "incidents";
 export function RecordPage({ kind, label, list, back }: { kind: Kind; label: string; list: string; back: string }) {
   const params = useParams();
   const id = params.id ?? "";
-  const records = useRecords(kind, null);
+  // B1.26b: live, an incident address reads that one case (GET /admin/incidents/{id}), so a case past the first page opens.
+  const records = useRecords(kind === "incidents" && isLiveData() ? `${INCIDENT_BY_ID_LIST}${id}` : kind, null);
   const row = records.data?.find((item) => item.id === id);
 
   if (records.isLoading) return <p className="state-line">{trn("Loading {0}.", label.toLowerCase())}</p>;

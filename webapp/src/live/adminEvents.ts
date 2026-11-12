@@ -39,7 +39,7 @@ export const INVALIDATES: Readonly<Record<string, readonly string[]>> = {
 
 /** The lists whose timers the stream replaces (each has an event that says when it changed). */
 // C4 (A15 N15): ride checks too: an answer is a trip projection (trip.changed) and need_help opens an incident.
-export const STREAMED_LISTS: ReadonlySet<string> = new Set(["trips", "reservations", "drivers", "zoneSupply", "incidents", "tickets", "payments", "approvals", "rideChecks", "rideCheckAlerts", "openTickets"]);
+export const STREAMED_LISTS: ReadonlySet<string> = new Set(["trips", "reservations", "drivers", "zoneSupply", "incidents", "tickets", "payments", "approvals", "rideChecks", "rideCheckAlerts", "openTickets", "openIncidents"]);
 
 /** Extra react-query keys behind a contract list name (besides ["records", name], ["live", name] and [name]). */
 const EXTRA_KEYS: Readonly<Record<string, ReadonlyArray<readonly unknown[]>>> = {
@@ -48,14 +48,16 @@ const EXTRA_KEYS: Readonly<Record<string, ReadonlyArray<readonly unknown[]>>> = 
   drivers: [["live", "driver"], ["live", "reservationDrivers"]],
   tickets: [["live", "ticket"], ["records", "openTickets"]],
   alerts: [["slice", "alertOps"]],
-  incidents: [["slice", "safetyOps"], ["slice", "incidentOps"], ["records", "rideCheckAlerts"]],
+  // B1.26b: the open-case list of the pollers and the every-case list of the driver / rider pages.
+  incidents: [["slice", "safetyOps"], ["slice", "incidentOps"], ["records", "rideCheckAlerts"], ["records", "openIncidents"], ["records", "everyIncident"]],
   overview: [["live", "kpis"], ["records", "kpis"]],
   dispatch: [["live", "dispatch-control"], ["slice", "adminDispatch"]],
   approvals: [["records", "approvals"]],
 };
 
 /** C4 (A15 N15): per-id lists ("rideChecksOfTrip:<tripId>") that a list's event refreshes too. */
-const NAME_PREFIXES: Readonly<Record<string, readonly string[]>> = { trips: ["rideChecksOfTrip:"] };
+// B1.26b: a trip's cases and one case by id (incidents.ts INCIDENTS_OF_TRIP_LIST / INCIDENT_BY_ID_LIST).
+const NAME_PREFIXES: Readonly<Record<string, readonly string[]>> = { trips: ["rideChecksOfTrip:"], incidents: ["incidentsOfTrip:", "incidentById:"] };
 
 function startsWith(key: readonly unknown[], prefix: readonly unknown[]): boolean {
   return prefix.every((part, i) => key[i] === part);

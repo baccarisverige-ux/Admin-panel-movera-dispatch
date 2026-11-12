@@ -47,7 +47,8 @@ export function useLiveRefetch(name: string, refetchMs: number | undefined, foll
 
 /** `refetchMs` keeps live screens up to date by reloading on a timer (live: see useLiveRefetch). */
 /** `observe` watches the list without reading it again on mount (the live list bar beside a page that reads it). */
-export function useRecords(name: string, scope?: string | null, options: { refetchMs?: number; observe?: boolean; follow?: boolean } = {}) {
+/** `enabled: false` reads nothing (B1.26b fix: the Incidents page reads a deep-linked case by id only when it is missing). */
+export function useRecords(name: string, scope?: string | null, options: { refetchMs?: number; observe?: boolean; follow?: boolean; enabled?: boolean } = {}) {
   const api = useAdminApi();
   const session = useSession();
   const resolved = useMarketScope(scope);
@@ -61,6 +62,7 @@ export function useRecords(name: string, scope?: string | null, options: { refet
     queryFn: ({ signal }) => readTracked(api, queryKey, () => api.list(name, effectiveScope, signal)),
     refetchInterval,
     ...(options.observe ? { refetchOnMount: false, retryOnMount: false } : {}),
+    ...(options.enabled === false ? { enabled: false } : {}),
   });
   return { ...query, scopeDenied, effectiveScope };
 }

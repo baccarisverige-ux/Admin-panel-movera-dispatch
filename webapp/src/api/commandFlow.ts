@@ -1,5 +1,6 @@
 import type { ActionSpec } from "../commands/registry.ts";
 import type { OperationRow } from "./seed.ts";
+import { isIncidentList } from "../live/incidents.ts";
 
 /**
  * The pure parts of running a command from a screen: when a read is retried (C-18), which cached reads a
@@ -44,7 +45,8 @@ export function queryTouched(queryKey: readonly unknown[], touched: Touched): bo
   const [kind, name] = queryKey;
   if (typeof kind !== "string") return true;
   if (ALWAYS.has(kind)) return true;
-  if (kind === "records") return typeof name !== "string" || touched.collections.has(name);
+  // B1.26b: a case command (collection "incidents") changes every incident list (open cases, history, a trip's, one case).
+  if (kind === "records") return typeof name !== "string" || touched.collections.has(name) || (touched.collections.has("incidents") && isIncidentList(name));
   if (kind === "slice") return typeof name !== "string" || touched.slices.has(name);
   // Static reads (the page catalog) never change with a command.
   if (kind === "admin-page") return false;

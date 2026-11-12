@@ -83,6 +83,7 @@ import { StatusDot } from "../ui/kit";
 import { currentLanguage, tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { isLiveData, liveTripOf } from "../live/realData";
 import { RIDE_CHECKS_OF_TRIP_LIST } from "../live/liveAdminApi";
+import { INCIDENTS_OF_TRIP_LIST } from "../live/incidents";
 import { approachOf, canWaiveFee, driverPointOf, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, reasonLine, tripMoney } from "../live/tripLive";
 
 type TimelineEvent = { at: string; text: string; tone: "status" | "good" | "muted" | "call" | "check" | "alert"; link?: { to: string; label: string } };
@@ -133,7 +134,8 @@ export function TripPage() {
   const canSafety = can(role, "incidents.read");
   // C4 (A15 N9/N15): live, only this trip's ride checks (GET /admin/ride-checks?tripId=).
   const rideCheckRows = useRecords(isLiveData() ? `${RIDE_CHECKS_OF_TRIP_LIST}${tripId}` : "rideChecks", null);
-  const incidents = useRecords("incidents", null);
+  // B1.26b: live, only this trip's cases (GET /admin/incidents?tripId=).
+  const incidents = useRecords(isLiveData() ? `${INCIDENTS_OF_TRIP_LIST}${tripId}` : "incidents", null);
   const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: canSafety });
   const incidentOps = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: canSafety });
   const listed = trips.data?.find((item) => item.id === tripId);

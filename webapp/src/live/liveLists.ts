@@ -3,7 +3,8 @@
  * trips) the search text, the status filter and how many pages are loaded ("Load more"). liveAdminApi reads them
  * when it lists, and remembers whether the server has a next page.
  */
-export type LiveListName = "drivers" | "fleets" | "vehicles" | "trips" | "riders" | "payments";
+// B1.26b: "incidents" is the Incidents page's case history (pages of 50, "Load more"; owner item 109).
+export type LiveListName = "drivers" | "fleets" | "vehicles" | "trips" | "riders" | "payments" | "incidents";
 export type LiveListQuery = { q: string; status: string; pages: number; hasMore: boolean; flagged?: boolean };
 
 const EMPTY: LiveListQuery = { q: "", status: "", pages: 1, hasMore: false };
@@ -34,4 +35,4 @@ export function resetLists(): void {
 }
 
 /** The query-string name of the status filter of each server list. */
-export const STATUS_PARAM: Record<LiveListName, string> = { drivers: "accountStatus", fleets: "status", vehicles: "status", trips: "status", riders: "status", payments: "status" };
+export const STATUS_PARAM: Record<LiveListName, string> = { drivers: "accountStatus", fleets: "status", vehicles: "status", trips: "status", riders: "status", payments: "status", incidents: "status" };

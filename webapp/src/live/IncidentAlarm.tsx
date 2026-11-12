@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useUrgentAlarm } from "../dashboard/useAlertSignals";
 import { tr } from "../i18n/core";
 import { zoneById } from "../markets/markets";
-import { applyEvent, connectIncidentFeed, ringing, type FeedMode, type ServerIncident } from "./incidents";
+import { applyEvent, connectIncidentFeed, isIncidentList, ringing, type FeedMode, type ServerIncident } from "./incidents";
 import { useLiveSession } from "./LiveSessionContext";
 
 /**
@@ -25,7 +25,8 @@ export function IncidentAlarm() {
       (event) => {
         setKnown((current) => applyEvent(current, event));
         // Incidents, Alerts and Dispatch read the list again at once, not at their next 10 s refresh.
-        void queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] === "records" && query.queryKey[1] === "incidents") || (query.queryKey[0] === "slice" && query.queryKey[1] === "safetyOps") });
+        // B1.26b: every incident list (open cases, history pages, a trip's cases, one case) and the safety book.
+        void queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] === "records" && isIncidentList(query.queryKey[1])) || (query.queryKey[0] === "slice" && query.queryKey[1] === "safetyOps") });
       },
       setMode,
     );

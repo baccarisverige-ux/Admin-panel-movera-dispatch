@@ -34,7 +34,8 @@ import { alertCall, bookFromServer, liveCountry, type AlertBookState } from "./l
 import { ALERTS_KEY, normalizeAlertBook } from "../alerts/engine.ts";
 import { INCIDENT_OPS_KEY, emptyIncidentOps } from "../safety/cases.ts";
 import { REVIEW_OPS_KEY, emptyReviewOps, type ReviewOps } from "../growth/reviews.ts";
-import { bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
+import { ALL_INCIDENTS_LIST, INCIDENT_BY_ID_LIST, INCIDENTS_OF_TRIP_LIST, OPEN_INCIDENTS_LIST, OPEN_INCIDENT_STATUSES, bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
+export { ALL_INCIDENTS_LIST, INCIDENT_BY_ID_LIST, INCIDENTS_OF_TRIP_LIST, OPEN_INCIDENTS_LIST } from "./incidents.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
 import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
@@ -597,6 +598,26 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return rows;
   }
 
+  /** B1.26b: the server's incidents behind one of the incident lists (see list()). */
+  async function readIncidents(name: string, filter: ZoneFilter, signal?: AbortSignal): Promise<ServerIncident[]> {
+    if (name === OPEN_INCIDENTS_LIST) return all<ServerIncident>(client, "/admin/incidents", filter, OPEN_INCIDENT_STATUSES.map((status) => ["status", status] as [string, string]));
+    if (name === "incidents") return paged<ServerIncident>(client, "incidents", "/admin/incidents", filter, signal);
+    if (name.startsWith(INCIDENTS_OF_TRIP_LIST)) {
+      const tripId = name.slice(INCIDENTS_OF_TRIP_LIST.length);
+      return tripId ? all<ServerIncident>(client, "/admin/incidents", filter, { tripId }) : [];
+    }
+    if (name.startsWith(INCIDENT_BY_ID_LIST)) {
+      const incidentId = name.slice(INCIDENT_BY_ID_LIST.length);
+      if (!incidentId) return [];
+      const row = await client.json<ServerIncident>(`/admin/incidents/${encodeURIComponent(incidentId)}`).catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) return null;
+        throw error;
+      });
+      return row?.incidentId ? [row] : [];
+    }
+    return all<ServerIncident>(client, "/admin/incidents", filter);
+  }
+
   /** C4 (A15 N15): the ride-check rows behind one of the three ride-check lists. */
   async function readRideChecks(name: string, filter: ZoneFilter): Promise<RideCheckRow[]> {
     if (name.startsWith(RIDE_CHECKS_OF_TRIP_LIST)) {
@@ -755,8 +776,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         return trip ? { riderId: trip.riderId, ...(trip.driverId ? { driverId: trip.driverId } : {}), ...(riders.get(trip.riderId)?.firstName ? { riderName: riders.get(trip.riderId)!.firstName } : {}) } : undefined;
       }) as unknown as DemoRecord[];
     }
-    if (name === "incidents") {
-      const rows = await all<ServerIncident>(client, "/admin/incidents", filter);
+    // B1.26b (server B1.26): the pollers read only the open cases (one small read on the server's open-case index);
+    // the Incidents page's history is pages of 50 with "Load more" (owner item 109); a trip and a case address read
+    // their own cases. Only the driver / rider case lists still read every case (no driverId / riderId filter yet).
+    if (name === OPEN_INCIDENTS_LIST || name === "incidents" || name === ALL_INCIDENTS_LIST || name.startsWith(INCIDENTS_OF_TRIP_LIST) || name.startsWith(INCIDENT_BY_ID_LIST)) {
+      const rows = await readIncidents(name, filter, signal);
       rows.forEach((row) => incidents.set(row.incidentId, row));
       return rows.map(incidentRecord);
     }
@@ -1342,7 +1366,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (key === "reservationOps") return (await livePolicyBook()) as typeof fallback;
       if (key === ALERTS_KEY) return bookFromServer(await client.json<AlertBookState>(`/admin/alerts/book?country=${here()}`), client.admin()?.adminId ?? null) as typeof fallback;
       if (key !== "safetyOps") return liveEmptyBook(fallback);
-      if (!incidents.size) await list("incidents").catch(() => []);
+      // B1.26b: the open cases (one small read); the Incidents page's history pages add theirs as they load.
+      if (!incidents.size) await list(OPEN_INCIDENTS_LIST).catch(() => []);
       return bookFrom(incidents.values()) as typeof fallback;
     },
     tripOffers,

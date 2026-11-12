@@ -23,6 +23,7 @@ export const svC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Minutes from the moment a case came in until someone took it.": "Minuter från att ett ärende kom in tills någon tog det.",
   "No earlier cases.": "Inga tidigare ärenden.",
   "No incidents in this scope.": "Inga incidenter i detta urval.",
+  "Case {0} not found.": "Ärendet {0} hittades inte.",
   "Nobody is working on these. Take them first.": "Ingen arbetar med dessa. Ta dem först.",
   "Only the safety team can call from a case.": "Bara säkerhetsteamet kan ringa från ett ärende.",
   "Open cases past the time limit of their level.": "Öppna ärenden som passerat tidsgränsen för sin nivå.",
