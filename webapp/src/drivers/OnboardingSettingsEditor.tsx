@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BellRing, CalendarClock, CalendarX2, CarFront, FileCheck2, ListOrdered, Pencil, Plus, Trash2 } from "lucide-react";
+import { BellRing, CalendarClock, CalendarX2, CarFront, FileCheck2, ListOrdered, MailCheck, Pencil, Plus, Trash2 } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { useSlice } from "../api/hooks";
@@ -67,6 +67,7 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
   const [draft, setDraft] = useState<{ country: MarketId; doc: SettingsDoc } | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [adding, setAdding] = useState<Record<Scope, string>>({ driver: "", fleet: "", vehicle: "" });
+  const [askEmailCheck, setAskEmailCheck] = useState(false);
   const saved = entry.document;
   const current = draft && draft.country === country ? draft.doc : saved;
   const dirty = Boolean(draft && draft.country === country) && JSON.stringify(current) !== JSON.stringify(saved);
@@ -166,6 +167,11 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
               </Row>
               <Row label={tr("Block at expiry")} help={tr("On the expiry day the driver can't go online until you approve the new document.")} on={current.expiry.blockAtExpiry} onToggle={(blockAtExpiry) => patch({ expiry: { ...current.expiry, blockAtExpiry } })} />
             </Card>
+            {/* v0.18.76 G30 (owner Q6 "Add the setting, off"; REMINDERS 58 warning while Movera has no own e-mail domain). */}
+            <Card title={tr("E-mail before approval")} icon={<MailCheck size={18} />} tone="purple">
+              <Row label={tr("Driver needs a verified e-mail before approval")} help={tr("On: Movera cannot approve a new driver until his e-mail is verified (drivers who were active before are not checked).")} on={current.emailVerifiedForApproval === true} onToggle={(on) => (on ? setAskEmailCheck(true) : patch({ emailVerifiedForApproval: false }))} />
+              <p className="fd-banner amber" data-testid="email-check-warning">{tr("Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.")}</p>
+            </Card>
           </>
         ) : (
           <>
@@ -198,6 +204,17 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
           <button data-command="admin.onboarding.editTypes" type="button" className="dash-btn small ghost" disabled={!dirty} onClick={() => setDraft(null)}>{tr("Undo changes")}</button>
           <CommandButton command="admin.onboarding.publishSettings" className="dash-btn small" targetId={country} scope="all" confirmTarget={false} before={`v${entry.liveVersion}`} after="published" sliceKey={ONBOARDING_SETTINGS_KEY} value={stagePublish(book, country, current, new Date().toISOString())} expectedSliceRev={book.draftRev} disabled={!dirty || Boolean(problem)} onDone={() => { setDraft(null); void slice.refetch(); }}>{tr("Publish")}</CommandButton>
         </div>
+      ) : null}
+      {askEmailCheck ? (
+        <Modal open title={tr("Turn on the e-mail check?")} onClose={() => setAskEmailCheck(false)}>
+          <div className="live-dialog" data-testid="email-check-confirm">
+            <p>{tr("Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.")}</p>
+            <div className="actions">
+              <button data-command="admin.onboarding.editTypes" type="button" className="primary-btn" onClick={() => { patch({ emailVerifiedForApproval: true }); setAskEmailCheck(false); }}>{tr("Turn on")}</button>
+              <button data-command="admin.onboarding.editTypes" type="button" className="secondary-btn" onClick={() => setAskEmailCheck(false)}>{tr("Cancel")}</button>
+            </div>
+          </div>
+        </Modal>
       ) : null}
       {editing ? <TypeDialog key={editing.mode === "edit" ? editing.type : `new-${editing.scope}`} editing={editing} doc={current} onClose={() => setEditing(null)} onSave={(doc) => { set(doc); setEditing(null); }} /> : null}
     </div>

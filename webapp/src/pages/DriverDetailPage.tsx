@@ -15,6 +15,7 @@ import { LiveMessagePerson } from "../live/LiveMessagePerson";
 import { activateEmphasised, driverCategoryFits, driverHistoryShown } from "../live/realOnly";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
 import { callHref } from "../live/masking";
+import { EmailVerifiedBadge } from "../live/EmailVerifiedBadge";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { belongsToDriver } from "../riders/match";
 import { useEffect, useMemo, useState } from "react";
@@ -360,12 +361,12 @@ export function DriverDetailPage() {
             // v0.18.54 §76: the server masked this driver's phone / e-mail / date of birth for this admin; Reveal asks why and shows them once.
             <>
               <Field label={tr("Phone")}><Phone size={13} aria-hidden="true" /> <MaskedText value={driver.phone} revealed={revealed?.phone} field="phone" dash={DASH} /> {revealed ? null : <RevealSensitive kind="driver" id={driver.id} onRevealed={setRevealed} />}</Field>
-              <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> <MaskedText value={driver.email} revealed={revealed?.email} field="email" dash={DASH} /></Field>
+              <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> <MaskedText value={driver.email} revealed={revealed?.email} field="email" dash={DASH} /><EmailVerifiedBadge email={driver.email} verifiedAt={driver.emailVerifiedAt} /></Field>
             </>
           ) : (
             <>
               <Field label={tr("Phone")}><Phone size={13} aria-hidden="true" /> <SensitiveValue value={driver.phone} permission="drivers.viewSensitive" command="admin.driver.revealSensitive" targetId={driver.id} label={tr("Phone")} /></Field>
-              <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> {email}</Field>
+              <Field label={tr("Email")}><Mail size={13} aria-hidden="true" /> {email}{liveData ? <EmailVerifiedBadge email={driver.email} verifiedAt={driver.emailVerifiedAt} /> : null}</Field>
             </>
           )}
           {liveData && (dob || revealed?.dateOfBirth) ? <Field label={tr("Date of birth")}><MaskedText value={dateOfBirthText(dob, uiLocale(), DASH)} revealed={revealed?.dateOfBirth ? dateOfBirthText(revealed.dateOfBirth, uiLocale(), DASH) : null} field="dob" dash={DASH} /></Field> : null}

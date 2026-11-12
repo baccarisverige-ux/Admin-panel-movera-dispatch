@@ -206,6 +206,8 @@ export function errorText(error: unknown): string {
   if (error.reason === "driver_online") return tr("The driver is online. Try again when the driver is offline.");
   if (error.reason === "no_vehicle") return tr("The driver has no car, so no category can be set.");
   if (error.reason === "bank_not_uploaded") return tr("The driver has not uploaded bank details yet.");
+  // v0.18.76 G30 (owner Q6, contract.json#emailVerified.texts.approvalRefused): the country needs a verified e-mail before approval.
+  if (error.reason === "email_not_verified") return tr("The driver's e-mail is not verified yet.");
   // v0.18.5 (owner G2-D5.7 "Reason always (Recommended)"): every rejection or block says why.
   if (error.reason === "note_required") return tr("Write why: the driver sees the reason.");
   // v0.18.5 (owner G2-D5.8): an end date more than 15 years ahead (contract documentExpiry.texts.expiry_too_far).

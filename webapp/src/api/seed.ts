@@ -55,6 +55,8 @@ export type DemoRecord = {
   returnAt?: string | null;
   policyVersion?: string;
   email?: string;
+  /** Live riders / drivers (v0.18.76 G30): when the e-mail was proven; absent = Not verified. Demo records have none. */
+  emailVerifiedAt?: string;
   company?: string;
   orgNumber?: string;
   ownerId?: string;

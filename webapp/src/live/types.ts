@@ -79,6 +79,8 @@ export type Driver = {
   dateOfBirth?: string;
   /** v0.18.54 §76: masked as "a•••@example.com" for an admin without drivers.viewSensitive. */
   email?: string;
+  /** v0.18.76 G30: when the current e-mail was proven (code or Apple / Google); absent = Not verified. Never masked. */
+  emailVerifiedAt?: string;
   country?: string;
   cityId?: string;
   language?: string;
@@ -306,6 +308,8 @@ export type Rider = {
   /** E.164, or v0.18.54 §76 masked ("+46•••••12") for an admin without riders.viewSensitive. */
   phone: string;
   email?: string;
+  /** v0.18.76 G30: when the current e-mail was proven (code or Apple / Google); absent = Not verified. Never masked. */
+  emailVerifiedAt?: string;
   /** v0.18.54 §76: true when phone / email were masked for this admin; absent when full. */
   sensitiveMasked?: boolean;
   rating?: number;

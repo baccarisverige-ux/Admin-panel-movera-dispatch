@@ -141,6 +141,7 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
     kind: docState(driver.documents, driver.requiredDocuments),
     fleetId: driver.fleet?.fleetId ?? null,
     ...(driver.email ? { email: driver.email } : {}),
+    ...(driver.emailVerifiedAt ? { emailVerifiedAt: driver.emailVerifiedAt } : {}),
     ...(driver.sensitiveMasked ? { liveSensitiveMasked: true } : {}),
     live: true,
     liveAccount: {
@@ -349,6 +350,7 @@ export function riderRecord(rider: Rider): DemoRecord {
     status: rider.status,
     version: rider.version,
     ...(rider.email ? { email: rider.email } : {}),
+    ...(rider.emailVerifiedAt ? { emailVerifiedAt: rider.emailVerifiedAt } : {}),
     ...(rider.sensitiveMasked ? { liveSensitiveMasked: true } : {}),
     live: true,
     liveRider: {
@@ -822,6 +824,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
         if (error instanceof ApiError && error.status === 409 && error.code === "documents_not_approved") {
           throw new ApiError(409, "Not all required documents are approved.", { code: error.code, reason: error.reason ?? undefined, details: [...error.details], requestId: error.requestId ?? undefined, retryable: false });
         }
+        if (error instanceof ApiError && error.reason === "email_not_verified") explained(error); // v0.18.76 G30: the country needs a verified e-mail
         throw error;
       });
       if (next?.driverId) drivers.set(next.driverId, next);
