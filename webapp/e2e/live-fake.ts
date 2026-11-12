@@ -100,6 +100,8 @@ export const DRIVER = {
   firstName: "Anna",
   lastName: "Berg",
   email: "anna@example.se",
+  // v0.18.76 G30: Anna's e-mail was proven by a code (the admin shows Verified, title with the date).
+  emailVerifiedAt: "2026-11-12T10:15:00Z",
   country: "SE",
   cityId: "stockholm_lan",
   accountType: "driver",
@@ -167,7 +169,7 @@ export type Incident = Record<string, unknown> & { incidentId: string; status: s
 
 /** GET /admin/riders (AdminRider): wallet and unpaid fees from the server. */
 export const RIDERS = [
-  { riderId: "R501", firstName: "Ida", phone: "+46700000501", email: "ida@example.se", rating: 4.9, status: "active", version: 2, outstanding: null, wallet: { amountMinor: 5000, currency: "SEK" }, consents: {} },
+  { riderId: "R501", firstName: "Ida", phone: "+46700000501", email: "ida@example.se", emailVerifiedAt: "2026-11-12T10:15:00Z", rating: 4.9, status: "active", version: 2, outstanding: null, wallet: { amountMinor: 5000, currency: "SEK" }, consents: {} },
   { riderId: "R502", firstName: "Omar", phone: "+46700000502", status: "active", version: 1, outstanding: { amountMinor: 4900, currency: "SEK" }, wallet: { amountMinor: 0, currency: "SEK" }, consents: {} },
 ];
 
@@ -257,6 +259,8 @@ export type TripState = {
   pagedLists?: boolean;
   /** Hold POST /admin/drivers/{id}/status this many ms. */
   statusDelayMs?: number;
+  /** v0.18.76 G30: the country's emailVerifiedForApproval is on: Activate of a driver without emailVerifiedAt answers 409 email_not_verified. */
+  emailCheckForApproval?: boolean;
   invitations: (typeof INVITATIONS)[number][];
   /** GET /admin/incidents and the incident feed (contract v0.7.0). */
   incidents: Incident[];
@@ -363,6 +367,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       // Contract v0.10.1: active needs every required document approved (a fleet owner also the company's).
       const missing = body.accountStatus === "active" ? activationMissing(current as Parameters<typeof activationMissing>[0]) : [];
       if (missing.length) return json(route, 409, { code: "documents_not_approved", message: "Required documents are not approved", requestId: "r-409a", retryable: false, details: missing });
+      if (state.emailCheckForApproval && body.accountStatus === "active" && !(current as { emailVerifiedAt?: string }).emailVerifiedAt) return json(route, 409, { code: "invalid_transition", reason: "email_not_verified", message: "Conflict", requestId: "r-409e", retryable: false, projection: current });
       state.drivers[index] = { ...current, accountStatus: body.accountStatus, version: current.version + 1 };
       return json(route, 200, state.drivers[index]);
     }

@@ -41,6 +41,7 @@ import { enC11BookedWaiting } from "./en/c11-booked-waiting.ts";
 import { enC12AdminMasking } from "./en/c12-admin-masking.ts";
 import { enC13EmergencyNumbers } from "./en/c13-emergency-numbers.ts";
 import { enC13ChatG92 } from "./en/c13-chat-g92.ts";
+import { enC14EmailVerified } from "./en/c14-email-verified.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -88,6 +89,7 @@ export const en = {
   ...enC12AdminMasking,
   ...enC13EmergencyNumbers,
   ...enC13ChatG92,
+  ...enC14EmailVerified,
 } as const;
 
 export type MessageKey = keyof typeof en;

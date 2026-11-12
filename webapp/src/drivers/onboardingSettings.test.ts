@@ -239,3 +239,19 @@ test("G2-D5.8: the last end date is today + 15 years (the contract's maxYearsAhe
   assert.equal(endDateTooFar("2027-01-01", now), false);
   assert.equal(endDateTooFar("", now), false);
 });
+
+// G30 (contract v0.18.76, contract.json#emailVerified.approvalSetting; owner 2026-11-12 Q6 "Add the setting, off"):
+// OnboardingSettings.emailVerifiedForApproval, per country, missing = false.
+test("G30: emailVerifiedForApproval OFF by default, toggles, survives normalizeSettingsBook of an old saved book (missing = false), and wireDocument sends it", () => {
+  for (const country of ["SE", "FR", "TN"] as const) assert.equal(defaultDoc(country).emailVerifiedForApproval, false, `${country} default off`);
+  const old = emptySettingsBook();
+  for (const country of ["SE", "FR", "TN"] as const) delete (old.countries[country].document as Partial<SettingsDoc>).emailVerifiedForApproval;
+  assert.equal("emailVerifiedForApproval" in old.countries.SE.document, false, "an old saved book has no key");
+  const read = normalizeSettingsBook(JSON.parse(JSON.stringify(old)));
+  assert.equal(read.countries.SE.document.emailVerifiedForApproval, false, "missing = false");
+  const on: SettingsDoc = { ...read.countries.SE.document, emailVerifiedForApproval: true };
+  assert.equal(normalizeSettingsBook({ ...read, countries: { ...read.countries, SE: { ...read.countries.SE, document: on } } }).countries.SE.document.emailVerifiedForApproval, true, "a saved ON stays on");
+  assert.equal(wireDocument(on).emailVerifiedForApproval, true, "PUT sends it");
+  assert.equal(wireDocument({ ...on, emailVerifiedForApproval: false }).emailVerifiedForApproval, false, "and sends OFF too");
+  assert.equal(settingsProblem(on), null, "ON is a valid document");
+});

@@ -39,6 +39,9 @@ test("rider page: a masked phone is text without a tel: link, Reveal with a reas
   await expect(phone.locator("a[href^='tel:']")).toHaveCount(0);
   await expect(page.locator("a[href^='tel:']")).toHaveCount(0);
   await expect(page.getByTestId("masked-email")).toHaveText(/i•••@example\.se/);
+  // G30 (v0.18.76): emailVerifiedAt is never masked, so the masked row shows Verified (title: the date).
+  await expect(page.getByTestId("email-verified")).toHaveText("Verified");
+  await expect(page.getByTestId("email-verified")).toHaveAttribute("title", /^E-mail verified .*2026/);
 
   const reveal = page.getByTestId("reveal-sensitive");
   await expect(reveal).toBeVisible();
@@ -55,6 +58,7 @@ test("rider page: a masked phone is text without a tel: link, Reveal with a reas
   await expect.poll(() => state.calls.find((call) => call.method === "POST" && call.path === "/api/v1/admin/riders/R501/reveal")?.body).toEqual({ reason: "Rider asked for a callback" });
   await expect(page.getByTestId("revealed-phone")).toHaveText(/\+46700000501/);
   await expect(page.getByTestId("revealed-email")).toHaveText(/ida@example\.se/);
+  await expect(page.getByTestId("email-verified")).toHaveText("Verified");
   if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/rider-page-${process.env.SHOT_TAG ?? "shot"}-revealed.png`, fullPage: true });
   // Shown for this page view only: nothing is written to the browser's storage.
   const stored = await page.evaluate(() => JSON.stringify([...Object.values(localStorage), ...Object.values(sessionStorage)]));
@@ -68,6 +72,8 @@ test("rider page: a rider without the masked flag shows no server Reveal button"
   await expect(page.getByRole("heading", { level: 2, name: "Omar" })).toBeVisible();
   await expect(page.getByTestId("reveal-sensitive")).toHaveCount(0);
   await expect(page.getByTestId("masked-phone")).toHaveCount(0);
+  // G30: Omar has no e-mail, so no Verified / Not verified badge.
+  await expect(page.getByTestId("email-verified")).toHaveCount(0);
 });
 
 test("driver page: a year-only date of birth shows the year, Reveal shows the e-mail and the full date", async ({ page }) => {
@@ -76,6 +82,7 @@ test("driver page: a year-only date of birth shows the year, Reveal shows the e-
   await page.goto("/drivers/D1001");
   await expect(page.getByRole("heading", { level: 2, name: "Anna Berg" })).toBeVisible();
   await expect(page.getByTestId("masked-email")).toHaveText(/a•••@example\.se/);
+  await expect(page.getByTestId("email-verified")).toHaveText("Verified");
   const dob = page.getByTestId("masked-dob");
   await expect(dob).toHaveText(/1990/);
   await expect(dob).not.toHaveText(/Invalid|NaN/);
@@ -85,8 +92,24 @@ test("driver page: a year-only date of birth shows the year, Reveal shows the e-
   await dialog.getByRole("button", { name: "Confirm" }).click();
   await expect.poll(() => state.calls.find((call) => call.method === "POST" && call.path === "/api/v1/admin/drivers/D1001/reveal")?.body).toEqual({ reason: "Document check with the driver" });
   await expect(page.getByTestId("revealed-email")).toHaveText(/anna@example\.se/);
+  await expect(page.getByTestId("email-verified")).toHaveText("Verified");
   await expect(page.getByTestId("revealed-dob")).toHaveText(/1990/);
   await expect(page.getByTestId("revealed-dob")).toHaveText(/17/);
+});
+
+test("G30: a driver without emailVerifiedAt shows Not verified, masked or full; the full rider shows Verified", async ({ page }) => {
+  const { emailVerifiedAt: _drop, ...unverified } = MASKED_DRIVER as typeof MASKED_DRIVER & { emailVerifiedAt?: string };
+  void _drop;
+  await fakeTripServer(page, { drivers: [{ ...unverified } as typeof DRIVER], riders: [{ ...RIDERS[0] }, { ...FULL_RIDER }] });
+  await signInWarm(page);
+  await page.goto("/drivers/D1001");
+  await expect(page.getByRole("heading", { level: 2, name: "Anna Berg" })).toBeVisible();
+  await expect(page.getByTestId("email-verified")).toHaveText("Not verified");
+  await expect(page.getByTestId("email-verified")).not.toHaveAttribute("title", /.+/);
+  await page.goto("/riders/R501");
+  await expect(page.getByRole("heading", { level: 2, name: "Ida" })).toBeVisible();
+  await expect(page.getByTestId("masked-email")).toHaveCount(0);
+  await expect(page.getByTestId("email-verified")).toHaveText("Verified");
 });
 
 test("fleet owner page: a masked owner e-mail shows Reveal, the fleet route answers the full e-mail", async ({ page }) => {

@@ -40,6 +40,8 @@ export type SettingsDoc = {
   guides?: Record<string, Guide>;
   /** v0.18.3 (R9): months a document of that type is valid from its issue date (1 to 120; FR urssaf_certificate 6). */
   validMonths?: Record<string, number>;
+  /** v0.18.76 G30 (owner Q6 "Add the setting, off", contract.json#emailVerified.approvalSetting): a driver never active before needs a verified e-mail to be approved; missing = false. */
+  emailVerifiedForApproval?: boolean;
 };
 
 export type Guide = { checklist: LocalText[]; tips: LocalText[] };
@@ -80,7 +82,7 @@ const STEPS = (): SettingsDoc["steps"] => [
 
 /** contract.json#driverOnboarding.settings.defaults (src/drivers/onboardingSettings.test.ts checks they are equal). */
 export function contractDefaults(): Record<MarketId, Omit<SettingsDoc, "version" | "country" | "publishedAt">> {
-  const common = (base: number) => ({ steps: STEPS(), signUpReminders: { on: true, everyDays: 2, stuckAfterDays: 10 }, expiry: { warnDays: [30, 7, 1], blockAtExpiry: true }, vehicles: { categories: categories(base), warnDays: 30, autoHold: true, photosNeeded: true }, customTypes: [], texts: {}, guides: {}, validMonths: {} });
+  const common = (base: number) => ({ steps: STEPS(), signUpReminders: { on: true, everyDays: 2, stuckAfterDays: 10 }, expiry: { warnDays: [30, 7, 1], blockAtExpiry: true }, vehicles: { categories: categories(base), warnDays: 30, autoHold: true, photosNeeded: true }, customTypes: [], texts: {}, guides: {}, validMonths: {}, emailVerifiedForApproval: false });
   return {
     SE: {
       documents: { driver: ["terms", "info_session", "driving_license", "profile_photo", "taxi_driver_license"], fleet: ["company_registration", "taxi_traffic_permit", "tax_settings", "bank_statement"], vehicle: ["vehicle_registration", "insurance"] },

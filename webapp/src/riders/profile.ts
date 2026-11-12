@@ -10,7 +10,7 @@ import { trx } from "../i18n/core.ts";
  * the rider page always agree. Demo model: stable per rider, anchored to "now".
  */
 
-export type RiderRecord = { id: string; name: string; phone: string; zoneId: string; status: string; tripId?: string | null; email?: string; live?: true; liveRider?: DemoRecord["liveRider"]; liveSensitiveMasked?: true };
+export type RiderRecord = { id: string; name: string; phone: string; zoneId: string; status: string; tripId?: string | null; email?: string; emailVerifiedAt?: string; live?: true; liveRider?: DemoRecord["liveRider"]; liveSensitiveMasked?: true };
 
 export type BookingStatus =
   | "completed"
