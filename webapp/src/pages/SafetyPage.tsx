@@ -1,7 +1,8 @@
 import { matchRider } from "../riders/match";
 import { isLiveData } from "../live/realData";
 import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi";
-import { OPEN_INCIDENTS_LIST } from "../live/incidents";
+import { INCIDENT_BY_ID_LIST, OPEN_INCIDENTS_LIST } from "../live/incidents";
+import { caseToRead, pickCase } from "../safety/caseLink";
 import { listQueryOf, setListQuery, subscribeLists } from "../live/liveLists";
 import { useQueryClient } from "@tanstack/react-query";
 import { NotConnected } from "../live/NotConnected";
@@ -84,12 +85,17 @@ type Show = "open" | "all" | "solved";
 /**
  * B1.26b (server B1.26): live, the open cases (status=open&status=investigating, one small read every 10 s) and the
  * case history in pages of 50 with "Load more" (owner item 109), merged by id; the demo reads its one list.
+ * A case named in the address (`?case=`) that neither holds is read by id and merged in (an old closed case opens
+ * without Load more); `caseLoading` stays true until that read is done.
  */
-function useIncidentCases() {
+function useIncidentCases(caseId: string | null) {
   const live = isLiveData();
   const queryClient = useQueryClient();
   const open = useRecords(live ? OPEN_INCIDENTS_LIST : "incidents", undefined, { refetchMs: 10_000 });
   const history = useRecords("incidents", undefined, { refetchMs: 10_000 });
+  const readId = caseToRead(caseId, live, open.data, history.data ?? (history.error ? [] : undefined));
+  // An incident list (incidents.ts isIncidentList): the stream, the alarm and case commands refresh it like the others.
+  const one = useRecords(`${INCIDENT_BY_ID_LIST}${readId ?? ""}`, undefined, { refetchMs: 10_000, enabled: Boolean(readId) });
   const paging = useSyncExternalStore(subscribeLists, () => listQueryOf("incidents"), () => listQueryOf("incidents"));
   // Each new history page brings closed cases whose owner and steps the safety book has not seen yet.
   useEffect(() => {
@@ -97,16 +103,17 @@ function useIncidentCases() {
   }, [live, history.dataUpdatedAt, queryClient]);
   const data = useMemo(() => {
     if (!open.data && !history.data) return undefined;
-    const byId = new Map((history.data ?? []).map((row) => [row.id, row]));
+    const byId = new Map([...(readId ? one.data ?? [] : []), ...(history.data ?? [])].map((row) => [row.id, row]));
     // The open list is read every 10 s: it is the newer word on an open case.
     for (const row of open.data ?? []) byId.set(row.id, row);
     return [...byId.values()];
-  }, [open.data, history.data]);
+  }, [open.data, history.data, readId, one.data]);
   const loadMore = () => {
     setListQuery("incidents", { pages: paging.pages + 1 });
     void queryClient.invalidateQueries({ queryKey: ["records", "incidents"] });
   };
-  return { data, isLoading: open.isLoading || (history.isLoading && !open.data), error: open.error ?? history.error, hasMore: live && paging.hasMore && !history.error, loadingMore: history.isFetching, loadMore };
+  const caseLoading = open.isLoading || history.isLoading || (Boolean(readId) && one.isLoading);
+  return { data, isLoading: open.isLoading || (history.isLoading && !open.data), caseLoading, error: open.error ?? history.error ?? (readId ? one.error : null), hasMore: live && paging.hasMore && !history.error, loadingMore: history.isFetching, loadMore };
 }
 
 export function SafetyPage() {
@@ -115,7 +122,7 @@ export function SafetyPage() {
   const [params, setParams] = useSearchParams();
   const scope = useMarketScope();
   const place = scope.market;
-  const rows = useIncidentCases();
+  const rows = useIncidentCases(params.get("case"));
   const trips = useRecords("trips");
   const drivers = useRecords("drivers");
   const riders = useRecords("riders");
@@ -143,7 +150,8 @@ export function SafetyPage() {
   const selectedId = params.get("case");
   // Keep the case on screen while the list reorders (for example right after Take), instead of jumping to the new first one.
   const lastShown = useRef<string | null>(null);
-  const item = shown.find((row) => row.id === selectedId) ?? shown.find((row) => row.id === lastShown.current) ?? shown[0] ?? null;
+  // B1.26b fix: a case named in the address opens (read by id when it is not loaded), or says "not found"; never another case.
+  const { item, missing } = pickCase(shown, cases, selectedId, lastShown.current, rows.caseLoading);
   lastShown.current = item?.id ?? null;
   const record = item ? rows.data?.find((row) => row.id === item.id) : undefined;
   const open = cases.filter((row) => row.state !== "solved");
@@ -305,7 +313,7 @@ export function SafetyPage() {
             checkTime={checkTime}
             onOpen={(id) => set({ case: id, show: null, level: null })}
           />
-        ) : <p className="dx-calm">{rows.isLoading ? tr("Loading incidents…") : tr("No incidents in this scope.")}</p>}
+        ) : <p className="dx-calm" role={missing ? "status" : undefined}>{missing ? tr("Case {0} not found.", [missing]) : rows.isLoading || (selectedId && rows.caseLoading) ? tr("Loading incidents…") : tr("No incidents in this scope.")}</p>}
       </div>
     </div>
   );

@@ -115,3 +115,32 @@ test("B1.26b: Take / Solved / False alarm (collection incidents) refresh every i
   for (const name of ["incidents", OPEN, `${OF_TRIP}T1`, `${BY_ID}inc_1`]) assert.equal(queryTouched(["records", name, "{}", "a1"], caseOnly), true, name);
   assert.equal(queryTouched(["records", "drivers", "{}", "a1"], caseOnly), false);
 });
+
+test("B1.26b fix: /incidents?case=<id> reads a case missing from the open cases and the loaded history by id, only live", async () => {
+  const { caseToRead } = await import("../safety/caseLink.ts");
+  const rows = [{ id: "inc_1" }, { id: "inc_c0" }];
+  assert.equal(caseToRead("inc_c55", true, rows, rows), "inc_c55", "an old closed case past the first page is read by id");
+  assert.equal(caseToRead("inc_c0", true, [], rows), null, "a loaded case needs no extra read");
+  assert.equal(caseToRead("inc_1", true, rows, []), null);
+  assert.equal(caseToRead("inc_c55", true, rows, undefined), null, "wait for the history page first");
+  assert.equal(caseToRead("inc_c55", false, rows, rows), null, "the demo holds every case");
+  assert.equal(caseToRead(null, true, rows, rows), null);
+});
+
+test("B1.26b fix: a deep-linked case that is nowhere says \"not found\" instead of opening another case", async () => {
+  const { pickCase } = await import("../safety/caseLink.ts");
+  const a = { id: "inc_1" };
+  const b = { id: "inc_c0" };
+  const old = { id: "inc_c55" };
+  // Found: in the list, or read by id but hidden by the "Open" filter.
+  assert.deepEqual(pickCase([a, b], [a, b], "inc_c0", null, false), { item: b, missing: null });
+  assert.deepEqual(pickCase([a], [a, old], "inc_c55", null, false), { item: old, missing: null });
+  // Not found once everything is read: no case on screen, never the first one (the NO-GO: shown[0] = inc_1).
+  assert.deepEqual(pickCase([a, b], [a, b], "inc_nope", "inc_1", false), { item: null, missing: "inc_nope" });
+  // Still reading: neither another case nor "not found".
+  assert.deepEqual(pickCase([a, b], [a, b], "inc_c55", null, true), { item: null, missing: null });
+  // No case in the address: keep the one on screen (list reorders after Take), else the first.
+  assert.deepEqual(pickCase([a, b], [a, b], null, "inc_c0", false), { item: b, missing: null });
+  assert.deepEqual(pickCase([a, b], [a, b], null, null, false), { item: a, missing: null });
+  assert.deepEqual(pickCase([], [], null, null, false), { item: null, missing: null });
+});

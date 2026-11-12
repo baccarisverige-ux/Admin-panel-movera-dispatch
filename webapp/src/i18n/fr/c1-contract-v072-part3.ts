@@ -23,6 +23,7 @@ export const frC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Minutes from the moment a case came in until someone took it.": "Délai, en minutes, entre la création du dossier et sa prise en charge.",
   "No earlier cases.": "Aucun cas précédent.",
   "No incidents in this scope.": "Aucun incident dans ce périmètre.",
+  "Case {0} not found.": "Dossier {0} introuvable.",
   "Nobody is working on these. Take them first.": "Personne ne s'en occupe. Prenez-les en premier.",
   "Only the safety team can call from a case.": "Seule l'équipe sécurité peut appeler depuis un dossier.",
   "Open cases past the time limit of their level.": "Dossiers ouverts qui ont dépassé le délai de leur niveau.",

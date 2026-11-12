@@ -231,3 +231,28 @@ test("B1.26b: Incidents reads the open cases (status filter) and the history in 
   await expect(list.filter({ hasText: "inc_c55 ·" })).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Load more" })).toHaveCount(0);
 });
+
+test("B1.26b fix: /incidents?case=<old closed case> opens THAT case without Load more; an unknown case says not found", async ({ page }) => {
+  // 60 newer closed cases + 1 open SOS: inc_c55 is past the first history page of 50 (supervisor probe, NO-GO b2dd1a3).
+  const closed = Array.from({ length: 60 }, (_, i) => ({ ...LOST_INCIDENT, incidentId: `inc_c${i}`, tripId: `T9${i}`, status: i % 2 ? "resolved" : "dismissed", alarm: false, resolvedBy: "A1", resolvedAt: "2026-10-26T09:30:00Z", version: 2 }));
+  const state = await fakeTripServer(page, { admin: { permissions: SAFETY }, incidents: [...closed, { ...SOS_INCIDENT }] as Incident[], incidentEvents: [] });
+  await signIn(page);
+  await page.goto("/incidents?case=inc_c55");
+  const list = page.locator(".op-case");
+  await expect(list.filter({ hasText: "inc_c55 ·" })).toHaveCount(1);
+  await expect(list.filter({ hasText: "inc_c55 ·" })).toHaveAttribute("aria-pressed", "true");
+  await expect(list.filter({ hasText: "inc_1 ·" })).toHaveAttribute("aria-pressed", "false");
+  // Read by id (GET /admin/incidents/inc_c55), not by walking the history: no Load more click, no second history page.
+  expect(state.calls.some((call) => call.method === "GET" && call.path === "/api/v1/admin/incidents/inc_c55")).toBe(true);
+  expect(state.calls.some((call) => call.method === "GET" && call.path.startsWith("/api/v1/admin/incidents?") && new URL(`https://x${call.path}`).searchParams.get("cursor"))).toBe(false);
+  await expect(page.getByRole("button", { name: "Load more" })).toHaveCount(1);
+  // "Open" only: the closed case the link asked for still opens.
+  await page.goto("/incidents?case=inc_c57&show=open");
+  await expect(page.locator(".op-case.active")).toHaveCount(0);
+  await expect(page.getByText("Case inc_c57 not found.")).toHaveCount(0);
+  await expect(page.locator(".dx-page")).toContainText("inc_c57");
+  // A case that does not exist: "not found", never another case.
+  await page.goto("/incidents?case=inc_nope");
+  await expect(page.getByText("Case inc_nope not found.")).toBeVisible();
+  await expect(page.locator(".op-case.active")).toHaveCount(0);
+});

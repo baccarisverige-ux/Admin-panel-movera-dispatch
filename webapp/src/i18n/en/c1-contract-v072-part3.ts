@@ -21,6 +21,7 @@ export const enC1ContractV072Part3 = {
   "Minutes from the moment a case came in until someone took it.": "Minutes from the moment a case came in until someone took it.",
   "No earlier cases.": "No earlier cases.",
   "No incidents in this scope.": "No incidents in this scope.",
+  "Case {0} not found.": "Case {0} not found.",
   "Nobody is working on these. Take them first.": "Nobody is working on these. Take them first.",
   "Only the safety team can call from a case.": "Only the safety team can call from a case.",
   "Open cases past the time limit of their level.": "Open cases past the time limit of their level.",
