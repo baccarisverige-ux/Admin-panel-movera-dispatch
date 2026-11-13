@@ -740,6 +740,9 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       // v0.18.10 (G8, contract.json#finish): change the driver's pay (reason) and resend the receipt (reason).
       if (one[2] === "/driver-pay") {
         if (!body?.reason?.trim() || !body?.change?.amountMinor) return json(route, 400, { code: "invalid_request", message: "change and reason are required", requestId: "r-400p", retryable: false });
+        // v0.18.82 S5 J4 (moneyBase.versionGuard): expectedVersion required; a stale one (a second click) is 409 with the trip.
+        if (typeof body.expectedVersion !== "number") return json(route, 400, { code: "invalid_request", message: "expectedVersion is required", requestId: "r-400pv", retryable: false });
+        if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "The trip changed since you last saw it.", requestId: "r-409p", retryable: false, projection: trip });
         const total = (trip.driverTotal?.amountMinor ?? 0) + body.change.amountMinor;
         Object.assign(trip, { version: Number(trip.version) + 1, driverTotal: { amountMinor: total, currency: body.change.currency }, ...(trip.moneySplit ? { moneySplit: { ...trip.moneySplit, driverTotal: { amountMinor: total, currency: body.change.currency } } } : {}) });
         return json(route, 200, trip);

@@ -85,12 +85,13 @@ export function personLimitsOf(raw: unknown): PersonLimits {
 }
 /** contract.json#walletCredit.defaultMax (major units). */
 export const WALLET_CREDIT_MAX: Record<MarketId, number> = { SE: 2900, FR: 250, TN: 800 };
-export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 300 };
+/** contract.json#configDefaults.driverPayChangeMax (major units); v0.18.82 TN 100 DT (owner Q-S5-6, 2026-11-13: it limits the change; was 300). */
+export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 100 };
 export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number };
 export const TIP_FLAGS = ["cashAfterTrip", "customAmount"] as const;
 export type MixedTipRules = Partial<Record<(typeof TIP_FLAGS)[number], string[]>>;
-/** contract.json#configDefaults.tipRules.customMax (major units); TN (closed) like FR in its own money. */
-export const TIP_CUSTOM_MAX: Record<MarketId, number> = { SE: 200, FR: 20, TN: 60 };
+/** contract.json#configDefaults.tipRules.customMax (major units); v0.18.82 TN 30 DT (owner Q-S5-6; was 60). */
+export const TIP_CUSTOM_MAX: Record<MarketId, number> = { SE: 200, FR: 20, TN: 30 };
 
 /**
  * `zones` (contract v0.8.1, owner 2026-10-28, live panel): Tips & limits of a zone or a country's Standard, by its

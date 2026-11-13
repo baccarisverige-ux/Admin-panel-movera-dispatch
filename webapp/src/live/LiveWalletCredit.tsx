@@ -8,11 +8,13 @@ import { useLiveSessionMaybe } from "./LiveSessionContext";
  * v0.18.29 A2 (fix job 0) (owner G12 Q5 "Real credit + limit", Q-D "Max 250 euro and equivalent", build-spec Q2 "One button on
  * rider page", Q1 "One admin always"; contract.json#walletCredit): the one way to give a rider money. The amount is
  * in the rider's currency; the server checks the country's limit (Trip settings) and tells the rider (push + history).
+ * v0.18.82 S5 J4a (moneyBase.versionGuard, owner 106): sends the rider version this page shows; a second click gets 409,
+ * the page reloads and says so. The button is off while a request is sending (CommandButton "Please wait").
  */
 const DIGITS: Record<string, number> = { SEK: 100, EUR: 100, TND: 1000 };
 const SYMBOL: Record<string, string> = { SEK: "kr", EUR: "€", TND: "DT" };
 
-export function LiveWalletCredit({ riderId, walletMinor, currency }: { riderId: string; walletMinor: number | null; currency: string | null }) {
+export function LiveWalletCredit({ riderId, version, walletMinor, currency }: { riderId: string; version?: number; walletMinor: number | null; currency: string | null }) {
   const session = useLiveSessionMaybe();
   const canEdit = session?.can("finance.edit") ?? false;
   const [amount, setAmount] = useState("");
@@ -39,7 +41,7 @@ export function LiveWalletCredit({ riderId, walletMinor, currency }: { riderId: 
         confirmTarget={false}
         before={balance}
         after={`+${amount} ${symbol}`}
-        value={{ amount: { amountMinor: minor, currency: cur } }}
+        value={{ ...(typeof version === "number" ? { expectedVersion: version } : {}), amount: { amountMinor: minor, currency: cur } }}
         disabled={!canEdit || Boolean(problem)}
         title={problem ?? undefined}
         onDone={() => { setNotice(tr("Added {0} {1} to the wallet.", [amount, symbol])); setAmount(""); }}

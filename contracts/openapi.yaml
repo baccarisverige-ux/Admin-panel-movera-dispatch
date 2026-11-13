@@ -1,11 +1,11 @@
-# Movera API v0.18.81 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.82 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.81
+  version: 0.18.82
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.81 in this folder; this file must agree with them.
+    v0.18.82 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.81
+  version: 0.18.82
   source: contract.json
 paths:
   /auth/otp/request:
@@ -5663,11 +5663,14 @@ paths:
   /admin/trips/{tripId}/adjust:
     post:
       operationId: adminAdjustTrip
-      summary: Adjust fare / waiting / waive cancel fee
-      description: 'Not a lifecycle transition (status unchanged; paymentStatus/fare change and emit payment_updated / trip_projection).
-        v0.7.2 (owner 2026-10-28, one admin is enough): 200 / 201 at once for every admin with the permission, written in
-        the audit. v0.18.9: POST /admin/trips/{tripId}/adjust { expectedVersion, fare?, waitingSeconds?, waiveCancelFee?,
-        reason? } (trips.intervene): price adjust and waiting (waitingSeconds = the pickup waiting that is charged).'
+      summary: Change the driver's pay / waiting / waive cancel fee
+      description: 'Not a lifecycle transition (status unchanged; paymentStatus / the driver''s pay change (v0.18.82: never
+        the rider''s price) and emit payment_updated / trip_projection). v0.7.2 (owner 2026-10-28, one admin is enough): 200
+        / 201 at once for every admin with the permission, written in the audit. v0.18.9: POST /admin/trips/{tripId}/adjust
+        { expectedVersion, fare?, waitingSeconds?, waiveCancelFee?, reason? } (trips.intervene): price adjust and waiting
+        (waitingSeconds = the pickup waiting that is charged). v0.18.82 (owner Q-M7, Q-S5-8): { expectedVersion, driverPay?,
+        waitingSeconds?, waiveCancelFee?, reason } — driverPay = the driver''s new pay, typed directly; the rider''s price
+        never changes; fare is refused (400 fare_is_driver_pay) (contract.json#moneyBase.adminFare).'
       tags:
       - Admin · Trips
       x-actor:
@@ -14945,14 +14948,16 @@ paths:
     post:
       operationId: adminChangeDriverPay
       summary: Change the driver's pay for an ended trip (audited)
-      description: 'v0.18.10: POST /admin/trips/{tripId}/driver-pay { change: Money (non-zero, the trip currency), reason
-        } (finance.edit, Idempotency-Key) on an ended trip with a driver → 200 TripProjection (admin): an earnings entry kind
-        adjustment of change (paid with the next payout), trip.driverAdjustments += change, driverTotal moves; audit trip.driver_pay
-        with before / after / reason; the driver gets a bell notice kind driver_pay_changed (texts.payChanged). Errors: driver_pay_not_ended,
-        driver_pay_no_driver, driver_pay_below_zero (driverTotal would go below 0), currency_mismatch. Checker: the size of
-        one change (plus or minus) is at most CountryRules.driverPayChangeMax of the trip''s zone (Admin › Tips & limits,
-        per zone or country; default SE 1000 kr, FR 100 €) → else 400 driver_pay_above_max. A refund taken from the driver
-        never takes more than his one number on the trip (never below 0).'
+      description: 'v0.18.10: POST /admin/trips/{tripId}/driver-pay { expectedVersion (v0.18.82, required: the TripProjection.version
+        the admin last saw; stale → 409 version_mismatch with the fresh admin TripProjection, contract.json#moneyBase.versionGuard),
+        change: Money (non-zero, the trip currency), reason } (finance.edit, Idempotency-Key) on an ended trip with a driver
+        → 200 TripProjection (admin): an earnings entry kind adjustment of change (paid with the next payout), trip.driverAdjustments
+        += change, driverTotal moves; audit trip.driver_pay with before / after / reason; the driver gets a bell notice kind
+        driver_pay_changed (texts.payChanged). Errors: driver_pay_not_ended, driver_pay_no_driver, driver_pay_below_zero (driverTotal
+        would go below 0), currency_mismatch. Checker: the size of one change (plus or minus) is at most CountryRules.driverPayChangeMax
+        of the trip''s zone (Admin › Tips & limits, per zone or country; default SE 1000 kr, FR 100 €, TN 100 DT — v0.18.82,
+        owner Q-S5-6 confirmed 2026-11-13) → else 400 driver_pay_above_max. A refund taken from the driver never takes more
+        than his one number on the trip (never below 0).'
       tags:
       - Admin · Trips
       x-actor:
@@ -14990,7 +14995,26 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 'v0.18.82 (owner 106): expectedVersion is stale → version_mismatch with the fresh admin TripProjection
+            (nothing written; a second click is refused), or conflict / invalid_transition as before. B2.3, owner 106 ''Yes,
+            refuse 2nd click (Rec.)'' (S07 M3): POST /admin/riders/{riderId}/wallet-credit { expectedVersion, amount, reason
+            } (expectedVersion = the Rider.version the admin last saw) and POST /admin/trips/{tripId}/driver-pay { expectedVersion,
+            change, reason } (expectedVersion = the trip''s TripProjection.version) both require expectedVersion (integer
+            ≥ 1). A stale value → 409 version_mismatch with the fresh projection (the admin Rider view for wallet-credit,
+            the admin TripProjection for driver-pay), as for refunds; nothing is written. A done credit raises Rider.version
+            and a done pay change raises the trip version (checked and raised under the row lock), so a second click or a
+            second admin with the same version is refused: the money is added once. The Idempotency-Key still answers an identical
+            resend with the first answer. A missing expectedVersion → 400 invalid_request (the server and the admin that sends
+            it ship in the same hour).'
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
@@ -16504,17 +16528,19 @@ paths:
       summary: Add money to a rider's wallet
       description: 'v0.18.29 A2 (owner G12 Q5 ''Real credit + limit'', Q-D ''Max 250 euro and equivalent'', build-spec Q2
         ''One button on rider page'', Q1 ''One admin always''): the one way an admin gives a rider money is Add money to wallet
-        on the rider''s page. POST /admin/riders/{riderId}/wallet-credit { amount, reason } (finance.edit, Idempotency-Key,
-        audit rider.wallet_credit). The amount is in the rider''s currency: the country of the rider''s latest trip (else
-        of his last seen zone); a rider with no known country is refused 409 rider_country_unknown, an amount in another currency
-        400 wallet_currency_mismatch. One credit is at most CountryRules.walletCreditMax of the rider''s COUNTRY (fix job
-        0, owner A2-1 2026-11-05 ''Per country, in Pricing''): the value on the country''s Standard in Pricing › Tips & limits;
-        a zone''s own value is ignored; missing or in another currency = the default below. The limit is in that country''s
-        currency and is checked only against a credit in that currency (wallet per currency, contract.json#walletPerCurrency
-        of fix job 6): the credit goes into the rider''s balance of that currency and is never converted. Above it 400 wallet_credit_too_large,
-        details ''max <amountMinor> <currency>'' (no second admin). The wallet gets a WalletEntry kind adjustment; the rider
-        gets a bell + push kind wallet_credit (texts below) and sees it in the wallet history as ''Credit from Movera''. The
-        balance never goes below 0 (credits are positive).'
+        on the rider''s page. POST /admin/riders/{riderId}/wallet-credit { expectedVersion, amount, reason } (finance.edit,
+        Idempotency-Key, audit rider.wallet_credit; v0.18.82: expectedVersion is required, the Rider.version the admin last
+        saw; stale → 409 version_mismatch with the fresh admin Rider view, nothing added — contract.json#moneyBase.versionGuard).
+        The amount is in the rider''s currency: the country of the rider''s latest trip (else of his last seen zone); a rider
+        with no known country is refused 409 rider_country_unknown, an amount in another currency 400 wallet_currency_mismatch.
+        One credit is at most CountryRules.walletCreditMax of the rider''s COUNTRY (fix job 0, owner A2-1 2026-11-05 ''Per
+        country, in Pricing''): the value on the country''s Standard in Pricing › Tips & limits; a zone''s own value is ignored;
+        missing or in another currency = the default below. The limit is in that country''s currency and is checked only against
+        a credit in that currency (wallet per currency, contract.json#walletPerCurrency of fix job 6): the credit goes into
+        the rider''s balance of that currency and is never converted. Above it 400 wallet_credit_too_large, details ''max
+        <amountMinor> <currency>'' (no second admin). The wallet gets a WalletEntry kind adjustment; the rider gets a bell
+        + push kind wallet_credit (texts below) and sees it in the wallet history as ''Credit from Movera''. The balance never
+        goes below 0 (credits are positive).'
       tags:
       - Admin · People
       x-actor:
@@ -16553,7 +16579,26 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 'v0.18.82 (owner 106): expectedVersion is stale → version_mismatch with the fresh admin Rider view
+            (nothing written; a second click is refused), or conflict / invalid_transition as before. B2.3, owner 106 ''Yes,
+            refuse 2nd click (Rec.)'' (S07 M3): POST /admin/riders/{riderId}/wallet-credit { expectedVersion, amount, reason
+            } (expectedVersion = the Rider.version the admin last saw) and POST /admin/trips/{tripId}/driver-pay { expectedVersion,
+            change, reason } (expectedVersion = the trip''s TripProjection.version) both require expectedVersion (integer
+            ≥ 1). A stale value → 409 version_mismatch with the fresh projection (the admin Rider view for wallet-credit,
+            the admin TripProjection for driver-pay), as for refunds; nothing is written. A done credit raises Rider.version
+            and a done pay change raises the trip version (checked and raised under the row lock), so a second click or a
+            second admin with the same version is refused: the money is added once. The Idempotency-Key still answers an identical
+            resend with the first answer. A missing expectedVersion → 400 invalid_request (the server and the admin that sends
+            it ship in the same hour).'
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
@@ -19193,8 +19238,8 @@ components:
     TripProjection:
       type: object
       description: 'Authoritative trip state. Field visibility depends on the actor (e.g. driverEarnings/commission are not
-        shown to riders). v0.5.1: fare and fareLines follow contract.json#pricing (CONTRACT.md §3.5); commission is Movera''s
-        share of the fare (fare − driverEarnings).'
+        shown to riders). v0.5.1: fare and fareLines follow contract.json#pricing (CONTRACT.md §3.5); commission = moneyBase.commission
+        (v0.18.82): fare − debtCollected − driverEarnings − pickupPay − driverBonus.'
       required:
       - tripId
       - status
@@ -19279,7 +19324,15 @@ components:
         driverEarnings:
           $ref: '#/components/schemas/Money'
         commission:
-          $ref: '#/components/schemas/Money'
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.82: B2.4 (S07 M5): ONE commission for every paid trip end (completed, ended early by the rider,
+            ended by the driver with the rider on board, admin complete): commission = fare − debtCollected − driverEarnings
+            − pickupPay − driverBonus (finish.debt.rule). The trip (TripProjection.commission, KPI commission), the trip''s
+            earnings entry and every driver and admin screen use this same number; the apps show the server''s number and
+            never work it out themselves. Movera''s later changes to the driver''s pay (driver-pay, an admin fare, a refund
+            taken from the driver) are not in commission: they are in driverAdjustments and lower moneySplit.movera. Earnings
+            entries written before v0.18.82 keep their stored value (history, never rewritten).'
         driverBonus:
           allOf:
           - $ref: '#/components/schemas/Money'
@@ -22505,7 +22558,11 @@ components:
           minimum: 0
         gross:
           type: integer
-          description: 'Bookings: ride prices of completed trips plus cancel and no-show fees charged. Tips not included.'
+          description: 'v0.18.82 (owner 107, S5 J3, contract.json#moneyBase.kpiMoney): the fares (without the outstanding_fee
+            line) of every trip of the day whose payment is captured, partially_refunded or refunded — completed, ended early
+            by the rider, ended by the driver with the rider on board — plus the cancel and no-show fees charged that day,
+            each fee counted once. Tips not included. Before v0.18.82: Bookings: ride prices of completed trips plus cancel
+            and no-show fees charged. Tips not included.'
         commission:
           type: integer
           description: Minor units of currency.
@@ -22539,13 +22596,18 @@ components:
             summary is re-summed).'
         fees:
           type: integer
-          description: Cancel and no-show fees charged that day (also inside gross).
+          description: 'Cancel and no-show fees charged that day (also inside gross). v0.18.82: counted once, on the day the
+            fee was charged; the same fee paid later with another trip (its outstanding_fee line) is not counted again.'
         moveraEarnings:
           type: integer
-          description: 'What Movera keeps: commission (trips.commission, already net of pickup pay and driver bonuses: commission
-            = fare - debtCollected - driverEarnings - pickupPay - driverBonus) + Movera''s share of fees - refunds of the
-            day''s trips. Can be negative. v0.18.13 (audit 2026-11-02 H2): pickup pay and bonuses are no longer taken off
-            a second time, and refunds are taken off (server migration 0047 rewrites the stored days).'
+          description: 'v0.18.82 (owner 107, contract.json#moneyBase.kpiMoney): commission (moneyBase.commission) + Movera''s
+            share of fees − Movera''s pay changes (earnings entries kind adjustment: driver-pay changes and an admin''s driverPay
+            delta, which Movera pays and which are not in commission; a refund taken from the driver is a negative change,
+            so it nets out against that refund) − refunds of the day''s trips. Can be negative. Before v0.18.82: What Movera
+            keeps: commission (trips.commission, already net of pickup pay and driver bonuses: commission = fare - debtCollected
+            - driverEarnings - pickupPay - driverBonus) + Movera''s share of fees - refunds of the day''s trips. Can be negative.
+            v0.18.13 (audit 2026-11-02 H2): pickup pay and bonuses are no longer taken off a second time, and refunds are
+            taken off (server migration 0047 rewrites the stored days).'
     KpiReport:
       type: object
       description: 'v0.9.0: GET /admin/kpis.'
@@ -22962,7 +23024,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/Money'
           description: 'v0.18.10 checker: the largest single change of a driver''s pay on a trip (POST /admin/trips/{tripId}/driver-pay).
-            Default SE 1000 kr, FR 100 €.'
+            Default SE 1000 kr, FR 100 €. v0.18.82 (owner Q-S5-6, confirmed 2026-11-13): TN 100 DT (100000 TND minor units).
+            It limits the CHANGE: |new pay − current pay| ≤ max; the pay never goes below 0.'
         payoutSchedule:
           allOf:
           - $ref: '#/components/schemas/PayoutSchedule'
@@ -27267,7 +27330,8 @@ components:
             (409 conflict, contract.json#auth.signOutOnTrip). v0.18.56 reasons: message_too_long, unknown_quick_reply, translate_target_not_allowed
             (400 invalid_request), translation_off (403 forbidden), coming_soon (503 unavailable) (contract.json#chat, §78).
             v0.18.64 reason: auto_translate_off (403 forbidden, contract.json#chat.autoTranslate, §85). v0.18.76 reasons:
-            email_needs_code (400 invalid_request), email_not_verified (409 invalid_transition) (contract.json#emailVerified).'
+            email_needs_code (400 invalid_request), email_not_verified (409 invalid_transition) (contract.json#emailVerified).
+            v0.18.82 reason: fare_is_driver_pay (400 invalid_request, admin adjust / complete sent the old fare field; contract.json#moneyBase.adminFare).'
         details:
           type: array
           items:
@@ -28761,11 +28825,44 @@ components:
           minimum: 1
           description: Version the caller last saw; stale → 409 version_mismatch.
         fare:
-          $ref: '#/components/schemas/Money'
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          deprecated: true
+          description: 'v0.18.82 (owner Q-M7 / Q-S5-8): refused — 400 invalid_request, reason fare_is_driver_pay; the rider''s
+            price cannot be changed. Send driverPay.'
         note:
           type: string
           minLength: 1
           maxLength: 1000
+        driverPay:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.82 (owner Q-S5-8 ''Admin types driver pay''): driver side only — the driver''s new pay for this
+            trip, typed directly (≥ 0); the rider''s price never changes. Owner Q-M7 (2026-11-12 12:33 ''If admin increase
+            fare it''s only for the driver side !! The rider pay same amount when booked''), Q-S5-7b (~17:15 ''driver side
+            (Rec.)'') and Q-S5-8 (2026-11-13 ''Admin types driver pay (Rec.)''), S07 M8/M9: the admin''s hand change on a
+            trip changes ONLY the driver''s pay, which the admin types directly: POST /admin/trips/{tripId}/adjust { expectedVersion,
+            driverPay?, waitingSeconds?, waiveCancelFee?, reason } and POST /admin/trips/{tripId}/complete { expectedVersion,
+            note, driverPay? } (driverPay: Money in the trip currency, ≥ 0 = the driver''s new pay for this trip, his one
+            number driverTotal without the tip — owner 2026-11-13 ''No, without tip'': the tip stays on top; the admin field
+            is ''Driver pay''). The server turns it into a delta = driverPay − the driver''s pay now (driverTotal − tip at
+            that moment; for complete, the pay the normal completion works out). The delta is checked like a driver-pay change:
+            its size at most CountryRules.driverPayChangeMax (else 400 driver_pay_above_max) and the pay never below 0 (400
+            driver_pay_below_zero); delta 0 changes nothing. The rider''s price is never changed by it: the rider pays the
+            booked price under its own rules (paid waiting, stops, early end) plus any earlier unpaid fee read at payment
+            (Q-M2); TripProjection.fare, fareLines, the receipt and the rider''s total stay as they would be without it. The
+            delta is kept on the trip as a driver pay change (TripProjection.driverAdjustments, an earnings entry kind adjustment
+            when the trip is paid, audit trip.adjust / trip.complete with before / after / reason); Movera pays it; commission
+            is not changed by it, it lowers moneySplit.movera. S07 M8: it is kept as its own delta across every re-price (arrive,
+            paid waiting, board, stop waiting, end, early end): a re-price works out the rider''s fare and the driver''s share
+            of it again and then adds the admin''s delta again; it is never lost (so the final pay = the re-priced pay + the
+            delta; owner 2026-11-13 ''32 DT, keep change'': e.g. pay 30 DT, the admin types 32 DT (+2 DT), paid waiting later
+            adds 3 DT → 35 DT). The admin field shows the driver''s current pay and its help text says: the tip stays on top,
+            and waiting or stops added later are added to this pay (the change is kept). The driver sees the new pay (driverTotal,
+            earningsBreakdown line adjustment) on the waybill and in history; the rider sees nothing of it. Old field: fare
+            on adjust / complete (a rider price in admins before v0.18.82) is refused: 400 invalid_request, reason fare_is_driver_pay
+            (''Type the driver''s pay (driverPay); the rider''s price cannot be changed.''), nothing written — never read
+            as a driver pay, so an older admin can never pay a wrong amount by mistake.'
     AdminRefundCommand:
       type: object
       description: 'v0.7.2: runs at once for every admin with the permission (one admin is enough, owner 2026-10-28).'
@@ -28788,7 +28885,8 @@ components:
           maxLength: 1000
     AdminAdjustCommand:
       type: object
-      description: Fare / waiting / cancel-fee correction; runs at once (v0.7.2, one admin is enough).
+      description: Driver pay (v0.18.82 driverPay; the rider's price never changes) / waiting / cancel-fee correction; runs
+        at once (v0.7.2, one admin is enough).
       required:
       - expectedVersion
       - reason
@@ -28798,7 +28896,11 @@ components:
           minimum: 1
           description: Version the caller last saw; stale → 409 version_mismatch.
         fare:
-          $ref: '#/components/schemas/Money'
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          deprecated: true
+          description: 'v0.18.82 (owner Q-M7 / Q-S5-8): refused — 400 invalid_request, reason fare_is_driver_pay; the rider''s
+            price cannot be changed. Send driverPay.'
         waitingSeconds:
           type: integer
           minimum: 0
@@ -28808,6 +28910,35 @@ components:
           type: string
           minLength: 1
           maxLength: 1000
+        driverPay:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.82 (owner Q-S5-8 ''Admin types driver pay''): driver side only — the driver''s new pay for this
+            trip, typed directly (≥ 0); the rider''s price never changes. Owner Q-M7 (2026-11-12 12:33 ''If admin increase
+            fare it''s only for the driver side !! The rider pay same amount when booked''), Q-S5-7b (~17:15 ''driver side
+            (Rec.)'') and Q-S5-8 (2026-11-13 ''Admin types driver pay (Rec.)''), S07 M8/M9: the admin''s hand change on a
+            trip changes ONLY the driver''s pay, which the admin types directly: POST /admin/trips/{tripId}/adjust { expectedVersion,
+            driverPay?, waitingSeconds?, waiveCancelFee?, reason } and POST /admin/trips/{tripId}/complete { expectedVersion,
+            note, driverPay? } (driverPay: Money in the trip currency, ≥ 0 = the driver''s new pay for this trip, his one
+            number driverTotal without the tip — owner 2026-11-13 ''No, without tip'': the tip stays on top; the admin field
+            is ''Driver pay''). The server turns it into a delta = driverPay − the driver''s pay now (driverTotal − tip at
+            that moment; for complete, the pay the normal completion works out). The delta is checked like a driver-pay change:
+            its size at most CountryRules.driverPayChangeMax (else 400 driver_pay_above_max) and the pay never below 0 (400
+            driver_pay_below_zero); delta 0 changes nothing. The rider''s price is never changed by it: the rider pays the
+            booked price under its own rules (paid waiting, stops, early end) plus any earlier unpaid fee read at payment
+            (Q-M2); TripProjection.fare, fareLines, the receipt and the rider''s total stay as they would be without it. The
+            delta is kept on the trip as a driver pay change (TripProjection.driverAdjustments, an earnings entry kind adjustment
+            when the trip is paid, audit trip.adjust / trip.complete with before / after / reason); Movera pays it; commission
+            is not changed by it, it lowers moneySplit.movera. S07 M8: it is kept as its own delta across every re-price (arrive,
+            paid waiting, board, stop waiting, end, early end): a re-price works out the rider''s fare and the driver''s share
+            of it again and then adds the admin''s delta again; it is never lost (so the final pay = the re-priced pay + the
+            delta; owner 2026-11-13 ''32 DT, keep change'': e.g. pay 30 DT, the admin types 32 DT (+2 DT), paid waiting later
+            adds 3 DT → 35 DT). The admin field shows the driver''s current pay and its help text says: the tip stays on top,
+            and waiting or stops added later are added to this pay (the change is kept). The driver sees the new pay (driverTotal,
+            earningsBreakdown line adjustment) on the waybill and in history; the rider sees nothing of it. Old field: fare
+            on adjust / complete (a rider price in admins before v0.18.82) is refused: 400 invalid_request, reason fare_is_driver_pay
+            (''Type the driver''s pay (driverPay); the rider''s price cannot be changed.''), nothing written — never read
+            as a driver pay, so an older admin can never pay a wrong amount by mistake.'
     DriverStatusCommand:
       type: object
       required:
@@ -32990,12 +33121,13 @@ components:
     TipRules:
       type: object
       description: 'v0.18.10: RiderAppConfig.tipRules { cashAfterTrip (default false), cashInCarMinutes (default 5, 0–60),
-        customAmount (default false), customMax: Money (default SE 200 kr, FR 20 €) }, Admin › Tips & limits, per zone or
-        country standard; missing / out of range = default. cashAfterTrip false: a cash tip is only accepted while the rider
-        is still in the car = within cashInCarMinutes after the trip ended (the finish screen); later → 409 tip_cash_after_trip_off
-        (card / Apple Pay tips are not limited). customAmount true: besides the preset amounts the rider may type any whole
-        amount from 1 up to customMax (above → 400 tip_above_max); false: presets only (400 tip_amount_not_allowed). customMax
-        never unlimited: a document without one uses the country default, else 20 × the highest preset amount.'
+        customAmount (default false), customMax: Money (default SE 200 kr, FR 20 €, TN 30 DT — v0.18.82, owner Q-S5-6) },
+        Admin › Tips & limits, per zone or country standard; missing / out of range = default. cashAfterTrip false: a cash
+        tip is only accepted while the rider is still in the car = within cashInCarMinutes after the trip ended (the finish
+        screen); later → 409 tip_cash_after_trip_off (card / Apple Pay tips are not limited). customAmount true: besides the
+        preset amounts the rider may type any whole amount from 1 up to customMax (above → 400 tip_above_max); false: presets
+        only (400 tip_amount_not_allowed). customMax never unlimited: a document without one uses the country default, else
+        20 × the highest preset amount.'
       properties:
         cashAfterTrip:
           type: boolean
@@ -33300,9 +33432,15 @@ components:
     DriverPayCommand:
       type: object
       required:
+      - expectedVersion
       - change
       - reason
       properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: 'v0.18.82 (owner 106): required. The TripProjection.version the admin last saw; stale → 409 version_mismatch
+            with the fresh projection.'
         change:
           allOf:
           - $ref: '#/components/schemas/Money'
@@ -33402,9 +33540,10 @@ components:
       description: 'v0.18.13: v0.18.13 (owner G10-2 ''Admin sets day and time''): CountryRules.payoutSchedule { frequency:
         weekly | every_2_weeks, day: monday..sunday, time: HH:MM } of the country standard (Settings › Payouts, per country);
         default weekly, Monday, 08:00, SE and FR. A period runs from one payout moment to the next in the local time of the
-        driver''s first zone; a driver without a zone uses his country''s time zone (SE Europe/Stockholm, FR Europe/Paris).
-        every_2_weeks counts from the week of 2026-01-05 (periods start on even weeks from it). A changed schedule applies
-        to the next period; entries are never paid twice.'
+        driver''s first zone; a driver without a zone uses his country''s time zone (SE Europe/Stockholm, FR Europe/Paris,
+        TN Africa/Tunis — v0.18.82, TN-1: before it a Tunisian driver without a zone fell back to Stockholm time). every_2_weeks
+        counts from the week of 2026-01-05 (periods start on even weeks from it). A changed schedule applies to the next period;
+        entries are never paid twice.'
       required:
       - frequency
       - day
@@ -34259,21 +34398,29 @@ components:
       type: object
       description: 'v0.18.29 A2 (owner G12 Q5 ''Real credit + limit'', Q-D ''Max 250 euro and equivalent'', build-spec Q2
         ''One button on rider page'', Q1 ''One admin always''): the one way an admin gives a rider money is Add money to wallet
-        on the rider''s page. POST /admin/riders/{riderId}/wallet-credit { amount, reason } (finance.edit, Idempotency-Key,
-        audit rider.wallet_credit). The amount is in the rider''s currency: the country of the rider''s latest trip (else
-        of his last seen zone); a rider with no known country is refused 409 rider_country_unknown, an amount in another currency
-        400 wallet_currency_mismatch. One credit is at most CountryRules.walletCreditMax of the rider''s COUNTRY (fix job
-        0, owner A2-1 2026-11-05 ''Per country, in Pricing''): the value on the country''s Standard in Pricing › Tips & limits;
-        a zone''s own value is ignored; missing or in another currency = the default below. The limit is in that country''s
-        currency and is checked only against a credit in that currency (wallet per currency, contract.json#walletPerCurrency
-        of fix job 6): the credit goes into the rider''s balance of that currency and is never converted. Above it 400 wallet_credit_too_large,
-        details ''max <amountMinor> <currency>'' (no second admin). The wallet gets a WalletEntry kind adjustment; the rider
-        gets a bell + push kind wallet_credit (texts below) and sees it in the wallet history as ''Credit from Movera''. The
-        balance never goes below 0 (credits are positive).'
+        on the rider''s page. POST /admin/riders/{riderId}/wallet-credit { expectedVersion, amount, reason } (finance.edit,
+        Idempotency-Key, audit rider.wallet_credit; v0.18.82: expectedVersion is required, the Rider.version the admin last
+        saw; stale → 409 version_mismatch with the fresh admin Rider view, nothing added — contract.json#moneyBase.versionGuard).
+        The amount is in the rider''s currency: the country of the rider''s latest trip (else of his last seen zone); a rider
+        with no known country is refused 409 rider_country_unknown, an amount in another currency 400 wallet_currency_mismatch.
+        One credit is at most CountryRules.walletCreditMax of the rider''s COUNTRY (fix job 0, owner A2-1 2026-11-05 ''Per
+        country, in Pricing''): the value on the country''s Standard in Pricing › Tips & limits; a zone''s own value is ignored;
+        missing or in another currency = the default below. The limit is in that country''s currency and is checked only against
+        a credit in that currency (wallet per currency, contract.json#walletPerCurrency of fix job 6): the credit goes into
+        the rider''s balance of that currency and is never converted. Above it 400 wallet_credit_too_large, details ''max
+        <amountMinor> <currency>'' (no second admin). The wallet gets a WalletEntry kind adjustment; the rider gets a bell
+        + push kind wallet_credit (texts below) and sees it in the wallet history as ''Credit from Movera''. The balance never
+        goes below 0 (credits are positive).'
       required:
+      - expectedVersion
       - amount
       - reason
       properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: 'v0.18.82 (owner 106): required. The Rider.version the admin last saw; stale → 409 version_mismatch
+            with the fresh projection.'
         amount:
           $ref: '#/components/schemas/Money'
         reason:

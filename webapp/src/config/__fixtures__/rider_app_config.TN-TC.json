@@ -151,7 +151,7 @@
     "cashInCarMinutes": 5,
     "customAmount": false,
     "customMax": {
-      "amountMinor": 60000,
+      "amountMinor": 30000,
       "currency": "TND"
     }
   },

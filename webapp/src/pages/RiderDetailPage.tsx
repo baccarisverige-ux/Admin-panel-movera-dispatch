@@ -372,7 +372,7 @@ export function RiderDetailPage() {
 
         <TabPanel id="wallet" activeId={tab}>
           <div className="rd-money">
-            {liveData ? <LiveWalletCredit riderId={rider.id} walletMinor={liveRiderOf(rider)?.walletMinor ?? null} currency={liveRiderOf(rider)?.currency ?? null} /> : (
+            {liveData ? <LiveWalletCredit riderId={rider.id} version={rider.version} walletMinor={liveRiderOf(rider)?.walletMinor ?? null} currency={liveRiderOf(rider)?.currency ?? null} /> : (
             <section className="fd-box rd-wallet">
               <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
               <strong className="rd-wallet-balance">{walletShown}</strong>
