@@ -80,8 +80,8 @@ test("Dispatch › Rides › Stops: route change switches, max stops and free mi
   await expect(stops.getByRole("radio", { name: "Cannot change" })).toBeChecked();
   // G7 live fix: the amount from Pricing (stopWaitPerMin per car type), still a link to Pricing.
   // A1 (v0.18.85 waitingPriceShown, owner 2026-11-02 driver-g6.md:96): also what the rider pays, with the app fee (10 %, premium 12 %).
-  // The Dispatch page money format drops trailing zeros (max 2 decimals), as for "37,5 kr" in dispatch.spec.ts:689, so 5,50 kr reads 5,5 kr.
-  await expect(stops.getByTestId("stop-price-link")).toHaveText("Price per minute: 5 kr – 9 kr · rider pays 5,5 kr – 10,08 kr (incl. app fee)");
+  // GM item 13: the Dispatch page shows the currency's own decimals (5,50 kr, as the owner's A1 example), never "5,5 kr".
+  await expect(stops.getByTestId("stop-price-link")).toHaveText("Price per minute: 5,00 kr – 9,00 kr · rider pays 5,50 kr – 10,08 kr (incl. app fee)");
   await expect(stops.getByTestId("stop-price-link")).toHaveAttribute("href", "/pricing");
   await stops.getByLabel("Also before pickup on").uncheck();
   await stops.getByRole("radio", { name: "Change at the normal price" }).check();

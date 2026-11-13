@@ -20,13 +20,12 @@ import { daysUntil, DRIVER_DOC_LABELS } from "../fleet/documents";
 import { zoneAllowed } from "../markets/scope";
 import { localDay } from "../dashboard/time";
 import { useMarketScope } from "../markets/useMarketScope";
+import { money as formatMajor } from "../pricing/zonePricing";
 import { failureCause, failureHandled } from "../payments/failures";
 import { useRidersData } from "../riders/useRidersData";
 import { RIDE_CHECK_KEY, alertBy, alertTitle, asRideChecks, emptyRideCheckOps, followText, normalizeRideCheckOps, reasonText, shiftOf, shifted, worries, type RideCheckOps } from "../safety/rideCheck";
 import { ALERTS_KEY, alertsFromServer, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, splitOld, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
 import { tr } from "../i18n/core.ts";
-
-const SYMBOL = { SE: "kr", FR: "€", TN: "DT" } as const;
 
 function hash(text: string): number {
   let value = 2166136261;
@@ -81,8 +80,9 @@ export function useAlerts() {
 
   const access = useMemo(() => agent?.scope ?? { zones: "all" as const }, [agent?.scope]);
   const zones = useMemo(() => market.zones.filter((zone) => zoneAllowed(access, zone.id) && (!scope.zones.length || scope.zones.includes(zone.id))), [market, access, scope.zones]);
-  // Contract v0.18.59 §81: the dinar with a dot and a space between thousands ("1 250.5 DT"), in every language.
-  const money = (major: number) => `${market.id === "TN" ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(major).replace(/,/g, " ") : new Intl.NumberFormat(market.locale, { maximumFractionDigits: 2 }).format(major)} ${SYMBOL[market.id]}`;
+  // Contract v0.18.59 §81: the dinar with a dot and a space between thousands ("1 250.500 DT"), in every language;
+  // GM item 13: always the currency's own decimals, with the one formatter (C-23).
+  const money = (major: number) => formatMajor(major, market.id);
 
   const facts = useMemo((): Facts => {
     const live = liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0);

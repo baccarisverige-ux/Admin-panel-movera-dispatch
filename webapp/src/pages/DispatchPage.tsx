@@ -10,7 +10,7 @@ import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { liveDrivers } from "../dashboard/live";
 import { reservationFareMinor } from "../dashboard/scheduled";
-import { activeCategories, emptyPricingStore, normalizeStore, SLICE_KEY as PRICING_KEY, zoneBook, type PricingStore } from "../pricing/zonePricing";
+import { activeCategories, emptyPricingStore, money as formatMajor, normalizeStore, SLICE_KEY as PRICING_KEY, zoneBook, type PricingStore } from "../pricing/zonePricing";
 import { candidatesFor, rideRequests, type RideRequest } from "../dashboard/riders";
 import { CATEGORIES } from "../domain/contract";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
@@ -184,7 +184,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const canControl = Boolean(agent && can(agent.role, "trips.intervene"));
   const canEdit = useCallback((id: string) => canEditRole && Boolean(agent && (agent.scope.zones === "all" || agent.scope.zones.includes(id))), [canEditRole, agent]);
   const symbol = SYMBOL[country];
-  const money = (value: number) => `${new Intl.NumberFormat(market.locale, { maximumFractionDigits: 2 }).format(value)} ${symbol}`;
+  // GM item 13: always the currency's own decimals ("5,50 kr", "0,55 €", "0.550 DT"), with the one formatter (C-23).
+  const money = (value: number) => formatMajor(value, country);
   const hhmm = new Intl.DateTimeFormat(uiLocale(), { timeZone: market.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(now));
 
   // Another admin published meanwhile: re-apply my changes on the new book; a field we both changed is a conflict.

@@ -45,14 +45,14 @@ test("a ride bonus: 4 rides from 15 to 17 earns 200 kr, rides back to back, seen
 
   // B7b: the real driver app only (demo build: sign-in note); the drawn-sample checks are archived in the Rules repo.
   await expect(page.getByLabel("Driver app preview")).toHaveText("Sign in to the live server to see the real app.");
-  await expect(page.locator(".db-cost")).toContainText("200 kr");
+  await expect(page.locator(".db-cost")).toContainText("200,00 kr");
 
   await page.getByRole("button", { name: "Start bonus" }).click();
   await confirm(page);
   await expect(page.getByText(/Bonus School run is on for \d+ drivers\./)).toBeVisible();
   const item = page.getByRole("list", { name: "Driver bonuses" }).getByRole("listitem").filter({ hasText: "School run" });
   await expect(item).toContainText("Ride bonus");
-  await expect(item).toContainText("Do 4 rides, earn 200 kr");
+  await expect(item).toContainText("Do 4 rides, earn 200,00 kr");
   await page.reload();
   await expect(page.getByRole("list", { name: "Driver bonuses" })).toContainText("School run");
 });
@@ -153,7 +153,7 @@ test("switch a bonus off and on, change it, end it", async ({ page }) => {
   await page.getByRole("button", { name: "Save changes" }).click();
   await confirm(page);
   await expect(page.getByText("Bonus Morning rush changed.")).toBeVisible();
-  await expect(list.getByRole("listitem").filter({ hasText: "Morning rush" })).toContainText("Do 3 rides, earn 175 kr");
+  await expect(list.getByRole("listitem").filter({ hasText: "Morning rush" })).toContainText("Do 3 rides, earn 175,00 kr");
 
   await list.getByRole("listitem").filter({ hasText: "Morning rush" }).getByRole("button", { name: "End bonus" }).click();
   await confirm(page);
