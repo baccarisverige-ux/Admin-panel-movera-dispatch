@@ -31,6 +31,7 @@ import { AcceptedCard, OfferStatus, OffersSection } from "./RideProgress";
 import { handledOf } from "./handle";
 import { CancelRequestButton, HandledLine, RadarSender, useDispatchBook, type HandledRide } from "./HandlePanel";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { useOpenTrip } from "../live/useOpenTrip";
 
 export { useAssignPanel } from "./assignContext";
 export { DriverBonusBox, useTripOffers } from "./DriverBonusBox";
@@ -78,6 +79,8 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
   const { agent } = useSession();
   const role = agent?.role ?? "viewer";
   const canAct = can(role, "trips.intervene");
+  // Admin fix A1: this trip's changes reload after 1 s, not behind the 5 s busy gap.
+  useOpenTrip(tripId);
   const trips = useTrips(null);
   const trip = trips.data?.find((row) => row.id === tripId);
   const offers = useTripOffers(tripId);
