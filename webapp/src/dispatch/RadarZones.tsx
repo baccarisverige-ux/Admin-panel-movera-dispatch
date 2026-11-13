@@ -6,7 +6,7 @@ import { BonusAreaMap } from "../drivers/BonusAreaMap";
 import type { Market, MarketZone } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { Choice, Num, Switch } from "./fields";
-import { ringAreaKm } from "../zones/releases";
+import { ringAreaKm } from "../zones/studioTools";
 import {
   blankRadarRule, blankRadarZone, driversInRadarZone, RADAR_RULE_LIMITS, radarRuleError, radarRuleFor, radarRulesIn, radarZoneError, radarZonesIn, radarZonesOf,
   withoutRadarRule, withoutRadarZone, withRadarRule, withRadarZone,

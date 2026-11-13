@@ -24,26 +24,14 @@ import {
 import { zoneDrawModes } from "./drawModes.ts";
 import { cityById } from "./cities.ts";
 import {
-  activityInside,
-  circleRing,
-  cityGaps,
-  clipToCity,
   createZoneIn,
   deleteZone,
   displayName,
-  firstShapeFromFile,
-  goLiveState,
-  joinShapes,
   launchChecklist,
-  lineKm,
-  removeOverlaps,
-  ringAreaKm,
   seedZones,
-  shapeChecks,
   suggestCode,
-  suggestedShape,
-  zoneChanges,
 } from "./releases.ts";
+import { activityInside, circleRing, cityGaps, clipToCity, firstShapeFromFile, goLiveState, joinShapes, lineKm, removeOverlaps, ringAreaKm, shapeChecks, suggestedShape, zoneChanges } from "./studioTools.ts";
 
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);

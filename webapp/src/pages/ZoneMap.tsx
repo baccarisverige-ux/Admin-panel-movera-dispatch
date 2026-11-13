@@ -38,12 +38,9 @@ import type { MarketId } from "../markets/markets";
 import { cityById, citiesOf, PLACES } from "../zones/cities";
 import { zoneStore, useZoneUi, type DrawTarget, type DrawTool, type ZoneLayers } from "../zones/bookStore";
 import {
-  cityGaps,
   displayName,
   effectiveZonesAt,
-  lineKm,
   priorityZones,
-  ringSizeKm,
   validateZones,
   zoneAreaKm,
   zoneHealth,
@@ -55,6 +52,7 @@ import {
   ZONE_TYPES,
   type ZoneShape,
 } from "../zones/releases";
+import { cityGaps, lineKm, ringSizeKm } from "../zones/studioTools";
 import { CommandButton } from "../ui/CommandButton";
 import { mapProviderLabel, ZoneCanvas, type MapOverlays } from "./ZoneCanvas";
 import { ZoneWizard, type WizardOverlay } from "./ZoneWizard";

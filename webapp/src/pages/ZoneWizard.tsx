@@ -25,24 +25,14 @@ import { CommandButton } from "../ui/CommandButton";
 import { citiesOf, cityById, PLACES, type City } from "../zones/cities";
 import { zoneStore, useZoneUi, type DrawTool } from "../zones/bookStore";
 import {
-  activityInside,
-  circleRing,
-  cityGaps,
-  clipToCity,
   displayName,
-  firstShapeFromFile,
-  joinShapes,
-  removeOverlaps,
-  ringAreaKm,
-  ringSizeKm,
-  shapeChecks,
   suggestCode,
-  suggestedShape,
   ZONE_COLOR,
   ZONE_TYPES,
   type ZoneKind,
   type ZoneShape,
 } from "../zones/releases";
+import { activityInside, circleRing, cityGaps, clipToCity, firstShapeFromFile, joinShapes, removeOverlaps, ringAreaKm, ringSizeKm, shapeChecks, suggestedShape } from "../zones/studioTools";
 import { tr, trn, trx, trSentences } from "../i18n";
 import { useQueryClient } from "@tanstack/react-query";
 import { market } from "../markets/markets";

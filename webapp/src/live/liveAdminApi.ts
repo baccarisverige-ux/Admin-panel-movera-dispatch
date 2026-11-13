@@ -27,6 +27,8 @@ import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts,
 import type { LiveClient } from "./session.ts";
 import { LIST_PAGE, PAGE_LIMIT, all, paged, type ListCounting } from "./listPages.ts";
 export { LIST_PAGE };
+import { DUE_PAYOUTS_LIST, LIVE_PAGE, createListReaders } from "./listReaders.ts";
+export { DUE_PAYOUTS_LIST, LIVE_PAGE };
 import { LIVE_CARD_LIST } from "../dashboard/liveCard.ts";
 import { WAITING_STATUSES, ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
@@ -153,14 +155,8 @@ export const RIDE_CHECKS_OF_TRIP_LIST = "rideChecksOfTrip:";
 export const RIDE_CHECK_ALERTS_LIST = "rideCheckAlerts";
 /** C7 (A15 N12): the Dashboard counts: open tickets and not-yet-paid payouts, filtered by the server's status. */
 export const OPEN_TICKETS_LIST = "openTickets";
-export const DUE_PAYOUTS_LIST = "duePayouts";
-const DUE_PAYOUT_STATUSES = ["pending", "pending_approval", "failed", "held"] as const;
 /** No-answer checks older than this belong to trips long over (the map shows checks of trips going on now). */
 const OPEN_CHECK_WINDOW_MS = 6 * 3_600_000;
-
-/** v0.18.34 §65: the live card reads pages of this size, up to LIVE_MAX_PAGES (rule 33: more than 10,000 drivers). */
-export const LIVE_PAGE = 500;
-const LIVE_MAX_PAGES = 60;
 
 const RIDE_CATEGORIES: string[] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
 const VEHICLE_STATUS: Record<string, string> = { approved: "eligible", pending: "pending", rejected: "ineligible", blocked: "on_hold" };
@@ -515,11 +511,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   }
   let currency: string = CURRENCY;
 
-  async function readDrivers(own = false, filter: ZoneFilter = NO_FILTER, signal?: AbortSignal): Promise<Driver[]> {
-    const rows = own ? await paged<Driver>(client, "drivers", "/admin/drivers", filter, signal) : await all<Driver>(client, "/admin/drivers");
-    rows.forEach((row) => drivers.set(row.driverId, row));
-    return rows;
-  }
+  const { readDrivers, readRiders, readPresence, readLivePages, readPayouts } = createListReaders(client, drivers, riders, presence);
 
   async function readFleets(counting: ListCounting = "keep"): Promise<Fleet[]> {
     return paged<Fleet>(client, "fleets", "/admin/fleets", NO_FILTER, undefined, counting);
@@ -538,33 +530,6 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
 
   /** C8 (A15 N10): riders the full riders read did not find (beyond its pages); not read again for them. */
   const riderScanMissed = new Set<string>();
-
-  async function readRiders(own = false, filter: ZoneFilter = NO_FILTER): Promise<Rider[]> {
-    const rows = own ? await paged<Rider>(client, "riders", "/admin/riders", filter) : await all<Rider>(client, "/admin/riders");
-    rows.forEach((row) => riders.set(row.riderId, row));
-    return rows;
-  }
-
-  /** GET /admin/live/drivers: who is online now, with the last position (drivers not offline). */
-  async function readPresence(filter: ZoneFilter = NO_FILTER, signal?: AbortSignal): Promise<void> {
-    const rows = await readLivePages(filter, signal);
-    presence.clear();
-    rows.forEach((row) => presence.set(row.driverId, row));
-  }
-
-  /** v0.18.34 §65 (A8/A10): every page of GET /admin/live/drivers (limit LIVE_PAGE, cursor) — who is online now. */
-  async function readLivePages(filter: ZoneFilter, signal?: AbortSignal): Promise<LiveDriverRow[]> {
-    const rows: LiveDriverRow[] = [];
-    let cursor: string | null = null;
-    for (let index = 0; index < LIVE_MAX_PAGES; index += 1) {
-      const params = new URLSearchParams([...filter.params, ["limit", String(LIVE_PAGE)], ...(cursor ? [["cursor", cursor] as [string, string]] : [])]);
-      const answer: LiveDriverList = await client.json<LiveDriverList>(`/admin/live/drivers?${params.toString()}`, signal ? { signal } : {});
-      rows.push(...answer.items);
-      cursor = answer.nextCursor ?? null;
-      if (!cursor) break;
-    }
-    return rows;
-  }
 
   /** L78-A: whether this server has the incidents driverId / riderId filter (false after one 400 unknown_filter). */
   const personFilter: PersonFilterMemo = {};
@@ -676,14 +641,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const rows = await all<{ refundId: string; tripId?: string; amount: LiveMoney; reason: string; status: string; createdAt?: string }>(client, "/admin/refunds", filter);
       return rows.map((row) => ({ id: row.refundId, name: row.tripId ? `pay_${row.tripId}` : "", phone: "", zoneId: row.tripId ? trips.get(row.tripId)?.zoneId ?? "" : "", status: row.status === "done" ? "refunded" : row.status, ...(row.tripId ? { tripId: row.tripId } : {}), fareOre: row.amount.amountMinor, ...(row.createdAt ? { createdAt: row.createdAt } : {}), notes: row.reason, live: true }));
     }
-    if (name === "payouts" || name === DUE_PAYOUTS_LIST) {
-      const statuses: [string, string][] = name === DUE_PAYOUTS_LIST ? DUE_PAYOUT_STATUSES.map((status) => ["status", status]) : [];
-      const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string }>(client, "/admin/payouts", filter, statuses);
-      return rows.map((row) => ({
-        id: row.payoutId, name: `${row.periodStart.slice(0, 10)} – ${row.periodEnd.slice(0, 10)}`, phone: "", zoneId: row.zoneId ?? "", status: row.status === "paid" ? "paid" : "scheduled", driverId: row.driverId, fareOre: row.amount.amountMinor, createdAt: row.createdAt, live: true,
-        livePayout: { lines: (row.lines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor, ...(line.count !== undefined ? { count: line.count } : {}) })), source: row.source, periodStart: row.periodStart, periodEnd: row.periodEnd, tripCount: row.tripCount, currency: row.amount.currency },
-      }));
-    }
+    if (name === "payouts" || name === DUE_PAYOUTS_LIST) return readPayouts(name, filter);
     if (name === "refundPayouts") {
       const answer = await client.json<Page<RefundPayout>>("/admin/refunds/payouts?payoutStatus=pending");
       return answer.items.map(refundPayoutRecord);

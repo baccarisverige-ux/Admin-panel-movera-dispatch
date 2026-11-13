@@ -25,13 +25,9 @@ import { Flag } from "../ui/Flag";
 import { CommandButton } from "../ui/CommandButton";
 import { zoneStore, useZoneUi } from "../zones/bookStore";
 import {
-  cityGaps,
-  citiesWithZones,
   displayName,
-  goLiveState,
   validateZones,
   zoneAreaKm,
-  zoneChanges,
   zoneHealth,
   zoneImpact,
   zoneStatus,
@@ -39,6 +35,7 @@ import {
   ZONE_COLOR,
   type ZoneShape,
 } from "../zones/releases";
+import { cityGaps, citiesWithZones, goLiveState, zoneChanges } from "../zones/studioTools";
 import { statusTone, ZoneMap } from "./ZoneMap";
 import { tr, trn, trx } from "../i18n";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
