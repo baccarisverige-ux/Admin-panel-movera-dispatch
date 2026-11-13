@@ -253,7 +253,7 @@ export function tripFacts(trip: Trip): LiveTripFacts {
     eta: trip.eta && Number.isFinite(trip.eta.etaSeconds) && Number.isFinite(trip.eta.distanceMeters) ? { etaSeconds: trip.eta.etaSeconds, distanceMeters: trip.eta.distanceMeters, target: trip.eta.target === "dropoff" ? "dropoff" : "pickup", at: trip.eta.at, source: trip.eta.source === "osrm" ? "osrm" : trip.eta.source === "stale" ? "stale" : "estimate" } : null,
     rider: trip.rider?.firstName ? { firstName: trip.rider.firstName, rating: typeof trip.rider.rating === "number" ? trip.rider.rating : null } : null,
     terms: trip.terms ? {
-      currency: trip.terms.currency, freeWaitMin: trip.terms.freeWaitMin, waitPerMinMinor: trip.terms.waitPerMin?.amountMinor ?? 0, noShowAfterMin: trip.terms.noShowAfterMin, noShowFeeMinor: trip.terms.noShowFee?.amountMinor ?? 0,
+      currency: trip.terms.currency, freeWaitMin: trip.terms.freeWaitMin, waitPerMinMinor: trip.terms.waitPerMin?.amountMinor ?? 0, waitPerMinShownMinor: typeof trip.terms.waitPerMinShown?.amountMinor === "number" ? trip.terms.waitPerMinShown.amountMinor : null, noShowAfterMin: trip.terms.noShowAfterMin, noShowFeeMinor: trip.terms.noShowFee?.amountMinor ?? 0,
       noShowDriverSharePct: trip.terms.noShowDriverSharePct, cancelFreeMin: typeof trip.terms.cancelRule?.freeMin === "number" ? trip.terms.cancelRule.freeMin : null, cancelDriverSharePct: trip.terms.cancelDriverSharePct,
       cancelAfterArrivedIsNoShow: Boolean(trip.terms.cancelAfterArrivedIsNoShow), maxPickupMoveMeters: trip.terms.maxPickupMoveMeters,
     } : null,

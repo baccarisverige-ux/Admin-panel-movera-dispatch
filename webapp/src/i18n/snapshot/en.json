@@ -8935,4 +8935,9 @@
 ["On: Movera cannot approve a new driver until his e-mail is verified (drivers who were active before are not checked).","On: Movera cannot approve a new driver until his e-mail is verified (drivers who were active before are not checked)."],
 ["Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.","Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved."],
 ["Turn on the e-mail check?","Turn on the e-mail check?"],
-["The driver's e-mail is not verified yet.","The driver's e-mail is not verified yet."]]
+["The driver's e-mail is not verified yet.","The driver's e-mail is not verified yet."],
+["{0} · rider pays {1} (incl. app fee)","{0} · rider pays {1} (incl. app fee)"],
+["{0} · rider pays {1}","{0} · rider pays {1}"],
+["Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee.","Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee."],
+["{0} min · {1}/min incl. app fee · driver gets {2}/min","{0} min · {1}/min incl. app fee · driver gets {2}/min"],
+["Rider pays {0}/min","Rider pays {0}/min"]]

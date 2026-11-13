@@ -5,6 +5,7 @@ import { NumberField } from "./NumberField";
 import { SurgeSlider } from "./SurgeSlider";
 import { useEscape } from "../ui/useEscape";
 import { money, quoteRide, type CategoryDef, type QuoteInput, type ZoneBook } from "./zonePricing";
+import { riderPerMin } from "./waitingShown";
 import { tr, trn, trx, trSentences } from "../i18n";
 
 type Props = {
@@ -90,7 +91,8 @@ export function TestRide({ zoneName, currency, categories, book, liveSurge, draf
           {/* v0.18.7 (G5): what the driver and rider apps get as the terms of this ride, from this Pricing (servedConfig) and Dispatch. */}
           {price ? (
             <dl className="test-ride-terms" data-testid="quote-terms" aria-label={tr("Terms the apps get")}>
-              <div><dt>{tr("Free wait, then per minute")}</dt><dd>{trn("{0} min · {1}/min", price.freeWaitMin, money(price.waitPerMin, currency))}</dd></div>
+              {/* A1 (v0.18.85 waitingPriceShown): the rider pays the waiting with the app fee; the driver gets the price typed here. */}
+              <div><dt>{tr("Free wait, then per minute")}</dt><dd data-testid="quote-terms-wait">{trn("{0} min · {1}/min incl. app fee · driver gets {2}/min", price.freeWaitMin, money(riderPerMin(price.waitPerMin, price.appFeePct, currency), currency), money(price.waitPerMin, currency))}</dd></div>
               <div><dt>{tr("No-show")}</dt><dd>{terms ? trn("after {0} min · {1} (driver gets {2}%)", price.freeWaitMin, money(price.noShowFee, currency), terms.noShowDriverSharePct) : trn("after {0} min · {1}", price.freeWaitMin, money(price.noShowFee, currency))}</dd></div>
               {terms ? <div><dt>{tr("Cancel after the driver arrived")}</dt><dd>{terms.cancelAfterArrivedIsNoShow ? tr("counts as a no-show") : tr("normal cancel fee")}</dd></div> : null}
               {terms ? <div><dt>{tr("Pickup move")}</dt><dd>{trn("up to {0} m", terms.maxPickupMoveMeters)}</dd></div> : null}

@@ -6,11 +6,14 @@ import type { MarketId } from "../markets/markets";
 import { Card, Check, Num, Row, Switch } from "./fields";
 import { driverNoShowShare, pickupTerms, WAIT_FIELDS, WAIT_RIDE_TYPES, WAITING_DRIVER_SHARE_PCT, type PickupWait, type WaitBase, type WaitOverride } from "./offers";
 import { cancelAfterArrivedText } from "./offerRules";
+import { waitPerMinCell } from "./stopPrice";
 import type { CountryDispatch, ZoneDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
 
 /** stopPerMin (G7 live fix): Pricing's stopWaitPerMin of the car type, shown in Stops. */
-export type WaitBaseRow = { id: string; label: string; base: WaitBase; stopPerMin?: number };
+/** appFeePct (A1, v0.18.85 waitingPriceShown): the category's Pricing app fee, so the rider's price per minute shows too. */
+export type WaitBaseRow = { id: string; label: string; base: WaitBase; stopPerMin?: number; appFeePct?: number; minorUnits?: number };
+
 
 type Props = {
   zone: ZoneDispatch;
@@ -73,7 +76,7 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
         <table className="dx-wait-table">
           <thead><tr><th>{tr("Category")}</th><th>{tr("Free wait = no-show wait")}</th><th>{tr("Then per minute")}</th><th>{tr("No-show fee")}</th></tr></thead>
           <tbody>
-            {waitBases.map((row) => <tr key={row.id}><td>{trx(row.label)}</td><td>{trn("{0} min", row.base.freeWaitMin)}</td><td>{money(row.base.perMin)}</td><td>{money(row.base.noShowFee)}</td></tr>)}
+            {waitBases.map((row) => <tr key={row.id}><td>{trx(row.label)}</td><td>{trn("{0} min", row.base.freeWaitMin)}</td><td data-testid="wait-base-per-min">{waitPerMinCell(row, money)}</td><td>{money(row.base.noShowFee)}</td></tr>)}
           </tbody>
         </table>
         <Link className="dash-btn small ghost" to={`/pricing?country=${countryId}&zone=${zone.zoneId}`}>{tr("Change in Pricing")}</Link>
