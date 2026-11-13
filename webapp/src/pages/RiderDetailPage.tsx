@@ -54,7 +54,7 @@ import { BOOKING_LABEL, categoryName, type Booking } from "../riders/profile";
 import { PromoBuilder } from "../riders/PromoBuilder";
 import { CURRENCY_SYMBOL, LiveChip, PromoTicketCard, RiderBadges, ScoreBadge, money, shown, waitText } from "../riders/ui";
 import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
-import { ALL_INCIDENTS_LIST } from "../live/incidents";
+import { INCIDENTS_OF_RIDER_LIST } from "../live/incidents";
 import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
 import { LiveRiderModeration } from "../live/LiveRiderModeration";
 import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
@@ -102,8 +102,9 @@ export function RiderDetailPage() {
   const tab = TABS.find((item) => item.id === params.get("tab"))?.id ?? "overview";
   const data = useRidersData("month", null);
   // B1.26b: this page lists the rider's cases of every status. useRidersData no longer reads them (it runs on every
-  // page through the alerts); the server has no riderId filter, so live reads every case, here only.
-  const incidentRows = useRecords(isLiveData() ? ALL_INCIDENTS_LIST : "incidents", null);
+  // page through the alerts); L78-A (v0.18.78): live reads them with the server's riderId filter (an older server:
+  // every case, once per session); belongsToRider below still narrows them.
+  const incidentRows = useRecords(isLiveData() ? `${INCIDENTS_OF_RIDER_LIST}${riderId}` : "incidents", null);
   const audit = useAudit();
   const opsSlice = useSlice<RiderOpsBook>("riderOps", emptyRiderOpsBook());
   const { policy: refundPolicy } = useRefundPolicy();

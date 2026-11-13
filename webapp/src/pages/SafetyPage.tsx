@@ -79,6 +79,7 @@ import { agentName } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
 import { CommandButton } from "../ui/CommandButton";
 import { currentLanguage, tr, trx } from "../i18n/core";
+import { ListCount } from "../live/ListCount";
 
 type Show = "open" | "all" | "solved";
 
@@ -289,6 +290,7 @@ export function SafetyPage() {
             })}
             {!shown.length ? <li className="dx-calm">{rows.isLoading ? tr("Loading incidents…") : tr("No incidents in this scope.")}</li> : null}
           </ul>
+          <ListCount list="incidents" />
           {rows.hasMore ? <button data-command="admin.server.loadMore" type="button" className="dash-btn ghost rd-more" disabled={rows.loadingMore} onClick={rows.loadMore}>{rows.loadingMore ? tr("Loading.") : tr("Load more")}</button> : null}
         </aside>
         {item && record ? (

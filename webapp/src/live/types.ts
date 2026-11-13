@@ -186,7 +186,8 @@ export type FleetInvitation = {
 
 export type FleetView = { fleet: Fleet; drivers: FleetDriver[]; vehicles: Vehicle[]; invitations?: FleetInvitation[] };
 
-export type Page<T> = { items: T[]; nextCursor: string | null };
+// v0.18.78: `total` (first page of an admin list, optional) = rows matching the same query.
+export type Page<T> = { items: T[]; nextCursor: string | null; total?: number };
 
 /** contract Money: integer minor units. */
 export type LiveMoney = { amountMinor: number; currency: string };

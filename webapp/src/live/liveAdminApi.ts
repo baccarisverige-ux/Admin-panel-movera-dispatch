@@ -25,7 +25,7 @@ import { radarRepeatOf, toolRefusal, type RadarZoneSend } from "./dispatchTools.
 import { rememberSendTarget, sendTarget, setActiveRadarSend } from "../dispatch/radarSends.ts";
 import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
-import { LIST_PAGE, PAGE_LIMIT, all, paged } from "./listPages.ts";
+import { LIST_PAGE, PAGE_LIMIT, all, paged, type ListCounting } from "./listPages.ts";
 export { LIST_PAGE };
 import { LIVE_CARD_LIST } from "../dashboard/liveCard.ts";
 import { WAITING_STATUSES, ridersOnlineRecords } from "../dashboard/riders.ts";
@@ -35,8 +35,9 @@ import { alertCall, bookFromServer, liveCountry, type AlertBookState } from "./l
 import { ALERTS_KEY, normalizeAlertBook } from "../alerts/engine.ts";
 import { INCIDENT_OPS_KEY, emptyIncidentOps } from "../safety/cases.ts";
 import { REVIEW_OPS_KEY, emptyReviewOps, type ReviewOps } from "../growth/reviews.ts";
-import { ALL_INCIDENTS_LIST, INCIDENT_BY_ID_LIST, INCIDENTS_OF_TRIP_LIST, OPEN_INCIDENTS_LIST, OPEN_INCIDENT_STATUSES, bookFrom, incidentRecord, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
+import { INCIDENT_BY_ID_LIST, INCIDENTS_OF_DRIVER_LIST, INCIDENTS_OF_RIDER_LIST, INCIDENTS_OF_TRIP_LIST, OPEN_INCIDENTS_LIST, OPEN_INCIDENT_STATUSES, bookFrom, incidentRecord, isIncidentList, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 export { ALL_INCIDENTS_LIST, INCIDENT_BY_ID_LIST, INCIDENTS_OF_TRIP_LIST, OPEN_INCIDENTS_LIST } from "./incidents.ts";
+import { readPersonIncidents, type PersonFilterMemo } from "./incidentsByPerson.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
 import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
@@ -520,9 +521,15 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return rows;
   }
 
-  async function readFleets(): Promise<Fleet[]> {
-    return paged<Fleet>(client, "fleets", "/admin/fleets");
+  async function readFleets(counting: ListCounting = "keep"): Promise<Fleet[]> {
+    return paged<Fleet>(client, "fleets", "/admin/fleets", NO_FILTER, undefined, counting);
   }
+
+  /**
+   * L78-A: the fleets / vehicles count is kept only for All zones, until the server's fleets / vehicles accept
+   * zoneIds / country (REMINDERS 60): it counts the admin's whole scope while the page shows the picked zones.
+   */
+  const scopeCount = (filter: ZoneFilter): ListCounting => (filter.zones === null ? "page" : "none");
 
   async function fleetZones(fleets: Fleet[]): Promise<Map<string, string>> {
     if (!drivers.size) await readDrivers().catch(() => []);
@@ -559,6 +566,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     return rows;
   }
 
+  /** L78-A: whether this server has the incidents driverId / riderId filter (false after one 400 unknown_filter). */
+  const personFilter: PersonFilterMemo = {};
+
   /** B1.26b: the server's incidents behind one of the incident lists (see list()). */
   async function readIncidents(name: string, filter: ZoneFilter, signal?: AbortSignal): Promise<ServerIncident[]> {
     if (name === OPEN_INCIDENTS_LIST) return all<ServerIncident>(client, "/admin/incidents", filter, OPEN_INCIDENT_STATUSES.map((status) => ["status", status] as [string, string]));
@@ -567,6 +577,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const tripId = name.slice(INCIDENTS_OF_TRIP_LIST.length);
       return tripId ? all<ServerIncident>(client, "/admin/incidents", filter, { tripId }) : [];
     }
+    // L78-A (v0.18.78): a driver's / rider's cases through the server's person filter (old server: every case, once).
+    if (name.startsWith(INCIDENTS_OF_DRIVER_LIST)) return readPersonIncidents(client, "driverId", name.slice(INCIDENTS_OF_DRIVER_LIST.length), filter, personFilter);
+    if (name.startsWith(INCIDENTS_OF_RIDER_LIST)) return readPersonIncidents(client, "riderId", name.slice(INCIDENTS_OF_RIDER_LIST.length), filter, personFilter);
     if (name.startsWith(INCIDENT_BY_ID_LIST)) {
       const incidentId = name.slice(INCIDENT_BY_ID_LIST.length);
       if (!incidentId) return [];
@@ -676,13 +689,13 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return answer.items.map(refundPayoutRecord);
     }
     if (name === "vehicles") {
-      const rows = await paged<Vehicle>(client, "vehicles", "/admin/vehicles");
+      const rows = await paged<Vehicle>(client, "vehicles", "/admin/vehicles", NO_FILTER, undefined, scopeCount(filter));
       rows.forEach((row) => vehicles.set(row.vehicleId, row));
       if (!drivers.size) await readDrivers().catch(() => []);
       return rows.map((row) => vehicleRecord(row, drivers));
     }
     if (name === "fleets" || name === "fleetOwners") {
-      const fleets = await readFleets();
+      const fleets = await readFleets(scopeCount(filter));
       const zones = await fleetZones(fleets);
       return fleets.map((fleet) => (name === "fleets" ? fleetRecord : ownerRecord)(fleet, zones.get(fleet.fleetId) ?? ""));
     }
@@ -739,8 +752,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     // B1.26b (server B1.26): the pollers read only the open cases (one small read on the server's open-case index);
     // the Incidents page's history is pages of 50 with "Load more" (owner item 109); a trip and a case address read
-    // their own cases. Only the driver / rider case lists still read every case (no driverId / riderId filter yet).
-    if (name === OPEN_INCIDENTS_LIST || name === "incidents" || name === ALL_INCIDENTS_LIST || name.startsWith(INCIDENTS_OF_TRIP_LIST) || name.startsWith(INCIDENT_BY_ID_LIST)) {
+    // their own cases; L78-A: a driver's / rider's cases use the server's driverId / riderId filter (v0.18.78). Only
+    // Reports › Care still reads every case (it counts by zone and period).
+    if (isIncidentList(name)) {
       const rows = await readIncidents(name, filter, signal);
       rows.forEach((row) => incidents.set(row.incidentId, row));
       return rows.map(incidentRecord);
@@ -891,7 +905,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     // Contract v0.18.0 (owner 2026-10-29, live audit): car details, the car's driver, the driver's categories and the
     // bank review go to the server; its refusals are explained (errorText) in the admin's language.
     if (input.action === "admin.vehicle.update" || input.action === "admin.vehicle.link") {
-      const vehicle = vehicles.get(input.targetId) ?? (await paged<Vehicle>(client, "vehicles", "/admin/vehicles")).find((row) => row.vehicleId === input.targetId);
+      const vehicle = vehicles.get(input.targetId) ?? (await paged<Vehicle>(client, "vehicles", "/admin/vehicles", NO_FILTER, undefined, "keep")).find((row) => row.vehicleId === input.targetId);
       if (!vehicle) throw new ApiError(404, "No such vehicle.", { code: "not_found" });
       const value = (input.value ?? {}) as Record<string, unknown>;
       const next = input.action === "admin.vehicle.update"

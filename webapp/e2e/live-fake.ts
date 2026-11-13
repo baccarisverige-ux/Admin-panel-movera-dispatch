@@ -257,6 +257,10 @@ export type TripState = {
   driversFail?: number;
   /** Step 39 (0.28a): GET /admin/drivers and GET /admin/trips page by `limit` with a numeric cursor (the real server pages at 50). */
   pagedLists?: boolean;
+  /** v0.18.78 (L78-A): the first page (no cursor) of the admin lists carries `total` (default off: an old or uncounted server). */
+  listTotals?: boolean;
+  /** v0.18.78 (L78-A): a server before v0.18.78: GET /admin/incidents with driverId / riderId answers 400 unknown_filter. */
+  oldIncidentFilters?: boolean;
   /** Hold POST /admin/drivers/{id}/status this many ms. */
   statusDelayMs?: number;
   /** v0.18.76 G30: the country's emailVerifiedForApproval is on: Activate of a driver without emailVerifiedAt answers 409 email_not_verified. */
@@ -307,6 +311,8 @@ function pageOf<T>(all: T[], url: URL): { items: T[]; nextCursor: string | null 
 
 export async function fakeTripServer(page: Page, init: Partial<TripState> = {}): Promise<TripState> {
   const state: TripState = { trips: [COMPLETED_TRIP, ACTIVE_TRIP, CANCELLED_TRIP].map((trip) => ({ ...trip })), calls: [], drivers: [{ ...DRIVER }, { ...OWNER }], fleets: [{ ...FLEET }], vehicles: [{ ...VEHICLE }], invitations: INVITATIONS.map((item) => ({ ...item })), incidents: [], incidentEvents: [], riders: RIDERS.map((item) => ({ ...item })), payouts: PAYOUTS.map((item) => ({ ...item })), tickets: TICKETS.map((item) => ({ ...item })), ticketMessages: TICKET_MESSAGES.map((item) => ({ ...item })), ratings: RATINGS.map((item) => ({ ...item })), approvals: APPROVALS.map((item) => ({ ...item })), refundPayouts: REFUND_PAYOUTS.map((item) => ({ ...item })), liveDrivers: [], ...init };
+  /** v0.18.78: `total` on the first page of a list (listTotals on), counted with the same filters as the page. */
+  const counted = <B extends object>(body: B, all: unknown[], url: URL): B & { total?: number } => (state.listTotals && !url.searchParams.get("cursor") ? { ...body, total: all.length } : body);
   const feed = (kind: string, incident: Incident) => state.incidentEvents.push({ eventId: `ev${state.incidentEvents.length + 1}`, sequence: state.incidentEvents.length + 1, kind, incident: { ...incident }, occurredAt: "2026-10-26T09:21:00Z", serverTime: "2026-10-26T09:21:00Z" });
   if (!init.incidentEvents) state.incidents.forEach((incident) => feed(incident.escalatedAt ? "incident_escalated" : "incident_opened", incident));
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -353,7 +359,7 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const status = url.searchParams.get("accountStatus");
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
       const all = inZones(state.drivers, (item) => item.zoneIds).filter((item) => (!status || item.accountStatus === status) && (!q || JSON.stringify(item).toLowerCase().includes(q)));
-      return json(route, 200, state.pagedLists ? pageOf(all, url) : { items: all, nextCursor: null });
+      return json(route, 200, counted(state.pagedLists ? pageOf(all, url) : { items: all, nextCursor: null }, all, url));
     }
     const driver = /^\/api\/v1\/admin\/drivers\/([^/]+)(\/status)?$/.exec(p);
     if (driver) {
@@ -376,8 +382,9 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
       return items.filter((item) => (!status || item.status === status) && (!q || JSON.stringify(item).toLowerCase().includes(q)));
     };
-    if (p === "/api/v1/admin/fleets") return json(route, 200, { items: filtered(state.fleets), nextCursor: null });
-    if (p === "/api/v1/admin/vehicles") return json(route, 200, { items: filtered(state.vehicles), nextCursor: null });
+    // Like the server (REMINDERS 60): fleets / vehicles ignore the zone pick; their total counts the admin's whole scope.
+    if (p === "/api/v1/admin/fleets") return json(route, 200, counted({ items: filtered(state.fleets), nextCursor: null }, filtered(state.fleets), url));
+    if (p === "/api/v1/admin/vehicles") return json(route, 200, counted({ items: filtered(state.vehicles), nextCursor: null }, filtered(state.vehicles), url));
     if (p === "/api/v1/admin/fleets/F1") {
       const [owner, member] = [state.drivers.find((item) => item.driverId === "D1000"), state.drivers.find((item) => item.driverId === "D1001")];
       return json(route, 200, {
@@ -422,10 +429,13 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const limit = Number(url.searchParams.get("limit") ?? all.length) || all.length;
       const start = Number(url.searchParams.get("cursor") ?? 0) || 0;
       const items = all.slice(start, start + limit);
-      return json(route, 200, { items, nextCursor: start + limit < all.length ? String(start + limit) : null });
+      return json(route, 200, counted({ items, nextCursor: start + limit < all.length ? String(start + limit) : null }, all, url));
     }
     if (p === "/api/v1/admin/live/drivers") return json(route, 200, { ...LIVE_DRIVERS, items: inZones([...(state.noLiveDrivers ? [] : LIVE_DRIVERS.items), ...state.liveDrivers], zoneField), ...(state.ridersOnline ? { ridersOnline: inZones(state.ridersOnline, zoneField), ridersOnlineWindowSeconds: 120 } : {}), ...(state.zoneSupply ? { zoneSupply: inZones(state.zoneSupply, zoneField) } : {}) });
-    if (p === "/api/v1/admin/payments") return json(route, 200, { items: inZones(PAYMENTS, (item) => [tripZone(item.tripId)]), nextCursor: null });
+    if (p === "/api/v1/admin/payments") {
+      const items = inZones(PAYMENTS, (item) => [tripZone(item.tripId)]);
+      return json(route, 200, counted({ items, nextCursor: null }, items, url));
+    }
     if (p === "/api/v1/admin/audit") {
       // C5/C6 (A15 N9, §1): the server's targetId filter and page limit.
       const targetId = url.searchParams.get("targetId");
@@ -623,10 +633,14 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       // B1.26b: the server's status (repeated) and tripId filters, and cursor paging by limit (contract GET /admin/incidents).
       const statuses = url.searchParams.getAll("status");
       const tripId = url.searchParams.get("tripId");
-      const rows = inZones(state.incidents, zoneField).filter((item) => (!statuses.length || statuses.includes(item.status)) && (!tripId || item.tripId === tripId));
+      // v0.18.78 (L78-A): driverId / riderId (AND, an unknown id = an empty page); an older server refuses the keys.
+      const driverId = url.searchParams.get("driverId");
+      const riderId = url.searchParams.get("riderId");
+      if ((driverId !== null || riderId !== null) && state.oldIncidentFilters) return json(route, 400, { code: "invalid_request", reason: "unknown_filter", message: "Unknown filter.", requestId: "r-400uf", retryable: false });
+      const rows = inZones(state.incidents, zoneField).filter((item) => (!statuses.length || statuses.includes(item.status)) && (!tripId || item.tripId === tripId) && (driverId === null || item.driverId === driverId) && (riderId === null || item.riderId === riderId));
       const from = Number(url.searchParams.get("cursor") ?? 0);
       const end = from + Number(url.searchParams.get("limit") ?? 50);
-      return json(route, 200, { items: rows.slice(from, end), nextCursor: end < rows.length ? String(end) : null });
+      return json(route, 200, counted({ items: rows.slice(from, end), nextCursor: end < rows.length ? String(end) : null }, rows, url));
     }
     if (p === "/api/v1/admin/incidents/stream") {
       const after = Number(url.searchParams.get("after") ?? 0);
@@ -683,10 +697,10 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
       const riderId = url.searchParams.get("riderId");
       const flaggedOnly = url.searchParams.get("flagged") === "true";
       const items = inZones(state.trips, (trip) => [String(trip.zoneId)]).filter((trip) => (!statuses.length || statuses.includes(String(trip.status))) && (!riderId || trip.riderId === riderId) && (!q || JSON.stringify(trip).toLowerCase().includes(q)) && (!flaggedOnly || (trip.adminFlag as { flagged?: boolean } | undefined)?.flagged === true));
-      if (state.pagedLists) return json(route, 200, pageOf(items, url));
+      if (state.pagedLists) return json(route, 200, counted(pageOf(items, url), items, url));
       const cursor = url.searchParams.get("cursor");
-      if (!cursor && items.length > 2) return json(route, 200, { items: items.slice(0, 2), nextCursor: "c2" });
-      return json(route, 200, { items: cursor ? items.slice(2) : items, nextCursor: null });
+      if (!cursor && items.length > 2) return json(route, 200, counted({ items: items.slice(0, 2), nextCursor: "c2" }, items, url));
+      return json(route, 200, counted({ items: cursor ? items.slice(2) : items, nextCursor: null }, items, url));
     }
     const one = /^\/api\/v1\/admin\/trips\/([^/]+)(\/offers|\/refund|\/adjust|\/reverse-no-show|\/pin\/unlock|\/flag|\/notes|\/case|\/reveal-contact|\/cancel|\/reassign|\/no-show|\/complete|\/driver-pay|\/receipt\/resend)?$/.exec(p);
     if (one) {
