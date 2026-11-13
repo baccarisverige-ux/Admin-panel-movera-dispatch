@@ -6,7 +6,7 @@ import {
   MonitorSmartphone, Moon, PawPrint, Plane, Plus, Route, Scale, Shield, ShieldAlert, Smartphone, Sparkles, Star, Timer, Trash2,
   TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins, Move, KeyRound,
 } from "lucide-react";
-import type { MarketId } from "../markets/markets";
+import { market, type MarketId } from "../markets/markets";
 import { BonusAreaMap } from "../drivers/BonusAreaMap";
 import { Card, Check, Choice, Num, Row, Switch } from "./fields";
 import { ReservationSettings } from "./ReservationSettings";
@@ -322,7 +322,7 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         <Row label={tr("Max stops")}><Num label={tr("Max stops")} value={zone.stops.max} unit="stops" min={1} max={5} disabled={disabled || !zone.stops.on} onChange={(max) => set({ stops: { ...zone.stops, max } })} /></Row>
         <Row label={tr("Free wait at each stop")} help={tr("Waiting at a stop is charged only after these minutes. The server charges by this number.")}><Num label={tr("Free wait per stop")} value={zone.stops.freeWaitMin} unit="min" min={0} max={20} disabled={disabled || !zone.stops.on} onChange={(freeWaitMin) => set({ stops: { ...zone.stops, freeWaitMin } })} /></Row>
         {/* v0.18.9 (G7 decision 4): the price per minute at a stop is Pricing's stopWaitPerMin (one price, set there). */}
-        <Row label={tr("Then, per minute")} help={tr("Set in Pricing for each car type. The server charges this price.")}><Link className="dx-limit-link" to="/pricing" data-testid="stop-price-link">{stopPriceText(waitBases, money)}</Link></Row>
+        <Row label={tr("Then, per minute")} help={tr("Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee.")}><Link className="dx-limit-link" to="/pricing" data-testid="stop-price-link">{stopPriceText(waitBases, money, market(countryId).minorUnits)}</Link></Row>
         <Row label={tr("Extra fee per stop")} help={tr("0 means no fee.")}><Num label={tr("Fee per stop")} value={zone.stops.perStop} unit={symbol} step={0.5} min={0} max={500} disabled={disabled || !zone.stops.on} onChange={(perStop) => set({ stops: { ...zone.stops, perStop } })} /></Row>
         {/* v0.18.9 (G7 decision 3 + owner rule 16): DriverAppConfig.routeChange, read live by the server per zone. */}
         <Row label={tr("Rider can change the destination or add a stop during the trip")} on={zone.stops.changeDuring} disabled={disabled || !zone.stops.on} onToggle={(changeDuring) => set({ stops: { ...zone.stops, changeDuring } })} />

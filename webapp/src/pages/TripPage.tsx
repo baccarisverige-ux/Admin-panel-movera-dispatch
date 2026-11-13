@@ -479,7 +479,8 @@ export function TripPage() {
             <div className="op-cash" data-testid="trip-terms">
               <b>{trn("{0} Rules this trip is charged by", <ListOrdered size={13} aria-hidden="true" />)}</b>
               <dl className="op-split-lines">
-                <div><dt>{tr("Free wait, then per minute")}</dt><dd>{trn("{0} min · {1}/min", facts.terms.freeWaitMin, liveMoney(facts.terms.waitPerMinMinor))}</dd></div>
+                {/* A1 (v0.18.85 waitingPriceShown, owner 2026-11-02 driver-g6.md:96): the rider's price incl. the app fee, and the driver's. */}
+                <div><dt>{tr("Free wait, then per minute")}</dt><dd data-testid="trip-terms-wait">{facts.terms.waitPerMinShownMinor !== null ? trn("{0} min · {1}/min incl. app fee · driver gets {2}/min", facts.terms.freeWaitMin, liveMoney(facts.terms.waitPerMinShownMinor), liveMoney(facts.terms.waitPerMinMinor)) : trn("{0} min · {1}/min", facts.terms.freeWaitMin, liveMoney(facts.terms.waitPerMinMinor))}</dd></div>
                 <div><dt>{tr("No-show")}</dt><dd>{trn("after {0} min · {1} (driver gets {2}%)", facts.terms.noShowAfterMin, liveMoney(facts.terms.noShowFeeMinor), facts.terms.noShowDriverSharePct)}</dd></div>
                 <div><dt>{tr("Rider cancel")}</dt><dd>{facts.terms.cancelFreeMin !== null ? trn("free {0} min after accept · driver gets {1}% of a fee", facts.terms.cancelFreeMin, facts.terms.cancelDriverSharePct) : tr("no fee rule")}</dd></div>
                 <div><dt>{tr("Cancel after the driver arrived")}</dt><dd data-testid="trip-terms-cancel-arrived">{cancelAfterArrivedText(facts.kind, facts.terms.cancelAfterArrivedIsNoShow)}</dd></div>

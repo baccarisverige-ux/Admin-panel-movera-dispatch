@@ -59,6 +59,10 @@ test("v0.18.7 (G5): a live trip keeps the car's position, the server's ETA, the 
   assert.equal(facts.terms?.maxPickupMoveMeters, 200);
   assert.deepEqual([facts.waiting?.noShowFeeMinor, facts.waiting?.noShowDriverShareMinor, facts.waiting?.chargedSecondsNow, facts.waiting?.chargedSoFarMinor], [6500, 5200, 30, 613]);
   assert.deepEqual(facts.cancellation, { actor: "rider", reasonCode: "plans_changed", at: "2026-10-25T08:16:00Z", feeMinor: 6500, feeStatus: "owed", feeKind: "no_show", driverShareMinor: 5200, note: null, reversal: null, refundedToWallet: false });
+  assert.equal(facts.terms?.waitPerMinShownMinor, null, "an older server sends no shown price: none invented");
+  // A1 (v0.18.85 waitingPriceShown, owner 2026-11-02 driver-g6.md:96): the price the rider pays, with the app fee.
+  const shown = tripRecord({ ...TRIP, terms: { currency: "SEK", freeWaitMin: 5, waitPerMin: SEK(1226), waitPerMinShown: SEK(1349), noShowAfterMin: 5, noShowFee: SEK(6500), noShowDriverSharePct: 80, cancelRule: null, cancelDriverSharePct: 100, cancelAfterArrivedIsNoShow: true, maxPickupMoveMeters: 200 } } as never).liveTrip!;
+  assert.deepEqual([shown.terms?.waitPerMinMinor, shown.terms?.waitPerMinShownMinor], [1226, 1349]);
   const older = tripRecord(TRIP).liveTrip!;
   assert.deepEqual([older.driverLocation, older.eta, older.rider, older.terms, older.waiting, older.cancellation], [null, null, null, null, null, null], "an older server: nothing invented");
 });

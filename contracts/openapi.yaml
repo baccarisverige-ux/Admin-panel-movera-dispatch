@@ -1,11 +1,11 @@
-# Movera API v0.18.82 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.85 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.82
+  version: 0.18.85
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.82 in this folder; this file must agree with them.
+    v0.18.85 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.82
+  version: 0.18.85
   source: contract.json
 paths:
   /auth/otp/request:
@@ -546,8 +546,10 @@ paths:
         currency. A rider who owes 100 kr from Stockholm is quoted in Paris without it (never +100 €); the debt waits for
         the next Swedish trip. The server sums the owed fees per currency: a quote and the fare of the next trip carry outstanding_fee
         = the owed fees in the pricing document''s currency (FareLine.sourceTripId = the oldest of them); a paid cash trip
-        settles only owed fees of its own currency, oldest first. v0.18.44 §67: POST /quotes and POST /trips refuse a drop-off
-        closer than minTripMeters to the pickup: 400 invalid_request, reason dropoff_too_close, details [''meters=<n>'', ''limitMeters=<m>''].
+        settles only owed fees of its own currency, oldest first. v0.18.84 (debtModel.readAtPayment): the same-currency rule
+        stays, but a quote no longer carries the fee: the debt of the trip''s currency is read from the wallet when the trip
+        is paid (Quote.walletDebt shows it as information). v0.18.44 §67: POST /quotes and POST /trips refuse a drop-off closer
+        than minTripMeters to the pickup: 400 invalid_request, reason dropoff_too_close, details [''meters=<n>'', ''limitMeters=<m>''].
         /trips re-checks with the zone''s live value (the admin may have raised it since the quote). The older samePointWarnMeters
         warning (v0.18.30) still applies above the limit. Off by default (owner Q9). v0.18.9: POST /quotes, POST /trips and
         POST /trips/{tripId}/route-quote with more stops → 400 invalid_request, reason too_many_stops, details ["maxStops=N"].
@@ -557,7 +559,17 @@ paths:
         by the server from the same zone''s DriverAppConfig.reservations when it serves the rider document (one source). A
         booked ride whose route is longer than maxTripKm km (default null = no limit, owner BL-Q5; the demo admin''s ''Max
         Trip Distance (Reservations)'' setting) is refused at quote: 400 invalid_request, reason trip_too_long (live rides
-        are not limited by it).'
+        are not limited by it). v0.18.84 (debtModel.readAtPayment, owner Q-M2): a quote no longer carries the outstanding_fee
+        line; Quote.walletDebt shows the debt as information. Q-M2 ''read at payment (Rec.)'': the debt is never copied into
+        a price — not into POST /quotes, not at booking (POST /trips, booked rides), not at reschedule, arrive or board. It
+        is read once, when the trip is paid: a trip completed, ended early by the rider, ended by the driver with the rider
+        on board, or an admin complete. In that payment the server reads the debt of the trip''s currency under the rider''s
+        wallet row lock (several server copies, Rule 33) and adds it as the outstanding_fee line (FareLine.sourceTripId =
+        the oldest owed fee''s trip; TripProjection.debtCollected, Receipt.debtIncluded). Paid in the car: the driver collects
+        it with the fare (it is in cashDue / TripFinish.cashToCollect), it is not in his driverEarnings (it is owed to Movera,
+        moneyBase.commission takes it out) and the wallet gets a WalletEntry kind debt_paid (+debt) that brings that balance
+        back to 0. So the debt is paid once: a second trip (a booked ride, another server copy) paid later reads 0. A trip
+        that ends without payment (cancel, no-show) takes no debt.'
       tags:
       - Rider · Booking
       x-actor:
@@ -640,7 +652,9 @@ paths:
         '409':
           description: 'version_mismatch / invalid_transition (with projection) or conflict (active_trip_exists, quote_used,
             quote_expired, ...). v0.18.81 (B1.34): kind scheduled and the rider already holds maxOpenPerRider booked rides
-            that have not ended → conflict, reason booked_rides_limit, the number in the message (contract.json#bookLater.riderCap).'
+            that have not ended → conflict, reason booked_rides_limit, the number in the message (contract.json#bookLater.riderCap).
+            v0.18.84 (owner Q-S5-4 ''Block only cash trip''): paymentMethod cash while the rider''s debt in the trip''s currency
+            is at or above CountryRules.maxRiderDebt → conflict, reason rider_debt_above_max (contract.json#debtModel.maxRiderDebt).'
           headers:
             X-Request-Id:
               description: Echo of the request id (server-generated if absent).
@@ -1274,13 +1288,16 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+      description: 'v0.18.83 (S2, owner ''Yes, 7 checks''): under overload it may answer 503 unavailable, reason server_busy,
+        Retry-After 2 at once; the app keeps the last value (contract.json#fastDispatch.shedPolls).'
   /rider/trips/active:
     get:
       operationId: getRiderActiveTrip
       summary: The rider's current non-terminal live trip, else a booked trip whose driver started driving
       description: '204 when there is none. v0.18.32 (contract.json#bookedRideSeen): a booked trip (kind scheduled) is returned
         once it reached driver_to_pickup, until it ends; a live trip wins when both are active (owner Q1, the app shows a
-        banner for the booked one).'
+        banner for the booked one). v0.18.83 (owner): never refused with server_busy by load shedding, also under overload
+        (the restore read; contract.json#fastDispatch.shedPolls.neverShed).'
       tags:
       - Rider · Booking
       x-actor:
@@ -2181,7 +2198,8 @@ paths:
       description: 'v0.18.14: GET /notifications shows title and body in the account''s current language when the notice was
         stored with every language (data.texts, taken out of the answer): set_offline, signed_in_elsewhere, phone/email changed,
         rider trip moments. Rider trip moments (riderTripPush) are now also kept in the list (bell true). A refund sends the
-        rider a notice kind refund (bell + push).'
+        rider a notice kind refund (bell + push). v0.18.83 (S2, owner ''Yes, 7 checks''): under overload it may answer 503
+        unavailable, reason server_busy, Retry-After 2 at once; the app keeps the last value (contract.json#fastDispatch.shedPolls).'
   /notifications/{notificationId}/read:
     post:
       operationId: markNotificationRead
@@ -2237,7 +2255,9 @@ paths:
         (cursor) and then appends message events. A poll that is still needed stops while the tab or app is hidden. The apps''
         realtime gate admits every kind message and call_* event in sequence order (same seen / gap / resync rules as realtime),
         not only call_* kinds. v0.18.66 §87: answered to an admin, each Message carries translations (the kept translations,
-        read-only; never a new provider call). Rider and driver answers never carry translations.'
+        read-only; never a new provider call). Rider and driver answers never carry translations. v0.18.83 (S2, owner ''Yes,
+        7 checks''): under overload it may answer 503 unavailable, reason server_busy, Retry-After 2 at once; the app keeps
+        the last value (contract.json#fastDispatch.shedPolls).'
       tags:
       - Notifications & messages
       x-actor:
@@ -4347,6 +4367,36 @@ paths:
         schema:
           type: boolean
         description: 'v0.18.9: only flagged trips.'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
+      - name: scheduledBefore
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        description: 'v0.18.83 (A2): kind live always passes; kind scheduled only when scheduledAt is at or before this time.
+          v0.18.83 (G34 fix plan A2; owner 2026-11-13 12:24 UTC "Exact contract filter (Rec.)"; proof sup3 P6b: the Dashboard''s
+          waiting-trips read took 10 pages / 1,000 booked rows every 10 s and showed none of them): GET /admin/trips takes
+          an optional scheduledBefore (Timestamp). With it, a trip of kind live always passes; a trip of kind scheduled passes
+          only when its scheduledAt is at or before scheduledBefore. It only narrows, together with the other filters (status,
+          kind, zones, from / to, ...). The Dashboard''s waiting requests use one read: GET /admin/trips?status=requested&status=searching&status=offered&scheduledBefore=<now>,
+          so booked rides that are not due are never read, and a booked ride whose send is late (still requested after its
+          pickup time) stays on the Dashboard. Reservations keeps its own reads (kind=scheduled), unchanged. A malformed value
+          → 400 invalid_request; a server before v0.18.83 answers it with 400 invalid_request (reason unknown_filter), so
+          the panel sends it only to a server of v0.18.83 or later.'
       responses:
         '200':
           description: OK
@@ -4404,6 +4454,21 @@ paths:
       - $ref: '#/components/parameters/Q'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
       responses:
         '200':
           description: OK
@@ -4475,6 +4540,21 @@ paths:
       - $ref: '#/components/parameters/Q'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
       responses:
         '200':
           description: OK
@@ -4533,6 +4613,21 @@ paths:
       - $ref: '#/components/parameters/Q'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
       responses:
         '200':
           description: OK
@@ -4599,6 +4694,21 @@ paths:
       - $ref: '#/components/parameters/Q'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
       responses:
         '200':
           description: OK
@@ -4671,6 +4781,21 @@ paths:
       - $ref: '#/components/parameters/To'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
       responses:
         '200':
           description: OK
@@ -4738,6 +4863,21 @@ paths:
       - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
       responses:
         '200':
           description: OK
@@ -4806,6 +4946,21 @@ paths:
       - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
       responses:
         '200':
           description: OK
@@ -4944,6 +5099,21 @@ paths:
           description: 'v0.18.15: me, none or an admin id.'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
       responses:
         '200':
           description: OK
@@ -5054,6 +5224,21 @@ paths:
           with 400 invalid_request (reason unknown_filter), so the panel sends them only to a server of v0.18.78 or later.
           Rule 33: the server may add an index on incidents.driver_id and incidents.rider_id (built without locking the table,
           Rule 46) so these filters stay fast at 10,000+ drivers and riders.'
+      - name: total
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: 'v0.18.83 (P4-B): false = do not count (the page leaves total out; the rows are the same). v0.18.83 (G34
+          fix plan P4-B; owner 2026-11-13 12:24 UTC "Yes (Rec.)"; proof sup3 P4: every live event reload re-counted page 1,
+          about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean,
+          default true). total=false: the server does not count and leaves total out of the page (the rows are the same).
+          The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status,
+          q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends
+          total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above),
+          so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter),
+          so the panel sends it only to a server of v0.18.83 or later. Other routes never take it.'
       responses:
         '200':
           description: OK
@@ -5437,7 +5622,18 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: 'version_mismatch / invalid_transition (with projection) or conflict. v0.18.84 (owner Q-S5-1 + 2026-11-13
+            14:54): a cash (pay-in-car) trip to a driver at or over his country''s owes-limit → conflict, reason driver_owes_movera
+            (contract.json#debtModel.driverOwes.cashOffers).'
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
@@ -11004,7 +11200,8 @@ paths:
         documentTypes: { [type]: { owner, kind, expires, name, help? } } for every type in the country''s lists, contract
         types with the admin''s texts and the custom types, so the app renders a type it does not know from this data. v0.18.3:
         DocumentTypeInfo.name is the country''s name (documents.namesByCountry); DocumentTypeInfo.guide (R8) and validMonths
-        (R9) when the country has them.'
+        (R9) when the country has them. v0.18.83 (S2, owner ''Yes, 7 checks''): under overload it may answer 503 unavailable,
+        reason server_busy, Retry-After 2 at once; the app keeps the last value (contract.json#fastDispatch.shedPolls).'
       tags:
       - Driver · Account
       x-actor:
@@ -11058,7 +11255,9 @@ paths:
         (pending or on_hold, or suspended without ever having been active; contract.json#emailVerified.neverActive), because
         Movera cannot approve him until it is verified; otherwise due_soon (orange, still works) with text texts.email_not_verified.
         Sent only to driver apps whose X-Contract-Version is 0.18.76 or higher (an older app would show an unknown line).
-        The line itself never blocks going online: a red one is only sent to a driver who is not active yet.'
+        The line itself never blocks going online: a red one is only sent to a driver who is not active yet. v0.18.83 (S2,
+        owner ''Yes, 7 checks''): under overload it may answer 503 unavailable, reason server_busy, Retry-After 2 at once;
+        the app keeps the last value (contract.json#fastDispatch.shedPolls).'
       tags:
       - Driver · Account
       x-actor:
@@ -11955,7 +12154,8 @@ paths:
         (no money, no number, no zone name, never the word surge / majoration) shows while the driver''s position is inside
         a listed zone or less than 3 km from its rectangle, any level. The old ''+{kr} kr i {zone}'' tip is removed. v0.18.6
         (G4 self-check): the French text ''Forte majoration à proximité'' said surge; it is now ''Bonus élevé à proximité'',
-        like the Swedish and English.'
+        like the Swedish and English. v0.18.83 (S2, owner ''Yes, 7 checks''): under overload it may answer 503 unavailable,
+        reason server_busy, Retry-After 2 at once; the app keeps the last value (contract.json#fastDispatch.shedPolls).'
       tags:
       - Driver · Session
       x-actor:
@@ -16540,7 +16740,8 @@ paths:
         the rider''s balance of that currency and is never converted. Above it 400 wallet_credit_too_large, details ''max
         <amountMinor> <currency>'' (no second admin). The wallet gets a WalletEntry kind adjustment; the rider gets a bell
         + push kind wallet_credit (texts below) and sees it in the wallet history as ''Credit from Movera''. The balance never
-        goes below 0 (credits are positive).'
+        goes below 0 (credits are positive). v0.18.84 (debtModel.riderWallet): a balance may be below 0 because of unpaid
+        fees; a credit is added to it as before and so lowers a debt first.'
       tags:
       - Admin · People
       x-actor:
@@ -16673,7 +16874,13 @@ paths:
         above). Refusals: reason missing = 400 invalid_request reason_required; no owed fee on that trip for that rider =
         409 invalid_transition fee_not_owed; the rider''s current ride already carries it = 409 conflict fee_on_running_trip
         (mark it after that ride). The driver of the original trip keeps his share (already paid). Answer: the admin Rider
-        view.'
+        view. v0.18.84 (debtModel.adminCorrections): Mark as paid writes a wallet correction (WalletEntry kind adjustment,
+        +the fee); the refusal fee_on_running_trip is no longer used — a ride open at that moment reads the lower debt when
+        it is paid. v0.18.84 (debtModel.adminCorrections): Admin Mark as paid (POST /admin/riders/{riderId}/fees/{tripId}/mark-paid),
+        waive (adjust waiveCancelFee) and reverse no-show write a correction: a WalletEntry kind adjustment (+the fee, at
+        most what is still owed of it) with the reason and the audit line as before; past entries are never changed. The refusal
+        409 conflict fee_on_running_trip is no longer used: no ride carries a copy of the debt any more, so a ride open at
+        that moment simply reads the new (lower) debt when it is paid.'
       tags:
       - Admin · People
       x-actor:
@@ -17480,7 +17687,9 @@ paths:
         of joinedAt (then entryId). A driver who dropped a rider at the airport joins at once with his next position (owner
         job 9 Q5: ''Yes, join at once''). He leaves the queue when: a position of his is outside the area for more than leaveGraceMin
         minutes in a row; he goes offline or goes online again later (a new online session never keeps the old place); he
-        accepts any trip (queue or not); the area is turned off or removed. The others move up.'
+        accepts any trip (queue or not); the area is turned off or removed. The others move up. v0.18.83 (S2, owner ''Yes,
+        7 checks''): under overload it may answer 503 unavailable, reason server_busy, Retry-After 2 at once; the app keeps
+        the last value (contract.json#fastDispatch.shedPolls).'
       tags:
       - Driver · Session
       x-actor:
@@ -17962,6 +18171,116 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/drivers-owing:
+    get:
+      operationId: adminListOwingDrivers
+      summary: Drivers who owe Movera
+      description: 'v0.18.84 (owner Q-S5-1a ''Both''): GET /admin/drivers-owing?country&zoneId&zoneIds&cursor&limit (finance.read;
+        only drivers whose first zone is in the admin''s zones, else 403 zone_out_of_scope for a zone filter outside them)
+        → OwingDriverList { items: OwingDriver[], nextCursor, total }: drivers with owed > 0, largest first (then driverId),
+        per currency. OwingDriver { driverId, driverName, zoneId, country, owed, limit (null = off), overLimit, lastPaidMoveraAt?
+        }.'
+      tags:
+      - Admin · Lists
+      x-actor:
+      - admin
+      x-permission: finance.read
+      x-read-only: true
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwingDriverList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/drivers/{driverId}/paid-movera:
+    post:
+      operationId: adminDriverPaidMovera
+      summary: Driver paid Movera
+      description: 'v0.18.84 (owner Q-S5-1a ''Both''): POST /admin/drivers/{driverId}/paid-movera { expectedOwed, amount,
+        reason } (finance.edit, Idempotency-Key, audit driver.paid_movera with amount, owedBefore, owedAfter and reason):
+        money the driver paid Movera another way (Swish, bank). amount > 0 in the currency of expectedOwed (= the owed the
+        admin saw); writes an earnings entry kind paid_to_movera (+amount; payout line paid_to_movera), never an edit of past
+        entries. Stale expectedOwed → 409 conflict, reason owed_changed with the fresh OwingDriver (a second click adds nothing,
+        owner 106 rule); amount above the owed now → 400 invalid_request, reason paid_above_owed; reason 1..300 characters
+        (else 400 reason_required). Answer: the fresh OwingDriver.'
+      tags:
+      - Admin · People
+      x-actor:
+      - admin
+      x-permission: finance.edit
+      parameters:
+      - $ref: '#/components/parameters/DriverId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaidMoveraCommand'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwingDriver'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 'v0.18.84: expectedOwed is stale → conflict, reason owed_changed with the fresh OwingDriver (nothing
+            written; a second click is refused).'
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
@@ -19534,7 +19853,13 @@ components:
             driverBonus, where debtCollected = the trip''s outstanding_fee line (an earlier fee the rider pays with this trip;
             it settles the old trip''s fee, whose driver share was already credited then). TripProjection.debtCollected (driver
             and admin views) and Receipt.debtIncluded show it as its own line (texts.debtLine). Server migration 0045 corrects
-            commission on stored trips.'
+            commission on stored trips. v0.18.84 (debtModel.readAtPayment): read from the wallet when the trip is paid, never
+            copied in at booking. Supervisor M3, changeover for trips made before server J8 (old quotes, booked rides, live
+            trips that already carry a copied outstanding_fee line while migration 0103 moves the same owed fees into the
+            wallet): at payment the copied outstanding_fee line is dropped from the fare and the debt is read from the wallet
+            instead (readAtPayment), so each fee is paid once. The rider''s total is the trip''s fare without the copied line
+            plus the whole debt read then (it may be more than the copied line when a fee came later); the copied amount is
+            never charged on top. A trip already paid before J8 is not touched.'
         moneySplit:
           $ref: '#/components/schemas/MoneySplit'
         sosAvailable:
@@ -19753,6 +20078,12 @@ components:
           oneOf:
           - $ref: '#/components/schemas/Timestamp'
           - type: 'null'
+        walletDebt:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.84 (owner Q-M2 / Q-S5-5): Q-S5-5: Quote.walletDebt (Money in the quote''s currency; absent when
+            that balance is ≥ 0) is information only, not in Quote.total and not a fare line: the rider app shows texts.quoteDebtLine
+            under the price. The amount paid is the one read at payment.'
     RouteQuote:
       type: object
       description: 'Price for a route change after request; apply with PATCH /trips/{tripId}. Priced from the booking (owner
@@ -19836,7 +20167,8 @@ components:
           - $ref: '#/components/schemas/Money'
           - type: 'null'
           description: 'v0.5.1 (CONTRACT.md §3.7): unpaid cash fees the rider owes (positive); null or missing = none. On
-            GET /rider/profile and the admin rider view. v0.18.7: the owed fees in the rider''s oldest owed currency (contract.json#pickupWaiting.debtByCurrency).'
+            GET /rider/profile and the admin rider view. v0.18.7: the owed fees in the rider''s oldest owed currency (contract.json#pickupWaiting.debtByCurrency).
+            v0.18.84 (debtModel.riderWallet): derived from the wallet: −min(0, balance) of the oldest owed currency.'
         language:
           type: string
           pattern: ^[a-z]{2}(-[A-Z]{2})?$
@@ -19857,7 +20189,8 @@ components:
             $ref: '#/components/schemas/Money'
           description: 'v0.18.7 (Q3): Rider.outstanding = the owed fees in the rider''s oldest owed currency (Money, null
             when nothing is owed); Rider.outstandingByCurrency = every currency with an owed amount (Money[], one per currency,
-            ascending by first debt). The admin rider view shows all of them.'
+            ascending by first debt). The admin rider view shows all of them. v0.18.84: derived from the wallet balances below
+            0.'
         sensitiveMasked:
           type: boolean
           description: 'v0.18.54 §76: true on an admin answer when phone / email were masked (the admin lacks riders.viewSensitive);
@@ -20766,6 +21099,10 @@ components:
           - refund
           - payout
           - adjustment
+          - fee
+          - debt_paid
+          description: 'v0.18.84 (debtModel): fee = an unpaid cancel / no-show fee (negative, tripId = the trip that owes
+            it); debt_paid = the debt paid with a trip (positive, tripId = the paying trip). An admin correction stays adjustment.'
         tripId:
           $ref: '#/components/schemas/Id'
         at:
@@ -20784,14 +21121,15 @@ components:
           allOf:
           - $ref: '#/components/schemas/Money'
           description: 'v0.18.28: the balance in the asked currency (query currency), else in the currency of the rider''s
-            zone.'
+            zone. v0.18.84 (debtModel.riderWallet): may be below 0 — an unpaid fee is a negative balance (the debt).'
         updatedAt:
           $ref: '#/components/schemas/Timestamp'
         balances:
           type: array
           items:
             $ref: '#/components/schemas/Money'
-          description: 'v0.18.28: every non-zero balance, one per currency, sorted by currency code. Never added across currencies.'
+          description: 'v0.18.28: every non-zero balance, one per currency, sorted by currency code. Never added across currencies.
+            v0.18.84: a balance may be below 0 (a debt in that currency).'
     SavedPaymentMethod:
       type: object
       required:
@@ -22351,6 +22689,7 @@ components:
           - tips
           - cash_collected
           - fees
+          - paid_to_movera
           description: contract.json#payouts.lines
         amount:
           allOf:
@@ -23168,6 +23507,30 @@ components:
             Add, edit, remove and reorder rows; at least one row. SE: 112 (general). FR: 112 (general). TN: police 197, ambulance
             (SAMU) 190. A country with no default and nothing saved shows 112. 400 invalid_request, reason invalid_emergency_numbers:
             empty list, more than 6, a number not matching the pattern, a kind not in kinds, or a missing sv / fr / en label.'
+        maxRiderDebt:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.84 (owner Q-M1, Q-S5-4, Q-S5-5): Q-M1 + Q-S5-3/Q-S5-4 (''Block only cash trip''): CountryRules.maxRiderDebt
+            (Money, the country standard only; Pricing › Tips & limits; a zone''s own value is ignored; missing or in another
+            currency = configDefaults.maxRiderDebt: SE 300 kr, FR 30 €, TN 84 DT, owner Q-S5-5). POST /trips with paymentMethod
+            cash (pay in car) while the rider''s debt in the trip''s currency is at or above it → 409 conflict, reason rider_debt_above_max,
+            details ["debt:<minor> <CUR>", "max:<minor> <CUR>"]; nothing is booked. card, apple_pay and wallet bookings stay
+            allowed (the debt is added to that payment, readAtPayment). It is checked only at booking: fees from trips already
+            running are always saved, even past the max, and a booked ride already made is not cancelled. Any amount (owner
+            2026-11-13 15:00 ''Any amount''): no upper bound in admin (> 0 in the country''s currency); the DB floor follows
+            it (dbFloor). DB floor: Q-S5-3 (owner ''Block booking at max (Rec.)'', option A) + owner 2026-11-13 15:00 (''Any
+            amount'': no admin cap; decisions/session-2026-11-06.md:1246): the server''s database keeps a safety floor per
+            currency on the wallet balance that follows the admin setting, so a fee from a running trip is always saved. The
+            floor only ever moves DOWN (wider): floor = min(the current floor, −(3 × the current max), −(max + 4 × the largest
+            cancel or no-show fee the country''s settings can produce)) — room for the fees of every ride a rider may still
+            have open (up to 3 booked rides + 1 live trip, B1.34) on top of a debt just under the max. It is recomputed when
+            Max rider debt or a cancel / no-show fee setting is saved, in the same transaction as that setting; an admin save
+            never raises it (lowering the max or a fee leaves it where it is), so it can never land on or above a balance.
+            It is not an admin setting itself and never −max. The values below are the starting floors (3 × the defaults:
+            SE −900 kr, FR −90 €, TN −252 DT). Server J8 migration 0102 needs this following floor (see migrations), not a
+            fixed CHECK constant; Rule 46 (no table lock, written undo).'
+        driverOwesLimit:
+          $ref: '#/components/schemas/DriverOwesLimit'
       x-server-only: true
     FeeRule:
       type: object
@@ -23368,6 +23731,15 @@ components:
           description: 'Equals freeWaitMin (owner Q41): the no-show button appears when the free wait ends.'
         noShowFee:
           $ref: '#/components/schemas/Money'
+        perMinShown:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.85: Money, served only (GET /rider/config, never stored in the published document): the headline
+            category''s waiting.perMin with its app fee; waiting.byCategory[categoryId].perMinShown the same per category,
+            from the zone''s live pricing document. The driver app ignores it: Unchanged: the driver app shows what the driver
+            earns. Waiting and stop waiting are 100 % the driver''s (§3.5 money split, decision 17), so his price per minute
+            is the raw waitPerMin / stopWaitPerMin; the app fee on them is Movera''s (decision 18). He never sees the rider''s
+            fee (like the no-show row shows his share, G6 fix 5).'
     RiderWaiting:
       type: object
       description: Top-level terms are the headline category's (economy, else the first).
@@ -23401,6 +23773,15 @@ components:
           description: 'v0.18.8: copied from the zone''s driver document when served (GET /rider/config).'
         stopFreeWaitMin:
           description: 'v0.18.8: copied from the zone''s driver document when served (GET /rider/config).'
+        perMinShown:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.85: Money, served only (GET /rider/config, never stored in the published document): the headline
+            category''s waiting.perMin with its app fee; waiting.byCategory[categoryId].perMinShown the same per category,
+            from the zone''s live pricing document. The driver app ignores it: Unchanged: the driver app shows what the driver
+            earns. Waiting and stop waiting are 100 % the driver''s (§3.5 money split, decision 17), so his price per minute
+            is the raw waitPerMin / stopWaitPerMin; the app fee on them is Movera''s (decision 18). He never sees the rider''s
+            fee (like the no-show row shows his share, G6 fix 5).'
     DriverWaiting:
       allOf:
       - $ref: '#/components/schemas/RiderWaiting'
@@ -27331,7 +27712,10 @@ components:
             (400 invalid_request), translation_off (403 forbidden), coming_soon (503 unavailable) (contract.json#chat, §78).
             v0.18.64 reason: auto_translate_off (403 forbidden, contract.json#chat.autoTranslate, §85). v0.18.76 reasons:
             email_needs_code (400 invalid_request), email_not_verified (409 invalid_transition) (contract.json#emailVerified).
-            v0.18.82 reason: fare_is_driver_pay (400 invalid_request, admin adjust / complete sent the old fare field; contract.json#moneyBase.adminFare).'
+            v0.18.82 reason: fare_is_driver_pay (400 invalid_request, admin adjust / complete sent the old fare field; contract.json#moneyBase.adminFare).
+            v0.18.84 reasons (contract.json#debtModel): rider_debt_above_max (409 conflict, POST /trips pay in car), driver_owes_movera
+            (409 conflict, admin assign of a cash trip to a driver at or over the owes-limit), owed_changed (409 conflict,
+            paid-movera), paid_above_owed and owes_limit_needs_amount (400 invalid_request).'
         details:
           type: array
           items:
@@ -28035,9 +28419,15 @@ components:
           type: boolean
           description: 'v0.18.33: Owner Q6 (''Switch per ride, starts ON''): CreateTripRequest.walletFirst (default true when
             missing). true = the rider''s wallet balance in the trip''s currency pays first: POST /trips reserves walletApplied
-            = min(balance in that currency, fare) and TripProjection.walletApplied / cashToCollect show it from booking on;
-            it is worked out again at boarding (never more than the balance). false = this trip pays nothing from the wallet
-            (walletApplied 0). Another currency''s balance is never used (contract.json#walletCurrency).'
+            = max(0, min(balance in that currency, fare)) (v0.18.84, supervisor M2: a negative balance pays nothing; the debt
+            is paid only through the outstanding_fee line read at payment, debtModel.readAtPayment) and TripProjection.walletApplied
+            / cashToCollect show it from booking on; it is worked out again at boarding (never more than the balance). false
+            = this trip pays nothing from the wallet (walletApplied 0). Another currency''s balance is never used (contract.json#walletCurrency).
+            v0.18.84 (owner Q-M1): Q-M1 ''when wallet is negative so can''t switch it off'': while the rider''s balance in
+            the trip''s currency is below 0, CreateTripRequest.walletFirst is ignored (read as true) and TripProjection.walletFirst
+            is true; the rider app shows the switch on and locked. RiderAppConfig.wallet.usedFirst false (a zone) does not
+            stop the debt being added at payment. walletApplied = max(0, min(balance, fare)): a negative balance pays nothing
+            (supervisor M2).'
           default: true
         notes:
           type: string
@@ -30359,7 +30749,12 @@ components:
         is on and he was never active before (pending or on_hold, or suspended without ever having been active; contract.json#emailVerified.neverActive),
         because Movera cannot approve him until it is verified; otherwise due_soon (orange, still works) with text texts.email_not_verified.
         Sent only to driver apps whose X-Contract-Version is 0.18.76 or higher (an older app would show an unknown line).
-        The line itself never blocks going online: a red one is only sent to a driver who is not active yet..'
+        The line itself never blocks going online: a red one is only sent to a driver who is not active yet.. owes_movera_over_limit:
+        v0.18.84 (owner Q-S5-1 ''Both'' + 2026-11-13 14:54, contract.json#debtModel.driverOwes.homeLine): due_soon (orange
+        warning) while his country''s CountryRules.driverOwesLimit is on and what he owes Movera is at or above its max —
+        he gets no cash trips until he pays (driverOwes.cashOffers); it never stops going online. owed and limit (Money) on
+        the line; no fix target; text texts.owes_movera_over_limit ({owed}, {limit}). Sent only to driver apps whose X-Contract-Version
+        is 0.18.84 or higher..'
       required:
       - kind
       - level
@@ -30382,6 +30777,7 @@ components:
           - vehicle_photos_needed
           - fleet_invitation
           - email_not_verified
+          - owes_movera_over_limit
         level:
           type: string
           enum:
@@ -30444,6 +30840,15 @@ components:
           - rejected
           description: 'v0.18.5 (G2-D1): DriverReminder.renewalStatus (in_review | rejected) on an expiring / expired line
             whose renewal waits or was rejected; the line keeps its level (a renewal never unblocks).'
+        owed:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.84: owes_movera_over_limit lines (due_soon warning: no cash trips until he pays): what he owes
+            Movera now.'
+        limit:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.84: owes_movera_over_limit lines: his country''s owes-limit.'
     DriverReminderList:
       type: object
       description: 'v0.18.0 (owner items 2 and 3: "add on the home page sheet that reminder ! Dont copy it''s only example";
@@ -32445,6 +32850,23 @@ components:
           - $ref: '#/components/schemas/Money'
           description: 'v0.18.9: PricingDocument.categories[categoryId].stopWaitPerMin per zone (Admin › Pricing), in the
             zone''s currency; now also on TripProjection.terms.stopWaitPerMin so both apps show it.'
+        waitPerMinShown:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.85: Money: terms.waitPerMin with the app fee (the effective price from arrive, also a waiting
+            rule''s own perMin). Absent on a trip booked before v0.18.85 (it kept no appFeePct): the apps then show waitPerMin
+            as before. shown price per minute = half-up(perMin.amountMinor × (1 + appFeePct / 100)) to a whole minor unit
+            (§3.5 step 7''s line rounding), in the trip''s / zone''s currency, with the category''s appFeePct (premium 12
+            %, every other category 10 % by default). Examples: 12,26 kr + 10 % = 13,49 kr; 16,90 kr + 12 % = 18,93 kr; 5
+            kr + 10 % = 5,50 kr; 0,50 € + 10 % = 0,55 €; 0.250 DT + 10 % = 0.275 DT.'
+        stopWaitPerMinShown:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.85: Money: terms.stopWaitPerMin with the app fee; present only when stopWaitPerMin and the kept
+            appFeePct are. shown price per minute = half-up(perMin.amountMinor × (1 + appFeePct / 100)) to a whole minor unit
+            (§3.5 step 7''s line rounding), in the trip''s / zone''s currency, with the category''s appFeePct (premium 12
+            %, every other category 10 % by default). Examples: 12,26 kr + 10 % = 13,49 kr; 16,90 kr + 12 % = 18,93 kr; 5
+            kr + 10 % = 5,50 kr; 0,50 € + 10 % = 0,55 €; 0.250 DT + 10 % = 0.275 DT.'
     TripEta:
       type: object
       description: 'v0.18.7 (Q4): Status item 2 + Q4 (one road-route ETA for both apps): the server computes the ETA every
@@ -34410,7 +34832,8 @@ components:
         the rider''s balance of that currency and is never converted. Above it 400 wallet_credit_too_large, details ''max
         <amountMinor> <currency>'' (no second admin). The wallet gets a WalletEntry kind adjustment; the rider gets a bell
         + push kind wallet_credit (texts below) and sees it in the wallet history as ''Credit from Movera''. The balance never
-        goes below 0 (credits are positive).'
+        goes below 0 (credits are positive). v0.18.84 (debtModel.riderWallet): a balance may be below 0 because of unpaid
+        fees; a credit is added to it as before and so lowers a debt first.'
       required:
       - expectedVersion
       - amount
@@ -34474,7 +34897,9 @@ components:
         above). Refusals: reason missing = 400 invalid_request reason_required; no owed fee on that trip for that rider =
         409 invalid_transition fee_not_owed; the rider''s current ride already carries it = 409 conflict fee_on_running_trip
         (mark it after that ride). The driver of the original trip keeps his share (already paid). Answer: the admin Rider
-        view.'
+        view. v0.18.84 (debtModel.adminCorrections): Mark as paid writes a wallet correction (WalletEntry kind adjustment,
+        +the fee); the refusal fee_on_running_trip is no longer used — a ride open at that moment reads the lower debt when
+        it is paid.'
       required:
       - reason
       properties:
@@ -35635,3 +36060,108 @@ components:
           format: email
         emailVerifiedAt:
           $ref: '#/components/schemas/Timestamp'
+    DriverOwesLimit:
+      type: object
+      description: 'v0.18.84 (owner Q-S5-1 ''Both'', 2026-11-13 14:22 / 14:32 / 14:54): at or over it the driver gets no cash
+        trips (never refused online). CountryRules.driverOwesLimit { enabled, max } of the country standard only (Pricing
+        › Tips & limits; a zone''s own value is ignored), admin-changeable (owner 2026-11-13 14:22, 14:54): the admin can
+        change the amount and switch it on or off at any time; a change applies at once. Shipped OFF (enabled false) in every
+        country so nobody loses cash trips (Q-S5-1, owner 14:32; nobody is blocked). configDefaults.driverOwesLimit: SE and
+        FR no number (max null), TN max 150 DT stored (owner 2026-11-13 14:22: the weekly cash a driver keeps that he owes
+        Movera, settled at payout), OFF until the owner switches it on in admin. Saving enabled true needs max > 0 in the
+        country''s currency (else 400 invalid_request, reason owes_limit_needs_amount). Missing = OFF. Owner 14:54 (''can
+        recive trip but cash trip''; owner 2026-11-13 14:54 (decisions/session-2026-11-06.md, same rule as the rider''s Q-S5-4)):
+        while the limit is on and his owed is at or above max, the server sends him NO offer for a trip with paymentMethod
+        cash (pay in car) — no dispatch round, Radar, Exclusive, on-trip / next-trip or booked-ride offer, and admin sends
+        (radar group) skip him; an admin assign of a cash trip to him → 409 conflict, reason driver_owes_movera (details ["owed:<minor>
+        <CUR>", "limit:<minor> <CUR>"]). card, apple_pay and wallet trips still come as before. Going online is never refused
+        by it (POST /driver/availability is unchanged). It applies at once, online or not: when he reaches the limit his open
+        cash offers are withdrawn (as when going offline); a cash trip he already accepted and the current trip finishes normally;
+        a booked pay-in-car ride he already accepted he keeps (owner 2026-11-13 15:01 ''He keeps it (Rec.)''); only NEW cash
+        offers stop. Cash offers come again at once when owed drops below max (a ''Driver paid Movera'' entry or a payout
+        that settles it) or the admin raises the amount or switches it off — until he pays.'
+      required:
+      - enabled
+      properties:
+        enabled:
+          type: boolean
+          description: 'Off by default in every country (owner Q-S5-1): nobody is blocked until the owner switches it on.'
+          default: false
+        max:
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+          description: Admin-changeable at any time. The country's currency; required (> 0) when enabled (else 400 owes_limit_needs_amount).
+            TN default 150000 TND (150 DT) stored, SE / FR null.
+    OwingDriver:
+      type: object
+      description: 'v0.18.84 (owner Q-S5-1a): one driver who owes Movera, in one currency.'
+      required:
+      - driverId
+      - owed
+      - limit
+      - overLimit
+      properties:
+        driverId:
+          $ref: '#/components/schemas/Id'
+        driverName:
+          type: string
+        zoneId:
+          $ref: '#/components/schemas/Id'
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        owed:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'Owner 2026-11-13 14:59 ''What he owes Movera (Rec.)'' (decisions/session-2026-11-06.md:1245): what
+            a driver owes Movera, per currency, = the cash he holds (the commission and the rider debt he collected on pay-in-car
+            trips, Q-M3) minus his earnings Movera holds for him, plus anything still owed from earlier weeks — owed = −min(0,
+            his next payout worked out now (payouts.lines of his unpaid entries) + the rest carried from earlier payouts below
+            0 (Q-M3, Q-S5-7a)). A ''Driver paid Movera'' entry raises that sum. Driver.country''s currency is the one compared
+            with the limit; 0 when nothing is owed.'
+        limit:
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+          description: The country's owes-limit; null = off.
+        overLimit:
+          type: boolean
+          description: 'owed is at or above limit: he gets no cash trips (false while off).'
+        lastPaidMoveraAt:
+          $ref: '#/components/schemas/Timestamp'
+    OwingDriverList:
+      allOf:
+      - $ref: '#/components/schemas/Page'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/OwingDriver'
+          total:
+            type: integer
+            minimum: 0
+            description: All drivers who owe Movera in the filter.
+      description: Page<OwingDriver>, largest owed first.
+    PaidMoveraCommand:
+      type: object
+      description: v0.18.84 (owner Q-S5-1a 'Driver paid Movera').
+      required:
+      - expectedOwed
+      - amount
+      - reason
+      properties:
+        expectedOwed:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The owed the admin saw; stale → 409 owed_changed.
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: '> 0, same currency, at most the owed now (else 400 paid_above_owed).'
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 300
+          description: 1..300 characters.
+      additionalProperties: false

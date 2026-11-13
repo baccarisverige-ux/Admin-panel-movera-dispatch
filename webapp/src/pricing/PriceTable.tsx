@@ -1,8 +1,9 @@
 import { Fragment } from "react";
 import { NumberField } from "./NumberField";
-import { PRICE_ROWS, rowApplies, currencySymbol, inputStep, priceMax, type CategoryDef, type CategoryPrice, type PriceField, type Problem, type ZoneBook } from "./zonePricing";
+import { PRICE_ROWS, rowApplies, currencySymbol, inputStep, money, priceMax, type CategoryDef, type CategoryPrice, type PriceField, type Problem, type ZoneBook } from "./zonePricing";
 import type { MarketId } from "../markets/markets";
 import { tr, trn, trx } from "../i18n";
+import { riderPerMin } from "./waitingShown";
 
 type Props = {
   zoneName: string;
@@ -93,6 +94,8 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
                           title={changed && before ? tr("Published: {0}", [before[field]]) : undefined}
                           onChange={(value) => onChange(category.id, { [field]: value })}
                         />
+                        {/* A1 (v0.18.85 waitingPriceShown, owner 2026-11-02 driver-g6.md:96): the waiting price the rider sees and pays. */}
+                        {field === "waitPerMin" || field === "stopWaitPerMin" ? <small className="price-rider-pays" data-testid={`rider-pays-${field}-${category.id}`}>{tr("Rider pays {0}/min", [money(riderPerMin(price[field], price.appFeePct, currency), currency)])}</small> : null}
                       </td>
                     );
                   })}

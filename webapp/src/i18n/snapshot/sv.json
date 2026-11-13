@@ -8935,4 +8935,9 @@
 ["On: Movera cannot approve a new driver until his e-mail is verified (drivers who were active before are not checked).","På: Movera kan inte godkänna en ny förare förrän hans e-post är verifierad (förare som varit aktiva tidigare kontrolleras inte)."],
 ["Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.","Tills Moveras egen e-postdomän är tillagd i e-posttjänsten når koderna bara testadressen. Slår du på detta nu kan nya förare inte godkännas."],
 ["Turn on the e-mail check?","Slå på e-postkontrollen?"],
-["The driver's e-mail is not verified yet.","Förarens e-post är inte verifierad än."]]
+["The driver's e-mail is not verified yet.","Förarens e-post är inte verifierad än."],
+["{0} · rider pays {1} (incl. app fee)","{0} · resenären betalar {1} (inkl. appavgift)"],
+["{0} · rider pays {1}","{0} · resenären betalar {1}"],
+["Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee.","Ställs in under Priser för varje biltyp. Föraren får detta pris; resenären betalar det med appavgiften."],
+["{0} min · {1}/min incl. app fee · driver gets {2}/min","{0} min · {1}/min inkl. appavgift · föraren får {2}/min"],
+["Rider pays {0}/min","Resenären betalar {0}/min"]]
