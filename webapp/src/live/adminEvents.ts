@@ -48,7 +48,7 @@ const EXTRA_KEYS: Readonly<Record<string, ReadonlyArray<readonly unknown[]>>> = 
   drivers: [["live", "driver"], ["live", "reservationDrivers"]],
   tickets: [["live", "ticket"], ["records", "openTickets"]],
   alerts: [["slice", "alertOps"]],
-  // B1.26b: the open-case list of the pollers and the every-case list of the driver / rider pages.
+  // B1.26b: the open-case list of the pollers and the every-case list (Reports › Care).
   incidents: [["slice", "safetyOps"], ["slice", "incidentOps"], ["records", "rideCheckAlerts"], ["records", "openIncidents"], ["records", "everyIncident"]],
   overview: [["live", "kpis"], ["records", "kpis"]],
   dispatch: [["live", "dispatch-control"], ["slice", "adminDispatch"]],
@@ -56,8 +56,9 @@ const EXTRA_KEYS: Readonly<Record<string, ReadonlyArray<readonly unknown[]>>> = 
 };
 
 /** C4 (A15 N15): per-id lists ("rideChecksOfTrip:<tripId>") that a list's event refreshes too. */
-// B1.26b: a trip's cases and one case by id (incidents.ts INCIDENTS_OF_TRIP_LIST / INCIDENT_BY_ID_LIST).
-const NAME_PREFIXES: Readonly<Record<string, readonly string[]>> = { trips: ["rideChecksOfTrip:"], incidents: ["incidentsOfTrip:", "incidentById:"] };
+// B1.26b: a trip's cases and one case by id (incidents.ts INCIDENTS_OF_TRIP_LIST / INCIDENT_BY_ID_LIST); L78-A: a
+// driver's / rider's cases (INCIDENTS_OF_DRIVER_LIST / INCIDENTS_OF_RIDER_LIST).
+const NAME_PREFIXES: Readonly<Record<string, readonly string[]>> = { trips: ["rideChecksOfTrip:"], incidents: ["incidentsOfTrip:", "incidentById:", "incidentsOfDriver:", "incidentsOfRider:"] };
 
 function startsWith(key: readonly unknown[], prefix: readonly unknown[]): boolean {
   return prefix.every((part, i) => key[i] === part);

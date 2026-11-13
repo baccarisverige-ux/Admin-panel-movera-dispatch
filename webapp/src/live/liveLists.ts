@@ -5,7 +5,9 @@
  */
 // B1.26b: "incidents" is the Incidents page's case history (pages of 50, "Load more"; owner item 109).
 export type LiveListName = "drivers" | "fleets" | "vehicles" | "trips" | "riders" | "payments" | "incidents";
-export type LiveListQuery = { q: string; status: string; pages: number; hasMore: boolean; flagged?: boolean };
+// L78-A (v0.18.78 adminListFilters.total): `loaded` = server rows read so far, `total` = the first page's count
+// (absent = not counted); the list shows "{loaded} of {total}".
+export type LiveListQuery = { q: string; status: string; pages: number; hasMore: boolean; flagged?: boolean; loaded?: number; total?: number };
 
 const EMPTY: LiveListQuery = { q: "", status: "", pages: 1, hasMore: false };
 const state = new Map<LiveListName, LiveListQuery>();
@@ -18,9 +20,19 @@ export function listQueryOf(name: LiveListName): LiveListQuery {
 export function setListQuery(name: LiveListName, patch: Partial<LiveListQuery>): void {
   const current = listQueryOf(name);
   const next = { ...current, ...patch };
+  // A new search / status / flagged filter: the old count never shows next to it while the new page loads.
+  if (!sameListFilter(current, next)) {
+    if (!("total" in patch)) delete next.total;
+    if (!("loaded" in patch)) delete next.loaded;
+  }
   if (JSON.stringify(next) === JSON.stringify(current)) return;
   state.set(name, next);
   listeners.forEach((listener) => listener());
+}
+
+/** Do two list queries ask the server the same (search, status, flagged)? */
+export function sameListFilter(a: LiveListQuery, b: LiveListQuery): boolean {
+  return a.q === b.q && a.status === b.status && Boolean(a.flagged) === Boolean(b.flagged);
 }
 
 export function subscribeLists(listener: () => void): () => void {

@@ -49,6 +49,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { useDialogFocus } from "../ui/useDialogFocus";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { DateInput } from "../ui/DateInput";
+import { ListCount } from "../live/ListCount";
 
 type View = "riders" | "promotions" | "insights";
 
@@ -272,6 +273,7 @@ export function RidersPage() {
               </ul>
             )}
             {filtered.length > limit ? <button data-command="admin.table.filter" type="button" className="dash-btn ghost rd-more" onClick={() => setLimit((value) => value + PAGE)}>{trn("Show {0} more of {1}", Math.min(PAGE, filtered.length - limit), filtered.length - limit)}</button> : null}
+            {live ? <ListCount list="riders" /> : null}
             {live && serverList.hasMore ? <button data-command="admin.server.loadMore" type="button" className="dash-btn ghost rd-more" disabled={data.loading} onClick={loadMoreFromServer}>{data.loading ? tr("Loading.") : tr("Load more")}</button> : null}
           </div>
         </>

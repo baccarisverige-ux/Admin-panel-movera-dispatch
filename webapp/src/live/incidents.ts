@@ -57,15 +57,18 @@ export type IncidentFeedEvent = {
 export const OPEN_INCIDENTS_LIST = "openIncidents";
 export const INCIDENTS_OF_TRIP_LIST = "incidentsOfTrip:";
 export const INCIDENT_BY_ID_LIST = "incidentById:";
-/** Every case (all pages): only pages that list a driver's or rider's cases (the server has no driverId/riderId filter). */
+/** Every case (all pages): Reports › Care (it counts cases by zone and period, not by person). */
 export const ALL_INCIDENTS_LIST = "everyIncident";
+/** v0.18.78 (L78-A): one driver's / one rider's cases (GET /admin/incidents?driverId= / ?riderId=, every page). */
+export const INCIDENTS_OF_DRIVER_LIST = "incidentsOfDriver:";
+export const INCIDENTS_OF_RIDER_LIST = "incidentsOfRider:";
 /** The server statuses of a case that is not closed yet. */
 export const OPEN_INCIDENT_STATUSES = ["open", "investigating"] as const;
 
 /** Is this react-query list name one of the incident lists (the alarm and the event stream refresh them all)? */
 export function isIncidentList(name: unknown): boolean {
   if (typeof name !== "string") return false;
-  return name === "incidents" || name === OPEN_INCIDENTS_LIST || name === ALL_INCIDENTS_LIST || name.startsWith(INCIDENTS_OF_TRIP_LIST) || name.startsWith(INCIDENT_BY_ID_LIST);
+  return name === "incidents" || name === OPEN_INCIDENTS_LIST || name === ALL_INCIDENTS_LIST || [INCIDENTS_OF_TRIP_LIST, INCIDENT_BY_ID_LIST, INCIDENTS_OF_DRIVER_LIST, INCIDENTS_OF_RIDER_LIST].some((prefix) => name.startsWith(prefix));
 }
 
 /** The demo page's words for the server's statuses. */

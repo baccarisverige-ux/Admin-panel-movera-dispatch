@@ -8,6 +8,7 @@ import { tr } from "../i18n";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
 import { listQueryOf, setListQuery, subscribeLists, type LiveListName } from "./liveLists";
 import { ErrorLine } from "./ui";
+import { ListCount } from "./ListCount";
 
 const STATUSES: Record<LiveListName, readonly string[]> = {
   drivers: ["pending", "active", "on_hold", "suspended"],
@@ -68,6 +69,7 @@ function Bar({ list, records, initialStatus }: { list: LiveListName; records: st
           {tr("Flagged only")}
         </label>
       ) : null}
+      <ListCount list={list} />
       {query.hasMore && !rows.error ? (
         <button data-command="admin.server.loadMore" type="button" className="secondary-btn" disabled={rows.isFetching} onClick={() => change({ pages: query.pages + 1 })}>
           {rows.isFetching ? tr("Loading.") : tr("Load more")}
