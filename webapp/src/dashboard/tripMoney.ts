@@ -24,6 +24,7 @@ export type TripMoney = {
 };
 
 export function tripMoney(split: MoneySplit, pickupPayMinor: number | null): TripMoney {
+  if (split.live) return liveTripMoney(split);
   const pickupPay = Math.max(0, Math.round(pickupPayMinor ?? 0));
   const tip = split.tip;
   const addedMoney = split.driverBonus;
@@ -42,6 +43,33 @@ export function tripMoney(split: MoneySplit, pickupPayMinor: number | null): Tri
     commission: split.commission,
     moveraKeeps,
     covers: moveraKeeps < 0,
+    estimate: split.state === "estimate",
+  };
+}
+
+/**
+ * S5 J5a (contract moneyBase.commission, v0.18.82): a live trip shows only the server's numbers. The server's commission
+ * and Movera's part of who-gets-what already have pickup pay and bonuses taken off, and the driver's total already holds
+ * them, so nothing is added or taken off here (before: the pop-up's own pickup estimate was taken off Movera again).
+ */
+function liveTripMoney(split: MoneySplit): TripMoney {
+  const facts = split.live!;
+  const pickupPay = facts.pickupPay ?? 0;
+  const addedMoney = facts.driverBonus ?? 0;
+  const tip = Number.isFinite(split.tip) ? split.tip : 0;
+  // Who-gets-what: the driver's total minus the tip; an older server: the driver's lines.
+  const driverGets = facts.split ? split.driverGets - tip : (facts.driverEarnings ?? NaN) + pickupPay + addedMoney;
+  return {
+    riderPays: split.riderPaid,
+    fareShare: driverGets - pickupPay - addedMoney,
+    pickupPay,
+    addedMoney,
+    tip,
+    driverGets,
+    fleet: Number.isFinite(split.fleet) ? split.fleet : 0,
+    commission: split.commission,
+    moveraKeeps: split.moveraKeeps,
+    covers: split.moveraKeeps < 0,
     estimate: split.state === "estimate",
   };
 }

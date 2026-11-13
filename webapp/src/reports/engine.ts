@@ -115,7 +115,7 @@ export function moneyData(report: EarningsReport, zones: readonly ZoneRow[], sha
     { id: "drivers", label: "Driver earnings", value: s(t.driverMinor), previous: s(p.driverMinor), format: "money", info: "Bookings minus commission, plus tips." },
     { id: "tips", label: "Tips", value: s(t.tipsMinor), previous: s(p.tipsMinor), format: "money", info: "Tips riders gave drivers. All of it goes to the driver." },
     { id: "refunds", label: "Refunds & vouchers", value: s(t.refundsMinor), previous: s(p.refundsMinor), format: "money", info: "Money given back to riders, as refunds or vouchers.", goodDown: true },
-    { id: "net", label: "Net revenue", value: s(t.netMinor), previous: s(p.netMinor), format: "money", info: "Movera earnings minus refunds and vouchers." },
+    { id: "net", label: "Net revenue", value: s(t.netMinor), previous: s(p.netMinor), format: "money", info: "Same as Movera earnings: refunds and vouchers are already taken off." },
     { id: "avgFare", label: "Average fare", value: t.trips ? Math.round(t.grossMinor / t.trips) : 0, previous: p.trips ? Math.round(p.grossMinor / p.trips) : null, format: "money", info: "Bookings ÷ completed rides." },
     { id: "failed", label: "Failed payments open", value: failed.minor, previous: null, format: "money", info: tr("{0} payments failed and are not settled yet. Right now, not for the period.", [failed.count]), goodDown: true },
   ];

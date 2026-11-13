@@ -149,19 +149,63 @@ test("live KPIs: a total only when every zone-day is there; tips, refunds and wa
   assert.equal(typeof payoutLineLabel, "function");
 });
 
-test("live Reports › Money (contract v0.10.3): per currency apart, net = Movera earnings − refunds, a missing day is Not connected", async () => {
+test("live Reports › Money (contract v0.10.3, netRevenue v0.18.13): per currency apart, net = Movera earnings (refunds already off), a missing day is Not connected", async () => {
   const { moneyGroups, totalsOf } = await import("./kpis.ts");
   const day = (date: string, zoneId: string, currency: string, gross: number, extra: Record<string, number> = { tips: 200, refunds: 100, fees: 400, moveraEarnings: 2500 }) => ({ date, zoneId, source: "summary" as const, currency, completedTrips: 2, cancelledTrips: 0, noShows: 0, gross, commission: 2000, driverEarnings: 8000, pickupPay: 500, driverBonus: 0, cashCollected: 0, walletApplied: 0, newRiders: 0, newDrivers: 0, ...extra });
   const dates = ["2026-10-26", "2026-10-27"];
   const groups = moneyGroups([day("2026-10-26", "Z001", "SEK", 10000), day("2026-10-27", "Z001", "SEK", 10000), day("2026-10-26", "FR-PC", "EUR", 3000), day("2026-10-27", "FR-PC", "EUR", 3000, { tips: 0, refunds: 0, fees: 0, moveraEarnings: -100 })], dates);
-  assert.deepEqual(groups.map((g) => [g.currency, g.missing, g.total.bookings, g.total.moveraEarnings, g.total.driverEarnings, g.total.tips, g.total.refunds, g.total.net]), [["EUR", false, 6000, 2400, 17000, 200, 100, 2300], ["SEK", false, 20000, 5000, 17000, 400, 200, 4800]]);
+  assert.deepEqual(groups.map((g) => [g.currency, g.missing, g.total.bookings, g.total.moveraEarnings, g.total.driverEarnings, g.total.tips, g.total.refunds, g.total.net]), [["EUR", false, 6000, 2400, 17000, 200, 100, 2400], ["SEK", false, 20000, 5000, 17000, 400, 200, 5000]], "S5 J5a: the server already took the refunds off Movera earnings; never twice");
   const gap = moneyGroups([day("2026-10-26", "Z001", "SEK", 10000)], dates)[0]!;
   assert.ok(gap.missing && Number.isNaN(gap.total.bookings) && Number.isNaN(gap.days[1]!.bookings));
   assert.equal(gap.days[0]!.bookings, 10000);
   const old = moneyGroups([day("2026-10-26", "Z001", "SEK", 10000, {})], ["2026-10-26"])[0]!;
   assert.ok(Number.isNaN(old.total.tips) && Number.isNaN(old.total.net) && old.total.bookings === 10000, "an older server without the money lines: Not connected, never 0");
   const totals = totalsOf([day("2026-10-26", "Z001", "SEK", 10000)], ["Z001"], ["2026-10-26"]);
-  assert.deepEqual([totals.tipsMinor, totals.refundsMinor, totals.netMinor], [200, 100, 2400]);
+  assert.deepEqual([totals.tipsMinor, totals.refundsMinor, totals.netMinor], [200, 100, 2500], "the Dashboard's Net revenue = Movera earnings too");
+});
+
+test("S5 J5a (contract v0.18.82 kpis.money, moneyBase.kpiMoney): the Money help texts say what the server counts, in sv, fr and en", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { sv } = await import("../i18n/sv.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const report = readFileSync(new URL("./LiveMoneyReport.tsx", import.meta.url), "utf8");
+  const engine = readFileSync(new URL("../reports/engine.ts", import.meta.url), "utf8");
+  const BOOKINGS = "Prices of paid rides (also rides ended early) plus cancel and no-show fees, each fee counted once. VAT included. Tips are not in it.";
+  const MOVERA = "What Movera keeps: commission (pickup pay and bonuses already out) plus its share of fees, minus Movera's pay changes to drivers and refunds. Can be negative.";
+  const NET = "Same as Movera earnings: refunds are already taken off.";
+  for (const text of [BOOKINGS, MOVERA, NET]) assert.ok(report.includes(JSON.stringify(text)), `Reports › Money: ${text}`);
+  // The demo Reports card keeps its existing voucher wording ("Refunds & vouchers" is its own card there).
+  const NET_VOUCHERS = "Same as Movera earnings: refunds and vouchers are already taken off.";
+  assert.ok(engine.includes(JSON.stringify(NET_VOUCHERS)), "the Net revenue help of Reports › Overview / Money says the same");
+  for (const old of ["Movera earnings minus refunds", "minus pickup pay and the driver bonuses Movera paid", "Ride prices plus cancel and no-show fees"]) {
+    assert.ok(!report.includes(old) && !engine.includes(old), `old text gone: ${old}`);
+  }
+  for (const text of [BOOKINGS, MOVERA, NET, NET_VOUCHERS]) {
+    const dict = [sv as Record<string, string>, fr as Record<string, string>];
+    for (const lang of dict) assert.ok(lang[text] && lang[text] !== text, `translated: ${text}`);
+  }
+});
+
+test("S5 J5a (moneyBase.commission): the driver pop-up's Money tab shows the server's who-gets-what; pickup pay is not taken off Movera a second time", async () => {
+  const { liveMoneySplit } = await import("../trips/file.ts");
+  const { tripMoney } = await import("../dashboard/tripMoney.ts");
+  const EUR = (amountMinor: number) => ({ amountMinor, currency: "EUR" });
+  // One commission: 480 − 352 earnings − 10 pickup pay = 118, the same as Movera's part of who-gets-what.
+  const trip: Trip = {
+    ...TRIP, zoneId: "FR-PC", fare: EUR(480), driverEarnings: EUR(352), commission: EUR(118), pickupPay: EUR(10), driverBonus: undefined, walletApplied: undefined, cashToCollect: EUR(480),
+    driverTotal: EUR(362), tip: { amount: EUR(250), method: "cash", at: "2026-11-02T01:00:00Z" },
+    moneySplit: { riderPaid: EUR(730), driverTotal: EUR(612), movera: EUR(118), debtCollected: EUR(0), tip: EUR(250), refunded: EUR(0) },
+  };
+  const record = tripRecord(trip);
+  const split = liveMoneySplit(record, record.liveTrip!);
+  assert.equal(split.commission, 118, "the server's commission, never worked out by the admin");
+  // The pop-up's own pickup estimate (here 60) must not replace or be added to the server's numbers.
+  const money = tripMoney(split, 60);
+  assert.deepEqual([money.riderPays, money.fareShare, money.pickupPay, money.tip, money.driverGets, money.commission, money.moveraKeeps, money.covers], [730, 352, 10, 250, 362, 118, 118, false]);
+  // A server without who-gets-what: the driver's lines and the server's commission, still nothing worked out twice.
+  const older = tripRecord({ ...trip, moneySplit: undefined, driverTotal: undefined, tip: undefined });
+  const oldMoney = tripMoney(liveMoneySplit(older, older.liveTrip!), 60);
+  assert.deepEqual([oldMoney.fareShare, oldMoney.pickupPay, oldMoney.driverGets, oldMoney.moveraKeeps], [352, 10, 362, 118]);
 });
 
 test("G2 R10: no Not connected yet badge on the live driver, onboarding, fleet owner and vehicle pages", async () => {
