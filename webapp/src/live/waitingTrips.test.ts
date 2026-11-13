@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { WAITING_TRIPS_LIST, createLiveAdminApi } from "./liveAdminApi.ts";
 import { ApiError } from "../api/httpClient.ts";
 import type { LiveClient } from "./session.ts";
@@ -106,4 +107,12 @@ test("A2: the trips list page and Reservations keep their own reads (no schedule
   await createLiveAdminApi(client).list("trips", null);
   assert.ok(tripReads(reads).length >= 1);
   for (const path of tripReads(reads)) assert.equal(params(path).has("scheduledBefore"), false, path);
+});
+
+test("A2: the contract copy (>= v0.18.83) has the rule this read follows", () => {
+  const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
+  const text: string = C.adminListFilters.scheduledBefore;
+  assert.match(text, /status=requested&status=searching&status=offered&scheduledBefore=<now>/);
+  assert.match(text, /kind live always passes/);
+  assert.match(text, /unknown_filter/);
 });
