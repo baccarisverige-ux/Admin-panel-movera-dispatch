@@ -89,4 +89,8 @@ export const enB4RadarExclusiveReservations = {
   "Driver groups for sending a ride": "Driver groups for sending a ride",
   "Save a radar zone": "Save a radar zone",
   "Save a radar zone rule": "Save a radar zone rule",
+  // v0.18.81 B1.34: Dispatch › Reservations › Booking, open booked rides per rider.
+  "Open booked rides per rider": "Open booked rides per rider",
+  "Open booked rides per rider, at most": "Open booked rides per rider, at most",
+  "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.": "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.",
 } as const;

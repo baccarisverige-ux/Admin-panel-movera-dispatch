@@ -238,9 +238,11 @@ export type BookingWindow = {
   /** v0.18.39 §63 (P17, owner "15 min after pickup past"): a booked ride with no driver ends this many minutes after its pickup time (no fee). */
   noDriverStopAfterMin: number;
   notHeadingNoticeEveryMin: number;
+  /** v0.18.81 B1.34 (contract.json#bookLater.riderCap, owner Q94 "A) Yes", 2026-11-13): booked rides a rider may hold that have not ended (default 3, 1-50). */
+  maxOpenPerRider: number;
 };
 
-export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30, arriveEarlyMin: 10, takeBackLateMin: 5, takeBackKeepIfDriveMin: 10, takeBackUntilMinBeforePickup: 15, notHeadingNotice: true, notHeadingNoticeEveryMin: 1, noDriverStopAfterMin: 15 };
+export const BOOKING_WINDOW_DEFAULT: BookingWindow = { minAheadMin: 15, maxAheadDays: 90, soonBeforeMin: 30, noticeOn: true, noticeMaxDrivers: 20, noDriverAlertMin: 10, riderReminderMin: 60, freeChangeBeforeMin: 60, maxTripKm: null, changeAnswerMin: 15, listAtTimeKm: 5, listAtTimeMin: 30, arriveEarlyMin: 10, takeBackLateMin: 5, takeBackKeepIfDriveMin: 10, takeBackUntilMinBeforePickup: 15, notHeadingNotice: true, notHeadingNoticeEveryMin: 1, noDriverStopAfterMin: 15, maxOpenPerRider: 3 };
 
 /** Limits for each booking window number (contract.json#bookLater, gen_openapi DriverReservations). */
 export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "maxTripKm" | "notHeadingNotice">, { min: number; max: number }> = {
@@ -250,6 +252,7 @@ export const BOOKING_LIMITS: Record<Exclude<keyof BookingWindow, "noticeOn" | "m
   arriveEarlyMin: { min: 0, max: 60 },
   takeBackLateMin: { min: 1, max: 60 }, takeBackKeepIfDriveMin: { min: 0, max: 60 }, takeBackUntilMinBeforePickup: { min: 0, max: 180 }, notHeadingNoticeEveryMin: { min: 1, max: 10 },
   noDriverStopAfterMin: { min: 1, max: 240 },
+  maxOpenPerRider: { min: 1, max: 50 },
 };
 export const MAX_TRIP_KM_LIMIT = { min: 1, max: 1000 };
 
@@ -260,6 +263,7 @@ export const BOOKING_LABELS: Record<keyof typeof BOOKING_LIMITS, string> = {
   arriveEarlyMin: "arrive before pickup (minutes)",
   takeBackLateMin: "take back when late more than (minutes)", takeBackKeepIfDriveMin: "keep if the driver is within (minutes' drive)", takeBackUntilMinBeforePickup: "take back only until (minutes before pickup)", notHeadingNoticeEveryMin: "not-heading notice every (minutes)",
   noDriverStopAfterMin: "stop a booked ride with no driver after pickup + (minutes)",
+  maxOpenPerRider: "open booked rides per rider",
 };
 
 export function completeBookingWindow(raw: unknown): BookingWindow {

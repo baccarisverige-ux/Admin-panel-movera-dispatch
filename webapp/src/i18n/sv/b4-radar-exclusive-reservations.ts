@@ -91,4 +91,8 @@ export const svB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   "Driver groups for sending a ride": "Förargrupper för att skicka en resa",
   "Save a radar zone": "Spara en radarzon",
   "Save a radar zone rule": "Spara en radarzonsregel",
+  // v0.18.81 B1.34: Dispatch › Reservations › Booking, open booked rides per rider.
+  "Open booked rides per rider": "Öppna bokade resor per resenär",
+  "Open booked rides per rider, at most": "Öppna bokade resor per resenär, högst",
+  "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.": "Exempel: vid 3 måste en resenär med 3 bokade resor som inte är klara avboka en innan hen bokar en ny. Direktresor räknas inte.",
 };

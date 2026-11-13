@@ -69,6 +69,9 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
           <Row label={tr("Longest booked ride")} help={tr("Off = no limit. On: example 60 km → a booked ride of 70 km is refused.")} on={bw.maxTripKm !== null} disabled={off} onToggle={(on) => setBooking({ maxTripKm: on ? 60 : null })}>
             {bw.maxTripKm !== null ? <Num label={tr("Longest booked ride, km")} before="up to" value={bw.maxTripKm} unit="km" min={1} max={1000} disabled={off} onChange={(maxTripKm) => setBooking({ maxTripKm })} /> : null}
           </Row>
+          <Row label={tr("Open booked rides per rider")} help={tr("Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.")}>
+            <Num label={tr("Open booked rides per rider, at most")} before="at most" value={bw.maxOpenPerRider} unit="rides" min={1} max={50} disabled={off} onChange={(maxOpenPerRider) => setBooking({ maxOpenPerRider })} />
+          </Row>
           <p className="dx-note">{tr("Card payments are taken in full when the ride is booked (card payments are still coming soon).")}</p>
         </div>
       </Card>

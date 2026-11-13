@@ -513,6 +513,8 @@ export function reservationBookingParts(resv: ZoneDispatch["reservation"], count
     takeBackUntilMinBeforePickup: b.takeBackUntilMinBeforePickup,
     // v0.18.39 §63 (P17): a booked ride with no driver ends at pickup + this many minutes.
     noDriverStopAfterMin: b.noDriverStopAfterMin,
+    // v0.18.81 B1.34 (contract.json#bookLater.riderCap): the server refuses the next booked ride over it (409 booked_rides_limit).
+    maxOpenPerRider: b.maxOpenPerRider,
     // Owner C (v0.18.19): the booked-ride raise is saved on the server; the live-ride bonus limit applies too.
     raiseFare: resv.raiseFare,
     // The country's highest (500 kr in Sweden) = no cap of its own: null, the live-ride limit only (contract default).
