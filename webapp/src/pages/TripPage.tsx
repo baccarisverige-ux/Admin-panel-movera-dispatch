@@ -84,6 +84,7 @@ import { currentLanguage, tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { isLiveData, liveTripOf } from "../live/realData";
 import { RIDE_CHECKS_OF_TRIP_LIST } from "../live/liveAdminApi";
 import { INCIDENTS_OF_TRIP_LIST } from "../live/incidents";
+import { useOpenTrip } from "../live/useOpenTrip";
 import { approachOf, canWaiveFee, driverPointOf, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, reasonLine, tripMoney } from "../live/tripLive";
 
 type TimelineEvent = { at: string; text: string; tone: "status" | "good" | "muted" | "call" | "check" | "alert"; link?: { to: string; label: string } };
@@ -120,6 +121,8 @@ export function TripPage() {
   const { agent, agents } = useSession();
   const role = agent?.role ?? "viewer";
   const liveRefund = useLiveRefund(tripId);
+  // Admin fix A1: this trip's changes reload after 1 s, not behind the 5 s busy gap.
+  useOpenTrip(tripId);
   const trips = useTrips(null);
   const drivers = useDrivers(null);
   const vehicles = useRecords("vehicles", null);

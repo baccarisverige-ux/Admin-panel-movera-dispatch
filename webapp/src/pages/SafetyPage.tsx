@@ -80,6 +80,7 @@ import { RouteMap } from "../trips/RouteMap";
 import { CommandButton } from "../ui/CommandButton";
 import { currentLanguage, tr, trx } from "../i18n/core";
 import { ListCount } from "../live/ListCount";
+import { useOpenTrip } from "../live/useOpenTrip";
 
 type Show = "open" | "all" | "solved";
 
@@ -356,6 +357,8 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
   const { book: countryBook } = useCountrySettings();
   const time2 = clocks(item, settings, now);
   const trip = linkedTrip(item, trips);
+  // A1/F1: the SOS case view reads its trip context from the Trips list; keep that trip at the 1 s reload, not the 5 s busy gap.
+  useOpenTrip(trip?.id ?? item.tripId);
   const driver = drivers.find((row) => row.id === (item.driverId ?? trip?.driverId));
   const rider = matchRider(riders, { riderId: item.riderId, phone: item.phone, name: item.who });
   const where = positions(item);

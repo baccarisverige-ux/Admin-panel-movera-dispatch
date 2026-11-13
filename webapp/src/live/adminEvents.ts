@@ -78,30 +78,120 @@ export function keyMatches(event: Pick<AdminLiveEvent, "type">, key: readonly un
  * Events are now collected for EVENT_BATCH_MS and each changed list is reloaded once per batch; a resync reloads all.
  */
 export const EVENT_BATCH_MS = 1_000;
+/**
+ * Admin fix A1 (SUP3 P4, audits/fix-plan-2026-11-13/sup3-admin.md; owner 2026-11-13: "5 seconds (Rec.)"): the busy
+ * types come several times a second at load (G34 2k: trip.changed 3.6/s per admin at 25 %, 9/s at peak), so every tab,
+ * on any page, reloaded Trips, Payments, KPIs and the drivers + live pages about once a second (AlertsProvider in
+ * AppShell). A busy type now reloads its BUSY lists at most once per EVENT_BUSY_GAP_MS; the first one after a quiet
+ * spell still goes after EVENT_BATCH_MS. Rare, urgent types (incident, alert, ticket, approval, payment.failed) and
+ * resync keep the 1 s batch.
+ * GM condition (gm/safety-review.md A1): the safety screens are never held. FAST_KEYS (the ride-check lists, the open
+ * trip page's own reads, the assign panel's offers) still reload 1 s after a busy event, and a trip.changed for a trip
+ * that is open on a trip page or in the assign panel (openTrip) reloads all its lists after 1 s, the Trips list those
+ * screens read the trip from included.
+ */
+export const EVENT_BUSY_GAP_MS = 5_000;
+export const BUSY_TYPES: ReadonlySet<string> = new Set(["trip.changed", "driver.status", "zone.supply"]);
+/** Keys a busy event still reloads after 1 s (never behind the busy gap). */
+export const FAST_KEYS: ReadonlyArray<readonly unknown[]> = [["records", "rideChecks"], ["records", "rideCheckAlerts"], ["trip-record"], ["live", "trip"], ["assign-offers"]];
+/** Per-id fast lists ("rideChecksOfTrip:<tripId>": the open trip page's ride checks). */
+const FAST_NAME_PREFIXES: readonly string[] = ["rideChecksOfTrip:"];
+export function isFastKey(key: readonly unknown[]): boolean {
+  return FAST_KEYS.some((prefix) => startsWith(key, prefix)) || (key[0] === "records" && typeof key[1] === "string" && FAST_NAME_PREFIXES.some((prefix) => (key[1] as string).startsWith(prefix)));
+}
+
+/** Trips open on a trip page or in the assign panel now (id -> how many screens show it). */
+const openTrips = new Map<string, number>();
+/** A screen that shows one trip calls this while it is open; the returned function closes it. */
+export function openTrip(tripId: string): () => void {
+  openTrips.set(tripId, (openTrips.get(tripId) ?? 0) + 1);
+  let closed = false;
+  return () => {
+    if (closed) return;
+    closed = true;
+    const left = (openTrips.get(tripId) ?? 1) - 1;
+    if (left > 0) openTrips.set(tripId, left);
+    else openTrips.delete(tripId);
+  };
+}
+export function isOpenTrip(tripId: string): boolean {
+  return openTrips.has(tripId);
+}
+
 export type KeyMatch = (key: readonly unknown[]) => boolean;
-type BatchOptions = { windowMs?: number; setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
-export function batchedInvalidator(invalidate: (match: KeyMatch) => void, options: BatchOptions = {}): { push: (event: Pick<AdminLiveEvent, "type">) => void; stop: () => void } {
+type BatchOptions = { windowMs?: number; busyGapMs?: number; now?: () => number; isOpenTrip?: (tripId: string) => boolean; setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
+export function batchedInvalidator(invalidate: (match: KeyMatch) => void, options: BatchOptions = {}): { push: (event: Pick<AdminLiveEvent, "type"> & Partial<Pick<AdminLiveEvent, "entityId">>) => void; stop: () => void } {
   const windowMs = options.windowMs ?? EVENT_BATCH_MS;
+  const busyGapMs = options.busyGapMs ?? EVENT_BUSY_GAP_MS;
+  const now = options.now ?? (() => Date.now());
+  const openNow = options.isOpenTrip ?? isOpenTrip;
   const setTimer = options.setTimer ?? ((fn: () => void, ms: number) => setTimeout(fn, ms));
   const clearTimer = options.clearTimer ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
   let types = new Set<string>();
+  /** Busy types in this batch that concern an open trip: they are not held. */
+  let urgent = new Set<string>();
+  let held = new Set<string>();
   let timer: unknown = null;
+  let heldTimer: unknown = null;
+  let lastBusy = Number.NEGATIVE_INFINITY;
+  const matchesAny = (batch: readonly string[], key: readonly unknown[]) => batch.some((type) => keyMatches({ type }, key));
   const flush = () => {
     timer = null;
-    const batch = types.has("resync") ? ["resync"] : [...types];
+    const pending = types;
+    const pendingUrgent = urgent;
     types = new Set();
-    if (batch.length) invalidate((key) => batch.some((type) => keyMatches({ type }, key)));
+    urgent = new Set();
+    const at = now();
+    if (pending.has("resync")) {
+      // A resync reloads everything: the held busy types are part of it.
+      held = new Set();
+      if (heldTimer !== null) clearTimer(heldTimer);
+      heldTimer = null;
+      lastBusy = at;
+      invalidate((key) => keyMatches({ type: "resync" }, key));
+      return;
+    }
+    const busyOk = at - lastBusy >= busyGapMs;
+    const out: string[] = [];
+    const heldNow: string[] = [];
+    for (const type of pending) {
+      if (BUSY_TYPES.has(type) && !busyOk && !pendingUrgent.has(type)) {
+        held.add(type);
+        heldNow.push(type);
+      } else {
+        out.push(type);
+        held.delete(type);
+      }
+    }
+    if (out.some((type) => BUSY_TYPES.has(type))) lastBusy = at;
+    if (held.size && heldTimer === null) heldTimer = setTimer(release, Math.max(0, lastBusy + busyGapMs - at));
+    // The held types still reload their FAST_KEYS now: the safety screens never wait for the busy gap.
+    if (out.length || heldNow.length) invalidate((key) => matchesAny(out, key) || (isFastKey(key) && matchesAny(heldNow, key)));
+  };
+  const release = () => {
+    heldTimer = null;
+    const due = [...held];
+    held = new Set();
+    if (!due.length) return;
+    lastBusy = now();
+    // Their FAST_KEYS were already reloaded in the 1 s batch of each event.
+    invalidate((key) => !isFastKey(key) && matchesAny(due, key));
   };
   return {
     push(event) {
       if (!INVALIDATES[event.type]) return;
       types.add(event.type);
+      if (event.type === "trip.changed" && event.entityId && openNow(event.entityId)) urgent.add(event.type);
       if (timer === null) timer = setTimer(flush, windowMs);
     },
     stop() {
       if (timer !== null) clearTimer(timer);
+      if (heldTimer !== null) clearTimer(heldTimer);
       timer = null;
+      heldTimer = null;
       types = new Set();
+      urgent = new Set();
+      held = new Set();
     },
   };
 }
