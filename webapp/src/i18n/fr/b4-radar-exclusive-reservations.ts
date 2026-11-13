@@ -91,4 +91,8 @@ export const frB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   "Driver groups for sending a ride": "Groupes de chauffeurs pour envoyer une course",
   "Save a radar zone": "Enregistrer une zone radar",
   "Save a radar zone rule": "Enregistrer une règle de zone radar",
+  // v0.18.81 B1.34: Dispatch › Reservations › Booking, open booked rides per rider.
+  "Open booked rides per rider": "Courses programmées ouvertes par passager",
+  "Open booked rides per rider, at most": "Courses programmées ouvertes par passager, au plus",
+  "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.": "Exemple : à 3, un passager qui a 3 courses programmées pas encore terminées doit en annuler une avant d’en programmer une autre. Les courses immédiates ne comptent pas.",
 };

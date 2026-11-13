@@ -12,8 +12,8 @@ import { CONTRACT_VERSION } from "../domain/contract.ts";
 const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
 const M = readFileSync(new URL("../../../contracts/CONTRACT.md", import.meta.url), "utf8");
 
-test("the admin pins the contract it carries (0.18.78; §87 landed in 0.18.66)", () => {
-  assert.equal(C.version, "0.18.78");
+test("the admin pins the contract it carries (0.18.81; §87 landed in 0.18.66)", () => {
+  assert.equal(C.version, "0.18.81");
   assert.equal(CONTRACT_VERSION, C.version);
 });
 
