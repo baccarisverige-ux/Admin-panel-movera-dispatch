@@ -15,7 +15,7 @@ import { NO_FILTER, zoneFilterOf, type ZoneFilter } from "./zoneFilter.ts";
 
 /** v0.18.9 (G7): trip page commands and their server step (POST /admin/trips/{tripId}/{step}). */
 const TRIP_STEPS: Record<string, string> = { "admin.trip.cancel": "cancel", "admin.trip.reassign": "reassign", "admin.trip.noShow": "no-show", "admin.trip.complete": "complete", "admin.trip.adjust": "adjust", "admin.trip.waiting": "adjust" };
-const TRIP_STEP_DONE: Record<string, string> = { "admin.trip.cancel": "Trip cancelled.", "admin.trip.reassign": "The trip is looking for a new driver.", "admin.trip.noShow": "Marked as a no-show.", "admin.trip.complete": "Trip completed.", "admin.trip.adjust": "Price changed.", "admin.trip.waiting": "Waiting time saved." };
+const TRIP_STEP_DONE: Record<string, string> = { "admin.trip.cancel": "Trip cancelled.", "admin.trip.reassign": "The trip is looking for a new driver.", "admin.trip.noShow": "Marked as a no-show.", "admin.trip.complete": "Trip completed.", "admin.trip.adjust": "Driver pay saved. The rider pays the same.", "admin.trip.waiting": "Waiting time saved." };
 
 export { zoneFilterOf, type ZoneFilter };
 import type { AdminApi, AuditQuery, CommandInput, CommandResult } from "../api/create.ts";
@@ -55,6 +55,7 @@ import { UNLOCK_SIGN_IN_PATH, fullPhone, unlockMessage } from "./unlockSignIn.ts
 import { rideCheckRecords } from "./rideChecks.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 import { readDraft, savePublish, standardKey } from "./configDocs.ts";
+import { driverPayAdjustBody } from "./moneyGuard.ts";
 
 export const NOT_CONNECTED = "Not connected yet.";
 
@@ -1064,9 +1065,13 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       else if (input.action === "admin.trip.reassign") body = { ...body, reasonCode: "admin_operational", note };
       else if (input.action === "admin.trip.noShow" || input.action === "admin.trip.complete") body = { ...body, note };
       else if (input.action === "admin.trip.adjust") {
-        const minor = Number(patch["fareOre"]);
-        if (!Number.isInteger(minor) || minor < 0) throw new ApiError(400, tr("Type a price."), { code: "invalid_request", retryable: false });
-        body = { ...body, fare: { amountMinor: minor, currency: trip.fare.currency }, reason: note };
+        // v0.18.82 S5 J6a (contract.json#moneyBase.adminFare, owner Q-M7 / Q-S5-8): the admin types the driver's new pay;
+        // the rider pays the booked price. The old fare is never sent (the server refuses it: fare_is_driver_pay).
+        // Only a typed number: nothing typed must never become a pay of 0.
+        const typed = patch["driverPayMinor"];
+        const minor = typeof typed === "number" ? typed : NaN;
+        if (!Number.isInteger(minor) || minor < 0) throw new ApiError(400, tr("Type the driver's pay."), { code: "invalid_request", retryable: false });
+        body = driverPayAdjustBody(trip, minor, note);
       } else if (input.action === "admin.trip.waiting") {
         const minutes = Number(patch["waitingMin"]);
         if (!Number.isFinite(minutes) || minutes < 0) throw new ApiError(400, tr("Type the waiting minutes."), { code: "invalid_request", retryable: false });

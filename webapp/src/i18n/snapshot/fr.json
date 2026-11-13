@@ -8939,4 +8939,15 @@
 ["{0} · rider pays {1}","{0} · le passager paie {1}"],
 ["Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee.","Défini dans Tarifs pour chaque type de véhicule. Le chauffeur reçoit ce prix ; le passager le paie avec les frais de plateforme."],
 ["{0} min · {1}/min incl. app fee · driver gets {2}/min","{0} min · {1}/min frais de plateforme inclus · le chauffeur reçoit {2}/min"],
-["Rider pays {0}/min","Le passager paie {0}/min"]]
+["Rider pays {0}/min","Le passager paie {0}/min"],
+["Driver pay{0}","Rémunération chauffeur{0}"],
+["Save driver pay","Enregistrer la rémunération"],
+["Driver's pay now: {0}","Rémunération actuelle du chauffeur : {0}"],
+["The rider pays the same price as booked. The tip stays on top. Waiting or stops added later are added to this pay.","Le passager paie le même prix qu'à la réservation. Le pourboire s'ajoute en plus. L'attente ou les arrêts ajoutés plus tard s'ajoutent à cette rémunération."],
+["Type the driver's pay.","Saisissez la rémunération du chauffeur."],
+["Driver pay saved. The rider pays the same.","Rémunération enregistrée. Le passager paie le même prix."],
+["Type the driver's pay. The rider's price cannot be changed.","Saisissez la rémunération du chauffeur. Le prix du passager ne peut pas être modifié."],
+["The change to the driver's pay is above this country's limit (Pricing › Tips & limits).","La modification de la rémunération dépasse la limite du pays (Tarifs › Pourboires et limites)."],
+["The driver's pay cannot go below 0.","La rémunération du chauffeur ne peut pas être inférieure à 0."],
+["The driver's pay cannot be changed while the trip is {0}.","La rémunération du chauffeur ne peut pas être modifiée tant que la course est {0}."],
+["Trip adjusted (driver pay, waiting or fee)","Course ajustée (rémunération, attente ou frais)"]]

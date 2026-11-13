@@ -44,6 +44,7 @@ import { svC13EmergencyNumbers } from "./sv/c13-emergency-numbers.ts";
 import { svC13ChatG92 } from "./sv/c13-chat-g92.ts";
 import { svC14EmailVerified } from "./sv/c14-email-verified.ts";
 import { svC15WaitingPriceShown } from "./sv/c15-waiting-price-shown.ts";
+import { svC15DriverPayJ6 } from "./sv/c16-driver-pay-j6.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -93,4 +94,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC13ChatG92,
   ...svC14EmailVerified,
   ...svC15WaitingPriceShown,
+  ...svC15DriverPayJ6,
 };

@@ -10,6 +10,15 @@ export function driverPayBody(trip: { version: number }, amountMinor: number, cu
 }
 
 /**
+ * S5 J6a (contract v0.18.82, contract.json#moneyBase.adminFare; owner Q-M7 "If admin increase fare it's only for the
+ * driver side !! The rider pay same amount when booked", Q-S5-8 "Admin types driver pay"): POST /admin/trips/{tripId}/adjust
+ * with the driver's new pay (driverTotal without the tip). Never the old `fare`: the server refuses it (fare_is_driver_pay).
+ */
+export function driverPayAdjustBody(trip: { version: number; fare: { currency: string } }, driverPayMinor: number, reason: string): { expectedVersion: number; driverPay: Money; reason: string } {
+  return { expectedVersion: trip.version, driverPay: { amountMinor: driverPayMinor, currency: trip.fare.currency }, reason: reason.trim() };
+}
+
+/**
  * One request at a time: while `work` runs, a second call does nothing (a double click before React re-renders the
  * disabled button sends no second request). `busy()` says whether one is running.
  */

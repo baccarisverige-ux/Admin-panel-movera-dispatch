@@ -41,24 +41,26 @@ test("R8 waiting and bounded fare corrections persist and are audited", async ({
   await page.goto("/trips/T0008");
   await expect(page.getByRole("heading", { level: 2, name: "Trip T0008" })).toBeVisible();
   await expect(page.getByTestId("waiting-block")).toContainText("Waiting time can be corrected");
-  await expect(page.getByTestId("adjust-block")).toContainText("±15%");
+  await expect(page.getByTestId("adjust-block")).toContainText("The rider pays the same price as booked");
 
   await page.getByLabel("Waiting minutes").fill("7");
   await page.getByRole("button", { name: "Save waiting time" }).click();
   await confirm(page);
   await expect(page.getByTestId("trip-fare")).toContainText("Waiting time charged: 7 min");
 
-  await page.getByLabel("Fare adjustment percent").fill("12");
-  await page.getByRole("button", { name: "Apply fare adjustment" }).click();
+  // v0.18.82 S5 J6a (owner Q-M7): the admin types the driver's pay; the rider's charged price does not move.
+  const charged = await page.getByTestId("trip-fare").textContent();
+  await page.getByLabel("Driver pay").fill("60");
+  await page.getByRole("button", { name: "Save driver pay" }).click();
   await confirm(page);
-  await expect(page.getByTestId("trip-fare")).toContainText("Charged 62,72 kr");
+  await expect(page.getByTestId("trip-fare")).toHaveText(charged ?? "");
 
   await expect(page.getByRole("list", { name: "Trip intervention audit" })).toContainText("admin.trip.waiting");
   await expect(page.getByRole("list", { name: "Trip intervention audit" })).toContainText("admin.trip.adjust");
 
   await page.reload();
   await expect(page.getByTestId("trip-fare")).toContainText("Waiting time charged: 7 min");
-  await expect(page.getByTestId("trip-fare")).toContainText("Charged 62,72 kr");
+  await expect(page.getByTestId("trip-fare")).toHaveText(charged ?? "");
 });
 
 test("R8 trip actions follow lifecycle state", async ({ page }) => {
@@ -68,20 +70,23 @@ test("R8 trip actions follow lifecycle state", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Offer to driver" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Reassign" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Apply fare adjustment" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save driver pay" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Save waiting time" })).toBeDisabled();
 
   await page.goto("/trips/T0044");
   await expect(page.getByRole("button", { name: "Offer to driver" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Reassign" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Apply fare adjustment" })).toBeEnabled();
+  // S5 J6a: the button is on once a driver pay is typed.
+  await expect(page.getByRole("button", { name: "Save driver pay" })).toBeDisabled();
+  await page.getByLabel("Driver pay").fill("50");
+  await expect(page.getByRole("button", { name: "Save driver pay" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Save waiting time" })).toBeEnabled();
 
   await page.goto("/trips/T0048");
   // Disabled by the trip's status.
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Reassign" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Apply fare adjustment" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save driver pay" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Refund" })).toBeEnabled();
 });
 

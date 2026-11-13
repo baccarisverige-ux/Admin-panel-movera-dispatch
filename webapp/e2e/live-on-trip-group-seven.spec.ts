@@ -130,7 +130,7 @@ test("trip page: ride check and route change of the trip; Flag, notes, Open case
   for (const id of ["live-trip-tools", "trip-actions"]) await expect(page.getByTestId(id)).not.toContainText("Not connected yet");
 });
 
-test("trip page: price adjust, waiting and complete go to the server with the trip's version", async ({ page }) => {
+test("trip page: driver pay, waiting and complete go to the server with the trip's version", async ({ page }) => {
   const { state } = await open(page, "/trips/T2007");
   const confirm = async () => {
     const modal = page.locator(".modal.open").last();
@@ -143,10 +143,13 @@ test("trip page: price adjust, waiting and complete go to the server with the tr
     if (await typed.count()) await typed.fill("T2007");
     await modal.getByRole("button", { name: "Confirm" }).click();
   };
-  await page.getByLabel("Fare adjustment percent").fill("-10");
-  await page.getByRole("button", { name: "Apply fare adjustment" }).click();
+  // v0.18.82 S5 J6a (owner Q-S5-8 "Admin types driver pay"): the field is the driver's pay; the rider's price is never sent.
+  await expect(page.getByTestId("adjust-block")).toContainText("The rider pays the same price as booked");
+  await page.getByLabel("Driver pay").fill("150");
+  await page.getByRole("button", { name: "Save driver pay" }).click();
   await confirm();
-  await expect.poll(() => posted(state, "/admin/trips/T2007/adjust")?.body).toMatchObject({ expectedVersion: 3, fare: { amountMinor: 20700, currency: "SEK" } });
+  await expect.poll(() => posted(state, "/admin/trips/T2007/adjust")?.body).toMatchObject({ expectedVersion: 3, driverPay: { amountMinor: 15000, currency: "SEK" } });
+  expect(posted(state, "/admin/trips/T2007/adjust")!.body).not.toHaveProperty("fare");
   state.calls.length = 0;
   await page.getByLabel("Waiting minutes").fill("4");
   await page.getByRole("button", { name: "Save waiting time" }).click();

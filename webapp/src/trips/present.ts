@@ -284,7 +284,7 @@ export function completeBlock(status: string): string | null {
 export function adjustBlock(status: string): string | null {
   return canAdjustFare(status)
     ? null
-    : tr("Fare adjustment is not allowed while the trip is {0}.", [statusLabel(status).toLowerCase()]);
+    : tr("The driver's pay cannot be changed while the trip is {0}.", [statusLabel(status).toLowerCase()]);
 }
 
 /**

@@ -8939,4 +8939,15 @@
 ["{0} · rider pays {1}","{0} · resenären betalar {1}"],
 ["Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee.","Ställs in under Priser för varje biltyp. Föraren får detta pris; resenären betalar det med appavgiften."],
 ["{0} min · {1}/min incl. app fee · driver gets {2}/min","{0} min · {1}/min inkl. appavgift · föraren får {2}/min"],
-["Rider pays {0}/min","Resenären betalar {0}/min"]]
+["Rider pays {0}/min","Resenären betalar {0}/min"],
+["Driver pay{0}","Förarlön{0}"],
+["Save driver pay","Spara förarlön"],
+["Driver's pay now: {0}","Förarens ersättning nu: {0}"],
+["The rider pays the same price as booked. The tip stays on top. Waiting or stops added later are added to this pay.","Resenären betalar samma pris som vid bokningen. Dricksen kommer ovanpå. Väntetid eller stopp som läggs till senare läggs till denna ersättning."],
+["Type the driver's pay.","Skriv förarens ersättning."],
+["Driver pay saved. The rider pays the same.","Förarersättningen sparad. Resenären betalar samma pris."],
+["Type the driver's pay. The rider's price cannot be changed.","Skriv förarens ersättning. Resenärens pris kan inte ändras."],
+["The change to the driver's pay is above this country's limit (Pricing › Tips & limits).","Ändringen av förarens ersättning är över landets gräns (Prissättning › Dricks och gränser)."],
+["The driver's pay cannot go below 0.","Förarens ersättning kan inte bli lägre än 0."],
+["The driver's pay cannot be changed while the trip is {0}.","Förarens ersättning kan inte ändras när resan är {0}."],
+["Trip adjusted (driver pay, waiting or fee)","Resa justerad (förarersättning, väntetid eller avgift)"]]

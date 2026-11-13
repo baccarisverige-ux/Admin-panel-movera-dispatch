@@ -273,7 +273,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.driver.revealSensitive", label: "Reveal driver sensitive data", reason: true, permission: "drivers.viewSensitive" },
   { id: "admin.rider.revealSensitive", label: "Reveal rider sensitive data", reason: true, permission: "riders.viewSensitive" },
   { id: "admin.trip.cancel", label: "Cancel trip", reason: true, permission: "trips.intervene" },
-  { id: "admin.trip.adjust", label: "Adjust fare", reason: true, permission: "trips.intervene" },
+  // v0.18.82 S5 J6a (owner Q-S5-8 "Admin types driver pay"): the admin types the driver's pay; the rider's price stays.
+  { id: "admin.trip.adjust", label: "Driver pay", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.waiting", label: "Change waiting time", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.offer", label: "Offer to driver", reason: true, permission: "trips.intervene" },
   // Assign tool (owner Q13–Q18, contract §3.1): direct assign (exclusive offer), radar groups, money for the driver.
@@ -703,7 +704,7 @@ export const COLLECTION_WRITES: Readonly<Record<string, Readonly<Record<string, 
   "admin.safety.take": { incidents: STATUS },
   "admin.safety.contact": { incidents: STATUS },
   "admin.safety.resolve": { incidents: STATUS },
-  "admin.trip.adjust": { trips: ["fareOre"] },
+  "admin.trip.adjust": { trips: ["driverPayMinor"] },
   "admin.trip.cancel": { trips: TRIP_END },
   "admin.trip.complete": { trips: ["status", "previousStatus"] },
   "admin.trip.noShow": { trips: TRIP_END },

@@ -336,7 +336,7 @@ test("G7 live fix 3: who-did-what never shows an e-mail; trip actions and result
   assert.equal(auditActorName("adm_2", team), "Nora Lind");
   assert.equal(auditActionText("trip.flag"), "Trip flagged");
   assert.equal(auditActionText("trip.unflag"), "Flag removed");
-  assert.equal(auditActionText("trip.adjust.requested"), "Trip price changed (waiting for a second admin)");
+  assert.equal(auditActionText("trip.adjust.requested"), "Trip adjusted (driver pay, waiting or fee) (waiting for a second admin)");
   assert.equal(auditResultText("committed"), "Done");
   assert.equal(shortId("trp_01JXYZABCDEFGH~srv_dropped_far_1"), "trp_…CDEFGH");
   assert.equal(shortId("T0138"), "T0138");

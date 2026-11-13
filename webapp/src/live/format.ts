@@ -198,6 +198,10 @@ export function errorText(error: unknown): string {
   if (error.reason === "no_show_too_early") return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");
   if (error.reason === "no_free_driver") return tr("None of these drivers can take the ride now.");
   if (error.reason === "currency_mismatch") return tr("The amount must be in the ride's currency.");
+  // v0.18.82 S5 J6a (contract.json#moneyBase.adminFare): the adjust field is the driver's pay, limited per country.
+  if (error.reason === "fare_is_driver_pay") return tr("Type the driver's pay. The rider's price cannot be changed.");
+  if (error.reason === "driver_pay_above_max") return tr("The change to the driver's pay is above this country's limit (Pricing › Tips & limits).");
+  if (error.reason === "driver_pay_below_zero") return tr("The driver's pay cannot go below 0.");
   if (error.reason === "plate_taken") return tr("Another car already has this plate.");
   if (error.reason === "driver_not_in_fleet") return tr("That driver is not in the car's fleet.");
   if (error.reason === "vehicle_not_approved") return tr("The car is not approved yet.");
@@ -414,7 +418,7 @@ const AUDIT_ACTIONS: Record<string, MessageKey> = {
   "rating.hide": "Review hidden", "rating.restore": "Review shown again",
   "support.reply": "Support answered", "ticket.reply": "Ticket answered",
   "surge.end": "Surge ended", "surge.schedule": "Surge planned",
-  "trip.adjust": "Trip price changed", "trip.assign": "Driver assigned", "trip.cancel": "Trip cancelled", "trip.complete": "Trip completed",
+  "trip.adjust": "Trip adjusted (driver pay, waiting or fee)", "trip.assign": "Driver assigned", "trip.cancel": "Trip cancelled", "trip.complete": "Trip completed",
   "trip.driver_bonus": "Driver bonus added to trip", "trip.no_show": "No-show recorded", "trip.pin_unlock": "Pickup PIN unlocked",
   "trip.flag": "Trip flagged", "trip.unflag": "Flag removed", "trip.note": "Note added", "trip.case": "Case opened",
   "trip.reveal_contact": "Phone number shown", "trip.receipt_resend": "Receipt sent again", "trip.driver_pay": "Driver pay changed",
