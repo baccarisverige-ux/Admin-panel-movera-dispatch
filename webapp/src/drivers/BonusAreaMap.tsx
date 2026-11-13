@@ -5,7 +5,8 @@ import { NumberField } from "../pricing/NumberField";
 import { ZoneCanvas } from "../pages/ZoneCanvas";
 import { citiesOf, PLACES } from "../zones/cities";
 import { useZoneUi, type DrawTool, type ZoneFocus, type ZoneLayers } from "../zones/bookStore";
-import { circleRing, displayName, firstShapeFromFile, joinShapes, ringAreaKm, suggestedShape } from "../zones/releases";
+import { displayName } from "../zones/releases";
+import { circleRing, firstShapeFromFile, joinShapes, ringAreaKm, suggestedShape } from "../zones/studioTools";
 import type { BonusArea } from "./bonus";
 import { tr, trn, trx, trSentences } from "../i18n";
 

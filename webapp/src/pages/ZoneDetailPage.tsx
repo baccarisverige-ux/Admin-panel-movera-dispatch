@@ -32,12 +32,9 @@ import { cityById } from "../zones/cities";
 import { zoneStore, useZoneUi } from "../zones/bookStore";
 import {
   displayName,
-  goLiveState,
   launchChecklist,
-  lineKm,
   RIDE_CATEGORIES,
   RIDE_OPTIONS,
-  ringSizeKm,
   validateZones,
   ZONE_COLOR,
   ZONE_PAYMENT_METHODS,
@@ -49,6 +46,7 @@ import {
   type CrossPrice,
   type ZoneShape,
 } from "../zones/releases";
+import { goLiveState, lineKm, ringSizeKm } from "../zones/studioTools";
 import { statusTone } from "./ZoneMap";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
