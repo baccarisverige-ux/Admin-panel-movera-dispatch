@@ -1,5 +1,5 @@
 /** Swedish dictionary, area c16-driver-pay-j6: S5 J6a (contract v0.18.82, contract.json#moneyBase.adminFare; owner Q-M7 / Q-S5-8 "Admin types driver pay"): the trip page's "Driver pay" field (was the fare adjustment), its help text and the server's refusals. Add new keys at the end of this file. Merged in ../sv.ts in this order. */
-export const svC15DriverPayJ6 = {
+export const svC16DriverPayJ6 = {
   "Driver pay{0}": "Förarlön{0}",
   "Save driver pay": "Spara förarlön",
   "Driver's pay now: {0}": "Förarens ersättning nu: {0}",
