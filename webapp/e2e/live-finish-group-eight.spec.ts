@@ -57,7 +57,8 @@ test("trip page: give money back from the driver's share, change pay with a reas
   await money.getByLabel("Driver pay change").fill("-15");
   await money.getByLabel("Reason for the pay change").fill("Wrong waiting");
   await money.getByRole("button", { name: "Change pay" }).click();
-  await expect.poll(() => posted(state, "/driver-pay")?.body).toMatchObject({ change: { amountMinor: -1500, currency: "SEK" }, reason: "Wrong waiting" });
+  await expect.poll(() => posted(state, "/driver-pay")?.body).toMatchObject({ expectedVersion: expect.any(Number), change: { amountMinor: -1500, currency: "SEK" }, reason: "Wrong waiting" });
+  await expect(money.getByRole("status")).toContainText("Driver pay changed.");
   await money.getByLabel("Reason for resending").fill("Rider asked");
   await money.getByRole("button", { name: "Resend receipt" }).click();
   await expect.poll(() => posted(state, "/receipt/resend")?.body).toMatchObject({ reason: "Rider asked" });

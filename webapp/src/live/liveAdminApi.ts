@@ -778,7 +778,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const reason = input.reason?.trim();
       if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
       if (!amount || typeof amount.amountMinor !== "number" || !(amount.amountMinor > 0) || typeof amount.currency !== "string") throw new ApiError(400, tr("Enter an amount above 0."), { code: "invalid_request", retryable: false });
-      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(input.targetId)}/wallet-credit`, { amount: { amountMinor: amount.amountMinor, currency: amount.currency }, reason: reason.slice(0, 300) }).catch(explained);
+      // v0.18.82 S5 J4a (moneyBase.versionGuard, owner 106): the rider version the page shows, else the one last read;
+      // a stale one (a second click) gets 409 version_mismatch: keep the server's fresh rider and say it was reloaded.
+      const shown = (input.value as { expectedVersion?: unknown } | undefined)?.expectedVersion;
+      const known = typeof shown === "number" && shown >= 1 ? shown : riders.get(input.targetId)?.version
+        ?? (await client.json<{ items: Rider[] }>(`/admin/riders?q=${encodeURIComponent(input.targetId)}`)).items.find((row) => row.riderId === input.targetId)?.version;
+      if (typeof known !== "number") throw new ApiError(404, "No such rider.", { code: "not_found" });
+      const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(input.targetId)}/wallet-credit`, { expectedVersion: known, amount: { amountMinor: amount.amountMinor, currency: amount.currency }, reason: reason.slice(0, 300) }).catch((error: unknown) => {
+        const fresh = error instanceof ApiError ? (error.projection as Rider | undefined) : undefined;
+        if (fresh?.riderId) riders.set(fresh.riderId, fresh);
+        return explained(error);
+      });
       if (next?.riderId) riders.set(next.riderId, next);
       return done("Saved.");
     }

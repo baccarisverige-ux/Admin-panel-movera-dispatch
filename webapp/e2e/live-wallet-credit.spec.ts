@@ -36,8 +36,12 @@ test("SE: 150 kr with a reason reaches the server; the balance follows; too larg
   const sent: Record<string, unknown>[] = [];
   await page.route(`${API}/api/v1/admin/riders/*/wallet-credit`, async (route) => {
     if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
-    const body = route.request().postDataJSON() as { amount: { amountMinor: number; currency: string }; reason: string };
+    const body = route.request().postDataJSON() as { expectedVersion?: number; amount: { amountMinor: number; currency: string }; reason: string };
     sent.push(body);
+    const current = state.riders.find((rider) => rider["riderId"] === "R501")!;
+    // v0.18.82 S5 J4 (moneyBase.versionGuard): expectedVersion required; a stale one is 409 with the fresh rider.
+    if (typeof body.expectedVersion !== "number") return json(route, 400, { code: "invalid_request", message: "expectedVersion is required", requestId: "r", retryable: false });
+    if (body.expectedVersion !== Number(current["version"])) return json(route, 409, { code: "version_mismatch", message: "The rider changed since you last saw them.", requestId: "r", retryable: false, projection: current });
     if (body.amount.amountMinor > 290_000) return json(route, 400, { code: "invalid_request", message: "too large", requestId: "r", retryable: false, reason: "wallet_credit_too_large", details: [] });
     const index = state.riders.findIndex((rider) => rider["riderId"] === "R501");
     const wallet = state.riders[index]!["wallet"] as { amountMinor: number; currency: string };
@@ -53,7 +57,7 @@ test("SE: 150 kr with a reason reaches the server; the balance follows; too larg
   await box.getByRole("button", { name: "Add money to wallet" }).click();
   await confirm(page);
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toMatchObject({ amount: { amountMinor: 15_000, currency: "SEK" } });
+  expect(sent[0]).toMatchObject({ expectedVersion: expect.any(Number), amount: { amountMinor: 15_000, currency: "SEK" } });
   expect(String(sent[0]!["reason"]).length).toBeGreaterThan(0);
   await page.reload();
   await expect(page.getByTestId("live-wallet-balance")).toContainText("200");
@@ -62,6 +66,26 @@ test("SE: 150 kr with a reason reaches the server; the balance follows; too larg
   await page.getByTestId("live-wallet-credit").getByRole("button", { name: "Add money to wallet" }).click();
   await confirm(page);
   await expect(page.getByText("That is more than one credit may be in this country (Trip settings).").first()).toBeVisible();
+});
+
+test("S5 J4a: a stale rider version (a second click, or another admin) gets 409: the page says it was reloaded", async ({ page }) => {
+  const state = await fakeTripServer(page, { admin: { permissions: [...ADMIN.permissions, "finance.edit"] } });
+  const sent: Record<string, unknown>[] = [];
+  await page.route(`${API}/api/v1/admin/riders/*/wallet-credit`, async (route) => {
+    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+    sent.push(route.request().postDataJSON() as Record<string, unknown>);
+    const current = state.riders.find((rider) => rider["riderId"] === "R501")!;
+    return json(route, 409, { code: "version_mismatch", message: "The rider changed since you last saw them.", requestId: "r", retryable: false, projection: current });
+  });
+  await signInWarm(page);
+  await page.goto("/riders/R501?tab=wallet");
+  const box = page.getByTestId("live-wallet-credit");
+  await box.getByLabel("Wallet amount").fill("50");
+  await box.getByRole("button", { name: "Add money to wallet" }).click();
+  await confirm(page);
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ expectedVersion: expect.any(Number), amount: { amountMinor: 5_000, currency: "SEK" } });
+  await expect(page.getByText("Someone else changed this record. It was reloaded; check it and try again.").first()).toBeVisible();
 });
 
 test("without finance.edit the amount and button are off; no voucher or credit-wallet elsewhere", async ({ page }) => {

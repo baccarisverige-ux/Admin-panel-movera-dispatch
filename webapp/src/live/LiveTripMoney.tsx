@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Receipt, RotateCcw, Scale, Wallet } from "lucide-react";
 import { tr } from "../i18n";
 import { useLiveSession, useLiveSessionMaybe } from "./LiveSessionContext";
 import { liveMoney, parseMinor } from "./format";
-import { ErrorLine } from "./ui";
+import { driverPayBody, singleFlight } from "./moneyGuard";
+import { ErrorLine, isVersionMismatch } from "./ui";
 
 /**
  * v0.18.10 (driver group 8 "Finish & cash", contract.json#finish; Rules decisions/admin-fake-by-group.md G8): the trip
  * page's money on live, every number from the server — who gets what (TripProjection.moneySplit: rider paid, driver's
  * one number with its lines, Movera, an earlier unpaid fee as its own line, tip, refunded), ended early, and three real
  * calls: Give money back (POST …/refund, optional "take from the driver"), Change the driver's pay (POST …/driver-pay,
- * reason, audited) and Resend receipt (POST …/receipt/resend, reason). Returns null in a demo build.
+ * reason, audited; v0.18.82 with the trip version the page shows) and Resend receipt (POST …/receipt/resend, reason).
+ * Returns null in a demo build.
  */
 type M = { amountMinor: number; currency: string };
 type MoneyTrip = {
@@ -60,6 +62,8 @@ function Money({ tripId }: { tripId: string }) {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  // v0.18.82 S5 J4a (owner 106): one money request at a time, even for a double click before the re-render.
+  const once = useRef(singleFlight()).current;
 
   if (trip.error) return <ErrorLine error={trip.error} onRetry={() => void trip.refetch()} />;
   const t = trip.data;
@@ -69,8 +73,7 @@ function Money({ tripId }: { tripId: string }) {
   const paid = ended && (t.paymentStatus === "captured" || t.paymentStatus === "partially_refunded");
   const split = t.moneySplit;
 
-  const run = async (work: () => Promise<string>) => {
-    if (busy) return;
+  const run = (work: () => Promise<string>) => once(async () => {
     setBusy(true);
     setError(null);
     setNotice("");
@@ -80,10 +83,13 @@ function Money({ tripId }: { tripId: string }) {
       void queryClient.invalidateQueries({ queryKey: ["records"] });
     } catch (caught) {
       setError(caught);
+      // v0.18.82 (moneyBase.versionGuard): a stale version (someone changed the trip, or a second click) reloads the
+      // trip; the line under the buttons says "Someone else changed this record. It was reloaded; …".
+      if (isVersionMismatch(caught)) void queryClient.invalidateQueries({ queryKey: ["live", "trip", tripId] });
     } finally {
       setBusy(false);
     }
-  };
+  });
   const refundMinor = parseMinor(refund, currency);
   const payNegative = pay.trim().startsWith("-") || pay.trim().startsWith("−");
   const payAbs = parseMinor(pay.trim().replace(/^[-−+]/, ""), currency);
@@ -135,7 +141,7 @@ function Money({ tripId }: { tripId: string }) {
           <input aria-label={tr("Reason for the pay change")} value={payWhy} placeholder={tr("Why?")} onChange={(e) => setPayWhy(e.target.value)} disabled={!ended || !t.driverId} />
           <button type="button" className="dash-btn small" data-command="admin.trip.pay" disabled={busy || !ended || !t.driverId || !payMinor || !payWhy.trim()} title={!ended ? tr("The trip is not finished.") : undefined}
             onClick={() => void run(async () => {
-              await client.post(`${path}/driver-pay`, { change: { amountMinor: payMinor!, currency }, reason: payWhy.trim() });
+              await client.post(`${path}/driver-pay`, driverPayBody(t, payMinor!, currency, payWhy));
               setPay(""); setPayWhy("");
               return tr("Driver pay changed.");
             })}>{tr("Change pay")}</button>
