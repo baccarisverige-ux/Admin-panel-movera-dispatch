@@ -219,7 +219,6 @@ export const enA3DE = {
   "Drivers can ask for rides only towards their destination.": "Drivers can ask for rides only towards their destination.",
   "Drivers can ask for rides towards home": "Drivers can ask for rides towards home",
   "Drivers can leave the zone": "Drivers can leave the zone",
-  "Drivers can take their money before the run, for a fee.": "Drivers can take their money before the run, for a fee.",
   "Drivers finishing a ride": "Drivers finishing a ride",
   "Drivers finishing a ride get the next one": "Drivers finishing a ride get the next one",
   "Drivers for the bonus": "Drivers for the bonus",

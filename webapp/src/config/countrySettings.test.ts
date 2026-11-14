@@ -146,7 +146,7 @@ test("the exporters read every new setting instead of the defaults", () => {
   assert.equal(riderAppConfig("FR-PC", state).promoCap, null);
   // Finance can still switch a ticked method off for every car type in a zone.
   let finance = state.finance;
-  for (const category of rider.catalog.categories) for (const platform of ["ios", "android"] as const) finance = savePaymentPolicy(finance, { zoneId: "Z001", category: category.id, platform }, { card: false, apple: true, google: true, cash: true, wallet: true });
+  for (const category of rider.catalog.categories) for (const platform of ["ios", "android"] as const) finance = savePaymentPolicy(finance, { zoneId: "Z001", category: category.id, platform }, { card: false, apple: true, cash: true, wallet: true });
   assert.deepEqual(riderAppConfig("Z001", { ...state, finance }).paymentMethods, ["apple_pay"]);
 });
 

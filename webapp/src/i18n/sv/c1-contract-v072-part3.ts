@@ -740,7 +740,6 @@ export const svC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Payment methods are set per country in Settings › Payment methods (Pay in car, card, Apple Pay).": "Betalsätt ställs in per land i Inställningar › Betalsätt (Betala i bilen, kort, Apple Pay).",
   "Open Settings": "Öppna Inställningar",
   "Refunds to send by Swish or bank are in Finance › Payouts.": "Återbetalningar som ska skickas med Swish eller bank finns i Ekonomi › Utbetalningar.",
-  "Vouchers, reconciliation and bank accounts:": "Värdekoder, avstämning och bankkonton:",
   "{0} payments from the server. Amounts are in each record's own currency.": "{0} betalningar från servern. Beloppen är i varje posts egen valuta.",
   "VAT inside ({0}%)": "Moms ingår ({0} %)",
   "VAT inside": "Moms ingår",

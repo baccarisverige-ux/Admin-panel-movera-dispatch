@@ -70,8 +70,9 @@ const STREETS: Record<MarketId, string[]> = {
 };
 const OPERATOR: Record<MarketId, string> = { SE: "Movera Sverige AB", FR: "Movera France SAS", TN: "Movera Tunisie SARL" };
 const PAYMENT: Record<MarketId, string[]> = {
-  SE: ["Card", "Apple Pay", "Google Pay", "Cash", "Wallet"],
-  FR: ["Card", "Apple Pay", "Google Pay", "Cash", "Wallet"],
+  // Owner G8 (driver-g8.md:4): no Google Pay.
+  SE: ["Card", "Apple Pay", "Cash", "Wallet"],
+  FR: ["Card", "Apple Pay", "Cash", "Wallet"],
   TN: ["Cash", "Card", "Wallet"],
 };
 const SOURCE = ["Rider app", "Rider app", "Reservation", "Airport desk", "Business account"];
@@ -196,7 +197,7 @@ export function liveTrip(
   };
 }
 
-const METHOD: Record<string, string> = { cash: "Cash", card: "Card", wallet: "Wallet", apple_pay: "Apple Pay", google_pay: "Google Pay" };
+const METHOD: Record<string, string> = { cash: "Cash", card: "Card", wallet: "Wallet", apple_pay: "Apple Pay" };
 
 /**
  * Live build: the driver's current trip from the server's trip (places, category, fare, payment method, times).

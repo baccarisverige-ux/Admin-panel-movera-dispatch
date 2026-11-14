@@ -31,7 +31,7 @@ const TRANSLATING = new Set(["tr", "trx", "trn", "trSentences", "translate"]);
 /** Words that stay the same in every language: brand and product names, units, codes. */
 export const ALLOW = new Set([
   "Movera", "Movera Admin", "Google", "Google Maps", "MapLibre", "OpenStreetMap", "Stripe", "Swish", "Klarna", "Apple Pay",
-  "Google Pay", "Visa", "Mastercard", "iOS", "Android", "SMS", "API", "CSV", "JSON", "PDF", "QR", "ID", "OK", "km", "min",
+  "Visa", "Mastercard", "iOS", "Android", "SMS", "API", "CSV", "JSON", "PDF", "QR", "ID", "OK", "km", "min",
   "km/h", "kr", "SEK", "EUR", "TND", "€", "h", "s", "m", "x", "×", "WhatsApp", "FR", "SV", "EN",
   "SE", "TN", "XL", "GPS", "Svenska", "Français", "English", "VAT", "PIN", "IBAN", "BIC", "URL", "UTC", "ms", "MB", "kB", "px", "%", "SOS", "OTP",
 ]);

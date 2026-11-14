@@ -306,7 +306,6 @@ export const svA8S: Record<keyof typeof enA8S, string> = {
   "Small arrows show the expected effect of your changes.": "Små pilar visar den väntade effekten av dina ändringar.",
   "Small enough to go without a second admin.": "Litet nog för att klara sig utan en andra admin.",
   "Small offer cards while the driver waits on the map.": "Små erbjudandekort medan föraren väntar på kartan.",
-  "Smallest cash-out": "Minsta uttag",
   "Smart": "Smart",
   "Smart cancel check": "Smart avbokningskontroll",
   "Smart gap": "Smart mellanrum",

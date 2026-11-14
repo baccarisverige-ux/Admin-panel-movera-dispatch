@@ -738,7 +738,6 @@ export const enC1ContractV072Part3 = {
   "Payment methods are set per country in Settings › Payment methods (Pay in car, card, Apple Pay).": "Payment methods are set per country in Settings › Payment methods (Pay in car, card, Apple Pay).",
   "Open Settings": "Open Settings",
   "Refunds to send by Swish or bank are in Finance › Payouts.": "Refunds to send by Swish or bank are in Finance › Payouts.",
-  "Vouchers, reconciliation and bank accounts:": "Vouchers, reconciliation and bank accounts:",
   "{0} payments from the server. Amounts are in each record's own currency.": "{0} payments from the server. Amounts are in each record's own currency.",
   "VAT inside ({0}%)": "VAT inside ({0}%)",
   "VAT inside": "VAT inside",

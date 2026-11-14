@@ -1,4 +1,5 @@
 import type { DemoRecord } from "../api/seed.ts";
+import { formatMoney, market, marketOfZone } from "../markets/markets.ts";
 
 export type ReservationStatus = "waiting" | "booked" | "assigned" | "cancelled" | "completed" | "no_show";
 
@@ -374,6 +375,12 @@ export function answerAsk(
   };
 }
 
+/** BQ-O15 item 3: a raise amount (major units) with the zone currency's decimals: "500,00 kr", "20,500 DT". */
+function zoneMoneyText(record: DemoRecord, major: number): string {
+  const country = marketOfZone(record.zoneId)?.id ?? "SE";
+  return formatMoney(Math.round(major * market(country).minorUnits), country);
+}
+
 /** Raise the driver's fare so someone takes the ride. Paid from Movera's commission, never above the zone's highest raise. */
 export function raiseFare(
   book: ReservationBook,
@@ -382,19 +389,19 @@ export function raiseFare(
   max: number,
   actorId: string,
   nowIso: string,
-  unit = "",
-  /** BQ-A30: the highest raise as shown on live, with its currency's decimals (SEK 2, TND 3); the demo leaves it out. */
+  /** BQ-A30: the highest raise as shown on live, with its currency's decimals (SEK 2, TND 3). Left out (demo): the
+   * same shared formatter for the record's zone (BQ-O15 item 3, owner s06:1275-1276). */
   maxText?: string,
 ): { book: ReservationBook; error?: string } {
   const current = reservationOps(book, record);
   if (reservationClosed(record.status) || record.driverId) return { book, error: "Only a ride without a driver can get a higher fare." };
   if (!Number.isFinite(amount) || amount <= 0) return { book, error: "Write a raise above 0." };
-  if (amount > max) return { book, error: `The raise can be at most ${maxText ?? `${max}${unit ? ` ${unit}` : ""}`}.` };
+  if (amount > max) return { book, error: `The raise can be at most ${maxText ?? zoneMoneyText(record, max)}.` };
   return {
     book: withOps(book, record, {
       ...current,
       raise: { amount, by: actorId, at: nowIso },
-      activity: [`Driver fare raised by ${amount}${unit ? ` ${unit}` : ""} by ${actorId}`, ...current.activity].slice(0, 40),
+      activity: [`Driver fare raised by ${zoneMoneyText(record, amount)} by ${actorId}`, ...current.activity].slice(0, 40),
     }),
   };
 }

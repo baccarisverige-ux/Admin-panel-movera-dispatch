@@ -5,7 +5,7 @@ import { sv } from "../i18n/sv.ts";
 import { registerDictionary, setLanguage } from "../i18n/core.ts";
 import type { DemoRecord, LiveTripFacts } from "../api/seed.ts";
 import { formatMoney } from "../markets/markets.ts";
-import { emptyPayoutOps, payoutLines } from "./runs.ts";
+import { payoutLines } from "./runs.ts";
 import { liveReservationMoney } from "../reservations/raiseMoney.ts";
 
 /**
@@ -58,32 +58,32 @@ test("A26: the page on live has no fare × % and no beyond / left sums", () => {
   assert.match(page, /liveMoney\.showSums|showSums/, "the beyond / left lines are demo only");
 });
 
-const sched = emptyPayoutOps().schedules.SE;
 const payout = (zoneId: string, currency: string, over: Partial<NonNullable<DemoRecord["livePayout"]>>, amountMinor: number): DemoRecord => ({ id: "po_1", name: "2026-11-02 – 2026-11-08", phone: "", zoneId, status: "scheduled", driverId: "drv_1", fareOre: amountMinor, live: true, livePayout: { lines: [], source: "weekly", periodStart: "2026-11-02", periodEnd: "2026-11-08", tripCount: 3, currency, summary: null, ...over } } as DemoRecord);
 
 test("FU-A29-2 SEK: a live payout shows the 2 lines of Payout.summary only", () => {
-  const { lines, instant, cashMinor } = payoutLines(payout("Z001", "SEK", { summary: { driverGetsMinor: 43_700, moveraGetsMinor: 8_300 }, lines: [{ code: "trips", amountMinor: 52_000, count: 3 }] }, 43_700), sched, { minor: 9_000, trips: 3 });
+  const result = payoutLines(payout("Z001", "SEK", { summary: { driverGetsMinor: 43_700, moveraGetsMinor: 8_300 }, lines: [{ code: "trips", amountMinor: 52_000, count: 3 }] }, 43_700), { minor: 9_000, trips: 3 });
+  const { lines, cashMinor } = result;
   assert.deepEqual(lines.map((line) => line.label), ["Driver gets", "Movera gets"]);
   assert.equal(formatMoney(lines[0].minor, "SE"), "437,00 kr");
   assert.equal(formatMoney(lines[1].minor, "SE"), "83,00 kr");
-  assert.equal(instant, false, "no demo instant cash-out tag on live");
+  assert.equal("instant" in result, false, "no instant cash-out tag on live (BQ-V45: the option is removed)");
   assert.equal(cashMinor, 0, "no app-made cash line on live");
   assert.ok(!lines.some((line) => /%/.test(line.label)), "no % on live");
 });
 
 test("FU-A29-2 TND: summary in dinar keeps 3 decimals", () => {
-  const { lines } = payoutLines(payout("Z201", "TND", { summary: { driverGetsMinor: 4_000, moveraGetsMinor: 2_500 } }, 4_000), sched);
+  const { lines } = payoutLines(payout("Z201", "TND", { summary: { driverGetsMinor: 4_000, moveraGetsMinor: 2_500 } }, 4_000));
   assert.deepEqual(lines.map((line) => formatMoney(line.minor, "TN")), ["4.000 DT", "2.500 DT"]);
 });
 
 test("FU-A29-2: an older server (no summary) shows the server's own lines and Payout.amount, nothing made up", () => {
-  const { lines } = payoutLines(payout("Z001", "SEK", { lines: [{ code: "trips", amountMinor: 52_000, count: 3 }, { code: "cash_collected", amountMinor: -8_300 }] }, 43_700), sched);
+  const { lines } = payoutLines(payout("Z001", "SEK", { lines: [{ code: "trips", amountMinor: 52_000, count: 3 }, { code: "cash_collected", amountMinor: -8_300 }] }, 43_700));
   assert.deepEqual(lines.map((line) => [line.code ?? line.label, line.minor]), [["trips", 52_000], ["cash_collected", -8_300], ["Driver gets", 43_700]]);
   assert.ok(!lines.some((line) => /%|commission/i.test(line.label)), "no demo commission % line");
 });
 
 test("S1 SEK: an older server's negative Payout.amount reads The driver owes Movera + the amount without its sign", () => {
-  const { lines } = payoutLines(payout("Z001", "SEK", { lines: [{ code: "trips", amountMinor: 20_000, count: 1 }, { code: "cash_collected", amountMinor: -26_500 }] }, -6_500), sched);
+  const { lines } = payoutLines(payout("Z001", "SEK", { lines: [{ code: "trips", amountMinor: 20_000, count: 1 }, { code: "cash_collected", amountMinor: -26_500 }] }, -6_500));
   const total = lines.at(-1)!;
   assert.equal(total.label, "The driver owes Movera");
   assert.equal(total.kind, "total");
@@ -92,14 +92,14 @@ test("S1 SEK: an older server's negative Payout.amount reads The driver owes Mov
 });
 
 test("S1 TND: the dinar keeps 3 decimals on The driver owes Movera", () => {
-  const { lines } = payoutLines(payout("Z201", "TND", { lines: [{ code: "cash_collected", amountMinor: -2_500 }] }, -2_500), sched);
+  const { lines } = payoutLines(payout("Z201", "TND", { lines: [{ code: "cash_collected", amountMinor: -2_500 }] }, -2_500));
   assert.deepEqual([lines.at(-1)!.label, formatMoney(lines.at(-1)!.minor, "TN")], ["The driver owes Movera", "2.500 DT"]);
   registerDictionary("sv", sv);
   assert.ok(sv["The driver owes Movera"], "sv text exists");
 });
 
 test("FU-A29-2: a live payout without summary or lines has no lines (the card reads Not connected yet)", () => {
-  assert.deepEqual(payoutLines(payout("Z001", "SEK", {}, 43_700), sched).lines, []);
+  assert.deepEqual(payoutLines(payout("Z001", "SEK", {}, 43_700)).lines, []);
   const parts = readFileSync(new URL("./PayoutParts.tsx", import.meta.url), "utf8");
   assert.match(parts, /Not connected yet/, "the line-by-line card says Not connected yet when the server sent nothing");
 });

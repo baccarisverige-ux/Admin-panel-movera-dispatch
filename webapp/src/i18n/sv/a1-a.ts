@@ -323,7 +323,6 @@ export const svA1A: Record<keyof typeof enA1A, string> = {
   "At a set time": "Vid en viss tid",
   "At least 300 per hour": "Minst 300 per timme",
   "At least per hour{0}": "Minst per timme{0}",
-  "At most {0} {1} at a time.": "Högst {0} {1} åt gången.",
   "At most {0} drivers in one radar group.": "Högst {0} förare i en radargrupp.",
   "At or below": "Lika med eller under",
   "Audit": "Granskning",

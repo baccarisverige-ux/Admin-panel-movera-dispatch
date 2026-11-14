@@ -57,7 +57,7 @@ export function liveRaise(
   const minor = parseMinor(text, currency);
   if (minor === null || minor <= 0) return { error: "Write a raise above 0." };
   const units = market(country).minorUnits;
-  const checked = raiseFare(book, record, minor / units, max, actorId, nowIso, "", raiseMaxText(max, country));
+  const checked = raiseFare(book, record, minor / units, max, actorId, nowIso, raiseMaxText(max, country));
   if (checked.error) return { error: checked.error };
   if (!liveRaiseOpen(record)) return { error: "Only a ride without a driver can get a higher fare." };
   return { call: reservationCall("raise", trip, { amountMinor: minor, reason: note }) };

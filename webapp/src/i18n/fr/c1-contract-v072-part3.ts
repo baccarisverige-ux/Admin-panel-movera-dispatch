@@ -740,7 +740,6 @@ export const frC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Payment methods are set per country in Settings › Payment methods (Pay in car, card, Apple Pay).": "Les moyens de paiement se règlent par pays dans Paramètres › Moyens de paiement (Payer à bord, carte, Apple Pay).",
   "Open Settings": "Ouvrir les paramètres",
   "Refunds to send by Swish or bank are in Finance › Payouts.": "Les remboursements à envoyer par Swish ou virement sont dans Finances › Versements.",
-  "Vouchers, reconciliation and bank accounts:": "Bons, rapprochement et comptes bancaires :",
   "{0} payments from the server. Amounts are in each record's own currency.": "{0} paiements du serveur. Les montants sont dans la devise de chaque ligne.",
   "VAT inside ({0}%)": "TVA incluse ({0} %)",
   "VAT inside": "TVA incluse",

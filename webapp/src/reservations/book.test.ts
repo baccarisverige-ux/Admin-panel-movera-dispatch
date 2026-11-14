@@ -24,6 +24,7 @@ import {
   zonedLocalValue,
 } from "./book.ts";
 import type { DemoRecord } from "../api/seed.ts";
+import { formatMoney } from "../markets/markets.ts";
 
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
@@ -130,9 +131,9 @@ assert(!askDriver(asked.book, record, "D3", "daniel", 60, "2026-10-06T10:01:01.0
 assert(askDriver(book, { ...record, status: "assigned", driverId: "D9" }, "D1", "daniel", 60, t0).error, "a ride with a driver cannot be asked again");
 
 // Raise the driver's fare for a ride nobody takes.
-const raised = raiseFare(book, record, 120, 500, "daniel", t0, "kr");
+const raised = raiseFare(book, record, 120, 500, "daniel", t0);
 assert(!raised.error && reservationOps(raised.book, record).raise?.amount === 120, "the raise is saved");
-assert(raiseFare(book, record, 600, 500, "daniel", t0, "kr").error === "The raise can be at most 500 kr.", "never over the highest raise");
+assert(raiseFare(book, record, 600, 500, "daniel", t0).error === `The raise can be at most ${formatMoney(50_000, "SE")}.`, "never over the highest raise (BQ-O15: with the currency's decimals)");
 assert(raiseFare(book, record, 0, 500, "daniel", t0).error === "Write a raise above 0.", "a raise must be above 0");
 assert(raiseFare(book, { ...record, driverId: "D1", status: "assigned" }, 50, 500, "daniel", t0).error, "a ride with a driver gets no raise");
 

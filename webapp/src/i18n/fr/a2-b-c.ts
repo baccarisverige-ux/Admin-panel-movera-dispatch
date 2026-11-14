@@ -203,7 +203,6 @@ export const frA2BC: Record<keyof typeof enA2BC, string> = {
   "Cash allowed": "Espèces autorisées",
   "Cash collected by driver": "Espèces encaissées par le chauffeur",
   "Cash received": "Espèces reçues",
-  "Cash-out fee": "Frais de retrait",
   "Cash, Reservation, extras like a child seat, and a fare boost.": "Espèces, réservation, suppléments comme un siège enfant, et un boost du tarif.",
   "Categories": "Catégories",
   "Categories {0}": "Catégories {0}",

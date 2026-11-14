@@ -323,7 +323,6 @@ export const frA1A: Record<keyof typeof enA1A, string> = {
   "At a set time": "À une heure précise",
   "At least 300 per hour": "Au moins 300 par heure",
   "At least per hour{0}": "Au moins par heure{0}",
-  "At most {0} {1} at a time.": "Au plus {0} {1} à la fois.",
   "At most {0} drivers in one radar group.": "Au plus {0} chauffeurs dans un groupe radar.",
   "At or below": "Égal ou inférieur",
   "Audit": "Audit",

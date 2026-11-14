@@ -221,7 +221,6 @@ export const svA3DE: Record<keyof typeof enA3DE, string> = {
   "Drivers can ask for rides only towards their destination.": "Förare kan be om resor bara mot sitt mål.",
   "Drivers can ask for rides towards home": "Förare kan be om resor hemåt",
   "Drivers can leave the zone": "Förare får lämna zonen",
-  "Drivers can take their money before the run, for a fee.": "Förare kan ta ut sina pengar före körningen, mot en avgift.",
   "Drivers finishing a ride": "Förare som avslutar en resa",
   "Drivers finishing a ride get the next one": "Förare som avslutar en resa får nästa",
   "Drivers for the bonus": "Förare för bonusen",

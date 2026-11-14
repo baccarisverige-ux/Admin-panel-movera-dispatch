@@ -59,8 +59,9 @@ const CATEGORY_SHARE: [string, string, number][] = [
 ];
 
 const METHOD_SHARE: Record<MarketId, [string, string, number][]> = {
-  SE: [["card", "Card", 0.55], ["apple", "Apple Pay", 0.22], ["google", "Google Pay", 0.1], ["wallet", "Wallet", 0.07], ["cash", "Cash", 0.06]],
-  FR: [["card", "Card", 0.58], ["apple", "Apple Pay", 0.22], ["google", "Google Pay", 0.12], ["wallet", "Wallet", 0.05], ["cash", "Cash", 0.03]],
+  // Owner G8 (driver-g8.md:4): no Google Pay; its old demo share is in Card, so the shares still add up to 1.
+  SE: [["card", "Card", 0.65], ["apple", "Apple Pay", 0.22], ["wallet", "Wallet", 0.07], ["cash", "Cash", 0.06]],
+  FR: [["card", "Card", 0.7], ["apple", "Apple Pay", 0.22], ["wallet", "Wallet", 0.05], ["cash", "Cash", 0.03]],
   TN: [["cash", "Cash", 0.48], ["card", "Card", 0.35], ["wallet", "Wallet", 0.17]],
 };
 
