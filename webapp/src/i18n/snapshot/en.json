@@ -7644,7 +7644,7 @@
 ["Tip rules","Tip rules"],
 ["The whole tip goes to the driver.","The whole tip goes to the driver."],
 ["Allow cash tips after the trip","Allow cash tips after the trip"],
-["Off: a cash tip is only possible in the car, in the first 5 minutes after the trip.","Off: a cash tip is only possible in the car, in the first 5 minutes after the trip."],
+["Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.","Off: a cash tip is only possible in the car, in the first {0} minutes after the trip."],
 ["Rider may type an amount","Rider may type an amount"],
 ["Highest typed tip","Highest typed tip"],
 ["Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to.","Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to."],
@@ -8989,4 +8989,7 @@
 ["The last step must be \"Above\".","The last step must be \"Above\"."],
 ["The \"up to\" price must be more than 0.","The \"up to\" price must be more than 0."],
 ["Each \"up to\" price must be higher than the step before.","Each \"up to\" price must be higher than the step before."],
-["{0} app fee","{0} app fee"]]
+["{0} app fee","{0} app fee"],
+["Cash tip time in the car","Cash tip time in the car"],
+["Cash tip time in the car: {0} min","Cash tip time in the car: {0} min"],
+["The driver gets a notice with the amount taken from his pay and this reason.","The driver gets a notice with the amount taken from his pay and this reason."]]

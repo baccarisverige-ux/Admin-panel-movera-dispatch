@@ -11,7 +11,7 @@ import { MARKETS, marketOfZone, standardZoneId, zoneById, type MarketId } from "
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, draftRules, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
-import { COUNTRY_SETTINGS_KEY, personLimitsOf, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, walletFirstChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, personLimitsOf, TIP_CASH_IN_CAR_MINUTES, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, walletFirstChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
@@ -372,8 +372,11 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
 
   /** A served rider document's tip rules (contract RiderAppConfig.tipRules); absent = both off (the apps' default). */
   function tipRulesOf(doc: Doc | null, market: (typeof MARKETS)[number], base: CountrySettings["tipRules"]): CountrySettings["tipRules"] {
-    const raw = (doc as { tipRules?: { cashAfterTrip?: unknown; customAmount?: unknown; customMax?: { amountMinor?: number } } } | null)?.tipRules;
-    return { cashAfterTrip: raw?.cashAfterTrip === true, customAmount: raw?.customAmount === true, customMax: typeof raw?.customMax?.amountMinor === "number" ? raw.customMax.amountMinor / market.minorUnits : base.customMax };
+    const raw = (doc as { tipRules?: { cashAfterTrip?: unknown; customAmount?: unknown; customMax?: { amountMinor?: number }; cashInCarMinutes?: unknown } } | null)?.tipRules;
+    // v0.18.91 job C8: the cash-tip time in the car the zone serves; missing / out of range = the default (5).
+    const minutes = raw?.cashInCarMinutes;
+    const cashInCarMinutes = typeof minutes === "number" && Number.isInteger(minutes) && minutes >= TIP_CASH_IN_CAR_MINUTES.min && minutes <= TIP_CASH_IN_CAR_MINUTES.max ? minutes : TIP_CASH_IN_CAR_MINUTES.default;
+    return { cashAfterTrip: raw?.cashAfterTrip === true, customAmount: raw?.customAmount === true, customMax: typeof raw?.customMax?.amountMinor === "number" ? raw.customMax.amountMinor / market.minorUnits : base.customMax, cashInCarMinutes };
   }
 
   /**

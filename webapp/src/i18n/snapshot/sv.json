@@ -7644,7 +7644,7 @@
 ["Tip rules","Regler för dricks"],
 ["The whole tip goes to the driver.","Hela dricksen går till föraren."],
 ["Allow cash tips after the trip","Tillåt kontant dricks efter resan"],
-["Off: a cash tip is only possible in the car, in the first 5 minutes after the trip.","Av: kontant dricks går bara i bilen, de första 5 minuterna efter resan."],
+["Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.","Av: kontant dricks går bara i bilen, de första {0} minuterna efter resan."],
 ["Rider may type an amount","Resenären får skriva ett eget belopp"],
 ["Highest typed tip","Högsta egna dricks"],
 ["Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to.","Inte sparat: Movera är inte öppet i {0} än, så servern har inga zoner där att skicka betalmetoder till."],
@@ -8989,4 +8989,7 @@
 ["The last step must be \"Above\".","Det sista steget måste vara \"Över\"."],
 ["The \"up to\" price must be more than 0.","\"Upp till\"-priset måste vara mer än 0."],
 ["Each \"up to\" price must be higher than the step before.","Varje \"upp till\"-pris måste vara högre än steget före."],
-["{0} app fee","{0} appavgift"]]
+["{0} app fee","{0} appavgift"],
+["Cash tip time in the car","Tid för kontant dricks i bilen"],
+["Cash tip time in the car: {0} min","Tid för kontant dricks i bilen: {0} min"],
+["The driver gets a notice with the amount taken from his pay and this reason.","Föraren får ett meddelande med beloppet som dras från hans ersättning och denna orsak."]]

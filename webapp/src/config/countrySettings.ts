@@ -87,7 +87,13 @@ export function personLimitsOf(raw: unknown): PersonLimits {
 export const WALLET_CREDIT_MAX: Record<MarketId, number> = { SE: 2900, FR: 250, TN: 800 };
 /** contract.json#configDefaults.driverPayChangeMax (major units); v0.18.82 TN 100 DT (owner Q-S5-6, 2026-11-13: it limits the change; was 300). */
 export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 100 };
-export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number };
+export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number; cashInCarMinutes: number };
+/**
+ * Job C8 (contract v0.18.91 finish.tips.cashInCarAdmin; owner "Anything admin can adjust becomes an admin setting"): the
+ * cash-tip time in the car, RiderAppConfig.tipRules.cashInCarMinutes — configDefaults.tipRules (5) and settings_ranges (0–60).
+ */
+export const TIP_CASH_IN_CAR_MINUTES = { default: 5, min: 0, max: 60 } as const;
+const cashInCarOf = (value: unknown, fallback: number): number => (typeof value === "number" && Number.isInteger(value) && value >= TIP_CASH_IN_CAR_MINUTES.min && value <= TIP_CASH_IN_CAR_MINUTES.max ? value : fallback);
 export const TIP_FLAGS = ["cashAfterTrip", "customAmount"] as const;
 export type MixedTipRules = Partial<Record<(typeof TIP_FLAGS)[number], string[]>>;
 /** contract.json#configDefaults.tipRules.customMax (major units); v0.18.82 TN 30 DT (owner Q-S5-6; was 60). */
@@ -151,7 +157,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, true])) as Record<ZonePaymentMethod, boolean>,
     walletFirst: true,
     languages: { rider: defaults.defaultLanguage, driver: defaults.defaultLanguage, admin: defaults.defaultLanguage },
-    tipRules: { cashAfterTrip: false, customAmount: false, customMax: TIP_CUSTOM_MAX[country] },
+    tipRules: { cashAfterTrip: false, customAmount: false, customMax: TIP_CUSTOM_MAX[country], cashInCarMinutes: TIP_CASH_IN_CAR_MINUTES.default },
     driverPayChangeMax: DRIVER_PAY_CHANGE_MAX[country],
     personLimits: { ...PERSON_LIMITS_DEFAULT },
     onTripMinDonePct: ON_TRIP_MIN_DONE_PCT_DEFAULT,
@@ -267,6 +273,7 @@ function completeTipRules(stored: unknown, base: TipRules): TipRules {
     cashAfterTrip: typeof raw.cashAfterTrip === "boolean" ? raw.cashAfterTrip : base.cashAfterTrip,
     customAmount: typeof raw.customAmount === "boolean" ? raw.customAmount : base.customAmount,
     customMax: finite(raw.customMax) ? raw.customMax : base.customMax,
+    cashInCarMinutes: cashInCarOf(raw.cashInCarMinutes, base.cashInCarMinutes),
   };
 }
 
@@ -364,6 +371,7 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   if (before.driverBonusLimit !== after.driverBonusLimit) lines.push(`Driver bonus limit: ${short(before.driverBonusLimit)} → ${short(after.driverBonusLimit)} ${symbol}`);
   // Live G8 round 3 item 3: in the admin's language (it was English in the SV and FR panels).
   if (JSON.stringify(before.tipRules) !== JSON.stringify(after.tipRules) || JSON.stringify(before.mixedTipRules ?? {}) !== JSON.stringify(after.mixedTipRules ?? {})) lines.push(tr("Tip rules: cash after the trip {0}, typed amount {1} (max {2})", [tr(after.tipRules.cashAfterTrip ? "on" : "off"), tr(after.tipRules.customAmount ? "on" : "off"), short(after.tipRules.customMax)]));
+  if (before.tipRules.cashInCarMinutes !== after.tipRules.cashInCarMinutes) lines.push(tr("Cash tip time in the car: {0} min", [String(after.tipRules.cashInCarMinutes)]));
   for (const method of ZONE_PAYMENT_METHODS) if (before.mixedMethods?.[method]?.length && !after.mixedMethods?.[method]?.length) lines.push(`${PAYMENT_METHOD_LABEL[method]}: mixed → ${after.paymentMethods[method] ? "on" : "off"}`);
     else if (before.paymentMethods[method] !== after.paymentMethods[method]) lines.push(`${PAYMENT_METHOD_LABEL[method]}: ${before.paymentMethods[method] ? "on" : "off"} → ${after.paymentMethods[method] ? "on" : "off"}`);
   for (const app of APP_IDS) if (before.languages[app] !== after.languages[app]) lines.push(`${APP_LABEL[app]} default language: ${before.languages[app]} → ${after.languages[app]}`);

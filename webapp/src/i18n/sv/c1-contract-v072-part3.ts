@@ -704,7 +704,7 @@ export const svC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Tip rules": "Regler för dricks",
   "The whole tip goes to the driver.": "Hela dricksen går till föraren.",
   "Allow cash tips after the trip": "Tillåt kontant dricks efter resan",
-  "Off: a cash tip is only possible in the car, in the first 5 minutes after the trip.": "Av: kontant dricks går bara i bilen, de första 5 minuterna efter resan.",
+  "Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.": "Av: kontant dricks går bara i bilen, de första {0} minuterna efter resan.",
   "Rider may type an amount": "Resenären får skriva ett eget belopp",
   "Highest typed tip": "Högsta egna dricks",
   "Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to.": "Inte sparat: Movera är inte öppet i {0} än, så servern har inga zoner där att skicka betalmetoder till.",

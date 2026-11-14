@@ -337,8 +337,9 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     // v0.18.33 (fix job 5, owner Q6): Settings › Payment methods "Use wallet first" (default on); the rider's per-ride switch starts on.
     wallet: { usedFirst: base.settings.walletFirst !== false },
     tips: amountOptions(base.settings.tips, base.currency),
-    // v0.18.10 (G8): Pricing › Tips & limits; cash tips only in the car (5 minutes) unless cashAfterTrip.
-    tipRules: { cashAfterTrip: base.settings.tipRules.cashAfterTrip, cashInCarMinutes: 5, customAmount: base.settings.tipRules.customAmount, customMax: wire(base.settings.tipRules.customMax, base.currency) },
+    // v0.18.10 (G8): Pricing › Tips & limits; cash tips only in the car unless cashAfterTrip. v0.18.91 job C8: the time in
+    // the car is the admin's (per zone or the country standard, default 5), no longer a fixed 5.
+    tipRules: { cashAfterTrip: base.settings.tipRules.cashAfterTrip, cashInCarMinutes: base.settings.tipRules.cashInCarMinutes, customAmount: base.settings.tipRules.customAmount, customMax: wire(base.settings.tipRules.customMax, base.currency) },
     raiseSteps: amountOptions(base.settings.raiseSteps, base.currency),
     /** Owner Q10: set per country in Pricing › Tips & limits, in local money; null = no cap. */
     promoCap: base.settings.promoCap === null ? null : wire(base.settings.promoCap, base.currency),
