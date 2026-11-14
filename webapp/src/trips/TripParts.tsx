@@ -14,6 +14,7 @@ import {
   addEntry,
   callSummary,
   decide,
+  moveraCommissionShown,
   isFlagged,
   needsApproval,
   withStatus,
@@ -50,7 +51,7 @@ function LiveSplitView({ split, money }: { split: MoneySplit; money: (minor: num
       {split.state === "estimate" ? <p className="dx-note">{tr("The trip is not finished. These numbers are an estimate from the price at booking.")}</p> : null}
       <dl className="op-split-lines">
         {line(tr("Trip price"), facts.fare, "split-fare")}
-        {line(tr("Movera commission"), facts.commission, "split-commission")}
+        {line(tr("Movera commission"), moveraCommissionShown(facts), "split-commission")}
         {line(tr("Driver earnings"), facts.driverEarnings, "split-driver-earnings")}
         {facts.pickupPay !== null ? line(tr("Driver pickup pay · paid by Movera"), facts.pickupPay, "split-pickup-pay") : null}
         {facts.driverBonus !== null ? line(tr("Money added for the driver (paid by Movera)"), facts.driverBonus, "split-driver-bonus") : null}

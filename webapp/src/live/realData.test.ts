@@ -176,3 +176,31 @@ test("G2c: the live Content page reads and publishes the server's content, so it
   const { connectionOf } = await import("./connection.ts");
   assert.equal(connectionOf("content").state, "connected");
 });
+
+/**
+ * Owner 2026-11-13 "Movera commission is how much movera keep !" (contract v0.18.87 moneyBase.commission.keepsRule):
+ * the live trip page's "Movera commission" row (TripParts.tsx LiveSplitView) shows what Movera keeps NOW =
+ * moneySplit.movera when the server sends who-gets-what, the same number as "Movera keeps"; the stored
+ * TripProjection.commission stays what Movera kept at the trip's end and is higher after a later bonus.
+ */
+test("live: Movera commission row = moneySplit.movera (Movera keeps) after a bonus added once the trip ended", async () => {
+  const { moveraCommissionShown } = await import("../trips/file.ts");
+  setLiveData(true);
+  // 300 kr trip, driver 240 kr, commission 60 kr at the end; then Movera adds 25 kr for the driver: Movera keeps 35 kr.
+  const trip = tripRecord({ ...TRIP, tripId: "trp_mc", moneySplit: { riderPaid: SEK(30000), driverTotal: SEK(26500), movera: SEK(3500), debtCollected: SEK(0), refunded: SEK(0) } });
+  const split = moneySplit(trip, null, true, []);
+  assert.equal(split.moveraKeeps, 3500);
+  assert.equal(moveraCommissionShown(split.live!), 3500, "the row equals Movera keeps, not the stored 60 kr");
+  assert.equal(moveraCommissionShown(split.live!), split.moveraKeeps);
+  // An older server without who-gets-what: the server's commission as sent; nothing worked out.
+  assert.equal(moveraCommissionShown(moneySplit(tripRecord(TRIP), null, true, []).live!), 6000);
+  assert.equal(moveraCommissionShown({ commission: null, split: null }), null);
+  const page = (await import("node:fs")).readFileSync(new URL("../trips/TripParts.tsx", import.meta.url), "utf8");
+  const row = page.split("\n").find((line) => line.includes('"split-commission"')) ?? "";
+  assert.match(row, /moveraCommissionShown\(facts\)/);
+  // Payments (PaymentPage "Movera keeps", Payments desk "Movera"): the same number.
+  remember([trip]);
+  const { paySplit } = await import("../payments/desk.ts");
+  assert.equal(paySplit(30000, "SE", "trp_mc").movera, 3500);
+  setLiveData(false);
+});

@@ -153,6 +153,17 @@ export type MoneySplit = {
 
 const LIVE_ONBOARD = new Set(["accepted", "driver_to_pickup", "arrived", "rider_onboard", "in_trip", "approaching_dropoff", "requested", "searching", "offered"]);
 
+/**
+ * Owner 2026-11-13 "Movera commission is how much movera keep !" (contract v0.18.87 moneyBase.commission.keepsRule): the
+ * live "Movera commission" row is what Movera keeps NOW = moneySplit.movera (the same number as "Movera keeps"; a later
+ * bonus or pay change is already off it). The stored TripProjection.commission is what Movera kept at the trip's end
+ * and is used only when the server sends no who-gets-what. Never worked out here; null when the server sends neither.
+ */
+export function moveraCommissionShown(facts: Pick<LiveTripFacts, "commission" | "split">): number | null {
+  if (facts.split) return facts.split.movera;
+  return facts.commission ?? null;
+}
+
 /** A live trip's split, only from the server's lines (fare, commission, driver earnings, pickup pay, bonus). */
 export function liveMoneySplit(trip: DemoRecord, facts: LiveTripFacts): MoneySplit {
   const country = countryOf(trip.zoneId);
