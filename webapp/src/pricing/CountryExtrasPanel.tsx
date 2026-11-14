@@ -228,6 +228,18 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               {/* Fix job 0 (owner A2-1 "Per country, in Pricing"): one limit per country, set on the country Standard; a zone shows it read-only. */}
               <NumberField label={tr("Largest Add money to wallet at one time")} value={shown.walletCreditMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit || !onStandard} changed={shown.walletCreditMax !== saved.walletCreditMax} onChange={(walletCreditMax) => edit({ walletCreditMax })} />
               {onStandard ? null : <small data-testid="wallet-credit-max-country">{tr("One limit per country: change it on the country Standard.")}</small>}
+              {/* S5 J9 (v0.18.84 debtModel; owner "Any amount", 2026-11-13 14:22 / 14:32 / 14:54): country Standard only, like the wallet limit. */}
+              <NumberField label={tr("Max rider debt")} value={shown.maxRiderDebt} unit={symbol} step={moneyStep(country)} disabled={!canEdit || !onStandard} changed={shown.maxRiderDebt !== saved.maxRiderDebt} onChange={(maxRiderDebt) => edit({ maxRiderDebt })} />
+              <small>{tr("At or above it the rider cannot book a trip paid in the car. Any amount.")}</small>
+              <div className="cx-owes-limit" data-testid="driver-owes-limit">
+                <label className="mini-switch">
+                  <input type="checkbox" aria-label={tr("Driver owes-limit on")} checked={shown.driverOwesLimit.enabled} disabled={!canEdit || !onStandard} onChange={(event) => edit({ driverOwesLimit: { ...shown.driverOwesLimit, enabled: event.target.checked } })} />
+                  <span aria-hidden="true"><i /></span>
+                  {tr("Driver owes-limit")}
+                </label>
+                <NumberField label={tr("Driver owes-limit")} value={shown.driverOwesLimit.max ?? 0} unit={symbol} step={moneyStep(country)} disabled={!canEdit || !onStandard} invalid={shown.driverOwesLimit.enabled && !(shown.driverOwesLimit.max && shown.driverOwesLimit.max > 0)} changed={JSON.stringify(shown.driverOwesLimit) !== JSON.stringify(saved.driverOwesLimit)} onChange={(max) => edit({ driverOwesLimit: { ...shown.driverOwesLimit, max: max > 0 ? max : null } })} />
+                <small>{tr("Over the limit the driver gets no cash trips; he can still go online.")}</small>
+              </div>
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
           </div>

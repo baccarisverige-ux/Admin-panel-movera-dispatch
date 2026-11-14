@@ -379,7 +379,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean };
 
 /** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
@@ -402,6 +402,10 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     ...(base?.["limits"] || input.personLimits ? { limits: { ...((base?.["limits"] as Record<string, unknown> | undefined) ?? {}), ...(input.personLimits ?? {}) } } : {}),
     // v0.18.29 A2 (fix job 0) (owner G12 Q-D): the largest single Add money to wallet.
     ...(input.walletCreditMax !== undefined ? { walletCreditMax: toMinor(input.walletCreditMax, currency) } : {}),
+    // S5 J9 (v0.18.84 debtModel): Max rider debt and the driver owes-limit, on the country standard only. The document is
+    // rebuilt from these inputs, so the standard's save always sends both (a field left out is dropped).
+    ...(input.maxRiderDebt !== undefined ? { maxRiderDebt: toMinor(input.maxRiderDebt, currency) } : {}),
+    ...(input.driverOwesLimit ? { driverOwesLimit: { enabled: input.driverOwesLimit.enabled, max: input.driverOwesLimit.max !== null && input.driverOwesLimit.max > 0 ? toMinor(input.driverOwesLimit.max, currency) : null } } : {}),
     // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.
     ...(input.calls ? { calls: { ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
     // v0.18.56 §78 (G9 part 2): Tips & limits › Chat; a save without it keeps the stored block.

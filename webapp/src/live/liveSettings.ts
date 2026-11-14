@@ -12,7 +12,7 @@ import { MARKETS, hasLiveMarketZones, marketOfZone, standardZoneId, zoneById, ty
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, draftRules, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
-import { COUNTRY_SETTINGS_KEY, personLimitsOf, TIP_CASH_IN_CAR_MINUTES, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, walletFirstChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, debtSettingsOfRules, personLimitsOf, TIP_CASH_IN_CAR_MINUTES, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, walletFirstChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
@@ -344,6 +344,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       onTripMinDonePct: (() => { const v = (document as { onTripOffers?: { minRouteDonePct?: unknown } }).onTripOffers?.minRouteDonePct; return typeof v === "number" && v >= 0 && v <= 100 ? v : 70; })(),
       // Fix job 0 (owner A2-1): read on the Standard; the server ignores a zone's own value.
       ...((document as { walletCreditMax?: { amountMinor: number } }).walletCreditMax ? { walletCreditMax: (document as { walletCreditMax: { amountMinor: number } }).walletCreditMax.amountMinor / market.minorUnits } : {}),
+      // S5 J9 (v0.18.84): Max rider debt and the driver owes-limit (the Standard's; missing or another currency = default).
+      ...debtSettingsOfRules(document, market.id as MarketId),
       ...((document as { driverPayChangeMax?: { amountMinor: number } }).driverPayChangeMax ? { driverPayChangeMax: (document as { driverPayChangeMax: { amountMinor: number } }).driverPayChangeMax.amountMinor / market.minorUnits } : {}),
     };
   }
@@ -692,7 +694,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const current = await draft("country_rules", id, true);
       const facts = zoneFacts(id);
       const hardMax = driverBonusHardMax(market.id as MarketId);
-      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct, chainLateFreeCancelMin: next.chainLateFreeCancelMin, calls: next.calls, chat: next.chat, dontMatchAgain: next.dontMatchAgain, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax, emergencyNumbers: next.emergencyNumbers, sosContactsSms: next.sosContactsSms } : {}) }, current?.document ?? null);
+      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct, chainLateFreeCancelMin: next.chainLateFreeCancelMin, calls: next.calls, chat: next.chat, dontMatchAgain: next.dontMatchAgain, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax, maxRiderDebt: next.maxRiderDebt, driverOwesLimit: next.driverOwesLimit, emergencyNumbers: next.emergencyNumbers, sosContactsSms: next.sosContactsSms } : {}) }, current?.document ?? null);
       await savePublish(http, "country_rules", id, current, doc);
       drafts.delete(key("country_rules", id));
       standardMarks.set("country_rules", id, false);
