@@ -5,6 +5,7 @@ import { tr } from "../i18n";
 import { useLiveSession, useLiveSessionMaybe } from "./LiveSessionContext";
 import { liveMoney, parseMinor } from "./format";
 import { driverPayBody, singleFlight } from "./moneyGuard";
+import { TRIP_ENDED, driverPayBox } from "../trips/driverPayBox";
 import { ErrorLine, isVersionMismatch } from "./ui";
 
 /**
@@ -31,7 +32,6 @@ type MoneyTrip = {
   finish?: { endedEarly: boolean; endedBy?: string; reasonCode?: string; repriced?: boolean };
 };
 
-const ENDED = ["completed", "cancelled_by_rider", "cancelled_by_driver", "cancelled_by_admin", "cancelled_by_system", "no_show", "expired", "failed"];
 
 function lineLabel(code: string): string {
   if (code === "trip") return tr("Trip");
@@ -69,7 +69,7 @@ function Money({ tripId }: { tripId: string }) {
   const t = trip.data;
   if (!t) return <p className="state-line">{tr("Loading.")}</p>;
   const currency = t.fare.currency;
-  const ended = ENDED.includes(t.status);
+  const ended = TRIP_ENDED.includes(t.status);
   const paid = ended && (t.paymentStatus === "captured" || t.paymentStatus === "partially_refunded");
   const split = t.moneySplit;
 
@@ -133,7 +133,9 @@ function Money({ tripId }: { tripId: string }) {
         </div>
       </div>
 
-      <div className="op-action blue">
+      {/* BQ-A28 (owner "screens must be simple"): only after the end, when the +/− change works; during the trip the page
+          shows the "Driver pay" box (J6a) instead, never both. */}
+      {driverPayBox(t.status, Boolean(t.driverId)) === "change" ? <div className="op-action blue">
         <h4><Wallet size={15} aria-hidden="true" /> {tr("Change the driver's pay")}</h4>
         <p className="op-help">{tr("Use + to add, − to take away.")}</p>
         <div className="op-inline wrap">
@@ -146,7 +148,7 @@ function Money({ tripId }: { tripId: string }) {
               return tr("Driver pay changed.");
             })}>{tr("Change pay")}</button>
         </div>
-      </div>
+      </div> : null}
 
       <div className="op-action grey">
         <h4><Receipt size={15} aria-hidden="true" /> {tr("Resend receipt")}</h4>

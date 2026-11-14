@@ -99,10 +99,12 @@ const TEXTS = [
   "Trip adjusted (driver pay, waiting or fee)",
 ];
 
-test("J6a: every new text is in sv, fr and en (the field is \"Driver pay\" / \"Förarlön\" / \"Rémunération du chauffeur\")", () => {
+// BQ-A28 (owner 2026-11-14, one wording): sv "Förarlön" became "Förarersättning", fr "Rémunération chauffeur" became
+// "Rémunération du chauffeur", the same word as the after-the-end "Change the driver's pay" box.
+test("J6a: every new text is in sv, fr and en (the field is \"Driver pay\" / \"Förarersättning\" / \"Rémunération du chauffeur\")", () => {
   for (const [lang, dictionary] of [["en", en], ["fr", fr], ["sv", sv]] as const) {
     for (const key of TEXTS) assert.ok((dictionary as Record<string, string>)[key], `${lang}: ${key}`);
   }
-  assert.equal((sv as Record<string, string>)["Driver pay"], "Förarlön");
-  assert.equal((fr as Record<string, string>)["Driver pay"], "Rémunération chauffeur");
+  assert.equal((sv as Record<string, string>)["Driver pay"], "Förarersättning");
+  assert.equal((fr as Record<string, string>)["Driver pay"], "Rémunération du chauffeur");
 });

@@ -152,7 +152,7 @@ export const svC1ContractV072Part4: Record<keyof typeof enC1ContractV072Part4, s
   "Payment or refund": "Betalning eller återbetalning",
   "Account and login": "Konto och inloggning",
   "The app does not work": "Appen fungerar inte",
-  "Driver pay": "Förarlön",
+  "Driver pay": "Förarersättning",
   "Refund done": "Återbetalning klar",
   "Lost item: asked the driver": "Borttappat föremål: föraren tillfrågad",
   "High demand": "Hög efterfrågan",

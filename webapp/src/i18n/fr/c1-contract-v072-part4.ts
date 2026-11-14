@@ -152,7 +152,7 @@ export const frC1ContractV072Part4: Record<keyof typeof enC1ContractV072Part4, s
   "Payment or refund": "Paiement ou remboursement",
   "Account and login": "Compte et connexion",
   "The app does not work": "L’application ne fonctionne pas",
-  "Driver pay": "Rémunération chauffeur",
+  "Driver pay": "Rémunération du chauffeur",
   "Refund done": "Remboursement effectué",
   "Lost item: asked the driver": "Objet perdu : chauffeur contacté",
   "High demand": "Forte demande",

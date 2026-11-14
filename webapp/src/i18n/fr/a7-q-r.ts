@@ -112,7 +112,7 @@ export const frA7QR: Record<keyof typeof enA7QR, string> = {
   "Refunds": "Remboursements",
   "Refunds & vouchers": "Remboursements et bons",
   "Refunds above {0} {1} need a second admin to approve ({2}).": "Les remboursements au-delà de {0} {1} doivent être approuvés par un second administrateur ({2}).",
-  "Refunds and driver pay changes above the amount wait until another admin approves them. One limit per country, the same everywhere (Q25).": "Les remboursements et changements de rémunération chauffeur au-delà du montant attendent l’approbation d’un autre administrateur. Une limite par pays, la même partout (Q25).",
+  "Refunds and driver pay changes above the amount wait until another admin approves them. One limit per country, the same everywhere (Q25).": "Les remboursements et changements de rémunération du chauffeur au-delà du montant attendent l’approbation d’un autre administrateur. Une limite par pays, la même partout (Q25).",
   "Refunds waiting for approval": "Remboursements en attente d’approbation",
   "Refunds: second admin": "Remboursements : second administrateur",
   "Refunds: when a second admin is needed": "Remboursements : quand un second administrateur est nécessaire",

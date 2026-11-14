@@ -195,7 +195,7 @@ export const svB8DriverMoneySupplyDemand: Record<keyof typeof enB8DriverMoneySup
   "Not connected yet": "Inte kopplad än",
   "Drivers and trips from the server; the rest is not connected yet.": "Förare och resor från servern; resten är inte kopplat än.",
   "Trips from the server; the rest is not connected yet.": "Resor från servern; resten är inte kopplat än.",
-  "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions, refunds (full and part), driver pay changes and receipts come from the server.": "Resor, resesida, erbjudanden, chatt, resekontroll, flagga, anteckningar, ärenden, åtgärder på resan, återbetalningar (hela och delar), ändrad förarlön och kvitton kommer från servern.",
+  "Trips, trip page, offers, chat, ride check, flag, notes, cases, trip actions, refunds (full and part), driver pay changes and receipts come from the server.": "Resor, resesida, erbjudanden, chatt, resekontroll, flagga, anteckningar, ärenden, åtgärder på resan, återbetalningar (hela och delar), ändrad förarersättning och kvitton kommer från servern.",
   "Drivers and trips from the server; positions are not connected yet.": "Förare och resor från servern; positioner är inte kopplade än.",
   "Trips and drivers from the server; dispatch actions are not connected yet.": "Resor och förare från servern; utskicksåtgärder är inte kopplade än.",
   "Trips and their offers from the server; sending offers is not connected yet.": "Resor och deras erbjudanden från servern; att skicka erbjudanden är inte kopplat än.",
