@@ -4,6 +4,7 @@
  */
 import { completeBookingWindow, completeEarlyEnd, RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
+import { headingValue } from "../config/zoneDefaults.ts";
 import { validPickupMove, validRaiseFactor, validSamePoint } from "../dispatch/offerRules.ts";
 
 type Doc = Record<string, unknown>;
@@ -126,6 +127,8 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   const heading = driver?.["headingCheck"] as Record<string, unknown> | undefined;
   if (heading && typeof heading === "object") {
     zone.reservation = { ...zone.reservation, booking: completeBookingWindow({ ...zone.reservation.booking, notHeadingNotice: heading["notice"], notHeadingNoticeEveryMin: heading["noticeEveryMin"] }) };
+    // BQ-V22: the heading numbers as the zone's drivers get them (bad or missing → 80 % / 2 min).
+    zone.riderCancel = { ...zone.riderCancel, headingPct: headingValue("headingPct", heading["headingPct"]), notHeadingMinutes: headingValue("notHeadingMinutes", heading["notHeadingMinutes"]) };
   }
   const maxStops = (driver?.["booking"] as { maxStops?: unknown } | undefined)?.maxStops;
   if (typeof maxStops === "number" && Number.isInteger(maxStops)) {

@@ -38,7 +38,8 @@ const LABELS: Record<string, string> = {
   "finishing.radar": "Finishing nearby on Radar", "finishing.exclusive": "Finishing nearby on Exclusive", "finishing.withinMin": "Finishing within minutes", "finishing.withinKm": "Finishing within km",
   "favourite.on": "Favourite drivers", "favourite.maxKm": "Favourite max distance", "favourite.waitSec": "Wait for favourite",
   waiting: "Rider waiting steps", "driverCancel.on": "Driver cancels: search again", "driverCancel.commissionCutPct": "Lower commission after a driver cancel",
-  "riderCancel.on": "Smart cancel check", "riderCancel.closerPct": "Came closer by",
+  "riderCancel.on": "Smart cancel check",
+  "riderCancel.headingPct": "Heading to the pickup at least", "riderCancel.notHeadingMinutes": "Not heading to the pickup for",
   "riderCancel.priority": "Priority after rider cancel", "riderCancel.priorityMin": "Priority minutes",
   extras: "Special requests", longTripKm: "Long trip from", "stops.on": "Stops", "stops.max": "Max stops", "pickupMove.maxMeters": "Pickup move after accept (m)", "samePoint.warnMeters": "Shortest ride (m)", "stops.freeWaitMin": "Free wait per stop",
   "stops.perMin": "Wait price per minute", "stops.perStop": "Fee per stop", "stops.changeDuring": "Change during the trip", "stops.driverCanRefuse": "Driver can refuse changes",
@@ -182,7 +183,8 @@ export function countryLines(before: CountryDispatch, after: CountryDispatch): s
   const lines: string[] = [];
   if (before.rest.on !== after.rest.on) lines.push(`Rest after long work: ${before.rest.on ? "on" : "off"} → ${after.rest.on ? "on" : "off"}`);
   if (before.rest.workHours !== after.rest.workHours) lines.push(`Work hours before rest: ${before.rest.workHours} → ${after.rest.workHours}`);
-  if (before.rest.restHours !== after.rest.restHours) lines.push(`Rest hours: ${before.rest.restHours} → ${after.rest.restHours}`);
+  if (before.rest.resetAfterOfflineHours !== after.rest.resetAfterOfflineHours) lines.push(`Offline hours that reset the driving time: ${before.rest.resetAfterOfflineHours} → ${after.rest.resetAfterOfflineHours}`);
+  if (before.rest.restMinutes !== after.rest.restMinutes) lines.push(`Break length shown in the app: ${before.rest.restMinutes} → ${after.rest.restMinutes} min`);
   if (before.rest.warnFirstMin !== after.rest.warnFirstMin) lines.push(`First driving limit warning: ${before.rest.warnFirstMin} → ${after.rest.warnFirstMin} min`);
   if (before.rest.warnLastMin !== after.rest.warnLastMin) lines.push(`Second driving limit warning: ${before.rest.warnLastMin} → ${after.rest.warnLastMin} min`);
   if (before.rest.blockOnline !== after.rest.blockOnline) lines.push(`Block going online at the limit: ${before.rest.blockOnline ? "on" : "off"} → ${after.rest.blockOnline ? "on" : "off"}`);

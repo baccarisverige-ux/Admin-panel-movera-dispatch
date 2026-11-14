@@ -89,7 +89,7 @@ export function CancelView({ book, categories, market, records, rulesOf, canDeci
                       <div><dt>{tr("When the rider cancelled")}</dt><dd>{trn("{0} · {1} km · {2} min away", time(record.cancelledAt), record.atCancel.km, record.atCancel.etaMin)}</dd></div>
                       <div><dt>{tr("Time after accept")}</dt><dd>{trn("{0} min (free: {1} min)", record.minutesAfterAccept, auto.freeMin)}</dd></div>
                       <div><dt>{tr("Fee for this car type")}</dt><dd>{feeRule(feeRow(rules.riderCancel.fees, record.category), record.fare, money)}</dd></div>
-                      <div><dt>{tr("Came closer")}</dt><dd>{trn("{0}% (fee from {1}%)", Math.max(0, auto.closerPct), rules.riderCancel.closerPct)}</dd></div>
+                      <div><dt>{tr("Heading to the pickup")}</dt><dd>{trn("{0}% of what the road allowed (fee from {1}%)", auto.headingShare, rules.riderCancel.headingPct)}</dd></div>
                       <div className="wide"><dt>{tr("Automatic decision")}</dt><dd>{auto.fee ? <CheckCircle2 size={13} aria-hidden="true" /> : <Ban size={13} aria-hidden="true" />} {trx(auto.why)}</dd></div>
                     </dl>
                     <div className="dx-cancel-actions">

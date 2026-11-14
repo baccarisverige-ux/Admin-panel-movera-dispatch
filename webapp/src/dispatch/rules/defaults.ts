@@ -1,7 +1,7 @@
 import { MARKETS, zoneById, type MarketId, type MarketZone } from "../../markets/markets.ts";
 import contract from "../../../../contracts/contract.json" with { type: "json" };
 import { fromSek } from "../../pricing/zonePricing.ts";
-import { CONFIG_DEFAULTS } from "../../config/zoneDefaults.ts";
+import { CONFIG_DEFAULTS, headingValue } from "../../config/zoneDefaults.ts";
 import { RAISE_MAX_FACTOR_DEFAULT } from "../offerRules.ts";
 import { cancelFeeDefaults, completeCancelFees, legacyCancelFees } from "../cancelFees.ts";
 import { CANCEL_RATE_LIMIT_DEFAULT, cancelReasonsDefault, completeCancelReasons, completeExclusiveReasons, completeOfferCard, completePickupWait, exclusiveReasonsDefault, offerCardDefault, pickupWaitDefault } from "../offers.ts";
@@ -95,7 +95,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     favourite: { on: true, maxKm: 4, waitSec: 15 },
     waiting: waitingDefault(),
     driverCancel: { on: true, commissionCutPct: 5 },
-    riderCancel: { on: true, closerPct: 25, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live"), driverSharePct: 100, earlyEnd: { ...EARLY_END_DEFAULT } },
+    riderCancel: { on: true, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live"), driverSharePct: 100, earlyEnd: { ...EARLY_END_DEFAULT }, ...CONFIG_DEFAULTS.headingCheck },
     extras: EXTRAS.map((extra) => ({ id: extra.id, on: true, badge: true })),
     longTripKm: 50,
     // Owner Q39: 3 stops at most by default (contract.json#configDefaults.maxStops).
@@ -151,10 +151,19 @@ export function countryOfZone(zoneId: string): MarketId {
 }
 
 export function countryDefault(country: MarketId): CountryDispatch {
-  return { country, rest: { on: true, workHours: 12, restHours: 6, warnFirstMin: 30, warnLastMin: 10, blockOnline: true }, cancelRateLimitPct: CANCEL_RATE_LIMIT_DEFAULT, cancelReasons: cancelReasonsDefault(), noShowDriverSharePct: CONFIG_DEFAULTS.noShowDriverSharePct };
+  return { country, rest: { on: true, workHours: contract.configDefaults.drivingLimits.maxHoursPerDay, restMinutes: contract.configDefaults.drivingLimits.restMinutes, resetAfterOfflineHours: contract.configDefaults.drivingLimits.resetAfterOfflineHours, warnFirstMin: 30, warnLastMin: 10, blockOnline: true }, cancelRateLimitPct: CANCEL_RATE_LIMIT_DEFAULT, cancelReasons: cancelReasonsDefault(), noShowDriverSharePct: CONFIG_DEFAULTS.noShowDriverSharePct };
 }
 
 /** Country rules from an older save: new settings come from the defaults. */
+/** SV: an older save's restHours (the rest = the offline reset) becomes resetAfterOfflineHours; restHours is dropped. */
+function completeRest(base: CountryDispatch["rest"], stored: unknown): CountryDispatch["rest"] {
+  const raw = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
+  const { restHours, ...rest } = raw;
+  const next = { ...base, ...rest } as CountryDispatch["rest"];
+  if (typeof raw.resetAfterOfflineHours !== "number" && typeof restHours === "number") next.resetAfterOfflineHours = restHours;
+  return next;
+}
+
 export function completeCountry(country: MarketId, stored: Partial<CountryDispatch> | undefined): CountryDispatch {
   const base = countryDefault(country);
   if (!stored || typeof stored !== "object") return base;
@@ -162,7 +171,7 @@ export function completeCountry(country: MarketId, stored: Partial<CountryDispat
     ...base,
     ...stored,
     country,
-    rest: { ...base.rest, ...(stored.rest ?? {}) },
+    rest: completeRest(base.rest, stored.rest),
     cancelRateLimitPct: typeof stored.cancelRateLimitPct === "number" ? stored.cancelRateLimitPct : base.cancelRateLimitPct,
     cancelReasons: completeCancelReasons(stored.cancelReasons),
     noShowDriverSharePct: typeof stored.noShowDriverSharePct === "number" && Number.isFinite(stored.noShowDriverSharePct) ? stored.noShowDriverSharePct : base.noShowDriverSharePct,
@@ -364,6 +373,11 @@ export function complete(zoneId: string, stored: Partial<ZoneDispatch> | undefin
   const share = oldCancel.driverSharePct;
   riderCancel.driverSharePct = typeof share === "number" && share >= 0 && share <= 100 ? share : 100;
   riderCancel.earlyEnd = completeEarlyEnd(oldCancel.earlyEnd);
+  // SV: the came-closer % is gone (contract pickupWaiting.headingCheck.replaces); older saves drop it.
+  delete riderCancel.closerPct;
+  // BQ-V22: the heading check numbers (older saves have none → 80 % / 2 min).
+  riderCancel.headingPct = headingValue("headingPct", oldCancel.headingPct);
+  riderCancel.notHeadingMinutes = headingValue("notHeadingMinutes", oldCancel.notHeadingMinutes);
   merged.riderCancel = riderCancel;
   merged.rideCheck = completeRideCheck(base.rideCheck, stored.rideCheck);
   merged.destinationMode = completeDestinationMode(stored.destinationMode);

@@ -14,7 +14,7 @@ import { DestinationSettings } from "./DestinationSettings";
 import { CancelRateCard, OfferCardSettings, RaiseLimitCard } from "./OfferSettings";
 import { ExclusiveRules, RadarRules } from "./OfferSections";
 import { MovedCard, offersLink } from "./MovedCard";
-import { CONFIG_DEFAULTS } from "../config/zoneDefaults";
+import { CONFIG_DEFAULTS, HEADING_RANGE } from "../config/zoneDefaults";
 import { PICKUP_MOVE_DEFAULT, pickupMoveField, SAME_POINT_RANGE } from "./offerRules";
 import { PickupWaitCard, type WaitBaseRow } from "./PickupWaitCard";
 import { stopPriceText } from "./stopPrice";
@@ -354,9 +354,15 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         </Row>
       </Card>
 
-      <Card title={tr("Rider cancels: smart check")} tone="green" icon={<Shield size={18} />} help={tr("The system compares the driver's distance to the rider when they accepted and when the rider cancelled.")} off={!zone.riderCancel.on} aside={<Switch label={tr("Smart cancel check")} on={zone.riderCancel.on} disabled={disabled} onChange={(on) => set({ riderCancel: { ...zone.riderCancel, on } })} />}>
+      <Card title={tr("Rider cancels: smart check")} tone="green" icon={<Shield size={18} />} help={tr("Checked every 30 s from accept until arrival: is the driver coming at least {0}% as close as the road allows? Not heading for {1} min in a row = the rider cancels for free.", [zone.riderCancel.headingPct, zone.riderCancel.notHeadingMinutes])} off={!zone.riderCancel.on} aside={<Switch label={tr("Smart cancel check")} on={zone.riderCancel.on} disabled={disabled} onChange={(on) => set({ riderCancel: { ...zone.riderCancel, on } })} />}>
         <p className="dx-note">{trn("{0} Free minutes and fees per car type: see Rider cancel fees ↓", <Coins size={13} aria-hidden="true" />)}</p>
-        <Row label={tr("Fee when the driver came closer by at least")} help={tr("If the driver did not move or went away, no fee.")}><Num label={tr("Came closer by")} value={zone.riderCancel.closerPct} unit="%" min={5} max={100} disabled={disabled || !zone.riderCancel.on} onChange={(closerPct) => set({ riderCancel: { ...zone.riderCancel, closerPct } })} /></Row>
+        {/* BQ-V22 (owner G5-8, decisions/driver-g5.md:9,16 "80 % default, admin can change"; "thresholds per zone"): DriverAppConfig.headingCheck. */}
+        <Row label={tr("Heading to the pickup = at least")} help={tr("Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.", [CONFIG_DEFAULTS.headingCheck.headingPct])}>
+          <Num label={tr("Heading to the pickup (%)")} value={zone.riderCancel.headingPct} unit="%" min={HEADING_RANGE.headingPct[0]} max={HEADING_RANGE.headingPct[1]} disabled={disabled} onChange={(headingPct) => set({ riderCancel: { ...zone.riderCancel, headingPct: Math.round(headingPct) } })} />
+        </Row>
+        <Row label={tr("Free cancel when not heading for")} help={tr("Not heading to the pickup this many minutes in a row: the rider cancels for free and the driver gets the notice. Usual value {0} min.", [CONFIG_DEFAULTS.headingCheck.notHeadingMinutes])}>
+          <Num label={tr("Not heading minutes")} value={zone.riderCancel.notHeadingMinutes} unit="min" min={HEADING_RANGE.notHeadingMinutes[0]} max={HEADING_RANGE.notHeadingMinutes[1]} disabled={disabled} onChange={(notHeadingMinutes) => set({ riderCancel: { ...zone.riderCancel, notHeadingMinutes: Math.round(notHeadingMinutes) } })} />
+        </Row>
         <Row label={tr("Driver gets the next nearby request first")} on={zone.riderCancel.priority} disabled={disabled || !zone.riderCancel.on} onToggle={(priority) => set({ riderCancel: { ...zone.riderCancel, priority } })}>
           <Num label={tr("Priority minutes")} value={zone.riderCancel.priorityMin} unit="min" min={1} max={60} disabled={disabled} onChange={(priorityMin) => set({ riderCancel: { ...zone.riderCancel, priorityMin } })} />
         </Row>
@@ -427,13 +433,17 @@ function Drivers({ zone, onChange, disabled, country, onCountry, countryName }: 
       <MovedCard what="Go offline automatically" testId="dx-moved-auto-offline" links={[{ label: "Radar rules", to: offersLink("radar", zone.zoneId, "Go offline automatically") }]} />
 
       <Card title={tr("Rest after long work · all of {0}", [countryName])} tone="purple" icon={<Timer size={18} />} help={tr("After this many hours of work, a driver cannot go online until the rest is done. This is a country rule.")} off={!country.rest.on} aside={<Switch label={tr("Rest after long work")} on={country.rest.on} disabled={disabled} onChange={(on) => onCountry({ ...country, rest: { ...country.rest, on } })} />}>
-        <Row label={tr("Work hours")}><Num label={tr("Work hours before rest")} value={country.rest.workHours} unit="h" min={4} max={16} disabled={disabled || !country.rest.on} onChange={(workHours) => onCountry({ ...country, rest: { ...country.rest, workHours } })} /></Row>
-        <Row label={tr("Rest")}><Num label={tr("Rest hours")} value={country.rest.restHours} unit="h" min={1} max={12} disabled={disabled || !country.rest.on} onChange={(restHours) => onCountry({ ...country, rest: { ...country.rest, restHours } })} /></Row>
+        {/* BQ-V21 (decisions/driving-time-limits.md:2-4): the server counts only driving (to the pickup + on trip) and resets after the rest offline. */}
+        <Row label={tr("Work hours")} help={tr("Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.")}><Num label={tr("Work hours before rest")} value={country.rest.workHours} unit="h" min={0} max={24} disabled={disabled || !country.rest.on} onChange={(workHours) => onCountry({ ...country, rest: { ...country.rest, workHours } })} /></Row>
+        {/* SV: decisions/driving-time-limits.md:4 "6 hours offline so reset all time" (DriverAppConfig.drivingLimits.resetAfterOfflineHours, 1-24). */}
+        <Row label={tr("Offline hours that reset the driving time")} help={tr("{0} hours offline in a row reset all the driving time. The server uses this number.", [country.rest.resetAfterOfflineHours])}><Num label={tr("Offline hours that reset the driving time")} value={country.rest.resetAfterOfflineHours} unit="h" min={1} max={24} disabled={disabled || !country.rest.on} onChange={(resetAfterOfflineHours) => onCountry({ ...country, rest: { ...country.rest, resetAfterOfflineHours: Math.round(resetAfterOfflineHours) } })} /></Row>
+        {/* SV: contract drivingLimits.restMinutes = the break length the app shows (default 30, not enforced by the server). */}
+        <Row label={tr("Break length shown in the app")} help={tr("Only shown to the driver; the server does not enforce it.")}><Num label={tr("Break length shown in the app")} value={country.rest.restMinutes} unit="min" min={0} max={1440} disabled={disabled || !country.rest.on} onChange={(restMinutes) => onCountry({ ...country, rest: { ...country.rest, restMinutes: Math.round(restMinutes) } })} /></Row>
         <Row label={tr("Warnings before the limit")} help={tr("On the island and in the app, with the time left.")}>
           <Num label={tr("First driving limit warning")} value={country.rest.warnFirstMin} unit="min left" min={1} max={120} disabled={disabled || !country.rest.on} onChange={(warnFirstMin) => onCountry({ ...country, rest: { ...country.rest, warnFirstMin } })} />
           <Num label={tr("Second driving limit warning")} before="and" value={country.rest.warnLastMin} unit="min left" min={1} max={120} disabled={disabled || !country.rest.on} onChange={(warnLastMin) => onCountry({ ...country, rest: { ...country.rest, warnLastMin } })} />
         </Row>
-        <Row label={tr("Block going online at the limit")} help={tr("The driver sees “Rest until 04:30” and can go online again after {0} h of rest.", [country.rest.restHours])} on={country.rest.blockOnline} disabled={disabled || !country.rest.on} onToggle={(blockOnline) => onCountry({ ...country, rest: { ...country.rest, blockOnline } })} />
+        <Row label={tr("Block going online at the limit")} help={tr("The driver sees “Rest until 04:30” and can go online again after {0} h of rest.", [country.rest.resetAfterOfflineHours])} on={country.rest.blockOnline} disabled={disabled || !country.rest.on} onToggle={(blockOnline) => onCountry({ ...country, rest: { ...country.rest, blockOnline } })} />
       </Card>
 
       <CancelRateCard country={country} onCountry={onCountry} countryName={countryName} disabled={disabled} />

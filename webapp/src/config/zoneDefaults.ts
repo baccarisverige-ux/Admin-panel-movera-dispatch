@@ -42,12 +42,27 @@ export const CONFIG_DEFAULTS = {
   noFixMinutesBeforeOffline: 5,
   /** v0.18.8 (G6): Rider PIN before Start — off, 5 wrong tries, then 5 min lock. */
   pickupPin: { required: false, maxAttempts: 5, lockMinutes: 5 },
+  /**
+   * BQ-V22 (owner G5-8, decisions/driver-g5.md:9,16 "80 % default, admin can change"; contract.json#configDefaults.headingCheck
+   * + pickupWaiting.headingCheck): heading to the pickup = at least headingPct % of what normal road speed allows; not
+   * heading for notHeadingMinutes in a row = free rider cancel. Per zone. Ranges as the contract / server (50-100 %, 1-30 min).
+   */
+  headingCheck: { headingPct: 80, notHeadingMinutes: 2 },
   countries: {
     SE: { currency: "SEK", defaultLanguage: "sv", tips: [sek(1000), sek(2000), sek(3000)], raiseSteps: [sek(5000), sek(10000), sek(15000), sek(20000)], driverBonus: { defaultLimit: sek(20000), hardMax: sek(100000) } },
     FR: { currency: "EUR", defaultLanguage: "fr", tips: [eur(100), eur(200), eur(500)], raiseSteps: [eur(200), eur(400), eur(600), eur(800)], driverBonus: { defaultLimit: eur(2000), hardMax: eur(9500) } },
     TN: { currency: "TND", defaultLanguage: "fr", tips: [tnd(1000), tnd(2000), tnd(3000)], raiseSteps: [tnd(2000), tnd(4000), tnd(6000), tnd(8000)], driverBonus: { defaultLimit: tnd(60000), hardMax: tnd(300000) } },
   } satisfies Record<MarketId, CountryDefaults>,
 } as const;
+
+/** BQ-V22: the ranges the server accepts (src/trips/headingCheck.ts; openapi DriverAppConfig.headingCheck). */
+export const HEADING_RANGE = { headingPct: [50, 100], notHeadingMinutes: [1, 30] } as const;
+
+/** BQ-V22: a heading value inside its range, else the contract default (older saves, a bad server value). */
+export function headingValue(key: keyof typeof HEADING_RANGE, value: unknown): number {
+  const [min, max] = HEADING_RANGE[key];
+  return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : CONFIG_DEFAULTS.headingCheck[key];
+}
 
 export function countryDefaults(country: MarketId): CountryDefaults {
   return CONFIG_DEFAULTS.countries[country];

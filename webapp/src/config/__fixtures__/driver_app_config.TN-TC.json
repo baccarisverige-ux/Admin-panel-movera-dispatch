@@ -955,7 +955,7 @@
   },
   "drivingLimits": {
     "maxHoursPerDay": 12,
-    "restMinutes": 360,
+    "restMinutes": 30,
     "resetAfterOfflineHours": 6,
     "on": true,
     "warnFirstMin": 30,

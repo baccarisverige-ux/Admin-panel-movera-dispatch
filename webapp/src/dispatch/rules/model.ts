@@ -468,7 +468,8 @@ export type ZoneDispatch = {
   /** Live trips (Radar and live Exclusive): the smart check, and per car type free minutes after accept, then the fee. */
   /** v0.8.0 (owner 2026-10-27): driverSharePct, the driver's share of the rider's cancel fee, per zone; default 100 %. */
   /** v0.18.10 (G8 Q2): earlyEnd = DriverAppConfig.cancelFees.earlyEnd — a driver's early end re-prices only when more than repriceOverKm km AND more than repriceOverMin min shorter (v0.18.33 BOTH; default 2 / 10). */
-  riderCancel: { on: boolean; closerPct: number; priority: boolean; priorityMin: number; fees: CancelFeeTable; driverSharePct: number; earlyEnd: EarlyEnd };
+  /** BQ-V22 (owner G5-8): headingPct / notHeadingMinutes = DriverAppConfig.headingCheck of the zone (default 80 % / 2 min). */
+  riderCancel: { on: boolean; priority: boolean; priorityMin: number; fees: CancelFeeTable; driverSharePct: number; earlyEnd: EarlyEnd; headingPct: number; notHeadingMinutes: number };
   extras: { id: ExtraId; on: boolean; badge: boolean }[];
   longTripKm: number;
   /**
@@ -504,7 +505,13 @@ export type ZoneDispatch = {
 export type CountryDispatch = {
   country: MarketId;
   /** Q25: warnings at warnFirstMin and warnLastMin before the limit; blockOnline: at the limit the driver can't go online. */
-  rest: { on: boolean; workHours: number; restHours: number; warnFirstMin: number; warnLastMin: number; blockOnline: boolean };
+  /**
+   * SV (decisions/driving-time-limits.md:2-4; contract.json#drivingLimits): workHours = DriverAppConfig.drivingLimits.maxHoursPerDay
+   * (driving only, 0-24, 0 = no limit, default 12); resetAfterOfflineHours = "6 hours offline so reset all time" (1-24,
+   * default 6); restMinutes = the break length the app shows (contract default 30, not enforced). Older saves had restHours
+   * (the rest = the reset): completeCountry moves it to resetAfterOfflineHours.
+   */
+  rest: { on: boolean; workHours: number; restMinutes: number; resetAfterOfflineHours: number; warnFirstMin: number; warnLastMin: number; blockOnline: boolean };
   /** Q22: the cancel rate drivers should stay under. Never shown to drivers. */
   cancelRateLimitPct: number;
   /** Q21: cancel reasons in this country, per language. */
