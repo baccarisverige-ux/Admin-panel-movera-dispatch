@@ -3,4 +3,7 @@ export const svC17TipWindowRefundNotice = {
   "Cash tip time in the car": "Tid för kontant dricks i bilen",
   "Cash tip time in the car: {0} min": "Tid för kontant dricks i bilen: {0} min",
   "The driver gets a notice with the amount taken from his pay and this reason.": "Föraren får ett meddelande med beloppet som dras från hans ersättning och denna orsak.",
+  "Cash tip time in the car: mixed → {0} min": "Tid för kontant dricks i bilen: blandat → {0} min",
+  "Differs by zone: {0}. Save keeps each zone's time unless you change it.": "Olika per zon: {0}. Spara behåller varje zons tid om du inte ändrar den.",
+  "0 minutes: riders cannot give a cash tip in the app once the trip has ended.": "0 minuter: resenärer kan inte ge kontant dricks i appen när resan har slutat.",
 };

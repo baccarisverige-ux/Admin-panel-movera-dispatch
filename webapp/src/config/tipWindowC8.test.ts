@@ -8,7 +8,7 @@ import { sv } from "../i18n/sv.ts";
 import { countryRulesOf, type ConfigHttp, type Doc } from "../live/configDocs.ts";
 import { createLiveSettings } from "../live/liveSettings.ts";
 import { appConfigState, riderAppConfig } from "./appConfigs.ts";
-import { COUNTRY_SETTINGS_KEY, TIP_CASH_IN_CAR_MINUTES, ZONE_RULES_KEY, countrySettingsLines, defaultCountrySettings, emptyCountrySettingsBook, normalizeCountrySettingsBook, type CountrySettings, type CountrySettingsBook } from "./countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, TIP_CASH_IN_CAR_MINUTES, ZONE_RULES_KEY, countrySettingsLines, defaultCountrySettings, emptyCountrySettingsBook, mixedCashInCarAcross, normalizeCountrySettingsBook, zoneValuesForSave, type CountrySettings, type CountrySettingsBook } from "./countrySettings.ts";
 
 /**
  * Job C8 (owner "Anything admin can adjust becomes an admin setting", Rules audits/answered-vs-built-2026-11-14-C-conversation.md:63;
@@ -131,6 +131,52 @@ test("C8 + A7: the panel has the field (no fixed 5), the trip page tells the adm
 for (const [lang, dictionary] of Object.entries({ en, sv, fr }) as Array<[string, Record<string, string>]>) {
   test(`${lang}: the new texts are translated`, () => {
     for (const key of NEW_TEXTS) {
+      assert.ok(dictionary[key], `${lang}: ${key}`);
+      if (lang !== "en") assert.notEqual(dictionary[key], key, `${lang}: ${key}`);
+    }
+  });
+}
+
+// Supervisor must-fix 1 (audits/impact/a7-c8-supervisor.md): a save for several zones keeps each zone's minutes unless the
+// admin changed the field; the zones that differ show "mixed"; the change list says "mixed → N".
+test("C8 mixed: two zones on different minutes keep their own unless the field is edited", () => {
+  const book = emptyCountrySettingsBook();
+  const zone = (minutes: number): CountrySettings => ({ ...book.countries.SE, tipRules: { ...book.countries.SE.tipRules, cashInCarMinutes: minutes } });
+  const own: Record<string, CountrySettings> = { Z001: zone(5), Z002: zone(10) };
+  const mixed = mixedCashInCarAcross([["Norrmalm", own.Z001!.tipRules], ["Södermalm", own.Z002!.tipRules]]);
+  assert.deepEqual(mixed, { Norrmalm: 5, Södermalm: 10 });
+  assert.equal(mixedCashInCarAcross([["A", own.Z001!.tipRules], ["B", own.Z001!.tipRules]]), undefined, "the same everywhere = not mixed");
+  // Not edited (still mixed): another field changes, each zone keeps its minutes.
+  const shown: CountrySettings = { ...own.Z001!, tips: [{ id: "tip-1", amount: 40, enabled: true }], mixedCashInCar: mixed };
+  const kept = zoneValuesForSave(shown, ["Z001", "Z002"], (id) => own[id]!);
+  assert.equal(kept.Z001!.tipRules.cashInCarMinutes, 5);
+  assert.equal(kept.Z002!.tipRules.cashInCarMinutes, 10);
+  assert.equal(kept.Z002!.tips[0]!.amount, 40, "the edited field still goes to every chosen zone");
+  assert.equal("mixedCashInCar" in kept.Z001!, false, "the mixed note is not saved");
+  // Edited: the field's value goes to both, and the change list says mixed → N.
+  const edited: CountrySettings = { ...shown, tipRules: { ...shown.tipRules, cashInCarMinutes: 8 }, mixedCashInCar: undefined };
+  const both = zoneValuesForSave(edited, ["Z001", "Z002"], (id) => own[id]!);
+  assert.deepEqual([both.Z001!.tipRules.cashInCarMinutes, both.Z002!.tipRules.cashInCarMinutes], [8, 8]);
+  const lines = countrySettingsLines("SE", { ...own.Z001!, mixedCashInCar: mixed }, edited);
+  assert.ok(lines.includes("Cash tip time in the car: mixed → 8 min"), lines.join(" | "));
+  // Editing back to the first zone's value still counts as a change (the mixed note goes).
+  const same: CountrySettings = { ...shown, tips: own.Z001!.tips, mixedCashInCar: undefined };
+  assert.ok(countrySettingsLines("SE", { ...own.Z001!, mixedCashInCar: mixed }, same).includes("Cash tip time in the car: mixed → 5 min"));
+});
+
+test("C8 mixed + 0 minutes: the panel shows the mixed note and the 0-minute note", () => {
+  const panel = readFileSync(new URL("../pricing/CountryExtrasPanel.tsx", import.meta.url), "utf8");
+  assert.ok(panel.includes('data-testid="tip-mixed-cashInCarMinutes"'));
+  assert.ok(panel.includes("zoneValuesForSave("));
+  assert.ok(panel.includes('data-testid="tip-cashInCar-zero"'));
+  assert.ok(panel.includes(ZERO_NOTE));
+});
+
+const ZERO_NOTE = "0 minutes: riders cannot give a cash tip in the app once the trip has ended.";
+const MIXED_NOTE = "Differs by zone: {0}. Save keeps each zone's time unless you change it.";
+for (const [lang, dictionary] of Object.entries({ en, sv, fr }) as Array<[string, Record<string, string>]>) {
+  test(`${lang}: the mixed and 0-minute notes are translated`, () => {
+    for (const key of [ZERO_NOTE, MIXED_NOTE, "Cash tip time in the car: mixed → {0} min"]) {
       assert.ok(dictionary[key], `${lang}: ${key}`);
       if (lang !== "en") assert.notEqual(dictionary[key], key, `${lang}: ${key}`);
     }

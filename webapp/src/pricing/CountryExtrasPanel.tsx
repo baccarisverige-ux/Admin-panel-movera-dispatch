@@ -14,6 +14,8 @@ import {
   countrySettingsOf,
   zoneSettingsOf,
   mixedTipAcross,
+  mixedCashInCarAcross,
+  zoneValuesForSave,
   TIP_CASH_IN_CAR_MINUTES,
   TIP_FLAGS,
   type MixedTipRules,
@@ -132,7 +134,9 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
   const first = zoneId ? zoneSettingsOf(zoneBook, country, zoneId) : countrySettingsOf(book, country);
   // Live G8 round 3 item 1: the chosen zones that disagree on a tip switch show it mixed, with the zones where it is off.
   const mixedTip = targets && targets.length > 1 ? mixedTipAcross(targets.map((id) => [zoneById(id)?.name ?? id, zoneSettingsOf(zoneBook, country, id).tipRules] as const)) : first.mixedTipRules;
-  const saved: CountrySettings = { ...first, mixedTipRules: mixedTip, tipRules: { ...first.tipRules, ...Object.fromEntries(TIP_FLAGS.filter((flag) => mixedTip?.[flag]).map((flag) => [flag, false])) } };
+  // v0.18.91 job C8 (supervisor must-fix 1): chosen zones with different cash-tip times show them; Save keeps each one's.
+  const mixedMinutes = targets && targets.length > 1 ? mixedCashInCarAcross(targets.map((id) => [zoneById(id)?.name ?? id, zoneSettingsOf(zoneBook, country, id).tipRules] as const)) : undefined;
+  const saved: CountrySettings = { ...first, mixedTipRules: mixedTip, mixedCashInCar: mixedMinutes, tipRules: { ...first.tipRules, ...Object.fromEntries(TIP_FLAGS.filter((flag) => mixedTip?.[flag]).map((flag) => [flag, false])) } };
   const [draft, setDraft] = useState<CountrySettings | null>(null);
   const shown = draft ?? saved;
   const dirty = draft !== null && JSON.stringify(sectionPart(draft, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
@@ -186,9 +190,11 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               <p className="dx-note">{tr("The whole tip goes to the driver.")}</p>
               <label className="check-row"><input type="checkbox" data-testid="tip-cashAfterTrip" checked={shown.tipRules.cashAfterTrip} ref={(node) => { if (node) node.indeterminate = Boolean(shown.mixedTipRules?.cashAfterTrip?.length); }} aria-checked={shown.mixedTipRules?.cashAfterTrip?.length ? "mixed" : undefined} aria-describedby={shown.mixedTipRules?.cashAfterTrip?.length ? "tip-mixed-cashAfterTrip" : undefined} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, cashAfterTrip: e.target.checked }, mixedTipRules: withoutTipFlag(shown.mixedTipRules, "cashAfterTrip") })} /> {tr("Allow cash tips after the trip")}</label>
               {shown.mixedTipRules?.cashAfterTrip?.length ? <small className="dx-note" id="tip-mixed-cashAfterTrip" data-testid="tip-mixed-cashAfterTrip">{tr("Off in: {0} — Save makes it the same in the chosen zones", [shown.mixedTipRules.cashAfterTrip.join(", ")])}</small> : null}
-              <p className="dx-note">{tr("Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.", [String(shown.tipRules.cashInCarMinutes)])}</p>
+              {shown.tipRules.cashInCarMinutes === 0 && !shown.tipRules.cashAfterTrip && !shown.mixedCashInCar
+                ? <p className="dx-note" data-testid="tip-cashInCar-zero">{tr("0 minutes: riders cannot give a cash tip in the app once the trip has ended.")}</p>
+                : <p className="dx-note">{tr("Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.", [String(shown.tipRules.cashInCarMinutes)])}</p>}
               {/* v0.18.91 job C8 (owner "Anything admin can adjust becomes an admin setting"): RiderAppConfig.tipRules.cashInCarMinutes. */}
-              {!shown.tipRules.cashAfterTrip ? <div data-testid="tip-cashInCarMinutes"><NumberField label={tr("Cash tip time in the car")} value={shown.tipRules.cashInCarMinutes} unit="min" step={1} min={TIP_CASH_IN_CAR_MINUTES.min} max={TIP_CASH_IN_CAR_MINUTES.max} disabled={!canEdit} changed={shown.tipRules.cashInCarMinutes !== saved.tipRules.cashInCarMinutes} onChange={(cashInCarMinutes) => edit({ tipRules: { ...shown.tipRules, cashInCarMinutes: Math.round(cashInCarMinutes) } })} /></div> : null}
+              {!shown.tipRules.cashAfterTrip ? <div data-testid="tip-cashInCarMinutes"><NumberField label={tr("Cash tip time in the car")} value={shown.tipRules.cashInCarMinutes} unit="min" step={1} min={TIP_CASH_IN_CAR_MINUTES.min} max={TIP_CASH_IN_CAR_MINUTES.max} disabled={!canEdit} changed={shown.tipRules.cashInCarMinutes !== saved.tipRules.cashInCarMinutes} onChange={(cashInCarMinutes) => edit({ tipRules: { ...shown.tipRules, cashInCarMinutes: Math.round(cashInCarMinutes) }, mixedCashInCar: undefined })} />{shown.mixedCashInCar ? <small className="dx-note" data-testid="tip-mixed-cashInCarMinutes">{tr("Differs by zone: {0}. Save keeps each zone's time unless you change it.", [Object.entries(shown.mixedCashInCar).map(([zone, minutes]) => `${zone} ${minutes} min`).join(", ")])}</small> : null}</div> : null}
               <label className="check-row"><input type="checkbox" data-testid="tip-customAmount" checked={shown.tipRules.customAmount} ref={(node) => { if (node) node.indeterminate = Boolean(shown.mixedTipRules?.customAmount?.length); }} aria-checked={shown.mixedTipRules?.customAmount?.length ? "mixed" : undefined} aria-describedby={shown.mixedTipRules?.customAmount?.length ? "tip-mixed-customAmount" : undefined} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, customAmount: e.target.checked }, mixedTipRules: withoutTipFlag(shown.mixedTipRules, "customAmount") })} /> {tr("Rider may type an amount")}</label>
               {shown.mixedTipRules?.customAmount?.length ? <small className="dx-note" id="tip-mixed-customAmount" data-testid="tip-mixed-customAmount">{tr("Off in: {0} — Save makes it the same in the chosen zones", [shown.mixedTipRules.customAmount.join(", ")])}</small> : null}
               {shown.tipRules.customAmount ? <NumberField label={tr("Highest typed tip")} value={shown.tipRules.customMax} unit={symbol} step={moneyStep(country)} max={tipMax(country) * 10} disabled={!canEdit} changed={shown.tipRules.customMax !== saved.tipRules.customMax} onChange={(customMax) => edit({ tipRules: { ...shown.tipRules, customMax } })} /> : null}
@@ -308,7 +314,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
             before={pricingSummary(country, saved)}
             after={pricingSummary(country, shown)}
             sliceKey={COUNTRY_SETTINGS_KEY}
-            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...Object.fromEntries(targets.map((id) => [id, shown])) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
+            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...zoneValuesForSave(shown, targets, (id) => zoneSettingsOf(zoneBook, country, id)) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
             expectedSliceRev={book.draftRev}
             disabled={loading || !canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
             title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}
