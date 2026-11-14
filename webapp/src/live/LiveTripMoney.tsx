@@ -7,6 +7,8 @@ import { liveMoney, parseMinor } from "./format";
 import { driverPayBody, singleFlight } from "./moneyGuard";
 import { TRIP_ENDED, driverPayBox } from "../trips/driverPayBox";
 import { ErrorLine, isVersionMismatch } from "./ui";
+import { NotConnected } from "./NotConnected";
+import { lostDriverRow, moveraCommissionRow } from "./moneyRows";
 
 /**
  * v0.18.10 (driver group 8 "Finish & cash", contract.json#finish; Rules decisions/admin-fake-by-group.md G8): the trip
@@ -28,6 +30,11 @@ type MoneyTrip = {
   earningsBreakdown?: { code: string; amount: M }[];
   debtCollected?: M;
   moneySplit?: { riderPaid: M; driverTotal: M; movera: M; debtCollected: M; tip?: M; refunded: M };
+  /** v0.18.92 (BQ-M24): the admin's "Movera commission" — one server number on every trip with a commission. */
+  moveraKeepsNow?: M;
+  /** v0.18.92 (moneyBase.lostDriverPaid): paid to the driver(s) who lost the trip, when above 0. */
+  lostDriverPaid?: M;
+  commission?: M;
   tip?: { amount: M; method: string; at: string };
   finish?: { endedEarly: boolean; endedBy?: string; reasonCode?: string; repriced?: boolean };
 };
@@ -72,6 +79,9 @@ function Money({ tripId }: { tripId: string }) {
   const ended = TRIP_ENDED.includes(t.status);
   const paid = ended && (t.paymentStatus === "captured" || t.paymentStatus === "partially_refunded");
   const split = t.moneySplit;
+  // BQ-M24 (v0.18.92 moneyBase.commissionRow.admin): the row is the server's moveraKeepsNow, paid or not; never worked out.
+  const moveraRow = moveraCommissionRow(t);
+  const lostDriver = lostDriverRow(t);
 
   const run = (work: () => Promise<string>) => once(async () => {
     setBusy(true);
@@ -99,17 +109,18 @@ function Money({ tripId }: { tripId: string }) {
     <div className="op-actions-grid" data-testid="live-trip-money">
       <div className="op-action green" data-testid="trip-who-gets-what">
         <h4><Scale size={15} aria-hidden="true" /> {tr("Who gets what")}</h4>
-        {split ? (
-          <ul className="cx-lines">
-            <li>{tr("Rider paid")}: <b>{liveMoney(split.riderPaid)}</b></li>
-            <li>{tr("Driver gets")}: <b>{liveMoney(split.driverTotal)}</b></li>
-            {(t.earningsBreakdown ?? []).map((line) => <li key={line.code} className="dx-note">· {lineLabel(line.code)}: {liveMoney(line.amount)}</li>)}
-            <li>{tr("Movera commission")}: <b>{liveMoney(split.movera)}</b></li>
-            {split.debtCollected.amountMinor > 0 ? <li data-testid="trip-debt-line">{tr("Earlier unpaid fee (to that trip)")}: <b>{liveMoney(split.debtCollected)}</b></li> : null}
-            {split.tip ? <li>{tr("Tip")}: <b>{liveMoney(split.tip)}</b>{t.tip ? ` (${t.tip.method === "cash" ? tr("Pay in car") : t.tip.method})` : ""}</li> : null}
-            {split.refunded.amountMinor > 0 ? <li>{tr("Refunded")}: <b>{liveMoney(split.refunded)}</b></li> : null}
-          </ul>
-        ) : <p className="dx-note">{tr("The server sends no money split for this trip yet.")}</p>}
+        {/* BQ-M24: the server sends moneySplit only on a paid end; the Movera commission row and the lost-driver line show on
+            every trip (the server's numbers), the paid lines only with the split. */}
+        <ul className="cx-lines">
+          {split ? <li>{tr("Rider paid")}: <b>{liveMoney(split.riderPaid)}</b></li> : null}
+          {split ? <li>{tr("Driver gets")}: <b>{liveMoney(split.driverTotal)}</b></li> : null}
+          {split ? (t.earningsBreakdown ?? []).map((line) => <li key={line.code} className="dx-note">· {lineLabel(line.code)}: {liveMoney(line.amount)}</li>) : null}
+          <li data-testid="trip-movera-commission">{tr("Movera commission")}: <b>{moveraRow ? liveMoney(moveraRow) : <NotConnected />}</b></li>
+          {lostDriver ? <li data-testid="trip-lost-driver-line">{tr("Paid to the driver who lost the trip")}: <b>{liveMoney(lostDriver)}</b></li> : null}
+          {split && split.debtCollected.amountMinor > 0 ? <li data-testid="trip-debt-line">{tr("Earlier unpaid fee (to that trip)")}: <b>{liveMoney(split.debtCollected)}</b></li> : null}
+          {split?.tip ? <li>{tr("Tip")}: <b>{liveMoney(split.tip)}</b>{t.tip ? ` (${t.tip.method === "cash" ? tr("Pay in car") : t.tip.method})` : ""}</li> : null}
+          {split && split.refunded.amountMinor > 0 ? <li>{tr("Refunded")}: <b>{liveMoney(split.refunded)}</b></li> : null}
+        </ul>
         {t.finish?.endedEarly ? (
           <p className="dx-warn" data-testid="trip-ended-early">
             {t.finish.endedBy === "rider" ? tr("The rider ended the trip early.") : tr("The driver ended the trip before the destination.")}

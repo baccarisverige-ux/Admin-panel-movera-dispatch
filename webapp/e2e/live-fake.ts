@@ -47,6 +47,8 @@ export const COMPLETED_TRIP = {
   ],
   driverEarnings: SEK(41600),
   commission: SEK(10400),
+  // v0.18.92 (BQ-M24): the admin view's one "Movera commission" number (paid trip, no later change: = commission).
+  moveraKeepsNow: SEK(10400),
   paymentMethod: "card",
   paymentStatus: "captured",
   ratingStatus: "rated",

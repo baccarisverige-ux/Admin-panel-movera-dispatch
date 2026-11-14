@@ -107,7 +107,7 @@ export type DemoRecord = {
   /** Live ratings (GET /admin/ratings, contract v0.9.0). */
   liveRating?: LiveRatingFacts;
   /** Live payouts (GET /admin/payouts, contract v0.9.0): the lines behind the amount. */
-  livePayout?: { lines: { code: string; amountMinor: number; count?: number }[]; source: string; periodStart: string; periodEnd: string; tripCount: number; currency: string };
+  livePayout?: { lines: { code: string; amountMinor: number; count?: number }[]; source: string; periodStart: string; periodEnd: string; tripCount: number; currency: string; summary?: { driverGetsMinor: number; moveraGetsMinor: number } | null };
 };
 
 export type LiveRideCheck = {
@@ -138,6 +138,10 @@ export type LiveTripFacts = {
   fare: number;
   fareLines: { code: string; amountMinor: number }[];
   commission: number | null;
+  /** v0.18.92 (BQ-M24): the admin's "Movera commission" row — the server's moveraKeepsNow; null/absent → "Not connected yet". */
+  moveraKeepsNow?: number | null;
+  /** v0.18.92: the server's lostDriverPaid (admin view); null/absent when not sent. */
+  lostDriverPaid?: number | null;
   driverEarnings: number | null;
   pickupPay: number | null;
   driverBonus: number | null;

@@ -197,7 +197,7 @@ export function driverBonusSettingLink(country: string, zoneId?: string): string
 export const DRIVER_BONUS_LIMIT_INPUT_ID = "driver-bonus-limit-input";
 
 type MoneyLike = { amountMinor: number } | null | undefined;
-type BonusTrip = { driverBonus?: MoneyLike; commission?: MoneyLike; driverBonusByKind?: { exclusive?: MoneyLike; radar?: MoneyLike } | null };
+type BonusTrip = { driverBonus?: MoneyLike; commission?: MoneyLike; moveraKeepsNow?: MoneyLike; driverBonusByKind?: { exclusive?: MoneyLike; radar?: MoneyLike } | null };
 
 /**
  * Owner bug 2026-11-01 ("Exclusif" arrived as Radar): the server keeps the admin's money per kind of offer
@@ -211,7 +211,10 @@ export function bonusByKind(trip: BonusTrip): { exclusiveMinor: number; radarMin
 /**
  * Movera's commission before any bonus: the server's commission already has the bonus taken off, and the Add money box
  * takes it off itself (owner photo 2026-11-01: "Movera paie 353,80 kr de plus" counted the 200 kr twice).
+ * BQ-M24 (v0.18.92 moneyBase.commissionRow.admin, "Add money box"): it starts from what Movera keeps now (the admin
+ * moveraKeepsNow, the lost-driver payment already off) when the server sends it; an older server: its commission.
  */
 export function commissionBeforeBonus(trip: BonusTrip): number {
-  return (trip.commission?.amountMinor ?? 0) + (trip.driverBonus?.amountMinor ?? 0);
+  const keeps = trip.moveraKeepsNow && Number.isFinite(trip.moveraKeepsNow.amountMinor) ? trip.moveraKeepsNow.amountMinor : trip.commission?.amountMinor ?? 0;
+  return keeps + (trip.driverBonus?.amountMinor ?? 0);
 }

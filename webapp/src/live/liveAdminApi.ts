@@ -233,6 +233,9 @@ export function tripFacts(trip: Trip): LiveTripFacts {
     fare: trip.fare.amountMinor,
     fareLines: (trip.fareLines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor })),
     commission: minorOf(trip.commission),
+    // BQ-M24 (v0.18.92 moneyBase.commissionRow.admin): the "Movera commission" row is this one server number, never worked out here.
+    moveraKeepsNow: minorOf(trip.moveraKeepsNow),
+    lostDriverPaid: minorOf(trip.lostDriverPaid),
     driverEarnings: minorOf(trip.driverEarnings),
     pickupPay: minorOf(trip.pickupPay),
     driverBonus: minorOf(trip.driverBonus),

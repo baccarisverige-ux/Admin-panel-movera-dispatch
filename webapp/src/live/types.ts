@@ -230,6 +230,10 @@ export type Trip = {
   moneySplit?: { riderPaid: LiveMoney; driverTotal: LiveMoney; movera: LiveMoney; debtCollected?: LiveMoney; tip?: LiveMoney; refunded?: LiveMoney };
   tip?: { amount: LiveMoney; method: string; at: string };
   commission?: LiveMoney;
+  /** v0.18.92 (BQ-M24, contract.json#moneyBase.commissionRow.admin): what Movera keeps now — the admin's one "Movera commission" number. Optional: older servers do not send it. */
+  moveraKeepsNow?: LiveMoney;
+  /** v0.18.92 (contract.json#moneyBase.lostDriverPaid, admin view): paid to the driver(s) who lost the trip; sent when above 0. */
+  lostDriverPaid?: LiveMoney;
   driverBonus?: LiveMoney;
   pickupPay?: LiveMoney;
   walletApplied?: LiveMoney;
