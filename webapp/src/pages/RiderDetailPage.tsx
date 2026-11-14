@@ -46,6 +46,7 @@ import {
   requestRefund,
   responseTone,
   setIdentity,
+  refundLeftText,
   toMajor,
   type RefundDestination,
 } from "../riders/care";
@@ -174,7 +175,6 @@ export function RiderDetailPage() {
   const credit = addCredit(care, rider, creditAmount, creditReason, me, now);
   const usedThisMonth = creditedThisMonth(care, rider.id, now);
   const refundRide = paidBookings.find((booking) => booking.id === refundId);
-  const refundLeft = refundRide ? toMajor(refundRide.fareMinor, country) - refunded(refundRide.id) : 0;
   const refund = requestRefund(care, rider, refundRide, refundAmount, refundTo, refundReason, me, now, refundPolicy);
   const lostNext = addLostItem(care, rider.id, lostItem, lostRide, me, now);
   const mergeNext = merge(care, rider.id, mergeInto.trim().toUpperCase());
@@ -405,7 +405,7 @@ export function RiderDetailPage() {
                   {paidBookings.slice(0, 60).map((booking) => <option key={booking.id} value={booking.id}>{date.format(booking.at)} · {booking.from} → {booking.to} · {money(booking.fareMinor, country)} · {trx(BOOKING_LABEL[booking.status])}</option>)}
                 </select>)}</label>
               <div className="rd-form-grid">
-                <label className="field">{trn("Amount{0}{1}", refundRide ? tr(" (up to {0})", [refundLeft.toFixed(2)]) : "", <NumberField label={tr("Refund amount")} value={refundAmount} unit={symbol} onChange={setRefundAmount} />)}</label>
+                <label className="field">{trn("Amount{0}{1}", refundRide ? tr(" (up to {0})", [refundLeftText(refundRide.fareMinor, refunded(refundRide.id), country)]) : "", <NumberField label={tr("Refund amount")} value={refundAmount} unit={symbol} onChange={setRefundAmount} />)}</label>
                 <label className="field">{trn("Why{0}", <input aria-label={tr("Refund reason")} value={refundReason} onChange={(event) => setRefundReason(event.target.value)} placeholder={tr("Charged twice")} />)}</label>
               </div>
               <div className="rd-dest" role="radiogroup" aria-label={tr("Refund to")}>

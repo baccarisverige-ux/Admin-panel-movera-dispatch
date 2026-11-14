@@ -1,5 +1,5 @@
 import { isLiveData, liveRiderOf } from "../live/realData.ts";
-import { market, type MarketId } from "../markets/markets.ts";
+import { formatMoney, market, type MarketId } from "../markets/markets.ts";
 import { defaultRefundPolicy, needsSecondAdmin, type RefundPolicy } from "../payments/refundPolicy.ts";
 import { countryOf, hash, type Booking, type RiderProfile, type RiderRecord } from "./profile.ts";
 
@@ -166,6 +166,11 @@ export function toMinor(amount: number, country: MarketId): number {
 
 export function toMajor(minor: number, country: MarketId): number {
   return minor / market(country).minorUnits;
+}
+
+/** BQ-O15: what is left to refund on a ride, with the shared money formatter (the currency's decimals and symbol). */
+export function refundLeftText(fareMinor: number, refundedMajor: number, country: MarketId): string {
+  return formatMoney(Math.max(0, fareMinor - toMinor(refundedMajor, country)), country);
 }
 
 /* ---------- Messages ---------- */
