@@ -125,7 +125,6 @@ export const frA0Symbols: Record<keyof typeof enA0Symbols, string> = {
   "{0} {1} waiting": "{0} {1} en attente",
   "{0} {1}: {2}. Tried {3} of {4}. {5} {6}": "{0} {1} : {2}. Essai {3} sur {4}. {5} {6}",
   "{0} {1}: waiting for a second admin to approve.": "{0} {1} : en attente de l’approbation d’un second administrateur.",
-  "{0} + {1}% app fee": "{0} + {1}% de frais de plateforme",
   "{0} × {1} km": "{0} × {1} km",
   "{0} 1 stop{1}": "{0} 1 arrêt{1}",
   "{0} 1.8 km · 4 min to pickup": "{0} 1,8 km · 4 min jusqu’à la prise en charge",

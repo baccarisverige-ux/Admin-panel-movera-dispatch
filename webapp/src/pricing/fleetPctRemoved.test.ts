@@ -14,7 +14,7 @@ import { bookOfPricing, pricingDocumentOf } from "../live/configDocs.ts";
 import { emptyPayoutOps, normalizePayoutOps, payoutLines } from "../payments/runs.ts";
 import { fleetRows } from "../reports/extra.ts";
 import { moneySplit } from "../trips/file.ts";
-import { defaultZoneBook, diffBooks, emptyPricingStore, zoneBook } from "./zonePricing.ts";
+import { commissionCardLines, defaultZoneBook, diffBooks, emptyPricingStore, zoneBook } from "./zonePricing.ts";
 
 const source = (file: string) => readFileSync(new URL(file, import.meta.url), "utf8");
 const FLEET_PCT = /fleetCommission|fleetPct|fleet-share|Fleet owner share|Fleet owner part|Fleet owner gets|fleet owner's share|Fleet owner's share|Fleet owner \$\{/;
@@ -68,4 +68,21 @@ test("no screen shows or edits a fleet-owner % (Commission card, Payouts, trip m
   assert.equal(docs.match(/fleetCommissionPct/g)?.length, 1);
   assert.match(docs, /REMOVED_PRICING_KEYS = \["fleetCommissionPct"\]/);
   assert.match(source("../live/liveSettings.ts"), /savePublish\(http, "pricing", id, current, withoutRemovedPricingKeys\(/);
+});
+
+test("the commission card's result lines are amounts only: Driver gets / Movera gets (commission + app fee), no %", () => {
+  // Owner 2026-11-14 05:17 UTC (decisions/session-2026-11-06.md): "simply write only how much in amount driver get and
+  // how much movera get in amount dont write any percentage". Contract v0.18.88 commissionSteps.adminCalculator.rule.
+  const panel = source("./CommissionPanel.tsx");
+  assert.doesNotMatch(panel, /% app fee|Movera keeps/, "no \"Movera keeps {0} + {1}% app fee\" line");
+  assert.match(panel, /tr\("Driver gets"\)/);
+  assert.match(panel, /tr\("Movera gets"\)/);
+  assert.ok(!("{0} + {1}% app fee" in en), "the old % result text is gone");
+  assert.equal(en["Movera gets"], "Movera gets");
+  // 200 kr at 20 % commission + 5 % app fee: driver 160 kr, Movera 40 + 10 = 50 kr.
+  assert.deepEqual(commissionCardLines(200, 20, 5, "SE"), { driverGets: 160, moveraGets: 50 });
+  // Exact decimal half_up (contract pricing.halfUp), not float: 55.00 kr at 0 % commission + 0.7 % app fee = 38.5 öre -> 39.
+  assert.deepEqual(commissionCardLines(55, 0, 0.7, "SE"), { driverGets: 55, moveraGets: 0.39 });
+  // TND (3 decimals): 60 DT at 20 % + 10 % = 48 DT / 18 DT.
+  assert.deepEqual(commissionCardLines(60, 20, 10, "TN"), { driverGets: 48, moveraGets: 18 });
 });

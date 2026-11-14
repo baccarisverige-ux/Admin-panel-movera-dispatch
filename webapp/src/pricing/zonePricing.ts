@@ -235,6 +235,33 @@ export function money(value: number, id: MarketId): string {
   return formatMarketMoney(Math.round(value * market(id).minorUnits), id);
 }
 
+/**
+ * pct % of a minor-unit amount, exact decimal half_up to a whole minor unit (contract.json#pricing.halfUp), never float:
+ * 5500 öre at 0.7 % = 38.5 öre exact -> 39 (float `Math.floor(x * pct / 100 + 0.5)` gives 38).
+ */
+export function pctOfMinorHalfUp(minor: number, pct: number): number {
+  const scale = 10_000n;
+  const n = BigInt(Math.round(minor)) * BigInt(Math.round(pct * Number(scale)));
+  const d = 100n * scale;
+  const twice = 2n * n + d;
+  const den = 2n * d;
+  const q = twice / den;
+  return Number(twice % den < 0n ? q - 1n : q);
+}
+
+/**
+ * The commission card's two result lines, amounts only in major units (owner 2026-11-14: "simply write only how much in
+ * amount driver get and how much movera get"; contract v0.18.88 commissionSteps.adminCalculator.rule): the driver gets
+ * the price minus the commission; Movera gets the commission + the app fee as one amount.
+ */
+export function commissionCardLines(price: number, commissionPct: number, appFeePct: number, id: MarketId): { driverGets: number; moveraGets: number } {
+  const unit = market(id).minorUnits;
+  const priceMinor = Math.round(price * unit);
+  const commission = pctOfMinorHalfUp(priceMinor, commissionPct);
+  const appFee = pctOfMinorHalfUp(priceMinor, appFeePct);
+  return { driverGets: (priceMinor - commission) / unit, moveraGets: (commission + appFee) / unit };
+}
+
 /** An amount in Swedish kronor in a market's own money, with the same rate and rounding the default prices use. */
 export function fromSek(amountSek: number, id: MarketId): number {
   const { factor, step } = CURRENCY[id];

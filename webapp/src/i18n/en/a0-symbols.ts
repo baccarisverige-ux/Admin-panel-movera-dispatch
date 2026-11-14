@@ -123,7 +123,6 @@ export const enA0Symbols = {
   "{0} {1} waiting": "{0} {1} waiting",
   "{0} {1}: {2}. Tried {3} of {4}. {5} {6}": "{0} {1}: {2}. Tried {3} of {4}. {5} {6}",
   "{0} {1}: waiting for a second admin to approve.": "{0} {1}: waiting for a second admin to approve.",
-  "{0} + {1}% app fee": "{0} + {1}% app fee",
   "{0} × {1} km": "{0} × {1} km",
   "{0} 1 stop{1}": "{0} 1 stop{1}",
   "{0} 1.8 km · 4 min to pickup": "{0} 1.8 km · 4 min to pickup",

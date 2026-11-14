@@ -1,6 +1,6 @@
 import type { MarketId } from "../markets/markets";
 import { NumberField } from "./NumberField";
-import { money, type CategoryDef, type Problem, type ZoneBook } from "./zonePricing";
+import { commissionCardLines, money, type CategoryDef, type Problem, type ZoneBook } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 
 type Props = {
@@ -14,7 +14,7 @@ type Props = {
 };
 
 /**
- * What Movera keeps from each trip, per category. No fleet-owner % (owner 2026-10-29, contract v0.18.88 fleetPayoutWhole):
+ * What Movera gets from each trip, per category. No fleet-owner % (owner 2026-10-29, contract v0.18.88 fleetPayoutWhole):
  * a fleet driver's whole earnings are paid to his fleet owner, who settles with his drivers outside Movera.
  */
 export function CommissionPanel({ currency, categories, book, published, problems, canEdit, onCommission }: Props) {
@@ -25,7 +25,8 @@ export function CommissionPanel({ currency, categories, book, published, problem
       {categories.map((category) => {
         const pct = book.commission[category.id] ?? 0;
         const appFee = book.prices[category.id]?.appFeePct ?? 0;
-        const driver = example * (1 - pct / 100);
+        const { driverGets, moveraGets } = commissionCardLines(example, pct, appFee, currency);
+        const moveraShare = driverGets + moveraGets > 0 ? (moveraGets / (driverGets + moveraGets)) * 100 : 0;
         return (
           <div key={category.id} className={book.prices[category.id]?.enabled ? "commission-card" : "commission-card off"}>
             <div className="commission-head">
@@ -33,13 +34,14 @@ export function CommissionPanel({ currency, categories, book, published, problem
               <NumberField label={tr("{0} commission", [trx(category.label)])} value={pct} unit="%" max={100} disabled={!canEdit} changed={pct !== published.commission[category.id]} invalid={bad.has(`commission.${category.id}`)} onChange={(value) => onCommission(category.id, value)} />
             </div>
             <div className="split-bar" aria-hidden="true">
-              <i className="driver" style={{ width: `${100 - pct}%` }} />
-              <i className="movera" style={{ width: `${pct}%` }} />
+              <i className="driver" style={{ width: `${100 - moveraShare}%` }} />
+              <i className="movera" style={{ width: `${moveraShare}%` }} />
             </div>
             <dl className="split-facts">
               <div className="split-title"><dt>{trn("On a {0} trip", money(example, currency))}</dt></div>
-              <div><dt>{tr("Driver gets")}</dt><dd>{money(driver, currency)}</dd></div>
-              <div><dt>{tr("Movera keeps")}</dt><dd>{trn("{0} + {1}% app fee", money(example - driver, currency), appFee)}</dd></div>
+              {/* Owner 2026-11-14: amounts only, never a % in a result line; Movera gets = commission + app fee. */}
+              <div><dt>{tr("Driver gets")}</dt><dd>{money(driverGets, currency)}</dd></div>
+              <div><dt>{tr("Movera gets")}</dt><dd>{money(moveraGets, currency)}</dd></div>
             </dl>
           </div>
         );
