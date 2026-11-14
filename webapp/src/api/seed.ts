@@ -147,6 +147,10 @@ export type LiveTripFacts = {
   driverBonus: number | null;
   walletApplied: number | null;
   cashToCollect: number | null;
+  /** BQ-A29 (v0.18.89 §90, TripFinish.cashToCollect): the end's cash to collect as sent; null/absent when not sent. */
+  finishCashToCollect?: number | null;
+  /** BQ-A29 (v0.18.89 §90 / v0.18.90, TripFinish.owedToMovera): the driver's balance after the trip (above 0 he owes Movera, below 0 Movera owes him); null/absent when not sent. */
+  owedToMovera?: number | null;
   /** Live G8 (contract.json#finish): the server's who-gets-what; null from a server without it. */
   split?: { riderPaid: number; driverTotal: number; movera: number; tip: number; refunded: number } | null;
   driverSilentAlert: { at?: string; [key: string]: unknown } | null;
@@ -167,7 +171,7 @@ export type LiveTripFacts = {
   /** The cancel as the server recorded it: who, the reason code, the fee, whether it is paid / owed / waived, which rule set it, and the driver's share. */
   /** v0.18.9 (G7): the server's ride check, the latest route change (with the driver's money) and the admin flag. */
   rideCheck?: { checkId: string; trigger: string; askedAt: string; answerBy: string; answers: { rider?: string; driver?: string }; alertedAt: string | null } | null;
-  routeChange?: { status: string; dropoff: LivePlace; stops: LivePlace[]; totalMinor: number; differenceMinor: number; askedAt: string; answerBy: string; answeredBy: string | null; driverEarningsMinor: number | null; earningsDifferenceMinor: number | null } | null;
+  routeChange?: { status: string; dropoff: LivePlace; stops: LivePlace[]; totalMinor: number; differenceMinor: number; askedAt: string; answerBy: string; answeredBy: string | null; driverEarningsMinor: number | null; earningsDifferenceMinor: number | null; /** BQ-A29: TripRouteChange.driverTotal as sent (v0.18.89). */ driverTotalMinor?: number | null } | null;
   adminFlag?: { flagged: boolean; reason: string | null; by: string | null; at: string | null } | null;
   /** v0.18.39 §63: the rider's latest search step (no_driver_nearby → the trip row's "No driver in reach" mark). */
   searchStep?: { kind: string } | null;

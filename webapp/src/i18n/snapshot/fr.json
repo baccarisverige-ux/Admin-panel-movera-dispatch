@@ -8996,4 +8996,10 @@
 ["Cash tip time in the car: mixed → {0} min","Délai du pourboire en espèces à bord : mixte → {0} min"],
 ["Differs by zone: {0}. Save keeps each zone's time unless you change it.","Différent selon la zone : {0}. Enregistrer garde le délai de chaque zone sauf si vous le modifiez."],
 ["0 minutes: riders cannot give a cash tip in the app once the trip has ended.","0 minute : les passagers ne peuvent pas donner de pourboire en espèces dans l’app une fois la course terminée."],
-["Paid to the driver who lost the trip","Payé au chauffeur qui a perdu la course"]]
+["Paid to the driver who lost the trip","Payé au chauffeur qui a perdu la course"],
+["Driver balance for this trip","Solde du chauffeur pour cette course"],
+["Driver owes Movera {0}","Le chauffeur doit {0} à Movera"],
+["Movera owes the driver {0}","Movera doit {0} au chauffeur"],
+["Settled","Soldé"],
+["What the driver gets for this trip.","Ce que le chauffeur reçoit pour cette course."],
+["What Movera keeps from this trip.","Ce que Movera garde sur cette course."]]

@@ -1,4 +1,5 @@
 import { NotConnected } from "../live/NotConnected";
+import { driverBalanceLine } from "../live/moneyRows";
 import { useState, type ReactNode } from "react";
 import { useRefundPolicy } from "../payments/useRefundPolicy";
 import { Link } from "react-router";
@@ -42,6 +43,7 @@ export function Section({ id, title, icon, aside, children, testId, wide = false
 /** A live trip's money: only the server's lines; what it does not send reads "Not connected yet". */
 function LiveSplitView({ split, money }: { split: MoneySplit; money: (minor: number) => string }) {
   const facts = split.live!;
+  const balance = facts.owedToMovera === null || facts.owedToMovera === undefined ? null : driverBalanceLine({ amountMinor: facts.owedToMovera, currency: facts.currency });
   const line = (label: string, value: number | null, testId?: string) => (
     <div data-testid={testId}><dt>{label}</dt><dd>{value === null || !Number.isFinite(value) ? <NotConnected /> : money(value)}</dd></div>
   );
@@ -59,6 +61,8 @@ function LiveSplitView({ split, money }: { split: MoneySplit; money: (minor: num
         {facts.walletApplied !== null ? line(tr("Paid from the wallet"), facts.walletApplied, "split-wallet") : null}
         {facts.cashToCollect !== null ? line(tr("Cash to collect"), facts.cashToCollect, "split-cash") : null}
         {facts.split ? line(tr("Driver gets"), facts.split.driverTotal, "split-driver-total") : null}
+        {/* BQ-A29 (v0.18.89 §90 / v0.18.90 priceDisplay.owedToMovera): the driver's balance after the trip, as sent; hidden when absent. */}
+        {balance ? <div data-testid="split-driver-balance" data-kind={balance.kind}><dt>{tr("Driver balance for this trip")}</dt><dd>{balance.text}</dd></div> : null}
         {/* Live G8 (6a): the tip is the server's (zero when none); "Not connected" only from a server without who-gets-what. */}
         {line(tr("Tip (all to the driver)"), facts.split ? facts.split.tip : null, "split-tip")}
         {line(tr("Promotion (paid by Movera)"), null, "split-promo")}

@@ -178,7 +178,8 @@ export function liveMoneySplit(trip: DemoRecord, facts: LiveTripFacts): MoneySpl
     riderPaid: split ? split.riderPaid : facts.fare - refunded,
     driverGets: split ? split.driverTotal : facts.driverEarnings ?? NaN,
     // BQ-M24 (v0.18.92): what Movera keeps now is the server's moveraKeepsNow when sent (paid = moneySplit.movera).
-    moveraKeeps: typeof facts.moveraKeepsNow === "number" ? facts.moveraKeepsNow : split ? split.movera : commission,
+    // A29 round 2 (FU-A29-1): absent → NaN ("Not connected yet"), never the stored commission.
+    moveraKeeps: typeof facts.moveraKeepsNow === "number" && Number.isFinite(facts.moveraKeepsNow) ? facts.moveraKeepsNow : split ? split.movera : NaN,
     driverBonus: facts.driverBonus ?? 0,
     live: facts,
   };

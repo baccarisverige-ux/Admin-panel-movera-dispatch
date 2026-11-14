@@ -137,14 +137,32 @@ export type PaySplit = { price: number; vat: number; vatRate: number; commission
 /** How a payment splits: driver, Movera's commission, and the VAT inside the price. */
 export function paySplit(amount: number, country: MarketId, tripId?: string | null): PaySplit {
   if (isLiveData()) {
-    // Live: the trip's commission and driver earnings from the server; VAT is not sent (NaN = "Not connected yet").
+    // Live: the server's numbers; VAT is not sent (NaN = "Not connected yet").
     const facts = tripId ? liveTripOf({ id: tripId }) : null;
     const commission = facts?.commission ?? NaN;
-    return { price: amount, vat: NaN, vatRate: NaN, commission, driver: facts?.driverEarnings ?? NaN, movera: commission };
+    // MC follow-up (contract 0.18.92 moneyBase.commissionRow.admin; owner 2026-11-13 "Movera commission is how much movera
+    // keep"): the desk's "Movera" / PaymentPage "Movera keeps" = the admin moveraKeepsNow (the trip page's number), else
+    // moneySplit.movera, else not connected — never the stored commission.
+    const movera = typeof facts?.moveraKeepsNow === "number" && Number.isFinite(facts.moveraKeepsNow) ? facts.moveraKeepsNow : facts?.split ? facts.split.movera : NaN;
+    // Price audit gap 6: "Driver" / "Driver gets" = the driver's one number (moneySplit.driverTotal, the trip page's
+    // "Driver gets"), else not connected — never the earnings line alone.
+    const driver = facts?.split ? facts.split.driverTotal : NaN;
+    return { price: amount, vat: NaN, vatRate: NaN, commission, driver, movera };
   }
   const vatRate = VAT[country];
   const commission = Math.round(amount * COMMISSION);
   return { price: amount, vat: Math.round((amount * vatRate) / (1 + vatRate)), vatRate, commission, driver: amount - commission, movera: commission };
+}
+
+/**
+ * The Driver / Movera bar on the payment page, in whole % of the price (demo only). A29 round 2 (M2, owner rule: % only
+ * in admin setting fields; the apps never work money out): live → null (no % result line, no bar); a missing value → null
+ * (never "NaN%").
+ */
+export function payShares(split: Pick<PaySplit, "price" | "driver" | "movera">): { driverPct: number; moveraPct: number } | null {
+  if (isLiveData() || !Number.isFinite(split.driver) || !Number.isFinite(split.movera) || !Number.isFinite(split.price)) return null;
+  const base = Math.max(split.price, 1);
+  return { driverPct: Math.round((split.driver / base) * 100), moveraPct: Math.round((split.movera / base) * 100) };
 }
 
 export type RetryPlan = { tries: number; max: number; nextAt: string | null; cause: { kind: "rider" | "system"; reason: string }; handled: boolean; owing: boolean };

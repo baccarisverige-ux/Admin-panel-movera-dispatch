@@ -8996,4 +8996,10 @@
 ["Cash tip time in the car: mixed → {0} min","Tid för kontant dricks i bilen: blandat → {0} min"],
 ["Differs by zone: {0}. Save keeps each zone's time unless you change it.","Olika per zon: {0}. Spara behåller varje zons tid om du inte ändrar den."],
 ["0 minutes: riders cannot give a cash tip in the app once the trip has ended.","0 minuter: resenärer kan inte ge kontant dricks i appen när resan har slutat."],
-["Paid to the driver who lost the trip","Betalt till föraren som förlorade resan"]]
+["Paid to the driver who lost the trip","Betalt till föraren som förlorade resan"],
+["Driver balance for this trip","Förarens saldo för resan"],
+["Driver owes Movera {0}","Föraren är skyldig Movera {0}"],
+["Movera owes the driver {0}","Movera är skyldig föraren {0}"],
+["Settled","Kvitt"],
+["What the driver gets for this trip.","Det föraren får för den här resan."],
+["What Movera keeps from this trip.","Det Movera behåller av den här resan."]]

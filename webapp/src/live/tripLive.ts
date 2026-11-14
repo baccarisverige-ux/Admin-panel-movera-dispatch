@@ -215,6 +215,7 @@ export function bonusByKind(trip: BonusTrip): { exclusiveMinor: number; radarMin
  * moveraKeepsNow, the lost-driver payment already off) when the server sends it; an older server: its commission.
  */
 export function commissionBeforeBonus(trip: BonusTrip): number {
-  const keeps = trip.moveraKeepsNow && Number.isFinite(trip.moveraKeepsNow.amountMinor) ? trip.moveraKeepsNow.amountMinor : trip.commission?.amountMinor ?? 0;
+  // A29 round 2 (FU-A29-1): without the server's moveraKeepsNow → NaN ("Not connected yet"), never the stored commission or 0.
+  const keeps = trip.moveraKeepsNow && Number.isFinite(trip.moveraKeepsNow.amountMinor) ? trip.moveraKeepsNow.amountMinor : NaN;
   return keeps + (trip.driverBonus?.amountMinor ?? 0);
 }

@@ -238,6 +238,8 @@ export type Trip = {
   pickupPay?: LiveMoney;
   walletApplied?: LiveMoney;
   cashToCollect?: LiveMoney;
+  /** v0.18.10 finish + v0.18.89 §90 / v0.18.90 (contract.json#priceDisplay.owedToMovera, admin view): on an ended trip with a fare. Optional: older servers do not send it. */
+  finish?: { endedEarly?: boolean; total?: LiveMoney; cashToCollect?: LiveMoney; driverTotal?: LiveMoney; owedToMovera?: LiveMoney; [key: string]: unknown };
   driverSilentAlert?: { at?: string; [key: string]: unknown };
   /** v0.18.39 §63 (contract.json#dispatch.searchStep, admin view): the latest rider-waiting step while searching. */
   searchStep?: { id?: string; kind: string; message?: string; at?: string } | null;
@@ -266,7 +268,7 @@ export type Trip = {
   adminFlag?: AdminTripFlag;
 };
 export type TripRideCheck = { checkId: string; trigger: string; askedAt: string; answerBy: string; answers: { rider?: "ok" | "need_help"; driver?: "ok" | "need_help" }; alertedAt?: string };
-export type TripRouteChange = { changeId: string; status: "pending" | "accepted" | "refused" | "expired" | "withdrawn"; dropoff: TripPlace; stops: TripPlace[]; total: LiveMoney; difference: LiveMoney; askedAt: string; answerBy: string; answeredAt?: string; answeredBy?: "driver" | "rider" | "system"; driverEarnings?: LiveMoney; earningsDifference?: LiveMoney };
+export type TripRouteChange = { changeId: string; status: "pending" | "accepted" | "refused" | "expired" | "withdrawn"; dropoff: TripPlace; stops: TripPlace[]; total: LiveMoney; difference: LiveMoney; askedAt: string; answerBy: string; answeredAt?: string; answeredBy?: "driver" | "rider" | "system"; driverEarnings?: LiveMoney; earningsDifference?: LiveMoney; /** v0.18.89 §90 (priceDisplay.routeChange): what the driver gets for the whole trip with the new route; optional. */ driverTotal?: LiveMoney };
 export type AdminTripFlag = { flagged: boolean; reason?: string; by?: string; at?: string };
 export type AdminTripNote = { noteId: string; tripId: string; text: string; adminId: string; adminName?: string; at: string };
 /** GET /admin/ride-checks rows (contract.json#onTrip.rideCheck.adminList). */
