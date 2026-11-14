@@ -1,11 +1,11 @@
-# Movera API v0.18.100 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.101 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.100
+  version: 0.18.101
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.100 in this folder; this file must agree with them.
+    v0.18.101 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.100
+  version: 0.18.101
   source: contract.json
 paths:
   /auth/otp/request:
@@ -22698,6 +22698,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/IncidentRideCheck'
           description: 'v0.12.0: only on kind ride_check.'
+        contactsSms:
+          allOf:
+          - $ref: '#/components/schemas/SosContactsSms'
+          description: 'v0.18.101 §92: the SMS to the driver''s emergency contacts of this case (admin views and feed).'
     RideCheckTrigger:
       type: string
       enum:
@@ -22828,6 +22832,14 @@ components:
           $ref: '#/components/schemas/Id'
         receivedAt:
           $ref: '#/components/schemas/Timestamp'
+        contactsSms:
+          allOf:
+          - $ref: '#/components/schemas/SosContactsSms'
+          description: 'v0.18.101 §92: driver SOS only; The FIRST driver SOS of a case (POST /driver/trips/{tripId}/sos that
+            opens the case, or that joins a case the rider opened): with the setting of the trip zone''s country on, one SMS
+            per contact stored for the driver at that moment. Later SOS on the same case (same or new Idempotency-Key, either
+            side) send nothing more and answer the stored result. A rider SOS never texts anybody and its SosReceipt has no
+            contactsSms.'
     AdminIncidentCommand:
       type: object
       description: 'v0.7.0: take, resolve (Solved) or dismiss (False alarm). The note becomes the resolution.'
@@ -23739,6 +23751,15 @@ components:
             fixed CHECK constant; Rule 46 (no table lock, written undo).'
         driverOwesLimit:
           $ref: '#/components/schemas/DriverOwesLimit'
+        sosContactsSms:
+          type: boolean
+          description: 'v0.18.101 §92: CountryRules.sosContactsSms (boolean) of the COUNTRY STANDARD only, like emergencyNumbers:
+            Admin › Pricing › Tips & limits per country › Emergency numbers card, switch "SMS to the driver''s emergency contacts
+            on SOS" (settings.edit, published with the country_rules document by settings.publish). A zone''s own country_rules
+            carrying it is 400 invalid_request, reason sos_sms_country_only; a value that is not true / false is 400 invalid_request,
+            reason invalid_document. Never saved = configDefaults.sosContactsSms[country] (true everywhere, the owner''s answer),
+            else configDefaults.sosContactsSms.other. Off: no SMS; the SOS, the call and the Movera alert are unchanged.'
+          default: true
       x-server-only: true
     FeeRule:
       type: object
@@ -25706,6 +25727,21 @@ components:
             extra call buttons on the "SOS sent" screen; (3) ride check "Need help" — the same call buttons; (4) the driver''s
             emergency contacts screen — the built-in number shown is the country list, not 112. Labels in the app language
             (sv / fr / en).'
+        sosContactsSms:
+          type: object
+          description: 'v0.18.101 §92: DriverAppConfig.sosContactsSms { on (the zone country''s switch), connected (an SMS
+            company is connected on this server) }, written by the server into GET /driver/config like emergencyNumbers (driverConfigZone).
+            The app promises an SMS only when on and connected.'
+          required:
+          - 'on'
+          - connected
+          properties:
+            'on':
+              type: boolean
+              description: The zone country's switch.
+            connected:
+              type: boolean
+              description: An SMS company is connected on this server.
     CategoryPricingWaiting:
       type: object
       description: Waiting at pickup for one category; RiderAppConfig / DriverAppConfig waiting.byCategory carry the same
@@ -36689,3 +36725,41 @@ components:
         (Timestamp, UTC) + DriverPayoutPage.nextPayoutLocal (string ''YYYY-MM-DDTHH:MM'', the same moment as wall-clock time
         in the payout''s time zone) + DriverPayoutPage.nextPayoutTimeZone (IANA name) on GET /driver/payouts only (every page,
         also when items is empty). The admin GET /admin/payouts never sends them.'
+    SosContactsSms:
+      type: object
+      description: 'v0.18.101 §92: SosContactsSms { status, contacts (number of SMS asked for, 0 or more), sent? (accepted
+        by the SMS company; only for sent / failed), at (when decided) }. status: off (admin switch off), no_contacts (the
+        driver has none), not_connected (no SMS company; rows kept as skipped), queued (handed to the SMS company after the
+        save), sent, failed. Optional SosReceipt.contactsSms (driver SOS only; the stored result on a repeat) and optional
+        Incident.contactsSms (admin case views and the incident feed; absent = no driver SOS on the case, or a case from before
+        v0.18.101). The SMS rows are written in sms_outbox (kind sos_contact) inside the SOS command. No SMS company connected
+        (today: BUILD-QUEUE §3, 46elks + Twilio chosen, keys missing): every row is kept with status skipped and the result
+        is not_connected ("SMS not connected"); nothing is sent and nothing pretends it was. With an SMS company: the rows
+        are written queued and handed to it only AFTER the SOS is saved (never inside the command, so the SOS answer and the
+        emergency call never wait for it); the case''s result then becomes sent (at least one accepted) or failed (none accepted).
+        The SMS step never fails the SOS: it runs in its own savepoint; on any error only it is rolled back, the case and
+        the Movera alert stay, and the result is failed (sent 0).'
+      required:
+      - status
+      - contacts
+      - at
+      properties:
+        status:
+          type: string
+          enum:
+          - 'off'
+          - no_contacts
+          - not_connected
+          - queued
+          - sent
+          - failed
+        contacts:
+          type: integer
+          minimum: 0
+          description: SMS asked for (one per stored contact).
+        sent:
+          type: integer
+          minimum: 0
+          description: Accepted by the SMS company; only for sent / failed.
+        at:
+          $ref: '#/components/schemas/Timestamp'

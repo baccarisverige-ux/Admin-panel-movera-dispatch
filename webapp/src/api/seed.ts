@@ -6,6 +6,7 @@ import type { ErrorCode } from "./httpClient.ts";
 const SEED_TRIP_STATUSES = TRIP_STATUSES.filter((status) => status !== "cancelled_by_system");
 import { MARKETS } from "../markets/markets.ts";
 import type { RideCheck } from "../safety/rideCheck.ts";
+import type { ContactsSms } from "../config/sosContactsSms.ts";
 import { marketRows } from "./marketSeed.ts";
 import { sosDriverId } from "./presence.ts";
 import { seedRideChecks } from "./rideCheckSeed.ts";
@@ -75,6 +76,8 @@ export type DemoRecord = {
   alarm?: boolean;
   /** Live Ride check incidents (contract v0.12.0 §22): what the app reported. */
   liveRideCheck?: LiveRideCheck;
+  /** Live SOS incidents (contract v0.18.101 §92, BQ-V34): Incident.contactsSms, the SMS to the driver's emergency contacts. */
+  liveContactsSms?: ContactsSms;
   /** Live build: the record came from the Movera server. Nothing on it may be invented (owner rule, part 3). */
   live?: true;
   /**

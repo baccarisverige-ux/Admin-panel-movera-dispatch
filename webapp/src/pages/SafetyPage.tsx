@@ -12,9 +12,10 @@ import { caseIsOpen } from "../live/emergencyContacts";
 import { useCountrySettings } from "../config/useCountrySettings";
 import { countrySettingsOf } from "../config/countrySettings";
 import { emergencyLabel } from "../config/emergencyNumbers";
+import { contactsSmsLine } from "../config/sosContactsSms";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { AlertOctagon, ArrowLeft, Car, Clock3, FileDown, History, ListChecks, MapPin, Phone, PhoneCall, Settings2, ShieldAlert, ShieldCheck, Siren, UserRound, Users } from "lucide-react";
+import { AlertOctagon, ArrowLeft, Car, Clock3, FileDown, History, ListChecks, MapPin, MessageSquareText, Phone, PhoneCall, Settings2, ShieldAlert, ShieldCheck, Siren, UserRound, Users } from "lucide-react";
 import { useAdminApi } from "../api/AdminApiContext";
 import { emptySafety, safetyAction, useCommands, useRecords, useSlice, type SafetyBook } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
@@ -573,6 +574,8 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
           {/* v0.18.54 §76 (owner Q41): one click on an OPEN case reveals both phones; hidden once the case is closed. */}
           {isLiveData() ? <LiveRevealContacts incidentId={item.id} status={caseIsOpen(item.state) ? "open" : "closed"} /> : null}
           {isLiveData() ? <LiveEmergencyContacts incidentId={item.id} hasDriver={Boolean(item.driverId ?? trip?.driverId)} hasRider={Boolean(rider)} open={caseIsOpen(item.state)} /> : null}
+          {/* v0.18.101 §92 (BQ-V34): Incident.contactsSms, what happened to the SMS to the driver's emergency contacts. */}
+          {item.contactsSms ? <p className="op-help" data-testid="sos-contacts-sms-line"><MessageSquareText size={13} aria-hidden="true" /> {contactsSmsLine(item.contactsSms)}</p> : null}
           {settings.pastCases ? (
             <>
               <h4 className="op-sub"><History size={13} aria-hidden="true" /> {tr("Earlier cases of {0}", [item.who])}</h4>
