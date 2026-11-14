@@ -9017,4 +9017,5 @@
 ["{0} min ({1} times)","{0} min ({1} fois)"],
 ["Waiting at pickup: \"Auto arrived within\" must be whole metres from 30 to 300.","Attente à la prise en charge : « Arrivée automatique à moins de » doit être un nombre entier de mètres de 30 à 300."],
 ["Waiting at pickup: \"Waiting stops beyond\" must be whole metres from 100 to 2000.","Attente à la prise en charge : « L’attente s’arrête au-delà de » doit être un nombre entier de mètres de 100 à 2000."],
-["Waiting at pickup: \"Waiting stops beyond\" must be more than \"Auto arrived within\".","Attente à la prise en charge : « L’attente s’arrête au-delà de » doit être supérieur à « Arrivée automatique à moins de »."]]
+["Waiting at pickup: \"Waiting stops beyond\" must be more than \"Auto arrived within\".","Attente à la prise en charge : « L’attente s’arrête au-delà de » doit être supérieur à « Arrivée automatique à moins de »."],
+["If the raise is more than Movera's commission, Movera pays the difference.","Si la hausse dépasse la commission de Movera, Movera paie la différence."]]

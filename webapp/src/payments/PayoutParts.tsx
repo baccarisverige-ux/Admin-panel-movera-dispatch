@@ -28,6 +28,7 @@ import {
 } from "./runs";
 import type { CurrencyCode } from "../domain/money";
 import { tr, trn, trx } from "../i18n";
+import { payoutLineLabel } from "../live/LivePayouts";
 
 const agentName = (id: string) => AGENTS.find((item) => item.id === id)?.name ?? id;
 
@@ -81,9 +82,12 @@ export function PayoutLines({ record, ops, country, money, onNotice, cash }: { r
   return (
     <section className="fn-section po-lines" aria-label={tr("Line by line")}>
       <h3>{trn("{0} {1} line by line {2}", <Hand size={16} aria-hidden="true" />, record.id, instant ? <span className="dx-tag">{trn("{0} Instant cash-out", <Zap size={11} aria-hidden="true" />)}</span> : null)}</h3>
+      {/* FU-A29-2: a live payout with no summary and no lines from the server reads "Not connected yet". */}
+      {record.live && !lines.length ? <p className="state-line" data-testid="payout-lines-not-connected">{tr("Not connected yet")}</p> : (
       <ul className="po-line-list">
-        {lines.map((line) => <li key={line.label} className={line.kind} title={trx(line.help)}><span>{trx(line.label)}</span><b>{line.kind === "minus" ? `− ${money(Math.abs(line.minor))}` : money(line.minor)}</b></li>)}
+        {lines.map((line) => <li key={line.label} className={line.kind} title={trx(line.help)}><span>{line.code ? `${payoutLineLabel(line.code)}${line.count !== undefined ? ` (${line.count})` : ""}` : trx(line.label)}</span><b>{line.kind === "minus" ? `− ${money(Math.abs(line.minor))}` : money(line.minor)}</b></li>)}
       </ul>
+      )}
       {hold ? <p className="fn-warn">{trn("{0} On hold by {1}: {2}", <PauseCircle size={14} aria-hidden="true" />, agentName(hold.by), hold.reason)}</p> : null}
       {failed ? <p className="fn-warn"><RefreshCcw size={14} aria-hidden="true" /> {failed}</p> : null}
       <div className="po-hold">

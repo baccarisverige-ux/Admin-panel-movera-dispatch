@@ -93,7 +93,31 @@ export function retryPayout(ops: PayoutOps, id: string, by: string, at: string):
   return { ...ops, draftRev: ops.draftRev + 1, retries: { ...ops.retries, [id]: [...(ops.retries[id] ?? []), { at, by }] } };
 }
 
-export type Line = { label: string; minor: number; kind: "plus" | "minus" | "total"; help?: string };
+export type Line = { label: string; minor: number; kind: "plus" | "minus" | "total"; help?: string; /** A server Payout.lines code (live, older server): the card shows its label. */ code?: string; count?: number };
+
+/**
+ * FU-A29-2 (owner rule R2; owner 2026-11-14 "how much driver get and how much movera get thats all no details";
+ * contract v0.18.92 priceDisplay.payoutSummary): a live payout's lines are the server's only — the 2 lines of
+ * Payout.summary; an older server without summary: its own Payout.lines and Payout.amount; nothing sent: no lines
+ * (the card reads "Not connected yet"). Nothing is worked out here.
+ */
+function livePayoutLines(record: DemoRecord): Line[] {
+  const payout = record.livePayout;
+  const real = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+  const summary = payout?.summary;
+  if (summary && real(summary.driverGetsMinor) && real(summary.moveraGetsMinor)) {
+    return [
+      { label: "Driver gets", minor: summary.driverGetsMinor, kind: "total" },
+      { label: "Movera gets", minor: summary.moveraGetsMinor, kind: "plus" },
+    ];
+  }
+  const lines = (payout?.lines ?? []).filter((line) => real(line.amountMinor));
+  if (!lines.length) return [];
+  return [
+    ...lines.map((line): Line => ({ label: line.code, code: line.code, minor: line.amountMinor, kind: line.amountMinor < 0 ? "minus" : "plus", ...(line.count !== undefined ? { count: line.count } : {}) })),
+    ...(real(record.fareOre) ? [{ label: "Driver gets", minor: record.fareOre, kind: "total" as const }] : []),
+  ];
+}
 
 /**
  * The payout explained. The record holds the amount the driver gets; the lines are worked out
@@ -101,6 +125,8 @@ export type Line = { label: string; minor: number; kind: "plus" | "minus" | "tot
  * driver's payout is the same whole amount, paid to his fleet owner (contract v0.18.88 fleetPayoutWhole: no fleet-owner %).
  */
 export function payoutLines(record: DemoRecord, sched: Schedule, cash: { minor: number; trips: number } = { minor: 0, trips: 0 }): { lines: Line[]; trips: number; instant: boolean; cashMinor: number } {
+  // FU-A29-2: live shows the server's numbers only (no hash-made demo lines, no %, no instant cash-out tag).
+  if (record.live) return { lines: livePayoutLines(record), trips: record.livePayout?.tripCount ?? 0, instant: false, cashMinor: 0 };
   const net = record.fareOre ?? 0;
   const seed = hash(record.id);
   const minor = market(countryOfPayout(record)).minorUnits;

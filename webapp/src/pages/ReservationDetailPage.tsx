@@ -39,6 +39,8 @@ import { SensitiveValue } from "../ui/SensitiveValue";
 import { isLiveData } from "../live/realData";
 import { tr, trn } from "../i18n";
 import { categoryName } from "../riders/profile";
+import { liveReservationMoney } from "../reservations/raiseMoney";
+import { formatMoney } from "../markets/markets";
 
 export function ReservationDetailPage() {
   const { id = "" } = useParams();
@@ -119,6 +121,11 @@ export function ReservationDetailPage() {
   const declinePrepared = answerAsk(book, record, "declined", nowIso);
   const raisePrepared = raiseFare(book, record, raiseAmount, raiseMax, agent?.id ?? "", nowIso, unit);
   const show = (value: number) => formatMajor(value, country);
+  // BQ-A26 (owner rule R2): on live the box shows the server's fare and moveraKeepsNow only, never fare × %, no sums.
+  const liveMoney = liveReservationMoney(record, isLiveData());
+  const fareText = liveMoney ? formatMoney(liveMoney.fareMinor, country) : `${show(fareMajor)}${fare.estimated ? tr(" (estimate)") : ""}`;
+  const commissionText = liveMoney ? formatMoney(liveMoney.moveraKeepsMinor, country) : show(split.commission);
+  const showSums = !liveMoney;
   const unassignPrepared = touchReservation(book, record, agent?.id ?? "", `Driver ${record.driverId ?? "none"} unassigned`);
   const cancelPrepared = touchReservation(book, record, agent?.id ?? "", "Reservation cancelled");
   const noShowPrepared = touchReservation(book, record, agent?.id ?? "", "Rider did not show up");
@@ -290,11 +297,12 @@ export function ReservationDetailPage() {
           {!zoneRules.raiseFare ? <p>{trn("Raising the fare is off in this zone. Change it in {0}.", <Link to={`/dispatch?zone=${record.zoneId}&tab=reservations`}>{tr("Dispatch › Reservations")}</Link>)}</p> : (
             <>
               <p>{tr("Nobody has taken it yet. A higher fare helps a driver take it. It is paid from Movera's commission; the rider pays the same.")}</p>
-              <p className="state-line">{trn("Fare {0}{1} · Movera's commission {2} · highest raise {3}.", show(fareMajor), fare.estimated ? tr(" (estimate)") : "", show(split.commission), show(raiseMax))}</p>
+              <p className="state-line">{trn("Fare {0}{1} · Movera's commission {2} · highest raise {3}.", fareText, "", commissionText, show(raiseMax))}</p>
               <label>{trn("Raise by ({0})", unit)}<input aria-label={tr("Fare raise")} inputMode="decimal" value={raiseText} disabled={!canRaise} onChange={(event) => setRaiseText(event.target.value.replace(/[^\d.,]/g, ""))} placeholder={tr("For example {0}", [Math.round(raiseMax / 5)])} />
               </label>
-              {raiseAmount > 0 && split.beyond > 0 ? <p className="resv-raise over" role="status">{trn("Goes {0} beyond Movera's commission. Movera pays the difference.", show(split.beyond))}</p> : null}
-              {raiseAmount > 0 && split.beyond === 0 ? <p className="resv-raise" role="status">{trn("All from Movera's commission. {0} of it is left.", show(split.commission - split.fromCommission))}</p> : null}
+              {liveMoney ? <p className="fine-print" data-testid="reservation-raise-rule">{tr("If the raise is more than Movera's commission, Movera pays the difference.")}</p> : null}
+              {showSums && raiseAmount > 0 && split.beyond > 0 ? <p className="resv-raise over" role="status">{trn("Goes {0} beyond Movera's commission. Movera pays the difference.", show(split.beyond))}</p> : null}
+              {showSums && raiseAmount > 0 && split.beyond === 0 ? <p className="resv-raise" role="status">{trn("All from Movera's commission. {0} of it is left.", show(split.commission - split.fromCommission))}</p> : null}
               {raiseText && raisePrepared.error ? <p className="state-line" role="alert">{raisePrepared.error}</p> : null}
               <div className="actions">
                 <CommandButton
