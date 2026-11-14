@@ -275,6 +275,8 @@ function rideCheck(base: Common, state: AppConfigState) {
   return {
     // v0.18.9 (G7, contract.json#onTrip.rideCheck.settings): the server's per-zone ride check (stopMinutes, offRouteKm too).
     on: rules.on, endFarMeters: rules.endFarMeters, noAnswerSeconds: rules.noAnswerSeconds, repeatMinutes: rules.repeatMinutes, noAnswerAlarm: rules.noAnswerAlarm,
+    // v0.18.100 (BQ-V37): the server's scan cadence, per zone.
+    scanEverySeconds: rules.scanEverySeconds,
     stopMinutes: rules.stopMinutes ?? state.rideCheck.longStopMinutes,
     offRouteKm: rules.routeKm,
     farOn: rules.farOn, stopOn: rules.stopOn, routeOn: rules.routeOn, longerOn: rules.longerOn, longerPct: rules.longerPct, crashOn: rules.crashOn,

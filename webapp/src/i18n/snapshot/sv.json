@@ -9012,4 +9012,8 @@
 ["At most {0} at a time.","Högst {0} åt gången."],
 ["Added {0} to {1}'s wallet.","La till {0} i {1}s plånbok."],
 ["Refund of {0} is waiting for a second admin to approve.","Återbetalning på {0} väntar på att en andra admin godkänner."],
-["Refunded {0} to the rider's {1}.","Återbetalade {0} till resenärens {1}."]]
+["Refunded {0} to the rider's {1}.","Återbetalade {0} till resenärens {1}."],
+["Check the GPS at most every","Kolla GPS:en högst var"],
+["The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter.","Servern tittar på varje resas position för en resekoll högst så här ofta. Kortare hittar ett problem tidigare; längre belastar servern mindre."],
+["Check the GPS at most every (s)","Kolla GPS:en högst var (s)"],
+["Ride check: check the GPS at most every must be 10 to 120 s.","Resekoll: Kolla GPS:en högst var måste vara 10 till 120 s."]]

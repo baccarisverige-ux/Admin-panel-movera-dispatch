@@ -9012,4 +9012,8 @@
 ["At most {0} at a time.","Au plus {0} à la fois."],
 ["Added {0} to {1}'s wallet.","{0} ajouté au portefeuille de {1}."],
 ["Refund of {0} is waiting for a second admin to approve.","Le remboursement de {0} attend l'approbation d'un second administrateur."],
-["Refunded {0} to the rider's {1}.","{0} remboursé sur {1} du passager."]]
+["Refunded {0} to the rider's {1}.","{0} remboursé sur {1} du passager."],
+["Check the GPS at most every","Vérifier le GPS au plus toutes les"],
+["The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter.","Le serveur regarde la position de chaque course pour une vérification de sécurité au plus aussi souvent. Plus court trouve un problème plus tôt ; plus long allège le serveur."],
+["Check the GPS at most every (s)","Vérifier le GPS au plus toutes les (s)"],
+["Ride check: check the GPS at most every must be 10 to 120 s.","Vérification de sécurité : Vérifier le GPS au plus toutes les doit être de 10 à 120 s."]]

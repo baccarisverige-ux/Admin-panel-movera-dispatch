@@ -2,7 +2,7 @@
  * The Dispatch rules read back from the server's documents (split from configDocs.ts so the first load carries only
  * this part: dispatch/rules.ts needs it; the save / publish code stays in the lazily loaded live chunk).
  */
-import { completeBookingWindow, completeEarlyEnd, RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
+import { completeBookingWindow, completeEarlyEnd, RIDE_CHECK_LIMITS, rideCheckDefault, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
 import { headingValue } from "../config/zoneDefaults.ts";
 import { AUTO_ARRIVE_DEFAULT_METERS, LEAVE_DEFAULT_METERS, validAutoArrive } from "../dispatch/offerRules.ts";
@@ -109,6 +109,8 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
       stopMinutes: n("stopMinutes", RIDE_CHECK_LIMITS.stopMinutes, rc.stopMinutes), routeKm: n("offRouteKm", RIDE_CHECK_LIMITS.routeKm, rc.routeKm),
       endFarMeters: n("endFarMeters", RIDE_CHECK_LIMITS.endFarMeters, rc.endFarMeters), noAnswerSeconds: n("noAnswerSeconds", RIDE_CHECK_LIMITS.noAnswerSeconds, rc.noAnswerSeconds),
       repeatMinutes: n("repeatMinutes", RIDE_CHECK_LIMITS.repeatMinutes, rc.repeatMinutes),
+      // v0.18.100 (BQ-V37): missing or outside 10-120 reads as the contract default 30, as the server reads it.
+      scanEverySeconds: n("scanEverySeconds", RIDE_CHECK_LIMITS.scanEverySeconds, rideCheckDefault().scanEverySeconds),
     };
   }
   const change = driver?.["routeChange"] as Record<string, unknown> | undefined;

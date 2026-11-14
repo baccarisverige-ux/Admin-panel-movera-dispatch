@@ -377,6 +377,11 @@ export type RideCheckRules = {
   noAnswerSeconds: number;
   repeatMinutes: number;
   noAnswerAlarm: boolean;
+  /**
+   * v0.18.100 (BQ-V37, owner W1 Q66 "Yes" = Q-B6, contract.json#onTrip.rideCheck.detection.cadence): the server looks at
+   * a trip's GPS for a ride check at most once every this many seconds (DriverAppConfig.rideCheck.scanEverySeconds).
+   */
+  scanEverySeconds: number;
   farOn: boolean;
   stopOn: boolean;
   routeOn: boolean;
@@ -393,11 +398,12 @@ export const RIDE_CHECK_LIMITS = {
   endFarMeters: { min: 100, max: 5000 },
   noAnswerSeconds: { min: 30, max: 600 },
   repeatMinutes: { min: 1, max: 120 },
+  scanEverySeconds: { min: 10, max: 120 },
   longerPct: { min: 10, max: 300 },
 } as const;
 
 export function rideCheckDefault(): RideCheckRules {
-  return { on: true, stopMinutes: 2, endFarMeters: 500, noAnswerSeconds: 120, repeatMinutes: 10, noAnswerAlarm: false, farOn: true, stopOn: true, routeOn: true, routeKm: 2, longerOn: true, longerPct: 50, crashOn: true };
+  return { on: true, stopMinutes: 2, endFarMeters: 500, noAnswerSeconds: 120, repeatMinutes: 10, noAnswerAlarm: false, scanEverySeconds: 30, farOn: true, stopOn: true, routeOn: true, routeKm: 2, longerOn: true, longerPct: 50, crashOn: true };
 }
 
 export type ZoneDispatch = {

@@ -727,6 +727,10 @@ if 'route_change_before_pickup_off' not in _ot['errors'] or _ot['rideCheck']['pu
 for _k, (_lo, _hi) in _ot['rideCheck']['settings']['ranges'].items():
     if not (_lo <= c['configDefaults']['rideCheck'][_k] <= _hi): bad += 1; print('RIDE CHECK range', _k)
 if set(_ot['rideCheck']['settings']['fields']) != set(c['configDefaults']['rideCheck']): bad += 1; print('RIDE CHECK fields')
+# v0.18.100 (BQ-V37, owner W1 Q66 "Yes" = Q-B6: ride check at most every 30 s per trip, an admin setting): the server's
+# scan cadence per zone, default 30 s, range 10-120 s.
+if c['configDefaults']['rideCheck'].get('scanEverySeconds') != 30 or _ot['rideCheck']['settings']['ranges'].get('scanEverySeconds') != [10, 120]: bad += 1; print('RIDE CHECK scanEverySeconds v0.18.100')
+if 'scanEverySeconds' not in _ot['rideCheck']['detection'].get('cadence', ''): bad += 1; print('RIDE CHECK cadence rule v0.18.100')
 if c['configDefaults']['maxStops'] != 3: bad += 1; print('MAX STOPS default')
 if c['configDefaults']['stopFreeWaitMin'] != 0: bad += 1; print('STOP FREE default v0.18.9')
 for _grp in (_ot['rideCheck']['texts'], _ot['routeChange']['texts'], _ot['stopWaiting']['texts'], _ot['maxStops']['texts']):

@@ -35,6 +35,10 @@ export function RideCheckCard({ zone, onChange, disabled }: { zone: ZoneDispatch
       <Row label={tr("Ask again after")} help={tr("The same reason does not ask again before this.")}>
         <Num label={tr("Ask again after")} value={check.repeatMinutes} unit="min" step={1} min={L.repeatMinutes.min} max={L.repeatMinutes.max} disabled={off} onChange={(repeatMinutes) => setCheck({ repeatMinutes })} />
       </Row>
+      {/* v0.18.100 (BQ-V37, owner W1 Q66): how often at most the server looks at a trip's GPS (per zone, default 30 s). */}
+      <Row label={tr("Check the GPS at most every")} help={tr("The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter.")}>
+        <Num label={tr("Check the GPS at most every")} value={check.scanEverySeconds} unit="s" step={5} min={L.scanEverySeconds.min} max={L.scanEverySeconds.max} disabled={off} onChange={(scanEverySeconds) => setCheck({ scanEverySeconds })} />
+      </Row>
       <Row label={tr("No answer rings the alarm")} help={tr("Off: a no-answer case is listed without sound. Need help always rings.")} on={check.noAnswerAlarm} disabled={off} onToggle={(noAnswerAlarm) => setCheck({ noAnswerAlarm })} />
       <p className="dx-note rc-note"><ShieldAlert size={13} aria-hidden="true" /> <span>{trn("The rider and the driver also get a push, so a locked phone still asks. Movera never calls 112; the person calls. Every check is in {0}.", <Link to="/incidents?view=ridechecks">{tr("Incidents → Ride checks")}</Link>)}</span></p>
     </Card>

@@ -330,6 +330,7 @@ export function rideCheckIssues(check: RideCheckRules): string[] {
     if (out(check.endFarMeters, RIDE_CHECK_LIMITS.endFarMeters)) issues.push(`Ride check: ended far from the drop-off must be ${RIDE_CHECK_LIMITS.endFarMeters.min} to ${RIDE_CHECK_LIMITS.endFarMeters.max} m.`);
     if (out(check.noAnswerSeconds, RIDE_CHECK_LIMITS.noAnswerSeconds)) issues.push(`Ride check: time to answer must be ${RIDE_CHECK_LIMITS.noAnswerSeconds.min} to ${RIDE_CHECK_LIMITS.noAnswerSeconds.max} s.`);
     if (out(check.repeatMinutes, RIDE_CHECK_LIMITS.repeatMinutes)) issues.push(`Ride check: ask again after must be ${RIDE_CHECK_LIMITS.repeatMinutes.min} to ${RIDE_CHECK_LIMITS.repeatMinutes.max} min.`);
+    if (out(check.scanEverySeconds, RIDE_CHECK_LIMITS.scanEverySeconds)) issues.push(`Ride check: check the GPS at most every must be ${RIDE_CHECK_LIMITS.scanEverySeconds.min} to ${RIDE_CHECK_LIMITS.scanEverySeconds.max} s.`);
   }
   return issues;
 }
