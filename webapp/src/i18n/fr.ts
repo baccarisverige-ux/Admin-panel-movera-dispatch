@@ -46,6 +46,7 @@ import { frC14EmailVerified } from "./fr/c14-email-verified.ts";
 import { frC15WaitingPriceShown } from "./fr/c15-waiting-price-shown.ts";
 import { frC16DriverPayJ6 } from "./fr/c16-driver-pay-j6.ts";
 import { frC17LanguageFallback } from "./fr/c17-language-fallback.ts";
+import { frC16CommissionSteps } from "./fr/c16-commission-steps.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -97,4 +98,5 @@ export const fr: Record<MessageKey, string> = {
   ...frC15WaitingPriceShown,
   ...frC16DriverPayJ6,
   ...frC17LanguageFallback,
+  ...frC16CommissionSteps,
 };

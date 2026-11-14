@@ -2,6 +2,7 @@ import { MARKETS, formatMoney as formatMarketMoney, market, marketOfZone, zoneBy
 import { completePickupPay, convertPickupPay, defaultPickupPay, diffPickupPay, riderPickupFee, validatePickupPay, type PickupPay } from "./pickupPay.ts";
 import { defaultFreeWaitMin } from "../config/zoneDefaults.ts";
 import { cleanPoints, curveIssue, curvePeak, type CurvePoint, type SurgeCurve } from "./surgeCurve.ts";
+import { appFeeHalfUp, baseMinorOf, convertSteps, resultLines, sameSteps, splitRidePart, STEPS_CONTRACT, validateSteps, type CommissionStep } from "./commissionSteps.ts";
 
 /**
  * Prices, fees, surge settings, commission and driver pickup pay, one full set per zone.
@@ -112,6 +113,11 @@ export type ZoneBook = {
   smart: SmartSurge;
   scheduled: ScheduledSurge[];
   commission: Record<string, number>;
+  /**
+   * J5b (contract v0.18.86, contract.json#commissionSteps): each car type's commission steps, in minor units of the
+   * zone currency; [] = none (the % above is used). Edited in that car type's Commission card, never globally.
+   */
+  commissionSteps: Record<string, CommissionStep[]>;
   /** Driver pickup pay, paid by Movera from its commission. */
   pickupPay: PickupPay;
 };
@@ -236,30 +242,17 @@ export function money(value: number, id: MarketId): string {
 }
 
 /**
- * pct % of a minor-unit amount, exact decimal half_up to a whole minor unit (contract.json#pricing.halfUp), never float:
- * 5500 öre at 0.7 % = 38.5 öre exact -> 39 (float `Math.floor(x * pct / 100 + 0.5)` gives 38).
- */
-export function pctOfMinorHalfUp(minor: number, pct: number): number {
-  const scale = 10_000n;
-  const n = BigInt(Math.round(minor)) * BigInt(Math.round(pct * Number(scale)));
-  const d = 100n * scale;
-  const twice = 2n * n + d;
-  const den = 2n * d;
-  const q = twice / den;
-  return Number(twice % den < 0n ? q - 1n : q);
-}
-
-/**
  * The commission card's two result lines, amounts only in major units (owner 2026-11-14: "simply write only how much in
  * amount driver get and how much movera get"; contract v0.18.88 commissionSteps.adminCalculator.rule): the driver gets
  * the price minus the commission; Movera gets the commission + the app fee as one amount.
  */
-export function commissionCardLines(price: number, commissionPct: number, appFeePct: number, id: MarketId): { driverGets: number; moveraGets: number } {
+export function commissionCardLines(price: number, commissionPct: number, appFeePct: number, id: MarketId, steps: readonly CommissionStep[] = []): { driverGets: number; moveraGets: number } {
+  // J5b: ONE calculation for the card's example and its calculator (commissionSteps.resultLines: the steps, or the %
+  // when there are none or they are not valid yet; exact decimal half_up, contract pricing.halfUp).
   const unit = market(id).minorUnits;
   const priceMinor = Math.round(price * unit);
-  const commission = pctOfMinorHalfUp(priceMinor, commissionPct);
-  const appFee = pctOfMinorHalfUp(priceMinor, appFeePct);
-  return { driverGets: (priceMinor - commission) / unit, moveraGets: (commission + appFee) / unit };
+  const lines = resultLines({ pct: commissionPct, steps: validateSteps(steps) ? [] : steps }, priceMinor, appFeePct);
+  return lines.ok ? { driverGets: lines.driverGets / unit, moveraGets: lines.moveraGets / unit } : { driverGets: price, moveraGets: 0 };
 }
 
 /** An amount in Swedish kronor in a market's own money, with the same rate and rounding the default prices use. */
@@ -286,9 +279,25 @@ const FEE_MAX_SEK = { airportPickup: 1_000, airportDropoff: 1_000, reservationFe
 const ROUTE_MAX_SEK = 20_000;
 const TIP_MAX_SEK = 1_000;
 
+/** The app fee's highest % (Pricing › Limits and the Commission card edit the same prices.<category>.appFeePct). */
+export const APP_FEE_MAX_PCT = 50;
+
+/**
+ * One category's price change, the same for Pricing › Limits and the Commission card's "App fee %" field (owner
+ * 2026-11-14 "Yes add app fee in same card"): both write prices.<categoryId> of the draft, so both show one value.
+ */
+export function patchCategoryPrice(draft: ZoneBook, categoryId: string, patch: Partial<CategoryPrice>): void {
+  draft.prices[categoryId] = { ...draft.prices[categoryId]!, ...patch };
+}
+
+/** The app fee the rider pays on top of a trip price (minor units), exact decimal half_up to a whole minor unit (not float). */
+export function appFeeOfMinor(priceMinor: number, appFeePct: number): number {
+  return appFeeHalfUp(priceMinor, appFeePct);
+}
+
 /** Highest value a price row accepts in a market: money rows by currency, app fee 50 %, free waiting 30 min. */
 export function priceMax(field: PriceField, id: MarketId): number {
-  if (field === "appFeePct") return 50;
+  if (field === "appFeePct") return APP_FEE_MAX_PCT;
   if (field === "freeWaitMin") return 30;
   return fromSek(PRICE_MAX_SEK[field], id);
 }
@@ -387,6 +396,7 @@ export function defaultZoneBook(zoneId: string, categories: readonly CategoryDef
     smart: defaultSmartSurge(),
     scheduled: [],
     commission: Object.fromEntries(categories.map((category) => [category.id, category.id === "premium" ? 22 : 20])),
+    commissionSteps: Object.fromEntries(categories.map((category) => [category.id, []])),
     pickupPay: defaultPickupPay(categories.map((category) => category.id), factor),
   };
 }
@@ -427,6 +437,7 @@ function completeBook(book: ZoneBook, categories: readonly CategoryDef[]): ZoneB
     ...book,
     prices: Object.fromEntries(categories.map((category) => [category.id, withoutRetiredFields({ ...defaultCategoryPrice(category.id, id, airport), ...(book.prices?.[category.id] ?? {}) }, category.id)])),
     commission: Object.fromEntries(categories.map((category) => [category.id, book.commission?.[category.id] ?? fallback.commission[category.id] ?? 20])),
+    commissionSteps: Object.fromEntries(categories.map((category) => [category.id, Array.isArray(book.commissionSteps?.[category.id]) ? book.commissionSteps[category.id] : []])),
     fees: { ...fallback.fees, ...(book.fees ?? {}) },
     smart: { ...fallback.smart, ...(book.smart ?? {}), profiles: book.smart?.profiles?.length ? book.smart.profiles : fallback.smart.profiles },
     routes: book.routes ?? [],
@@ -481,10 +492,14 @@ export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDe
       else if (value > max && row.field !== "appFeePct" && row.field !== "freeWaitMin") add(`prices.${category.id}.${row.field}`, `${category.label}: ${row.label} can be at most ${short(max)} ${currencySymbol(currency)}.`);
     }
     if (price.maximum && price.minimum > price.maximum) add(`prices.${category.id}.minimum`, `${category.label}: minimum fare is higher than the maximum fare.`);
-    if (price.appFeePct > 50) add(`prices.${category.id}.appFeePct`, `${category.label}: app fee can be at most 50%.`);
+    if (price.appFeePct > APP_FEE_MAX_PCT) add(`prices.${category.id}.appFeePct`, `${category.label}: app fee can be at most 50%.`);
     if (price.freeWaitMin > 30) add(`prices.${category.id}.freeWaitMin`, `${category.label}: free waiting can be at most 30 min.`);
     const commission = book.commission[category.id];
     if (!Number.isFinite(commission) || commission < 0 || commission > 60) add(`commission.${category.id}`, `${category.label}: commission must be between 0 and 60%.`);
+    // J5b (contract.json#commissionSteps.validation): the server's 400 commission_steps_invalid, checked before saving.
+    // The advisory warning (commissionSteps.warn) is never a problem: the admin may still save.
+    const stepProblem = validateSteps(book.commissionSteps?.[category.id] ?? []);
+    if (stepProblem) add(`commissionSteps.${category.id}${stepProblem.step === null ? "" : `.${stepProblem.step}`}`, `${category.label}: ${stepProblemText(stepProblem.problem)}`);
   }
   problems.push(...validatePickupPay(book.pickupPay, categories));
   const minTrip = book.fees.minTripMeters;
@@ -629,6 +644,7 @@ export function diffBooks(before: ZoneBook, after: ZoneBook, categories: readonl
     if (a.enabled !== b.enabled) lines.push(`${category.label} turned ${b.enabled ? "on" : "off"}`);
     for (const row of PRICE_ROWS) if (a[row.field] !== b[row.field]) lines.push(`${category.label} · ${row.label} ${short(a[row.field])} → ${short(b[row.field])}`);
     if (before.commission[category.id] !== after.commission[category.id]) lines.push(`${category.label} · commission ${before.commission[category.id]}% → ${after.commission[category.id]}%`);
+    if (!sameSteps(before.commissionSteps?.[category.id], after.commissionSteps?.[category.id])) lines.push(`${category.label} · commission steps: ${after.commissionSteps?.[category.id]?.length ?? 0}`);
   }
   const feeLabels: Record<string, string> = { airportPickup: "Airport pickup fee", airportDropoff: "Airport drop-off fee", reservationFee: "Reservation fee", cleaningFee: "Cleaning fee", tollsPassThrough: "Tolls added to fare", rounding: "Rounding", minTripMeters: "Shortest trip (m)" };
   for (const key of Object.keys(feeLabels) as (keyof ZoneFees)[]) {
@@ -720,6 +736,10 @@ export function copyInto(source: ZoneBook, target: ZoneBook, parts: readonly Cop
   }
   if (parts.includes("commission")) {
     next.commission = { ...source.commission };
+    // J5b (supervisor must-fix 3): Copy zones copies the steps too; another country's amounts are converted.
+    const fromMinor = market(from).minorUnits;
+    const toMinor = market(to).minorUnits;
+    next.commissionSteps = Object.fromEntries(Object.entries(source.commissionSteps ?? {}).map(([id, steps]) => [id, from === to ? structuredClone(steps) : convertSteps(steps, fromMinor, toMinor, rate)]));
   }
   if (parts.includes("pickup")) {
     next.pickupPay = convertPickupPay(source.pickupPay, (value) => (from === to ? value : roundTo(value * rate, 0.01)));
@@ -848,7 +868,11 @@ export type QuoteInput = {
 
 export type QuoteLine = { label: string; amount: number; kind: "trip" | "surge" | "limit" | "extra" | "fee" | "rounding" };
 
-export type Quote = { lines: QuoteLine[]; total: number; appFee: number; driverGets: number; moveraGets: number; error?: string };
+export type Quote = {
+  lines: QuoteLine[]; total: number; appFee: number; driverGets: number; moveraGets: number; error?: string;
+  /** J5b: the commission step used (index from 0), null = the % commission (no steps). */
+  commissionStep?: number | null;
+};
 
 /** What the rider pays for one ride, line by line, and how it splits between driver and Movera. */
 export function quoteRide(book: ZoneBook, input: QuoteInput): Quote {
@@ -913,14 +937,20 @@ export function quoteRide(book: ZoneBook, input: QuoteInput): Quote {
   const exact = lines.map((line) => ({ ...line, amount: minor(line.amount) / unit }));
   const linesMinor = exact.reduce((sum, line) => sum + minor(line.amount), 0);
   if (linesMinor !== totalMinor) exact.push({ label: "Rounding", amount: (totalMinor - linesMinor) / unit, kind: "rounding" });
-  const commission = (book.commission[input.categoryId] ?? 0) / 100;
   // Owner 2026-10-27 (contract.json#pricing.moneySplit): waiting at pickup and at stops is 100 % the driver's, no commission.
   const pickupWait = paidWait * price.waitPerMin;
   const stopWait = input.stopWaitMin * price.stopWaitPerMin;
-  const driverMinor = Math.min(totalMinor, minor((beforeFee - pickupWait - stopWait) * (1 - commission)) + minor(pickupWait) + minor(stopWait));
-  return { lines: exact, total: totalMinor / unit, appFee: minor(appFee) / unit, driverGets: driverMinor / unit, moveraGets: (totalMinor - driverMinor) / unit };
+  // J5b (contract.json#commissionSteps.where): the step picked by the exact commission base, the shared function.
+  const rideSplit = splitRidePart({ pct: book.commission[input.categoryId] ?? 0, steps: book.commissionSteps?.[input.categoryId] ?? [] }, baseMinorOf(beforeFee - pickupWait - stopWait, unit));
+  const driverMinor = Math.max(0, Math.min(totalMinor, rideSplit.driverRidePart + minor(pickupWait) + minor(stopWait)));
+  return { lines: exact, total: totalMinor / unit, appFee: minor(appFee) / unit, driverGets: driverMinor / unit, moveraGets: (totalMinor - driverMinor) / unit, commissionStep: rideSplit.step };
 }
 
 export function marketZoneIdsFor(id: MarketId): string[] {
   return MARKETS.find((item) => item.id === id)?.zones.map((zone) => zone.id) ?? [];
+}
+
+/** J5b: the contract's English text of a commission-step problem (the panel translates it; contract.json#commissionSteps.texts.errors). */
+export function stepProblemText(problem: keyof typeof STEPS_CONTRACT.texts.errors): string {
+  return STEPS_CONTRACT.texts.errors[problem].en.replace("{max}", String(STEPS_CONTRACT.validation.maxSteps));
 }

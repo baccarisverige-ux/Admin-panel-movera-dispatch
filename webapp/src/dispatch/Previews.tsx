@@ -8,6 +8,8 @@ import {
   type DriverGroup, type OfferMode, type ReservationTimelineStep, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx, trSentences, uiLocale } from "../i18n";
+import { market } from "../markets/markets";
+import { commissionOfMajor, type CommissionRule } from "../pricing/commissionSteps";
 
 /** How the rules look on the phones: the driver's offer card and the rider's waiting screen. */
 
@@ -19,7 +21,7 @@ const SAMPLE: Record<MarketId, { pickup: string; stop: string; drop: string; are
 
 type OfferView = "popup" | "full" | "offer" | "driving";
 
-export function DriverOfferPreview({ zone, money, country, commissionPct = 20 }: { zone: ZoneDispatch; money: (value: number) => string; country: MarketId; commissionPct?: number }) {
+export function DriverOfferPreview({ zone, money, country, commission = { pct: 20, steps: [] } }: { zone: ZoneDispatch; money: (value: number) => string; country: MarketId; commission?: CommissionRule }) {
   const sample = SAMPLE[country];
   const first: OfferMode = zone.radar.on ? "radar" : "exclusive";
   const [mode, setMode] = useState<OfferMode>(first);
@@ -35,7 +37,8 @@ export function DriverOfferPreview({ zone, money, country, commissionPct = 20 }:
   const seconds = shown === "radar" ? zone.radar.seconds : zone.exclusive.seconds;
   const badges = card.badges ? zone.extras.filter((extra) => extra.on && extra.badge && (extra.id === "child_seat" || extra.id === "long_trip")).map((extra) => EXTRAS.find((item) => item.id === extra.id)!.badge) : [];
   const stops = card.stops && zone.stops.on ? Math.min(1, zone.stops.max) : 0;
-  const fare = card.netFare ? Math.round(sample.price * (1 - commissionPct / 100) * 100) / 100 : sample.price;
+  // J5b (contract v0.18.86): the net fare uses the zone's commission steps when it has them (the shared function).
+  const fare = card.netFare ? commissionOfMajor(commission, sample.price, market(country).minorUnits).driver : sample.price;
   return (
     <figure className="dp-phone dx-phone" aria-label={tr("Driver offer preview")}>
       <div className="ra-switch" role="tablist" aria-label={tr("Offer type")}>

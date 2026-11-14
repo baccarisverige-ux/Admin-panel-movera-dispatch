@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { AlertTriangle, ArrowLeft, Bell, Flag, CalendarClock, CheckCircle2, Clock, Copy, Gauge, Layers, MapPin, Pause, Plane, Radar, Shield, Smartphone, Star, Target, Timer, Trash2, TrendingDown, TrendingUp, Users, Wand2 } from "lucide-react";
 import type { Market, MarketZone } from "../markets/markets";
+import type { CommissionRule } from "../pricing/commissionSteps";
 import { CommandButton } from "../ui/CommandButton";
 import { Modal } from "../ui/Modal";
 import { beforeAfter, zoneResults } from "./demo";
@@ -37,7 +38,7 @@ type Props = {
   agentId: string;
   onNotice: (text: string) => void;
   /** Movera's commission for a normal ride in a zone (Pricing), and a sample booked-ride fare there. */
-  commissionOf: (zoneId: string) => number;
+  commissionOf: (zoneId: string) => CommissionRule;
   sampleFareOf: (zoneId: string) => number;
   /** Waiting at pickup per category, from Pricing. */
   waitBasesOf: (zoneId: string) => WaitBaseRow[];
@@ -191,7 +192,7 @@ export function RulesView(props: Props) {
               disabled={!editable}
               money={money}
               groups={book.groups.filter((item) => item.country === market.id)}
-              commissionPct={props.commissionOf(zone.id)}
+              commission={props.commissionOf(zone.id)}
               sampleFare={props.sampleFareOf(zone.id)}
               waitBases={props.waitBasesOf(zone.id)}
               otherZones={zones.filter((item) => item.id !== zone.id && canEdit(item.id)).map((item) => ({ id: item.id, name: item.name }))}
@@ -226,7 +227,7 @@ export function RulesView(props: Props) {
             </div>
             {tab === "reservations"
               ? (shownPhone === "driver" ? <ReservationDriverPreview zone={rules} money={money} country={market.id} /> : <ReservationRiderPreview zone={rules} money={money} country={market.id} fare={props.sampleFareOf(zone.id)} />)
-              : shownPhone === "driver" ? <DriverOfferPreview zone={rules} money={money} country={market.id} commissionPct={props.commissionOf(zone.id)} /> : <RiderWaitingPreview zone={rules} />}
+              : shownPhone === "driver" ? <DriverOfferPreview zone={rules} money={money} country={market.id} commission={props.commissionOf(zone.id)} /> : <RiderWaitingPreview zone={rules} />}
           </aside>
         </div>
       </div>

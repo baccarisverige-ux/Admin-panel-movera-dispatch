@@ -22,7 +22,7 @@ export const svA8S: Record<keyof typeof enA8S, string> = {
   "Same person with two accounts? Keep the other one; this one points to it.": "Samma person med två konton? Behåll det andra; det här pekar på det.",
   "Same shape as a zone": "Samma form som en zon",
   "Sample action": "Exempelåtgärd",
-  "Sample booked ride {0}. Movera's commission here is {1}% = {2} (set in Pricing).": "Exempel på bokad resa {0}. Moveras provision här är {1} % = {2} (ställs in i Priser).",
+  "Sample booked ride {0}. Movera's commission here is {1} (set in Pricing).": "Exempel på bokad resa {0}. Moveras provision här är {1} (ställs in i Priser).",
   "Sample booking": "Exempelbokning",
   "Sample raise": "Exempelhöjning",
   "Sample ride booked": "Exempelresa bokad",

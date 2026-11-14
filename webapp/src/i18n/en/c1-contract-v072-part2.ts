@@ -324,7 +324,7 @@ export const enC1ContractV072Part2 = {
   "Reservation offer history": "Reservation offer history",
   "Raising the fare is off in this zone. Change it in {0}.": "Raising the fare is off in this zone. Change it in {0}.",
   "Nobody has taken it yet. A higher fare helps a driver take it. It is paid from Movera's commission; the rider pays the same.": "Nobody has taken it yet. A higher fare helps a driver take it. It is paid from Movera's commission; the rider pays the same.",
-  "Fare {0}{1} · Movera's commission {2}% = {3} · highest raise {4}.": "Fare {0}{1} · Movera's commission {2}% = {3} · highest raise {4}.",
+  "Fare {0}{1} · Movera's commission {2} · highest raise {3}.": "Fare {0}{1} · Movera's commission {2} · highest raise {3}.",
   " (estimate)": " (estimate)",
   "Raise by ({0})": "Raise by ({0})",
   "Fare raise": "Fare raise",

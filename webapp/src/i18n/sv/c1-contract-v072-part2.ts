@@ -326,7 +326,7 @@ export const svC1ContractV072Part2: Record<keyof typeof enC1ContractV072Part2, s
   "Reservation offer history": "Bokningens erbjudandehistorik",
   "Raising the fare is off in this zone. Change it in {0}.": "Att höja priset är avstängt i den här zonen. Ändra det i {0}.",
   "Nobody has taken it yet. A higher fare helps a driver take it. It is paid from Movera's commission; the rider pays the same.": "Ingen har tagit den än. Ett högre pris hjälper en förare att ta den. Det betalas från Moveras provision; resenären betalar samma.",
-  "Fare {0}{1} · Movera's commission {2}% = {3} · highest raise {4}.": "Pris {0}{1} · Moveras provision {2} % = {3} · högsta höjning {4}.",
+  "Fare {0}{1} · Movera's commission {2} · highest raise {3}.": "Pris {0}{1} · Moveras provision {2} · högsta höjning {3}.",
   " (estimate)": " (uppskattning)",
   "Raise by ({0})": "Höj med ({0})",
   "Fare raise": "Prishöjning",

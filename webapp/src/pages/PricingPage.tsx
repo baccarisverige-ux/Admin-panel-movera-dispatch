@@ -56,6 +56,7 @@ import {
   emptyPricingStore,
   largePriceChanges,
   normalizeStore,
+  patchCategoryPrice,
   publishZones,
   stopManualSurges,
   undoLastPublish,
@@ -329,7 +330,7 @@ export function PricingPage() {
                   published={published}
                   problems={problems}
                   canEdit={canPublish}
-                  onChange={(categoryId, patch: Partial<CategoryPrice>) => update((draft) => { draft.prices[categoryId] = { ...draft.prices[categoryId], ...patch }; })}
+                  onChange={(categoryId, patch: Partial<CategoryPrice>) => update((draft) => patchCategoryPrice(draft, categoryId, patch))}
                   onOpenCancelFees={can(role, "trips.read") ? () => {
                     if (dirty.length && !window.confirm("Your price changes are not published and will be lost. Open Rider cancel fees in Dispatch?")) return;
                     navigate(`/dispatch?zone=${encodeURIComponent(zoneId)}&tab=rides#dx-rider-cancel-fees`);
@@ -385,7 +386,7 @@ export function PricingPage() {
                 <h3 id="commission-title">{trn("{0} Commission · {1}", <BadgePercent size={16} aria-hidden="true" />, zone?.name)}</h3>
                 <span className="fine-print">{tr("What Movera keeps from the trip price")}</span>
               </div>
-              <CommissionPanel currency={currency} categories={categories} book={book} published={published} problems={problems} canEdit={canPublish} onCommission={(id, value) => update((draft) => { draft.commission[id] = value; })} />
+              <CommissionPanel currency={currency} categories={categories} book={book} published={published} problems={problems} canEdit={canPublish} onCommission={(id, value) => update((draft) => { draft.commission[id] = value; })} onAppFee={(id, value) => update((draft) => patchCategoryPrice(draft, id, { appFeePct: value }))} onSteps={(id, steps) => update((draft) => { draft.commissionSteps = { ...draft.commissionSteps, [id]: steps }; })} />
             </section>
           ) : null}
 

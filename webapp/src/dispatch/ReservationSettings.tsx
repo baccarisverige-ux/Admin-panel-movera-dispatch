@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { AlertTriangle, Bell, CalendarClock, Clock, Timer, TrendingUp, UserCheck, Users, UserX } from "lucide-react";
-import type { MarketId } from "../markets/markets";
+import { market, type MarketId } from "../markets/markets";
+import type { CommissionRule } from "../pricing/commissionSteps";
 import { Card, Choice, Num, Row, Switch } from "./fields";
 import { ReservationTimelinePreview, spanLabel } from "./Previews";
 import { BookingPolicyCard } from "./BookingPolicy";
@@ -21,7 +22,7 @@ type Props = {
   countryName: string;
   groups: DriverGroup[];
   /** Movera's commission in this zone for a normal ride, from Pricing, and a sample booked-ride fare. */
-  commissionPct: number;
+  commission: CommissionRule;
   sampleFare: number;
   /** Opens Rides & stops › Rider cancel fees on its Reservations tab. */
   onOpenCancelFees: () => void;
@@ -36,7 +37,7 @@ function clock(startMin: number, plusMin: number): string {
 const SAMPLE_PICKUP = 7 * 60 + 40;
 
 /** Dispatch › Reservations: everything about rides booked for later, in one place. */
-export function ReservationSettings({ zone, onChange, disabled, symbol, money, countryId, countryName, groups, commissionPct, sampleFare, onOpenCancelFees }: Props) {
+export function ReservationSettings({ zone, onChange, disabled, symbol, money, countryId, countryName, groups, commission, sampleFare, onOpenCancelFees }: Props) {
   const resv = zone.reservation;
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   const setResv = (patch: Partial<ReservationRules>) => set({ reservation: { ...resv, ...patch } });
@@ -51,7 +52,8 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
   const lateAway = 10 + late.toleranceMin + 1;
   const cap = raiseCap(countryId);
   const [tryRaise, setTryRaise] = useState(() => Math.min(cap, Math.round(sampleFare * 0.3)));
-  const split = raiseSplit(tryRaise, sampleFare, commissionPct);
+  // J5b: with steps the sample commission comes from the shared step function.
+  const split = raiseSplit(tryRaise, sampleFare, commission, market(countryId).minorUnits);
   const normal = resv.types.normal;
   const gap = smartGapMin(35, 20, normal.spareMin);
   const group = groups.find((item) => item.id === resv.listGroupId);
@@ -250,7 +252,7 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
         {resv.raiseFare ? (
           <div className="dx-sub" role="group" aria-label={tr("Try a raise")}>
             <b>{trn("{0} Try a raise", <TrendingUp size={13} aria-hidden="true" />)}</b>
-            <small>{trn("Sample booked ride {0}. Movera's commission here is {1}% = {2} (set in Pricing).", money(sampleFare), commissionPct, money(split.commission))}</small>
+            <small>{trn("Sample booked ride {0}. Movera's commission here is {1} (set in Pricing).", money(sampleFare), money(split.commission))}</small>
             <span className="dx-resv-pick">
               <Num label={tr("Sample raise")} before="raise by" value={tryRaise} unit={symbol} step={0.5} min={0} max={cap} onChange={setTryRaise} />
             </span>
