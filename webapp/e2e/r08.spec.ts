@@ -50,7 +50,7 @@ test("R8 waiting and bounded fare corrections persist and are audited", async ({
 
   // v0.18.82 S5 J6a (owner Q-M7): the admin types the driver's pay; the rider's charged price does not move.
   const charged = await page.getByTestId("trip-fare").textContent();
-  await page.getByLabel("Driver pay").fill("60");
+  await page.getByLabel("Driver pay", { exact: true }).fill("60");
   await page.getByRole("button", { name: "Save driver pay" }).click();
   await confirm(page);
   await expect(page.getByTestId("trip-fare")).toHaveText(charged ?? "");
@@ -78,7 +78,7 @@ test("R8 trip actions follow lifecycle state", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Reassign" })).toBeEnabled();
   // S5 J6a: the button is on once a driver pay is typed.
   await expect(page.getByRole("button", { name: "Save driver pay" })).toBeDisabled();
-  await page.getByLabel("Driver pay").fill("50");
+  await page.getByLabel("Driver pay", { exact: true }).fill("50");
   await expect(page.getByRole("button", { name: "Save driver pay" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Save waiting time" })).toBeEnabled();
 

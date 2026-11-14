@@ -145,7 +145,7 @@ test("trip page: driver pay, waiting and complete go to the server with the trip
   };
   // v0.18.82 S5 J6a (owner Q-S5-8 "Admin types driver pay"): the field is the driver's pay; the rider's price is never sent.
   await expect(page.getByTestId("adjust-block")).toContainText("The rider pays the same price as booked");
-  await page.getByLabel("Driver pay").fill("150");
+  await page.getByLabel("Driver pay", { exact: true }).fill("150");
   await page.getByRole("button", { name: "Save driver pay" }).click();
   await confirm();
   await expect.poll(() => posted(state, "/admin/trips/T2007/adjust")?.body).toMatchObject({ expectedVersion: 3, driverPay: { amountMinor: 15000, currency: "SEK" } });
