@@ -1,4 +1,5 @@
 import { currencySymbol } from "../../pricing/zonePricing.ts";
+import { commissionOfMajor, type CommissionRule } from "../../pricing/commissionSteps.ts";
 import { validRaiseFactor, validSamePoint } from "../offerRules.ts";
 import { DEFAULT_FEE_CATEGORIES, cancelFeeIssues, type FeeCategory } from "../cancelFees.ts";
 import { cancelReasonIssues, exclusiveReasonIssues, pickupWaitIssues } from "../offers.ts";
@@ -153,10 +154,21 @@ export function leaveNowBeforeMin(driveMin: number, spareMin: number): number {
   return Math.max(0, Math.round(driveMin)) + Math.max(0, spareMin);
 }
 
-/** How a fare raise is paid: from Movera's commission first, and Movera pays anything beyond it. */
-export function raiseSplit(raise: number, fare: number, commissionPct: number): { commission: number; fromCommission: number; beyond: number } {
-  const round = (value: number) => Math.round(value * 100) / 100;
-  const commission = round(Math.max(0, fare) * Math.max(0, commissionPct) / 100);
+/**
+ * How a fare raise is paid: from Movera's commission first, and Movera pays anything beyond it.
+ * J5b (contract v0.18.86): given the car type's commission rule ({ pct, steps }), the commission comes from the shared
+ * step function (pricing/commissionSteps.ts) on the fare in minor units; a plain % keeps the old one-% preview.
+ */
+export function raiseSplit(raise: number, fare: number, commission: number | CommissionRule, minorUnits = 100): { commission: number; fromCommission: number; beyond: number } {
+  const unit = typeof commission === "number" ? 100 : minorUnits;
+  const round = (value: number) => Math.round(value * unit) / unit;
+  const ofFare = typeof commission === "number"
+    ? round(Math.max(0, fare) * Math.max(0, commission) / 100)
+    : round(commissionOfMajor(commission, fare, minorUnits).commission);
+  return raiseParts(raise, ofFare, round);
+}
+
+function raiseParts(raise: number, commission: number, round: (value: number) => number): { commission: number; fromCommission: number; beyond: number } {
   const amount = Math.max(0, raise);
   return { commission, fromCommission: round(Math.min(amount, commission)), beyond: round(Math.max(0, amount - commission)) };
 }

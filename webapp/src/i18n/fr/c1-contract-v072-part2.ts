@@ -326,7 +326,7 @@ export const frC1ContractV072Part2: Record<keyof typeof enC1ContractV072Part2, s
   "Reservation offer history": "Historique des offres de la réservation",
   "Raising the fare is off in this zone. Change it in {0}.": "L'augmentation du tarif est désactivée dans cette zone. Modifiez-la dans {0}.",
   "Nobody has taken it yet. A higher fare helps a driver take it. It is paid from Movera's commission; the rider pays the same.": "Personne ne l'a encore prise. Un tarif plus élevé aide un chauffeur à la prendre. Il est payé sur la commission de Movera ; le passager paie pareil.",
-  "Fare {0}{1} · Movera's commission {2}% = {3} · highest raise {4}.": "Tarif {0}{1} · commission de Movera {2} % = {3} · hausse maximale {4}.",
+  "Fare {0}{1} · Movera's commission {2} · highest raise {3}.": "Tarif {0}{1} · commission de Movera {2} · hausse maximale {3}.",
   " (estimate)": " (estimation)",
   "Raise by ({0})": "Augmenter de ({0})",
   "Fare raise": "Hausse du tarif",

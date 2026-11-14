@@ -12,6 +12,7 @@ import type { CurrencyCode, Money } from "../domain/money.ts";
 import { fromMajor } from "../domain/money.ts";
 import { marketOfZone } from "../markets/markets.ts";
 import type { CategoryPrice, ZoneBook } from "../pricing/zonePricing.ts";
+import type { CommissionStep } from "../pricing/commissionSteps.ts";
 import { MIN_TRIP_METERS } from "../pricing/zonePricing.ts";
 import type { ZoneDispatch } from "../dispatch/rules.ts";
 
@@ -48,7 +49,7 @@ export function zoneFacts(id: string): ZoneFacts {
 
 const SEAT_CATEGORY = "child_seat";
 
-function categoryDoc(price: CategoryPrice, commissionPct: number, riderFee: ZoneBook["pickupPay"]["rates"][string]["riderFee"] | undefined, id: string, currency: CurrencyCode): Doc {
+function categoryDoc(price: CategoryPrice, commissionPct: number, commissionSteps: readonly CommissionStep[], riderFee: ZoneBook["pickupPay"]["rates"][string]["riderFee"] | undefined, id: string, currency: CurrencyCode): Doc {
   const fee = (own: { on: boolean; amount: number } | undefined) => (own?.on ? toMinor(own.amount, currency) : null);
   return {
     enabled: price.enabled,
@@ -59,6 +60,9 @@ function categoryDoc(price: CategoryPrice, commissionPct: number, riderFee: Zone
     maximum: price.maximum > 0 ? toMinor(price.maximum, currency) : null,
     appFeePct: price.appFeePct,
     commissionPct,
+    // J5b (contract v0.18.86, supervisor must-fix 2/3): always written, [] when there are none, the whole list
+    // otherwise (a list without ids is one value for patchChanged, so "Remove all steps" really sends []).
+    commissionSteps: commissionSteps.map((step) => ({ ...step })),
     extraStopFee: toMinor(price.extraStopFee, currency),
     stopWaitPerMin: toMinor(price.stopWaitPerMin, currency),
     // v0.7.1 (owner 2026-10-27): ONE seat fee, only on Child Seat.
@@ -84,7 +88,7 @@ export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null):
     country: facts.country,
     timeZone: facts.timeZone,
     priceStep: toMinor(book.fees.rounding, c),
-    categories: Object.fromEntries(Object.entries(book.prices).map(([cid, price]) => [cid, categoryDoc(price, book.commission[cid] ?? 20, book.pickupPay.rates[cid]?.riderFee, cid, c)])),
+    categories: Object.fromEntries(Object.entries(book.prices).map(([cid, price]) => [cid, categoryDoc(price, book.commission[cid] ?? 20, book.commissionSteps?.[cid] ?? [], book.pickupPay.rates[cid]?.riderFee, cid, c)])),
     fees: {
       airportPickup: toMinor(book.fees.airportPickup, c),
       airportDropoff: toMinor(book.fees.airportDropoff, c),
@@ -146,6 +150,9 @@ export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
       noShowFee: toMajor(waiting["noShowFee"], f, own.noShowFee),
     };
     if (typeof cat["commissionPct"] === "number") book.commission[cid] = cat["commissionPct"];
+    // J5b: the server's steps (absent / null = none). Kept as the contract's shape, minor units.
+    const steps = cat["commissionSteps"];
+    book.commissionSteps = { ...book.commissionSteps, [cid]: Array.isArray(steps) ? (structuredClone(steps) as CommissionStep[]) : [] };
     const rate = book.pickupPay.rates[cid];
     const rider = cat["riderPickupFee"] as { live?: Money | null; reservation?: Money | null } | undefined;
     if (rate && rider) {

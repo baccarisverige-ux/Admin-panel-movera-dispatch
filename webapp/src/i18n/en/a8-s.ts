@@ -20,7 +20,7 @@ export const enA8S = {
   "Same person with two accounts? Keep the other one; this one points to it.": "Same person with two accounts? Keep the other one; this one points to it.",
   "Same shape as a zone": "Same shape as a zone",
   "Sample action": "Sample action",
-  "Sample booked ride {0}. Movera's commission here is {1}% = {2} (set in Pricing).": "Sample booked ride {0}. Movera's commission here is {1}% = {2} (set in Pricing).",
+  "Sample booked ride {0}. Movera's commission here is {1} (set in Pricing).": "Sample booked ride {0}. Movera's commission here is {1} (set in Pricing).",
   "Sample booking": "Sample booking",
   "Sample raise": "Sample raise",
   "Sample ride booked": "Sample ride booked",

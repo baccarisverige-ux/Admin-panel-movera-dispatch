@@ -8,6 +8,7 @@ import { ApiError } from "../api/httpClient.ts";
 import { CURRENCIES, formatMoney, type CurrencyCode, type Money } from "../domain/money.ts";
 import { currentLanguage, tr, type MessageKey } from "../i18n/index.ts";
 import { DOCUMENT_TYPES, ONBOARDING_COUNTRIES, REQUIRED_DOCUMENTS } from "./onboardingContract.ts";
+import { STEPS_CONTRACT, type StepProblemCode } from "../pricing/commissionSteps.ts";
 import type { AdminMe, DocumentStatus, DocumentSummary, Driver, Vehicle } from "./types.ts";
 
 /** "Anna Berg", or the first name alone; the id when the server sent no name. */
@@ -186,6 +187,8 @@ export function errorText(error: unknown): string {
   if (error.status === 409 && error.code === "version_mismatch") return tr("Someone else changed this record. It was reloaded; check it and try again.");
   // v0.18.3 (R2): approving a car that breaks the country's car rules.
   if (error.reason === "vehicle_rules_not_met") return tr("The car does not meet the country's car rules: {0}.", [error.details.map(ruleProblemText).join(", ") || "—"]);
+  // J5b (contract v0.18.86, contract.json#commissionSteps.validation): the problem's text at the step it names.
+  if (error.reason === "commission_steps_invalid") return commissionStepsErrorText(error.details);
   // v0.18.3 (R9): the issue date of a document cannot be in the future.
   if (error.reason === "issued_in_future") return tr("The issue date cannot be in the future.");
   // v0.18.0 (owner 2026-10-29, live audit): car details, the car's driver, categories and the bank review.
@@ -497,4 +500,18 @@ export function auditDetailText(row: { action: string; after: string }): string 
   let detail: { reason?: unknown; minutes?: unknown } = {};
   try { detail = row.after ? (JSON.parse(row.after) as typeof detail) : {}; } catch { detail = {}; }
   return typeof detail.minutes === "number" ? tr("No position for {0} min", [detail.minutes]) : tr("No position");
+}
+
+/**
+ * J5b: 400 commission_steps_invalid details ["step:<index from 0>", "problem:<code>"] ("step:" left out for not_a_list
+ * and too_many_steps) → the contract's text in the panel's language, with the step counted from 1.
+ */
+export function commissionStepsErrorText(details: readonly string[]): string {
+  const value = (prefix: string) => details.find((item) => item.startsWith(prefix))?.slice(prefix.length);
+  const problem = value("problem:") as StepProblemCode | undefined;
+  const english = problem && STEPS_CONTRACT.texts.errors[problem] ? STEPS_CONTRACT.texts.errors[problem].en : null;
+  if (!english) return tr("Something failed.");
+  const text = tr(english as MessageKey, { max: STEPS_CONTRACT.validation.maxSteps });
+  const step = Number(value("step:"));
+  return value("step:") !== undefined && Number.isInteger(step) ? `${tr("Commission steps")} (${step + 1}): ${text}` : text;
 }

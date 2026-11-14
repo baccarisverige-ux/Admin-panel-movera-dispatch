@@ -32,6 +32,7 @@ import { reservationFareMinor } from "../dashboard/scheduled";
 import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook, raiseCap, raiseSplit, type DispatchBook } from "../dispatch/rules";
 import { statusLabel } from "../domain/labels";
 import { market, marketOfZone } from "../markets/markets";
+import { ruleOf } from "../pricing/commissionSteps";
 import { currencySymbol, emptyPricingStore, money as formatMajor, normalizeStore, SLICE_KEY as PRICING_KEY, zoneBook, type PricingStore } from "../pricing/zonePricing";
 import { CommandButton } from "../ui/CommandButton";
 import { SensitiveValue } from "../ui/SensitiveValue";
@@ -89,10 +90,11 @@ export function ReservationDetailPage() {
   const unit = currencySymbol(country);
   const fare = reservationFareMinor(record);
   const fareMajor = fare.minor / market(country).minorUnits;
-  const commissionPct = zoneBook(normalizeStore(pricingSlice.value), record.zoneId).commission[ops.category ?? "economy"] ?? 20;
+  // J5b (contract v0.18.86): the car type's steps when it has them (the shared function), else its %.
+  const commission = ruleOf(zoneBook(normalizeStore(pricingSlice.value), record.zoneId), ops.category ?? "economy");
   const raiseMax = Math.min(zoneRules.raiseMax, raiseCap(country));
   const raiseAmount = raiseText.trim() === "" ? 0 : Number(raiseText.replace(",", "."));
-  const split = raiseSplit(raiseAmount, fareMajor, commissionPct);
+  const split = raiseSplit(raiseAmount, fareMajor, commission, market(country).minorUnits);
   const warning = reservationWarning(record, ops, nowIso);
   const canIntervene = Boolean(agent && can(agent.role, "trips.intervene"));
   const pickupFuture = Date.parse(ops.pickupAt) > Date.parse(nowIso);
@@ -288,7 +290,7 @@ export function ReservationDetailPage() {
           {!zoneRules.raiseFare ? <p>{trn("Raising the fare is off in this zone. Change it in {0}.", <Link to={`/dispatch?zone=${record.zoneId}&tab=reservations`}>{tr("Dispatch › Reservations")}</Link>)}</p> : (
             <>
               <p>{tr("Nobody has taken it yet. A higher fare helps a driver take it. It is paid from Movera's commission; the rider pays the same.")}</p>
-              <p className="state-line">{trn("Fare {0}{1} · Movera's commission {2}% = {3} · highest raise {4}.", show(fareMajor), fare.estimated ? tr(" (estimate)") : "", commissionPct, show(split.commission), show(raiseMax))}</p>
+              <p className="state-line">{trn("Fare {0}{1} · Movera's commission {2} · highest raise {3}.", show(fareMajor), fare.estimated ? tr(" (estimate)") : "", show(split.commission), show(raiseMax))}</p>
               <label>{trn("Raise by ({0})", unit)}<input aria-label={tr("Fare raise")} inputMode="decimal" value={raiseText} disabled={!canRaise} onChange={(event) => setRaiseText(event.target.value.replace(/[^\d.,]/g, ""))} placeholder={tr("For example {0}", [Math.round(raiseMax / 5)])} />
               </label>
               {raiseAmount > 0 && split.beyond > 0 ? <p className="resv-raise over" role="status">{trn("Goes {0} beyond Movera's commission. Movera pays the difference.", show(split.beyond))}</p> : null}

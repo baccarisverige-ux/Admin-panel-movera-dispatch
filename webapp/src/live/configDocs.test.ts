@@ -66,7 +66,9 @@ test("PricingDocument from the Pricing page: minor units, ONE seat fee on Child 
   assert.deepEqual(categories["child_seat"]!["childSeatFee"], { amountMinor: 1500, currency: "SEK" });
   // The admin's contract copy is older (seat fees on every category there); the other keys match.
   const seat = new Set(["babySeatFee", "childSeatFee"]);
-  assert.deepEqual(Object.keys(categories["economy"]!).sort(), Object.keys((fixture["categories"] as Record<string, Doc>)["economy"]!).filter((k) => !seat.has(k)).sort());
+  // J5b (contract v0.18.86, supervisor must-fix 3): commissionSteps is optional in the contract sample; the admin always writes it ([] = none).
+  assert.deepEqual(categories["economy"]!["commissionSteps"], []);
+  assert.deepEqual(Object.keys(categories["economy"]!).filter((k) => k !== "commissionSteps").sort(), Object.keys((fixture["categories"] as Record<string, Doc>)["economy"]!).filter((k) => !seat.has(k)).sort());
   // Back to the page: the same book.
   assert.deepEqual(bookOfPricing(doc, zoneBook(emptyPricingStore(), "Z001")), { ...book, version: 1 });
 });

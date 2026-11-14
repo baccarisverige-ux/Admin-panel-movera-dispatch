@@ -6,6 +6,7 @@ import { SurgeSlider } from "./SurgeSlider";
 import { useEscape } from "../ui/useEscape";
 import { money, quoteRide, type CategoryDef, type QuoteInput, type ZoneBook } from "./zonePricing";
 import { riderPerMin } from "./waitingShown";
+import { stepLabel } from "./CommissionSteps";
 import { tr, trn, trx, trSentences } from "../i18n";
 
 type Props = {
@@ -87,6 +88,8 @@ export function TestRide({ zoneName, currency, categories, book, liveSurge, draf
             <span>{trn("{0}Driver {1}", <i className="driver" />, money(quote.driverGets, currency))}</span>
             <span>{trn("{0}Movera {1}", <i className="movera" />, money(quote.moveraGets, currency))}</span>
           </div>
+          {/* J5b (contract.json#commissionSteps.apps.admin): Test a ride shows the step used (the shared function). */}
+          {book.commissionSteps?.[input.categoryId]?.length ? <small data-testid="quote-step">{tr("Step used: {step}", { step: stepLabel(book.commissionSteps[input.categoryId], quote.commissionStep ?? null, book.commission[input.categoryId] ?? 0, currency) })}</small> : null}
           <small>{tr("VAT included. Tips are not part of the price.")}</small>
           {/* v0.18.7 (G5): what the driver and rider apps get as the terms of this ride, from this Pricing (servedConfig) and Dispatch. */}
           {price ? (

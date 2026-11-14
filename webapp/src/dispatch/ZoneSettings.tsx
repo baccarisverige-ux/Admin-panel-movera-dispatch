@@ -7,6 +7,7 @@ import {
   TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins, Move, KeyRound,
 } from "lucide-react";
 import { market, type MarketId } from "../markets/markets";
+import type { CommissionRule } from "../pricing/commissionSteps";
 import { BonusAreaMap } from "../drivers/BonusAreaMap";
 import { Card, Check, Choice, Num, Row, Switch } from "./fields";
 import { ReservationSettings } from "./ReservationSettings";
@@ -52,7 +53,7 @@ type Props = {
   /** Saved driver groups of this country (Events & groups). */
   groups: DriverGroup[];
   /** Movera's commission for a normal ride in this zone (Pricing) and a sample booked-ride fare, for the fare raise check. */
-  commissionPct: number;
+  commission: CommissionRule;
   sampleFare: number;
   /** Waiting at pickup per category, from Pricing for this zone. */
   waitBases: WaitBaseRow[];
@@ -73,7 +74,7 @@ export function ZoneSettings(props: Props) {
   if (tab === "modes") return <Modes {...props} />;
   if (tab === "radar") return <div className="dx-cards"><RadarRules zone={props.zone} onChange={props.onChange} disabled={props.disabled} zoneId={props.zone.zoneId} /></div>;
   if (tab === "exclusive") return <div className="dx-cards"><ExclusiveRules zone={props.zone} onChange={props.onChange} disabled={props.disabled} zoneId={props.zone.zoneId} /></div>;
-  if (tab === "reservations") return <ReservationSettings zone={props.zone} onChange={props.onChange} disabled={props.disabled} symbol={props.symbol} money={props.money} countryId={props.countryId} countryName={props.countryName} groups={props.groups} commissionPct={props.commissionPct} sampleFare={props.sampleFare} onOpenCancelFees={() => props.onOpenCancelFees("reservation")} />;
+  if (tab === "reservations") return <ReservationSettings zone={props.zone} onChange={props.onChange} disabled={props.disabled} symbol={props.symbol} money={props.money} countryId={props.countryId} countryName={props.countryName} groups={props.groups} commission={props.commission} sampleFare={props.sampleFare} onOpenCancelFees={() => props.onOpenCancelFees("reservation")} />;
   if (tab === "best") return <Best {...props} />;
   if (tab === "waiting") return <Waiting {...props} />;
   if (tab === "rides") return <Rides {...props} />;

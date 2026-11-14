@@ -20,6 +20,7 @@ import { PublishTargetsLine, StandardBar } from "../live/StandardBar";
 import { countryAllowed, zoneAllowed } from "../markets/scope";
 import { rememberCountry } from "../markets/useMarketScope";
 import { useMarketScope } from "../markets/useMarketScope";
+import { ruleOf } from "../pricing/commissionSteps";
 import { CommandButton } from "../ui/CommandButton";
 import { useAlertsMaybe } from "../alerts/AlertsContext";
 import { DispatchAlerts } from "../alerts/DispatchAlerts";
@@ -318,7 +319,8 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   }
 
   const say = (text: string) => setNotice(text);
-  const commissionOf = (id: string) => zoneBook(pricing, id).commission.economy ?? 20;
+  // J5b: the economy car type's commission rule (% and steps) for the previews.
+  const commissionOf = (id: string) => ruleOf(zoneBook(pricing, id), "economy");
   const sampleFareOf = (id: string) => reservationFareMinor({ zoneId: id, category: "economy" }).minor / market.minorUnits;
   /** The car types Pricing offers in a zone (not deleted, switched on there), the same list as waiting at pickup. */
   const feeCategoriesOf = (id: string) => {

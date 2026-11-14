@@ -166,11 +166,12 @@
 .dash-btn.publish { background: linear-gradient(135deg, #2a78d6, #6250d6); border-color: transparent; color: #fff; box-shadow: 0 8px 20px rgba(98, 80, 214, .35); }
 
 /* Commission */
-.commission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.commission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; align-items: start; }
 .commission-card { display: grid; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); }
 .commission-card.off { opacity: .55; }
 .commission-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .commission-head .num-field input { width: 92px; min-width: 0; }
+.commission-fee { font-size: 12.5px; color: var(--muted); }
 .split-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #eef0f1; }
 .split-bar i { display: block; height: 100%; transition: width .3s; }
 .split-bar .driver, .receipt-split .driver { background: linear-gradient(90deg, #1baf7a, #0e9aa7); }
@@ -179,6 +180,7 @@
 .split-facts div { display: flex; justify-content: space-between; gap: 8px; }
 .split-facts dt { color: var(--muted); }
 .split-facts .split-title dt { font-weight: 700; color: var(--dash-ink-2); }
+.commission-card > .split-title { margin: 8px 0 2px; font-size: 13px; font-weight: 700; color: var(--dash-ink-2); }
 .split-facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 
 /* History */
@@ -616,3 +618,27 @@
 .test-ride-terms div { display: flex; justify-content: space-between; gap: 10px; }
 .test-ride-terms dt { color: var(--dash-ink-2); }
 .test-ride-terms dd { margin: 0; font-weight: 600; text-align: right; }
+
+/* J5b commission steps + calculator, inside each car-type card (contract v0.18.86 commissionSteps.adminPlacement) */
+.commission-card > * { min-width: 0; }
+.cs { display: grid; gap: 8px; min-width: 0; padding-top: 10px; border-top: 1px dashed var(--line); }
+.cs > *, .cs-row > *, .cs-calc > * { min-width: 0; }
+.cs-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
+.cs-link { border: 0; background: none; padding: 0; color: var(--status-critical); font-size: 12px; font-weight: 600; cursor: pointer; }
+.cs-help { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.cs-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cs-row { display: grid; gap: 4px; padding: 8px; border-radius: 10px; background: var(--bg); font-size: 12px; }
+.cs-row.invalid { outline: 1px solid var(--status-critical); }
+.cs-where { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 600; }
+.cs-what { display: flex; align-items: center; gap: 6px; }
+.cs-what select { flex: 1 1 0; width: 0; min-width: 0; font-size: 12px; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: inherit; }
+.cs .num-field input { width: 76px; min-width: 0; }
+.cs-warn { display: flex; gap: 6px; align-items: flex-start; margin: 0; padding: 6px 8px; border-radius: 8px; background: #fff6e0; color: #7a4b00; font-size: 11.5px; line-height: 1.35; }
+.cs-warn svg { flex: none; margin-top: 2px; }
+.cs-error { color: var(--status-critical); font-size: 11.5px; }
+.cs-add { justify-self: start; }
+.cs-calc { display: grid; gap: 6px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); }
+.cs-calc-title { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.cs-calc-price { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.cs-calc .num-field input { width: 96px; }
+.cs-calc-facts dd { max-width: 60%; }
