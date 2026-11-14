@@ -578,8 +578,9 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     },
     // v0.18.13 (contract.json#drivingLimits). BQ-V21 (decisions/driving-time-limits.md:2-4, owner "12 hours driving … not
     // online time" + "6 hours offline so reset all time"): per country, Dispatch › Drivers › Rest after long work —
-    // Work hours = maxHoursPerDay (default 12), Rest hours = resetAfterOfflineHours (default 6; before this always 6).
-    drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restHours * 60, resetAfterOfflineHours: country.rest.restHours, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
+    // maxHoursPerDay (default 12, 0 = no limit), resetAfterOfflineHours (default 6), restMinutes = the break length the app
+    // shows (contract default 30; before this rest hours × 60).
+    drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restMinutes, resetAfterOfflineHours: country.rest.resetAfterOfflineHours, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
     // v0.18.13 (contract.json#pickupWaiting.headingCheck, G5-8). BQ-V22 (decisions/driver-g5.md:9,16 "80 % default, admin
     // can change"): headingPct / notHeadingMinutes per zone from Dispatch › Rides › Rider cancels: smart check. `on` has no
     // admin control (always on, publishing keeps the server's own value; configDocs withOwned).

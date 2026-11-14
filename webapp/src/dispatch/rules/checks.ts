@@ -262,8 +262,10 @@ export function countryIssues(country: CountryDispatch): string[] {
   if (!country.rest.on) return issues;
   if (country.rest.warnFirstMin < 1 || country.rest.warnFirstMin > 120 || country.rest.warnLastMin < 1 || country.rest.warnLastMin > 120) issues.push("Driving limit warnings must be 1 to 120 minutes before the limit.");
   else if (country.rest.warnFirstMin <= country.rest.warnLastMin) issues.push("Driving limit: the first warning must come before the second (a larger number of minutes).");
-  if (country.rest.workHours < 4 || country.rest.workHours > 16) issues.push("Work hours before rest must be 4 to 16.");
-  if (country.rest.restHours < 1 || country.rest.restHours > 12) issues.push("Rest hours must be 1 to 12.");
+  // SV: the server's ranges (contract drivingLimits: maxHoursPerDay 0-24, 0 = no limit; resetAfterOfflineHours 1-24; restMinutes ≥ 0).
+  if (!(country.rest.workHours >= 0 && country.rest.workHours <= 24)) issues.push("Driving hours must be 0 to 24 (0 = no limit).");
+  if (!(Number.isInteger(country.rest.resetAfterOfflineHours) && country.rest.resetAfterOfflineHours >= 1 && country.rest.resetAfterOfflineHours <= 24)) issues.push("Offline hours that reset the driving time must be 1 to 24.");
+  if (!(Number.isInteger(country.rest.restMinutes) && country.rest.restMinutes >= 0 && country.rest.restMinutes <= 1440)) issues.push("Break length must be 0 to 1440 minutes.");
   return issues;
 }
 

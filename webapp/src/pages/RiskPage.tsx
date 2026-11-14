@@ -124,7 +124,7 @@ function SafetyRules({ editable }: { editable: boolean }) {
         <p className="op-help">{tr("Each zone has its own safety rules. Zones without their own rules use the defaults.")}</p>
         <div className="op-rest">
           <Timer size={16} aria-hidden="true" />
-          <span><b>{tr("Driving and rest (Dispatch)")}</b><small>{rest.on ? tr("After {0} h of work, {1} h rest before going online.", [rest.workHours, rest.restHours]) : tr("Off in Dispatch.")}</small></span>
+          <span><b>{tr("Driving and rest (Dispatch)")}</b><small>{rest.on ? tr("After {0} h of work, {1} h rest before going online.", [rest.workHours, rest.resetAfterOfflineHours]) : tr("Off in Dispatch.")}</small></span>
           <Link className="dash-btn small ghost" to="/dispatch">{tr("Open Dispatch")}</Link>
         </div>
         {id ? (

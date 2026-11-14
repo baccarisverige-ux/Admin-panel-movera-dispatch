@@ -151,10 +151,19 @@ export function countryOfZone(zoneId: string): MarketId {
 }
 
 export function countryDefault(country: MarketId): CountryDispatch {
-  return { country, rest: { on: true, workHours: 12, restHours: 6, warnFirstMin: 30, warnLastMin: 10, blockOnline: true }, cancelRateLimitPct: CANCEL_RATE_LIMIT_DEFAULT, cancelReasons: cancelReasonsDefault(), noShowDriverSharePct: CONFIG_DEFAULTS.noShowDriverSharePct };
+  return { country, rest: { on: true, workHours: contract.configDefaults.drivingLimits.maxHoursPerDay, restMinutes: contract.configDefaults.drivingLimits.restMinutes, resetAfterOfflineHours: contract.configDefaults.drivingLimits.resetAfterOfflineHours, warnFirstMin: 30, warnLastMin: 10, blockOnline: true }, cancelRateLimitPct: CANCEL_RATE_LIMIT_DEFAULT, cancelReasons: cancelReasonsDefault(), noShowDriverSharePct: CONFIG_DEFAULTS.noShowDriverSharePct };
 }
 
 /** Country rules from an older save: new settings come from the defaults. */
+/** SV: an older save's restHours (the rest = the offline reset) becomes resetAfterOfflineHours; restHours is dropped. */
+function completeRest(base: CountryDispatch["rest"], stored: unknown): CountryDispatch["rest"] {
+  const raw = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
+  const { restHours, ...rest } = raw;
+  const next = { ...base, ...rest } as CountryDispatch["rest"];
+  if (typeof raw.resetAfterOfflineHours !== "number" && typeof restHours === "number") next.resetAfterOfflineHours = restHours;
+  return next;
+}
+
 export function completeCountry(country: MarketId, stored: Partial<CountryDispatch> | undefined): CountryDispatch {
   const base = countryDefault(country);
   if (!stored || typeof stored !== "object") return base;
@@ -162,7 +171,7 @@ export function completeCountry(country: MarketId, stored: Partial<CountryDispat
     ...base,
     ...stored,
     country,
-    rest: { ...base.rest, ...(stored.rest ?? {}) },
+    rest: completeRest(base.rest, stored.rest),
     cancelRateLimitPct: typeof stored.cancelRateLimitPct === "number" ? stored.cancelRateLimitPct : base.cancelRateLimitPct,
     cancelReasons: completeCancelReasons(stored.cancelReasons),
     noShowDriverSharePct: typeof stored.noShowDriverSharePct === "number" && Number.isFinite(stored.noShowDriverSharePct) ? stored.noShowDriverSharePct : base.noShowDriverSharePct,

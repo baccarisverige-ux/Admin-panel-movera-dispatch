@@ -102,8 +102,12 @@ export const frB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   "Free cancel when not heading for": "Annulation gratuite si le chauffeur ne se dirige pas vers la prise en charge pendant",
   "Not heading to the pickup this many minutes in a row: the rider cancels for free and the driver gets the notice. Usual value {0} min.": "Ne se dirige pas vers la prise en charge pendant ce nombre de minutes d’affilée : le passager annule gratuitement et le chauffeur reçoit l’avis. Valeur habituelle {0} min.",
   "Not heading minutes": "Minutes sans se diriger vers la prise en charge",
-  "Only driving counts: to the pickup and on trip. Online waiting does not count.": "Seule la conduite compte : vers la prise en charge et pendant la course. L’attente en ligne ne compte pas.",
-  "This many hours offline in a row start the driving time again from zero.": "Ce nombre d’heures hors ligne d’affilée remet le temps de conduite à zéro.",
   "Heading to the pickup at least": "Se dirige vers la prise en charge au moins",
   "Not heading to the pickup for": "Ne se dirige pas vers la prise en charge pendant",
+  // SV follow-up: offline reset and break length are separate (contract drivingLimits).
+  "Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.": "Seule la conduite compte : vers la prise en charge et pendant la course. L’attente en ligne ne compte pas. 0 = pas de limite.",
+  "Offline hours that reset the driving time": "Heures hors ligne qui remettent le temps de conduite à zéro",
+  "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.": "Règle : 6 heures hors ligne d’affilée remettent tout le temps de conduite à zéro. Le serveur utilise ce nombre.",
+  "Break length shown in the app": "Durée de pause affichée dans l’application",
+  "Only shown to the driver; the server does not enforce it.": "Seulement affichée au chauffeur ; le serveur ne l’impose pas.",
 };

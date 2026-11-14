@@ -100,8 +100,12 @@ export const enB4RadarExclusiveReservations = {
   "Free cancel when not heading for": "Free cancel when not heading for",
   "Not heading to the pickup this many minutes in a row: the rider cancels for free and the driver gets the notice. Usual value {0} min.": "Not heading to the pickup this many minutes in a row: the rider cancels for free and the driver gets the notice. Usual value {0} min.",
   "Not heading minutes": "Not heading minutes",
-  "Only driving counts: to the pickup and on trip. Online waiting does not count.": "Only driving counts: to the pickup and on trip. Online waiting does not count.",
-  "This many hours offline in a row start the driving time again from zero.": "This many hours offline in a row start the driving time again from zero.",
   "Heading to the pickup at least": "Heading to the pickup at least",
   "Not heading to the pickup for": "Not heading to the pickup for",
+  // SV follow-up: offline reset and break length are separate (contract drivingLimits).
+  "Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.": "Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.",
+  "Offline hours that reset the driving time": "Offline hours that reset the driving time",
+  "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.": "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.",
+  "Break length shown in the app": "Break length shown in the app",
+  "Only shown to the driver; the server does not enforce it.": "Only shown to the driver; the server does not enforce it.",
 } as const;

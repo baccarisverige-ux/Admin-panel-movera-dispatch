@@ -123,7 +123,7 @@ export function rankDrivers(zone: ZoneDispatch, country: CountryDispatch, reques
     const etaMin = Math.max(1, Math.round((km / 24) * 60) + (driver.finishing ? driver.finishing.inMin : 0));
     const ring = zone.radius.steps.findIndex((step) => km <= step);
     let out: string | null = null;
-    if (country.rest.on && driver.restNeeded) out = `Needs ${country.rest.restHours} h rest after ${country.rest.workHours} h of work`;
+    if (country.rest.on && driver.restNeeded) out = `Needs ${country.rest.resetAfterOfflineHours} h rest after ${country.rest.workHours} h of work`;
     else if (driver.finishing && !finishingOk) out = "On a ride that does not end close enough or soon enough";
     else if (!driver.categories.includes(request.category)) out = "Not allowed to drive this category";
     else if (request.blocked.includes(driver.id) && zone.safety.doNotMatch) out = "On the do-not-match list with this rider";

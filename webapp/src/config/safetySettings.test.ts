@@ -33,17 +33,17 @@ test("defaults equal the contract: 12 h driving, 6 h offline reset, 80 %, 2 min 
   }
 });
 
-test("BQ-V21: the country's Rest hours are the offline reset the server uses (per country, not hard-coded 6)", () => {
+test("BQ-V21: the country's offline reset hours are the offline reset the server uses (per country, not hard-coded 6)", () => {
   const base = appConfigState({ now: NOW });
   const se = liveCountry(base.dispatch, "SE");
-  const published = publish(base.dispatch, {}, { SE: { ...se, rest: { ...se.rest, workHours: 10, restHours: 4 } } }, [], "nora", "2026-11-14T09:30:00.000Z", "");
+  const published = publish(base.dispatch, {}, { SE: { ...se, rest: { ...se.rest, workHours: 10, resetAfterOfflineHours: 4 } } }, [], "nora", "2026-11-14T09:30:00.000Z", "");
   assert.ok(!published.error, published.error ?? "");
   const state = { ...base, dispatch: published.book };
   const limits = driverAppConfig("Z001", state).drivingLimits as Record<string, unknown>;
   assert.equal(limits.maxHoursPerDay, 10);
   assert.equal(limits.resetAfterOfflineHours, 4);
   assert.equal((driverAppConfig("FR-PC", state).drivingLimits as Record<string, unknown>).resetAfterOfflineHours, 6, "only that country");
-  assert.ok(countryIssues({ ...se, rest: { ...se.rest, restHours: 0 } }).some((issue) => issue.includes("Rest hours")));
+  assert.ok(countryIssues({ ...se, rest: { ...se.rest, resetAfterOfflineHours: 0 } }).some((issue) => issue.includes("1 to 24")));
 });
 
 test("BQ-V22: the zone's heading % and minutes are published for that zone only; bad values are refused", () => {

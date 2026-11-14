@@ -183,7 +183,8 @@ export function countryLines(before: CountryDispatch, after: CountryDispatch): s
   const lines: string[] = [];
   if (before.rest.on !== after.rest.on) lines.push(`Rest after long work: ${before.rest.on ? "on" : "off"} → ${after.rest.on ? "on" : "off"}`);
   if (before.rest.workHours !== after.rest.workHours) lines.push(`Work hours before rest: ${before.rest.workHours} → ${after.rest.workHours}`);
-  if (before.rest.restHours !== after.rest.restHours) lines.push(`Rest hours: ${before.rest.restHours} → ${after.rest.restHours}`);
+  if (before.rest.resetAfterOfflineHours !== after.rest.resetAfterOfflineHours) lines.push(`Offline hours that reset the driving time: ${before.rest.resetAfterOfflineHours} → ${after.rest.resetAfterOfflineHours}`);
+  if (before.rest.restMinutes !== after.rest.restMinutes) lines.push(`Break length shown in the app: ${before.rest.restMinutes} → ${after.rest.restMinutes} min`);
   if (before.rest.warnFirstMin !== after.rest.warnFirstMin) lines.push(`First driving limit warning: ${before.rest.warnFirstMin} → ${after.rest.warnFirstMin} min`);
   if (before.rest.warnLastMin !== after.rest.warnLastMin) lines.push(`Second driving limit warning: ${before.rest.warnLastMin} → ${after.rest.warnLastMin} min`);
   if (before.rest.blockOnline !== after.rest.blockOnline) lines.push(`Block going online at the limit: ${before.rest.blockOnline ? "on" : "off"} → ${after.rest.blockOnline ? "on" : "off"}`);

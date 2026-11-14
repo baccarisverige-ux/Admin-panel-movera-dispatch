@@ -505,7 +505,13 @@ export type ZoneDispatch = {
 export type CountryDispatch = {
   country: MarketId;
   /** Q25: warnings at warnFirstMin and warnLastMin before the limit; blockOnline: at the limit the driver can't go online. */
-  rest: { on: boolean; workHours: number; restHours: number; warnFirstMin: number; warnLastMin: number; blockOnline: boolean };
+  /**
+   * SV (decisions/driving-time-limits.md:2-4; contract.json#drivingLimits): workHours = DriverAppConfig.drivingLimits.maxHoursPerDay
+   * (driving only, 0-24, 0 = no limit, default 12); resetAfterOfflineHours = "6 hours offline so reset all time" (1-24,
+   * default 6); restMinutes = the break length the app shows (contract default 30, not enforced). Older saves had restHours
+   * (the rest = the reset): completeCountry moves it to resetAfterOfflineHours.
+   */
+  rest: { on: boolean; workHours: number; restMinutes: number; resetAfterOfflineHours: number; warnFirstMin: number; warnLastMin: number; blockOnline: boolean };
   /** Q22: the cancel rate drivers should stay under. Never shown to drivers. */
   cancelRateLimitPct: number;
   /** Q21: cancel reasons in this country, per language. */
