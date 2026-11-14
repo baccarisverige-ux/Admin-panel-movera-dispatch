@@ -46,6 +46,7 @@ import { enC15WaitingPriceShown } from "./en/c15-waiting-price-shown.ts";
 import { enC16DriverPayJ6 } from "./en/c16-driver-pay-j6.ts";
 import { enC17LanguageFallback } from "./en/c17-language-fallback.ts";
 import { enC16CommissionSteps } from "./en/c16-commission-steps.ts";
+import { enC17TipWindowRefundNotice } from "./en/c17-tip-window-refund-notice.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -98,6 +99,7 @@ export const en = {
   ...enC16DriverPayJ6,
   ...enC17LanguageFallback,
   ...enC16CommissionSteps,
+  ...enC17TipWindowRefundNotice,
 } as const;
 
 export type MessageKey = keyof typeof en;

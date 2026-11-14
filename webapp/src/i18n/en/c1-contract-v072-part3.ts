@@ -702,7 +702,7 @@ export const enC1ContractV072Part3 = {
   "Tip rules": "Tip rules",
   "The whole tip goes to the driver.": "The whole tip goes to the driver.",
   "Allow cash tips after the trip": "Allow cash tips after the trip",
-  "Off: a cash tip is only possible in the car, in the first 5 minutes after the trip.": "Off: a cash tip is only possible in the car, in the first 5 minutes after the trip.",
+  "Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.": "Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.",
   "Rider may type an amount": "Rider may type an amount",
   "Highest typed tip": "Highest typed tip",
   "Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to.": "Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to.",

@@ -50,7 +50,7 @@ test("Q11: a booked ride is « Course programmée » in every French admin text"
 test("Q13: cash is « Payer à bord » (contract finish.paymentMethods.texts.cash) and no French text pays « dans la voiture »", () => {
   assert.equal(FR["Pay in car"], C.finish.paymentMethods.texts.cash.fr);
   assert.deepEqual(Object.entries(FR).filter(([, value]) => /Payer dans la voiture|pourboire[^.]*dans la voiture/.test(value)).map(([key]) => key), []);
-  assert.match(FR["Off: a cash tip is only possible in the car, in the first 5 minutes after the trip."]!, /qu’à bord/);
+  assert.match(FR["Off: a cash tip is only possible in the car, in the first {0} minutes after the trip."]!, /qu’à bord/);
 });
 
 test("Q14: the archive line (row 402) is the owner's sentence", () => {

@@ -47,6 +47,7 @@ import { svC15WaitingPriceShown } from "./sv/c15-waiting-price-shown.ts";
 import { svC16DriverPayJ6 } from "./sv/c16-driver-pay-j6.ts";
 import { svC17LanguageFallback } from "./sv/c17-language-fallback.ts";
 import { svC16CommissionSteps } from "./sv/c16-commission-steps.ts";
+import { svC17TipWindowRefundNotice } from "./sv/c17-tip-window-refund-notice.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -99,4 +100,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC16DriverPayJ6,
   ...svC17LanguageFallback,
   ...svC16CommissionSteps,
+  ...svC17TipWindowRefundNotice,
 };

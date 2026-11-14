@@ -49,6 +49,12 @@ export type CountrySettings = {
    * it is off. Shown mixed; Save makes it the same in those zones.
    */
   mixedTipRules?: MixedTipRules;
+  /**
+   * v0.18.91 job C8 (supervisor must-fix 1): the zones chosen at the top have different cash-tip times in the car (zone
+   * name → minutes). While set, Save keeps each zone's own time; editing the field removes it (the value goes to all).
+   * Shown only, never saved.
+   */
+  mixedCashInCar?: Record<string, number>;
   /** v0.18.10 checker: the largest single change of a driver's pay on a trip (CountryRules.driverPayChangeMax), local money. */
   driverPayChangeMax: number;
   /**
@@ -87,7 +93,13 @@ export function personLimitsOf(raw: unknown): PersonLimits {
 export const WALLET_CREDIT_MAX: Record<MarketId, number> = { SE: 2900, FR: 250, TN: 800 };
 /** contract.json#configDefaults.driverPayChangeMax (major units); v0.18.82 TN 100 DT (owner Q-S5-6, 2026-11-13: it limits the change; was 300). */
 export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 100 };
-export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number };
+export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number; cashInCarMinutes: number };
+/**
+ * Job C8 (contract v0.18.91 finish.tips.cashInCarAdmin; owner "Anything admin can adjust becomes an admin setting"): the
+ * cash-tip time in the car, RiderAppConfig.tipRules.cashInCarMinutes — configDefaults.tipRules (5) and settings_ranges (0–60).
+ */
+export const TIP_CASH_IN_CAR_MINUTES = { default: 5, min: 0, max: 60 } as const;
+const cashInCarOf = (value: unknown, fallback: number): number => (typeof value === "number" && Number.isInteger(value) && value >= TIP_CASH_IN_CAR_MINUTES.min && value <= TIP_CASH_IN_CAR_MINUTES.max ? value : fallback);
 export const TIP_FLAGS = ["cashAfterTrip", "customAmount"] as const;
 export type MixedTipRules = Partial<Record<(typeof TIP_FLAGS)[number], string[]>>;
 /** contract.json#configDefaults.tipRules.customMax (major units); v0.18.82 TN 30 DT (owner Q-S5-6; was 60). */
@@ -108,7 +120,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -151,7 +163,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     paymentMethods: Object.fromEntries(ZONE_PAYMENT_METHODS.map((method) => [method, true])) as Record<ZonePaymentMethod, boolean>,
     walletFirst: true,
     languages: { rider: defaults.defaultLanguage, driver: defaults.defaultLanguage, admin: defaults.defaultLanguage },
-    tipRules: { cashAfterTrip: false, customAmount: false, customMax: TIP_CUSTOM_MAX[country] },
+    tipRules: { cashAfterTrip: false, customAmount: false, customMax: TIP_CUSTOM_MAX[country], cashInCarMinutes: TIP_CASH_IN_CAR_MINUTES.default },
     driverPayChangeMax: DRIVER_PAY_CHANGE_MAX[country],
     personLimits: { ...PERSON_LIMITS_DEFAULT },
     onTripMinDonePct: ON_TRIP_MIN_DONE_PCT_DEFAULT,
@@ -231,6 +243,21 @@ export function languagesChanged(before: CountrySettings, after: CountrySettings
   return APP_IDS.some((app) => before.languages[app] !== after.languages[app]);
 }
 
+/** v0.18.91 job C8: the zones' cash-tip times in the car (name → minutes) when they differ; undefined when all are the same. */
+export function mixedCashInCarAcross(zones: ReadonlyArray<readonly [string, TipRules]>): Record<string, number> | undefined {
+  if (zones.length < 2 || zones.every(([, rules]) => rules.cashInCarMinutes === zones[0]![1].cashInCarMinutes)) return undefined;
+  return Object.fromEntries(zones.map(([zone, rules]) => [zone, rules.cashInCarMinutes]));
+}
+
+/**
+ * v0.18.91 job C8 (supervisor must-fix 1): what Save writes for each chosen zone — the shown settings, but while the
+ * cash-tip time is still mixed (not edited) each zone keeps its own time. The mixed note itself is never saved.
+ */
+export function zoneValuesForSave(shown: CountrySettings, targets: readonly string[], own: (zoneId: string) => CountrySettings): Record<string, CountrySettings> {
+  const { mixedCashInCar, ...rest } = shown;
+  return Object.fromEntries(targets.map((id) => [id, mixedCashInCar ? { ...rest, tipRules: { ...rest.tipRules, cashInCarMinutes: own(id).tipRules.cashInCarMinutes } } : rest]));
+}
+
 /** Live G8 round 3 item 1: the tip switches the given zones disagree on, with the zones where each is off. */
 export function mixedTipAcross(zones: ReadonlyArray<readonly [string, TipRules]>): MixedTipRules | undefined {
   const mixed: MixedTipRules = {};
@@ -267,6 +294,7 @@ function completeTipRules(stored: unknown, base: TipRules): TipRules {
     cashAfterTrip: typeof raw.cashAfterTrip === "boolean" ? raw.cashAfterTrip : base.cashAfterTrip,
     customAmount: typeof raw.customAmount === "boolean" ? raw.customAmount : base.customAmount,
     customMax: finite(raw.customMax) ? raw.customMax : base.customMax,
+    cashInCarMinutes: cashInCarOf(raw.cashInCarMinutes, base.cashInCarMinutes),
   };
 }
 
@@ -364,6 +392,8 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   if (before.driverBonusLimit !== after.driverBonusLimit) lines.push(`Driver bonus limit: ${short(before.driverBonusLimit)} → ${short(after.driverBonusLimit)} ${symbol}`);
   // Live G8 round 3 item 3: in the admin's language (it was English in the SV and FR panels).
   if (JSON.stringify(before.tipRules) !== JSON.stringify(after.tipRules) || JSON.stringify(before.mixedTipRules ?? {}) !== JSON.stringify(after.mixedTipRules ?? {})) lines.push(tr("Tip rules: cash after the trip {0}, typed amount {1} (max {2})", [tr(after.tipRules.cashAfterTrip ? "on" : "off"), tr(after.tipRules.customAmount ? "on" : "off"), short(after.tipRules.customMax)]));
+  if (before.mixedCashInCar && !after.mixedCashInCar) lines.push(tr("Cash tip time in the car: mixed → {0} min", [String(after.tipRules.cashInCarMinutes)]));
+  else if (!after.mixedCashInCar && before.tipRules.cashInCarMinutes !== after.tipRules.cashInCarMinutes) lines.push(tr("Cash tip time in the car: {0} min", [String(after.tipRules.cashInCarMinutes)]));
   for (const method of ZONE_PAYMENT_METHODS) if (before.mixedMethods?.[method]?.length && !after.mixedMethods?.[method]?.length) lines.push(`${PAYMENT_METHOD_LABEL[method]}: mixed → ${after.paymentMethods[method] ? "on" : "off"}`);
     else if (before.paymentMethods[method] !== after.paymentMethods[method]) lines.push(`${PAYMENT_METHOD_LABEL[method]}: ${before.paymentMethods[method] ? "on" : "off"} → ${after.paymentMethods[method] ? "on" : "off"}`);
   for (const app of APP_IDS) if (before.languages[app] !== after.languages[app]) lines.push(`${APP_LABEL[app]} default language: ${before.languages[app]} → ${after.languages[app]}`);

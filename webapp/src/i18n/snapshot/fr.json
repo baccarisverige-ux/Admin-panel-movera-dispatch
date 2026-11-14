@@ -7644,7 +7644,7 @@
 ["Tip rules","Règles du pourboire"],
 ["The whole tip goes to the driver.","Tout le pourboire va au chauffeur."],
 ["Allow cash tips after the trip","Autoriser le pourboire en espèces après la course"],
-["Off: a cash tip is only possible in the car, in the first 5 minutes after the trip.","Désactivé : le pourboire en espèces n’est possible qu’à bord, dans les 5 minutes après la course."],
+["Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.","Désactivé : le pourboire en espèces n’est possible qu’à bord, dans les {0} minutes après la course."],
 ["Rider may type an amount","Le passager peut saisir un montant"],
 ["Highest typed tip","Pourboire saisi maximum"],
 ["Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to.","Non enregistré : Movera n’est pas encore ouvert en {0}, le serveur n’a donc aucune zone où envoyer les moyens de paiement."],
@@ -8989,4 +8989,10 @@
 ["The last step must be \"Above\".","Le dernier palier doit être « Au-delà »."],
 ["The \"up to\" price must be more than 0.","Le prix « jusqu’à » doit être supérieur à 0."],
 ["Each \"up to\" price must be higher than the step before.","Chaque prix « jusqu’à » doit être plus élevé que celui du palier précédent."],
-["{0} app fee","Frais de plateforme {0}"]]
+["{0} app fee","Frais de plateforme {0}"],
+["Cash tip time in the car","Délai du pourboire en espèces à bord"],
+["Cash tip time in the car: {0} min","Délai du pourboire en espèces à bord : {0} min"],
+["The driver gets a notice with the amount taken from his pay and this reason.","Le chauffeur reçoit une notification avec le montant retenu sur sa rémunération et ce motif."],
+["Cash tip time in the car: mixed → {0} min","Délai du pourboire en espèces à bord : mixte → {0} min"],
+["Differs by zone: {0}. Save keeps each zone's time unless you change it.","Différent selon la zone : {0}. Enregistrer garde le délai de chaque zone sauf si vous le modifiez."],
+["0 minutes: riders cannot give a cash tip in the app once the trip has ended.","0 minute : les passagers ne peuvent pas donner de pourboire en espèces dans l’app une fois la course terminée."]]

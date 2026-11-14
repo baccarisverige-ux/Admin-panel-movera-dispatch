@@ -704,7 +704,7 @@ export const frC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Tip rules": "Règles du pourboire",
   "The whole tip goes to the driver.": "Tout le pourboire va au chauffeur.",
   "Allow cash tips after the trip": "Autoriser le pourboire en espèces après la course",
-  "Off: a cash tip is only possible in the car, in the first 5 minutes after the trip.": "Désactivé : le pourboire en espèces n’est possible qu’à bord, dans les 5 minutes après la course.",
+  "Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.": "Désactivé : le pourboire en espèces n’est possible qu’à bord, dans les {0} minutes après la course.",
   "Rider may type an amount": "Le passager peut saisir un montant",
   "Highest typed tip": "Pourboire saisi maximum",
   "Not saved: Movera is not open in {0} yet, so the server has no zones there to send payment methods to.": "Non enregistré : Movera n’est pas encore ouvert en {0}, le serveur n’a donc aucune zone où envoyer les moyens de paiement.",
