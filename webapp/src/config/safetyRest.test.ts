@@ -52,3 +52,21 @@ test("6: ranges as the server's — work hours 0-24 (0 = no limit), offline rese
   assert.ok(issues({ resetAfterOfflineHours: 25 }).some((issue) => issue.includes("1 to 24")));
   assert.ok(issues({ restMinutes: -1 }).some((issue) => issue.includes("Break")));
 });
+
+test("supervisor fixes 2 + 3: the smart-check card says the heading rule; the reset help shows the field's value (sv/fr/en)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const screen = readFileSync(new URL("../dispatch/ZoneSettings.tsx", import.meta.url), "utf8");
+  assert.ok(!screen.includes("compares the driver's distance"), "the removed came-closer check is not described");
+  assert.ok(!screen.includes("Owner rule:"), "no internal wording");
+  assert.ok(screen.includes("[country.rest.resetAfterOfflineHours])"), "the reset help shows the field's value");
+  const { en } = await import("../i18n/en.ts");
+  const { sv } = await import("../i18n/sv.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  for (const key of [
+    "Checked every 30 s from accept until arrival: is the driver coming at least {0}% as close as the road allows? Not heading for {1} min in a row = the rider cancels for free.",
+    "{0} hours offline in a row reset all the driving time. The server uses this number.",
+  ]) {
+    for (const [lang, dict] of Object.entries({ en, sv, fr })) assert.ok(typeof (dict as Record<string, string>)[key] === "string", `${lang}: ${key}`);
+    assert.ok(screen.includes(key), key);
+  }
+});

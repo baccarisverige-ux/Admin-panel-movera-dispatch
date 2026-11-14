@@ -105,7 +105,6 @@ export const enB4RadarExclusiveReservations = {
   // SV follow-up: offline reset and break length are separate (contract drivingLimits).
   "Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.": "Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.",
   "Offline hours that reset the driving time": "Offline hours that reset the driving time",
-  "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.": "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.",
   "Break length shown in the app": "Break length shown in the app",
   "Only shown to the driver; the server does not enforce it.": "Only shown to the driver; the server does not enforce it.",
   // SV: Cancel checks decide with the heading rule (the came-closer % is gone).
@@ -113,4 +112,7 @@ export const enB4RadarExclusiveReservations = {
   "{0}% of what the road allowed (fee from {1}%)": "{0}% of what the road allowed (fee from {1}%)",
   "The driver was heading to the pickup: {0}% of what the road allowed (needs {1}%). Fee applies.": "The driver was heading to the pickup: {0}% of what the road allowed (needs {1}%). Fee applies.",
   "The driver was not heading to the pickup: {0}% of what the road allowed (needs {1}%). No fee.": "The driver was not heading to the pickup: {0}% of what the road allowed (needs {1}%). No fee.",
+  // SV supervisor fixes: the smart-check card says the heading rule; the reset help shows the field's value.
+  "Checked every 30 s from accept until arrival: is the driver coming at least {0}% as close as the road allows? Not heading for {1} min in a row = the rider cancels for free.": "Checked every 30 s from accept until arrival: is the driver coming at least {0}% as close as the road allows? Not heading for {1} min in a row = the rider cancels for free.",
+  "{0} hours offline in a row reset all the driving time. The server uses this number.": "{0} hours offline in a row reset all the driving time. The server uses this number.",
 } as const;

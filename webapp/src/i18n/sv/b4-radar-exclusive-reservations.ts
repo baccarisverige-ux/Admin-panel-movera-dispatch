@@ -107,7 +107,6 @@ export const svB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   // SV follow-up: offline reset and break length are separate (contract drivingLimits).
   "Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.": "Bara körning räknas: till upphämtningen och under resan. Väntan online räknas inte. 0 = ingen gräns.",
   "Offline hours that reset the driving time": "Timmar offline som nollställer körtiden",
-  "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.": "Regel: 6 timmar offline i rad nollställer all körtid. Servern använder det här talet.",
   "Break length shown in the app": "Pauslängd som visas i appen",
   "Only shown to the driver; the server does not enforce it.": "Visas bara för föraren; servern kontrollerar den inte.",
   // SV: Cancel checks decide with the heading rule (the came-closer % is gone).
@@ -115,4 +114,7 @@ export const svB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   "{0}% of what the road allowed (fee from {1}%)": "{0} % av vad vägen tillät (avgift från {1} %)",
   "The driver was heading to the pickup: {0}% of what the road allowed (needs {1}%). Fee applies.": "Föraren körde mot upphämtningen: {0} % av vad vägen tillät (kräver {1} %). Avgift tas ut.",
   "The driver was not heading to the pickup: {0}% of what the road allowed (needs {1}%). No fee.": "Föraren körde inte mot upphämtningen: {0} % av vad vägen tillät (kräver {1} %). Ingen avgift.",
+  // SV supervisor fixes: the smart-check card says the heading rule; the reset help shows the field's value.
+  "Checked every 30 s from accept until arrival: is the driver coming at least {0}% as close as the road allows? Not heading for {1} min in a row = the rider cancels for free.": "Kontrolleras var 30:e sekund från accept tills föraren är framme: kommer föraren minst {0} % så nära som vägen tillåter? Kör inte mot upphämtningen i {1} min i rad = resenären avbokar gratis.",
+  "{0} hours offline in a row reset all the driving time. The server uses this number.": "{0} timmar offline i rad nollställer all körtid. Servern använder det här talet.",
 };

@@ -107,7 +107,6 @@ export const frB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   // SV follow-up: offline reset and break length are separate (contract drivingLimits).
   "Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.": "Seule la conduite compte : vers la prise en charge et pendant la course. L’attente en ligne ne compte pas. 0 = pas de limite.",
   "Offline hours that reset the driving time": "Heures hors ligne qui remettent le temps de conduite à zéro",
-  "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.": "Règle : 6 heures hors ligne d’affilée remettent tout le temps de conduite à zéro. Le serveur utilise ce nombre.",
   "Break length shown in the app": "Durée de pause affichée dans l’application",
   "Only shown to the driver; the server does not enforce it.": "Seulement affichée au chauffeur ; le serveur ne l’impose pas.",
   // SV: Cancel checks decide with the heading rule (the came-closer % is gone).
@@ -115,4 +114,7 @@ export const frB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   "{0}% of what the road allowed (fee from {1}%)": "{0} % de ce que la route permettait (frais à partir de {1} %)",
   "The driver was heading to the pickup: {0}% of what the road allowed (needs {1}%). Fee applies.": "Le chauffeur se dirigeait vers la prise en charge : {0} % de ce que la route permettait (il faut {1} %). Frais appliqués.",
   "The driver was not heading to the pickup: {0}% of what the road allowed (needs {1}%). No fee.": "Le chauffeur ne se dirigeait pas vers la prise en charge : {0} % de ce que la route permettait (il faut {1} %). Pas de frais.",
+  // SV supervisor fixes: the smart-check card says the heading rule; the reset help shows the field's value.
+  "Checked every 30 s from accept until arrival: is the driver coming at least {0}% as close as the road allows? Not heading for {1} min in a row = the rider cancels for free.": "Vérifié toutes les 30 s, de l’acceptation à l’arrivée : le chauffeur se rapproche-t-il d’au moins {0} % de ce que permet la route ? S’il ne se dirige pas vers la prise en charge pendant {1} min d’affilée, le passager annule gratuitement.",
+  "{0} hours offline in a row reset all the driving time. The server uses this number.": "{0} heures hors ligne d’affilée remettent tout le temps de conduite à zéro. Le serveur utilise ce nombre.",
 };
