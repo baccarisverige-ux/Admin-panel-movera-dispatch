@@ -15,7 +15,7 @@ import type { Trip } from "./types.ts";
  * "U show how much driver get and how much movera get thats all no details"): every "Movera commission" row is ONE
  * server number (the admin TripProjection.moveraKeepsNow, never commission, never a subtraction); "Paid to the driver
  * who lost the trip" from TripProjection.lostDriverPaid when above 0; payout cards show the 2 lines of Payout.summary.
- * The fields are read as optional: the admin's contract copy is older than 0.18.92 (not merged yet).
+ * The fields are read as optional (absent on an older server); the admin carries contract 0.18.92 (sync0_18_92.test.ts).
  */
 const money = (amountMinor: number, currency: string) => ({ amountMinor, currency });
 const NBSP = /[\u00a0\u202f]/g;
