@@ -457,7 +457,9 @@ export function TripPage() {
           ) : null}
           {facts?.waiting ? (
             <dl className="op-split-lines" data-testid="trip-waiting-facts">
-              <div><dt>{tr("Driver arrived")}</dt><dd>{time(facts.waiting.arrivedAt)}</dd></div>
+              <div><dt>{tr("Driver arrived")}</dt><dd>{time(facts.waiting.arrivedAt)}{facts.waiting.arrivedBy ? ` · ${facts.waiting.arrivedBy === "auto" ? tr("automatic") : tr("tapped")}` : ""}</dd></div>
+              {facts.waiting.awaySince ? <div><dt>{tr("Waiting stopped")}</dt><dd data-testid="trip-wait-away">{tr("driver away since {0}", [time(facts.waiting.awaySince)])}</dd></div> : null}
+              {facts.waiting.pauseCount ? <div><dt>{tr("Stopped in all")}</dt><dd data-testid="trip-wait-paused">{trn("{0} min ({1} times)", Math.ceil((facts.waiting.pausedSeconds ?? 0) / 60), facts.waiting.pauseCount)}</dd></div> : null}
               {facts.waiting.waitFrom ? <div><dt>{tr("Free waiting from")}</dt><dd data-testid="trip-wait-from">{time(facts.waiting.waitFrom)}</dd></div> : null}
               <div><dt>{tr("Free until")}</dt><dd>{time(facts.waiting.freeUntil)}</dd></div>
               {facts.waiting.chargedSoFarMinor !== null ? <div><dt>{tr("Waiting charged so far")}</dt><dd>{liveMoney(facts.waiting.chargedSoFarMinor)}</dd></div> : null}

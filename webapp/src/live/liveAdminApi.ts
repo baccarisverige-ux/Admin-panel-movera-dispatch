@@ -269,7 +269,12 @@ export function tripFacts(trip: Trip): LiveTripFacts {
       paidMinutes: typeof trip.waiting.paidMinutes === "number" ? trip.waiting.paidMinutes : null, rules: Array.isArray(trip.waiting.rules) ? trip.waiting.rules : [],
       freeWaitMin: typeof trip.waiting.freeWaitMin === "number" ? trip.waiting.freeWaitMin : null, noShowAfterMin: typeof trip.waiting.noShowAfterMin === "number" ? trip.waiting.noShowAfterMin : null,
       // v0.18.51 §73: the server's waitFrom (the later of arrival and pickup time for a booked ride), never worked out here.
-      waitFrom: typeof trip.waiting.waitFrom === "string" ? trip.waiting.waitFrom : null } : null,
+      waitFrom: typeof trip.waiting.waitFrom === "string" ? trip.waiting.waitFrom : null,
+      // v0.18.93 (job C9, contract.json#autoArrive): the server's arrival kind, stopped clock and finished stops, never worked out here.
+      arrivedBy: trip.waiting.arrivedBy === "auto" || trip.waiting.arrivedBy === "tap" ? trip.waiting.arrivedBy : null,
+      awaySince: typeof trip.waiting.away?.since === "string" ? trip.waiting.away.since : null,
+      pausedSeconds: typeof trip.waiting.pausedSeconds === "number" ? trip.waiting.pausedSeconds : 0,
+      pauseCount: typeof trip.waiting.pauseCount === "number" ? trip.waiting.pauseCount : 0 } : null,
     rideCheck: trip.rideCheck ? { checkId: trip.rideCheck.checkId, trigger: trip.rideCheck.trigger, askedAt: trip.rideCheck.askedAt, answerBy: trip.rideCheck.answerBy, answers: { ...trip.rideCheck.answers }, alertedAt: trip.rideCheck.alertedAt ?? null } : null,
     routeChange: trip.routeChange ? { status: trip.routeChange.status, dropoff: trip.routeChange.dropoff, stops: trip.routeChange.stops ?? [], totalMinor: trip.routeChange.total.amountMinor, differenceMinor: trip.routeChange.difference.amountMinor, askedAt: trip.routeChange.askedAt, answerBy: trip.routeChange.answerBy, answeredBy: trip.routeChange.answeredBy ?? null, driverEarningsMinor: minorOf(trip.routeChange.driverEarnings), earningsDifferenceMinor: minorOf(trip.routeChange.earningsDifference), driverTotalMinor: minorOf(trip.routeChange.driverTotal) } : null,
     adminFlag: trip.adminFlag ? { flagged: trip.adminFlag.flagged, reason: trip.adminFlag.reason ?? null, by: trip.adminFlag.by ?? null, at: trip.adminFlag.at ?? null } : null,

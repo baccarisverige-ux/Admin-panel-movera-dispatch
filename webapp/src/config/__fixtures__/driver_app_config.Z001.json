@@ -657,6 +657,8 @@
     "driverSharePct": 80,
     "driverShareWaitPct": 100,
     "cancelAfterArrivedIsNoShow": true,
+    "autoArriveMeters": 100,
+    "leaveMeters": 200,
     "byCategory": {
       "economy": {
         "freeWaitMin": 5,

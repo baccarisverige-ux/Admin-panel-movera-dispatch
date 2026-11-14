@@ -165,7 +165,9 @@ export type LiveTripFacts = {
   /** v0.18.7: the rules the trip is charged by. */
   terms: { currency: string; freeWaitMin: number; waitPerMinMinor: number; /** A1 v0.18.85: incl. the app fee (rider pays); null from an older server. */ waitPerMinShownMinor: number | null; noShowAfterMin: number; noShowFeeMinor: number; noShowDriverSharePct: number; cancelFreeMin: number | null; cancelDriverSharePct: number; cancelAfterArrivedIsNoShow: boolean; maxPickupMoveMeters: number } | null;
   /** v0.18.7 (G5 Q5/Q6): the waiting at the pickup with the no-show amounts and the running cost. */
-  waiting: { arrivedAt: string; freeUntil: string; noShowAt: string; chargedSeconds: number; noShowFeeMinor: number | null; noShowDriverShareMinor: number | null; chargedSecondsNow: number | null; chargedSoFarMinor: number | null; paidMinutes: number | null; rules: string[]; freeWaitMin: number | null; noShowAfterMin: number | null; waitFrom: string | null } | null;
+  waiting: { arrivedAt: string; freeUntil: string; noShowAt: string; chargedSeconds: number; noShowFeeMinor: number | null; noShowDriverShareMinor: number | null; chargedSecondsNow: number | null; chargedSoFarMinor: number | null; paidMinutes: number | null; rules: string[]; freeWaitMin: number | null; noShowAfterMin: number | null; waitFrom: string | null;
+    /** v0.18.93 (job C9, contract.json#autoArrive): automatic or tapped arrival, the stopped clock while away, the finished stops (all from the server). */
+    arrivedBy?: "auto" | "tap" | null; awaySince?: string | null; pausedSeconds?: number; pauseCount?: number } | null;
   /** v0.18.8 (G6): the rider PIN when the trip needs one (the admin reads it to the driver on the phone). */
   pin: { code: string | null; verified: boolean; attempts: number | null; blocked: boolean } | null;
   /** The cancel as the server recorded it: who, the reason code, the fee, whether it is paid / owed / waived, which rule set it, and the driver's share. */

@@ -265,7 +265,9 @@ export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc
       const made = built["waiting"] as Doc;
       // v0.18.7 (G5 Q2): the cancel-after-arrived switch is the admin's; the money stays pricing's (servedConfig).
       // v0.18.8 (G6): the free wait at each stop (Dispatch › Rides › Stops) is the admin's too.
-      next["waiting"] = { ...own, driverSharePct: made["driverSharePct"], driverShareWaitPct: made["driverShareWaitPct"], cancelAfterArrivedIsNoShow: made["cancelAfterArrivedIsNoShow"], farPickup: made["farPickup"], rideTypes: made["rideTypes"], stopFreeWaitMin: made["stopFreeWaitMin"] };
+      next["waiting"] = { ...own, driverSharePct: made["driverSharePct"], driverShareWaitPct: made["driverShareWaitPct"], cancelAfterArrivedIsNoShow: made["cancelAfterArrivedIsNoShow"], farPickup: made["farPickup"], rideTypes: made["rideTypes"], stopFreeWaitMin: made["stopFreeWaitMin"],
+        // v0.18.93 (job C9, contract.json#autoArrive): the auto-arrive and leave distances are the admin's too.
+        ...(made["autoArriveMeters"] !== undefined ? { autoArriveMeters: made["autoArriveMeters"], leaveMeters: made["leaveMeters"] } : {}) };
       continue;
     }
     if (key === "headingCheck") {
@@ -285,7 +287,7 @@ export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc
 const META_KEYS = new Set(["version", "publishedAt", "usesStandard"]);
 
 /** The waiting parts the admin owns (the money stays pricing's, see withOwned). */
-const WAITING_OWNED = ["driverSharePct", "driverShareWaitPct", "cancelAfterArrivedIsNoShow", "farPickup", "rideTypes", "stopFreeWaitMin"] as const;
+const WAITING_OWNED = ["driverSharePct", "driverShareWaitPct", "cancelAfterArrivedIsNoShow", "farPickup", "rideTypes", "stopFreeWaitMin", "autoArriveMeters", "leaveMeters"] as const;
 
 const isPlain = (value: unknown): value is Doc => typeof value === "object" && value !== null && !Array.isArray(value);
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);

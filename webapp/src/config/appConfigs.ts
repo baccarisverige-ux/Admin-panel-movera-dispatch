@@ -563,6 +563,9 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
       freeWaitMin: wait.freeWaitMin, perMin: wait.perMin, noShowAfterMin: wait.noShowAfterMin, noShowFee: wait.noShowFee, ...share,
       // v0.18.7 (G5 Q2): the server copies it into the rider document when serving GET /rider/config.
       cancelAfterArrivedIsNoShow: zone.pickupWait.cancelAfterArrivedIsNoShow,
+      // v0.18.93 (job C9, contract.json#autoArrive): Dispatch › Waiting at pickup, per zone; the server reads them.
+      autoArriveMeters: zone.pickupWait.autoArriveMeters,
+      leaveMeters: zone.pickupWait.leaveMeters,
       byCategory: wait.byCategory,
       ...waitingRules(base, state),
     },
