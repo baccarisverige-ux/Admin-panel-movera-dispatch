@@ -5,6 +5,7 @@ import { tr } from "../i18n";
 import type { LiveTripFacts } from "../api/seed";
 import { useLiveSession, useLiveSessionMaybe } from "./LiveSessionContext";
 import { liveMoney, adminLabel } from "./format";
+import { routeChangeDriverGets } from "./moneyRows";
 import { ErrorLine } from "./ui";
 import type { AdminTripFlag, AdminTripNote, Page } from "./types";
 
@@ -97,6 +98,7 @@ function Tools({ tripId, facts, hasDriver }: { tripId: string; facts: LiveTripFa
 
   const check = facts?.rideCheck ?? null;
   const change = facts?.routeChange ?? null;
+  const driverGets = change ? routeChangeDriverGets(change) : null;
   return (
     <div className="op-actions-grid" data-testid="live-trip-tools">
       {check ? (
@@ -113,7 +115,8 @@ function Tools({ tripId, facts, hasDriver }: { tripId: string; facts: LiveTripFa
           <p>{routeStatusText(change.status)}</p>
           <p>{tr("New destination")}: {change.dropoff.address ?? `${change.dropoff.lat}, ${change.dropoff.lng}`}{change.stops.length ? ` · ${tr("Stops")}: ${change.stops.length}` : ""}</p>
           <p>{tr("New price")}: <b>{liveMoney({ amountMinor: change.totalMinor, currency })}</b> ({change.differenceMinor >= 0 ? "+" : "−"}{liveMoney({ amountMinor: Math.abs(change.differenceMinor), currency })})</p>
-          {change.driverEarningsMinor !== null ? <p>{tr("Driver gets")}: <b>{liveMoney({ amountMinor: change.driverEarningsMinor, currency })}</b></p> : null}
+          {/* BQ-A29 (v0.18.89 §90 priceDisplay.routeChange): what he gets for the whole trip = TripRouteChange.driverTotal as sent; absent → hidden. */}
+          {driverGets !== null ? <p data-testid="route-change-driver-gets">{tr("Driver gets")}: <b>{liveMoney({ amountMinor: driverGets, currency })}</b></p> : null}
         </div>
       ) : null}
 

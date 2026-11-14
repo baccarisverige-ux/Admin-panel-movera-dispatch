@@ -28,9 +28,12 @@ export type CashFigures = { collected: number; owed: number; driverKeeps: number
 export function cashFigures(split: MoneySplit): CashFigures | null {
   if (split.state !== "charged") return null;
   if (split.live) {
-    // Live: the server's lines. With no wallet part the driver collects the whole fare; Movera's part is its commission.
+    // BQ-A29 (v0.18.89 §90 / v0.18.90): live = the server's numbers as sent — the cash to collect (TripFinish.cashToCollect,
+    // else TripProjection.cashToCollect) and the driver's balance (TripFinish.owedToMovera: above 0 he owes Movera, below 0
+    // Movera owes him). Not sent → NaN ("Not connected yet"), never the fare, the stored commission or a subtraction.
     const facts = split.live;
-    return { collected: facts.cashToCollect ?? facts.fare, owed: facts.commission ?? NaN, driverKeeps: facts.driverEarnings ?? NaN };
+    const sent = (value: number | null | undefined) => (typeof value === "number" && Number.isFinite(value) ? value : NaN);
+    return { collected: sent(facts.finishCashToCollect ?? facts.cashToCollect), owed: sent(facts.owedToMovera), driverKeeps: NaN };
   }
   const collected = split.riderPaid - split.tip;
   const driverKeeps = split.driverGets - split.tip;
@@ -39,6 +42,9 @@ export function cashFigures(split: MoneySplit): CashFigures | null {
 
 /** The cash a driver owes Movera over a set of trips, to take from the next payout. */
 export function cashOwed(trips: readonly DemoRecord[], driverId: string, splitOf: (trip: DemoRecord) => MoneySplit, countryOf: (trip: DemoRecord) => string): { minor: number; trips: number } {
+  // BQ-A29 (contract.json#priceDisplay.owedToMovera "Sums over many trips come from the server (EarningsPeriod,
+  // Payout.summary), not a phone sum"): no sum over live trips here.
+  if (isLiveData()) return { minor: 0, trips: 0 };
   let minor = 0;
   let count = 0;
   for (const trip of trips) {

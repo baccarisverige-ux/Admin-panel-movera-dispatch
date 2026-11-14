@@ -502,7 +502,9 @@ export function TripPage() {
                 <>
                   <dl className="op-split-lines">
                     <div><dt>{tr("Cash collected by driver")}</dt><dd>{money(cash.collected)}</dd></div>
-                    <div className="minus"><dt>{tr("Owed to Movera")}</dt><dd>{money(cash.owed)}</dd></div>
+                    {/* BQ-A29: on live the driver's balance is the server's owedToMovera, shown once in "Who gets what" above
+                        (split-driver-balance); the demo keeps its own line. */}
+                    {split.live ? null : <div className="minus"><dt>{tr("Owed to Movera")}</dt><dd>{money(cash.owed)}</dd></div>}
                   </dl>
                   <p className="op-help">{trn("The owed amount is taken from the driver's next payout. {0}", <Link to="/payouts">{tr("Payouts")}</Link>)}</p>
                 </>

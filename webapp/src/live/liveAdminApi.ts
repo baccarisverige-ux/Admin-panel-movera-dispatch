@@ -241,6 +241,9 @@ export function tripFacts(trip: Trip): LiveTripFacts {
     driverBonus: minorOf(trip.driverBonus),
     walletApplied: minorOf(trip.walletApplied),
     cashToCollect: minorOf(trip.cashToCollect),
+    // BQ-A29 (v0.18.89 §90 / v0.18.90 priceDisplay.owedToMovera): the end's numbers as the server sends them; never worked out here.
+    finishCashToCollect: minorOf(trip.finish?.cashToCollect),
+    owedToMovera: minorOf(trip.finish?.owedToMovera),
     // Live G8 (6a): the trip page's top numbers and Money card use the server's who-gets-what, the same as its card.
     split: trip.moneySplit ? {
       riderPaid: trip.moneySplit.riderPaid.amountMinor,
@@ -268,7 +271,7 @@ export function tripFacts(trip: Trip): LiveTripFacts {
       // v0.18.51 §73: the server's waitFrom (the later of arrival and pickup time for a booked ride), never worked out here.
       waitFrom: typeof trip.waiting.waitFrom === "string" ? trip.waiting.waitFrom : null } : null,
     rideCheck: trip.rideCheck ? { checkId: trip.rideCheck.checkId, trigger: trip.rideCheck.trigger, askedAt: trip.rideCheck.askedAt, answerBy: trip.rideCheck.answerBy, answers: { ...trip.rideCheck.answers }, alertedAt: trip.rideCheck.alertedAt ?? null } : null,
-    routeChange: trip.routeChange ? { status: trip.routeChange.status, dropoff: trip.routeChange.dropoff, stops: trip.routeChange.stops ?? [], totalMinor: trip.routeChange.total.amountMinor, differenceMinor: trip.routeChange.difference.amountMinor, askedAt: trip.routeChange.askedAt, answerBy: trip.routeChange.answerBy, answeredBy: trip.routeChange.answeredBy ?? null, driverEarningsMinor: minorOf(trip.routeChange.driverEarnings), earningsDifferenceMinor: minorOf(trip.routeChange.earningsDifference) } : null,
+    routeChange: trip.routeChange ? { status: trip.routeChange.status, dropoff: trip.routeChange.dropoff, stops: trip.routeChange.stops ?? [], totalMinor: trip.routeChange.total.amountMinor, differenceMinor: trip.routeChange.difference.amountMinor, askedAt: trip.routeChange.askedAt, answerBy: trip.routeChange.answerBy, answeredBy: trip.routeChange.answeredBy ?? null, driverEarningsMinor: minorOf(trip.routeChange.driverEarnings), earningsDifferenceMinor: minorOf(trip.routeChange.earningsDifference), driverTotalMinor: minorOf(trip.routeChange.driverTotal) } : null,
     adminFlag: trip.adminFlag ? { flagged: trip.adminFlag.flagged, reason: trip.adminFlag.reason ?? null, by: trip.adminFlag.by ?? null, at: trip.adminFlag.at ?? null } : null,
     pin: trip.pinRequired ? { code: typeof trip.pickupPin === "string" ? trip.pickupPin : null, verified: Boolean(trip.pinVerified), attempts: typeof trip.pinAttempts === "number" ? trip.pinAttempts : null, blocked: trip.pinBlocked === true } : null,
     cancellation: trip.cancellation ? { actor: trip.cancellation.actor, reasonCode: trip.cancellation.reasonCode, at: trip.cancellation.at, feeMinor: minorOf(trip.cancellation.fee), feeStatus: trip.cancellation.feeStatus ?? null, feeKind: trip.cancellation.feeKind ?? null, driverShareMinor: minorOf(trip.cancellation.driverShare), note: trip.cancellation.note ?? null,

@@ -39,7 +39,8 @@ test("live: a trip page reads only server facts (places, times, category, fare l
   assert.ok(Number.isNaN(split.tip) && Number.isNaN(split.promo), "no invented tip or promotion");
   assert.ok(!("fleet" in split), "no fleet-owner share (v0.18.88)");
   assert.equal(isCashTrip(trip, "SE"), true);
-  assert.deepEqual(cashFigures(split), { collected: 30000, owed: 6000, driverKeeps: 24000 });
+  // BQ-A29 (v0.18.89 §90): no finish.owedToMovera / cashToCollect sent → "Not connected yet", never the fare or the commission.
+  assert.deepEqual(cashFigures(split), { collected: NaN, owed: NaN, driverKeeps: NaN });
   assert.equal(chatOf(trip), null);
   assert.equal(callsOf(trip), null);
   assert.deepEqual(offersOf(trip, ["drv_1", "drv_2"]), []);
@@ -114,7 +115,8 @@ test("live: every listed demo source answers with server facts or Not connected,
   assert.deepEqual(failureCause({ id: "PAY1" }), { kind: "rider", reason: "Not connected yet" });
   assert.equal(failureHandled({ id: "PAY1" }), false);
   const split = paySplit(30000, "SE", "trp_7");
-  assert.deepEqual([split.commission, split.driver], [6000, 24000]);
+  // MC desk follow-up (price-audit gap 6): no moneySplit sent → the Driver column is "Not connected yet", never driverEarnings.
+  assert.deepEqual([split.commission, split.driver, split.movera], [6000, NaN, NaN]);
   assert.ok(Number.isNaN(split.vat));
   const rider = { id: "rdr_7", name: "Ida", phone: "", zoneId: "", status: "active" };
   const bookings = riderBookings(rider, Date.now());

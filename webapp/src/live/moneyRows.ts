@@ -54,3 +54,27 @@ export function runSummaryRows(rows: readonly { payoutId: string; driverId: stri
   }
   return out;
 }
+
+export type BalanceLine = { kind: "driver_owes" | "movera_owes" | "settled"; text: string; amount: Money };
+
+/**
+ * BQ-A29 (contract.json#priceDisplay.owedToMovera, v0.18.90 text; driver and admin views): the driver's balance after
+ * the trip, the server's TripFinish.owedToMovera as sent. Above 0: "Driver owes Movera X"; below 0: "Movera owes the
+ * driver X" (the amount shown without its sign, as the contract says); 0: "Settled". Absent (an older server, a trip
+ * not ended) → null: the line is hidden. Nothing is worked out here.
+ */
+export function driverBalanceLine(owed: MoneyLike): BalanceLine | null {
+  if (!real(owed)) return null;
+  if (owed.amountMinor === 0) return { kind: "settled", text: tr("Settled"), amount: owed };
+  if (owed.amountMinor > 0) return { kind: "driver_owes", text: tr("Driver owes Movera {0}", [liveMoney(owed)]), amount: owed };
+  const shown = { amountMinor: -owed.amountMinor, currency: owed.currency };
+  return { kind: "movera_owes", text: tr("Movera owes the driver {0}", [liveMoney(shown)]), amount: owed };
+}
+
+/**
+ * BQ-A29 (contract.json#priceDisplay.routeChange): the route-change card's "Driver gets" = TripRouteChange.driverTotal
+ * (what he gets for the whole trip with the new route) as sent; absent → null (the line is hidden, never driverEarnings).
+ */
+export function routeChangeDriverGets(change: { driverTotalMinor?: number | null }): number | null {
+  return typeof change.driverTotalMinor === "number" && Number.isFinite(change.driverTotalMinor) ? change.driverTotalMinor : null;
+}
