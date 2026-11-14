@@ -4,6 +4,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { tr, trn } from "../i18n";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
 import { liveMoney } from "./format";
+import { walletCreditMinor } from "./walletCredit";
 
 /**
  * v0.18.29 A2 (fix job 0) (owner G12 Q5 "Real credit + limit", Q-D "Max 250 euro and equivalent", build-spec Q2 "One button on
@@ -12,7 +13,6 @@ import { liveMoney } from "./format";
  * v0.18.82 S5 J4a (moneyBase.versionGuard, owner 106): sends the rider version this page shows; a second click gets 409,
  * the page reloads and says so. The button is off while a request is sending (CommandButton "Please wait").
  */
-const DIGITS: Record<string, number> = { SEK: 100, EUR: 100, TND: 1000 };
 const SYMBOL: Record<string, string> = { SEK: "kr", EUR: "€", TND: "DT" };
 
 export function LiveWalletCredit({ riderId, version, walletMinor, currency }: { riderId: string; version?: number; walletMinor: number | null; currency: string | null }) {
@@ -21,11 +21,9 @@ export function LiveWalletCredit({ riderId, version, walletMinor, currency }: { 
   const [amount, setAmount] = useState("");
   const [notice, setNotice] = useState("");
   const cur = currency ?? "SEK";
-  const digits = DIGITS[cur] ?? 100;
   const symbol = SYMBOL[cur] ?? cur;
-  const major = Number(amount.replace(",", "."));
-  const minor = Number.isFinite(major) ? Math.round(major * digits) : NaN;
-  const problem = !(minor > 0) ? tr("Enter an amount above 0.") : null;
+  const minor = walletCreditMinor(amount, cur);
+  const problem = minor === null ? tr("Enter an amount above 0.") : null;
   // GM item 13: the currency's own decimals ("200,00 kr", "12.500 DT"), with the one formatter (C-23).
   const balance = walletMinor === null ? "—" : liveMoney({ amountMinor: walletMinor, currency: cur });
   return (
@@ -43,7 +41,7 @@ export function LiveWalletCredit({ riderId, version, walletMinor, currency }: { 
         confirmTarget={false}
         before={balance}
         after={`+${amount} ${symbol}`}
-        value={{ ...(typeof version === "number" ? { expectedVersion: version } : {}), amount: { amountMinor: minor, currency: cur } }}
+        value={{ ...(typeof version === "number" ? { expectedVersion: version } : {}), amount: { amountMinor: minor ?? 0, currency: cur } }}
         disabled={!canEdit || Boolean(problem)}
         title={problem ?? undefined}
         onDone={() => { setNotice(tr("Added {0} {1} to the wallet.", [amount, symbol])); setAmount(""); }}

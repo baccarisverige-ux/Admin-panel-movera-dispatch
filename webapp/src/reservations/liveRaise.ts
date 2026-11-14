@@ -1,7 +1,7 @@
 import type { DemoRecord } from "../api/seed.ts";
 import { parseMinor } from "../live/format.ts";
 import { reservationActions, reservationCall, type ServerReservation } from "../live/reservations.ts";
-import { formatMoney, market, marketOfZone, type MarketId } from "../markets/markets.ts";
+import { formatMoney, market, MARKETS, marketOfZone, type MarketId } from "../markets/markets.ts";
 import { raiseFare, type ReservationBook } from "./book.ts";
 
 /**
@@ -37,28 +37,45 @@ export function liveRaiseOpen(record: DemoRecord): boolean {
   return !record.driverId && reservationActions(serverTripOf(record)).includes("raise");
 }
 
+/** The market of a currency the admin knows (SEK, EUR, TND), else undefined. */
+function marketOfKnownCurrency(currency: string | null | undefined): MarketId | undefined {
+  return currency ? MARKETS.find((item) => item.currency === currency)?.id : undefined;
+}
+
+/**
+ * BQ-A30b S1: the country the reservation page counts and writes money in. On live it is the trip's currency's country
+ * (a TND trip → Tunisia, even when its zone is not in the admin's zone list), else its zone's country, else Sweden.
+ * The demo keeps its zone's country.
+ */
+export function raiseCountry(record: DemoRecord, live: boolean): MarketId {
+  const ofCurrency = live ? marketOfKnownCurrency(record.liveTrip?.currency) : undefined;
+  return ofCurrency ?? marketOfZone(record.zoneId)?.id ?? "SE";
+}
+
 /**
  * Check a live raise typed in major units and build its server call. The amount goes to minor units with the trip's
  * currency's own decimals (SEK öre ×100, TND millimes ×1000), never rounded: more decimals than the currency has is
- * refused. The highest raise is shown with its decimals.
+ * refused. BQ-A30b: the limit check and its text use the same currency (S1); no known currency is refused, never SEK (S2).
+ * `max` is in that currency's major units (the page's raiseMax for raiseCountry).
  */
 export function liveRaise(
   book: ReservationBook,
   record: DemoRecord,
   text: string,
   max: number,
-  country: MarketId,
   actorId: string,
   nowIso: string,
   note = "",
 ): { error?: string; call?: { path: string; body: Record<string, unknown> } } {
   const trip = serverTripOf(record);
-  const currency = trip.fare?.currency ?? marketOfZone(record.zoneId)?.currency ?? market(country).currency;
+  const country = marketOfKnownCurrency(record.liveTrip?.currency) ?? marketOfZone(record.zoneId)?.id;
+  if (!country) return { error: "The trip's currency is not known." };
+  const currency = market(country).currency;
   const minor = parseMinor(text, currency);
   if (minor === null || minor <= 0) return { error: "Write a raise above 0." };
-  const units = market(country).minorUnits;
-  const checked = raiseFare(book, record, minor / units, max, actorId, nowIso, raiseMaxText(max, country));
+  const checked = raiseFare(book, record, minor / market(country).minorUnits, max, actorId, nowIso, raiseMaxText(max, country));
   if (checked.error) return { error: checked.error };
   if (!liveRaiseOpen(record)) return { error: "Only a ride without a driver can get a higher fare." };
+  // trip.fare carries the same currency (tripFacts keeps fare and currency together), so the body says `currency`.
   return { call: reservationCall("raise", trip, { amountMinor: minor, reason: note }) };
 }
