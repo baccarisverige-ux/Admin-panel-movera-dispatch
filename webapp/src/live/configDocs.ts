@@ -105,6 +105,20 @@ export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null):
   };
 }
 
+/**
+ * Pricing keys the contract removed that a server document may still carry from an older admin. Owner 2026-10-29 "if
+ * there is any % u delete that" (contract v0.18.13 fleetShareRemoved, v0.18.88 fleetPayoutWhole: removed, ignored): a
+ * publish never writes them back, so the fleet-owner % leaves the zone's document at its next publish.
+ */
+export const REMOVED_PRICING_KEYS = ["fleetCommissionPct"] as const;
+
+/** The pricing document to send: without the keys the contract removed. */
+export function withoutRemovedPricingKeys(doc: Doc): Doc {
+  const next = { ...doc };
+  for (const key of REMOVED_PRICING_KEYS) delete next[key];
+  return next;
+}
+
 /** The book the Pricing page shows for a server pricing document: the document's values over `fallback`. */
 export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
   const facts = zoneFacts(fallback.zoneId);

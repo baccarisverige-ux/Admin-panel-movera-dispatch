@@ -20,6 +20,7 @@ import {
   countryRulesOf,
   dispatchDocumentOf,
   pricingDocumentOf,
+  withoutRemovedPricingKeys,
   readDraft,
   rulesOfDispatch,
   restoreVersion,
@@ -521,7 +522,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     for (const id of zoneIds) {
       const current = await draft("pricing", id, true);
       const built = pricingDocumentOf(zoneBook(store, id), id, current?.document ?? null);
-      await savePublish(http, "pricing", id, current, current ? patchChanged(current.document, pricingDocumentOf(zoneBook(prior, id), id, current.document), built) : built);
+      await savePublish(http, "pricing", id, current, withoutRemovedPricingKeys(current ? patchChanged(current.document, pricingDocumentOf(zoneBook(prior, id), id, current.document), built) : built));
     }
     slices.set(PRICING_KEY, store);
     baseline.pricing = store;

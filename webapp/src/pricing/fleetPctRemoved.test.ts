@@ -55,8 +55,13 @@ test("Reports › Fleet owners: what the drivers earned, no owner's share", () =
 });
 
 test("no screen shows or edits a fleet-owner % (Commission card, Payouts, trip money, Reports)", () => {
-  for (const file of ["./CommissionPanel.tsx", "./zonePricing.ts", "./book.ts", "./sets.ts", "../pages/PricingPage.tsx", "../live/configDocs.ts", "../payments/runs.ts", "../payments/PayoutParts.tsx", "../trips/file.ts", "../trips/TripParts.tsx", "../dashboard/tripMoney.ts", "../dashboard/TripMoneyTab.tsx", "../pages/TripPage.tsx", "../reports/extra.ts", "../reports/ExtraTabs.tsx", "../styles/pricing.css"]) {
+  for (const file of ["./CommissionPanel.tsx", "./zonePricing.ts", "./book.ts", "./sets.ts", "../pages/PricingPage.tsx", "../payments/runs.ts", "../payments/PayoutParts.tsx", "../trips/file.ts", "../trips/TripParts.tsx", "../dashboard/tripMoney.ts", "../dashboard/TripMoneyTab.tsx", "../pages/TripPage.tsx", "../reports/extra.ts", "../reports/ExtraTabs.tsx", "../styles/pricing.css"]) {
     assert.doesNotMatch(source(file), FLEET_PCT, file);
   }
   assert.doesNotMatch(source("./CommissionPanel.tsx"), /tr\("Fleet owner"\)|onFleet/, "no Fleet owner line in the commission card");
+  // configDocs.ts names the key once, only in the list of removed keys a publish deletes.
+  const docs = source("../live/configDocs.ts");
+  assert.equal(docs.match(/fleetCommissionPct/g)?.length, 1);
+  assert.match(docs, /REMOVED_PRICING_KEYS = \["fleetCommissionPct"\]/);
+  assert.match(source("../live/liveSettings.ts"), /savePublish\(http, "pricing", id, current, withoutRemovedPricingKeys\(/);
 });
