@@ -8939,4 +8939,15 @@
 ["{0} · rider pays {1}","{0} · rider pays {1}"],
 ["Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee.","Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee."],
 ["{0} min · {1}/min incl. app fee · driver gets {2}/min","{0} min · {1}/min incl. app fee · driver gets {2}/min"],
-["Rider pays {0}/min","Rider pays {0}/min"]]
+["Rider pays {0}/min","Rider pays {0}/min"],
+["Driver pay{0}","Driver pay{0}"],
+["Save driver pay","Save driver pay"],
+["Driver's pay now: {0}","Driver's pay now: {0}"],
+["The rider pays the same price as booked. The tip stays on top. Waiting or stops added later are added to this pay.","The rider pays the same price as booked. The tip stays on top. Waiting or stops added later are added to this pay."],
+["Type the driver's pay.","Type the driver's pay."],
+["Driver pay saved. The rider pays the same.","Driver pay saved. The rider pays the same."],
+["Type the driver's pay. The rider's price cannot be changed.","Type the driver's pay. The rider's price cannot be changed."],
+["The change to the driver's pay is above this country's limit (Pricing › Tips & limits).","The change to the driver's pay is above this country's limit (Pricing › Tips & limits)."],
+["The driver's pay cannot go below 0.","The driver's pay cannot go below 0."],
+["The driver's pay cannot be changed while the trip is {0}.","The driver's pay cannot be changed while the trip is {0}."],
+["Trip adjusted (driver pay, waiting or fee)","Trip adjusted (driver pay, waiting or fee)"]]

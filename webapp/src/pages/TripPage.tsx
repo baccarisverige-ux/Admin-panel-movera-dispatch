@@ -2,7 +2,7 @@ import { NotConnected } from "../live/NotConnected";
 import { LiveTripChat } from "../live/LiveTripChat";
 import { LiveBlockPair } from "../live/LiveBlockedPairs";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { auditActionText, auditActorName, auditResultText, fareLineLabel } from "../live/format";
+import { auditActionText, auditActorName, auditResultText, fareLineLabel, parseMinor } from "../live/format";
 import { Link, useNavigate, useParams } from "react-router";
 import { useLiveRefund } from "../live/LiveRefund";
 import { LiveTripMoney } from "../live/LiveTripMoney";
@@ -44,7 +44,6 @@ import {
 } from "../trips/file";
 import {
   adjustBlock,
-  asTrip,
   cancelBlock,
   cancelReason,
   cancelledBy,
@@ -74,7 +73,7 @@ import { AdminActions, ChatCalls, Section, SplitView, entryLine } from "../trips
 import { RouteMap } from "../trips/RouteMap";
 import { cashFigures, isCashTrip } from "../trips/cash";
 import { offerLog, timelineOffers } from "../trips/offerLog";
-import { adjustFare, waitingMinutes } from "../trips/rules";
+import { waitingMinutes } from "../trips/rules";
 import { CommandButton } from "../ui/CommandButton";
 import { ReverseNoShowButton } from "../trips/ReverseNoShow";
 import { DriverBonusBox, NearbyButton, OffersSection, useTripOffers } from "../dispatch/AssignPanel";
@@ -155,7 +154,7 @@ export function TripPage() {
   const dispatchOffers = useTripOffers(tripId, can(role, "trips.read"));
   const clock = useNow();
   const [driverId, setDriverId] = useState("");
-  const [farePercent, setFarePercent] = useState("10");
+  const [driverPayInput, setDriverPayInput] = useState("");
   const [waitingInput, setWaitingInput] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [notice, setNotice] = useState("");
@@ -203,8 +202,6 @@ export function TripPage() {
   const completeWhy = completeBlock(trip.status);
   // Admin cancel reasons: contract admin_* codes, texts from Dispatch › Cancel reasons (the one editor).
   const adminReasons = liveCountry(normalizeDispatchBook(dispatchSlice.value), country).cancelReasons.groups.admin;
-  const fareAttempt = adjustFare(asTrip(trip), Number(farePercent));
-  const adjustWhy = adjustBlock(trip.status) ?? fareAttempt.error ?? null;
   const waitingValue = waitingInput === "" ? fare.waitingMin : Number(waitingInput);
   const waitingAttempt = waitingMinutes(trip.status, waitingValue);
   const waitingWhy = waitingBlock(trip.status) ?? waitingAttempt.error ?? null;
@@ -213,6 +210,12 @@ export function TripPage() {
   const tone = trip.status.includes("cancel") || trip.status === "failed" ? "red" : trip.status === "completed" ? "green" : "amber";
   const store = normalizeStore(pricing.value);
   const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees, dispatchOffers.data?.bonusMinor ?? 0);
+  // v0.18.82 S5 J6a (contract.json#moneyBase.adminFare; owner Q-M7 "it's only for the driver side", Q-S5-8 "Admin types
+  // driver pay", "No, without tip", "32 DT, keep change"): the admin types the driver's new pay (without the tip); the
+  // rider pays the booked price. The field shows the driver's pay now.
+  const payNow = Number.isFinite(split.driverGets) ? split.driverGets - (Number.isFinite(split.tip) ? split.tip : 0) : null;
+  const driverPayMinor = parseMinor(driverPayInput, tripCurrency);
+  const adjustWhy = adjustBlock(trip.status) ?? (driverPayMinor === null ? tr("Type the driver's pay.") : null);
   const chat = chatOf(trip);
   const calls = callsOf(trip);
   const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })), dispatchOffers.data?.offers);
@@ -657,14 +660,12 @@ export function TripPage() {
               )}
 
               <div className="field-grid">
-                <label>{trn("Fare adjustment (%){0}", <input
-                    aria-label={tr("Fare adjustment percent")}
-                    type="number"
-                    min="-15"
-                    max="15"
-                    step="1"
-                    value={farePercent}
-                    onChange={(event) => setFarePercent(event.target.value)}
+                <label>{trn("Driver pay{0}", <input
+                    aria-label={tr("Driver pay")}
+                    inputMode="decimal"
+                    placeholder={payNow !== null ? liveMoney(payNow) : "0"}
+                    value={driverPayInput}
+                    onChange={(event) => setDriverPayInput(event.target.value)}
                   />)}</label>
                 <label>{trn("Waiting minutes{0}", <input
                     aria-label={tr("Waiting minutes")}
@@ -677,9 +678,13 @@ export function TripPage() {
                   />)}</label>
               </div>
 
-              <p data-testid="adjust-block">{adjustWhy ?? tr("Fare can be adjusted by up to ±15% in this state.")}</p>
+              <p data-testid="adjust-block">
+                {payNow !== null ? <>{tr("Driver's pay now: {0}", [liveMoney(payNow)])}. </> : null}
+                {tr("The rider pays the same price as booked. The tip stays on top. Waiting or stops added later are added to this pay.")}
+                {adjustWhy ? <> {adjustWhy}</> : null}
+              </p>
               {adjustWhy ? (
-                <button data-command="admin.trip.adjust" className="secondary-btn" type="button" disabled title={adjustWhy}>{tr("Apply fare adjustment")}</button>
+                <button data-command="admin.trip.adjust" className="secondary-btn" type="button" disabled title={adjustWhy}>{tr("Save driver pay")}</button>
               ) : (
                 <CommandButton
                   command="admin.trip.adjust"
@@ -689,10 +694,11 @@ export function TripPage() {
                   entityState={trip.status}
                   scope={trip.zoneId}
                   collection="trips"
-                  before={legacyMoney(trip.fareOre ?? 0)}
-                  after={legacyMoney(fareAttempt.trip.fareOre)}
-                  patch={{ fareOre: fareAttempt.trip.fareOre }}
-                >{tr("Apply fare adjustment")}</CommandButton>
+                  before={payNow !== null ? liveMoney(payNow) : "—"}
+                  after={liveMoney(driverPayMinor ?? 0)}
+                  patch={{ driverPayMinor }}
+                  onDone={() => setDriverPayInput("")}
+                >{tr("Save driver pay")}</CommandButton>
               )}
 
               <p data-testid="waiting-block">{waitingWhy ?? tr("Waiting time can be corrected in this state.")}</p>

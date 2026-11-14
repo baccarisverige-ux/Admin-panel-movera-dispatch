@@ -757,8 +757,10 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
         if (body.expectedVersion !== trip.version) return json(route, 409, { code: "version_mismatch", message: "Stale version", requestId: "r-409a", retryable: false, projection: trip });
         if (!body.reason) return json(route, 400, { code: "invalid_request", message: "reason is required", requestId: "r-400a", retryable: false });
         const cancellation = trip.cancellation as { fee?: { amountMinor: number; currency: string } | null; feeStatus?: string } | undefined;
-        // v0.18.9 (G7): price adjust (fare) and the charged waiting (waitingSeconds).
-        if (body.fare) trip.fare = { ...(trip.fare as object), amountMinor: body.fare.amountMinor };
+        // v0.18.82 S5 J6 (contract.json#moneyBase.adminFare): the old fare is refused; driverPay changes only the driver's pay.
+        if (body.fare) return json(route, 400, { code: "invalid_request", message: "Type the driver's pay (driverPay); the rider's price cannot be changed.", reason: "fare_is_driver_pay", requestId: "r-400f", retryable: false });
+        if (body.driverPay) trip.driverTotal = { amountMinor: body.driverPay.amountMinor, currency: body.driverPay.currency };
+        // v0.18.9 (G7): the charged waiting (waitingSeconds).
         if (typeof body.waitingSeconds === "number") trip.waiting = { arrivedAt: "2026-10-26T09:12:00Z", freeUntil: "2026-10-26T09:15:00Z", noShowAt: "2026-10-26T09:20:00Z", rules: [], ...((trip.waiting as object | undefined) ?? {}), chargedSeconds: body.waitingSeconds, paidMinutes: Math.ceil(body.waitingSeconds / 60) };
         if (body.waiveCancelFee && cancellation?.fee) {
           cancellation.feeStatus = "waived";
