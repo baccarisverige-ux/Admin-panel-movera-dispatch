@@ -30,7 +30,7 @@ export { LIST_PAGE };
 import { DUE_PAYOUTS_LIST, LIVE_PAGE, createListReaders } from "./listReaders.ts";
 export { DUE_PAYOUTS_LIST, LIVE_PAGE };
 import { LIVE_CARD_LIST } from "../dashboard/liveCard.ts";
-import { WAITING_STATUSES, ridersOnlineRecords } from "../dashboard/riders.ts";
+import { ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
 import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { alertCall, bookFromServer, liveCountry, type AlertBookState } from "./liveAlerts.ts";
@@ -40,6 +40,7 @@ import { REVIEW_OPS_KEY, emptyReviewOps, type ReviewOps } from "../growth/review
 import { INCIDENT_BY_ID_LIST, INCIDENTS_OF_DRIVER_LIST, INCIDENTS_OF_RIDER_LIST, INCIDENTS_OF_TRIP_LIST, OPEN_INCIDENTS_LIST, OPEN_INCIDENT_STATUSES, bookFrom, incidentRecord, isIncidentList, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 export { ALL_INCIDENTS_LIST, INCIDENT_BY_ID_LIST, INCIDENTS_OF_TRIP_LIST, OPEN_INCIDENTS_LIST } from "./incidents.ts";
 import { readPersonIncidents, type PersonFilterMemo } from "./incidentsByPerson.ts";
+import { readWaitingTrips, type ScheduledBeforeMemo } from "./waitingTrips.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
 import { controlBody, controlValueOf, dispatchControlPath, isPendingApproval, parseControl } from "./dispatchControl.ts";
@@ -534,6 +535,9 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   /** L78-A: whether this server has the incidents driverId / riderId filter (false after one 400 unknown_filter). */
   const personFilter: PersonFilterMemo = {};
 
+  /** A2 (v0.18.83): whether this server has GET /admin/trips scheduledBefore (false after one 400 unknown_filter). */
+  const scheduledBeforeFilter: ScheduledBeforeMemo = {};
+
   /** B1.26b: the server's incidents behind one of the incident lists (see list()). */
   async function readIncidents(name: string, filter: ZoneFilter, signal?: AbortSignal): Promise<ServerIncident[]> {
     if (name === OPEN_INCIDENTS_LIST) return all<ServerIncident>(client, "/admin/incidents", filter, OPEN_INCIDENT_STATUSES.map((status) => ["status", status] as [string, string]));
@@ -673,8 +677,10 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     // Step 39 (plan 0.28a, audit A15 N5): the Dashboard's ride requests are every waiting trip the server has
     // (GET /admin/trips?status=requested&status=searching&status=offered, all pages), never the first list page.
+    // A2 (v0.18.83, owner 2026-11-13 "Exact contract filter"): + scheduledBefore=<now>, so booked rides not due are
+    // never read; an older server (400 unknown_filter) gets the read above for the rest of the session.
     if (name === WAITING_TRIPS_LIST) {
-      const rows = await all<Trip>(client, "/admin/trips", filter, WAITING_STATUSES.map((status) => ["status", status] as [string, string]));
+      const rows = await readWaitingTrips(client, filter, scheduledBeforeFilter);
       rows.forEach((row) => trips.set(row.tripId, row));
       if (!riders.size) await readRiders().catch(() => []);
       return rows.map((row) => tripRecord(row, riders.get(row.riderId)));
