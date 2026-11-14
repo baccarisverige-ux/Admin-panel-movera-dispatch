@@ -82,6 +82,22 @@ test("FU-A29-2: an older server (no summary) shows the server's own lines and Pa
   assert.ok(!lines.some((line) => /%|commission/i.test(line.label)), "no demo commission % line");
 });
 
+test("S1 SEK: an older server's negative Payout.amount reads The driver owes Movera + the amount without its sign", () => {
+  const { lines } = payoutLines(payout("Z001", "SEK", { lines: [{ code: "trips", amountMinor: 20_000, count: 1 }, { code: "cash_collected", amountMinor: -26_500 }] }, -6_500), sched);
+  const total = lines.at(-1)!;
+  assert.equal(total.label, "The driver owes Movera");
+  assert.equal(total.kind, "total");
+  assert.equal(formatMoney(total.minor, "SE"), "65,00 kr");
+  assert.ok(!lines.some((line) => line.label === "Driver gets"), "no Driver gets with a negative amount");
+});
+
+test("S1 TND: the dinar keeps 3 decimals on The driver owes Movera", () => {
+  const { lines } = payoutLines(payout("Z201", "TND", { lines: [{ code: "cash_collected", amountMinor: -2_500 }] }, -2_500), sched);
+  assert.deepEqual([lines.at(-1)!.label, formatMoney(lines.at(-1)!.minor, "TN")], ["The driver owes Movera", "2.500 DT"]);
+  registerDictionary("sv", sv);
+  assert.ok(sv["The driver owes Movera"], "sv text exists");
+});
+
 test("FU-A29-2: a live payout without summary or lines has no lines (the card reads Not connected yet)", () => {
   assert.deepEqual(payoutLines(payout("Z001", "SEK", {}, 43_700), sched).lines, []);
   const parts = readFileSync(new URL("./PayoutParts.tsx", import.meta.url), "utf8");

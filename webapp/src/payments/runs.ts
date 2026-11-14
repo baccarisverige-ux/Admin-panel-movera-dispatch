@@ -115,7 +115,9 @@ function livePayoutLines(record: DemoRecord): Line[] {
   if (!lines.length) return [];
   return [
     ...lines.map((line): Line => ({ label: line.code, code: line.code, minor: line.amountMinor, kind: line.amountMinor < 0 ? "minus" : "plus", ...(line.count !== undefined ? { count: line.count } : {}) })),
-    ...(real(record.fareOre) ? [{ label: "Driver gets", minor: record.fareOre, kind: "total" as const }] : []),
+    // S1 (A26 supervisor): below zero the driver owes Movera — as LivePayouts.tsx:191, the amount shown without its sign
+    // (display only, nothing worked out).
+    ...(real(record.fareOre) ? [record.fareOre < 0 ? { label: "The driver owes Movera", minor: -record.fareOre, kind: "total" as const } : { label: "Driver gets", minor: record.fareOre, kind: "total" as const }] : []),
   ];
 }
 
