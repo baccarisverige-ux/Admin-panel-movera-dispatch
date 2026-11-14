@@ -17,6 +17,7 @@ import {
   updateDraft,
   validateZones,
   zoneImpact,
+  zoneRuleSummary,
   ZONE_TYPES,
   zonesAt,
   zonesToGeoJSON,
@@ -28,6 +29,7 @@ import {
   deleteZone,
   displayName,
   launchChecklist,
+  makeZone,
   seedZones,
   suggestCode,
 } from "./releases.ts";
@@ -163,5 +165,15 @@ assert(Math.abs(lineKm([[59.33, 18.0], [59.33, 18.1]]) - 5.69) < 0.1, "measure a
 assert(firstShapeFromFile(JSON.stringify(zonesToGeoJSON([madeZone]))).points.length === madeZone.points.length && firstShapeFromFile("nope").error, "first shape from a file");
 assert(goLiveState({ ...madeZone, goLiveAt: "2099-01-01T06:00" }, Date.now()) === "scheduled" && goLiveState(madeZone, Date.now()) === "now", "go live later");
 assert(activityInside(paris.outline).drivers > 0, "drivers inside Paris");
+
+// BQ-O15: the zone rule summary (zone map "Rules here") shows the exact fee in the zone's own currency and decimals,
+// never a whole-kr rounding ("12,50 kr", not "13 kr"; a Tunis airport fee of 3000 millimes is "3.000 DT", not "30 kr").
+const feeRing = circleRing(59.33, 18.06, 1);
+const feeSummary = zoneRuleSummary(makeZone({ id: "fee-se", code: "FEE", name: "Fee", kind: "operating", country: "SE", points: feeRing, zoneFeeOre: 1250, airportFeeOre: 0 }));
+assert(feeSummary.includes("zone fee 12,50\u00a0kr") || feeSummary.includes("zone fee 12,50 kr"), `zone fee keeps its öre: ${feeSummary}`);
+const airTn = zoneRuleSummary(makeZone({ id: "fee-tn", code: "FEE-TN", name: "Fee TN", kind: "airport", country: "TN", points: feeRing, zoneFeeOre: 3000, airportFeeOre: 3000 }));
+assert(/zone fee 3\.000\s?DT, airport fee 3\.000\s?DT/.test(airTn), `a Tunis fee shows 3 decimals in DT: ${airTn}`);
+const airFr = zoneRuleSummary(makeZone({ id: "fee-fr", code: "FEE-FR", name: "Fee FR", kind: "airport", country: "FR", points: feeRing, zoneFeeOre: 500, airportFeeOre: 550 }));
+assert(/zone fee 5,00\s?€, airport fee 5,50\s?€/.test(airFr), `a Paris fee shows euro cents: ${airFr}`);
 
 console.log("zones ok");

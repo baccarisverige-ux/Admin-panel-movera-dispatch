@@ -6,7 +6,7 @@ import { point, polygon } from "@turf/helpers";
 import kinks from "@turf/kinks";
 import { intersect } from "@turf/intersect";
 import { featureCollection } from "@turf/helpers";
-import type { MarketId } from "../markets/markets.ts";
+import { formatMoney, type MarketId } from "../markets/markets.ts";
 import { cityById, type City } from "./cities.ts";
 
 export const ZONE_TYPES = [
@@ -922,7 +922,8 @@ export function effectiveZonesAt(zones: ZoneShape[], lat: number, lng: number): 
 }
 
 export function zoneRuleSummary(zone: ZoneShape): string {
-  const fees = [zone.zoneFeeOre ? `zone fee ${(zone.zoneFeeOre / 100).toFixed(0)} kr` : "", zone.airportFeeOre ? `airport fee ${(zone.airportFeeOre / 100).toFixed(0)} kr` : ""].filter(Boolean);
+  // BQ-O15: the exact fee in the zone's own currency and decimals (12,50 kr, 3.000 DT), never rounded to whole kr.
+  const fees = [zone.zoneFeeOre ? `zone fee ${formatMoney(zone.zoneFeeOre, zone.country)}` : "", zone.airportFeeOre ? `airport fee ${formatMoney(zone.airportFeeOre, zone.country)}` : ""].filter(Boolean);
   return [
     `price ${zone.priceSet}`,
     fees.join(", "),

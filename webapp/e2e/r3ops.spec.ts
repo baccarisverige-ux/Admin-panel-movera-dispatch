@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { localDay } from "../src/dashboard/time";
+import { market } from "../src/markets/markets";
 
 async function session(page: Page, agentId = "nora") {
   await page.addInitScript((id) => {
@@ -14,7 +16,11 @@ async function confirm(page: Page) {
   await page.locator(".modal.open").last().getByRole("button", { name: "Confirm" }).click();
 }
 
-const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+// BQ-O12: a date `days` after today in the driver's zone (Stockholm), the day the app counts expiry in
+// (fleet/documents.ts daysUntil with the market's time zone). A UTC day was one day behind between local midnight and
+// UTC midnight (23:00-24:00 UTC in winter), and "Expires in 20 days" read "Expires in 19 days".
+const day = (days: number, nowMs = Date.now()) =>
+  new Date(Date.parse(`${localDay(nowMs, market("SE").timeZone)}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
 // Owner G3-R3 (2026-10-30): "Remove the switch". The per-driver scheduled rides control (Q11) is gone everywhere;
 // every driver can take booked rides and the zone's Reservations switch decides.

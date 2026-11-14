@@ -1,4 +1,4 @@
-import { addCredit, validatePromo, autoState, parseEmails, promoMessage, promoReach, randomRiders, sendPromotion, setAutoPromos, setPopup, editPromotion, promoPrice, setPromotionOn, addLostItem, advanceLostItem, ban, createPromotion, emptyRiderCare, isBanned, markPaid, maxCost, merge, normalizeCare, promoResults, promoUsed, reply, requestRefund, saveFilter, threadOf, unpaidMinor, waitingMinutes, type PromoDraft } from "./care.ts";
+import { addCredit, validatePromo, autoState, parseEmails, promoMessage, promoReach, randomRiders, sendPromotion, setAutoPromos, setPopup, editPromotion, promoPrice, setPromotionOn, addLostItem, advanceLostItem, ban, createPromotion, emptyRiderCare, isBanned, markPaid, maxCost, merge, normalizeCare, promoResults, promoUsed, refundLeftText, reply, requestRefund, saveFilter, threadOf, unpaidMinor, waitingMinutes, type PromoDraft } from "./care.ts";
 import { bookingCounts, joinedAt, riderBookings, riderCode, riderProfile, type RiderRecord } from "./profile.ts";
 import { buildRows, pickAudience, insights, matches, ridersCsv, segmentCounts, sortRows } from "./segments.ts";
 
@@ -144,4 +144,11 @@ assert(setAutoPromos(emptyRiderCare(), { ...auto, birthday: { ...auto.birthday, 
 assert(setAutoPromos(emptyRiderCare(), { ...auto, winBack: { ...auto.winBack, audience: "picked", riderIds: [] } }).error === "Pick at least one rider.", "riders I pick needs riders");
 assert(!setAutoPromos(emptyRiderCare(), { ...auto, winBack: { ...auto.winBack, audience: "random", count: 2, riderIds: ["R0001", "R0002"] } }).error, "random riders saved");
 assert(normalizeCare({ autoPromos: { birthday: { on: true } } }).autoPromos.birthday.riderIds.length === 0, "older saved automatic promotions get an empty rider list");
+// BQ-O15: the refund "(up to …)" amount uses the shared money formatter with the currency's decimals and symbol.
+assert(refundLeftText(12550, 0, "SE") === "125,50 kr", `SEK left: ${refundLeftText(12550, 0, "SE")}`);
+assert(refundLeftText(12550, 25.5, "SE") === "100,00 kr", `SEK after a refund: ${refundLeftText(12550, 25.5, "SE")}`);
+assert(refundLeftText(12345, 0, "TN") === "12.345 DT", `TND keeps 3 decimals: ${refundLeftText(12345, 0, "TN")}`);
+assert(refundLeftText(12345, 2.1, "TN") === "10.245 DT", `TND after a refund: ${refundLeftText(12345, 2.1, "TN")}`);
+assert(refundLeftText(1500, 0, "FR") === "15,00 €", `EUR left: ${refundLeftText(1500, 0, "FR")}`);
+assert(refundLeftText(1000, 20, "SE") === "0,00 kr", "never below zero");
 console.log("rider care ok");

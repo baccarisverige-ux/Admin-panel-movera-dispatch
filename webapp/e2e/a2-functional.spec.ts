@@ -144,7 +144,10 @@ test("UI-07 + UI-08: on a phone the topbar stays on screen, and the menu closes 
   await expect(page.locator(".topbar")).toBeVisible();
   // Pages load on first visit: wait for the page itself before scrolling it.
   await expect(page.getByRole("heading", { name: /^Alerts in /, level: 2 })).toBeVisible();
-  await page.mouse.wheel(0, 1500);
+  // BQ-O14: the alerts list fills in after the heading; wait until the page is tall enough to scroll, then scroll the
+  // window itself (a mouse wheel at the top-left corner was sometimes lost in firefox and scrollY stayed 0).
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeGreaterThan(1000);
+  await page.evaluate(() => window.scrollTo({ top: 1500, behavior: "instant" }));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
   const top = await page.locator(".topbar").evaluate((node) => node.getBoundingClientRect().top);
   expect(Math.abs(top)).toBeLessThan(2);
