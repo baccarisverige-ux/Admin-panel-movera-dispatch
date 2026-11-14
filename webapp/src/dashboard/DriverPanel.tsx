@@ -117,7 +117,7 @@ export function DriverPanel({ driver, color, info, trip, locale, timeZone, route
         </div>
       ) : null}
       {moneyTripId && tab === "money" ? (
-        <TripMoneyTab tripId={moneyTripId} zoneId={driver.zoneId} pickupKm={pickupKm} hasFleet={Boolean(info?.fleet)} />
+        <TripMoneyTab tripId={moneyTripId} zoneId={driver.zoneId} pickupKm={pickupKm} />
       ) : trip ? (
         <TripCard
           trip={trip}

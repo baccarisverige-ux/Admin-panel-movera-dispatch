@@ -104,7 +104,7 @@ export const svA9T: Record<keyof typeof enA9T, string> = {
   "The pickup is outside the event area{0}. Normal rules are used.": "Upphämtningen ligger utanför evenemangets område{0}. Vanliga regler används.",
   "The pickup zone": "Upphämtningszonen",
   "The price minus Movera's commission.": "Priset minus Moveras provision.",
-  "The ride price minus Movera's commission (and the fleet owner's share), plus the tip.": "Resans pris minus Moveras provision (och flottägarens andel), plus dricks.",
+  "The ride price minus Movera's commission, plus the tip.": "Resans pris minus Moveras provision, plus dricks.",
   "The ride shows in Live and in Alerts as “Booked ride soon with no driver”, so you can give it to a driver.": "Resan visas i Live och i Larm som ”Bokad resa snart utan förare”, så att du kan ge den till en förare.",
   "The ride shows in Live with an alert, so an admin can pick a driver.": "Resan visas i Live med ett larm, så att en admin kan välja förare.",
   "The rider asked for a stop": "Resenären bad om ett stopp",

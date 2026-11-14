@@ -164,9 +164,6 @@ export function validateZonePrice(zone: ZonePrice): string | null {
     return "Boost cap must be at least every configured boost multiplier.";
   }
 
-  const fleet = numberError(zone.fleetCommission, "Fleet commission", 0, 100);
-  if (fleet) return fleet;
-
   if (zone.tips.length === 0 || zone.tips.some((tip) => !Number.isFinite(tip) || tip < 0 || tip > 5_000)) {
     return "Tip presets must contain values between 0 and 5000 kr.";
   }

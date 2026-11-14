@@ -8,14 +8,13 @@ import type { MoneySplit } from "../trips/file.ts";
  */
 export type TripMoney = {
   riderPays: number;
-  /** The driver's share of the fare, after commission and any fleet share, without tips, bonus or pickup pay. */
+  /** The driver's share of the fare, after commission, without tips, bonus or pickup pay. */
   fareShare: number;
   pickupPay: number;
   addedMoney: number;
   tip: number;
   /** Fare share + pickup pay + added money (tips are shown apart). */
   driverGets: number;
-  fleet: number;
   commission: number;
   /** Movera's result on the ride: negative when it covers more than its commission. */
   moveraKeeps: number;
@@ -39,7 +38,6 @@ export function tripMoney(split: MoneySplit, pickupPayMinor: number | null): Tri
     addedMoney,
     tip,
     driverGets,
-    fleet: split.fleet,
     commission: split.commission,
     moveraKeeps,
     covers: moveraKeeps < 0,
@@ -67,7 +65,6 @@ function liveTripMoney(split: MoneySplit): TripMoney {
     addedMoney,
     tip,
     driverGets,
-    fleet: Number.isFinite(split.fleet) ? split.fleet : 0,
     commission: split.commission,
     moveraKeeps: split.moveraKeeps,
     covers: split.moveraKeeps < 0,

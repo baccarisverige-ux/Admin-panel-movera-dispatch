@@ -18,19 +18,19 @@ const trip = (id: string, status: string, extra: Partial<DemoRecord> = {}): Demo
 assert(groupOf("in_trip") === "live" && groupOf("searching") === "searching" && groupOf("cancelled_by_rider") === "cancelled" && groupOf("failed") === "problem", "trip groups");
 const done = trip("T0012", "completed");
 const book = defaultZoneBook("Z001");
-const split = moneySplit(done, book, false, []);
+const split = moneySplit(done, book, []);
 assert(split.price === 10_000 && split.state === "charged", "the charged price is the trip price");
-assert(split.riderPaid - split.driverGets - split.fleet === split.moveraKeeps, "every krona goes somewhere");
+assert(split.riderPaid - split.driverGets === split.moveraKeeps, "every krona goes somewhere");
 assert(split.commission === Math.round((split.ridePrice * split.commissionPct) / 100), "commission from the zone price book");
-const fleetSplit = moneySplit(done, { ...book, fleetCommissionPct: 10 }, true, []);
-assert(fleetSplit.fleet > 0 && fleetSplit.driverGets < split.driverGets, "fleet owner share comes from the driver's part");
-assert(moneySplit(trip("T0013", "failed"), book, false, []).state === "none", "a failed trip moves no money");
+// v0.18.88 fleetPayoutWhole (owner 2026-10-29): no fleet-owner % in the split.
+assert(!("fleet" in split) && !("fleetPct" in split), "no fleet owner share");
+assert(moneySplit(trip("T0013", "failed"), book, []).state === "none", "a failed trip moves no money");
 // A rider's late cancel fee comes from Dispatch › Rider cancel fees (Live trips), not from Pricing.
 const lateId = Array.from({ length: 30 }, (_, n) => `T${String(n + 1).padStart(4, "0")}`).find((id) => tripIndex(id) % 3 === 0)!;
 const lateCancel = trip(lateId, "cancelled_by_rider");
 const ownTable = { economy: { freeMin: 2, type: "fixed" as const, value: 20, min: null, max: null } };
-assert(moneySplit(lateCancel, book, false, [], ownTable).state === "cancel_fee" && moneySplit(lateCancel, book, false, [], ownTable).price === 2_000, "the zone's live cancel fee is what the rider paid");
-assert(moneySplit(lateCancel, book, false, []).state === "cancel_fee" && moneySplit(lateCancel, book, false, []).price > 0, "without a table, the default live cancel fees apply");
+assert(moneySplit(lateCancel, book, [], ownTable).state === "cancel_fee" && moneySplit(lateCancel, book, [], ownTable).price === 2_000, "the zone's live cancel fee is what the rider paid");
+assert(moneySplit(lateCancel, book, []).state === "cancel_fee" && moneySplit(lateCancel, book, []).price > 0, "without a table, the default live cancel fees apply");
 assert(/rue|avenue|place|quai|boulevard/.test(routeOf(trip("T1001", "completed", { zoneId: "FR-OCE" })).stops[0].label), "French trips get French streets");
 assert(callSummary([{ at: "", from: "driver", seconds: 30, answered: true }]).startsWith("Driver called the rider once"), "call summary");
 assert(canSeePrivate("support", emptyTripOps().settings) && !canSeePrivate("viewer", emptyTripOps().settings), "support sees private data, viewer does not");
@@ -43,7 +43,7 @@ assert(addEntry(ops, { tripId: "T0012", kind: "note", text: " " }, "nora", "2026
 assert(!needsApproval("pay", 60_000, "SE", defaultRefundPolicy()) && !needsApproval("pay", 10_000, "SE", defaultRefundPolicy()), "no pay change needs a second admin");
 const asked = withStatus(addEntry(ops, { tripId: "T0012", kind: "pay", text: "", amountMinor: 60_000 }, "nora", "2026-10-12T10:00:00Z", split), needsApproval("pay", 60_000, "SE", defaultRefundPolicy()));
 assert(asked.entry.status !== "waiting", "nothing waits");
-assert(moneySplit(done, book, false, asked.ops.entries).payChange === 60_000, "the pay change counts at once");
+assert(moneySplit(done, book, asked.ops.entries).payChange === 60_000, "the pay change counts at once");
 const flaggedOps = addEntry(ops, { tripId: "T0012", kind: "flag", text: "Long route" }, "nora", "2026-10-12T10:00:00Z").ops;
 assert(flaggedIds(flaggedOps).has("T0012"), "flagged trips");
 assert(!flaggedIds(addEntry(flaggedOps, { tripId: "T0012", kind: "unflag", text: "Checked" }, "nora", "2026-10-12T11:00:00Z").ops).has("T0012"), "unflag");

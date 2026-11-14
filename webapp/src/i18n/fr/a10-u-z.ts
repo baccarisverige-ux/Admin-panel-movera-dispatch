@@ -153,7 +153,6 @@ export const frA10UZ: Record<keyof typeof enA10UZ, string> = {
   "Weekend": "Week-end",
   "Weekly summary": "Résumé hebdomadaire",
   "Welcome to Movera": "Bienvenue chez Movera",
-  "What a fleet owner gets from their drivers' rides, after commission.": "Ce qu’un propriétaire de flotte reçoit des courses de ses chauffeurs, après commission.",
   "What a new driver must upload in this country. The driving licence is always needed.": "Ce qu’un nouveau chauffeur doit envoyer dans ce pays. Le permis de conduire est toujours requis.",
   "What an admin picks when cancelling a trip from Trips. The codes are fixed by the shared contract.": "Ce qu’un administrateur choisit en annulant une course depuis Courses. Les codes sont fixés par le contrat partagé.",
   "What changed": "Ce qui a changé",

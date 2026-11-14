@@ -89,8 +89,6 @@ export const frA4FL: Record<keyof typeof enA4FL, string> = {
   "Flagged for a closer look": "Signalée pour un examen plus attentif",
   "Fleet & Drivers": "Flotte et chauffeurs",
   "Fleet owner": "Gestionnaire de flotte",
-  "Fleet owner part": "Part du propriétaire de flotte",
-  "Fleet owner share": "Part du propriétaire de flotte",
   "Fleet owners": "Propriétaires de flotte",
   "Fleet partner": "Partenaire de flotte",
   "Fleet territory": "Territoire de la flotte",

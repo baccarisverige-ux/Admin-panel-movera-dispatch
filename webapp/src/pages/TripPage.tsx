@@ -209,7 +209,7 @@ export function TripPage() {
   const tripAudits = (audit.data ?? []).filter((item) => item.targetId === trip.id).slice(0, TRIP_AUDIT_ROWS);
   const tone = trip.status.includes("cancel") || trip.status === "failed" ? "red" : trip.status === "completed" ? "green" : "amber";
   const store = normalizeStore(pricing.value);
-  const split = moneySplit(trip, zoneBook(store, trip.zoneId), Boolean(driver?.fleetId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees, dispatchOffers.data?.bonusMinor ?? 0);
+  const split = moneySplit(trip, zoneBook(store, trip.zoneId), ops.entries, liveRules(normalizeDispatchBook(dispatchSlice.value), trip.zoneId).riderCancel.fees, dispatchOffers.data?.bonusMinor ?? 0);
   // v0.18.82 S5 J6a (contract.json#moneyBase.adminFare; owner Q-M7 "it's only for the driver side", Q-S5-8 "Admin types
   // driver pay", "No, without tip", "32 DT, keep change"): the admin types the driver's new pay (without the tip); the
   // rider pays the booked price. The field shows the driver's pay now.
@@ -304,7 +304,7 @@ export function TripPage() {
         fmt={(value, format) => (!Number.isFinite(value) ? tr("Not connected yet") : format === "money" ? money(value) : format === "min" ? `${value} min` : String(value))}
         cards={[
           { id: "paid", label: split.state === "estimate" ? tr("Rider pays (estimate)") : tr("Rider paid"), value: split.riderPaid, previous: null, format: "money", info: tr("The trip price, minus promotions and refunds, plus the tip.") },
-          { id: "driver", label: tr("Driver gets"), value: split.driverGets, previous: null, format: "money", info: tr("The ride price minus Movera's commission (and the fleet owner's share), plus the tip.") },
+          { id: "driver", label: tr("Driver gets"), value: split.driverGets, previous: null, format: "money", info: tr("The ride price minus Movera's commission, plus the tip.") },
           { id: "movera", label: tr("Movera keeps"), value: split.moveraKeeps, previous: null, format: "money", info: tr("Commission and app fee, minus promotions and refunds Movera paid.") },
           ...(eta
             ? [

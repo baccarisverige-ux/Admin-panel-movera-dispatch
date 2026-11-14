@@ -266,7 +266,6 @@ export const svA0Symbols: Record<keyof typeof enA0Symbols, string> = {
   "{0} Fix": "{0} Åtgärda",
   "{0} Fixed-price routes": "{0} Rutter med fast pris",
   "{0} Flagged": "{0} Flaggad",
-  "{0} Fleet owner gets {1}%": "{0} Flottägaren får {1} %",
   "{0} Flyer": "{0} Flygblad",
   "{0} follow up": "{0} uppföljning",
   "{0} free · {1} busy{2}": "{0} lediga · {1} upptagna{2}",

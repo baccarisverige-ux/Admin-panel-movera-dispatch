@@ -99,7 +99,6 @@ export function pricingDocumentOf(book: ZoneBook, id: string, base: Doc | null):
       smart: structuredClone(book.smart),
       scheduled: structuredClone(book.scheduled),
     },
-    fleetCommissionPct: book.fleetCommissionPct,
     // v0.18.44 §67: written only when the server document has it or the admin changed it from the contract default, so
     // an untouched zone republishes the same document (the server reads a missing value as 0 = off, owner Q9).
     ...(base && "minTripMeters" in base) || book.fees.minTripMeters !== MIN_TRIP_METERS.default ? { minTripMeters: book.fees.minTripMeters } : {},
@@ -158,7 +157,7 @@ export function bookOfPricing(doc: Doc, fallback: ZoneBook): ZoneBook {
   const surge = doc["surge"] as { smart?: ZoneBook["smart"]; scheduled?: ZoneBook["scheduled"] } | undefined;
   if (surge?.smart) book.smart = structuredClone(surge.smart);
   if (surge?.scheduled) book.scheduled = structuredClone(surge.scheduled);
-  if (typeof doc["fleetCommissionPct"] === "number") book.fleetCommissionPct = doc["fleetCommissionPct"];
+  // contract v0.18.88 fleetPayoutWhole: an old document's fleet-owner % key is ignored (never read, never written back).
   if (typeof doc["version"] === "number") book.version = doc["version"];
   return book;
 }

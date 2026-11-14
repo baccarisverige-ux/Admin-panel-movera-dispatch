@@ -89,8 +89,6 @@ export const svA4FL: Record<keyof typeof enA4FL, string> = {
   "Flagged for a closer look": "Flaggad för närmare granskning",
   "Fleet & Drivers": "Flotta och förare",
   "Fleet owner": "Flottägare",
-  "Fleet owner part": "Flottägarens del",
-  "Fleet owner share": "Flottägarens andel",
   "Fleet owners": "Flottägare",
   "Fleet partner": "Flottpartner",
   "Fleet territory": "Flottans område",

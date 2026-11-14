@@ -87,8 +87,6 @@ export const enA4FL = {
   "Flagged for a closer look": "Flagged for a closer look",
   "Fleet & Drivers": "Fleet & Drivers",
   "Fleet owner": "Fleet owner",
-  "Fleet owner part": "Fleet owner part",
-  "Fleet owner share": "Fleet owner share",
   "Fleet owners": "Fleet owners",
   "Fleet partner": "Fleet partner",
   "Fleet territory": "Fleet territory",

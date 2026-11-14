@@ -7,7 +7,6 @@ export const svB8DriverMoneySupplyDemand: Record<keyof typeof enB8DriverMoneySup
   "Share of the fare": "Andel av priset",
   "Added money": "Tillagda pengar",
   "Tip (apart)": "Dricks (separat)",
-  "Fleet owner's share": "Flottägarens andel",
   "No trip record for this ride yet, so the split is not known. The fare on the Trip tab is an estimate.": "Ingen resa sparad för den här körningen än, så fördelningen är okänd. Priset under fliken Resa är en uppskattning.",
   "Estimate until the ride ends.": "Uppskattning tills resan är slut.",
   "Pickup pay is not known for this ride.": "Upphämtningsersättningen är okänd för den här resan.",

@@ -264,7 +264,6 @@ export const enA0Symbols = {
   "{0} Fix": "{0} Fix",
   "{0} Fixed-price routes": "{0} Fixed-price routes",
   "{0} Flagged": "{0} Flagged",
-  "{0} Fleet owner gets {1}%": "{0} Fleet owner gets {1}%",
   "{0} Flyer": "{0} Flyer",
   "{0} follow up": "{0} follow up",
   "{0} free · {1} busy{2}": "{0} free · {1} busy{2}",

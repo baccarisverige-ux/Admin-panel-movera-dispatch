@@ -16,7 +16,6 @@ import { driverPerformance } from "../fleet/performance";
 import { PROMO_OPS_KEY, emptyPromoOps, hubItems, normalizePromoOps, type PromoOps } from "../growth/hub";
 import { MARKETS, formatMoney, market, type MarketId } from "../markets/markets";
 import { zoneDemand } from "../pricing/demand";
-import { SLICE_KEY as PRICING_KEY, emptyPricingStore, normalizeStore, zoneBook, type PricingStore } from "../pricing/zonePricing";
 import { CARE_KEY, emptyRiderCare, normalizeCare, type RiderCare } from "../riders/care";
 import { INCIDENT_OPS_KEY, caseOf, emptyIncidentOps, normalizeIncidentOps, type IncidentOps } from "../safety/cases";
 import { SUPPORT_DESK_KEY, TOPICS, emptyDesk, factsOf, normalizeDesk, type Desk } from "../support/desk";
@@ -132,7 +131,6 @@ export function FleetsTab({ market: current, zones, window, compare, fmt, money,
   const drivers = useRecords("drivers");
   const fleets = useRecords("fleets");
   const ops = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
-  const pricing = normalizeStore(useSlice<PricingStore>(PRICING_KEY, emptyPricingStore()).value);
   const ids = new Set(zones.map((zone) => zone.id));
   const rows = useMemo(() => {
     const list = (drivers.data ?? []).filter((row) => ids.has(row.zoneId) && row.fleetId).map((row) => {
@@ -140,8 +138,8 @@ export function FleetsTab({ market: current, zones, window, compare, fmt, money,
       const perf = driverPerformance({ id: row.id, zoneId: row.zoneId, status: row.status, stars: o.ratings.stars, acceptancePct: o.ratings.acceptancePct, cancellationPct: o.ratings.cancellationPct }, window, false);
       return { id: row.id, fleetId: row.fleetId ?? null, zoneId: row.zoneId, trips: perf.current.trips, grossMinor: perf.current.grossMinor, netMinor: perf.current.netMinor, previousTrips: perf.previous.trips, rating: perf.current.rating, online: isOnline(row) };
     });
-    return fleetRows(list, fleets.data ?? [], (zoneId) => zoneBook(pricing, zoneId).fleetCommissionPct);
-  }, [drivers.data, fleets.data, ops.value, pricing, window, zones.map((zone) => zone.id).join(",")]);
+    return fleetRows(list, fleets.data ?? []);
+  }, [drivers.data, fleets.data, ops.value, window, zones.map((zone) => zone.id).join(",")]);
   const trips = rows.reduce((sum, row) => sum + row.trips, 0);
   const cards: Card[] = [
     { id: "fleets", label: "Fleet owners", value: rows.length, previous: null, format: "count", info: "Fleets with at least one driver in these zones." },

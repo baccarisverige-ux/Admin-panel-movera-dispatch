@@ -104,7 +104,7 @@ export const frA9T: Record<keyof typeof enA9T, string> = {
   "The pickup is outside the event area{0}. Normal rules are used.": "La prise en charge est hors de la zone de l’événement{0}. Les règles normales s’appliquent.",
   "The pickup zone": "La zone de prise en charge",
   "The price minus Movera's commission.": "Le prix moins la commission de Movera.",
-  "The ride price minus Movera's commission (and the fleet owner's share), plus the tip.": "Prix de la course, déduction faite de la commission Movera et de la part éventuelle du gestionnaire de flotte, auquel s’ajoute le pourboire.",
+  "The ride price minus Movera's commission, plus the tip.": "Prix de la course, déduction faite de la commission Movera, auquel s’ajoute le pourboire.",
   "The ride shows in Live and in Alerts as “Booked ride soon with no driver”, so you can give it to a driver.": "La course s’affiche dans En direct et dans Alertes comme « Course programmée imminente sans chauffeur », pour que vous puissiez la donner à un chauffeur.",
   "The ride shows in Live with an alert, so an admin can pick a driver.": "La course s’affiche dans En direct avec une alerte, pour qu’un administrateur choisisse un chauffeur.",
   "The rider asked for a stop": "Le passager a demandé un arrêt",

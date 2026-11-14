@@ -44,7 +44,6 @@ export type ZonePrice = {
   boostAuto: number;
   boostCap: number;
   commission: Record<PriceCategoryId, number>;
-  fleetCommission: number;
   optionFee: Record<string, number>;
   enabledCategories: Record<PriceCategoryId, boolean>;
   enabledOptions: Record<string, boolean>;
@@ -87,7 +86,6 @@ function zonePrice(zoneId: string, zoneName: string): ZonePrice {
     boostAuto: 1.8,
     boostCap: 2.5,
     commission,
-    fleetCommission: 12,
     optionFee,
     enabledCategories,
     enabledOptions,

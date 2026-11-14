@@ -215,7 +215,6 @@ export const enA6OP = {
   "Papers needed": "Papers needed",
   "Parent": "Parent",
   "Part of Off the route: the trip takes much longer than the time shown at booking.": "Part of Off the route: the trip takes much longer than the time shown at booking.",
-  "Part of their drivers' earnings that goes to the fleet owner in {0}": "Part of their drivers' earnings that goes to the fleet owner in {0}",
   "Parts": "Parts",
   "Parts of the panel that showed alerts before this section. Off by default, so every number and sound comes from Alerts.": "Parts of the panel that showed alerts before this section. Off by default, so every number and sound comes from Alerts.",
   "Pass an alert to another admin": "Pass an alert to another admin",

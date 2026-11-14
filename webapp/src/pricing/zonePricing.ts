@@ -112,7 +112,6 @@ export type ZoneBook = {
   smart: SmartSurge;
   scheduled: ScheduledSurge[];
   commission: Record<string, number>;
-  fleetCommissionPct: number;
   /** Driver pickup pay, paid by Movera from its commission. */
   pickupPay: PickupPay;
 };
@@ -361,7 +360,6 @@ export function defaultZoneBook(zoneId: string, categories: readonly CategoryDef
     smart: defaultSmartSurge(),
     scheduled: [],
     commission: Object.fromEntries(categories.map((category) => [category.id, category.id === "premium" ? 22 : 20])),
-    fleetCommissionPct: 5,
     pickupPay: defaultPickupPay(categories.map((category) => category.id), factor),
   };
 }
@@ -462,7 +460,6 @@ export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDe
     if (!Number.isFinite(commission) || commission < 0 || commission > 60) add(`commission.${category.id}`, `${category.label}: commission must be between 0 and 60%.`);
   }
   problems.push(...validatePickupPay(book.pickupPay, categories));
-  if (book.fleetCommissionPct < 0 || book.fleetCommissionPct > 30) add("commission.fleet", "Fleet owner share must be between 0 and 30%.");
   const minTrip = book.fees.minTripMeters;
   if (!Number.isInteger(minTrip) || minTrip < MIN_TRIP_METERS.min || minTrip > MIN_TRIP_METERS.max) add("fees.minTripMeters", `Shortest trip must be whole metres from ${MIN_TRIP_METERS.min} to ${MIN_TRIP_METERS.max}.`);
   for (const [key, value] of Object.entries(book.fees)) {
@@ -574,7 +571,6 @@ export function largePriceChanges(published: ZoneBook, draft: ZoneBook, categori
       }
     }
   }
-  if (isLargePriceChange(published.fleetCommissionPct, draft.fleetCommissionPct)) lines.push(changeText(`${where}Fleet commission`, published.fleetCommissionPct, draft.fleetCommissionPct, "%"));
   for (const profile of draft.smart.profiles) {
     const before = published.smart.profiles.find((item) => item.id === profile.id);
     if (before && isLargePriceChange(before.cap, profile.cap)) lines.push(changeText(`${where}Surge cap ${profile.name}`, before.cap, profile.cap, "×"));
@@ -607,7 +603,6 @@ export function diffBooks(before: ZoneBook, after: ZoneBook, categories: readonl
     for (const row of PRICE_ROWS) if (a[row.field] !== b[row.field]) lines.push(`${category.label} · ${row.label} ${short(a[row.field])} → ${short(b[row.field])}`);
     if (before.commission[category.id] !== after.commission[category.id]) lines.push(`${category.label} · commission ${before.commission[category.id]}% → ${after.commission[category.id]}%`);
   }
-  if (before.fleetCommissionPct !== after.fleetCommissionPct) lines.push(`Fleet owner share ${before.fleetCommissionPct}% → ${after.fleetCommissionPct}%`);
   const feeLabels: Record<string, string> = { airportPickup: "Airport pickup fee", airportDropoff: "Airport drop-off fee", reservationFee: "Reservation fee", cleaningFee: "Cleaning fee", tollsPassThrough: "Tolls added to fare", rounding: "Rounding", minTripMeters: "Shortest trip (m)" };
   for (const key of Object.keys(feeLabels) as (keyof ZoneFees)[]) {
     if (before.fees[key] !== after.fees[key]) lines.push(`${feeLabels[key]} ${String(before.fees[key])} → ${String(after.fees[key])}`);
@@ -698,7 +693,6 @@ export function copyInto(source: ZoneBook, target: ZoneBook, parts: readonly Cop
   }
   if (parts.includes("commission")) {
     next.commission = { ...source.commission };
-    next.fleetCommissionPct = source.fleetCommissionPct;
   }
   if (parts.includes("pickup")) {
     next.pickupPay = convertPickupPay(source.pickupPay, (value) => (from === to ? value : roundTo(value * rate, 0.01)));

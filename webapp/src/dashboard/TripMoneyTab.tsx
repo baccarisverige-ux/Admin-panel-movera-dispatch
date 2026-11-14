@@ -15,7 +15,7 @@ const SPEED_KMH = 26;
  * The Money tab of the driver pop-up: one ride's split. Rider pays, driver gets (fare share, pickup pay,
  * added money; tips apart) and what Movera keeps, or covers in red. Same numbers as the Trip page.
  */
-export function TripMoneyTab({ tripId, zoneId, pickupKm, hasFleet }: { tripId: string; zoneId: string; pickupKm: number | null; hasFleet: boolean }) {
+export function TripMoneyTab({ tripId, zoneId, pickupKm }: { tripId: string; zoneId: string; pickupKm: number | null }) {
   const trips = useTrips(null);
   const pricing = useSlice<unknown>(PRICING_KEY, emptyPricingStore());
   const dispatch = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
@@ -28,7 +28,7 @@ export function TripMoneyTab({ tripId, zoneId, pickupKm, hasFleet }: { tripId: s
   const country = countryOf(trip.zoneId || zoneId);
   const minor = market(country).minorUnits;
   const book = zoneBook(normalizeStore(pricing.value), trip.zoneId || zoneId);
-  const split = moneySplit(trip, book, hasFleet, [], liveRules(normalizeDispatchBook(dispatch.value), trip.zoneId || zoneId).riderCancel.fees, offers.data?.bonusMinor ?? 0);
+  const split = moneySplit(trip, book, [], liveRules(normalizeDispatchBook(dispatch.value), trip.zoneId || zoneId).riderCancel.fees, offers.data?.bonusMinor ?? 0);
   const category = categoryOf(trip.id).id;
   const paid = pickupKm !== null && offerGetsPickupPay(book.pickupPay, "radar", category);
   // S5 J5a: a live trip's pickup pay is the server's line (already out of Movera's commission), never an estimate here.
@@ -44,7 +44,6 @@ export function TripMoneyTab({ tripId, zoneId, pickupKm, hasFleet }: { tripId: s
         <div className="sub"><dt>{tr("Pickup pay")}</dt><dd>{pickup === null ? "—" : fmt(money.pickupPay)}</dd></div>
         <div className="sub"><dt>{tr("Added money")}</dt><dd>{fmt(money.addedMoney)}</dd></div>
         {money.tip ? <div className="sub"><dt>{tr("Tip (apart)")}</dt><dd>{fmt(money.tip)}</dd></div> : null}
-        {money.fleet ? <div className="sub"><dt>{tr("Fleet owner's share")}</dt><dd>{fmt(money.fleet)}</dd></div> : null}
         <div className={money.covers ? "lead covers" : "lead keeps"} data-testid="trip-money-movera">
           <dt>{money.covers ? tr("Movera covers") : tr("Movera keeps")}</dt>
           <dd>{fmt(Math.abs(money.moveraKeeps))}</dd>

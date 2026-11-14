@@ -148,7 +148,6 @@ export const svA3DE: Record<keyof typeof enA3DE, string> = {
   "Driver {0}": "Förare {0}",
   "Driver {0} km / {1} min from the pickup when the offer shows. Ride {2} km, {3} min.": "Föraren är {0} km / {1} min från upphämtningen när erbjudandet visas. Resa {2} km, {3} min.",
   "Driver {0}%, Movera {1}%": "Förare {0} %, Movera {1} %",
-  "Driver {0}%, Movera {1}%{2}": "Förare {0} %, Movera {1} %{2}",
   "Driver app": "Förarappen",
   "Driver app · {0}": "Förarappen · {0}",
   "Driver app · bonus details": "Förarappen · bonusdetaljer",

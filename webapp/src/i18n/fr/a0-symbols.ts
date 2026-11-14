@@ -266,7 +266,6 @@ export const frA0Symbols: Record<keyof typeof enA0Symbols, string> = {
   "{0} Fix": "{0} Corriger",
   "{0} Fixed-price routes": "{0} Trajets à prix fixe",
   "{0} Flagged": "{0} Signalé",
-  "{0} Fleet owner gets {1}%": "{0} Le propriétaire de flotte reçoit {1} %",
   "{0} Flyer": "{0} Flyer",
   "{0} follow up": "{0} suivi",
   "{0} free · {1} busy{2}": "{0} libre(s) · {1} occupé(s){2}",

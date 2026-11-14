@@ -130,8 +130,7 @@ export function zoneTimers(db: DemoDb, zoneId: string) {
 
 function context(db: DemoDb, trip: DemoRecord, by: string, now: string): AssignContext {
   const country = countryOf(trip.zoneId);
-  const driver = db.drivers.find((row) => row.id === trip.driverId);
-  const split = moneySplit(trip, zoneBook(normalizeStore(db.slices[PRICING_KEY]), trip.zoneId), Boolean(driver?.fleetId), []);
+  const split = moneySplit(trip, zoneBook(normalizeStore(db.slices[PRICING_KEY]), trip.zoneId), []);
   const free = new Set(live(db).filter((row) => row.state === "free").map((row) => row.id));
   return {
     tripId: trip.id,

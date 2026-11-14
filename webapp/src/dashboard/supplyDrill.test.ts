@@ -42,7 +42,7 @@ test("drivers inside a radar zone or a zone, free first, with their status chip"
 
 const split = (over: Partial<MoneySplit> = {}): MoneySplit => ({
   country: "SE", state: "estimate", price: 20_000, appFee: 0, ridePrice: 20_000, commissionPct: 20, commission: 4_000, promo: 0, tip: 0,
-  refunded: 0, payChange: 0, vat: 0, vatRate: 0.06, fleetPct: 0, fleet: 0, riderPaid: 20_000, driverGets: 16_000, moveraKeeps: 4_000, driverBonus: 0, ...over,
+  refunded: 0, payChange: 0, vat: 0, vatRate: 0.06, riderPaid: 20_000, driverGets: 16_000, moveraKeeps: 4_000, driverBonus: 0, ...over,
 });
 
 test("the Money tab: rider pays, driver gets fare share + pickup pay + added money, Movera keeps the rest", () => {

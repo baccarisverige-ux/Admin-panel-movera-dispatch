@@ -137,10 +137,10 @@ export function companyTotals(lines: readonly { line: TaxLine; minorUnits: numbe
 }
 
 export type FleetDriver = { id: string; fleetId: string | null; zoneId: string; trips: number; grossMinor: number; netMinor: number; previousTrips: number; rating: number; online: boolean };
-export type FleetRow = { id: string; name: string; drivers: number; online: number; trips: number; previousTrips: number; grossMinor: number; driverMinor: number; fleetMinor: number; perDriverTrips: number; rating: number };
+export type FleetRow = { id: string; name: string; drivers: number; online: number; trips: number; previousTrips: number; grossMinor: number; driverMinor: number; perDriverTrips: number; rating: number };
 
-/** Each fleet owner: drivers, rides, what the drivers earned, and the owner's share of it. */
-export function fleetRows(drivers: readonly FleetDriver[], fleets: readonly { id: string; name: string }[], sharePct: (zoneId: string) => number): FleetRow[] {
+/** Each fleet owner: drivers, rides and what the drivers earned (all paid to the owner; no owner's % — contract v0.18.88 fleetPayoutWhole). */
+export function fleetRows(drivers: readonly FleetDriver[], fleets: readonly { id: string; name: string }[]): FleetRow[] {
   return fleets.map((fleet) => {
     const mine = drivers.filter((row) => row.fleetId === fleet.id);
     const trips = mine.reduce((sum, row) => sum + row.trips, 0);
@@ -154,7 +154,6 @@ export function fleetRows(drivers: readonly FleetDriver[], fleets: readonly { id
       previousTrips: mine.reduce((sum, row) => sum + row.previousTrips, 0),
       grossMinor: mine.reduce((sum, row) => sum + row.grossMinor, 0),
       driverMinor,
-      fleetMinor: mine.reduce((sum, row) => sum + Math.round((row.netMinor * sharePct(row.zoneId)) / 100), 0),
       perDriverTrips: mine.length ? Math.round((trips / mine.length) * 10) / 10 : 0,
       rating: trips ? Math.round((mine.reduce((sum, row) => sum + row.rating * row.trips, 0) / trips) * 100) / 100 : 0,
     };

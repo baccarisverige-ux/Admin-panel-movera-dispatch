@@ -70,11 +70,11 @@ export function RunCard({ run, rows, ops, country, next, money, fileRows, starte
 }
 
 /** One payout explained line by line, with hold and retry. */
-export function PayoutLines({ record, fleet, ops, country, money, onNotice, cash }: { record: DemoRecord; fleet: boolean; ops: PayoutOps; country: MarketId; money: (minor: number) => string; onNotice: (text: string) => void; cash?: { minor: number; trips: number } }) {
+export function PayoutLines({ record, ops, country, money, onNotice, cash }: { record: DemoRecord; ops: PayoutOps; country: MarketId; money: (minor: number) => string; onNotice: (text: string) => void; cash?: { minor: number; trips: number } }) {
   const { agent } = useSession();
   const [reason, setReason] = useState("");
   const sched = ops.schedules[country];
-  const { lines, instant } = payoutLines(record, fleet, sched, cash);
+  const { lines, instant } = payoutLines(record, sched, cash);
   const hold = holdOf(ops, record.id);
   const failed = failedOf(ops, record);
   const next = setHold(ops, record.id, !hold, hold ? "Released" : reason, agent?.id ?? "", new Date().toISOString());
@@ -95,7 +95,7 @@ export function PayoutLines({ record, fleet, ops, country, money, onNotice, cash
   );
 }
 
-/** The schedule per country: when, instant cash-out, approval and the fleet owner part. */
+/** The schedule per country: when, instant cash-out and approval (no fleet-owner part: contract v0.18.88 fleetPayoutWhole). */
 export function ScheduleView({ ops, country, editable }: { ops: PayoutOps; country: MarketId; editable: boolean }) {
   const [draft, setDraft] = useState<Schedule | null>(null);
   const fieldErrors = useFieldErrors();
@@ -133,9 +133,6 @@ export function ScheduleView({ ops, country, editable }: { ops: PayoutOps; count
         <Card title={tr("Checks")} icon={<CheckCheck size={18} />} tone="green">
           <Row label={tr("Second admin for big runs")} help={tr("A run above this total waits until another admin approves it.")}>
             <Num label={tr("Approval over")} before="Over" value={current.approvalOverMajor} unit={symbol} onChange={(value) => patch({ approvalOverMajor: value })} />
-          </Row>
-          <Row label={tr("Fleet owner part")} help={tr("What a fleet owner gets from their drivers' rides, after commission.")}>
-            <Num label={tr("Fleet owner part")} value={current.fleetPct} unit="%" max={50} onChange={(value) => patch({ fleetPct: value })} />
           </Row>
         </Card>
       </fieldset>

@@ -385,7 +385,7 @@ export function PricingPage() {
                 <h3 id="commission-title">{trn("{0} Commission · {1}", <BadgePercent size={16} aria-hidden="true" />, zone?.name)}</h3>
                 <span className="fine-print">{tr("What Movera keeps from the trip price")}</span>
               </div>
-              <CommissionPanel zoneName={zone?.name ?? zoneId} currency={currency} categories={categories} book={book} published={published} problems={problems} canEdit={canPublish} onCommission={(id, value) => update((draft) => { draft.commission[id] = value; })} onFleet={(value) => update((draft) => { draft.fleetCommissionPct = value; })} />
+              <CommissionPanel currency={currency} categories={categories} book={book} published={published} problems={problems} canEdit={canPublish} onCommission={(id, value) => update((draft) => { draft.commission[id] = value; })} />
             </section>
           ) : null}
 

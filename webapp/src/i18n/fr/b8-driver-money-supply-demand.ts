@@ -7,7 +7,6 @@ export const frB8DriverMoneySupplyDemand: Record<keyof typeof enB8DriverMoneySup
   "Share of the fare": "Part du prix de la course",
   "Added money": "Argent ajouté",
   "Tip (apart)": "Pourboire (à part)",
-  "Fleet owner's share": "Part du propriétaire de flotte",
   "No trip record for this ride yet, so the split is not known. The fare on the Trip tab is an estimate.": "Pas encore de fiche pour cette course, la répartition n’est donc pas connue. Le prix de l’onglet Course est une estimation.",
   "Estimate until the ride ends.": "Estimation jusqu’à la fin de la course.",
   "Pickup pay is not known for this ride.": "La prime d’approche n’est pas connue pour cette course.",
