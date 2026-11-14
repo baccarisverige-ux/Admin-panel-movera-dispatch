@@ -110,4 +110,9 @@ export const svB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.": "Regel: 6 timmar offline i rad nollställer all körtid. Servern använder det här talet.",
   "Break length shown in the app": "Pauslängd som visas i appen",
   "Only shown to the driver; the server does not enforce it.": "Visas bara för föraren; servern kontrollerar den inte.",
+  // SV: Cancel checks decide with the heading rule (the came-closer % is gone).
+  "Heading to the pickup": "Kör mot upphämtningen",
+  "{0}% of what the road allowed (fee from {1}%)": "{0} % av vad vägen tillät (avgift från {1} %)",
+  "The driver was heading to the pickup: {0}% of what the road allowed (needs {1}%). Fee applies.": "Föraren körde mot upphämtningen: {0} % av vad vägen tillät (kräver {1} %). Avgift tas ut.",
+  "The driver was not heading to the pickup: {0}% of what the road allowed (needs {1}%). No fee.": "Föraren körde inte mot upphämtningen: {0} % av vad vägen tillät (kräver {1} %). Ingen avgift.",
 };

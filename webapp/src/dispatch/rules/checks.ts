@@ -68,7 +68,6 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (zone.reservation.on && zone.reservation.toExclusive && zone.reservation.exclusiveBeforeMin >= zone.reservation.searchBeforeMin) issues.push("Reservations: the switch to Exclusive must come after the search starts (a smaller number of minutes).");
   issues.push(...reservationIssues(zone.reservation, zone.zoneId, categories));
   if (zone.driverCancel.on && (zone.driverCancel.commissionCutPct < 0 || zone.driverCancel.commissionCutPct > 30)) issues.push("Driver cancels: lower commission must be 0 to 30%.");
-  if (zone.riderCancel.on && (zone.riderCancel.closerPct < 5 || zone.riderCancel.closerPct > 100)) issues.push("Rider cancels: \"came closer\" must be 5 to 100%.");
   if (zone.riderCancel.on) issues.push(...cancelFeeIssues(zone.riderCancel.fees, "live", categories));
   // BQ-V22 (owner G5-8): the server's ranges for DriverAppConfig.headingCheck.
   if (!(Number.isInteger(zone.riderCancel.headingPct) && zone.riderCancel.headingPct >= HEADING_RANGE.headingPct[0] && zone.riderCancel.headingPct <= HEADING_RANGE.headingPct[1])) issues.push("Heading to the pickup must be 50 to 100%.");

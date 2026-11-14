@@ -374,8 +374,7 @@
     }
   },
   "cancelCheck": {
-    "on": true,
-    "closerPct": 25
+    "on": true
   },
   "waiting": {
     "freeWaitMin": 5,

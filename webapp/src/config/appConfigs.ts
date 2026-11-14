@@ -346,7 +346,8 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     // v0.18.17: the booking window and free-change time per zone (the server serves the same from the driver document).
     booking: { ...booking(base), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays, minAheadMin: base.zone.reservation.booking.minAheadMin, maxAheadDays: base.zone.reservation.booking.maxAheadDays, freeChangeBeforeMin: base.zone.reservation.booking.freeChangeBeforeMin },
     cancelFees: cancelFees(base),
-    cancelCheck: { on: base.zone.riderCancel.on, closerPct: base.zone.riderCancel.closerPct },
+    // SV: no closerPct any more (the came-closer check is gone, contract pickupWaiting.headingCheck.replaces).
+    cancelCheck: { on: base.zone.riderCancel.on },
     // v0.18.7 (G5 Q2): the same switch as the driver document (contract RiderAppConfig.waiting); the server copies the
     // driver zone's value when serving, so the rider's Terms can show the rule. Set in Dispatch › Waiting at pickup.
     waiting: { ...waiting(base), cancelAfterArrivedIsNoShow: base.zone.pickupWait.cancelAfterArrivedIsNoShow, ...waitingRules(base, state) },

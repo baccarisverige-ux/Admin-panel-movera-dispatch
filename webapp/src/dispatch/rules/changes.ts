@@ -38,7 +38,7 @@ const LABELS: Record<string, string> = {
   "finishing.radar": "Finishing nearby on Radar", "finishing.exclusive": "Finishing nearby on Exclusive", "finishing.withinMin": "Finishing within minutes", "finishing.withinKm": "Finishing within km",
   "favourite.on": "Favourite drivers", "favourite.maxKm": "Favourite max distance", "favourite.waitSec": "Wait for favourite",
   waiting: "Rider waiting steps", "driverCancel.on": "Driver cancels: search again", "driverCancel.commissionCutPct": "Lower commission after a driver cancel",
-  "riderCancel.on": "Smart cancel check", "riderCancel.closerPct": "Came closer by",
+  "riderCancel.on": "Smart cancel check",
   "riderCancel.headingPct": "Heading to the pickup at least", "riderCancel.notHeadingMinutes": "Not heading to the pickup for",
   "riderCancel.priority": "Priority after rider cancel", "riderCancel.priorityMin": "Priority minutes",
   extras: "Special requests", longTripKm: "Long trip from", "stops.on": "Stops", "stops.max": "Max stops", "pickupMove.maxMeters": "Pickup move after accept (m)", "samePoint.warnMeters": "Shortest ride (m)", "stops.freeWaitMin": "Free wait per stop",

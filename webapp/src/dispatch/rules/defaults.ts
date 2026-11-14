@@ -95,7 +95,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     favourite: { on: true, maxKm: 4, waitSec: 15 },
     waiting: waitingDefault(),
     driverCancel: { on: true, commissionCutPct: 5 },
-    riderCancel: { on: true, closerPct: 25, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live"), driverSharePct: 100, earlyEnd: { ...EARLY_END_DEFAULT }, ...CONFIG_DEFAULTS.headingCheck },
+    riderCancel: { on: true, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live"), driverSharePct: 100, earlyEnd: { ...EARLY_END_DEFAULT }, ...CONFIG_DEFAULTS.headingCheck },
     extras: EXTRAS.map((extra) => ({ id: extra.id, on: true, badge: true })),
     longTripKm: 50,
     // Owner Q39: 3 stops at most by default (contract.json#configDefaults.maxStops).
@@ -373,6 +373,8 @@ export function complete(zoneId: string, stored: Partial<ZoneDispatch> | undefin
   const share = oldCancel.driverSharePct;
   riderCancel.driverSharePct = typeof share === "number" && share >= 0 && share <= 100 ? share : 100;
   riderCancel.earlyEnd = completeEarlyEnd(oldCancel.earlyEnd);
+  // SV: the came-closer % is gone (contract pickupWaiting.headingCheck.replaces); older saves drop it.
+  delete riderCancel.closerPct;
   // BQ-V22: the heading check numbers (older saves have none → 80 % / 2 min).
   riderCancel.headingPct = headingValue("headingPct", oldCancel.headingPct);
   riderCancel.notHeadingMinutes = headingValue("notHeadingMinutes", oldCancel.notHeadingMinutes);

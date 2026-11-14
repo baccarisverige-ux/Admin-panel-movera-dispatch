@@ -108,4 +108,9 @@ export const enB4RadarExclusiveReservations = {
   "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.": "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.",
   "Break length shown in the app": "Break length shown in the app",
   "Only shown to the driver; the server does not enforce it.": "Only shown to the driver; the server does not enforce it.",
+  // SV: Cancel checks decide with the heading rule (the came-closer % is gone).
+  "Heading to the pickup": "Heading to the pickup",
+  "{0}% of what the road allowed (fee from {1}%)": "{0}% of what the road allowed (fee from {1}%)",
+  "The driver was heading to the pickup: {0}% of what the road allowed (needs {1}%). Fee applies.": "The driver was heading to the pickup: {0}% of what the road allowed (needs {1}%). Fee applies.",
+  "The driver was not heading to the pickup: {0}% of what the road allowed (needs {1}%). No fee.": "The driver was not heading to the pickup: {0}% of what the road allowed (needs {1}%). No fee.",
 } as const;

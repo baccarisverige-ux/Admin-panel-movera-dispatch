@@ -252,15 +252,26 @@ export function riderCancelFee(zone: ZoneDispatch, kind: CancelFeeKind, category
   return cancelFeeAmount(feeRow(table, category), fare, countryOfZone(zone.zoneId));
 }
 
-/** The automatic fee decision for a rider cancel, the fee for the trip's car type, and the reason in words. */
-export function cancelDecision(record: CancelRecord, zone: ZoneDispatch): { fee: boolean; why: string; closerPct: number; amount: number; freeMin: number } {
+/**
+ * The automatic fee decision for a rider cancel, the fee for the trip's car type, and the reason in words.
+ * SV (coordinator ruling on open point 3; contract pickupWaiting.headingCheck: "The v0.4 came-closer check … is gone"):
+ * decided with the heading rule — the driver got at least headingPct % (default 80) as much closer to the pickup as normal
+ * road speed allowed since he accepted (road speed = km / ETA at accept; the server checks every 30 s, here the record
+ * has one span). closerPct stays as a measurement only.
+ */
+export function cancelDecision(record: CancelRecord, zone: ZoneDispatch): { fee: boolean; why: string; closerPct: number; headingShare: number; amount: number; freeMin: number } {
   const closerPct = record.atAccept.km > 0 ? Math.round(((record.atAccept.km - record.atCancel.km) / record.atAccept.km) * 100) : 0;
+  const speed = record.atAccept.etaMin > 0 ? record.atAccept.km / record.atAccept.etaMin : 0;
+  const possible = Math.min(record.atAccept.km, speed * record.minutesAfterAccept);
+  const progress = record.atAccept.km - record.atCancel.km;
+  const headingShare = possible > 0 ? Math.max(0, Math.round((progress / possible) * 100)) : 100;
   const freeMin = feeRow(zone.riderCancel.fees, record.category).freeMin;
   const amount = riderCancelFee(zone, "live", record.category, record.fare);
-  if (!zone.riderCancel.on) return { fee: false, why: tr("The smart cancel check is off in this zone."), closerPct, amount, freeMin };
-  if (record.minutesAfterAccept < freeMin) return { fee: false, why: tr("Cancelled {0} min after accept, inside the free {1} min.", [record.minutesAfterAccept, freeMin]), closerPct, amount, freeMin };
-  if (closerPct >= zone.riderCancel.closerPct) return { fee: true, why: tr("The driver came {0}% closer ({1} → {2} km). Fee applies.", [closerPct, record.atAccept.km, record.atCancel.km]), closerPct, amount, freeMin };
-  return { fee: false, why: tr("The driver came only {0}% closer (needs {1}%). No fee.", [Math.max(0, closerPct), zone.riderCancel.closerPct]), closerPct, amount, freeMin };
+  const base = { closerPct, headingShare, amount, freeMin };
+  if (!zone.riderCancel.on) return { fee: false, why: tr("The smart cancel check is off in this zone."), ...base };
+  if (record.minutesAfterAccept < freeMin) return { fee: false, why: tr("Cancelled {0} min after accept, inside the free {1} min.", [record.minutesAfterAccept, freeMin]), ...base };
+  if (headingShare >= zone.riderCancel.headingPct) return { fee: true, why: tr("The driver was heading to the pickup: {0}% of what the road allowed (needs {1}%). Fee applies.", [headingShare, zone.riderCancel.headingPct]), ...base };
+  return { fee: false, why: tr("The driver was not heading to the pickup: {0}% of what the road allowed (needs {1}%). No fee.", [headingShare, zone.riderCancel.headingPct]), ...base };
 }
 
 /** Everything the backend needs, in one file: the live rules per zone, country rules, events and groups. */

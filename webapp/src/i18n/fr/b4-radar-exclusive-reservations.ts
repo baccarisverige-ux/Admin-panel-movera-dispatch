@@ -110,4 +110,9 @@ export const frB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   "Owner rule: 6 hours offline in a row reset all the driving time. The server uses this number.": "Règle : 6 heures hors ligne d’affilée remettent tout le temps de conduite à zéro. Le serveur utilise ce nombre.",
   "Break length shown in the app": "Durée de pause affichée dans l’application",
   "Only shown to the driver; the server does not enforce it.": "Seulement affichée au chauffeur ; le serveur ne l’impose pas.",
+  // SV: Cancel checks decide with the heading rule (the came-closer % is gone).
+  "Heading to the pickup": "Se dirige vers la prise en charge",
+  "{0}% of what the road allowed (fee from {1}%)": "{0} % de ce que la route permettait (frais à partir de {1} %)",
+  "The driver was heading to the pickup: {0}% of what the road allowed (needs {1}%). Fee applies.": "Le chauffeur se dirigeait vers la prise en charge : {0} % de ce que la route permettait (il faut {1} %). Frais appliqués.",
+  "The driver was not heading to the pickup: {0}% of what the road allowed (needs {1}%). No fee.": "Le chauffeur ne se dirigeait pas vers la prise en charge : {0} % de ce que la route permettait (il faut {1} %). Pas de frais.",
 };
