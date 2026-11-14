@@ -24,6 +24,7 @@ const FINISHED = {
   earningsBreakdown: [{ code: "trip", amount: SEK(6005) }, { code: "pickup_pay", amount: SEK(360) }],
   debtCollected: SEK(24000),
   moneySplit: { riderPaid: SEK(31800), driverTotal: SEK(6365), movera: SEK(1435), debtCollected: SEK(24000), refunded: SEK(0) },
+  moveraKeepsNow: SEK(1435),
   finish: { endedEarly: true, endedBy: "rider", reasonCode: "plans_changed", total: SEK(31800), cashToCollect: SEK(31800), ratingAllowed: false },
 };
 

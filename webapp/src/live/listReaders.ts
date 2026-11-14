@@ -55,10 +55,12 @@ export function createListReaders(client: LiveClient, drivers: Map<string, Drive
   /** The Payouts list and the Dashboard's not-yet-paid payouts (DUE_PAYOUTS_LIST). */
   async function readPayouts(name: string, filter: ZoneFilter): Promise<DemoRecord[]> {
     const statuses: [string, string][] = name === DUE_PAYOUTS_LIST ? DUE_PAYOUT_STATUSES.map((status) => ["status", status]) : [];
-    const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string }>(client, "/admin/payouts", filter, statuses);
+    const rows = await all<{ payoutId: string; driverId: string; driverName?: string; zoneId?: string; amount: LiveMoney; status: string; periodStart: string; periodEnd: string; source: string; tripCount: number; lines?: { code: string; amount: LiveMoney; count?: number }[]; createdAt: string; summary?: { driverGets?: LiveMoney; moveraGets?: LiveMoney } }>(client, "/admin/payouts", filter, statuses);
     return rows.map((row) => ({
       id: row.payoutId, name: `${row.periodStart.slice(0, 10)} – ${row.periodEnd.slice(0, 10)}`, phone: "", zoneId: row.zoneId ?? "", status: row.status === "paid" ? "paid" : "scheduled", driverId: row.driverId, fareOre: row.amount.amountMinor, createdAt: row.createdAt, live: true,
-      livePayout: { lines: (row.lines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor, ...(line.count !== undefined ? { count: line.count } : {}) })), source: row.source, periodStart: row.periodStart, periodEnd: row.periodEnd, tripCount: row.tripCount, currency: row.amount.currency },
+      livePayout: { lines: (row.lines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor, ...(line.count !== undefined ? { count: line.count } : {}) })), source: row.source, periodStart: row.periodStart, periodEnd: row.periodEnd, tripCount: row.tripCount, currency: row.amount.currency,
+        // BQ-M22 (v0.18.92 priceDisplay.payoutSummary): the server's two numbers, kept whole; absent from an older server.
+        summary: row.summary?.driverGets && row.summary.moveraGets ? { driverGetsMinor: row.summary.driverGets.amountMinor, moveraGetsMinor: row.summary.moveraGets.amountMinor } : null },
     }));
   }
 

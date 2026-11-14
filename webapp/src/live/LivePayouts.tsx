@@ -12,6 +12,7 @@ import { zoneFilterOf } from "./zoneFilter";
 import { LivePayoutSettings } from "./LivePayoutSettings";
 import { CommandButton } from "../ui/CommandButton";
 import { DateInput } from "../ui/DateInput";
+import { payoutSummaryLines, runSummaryRows, type PayoutSummary, type SummaryLine } from "./moneyRows";
 
 /**
  * Live builds only, in the demo Payouts page (contract v0.9.0 §16, owner real-data decisions part 3): the server's
@@ -35,7 +36,18 @@ export type LivePayout = {
   tripCount: number;
   lines: PayoutLine[];
   note?: string;
+  /** v0.18.92 (BQ-M22, contract.json#priceDisplay.payoutSummary): the admin's two numbers; absent from an older server. */
+  summary?: PayoutSummary;
 };
+
+/** The payout card's two lines (owner 2026-11-14 "how much driver get and how much movera get thats all no details"). */
+function SummaryLines({ lines, testId }: { lines: SummaryLine[]; testId: string }) {
+  return (
+    <dl className="op-split-lines" data-testid={testId}>
+      {lines.map((line) => <div key={line.key} className={line.amount.amountMinor < 0 ? "minus" : undefined} data-line={line.key}><dt>{line.label}</dt><dd>{line.text}</dd></div>)}
+    </dl>
+  );
+}
 type RefundToSend = { refundId: string; tripId?: string; amount: LiveMoney; reason?: string; createdAt?: string; riderName: string; riderPhone: string; payoutTo?: unknown };
 
 export const PAYOUT_LINE_LABEL: Record<string, string> = {
@@ -54,6 +66,13 @@ export function payoutLineLabel(code: string): string {
 }
 
 const day = (iso: string) => iso.slice(0, 10);
+
+/** The payout list's money cell: the summary's 2 lines when sent, else Payout.amount (an older server). */
+function payoutCell(item: LivePayout) {
+  const lines = payoutSummaryLines(item);
+  if (!lines) return liveMoney(item.amount);
+  return <span className="po-summary-cell" data-testid="live-payout-row-summary">{lines.map((line) => <span key={line.key} data-line={line.key}>{line.label} {line.text}<br /></span>)}</span>;
+}
 
 function payoutTo(value: unknown): string {
   if (typeof value === "string") return value;
@@ -86,7 +105,8 @@ export function LivePayouts() {
     const rows = items.filter((item) => item.status === "pending_approval" && item.periodEnd === periodEnd);
     const totals = new Map<string, number>();
     for (const row of rows) totals.set(row.amount.currency, (totals.get(row.amount.currency) ?? 0) + row.amount.amountMinor);
-    return { periodEnd, periodStart: rows[0]!.periodStart, count: rows.length, totals: [...totals].map(([currency, amountMinor]) => ({ amountMinor, currency }) as LiveMoney) };
+    // BQ-M22: each payout's own 2 lines (the server's summary), nothing added up here; an older server: today's totals.
+    return { periodEnd, periodStart: rows[0]!.periodStart, count: rows.length, totals: [...totals].map(([currency, amountMinor]) => ({ amountMinor, currency }) as LiveMoney), summaries: runSummaryRows(rows) };
   });
   const selected = items.find((item) => item.payoutId === selectedId) ?? items[0];
   const refresh = () => {
@@ -124,7 +144,8 @@ export function LivePayouts() {
           <ul className="pm-list">
             {waitingRuns.map((runRow) => (
               <li key={runRow.periodEnd} data-run={runRow.periodEnd}>
-                <span className="pm-main"><b>{day(runRow.periodStart)} – {day(runRow.periodEnd)}</b><small>{tr("{0} drivers", [runRow.count])} · {runRow.totals.map(liveMoney).join(" + ")}</small></span>
+                <span className="pm-main"><b>{day(runRow.periodStart)} – {day(runRow.periodEnd)}</b><small>{tr("{0} drivers", [runRow.count])}{runRow.summaries ? "" : ` · ${runRow.totals.map(liveMoney).join(" + ")}`}</small>
+                  {runRow.summaries ? runRow.summaries.map((row) => <span key={row.payoutId} className="po-run-driver" data-payout={row.payoutId}><small>{row.who}</small><SummaryLines lines={row.lines} testId="live-payout-run-summary" /></span>) : null}</span>
                 <CommandButton command="admin.payout.approveRun" className="dash-btn small" targetId={`${scope.market.id} ${day(runRow.periodEnd)}`} confirmTarget={false} before={tr("Waiting for approval")} after={tr("To pay")} value={{ country: scope.market.id, periodEnd: runRow.periodEnd }} disabled={!can("finance.edit")} onDone={() => { setNotice(tr("Run approved: the payouts can be paid.")); refresh(); }}>{tr("Approve run")}</CommandButton>
               </li>
             ))}
@@ -144,7 +165,7 @@ export function LivePayouts() {
                   <td>{day(item.periodStart)} – {day(item.periodEnd)}</td>
                   <td>{item.driverName ?? item.driverId}</td>
                   <td>{item.tripCount}</td>
-                  <td className={item.amount.amountMinor < 0 ? "minus" : undefined}>{liveMoney(item.amount)}</td>
+                  <td className={item.amount.amountMinor < 0 ? "minus" : undefined}>{payoutCell(item)}</td>
                   <td>{item.status === "paid" ? tr("Paid") : item.status === "pending_approval" ? tr("Waiting for approval") : tr("To pay")}</td>
                   <td>{item.source === "weekly" ? tr("Weekly") : tr("By hand")}</td>
                 </tr>
@@ -157,15 +178,19 @@ export function LivePayouts() {
       {selected ? (
         <article className="panel fn-panel" data-testid="live-payout-detail">
           <h3>{selected.driverName ?? selected.driverId} · {day(selected.periodStart)} – {day(selected.periodEnd)}</h3>
-          <dl className="op-split-lines" data-testid="live-payout-lines">
-            {selected.lines.map((line) => (
-              <div key={line.code} className={line.amount.amountMinor < 0 ? "minus" : undefined} data-line={line.code}>
-                <dt>{payoutLineLabel(line.code)}{line.count !== undefined ? ` (${line.count})` : ""}</dt>
-                <dd>{liveMoney(line.amount)}</dd>
-              </div>
-            ))}
-            <div className="total"><dt>{selected.amount.amountMinor < 0 ? tr("The driver owes Movera") : tr("Driver gets")}</dt><dd>{liveMoney(selected.amount)}</dd></div>
-          </dl>
+          {/* BQ-M22 (contract.json#priceDisplay.payoutSummary.display): exactly the 2 lines of Payout.summary, no other detail.
+              An older server (no summary) keeps today's card (the server's lines and Payout.amount), nothing worked out. */}
+          {payoutSummaryLines(selected) ? <SummaryLines lines={payoutSummaryLines(selected)!} testId="live-payout-summary" /> : (
+            <dl className="op-split-lines" data-testid="live-payout-lines">
+              {selected.lines.map((line) => (
+                <div key={line.code} className={line.amount.amountMinor < 0 ? "minus" : undefined} data-line={line.code}>
+                  <dt>{payoutLineLabel(line.code)}{line.count !== undefined ? ` (${line.count})` : ""}</dt>
+                  <dd>{liveMoney(line.amount)}</dd>
+                </div>
+              ))}
+              <div className="total"><dt>{selected.amount.amountMinor < 0 ? tr("The driver owes Movera") : tr("Driver gets")}</dt><dd>{liveMoney(selected.amount)}</dd></div>
+            </dl>
+          )}
           <p className="op-help">{selected.status === "paid" ? tr("Paid {0}.", [selected.paidAt ? day(selected.paidAt) : ""]) : tr("Not paid yet.")} {selected.note ?? ""}</p>
           <p className="op-help">{tr("Bank details")}: <NotConnected /></p>
           <button type="button" className="primary-btn" data-command="admin.payment.markPaid" disabled={busy || selected.status === "paid" || selected.status === "pending_approval"} title={selected.status === "pending_approval" ? tr("Approve the run first.") : undefined} onClick={() => void run(() => client.post(`/admin/payouts/${encodeURIComponent(selected.payoutId)}/paid`, {}), tr("Payout marked as paid."))}>{tr("Mark as paid")}</button>
