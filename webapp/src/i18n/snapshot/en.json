@@ -8960,4 +8960,7 @@
 ["The change to the driver's pay is above this country's limit (Pricing › Tips & limits).","The change to the driver's pay is above this country's limit (Pricing › Tips & limits)."],
 ["The driver's pay cannot go below 0.","The driver's pay cannot go below 0."],
 ["The driver's pay cannot be changed while the trip is {0}.","The driver's pay cannot be changed while the trip is {0}."],
-["Trip adjusted (driver pay, waiting or fee)","Trip adjusted (driver pay, waiting or fee)"]]
+["Trip adjusted (driver pay, waiting or fee)","Trip adjusted (driver pay, waiting or fee)"],
+["Could not load {0}, showing English.","Could not load {0}, showing English."],
+["Waiting time must be a whole number from 0 to 120 minutes.","Waiting time must be a whole number from 0 to 120 minutes."],
+["Try loading the panel language again","Try loading the panel language again"]]

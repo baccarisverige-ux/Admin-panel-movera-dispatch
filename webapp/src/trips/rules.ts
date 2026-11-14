@@ -1,4 +1,5 @@
 import { DRIVER_ASSIGNED_STATUSES, TERMINAL_STATUSES, nextStatus, statesFor, type TripStatus } from "../domain/contract.ts";
+import { tr } from "../i18n/core.ts";
 
 /*
  * Admin trip commands, derived from the shared transition table (contract.json#transitions, actor "admin").
@@ -133,7 +134,7 @@ export function adjustFare(trip: Trip, percent: number, maxPercent = 15): { trip
 
 export function waitingMinutes(status: string, minutes: number): { minutes: number; error?: string } {
   if (!canSetWaiting(status)) return { minutes, error: `Waiting time cannot be changed while the trip is ${status}.` };
-  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 120) return { minutes, error: "Waiting time must be a whole number from 0 to 120 minutes." };
+  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 120) return { minutes, error: tr("Waiting time must be a whole number from 0 to 120 minutes.") };
   return { minutes };
 }
 

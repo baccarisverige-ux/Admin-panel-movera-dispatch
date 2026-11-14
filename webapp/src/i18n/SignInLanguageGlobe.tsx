@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Globe } from "lucide-react";
 import { tr } from "./core";
 import { useLanguage } from "./I18nProvider";
+import { LanguageFallbackNote } from "./LanguageFallbackNote";
 import { ADMIN_LANGUAGES, LANGUAGE_NATIVE_NAME } from "./languages";
 import { chooseSignInLanguage } from "./signInLanguage";
 
@@ -47,6 +48,7 @@ export function SignInLanguageGlobe() {
           ))}
         </ul>
       ) : null}
+      <LanguageFallbackNote />
     </div>
   );
 }

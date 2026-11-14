@@ -22,10 +22,72 @@ export function isLanguageLoaded(language: AppLanguage): boolean {
   return language === "en" || Boolean(loaded[language]);
 }
 
-/** Loads a language's dictionary (once). English is always there. */
-export async function loadLanguage(language: AppLanguage): Promise<void> {
+/**
+ * BQ-A27 (proven by e2e/live-language-fallback.spec.ts): Chromium remembers a language file that failed to load and
+ * answers every later import() of it with the same error, so trying again needs a new address. The browser's error
+ * names the file ("Failed to fetch dynamically imported module: https://…/assets/sv-….js"); a new try loads that file
+ * with ?retry=N. Browsers whose error names no file (Safari) just import again.
+ */
+const failedFile: Partial<Record<AppLanguage, string>> = {};
+let freshTries = 0;
+
+/** The file a failed import() names, without its query; undefined when the error names none. */
+export function failedImportUrl(error: unknown): string | undefined {
+  const message = error instanceof Error ? error.message : String(error);
+  const match = /(https?:\/\/[^\s?#]+\.[cm]?[jt]sx?)(?:[?#]\S*)?\s*$/.exec(message);
+  return match?.[1];
+}
+
+/** The same file under a new address, so the browser fetches it again. */
+export function freshUrl(url: string, n: number): string {
+  return `${url}${url.includes("?") ? "&" : "?"}retry=${n}`;
+}
+
+/** The dictionary a language file exports (its export name may be shortened in the build). */
+function dictionaryOf(module: Record<string, unknown>, language: AppLanguage): Dictionary {
+  const named = module[language];
+  const found = named && typeof named === "object" ? named : Object.values(module).find((value) => value && typeof value === "object" && "Dashboard" in (value as object));
+  if (!found) throw new Error(`No ${language} dictionary in the loaded file`);
+  return found as Dictionary;
+}
+
+/** Loads a language's dictionary (once). English is always there. A try after a failure fetches the file again. */
+export async function loadLanguage(language: AppLanguage, retry = false): Promise<void> {
   if (isLanguageLoaded(language) || language === "en") return;
-  loaded[language] = await LOADERS[language]();
+  const file = retry ? failedFile[language] : undefined;
+  try {
+    loaded[language] = file
+      ? dictionaryOf(await import(/* @vite-ignore */ freshUrl(file, (freshTries += 1))) as Record<string, unknown>, language)
+      : await LOADERS[language]();
+  } catch (error) {
+    failedFile[language] ??= failedImportUrl(error);
+    throw error;
+  }
+}
+
+/**
+ * BQ-A27: how long to wait before each new try of a language file that failed to load (4 tries, about 4.6 s in all).
+ * After the last try the panel shows English with a note instead of "…" for good.
+ */
+export const LANGUAGE_RETRY_DELAYS_MS: readonly number[] = [400, 1200, 3000];
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** Loads a language, trying again with a growing wait when the file fails; false when every try failed. */
+export async function loadLanguageWithRetry(
+  language: AppLanguage,
+  { load = loadLanguage, wait = sleep, delays = LANGUAGE_RETRY_DELAYS_MS }: { load?: (language: AppLanguage, retry: boolean) => Promise<void>; wait?: (ms: number) => Promise<void>; delays?: readonly number[] } = {},
+): Promise<boolean> {
+  if (language === "en") return true;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await load(language, attempt > 0);
+      return true;
+    } catch {
+      if (attempt >= delays.length) return false;
+      await wait(delays[attempt]);
+    }
+  }
 }
 
 /** Puts a dictionary in place without loading it (tests). */
