@@ -9026,4 +9026,6 @@
 ["SMS to {n} emergency contacts: not connected (no SMS company yet)","SMS à {n} contacts d’urgence : non connecté (pas encore de société SMS)"],
 ["SMS to {n} emergency contacts: sending","SMS à {n} contacts d’urgence : en cours d’envoi"],
 ["SMS sent to {sent} of {n} emergency contacts","SMS envoyé à {sent} sur {n} contacts d’urgence"],
-["SMS to {n} emergency contacts failed","Échec du SMS à {n} contacts d’urgence"]]
+["SMS to {n} emergency contacts failed","Échec du SMS à {n} contacts d’urgence"],
+["The run changed while you looked. Payouts now: {0}. To pay now: {1}. It was reloaded; check it and approve again.","Le lot a changé pendant que vous le regardiez. Versements maintenant : {0}. À payer maintenant : {1}. Il a été rechargé ; vérifiez et approuvez à nouveau."],
+["Server now: {0} payouts · {1}","Serveur maintenant : {0} versements · {1}"]]

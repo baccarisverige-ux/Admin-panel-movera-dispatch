@@ -49,6 +49,7 @@ import { remember, setLiveData } from "./realData.ts";
 import { bonusByKind, commissionBeforeBonus, liveBonusLimits } from "./tripLive.ts";
 import { vehicleMissing } from "./activation.ts";
 import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
+import { expectedOf, freshRunCard, runChangedText } from "./payoutRunGuard.ts";
 import { formatNumber, tr } from "../i18n/index.ts";
 import { revealPath, type Revealed } from "./masking.ts";
 import { UNLOCK_SIGN_IN_PATH, fullPhone, unlockMessage } from "./unlockSignIn.ts";
@@ -817,7 +818,15 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // Fix job 0 (owner A2-3 "Yes, reason required"): the admin's own reason, kept in the server's audit.
       const reason = (input.reason ?? "").trim();
       if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", reason: "reason_required", retryable: false });
-      await client.post("/admin/payouts/runs/approve", { country, periodEnd, reason: reason.slice(0, 300) }).catch(explained);
+      // BQ-V38 (contract v0.18.102 payoutMode.approveGuard, owner 105 "Refresh, approve again"): what the admin saw goes
+      // with it; a run that changed meanwhile is refused (409 run_changed) with the server's fresh card, shown here.
+      const expected = expectedOf(input.value);
+      if (!expected) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", reason: "expected_total_required", retryable: false });
+      await client.post("/admin/payouts/runs/approve", { country, periodEnd, ...expected, reason: reason.slice(0, 300) }).catch((error: unknown) => {
+        const card = freshRunCard(error);
+        if (card && error instanceof ApiError) throw new ApiError(409, runChangedText(card), { code: error.code, reason: "run_changed", projection: card, requestId: error.requestId ?? undefined, retryable: false });
+        return explained(error);
+      });
       return done("Run approved: the payouts can be paid.");
     }
     // v0.18.29 A2 (fix job 0) (owner Q4 + G10-2): the country's payout mode and schedule, in its Standard's CountryRules (kept otherwise).

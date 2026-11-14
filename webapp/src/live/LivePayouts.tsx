@@ -13,6 +13,7 @@ import { LivePayoutSettings } from "./LivePayoutSettings";
 import { CommandButton } from "../ui/CommandButton";
 import { DateInput } from "../ui/DateInput";
 import { payoutSummaryLines, runSummaryRows, type PayoutSummary, type SummaryLine } from "./moneyRows";
+import { approveRunValue, freshCardLine, freshRunCard, type PayoutRunCard } from "./payoutRunGuard";
 
 /**
  * Live builds only, in the demo Payouts page (contract v0.9.0 §16, owner real-data decisions part 3): the server's
@@ -99,6 +100,8 @@ export function LivePayouts() {
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ driverId: "", from: "", to: "", note: "" });
+  // BQ-V38 (owner 105 "Refresh, approve again"): the server's fresh card of a run whose Approve was refused (run_changed).
+  const [freshCards, setFreshCards] = useState<Record<string, PayoutRunCard>>({});
   const items = payouts.data?.items ?? [];
   // v0.18.29 A2 (fix job 0) (owner Q4): a manual country's runs wait for one admin's approval, one run per period end.
   const waitingRuns = [...new Set(items.filter((item) => item.status === "pending_approval").map((item) => item.periodEnd))].sort().map((periodEnd) => {
@@ -106,7 +109,7 @@ export function LivePayouts() {
     const totals = new Map<string, number>();
     for (const row of rows) totals.set(row.amount.currency, (totals.get(row.amount.currency) ?? 0) + row.amount.amountMinor);
     // BQ-M22: each payout's own 2 lines (the server's summary), nothing added up here; an older server: today's totals.
-    return { periodEnd, periodStart: rows[0]!.periodStart, count: rows.length, totals: [...totals].map(([currency, amountMinor]) => ({ amountMinor, currency }) as LiveMoney), summaries: runSummaryRows(rows) };
+    return { periodEnd, periodStart: rows[0]!.periodStart, rows, count: rows.length, totals: [...totals].map(([currency, amountMinor]) => ({ amountMinor, currency }) as LiveMoney), summaries: runSummaryRows(rows) };
   });
   const selected = items.find((item) => item.payoutId === selectedId) ?? items[0];
   const refresh = () => {
@@ -146,7 +149,10 @@ export function LivePayouts() {
               <li key={runRow.periodEnd} data-run={runRow.periodEnd}>
                 <span className="pm-main"><b>{day(runRow.periodStart)} – {day(runRow.periodEnd)}</b><small>{tr("{0} drivers", [runRow.count])}{runRow.summaries ? "" : ` · ${runRow.totals.map(liveMoney).join(" + ")}`}</small>
                   {runRow.summaries ? runRow.summaries.map((row) => <span key={row.payoutId} className="po-run-driver" data-payout={row.payoutId}><small>{row.who}</small><SummaryLines lines={row.lines} testId="live-payout-run-summary" /></span>) : null}</span>
-                <CommandButton command="admin.payout.approveRun" className="dash-btn small" targetId={`${scope.market.id} ${day(runRow.periodEnd)}`} confirmTarget={false} before={tr("Waiting for approval")} after={tr("To pay")} value={{ country: scope.market.id, periodEnd: runRow.periodEnd }} disabled={!can("finance.edit")} onDone={() => { setNotice(tr("Run approved: the payouts can be paid.")); refresh(); }}>{tr("Approve run")}</CommandButton>
+                {freshCards[`${scope.market.id}|${runRow.periodEnd}`] ? <small className="po-run-fresh" data-testid="live-payout-run-fresh">{freshCardLine(freshCards[`${scope.market.id}|${runRow.periodEnd}`]!)}</small> : null}
+                <CommandButton command="admin.payout.approveRun" className="dash-btn small" targetId={`${scope.market.id} ${day(runRow.periodEnd)}`} confirmTarget={false} before={tr("Waiting for approval")} after={tr("To pay")} value={approveRunValue({ country: scope.market.id, periodEnd: runRow.periodEnd }, runRow.rows, freshCards[`${scope.market.id}|${runRow.periodEnd}`] ?? null)} disabled={!can("finance.edit")}
+                  onError={(failure) => { const card = freshRunCard(failure); if (card) setFreshCards((cards) => ({ ...cards, [`${card.country}|${card.periodEnd}`]: card })); refresh(); }}
+                  onDone={() => { setFreshCards((cards) => { const next = { ...cards }; delete next[`${scope.market.id}|${runRow.periodEnd}`]; return next; }); setNotice(tr("Run approved: the payouts can be paid.")); refresh(); }}>{tr("Approve run")}</CommandButton>
               </li>
             ))}
           </ul>
