@@ -146,7 +146,6 @@ export const enA3DE = {
   "Driver {0}": "Driver {0}",
   "Driver {0} km / {1} min from the pickup when the offer shows. Ride {2} km, {3} min.": "Driver {0} km / {1} min from the pickup when the offer shows. Ride {2} km, {3} min.",
   "Driver {0}%, Movera {1}%": "Driver {0}%, Movera {1}%",
-  "Driver {0}%, Movera {1}%{2}": "Driver {0}%, Movera {1}%{2}",
   "Driver app": "Driver app",
   "Driver app · {0}": "Driver app · {0}",
   "Driver app · bonus details": "Driver app · bonus details",

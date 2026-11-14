@@ -48,10 +48,9 @@ test("PricingDocument from the Pricing page: minor units, ONE seat fee on Child 
   const fixture = sample("pricing_document");
   // v0.7.1 (owner 2026-10-27): no free minutes at a stop and no separate surge maximum (the slider is the maximum).
   const gone = new Set(["stopFreeWaitMin"]);
-  // v0.18.13 (contract.json#fleetShareRemoved): the sample has no fleetCommissionPct any more; "a document that still
-  // carries the key is accepted and the key ignored". The admin still sends it until the fleet % job (G10) removes it.
-  const legacy = new Set(["fleetCommissionPct"]);
-  assert.deepEqual(Object.keys(doc).filter((k) => !legacy.has(k)).sort(), Object.keys(fixture).filter((k) => !gone.has(k)).sort());
+  // v0.18.13 / v0.18.88 (contract.json#fleetShareRemoved, #fleetPayoutWhole): no fleetCommissionPct; the admin never sends it.
+  assert.ok(!("fleetCommissionPct" in doc));
+  assert.deepEqual(Object.keys(doc).sort(), Object.keys(fixture).filter((k) => !gone.has(k)).sort());
   assert.ok(!("stopFreeWaitMin" in doc));
   const surge = doc["surge"] as Doc;
   assert.ok(!("maxMultiplier" in surge));
@@ -172,13 +171,14 @@ test("live Pricing: reading marks 'Uses standard'; publishing sends the changed 
   const store = (await settings.readSlice("zonePricing", null)) as ReturnType<typeof emptyPricingStore>;
   assert.equal(standardMarks.get("pricing", "Z001"), true);
   assert.equal(standardMarks.get("pricing", "Z002"), false);
-  assert.equal(store.zones["Z002"]!.fleetCommissionPct, 7);
-  const edited = { ...zoneBook(store, "Z002"), fleetCommissionPct: 8 };
+  // v0.18.88: an old document's fleetCommissionPct (7) is ignored when read and never written back.
+  assert.ok(!("fleetCommissionPct" in store.zones["Z002"]!));
+  const edited = { ...zoneBook(store, "Z002"), commission: { ...zoneBook(store, "Z002").commission, economy: 21 } };
   const published = publishZones(store, { Z002: edited }, "A1", "Pricing update", "2026-10-27T10:00:00Z");
   server.calls.length = 0;
   assert.equal(await settings.command("admin.pricing.publish", { targetId: "pricing", value: published.store }), "Published.");
   const put = server.calls.find((c) => c.method === "PUT")!;
-  assert.equal(((put.body as { document: Doc }).document)["fleetCommissionPct"], 8);
+  assert.ok(!("fleetCommissionPct" in (put.body as { document: Doc }).document), "an old fleetCommissionPct is not written back");
   assert.equal((put.body as { expectedVersion: number }).expectedVersion, 3);
   server.calls.length = 0;
   await settings.command("admin.config.useStandard", { targetId: "Z002", value: { docs: ["pricing"] } });

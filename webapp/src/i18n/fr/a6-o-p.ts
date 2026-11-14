@@ -217,7 +217,6 @@ export const frA6OP: Record<keyof typeof enA6OP, string> = {
   "Papers needed": "Documents requis",
   "Parent": "Parent",
   "Part of Off the route: the trip takes much longer than the time shown at booking.": "Partie de Hors itinéraire : la course dure bien plus longtemps que le temps indiqué à la réservation.",
-  "Part of their drivers' earnings that goes to the fleet owner in {0}": "Part des gains de leurs chauffeurs qui revient au propriétaire de flotte en {0}",
   "Parts": "Parties",
   "Parts of the panel that showed alerts before this section. Off by default, so every number and sound comes from Alerts.": "Parties de l’interface qui affichaient des alertes avant cette section. Désactivées par défaut, pour que chaque chiffre et chaque son vienne d’Alertes.",
   "Pass an alert to another admin": "Transmettre une alerte à un autre administrateur",

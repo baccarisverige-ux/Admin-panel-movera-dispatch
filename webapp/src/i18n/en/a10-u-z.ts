@@ -151,7 +151,6 @@ export const enA10UZ = {
   "Weekend": "Weekend",
   "Weekly summary": "Weekly summary",
   "Welcome to Movera": "Welcome to Movera",
-  "What a fleet owner gets from their drivers' rides, after commission.": "What a fleet owner gets from their drivers' rides, after commission.",
   "What a new driver must upload in this country. The driving licence is always needed.": "What a new driver must upload in this country. The driving licence is always needed.",
   "What an admin picks when cancelling a trip from Trips. The codes are fixed by the shared contract.": "What an admin picks when cancelling a trip from Trips. The codes are fixed by the shared contract.",
   "What changed": "What changed",

@@ -394,7 +394,6 @@ export const svC1ContractV072Part4: Record<keyof typeof enC1ContractV072Part4, s
   "Money the driver owes Movera.": "Pengar föraren är skyldig Movera.",
   "Movera commission 20%": "Moveras provision 20 %",
   "Other debts (damage, fines)": "Andra skulder (skador, böter)",
-  "Paid to the driver's fleet owner.": "Betalas till förarens flottägare.",
   "Published": "Publicerad",
   "Radar, Exclusive and the scheduled ride popup.": "Radar, Exklusivt och popupen för bokade resor.",
   "Re-accept": "Godkänn igen",

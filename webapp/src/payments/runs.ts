@@ -6,7 +6,7 @@ import { csvCell } from "../reports/csv.ts";
 
 /**
  * Payout runs: when drivers get paid in each country, instant cash-out, holds with a reason,
- * failed payouts with retry, the payout explained line by line, the fleet owner's part,
+ * failed payouts with retry, the payout explained line by line (no fleet-owner part: contract v0.18.88),
  * a second admin for big runs, and the bank file.
  */
 
@@ -23,7 +23,6 @@ export type Schedule = {
   /** A run above this total (major units) waits for a second admin. */
   approvalOverMajor: number;
   retryFailed: boolean;
-  fleetPct: number;
 };
 
 export type Hold = { on: boolean; reason: string; by: string; at: string };
@@ -40,7 +39,7 @@ export type PayoutOps = {
 
 function schedule(country: MarketId): Schedule {
   const scale = country === "SE" ? 10 : country === "TN" ? 3 : 1;
-  return { every: "weekly", weekday: 0, time: "08:00", instant: { on: country !== "TN", feePct: 1.5, minMajor: 10 * scale }, approvalOverMajor: 2_000 * scale, retryFailed: true, fleetPct: 10 };
+  return { every: "weekly", weekday: 0, time: "08:00", instant: { on: country !== "TN", feePct: 1.5, minMajor: 10 * scale }, approvalOverMajor: 2_000 * scale, retryFailed: true };
 }
 
 export function emptyPayoutOps(): PayoutOps {
@@ -54,7 +53,10 @@ export function normalizePayoutOps(value: unknown): PayoutOps {
   const schedules = { ...base.schedules };
   for (const item of MARKETS) {
     const saved = raw.schedules?.[item.id];
-    if (saved) schedules[item.id] = { ...base.schedules[item.id], ...saved, instant: { ...base.schedules[item.id].instant, ...saved.instant } };
+    if (!saved) continue;
+    // Only the schedule's own keys are kept: an old saved fleet-owner part is dropped (contract v0.18.88 fleetPayoutWhole).
+    const { every, weekday, time, approvalOverMajor, retryFailed } = { ...base.schedules[item.id], ...saved };
+    schedules[item.id] = { every, weekday, time, instant: { ...base.schedules[item.id].instant, ...saved.instant }, approvalOverMajor, retryFailed };
   }
   return { draftRev: typeof raw.draftRev === "number" ? raw.draftRev : 1, schedules, holds: raw.holds ?? {}, retries: raw.retries ?? {}, approvals: Array.isArray(raw.approvals) ? raw.approvals : [], files: Array.isArray(raw.files) ? raw.files : [] };
 }
@@ -95,10 +97,10 @@ export type Line = { label: string; minor: number; kind: "plus" | "minus" | "tot
 
 /**
  * The payout explained. The record holds the amount the driver gets; the lines are worked out
- * so they add up to it exactly: trips, bonuses and tips, minus commission, the fleet owner's
- * part, fees and debts.
+ * so they add up to it exactly: trips, bonuses and tips, minus commission, fees and debts. A fleet
+ * driver's payout is the same whole amount, paid to his fleet owner (contract v0.18.88 fleetPayoutWhole: no fleet-owner %).
  */
-export function payoutLines(record: DemoRecord, fleet: boolean, sched: Schedule, cash: { minor: number; trips: number } = { minor: 0, trips: 0 }): { lines: Line[]; trips: number; fleetMinor: number; instant: boolean; cashMinor: number } {
+export function payoutLines(record: DemoRecord, sched: Schedule, cash: { minor: number; trips: number } = { minor: 0, trips: 0 }): { lines: Line[]; trips: number; instant: boolean; cashMinor: number } {
   const net = record.fareOre ?? 0;
   const seed = hash(record.id);
   const minor = market(countryOfPayout(record)).minorUnits;
@@ -108,14 +110,12 @@ export function payoutLines(record: DemoRecord, fleet: boolean, sched: Schedule,
   const instant = sched.instant.on && seed % 4 === 1;
   const debts = seed % 5 === 2 ? round(net * 0.04) : 0;
   const fee = instant ? Math.round(net * (sched.instant.feePct / 100)) : 0;
-  const fleetPct = fleet ? sched.fleetPct / 100 : 0;
   // Cash the driver collected for Movera on cash trips is taken off this payout (Q23).
   const cashMinor = Math.max(0, Math.round(cash.minor));
-  // net = G − cG − fleet·(G − cG) + bonus + tips − fee − debts − cash
-  const gross = Math.round((net - bonus - tips + fee + debts + cashMinor) / ((1 - 0.2) * (1 - fleetPct)));
-  const fleetMinor = Math.round((gross - Math.round(gross * 0.2)) * fleetPct);
+  // net = G − cG + bonus + tips − fee − debts − cash
+  const gross = Math.round((net - bonus - tips + fee + debts + cashMinor) / (1 - 0.2));
   // Whatever rounding is left goes into the commission line, so the lines always add up.
-  const commission = gross - fleetMinor + bonus + tips - fee - debts - cashMinor - net;
+  const commission = gross + bonus + tips - fee - debts - cashMinor - net;
   const trips = Math.max(1, Math.round(gross / (minor * (minor === 100 ? 1.6 : 1) * 160)));
   const lines: Line[] = [
     cashMinor
@@ -124,13 +124,12 @@ export function payoutLines(record: DemoRecord, fleet: boolean, sched: Schedule,
     ...(bonus ? [{ label: "Bonuses", minor: bonus, kind: "plus" as const, help: "Ride and area bonuses earned this period." }] : []),
     { label: "Tips", minor: tips, kind: "plus", help: "Tips go to the driver in full." },
     { label: "Movera commission 20%", minor: -commission, kind: "minus", help: "From the zone's price book." },
-    ...(fleetMinor ? [{ label: `Fleet owner ${sched.fleetPct}%`, minor: -fleetMinor, kind: "minus" as const, help: "Paid to the driver's fleet owner." }] : []),
     ...(fee ? [{ label: `Instant cash-out fee ${sched.instant.feePct}%`, minor: -fee, kind: "minus" as const }] : []),
     ...(cashMinor ? [{ label: `Cash rides: owed to Movera (${cash.trips} trip${cash.trips === 1 ? "" : "s"})`, minor: -cashMinor, kind: "minus" as const, help: "The driver collected these fares in cash. Movera's part is taken from this payout." }] : []),
     ...(debts ? [{ label: "Other debts (damage, fines)", minor: -debts, kind: "minus" as const, help: "Money the driver owes Movera." }] : []),
     { label: "Driver gets", minor: net, kind: "total" },
   ];
-  return { lines, trips, fleetMinor, instant, cashMinor };
+  return { lines, trips, instant, cashMinor };
 }
 
 /** The next run date for the country's schedule, in the country's time. */
@@ -183,7 +182,6 @@ export function scheduleError(sched: Schedule): string | null {
   if (sched.instant.on && (sched.instant.feePct < 0 || sched.instant.feePct > 10)) return "The instant cash-out fee must be 0 to 10%.";
   if (sched.instant.on && sched.instant.minMajor < 0) return "The smallest cash-out must be zero or more.";
   if (sched.approvalOverMajor < 0) return "The approval amount must be zero or more.";
-  if (sched.fleetPct < 0 || sched.fleetPct > 50) return "The fleet owner part must be 0 to 50%.";
   return null;
 }
 

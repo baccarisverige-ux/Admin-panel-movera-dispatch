@@ -394,7 +394,6 @@ export const frC1ContractV072Part4: Record<keyof typeof enC1ContractV072Part4, s
   "Money the driver owes Movera.": "Argent que le chauffeur doit à Movera.",
   "Movera commission 20%": "Commission Movera 20 %",
   "Other debts (damage, fines)": "Autres dettes (dégâts, amendes)",
-  "Paid to the driver's fleet owner.": "Payé au propriétaire de flotte du chauffeur.",
   "Published": "Publié",
   "Radar, Exclusive and the scheduled ride popup.": "Radar, Exclusif et la fenêtre des courses programmées.",
   "Re-accept": "Accepter à nouveau",

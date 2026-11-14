@@ -73,9 +73,8 @@ export function SplitView({ split, money }: { split: MoneySplit; money: (minor: 
     <div className="op-split">
       {split.state === "estimate" ? <p className="dx-note">{tr("The trip is not finished. These numbers are an estimate from the price at booking.")}</p> : null}
       {split.state === "cancel_fee" ? <p className="dx-note">{tr("The trip was cancelled. The rider paid a fee.")}</p> : null}
-      <div className="op-split-bar" role="img" aria-label={tr("Driver {0}%, Movera {1}%{2}", [pct(split.driverGets), pct(split.moveraKeeps), split.fleet ? `, fleet owner ${pct(split.fleet)}%` : ""])}>
+      <div className="op-split-bar" role="img" aria-label={tr("Driver {0}%, Movera {1}%", [pct(split.driverGets), pct(split.moveraKeeps)])}>
         <i className="driver" style={{ width: `${pct(split.driverGets)}%` }} />
-        {split.fleet ? <i className="fleet" style={{ width: `${pct(split.fleet)}%` }} /> : null}
         <i className="movera" style={{ width: `${pct(split.moveraKeeps)}%` }} />
       </div>
       <dl className="op-split-lines">
@@ -89,7 +88,6 @@ export function SplitView({ split, money }: { split: MoneySplit; money: (minor: 
         {split.payChange ? <div className={split.payChange > 0 ? "plus" : "minus"}><dt>{tr("Pay change by an admin")}</dt><dd>{split.payChange > 0 ? "+ " : "− "}{money(Math.abs(split.payChange))}</dd></div> : null}
         {split.driverBonus ? <div className="plus" data-testid="split-driver-bonus"><dt>{tr("Money added for the driver (paid by Movera)")}</dt><dd>+ {money(split.driverBonus)}</dd></div> : null}
         <div className="driver"><dt>{trn("{0} Driver gets", <i aria-hidden="true" />)}</dt><dd>{money(split.driverGets)}</dd></div>
-        {split.fleet ? <div className="fleet"><dt>{trn("{0} Fleet owner gets {1}%", <i aria-hidden="true" />, split.fleetPct)}</dt><dd>{money(split.fleet)}</dd></div> : null}
         <div className="movera"><dt>{trn("{0} Movera keeps", <i aria-hidden="true" />)}</dt><dd>{money(split.moveraKeeps)}</dd></div>
         {split.driverBonus && split.moveraKeeps < 0 ? <div className="minus" data-testid="split-beyond-commission"><dt>{tr("Movera pays beyond its commission")}</dt><dd>{money(-split.moveraKeeps)}</dd></div> : null}
         <div className="vat"><dt>{trn("VAT included ({0}%, to confirm)", Math.round(split.vatRate * 100))}</dt><dd>{money(split.vat)}</dd></div>

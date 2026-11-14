@@ -151,7 +151,6 @@
 .fee-note { color: #8a5a00 !important; }
 .tip-preview { display: flex; gap: 6px; flex-wrap: wrap; }
 .tip-preview span { padding: 4px 10px; border-radius: 999px; background: #eef5ff; color: var(--dash-blue); font-size: 12px; font-weight: 700; }
-.fleet-share { margin-top: 12px; grid-template-columns: minmax(0, 1fr) 160px; align-items: center; }
 
 /* Fixed routes */
 .routes { display: grid; gap: 10px; }
@@ -498,7 +497,6 @@
   .draft-text { grid-column: 1 / -1; }
   .cat-form { grid-template-columns: 1fr; }
   .price-check { grid-template-columns: 1fr; }
-  .fleet-share { grid-template-columns: 1fr; }
   .state-filters .surge-controls { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {

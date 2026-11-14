@@ -3,8 +3,8 @@ import type { MoneySplit } from "./file.ts";
 import { isLiveData, liveTripOf } from "../live/realData.ts";
 
 /**
- * Cash trips (Round 3, Q23). The driver collects the fare in cash, so Movera's part (commission, app fee,
- * the fleet owner's part) is owed by the driver and taken from the next payout. Tips are paid in the app.
+ * Cash trips (Round 3, Q23). The driver collects the fare in cash, so Movera's part (commission, app fee)
+ * is owed by the driver and taken from the next payout. Tips are paid in the app.
  */
 
 function hash(text: string): number {

@@ -36,17 +36,18 @@ test("taxes: a Swedish company in three countries", () => {
   assert.equal(normalizeTaxRules(null).home, "SE");
 });
 
-test("fleet owners: drivers, rides and the owner's share per zone", () => {
+test("fleet owners: drivers, rides and what the drivers earned (no owner's share, v0.18.88)", () => {
   const rows = fleetRows([
     { id: "D1", fleetId: "F1", zoneId: "Z1", trips: 10, grossMinor: 10_000, netMinor: 8_000, previousTrips: 8, rating: 4.8, online: true },
     { id: "D2", fleetId: "F1", zoneId: "Z2", trips: 30, grossMinor: 30_000, netMinor: 24_000, previousTrips: 20, rating: 4.4, online: false },
     { id: "D3", fleetId: null, zoneId: "Z1", trips: 5, grossMinor: 5_000, netMinor: 4_000, previousTrips: 5, rating: 5, online: true },
-  ], [{ id: "F1", name: "North" }, { id: "F2", name: "Empty" }], (zoneId) => (zoneId === "Z1" ? 5 : 10));
+  ], [{ id: "F1", name: "North" }, { id: "F2", name: "Empty" }]);
   assert.equal(rows.length, 1, "fleets without drivers are left out");
   assert.equal(rows[0].drivers, 2);
   assert.equal(rows[0].online, 1);
   assert.equal(rows[0].trips, 40);
-  assert.equal(rows[0].fleetMinor, 400 + 2_400);
+  assert.equal(rows[0].driverMinor, 8_000 + 24_000);
+  assert.ok(!("fleetMinor" in rows[0]));
   assert.equal(rows[0].perDriverTrips, 20);
   assert.equal(rows[0].rating, 4.5);
 });

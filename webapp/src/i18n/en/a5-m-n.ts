@@ -144,6 +144,7 @@ export const enA5MN = {
   "Movera gives a reservation to a driver": "Movera gives a reservation to a driver",
   "Movera gives a ride to a driver": "Movera gives a ride to a driver",
   "Movera keeps": "Movera keeps",
+  "Movera gets": "Movera gets",
   "Movera offer": "Movera offer",
   "Movera pays {0} more than its commission on this trip.": "Movera pays {0} more than its commission on this trip.",
   "Movera pays beyond its commission": "Movera pays beyond its commission",

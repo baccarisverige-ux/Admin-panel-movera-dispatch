@@ -24,8 +24,8 @@ type Money = { amountMinor: number; currency: string };
 const DIGITS: Record<string, number> = { SEK: 100, EUR: 100, TND: 1000 };
 const major = (money: Money) => money.amountMinor / DIGITS[money.currency]!;
 
-test("the admin pins the contract it carries (0.18.86; S5 J3 landed in 0.18.82)", () => {
-  assert.equal(C.version, "0.18.86");
+test("the admin pins the contract it carries (0.18.88; S5 J3 landed in 0.18.82)", () => {
+  assert.equal(C.version, "0.18.88");
   assert.equal(CONTRACT_VERSION, C.version);
 });
 

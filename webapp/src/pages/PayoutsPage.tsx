@@ -86,11 +86,10 @@ export function PayoutsPage() {
   if (!selected) return <p className="state-line">{tr("No payouts are available.")}</p>;
 
   const driverId = selected.driverId ?? "";
-  const selectedFleet = Boolean((drivers.data ?? []).find((row) => row.id === selected.driverId)?.fleetId);
   const pricingStore = normalizeStore(pricingSlice.value);
   const tripEntries = normalizeTripOps(tripOpsSlice.value).entries;
   const dispatchBook = normalizeDispatchBook(dispatchSlice.value);
-  const selectedCash = cashOwed(trips.data ?? [], driverId, (trip) => moneySplit(trip, zoneBook(pricingStore, trip.zoneId), selectedFleet, tripEntries, liveRules(dispatchBook, trip.zoneId).riderCancel.fees), (trip) => countryOf(trip.zoneId));
+  const selectedCash = cashOwed(trips.data ?? [], driverId, (trip) => moneySplit(trip, zoneBook(pricingStore, trip.zoneId), tripEntries, liveRules(dispatchBook, trip.zoneId).riderCancel.fees), (trip) => countryOf(trip.zoneId));
   const persistedBank = bankReview(finance, driverId);
   const bank = bankDraft?.driverId === driverId ? bankDraft : persistedBank;
   const state = payoutState(finance, selected);
@@ -237,7 +236,7 @@ export function PayoutsPage() {
           >{tr("Mark paid")}</CommandButton>
         </div>
       </article>
-      <PayoutLines record={selected} fleet={selectedFleet} ops={ops} country={countryOfPayout(selected)} money={(minor) => formatMoney(minor, countryOfPayout(selected))} onNotice={setNotice} cash={selectedCash} />
+      <PayoutLines record={selected} ops={ops} country={countryOfPayout(selected)} money={(minor) => formatMoney(minor, countryOfPayout(selected))} onNotice={setNotice} cash={selectedCash} />
       </>
       )}
     </div>

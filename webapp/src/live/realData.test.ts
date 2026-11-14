@@ -34,9 +34,10 @@ test("live: a trip page reads only server facts (places, times, category, fare l
   const route = routeOf(trip);
   assert.equal(route.stops.length, 2);
   assert.ok(Number.isNaN(route.km) && Number.isNaN(route.minutes), "distance and minutes are not on the trip");
-  const split = moneySplit(trip, null, true, []);
+  const split = moneySplit(trip, null, []);
   assert.deepEqual([split.price, split.commission, split.driverGets, split.moveraKeeps], [30000, 6000, 24000, 6000]);
-  assert.ok(Number.isNaN(split.tip) && Number.isNaN(split.promo) && Number.isNaN(split.fleet), "no invented tip, promotion or fleet share");
+  assert.ok(Number.isNaN(split.tip) && Number.isNaN(split.promo), "no invented tip or promotion");
+  assert.ok(!("fleet" in split), "no fleet-owner share (v0.18.88)");
   assert.equal(isCashTrip(trip, "SE"), true);
   assert.deepEqual(cashFigures(split), { collected: 30000, owed: 6000, driverKeeps: 24000 });
   assert.equal(chatOf(trip), null);

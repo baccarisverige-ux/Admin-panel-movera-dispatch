@@ -102,7 +102,7 @@ export const enA9T = {
   "The pickup is outside the event area{0}. Normal rules are used.": "The pickup is outside the event area{0}. Normal rules are used.",
   "The pickup zone": "The pickup zone",
   "The price minus Movera's commission.": "The price minus Movera's commission.",
-  "The ride price minus Movera's commission (and the fleet owner's share), plus the tip.": "The ride price minus Movera's commission (and the fleet owner's share), plus the tip.",
+  "The ride price minus Movera's commission, plus the tip.": "The ride price minus Movera's commission, plus the tip.",
   "The ride shows in Live and in Alerts as “Booked ride soon with no driver”, so you can give it to a driver.": "The ride shows in Live and in Alerts as “Booked ride soon with no driver”, so you can give it to a driver.",
   "The ride shows in Live with an alert, so an admin can pick a driver.": "The ride shows in Live with an alert, so an admin can pick a driver.",
   "The rider asked for a stop": "The rider asked for a stop",

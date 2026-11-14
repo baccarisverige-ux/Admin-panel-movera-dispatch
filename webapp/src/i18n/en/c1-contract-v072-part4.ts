@@ -392,7 +392,6 @@ export const enC1ContractV072Part4 = {
   "Money the driver owes Movera.": "Money the driver owes Movera.",
   "Movera commission 20%": "Movera commission 20%",
   "Other debts (damage, fines)": "Other debts (damage, fines)",
-  "Paid to the driver's fleet owner.": "Paid to the driver's fleet owner.",
   "Published": "Published",
   "Radar, Exclusive and the scheduled ride popup.": "Radar, Exclusive and the scheduled ride popup.",
   "Re-accept": "Re-accept",

@@ -140,8 +140,6 @@ export type MoneySplit = {
   payChange: number;
   vat: number;
   vatRate: number;
-  fleetPct: number;
-  fleet: number;
   riderPaid: number;
   driverGets: number;
   moveraKeeps: number;
@@ -177,8 +175,6 @@ export function liveMoneySplit(trip: DemoRecord, facts: LiveTripFacts): MoneySpl
     payChange: NaN,
     vat: NaN,
     vatRate: NaN,
-    fleetPct: NaN,
-    fleet: NaN,
     riderPaid: split ? split.riderPaid : facts.fare - refunded,
     driverGets: split ? split.driverTotal : facts.driverEarnings ?? NaN,
     moveraKeeps: split ? split.movera : commission,
@@ -191,7 +187,7 @@ export function liveMoneySplit(trip: DemoRecord, facts: LiveTripFacts): MoneySpl
  * `liveCancelFees`: the zone's Live trips table from Dispatch › Rider cancel fees (the one place rider cancel fees are set).
  * Left out, the country's default table is used.
  */
-export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: boolean, entries: readonly Entry[], liveCancelFees?: CancelFeeTable, driverBonusMinor = 0): MoneySplit {
+export function moneySplit(trip: DemoRecord, book: ZoneBook | null, entries: readonly Entry[], liveCancelFees?: CancelFeeTable, driverBonusMinor = 0): MoneySplit {
   const live = liveTripOf(trip);
   if (live) return liveMoneySplit(trip, live);
   const country = countryOf(trip.zoneId);
@@ -226,13 +222,12 @@ export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: bo
   const payChange = done.filter((entry) => entry.kind === "pay").reduce((sum, entry) => sum + (entry.amountMinor ?? 0), 0);
   const vatRate = VAT_RATE[country];
   const vat = Math.round((price * vatRate) / (1 + vatRate));
-  const fleetPct = hasFleet ? book?.fleetCommissionPct ?? 0 : 0;
   const driverRide = ridePrice - commission + payChange;
-  const fleet = Math.round((driverRide * fleetPct) / 100);
   const riderPaid = price - promo + tip - refunded;
-  // The bonus goes to the driver whole (no fleet share) and only when the ride happens; Movera pays it.
+  // The bonus goes to the driver whole and only when the ride happens; Movera pays it. No fleet-owner % (contract
+  // v0.18.88 fleetPayoutWhole): a fleet driver's whole earnings go to his fleet owner, who settles with him outside Movera.
   const driverBonus = state === "charged" || state === "estimate" ? Math.max(0, Math.round(driverBonusMinor)) : 0;
-  const driverGets = driverRide - fleet + tip + driverBonus;
+  const driverGets = driverRide + tip + driverBonus;
   return {
     country,
     state,
@@ -247,11 +242,9 @@ export function moneySplit(trip: DemoRecord, book: ZoneBook | null, hasFleet: bo
     payChange,
     vat,
     vatRate,
-    fleetPct,
-    fleet,
     riderPaid,
     driverGets,
-    moveraKeeps: riderPaid - driverGets - fleet,
+    moveraKeeps: riderPaid - driverGets,
     driverBonus,
   };
 }

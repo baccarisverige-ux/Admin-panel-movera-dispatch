@@ -217,7 +217,6 @@ export const svA6OP: Record<keyof typeof enA6OP, string> = {
   "Papers needed": "Papper som krävs",
   "Parent": "Överordnad",
   "Part of Off the route: the trip takes much longer than the time shown at booking.": "Del av Utanför rutten: resan tar mycket längre tid än tiden som visades vid bokningen.",
-  "Part of their drivers' earnings that goes to the fleet owner in {0}": "Andel av förarnas intäkter som går till flottägaren i {0}",
   "Parts": "Delar",
   "Parts of the panel that showed alerts before this section. Off by default, so every number and sound comes from Alerts.": "Delar av panelen som visade larm före den här delen. Av som standard, så att varje siffra och varje ljud kommer från Larm.",
   "Pass an alert to another admin": "Skicka ett larm vidare till en annan admin",

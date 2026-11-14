@@ -5,7 +5,6 @@ export const enB8DriverMoneySupplyDemand = {
   "Share of the fare": "Share of the fare",
   "Added money": "Added money",
   "Tip (apart)": "Tip (apart)",
-  "Fleet owner's share": "Fleet owner's share",
   "No trip record for this ride yet, so the split is not known. The fare on the Trip tab is an estimate.": "No trip record for this ride yet, so the split is not known. The fare on the Trip tab is an estimate.",
   "Estimate until the ride ends.": "Estimate until the ride ends.",
   "Pickup pay is not known for this ride.": "Pickup pay is not known for this ride.",

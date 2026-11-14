@@ -112,7 +112,6 @@ export type ZoneBook = {
   smart: SmartSurge;
   scheduled: ScheduledSurge[];
   commission: Record<string, number>;
-  fleetCommissionPct: number;
   /** Driver pickup pay, paid by Movera from its commission. */
   pickupPay: PickupPay;
 };
@@ -234,6 +233,33 @@ export function roundTo(value: number, step: number): number {
 /** Format a major-unit amount in the zone's currency, with the one formatter (C-23). */
 export function money(value: number, id: MarketId): string {
   return formatMarketMoney(Math.round(value * market(id).minorUnits), id);
+}
+
+/**
+ * pct % of a minor-unit amount, exact decimal half_up to a whole minor unit (contract.json#pricing.halfUp), never float:
+ * 5500 öre at 0.7 % = 38.5 öre exact -> 39 (float `Math.floor(x * pct / 100 + 0.5)` gives 38).
+ */
+export function pctOfMinorHalfUp(minor: number, pct: number): number {
+  const scale = 10_000n;
+  const n = BigInt(Math.round(minor)) * BigInt(Math.round(pct * Number(scale)));
+  const d = 100n * scale;
+  const twice = 2n * n + d;
+  const den = 2n * d;
+  const q = twice / den;
+  return Number(twice % den < 0n ? q - 1n : q);
+}
+
+/**
+ * The commission card's two result lines, amounts only in major units (owner 2026-11-14: "simply write only how much in
+ * amount driver get and how much movera get"; contract v0.18.88 commissionSteps.adminCalculator.rule): the driver gets
+ * the price minus the commission; Movera gets the commission + the app fee as one amount.
+ */
+export function commissionCardLines(price: number, commissionPct: number, appFeePct: number, id: MarketId): { driverGets: number; moveraGets: number } {
+  const unit = market(id).minorUnits;
+  const priceMinor = Math.round(price * unit);
+  const commission = pctOfMinorHalfUp(priceMinor, commissionPct);
+  const appFee = pctOfMinorHalfUp(priceMinor, appFeePct);
+  return { driverGets: (priceMinor - commission) / unit, moveraGets: (commission + appFee) / unit };
 }
 
 /** An amount in Swedish kronor in a market's own money, with the same rate and rounding the default prices use. */
@@ -361,7 +387,6 @@ export function defaultZoneBook(zoneId: string, categories: readonly CategoryDef
     smart: defaultSmartSurge(),
     scheduled: [],
     commission: Object.fromEntries(categories.map((category) => [category.id, category.id === "premium" ? 22 : 20])),
-    fleetCommissionPct: 5,
     pickupPay: defaultPickupPay(categories.map((category) => category.id), factor),
   };
 }
@@ -462,7 +487,6 @@ export function validateZoneBook(book: ZoneBook, categories: readonly CategoryDe
     if (!Number.isFinite(commission) || commission < 0 || commission > 60) add(`commission.${category.id}`, `${category.label}: commission must be between 0 and 60%.`);
   }
   problems.push(...validatePickupPay(book.pickupPay, categories));
-  if (book.fleetCommissionPct < 0 || book.fleetCommissionPct > 30) add("commission.fleet", "Fleet owner share must be between 0 and 30%.");
   const minTrip = book.fees.minTripMeters;
   if (!Number.isInteger(minTrip) || minTrip < MIN_TRIP_METERS.min || minTrip > MIN_TRIP_METERS.max) add("fees.minTripMeters", `Shortest trip must be whole metres from ${MIN_TRIP_METERS.min} to ${MIN_TRIP_METERS.max}.`);
   for (const [key, value] of Object.entries(book.fees)) {
@@ -574,7 +598,6 @@ export function largePriceChanges(published: ZoneBook, draft: ZoneBook, categori
       }
     }
   }
-  if (isLargePriceChange(published.fleetCommissionPct, draft.fleetCommissionPct)) lines.push(changeText(`${where}Fleet commission`, published.fleetCommissionPct, draft.fleetCommissionPct, "%"));
   for (const profile of draft.smart.profiles) {
     const before = published.smart.profiles.find((item) => item.id === profile.id);
     if (before && isLargePriceChange(before.cap, profile.cap)) lines.push(changeText(`${where}Surge cap ${profile.name}`, before.cap, profile.cap, "×"));
@@ -607,7 +630,6 @@ export function diffBooks(before: ZoneBook, after: ZoneBook, categories: readonl
     for (const row of PRICE_ROWS) if (a[row.field] !== b[row.field]) lines.push(`${category.label} · ${row.label} ${short(a[row.field])} → ${short(b[row.field])}`);
     if (before.commission[category.id] !== after.commission[category.id]) lines.push(`${category.label} · commission ${before.commission[category.id]}% → ${after.commission[category.id]}%`);
   }
-  if (before.fleetCommissionPct !== after.fleetCommissionPct) lines.push(`Fleet owner share ${before.fleetCommissionPct}% → ${after.fleetCommissionPct}%`);
   const feeLabels: Record<string, string> = { airportPickup: "Airport pickup fee", airportDropoff: "Airport drop-off fee", reservationFee: "Reservation fee", cleaningFee: "Cleaning fee", tollsPassThrough: "Tolls added to fare", rounding: "Rounding", minTripMeters: "Shortest trip (m)" };
   for (const key of Object.keys(feeLabels) as (keyof ZoneFees)[]) {
     if (before.fees[key] !== after.fees[key]) lines.push(`${feeLabels[key]} ${String(before.fees[key])} → ${String(after.fees[key])}`);
@@ -698,7 +720,6 @@ export function copyInto(source: ZoneBook, target: ZoneBook, parts: readonly Cop
   }
   if (parts.includes("commission")) {
     next.commission = { ...source.commission };
-    next.fleetCommissionPct = source.fleetCommissionPct;
   }
   if (parts.includes("pickup")) {
     next.pickupPay = convertPickupPay(source.pickupPay, (value) => (from === to ? value : roundTo(value * rate, 0.01)));

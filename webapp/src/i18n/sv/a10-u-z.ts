@@ -153,7 +153,6 @@ export const svA10UZ: Record<keyof typeof enA10UZ, string> = {
   "Weekend": "Helg",
   "Weekly summary": "Veckosammanfattning",
   "Welcome to Movera": "Välkommen till Movera",
-  "What a fleet owner gets from their drivers' rides, after commission.": "Vad en flottägare får från förarnas resor, efter provision.",
   "What a new driver must upload in this country. The driving licence is always needed.": "Vad en ny förare måste ladda upp i det här landet. Körkortet krävs alltid.",
   "What an admin picks when cancelling a trip from Trips. The codes are fixed by the shared contract.": "Det en admin väljer när en resa avbokas från Resor. Koderna bestäms av det gemensamma kontraktet.",
   "What changed": "Vad som ändrades",

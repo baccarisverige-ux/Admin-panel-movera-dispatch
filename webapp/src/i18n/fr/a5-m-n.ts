@@ -146,6 +146,7 @@ export const frA5MN: Record<keyof typeof enA5MN, string> = {
   "Movera gives a reservation to a driver": "Movera donne une réservation à un chauffeur",
   "Movera gives a ride to a driver": "Movera donne une course à un chauffeur",
   "Movera keeps": "Movera garde",
+  "Movera gets": "Movera reçoit",
   "Movera offer": "Offre Movera",
   "Movera pays {0} more than its commission on this trip.": "Movera paie {0} de plus que sa commission sur cette course.",
   "Movera pays beyond its commission": "Movera paie au-delà de sa commission",
