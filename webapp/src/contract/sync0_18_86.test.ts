@@ -11,8 +11,8 @@ import { CONTRACT_VERSION } from "../domain/contract.ts";
 
 const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
 
-test("the admin pins the contract it carries (0.18.86; J5b commission steps landed in 0.18.86)", () => {
-  assert.equal(C.version, "0.18.86");
+test("the admin pins the contract it carries (0.18.88; J5b commission steps landed in 0.18.86)", () => {
+  assert.equal(C.version, "0.18.88");
   assert.equal(CONTRACT_VERSION, C.version);
   assert.ok(C.commissionSteps, "contract.json#commissionSteps is in the copy");
   assert.ok(readFileSync(new URL("../../../contracts/fixtures/commission_steps.json", import.meta.url), "utf8").length > 0);

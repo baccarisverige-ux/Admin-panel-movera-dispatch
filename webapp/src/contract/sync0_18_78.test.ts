@@ -21,8 +21,8 @@ function schemaBlock(name: string): string {
   return next < 0 ? rest : rest.slice(0, next + 1);
 }
 
-test("the admin pins the contract it carries (0.18.86; L78 landed in 0.18.78)", () => {
-  assert.equal(C.version, "0.18.86");
+test("the admin pins the contract it carries (0.18.88; L78 landed in 0.18.78)", () => {
+  assert.equal(C.version, "0.18.88");
   assert.equal(CONTRACT_VERSION, C.version);
 });
 
