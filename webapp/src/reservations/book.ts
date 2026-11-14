@@ -383,11 +383,13 @@ export function raiseFare(
   actorId: string,
   nowIso: string,
   unit = "",
+  /** BQ-A30: the highest raise as shown on live, with its currency's decimals (SEK 2, TND 3); the demo leaves it out. */
+  maxText?: string,
 ): { book: ReservationBook; error?: string } {
   const current = reservationOps(book, record);
   if (reservationClosed(record.status) || record.driverId) return { book, error: "Only a ride without a driver can get a higher fare." };
   if (!Number.isFinite(amount) || amount <= 0) return { book, error: "Write a raise above 0." };
-  if (amount > max) return { book, error: `The raise can be at most ${max}${unit ? ` ${unit}` : ""}.` };
+  if (amount > max) return { book, error: `The raise can be at most ${maxText ?? `${max}${unit ? ` ${unit}` : ""}`}.` };
   return {
     book: withOps(book, record, {
       ...current,

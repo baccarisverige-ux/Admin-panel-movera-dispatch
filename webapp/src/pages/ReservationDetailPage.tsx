@@ -41,6 +41,10 @@ import { tr, trn } from "../i18n";
 import { categoryName } from "../riders/profile";
 import { liveReservationMoney } from "../reservations/raiseMoney";
 import { formatMoney } from "../markets/markets";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+import { ErrorLine } from "../live/ui";
+import { liveRaise, liveRaiseOpen } from "../reservations/liveRaise";
 
 export function ReservationDetailPage() {
   const { id = "" } = useParams();
@@ -70,6 +74,11 @@ export function ReservationDetailPage() {
   const [returnDisambiguation, setReturnDisambiguation] = useState<"earlier" | "later">("earlier");
   const [notice, setNotice] = useState("");
   const [raiseText, setRaiseText] = useState("");
+  // BQ-A30: on live "Raise the fare" posts to the server (POST /admin/trips/{id}/driver-bonus), never the demo book.
+  const liveSession = useLiveSessionMaybe();
+  const queryClient = useQueryClient();
+  const [raiseBusy, setRaiseBusy] = useState(false);
+  const [raiseFailure, setRaiseFailure] = useState<unknown>(null);
 
   if (reservations.isLoading || drivers.isLoading || vehicles.isLoading || store.loading) {
     return <p className="state-line">{tr("Loading reservation.")}</p>;
@@ -103,7 +112,10 @@ export function ReservationDetailPage() {
   const isOpen = ["waiting", "booked", "assigned"].includes(record.status);
   const canAssign = canIntervene && pickupFuture && ["waiting", "booked"].includes(record.status) && candidates.length > 0 && ask?.state !== "waiting";
   const canAnswer = canIntervene && ask?.state === "waiting" && ["waiting", "booked"].includes(record.status);
-  const canRaise = canIntervene && zoneRules.raiseFare && pickupFuture && ["waiting", "booked"].includes(record.status) && !record.driverId;
+  // BQ-A30: a live booked ride uses the server's statuses (requested / searching / offered = no driver yet), as LiveReservations.
+  const liveRaising = Boolean(liveSession) && (isLiveData() || Boolean(record.live));
+  const raiseOpen = liveRaising ? liveRaiseOpen(record) : ["waiting", "booked"].includes(record.status) && !record.driverId;
+  const canRaise = canIntervene && zoneRules.raiseFare && pickupFuture && raiseOpen;
   const canUnassign = canIntervene && record.status === "assigned" && Boolean(record.driverId);
   const canCancel = canIntervene && ["waiting", "booked", "assigned"].includes(record.status);
   const canNoShow = canCancel && !pickupFuture;
@@ -120,6 +132,25 @@ export function ReservationDetailPage() {
   const acceptPrepared = answerAsk(book, record, "accepted", nowIso);
   const declinePrepared = answerAsk(book, record, "declined", nowIso);
   const raisePrepared = raiseFare(book, record, raiseAmount, raiseMax, agent?.id ?? "", nowIso, unit);
+  const liveRaisePrepared = liveRaising ? liveRaise(book, record, raiseText, raiseMax, country, agent?.id ?? "", nowIso) : null;
+  const raiseError = liveRaisePrepared ? liveRaisePrepared.error : raisePrepared.error;
+  async function postLiveRaise() {
+    const call = liveRaisePrepared?.call;
+    if (!liveSession || !call) return;
+    setRaiseBusy(true);
+    setRaiseFailure(null);
+    try {
+      await liveSession.client.post(call.path, call.body);
+      setNotice(tr("Driver fare raised by {0}. Drivers see the new fare.", [show(raiseAmount)]));
+      setRaiseText("");
+      void queryClient.invalidateQueries({ queryKey: ["records", "reservations"] });
+      void queryClient.invalidateQueries({ queryKey: ["live", "reservations"] });
+    } catch (failure) {
+      setRaiseFailure(failure);
+    } finally {
+      setRaiseBusy(false);
+    }
+  }
   const show = (value: number) => formatMajor(value, country);
   // BQ-A26 (owner rule R2): on live the box shows the server's fare and moveraKeepsNow only, never fare × %, no sums.
   const liveMoney = liveReservationMoney(record, isLiveData());
@@ -291,7 +322,7 @@ export function ReservationDetailPage() {
         )}
       </article>
 
-      {isOpen && !record.driverId ? (
+      {(liveRaising ? raiseOpen : isOpen && !record.driverId) ? (
         <article className="panel" data-testid="reservation-raise">
           <h3>{tr("Raise the driver's fare")}</h3>
           {!zoneRules.raiseFare ? <p>{trn("Raising the fare is off in this zone. Change it in {0}.", <Link to={`/dispatch?zone=${record.zoneId}&tab=reservations`}>{tr("Dispatch › Reservations")}</Link>)}</p> : (
@@ -303,8 +334,20 @@ export function ReservationDetailPage() {
               {liveMoney ? <p className="fine-print" data-testid="reservation-raise-rule">{tr("If the raise is more than Movera's commission, Movera pays the difference.")}</p> : null}
               {showSums && raiseAmount > 0 && split.beyond > 0 ? <p className="resv-raise over" role="status">{trn("Goes {0} beyond Movera's commission. Movera pays the difference.", show(split.beyond))}</p> : null}
               {showSums && raiseAmount > 0 && split.beyond === 0 ? <p className="resv-raise" role="status">{trn("All from Movera's commission. {0} of it is left.", show(split.commission - split.fromCommission))}</p> : null}
-              {raiseText && raisePrepared.error ? <p className="state-line" role="alert">{raisePrepared.error}</p> : null}
+              {raiseText && raiseError ? <p className="state-line" role="alert">{raiseError}</p> : null}
+              {raiseFailure ? <ErrorLine error={raiseFailure} onRetry={() => setRaiseFailure(null)} /> : null}
               <div className="actions">
+                {liveRaising ? (
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    data-command="admin.reservation.raise"
+                    data-testid="reservation-raise-live"
+                    disabled={raiseBusy || !canRaise || !raiseText || Boolean(raiseError) || !liveRaisePrepared?.call}
+                    title={!canRaise ? (!canIntervene ? tr("Your role is read-only.") : tr("Only a future ride without a driver can get a higher fare.")) : raiseError}
+                    onClick={() => void postLiveRaise()}
+                  >{tr("Raise the fare")}</button>
+                ) : (
                 <CommandButton
                   command="admin.reservation.raise"
                   className="primary-btn"
@@ -325,6 +368,7 @@ export function ReservationDetailPage() {
                     setRaiseText("");
                   }}
                 >{tr("Raise the fare")}</CommandButton>
+                )}
               </div>
             </>
           )}
