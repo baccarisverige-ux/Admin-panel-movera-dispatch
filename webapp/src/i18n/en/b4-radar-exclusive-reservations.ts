@@ -93,4 +93,15 @@ export const enB4RadarExclusiveReservations = {
   "Open booked rides per rider": "Open booked rides per rider",
   "Open booked rides per rider, at most": "Open booked rides per rider, at most",
   "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.": "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.",
+  // BQ-V21 + BQ-V22 (SAFETY): Dispatch › Drivers › Rest after long work; Dispatch › Rides › Rider cancels: smart check.
+  "Heading to the pickup = at least": "Heading to the pickup = at least",
+  "Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.": "Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.",
+  "Heading to the pickup (%)": "Heading to the pickup (%)",
+  "Free cancel when not heading for": "Free cancel when not heading for",
+  "Not heading to the pickup this many minutes in a row: the rider cancels for free and the driver gets the notice. Usual value {0} min.": "Not heading to the pickup this many minutes in a row: the rider cancels for free and the driver gets the notice. Usual value {0} min.",
+  "Not heading minutes": "Not heading minutes",
+  "Only driving counts: to the pickup and on trip. Online waiting does not count.": "Only driving counts: to the pickup and on trip. Online waiting does not count.",
+  "This many hours offline in a row start the driving time again from zero.": "This many hours offline in a row start the driving time again from zero.",
+  "Heading to the pickup at least": "Heading to the pickup at least",
+  "Not heading to the pickup for": "Not heading to the pickup for",
 } as const;

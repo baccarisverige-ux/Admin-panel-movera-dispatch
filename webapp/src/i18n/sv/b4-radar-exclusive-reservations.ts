@@ -95,4 +95,15 @@ export const svB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   "Open booked rides per rider": "Öppna bokade resor per resenär",
   "Open booked rides per rider, at most": "Öppna bokade resor per resenär, högst",
   "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.": "Exempel: vid 3 måste en resenär med 3 bokade resor som inte är klara avboka en innan hen bokar en ny. Direktresor räknas inte.",
+  // BQ-V21 + BQ-V22 (SAFETY): Dispatch › Drivers › Rest after long work; Dispatch › Rides › Rider cancels: smart check.
+  "Heading to the pickup = at least": "Kör mot upphämtningen = minst",
+  "Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.": "Kontrolleras var 30:e sekund från accept tills föraren är framme: föraren ska komma minst så här stor del så mycket närmare upphämtningen som normal hastighet på vägen tillåter. Vanligt värde {0} %.",
+  "Heading to the pickup (%)": "Kör mot upphämtningen (%)",
+  "Free cancel when not heading for": "Gratis avbokning när föraren inte kör mot upphämtningen i",
+  "Not heading to the pickup this many minutes in a row: the rider cancels for free and the driver gets the notice. Usual value {0} min.": "Kör inte mot upphämtningen så här många minuter i rad: resenären avbokar gratis och föraren får meddelandet. Vanligt värde {0} min.",
+  "Not heading minutes": "Minuter utan att köra mot upphämtningen",
+  "Only driving counts: to the pickup and on trip. Online waiting does not count.": "Bara körning räknas: till upphämtningen och under resan. Väntan online räknas inte.",
+  "This many hours offline in a row start the driving time again from zero.": "Så här många timmar offline i rad nollställer körtiden.",
+  "Heading to the pickup at least": "Kör mot upphämtningen minst",
+  "Not heading to the pickup for": "Kör inte mot upphämtningen i",
 };

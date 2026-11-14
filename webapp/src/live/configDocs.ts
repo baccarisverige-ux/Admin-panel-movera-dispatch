@@ -262,10 +262,11 @@ export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc
       continue;
     }
     if (key === "headingCheck") {
-      // v0.18.35 FIX JOB 4: the panel owns only the notice and reassign (always false, owner Q-A); the heading numbers stay the server's.
+      // v0.18.35 FIX JOB 4: the panel owns the notice and reassign (always false, owner Q-A).
+      // BQ-V22 (owner G5-8 "80 % default, admin can change"): and the heading numbers; `on` stays the server's.
       const own = (server["headingCheck"] ?? {}) as Doc;
       const made = built["headingCheck"] as Doc;
-      next["headingCheck"] = { ...own, reassign: false, notice: made["notice"], noticeEveryMin: made["noticeEveryMin"] };
+      next["headingCheck"] = { ...own, headingPct: made["headingPct"], notHeadingMinutes: made["notHeadingMinutes"], reassign: false, notice: made["notice"], noticeEveryMin: made["noticeEveryMin"] };
       continue;
     }
     next[key] = structuredClone(built[key]);

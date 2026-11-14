@@ -576,13 +576,16 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
       scheduled: codes(country.cancelReasons.groups.scheduled),
       noShow: [country.cancelReasons.noShow.code],
     },
-    // v0.18.13 (contract.json#drivingLimits): resetAfterOfflineHours has no admin control yet (backlog): the contract default 6.
-    drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restHours * 60, resetAfterOfflineHours: 6, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
-    // v0.18.13 (contract.json#pickupWaiting.headingCheck, G5-8): on / headingPct / notHeadingMinutes have no admin control
-    // yet (backlog): the contract defaults, and publishing keeps the server's own values (configDocs withOwned).
+    // v0.18.13 (contract.json#drivingLimits). BQ-V21 (decisions/driving-time-limits.md:2-4, owner "12 hours driving … not
+    // online time" + "6 hours offline so reset all time"): per country, Dispatch › Drivers › Rest after long work —
+    // Work hours = maxHoursPerDay (default 12), Rest hours = resetAfterOfflineHours (default 6; before this always 6).
+    drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restHours * 60, resetAfterOfflineHours: country.rest.restHours, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
+    // v0.18.13 (contract.json#pickupWaiting.headingCheck, G5-8). BQ-V22 (decisions/driver-g5.md:9,16 "80 % default, admin
+    // can change"): headingPct / notHeadingMinutes per zone from Dispatch › Rides › Rider cancels: smart check. `on` has no
+    // admin control (always on, publishing keeps the server's own value; configDocs withOwned).
     // v0.18.35 (owner Q-A, FIX JOB 4): reassign is always false (a live ride is never taken back; read-only in the panel);
     // the "not driving to the rider" notice is Dispatch › Book later › Late driver.
-    headingCheck: { on: true, headingPct: 80, notHeadingMinutes: 2, reassign: false, notice: zone.reservation.booking.notHeadingNotice, noticeEveryMin: zone.reservation.booking.notHeadingNoticeEveryMin },
+    headingCheck: { on: true, headingPct: zone.riderCancel.headingPct, notHeadingMinutes: zone.riderCancel.notHeadingMinutes, reassign: false, notice: zone.reservation.booking.notHeadingNotice, noticeEveryMin: zone.reservation.booking.notHeadingNoticeEveryMin },
     rideCheck: rideCheck(base, state),
     routeChange: routeChange(base),
     texts: driverTexts(base, state),

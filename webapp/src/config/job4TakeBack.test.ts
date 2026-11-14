@@ -54,11 +54,12 @@ test("Late driver: the values come back from the live driver document; bad ones 
   assert.deepEqual([bad.reservation.booking.notHeadingNotice, bad.reservation.booking.notHeadingNoticeEveryMin], [true, 1]);
 });
 
-test("publishing Dispatch writes only the notice parts of headingCheck (the server's own heading numbers stay); reassign is always false", () => {
+// BQ-V22 (owner G5-8 "80 % default, admin can change"): the heading numbers are the admin's now (safetySettings.test.ts); `on` stays the server's.
+test("publishing Dispatch writes the notice parts and the admin's heading numbers of headingCheck; reassign is always false", () => {
   assert.ok(OWNED.dispatch.driver.includes("headingCheck"));
   const server = { headingCheck: { on: true, headingPct: 90, notHeadingMinutes: 3, reassign: true } };
   const built = { headingCheck: { on: true, headingPct: 80, notHeadingMinutes: 2, reassign: false, notice: false, noticeEveryMin: 2 } };
-  assert.deepEqual(withOwned(server, built, ["headingCheck"]).headingCheck, { on: true, headingPct: 90, notHeadingMinutes: 3, reassign: false, notice: false, noticeEveryMin: 2 });
+  assert.deepEqual(withOwned(server, built, ["headingCheck"]).headingCheck, { on: true, headingPct: 80, notHeadingMinutes: 2, reassign: false, notice: false, noticeEveryMin: 2 });
 });
 
 test("alert kind booked_taken_back is in the Dispatch group, like the contract", () => {

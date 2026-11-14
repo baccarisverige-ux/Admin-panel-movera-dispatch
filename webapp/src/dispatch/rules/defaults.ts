@@ -1,7 +1,7 @@
 import { MARKETS, zoneById, type MarketId, type MarketZone } from "../../markets/markets.ts";
 import contract from "../../../../contracts/contract.json" with { type: "json" };
 import { fromSek } from "../../pricing/zonePricing.ts";
-import { CONFIG_DEFAULTS } from "../../config/zoneDefaults.ts";
+import { CONFIG_DEFAULTS, headingValue } from "../../config/zoneDefaults.ts";
 import { RAISE_MAX_FACTOR_DEFAULT } from "../offerRules.ts";
 import { cancelFeeDefaults, completeCancelFees, legacyCancelFees } from "../cancelFees.ts";
 import { CANCEL_RATE_LIMIT_DEFAULT, cancelReasonsDefault, completeCancelReasons, completeExclusiveReasons, completeOfferCard, completePickupWait, exclusiveReasonsDefault, offerCardDefault, pickupWaitDefault } from "../offers.ts";
@@ -95,7 +95,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     favourite: { on: true, maxKm: 4, waitSec: 15 },
     waiting: waitingDefault(),
     driverCancel: { on: true, commissionCutPct: 5 },
-    riderCancel: { on: true, closerPct: 25, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live"), driverSharePct: 100, earlyEnd: { ...EARLY_END_DEFAULT } },
+    riderCancel: { on: true, closerPct: 25, priority: true, priorityMin: 10, fees: cancelFeeDefaults("live"), driverSharePct: 100, earlyEnd: { ...EARLY_END_DEFAULT }, ...CONFIG_DEFAULTS.headingCheck },
     extras: EXTRAS.map((extra) => ({ id: extra.id, on: true, badge: true })),
     longTripKm: 50,
     // Owner Q39: 3 stops at most by default (contract.json#configDefaults.maxStops).
@@ -364,6 +364,9 @@ export function complete(zoneId: string, stored: Partial<ZoneDispatch> | undefin
   const share = oldCancel.driverSharePct;
   riderCancel.driverSharePct = typeof share === "number" && share >= 0 && share <= 100 ? share : 100;
   riderCancel.earlyEnd = completeEarlyEnd(oldCancel.earlyEnd);
+  // BQ-V22: the heading check numbers (older saves have none → 80 % / 2 min).
+  riderCancel.headingPct = headingValue("headingPct", oldCancel.headingPct);
+  riderCancel.notHeadingMinutes = headingValue("notHeadingMinutes", oldCancel.notHeadingMinutes);
   merged.riderCancel = riderCancel;
   merged.rideCheck = completeRideCheck(base.rideCheck, stored.rideCheck);
   merged.destinationMode = completeDestinationMode(stored.destinationMode);

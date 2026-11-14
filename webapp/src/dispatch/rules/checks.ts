@@ -6,6 +6,7 @@ import { destinationModeIssues, nextTripsIssues } from "../tripRules.ts";
 import { tr, trx } from "../../i18n/core.ts";
 import { type OfferMode, type ReservationStep, RIDE_TYPES, PICKUP_MOVE_MAX_METERS, RESERVATION_STEP_LABEL, BOOKING_WINDOW_DEFAULT, BOOKING_LIMITS, MAX_TRIP_KM_LIMIT, BOOKING_LABELS, type ReservationRules, type ZoneDispatch, type CountryDispatch, type DriverGroup, arrivedDistanceIssues } from "./model.ts";
 import { raiseCap, countryOfZone, rideCheckIssues } from "./defaults.ts";
+import { HEADING_RANGE } from "../../config/zoneDefaults.ts";
 
 /** Dispatch rules, part: Save checks and the reservation timeline (was rules.ts lines 957–1206). rules.ts re-exports everything; import from "../rules.ts" as before. */
 /** Problems that stop a save. Empty means the rules are fine. */
@@ -69,6 +70,9 @@ export function zoneIssues(zone: ZoneDispatch, categories: readonly FeeCategory[
   if (zone.driverCancel.on && (zone.driverCancel.commissionCutPct < 0 || zone.driverCancel.commissionCutPct > 30)) issues.push("Driver cancels: lower commission must be 0 to 30%.");
   if (zone.riderCancel.on && (zone.riderCancel.closerPct < 5 || zone.riderCancel.closerPct > 100)) issues.push("Rider cancels: \"came closer\" must be 5 to 100%.");
   if (zone.riderCancel.on) issues.push(...cancelFeeIssues(zone.riderCancel.fees, "live", categories));
+  // BQ-V22 (owner G5-8): the server's ranges for DriverAppConfig.headingCheck.
+  if (!(Number.isInteger(zone.riderCancel.headingPct) && zone.riderCancel.headingPct >= HEADING_RANGE.headingPct[0] && zone.riderCancel.headingPct <= HEADING_RANGE.headingPct[1])) issues.push("Heading to the pickup must be 50 to 100%.");
+  if (!(Number.isInteger(zone.riderCancel.notHeadingMinutes) && zone.riderCancel.notHeadingMinutes >= HEADING_RANGE.notHeadingMinutes[0] && zone.riderCancel.notHeadingMinutes <= HEADING_RANGE.notHeadingMinutes[1])) issues.push("Not heading to the pickup must be 1 to 30 minutes.");
   issues.push(...arrivedDistanceIssues(zone.riderCancel.earlyEnd));
   if (zone.stops.on && (zone.stops.max < 1 || zone.stops.max > 5)) issues.push("Stops: max stops must be 1 to 5.");
   if (!Number.isInteger(zone.stops.answerSeconds) || zone.stops.answerSeconds < 15 || zone.stops.answerSeconds > 300) issues.push("Route change: the driver's time to answer must be 15 to 300 s.");
