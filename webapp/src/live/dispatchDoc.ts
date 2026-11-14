@@ -5,6 +5,7 @@
 import { completeBookingWindow, completeEarlyEnd, RIDE_CHECK_LIMITS, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
 import { headingValue } from "../config/zoneDefaults.ts";
+import { AUTO_ARRIVE_DEFAULT_METERS, LEAVE_DEFAULT_METERS, validAutoArrive } from "../dispatch/offerRules.ts";
 import { validPickupMove, validRaiseFactor, validSamePoint } from "../dispatch/offerRules.ts";
 
 type Doc = Record<string, unknown>;
@@ -77,6 +78,10 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   // v0.18.7 (G5 Q2): "Cancel after the driver arrived counts as a no-show" as the zone's drivers get it (default on).
   const afterArrived = (driver?.["waiting"] as { cancelAfterArrivedIsNoShow?: unknown } | undefined)?.cancelAfterArrivedIsNoShow;
   if (typeof afterArrived === "boolean") zone.pickupWait = { ...zone.pickupWait, cancelAfterArrivedIsNoShow: afterArrived };
+  // v0.18.93 (job C9, contract.json#autoArrive): the auto-arrive and leave distances as the server reads them (a bad pair: defaults).
+  const fence = driver?.["waiting"] as { autoArriveMeters?: unknown; leaveMeters?: unknown } | undefined;
+  const pair = validAutoArrive(fence?.autoArriveMeters ?? AUTO_ARRIVE_DEFAULT_METERS, fence?.leaveMeters ?? LEAVE_DEFAULT_METERS);
+  if (fence && (fence.autoArriveMeters !== undefined || fence.leaveMeters !== undefined)) zone.pickupWait = { ...zone.pickupWait, ...(pair ?? { autoArriveMeters: AUTO_ARRIVE_DEFAULT_METERS, leaveMeters: LEAVE_DEFAULT_METERS }) };
   // v0.18.7 (G5 item 4): the pickup move limit the server checks (booking.maxPickupMoveMeters, 0–2000; migration 0041 moved 500 to 200).
   const move = validPickupMove((driver?.["booking"] as { maxPickupMoveMeters?: unknown } | undefined)?.maxPickupMoveMeters);
   if (move !== null) zone.pickupMove = { maxMeters: move };

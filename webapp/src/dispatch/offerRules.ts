@@ -91,3 +91,31 @@ const CANCEL_AFTER_ARRIVED_TEXT: Record<AppLanguage, string> = CANCEL_AFTER_ARRI
 export function cancelAfterArrivedText(language: AppLanguage = currentLanguage()): string {
   return CANCEL_AFTER_ARRIVED_TEXT[language] ?? CANCEL_AFTER_ARRIVED_TEXT.en;
 }
+
+/**
+ * v0.18.93 (job C9, contract.json#autoArrive; owner 2026-11-02 review Q3 "Both: auto + button", Rules
+ * decisions/driver-g7.md:83-84): the server marks the driver arrived within DriverAppConfig.waiting.autoArriveMeters of
+ * the pickup (default 100 m, 30–300) and stops the waiting clock while he is farther than waiting.leaveMeters (default
+ * 200 m, 100–2000, above autoArriveMeters), per zone or the country standard. Read from the contract, never retyped.
+ */
+const AUTO_ARRIVE = contract.autoArrive.settings;
+export const AUTO_ARRIVE_DEFAULT_METERS: number = AUTO_ARRIVE.arriveMeters.default;
+export const LEAVE_DEFAULT_METERS: number = AUTO_ARRIVE.leaveMeters.default;
+export const AUTO_ARRIVE_RANGE = AUTO_ARRIVE.arriveMeters.range as [number, number];
+export const LEAVE_RANGE = AUTO_ARRIVE.leaveMeters.range as [number, number];
+const wholeIn = (value: unknown, [min, max]: [number, number]): value is number => typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
+
+/** The pair as the server reads it: a bad value or leave not above arrive takes the defaults (100 / 200). */
+export function validAutoArrive(arrive: unknown, leave: unknown): { autoArriveMeters: number; leaveMeters: number } | null {
+  if (!wholeIn(arrive, AUTO_ARRIVE_RANGE) || !wholeIn(leave, LEAVE_RANGE) || leave <= arrive) return null;
+  return { autoArriveMeters: arrive, leaveMeters: leave };
+}
+
+/** The problems the server would refuse with 400 invalid_auto_arrive_distance (English keys, shown through tr). */
+export function autoArriveIssues(arrive: number, leave: number): string[] {
+  const issues: string[] = [];
+  if (!wholeIn(arrive, AUTO_ARRIVE_RANGE)) issues.push(`Waiting at pickup: "Auto arrived within" must be whole metres from ${AUTO_ARRIVE_RANGE[0]} to ${AUTO_ARRIVE_RANGE[1]}.`);
+  if (!wholeIn(leave, LEAVE_RANGE)) issues.push(`Waiting at pickup: "Waiting stops beyond" must be whole metres from ${LEAVE_RANGE[0]} to ${LEAVE_RANGE[1]}.`);
+  if (leave <= arrive) issues.push('Waiting at pickup: "Waiting stops beyond" must be more than "Auto arrived within".');
+  return issues;
+}

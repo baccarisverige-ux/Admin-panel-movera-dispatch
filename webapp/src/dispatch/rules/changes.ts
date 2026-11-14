@@ -64,6 +64,7 @@ Object.assign(LABELS, {
   "bookedNext.on": "Booked ride for a driver on a trip", "bookedNext.withinMin": "Driver on a trip can get a booked ride starting within (min)",
     "pickupWait.farPickupOn": "Rule for far pickups", "pickupWait.farPickupKm": "Far pickup from",
     "pickupWait.cancelAfterArrivedIsNoShow": "Cancel after the driver arrived counts as a no-show",
+    "pickupWait.autoArriveMeters": "Auto arrived within", "pickupWait.leaveMeters": "Waiting stops beyond",
 });
 for (const reason of EXCLUSIVE_REASON_LIST) {
   LABELS[`exclusiveReasons.${reason.id}.text`] = `Exclusive reason (${reason.when.toLowerCase()})`;

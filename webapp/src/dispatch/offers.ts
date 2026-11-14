@@ -1,7 +1,7 @@
 import type { MarketId } from "../markets/markets.ts";
 import { currencySymbol, fromSek, isLargePriceChange } from "../pricing/zonePricing.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
-import { CANCEL_AFTER_ARRIVED_DEFAULT } from "./offerRules.ts";
+import { AUTO_ARRIVE_DEFAULT_METERS, autoArriveIssues, CANCEL_AFTER_ARRIVED_DEFAULT, LEAVE_DEFAULT_METERS } from "./offerRules.ts";
 
 /**
  * Round 3 offer and trip rules (Q14–Q22): what the offer card shows, why an offer is Exclusive,
@@ -116,6 +116,12 @@ export type PickupWait = {
    * accept) is charged the no-show fee. DriverAppConfig.waiting.cancelAfterArrivedIsNoShow; default on.
    */
   cancelAfterArrivedIsNoShow: boolean;
+  /**
+   * v0.18.93 (job C9, contract.json#autoArrive): the server marks the driver arrived within autoArriveMeters of the
+   * pickup, and the waiting stops counting while he is farther than leaveMeters. DriverAppConfig.waiting.*; 100 / 200 m.
+   */
+  autoArriveMeters: number;
+  leaveMeters: number;
   /** Pickups farther than farPickupKm get the far rule. */
   farPickupOn: boolean;
   farPickupKm: number;
@@ -145,6 +151,8 @@ const none = (): WaitOverride => ({ freeWaitMin: null, perMin: null, noShowAfter
 export function pickupWaitDefault(country: MarketId = "SE"): PickupWait {
   return {
     cancelAfterArrivedIsNoShow: CANCEL_AFTER_ARRIVED_DEFAULT,
+    autoArriveMeters: AUTO_ARRIVE_DEFAULT_METERS,
+    leaveMeters: LEAVE_DEFAULT_METERS,
     farPickupOn: true,
     farPickupKm: 5,
     farPickup: { ...none(), freeWaitMin: 1, noShowFee: fromSek(85, country) },
@@ -174,6 +182,8 @@ export function completePickupWait(base: PickupWait, stored: unknown): PickupWai
   const types = (raw.rideTypes && typeof raw.rideTypes === "object" ? raw.rideTypes : {}) as Partial<PickupWait["rideTypes"]>;
   return {
     cancelAfterArrivedIsNoShow: typeof raw.cancelAfterArrivedIsNoShow === "boolean" ? raw.cancelAfterArrivedIsNoShow : base.cancelAfterArrivedIsNoShow,
+    autoArriveMeters: num(raw.autoArriveMeters, base.autoArriveMeters ?? AUTO_ARRIVE_DEFAULT_METERS),
+    leaveMeters: num(raw.leaveMeters, base.leaveMeters ?? LEAVE_DEFAULT_METERS),
     farPickupOn: typeof raw.farPickupOn === "boolean" ? raw.farPickupOn : base.farPickupOn,
     farPickupKm: num(raw.farPickupKm, base.farPickupKm),
     farPickup: completeOverride(base.farPickup, raw.farPickup),
@@ -197,6 +207,8 @@ function overrideIssues(label: string, rule: WaitOverride, symbol: string): stri
 export function pickupWaitIssues(wait: PickupWait, country: MarketId): string[] {
   const symbol = currencySymbol(country);
   const issues: string[] = [];
+  // v0.18.93 (contract.json#autoArrive.settings.validation): the server refuses these with 400 invalid_auto_arrive_distance.
+  issues.push(...autoArriveIssues(wait.autoArriveMeters, wait.leaveMeters));
   if (wait.farPickupOn) {
     if (wait.farPickupKm < 0.5 || wait.farPickupKm > 50) issues.push("Waiting at pickup: a far pickup must start 0.5 to 50 km away.");
     issues.push(...overrideIssues(`over ${wait.farPickupKm} km`, wait.farPickup, symbol));

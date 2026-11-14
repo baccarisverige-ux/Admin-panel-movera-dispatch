@@ -5,7 +5,7 @@ import { emptyReservationBook, normalizeReservationBook, useSlice, type Reservat
 import type { MarketId } from "../markets/markets";
 import { Card, Check, Num, Row, Switch } from "./fields";
 import { driverNoShowShare, pickupTerms, WAIT_FIELDS, WAIT_RIDE_TYPES, WAITING_DRIVER_SHARE_PCT, type PickupWait, type WaitBase, type WaitOverride } from "./offers";
-import { cancelAfterArrivedText } from "./offerRules";
+import { AUTO_ARRIVE_RANGE, cancelAfterArrivedText, LEAVE_RANGE } from "./offerRules";
 import { waitPerMinCell } from "./stopPrice";
 import type { CountryDispatch, ZoneDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
@@ -83,6 +83,12 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
       </div>
       {/* v0.18.7 (G5 Q2, owner "admin can adjust"): the no-show fee for a cancel after arrival, per zone, default on. */}
       <Row label={tr("Cancel after the driver arrived counts as a no-show")} help={tr("{0} Inside the free minutes after accept the rider always cancels free; before the free waiting at the pickup is over it is the normal cancel fee. Off: the normal cancel fee applies after arrival too.", [cancelAfterArrivedText()])} on={wait.cancelAfterArrivedIsNoShow} disabled={disabled} onToggle={(cancelAfterArrivedIsNoShow) => set({ cancelAfterArrivedIsNoShow })} />
+      {/* v0.18.93 (job C9, owner review Q3 "Both: auto + button", decisions/driver-g7.md:83-84): the server's own
+          arrival and the waiting that stops while the driver is away, per zone (contract.json#autoArrive). */}
+      <Row label={tr("Auto arrived and waiting away")} help={tr("The server marks the driver arrived when he is this close to the pickup; he can still tap Arrived. While he is farther than the second distance before the rider is in the car, the waiting time stops (no free minutes used, nothing charged, no no-show) and goes on when he is back.")}>
+        <span data-testid="wait-auto-arrive"><Num label={tr("Auto arrived within")} before={tr("arrived within")} value={wait.autoArriveMeters} unit="m" step={10} min={AUTO_ARRIVE_RANGE[0]} max={AUTO_ARRIVE_RANGE[1]} disabled={disabled} onChange={(autoArriveMeters) => set({ autoArriveMeters: Math.round(autoArriveMeters) })} /></span>
+        <span data-testid="wait-leave"><Num label={tr("Waiting stops beyond")} before={tr("waiting stops beyond")} value={wait.leaveMeters} unit="m" step={10} min={LEAVE_RANGE[0]} max={LEAVE_RANGE[1]} disabled={disabled} onChange={(leaveMeters) => set({ leaveMeters: Math.round(leaveMeters) })} /></span>
+      </Row>
       <Row label={tr("Driver's share")} help={tr("The waiting money always goes {0}% to the driver. The no-show fee share is one rule for all of {1}. The no-show reason never counts in the cancel rate.", [WAITING_DRIVER_SHARE_PCT, countryName])}>
         <span className="dx-override on" data-testid="wait-share-fixed"><small>{trn("waiting money {0}% (fixed)", WAITING_DRIVER_SHARE_PCT)}</small></span>
         <Num label={tr("Driver's share of the no-show fee")} before={tr("no-show, all of {0}", [countryName])} value={country.noShowDriverSharePct} unit="%" min={0} max={100} disabled={disabled} onChange={(noShowDriverSharePct) => onCountry({ ...country, noShowDriverSharePct: Math.round(noShowDriverSharePct) })} />
