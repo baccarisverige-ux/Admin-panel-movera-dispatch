@@ -90,7 +90,7 @@ test("Rider page: Omar's cases are read with riderId=R502", async ({ page }) => 
   expect(incidentReads(state).filter((q) => !q.get("driverId") && !q.get("riderId") && !q.getAll("status").length && !q.get("tripId"))).toHaveLength(0);
 });
 
-test("older server (400 unknown_filter): the same cases from every case, no error, one rejected read", async ({ page }) => {
+test("older server (400 unknown_filter): the same cases from every case, no error, two rejected reads once per session (A6: the first 400 is read as no total key)", async ({ page }) => {
   const state = await fakeTripServer(page, { incidents: CASES, oldIncidentFilters: true, drivers: [{ ...DRIVER }], admin: { permissions: SAFETY } });
   await signIn(page);
   await page.goto("/drivers/D1001?tab=activity");
@@ -98,7 +98,7 @@ test("older server (400 unknown_filter): the same cases from every case, no erro
   await expect(page.getByRole("link", { name: "inc_mine2" })).toBeVisible();
   await expect(page.getByRole("link", { name: "inc_o0" })).toHaveCount(0);
   await expect(page.getByText("Unknown filter.")).toHaveCount(0);
-  expect(incidentReads(state).filter((q) => q.get("driverId") || q.get("riderId"))).toHaveLength(1);
+  expect(incidentReads(state).filter((q) => q.get("driverId") || q.get("riderId"))).toHaveLength(2);
   // The same session (no reload): the rider page goes straight to the every-case read.
   await page.evaluate(() => {
     window.history.pushState({}, "", "/riders/R502?tab=safety");
@@ -106,7 +106,7 @@ test("older server (400 unknown_filter): the same cases from every case, no erro
   });
   await expect(page.getByRole("link", { name: "inc_mine1" })).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText("Unknown filter.")).toHaveCount(0);
-  expect(incidentReads(state).filter((q) => q.get("driverId") || q.get("riderId"))).toHaveLength(1);
+  expect(incidentReads(state).filter((q) => q.get("driverId") || q.get("riderId"))).toHaveLength(2);
   expect(incidentReads(state).some((q) => !q.getAll("status").length && !q.get("tripId") && q.get("limit") === "100")).toBe(true);
 });
 
