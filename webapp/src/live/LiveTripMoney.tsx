@@ -5,6 +5,7 @@ import { tr } from "../i18n";
 import { useLiveSession, useLiveSessionMaybe } from "./LiveSessionContext";
 import { liveMoney, parseMinor } from "./format";
 import { driverPayBody, singleFlight } from "./moneyGuard";
+import { driverPayBox } from "../trips/driverPayBox";
 import { ErrorLine, isVersionMismatch } from "./ui";
 
 /**
@@ -133,7 +134,9 @@ function Money({ tripId }: { tripId: string }) {
         </div>
       </div>
 
-      <div className="op-action blue">
+      {/* BQ-A28 (owner "screens must be simple"): only after the end, when the +/− change works; during the trip the page
+          shows the "Driver pay" box (J6a) instead, never both. */}
+      {driverPayBox(t.status, Boolean(t.driverId)) === "change" ? <div className="op-action blue">
         <h4><Wallet size={15} aria-hidden="true" /> {tr("Change the driver's pay")}</h4>
         <p className="op-help">{tr("Use + to add, − to take away.")}</p>
         <div className="op-inline wrap">
@@ -146,7 +149,7 @@ function Money({ tripId }: { tripId: string }) {
               return tr("Driver pay changed.");
             })}>{tr("Change pay")}</button>
         </div>
-      </div>
+      </div> : null}
 
       <div className="op-action grey">
         <h4><Receipt size={15} aria-hidden="true" /> {tr("Resend receipt")}</h4>

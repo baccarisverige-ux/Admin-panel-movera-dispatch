@@ -71,6 +71,7 @@ import {
 } from "../trips/present";
 import { AdminActions, ChatCalls, Section, SplitView, entryLine } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
+import { driverPayBox } from "../trips/driverPayBox";
 import { cashFigures, isCashTrip } from "../trips/cash";
 import { offerLog, timelineOffers } from "../trips/offerLog";
 import { waitingMinutes } from "../trips/rules";
@@ -216,6 +217,9 @@ export function TripPage() {
   const payNow = Number.isFinite(split.driverGets) ? split.driverGets - (Number.isFinite(split.tip) ? split.tip : 0) : null;
   const driverPayMinor = parseMinor(driverPayInput, tripCurrency);
   const adjustWhy = adjustBlock(trip.status) ?? (driverPayMinor === null ? tr("Type the driver's pay.") : null);
+  // BQ-A28 (owner "screens must be simple"): the "Driver pay" box shows only while it can save (during the trip); after
+  // the end the page shows "Change the driver's pay" (+/−, LiveTripMoney) instead, never both.
+  const payBox = driverPayBox(trip.status, Boolean(trip.driverId));
   const chat = chatOf(trip);
   const calls = callsOf(trip);
   const offerSteps = offerLog(trip, (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })), dispatchOffers.data?.offers);
@@ -660,13 +664,13 @@ export function TripPage() {
               )}
 
               <div className="field-grid">
-                <label>{trn("Driver pay{0}", <input
+                {payBox === "set" ? <label>{trn("Driver pay{0}", <input
                     aria-label={tr("Driver pay")}
                     inputMode="decimal"
                     placeholder={payNow !== null ? liveMoney(payNow) : "0"}
                     value={driverPayInput}
                     onChange={(event) => setDriverPayInput(event.target.value)}
-                  />)}</label>
+                  />)}</label> : null}
                 <label>{trn("Waiting minutes{0}", <input
                     aria-label={tr("Waiting minutes")}
                     type="number"
@@ -678,6 +682,7 @@ export function TripPage() {
                   />)}</label>
               </div>
 
+              {payBox === "set" ? <>
               <p data-testid="adjust-block">
                 {payNow !== null ? <>{tr("Driver's pay now: {0}", [liveMoney(payNow)])}. </> : null}
                 {tr("The rider pays the same price as booked. The tip stays on top. Waiting or stops added later are added to this pay.")}
@@ -700,6 +705,7 @@ export function TripPage() {
                   onDone={() => setDriverPayInput("")}
                 >{tr("Save driver pay")}</CommandButton>
               )}
+              </> : null}
 
               <p data-testid="waiting-block">{waitingWhy ?? tr("Waiting time can be corrected in this state.")}</p>
               {waitingWhy ? (

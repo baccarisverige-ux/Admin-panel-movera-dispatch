@@ -230,7 +230,7 @@ export const frA2BC: Record<keyof typeof enA2BC, string> = {
   "Change driver category eligibility": "Modifier les catégories autorisées du chauffeur",
   "Change in Pricing": "Modifier dans Tarifs",
   "Change my panel language": "Changer ma langue de l’interface",
-  "Change pay": "Modifier la rémunération",
+  "Change pay": "Modifier la rémunération du chauffeur",
   "Change promotion": "Modifier la promotion",
   "Change return ride": "Modifier le trajet retour",
   "Change the driver's pay": "Modifier la rémunération du chauffeur",

@@ -70,7 +70,8 @@ test("R8 trip actions follow lifecycle state", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Offer to driver" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Reassign" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Save driver pay" })).toBeDisabled();
+  // BQ-A28 (owner "screens must be simple"): no driver yet, so no driver pay box at all (was a disabled button).
+  await expect(page.getByRole("button", { name: "Save driver pay" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Save waiting time" })).toBeDisabled();
 
   await page.goto("/trips/T0044");
@@ -86,7 +87,9 @@ test("R8 trip actions follow lifecycle state", async ({ page }) => {
   // Disabled by the trip's status.
   await expect(page.getByRole("button", { name: "Cancel trip" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Reassign" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Save driver pay" })).toBeDisabled();
+  // BQ-A28: an ended trip shows no "Driver pay" box (it cannot save); the pay is changed with + or − instead.
+  await expect(page.getByRole("button", { name: "Save driver pay" })).toHaveCount(0);
+  await expect(page.getByLabel("Driver pay", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Refund" })).toBeEnabled();
 });
 

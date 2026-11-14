@@ -195,7 +195,7 @@ export const svA0Symbols: Record<keyof typeof enA0Symbols, string> = {
   "{0} cannot be deleted now": "{0} kan inte tas bort nu",
   "{0} cap": "{0} tak",
   "{0} Cash trip": "{0} Kontantresa",
-  "{0} Change the driver's pay": "{0} Ändra förarens ersättning",
+  "{0} Change the driver's pay": "{0} Ändra förarersättning",
   "{0} change{1} · riders see them after you publish": "{0} ändringar · resenärer ser dem när du publicerar",
   "{0} change{1} not live yet": "{0} ändringar inte live än",
   "{0} change{1} not saved": "{0} ändringar inte sparade",

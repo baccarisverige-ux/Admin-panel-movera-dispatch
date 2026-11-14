@@ -189,7 +189,7 @@ export const svA3DE: Record<keyof typeof enA3DE, string> = {
   "Driver offer preview": "Förhandsvisning av förarerbjudande",
   "Driver or service problem": "Förar- eller serviceproblem",
   "Driver pay {0}": "Förarersättning {0}",
-  "Driver pay change": "Ändrad förarersättning",
+  "Driver pay change": "Ändring av förarersättning",
   "Driver pay changed.": "Förarersättningen ändrad.",
   "Driver pickup pay": "Förarens betalning för körning till upphämtning",
   "Driver queue": "Förarkö",
