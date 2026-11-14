@@ -149,19 +149,76 @@ test("live KPIs: a total only when every zone-day is there; tips, refunds and wa
   assert.equal(typeof payoutLineLabel, "function");
 });
 
-test("live Reports › Money (contract v0.10.3): per currency apart, net = Movera earnings − refunds, a missing day is Not connected", async () => {
+test("live Reports › Money (contract v0.10.3, netRevenue v0.18.13): per currency apart, net = Movera earnings (refunds already off), a missing day is Not connected", async () => {
   const { moneyGroups, totalsOf } = await import("./kpis.ts");
   const day = (date: string, zoneId: string, currency: string, gross: number, extra: Record<string, number> = { tips: 200, refunds: 100, fees: 400, moveraEarnings: 2500 }) => ({ date, zoneId, source: "summary" as const, currency, completedTrips: 2, cancelledTrips: 0, noShows: 0, gross, commission: 2000, driverEarnings: 8000, pickupPay: 500, driverBonus: 0, cashCollected: 0, walletApplied: 0, newRiders: 0, newDrivers: 0, ...extra });
   const dates = ["2026-10-26", "2026-10-27"];
   const groups = moneyGroups([day("2026-10-26", "Z001", "SEK", 10000), day("2026-10-27", "Z001", "SEK", 10000), day("2026-10-26", "FR-PC", "EUR", 3000), day("2026-10-27", "FR-PC", "EUR", 3000, { tips: 0, refunds: 0, fees: 0, moveraEarnings: -100 })], dates);
-  assert.deepEqual(groups.map((g) => [g.currency, g.missing, g.total.bookings, g.total.moveraEarnings, g.total.driverEarnings, g.total.tips, g.total.refunds, g.total.net]), [["EUR", false, 6000, 2400, 17000, 200, 100, 2300], ["SEK", false, 20000, 5000, 17000, 400, 200, 4800]]);
+  assert.deepEqual(groups.map((g) => [g.currency, g.missing, g.total.bookings, g.total.moveraEarnings, g.total.driverEarnings, g.total.tips, g.total.refunds, g.total.net]), [["EUR", false, 6000, 2400, 17000, 200, 100, 2400], ["SEK", false, 20000, 5000, 17000, 400, 200, 5000]], "S5 J5a: the server already took the refunds off Movera earnings; never twice");
   const gap = moneyGroups([day("2026-10-26", "Z001", "SEK", 10000)], dates)[0]!;
   assert.ok(gap.missing && Number.isNaN(gap.total.bookings) && Number.isNaN(gap.days[1]!.bookings));
   assert.equal(gap.days[0]!.bookings, 10000);
   const old = moneyGroups([day("2026-10-26", "Z001", "SEK", 10000, {})], ["2026-10-26"])[0]!;
   assert.ok(Number.isNaN(old.total.tips) && Number.isNaN(old.total.net) && old.total.bookings === 10000, "an older server without the money lines: Not connected, never 0");
   const totals = totalsOf([day("2026-10-26", "Z001", "SEK", 10000)], ["Z001"], ["2026-10-26"]);
-  assert.deepEqual([totals.tipsMinor, totals.refundsMinor, totals.netMinor], [200, 100, 2400]);
+  assert.deepEqual([totals.tipsMinor, totals.refundsMinor, totals.netMinor], [200, 100, 2500], "the Dashboard's Net revenue = Movera earnings too");
+});
+
+test("S5 J5a (contract v0.18.82 kpis.money, moneyBase.kpiMoney): the Money help texts say what the server counts, in sv, fr and en", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { sv } = await import("../i18n/sv.ts");
+  const { fr } = await import("../i18n/fr.ts");
+  const report = readFileSync(new URL("./LiveMoneyReport.tsx", import.meta.url), "utf8");
+  const engine = readFileSync(new URL("../reports/engine.ts", import.meta.url), "utf8");
+  const BOOKINGS = "Prices of paid rides (also rides ended early) plus cancel and no-show fees, each fee counted once. VAT included. Tips are not in it.";
+  const MOVERA = "What Movera keeps: commission (pickup pay and bonuses already out) plus its share of fees, minus Movera's pay changes to drivers and refunds. Can be negative.";
+  const NET = "Same as Movera earnings: refunds are already taken off.";
+  for (const text of [BOOKINGS, MOVERA, NET]) assert.ok(report.includes(JSON.stringify(text)), `Reports › Money: ${text}`);
+  // Supervisor must-fix 1: no vouchers in the server's formula; the demo card says the same as live.
+  assert.ok(engine.includes(`info: ${JSON.stringify(NET)}`), "the Net revenue help of Reports › Overview / Money says the same");
+  assert.ok(!engine.includes("vouchers are already taken off"), "no voucher wording in the Net revenue help");
+  // Supervisor must-fix 2: the demo "Movera earnings" card has the same help as live.
+  assert.ok(engine.includes(`info: ${JSON.stringify(MOVERA)}`), "demo Movera earnings help = live");
+  for (const old of ["Movera earnings minus refunds", "minus pickup pay and the driver bonuses Movera paid", "Ride prices plus cancel and no-show fees"]) {
+    assert.ok(!report.includes(old) && !engine.includes(old), `old text gone: ${old}`);
+  }
+  for (const text of [BOOKINGS, MOVERA, NET]) {
+    const dict = [sv as Record<string, string>, fr as Record<string, string>];
+    for (const lang of dict) assert.ok(lang[text] && lang[text] !== text, `translated: ${text}`);
+  }
+});
+
+test("S5 J5a supervisor must-fix 4: natural French for the Bookings help", async () => {
+  const { fr } = await import("../i18n/fr.ts");
+  const BOOKINGS = "Prices of paid rides (also rides ended early) plus cancel and no-show fees, each fee counted once. VAT included. Tips are not in it.";
+  assert.equal((fr as Record<string, string>)[BOOKINGS], "Prix des courses payées (y compris celles terminées plus tôt) plus frais d’annulation et de non-présentation, chacun compté une seule fois. TVA incluse. Les pourboires n’y sont pas.");
+});
+
+test("S5 J5a (moneyBase.commission): the driver pop-up's Money tab shows the server's who-gets-what; pickup pay is not taken off Movera a second time", async () => {
+  const { liveMoneySplit } = await import("../trips/file.ts");
+  const { tripMoney } = await import("../dashboard/tripMoney.ts");
+  const EUR = (amountMinor: number) => ({ amountMinor, currency: "EUR" });
+  // One commission: 480 − 352 earnings − 10 pickup pay = 118, the same as Movera's part of who-gets-what.
+  const trip: Trip = {
+    ...TRIP, zoneId: "FR-PC", fare: EUR(480), driverEarnings: EUR(352), commission: EUR(118), pickupPay: EUR(10), driverBonus: undefined, walletApplied: undefined, cashToCollect: EUR(480),
+    driverTotal: EUR(362), tip: { amount: EUR(250), method: "cash", at: "2026-11-02T01:00:00Z" },
+    moneySplit: { riderPaid: EUR(730), driverTotal: EUR(612), movera: EUR(118), debtCollected: EUR(0), tip: EUR(250), refunded: EUR(0) },
+  };
+  const record = tripRecord(trip);
+  const split = liveMoneySplit(record, record.liveTrip!);
+  assert.equal(split.commission, 118, "the server's commission, never worked out by the admin");
+  // The pop-up's own pickup estimate (here 60) must not replace or be added to the server's numbers.
+  const money = tripMoney(split, 60);
+  assert.deepEqual([money.riderPays, money.fareShare, money.pickupPay, money.tip, money.driverGets, money.commission, money.moveraKeeps, money.covers], [730, 352, 10, 250, 362, 118, 118, false]);
+  // Supervisor should-fix 6/7: an admin pay change (+0,50 €, Movera pays it) is in the driver's total and Movera's part,
+  // never inside "Share of the fare", which is the server's driverEarnings line.
+  const changed = tripRecord({ ...trip, moneySplit: { riderPaid: EUR(730), driverTotal: EUR(662), movera: EUR(68), debtCollected: EUR(0), tip: EUR(250), refunded: EUR(0) } });
+  const paid = tripMoney(liveMoneySplit(changed, changed.liveTrip!), 60);
+  assert.deepEqual([paid.fareShare, paid.pickupPay, paid.addedMoney, paid.driverGets, paid.moveraKeeps], [352, 10, 0, 412, 68]);
+  // A server without who-gets-what: the driver's lines and the server's commission, still nothing worked out twice.
+  const older = tripRecord({ ...trip, moneySplit: undefined, driverTotal: undefined, tip: undefined });
+  const oldMoney = tripMoney(liveMoneySplit(older, older.liveTrip!), 60);
+  assert.deepEqual([oldMoney.fareShare, oldMoney.pickupPay, oldMoney.driverGets, oldMoney.moveraKeeps], [352, 10, 362, 118]);
 });
 
 test("G2 R10: no Not connected yet badge on the live driver, onboarding, fleet owner and vehicle pages", async () => {
@@ -175,4 +232,33 @@ test("G2 R10: no Not connected yet badge on the live driver, onboarding, fleet o
 test("G2c: the live Content page reads and publishes the server's content, so it shows no Not connected yet badge", async () => {
   const { connectionOf } = await import("./connection.ts");
   assert.equal(connectionOf("content").state, "connected");
+});
+
+test("S5 J5a supervisor must-fix 3: the live Dashboard's Movera earnings row is the server's moveraEarnings; the commission stays for the tax lines", async () => {
+  const { totalsOf } = await import("./kpis.ts");
+  const { dashboardMoveraMinor } = await import("../dashboard/earnings.ts");
+  const { readFileSync } = await import("node:fs");
+  const day = { date: "2026-10-26", zoneId: "Z001", source: "summary" as const, currency: "SEK", completedTrips: 2, cancelledTrips: 0, noShows: 0, gross: 10000, commission: 2000, driverEarnings: 8000, pickupPay: 0, driverBonus: 0, cashCollected: 0, walletApplied: 0, newRiders: 0, newDrivers: 0, tips: 0, refunds: 100, fees: 600, moveraEarnings: 2500 };
+  const totals = totalsOf([day], ["Z001"], ["2026-10-26"]);
+  assert.equal(totals.commissionMinor, 2000, "Σ commission unchanged (reports/extra.ts tax lines)");
+  assert.equal(dashboardMoveraMinor(totals, true), 2500, "live: the server's Movera earnings");
+  assert.equal(dashboardMoveraMinor(totals, false), 2000, "demo: unchanged");
+  const page = readFileSync(new URL("../pages/DashboardPage.tsx", import.meta.url), "utf8");
+  assert.ok(page.includes("dashboardMoveraMinor(totals, liveData)") && page.includes("dashboardMoveraMinor(previous, liveData)"), "the row and its change use it");
+  assert.ok(page.includes('liveData ? tr("Refunds") : tr("Refunds & vouchers")'), "live: Refunds (no vouchers on the server)");
+});
+
+test("S5 J5a owner 2026-11-14 \"Movera commission is how much movera keep\": the Add money box's Movera commission row = Movera keeps, never the commission before the bonus", async () => {
+  const { bonusBoxSplit } = await import("../dispatch/assign.ts");
+  const { readFileSync } = await import("node:fs");
+  // Server commission 153,80 kr after a 200 kr bonus (owner photo 2026-11-01); the box gets commission + bonus = 353,80 kr.
+  const view = { commissionMinor: 35380 };
+  const none = bonusBoxSplit(view, 20000, 0);
+  assert.deepEqual([none.commissionShownMinor, none.moveraKeepsMinor], [15380, 15380], "already 200 kr out: 153,80 kr both rows");
+  const more = bonusBoxSplit(view, 20000, 5000);
+  assert.deepEqual([more.commissionShownMinor, more.moveraKeepsMinor], [10380, 10380], "+50 kr now: 103,80 kr both rows");
+  const box = readFileSync(new URL("../dispatch/DriverBonusBox.tsx", import.meta.url), "utf8");
+  assert.ok(box.includes('<dt>{tr("Movera commission")}</dt><dd>{money(split.commissionShownMinor)}</dd>'), "the row keeps its name and shows what Movera keeps");
+  assert.ok(!box.includes("money(view.commissionMinor)"), "never the commission before the bonus");
+  assert.ok(box.includes('tr("Bonus paid by Movera")') && box.includes('tr("Movera keeps")'), "no row removed");
 });

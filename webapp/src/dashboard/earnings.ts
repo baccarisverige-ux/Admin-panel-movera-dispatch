@@ -208,3 +208,12 @@ export function change(now: number, before: number): number | null {
   if (!before) return null;
   return ((now - before) / before) * 100;
 }
+
+/**
+ * S5 J5a (contract kpis.money.moveraEarnings / netRevenue): the Dashboard's "Movera earnings" row. Live: the server's
+ * moveraEarnings (live/kpis.ts totalsOf netMinor = Σ moveraEarnings, refunds already off); the demo keeps its
+ * commission. `commissionMinor` itself stays the commission (reports/extra.ts tax lines).
+ */
+export function dashboardMoveraMinor(totals: Pick<Totals, "commissionMinor" | "netMinor">, live: boolean): number {
+  return live ? totals.netMinor : totals.commissionMinor;
+}

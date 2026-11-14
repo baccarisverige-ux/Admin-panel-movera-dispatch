@@ -40,7 +40,7 @@ import { commandById } from "../commands/registry";
 import { useAlertsMaybe } from "../alerts/AlertsContext";
 import { DriversMap, REQUEST_COLOR, STATE_COLOR } from "../dashboard/DriversMap";
 import { EarningsChart } from "../dashboard/EarningsChart";
-import { change, COMMISSION_PLACEHOLDER, earningsReport, type Share } from "../dashboard/earnings";
+import { change, COMMISSION_PLACEHOLDER, dashboardMoveraMinor, earningsReport, type Share } from "../dashboard/earnings";
 import { activeBoosts, airportQueues, cancellations, ratings, shortageZones } from "../dashboard/insights";
 import { useSupply } from "../dashboard/useSupply";
 import { countStates, LIVE_STATES, liveDrivers, type LiveState } from "../dashboard/live";
@@ -565,11 +565,11 @@ export function DashboardPage() {
             <dl className="earnings-side">
               <div className="side-row accent">
                 <dt>{liveData ? tr("Movera earnings") : trn("Movera earnings {0}", <small>{trn("Commission {0}% placeholder · set later in Pricing", Math.round(COMMISSION_PLACEHOLDER * 100))}</small>)}</dt>
-                <dd>{money(totals.commissionMinor)} <Delta value={change(totals.commissionMinor, previous.commissionMinor)} label={shownSpan.compareLabel} /></dd>
+                <dd>{money(dashboardMoveraMinor(totals, liveData))} <Delta value={change(dashboardMoveraMinor(totals, liveData), dashboardMoveraMinor(previous, liveData))} label={shownSpan.compareLabel} /></dd>
               </div>
               <div className="side-row"><dt>{tr("Driver earnings")}</dt><dd>{money(totals.driverMinor)} <Delta value={change(totals.driverMinor, previous.driverMinor)} label={shownSpan.compareLabel} /></dd></div>
               <div className="side-row"><dt>{tr("Tips")}</dt><dd>{money(totals.tipsMinor)} <Delta value={change(totals.tipsMinor, previous.tipsMinor)} label={shownSpan.compareLabel} /></dd></div>
-              <div className="side-row"><dt>{tr("Refunds & vouchers")}</dt><dd>−{money(totals.refundsMinor)} <Delta value={change(totals.refundsMinor, previous.refundsMinor)} inverse label={shownSpan.compareLabel} /></dd></div>
+              <div className="side-row"><dt>{liveData ? tr("Refunds") : tr("Refunds & vouchers")}</dt><dd>−{money(totals.refundsMinor)} <Delta value={change(totals.refundsMinor, previous.refundsMinor)} inverse label={shownSpan.compareLabel} /></dd></div>
               <div className="side-row strong"><dt>{tr("Net revenue")}</dt><dd>{money(totals.netMinor)} <Delta value={change(totals.netMinor, previous.netMinor)} label={shownSpan.compareLabel} /></dd></div>
               <div className="side-row"><dt>{tr("Average fare")}</dt><dd>{money(avgFare)} <Delta value={change(avgFare, prevAvgFare)} label={shownSpan.compareLabel} /></dd></div>
             </dl>

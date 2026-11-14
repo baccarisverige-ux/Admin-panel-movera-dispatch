@@ -45,7 +45,8 @@ export function totalsOf(days: readonly KpiDay[], zoneIds: readonly string[], da
     driverMinor: sum((day) => day.driverEarnings + day.pickupPay + day.driverBonus),
     tipsMinor: sum((day) => day.tips ?? NONE),
     refundsMinor: sum((day) => day.refunds ?? NONE),
-    netMinor: sum((day) => (day.moveraEarnings ?? NONE) - (day.refunds ?? NONE)),
+    // contract kpis.money.netRevenue (v0.18.13): = Movera earnings; the server already took the refunds off (S5 J5a).
+    netMinor: sum((day) => day.moveraEarnings ?? NONE),
     newRiders: sum((day) => day.newRiders),
     newDrivers: sum((day) => day.newDrivers),
     waitMinTotal: NONE,
@@ -71,7 +72,6 @@ export type MoneyLine = { key: string; source?: "live" | "summary"; trips: numbe
 function lineOf(key: string, days: readonly KpiDay[], complete: boolean): MoneyLine {
   const sum = (pick: (day: KpiDay) => number | undefined) => (complete ? days.reduce((total, day) => total + (pick(day) ?? NONE), 0) : NONE);
   const movera = sum((day) => day.moveraEarnings);
-  const refunds = sum((day) => day.refunds);
   return {
     key,
     trips: sum((day) => day.completedTrips),
@@ -79,8 +79,8 @@ function lineOf(key: string, days: readonly KpiDay[], complete: boolean): MoneyL
     moveraEarnings: movera,
     driverEarnings: sum((day) => day.driverEarnings + day.pickupPay + day.driverBonus),
     tips: sum((day) => day.tips),
-    refunds,
-    net: movera - refunds,
+    refunds: sum((day) => day.refunds),
+    net: movera,
   };
 }
 
@@ -88,7 +88,7 @@ export type MoneyGroup = { currency: string; missing: boolean; total: MoneyLine;
 
 /**
  * Reports › Money (contract v0.10.3 kpis.money): the server's zone-days per currency, never added across currencies.
- * Net revenue = Movera earnings − refunds. A zone missing a day makes that zone's and the currency's totals NaN.
+ * Net revenue = Movera earnings (kpis.money.netRevenue v0.18.13: refunds are already taken off, never a second time). A zone missing a day makes that zone's and the currency's totals NaN.
  */
 export function moneyGroups(days: readonly KpiDay[], dates: readonly string[]): MoneyGroup[] {
   const currencies = [...new Set(days.map((day) => day.currency))].sort();

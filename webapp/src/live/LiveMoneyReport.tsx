@@ -39,12 +39,12 @@ export function LiveMoneyReport({ window, timeZone, zoneIds }: { window: PeriodW
         const fmt = (value: number, format: Format) => (format === "money" ? money(value) : Number.isFinite(value) ? String(value) : tr("Not connected yet"));
         const t = group.total;
         const cards: Card[] = [
-          { id: "gross", label: "Bookings", value: t.bookings, previous: null, format: "money", info: "Ride prices plus cancel and no-show fees, VAT included. Tips are not in it." },
-          { id: "movera", label: "Movera earnings", value: t.moveraEarnings, previous: null, format: "money", info: "What Movera keeps: commission and fees, minus pickup pay and the driver bonuses Movera paid. Can be negative." },
+          { id: "gross", label: "Bookings", value: t.bookings, previous: null, format: "money", info: "Prices of paid rides (also rides ended early) plus cancel and no-show fees, each fee counted once. VAT included. Tips are not in it." },
+          { id: "movera", label: "Movera earnings", value: t.moveraEarnings, previous: null, format: "money", info: "What Movera keeps: commission (pickup pay and bonuses already out) plus its share of fees, minus Movera's pay changes to drivers and refunds. Can be negative." },
           { id: "drivers", label: "Driver earnings", value: t.driverEarnings, previous: null, format: "money", info: "What drivers earned: their part of the rides, pickup pay and bonuses. Tips are apart." },
           { id: "tips", label: "Tips", value: t.tips, previous: null, format: "money", info: "Tips riders gave drivers. All of it goes to the driver." },
           { id: "refunds", label: "Refunds", value: t.refunds, previous: null, format: "money", info: "Money given back to riders, counted on the day of the trip.", goodDown: true },
-          { id: "net", label: "Net revenue", value: t.net, previous: null, format: "money", info: "Movera earnings minus refunds." },
+          { id: "net", label: "Net revenue", value: t.net, previous: null, format: "money", info: "Same as Movera earnings: refunds are already taken off." },
         ];
         return (
           <section key={group.currency} className="rp-currency" aria-label={group.currency} data-testid={`live-money-${group.currency}`}>

@@ -110,9 +110,10 @@ test("dashboard and Reports › Money: the server's KPI days, no modelled number
   await page.goto("/reports?tab=money");
   const report = page.getByTestId("live-money-report");
   await expect(report).toContainText("Live today");
-  // Today (one zone-day in the fake): the cards from the server's money lines, contract v0.10.3.
+  // Today (one zone-day in the fake): the cards from the server's money lines, contract v0.10.3. S5 J5a (contract
+  // kpis.money.netRevenue): Net revenue = Movera earnings; the server already took the refunds off (not 250 − 10).
   const cards = report.getByRole("region", { name: "Numbers" });
-  for (const [label, value] of [["Bookings", "1 234,00 kr"], ["Movera earnings", "250,00 kr"], ["Driver earnings", "1 002,20 kr"], ["Tips", "20,00 kr"], ["Refunds", "10,00 kr"], ["Net revenue", "240,00 kr"]]) {
+  for (const [label, value] of [["Bookings", "1 234,00 kr"], ["Movera earnings", "250,00 kr"], ["Driver earnings", "1 002,20 kr"], ["Tips", "20,00 kr"], ["Refunds", "10,00 kr"], ["Net revenue", "250,00 kr"]]) {
     await expect(cards.locator(".rp-card", { hasText: label }).first()).toContainText(value);
   }
   await expect(report.getByRole("table", { name: "Money by zone" })).toContainText("1 234,00 kr");

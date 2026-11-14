@@ -31,7 +31,8 @@ export function TripMoneyTab({ tripId, zoneId, pickupKm, hasFleet }: { tripId: s
   const split = moneySplit(trip, book, hasFleet, [], liveRules(normalizeDispatchBook(dispatch.value), trip.zoneId || zoneId).riderCancel.fees, offers.data?.bonusMinor ?? 0);
   const category = categoryOf(trip.id).id;
   const paid = pickupKm !== null && offerGetsPickupPay(book.pickupPay, "radar", category);
-  const pickup = paid ? Math.round(pickupPayFor(book.pickupPay.rates[category], pickupKm, (pickupKm / SPEED_KMH) * 60).total * minor) : null;
+  // S5 J5a: a live trip's pickup pay is the server's line (already out of Movera's commission), never an estimate here.
+  const pickup = split.live ? split.live.pickupPay : paid ? Math.round(pickupPayFor(book.pickupPay.rates[category], pickupKm, (pickupKm / SPEED_KMH) * 60).total * minor) : null;
   const money = tripMoney(split, pickup);
   const fmt = (value: number) => formatMoney(value, country);
   return (
@@ -51,7 +52,7 @@ export function TripMoneyTab({ tripId, zoneId, pickupKm, hasFleet }: { tripId: s
       </dl>
       <p className="fine-print">
         {money.estimate ? tr("Estimate until the ride ends.") : null}{" "}
-        {pickup === null ? tr("Pickup pay is not known for this ride.") : trn("Pickup pay from about {0} km to the pickup, paid by Movera.", (pickupKm ?? 0).toFixed(1))}
+        {pickup === null ? tr("Pickup pay is not known for this ride.") : pickupKm === null ? null : trn("Pickup pay from about {0} km to the pickup, paid by Movera.", pickupKm.toFixed(1))}
       </p>
     </div>
   );

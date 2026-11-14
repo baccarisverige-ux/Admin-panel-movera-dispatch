@@ -11,7 +11,7 @@ import type { TripOffersView } from "../api/dispatchSim";
 import { formatMoney, market, marketOfCurrency, marketOfZone, MARKETS, type Market } from "../markets/markets";
 import { countryOf } from "../trips/file";
 import { CommandButton } from "../ui/CommandButton";
-import { BONUS_SCOPES, bonusInScope, bonusIssue, bonusOf, canAssign, scopeCovers, waitingMoney, type AdminOffer, type BonusIssue, type BonusScope } from "./assign";
+import { BONUS_SCOPES, bonusBoxSplit, bonusInScope, bonusIssue, bonusOf, canAssign, scopeCovers, waitingMoney, type AdminOffer, type BonusIssue, type BonusScope } from "./assign";
 import { tr, trn, trSentences, trx } from "../i18n";
 
 
@@ -130,7 +130,8 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
   const queryClient = useQueryClient();
   const already = bonusInScope(view, draft.scope);
   const total = already + addMinor;
-  const moveraKeeps = view.commissionMinor - total;
+  const split = bonusBoxSplit(view, already, addMinor);
+  const moveraKeeps = split.moveraKeepsMinor;
   const same = view.bonusExclusiveMinor === view.bonusRadarMinor;
   const left = Math.max(0, view.limits.limitMinor - already);
   // Owner bug 2026-11-01: say so when no offer of the chosen kind is out (the money waits for the next one).
@@ -196,7 +197,7 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
         <dl className="as-split" aria-label={tr("Money split with the bonus")} data-testid="driver-bonus-split">
           <div><dt>{tr("Rider pays")}</dt><dd>{money(view.fareMinor)}</dd></div>
           <div><dt>{tr("Driver gets")}</dt><dd>{money(view.driverNetMinor + total)}</dd></div>
-          <div><dt>{tr("Movera commission")}</dt><dd>{money(view.commissionMinor)}</dd></div>
+          <div><dt>{tr("Movera commission")}</dt><dd>{money(split.commissionShownMinor)}</dd></div>
           <div className={total ? "minus" : undefined}><dt>{tr("Bonus paid by Movera")}</dt><dd>− {money(total)}</dd></div>
           <div className={moveraKeeps < 0 ? "total minus" : "total"}><dt>{tr("Movera keeps")}</dt><dd>{money(moveraKeeps)}</dd></div>
         </dl>

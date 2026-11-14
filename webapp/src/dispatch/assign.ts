@@ -211,6 +211,18 @@ export function scopeCovers(scope: BonusScope, kind: AdminOffer["kind"]): boolea
 }
 
 /** The bonus already added on the offers a new amount with this scope would raise (the larger, for the limit). */
+/**
+ * The Add money box's money split (S5 J5a, owner 2026-11-14 "Movera commission is how much movera keep"): the box's
+ * `commissionMinor` is the commission before any bonus (live: server commission + bonus, tripLive.ts
+ * commissionBeforeBonus), so the "Movera commission" row shows what Movera keeps after the money added (already out +
+ * typed now) — the same number as "Movera keeps", matching the server's commission (moneyBase.commission). Never the
+ * commission before the bonus.
+ */
+export function bonusBoxSplit(view: { commissionMinor: number }, alreadyMinor: number, addMinor: number): { commissionShownMinor: number; moveraKeepsMinor: number } {
+  const moveraKeepsMinor = view.commissionMinor - alreadyMinor - addMinor;
+  return { commissionShownMinor: moveraKeepsMinor, moveraKeepsMinor };
+}
+
 export function bonusInScope(trip: Bonuses, scope: BonusScope): number {
   if (scope === "exclusive") return trip.bonusExclusiveMinor;
   if (scope === "radar") return trip.bonusRadarMinor;
