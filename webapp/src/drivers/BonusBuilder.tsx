@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Ban, CalendarDays, Clock, Gauge, Layers, MapPinned, Minus, Plus, Route, Search, ShieldCheck, Star, Tags, Timer, Trophy, Users, Wallet, X, Zap } from "lucide-react";
 import { CATEGORIES } from "../domain/contract";
 import { market, type MarketId } from "../markets/markets";
+import { money as formatMajor } from "../pricing/zonePricing";
 import { NumberField } from "../pricing/NumberField";
 import { CommandButton } from "../ui/CommandButton";
 import { BonusAreaMap } from "./BonusAreaMap";
@@ -84,7 +85,7 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
   const [query, setQuery] = useState("");
   const symbol = SYMBOL[country];
   const info = market(country);
-  const money = (value: number) => `${new Intl.NumberFormat(info.locale, { maximumFractionDigits: 2 }).format(value)} ${symbol}`;
+  const money = (value: number) => formatMajor(value, country);
   const editing = Boolean(start.id);
   const set = (patch: Partial<DriverBonus>) => setBonus((current) => ({ ...current, ...patch }));
   const setRule = <K extends keyof BonusRules>(key: K, value: Partial<BonusRules[K]>) => setBonus((current) => ({ ...current, rules: { ...current.rules, [key]: { ...current.rules[key], ...value } } }));

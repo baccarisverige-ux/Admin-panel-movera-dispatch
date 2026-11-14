@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, Flame, MapPinned, Pencil, Plus, Radio, Trophy, Users, Wallet, Zap } from "lucide-react";
 import { useSlice } from "../api/hooks";
 import { market, type MarketId } from "../markets/markets";
+import { money as formatMajor } from "../pricing/zonePricing";
 import { CommandButton } from "../ui/CommandButton";
 import { BonusBuilder, type BonusDriver } from "./BonusBuilder";
 import { RealAppPreview } from "../ui/RealAppPreview";
@@ -53,8 +54,7 @@ export function BonusesView({ country, drivers, fleets, agentId, canEdit }: { co
   const [filter, setFilter] = useState<Filter>("all");
   const [notice, setNotice] = useState("");
   const info = market(country);
-  const symbol = { SE: "kr", FR: "€", TN: "DT" }[country];
-  const money = (value: number) => `${new Intl.NumberFormat(info.locale, { maximumFractionDigits: 2 }).format(value)} ${symbol}`;
+  const money = (value: number) => formatMajor(value, country);
   const mine = book.bonuses.filter((bonus) => bonus.country === country);
   const summaries = useMemo(() => new Map(mine.map((bonus) => [bonus.id, bonusSummary(bonus, drivers.map((driver) => ({ facts: driver.facts, home: driver.home, zoneId: driver.zoneId })), now, info.timeZone)])), [mine, drivers, now, info.timeZone]);
   const states = new Map(mine.map((bonus) => [bonus.id, bonusState(bonus, now, info.timeZone)]));

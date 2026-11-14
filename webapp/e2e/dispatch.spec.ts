@@ -171,8 +171,8 @@ test("cancel checks: the automatic fee decision can be changed by hand", async (
   await record.getByRole("button", { name: /Give the fee to the driver/ }).click();
   await confirm(page);
   await expect(record).toContainText("Changed by nora");
-  await expect(record).toContainText("Fee 35 kr");
-  await expect(record).toContainText("35 kr fixed");
+  await expect(record).toContainText("Fee 35,00 kr");
+  await expect(record).toContainText("35,00 kr fixed");
 });
 
 test("events: open the driver bonus builder with the event's area and message", async ({ page }) => {
@@ -429,7 +429,7 @@ test("reservations in one place: a driver group, the Home popup, smart gap, canc
   await expect(phone).toContainText("Offline: another driver gets it in 8 min");
   await page.getByRole("tab", { name: "Rider app" }).click();
   await expect(page.getByLabel("Rider reservation preview")).toContainText("Your driver");
-  await expect(page.getByLabel("Rider reservation preview")).toContainText("Free cancel until 06:40 · then 75 kr");
+  await expect(page.getByLabel("Rider reservation preview")).toContainText("Free cancel until 06:40 · then 75,00 kr");
 
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
@@ -551,20 +551,20 @@ test("waiting at pickup: Pricing's values per category, ride type and distance r
   await expect(pricing.getByRole("row").filter({ has: page.getByRole("cell", { name: "Movera", exact: true }) })).toContainText("5 min");
   await expect(pricing.getByRole("link", { name: "Change in Pricing" })).toHaveAttribute("href", /\/pricing\?country=SE&zone=Z001/);
   const examples = wait.getByRole("group", { name: "Waiting examples" }).getByRole("listitem");
-  await expect(examples.filter({ hasText: "Normal ride" })).toContainText("5 min free · then 12,26 kr/min · no-show after 5 min · fee 65 kr (driver gets 52 kr)");
+  await expect(examples.filter({ hasText: "Normal ride" })).toContainText("5 min free · then 12,26 kr/min · no-show after 5 min · fee 65,00 kr (driver gets 52,00 kr)");
   await expect(examples.filter({ hasText: "Scheduled ride" })).toContainText("5 min free");
   await expect(examples.filter({ hasText: "Airport pickup" })).toContainText("15 min free · then 12,26 kr/min · no-show after 20 min");
-  await expect(examples.filter({ hasText: "Far pickup" })).toContainText("1 min free · then 12,26 kr/min · no-show after 5 min · fee 85 kr");
+  await expect(examples.filter({ hasText: "Far pickup" })).toContainText("1 min free · then 12,26 kr/min · no-show after 5 min · fee 85,00 kr");
   // Q41/Q43: no-show comes at the end of Pricing's free wait (no own setting), and the waiting money is all the driver's.
   await expect(wait.getByRole("textbox", { name: "No-show after", exact: true })).toHaveCount(0);
   await expect(wait.getByTestId("wait-share-fixed")).toContainText("waiting money 100% (fixed)");
   // Q44: the no-show fee share is one rule for the whole country.
   await wait.getByLabel("Driver's share of the no-show fee").fill("100");
-  await expect(examples.filter({ hasText: "Normal ride" })).toContainText("(driver gets 65 kr)");
+  await expect(examples.filter({ hasText: "Normal ride" })).toContainText("(driver gets 65,00 kr)");
   const far = wait.getByRole("group", { name: "Far pickups" });
   await far.getByText("Price per minute").click();
   await far.getByLabel("Far pickup price per minute").fill("8");
-  await expect(examples.filter({ hasText: "Far pickup" })).toContainText("then 8 kr/min");
+  await expect(examples.filter({ hasText: "Far pickup" })).toContainText("then 8,00 kr/min");
   await wait.getByLabel("Event pickup rule on").uncheck();
   await expect(examples.filter({ hasText: "Event pickup" })).toContainText("5 min free");
   await wait.getByRole("button", { name: "Use in all zones" }).click();
@@ -680,13 +680,13 @@ test("rider cancel fees per car type: live trips and reservations, % with min an
   for (const name of ["Movera", "Comfort", "Premium", "Priority", "Movera XL", "Electric", "Pet", "Child Seat"]) await expect(live.getByRole("rowheader", { name, exact: true })).toBeVisible();
   await expect(live.getByLabel("Live trips Pet fee", { exact: true })).toHaveValue("35");
   await expect(live.getByLabel("Live trips Comfort fee", { exact: true })).toHaveValue("45");
-  await expect(live.getByLabel("Live trips: rider sees")).toContainText("Free cancel for 2 min after the driver accepts · then 45 kr");
+  await expect(live.getByLabel("Live trips: rider sees")).toContainText("Free cancel for 2 min after the driver accepts · then 45,00 kr");
   await live.getByRole("radiogroup", { name: "Live trips Comfort fee type" }).getByText("% of price").click();
   await live.getByLabel("Live trips Comfort lowest fee").fill("200");
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toContainText("Rider cancels, Comfort: the lowest fee must not be more than the highest.");
   await live.getByLabel("Live trips Comfort lowest fee").fill("");
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toHaveCount(0);
-  await expect(live.getByLabel("Live trips: rider sees")).toContainText("then 37,5 kr (15%, at most 150 kr)"); // X4: 15% of 250 kr, whole öre like the apps (was rounded to 38 kr)
+  await expect(live.getByLabel("Live trips: rider sees")).toContainText("then 37,50 kr (15%, at most 150,00 kr)"); // X4: 15% of 250 kr, whole öre like the apps (was rounded to 38 kr); GM item 13: always 2 decimals
   await live.getByRole("button", { name: "Same for all car types" }).click();
   await live.getByRole("group", { name: /use one car type's rule for all/ }).getByRole("button", { name: "Movera", exact: true }).click();
   await expect(live.getByLabel("Live trips Comfort fee", { exact: true })).toHaveValue("35");
@@ -698,7 +698,7 @@ test("rider cancel fees per car type: live trips and reservations, % with min an
 
   await card.getByRole("tab", { name: "Reservations" }).click();
   const resv = page.getByRole("group", { name: "Reservations cancel fees" });
-  await expect(resv.getByLabel("Reservations: rider sees")).toContainText("Free cancel until 12:00 · then 105 kr (25%, between 80 kr and 300 kr)");
+  await expect(resv.getByLabel("Reservations: rider sees")).toContainText("Free cancel until 12:00 · then 105,00 kr (25%, between 80,00 kr and 300,00 kr)");
 
   await page.setViewportSize({ width: 390, height: 860 });
   await expect(resv.getByLabel("Reservations Premium highest fee")).toBeVisible();

@@ -5,6 +5,7 @@ import { useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
 import { market as marketOf, type MarketId } from "../markets/markets";
+import { money as formatMajor } from "../pricing/zonePricing";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn, trx } from "../i18n";
 import { BONUS_KEY, bonusState, emptyBonusBook, localParts, normalizeBonusBook, rewardLine, saveBonus, type BonusBook, type DriverBonus } from "./bonus";
@@ -24,7 +25,7 @@ export function BonusQuickPopup({ bonusId, country, fullLink, onClose, onNotice 
   const bonus = book.bonuses.find((item) => item.id === bonusId) ?? null;
   const canEdit = Boolean(agent && can(agent.role, "drivers.bonuses"));
   const place = marketOf(country);
-  const money = (value: number) => new Intl.NumberFormat(place.locale, { style: "currency", currency: place.currency, maximumFractionDigits: 2 }).format(value);
+  const money = (value: number) => formatMajor(value, country);
 
   const [on, setOn] = useState(bonus ? bonus.status === "active" : true);
   const [amount, setAmount] = useState(bonus ? String(bonus.reward.type === "multiplier" ? bonus.reward.multiplier : bonus.reward.amount) : "");

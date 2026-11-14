@@ -3,6 +3,7 @@ import { Wallet } from "lucide-react";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn } from "../i18n";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
+import { liveMoney } from "./format";
 
 /**
  * v0.18.29 A2 (fix job 0) (owner G12 Q5 "Real credit + limit", Q-D "Max 250 euro and equivalent", build-spec Q2 "One button on
@@ -25,7 +26,8 @@ export function LiveWalletCredit({ riderId, version, walletMinor, currency }: { 
   const major = Number(amount.replace(",", "."));
   const minor = Number.isFinite(major) ? Math.round(major * digits) : NaN;
   const problem = !(minor > 0) ? tr("Enter an amount above 0.") : null;
-  const balance = walletMinor === null ? "—" : `${(walletMinor / digits).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ${symbol}`;
+  // GM item 13: the currency's own decimals ("200,00 kr", "12.500 DT"), with the one formatter (C-23).
+  const balance = walletMinor === null ? "—" : liveMoney({ amountMinor: walletMinor, currency: cur });
   return (
     <section className="fd-box rd-wallet" data-testid="live-wallet-credit">
       <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
