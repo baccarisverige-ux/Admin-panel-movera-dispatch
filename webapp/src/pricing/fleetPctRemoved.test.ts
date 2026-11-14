@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { DemoRecord } from "../api/seed.ts";
+import { en } from "../i18n/en.ts";
 import { bookOfPricing, pricingDocumentOf } from "../live/configDocs.ts";
 import { emptyPayoutOps, normalizePayoutOps, payoutLines } from "../payments/runs.ts";
 import { fleetRows } from "../reports/extra.ts";
@@ -59,6 +60,9 @@ test("no screen shows or edits a fleet-owner % (Commission card, Payouts, trip m
     assert.doesNotMatch(source(file), FLEET_PCT, file);
   }
   assert.doesNotMatch(source("./CommissionPanel.tsx"), /tr\("Fleet owner"\)|onFleet/, "no Fleet owner line in the commission card");
+  // Re-grep 2026-11-14: no leftover text or comment about a fleet owner's part.
+  assert.ok(!("Paid to the driver's fleet owner." in en), "the old payout-line help text is gone");
+  for (const file of ["../trips/cash.ts", "../payments/runs.ts"]) assert.doesNotMatch(source(file), /fleet owner's part/, file);
   // configDocs.ts names the key once, only in the list of removed keys a publish deletes.
   const docs = source("../live/configDocs.ts");
   assert.equal(docs.match(/fleetCommissionPct/g)?.length, 1);

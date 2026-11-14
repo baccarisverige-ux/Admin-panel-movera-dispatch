@@ -6,7 +6,7 @@ import { csvCell } from "../reports/csv.ts";
 
 /**
  * Payout runs: when drivers get paid in each country, instant cash-out, holds with a reason,
- * failed payouts with retry, the payout explained line by line, the fleet owner's part,
+ * failed payouts with retry, the payout explained line by line (no fleet-owner part: contract v0.18.88),
  * a second admin for big runs, and the bank file.
  */
 
