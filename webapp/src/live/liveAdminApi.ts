@@ -40,6 +40,7 @@ import { REVIEW_OPS_KEY, emptyReviewOps, type ReviewOps } from "../growth/review
 import { INCIDENT_BY_ID_LIST, INCIDENTS_OF_DRIVER_LIST, INCIDENTS_OF_RIDER_LIST, INCIDENTS_OF_TRIP_LIST, OPEN_INCIDENTS_LIST, OPEN_INCIDENT_STATUSES, bookFrom, incidentRecord, isIncidentList, nudgeIncidentFeed, type ServerIncident } from "./incidents.ts";
 export { ALL_INCIDENTS_LIST, INCIDENT_BY_ID_LIST, INCIDENTS_OF_TRIP_LIST, OPEN_INCIDENTS_LIST } from "./incidents.ts";
 import { readPersonIncidents, type PersonFilterMemo } from "./incidentsByPerson.ts";
+import { stopVisitsOf } from "./stopVisits.ts";
 import { readWaitingTrips, type ScheduledBeforeMemo } from "./waitingTrips.ts";
 import type { SafetyBook } from "../safety/ops.ts";
 import type { NearbyDriver as AssignNearbyDriver } from "../dispatch/assign.ts";
@@ -231,6 +232,8 @@ export function tripFacts(trip: Trip): LiveTripFacts {
     pickup: trip.pickup,
     dropoff: trip.dropoff,
     stops: trip.stops ?? [],
+    // v0.18.98 (job C9b, contract.json#autoArrive.stops): each stop's visit as the server sends it, never worked out here.
+    stopVisits: stopVisitsOf(trip),
     fare: trip.fare.amountMinor,
     fareLines: (trip.fareLines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor })),
     commission: minorOf(trip.commission),
