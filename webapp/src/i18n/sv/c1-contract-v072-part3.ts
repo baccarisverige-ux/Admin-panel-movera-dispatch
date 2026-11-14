@@ -724,7 +724,7 @@ export const svC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Earlier unpaid fee (to that trip)": "Tidigare obetald avgift (till den resan)",
   "Only a paid, finished trip can be refunded.": "Bara en betald, avslutad resa kan återbetalas.",
   "Reason for resending": "Orsak till att skicka igen",
-  "Reason for the pay change": "Orsak till ändringen av ersättningen",
+  "Reason for the pay change": "Orsak till ändringen av förarersättningen",
   "Receipt sent again to the rider (in the app).": "Kvittot skickades igen till resenären (i appen).",
   "Resend receipt": "Skicka kvitto igen",
   "The booked price applies.": "Det bokade priset gäller.",

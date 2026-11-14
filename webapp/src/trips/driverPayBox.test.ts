@@ -28,7 +28,9 @@ test("A28: before a driver has the trip, no driver pay box", () => {
   for (const status of ["requested", "searching", "offered"]) assert.equal(driverPayBox(status, false), null, status);
 });
 
-const PAY_TEXTS = ["Driver pay", "Driver pay{0}", "Save driver pay", "Driver's pay now: {0}", "Driver pay change", "Change pay", "Change the driver's pay", "{0} Change the driver's pay"];
+const PAY_TEXTS = ["Driver pay", "Driver pay{0}", "Save driver pay", "Driver's pay now: {0}", "Driver pay change", "Change pay", "Change the driver's pay", "{0} Change the driver's pay",
+  // Supervisor must-fix 2 (audits/impact/admin-a28-supervisor.md): the help line in the same J6a box and its refusal.
+  "Type the driver's pay.", "Type the driver's pay. The rider's price cannot be changed.", "Reason for the pay change"];
 
 test("A28: one wording for the driver's pay in sv (förarersättning) and fr (rémunération du chauffeur)", () => {
   const svd = sv as Record<string, string>;

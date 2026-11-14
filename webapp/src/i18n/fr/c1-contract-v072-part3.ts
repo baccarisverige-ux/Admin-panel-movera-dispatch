@@ -724,7 +724,7 @@ export const frC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Earlier unpaid fee (to that trip)": "Ancien frais impayé (pour cette course-là)",
   "Only a paid, finished trip can be refunded.": "Seule une course terminée et payée peut être remboursée.",
   "Reason for resending": "Motif du nouvel envoi",
-  "Reason for the pay change": "Motif de la modification de la rémunération",
+  "Reason for the pay change": "Motif de la modification de la rémunération du chauffeur",
   "Receipt sent again to the rider (in the app).": "Reçu renvoyé au passager (dans l’application).",
   "Resend receipt": "Renvoyer le reçu",
   "The booked price applies.": "Le prix confirmé lors de la réservation reste applicable.",

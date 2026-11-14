@@ -5,7 +5,7 @@ import { tr } from "../i18n";
 import { useLiveSession, useLiveSessionMaybe } from "./LiveSessionContext";
 import { liveMoney, parseMinor } from "./format";
 import { driverPayBody, singleFlight } from "./moneyGuard";
-import { driverPayBox } from "../trips/driverPayBox";
+import { TRIP_ENDED, driverPayBox } from "../trips/driverPayBox";
 import { ErrorLine, isVersionMismatch } from "./ui";
 
 /**
@@ -32,7 +32,6 @@ type MoneyTrip = {
   finish?: { endedEarly: boolean; endedBy?: string; reasonCode?: string; repriced?: boolean };
 };
 
-const ENDED = ["completed", "cancelled_by_rider", "cancelled_by_driver", "cancelled_by_admin", "cancelled_by_system", "no_show", "expired", "failed"];
 
 function lineLabel(code: string): string {
   if (code === "trip") return tr("Trip");
@@ -70,7 +69,7 @@ function Money({ tripId }: { tripId: string }) {
   const t = trip.data;
   if (!t) return <p className="state-line">{tr("Loading.")}</p>;
   const currency = t.fare.currency;
-  const ended = ENDED.includes(t.status);
+  const ended = TRIP_ENDED.includes(t.status);
   const paid = ended && (t.paymentStatus === "captured" || t.paymentStatus === "partially_refunded");
   const split = t.moneySplit;
 
