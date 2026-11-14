@@ -8,7 +8,7 @@ import { useLiveRefetch, zonedLabel } from "../api/hooks";
 import { useLiveSession } from "./LiveSessionContext";
 import { readUncounted } from "./listTotalParam";
 import { ErrorLine } from "./ui";
-import { atRisk, inView, isOverdue, needsAttention, notStarted, reservationActions, reservationCall, reservationStateLabel, RESERVATIONS_PATH, sortReservations, type ReservationAction, type ServerReservation, type View } from "./reservations";
+import { atRisk, inView, raiseAmountMinor, isOverdue, needsAttention, notStarted, reservationActions, reservationCall, reservationStateLabel, RESERVATIONS_PATH, sortReservations, type ReservationAction, type ServerReservation, type View } from "./reservations";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "all", label: "All" },
@@ -59,7 +59,7 @@ export function LiveReservations() {
     setBusy(true);
     setError(null);
     try {
-      const call = reservationCall(action, trip, { reason, driverId, amountMinor: Math.round(Number(amount.replace(",", ".")) * 100) || 0 });
+      const call = reservationCall(action, trip, { reason, driverId, amountMinor: raiseAmountMinor(amount, trip) ?? 0 });
       await client.post(call.path, call.body);
       setNotice(tr("Done: {0}.", [trx(BUTTON[action])]));
       setOpen(null);
@@ -122,7 +122,7 @@ export function LiveReservations() {
                       ) : null}
                       {open.action === "raise" ? <input aria-label={tr("Amount to add")} inputMode="decimal" value={amount} maxLength={10} onChange={(event) => setAmount(event.target.value)} /> : null}
                       <input aria-label={tr("Reason")} value={reason} maxLength={500} placeholder={open.action === "assign" || open.action === "offer" || open.action === "raise" ? tr("Note (optional)") : tr("Reason")} onChange={(event) => setReason(event.target.value)} />
-                      <ActButton action={open.action} disabled={busy || (["unassign", "cancel", "noShow", "contact"].includes(open.action) && !reason.trim()) || ((open.action === "assign" || open.action === "offer") && !driverId.trim()) || (open.action === "raise" && !(Number(amount.replace(",", ".")) > 0))} onClick={() => void run(trip, open.action)}>{tr("Confirm")}</ActButton>
+                      <ActButton action={open.action} disabled={busy || (["unassign", "cancel", "noShow", "contact"].includes(open.action) && !reason.trim()) || ((open.action === "assign" || open.action === "offer") && !driverId.trim()) || (open.action === "raise" && raiseAmountMinor(amount, trip) === null)} onClick={() => void run(trip, open.action)}>{tr("Confirm")}</ActButton>
                       <button type="button" className="dash-btn small ghost" data-command="admin.table.filter" onClick={() => setOpen(null)}>{tr("Close")}</button>
                     </span>
                   ) : null}
