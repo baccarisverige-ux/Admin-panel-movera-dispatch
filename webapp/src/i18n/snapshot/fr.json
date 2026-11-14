@@ -4225,6 +4225,7 @@
 ["The rider was left at the wrong place","Le passager a été déposé au mauvais endroit"],
 ["The rider's bank asks for proof. Answer before the deadline or the money goes back to the rider. The trip page has the route, chat and calls to use as proof.","La banque du passager demande un justificatif. Répondez avant l’échéance, sinon l’argent revient au passager. La page de la course contient l’itinéraire, la discussion et les appels à utiliser comme justificatif."],
 ["The rider's bank questions the payment (chargeback).","La banque du passager conteste le paiement (rétrofacturation)."],
+["The rider's currency is not known.","La devise du passager n’est pas connue."],
 ["The riders who joined last.","Les passagers inscrits en dernier."],
 ["The search grows step by step when nobody accepts.","La recherche s’élargit étape par étape quand personne n’accepte."],
 ["The search stops and the rider sees this message.","La recherche s’arrête et le passager voit ce message."],

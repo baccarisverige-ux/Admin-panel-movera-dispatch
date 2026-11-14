@@ -121,6 +121,7 @@ export const enA9T = {
   "The rider was left at the wrong place": "The rider was left at the wrong place",
   "The rider's bank asks for proof. Answer before the deadline or the money goes back to the rider. The trip page has the route, chat and calls to use as proof.": "The rider's bank asks for proof. Answer before the deadline or the money goes back to the rider. The trip page has the route, chat and calls to use as proof.",
   "The rider's bank questions the payment (chargeback).": "The rider's bank questions the payment (chargeback).",
+  "The rider's currency is not known.": "The rider's currency is not known.",
   "The riders who joined last.": "The riders who joined last.",
   "The search grows step by step when nobody accepts.": "The search grows step by step when nobody accepts.",
   "The search stops and the rider sees this message.": "The search stops and the rider sees this message.",

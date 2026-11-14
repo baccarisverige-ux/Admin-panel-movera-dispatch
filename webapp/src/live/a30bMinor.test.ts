@@ -44,3 +44,9 @@ test("A30b wallet TND: 3 decimals are millimes; a 4th decimal and 1e3 are refuse
   assert.equal(walletCreditMinor("12.5001", "TND"), null);
   assert.equal(walletCreditMinor("1e3", "TND"), null);
 });
+
+test("A30b SF1 wallet: no rider currency sends nothing (never SEK), in SEK-style and TND-style amounts", () => {
+  assert.equal(walletCreditMinor("5", null), null);
+  assert.equal(walletCreditMinor("12,50", null), null);
+  assert.equal(walletCreditMinor("12,500", null), null);
+});

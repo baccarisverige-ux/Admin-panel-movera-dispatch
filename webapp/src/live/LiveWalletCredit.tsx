@@ -4,7 +4,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { tr, trn } from "../i18n";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
 import { liveMoney } from "./format";
-import { walletCreditMinor } from "./walletCredit";
+import { walletCreditMinor, walletCreditProblem } from "./walletCredit";
 
 /**
  * v0.18.29 A2 (fix job 0) (owner G12 Q5 "Real credit + limit", Q-D "Max 250 euro and equivalent", build-spec Q2 "One button on
@@ -20,19 +20,21 @@ export function LiveWalletCredit({ riderId, version, walletMinor, currency }: { 
   const canEdit = session?.can("finance.edit") ?? false;
   const [amount, setAmount] = useState("");
   const [notice, setNotice] = useState("");
-  const cur = currency ?? "SEK";
-  const symbol = SYMBOL[cur] ?? cur;
-  const minor = walletCreditMinor(amount, cur);
-  const problem = minor === null ? tr("Enter an amount above 0.") : null;
+  // BQ-A30b SF1: no known rider currency → nothing is sent (never "SEK"); the box says so and the button stays off.
+  const minor = walletCreditMinor(amount, currency);
+  const problemKey = walletCreditProblem(amount, currency);
+  const problem = problemKey ? tr(problemKey) : null;
+  const symbol = currency ? SYMBOL[currency] ?? currency : "";
   // GM item 13: the currency's own decimals ("200,00 kr", "12.500 DT"), with the one formatter (C-23).
-  const balance = walletMinor === null ? "—" : liveMoney({ amountMinor: walletMinor, currency: cur });
+  const balance = walletMinor === null || currency === null ? "—" : liveMoney({ amountMinor: walletMinor, currency });
   return (
     <section className="fd-box rd-wallet" data-testid="live-wallet-credit">
       <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
       <strong className="rd-wallet-balance" data-testid="live-wallet-balance">{balance}</strong>
       <div className="rd-form-grid">
-        <label className="field"><span>{tr("Amount")} ({symbol})</span><input aria-label={tr("Wallet amount")} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={!canEdit} /></label>
+        <label className="field"><span>{tr("Amount")}{symbol ? ` (${symbol})` : ""}</span><input aria-label={tr("Wallet amount")} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={!canEdit} /></label>
       </div>
+      {currency === null ? <p className="dx-warn" data-testid="live-wallet-no-currency">{tr("The rider's currency is not known.")}</p> : null}
       <small className="fine">{tr("The rider gets a notice and sees it in the wallet as Credit from Movera.")}</small>
       <CommandButton
         command="admin.rider.walletCredit"
@@ -41,7 +43,7 @@ export function LiveWalletCredit({ riderId, version, walletMinor, currency }: { 
         confirmTarget={false}
         before={balance}
         after={`+${amount} ${symbol}`}
-        value={{ ...(typeof version === "number" ? { expectedVersion: version } : {}), amount: { amountMinor: minor ?? 0, currency: cur } }}
+        value={{ ...(typeof version === "number" ? { expectedVersion: version } : {}), amount: { amountMinor: minor ?? 0, currency: currency ?? "" } }}
         disabled={!canEdit || Boolean(problem)}
         title={problem ?? undefined}
         onDone={() => { setNotice(tr("Added {0} {1} to the wallet.", [amount, symbol])); setAmount(""); }}
