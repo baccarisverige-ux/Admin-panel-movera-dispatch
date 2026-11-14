@@ -583,11 +583,11 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     // shows (contract default 30; before this rest hours × 60).
     drivingLimits: { maxHoursPerDay: country.rest.workHours, restMinutes: country.rest.restMinutes, resetAfterOfflineHours: country.rest.resetAfterOfflineHours, on: country.rest.on, warnFirstMin: country.rest.warnFirstMin, warnLastMin: country.rest.warnLastMin, blockOnline: country.rest.blockOnline },
     // v0.18.13 (contract.json#pickupWaiting.headingCheck, G5-8). BQ-V22 (decisions/driver-g5.md:9,16 "80 % default, admin
-    // can change"): headingPct / notHeadingMinutes per zone from Dispatch › Rides › Rider cancels: smart check. `on` has no
-    // admin control (always on, publishing keeps the server's own value; configDocs withOwned).
+    // can change"): headingPct / notHeadingMinutes per zone from Dispatch › Rides › Rider cancels: smart check. SV: `on` is
+    // that card's "Smart cancel check" switch (contract pickupWaiting.headingCheck.setting maps it to on).
     // v0.18.35 (owner Q-A, FIX JOB 4): reassign is always false (a live ride is never taken back; read-only in the panel);
     // the "not driving to the rider" notice is Dispatch › Book later › Late driver.
-    headingCheck: { on: true, headingPct: zone.riderCancel.headingPct, notHeadingMinutes: zone.riderCancel.notHeadingMinutes, reassign: false, notice: zone.reservation.booking.notHeadingNotice, noticeEveryMin: zone.reservation.booking.notHeadingNoticeEveryMin },
+    headingCheck: { on: zone.riderCancel.on, headingPct: zone.riderCancel.headingPct, notHeadingMinutes: zone.riderCancel.notHeadingMinutes, reassign: false, notice: zone.reservation.booking.notHeadingNotice, noticeEveryMin: zone.reservation.booking.notHeadingNoticeEveryMin },
     rideCheck: rideCheck(base, state),
     routeChange: routeChange(base),
     texts: driverTexts(base, state),
