@@ -5,7 +5,8 @@ import { ArrowLeft, Copy, Gavel, RefreshCcw } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { formatMoney, market } from "../markets/markets";
-import { METHOD_LABELS, PAY_OPS_KEY, emptyPayOps, factsOf, normalizePayOps, paySplit, refundLimitMinor, retryPlan, type PayOps } from "../payments/desk";
+import { METHOD_LABELS, PAY_OPS_KEY, emptyPayOps, factsOf, normalizePayOps, paySplit, payShares, refundLimitMinor, retryPlan, type PayOps } from "../payments/desk";
+import { isLiveData } from "../live/realData";
 import { Cards } from "../reports/ui";
 import { needsSecondAdmin } from "../payments/refundPolicy";
 import { useRefundPolicy } from "../payments/useRefundPolicy";
@@ -39,6 +40,8 @@ export function PaymentPage() {
   // Q25: the one second-admin rule from Settings, per country (default above 500 kr, 50 €, 150 DT); the server applies the same setting.
   const needsSecond = needsSecondAdmin(refundPolicy, facts.country, amount) && payment.status === "captured";
   const split = paySplit(amount, facts.country, facts.tripId);
+  const shares = payShares(split);
+  const live = isLiveData();
   const plan = payment.status === "failed" ? retryPlan(payment, facts, ops, now) : null;
   const limit = agent ? refundLimitMinor(agent.role, facts.country, ops) : 0;
   const overLimit = limit !== null && amount > limit && payment.status === "captured";
@@ -70,8 +73,9 @@ export function PaymentPage() {
         // Live: the trip's split arrives with the trips list; until then the cards say "Loading…", never "Not connected yet".
         fmt={(value) => (!Number.isFinite(value) && trips.isLoading ? tr("Loading…") : money(value))}
         cards={[
-          { id: "driver", label: tr("Driver gets"), value: split.driver, previous: null, format: "money", info: tr("The price minus Movera's commission.") },
-          { id: "movera", label: tr("Movera keeps"), value: split.movera, previous: null, format: "money", info: tr("Commission (20% until the price book is linked).") },
+          // A29 round 2 (M2): on live the info texts say what the amount is, no % and no formula (the server's numbers).
+          { id: "driver", label: tr("Driver gets"), value: split.driver, previous: null, format: "money", info: live ? tr("What the driver gets for this trip.") : tr("The price minus Movera's commission.") },
+          { id: "movera", label: tr("Movera keeps"), value: split.movera, previous: null, format: "money", info: live ? tr("What Movera keeps from this trip.") : tr("Commission (20% until the price book is linked).") },
           { id: "vat", label: Number.isFinite(split.vatRate) ? tr("VAT inside ({0}%)", [Math.round(split.vatRate * 100)]) : tr("VAT inside"), value: split.vat, previous: null, format: "money", info: tr("VAT included in the price. Rates are placeholders to confirm.") },
         ]}
       />
@@ -82,10 +86,13 @@ export function PaymentPage() {
           <div><dt>{tr("Rider")}</dt><dd>{facts.riderId ? <Link to={`/riders/${facts.riderId}`}>{facts.riderName}</Link> : facts.riderName}</dd></div>
           <div><dt>{tr("Trip")}</dt><dd>{facts.tripId ? <Link to={`/trips/${facts.tripId}`}>{facts.tripId}</Link> : "–"}</dd></div>
         </dl>
-        <div className="pm-split" role="img" aria-label={tr("Driver {0}%, Movera {1}%", [Math.round((split.driver / Math.max(split.price, 1)) * 100), Math.round((split.movera / Math.max(split.price, 1)) * 100)])}>
-          <i className="driver" style={{ width: `${(split.driver / Math.max(split.price, 1)) * 100}%` }} />
-          <i className="movera" style={{ width: `${(split.movera / Math.max(split.price, 1)) * 100}%` }} />
-        </div>
+        {/* A29 round 2 (M2): the % bar only in the demo and only with both values (payShares); never on live, never NaN%. */}
+        {shares ? (
+          <div className="pm-split" role="img" aria-label={tr("Driver {0}%, Movera {1}%", [shares.driverPct, shares.moveraPct])}>
+            <i className="driver" style={{ width: `${shares.driverPct}%` }} />
+            <i className="movera" style={{ width: `${shares.moveraPct}%` }} />
+          </div>
+        ) : null}
         {plan ? <p className="fn-warn">{trn("{0} {1}: {2}. Tried {3} of {4}. {5} {6}", <RefreshCcw size={14} aria-hidden="true" />, plan.cause.kind === "system" ? tr("Our side") : tr("Rider's side"), trx(plan.cause.reason), Number.isFinite(plan.tries) ? plan.tries : tr("Not connected yet"), plan.max, plan.nextAt ? tr("Next try {0}.", [new Intl.DateTimeFormat(market(facts.country).locale, { timeZone: market(facts.country).timeZone, dateStyle: "short", timeStyle: "short" }).format(new Date(plan.nextAt))]) : tr("No more automatic tries."), <Link to="/payments?tab=failed">{tr("Failed and retries")}</Link>)}</p> : null}
         {facts.dispute ? <p className="fn-warn">{trn("{0} Dispute: {1}. Answer by {2}. {3}", <Gavel size={14} aria-hidden="true" />, facts.dispute.reason, facts.dispute.deadline, <Link to="/payments?tab=disputes">{tr("Disputes")}</Link>)}</p> : null}
       </section>

@@ -154,6 +154,17 @@ export function paySplit(amount: number, country: MarketId, tripId?: string | nu
   return { price: amount, vat: Math.round((amount * vatRate) / (1 + vatRate)), vatRate, commission, driver: amount - commission, movera: commission };
 }
 
+/**
+ * The Driver / Movera bar on the payment page, in whole % of the price (demo only). A29 round 2 (M2, owner rule: % only
+ * in admin setting fields; the apps never work money out): live → null (no % result line, no bar); a missing value → null
+ * (never "NaN%").
+ */
+export function payShares(split: Pick<PaySplit, "price" | "driver" | "movera">): { driverPct: number; moveraPct: number } | null {
+  if (isLiveData() || !Number.isFinite(split.driver) || !Number.isFinite(split.movera) || !Number.isFinite(split.price)) return null;
+  const base = Math.max(split.price, 1);
+  return { driverPct: Math.round((split.driver / base) * 100), moveraPct: Math.round((split.movera / base) * 100) };
+}
+
 export type RetryPlan = { tries: number; max: number; nextAt: string | null; cause: { kind: "rider" | "system"; reason: string }; handled: boolean; owing: boolean };
 
 /** Failed payment: why, how many retries so far, when the next one runs, and if the rider is blocked for owing. */

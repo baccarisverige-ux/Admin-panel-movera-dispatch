@@ -89,8 +89,8 @@ test("run card: each payout's own 2 lines, nothing added up in the app; one payo
 test("Add money box: the commission before the bonus starts from the server's moveraKeepsNow when sent (lost-driver payment off)", () => {
   // Under way: commission 50,00 kr after a 20,00 kr bonus, lost driver paid 30,00 kr → moveraKeepsNow 20,00 kr.
   assert.equal(commissionBeforeBonus({ commission: money(5000, "SEK"), driverBonus: money(2000, "SEK"), moveraKeepsNow: money(2000, "SEK") }), 4000);
-  // An older server: today's commission + bonus.
-  assert.equal(commissionBeforeBonus({ commission: money(5000, "SEK"), driverBonus: money(2000, "SEK") }), 7000);
+  // An older server (no moveraKeepsNow): "Not connected yet" (A29 round 2, FU-A29-1), never the stored commission + bonus.
+  assert.ok(Number.isNaN(commissionBeforeBonus({ commission: money(5000, "SEK"), driverBonus: money(2000, "SEK") })));
 });
 
 test("trip page: no 'no money split' note, the row reads moveraKeepsNow; the lost-driver line is in sv / fr / en as the contract", () => {

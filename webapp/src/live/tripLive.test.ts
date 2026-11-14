@@ -143,14 +143,15 @@ test("owner bug 2026-11-01: Add money per kind of offer and Movera's commission 
   const sek = (amountMinor: number) => ({ amountMinor, currency: "SEK" });
   const eur = (amountMinor: number) => ({ amountMinor, currency: "EUR" });
   // Exclusive 200 kr, radar 0: the server's driverBonus is the larger one.
-  const se = { driverBonus: sek(20000), commission: sek(-15380), driverBonusByKind: { exclusive: { ...sek(20000), priority: true }, radar: { ...sek(0), priority: false } } };
+  const se = { driverBonus: sek(20000), commission: sek(-15380), moveraKeepsNow: sek(-15380), driverBonusByKind: { exclusive: { ...sek(20000), priority: true }, radar: { ...sek(0), priority: false } } };
   assert.deepEqual(bonusByKind(se), { exclusiveMinor: 20000, radarMinor: 0 });
   // The owner's photo: commission 46,20 kr before the bonus; the box shows "Movera pays 153,80 kr more", not 353,80.
   assert.equal(commissionBeforeBonus(se), 4620);
   assert.equal(commissionBeforeBonus(se) - 20000, -15380);
   // An older server: one bonus for both kinds.
   assert.deepEqual(bonusByKind({ driverBonus: eur(500), commission: eur(300) }), { exclusiveMinor: 500, radarMinor: 500 });
-  assert.equal(commissionBeforeBonus({ driverBonus: eur(500), commission: eur(300) }), 800);
+  // A29 round 2 (FU-A29-1): without the server's moveraKeepsNow → "Not connected yet", never the stored commission.
+  assert.ok(Number.isNaN(commissionBeforeBonus({ driverBonus: eur(500), commission: eur(300) })));
   assert.deepEqual(bonusByKind({}), { exclusiveMinor: 0, radarMinor: 0 });
 });
 

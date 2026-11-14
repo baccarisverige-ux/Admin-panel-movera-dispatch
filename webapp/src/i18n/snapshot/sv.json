@@ -9000,4 +9000,6 @@
 ["Driver balance for this trip","Förarens saldo för resan"],
 ["Driver owes Movera {0}","Föraren är skyldig Movera {0}"],
 ["Movera owes the driver {0}","Movera är skyldig föraren {0}"],
-["Settled","Kvitt"]]
+["Settled","Kvitt"],
+["What the driver gets for this trip.","Det föraren får för den här resan."],
+["What Movera keeps from this trip.","Det Movera behåller av den här resan."]]

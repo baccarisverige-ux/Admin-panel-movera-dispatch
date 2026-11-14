@@ -6,4 +6,7 @@ export const enC18MoneyM24 = {
   "Driver owes Movera {0}": "Driver owes Movera {0}",
   "Movera owes the driver {0}": "Movera owes the driver {0}",
   "Settled": "Settled",
+  // A29 round 2 (M2): PaymentPage info texts on live, amounts only.
+  "What the driver gets for this trip.": "What the driver gets for this trip.",
+  "What Movera keeps from this trip.": "What Movera keeps from this trip.",
 } as const;

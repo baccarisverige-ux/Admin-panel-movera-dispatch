@@ -501,12 +501,13 @@ export function TripPage() {
               {cash ? (
                 <>
                   <dl className="op-split-lines">
-                    <div><dt>{tr("Cash collected by driver")}</dt><dd>{money(cash.collected)}</dd></div>
+                    {/* A29 round 2 (M1): live = finish.cashToCollect, what is LEFT to collect (contract priceDisplay.owedToMovera). */}
+                    <div><dt>{split.live ? tr("Cash to collect") : tr("Cash collected by driver")}</dt><dd>{money(cash.collected)}</dd></div>
                     {/* BQ-A29: on live the driver's balance is the server's owedToMovera, shown once in "Who gets what" above
                         (split-driver-balance); the demo keeps its own line. */}
                     {split.live ? null : <div className="minus"><dt>{tr("Owed to Movera")}</dt><dd>{money(cash.owed)}</dd></div>}
                   </dl>
-                  <p className="op-help">{trn("The owed amount is taken from the driver's next payout. {0}", <Link to="/payouts">{tr("Payouts")}</Link>)}</p>
+                  {split.live ? null : <p className="op-help">{trn("The owed amount is taken from the driver's next payout. {0}", <Link to="/payouts">{tr("Payouts")}</Link>)}</p>}
                 </>
               ) : <p className="op-help">{tr("The driver collects the fare in cash at the drop-off.")}</p>}
             </div>

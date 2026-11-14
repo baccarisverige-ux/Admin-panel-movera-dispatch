@@ -35,7 +35,8 @@ test("live: a trip page reads only server facts (places, times, category, fare l
   assert.equal(route.stops.length, 2);
   assert.ok(Number.isNaN(route.km) && Number.isNaN(route.minutes), "distance and minutes are not on the trip");
   const split = moneySplit(trip, null, []);
-  assert.deepEqual([split.price, split.commission, split.driverGets, split.moveraKeeps], [30000, 6000, 24000, 6000]);
+  // A29 round 2 (FU-A29-1): no moveraKeepsNow / moneySplit sent → Movera keeps is "Not connected yet", never the commission.
+  assert.deepEqual([split.price, split.commission, split.driverGets, split.moveraKeeps], [30000, 6000, 24000, NaN]);
   assert.ok(Number.isNaN(split.tip) && Number.isNaN(split.promo), "no invented tip or promotion");
   assert.ok(!("fleet" in split), "no fleet-owner share (v0.18.88)");
   assert.equal(isCashTrip(trip, "SE"), true);
@@ -221,7 +222,8 @@ test("S5 J5a (moneyBase.commission): the driver pop-up's Money tab shows the ser
   // A server without who-gets-what: the driver's lines and the server's commission, still nothing worked out twice.
   const older = tripRecord({ ...trip, moneySplit: undefined, driverTotal: undefined, tip: undefined });
   const oldMoney = tripMoney(liveMoneySplit(older, older.liveTrip!), 60);
-  assert.deepEqual([oldMoney.fareShare, oldMoney.pickupPay, oldMoney.driverGets, oldMoney.moveraKeeps], [352, 10, 362, 118]);
+  // A29 round 2 (FU-A29-1): Movera keeps is not the stored commission on a server without who-gets-what / moveraKeepsNow.
+  assert.deepEqual([oldMoney.fareShare, oldMoney.pickupPay, oldMoney.driverGets, oldMoney.moveraKeeps], [352, 10, 362, NaN]);
 });
 
 test("G2 R10: no Not connected yet badge on the live driver, onboarding, fleet owner and vehicle pages", async () => {

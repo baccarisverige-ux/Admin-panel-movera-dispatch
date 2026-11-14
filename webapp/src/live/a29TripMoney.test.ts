@@ -142,3 +142,51 @@ test("Payments desk (paySplit live) in TND: the server's numbers in millimes as 
     setLiveData(false);
   }
 });
+
+/* ---- Round 2 (supervisor audits/impact/admin-a29-supervisor.md: M1, M2, FU-A29-1); live only, demo unchanged. ---- */
+
+test("M1: the live cash box labels finish.cashToCollect 'Cash to collect' (what is LEFT to collect), no 'owed amount' help line", () => {
+  const page = readFileSync(new URL("../pages/TripPage.tsx", import.meta.url), "utf8");
+  const box = page.slice(page.indexOf('data-testid="trip-cash"'), page.indexOf('data-testid="trip-cash"') + 1600);
+  assert.ok(/split\.live \? tr\("Cash to collect"\) : tr\("Cash collected by driver"\)/.test(box), "live: 'Cash to collect'; demo keeps its label");
+  assert.ok(/split\.live \? null : <p className="op-help">\{trn\("The owed amount is taken from the driver's next payout/.test(box), "live: no 'owed amount' help line");
+});
+
+test("M2: PaymentPage on live: amounts-only info texts (en/sv/fr), no % bar or 'Driver {0}%, Movera {1}%' label, never NaN%", async () => {
+  const { payShares } = await import("../payments/desk.ts");
+  setLiveData(true);
+  try {
+    assert.equal(payShares({ price: 30000, driver: 26500, movera: 3500 }), null, "live: no % result line");
+  } finally {
+    setLiveData(false);
+  }
+  assert.deepEqual(payShares({ price: 30000, driver: 24000, movera: 6000 }), { driverPct: 80, moveraPct: 20 }, "demo unchanged");
+  assert.equal(payShares({ price: 30000, driver: Number.NaN, movera: 6000 }), null, "a missing value: no bar, never NaN%");
+  const page = readFileSync(new URL("../pages/PaymentPage.tsx", import.meta.url), "utf8");
+  assert.ok(page.includes("payShares(split)") && !/Math\.round\(\(split\.driver \/ Math\.max/.test(page), "the bar reads payShares");
+  assert.ok(/live \? tr\("What the driver gets for this trip\."\)/.test(page) && /live \? tr\("What Movera keeps from this trip\."\)/.test(page));
+  registerDictionary("sv", sv);
+  const { fr } = await import("../i18n/fr.ts");
+  for (const [key, dict] of [["What the driver gets for this trip.", sv], ["What Movera keeps from this trip.", sv], ["What the driver gets for this trip.", fr], ["What Movera keeps from this trip.", fr]] as const) {
+    const text = (dict as Record<string, string>)[key];
+    assert.ok(text && text !== key && !text.includes("%"), `${key} translated, no %`);
+  }
+});
+
+test("FU-A29-1: live 'Movera keeps' and the Add money box never fall back to the stored commission or 0", async () => {
+  const { commissionBeforeBonus } = await import("./tripLive.ts");
+  setLiveData(true);
+  try {
+    const old = tripRecord(trip({ tripId: "trp_fu" }));
+    remember([old]);
+    assert.ok(Number.isNaN(moneySplit(old, null, []).moveraKeeps), "no moveraKeepsNow, no moneySplit → Not connected yet, not commission 60,00 kr");
+    const sent = tripRecord(trip({ tripId: "trp_fu2", moveraKeepsNow: money(4500, "TND") }, "TND"));
+    remember([sent]);
+    assert.equal(moneySplit(sent, null, []).moveraKeeps, 4500);
+  } finally {
+    setLiveData(false);
+  }
+  assert.ok(Number.isNaN(commissionBeforeBonus({ commission: money(5000, "SEK"), driverBonus: money(2000, "SEK") })), "no moveraKeepsNow → Not connected yet");
+  assert.ok(Number.isNaN(commissionBeforeBonus({})), "never ?? 0");
+  assert.equal(commissionBeforeBonus({ moveraKeepsNow: money(2000, "SEK"), driverBonus: money(2000, "SEK") }), 4000);
+});
