@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "../auth/SessionContext";
 import { ROLE_LABELS } from "../auth/permissions";
+import { LanguageFallbackNote } from "./LanguageFallbackNote";
 import { LanguageSaveButton } from "./LanguageSaveButton";
 import { tr, trx } from "./core";
 import { trn } from "./nodes";
@@ -83,6 +84,7 @@ export function ProfileMenu({ initials }: { initials: string }) {
               {ADMIN_LANGUAGES.map((code) => <option key={code} value={code}>{languageOptionLabel(code)}</option>)}
             </select>
           </label>
+          <LanguageFallbackNote />
           <p className="profile-menu-help">
             {language.source === "build"
               ? tr("This build starts every admin in {0}.", [languageOptionLabel(language.defaultLanguage)])

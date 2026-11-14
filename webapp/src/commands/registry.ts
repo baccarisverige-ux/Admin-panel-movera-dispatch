@@ -45,6 +45,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.auth.pickAgent", label: "Pick demo agent", reason: false, permission: "overview.read" },
   // Owner G1-D2: the globe on the pages before sign-in (sv / fr / en, remembered on this computer).
   { id: "admin.auth.signInLanguage", label: "Choose the sign-in page language", reason: false, permission: "overview.read" },
+  // BQ-A27: the "Try again" of the note shown when the admin's language file could not load (English meanwhile).
+  { id: "admin.shell.languageRetry", label: "Try loading the panel language again", reason: false, permission: "overview.read" },
   // Live mode (src/live): the server decides and writes the audit; the note travels in the request body.
   { id: "admin.server.signIn", label: "Sign in to the server", reason: false, permission: "overview.read" },
   { id: "admin.server.setupPassword", label: "Choose the first password", reason: false, permission: "overview.read" },

@@ -3,7 +3,7 @@ import { useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { COUNTRY_SETTINGS_KEY, normalizeCountrySettingsBook } from "../config/countrySettings";
 import type { MarketId } from "../markets/markets";
-import { isLanguageLoaded, loadLanguage, setLanguage } from "./core";
+import { isLanguageLoaded, loadLanguageWithRetry, setLanguage } from "./core";
 import { homeCountry, resolveAdminLanguage, type AppLanguage, type LanguageSource } from "./languages";
 import { signInLanguage, subscribeSignInLanguage } from "./signInLanguage";
 
@@ -16,9 +16,13 @@ type I18nValue = {
   country: MarketId;
   /** The admin's own choice, if any. */
   chosen: AppLanguage | undefined;
+  /** BQ-A27: the language the admin should see but whose file could not load; the panel shows English meanwhile. */
+  fallbackFrom?: AppLanguage;
+  /** BQ-A27: try loading fallbackFrom again. */
+  retry: () => void;
 };
 
-const I18nContext = createContext<I18nValue>({ language: "en", source: "country", defaultLanguage: "en", country: "SE", chosen: undefined });
+const I18nContext = createContext<I18nValue>({ language: "en", source: "country", defaultLanguage: "en", country: "SE", chosen: undefined, retry: () => {} });
 
 /**
  * Picks the signed-in admin's language (owner Q49): their own choice from the profile, else the admin default of their
@@ -43,23 +47,33 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     })
     : { language: beforeSignIn.language, source: beforeSignIn.source === "chosen" ? "chosen" : "computer", defaultLanguage: beforeSignIn.language };
   // French and Swedish load on first use; until then the page waits a moment (English never waits).
-  const ready = isLanguageLoaded(resolved.language);
+  // BQ-A27: a file that fails is tried again a few times; when every try fails the panel shows English and the language
+  // pickers say so (LanguageFallbackNote), with a button to try again.
+  const wanted = resolved.language;
+  const [failed, setFailed] = useState<AppLanguage | null>(null);
+  const fallbackFrom = failed === wanted ? wanted : undefined;
+  const language: AppLanguage = fallbackFrom ? "en" : wanted;
+  const ready = isLanguageLoaded(language);
   const [, setLoaded] = useState(0);
   useEffect(() => {
     if (ready) return;
     let live = true;
-    void loadLanguage(resolved.language).then(() => { if (live) setLoaded((count) => count + 1); });
+    void loadLanguageWithRetry(wanted).then((ok) => {
+      if (!live) return;
+      if (ok) setLoaded((count) => count + 1);
+      else setFailed(wanted);
+    });
     return () => { live = false; };
-  }, [ready, resolved.language]);
+  }, [ready, wanted]);
   // Set before the children render, so module-level helpers (status words, dates) already use it.
-  if (ready) setLanguage(resolved.language);
+  if (ready) setLanguage(language);
   useEffect(() => {
-    if (ready) document.documentElement.lang = resolved.language;
-  }, [ready, resolved.language]);
-  const value = useMemo<I18nValue>(() => ({ ...resolved, country, chosen: me?.language }), [resolved.language, resolved.source, resolved.defaultLanguage, country, me?.language]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (ready) document.documentElement.lang = language;
+  }, [ready, language]);
+  const value = useMemo<I18nValue>(() => ({ ...resolved, language, country, chosen: me?.language, fallbackFrom, retry: () => setFailed(null) }), [language, resolved.source, resolved.defaultLanguage, country, me?.language, fallbackFrom]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <I18nContext.Provider value={value}>
-      {ready ? <Fragment key={resolved.language}>{children}</Fragment> : <p className="state-line" role="status">…</p>}
+      {ready ? <Fragment key={language}>{children}</Fragment> : <p className="state-line" role="status">…</p>}
     </I18nContext.Provider>
   );
 }

@@ -2,6 +2,7 @@ import { Languages } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
 import { tr } from "./core";
 import { useLanguage } from "./I18nProvider";
+import { LanguageFallbackNote } from "./LanguageFallbackNote";
 import { LanguageSaveButton } from "./LanguageSaveButton";
 import { languageSetting } from "./ProfileMenu";
 import { ADMIN_LANGUAGES, LANGUAGE_NATIVE_NAME, languageOptionLabel, type AppLanguage } from "./languages";
@@ -37,6 +38,7 @@ export function LanguageQuickSwitch({ compact = false }: { compact?: boolean }) 
           </LanguageSaveButton>
         );
       })}
+      <LanguageFallbackNote />
     </div>
   );
 }

@@ -8960,4 +8960,7 @@
 ["The change to the driver's pay is above this country's limit (Pricing › Tips & limits).","La modification de la rémunération dépasse la limite du pays (Tarifs › Pourboires et limites)."],
 ["The driver's pay cannot go below 0.","La rémunération du chauffeur ne peut pas être inférieure à 0."],
 ["The driver's pay cannot be changed while the trip is {0}.","La rémunération du chauffeur ne peut pas être modifiée tant que la course est {0}."],
-["Trip adjusted (driver pay, waiting or fee)","Course ajustée (rémunération, attente ou frais)"]]
+["Trip adjusted (driver pay, waiting or fee)","Course ajustée (rémunération, attente ou frais)"],
+["Could not load {0}, showing English.","Impossible de charger {0}, affichage en anglais."],
+["Waiting time must be a whole number from 0 to 120 minutes.","Le temps d’attente doit être un nombre entier de 0 à 120 minutes."],
+["Try loading the panel language again","Réessayer de charger la langue du panneau"]]

@@ -8960,4 +8960,7 @@
 ["The change to the driver's pay is above this country's limit (Pricing › Tips & limits).","Ändringen av förarens ersättning är över landets gräns (Prissättning › Dricks och gränser)."],
 ["The driver's pay cannot go below 0.","Förarens ersättning kan inte bli lägre än 0."],
 ["The driver's pay cannot be changed while the trip is {0}.","Förarens ersättning kan inte ändras när resan är {0}."],
-["Trip adjusted (driver pay, waiting or fee)","Resa justerad (förarersättning, väntetid eller avgift)"]]
+["Trip adjusted (driver pay, waiting or fee)","Resa justerad (förarersättning, väntetid eller avgift)"],
+["Could not load {0}, showing English.","Kunde inte ladda {0}, visar engelska."],
+["Waiting time must be a whole number from 0 to 120 minutes.","Väntetiden måste vara ett heltal från 0 till 120 minuter."],
+["Try loading the panel language again","Försök ladda panelens språk igen"]]
