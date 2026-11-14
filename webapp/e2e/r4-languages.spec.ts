@@ -31,6 +31,29 @@ async function pickLanguage(page: Page, code: "" | "en" | "fr" | "sv", saveLabel
   await expect(menu).toBeHidden();
 }
 
+/**
+ * BQ-O13: every page.goto and reload starts the whole panel again. On the dev server the app, the French or Swedish
+ * dictionary (loaded on first use; I18nProvider shows "…" until then) and the page come in module by module. A
+ * fixed 5 s check of the top bar failed on a different page each run. So wait until the route has finished loading
+ * before reading it: the panel is drawn in the admin's language (html lang is set once the dictionary is in), the top
+ * bar title is there and the page itself replaced its "Loading." line. A normal load takes about 1 s. Seen locally
+ * on the dev server: once in a while a reload never settles (the page stays blank or on "…" for good, while the same
+ * route loads at once the next time); then the route is loaded once more, and a second hang fails the test.
+ */
+async function loaded(page: Page, lang: "en" | "fr" | "sv") {
+  const ready = () => page.waitForFunction(
+    (code) => document.documentElement.lang === code && document.querySelector(".topbar h1") !== null && document.querySelector("section.page.active > p.state-line") === null,
+    lang,
+    { timeout: 20_000 },
+  );
+  try {
+    await ready();
+  } catch {
+    await page.reload();
+    await ready();
+  }
+}
+
 async function noSideScroll(page: Page, where: string) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow, `${where}: no horizontal scroll`).toBeLessThanOrEqual(1);
@@ -64,6 +87,7 @@ async function visitAll(page: Page, lang: "fr" | "sv") {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 800 });
     for (const check of PAGES) {
       await page.goto(check.path);
+      await loaded(page, lang);
       await expect(page.locator(".topbar h1"), check.path).toHaveText(say(lang, check.title));
       const text = say(lang, check.text);
       expect(text, `${check.text} is translated to ${lang}`).not.toBe(check.text);
@@ -79,6 +103,7 @@ test("the profile picker shows codes; French is saved for this admin, logged in 
   test.setTimeout(180_000);
   await session(page);
   await page.goto("/");
+  await loaded(page, "en");
   await expect(page.locator(".topbar h1")).toHaveText("Dashboard");
   await page.getByTestId("profile-button").click();
   const menu = page.locator("#profile-menu");
@@ -102,10 +127,12 @@ test("the profile picker shows codes; French is saved for this admin, logged in 
 
   // Saved for this admin: a new page load keeps it.
   await page.reload();
+  await loaded(page, "fr");
   await expect(page.locator(".topbar h1")).toHaveText("Tableau de bord");
 
   // My activity lists the change with its before and after.
   await page.goto("/dispatch?view=activity");
+  await loaded(page, "fr");
   const entry = page.locator("main").getByText("Changer ma langue de l’interface").first();
   await expect(entry).toBeVisible();
   await entry.click();
@@ -120,6 +147,7 @@ test("Swedish on every main page, dates in Swedish, then back to the country def
   test.setTimeout(180_000);
   await session(page);
   await page.goto("/");
+  await loaded(page, "en");
   await pickLanguage(page, "sv");
   await expect(page.locator(".topbar h1")).toHaveText("Kontrollpanel");
   await expect(page.locator(".profile-meta")).toContainText(/\d{1,2} [a-zåäö]{3}\.? \d{4}/);
@@ -128,6 +156,7 @@ test("Swedish on every main page, dates in Swedish, then back to the country def
   // Back to the default ("Country default", value ""): the build default (English in this suite) applies again.
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
+  await loaded(page, "sv");
   await pickLanguage(page, "", "Spara språket");
   await expect(page.locator(".topbar h1")).toHaveText("Dashboard");
 });
@@ -135,8 +164,10 @@ test("Swedish on every main page, dates in Swedish, then back to the country def
 test("dialog texts follow the language: confirm, reason and Please wait", async ({ page }) => {
   await session(page);
   await page.goto("/");
+  await loaded(page, "en");
   await pickLanguage(page, "fr");
   await page.goto("/trips/T0004");
+  await loaded(page, "fr");
   const cancel = page.getByRole("button", { name: "Annuler la course" }).first();
   await expect(cancel).toBeVisible();
   await cancel.click();
