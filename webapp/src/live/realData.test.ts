@@ -202,5 +202,11 @@ test("live: Movera commission row = moneySplit.movera (Movera keeps) after a bon
   remember([trip]);
   const { paySplit } = await import("../payments/desk.ts");
   assert.equal(paySplit(30000, "SE", "trp_mc").movera, 3500);
+  // Price audit gap 6: the desk's Driver column is the driver's total (moneySplit.driverTotal: earnings + pickup pay +
+  // bonus + tip + Movera's changes), the same number as the trip page's "Driver gets", never driverEarnings alone.
+  assert.equal(paySplit(30000, "SE", "trp_mc").driver, 26500);
+  assert.equal(paySplit(30000, "SE", "trp_mc").driver, split.driverGets);
+  remember([tripRecord(TRIP)]);
+  assert.equal(paySplit(30000, "SE", "trp_7").driver, 24000, "an older server without who-gets-what: driverEarnings as sent");
   setLiveData(false);
 });

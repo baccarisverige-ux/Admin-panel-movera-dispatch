@@ -142,7 +142,12 @@ export function paySplit(amount: number, country: MarketId, tripId?: string | nu
     const commission = facts?.commission ?? NaN;
     // Owner 2026-11-13 "Movera commission is how much movera keep" (contract v0.18.87 keepsRule): Movera's part is what
     // it keeps now (moneySplit.movera, a later bonus or pay change already off); the stored commission only without it.
-    return { price: amount, vat: NaN, vatRate: NaN, commission, driver: facts?.driverEarnings ?? NaN, movera: facts?.split ? facts.split.movera : commission };
+    return {
+      price: amount, vat: NaN, vatRate: NaN, commission,
+      // Price audit gap 6: the driver's one number (moneySplit.driverTotal), as the trip page's "Driver gets".
+      driver: facts?.split ? facts.split.driverTotal : facts?.driverEarnings ?? NaN,
+      movera: facts?.split ? facts.split.movera : commission,
+    };
   }
   const vatRate = VAT[country];
   const commission = Math.round(amount * COMMISSION);
