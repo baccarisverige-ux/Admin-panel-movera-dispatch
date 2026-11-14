@@ -93,7 +93,9 @@ test("L78-A: an older server (400 unknown_filter) → every case as before, no e
   const api = createLiveAdminApi(client);
   const rows = await api.list(`${OF_DRIVER}D3`, null);
   assert.equal(rows.length, CASES.length, "every case; the page's own filter narrows it");
-  assert.equal(listReads(reads).filter((path) => params(path).has("driverId")).length, 1, "one rejected read");
+  // A6 (v0.18.83 total=false): the first 400 is read as "no total key" (listTotalParam.ts), so the driverId read is
+  // made once more without total before the old read; after that never again this session.
+  assert.equal(listReads(reads).filter((path) => params(path).has("driverId")).length, 2, "two rejected reads, once per session");
   reads.length = 0;
   const again = await api.list(`${OF_RIDER}R4`, null);
   assert.equal(again.length, CASES.length);
