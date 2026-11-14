@@ -87,7 +87,9 @@ test("A2: an older server (400 unknown_filter) → the old read (three statuses,
   const first = await api.list(WAITING_TRIPS_LIST, null);
   assert.equal(first.length, TRIPS.length, "the old read returns every waiting trip (the Dashboard's own due filter narrows it)");
   const withKey = tripReads(reads).filter((path) => params(path).has("scheduledBefore"));
-  assert.equal(withKey.length, 1);
+  // A6 (v0.18.83 total=false): the first 400 is read as "no total key" (listTotalParam.ts), so the old server sees the
+  // scheduledBefore read once more without total; after that never again this session.
+  assert.equal(withKey.length, 2);
   reads.length = 0;
   const second = await api.list(WAITING_TRIPS_LIST, null);
   assert.equal(second.length, TRIPS.length);

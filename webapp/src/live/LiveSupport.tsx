@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { tr, uiLocale } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
+import { readUncounted } from "./listTotalParam";
 import { ErrorLine } from "./ui";
 import type { Page, ReadyReply, SupportSettings, SupportTicket } from "./types";
 import { useMarketScope } from "../markets/useMarketScope";
@@ -149,7 +150,7 @@ export function LiveSupport() {
   // v0.18.15 (owner "Yes"): the country's ready replies, picked into the answer box.
   const supportSettings = useQuery({ queryKey: ["live", "supportSettings", country], queryFn: () => client.json<SupportSettings>(`/admin/support/settings?country=${country}`) });
   const readyReplies = supportSettings.data?.replies ?? [];
-  const list = useQuery({ queryKey: ["live", "tickets", status, assigned, zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<SupportTicket>) : client.json<Page<SupportTicket>>(`/admin/tickets?limit=100${status ? `&status=${status}` : ""}${assigned ? `&assignedTo=${assigned}` : ""}${zoneQuery ? `&${zoneQuery}` : ""}`)) });
+  const list = useQuery({ queryKey: ["live", "tickets", status, assigned, zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<SupportTicket>) : readUncounted<Page<SupportTicket>>(client, `/admin/tickets?limit=100${status ? `&status=${status}` : ""}${assigned ? `&assignedTo=${assigned}` : ""}${zoneQuery ? `&${zoneQuery}` : ""}`)) });
   const items = list.data?.items ?? [];
   const current = items.find((item) => item.ticketId === selected) ?? items[0];
   const detail = useQuery({ queryKey: ["live", "ticket", current?.ticketId], queryFn: () => client.json<SupportTicket>(`/admin/tickets/${encodeURIComponent(current!.ticketId)}`), enabled: Boolean(current) });

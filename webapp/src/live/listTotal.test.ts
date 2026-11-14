@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createLiveAdminApi } from "./liveAdminApi.ts";
-import { listQueryOf, resetLists, setListQuery } from "./liveLists.ts";
+import { askListCount, listQueryOf, resetLists, setListQuery } from "./liveLists.ts";
 import { registerDictionary, setLanguage, uiLocale } from "../i18n/core.ts";
 import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
@@ -96,6 +96,8 @@ test("L78-A: a first page without total clears an older total (never a stale num
   await api.list("drivers", null);
   assert.equal(queryOf("drivers").total, 120);
   send = false;
+  // A6 (v0.18.83): only a read the list page asked for is counted (a plain reload sends total=false and keeps 120).
+  askListCount("drivers");
   await api.list("drivers", null);
   assert.equal(queryOf("drivers").total, undefined);
   assert.equal(queryOf("drivers").loaded, 50);

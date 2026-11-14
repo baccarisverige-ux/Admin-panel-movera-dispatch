@@ -25,7 +25,7 @@ import { radarRepeatOf, toolRefusal, type RadarZoneSend } from "./dispatchTools.
 import { rememberSendTarget, sendTarget, setActiveRadarSend } from "../dispatch/radarSends.ts";
 import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
-import { LIST_PAGE, PAGE_LIMIT, all, paged, type ListCounting } from "./listPages.ts";
+import { LIST_PAGE, PAGE_LIMIT, all, paged, readUncounted, type ListCounting } from "./listPages.ts";
 export { LIST_PAGE };
 import { DUE_PAYOUTS_LIST, LIVE_PAGE, createListReaders } from "./listReaders.ts";
 export { DUE_PAYOUTS_LIST, LIVE_PAGE };
@@ -612,7 +612,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     const filter = zoneFilterOf(scope);
     if (needle.length < 2 || filter.denied) return [];
     const params = new URLSearchParams([["q", needle], ["limit", "5"], ...filter.params]).toString();
-    const quiet = <T,>(path: string) => client.json<Page<T>>(`${path}?${params}`).then((page) => page.items).catch(() => [] as T[]);
+    const quiet = <T,>(path: string) => readUncounted<Page<T>>(client, `${path}?${params}`).then((page) => page.items).catch(() => [] as T[]);
     const [tripRows, driverRows, riderRows] = await Promise.all([quiet<Trip>("/admin/trips"), quiet<Driver>("/admin/drivers"), quiet<Rider>("/admin/riders")]);
     return [
       ...tripRows.map((row) => ({ kind: "trip", id: row.tripId, label: row.tripId, path: `/trips/${row.tripId}` })),
@@ -789,7 +789,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       // a stale one (a second click) gets 409 version_mismatch: keep the server's fresh rider and say it was reloaded.
       const shown = (input.value as { expectedVersion?: unknown } | undefined)?.expectedVersion;
       const known = typeof shown === "number" && shown >= 1 ? shown : riders.get(input.targetId)?.version
-        ?? (await client.json<{ items: Rider[] }>(`/admin/riders?q=${encodeURIComponent(input.targetId)}`)).items.find((row) => row.riderId === input.targetId)?.version;
+        ?? (await readUncounted<{ items: Rider[] }>(client, `/admin/riders?q=${encodeURIComponent(input.targetId)}`)).items.find((row) => row.riderId === input.targetId)?.version;
       if (typeof known !== "number") throw new ApiError(404, "No such rider.", { code: "not_found" });
       const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(input.targetId)}/wallet-credit`, { expectedVersion: known, amount: { amountMinor: amount.amountMinor, currency: amount.currency }, reason: reason.slice(0, 300) }).catch((error: unknown) => {
         const fresh = error instanceof ApiError ? (error.projection as Rider | undefined) : undefined;
@@ -848,7 +848,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const { level, pauseDays } = (input.value ?? {}) as { level?: string; pauseDays?: number };
       const reason = input.reason?.trim();
       if (!level || !reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
-      const rider = riders.get(input.targetId) ?? (await client.json<{ items: Rider[] }>(`/admin/riders?q=${encodeURIComponent(input.targetId)}`)).items.find((row) => row.riderId === input.targetId);
+      const rider = riders.get(input.targetId) ?? (await readUncounted<{ items: Rider[] }>(client, `/admin/riders?q=${encodeURIComponent(input.targetId)}`)).items.find((row) => row.riderId === input.targetId);
       if (!rider) throw new ApiError(404, "No such rider.", { code: "not_found" });
       const next = await client.post<Rider>(`/admin/riders/${encodeURIComponent(rider.riderId)}/moderation`, { expectedVersion: rider.version, level, reason: reason.slice(0, 300), ...(level === "paused" ? { pauseDays } : {}) }).catch(explained);
       if (next?.riderId) riders.set(next.riderId, next);

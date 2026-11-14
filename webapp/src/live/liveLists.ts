@@ -40,9 +40,36 @@ export function subscribeLists(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+/**
+ * A6 (v0.18.83 adminListFilters.total.onlyWhenAsked): the server counts a list only when the list page asks: when it
+ * opens (askListCount) and when its filter changes (a filter key that is not the last counted one). Every other read
+ * sends total=false and the list keeps the number it shows. Not part of LiveListQuery: asking redraws nothing.
+ */
+const countAsked = new Set<LiveListName>();
+const countedKey = new Map<LiveListName, string>();
+
+/** The list page opened: its next first-page read is counted (once). */
+export function askListCount(name: LiveListName): void {
+  countAsked.add(name);
+}
+
+/** Should this read of the list be counted? It uses the page's ask; the key is the read's whole filter. */
+export function takeListCount(name: LiveListName, key: string): boolean {
+  const asked = countAsked.delete(name);
+  return asked || countedKey.get(name) !== key;
+}
+
+/** The read with this filter key was counted (or the list's count is not kept: null forgets it). */
+export function setCountedKey(name: LiveListName, key: string | null): void {
+  if (key === null) countedKey.delete(name);
+  else countedKey.set(name, key);
+}
+
 /** Forget every filter (sign-out, tests). */
 export function resetLists(): void {
   state.clear();
+  countAsked.clear();
+  countedKey.clear();
   listeners.forEach((listener) => listener());
 }
 
