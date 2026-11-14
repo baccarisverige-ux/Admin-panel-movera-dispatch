@@ -44,7 +44,7 @@ test("Payouts: no fleet-owner part; a fleet driver's payout lines are the same a
   const saved = normalizePayoutOps({ schedules: { SE: { ...ops.schedules.SE, fleetPct: 10 } } });
   assert.ok(!("fleetPct" in saved.schedules.SE), "an old saved fleetPct is dropped");
   const record: DemoRecord = { id: "PO1", name: "Week 1", phone: "", zoneId: "Z001", status: "scheduled", driverId: "D0001", fareOre: 125_000 };
-  const { lines } = payoutLines(record, ops.schedules.SE);
+  const { lines } = payoutLines(record);
   assert.ok(!lines.some((line) => /fleet/i.test(line.label)), "no Fleet owner line");
   assert.equal(lines.find((line) => line.kind === "total")?.minor, 125_000, "the driver's whole earnings");
 });

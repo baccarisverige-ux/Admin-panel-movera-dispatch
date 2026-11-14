@@ -48,6 +48,7 @@ import {
   setIdentity,
   refundLeftText,
   toMajor,
+  typedMoneyText,
   type RefundDestination,
 } from "../riders/care";
 import { advanceRiderPrivacy, emptyRiderOpsBook, revokeRiderSessions, riderOps, setRiderAccountReason, setRiderNote, type RiderOpsBook } from "../riders/ops";
@@ -377,18 +378,18 @@ export function RiderDetailPage() {
               <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
               <strong className="rd-wallet-balance">{walletShown}</strong>
               <div className="rd-limit">
-                <span>{trn("Given this month: {0} of {1} {2}", usedThisMonth, care.limits[country], symbol)}</span>
+                <span>{trn("Given this month: {0} of {1}", typedMoneyText(usedThisMonth, country), typedMoneyText(care.limits[country], country))}</span>
                 <i aria-hidden="true"><b style={{ width: `${Math.min(100, (usedThisMonth / care.limits[country]) * 100)}%` }} /></i>
               </div>
               <div className="rd-form-grid">
                 <label className="field">{trn("Amount{0}", <NumberField label={tr("Wallet amount")} value={creditAmount} unit={symbol} onChange={setCreditAmount} />)}</label>
                 <label className="field">{trn("Why{0}", <input aria-label={tr("Wallet reason")} value={creditReason} onChange={(event) => setCreditReason(event.target.value)} placeholder={tr("Driver was late")} />)}</label>
               </div>
-              {credit.error && (creditReason || creditAmount !== 100) ? <p className="rd-form-error">{trSentences(credit.error)}</p> : <small className="fine">{trn("At most {0} {1} at a time.", CREDIT_MAX[country], symbol)}</small>}
-              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={walletShown} after={`+${creditAmount} ${symbol}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(tr("Added {0} {1} to {2}'s wallet.", [creditAmount, symbol, rider.name])); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
+              {credit.error && (creditReason || creditAmount !== 100) ? <p className="rd-form-error">{trSentences(credit.error)}</p> : <small className="fine">{trn("At most {0} at a time.", typedMoneyText(CREDIT_MAX[country], country))}</small>}
+              <CommandButton command="admin.rider.walletCredit" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(creditAmount * place.minorUnits)} before={walletShown} after={`+${typedMoneyText(creditAmount, country)}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={credit.care} disabled={!can(role, "finance.read") || Boolean(credit.error)} title={credit.error} onDone={() => { setNotice(tr("Added {0} to {1}'s wallet.", [typedMoneyText(creditAmount, country), rider.name])); setCreditReason(""); }}>{trn("{0} Add to wallet", <Wallet size={14} aria-hidden="true" />)}</CommandButton>
               {care.credits.filter((item) => item.riderId === rider.id).length ? (
                 <ul className="rd-ledger" aria-label={tr("Wallet credits")}>
-                  {care.credits.filter((item) => item.riderId === rider.id).map((item) => <li key={item.id}><b>+{item.amount} {symbol}</b><span>{item.reason}</span><small>{dateTime.format(Date.parse(item.at))} · {item.by}</small></li>)}
+                  {care.credits.filter((item) => item.riderId === rider.id).map((item) => <li key={item.id}><b>+{typedMoneyText(item.amount, country)}</b><span>{item.reason}</span><small>{dateTime.format(Date.parse(item.at))} · {item.by}</small></li>)}
                 </ul>
               ) : null}
             </section>
@@ -416,7 +417,7 @@ export function RiderDetailPage() {
                 ))}
               </div>
               {refund.error && refundRide && refundReason ? <p className="rd-form-error">{trSentences(refund.error)}</p> : null}
-              <CommandButton command="admin.rider.refund" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(refundAmount * place.minorUnits)} before={refundRide?.id ?? ""} after={`${refundAmount} ${symbol} to ${refundTo}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={refund.care} disabled={!can(role, "finance.read") || Boolean(refund.error)} title={refund.error} onDone={() => { setNotice(refund.needsApproval ? tr("Refund of {0} {1} is waiting for a second admin to approve.", [refundAmount, symbol]) : tr("Refunded {0} {1} to the rider's {2}.", [refundAmount, symbol, DESTINATIONS.find((item) => item.id === refundTo)?.label.toLowerCase()])); setRefundReason(""); setRefundId(""); }}>{trn("{0} Refund {1}", <RotateCcw size={14} aria-hidden="true" />, refundAmount ? `${refundAmount} ${symbol}` : "")}</CommandButton>
+              <CommandButton command="admin.rider.refund" className="dash-btn" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} amountOre={Math.round(refundAmount * place.minorUnits)} before={refundRide?.id ?? ""} after={`${typedMoneyText(refundAmount, country)} to ${refundTo}`} expectedSliceRev={care.draftRev} sliceKey={CARE_KEY} value={refund.care} disabled={!can(role, "finance.read") || Boolean(refund.error)} title={refund.error} onDone={() => { setNotice(refund.needsApproval ? tr("Refund of {0} is waiting for a second admin to approve.", [typedMoneyText(refundAmount, country)]) : tr("Refunded {0} to the rider's {1}.", [typedMoneyText(refundAmount, country), DESTINATIONS.find((item) => item.id === refundTo)?.label.toLowerCase()])); setRefundReason(""); setRefundId(""); }}>{trn("{0} Refund {1}", <RotateCcw size={14} aria-hidden="true" />, refundAmount ? typedMoneyText(refundAmount, country) : "")}</CommandButton>
             </section>
           </div>
           <section className="fd-box">
@@ -425,7 +426,7 @@ export function RiderDetailPage() {
               <ul className="rd-ledger" aria-label={tr("Refunds")}>
                 {refundsFor.map((item) => (
                   <li key={item.id}>
-                    <b>{item.amount} {symbol}</b>
+                    <b>{typedMoneyText(item.amount, country)}</b>
                     <span>{trn("{0} · to {1} · {2}", item.bookingId, item.destination, item.reason)}</span>
                     <span className={`rd-refund-status r-${item.status}`}>{item.status === "waiting" ? tr("Waiting for approval") : item.status === "sent" ? tr("Sent") : tr("Rejected")}</span>
                     <small>{trn("Asked by {0} · {1}{2}", item.by, dateTime.format(Date.parse(item.at)), item.decidedBy ? tr(" · decided by {0}", [item.decidedBy]) : "")}</small>
@@ -566,8 +567,8 @@ export function RiderDetailPage() {
           <Timeline items={[
             ...(Number.isFinite(profile.joinedAt) ? [{ at: profile.joinedAt, text: "Joined Movera", tone: "violet" as const }] : []),
             ...row.bookings.filter((booking) => booking.at <= now).slice(0, 15).map((booking) => ({ at: booking.at, text: `${BOOKING_LABEL[booking.status]} · ${booking.from} → ${booking.to}${booking.fareMinor ? ` · ${money(booking.fareMinor, country)}` : ""}`, tone: booking.status === "completed" ? "green" : booking.status === "interrupted" || booking.status === "no_show" ? "red" : "grey" })),
-            ...care.credits.filter((item) => item.riderId === rider.id).map((item) => ({ at: Date.parse(item.at), text: `Wallet +${item.amount} ${symbol} by ${item.by}: ${item.reason}`, tone: "blue" })),
-            ...refundsFor.map((item) => ({ at: Date.parse(item.at), text: `Refund ${item.amount} ${symbol} to ${item.destination} (${item.status}) by ${item.by}`, tone: "blue" })),
+            ...care.credits.filter((item) => item.riderId === rider.id).map((item) => ({ at: Date.parse(item.at), text: `Wallet +${typedMoneyText(item.amount, country)} by ${item.by}: ${item.reason}`, tone: "blue" })),
+            ...refundsFor.map((item) => ({ at: Date.parse(item.at), text: `Refund ${typedMoneyText(item.amount, country)} to ${item.destination} (${item.status}) by ${item.by}`, tone: "blue" })),
             ...promos.map((ticket) => ({ at: Date.parse(ticket.createdAt), text: `Promotion ${ticket.code} given by ${ticket.createdBy}`, tone: "aqua" })),
             ...row.thread.map((message) => ({ at: Date.parse(message.at), text: `${message.from === "admin" ? `Movera (${message.by})` : "Rider"}: ${message.text}`, tone: message.from === "admin" ? "blue" : "amber" })),
             ...audits.map((item) => ({ at: Date.parse(item.at), text: `${item.action} · ${item.result} · ${item.actorId}`, tone: "grey" })),

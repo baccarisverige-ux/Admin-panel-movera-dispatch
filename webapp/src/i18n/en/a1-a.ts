@@ -321,7 +321,6 @@ export const enA1A = {
   "At a set time": "At a set time",
   "At least 300 per hour": "At least 300 per hour",
   "At least per hour{0}": "At least per hour{0}",
-  "At most {0} {1} at a time.": "At most {0} {1} at a time.",
   "At most {0} drivers in one radar group.": "At most {0} drivers in one radar group.",
   "At or below": "At or below",
   "Audit": "Audit",

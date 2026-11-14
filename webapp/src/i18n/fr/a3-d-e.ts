@@ -221,7 +221,6 @@ export const frA3DE: Record<keyof typeof enA3DE, string> = {
   "Drivers can ask for rides only towards their destination.": "Les chauffeurs peuvent demander des courses uniquement vers leur destination.",
   "Drivers can ask for rides towards home": "Les chauffeurs peuvent demander des courses vers leur domicile",
   "Drivers can leave the zone": "Les chauffeurs peuvent quitter la zone",
-  "Drivers can take their money before the run, for a fee.": "Les chauffeurs peuvent retirer leur argent avant le lot, moyennant des frais.",
   "Drivers finishing a ride": "Chauffeurs qui terminent une course",
   "Drivers finishing a ride get the next one": "Les chauffeurs qui terminent une course reçoivent la suivante",
   "Drivers for the bonus": "Chauffeurs pour le bonus",

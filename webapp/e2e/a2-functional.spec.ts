@@ -130,10 +130,11 @@ test("UI-05 + UI-10: an out-of-range or malformed price stays visible as an erro
 
   await page.getByRole("button", { name: "Discard" }).click();
   await page.goto("/payouts?tab=schedule");
-  const fee = page.getByLabel("Cash-out fee");
-  await fee.fill("500");
-  await expect(page.locator(".num-field-error")).toHaveText("Max 10%.");
-  await expect(fee).toHaveValue("500");
+  // BQ-V45 (owner driver-g10.md:7): instant cash-out and its fee field are removed; the schedule's "Approval over" field is checked instead.
+  const approval = page.getByLabel("Approval over");
+  await approval.fill("-50");
+  await expect(page.locator(".num-field-error")).toHaveText("Must be 0 or more.");
+  await expect(approval).toHaveValue("-50");
   await expect(page.getByRole("button", { name: "Save schedule" })).toBeDisabled();
 });
 

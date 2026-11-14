@@ -203,7 +203,6 @@ export const svA2BC: Record<keyof typeof enA2BC, string> = {
   "Cash allowed": "Kontant tillåtet",
   "Cash collected by driver": "Kontanter som föraren tagit emot",
   "Cash received": "Kontanter mottagna",
-  "Cash-out fee": "Uttagsavgift",
   "Cash, Reservation, extras like a child seat, and a fare boost.": "Kontant, bokning, tillägg som barnstol och en prisboost.",
   "Categories": "Kategorier",
   "Categories {0}": "Kategorier {0}",

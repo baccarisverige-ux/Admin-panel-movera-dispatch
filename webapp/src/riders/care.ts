@@ -168,6 +168,14 @@ export function toMajor(minor: number, country: MarketId): number {
   return minor / market(country).minorUnits;
 }
 
+/**
+ * BQ-O15 item 3 (owner s06:1275-1276: the right decimals on every money display): an amount the admin typed in major
+ * units (wallet credit, refund, limits), shown with the shared formatter: "125,00 kr", "12,50 €", "12,500 DT".
+ */
+export function typedMoneyText(amount: number, country: MarketId): string {
+  return formatMoney(toMinor(amount, country), country);
+}
+
 /** BQ-O15: what is left to refund on a ride, with the shared money formatter (the currency's decimals and symbol). */
 export function refundLeftText(fareMinor: number, refundedMajor: number, country: MarketId): string {
   return formatMoney(Math.max(0, fareMinor - toMinor(refundedMajor, country)), country);
@@ -260,12 +268,12 @@ export function creditedThisMonth(care: RiderCare, riderId: string, now: number)
 
 export function addCredit(care: RiderCare, rider: RiderRecord, amount: number, reason: string, by: string, now: number): { care: RiderCare; error?: string } {
   const country = countryOf(rider);
-  const symbol = { SE: "kr", FR: "€", TN: "DT" }[country];
+  const money = (major: number) => typedMoneyText(major, country);
   if (!(amount > 0)) return { care, error: "Enter an amount above 0." };
-  if (amount > CREDIT_MAX[country]) return { care, error: `One credit can be at most ${CREDIT_MAX[country]} ${symbol}.` };
+  if (amount > CREDIT_MAX[country]) return { care, error: `One credit can be at most ${money(CREDIT_MAX[country])}.` };
   if (!reason.trim()) return { care, error: "Write why the rider gets this credit." };
   const used = creditedThisMonth(care, rider.id, now);
-  if (used + amount > care.limits[country]) return { care, error: `Monthly limit is ${care.limits[country]} ${symbol}. ${used} ${symbol} already given this month.` };
+  if (used + amount > care.limits[country]) return { care, error: `Monthly limit is ${money(care.limits[country])}. ${money(used)} already given this month.` };
   const credit: Credit = { id: `CR-${rider.id}-${care.credits.length + 1}`, riderId: rider.id, amount, currency: country, reason: reason.trim(), by, at: new Date(now).toISOString() };
   return { care: bump(care, { credits: [credit, ...care.credits] }) };
 }
@@ -277,7 +285,7 @@ export function requestRefund(care: RiderCare, rider: RiderRecord, booking: Book
   const paid = toMajor(booking.fareMinor, country);
   const already = care.refunds.filter((item) => item.bookingId === booking.id && item.status !== "rejected").reduce((sum, item) => sum + item.amount, 0);
   if (!(amount > 0)) return { care, error: "Enter an amount above 0.", needsApproval: false };
-  if (amount + already > paid + 0.001) return { care, error: `The rider paid ${paid.toFixed(market(country).minorUnits === 1000 ? 3 : 2)} for this ride${already ? `, ${already} already refunded` : ""}.`, needsApproval: false };
+  if (amount + already > paid + 0.001) return { care, error: `The rider paid ${formatMoney(booking.fareMinor, country)} for this ride${already ? `, ${typedMoneyText(already, country)} already refunded` : ""}.`, needsApproval: false };
   if (!reason.trim()) return { care, error: "Write why the rider is refunded.", needsApproval: false };
   const needsApproval = needsSecondAdmin(policy, country, toMinor(amount, country));
   const refund: Refund = { id: `RF-${rider.id}-${care.refunds.length + 1}`, riderId: rider.id, bookingId: booking.id, amount, currency: country, destination, reason: reason.trim(), status: needsApproval ? "waiting" : "sent", by, at: new Date(now).toISOString(), decidedBy: null };

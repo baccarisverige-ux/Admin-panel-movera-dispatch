@@ -14,12 +14,12 @@ import { failureCause, failureHandled } from "./failures.ts";
 
 export const PAY_OPS_KEY = "paymentOps";
 
-export const METHOD_LABELS: Record<PaymentMethod, string> = { card: "Card", apple: "Apple Pay", google: "Google Pay", cash: "Cash", wallet: "Wallet" };
+export const METHOD_LABELS: Record<PaymentMethod, string> = { card: "Card", apple: "Apple Pay", cash: "Cash", wallet: "Wallet" };
 
 const COUNTRY_METHODS: Record<MarketId, PaymentMethod[]> = {
-  // Q7 FINAL: the same methods in every country (no Swish, Klarna or PayPal).
-  SE: ["card", "card", "card", "apple", "apple", "google", "cash"],
-  FR: ["card", "card", "card", "apple", "google", "cash"],
+  // Q7 FINAL: the same methods in every country (no Swish, Klarna or PayPal; G8: no Google Pay).
+  SE: ["card", "card", "card", "apple", "apple", "cash"],
+  FR: ["card", "card", "card", "apple", "cash"],
   TN: ["card", "cash", "cash", "wallet", "card"],
 };
 
@@ -109,7 +109,7 @@ export function disputeOf(record: DemoRecord, ops: PayOps, now: number): Dispute
 function liveFacts(record: DemoRecord, trips: readonly DemoRecord[], ops: PayOps): PayFacts {
   const trip = record.tripId ? trips.find((row) => row.id === record.tripId) ?? null : null;
   const country = marketOfZone(trip?.zoneId ?? record.zoneId)?.id ?? "SE";
-  const method: PaymentMethod = (["card", "apple", "google", "cash", "wallet"] as const).find((item) => item === record.name) ?? (record.name === "apple_pay" ? "apple" : record.name === "google_pay" ? "google" : "card");
+  const method: PaymentMethod = (["card", "apple", "cash", "wallet"] as const).find((item) => item === record.name) ?? (record.name === "apple_pay" ? "apple" : "card");
   const retried = ops.retries[record.id]?.at(-1);
   const status = retried?.result === "paid" ? "captured" : record.status;
   const group: PayFacts["group"] = status === "captured" ? "paid" : status === "failed" ? "failed" : status === "refunded" || status === "partially_refunded" ? "refunded" : "waiting";

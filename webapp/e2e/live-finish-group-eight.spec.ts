@@ -71,8 +71,14 @@ test("payments on live: no demo ledger; failed and disputes say why they are emp
   await expect(page.getByTestId("payment-count")).not.toContainText("demo ledger");
   await page.getByRole("tab", { name: "Failed and retries" }).click();
   await expect(page.getByTestId("live-payments-failed")).toContainText("Pay in car");
+  // BQ-V45 (owner rule 1, admin-fake-by-group.md:30 Q2): no "Not connected yet" line and no voucher tools on live Payments.
+  await expect(page.getByTestId("live-payments-failed")).not.toContainText("Not connected yet");
+  await page.getByRole("tab", { name: "Rules" }).click();
+  await expect(page.getByTestId("live-payments-rules")).toContainText("One admin is enough");
+  await expect(page.getByTestId("live-payments-rules")).not.toContainText("Not connected yet");
   await page.getByRole("tab", { name: "Methods and tools" }).click();
   await expect(page.getByTestId("live-payments-tools")).toContainText("Settings › Payment methods");
+  await expect(page.getByTestId("live-payments-tools")).not.toContainText(/Not connected yet|Vouchers/);
 });
 
 test("Live G8 fix 2: no English left in SV — the price rule, the dispatch status line and the cancel fee table", async ({ page }) => {

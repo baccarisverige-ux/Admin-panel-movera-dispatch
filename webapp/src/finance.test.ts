@@ -13,7 +13,7 @@ const ops = emptyPayOps();
 
 // Payments
 const facts = factsOf(pay("PAY0002", "captured"), riders, [], ops, now);
-assert(facts.country === "SE" && facts.riderId === "R0001" && ["card", "apple", "google", "cash"].includes(facts.method), "a Swedish payment has one of the four methods and a rider");
+assert(facts.country === "SE" && facts.riderId === "R0001" && ["card", "apple", "cash"].includes(facts.method), "a Swedish payment has one of the three methods (no Google Pay) and a rider");
 for (const zone of ["Z001", "FR-OCE", "TN-TC"]) for (let index = 0; index < 40; index += 1) {
   const method: string = factsOf(pay(`PAY${2000 + index}`, "captured", 1000, zone), [], [], ops, now).method;
   assert(!["swish", "klarna", "paypal"].includes(method), `Q7 FINAL: no Swish, Klarna or PayPal (${zone})`);
@@ -37,18 +37,18 @@ const payouts = emptyPayoutOps();
 const sched = payouts.schedules.SE;
 const record: DemoRecord = { id: "PO1", name: "Week 1", phone: "", zoneId: "Z001", status: "scheduled", driverId: "D0001", fareOre: 125_000 };
 {
-  const { lines } = payoutLines(record, sched);
+  const { lines } = payoutLines(record);
   const sum = lines.filter((line) => line.kind !== "total").reduce((total, line) => total + line.minor, 0);
   assert(sum === 125_000 && lines.at(-1)?.minor === 125_000, "the lines add up to what the driver gets");
   // v0.18.88 fleetPayoutWhole (owner 2026-10-29): no fleet-owner part; a fleet driver's whole earnings go to his owner.
   assert(!lines.some((line) => /fleet/i.test(line.label)), "no fleet owner line");
 }
 // Q23: cash the driver owes Movera is a deduction line, and the lines still add up.
-const withCash = payoutLines(record, sched, { minor: 9_000, trips: 3 });
+const withCash = payoutLines(record, { minor: 9_000, trips: 3 });
 const cashLine = withCash.lines.find((line) => line.label.startsWith("Cash rides"));
 assert(cashLine?.label === "Cash rides: owed to Movera (3 trips)" && cashLine.minor === -9_000 && cashLine.kind === "minus" && withCash.cashMinor === 9_000, "cash owed is a minus line");
 assert(withCash.lines.filter((line) => line.kind !== "total").reduce((total, line) => total + line.minor, 0) === 125_000 && withCash.lines[0].label.endsWith("paid in the app"), "with cash the lines still add up to what the driver gets");
-assert(!payoutLines(record, sched).lines.some((line) => line.label.startsWith("Cash rides")), "no cash line without cash trips");
+assert(!payoutLines(record).lines.some((line) => line.label.startsWith("Cash rides")), "no cash line without cash trips");
 assert(setHold(payouts, "PO1", true, " ", "astrid", "2026-10-12T12:00:00Z").error, "a hold needs a reason");
 const held = setHold(payouts, "PO1", true, "Damage claim", "astrid", "2026-10-12T12:00:00Z").ops;
 assert(holdOf(held, "PO1")?.reason === "Damage claim" && !holdOf(setHold(held, "PO1", false, "Released", "astrid", "2026-10-12T13:00:00Z").ops, "PO1"), "hold and release");

@@ -58,7 +58,7 @@ test("no driver near pickup: raise the driver's fare from Movera's commission, n
   await panel.getByLabel("Fare raise").fill("250");
   await expect(panel.getByRole("status")).toContainText("beyond Movera's commission. Movera pays the difference.");
   await panel.getByLabel("Fare raise").fill("600");
-  await expect(panel.getByRole("alert")).toContainText("The raise can be at most 500 kr.");
+  await expect(panel.getByRole("alert")).toContainText(/The raise can be at most 500,00\skr\./);
   await expect(panel.getByRole("button", { name: "Raise the fare" })).toBeDisabled();
   await panel.getByLabel("Fare raise").fill("120");
   await panel.getByRole("button", { name: "Raise the fare" }).click();

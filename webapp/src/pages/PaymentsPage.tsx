@@ -25,19 +25,19 @@ import { PaymentsDesk } from "../payments/PaymentsDesk";
 import { tr, trn, trx, trSentences } from "../i18n";
 import { Link } from "react-router";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { NotConnected } from "../live/NotConnected";
 
 /**
  * v0.18.10 (G8, owner rule 1: no fake on live): the live panel shows only what the server has. Payments are the server's
  * (GET /admin/payments). Movera takes only Pay in car (cash) today, so nothing can fail at a card company or be disputed;
  * refund rules and the method / voucher / bank tools have no server source yet. Refunds are made on the trip page.
+ * BQ-V45 (owner rule 1 and Q2, admin-fake-by-group.md:30: one 'Add money' button, no wallet voucher): the tabs say what
+ * is true today and show no "Not connected yet" line.
  */
 function LivePaymentsTab({ tab }: { tab: string }) {
   if (tab === "failed" || tab === "disputes") {
     return (
       <article className="panel" data-testid={`live-payments-${tab}`}>
         <p>{tr("Movera takes only Pay in car (cash) today: no card payment can fail or be disputed. This tab fills when a payment company is connected.")}</p>
-        <NotConnected block />
       </article>
     );
   }
@@ -45,7 +45,6 @@ function LivePaymentsTab({ tab }: { tab: string }) {
     return (
       <article className="panel" data-testid="live-payments-rules">
         <p>{tr("One admin is enough for every refund on live. Refunds are made on the trip page (Give money back, with Take it from the driver's share).")}</p>
-        <NotConnected block />
       </article>
     );
   }
@@ -53,7 +52,6 @@ function LivePaymentsTab({ tab }: { tab: string }) {
     <article className="panel" data-testid="live-payments-tools">
       <p>{tr("Payment methods are set per country in Settings › Payment methods (Pay in car, card, Apple Pay).")} <Link to="/settings#country-apps">{tr("Open Settings")}</Link></p>
       <p>{tr("Refunds to send by Swish or bank are in Finance › Payouts.")}</p>
-      <p>{tr("Vouchers, reconciliation and bank accounts:")} <NotConnected /></p>
     </article>
   );
 }

@@ -44,7 +44,7 @@ import { formatMoney } from "../markets/markets";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { ErrorLine } from "../live/ui";
-import { liveRaise, liveRaiseOpen } from "../reservations/liveRaise";
+import { liveRaise, liveRaiseOpen, raiseMaxText } from "../reservations/liveRaise";
 
 export function ReservationDetailPage() {
   const { id = "" } = useParams();
@@ -131,7 +131,7 @@ export function ReservationDetailPage() {
   const askPrepared = askDriver(book, record, chosen, agent?.id ?? "", zoneRules.assignAcceptSec, nowIso);
   const acceptPrepared = answerAsk(book, record, "accepted", nowIso);
   const declinePrepared = answerAsk(book, record, "declined", nowIso);
-  const raisePrepared = raiseFare(book, record, raiseAmount, raiseMax, agent?.id ?? "", nowIso, unit);
+  const raisePrepared = raiseFare(book, record, raiseAmount, raiseMax, agent?.id ?? "", nowIso);
   const liveRaisePrepared = liveRaising ? liveRaise(book, record, raiseText, raiseMax, country, agent?.id ?? "", nowIso) : null;
   const raiseError = liveRaisePrepared ? liveRaisePrepared.error : raisePrepared.error;
   async function postLiveRaise() {
@@ -356,8 +356,8 @@ export function ReservationDetailPage() {
                   confirmTarget={false}
                   entityState={record.status}
                   scope={record.zoneId}
-                  before={ops.raise ? `+${ops.raise.amount} ${unit}` : "no raise"}
-                  after={`+${raiseAmount} ${unit}`}
+                  before={ops.raise ? `+${raiseMaxText(ops.raise.amount, country)}` : "no raise"}
+                  after={`+${raiseMaxText(raiseAmount, country)}`}
                   expectedSliceRev={book.draftRev}
                   sliceKey="reservationOps"
                   value={raisePrepared.book}

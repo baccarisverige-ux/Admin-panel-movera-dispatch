@@ -306,7 +306,6 @@ export const frA8S: Record<keyof typeof enA8S, string> = {
   "Small arrows show the expected effect of your changes.": "De petites flèches montrent l’effet attendu de vos modifications.",
   "Small enough to go without a second admin.": "Assez petit pour se passer d’un second administrateur.",
   "Small offer cards while the driver waits on the map.": "Petites fiches d’offre pendant que le chauffeur attend sur la carte.",
-  "Smallest cash-out": "Plus petit retrait",
   "Smart": "Intelligent",
   "Smart cancel check": "Contrôle intelligent des annulations",
   "Smart gap": "Écart intelligent",

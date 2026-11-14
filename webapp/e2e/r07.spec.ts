@@ -33,19 +33,19 @@ test("R7 rider account, wallet, refund, promotion, notes and sessions persist", 
   await page.getByLabel("Wallet reason").fill("Driver was late");
   await page.getByRole("button", { name: "Add to wallet" }).click();
   await confirm(page);
-  await expect(page.getByText("Added 125 kr to")).toBeVisible();
-  await expect(page.getByRole("list", { name: "Wallet credits" })).toContainText("+125 kr");
+  await expect(page.getByText(/Added 125,00\skr to/)).toBeVisible();
+  await expect(page.getByRole("list", { name: "Wallet credits" })).toContainText(/\+125,00\skr/);
   await page.getByLabel("Wallet amount").fill("600");
-  await expect(page.getByText("One credit can be at most 500 kr.")).toBeVisible();
+  await expect(page.getByText(/One credit can be at most 500,00\skr\./)).toBeVisible();
 
   const ride = page.getByLabel("Ride to refund");
   await ride.selectOption({ index: 1 });
   await page.getByLabel("Refund amount").fill("20");
   await page.getByLabel("Refund reason").fill("Long route");
   await page.getByRole("radio", { name: /Movera wallet/ }).click();
-  await page.getByRole("button", { name: /^Refund 20 kr/ }).click();
+  await page.getByRole("button", { name: /^Refund 20,00\skr/ }).click();
   await confirm(page);
-  await expect(page.getByText("Refunded 20 kr to the rider's movera wallet.")).toBeVisible();
+  await expect(page.getByText(/Refunded 20,00\skr to the rider's movera wallet\./)).toBeVisible();
   await expect(page.getByRole("list", { name: "Refunds" })).toContainText("Sent");
 
   await page.getByRole("tab", { name: "Promotions" }).click();
@@ -75,12 +75,12 @@ test("R7 rider account, wallet, refund, promotion, notes and sessions persist", 
 
   await page.reload();
   await page.getByRole("tab", { name: "Wallet & refunds" }).click();
-  await expect(page.getByRole("list", { name: "Wallet credits" })).toContainText("+125 kr");
+  await expect(page.getByRole("list", { name: "Wallet credits" })).toContainText(/\+125,00\skr/);
   await page.getByRole("tab", { name: "Account" }).click();
   await expect(page.getByText("Call rider before airport pickup")).toBeVisible();
   await expect(page.getByText("Status: processing")).toBeVisible();
   await page.getByRole("tab", { name: "Activity" }).click();
-  await expect(page.getByRole("list", { name: "Rider timeline" })).toContainText("Wallet +125 kr");
+  await expect(page.getByRole("list", { name: "Rider timeline" })).toContainText(/Wallet \+125,00\skr/);
 });
 
 test("R7 big refunds wait for a second admin", async ({ page }) => {
@@ -96,10 +96,10 @@ test("R7 big refunds wait for a second admin", async ({ page }) => {
   await page.getByLabel("Ride to refund").selectOption({ index: big });
   await page.getByLabel("Refund amount").fill("550");
   await page.getByLabel("Refund reason").fill("Charged twice");
-  await page.getByRole("button", { name: /^Refund 550 kr/ }).click();
+  await page.getByRole("button", { name: /^Refund 550,00\skr/ }).click();
   await confirm(page);
   // BASE B14 (owner Q1 "One admin always"): sent at once, no second admin.
-  await expect(page.getByText(/^Refunded 550 kr to the rider's/)).toBeVisible();
+  await expect(page.getByText(/^Refunded 550,00\skr to the rider's/)).toBeVisible();
   const refunds = page.getByRole("list", { name: "Refunds" });
   await expect(refunds).toContainText("Sent");
   await expect(refunds.getByRole("button", { name: "Approve" })).toHaveCount(0);

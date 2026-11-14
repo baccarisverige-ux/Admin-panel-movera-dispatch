@@ -201,7 +201,6 @@ export const enA2BC = {
   "Cash allowed": "Cash allowed",
   "Cash collected by driver": "Cash collected by driver",
   "Cash received": "Cash received",
-  "Cash-out fee": "Cash-out fee",
   "Cash, Reservation, extras like a child seat, and a fare boost.": "Cash, Reservation, extras like a child seat, and a fare boost.",
   "Categories": "Categories",
   "Categories {0}": "Categories {0}",

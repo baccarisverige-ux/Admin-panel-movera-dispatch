@@ -304,7 +304,6 @@ export const enA8S = {
   "Small arrows show the expected effect of your changes.": "Small arrows show the expected effect of your changes.",
   "Small enough to go without a second admin.": "Small enough to go without a second admin.",
   "Small offer cards while the driver waits on the map.": "Small offer cards while the driver waits on the map.",
-  "Smallest cash-out": "Smallest cash-out",
   "Smart": "Smart",
   "Smart cancel check": "Smart cancel check",
   "Smart gap": "Smart gap",

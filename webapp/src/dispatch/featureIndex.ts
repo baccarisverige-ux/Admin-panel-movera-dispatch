@@ -105,7 +105,7 @@ export const FEATURE_INDEX: readonly FeatureEntry[] = [
   { id: "calls", phrase: "In-app calls per country", section: "Pricing › Tips & limits", keywords: "call phone ring window rider driver webrtc settings", path: "/pricing?tab=extras&section=calls" },
   { id: "pricing-history", phrase: "Pricing history, undo and restore", section: "Pricing", path: "/pricing?tab=history" },
   { id: "app-features", phrase: "App features, versions and updates", section: "Settings", keywords: "wallet pin share trip", path: "/settings" },
-  { id: "payment-methods", phrase: "Payment methods per country", section: "Settings", keywords: "cash card apple pay google pay wallet", path: "/settings#country-apps" },
+  { id: "payment-methods", phrase: "Payment methods per country", section: "Settings", keywords: "cash card apple pay wallet", path: "/settings#country-apps" },
   { id: "languages", phrase: "Default app languages per country", section: "Settings", keywords: "language english french swedish en fr sv rider driver admin", path: "/settings#country-apps" },
   { id: "payment-rules", phrase: "Payment retries, owing riders, refund limit per role", section: "Payments › Rules", path: "/payments?tab=rules" },
   { id: "payout-schedule", phrase: "Payout schedule and approval", section: "Payouts", path: "/payouts" },

@@ -132,8 +132,8 @@ export type ActivityPoint = {
 
 export const RIDE_CATEGORIES = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
 export const RIDE_OPTIONS = ["baby_seat", "child_seat", "booster_seat", "extra_bags", "pet"];
-/** Owner Q7 FINAL: no Swish, Klarna or PayPal. */
-export const ZONE_PAYMENT_METHODS = ["card", "apple", "google", "cash", "wallet"];
+/** Owner Q7 FINAL: no Swish, Klarna or PayPal; owner G8 (driver-g8.md:4): no Google Pay. */
+export const ZONE_PAYMENT_METHODS = ["card", "apple", "cash", "wallet"];
 
 const DEFAULT_PRIORITY: Record<ZoneKind, number> = {
   service: 10,

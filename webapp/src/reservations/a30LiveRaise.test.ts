@@ -35,7 +35,7 @@ test("A30 SEK: over the highest raise the error shows 2 decimals", () => {
   const out = liveRaise(emptyReservationBook(), booked("Z001", "SEK"), "600", 500, "SE", "admin_1", t0);
   assert.equal(out.call, undefined);
   assert.equal(out.error, "The raise can be at most 500,00 kr.");
-  assert.equal(raiseFare(emptyReservationBook(), booked("Z001", "SEK"), 600, 500, "admin_1", t0, "kr", raiseMaxText(500, "SE")).error, "The raise can be at most 500,00 kr.");
+  assert.equal(raiseFare(emptyReservationBook(), booked("Z001", "SEK"), 600, 500, "admin_1", t0, raiseMaxText(500, "SE")).error, "The raise can be at most 500,00 kr.");
 });
 
 test("A30 TND: over the highest raise the error shows 3 decimals", () => {
@@ -43,7 +43,7 @@ test("A30 TND: over the highest raise the error shows 3 decimals", () => {
   const out = liveRaise(emptyReservationBook(), booked("Z100", "TND"), "21", 20.5, "TN", "admin_1", t0);
   assert.equal(out.call, undefined);
   assert.equal(out.error, "The raise can be at most 20.500 DT.");
-  assert.equal(raiseFare(emptyReservationBook(), booked("Z100", "TND"), 21, 20.5, "admin_1", t0, "DT", raiseMaxText(20.5, "TN")).error, "The raise can be at most 20.500 DT.");
+  assert.equal(raiseFare(emptyReservationBook(), booked("Z100", "TND"), 21, 20.5, "admin_1", t0, raiseMaxText(20.5, "TN")).error, "The raise can be at most 20.500 DT.");
 });
 
 test("A30: zero, empty or a ride with a driver posts nothing", () => {
@@ -57,7 +57,7 @@ test("A30: the live box opens for the server's no-driver statuses only (the same
   for (const status of ["accepted", "in_trip", "completed", "cancelled_by_admin"]) assert.equal(liveRaiseOpen(booked("Z001", "SEK", { status, driverId: status === "accepted" ? "D1" : null })), false, status);
 });
 
-test("A30 demo unchanged: no max text keeps the demo's own words", () => {
+test("A30 demo: no max text gives the same words, with the currency's decimals (BQ-O15 item 3)", () => {
   const record = { id: "B021", name: "Rider", phone: "", zoneId: "Z001", status: "waiting", driverId: null } as unknown as DemoRecord;
-  assert.equal(raiseFare(emptyReservationBook(), record, 600, 500, "daniel", t0, "kr").error, "The raise can be at most 500 kr.");
+  assert.equal(raiseFare(emptyReservationBook(), record, 600, 500, "daniel", t0).error, "The raise can be at most 500,00 kr.");
 });

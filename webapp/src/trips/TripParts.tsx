@@ -195,7 +195,8 @@ export function AdminActions({ trip, ops, split, money, country, riderId, onNoti
   const caseTry = make({ tripId: trip.id, kind: "case", text: caseText.trim(), target: caseKind });
   const blockTry = make({ tripId: trip.id, kind: "block", text: `${trip.name} and the driver will not be matched again`, target: "both" });
   const receiptTry = make({ tripId: trip.id, kind: "receipt", text: `Receipt sent again to ${trip.name}` });
-  const limit = `${refundPolicy.aboveMajor[country]} ${symbol}`;
+  // BQ-O15 item 3: the second-admin limit (major units) with the currency's decimals, through the shared formatter.
+  const limit = money(Math.round(refundPolicy.aboveMajor[country] * minor));
   const any = Object.values(on).some(Boolean);
   const save = (result: { ops: TripOps; entry: Entry; error?: string }) => ({ sliceKey: TRIP_OPS_KEY, value: result.ops, expectedSliceRev: ops.draftRev, targetId: trip.id, scope: trip.zoneId, confirmTarget: false });
 

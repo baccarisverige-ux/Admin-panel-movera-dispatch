@@ -61,9 +61,9 @@ const reconciliation = runReconciliation(book, {
 assert(reconciliation.run.differenceOre === 200_000, "reconciliation difference is deterministic");
 assert(reconciliation.book.reconciliations[0]?.note === "Daily close", "reconciliation run is retained");
 
-// Q7 FINAL: an older saved policy with Swish, Klarna or PayPal opens with today's methods only.
+// Q7 FINAL + G8: an older saved policy with Swish, Klarna, PayPal or Google Pay opens with today's methods only.
 const legacy = { ...defaultFinanceBook(), policies: { "Z001|economy|ios": { card: true, swish: true, klarna: false, apple: false, google: true, paypal: true, cash: true, wallet: true } } } as unknown as Parameters<typeof paymentPolicy>[0];
 const legacyPolicy = paymentPolicy(legacy, { zoneId: "Z001", category: "economy", platform: "ios" });
-assert(JSON.stringify(Object.keys(legacyPolicy)) === JSON.stringify(["card", "apple", "google", "cash", "wallet"]) && legacyPolicy.apple === false, "no Swish, Klarna or PayPal in a policy; saved values kept");
+assert(JSON.stringify(Object.keys(legacyPolicy)) === JSON.stringify(["card", "apple", "cash", "wallet"]) && legacyPolicy.apple === false, "no Swish, Klarna, PayPal or Google Pay in a policy; saved values kept");
 
 console.log("finance ops ok");

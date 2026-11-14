@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarClock, CheckCheck, FileDown, Hand, PauseCircle, RefreshCcw, Zap } from "lucide-react";
+import { CalendarClock, CheckCheck, FileDown, Hand, PauseCircle, RefreshCcw } from "lucide-react";
 import type { DemoRecord } from "../api/seed";
 import { useSession } from "../auth/SessionContext";
 import { AGENTS, can } from "../auth/permissions";
@@ -75,13 +75,13 @@ export function PayoutLines({ record, ops, country, money, onNotice, cash }: { r
   const { agent } = useSession();
   const [reason, setReason] = useState("");
   const sched = ops.schedules[country];
-  const { lines, instant } = payoutLines(record, sched, cash);
+  const { lines } = payoutLines(record, cash);
   const hold = holdOf(ops, record.id);
   const failed = failedOf(ops, record);
   const next = setHold(ops, record.id, !hold, hold ? "Released" : reason, agent?.id ?? "", new Date().toISOString());
   return (
     <section className="fn-section po-lines" aria-label={tr("Line by line")}>
-      <h3>{trn("{0} {1} line by line {2}", <Hand size={16} aria-hidden="true" />, record.id, instant ? <span className="dx-tag">{trn("{0} Instant cash-out", <Zap size={11} aria-hidden="true" />)}</span> : null)}</h3>
+      <h3>{trn("{0} {1} line by line", <Hand size={16} aria-hidden="true" />, record.id)}</h3>
       {/* FU-A29-2: a live payout with no summary and no lines from the server reads "Not connected yet". */}
       {record.live && !lines.length ? <p className="state-line" data-testid="payout-lines-not-connected">{tr("Not connected yet")}</p> : (
       <ul className="po-line-list">
@@ -99,7 +99,7 @@ export function PayoutLines({ record, ops, country, money, onNotice, cash }: { r
   );
 }
 
-/** The schedule per country: when, instant cash-out and approval (no fleet-owner part: contract v0.18.88 fleetPayoutWhole). */
+/** The schedule per country: when and approval (no fleet-owner part: contract v0.18.88 fleetPayoutWhole; no instant cash-out: owner driver-g10.md:7). */
 export function ScheduleView({ ops, country, editable }: { ops: PayoutOps; country: MarketId; editable: boolean }) {
   const [draft, setDraft] = useState<Schedule | null>(null);
   const fieldErrors = useFieldErrors();
@@ -127,12 +127,6 @@ export function ScheduleView({ ops, country, editable }: { ops: PayoutOps; count
             <input aria-label={tr("Payout time")} type="time" value={current.time} onChange={(event) => patch({ time: event.target.value })} />
           </Row>
           <Row label={tr("Retry failed payouts")} help={tr("Admins can send a payout again after the bank returned it.")} on={current.retryFailed} onToggle={(on) => patch({ retryFailed: on })} />
-        </Card>
-        <Card title={tr("Instant cash-out")} icon={<Zap size={18} />} tone="orange" help={tr("Drivers can take their money before the run, for a fee.")}>
-          <Row label={tr("Instant cash-out")} on={current.instant.on} onToggle={(on) => patch({ instant: { ...current.instant, on } })}>
-            <Num label={tr("Cash-out fee")} before="Fee" value={current.instant.feePct} unit="%" step={0.1} max={10} onChange={(value) => patch({ instant: { ...current.instant, feePct: value } })} />
-            <Num label={tr("Smallest cash-out")} before="From" value={current.instant.minMajor} unit={symbol} onChange={(value) => patch({ instant: { ...current.instant, minMajor: value } })} />
-          </Row>
         </Card>
         <Card title={tr("Checks")} icon={<CheckCheck size={18} />} tone="green">
           <Row label={tr("Second admin for big runs")} help={tr("A run above this total waits until another admin approves it.")}>
