@@ -110,3 +110,13 @@ assert(csvOf(["a"], [["=SUM(A1)"]]) === "a\n'=SUM(A1)", "CSV guards formulas");
 assert(csvOf(["a"], [["\t=SUM(A1)"]]) === "a\n'\t=SUM(A1)", "CSV guards a tab before a formula");
 
 console.log("reports engine ok");
+
+// S5 J5a supervisor must-fix 2: demo Reports › Money, the Movera earnings card = the Net revenue card (contract kpis.money.netRevenue).
+{
+  const cards = moneyData(report, [], 1, { count: 0, minor: 0 }).cards;
+  const movera = cards.find((card) => card.label === "Movera earnings")!;
+  const net = cards.find((card) => card.id === "net")!;
+  assert(movera.value === net.value && movera.previous === net.previous, `demo Movera earnings ${movera.value} = Net revenue ${net.value}`);
+  assert(movera.info === "What Movera keeps: commission (pickup pay and bonuses already out) plus its share of fees, minus Movera's pay changes to drivers and refunds. Can be negative.", "demo Movera earnings help = live");
+  assert(net.info === "Same as Movera earnings: refunds are already taken off.", "demo Net revenue help = live, no vouchers");
+}

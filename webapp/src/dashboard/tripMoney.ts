@@ -61,7 +61,8 @@ function liveTripMoney(split: MoneySplit): TripMoney {
   const driverGets = facts.split ? split.driverGets - tip : (facts.driverEarnings ?? NaN) + pickupPay + addedMoney;
   return {
     riderPays: split.riderPaid,
-    fareShare: driverGets - pickupPay - addedMoney,
+    // The server's line; an admin pay change is in the driver's total and Movera's part, never in the fare share.
+    fareShare: facts.driverEarnings ?? driverGets - pickupPay - addedMoney,
     pickupPay,
     addedMoney,
     tip,

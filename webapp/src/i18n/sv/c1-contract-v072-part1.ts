@@ -367,7 +367,6 @@ export const svC1ContractV072Part1: Record<keyof typeof enC1ContractV072Part1, s
   "Movera's commission on rides (20% placeholder until set in Pricing).": "Moveras provision på resor (20 % tills den sätts i Priser).",
   "Bookings minus commission, plus tips.": "Bokningar minus provision, plus dricks.",
   "Money given back to riders, as refunds or vouchers.": "Pengar tillbaka till resenärer, som återbetalning eller värdebevis.",
-  "Same as Movera earnings: refunds and vouchers are already taken off.": "Samma som Moveras intäkter: återbetalningar och värdebevis är redan avdragna.",
   "Bookings ÷ completed rides.": "Bokningar ÷ genomförda resor.",
   "Failed payments open": "Öppna misslyckade betalningar",
   "Drivers who drove": "Förare som körde",

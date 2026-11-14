@@ -365,7 +365,6 @@ export const enC1ContractV072Part1 = {
   "Movera's commission on rides (20% placeholder until set in Pricing).": "Movera's commission on rides (20% placeholder until set in Pricing).",
   "Bookings minus commission, plus tips.": "Bookings minus commission, plus tips.",
   "Money given back to riders, as refunds or vouchers.": "Money given back to riders, as refunds or vouchers.",
-  "Same as Movera earnings: refunds and vouchers are already taken off.": "Same as Movera earnings: refunds and vouchers are already taken off.",
   "Bookings ÷ completed rides.": "Bookings ÷ completed rides.",
   "Failed payments open": "Failed payments open",
   "Drivers who drove": "Drivers who drove",
