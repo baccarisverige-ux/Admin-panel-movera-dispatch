@@ -9017,4 +9017,5 @@
 ["{0} min ({1} times)","{0} min ({1} times)"],
 ["Waiting at pickup: \"Auto arrived within\" must be whole metres from 30 to 300.","Waiting at pickup: \"Auto arrived within\" must be whole metres from 30 to 300."],
 ["Waiting at pickup: \"Waiting stops beyond\" must be whole metres from 100 to 2000.","Waiting at pickup: \"Waiting stops beyond\" must be whole metres from 100 to 2000."],
-["Waiting at pickup: \"Waiting stops beyond\" must be more than \"Auto arrived within\".","Waiting at pickup: \"Waiting stops beyond\" must be more than \"Auto arrived within\"."]]
+["Waiting at pickup: \"Waiting stops beyond\" must be more than \"Auto arrived within\".","Waiting at pickup: \"Waiting stops beyond\" must be more than \"Auto arrived within\"."],
+["If the raise is more than Movera's commission, Movera pays the difference.","If the raise is more than Movera's commission, Movera pays the difference."]]

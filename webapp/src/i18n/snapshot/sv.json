@@ -9017,4 +9017,5 @@
 ["{0} min ({1} times)","{0} min ({1} gånger)"],
 ["Waiting at pickup: \"Auto arrived within\" must be whole metres from 30 to 300.","Väntan vid upphämtning: ”Automatiskt framme inom” måste vara hela meter från 30 till 300."],
 ["Waiting at pickup: \"Waiting stops beyond\" must be whole metres from 100 to 2000.","Väntan vid upphämtning: ”Väntan stannar bortom” måste vara hela meter från 100 till 2000."],
-["Waiting at pickup: \"Waiting stops beyond\" must be more than \"Auto arrived within\".","Väntan vid upphämtning: ”Väntan stannar bortom” måste vara mer än ”Automatiskt framme inom”."]]
+["Waiting at pickup: \"Waiting stops beyond\" must be more than \"Auto arrived within\".","Väntan vid upphämtning: ”Väntan stannar bortom” måste vara mer än ”Automatiskt framme inom”."],
+["If the raise is more than Movera's commission, Movera pays the difference.","Om höjningen är större än Moveras provision betalar Movera mellanskillnaden."]]

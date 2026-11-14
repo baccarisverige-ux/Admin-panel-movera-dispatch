@@ -69,7 +69,11 @@ test("Dispatch previews show Movera's commission as an amount only, never a deri
   const settings = source("../dispatch/ReservationSettings.tsx");
   const detail = source("../pages/ReservationDetailPage.tsx");
   assert.match(settings, /trn\("Sample booked ride \{0\}\. Movera's commission here is \{1\} \(set in Pricing\)\.", money\(sampleFare\), money\(split\.commission\)\)/);
-  assert.match(detail, /trn\("Fare \{0\}\{1\} · Movera's commission \{2\} · highest raise \{3\}\.", show\(fareMajor\), fare\.estimated \? tr\(" \(estimate\)"\) : "", show\(split\.commission\), show\(raiseMax\)\)/);
+  // BQ-A26: the line takes fareText / commissionText (demo: show(fareMajor) + estimate / show(split.commission); live: the
+  // server's fare and moveraKeepsNow, src/payments/a26LiveMoney.test.ts) — still amounts only.
+  assert.match(detail, /trn\("Fare \{0\}\{1\} · Movera's commission \{2\} · highest raise \{3\}\.", fareText, "", commissionText, show\(raiseMax\)\)/);
+  assert.match(detail, /const fareText = liveMoney \? formatMoney\(liveMoney\.fareMinor, country\) : `\$\{show\(fareMajor\)\}\$\{fare\.estimated \? tr\(" \(estimate\)"\) : ""\}`;/);
+  assert.match(detail, /const commissionText = liveMoney \? formatMoney\(liveMoney\.moveraKeepsMinor, country\) : show\(split\.commission\);/);
   for (const src of [settings, detail]) assert.doesNotMatch(src, /shownPct|commissionPct/);
   assert.ok(!("shownPct" in CS), "shownPct has no caller and is gone");
   for (const d of [en, fr, sv] as Record<string, string>[]) {
