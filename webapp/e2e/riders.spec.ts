@@ -69,7 +69,7 @@ test("categories, top bookers and a group promotion with a ticket", async ({ pag
   await page.getByLabel("Promotion title").fill("Thanks for riding with us");
   await page.getByLabel("Promotion rides").fill("10");
   await page.getByLabel("Promotion max per ride").fill("50");
-  await expect(page.getByLabel("Promotion TOPWEEK30").first()).toContainText("30% off your next 10 rides · max 50 kr per ride");
+  await expect(page.getByLabel("Promotion TOPWEEK30").first()).toContainText("30% off your next 10 rides · max 50,00 kr per ride");
   await expect(page.locator(".rd-cost")).toContainText("5 000,00 kr");
   await page.getByRole("button", { name: "Give promotion" }).click();
   await confirm(page);
@@ -143,12 +143,12 @@ test("existing promotions switch off and on, and their discount, max per ride an
   await page.getByLabel("THANKYOU20 discount").fill("25");
   await page.getByLabel("THANKYOU20 max per ride").fill("60");
   await page.getByLabel("THANKYOU20 rides").fill("6");
-  await expect(thanks.getByLabel("Promotion THANKYOU20")).toContainText("25% off your next 6 rides · max 60 kr per ride");
+  await expect(thanks.getByLabel("Promotion THANKYOU20")).toContainText("25% off your next 6 rides · max 60,00 kr per ride");
   await page.getByRole("button", { name: "Save changes" }).click();
   await confirm(page);
   await expect(page.getByText("Promotion THANKYOU20 changed.")).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("list", { name: "Promotions" }).getByLabel("Promotion THANKYOU20")).toContainText("25% off your next 6 rides · max 60 kr per ride");
+  await expect(page.getByRole("list", { name: "Promotions" }).getByLabel("Promotion THANKYOU20")).toContainText("25% off your next 6 rides · max 60,00 kr per ride");
 
   await page.getByRole("tab", { name: /Automatic/ }).click();
   await page.getByLabel("Come back rides").fill("5");
