@@ -74,10 +74,41 @@ test("a manual run waits: Mark as paid is off, Approve run sends country + perio
   await runs.getByRole("button", { name: "Approve run" }).click();
   await confirm(page);
   await expect.poll(() => approved.length).toBe(1);
-  expect(approved[0]).toEqual({ country: "SE", periodEnd: waiting.periodEnd, reason: "Amount and details are correct" });
+  // BQ-V38 (v0.18.102): the count and total of the run the admin sees go with it.
+  expect(approved[0]).toEqual({ country: "SE", periodEnd: waiting.periodEnd, expectedCount: 1, expectedTotal: [{ amountMinor: 10_000, currency: "SEK" }], reason: "Amount and details are correct" });
   await expect(page.getByText("Run approved: the payouts can be paid.")).toBeVisible();
   await expect(page.getByTestId("live-payout-runs")).toHaveCount(0);
   await expect(page.getByTestId("live-payout-detail").getByRole("button", { name: "Mark as paid" })).toBeEnabled();
+});
+
+test("BQ-V38: a run that changed while the admin looked is refused (409 run_changed): the page says why with the fresh count and total, and Approve again sends them", async ({ page }) => {
+  const waiting = { ...PAYOUTS[0]!, payoutId: "PY9", status: "pending_approval", amount: { amountMinor: 10_000, currency: "SEK" } };
+  const state = await fakeTripServer(page, { admin: { permissions: PERMS }, payouts: [waiting] });
+  await fakeSettings(page);
+  const approved: Record<string, unknown>[] = [];
+  await page.route(`${API}/api/v1/admin/payouts/runs/approve`, async (route) => {
+    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    approved.push(body);
+    const card = { country: "SE", periodEnd: waiting.periodEnd, count: 2, total: [{ amountMinor: 15_000, currency: "SEK" }] };
+    if (body["expectedCount"] !== 2) return json(route, 409, { code: "conflict", message: "The run changed since you looked at it.", requestId: "req_v38", retryable: false, reason: "run_changed", projection: card });
+    state.payouts[0] = { ...state.payouts[0]!, status: "pending" };
+    return json(route, 200, { country: "SE", periodEnd: waiting.periodEnd, approved: 2, total: card.total });
+  });
+  await signInWarm(page);
+  await page.goto("/payouts");
+  const runs = page.getByTestId("live-payout-runs");
+  await runs.getByRole("button", { name: "Approve run" }).click();
+  await confirm(page);
+  await expect.poll(() => approved.length).toBe(1);
+  await expect(page.getByText("The run changed while you looked. Payouts now: 2. To pay now: 150,00 kr. It was reloaded; check it and approve again.")).toBeVisible();
+  await expect(runs.getByTestId("live-payout-run-fresh")).toHaveText("Server now: 2 payouts · 150,00 kr");
+  expect(state.payouts[0]!.status).toBe("pending_approval");
+  await runs.getByRole("button", { name: "Approve run" }).click();
+  await confirm(page);
+  await expect.poll(() => approved.length).toBe(2);
+  expect(approved[1]).toMatchObject({ country: "SE", periodEnd: waiting.periodEnd, expectedCount: 2, expectedTotal: [{ amountMinor: 15_000, currency: "SEK" }] });
+  await expect(page.getByText("Run approved: the payouts can be paid.")).toBeVisible();
 });
 
 test("without settings.publish the payout settings are read-only; without finance.edit Approve run is off", async ({ page }) => {

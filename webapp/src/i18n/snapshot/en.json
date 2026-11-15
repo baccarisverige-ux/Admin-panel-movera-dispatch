@@ -9026,4 +9026,6 @@
 ["SMS to {n} emergency contacts: not connected (no SMS company yet)","SMS to {n} emergency contacts: not connected (no SMS company yet)"],
 ["SMS to {n} emergency contacts: sending","SMS to {n} emergency contacts: sending"],
 ["SMS sent to {sent} of {n} emergency contacts","SMS sent to {sent} of {n} emergency contacts"],
-["SMS to {n} emergency contacts failed","SMS to {n} emergency contacts failed"]]
+["SMS to {n} emergency contacts failed","SMS to {n} emergency contacts failed"],
+["The run changed while you looked. Payouts now: {0}. To pay now: {1}. It was reloaded; check it and approve again.","The run changed while you looked. Payouts now: {0}. To pay now: {1}. It was reloaded; check it and approve again."],
+["Server now: {0} payouts · {1}","Server now: {0} payouts · {1}"]]

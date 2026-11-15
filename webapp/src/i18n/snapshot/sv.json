@@ -9026,4 +9026,6 @@
 ["SMS to {n} emergency contacts: not connected (no SMS company yet)","Sms till {n} nödkontakter: inte anslutet (inget sms-företag än)"],
 ["SMS to {n} emergency contacts: sending","Sms till {n} nödkontakter: skickas"],
 ["SMS sent to {sent} of {n} emergency contacts","Sms skickat till {sent} av {n} nödkontakter"],
-["SMS to {n} emergency contacts failed","Sms till {n} nödkontakter misslyckades"]]
+["SMS to {n} emergency contacts failed","Sms till {n} nödkontakter misslyckades"],
+["The run changed while you looked. Payouts now: {0}. To pay now: {1}. It was reloaded; check it and approve again.","Körningen ändrades medan du tittade. Utbetalningar nu: {0}. Att betala nu: {1}. Den laddades om; kontrollera och godkänn igen."],
+["Server now: {0} payouts · {1}","Servern nu: {0} utbetalningar · {1}"]]

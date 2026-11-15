@@ -53,6 +53,7 @@ import { enC19MoneyA26 } from "./en/c19-money-a26.ts";
 import { enC20V45O15Cleanup } from "./en/c20-v45-o15-cleanup.ts";
 import { enC21RideCheckCadence } from "./en/c21-ride-check-cadence.ts";
 import { enC22SosContactsSms } from "./en/c22-sos-contacts-sms.ts";
+import { enC23PayoutRunGuard } from "./en/c23-payout-run-guard.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -112,6 +113,7 @@ export const en = {
   ...enC20V45O15Cleanup,
   ...enC21RideCheckCadence,
   ...enC22SosContactsSms,
+  ...enC23PayoutRunGuard,
 } as const;
 
 export type MessageKey = keyof typeof en;

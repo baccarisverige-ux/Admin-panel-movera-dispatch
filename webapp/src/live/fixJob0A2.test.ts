@@ -36,7 +36,8 @@ test("A2-2: Mark as paid posts the owed fee of that trip with the admin's reason
 test("A2-3: Approve run sends the reason; an empty reason is refused before any call", async () => {
   const { client, posts } = fakeClient();
   const api = createLiveAdminApi(client);
-  const value = { country: "FR", periodEnd: "2026-11-02T07:00:00.000Z" };
+  // BQ-V38 (v0.18.102): the run's count and total the admin saw go with it.
+  const value = { country: "FR", periodEnd: "2026-11-02T07:00:00.000Z", expectedCount: 1, expectedTotal: [{ amountMinor: 3_000, currency: "EUR" }] };
   await assert.rejects(api.command({ ...base, action: "admin.payout.approveRun", targetId: "FR", reason: "", value }));
   assert.equal(posts.length, 0);
   await api.command({ ...base, action: "admin.payout.approveRun", targetId: "FR", reason: "Bank file checked", value });
