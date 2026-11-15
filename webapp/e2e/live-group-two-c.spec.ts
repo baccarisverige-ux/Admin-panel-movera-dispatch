@@ -3,7 +3,7 @@ import { DRIVER, FLEET, OWNER, VEHICLE, fakeTripServer, signIn, type TripState }
 
 /**
  * Owner G2c (2026-10-30, "Fix now (Recommended)"), admin re-check after #169 on live: real numbers only and "—" when the
- * server has none (1, 2), no config calls for the closed country TN or pricing history for standard-XX (3), every text
+ * server has none (1, 2), the closed country TN read only for zones the server lists, no pricing history for standard-XX (3), every text
  * in sv/fr/en (4), the car's own categories and names instead of raw ids (5).
  */
 const CAR_ID = "01JBXK7Q2M9V4T8RZ5N3W6Y1CD";
@@ -69,14 +69,18 @@ test("2: the live Content page has no Not connected yet badge", async ({ page })
   await expect(page.getByTestId("not-connected")).toHaveCount(0);
 });
 
-test("3: no config call for the closed country TN and no pricing history for standard-XX", async ({ page }) => {
+test("3: the closed country TN is read only for the zones the server lists (BQ-FEE0), and no pricing history for standard-XX", async ({ page }) => {
   const state = await start(page);
   for (const path of ["/drivers", "/pricing", "/dispatch/rules", "/vehicles", "/onboarding"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
   }
-  const bad = state.calls.map((call) => call.path).filter((path) => /\/admin\/config\/.*(country=TN|zoneId=TN-)|\/admin\/config\/pricing\/history\?zoneId=standard-/.test(path));
+  // BQ-FEE0 (owner 2026-11-15): Tunisia is closed for sign-up but has a zone on the server (TN-TC), so its settings are read
+  // from the server (before, the admin showed built-in defaults: app fee 10 %, no steps). A TN zone the server does not list is never asked.
+  const paths = state.calls.map((call) => call.path);
+  const bad = paths.filter((path) => /\/admin\/config\/.*zoneId=TN-(?!TC\b)|\/admin\/config\/pricing\/history\?zoneId=standard-/.test(path));
   expect(bad).toEqual([]);
+  expect(paths.some((path) => /\/admin\/config\/\w+\?(country=TN|zoneId=TN-TC)/.test(path)), "the listed TN zone is read from the server").toBe(true);
   expect(state.calls.some((call) => /\/admin\/config\/\w+\?(country=SE|zoneId=SE-)/.test(call.path)), "the open country is still read").toBe(true);
 });
 
