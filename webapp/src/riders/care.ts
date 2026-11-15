@@ -400,9 +400,24 @@ export function parseEmails(text: string): { valid: string[]; invalid: string[] 
   return { valid, invalid: parts.filter((part) => !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(part)) };
 }
 
+/** BQ-O15c: a promotion's deal as riders see it: "25%", or a fixed amount in the shared formatter ("50,00 kr"). */
+export function promoDealText(ticket: Pick<PromoTicket, "kind" | "value" | "country">): string {
+  return ticket.kind === "percent" ? `${ticket.value}%` : typedMoneyText(ticket.value, ticket.country);
+}
+
+/** BQ-O15c: the most a percent promotion takes off one ride, in the shared formatter. */
+export function promoCapText(ticket: Pick<PromoTicket, "maxPerRide" | "country">): string {
+  return typedMoneyText(ticket.maxPerRide, ticket.country);
+}
+
+/** BQ-O15c: the promotion's minimum fare, in the shared formatter. */
+export function promoMinFareText(ticket: Pick<PromoTicket, "minFare" | "country">): string {
+  return typedMoneyText(ticket.minFare, ticket.country);
+}
+
 export function promoMessage(ticket: Pick<PromoTicket, "title" | "kind" | "value" | "rides" | "maxPerRide" | "code" | "validTo" | "country">, locale: string): string {
   // BQ-O15b: a fixed amount in the shared formatter (the currency's decimals and symbol), never "50 kr".
-  const deal = ticket.kind === "percent" ? `${ticket.value}%` : typedMoneyText(ticket.value, ticket.country);
+  const deal = promoDealText(ticket);
   const until = ticket.validTo ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(Date.parse(ticket.validTo)) : "";
   return `${ticket.title}: ${deal} off your next ${ticket.rides} ride${ticket.rides === 1 ? "" : "s"} with Movera. Use code ${ticket.code}${until ? ` before ${until}` : ""}.`;
 }

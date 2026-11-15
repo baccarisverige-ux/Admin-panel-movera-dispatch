@@ -754,4 +754,8 @@ export const enA0Symbols = {
   "3 rides 100, 5 rides 200…": "3 rides 100, 5 rides 200…",
   "3–5 working days": "3–5 working days",
   "30 min": "30 min",
+  // BQ-O15c: promotion texts with one formatted amount (shared money formatter).
+  "{0} off your next {1} ride{2} · max {3} per ride": "{0} off your next {1} ride{2} · max {3} per ride",
+  " · up to {0} per ride": " · up to {0} per ride",
+  " · min fare {0}": " · min fare {0}",
 } as const;

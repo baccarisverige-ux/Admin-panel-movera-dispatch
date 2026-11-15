@@ -756,4 +756,8 @@ export const frA0Symbols: Record<keyof typeof enA0Symbols, string> = {
   "3 rides 100, 5 rides 200…": "3 courses 100, 5 courses 200…",
   "3–5 working days": "3 à 5 jours ouvrés",
   "30 min": "30 min",
+  // BQ-O15c: promotion texts with one formatted amount (shared money formatter).
+  "{0} off your next {1} ride{2} · max {3} per ride": "Réduction de {0} sur {1} course{2} à venir · plafond de {3} par course",
+  " · up to {0} per ride": " · jusqu'à {0} par course",
+  " · min fare {0}": " · tarif min. {0}",
 };
