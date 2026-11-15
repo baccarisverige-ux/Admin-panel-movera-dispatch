@@ -9060,4 +9060,5 @@
 ["No driven route yet: the driver app has sent no position on this trip. The planned route is shown.","Ingen körd väg ännu: förarappen har inte skickat någon position på den här resan. Den planerade vägen visas."],
 ["The driven route was deleted 30 days after the trip. The planned route is shown.","Den körda vägen raderades 30 dagar efter resan. Den planerade vägen visas."],
 ["The driven route could not be loaded. The planned route is shown.","Den körda vägen kunde inte hämtas. Den planerade vägen visas."],
-["{0} Driven (GPS) {1} Planned","{0} Körd (GPS) {1} Planerad"]]
+["{0} Driven (GPS) {1} Planned","{0} Körd (GPS) {1} Planerad"],
+["Waiting since {0}","Väntar sedan {0}"]]
