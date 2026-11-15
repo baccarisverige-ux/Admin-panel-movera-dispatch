@@ -73,6 +73,11 @@ export type Driver = {
   offlineAfterTrip?: boolean;
   /** v0.18.65 §86: stopped next-trip offers on the trip sheet's radar for his current trip. */
   nextTripsOff?: boolean;
+  /** v0.18.6 (owner "Send the real reason"): why the server set him offline, sent only while offline (BQ-A07). */
+  offlineReason?: string;
+  /** v0.18.6: the admin's note, only with offlineReason vehicle_blocked. */
+  offlineNote?: string;
+  offlineAt?: string;
   firstName: string;
   lastName?: string;
   /** v0.18.54 §76: YYYY-MM-DD, or the year only ("1990") when masked for this admin. */

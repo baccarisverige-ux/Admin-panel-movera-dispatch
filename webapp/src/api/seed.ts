@@ -218,6 +218,10 @@ export type LiveDriverFacts = {
   offlineAfterTrip?: boolean;
   /** v0.18.65 §86: on a trip with next-trip offers stopped (Driver / LiveDriver.nextTripsOff). */
   nextTripsOff?: boolean;
+  /** BQ-A07: Driver.offlineReason / offlineNote / offlineAt (v0.18.6), only while he is offline. */
+  offlineReason?: string;
+  offlineNote?: string;
+  offlineAt?: string;
   /** v0.18.4 (G3-D2): Driver.performance when the server sent it (GET /admin/drivers/{driverId}). */
   performance?: { acceptancePct: number | null; cancellationPct: number | null; rating: number | null };
   /** v0.18.17 (owner BL-Q4): the home area the driver set in the app. */

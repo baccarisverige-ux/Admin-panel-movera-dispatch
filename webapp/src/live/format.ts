@@ -8,6 +8,7 @@ import { ApiError } from "../api/httpClient.ts";
 import { CURRENCIES, formatMoney, type CurrencyCode, type Money } from "../domain/money.ts";
 import { currentLanguage, tr, type MessageKey } from "../i18n/index.ts";
 import { DOCUMENT_TYPES, ONBOARDING_COUNTRIES, REQUIRED_DOCUMENTS } from "./onboardingContract.ts";
+import { offlineReasonText, type OfflineReasonExtra } from "./offlineReason.ts";
 import { STEPS_CONTRACT, type StepProblemCode } from "../pricing/commissionSteps.ts";
 import type { AdminMe, DocumentStatus, DocumentSummary, Driver, Vehicle } from "./types.ts";
 
@@ -496,12 +497,15 @@ export function auditActorName(actorId: string, agents: readonly { id: string; n
   return actorId.includes("@") ? tr("Admin") : tr("Admin {0}", [shortId(actorId)]);
 }
 
-/** G3-R1: driver.auto_offline detail { reason: no_position, lastFixAt, minutes } as one line; null for other actions. */
+/**
+ * G3-R1 + BQ-A07: driver.auto_offline detail { reason, lastFixAt?, minutes?, count?, note? } as one line, by the one
+ * offline-reason formatter (live/offlineReason.ts); a row without reason is no_position (G3-R1). null for other actions.
+ */
 export function auditDetailText(row: { action: string; after: string }): string | null {
   if (row.action !== "driver.auto_offline") return null;
-  let detail: { reason?: unknown; minutes?: unknown } = {};
+  let detail: { reason?: unknown } & OfflineReasonExtra = {};
   try { detail = row.after ? (JSON.parse(row.after) as typeof detail) : {}; } catch { detail = {}; }
-  return typeof detail.minutes === "number" ? tr("No position for {0} min", [detail.minutes]) : tr("No position");
+  return offlineReasonText(typeof detail.reason === "string" && detail.reason ? detail.reason : "no_position", detail);
 }
 
 /**

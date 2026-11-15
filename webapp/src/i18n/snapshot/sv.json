@@ -9040,4 +9040,17 @@
 ["Waiting stopped: driver away since {0}","Väntan stannad: föraren borta sedan {0}"],
 ["Stopped in all: {0} min ({1} times)","Stannad totalt: {0} min ({1} gånger)"],
 ["At stop {0} since {1}","Vid stopp {0} sedan {1}"],
-["This driver works in another country. A fleet works in one country only.","Föraren arbetar i ett annat land. Ett åkeri arbetar bara i ett land."]]
+["This driver works in another country. A fleet works in one country only.","Föraren arbetar i ett annat land. Ett åkeri arbetar bara i ett land."],
+["Missed or declined {0} offers in a row","Missade eller nekade {0} erbjudanden i rad"],
+["Missed or declined offers in a row","Missade eller nekade erbjudanden i rad"],
+["The driver app was restarted while online","Förarappen startades om medan föraren var online"],
+["Car blocked or rejected by an admin: {0}","Bilen spärrad eller nekad av en admin: {0}"],
+["Car blocked or rejected by an admin","Bilen spärrad eller nekad av en admin"],
+["Removed from the fleet, or the fleet was blocked","Borttagen från åkeriet, eller åkeriet spärrades"],
+["Account on hold, suspended or back to pending","Kontot pausat, avstängt eller tillbaka till väntande"],
+["Set offline by Movera","Satt offline av Movera"],
+["A required document has expired","Ett obligatoriskt dokument har gått ut"],
+["Went offline after his trip (asked during the trip)","Gick offline efter resan (bad om det under resan)"],
+["Set offline by the server ({0})","Satt offline av servern ({0})"],
+["Offline reason","Orsak till offline"],
+["Set offline {0}","Satt offline {0}"]]

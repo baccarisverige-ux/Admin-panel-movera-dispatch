@@ -64,6 +64,7 @@ import { dateOfBirthText, type Revealed } from "../live/masking";
 import { TabPanel, Tabs } from "../ui/Tabs";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { auditActionText, auditActorText, auditDetailText, mainDocuments, renewalFor } from "../live/format";
+import { offlineReasonText } from "../live/offlineReason";
 
 const TABS = ["Overview", "Documents", "Performance", "Earnings", "Trips", "Vehicles", "Messages", "Notes", "Activity"];
 const CATEGORIES: Vehicle["category"][] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
@@ -376,6 +377,7 @@ export function DriverDetailPage() {
           <Field label={tr("Payouts go to")}>{fleet ? tr("{0} (fleet)", [fleet.name]) : liveData ? DASH : tr("The driver · bank •••• {0}", [ops.bank.last4])}</Field>
           <Field label={tr("Joined")}>{liveData ? (liveJoined ? dateFormat.format(Date.parse(liveJoined)) : DASH) : dateFormat.format(Date.parse(joined))}</Field>
           <Field label={tr("Last online")}>{lastOnline}</Field>
+          {liveData && liveFacts?.offlineReason ? <Field label={tr("Offline reason")}><span data-offline-reason={liveFacts.offlineReason}>{offlineReasonText(liveFacts.offlineReason, { note: liveFacts.offlineNote })}{liveFacts.offlineAt ? ` · ${tr("Set offline {0}", [dateFormat.format(Date.parse(liveFacts.offlineAt))])}` : ""}</span></Field> : null}
           {liveData ? <Field label={tr("Home area")}>{liveFacts?.homeArea ? `${liveFacts.homeArea.label ? `${liveFacts.homeArea.label} · ` : ""}${liveFacts.homeArea.lat.toFixed(4)}, ${liveFacts.homeArea.lng.toFixed(4)}` : tr("Not set by the driver")}</Field> : null}
 
         </dl>
