@@ -1,4 +1,4 @@
-/** Swedish dictionary, area c28-offline-reasons: BQ-A07 (owner 2026-10-31 "Send the real reason", Rules decisions/driver-g3.md): the admin texts for every Driver.offlineReason (contract.json#driverHome.setOffline.offlineReasons, plus app_restart), shown on the Audit page and the driver page by live/offlineReason.ts. Add new keys at the end of this file. Merged in ../sv.ts in this order. */
+/** Swedish dictionary, area c28-offline-reasons: BQ-A07 (owner 2026-10-31 "Send the real reason", Rules decisions/driver-g3.md): the admin texts for every Driver.offlineReason (contract.json#driverHome.setOffline.offlineReasons, plus app_restart), shown on the Audit page and the driver page by live/offlineReason.ts; and BQ-A09 (the same plan row 9), Content › Driver app texts in sv / fr / en. Add new keys at the end of this file. Merged in ../sv.ts in this order. */
 export const svC28OfflineReasons = {
   "Missed or declined {0} offers in a row": "Missade eller nekade {0} erbjudanden i rad",
   "Missed or declined offers in a row": "Missade eller nekade erbjudanden i rad",
@@ -13,4 +13,6 @@ export const svC28OfflineReasons = {
   "Set offline by the server ({0})": "Satt offline av servern ({0})",
   "Offline reason": "Orsak till offline",
   "Set offline {0}": "Satt offline {0}",
+  // BQ-A09 (same plan row 9): Content › Driver app texts is sv / fr / en only, the Arabic tab is removed.
+  "Island, offer and button texts in the driver app, in Swedish, French and English.": "Ö-, erbjudande- och knapptexter i förarappen, på svenska, franska och engelska.",
 } as const;

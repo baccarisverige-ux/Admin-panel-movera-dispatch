@@ -1,18 +1,19 @@
 /**
  * Driver app texts (Round 3, Q30): every island, offer and main trip button text the driver app lets admin change,
- * per language (English, Swedish, French, Arabic). An empty text means the app's own default (English).
+ * per language (English, Swedish, French). An empty text means the app's own default (English).
+ * BQ-A09 (owner Q7 "Make it real, sv/fr/en" => "Arabic tab removed", Rules decisions/driver-g14.md): no Arabic tab; the
+ * removed tab is archived in ./archive/driverTexts-ar-2026-11-15.ts and saved Arabic texts stay in book.archivedAr.
  * The keys and defaults are the driver app's (DriverTexts in driver_app_texts.dart); the app reads
  * { byLanguage: { sv: { "island.online": "Radar på" } } }.
  */
 
 export const DRIVER_TEXTS_KEY = "driverTexts";
 
-export type TextLang = "en" | "sv" | "fr" | "ar";
+export type TextLang = "en" | "sv" | "fr";
 export const TEXT_LANGS: { id: TextLang; label: string }[] = [
   { id: "en", label: "English" },
   { id: "sv", label: "Swedish" },
   { id: "fr", label: "French" },
-  { id: "ar", label: "Arabic" },
 ];
 
 export type TextArea = "island" | "offer" | "trip";
@@ -129,10 +130,16 @@ export const SAMPLE_VALUES: Record<string, string> = {
 
 export type Texts = Record<TextLang, Record<string, string>>;
 export type TextLog = { at: string; by: string; line: string };
-export type DriverTextBook = { draftRev: number; texts: Texts; log: TextLog[] };
+export type DriverTextBook = {
+  draftRev: number;
+  texts: Texts;
+  log: TextLog[];
+  /** BQ-A09 + Rule 21: Arabic texts saved before the Arabic tab was removed; kept, never published. */
+  archivedAr?: Record<string, string>;
+};
 
 export function emptyTexts(): Texts {
-  return { en: {}, sv: {}, fr: {}, ar: {} };
+  return { en: {}, sv: {}, fr: {} };
 }
 
 export function emptyDriverTextBook(): DriverTextBook {
@@ -153,13 +160,23 @@ export function cleanTexts(value: unknown): Texts {
   return out;
 }
 
+/** BQ-A09 + Rule 21: the written Arabic texts of known keys, kept aside after the Arabic tab was removed. */
+function archivedArabic(value: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!value || typeof value !== "object") return out;
+  for (const [id, text] of Object.entries(value as Record<string, unknown>)) if (KEY_BY_ID.has(id) && typeof text === "string" && text.trim()) out[id] = text.trim();
+  return out;
+}
+
 export function normalizeDriverTextBook(value: unknown): DriverTextBook {
   if (!value || typeof value !== "object") return emptyDriverTextBook();
   const raw = value as Partial<DriverTextBook>;
+  const archivedAr = { ...archivedArabic(raw.archivedAr), ...archivedArabic((raw.texts as Record<string, unknown> | undefined)?.ar) };
   return {
     draftRev: typeof raw.draftRev === "number" && raw.draftRev > 0 ? raw.draftRev : 1,
     texts: cleanTexts(raw.texts),
     log: Array.isArray(raw.log) ? raw.log : [],
+    ...(Object.keys(archivedAr).length ? { archivedAr } : {}),
   };
 }
 
@@ -173,8 +190,9 @@ export function fill(text: string, values: Record<string, string> = SAMPLE_VALUE
 }
 
 /** What the app shows: admin's text for the language, or the app's default. own: admin wrote it. */
-export function textOf(texts: Texts, lang: TextLang, id: string, values?: Record<string, string>): { text: string; own: boolean } {
-  const own = texts[lang]?.[id]?.trim();
+export function textOf(texts: Texts, lang: TextLang | (string & {}), id: string, values?: Record<string, string>): { text: string; own: boolean } {
+  // A language without a tab here (Messages › Driver notices still has Arabic) uses the app's default.
+  const own = (texts as Partial<Record<string, Record<string, string>>>)[lang]?.[id]?.trim();
   const base = own || textKey(id)?.english || id;
   return { text: values ? fill(base, values) : base, own: Boolean(own) };
 }
@@ -230,7 +248,7 @@ export function saveTexts(book: DriverTextBook, texts: Texts, actorId: string, n
   const next = cleanTexts(texts);
   const lines = textChanges(book.texts, next);
   if (!lines.length) return { book, error: "Nothing changed." };
-  return { book: { draftRev: book.draftRev + 1, texts: next, log: [...lines.map((line) => ({ at: nowIso, by: actorId, line })), ...book.log].slice(0, 300) } };
+  return { book: { draftRev: book.draftRev + 1, texts: next, log: [...lines.map((line) => ({ at: nowIso, by: actorId, line })), ...book.log].slice(0, 300), ...(book.archivedAr ? { archivedAr: book.archivedAr } : {}) } };
 }
 
 /** What the driver app reads (DriverAppTextOverrides.byLanguage): only the texts admin wrote. */
