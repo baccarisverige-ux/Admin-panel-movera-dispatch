@@ -401,8 +401,8 @@ export function parseEmails(text: string): { valid: string[]; invalid: string[] 
 }
 
 export function promoMessage(ticket: Pick<PromoTicket, "title" | "kind" | "value" | "rides" | "maxPerRide" | "code" | "validTo" | "country">, locale: string): string {
-  const symbol = { SE: "kr", FR: "€", TN: "DT" }[ticket.country];
-  const deal = ticket.kind === "percent" ? `${ticket.value}%` : `${ticket.value} ${symbol}`;
+  // BQ-O15b: a fixed amount in the shared formatter (the currency's decimals and symbol), never "50 kr".
+  const deal = ticket.kind === "percent" ? `${ticket.value}%` : typedMoneyText(ticket.value, ticket.country);
   const until = ticket.validTo ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(Date.parse(ticket.validTo)) : "";
   return `${ticket.title}: ${deal} off your next ${ticket.rides} ride${ticket.rides === 1 ? "" : "s"} with Movera. Use code ${ticket.code}${until ? ` before ${until}` : ""}.`;
 }
