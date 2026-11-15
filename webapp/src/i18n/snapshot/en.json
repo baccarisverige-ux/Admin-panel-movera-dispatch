@@ -9039,4 +9039,5 @@
 ["Left {0}","Left {0}"],
 ["Waiting stopped: driver away since {0}","Waiting stopped: driver away since {0}"],
 ["Stopped in all: {0} min ({1} times)","Stopped in all: {0} min ({1} times)"],
-["At stop {0} since {1}","At stop {0} since {1}"]]
+["At stop {0} since {1}","At stop {0} since {1}"],
+["This driver works in another country. A fleet works in one country only.","This driver works in another country. A fleet works in one country only."]]

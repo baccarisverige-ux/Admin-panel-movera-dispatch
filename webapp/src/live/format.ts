@@ -239,6 +239,8 @@ export function errorText(error: unknown): string {
   if (error.status === 409 && error.reason === "invitation_closed") return tr("This invitation was already answered or withdrawn.");
   if (error.status === 409 && error.reason === "driver_not_signed_up") return tr("That number has no account yet. Accept is possible once it signs up.");
   if (error.status === 409 && error.reason === "already_in_fleet") return tr("The driver is already in a fleet.");
+  // v0.18.109 (BQ-FLEETCUR, owner 2026-11-15): a fleet works in one country; accepting a driver of another country is refused.
+  if (error.status === 409 && error.reason === "fleet_other_country") return tr("This driver works in another country. A fleet works in one country only.");
   if (error.status === 404 && error.reason === "invitation_not_found") return tr("This invitation is no longer on the fleet.");
   if (error.status === 429) return error.retryAfterSeconds ? tr("Too many attempts. Wait {0} s.", [error.retryAfterSeconds]) : tr("Too many attempts. Wait.");
   if (error.status === 0) return error.message;

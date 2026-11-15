@@ -9039,4 +9039,5 @@
 ["Left {0}","Parti à {0}"],
 ["Waiting stopped: driver away since {0}","Attente arrêtée : chauffeur éloigné depuis {0}"],
 ["Stopped in all: {0} min ({1} times)","Arrêtée au total : {0} min ({1} fois)"],
-["At stop {0} since {1}","À l’arrêt {0} depuis {1}"]]
+["At stop {0} since {1}","À l’arrêt {0} depuis {1}"],
+["This driver works in another country. A fleet works in one country only.","Ce chauffeur travaille dans un autre pays. Une flotte travaille dans un seul pays."]]
