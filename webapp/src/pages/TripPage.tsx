@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { useLiveRefund } from "../live/LiveRefund";
 import { LiveTripMoney } from "../live/LiveTripMoney";
 import { LiveTripTools } from "../live/LiveTripTools";
+import { stoppedMinutes } from "../live/stopVisits";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
 import { useEffect, useMemo, useState } from "react";
@@ -393,9 +394,23 @@ export function TripPage() {
           </MapPanel>
           <div>
             <ol className="op-stops" data-testid="trip-stops">
-              {route.stops.map((stop, index) => (
-                <li key={`${stop.kind}-${index}`} className={stop.kind}><i aria-hidden="true" />{stop.kind === "pickup" ? tr("Pickup") : stop.kind === "dropoff" ? tr("Drop-off") : tr("Stop")} · {trx(stop.label)}</li>
-              ))}
+              {route.stops.map((stop, index) => {
+                // v0.18.108 (job C9b, contract.json#autoArrive.stops): the server's visit of this middle stop (route.stops
+                // starts with the pickup, so stop i of the trip is index i + 1). Shown as sent, never worked out here.
+                const visit = stop.kind === "stop" ? facts?.stopVisits?.[index - 1] ?? null : null;
+                return (
+                  <li key={`${stop.kind}-${index}`} className={stop.kind}><i aria-hidden="true" />{stop.kind === "pickup" ? tr("Pickup") : stop.kind === "dropoff" ? tr("Drop-off") : tr("Stop")} · {trx(stop.label)}
+                    {visit ? (
+                      <small className="op-stop-visit">
+                        <span data-testid="trip-stop-arrived">{tr("Arrived {0}", [time(visit.arrivedAt)])}{visit.arrivedBy ? ` · ${visit.arrivedBy === "auto" ? tr("automatic") : tr("tapped")}` : ""}</span>
+                        {visit.leftAt ? <> · <span data-testid="trip-stop-left">{tr("Left {0}", [time(visit.leftAt)])}</span></> : null}
+                        {visit.awaySince ? <> · <span data-testid="trip-stop-away">{tr("Waiting stopped: driver away since {0}", [time(visit.awaySince)])}</span></> : null}
+                        {visit.pauseCount ? <> · <span data-testid="trip-stop-paused">{tr("Stopped in all: {0} min ({1} times)", [stoppedMinutes(visit), visit.pauseCount])}</span></> : null}
+                      </small>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ol>
             <dl className="op-facts" data-testid="trip-route-facts">
               {eta ? (

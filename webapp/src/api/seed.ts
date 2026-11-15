@@ -128,6 +128,8 @@ export type LiveRideCheck = {
 export type LiveRatingFacts = { tripId: string; from: "rider" | "driver"; stars: number; tags: string[]; comment: string | null; at: string; riderId: string; riderName: string | null; driverId: string | null; driverName: string | null; zoneId: string; hidden: boolean; hiddenBy: string | null; hiddenAt: string | null; hideReason: string | null };
 
 export type LivePlace = { address?: string; lat: number; lng: number };
+/** v0.18.108 (job C9b, contract.json#autoArrive.stops / #stopWaits.projection): one middle stop's visit as the server sends it. */
+export type LiveStopVisit = { arrivedAt: string; arrivedBy: "auto" | "tap" | null; leftAt: string | null; awaySince: string | null; pausedSeconds: number; pauseCount: number };
 /** Money in minor units of the trip's currency; null when the server did not send that line. */
 export type LiveTripFacts = {
   kind: "live" | "scheduled";
@@ -138,6 +140,8 @@ export type LiveTripFacts = {
   pickup: LivePlace;
   dropoff: LivePlace;
   stops: LivePlace[];
+  /** v0.18.108 (job C9b): per stop (same order), the server's visit; null for a stop not arrived at. Absent on older records. */
+  stopVisits?: (LiveStopVisit | null)[];
   fare: number;
   fareLines: { code: string; amountMinor: number }[];
   commission: number | null;

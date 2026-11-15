@@ -8,6 +8,7 @@ import type { LiveDriver } from "./live.ts";
 import { lengthKm, type LatLng } from "./route.ts";
 import { tr, uiLocale } from "../i18n/core.ts";
 import { NOT_CONNECTED_TEXT, isLiveData, liveTripOf } from "../live/realData.ts";
+import { currentStopOf } from "../live/stopVisits.ts";
 import { placeText } from "../trips/present.ts";
 import { formatMoney as formatCurrency, isCurrency } from "../domain/money.ts";
 
@@ -60,6 +61,8 @@ export type LiveTrip = {
   progressPct: number | null;
   startedAtMs: number;
   next: NextPickup | null;
+  /** v0.18.108 (job C9b, contract.json#autoArrive.stops): the middle stop the driver is at now, as the server sent it (live only). */
+  stop?: { number: number; arrivedAtMs: number; arrivedBy: "auto" | "tap" | null; awaySinceMs: number | null } | null;
   waybill: Waybill;
 };
 
@@ -221,6 +224,8 @@ function serverTrip(driver: LiveDriver, records: { trips: readonly DemoRecord[];
   const vehicle = records.vehicles.find((row) => row.driverId === driver.id);
   const fleet = vehicle?.fleetId ? records.fleets.find((row) => row.id === vehicle.fleetId)?.name ?? null : null;
   const riderId = trip.tripId ?? null;
+  const open = currentStopOf(facts);
+  const stop = open ? { number: open.number, arrivedAtMs: Date.parse(open.visit.arrivedAt), arrivedBy: open.visit.arrivedBy, awaySinceMs: open.visit.awaySince ? Date.parse(open.visit.awaySince) : null } : null;
   return {
     tripId: trip.id,
     phase,
@@ -237,6 +242,7 @@ function serverTrip(driver: LiveDriver, records: { trips: readonly DemoRecord[];
     progressPct: null,
     startedAtMs,
     next: null,
+    stop,
     waybill: {
       number: trip.id,
       issuedAt: dateTime.format(startedAtMs),

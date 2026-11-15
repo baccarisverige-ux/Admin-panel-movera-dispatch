@@ -192,6 +192,8 @@ export type Page<T> = { items: T[]; nextCursor: string | null; total?: number };
 /** contract Money: integer minor units. */
 export type LiveMoney = { amountMinor: number; currency: string };
 export type TripPlace = { address?: string; lat: number; lng: number };
+/** v0.18.108 (job C9b, contract StopVisit / stopWaits.projection): stops[i] (canonical) and the stopVisits mirror carry these. */
+export type TripStopVisit = { arrivedAt?: string; leftAt?: string; arrivedBy?: "auto" | "tap"; away?: { since: string }; pausedSeconds?: number; pauseCount?: number };
 
 /** v0.18.7 (G5 Q4): the server's road-route ETA, refreshed every 30 s while a driver is on the way or driving. */
 export type TripEta = { etaSeconds: number; distanceMeters: number; target: "pickup" | "dropoff"; at: string; source: "osrm" | "estimate" | "stale" };
@@ -221,7 +223,9 @@ export type Trip = {
   categoryId: string;
   pickup: TripPlace;
   dropoff: TripPlace;
-  stops: TripPlace[];
+  stops: (TripPlace & TripStopVisit)[];
+  /** v0.7.1 mirror of the stop taps (+ the four v0.18.108 fields); stops[i] is canonical. */
+  stopVisits?: (TripStopVisit & { stopIndex: number })[];
   fare: LiveMoney;
   fareLines?: { code: string; amount: LiveMoney }[];
   driverEarnings?: LiveMoney;

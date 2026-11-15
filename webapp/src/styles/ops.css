@@ -53,6 +53,9 @@
 .op-stops li i { width: 12px; height: 12px; flex: none; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--line); background: #eda100; }
 .op-stops li.pickup i { background: #1a9256; }
 .op-stops li.dropoff i { background: #c63c3c; }
+/* v0.18.108 (job C9b): the server's stop visit under a middle stop (arrived, left, away, stopped in all). */
+.op-stops li { flex-wrap: wrap; }
+.op-stop-visit { flex-basis: 100%; padding-left: 22px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .op-facts { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .op-facts div { padding: 8px 10px; border-radius: 12px; background: #f6f8f9; }
 .op-facts dt { font-size: 11px; color: var(--muted); font-weight: 700; }

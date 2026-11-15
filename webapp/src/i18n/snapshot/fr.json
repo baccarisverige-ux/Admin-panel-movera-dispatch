@@ -9031,4 +9031,12 @@
 ["SMS sent to {sent} of {n} emergency contacts","SMS envoyé à {sent} sur {n} contacts d’urgence"],
 ["SMS to {n} emergency contacts failed","Échec du SMS à {n} contacts d’urgence"],
 ["The run changed while you looked. Payouts now: {0}. To pay now: {1}. It was reloaded; check it and approve again.","Le lot a changé pendant que vous le regardiez. Versements maintenant : {0}. À payer maintenant : {1}. Il a été rechargé ; vérifiez et approuvez à nouveau."],
-["Server now: {0} payouts · {1}","Serveur maintenant : {0} versements · {1}"]]
+["Server now: {0} payouts · {1}","Serveur maintenant : {0} versements · {1}"],
+["At the pickup and at stops: the server marks the driver arrived when he is this close; he can still tap Arrived. While he is farther than the second distance before the rider is in the car (pickup) or before the stop is done, the waiting time stops (nothing charged; at the pickup no free minutes used and no no-show) and goes on when he is back.","À la prise en charge et aux arrêts : le serveur marque le chauffeur comme arrivé quand il est aussi près ; il peut toujours appuyer sur Arrivé. Tant qu’il est plus loin que la deuxième distance avant que le passager soit à bord (prise en charge) ou avant que l’arrêt soit terminé, le temps d’attente s’arrête (rien n’est facturé ; à la prise en charge aucune minute gratuite utilisée et pas d’absence du passager) et reprend à son retour."],
+["Arrived and waiting away at stops","Arrivée et attente quand le chauffeur s’éloigne aux arrêts"],
+["The same distances as Waiting at pickup: the server marks the stop arrived within {0} m, and the waiting at the stop stops while the driver is more than {1} m away.","Les mêmes distances que l’attente à la prise en charge : le serveur marque l’arrêt comme atteint à moins de {0} m, et l’attente à l’arrêt s’arrête tant que le chauffeur est à plus de {1} m."],
+["Arrived {0}","Arrivé à {0}"],
+["Left {0}","Parti à {0}"],
+["Waiting stopped: driver away since {0}","Attente arrêtée : chauffeur éloigné depuis {0}"],
+["Stopped in all: {0} min ({1} times)","Arrêtée au total : {0} min ({1} fois)"],
+["At stop {0} since {1}","À l’arrêt {0} depuis {1}"]]

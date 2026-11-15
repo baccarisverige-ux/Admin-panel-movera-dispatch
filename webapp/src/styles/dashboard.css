@@ -684,6 +684,9 @@
 .trip-stops li > span { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 800; }
 .trip-stops .stop-a > span { background: #0ca30c; }
 .trip-stops .stop-b > span { background: #d03b3b; }
+/* v0.18.108 (job C9b): the stop the driver is at now and the stopped waiting while he is away. */
+.trip-stop-note { margin: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.trip-stop-note .away { color: #b45309; font-weight: 600; }
 .trip-stops small { display: block; font-size: 11px; color: var(--muted); }
 .trip-stops strong { font-size: 13px; }
 .trip-facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }

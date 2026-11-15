@@ -933,4 +933,47 @@ if not {'autoArriveMeters', 'leaveMeters'} <= set(c['bookingSnapshot']['fields']
 for _k, _t in _aa['texts'].items():
     if set(_t) != {'sv', 'fr', 'en'} or any(not _t[l].strip() for l in _t): bad += 1; print('AUTO ARRIVE TEXT', _k)
     if _k == 'driverPaused' and any('{leave}' not in _t[l] or '{arrive}' not in _t[l] for l in _t): bad += 1; print('AUTO ARRIVE placeholders')
+# v0.18.108 (contract.json#autoArrive.stops, job C9b): the wait at a middle stop stands still while the driver is away.
+_as = _aa['stops']
+def stop_clock(x):
+    away, paused, count, taps, out = None, 0, 0, [], {}
+    def back(at):
+        nonlocal away, paused, count
+        paused += max(0, at - away); count += 1; away = None
+    for e in x['events']:
+        if e['kind'] == 'fix':
+            if away is None and e['meters'] > x['leaveMeters']: away = e['at']
+            elif away is not None and e['meters'] <= x['arriveMeters']: back(e['at'])
+        elif e['kind'] == 'tap':
+            if away is None: taps.append('stop_already_arrived')
+            elif e['meters'] <= x['leaveMeters']: back(e['at']); taps.append('ok')
+            else: taps.append('not_at_stop')
+        elif e['kind'] in ('leave', 'complete'):
+            waited = max(0, (away if away is not None else e['at']) - paused)
+            charged = max(0, waited - x['stopFreeWaitMin'] * 60)
+            out.update(waitedSeconds=waited, chargedSeconds=charged,
+                       stopLine={'amountMinor': _hu(Fr(charged, 60) * x['stopWaitPerMin']['amountMinor']), 'currency': x['currency']})
+    return dict(pausedSeconds=paused, pauseCount=count, awayAtEnd=away is not None, taps=taps, **out)
+for _x in _aaf['stops']:
+    if stop_clock(_x) != _x['expect'] or _x['currency'] not in c['currencies'] or _x['stopWaitPerMin']['currency'] != _x['currency']: bad += 1; print('AUTO ARRIVE STOP CLOCK', _x['id'], stop_clock(_x))
+if {_x['currency'] for _x in _aaf['stops']} != {'SEK', 'TND'}: bad += 1; print('AUTO ARRIVE STOP currencies')
+def stop_first_tap(x, max_age=60, arrive=100):
+    v = x['contractVersion']; sent, stored = x['sent'], x['stored']
+    if v is None or tuple(map(int, v.split('.'))) < tuple(map(int, _as['minContractVersion'].split('.'))):
+        return 'ok' if stored is None or stored['meters'] <= _as['tapMaxMeters'] else 'not_at_stop'
+    fresh = [p for p in (sent, stored) if p is not None and p['ageSeconds'] <= max_age]
+    if not fresh: return 'position_stale' if (sent or stored) else 'not_at_stop'
+    return 'not_at_stop' if fresh[0]['meters'] > _as['tapMaxMeters'] else 'ok'
+for _x in _aaf['firstTap']:
+    if stop_first_tap(_x) != _x['expect']: bad += 1; print('AUTO ARRIVE STOP TAP', _x['id'], stop_first_tap(_x))
+def next_stop_auto(x, arrive=100):
+    if any(m > arrive for m in x['nextStopPairMeters']): return 'none'
+    o = x['openStop']
+    if o is not None and not o['away'] and any(m <= arrive for m in o['pairMeters']): return 'none'
+    return 'auto'
+for _x in _aaf['nextStopAuto']:
+    if next_stop_auto(_x) != _x['expect']: bad += 1; print('AUTO ARRIVE NEXT STOP', _x['id'], next_stop_auto(_x))
+for _k, _t in _as['texts'].items():
+    if set(_t) != {'sv', 'fr', 'en'} or any(not _t[l].strip() for l in _t): bad += 1; print('AUTO ARRIVE STOP TEXT', _k)
+    if _k == 'driverStopPaused' and any('{leave}' not in _t[l] or '{arrive}' not in _t[l] for l in _t): bad += 1; print('AUTO ARRIVE STOP placeholders')
 print('OK' if not bad else f'{bad} mismatches'); sys.exit(1 if bad else 0)
