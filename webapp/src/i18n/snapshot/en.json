@@ -9054,4 +9054,10 @@
 ["Set offline by the server ({0})","Set offline by the server ({0})"],
 ["Offline reason","Offline reason"],
 ["Set offline {0}","Set offline {0}"],
-["Island, offer and button texts in the driver app, in Swedish, French and English.","Island, offer and button texts in the driver app, in Swedish, French and English."]]
+["Island, offer and button texts in the driver app, in Swedish, French and English.","Island, offer and button texts in the driver app, in Swedish, French and English."],
+["Driven route: {0} GPS positions · kept until {1}","Driven route: {0} GPS positions · kept until {1}"],
+["Driven route: {0} GPS positions","Driven route: {0} GPS positions"],
+["No driven route yet: the driver app has sent no position on this trip. The planned route is shown.","No driven route yet: the driver app has sent no position on this trip. The planned route is shown."],
+["The driven route was deleted 30 days after the trip. The planned route is shown.","The driven route was deleted 30 days after the trip. The planned route is shown."],
+["The driven route could not be loaded. The planned route is shown.","The driven route could not be loaded. The planned route is shown."],
+["{0} Driven (GPS) {1} Planned","{0} Driven (GPS) {1} Planned"]]

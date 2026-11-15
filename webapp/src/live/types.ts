@@ -313,7 +313,8 @@ export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number
 export type ZoneSupplyRow = { zoneId: string; online: number; free: number; busy: number; waiting: number; level: "ok" | "tight" | "short"; shortage: boolean };
 
 /** GET /admin/trips/{tripId}/trace: the car's positions on the trip (kept 30 days). */
-export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; measuredAt: string }[]; keptUntil: string };
+/** BQ-A08: fixes are GeoFix (accuracy, heading?, speedMps?), in time order; keptUntil is optional in the contract. */
+export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; accuracy?: number; measuredAt: string }[]; keptUntil?: string };
 
 /** GET /admin/riders (AdminRider). */
 export type Rider = {

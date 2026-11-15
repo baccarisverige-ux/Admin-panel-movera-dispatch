@@ -31,6 +31,7 @@ import { ApiError, apiRequest, classifyStatus, type ApiErrorBody } from "./httpC
 import { COUNTRY_SETTINGS_KEY, normalizeCountrySettingsBook, saveCountrySettings } from "../config/countrySettings.ts";
 import { REFUND_POLICY_KEY, needsSecondAdminIn, normalizeRefundPolicy, parseRefundAbove, saveRefundPolicy, type RefundPolicy } from "../payments/refundPolicy.ts";
 import type { ApprovalRow, AuditRow, DemoDb, DemoRecord, InboxItem, OperationRow, ZoneScope } from "./seed.ts";
+import type { TripTrace } from "../live/types.ts";
 import { advanceDemoDispatch, dispatchBook, dispatchCommand, nearbyFor, tripOffersView, type NearbyDriverList, type TripOffersView } from "./dispatchSim.ts";
 import { ADMIN_DISPATCH_KEY, NEARBY_SCOPES, radiusIssue, type DispatchEvent, type NearbyQuery } from "../dispatch/assign.ts";
 
@@ -108,6 +109,8 @@ export type AdminApi = {
    * the list's loaded pages; null when the server has no such trip. The demo answers from its own list.
    */
   trip?: (tripId: string) => Promise<DemoRecord | null>;
+  /** BQ-A08: GET /admin/trips/{tripId}/trace, the car's GPS fixes on the trip (live only; the demo has none). */
+  tripTrace?: (tripId: string) => Promise<TripTrace>;
   /** GET /admin/trips/{id}/nearby-drivers?scope&radiusKm: active drivers near the pickup. */
   nearbyDrivers: (tripId: string, query: NearbyQuery) => Promise<NearbyDriverList>;
   /** GET /admin/dispatch/stream (JSON page): dispatch events after a sequence number. */

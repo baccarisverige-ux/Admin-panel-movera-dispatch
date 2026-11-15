@@ -32,7 +32,7 @@ export { DUE_PAYOUTS_LIST, LIVE_PAGE };
 import { LIVE_CARD_LIST } from "../dashboard/liveCard.ts";
 import { ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
-import type { AdminRating, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
+import type { AdminRating, TripTrace, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { alertCall, bookFromServer, liveCountry, type AlertBookState } from "./liveAlerts.ts";
 import { ALERTS_KEY, normalizeAlertBook } from "../alerts/engine.ts";
 import { INCIDENT_OPS_KEY, emptyIncidentOps } from "../safety/cases.ts";
@@ -1351,6 +1351,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return bookFrom(incidents.values()) as typeof fallback;
     },
     tripOffers,
+    // BQ-A08 (owner "Road route + driven line"): the driven line of the trip page.
+    tripTrace: (tripId) => client.json<TripTrace>(`/admin/trips/${encodeURIComponent(tripId)}/trace`),
     trip: async (tripId) => {
       const found = await client.json<Trip>(`/admin/trips/${encodeURIComponent(tripId)}`).catch((error: unknown) => {
         if (error instanceof ApiError && error.status === 404) return null;

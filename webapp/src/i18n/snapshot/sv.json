@@ -9054,4 +9054,10 @@
 ["Set offline by the server ({0})","Satt offline av servern ({0})"],
 ["Offline reason","Orsak till offline"],
 ["Set offline {0}","Satt offline {0}"],
-["Island, offer and button texts in the driver app, in Swedish, French and English.","Ö-, erbjudande- och knapptexter i förarappen, på svenska, franska och engelska."]]
+["Island, offer and button texts in the driver app, in Swedish, French and English.","Ö-, erbjudande- och knapptexter i förarappen, på svenska, franska och engelska."],
+["Driven route: {0} GPS positions · kept until {1}","Körd väg: {0} GPS-positioner · sparas till {1}"],
+["Driven route: {0} GPS positions","Körd väg: {0} GPS-positioner"],
+["No driven route yet: the driver app has sent no position on this trip. The planned route is shown.","Ingen körd väg ännu: förarappen har inte skickat någon position på den här resan. Den planerade vägen visas."],
+["The driven route was deleted 30 days after the trip. The planned route is shown.","Den körda vägen raderades 30 dagar efter resan. Den planerade vägen visas."],
+["The driven route could not be loaded. The planned route is shown.","Den körda vägen kunde inte hämtas. Den planerade vägen visas."],
+["{0} Driven (GPS) {1} Planned","{0} Körd (GPS) {1} Planerad"]]
