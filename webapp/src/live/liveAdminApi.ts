@@ -55,6 +55,7 @@ import { formatNumber, tr } from "../i18n/index.ts";
 import { revealPath, type Revealed } from "./masking.ts";
 import { UNLOCK_SIGN_IN_PATH, fullPhone, unlockMessage } from "./unlockSignIn.ts";
 import { rideCheckRecords } from "./rideChecks.ts";
+import { FALLBACK_POLL_MS, liveStreamState, tripChangedSince, tripChangeMark } from "./adminEvents.ts";
 import { SettingsChanged, createLiveSettings } from "./liveSettings.ts";
 import { readDraft, savePublish, standardKey } from "./configDocs.ts";
 import { driverPayAdjustBody } from "./moneyGuard.ts";
@@ -161,6 +162,8 @@ export const RIDE_CHECKS_OF_TRIP_LIST = "rideChecksOfTrip:";
 export const RIDE_CHECK_ALERTS_LIST = "rideCheckAlerts";
 /** C7 (A15 N12): the Dashboard counts: open tickets and not-yet-paid payouts, filtered by the server's status. */
 export const OPEN_TICKETS_LIST = "openTickets";
+/** Poll cost: an alert trip's both-sides read is kept at most this long, even with no event for it (the stream's fallback pace). */
+const ALERT_TRIP_MAX_AGE_MS = FALLBACK_POLL_MS;
 /** No-answer checks older than this belong to trips long over (the map shows checks of trips going on now). */
 const OPEN_CHECK_WINDOW_MS = 6 * 3_600_000;
 
@@ -595,7 +598,32 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     ]);
     const tripIds = [...new Set(found.flat().map((row) => row.tripId))];
     // Both sides of each alert check (the other side's answer and follow-ups), one small read per trip.
-    return (await Promise.all(tripIds.map((tripId) => all<RideCheckRow>(client, "/admin/ride-checks", filter, { tripId })))).flat();
+    // Poll cost (Rules audits/impact/admin-poll-cost.md): this list reloads ~1 s after EVERY trip.changed of any trip
+    // (a FAST_KEY, never held), so it read every alert trip again each second. A trip's both-sides read is now kept
+    // while (1) the stream is open, (2) no event said that trip changed, (3) its rows in the three filtered reads above
+    // are exactly as at the kept read (any answer of a need_help / waiting / no_answer side that moves changes them),
+    // and (4) it is younger than ALERT_TRIP_MAX_AGE_MS. Otherwise it is read again, as before.
+    const scope = `${JSON.stringify(filter)}|`;
+    const seen = new Map<string, string[]>();
+    for (const row of found.flat()) seen.set(row.tripId, [...(seen.get(row.tripId) ?? []), JSON.stringify(row)]);
+    const wanted = new Set(tripIds.map((tripId) => scope + tripId));
+    for (const key of alertTrips.keys()) if (key.startsWith(scope) && !wanted.has(key)) alertTrips.delete(key);
+    return (await Promise.all(tripIds.map((tripId) => alertTripChecks(tripId, filter, scope + tripId, (seen.get(tripId) ?? []).sort().join("\n"))))).flat();
+  }
+
+  /** One alert trip's checks: the kept read (a running one too) while nothing says it changed; else a new read. */
+  const alertTrips = new Map<string, { mark: number; at: number; seen: string; rows: Promise<RideCheckRow[]> }>();
+  function alertTripChecks(tripId: string, filter: ZoneFilter, key: string, seen: string): Promise<RideCheckRow[]> {
+    const kept = alertTrips.get(key);
+    const at = Date.now();
+    if (kept && liveStreamState() === "open" && kept.seen === seen && !tripChangedSince(tripId, kept.mark) && at - kept.at < ALERT_TRIP_MAX_AGE_MS) return kept.rows;
+    const mark = tripChangeMark();
+    const rows = all<RideCheckRow>(client, "/admin/ride-checks", filter, { tripId });
+    alertTrips.set(key, { mark, at, seen, rows });
+    rows.catch(() => {
+      if (alertTrips.get(key)?.rows === rows) alertTrips.delete(key);
+    });
+    return rows;
   }
 
   /** One small live read for the zone counts (they always cover every driver, v0.18.34 §65). */
