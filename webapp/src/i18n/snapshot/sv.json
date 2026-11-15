@@ -9060,4 +9060,8 @@
 ["No driven route yet: the driver app has sent no position on this trip. The planned route is shown.","Ingen körd väg ännu: förarappen har inte skickat någon position på den här resan. Den planerade vägen visas."],
 ["The driven route was deleted 30 days after the trip. The planned route is shown.","Den körda vägen raderades 30 dagar efter resan. Den planerade vägen visas."],
 ["The driven route could not be loaded. The planned route is shown.","Den körda vägen kunde inte hämtas. Den planerade vägen visas."],
-["{0} Driven (GPS) {1} Planned","{0} Körd (GPS) {1} Planerad"]]
+["{0} Driven (GPS) {1} Planned","{0} Körd (GPS) {1} Planerad"],
+["Pickup entrance chips","Ingångsval vid upphämtning"],
+["When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.","När kunden väljer upphämtning föreslår kundappen Huvudentré, Sidoentré och Parkering runt nålen, märkta som ungefärliga. Använd tidigare och Nära hemmet finns alltid kvar. Kundappen läser detta."],
+["Pickup entrance chips (approximate)","Ingångsval vid upphämtning (ungefärliga)"],
+["Off: no entrance chips; the pickup is the address only. Usual value: on.","Av: inga ingångsval; upphämtningen är bara adressen. Vanligt värde: på."]]

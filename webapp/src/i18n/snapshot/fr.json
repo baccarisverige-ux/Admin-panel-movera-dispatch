@@ -9060,4 +9060,8 @@
 ["No driven route yet: the driver app has sent no position on this trip. The planned route is shown.","Pas encore de trajet parcouru : l’application chauffeur n’a envoyé aucune position pour cette course. L’itinéraire prévu est affiché."],
 ["The driven route was deleted 30 days after the trip. The planned route is shown.","Le trajet parcouru a été supprimé 30 jours après la course. L’itinéraire prévu est affiché."],
 ["The driven route could not be loaded. The planned route is shown.","Le trajet parcouru n’a pas pu être chargé. L’itinéraire prévu est affiché."],
-["{0} Driven (GPS) {1} Planned","{0} Parcouru (GPS) {1} Prévu"]]
+["{0} Driven (GPS) {1} Planned","{0} Parcouru (GPS) {1} Prévu"],
+["Pickup entrance chips","Points d’accès de prise en charge"],
+["When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.","Quand le client choisit le lieu de prise en charge, l’appli client propose Entrée principale, Entrée latérale et Parking autour de l’épingle, marqués comme approximatifs. Déjà utilisé et Près du domicile restent toujours. L’appli client lit ce réglage."],
+["Pickup entrance chips (approximate)","Points d’accès de prise en charge (approximatifs)"],
+["Off: no entrance chips; the pickup is the address only. Usual value: on.","Désactivé : aucun point d’accès ; la prise en charge est seulement l’adresse. Valeur habituelle : activé."]]
