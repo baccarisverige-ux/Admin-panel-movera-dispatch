@@ -352,6 +352,11 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         </Row>
       </Card>
 
+      <Card title={tr("Pickup entrance chips")} tone="purple" icon={<MapPin size={18} />} help={tr("When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.")}>
+        {/* BQ-V21 (owner full-audit Q6 "Keep as 'approximate'" => admin on/off per zone, default on; contract v0.18.115). */}
+        <Row label={tr("Pickup entrance chips (approximate)")} help={tr("Off: no entrance chips; the pickup is the address only. Usual value: on.")} on={zone.pickupSpots?.on ?? CONFIG_DEFAULTS.pickupSpotsOn} disabled={disabled} onToggle={(on) => set({ pickupSpots: { on } })} />
+      </Card>
+
       <Card title={tr("Driver cancels after accepting")} tone="orange" icon={<UserX size={18} />} help={tr("It only counts in the driver's cancel rate, and the ride searches again.")} off={!zone.driverCancel.on} aside={<Switch label={tr("Search again")} on={zone.driverCancel.on} disabled={disabled} onChange={(on) => set({ driverCancel: { ...zone.driverCancel, on } })} />}>
         <Row label={tr("Lower Movera's commission on that ride")} help={tr("The rider pays the same. The next driver earns more, so it is taken faster.")}>
           <Num label={tr("Lower commission after a driver cancel")} value={zone.driverCancel.commissionCutPct} unit="% lower" min={0} max={30} disabled={disabled || !zone.driverCancel.on} onChange={(commissionCutPct) => set({ driverCancel: { ...zone.driverCancel, commissionCutPct } })} />

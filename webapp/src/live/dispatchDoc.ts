@@ -13,8 +13,11 @@ type Doc = Record<string, unknown>;
 /** Contract defaults for offer seconds a document holds as 0. */
 export const SECONDS_DEFAULT = { radar: 15, exclusive: 30 } as const;
 
-/** The Dispatch rules for a server dispatch document (+ the driver document's offer and cancel-share parts) over `fallback`. */
-export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: ZoneDispatch): ZoneDispatch {
+/**
+ * The Dispatch rules for a server dispatch document (+ the driver document's offer and cancel-share parts, + v0.18.115
+ * the rider document's pickup entrance chips switch) over `fallback`.
+ */
+export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: ZoneDispatch, rider: Doc | null = null): ZoneDispatch {
   const zone = structuredClone(fallback);
   if (doc) {
     const d = doc as unknown as Partial<ZoneDispatch> & { finishing?: Partial<ZoneDispatch["finishing"]>; favourite?: Partial<ZoneDispatch["favourite"]> };
@@ -88,6 +91,12 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   // v0.18.30 (owner Q9): "Shortest ride (m)" as the zone's drivers and the server get it (booking.samePointWarnMeters, 0–1000).
   const samePoint = validSamePoint((driver?.["booking"] as { samePointWarnMeters?: unknown } | undefined)?.samePointWarnMeters);
   if (samePoint !== null) zone.samePoint = { warnMeters: samePoint };
+  // v0.18.115 BQ-V21 (contract.json#pickupSpots): the entrance chips switch as the zone's riders get it; a rider document
+  // without it (published before v0.18.115) is served on, so it reads on.
+  if (rider) {
+    const spots = (rider["booking"] as { pickupSpots?: { on?: unknown } } | undefined)?.pickupSpots?.on;
+    zone.pickupSpots = { on: typeof spots === "boolean" ? spots : true };
+  }
   // v0.18.8 (G6): the free wait at each stop the server charges by (waiting.stopFreeWaitMin, 0–20; 0 while stops are off).
   const stopFree = (driver?.["waiting"] as { stopFreeWaitMin?: unknown } | undefined)?.stopFreeWaitMin;
   if (zone.stops.on && typeof stopFree === "number" && Number.isInteger(stopFree) && stopFree >= 0 && stopFree <= 20) zone.stops = { ...zone.stops, freeWaitMin: stopFree };

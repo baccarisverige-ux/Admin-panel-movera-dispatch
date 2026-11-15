@@ -492,6 +492,12 @@ export type ZoneDispatch = {
    * Optional so rules saved before v0.18.30 still load (the default is used then).
    */
   samePoint?: { warnMeters: number };
+  /**
+   * BQ-V21 (owner full-audit Q6 "Keep as 'approximate'" => admin on/off per zone, default on; contract v0.18.115
+   * contract.json#pickupSpots): the rider's approximate pickup entrance chips (Main entrance / Side entrance / Parking).
+   * Sent as RiderAppConfig.booking.pickupSpots.on. Optional so rules saved before it still load (on then).
+   */
+  pickupSpots?: { on: boolean };
   airport: { on: boolean; order: "fifo" | "best"; maxQueueMin: number; queueAreas: { id: string; name: string; ring: [number, number][] }[] };
   goingHome: { on: boolean; perDay: number; maxOffDeg: number };
   /** R13-9: Destination mode, each part on or off with its own number. */
