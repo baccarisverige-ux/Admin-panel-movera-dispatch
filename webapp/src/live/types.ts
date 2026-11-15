@@ -73,6 +73,11 @@ export type Driver = {
   offlineAfterTrip?: boolean;
   /** v0.18.65 §86: stopped next-trip offers on the trip sheet's radar for his current trip. */
   nextTripsOff?: boolean;
+  /** v0.18.6 (owner "Send the real reason"): why the server set him offline, sent only while offline (BQ-A07). */
+  offlineReason?: string;
+  /** v0.18.6: the admin's note, only with offlineReason vehicle_blocked. */
+  offlineNote?: string;
+  offlineAt?: string;
   firstName: string;
   lastName?: string;
   /** v0.18.54 §76: YYYY-MM-DD, or the year only ("1990") when masked for this admin. */
@@ -308,7 +313,8 @@ export type LiveDriverList = { items: LiveDriverRow[]; staleAfterSeconds: number
 export type ZoneSupplyRow = { zoneId: string; online: number; free: number; busy: number; waiting: number; level: "ok" | "tight" | "short"; shortage: boolean };
 
 /** GET /admin/trips/{tripId}/trace: the car's positions on the trip (kept 30 days). */
-export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; measuredAt: string }[]; keptUntil: string };
+/** BQ-A08: fixes are GeoFix (accuracy, heading?, speedMps?), in time order; keptUntil is optional in the contract. */
+export type TripTrace = { tripId: string; fixes: { lat: number; lng: number; accuracy?: number; measuredAt: string }[]; keptUntil?: string };
 
 /** GET /admin/riders (AdminRider). */
 export type Rider = {

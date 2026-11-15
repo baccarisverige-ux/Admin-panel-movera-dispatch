@@ -91,11 +91,12 @@ test("Content › Driver app texts: per language, empty is the default, with a l
   await page.getByRole("radiogroup", { name: "Where in the app" }).getByText("Trip buttons").click();
   await page.getByLabel("Collect cash in Swedish", { exact: true }).fill("Ta betalt kontant");
   await expect(page.getByTestId("preview-trip")).toContainText("Ta betalt kontant");
-  await page.getByRole("radiogroup", { name: "Text language" }).getByText("Arabic").click();
-  const arabic = page.getByLabel("Collect cash in Arabic", { exact: true });
-  await expect(arabic).toHaveAttribute("dir", "rtl");
-  await expect(arabic).toHaveValue("");
-  await arabic.focus();
+  // BQ-A09 (owner Q7 "Make it real, sv/fr/en"): no Arabic tab.
+  await expect(page.getByRole("radiogroup", { name: "Text language" }).getByText("Arabic")).toHaveCount(0);
+  await page.getByRole("radiogroup", { name: "Text language" }).getByText("French").click();
+  const french = page.getByLabel("Collect cash in French", { exact: true });
+  await expect(french).toHaveValue("");
+  await french.focus();
   await expect(page.getByTestId("preview-trip")).toContainText("Collect cash");
 
   const pending = page.getByRole("list", { name: "Changes not saved" });

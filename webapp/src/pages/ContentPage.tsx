@@ -105,7 +105,7 @@ export function ContentPage() {
         <button data-command="admin.content.view" type="button" className="dash-btn ghost dx-back" onClick={() => (globalThis.history.length > 1 ? navigate(-1) : navigate("/"))}><ArrowLeft size={16} aria-hidden="true" /> {tr("Back")}</button>
         <div className="dx-head-text">
           <h2>{tr("Content")}</h2>
-          <p>{view === "legal" ? tr("Terms of use and privacy policy per country, in Swedish, French and English, with the company details and a version history.") : view === "driver-texts" ? tr("Island, offer and button texts in the driver app, in English, Swedish, French and Arabic.") : live ? tr("Texts in Swedish, French and English for the apps. Publish sends them to the zones chosen at the top; one admin is enough. History and rollback come from the server.") : tr("Content studio in Swedish, French and English. A second agent must publish. Originals and every publication remain in history. Simulation only.")}</p>
+          <p>{view === "legal" ? tr("Terms of use and privacy policy per country, in Swedish, French and English, with the company details and a version history.") : view === "driver-texts" ? tr("Island, offer and button texts in the driver app, in Swedish, French and English.") : live ? tr("Texts in Swedish, French and English for the apps. Publish sends them to the zones chosen at the top; one admin is enough. History and rollback come from the server.") : tr("Content studio in Swedish, French and English. A second agent must publish. Originals and every publication remain in history. Simulation only.")}</p>
         </div>
       </header>
       <div className="dash-tabs dx-views" role="tablist" aria-label={tr("Content sections")}>

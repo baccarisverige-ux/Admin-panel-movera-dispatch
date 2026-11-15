@@ -231,7 +231,8 @@ test("G2 R10: the live driver page's expiring list comes from the server's end d
 });
 
 test("G3-R1: an automatic set offline (driver.auto_offline) reads in sv, fr and en; the actor is Movera, not an admin", async () => {
-  const { auditActionText, auditDetailText, auditActorText } = await import("./format.ts");
+  const { auditActionText, auditActorText } = await import("./format.ts");
+  const { auditDetailText } = await import("./offlineReason.ts");
   const { auditRow } = await import("./liveAdminApi.ts");
   const { fr } = await import("../i18n/fr.ts");
   registerDictionary("sv", sv);

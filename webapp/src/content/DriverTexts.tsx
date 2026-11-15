@@ -32,7 +32,6 @@ export function DriverTextsView({ editable, onNotice }: { editable: boolean; onN
   const changes = textChanges(book.texts, texts);
   const saved = saveTexts(book, texts, agent?.id ?? "", new Date().toISOString());
   useDirtyWarning(changes.length > 0);
-  const rtl = lang === "ar";
   const langName = TEXT_LANGS.find((item) => item.id === lang)!.label;
   const needle = query.trim().toLowerCase();
   const shown = DRIVER_TEXT_KEYS.filter((key) => (area === "all" || key.area === area)
@@ -69,7 +68,6 @@ export function DriverTextsView({ editable, onNotice }: { editable: boolean; onN
                       <input
                         aria-label={tr("{0} in {1}", [key.english, langName])}
                         aria-invalid={issue ? true : undefined}
-                        dir={rtl ? "rtl" : undefined}
                         placeholder={tr("Default: {0}", [key.english])}
                         value={value}
                         disabled={!editable}
@@ -114,7 +112,7 @@ export function DriverTextsView({ editable, onNotice }: { editable: boolean; onN
 
       <aside className="gr-phone dt-preview" aria-label={tr("Driver app preview")}>
         <h3><Smartphone size={15} aria-hidden="true" />{" "}{trn("Live preview · {0}", langName)}</h3>
-        <div className="dt-phone" dir={rtl ? "rtl" : undefined}>
+        <div className="dt-phone">
           <span className="gr-phone-bar" />
           <p className={focused?.area === "island" ? "dt-island focus" : "dt-island"} data-testid="preview-island">{show(focused?.area === "island" ? focus : "island.online")}</p>
           <div className="dt-map" aria-hidden="true" />

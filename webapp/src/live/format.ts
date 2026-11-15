@@ -496,14 +496,6 @@ export function auditActorName(actorId: string, agents: readonly { id: string; n
   return actorId.includes("@") ? tr("Admin") : tr("Admin {0}", [shortId(actorId)]);
 }
 
-/** G3-R1: driver.auto_offline detail { reason: no_position, lastFixAt, minutes } as one line; null for other actions. */
-export function auditDetailText(row: { action: string; after: string }): string | null {
-  if (row.action !== "driver.auto_offline") return null;
-  let detail: { reason?: unknown; minutes?: unknown } = {};
-  try { detail = row.after ? (JSON.parse(row.after) as typeof detail) : {}; } catch { detail = {}; }
-  return typeof detail.minutes === "number" ? tr("No position for {0} min", [detail.minutes]) : tr("No position");
-}
-
 /**
  * J5b: 400 commission_steps_invalid details ["step:<index from 0>", "problem:<code>"] ("step:" left out for not_a_list
  * and too_many_steps) → the contract's text in the panel's language, with the step counted from 1.

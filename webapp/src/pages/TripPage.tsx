@@ -72,6 +72,8 @@ import {
 } from "../trips/present";
 import { AdminActions, ChatCalls, Section, SplitView, entryLine } from "../trips/TripParts";
 import { RouteMap } from "../trips/RouteMap";
+import { traceLine } from "../trips/tripTrace";
+import { useTripTrace } from "../trips/useTripTrace";
 import { driverPayBox } from "../trips/driverPayBox";
 import { cashFigures, isCashTrip } from "../trips/cash";
 import { offerLog, timelineOffers } from "../trips/offerLog";
@@ -168,6 +170,7 @@ export function TripPage() {
     [drivers.data, trip, vehicles.data, free],
   );
   const route = useMemo(() => (trip ? routeOf(trip) : null), [trip]);
+  const trace = useTripTrace(tripId, trip?.status, live && Boolean(trip?.driverId) && can(role, "trips.read"));
   const chosen = driverId || eligible[0]?.id || "";
   // v0.18.7 (G5): the trip's live facts follow the page's own read of GET /admin/trips/{tripId} (ETA every 30 s,
   // the car's position, the rider summary, the terms and the cancel fee); the list's copy is the fallback.
@@ -390,8 +393,10 @@ export function TripPage() {
       <Section id="route" title={tr("Route")} icon={<RouteIcon size={16} />} testId="trip-route" wide>
         <div className="op-route-grid">
           <MapPanel title={tr("Map")} note={<span className="op-legend">{trn("{0} Ride {1} Driver to pickup {2} Pickup {3} Stop {4} Drop-off", <i className="ride" />, <i className="approach" />, <i className="pickup" />, <i className="stop" />, <i className="dropoff" />)}</span>}>
-            <RouteMap stops={route.stops} path={route.path} approach={facts ? approachOf(facts) : trip.driverId ? route.approach : []} points={facts ? driverPointOf(facts, driver?.name ?? tr("Driver")) : []} label={tr("Route of trip {0}", [trip.id])} />
+            <RouteMap stops={route.stops} path={route.path} approach={facts ? approachOf(facts) : trip.driverId ? route.approach : []} points={facts ? driverPointOf(facts, driver?.name ?? tr("Driver")) : []} driven={trace?.line ?? []} label={tr("Route of trip {0}", [trip.id])} />
           </MapPanel>
+          {/* BQ-A08 (owner "Road route + driven line"): the car's real driven line next to the planned route. */}
+          {trace ? <p className="op-help" data-testid="trip-trace-state" data-trace={trace.state}><span className="op-legend">{trn("{0} Driven (GPS) {1} Planned", <i className="driven" />, <i className="ride" />)}</span> {traceLine(trace)}</p> : null}
           <div>
             <ol className="op-stops" data-testid="trip-stops">
               {route.stops.map((stop, index) => {

@@ -437,7 +437,8 @@ function driverTexts(base: Common, state: AppConfigState) {
   const reasons = [book.noShow, ...(["driverBeforeTrip", "driverDuringTrip", "driverNextTrip", "scheduled"] as const).flatMap((group) => book.groups[group])];
   return {
     byLanguage: Object.fromEntries(LANGS.map(({ id: lang }) => [lang, {
-      ...own[lang],
+      // BQ-A09: driver texts have sv / fr / en only; the cancel reasons below still fill every language.
+      ...(own as Partial<Record<LangId, Record<string, string>>>)[lang],
       ...Object.fromEntries(reasons.flatMap((item) => {
         const subtitle = reasonText(item.subtitle, lang);
         return [[`cancelReason.${item.code}`, reasonText(item.title, lang)], ...(subtitle ? [[`cancelReason.${item.code}.subtitle`, subtitle]] : [])];

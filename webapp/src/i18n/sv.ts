@@ -57,6 +57,7 @@ import { svC22SosContactsSms } from "./sv/c22-sos-contacts-sms.ts";
 import { svC23PayoutRunGuard } from "./sv/c23-payout-run-guard.ts";
 import { svC27StopAutoArrive } from "./sv/c27-stop-auto-arrive.ts";
 import { svC24FleetCountry } from "./sv/c24-fleet-country.ts";
+import { svC28OfflineReasons } from "./sv/c28-offline-reasons.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -119,4 +120,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC23PayoutRunGuard,
   ...svC27StopAutoArrive,
   ...svC24FleetCountry,
+  ...svC28OfflineReasons,
 };
