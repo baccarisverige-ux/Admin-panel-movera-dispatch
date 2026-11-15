@@ -20,8 +20,8 @@ import {
 /**
  * BQ-V44 admin (owner G10-5 "Make bonuses real (Recommended)", Rules decisions/driver-g10.md:9; Q12 bonus zones,
  * decisions/admin-fake-by-group.md:40; plan Rules audits/impact/v44-driver-bonuses.md §7; money supervisor GO round 2).
- * Contract 0.18.110 (movera-contracts 45dfc7c, not yet tagged, so the copy in contracts/ is not synced): the values below
- * are the contract's, as literals, until the coordinator syncs the copy after the tag.
+ * Contract 0.18.110 (was 0.18.103 at movera-contracts 45dfc7c; the copy in contracts/ is synced from k110 0b5be16): the
+ * values below are the contract's, as literals; swapping them for the fixture file is still open (supervisor N9).
  * Drivers › Bonuses on live = the server's bonus campaigns (/admin/bonuses); the demo builder stays demo-only (Rule 21).
  */
 
