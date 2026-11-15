@@ -23925,15 +23925,16 @@ components:
         scanEverySeconds:
           type: integer
           minimum: 10
-          maximum: 120
+          maximum: 60
           description: 'v0.18.100: v0.18.100 (BQ-V37, owner W1 Q66 "Yes" = Q-B6): the server looks at a trip''s GPS for a
-            ride check at most once every this many seconds (default 30; 10–120). Per zone, like the other ride-check settings.
-            Server only: the apps ignore it (their own checks keep their own timing). v0.18.100 (BQ-V37, owner W1 Q66 "Yes"
-            = Q-B6 "at most every 30 s per trip instead of after every GPS batch"): one scan per trip at most every scanEverySeconds
-            (DriverAppConfig.rideCheck.scanEverySeconds of the trip''s zone, default 30). A GPS batch that comes sooner books
-            the scan for the end of that time instead of now (the newest fixes are read then); a pending scan keeps its due
-            time (never later). The first scan of a trip is not delayed. An admin change applies from the trip''s next scan.
-            The trigger rules, repeatMinutes, the complete / cancel check (dropped_far) and the apps are unchanged.'
+            ride check at most once every this many seconds (default 30; 10–60, owner 2026-11-15: at most 60 s). Per zone,
+            like the other ride-check settings. Server only: the apps ignore it (their own checks keep their own timing).
+            v0.18.100 (BQ-V37, owner W1 Q66 "Yes" = Q-B6 "at most every 30 s per trip instead of after every GPS batch"):
+            one scan per trip at most every scanEverySeconds (DriverAppConfig.rideCheck.scanEverySeconds of the trip''s zone,
+            default 30). A GPS batch that comes sooner books the scan for the end of that time instead of now (the newest
+            fixes are read then); a pending scan keeps its due time (never later). The first scan of a trip is not delayed.
+            An admin change applies from the trip''s next scan. The trigger rules, repeatMinutes, the complete / cancel check
+            (dropped_far) and the apps are unchanged.'
           default: 30
     CategoryWaiting:
       type: object

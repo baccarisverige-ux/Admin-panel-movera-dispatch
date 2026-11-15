@@ -109,7 +109,7 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
       stopMinutes: n("stopMinutes", RIDE_CHECK_LIMITS.stopMinutes, rc.stopMinutes), routeKm: n("offRouteKm", RIDE_CHECK_LIMITS.routeKm, rc.routeKm),
       endFarMeters: n("endFarMeters", RIDE_CHECK_LIMITS.endFarMeters, rc.endFarMeters), noAnswerSeconds: n("noAnswerSeconds", RIDE_CHECK_LIMITS.noAnswerSeconds, rc.noAnswerSeconds),
       repeatMinutes: n("repeatMinutes", RIDE_CHECK_LIMITS.repeatMinutes, rc.repeatMinutes),
-      // v0.18.100 (BQ-V37): missing or outside 10-120 reads as the contract default 30, as the server reads it.
+      // v0.18.100 (BQ-V37): missing or outside 10-60 (owner 2026-11-15: at most 60 s) reads as the contract default 30, as the server reads it.
       scanEverySeconds: n("scanEverySeconds", RIDE_CHECK_LIMITS.scanEverySeconds, rideCheckDefault().scanEverySeconds),
     };
   }

@@ -3,5 +3,5 @@ export const svC21RideCheckCadence = {
   "Check the GPS at most every": "Kolla GPS:en högst var",
   "The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter.": "Servern tittar på varje resas position för en resekoll högst så här ofta. Kortare hittar ett problem tidigare; längre belastar servern mindre.",
   "Check the GPS at most every (s)": "Kolla GPS:en högst var (s)",
-  "Ride check: check the GPS at most every must be 10 to 120 s.": "Resekoll: Kolla GPS:en högst var måste vara 10 till 120 s.",
+  "Ride check: check the GPS at most every must be 10 to 60 s.": "Resekoll: Kolla GPS:en högst var måste vara 10 till 60 s.",
 } as const;

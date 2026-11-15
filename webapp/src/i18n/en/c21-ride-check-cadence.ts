@@ -3,5 +3,5 @@ export const enC21RideCheckCadence = {
   "Check the GPS at most every": "Check the GPS at most every",
   "The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter.": "The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter.",
   "Check the GPS at most every (s)": "Check the GPS at most every (s)",
-  "Ride check: check the GPS at most every must be 10 to 120 s.": "Ride check: check the GPS at most every must be 10 to 120 s.",
+  "Ride check: check the GPS at most every must be 10 to 60 s.": "Ride check: check the GPS at most every must be 10 to 60 s.",
 } as const;

@@ -6703,7 +6703,7 @@
           "noAnswerSeconds": "Nobody answered within this many seconds → the safety team is alerted (an open ride_check incident) (default 120; 30–600). Also used for the apps' own checks.",
           "repeatMinutes": "The same reason does not ask again within this many minutes of the trip (default 10; 1–120).",
           "noAnswerAlarm": "true = a no-answer case also rings the admin alarm and escalates like an SOS; false (default, as v0.12.0) = it shows in the safety list without sound.",
-          "scanEverySeconds": "v0.18.100 (BQ-V37, owner W1 Q66 \"Yes\" = Q-B6): the server looks at a trip's GPS for a ride check at most once every this many seconds (default 30; 10–120). Per zone, like the other ride-check settings. Server only: the apps ignore it (their own checks keep their own timing)."
+          "scanEverySeconds": "v0.18.100 (BQ-V37, owner W1 Q66 \"Yes\" = Q-B6): the server looks at a trip's GPS for a ride check at most once every this many seconds (default 30; 10–60, owner 2026-11-15: at most 60 s). Per zone, like the other ride-check settings. Server only: the apps ignore it (their own checks keep their own timing)."
         },
         "ranges": {
           "stopMinutes": [
@@ -6728,7 +6728,7 @@
           ],
           "scanEverySeconds": [
             10,
-            120
+            60
           ]
         },
         "invalid": "A missing field or one outside its range reads as the default."

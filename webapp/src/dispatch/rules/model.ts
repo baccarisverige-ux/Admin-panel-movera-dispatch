@@ -398,7 +398,7 @@ export const RIDE_CHECK_LIMITS = {
   endFarMeters: { min: 100, max: 5000 },
   noAnswerSeconds: { min: 30, max: 600 },
   repeatMinutes: { min: 1, max: 120 },
-  scanEverySeconds: { min: 10, max: 120 },
+  scanEverySeconds: { min: 10, max: 60 },
   longerPct: { min: 10, max: 300 },
 } as const;
 
