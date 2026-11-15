@@ -130,7 +130,9 @@ export function reservationCall(action: Exclude<ReservationAction, "open">, trip
   if (action === "raise") {
     const amount = input.amountMinor ?? 0;
     if (!(amount > 0)) throw new Error("Write how much to add.");
-    return { path: `/admin/trips/${id}/driver-bonus`, body: { expectedVersion: trip.version, amount: { amountMinor: amount, currency: reservationCurrency(trip) }, ...(reason ? { note: reason } : {}) } };
+    const currency = reservationCurrency(trip);
+    if (currency === null) throw new Error("The trip's currency is not known.");
+    return { path: `/admin/trips/${id}/driver-bonus`, body: { expectedVersion: trip.version, amount: { amountMinor: amount, currency }, ...(reason ? { note: reason } : {}) } };
   }
   if (action === "noShow") {
     if (!reason) throw new Error("Write why it is a no-show.");
@@ -156,14 +158,19 @@ export const notStarted = (trip: ServerReservation): boolean => Boolean(trip.res
 /** Owner leave on time: the driver may be late for a held booked ride. */
 export const atRisk = (trip: ServerReservation): boolean => Boolean(trip.reservation?.atRisk) && trip.status === "accepted";
 
-/** The currency a booked ride's money is in: the trip's fare, else its zone's market (the same fallback as reservationCall). */
-export const reservationCurrency = (trip: ServerReservation): string => trip.fare?.currency ?? marketOfZone(trip.zoneId)?.currency ?? "SEK";
+/**
+ * The currency a booked ride's money is in: the trip's fare, else its zone's market. BQ-A30b S2: neither known → null
+ * (never "SEK": a TND trip would go out in SEK); the raise is then refused and Confirm stays disabled.
+ */
+export const reservationCurrency = (trip: ServerReservation): string | null => trip.fare?.currency ?? marketOfZone(trip.zoneId)?.currency ?? null;
 
 /**
  * BQ-A30: the typed raise (major units, "5" or "5,250") in the trip currency's minor units — SEK öre ×100, TND millimes
  * ×1000 (parseMinor, the one converter). More decimals than the currency has, zero or text → null (refused, never rounded).
  */
 export function raiseAmountMinor(text: string, trip: ServerReservation): number | null {
-  const minor = parseMinor(text, reservationCurrency(trip));
+  const currency = reservationCurrency(trip);
+  if (currency === null) return null;
+  const minor = parseMinor(text, currency);
   return minor !== null && minor > 0 ? minor : null;
 }

@@ -31,7 +31,7 @@ import { useSession } from "../auth/SessionContext";
 import { reservationFareMinor } from "../dashboard/scheduled";
 import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook, raiseCap, raiseSplit, type DispatchBook } from "../dispatch/rules";
 import { statusLabel } from "../domain/labels";
-import { market, marketOfZone } from "../markets/markets";
+import { market } from "../markets/markets";
 import { ruleOf } from "../pricing/commissionSteps";
 import { currencySymbol, emptyPricingStore, money as formatMajor, normalizeStore, SLICE_KEY as PRICING_KEY, zoneBook, type PricingStore } from "../pricing/zonePricing";
 import { CommandButton } from "../ui/CommandButton";
@@ -44,7 +44,7 @@ import { formatMoney } from "../markets/markets";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { ErrorLine } from "../live/ui";
-import { liveRaise, liveRaiseOpen, raiseMaxText } from "../reservations/liveRaise";
+import { liveRaise, liveRaiseOpen, raiseCountry, raiseMaxText } from "../reservations/liveRaise";
 
 export function ReservationDetailPage() {
   const { id = "" } = useParams();
@@ -97,7 +97,10 @@ export function ReservationDetailPage() {
   const zoneRules = liveRules(normalizeDispatchBook(dispatchSlice.value), record.zoneId).reservation;
   const ask = currentAsk(ops, nowIso);
   const askName = ask ? (drivers.data ?? []).find((item) => item.id === ask.ask.driverId)?.name ?? ask.ask.driverId : "";
-  const country = marketOfZone(record.zoneId)?.id ?? "SE";
+  // BQ-A30: a live booked ride uses the server's statuses (requested / searching / offered = no driver yet), as LiveReservations.
+  const liveRaising = Boolean(liveSession) && (isLiveData() || Boolean(record.live));
+  // BQ-A30b S1: on live the money is counted and written in the trip's currency (TND ×1000), not the zone's with a Sweden fallback.
+  const country = raiseCountry(record, liveRaising);
   const unit = currencySymbol(country);
   const fare = reservationFareMinor(record);
   const fareMajor = fare.minor / market(country).minorUnits;
@@ -112,8 +115,6 @@ export function ReservationDetailPage() {
   const isOpen = ["waiting", "booked", "assigned"].includes(record.status);
   const canAssign = canIntervene && pickupFuture && ["waiting", "booked"].includes(record.status) && candidates.length > 0 && ask?.state !== "waiting";
   const canAnswer = canIntervene && ask?.state === "waiting" && ["waiting", "booked"].includes(record.status);
-  // BQ-A30: a live booked ride uses the server's statuses (requested / searching / offered = no driver yet), as LiveReservations.
-  const liveRaising = Boolean(liveSession) && (isLiveData() || Boolean(record.live));
   const raiseOpen = liveRaising ? liveRaiseOpen(record) : ["waiting", "booked"].includes(record.status) && !record.driverId;
   const canRaise = canIntervene && zoneRules.raiseFare && pickupFuture && raiseOpen;
   const canUnassign = canIntervene && record.status === "assigned" && Boolean(record.driverId);
@@ -132,7 +133,7 @@ export function ReservationDetailPage() {
   const acceptPrepared = answerAsk(book, record, "accepted", nowIso);
   const declinePrepared = answerAsk(book, record, "declined", nowIso);
   const raisePrepared = raiseFare(book, record, raiseAmount, raiseMax, agent?.id ?? "", nowIso);
-  const liveRaisePrepared = liveRaising ? liveRaise(book, record, raiseText, raiseMax, country, agent?.id ?? "", nowIso) : null;
+  const liveRaisePrepared = liveRaising ? liveRaise(book, record, raiseText, raiseMax, agent?.id ?? "", nowIso) : null;
   const raiseError = liveRaisePrepared ? liveRaisePrepared.error : raisePrepared.error;
   async function postLiveRaise() {
     const call = liveRaisePrepared?.call;

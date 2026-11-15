@@ -4225,6 +4225,7 @@
 ["The rider was left at the wrong place","Resenären lämnades på fel ställe"],
 ["The rider's bank asks for proof. Answer before the deadline or the money goes back to the rider. The trip page has the route, chat and calls to use as proof.","Resenärens bank begär underlag. Svara före tidsgränsen, annars går pengarna tillbaka till resenären. Resesidan har rutt, chatt och samtal att använda som underlag."],
 ["The rider's bank questions the payment (chargeback).","Resenärens bank ifrågasätter betalningen (återkrav)."],
+["The rider's currency is not known.","Resenärens valuta är inte känd."],
 ["The riders who joined last.","Resenärerna som gick med sist."],
 ["The search grows step by step when nobody accepts.","Sökningen växer steg för steg när ingen accepterar."],
 ["The search stops and the rider sees this message.","Sökningen stoppas och resenären ser det här meddelandet."],
