@@ -1,5 +1,5 @@
-/** French dictionary, area c22-bonus-campaigns: BQ-V44 driver bonus campaigns (owner G10-5 "Make bonuses real (Recommended)", Rules decisions/driver-g10.md:9; contract 0.18.110 bonusCampaigns: the progress, duration and "ended" words are the contract's texts). Add new keys at the end of this file. Merged in ../fr.ts in this order. */
-export const frC22BonusCampaigns = {
+/** French dictionary, area c25-bonus-campaigns: BQ-V44 driver bonus campaigns (owner G10-5 "Make bonuses real (Recommended)", Rules decisions/driver-g10.md:9; contract 0.18.110 bonusCampaigns: the progress, duration and "ended" words are the contract's texts). Add new keys at the end of this file. Merged in ../fr.ts in this order. */
+export const frC25BonusCampaigns = {
   "{0} h {1} min": "{0} h {1} min",
   "{0} of {1} trips": "{0} sur {1} courses",
   "{0} of {1} online": "{0} sur {1} en ligne",
