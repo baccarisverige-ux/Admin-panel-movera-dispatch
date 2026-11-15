@@ -52,6 +52,7 @@ import { frC18MoneyM24 } from "./fr/c18-money-m24.ts";
 import { frC18AutoArrive } from "./fr/c18-auto-arrive.ts";
 import { frC19MoneyA26 } from "./fr/c19-money-a26.ts";
 import { frC20V45O15Cleanup } from "./fr/c20-v45-o15-cleanup.ts";
+import { frC22BonusCampaigns } from "./fr/c22-bonus-campaigns.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -109,4 +110,5 @@ export const fr: Record<MessageKey, string> = {
   ...frC18AutoArrive,
   ...frC19MoneyA26,
   ...frC20V45O15Cleanup,
+  ...frC22BonusCampaigns,
 };

@@ -228,6 +228,9 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               {/* Fix job 0 (owner A2-1 "Per country, in Pricing"): one limit per country, set on the country Standard; a zone shows it read-only. */}
               <NumberField label={tr("Largest Add money to wallet at one time")} value={shown.walletCreditMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit || !onStandard} changed={shown.walletCreditMax !== saved.walletCreditMax} onChange={(walletCreditMax) => edit({ walletCreditMax })} />
               {onStandard ? null : <small data-testid="wallet-credit-max-country">{tr("One limit per country: change it on the country Standard.")}</small>}
+              {/* BQ-V44 (contract 0.18.103 CountryRules.bonusCampaignMax): the largest amount of one driver bonus campaign (Drivers › Bonuses). */}
+              <NumberField label={tr("Largest campaign bonus")} value={shown.bonusCampaignMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit} changed={shown.bonusCampaignMax !== saved.bonusCampaignMax} onChange={(bonusCampaignMax) => edit({ bonusCampaignMax })} />
+              <small data-testid="bonus-campaign-max-help">{tr("The most one driver can earn from one bonus campaign in Drivers › Bonuses. Movera pays it with the next payout.")}</small>
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
           </div>

@@ -356,6 +356,8 @@ export async function fakeTripServer(page: Page, init: Partial<TripState> = {}):
     if (p === "/api/v1/admin/auth/me" && method === "GET") return json(route, 200, { ...ADMIN, ...state.admin });
     // Contract v0.11.0 §20: the zone list every live screen reads (fakeZones() answers writes too).
     if (p === "/api/v1/admin/zones" && method === "GET") return json(route, 200, { zones: SEED_ZONES() });
+    // v0.18.103 BQ-V44: Drivers › Bonuses on live reads the server's bonus campaigns (none in this fake).
+    if (p === "/api/v1/admin/bonuses" && method === "GET") return json(route, 200, { items: [], nextCursor: null });
     if (p === "/api/v1/admin/drivers") {
       if (state.driversFail) return json(route, state.driversFail, { code: "unavailable", message: "The server is busy.", requestId: "r-503", retryable: false });
       const status = url.searchParams.get("accountStatus");
