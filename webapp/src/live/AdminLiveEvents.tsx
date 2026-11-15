@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { tr } from "../i18n/core";
-import { batchedInvalidator, connectAdminEvents, fetchEventSource, liveStreamState, showsReconnecting, watchLiveStream } from "./adminEvents";
+import { batchedInvalidator, connectAdminEvents, fetchEventSource, liveStreamState, noteEventForReads, showsReconnecting, watchLiveStream } from "./adminEvents";
 import { useLiveSession } from "./LiveSessionContext";
 
 /**
@@ -16,7 +16,11 @@ export function AdminLiveEvents() {
     // 503 proof 2026-11-06: one reload per changed list per second, never one per event; a running read is not
     // cancelled and started again (cancelRefetch false), so a burst of events cannot multiply the calls.
     const batch = batchedInvalidator((match) => void queryClient.invalidateQueries({ predicate: (query) => match(query.queryKey) }, { cancelRefetch: false }));
-    const stop = connectAdminEvents(fetchEventSource(client), batch.push);
+    // Poll cost: which trips changed is noted first, so the ride-check alerts re-read only those trips.
+    const stop = connectAdminEvents(fetchEventSource(client), (event) => {
+      noteEventForReads(event);
+      batch.push(event);
+    });
     return () => {
       stop();
       batch.stop();

@@ -118,6 +118,51 @@ export function isOpenTrip(tripId: string): boolean {
   return openTrips.has(tripId);
 }
 
+/**
+ * Admin poll cost (Rules audits/impact/admin-poll-cost.md, Render 2026-11-15 14:50:52 UTC): the per-trip reads (the
+ * offers of a trip, the trip by id, its money / refund box, its ride checks) were reloaded for EVERY trip.changed of
+ * ANY trip: each open screen re-read its trip's offers on every busy second, whatever trip changed. The id of one of
+ * those keys; null for a list.
+ */
+export function tripOfKey(key: readonly unknown[]): string | null {
+  const id = key[0] === "assign-offers" || key[0] === "trip-record" ? key[1] : key[0] === "live" && key[1] === "trip" ? key[2] : null;
+  if (typeof id === "string") return id;
+  if (key[0] === "records" && typeof key[1] === "string" && key[1].startsWith("rideChecksOfTrip:")) return key[1].slice("rideChecksOfTrip:".length);
+  return null;
+}
+
+/**
+ * Which trips the stream said changed, for reads that keep a per-trip answer (the ride-check alerts' "both sides" read
+ * per trip, liveAdminApi.ts). Each change gets a number; a read remembers the number it started at.
+ * null = every trip (resync, a trip.changed without an id, an incident change).
+ */
+let changeMark = 0;
+let everyTripChangedAt = 0;
+const tripChangedAt = new Map<string, number>();
+/** Bounds the map over a long shift: past this, everything counts as changed once (one full read) and it starts again. */
+const TRIP_MARKS_MAX = 10_000;
+export function noteTripChange(tripId: string | null): void {
+  changeMark += 1;
+  if (tripId === null || tripChangedAt.size >= TRIP_MARKS_MAX) {
+    everyTripChangedAt = changeMark;
+    tripChangedAt.clear();
+    if (tripId === null) return;
+  }
+  tripChangedAt.set(tripId, changeMark);
+}
+export function tripChangeMark(): number {
+  return changeMark;
+}
+export function tripChangedSince(tripId: string, mark: number): boolean {
+  return everyTripChangedAt > mark || (tripChangedAt.get(tripId) ?? 0) > mark;
+}
+/** Every stream event goes here first (AdminLiveEvents.tsx), before its batch reloads anything. */
+export function noteEventForReads(event: Pick<AdminLiveEvent, "type"> & Partial<Pick<AdminLiveEvent, "entityId">>): void {
+  if (event.type === "trip.changed") noteTripChange(event.entityId || null);
+  // need_help opens a case; a case change has no trip id, so every trip is read again (rare type).
+  else if (event.type === "resync" || event.type === "incident.changed") noteTripChange(null);
+}
+
 export type KeyMatch = (key: readonly unknown[]) => boolean;
 type BatchOptions = { windowMs?: number; busyGapMs?: number; now?: () => number; isOpenTrip?: (tripId: string) => boolean; setTimer?: (fn: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void };
 export function batchedInvalidator(invalidate: (match: KeyMatch) => void, options: BatchOptions = {}): { push: (event: Pick<AdminLiveEvent, "type"> & Partial<Pick<AdminLiveEvent, "entityId">>) => void; stop: () => void } {
@@ -134,13 +179,26 @@ export function batchedInvalidator(invalidate: (match: KeyMatch) => void, option
   let timer: unknown = null;
   let heldTimer: unknown = null;
   let lastBusy = Number.NEGATIVE_INFINITY;
-  const matchesAny = (batch: readonly string[], key: readonly unknown[]) => batch.some((type) => keyMatches({ type }, key));
+  /** The trips the batch's trip.changed events named; null once one came without an id (then every trip). */
+  let changedTrips: Set<string> | null = new Set();
+  // Poll cost: a per-trip key follows trip.changed of its own trip only (trips = that batch's trips; null = all).
+  const typeMatches = (type: string, key: readonly unknown[], trips: ReadonlySet<string> | null) => {
+    if (type === "trip.changed" && trips !== null) {
+      const id = tripOfKey(key);
+      if (id !== null && !trips.has(id)) return false;
+    }
+    return keyMatches({ type }, key);
+  };
+  const matchesAny = (batch: readonly string[], key: readonly unknown[], trips: ReadonlySet<string> | null = null) => batch.some((type) => typeMatches(type, key, trips));
   const flush = () => {
     timer = null;
     const pending = types;
     const pendingUrgent = urgent;
     types = new Set();
     urgent = new Set();
+    // The per-trip keys are all FAST_KEYS: they reload in this batch, never in a held release.
+    const batchTrips = changedTrips;
+    changedTrips = new Set();
     const at = now();
     if (pending.has("resync")) {
       // A resync reloads everything: the held busy types are part of it.
@@ -166,7 +224,7 @@ export function batchedInvalidator(invalidate: (match: KeyMatch) => void, option
     if (out.some((type) => BUSY_TYPES.has(type))) lastBusy = at;
     if (held.size && heldTimer === null) heldTimer = setTimer(release, Math.max(0, lastBusy + busyGapMs - at));
     // The held types still reload their FAST_KEYS now: the safety screens never wait for the busy gap.
-    if (out.length || heldNow.length) invalidate((key) => matchesAny(out, key) || (isFastKey(key) && matchesAny(heldNow, key)));
+    if (out.length || heldNow.length) invalidate((key) => matchesAny(out, key, batchTrips) || (isFastKey(key) && matchesAny(heldNow, key, batchTrips)));
   };
   const release = () => {
     heldTimer = null;
@@ -181,6 +239,10 @@ export function batchedInvalidator(invalidate: (match: KeyMatch) => void, option
     push(event) {
       if (!INVALIDATES[event.type]) return;
       types.add(event.type);
+      if (event.type === "trip.changed") {
+        if (!event.entityId) changedTrips = null;
+        else changedTrips?.add(event.entityId);
+      }
       if (event.type === "trip.changed" && event.entityId && openNow(event.entityId)) urgent.add(event.type);
       if (timer === null) timer = setTimer(flush, windowMs);
     },
@@ -192,6 +254,7 @@ export function batchedInvalidator(invalidate: (match: KeyMatch) => void, option
       types = new Set();
       urgent = new Set();
       held = new Set();
+      changedTrips = new Set();
     },
   };
 }
