@@ -8,7 +8,7 @@ import { chatSettingsOf } from "../config/chatSettings.ts";
 import { dontMatchOf } from "../config/dontMatchSettings.ts";
 import { emergencyNumbersOf } from "../config/emergencyNumbers.ts";
 import { sosContactsSmsOf } from "../config/sosContactsSms.ts";
-import { MARKETS, marketOfZone, standardZoneId, zoneById, type MarketId } from "../markets/markets.ts";
+import { MARKETS, hasLiveMarketZones, marketOfZone, standardZoneId, zoneById, type Market, type MarketId } from "../markets/markets.ts";
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, draftRules, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
@@ -56,11 +56,18 @@ export function settingsScopes(): string[] {
 }
 
 /**
- * The scopes the live panel reads: the open countries only. A closed country (TN, OPEN false) has nothing on the
- * server, so asking for it only gave 404s on every page load (owner G2c, 2026-10-30).
+ * The countries the live panel reads: the open ones, and a closed one (TN, OPEN false) only when the server's zone list
+ * holds zones of it. A closed country's seeds have nothing on the server, so asking for them only gave 404s on every
+ * page load (owner G2c, 2026-10-30); but a zone the server lists has its own documents (fee-zero 2026-11-15: Grand
+ * Tunis' app fee 0 was published, yet the page never read the zone back and showed the built-in 10 %).
  */
+export function readMarkets(): Market[] {
+  return MARKETS.filter((market) => OPEN[market.id] || (hasLiveMarketZones() && market.zones.length > 0));
+}
+
+/** The scopes the live panel reads: each read country's Standard and zones (readMarkets). */
 export function readScopes(): string[] {
-  return MARKETS.filter((market) => OPEN[market.id]).flatMap((market) => [standardZoneId(market.id), ...market.zones.map((zone) => zone.id)]);
+  return readMarkets().flatMap((market) => [standardZoneId(market.id), ...market.zones.map((zone) => zone.id)]);
 }
 
 type Listener = () => void;
@@ -412,7 +419,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     // threw before any request, so the page showed the defaults (every method ticked) instead of what the server serves.
     const book = normalizeCountrySettingsBook(fallback ?? null);
     const countries = { ...book.countries };
-    await Promise.all(MARKETS.filter((market) => OPEN[market.id]).map(async (market) => {
+    await Promise.all(readMarkets().map(async (market) => {
       const found = await draft("country_rules", standardKey(market.id), true);
       if (found) countries[market.id] = settingsOfRules(countrySettingsOf(book, market.id), market, found.document);
       // v0.18.10 (G8): payment methods, tip rules and languages as the riders and drivers of the country get them.
@@ -529,6 +536,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const current = await draft("pricing", id, true);
       const built = pricingDocumentOf(zoneBook(store, id), id, current?.document ?? null);
       await savePublish(http, "pricing", id, current, withoutRemovedPricingKeys(current ? patchChanged(current.document, pricingDocumentOf(zoneBook(prior, id), id, current.document), built) : built));
+      // fee-zero 2026-11-15: the page re-reads right after a publish; the draft read before it (10 s cache) would show
+      // the old values again (app fee 0 → 10). Like Dispatch, the next read asks the server.
+      drafts.delete(key("pricing", id));
     }
     slices.set(PRICING_KEY, store);
     baseline.pricing = store;
@@ -684,6 +694,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const hardMax = driverBonusHardMax(market.id as MarketId);
       const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct, chainLateFreeCancelMin: next.chainLateFreeCancelMin, calls: next.calls, chat: next.chat, dontMatchAgain: next.dontMatchAgain, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax, emergencyNumbers: next.emergencyNumbers, sosContactsSms: next.sosContactsSms } : {}) }, current?.document ?? null);
       await savePublish(http, "country_rules", id, current, doc);
+      drafts.delete(key("country_rules", id));
       standardMarks.set("country_rules", id, false);
       // v0.18.10 (G8): the tip rules (cash after the trip, typed amount + max) live in the rider app document.
       await publishAppParts(id, { rider: ["tipRules"], driver: [] }, stateWith({ countrySettings: { ...book, countries: { ...book.countries, [market.id]: next } } }), id, stateWith({ countrySettings: { ...prior, countries: { ...prior.countries, [market.id]: zoneSettingsOf(prior, market.id as MarketId, id) } } }));
