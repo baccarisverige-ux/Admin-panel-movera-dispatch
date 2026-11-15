@@ -9,7 +9,8 @@ import { Cards } from "../reports/ui";
 import { DataTable } from "../ui/DataTable";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn, trx } from "../i18n";
-import { auditActionText, auditActorText, auditDetailText, auditValueText } from "../live/format";
+import { auditActionText, auditActorText, auditValueText } from "../live/format";
+import { auditDetailText } from "../live/offlineReason";
 import { DateInput } from "../ui/DateInput";
 
 const PAGE = 50;

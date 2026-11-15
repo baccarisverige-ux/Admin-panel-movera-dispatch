@@ -31,3 +31,15 @@ export function offlineReasonText(reason: string, extra: OfflineReasonExtra = {}
     default: return tr("Set offline by the server ({0})", [reason]);
   }
 }
+
+/**
+ * G3-R1 + BQ-A07: driver.auto_offline detail { reason, lastFixAt?, minutes?, count?, note? } as one line, by the one
+ * offline-reason formatter above; a row without reason is no_position (G3-R1). null for other actions. Lives here, not in
+ * live/format.ts (entry script), so only the lazy Audit and driver pages download the offline-reason texts.
+ */
+export function auditDetailText(row: { action: string; after: string }): string | null {
+  if (row.action !== "driver.auto_offline") return null;
+  let detail: { reason?: unknown } & OfflineReasonExtra = {};
+  try { detail = row.after ? (JSON.parse(row.after) as typeof detail) : {}; } catch { detail = {}; }
+  return offlineReasonText(typeof detail.reason === "string" && detail.reason ? detail.reason : "no_position", detail);
+}

@@ -17,7 +17,8 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
           if (/node_modules\/(react|react-dom|scheduler|react-router)\//.test(id)) return "vendor-react";
-          if (/node_modules\/(zod|@tanstack\/query-core|@tanstack\/react-query|lucide-react)\//.test(id)) return "vendor-lib";
+          // BQ-A07 PR: bignumber.js (money maths, needed at start-up) joins the start-up libraries; entry gzip about 8 kB smaller.
+          if (/node_modules\/(zod|@tanstack\/query-core|@tanstack\/react-query|lucide-react|bignumber\.js)\//.test(id)) return "vendor-lib";
           return undefined;
         },
       },

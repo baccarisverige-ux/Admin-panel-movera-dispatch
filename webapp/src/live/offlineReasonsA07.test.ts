@@ -5,9 +5,8 @@ import { registerDictionary, setLanguage } from "../i18n/core.ts";
 import { en } from "../i18n/en.ts";
 import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
-import { auditDetailText } from "./format.ts";
 import { auditRow, driverRecord } from "./liveAdminApi.ts";
-import { OFFLINE_REASONS, offlineReasonText } from "./offlineReason.ts";
+import { OFFLINE_REASONS, auditDetailText, offlineReasonText } from "./offlineReason.ts";
 
 /**
  * BQ-A07 (plan/NEXT-NONMONEY-2026-11-15.md row 9; owner 2026-10-31 "Send the real reason", Rules decisions/driver-g3.md):

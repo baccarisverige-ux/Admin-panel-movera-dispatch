@@ -63,8 +63,8 @@ import { MaskedText, RevealSensitive } from "../live/LiveReveal";
 import { dateOfBirthText, type Revealed } from "../live/masking";
 import { TabPanel, Tabs } from "../ui/Tabs";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
-import { auditActionText, auditActorText, auditDetailText, mainDocuments, renewalFor } from "../live/format";
-import { offlineReasonText } from "../live/offlineReason";
+import { auditActionText, auditActorText, mainDocuments, renewalFor } from "../live/format";
+import { auditDetailText, offlineReasonText } from "../live/offlineReason";
 
 const TABS = ["Overview", "Documents", "Performance", "Earnings", "Trips", "Vehicles", "Messages", "Notes", "Activity"];
 const CATEGORIES: Vehicle["category"][] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
