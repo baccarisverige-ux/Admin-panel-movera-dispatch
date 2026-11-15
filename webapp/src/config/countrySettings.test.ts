@@ -131,7 +131,7 @@ test("the exporters read every new setting instead of the defaults", () => {
   assert.deepEqual(rider.paymentMethods, ["card", "apple_pay"]);
   assert.deepEqual(rider.languages.default, { rider: "en", driver: "fr", admin: "sv" });
   // v0.18.17: the zone's booking window (Dispatch › Reservations › Booking policy) rides along, owner defaults here.
-  assert.deepEqual(rider.booking, { maxStops: 2, maxPickupMoveMeters: 300, samePointWarnMeters: 100, bookingHorizonDays: rider.booking.bookingHorizonDays, minAheadMin: 15, maxAheadDays: 90, freeChangeBeforeMin: 60 });
+  assert.deepEqual(rider.booking, { maxStops: 2, maxPickupMoveMeters: 300, samePointWarnMeters: 100, pickupSpots: { on: true }, bookingHorizonDays: rider.booking.bookingHorizonDays, minAheadMin: 15, maxAheadDays: 90, freeChangeBeforeMin: 60 });
   const driver = driverAppConfig("Z001", state);
   assert.deepEqual(driver.driverBonus, { defaultLimit: { amountMinor: 30000, currency: "SEK" }, hardMax: { amountMinor: 100000, currency: "SEK" } });
   assert.deepEqual(driver.booking, { maxStops: 2, maxPickupMoveMeters: 300, samePointWarnMeters: 100 });
