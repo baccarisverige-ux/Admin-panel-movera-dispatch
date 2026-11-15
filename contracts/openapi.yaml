@@ -1,11 +1,11 @@
-# Movera API v0.18.108 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.109 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.108
+  version: 0.18.109
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.108 in this folder; this file must agree with them.
+    v0.18.109 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.108
+  version: 0.18.109
   source: contract.json
 paths:
   /auth/otp/request:
@@ -3799,7 +3799,14 @@ paths:
       summary: Send the sign-up details (once; the account goes on hold)
       description: 'v0.5.3. Validation reasons: under_age, country_not_open, invalid_city, invalid_email, terms_required,
         company_required, fleet_join_mismatch. A fleet account gets a Fleet in status pending; a driver account with fleetJoin
-        is linked at once (the fleet must be approved: fleet_join_mismatch otherwise). accountStatus pending → on_hold.'
+        is linked at once (the fleet must be approved: fleet_join_mismatch otherwise). accountStatus pending → on_hold. v0.18.109
+        (server BQ-FLEETCUR, owner 2026-11-15 "What u mean fleet can earn in two currencies!", Rules decisions/session-2026-11-06.md:1322):
+        a fleet works in ONE country and earns in ONE currency. A driver joins only a fleet of his own country (his country,
+        else his first zone''s). Otherwise 409 conflict with reason fleet_other_country, on POST /driver/fleet/join (and fleetJoin
+        on POST /driver/onboarding), POST /driver/fleet/invite (a number with an account), POST /driver/fleet/invitations/{invitationId}/accept
+        and POST /admin/fleets/{fleetId}/invitations/{invitationId}/accept. POST /driver/onboarding is 409 fleet_other_country
+        too when a fleet member changes his country away from his fleet''s, or a fleet owner changes it while his fleet has
+        other drivers.'
       tags:
       - Driver · Account
       x-actor:
@@ -3881,9 +3888,16 @@ paths:
     post:
       operationId: joinFleet
       summary: Ask to join a fleet with its code, the owner's name and e-mail
-      description: v0.5.3. A pending driver_request the owner accepts or declines (contract.json#driverOnboarding.fleetInvitations);
+      description: 'v0.5.3. A pending driver_request the owner accepts or declines (contract.json#driverOnboarding.fleetInvitations);
         a pending request already open → 200 with it. Driver accounts only (a fleet account → 409 invalid_transition, fleet_account);
-        already in a fleet → 409 invalid_transition (already_in_fleet).
+        already in a fleet → 409 invalid_transition (already_in_fleet). v0.18.109 (server BQ-FLEETCUR, owner 2026-11-15 "What
+        u mean fleet can earn in two currencies!", Rules decisions/session-2026-11-06.md:1322): a fleet works in ONE country
+        and earns in ONE currency. A driver joins only a fleet of his own country (his country, else his first zone''s). Otherwise
+        409 conflict with reason fleet_other_country, on POST /driver/fleet/join (and fleetJoin on POST /driver/onboarding),
+        POST /driver/fleet/invite (a number with an account), POST /driver/fleet/invitations/{invitationId}/accept and POST
+        /admin/fleets/{fleetId}/invitations/{invitationId}/accept. POST /driver/onboarding is 409 fleet_other_country too
+        when a fleet member changes his country away from his fleet''s, or a fleet owner changes it while his fleet has other
+        drivers.'
       tags:
       - Driver · Fleet
       x-actor:
@@ -3932,7 +3946,14 @@ paths:
         → 409 invalid_transition (already_in_fleet); the owner''s own number → 400. An open invite to the same number → 200
         with it. v0.18.5: v0.18.5 (owner G2-D5.5 "Name after he accepts (Recommended)"): an owner_invite shows the owner only
         the phone number ("Invitation sent to +46 70…") until the driver accepts: no driverId or driverName in the owner''s
-        view, and a decline notice names the number, not the person.'
+        view, and a decline notice names the number, not the person. v0.18.109 (server BQ-FLEETCUR, owner 2026-11-15 "What
+        u mean fleet can earn in two currencies!", Rules decisions/session-2026-11-06.md:1322): a fleet works in ONE country
+        and earns in ONE currency. A driver joins only a fleet of his own country (his country, else his first zone''s). Otherwise
+        409 conflict with reason fleet_other_country, on POST /driver/fleet/join (and fleetJoin on POST /driver/onboarding),
+        POST /driver/fleet/invite (a number with an account), POST /driver/fleet/invitations/{invitationId}/accept and POST
+        /admin/fleets/{fleetId}/invitations/{invitationId}/accept. POST /driver/onboarding is 409 fleet_other_country too
+        when a fleet member changes his country away from his fleet''s, or a fleet owner changes it while his fleet has other
+        drivers.'
       tags:
       - Driver · Fleet
       x-actor:
@@ -4014,8 +4035,15 @@ paths:
     post:
       operationId: acceptFleetInvitation
       summary: Accept (the driver an invite, the owner a request)
-      description: v0.5.3. Links the driver; his other pending invitations close. The driver on a trip → 409 (on_trip); already
-        in a fleet → 409 (already_in_fleet); expired → 409 (invitation_expired). Not pending → 409 invalid_transition.
+      description: 'v0.5.3. Links the driver; his other pending invitations close. The driver on a trip → 409 (on_trip); already
+        in a fleet → 409 (already_in_fleet); expired → 409 (invitation_expired). Not pending → 409 invalid_transition. v0.18.109
+        (server BQ-FLEETCUR, owner 2026-11-15 "What u mean fleet can earn in two currencies!", Rules decisions/session-2026-11-06.md:1322):
+        a fleet works in ONE country and earns in ONE currency. A driver joins only a fleet of his own country (his country,
+        else his first zone''s). Otherwise 409 conflict with reason fleet_other_country, on POST /driver/fleet/join (and fleetJoin
+        on POST /driver/onboarding), POST /driver/fleet/invite (a number with an account), POST /driver/fleet/invitations/{invitationId}/accept
+        and POST /admin/fleets/{fleetId}/invitations/{invitationId}/accept. POST /driver/onboarding is 409 fleet_other_country
+        too when a fleet member changes his country away from his fleet''s, or a fleet owner changes it while his fleet has
+        other drivers.'
       tags:
       - Driver · Fleet
       x-actor:
@@ -4216,7 +4244,9 @@ paths:
         Rules audits/impact/j8-rebase-money-fix-supervisor.md §6; contract kpis.money.fleets "Fleet views get only the driver
         earnings", owner s06:1277): GET /driver/fleet/earnings (FleetEarnings, FleetDriverEarnings) sums only the driver''s
         earnings entries of the period: a paid_to_movera entry (''Driver paid Movera'') is not earnings and is never in a
-        driver''s earnings (FleetDriverEarnings.earnings) or in total. Wording only; no shape change.'
+        driver''s earnings (FleetDriverEarnings.earnings) or in total. Wording only; no shape change. v0.18.109 (server BQ-FLEETCUR,
+        driverOnboarding.fleetInvitations.oneCountry): FleetDriverEarnings.earnings / .trips and FleetEarnings.total count
+        only entries in the fleet''s currency (SE SEK, FR EUR, TN TND).'
       tags:
       - Driver · Fleet
       x-actor:
@@ -8982,7 +9012,14 @@ paths:
     post:
       operationId: adminAcceptFleetInvitation
       summary: Accept a pending invitation or request for the fleet
-      description: v0.5.3. The same effect as the driver's or owner's answer; written in the audit.
+      description: 'v0.5.3. The same effect as the driver''s or owner''s answer; written in the audit. v0.18.109 (server BQ-FLEETCUR,
+        owner 2026-11-15 "What u mean fleet can earn in two currencies!", Rules decisions/session-2026-11-06.md:1322): a fleet
+        works in ONE country and earns in ONE currency. A driver joins only a fleet of his own country (his country, else
+        his first zone''s). Otherwise 409 conflict with reason fleet_other_country, on POST /driver/fleet/join (and fleetJoin
+        on POST /driver/onboarding), POST /driver/fleet/invite (a number with an account), POST /driver/fleet/invitations/{invitationId}/accept
+        and POST /admin/fleets/{fleetId}/invitations/{invitationId}/accept. POST /driver/onboarding is 409 fleet_other_country
+        too when a fleet member changes his country away from his fleet''s, or a fleet owner changes it while his fleet has
+        other drivers.'
       tags:
       - Admin · People
       x-actor:
@@ -21189,7 +21226,9 @@ components:
         audits/impact/j8-rebase-money-fix-supervisor.md §6; contract kpis.money.fleets "Fleet views get only the driver earnings",
         owner s06:1277): GET /driver/fleet/earnings (FleetEarnings, FleetDriverEarnings) sums only the driver''s earnings
         entries of the period: a paid_to_movera entry (''Driver paid Movera'') is not earnings and is never in a driver''s
-        earnings (FleetDriverEarnings.earnings) or in total. Wording only; no shape change.'
+        earnings (FleetDriverEarnings.earnings) or in total. Wording only; no shape change. v0.18.109 (server BQ-FLEETCUR,
+        driverOnboarding.fleetInvitations.oneCountry): FleetDriverEarnings.earnings / .trips and FleetEarnings.total count
+        only entries in the fleet''s currency (SE SEK, FR EUR, TN TND).'
       required:
       - from
       - to
@@ -28097,7 +28136,8 @@ components:
             (400 invalid_request, PUT /admin/config/pricing and its publish; details ["step:<index>", "problem:<code>"], contract.json#commissionSteps.validation).
             v0.18.93 reasons: driver_away_from_pickup (409, the driver''s no-show while the waiting clock is stopped), invalid_auto_arrive_distance
             (400, contract.json#autoArrive.settings.validation). v0.18.108 reason: not_at_stop (409 invalid_transition, the
-            driver''s stop tap or back tap farther than allowed from the stop; contract.json#autoArrive.stops.tap / back).'
+            driver''s stop tap or back tap farther than allowed from the stop; contract.json#autoArrive.stops.tap / back).
+            v0.18.109 reason: fleet_other_country (409 conflict, the driver''s country is not the fleet''s; contract.json#driverOnboarding.fleetInvitations.oneCountry).'
         details:
           type: array
           items:
