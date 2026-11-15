@@ -166,6 +166,10 @@ test("Messages › Driver notifications: on/off, texts, limits and a demand mess
 });
 
 test("Safety points to the one cancel rate limit, and document colours follow the country's first warning", async ({ page }) => {
+  // BQ-O14: a fixed clock inside the window that used to fail (23:30 UTC = 00:30 Stockholm in winter, already the
+  // next local day), so the expiry texts are checked across that boundary on every run, not only when CI runs at night.
+  const now = Date.parse(`${new Date().toISOString().slice(0, 10)}T23:30:00Z`);
+  await page.clock.setFixedTime(now);
   await session(page);
   await page.goto("/dispatch?zone=Z001&tab=safety");
   const checks = page.getByRole("region", { name: "Checks before a driver gets a request" });
@@ -182,7 +186,7 @@ test("Safety points to the one cancel rate limit, and document colours follow th
   await page.goto("/drivers/D0002?tab=documents");
   const licence = page.getByTestId("doc-driver_license");
   await licence.getByLabel("Driving licence status").selectOption("approved");
-  await licence.getByLabel("Driving licence expiry date").fill(day(20));
+  await licence.getByLabel("Driving licence expiry date").fill(day(20, now));
   await expect(licence.locator(".fd-health")).toHaveText("Expires in 20 days");
 
   await page.goto("/onboarding?view=steps");
@@ -195,8 +199,8 @@ test("Safety points to the one cancel rate limit, and document colours follow th
   await page.goto("/drivers/D0002?tab=documents");
   const again = page.getByTestId("doc-driver_license");
   await again.getByLabel("Driving licence status").selectOption("approved");
-  await again.getByLabel("Driving licence expiry date").fill(day(20));
+  await again.getByLabel("Driving licence expiry date").fill(day(20, now));
   await expect(again.locator(".fd-health")).toHaveText("Approved");
-  await again.getByLabel("Driving licence expiry date").fill(day(10));
+  await again.getByLabel("Driving licence expiry date").fill(day(10, now));
   await expect(again.locator(".fd-health")).toHaveText("Expires in 10 days");
 });
