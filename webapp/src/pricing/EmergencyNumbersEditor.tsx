@@ -1,16 +1,18 @@
-import { ArrowDown, ArrowUp, Plus, Siren, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, MessageSquareText, Plus, Siren, Trash2 } from "lucide-react";
 import { EMERGENCY_KINDS, EMERGENCY_MAX_ROWS, KIND_LABEL, type EmergencyNumber } from "../config/emergencyNumbers";
 import { tr, trn } from "../i18n";
 
-type Props = { rows: EmergencyNumber[]; canEdit: boolean; onStandard: boolean; onChange: (rows: EmergencyNumber[]) => void };
+type Props = { rows: EmergencyNumber[]; canEdit: boolean; onStandard: boolean; onChange: (rows: EmergencyNumber[]) => void; sosSms: boolean; onSosSms: (on: boolean) => void };
 const LANGS = [["sv", "Name in Swedish"], ["fr", "Name in French"], ["en", "Name in English"]] as const;
 
 /**
  * v0.18.57 §79 (contract.json#emergencyNumbers, owner 2026-11-10): Admin › Pricing › Tips & limits › Emergency numbers.
  * 1–6 rows (kind, number, name in sv / fr / en); the first row is the main number (SOS dials it). Country standard only:
  * on a zone the list is shown read-only.
+ * v0.18.101 §92 (BQ-V34, owner G14 Q2): the switch "SMS to the driver's emergency contacts on SOS"
+ * (CountryRules.sosContactsSms), country standard only like the numbers; read-only on a zone.
  */
-export function EmergencyNumbersEditor({ rows, canEdit, onStandard, onChange }: Props) {
+export function EmergencyNumbersEditor({ rows, canEdit, onStandard, onChange, sosSms, onSosSms }: Props) {
   const editable = canEdit && onStandard;
   const set = (index: number, patch: Partial<EmergencyNumber>) => onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)));
   const move = (index: number, by: -1 | 1) => {
@@ -53,6 +55,15 @@ export function EmergencyNumbersEditor({ rows, canEdit, onStandard, onChange }: 
       {editable && rows.length < EMERGENCY_MAX_ROWS ? (
         <button type="button" data-command="admin.pricing.edit" className="dash-btn small ghost" data-testid="emergency-add" onClick={() => onChange([...rows, { kind: "general", number: "", label: { sv: "", fr: "", en: "" } }])}><Plus size={13} aria-hidden="true" /> {tr("Add an emergency number")}</button>
       ) : null}
+      <div>
+        <strong>{trn("{0} SMS to the driver's emergency contacts on SOS", <MessageSquareText size={14} aria-hidden="true" />)}</strong>
+        <small>{tr("When a driver presses SOS during a trip, each of his emergency contacts gets one SMS with his position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.")}</small>
+      </div>
+      <label className="mini-switch big">
+        <input type="checkbox" aria-label={tr("SMS to the driver's emergency contacts on SOS")} data-testid="sos-contacts-sms" checked={sosSms} disabled={!editable} onChange={(event) => onSosSms(event.target.checked)} />
+        <span aria-hidden="true"><i /></span>
+        {sosSms ? tr("On") : tr("Off")}
+      </label>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { MARKETS, market, type MarketId } from "../markets/markets.ts";
 import { tr } from "../i18n/core.ts";
 import { CALL_DEFAULTS, callSettingsIssues, callSettingsLines, callSettingsOf, type CallSettings } from "./callSettings.ts";
 import { emergencyDefaults, emergencyNumbersIssues, emergencyNumbersLines, emergencyNumbersOf, type EmergencyNumber } from "./emergencyNumbers.ts";
+import { SOS_CONTACTS_SMS_DEFAULT, sosContactsSmsLines, sosContactsSmsOf } from "./sosContactsSms.ts";
 import { chatSettingsIssues, chatSettingsLines, chatSettingsOf, defaultChatSettings, type ChatSettings } from "./chatSettings.ts";
 import { DONT_MATCH_DEFAULTS, dontMatchIssues, dontMatchLines, dontMatchOf, type DontMatchSettings } from "./dontMatchSettings.ts";
 import { fromSek, isLargePriceChange, roundTo, tipMax } from "../pricing/zonePricing.ts";
@@ -76,6 +77,8 @@ export type CountrySettings = {
   dontMatchAgain: DontMatchSettings;
   /** v0.18.57 §79: CountryRules.emergencyNumbers (country standard only) — the call buttons of both apps and the case page. */
   emergencyNumbers: EmergencyNumber[];
+  /** v0.18.101 §92 (BQ-V34, owner G14 Q2): CountryRules.sosContactsSms (country standard only) — the driver's SOS texts his emergency contacts. */
+  sosContactsSms: boolean;
 };
 export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };
 export const PERSON_LIMITS_DEFAULT: PersonLimits = { savedPlacesPerPerson: 50, emergencyContactsPerPerson: 10 };
@@ -120,7 +123,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -173,6 +176,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     chat: defaultChatSettings(),
     dontMatchAgain: { ...DONT_MATCH_DEFAULTS },
     emergencyNumbers: emergencyDefaults(country),
+    sosContactsSms: SOS_CONTACTS_SMS_DEFAULT,
   };
 }
 
@@ -223,6 +227,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     chat: raw.chat && typeof raw.chat === "object" ? { ...chatSettingsOf(raw.chat), ...keptNumbers(raw.chat) } : defaultChatSettings(),
     dontMatchAgain: dontMatchOf(raw.dontMatchAgain),
     emergencyNumbers: emergencyNumbersOf(raw.emergencyNumbers, country),
+    sosContactsSms: sosContactsSmsOf(raw.sosContactsSms),
     ...mixedOf(raw.mixedMethods),
     ...mixedTipOf(raw.mixedTipRules),
   };
@@ -403,6 +408,7 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   lines.push(...chatSettingsLines(before.chat, after.chat));
   lines.push(...dontMatchLines(before.dontMatchAgain, after.dontMatchAgain));
   lines.push(...emergencyNumbersLines(before.emergencyNumbers, after.emergencyNumbers));
+  lines.push(...sosContactsSmsLines(before.sosContactsSms, after.sosContactsSms));
   if (before.personLimits.savedPlacesPerPerson !== after.personLimits.savedPlacesPerPerson) lines.push(tr("Saved places per person: {0} → {1}", [before.personLimits.savedPlacesPerPerson, after.personLimits.savedPlacesPerPerson]));
   if (before.personLimits.emergencyContactsPerPerson !== after.personLimits.emergencyContactsPerPerson) lines.push(tr("Emergency contacts per person: {0} → {1}", [before.personLimits.emergencyContactsPerPerson, after.personLimits.emergencyContactsPerPerson]));
   return lines;

@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.100",
+  "version": "0.18.101",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -3980,6 +3980,12 @@
           "currency": "TND"
         }
       }
+    },
+    "sosContactsSms": {
+      "SE": true,
+      "FR": true,
+      "TN": true,
+      "other": true
     }
   },
   "realtime": {
@@ -9833,5 +9839,107 @@
       }
     },
     "notInThisVersion": "Middle stops (decisions/driver-g7.md:84 says \"At the pickup AND at stops\"): stop arrival stays the driver's tap (stopWaits) in v0.18.93; auto stop arrival and the stop wait stopping when he drives away are a later version."
+  },
+  "sosContactsSms": {
+    "note": "v0.18.101 (CONTRACT.md §92, BQ-V34 = BQ-S12; owner 2026-11-02 Q2 \"Use them in SOS (Recommended)\", Rules decisions/driver-g14.md:12; Rule 0): the driver's SOS = the call to the country's first emergency number (v0.18.57) + the Movera alert (§15) + one SMS with his position to each of his emergency contacts (phoneDataToServer.driverEmergencyContacts), with an admin on/off. Additive; X-Api-Version stays 0.5; server migration 0111 (incidents.contacts_sms). The rider's SOS sends no SMS (BUILD-QUEUE BQ-S12: rider n/a).",
+    "setting": "CountryRules.sosContactsSms (boolean) of the COUNTRY STANDARD only, like emergencyNumbers: Admin › Pricing › Tips & limits per country › Emergency numbers card, switch \"SMS to the driver's emergency contacts on SOS\" (settings.edit, published with the country_rules document by settings.publish). A zone's own country_rules carrying it is 400 invalid_request, reason sos_sms_country_only; a value that is not true / false is 400 invalid_request, reason invalid_document. Never saved = configDefaults.sosContactsSms[country] (true everywhere, the owner's answer), else configDefaults.sosContactsSms.other. Off: no SMS; the SOS, the call and the Movera alert are unchanged.",
+    "when": "The FIRST driver SOS of a case (POST /driver/trips/{tripId}/sos that opens the case, or that joins a case the rider opened): with the setting of the trip zone's country on, one SMS per contact stored for the driver at that moment. Later SOS on the same case (same or new Idempotency-Key, either side) send nothing more and answer the stored result. A rider SOS never texts anybody and its SosReceipt has no contactsSms.",
+    "text": "Language: the notice language rule (v0.18.66 noticeLanguage: the driver's own language, else the trip zone's country language, else en). texts.sms with {driver} = the driver's first name, {link} = the position link, {emergency} = the country's first emergency number (emergencyNumbers). Position = the GPS of this driver press (the SOS body), else the car's latest position the server has (driverPosition, kept at case open), else the case's position; never the rider's phone GPS first; {link} = positionLink with {lat} / {lng} (6 decimals); no position at all: texts.noPosition takes the place of 'Position: {link}' (fr 'Position : {link}').",
+    "positionLink": "https://maps.google.com/?q={lat},{lng}",
+    "liveLink": "Follow-up (not in this version): when the trip share link exists (BUILD-QUEUE S19, owner G14 Q1 'live link (car, plate, ETA), stops at drop-off'), {link} becomes that live link; until then the SMS carries the position at the moment of the SOS.",
+    "phone": "Contacts are stored as typed (digits, optional leading +, 3-15 digits). To send: spaces and dashes removed; a number starting with + is kept; 00… becomes +…; a leading 0 is replaced by the calling code of the driver's country (callingCodes; else the trip zone's country); a number that already starts with that code's digits and is long enough (SE 46 + 9 digits, FR 33 + 9, TN 216 + 8; e.g. 46701234567, 21622123456) only gets the +; any other number gets the code in front. A country without a calling code here: the number is kept as stored. The final number must match ^\\+[1-9][0-9]{6,14}$; one that does not is kept in sms_outbox with status skipped (no SMS company) or failed (with one), error invalid_number, is counted in contacts and is NEVER handed to the SMS company (a wrong number must never get the driver's position).",
+    "callingCodes": {
+      "SE": "+46",
+      "FR": "+33",
+      "TN": "+216"
+    },
+    "delivery": "The SMS rows are written in sms_outbox (kind sos_contact) inside the SOS command. No SMS company connected (today: BUILD-QUEUE §3, 46elks + Twilio chosen, keys missing): every row is kept with status skipped and the result is not_connected (\"SMS not connected\"); nothing is sent and nothing pretends it was. With an SMS company: the rows are written queued and handed to it only AFTER the SOS is saved (never inside the command, so the SOS answer and the emergency call never wait for it); the case's result then becomes sent (at least one accepted) or failed (none accepted). The SMS step never fails the SOS: it runs in its own savepoint; on any error only it is rolled back, the case and the Movera alert stay, and the result is failed (sent 0).",
+    "result": "SosContactsSms { status, contacts (number of SMS asked for, 0 or more), sent? (accepted by the SMS company; only for sent / failed), at (when decided) }. status: off (admin switch off), no_contacts (the driver has none), not_connected (no SMS company; rows kept as skipped), queued (handed to the SMS company after the save), sent, failed. Optional SosReceipt.contactsSms (driver SOS only; the stored result on a repeat) and optional Incident.contactsSms (admin case views and the incident feed; absent = no driver SOS on the case, or a case from before v0.18.101).",
+    "statuses": [
+      "off",
+      "no_contacts",
+      "not_connected",
+      "queued",
+      "sent",
+      "failed"
+    ],
+    "driverConfig": "DriverAppConfig.sosContactsSms { on (the zone country's switch), connected (an SMS company is connected on this server) }, written by the server into GET /driver/config like emergencyNumbers (driverConfigZone). The app promises an SMS only when on and connected.",
+    "apps": "Contract: this block. Server: setting check, the SMS rows after a driver SOS, SosReceipt / Incident.contactsSms, DriverAppConfig.sosContactsSms. Admin: the switch on the Emergency numbers card (country standard; read-only on a zone) and one line on an SOS case (texts.admin). Driver app: after SOS, texts.driver line by the receipt's status; the emergency contacts screen line by DriverAppConfig.sosContactsSms (texts.driverContactsOn / driverContactsOff), replacing the old 'Trusted contacts stay on this device' line (wrong since v0.18.26). Rider app: nothing (the field is optional; ignored).",
+    "texts": {
+      "sms": {
+        "sv": "Movera SOS: {driver} tryckte på SOS under en resa och kan behöva hjälp. Position: {link}. Ring {driver} eller {emergency}.",
+        "fr": "Movera SOS : {driver} a appuyé sur SOS pendant une course et a peut-être besoin d’aide. Position : {link}. Appelez {driver} ou le {emergency}.",
+        "en": "Movera SOS: {driver} pressed SOS during a trip and may need help. Position: {link}. Call {driver} or {emergency}."
+      },
+      "noPosition": {
+        "sv": "Position saknas",
+        "fr": "Position inconnue",
+        "en": "Position not available"
+      },
+      "driver": {
+        "sent": {
+          "sv": "Dina nödkontakter fick ett sms med din position.",
+          "fr": "Vos contacts d’urgence ont reçu un SMS avec votre position.",
+          "en": "Your emergency contacts got an SMS with your position."
+        },
+        "notConnected": {
+          "sv": "Sms till dina nödkontakter är inte anslutet än.",
+          "fr": "Le SMS à vos contacts d’urgence n’est pas encore connecté.",
+          "en": "SMS to your emergency contacts is not connected yet."
+        },
+        "failed": {
+          "sv": "Sms till dina nödkontakter kunde inte skickas.",
+          "fr": "Le SMS à vos contacts d’urgence n’a pas pu être envoyé.",
+          "en": "The SMS to your emergency contacts could not be sent."
+        }
+      },
+      "driverContactsOn": {
+        "sv": "När du trycker på SOS under en resa får de ett sms med din position.",
+        "fr": "Quand vous appuyez sur SOS pendant une course, ils reçoivent un SMS avec votre position.",
+        "en": "When you press SOS during a trip, they get an SMS with your position."
+      },
+      "driverContactsOff": {
+        "sv": "Sms till nödkontakter vid SOS är inte på än. Ring dem från den här sidan.",
+        "fr": "Le SMS aux contacts d’urgence lors d’un SOS n’est pas encore actif. Appelez-les depuis cette page.",
+        "en": "SMS to emergency contacts on SOS is not on yet. Call them from this page."
+      },
+      "admin": {
+        "switch": {
+          "sv": "Sms till förarens nödkontakter vid SOS",
+          "fr": "SMS aux contacts d’urgence du chauffeur lors d’un SOS",
+          "en": "SMS to the driver's emergency contacts on SOS"
+        },
+        "off": {
+          "sv": "Sms till nödkontakter: av",
+          "fr": "SMS aux contacts d’urgence : désactivé",
+          "en": "SMS to emergency contacts: off"
+        },
+        "no_contacts": {
+          "sv": "Sms till nödkontakter: föraren har inga",
+          "fr": "SMS aux contacts d’urgence : le chauffeur n’en a aucun",
+          "en": "SMS to emergency contacts: the driver has none"
+        },
+        "not_connected": {
+          "sv": "Sms till {n} nödkontakter: inte anslutet (inget sms-företag än)",
+          "fr": "SMS à {n} contacts d’urgence : non connecté (pas encore de société SMS)",
+          "en": "SMS to {n} emergency contacts: not connected (no SMS company yet)"
+        },
+        "queued": {
+          "sv": "Sms till {n} nödkontakter: skickas",
+          "fr": "SMS à {n} contacts d’urgence : en cours d’envoi",
+          "en": "SMS to {n} emergency contacts: sending"
+        },
+        "sent": {
+          "sv": "Sms skickat till {sent} av {n} nödkontakter",
+          "fr": "SMS envoyé à {sent} sur {n} contacts d’urgence",
+          "en": "SMS sent to {sent} of {n} emergency contacts"
+        },
+        "failed": {
+          "sv": "Sms till {n} nödkontakter misslyckades",
+          "fr": "Échec du SMS à {n} contacts d’urgence",
+          "en": "SMS to {n} emergency contacts failed"
+        }
+      }
+    }
   }
 }

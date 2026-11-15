@@ -9016,4 +9016,14 @@
 ["Check the GPS at most every","Check the GPS at most every"],
 ["The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter.","The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter."],
 ["Check the GPS at most every (s)","Check the GPS at most every (s)"],
-["Ride check: check the GPS at most every must be 10 to 60 s.","Ride check: check the GPS at most every must be 10 to 60 s."]]
+["Ride check: check the GPS at most every must be 10 to 60 s.","Ride check: check the GPS at most every must be 10 to 60 s."],
+["SMS to the driver's emergency contacts on SOS","SMS to the driver's emergency contacts on SOS"],
+["{0} SMS to the driver's emergency contacts on SOS","{0} SMS to the driver's emergency contacts on SOS"],
+["When a driver presses SOS during a trip, each of his emergency contacts gets one SMS with his position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.","When a driver presses SOS during a trip, each of his emergency contacts gets one SMS with his position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected."],
+["SMS to the driver's emergency contacts on SOS: {0}","SMS to the driver's emergency contacts on SOS: {0}"],
+["SMS to emergency contacts: off","SMS to emergency contacts: off"],
+["SMS to emergency contacts: the driver has none","SMS to emergency contacts: the driver has none"],
+["SMS to {n} emergency contacts: not connected (no SMS company yet)","SMS to {n} emergency contacts: not connected (no SMS company yet)"],
+["SMS to {n} emergency contacts: sending","SMS to {n} emergency contacts: sending"],
+["SMS sent to {sent} of {n} emergency contacts","SMS sent to {sent} of {n} emergency contacts"],
+["SMS to {n} emergency contacts failed","SMS to {n} emergency contacts failed"]]

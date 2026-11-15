@@ -1,4 +1,5 @@
 import type { DemoRecord, LiveRideCheck } from "../api/seed.ts";
+import type { ContactsSms } from "../config/sosContactsSms.ts";
 import { sameRider } from "../riders/match.ts";
 import type { LatLng } from "../dashboard/route.ts";
 import { market, marketOfZone, zoneById, type MarketId } from "../markets/markets.ts";
@@ -139,6 +140,8 @@ export type Case = {
   falseAlarm: boolean;
   /** Live Ride check (contract v0.12.0 §22): trigger, who, answer, from the server. */
   rideCheck?: LiveRideCheck;
+  /** Live SOS (contract v0.18.101 §92, BQ-V34): what happened to the SMS to the driver's emergency contacts. */
+  contactsSms?: ContactsSms;
 };
 
 const OPEN = new Set(["queued", "taken"]);
@@ -200,6 +203,7 @@ export function caseOf(row: DemoRecord, safety: SafetyBook, ops: IncidentOps, no
     escalatedAt: row.escalatedAt ?? null,
     falseAlarm: row.status === "dismissed",
     ...(row.liveRideCheck ? { rideCheck: row.liveRideCheck } : {}),
+    ...(row.liveContactsSms ? { contactsSms: row.liveContactsSms } : {}),
   };
 }
 

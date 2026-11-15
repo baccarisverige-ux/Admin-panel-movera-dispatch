@@ -9016,4 +9016,14 @@
 ["Check the GPS at most every","Vérifier le GPS au plus toutes les"],
 ["The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter.","Le serveur regarde la position de chaque course pour une vérification de sécurité au plus aussi souvent. Plus court trouve un problème plus tôt ; plus long allège le serveur."],
 ["Check the GPS at most every (s)","Vérifier le GPS au plus toutes les (s)"],
-["Ride check: check the GPS at most every must be 10 to 60 s.","Vérification de sécurité : Vérifier le GPS au plus toutes les doit être de 10 à 60 s."]]
+["Ride check: check the GPS at most every must be 10 to 60 s.","Vérification de sécurité : Vérifier le GPS au plus toutes les doit être de 10 à 60 s."],
+["SMS to the driver's emergency contacts on SOS","SMS aux contacts d’urgence du chauffeur lors d’un SOS"],
+["{0} SMS to the driver's emergency contacts on SOS","{0} SMS aux contacts d’urgence du chauffeur lors d’un SOS"],
+["When a driver presses SOS during a trip, each of his emergency contacts gets one SMS with his position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.","Quand un chauffeur appuie sur SOS pendant une course, chacun de ses contacts d’urgence reçoit un SMS avec sa position. Désactivé : pas de SMS ; l’appel et l’alerte Movera restent. Envoyé seulement quand une société SMS est connectée."],
+["SMS to the driver's emergency contacts on SOS: {0}","SMS aux contacts d’urgence du chauffeur lors d’un SOS : {0}"],
+["SMS to emergency contacts: off","SMS aux contacts d’urgence : désactivé"],
+["SMS to emergency contacts: the driver has none","SMS aux contacts d’urgence : le chauffeur n’en a aucun"],
+["SMS to {n} emergency contacts: not connected (no SMS company yet)","SMS à {n} contacts d’urgence : non connecté (pas encore de société SMS)"],
+["SMS to {n} emergency contacts: sending","SMS à {n} contacts d’urgence : en cours d’envoi"],
+["SMS sent to {sent} of {n} emergency contacts","SMS envoyé à {sent} sur {n} contacts d’urgence"],
+["SMS to {n} emergency contacts failed","Échec du SMS à {n} contacts d’urgence"]]

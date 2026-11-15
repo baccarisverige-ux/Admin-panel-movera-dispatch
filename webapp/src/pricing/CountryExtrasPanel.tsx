@@ -286,9 +286,9 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               </label>
             </div>
           </div>
-          {/* v0.18.57 §79 (owner 2026-11-10): CountryRules.emergencyNumbers, country standard only. */}
+          {/* v0.18.57 §79 (owner 2026-11-10): CountryRules.emergencyNumbers; v0.18.101 §92 (BQ-V34): CountryRules.sosContactsSms; both country standard only. */}
           <div id="extras-emergency-numbers" className="cx-anchor">
-            <EmergencyNumbersEditor rows={onStandard ? shown.emergencyNumbers : countrySettingsOf(book, country).emergencyNumbers} canEdit={canEdit} onStandard={onStandard} onChange={(emergencyNumbers) => edit({ emergencyNumbers })} />
+            <EmergencyNumbersEditor rows={onStandard ? shown.emergencyNumbers : countrySettingsOf(book, country).emergencyNumbers} canEdit={canEdit} onStandard={onStandard} onChange={(emergencyNumbers) => edit({ emergencyNumbers })} sosSms={onStandard ? shown.sosContactsSms : countrySettingsOf(book, country).sosContactsSms} onSosSms={(sosContactsSms) => edit({ sosContactsSms })} />
           </div>
           <div id="extras-person-limits" className="cx-anchor">
             <div className="fee-card" data-testid="person-limits">

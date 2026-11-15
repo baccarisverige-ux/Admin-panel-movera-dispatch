@@ -9016,4 +9016,14 @@
 ["Check the GPS at most every","Kolla GPS:en högst var"],
 ["The server looks at each trip's position for a ride check at most this often. Shorter finds a problem sooner; longer keeps the server lighter.","Servern tittar på varje resas position för en resekoll högst så här ofta. Kortare hittar ett problem tidigare; längre belastar servern mindre."],
 ["Check the GPS at most every (s)","Kolla GPS:en högst var (s)"],
-["Ride check: check the GPS at most every must be 10 to 60 s.","Resekoll: Kolla GPS:en högst var måste vara 10 till 60 s."]]
+["Ride check: check the GPS at most every must be 10 to 60 s.","Resekoll: Kolla GPS:en högst var måste vara 10 till 60 s."],
+["SMS to the driver's emergency contacts on SOS","Sms till förarens nödkontakter vid SOS"],
+["{0} SMS to the driver's emergency contacts on SOS","{0} Sms till förarens nödkontakter vid SOS"],
+["When a driver presses SOS during a trip, each of his emergency contacts gets one SMS with his position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.","När en förare trycker på SOS under en resa får var och en av hans nödkontakter ett sms med hans position. Av: inget sms; samtalet och Movera-larmet finns kvar. Skickas först när ett sms-företag är anslutet."],
+["SMS to the driver's emergency contacts on SOS: {0}","Sms till förarens nödkontakter vid SOS: {0}"],
+["SMS to emergency contacts: off","Sms till nödkontakter: av"],
+["SMS to emergency contacts: the driver has none","Sms till nödkontakter: föraren har inga"],
+["SMS to {n} emergency contacts: not connected (no SMS company yet)","Sms till {n} nödkontakter: inte anslutet (inget sms-företag än)"],
+["SMS to {n} emergency contacts: sending","Sms till {n} nödkontakter: skickas"],
+["SMS sent to {sent} of {n} emergency contacts","Sms skickat till {sent} av {n} nödkontakter"],
+["SMS to {n} emergency contacts failed","Sms till {n} nödkontakter misslyckades"]]
