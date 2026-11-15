@@ -10,11 +10,17 @@ test.beforeEach(async ({ page }) => {
   await signIn(page);
 });
 
-test("D1: Drivers has no Bonuses tab on live, and ?view=bonuses shows the drivers", async ({ page }) => {
+// BQ-V44 (contract 0.18.110): D1 hid the tab while the demo builder had no server. Now the tab shows the server's
+// bonus campaigns (/admin/bonuses); the demo builder (ride / area bonuses) stays demo-only (Rule 21).
+test("D1 → V44: Drivers › Bonuses on live shows the server's campaigns, not the demo builder", async ({ page }) => {
   await page.goto("/drivers?view=bonuses");
   await expect(page.getByRole("heading", { level: 2, name: "Drivers" })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Bonuses" })).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: "Drivers" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Bonuses" })).toBeVisible();
+  await expect(page.getByTestId("live-bonus-campaigns")).toBeVisible();
+  await expect(page.getByText("No bonus campaign here yet.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /New campaign/ })).toBeVisible();
+  await expect(page.getByText("New ride bonus")).toHaveCount(0);
+  await expect(page.getByText("New area bonus")).toHaveCount(0);
 });
 
 test("D4/D9: Trips has no Save view and no Settings on live; ?view=settings shows the list", async ({ page }) => {
