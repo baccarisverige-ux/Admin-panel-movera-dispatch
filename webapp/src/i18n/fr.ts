@@ -56,6 +56,7 @@ import { frC21RideCheckCadence } from "./fr/c21-ride-check-cadence.ts";
 import { frC22SosContactsSms } from "./fr/c22-sos-contacts-sms.ts";
 import { frC23PayoutRunGuard } from "./fr/c23-payout-run-guard.ts";
 import { frC27StopAutoArrive } from "./fr/c27-stop-auto-arrive.ts";
+import { frC24FleetCountry } from "./fr/c24-fleet-country.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -117,4 +118,5 @@ export const fr: Record<MessageKey, string> = {
   ...frC22SosContactsSms,
   ...frC23PayoutRunGuard,
   ...frC27StopAutoArrive,
+  ...frC24FleetCountry,
 };

@@ -9039,4 +9039,5 @@
 ["Left {0}","Lämnade {0}"],
 ["Waiting stopped: driver away since {0}","Väntan stannad: föraren borta sedan {0}"],
 ["Stopped in all: {0} min ({1} times)","Stannad totalt: {0} min ({1} gånger)"],
-["At stop {0} since {1}","Vid stopp {0} sedan {1}"]]
+["At stop {0} since {1}","Vid stopp {0} sedan {1}"],
+["This driver works in another country. A fleet works in one country only.","Föraren arbetar i ett annat land. Ett åkeri arbetar bara i ett land."]]
