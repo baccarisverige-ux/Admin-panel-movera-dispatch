@@ -36,7 +36,7 @@ export function TripCard({ trip, timeZone, routeShown, onToggleRoute, routeLink,
         <li className="stop-a"><span aria-hidden="true">A</span><div><small>{tr("Pickup")}</small><strong>{trx(trip.pickup.label)}</strong></div></li>
         <li className="stop-b"><span aria-hidden="true">B</span><div><small>{tr("Drop-off")}</small><strong>{trx(trip.dropoff.label)}</strong></div></li>
       </ol>
-      {/* v0.18.98 (job C9b, contract.json#autoArrive.stops): the stop the driver is at and the stopped waiting, as the server sent them. */}
+      {/* v0.18.108 (job C9b, contract.json#autoArrive.stops): the stop the driver is at and the stopped waiting, as the server sent them. */}
       {trip.stop ? (
         <p className="trip-stop-note" data-testid="trip-card-stop">
           {tr("At stop {0} since {1}", [trip.stop.number, time.format(trip.stop.arrivedAtMs)])}{trip.stop.arrivedBy ? ` · ${trip.stop.arrivedBy === "auto" ? tr("automatic") : tr("tapped")}` : ""}

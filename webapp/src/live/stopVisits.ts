@@ -1,5 +1,5 @@
 /**
- * Job C9b (contract v0.18.98 §92, contract.json#autoArrive.stops + #stopWaits.projection; owner 2026-11-02 "At the pickup
+ * Job C9b (contract v0.18.108 §93, contract.json#autoArrive.stops + #stopWaits.projection; owner 2026-11-02 "At the pickup
  * AND at stops", Rules decisions/driver-g7.md:84): the server's facts of each middle stop as the admin shows them —
  * arrived (automatic or tapped), left, the stopped waiting while the driver is away and the finished away spells.
  * TripProjection.stops[i] is canonical; TripProjection.stopVisits[] is the mirror older servers send. Nothing is worked

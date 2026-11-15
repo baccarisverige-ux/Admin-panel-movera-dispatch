@@ -61,7 +61,7 @@ export type LiveTrip = {
   progressPct: number | null;
   startedAtMs: number;
   next: NextPickup | null;
-  /** v0.18.98 (job C9b, contract.json#autoArrive.stops): the middle stop the driver is at now, as the server sent it (live only). */
+  /** v0.18.108 (job C9b, contract.json#autoArrive.stops): the middle stop the driver is at now, as the server sent it (live only). */
   stop?: { number: number; arrivedAtMs: number; arrivedBy: "auto" | "tap" | null; awaySinceMs: number | null } | null;
   waybill: Waybill;
 };

@@ -232,7 +232,7 @@ export function tripFacts(trip: Trip): LiveTripFacts {
     pickup: trip.pickup,
     dropoff: trip.dropoff,
     stops: trip.stops ?? [],
-    // v0.18.98 (job C9b, contract.json#autoArrive.stops): each stop's visit as the server sends it, never worked out here.
+    // v0.18.108 (job C9b, contract.json#autoArrive.stops): each stop's visit as the server sends it, never worked out here.
     stopVisits: stopVisitsOf(trip),
     fare: trip.fare.amountMinor,
     fareLines: (trip.fareLines ?? []).map((line) => ({ code: line.code, amountMinor: line.amount.amountMinor })),

@@ -8,7 +8,7 @@ import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
 
 /**
- * Job C9b (contract v0.18.98 §92, contract.json#autoArrive.stops; owner 2026-11-02 "At the pickup AND at stops",
+ * Job C9b (contract v0.18.108 §93, contract.json#autoArrive.stops; owner 2026-11-02 "At the pickup AND at stops",
  * Rules decisions/driver-g7.md:84): the same two distances apply at middle stops; the trip page and the live trip card
  * show the server's stop facts (arrived automatic / tapped, left, away since, stopped in all), never worked out here.
  */
@@ -33,7 +33,7 @@ test("C9b: stops[i] carries the server's visit (arrivedBy, leftAt, away.since, p
   ]);
 });
 
-test("C9b: a server before v0.18.98 (no new fields) and the stopVisits mirror still read; odd values are not shown", () => {
+test("C9b: a server before v0.18.108 (no new fields) and the stopVisits mirror still read; odd values are not shown", () => {
   const old = stopVisitsOf(trip([{ lat: 1, lng: 2 }, { lat: 1, lng: 3 }], [{ stopIndex: 0, arrivedAt: AT(2), leftAt: AT(5) }, { stopIndex: 1, arrivedAt: AT(6), arrivedBy: "auto", away: { since: AT(7) }, pausedSeconds: 60, pauseCount: 1 }]) as never);
   assert.deepEqual(old[0], { arrivedAt: AT(2), arrivedBy: null, leftAt: AT(5), awaySince: null, pausedSeconds: 0, pauseCount: 0 });
   assert.deepEqual(old[1], { arrivedAt: AT(6), arrivedBy: "auto", leftAt: null, awaySince: AT(7), pausedSeconds: 60, pauseCount: 1 });

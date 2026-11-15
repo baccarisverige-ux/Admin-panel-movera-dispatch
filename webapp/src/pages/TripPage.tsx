@@ -395,7 +395,7 @@ export function TripPage() {
           <div>
             <ol className="op-stops" data-testid="trip-stops">
               {route.stops.map((stop, index) => {
-                // v0.18.98 (job C9b, contract.json#autoArrive.stops): the server's visit of this middle stop (route.stops
+                // v0.18.108 (job C9b, contract.json#autoArrive.stops): the server's visit of this middle stop (route.stops
                 // starts with the pickup, so stop i of the trip is index i + 1). Shown as sent, never worked out here.
                 const visit = stop.kind === "stop" ? facts?.stopVisits?.[index - 1] ?? null : null;
                 return (
