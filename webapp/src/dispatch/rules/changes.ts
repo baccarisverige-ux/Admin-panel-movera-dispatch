@@ -18,6 +18,7 @@ const LABELS: Record<string, string> = {
   "rideCheck.crashOn": "Ride check on a possible crash",
   "rideCheck.on": "Ride check by the server", "rideCheck.stopMinutes": "Long stop (min)", "rideCheck.endFarMeters": "Ended far from the drop-off (m)",
   "rideCheck.noAnswerSeconds": "Time to answer (s)", "rideCheck.repeatMinutes": "Ask again after (min)", "rideCheck.noAnswerAlarm": "No answer rings the alarm",
+  "rideCheck.scanEverySeconds": "Check the GPS at most every (s)",
   "radar.on": "Radar", "radar.drivers": "Radar drivers", "radar.seconds": "Radar time", "radar.then": "After Radar",
   "exclusive.on": "Exclusive", "exclusive.seconds": "Exclusive time to accept", "exclusive.drivers": "Exclusive drivers to try", "exclusive.then": "After Exclusive",
   "radarApp.fullOn": "Radar full screen", "radarApp.full": "Offers on full-screen radar", "radarApp.popupOn": "Radar popup", "radarApp.popup": "Offers in the popup",

@@ -562,6 +562,7 @@
     "noAnswerSeconds": 120,
     "repeatMinutes": 10,
     "noAnswerAlarm": false,
+    "scanEverySeconds": 30,
     "stopMinutes": 2,
     "offRouteKm": 2,
     "farOn": true,
