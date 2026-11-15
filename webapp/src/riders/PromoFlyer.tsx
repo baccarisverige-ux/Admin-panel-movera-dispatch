@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
 import qrcode from "qrcode-generator";
 import { Download, Printer } from "lucide-react";
-import type { PromoTicket } from "./care";
+import { promoCapText, promoDealText, type PromoTicket } from "./care";
 import { categoryName } from "./profile";
-import { CURRENCY_SYMBOL } from "./ui";
 import { tr, trn } from "../i18n";
 
 type FlyerPromo = Pick<PromoTicket, "code" | "title" | "kind" | "value" | "rides" | "maxPerRide" | "validFrom" | "validTo" | "country" | "categories">;
@@ -33,10 +32,10 @@ function qrPath(text: string, size: number): { d: string; cell: number } {
 
 /** The flyer as a standalone SVG (A5 shape), so the same picture is shown, printed and downloaded. */
 export function flyerSvg(promo: FlyerPromo, link: string, locale: string): string {
-  const symbol = CURRENCY_SYMBOL[promo.country];
-  const deal = promo.kind === "percent" ? `${promo.value}%` : `${promo.value} ${symbol}`;
+  // BQ-O15c: every amount in the shared money formatter ("50,00 kr", "12,500 DT"), never "50 kr".
+  const deal = promoDealText(promo);
   const rides = promo.rides === 1 ? tr("off your next ride") : tr("off your next {0} rides", [promo.rides]);
-  const cap = promo.kind === "percent" ? tr(" · up to {0} {1} per ride", [promo.maxPerRide, symbol]) : "";
+  const cap = promo.kind === "percent" ? tr(" · up to {0} per ride", [promoCapText(promo)]) : "";
   const date = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" });
   const valid = promo.validFrom && promo.validTo ? tr("Valid {0} – {1}", [date.format(Date.parse(promo.validFrom)), date.format(Date.parse(promo.validTo))]) : "";
   const cats = promo.categories.length ? promo.categories.map(categoryName).join(", ") : tr("All ride categories");

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AlertTriangle, Crown, Gift, MessageCircleWarning, Sparkles, Star, Ticket, Wallet } from "lucide-react";
 import { formatMoney, type MarketId } from "../markets/markets";
-import type { PromoTicket } from "./care";
+import { promoCapText, promoDealText, promoMinFareText, type PromoTicket } from "./care";
 import { categoryName } from "./profile";
 import type { LiveState, RiderRow } from "./segments";
 import { tr, trn, uiLocale, trx } from "../i18n";
@@ -58,9 +58,10 @@ export function waitText(minutes: number): string {
 
 /** The promotion as riders see it in the app: a ticket with the deal, the limits and the dates. */
 export function PromoTicketCard({ ticket, used }: { ticket: Pick<PromoTicket, "code" | "title" | "kind" | "value" | "rides" | "maxPerRide" | "minFare" | "validFrom" | "validTo" | "country" | "categories" | "status">; used?: number; locale: string }) {
-  const symbol = CURRENCY_SYMBOL[ticket.country];
+
   const date = new Intl.DateTimeFormat(uiLocale(), { day: "numeric", month: "short" });
-  const deal = ticket.kind === "percent" ? `${ticket.value}%` : `${ticket.value} ${symbol}`;
+  // BQ-O15c: every amount in the shared money formatter ("50,00 kr", "12,500 DT"), never "50 kr".
+  const deal = promoDealText(ticket);
   const left = used === undefined ? null : Math.max(0, ticket.rides - used);
   return (
     <div className={`rd-ticket${ticket.status === "active" ? "" : ` ${ticket.status}`}`} aria-label={tr("Promotion {0}", [ticket.code])}>
@@ -71,10 +72,10 @@ export function PromoTicketCard({ ticket, used }: { ticket: Pick<PromoTicket, "c
       </div>
       <div className="rd-ticket-body">
         <b>{ticket.title || tr("Your promotion")}</b>
-        <span>{ticket.kind === "percent" ? tr("{0} off your next {1} ride{2} · max {3} {4} per ride", [deal, ticket.rides, ticket.rides === 1 ? "" : "s", ticket.maxPerRide, symbol]) : tr("{0} off each of your next {1} ride{2}", [deal, ticket.rides, ticket.rides === 1 ? "" : "s"])}</span>
+        <span>{ticket.kind === "percent" ? tr("{0} off your next {1} ride{2} · max {3} per ride", [deal, ticket.rides, ticket.rides === 1 ? "" : "s", promoCapText(ticket)]) : tr("{0} off each of your next {1} ride{2}", [deal, ticket.rides, ticket.rides === 1 ? "" : "s"])}</span>
         <small>
           {ticket.validFrom && ticket.validTo ? `${date.format(Date.parse(ticket.validFrom))} – ${date.format(Date.parse(ticket.validTo))}` : tr("Pick dates")}
-          {ticket.minFare ? tr(" · min fare {0} {1}", [ticket.minFare, symbol]) : ""}
+          {ticket.minFare ? tr(" · min fare {0}", [promoMinFareText(ticket)]) : ""}
           {ticket.categories.length ? ` · ${ticket.categories.map(categoryName).join(", ")}` : tr(" · all categories")}
         </small>
         {left !== null ? (

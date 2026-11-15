@@ -756,4 +756,8 @@ export const svA0Symbols: Record<keyof typeof enA0Symbols, string> = {
   "3 rides 100, 5 rides 200…": "3 resor 100, 5 resor 200…",
   "3–5 working days": "3–5 arbetsdagar",
   "30 min": "30 min",
+  // BQ-O15c: promotion texts with one formatted amount (shared money formatter).
+  "{0} off your next {1} ride{2} · max {3} per ride": "{0} rabatt på dina nästa {1} resor · max {3} per resa",
+  " · up to {0} per ride": " · upp till {0} per resa",
+  " · min fare {0}": " · minipris {0}",
 };
