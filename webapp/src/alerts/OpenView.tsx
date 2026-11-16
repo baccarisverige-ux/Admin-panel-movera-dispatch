@@ -4,7 +4,7 @@ import { useSession } from "../auth/SessionContext";
 import { CommandButton } from "../ui/CommandButton";
 import { useAlertsData } from "./AlertsContext";
 import { AlertActions, agentName, StatusLine } from "./AlertActions";
-import { ALERTS_KEY, GROUPS, kindDef, LEVELS, unmuteKind, type GroupId, type Level, type OpenAlert } from "./engine";
+import { ALERTS_KEY, GROUPS, kindDef, LEVELS, pageAlerts, unmuteKind, type GroupId, type Level, type OpenAlert } from "./engine";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 
 export function ago(since: number, now: number): string {
@@ -30,6 +30,11 @@ export function OpenView({ old = false }: { old?: boolean } = {}) {
   const [state, setState] = useState<"open" | "snoozed" | "muted">("open");
   const [selected, setSelected] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  // Q131: the list in pages; a new filter starts again on the first page.
+  const [pages, setPages] = useState(1);
+  const filterKey = `${old}|${quick}|${group}|${zone}|${state}`;
+  const [pagedFor, setPagedFor] = useState(filterKey);
+  if (pagedFor !== filterKey) { setPagedFor(filterKey); setPages(1); }
   const list = (old ? data.old : data.open).filter((alert) => {
     if (state === "open" && (alert.status === "snoozed" || alert.muted)) return false;
     if (state === "snoozed" && alert.status !== "snoozed") return false;
@@ -41,6 +46,7 @@ export function OpenView({ old = false }: { old?: boolean } = {}) {
     if (zone !== "all" && alert.zoneId !== zone) return false;
     return true;
   });
+  const page = pageAlerts(list, pages);
   const current = list.find((alert) => alert.id === selected) ?? null;
   const counters: { id: Quick; label: string; count: number }[] = [
     { id: "critical", label: tr("Critical"), count: data.counts.critical },
@@ -87,7 +93,7 @@ export function OpenView({ old = false }: { old?: boolean } = {}) {
 
       <div className={current ? "al-work has-detail" : "al-work"}>
         <ul className="al-list" aria-label={tr("Alerts")}>
-          {list.length === 0 ? <li className="al-empty">{state === "open" ? tr("Nothing here. Good work.") : state === "snoozed" ? tr("No snoozed alert.") : tr("No muted alert.")}</li> : list.map((alert) => {
+          {list.length === 0 ? <li className="al-empty">{state === "open" ? tr("Nothing here. Good work.") : state === "snoozed" ? tr("No snoozed alert.") : tr("No muted alert.")}</li> : page.rows.map((alert) => {
             const Icon = LEVEL_ICON[alert.level];
             return (
               <li key={alert.id} className={`al-row ${alert.level}${alert.solved ? " solved" : ""}${alert.id === selected ? " on" : ""}`}>
@@ -108,6 +114,7 @@ export function OpenView({ old = false }: { old?: boolean } = {}) {
               </li>
             );
           })}
+          {page.left > 0 ? <li className="al-more"><button data-command="admin.alerts.view" type="button" className="dash-btn small ghost" onClick={() => setPages(pages + 1)}>{trn("Show more ({0} left)", page.left)}</button></li> : null}
         </ul>
         {current ? <Detail alert={current} onClose={() => setSelected(null)} onNotice={setNotice} /> : null}
       </div>

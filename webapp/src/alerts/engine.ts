@@ -601,9 +601,6 @@ export function splitOld<T extends Alert>(alerts: readonly T[]): { open: T[]; ol
 
 /** Join the alerts with who works on them. Done ones leave the open list; SOS follows Incidents. */
 export function openAlerts(alerts: readonly Alert[], book: AlertBook, now: number, sosOwner: (incidentId: string) => string | null): OpenAlert[] {
-  const level = { critical: 0, important: 1, info: 2 } as const;
-  // Same level: safety first, then what hurts riders right now.
-  const group: Record<GroupId, number> = { safety: 0, dispatch: 1, system: 2, money: 3, drivers: 4, riders: 5 };
   return alerts
     .map((alert): OpenAlert | null => {
       const record = book.records[alert.id] ?? null;
@@ -617,7 +614,28 @@ export function openAlerts(alerts: readonly Alert[], book: AlertBook, now: numbe
       return { ...alert, status: record?.owner ? "taken" : "new", owner: record?.owner ?? null, record, muted };
     })
     .filter((item): item is OpenAlert => Boolean(item))
-    .sort((a, b) => level[a.level] - level[b.level] || group[a.group] - group[b.group] || a.since - b.since);
+    .sort(alertOrder);
+}
+
+const LEVEL_ORDER = { critical: 0, important: 1, info: 2 } as const;
+
+/**
+ * Q131 (owner W2 "Yes, newest first (Rec.)"): critical, then important, then info; inside a level the safety kinds
+ * (sos, car_lost, ride_check, sos_slow) first, as the server orders the book; then open before solved (green ones stay);
+ * then the newest first (an open alert by when it came in, a solved one by when it was solved).
+ */
+export function alertOrder(a: Alert, b: Alert): number {
+  const safe = (alert: Alert) => (alert.group === "safety" ? 0 : 1);
+  const solved = (alert: Alert) => (alert.solved ? 1 : 0);
+  const when = (alert: Alert) => alert.solved?.at ?? alert.since;
+  return LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] || safe(a) - safe(b) || solved(a) - solved(b) || when(b) - when(a);
+}
+
+/** Q131: the alert list in pages; "Show more" adds the next ALERT_PAGE rows. */
+export const ALERT_PAGE = 50;
+export function pageAlerts<T>(list: readonly T[], pages: number): { rows: T[]; left: number } {
+  const rows = list.slice(0, Math.max(1, pages) * ALERT_PAGE);
+  return { rows, left: list.length - rows.length };
 }
 
 function base(alert: Alert, record: AlertRecord | undefined): AlertRecord {
