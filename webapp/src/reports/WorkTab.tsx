@@ -8,6 +8,7 @@ import { ArrowLeft, Bell, Download, Eye, KeyRound, LogIn, LogOut, Pencil, Shield
 import { useAudit } from "../api/hooks";
 import { useAdminApi } from "../api/AdminApiContext";
 import { useAlertsMaybe } from "../alerts/AlertsContext";
+import { useAlertIncidents } from "../alerts/useOnDemand";
 import { solvedHistory } from "../alerts/history";
 import { AGENTS, ROLE_LABELS, type Role } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
@@ -38,11 +39,13 @@ export function WorkTab({ market, zones, window, compare, fmt, onCsv, settings }
   // C10 (A16 D10): live cannot save "who sees other admins' work" yet (its Save is hidden): hide the card.
   const accessHidden = useCommandHidden("admin.reports.access");
   const shared = useAlertsMaybe();
+  // Q132: the cases behind the solved SOS / ride-check alerts, read on this tab only (not by the alert bar).
+  const incidents = useAlertIncidents(Boolean(shared));
   const activity = useSyncExternalStore(subscribeActivity, readActivity, readActivity);
   const [kindFilter, setKindFilter] = useState<WorkKind | "all">("all");
   const others = Boolean(agent && canSeeOthers(agent.role, settings.access.roles));
   const zoneIds = useMemo(() => new Set(zones.map((zone) => zone.id)), [zones]);
-  const history = useMemo(() => (shared ? solvedHistory(shared.book, shared.safety.value, (id) => shared.facts.incidents.find((row) => row.id === id)?.zoneId ?? null, (id) => shared.facts.incidents.find((row) => row.id === id)?.kind === "ride_check") : []), [shared?.book, shared?.safety.value, shared?.facts.incidents]);
+  const history = useMemo(() => (shared ? solvedHistory(shared.book, shared.safety.value, (id) => incidents.find((row) => row.id === id)?.zoneId ?? null, (id) => incidents.find((row) => row.id === id)?.kind === "ride_check") : []), [shared?.book, shared?.safety.value, incidents]);
   const [now] = useState(() => Date.now());
   const events = useMemo(() => {
     const label = (action: string) => `${sectionOf(action)}: ${commandById(action)?.label ?? action}`;

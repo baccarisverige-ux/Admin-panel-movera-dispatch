@@ -1,5 +1,4 @@
 import { isLiveData, liveDriverOf } from "../live/realData";
-import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi";
 import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { useEffect, useMemo, useState } from "react";
 import { useRecords, useSlice } from "../api/hooks";
@@ -23,9 +22,11 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { money as formatMajor } from "../pricing/zonePricing";
 import { failureCause, failureHandled } from "../payments/failures";
 import { useRidersData } from "../riders/useRidersData";
-import { RIDE_CHECK_KEY, alertBy, alertTitle, asRideChecks, emptyRideCheckOps, followText, normalizeRideCheckOps, reasonText, shiftOf, shifted, worries, type RideCheckOps } from "../safety/rideCheck";
+import { RIDE_CHECK_KEY, alertBy, alertTitle, emptyRideCheckOps, followText, normalizeRideCheckOps, reasonText, shiftOf, shifted, worries, type RideCheckOps } from "../safety/rideCheck";
 import { ALERTS_KEY, alertsFromServer, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, splitOld, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
 import { tr } from "../i18n/core.ts";
+import { alertPolls, alertReads } from "./reads";
+import { useRideCheckRows } from "./useOnDemand";
 
 function hash(text: string): number {
   let value = 2166136261;
@@ -42,35 +43,40 @@ export function useAlerts() {
   const { agent } = useSession();
   const scope = useMarketScope();
   const market = scope.market;
-  // v0.18.20: on live the book carries the server's alerts; read again every 15 s (live updates come with the SSE job).
-  const slice = useSlice<AlertBook>(ALERTS_KEY, emptyAlertBook(), isLiveData() ? { refetchMs: 15_000 } : {});
-  const book = useMemo(() => normalizeAlertBook(slice.value), [slice.value]);
+  const live = isLiveData();
+  // v0.18.20: on live the book carries the server's alerts; read again every 15 s (and on each alert.changed event).
+  const polls = alertPolls(live);
   // Only read what the role may read: a refused read is retried and slows every save.
   const canSafety = Boolean(agent && can(agent.role, "incidents.read"));
-  const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: canSafety });
-  const incidentSlice = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: canSafety });
-  const incidentOps = useMemo(() => normalizeIncidentOps(incidentSlice.value), [incidentSlice.value]);
-  const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
-  const dispatchBook = useMemo(() => normalizeDispatchBook(dispatchSlice.value), [dispatchSlice.value]);
-  const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
-  const drivers = useRecords("drivers", undefined, { refetchMs: 15_000 });
-  // G3-D5: live, the server's supply per zone (every online driver counted in his zone, position or not).
-  const zoneSupply = useRecords("zoneSupply", undefined, { refetchMs: 15_000 });
-  const trips = useRecords("trips", undefined, { refetchMs: 15_000 });
-  // B1.26b: live, the open cases only (one small read), not every page of the case history.
-  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents", undefined, { refetchMs: 10_000 });
-  const reservations = useRecords("reservations", undefined, { refetchMs: 30_000 });
-  const payments = useRecords("payments", undefined, { refetchMs: 30_000 });
-  const payouts = useRecords("payouts");
-  const vehicles = useRecords("vehicles");
-  const tickets = useRecords("tickets", undefined, { refetchMs: 30_000 });
-  const riders = useRidersData("month");
   // Ride check alerts go to the safety team and to dispatchers.
   const canRideCheck = Boolean(agent && (can(agent.role, "incidents.read") || can(agent.role, "trips.intervene")));
-  // C4 (A15 N15): live, only the checks behind an alert (need_help, both sides of those trips), never every check.
-  const rideCheckRows = useRecords(isLiveData() ? RIDE_CHECK_ALERTS_LIST : "rideChecks", undefined, { refetchMs: 10_000 });
-  const rideChecks = useMemo(() => asRideChecks(rideCheckRows.data), [rideCheckRows.data]);
-  const rideSlice = useSlice<RideCheckOps>(RIDE_CHECK_KEY, emptyRideCheckOps(), { enabled: canRideCheck });
+  const slice = useSlice<AlertBook>(ALERTS_KEY, emptyAlertBook(), { refetchMs: polls.alerts });
+  const book = useMemo(() => normalizeAlertBook(slice.value), [slice.value]);
+  // Q132 (owner W2 A): live, the bar reads only the server's alert list (+ the SOS owner and the ride-check banner's
+  // book); no table is read to build alerts in the browser. Demo: the panel's own engine reads its tables as before.
+  const reads = alertReads({ live, canSafety, canRideCheck, found: book.found });
+  const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: reads.safetyOps });
+  const incidentSlice = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: reads.incidentOps });
+  const incidentOps = useMemo(() => normalizeIncidentOps(incidentSlice.value), [incidentSlice.value]);
+  const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook(), { enabled: reads.dispatch });
+  const dispatchBook = useMemo(() => normalizeDispatchBook(dispatchSlice.value), [dispatchSlice.value]);
+  const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook(), { enabled: reads.driverOps });
+  const drivers = useRecords("drivers", undefined, { refetchMs: polls.drivers, enabled: reads.drivers });
+  // G3-D5: live, the server's supply per zone (every online driver counted in his zone, position or not).
+  const zoneSupply = useRecords("zoneSupply", undefined, { refetchMs: polls.zoneSupply, enabled: reads.zoneSupply });
+  const trips = useRecords("trips", undefined, { refetchMs: polls.trips, enabled: reads.trips });
+  // B1.26b: live, the open cases only (one small read), not every page of the case history.
+  const incidents = useRecords(live ? OPEN_INCIDENTS_LIST : "incidents", undefined, { refetchMs: polls.incidents, enabled: reads.incidents });
+  const reservations = useRecords("reservations", undefined, { refetchMs: polls.reservations, enabled: reads.reservations });
+  const payments = useRecords("payments", undefined, { refetchMs: polls.payments, enabled: reads.payments });
+  const payouts = useRecords("payouts", undefined, { enabled: reads.payouts });
+  const vehicles = useRecords("vehicles", undefined, { enabled: reads.vehicles });
+  const tickets = useRecords("tickets", undefined, { refetchMs: polls.tickets, enabled: reads.tickets });
+  const riders = useRidersData("month", undefined, { enabled: reads.riders });
+  // C4 (A15 N15): live, only the checks behind an alert (need_help, both sides of those trips), never every check;
+  // Q132: and only while the list holds a ride-check alert this admin may see.
+  const { checks: rideChecks } = useRideCheckRows(reads.rideChecks);
+  const rideSlice = useSlice<RideCheckOps>(RIDE_CHECK_KEY, emptyRideCheckOps(), { enabled: reads.rideCheckOps });
   const rideOps = useMemo(() => normalizeRideCheckOps(rideSlice.value), [rideSlice.value]);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 30_000) * 30_000);
   useEffect(() => {
@@ -97,7 +103,7 @@ export function useAlerts() {
     const zoneName = (id: string) => market.zones.find((zone) => zone.id === id)?.name ?? id;
     const hour = Math.floor(now / 3_600_000);
     // Live (owner rule, part 3): only facts the server sends; local demo stores and hashes give nothing.
-    const liveData = isLiveData();
+    const liveData = live;
     return {
       now,
       day,
@@ -178,11 +184,11 @@ export function useAlerts() {
       money,
     };
     // money depends only on the market, which is already a dependency.
-  }, [now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks, zoneSupply.data]);
+  }, [live, now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks, zoneSupply.data]);
 
   // v0.18.20 server-side alerts: on live the server finds every alert (owner A1–A3); the panel only reads them. The
   // panel's own engine stays for the demo (demo removal is its own job).
-  const liveFound = isLiveData();
+  const liveFound = live;
   const all = useMemo(
     () => (liveFound
       ? alertsFromServer(book.found ?? [], zones, (incidentId) => rideChecks.find((check) => check.incidentId === incidentId)?.id)
@@ -213,7 +219,7 @@ export function useAlerts() {
     now,
     sosOwner,
     rideCheck: { checks: rideChecks, ops: rideOps, loading: rideSlice.loading, unopened, demoShift: demoShift(now, api.demo) },
-    loading: slice.loading || incidents.isLoading || trips.isLoading,
+    loading: slice.loading || (reads.incidents && incidents.isLoading) || (reads.trips && trips.isLoading),
     counts: {
       critical: active.filter((alert) => alert.level === "critical").length,
       important: active.filter((alert) => alert.level === "important").length,

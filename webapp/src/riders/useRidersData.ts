@@ -5,12 +5,14 @@ import { CARE_KEY, emptyRiderCare, normalizeCare } from "./care";
 import { buildRows, type Period } from "./segments";
 
 /** Riders of the chosen country and zones, with everything the list and the rider page need. */
-export function useRidersData(period: Period, scope?: string | null) {
-  const riders = useRiders(scope ?? null);
-  const trips = useRecords("trips", scope, { refetchMs: 30_000 });
-  const drivers = useRecords("drivers");
-  const tickets = useRecords("tickets");
-  const careSlice = useSlice<unknown>(CARE_KEY, emptyRiderCare());
+/** `enabled: false` reads nothing (Q132: the live alert bar needs no rider data). */
+export function useRidersData(period: Period, scope?: string | null, options: { enabled?: boolean } = {}) {
+  const off = options.enabled === false ? { enabled: false } : {};
+  const riders = useRiders(scope ?? null, off);
+  const trips = useRecords("trips", scope, { refetchMs: 30_000, ...off });
+  const drivers = useRecords("drivers", undefined, off);
+  const tickets = useRecords("tickets", undefined, off);
+  const careSlice = useSlice<unknown>(CARE_KEY, emptyRiderCare(), off);
   const care = useMemo(() => normalizeCare(careSlice.value), [careSlice.value]);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 60_000) * 60_000);
   useEffect(() => {
