@@ -7,4 +7,5 @@ export const frC32ShareTrip: Record<keyof typeof enC32ShareTrip, string> = {
   "Riders can share a live trip link": "Les passagers peuvent partager un lien de trajet en direct",
   "Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.": "Désactivé : l’appli passager masque Partager le trajet et tous les liens en direct de la zone s’arrêtent. Valeur habituelle : activé.",
   "{0}: set per zone in Dispatch › Safety. {1}": "{0} : réglé par zone dans Répartition › Sécurité. {1}",
+  "Share trip could not be read from the server for this zone. Reload the page and try again.": "Le partage du trajet n’a pas pu être lu sur le serveur pour cette zone. Rechargez la page et réessayez.",
 };

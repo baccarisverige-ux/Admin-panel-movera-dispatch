@@ -255,6 +255,15 @@ export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[
   content: { rider: [], driver: ["texts", "notices"] },
 };
 
+/**
+ * BQ-S10 round 2 (supervisor SF-A1): the parts a Dispatch publish of one zone writes. The Share trip switch lives in
+ * the rider document; when that read failed (`riderRead` false) the page only shows the browser's own value, so
+ * `shareTrip` is left out and a zone switched off cannot come back on.
+ */
+export function dispatchOwnedFor(riderRead: boolean): { rider: string[]; driver: string[] } {
+  return riderRead ? OWNED.dispatch : { ...OWNED.dispatch, rider: OWNED.dispatch.rider.filter((key) => key !== "shareTrip") };
+}
+
 /** `server` with `keys` taken from `built` (the admin exporter's full document). The waiting money stays the server's (pricing keeps it, §6.2). */
 export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc {
   const next: Doc = structuredClone(server);
