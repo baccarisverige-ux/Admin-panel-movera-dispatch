@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.112",
+  "version": "0.18.115",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -4023,7 +4023,8 @@
         "amountMinor": 200000,
         "currency": "TND"
       }
-    }
+    },
+    "pickupSpotsOn": true
   },
   "realtime": {
     "envelope": [
@@ -8811,7 +8812,8 @@
       "driver"
     ],
     "start": "POST /trips/{tripId}/call (no body, Idempotency-Key) by the trip's rider or driver → 200 TripCall { tripId, mode:'in_app', callId, ice { servers, ttlSeconds }, ringSeconds, maxCallMin, expiresAt }. The server keeps a trip_calls row (state ringing) and sends call_ringing on the trip stream; the callee's app shows the incoming-call sheet.",
-    "window": "Open from driver assignment (tripStatus.driverAssigned) until callWindowAfterTripMin (default 60) minutes after the trip ended as completed (trips.ended_at). Outside it: 409 invalid_transition, reason call_window_closed. A cancelled trip has no window after it. The apps show the call button only inside the window.",
+    "window": "Open from driver assignment (tripStatus.driverAssigned) until callWindowAfterTripMin (default 60) minutes after the trip ended as completed (trips.ended_at). Outside it: 409 invalid_transition, reason call_window_closed. A cancelled trip has no window after it. The apps show the call button only inside the window. v0.18.113 (BQ-S13): the end of this window is sent to both apps as TripProjection.callOpenUntil (inAppCalls.callOpenUntil).",
+    "callOpenUntil": "v0.18.113 (BQ-S13; owner 2026-11-01 \"Keep call open for 1 hour but not chat\", Rules decisions/driver-g9.md:38, conversation/session-2026-11-01b.md:108): TripProjection.callOpenUntil (date-time, UTC) = trips.ended_at + the trip zone's CountryRules.calls.callWindowAfterTripMin minutes (inAppCalls.settings: its own country_rules, else the country standard, else the default 60; read when the trip is served, so an admin change applies at once to trips already ended). Sent only on a completed trip with an end time while that zone's calls.on is true; absent otherwise (calls off, a cancelled trip, an early end, a trip not ended yet: during the trip the call button follows the trip status as before). Served on GET /trips/{tripId} (rider, driver and admin views) and on every GET /rider/trips item; stream events and command answers do not carry it, so an app reads GET /trips/{tripId} once when a finished trip opens (not a poll). It is the same instant the server checks (inAppCalls.window): a call at or before callOpenUntil is allowed, after it POST /trips/{tripId}/call is 409 invalid_transition, reason call_window_closed. Apps: on the finished trip (driver: Trip finished and the ride history detail; rider: the ride complete summary and the past ride in History) the 'Call rider' / 'Call driver' button shows while now ≤ callOpenUntil and hides by itself when it passes; absent → no call button. The call itself is unchanged (in-app, never a phone number). Chat stays closed after the drop-off (no change). Admin: no new setting — Pricing › Tips & limits › Calls › Call window after the trip (min), 0–240, default 60, per country standard or zone. X-Api-Version stays 0.5; additive; no migration.",
     "signalling": "POST /calls/{callId}/signal { type: offer|answer|ice, sdp?, candidate? } by the call's caller or callee → 202; the server relays it as call_signal on the trip stream (from = the sender's side). Media goes peer to peer (or through the TURN server); the server never sees audio and stores none.",
     "answer": "POST /calls/{callId}/answer by the callee while ringing → 200 CallView (state answered) with ice { servers, ttlSeconds } (the callee's STUN/TURN servers), event call_answered.",
     "end": "POST /calls/{callId}/end { reason: hangup|declined|failed } by either side → 200 CallView (state ended), event call_ended. A second end is answered with the same CallView (idempotent).",
@@ -10225,5 +10227,12 @@
     },
     "fixtures": "fixtures/bonus_campaigns.json (reference_check.py): validation, trips counting, online hours, payout lines + Driver gets / Movera gets, KPI day row — SEK, EUR and TND.",
     "progressFormat": "Supervisor note (weak spot 2): for online_hours progress.done and progress.target are MINUTES; the app writes each with texts.duration (h = minutes div 60, m = minutes mod 60, e.g. 260 → '4 h 20 min') or texts.durationWholeHours when m = 0 (600 → '10 h'), then fills texts.progressHours: '4 h 20 min av 10 h online'. Trips use texts.progressTrips with the plain numbers. Every number is the server's (owner s06:1275-1276: the apps show the server's numbers, the same on every screen)."
+  },
+  "pickupSpots": {
+    "note": "v0.18.115 (BQ-V21; owner full-audit Q6 2026-11-02 \"Keep as 'approximate'\" => admin on/off per zone (default on), Rules decisions/rider-g4-pickup.md:7): the rider's pickup entrance chips (Main entrance / Side entrance / Parking, placed around the pin and labelled approximate in sv / fr / en) have an admin on/off switch per zone, default on. Not money. X-Api-Version stays 0.5; additive; no migration.",
+    "setting": "RiderAppConfig.booking.pickupSpots.on (boolean, default true = configDefaults.pickupSpotsOn) in the zone's rider document (its own, else its country standard), saved and published with PUT /admin/config/rider_app_config + POST /admin/config/rider_app_config/publish (settings.edit / settings.publish), the same draft / publish / version rule as the other documents. Admin: Dispatch › Rides 'Pickup entrance chips (approximate)', per zone.",
+    "server": "PUT /admin/config/rider_app_config: a booking.pickupSpots that is not an object, or an on that is not true / false, is 400 invalid_request with reason invalid_document. GET /rider/config always serves booking.pickupSpots { on }: the document's value, true when it is missing (a document published before v0.18.115).",
+    "rider": "on: the Set pickup sheet shows the entrance chips as before (a chosen chip's title, with its approximate mark, ends the booked pickup label the driver sees). off: no entrance chips, and the pickup label is the address only. 'Previously used' (the device's own confirmed pickups) and 'Near Home' (the rider's saved Home) are real places, not entrance chips, and stay. A document without the field (an older server) reads as on.",
+    "driver": "No change: the driver reads the booked pickup label from the trip (Offer / TripProjection pickup); no config field."
   }
 }
