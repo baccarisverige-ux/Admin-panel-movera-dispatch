@@ -14,8 +14,8 @@ type Doc = Record<string, unknown>;
 export const SECONDS_DEFAULT = { radar: 15, exclusive: 30 } as const;
 
 /**
- * The Dispatch rules for a server dispatch document (+ the driver document's offer and cancel-share parts, + v0.18.115
- * the rider document's pickup entrance chips switch) over `fallback`.
+ * The Dispatch rules for a server dispatch document (+ the driver document's offer and cancel-share parts, + the rider
+ * document's v0.18.115 pickup entrance chips switch and v0.18.116 share trip switch) over `fallback`.
  */
 export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: ZoneDispatch, rider: Doc | null = null): ZoneDispatch {
   const zone = structuredClone(fallback);
@@ -91,11 +91,18 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   // v0.18.30 (owner Q9): "Shortest ride (m)" as the zone's drivers and the server get it (booking.samePointWarnMeters, 0–1000).
   const samePoint = validSamePoint((driver?.["booking"] as { samePointWarnMeters?: unknown } | undefined)?.samePointWarnMeters);
   if (samePoint !== null) zone.samePoint = { warnMeters: samePoint };
-  // v0.18.115 BQ-V21 (contract.json#pickupSpots): the entrance chips switch as the zone's riders get it; a rider document
-  // without it (published before v0.18.115) is served on, so it reads on.
+  // One rider document read serves both rider switches below; no rider document (not read, or the read failed) keeps the
+  // rules' own values.
   if (rider) {
+    // v0.18.115 BQ-V21 (contract.json#pickupSpots): the entrance chips switch as the zone's riders get it; a rider
+    // document without it (published before v0.18.115) is served on, so it reads on.
     const spots = (rider["booking"] as { pickupSpots?: { on?: unknown } } | undefined)?.pickupSpots?.on;
     zone.pickupSpots = { on: typeof spots === "boolean" ? spots : true };
+    // v0.18.116 BQ-S10 (contract.json#shareTrip.setting): the share trip switch as the zone's riders get it. Never saved =
+    // the document's older features.shareTrip when that is true / false, else on (the same rule as the server's).
+    const on = (rider["shareTrip"] as { on?: unknown } | undefined)?.on;
+    const older = (rider["features"] as { shareTrip?: unknown } | undefined)?.shareTrip;
+    zone.shareTrip = { on: typeof on === "boolean" ? on : typeof older === "boolean" ? older : true };
   }
   // v0.18.8 (G6): the free wait at each stop the server charges by (waiting.stopFreeWaitMin, 0–20; 0 while stops are off).
   const stopFree = (driver?.["waiting"] as { stopFreeWaitMin?: unknown } | undefined)?.stopFreeWaitMin;

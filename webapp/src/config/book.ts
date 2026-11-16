@@ -266,7 +266,14 @@ export function setFeature(book: ConfigBook, key: "reservations" | "wallet", val
   return edited(book, { ...book.draft, features: { ...book.draft.features, luxury: false, [key]: value }, switches }, authorId);
 }
 
+/**
+ * BQ-S10 (contract v0.18.116): "Share trip" is set per zone in Dispatch › Safety. The old book-wide switch is shown
+ * read-only in Config › Features and cannot be set.
+ */
+export const MOVED_TO_SAFETY: ReadonlySet<string> = new Set(["shareTrip"]);
+
 export function setSwitch(book: ConfigBook, id: string, on: boolean, authorId: string): ConfigBook {
+  if (MOVED_TO_SAFETY.has(id)) return book;
   const switches = book.draft.switches.map((item) => (item.id === id ? { ...item, on } : item));
   const features = { ...book.draft.features, luxury: false as const };
   if (id === "wallet" || id === "reservations") features[id] = on;
