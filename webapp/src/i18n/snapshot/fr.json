@@ -9122,4 +9122,8 @@
 ["Resume a bonus campaign","Reprendre une campagne de bonus"],
 ["End a bonus campaign","Terminer une campagne de bonus"],
 ["Open a bonus campaign","Ouvrir une campagne de bonus"],
-["Waiting since {0}","En attente depuis {0}"]]
+["Waiting since {0}","En attente depuis {0}"],
+["Pickup entrance chips","Points d’accès de prise en charge"],
+["When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.","Quand le client choisit le lieu de prise en charge, l’appli client propose Entrée principale, Entrée latérale et Parking autour de l’épingle, marqués comme approximatifs. Déjà utilisé et Près du domicile restent toujours. L’appli client lit ce réglage."],
+["Pickup entrance chips (approximate)","Points d’accès de prise en charge (approximatifs)"],
+["Off: no entrance chips; the pickup is the address only. Usual value: on.","Désactivé : aucun point d’accès ; la prise en charge est seulement l’adresse. Valeur habituelle : activé."]]

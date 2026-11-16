@@ -186,6 +186,11 @@ function samePointWarnMeters(zone: ZoneDispatch): number {
   return validSamePoint(zone.samePoint?.warnMeters) ?? CONFIG_DEFAULTS.samePointWarnMeters;
 }
 
+/** v0.18.115 BQ-V21 (owner: admin on/off per zone, default on): the rider's approximate pickup entrance chips. */
+function pickupSpots(zone: ZoneDispatch): { on: boolean } {
+  return { on: typeof zone.pickupSpots?.on === "boolean" ? zone.pickupSpots.on : CONFIG_DEFAULTS.pickupSpotsOn };
+}
+
 /** Q39/Q40: max stops and the pickup move limit after accept, from the zone's live Dispatch rules. */
 function booking(base: Common) {
   return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: base.zone.pickupMove.maxMeters, samePointWarnMeters: samePointWarnMeters(base.zone) };
@@ -347,7 +352,7 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     promoCap: base.settings.promoCap === null ? null : wire(base.settings.promoCap, base.currency),
     pickupFee: riderPickupFee(base),
     // v0.18.17: the booking window and free-change time per zone (the server serves the same from the driver document).
-    booking: { ...booking(base), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays, minAheadMin: base.zone.reservation.booking.minAheadMin, maxAheadDays: base.zone.reservation.booking.maxAheadDays, freeChangeBeforeMin: base.zone.reservation.booking.freeChangeBeforeMin },
+    booking: { ...booking(base), pickupSpots: pickupSpots(base.zone), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays, minAheadMin: base.zone.reservation.booking.minAheadMin, maxAheadDays: base.zone.reservation.booking.maxAheadDays, freeChangeBeforeMin: base.zone.reservation.booking.freeChangeBeforeMin },
     cancelFees: cancelFees(base),
     // SV: no closerPct any more (the came-closer check is gone, contract pickupWaiting.headingCheck.replaces).
     cancelCheck: { on: base.zone.riderCancel.on },
