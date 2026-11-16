@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { isLiveData } from "../live/realData";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { PublishTargetsLine, StandardBar, UsesStandardChip } from "../live/StandardBar";
+import { StandardBar, UsesStandardChip } from "../live/StandardBar";
 import { liveSurgeRows, smartChangesLastHour } from "../live/liveSurge";
 import { useLiveSurge } from "../live/useLiveSurge";
 import { useNavigate, useSearchParams } from "react-router";
@@ -438,7 +438,7 @@ export function PricingPage() {
             <small>{fieldErrors.first ?? (dirtyProblems.length ? dirtyProblems[0].message : tr("{0} change{1} · riders see them after you publish", [publish.changes.length, publish.changes.length === 1 ? "" : "s"]))}</small>
           </div>
           <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice(tr("Changes discarded.")); }}>{tr("Discard")}</button>
-          <CommandButton command="admin.pricing.publish" summary={liveSession ? <PublishTargetsLine zoneIds={dirty.map((draft) => draft.zoneId)} doc="pricing" /> : undefined} className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={slice.loading || !canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(tr("Published as pricing revision {0}.", [publish.store.draftRev])); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
+          <CommandButton command="admin.pricing.publish" where={liveSession ? { zoneIds: dirty.map((draft) => draft.zoneId), doc: "pricing", keepFollowers: false } : undefined} className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={slice.loading || !canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(tr("Published as pricing revision {0}.", [publish.store.draftRev])); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
         </div>
       ) : null}
 

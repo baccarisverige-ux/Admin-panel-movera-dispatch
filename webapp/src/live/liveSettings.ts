@@ -49,7 +49,7 @@ import { tr, trx } from "../i18n/core.ts";
 import { COUNTRY_LABEL } from "../i18n/countries.ts";
 import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePaymentMethod } from "../config/zoneDefaults.ts";
 import { ApiError } from "../api/httpClient.ts";
-import { TIPS_LAST_SAVE_KEY, lastTipsSave, newSaveId, saveNote, savedLine, undoTipsSave, type UndoOutcome } from "./tipsUndo.ts";
+import { TIPS_LAST_SAVE_KEY, lastTipsSave, newSaveId, saveNote, savedLine, undoBlocked, undoTipsSave, type UndoOutcome } from "./tipsUndo.ts";
 import { readDispatchTools, sendToolCalls, toolCalls, toolRefusal, toolsOf, type DispatchTools } from "./dispatchTools.ts";
 
 /** Every zone of the admin's markets and each country's Standard. */
@@ -498,7 +498,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
    * save): its id goes into the publish note, and with `viaStandard` a zone whose document uses the Standard is left
    * on it (the Standard is saved too, so the zone gets the change by using it).
    */
-  async function publishAppParts(id: string, owned: { rider: string[]; driver: string[] }, state: ReturnType<typeof appConfigState>, source: string, before: ReturnType<typeof appConfigState>, save?: { saveId: string; viaStandard: boolean }): Promise<void> {
+  async function publishAppParts(id: string, owned: { rider: string[]; driver: string[] }, state: ReturnType<typeof appConfigState>, source: string, before: ReturnType<typeof appConfigState>, save?: { saveId?: string; viaStandard: boolean }): Promise<void> {
     for (const [doc, keys, build] of [["rider_app_config", owned.rider, riderAppConfig], ["driver_app_config", owned.driver, driverAppConfig]] as const) {
       if (!keys.length) continue;
       const current = await draft(doc, id, true);
@@ -508,7 +508,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       // the server's document; fields the page does not show (booking horizon, rest minutes…) stay the server's.
       const document = current ? patchChanged(current.document, build(source, before) as unknown as Doc, built, keys) : { ...built, ...("zoneId" in built && !countryOfStandard(id) ? { zoneId: id } : {}) };
       const live = current ? await liveDocumentOf(http, doc, id) : null;
-      await savePublishLive(http, doc, id, current, document, live, save ? saveNote(save.saveId, current?.usesStandard === true) : undefined);
+      await savePublishLive(http, doc, id, current, document, live, save?.saveId ? saveNote(save.saveId, current?.usesStandard === true) : undefined);
       drafts.delete(key(doc, id));
       unpublishedMarks.set(doc, id, countryOfStandard(id) ? undefined : []);
       if (current?.usesStandard) standardMarks.set(doc, id, false);
@@ -646,8 +646,17 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const before = stateWith({ dispatch: prior });
     slices.set(DISPATCH_KEY, book);
     const state = stateWith({ dispatch: book });
-    for (const id of zoneIds) {
+    // Owner 2026-11-16 "Stay on Standard (Rec.)": the Standard first; a zone that uses the Standard and is published
+    // with the SAME rules as its Standard is not given a copy (it gets them by using the Standard, and stays on it).
+    // A zone whose rules differ from the Standard's still gets its own: that is how a zone is made different.
+    const viaStandardNames: string[] = [];
+    for (const id of [...zoneIds.filter((item) => countryOfStandard(item)), ...zoneIds.filter((item) => !countryOfStandard(item))]) {
       const current = await draft("dispatch", id, true);
+      const standardId = countryOfStandard(id) ? null : standardKey(marketOfZone(id)?.id ?? "");
+      if (standardId && zoneIds.includes(standardId) && current?.usesStandard === true && JSON.stringify({ ...liveRules(book, id), zoneId: "" }) === JSON.stringify({ ...liveRules(book, standardId), zoneId: "" })) {
+        viaStandardNames.push(zoneById(id)?.name ?? id);
+        continue;
+      }
       const built = dispatchDocumentOf(liveRules(book, id), id, current?.document ?? null);
       const document = current ? patchChanged(current.document, dispatchDocumentOf(liveRules(normalizeDispatchBook(prior), id), id, current.document), built) : built;
       // Checker #204: compared with what is LIVE, so a saved draft that already holds the change is still published.
@@ -657,6 +666,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, OWNED.dispatch, state, id, before);
     }
     baseline.dispatch = book;
+    if (viaStandardNames.length) return tr("Published. These zones use the Standard and got it through the Standard, with no copy of their own: {0}.", [viaStandardNames.join(", ")]);
     return "Published.";
   }
 
@@ -668,8 +678,16 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     if (!targets.length) throw new Error("Choose the zones at the top first.");
     const state = stateWith({ config: value });
     // Per target: what this session last sent to it, else the book the page started from (Settings has no server read).
-    for (const id of targets) {
-      await publishAppParts(id, OWNED.settings, state, id, stateWith({ config: baseline.config.has(id) ? baseline.config.get(id) : baseline.configStart }));
+    // Owner 2026-11-16 "Stay on Standard (Rec.)": when a country's Standard is chosen too, a chosen zone whose app
+    // document uses the Standard is not given a copy (per document: rider and driver apart); the Standard goes first.
+    const viaStandardNames: string[] = [];
+    for (const id of [...targets.filter((item) => countryOfStandard(item)), ...targets.filter((item) => !countryOfStandard(item))]) {
+      const viaStandard = !countryOfStandard(id) && targets.includes(standardKey(marketOfZone(id)?.id ?? ""));
+      if (viaStandard) {
+        const apps = await Promise.all((["rider_app_config", "driver_app_config"] as const).map((doc) => draft(doc, id, true).catch(() => null)));
+        if (apps.some((app) => app?.usesStandard === true)) viaStandardNames.push(zoneById(id)?.name ?? id);
+      }
+      await publishAppParts(id, OWNED.settings, state, id, stateWith({ config: baseline.config.has(id) ? baseline.config.get(id) : baseline.configStart }), { viaStandard });
       baseline.config.set(id, structuredClone(value));
     }
     // G3: say which zones of a chosen Standard keep their own app settings (their drivers do not get this change).
@@ -680,7 +698,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         if (app && app.usesStandard !== true) own.push(zoneById(id)?.name ?? id);
       }
     }
-    if (own.length) return tr("Published. These zones have their own driver app settings and did not get it: {0}. Choose them at the top and publish again, or set them back to the Standard.", [own.join(", ")]);
+    const through = viaStandardNames.length ? ` ${tr("These zones use the Standard and got it through the Standard, with no copy of their own: {0}.", [viaStandardNames.join(", ")])}` : "";
+    if (own.length) return `${tr("Published. These zones have their own driver app settings and did not get it: {0}. Choose them at the top and publish again, or set them back to the Standard.", [own.join(", ")])}${through}`;
+    if (through) return `${tr("Published.")}${through}`;
     return "Published.";
   }
 
@@ -735,6 +755,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   /** Undo last Tips & limits save: every document of that save goes back; `saveId` is the save the admin was shown. */
   async function undoTips(saveId: string, country: string): Promise<string> {
     const save = await tipsSaveOf(country);
+    // Supervisor MF-A1: a document that could not be read may belong to the save; nothing is undone until it can be read.
+    const blocked = undoBlocked(save);
+    if (blocked) throw new Error(blocked);
     if (!save || !save.documents.some((item) => item.back.to !== "nothing")) throw new Error("Nothing to undo: no Tips & limits save that can go back was found.");
     if (save.saveId !== saveId) throw new Error("Another Tips & limits save was made meanwhile. Open Tips & limits again to see what Undo would do now.");
     let outcome: UndoOutcome;

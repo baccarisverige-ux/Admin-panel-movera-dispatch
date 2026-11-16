@@ -16,7 +16,7 @@ import { CATEGORIES } from "../domain/contract";
 import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
 import { marketOfZone, standardZone, standardZoneId, zoneById, type MarketId } from "../markets/markets";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { PublishTargetsLine, StandardBar } from "../live/StandardBar";
+import { StandardBar } from "../live/StandardBar";
 import { countryAllowed, zoneAllowed } from "../markets/scope";
 import { rememberCountry } from "../markets/useMarketScope";
 import { useMarketScope } from "../markets/useMarketScope";
@@ -415,7 +415,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
                 <CommandButton command="admin.dispatch.saveDraft" className="dash-btn small ghost" targetId="dispatch draft" confirmTarget={false} scope={scopeLabel([...changed])} before={`draft ${book.draftRev}`} after={`draft ${drafted.draftRev}`} expectedSliceRev={baseRev} sliceKey={DISPATCH_KEY} value={drafted} disabled={slice.loading || !canEditRole || conflicts.length > 0} largeChanges={largeDraftChanges} onDone={() => { forgetPublished(); setNotice(tr("Draft saved. Nothing is live yet. Test it in Test a ride, then publish.")); }}>{trn("{0} Save draft", <Save size={13} aria-hidden="true" />)}</CommandButton>
               ) : null}
               {view !== "test" ? <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => go({ view: "test" })}>{trn("{0} Test it", <FlaskConical size={13} aria-hidden="true" />)}</button> : null}
-              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} summary={liveSession ? <PublishTargetsLine zoneIds={[...changed]} doc="dispatch" /> : undefined} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={baseRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={slice.loading || !canEditRole || Boolean(published.error) || conflicts.length > 0} title={published.error} largeChanges={largeChanges} onDone={() => {
+              <CommandButton command="admin.dispatch.publish" className="dash-btn small publish" targetId="dispatch rules" confirmTarget={false} where={liveSession ? { zoneIds: [...changed], doc: "dispatch", keepFollowers: (id) => JSON.stringify({ ...rulesOf(id), zoneId: "" }) === JSON.stringify({ ...rulesOf(standardZoneId(country)), zoneId: "" }) } : undefined} scope={scopeLabel([...changed])} before={`rev ${book.draftRev}`} after={`rev ${published.book.draftRev}`} expectedSliceRev={baseRev} sliceKey={DISPATCH_KEY} value={published.book} disabled={slice.loading || !canEditRole || Boolean(published.error) || conflicts.length > 0} title={published.error} largeChanges={largeChanges} onDone={() => {
                 const liveNames = published.live.map((id) => zoneById(id)?.name ?? id);
                 const waitNames = published.waiting.map((id) => zoneById(id)?.name ?? id);
                 forgetPublished();

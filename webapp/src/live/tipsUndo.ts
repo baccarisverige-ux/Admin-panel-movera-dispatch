@@ -25,7 +25,9 @@ export const TIPS_LAST_SAVE_KEY = "tipsLimitsLastSave";
 const NOTE = /^Tips & limits save (\S+)( \(used the Standard before\))?$/;
 /** The server's own re-stamp of a Standard when a zone goes back to it: the same document as the next version. */
 const RESTAMP = /^re-stamped: /;
-const HISTORY_LIMIT = 10;
+const FIRST_PAGE = 3;
+const NEXT_PAGE = 20;
+const MAX_PAGES = 30;
 
 export const newSaveId = (at: string): string => `${at}/${Math.random().toString(36).slice(2, 8).padEnd(6, "0")}`;
 
@@ -49,26 +51,53 @@ export type Back =
   | { to: "nothing"; why: "changed" | "first" };
 
 export type SavedDocument = { doc: TipsDoc; id: string; version: number; back: Back };
-export type TipsSave = { saveId: string; at: string; by: string; documents: SavedDocument[] };
+/** `unreadable`: documents of the country whose History the server did not give; they block the Undo. */
+export type TipsSave = { saveId: string; at: string; by: string; documents: SavedDocument[]; unreadable: Array<{ doc: TipsDoc; id: string }> };
 
-const historyOf = async (http: ConfigHttp, doc: TipsDoc, id: string): Promise<HistoryEntry[]> => {
+type Read = { doc: TipsDoc; id: string; items: HistoryEntry[]; unreadable: boolean };
+
+/**
+ * A scope's History, newest first, read page by page with the server's cursor until the newest save entry and the
+ * version below it are in hand, or the end (supervisor MF-A1: one page of 10 lost a save under 11 re-stamps). The
+ * first page is small (SF-A3: most scopes have no save near the top). A scope the server does not know (404) has no
+ * history; any other failure makes the scope unreadable, and that is said: it is never read as "no save here".
+ */
+async function historyOf(http: ConfigHttp, doc: TipsDoc, id: string): Promise<Read> {
   const scope = scopeOf(id);
   const query = "country" in scope ? `country=${encodeURIComponent(scope.country)}` : `zoneId=${encodeURIComponent(scope.zoneId)}`;
-  // A scope the server cannot answer for (no such zone, or a server that does not take a country yet) has no save here.
-  const page = await http.json<{ items?: HistoryEntry[] }>(`/admin/config/${doc}/history?${query}&limit=${HISTORY_LIMIT}`).catch(() => null);
-  return [...(page?.items ?? [])].sort((a, b) => b.version - a.version);
-};
+  const items: HistoryEntry[] = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    let answer: { items?: HistoryEntry[]; nextCursor?: string | null };
+    try {
+      answer = await http.json<{ items?: HistoryEntry[]; nextCursor?: string | null }>(`/admin/config/${doc}/history?${query}&limit=${page === 0 ? FIRST_PAGE : NEXT_PAGE}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`);
+    } catch (error) {
+      if ((error as { status?: number } | null)?.status === 404) return { doc, id, items, unreadable: false };
+      return { doc, id, items, unreadable: true };
+    }
+    items.push(...[...(answer.items ?? [])].sort((a, b) => b.version - a.version));
+    const found = items.findIndex((entry) => parseSaveNote(entry.note));
+    cursor = answer.nextCursor ?? null;
+    // Enough: the newest save entry of this scope and the version below it; or everything.
+    if (!cursor || (found >= 0 && found < items.length - 1)) return { doc, id, items, unreadable: false };
+  }
+  // Longer than this reader goes: not claimed either way.
+  return { doc, id, items, unreadable: true };
+}
 
 /** The Standard first, then the zones; the rider documents before the Tips & limits ones. */
-const inUndoOrder = (documents: SavedDocument[]): SavedDocument[] =>
+const inUndoOrder = <T extends { doc: TipsDoc; id: string }>(documents: T[]): T[] =>
   [...documents].sort((a, b) => TIPS_DOCS.indexOf(a.doc) - TIPS_DOCS.indexOf(b.doc) || Number(Boolean(countryOfStandard(b.id))) - Number(Boolean(countryOfStandard(a.id))) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 /**
  * The newest Tips & limits save among `scopes` (a country's Standard and zones), with what Undo would do to each
- * document it published; null when no publish there carries a save id.
+ * document it published, and the documents that could not be read (they block the Undo: one of them may belong to the
+ * save). null when every scope was read and no publish carries a save id. With unreadable scopes and no save found,
+ * the answer has no documents and an empty saveId.
  */
 export async function lastTipsSave(http: ConfigHttp, scopes: readonly string[]): Promise<TipsSave | null> {
-  const read = await Promise.all(scopes.flatMap((id) => TIPS_DOCS.map(async (doc) => ({ doc, id, items: await historyOf(http, doc, id) }))));
+  const read = await Promise.all(scopes.flatMap((id) => TIPS_DOCS.map((doc) => historyOf(http, doc, id))));
+  const unreadable = inUndoOrder(read.filter((item) => item.unreadable).map(({ doc, id }) => ({ doc, id })));
   let newest: { saveId: string; at: string; by: string } | null = null;
   for (const { items } of read) {
     for (const entry of items) {
@@ -76,11 +105,11 @@ export async function lastTipsSave(http: ConfigHttp, scopes: readonly string[]):
       if (tag && (!newest || Date.parse(entry.publishedAt) > Date.parse(newest.at))) newest = { saveId: tag.saveId, at: entry.publishedAt, by: entry.publishedBy ?? "" };
     }
   }
-  if (!newest) return null;
+  if (!newest) return unreadable.length ? { saveId: "", at: "", by: "", documents: [], unreadable } : null;
   const { saveId, by } = newest;
   const documents: SavedDocument[] = [];
   let at = newest.at;
-  for (const { doc, id, items } of read) {
+  for (const { doc, id, items, unreadable: partly } of read) {
     const index = items.findIndex((entry) => parseSaveNote(entry.note)?.saveId === saveId);
     if (index < 0) continue;
     const entry = items[index]!;
@@ -92,8 +121,8 @@ export async function lastTipsSave(http: ConfigHttp, scopes: readonly string[]):
     if (above.some((item) => !RESTAMP.test(item.note ?? ""))) back = { to: "nothing", why: "changed" };
     else if (tag.wasOnStandard) back = { to: "standard" };
     else if (previous) back = { to: "version", version: previous.version, expectedVersion: items[0]!.version };
-    // The page was full: an earlier version may exist beyond it, so nothing is claimed.
-    else back = { to: "nothing", why: items.length >= HISTORY_LIMIT ? "changed" : "first" };
+    // A history that stopped in the middle may hold an earlier version: nothing is claimed (it is in `unreadable`).
+    else back = { to: "nothing", why: partly ? "changed" : "first" };
     if (back.to !== "nothing") {
       // History keeps a zone's versions after it went back to the Standard: the draft says what is live now.
       const now = await readDraft(http, doc, id).catch(() => null);
@@ -102,7 +131,13 @@ export async function lastTipsSave(http: ConfigHttp, scopes: readonly string[]):
     }
     documents.push({ doc, id, version: entry.version, back });
   }
-  return { saveId, at, by, documents: inUndoOrder(documents) };
+  return { saveId, at, by, documents: inUndoOrder(documents), unreadable };
+}
+
+/** Why Undo may not run for this save (said in the dialog, Confirm stays off), or null. */
+export function undoBlocked(save: TipsSave | null): string | null {
+  if (!save || !save.unreadable.length) return null;
+  return tr("Undo is blocked: these documents could not be read, and one of them may belong to this save. {0}", [save.unreadable.map(unreadLine).join(" ")]);
 }
 
 export type UndoOutcome = { undone: SavedDocument[]; skipped: SavedDocument[] };
@@ -112,6 +147,8 @@ export type UndoOutcome = { undone: SavedDocument[]; skipped: SavedDocument[] };
  * the Standard before the zones). A document the server says changed meanwhile (409) is skipped, the rest go on.
  */
 export async function undoTipsSave(http: ConfigHttp, save: TipsSave): Promise<UndoOutcome> {
+  const blocked = undoBlocked(save);
+  if (blocked) throw new Error(blocked);
   const undone: SavedDocument[] = [];
   const skipped: SavedDocument[] = [];
   for (const item of save.documents) {
@@ -153,4 +190,9 @@ export function savedLine(item: SavedDocument): string {
   if (item.back.to === "standard") return tr("{0} · {1}: its own version {2} → back to the Standard", [...head, item.version]);
   if (item.back.why === "first") return tr("{0} · {1}: version {2} is its first version. Not touched.", [...head, item.version]);
   return tr("{0} · {1}: version {2} was changed after this save. Not touched.", [...head, item.version]);
+}
+
+/** One line of the Undo dialog for a document whose History could not be read. */
+export function unreadLine(item: { doc: TipsDoc; id: string }): string {
+  return tr("{0} · {1}: could not be read.", [scopeName(item.id), docName(item.doc)]);
 }

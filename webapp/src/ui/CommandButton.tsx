@@ -10,6 +10,9 @@ import { commandById } from "../commands/registry";
 import { tr, trn, trSentences, trx } from "../i18n";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { liveHandles } from "../live/liveCommands";
+import { WhereItLands, WhereSentences, scopeNames, type WhereProps } from "../live/WhereItLands";
+import { ConfirmInfo, type ConfirmInfoProps } from "./ConfirmInfo";
+import { undoFor, whoFor } from "./confirmInfo";
 
 type CommandButtonProps = {
   command: string;
@@ -56,6 +59,19 @@ type CommandButtonProps = {
   optionalNote?: boolean;
   /** What the dialog says it will do, instead of "This acts on <target>" (for example "Send an exclusive offer to Erik"). */
   summary?: ReactNode;
+  /** Plain lines the dialog lists in full (every one, never "and N more"), e.g. each document an Undo puts back. */
+  details?: readonly string[];
+  /** The dialog asks for the "Yes, I'm sure" tick without the "more than 50 %" wording of `largeChanges`. */
+  sure?: boolean;
+  /** Said in the dialog as an alert; Confirm stays off while it is set (e.g. a document that could not be read). */
+  blockedReason?: string | null;
+  /**
+   * A setting that is saved per zone / Standard (live panel): the dialog shows the zones again, the admin ticks them
+   * before Confirm, and it says where the setting lands (owner 2026-11-16). With `pick` the ticked ones are the scope.
+   */
+  where?: WhereProps;
+  /** Overrides of the "?" explanation (what, where, from → to, who, how to undo); the rest comes from the command. */
+  info?: Partial<ConfirmInfoProps>;
   children: ReactNode;
   "aria-label"?: string;
 };
@@ -92,6 +108,11 @@ export function CommandButton({
   reasonLabel = tr("Reason"),
   optionalNote = false,
   summary,
+  details,
+  sure: askTick = false,
+  blockedReason,
+  where,
+  info,
   children,
   "aria-label": ariaLabel,
 }: CommandButtonProps) {
@@ -111,13 +132,17 @@ export function CommandButton({
   const [sure, setSure] = useState(false);
   const [note, setNote] = useState("");
   const askSure = Boolean(largeChanges && largeChanges.length);
+  const [ticked, setTicked] = useState<string[]>([]);
+  // Every place is ticked again; with `pick` at least one, and only those are sent.
+  const placed = !where || (where.pick ? ticked.length > 0 : ticked.length === where.zoneIds.length);
+  const sentScope = where?.pick && ticked.length ? ticked.join(",") : scope;
   const mustType = confirmTarget ? (targetId ?? "") : "";
   const dialogRoot=useDialogFocus(open,()=>setOpen(false));
   // The audit keeps the reason in English (audit data is never translated); the list shows the admin's language.
   const codeChoice = reasonChoices?.find((item) => item.value === reason);
   const codeLabel = codeChoice ? codeChoice.audit ?? codeChoice.label : "";
   const chosen = coded ? (codeLabel ? [codeLabel, note.trim()].filter(Boolean).join(" · ") : "") : [auditReason(reason, otherText), optionalNote ? note.trim() : ""].filter(Boolean).join(" · ");
-  const confirmed = (mustType.length === 0 || typed === mustType) && chosen.length > 0 && (!askSure || sure);
+  const confirmed = (mustType.length === 0 || typed === mustType) && chosen.length > 0 && (!(askSure || askTick) || sure) && placed;
   // While any command runs, every command button waits (C-16, Q31): disabled, with a spinner and "Please wait".
   const waiting = commands.busy || commands.phase === "submitting";
   const blocked = disabled || waiting || !spec || denied;
@@ -132,6 +157,8 @@ export function CommandButton({
     setOtherText("");
     setTyped("");
     setSure(false);
+    // One place: nothing to choose between, it is named and already ticked. More: each is ticked again by hand.
+    setTicked(where && where.zoneIds.length === 1 ? [...where.zoneIds] : []);
     setOpen(true);
   }
 
@@ -150,7 +177,7 @@ export function CommandButton({
       amountOre,
       collection,
       patch: patch ? { ...patch, ...(storeReason ? { notes: why } : {}), ...(reasonField && code ? { [reasonField]: code } : {}) } : undefined,
-      scope,
+      scope: sentScope,
       expectedRev,
       expectedSliceRev,
       idempotencyKey,
@@ -203,7 +230,7 @@ export function CommandButton({
             className="modal-card"
             onSubmit={(event) => {
               event.preventDefault();
-              if (!confirmed) return;
+              if (!confirmed || blockedReason) return;
               setOpen(false);
               if (validationError) {
                 onValidationError?.(validationError);
@@ -213,7 +240,17 @@ export function CommandButton({
             }}
           >
             <h3>{spec ? trx(spec.label) : null}</h3>
-            <p>{summary ?? <>{trn("This acts on {0}.", targetId ?? (spec ? trx(spec.label) : ""))}</>}</p>
+            {where && !summary ? null : <p>{summary ?? <>{trn("This acts on {0}.", targetId ?? (spec ? trx(spec.label) : ""))}</>}</p>}
+            {where ? <WhereItLands {...where} ticked={ticked} onTicked={setTicked} /> : null}
+            <ConfirmInfo
+              what={info?.what ?? (where ? (spec ? trx(spec.label) : "") : summary ?? (spec ? trx(spec.label) : ""))}
+              where={info?.where ?? (where ? <WhereSentences zoneIds={where.pick ? ticked : where.zoneIds} doc={where.doc} keepFollowers={where.keepFollowers} /> : scopeNames(scope) || (targetId && !/^(pricing-rev-|[a-z]+ (rules|draft)$)/.test(targetId) ? targetId : undefined))}
+              change={info?.change ?? (before && after && before !== after ? `${before} → ${after}` : undefined)}
+              who={info?.who ?? tr(whoFor(command))}
+              undo={info?.undo ?? tr(undoFor(command))}
+            />
+            {details?.length ? <ul className="confirm-details" data-testid="command-details">{details.map((line) => <li key={line}>{line}</li>)}</ul> : null}
+            {blockedReason ? <p className="state-line" role="alert" data-testid="command-blocked">{blockedReason}</p> : null}
             {askSure ? (
               <div className="state-line" role="alert" data-testid="large-change-warning">{trn("{0} {1} by more than 50% from the published value:{2}", <strong>{tr("Are you sure?")}</strong>, largeChanges!.length === 1 ? tr("This value changes") : tr("These values change"), <ul>
                   {largeChanges!.slice(0, 8).map((line) => <li key={line}>{line}</li>)}
@@ -240,10 +277,10 @@ export function CommandButton({
             {mustType ? (
               <label>{trn("Type {0} to confirm{1}", mustType, <input value={typed} onChange={(event) => setTyped(event.target.value)} />)}</label>
             ) : null}
-            {askSure ? (
+            {askSure || askTick ? (
               <label className="check-row">{trn("{0} Yes, I'm sure", <input type="checkbox" checked={sure} onChange={(event) => setSure(event.target.checked)} />)}</label>
             ) : null}
-            <button data-command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!confirmed}>{tr("Confirm")}</button>
+            <button data-command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!confirmed || Boolean(blockedReason)}>{tr("Confirm")}</button>
             <button data-command="admin.confirm.cancel" className="secondary-btn" type="button" onClick={() => setOpen(false)}>{tr("Cancel")}</button>
           </form>
         </div>

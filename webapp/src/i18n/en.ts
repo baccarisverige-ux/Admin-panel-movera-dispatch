@@ -60,6 +60,7 @@ import { enC28OfflineReasons } from "./en/c28-offline-reasons.ts";
 import { enC25BonusCampaigns } from "./en/c25-bonus-campaigns.ts";
 import { enC29SupportOrder } from "./en/c29-support-order.ts";
 import { enC33TipsLimitsUndo } from "./en/c33-tips-limits-undo.ts";
+import { enC35WhereItLands } from "./en/c35-where-it-lands.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -126,6 +127,7 @@ export const en = {
   ...enC25BonusCampaigns,
   ...enC29SupportOrder,
   ...enC33TipsLimitsUndo,
+  ...enC35WhereItLands,
 } as const;
 
 export type MessageKey = keyof typeof en;

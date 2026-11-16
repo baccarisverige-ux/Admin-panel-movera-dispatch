@@ -1,3 +1,4 @@
+import { ConfirmInfo } from "./ConfirmInfo";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { can, type Role } from "../auth/permissions";
 import { CommandButton } from "./CommandButton";
@@ -155,6 +156,7 @@ function ConfirmDialogCard({ record, reasons, typed, onConfirm, onClose }: Confi
       <form className="modal-card" role="dialog" aria-modal="true" aria-label={tr("Confirm")} onSubmit={submit}>
         <h3>{tr("Confirm")}</h3>
         <p>{trn("This acts on {0}.", record)}</p>
+        <ConfirmInfo what={trn("This acts on {0}.", record)} where={record} />
         <label>{trn("Reason{0}", <select value={reason} onChange={(event) => setReason(event.target.value)}>
             {reasons.map((item) => (
               <option key={item}>{item}</option>

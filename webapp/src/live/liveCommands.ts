@@ -40,6 +40,7 @@ export const LIVE_COMMANDS: ReadonlySet<string> = new Set([
  * and that every such id in the code is listed.
  */
 export const SCREEN_ONLY_COMMANDS: ReadonlySet<string> = new Set([
+  "admin.confirm.info", "admin.confirm.tickAll",
   "admin.alarm.sound",
   "admin.alerts.export", "admin.alerts.view",
   "admin.auditLog.view",

@@ -1,3 +1,4 @@
+import { ConfirmInfo } from "../ui/ConfirmInfo";
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Loader2, Phone } from "lucide-react";
@@ -57,6 +58,12 @@ export function RevealSensitive({ kind, id, onRevealed, className = "dash-btn sm
           <form className="modal-card" onSubmit={(event) => { event.preventDefault(); void send(); }}>
             <h3>{tr("Reveal the full value")}</h3>
             <p>{tr("The server shows the full phone, e-mail and date of birth once, for this page only, and saves who asked and why.")}</p>
+            <ConfirmInfo
+              what={tr("The server shows the full phone, e-mail and date of birth once, for this page only, and saves who asked and why.")}
+              where={tr("This page only. Nothing is changed on the account.")}
+              who={tr("The person whose data it is. Your name and your reason are saved in the Audit log.")}
+              undo={tr("Nothing is changed, so there is nothing to undo. The reveal stays in the Audit log.")}
+            />
             <label>
               {tr("Why do you need the full value?")}
               <input aria-label={tr("Why do you need the full value?")} value={reason} maxLength={REVEAL_REASON_MAX} required minLength={3} autoFocus placeholder={tr("At least 3 characters")} onChange={(event) => setReason(event.target.value)} />

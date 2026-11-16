@@ -17,7 +17,7 @@ type Seed = { liveVersion: number; document: Doc; draftVersion?: number };
 const refuse = (status: number, reason: string) => Object.assign(new Error(reason), { status, reason });
 const standardOf = (id: string) => (/^standard-/.test(id) ? null : `standard-${marketOfZone(id)?.id ?? "SE"}`);
 
-export function fakeConfigServer(seed: Record<string, Seed>, options: { countryHistory?: boolean; by?: string } = {}) {
+export function fakeConfigServer(seed: Record<string, Seed>, options: { countryHistory?: boolean; by?: string; failHistory?: (path: string) => boolean } = {}) {
   const calls: FakeCall[] = [];
   const rows = new Map<string, Row>();
   let clock = Date.parse("2026-11-16T06:00:00Z");
@@ -49,12 +49,19 @@ export function fakeConfigServer(seed: Record<string, Seed>, options: { countryH
     json: async <T,>(path: string) => {
       calls.push({ method: "GET", path });
       const url = new URL(`http://x${path}`);
+      // Only the config documents live here; every other list of the server (dispatch tools, categories) is not found.
+      if (!url.pathname.startsWith("/admin/config/")) throw refuse(404, "not_found");
       const [, , , doc, tail] = url.pathname.split("/");
       const country = url.searchParams.get("country");
       if (tail === "history") {
         if (country && options.countryHistory === false) throw refuse(400, "invalid_body");
+        if (options.failHistory?.(path)) throw refuse(503, "unavailable");
         const row = rows.get(scope(doc!, { zoneId: url.searchParams.get("zoneId"), country }));
-        return { items: (row?.history ?? []).slice(0, Number(url.searchParams.get("limit") ?? 50)), nextCursor: null } as T;
+        // Newest first; `cursor` = the last version of the page before (movera-server configHistory).
+        const cursor = url.searchParams.get("cursor");
+        const limit = Number(url.searchParams.get("limit") ?? 50);
+        const rest = (row?.history ?? []).filter((entry) => !cursor || entry.version < Number(cursor));
+        return { items: rest.slice(0, limit), nextCursor: rest.length > limit ? String(rest[limit - 1]!.version) : null } as T;
       }
       if (tail) throw refuse(404, "not_found");
       const key = scope(doc!, { zoneId: url.searchParams.get("zoneId"), country });

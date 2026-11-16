@@ -1,3 +1,4 @@
+import { ConfirmInfo } from "../ui/ConfirmInfo";
 import { useMemo, useState } from "react";
 import { BellRing, CalendarClock, CalendarX2, CarFront, FileCheck2, ListOrdered, MailCheck, Pencil, Plus, Trash2 } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
@@ -209,6 +210,12 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
         <Modal open title={tr("Turn on the e-mail check?")} onClose={() => setAskEmailCheck(false)}>
           <div className="live-dialog" data-testid="email-check-confirm">
             <p>{tr("Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.")}</p>
+            <ConfirmInfo
+              what={tr("Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.")}
+              where={tr("In the draft of this country's onboarding settings. Nothing is live until you publish.")}
+              who={tr("New drivers of this country, after you publish.")}
+              undo={tr("Switch it off again in the same list, before or after you publish.")}
+            />
             <div className="actions">
               <button data-command="admin.onboarding.editTypes" type="button" className="primary-btn" onClick={() => { patch({ emailVerifiedForApproval: true }); setAskEmailCheck(false); }}>{tr("Turn on")}</button>
               <button data-command="admin.onboarding.editTypes" type="button" className="secondary-btn" onClick={() => setAskEmailCheck(false)}>{tr("Cancel")}</button>

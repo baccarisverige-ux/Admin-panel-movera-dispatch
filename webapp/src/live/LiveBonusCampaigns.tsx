@@ -1,3 +1,4 @@
+import { ConfirmInfo } from "../ui/ConfirmInfo";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Flame, Plus, Trophy, Users, Wallet } from "lucide-react";
@@ -302,6 +303,12 @@ function CampaignDetail({ bonusId, canWrite, zoneLabel, onBack }: { bonusId: str
       {confirmEnd ? (
         <div className="cat-actions" role="alertdialog" aria-label={tr("End campaign")}>
           <span>{tr("End it now for every driver? Nothing counts any more; bonuses already earned stay paid. It cannot start again.")}</span>
+          <ConfirmInfo
+            what={tr("End it now for every driver? Nothing counts any more; bonuses already earned stay paid. It cannot start again.")}
+            where={zoneLabel(campaign.zoneId)}
+            who={tr("Every driver in this campaign. Bonuses already earned stay paid.")}
+            undo={tr("It cannot be undone: an ended campaign cannot start again. Create a new campaign instead.")}
+          />
           <button data-command="admin.server.dialogConfirm" type="button" className="dash-btn small" disabled={busy} onClick={() => void command(campaign, "end", tr("Campaign ended."))}>{tr("End campaign")}</button>
           <button data-command="admin.server.dialogCancel" type="button" className="dash-btn small ghost" onClick={() => setConfirmEnd(false)}>{tr("Cancel")}</button>
         </div>

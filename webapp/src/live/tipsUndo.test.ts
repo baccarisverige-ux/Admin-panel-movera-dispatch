@@ -9,7 +9,7 @@ import { countryRulesOf, type Doc } from "./configDocs.ts";
 import { fakeConfigServer } from "./fakeConfigServer.ts";
 import { liveHandles } from "./liveCommands.ts";
 import { createLiveSettings } from "./liveSettings.ts";
-import { TIPS_LAST_SAVE_KEY, lastTipsSave, parseSaveNote, saveNote, savedLine, type TipsSave } from "./tipsUndo.ts";
+import { TIPS_LAST_SAVE_KEY, lastTipsSave, parseSaveNote, saveNote, savedLine, undoBlocked, unreadLine, type TipsSave } from "./tipsUndo.ts";
 
 /**
  * Live 2026-11-16 (Rules audits/impact/country-undo.md): one "Save tips & limits" publishes several documents (the
@@ -153,9 +153,82 @@ test("nothing saved from the panel yet: nothing to undo (a save from before this
   await assert.rejects(Promise.resolve(settings.command("admin.tipsLimits.undo", { targetId: "x", scope: "SE" })), /Nothing to undo/);
 });
 
-test("the server before History takes a country (fad59d5): the Standard's documents are not found, nothing breaks", async () => {
+/**
+ * Supervisor MF-A1 (Rules audits/impact/country-undo-supervisor.md): a document of the save must never be left out
+ * without being named. Two cases did that: a scope whose History cannot be read, and a save deeper than one page.
+ */
+test("MF-A1 (a): the Standard cannot be read while a zone is in the save: it is named, and the Undo is blocked", async () => {
+  const seed = { "country_rules:standard-SE": { liveVersion: 1, document: rules(10) }, "country_rules:Z002": { liveVersion: 3, document: rules(35) }, "rider_app_config:standard-SE": { liveVersion: 8, document: sample("rider_app_config") } };
+  const before = fakeConfigServer(seed);
+  const settings = createLiveSettings(before.http, () => "2026-11-16T05:18:42Z");
+  const book = { ...((await settings.readSlice("countrySettings", { draftRev: 0, countries: {} })) as Book), zones: (await settings.readSlice("countrySettingsZones", {})) as Book["zones"] };
+  const shown = { ...book.zones["standard-SE"]!, tips: [{ id: "t1", amount: 40, enabled: true }] };
+  await settings.command("admin.pricing.saveCountry", { targetId: "SE tips and limits", value: { ...book, draftRev: 1, zones: { ...book.zones, "standard-SE": shown, Z002: shown } }, scope: "standard-SE,Z002" });
+  // The same server, now refusing History for a country (a server without fad59d5 answers 400).
+  let refuse = true;
+  const json = before.http.json;
+  before.http.json = (async (path: string) => {
+    if (refuse && path.includes("/history?country=")) throw Object.assign(new Error("invalid_body"), { status: 400 });
+    return json(path);
+  }) as typeof json;
+
+  const found = (await settings.readSlice(`${TIPS_LAST_SAVE_KEY}:SE`, null)) as TipsSave;
+  assert.deepEqual(found.documents.map((d) => d.id), ["Z002"]);
+  assert.deepEqual(found.unreadable.map((d) => `${d.doc}:${d.id}`).sort(), ["country_rules:standard-SE", "rider_app_config:standard-SE"]);
+  assert.match(unreadLine(found.unreadable[0]!), /Standard.*could not be read/);
+  assert.match(undoBlocked(found) ?? "", /could not be read/);
+  before.calls.length = 0;
+  await assert.rejects(Promise.resolve(settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" })), /could not be read/);
+  assert.deepEqual(restores(before), [], "nothing is restored while a document of the country cannot be read");
+  assert.equal(tipOf(before, "country_rules:Z002"), 4000);
+  // Readable again: the whole save is named and undone.
+  refuse = false;
+  const whole = (await settings.readSlice(`${TIPS_LAST_SAVE_KEY}:SE`, null)) as TipsSave;
+  assert.equal(whole.documents.length, 3);
+  assert.equal(undoBlocked(whole), null);
+});
+
+test("MF-A1 (a): nothing found and a scope unreadable: no save is claimed, the scope is named", async () => {
   const server = fakeConfigServer({ "country_rules:standard-SE": { liveVersion: 1, document: rules(10) } }, { countryHistory: false });
-  assert.equal(await lastTipsSave(server.http, SCOPES), null);
+  const found = (await lastTipsSave(server.http, SCOPES))!;
+  assert.deepEqual(found.documents, []);
+  assert.deepEqual(found.unreadable.map((d) => d.id), ["standard-SE", "standard-SE"]);
+  assert.match(undoBlocked(found) ?? "", /could not be read/);
+});
+
+test("MF-A1 (b): more than 10 newer entries above the save (11 zones re-stamped the Standard): still found and undone", async () => {
+  const { server, settings, save, last } = await open();
+  await save(["standard-SE"], 40);
+  const saved = server.live("country_rules:standard-SE");
+  // 11 zones with Tips & limits of their own go back to the Standard: each re-stamps the Standard one version up.
+  const zones = ["ARN", "BMA", "Z001", "Z002", "Z003", "Z004", "Z005", "Z006", "Z007", "Z008", "Z009"];
+  for (const zone of zones) {
+    const at = { zoneId: zone };
+    const put = await server.http.put<{ version: number }>("/admin/config/country_rules", { expectedVersion: zone === "Z002" ? 4 : 1, ...at, document: rules(35) });
+    await server.http.post("/admin/config/country_rules/publish", { expectedVersion: put.version, ...at });
+    const own = await server.http.json<{ version: number }>(`/admin/config/country_rules?zoneId=${zone}`);
+    await server.http.post("/admin/config/country_rules/use-standard", { ...at, expectedVersion: own.version });
+  }
+  assert.ok(server.history("country_rules:standard-SE").length >= 13);
+  const found = (await last())!;
+  const standard = found.documents.find((d) => d.doc === "country_rules" && d.id === "standard-SE")!;
+  assert.ok(standard, "the Standard is still a document of the save");
+  assert.equal(standard.version, saved);
+  assert.deepEqual(standard.back, { to: "version", version: 1, expectedVersion: server.live("country_rules:standard-SE") });
+  await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" });
+  assert.equal(tipOf(server, "country_rules:standard-SE"), 1000);
+});
+
+test("the dialog lists EVERY document (no \"and N more\") in plain words, and blocks Confirm when one cannot be read", () => {
+  const panel = readFileSync(new URL("../pricing/CountryExtrasPanel.tsx", import.meta.url), "utf8");
+  const button = panel.slice(panel.indexOf('command="admin.tipsLimits.undo"'));
+  const props = button.slice(0, button.indexOf("</CommandButton>"));
+  assert.ok(/details=\{[^}]*savedLine/.test(props) && props.includes("unreadLine"));
+  assert.ok(props.includes("blockedReason={"));
+  assert.equal(props.includes("largeChanges="), false, "not the \"changes by more than 50%\" wording");
+  const dialog = readFileSync(new URL("../ui/CommandButton.tsx", import.meta.url), "utf8");
+  assert.ok(dialog.includes('data-testid="command-details"') && dialog.includes('data-testid="command-blocked"'));
+  assert.ok(/disabled=\{!confirmed \|\| Boolean\(blockedReason\)/.test(dialog));
 });
 
 test("the button: its own command, asks for a reason and confirmation, names the documents, in sv / fr / en", () => {
@@ -167,7 +240,7 @@ test("the button: its own command, asks for a reason and confirmation, names the
   const button = panel.slice(panel.indexOf('command="admin.tipsLimits.undo"'));
   const props = button.slice(0, button.indexOf("</CommandButton>"));
   assert.ok(props.includes('tr("Undo last Tips & limits save")'));
-  assert.ok(/largeChanges=\{[^}]*savedLine/.test(props), "the dialog lists every document and waits for \"Yes, I'm sure\"");
+  assert.ok(props.includes("sure"), "the dialog waits for \"Yes, I'm sure\"");
   assert.ok(props.includes("summary="));
   assert.equal(fr["Undo last Tips & limits save"], "Annuler le dernier enregistrement des pourboires et limites");
   assert.equal(sv["Undo last Tips & limits save"], "Ångra senaste sparningen av dricks och gränser");

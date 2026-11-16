@@ -402,6 +402,9 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.doc.rotate", label: "Rotate document", reason: false, permission: "system.read" },
   { id: "admin.confirm.submit", label: "Confirm action", reason: false, permission: "overview.read" },
   { id: "admin.confirm.cancel", label: "Cancel dialog", reason: false, permission: "overview.read" },
+  // Owner 2026-11-16: every confirm dialog has a "?" that explains what happens, where, who and how to undo (ui/ConfirmInfo.tsx).
+  { id: "admin.confirm.info", label: "What will happen?", reason: false, permission: "overview.read" },
+  { id: "admin.confirm.tickAll", label: "Tick all zones in the dialog", reason: false, permission: "overview.read" },
   { id: "admin.trip.reassign", label: "Reassign trip", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.refund", label: "Refund trip", reason: true, permission: "payments.refund" },
   // v0.18.7 (G5 Q2/Q3): waive an owed cancel or no-show fee (POST /admin/trips/{tripId}/adjust waiveCancelFee).
