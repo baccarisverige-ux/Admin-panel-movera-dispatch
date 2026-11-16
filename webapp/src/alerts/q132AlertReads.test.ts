@@ -145,5 +145,6 @@ test("Q132 safety order holds: critical first; inside a level the safety alerts 
   const shown = openAlerts(alertsFromServer(found, [{ id: "z1" }]), emptyAlertBook(), Date.parse("2026-11-16T11:00:00Z"), () => null);
   const kinds = shown.map((alert) => alert.kind);
   assert.deepEqual(kinds.slice(0, 3).sort(), ["car_lost", "ride_check", "sos"], "the new safety alerts are on top");
-  assert.deepEqual(kinds.slice(3), ["no_driver", "payment_failed", "sos_slow", "booked_at_risk", "ticket_open"]);
+  // Q131 (owner "newest first"): inside a level after the safety kinds, the newest first (no other group order).
+  assert.deepEqual(kinds.slice(3), ["payment_failed", "no_driver", "sos_slow", "booked_at_risk", "ticket_open"]);
 });

@@ -74,6 +74,9 @@
 .al-work { display: grid; gap: 12px; align-items: start; }
 .al-work.has-detail { grid-template-columns: minmax(0, 1fr) 380px; }
 .al-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+/* Q131 round 2 (SF-2): the "Show more (N left)" row at the end of the list, centred, not a bare list row. */
+.al-more { list-style: none; display: flex; justify-content: center; padding: 4px 0 2px; }
+.al-more .dash-btn { min-width: 220px; justify-content: center; }
 .al-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 12px; border-radius: 14px; background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--inf); box-shadow: var(--shadow); }
 .al-row.critical { border-left-color: var(--crit); }
 .al-row.important { border-left-color: var(--imp); }
