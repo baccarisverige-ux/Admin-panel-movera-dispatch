@@ -5,7 +5,7 @@ import { ADMIN, API, fakeSettings, fakeTripServer, signIn } from "./live-fake";
  * Country undo (Rules audits/impact/country-undo.md), supervisor MF-R3-3: a browser look at the confirm dialogs in
  * en / sv / fr against the faked server (no live server, no sign-in to live). Screenshots go to SHOTS when it is set:
  * (a) the "!" open, (b) the zone pick with every zone and the Standard ticked and the where-it-lands text, (c) the
- * Tips & limits Undo dialog with its list of documents.
+ * Tips & limits Undo dialog with its list of documents, (d, en only) Save tips & limits with Confirm off before the zones are ticked.
  */
 const SHOTS = process.env.SHOTS;
 const LANDING = { en: "Dashboard", sv: "Kontrollpanel", fr: "Tableau de bord" } as const;
@@ -68,6 +68,8 @@ for (const lang of ["en", "sv", "fr"] as const) {
     const modal = page.locator(".modal.open").last();
     await expect(modal.getByTestId("command-details").locator("li")).toHaveCount(4);
     await expect(modal.locator('[data-command="admin.confirm.submit"]')).toBeDisabled();
+    // Supervisor MF-R4-1: a disabled Confirm must look disabled (faded), not like an enabled one.
+    expect(Number(await modal.locator('[data-command="admin.confirm.submit"]').evaluate((element) => getComputedStyle(element).opacity))).toBeLessThan(1);
     await shot(page, `c-tips-undo-${lang}`);
     await modal.locator('[data-command="admin.confirm.cancel"]').click();
 
@@ -78,6 +80,7 @@ for (const lang of ["en", "sv", "fr"] as const) {
     await expect(modal.getByTestId("where-pick")).toBeVisible();
     const confirmButton = modal.locator('[data-command="admin.confirm.submit"]');
     await expect(confirmButton).toBeDisabled();
+    if (lang === "en") await shot(page, "d-confirm-disabled-zone-pick-en");
     await modal.locator('[data-command="admin.confirm.tickAll"]').click();
     await expect(modal.getByTestId("where-pick").getByTestId("where-lands")).not.toBeEmpty();
     await shot(page, `b-zone-pick-all-standard-${lang}`);

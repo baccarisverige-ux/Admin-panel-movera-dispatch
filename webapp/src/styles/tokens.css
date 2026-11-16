@@ -593,6 +593,12 @@ textarea:focus {
   background:var(--primary-2)
 }
 
+/* A disabled primary button (e.g. Confirm before the zones are ticked) must look off, not like an enabled one. */
+.primary-btn:disabled {
+  opacity:.5;
+  cursor:not-allowed
+}
+
 .secondary-btn {
   border:1px solid #dbe1ea;
   background:#fff;
