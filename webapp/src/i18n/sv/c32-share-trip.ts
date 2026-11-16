@@ -7,4 +7,5 @@ export const svC32ShareTrip: Record<keyof typeof enC32ShareTrip, string> = {
   "Riders can share a live trip link": "Resenärer kan dela en livelänk till resan",
   "Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.": "Av: resenärsappen döljer Dela resan och alla livelänkar i zonen slutar fungera. Vanligt värde: på.",
   "{0}: set per zone in Dispatch › Safety. {1}": "{0}: ställs in per zon i Trafikledning › Säkerhet. {1}",
+  "Share trip could not be read from the server for this zone. Reload the page and try again.": "Dela resan kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen.",
 };
