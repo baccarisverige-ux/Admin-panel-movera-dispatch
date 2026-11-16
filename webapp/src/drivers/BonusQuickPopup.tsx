@@ -9,6 +9,7 @@ import { money as formatMajor } from "../pricing/zonePricing";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn, trx } from "../i18n";
 import { BONUS_KEY, bonusState, emptyBonusBook, localParts, normalizeBonusBook, rewardLine, saveBonus, type BonusBook, type DriverBonus } from "./bonus";
+import { SettingInfo } from "../ui/SettingInfo";
 
 const END_CHIPS = [30, 60, 120] as const;
 const pad = (value: number) => String(value).padStart(2, "0");
@@ -68,9 +69,11 @@ export function BonusQuickPopup({ bonusId, country, fullLink, onClose, onNotice 
       </header>
 
       {bonus.status !== "ended" ? (
+        <>
         <button data-command="admin.drivers.bonusToggle" type="button" className={on ? "surge-toggle on" : "surge-toggle"} aria-pressed={on} disabled={!canEdit} onClick={() => setOn((value) => !value)}>
           {trn("Bonus on {0}", <span className="switch" aria-hidden="true"><i /></span>)}
-        </button>
+        </button><SettingInfo id="bonus.quick.on" label={tr("Driver bonus {0}", [bonus.name])} />
+        </>
       ) : <p className="fine">{tr("This bonus has ended.")}</p>}
 
       {on ? (
@@ -78,14 +81,14 @@ export function BonusQuickPopup({ bonusId, country, fullLink, onClose, onNotice 
           {editsAmount ? (
             <label className="mq-field">
               {bonus.reward.type === "multiplier" ? tr("Fare multiplier") : bonus.reward.type === "per_ride" ? tr("Extra per ride ({0})", [place.currency]) : bonus.reward.type === "guarantee" ? tr("At least per hour ({0})", [place.currency]) : tr("Bonus amount ({0})", [place.currency])}
-              <input type="number" min={0} step={bonus.reward.type === "multiplier" ? 0.1 : 1} value={amount} disabled={!canEdit} onChange={(event) => setAmount(event.target.value)} />
+              <input type="number" min={0} step={bonus.reward.type === "multiplier" ? 0.1 : 1} value={amount} disabled={!canEdit} onChange={(event) => setAmount(event.target.value)} /><SettingInfo id="bonus.quick.amount" />
             </label>
           ) : <p className="fine">{tr("Step bonuses are changed in full screen.")}</p>}
           <fieldset className="mq-time">
             <legend>{tr("Time window (local)")}</legend>
             <div className="mq-time-row">
-              <label>{tr("From")}<input type="time" value={start} disabled={!canEdit} aria-label={tr("Bonus starts at")} onChange={(event) => setStart(event.target.value)} /></label>
-              <label>{tr("Until")}<input type="time" value={end} disabled={!canEdit} aria-label={tr("Bonus ends at")} onChange={(event) => setEnd(event.target.value)} /></label>
+              <label>{tr("From")}<input type="time" value={start} disabled={!canEdit} aria-label={tr("Bonus starts at")} onChange={(event) => setStart(event.target.value)} /><SettingInfo id="bonus.window" label={tr("Bonus starts at")} /></label>
+              <label>{tr("Until")}{/* info-at: bonus.window */}<input type="time" value={end} disabled={!canEdit} aria-label={tr("Bonus ends at")} onChange={(event) => setEnd(event.target.value)} /></label>
             </div>
             <div className="mq-chips">
               {END_CHIPS.map((minutes) => <button data-command="admin.drivers.bonusEdit" key={minutes} type="button" className="mq-chip" disabled={!canEdit} onClick={() => endIn(minutes)}>{minutes < 60 ? tr("Ends in {0} min", [minutes]) : tr("Ends in {0} h", [minutes / 60])}</button>)}

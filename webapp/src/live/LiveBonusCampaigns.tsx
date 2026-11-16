@@ -18,6 +18,7 @@ import { readDraft } from "./configDocs";
 import { useLiveSession } from "./LiveSessionContext";
 import { useLiveZoneList } from "./LiveZones";
 import { DateText, ErrorLine, LoadMore, isVersionMismatch, useLivePage } from "./ui";
+import { SettingInfo } from "../ui/SettingInfo";
 
 /**
  * BQ-V44 (owner G10-5 "Make bonuses real (Recommended)", Rules decisions/driver-g10.md:9; Q12 bonus zones,
@@ -85,6 +86,7 @@ export function LiveBonusCampaigns({ country }: { country: MarketId }) {
         </div>
         <label className="fd-select">
           <span>{tr("Zone")}</span>
+          {/* info-skip: list filter, not a setting */}
           <select value={zoneId} onChange={(event) => setZoneId(event.target.value)}>
             <option value="">{tr("All zones")}</option>
             {zones.map((zone) => <option key={zone.zoneId} value={zone.zoneId}>{zoneName(zone.names, currentLanguage())}</option>)}
@@ -128,7 +130,7 @@ function NamesFields({ names, onChange, disabled }: { names: CampaignNames; onCh
     <div className="zd-fields">
       {([["sv", "Name in Swedish"], ["fr", "Name in French"], ["en", "Name in English"]] as const).map(([lang, label]) => (
         <label key={lang} className="field">
-          <span>{trx(label)}</span>
+          <span>{trx(label)}<SettingInfo id="bonus.campaign.names" label={trx(label)} /></span>
           <input aria-label={trx(label)} value={names[lang]} maxLength={80} disabled={disabled} onChange={(event) => onChange({ ...names, [lang]: event.target.value })} />
         </label>
       ))}
@@ -183,40 +185,40 @@ function CampaignCreate({ country, zones, onClose }: { country: MarketId; zones:
       </div>
       <div className="zd-fields">
         <label className="field">
-          <span>{tr("Zone")}</span>
+          <span>{tr("Zone")}<SettingInfo id="bonus.campaign.zone" label={tr("Zone")} /></span>
           <select aria-label={tr("Zone")} value={form.zoneId} onChange={(event) => set({ zoneId: event.target.value, polygon: [] })}>
             {zones.map((item) => <option key={item.zoneId} value={item.zoneId}>{zoneName(item.names, currentLanguage())}</option>)}
           </select>
         </label>
         <label className="field">
-          <span>{tr("Counts")}</span>
+          <span>{tr("Counts")}<SettingInfo id="bonus.campaign.measure" label={tr("Counts")} /></span>
           <select aria-label={tr("Counts")} value={form.measure} onChange={(event) => set({ measure: event.target.value as CampaignMeasure })}>
             <option value="trips">{tr("Trips")}</option>
             <option value="online_hours">{tr("Hours online")}</option>
           </select>
         </label>
         <label className="field">
-          <span>{form.measure === "trips" ? tr("Target (trips)") : tr("Target (hours online)")}</span>
+          <span>{form.measure === "trips" ? tr("Target (trips)") : tr("Target (hours online)")}<SettingInfo id="bonus.campaign.target" label={tr("Target")} /></span>
           <input aria-label={form.measure === "trips" ? tr("Target (trips)") : tr("Target (hours online)")} inputMode="numeric" value={form.target} maxLength={3} onChange={(event) => set({ target: event.target.value })} />
           <small>{tr("{0} to {1}", CAMPAIGN_LIMITS.target[form.measure])}</small>
         </label>
         <label className="field">
-          <span>{tr("Amount")} ({target ? currencySymbol(target.currency) : ""})</span>
+          <span>{tr("Amount")} ({target ? currencySymbol(target.currency) : ""})<SettingInfo id="bonus.campaign.amount" label={tr("Amount")} /></span>
           <input aria-label={tr("Amount")} inputMode="decimal" value={form.amount} maxLength={12} onChange={(event) => set({ amount: event.target.value })} />
           <small data-testid="campaign-max">{tr("At most {0} (Pricing › Tips & limits).", [formatMoney(max)])}</small>
         </label>
         <label className="field">
-          <span>{tr("Start date")}</span>
+          <span>{tr("Start date")}<SettingInfo id="bonus.campaign.dates" label={tr("Start date")} /></span>
           <DateInput aria-label={tr("Start date")} value={form.startDate} min={today} onChange={(event) => set({ startDate: event.target.value, endDate: form.endDate && form.endDate < event.target.value ? "" : form.endDate })} />
         </label>
         <label className="field">
-          <span>{tr("End date")}</span>
+          <span>{tr("End date")}<SettingInfo id="bonus.campaign.dates" label={tr("End date")} /></span>
           <DateInput aria-label={tr("End date")} value={form.endDate} min={form.startDate || today} max={form.startDate ? lastEndDate(form.startDate) : undefined} onChange={(event) => set({ endDate: event.target.value })} />
           <small>{tr("Local dates of the zone, at most {0} days.", [CAMPAIGN_LIMITS.maxDays])}</small>
         </label>
       </div>
       <NamesFields names={form.names} onChange={(names) => set({ names })} />
-      <h4>{tr("Campaign area")}</h4>
+      <h4>{tr("Campaign area")}<SettingInfo id="bonus.campaign.area" label={tr("Campaign area")} /></h4>
       <p className="fine">{tr("Its own shape, separate from the operating zones. Every point must be inside the zone.")}</p>
       {zone ? <BonusAreaMap key={zone.zoneId} country={country} areas={form.polygon.length ? [{ id: "campaign", name: tr("Campaign area"), ring: form.polygon }] : []} onChange={(next) => set({ polygon: next[next.length - 1]?.ring ?? [] })} view={zone.polygon} /> : null}
       <p className="fine">{form.polygon.length ? tr("Area: {0} points", [form.polygon.length]) : tr("No area drawn yet.")}</p>
@@ -311,7 +313,7 @@ function CampaignDetail({ bonusId, canWrite, zoneLabel, onBack }: { bonusId: str
           <p className="fine">{tr("Only the names and a later end date can change. To change anything else, end it and make a new campaign.")}</p>
           <NamesFields names={editing.names} onChange={(names) => setEditing({ ...editing, names })} />
           <label className="field">
-            <span>{tr("End date")}</span>
+            <span>{tr("End date")}<SettingInfo id="bonus.campaign.laterEnd" label={tr("End date")} /></span>
             <DateInput aria-label={tr("End date")} value={editing.endDate} min={campaign.endDate} max={lastEndDate(campaign.startDate)} onChange={(event) => setEditing({ ...editing, endDate: event.target.value })} />
           </label>
           <div className="cat-actions">
