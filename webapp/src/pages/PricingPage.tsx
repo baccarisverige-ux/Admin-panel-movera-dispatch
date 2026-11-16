@@ -282,7 +282,8 @@ export function PricingPage() {
           <Tags size={18} aria-hidden="true" /><span><b>{tr("Categories")}</b><small>{trn("{0} active", categories.length)}</small></span>
         </button>
         <CommandButton command="admin.pricing.undo" className="quick-tile" targetId={`pricing-rev-${store.history[0]?.rev ?? 0}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after="undo last publish" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={undo.store} disabled={slice.loading || !canPublish || Boolean(undo.error)} title={undo.error} largeChanges={undo.error ? undefined : largeStoreChanges(store, undo.store)} onDone={() => setNotice(tr("Revision {0} undone.", [store.history[0]?.rev]))}>
-          <Undo2 size={18} aria-hidden="true" /><span><b>{tr("Undo last publish")}</b><small>{store.history[0] ? tr("Revision {0}", [store.history[0].rev]) : tr("Nothing yet")}</small></span>
+          <Undo2 size={18} aria-hidden="true" />{/* Live 2026-11-16: this tile undoes the newest pricing publish only (never Tips & limits); it says so and names the zone and version. */}
+          <span><b>{tr("Undo last pricing publish")}</b><small>{store.history[0] ? `${tr("Revision {0}", [store.history[0].rev])}${store.history[0].changes[0] ? ` · ${store.history[0].changes[0]}` : ""}` : tr("Nothing yet")}</small></span>
         </CommandButton>
       </section>
 
