@@ -77,6 +77,7 @@ export default function RequestLimitsPanel({ editable }: { editable: boolean }) 
         <>
           <label>
             {tr("Country")}{" "}
+            {/* info-skip: picks which country's limits are shown, not a setting */}
             <select value={country} onChange={(event) => setCountry(event.target.value as MarketId)}>
               {COUNTRIES.map((id) => <option key={id} value={id}>{trx(COUNTRY_LABEL[id])}</option>)}
             </select>
@@ -88,6 +89,7 @@ export default function RequestLimitsPanel({ editable }: { editable: boolean }) 
           ) : (
             REQUEST_LIMIT_FIELDS.map((field) => (
               <NumberField
+                info={`settings.requestLimits.${field}`}
                 key={field}
                 label={trx(REQUEST_LIMIT_LABEL[field])}
                 value={shown[field]}
