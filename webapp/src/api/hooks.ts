@@ -76,8 +76,8 @@ export function useDriver(id: string, scope: string | null) {
   return { ...query, driver: query.data?.find((row) => row.id === id) };
 }
 
-export function useRiders(scope: string | null) {
-  return useRecords("riders", scope);
+export function useRiders(scope: string | null, options: { enabled?: boolean } = {}) {
+  return useRecords("riders", scope, options);
 }
 
 export function useTrips(scope: string | null, options: { refetchMs?: number; follow?: boolean } = {}) {

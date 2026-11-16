@@ -364,7 +364,9 @@ export type AdminRating = { tripId: string; from: "rider" | "driver"; stars: num
 export type TicketMessage = { messageId: string; from: "rider" | "driver" | "support"; text: string; at: string; adminName?: string };
 export type SupportTicket = { ticketId: string; tripId?: string; openedBy: "rider" | "driver" | "admin"; riderId?: string; driverId?: string; category: string; subject: string; status: "open" | "pending" | "resolved" | "closed"; priority?: string; createdAt: string; updatedAt: string; zoneId?: string; lastMessageAt?: string; messages?: TicketMessage[];
   /** v0.18.15 support desk (contract.json#supportDesk.adminView). */
-  assignedTo?: { adminId: string; name?: string }; solvedBy?: string; solvedAt?: string; incidentId?: string; feedback?: { text: string; at: string }; firstReplyAt?: string; firstReplyDueAt?: string; solveDueAt?: string; late?: { reply: boolean; solve: boolean } };
+  assignedTo?: { adminId: string; name?: string }; solvedBy?: string; solvedAt?: string; incidentId?: string; feedback?: { text: string; at: string }; firstReplyAt?: string; firstReplyDueAt?: string; solveDueAt?: string; late?: { reply: boolean; solve: boolean };
+  /** v0.18.112 BQ-A04 (contract.json#supportDesk.inboxOrder.waitingSince): open + the first rider / driver message with no support answer after it. */
+  waitingSince?: string };
 /** v0.18.15 GET|PUT /admin/support/settings (contract.json#supportDesk.settings). */
 export type SupportTopicSetting = { code: string; on: boolean; firstReplyMin: number; solveHours: number; assignTo?: string | undefined };
 /** v0.18.15 (owner "Yes"): a ready reply in one language. */
