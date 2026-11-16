@@ -5,4 +5,5 @@ export const enC32ShareTrip = {
   "Riders can share a live trip link": "Riders can share a live trip link",
   "Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.": "Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.",
   "{0}: set per zone in Dispatch › Safety. {1}": "{0}: set per zone in Dispatch › Safety. {1}",
+  "Share trip could not be read from the server for this zone. Reload the page and try again.": "Share trip could not be read from the server for this zone. Reload the page and try again.",
 } as const;

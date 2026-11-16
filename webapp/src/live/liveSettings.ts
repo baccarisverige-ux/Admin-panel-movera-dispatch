@@ -16,6 +16,7 @@ import { COUNTRY_SETTINGS_KEY, personLimitsOf, TIP_CASH_IN_CAR_MINUTES, TIP_FLAG
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
+  dispatchOwnedFor,
   SettingsChanged,
   bookOfPricing,
   countryRulesOf,
@@ -258,6 +259,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return restore(before[0]);
   }
 
+  /** BQ-S10 round 2 (supervisor SF-A1): zones whose rider document (the Share trip switch) could not be read. */
+  const riderUnread = new Set<string>();
+
   async function readDispatch(fallback: unknown): Promise<DispatchBook> {
     const book = normalizeDispatchBook(fallback);
     const live = { ...book.live };
@@ -270,7 +274,10 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       drivers.set(id, driver?.document ?? null);
       // v0.18.116 BQ-S10: the rider document holds the Share trip switch (Dispatch › Safety). Read on its own (never
       // marks the zone unknown); a zone without one, or a failed read, keeps the rules' own value.
-      const rider = driver ? await readDraft(http, "rider_app_config", id).catch(() => null) : null;
+      // Round 2 (supervisor SF-A1): a FAILED read is remembered, so the next Dispatch publish of the zone leaves
+      // shareTrip out (the value shown is then only the browser's own).
+      riderUnread.delete(id);
+      const rider = driver ? await readDraft(http, "rider_app_config", id).catch(() => { riderUnread.add(id); return null; }) : null;
       riders.set(id, rider?.document ?? null);
       // G3: what of the zone's app documents is saved but not live (shown above the editor).
       if (driver && !countryOfStandard(id)) await markUnpublished("driver_app_config", id, driver).catch(() => undefined);
@@ -643,6 +650,13 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     // Never the slice: draft and tool saves overwrite it with the edited book. Never read yet: read the server first.
     const prior = baseline.dispatch ?? (await readDispatch(book));
     const before = stateWith({ dispatch: prior });
+    // BQ-S10 round 2 (supervisor SF-A1): a Share trip value that was never read from the server is not published. A
+    // book that changes it for such a zone is refused before anything is written.
+    for (const id of zoneIds) {
+      if (!riderUnread.has(id)) continue;
+      const was = liveRules(normalizeDispatchBook(prior), id).shareTrip?.on ?? true;
+      if ((liveRules(book, id).shareTrip?.on ?? true) !== was) throw new Error("Share trip could not be read from the server for this zone. Reload the page and try again.");
+    }
     slices.set(DISPATCH_KEY, book);
     const state = stateWith({ dispatch: book });
     for (const id of zoneIds) {
@@ -652,8 +666,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       // Checker #204: compared with what is LIVE, so a saved draft that already holds the change is still published.
       await savePublishLive(http, "dispatch", id, current, document, current ? await liveDocumentOf(http, "dispatch", id) : null);
       drafts.delete(key("dispatch", id));
-      await publishAppParts(id, OWNED.dispatch, state, id, before);
-      for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, OWNED.dispatch, state, id, before);
+      const owned = dispatchOwnedFor(!riderUnread.has(id));
+      await publishAppParts(id, owned, state, id, before);
+      for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, owned, state, id, before);
     }
     baseline.dispatch = book;
     return "Published.";
