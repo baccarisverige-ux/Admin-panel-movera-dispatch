@@ -9,6 +9,7 @@ import { ALERTS, EXTRAS, FACTORS, WAIT_KINDS } from "../dispatch/rules/model.ts"
 import { OFFER_CARD_DETAILS, WAIT_RIDE_TYPES } from "../dispatch/offers.ts";
 import { LEVELS, ZONE_LIMITS } from "../alerts/engine.ts";
 import { TOPICS } from "../support/desk.ts";
+import { LEGAL_PLACEHOLDERS } from "../content/legal.ts";
 
 /**
  * The lists behind info ids built in a loop (`prefix.${id}`), taken from the same lists the pages loop over, so a new
@@ -38,4 +39,7 @@ export const SETTING_INFO_LISTS: Readonly<Record<string, readonly string[]>> = {
   // alerts/SettingsView.tsx LEGACY (a list inside the page).
   "alerts.settings.legacy.": ["dashboardCounts", "dashboardSound", "inbox", "dispatchAlerts"],
   "support.limits.": TOPICS.map((item) => item.id),
+  "content.legal.company.": [...LEGAL_PLACEHOLDERS],
+  // drivers/BonusBuilder.tsx RULES (a list inside the page).
+  "bonus.rule.": ["maxCancelPct", "minAcceptPct", "backToBack", "minFare", "minKm", "minRating", "minOnlineMin", "maxRides", "maxPayout"],
 };
