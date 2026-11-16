@@ -9227,4 +9227,8 @@
 ["Dispatch › Live: press Resume or Back to rules on the same zone. It is not in Dispatch › History.","Dispatch › Live: tryck på Återuppta eller Tillbaka till reglerna på samma zon. Det finns inte i Dispatch › Historik."],
 ["There is no one-press undo for a zone save: change it back on the same zone and save again. The save is written in the Audit log.","Det finns ingen ångra med ett tryck för en zonsparning: ändra tillbaka på samma zon och spara igen. Sparningen skrivs i granskningsloggen."],
 ["There is no one-press undo for a new zone. It is created closed: riders cannot use it until someone presses Open zone.","Det finns ingen ångra med ett tryck för en ny zon. Den skapas stängd: resenärer kan inte använda den förrän någon trycker på Öppna zon."],
-["Zones: Undo last publish takes back the newest publish, and a zone's History has Restore version for each earlier version.","Zoner: Ångra senaste publicering tar tillbaka den senaste publiceringen, och en zons Historik har Återställ version för varje tidigare version."]]
+["Zones: Undo last publish takes back the newest publish, and a zone's History has Restore version for each earlier version.","Zoner: Ångra senaste publicering tar tillbaka den senaste publiceringen, och en zons Historik har Återställ version för varje tidigare version."],
+["{0}: {1} → {2}","{0}: {1} → {2}"],
+["{0} (off)","{0} (av)"],
+["{0}, default language","{0}, standardspråk"],
+["Values before → after: see the Audit log.","Värden före → efter: se Granskningsloggen."]]

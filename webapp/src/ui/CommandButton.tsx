@@ -264,7 +264,9 @@ export function CommandButton({
             <ConfirmInfo
               what={info?.what ?? (where ? (spec ? trx(spec.label) : "") : summary ?? (spec ? trx(spec.label) : ""))}
               where={info?.where ?? (where ? <WhereSentences zoneIds={where.pick ? ticked : where.zoneIds} doc={where.doc} keepFollowers={where.keepFollowers} /> : scopeNames(scope) || (targetId && !/^(pricing-rev-|[a-z]+ (rules|draft)$)/.test(targetId) ? targetId : undefined))}
-              change={info?.change ?? (before && after && before !== after ? `${before} → ${after}` : undefined)}
+              change={info?.change}
+              // cfgundo SF-R4-3: the audit words stay English for the server; the "!" writes them in the admin's language (ui/fromTo.ts).
+              changeOf={info?.changeOf ?? (before && after && before !== after ? { kind: "audit", before, after } : undefined)}
               who={info?.who}
               undo={info?.undo}
               command={command}

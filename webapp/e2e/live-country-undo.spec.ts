@@ -89,7 +89,11 @@ for (const lang of ["en", "sv", "fr"] as const) {
     await modal.locator('[data-command="admin.confirm.info"]').click();
     await expect(modal.getByTestId("confirm-info")).toBeVisible();
     await expect(modal.getByTestId("confirm-info").getByTestId("where-lands")).not.toBeEmpty();
-    await modal.getByTestId("confirm-info").scrollIntoViewIfNeeded();
+    // cfgundo SF-R4-3: the From → to line is in the dialog's language, built from the values (ui/fromTo.ts).
+    const fromTo = modal.getByTestId("confirm-info-from-to");
+    await expect(fromTo).toContainText({ en: "Tips:", sv: "Dricks:", fr: "Pourboires :" }[lang]);
+    if (lang !== "en") await expect(fromTo).not.toContainText(/\b(tips|raise|promo cap|none|driver bonus limit)\b/i);
+    await fromTo.scrollIntoViewIfNeeded();
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/a-info-open-${lang}.png`, fullPage: false });
     await modal.locator('[data-command="admin.confirm.cancel"]').click();
     expect(server.sent.filter((call) => call.method !== "GET")).toEqual([]);

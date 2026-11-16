@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { tr } from "../i18n";
+import type { ChangeOf } from "./fromTo";
 
 /**
  * The "!" in an orange triangle of every confirm dialog (owner 2026-11-16: "When confirm anything u add info ? When clic understand what's
@@ -15,8 +16,12 @@ import { tr } from "../i18n";
 export const INFO_ORANGE = "#C2410C";
 export const INFO_MARK = "#FFFFFF";
 
-/** `command`: who it affects and how to undo it come from the command (ui/confirmInfo.ts) when not given. */
-export type ConfirmInfoProps = { what: ReactNode; where?: ReactNode; change?: ReactNode; who?: ReactNode; undo?: ReactNode; command?: string };
+/**
+ * `command`: who it affects and how to undo it come from the command (ui/confirmInfo.ts) when not given.
+ * `changeOf`: the values of the "From → to" line, written in the admin's language by ui/fromTo.ts (cfgundo SF-R4-3);
+ * `change` (already translated) wins over it.
+ */
+export type ConfirmInfoProps = { what: ReactNode; where?: ReactNode; change?: ReactNode; changeOf?: ChangeOf; who?: ReactNode; undo?: ReactNode; command?: string };
 
 /**
  * The words are loaded when the "!" is first pressed (audit bundle budget, scripts/check-bundle.mjs): the explanation

@@ -133,7 +133,7 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
           targetId={tr("Payment methods and languages per country")}
           confirmTarget={false}
           summary={tr("This saves the payment methods and languages of every country and sends them to every zone. Keep this page open until it is done.")}
-          info={{ where: tr("Each country whose payment methods or languages you changed: its Standard and every open zone of it."), who: tr("Riders and drivers of those countries: their apps get them with the next app settings.") }}
+          info={{ where: tr("Each country whose payment methods or languages you changed: its Standard and every open zone of it."), who: tr("Riders and drivers of those countries: their apps get them with the next app settings."), changeOf: { kind: "countryApps", before: Object.fromEntries(MARKETS.map((item) => [item.id, countrySettingsOf(book, item.id)])), after: Object.fromEntries(MARKETS.map((item) => [item.id, countrySettingsOf(shown, item.id)])) } }}
           before={settingsSummary(book)}
           after={settingsSummary(shown)}
           sliceKey={COUNTRY_SETTINGS_KEY}

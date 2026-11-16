@@ -9227,4 +9227,8 @@
 ["Dispatch › Live: press Resume or Back to rules on the same zone. It is not in Dispatch › History.","Dispatch › En direct : appuyez sur Reprendre ou Retour aux règles sur la même zone. Ce n’est pas dans Dispatch › Historique."],
 ["There is no one-press undo for a zone save: change it back on the same zone and save again. The save is written in the Audit log.","Pas d’annulation en un clic pour l’enregistrement d’une zone : remettez-la comme avant sur la même zone et enregistrez à nouveau. L’enregistrement est écrit dans le journal d’audit."],
 ["There is no one-press undo for a new zone. It is created closed: riders cannot use it until someone presses Open zone.","Pas d’annulation en un clic pour une nouvelle zone. Elle est créée fermée : les passagers ne peuvent pas l’utiliser tant que personne n’appuie sur Ouvrir la zone."],
-["Zones: Undo last publish takes back the newest publish, and a zone's History has Restore version for each earlier version.","Zones : Annuler la dernière publication reprend la publication la plus récente, et l’Historique d’une zone propose Restaurer la version pour chaque version précédente."]]
+["Zones: Undo last publish takes back the newest publish, and a zone's History has Restore version for each earlier version.","Zones : Annuler la dernière publication reprend la publication la plus récente, et l’Historique d’une zone propose Restaurer la version pour chaque version précédente."],
+["{0}: {1} → {2}","{0} : {1} → {2}"],
+["{0} (off)","{0} (désactivé)"],
+["{0}, default language","{0}, langue par défaut"],
+["Values before → after: see the Audit log.","Valeurs avant → après : voir le Journal d'audit."]]
