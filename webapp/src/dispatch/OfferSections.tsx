@@ -117,7 +117,7 @@ export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
       </Card>
 
       <Card title={tr("Go offline automatically")} tone="red" icon={<Power size={18} />} help={tr("A driver who does not accept offers is set offline, so riders are not kept waiting.")} off={!zone.autoOffline.on} aside={<Switch label={tr("Go offline automatically")} on={zone.autoOffline.on} disabled={disabled} onChange={(on) => set({ autoOffline: { ...zone.autoOffline, on } })} />}>
-        <Row label={tr("After offers not accepted in a row")} help={`${autoOfflineText(zone.autoOffline.after)} ${tr("Offers sent during a trip do not count. The driver can go online again at once.")}`}>
+        <Row label={tr("After offers not accepted in a row")} help={`${autoOfflineText(zone.autoOffline.after)} ${tr("Offers sent during a trip do not count. The driver can go online again at once.")} ${tr("Offers that ran out while the server's live link was down do not count either.")}`}>
           <Num label={tr("Offline after offers not accepted")} value={zone.autoOffline.after} unit="offers" min={1} max={99} disabled={disabled || !zone.autoOffline.on} onChange={(after) => set({ autoOffline: { ...zone.autoOffline, after: Math.round(after) } })} />
         </Row>
       </Card>
