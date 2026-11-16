@@ -69,6 +69,11 @@ export type CountrySettings = {
   chainLateFreeCancelMin: number;
   /** v0.18.29 A2 (fix job 0) (owner G12 Q-D "Max 250 euro and equivalent"): the largest single Add money to wallet (CountryRules.walletCreditMax), local money. */
   walletCreditMax: number;
+  /**
+   * v0.18.110 BQ-V44 (owner G10-5, Rules decisions/driver-g10.md:9; contract configDefaults.bonusCampaignMax D13): the
+   * largest amount of one driver bonus campaign (CountryRules.bonusCampaignMax, per country standard or zone), local money.
+   */
+  bonusCampaignMax: number;
   /** v0.18.38 §62 (fix job 8, owner G15 "In-app calls only"): CountryRules.calls — on, mode, window after the trip, ring time, longest call. */
   calls: CallSettings;
   /** v0.18.56 §78 (G9 part 2, owner Q79–Q85): CountryRules.chat — keep days, length, spam limit, sound, sheet, read aloud, translate, quick replies, auto "I've arrived". */
@@ -96,6 +101,8 @@ export function personLimitsOf(raw: unknown): PersonLimits {
 export const WALLET_CREDIT_MAX: Record<MarketId, number> = { SE: 2900, FR: 250, TN: 800 };
 /** contract.json#configDefaults.driverPayChangeMax (major units); v0.18.82 TN 100 DT (owner Q-S5-6, 2026-11-13: it limits the change; was 300). */
 export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 100 };
+/** contract.json#configDefaults.bonusCampaignMax (0.18.110, D13; major units): SE 2 000 kr, FR 200 €, TN 200 DT. */
+export const BONUS_CAMPAIGN_MAX_MAJOR: Record<MarketId, number> = { SE: 2000, FR: 200, TN: 200 };
 export type TipRules = { cashAfterTrip: boolean; customAmount: boolean; customMax: number; cashInCarMinutes: number };
 /**
  * Job C8 (contract v0.18.91 finish.tips.cashInCarAdmin; owner "Anything admin can adjust becomes an admin setting"): the
@@ -123,7 +130,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -172,6 +179,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     onTripMinDonePct: ON_TRIP_MIN_DONE_PCT_DEFAULT,
     chainLateFreeCancelMin: CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT,
     walletCreditMax: WALLET_CREDIT_MAX[country],
+    bonusCampaignMax: BONUS_CAMPAIGN_MAX_MAJOR[country],
     calls: { ...CALL_DEFAULTS },
     chat: defaultChatSettings(),
     dontMatchAgain: { ...DONT_MATCH_DEFAULTS },
@@ -223,6 +231,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     onTripMinDonePct: finite(raw.onTripMinDonePct) ? raw.onTripMinDonePct : base.onTripMinDonePct,
     chainLateFreeCancelMin: finite(raw.chainLateFreeCancelMin) ? raw.chainLateFreeCancelMin : base.chainLateFreeCancelMin,
     walletCreditMax: finite(raw.walletCreditMax) && raw.walletCreditMax > 0 ? raw.walletCreditMax : base.walletCreditMax,
+    bonusCampaignMax: finite(raw.bonusCampaignMax) && raw.bonusCampaignMax > 0 ? raw.bonusCampaignMax : base.bonusCampaignMax,
     calls: callSettingsOf(raw.calls),
     chat: raw.chat && typeof raw.chat === "object" ? { ...chatSettingsOf(raw.chat), ...keptNumbers(raw.chat) } : defaultChatSettings(),
     dontMatchAgain: dontMatchOf(raw.dontMatchAgain),
@@ -365,6 +374,9 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   if (!finite(settings.driverBonusLimit) || settings.driverBonusLimit <= 0) issues.push(`${name} driver bonus limit: must be above 0.`);
   else if (settings.driverBonusLimit > hardMax) issues.push(`${name} driver bonus limit: at most ${short(hardMax)} ${symbol}, the hard max.`);
   else if (hasMoreDecimals(settings.driverBonusLimit, country)) issues.push(`${name} driver bonus limit: too many decimals.`);
+  // v0.18.110 BQ-V44: CountryRules.bonusCampaignMax, above 0 with the currency's decimals.
+  if (!finite(settings.bonusCampaignMax) || settings.bonusCampaignMax <= 0) issues.push(tr("{0}: Largest campaign bonus must be above 0.", [name]));
+  else if (hasMoreDecimals(settings.bonusCampaignMax, country)) issues.push(tr("{0}: Largest campaign bonus has too many decimals.", [name]));
   if (!ZONE_PAYMENT_METHODS.some((method) => settings.paymentMethods[method] || settings.mixedMethods?.[method]?.length)) issues.push(`${name}: at least one payment method must be on.`);
   for (const app of APP_IDS) if (!(APP_LANGUAGES as readonly string[]).includes(settings.languages[app])) issues.push(`${name}: choose a language for the ${APP_LABEL[app].toLowerCase()}.`);
   if (!(settings.tipRules.customMax > 0) || settings.tipRules.customMax > TIP_CUSTOM_MAX[country] * 10) issues.push(`${name}: the highest typed tip must be more than 0 and at most ${TIP_CUSTOM_MAX[country] * 10}.`);
@@ -402,6 +414,7 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   for (const method of ZONE_PAYMENT_METHODS) if (before.mixedMethods?.[method]?.length && !after.mixedMethods?.[method]?.length) lines.push(`${PAYMENT_METHOD_LABEL[method]}: mixed → ${after.paymentMethods[method] ? "on" : "off"}`);
     else if (before.paymentMethods[method] !== after.paymentMethods[method]) lines.push(`${PAYMENT_METHOD_LABEL[method]}: ${before.paymentMethods[method] ? "on" : "off"} → ${after.paymentMethods[method] ? "on" : "off"}`);
   for (const app of APP_IDS) if (before.languages[app] !== after.languages[app]) lines.push(`${APP_LABEL[app]} default language: ${before.languages[app]} → ${after.languages[app]}`);
+  if (before.bonusCampaignMax !== after.bonusCampaignMax) lines.push(tr("Largest campaign bonus: {0} → {1} {2}", [short(before.bonusCampaignMax), short(after.bonusCampaignMax), symbol]));
   if (before.chainLateFreeCancelMin !== after.chainLateFreeCancelMin) lines.push(tr("Next trip free cancel after: {0} min → {1} min", [before.chainLateFreeCancelMin, after.chainLateFreeCancelMin]));
   if (before.onTripMinDonePct !== after.onTripMinDonePct) lines.push(tr("Offers on a trip from: {0} % → {1} %", [before.onTripMinDonePct, after.onTripMinDonePct]));
   lines.push(...callSettingsLines(before.calls, after.calls));

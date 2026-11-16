@@ -82,6 +82,13 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.revealDriver", label: "Reveal a driver's full phone, e-mail and date of birth (reason, audited)", reason: false, permission: "drivers.read" },
   { id: "admin.server.revealFleet", label: "Reveal a fleet's full owner e-mail (reason, audited)", reason: false, permission: "drivers.read" },
   { id: "admin.server.revealIncidentContacts", label: "Reveal both phones of an open safety case (SOS, audited)", reason: false, permission: "incidents.read" },
+  // v0.18.110 BQ-V44 (owner G10-5, Rules decisions/driver-g10.md:9): Drivers › Bonuses on live, the server's bonus campaigns (/admin/bonuses).
+  { id: "admin.server.bonusCampaignCreate", label: "Create a bonus campaign", reason: false, permission: "drivers.bonuses" },
+  { id: "admin.server.bonusCampaignEdit", label: "Change a bonus campaign's names or end date", reason: false, permission: "drivers.bonuses" },
+  { id: "admin.server.bonusCampaignPause", label: "Pause a bonus campaign", reason: false, permission: "drivers.bonuses" },
+  { id: "admin.server.bonusCampaignResume", label: "Resume a bonus campaign", reason: false, permission: "drivers.bonuses" },
+  { id: "admin.server.bonusCampaignEnd", label: "End a bonus campaign", reason: false, permission: "drivers.bonuses" },
+  { id: "admin.server.bonusCampaignOpen", label: "Open a bonus campaign", reason: false, permission: "drivers.read" },
   { id: "admin.audit.refund50", label: "Refund 50 kr", reason: true, permission: "payments.refund" },
   // The id is kept for older audit rows; the demo amount is above the default 500 kr second-admin limit.
   { id: "admin.audit.refund250", label: "Refund 600 kr", reason: true, permission: "payments.refund" },

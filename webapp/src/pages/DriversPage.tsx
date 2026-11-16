@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import { useCommandHidden } from "../live/useCommandHidden";
 import { statusLabel } from "../domain/labels";
 import { LiveListBar } from "../live/LiveListBar";
@@ -28,6 +28,10 @@ import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { liveDriverMonth, liveJoinedDays, orDash } from "../live/driverFacts";
 import { liveDriverDocs } from "../fleet/liveOwner";
 import { categoryName } from "../riders/profile";
+import { CAMPAIGN_COMMANDS } from "../drivers/campaigns";
+
+// BQ-V44 (contract 0.18.110): the server's bonus campaigns on live, loaded only when the tab opens.
+const LiveBonusCampaigns = lazy(() => import("../live/LiveBonusCampaigns").then((module) => ({ default: module.LiveBonusCampaigns })));
 
 const VIEWS = [
   { id: "all", get label() { return tr("All"); } },
@@ -45,8 +49,10 @@ type View = (typeof VIEWS)[number]["id"];
 export function DriversPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  // C10 (A16 D1): live cannot save a bonus yet (its Save is hidden), so the Bonuses tab is hidden too.
-  const bonusesHidden = useCommandHidden("admin.drivers.bonusCreate");
+  // C10 (A16 D1) hid the tab on live while the demo builder had no server. BQ-V44: on live the tab shows the server's
+  // bonus campaigns (/admin/bonuses); the demo builder stays demo-only (Rule 21).
+  const live = isLiveData();
+  const bonusesHidden = useCommandHidden(live ? CAMPAIGN_COMMANDS.create : "admin.drivers.bonusCreate");
   const tab = params.get("view") === "bonuses" && !bonusesHidden ? "bonuses" : "drivers";
   const { agent } = useSession();
   const scope = useMarketScope();
@@ -61,7 +67,6 @@ export function DriversPage() {
   const [view, setView] = useState<View>("all");
   const [type, setType] = useState("all");
   const [now] = useState(() => Date.now());
-  const live = isLiveData();
   const month = useMemo(() => periodWindow({ kind: "month" }, now, scope.market.timeZone, uiLocale()), [now, scope.market]);
 
   const presence = useMemo(() => new Map(liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0).map((row) => [row.id, row.state as Presence])), [drivers.data, vehicles.data, trips.data, incidents.data]);
@@ -148,11 +153,11 @@ export function DriversPage() {
         <div className="fd-head">
           <div>
             <h2>{tr("Drivers")}</h2>
-            <p>{trn("Bonuses drivers see in the driver app: ride bonuses and area bonuses on the map, in {0}.", trx(scope.market.name))}</p>
+            <p>{live ? trn("Bonus campaigns drivers see in the driver app: reach the target inside the area and the dates, earn the amount once with the next payout, in {0}.", trx(scope.market.name)) : trn("Bonuses drivers see in the driver app: ride bonuses and area bonuses on the map, in {0}.", trx(scope.market.name))}</p>
           </div>
         </div>
         {tabs}
-        <BonusesView country={scope.country} drivers={bonusDrivers} fleets={Array.from(new Map((fleets.data ?? []).map((fleet) => [fleet.id, { id: fleet.id, name: fleet.name }])).values())} agentId={agent?.id ?? null} canEdit={Boolean(agent && can(agent.role, "drivers.bonuses"))} />
+        {live ? <Suspense fallback={<p className="state-line">{tr("Loading bonuses.")}</p>}><LiveBonusCampaigns country={scope.country} /></Suspense> : <BonusesView country={scope.country} drivers={bonusDrivers} fleets={Array.from(new Map((fleets.data ?? []).map((fleet) => [fleet.id, { id: fleet.id, name: fleet.name }])).values())} agentId={agent?.id ?? null} canEdit={Boolean(agent && can(agent.role, "drivers.bonuses"))} />}
       </div>
     );
   }
