@@ -160,9 +160,9 @@ export function PayoutsPage() {
 
         <h4>{tr("Bank review")}</h4>
         <div className="field-grid">
-          <label>{tr("Clearing number")}<input aria-label={tr("Payout clearing number")} value={bank.clearing} onChange={(event) => patchBank({ clearing: event.target.value })} />
+          <label>{tr("Clearing number")}{/* info-skip: one driver's bank details, not a setting */}<input aria-label={tr("Payout clearing number")} value={bank.clearing} onChange={(event) => patchBank({ clearing: event.target.value })} />
           </label>
-          <label>{tr("Account")}<input aria-label={tr("Payout account number")} value={bank.account} onChange={(event) => patchBank({ account: event.target.value })} />
+          <label>{tr("Account")}{/* info-skip: one driver's bank details, not a setting */}<input aria-label={tr("Payout account number")} value={bank.account} onChange={(event) => patchBank({ account: event.target.value })} />
           </label>
           <label>
             IBAN
@@ -172,7 +172,7 @@ export function PayoutsPage() {
             BIC
             <input aria-label={tr("Payout BIC")} value={bank.bic} onChange={(event) => patchBank({ bic: event.target.value.toUpperCase() })} />
           </label>
-          <label>{tr("Review note")}<input aria-label={tr("Bank review note")} value={bankNote} onChange={(event) => setBankNote(event.target.value)} />
+          <label>{tr("Review note")}{/* info-skip: note on one bank review, not a setting */}<input aria-label={tr("Bank review note")} value={bankNote} onChange={(event) => setBankNote(event.target.value)} />
           </label>
         </div>
         <p data-testid="payout-bank-check">{validation ?? tr("Bank details pass the configured validation checks.")}</p>

@@ -20,6 +20,7 @@ import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePayment
 import { tr, trn, trx, trSentences } from "../i18n";
 import { useAdminApi } from "../api/AdminApiContext";
 import { OPEN } from "../drivers/onboardingSettings";
+import { SettingInfo } from "../ui/SettingInfo";
 
 /**
  * Settings › Payment methods and languages per country: Pay in car (cash), Card and Apple Pay (v0.18.10: no Google Pay) (owner Q7 FINAL, no Swish,
@@ -67,9 +68,9 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
         <thead>
           <tr>
             <th scope="col">{tr("Country")}</th>
-            {ZONE_PAYMENT_METHODS.map((method) => <th key={method} scope="col">{trx(PAYMENT_METHOD_LABEL[method])}{method === "cash" ? null : <small> · {tr("Coming soon")}</small>}</th>)}
-            <th scope="col">{tr("Use wallet first")}<small> · {tr("the rider can switch it off per ride")}</small></th>
-            {APP_IDS.map((app) => <th key={app} scope="col">{trn("{0} language", trx(APP_LABEL[app]))}</th>)}
+            {ZONE_PAYMENT_METHODS.map((method) => <th key={method} scope="col">{trx(PAYMENT_METHOD_LABEL[method])}<SettingInfo id={`settings.payment.${method}`} label={trx(PAYMENT_METHOD_LABEL[method])} />{method === "cash" ? null : <small> · {tr("Coming soon")}</small>}</th>)}
+            <th scope="col">{tr("Use wallet first")}<SettingInfo id="settings.walletFirst" label={tr("Use wallet first")} /><small> · {tr("the rider can switch it off per ride")}</small></th>
+            {APP_IDS.map((app) => <th key={app} scope="col">{trn("{0} language", trx(APP_LABEL[app]))}<SettingInfo id={`settings.language.${app}`} label={tr("{0} language", [trx(APP_LABEL[app])])} /></th>)}
           </tr>
         </thead>
         <tbody>
@@ -84,6 +85,7 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
                   const noteId = `country-apps-mixed-${item.id}-${method}`;
                   return (
                     <td key={method}>
+                      {/* info-at: settings.payment.* (the column head's "i") */}
                       <input
                         type="checkbox"
                         aria-label={`${item.name} ${trx(PAYMENT_METHOD_LABEL[method])}`}
@@ -101,6 +103,7 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
                   );
                 })}
                 <td>
+                  {/* info-at: settings.walletFirst (the column head's "i") */}
                   <input
                     type="checkbox"
                     aria-label={`${item.name} ${tr("Use wallet first")}`}
@@ -112,6 +115,7 @@ export function CountryAppsPanel({ editable, onDirty }: { editable: boolean; onD
                 </td>
                 {APP_IDS.map((app) => (
                   <td key={app}>
+                    {/* info-at: settings.language.* (the column head's "i") */}
                     <select aria-label={tr("{0} {1} language", [item.name, app])} value={settings.languages[app]} disabled={!editable || loading} onChange={(event) => edit(item.id, { languages: { ...settings.languages, [app]: event.target.value as AppLanguage } })}>
                       {APP_LANGUAGES.map((lang) => <option key={lang} value={lang}>{lang.toUpperCase()} · {trx(LANGUAGE_LABEL[lang])}</option>)}
                     </select>

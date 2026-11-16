@@ -437,7 +437,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
                 ))}
                 {countryChanged.length ? <li><b>{trx(market.name)}</b><ul>{countryChanged.map((line) => <li key={line}>{line}</li>)}</ul></li> : null}
               </ul>
-              <label className="field">{trn("Note for the history (optional){0}", <input aria-label={tr("Publish note")} maxLength={120} value={note} onChange={(event) => setNote(event.target.value)} placeholder={tr("For example More drivers on the radar for Friday nights")} />)}</label>
+              <label className="field">{trn("Note for the history (optional){0}", /* info-skip: note for the history of one publish, not a setting */ <input aria-label={tr("Publish note")} maxLength={120} value={note} onChange={(event) => setNote(event.target.value)} placeholder={tr("For example More drivers on the radar for Friday nights")} />)}</label>
             </div>
           ) : null}
           {published.error && (changes.length || countryChanged.length) ? <p className="dx-publish-error" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {trSentences(published.error)}</p> : null}
