@@ -130,3 +130,56 @@ test("F1 helper: countryRulesOf carries payoutMode and payoutSchedule over from 
   assert.equal(next["payoutMode"], "manual");
   assert.deepEqual(next["payoutSchedule"], MANUAL.payoutSchedule);
 });
+
+test("F1 fix: a key the panel does not know (added later by another screen) is kept by a Tips & limits Save", async () => {
+  const { sent, live } = await saveTips(40, { ...MANUAL, futureSetting: { on: true, max: { amountMinor: 12345, currency: "SEK" } } });
+  assert.deepEqual(sent["futureSetting"], { on: true, max: { amountMinor: 12345, currency: "SEK" } }, "the document the Save sends keeps it");
+  assert.deepEqual(live["futureSetting"], { on: true, max: { amountMinor: 12345, currency: "SEK" } });
+  const base: Doc = { country: "SE", currency: "SEK", futureSetting: 7, usesStandard: true, zoneId: "Z001" };
+  const next = countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 } }, base);
+  assert.equal(next["futureSetting"], 7, "helper: an unknown key is kept");
+  assert.equal("usesStandard" in next || "zoneId" in next, false, "the server's read marks are never sent back");
+});
+
+test("F1 fix: the keys the panel owns are still written from the panel, never kept from the stored document", () => {
+  const stored: Doc = {
+    version: 4, publishedAt: "2026-11-10T08:00:00.000Z", country: "SE", currency: "SEK",
+    tips: [{ amount: { amountMinor: 99900, currency: "SEK" }, enabled: true }], raiseSteps: [{ amount: { amountMinor: 99900, currency: "SEK" }, enabled: true }],
+    driverBonus: { defaultLimit: { amountMinor: 1, currency: "SEK" }, hardMax: { amountMinor: 1, currency: "SEK" } },
+    driverPayChangeMax: { amountMinor: 1, currency: "SEK" }, onTripOffers: { minRouteDonePct: 1, lateFreeCancelMin: 1 }, walletCreditMax: { amountMinor: 1, currency: "SEK" },
+    emergencyNumbers: [{ kind: "all", number: "000", label: { sv: "x", fr: "x", en: "x" } }], sosContactsSms: false, ...MANUAL,
+  };
+  // A save that leaves out the keys the panel only writes when given (as a zone's save does): they are not sent.
+  const next = countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 } }, stored);
+  for (const key of ["driverPayChangeMax", "onTripOffers", "walletCreditMax", "emergencyNumbers", "sosContactsSms"]) assert.equal(key in next, false, `${key} is the panel's: left out = not sent, as before`);
+  assert.equal((next["tips"] as Array<{ amount: { amountMinor: number } }>)[0]!.amount.amountMinor, 1000, "tips come from the panel");
+  assert.equal(next["version"], 4);
+  assert.equal(next["payoutMode"], "manual", "while the payout keys stay");
+  // The panel's values replace the stored ones, including a switch turned off.
+  const on = countryRulesOf("SE", "SEK", { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 }, sosContactsSms: true, emergencyNumbers: [] }, stored);
+  assert.equal(on["sosContactsSms"], true);
+  assert.deepEqual(on["emergencyNumbers"], []);
+});
+
+test("F1 fix: a zone's own rules never take the Standard's payout keys (nor its SOS / emergency keys)", async () => {
+  const { fake, settings, book } = await open({ ...MANUAL, maxRiderDebt: { amountMinor: 30000, currency: "SEK" }, futureSetting: 1 });
+  // Z001 uses the Standard: its base is the Standard's document; Save gives it rules of its own.
+  const zone = { ...(book.zones["Z001"] ?? book.zones["standard-SE"]!), tips: [{ id: "t1", amount: 40, enabled: true }] };
+  const value: Book = { ...book, draftRev: book.draftRev + 1, zones: { ...book.zones, Z001: zone } };
+  await settings.command("admin.pricing.saveCountry", { targetId: "Z001 tips and limits", value, scope: "Z001" });
+  const put = fake.calls.find((c) => c.method === "PUT" && c.path.endsWith("/country_rules") && (c.body as { zoneId?: string }).zoneId === "Z001");
+  assert.ok(put, "the Save wrote Z001's own country_rules");
+  const sent = (put.body as { document: Doc }).document;
+  for (const key of ["payoutMode", "payoutSchedule", "maxRiderDebt", "emergencyNumbers", "sosContactsSms", "walletCreditMax", "usesStandard"]) assert.equal(key in sent, false, `${key} is the Standard's`);
+  assert.equal(sent["futureSetting"], 1, "other keys are copied, as calls / chat are");
+  assert.equal(fake.live("country_rules:standard-SE")!["payoutMode"], "manual", "the Standard is not touched");
+});
+
+test("F1 fix helper: standard false drops the Standard-only keys, standard true (default) keeps them", () => {
+  const base: Doc = { country: "SE", currency: "SEK", ...MANUAL, maxRiderDebt: 1, driverOwesLimit: { enabled: true, max: null } };
+  const input = { tips: [10], raiseSteps: [50], driverBonus: { defaultLimit: 200, hardMax: 1000 } };
+  const zone = countryRulesOf("SE", "SEK", input, base, { standard: false });
+  for (const key of ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"]) assert.equal(key in zone, false, key);
+  const standard = countryRulesOf("SE", "SEK", input, base, { standard: true });
+  for (const key of ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"]) assert.ok(key in standard, key);
+});
