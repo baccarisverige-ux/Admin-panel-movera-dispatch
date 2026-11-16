@@ -143,7 +143,7 @@ export function QuickNearbyPick({ request, candidates, onDone, view, draft, onSe
     <div className="hq-block" data-testid="quick-nearby">
       <label className="hq-field">
         <span>{tr("Nearest free drivers")}</span>
-        <select aria-label={tr("Choose a driver for {0}", [request.rider])} value={pick?.driver.id ?? ""} onChange={(event) => setChosen(event.target.value)} disabled={candidates.length === 0}>
+        {/* info-skip: input of one action on one ride, not a setting */}<select aria-label={tr("Choose a driver for {0}", [request.rider])} value={pick?.driver.id ?? ""} onChange={(event) => setChosen(event.target.value)} disabled={candidates.length === 0}>
           {candidates.length === 0 ? <option value="">{tr("No free driver nearby")}</option> : null}
           {candidates.slice(0, 8).map((item) => (
             <option key={item.driver.id} value={item.driver.id}>{trn("{0} · {1} km · {2} min{3}", item.driver.name, item.km, item.etaMin, item.categoryOk ? "" : tr(" · cannot drive {0}", [request.categoryLabel]))}</option>
@@ -214,7 +214,7 @@ export function RadarTargetPicker({ ride, book, candidates, value, onChange, max
                 return (
                   <li key={zone.id}>
                     <label>
-                      <input type="radio" name={`radar-zone-${ride.tripId}`} checked={value.kind === "radar_zone" && value.id === zone.id} onChange={() => onChange(target)} />
+                      {/* info-skip: input of one action on one ride, not a setting */}<input type="radio" name={`radar-zone-${ride.tripId}`} checked={value.kind === "radar_zone" && value.id === zone.id} onChange={() => onChange(target)} />
                       <b>{zone.name}</b>
                       <small>{zoneNameOf(zone.zoneId)} · {trn("{0} free driver{1} inside", count, count === 1 ? "" : tr("s"))}</small>
                     </label>
@@ -233,7 +233,7 @@ export function RadarTargetPicker({ ride, book, candidates, value, onChange, max
             return (
               <li key={zone.id} className={zone.near ? undefined : "far"}>
                 <label>
-                  <input type="checkbox" checked={checked} onChange={() => onChange({ kind: "zone", ids: checked ? ids.filter((id) => id !== zone.id) : [...ids, zone.id] })} />
+                  {/* info-skip: input of one action on one ride, not a setting */}<input type="checkbox" checked={checked} onChange={() => onChange({ kind: "zone", ids: checked ? ids.filter((id) => id !== zone.id) : [...ids, zone.id] })} />
                   <b>{zone.name}</b>
                   <small>{zone.id === ride.zoneId ? tr("Pickup zone") : zone.near ? tr("Next to it") : ""}</small>
                 </label>
@@ -245,7 +245,7 @@ export function RadarTargetPicker({ ride, book, candidates, value, onChange, max
       {mode === "group" ? (
         <label className="hq-field">
           <span>{tr("Driver group")}</span>
-          <select aria-label={tr("Driver group for {0}", [ride.rider])} value={value.kind === "group" ? value.id : ""} onChange={(event) => onChange({ kind: "group", id: event.target.value })}>
+          {/* info-skip: input of one action on one ride, not a setting */}<select aria-label={tr("Driver group for {0}", [ride.rider])} value={value.kind === "group" ? value.id : ""} onChange={(event) => onChange({ kind: "group", id: event.target.value })}>
             {groups.length ? groups.map((group) => <option key={group.id} value={group.id}>{trn("{0} · {1} drivers", trx(group.name), group.driverIds.length)}</option>) : <option value="">{tr("No group yet")}</option>}
           </select>
         </label>
@@ -258,7 +258,7 @@ export function RadarTargetPicker({ ride, book, candidates, value, onChange, max
         ) : (
           <label className="hq-field inline">
             <span>{tr("Max drivers who can see it")}</span>
-            <input type="number" min={1} max={RADAR_GROUP_MAX} step={1} value={max} aria-label={tr("Max drivers who can see it")} onChange={(event) => onMax(Math.min(RADAR_GROUP_MAX, Math.max(1, Math.round(Number(event.target.value) || 1))))} />
+            {/* info-skip: input of one action on one ride, not a setting */}<input type="number" min={1} max={RADAR_GROUP_MAX} step={1} value={max} aria-label={tr("Max drivers who can see it")} onChange={(event) => onMax(Math.min(RADAR_GROUP_MAX, Math.max(1, Math.round(Number(event.target.value) || 1))))} />
           </label>
         )}
         <small>{trn("{0} Timer {1} s{2}", <Clock size={11} aria-hidden="true" />, timer.seconds, timer.ruleName ? tr(" · rule “{0}”", [timer.ruleName]) : tr(" · the zone's radar"))}{timer.repeat ? tr(" · sends again by itself") : ""}</small>

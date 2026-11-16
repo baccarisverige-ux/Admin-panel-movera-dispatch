@@ -91,7 +91,7 @@ export function PayoutLines({ record, ops, country, money, onNotice, cash }: { r
       {hold ? <p className="fn-warn">{trn("{0} On hold by {1}: {2}", <PauseCircle size={14} aria-hidden="true" />, agentName(hold.by), hold.reason)}</p> : null}
       {failed ? <p className="fn-warn"><RefreshCcw size={14} aria-hidden="true" /> {failed}</p> : null}
       <div className="po-hold">
-        {!hold ? <input aria-label={tr("Hold reason")} value={reason} placeholder={tr("Why hold this payout?")} onChange={(event) => setReason(event.target.value)} /> : null}
+        {!hold ? /* info-skip: reason for one payout hold, not a setting */ <input aria-label={tr("Hold reason")} value={reason} placeholder={tr("Why hold this payout?")} onChange={(event) => setReason(event.target.value)} /> : null}
         <CommandButton command="admin.payout.hold" className={hold ? "dash-btn small" : "dash-btn small danger-ghost"} sliceKey={PAYOUT_OPS_KEY} value={next.ops} expectedSliceRev={ops.draftRev} targetId={record.id} confirmTarget={false} before={hold ? "held" : "free"} after={hold ? "released" : "held"} disabled={Boolean(next.error)} title={next.error} onDone={() => { setReason(""); onNotice(hold ? tr("Payout released.") : tr("Payout on hold.")); }}>{hold ? tr("Release payout") : tr("Hold payout")}</CommandButton>
         {failed ? <CommandButton command="admin.payout.retry" className="dash-btn small" sliceKey={PAYOUT_OPS_KEY} value={retryPayout(ops, record.id, agent?.id ?? "", new Date().toISOString())} expectedSliceRev={ops.draftRev} targetId={record.id} confirmTarget={false} before="failed" after="retried" disabled={!sched.retryFailed} title={sched.retryFailed ? undefined : tr("Retries are off in the schedule.")} onDone={() => onNotice(tr("Payout sent again."))}>{trn("{0} Retry payout", <RefreshCcw size={13} aria-hidden="true" />)}</CommandButton> : null}
       </div>
@@ -115,21 +115,21 @@ export function ScheduleView({ ops, country, editable }: { ops: PayoutOps; count
       {!editable ? <p className="dx-readonly">{tr("Only admins who approve money can change the schedule.")}</p> : null}
       <fieldset className="fn-fieldset" disabled={!editable}>
         <Card title={tr("When drivers get paid")} icon={<CalendarClock size={18} />} tone="blue" help={scheduleLine(current)}>
-          <Row label={tr("How often")}>
+          <Row info="payouts.howOften" label={tr("How often")}>
             <Choice label={tr("Payout frequency")} value={current.every} options={[{ id: "weekly", label: tr("Every week") }, { id: "daily", label: tr("Every day") }]} onChange={(every) => patch({ every })} />
           </Row>
           {current.every === "weekly" ? (
-            <Row label={tr("Day")}>
+            <Row info="payouts.day" label={tr("Day")}>
               <select aria-label={tr("Payout day")} value={current.weekday} onChange={(event) => patch({ weekday: Number(event.target.value) })}>{WEEKDAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}</select>
             </Row>
           ) : null}
-          <Row label={tr("Time")} help={tr("In the country's time.")}>
+          <Row info="payouts.time" label={tr("Time")} help={tr("In the country's time.")}>
             <input aria-label={tr("Payout time")} type="time" value={current.time} onChange={(event) => patch({ time: event.target.value })} />
           </Row>
-          <Row label={tr("Retry failed payouts")} help={tr("Admins can send a payout again after the bank returned it.")} on={current.retryFailed} onToggle={(on) => patch({ retryFailed: on })} />
+          <Row info="payouts.retryFailedPayouts" label={tr("Retry failed payouts")} help={tr("Admins can send a payout again after the bank returned it.")} on={current.retryFailed} onToggle={(on) => patch({ retryFailed: on })} />
         </Card>
         <Card title={tr("Checks")} icon={<CheckCheck size={18} />} tone="green">
-          <Row label={tr("Second admin for big runs")} help={tr("A run above this total waits until another admin approves it.")}>
+          <Row info="payouts.secondAdminForBigRuns" label={tr("Second admin for big runs")} help={tr("A run above this total waits until another admin approves it.")}>
             <Num label={tr("Approval over")} before="Over" value={current.approvalOverMajor} unit={symbol} onChange={(value) => patch({ approvalOverMajor: value })} />
           </Row>
         </Card>

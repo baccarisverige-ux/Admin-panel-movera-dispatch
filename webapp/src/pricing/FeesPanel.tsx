@@ -6,6 +6,7 @@ import type { MarketId } from "../markets/markets";
 import { NumberField } from "./NumberField";
 import { MIN_TRIP_METERS, currencySymbol, feeMax, inputStep, money, roundingOptions, routeMax, type CategoryDef, type FixedRoute, type Problem, type ZoneBook, type ZoneFees } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type FeesProps = {
   zoneName: string;
@@ -39,7 +40,7 @@ export function FeesPanel({ zoneName, airport, currency, book, published, proble
             <strong>{trx(row.label)}</strong>
             <small>{trx(row.hint)}</small>
           </div>
-          <NumberField label={trx(row.label)} value={book.fees[row.key]} unit={symbol} step={inputStep(currency)} max={feeMax(row.key, currency)} disabled={!canEdit} changed={book.fees[row.key] !== published.fees[row.key]} invalid={bad.has(`fees.${row.key}`)} onChange={(value) => onChange({ [row.key]: value })} />
+          <NumberField info={`pricing.fee.${row.key}`} label={trx(row.label)} value={book.fees[row.key]} unit={symbol} step={inputStep(currency)} max={feeMax(row.key, currency)} disabled={!canEdit} changed={book.fees[row.key] !== published.fees[row.key]} invalid={bad.has(`fees.${row.key}`)} onChange={(value) => onChange({ [row.key]: value })} />
           {row.key.startsWith("airport") && !airport && book.fees[row.key] > 0 ? <small className="fee-note">{trn("{0} is not an airport zone, so this only applies to rides to or from an airport.", zoneName)}</small> : null}
         </div>
       ))}
@@ -49,7 +50,7 @@ export function FeesPanel({ zoneName, airport, currency, book, published, proble
           <small>{tr("Passed on to the rider at cost, shown on the receipt")}</small>
         </div>
         <label className="mini-switch big">
-          <input type="checkbox" aria-label={tr("Add tolls to the fare")} checked={book.fees.tollsPassThrough} disabled={!canEdit} onChange={(event) => onChange({ tollsPassThrough: event.target.checked })} />
+          <input type="checkbox" aria-label={tr("Add tolls to the fare")} checked={book.fees.tollsPassThrough} disabled={!canEdit} onChange={(event) => onChange({ tollsPassThrough: event.target.checked })} /><SettingInfo id="pricing.fee.tolls" label={tr("Add tolls to the fare")} />
           <span aria-hidden="true"><i /></span>
           {book.fees.tollsPassThrough ? tr("Added to fare") : tr("Not added")}
         </label>
@@ -69,14 +70,14 @@ export function FeesPanel({ zoneName, airport, currency, book, published, proble
         </div>
         <select aria-label={tr("Rounding")} value={book.fees.rounding} disabled={!canEdit} onChange={(event) => onChange({ rounding: Number(event.target.value) })}>
           {roundingOptions(currency).map((step) => <option key={step} value={step}>{step < 0.05 ? tr("No rounding") : tr("Nearest {0}", [money(step, currency)])}</option>)}
-        </select>
+        </select><SettingInfo id="pricing.fee.rounding" label={tr("Rounding")} />
       </div>
       <div className="fee-card" data-testid="fees-min-trip">
         <div>
           <strong>{tr("Shortest trip")}</strong>
           <small>{tr("A drop-off closer than this to the pickup is refused: the rider sees \"Drop-off is too close to pickup\". 0 = off.")}</small>
         </div>
-        <NumberField label={tr("Shortest trip")} value={book.fees.minTripMeters} unit="m" step={10} min={MIN_TRIP_METERS.min} max={MIN_TRIP_METERS.max} disabled={!canEdit} changed={book.fees.minTripMeters !== published.fees.minTripMeters} invalid={bad.has("fees.minTripMeters")} onChange={(value) => onChange({ minTripMeters: Math.round(value) })} />
+        <NumberField info="pricing.fee.minTrip" label={tr("Shortest trip")} value={book.fees.minTripMeters} unit="m" step={10} min={MIN_TRIP_METERS.min} max={MIN_TRIP_METERS.max} disabled={!canEdit} changed={book.fees.minTripMeters !== published.fees.minTripMeters} invalid={bad.has("fees.minTripMeters")} onChange={(value) => onChange({ minTripMeters: Math.round(value) })} />
       </div>
     </div>
   );
@@ -103,13 +104,13 @@ export function FixedRoutes({ currency, categories, routes, problems, canEdit, z
           {routes.map((route) => (
             <li key={route.id} className={bad.has(`routes.${route.id}`) ? "invalid" : undefined}>
               <Route size={16} aria-hidden="true" />
-              <input aria-label={tr("Route from")} placeholder={tr("From, e.g. Arlanda")} value={route.from} disabled={!canEdit} onChange={(event) => patch(route.id, { from: event.target.value })} />
+              <input aria-label={tr("Route from")} placeholder={tr("From, e.g. Arlanda")} value={route.from} disabled={!canEdit} onChange={(event) => patch(route.id, { from: event.target.value })} /><SettingInfo id="pricing.route.places" label={tr("Route from")} />
               <span aria-hidden="true">→</span>
-              <input aria-label={tr("Route to")} placeholder={tr("To, e.g. City")} value={route.to} disabled={!canEdit} onChange={(event) => patch(route.id, { to: event.target.value })} />
+              <input aria-label={tr("Route to")} placeholder={tr("To, e.g. City")} value={route.to} disabled={!canEdit} onChange={(event) => patch(route.id, { to: event.target.value })} /><SettingInfo id="pricing.route.places" label={tr("Route to")} />
               <select aria-label={tr("Route category")} value={route.categoryId} disabled={!canEdit} onChange={(event) => patch(route.id, { categoryId: event.target.value })}>
                 {categories.map((category) => <option key={category.id} value={category.id}>{trx(category.label)}</option>)}
-              </select>
-              <NumberField label={tr("Route price")} value={route.price} unit={currencySymbol(currency)} step={inputStep(currency)} max={routeMax(currency)} disabled={!canEdit} onChange={(value) => patch(route.id, { price: value })} />
+              </select><SettingInfo id="pricing.route.category" label={tr("Route category")} />
+              <NumberField info="pricing.route.price" label={tr("Route price")} value={route.price} unit={currencySymbol(currency)} step={inputStep(currency)} max={routeMax(currency)} disabled={!canEdit} onChange={(value) => patch(route.id, { price: value })} />
               <button data-command="admin.pricing.edit" type="button" className="icon-ghost" aria-label={tr("Remove route {0} to {1}", [route.from, route.to])} disabled={!canEdit} onClick={() => onChange(routes.filter((item) => item.id !== route.id))}><Trash2 size={15} aria-hidden="true" /></button>
             </li>
           ))}

@@ -16,6 +16,7 @@ import {
   type CountryDispatch, type DispatchBook, type TabId, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = {
   book: DispatchBook;
@@ -257,7 +258,7 @@ function CopyDialog({ open, tabs, onClose, from, zones, onApply }: { open: boole
       <div className="zn-chips">
         {zones.map((zone) => (
           <label key={zone.id} className={ids.includes(zone.id) ? "check-chip on" : "check-chip"}>
-            <input type="checkbox" checked={ids.includes(zone.id)} onChange={() => setIds(ids.includes(zone.id) ? ids.filter((id) => id !== zone.id) : [...ids, zone.id])} />{zone.name}
+            {/* info-skip: picks zones to copy to, not a setting */}<input type="checkbox" checked={ids.includes(zone.id)} onChange={() => setIds(ids.includes(zone.id) ? ids.filter((id) => id !== zone.id) : [...ids, zone.id])} />{zone.name}
           </label>
         ))}
       </div>
@@ -265,7 +266,7 @@ function CopyDialog({ open, tabs, onClose, from, zones, onApply }: { open: boole
       <div className="zn-chips">
         {tabs.map((item) => (
           <label key={item.id} className={parts.includes(item.id) ? "check-chip on" : "check-chip"}>
-            <input type="checkbox" checked={parts.includes(item.id)} onChange={() => setParts(parts.includes(item.id) ? parts.filter((id) => id !== item.id) : [...parts, item.id])} />{trx(item.label)}
+            {/* info-skip: picks parts to copy, not a setting */}<input type="checkbox" checked={parts.includes(item.id)} onChange={() => setParts(parts.includes(item.id) ? parts.filter((id) => id !== item.id) : [...parts, item.id])} />{trx(item.label)}
           </label>
         ))}
       </div>
@@ -294,7 +295,7 @@ function PresetDialog({ open, onClose, book, zone, zoneName, countryId, agentId,
           <li key={preset.id}>
             {renaming?.id === preset.id ? (
               <span className="dx-preset-rename">
-                <input aria-label={tr("New name for {0}", [preset.name])} value={renaming.name} maxLength={40} onChange={(event) => setRenaming({ id: preset.id, name: event.target.value })} />
+                <input aria-label={tr("New name for {0}", [preset.name])} value={renaming.name} maxLength={40} onChange={(event) => setRenaming({ id: preset.id, name: event.target.value })} /><SettingInfo id="dispatch.rules.presetName" label={tr("New name for {0}", [preset.name])} />
                 <CommandButton command="admin.dispatch.preset" className="dash-btn small" targetId={preset.name} confirmTarget={false} scope="all" before={preset.name} after={renaming.name.trim()} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={withPresets(book.presets.map((item) => (item.id === preset.id ? { ...item, name: renaming.name.trim() } : item)))} disabled={!canEdit || !renaming.name.trim() || taken(renaming.name, preset.id)} onDone={() => { onSaved(renaming.name.trim()); setRenaming(null); }}>{tr("Save name")}</CommandButton>
                 <button data-command="admin.dispatch.view" type="button" className="dash-btn small ghost" onClick={() => setRenaming(null)}>{tr("Cancel")}</button>
               </span>
@@ -312,7 +313,7 @@ function PresetDialog({ open, onClose, book, zone, zoneName, countryId, agentId,
       </ul>
       <h5 className="dx-modal-h">{trn("Save {0}'s settings as a preset", zoneName)}</h5>
       <div className="dx-modal-row">
-        <label className="field">{trn("Preset name{0}", <input aria-label={tr("Preset name")} value={name} maxLength={40} onChange={(event) => setName(event.target.value)} placeholder={tr("For example Weekend nights")} />)}</label>
+        <label className="field">{trn("Preset name{0}", <input aria-label={tr("Preset name")} value={name} maxLength={40} onChange={(event) => setName(event.target.value)} placeholder={tr("For example Weekend nights")} />)}<SettingInfo id="dispatch.rules.presetName" label={tr("Preset name")} /></label>
         <CommandButton command="admin.dispatch.preset" className="dash-btn" targetId={name.trim() || "preset"} confirmTarget={false} scope="all" before={`${own.length} presets`} after={`${own.length + 1} presets`} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={withPresets([...book.presets, { ...saved, note: `${saved.note} by ${agentId}` }])} disabled={!canEdit || !name.trim() || taken(name)} onDone={() => { onSaved(name.trim()); setName(""); }}>{tr("Save preset")}</CommandButton>
       </div>
       <p className="dx-note">{tr("Saved presets are for the whole country. Anyone who may edit Dispatch can save, rename or delete them; every change is in the audit log.")}</p>

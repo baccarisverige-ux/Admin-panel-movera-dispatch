@@ -23,6 +23,7 @@ import "./styles/support.css";
 import "./styles/growth.css";
 import "./styles/platform.css";
 import "./styles/live.css";
+import "./styles/settingInfo.css";
 
 // G5: a deep link that came through GitHub Pages' 404 page (?p=/trips/T123) opens that page, not the Dashboard.
 restoreDeepLink(window.location, import.meta.env.BASE_URL, (url) => window.history.replaceState(null, "", url));

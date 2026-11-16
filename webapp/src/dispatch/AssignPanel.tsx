@@ -186,7 +186,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
               {scopeButton("Whole zone", { kind: "zone" }, scope.kind === "zone")}
               {scopeButton("Zone + neighbours", { kind: "zone_and_neighbours" }, scope.kind === "zone_and_neighbours")}
               {scope.kind === "custom" ? (
-                <label className="as-custom">{trn("{0} km", <input aria-label={tr("Custom distance in km")} type="number" min="0.1" max="100" step="0.5" value={custom} onChange={(event) => setCustom(event.target.value)} />)}</label>
+                <label className="as-custom">{trn("{0} km", /* info-skip: input of one assign action, not a setting */ <input aria-label={tr("Custom distance in km")} type="number" min="0.1" max="100" step="0.5" value={custom} onChange={(event) => setCustom(event.target.value)} />)}</label>
               ) : null}
             </div>
           </div>
