@@ -54,6 +54,7 @@ export function RideCheckSettingsCard({ where }: { where: "dispatch" | "rules" }
       <Row label={tr("Unexpected long stop")} help={tr("The car stands still mid-trip, not at a planned stop and not in traffic. Ride check starts.")}>
         <Num label={tr("Unexpected long stop")} before="for more than" value={shown.longStopMinutes} unit="min" min={1} disabled={disabled} onChange={(longStopMinutes) => patch({ longStopMinutes })} />
       </Row>
+      <p className="dx-note rc-note"><span>{tr("A phone whose GPS has frozen is only noticed when this is under 10 minutes.")}</span></p>
       {live ? null : !editable ? <p className="dx-readonly">{tr("Only the safety team can change these settings.")}</p> : (
         <div className="rc-settings-save">
           <span className="dx-publish-text">

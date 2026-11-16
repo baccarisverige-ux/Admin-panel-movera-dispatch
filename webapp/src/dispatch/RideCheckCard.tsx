@@ -22,6 +22,8 @@ export function RideCheckCard({ zone, onChange, disabled }: { zone: ZoneDispatch
       <Row label={tr("Unexpected long stop")} help={tr("No movement mid-trip, not at a planned stop and not at the drop-off.")} on={check.stopOn} disabled={off} onToggle={(stopOn) => setCheck({ stopOn })}>
         <Num label={tr("Long stop")} before="more than" value={check.stopMinutes} unit="min" step={1} min={L.stopMinutes.min} max={L.stopMinutes.max} disabled={off} onChange={(stopMinutes) => setCheck({ stopMinutes })} />
       </Row>
+      {/* Owner 2026-11-16 "Keep, note at setting": the driver app re-sends a frozen fix for up to 10 min (longstop-frozen-fix). */}
+      <p className="dx-note rc-note"><ShieldAlert size={13} aria-hidden="true" /> <span>{tr("A phone whose GPS has frozen is only noticed when this is under 10 minutes.")}</span></p>
       <Row label={tr("Off the route")} help={tr("The car is far from the planned route.")} on={check.routeOn} disabled={off} onToggle={(routeOn) => setCheck({ routeOn })}>
         <Num label={tr("Off the route from")} before="more than" value={check.routeKm} unit="km" step={0.5} min={L.routeKm.min} max={L.routeKm.max} disabled={off} onChange={(routeKm) => setCheck({ routeKm })} />
       </Row>

@@ -9060,4 +9060,5 @@
 ["No driven route yet: the driver app has sent no position on this trip. The planned route is shown.","No driven route yet: the driver app has sent no position on this trip. The planned route is shown."],
 ["The driven route was deleted 30 days after the trip. The planned route is shown.","The driven route was deleted 30 days after the trip. The planned route is shown."],
 ["The driven route could not be loaded. The planned route is shown.","The driven route could not be loaded. The planned route is shown."],
-["{0} Driven (GPS) {1} Planned","{0} Driven (GPS) {1} Planned"]]
+["{0} Driven (GPS) {1} Planned","{0} Driven (GPS) {1} Planned"],
+["A phone whose GPS has frozen is only noticed when this is under 10 minutes.","A phone whose GPS has frozen is only noticed when this is under 10 minutes."]]
