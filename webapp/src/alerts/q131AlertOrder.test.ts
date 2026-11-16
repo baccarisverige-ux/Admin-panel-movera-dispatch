@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import * as engine from "./engine.ts";
 import { alertsFromServer, emptyAlertBook, openAlerts, type FoundAlert } from "./engine.ts";
 
@@ -16,7 +15,6 @@ function found(id: string, kind: FoundAlert["kind"], level: FoundAlert["level"],
   return { alertId: id, kind, level, title: id, zoneId: "Z001", since: at(sinceMin), state: "open", ...extra } as FoundAlert;
 }
 const order = (rows: FoundAlert[]) => openAlerts(alertsFromServer(rows, [{ id: "Z001" }]), emptyAlertBook(), now, () => null).map((a) => a.id);
-const src = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 test("Q131: a new SOS shows above the older ones of the same level", () => {
   const ids = order([found("sos:old", "sos", "critical", 90, { ref: { incidentId: "I1" } }), found("sos:mid", "sos", "critical", 30, { ref: { incidentId: "I2" } }), found("sos:new", "sos", "critical", 1, { ref: { incidentId: "I3" } })]);
@@ -46,8 +44,11 @@ test("Q131: solved (green) alerts are kept, after the open ones of their level, 
     found("open:old", "long_wait", "important", 90),
     found("solved:late", "rider_cancels", "important", 70, { state: "solved", solvedAt: at(5) }),
     found("open:new", "rider_cancels", "important", 10),
+    // Round 2 (SF-1c): came in last of the solved ones but was solved before solved:late, so the order by solved time
+    // and the order by "since" differ: sorting solved alerts by "since" puts it first.
+    found("solved:cameLate", "long_wait", "important", 20, { state: "solved", solvedAt: at(60) }),
   ]);
-  assert.deepEqual(ids, ["open:new", "open:old", "solved:late", "solved:early"]);
+  assert.deepEqual(ids, ["open:new", "open:old", "solved:late", "solved:cameLate", "solved:early"]);
 });
 
 test("Q131: paging: the first page, then Show more until everything is shown", () => {
@@ -60,7 +61,58 @@ test("Q131: paging: the first page, then Show more until everything is shown", (
   assert.deepEqual(pageAlerts!(list, 2), { rows: list.slice(0, size * 2), left: 3 });
   assert.deepEqual(pageAlerts!(list, 3), { rows: list, left: 0 });
   assert.deepEqual(pageAlerts!([], 1), { rows: [], left: 0 });
-  const view = src("./OpenView.tsx");
-  assert.match(view, /pageAlerts\(/, "OpenView shows the whole list at once");
-  assert.match(view, /Show more \(\{0\} left\)/, "OpenView has no Show more button");
+});
+
+// Round 2 (supervisor SF-1a, b): the screen's list is built by pure functions that OpenView draws as they are (no
+// source-text test): alertListView gives the rows to draw (filtered, then one page at a time) and pagesFor brings a
+// new filter back to page 1.
+type ListApi = {
+  alertListView: (list: readonly engine.OpenAlert[], filter: Filter, me: string | undefined, pages: number, selected?: string | null) => { rows: engine.OpenAlert[]; left: number; total: number; current: engine.OpenAlert | null };
+  alertFilterKey: (old: boolean, filter: Filter) => string;
+  pagesFor: (paging: { key: string; pages: number }, key: string) => number;
+};
+type Filter = { quick: "all" | engine.Level | "mine" | "new"; group: engine.GroupId | "all"; zone: string; state: "open" | "snoozed" | "muted" };
+const ALL: Filter = { quick: "all", group: "all", zone: "all", state: "open" };
+function listApi(): ListApi {
+  const mod = engine as unknown as Partial<ListApi>;
+  assert.equal(typeof mod.alertListView, "function", "engine.ts has no alertListView: OpenView builds (and may draw) the whole list itself");
+  assert.equal(typeof mod.pagesFor, "function", "engine.ts has no pagesFor: a new filter is not brought back to page 1");
+  return mod as ListApi;
+}
+const many = (count: number, level: FoundAlert["level"] = "important", from = 0) => Array.from({ length: count }, (_, i) => found(`a${from + i}`, "long_wait", level, from + i + 1, { zoneId: i % 2 ? "Z002" : "Z001" }));
+const opened = (rows: FoundAlert[]) => openAlerts(alertsFromServer(rows, [{ id: "Z001" }, { id: "Z002" }]), emptyAlertBook(), now, () => null);
+
+test("Q131 round 2: the screen draws one page of the filtered list, then Show more, never the whole list at once", () => {
+  const { alertListView } = listApi();
+  const list = opened(many(120));
+  const first = alertListView(list, ALL, "me", 1);
+  assert.equal(first.rows.length, engine.ALERT_PAGE, "the whole list is drawn: no pages");
+  assert.deepEqual(first.rows.map((a) => a.id), list.slice(0, engine.ALERT_PAGE).map((a) => a.id), "the first page is the top of the ordered list");
+  assert.deepEqual([first.left, first.total], [120 - engine.ALERT_PAGE, 120]);
+  assert.deepEqual([alertListView(list, ALL, "me", 2).rows.length, alertListView(list, ALL, "me", 3).left], [engine.ALERT_PAGE * 2, 0]);
+  // The filter comes before the page: one zone of 120 alerts is 60, so 50 drawn and 10 left.
+  const zone = alertListView(list, { ...ALL, zone: "Z002" }, "me", 1);
+  assert.ok(zone.rows.every((a) => a.zoneId === "Z002"));
+  assert.deepEqual([zone.rows.length, zone.left, zone.total], [engine.ALERT_PAGE, 10, 60]);
+  // A level filter: 3 critical among 120.
+  const mixed = [...list, ...opened(many(3, "critical", 500))];
+  const critical = alertListView(mixed, { ...ALL, quick: "critical" }, "me", 1);
+  assert.deepEqual([critical.rows.length, critical.left], [3, 0]);
+  // The open alert chosen for the side panel is found in the whole filtered list, not only in the drawn page.
+  assert.equal(alertListView(list, ALL, "me", 1, list[100].id).current?.id, list[100].id);
+});
+
+test("Q131 round 2: a new filter starts again on page 1; the same filter keeps the pages shown", () => {
+  const { alertFilterKey, pagesFor } = listApi();
+  const key = alertFilterKey(false, ALL);
+  assert.equal(pagesFor({ key, pages: 3 }, key), 3, "Show more is lost without a filter change");
+  const changes: [string, string][] = [
+    ["Old tab", alertFilterKey(true, ALL)],
+    ["level", alertFilterKey(false, { ...ALL, quick: "critical" })],
+    ["mine", alertFilterKey(false, { ...ALL, quick: "mine" })],
+    ["kind", alertFilterKey(false, { ...ALL, group: "money" })],
+    ["zone", alertFilterKey(false, { ...ALL, zone: "Z002" })],
+    ["snoozed", alertFilterKey(false, { ...ALL, state: "snoozed" })],
+  ];
+  for (const [what, next] of changes) assert.equal(pagesFor({ key, pages: 3 }, next), 1, `a new ${what} filter stays on page 3`);
 });

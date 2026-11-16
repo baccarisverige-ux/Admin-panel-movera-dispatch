@@ -638,6 +638,45 @@ export function pageAlerts<T>(list: readonly T[], pages: number): { rows: T[]; l
   return { rows, left: list.length - rows.length };
 }
 
+/** Q131 round 2: the filters of the Open / Old alert list (OpenView). */
+export type AlertFilter = { quick: "all" | Level | "mine" | "new"; group: GroupId | "all"; zone: string; state: "open" | "snoozed" | "muted" };
+
+/** The alerts that pass the filters, in the order they came (the list is already ordered by alertOrder). */
+export function filterAlerts(list: readonly OpenAlert[], filter: AlertFilter, me: string | undefined): OpenAlert[] {
+  const { quick, group, zone, state } = filter;
+  return list.filter((alert) => {
+    if (state === "open" && (alert.status === "snoozed" || alert.muted)) return false;
+    if (state === "snoozed" && alert.status !== "snoozed") return false;
+    if (state === "muted" && !alert.muted) return false;
+    if (quick === "mine" && alert.owner !== me) return false;
+    if (quick === "new" && alert.status !== "new") return false;
+    if ((quick === "critical" || quick === "important" || quick === "info") && alert.level !== quick) return false;
+    if (group !== "all" && alert.group !== group) return false;
+    if (zone !== "all" && alert.zoneId !== zone) return false;
+    return true;
+  });
+}
+
+/**
+ * Q131 round 2: what the list screen draws: the rows of the pages shown (never the whole list at once), how many are
+ * left behind "Show more", the filtered total, and the chosen alert (looked up in the whole filtered list).
+ */
+export function alertListView(list: readonly OpenAlert[], filter: AlertFilter, me: string | undefined, pages: number, selected: string | null = null): { rows: OpenAlert[]; left: number; total: number; current: OpenAlert | null } {
+  const shown = filterAlerts(list, filter, me);
+  const page = pageAlerts(shown, pages);
+  return { rows: page.rows, left: page.left, total: shown.length, current: shown.find((alert) => alert.id === selected) ?? null };
+}
+
+/** One key per filter choice (and the Old tab): a change of any of them is a new filter. */
+export function alertFilterKey(old: boolean, filter: AlertFilter): string {
+  return JSON.stringify([old, filter.quick, filter.group, filter.zone, filter.state]);
+}
+
+/** The pages to show: the ones opened with "Show more" for this filter; a new filter starts again on page 1. */
+export function pagesFor(paging: { key: string; pages: number }, key: string): number {
+  return paging.key === key ? Math.max(1, paging.pages) : 1;
+}
+
 function base(alert: Alert, record: AlertRecord | undefined): AlertRecord {
   return record ?? { id: alert.id, kind: alert.kind, level: alert.level, title: alert.title, zoneId: alert.zoneId, since: new Date(alert.since).toISOString(), status: "taken", owner: null, events: [] };
 }
