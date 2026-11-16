@@ -6,4 +6,5 @@ export const frC31PickupSpots: Record<keyof typeof enC31PickupSpots, string> = {
   "When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.": "Quand le client choisit le lieu de prise en charge, l’appli client propose Entrée principale, Entrée latérale et Parking autour de l’épingle, marqués comme approximatifs. Déjà utilisé et Près du domicile restent toujours. L’appli client lit ce réglage.",
   "Pickup entrance chips (approximate)": "Points d’accès de prise en charge (approximatifs)",
   "Off: no entrance chips; the pickup is the address only. Usual value: on.": "Désactivé : aucun point d’accès ; la prise en charge est seulement l’adresse. Valeur habituelle : activé.",
+  "Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.": "Les points d’accès de prise en charge n’ont pas pu être lus sur le serveur pour cette zone. Rechargez la page et réessayez.",
 };

@@ -6,4 +6,5 @@ export const svC31PickupSpots: Record<keyof typeof enC31PickupSpots, string> = {
   "When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.": "När kunden väljer upphämtning föreslår kundappen Huvudentré, Sidoentré och Parkering runt nålen, märkta som ungefärliga. Använd tidigare och Nära hemmet finns alltid kvar. Kundappen läser detta.",
   "Pickup entrance chips (approximate)": "Ingångsval vid upphämtning (ungefärliga)",
   "Off: no entrance chips; the pickup is the address only. Usual value: on.": "Av: inga ingångsval; upphämtningen är bara adressen. Vanligt värde: på.",
+  "Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.": "Ingångsval vid upphämtning kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen.",
 };
