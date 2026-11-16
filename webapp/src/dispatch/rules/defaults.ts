@@ -103,6 +103,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     stops: { on: true, max: CONFIG_DEFAULTS.maxStops, freeWaitMin: 0, perMin: 0, perStop: 0, changeDuring: true, driverCanRefuse: true, answerSeconds: 60, beforePickup: true, fixedPriceTrips: "block" },
     pickupMove: { maxMeters: CONFIG_DEFAULTS.maxPickupMoveMeters },
     samePoint: { warnMeters: CONFIG_DEFAULTS.samePointWarnMeters },
+    shareTrip: { on: CONFIG_DEFAULTS.shareTripOn },
     airport: { on: airport, order: "fifo", maxQueueMin: 120, queueAreas: [] },
     goingHome: { on: true, perDay: 2, maxOffDeg: 45 },
     destinationMode: destinationModeDefault(),

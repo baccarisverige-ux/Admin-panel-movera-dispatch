@@ -16,6 +16,7 @@ import {
   emptyConfig,
   impactPreview,
   missingTranslations,
+  MOVED_TO_SAFETY,
   normalizeConfig,
   publishConfig,
   removeOverride,
@@ -96,6 +97,10 @@ const PAYMENT_SWITCHES = new Set(["cash", "applePay"]);
 function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: boolean }; onChange: (on: boolean) => void }) {
   if (DISPATCH_SWITCHES.has(item.id)) {
     return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{trn("{0}: set per zone in Dispatch › Reservations. {1}", trx(item.label), <Link to="/dispatch?tab=reservations">{tr("Edit in Dispatch")}</Link>)}</p>;
+  }
+  if (MOVED_TO_SAFETY.has(item.id)) {
+    // BQ-S10 (contract v0.18.116): Share trip is set per zone in Dispatch › Safety; read-only here.
+    return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{trn("{0}: set per zone in Dispatch › Safety. {1}", trx(item.label), <Link to="/dispatch?tab=safety">{tr("Edit in Dispatch")}</Link>)}</p>;
   }
   if (PAYMENT_SWITCHES.has(item.id)) {
     return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{trn("{0}: set per country in Payment methods and languages. {1}", trx(item.label), <a href="#country-apps" onClick={(event) => { event.preventDefault(); document.getElementById("country-apps")?.scrollIntoView({ block: "start" }); }}>{tr("Edit per country")}</a>)}</p>;

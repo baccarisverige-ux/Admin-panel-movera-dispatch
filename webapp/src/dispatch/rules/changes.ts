@@ -52,7 +52,7 @@ const LABELS: Record<string, string> = {
   "decline.on": "Saying no rules", "decline.countsAcceptance": "No lowers acceptance", "decline.pauseAfter": "Pause after no's", "decline.pauseMin": "No pause minutes",
   "decline.longTripFree": "Long trips free to refuse", "decline.farPickupFree": "Far pickups free to refuse", "decline.farPickupKm": "Far pickup from",
   "safety.minRating": "Lowest rating check", "pickupPin.required": "Rider PIN before Start", "pickupPin.maxAttempts": "Wrong tries before lock", "pickupPin.lockMinutes": "Lock minutes", "safety.ratingBelow": "Lowest rating", "safety.maxCancel": "No requests over the cancel rate limit",
-  "safety.doNotMatch": "Do not match list", "safety.womenOnly": "Women-only rides", alerts: "Alerts",
+  "safety.doNotMatch": "Do not match list", "safety.womenOnly": "Women-only rides", "shareTrip.on": "Riders can share a live trip link", alerts: "Alerts",
 };
 
 /** Labels for the offer and waiting settings (Round 3, Q14–Q20). */
@@ -330,7 +330,7 @@ const PART_KEYS: Record<TabId, (keyof ZoneDispatch)[]> = {
   rides: ["extras", "longTripKm", "stops", "pickupMove", "samePoint", "driverCancel", "riderCancel", "airport", "pickupWait"],
   drivers: ["goingHome", "fairness", "decline"],
   destination: ["destinationMode", "nextTrips"],
-  safety: ["safety", "pickupPin", "rideCheck"],
+  safety: ["safety", "pickupPin", "rideCheck", "shareTrip"],
   alerts: ["alerts"],
 };
 
