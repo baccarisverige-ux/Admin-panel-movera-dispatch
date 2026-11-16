@@ -9,6 +9,7 @@ import { AppShell } from "./layout/AppShell";
 import { LIVE_HIDDEN_PAGES, MENU, menuItem, pageForPath, redirectTarget, type MenuItem } from "./nav";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundRecord } from "./ui/NotFoundRecord";
+import { ChunkBoundary } from "./ui/ChunkBoundary";
 import { I18nProvider } from "./i18n/I18nProvider";
 import { tr, trx } from "./i18n";
 import { useAdminApi } from "./api/AdminApiContext";
@@ -156,7 +157,7 @@ function Shell({ page, children, forceNoAccess = false }: { page: MenuItem | und
           ) : null}
           {live ? <IncidentAlarm /> : null}
           {live ? <AdminLiveEvents /> : null}
-          {denied ? <NoAccess /> : page ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>{children}</Suspense> : <NotFound />}
+          {denied ? <NoAccess /> : page ? <ChunkBoundary key={shown.id}><Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>{children}</Suspense></ChunkBoundary> : <NotFound />}
         </section>
       </AssignPanelProvider>
     </AppShell>
@@ -169,9 +170,11 @@ function Authed() {
   const location = useLocation();
   if (!agent && live) {
     return (
-      <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>
-        {/^\/setup-password\/?$/.test(location.pathname) ? <LiveSetupPasswordPage /> : <LiveLoginPage />}
-      </Suspense>
+      <ChunkBoundary>
+        <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>
+          {/^\/setup-password\/?$/.test(location.pathname) ? <LiveSetupPasswordPage /> : <LiveLoginPage />}
+        </Suspense>
+      </ChunkBoundary>
     );
   }
   if (!agent) return <LoginPage />;
@@ -253,7 +256,7 @@ export function App() {
   );
   return (
     <BrowserRouter basename={routerBasename()}>
-      {api.kind === "http" ? <LiveSessionProvider><Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}><LiveAdminApiProvider>{body}</LiveAdminApiProvider></Suspense></LiveSessionProvider> : <SessionProvider>{body}</SessionProvider>}
+      {api.kind === "http" ? <LiveSessionProvider><ChunkBoundary><Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}><LiveAdminApiProvider>{body}</LiveAdminApiProvider></Suspense></ChunkBoundary></LiveSessionProvider> : <SessionProvider>{body}</SessionProvider>}
     </BrowserRouter>
   );
 }

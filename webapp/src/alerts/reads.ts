@@ -1,6 +1,6 @@
 import { followsIncident, type KindId } from "./engine.ts";
 import { OPEN_INCIDENTS_LIST } from "../live/incidents.ts";
-import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi.ts";
+import { RIDE_CHECK_ALERTS_LIST } from "../live/listNames.ts";
 
 /**
  * Q132 (owner W2 answer A, 2026-11-15): what the shared alert bar (useAlerts, mounted on every page) reads.

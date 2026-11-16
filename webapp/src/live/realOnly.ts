@@ -5,7 +5,7 @@
  */
 import type { DemoRecord } from "../api/seed.ts";
 import { isLiveData } from "./realData.ts";
-import { docState } from "./liveAdminApi.ts";
+import { docState } from "./docState.ts";
 
 type Fuel = NonNullable<DemoRecord["fuel"]>;
 
