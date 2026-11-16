@@ -268,8 +268,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const rules = await draft("dispatch", id, true);
       const driver = unknownZones.has(id) ? null : await draft("driver_app_config", id, true);
       drivers.set(id, driver?.document ?? null);
-      // v0.18.115 BQ-V21: the rider document holds the pickup entrance chips switch (Dispatch › Rides). Read on its own
-      // (never marks the zone unknown); a zone without one, or a failed read, keeps the rules' own value.
+      // One rider document read serves v0.18.115 BQ-V21 (the pickup entrance chips switch, Dispatch › Rides) and
+      // v0.18.116 BQ-S10 (the Share trip switch, Dispatch › Safety). Read on its own (never marks the zone unknown); a
+      // zone without one, or a failed read, keeps the rules' own values.
       const rider = driver ? await readDraft(http, "rider_app_config", id).catch(() => null) : null;
       riders.set(id, rider?.document ?? null);
       // G3: what of the zone's app documents is saved but not live (shown above the editor).

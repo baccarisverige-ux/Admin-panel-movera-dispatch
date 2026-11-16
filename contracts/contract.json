@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.115",
+  "version": "0.18.116",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -4024,7 +4024,8 @@
         "currency": "TND"
       }
     },
-    "pickupSpotsOn": true
+    "pickupSpotsOn": true,
+    "shareTripOn": true
   },
   "realtime": {
     "envelope": [
@@ -10234,5 +10235,181 @@
     "server": "PUT /admin/config/rider_app_config: a booking.pickupSpots that is not an object, or an on that is not true / false, is 400 invalid_request with reason invalid_document. GET /rider/config always serves booking.pickupSpots { on }: the document's value, true when it is missing (a document published before v0.18.115).",
     "rider": "on: the Set pickup sheet shows the entrance chips as before (a chosen chip's title, with its approximate mark, ends the booked pickup label the driver sees). off: no entrance chips, and the pickup label is the address only. 'Previously used' (the device's own confirmed pickups) and 'Near Home' (the rider's saved Home) are real places, not entrance chips, and stay. A document without the field (an older server) reads as on.",
     "driver": "No change: the driver reads the booked pickup label from the trip (Offer / TripProjection pickup); no config field."
+  },
+  "shareTrip": {
+    "note": "v0.18.116 (BQ-S10, S12 G14; owner 2026-11-02 Q1 \"Build it for real (Recommended)\", Rules decisions/driver-g14.md:11, and the owner's S10 button answers of 2026-11-15, decisions/driver-g14.md S10 section Q1-Q7; Rule 0): during a trip the rider makes a live link and sends it with the phone's own share sheet or SMS app. The page behind the link shows the car, the plate, the arrival time, the trip phase and the car's latest spot, and nothing else. The link stops at drop-off. Admin on/off per zone, default on. A safety and privacy feature, not money. Additive; X-Api-Version stays 0.5; server migration 0114 (trip_shares).",
+    "owner": {
+      "Q1": "Yes, live car spot: an 'Open in Maps' link to the car's latest spot, refreshed every 20 s, stops at drop-off.",
+      "Q2": "No names: car, plate, arrival time and car spot only.",
+      "Q3": "Never the destination: only 'arriving in about N min / around HH:MM'; no address, city or area.",
+      "Q4": "'Automatically share every ride' opens the share sheet once at trip start; later the server texts the contacts when an SMS company is connected (not in this version).",
+      "Q5": "The driver's own share and the live link in the driver's SOS SMS (sosContactsSms.liveLink) are a separate later job.",
+      "Q6": "The per-zone switch is on by default.",
+      "Q7": "Share records are kept 30 days.",
+      "Q-A": "2026-11-15 19:32 UTC 'Hide until rider is in (Rec.)': before the rider is in the car the page shows no car position and no map link, only the phase text.",
+      "Q-B": "2026-11-15 19:32 UTC 'Hide last 500 m (Rec.)': within about 500 m of the drop-off the position and map link are hidden; only 'Arriving in about N min'.",
+      "stops": "2026-11-16 05:24 UTC 'Keep 500 m at stops (Rec.)': the same 500 m hide around every middle stop (confirms the session decision of 2026-11-15).",
+      "Q-D": "2026-11-16 05:24 UTC 'Keep 500 m at pickup (Rec.)': the same 500 m hide around the pickup (confirms the session decision of 2026-11-15)."
+    },
+    "setting": "Per zone: the zone's rider document (rider_app_config; its own, else its country standard) carries shareTrip { on } (boolean), saved and published with PUT /admin/config/rider_app_config + POST /admin/config/rider_app_config/publish (settings.edit / settings.publish). Admin: Dispatch › Safety, card 'Share trip link', switch 'Riders can share a live trip link'. Never saved = the document's older features.shareTrip when that is true / false, else configDefaults.shareTripOn (true). A shareTrip that is not an object, or an on that is not true / false, is 400 invalid_request, reason invalid_document. GET /rider/config always serves shareTrip { on } and the same value as features.shareTrip, so a rider app built before v0.18.116 reads the switch with no change. The driver document gets nothing.",
+    "statuses": [
+      "accepted",
+      "driver_to_pickup",
+      "arrived",
+      "rider_onboard",
+      "in_trip",
+      "approaching_dropoff"
+    ],
+    "notLive": "A link can be made only while the trip has a driver: the statuses above (the same list as safety.sos.riderStatuses). Before a driver, after the end, and for a booked (scheduled) ride still in accepted whose driver the rider is not shown yet: 409 invalid_transition, reason trip_not_live.",
+    "maxHours": 6,
+    "retentionDays": 30,
+    "ends": "A link stops, whichever comes first: (a) when the trip reaches any tripStatus.terminal status (drop-off = completed; also every cancelled status, no_show, expired, failed), checked every time the link is read, so no timer is needed; (b) when the rider stops sharing; (c) when the zone's switch is off, read on every view; (d) maxHours hours after the link was made. An ended link never shows trip data again: 410 with { state: 'ended', reason: 'share_ended' }. (c) is kept: a link seen while the switch is off stays ended when the switch is turned on again. Not an end: a trip that has no driver again (public.searching). (c) is seen when the link is read: a switch turned off and on again with no read in between leaves the link working, and a server copy may serve its cached switch for some seconds after a publish.",
+    "link": {
+      "url": "<share base>/s/<token>: the server's own public origin (server env SHARE_LINK_BASE, not a secret, so the host can change with no app release).",
+      "token": "128 bits as base64url, 22 characters, that cannot be guessed: the server makes them from the new link's id with a key of its own that the server derives from its secret with a fixed label (HMAC-SHA256, cut to 128 bits). The server stores only the SHA-256 of the token, never the token and never the URL: a copy of the database cannot open a link. A token is never written to a log, an audit row, an error message or the idempotency store.",
+      "tokenPattern": "^[A-Za-z0-9_-]{22}$"
+    },
+    "routes": {
+      "create": "POST /rider/trips/{tripId}/share {} + Idempotency-Key → 201 TripShareLink { shareId, tripId, url, createdAt, expiresAt, endsAtDropoff: true }. The signed-in rider's own trip only; another rider's trip is 404 trip_not_found. 409 invalid_transition, reason trip_not_live (notLive) or too_many_shares (limits.maxActivePerTrip live links already); 403 forbidden, reason share_trip_off (the zone's switch is off). Counted by the general write limit.",
+      "list": "GET /rider/trips/{tripId}/share → TripShareList { items: [TripShareItem { shareId, tripId, createdAt, expiresAt, endsAtDropoff }] }: the trip's live links, oldest first, without url (the app keeps the URL it got). An ended trip answers an empty list.",
+      "revoke": "DELETE /rider/trips/{tripId}/share + Idempotency-Key → 204. 'Stop sharing': every live link of the trip ends at once; no live link is still 204.",
+      "publicJson": "GET /api/v1/share/{token} (no sign-in, no standard headers needed) → 200 PublicTripShare, or 200 PublicTripShareSearching while the trip has no driver (public.searching); an ended link → 410 PublicTripShareEnded { state: 'ended', reason: 'share_ended' }; a bad or unknown token → 404 not_found, reason share_not_found, the same body for every miss so tokens cannot be probed.",
+      "publicPage": "GET /s/{token} (outside /api/v1; no sign-in): the same answer as an HTML page, 200 / 410 / 404, rendered by the server from the same allow-list. 429 is a short HTML page too; 503 is the standard error body. No script; the page reloads itself every public.refreshSeconds seconds while live."
+    },
+    "public": {
+      "fields": [
+        "state",
+        "phase",
+        "car",
+        "eta",
+        "position",
+        "updatedAt",
+        "refreshSeconds"
+      ],
+      "car": [
+        "make",
+        "model",
+        "color",
+        "plate"
+      ],
+      "eta": [
+        "minutes",
+        "target",
+        "arriveAround"
+      ],
+      "position": [
+        "lat",
+        "lng",
+        "at"
+      ],
+      "shape": "PublicTripShare { state: 'live', phase (phases, or queuedPhase), car: { make, model, color, plate }, eta: { minutes, target: pickup | dropoff, arriveAround } | null, position: { lat, lng, at } | null, updatedAt, refreshSeconds }. A FIXED ALLOW-LIST: the answer is built field by field from this list and never from TripProjection; a field not listed here is never sent.",
+      "phases": {
+        "to_pickup": [
+          "accepted",
+          "driver_to_pickup"
+        ],
+        "at_pickup": [
+          "arrived"
+        ],
+        "on_trip": [
+          "rider_onboard",
+          "in_trip",
+          "approaching_dropoff"
+        ]
+      },
+      "etaRule": "eta comes from the trip's stored ETA (TripEta): minutes = the seconds still left at the time of the read, rounded up to whole minutes, at least 1; target = pickup before the rider is in the car, dropoff after; arriveAround = that arrival instant as HH:MM in the trip zone's time zone. null when the server has no ETA, and in phase at_pickup.",
+      "positionRule": "position is the car's latest GPS fix the server has (from POST /driver/location), lat / lng with 5 decimals, at = when it was measured. It is sent ONLY when all of these hold, else null: (1) owner Q-A 2026-11-15 'Hide until rider is in': the rider is in the car (status in tripStatus.riderOnboard: phase on_trip). On the way to the pickup and waiting at it (to_pickup, at_pickup, queued) there is never a position and no Maps link, only the phase text. (2) owner Q-B 2026-11-15 'Hide last 500 m': the car is farther than hideWithinMetersOfDropoff metres (straight line) from the trip's drop-off AND from every middle stop of the trip (the same 500 m around each stop: owner 2026-11-16 05:24 UTC 'Keep 500 m at stops', confirming the session decision of 2026-11-15). The same distance applies around the trip's PICKUP (Q-D: owner 2026-11-16 05:24 UTC 'Keep 500 m at pickup', confirming the session decision of 2026-11-15; the status says the rider is in the car while the car still stands at the pickup, often the rider's home, which owner Q-A means to hide). Inside it the position and the Maps link are hidden and the page shows only 'Arriving in about N min'. A pickup, drop-off or stop the server has no finite coordinates for hides the position. The server works the distances out itself; the pickup, the drop-off, the stops and the distances are never sent. (3) the fix is not older than positionMaxAgeSeconds. The page shows a position only as the link positionLink ('Open in Maps'): no map tiles, no map key; with no position it shows no position line at all. Queued trip (supervisor MF-1): while the trip waits behind the driver's current trip (accepted with the server's next_after_trip_id set) the car still carries ANOTHER rider: position is null by rule (1), eta is null and phase is queuedPhase, never to_pickup.",
+      "positionMaxAgeSeconds": 300,
+      "hideWithinMetersOfDropoff": 500,
+      "positionLink": "https://maps.google.com/?q={lat},{lng}",
+      "refreshSeconds": 20,
+      "never": [
+        "any phone number (rider, driver, contacts)",
+        "any name (rider, driver first name or surname, contacts)",
+        "the pickup, stop and drop-off addresses and coordinates",
+        "the destination, its city or area",
+        "saved places",
+        "fare, price, payment, tip",
+        "rating",
+        "driver photo",
+        "any id other than the token in the address (no tripId, riderId, driverId, shareId, zoneId)"
+      ],
+      "headers": "Both public routes answer with Cache-Control: no-store, Referrer-Policy: no-referrer, X-Robots-Tag: noindex, nofollow and X-Content-Type-Options: nosniff. The HTML page also carries Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none', and <meta name=\"robots\" content=\"noindex, nofollow\">. The same four headers are on every answer of the two share paths, also the load-shed 503 and the 404 of a path that matches no route (an over-long token).",
+      "preview": "Messaging apps fetch a link to build a preview. The page has no Open Graph / preview tags and its <title> is only 'Movera' + texts.title, so a preview never carries trip data.",
+      "queuedPhase": "queued",
+      "searching": "While the trip has no driver (the driver cancelled and a new search runs; also a held booked ride whose driver the rider is not shown yet) the link is NOT ended: both public routes answer 200 with PublicTripShareSearching { state: 'searching', updatedAt, refreshSeconds } and the page says texts.searching and keeps reloading. No car, plate, time or position is sent. When a driver is assigned the link shows the new car."
+    },
+    "limits": {
+      "maxActivePerTrip": 3,
+      "perAddressPerMinute": 60,
+      "perTokenPerMinute": 30,
+      "note": "The public reads (both routes together) have their own budget, outside the general write limit (rateLimit): perAddressPerMinute per client address and perTokenPerMinute per link, a fixed 60 s window in each server copy's memory, like telemetry.limits. Over it: 429 rate_limited, reason share_too_many, Retry-After. Under load the public reads are shed first (503 unavailable, Retry-After), before any signed-in route; they are never in the safety set: a contact's page may fail under load, SOS must not."
+    },
+    "language": "The page's language: the viewer's Accept-Language (sv / fr / en, first match), else the trip zone's country language (configDefaults.countries.<country>.defaultLanguage: SE sv, FR fr, TN fr), else en.",
+    "texts": {
+      "sv": {
+        "title": "Delad resa",
+        "toPickup": "På väg för att hämta",
+        "atPickup": "Bilen väntar vid upphämtningen",
+        "onTrip": "På resan",
+        "arriving": "Framme om cirka {min} min",
+        "around": "omkring {time}",
+        "car": "Bil",
+        "plate": "Registreringsnummer",
+        "openInMaps": "Öppna bilens position i Kartor (Maps)",
+        "updated": "Uppdaterad {time}",
+        "ended": "Den här resan är avslutad. Länken fungerar inte längre.",
+        "notFound": "Länken hittades inte",
+        "privacy": "Sidan visar bara bilen, registreringsnumret, ankomsttiden och, under resan, bilens position. Den slutar fungera när resan är klar.",
+        "message": "Följ min Movera-resa live: {url}",
+        "tooMany": "För många visningar just nu. Försök igen om en minut.",
+        "queued": "Föraren avslutar en annan resa först",
+        "searching": "Söker en ny bil"
+      },
+      "fr": {
+        "title": "Trajet partagé",
+        "toPickup": "En route vers la prise en charge",
+        "atPickup": "La voiture attend au point de prise en charge",
+        "onTrip": "Trajet en cours",
+        "arriving": "Arrivée dans environ {min} min",
+        "around": "vers {time}",
+        "car": "Voiture",
+        "plate": "Immatriculation",
+        "openInMaps": "Ouvrir la position de la voiture dans Maps",
+        "updated": "Mis à jour à {time}",
+        "ended": "Ce trajet est terminé. Le lien ne fonctionne plus.",
+        "notFound": "Lien introuvable",
+        "privacy": "Cette page montre seulement la voiture, l'immatriculation, l'heure d'arrivée et, pendant le trajet, la position de la voiture. Elle cesse de fonctionner à la fin du trajet.",
+        "message": "Suivez mon trajet Movera en direct : {url}",
+        "tooMany": "Trop de consultations pour le moment. Réessayez dans une minute.",
+        "queued": "Le chauffeur termine d'abord une autre course",
+        "searching": "Recherche d'une nouvelle voiture"
+      },
+      "en": {
+        "title": "Shared trip",
+        "toPickup": "On the way to pick up",
+        "atPickup": "The car is waiting at the pickup",
+        "onTrip": "On the trip",
+        "arriving": "Arriving in about {min} min",
+        "around": "around {time}",
+        "car": "Car",
+        "plate": "Plate",
+        "openInMaps": "Open the car's position in Maps",
+        "updated": "Updated {time}",
+        "ended": "This trip has ended. The link no longer works.",
+        "notFound": "Link not found",
+        "privacy": "This page shows only the car, the plate, the arrival time and, during the trip, the car's position. It stops working when the trip is over.",
+        "message": "Follow my Movera ride live: {url}",
+        "tooMany": "Too many views right now. Try again in a minute.",
+        "queued": "The driver is finishing another trip first",
+        "searching": "Looking for a new car"
+      }
+    },
+    "contacts": "Trusted contacts are the rider's emergency contacts on the server (phoneDataToServer.riderEmergencyContacts, GET | PUT /rider/emergency-contacts): no second list. v0.18.116: EmergencyContact gains the optional shareTrips (boolean): 'Share trips with this contact'. The server keeps it on the rider's list and returns it; a value that is not true / false is 400 invalid_request; a driver PUT that carries it is accepted and the field is not kept. The server sends nothing to a contact: the rider's phone sends the message (texts.<lang>.message with {url}).",
+    "autoShare": "Owner Q4: the rider app's 'Automatically share every ride' opens the Share trip sheet once when the trip starts (one tap to send). Later, when an SMS company is connected, the server texts the contacts with shareTrips true; not in this version.",
+    "privacy": "No new personal data is collected. trip_shares holds the token hash, the trip, the rider, the zone and three times; a row is deleted retentionDays days after it was made. The audit rows trip.share_started / trip.share_stopped hold { tripId, count } only. The stored idempotency answer of the create call is kept without the url; a replay of the same Idempotency-Key gets the same url again, made from the link's id. Privacy unchanged for contacts (CONTRACT.md §49).",
+    "rider": "Rider app: the share button on the live trip screen and the safety sheet 'Share trip' open one Share trip sheet: the trusted contacts with shareTrips on (one tap opens the SMS app with texts.message), 'Share with…' (the phone's share sheet), 'Stop sharing' (DELETE) and the line that the link stops at drop-off. Hidden when features.shareTrip is false and outside statuses; 403 share_trip_off mid-trip hides it.",
+    "driver": "No change: the driver app calls no share route and its document gets no shareTrip key; the car and plate the page shows are already on the trip. The driver's own share is a later job (owner Q5).",
+    "admin": "Dispatch › Safety per zone (and the country standard): the 'Share trip link' card; the Dispatch publish writes the rider document's shareTrip { on }. Config › Features 'Share trip' is read-only with the line 'Set per zone in Dispatch › Safety'."
   }
 }

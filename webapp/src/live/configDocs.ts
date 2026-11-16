@@ -250,7 +250,7 @@ export { SECONDS_DEFAULT, rulesOfDispatch, reservationOfDriverDoc } from "./disp
 
 /** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
 export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
-  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck"] },
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons", "shareTrip"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck"] },
   settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
   content: { rider: [], driver: ["texts", "notices"] },
 };
