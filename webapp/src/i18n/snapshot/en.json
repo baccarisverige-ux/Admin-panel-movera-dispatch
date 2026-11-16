@@ -9121,4 +9121,5 @@
 ["Pause a bonus campaign","Pause a bonus campaign"],
 ["Resume a bonus campaign","Resume a bonus campaign"],
 ["End a bonus campaign","End a bonus campaign"],
-["Open a bonus campaign","Open a bonus campaign"]]
+["Open a bonus campaign","Open a bonus campaign"],
+["Waiting since {0}","Waiting since {0}"]]

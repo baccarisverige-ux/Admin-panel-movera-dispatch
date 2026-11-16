@@ -9121,4 +9121,5 @@
 ["Pause a bonus campaign","Pausa en bonuskampanj"],
 ["Resume a bonus campaign","Återuppta en bonuskampanj"],
 ["End a bonus campaign","Avsluta en bonuskampanj"],
-["Open a bonus campaign","Öppna en bonuskampanj"]]
+["Open a bonus campaign","Öppna en bonuskampanj"],
+["Waiting since {0}","Väntar sedan {0}"]]

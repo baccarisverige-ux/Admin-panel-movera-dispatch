@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tr, uiLocale } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { readUncounted } from "./listTotalParam";
-import { ErrorLine } from "./ui";
+import { ErrorLine, LoadMore } from "./ui";
 import type { Page, ReadyReply, SupportSettings, SupportTicket } from "./types";
 import { useMarketScope } from "../markets/useMarketScope";
 import { zoneFilterOf } from "./zoneFilter";
 import { deskCall, settingsIssue } from "./supportDesk";
 import { adminLabel } from "./format";
+import { inboxPath, joinInboxPages, waitingSinceText } from "./supportInbox";
 
 /**
  * Live builds only (contract v0.9.0 §16; v0.18.15 §37 support desk, owner 2026-11-02 decisions/other-support-promos.md
@@ -150,8 +151,15 @@ export function LiveSupport() {
   // v0.18.15 (owner "Yes"): the country's ready replies, picked into the answer box.
   const supportSettings = useQuery({ queryKey: ["live", "supportSettings", country], queryFn: () => client.json<SupportSettings>(`/admin/support/settings?country=${country}`) });
   const readyReplies = supportSettings.data?.replies ?? [];
-  const list = useQuery({ queryKey: ["live", "tickets", status, assigned, zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<SupportTicket>) : readUncounted<Page<SupportTicket>>(client, `/admin/tickets?limit=100${status ? `&status=${status}` : ""}${assigned ? `&assignedTo=${assigned}` : ""}${zoneQuery ? `&${zoneQuery}` : ""}`)) });
-  const items = list.data?.items ?? [];
+  // BQ-A04 (v0.18.112, contract.json#supportDesk.inboxOrder; owner item 109): the server's order (the oldest waiting
+  // ticket first), 50 at a time with "Load more"; the panel never sorts.
+  const list = useInfiniteQuery({
+    queryKey: ["live", "tickets", status, assigned, zoneQuery],
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<SupportTicket>) : readUncounted<Page<SupportTicket>>(client, inboxPath({ status, assigned, zoneQuery }, pageParam))),
+    getNextPageParam: (last) => last.nextCursor,
+  });
+  const items = joinInboxPages(list.data?.pages ?? []);
   const current = items.find((item) => item.ticketId === selected) ?? items[0];
   const detail = useQuery({ queryKey: ["live", "ticket", current?.ticketId], queryFn: () => client.json<SupportTicket>(`/admin/tickets/${encodeURIComponent(current!.ticketId)}`), enabled: Boolean(current) });
   // Admins to hand a ticket to: me and the admins already working on tickets in this list (the Team list is its own area).
@@ -215,7 +223,9 @@ export function LiveSupport() {
           {list.isLoading ? <p className="state-line">{tr("Loading.")}</p> : list.error ? <ErrorLine error={list.error} onRetry={() => void list.refetch()} /> : items.length === 0 ? <p className="dx-calm">{tr("No tickets.")}</p> : (
             <div className="sp-grid">
               <ul className="pm-list" aria-label={tr("Tickets")} data-testid="live-ticket-list">
-                {items.map((item) => (
+                {items.map((item) => {
+                  const waiting = waitingSinceText(item, when);
+                  return (
                   <li key={item.ticketId} className={item.ticketId === current?.ticketId ? "selected" : undefined}>
                     <button type="button" className="link-action" data-command="admin.ticket.view" onClick={() => { setSelected(item.ticketId); setNotice(""); setError(null); }}>
                       <b>{item.subject}</b>
@@ -223,10 +233,13 @@ export function LiveSupport() {
                         {categoryLabel(item.category)} · {item.openedBy === "rider" ? tr("Rider") : tr("Driver")} · {tr(STATUS_LABEL[item.status] as Parameters<typeof tr>[0])} · {when(item.updatedAt)}
                         {item.assignedTo ? <> · {adminLabel(item.assignedTo.name)}</> : null}
                         {item.late?.reply || item.late?.solve ? <> · <b className="danger-text">{tr("Late")}</b></> : null}
+                        {waiting ? <> · <span data-testid="live-ticket-waiting">{waiting}</span></> : null}
                       </small>
                     </button>
                   </li>
-                ))}
+                  );
+                })}
+                {list.hasNextPage ? <li className="pm-list-more" data-testid="live-ticket-more"><LoadMore hasMore={Boolean(list.hasNextPage)} loading={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()} /></li> : null}
               </ul>
               {current && ticket ? (
                 <article className="panel" data-testid="live-ticket">
