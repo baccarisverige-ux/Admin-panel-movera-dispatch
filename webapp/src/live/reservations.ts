@@ -149,6 +149,18 @@ export function reservationCall(action: Exclude<ReservationAction, "open">, trip
 /** The list's query: every booked ride of the admin's zones (contract.json#adminListFilters, kind=scheduled). */
 export const RESERVATIONS_PATH = "/admin/trips?kind=scheduled&limit=200";
 
+/**
+ * Q132 round 3 (CI fix): the page's own read names the country and zones picked in the top bar (contract.json#adminListFilters;
+ * owner 2026-10-29 "if I chose France it show Sweden trips"). Before Q132 the alert bar's trips read named them on
+ * every page; the bar no longer reads trips on live, so the page reads its own list, per country. `null` when the
+ * scope allows nothing (no read is sent).
+ */
+export function reservationsPath(filter: { params: readonly (readonly [string, string])[]; denied: boolean }): string | null {
+  if (filter.denied) return null;
+  const query = new URLSearchParams(filter.params as [string, string][]).toString();
+  return query ? `${RESERVATIONS_PATH}&${query}` : RESERVATIONS_PATH;
+}
+
 /** Owner BL-Q7: the pickup time passed with no driver; an admin handles it (it keeps going out as Exclusive). */
 export const isOverdue = (trip: ServerReservation): boolean => Boolean(trip.reservation?.overdue) && NO_DRIVER.has(trip.status);
 
