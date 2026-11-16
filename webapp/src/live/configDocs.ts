@@ -381,10 +381,38 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean };
 
-/** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
-export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
+/**
+ * F1 (MONEY, Rules audits/impact/f1-tips-save-payout-mode.md): the keys of a country_rules document the Tips & limits
+ * panel writes. countryRulesOf writes each of these from the panel's values exactly as before (a key the panel leaves
+ * out is not sent); every OTHER key of the stored document is kept as it is. Before, the document was rebuilt from a
+ * fixed list and the server stores what it is sent, so Finance › Payouts settings' payoutMode and payoutSchedule (same
+ * document) were dropped by every Tips & limits Save: a manual country went back to automatic, Monday 08:00.
+ */
+export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "currency", "tips", "raiseSteps", "driverBonus", "driverPayChangeMax", "onTripOffers", "limits", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms"] as const;
+
+/**
+ * Kept from the stored document on a country Standard only. A zone's base can be its Standard's document (a zone
+ * that uses the Standard gets its own here), and these are the Standard's: the server reads the payout keys from the
+ * Standard only (contract payoutSchedule "read from the country standard only"; J9 v0.18.84 maxRiderDebt and
+ * driverOwesLimit: "the country standard only; a zone's own value is ignored") and refuses the SOS / emergency keys
+ * on a zone (400 *_country_only). The panel's own Standard-only keys (walletCreditMax, emergencyNumbers,
+ * sosContactsSms) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
+ */
+export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"] as const;
+
+/** Never stored in a document: the server's marks on a read. */
+const COUNTRY_RULES_READ_MARKS = ["usesStandard", "zoneId"] as const;
+
+/**
+ * CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). `standard`: the document is the
+ * country Standard's (false for a zone's own rules).
+ */
+export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null, { standard = true }: { standard?: boolean } = {}): Doc {
   const option = (amount: number) => ({ amount: toMinor(amount, currency), enabled: true });
+  const drop = new Set<string>([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_READ_MARKS, ...(standard ? [] : COUNTRY_RULES_STANDARD_ONLY_KEPT)]);
+  const kept = structuredClone(Object.fromEntries(Object.entries(base ?? {}).filter(([key]) => !drop.has(key)))) as Doc;
   return {
+    ...kept,
     version: (base?.["version"] as number | undefined) ?? 1,
     publishedAt: (base?.["publishedAt"] as string | undefined) ?? new Date(0).toISOString(),
     country,
