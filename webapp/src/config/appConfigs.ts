@@ -186,6 +186,14 @@ function samePointWarnMeters(zone: ZoneDispatch): number {
   return validSamePoint(zone.samePoint?.warnMeters) ?? CONFIG_DEFAULTS.samePointWarnMeters;
 }
 
+/**
+ * v0.18.116 BQ-S10 (owner: admin on/off per zone, default on): riders can share a live trip link. The zone's Dispatch ›
+ * Safety switch decides; the old book-wide Config switch is read-only and decides nothing.
+ */
+function shareTrip(zone: ZoneDispatch): { on: boolean } {
+  return { on: typeof zone.shareTrip?.on === "boolean" ? zone.shareTrip.on : CONFIG_DEFAULTS.shareTripOn };
+}
+
 /** Q39/Q40: max stops and the pickup move limit after accept, from the zone's live Dispatch rules. */
 function booking(base: Common) {
   return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: base.zone.pickupMove.maxMeters, samePointWarnMeters: samePointWarnMeters(base.zone) };
@@ -333,8 +341,10 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
       scheduledRides: scheduledRides(base),
       wallet: switchOn(base, "rider", "wallet") && featureOn(base, "wallet", zoneId, "rider", state.now),
       pin: switchOn(base, "rider", "pin"),
-      shareTrip: switchOn(base, "rider", "shareTrip"),
+      // v0.18.116: the older field says the same as the per-zone switch (the server serves it that way too).
+      shareTrip: shareTrip(base.zone).on,
     },
+    shareTrip: shareTrip(base.zone),
     paymentMethods: paymentMethods(base, state, zoneId),
     // v0.18.33 (fix job 5, owner Q6): Settings › Payment methods "Use wallet first" (default on); the rider's per-ride switch starts on.
     wallet: { usedFirst: base.settings.walletFirst !== false },

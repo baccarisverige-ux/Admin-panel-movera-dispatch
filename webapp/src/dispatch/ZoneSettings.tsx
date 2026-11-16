@@ -478,6 +478,10 @@ function Safety({ zone, onChange, disabled, country, countryName }: Props) {
         <p className="op-help">{tr("Riders see the code in their app. Admins see it on the trip page. The driver never gets it.")}</p>
       </Card>
       <RideCheckCard zone={zone} onChange={onChange} disabled={disabled} />
+      {/* BQ-S10 (owner Q1 "admin on/off per zone", S10 Q6 default on; contract v0.18.116 contract.json#shareTrip): the rider document's shareTrip { on }. */}
+      <Card title={tr("Share trip link")} tone="green" icon={<Shield size={18} />} help={tr("During a trip the rider can send a live link to someone they trust. The page shows the car, the plate and the arrival time. The car’s position shows only while the rider is in the car, and never near the pickup, a stop or the drop-off. The link stops at drop-off.")}>
+        <Row label={tr("Riders can share a live trip link")} help={tr("Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.")} on={zone.shareTrip?.on ?? CONFIG_DEFAULTS.shareTripOn} disabled={disabled} onToggle={(on) => onChange({ ...zone, shareTrip: { on } })} />
+      </Card>
     </div>
   );
 }

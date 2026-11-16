@@ -115,6 +115,9 @@
     "pin": true,
     "shareTrip": true
   },
+  "shareTrip": {
+    "on": true
+  },
   "paymentMethods": [
     "cash",
     "card",

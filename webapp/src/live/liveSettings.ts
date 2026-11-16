@@ -262,14 +262,19 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const book = normalizeDispatchBook(fallback);
     const live = { ...book.live };
     const drivers = new Map<string, Doc | null>();
+    const riders = new Map<string, Doc | null>();
     await Promise.all(readScopes().map(async (id) => {
       // One read first tells whether the server knows the zone at all.
       const rules = await draft("dispatch", id, true);
       const driver = unknownZones.has(id) ? null : await draft("driver_app_config", id, true);
       drivers.set(id, driver?.document ?? null);
+      // v0.18.116 BQ-S10: the rider document holds the Share trip switch (Dispatch › Safety). Read on its own (never
+      // marks the zone unknown); a zone without one, or a failed read, keeps the rules' own value.
+      const rider = driver ? await readDraft(http, "rider_app_config", id).catch(() => null) : null;
+      riders.set(id, rider?.document ?? null);
       // G3: what of the zone's app documents is saved but not live (shown above the editor).
       if (driver && !countryOfStandard(id)) await markUnpublished("driver_app_config", id, driver).catch(() => undefined);
-      if (rules || driver) live[id] = rulesOfDispatch(rules?.document ?? null, driver?.document ?? null, liveRules(book, id));
+      if (rules || driver) live[id] = rulesOfDispatch(rules?.document ?? null, driver?.document ?? null, liveRules(book, id), rider?.document ?? null);
     }));
     // Owner 2026-10-28: History shows the server's published versions, so "Ångra" can put the one before back.
     const rows: Array<HistoryEntry & { zoneId: string }> = [];
@@ -287,7 +292,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const newest = rows.filter((row) => row.zoneId === id).sort((a, b) => b.version - a.version)[0];
       if (!newest) continue;
       const shown = live[id]!;
-      live[id] = rulesOfDispatch(newest.document, drivers.get(id) ?? null, liveRules(book, id));
+      live[id] = rulesOfDispatch(newest.document, drivers.get(id) ?? null, liveRules(book, id), riders.get(id) ?? null);
       if (JSON.stringify(shown) !== JSON.stringify(live[id])) draftsOf[id] = shown;
     }
     dispatchVersions.clear();
@@ -304,7 +309,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         note: row.action === "restore" ? `Undo: version ${row.restoredFrom ?? "?"} again` : row.note ?? "",
         zoneIds: [row.zoneId],
         lines: [`${name} · version ${row.version}`],
-        live: { ...live, [row.zoneId]: rulesOfDispatch(row.document, drivers.get(row.zoneId) ?? null, liveRules(book, row.zoneId)) },
+        live: { ...live, [row.zoneId]: rulesOfDispatch(row.document, drivers.get(row.zoneId) ?? null, liveRules(book, row.zoneId), riders.get(row.zoneId) ?? null) },
         liveCountries: book.liveCountries,
       };
     });
