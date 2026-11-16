@@ -457,14 +457,15 @@ export async function readDraft(http: ConfigHttp, doc: ConfigDocName, id: string
 
 /**
  * Saves `document` as the draft and publishes it at once (no second admin, v0.8.0). Nothing is sent when the server
- * already has the same live document. A 409 becomes SettingsChanged.
+ * already has the same live document. A 409 becomes SettingsChanged. `note` goes into the publish (History and the
+ * audit keep it): a Tips & limits save names itself there, so its documents can be undone together (live/tipsUndo.ts).
  */
-export async function savePublish(http: ConfigHttp, doc: ConfigDocName, id: string, draft: Draft | null, document: Doc): Promise<{ version: number } | null> {
+export async function savePublish(http: ConfigHttp, doc: ConfigDocName, id: string, draft: Draft | null, document: Doc, note?: string): Promise<{ version: number } | null> {
   if (draft && draft.liveVersion > 0 && !draft.usesStandard && sameDocument(draft.document, document)) return null;
   const scope = scopeOf(id);
   try {
     const saved = await http.put<Draft>(`/admin/config/${doc}`, { expectedVersion: draft?.version ?? 1, ...scope, document });
-    return await http.post<{ version: number }>(`/admin/config/${doc}/publish`, { expectedVersion: saved.version, ...scope });
+    return await http.post<{ version: number }>(`/admin/config/${doc}/publish`, { expectedVersion: saved.version, ...scope, ...(note ? { note } : {}) });
   } catch (error) {
     if (isStatus(error, 409)) throw new SettingsChanged();
     throw error;
@@ -478,7 +479,7 @@ export async function savePublish(http: ConfigHttp, doc: ConfigDocName, id: stri
  * undefined when the server cannot say (a country Standard has no history read): then a server draft row (version
  * above 1) may hold unpublished changes, so it is published rather than skipped.
  */
-export async function savePublishLive(http: ConfigHttp, doc: ConfigDocName, id: string, draft: Draft | null, document: Doc, live: Doc | null | undefined): Promise<{ version: number } | null> {
+export async function savePublishLive(http: ConfigHttp, doc: ConfigDocName, id: string, draft: Draft | null, document: Doc, live: Doc | null | undefined, note?: string): Promise<{ version: number } | null> {
   if (draft && draft.liveVersion > 0 && !draft.usesStandard) {
     if (live && sameDocument(live, document)) return null;
     // G7 live fix 2: a zone whose live document could not be read (a slow server) is published, never skipped: the
@@ -486,7 +487,7 @@ export async function savePublishLive(http: ConfigHttp, doc: ConfigDocName, id: 
     if (live === undefined && countryOfStandard(id) && draft.version <= 1 && sameDocument(draft.document, document)) return null;
   }
   // The skip is decided above; savePublish only takes the draft's version from here.
-  return savePublish(http, doc, id, draft ? { ...draft, liveVersion: 0 } : null, document);
+  return savePublish(http, doc, id, draft ? { ...draft, liveVersion: 0 } : null, document, note);
 }
 
 

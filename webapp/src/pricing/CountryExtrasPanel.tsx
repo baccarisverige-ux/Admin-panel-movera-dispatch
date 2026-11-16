@@ -1,10 +1,12 @@
 import { DRIVER_BONUS_LIMIT_INPUT_ID } from "../live/tripLive";
 import { useEffect, useState } from "react";
-import { BadgeDollarSign, Gift, HandHeart, Phone, Plus, Save, TrendingUp } from "lucide-react";
+import { BadgeDollarSign, Gift, HandHeart, Phone, Plus, Save, TrendingUp, Undo2 } from "lucide-react";
 import { CALL_FIELDS, CALL_RANGES, callModeText } from "../config/callSettings";
 import { DONT_MATCH_STARS, dontMatchStarsText } from "../config/dontMatchSettings";
 import { market, zoneById, type MarketId } from "../markets/markets";
 import { PublishTargetsLine } from "../live/StandardBar";
+import { TIPS_LAST_SAVE_KEY, savedLine, type TipsSave } from "../live/tipsUndo";
+import { shortDateTime } from "../domain/time";
 import {
   COUNTRY_SETTINGS_KEY,
   MAX_AMOUNTS,
@@ -124,13 +126,17 @@ function withoutTipFlag(mixed: MixedTipRules | undefined, flag: (typeof TIP_FLAG
 }
 
 export function CountryExtrasPanel({ country, canEdit, section, focus = null, onDirty, onNotice, targets, zoneId: shownZone }: Props) {
-  const { book, loading: bookLoading } = useCountrySettings();
+  const { book, loading: bookLoading, slice } = useCountrySettings();
   const zoneId = targets ? (shownZone && targets.includes(shownZone) ? shownZone : targets[0]) : undefined;
   const onStandard = !zoneId || zoneId === `standard-${country}`;
   // v0.8.1 live: each zone's (or Standard's) own Tips & limits, read when this tab opens.
   const zoneRules = useSlice<Record<string, CountrySettings>>(ZONE_RULES_KEY, {}, { enabled: Boolean(targets) });
   const zoneBook = { ...book, zones: zoneRules.value };
   const loading = bookLoading || (Boolean(targets) && zoneRules.loading);
+  // Live 2026-11-16: the newest Tips & limits save of this country on the server, for "Undo last Tips & limits save".
+  const lastSave = useSlice<TipsSave | null>(`${TIPS_LAST_SAVE_KEY}:${country}`, null, { enabled: Boolean(targets) });
+  const goBack = lastSave.value?.documents.filter((item) => item.back.to !== "nothing").length ?? 0;
+  const savedAt = lastSave.value ? shortDateTime(lastSave.value.at, market(country).timeZone) : "";
   const first = zoneId ? zoneSettingsOf(zoneBook, country, zoneId) : countrySettingsOf(book, country);
   // Live G8 round 3 item 1: the chosen zones that disagree on a tip switch show it mixed, with the zones where it is off.
   const mixedTip = targets && targets.length > 1 ? mixedTipAcross(targets.map((id) => [zoneById(id)?.name ?? id, zoneSettingsOf(zoneBook, country, id).tipRules] as const)) : first.mixedTipRules;
@@ -322,10 +328,27 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
             disabled={loading || !canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
             title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}
             largeChanges={large}
-            onDone={() => { setDraft(null); if (targets) void zoneRules.refetch(); onNotice(targets ? tr("Tips & limits saved for {0}. No other zone changed.", [zoneNames]) : tr("Tips & limits saved for {0}. The rider and driver apps get them with the next app config.", [name])); }}
+            onDone={() => { setDraft(null); if (targets) { void zoneRules.refetch(); void lastSave.refetch(); } onNotice(targets ? tr("Tips & limits saved for {0}. No other zone changed.", [zoneNames]) : tr("Tips & limits saved for {0}. The rider and driver apps get them with the next app config.", [name])); }}
           >{trn("{0} Save tips & limits", <Save size={15} aria-hidden="true" />)}</CommandButton>
           <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" disabled={!draft} onClick={() => setDraft(null)}>{tr("Discard")}</button>
+          {targets ? (
+            <CommandButton
+              command="admin.tipsLimits.undo"
+              className="dash-btn ghost"
+              targetId={lastSave.value?.saveId ?? ""}
+              confirmTarget={false}
+              scope={country}
+              before={lastSave.value ? `Tips & limits save ${lastSave.value.saveId}` : ""}
+              after="undo last Tips & limits save"
+              disabled={!canEdit || dirty || lastSave.loading || goBack === 0}
+              title={!canEdit ? tr("Your role cannot change this.") : dirty ? tr("Save or discard unsaved changes first.") : lastSave.loading ? tr("Looking for the last Tips & limits save.") : !lastSave.value ? tr("No Tips & limits save to undo in {0}. Only saves made from this panel version on can be undone here.", [name]) : goBack === 0 ? tr("The last Tips & limits save was already undone or changed. Nothing can go back.") : undefined}
+              summary={lastSave.value ? tr("Undo the Tips & limits save of {0} by {1}. Each document below goes back to the version before that save; nothing else changes.", [savedAt, lastSave.value.by]) : undefined}
+              largeChanges={lastSave.value ? lastSave.value.documents.map(savedLine) : undefined}
+              onDone={(result) => { setDraft(null); void slice.refetch(); void zoneRules.refetch(); void lastSave.refetch(); onNotice(result?.message ?? ""); }}
+            ><Undo2 size={15} aria-hidden="true" /> {tr("Undo last Tips & limits save")}</CommandButton>
+          ) : null}
         </div>
+        {targets && lastSave.value && goBack > 0 ? <p className="fine-print" data-testid="tips-last-save">{tr("Saved {0} by {1} · {2} document(s) go back", [savedAt, lastSave.value.by, goBack])}</p> : null}
       </section>
     </FieldErrorScope>
   );

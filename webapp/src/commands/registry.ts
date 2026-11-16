@@ -229,6 +229,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.pricing.archiveCategory", label: "Delete category", reason: true, permission: "settings.publish" },
   { id: "admin.pricing.restoreCategory", label: "Restore category", reason: true, permission: "settings.publish" },
   { id: "admin.pricing.saveCountry", label: "Save tips, raise steps, promo cap and driver bonus limit", reason: true, permission: "settings.publish" },
+  // Live 2026-11-16 (Rules audits/impact/country-undo.md): Tips & limits has its own Undo (live/tipsUndo.ts); the pricing Undo never undid it.
+  { id: "admin.tipsLimits.undo", label: "Undo last Tips & limits save", reason: true, permission: "settings.publish" },
   { id: "admin.ui.surgeLayer", label: "Surge map layer", reason: false, permission: "overview.read" },
   { id: "admin.reservation.assign", label: "Assign reservation", reason: true, permission: "trips.intervene" },
   { id: "admin.reservation.offer", label: "Offer reservation", reason: true, permission: "trips.intervene" },
@@ -613,6 +615,7 @@ const DESTRUCTIVE = new Set([
   "admin.trip.refund",
   "admin.dispatch.restore",
   "admin.dispatch.undo",
+  "admin.tipsLimits.undo",
   "admin.rider.block",
   "admin.rider.promoRemove",
   "admin.rider.privacy",
