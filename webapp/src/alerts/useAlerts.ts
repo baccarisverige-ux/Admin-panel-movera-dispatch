@@ -1,37 +1,23 @@
-import { isLiveData, liveDriverOf } from "../live/realData";
-import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi";
-import { OPEN_INCIDENTS_LIST } from "../live/incidents";
+import { isLiveData } from "../live/realData";
 import { useEffect, useMemo, useState } from "react";
 import { useRecords, useSlice } from "../api/hooks";
 import { useAdminApi } from "../api/AdminApiContext";
 import { emptySafety, type SafetyBook } from "../safety/ops";
-import { INCIDENT_OPS_KEY, caseOf, emptyIncidentOps, lateText, normalizeIncidentOps, type IncidentOps } from "../safety/cases";
+import { INCIDENT_OPS_KEY, emptyIncidentOps, normalizeIncidentOps, type IncidentOps } from "../safety/cases";
 import { useSession } from "../auth/SessionContext";
 import { can } from "../auth/permissions";
-import { liveDrivers } from "../dashboard/live";
-import { rideRequests } from "../dashboard/riders";
 import { demoShift } from "../dashboard/scheduled";
-import { driverFacts } from "../dispatch/demo";
-import { autoOfflineRows } from "../live/dispatchFacts";
-import { DISPATCH_KEY, emptyDispatchBook, liveRules, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
-import { DRIVER_DOCUMENTS } from "../drivers/gate";
-import { driverOps, emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
-import { daysUntil, DRIVER_DOC_LABELS } from "../fleet/documents";
+import { DISPATCH_KEY, emptyDispatchBook, normalizeDispatchBook, type DispatchBook } from "../dispatch/rules";
+import { emptyDriverOpsBook, type DriverOpsBook } from "../drivers/ops";
 import { zoneAllowed } from "../markets/scope";
-import { localDay } from "../dashboard/time";
 import { useMarketScope } from "../markets/useMarketScope";
 import { money as formatMajor } from "../pricing/zonePricing";
-import { failureCause, failureHandled } from "../payments/failures";
 import { useRidersData } from "../riders/useRidersData";
-import { RIDE_CHECK_KEY, alertBy, alertTitle, asRideChecks, emptyRideCheckOps, followText, normalizeRideCheckOps, reasonText, shiftOf, shifted, worries, type RideCheckOps } from "../safety/rideCheck";
+import { RIDE_CHECK_KEY, emptyRideCheckOps, normalizeRideCheckOps, type RideCheckOps } from "../safety/rideCheck";
 import { ALERTS_KEY, alertsFromServer, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, splitOld, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
-import { tr } from "../i18n/core.ts";
-
-function hash(text: string): number {
-  let value = 2166136261;
-  for (const char of text) value = Math.imul(value ^ char.charCodeAt(0), 16777619);
-  return value >>> 0;
-}
+import { alertFacts } from "./facts";
+import { alertIncidentsRead, alertPolls, alertReadOptions } from "./reads";
+import { useRideCheckRows } from "./useOnDemand";
 
 /**
  * Every alert for the chosen country and zones, worked out once from the panel's data and shared by
@@ -42,35 +28,41 @@ export function useAlerts() {
   const { agent } = useSession();
   const scope = useMarketScope();
   const market = scope.market;
-  // v0.18.20: on live the book carries the server's alerts; read again every 15 s (live updates come with the SSE job).
-  const slice = useSlice<AlertBook>(ALERTS_KEY, emptyAlertBook(), isLiveData() ? { refetchMs: 15_000 } : {});
-  const book = useMemo(() => normalizeAlertBook(slice.value), [slice.value]);
+  const live = isLiveData();
+  // v0.18.20: on live the book carries the server's alerts; read again every 15 s (and on each alert.changed event).
   // Only read what the role may read: a refused read is retried and slows every save.
   const canSafety = Boolean(agent && can(agent.role, "incidents.read"));
-  const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: canSafety });
-  const incidentSlice = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: canSafety });
-  const incidentOps = useMemo(() => normalizeIncidentOps(incidentSlice.value), [incidentSlice.value]);
-  const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook());
-  const dispatchBook = useMemo(() => normalizeDispatchBook(dispatchSlice.value), [dispatchSlice.value]);
-  const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook());
-  const drivers = useRecords("drivers", undefined, { refetchMs: 15_000 });
-  // G3-D5: live, the server's supply per zone (every online driver counted in his zone, position or not).
-  const zoneSupply = useRecords("zoneSupply", undefined, { refetchMs: 15_000 });
-  const trips = useRecords("trips", undefined, { refetchMs: 15_000 });
-  // B1.26b: live, the open cases only (one small read), not every page of the case history.
-  const incidents = useRecords(isLiveData() ? OPEN_INCIDENTS_LIST : "incidents", undefined, { refetchMs: 10_000 });
-  const reservations = useRecords("reservations", undefined, { refetchMs: 30_000 });
-  const payments = useRecords("payments", undefined, { refetchMs: 30_000 });
-  const payouts = useRecords("payouts");
-  const vehicles = useRecords("vehicles");
-  const tickets = useRecords("tickets", undefined, { refetchMs: 30_000 });
-  const riders = useRidersData("month");
   // Ride check alerts go to the safety team and to dispatchers.
   const canRideCheck = Boolean(agent && (can(agent.role, "incidents.read") || can(agent.role, "trips.intervene")));
-  // C4 (A15 N15): live, only the checks behind an alert (need_help, both sides of those trips), never every check.
-  const rideCheckRows = useRecords(isLiveData() ? RIDE_CHECK_ALERTS_LIST : "rideChecks", undefined, { refetchMs: 10_000 });
-  const rideChecks = useMemo(() => asRideChecks(rideCheckRows.data), [rideCheckRows.data]);
-  const rideSlice = useSlice<RideCheckOps>(RIDE_CHECK_KEY, emptyRideCheckOps(), { enabled: canRideCheck });
+  const slice = useSlice<AlertBook>(ALERTS_KEY, emptyAlertBook(), { refetchMs: alertPolls(live).alerts });
+  const book = useMemo(() => normalizeAlertBook(slice.value), [slice.value]);
+  // Q132 (owner W2 A): live, the bar reads only the server's alert list (+ the SOS owner and the ride-check banner's
+  // book); no table is read to build alerts in the browser. Demo: the panel's own engine reads its tables as before.
+  // Round 2 (SF-1): an open SOS / car-lost / ride-check alert keeps the open cases read on (Take / Solved never wait).
+  const reads = alertReadOptions({ live, canSafety, canRideCheck, found: book.found });
+  const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), reads.safetyOps);
+  const incidentSlice = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), reads.incidentOps);
+  const incidentOps = useMemo(() => normalizeIncidentOps(incidentSlice.value), [incidentSlice.value]);
+  const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook(), reads.dispatch);
+  const dispatchBook = useMemo(() => normalizeDispatchBook(dispatchSlice.value), [dispatchSlice.value]);
+  const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook(), reads.driverOps);
+  const drivers = useRecords("drivers", undefined, reads.drivers);
+  // G3-D5: live, the server's supply per zone (every online driver counted in his zone, position or not).
+  const zoneSupply = useRecords("zoneSupply", undefined, reads.zoneSupply);
+  const trips = useRecords("trips", undefined, reads.trips);
+  // B1.26b: live, the open cases only (one small read), not every page of the case history.
+  const incidentRead = alertIncidentsRead(live, reads.incidents.enabled);
+  const incidents = useRecords(incidentRead.list, undefined, incidentRead.options);
+  const reservations = useRecords("reservations", undefined, reads.reservations);
+  const payments = useRecords("payments", undefined, reads.payments);
+  const payouts = useRecords("payouts", undefined, reads.payouts);
+  const vehicles = useRecords("vehicles", undefined, reads.vehicles);
+  const tickets = useRecords("tickets", undefined, reads.tickets);
+  const riders = useRidersData("month", undefined, reads.riders);
+  // C4 (A15 N15): live, only the checks behind an alert (need_help, both sides of those trips), never every check;
+  // Q132: and only while the list holds a ride-check alert this admin may see.
+  const { checks: rideChecks } = useRideCheckRows(reads.rideChecks.enabled);
+  const rideSlice = useSlice<RideCheckOps>(RIDE_CHECK_KEY, emptyRideCheckOps(), reads.rideCheckOps);
   const rideOps = useMemo(() => normalizeRideCheckOps(rideSlice.value), [rideSlice.value]);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 30_000) * 30_000);
   useEffect(() => {
@@ -84,105 +76,20 @@ export function useAlerts() {
   // GM item 13: always the currency's own decimals, with the one formatter (C-23).
   const money = (major: number) => formatMajor(major, market.id);
 
-  const facts = useMemo((): Facts => {
-    const live = liveDrivers(drivers.data ?? [], vehicles.data ?? [], trips.data ?? [], incidents.data ?? [], 0);
-    const online = new Set(live.map((driver) => driver.id));
-    const requests = rideRequests(trips.data ?? [], [], (id) => online.has(id));
-    const freeByZone: Record<string, number> = {};
-    for (const driver of live) if (driver.state === "free") freeByZone[driver.zoneId] = (freeByZone[driver.zoneId] ?? 0) + 1;
-    const opsOf = (row: { id: string; name: string; fleetId?: string | null; status: string; kind?: string }) => driverOps(driverStore.value, { id: row.id, name: row.name, fleetId: row.fleetId ?? null, status: row.status, kind: row.kind });
-    const activeDrivers = (drivers.data ?? []).filter((row) => row.status === "active");
-    const shift = demoShift(now, api.demo);
-    const day = localDay(now, market.timeZone);
-    const zoneName = (id: string) => market.zones.find((zone) => zone.id === id)?.name ?? id;
-    const hour = Math.floor(now / 3_600_000);
-    // Live (owner rule, part 3): only facts the server sends; local demo stores and hashes give nothing.
-    const liveData = isLiveData();
-    return {
-      now,
-      day,
-      zones: zones.map((zone) => ({ id: zone.id, name: zone.name })),
-      incidents: (incidents.data ?? []).map((row) => {
-        const record = safety.value.incidents[row.id];
-        return { id: row.id, zoneId: row.zoneId, who: row.name, status: row.status, owner: record?.owner ?? null, takenAt: record?.events.find((event) => event.kind === "take")?.at ?? null, createdAt: row.createdAt ?? null, late: lateText(caseOf(row, safety.value, incidentOps, now), incidentOps.settings, now), kind: row.kind };
-      }),
-      rideChecks: rideChecks.flatMap((check) => {
-        const row = check.incidentId ? (incidents.data ?? []).find((item) => item.id === check.incidentId) : undefined;
-        const first = alertBy(check);
-        if (!row || !first) return [];
-        const opened = caseOf(row, safety.value, incidentOps, now).openedAt;
-        const said = worries(check).map((item) => followText(item.follow));
-        return [{
-          id: check.id,
-          incidentId: row.id,
-          zoneId: check.zoneId,
-          status: row.status,
-          title: tr("Ride check: {0}", [alertTitle(check)]),
-          detail: [...(said.length ? said : [reasonText(check)]), zoneName(check.zoneId), check.tripId].join(" · "),
-          since: shifted(first.answer.at, shiftOf(check, opened, shift)),
-        }];
-      }),
-      requests: requests.map((request) => ({ tripId: request.tripId, rider: request.rider, zoneId: request.zoneId, waitingMin: request.waitingMin, searching: request.status === "searching" })),
-      freeByZone,
-      ...(liveData ? { supplyByZone: Object.fromEntries((zoneSupply.data ?? []).filter((row) => row.supply).map((row) => [row.zoneId, { free: row.supply!.free, waiting: row.supply!.waiting }])) } : {}),
-      dispatch: (zoneId) => {
-        const alerts = liveRules(dispatchBook, zoneId).alerts;
-        const pick = (id: "long_wait" | "few_drivers" | "no_driver") => {
-          const item = alerts.find((entry) => entry.id === id);
-          return { on: Boolean(item?.on), limit: item?.limit ?? 5 };
-        };
-        return { long_wait: pick("long_wait"), few_drivers: pick("few_drivers"), no_driver: pick("no_driver") };
-      },
-      lateRides: (reservations.data ?? [])
-        .filter((row) => row.pickupAt && (row.status === "waiting" || row.status === "booked") && !row.driverId)
-        .map((row) => ({ id: row.id, rider: row.name, zoneId: row.zoneId, minutesLeft: Math.round((Date.parse(row.pickupAt!) + shift - now) / 60_000) }))
-        .filter((row) => row.minutesLeft >= 0 && row.minutesLeft <= 180),
-      documents: liveData ? [] : activeDrivers.flatMap((row) => {
-        const ops = opsOf(row);
-        return DRIVER_DOCUMENTS.filter((id) => !(row.fleetId && id === "company_registration")).flatMap((id) => {
-          const doc = ops.documents[id];
-          const days = doc ? daysUntil(doc.expiresAt, now, market.timeZone) : null;
-          return days === null ? [] : [{ driverId: row.id, driver: row.name, zoneId: row.zoneId, doc: DRIVER_DOC_LABELS[id] ?? id, days }];
-        });
-      }),
-      ratings: liveData
-        ? activeDrivers.flatMap((row) => {
-          const rating = liveDriverOf(row)?.rating ?? null;
-          return rating === null ? [] : [{ driverId: row.id, driver: row.name, zoneId: row.zoneId, rating }];
-        })
-        : activeDrivers.map((row) => ({ driverId: row.id, driver: row.name, zoneId: row.zoneId, rating: opsOf(row).ratings.stars })),
-      // Owner 2026-11-04 (real driver facts): no alert from a null fact (autoOfflineRows); on live the server raises
-      // auto-offline itself (it sets the driver offline), so the panel invents nothing here.
-      offline: liveData ? [] : autoOfflineRows(driverFacts(live, () => ({ rating: 4.7, acceptancePct: 80, cancelPct: 5, categories: [] }), null), (zoneId) => {
-        const rule = liveRules(dispatchBook, zoneId).autoOffline;
-        return rule.on ? rule.after : null;
-      }),
-      payments: (payments.data ?? [])
-        .filter((row) => row.status === "failed" && !failureHandled(row))
-        .map((row) => {
-          const cause = liveData ? { kind: "rider" as const, reason: "Not connected yet" } : failureCause(row);
-          return { id: row.id, zoneId: row.zoneId, rider: row.name, amount: (row.fareOre ?? 0) / market.minorUnits, system: cause.kind === "system", reason: cause.reason, ...(row.createdAt ? { at: row.createdAt } : {}) };
-        }),
-      // A2 leftovers (owner Q1 "One admin always"): no refund waits for a second admin.
-      refunds: [],
-      payouts: (payouts.data ?? []).filter((row) => row.status === "scheduled").map((row) => ({ id: row.id, driver: (drivers.data ?? []).find((item) => item.id === row.driverId)?.name ?? row.name, zoneId: row.zoneId, amount: (row.fareOre ?? 0) / market.minorUnits })),
-      riders: liveData ? [] : riders.rows.filter((row) => row.profile.country === market.id).map((row) => ({ id: row.rider.id, name: row.rider.name, flags: row.profile.fraudFlags, cancelRate: row.profile.cancelRate, rides: row.profile.completed + row.profile.cancelled + row.profile.noShows })),
-      tickets: (tickets.data ?? []).filter((row) => row.status === "open").map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId, ...(row.openedBy ? { openedBy: row.openedBy } : {}) })),
-      // Demo health: the map tiles are slow now and then; the backend reports real health later.
-      system: liveData ? [] : [
-        { id: "api", name: "Admin API", state: "ok", detail: "" },
-        { id: "maps", name: "Map tiles", state: hash(`maps:${hour}`) % 4 === 0 ? "slow" : "ok", detail: "Answers take over 2 seconds" },
-        { id: "payments", name: "Payment provider", state: hash(`pay:${hour}`) % 9 === 0 ? "slow" : "ok", detail: "Card payments take longer than usual" },
-        { id: "push", name: "Driver app notifications", state: "ok", detail: "" },
-      ],
-      money,
-    };
-    // money depends only on the market, which is already a dependency.
-  }, [now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks, zoneSupply.data]);
+  // Q132 round 3: the facts are built by a pure function (alerts/facts.ts); `live` here is the live / demo flag.
+  const facts = useMemo((): Facts => alertFacts({
+    live, now, demo: api.demo, market, zones,
+    drivers: drivers.data ?? [], vehicles: vehicles.data ?? [], trips: trips.data ?? [], incidents: incidents.data ?? [],
+    reservations: reservations.data ?? [], payments: payments.data ?? [], payouts: payouts.data ?? [], tickets: tickets.data ?? [],
+    zoneSupply: zoneSupply.data ?? [], riderRows: riders.rows, safety: safety.value, incidentOps, dispatchBook,
+    driverOps: driverStore.value, rideChecks, money,
+  }),
+  // money depends only on the market, which is already a dependency.
+  [live, now, zones, drivers.data, vehicles.data, trips.data, incidents.data, reservations.data, payments.data, payouts.data, tickets.data, riders.rows, safety.value, incidentOps, dispatchBook, driverStore.value, market, api.demo, rideChecks, zoneSupply.data]);
 
   // v0.18.20 server-side alerts: on live the server finds every alert (owner A1–A3); the panel only reads them. The
   // panel's own engine stays for the demo (demo removal is its own job).
-  const liveFound = isLiveData();
+  const liveFound = live;
   const all = useMemo(
     () => (liveFound
       ? alertsFromServer(book.found ?? [], zones, (incidentId) => rideChecks.find((check) => check.incidentId === incidentId)?.id)
@@ -213,7 +120,8 @@ export function useAlerts() {
     now,
     sosOwner,
     rideCheck: { checks: rideChecks, ops: rideOps, loading: rideSlice.loading, unopened, demoShift: demoShift(now, api.demo) },
-    loading: slice.loading || incidents.isLoading || trips.isLoading,
+    // Round 2: the live warm read of the open cases never holds back the alert sound (only the demo engine needs it).
+    loading: slice.loading || (!live && reads.incidents.enabled && incidents.isLoading) || (reads.trips.enabled && trips.isLoading),
     counts: {
       critical: active.filter((alert) => alert.level === "critical").length,
       important: active.filter((alert) => alert.level === "important").length,

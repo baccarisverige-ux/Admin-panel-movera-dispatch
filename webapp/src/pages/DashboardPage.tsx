@@ -38,6 +38,7 @@ import { can } from "../auth/permissions";
 import { useSession } from "../auth/SessionContext";
 import { commandById } from "../commands/registry";
 import { useAlertsMaybe } from "../alerts/AlertsContext";
+import { useRideCheckRows } from "../alerts/useOnDemand";
 import { DriversMap, REQUEST_COLOR, STATE_COLOR } from "../dashboard/DriversMap";
 import { EarningsChart } from "../dashboard/EarningsChart";
 import { change, COMMISSION_PLACEHOLDER, dashboardMoveraMinor, earningsReport, type Share } from "../dashboard/earnings";
@@ -364,6 +365,9 @@ export function DashboardPage() {
   ];
   // Alerts is the one source by default; the older counts and sound only run when switched back on there.
   const shared = useAlertsMaybe();
+  // Q132: the live map pins the open ride checks; it reads them itself (the alert bar reads them only behind a ride-check alert).
+  const canMapRideChecks = can(role, "incidents.read") || can(role, "trips.intervene");
+  const { checks: mapRideChecks } = useRideCheckRows(canMapRideChecks);
   const legacy = shared?.book.settings.legacy ?? { dashboardCounts: true, dashboardSound: true };
   const alertSignals = useAlertSignals(legacy.dashboardSound ? signals : [], !incidents.isLoading && !trips.isLoading);
   const sharedPills = shared ? (["critical", "important", "info"] as const).map((level) => {
@@ -640,7 +644,7 @@ export function DashboardPage() {
                 surgeDriver={Boolean(liveSurge)}
                 bonusAreas={bonusAreas}
                 bonusShown={showBonus}
-                rideChecks={shared && (can(role, "incidents.read") || can(role, "trips.intervene")) ? { checks: shared.rideCheck.checks, demoShift: shared.rideCheck.demoShift, now: shared.now } : null}
+                rideChecks={shared && canMapRideChecks ? { checks: mapRideChecks, demoShift: shared.rideCheck.demoShift, now: shared.now } : null}
                 onSurgeZone={(zoneId) => setQuick({ kind: "surge", zoneId })}
                 onBonusArea={(id) => setQuick({ kind: "bonus", id })}
                 overlay={<LiveMapQuickPopup target={quick} surge={surge} country={country} market={market} withScope={withScope} onClose={() => setQuick(null)} onNotice={setLiveNotice} />}

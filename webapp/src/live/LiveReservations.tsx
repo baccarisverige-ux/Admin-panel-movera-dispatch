@@ -8,7 +8,9 @@ import { useLiveRefetch, zonedLabel } from "../api/hooks";
 import { useLiveSession } from "./LiveSessionContext";
 import { readUncounted } from "./listTotalParam";
 import { ErrorLine } from "./ui";
-import { atRisk, inView, raiseAmountMinor, isOverdue, needsAttention, notStarted, reservationActions, reservationCall, reservationStateLabel, RESERVATIONS_PATH, sortReservations, type ReservationAction, type ServerReservation, type View } from "./reservations";
+import { useMarketScope } from "../markets/useMarketScope";
+import { zoneFilterOf } from "./zoneFilter";
+import { atRisk, inView, raiseAmountMinor, isOverdue, needsAttention, notStarted, reservationActions, reservationCall, reservationStateLabel, reservationsPath, sortReservations, type ReservationAction, type ServerReservation, type View } from "./reservations";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "all", label: "All" },
@@ -43,7 +45,11 @@ export function LiveReservations() {
   // Live test MED 7: the admin picks drivers by name (the zone's drivers from the server), never a raw id.
   const drivers = useQuery({ queryKey: ["live", "reservationDrivers"], queryFn: () => readUncounted<{ items: { driverId: string; firstName?: string; lastName?: string; onlineStatus?: string; zoneIds?: string[] }[] }>(client, "/admin/drivers?accountStatus=active&limit=200"), staleTime: 60_000 });
   const refetchInterval = useLiveRefetch("reservations", 30_000);
-  const list = useQuery({ queryKey: ["live", "reservations"], queryFn: () => readUncounted<{ items: ServerReservation[] }>(client, RESERVATIONS_PATH), refetchInterval });
+  // Q132 round 3: the page reads its own booked rides of the country and zones in the top bar (the alert bar no longer
+  // reads trips on live). The key keeps the ["live", "reservations"] prefix, so saves and live events still reload it.
+  const scope = useMarketScope();
+  const path = reservationsPath(zoneFilterOf(scope.effective));
+  const list = useQuery({ queryKey: ["live", "reservations", path], queryFn: () => (path ? readUncounted<{ items: ServerReservation[] }>(client, path) : Promise.resolve({ items: [] as ServerReservation[] })), refetchInterval });
   const [view, setView] = useState<View>("all");
   const [open, setOpen] = useState<{ tripId: string; action: Exclude<ReservationAction, "open"> } | null>(null);
   const [reason, setReason] = useState("");
