@@ -49,6 +49,7 @@ test("A09 + Rule 21: the removed Arabic tab is archived in content/archive with 
   assert.match(text, /driver-g14\.md/);
   const archive = await import("./archive/driverTexts-ar-2026-11-15.ts");
   assert.deepEqual(archive.ARCHIVED_ARABIC_TAB, { id: "ar", label: "Arabic", rtl: true });
-  assert.equal(archive.ARCHIVED_ARABIC_KEYS, DRIVER_TEXT_KEYS.length, "every one of the 67 keys had an (empty) Arabic slot");
+  // G18 (2026-11-16) added trip.finishTrip after the archive: 67 then, one more now.
+  assert.equal(archive.ARCHIVED_ARABIC_KEYS, DRIVER_TEXT_KEYS.length - 1, "every one of the 67 keys had an (empty) Arabic slot");
   assert.deepEqual(archive.ARCHIVED_ARABIC_TEXTS, {}, "the code held no Arabic driver texts: the defaults were empty");
 });
