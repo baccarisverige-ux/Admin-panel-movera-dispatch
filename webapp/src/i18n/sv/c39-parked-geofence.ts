@@ -2,4 +2,7 @@
 export const svC39ParkedGeofence = {
   "Automatic arrival check (pickup, waiting clock, stops)": "Automatisk ankomstkontroll (upphämtning, väntetidsklocka, stopp)",
   "{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work.": "{0} stoppade på servern för {1}. Den körs en gång till av sig själv efter 1 min; misslyckas den igen förblir den stoppad. Förarens egna tryck fungerar fortfarande.",
+  // S4 B1.1 SF-2, round 4 (a session decision under the owner's night rule, 2026-11-16; the owner reviews it): a parked trip_eta job.
+  "Live arrival time (ETA) update": "Uppdatering av ankomsttid (ETA)",
+  "{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. Meanwhile the apps show an estimated time, and the rider's \"almost there\" message and the late check of booked rides wait.": "{0} stoppade på servern för {1}. Den körs en gång till av sig själv efter 1 min; misslyckas den igen förblir den stoppad. Under tiden visar apparna en uppskattad tid, och resenärens meddelande ”nästan framme” och förseningskontrollen för bokade resor väntar.",
 } as const;

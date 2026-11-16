@@ -9128,4 +9128,6 @@
 ["Pickup entrance chips (approximate)","Pickup entrance chips (approximate)"],
 ["Off: no entrance chips; the pickup is the address only. Usual value: on.","Off: no entrance chips; the pickup is the address only. Usual value: on."],
 ["Automatic arrival check (pickup, waiting clock, stops)","Automatic arrival check (pickup, waiting clock, stops)"],
-["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work.","{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work."]]
+["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work.","{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work."],
+["Live arrival time (ETA) update","Live arrival time (ETA) update"],
+["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. Meanwhile the apps show an estimated time, and the rider's \"almost there\" message and the late check of booked rides wait.","{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. Meanwhile the apps show an estimated time, and the rider's \"almost there\" message and the late check of booked rides wait."]]
