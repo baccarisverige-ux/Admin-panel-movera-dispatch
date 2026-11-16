@@ -101,7 +101,9 @@ test("B1.26b: incident.changed refreshes the open-case, per-trip and per-case li
 
 test("B1.26b: the 10 s / 30 s pollers and the alarm refresh use the open-case list, not the whole history", () => {
   const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
-  for (const file of ["alerts/useAlerts.ts", "pages/DashboardPage.tsx", "pages/PricingPage.tsx"]) {
+  // Q132 round 2: the alert bar's open-case read is built in alerts/reads.ts (alertIncidentsRead; behaviour pinned in
+  // alerts/q132AlertReads.test.ts), so that file is checked here instead of useAlerts.ts.
+  for (const file of ["alerts/reads.ts", "pages/DashboardPage.tsx", "pages/PricingPage.tsx"]) {
     assert.doesNotMatch(read(file), /useRecords\("incidents", undefined, \{ refetchMs/, file);
     assert.match(read(file), /OPEN_INCIDENTS_LIST/, file);
   }

@@ -1,5 +1,4 @@
 import { isLiveData, liveDriverOf } from "../live/realData";
-import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { useEffect, useMemo, useState } from "react";
 import { useRecords, useSlice } from "../api/hooks";
 import { useAdminApi } from "../api/AdminApiContext";
@@ -25,7 +24,7 @@ import { useRidersData } from "../riders/useRidersData";
 import { RIDE_CHECK_KEY, alertBy, alertTitle, emptyRideCheckOps, followText, normalizeRideCheckOps, reasonText, shiftOf, shifted, worries, type RideCheckOps } from "../safety/rideCheck";
 import { ALERTS_KEY, alertsFromServer, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, splitOld, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
 import { tr } from "../i18n/core.ts";
-import { alertPolls, alertReads } from "./reads";
+import { alertIncidentsRead, alertPolls, alertReadOptions } from "./reads";
 import { useRideCheckRows } from "./useOnDemand";
 
 function hash(text: string): number {
@@ -45,38 +44,39 @@ export function useAlerts() {
   const market = scope.market;
   const live = isLiveData();
   // v0.18.20: on live the book carries the server's alerts; read again every 15 s (and on each alert.changed event).
-  const polls = alertPolls(live);
   // Only read what the role may read: a refused read is retried and slows every save.
   const canSafety = Boolean(agent && can(agent.role, "incidents.read"));
   // Ride check alerts go to the safety team and to dispatchers.
   const canRideCheck = Boolean(agent && (can(agent.role, "incidents.read") || can(agent.role, "trips.intervene")));
-  const slice = useSlice<AlertBook>(ALERTS_KEY, emptyAlertBook(), { refetchMs: polls.alerts });
+  const slice = useSlice<AlertBook>(ALERTS_KEY, emptyAlertBook(), { refetchMs: alertPolls(live).alerts });
   const book = useMemo(() => normalizeAlertBook(slice.value), [slice.value]);
   // Q132 (owner W2 A): live, the bar reads only the server's alert list (+ the SOS owner and the ride-check banner's
   // book); no table is read to build alerts in the browser. Demo: the panel's own engine reads its tables as before.
-  const reads = alertReads({ live, canSafety, canRideCheck, found: book.found });
-  const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), { enabled: reads.safetyOps });
-  const incidentSlice = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), { enabled: reads.incidentOps });
+  // Round 2 (SF-1): an open SOS / car-lost / ride-check alert keeps the open cases read on (Take / Solved never wait).
+  const reads = alertReadOptions({ live, canSafety, canRideCheck, found: book.found });
+  const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), reads.safetyOps);
+  const incidentSlice = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), reads.incidentOps);
   const incidentOps = useMemo(() => normalizeIncidentOps(incidentSlice.value), [incidentSlice.value]);
-  const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook(), { enabled: reads.dispatch });
+  const dispatchSlice = useSlice<DispatchBook>(DISPATCH_KEY, emptyDispatchBook(), reads.dispatch);
   const dispatchBook = useMemo(() => normalizeDispatchBook(dispatchSlice.value), [dispatchSlice.value]);
-  const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook(), { enabled: reads.driverOps });
-  const drivers = useRecords("drivers", undefined, { refetchMs: polls.drivers, enabled: reads.drivers });
+  const driverStore = useSlice<DriverOpsBook>("driverOps", emptyDriverOpsBook(), reads.driverOps);
+  const drivers = useRecords("drivers", undefined, reads.drivers);
   // G3-D5: live, the server's supply per zone (every online driver counted in his zone, position or not).
-  const zoneSupply = useRecords("zoneSupply", undefined, { refetchMs: polls.zoneSupply, enabled: reads.zoneSupply });
-  const trips = useRecords("trips", undefined, { refetchMs: polls.trips, enabled: reads.trips });
+  const zoneSupply = useRecords("zoneSupply", undefined, reads.zoneSupply);
+  const trips = useRecords("trips", undefined, reads.trips);
   // B1.26b: live, the open cases only (one small read), not every page of the case history.
-  const incidents = useRecords(live ? OPEN_INCIDENTS_LIST : "incidents", undefined, { refetchMs: polls.incidents, enabled: reads.incidents });
-  const reservations = useRecords("reservations", undefined, { refetchMs: polls.reservations, enabled: reads.reservations });
-  const payments = useRecords("payments", undefined, { refetchMs: polls.payments, enabled: reads.payments });
-  const payouts = useRecords("payouts", undefined, { enabled: reads.payouts });
-  const vehicles = useRecords("vehicles", undefined, { enabled: reads.vehicles });
-  const tickets = useRecords("tickets", undefined, { refetchMs: polls.tickets, enabled: reads.tickets });
-  const riders = useRidersData("month", undefined, { enabled: reads.riders });
+  const incidentRead = alertIncidentsRead(live, reads.incidents.enabled);
+  const incidents = useRecords(incidentRead.list, undefined, incidentRead.options);
+  const reservations = useRecords("reservations", undefined, reads.reservations);
+  const payments = useRecords("payments", undefined, reads.payments);
+  const payouts = useRecords("payouts", undefined, reads.payouts);
+  const vehicles = useRecords("vehicles", undefined, reads.vehicles);
+  const tickets = useRecords("tickets", undefined, reads.tickets);
+  const riders = useRidersData("month", undefined, reads.riders);
   // C4 (A15 N15): live, only the checks behind an alert (need_help, both sides of those trips), never every check;
   // Q132: and only while the list holds a ride-check alert this admin may see.
-  const { checks: rideChecks } = useRideCheckRows(reads.rideChecks);
-  const rideSlice = useSlice<RideCheckOps>(RIDE_CHECK_KEY, emptyRideCheckOps(), { enabled: reads.rideCheckOps });
+  const { checks: rideChecks } = useRideCheckRows(reads.rideChecks.enabled);
+  const rideSlice = useSlice<RideCheckOps>(RIDE_CHECK_KEY, emptyRideCheckOps(), reads.rideCheckOps);
   const rideOps = useMemo(() => normalizeRideCheckOps(rideSlice.value), [rideSlice.value]);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 30_000) * 30_000);
   useEffect(() => {
@@ -219,7 +219,8 @@ export function useAlerts() {
     now,
     sosOwner,
     rideCheck: { checks: rideChecks, ops: rideOps, loading: rideSlice.loading, unopened, demoShift: demoShift(now, api.demo) },
-    loading: slice.loading || (reads.incidents && incidents.isLoading) || (reads.trips && trips.isLoading),
+    // Round 2: the live warm read of the open cases never holds back the alert sound (only the demo engine needs it).
+    loading: slice.loading || (!live && reads.incidents.enabled && incidents.isLoading) || (reads.trips.enabled && trips.isLoading),
     counts: {
       critical: active.filter((alert) => alert.level === "critical").length,
       important: active.filter((alert) => alert.level === "important").length,

@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { KINDS, alertsFromServer, emptyAlertBook, openAlerts, type FoundAlert, type KindId } from "./engine.ts";
 
 /**
@@ -16,7 +15,6 @@ async function plan(): Promise<Plan> {
   assert.ok(mod, "src/alerts/reads.ts (the alert bar's read plan) does not exist: useAlerts reads every table");
   return mod;
 }
-const src = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 function polled(mod: Plan, input: Parameters<Plan["alertReads"]>[0]): string[] {
   const on = mod.alertReads(input);
@@ -26,7 +24,8 @@ function polled(mod: Plan, input: Parameters<Plan["alertReads"]>[0]): string[] {
 
 test("Q132 live: the alert bar polls only the alert list (no table, no ride check without a ride-check alert)", async () => {
   const mod = await plan();
-  const input = { live: true, canSafety: true, canRideCheck: true, found: [{ kind: "sos" as KindId }, { kind: "long_wait" as KindId }] };
+  // Round 2 (SF-1): an open SOS now keeps the open cases warm (test below), so this list holds no safety alert.
+  const input = { live: true, canSafety: true, canRideCheck: true, found: [{ kind: "payment_failed" as KindId, state: "open" as const }, { kind: "long_wait" as KindId, state: "open" as const }] };
   assert.deepEqual(polled(mod, input), ["alerts"]);
   const on = Object.entries(mod.alertReads(input)).filter(([, yes]) => yes).map(([name]) => name).sort();
   // The alert list, who owns each SOS (safetyOps: the SOS owner on the bar) and the ride-check banner's "opened" book.
@@ -35,7 +34,10 @@ test("Q132 live: the alert bar polls only the alert list (no table, no ride chec
 
 test("Q132 live: a ride-check alert in the list adds only its ride checks (for the red banner), never for a role that cannot see it", async () => {
   const mod = await plan();
-  assert.deepEqual(polled(mod, { live: true, canSafety: true, canRideCheck: true, found: [{ kind: "ride_check" }] }), ["alerts", "rideChecks"]);
+  // Round 2 (SF-1): for the safety team an open ride-check alert also keeps its case warm (incidents); a dispatcher
+  // (trips.intervene, no incidents.read) gets the ride checks only.
+  assert.deepEqual(polled(mod, { live: true, canSafety: true, canRideCheck: true, found: [{ kind: "ride_check" }] }), ["alerts", "incidents", "rideChecks"]);
+  assert.deepEqual(polled(mod, { live: true, canSafety: false, canRideCheck: true, found: [{ kind: "ride_check" }] }), ["alerts", "rideChecks"]);
   assert.deepEqual(polled(mod, { live: true, canSafety: false, canRideCheck: false, found: [{ kind: "ride_check" }] }), ["alerts"]);
   assert.deepEqual(polled(mod, { live: true, canSafety: true, canRideCheck: true, found: undefined }), ["alerts"]);
 });
@@ -48,26 +50,56 @@ test("Q132 demo: the panel's own engine keeps every read it had (demo removal is
   assert.equal(mod.alertPolls(true).alerts, 15_000, "live: the alert list every 15 s, as before");
 });
 
-test("Q132 useAlerts.ts takes every read from the plan: no table is read or polled on its own", () => {
-  const text = src("./useAlerts.ts");
-  const calls = text.split("\n").map((line, index) => ({ line, at: index + 1 })).filter(({ line }) => /\b(useRecords|useSlice|useRidersData|useRideCheckRows)\s*[<(]/.test(line) && !/^\s*(import|export|\/\/|\*)/.test(line));
-  assert.ok(calls.length >= 10, `found ${calls.length} reads`);
-  const free = calls.filter(({ line }) => !/\b(reads|polls)\.\w+/.test(line)).map(({ at, line }) => `useAlerts.ts:${at} ${line.trim().slice(0, 90)}`);
-  assert.deepEqual(free, [], "reads that ignore the plan");
-  assert.doesNotMatch(text, /refetchMs:\s*\d/, "a poll time written in useAlerts instead of the plan");
+// Round 2 (supervisor SF-2): the two source-text tests (useAlerts.ts names the plan; six files name the on-demand
+// hooks) are replaced by behaviour tests of the options the hooks pass to their reads (RULES.md: no new source-reading
+// tests). The hooks now take every read's options from these pure functions, so a hook cannot ignore the plan without
+// changing what is tested here.
+const TABLES = ["incidentOps", "dispatch", "driverOps", "drivers", "zoneSupply", "trips", "incidents", "reservations", "payments", "payouts", "vehicles", "tickets", "riders"] as const;
+
+test("Q132 the bar's read options: live, every table read is switched off; demo, every table keeps its poll", async () => {
+  const mod = await plan();
+  assert.equal(typeof mod.alertReadOptions, "function", "alertReadOptions (the options useAlerts passes to each read) does not exist");
+  const live = mod.alertReadOptions({ live: true, canSafety: true, canRideCheck: true, found: [{ kind: "long_wait", state: "open" }] });
+  for (const name of TABLES) assert.equal(live[name].enabled, false, `live: ${name} is read by the bar`);
+  assert.deepEqual([live.alerts, live.safetyOps.enabled, live.rideCheckOps.enabled, live.rideChecks.enabled], [{ enabled: true, refetchMs: 15_000 }, true, true, false]);
+  const demo = mod.alertReadOptions({ live: false, canSafety: true, canRideCheck: true, found: undefined });
+  for (const name of TABLES) assert.equal(demo[name].enabled, true, `demo: ${name} must stay on`);
+  assert.deepEqual([demo.drivers, demo.trips, demo.incidents, demo.tickets, demo.payouts], [{ enabled: true, refetchMs: 15_000 }, { enabled: true, refetchMs: 15_000 }, { enabled: true, refetchMs: 10_000 }, { enabled: true, refetchMs: 30_000 }, { enabled: true }]);
 });
 
-test("Q132 what one alert needs is read on demand: the SOS take/solve, the history zones and the map's ride checks", () => {
-  for (const file of ["./AlertActions.tsx", "./HistoryView.tsx", "../reports/Tabs.tsx", "../reports/WorkTab.tsx"]) {
-    const text = src(file);
-    assert.doesNotMatch(text, /facts\.incidents/, `${file} still needs the bar's incident table`);
-    assert.match(text, /useAlertIncidents\(/, `${file} reads its incidents itself`);
+test("Q132 the riders' data obeys enabled: off reads none of its five lists (the live bar), on reads them as before", async () => {
+  const mod = await import("../riders/ridersReads.ts").catch(() => null);
+  assert.ok(mod, "src/riders/ridersReads.ts (the options useRidersData passes to its reads) does not exist");
+  const off = mod.ridersReadOptions({ enabled: false });
+  assert.deepEqual(Object.keys(off).sort(), ["care", "drivers", "riders", "tickets", "trips"]);
+  for (const [name, options] of Object.entries(off)) assert.equal(options.enabled, false, `enabled: false ignored: ${name} is read`);
+  const on = mod.ridersReadOptions({});
+  for (const [name, options] of Object.entries(on)) assert.notEqual(options.enabled, false, `${name} is off by default`);
+  assert.equal(on.trips.refetchMs, 30_000, "the riders' trips every 30 s, as before");
+});
+
+test("Q132 what one alert needs is read on demand and obeys enabled (open cases, ride checks); live and demo lists", async () => {
+  const mod = await plan();
+  assert.equal(typeof mod.alertIncidentsRead, "function", "alertIncidentsRead (the options useAlertIncidents passes) does not exist");
+  assert.deepEqual(mod.alertIncidentsRead(true, true), { list: "openIncidents", options: { refetchMs: 10_000, enabled: true } });
+  assert.deepEqual(mod.alertIncidentsRead(true, false), { list: "openIncidents", options: { refetchMs: 10_000, enabled: false } }, "useAlertIncidents ignores enabled: every alert row reads the open cases");
+  assert.equal(mod.alertIncidentsRead(false, true).list, "incidents");
+  assert.deepEqual(mod.rideCheckRowsRead(true, false), { list: "rideCheckAlerts", options: { refetchMs: 10_000, enabled: false } });
+  assert.equal(mod.rideCheckRowsRead(false, true).list, "rideChecks");
+});
+
+test("Q132 SF-1 safety: while an SOS / car-lost / ride-check alert is open, the bar keeps the open cases read on (Take / Solved never wait)", async () => {
+  const mod = await plan();
+  const input = (found: { kind: KindId; state: "open" | "solved" }[], canSafety = true) => ({ live: true, canSafety, canRideCheck: canSafety, found });
+  for (const kind of ["sos", "car_lost", "ride_check", "sos_slow"] as KindId[]) {
+    const options = mod.alertReadOptions(input([{ kind: "long_wait", state: "open" }, { kind, state: "open" }]));
+    // The same list and poll as the alert row's own read (useAlertIncidents): one shared cache entry, so the buttons
+    // are drawn from data the bar already holds, and no second read is made.
+    assert.deepEqual({ list: mod.alertIncidentsRead(true, options.incidents.enabled).list, options: options.incidents }, mod.alertIncidentsRead(true, true), `${kind} open: the open cases are not kept warm`);
   }
-  for (const file of ["../pages/DashboardPage.tsx", "../pages/DispatchPage.tsx"]) {
-    const text = src(file);
-    assert.doesNotMatch(text, /rideCheck\.checks/, `${file} still takes the map's ride checks from the bar`);
-    assert.match(text, /useRideCheckRows\(/, `${file} reads the map's ride checks itself`);
-  }
+  assert.equal(mod.alertReadOptions(input([{ kind: "sos", state: "solved" }])).incidents.enabled, false, "a solved SOS needs no warm read");
+  assert.equal(mod.alertReadOptions(input([{ kind: "long_wait", state: "open" }])).incidents.enabled, false, "no safety alert: no read");
+  assert.equal(mod.alertReadOptions(input([{ kind: "sos", state: "open" }], false)).incidents.enabled, false, "a role without incidents.read is never made to read the cases (a refused read is retried)");
 });
 
 const ALL_KINDS: (KindId | "rule")[] = [...KINDS.map((def) => def.id), "rule"];

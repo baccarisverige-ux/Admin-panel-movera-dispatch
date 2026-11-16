@@ -2,17 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useRecords, useRiders, useSlice } from "../api/hooks";
 import { rideRequests } from "../dashboard/riders";
 import { CARE_KEY, emptyRiderCare, normalizeCare } from "./care";
+import { ridersReadOptions } from "./ridersReads";
 import { buildRows, type Period } from "./segments";
 
 /** Riders of the chosen country and zones, with everything the list and the rider page need. */
 /** `enabled: false` reads nothing (Q132: the live alert bar needs no rider data). */
 export function useRidersData(period: Period, scope?: string | null, options: { enabled?: boolean } = {}) {
-  const off = options.enabled === false ? { enabled: false } : {};
-  const riders = useRiders(scope ?? null, off);
-  const trips = useRecords("trips", scope, { refetchMs: 30_000, ...off });
-  const drivers = useRecords("drivers", undefined, off);
-  const tickets = useRecords("tickets", undefined, off);
-  const careSlice = useSlice<unknown>(CARE_KEY, emptyRiderCare(), off);
+  const reads = ridersReadOptions(options);
+  const riders = useRiders(scope ?? null, reads.riders);
+  const trips = useRecords("trips", scope, reads.trips);
+  const drivers = useRecords("drivers", undefined, reads.drivers);
+  const tickets = useRecords("tickets", undefined, reads.tickets);
+  const careSlice = useSlice<unknown>(CARE_KEY, emptyRiderCare(), reads.care);
   const care = useMemo(() => normalizeCare(careSlice.value), [careSlice.value]);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 60_000) * 60_000);
   useEffect(() => {
