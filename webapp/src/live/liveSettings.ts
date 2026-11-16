@@ -49,7 +49,7 @@ import { tr, trx } from "../i18n/core.ts";
 import { COUNTRY_LABEL } from "../i18n/countries.ts";
 import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePaymentMethod } from "../config/zoneDefaults.ts";
 import { ApiError } from "../api/httpClient.ts";
-import { TIPS_LAST_SAVE_KEY, lastTipsSave, newSaveId, saveNote, savedLine, undoBlocked, undoTipsSave, type TipsSave, type UndoOutcome } from "./tipsUndo.ts";
+import { TIPS_LAST_SAVE_KEY, lastTipsSave, newSaveId, saveNote, savedLine, shownDocuments, undoBlocked, undoTipsSave, type TipsSave, type UndoOutcome } from "./tipsUndo.ts";
 import { readDispatchTools, sendToolCalls, toolCalls, toolRefusal, toolsOf, type DispatchTools } from "./dispatchTools.ts";
 
 /** Every zone of the admin's markets and each country's Standard. */
@@ -158,6 +158,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   /** The last Tips & limits save read per country, for a while (shownTipsSave, SF-A3). */
   const tipsSaves = new Map<string, { at: number; save: Promise<TipsSave | null> }>();
   const TIPS_SAVE_FOR_MS = 120_000;
+  /** Commands of this panel still running, and a count that moves when one starts or ends (MF-R3-2). */
+  let commandsRunning = 0;
+  let commandEpoch = 0;
   /*
    * Live sweep 2026-11-02 H1: what each page's model looked like when it was last READ FROM THE SERVER (or after a
    * publish the server took). A publish writes only what differs between this baseline and the admin's edited model,
@@ -765,13 +768,17 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const kept = tipsSaves.get(country);
     if (kept && Date.now() - kept.at < TIPS_SAVE_FOR_MS) return kept.save;
     const save = tipsSaveOf(country);
+    // MF-R3-2: a read begun while a command runs, or one a command started or ended during, may see half a save.
+    if (commandsRunning > 0) return save;
+    const epoch = commandEpoch;
     tipsSaves.set(country, { at: Date.now(), save });
-    save.then((found) => { if (found && (found.unreadable.length || found.tooLong.length)) tipsSaves.delete(country); }, () => tipsSaves.delete(country));
+    const drop = () => { if (tipsSaves.get(country)?.save === save) tipsSaves.delete(country); };
+    save.then((found) => { if (epoch !== commandEpoch || (found && (found.unreadable.length || found.tooLong.length))) drop(); }, drop);
     return save;
   }
 
   /** Undo last Tips & limits save: every document of that save goes back; `saveId` is the save the admin was shown. */
-  async function undoTips(saveId: string, country: string): Promise<string> {
+  async function undoTips(saveId: string, country: string, shown: unknown): Promise<string> {
     tipsSaves.delete(country);
     const save = await tipsSaveOf(country);
     // Supervisor MF-A1: a document that could not be read may belong to the save; nothing is undone until it can be read.
@@ -779,6 +786,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     if (blocked) throw new Error(blocked);
     if (!save || !save.documents.some((item) => item.back.to !== "nothing")) throw new Error("Nothing to undo: no Tips & limits save that can go back was found.");
     if (save.saveId !== saveId) throw new Error("Another Tips & limits save was made meanwhile. Open Tips & limits again to see what Undo would do now.");
+    // MF-R3-2: Undo names every document before it acts. What it reads now must be what the dialog listed.
+    const now = shownDocuments(save);
+    if (!Array.isArray(shown) || shown.length !== now.length || now.some((line, index) => shown[index] !== line)) throw new Error("The save changed since you looked. Open Tips & limits again.");
     let outcome: UndoOutcome;
     try {
       outcome = await undoTipsSave(http, save);
@@ -962,44 +972,66 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       return null;
     },
     command(action, input) {
-      // Any publish from here may be one of a Tips & limits save's documents: the tab reads again (SF-A3).
+      // Any publish from here may be one of a Tips & limits save's documents: the tab reads again (SF-A3), and a read
+      // made while the command runs is not kept (MF-R3-2: it can see only part of the save).
       tipsSaves.clear();
-      if (action === "admin.onboarding.publishSettings") return publishOnboarding(input.value, input.targetId);
-      if (action === "admin.pricing.publish") return publishPricing(normalizeStore(input.value));
-      // v0.7.1: Manage categories, manual surge, History (v0.7.2: no Tell drivers, contract.json#surgeNoticeRemoved).
-      if (action === "admin.pricing.createCategory") return saveCatalog(normalizeStore(input.value), "Added.");
-      if (action === "admin.pricing.editCategory") return saveCatalog(normalizeStore(input.value), "Saved.");
-      if (action === "admin.pricing.archiveCategory") return saveCatalog(normalizeStore(input.value), "Deleted. It can be restored for 30 days.");
-      if (action === "admin.pricing.restoreCategory") return saveCatalog(normalizeStore(input.value), "Restored, switched off in every zone.");
-      if (action === "admin.pricing.startSurge" || action === "admin.pricing.stopSurge" || action === "admin.pricing.stopAllSurges") return sendSurges(normalizeStore(input.value));
-      if (action === "admin.pricing.restore") return restore(Number(/(\d+)$/.exec(input.targetId)?.[1] ?? NaN));
-      if (action === "admin.pricing.undo") return undoLast();
-      if (action === "admin.dispatch.publish") return publishDispatch(normalizeDispatchBook(input.value));
-      if (action === "admin.dispatch.saveDraft") return saveDispatchDraft(normalizeDispatchBook(input.value), input.scope);
-      if (action === "admin.dispatch.undo") return undoDispatch(input.targetId);
-      // v0.18.6 (G4-F2..F4, F6): the dispatch tools are the server's.
-      if (action === "admin.dispatch.preset") return saveTools(normalizeDispatchBook(input.value), "Preset saved.");
-      if (action === "admin.dispatch.group") return saveTools(normalizeDispatchBook(input.value), "Group saved.");
-      if (action === "admin.dispatch.radarZone") return saveTools(normalizeDispatchBook(input.value), "Radar zone saved.");
-      if (action === "admin.dispatch.radarRule") return saveTools(normalizeDispatchBook(input.value), "Rule saved.");
-      if (action === "admin.dispatch.event") return saveTools(normalizeDispatchBook(input.value), "Event saved.");
-      if (action === "admin.config.save") {
-        slices.set(CONFIG_KEY, input.value);
-        return Promise.resolve("Draft saved in this session. Publish sends it to the chosen zones.");
+      commandsRunning += 1;
+      commandEpoch += 1;
+      let out: Promise<string | SettingsAnswer> | null;
+      try {
+        out = route(action, input);
+      } catch (error) {
+        out = Promise.reject(error);
       }
-      if (action === "admin.config.publish") {
-        slices.set(CONFIG_KEY, input.value);
-        return publishSettings(input.value, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
+      const ended = () => {
+        commandsRunning -= 1;
+        commandEpoch += 1;
+        tipsSaves.clear();
+      };
+      if (!out) {
+        ended();
+        return out;
       }
-      if (action === "admin.config.saveCountry") return saveMethods(input.value as CountrySettingsBook);
-      if (action === "admin.tipsLimits.undo") return undoTips(input.targetId, input.scope ?? "");
-      if (action === "admin.pricing.saveCountry") return saveCountries(input.value as CountrySettingsBook, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
-      if (action === "admin.config.copyAppToZones") return copyAppToZones(input.targetId);
-      if (action === "admin.config.publishAppDraft") return publishAppDraft(input.targetId);
-      if (action === "admin.config.useStandard") return backToStandard(input.targetId, ((input.value as { docs?: string[] } | undefined)?.docs ?? ["pricing"]) as ConfigDocName[]);
-      return null;
+      return out.finally(ended);
     },
   };
+
+  function route(action: string, input: { targetId: string; value?: unknown; scope?: string }): Promise<string | SettingsAnswer> | null {
+    if (action === "admin.onboarding.publishSettings") return publishOnboarding(input.value, input.targetId);
+    if (action === "admin.pricing.publish") return publishPricing(normalizeStore(input.value));
+    // v0.7.1: Manage categories, manual surge, History (v0.7.2: no Tell drivers, contract.json#surgeNoticeRemoved).
+    if (action === "admin.pricing.createCategory") return saveCatalog(normalizeStore(input.value), "Added.");
+    if (action === "admin.pricing.editCategory") return saveCatalog(normalizeStore(input.value), "Saved.");
+    if (action === "admin.pricing.archiveCategory") return saveCatalog(normalizeStore(input.value), "Deleted. It can be restored for 30 days.");
+    if (action === "admin.pricing.restoreCategory") return saveCatalog(normalizeStore(input.value), "Restored, switched off in every zone.");
+    if (action === "admin.pricing.startSurge" || action === "admin.pricing.stopSurge" || action === "admin.pricing.stopAllSurges") return sendSurges(normalizeStore(input.value));
+    if (action === "admin.pricing.restore") return restore(Number(/(\d+)$/.exec(input.targetId)?.[1] ?? NaN));
+    if (action === "admin.pricing.undo") return undoLast();
+    if (action === "admin.dispatch.publish") return publishDispatch(normalizeDispatchBook(input.value));
+    if (action === "admin.dispatch.saveDraft") return saveDispatchDraft(normalizeDispatchBook(input.value), input.scope);
+    if (action === "admin.dispatch.undo") return undoDispatch(input.targetId);
+    // v0.18.6 (G4-F2..F4, F6): the dispatch tools are the server's.
+    if (action === "admin.dispatch.preset") return saveTools(normalizeDispatchBook(input.value), "Preset saved.");
+    if (action === "admin.dispatch.group") return saveTools(normalizeDispatchBook(input.value), "Group saved.");
+    if (action === "admin.dispatch.radarZone") return saveTools(normalizeDispatchBook(input.value), "Radar zone saved.");
+    if (action === "admin.dispatch.radarRule") return saveTools(normalizeDispatchBook(input.value), "Rule saved.");
+    if (action === "admin.dispatch.event") return saveTools(normalizeDispatchBook(input.value), "Event saved.");
+    if (action === "admin.config.save") {
+      slices.set(CONFIG_KEY, input.value);
+      return Promise.resolve("Draft saved in this session. Publish sends it to the chosen zones.");
+    }
+    if (action === "admin.config.publish") {
+      slices.set(CONFIG_KEY, input.value);
+      return publishSettings(input.value, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
+    }
+    if (action === "admin.config.saveCountry") return saveMethods(input.value as CountrySettingsBook);
+    if (action === "admin.tipsLimits.undo") return undoTips(input.targetId, input.scope ?? "", (input.value as { shown?: unknown } | undefined)?.shown);
+    if (action === "admin.pricing.saveCountry") return saveCountries(input.value as CountrySettingsBook, (input.scope ?? "").split(",").filter((id) => settingsScopes().includes(id)));
+    if (action === "admin.config.copyAppToZones") return copyAppToZones(input.targetId);
+    if (action === "admin.config.publishAppDraft") return publishAppDraft(input.targetId);
+    if (action === "admin.config.useStandard") return backToStandard(input.targetId, ((input.value as { docs?: string[] } | undefined)?.docs ?? ["pricing"]) as ConfigDocName[]);
+    return null;
+  }
 }
 
 export { SettingsChanged };

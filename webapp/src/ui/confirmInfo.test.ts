@@ -6,6 +6,7 @@ import { en } from "../i18n/en.ts";
 import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
 import { market } from "../markets/markets.ts";
+import { canConfirm, initialTicks, type WhereLoad } from "./confirmGate.ts";
 import { landing, noOtherZoneChange, pricingWhere, undoFor, watchedIds, whereText, whoFor } from "./confirmInfo.ts";
 
 /**
@@ -185,7 +186,7 @@ test("the settings dialogs ask for the zones again: Tips & limits, Pricing, Sett
   assert.ok(where("pages/ConfigPage.tsx", "admin.config.publish"));
   assert.ok(where("pages/DispatchPage.tsx", "admin.dispatch.publish"));
   const dialog = textOf("ui/CommandButton.tsx");
-  assert.ok(dialog.includes("<WhereItLands") && /const placed = /.test(dialog) && dialog.includes("&& placed"), "Confirm waits for the ticks");
+  assert.ok(dialog.includes("<WhereItLands") && /const confirmed = canConfirm\(\{ where, ticked, whereLoad,/.test(dialog), "Confirm waits for the ticks and the zone text");
   assert.ok(textOf("live/WhereItLands.tsx").includes('type="checkbox"'));
 });
 
@@ -260,4 +261,79 @@ test("bundle: the words of the \"!\" and the zone pick load on demand, not in th
   const button = textOf("ui/CommandButton.tsx");
   assert.ok(button.includes('import("../live/WhereItLands")'));
   assert.equal(/^import \{[^}]*\} from "(\.\.\/live\/WhereItLands|\.\/confirmInfo)"/m.test(button), false, "no static import of the words");
+});
+
+/**
+ * Supervisor MF-R3-1 (Rules audits/impact/country-undo-supervisor.md, Round 3): the zone pick and its sentences load on
+ * demand. A dialog with ONE place opens with it ticked, so Confirm was on while the dialog still said "Loading…", and
+ * stayed on when the file failed to load. Confirm now also waits until the zone text is in, and stays off on a failure.
+ */
+test("MF-R3-1: Confirm waits until the zone text has loaded, also with one place ticked at open; a failed load keeps it off", () => {
+  const ready = { typedOk: true, reasonOk: true, sureOk: true };
+  const one = { zoneIds: ["standard-SE"] };
+  const ticked = initialTicks(one);
+  assert.deepEqual(ticked, ["standard-SE"], "one place: it is named and ticked at open");
+  const at = (whereLoad: WhereLoad, where: { zoneIds: readonly string[]; pick?: boolean } | undefined = one, marks = ticked) => canConfirm({ ...ready, where, ticked: marks, whereLoad });
+  assert.equal(at("loading"), false, "one place, the zone text not loaded yet: Confirm is off");
+  assert.equal(at("failed"), false, "the zone text could not be loaded: Confirm stays off");
+  assert.equal(at("ready"), true);
+  // More places: none is ticked at open; each is ticked again by hand (owner 2026-11-16).
+  const two = { zoneIds: ["standard-SE", "Z002"] };
+  assert.deepEqual(initialTicks(two), []);
+  assert.deepEqual(initialTicks({ ...two, pick: true }), []);
+  assert.equal(at("ready", two, []), false, "nothing ticked");
+  assert.equal(at("ready", two, ["Z002"]), false, "every place is ticked again");
+  assert.equal(at("ready", two, ["standard-SE", "Z002"]), true);
+  assert.equal(at("loading", two, ["standard-SE", "Z002"]), false);
+  assert.equal(at("ready", { ...two, pick: true }, []), false, "with pick: at least one");
+  assert.equal(at("ready", { ...two, pick: true }, ["Z002"]), true);
+  // No zone pick in the dialog: nothing to load or tick.
+  assert.equal(canConfirm({ ...ready, ticked: [], whereLoad: "loading" }), true);
+  for (const missing of ["typedOk", "reasonOk", "sureOk"] as const) assert.equal(canConfirm({ ...ready, [missing]: false, where: one, ticked, whereLoad: "ready" }), false, missing);
+});
+
+test("MF-R3-1: the dialog loads the zone text when it opens, says a failed load, and Confirm uses the same rule", () => {
+  const dialog = textOf("ui/CommandButton.tsx");
+  assert.match(dialog, /setTicked\(initialTicks\(where\)\)/, "the ticks at open come from initialTicks");
+  assert.match(dialog, /whereLoad === "failed" \? <p className="state-line" role="alert"[^>]*>\{tr\("The zone list could not be loaded\. Reload the page to save this\."\)\}<\/p>/, "a failed load is said in the dialog");
+  assert.match(dialog, /disabled=\{!confirmed \|\| Boolean\(blockedReason\)\}/);
+  assert.doesNotMatch(dialog, /const placed = /, "one rule only: canConfirm");
+});
+
+/**
+ * Supervisor SF-R3-5 (Rules audits/impact/country-undo-supervisor.md, Round 3): words shown on live that were wrong.
+ * Each was checked against the buttons that really exist (pages/LiveZoneActions.tsx, pages/ZoneMap.tsx,
+ * pages/ZonesPage.tsx, dispatch/RulesView.tsx, DriverGroupsCard.tsx, RadarZones.tsx, EventsView.tsx, LiveView.tsx,
+ * dispatch/BookingPolicy.tsx, alerts/SettingsView.tsx, safety/IncidentSettings.tsx, pages/ReviewsPage.tsx).
+ */
+test("SF-R3-5: zone saves name no \"Releases\" screen; each says what really takes it back", () => {
+  for (const command of COMMANDS.map((item) => item.id).filter((id) => id.startsWith("admin.zone."))) assert.doesNotMatch(undoFor(command), /Releases|release/, command);
+  assert.match(undoFor("admin.zone.update"), /no one-press undo/);
+  assert.match(undoFor("admin.zone.update"), /save again/);
+  assert.match(undoFor("admin.zone.create"), /closed/);
+  assert.match(undoFor("admin.zone.publish"), /Undo last publish/);
+  assert.match(undoFor("admin.zone.restoreVersion"), /Restore version/);
+});
+
+test("SF-R3-5: the Dispatch tools are not in Dispatch › History; Live control says its own button", () => {
+  for (const command of ["admin.dispatch.preset", "admin.dispatch.group", "admin.dispatch.radarZone", "admin.dispatch.radarRule", "admin.dispatch.event"]) {
+    assert.doesNotMatch(undoFor(command), /History › Undo|puts the version before back/, command);
+    assert.match(undoFor(command), /not in Dispatch › History/, command);
+  }
+  assert.match(undoFor("admin.dispatch.control"), /Back to rules/);
+  assert.match(undoFor("admin.dispatch.control"), /Resume/);
+  assert.doesNotMatch(undoFor("admin.dispatch.control"), /History › Undo/);
+  assert.match(undoFor("admin.dispatch.publish"), /Dispatch › History/, "rule versions are in History");
+});
+
+test("SF-R3-5: Who of the settings that are not one case or one trip", () => {
+  assert.doesNotMatch(whoFor("admin.reservation.savePolicy"), /this trip or booking/);
+  assert.match(whoFor("admin.reservation.savePolicy"), /every zone/);
+  assert.match(whoFor("admin.reservation.savePolicy"), /already booked keep/);
+  for (const command of ["admin.alerts.settings", "admin.incident.settings", "admin.review.rules"]) assert.doesNotMatch(whoFor(command), /The case named here/, command);
+  assert.match(whoFor("admin.alerts.settings"), /Every admin/);
+  assert.match(whoFor("admin.incident.settings"), /safety cases/);
+  assert.match(whoFor("admin.review.rules"), /average falls under/);
+  assert.match(whoFor("admin.reservation.cancel"), /this trip or booking/, "a booked ride's own commands keep their Who");
+  assert.match(whoFor("admin.incident.level"), /The case named here/);
 });

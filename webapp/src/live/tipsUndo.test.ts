@@ -9,7 +9,7 @@ import { countryRulesOf, type Doc } from "./configDocs.ts";
 import { fakeConfigServer } from "./fakeConfigServer.ts";
 import { liveHandles } from "./liveCommands.ts";
 import { createLiveSettings } from "./liveSettings.ts";
-import { TIPS_LAST_SAVE_KEY, lastTipsSave, parseSaveNote, saveNote, savedLine, tooLongLine, undoBlocked, unreadLine, type TipsSave } from "./tipsUndo.ts";
+import { TIPS_LAST_SAVE_KEY, lastTipsSave, parseSaveNote, saveNote, savedLine, shownDocuments, tooLongLine, undoBlocked, unreadLine, type TipsSave } from "./tipsUndo.ts";
 
 /**
  * Live 2026-11-16 (Rules audits/impact/country-undo.md): one "Save tips & limits" publishes several documents (the
@@ -79,7 +79,7 @@ test("Undo last Tips & limits save: names every document of the save, then resto
   assert.match(lines[2]!, /\(Z002\)/);
 
   server.calls.length = 0;
-  const said = String(await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" }));
+  const said = String(await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE", value: { shown: shownDocuments(found) } }));
   const note = `Undo Tips & limits save ${found.saveId}`;
   assert.deepEqual(restores(server), [
     { path: "rider_app_config/restore", country: "SE", version: 8, expectedVersion: 9, note },
@@ -92,7 +92,7 @@ test("Undo last Tips & limits save: names every document of the save, then resto
   // The undo itself is not a save: the same save is found, nothing of it can go back, and a second press is refused.
   assert.ok((await last())!.documents.every((d) => d.back.to === "nothing"));
   server.calls.length = 0;
-  await assert.rejects(Promise.resolve(settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" })), /Nothing to undo/);
+  await assert.rejects(Promise.resolve(settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE", value: { shown: shownDocuments(found) } })), /Nothing to undo/);
   assert.deepEqual(restores(server), []);
 });
 
@@ -104,7 +104,7 @@ test("a zone that used the Standard before the save goes back to the Standard (i
   assert.deepEqual(found.documents.map((d) => [d.doc, d.id, d.back.to]), [["rider_app_config", "Z001", "standard"], ["country_rules", "Z001", "standard"]]);
   assert.match(savedLine(found.documents[1]!), /back to the Standard/);
   server.calls.length = 0;
-  await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" });
+  await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE", value: { shown: shownDocuments(found) } });
   assert.deepEqual(restores(server).map((c) => [c.path, (c as { zoneId?: string }).zoneId]), [["rider_app_config/use-standard", "Z001"], ["country_rules/use-standard", "Z001"]]);
   assert.equal(server.live("country_rules:Z001"), 0);
   assert.equal(server.live("rider_app_config:Z001"), 0);
@@ -123,7 +123,7 @@ test("a document published again after the save is named as changed and is not t
   assert.deepEqual(z002.back, { to: "nothing", why: "changed" });
   assert.match(savedLine(z002), /Not touched/);
   server.calls.length = 0;
-  const said = String(await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" }));
+  const said = String(await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE", value: { shown: shownDocuments(found) } }));
   assert.deepEqual(restores(server).map((c) => (c as { zoneId?: string; country?: string }).zoneId ?? (c as { country?: string }).country), ["SE", "SE"]);
   assert.equal(tipOf(server, "country_rules:Z002"), 5500);
   assert.match(said, /Not undone/);
@@ -143,7 +143,7 @@ test("Undo acts only on the save the admin was shown: a newer save refuses it", 
   await save(["standard-SE"], 40);
   const shown = (await last())!;
   await save(["standard-SE"], 45);
-  await assert.rejects(Promise.resolve(settings.command("admin.tipsLimits.undo", { targetId: shown.saveId, scope: "SE" })), /Another Tips & limits save/);
+  await assert.rejects(Promise.resolve(settings.command("admin.tipsLimits.undo", { targetId: shown.saveId, scope: "SE", value: { shown: shownDocuments(shown) } })), /Another Tips & limits save/);
 });
 
 test("nothing saved from the panel yet: nothing to undo (a save from before this version carries no id)", async () => {
@@ -178,7 +178,7 @@ test("MF-A1 (a): the Standard cannot be read while a zone is in the save: it is 
   assert.match(unreadLine(found.unreadable[0]!), /Standard.*could not be read/);
   assert.match(undoBlocked(found) ?? "", /could not be read/);
   before.calls.length = 0;
-  await assert.rejects(Promise.resolve(settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" })), /could not be read/);
+  await assert.rejects(Promise.resolve(settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE", value: { shown: shownDocuments(found) } })), /could not be read/);
   assert.deepEqual(restores(before), [], "nothing is restored while a document of the country cannot be read");
   assert.equal(tipOf(before, "country_rules:Z002"), 4000);
   // Readable again: the whole save is named and undone.
@@ -215,7 +215,7 @@ test("MF-A1 (b): more than 10 newer entries above the save (11 zones re-stamped 
   assert.ok(standard, "the Standard is still a document of the save");
   assert.equal(standard.version, saved);
   assert.deepEqual(standard.back, { to: "version", version: 1, expectedVersion: server.live("country_rules:standard-SE") });
-  await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" });
+  await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE", value: { shown: shownDocuments(found) } });
   assert.equal(tipOf(server, "country_rules:standard-SE"), 1000);
 });
 
@@ -271,7 +271,7 @@ test("SF-A3: a long History older than the save is not read to its end, and does
   assert.equal(undoBlocked(found), null, "a long History of a zone that is not in the save blocks nothing");
   assert.ok(found.documents.some((d) => d.id === "standard-SE" && d.back.to === "version"));
   assert.ok(historyCalls(server, "country_rules/history?zoneId=Z002") <= 2, `Z002 read ${historyCalls(server, "country_rules/history?zoneId=Z002")} pages: it stops below the save's time`);
-  await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" });
+  await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE", value: { shown: shownDocuments(found) } });
   assert.equal(tipOf(server, "country_rules:standard-SE"), 1000);
 });
 
@@ -303,7 +303,7 @@ test("SF-A3: opening the tab again reads nothing new; a save, an Undo and the Un
   const second = (await last())!;
   assert.notEqual(second.saveId, first.saveId, "a save forgets what was read");
   server.calls.length = 0;
-  await settings.command("admin.tipsLimits.undo", { targetId: second.saveId, scope: "SE" });
+  await settings.command("admin.tipsLimits.undo", { targetId: second.saveId, scope: "SE", value: { shown: shownDocuments(second) } });
   assert.ok(historyCalls(server, "") > 0, "Undo reads the History again before it acts");
   server.calls.length = 0;
   assert.ok((await last())!.documents.every((d) => d.back.to === "nothing"));

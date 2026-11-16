@@ -4,7 +4,7 @@ import { BadgeDollarSign, Gift, HandHeart, Phone, Plus, Save, TrendingUp, Undo2 
 import { CALL_FIELDS, CALL_RANGES, callModeText } from "../config/callSettings";
 import { DONT_MATCH_STARS, dontMatchStarsText } from "../config/dontMatchSettings";
 import { market, zoneById, type MarketId } from "../markets/markets";
-import { TIPS_LAST_SAVE_KEY, savedLine, scopeName, undoBlocked, unreadLine, type TipsSave } from "../live/tipsUndo";
+import { TIPS_LAST_SAVE_KEY, savedLine, scopeName, shownDocuments, undoBlocked, unreadLine, type TipsSave } from "../live/tipsUndo";
 import { shortDateTime } from "../domain/time";
 import {
   COUNTRY_SETTINGS_KEY,
@@ -339,6 +339,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
               targetId={lastSave.value?.saveId ?? ""}
               confirmTarget={false}
               scope={country}
+              value={lastSave.value ? { shown: shownDocuments(lastSave.value) } : undefined}
               before={lastSave.value ? `Tips & limits save ${lastSave.value.saveId}` : ""}
               after="undo last Tips & limits save"
               disabled={!canEdit || dirty || lastSave.loading || (goBack === 0 && !blocked)}

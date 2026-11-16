@@ -230,6 +230,14 @@ export function scopeName(id: string): string {
 const docName = (doc: TipsDoc): string => (doc === "country_rules" ? tr("Tips & limits") : tr("Rider app tip rules"));
 
 /** One line of the Undo dialog: the document, the version the save published and what Undo does with it. */
+/**
+ * Supervisor MF-R3-2: what the Undo dialog listed, one key per document (the document, the version the save published
+ * and where it goes back to). The Undo command reads the save again and acts only when it finds the same keys.
+ */
+export function shownDocuments(save: Pick<TipsSave, "documents">): string[] {
+  return save.documents.map((item) => `${item.doc}:${item.id}:${item.version}:${item.back.to === "version" ? `version ${item.back.version}` : item.back.to === "standard" ? "standard" : `nothing ${item.back.why}`}`);
+}
+
 export function savedLine(item: SavedDocument): string {
   const head = [scopeName(item.id), docName(item.doc)];
   if (item.back.to === "version") return tr("{0} · {1}: version {2} → back to version {3}", [...head, item.version, item.back.version]);

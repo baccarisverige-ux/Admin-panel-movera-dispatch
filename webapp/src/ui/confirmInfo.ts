@@ -19,12 +19,18 @@ export const PRICING_WHO = "Riders and drivers in the places named under Where: 
 export function whoFor(command: string) {
   const domain = domainOf(command);
   if (/^admin\.(payout|refund|payment)\.|^admin\.trip\.(refund|adjust|waiveFee|driverBonus)$|^admin\.rider\.(walletCredit|feeMarkPaid)$/.test(command)) return "The people whose money this is: the rider, driver or fleet named here. Nobody else." as const;
+  // Supervisor SF-R3-5: the reservation policy is one for every zone (dispatch/BookingPolicy.tsx), not one booking.
+  if (command === "admin.reservation.savePolicy") return "Riders and drivers of rides booked from now on, in every zone. Rides already booked keep the policy they were booked with." as const;
   if (domain === "trip" || domain === "reservation") return "The rider and the driver of this trip or booking. Nobody else." as const;
   // Supervisor SF-R2-2: a Standard reaches the zones that use it; the Where line names them, so this does not say "other zones are not affected".
   if (["pricing", "tipsLimits", "config", "dispatch", "zone", "onboarding"].includes(domain)) return PRICING_WHO;
   if (["studio", "content", "campaign", "messages", "driverNotices"].includes(domain)) return "Everyone who sees these texts or messages in the apps, in the zones named here." as const;
   if (["driver", "drivers", "driverOps", "vehicle", "fleetOwner"].includes(domain)) return "The driver, car or fleet named here. Other drivers are not affected." as const;
   if (["rider", "riders", "growthOps"].includes(domain)) return "The rider named here. Other riders are not affected." as const;
+  // Supervisor SF-R3-5: settings of a desk, saved per country on the server; not one case.
+  if (command === "admin.alerts.settings") return "Every admin of this country: which alerts they see and hear, and when. Riders and drivers are not affected." as const;
+  if (command === "admin.incident.settings") return "Every admin who handles safety cases in this country: time limits, call buttons and case tools. Riders and drivers are not affected." as const;
+  if (command === "admin.review.rules") return "Riders and drivers of this country whose average falls under a line: they get the warning or are listed for an admin review. New comments with a listed word are hidden." as const;
   if (["safety", "incident", "alerts", "support", "review", "approval", "inbox"].includes(domain)) return "The case named here and the people in it. Other admins see the change at once." as const;
   if (["team", "auth", "server"].includes(domain)) return "The account named here." as const;
   return "See the details above for who this reaches." as const;
@@ -45,6 +51,10 @@ export function undoFor(command: string) {
   // Surges are not in Pricing › History: the opposite button on the same zone takes a surge back.
   if (/^admin\.pricing\.(startSurge|stopSurge|stopAllSurges|saveSurge|clearSurge|activateBoost|saveBoost)$/.test(command)) return "Start or stop the manual surge again on the same zone (Pricing › Surge). Nothing goes back by itself." as const;
   if (domain === "pricing") return "Pricing › History › Restore puts an earlier version back, and the tile Undo last pricing publish undoes the newest one." as const;
+  // Supervisor SF-R3-5: the tools are saved on the server apart from the rule versions (live/liveSettings.ts saveTools).
+  if (/^admin\.dispatch\.(preset|group|radarZone|radarRule|event)$/.test(command)) return "Presets, driver groups, radar zones, radar rules and events are saved on their own and are not in Dispatch › History. There is no one-press undo: change it back, add it again or remove it on the same tab. The save is written in the Audit log." as const;
+  // dispatch/LiveView.tsx: Pause, Resume, Radar now, Exclusive now, Back to rules on the same zone.
+  if (command === "admin.dispatch.control") return "Dispatch › Live: press Resume or Back to rules on the same zone. It is not in Dispatch › History." as const;
   if (domain === "dispatch") return "Dispatch › History › Undo puts the version before back." as const;
   // live/LiveReservations.tsx: a cancelled ride, a no-show and a raise have no opposite button.
   if (/^admin\.reservation\.(cancel|noShow|raise)$/.test(command)) return "There is no one-press undo for this booked ride. The action is written in the Audit log with your name and your reason." as const;
@@ -52,7 +62,12 @@ export function undoFor(command: string) {
   if (domain === "config" || domain === "onboarding") return "There is no one-press undo here: publish the earlier values again. A zone can also go back to the Standard with Go back to Standard." as const;
   // pages/LiveZoneActions.tsx: one button that closes an open zone and opens a closed one.
   if (command === "admin.zone.close" || command === "admin.zone.open") return "Press Open zone or Close zone on the same zone to turn it back. Rides booked meanwhile stay as they are." as const;
-  if (domain === "zone") return "Zones › Releases: roll back to the release before." as const;
+  // Supervisor SF-R3-5: there is no "Releases" screen. Live: Save names and type / Save outline (pages/LiveZoneActions.tsx,
+  // ZoneMap.tsx) keep no versions in the panel; the server writes zone.update in the Audit log.
+  if (command === "admin.zone.update") return "There is no one-press undo for a zone save: change it back on the same zone and save again. The save is written in the Audit log." as const;
+  if (command === "admin.zone.create") return "There is no one-press undo for a new zone. It is created closed: riders cannot use it until someone presses Open zone." as const;
+  // The demo zone screens (pages/ZonesPage.tsx, ZoneDetailPage.tsx): Undo last publish and a zone's History › Restore version.
+  if (domain === "zone") return "Zones: Undo last publish takes back the newest publish, and a zone's History has Restore version for each earlier version." as const;
   if (domain === "studio" || domain === "content") return "Content › History: roll back to the version before." as const;
   if (/^admin\.(payout|refund|payment)\.|^admin\.trip\.(refund|adjust|waiveFee|driverBonus)$|^admin\.rider\.(walletCredit|feeMarkPaid)$/.test(command)) return "Money that was sent cannot be taken back from the panel. Check the amount and the person before you confirm." as const;
   return "There is no one-press undo. The action is written in the Audit log with your name and your reason; do the opposite action on the same page to take it back." as const;

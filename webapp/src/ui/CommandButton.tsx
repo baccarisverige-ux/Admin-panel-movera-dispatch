@@ -12,14 +12,17 @@ import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { liveHandles } from "../live/liveCommands";
 import type { WhereProps } from "../live/WhereItLands";
 import { ConfirmInfo, type ConfirmInfoProps } from "./ConfirmInfo";
+import { canConfirm, initialTicks, type WhereLoad } from "./confirmGate";
 import { scopeNames } from "./scopeNames";
 
 /**
  * The zone pick and its sentences are loaded with the first settings dialog (audit bundle budget,
- * scripts/check-bundle.mjs). Until they are in, Confirm stays off: the places are not ticked yet.
+ * scripts/check-bundle.mjs). Until they are in, Confirm stays off, also when the one place is ticked at open, and it
+ * stays off when they could not be loaded (supervisor MF-R3-1, ui/confirmGate.ts).
  */
 const whereModule = () => import("../live/WhereItLands");
-const whereFailed = () => <p className="state-line" role="alert">{tr("The zone list could not be loaded. Reload the page to save this.")}</p>;
+let whereLoaded = false;
+const whereFailed = () => <></>;
 const WhereItLands = lazy(() => whereModule().then((module) => ({ default: module.WhereItLands }), () => ({ default: whereFailed })));
 const WhereSentences = lazy(() => whereModule().then((module) => ({ default: module.WhereSentences }), () => ({ default: whereFailed })));
 
@@ -142,8 +145,7 @@ export function CommandButton({
   const [note, setNote] = useState("");
   const askSure = Boolean(largeChanges && largeChanges.length);
   const [ticked, setTicked] = useState<string[]>([]);
-  // Every place is ticked again; with `pick` at least one, and only those are sent.
-  const placed = !where || (where.pick ? ticked.length > 0 : ticked.length === where.zoneIds.length);
+  const [whereLoad, setWhereLoad] = useState<WhereLoad>(() => (whereLoaded ? "ready" : "loading"));
   const sentScope = where?.pick && ticked.length ? ticked.join(",") : scope;
   const mustType = confirmTarget ? (targetId ?? "") : "";
   const dialogRoot=useDialogFocus(open,()=>setOpen(false));
@@ -151,7 +153,8 @@ export function CommandButton({
   const codeChoice = reasonChoices?.find((item) => item.value === reason);
   const codeLabel = codeChoice ? codeChoice.audit ?? codeChoice.label : "";
   const chosen = coded ? (codeLabel ? [codeLabel, note.trim()].filter(Boolean).join(" · ") : "") : [auditReason(reason, otherText), optionalNote ? note.trim() : ""].filter(Boolean).join(" · ");
-  const confirmed = (mustType.length === 0 || typed === mustType) && chosen.length > 0 && (!(askSure || askTick) || sure) && placed;
+  // Every place is ticked again (with `pick` at least one, and only those are sent), and the zone text is in.
+  const confirmed = canConfirm({ where, ticked, whereLoad, typedOk: mustType.length === 0 || typed === mustType, reasonOk: chosen.length > 0, sureOk: !(askSure || askTick) || sure });
   // While any command runs, every command button waits (C-16, Q31): disabled, with a spinner and "Please wait".
   const waiting = commands.busy || commands.phase === "submitting";
   const blocked = disabled || waiting || !spec || denied;
@@ -166,9 +169,14 @@ export function CommandButton({
     setOtherText("");
     setTyped("");
     setSure(false);
-    // One place: nothing to choose between, it is named and already ticked. More: each is ticked again by hand.
-    setTicked(where && where.zoneIds.length === 1 ? [...where.zoneIds] : []);
-    if (where) void whereModule().catch(() => undefined);
+    setTicked(initialTicks(where));
+    if (where) {
+      setWhereLoad(whereLoaded ? "ready" : "loading");
+      void whereModule().then(() => {
+        whereLoaded = true;
+        setWhereLoad("ready");
+      }, () => setWhereLoad("failed"));
+    }
     setOpen(true);
   }
 
@@ -251,7 +259,8 @@ export function CommandButton({
           >
             <h3>{spec ? trx(spec.label) : null}</h3>
             {where && !summary ? null : <p>{summary ?? <>{trn("This acts on {0}.", targetId ?? (spec ? trx(spec.label) : ""))}</>}</p>}
-            {where ? <Suspense fallback={<p className="fine-print">{tr("Loading…")}</p>}><WhereItLands {...where} ticked={ticked} onTicked={setTicked} /></Suspense> : null}
+            {where && whereLoad === "failed" ? <p className="state-line" role="alert" data-testid="where-failed">{tr("The zone list could not be loaded. Reload the page to save this.")}</p> : null}
+            {where && whereLoad !== "failed" ? <Suspense fallback={<p className="fine-print">{tr("Loading…")}</p>}><WhereItLands {...where} ticked={ticked} onTicked={setTicked} /></Suspense> : null}
             <ConfirmInfo
               what={info?.what ?? (where ? (spec ? trx(spec.label) : "") : summary ?? (spec ? trx(spec.label) : ""))}
               where={info?.where ?? (where ? <WhereSentences zoneIds={where.pick ? ticked : where.zoneIds} doc={where.doc} keepFollowers={where.keepFollowers} /> : scopeNames(scope) || (targetId && !/^(pricing-rev-|[a-z]+ (rules|draft)$)/.test(targetId) ? targetId : undefined))}
