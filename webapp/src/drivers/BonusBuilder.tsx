@@ -26,6 +26,7 @@ import {
 } from "./bonus";
 import { tr, trn, trx, trSentences } from "../i18n";
 import { DateInput } from "../ui/DateInput";
+import { SettingInfo } from "../ui/SettingInfo";
 
 export type BonusDriver = { facts: DriverFacts; name: string; code: string; zoneId: string; home: [number, number] };
 
@@ -110,7 +111,7 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
         </div>
 
         <Section n={1} title={tr("Kind and name")} icon={<Layers size={15} />}>
-          <div className="db-kinds" role="radiogroup" aria-label={tr("Bonus kind")}>
+          <div className="db-kinds" role="radiogroup" aria-label={tr("Bonus kind")}><SettingInfo id="bonus.kind" label={tr("Bonus kind")} />
             <button data-command="admin.drivers.bonusForm" type="button" role="radio" aria-checked={bonus.kind === "rides"} className={bonus.kind === "rides" ? "db-kind on" : "db-kind"} onClick={() => chooseKind("rides")}>
               <Zap size={20} aria-hidden="true" />
               <span><b>{tr("Ride bonus")}</b><small>{tr("Do rides in a time window, anywhere in the zones you pick")}</small></span>
@@ -120,12 +121,12 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
               <span><b>{tr("Area bonus")}</b><small>{tr("Only rides in an area you draw on the map")}</small></span>
             </button>
           </div>
-          <label className="field">{trn("Name drivers see{0}", <input aria-label={tr("Bonus name")} value={bonus.name} maxLength={40} onChange={(event) => set({ name: event.target.value })} placeholder={tr("Morning rush")} />)}</label>
-          <label className="field">{trn("Message to drivers {0}{1}{2}", <small>{tr("(optional, shown in the app and on the map)")}</small>, <textarea aria-label={tr("Message to drivers")} rows={2} maxLength={140} value={bonus.note} onChange={(event) => set({ note: event.target.value })} placeholder={bonus.kind === "area" ? tr("Concert ends at 22:00. Wait at the north exit.") : tr("Busy morning. Stay online near the station.")} />, <small className="fine">{bonus.note.length} / 140</small>)}</label>
+          <label className="field">{trn("Name drivers see{0}", <input aria-label={tr("Bonus name")} value={bonus.name} maxLength={40} onChange={(event) => set({ name: event.target.value })} placeholder={tr("Morning rush")} />)}<SettingInfo id="bonus.name" label={tr("Bonus name")} /></label>
+          <label className="field">{trn("Message to drivers {0}{1}{2}", <small>{tr("(optional, shown in the app and on the map)")}</small>, <textarea aria-label={tr("Message to drivers")} rows={2} maxLength={140} value={bonus.note} onChange={(event) => set({ note: event.target.value })} placeholder={bonus.kind === "area" ? tr("Concert ends at 22:00. Wait at the north exit.") : tr("Busy morning. Stay online near the station.")} />, <small className="fine">{bonus.note.length} / 140</small>)}<SettingInfo id="bonus.message" label={tr("Message to drivers")} /></label>
         </Section>
 
         <Section n={2} title={tr("Reward")} icon={<Trophy size={15} />}>
-          <div className="db-rewards" role="radiogroup" aria-label={tr("Reward type")}>
+          <div className="db-rewards" role="radiogroup" aria-label={tr("Reward type")}><SettingInfo id="bonus.rewardType" label={tr("Reward type")} />
             {REWARD_TYPES.map((item) => (
               <button data-command="admin.drivers.bonusForm" key={item.id} type="button" role="radio" aria-checked={bonus.reward.type === item.id} className={bonus.reward.type === item.id ? "db-reward on" : "db-reward"} onClick={() => setReward({ type: item.id as RewardType, amount: REWARD_START[item.id as RewardType][country] })}>
                 <b>{trx(item.label)}</b><small>{trx(item.hint)}</small>
@@ -134,17 +135,18 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
           </div>
           {bonus.reward.type === "target" ? (
             <div className="db-row">
-              <label className="field">{trn("Rides to do{0}", <NumberField label={tr("Rides to do")} value={bonus.reward.rides} unit="rides" max={50} onChange={(value) => setReward({ rides: Math.round(value) })} />)}</label>
-              <label className="field">{trn("Bonus{0}", <NumberField label={tr("Bonus amount")} value={bonus.reward.amount} unit={symbol} onChange={(value) => setReward({ amount: value })} />)}</label>
+              <label className="field">{trn("Rides to do{0}", <NumberField info="bonus.reward.target" label={tr("Rides to do")} value={bonus.reward.rides} unit="rides" max={50} onChange={(value) => setReward({ rides: Math.round(value) })} />)}</label>
+              <label className="field">{trn("Bonus{0}", <NumberField info="bonus.reward.target" label={tr("Bonus amount")} value={bonus.reward.amount} unit={symbol} onChange={(value) => setReward({ amount: value })} />)}</label>
             </div>
           ) : null}
           {bonus.reward.type === "steps" ? (
             <div className="db-steps" aria-label={tr("Steps")}>
+              <SettingInfo id="bonus.reward.steps" label={tr("Steps")} />
               {bonus.reward.steps.map((step, index) => (
                 <div key={index} className="db-step">
                   <i>{index + 1}</i>
-                  <label className="field">{trn("Rides{0}", <NumberField label={tr("Step {0} rides", [index + 1])} value={step.rides} unit="rides" max={50} onChange={(value) => setReward({ steps: bonus.reward.steps.map((item, at) => (at === index ? { ...item, rides: Math.round(value) } : item)) })} />)}</label>
-                  <label className="field">{trn("Bonus{0}", <NumberField label={tr("Step {0} amount", [index + 1])} value={step.amount} unit={symbol} onChange={(value) => setReward({ steps: bonus.reward.steps.map((item, at) => (at === index ? { ...item, amount: value } : item)) })} />)}</label>
+                  <label className="field">{trn("Rides{0}", /* info-at: bonus.reward.steps */ <NumberField label={tr("Step {0} rides", [index + 1])} value={step.rides} unit="rides" max={50} onChange={(value) => setReward({ steps: bonus.reward.steps.map((item, at) => (at === index ? { ...item, rides: Math.round(value) } : item)) })} />)}</label>
+                  <label className="field">{trn("Bonus{0}", /* info-at: bonus.reward.steps */ <NumberField label={tr("Step {0} amount", [index + 1])} value={step.amount} unit={symbol} onChange={(value) => setReward({ steps: bonus.reward.steps.map((item, at) => (at === index ? { ...item, amount: value } : item)) })} />)}</label>
                   <button data-command="admin.drivers.bonusForm" type="button" className="icon-ghost" aria-label={tr("Remove step {0}", [index + 1])} disabled={bonus.reward.steps.length <= 2} onClick={() => setReward({ steps: bonus.reward.steps.filter((_, at) => at !== index) })}><Minus size={14} aria-hidden="true" /></button>
                 </div>
               ))}
@@ -157,19 +159,19 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
           ) : null}
           {bonus.reward.type === "per_ride" ? (
             <div className="db-row">
-              <label className="field">{trn("Extra on each ride{0}", <NumberField label={tr("Extra per ride")} value={bonus.reward.amount} unit={symbol} onChange={(value) => setReward({ amount: value })} />)}</label>
+              <label className="field">{trn("Extra on each ride{0}", <NumberField info="bonus.reward.perRide" label={tr("Extra per ride")} value={bonus.reward.amount} unit={symbol} onChange={(value) => setReward({ amount: value })} />)}</label>
               <small className="fine">{tr("Set \"Max payout per driver\" in the rules so the cost has a limit.")}</small>
             </div>
           ) : null}
           {bonus.reward.type === "multiplier" ? (
             <div className="db-row">
-              <label className="field">{trn("Boost on fares{0}", <NumberField label={tr("Earnings boost")} value={bonus.reward.multiplier} unit="×" step={0.05} max={3} onChange={(value) => setReward({ multiplier: value })} />)}</label>
+              <label className="field">{trn("Boost on fares{0}", <NumberField info="bonus.reward.multiplier" label={tr("Earnings boost")} value={bonus.reward.multiplier} unit="×" step={0.05} max={3} onChange={(value) => setReward({ multiplier: value })} />)}</label>
               <small className="fine">{tr("×1.3 means 30% more on the driver's share of each fare. Needs a max payout.")}</small>
             </div>
           ) : null}
           {bonus.reward.type === "guarantee" ? (
             <div className="db-row">
-              <label className="field">{trn("At least per hour{0}", <NumberField label={tr("Guaranteed per hour")} value={bonus.reward.amount} unit={symbol} onChange={(value) => setReward({ amount: value })} />)}</label>
+              <label className="field">{trn("At least per hour{0}", <NumberField info="bonus.reward.guarantee" label={tr("Guaranteed per hour")} value={bonus.reward.amount} unit={symbol} onChange={(value) => setReward({ amount: value })} />)}</label>
               <small className="fine">{tr("If the driver earns less while online in the window, Movera pays the rest. Needs a max payout.")}</small>
             </div>
           ) : null}
@@ -177,11 +179,11 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
 
         <Section n={3} title={tr("When")} icon={<Clock size={15} />}>
           <div className="db-row">
-            <label className="field">{trn("From{0}", <input type="time" aria-label={tr("Start time")} value={bonus.start} onChange={(event) => set({ start: event.target.value })} />)}</label>
-            <label className="field">{trn("To{0}", <input type="time" aria-label={tr("End time")} value={bonus.end} onChange={(event) => set({ end: event.target.value })} />)}</label>
+            <label className="field">{trn("From{0}", <input type="time" aria-label={tr("Start time")} value={bonus.start} onChange={(event) => set({ start: event.target.value })} />)}<SettingInfo id="bonus.window" label={tr("Start time")} /></label>
+            <label className="field">{trn("To{0}", /* info-at: bonus.window */ <input type="time" aria-label={tr("End time")} value={bonus.end} onChange={(event) => set({ end: event.target.value })} />)}</label>
             <span className="db-window">{windowMinutes(bonus) ? tr("{0} h {1}", [Math.floor(windowMinutes(bonus) / 60), windowMinutes(bonus) % 60 ? `${windowMinutes(bonus) % 60} min` : ""]) : "—"}{bonus.end < bonus.start ? tr(" · past midnight") : ""}</span>
           </div>
-          <div className="db-days" role="group" aria-label={tr("Days")}>
+          <div className="db-days" role="group" aria-label={tr("Days")}><SettingInfo id="bonus.weekdays" label={tr("Days")} />
             {DAY_SHORT.map((label, day) => (
               <button data-command="admin.drivers.bonusForm" key={label} type="button" aria-pressed={bonus.days.includes(day)} className={bonus.days.includes(day) ? "db-day on" : "db-day"} onClick={() => toggleDay(day)}>{trx(label)}</button>
             ))}
@@ -192,24 +194,24 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
             </span>
           </div>
           <div className="db-row">
-            <label className="field">{trn("First day{0}", <DateInput aria-label={tr("First day")} value={bonus.from} onChange={(event) => set({ from: event.target.value })} />)}</label>
-            <label className="field">{trn("Last day {0}{1}", <small>{tr("(empty = no end)")}</small>, <DateInput aria-label={tr("Last day")} value={bonus.until} onChange={(event) => set({ until: event.target.value })} />)}</label>
+            <label className="field">{trn("First day{0}", <DateInput aria-label={tr("First day")} value={bonus.from} onChange={(event) => set({ from: event.target.value })} />)}<SettingInfo id="bonus.days" label={tr("First day")} /></label>
+            <label className="field">{trn("Last day {0}{1}", <small>{tr("(empty = no end)")}</small>, /* info-at: bonus.days */ <DateInput aria-label={tr("Last day")} value={bonus.until} onChange={(event) => set({ until: event.target.value })} />)}</label>
           </div>
         </Section>
 
         <Section n={4} title={tr("Where")} icon={<MapPinned size={15} />}>
           {bonus.kind === "rides" ? (
             <fieldset className="rd-chips">
-              <legend>{trn("Zones in {0} {1}", info.name, <small>{tr("(none = the whole country)")}</small>)}</legend>
+              <legend>{trn("Zones in {0} {1}", info.name, <small>{tr("(none = the whole country)")}</small>)}<SettingInfo id="bonus.zones" label={tr("Zones")} /></legend>
               {info.zones.map((zone) => (
                 <label key={zone.id} className={bonus.zones.includes(zone.id) ? "check-chip on" : "check-chip"}>
-                  <input type="checkbox" checked={bonus.zones.includes(zone.id)} onChange={() => set({ zones: bonus.zones.includes(zone.id) ? bonus.zones.filter((id) => id !== zone.id) : [...bonus.zones, zone.id] })} />{zone.name}
+                  {/* info-at: bonus.zones */}<input type="checkbox" checked={bonus.zones.includes(zone.id)} onChange={() => set({ zones: bonus.zones.includes(zone.id) ? bonus.zones.filter((id) => id !== zone.id) : [...bonus.zones, zone.id] })} />{zone.name}
                 </label>
               ))}
             </fieldset>
           ) : (
             <>
-              <div className="zn-seg db-seg" role="radiogroup" aria-label={tr("A ride counts when")}>
+              <div className="zn-seg db-seg" role="radiogroup" aria-label={tr("A ride counts when")}><SettingInfo id="bonus.areaCounts" label={tr("A ride counts when")} />
                 {([["pickup", "Pickup inside"], ["dropoff", "Drop-off inside"], ["both", "Both inside"]] as const).map(([id, label]) => (
                   <button data-command="admin.drivers.bonusForm" key={id} type="button" role="radio" aria-checked={bonus.areaCounts === id} className={bonus.areaCounts === id ? "on" : undefined} onClick={() => set({ areaCounts: id })}>{trx(label)}</button>
                 ))}
@@ -227,18 +229,18 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
               return (
                 <li key={rule.key} className={value.on ? "db-rule on" : "db-rule"}>
                   <label className="db-rule-switch">
-                    <input type="checkbox" aria-label={tr("{0} on", [trx(rule.label)])} checked={value.on} onChange={(event) => setRule(rule.key, { on: event.target.checked })} />
+                    {/* info-at: bonus.rule.* */}<input type="checkbox" aria-label={tr("{0} on", [trx(rule.label)])} checked={value.on} onChange={(event) => setRule(rule.key, { on: event.target.checked })} />
                     <span className="zd-switch" aria-hidden="true"><i /></span>
                   </label>
                   <span className="db-rule-icon" aria-hidden="true">{rule.icon}</span>
                   <span className="db-rule-text"><b>{trx(rule.label)}</b><small>{trx(rule.hint)}</small></span>
-                  <NumberField label={trx(rule.label)} value={value.value} unit={rule.unit(symbol)} step={rule.key === "minRating" ? 0.1 : 1} max={rule.max} disabled={!value.on} onChange={(next) => setRule(rule.key, { value: next })} />
+                  <NumberField info={`bonus.rule.${rule.key}`} label={trx(rule.label)} value={value.value} unit={rule.unit(symbol)} step={rule.key === "minRating" ? 0.1 : 1} max={rule.max} disabled={!value.on} onChange={(next) => setRule(rule.key, { value: next })} />
                 </li>
               );
             })}
             <li className={bonus.rules.categories.on ? "db-rule on wide" : "db-rule wide"}>
               <label className="db-rule-switch">
-                <input type="checkbox" aria-label={tr("Only some categories on")} checked={bonus.rules.categories.on} onChange={(event) => setRule("categories", { on: event.target.checked })} />
+                <input type="checkbox" aria-label={tr("Only some categories on")} checked={bonus.rules.categories.on} onChange={(event) => setRule("categories", { on: event.target.checked })} /><SettingInfo id="bonus.rule.categories" label={tr("Only some categories on")} />
                 <span className="zd-switch" aria-hidden="true"><i /></span>
               </label>
               <span className="db-rule-icon" aria-hidden="true"><Tags size={15} /></span>
@@ -247,7 +249,7 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
                 <span className="db-cats">
                   {CATEGORIES.map((category) => (
                     <label key={category.id} className={bonus.rules.categories.value.includes(category.id) ? "check-chip on" : "check-chip"}>
-                      <input type="checkbox" aria-label={tr("Bonus category {0}", [trx(category.label)])} checked={bonus.rules.categories.value.includes(category.id)} onChange={() => setRule("categories", { value: bonus.rules.categories.value.includes(category.id) ? bonus.rules.categories.value.filter((id) => id !== category.id) : [...bonus.rules.categories.value, category.id] })} />{trx(category.label)}
+                      {/* info-at: bonus.rule.categories */}<input type="checkbox" aria-label={tr("Bonus category {0}", [trx(category.label)])} checked={bonus.rules.categories.value.includes(category.id)} onChange={() => setRule("categories", { value: bonus.rules.categories.value.includes(category.id) ? bonus.rules.categories.value.filter((id) => id !== category.id) : [...bonus.rules.categories.value, category.id] })} />{trx(category.label)}
                     </label>
                   ))}
                 </span>
@@ -260,25 +262,25 @@ export function BonusBuilder({ country, book, agentId, canEdit, drivers, fleets,
           <div className="db-row">
             <label className="field">{trn("Drivers{0}", <select aria-label={tr("Bonus audience")} value={bonus.audience} onChange={(event) => set({ audience: event.target.value as DriverBonus["audience"] })}>
                 {AUDIENCES.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
-              </select>)}</label>
+              </select>)}<SettingInfo id="bonus.audience" label={tr("Bonus audience")} /></label>
             {bonus.audience === "fleet" ? (
-              <label className="field">{trn("Fleet{0}", <select aria-label={tr("Bonus fleet")} value={bonus.fleetId} onChange={(event) => set({ fleetId: event.target.value })}>
+              <label className="field">{trn("Fleet{0}", /* info-at: bonus.audience */ <select aria-label={tr("Bonus fleet")} value={bonus.fleetId} onChange={(event) => set({ fleetId: event.target.value })}>
                   <option value="">{tr("Pick a fleet")}</option>
                   {fleets.map((fleet) => <option key={fleet.id} value={fleet.id}>{fleet.name}</option>)}
                 </select>)}</label>
             ) : null}
             <label className="field">{trn("Total budget {0}{1}", <small>{tr("(optional)")}</small>, <span className="db-budget">
-                <NumberField label={tr("Bonus budget")} value={bonus.budget ?? 0} unit={symbol} onChange={(value) => set({ budget: value > 0 ? value : null })} />
+                <NumberField info="bonus.budget" label={tr("Bonus budget")} value={bonus.budget ?? 0} unit={symbol} onChange={(value) => set({ budget: value > 0 ? value : null })} />
               </span>)}</label>
           </div>
           {bonus.audience === "picked" ? (
             <div className="db-pick">
-              <label className="rd-search small"><Search size={14} aria-hidden="true" /><input aria-label={tr("Find drivers for the bonus")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tr("Find by name or code")} /></label>
+              <label className="rd-search small"><Search size={14} aria-hidden="true" />{/* info-skip: search box, not a setting */}<input aria-label={tr("Find drivers for the bonus")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tr("Find by name or code")} /></label>
               <ul className="rd-audience-list" aria-label={tr("Drivers for the bonus")}>
                 {shown.map((driver) => (
                   <li key={driver.facts.id} className={bonus.driverIds.includes(driver.facts.id) ? "on" : undefined}>
                     <label>
-                      <input type="checkbox" aria-label={tr("Give bonus to {0}", [driver.name])} disabled={driver.facts.status !== "active"} checked={bonus.driverIds.includes(driver.facts.id)} onChange={() => set({ driverIds: bonus.driverIds.includes(driver.facts.id) ? bonus.driverIds.filter((id) => id !== driver.facts.id) : [...bonus.driverIds, driver.facts.id] })} />
+                      {/* info-at: bonus.audience */}<input type="checkbox" aria-label={tr("Give bonus to {0}", [driver.name])} disabled={driver.facts.status !== "active"} checked={bonus.driverIds.includes(driver.facts.id)} onChange={() => set({ driverIds: bonus.driverIds.includes(driver.facts.id) ? bonus.driverIds.filter((id) => id !== driver.facts.id) : [...bonus.driverIds, driver.facts.id] })} />
                       <span className="rd-aud-name">{driver.name}<small>{driver.code}{driver.facts.status !== "active" ? ` · ${driver.facts.status}` : ""}</small></span>
                       <span className="rd-aud-num">{trn("Rating {0}", driver.facts.rating.toFixed(2))}</span>
                     </label>

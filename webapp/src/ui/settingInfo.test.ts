@@ -38,7 +38,7 @@ export const SETTING_FILES: Readonly<Record<string, readonly string[]>> = {
 };
 
 /** Areas whose "i" is not attached yet (the record lists them). The inventory test prints them; it does not fail on them. */
-export const NOT_YET: readonly string[] = ["Content", "Onboarding", "Drivers › Bonuses"];
+export const NOT_YET: readonly string[] = ["Onboarding"];
 
 const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 const scanned: { area: string; file: string; field: ScannedField }[] = Object.entries(SETTING_FILES).flatMap(([area, files]) =>
