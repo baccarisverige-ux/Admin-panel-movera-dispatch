@@ -27,7 +27,13 @@ const NOTE = /^Tips & limits save (\S+)( \(used the Standard before\))?$/;
 const RESTAMP = /^re-stamped: /;
 const FIRST_PAGE = 3;
 const NEXT_PAGE = 20;
-const MAX_PAGES = 30;
+/**
+ * Supervisor SF-A3: the most pages one scope is read for (3 + 7 × 20 = 143 entries). A scope that still holds no save
+ * entry and nothing older than the newest save is "too long": named, and the Undo waits (it may hold the save).
+ */
+export const MAX_PAGES = 8;
+/** Server and admin clocks, and one save's publishes one after the other: History older than this before the save's earliest entry cannot hold it. */
+const SAVE_SPAN_MS = 60 * 60 * 1000;
 
 export const newSaveId = (at: string): string => `${at}/${Math.random().toString(36).slice(2, 8).padEnd(6, "0")}`;
 
@@ -51,38 +57,79 @@ export type Back =
   | { to: "nothing"; why: "changed" | "first" };
 
 export type SavedDocument = { doc: TipsDoc; id: string; version: number; back: Back };
-/** `unreadable`: documents of the country whose History the server did not give; they block the Undo. */
-export type TipsSave = { saveId: string; at: string; by: string; documents: SavedDocument[]; unreadable: Array<{ doc: TipsDoc; id: string }> };
+/**
+ * `unreadable`: documents of the country whose History the server did not give. `tooLong`: documents whose History
+ * holds no save entry within MAX_PAGES and nothing older than the save (SF-A3). Both block the Undo: one of them may
+ * belong to the save.
+ */
+export type TipsSave = { saveId: string; at: string; by: string; documents: SavedDocument[]; unreadable: Array<{ doc: TipsDoc; id: string }>; tooLong: Array<{ doc: TipsDoc; id: string }> };
 
-type Read = { doc: TipsDoc; id: string; items: HistoryEntry[]; unreadable: boolean };
+type Read = { doc: TipsDoc; id: string; items: HistoryEntry[]; cursor: string | null; pages: number; unreadable: boolean; tooLong: boolean };
+type Newest = { saveId: string; at: string; by: string; floor: number };
 
 /**
- * A scope's History, newest first, read page by page with the server's cursor until the newest save entry and the
- * version below it are in hand, or the end (supervisor MF-A1: one page of 10 lost a save under 11 re-stamps). The
- * first page is small (SF-A3: most scopes have no save near the top). A scope the server does not know (404) has no
- * history; any other failure makes the scope unreadable, and that is said: it is never read as "no save here".
+ * One more page of a scope's History, newest first, with the server's cursor (supervisor MF-A1: one page of 10 lost a
+ * save under 11 re-stamps). The first page is small (most scopes have no save near the top). A scope the server does
+ * not know (404) has no history; any other failure makes the scope unreadable, and that is said: it is never read as
+ * "no save here".
  */
-async function historyOf(http: ConfigHttp, doc: TipsDoc, id: string): Promise<Read> {
-  const scope = scopeOf(id);
+async function readPage(http: ConfigHttp, read: Read): Promise<void> {
+  const scope = scopeOf(read.id);
   const query = "country" in scope ? `country=${encodeURIComponent(scope.country)}` : `zoneId=${encodeURIComponent(scope.zoneId)}`;
-  const items: HistoryEntry[] = [];
-  let cursor: string | null = null;
-  for (let page = 0; page < MAX_PAGES; page += 1) {
-    let answer: { items?: HistoryEntry[]; nextCursor?: string | null };
-    try {
-      answer = await http.json<{ items?: HistoryEntry[]; nextCursor?: string | null }>(`/admin/config/${doc}/history?${query}&limit=${page === 0 ? FIRST_PAGE : NEXT_PAGE}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`);
-    } catch (error) {
-      if ((error as { status?: number } | null)?.status === 404) return { doc, id, items, unreadable: false };
-      return { doc, id, items, unreadable: true };
-    }
-    items.push(...[...(answer.items ?? [])].sort((a, b) => b.version - a.version));
-    const found = items.findIndex((entry) => parseSaveNote(entry.note));
-    cursor = answer.nextCursor ?? null;
-    // Enough: the newest save entry of this scope and the version below it; or everything.
-    if (!cursor || (found >= 0 && found < items.length - 1)) return { doc, id, items, unreadable: false };
+  let answer: { items?: HistoryEntry[]; nextCursor?: string | null };
+  try {
+    answer = await http.json<{ items?: HistoryEntry[]; nextCursor?: string | null }>(`/admin/config/${read.doc}/history?${query}&limit=${read.pages === 0 ? FIRST_PAGE : NEXT_PAGE}${read.cursor ? `&cursor=${encodeURIComponent(read.cursor)}` : ""}`);
+  } catch (error) {
+    read.cursor = null;
+    if ((error as { status?: number } | null)?.status !== 404) read.unreadable = true;
+    return;
   }
-  // Longer than this reader goes: not claimed either way.
-  return { doc, id, items, unreadable: true };
+  read.pages += 1;
+  read.items.push(...[...(answer.items ?? [])].sort((a, b) => b.version - a.version));
+  read.cursor = answer.nextCursor ?? null;
+}
+
+/** The newest save entry among everything read so far, and the time below which no entry of it can be. */
+function newestOf(reads: readonly Read[]): Newest | null {
+  let newest: Newest | null = null;
+  for (const { items } of reads) {
+    for (const entry of items) {
+      const tag = parseSaveNote(entry.note);
+      if (tag && (!newest || Date.parse(entry.publishedAt) > Date.parse(newest.at))) newest = { saveId: tag.saveId, at: entry.publishedAt, by: entry.publishedBy ?? "", floor: 0 };
+    }
+  }
+  if (!newest) return null;
+  const { saveId } = newest;
+  const earliest = Math.min(...reads.flatMap(({ items }) => items.filter((entry) => parseSaveNote(entry.note)?.saveId === saveId).map((entry) => Date.parse(entry.publishedAt))));
+  return { ...newest, floor: earliest - SAVE_SPAN_MS };
+}
+
+/**
+ * Whether one scope must be read further (SF-A3: stop when the reading is done). Done: the end of its History; its
+ * newest save entry is the country's newest save and the version below it is in hand; its newest save entry is an
+ * older save (the newest save, had it written here, would be above it); or it is read down below the newest save's
+ * time. A version is published after the one below it, so nothing deeper can change the answer.
+ */
+function needsMore(read: Read, newest: Newest | null): boolean {
+  if (read.unreadable || !read.cursor) return false;
+  const found = read.items.findIndex((entry) => parseSaveNote(entry.note));
+  if (found >= 0) return parseSaveNote(read.items[found]!.note)!.saveId === newest?.saveId && found === read.items.length - 1;
+  const last = read.items[read.items.length - 1];
+  return !(newest && last && Date.parse(last.publishedAt) < newest.floor);
+}
+
+/** Every scope read page by page, together, until each is done or at MAX_PAGES (then it is too long). */
+async function historiesOf(http: ConfigHttp, scopes: readonly string[]): Promise<Read[]> {
+  const reads: Read[] = scopes.flatMap((id) => TIPS_DOCS.map((doc) => ({ doc, id, items: [], cursor: null, pages: 0, unreadable: false, tooLong: false })));
+  await Promise.all(reads.map((read) => readPage(http, read)));
+  for (;;) {
+    const newest = newestOf(reads);
+    const more = reads.filter((read) => !read.tooLong && needsMore(read, newest));
+    for (const read of more) if (read.pages >= MAX_PAGES) read.tooLong = true;
+    const next = more.filter((read) => !read.tooLong);
+    if (!next.length) return reads;
+    await Promise.all(next.map((read) => readPage(http, read)));
+  }
 }
 
 /** The Standard first, then the zones; the rider documents before the Tips & limits ones. */
@@ -96,20 +143,16 @@ const inUndoOrder = <T extends { doc: TipsDoc; id: string }>(documents: T[]): T[
  * the answer has no documents and an empty saveId.
  */
 export async function lastTipsSave(http: ConfigHttp, scopes: readonly string[]): Promise<TipsSave | null> {
-  const read = await Promise.all(scopes.flatMap((id) => TIPS_DOCS.map((doc) => historyOf(http, doc, id))));
+  const read = await historiesOf(http, scopes);
   const unreadable = inUndoOrder(read.filter((item) => item.unreadable).map(({ doc, id }) => ({ doc, id })));
-  let newest: { saveId: string; at: string; by: string } | null = null;
-  for (const { items } of read) {
-    for (const entry of items) {
-      const tag = parseSaveNote(entry.note);
-      if (tag && (!newest || Date.parse(entry.publishedAt) > Date.parse(newest.at))) newest = { saveId: tag.saveId, at: entry.publishedAt, by: entry.publishedBy ?? "" };
-    }
-  }
-  if (!newest) return unreadable.length ? { saveId: "", at: "", by: "", documents: [], unreadable } : null;
+  const tooLong = inUndoOrder(read.filter((item) => item.tooLong).map(({ doc, id }) => ({ doc, id })));
+  const newest = newestOf(read);
+  if (!newest) return unreadable.length || tooLong.length ? { saveId: "", at: "", by: "", documents: [], unreadable, tooLong } : null;
   const { saveId, by } = newest;
   const documents: SavedDocument[] = [];
   let at = newest.at;
-  for (const { doc, id, items, unreadable: partly } of read) {
+  for (const { doc, id, items, unreadable: cut, tooLong: long } of read) {
+    const partly = cut || long;
     const index = items.findIndex((entry) => parseSaveNote(entry.note)?.saveId === saveId);
     if (index < 0) continue;
     const entry = items[index]!;
@@ -131,13 +174,16 @@ export async function lastTipsSave(http: ConfigHttp, scopes: readonly string[]):
     }
     documents.push({ doc, id, version: entry.version, back });
   }
-  return { saveId, at, by, documents: inUndoOrder(documents), unreadable };
+  return { saveId, at, by, documents: inUndoOrder(documents), unreadable, tooLong };
 }
 
 /** Why Undo may not run for this save (said in the dialog, Confirm stays off), or null. */
 export function undoBlocked(save: TipsSave | null): string | null {
-  if (!save || !save.unreadable.length) return null;
-  return tr("Undo is blocked: these documents could not be read, and one of them may belong to this save. {0}", [save.unreadable.map(unreadLine).join(" ")]);
+  if (!save || (!save.unreadable.length && !save.tooLong?.length)) return null;
+  const lines: string[] = [];
+  if (save.unreadable.length) lines.push(tr("Undo is blocked: these documents could not be read, and one of them may belong to this save. {0}", [save.unreadable.map(unreadLine).join(" ")]));
+  if (save.tooLong?.length) lines.push(tr("Undo is blocked: the History of these documents is too long to read here, and one of them may belong to this save. {0}", [save.tooLong.map(tooLongLine).join(" ")]));
+  return lines.join(" ");
 }
 
 export type UndoOutcome = { undone: SavedDocument[]; skipped: SavedDocument[] };
@@ -195,4 +241,9 @@ export function savedLine(item: SavedDocument): string {
 /** One line of the Undo dialog for a document whose History could not be read. */
 export function unreadLine(item: { doc: TipsDoc; id: string }): string {
   return tr("{0} · {1}: could not be read.", [scopeName(item.id), docName(item.doc)]);
+}
+
+/** One line of the Undo dialog for a document whose History is too long to read here (SF-A3). */
+export function tooLongLine(item: { doc: TipsDoc; id: string }): string {
+  return tr("{0} · {1}: Undo not available (history too long).", [scopeName(item.id), docName(item.doc)]);
 }

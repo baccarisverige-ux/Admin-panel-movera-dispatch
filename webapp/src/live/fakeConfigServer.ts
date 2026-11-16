@@ -12,7 +12,8 @@ import type { ConfigHttp, Doc } from "./configDocs.ts";
 type Entry = { version: number; publishedAt: string; publishedBy: string; note?: string; action: "publish" | "restore"; restoredFrom?: number; document: Doc };
 type Row = { draftVersion: number; draft: Doc | null; live: { version: number; document: Doc } | null; history: Entry[] };
 export type FakeCall = { method: string; path: string; body?: unknown };
-type Seed = { liveVersion: number; document: Doc; draftVersion?: number };
+/** `older`: that many published versions below the live one, one a minute from 2026-10-01 (a long History, SF-A3). */
+type Seed = { liveVersion: number; document: Doc; draftVersion?: number; older?: number };
 
 const refuse = (status: number, reason: string) => Object.assign(new Error(reason), { status, reason });
 const standardOf = (id: string) => (/^standard-/.test(id) ? null : `standard-${marketOfZone(id)?.id ?? "SE"}`);
@@ -24,6 +25,9 @@ export function fakeConfigServer(seed: Record<string, Seed>, options: { countryH
   const stamp = () => new Date((clock += 1000)).toISOString();
   for (const [key, item] of Object.entries(seed)) {
     const history: Entry[] = item.liveVersion > 0 ? [{ version: item.liveVersion, publishedAt: "2026-11-02T13:44:16.078Z", publishedBy: "seed", action: "publish", document: { ...item.document, version: item.liveVersion } }] : [];
+    for (let back = 1; back <= Math.min(item.older ?? 0, item.liveVersion - 1); back += 1) {
+      history.push({ version: item.liveVersion - back, publishedAt: new Date(Date.parse("2026-10-01T00:00:00Z") + (item.liveVersion - back) * 60_000).toISOString(), publishedBy: "seed", note: "Pricing update", action: "publish", document: { ...item.document, version: item.liveVersion - back } });
+    }
     rows.set(key, { draftVersion: item.draftVersion ?? item.liveVersion + 1, draft: item.document, live: item.liveVersion > 0 ? { version: item.liveVersion, document: item.document } : null, history });
   }
   const scope = (doc: string, from: { zoneId?: string | null; country?: string | null }) => {

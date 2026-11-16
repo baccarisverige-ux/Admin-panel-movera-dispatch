@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { tr } from "../i18n";
 
 /**
@@ -15,13 +15,21 @@ import { tr } from "../i18n";
 export const INFO_ORANGE = "#C2410C";
 export const INFO_MARK = "#FFFFFF";
 
-export type ConfirmInfoProps = { what: ReactNode; where?: ReactNode; change?: ReactNode; who?: ReactNode; undo?: ReactNode };
+/** `command`: who it affects and how to undo it come from the command (ui/confirmInfo.ts) when not given. */
+export type ConfirmInfoProps = { what: ReactNode; where?: ReactNode; change?: ReactNode; who?: ReactNode; undo?: ReactNode; command?: string };
 
-export function ConfirmInfo({ what, where, change, who, undo }: ConfirmInfoProps) {
+/**
+ * The words are loaded when the "!" is first pressed (audit bundle budget, scripts/check-bundle.mjs): the explanation
+ * and the zone texts are in their own file (ui/ConfirmInfoBody.tsx), not in the admin's first download.
+ */
+const loadBody = () => import("./ConfirmInfoBody");
+const Body = lazy(() => loadBody().catch(() => ({ default: () => <p className="state-line" role="alert">{tr("The explanation could not be loaded. Reload the page to see it.")}</p> })));
+
+export function ConfirmInfo(props: ConfirmInfoProps) {
   const [open, setOpen] = useState(false);
   return (
     <div className="confirm-info">
-      <button type="button" data-command="admin.confirm.info" className="confirm-info-btn" aria-expanded={open} aria-label={tr("What will happen")} title={tr("What will happen? Open the explanation")} onClick={() => setOpen((value) => !value)}>
+      <button type="button" data-command="admin.confirm.info" className="confirm-info-btn" aria-expanded={open} aria-label={tr("What will happen")} title={tr("What will happen? Open the explanation")} onPointerEnter={() => void loadBody()} onFocus={() => void loadBody()} onClick={() => setOpen((value) => !value)}>
         <svg className="confirm-info-icon" width="20" height="18" viewBox="0 0 20 18" aria-hidden="true" data-testid="confirm-info-icon">
           <path d="M10 1 19 17H1Z" fill={INFO_ORANGE} stroke={INFO_ORANGE} strokeWidth="2" strokeLinejoin="round" />
           <path d="M10 6.2v5.2" stroke={INFO_MARK} strokeWidth="2.2" strokeLinecap="round" />
@@ -29,15 +37,7 @@ export function ConfirmInfo({ what, where, change, who, undo }: ConfirmInfoProps
         </svg>
         {tr("What will happen?")}
       </button>
-      {open ? (
-        <dl className="confirm-info-body" data-testid="confirm-info">
-          <dt>{tr("What happens")}</dt><dd>{what}</dd>
-          <dt>{tr("Where")}</dt><dd>{where ?? tr("Only what this dialog names. No other zone, person or setting changes.")}</dd>
-          {change ? <><dt>{tr("From → to")}</dt><dd>{change}</dd></> : null}
-          <dt>{tr("Who it affects")}</dt><dd>{who ?? tr("Only what this dialog names. Nobody else.")}</dd>
-          <dt>{tr("How to undo")}</dt><dd>{undo ?? tr("There is no one-press undo. The action is written in the Audit log with your name and your reason; do the opposite action on the same page to take it back.")}</dd>
-        </dl>
-      ) : null}
+      {open ? <Suspense fallback={<p className="fine-print" data-testid="confirm-info-loading">{tr("Loading…")}</p>}><Body {...props} /></Suspense> : null}
     </div>
   );
 }

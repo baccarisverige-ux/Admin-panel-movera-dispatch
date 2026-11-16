@@ -1,5 +1,5 @@
 import { useDialogFocus } from "./useDialogFocus";
-import { useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { useCommands } from "../api/hooks";
 import type { CommandResult } from "../api/create";
@@ -10,9 +10,18 @@ import { commandById } from "../commands/registry";
 import { tr, trn, trSentences, trx } from "../i18n";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { liveHandles } from "../live/liveCommands";
-import { WhereItLands, WhereSentences, scopeNames, type WhereProps } from "../live/WhereItLands";
+import type { WhereProps } from "../live/WhereItLands";
 import { ConfirmInfo, type ConfirmInfoProps } from "./ConfirmInfo";
-import { undoFor, whoFor } from "./confirmInfo";
+import { scopeNames } from "./scopeNames";
+
+/**
+ * The zone pick and its sentences are loaded with the first settings dialog (audit bundle budget,
+ * scripts/check-bundle.mjs). Until they are in, Confirm stays off: the places are not ticked yet.
+ */
+const whereModule = () => import("../live/WhereItLands");
+const whereFailed = () => <p className="state-line" role="alert">{tr("The zone list could not be loaded. Reload the page to save this.")}</p>;
+const WhereItLands = lazy(() => whereModule().then((module) => ({ default: module.WhereItLands }), () => ({ default: whereFailed })));
+const WhereSentences = lazy(() => whereModule().then((module) => ({ default: module.WhereSentences }), () => ({ default: whereFailed })));
 
 type CommandButtonProps = {
   command: string;
@@ -159,6 +168,7 @@ export function CommandButton({
     setSure(false);
     // One place: nothing to choose between, it is named and already ticked. More: each is ticked again by hand.
     setTicked(where && where.zoneIds.length === 1 ? [...where.zoneIds] : []);
+    if (where) void whereModule().catch(() => undefined);
     setOpen(true);
   }
 
@@ -241,13 +251,14 @@ export function CommandButton({
           >
             <h3>{spec ? trx(spec.label) : null}</h3>
             {where && !summary ? null : <p>{summary ?? <>{trn("This acts on {0}.", targetId ?? (spec ? trx(spec.label) : ""))}</>}</p>}
-            {where ? <WhereItLands {...where} ticked={ticked} onTicked={setTicked} /> : null}
+            {where ? <Suspense fallback={<p className="fine-print">{tr("Loading…")}</p>}><WhereItLands {...where} ticked={ticked} onTicked={setTicked} /></Suspense> : null}
             <ConfirmInfo
               what={info?.what ?? (where ? (spec ? trx(spec.label) : "") : summary ?? (spec ? trx(spec.label) : ""))}
               where={info?.where ?? (where ? <WhereSentences zoneIds={where.pick ? ticked : where.zoneIds} doc={where.doc} keepFollowers={where.keepFollowers} /> : scopeNames(scope) || (targetId && !/^(pricing-rev-|[a-z]+ (rules|draft)$)/.test(targetId) ? targetId : undefined))}
               change={info?.change ?? (before && after && before !== after ? `${before} → ${after}` : undefined)}
-              who={info?.who ?? tr(whoFor(command))}
-              undo={info?.undo ?? tr(undoFor(command))}
+              who={info?.who}
+              undo={info?.undo}
+              command={command}
             />
             {details?.length ? <ul className="confirm-details" data-testid="command-details">{details.map((line) => <li key={line}>{line}</li>)}</ul> : null}
             {blockedReason ? <p className="state-line" role="alert" data-testid="command-blocked">{blockedReason}</p> : null}

@@ -9,7 +9,7 @@ import { countryRulesOf, type Doc } from "./configDocs.ts";
 import { fakeConfigServer } from "./fakeConfigServer.ts";
 import { liveHandles } from "./liveCommands.ts";
 import { createLiveSettings } from "./liveSettings.ts";
-import { TIPS_LAST_SAVE_KEY, lastTipsSave, parseSaveNote, saveNote, savedLine, undoBlocked, unreadLine, type TipsSave } from "./tipsUndo.ts";
+import { TIPS_LAST_SAVE_KEY, lastTipsSave, parseSaveNote, saveNote, savedLine, tooLongLine, undoBlocked, unreadLine, type TipsSave } from "./tipsUndo.ts";
 
 /**
  * Live 2026-11-16 (Rules audits/impact/country-undo.md): one "Save tips & limits" publishes several documents (the
@@ -244,4 +244,68 @@ test("the button: its own command, asks for a reason and confirmation, names the
   assert.ok(props.includes("summary="));
   assert.equal(fr["Undo last Tips & limits save"], "Annuler le dernier enregistrement des pourboires et limites");
   assert.equal(sv["Undo last Tips & limits save"], "Ångra senaste sparningen av dricks och gränser");
+});
+
+/**
+ * Supervisor SF-A3 (Rules audits/impact/country-undo-supervisor.md, Round 2): a scope with no save entry was read to its
+ * end (pages of 20, up to 30 pages, both documents, every zone and the Standard) each time the tab opened, and past
+ * 583 entries it became unreadable and blocked every Undo of the country.
+ */
+const longSeed = (older: number) => ({
+  "country_rules:standard-SE": { liveVersion: 1, document: rules(10) },
+  "country_rules:Z002": { liveVersion: older + 1, document: rules(35), older },
+  "rider_app_config:standard-SE": { liveVersion: 8, document: sample("rider_app_config") },
+});
+const historyCalls = (server: ReturnType<typeof fakeConfigServer>, part: string) => server.calls.filter((c) => c.method === "GET" && c.path.includes("/history?") && c.path.includes(part)).length;
+
+test("SF-A3: a long History older than the save is not read to its end, and does not block the Undo (600 entries)", async () => {
+  const server = fakeConfigServer(longSeed(600));
+  const settings = createLiveSettings(server.http, () => "2026-11-16T05:18:42Z");
+  const book = { ...((await settings.readSlice("countrySettings", { draftRev: 0, countries: {} })) as Book), zones: (await settings.readSlice("countrySettingsZones", {})) as Book["zones"] };
+  const shown = { ...book.zones["standard-SE"]!, tips: [{ id: "t1", amount: 40, enabled: true }] };
+  await settings.command("admin.pricing.saveCountry", { targetId: "SE tips and limits", value: { ...book, draftRev: 1, zones: { ...book.zones, "standard-SE": shown } }, scope: "standard-SE" });
+  server.calls.length = 0;
+  const found = (await settings.readSlice(`${TIPS_LAST_SAVE_KEY}:SE`, null)) as TipsSave;
+  assert.deepEqual(found.unreadable, []);
+  assert.deepEqual(found.tooLong, []);
+  assert.equal(undoBlocked(found), null, "a long History of a zone that is not in the save blocks nothing");
+  assert.ok(found.documents.some((d) => d.id === "standard-SE" && d.back.to === "version"));
+  assert.ok(historyCalls(server, "country_rules/history?zoneId=Z002") <= 2, `Z002 read ${historyCalls(server, "country_rules/history?zoneId=Z002")} pages: it stops below the save's time`);
+  await settings.command("admin.tipsLimits.undo", { targetId: found.saveId, scope: "SE" });
+  assert.equal(tipOf(server, "country_rules:standard-SE"), 1000);
+});
+
+test("SF-A3: no save id within the page limit: only that scope says \"Undo not available (history too long)\", Confirm stays off", async () => {
+  const server = fakeConfigServer(longSeed(600));
+  const found = (await lastTipsSave(server.http, SCOPES))!;
+  assert.deepEqual(found.documents, []);
+  assert.deepEqual(found.unreadable, []);
+  assert.deepEqual(found.tooLong.map((d) => `${d.doc}:${d.id}`), ["country_rules:Z002"], "that scope only");
+  assert.match(tooLongLine(found.tooLong[0]!), /Z002.*Undo not available \(history too long\)/);
+  assert.match(undoBlocked(found) ?? "", /history too long/);
+  assert.ok(historyCalls(server, "country_rules/history?zoneId=Z002") <= 8, "a page limit, not the whole History");
+  // MF-A1 kept: a scope that cannot be read is still named and refused, beside the long one.
+  const broken = fakeConfigServer(longSeed(600), { failHistory: (path) => path.includes("zoneId=Z003") });
+  const both = (await lastTipsSave(broken.http, SCOPES))!;
+  assert.deepEqual(both.unreadable.map((d) => d.id), ["Z003", "Z003"]);
+  assert.match(undoBlocked(both) ?? "", /could not be read/);
+  assert.match(undoBlocked(both) ?? "", /history too long/);
+});
+
+test("SF-A3: opening the tab again reads nothing new; a save, an Undo and the Undo itself read again", async () => {
+  const { server, settings, save, last } = await open();
+  await save(["standard-SE", "Z002"], 40);
+  const first = (await last())!;
+  server.calls.length = 0;
+  assert.equal((await last())!.saveId, first.saveId);
+  assert.equal(historyCalls(server, ""), 0, "the second open is read from what the first read");
+  await save(["standard-SE"], 45);
+  const second = (await last())!;
+  assert.notEqual(second.saveId, first.saveId, "a save forgets what was read");
+  server.calls.length = 0;
+  await settings.command("admin.tipsLimits.undo", { targetId: second.saveId, scope: "SE" });
+  assert.ok(historyCalls(server, "") > 0, "Undo reads the History again before it acts");
+  server.calls.length = 0;
+  assert.ok((await last())!.documents.every((d) => d.back.to === "nothing"));
+  assert.ok(historyCalls(server, "") > 0, "after an Undo the tab reads again");
 });

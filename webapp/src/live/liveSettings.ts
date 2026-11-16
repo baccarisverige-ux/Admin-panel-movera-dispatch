@@ -49,7 +49,7 @@ import { tr, trx } from "../i18n/core.ts";
 import { COUNTRY_LABEL } from "../i18n/countries.ts";
 import { APP_LANGUAGES, ZONE_PAYMENT_METHODS, type AppLanguage, type ZonePaymentMethod } from "../config/zoneDefaults.ts";
 import { ApiError } from "../api/httpClient.ts";
-import { TIPS_LAST_SAVE_KEY, lastTipsSave, newSaveId, saveNote, savedLine, undoBlocked, undoTipsSave, type UndoOutcome } from "./tipsUndo.ts";
+import { TIPS_LAST_SAVE_KEY, lastTipsSave, newSaveId, saveNote, savedLine, undoBlocked, undoTipsSave, type TipsSave, type UndoOutcome } from "./tipsUndo.ts";
 import { readDispatchTools, sendToolCalls, toolCalls, toolRefusal, toolsOf, type DispatchTools } from "./dispatchTools.ts";
 
 /** Every zone of the admin's markets and each country's Standard. */
@@ -155,6 +155,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
   const key = (doc: ConfigDocName, id: string) => `${doc}:${id}`;
 
   const unknownZones = new Set<string>();
+  /** The last Tips & limits save read per country, for a while (shownTipsSave, SF-A3). */
+  const tipsSaves = new Map<string, { at: number; save: Promise<TipsSave | null> }>();
+  const TIPS_SAVE_FOR_MS = 120_000;
   /*
    * Live sweep 2026-11-02 H1: what each page's model looked like when it was last READ FROM THE SERVER (or after a
    * publish the server took). A publish writes only what differs between this baseline and the admin's edited model,
@@ -576,6 +579,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     drafts.clear();
     readAt.clear();
     unknownZones.clear();
+    tipsSaves.clear();
     slices.clear();
     resetBaselines();
   }
@@ -718,6 +722,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const priorZones = baseline.zoneRules ?? (await readZoneRules());
     const prior: CountrySettingsBook = { ...priorBook, zones: { ...(priorBook as { zones?: Record<string, CountrySettings> }).zones, ...priorZones } } as CountrySettingsBook;
     const saveId = newSaveId(now());
+    tipsSaves.clear();
     const viaStandardNames: string[] = [];
     for (const id of [...targets.filter((item) => countryOfStandard(item)), ...targets.filter((item) => !countryOfStandard(item))]) {
       const market = marketOfZone(id);
@@ -751,9 +756,23 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
 
   /** The newest Tips & limits save of a country (its Standard and zones), with what Undo would do to each document. */
   const tipsSaveOf = (country: string) => lastTipsSave(http, readScopes().filter((id) => (countryOfStandard(id) ?? marketOfZone(id)?.id) === country && !unknownZones.has(id)));
+  /**
+   * Supervisor SF-A3: the tab shows what the last read found for a while (TIPS_SAVE_FOR_MS), not a new read of every
+   * History each time it opens. Any command from this panel, another admin, and a read that could not finish forget
+   * it; the Undo itself always reads again before it acts.
+   */
+  function shownTipsSave(country: string): Promise<TipsSave | null> {
+    const kept = tipsSaves.get(country);
+    if (kept && Date.now() - kept.at < TIPS_SAVE_FOR_MS) return kept.save;
+    const save = tipsSaveOf(country);
+    tipsSaves.set(country, { at: Date.now(), save });
+    save.then((found) => { if (found && (found.unreadable.length || found.tooLong.length)) tipsSaves.delete(country); }, () => tipsSaves.delete(country));
+    return save;
+  }
 
   /** Undo last Tips & limits save: every document of that save goes back; `saveId` is the save the admin was shown. */
   async function undoTips(saveId: string, country: string): Promise<string> {
+    tipsSaves.delete(country);
     const save = await tipsSaveOf(country);
     // Supervisor MF-A1: a document that could not be read may belong to the save; nothing is undone until it can be read.
     const blocked = undoBlocked(save);
@@ -765,6 +784,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       outcome = await undoTipsSave(http, save);
     } finally {
       // Whatever went back, nothing read before is current any more.
+      tipsSaves.delete(country);
       for (const item of save.documents) drafts.delete(key(item.doc, item.id));
       baseline.countries = null;
       baseline.zoneRules = null;
@@ -930,7 +950,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       if (sliceKey === DISPATCH_KEY) return readDispatch(fallback);
       if (sliceKey === COUNTRY_SETTINGS_KEY) return readCountries(fallback);
       if (sliceKey === ZONE_RULES_KEY) return readZoneRules();
-      if (sliceKey.startsWith(`${TIPS_LAST_SAVE_KEY}:`)) return tipsSaveOf(sliceKey.slice(TIPS_LAST_SAVE_KEY.length + 1));
+      if (sliceKey.startsWith(`${TIPS_LAST_SAVE_KEY}:`)) return shownTipsSave(sliceKey.slice(TIPS_LAST_SAVE_KEY.length + 1));
       if (sliceKey === ONBOARDING_SETTINGS_KEY) return readOnboarding(fallback);
       // Settings' draft lives in this session until it is published (the server keeps the published documents).
       if (sliceKey === CONFIG_KEY) {
@@ -942,6 +962,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       return null;
     },
     command(action, input) {
+      // Any publish from here may be one of a Tips & limits save's documents: the tab reads again (SF-A3).
+      tipsSaves.clear();
       if (action === "admin.onboarding.publishSettings") return publishOnboarding(input.value, input.targetId);
       if (action === "admin.pricing.publish") return publishPricing(normalizeStore(input.value));
       // v0.7.1: Manage categories, manual surge, History (v0.7.2: no Tell drivers, contract.json#surgeNoticeRemoved).

@@ -1,3 +1,4 @@
+import { ConfirmInfo } from "../ui/ConfirmInfo";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -122,6 +123,7 @@ export function LiveReservations() {
                       ) : null}
                       {open.action === "raise" ? <input aria-label={tr("Amount to add")} inputMode="decimal" value={amount} maxLength={10} onChange={(event) => setAmount(event.target.value)} /> : null}
                       <input aria-label={tr("Reason")} value={reason} maxLength={500} placeholder={open.action === "assign" || open.action === "offer" || open.action === "raise" ? tr("Note (optional)") : tr("Reason")} onChange={(event) => setReason(event.target.value)} />
+                      <ConfirmInfo what={trx(BUTTON[open.action])} where={tr("Trip {0} only.", [trip.tripId])} command={`admin.reservation.${open.action}`} />
                       <ActButton action={open.action} disabled={busy || (["unassign", "cancel", "noShow", "contact"].includes(open.action) && !reason.trim()) || ((open.action === "assign" || open.action === "offer") && !driverId.trim()) || (open.action === "raise" && raiseAmountMinor(amount, trip) === null)} onClick={() => void run(trip, open.action)}>{tr("Confirm")}</ActButton>
                       <button type="button" className="dash-btn small ghost" data-command="admin.table.filter" onClick={() => setOpen(null)}>{tr("Close")}</button>
                     </span>

@@ -133,7 +133,7 @@ export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onN
                       <div>
                         <strong>{trn("Delete {0}?", trx(category.label))}</strong>
                         <p>{tr("Riders stop seeing it in every zone. It is archived and can be restored for 30 days. You will type its name and give a reason.")}</p>
-                        <CommandButton command="admin.pricing.archiveCategory" className="dash-btn small danger" targetId={category.label} scope="all" before={`${category.label} active`} after={`${category.label} archived`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={archive.store} disabled={!canEdit || Boolean(archive.error)} title={archive.error} onDone={() => { setDeleting(null); onNotice(tr("{0} deleted. You can restore it for 30 days.", [trx(category.label)])); }}>{trn("{0} Delete safely", <Lock size={13} aria-hidden="true" />)}</CommandButton>
+                        <CommandButton command="admin.pricing.archiveCategory" className="dash-btn small danger" targetId={category.label} scope="all" info={{ where: tr("Every zone of every country: riders stop seeing this category everywhere."), who: tr("Every rider who could choose this category, and the drivers who drive it.") }} before={`${category.label} active`} after={`${category.label} archived`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={archive.store} disabled={!canEdit || Boolean(archive.error)} title={archive.error} onDone={() => { setDeleting(null); onNotice(tr("{0} deleted. You can restore it for 30 days.", [trx(category.label)])); }}>{trn("{0} Delete safely", <Lock size={13} aria-hidden="true" />)}</CommandButton>
                       </div>
                     )}
                   </div>

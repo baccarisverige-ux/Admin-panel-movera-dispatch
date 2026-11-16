@@ -1,8 +1,7 @@
 import { useSyncExternalStore } from "react";
-import { trx, tr } from "../i18n";
-import { COUNTRY_LABEL } from "../i18n/countries";
-import { zoneById } from "../markets/markets";
-import { landing } from "../ui/confirmInfo";
+import { tr } from "../i18n";
+import { watchedIds, whereText } from "../ui/confirmInfo";
+import { scopeName as nameOf } from "../ui/scopeNames";
 import type { ConfigDocName } from "./configDocs.ts";
 import { standardMarks } from "./liveSettings.ts";
 
@@ -17,29 +16,14 @@ export type WhereProps = {
   pick?: boolean;
 };
 
-const nameOf = (id: string) => (/^standard-/.test(id) ? tr("Standard {0}", [trx(COUNTRY_LABEL[id.slice(9) as keyof typeof COUNTRY_LABEL] ?? id.slice(9))]) : zoneById(id)?.name ?? id);
-
-/** Plain sentences: where the setting lands for the ticked scopes (owner 2026-11-16 "Stay on Standard (Rec.)"). */
+/**
+ * Plain sentences: where the setting lands for the ticked scopes (owner 2026-11-16 "Stay on Standard (Rec.)").
+ * Supervisor MF-R2-1: re-rendered when the server says which zones use their Standard, for every zone of the country
+ * (an unticked zone on the Standard changes too); a zone not known yet is named, never left out.
+ */
 export function WhereSentences({ zoneIds, doc, keepFollowers = true }: Pick<WhereProps, "zoneIds" | "doc" | "keepFollowers">) {
-  // Re-rendered when the server says which zones use their Standard.
-  useSyncExternalStore(standardMarks.subscribe, () => zoneIds.map((id) => String(standardMarks.get(doc, id))).join(","), () => "");
-  if (!zoneIds.length) return <span data-testid="where-lands">{tr("Nothing is ticked: nothing will be saved.")}</span>;
-  const list = (names: string[]) => names.join(", ");
-  return (
-    <span data-testid="where-lands">
-      {landing(zoneIds, (id) => standardMarks.get(doc, id), keepFollowers).map((item) => (
-        <span key={item.country}>
-          {item.standard ? `${tr("It is saved in {0}.", [nameOf(`standard-${item.country}`)])} ` : ""}
-          {item.through.length ? `${tr("These zones use the Standard: they get it through the Standard and stay on it (no copy of their own): {0}.", [list(item.through)])} ` : ""}
-          {item.direct.length ? `${tr("These zones have settings of their own: it is saved directly in each: {0}.", [list(item.direct)])} ` : ""}
-          {item.detach.length ? `${tr("These zones use the Standard now: each gets settings of its own and stops following the Standard: {0}.", [list(item.detach)])} ` : ""}
-          {item.notReached.length ? `${tr("These zones have settings of their own and are not ticked: they do NOT get it: {0}.", [list(item.notReached)])} ` : ""}
-          {item.unknown.length ? `${tr("Not known yet whether these use the Standard: {0}.", [list(item.unknown)])} ` : ""}
-        </span>
-      ))}
-      {tr("No other zone changes.")}
-    </span>
-  );
+  useSyncExternalStore(standardMarks.subscribe, () => watchedIds(zoneIds).map((id) => String(standardMarks.get(doc, id))).join(","), () => "");
+  return <span data-testid="where-lands">{whereText(zoneIds, (id) => standardMarks.get(doc, id), keepFollowers)}</span>;
 }
 
 /**
@@ -62,6 +46,3 @@ export function WhereItLands({ zoneIds, doc, keepFollowers, pick, ticked, onTick
     </fieldset>
   );
 }
-
-/** The scopes as names, for the "?" of a dialog without a zone pick. */
-export const scopeNames = (scope: string | undefined): string => (scope ?? "").split(",").filter((id) => /^standard-[A-Z]{2}$/.test(id) || zoneById(id)).map(nameOf).join(", ");
