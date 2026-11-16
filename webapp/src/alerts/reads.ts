@@ -82,6 +82,37 @@ export function alertIncidentsRead(live: boolean, enabled: boolean): { list: str
   return { list: live ? OPEN_INCIDENTS_LIST : "incidents", options: { refetchMs: alertPolls(live).incidents, enabled } };
 }
 
+/**
+ * SF-A X1 (REMINDERS 139): the bar's warm read of the open cases, straight from the plan (live: on only while an open
+ * SOS / car-lost / ride-check / SOS-slow alert is listed for a role with incidents.read). The same list and options as
+ * the alert row's read (useAlertIncidents), so the row finds the data in the shared cache and Take / Solved never wait.
+ */
+export function alertBarIncidentsRead(input: AlertReadInput): { list: string; options: ReadOptions } {
+  return alertIncidentsRead(input.live, alertReads(input).incidents);
+}
+
+/** What is still loading behind the bar (useSlice / useRecords isLoading of the alert list, the cases and the trips). */
+export type AlertBarLoads = { alerts: boolean; incidents: boolean; trips: boolean };
+
+/**
+ * SF-A X2 (REMINDERS 139): the bar's `loading` (the alert sound waits on it, AlertBell). Live: the alert list only;
+ * the warm read of the open cases never holds back the sound. Demo: the engine also waits for the cases and trips.
+ */
+export function alertBarLoading(input: AlertReadInput, loads: AlertBarLoads): boolean {
+  if (input.live) return loads.alerts;
+  const on = alertReads(input);
+  return loads.alerts || (on.incidents && loads.incidents) || (on.trips && loads.trips);
+}
+
+/**
+ * SF-B (REMINDERS 139): an SOS / ride-check alert row reads the open cases (its Take / Solved) only when it has a case
+ * and the viewer may read cases (incidents.read). A dispatcher sees ride-check rows but the server refuses him
+ * GET /admin/incidents (server src/safety/routes.ts), so his row sends no read; it showed no buttons before either.
+ */
+export function alertRowReadsIncidents(alert: { kind: KindId; incidentId?: string | null }, canReadIncidents: boolean): boolean {
+  return canReadIncidents && followsIncident(alert.kind) && Boolean(alert.incidentId);
+}
+
 /** The ride checks behind an alert (useRideCheckRows): live only those behind an alert. */
 export function rideCheckRowsRead(live: boolean, enabled: boolean): { list: string; options: ReadOptions } {
   return { list: live ? RIDE_CHECK_ALERTS_LIST : "rideChecks", options: { refetchMs: alertPolls(live).rideChecks, enabled } };
