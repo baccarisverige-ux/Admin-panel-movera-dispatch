@@ -9123,4 +9123,9 @@
 ["End a bonus campaign","Avsluta en bonuskampanj"],
 ["Open a bonus campaign","Öppna en bonuskampanj"],
 ["Waiting since {0}","Väntar sedan {0}"],
-["Offers that ran out while the server's live link was down do not count either.","Erbjudanden som gick ut medan serverns direktlänk låg nere räknas inte heller."]]
+["Offers that ran out while the server's live link was down do not count either.","Erbjudanden som gick ut medan serverns direktlänk låg nere räknas inte heller."],
+["Let {0} Exclusive offers run out in a row","Lät {0} Exklusiva erbjudanden gå ut i rad"],
+["Let Exclusive offers run out in a row","Lät Exklusiva erbjudanden gå ut i rad"],
+["After Exclusive offers ignored in a row","Efter ignorerade Exklusiva erbjudanden i rad"],
+["A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts.","En förare som låter Exklusiva erbjudanden gå ut sätts offline, så att resenärer inte får vänta. Att neka ett erbjudande räknas aldrig."],
+["Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.","Exklusiva erbjudanden som föraren lät gå ut i rad. Nekade erbjudanden och Radar-erbjudanden räknas inte."]]

@@ -9123,4 +9123,9 @@
 ["End a bonus campaign","End a bonus campaign"],
 ["Open a bonus campaign","Open a bonus campaign"],
 ["Waiting since {0}","Waiting since {0}"],
-["Offers that ran out while the server's live link was down do not count either.","Offers that ran out while the server's live link was down do not count either."]]
+["Offers that ran out while the server's live link was down do not count either.","Offers that ran out while the server's live link was down do not count either."],
+["Let {0} Exclusive offers run out in a row","Let {0} Exclusive offers run out in a row"],
+["Let Exclusive offers run out in a row","Let Exclusive offers run out in a row"],
+["After Exclusive offers ignored in a row","After Exclusive offers ignored in a row"],
+["A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts.","A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts."],
+["Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.","Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count."]]

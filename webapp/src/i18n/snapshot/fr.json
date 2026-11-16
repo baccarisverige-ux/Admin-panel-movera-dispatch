@@ -9123,4 +9123,9 @@
 ["End a bonus campaign","Terminer une campagne de bonus"],
 ["Open a bonus campaign","Ouvrir une campagne de bonus"],
 ["Waiting since {0}","En attente depuis {0}"],
-["Offers that ran out while the server's live link was down do not count either.","Les offres expirées pendant une coupure du lien direct du serveur ne comptent pas non plus."]]
+["Offers that ran out while the server's live link was down do not count either.","Les offres expirées pendant une coupure du lien direct du serveur ne comptent pas non plus."],
+["Let {0} Exclusive offers run out in a row","A laissé expirer {0} offres Exclusives d’affilée"],
+["Let Exclusive offers run out in a row","A laissé expirer des offres Exclusives d’affilée"],
+["After Exclusive offers ignored in a row","Après des offres Exclusives ignorées d’affilée"],
+["A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts.","Un chauffeur qui laisse expirer des offres Exclusives est mis hors ligne, pour que les passagers n’attendent pas. Refuser une offre ne compte jamais."],
+["Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.","Offres Exclusives que le chauffeur a laissé expirer d’affilée. Les offres refusées et les offres Radar ne comptent pas."]]

@@ -16,7 +16,7 @@ const KEY = "Offers that ran out while the server's live link was down do not co
 
 test("Q-B13: the auto-offline help line says offers that ran out during a server link outage do not count", () => {
   const source = readFileSync(new URL("./OfferSections.tsx", import.meta.url), "utf8");
-  const row = source.slice(source.indexOf('label={tr("After offers not accepted in a row")}'));
+  const row = source.slice(source.indexOf('label={tr("After Exclusive offers ignored in a row")}'));
   assert.ok(row.length > 0, "the auto-offline row is there");
   const help = row.slice(0, row.indexOf("</Row>"));
   assert.ok(help.includes(`tr(${JSON.stringify(KEY)})`), "the help line carries the outage sentence");
