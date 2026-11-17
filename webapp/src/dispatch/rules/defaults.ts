@@ -104,6 +104,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     pickupMove: { maxMeters: CONFIG_DEFAULTS.maxPickupMoveMeters },
     samePoint: { warnMeters: CONFIG_DEFAULTS.samePointWarnMeters },
     pickupSpots: { on: CONFIG_DEFAULTS.pickupSpotsOn },
+    shareTrip: { on: CONFIG_DEFAULTS.shareTripOn },
     airport: { on: airport, order: "fifo", maxQueueMin: 120, queueAreas: [] },
     goingHome: { on: true, perDay: 2, maxOffDeg: 45 },
     destinationMode: destinationModeDefault(),

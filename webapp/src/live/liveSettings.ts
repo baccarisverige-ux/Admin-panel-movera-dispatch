@@ -16,6 +16,9 @@ import { COUNTRY_SETTINGS_KEY, personLimitsOf, TIP_CASH_IN_CAR_MINUTES, TIP_FLAG
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
+  dispatchOwnedFor,
+  keepPaths,
+  type OwnedParts,
   SettingsChanged,
   bookOfPricing,
   countryRulesOf,
@@ -258,6 +261,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     return restore(before[0]);
   }
 
+  /** BQ-S10 round 2 (supervisor SF-A1): zones whose rider document (the Share trip and pickup entrance chips switches) could not be read. */
+  const riderUnread = new Set<string>();
+
   async function readDispatch(fallback: unknown): Promise<DispatchBook> {
     const book = normalizeDispatchBook(fallback);
     const live = { ...book.live };
@@ -268,9 +274,13 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const rules = await draft("dispatch", id, true);
       const driver = unknownZones.has(id) ? null : await draft("driver_app_config", id, true);
       drivers.set(id, driver?.document ?? null);
-      // v0.18.115 BQ-V21: the rider document holds the pickup entrance chips switch (Dispatch › Rides). Read on its own
-      // (never marks the zone unknown); a zone without one, or a failed read, keeps the rules' own value.
-      const rider = driver ? await readDraft(http, "rider_app_config", id).catch(() => null) : null;
+      // One rider document read serves v0.18.115 BQ-V21 (the pickup entrance chips switch, Dispatch › Rides) and
+      // v0.18.116 BQ-S10 (the Share trip switch, Dispatch › Safety). Read on its own (never marks the zone unknown); a
+      // zone without one, or a failed read, keeps the rules' own values.
+      // S10 round 2 (supervisor SF-A1): a FAILED read is remembered, so the next Dispatch publish of the zone leaves
+      // shareTrip and booking.pickupSpots out (the values shown are then only the browser's own).
+      riderUnread.delete(id);
+      const rider = driver ? await readDraft(http, "rider_app_config", id).catch(() => { riderUnread.add(id); return null; }) : null;
       riders.set(id, rider?.document ?? null);
       // G3: what of the zone's app documents is saved but not live (shown above the editor).
       if (driver && !countryOfStandard(id)) await markUnpublished("driver_app_config", id, driver).catch(() => undefined);
@@ -498,14 +508,18 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
    * document (it was skipped before, so the change never reached the apps). `source` builds the parts from another
    * scope (a zone that follows its country's Standard rules gets the Standard's parts).
    */
-  async function publishAppParts(id: string, owned: { rider: string[]; driver: string[] }, state: ReturnType<typeof appConfigState>, source: string, before: ReturnType<typeof appConfigState>): Promise<void> {
+  async function publishAppParts(id: string, owned: OwnedParts, state: ReturnType<typeof appConfigState>, source: string, before: ReturnType<typeof appConfigState>): Promise<void> {
     for (const [doc, keys, build] of [["rider_app_config", owned.rider, riderAppConfig], ["driver_app_config", owned.driver, driverAppConfig]] as const) {
       if (!keys.length) continue;
       const current = await draft(doc, id, true);
-      const built = build(source, state) as unknown as Doc;
+      const was = build(source, before) as unknown as Doc;
+      // S10 admin rebase over V21 (SF-A1): paths that were never read from the server (booking.pickupSpots after a
+      // failed rider read) are built as they were before the edit, so they are not written (left out of a new document).
+      const serverKeeps = doc === "rider_app_config" ? owned.riderServerKeeps ?? [] : [];
+      const built = serverKeeps.length ? keepPaths(build(source, state) as unknown as Doc, current ? was : null, serverKeeps) : (build(source, state) as unknown as Doc);
       // Live sweep 2026-11-02 H1: with the state before the edit, only the fields the admin changed are written over
       // the server's document; fields the page does not show (booking horizon, rest minutes…) stay the server's.
-      const document = current ? patchChanged(current.document, build(source, before) as unknown as Doc, built, keys) : { ...built, ...("zoneId" in built && !countryOfStandard(id) ? { zoneId: id } : {}) };
+      const document = current ? patchChanged(current.document, was, built, keys) : { ...built, ...("zoneId" in built && !countryOfStandard(id) ? { zoneId: id } : {}) };
       const live = current ? await liveDocumentOf(http, doc, id) : null;
       await savePublishLive(http, doc, id, current, document, live);
       drafts.delete(key(doc, id));
@@ -643,6 +657,16 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     // Never the slice: draft and tool saves overwrite it with the edited book. Never read yet: read the server first.
     const prior = baseline.dispatch ?? (await readDispatch(book));
     const before = stateWith({ dispatch: prior });
+    // BQ-S10 round 2 (supervisor SF-A1): a Share trip value that was never read from the server is not published. A
+    // book that changes it for such a zone is refused before anything is written. S10 admin rebase over V21: the same
+    // for the pickup entrance chips switch (V21), read from the same rider document.
+    for (const id of zoneIds) {
+      if (!riderUnread.has(id)) continue;
+      const was = liveRules(normalizeDispatchBook(prior), id);
+      const next = liveRules(book, id);
+      if ((next.shareTrip?.on ?? true) !== (was.shareTrip?.on ?? true)) throw new Error("Share trip could not be read from the server for this zone. Reload the page and try again.");
+      if ((next.pickupSpots?.on ?? true) !== (was.pickupSpots?.on ?? true)) throw new Error("Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.");
+    }
     slices.set(DISPATCH_KEY, book);
     const state = stateWith({ dispatch: book });
     for (const id of zoneIds) {
@@ -652,8 +676,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       // Checker #204: compared with what is LIVE, so a saved draft that already holds the change is still published.
       await savePublishLive(http, "dispatch", id, current, document, current ? await liveDocumentOf(http, "dispatch", id) : null);
       drafts.delete(key("dispatch", id));
-      await publishAppParts(id, OWNED.dispatch, state, id, before);
-      for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, OWNED.dispatch, state, id, before);
+      const owned = dispatchOwnedFor(!riderUnread.has(id));
+      await publishAppParts(id, owned, state, id, before);
+      for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, owned, state, id, before);
     }
     baseline.dispatch = book;
     return "Published.";

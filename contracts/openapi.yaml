@@ -1,11 +1,11 @@
-# Movera API v0.18.115 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.116 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.115
+  version: 0.18.116
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.115 in this folder; this file must agree with them.
+    v0.18.116 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.115
+  version: 0.18.116
   source: contract.json
 paths:
   /auth/otp/request:
@@ -18900,6 +18900,306 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /rider/trips/{tripId}/share:
+    post:
+      operationId: riderShareTrip
+      summary: Make a live trip link
+      description: 'v0.18.116 (contract.json#shareTrip): POST /rider/trips/{tripId}/share {} + Idempotency-Key → 201 TripShareLink
+        { shareId, tripId, url, createdAt, expiresAt, endsAtDropoff: true }. The signed-in rider''s own trip only; another
+        rider''s trip is 404 trip_not_found. 409 invalid_transition, reason trip_not_live (notLive) or too_many_shares (limits.maxActivePerTrip
+        live links already); 403 forbidden, reason share_trip_off (the zone''s switch is off). Counted by the general write
+        limit. A link can be made only while the trip has a driver: the statuses above (the same list as safety.sos.riderStatuses).
+        Before a driver, after the end, and for a booked (scheduled) ride still in accepted whose driver the rider is not
+        shown yet: 409 invalid_transition, reason trip_not_live. A link stops, whichever comes first: (a) when the trip reaches
+        any tripStatus.terminal status (drop-off = completed; also every cancelled status, no_show, expired, failed), checked
+        every time the link is read, so no timer is needed; (b) when the rider stops sharing; (c) when the zone''s switch
+        is off, read on every view; (d) maxHours hours after the link was made. An ended link never shows trip data again:
+        410 with { state: ''ended'', reason: ''share_ended'' }. (c) is kept: a link seen while the switch is off stays ended
+        when the switch is turned on again. Not an end: a trip that has no driver again (public.searching). (c) is seen when
+        the link is read: a switch turned off and on again with no read in between leaves the link working, and a server copy
+        may serve its cached switch for some seconds after a publish.'
+      tags:
+      - Rider · Safety
+      x-actor:
+      - rider
+      parameters:
+      - $ref: '#/components/parameters/TripId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '201':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripShareLink'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    get:
+      operationId: riderTripShares
+      summary: The trip's live links
+      description: 'v0.18.116 (contract.json#shareTrip): GET /rider/trips/{tripId}/share → TripShareList { items: [TripShareItem
+        { shareId, tripId, createdAt, expiresAt, endsAtDropoff }] }: the trip''s live links, oldest first, without url (the
+        app keeps the URL it got). An ended trip answers an empty list.'
+      tags:
+      - Rider · Safety
+      x-actor:
+      - rider
+      parameters:
+      - $ref: '#/components/parameters/TripId'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripShareList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    delete:
+      operationId: riderStopShareTrip
+      summary: Stop sharing the trip
+      description: 'v0.18.116 (contract.json#shareTrip): DELETE /rider/trips/{tripId}/share + Idempotency-Key → 204. ''Stop
+        sharing'': every live link of the trip ends at once; no live link is still 204.'
+      tags:
+      - Rider · Safety
+      x-actor:
+      - rider
+      parameters:
+      - $ref: '#/components/parameters/TripId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '204':
+          description: No content
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /share/{token}:
+    get:
+      operationId: publicTripShare
+      summary: A shared trip (no sign-in)
+      description: 'v0.18.116 (contract.json#shareTrip): GET /api/v1/share/{token} (no sign-in, no standard headers needed)
+        → 200 PublicTripShare, or 200 PublicTripShareSearching while the trip has no driver (public.searching); an ended link
+        → 410 PublicTripShareEnded { state: ''ended'', reason: ''share_ended'' }; a bad or unknown token → 404 not_found,
+        reason share_not_found, the same body for every miss so tokens cannot be probed. Both public routes answer with Cache-Control:
+        no-store, Referrer-Policy: no-referrer, X-Robots-Tag: noindex, nofollow and X-Content-Type-Options: nosniff. The HTML
+        page also carries Content-Security-Policy: default-src ''none''; style-src ''unsafe-inline''; img-src ''self''; base-uri
+        ''none''; form-action ''none''; frame-ancestors ''none'', and <meta name="robots" content="noindex, nofollow">. The
+        same four headers are on every answer of the two share paths, also the load-shed 503 and the 404 of a path that matches
+        no route (an over-long token). The public reads (both routes together) have their own budget, outside the general
+        write limit (rateLimit): perAddressPerMinute per client address and perTokenPerMinute per link, a fixed 60 s window
+        in each server copy''s memory, like telemetry.limits. Over it: 429 rate_limited, reason share_too_many, Retry-After.
+        Under load the public reads are shed first (503 unavailable, Retry-After), before any signed-in route; they are never
+        in the safety set: a contact''s page may fail under load, SOS must not.'
+      tags:
+      - Public · Share trip
+      x-actor: []
+      parameters:
+      - name: token
+        in: path
+        required: true
+        description: '128 bits as base64url, 22 characters, that cannot be guessed: the server makes them from the new link''s
+          id with a key of its own that the server derives from its secret with a fixed label (HMAC-SHA256, cut to 128 bits).
+          The server stores only the SHA-256 of the token, never the token and never the URL: a copy of the database cannot
+          open a link. A token is never written to a log, an audit row, an error message or the idempotency store.'
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{22}$
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+            Referrer-Policy:
+              schema:
+                type: string
+            X-Robots-Tag:
+              schema:
+                type: string
+            X-Content-Type-Options:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/PublicTripShare'
+                - $ref: '#/components/schemas/PublicTripShareSearching'
+        '404':
+          description: 'not_found, reason share_not_found: the same answer for every miss.'
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: 'The link has ended (share_ended): no trip data.'
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicTripShareEnded'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      security: []
+      x-public: true
+  /s/{token}:
+    get:
+      operationId: publicTripSharePage
+      summary: The shared trip page (HTML, no sign-in)
+      description: 'v0.18.116 (contract.json#shareTrip): GET /s/{token} (outside /api/v1; no sign-in): the same answer as
+        an HTML page, 200 / 410 / 404, rendered by the server from the same allow-list. 429 is a short HTML page too; 503
+        is the standard error body. No script; the page reloads itself every public.refreshSeconds seconds while live. Both
+        public routes answer with Cache-Control: no-store, Referrer-Policy: no-referrer, X-Robots-Tag: noindex, nofollow and
+        X-Content-Type-Options: nosniff. The HTML page also carries Content-Security-Policy: default-src ''none''; style-src
+        ''unsafe-inline''; img-src ''self''; base-uri ''none''; form-action ''none''; frame-ancestors ''none'', and <meta
+        name="robots" content="noindex, nofollow">. The same four headers are on every answer of the two share paths, also
+        the load-shed 503 and the 404 of a path that matches no route (an over-long token). Messaging apps fetch a link to
+        build a preview. The page has no Open Graph / preview tags and its <title> is only ''Movera'' + texts.title, so a
+        preview never carries trip data. The page''s language: the viewer''s Accept-Language (sv / fr / en, first match),
+        else the trip zone''s country language (configDefaults.countries.<country>.defaultLanguage: SE sv, FR fr, TN fr),
+        else en.'
+      tags:
+      - Public · Share trip
+      x-actor: []
+      parameters:
+      - name: token
+        in: path
+        required: true
+        description: '128 bits as base64url, 22 characters, that cannot be guessed: the server makes them from the new link''s
+          id with a key of its own that the server derives from its secret with a fixed label (HMAC-SHA256, cut to 128 bits).
+          The server stores only the SHA-256 of the token, never the token and never the URL: a copy of the database cannot
+          open a link. A token is never written to a log, an audit row, an error message or the idempotency store.'
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{22}$
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+            Referrer-Policy:
+              schema:
+                type: string
+            X-Robots-Tag:
+              schema:
+                type: string
+            X-Content-Type-Options:
+              schema:
+                type: string
+          content:
+            text/html:
+              schema:
+                type: string
+                description: The share page. No script, no preview tags with trip data.
+        '404':
+          description: 'Link not found: the same page for every miss.'
+          content:
+            text/html:
+              schema:
+                type: string
+                description: The share page. No script, no preview tags with trip data.
+        '410':
+          description: 'The link has ended: the page says so and shows no trip data.'
+          content:
+            text/html:
+              schema:
+                type: string
+                description: The share page. No script, no preview tags with trip data.
+        '429':
+          description: 'rate_limited: a short HTML page; obey Retry-After.'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            text/html:
+              schema:
+                type: string
+                description: The share page. No script, no preview tags with trip data.
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      security: []
+      x-public: true
+      servers:
+      - url: https://api.dev.movera.invalid
+        description: The server's origin, outside /api/v1.
 components:
   securitySchemes:
     bearerAuth:
@@ -25851,6 +26151,7 @@ components:
               type: boolean
             shareTrip:
               type: boolean
+              description: 'v0.18.116 (contract.json#shareTrip): the same value as shareTrip.on (served by the server).'
           additionalProperties:
             type: boolean
         paymentMethods:
@@ -26049,6 +26350,21 @@ components:
             extra call buttons on the "SOS sent" screen; (3) ride check "Need help" — the same call buttons; (4) the driver''s
             emergency contacts screen — the built-in number shown is the country list, not 112. Labels in the app language
             (sv / fr / en).'
+        shareTrip:
+          type: object
+          description: 'v0.18.116 (contract.json#shareTrip): Per zone: the zone''s rider document (rider_app_config; its own,
+            else its country standard) carries shareTrip { on } (boolean), saved and published with PUT /admin/config/rider_app_config
+            + POST /admin/config/rider_app_config/publish (settings.edit / settings.publish). Admin: Dispatch › Safety, card
+            ''Share trip link'', switch ''Riders can share a live trip link''. Never saved = the document''s older features.shareTrip
+            when that is true / false, else configDefaults.shareTripOn (true). A shareTrip that is not an object, or an on
+            that is not true / false, is 400 invalid_request, reason invalid_document. GET /rider/config always serves shareTrip
+            { on } and the same value as features.shareTrip, so a rider app built before v0.18.116 reads the switch with no
+            change. The driver document gets nothing.'
+          properties:
+            'on':
+              type: boolean
+              description: The zone's switch.
+              default: true
     DriverAppConfig:
       type: object
       description: Per-zone driver document built by Admin exporters. Unknown keys are ignored; missing keys fall back to
@@ -36248,6 +36564,14 @@ components:
         relation:
           type: string
           maxLength: 40
+        shareTrips:
+          type: boolean
+          description: 'v0.18.116 (contract.json#shareTrip): Trusted contacts are the rider''s emergency contacts on the server
+            (phoneDataToServer.riderEmergencyContacts, GET | PUT /rider/emergency-contacts): no second list. v0.18.116: EmergencyContact
+            gains the optional shareTrips (boolean): ''Share trips with this contact''. The server keeps it on the rider''s
+            list and returns it; a value that is not true / false is 400 invalid_request; a driver PUT that carries it is
+            accepted and the field is not kept. The server sends nothing to a contact: the rider''s phone sends the message
+            (texts.<lang>.message with {url}).'
     EmergencyContactList:
       type: object
       required:
@@ -37936,3 +38260,269 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Money'
+    TripShareItem:
+      type: object
+      description: 'v0.18.116 (contract.json#shareTrip): GET /rider/trips/{tripId}/share → TripShareList { items: [TripShareItem
+        { shareId, tripId, createdAt, expiresAt, endsAtDropoff }] }: the trip''s live links, oldest first, without url (the
+        app keeps the URL it got). An ended trip answers an empty list.'
+      required:
+      - shareId
+      - tripId
+      - createdAt
+      - expiresAt
+      - endsAtDropoff
+      properties:
+        shareId:
+          $ref: '#/components/schemas/Id'
+        tripId:
+          $ref: '#/components/schemas/Id'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        expiresAt:
+          allOf:
+          - $ref: '#/components/schemas/Timestamp'
+          description: createdAt + 6 h (shareTrip.maxHours); the link ends earlier at drop-off.
+        endsAtDropoff:
+          type: boolean
+          enum:
+          - true
+      additionalProperties: false
+    TripShareLink:
+      type: object
+      description: 'v0.18.116 (contract.json#shareTrip): POST /rider/trips/{tripId}/share {} + Idempotency-Key → 201 TripShareLink
+        { shareId, tripId, url, createdAt, expiresAt, endsAtDropoff: true }. The signed-in rider''s own trip only; another
+        rider''s trip is 404 trip_not_found. 409 invalid_transition, reason trip_not_live (notLive) or too_many_shares (limits.maxActivePerTrip
+        live links already); 403 forbidden, reason share_trip_off (the zone''s switch is off). Counted by the general write
+        limit.'
+      required:
+      - shareId
+      - tripId
+      - url
+      - createdAt
+      - expiresAt
+      - endsAtDropoff
+      properties:
+        shareId:
+          $ref: '#/components/schemas/Id'
+        tripId:
+          $ref: '#/components/schemas/Id'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        expiresAt:
+          allOf:
+          - $ref: '#/components/schemas/Timestamp'
+          description: createdAt + 6 h (shareTrip.maxHours); the link ends earlier at drop-off.
+        endsAtDropoff:
+          type: boolean
+          enum:
+          - true
+        url:
+          type: string
+          format: uri
+          description: '<share base>/s/<token>: the server''s own public origin (server env SHARE_LINK_BASE, not a secret,
+            so the host can change with no app release). 128 bits as base64url, 22 characters, that cannot be guessed: the
+            server makes them from the new link''s id with a key of its own that the server derives from its secret with a
+            fixed label (HMAC-SHA256, cut to 128 bits). The server stores only the SHA-256 of the token, never the token and
+            never the URL: a copy of the database cannot open a link. A token is never written to a log, an audit row, an
+            error message or the idempotency store.'
+      additionalProperties: false
+    TripShareList:
+      type: object
+      description: 'v0.18.116 (contract.json#shareTrip): GET /rider/trips/{tripId}/share → TripShareList { items: [TripShareItem
+        { shareId, tripId, createdAt, expiresAt, endsAtDropoff }] }: the trip''s live links, oldest first, without url (the
+        app keeps the URL it got). An ended trip answers an empty list.'
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TripShareItem'
+          maxItems: 3
+      additionalProperties: false
+    PublicTripShare:
+      type: object
+      description: 'v0.18.116 (contract.json#shareTrip): PublicTripShare { state: ''live'', phase (phases, or queuedPhase),
+        car: { make, model, color, plate }, eta: { minutes, target: pickup | dropoff, arriveAround } | null, position: { lat,
+        lng, at } | null, updatedAt, refreshSeconds }. A FIXED ALLOW-LIST: the answer is built field by field from this list
+        and never from TripProjection; a field not listed here is never sent. Never: any phone number (rider, driver, contacts);
+        any name (rider, driver first name or surname, contacts); the pickup, stop and drop-off addresses and coordinates;
+        the destination, its city or area; saved places; fare, price, payment, tip; rating; driver photo; any id other than
+        the token in the address (no tripId, riderId, driverId, shareId, zoneId).'
+      required:
+      - state
+      - phase
+      - car
+      - eta
+      - position
+      - updatedAt
+      - refreshSeconds
+      properties:
+        state:
+          type: string
+          enum:
+          - live
+        phase:
+          type: string
+          enum:
+          - to_pickup
+          - at_pickup
+          - on_trip
+          - queued
+          x-statuses:
+            to_pickup:
+            - accepted
+            - driver_to_pickup
+            at_pickup:
+            - arrived
+            on_trip:
+            - rider_onboard
+            - in_trip
+            - approaching_dropoff
+        car:
+          type: object
+          description: The car as on the trip. No driver name, photo or rating.
+          required:
+          - make
+          - model
+          - color
+          - plate
+          properties:
+            make:
+              type: string
+              maxLength: 80
+            model:
+              type: string
+              maxLength: 80
+            color:
+              type: string
+              maxLength: 80
+            plate:
+              type: string
+              maxLength: 80
+          additionalProperties: false
+        eta:
+          oneOf:
+          - type: object
+            description: 'eta comes from the trip''s stored ETA (TripEta): minutes = the seconds still left at the time of
+              the read, rounded up to whole minutes, at least 1; target = pickup before the rider is in the car, dropoff after;
+              arriveAround = that arrival instant as HH:MM in the trip zone''s time zone. null when the server has no ETA,
+              and in phase at_pickup.'
+            required:
+            - minutes
+            - target
+            - arriveAround
+            properties:
+              minutes:
+                type: integer
+                minimum: 1
+              target:
+                type: string
+                enum:
+                - pickup
+                - dropoff
+              arriveAround:
+                type: string
+                pattern: ^[0-2][0-9]:[0-5][0-9]$
+                description: HH:MM in the trip zone's time zone.
+            additionalProperties: false
+          - type: 'null'
+        position:
+          oneOf:
+          - type: object
+            description: 'position is the car''s latest GPS fix the server has (from POST /driver/location), lat / lng with
+              5 decimals, at = when it was measured. It is sent ONLY when all of these hold, else null: (1) owner Q-A 2026-11-15
+              ''Hide until rider is in'': the rider is in the car (status in tripStatus.riderOnboard: phase on_trip). On the
+              way to the pickup and waiting at it (to_pickup, at_pickup, queued) there is never a position and no Maps link,
+              only the phase text. (2) owner Q-B 2026-11-15 ''Hide last 500 m'': the car is farther than hideWithinMetersOfDropoff
+              metres (straight line) from the trip''s drop-off AND from every middle stop of the trip (the same 500 m around
+              each stop: owner 2026-11-16 05:24 UTC ''Keep 500 m at stops'', confirming the session decision of 2026-11-15).
+              The same distance applies around the trip''s PICKUP (Q-D: owner 2026-11-16 05:24 UTC ''Keep 500 m at pickup'',
+              confirming the session decision of 2026-11-15; the status says the rider is in the car while the car still stands
+              at the pickup, often the rider''s home, which owner Q-A means to hide). Inside it the position and the Maps
+              link are hidden and the page shows only ''Arriving in about N min''. A pickup, drop-off or stop the server has
+              no finite coordinates for hides the position. The server works the distances out itself; the pickup, the drop-off,
+              the stops and the distances are never sent. (3) the fix is not older than positionMaxAgeSeconds. The page shows
+              a position only as the link positionLink (''Open in Maps''): no map tiles, no map key; with no position it shows
+              no position line at all. Queued trip (supervisor MF-1): while the trip waits behind the driver''s current trip
+              (accepted with the server''s next_after_trip_id set) the car still carries ANOTHER rider: position is null by
+              rule (1), eta is null and phase is queuedPhase, never to_pickup.'
+            required:
+            - lat
+            - lng
+            - at
+            properties:
+              lat:
+                type: number
+                minimum: -90
+                maximum: 90
+              lng:
+                type: number
+                minimum: -180
+                maximum: 180
+              at:
+                $ref: '#/components/schemas/Timestamp'
+            additionalProperties: false
+          - type: 'null'
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+        refreshSeconds:
+          type: integer
+          enum:
+          - 20
+      additionalProperties: false
+      x-never:
+      - any phone number (rider, driver, contacts)
+      - any name (rider, driver first name or surname, contacts)
+      - the pickup, stop and drop-off addresses and coordinates
+      - the destination, its city or area
+      - saved places
+      - fare, price, payment, tip
+      - rating
+      - driver photo
+      - any id other than the token in the address (no tripId, riderId, driverId, shareId, zoneId)
+    PublicTripShareEnded:
+      type: object
+      description: 'v0.18.116 (contract.json#shareTrip): A link stops, whichever comes first: (a) when the trip reaches any
+        tripStatus.terminal status (drop-off = completed; also every cancelled status, no_show, expired, failed), checked
+        every time the link is read, so no timer is needed; (b) when the rider stops sharing; (c) when the zone''s switch
+        is off, read on every view; (d) maxHours hours after the link was made. An ended link never shows trip data again:
+        410 with { state: ''ended'', reason: ''share_ended'' }. (c) is kept: a link seen while the switch is off stays ended
+        when the switch is turned on again. Not an end: a trip that has no driver again (public.searching). (c) is seen when
+        the link is read: a switch turned off and on again with no read in between leaves the link working, and a server copy
+        may serve its cached switch for some seconds after a publish.'
+      required:
+      - state
+      - reason
+      properties:
+        state:
+          type: string
+          enum:
+          - ended
+        reason:
+          type: string
+          enum:
+          - share_ended
+      additionalProperties: false
+    PublicTripShareSearching:
+      type: object
+      description: 'v0.18.116 (contract.json#shareTrip): While the trip has no driver (the driver cancelled and a new search
+        runs; also a held booked ride whose driver the rider is not shown yet) the link is NOT ended: both public routes answer
+        200 with PublicTripShareSearching { state: ''searching'', updatedAt, refreshSeconds } and the page says texts.searching
+        and keeps reloading. No car, plate, time or position is sent. When a driver is assigned the link shows the new car.'
+      required:
+      - state
+      - updatedAt
+      - refreshSeconds
+      properties:
+        state:
+          type: string
+          enum:
+          - searching
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+        refreshSeconds:
+          type: integer
+          enum:
+          - 20
+      additionalProperties: false

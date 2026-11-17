@@ -250,10 +250,46 @@ export { SECONDS_DEFAULT, rulesOfDispatch, reservationOfDriverDoc } from "./disp
 
 /** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
 export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
-  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck"] },
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons", "shareTrip"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck"] },
   settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
   content: { rider: [], driver: ["texts", "notices"] },
 };
+
+/** The parts of the rider and driver documents one publish writes; `riderServerKeeps` (dotted paths inside them) stay the server's. */
+export type OwnedParts = { rider: string[]; driver: string[]; riderServerKeeps?: string[] };
+
+/**
+ * BQ-S10 round 2 (supervisor SF-A1): the parts a Dispatch publish of one zone writes. The Share trip switch (S10) and
+ * the pickup entrance chips switch (V21, booking.pickupSpots) live in the rider document; when that read failed
+ * (`riderRead` false) the page only shows the browser's own values, so `shareTrip` is left out and
+ * `booking.pickupSpots` stays the server's (the rest of `booking` is still written): a zone switched off cannot come
+ * back on. (S10 admin rebase over V21: before, pickupSpots was still published after a failed read.)
+ */
+export function dispatchOwnedFor(riderRead: boolean): OwnedParts {
+  return riderRead ? OWNED.dispatch : { ...OWNED.dispatch, rider: OWNED.dispatch.rider.filter((key) => key !== "shareTrip"), riderServerKeeps: ["booking.pickupSpots"] };
+}
+
+/**
+ * `after` with each dotted path in `paths` set back to its value in `before` (removed when `before` has none or is
+ * null), so a publish built from them leaves those paths as the server has them.
+ */
+export function keepPaths(after: Doc, before: Doc | null, paths: readonly string[]): Doc {
+  const next: Doc = structuredClone(after);
+  for (const path of paths) {
+    const parts = path.split(".");
+    const last = parts.pop()!;
+    let into: unknown = next;
+    let from: unknown = before;
+    for (const part of parts) {
+      into = isPlain(into) ? into[part] : undefined;
+      from = isPlain(from) ? from[part] : undefined;
+    }
+    if (!isPlain(into)) continue;
+    if (isPlain(from) && last in from) into[last] = structuredClone(from[last]);
+    else delete into[last];
+  }
+  return next;
+}
 
 /** `server` with `keys` taken from `built` (the admin exporter's full document). The waiting money stays the server's (pricing keeps it, §6.2). */
 export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc {
