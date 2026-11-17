@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { sliderColor } from "./surge";
 import { HIGH_SURGE, SLIDER_MAX, SLIDER_MIN } from "./zonePricing";
 import { trn, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = {
   label: string;
@@ -13,13 +14,15 @@ type Props = {
   min?: number;
   max?: number;
   compact?: boolean;
+  /** The id of this setting's text for the small "i" by the label (ui/SettingInfo.ts). */
+  info?: string;
 };
 
 /**
  * Drag to set a surge from ×1.0 to ×6.0. The colour follows the level, and going above ×3
  * asks the admin to keep it or step back, so a slip of the mouse does not price riders out.
  */
-export function SurgeSlider({ label, value, onChange, disabled = false, min = SLIDER_MIN, max = SLIDER_MAX, compact = false }: Props) {
+export function SurgeSlider({ label, value, onChange, disabled = false, min = SLIDER_MIN, max = SLIDER_MAX, compact = false, info }: Props) {
   const [pending, setPending] = useState<number | null>(null);
   const [before, setBefore] = useState(value);
   const shown = pending ?? value;
@@ -34,9 +37,10 @@ export function SurgeSlider({ label, value, onChange, disabled = false, min = SL
   return (
     <div className={compact ? "surge-slider compact" : "surge-slider"} style={{ "--slider-color": color, "--slider-fill": `${fill}%` } as CSSProperties}>
       <div className="surge-slider-head">
-        <span>{trx(label)}</span>
+        <span>{trx(label)}{info ? <SettingInfo id={info} label={trx(label)} /> : null}</span>
         <output aria-live="polite">×{shown.toFixed(1)}</output>
       </div>
+      {/* info-skip: the slider itself; each use passes its info id */}
       <input
         type="range"
         aria-label={label}

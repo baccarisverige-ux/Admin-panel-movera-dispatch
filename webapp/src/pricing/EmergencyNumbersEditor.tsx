@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, MessageSquareText, Plus, Siren, Trash2 } from "lucide-react";
 import { EMERGENCY_KINDS, EMERGENCY_MAX_ROWS, KIND_LABEL, type EmergencyNumber } from "../config/emergencyNumbers";
 import { tr, trn } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = { rows: EmergencyNumber[]; canEdit: boolean; onStandard: boolean; onChange: (rows: EmergencyNumber[]) => void; sosSms: boolean; onSosSms: (on: boolean) => void };
 const LANGS = [["sv", "Name in Swedish"], ["fr", "Name in French"], ["en", "Name in English"]] as const;
@@ -33,14 +34,14 @@ export function EmergencyNumbersEditor({ rows, canEdit, onStandard, onChange, so
           <label className="field"><span>{tr("Kind")}</span>
             <select aria-label={tr("Emergency number {0} kind", [index + 1])} value={row.kind} disabled={!editable} onChange={(event) => set(index, { kind: event.target.value as EmergencyNumber["kind"] })}>
               {EMERGENCY_KINDS.map((kind) => <option key={kind} value={kind}>{tr(KIND_LABEL[kind])}</option>)}
-            </select>
+            </select><SettingInfo id="tips.emergency.kind" label={tr("Emergency number {0} kind", [index + 1])} />
           </label>
           <label className="field"><span>{tr("Number")}</span>
-            <input aria-label={tr("Emergency number {0}", [index + 1])} className="short" inputMode="tel" value={row.number} disabled={!editable} onChange={(event) => set(index, { number: event.target.value.trim() })} />
+            <input aria-label={tr("Emergency number {0}", [index + 1])} className="short" inputMode="tel" value={row.number} disabled={!editable} onChange={(event) => set(index, { number: event.target.value.trim() })} /><SettingInfo id="tips.emergency.number" label={tr("Emergency number {0}", [index + 1])} />
           </label>
           {LANGS.map(([lang, title]) => (
             <label key={lang} className="field"><span>{tr(title)}</span>
-              <input aria-label={tr("Emergency number {0}: {1}", [index + 1, tr(title)])} maxLength={40} value={row.label[lang]} disabled={!editable} onChange={(event) => set(index, { label: { ...row.label, [lang]: event.target.value } })} />
+              <input aria-label={tr("Emergency number {0}: {1}", [index + 1, tr(title)])} maxLength={40} value={row.label[lang]} disabled={!editable} onChange={(event) => set(index, { label: { ...row.label, [lang]: event.target.value } })} /><SettingInfo id="tips.emergency.label" label={tr("Emergency number {0}: {1}", [index + 1, tr(title)])} />
             </label>
           ))}
           {editable ? (
@@ -60,7 +61,7 @@ export function EmergencyNumbersEditor({ rows, canEdit, onStandard, onChange, so
         <small>{tr("When a driver presses SOS during a trip, each of his emergency contacts gets one SMS with his position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.")}</small>
       </div>
       <label className="mini-switch big">
-        <input type="checkbox" aria-label={tr("SMS to the driver's emergency contacts on SOS")} data-testid="sos-contacts-sms" checked={sosSms} disabled={!editable} onChange={(event) => onSosSms(event.target.checked)} />
+        <input type="checkbox" aria-label={tr("SMS to the driver's emergency contacts on SOS")} data-testid="sos-contacts-sms" checked={sosSms} disabled={!editable} onChange={(event) => onSosSms(event.target.checked)} /><SettingInfo id="tips.sosContactsSms" label={tr("SMS to the driver's emergency contacts on SOS")} />
         <span aria-hidden="true"><i /></span>
         {sosSms ? tr("On") : tr("Off")}
       </label>
