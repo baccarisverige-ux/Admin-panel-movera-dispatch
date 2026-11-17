@@ -5,31 +5,41 @@ import { tr } from "../i18n/core.ts";
  * The small "i" next to every admin setting (owner 2026-11-16: "Also add next to any setting in all admin panel small i
  * for info when clic it show what this setting for and where can apply and all explanation !"; "the i make it white
  * inside blue circle"; texts "Make it only english"). Record: Rules audits/impact/admin-setting-help.md.
- * A tap (or Enter / Space) opens a short card: what the setting is for, where it applies, unit / range / default, an
- * example. Escape, the close button, a second tap or a tap outside closes it. The English texts load on first open
+ * A tap (or Enter / Space) opens a short card in six parts (owner 2026-11-16 "Add info details in i"): the exact effect,
+ * who and where it affects, unit and allowed range, the default, a concrete example, and what happens at the extremes. Escape, the close button, a second tap or a tap outside closes it. The English texts load on first open
  * (settingInfoTexts.ts), so the first page load does not carry them. Written without JSX so node tests can render it.
  */
 
 export type SettingInfoText = {
-  /** What the setting is for. */
+  /** The exact effect: what the setting does. */
   what: string;
-  /** Where it applies: country Standard or zone, which apps or people. */
+  /** Who it affects (riders / drivers / admins) and where: country Standard or zone, which apps. */
   where: string;
-  /** Unit, allowed range and default. */
+  /** Unit and allowed range. */
   range: string;
-  /** One example. */
+  /** The default value (the code default). */
+  default: string;
+  /** One concrete example. */
   example: string;
+  /** What happens at the lowest and the highest value (or at off and on). */
+  extremes: string;
 };
 
 export type SettingInfoTexts = Readonly<Record<string, SettingInfoText>>;
 
+export type SettingInfoPart = { key: keyof SettingInfoText; title: string };
+
 let cache: SettingInfoTexts | null = null;
+let partsCache: readonly SettingInfoPart[] = [];
 let loading: Promise<SettingInfoTexts> | null = null;
 
 /** Loads the English info texts once (a separate file in the build). */
 export function loadSettingInfoTexts(): Promise<SettingInfoTexts> {
   if (cache) return Promise.resolve(cache);
-  loading ??= import("./settingInfoTexts.ts").then((module) => (cache = module.SETTING_INFO));
+  loading ??= import("./settingInfoTexts.ts").then((module) => {
+    partsCache = module.SETTING_INFO_PARTS;
+    return (cache = module.SETTING_INFO);
+  });
   return loading;
 }
 
@@ -49,12 +59,6 @@ export function settingInfoLabel(label: string | undefined): string {
   return label ? `${tr("Info")}: ${label}` : tr("Info");
 }
 
-export const SETTING_INFO_PARTS: readonly { key: keyof SettingInfoText; title: string }[] = [
-  { key: "what", title: "What it is for" }, // i18n-ignore: owner 2026-11-16 "Make it only english"
-  { key: "where", title: "Where it applies" }, // i18n-ignore: owner 2026-11-16 "Make it only english"
-  { key: "range", title: "Unit, range and default" }, // i18n-ignore: owner 2026-11-16 "Make it only english"
-  { key: "example", title: "Example" }, // i18n-ignore: owner 2026-11-16 "Make it only english"
-];
 
 export function SettingInfo({ id, label, defaultOpen = false }: { id: string; label?: string; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -123,7 +127,7 @@ export function SettingInfo({ id, label, defaultOpen = false }: { id: string; la
           { id: popId, ref: card, className: "setting-info-card", role: "dialog", "aria-label": name, tabIndex: -1, lang: "en" },
           h("div", { className: "setting-info-head" }, h("b", null, label ?? ""), h("button", { type: "button", className: "setting-info-close", "aria-label": tr("Close"), onClick: (event: { preventDefault: () => void; stopPropagation: () => void }) => { event.preventDefault(); event.stopPropagation(); step("close"); button.current?.focus(); } }, "×")),
           text
-            ? h("dl", null, ...SETTING_INFO_PARTS.flatMap((part) => [h("dt", { key: `${part.key}-t` }, part.title), h("dd", { key: `${part.key}-d` }, text[part.key])]))
+            ? h("dl", null, ...partsCache.flatMap((part) => [h("dt", { key: `${part.key}-t` }, part.title), h("dd", { key: `${part.key}-d` }, text[part.key])]))
             : h("p", { className: "setting-info-wait" }, "…"),
         )
       : null,

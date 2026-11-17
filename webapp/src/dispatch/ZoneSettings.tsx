@@ -363,7 +363,7 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         </Row>
       </Card>
 
-      <Card title={tr("Pickup entrance chips")} info="dispatch.zone.pickupEntranceChips" tone="purple" icon={<MapPin size={18} />} help={tr("When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.")}>
+      <Card title={tr("Pickup entrance chips")} tone="purple" icon={<MapPin size={18} />} help={tr("When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.")}>
         {/* BQ-V21 (owner full-audit Q6 "Keep as 'approximate'" => admin on/off per zone, default on; contract v0.18.115). */}
         <Row info="dispatch.zone.pickupEntranceChipsApproximate" label={tr("Pickup entrance chips (approximate)")} help={tr("Off: no entrance chips; the pickup is the address only. Usual value: on.")} on={zone.pickupSpots?.on ?? CONFIG_DEFAULTS.pickupSpotsOn} disabled={disabled} onToggle={(on) => set({ pickupSpots: { on } })} />
       </Card>
