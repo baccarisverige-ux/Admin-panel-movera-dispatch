@@ -58,11 +58,6 @@ export function RevealSensitive({ kind, id, onRevealed, className = "dash-btn sm
           <form className="modal-card" onSubmit={(event) => { event.preventDefault(); void send(); }}>
             <h3>{tr("Reveal the full value")}</h3>
             <p>{tr("The server shows the full phone, e-mail and date of birth once, for this page only, and saves who asked and why.")}</p>
-            <label>
-              {tr("Why do you need the full value?")}
-              <input aria-label={tr("Why do you need the full value?")} value={reason} maxLength={REVEAL_REASON_MAX} required minLength={3} autoFocus placeholder={tr("At least 3 characters")} onChange={(event) => setReason(event.target.value)} />
-            </label>
-            {error ? <ErrorLine error={error} /> : null}
             <ConfirmInfo
               what={tr("The server shows the full phone, e-mail and date of birth once, for this page only, and saves who asked and why.")}
               where={tr("This page only. Nothing is changed on the account.")}
@@ -71,6 +66,11 @@ export function RevealSensitive({ kind, id, onRevealed, className = "dash-btn sm
               when={tr("At once, on this page only.")}
               money={tr("No money moves.")}
             />
+            <label>
+              {tr("Why do you need the full value?")}
+              <input aria-label={tr("Why do you need the full value?")} value={reason} maxLength={REVEAL_REASON_MAX} required minLength={3} autoFocus placeholder={tr("At least 3 characters")} onChange={(event) => setReason(event.target.value)} />
+            </label>
+            {error ? <ErrorLine error={error} /> : null}
             <button data-command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!ok || busy}>
               {busy ? trn("{0} Please wait", <Loader2 size={13} className="cmd-spin" aria-hidden="true" />) : tr("Confirm")}
             </button>

@@ -261,6 +261,16 @@ export function CommandButton({
             {where && !summary ? null : <p>{summary ?? <>{trn("This acts on {0}.", targetId ?? (spec ? trx(spec.label) : ""))}</>}</p>}
             {where && whereLoad === "failed" ? <p className="state-line" role="alert" data-testid="where-failed">{tr("The zone list could not be loaded. Reload the page to save this.")}</p> : null}
             {where && whereLoad !== "failed" ? <Suspense fallback={<p className="fine-print">{tr("Loading…")}</p>}><WhereItLands {...where} ticked={ticked} onTicked={setTicked} /></Suspense> : null}
+            <ConfirmInfo
+              what={info?.what ?? (where ? (spec ? trx(spec.label) : "") : summary ?? (spec ? trx(spec.label) : ""))}
+              where={info?.where ?? (where ? <WhereSentences zoneIds={where.pick ? ticked : where.zoneIds} doc={where.doc} keepFollowers={where.keepFollowers} /> : scopeNames(scope) || (targetId && !/^(pricing-rev-|[a-z]+ (rules|draft)$)/.test(targetId) ? targetId : undefined))}
+              change={info?.change}
+              // cfgundo SF-R4-3: the audit words stay English for the server; the "!" writes them in the admin's language (ui/fromTo.ts).
+              changeOf={info?.changeOf ?? (before && after && before !== after ? { kind: "audit", before, after } : undefined)}
+              who={info?.who}
+              undo={info?.undo}
+              command={command}
+            />
             {details?.length ? <ul className="confirm-details" data-testid="command-details">{details.map((line) => <li key={line}>{line}</li>)}</ul> : null}
             {blockedReason ? <p className="state-line" role="alert" data-testid="command-blocked">{blockedReason}</p> : null}
             {askSure ? (
@@ -292,16 +302,6 @@ export function CommandButton({
             {askSure || askTick ? (
               <label className="check-row">{trn("{0} Yes, I'm sure", <input type="checkbox" checked={sure} onChange={(event) => setSure(event.target.checked)} />)}</label>
             ) : null}
-            <ConfirmInfo
-              what={info?.what ?? (where ? (spec ? trx(spec.label) : "") : summary ?? (spec ? trx(spec.label) : ""))}
-              where={info?.where ?? (where ? <WhereSentences zoneIds={where.pick ? ticked : where.zoneIds} doc={where.doc} keepFollowers={where.keepFollowers} /> : scopeNames(scope) || (targetId && !/^(pricing-rev-|[a-z]+ (rules|draft)$)/.test(targetId) ? targetId : undefined))}
-              change={info?.change}
-              // cfgundo SF-R4-3: the audit words stay English for the server; the "!" writes them in the admin's language (ui/fromTo.ts).
-              changeOf={info?.changeOf ?? (before && after && before !== after ? { kind: "audit", before, after } : undefined)}
-              who={info?.who}
-              undo={info?.undo}
-              command={command}
-            />
             <button data-command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!confirmed || Boolean(blockedReason)}>{tr("Confirm")}</button>
             <button data-command="admin.confirm.cancel" className="secondary-btn" type="button" onClick={() => setOpen(false)}>{tr("Cancel")}</button>
           </form>

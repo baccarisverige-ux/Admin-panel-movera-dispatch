@@ -202,6 +202,7 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         }}
       >
         <p>{summary}</p>
+        <ConfirmInfo what={<>{title}: {summary}</>} who={who} undo={undo} where={where} command={command} money={money} when={when} />
         {note !== "none" ? (
           <label>
             {noteLabel ?? (note === "required" ? tr("Note (required)") : tr("Note (optional)"))}
@@ -230,7 +231,6 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         {expiryTooFar ? <p className="vh-help live-error" role="alert" data-testid="expiry-too-far">{tr("Check the end date")} · {tr("At most {0} years from today.", [EXPIRY_YEARS])}</p> : null}
         {expiryMissing ? <p className="vh-help" data-testid="expiry-required">{tr("This document expires: type the expiry date from the document (after today).")}</p> : null}
         {error ? <ErrorLine error={error} /> : null}
-        <ConfirmInfo what={<>{title}: {summary}</>} who={who} undo={undo} where={where} command={command} money={money} when={when} />
         <div className="actions">
           <button data-command="admin.server.dialogConfirm" type="submit" className={danger ? "primary-btn live-danger" : "primary-btn"} disabled={blocked}>
             {busy ? tr("Sending.") : confirmLabel}
