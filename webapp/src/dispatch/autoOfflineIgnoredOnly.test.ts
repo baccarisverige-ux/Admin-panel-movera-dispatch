@@ -68,7 +68,7 @@ test("the rule sentence is the carried contract's; from contract 0.18.120 it say
   for (const lang of ["sv", "fr", "en"] as const) assert.equal(autoOfflineText(7, lang), admin[lang].replace("{n}", "7"));
   const [, minor, patch] = contract.version.split(".").map(Number);
   if (minor! > 18 || patch! >= 120) {
-    assert.equal(autoOfflineText(10, "en"), "The driver goes offline after 10 Exclusive offers in a row that he let run out (hand-sent ones too). A decline never counts and does not reset the count. Radar never counts.");
+    assert.equal(autoOfflineText(10, "en"), "The driver goes offline after letting 10 Exclusive offers in a row run out (hand-sent ones too). A decline never counts and does not reset the count. Radar never counts.");
     assert.ok(autoOfflineText(10, "sv").includes("Ett nekat erbjudande räknas aldrig") && autoOfflineText(10, "fr").includes("Un refus ne compte jamais"));
   }
 });
