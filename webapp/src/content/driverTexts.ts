@@ -103,6 +103,8 @@ const ROWS: [string, TextArea, TextGroup, string][] = [
   ["trip.complete", "trip", "buttons", "Complete trip"],
   ["trip.goToStop", "trip", "buttons", "Go to {stop} stop"],
   ["trip.goToDropoff", "trip", "buttons", "Go to drop-off"],
+  // G18 (owner 2026-11-16): a cash trip's button before "Collect cash".
+  ["trip.finishTrip", "trip", "buttons", "Finish trip"],
   ["trip.collectCash", "trip", "buttons", "Collect cash"],
   ["trip.completeRide", "trip", "buttons", "Complete ride"],
 ];

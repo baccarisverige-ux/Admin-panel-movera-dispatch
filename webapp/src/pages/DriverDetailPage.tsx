@@ -1,6 +1,6 @@
 import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { isLiveData, liveDriverOf } from "../live/realData";
-import { DRIVER_BY_ID_LIST } from "../live/liveAdminApi";
+import { DRIVER_BY_ID_LIST } from "../live/listNames";
 import { INCIDENTS_OF_DRIVER_LIST } from "../live/incidents";
 import { LiveDriverPreferences } from "../live/LiveProfileData";
 import { LivePayoutHold } from "../live/LivePayoutHold";

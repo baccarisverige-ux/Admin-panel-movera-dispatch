@@ -186,6 +186,19 @@ function samePointWarnMeters(zone: ZoneDispatch): number {
   return validSamePoint(zone.samePoint?.warnMeters) ?? CONFIG_DEFAULTS.samePointWarnMeters;
 }
 
+/** v0.18.115 BQ-V21 (owner: admin on/off per zone, default on): the rider's approximate pickup entrance chips. */
+function pickupSpots(zone: ZoneDispatch): { on: boolean } {
+  return { on: typeof zone.pickupSpots?.on === "boolean" ? zone.pickupSpots.on : CONFIG_DEFAULTS.pickupSpotsOn };
+}
+
+/**
+ * v0.18.116 BQ-S10 (owner: admin on/off per zone, default on): riders can share a live trip link. The zone's Dispatch ›
+ * Safety switch decides; the old book-wide Config switch is read-only and decides nothing.
+ */
+function shareTrip(zone: ZoneDispatch): { on: boolean } {
+  return { on: typeof zone.shareTrip?.on === "boolean" ? zone.shareTrip.on : CONFIG_DEFAULTS.shareTripOn };
+}
+
 /** Q39/Q40: max stops and the pickup move limit after accept, from the zone's live Dispatch rules. */
 function booking(base: Common) {
   return { maxStops: base.zone.stops.on ? base.zone.stops.max : 0, maxPickupMoveMeters: base.zone.pickupMove.maxMeters, samePointWarnMeters: samePointWarnMeters(base.zone) };
@@ -333,8 +346,10 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
       scheduledRides: scheduledRides(base),
       wallet: switchOn(base, "rider", "wallet") && featureOn(base, "wallet", zoneId, "rider", state.now),
       pin: switchOn(base, "rider", "pin"),
-      shareTrip: switchOn(base, "rider", "shareTrip"),
+      // v0.18.116: the older field says the same as the per-zone switch (the server serves it that way too).
+      shareTrip: shareTrip(base.zone).on,
     },
+    shareTrip: shareTrip(base.zone),
     paymentMethods: paymentMethods(base, state, zoneId),
     // v0.18.33 (fix job 5, owner Q6): Settings › Payment methods "Use wallet first" (default on); the rider's per-ride switch starts on.
     wallet: { usedFirst: base.settings.walletFirst !== false },
@@ -347,7 +362,7 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     promoCap: base.settings.promoCap === null ? null : wire(base.settings.promoCap, base.currency),
     pickupFee: riderPickupFee(base),
     // v0.18.17: the booking window and free-change time per zone (the server serves the same from the driver document).
-    booking: { ...booking(base), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays, minAheadMin: base.zone.reservation.booking.minAheadMin, maxAheadDays: base.zone.reservation.booking.maxAheadDays, freeChangeBeforeMin: base.zone.reservation.booking.freeChangeBeforeMin },
+    booking: { ...booking(base), pickupSpots: pickupSpots(base.zone), bookingHorizonDays: state.reservations.currentPolicy.bookingHorizonDays, minAheadMin: base.zone.reservation.booking.minAheadMin, maxAheadDays: base.zone.reservation.booking.maxAheadDays, freeChangeBeforeMin: base.zone.reservation.booking.freeChangeBeforeMin },
     cancelFees: cancelFees(base),
     // SV: no closerPct any more (the came-closer check is gone, contract pickupWaiting.headingCheck.replaces).
     cancelCheck: { on: base.zone.riderCancel.on },

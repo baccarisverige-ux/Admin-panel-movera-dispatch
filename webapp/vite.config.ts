@@ -1,12 +1,30 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import type { Plugin } from "vite";
+import { entryProblems } from "./src/build/entryGuard.ts";
+
+// Admin lazy-load job (2026-11-16): the build stops when a heavy module is back in the first load (entry script) or a
+// safety module (alert bar, SOS / alert sound, live safety reads) has left it. Lists: src/build/entryGuard.ts.
+function entryGuard(): Plugin {
+  return {
+    name: "movera-entry-guard",
+    apply: "build",
+    generateBundle(_options, bundle) {
+      for (const chunk of Object.values(bundle)) {
+        if (chunk.type !== "chunk" || !chunk.isEntry) continue;
+        const problems = entryProblems(Object.keys(chunk.modules));
+        if (problems.length) this.error(`entry ${chunk.fileName}:\n${problems.join("\n")}`);
+      }
+    },
+  };
+}
 
 // MOVERA_DEV_PROXY=http://127.0.0.1:8080 makes the dev server forward /api to a Movera server, so the live mode
 // (VITE_ADMIN_API=http) runs same-origin in development: no CORS, and the bearer token stays with this origin.
 const proxyTarget = process.env.MOVERA_DEV_PROXY;
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), entryGuard()],
   base: "/",
   // Load-time job (owner 2026-11-03, audit F9): the libraries every page needs go into their own files, so the entry
   // script stays under its size budget (scripts/check-bundle.mjs) and a new admin build does not make browsers

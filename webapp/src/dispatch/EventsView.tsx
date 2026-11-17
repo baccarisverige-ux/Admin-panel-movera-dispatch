@@ -13,6 +13,7 @@ import { PointMap } from "./PointMap";
 import { eventIssue } from "../live/dispatchTools";
 import { isLiveData } from "../live/realData";
 import { currentLanguage, tr, trn, trx, trSentences } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = {
   book: DispatchBook;
@@ -48,16 +49,17 @@ function detailsOf(event: DispatchEvent): NonNullable<DispatchEvent["details"]> 
 }
 
 /** One text in sv / fr / en (G4-F6: drivers read it in their language). */
-function TextTriple({ label, value, multiline = false, max, onChange }: { label: string; value: EventText; multiline?: boolean; max: number; onChange: (next: EventText) => void }) {
+function TextTriple({ label, value, multiline = false, max, onChange, info }: { label: string; value: EventText; multiline?: boolean; max: number; onChange: (next: EventText) => void; info?: string }) {
   return (
     <fieldset className="dx-text-triple" aria-label={label}>
-      <legend>{label}</legend>
+      <legend>{label}{info ? <SettingInfo id={info} label={label} /> : null}</legend>
       {LANGS.map((lang) => (
         <label key={lang.id} className="field">
           <small>{lang.label}</small>
+          {/* info-skip: one language of the text; the legend's i explains it */}
           {multiline
-            ? <textarea aria-label={`${label} (${lang.id})`} rows={2} maxLength={max} value={value[lang.id]} onChange={(event) => onChange({ ...value, [lang.id]: event.target.value })} />
-            : <input aria-label={`${label} (${lang.id})`} maxLength={max} value={value[lang.id]} onChange={(event) => onChange({ ...value, [lang.id]: event.target.value })} />}
+            ? /* info-skip: one language of the text; the legend's i explains it */ <textarea aria-label={`${label} (${lang.id})`} rows={2} maxLength={max} value={value[lang.id]} onChange={(event) => onChange({ ...value, [lang.id]: event.target.value })} />
+            : /* info-skip: one language of the text; the legend's i explains it */ <input aria-label={`${label} (${lang.id})`} maxLength={max} value={value[lang.id]} onChange={(event) => onChange({ ...value, [lang.id]: event.target.value })} />}
         </label>
       ))}
     </fieldset>
@@ -100,27 +102,27 @@ export function EventsView({ book, market, canEdit, canBonus, onNotice }: Props)
         </div>
         <div className="dx-event-grid">
           <div className="dx-event-fields">
-            <label className="field">{trn("Event name{0}", <input aria-label={tr("Event name")} maxLength={80} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Football final")} />)}</label>
+            <label className="field">{trn("Event name{0}", <input aria-label={tr("Event name")} maxLength={80} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Football final")} />)}<SettingInfo id="dispatch.events.name" label={tr("Event name")} /></label>
             <div className="dx-modal-row">
-              <label className="field">{trn("Starts{0}", <input type="datetime-local" aria-label={tr("Event starts")} value={editing.from} onChange={(event) => setEditing({ ...editing, from: event.target.value })} />)}</label>
-              <label className="field">{trn("Ends{0}", <input type="datetime-local" aria-label={tr("Event ends")} value={editing.until} onChange={(event) => setEditing({ ...editing, until: event.target.value })} />)}</label>
+              <label className="field">{trn("Starts{0}", <input type="datetime-local" aria-label={tr("Event starts")} value={editing.from} onChange={(event) => setEditing({ ...editing, from: event.target.value })} />)}<SettingInfo id="dispatch.events.times" label={tr("Event starts")} /></label>
+              <label className="field">{trn("Ends{0}", <input type="datetime-local" aria-label={tr("Event ends")} value={editing.until} onChange={(event) => setEditing({ ...editing, until: event.target.value })} />)}<SettingInfo id="dispatch.events.times" label={tr("Event ends")} /></label>
             </div>
             <p className="dx-note">{tr("Times are local time in {0} ({1}).", [trx(market.name), market.timeZone])}</p>
             <div className="dx-modal-row">
-              <label className="field">{trn("Latitude{0}", <input type="number" step="0.000001" aria-label={tr("Event latitude")} value={typed.lat} onChange={(event) => point(event.target.value, typed.lng)} />)}</label>
-              <label className="field">{trn("Longitude{0}", <input type="number" step="0.000001" aria-label={tr("Event longitude")} value={typed.lng} onChange={(event) => point(typed.lat, event.target.value)} />)}</label>
+              <label className="field">{trn("Latitude{0}", <input type="number" step="0.000001" aria-label={tr("Event latitude")} value={typed.lat} onChange={(event) => point(event.target.value, typed.lng)} />)}<SettingInfo id="dispatch.events.point" label={tr("Event latitude")} /></label>
+              <label className="field">{trn("Longitude{0}", <input type="number" step="0.000001" aria-label={tr("Event longitude")} value={typed.lng} onChange={(event) => point(typed.lat, event.target.value)} />)}<SettingInfo id="dispatch.events.point" label={tr("Event longitude")} /></label>
             </div>
-            <TextTriple label={tr("Title for drivers")} value={details.title} max={80} onChange={(title) => setDetails({ title })} />
-            <TextTriple label={tr("Description for drivers")} value={details.description} max={1000} multiline onChange={(description) => setDetails({ description })} />
-            <TextTriple label={tr("Pickup note (optional)")} value={details.pickupNote} max={300} onChange={(pickupNote) => setDetails({ pickupNote })} />
+            <TextTriple info="dispatch.events.title" label={tr("Title for drivers")} value={details.title} max={80} onChange={(title) => setDetails({ title })} />
+            <TextTriple info="dispatch.events.description" label={tr("Description for drivers")} value={details.description} max={1000} multiline onChange={(description) => setDetails({ description })} />
+            <TextTriple info="dispatch.events.pickupNoteDrivers" label={tr("Pickup note (optional)")} value={details.pickupNote} max={300} onChange={(pickupNote) => setDetails({ pickupNote })} />
             <p className="dx-note">{tr("Drivers see a small event icon at the pin on their map; a tap shows the title, the time, the place, the description and the pickup note. Events change no dispatch rules.")}</p>
             {live ? null : <>
-              <div className="field">{trn("Dispatch in the area{0}", <Choice label={tr("Event mode")} value={editing.mode} onChange={(mode) => setEditing({ ...editing, mode })} options={[{ id: "radar", label: tr("Radar") }, { id: "exclusive", label: tr("Exclusive") }]} />)}</div>
-              {editing.mode === "radar" ? <label className="field">{trn("Drivers who see each request{0}", <Num label={tr("Event radar drivers")} value={editing.radarDrivers} unit="drivers" min={1} max={30} onChange={(radarDrivers) => setEditing({ ...editing, radarDrivers })} />)}</label> : null}
-              <label className="field">{trn("Pickup point for riders{0}", <input aria-label={tr("Event pickup note")} maxLength={100} value={editing.pickupNote} onChange={(event) => setEditing({ ...editing, pickupNote: event.target.value })} placeholder={tr("For example North gate, lane P2")} />)}</label>
-              <label className="field">{trn("Message to drivers before the event{0}", <textarea aria-label={tr("Event driver message")} rows={2} maxLength={140} value={editing.driverMessage} onChange={(event) => setEditing({ ...editing, driverMessage: event.target.value })} placeholder={tr("For example Concert ends at 22:30. Wait at the north gate.")} />)}</label>
+              <div className="field">{trn("Dispatch in the area{0}", <Choice info="dispatch.events.mode" label={tr("Event mode")} value={editing.mode} onChange={(mode) => setEditing({ ...editing, mode })} options={[{ id: "radar", label: tr("Radar") }, { id: "exclusive", label: tr("Exclusive") }]} />)}</div>
+              {editing.mode === "radar" ? <label className="field">{trn("Drivers who see each request{0}", <Num info="dispatch.events.radarDrivers" label={tr("Event radar drivers")} value={editing.radarDrivers} unit="drivers" min={1} max={30} onChange={(radarDrivers) => setEditing({ ...editing, radarDrivers })} />)}</label> : null}
+              <label className="field">{trn("Pickup point for riders{0}", <input aria-label={tr("Event pickup note")} maxLength={100} value={editing.pickupNote} onChange={(event) => setEditing({ ...editing, pickupNote: event.target.value })} placeholder={tr("For example North gate, lane P2")} />)}<SettingInfo id="dispatch.events.pickupPoint" label={tr("Event pickup note")} /></label>
+              <label className="field">{trn("Message to drivers before the event{0}", <textarea aria-label={tr("Event driver message")} rows={2} maxLength={140} value={editing.driverMessage} onChange={(event) => setEditing({ ...editing, driverMessage: event.target.value })} placeholder={tr("For example Concert ends at 22:30. Wait at the north gate.")} />)}<SettingInfo id="dispatch.events.driverMessage" label={tr("Event driver message")} /></label>
             </>}
-            <div className="dx-row"><span className="dx-row-text"><b>{tr("Event is on")}</b></span><Switch label={tr("Event")} on={editing.on} onChange={(on) => setEditing({ ...editing, on })} /></div>
+            <div className="dx-row"><span className="dx-row-text"><b>{tr("Event is on")}</b></span><Switch info="dispatch.events.on" label={tr("Event")} on={editing.on} onChange={(on) => setEditing({ ...editing, on })} /></div>
             {error ? <p className="dx-issues" role="alert">{trSentences(error)}</p> : null}
             <div className="dx-modal-actions">
               <CommandButton command="admin.dispatch.event" className="dash-btn" targetId={editing.name.trim() || "event"} confirmTarget={false} scope="all" before={exists ? "event" : "none"} after={editing.on ? "on" : "off"} expectedSliceRev={book.draftRev} sliceKey={DISPATCH_KEY} value={next} disabled={!canEdit || Boolean(error)} onDone={() => { onNotice(tr("Event {0} saved.", [editing.name])); setEditing(null); }}>{tr("Save event")}</CommandButton>

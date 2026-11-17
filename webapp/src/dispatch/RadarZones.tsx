@@ -13,6 +13,7 @@ import {
 } from "./radarZones";
 import { DISPATCH_KEY, type DispatchBook, type RadarZone, type RadarZoneRule } from "./rules";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type ZonesProps = {
   book: DispatchBook;
@@ -52,7 +53,7 @@ export function RadarZonesCard({ book, market, zone, drivers, canEdit, onNotice 
         </div>
         <div className="dx-event-grid">
           <div className="dx-event-fields">
-            <label className="field">{trn("Radar zone name{0}", <input aria-label={tr("Radar zone name")} maxLength={40} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Södermalm")} />)}</label>
+            <label className="field">{trn("Radar zone name{0}", <input aria-label={tr("Radar zone name")} maxLength={40} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Södermalm")} />)}<SettingInfo id="dispatch.radarZones.name" label={tr("Radar zone name")} /></label>
             <p className="dx-note">{trn("{0} Draw it on the map like a zone: shape, rectangle, circle or free hand. It belongs to {1}. Radar zones may overlap; a radar sent to this one goes to the free drivers inside it at that moment.", <MapPinned size={13} aria-hidden="true" />, <b>{zone.name}</b>)}</p>
             {editing.ring.length >= 3 && !live ? <p className="dx-note">{trn("{0} km² · {1} free driver{2} inside right now", ringAreaKm(editing.ring).toFixed(2), driversInRadarZone(editing, free).length, driversInRadarZone(editing, free).length === 1 ? "" : tr("s"))}</p> : null}
             {editing.ring.length >= 3 && live ? <p className="dx-note">{trn("{0} km²", ringAreaKm(editing.ring).toFixed(2))}</p> : null}
@@ -150,24 +151,24 @@ export function RadarZoneRulesCard({ book, market, canEdit, onNotice }: RulesPro
         const toggle = (id: string) => setEditing({ ...editing, radarZoneIds: picked.includes(id) ? picked.filter((item) => item !== id) : [...picked, id] });
         return (
           <div className="dx-group-edit" aria-label={tr("Radar zone rule")} data-testid="radar-rule-edit">
-            <label className="field">{trn("Rule name{0}", <input aria-label={tr("Rule name")} maxLength={40} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Friday nights")} />)}</label>
-            <div className="field">{trn("Applies to{0}", <Choice label={tr("Rule applies to")} value={editing.radarZoneIds === "all" ? "all" : "some"} onChange={(value) => setEditing({ ...editing, radarZoneIds: value === "all" ? "all" : [] })} options={[{ id: "all", label: tr("All radar zones") }, { id: "some", label: tr("Pick radar zones") }]} />)}</div>
+            <label className="field">{trn("Rule name{0}", <input aria-label={tr("Rule name")} maxLength={40} value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder={tr("For example Friday nights")} />)}<SettingInfo id="dispatch.radarZones.ruleName" label={tr("Rule name")} /></label>
+            <div className="field">{trn("Applies to{0}", <Choice info="dispatch.radarZones.ruleAppliesTo" label={tr("Rule applies to")} value={editing.radarZoneIds === "all" ? "all" : "some"} onChange={(value) => setEditing({ ...editing, radarZoneIds: value === "all" ? "all" : [] })} options={[{ id: "all", label: tr("All radar zones") }, { id: "some", label: tr("Pick radar zones") }]} />)}</div>
             {editing.radarZoneIds !== "all" ? (
               zones.length ? (
                 <div className="zn-chips" role="group" aria-label={tr("Radar zones the rule applies to")}>
                   {zones.map((zone) => (
                     <label key={zone.id} className={picked.includes(zone.id) ? "check-chip on" : "check-chip"}>
-                      <input type="checkbox" checked={picked.includes(zone.id)} onChange={() => toggle(zone.id)} />{zone.name} <small>· {zoneName(zone.zoneId)}</small>
+                      {/* info-at: dispatch.radarZones.ruleAppliesTo */}<input type="checkbox" checked={picked.includes(zone.id)} onChange={() => toggle(zone.id)} />{zone.name} <small>· {zoneName(zone.zoneId)}</small>
                     </label>
                   ))}
                 </div>
               ) : <p className="dx-calm">{tr("No radar zone yet. Draw one first.")}</p>
             ) : null}
             <div className="dx-modal-row">
-              <label className="field">{trn("Time on the radar{0}", <Num label={tr("Rule radar time")} value={editing.seconds} unit="s" min={RADAR_RULE_LIMITS.seconds.min} max={RADAR_RULE_LIMITS.seconds.max} onChange={(seconds) => setEditing({ ...editing, seconds })} />)}</label>
-              <label className="field">{trn("Most drivers who see it{0}", <Num label={tr("Rule most drivers")} before="up to" value={editing.maxDrivers} unit="drivers" min={RADAR_RULE_LIMITS.maxDrivers.min} max={RADAR_RULE_LIMITS.maxDrivers.max} onChange={(maxDrivers) => setEditing({ ...editing, maxDrivers: Math.round(maxDrivers) })} />)}</label>
+              <label className="field">{trn("Time on the radar{0}", <Num info="dispatch.radarZones.ruleSeconds" label={tr("Rule radar time")} value={editing.seconds} unit="s" min={RADAR_RULE_LIMITS.seconds.min} max={RADAR_RULE_LIMITS.seconds.max} onChange={(seconds) => setEditing({ ...editing, seconds })} />)}</label>
+              <label className="field">{trn("Most drivers who see it{0}", <Num info="dispatch.radarZones.ruleMaxDrivers" label={tr("Rule most drivers")} before="up to" value={editing.maxDrivers} unit="drivers" min={RADAR_RULE_LIMITS.maxDrivers.min} max={RADAR_RULE_LIMITS.maxDrivers.max} onChange={(maxDrivers) => setEditing({ ...editing, maxDrivers: Math.round(maxDrivers) })} />)}</label>
             </div>
-            <div className="dx-row"><span className="dx-row-text"><b>{tr("Send again by itself")}</b><small>{tr("When the time runs out and nobody accepted, it goes out again to whoever is free inside then, drivers who came in too, until a driver accepts, an admin stops it or the rider's search ends (8 min).")}</small></span><Switch label={tr("Send again by itself")} on={editing.repeat} onChange={(repeat) => setEditing({ ...editing, repeat })} /></div>
+            <div className="dx-row"><span className="dx-row-text"><b>{tr("Send again by itself")}</b><small>{tr("When the time runs out and nobody accepted, it goes out again to whoever is free inside then, drivers who came in too, until a driver accepts, an admin stops it or the rider's search ends (8 min).")}</small></span><Switch info="dispatch.radarZones.ruleRepeat" label={tr("Send again by itself")} on={editing.repeat} onChange={(repeat) => setEditing({ ...editing, repeat })} /></div>
             {error ? <p className="dx-issues" role="alert">{trSentences(error)}</p> : null}
             <div className="dx-modal-actions">
               <button data-command="admin.dispatch.view" type="button" className="dash-btn ghost" onClick={() => setEditing(null)}>{tr("Cancel")}</button>

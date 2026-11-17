@@ -63,29 +63,29 @@ export function TestView({ market, zones, zoneId, onZone, draftOf, liveOf, count
       <section className="dx-test-form dash-card" aria-label={tr("Fake ride")}>
         <h3>{trn("{0} Test a ride", <Play size={15} aria-hidden="true" />)}</h3>
         <p className="dx-modal-help">{tr("Nothing is sent to drivers. Click the map to put the pickup, or pick a place.")}</p>
-        <label className="field">{trn("Zone{0}", <select aria-label={tr("Test zone")} value={zone.id} onChange={(event) => { const next = zones.find((item) => item.id === event.target.value); onZone(event.target.value); if (next) setPickup([next.center[0], next.center[1]]); }}>
+        <label className="field">{trn("Zone{0}", /* info-skip: test input, not a setting */ <select aria-label={tr("Test zone")} value={zone.id} onChange={(event) => { const next = zones.find((item) => item.id === event.target.value); onZone(event.target.value); if (next) setPickup([next.center[0], next.center[1]]); }}>
             {zones.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>)}</label>
-        <label className="field">{trn("Pickup place{0}", <select aria-label={tr("Test pickup place")} value="" onChange={(event) => { const hit = places.find((item) => item.name === event.target.value); if (hit) setPickup([hit.lat, hit.lng]); }}>
+        <label className="field">{trn("Pickup place{0}", /* info-skip: test input, not a setting */ <select aria-label={tr("Test pickup place")} value="" onChange={(event) => { const hit = places.find((item) => item.name === event.target.value); if (hit) setPickup([hit.lat, hit.lng]); }}>
             <option value="">{pickup ? tr("Map point {0}, {1}", [pickup[0].toFixed(4), pickup[1].toFixed(4)]) : tr("Pick a place")}</option>
             {places.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
           </select>)}</label>
-        <label className="field">{trn("Category{0}", <select aria-label={tr("Test category")} value={category} onChange={(event) => setCategory(event.target.value)}>
+        <label className="field">{trn("Category{0}", /* info-skip: test input, not a setting */ <select aria-label={tr("Test category")} value={category} onChange={(event) => setCategory(event.target.value)}>
             {CATEGORIES.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
           </select>)}</label>
-        <label className="field">{trn("Trip length{0}", <span className="dx-inline"><input type="range" min={1} max={120} aria-label={tr("Test trip length")} value={tripKm} onChange={(event) => setTripKm(Number(event.target.value))} /><b>{trn("{0} km", tripKm)}</b></span>)}</label>
+        <label className="field">{trn("Trip length{0}", <span className="dx-inline">{/* info-skip: test input, not a setting */}<input type="range" min={1} max={120} aria-label={tr("Test trip length")} value={tripKm} onChange={(event) => setTripKm(Number(event.target.value))} /><b>{trn("{0} km", tripKm)}</b></span>)}</label>
         <div className="field">{trn("The rider asks for{0}", <span className="zn-chips">
-            {EXTRAS.filter((extra) => extra.id !== "long_trip").map((extra) => <Check key={extra.id} label={trx(extra.label)} on={extras.includes(extra.id)} onChange={(on) => setExtras(on ? [...extras, extra.id] : extras.filter((id) => id !== extra.id))} />)}
+            {EXTRAS.filter((extra) => extra.id !== "long_trip").map((extra) => /* info-skip: test input, not a setting */ <Check key={extra.id} label={trx(extra.label)} on={extras.includes(extra.id)} onChange={(on) => setExtras(on ? [...extras, extra.id] : extras.filter((id) => id !== extra.id))} />)}
           </span>)}</div>
-        <div className="dx-row"><span className="dx-row-text"><b>{tr("Woman driver only")}</b></span><Switch label={tr("Woman driver only")} on={womenOnly} onChange={setWomenOnly} /></div>
+        <div className="dx-row"><span className="dx-row-text"><b>{tr("Woman driver only")}</b></span>{/* info-skip: test input, not a setting */}<Switch label={tr("Woman driver only")} on={womenOnly} onChange={setWomenOnly} /></div>
         {events.length ? (
-          <label className="field">{trn("When{0}", <select aria-label={tr("Test time")} value={eventId} onChange={(event) => { setEventId(event.target.value); const hit = events.find((item) => item.id === event.target.value); if (hit && hit.ring.length) setPickup([hit.ring.reduce((sum, point) => sum + point[0], 0) / hit.ring.length, hit.ring.reduce((sum, point) => sum + point[1], 0) / hit.ring.length]); }}>
+          <label className="field">{trn("When{0}", /* info-skip: test input, not a setting */ <select aria-label={tr("Test time")} value={eventId} onChange={(event) => { setEventId(event.target.value); const hit = events.find((item) => item.id === event.target.value); if (hit && hit.ring.length) setPickup([hit.ring.reduce((sum, point) => sum + point[0], 0) / hit.ring.length, hit.ring.reduce((sum, point) => sum + point[1], 0) / hit.ring.length]); }}>
               <option value="">{tr("Now")}</option>
               {events.map((item) => <option key={item.id} value={item.id}>{trn("During {0}", item.name)}</option>)}
             </select>)}</label>
         ) : null}
         {picked && !applied.event ? <p className="dx-note">{trn("The pickup is outside the event area{0}. Normal rules are used.", picked.on ? "" : tr(", or the event is off"))}</p> : null}
-        <div className="field">{trn("Rules to test{0}", <Choice label={tr("Rules to test")} value={which} onChange={setWhich} options={[{ id: "draft", label: hasChanges ? tr("My changes") : tr("My changes (none)") }, { id: "live", label: tr("Live now") }]} />)}</div>
+        <div className="field">{trn("Rules to test{0}", /* info-skip: test input, not a setting */ <Choice label={tr("Rules to test")} value={which} onChange={setWhich} options={[{ id: "draft", label: hasChanges ? tr("My changes") : tr("My changes (none)") }, { id: "live", label: tr("Live now") }]} />)}</div>
       </section>
 
       <div className="dx-test-main">
