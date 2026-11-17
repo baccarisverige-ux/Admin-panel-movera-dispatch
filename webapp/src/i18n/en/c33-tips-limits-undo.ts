@@ -1,0 +1,20 @@
+/** English dictionary, area c33-tips-limits-undo: live 2026-11-16 (Rules audits/impact/country-undo.md): Pricing › Tips & limits gets its own "Undo last Tips & limits save" (live/tipsUndo.ts, pricing/CountryExtrasPanel.tsx), and a save of the Standard no longer copies into the zones that use it (live/liveSettings.ts saveCountries). Add new keys at the end of this file. Merged in ../en.ts in this order. */
+export const enC33TipsLimitsUndo = {
+  "Undo last Tips & limits save": "Undo last Tips & limits save",
+  "Rider app tip rules": "Rider app tip rules",
+  "{0} · {1}: version {2} → back to version {3}": "{0} · {1}: version {2} → back to version {3}",
+  "{0} · {1}: its own version {2} → back to the Standard": "{0} · {1}: its own version {2} → back to the Standard",
+  "{0} · {1}: version {2} is its first version. Not touched.": "{0} · {1}: version {2} is its first version. Not touched.",
+  "{0} · {1}: version {2} was changed after this save. Not touched.": "{0} · {1}: version {2} was changed after this save. Not touched.",
+  "Saved. These zones use the Standard and got it through the Standard, with no copy of their own: {0}.": "Saved. These zones use the Standard and got it through the Standard, with no copy of their own: {0}.",
+  "Undone: {0} document(s) of the last Tips & limits save are back as before.": "Undone: {0} document(s) of the last Tips & limits save are back as before.",
+  "Not undone: {0}": "Not undone: {0}",
+  "Nothing to undo: no Tips & limits save that can go back was found.": "Nothing to undo: no Tips & limits save that can go back was found.",
+  "Another Tips & limits save was made meanwhile. Open Tips & limits again to see what Undo would do now.": "Another Tips & limits save was made meanwhile. Open Tips & limits again to see what Undo would do now.",
+  "Nothing was undone: every document of that save was changed after it.": "Nothing was undone: every document of that save was changed after it.",
+  "Saved {0} by {1} · {2} document(s) go back": "Saved {0} by {1} · {2} document(s) go back",
+  "No Tips & limits save to undo in {0}. Only saves made from this panel version on can be undone here.": "No Tips & limits save to undo in {0}. Only saves made from this panel version on can be undone here.",
+  "The last Tips & limits save was already undone or changed. Nothing can go back.": "The last Tips & limits save was already undone or changed. Nothing can go back.",
+  "Undo the Tips & limits save of {0} by {1}. Each document below goes back to the version before that save; nothing else changes.": "Undo the Tips & limits save of {0} by {1}. Each document below goes back to the version before that save; nothing else changes.",
+  "Looking for the last Tips & limits save.": "Looking for the last Tips & limits save.",
+};

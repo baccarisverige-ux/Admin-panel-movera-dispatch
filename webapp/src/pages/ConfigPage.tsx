@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { NotConnected } from "../live/NotConnected";
-import { CopyToAllZones, PublishTargetsLine } from "../live/StandardBar";
+import { CopyToAllZones } from "../live/StandardBar";
 import { zoneById as zoneNameOf } from "../markets/markets";
 import { publishTargets } from "../markets/scope";
 import { useMarketScope } from "../markets/useMarketScope";
@@ -500,7 +500,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
           <CommandButton
             command="admin.config.publish"
             confirmTarget={false}
-            summary={liveSession ? <PublishTargetsLine zoneIds={settingsTargets} /> : undefined}
+            where={liveSession ? { zoneIds: settingsTargets, doc: "driver_app_config", pick: true } : undefined}
             scope={liveSession ? settingsTargets.join(",") : undefined}
             className="primary-btn"
             type="button"

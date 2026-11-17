@@ -38,6 +38,7 @@ export function LiveCompanyReview({ fleetId }: { fleetId: string }) {
       ) : null}
       <DecisionDialog
         open={Boolean(decision)}
+        command="admin.server.fleetReview"
         title={decision === "rejected" ? tr("Reject the company") : tr("Approve the company")}
         summary={trn("{0} · {1}", fleet.name, fleet.orgNumber)}
         confirmLabel={decision === "rejected" ? tr("Reject") : tr("Approve")}

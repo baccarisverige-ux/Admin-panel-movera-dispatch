@@ -61,6 +61,10 @@ import { svC28OfflineReasons } from "./sv/c28-offline-reasons.ts";
 import { svC19DebtModel } from "./sv/c19-debt-model.ts";
 import { svC25BonusCampaigns } from "./sv/c25-bonus-campaigns.ts";
 import { svC29SupportOrder } from "./sv/c29-support-order.ts";
+import { svC33TipsLimitsUndo } from "./sv/c33-tips-limits-undo.ts";
+import { svC35WhereItLands } from "./sv/c35-where-it-lands.ts";
+import { svC38FromTo } from "./sv/c38-from-to.ts";
+import { svC39ConfirmDetails } from "./sv/c39-confirm-details.ts";
 import { svC31PickupSpots } from "./sv/c31-pickup-spots.ts";
 import { svC32ShareTrip } from "./sv/c32-share-trip.ts";
 
@@ -129,6 +133,10 @@ export const sv: Record<MessageKey, string> = {
   ...svC19DebtModel,
   ...svC25BonusCampaigns,
   ...svC29SupportOrder,
+  ...svC33TipsLimitsUndo,
+  ...svC35WhereItLands,
+  ...svC38FromTo,
+  ...svC39ConfirmDetails,
   ...svC31PickupSpots,
   ...svC32ShareTrip,
 };

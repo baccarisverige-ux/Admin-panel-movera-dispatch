@@ -231,6 +231,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.pricing.archiveCategory", label: "Delete category", reason: true, permission: "settings.publish" },
   { id: "admin.pricing.restoreCategory", label: "Restore category", reason: true, permission: "settings.publish" },
   { id: "admin.pricing.saveCountry", label: "Save tips, raise steps, promo cap and driver bonus limit", reason: true, permission: "settings.publish" },
+  // Live 2026-11-16 (Rules audits/impact/country-undo.md): Tips & limits has its own Undo (live/tipsUndo.ts); the pricing Undo never undid it.
+  { id: "admin.tipsLimits.undo", label: "Undo last Tips & limits save", reason: true, permission: "settings.publish" },
   { id: "admin.ui.surgeLayer", label: "Surge map layer", reason: false, permission: "overview.read" },
   { id: "admin.reservation.assign", label: "Assign reservation", reason: true, permission: "trips.intervene" },
   { id: "admin.reservation.offer", label: "Offer reservation", reason: true, permission: "trips.intervene" },
@@ -402,6 +404,9 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.doc.rotate", label: "Rotate document", reason: false, permission: "system.read" },
   { id: "admin.confirm.submit", label: "Confirm action", reason: false, permission: "overview.read" },
   { id: "admin.confirm.cancel", label: "Cancel dialog", reason: false, permission: "overview.read" },
+  // Owner 2026-11-16: every confirm dialog has a "?" that explains what happens, where, who and how to undo (ui/ConfirmInfo.tsx).
+  { id: "admin.confirm.info", label: "What will happen?", reason: false, permission: "overview.read" },
+  { id: "admin.confirm.tickAll", label: "Tick all zones in the dialog", reason: false, permission: "overview.read" },
   { id: "admin.trip.reassign", label: "Reassign trip", reason: true, permission: "trips.intervene" },
   { id: "admin.trip.refund", label: "Refund trip", reason: true, permission: "payments.refund" },
   // v0.18.7 (G5 Q2/Q3): waive an owed cancel or no-show fee (POST /admin/trips/{tripId}/adjust waiveCancelFee).
@@ -615,6 +620,7 @@ const DESTRUCTIVE = new Set([
   "admin.trip.refund",
   "admin.dispatch.restore",
   "admin.dispatch.undo",
+  "admin.tipsLimits.undo",
   "admin.rider.block",
   "admin.rider.promoRemove",
   "admin.rider.privacy",

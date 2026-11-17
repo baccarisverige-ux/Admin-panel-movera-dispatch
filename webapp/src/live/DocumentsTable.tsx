@@ -193,6 +193,7 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
 
       <DecisionDialog
         open={Boolean(decision)}
+        command="admin.server.documentReview"
         title={decision?.kind === "rejected" ? tr("Reject document") : tr("Approve document")}
         summary={decision ? (decision.renewal
           ? (decision.kind === "rejected"
@@ -224,6 +225,7 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
       />
       <DecisionDialog
         open={Boolean(check)}
+        command="admin.server.documentCheck"
         title={tr("Mark held")}
         summary={check ? trn("{0} was held. It then counts as approved for activation.", <strong>{name(check)}</strong>) : null}
         confirmLabel={tr("Mark held")}
