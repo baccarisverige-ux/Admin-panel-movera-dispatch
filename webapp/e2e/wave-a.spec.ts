@@ -175,7 +175,7 @@ test("Q28: Undo of a big price change asks Are you sure, like Publish", async ({
   await dialog(page).getByLabel("Yes, I'm sure").check();
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText(/Published as pricing revision/)).toBeVisible();
-  await page.getByRole("button", { name: /^Undo last publish/ }).click();
+  await page.getByRole("button", { name: /^Undo last pricing publish/ }).click();
   const warning = dialog(page).getByTestId("large-change-warning");
   await expect(warning).toContainText("Are you sure?");
   await expect(warning).toContainText("Norrmalm · Movera Base fare");

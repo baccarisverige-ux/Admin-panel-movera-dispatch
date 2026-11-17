@@ -21,6 +21,17 @@ const confirm = async (page: Page) => {
   await modal.getByRole("button", { name: /^(Confirm|Bekräfta)$/ }).click();
 };
 
+
+/** Owner 2026-11-16 (decisions/session-2026-11-06.md:1434): every settings confirm asks to tick the zones again (live/WhereItLands.tsx). */
+const tickWhere = async (page: Page) => {
+  const pick = page.locator(".modal.open").last().getByTestId("where-pick");
+  await expect(pick).toBeVisible();
+  const all = pick.locator('[data-command="admin.confirm.tickAll"]');
+  if (await all.count()) await all.click();
+  else await pick.getByRole("checkbox").check();
+  return pick;
+};
+
 test("Pricing: the Standard for Sweden, 'Uses standard' on a zone, and Go back to Standard for a zone with its own", async ({ page }) => {
   await fakeTripServer(page, { admin: SV_ADMIN });
   const server = await fakeSettings(page);
@@ -59,7 +70,9 @@ test("Dispatch: the driver's share of the cancel fee; publishing goes live at on
   await shot(page, "admin-dispatch-cancel-share-sv");
   const publish = page.getByRole("region", { name: "Publicera" });
   await publish.getByRole("button", { name: "Publicera nu" }).click();
-  await expect(page.getByTestId("publish-targets")).toHaveText("Publiceras till: Södermalm. Ingen annan zon ändras.");
+  const pick = await tickWhere(page);
+  await expect(pick.locator("label.check-row")).toHaveText(["Södermalm"]);
+  await expect(pick.getByTestId("where-lands")).toHaveText("De här zonerna har egna inställningar: det sparas direkt i var och en: Södermalm. Ingen annan zon ändras.");
   await shot(page, "admin-dispatch-publish-confirm-zones-sv");
   await confirm(page);
   // The driver document (its cancel share) goes live at once; the dispatch rules did not change, so they are not sent.
@@ -98,7 +111,9 @@ test("Scope at the top: the Standard can be chosen beside the zones; Settings pu
   await page.getByRole("button", { name: "Spara utkast" }).first().click();
   await expect(page.getByText("Utkastet sparat i den här sessionen.", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Publicera", exact: true }).click();
-  await expect(page.getByTestId("publish-targets")).toHaveText("Publiceras till: Södermalm. Ingen annan zon ändras.");
+  const pick = await tickWhere(page);
+  await expect(pick.locator("label.check-row")).toHaveText(["Södermalm"]);
+  await expect(pick.getByTestId("where-lands")).toHaveText("De här zonerna har egna inställningar: det sparas direkt i var och en: Södermalm. Ingen annan zon ändras.");
   await shot(page, "admin-settings-publish-confirm-zones-sv");
   await confirm(page);
   await expect.poll(() => server.sent.filter((s) => s.method === "POST").length).toBeGreaterThan(0);
@@ -125,7 +140,10 @@ test("Tips & limits (v0.8.1, owner 2026-10-28): shown for the zone chosen at the
   await shot(page, "admin-tips-two-zones-sv");
   server.sent.length = 0;
   await page.getByTestId("pricing-extras").getByRole("button", { name: /Spara dricks och gränser/ }).click();
-  await expect(page.getByTestId("publish-targets")).toContainText("Stockholm län, Södermalm");
+  const pick = await tickWhere(page);
+  await expect(pick.locator("label.check-row")).toHaveText(["Stockholm län", "Södermalm"]);
+  await expect(pick.getByTestId("where-lands")).toContainText("det sparas direkt i var och en: Södermalm.");
+  await expect(pick.getByTestId("where-lands")).toContainText("Stockholm län. Ingen annan zon ändras.");
   await shot(page, "admin-tips-confirm-sv");
   await confirm(page);
   await expect.poll(() => server.sent.filter((s) => s.method === "PUT" && s.path.includes("country_rules")).map((s) => s.body?.["zoneId"])).toEqual(["Z001", "Z002"]);

@@ -593,6 +593,12 @@ textarea:focus {
   background:var(--primary-2)
 }
 
+/* A disabled primary button (e.g. Confirm before the zones are ticked) must look off, not like an enabled one. */
+.primary-btn:disabled {
+  opacity:.5;
+  cursor:not-allowed
+}
+
 .secondary-btn {
   border:1px solid #dbe1ea;
   background:#fff;
@@ -1701,3 +1707,14 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
   border: 1px solid var(--line);
   border-radius: 8px
 }
+
+/* Owner 2026-11-16: the "?" of every confirm dialog (ui/ConfirmInfo.tsx) and the zone pick of the settings dialogs (live/WhereItLands.tsx). */
+.confirm-info { margin: 6px 0; }
+.confirm-info-btn { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.confirm-info-body { margin: 8px 0 0; padding: 10px 12px; border-radius: 8px; background: rgba(127, 127, 127, 0.12); font-size: 13px; display: grid; gap: 2px; }
+.confirm-info-body dt { font-weight: 700; margin-top: 6px; }
+.confirm-info-body dd { margin: 0; }
+.where-lands { margin: 8px 0; padding: 8px 10px; border: 1px solid rgba(127, 127, 127, 0.4); border-radius: 8px; }
+.where-lands-list { display: flex; flex-wrap: wrap; gap: 4px 14px; max-height: 160px; overflow: auto; margin-bottom: 6px; }
+.where-lands-text { font-size: 13px; margin: 6px 0 0; }
+.confirm-details { margin: 6px 0; padding-left: 18px; font-size: 13px; max-height: 220px; overflow: auto; }

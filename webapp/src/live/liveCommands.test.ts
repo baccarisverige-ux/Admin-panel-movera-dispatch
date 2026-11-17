@@ -20,6 +20,8 @@ test("LIVE_COMMANDS is exactly what the live adapter handles", () => {
     ...maps,
     ...idsIn("./liveAdminApi.ts", /async function command\(/, /\n {2}function nameOf\(/),
     ...idsIn("./liveSettings.ts", /\n {4}command\(action, input\) \{/, /\n {4}\},\n {2}\};/),
+    // MF-R3-2: the settings commands are routed in route(), and command() wraps it (start and end of every command).
+    ...idsIn("./liveSettings.ts", /\n {2}function route\(/, /\n {2}\}\n\}/),
   ]);
   const listed = idsIn("./liveCommands.ts", /export const LIVE_COMMANDS/, /\]\);/);
   assert.deepEqual([...new Set(listed)].sort(), [...handled].sort());
