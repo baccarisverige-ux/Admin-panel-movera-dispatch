@@ -4,9 +4,16 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { scanSettingFields, shownInfoIds, type ScannedField } from "./settingInfoScan.ts";
-import { SETTING_INFO_PARTS, SettingInfo, loadSettingInfoTexts, nextInfoOpen, settingInfoLabel } from "./SettingInfo.ts";
-import { SETTING_INFO } from "./settingInfoTexts.ts";
+import { SettingInfo, loadSettingInfoTexts, nextInfoOpen, settingInfoLabel } from "./SettingInfo.ts";
+import { SETTING_INFO, SETTING_INFO_PARTS } from "./settingInfoTexts.ts";
 import { SETTING_INFO_LISTS } from "./settingInfoLists.ts";
+import { defaultCountrySettings } from "../config/countrySettings.ts";
+import { CALL_DEFAULTS, CALL_FIELDS } from "../config/callSettings.ts";
+import { CHAT_DEFAULTS, CHAT_FIELDS } from "../config/chatSettings.ts";
+import { REQUEST_LIMIT_DEFAULTS, REQUEST_LIMIT_FIELDS } from "../config/requestLimits.ts";
+import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
+import { defaultZone } from "../dispatch/rules/defaults.ts";
+import { defaultCategoryPrice } from "../pricing/zonePricing.ts";
 
 /**
  * Owner 2026-11-16: "Also add next to any setting in all admin panel small i for info when clic it show what this
@@ -76,19 +83,89 @@ test("inventory: an info-at: <id> marker points at an i shown in the same file",
   }
 });
 
-test("English completeness: every text has all four parts, short and plain", () => {
+test("English completeness: every text has all six parts (effect, who and where, range, default, example, extremes), short and plain", () => {
   const entries = Object.entries(SETTING_INFO);
   assert.ok(entries.length > 0);
+  assert.deepEqual(SETTING_INFO_PARTS.map((part) => part.key), ["what", "where", "range", "default", "example", "extremes"]);
+  const gaps: string[] = [];
   for (const [id, text] of entries) {
     for (const { key } of SETTING_INFO_PARTS) {
       const value = text[key];
-      assert.ok(typeof value === "string" && value.trim().length >= 3, `${id}.${key} is empty`);
+      assert.ok(typeof value === "string" && value.trim().length >= 2, `${id}.${key} is empty`);
       assert.ok(value.length <= 400, `${id}.${key} is longer than 400 characters`);
       const sentences = value.split(/(?<=[.!?])\s+(?=[A-Z0-9"'])/).filter(Boolean).length;
-      assert.ok(sentences <= 3, `${id}.${key} has ${sentences} sentences (1 to 3)`);
+      assert.ok(sentences <= (key === "where" ? 4 : 3), `${id}.${key} has ${sentences} sentences`);
       assert.doesNotMatch(value, /TODO|lorem|\?\?\?/i, `${id}.${key}`);
     }
+    if (/\bDefaults?:/.test(text.range)) gaps.push(`${id}: the default has its own part`);
+    if (!/rider|driver|admin|support|everyone|people|user/i.test(text.where)) gaps.push(`${id}: who it affects (riders, drivers or admins)`);
+    if (!/:|;|no extremes/.test(text.extremes)) gaps.push(`${id}: the extremes name each end`);
   }
+  assert.deepEqual(gaps, []);
+  console.log(`setting info texts: ${entries.length}, each with ${SETTING_INFO_PARTS.length} parts`);
+});
+
+/** A generated sample: the default in the "i" text must be the code default (owner 2026-11-16 "Add info details in i"). */
+const fmt = (value: number) => (Math.abs(value) >= 1000 ? value.toLocaleString("en-US").replace(/,/g, " ") : String(value));
+function defaultSample(): [id: string, value: number | boolean | string][] {
+  const se = defaultCountrySettings("SE");
+  const zone = defaultZone({ id: "sample", kind: "operating" });
+  const movera = defaultCategoryPrice("movera", "SE");
+  const rows: [string, number | boolean | string][] = [
+    ...CALL_FIELDS.map((field) => [`tips.calls.${field.key}`, CALL_DEFAULTS[field.key as keyof typeof CALL_DEFAULTS]] as [string, number | boolean]),
+    ...CHAT_FIELDS.filter((field) => typeof CHAT_DEFAULTS[field.key as keyof typeof CHAT_DEFAULTS] !== "object").map((field) => [`tips.chat.${field.key}`, CHAT_DEFAULTS[field.key as keyof typeof CHAT_DEFAULTS]] as [string, number | boolean | string]),
+    ...REQUEST_LIMIT_FIELDS.map((field) => [`settings.requestLimits.${field}`, REQUEST_LIMIT_DEFAULTS[field]] as [string, number]),
+    ["tips.cashInCarMinutes", se.tipRules.cashInCarMinutes],
+    ["tips.cashAfterTrip", se.tipRules.cashAfterTrip],
+    ["tips.customAmount", se.tipRules.customAmount],
+    ["tips.onTripMinDonePct", se.onTripMinDonePct],
+    ["tips.chainLateFreeCancelMin", se.chainLateFreeCancelMin],
+    ["tips.savedPlacesPerPerson", se.personLimits.savedPlacesPerPerson],
+    ["tips.emergencyContactsPerPerson", se.personLimits.emergencyContactsPerPerson],
+    ["tips.sosContactsSms", se.sosContactsSms],
+    ["tips.driverBonusLimit", se.driverBonusLimit],
+    ["tips.walletCreditMax", se.walletCreditMax],
+    ["tips.bonusCampaignMax", se.bonusCampaignMax],
+    ["settings.walletFirst", se.walletFirst],
+    ["dispatch.zone.useRadarWhenBusy", zone.choose.radarAbove],
+    ["dispatch.zone.farReach", zone.limits.farReachKm],
+    ["dispatch.offer.timeOnTheRadar", zone.radar.seconds],
+    ["dispatch.offer.timeToAccept", zone.exclusive.seconds],
+    ["dispatch.offer.driversToTry", zone.exclusive.drivers],
+    ["dispatch.offer.afterOffersNotAcceptedInA", zone.autoOffline.after],
+    ["dispatch.offer.hiddenWithComesBackAfter", zone.hiddenComesBackMin],
+    ["dispatch.offer.fullScreenRadar", zone.radarApp.full],
+    ["dispatch.res.startLookingForADriver", zone.reservation.searchBeforeMin],
+    ["dispatch.res.timeToAccept", zone.reservation.assignAcceptSec],
+    ["dispatch.res.aDriverSLateCancel", zone.reservation.driverLateCancelHours],
+    ["dispatch.zone.pickupEntranceChipsApproximate", CONFIG_DEFAULTS.pickupSpotsOn],
+    ["pricing.price.base", movera.base],
+    ["pricing.price.perKm", movera.perKm],
+    ["pricing.price.perMin", movera.perMin],
+    ["pricing.price.freeWaitMin", movera.freeWaitMin],
+    ["pricing.price.noShowFee", movera.noShowFee],
+    ["pricing.price.appFeePct", movera.appFeePct],
+  ];
+  return rows;
+}
+
+test("defaults in the texts equal the code defaults (a generated sample)", () => {
+  const sample = defaultSample();
+  assert.ok(sample.length >= 20, `sample of ${sample.length}`);
+  const wrong: string[] = [];
+  for (const [id, value] of sample) {
+    const text = SETTING_INFO[id]?.default;
+    assert.ok(text, `${id} has a default part`);
+    const ok =
+      typeof value === "boolean"
+        ? new RegExp(`^${value ? "On" : "Off"}\\b`).test(text)
+        : typeof value === "number"
+          ? new RegExp(`(^|[^\\d.])${fmt(value).replace(".", "\\.")}(?![\\d])`).test(text)
+          : text.toLowerCase().includes(value.replace(/_/g, " ").toLowerCase()) || text.toLowerCase().includes(value.toLowerCase());
+    if (!ok) wrong.push(`${id}: code ${JSON.stringify(value)}, text "${text}"`);
+  }
+  assert.deepEqual(wrong, []);
+  console.log(`setting info defaults checked against the code: ${sample.length}`);
 });
 
 test("English completeness: no text is left without a field that uses it", () => {
