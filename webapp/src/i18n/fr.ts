@@ -58,6 +58,7 @@ import { frC23PayoutRunGuard } from "./fr/c23-payout-run-guard.ts";
 import { frC27StopAutoArrive } from "./fr/c27-stop-auto-arrive.ts";
 import { frC24FleetCountry } from "./fr/c24-fleet-country.ts";
 import { frC28OfflineReasons } from "./fr/c28-offline-reasons.ts";
+import { frC19DebtModel } from "./fr/c19-debt-model.ts";
 import { frC25BonusCampaigns } from "./fr/c25-bonus-campaigns.ts";
 import { frC29SupportOrder } from "./fr/c29-support-order.ts";
 import { frC33TipsLimitsUndo } from "./fr/c33-tips-limits-undo.ts";
@@ -129,6 +130,7 @@ export const fr: Record<MessageKey, string> = {
   ...frC27StopAutoArrive,
   ...frC24FleetCountry,
   ...frC28OfflineReasons,
+  ...frC19DebtModel,
   ...frC25BonusCampaigns,
   ...frC29SupportOrder,
   ...frC33TipsLimitsUndo,

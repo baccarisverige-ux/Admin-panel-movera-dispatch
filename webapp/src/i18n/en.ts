@@ -57,6 +57,7 @@ import { enC23PayoutRunGuard } from "./en/c23-payout-run-guard.ts";
 import { enC27StopAutoArrive } from "./en/c27-stop-auto-arrive.ts";
 import { enC24FleetCountry } from "./en/c24-fleet-country.ts";
 import { enC28OfflineReasons } from "./en/c28-offline-reasons.ts";
+import { enC19DebtModel } from "./en/c19-debt-model.ts";
 import { enC25BonusCampaigns } from "./en/c25-bonus-campaigns.ts";
 import { enC29SupportOrder } from "./en/c29-support-order.ts";
 import { enC33TipsLimitsUndo } from "./en/c33-tips-limits-undo.ts";
@@ -128,6 +129,7 @@ export const en = {
   ...enC27StopAutoArrive,
   ...enC24FleetCountry,
   ...enC28OfflineReasons,
+  ...enC19DebtModel,
   ...enC25BonusCampaigns,
   ...enC29SupportOrder,
   ...enC33TipsLimitsUndo,

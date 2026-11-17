@@ -71,6 +71,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.vehicleDocuments", label: "Show vehicle documents", reason: false, permission: "drivers.read" },
   // v0.18.5 (owner G1-B2): Content › Legal per country, published on the server (POST /admin/legal/{country}/publish).
   { id: "admin.server.legalPublish", label: "Publish terms and privacy", reason: false, permission: "settings.publish" },
+  // S5 J9 (v0.18.84 debtModel.driverOwes.paidMovera): Drivers › Owe Movera › "Driver paid Movera" (reason, audited by the server).
+  { id: "admin.server.driverPaidMovera", label: "Driver paid Movera", reason: false, permission: "finance.edit" },
   // v0.18.5 (owner G9): the trip's chat in the trip details (GET /trips/{tripId}/messages, support.reply).
   { id: "admin.server.tripChat", label: "Show the trip chat", reason: false, permission: "trips.read" },
   // BASE B13 (contract v0.18.26 §47): a safety case shows the driver's emergency contacts (read-only, audited by the server).
