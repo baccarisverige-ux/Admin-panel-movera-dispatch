@@ -12,6 +12,7 @@ import { SurgeCurve } from "./SurgeCurve";
 import { DURATION_CHIPS, curvePreset, minutesUntil, type CurvePoint } from "./surgeCurve";
 import { sliderColor, type ZoneSurge } from "./surge";
 import { HIGH_SURGE, SLICE_KEY, SLIDER_MAX, emptyPricingStore, normalizeStore, startManualSurge, stopManualSurges, zoneLive } from "./zonePricing";
+import { SettingInfo } from "../ui/SettingInfo";
 
 const SOURCE_LABEL: Record<ZoneSurge["source"], string> = { manual: "Manual", scheduled: "Scheduled", smart: "Smart", off: "No surge" };
 const round1 = (value: number) => Math.round(value * 10) / 10;
@@ -104,8 +105,8 @@ export function SurgeQuickPopup({ zone, timeZone, fullLink, onClose, onNotice }:
               ))}
             </div>
             <div className="mq-time-row">
-              <label>{tr("Minutes")}<input type="number" min={5} max={720} step={5} value={mode === "minutes" || !Number.isFinite(minutes) ? custom : String(minutes)} aria-label={tr("Surge minutes")} onFocus={() => { if (mode !== "minutes" && Number.isFinite(minutes)) setCustom(String(minutes)); setMode("minutes"); }} onChange={(event) => { setMode("minutes"); setCustom(event.target.value); }} /></label>
-              <label>{tr("Until")}<input type="time" value={until} aria-label={tr("Surge ends at")} onFocus={() => setMode("until")} onChange={(event) => { setMode("until"); setUntil(event.target.value); }} /></label>
+              <label>{tr("Minutes")}<input type="number" min={5} max={720} step={5} value={mode === "minutes" || !Number.isFinite(minutes) ? custom : String(minutes)} aria-label={tr("Surge minutes")} onFocus={() => { if (mode !== "minutes" && Number.isFinite(minutes)) setCustom(String(minutes)); setMode("minutes"); }} onChange={(event) => { setMode("minutes"); setCustom(event.target.value); }} /><SettingInfo id="pricing.manualSurge.duration" label={tr("Surge minutes")} /></label>
+              <label>{tr("Until")}<input type="time" value={until} aria-label={tr("Surge ends at")} onFocus={() => setMode("until")} onChange={(event) => { setMode("until"); setUntil(event.target.value); }} /><SettingInfo id="pricing.manualSurge.duration" label={tr("Surge ends at")} /></label>
             </div>
             <small className="fine">{endsAt ? tr("Ends by itself at {0}, then back to normal.", [clock.format(endsAt)]) : tr("Pick how long it runs.")}</small>
           </fieldset>
@@ -118,6 +119,7 @@ export function SurgeQuickPopup({ zone, timeZone, fullLink, onClose, onNotice }:
           {high ? (
             <label className="mq-warn check-row">
               <AlertTriangle size={14} aria-hidden="true" />
+              {/* info-skip: confirms a high surge, not a setting */}
               <input type="checkbox" checked={keepHigh} onChange={(event) => setKeepHigh(event.target.checked)} />
               {tr("Keep a surge above ×{0}. Riders may find it too expensive.", [HIGH_SURGE])}
             </label>

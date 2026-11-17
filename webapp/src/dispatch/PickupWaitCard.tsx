@@ -38,9 +38,10 @@ function OverrideField({ rule, field, unit, label, disabled, onChange }: { rule:
   const name = WAIT_FIELDS.find((item) => item.id === field)!.label;
   return (
     <span className={value === null ? "dx-override" : "dx-override on"}>
+      {/* info-skip: one value of an extra waiting rule; the rule's i explains it */}
       <Check label={name} on={value !== null} disabled={disabled} onChange={(on) => onChange({ ...rule, [field]: on ? (field === "noShowAfterMin" ? 5 : field === "freeWaitMin" ? 2 : 0) : null })} />
       {value !== null
-        ? <Num label={`${label} ${name.toLowerCase()}`} value={value} unit={unit} step={field === "perMin" ? 0.01 : field === "noShowFee" ? 0.5 : 1} min={field === "noShowAfterMin" ? 1 : 0} max={field === "perMin" || field === "noShowFee" ? 1000 : 60} disabled={disabled} onChange={(next) => onChange({ ...rule, [field]: next })} />
+        ? /* info-skip: one value of an extra waiting rule; the rule's i explains it */ <Num label={`${label} ${name.toLowerCase()}`} value={value} unit={unit} step={field === "perMin" ? 0.01 : field === "noShowFee" ? 0.5 : 1} min={field === "noShowAfterMin" ? 1 : 0} max={field === "perMin" || field === "noShowFee" ? 1000 : 60} disabled={disabled} onChange={(next) => onChange({ ...rule, [field]: next })} />
         : <small>{tr("same")}</small>}
     </span>
   );
@@ -82,15 +83,15 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
         <Link className="dash-btn small ghost" to={`/pricing?country=${countryId}&zone=${zone.zoneId}`}>{tr("Change in Pricing")}</Link>
       </div>
       {/* v0.18.7 (G5 Q2, owner "admin can adjust"): the no-show fee for a cancel after arrival, per zone, default on. */}
-      <Row label={tr("Cancel after the driver arrived counts as a no-show")} help={tr("{0} Inside the free minutes after accept the rider always cancels free; before the free waiting at the pickup is over it is the normal cancel fee. Off: the normal cancel fee applies after arrival too.", [cancelAfterArrivedText()])} on={wait.cancelAfterArrivedIsNoShow} disabled={disabled} onToggle={(cancelAfterArrivedIsNoShow) => set({ cancelAfterArrivedIsNoShow })} />
+      <Row info="dispatch.wait.cancelAfterTheDriverArrivedCounts" label={tr("Cancel after the driver arrived counts as a no-show")} help={tr("{0} Inside the free minutes after accept the rider always cancels free; before the free waiting at the pickup is over it is the normal cancel fee. Off: the normal cancel fee applies after arrival too.", [cancelAfterArrivedText()])} on={wait.cancelAfterArrivedIsNoShow} disabled={disabled} onToggle={(cancelAfterArrivedIsNoShow) => set({ cancelAfterArrivedIsNoShow })} />
       {/* v0.18.93 (job C9, owner review Q3 "Both: auto + button", decisions/driver-g7.md:83-84): the server's own
           arrival and the waiting that stops while the driver is away, per zone (contract.json#autoArrive).
           v0.18.108 (job C9b, "At the pickup AND at stops"): the same two distances apply at middle stops (autoArrive.stops). */}
-      <Row label={tr("Auto arrived and waiting away")} help={tr("At the pickup and at stops: the server marks the driver arrived when he is this close; he can still tap Arrived. While he is farther than the second distance before the rider is in the car (pickup) or before the stop is done, the waiting time stops (nothing charged; at the pickup no free minutes used and no no-show) and goes on when he is back.")}>
+      <Row info="dispatch.wait.autoArrivedAndWaitingAway" label={tr("Auto arrived and waiting away")} help={tr("At the pickup and at stops: the server marks the driver arrived when he is this close; he can still tap Arrived. While he is farther than the second distance before the rider is in the car (pickup) or before the stop is done, the waiting time stops (nothing charged; at the pickup no free minutes used and no no-show) and goes on when he is back.")}>
         <span data-testid="wait-auto-arrive"><Num label={tr("Auto arrived within")} before={tr("arrived within")} value={wait.autoArriveMeters} unit="m" step={10} min={AUTO_ARRIVE_RANGE[0]} max={AUTO_ARRIVE_RANGE[1]} disabled={disabled} onChange={(autoArriveMeters) => set({ autoArriveMeters: Math.round(autoArriveMeters) })} /></span>
         <span data-testid="wait-leave"><Num label={tr("Waiting stops beyond")} before={tr("waiting stops beyond")} value={wait.leaveMeters} unit="m" step={10} min={LEAVE_RANGE[0]} max={LEAVE_RANGE[1]} disabled={disabled} onChange={(leaveMeters) => set({ leaveMeters: Math.round(leaveMeters) })} /></span>
       </Row>
-      <Row label={tr("Driver's share")} help={tr("The waiting money always goes {0}% to the driver. The no-show fee share is one rule for all of {1}. The no-show reason never counts in the cancel rate.", [WAITING_DRIVER_SHARE_PCT, countryName])}>
+      <Row info="dispatch.wait.driverSShare" label={tr("Driver's share")} help={tr("The waiting money always goes {0}% to the driver. The no-show fee share is one rule for all of {1}. The no-show reason never counts in the cancel rate.", [WAITING_DRIVER_SHARE_PCT, countryName])}>
         <span className="dx-override on" data-testid="wait-share-fixed"><small>{trn("waiting money {0}% (fixed)", WAITING_DRIVER_SHARE_PCT)}</small></span>
         <Num label={tr("Driver's share of the no-show fee")} before={tr("no-show, all of {0}", [countryName])} value={country.noShowDriverSharePct} unit="%" min={0} max={100} disabled={disabled} onChange={(noShowDriverSharePct) => onCountry({ ...country, noShowDriverSharePct: Math.round(noShowDriverSharePct) })} />
       </Row>
@@ -98,12 +99,12 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
       <div className="dx-sub" role="group" aria-label={tr("Far pickups")}>
         <span className="dx-sub-head">
           <b>{tr("By pickup distance")}</b>
-          <Switch label={tr("Rule for far pickups")} on={wait.farPickupOn} disabled={disabled} onChange={(farPickupOn) => set({ farPickupOn })} />
+          <Switch info="dispatch.wait.farPickup" label={tr("Rule for far pickups")} on={wait.farPickupOn} disabled={disabled} onChange={(farPickupOn) => set({ farPickupOn })} />
         </span>
         <small>{tr("The driver drove far to get the rider: for example a shorter free wait and a higher no-show fee.")}</small>
         {wait.farPickupOn ? (
           <>
-            <span className="dx-resv-pick"><Num label={tr("Far pickup from")} before="pickup over" value={wait.farPickupKm} unit="km" step={0.5} min={0.5} max={50} disabled={disabled} onChange={(farPickupKm) => set({ farPickupKm })} /></span>
+            <span className="dx-resv-pick">{/* info-at: dispatch.wait.farPickup */}<Num label={tr("Far pickup from")} before="pickup over" value={wait.farPickupKm} unit="km" step={0.5} min={0.5} max={50} disabled={disabled} onChange={(farPickupKm) => set({ farPickupKm })} /></span>
             {fields(wait.farPickup, "Far pickup", (farPickup) => set({ farPickup }))}
           </>
         ) : null}
@@ -121,7 +122,7 @@ export function PickupWaitCard({ zone, onChange, disabled, symbol, money, countr
                 <span className="dx-type-name">
                   <b>{trx(type.label)}</b>
                   <small>{trx(type.help)}</small>
-                  <Switch label={tr("{0} rule", [trx(type.label)])} on={rule.on} disabled={disabled} onChange={(on) => setRule({ on })} />
+                  <Switch info={`dispatch.wait.rideType.${type.id}`} label={tr("{0} rule", [trx(type.label)])} on={rule.on} disabled={disabled} onChange={(on) => setRule({ on })} />
                 </span>
                 {rule.on ? (
                   <span className="dx-type-values">

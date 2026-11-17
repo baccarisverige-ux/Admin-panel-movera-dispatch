@@ -10,6 +10,7 @@ import {
   type CancelFeeKind, type CancelFeeRow, type CancelFeeTable, type CancelFeeType, type FeeCategory,
 } from "./cancelFees";
 import { tr, trn, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 const FEE_TYPES: { id: CancelFeeType; label: string }[] = [
   { id: "fixed", get label() { return tr("Fixed"); } },
@@ -31,6 +32,7 @@ function OptionalMoney({ label, value, unit, disabled, onChange }: { label: stri
   return (
     <span className="dx-num" style={{ "--u": unit.length } as CSSProperties}>
       <span className={invalid ? "num-field invalid" : "num-field"}>
+        {/* info-skip: the box itself; the table column's i explains it */}
         <input
           type="text"
           inputMode="decimal"
@@ -93,7 +95,7 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
     <div className="dx-fees" role="group" aria-label={tr("{0} cancel fees", [words.name])}>
       <table className="dx-fee-table" aria-label={tr("{0} cancel fees per car type", [words.name])}>
         <thead>
-          <tr><th scope="col">{tr("Car type")}</th><th scope="col">{words.free}</th><th scope="col">{tr("Fee type")}</th><th scope="col">{tr("Fee")}</th><th scope="col">{tr("Min")}</th><th scope="col">{tr("Max")}</th></tr>
+          <tr><th scope="col">{tr("Car type")}</th><th scope="col">{words.free}<SettingInfo id={`dispatch.cancelFee.free.${kind}`} label={`${words.name}: ${words.free}`} /></th><th scope="col">{tr("Fee type")}<SettingInfo id="dispatch.cancelFee.type" label={tr("Fee type")} /></th><th scope="col">{tr("Fee")}<SettingInfo id="dispatch.cancelFee.value" label={tr("Fee")} /></th><th scope="col">{tr("Min")}<SettingInfo id="dispatch.cancelFee.min" label={tr("Min")} /></th><th scope="col">{tr("Max")}<SettingInfo id="dispatch.cancelFee.max" label={tr("Max")} /></th></tr>
         </thead>
         <tbody>
           {categories.map(({ id, label }) => {
@@ -104,16 +106,19 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
               <tr key={id}>
                 <th scope="row">{trx(label)}</th>
                 <td data-label={words.free}>
+                  {/* info-at: dispatch.cancelFee.free.* */}
                   <Num label={tr("{0} free cancel minutes", [name])} value={row.freeMin} unit={words.unit} min={0} max={words.max} disabled={disabled} onChange={(freeMin) => setRow(id, { freeMin: kind === "reservation" ? Math.round(freeMin) : freeMin })} />
                 </td>
                 <td data-label="Fee type">
+                  {/* info-at: dispatch.cancelFee.type */}
                   <Choice label={tr("{0} fee type", [name])} value={row.type} options={FEE_TYPES} disabled={disabled} onChange={(type) => setType(id, type)} />
                 </td>
                 <td data-label="Fee">
+                  {/* info-at: dispatch.cancelFee.value */}
                   <Num label={tr("{0} fee", [name])} value={row.value} unit={percent ? "%" : symbol} step={percent ? 1 : 0.5} min={0} max={percent ? CANCEL_FEE_LIMITS.pctMax : CANCEL_FEE_LIMITS.fixedMax} disabled={disabled} onChange={(value) => setRow(id, { value })} />
                 </td>
-                <td data-label="Min" className={percent ? undefined : "dx-fee-na"}>{percent ? <OptionalMoney label={tr("{0} lowest fee", [name])} value={row.min} unit={symbol} disabled={disabled} onChange={(min) => setRow(id, { min })} /> : <span className="dx-fee-none" aria-label={tr("No min for a fixed fee")}>—</span>}</td>
-                <td data-label="Max" className={percent ? undefined : "dx-fee-na"}>{percent ? <OptionalMoney label={tr("{0} highest fee", [name])} value={row.max} unit={symbol} disabled={disabled} onChange={(max) => setRow(id, { max })} /> : <span className="dx-fee-none" aria-label={tr("No max for a fixed fee")}>—</span>}</td>
+                <td data-label="Min" className={percent ? undefined : "dx-fee-na"}>{/* info-at: dispatch.cancelFee.min */}{percent ? <OptionalMoney label={tr("{0} lowest fee", [name])} value={row.min} unit={symbol} disabled={disabled} onChange={(min) => setRow(id, { min })} /> : <span className="dx-fee-none" aria-label={tr("No min for a fixed fee")}>—</span>}</td>
+                <td data-label="Max" className={percent ? undefined : "dx-fee-na"}>{/* info-at: dispatch.cancelFee.max */}{percent ? <OptionalMoney label={tr("{0} highest fee", [name])} value={row.max} unit={symbol} disabled={disabled} onChange={(max) => setRow(id, { max })} /> : <span className="dx-fee-none" aria-label={tr("No max for a fixed fee")}>—</span>}</td>
               </tr>
             );
           })}
@@ -133,9 +138,9 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
         </div>
       ) : null}
       <div className="dx-fee-sees" aria-label={tr("{0}: rider sees", [words.name])}>
-        <span className="dx-fee-sample">{trn("{0} Rider sees{1}{2}{3}", <Eye size={13} aria-hidden="true" />, <select className="dx-select" aria-label={tr("{0} preview car type", [words.name])} value={sample} onChange={(event) => setSample(event.target.value)}>
+        <span className="dx-fee-sample">{trn("{0} Rider sees{1}{2}{3}", <Eye size={13} aria-hidden="true" />, /* info-skip: preview input, not a setting */ <select className="dx-select" aria-label={tr("{0} preview car type", [words.name])} value={sample} onChange={(event) => setSample(event.target.value)}>
             {categories.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
-          </select>, <Num label={tr("{0} preview trip price", [words.name])} before="trip" value={fare} unit={symbol} step={1} min={0} max={100000} onChange={setFare} />, kind === "reservation" ? <small>{tr("pickup 14:00")}</small> : null)}</span>
+          </select>, /* info-skip: preview input, not a setting */ <Num label={tr("{0} preview trip price", [words.name])} before="trip" value={fare} unit={symbol} step={1} min={0} max={100000} onChange={setFare} />, kind === "reservation" ? <small>{tr("pickup 14:00")}</small> : null)}</span>
         <p role="status"><span className="sr-only">{sampleLabel}: </span><b>{trx(seen.line)}</b>{seen.detail ? <> {trx(seen.detail)}</> : null}</p>
       </div>
       <Modal open={copyOpen} title={tr("Copy {0} cancel fees", [words.name.toLowerCase()])} onClose={() => setCopyOpen(false)}>
@@ -143,7 +148,7 @@ export function CancelFeeTable({ kind, table, onChange, disabled, symbol, money,
         <div className="zn-chips">
           {otherZones.map((zone) => (
             <label key={zone.id} className={ids.includes(zone.id) ? "check-chip on" : "check-chip"}>
-              <input type="checkbox" checked={ids.includes(zone.id)} onChange={() => setIds(ids.includes(zone.id) ? ids.filter((item) => item !== zone.id) : [...ids, zone.id])} />{zone.name}
+              {/* info-skip: picks zones to copy to, not a setting */}<input type="checkbox" checked={ids.includes(zone.id)} onChange={() => setIds(ids.includes(zone.id) ? ids.filter((item) => item !== zone.id) : [...ids, zone.id])} />{zone.name}
             </label>
           ))}
         </div>

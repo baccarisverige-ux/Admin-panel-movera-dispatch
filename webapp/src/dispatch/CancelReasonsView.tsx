@@ -5,6 +5,7 @@ import { Card, Choice } from "./fields";
 import { CANCEL_GROUPS, CANCEL_SUBTITLE_MAX, CANCEL_TITLE_MAX, cancelReasonIssues, LANGS, type CancelGroupId, type CancelReason, type CancelReasonBook, type LangId } from "./offers";
 import type { CountryDispatch } from "./rules";
 import { tr, trn, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = {
   market: Market;
@@ -26,7 +27,9 @@ export function CancelReasonsView({ market, country, onCountry, canEdit }: Props
   const row = (item: CancelReason, onItem: (next: CancelReason) => void, subtitles: boolean, tools: ReactNode, fixedLabel?: string) => (
     <li key={item.code} className="dx-reason">
       <span className="dx-reason-texts">
+        {/* info-at: dispatch.reasons.text */}
         <input className={lang === "en" && !item.title.en?.trim() ? "dx-text invalid" : "dx-text"} dir={rtl ? "rtl" : undefined} aria-label={tr("Reason text {0}", [item.code])} value={item.title[lang] ?? ""} placeholder={lang === "en" ? tr("Short reason") : item.title.en ?? ""} maxLength={CANCEL_TITLE_MAX + 20} disabled={disabled} onChange={(event) => onItem({ ...item, title: { ...item.title, [lang]: event.target.value } })} />
+        {/* info-at: dispatch.reasons.text */}
         {subtitles ? <input className="dx-text soft" dir={rtl ? "rtl" : undefined} aria-label={tr("Second line {0}", [item.code])} value={item.subtitle[lang] ?? ""} placeholder={lang === "en" ? tr("Second line (optional)") : item.subtitle.en ?? ""} maxLength={CANCEL_SUBTITLE_MAX + 20} disabled={disabled} onChange={(event) => onItem({ ...item, subtitle: { ...item.subtitle, [lang]: event.target.value } })} /> : null}
         <small><code>{item.code}</code>{fixedLabel ? ` · ${trx(fixedLabel)}` : ""}</small>
       </span>
@@ -41,9 +44,9 @@ export function CancelReasonsView({ market, country, onCountry, canEdit }: Props
       <section className="dash-card" aria-labelledby="dx-reasons-title">
         <div className="card-head">
           <h3 id="dx-reasons-title">{trn("{0} Cancel reasons in {1}", <ListX size={16} aria-hidden="true" />, trx(market.name))}</h3>
-          <span className="dx-lang"><Languages size={14} aria-hidden="true" /><Choice label={tr("Language")} value={lang} onChange={setLang} options={LANGS.map((item) => ({ id: item.id, label: item.label }))} /></span>
+          <span className="dx-lang"><Languages size={14} aria-hidden="true" />{/* info-skip: picks the language shown, not a setting */}<Choice label={tr("Language")} value={lang} onChange={setLang} options={LANGS.map((item) => ({ id: item.id, label: item.label }))} /></span>
         </div>
-        <p className="dx-modal-help">{tr("What drivers and riders choose from when they cancel. An empty language shows the English text.")}</p>
+        <p className="dx-modal-help">{tr("What drivers and riders choose from when they cancel. An empty language shows the English text.")}<SettingInfo id="dispatch.reasons.text" label={tr("Cancel reasons")} /></p>
         {issues.length ? <ul className="dx-issues" role="alert">{issues.map((line) => <li key={line}><AlertTriangle size={13} aria-hidden="true" /> {line}</li>)}</ul> : null}
         {!canEdit ? <p className="dx-readonly" role="status">{tr("You can view the reasons. Only Super admin and Operations can change them.")}</p> : null}
       </section>

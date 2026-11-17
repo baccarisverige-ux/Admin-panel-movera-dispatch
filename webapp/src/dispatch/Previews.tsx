@@ -175,7 +175,7 @@ export function ReservationTimelinePreview({ zone, groups = [] }: { zone: ZoneDi
       <b>{trn("{0} Step by step, if nobody takes it", <CalendarClock size={13} aria-hidden="true" />)}</b>
       <span className="dx-resv-pick">
         <small>{tr("Sample ride booked")}</small>
-        <Choice label={tr("Sample booking")} value={lead} onChange={setLead} options={SAMPLE_LEADS.map((item) => ({ id: item.id, label: item.label }))} />
+        {/* info-skip: preview input, not a setting */}<Choice label={tr("Sample booking")} value={lead} onChange={setLead} options={SAMPLE_LEADS.map((item) => ({ id: item.id, label: item.label }))} />
         <small>{tr("before pickup")}</small>
       </span>
       <ol className="dx-resv-flow" aria-label={tr("Reservation steps")}>

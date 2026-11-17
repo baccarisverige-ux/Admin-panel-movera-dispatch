@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { NumberField } from "./NumberField";
+import { SettingInfo } from "../ui/SettingInfo";
 import { PRICE_ROWS, rowApplies, currencySymbol, inputStep, money, priceMax, type CategoryDef, type CategoryPrice, type PriceField, type Problem, type ZoneBook } from "./zonePricing";
 import type { MarketId } from "../markets/markets";
 import { tr, trn, trx } from "../i18n";
@@ -40,6 +41,7 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
                 <th scope="col" key={category.id} className={enabled ? "cat-head" : "cat-head off"}>
                   <strong>{trx(category.label)}</strong>
                   <small>{trx(category.line)}</small>
+                  <SettingInfo id="pricing.categoryOn" label={tr("{0} available in {1}", [trx(category.label), zoneName])} />
                   <label className="mini-switch">
                     <input type="checkbox" aria-label={tr("{0} available in {1}", [trx(category.label), zoneName])} checked={enabled} disabled={!canEdit} onChange={(event) => onChange(category.id, { enabled: event.target.checked })} />
                     <span aria-hidden="true"><i /></span>
@@ -69,7 +71,7 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
               {PRICE_ROWS.filter((row) => row.group === group).map((row) => (
                 <tr key={row.field}>
                   <th scope="row">
-                    <span>{trx(row.label)}</span>
+                    <span>{trx(row.label)}<SettingInfo id={`pricing.price.${row.field}`} label={trx(row.label)} /></span>
                     {row.hint ? <small>{trx(row.hint)}</small> : null}
                   </th>
                   {categories.map((category) => {
@@ -82,6 +84,7 @@ export function PriceTable({ zoneName, currency, categories, book, published, pr
                     const changed = before ? before[field] !== price[field] : false;
                     return (
                       <td key={category.id} className={price.enabled ? undefined : "off"}>
+                        {/* info-at: pricing.price.* (the row header's "i") */}
                         <NumberField
                           label={`${zoneName} ${category.label} ${row.label}`}
                           value={price[field]}

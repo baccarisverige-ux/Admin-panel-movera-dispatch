@@ -43,6 +43,7 @@ import {
   type ZoneLive,
 } from "./zonePricing";
 import { tr, trn, uiLocale, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = {
   market: Market;
@@ -171,10 +172,10 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
             </div>
           ) : (
             <>
-              <SurgeSlider label={tr("Manual surge")} value={manual} onChange={setManual} disabled={!canEdit} />
+              <SurgeSlider info="pricing.manualSurge.level" label={tr("Manual surge")} value={manual} onChange={setManual} disabled={!canEdit} />
               <label className="field inline">{trn("Runs for{0}", <select aria-label={tr("Manual surge duration")} value={minutes} disabled={!canEdit} onChange={(event) => setMinutes(Number(event.target.value))}>
                   {DURATIONS.map((value) => <option key={value} value={value}>{value < 60 ? tr("{0} min", [value]) : tr("{0} h", [value / 60])}</option>)}
-                </select>)}</label>
+                </select>)}<SettingInfo id="pricing.manualSurge.duration" label={tr("Manual surge duration")} /></label>
               <CommandButton command="admin.pricing.startSurge" className="dash-btn surge-go" targetId={zoneId} confirmTarget={false} scope={zoneId} before="no manual surge" after={`×${manual.toFixed(1)} for ${minutes} min`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={start.store} disabled={!canEdit || manual <= 1 || Boolean(start.error)} title={manual <= 1 ? tr("Move the slider above ×1.0") : start.error} onDone={() => onNotice(tr("Manual surge ×{0} started in {1} for {2}.", [manual.toFixed(1), zoneName, minutes < 60 ? `${minutes} min` : `${minutes / 60} h`]))}>{trn("{0} Start surge ×{1}", <Zap size={14} aria-hidden="true" />, manual.toFixed(1))}</CommandButton>
               <small className="fine">{tr("It stops by itself at the end. Manual surge wins over smart and scheduled surge.")}</small>
             </>
@@ -249,19 +250,19 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
         <div className="card-head">
           <h3 id="smart-title">{trn("{0} Smart surge · {1}", <Cpu size={16} aria-hidden="true" />, zoneName)}</h3>
           <label className="mini-switch big">
-            <input type="checkbox" aria-label={tr("Smart surge on")} checked={book.smart.enabled} disabled={!canEdit} onChange={(event) => onSmart({ enabled: event.target.checked })} />
+            <input type="checkbox" aria-label={tr("Smart surge on")} checked={book.smart.enabled} disabled={!canEdit} onChange={(event) => onSmart({ enabled: event.target.checked })} /><SettingInfo id="pricing.smart.on" label={tr("Smart surge on")} />
             <span aria-hidden="true"><i /></span>
             {book.smart.enabled ? tr("On") : tr("Off")}
           </label>
         </div>
         <p className="smart-explain">{trn("Every {0} min smart surge compares {1} with {2} (online and not on a trip). Many drivers and few requests means no surge. It starts only when a level holds for {3} min, goes down one step at a time, waits {4} min between changes, and stops by itself when the level stays low for {5} min.", book.smart.checkEveryMin, <b>{tr("ride requests")}</b>, <b>{tr("free online drivers")}</b>, book.smart.holdMin, book.smart.cooldownMin, book.smart.stopAfterMin)}</p>
         <div className={bad.has("smart.active") || bad.has("smart.checkEveryMin") ? "timing-grid invalid" : "timing-grid"}>
-          <label className="field">{trn("Active from{0}", <input type="time" aria-label={tr("Smart surge active from")} value={book.smart.activeFrom} disabled={!canEdit} onChange={(event) => onSmart({ activeFrom: event.target.value })} />)}</label>
-          <label className="field">{trn("Active until{0}", <input type="time" aria-label={tr("Smart surge active until")} value={book.smart.activeTo} disabled={!canEdit} onChange={(event) => onSmart({ activeTo: event.target.value })} />)}</label>
-          <label className="field">{trn("Check every{0}", <NumberField label={tr("Check every")} value={book.smart.checkEveryMin} unit="min" max={15} disabled={!canEdit} onChange={(value) => onSmart({ checkEveryMin: value })} />)}</label>
-          <label className="field">{trn("Start only if it holds{0}", <NumberField label={tr("Start only if it holds")} value={book.smart.holdMin} unit="min" max={30} disabled={!canEdit} onChange={(value) => onSmart({ holdMin: value })} />)}</label>
-          <label className="field">{trn("Stop after low for{0}", <NumberField label={tr("Stop after low for")} value={book.smart.stopAfterMin} unit="min" max={60} disabled={!canEdit} onChange={(value) => onSmart({ stopAfterMin: value })} />)}</label>
-          <label className="field">{trn("Wait between changes{0}", <NumberField label={tr("Wait between changes")} value={book.smart.cooldownMin} unit="min" max={30} disabled={!canEdit} onChange={(value) => onSmart({ cooldownMin: value })} />)}</label>
+          <label className="field">{trn("Active from{0}", <input type="time" aria-label={tr("Smart surge active from")} value={book.smart.activeFrom} disabled={!canEdit} onChange={(event) => onSmart({ activeFrom: event.target.value })} />)}<SettingInfo id="pricing.smart.active" label={tr("Smart surge active from")} /></label>
+          <label className="field">{trn("Active until{0}", <input type="time" aria-label={tr("Smart surge active until")} value={book.smart.activeTo} disabled={!canEdit} onChange={(event) => onSmart({ activeTo: event.target.value })} />)}<SettingInfo id="pricing.smart.active" label={tr("Smart surge active until")} /></label>
+          <label className="field">{trn("Check every{0}", <NumberField info="pricing.smart.checkEvery" label={tr("Check every")} value={book.smart.checkEveryMin} unit="min" max={15} disabled={!canEdit} onChange={(value) => onSmart({ checkEveryMin: value })} />)}</label>
+          <label className="field">{trn("Start only if it holds{0}", <NumberField info="pricing.smart.hold" label={tr("Start only if it holds")} value={book.smart.holdMin} unit="min" max={30} disabled={!canEdit} onChange={(value) => onSmart({ holdMin: value })} />)}</label>
+          <label className="field">{trn("Stop after low for{0}", <NumberField info="pricing.smart.stopAfter" label={tr("Stop after low for")} value={book.smart.stopAfterMin} unit="min" max={60} disabled={!canEdit} onChange={(value) => onSmart({ stopAfterMin: value })} />)}</label>
+          <label className="field">{trn("Wait between changes{0}", <NumberField info="pricing.smart.cooldown" label={tr("Wait between changes")} value={book.smart.cooldownMin} unit="min" max={30} disabled={!canEdit} onChange={(value) => onSmart({ cooldownMin: value })} />)}</label>
         </div>
         <small className="fine">{trn("{0} {1} The first matching profile from the top wins; Normal is used the rest of the time.", book.smart.activeFrom === book.smart.activeTo ? tr("Active all day.") : tr("Active {0}–{1}.", [book.smart.activeFrom, book.smart.activeTo]), hoursOn ? "" : tr("Outside active hours now."))}</small>
 
@@ -272,7 +273,7 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
             return (
               <article key={profile.id} className={["profile-card", isNow ? "now" : "", invalid ? "invalid" : ""].filter(Boolean).join(" ")} aria-label={tr("Time profile {0}", [profile.name])}>
                 <div className="profile-head">
-                  <input className="profile-name" aria-label={tr("Profile name")} value={profile.name} disabled={!canEdit} onChange={(event) => patchProfile(profile.id, { name: event.target.value })} />
+                  <input className="profile-name" aria-label={tr("Profile name")} value={profile.name} disabled={!canEdit} onChange={(event) => patchProfile(profile.id, { name: event.target.value })} /><SettingInfo id="pricing.smart.profileName" label={tr("Profile name")} />
                   {isNow ? <span className="badge-live">{tr("Active now")}</span> : null}
                   {profile.isDefault ? <span className="badge-soft">{tr("Fallback")}</span> : (
                     <span className="profile-tools">
@@ -285,19 +286,24 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
                 {profile.isDefault ? <p className="fine">{tr("Used whenever no other profile matches.")}</p> : (
                   <>
                     <div className="day-chips" role="group" aria-label={tr("{0} days", [profile.name])}>
+                      <SettingInfo id="pricing.smart.profileDays" label={tr("{0} days", [profile.name])} />
                       {WEEKDAY_LABELS.map((day, dayIndex) => (
                         <label key={day} className={profile.days.includes(dayIndex) ? "day on" : "day"}>
+                          {/* info-at: pricing.smart.profileDays */}
                           <input type="checkbox" aria-label={`${profile.name} ${day}`} checked={profile.days.includes(dayIndex)} disabled={!canEdit} onChange={(event) => patchProfile(profile.id, { days: event.target.checked ? [...profile.days, dayIndex].sort() : profile.days.filter((item) => item !== dayIndex) })} />
                           {day}
                         </label>
                       ))}
                     </div>
                     <div className="window-list">
+                      <SettingInfo id="pricing.smart.profileWindow" label={tr("Time profile {0}", [profile.name])} />
                       {profile.windows.map((window, windowIndex) => (
                         <span key={windowIndex} className="window">
                           <Clock size={13} aria-hidden="true" />
+                          {/* info-at: pricing.smart.profileWindow */}
                           <input type="time" aria-label={tr("{0} from", [profile.name])} value={window.from} disabled={!canEdit} onChange={(event) => patchProfile(profile.id, { windows: profile.windows.map((item, i) => (i === windowIndex ? { ...item, from: event.target.value } : item)) })} />
                           –
+                          {/* info-at: pricing.smart.profileWindow */}
                           <input type="time" aria-label={tr("{0} to", [profile.name])} value={window.to} disabled={!canEdit} onChange={(event) => patchProfile(profile.id, { windows: profile.windows.map((item, i) => (i === windowIndex ? { ...item, to: event.target.value } : item)) })} />
                           {profile.windows.length > 1 ? <button data-command="admin.pricing.edit" type="button" className="icon-ghost" aria-label={tr("Remove time window")} disabled={!canEdit} onClick={() => patchProfile(profile.id, { windows: profile.windows.filter((_, i) => i !== windowIndex) })}><Trash2 size={12} aria-hidden="true" /></button> : null}
                         </span>
@@ -310,8 +316,8 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
                   {profile.steps.map((step, stepIndex) => (
                     <div key={stepIndex} className="step-row">
                       <span className="step-when">{tr("When requests per free driver reach")}</span>
-                      <NumberField label={tr("{0} step {1} level", [profile.name, stepIndex + 1])} value={step.ratio} step={0.1} max={20} disabled={!canEdit} onChange={(value) => patchProfile(profile.id, { steps: profile.steps.map((item, i) => (i === stepIndex ? { ...item, ratio: value } : item)) })} />
-                      <SurgeSlider compact label={tr("{0} step {1} surge", [profile.name, stepIndex + 1])} value={step.multiplier} disabled={!canEdit} onChange={(value) => patchProfile(profile.id, { steps: profile.steps.map((item, i) => (i === stepIndex ? { ...item, multiplier: value } : item)) })} />
+                      <NumberField info="pricing.smart.stepLevel" label={tr("{0} step {1} level", [profile.name, stepIndex + 1])} value={step.ratio} step={0.1} max={20} disabled={!canEdit} onChange={(value) => patchProfile(profile.id, { steps: profile.steps.map((item, i) => (i === stepIndex ? { ...item, ratio: value } : item)) })} />
+                      <SurgeSlider info="pricing.smart.stepSurge" compact label={tr("{0} step {1} surge", [profile.name, stepIndex + 1])} value={step.multiplier} disabled={!canEdit} onChange={(value) => patchProfile(profile.id, { steps: profile.steps.map((item, i) => (i === stepIndex ? { ...item, multiplier: value } : item)) })} />
                       {profile.steps.length > 1 ? <button data-command="admin.pricing.edit" type="button" className="icon-ghost" aria-label={tr("Remove {0} step {1}", [profile.name, stepIndex + 1])} disabled={!canEdit} onClick={() => patchProfile(profile.id, { steps: profile.steps.filter((_, i) => i !== stepIndex) })}><Trash2 size={13} aria-hidden="true" /></button> : <span />}
                     </div>
                   ))}
@@ -322,7 +328,7 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
                     }}>{tr("+ step")}</button>
                   ) : null}
                 </div>
-                <SurgeSlider compact label={tr("{0} cap", [profile.name])} value={profile.cap} disabled={!canEdit} onChange={(value) => patchProfile(profile.id, { cap: value })} />
+                <SurgeSlider info="pricing.smart.cap" compact label={tr("{0} cap", [profile.name])} value={profile.cap} disabled={!canEdit} onChange={(value) => patchProfile(profile.id, { cap: value })} />
               </article>
             );
           })}
@@ -345,12 +351,12 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
             <ul className="scheduled-list" aria-label={tr("Scheduled surges")}>
               {book.scheduled.map((item) => (
                 <li key={item.id} className={bad.has(`scheduled.${item.id}`) ? "invalid" : undefined}>
-                  <input aria-label={tr("Scheduled surge name")} placeholder={tr("Name, e.g. Concert")} value={item.name} disabled={!canEdit} onChange={(event) => onScheduled(book.scheduled.map((row) => (row.id === item.id ? { ...row, name: event.target.value } : row)))} />
+                  <input aria-label={tr("Scheduled surge name")} placeholder={tr("Name, e.g. Concert")} value={item.name} disabled={!canEdit} onChange={(event) => onScheduled(book.scheduled.map((row) => (row.id === item.id ? { ...row, name: event.target.value } : row)))} /><SettingInfo id="pricing.scheduled.name" label={tr("Scheduled surge name")} />
                   <div className="sched-times">
-                    <input type="datetime-local" aria-label={tr("Scheduled surge start")} value={localInput(item.startsAt, market.timeZone)} disabled={!canEdit} onChange={(event) => onScheduled(book.scheduled.map((row) => (row.id === item.id ? { ...row, startsAt: fromLocalInput(event.target.value, market.timeZone) } : row)))} />
-                    <input type="datetime-local" aria-label={tr("Scheduled surge end")} value={localInput(item.endsAt, market.timeZone)} disabled={!canEdit} onChange={(event) => onScheduled(book.scheduled.map((row) => (row.id === item.id ? { ...row, endsAt: fromLocalInput(event.target.value, market.timeZone) } : row)))} />
+                    <input type="datetime-local" aria-label={tr("Scheduled surge start")} value={localInput(item.startsAt, market.timeZone)} disabled={!canEdit} onChange={(event) => onScheduled(book.scheduled.map((row) => (row.id === item.id ? { ...row, startsAt: fromLocalInput(event.target.value, market.timeZone) } : row)))} /><SettingInfo id="pricing.scheduled.times" label={tr("Scheduled surge start")} />
+                    <input type="datetime-local" aria-label={tr("Scheduled surge end")} value={localInput(item.endsAt, market.timeZone)} disabled={!canEdit} onChange={(event) => onScheduled(book.scheduled.map((row) => (row.id === item.id ? { ...row, endsAt: fromLocalInput(event.target.value, market.timeZone) } : row)))} /><SettingInfo id="pricing.scheduled.times" label={tr("Scheduled surge end")} />
                   </div>
-                  <SurgeSlider compact label={tr("{0} surge", [item.name || "Scheduled"])} value={item.multiplier} disabled={!canEdit} onChange={(value) => onScheduled(book.scheduled.map((row) => (row.id === item.id ? { ...row, multiplier: value } : row)))} />
+                  <SurgeSlider info="pricing.scheduled.level" compact label={tr("{0} surge", [item.name || "Scheduled"])} value={item.multiplier} disabled={!canEdit} onChange={(value) => onScheduled(book.scheduled.map((row) => (row.id === item.id ? { ...row, multiplier: value } : row)))} />
                   <button data-command="admin.pricing.edit" type="button" className="icon-ghost danger" aria-label={tr("Remove scheduled surge {0}", [item.name])} disabled={!canEdit} onClick={() => onScheduled(book.scheduled.filter((row) => row.id !== item.id))}><Trash2 size={14} aria-hidden="true" /></button>
                 </li>
               ))}

@@ -9,6 +9,7 @@ import { displayName } from "../zones/releases";
 import { circleRing, firstShapeFromFile, joinShapes, ringAreaKm, suggestedShape } from "../zones/studioTools";
 import type { BonusArea } from "./bonus";
 import { tr, trn, trx, trSentences } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Method = "place" | "copy" | "districts" | "file" | null;
 
@@ -77,7 +78,7 @@ export function BonusAreaMap({ country, areas, onChange, view }: { country: Mark
         <div className="zn-city-jump" role="group" aria-label={tr("City")}>
           {cities.map((item) => <button data-command="admin.drivers.bonusDraw" key={item.id} type="button" aria-pressed={item.id === city?.id} className={item.id === city?.id ? "zn-chip on" : "zn-chip"} onClick={() => pickCity(item.id)}>{item.name}</button>)}
         </div>
-        <label className={heat ? "db-heat on" : "db-heat"}>{trn("{0}{1} Where riders ask", <input type="checkbox" aria-label={tr("Show where riders ask for rides")} checked={heat} onChange={(event) => setHeat(event.target.checked)} />, <Flame size={14} aria-hidden="true" />)}</label>
+        <label className={heat ? "db-heat on" : "db-heat"}>{trn("{0}{1} Where riders ask", /* info-skip: map layer, not a setting */ <input type="checkbox" aria-label={tr("Show where riders ask for rides")} checked={heat} onChange={(event) => setHeat(event.target.checked)} />, <Flame size={14} aria-hidden="true" />)}</label>
       </div>
 
       <div className="db-methods" role="group" aria-label={tr("More ways to make an area")}>
@@ -95,11 +96,11 @@ export function BonusAreaMap({ country, areas, onChange, view }: { country: Mark
 
       {method === "place" && city ? (
         <div className="zn-option zn-row">
-          <label className="field">{trn("Place{0}", <select aria-label={tr("Bonus place")} value={place} onChange={(event) => setPlace(event.target.value)}>
+          <label className="field">{trn("Place{0}", /* info-skip: drawing helper that makes an area, not a setting */ <select aria-label={tr("Bonus place")} value={place} onChange={(event) => setPlace(event.target.value)}>
               <option value="">{tr("Pick a place")}</option>
               {PLACES.filter((item) => cities.some((entry) => entry.id === item.city)).map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
             </select>)}</label>
-          <label className="field">{trn("Distance around{0}", <NumberField label={tr("Bonus distance around")} value={km} unit="km" max={30} onChange={(value) => setKm(Math.max(0.2, value))} />)}</label>
+          <label className="field">{trn("Distance around{0}", /* info-skip: drawing helper that makes an area, not a setting */ <NumberField label={tr("Bonus distance around")} value={km} unit="km" max={30} onChange={(value) => setKm(Math.max(0.2, value))} />)}</label>
           <button data-command="admin.drivers.bonusDraw" type="button" className="dash-btn small" disabled={!place} onClick={() => {
             const hit = PLACES.find((item) => item.name === place);
             if (hit) add(circleRing(hit.lat, hit.lng, km), hit.name.split(",")[0] ?? hit.name);
@@ -108,7 +109,7 @@ export function BonusAreaMap({ country, areas, onChange, view }: { country: Mark
       ) : null}
       {method === "copy" ? (
         <div className="zn-option zn-row">
-          <label className="field">{trn("Zone{0}", <select aria-label={tr("Zone to copy for the bonus")} defaultValue="" onChange={(event) => {
+          <label className="field">{trn("Zone{0}", /* info-skip: drawing helper that makes an area, not a setting */ <select aria-label={tr("Zone to copy for the bonus")} defaultValue="" onChange={(event) => {
               const zone = zones.find((item) => item.id === event.target.value);
               if (zone) add(zone.points.map((item) => [...item] as [number, number]), displayName(zone));
               event.target.value = "";
@@ -123,7 +124,7 @@ export function BonusAreaMap({ country, areas, onChange, view }: { country: Mark
           <div className="zn-chips">
             {city.districts.map((item) => (
               <label key={item.id} className={picked.includes(item.id) ? "check-chip on" : "check-chip"}>
-                <input type="checkbox" checked={picked.includes(item.id)} onChange={() => setPicked(picked.includes(item.id) ? picked.filter((id) => id !== item.id) : [...picked, item.id])} />{item.name}
+                {/* info-skip: drawing helper that makes an area, not a setting */}<input type="checkbox" checked={picked.includes(item.id)} onChange={() => setPicked(picked.includes(item.id) ? picked.filter((id) => id !== item.id) : [...picked, item.id])} />{item.name}
               </label>
             ))}
           </div>
@@ -184,7 +185,7 @@ export function BonusAreaMap({ country, areas, onChange, view }: { country: Mark
         {areas.length === 0 ? <li className="db-area empty">{trn("{0} No area yet. Draw one on the map or use a way above.", <Crosshair size={14} aria-hidden="true" />)}</li> : areas.map((area, index) => (
           <li key={area.id} className="db-area">
             <i aria-hidden="true">{index + 1}</i>
-            <input aria-label={tr("Area {0} name", [index + 1])} value={area.name} onChange={(event) => onChange(areas.map((item) => (item.id === area.id ? { ...item, name: event.target.value } : item)))} />
+            <input aria-label={tr("Area {0} name", [index + 1])} value={area.name} onChange={(event) => onChange(areas.map((item) => (item.id === area.id ? { ...item, name: event.target.value } : item)))} /><SettingInfo id="bonus.areaName" label={tr("Area {0} name", [index + 1])} />
             <small>{trn("{0} km²", ringAreaKm(area.ring).toFixed(2))}</small>
             <button data-command="admin.drivers.bonusDraw" type="button" className="dash-btn small ghost" onClick={() => setFitTo([...area.ring])}>{tr("Show")}</button>
             <button data-command="admin.drivers.bonusDraw" type="button" className="icon-ghost" aria-label={tr("Remove {0}", [area.name])} onClick={() => onChange(areas.filter((item) => item.id !== area.id))}><Trash2 size={14} aria-hidden="true" /></button>

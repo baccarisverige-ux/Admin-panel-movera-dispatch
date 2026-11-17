@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { useFieldErrorReport } from "../ui/fieldErrors";
 import { numberInputError, parseNumberInput } from "./numberInput";
 import { trSentences, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = {
   value: number;
@@ -18,6 +19,8 @@ type Props = {
   className?: string;
   /** The input's id, so a deep link can focus exactly this box. */
   id?: string;
+  /** The id of this setting's text for the small "i" after the box (ui/SettingInfo.ts). */
+  info?: string;
 };
 
 /**
@@ -25,7 +28,7 @@ type Props = {
  * Text that is not a number or is outside min/max is kept as typed and marked invalid with a message; it is
  * never changed silently, and the last valid value stays in the draft until the text is fixed.
  */
-export function NumberField({ value, onChange, label, unit, step = 1, min = 0, max, disabled = false, changed = false, invalid = false, title, className, id }: Props) {
+export function NumberField({ value, onChange, label, unit, step = 1, min = 0, max, disabled = false, changed = false, invalid = false, title, className, id, info }: Props) {
   const [text, setText] = useState(String(value));
   const errorId = useId();
   const report = useFieldErrorReport();
@@ -67,6 +70,7 @@ export function NumberField({ value, onChange, label, unit, step = 1, min = 0, m
         />
         {unit ? <i aria-hidden="true">{unit}</i> : null}
       </span>
+      {info ? <SettingInfo id={info} label={trx(label)} /> : null}
       {error ? <small id={errorId} className="num-field-error" role="status">{trSentences(error)}</small> : null}
     </>
   );

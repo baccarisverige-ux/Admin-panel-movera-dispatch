@@ -29,7 +29,7 @@ export function BookingPolicyCard() {
     <div data-testid="reservation-policy">
       <Card title={tr("Reservation policy · all zones · {0}", [book.currentPolicy.version])} tone="green" icon={<ScrollText size={18} />} help={tr("Saved on its own as a new version. Rides already booked keep the version they were booked with.")}>
         {/* Owner BL-Q3 (permission given): "Book up to", "Assignment lead" and "Give-up time" are gone; the booking policy is per zone above. */}
-        <Row label={tr("Included waiting")} help={tr("Free waiting at the pickup for a booked ride.")}>
+        <Row info="dispatch.booking.includedWaiting" label={tr("Included waiting")} help={tr("Free waiting at the pickup for a booked ride.")}>
           <Num label={tr("Included waiting")} value={policy.includedWaitingMinutes} unit="min" min={0} max={60} disabled={off} onChange={(includedWaitingMinutes) => patch({ includedWaitingMinutes })} />
         </Row>
         {draft && prepared.error ? <p className="dx-issues" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {trSentences(prepared.error)}</p> : null}

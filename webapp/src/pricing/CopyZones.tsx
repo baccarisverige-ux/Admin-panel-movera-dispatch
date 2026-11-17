@@ -49,6 +49,7 @@ export function CopyZones({ fromZoneId, fromName, initialParts = ["prices", "fee
           <legend>{tr("What to copy")}</legend>
           {PARTS.map((part) => (
             <label key={part.id} className={parts.has(part.id) ? "check-chip on" : "check-chip"}>
+              {/* info-skip: picks what to copy, not a setting */}
               <input type="checkbox" checked={parts.has(part.id)} onChange={() => setParts(toggle(parts, part.id))} />
               {trx(part.label)}
             </label>
@@ -71,6 +72,7 @@ export function CopyZones({ fromZoneId, fromName, initialParts = ["prices", "fee
               <div className="copy-zone-grid">
                 {zones.map((zone) => (
                   <label key={zone.id} className={picked.has(zone.id) ? "check-chip on" : "check-chip"}>
+                    {/* info-skip: picks where to copy, not a setting */}
                     <input type="checkbox" aria-label={tr("Copy to {0}", [zone.name])} checked={picked.has(zone.id)} onChange={() => setPicked(toggle(picked, zone.id))} />
                     {zone.name}
                   </label>
