@@ -86,7 +86,7 @@ export const DISPATCH_OFFERS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "Off: drivers who let offers run out stay online; On: they are set offline after the count below.",
   ),
   "dispatch.offer.afterOffersNotAcceptedInA": t("How many Exclusive offers the driver lets run out (ignores) in a row set the driver offline. Declining an offer never counts and never resets the count; Radar offers never count.", OFFERS_DRIVER, "Offers, 1 to 99.",
-    "10.", "10: the tenth ignored Exclusive offer in a row sets him offline.",
+    "10.", "10: the tenth ignored Exclusive offer in a row sets the driver offline.",
     "1: one ignored Exclusive offer sets the driver offline; 99: almost never.",
   ),
   "dispatch.offer.setOfflineAfterMinutesWithoutPosition": t("A driver with no position for this long is set offline; he can go online again at once. Each automatic set offline is in the audit log.", OFFERS_DRIVER, "Minutes, 0 to 120. 0 = never.",
