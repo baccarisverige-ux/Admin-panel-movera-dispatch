@@ -632,7 +632,10 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     if (!zoneIds.length) throw new Error("Nothing to save. Change a rule first.");
     for (const id of zoneIds) {
       const current = await draft("dispatch", id, true);
-      await saveDraftOnly(http, "dispatch", id, current, dispatchDocumentOf(draftRules(book, id), id, current?.document ?? null));
+      const built = dispatchDocumentOf(draftRules(book, id), id, current?.document ?? null);
+      // U1 (safe config saves): start from the stored document, like publishDispatch; only what the panel changed is written.
+      const document = current ? patchChanged(current.document, dispatchDocumentOf(rulesOfDispatch(current.document, null, draftRules(book, id)), id, current.document), built) : built;
+      await saveDraftOnly(http, "dispatch", id, current, document);
       drafts.delete(key("dispatch", id));
     }
     slices.set(DISPATCH_KEY, book);

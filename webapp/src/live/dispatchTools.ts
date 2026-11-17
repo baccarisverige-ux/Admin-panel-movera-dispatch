@@ -8,7 +8,7 @@
 import type { MarketId } from "../markets/markets.ts";
 import { market, MARKETS } from "../markets/markets.ts";
 import { zoneDefault, type DispatchBook, type DispatchEvent, type DriverGroup, type EventText, type Preset, type RadarZone, type RadarZoneRule, type ZoneDispatch } from "../dispatch/rules.ts";
-import { dispatchDocumentOf, rulesOfDispatch } from "./configDocs.ts";
+import { dispatchDocumentOf, patchChanged, rulesOfDispatch } from "./configDocs.ts";
 
 /* ---------------------------------------------------------------- the server's items (contract.json#dispatchTools) */
 
@@ -115,7 +115,9 @@ const META = ["version", "publishedAt", "zoneId", "country", "timeZone", "usesSt
 export function presetValuesOf(preset: Preset, country: MarketId): Record<string, unknown> {
   if (preset.doc && !preset.values) return { ...preset.doc };
   const zoneId = market(country).zones[0]!.id;
-  const doc = dispatchDocumentOf({ ...(preset.values as ZoneDispatch), zoneId }, zoneId, null);
+  const built = dispatchDocumentOf({ ...(preset.values as ZoneDispatch), zoneId }, zoneId, null);
+  // U4 (safe config saves): an edited server preset starts from its stored values; only what the panel changed is written.
+  const doc = preset.doc ? patchChanged(preset.doc, dispatchDocumentOf({ ...rulesOfDispatch(preset.doc, null, zoneDefault(zoneId)), zoneId }, zoneId, null), built) : built;
   for (const key of META) delete doc[key];
   return doc;
 }
