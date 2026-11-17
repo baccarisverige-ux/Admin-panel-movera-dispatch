@@ -21,7 +21,7 @@ export type { BankReview, FinanceBook, PaymentPolicyContext, PayoutState, Reconc
 export { answerAsk, askDriver, currentAsk, notAccepted, raiseFare } from "../reservations/book.ts";
 export { assignReservation, cancelReservation, emptyReservationBook, needsDriverSoon, normalizeReservationBook, recordReservationContact, recordReservationOffer, reservationCandidates, reservationOps, reservationWarning, saveReservationPolicy, scheduleReturnRide, stockholmLabel, stockholmLocalToIso, stockholmLocalValue, timeZoneCity, touchReservation, zonedLabel, zonedLocalToIso, zonedLocalValue, unassignReservation, DEFAULT_RESERVATION_POLICY, GIVE_UP_MINUTES } from "../reservations/book.ts";
 export type { AskState, Reservation, ReservationAsk, ReservationBook, ReservationContact, ReservationOffer, ReservationOps, ReservationPolicy, ReservationRaise, ReservationStatus } from "../reservations/book.ts";
-export { advanceConfigClock, approveConfig, configDiff, draftRevisionMatches, effectiveValue, emptyConfig, impactPreview, missingTranslations, normalizeConfig, publishConfig, removeOverride, rollbackConfig, REASON_GROUPS, setAppUpdate, setAppVersion, setEnvironment, setExpiry, setFeature, setMaxStops, setOverride, setReason, setSchedule, setSwitch, setZoneOverride, submitConfigApproval } from "../config/book.ts";
+export { advanceConfigClock, approveConfig, configDiff, draftRevisionMatches, effectiveValue, emptyConfig, impactPreview, missingTranslations, MOVED_TO_SAFETY, normalizeConfig, publishConfig, removeOverride, rollbackConfig, REASON_GROUPS, setAppUpdate, setAppVersion, setEnvironment, setExpiry, setFeature, setMaxStops, setOverride, setReason, setSchedule, setSwitch, setZoneOverride, submitConfigApproval } from "../config/book.ts";
 export type { ConfigBook, EffectiveContext, FeatureKey, OverrideLevel, OverrideRule } from "../config/book.ts";
 export { activeScheduledBoost, defaultPricingBook, enabledCategoryIds, normalizePricingBook, pricingDiff, removeBoostSchedule, restorePricingVersion, saveBoostSchedule, savePriceZone, validateZonePrice } from "../pricing/book.ts";
 export type { BoostSchedule, PricingBook, PricingSnapshot } from "../pricing/book.ts";
@@ -76,8 +76,8 @@ export function useDriver(id: string, scope: string | null) {
   return { ...query, driver: query.data?.find((row) => row.id === id) };
 }
 
-export function useRiders(scope: string | null) {
-  return useRecords("riders", scope);
+export function useRiders(scope: string | null, options: { enabled?: boolean } = {}) {
+  return useRecords("riders", scope, options);
 }
 
 export function useTrips(scope: string | null, options: { refetchMs?: number; follow?: boolean } = {}) {

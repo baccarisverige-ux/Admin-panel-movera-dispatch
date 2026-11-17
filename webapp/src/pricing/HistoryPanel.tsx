@@ -24,6 +24,7 @@ export function HistoryPanel({ store, zoneId, agentId, canEdit, timeZone, onRest
   return (
     <>
       <div className="history-head">
+        {/* info-skip: list filter, not a setting */}
         <label className="mini-switch">{trn("{0}{1}Only {2}", <input type="checkbox" checked={onlyZone} onChange={(event) => setOnlyZone(event.target.checked)} aria-label={tr("Only {0}", [zoneById(zoneId)?.name ?? zoneId])} />, <span aria-hidden="true"><i /></span>, zoneById(zoneId)?.name ?? zoneId)}</label>
         <small>{trn("Current pricing revision {0}", store.draftRev)}</small>
       </div>

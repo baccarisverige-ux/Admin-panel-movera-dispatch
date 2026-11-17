@@ -17,6 +17,7 @@ import {
   type PricingStore,
 } from "./zonePricing";
 import { currentLanguage, tr, trn, uiLocale, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = {
   store: PricingStore;
@@ -43,6 +44,7 @@ function LineFields({ form, setForm, prefix }: { form: Form; setForm: (form: For
       {(["sv", "fr", "en"] as const).map((code) => (
         <label key={code} className="cat-line">
           <span>{code.toUpperCase()}</span>
+          {/* info-at: pricing.category.line */}
           <input
             aria-label={`${prefix === "Category" ? tr("Category line") : tr("New category line")} · ${label[code]}`}
             placeholder={label[code]}
@@ -52,7 +54,7 @@ function LineFields({ form, setForm, prefix }: { form: Form; setForm: (form: For
               const lines = { ...form.lines, [code]: event.target.value };
               setForm({ ...form, lines, line: code === "en" ? event.target.value : form.line || event.target.value });
             }}
-          />
+          /><SettingInfo id="pricing.category.line" />
         </label>
       ))}
     </div>
@@ -99,9 +101,9 @@ export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onN
               <li key={category.id} className={isDeleting ? "deleting" : undefined}>
                 {isEditing ? (
                   <div className="cat-form">
-                    <input aria-label={tr("Category name")} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} />
+                    <input aria-label={tr("Category name")} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} /><SettingInfo id="pricing.category.name" label={tr("Category name")} />
                     <LineFields form={form} setForm={setForm} prefix="Category" />
-                    <input aria-label={tr("Category seats")} type="number" min={1} max={8} value={form.seats} onChange={(event) => setForm({ ...form, seats: Number(event.target.value) })} />
+                    <input aria-label={tr("Category seats")} type="number" min={1} max={8} value={form.seats} onChange={(event) => setForm({ ...form, seats: Number(event.target.value) })} /><SettingInfo id="pricing.category.seats" label={tr("Category seats")} />
                     {formError ? <small className="form-error">{formError}</small> : null}
                     <div className="cat-actions">
                       <CommandButton command="admin.pricing.editCategory" className="dash-btn small" targetId={category.id} confirmTarget={false} scope="all" before={category.label} after={form.label} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={edited?.store} disabled={!canEdit || Boolean(formError)} onDone={() => { setEditing(null); onNotice(tr("{0} saved.", [form.label])); }}>{tr("Save")}</CommandButton>
@@ -145,9 +147,9 @@ export function CategoryManager({ store, usageOf, agentId, canEdit, onClose, onN
 
         {adding ? (
           <div className="cat-form add">
-            <input aria-label={tr("New category name")} placeholder={tr("Name riders see, e.g. Women Driver")} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} />
+            <input aria-label={tr("New category name")} placeholder={tr("Name riders see, e.g. Women Driver")} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} /><SettingInfo id="pricing.category.name" label={tr("New category name")} />
             <LineFields form={form} setForm={setForm} prefix="New category" />
-            <input aria-label={tr("New category seats")} type="number" min={1} max={8} value={form.seats} onChange={(event) => setForm({ ...form, seats: Number(event.target.value) })} />
+            <input aria-label={tr("New category seats")} type="number" min={1} max={8} value={form.seats} onChange={(event) => setForm({ ...form, seats: Number(event.target.value) })} /><SettingInfo id="pricing.category.seats" label={tr("New category seats")} />
             {formError ? <small className="form-error">{formError}</small> : <small className="fine">{tr("Starts off in every zone, with Movera's prices to edit.")}</small>}
             <div className="cat-actions">
               <CommandButton command="admin.pricing.createCategory" className="dash-btn small" targetId={form.label || "new-category"} confirmTarget={false} scope="all" before="none" after={form.label} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={added?.store} disabled={!canEdit || Boolean(formError)} onDone={() => { setAdding(false); onNotice(tr("{0} added. Turn it on in the zones where it should be sold.", [trx(form.label)])); }}>{tr("Add category")}</CommandButton>

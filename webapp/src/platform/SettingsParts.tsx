@@ -64,7 +64,7 @@ export function FindSetting({ onPick }: { onPick: (heading: string) => void }) {
   const other = q ? elsewhereLinks().filter((item) => `${item.label} ${item.what} ${item.section}`.toLowerCase().includes(q)) : [];
   return (
     <div className="pl-find" ref={box}>
-      <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label={tr("Find a setting")} placeholder={tr("Find a setting, for example wallet, stops or prices")} value={query} onFocus={collect} onChange={(e) => { setQuery(e.target.value); collect(); }} /></label>
+      <label className="pl-search"><Search size={14} aria-hidden="true" />{/* info-skip: search box, not a setting */}<input aria-label={tr("Find a setting")} placeholder={tr("Find a setting, for example wallet, stops or prices")} value={query} onFocus={collect} onChange={(e) => { setQuery(e.target.value); collect(); }} /></label>
       <div className="pl-jumps" aria-label={tr("Sections on this page")}>
         {here.map((text) => <a key={text} href={`#${encodeURIComponent(text)}`} className="pl-jump" onClick={(event) => { event.preventDefault(); onPick(text); }}>{text}</a>)}
         {other.map((item) => <Link key={item.path} className="pl-jump other" to={item.path}>{trx(item.label)} <small>{trn("in {0}", trx(item.section))}</small> <ArrowRight size={11} aria-hidden="true" /></Link>)}
@@ -109,8 +109,8 @@ export function CompareVersions() {
   return (
     <Card title={tr("Compare versions")} icon={<GitCompare size={15} />} tone="purple" help={tr("Pick two versions. Roll back from the Review and publish part of All settings.")}>
       <div className="pl-compare-pick">
-        <label className="pl-field"><span>{tr("From")}</span><select aria-label={tr("Compare from")} value={a} onChange={(e) => setFrom(Number(e.target.value))}>{versions.map((item) => <option key={item.index} value={item.index}>{trx(item.label)}</option>)}</select></label>
-        <label className="pl-field"><span>{tr("To")}</span><select aria-label={tr("Compare to")} value={b} onChange={(e) => setTo(e.target.value === "draft" ? "draft" : Number(e.target.value))}><option value="draft">{tr("The draft now")}</option>{versions.map((item) => <option key={item.index} value={item.index}>{trx(item.label)}</option>)}</select></label>
+        <label className="pl-field"><span>{tr("From")}</span>{/* info-skip: picks versions to compare, not a setting */}<select aria-label={tr("Compare from")} value={a} onChange={(e) => setFrom(Number(e.target.value))}>{versions.map((item) => <option key={item.index} value={item.index}>{trx(item.label)}</option>)}</select></label>
+        <label className="pl-field"><span>{tr("To")}</span>{/* info-skip: picks versions to compare, not a setting */}<select aria-label={tr("Compare to")} value={b} onChange={(e) => setTo(e.target.value === "draft" ? "draft" : Number(e.target.value))}><option value="draft">{tr("The draft now")}</option>{versions.map((item) => <option key={item.index} value={item.index}>{trx(item.label)}</option>)}</select></label>
       </div>
       {store.loading ? <p className="pl-help">{tr("Loading versions.")}</p> : diff.length ? (
         <ul className="pl-diff" aria-label={tr("Version changes")}>{diff.map((line) => <li key={line}>{line}</li>)}</ul>
@@ -127,7 +127,7 @@ export function PanelSettings({ isSuper, onNotice }: { isSuper: boolean; onNotic
   return (
     <Card title={tr("Admin panel")} icon={<Server size={15} />} tone="orange" help={tr("System, Release gates and Design are for developers. Only the Super admin sees them, and only when this is on.")}>
       <Row label={tr("Show developer pages in the menu")} help={isSuper ? tr("Off: the pages still open by their address, for the Super admin only.") : tr("Only the Super admin can change this.")}>
-        <Switch label={tr("Show developer pages in the menu")} on={ops.devPages} disabled onChange={() => undefined} />
+        <Switch info="settings.devPages" label={tr("Show developer pages in the menu")} on={ops.devPages} disabled onChange={() => undefined} />
       </Row>
       <div className="actions">
         <CommandButton command="admin.panel.devPages" confirmTarget={false} className="dash-btn small" sliceKey={PANEL_OPS_KEY} value={{ ...ops, draftRev: ops.draftRev + 1, devPages: !ops.devPages }} expectedSliceRev={ops.draftRev} targetId="menu" disabled={!isSuper || slice.loading} onDone={() => onNotice(ops.devPages ? tr("Developer pages are hidden from the menu.") : tr("Developer pages now show in the menu."))}>{ops.devPages ? tr("Hide developer pages") : tr("Show developer pages")}</CommandButton>

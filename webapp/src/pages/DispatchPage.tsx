@@ -23,6 +23,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { ruleOf } from "../pricing/commissionSteps";
 import { CommandButton } from "../ui/CommandButton";
 import { useAlertsMaybe } from "../alerts/AlertsContext";
+import { useRideCheckRows } from "../alerts/useOnDemand";
 import { DispatchAlerts } from "../alerts/DispatchAlerts";
 import { cancelRecords, driverFacts, onlyFinishingNearby } from "../dispatch/demo";
 import { CancelView } from "../dispatch/CancelView";
@@ -263,7 +264,9 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
   const sharedAlerts = useAlertsMaybe();
   // Ride checks still open on a live trip, pinned to the car on the live map (safety team and dispatchers).
   const canRideCheck = Boolean(agent && (can(agent.role, "incidents.read") || can(agent.role, "trips.intervene")));
-  const mapRideChecks = canRideCheck && sharedAlerts ? { checks: sharedAlerts.rideCheck.checks, demoShift: sharedAlerts.rideCheck.demoShift, now: sharedAlerts.now } : null;
+  // Q132: the map reads its own ride checks on Live only (the alert bar reads them only behind a ride-check alert).
+  const { checks: liveMapChecks } = useRideCheckRows(canRideCheck && view === "live");
+  const mapRideChecks = canRideCheck && sharedAlerts ? { checks: liveMapChecks, demoShift: sharedAlerts.rideCheck.demoShift, now: sharedAlerts.now } : null;
   const ownAlerts = sharedAlerts ? sharedAlerts.book.settings.legacy.dispatchAlerts : true;
   const records = useMemo(() => cancelRecords(country, zones.map((zone) => ({ id: zone.id, name: zone.name, center: zone.center })), (drivers.data ?? []).map((row) => ({ id: row.id, name: row.name, zoneId: row.zoneId })), loadedAt), [country, zones.map((zone) => zone.id).join(","), drivers.data, loadedAt]);
 
@@ -437,7 +440,7 @@ export function DispatchPage({ section = "dispatch" }: { section?: "dispatch" | 
                 ))}
                 {countryChanged.length ? <li><b>{trx(market.name)}</b><ul>{countryChanged.map((line) => <li key={line}>{line}</li>)}</ul></li> : null}
               </ul>
-              <label className="field">{trn("Note for the history (optional){0}", <input aria-label={tr("Publish note")} maxLength={120} value={note} onChange={(event) => setNote(event.target.value)} placeholder={tr("For example More drivers on the radar for Friday nights")} />)}</label>
+              <label className="field">{trn("Note for the history (optional){0}", /* info-skip: note for the history of one publish, not a setting */ <input aria-label={tr("Publish note")} maxLength={120} value={note} onChange={(event) => setNote(event.target.value)} placeholder={tr("For example More drivers on the radar for Friday nights")} />)}</label>
             </div>
           ) : null}
           {published.error && (changes.length || countryChanged.length) ? <p className="dx-publish-error" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {trSentences(published.error)}</p> : null}

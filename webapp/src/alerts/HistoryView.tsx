@@ -4,6 +4,7 @@ import { localDay } from "../dashboard/time";
 import { CheckCircle2, Copy, Download, Mail, Repeat, Search, Timer, Trophy } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
 import { useAlertsData } from "./AlertsContext";
+import { useAlertIncidents } from "./useOnDemand";
 import { agentName } from "./AlertActions";
 import { LEVEL_ICON } from "./OpenView";
 import { solvedHistory } from "./history";
@@ -13,11 +14,13 @@ import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 /** Solved alerts with both names, the numbers behind them, a CSV export and a weekly summary for managers. */
 export function HistoryView() {
   const data = useAlertsData();
+  // Q132: the cases (zone, kind of each solved SOS / ride check) read on this view only.
+  const incidents = useAlertIncidents();
   const { agent } = useSession();
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState<Level | "all">("all");
   const [notice, setNotice] = useState("");
-  const rows = useMemo(() => solvedHistory(data.book, data.safety.value, (id) => data.facts.incidents.find((row) => row.id === id)?.zoneId ?? null, (id) => data.facts.incidents.find((row) => row.id === id)?.kind === "ride_check"), [data.book, data.safety.value, data.facts.incidents]);
+  const rows = useMemo(() => solvedHistory(data.book, data.safety.value, (id) => incidents.find((row) => row.id === id)?.zoneId ?? null, (id) => incidents.find((row) => row.id === id)?.kind === "ride_check"), [data.book, data.safety.value, incidents]);
   const shown = rows.filter((row) => (level === "all" || row.level === level) && (!query.trim() || `${row.title} ${row.note} ${agentName(row.solvedBy)} ${agentName(row.takenBy)}`.toLowerCase().includes(query.trim().toLowerCase())));
   const stats = numbers(rows);
   const label = (kind: HistoryRow["kind"]) => kindDef(kind)?.label ?? "Your rule";

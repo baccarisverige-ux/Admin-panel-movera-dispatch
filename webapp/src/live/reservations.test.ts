@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { inView, needsAttention, reservationActions, reservationCall, reservationState, RESERVATIONS_PATH, sortReservations, type ServerReservation } from "./reservations.ts";
+import { inView, needsAttention, reservationActions, reservationCall, reservationState, RESERVATIONS_PATH, reservationsPath, sortReservations, type ServerReservation } from "./reservations.ts";
 
 // v0.18.17 Book later (owner 2026-11-03): Admin › Reservations reads the server (before: a browser-only book, empty on
 // live) and its buttons call the server's commands.
@@ -9,6 +9,17 @@ const trip = (over: Partial<ServerReservation> = {}): ServerReservation => ({ tr
 
 test("the list reads the server's booked rides", () => {
   assert.equal(RESERVATIONS_PATH, "/admin/trips?kind=scheduled&limit=200");
+});
+
+// Q132 round 3 (CI fix, live-zone.spec.ts "reservations"): the alert bar no longer reads trips on live, so the page's
+// own read names the country / zones picked in the top bar, and sends nothing when the scope allows nothing.
+test("Q132 R3: the page's own booked-rides read names the country and zones of the top bar", () => {
+  assert.equal(reservationsPath({ params: [["country", "SE"]], denied: false }), "/admin/trips?kind=scheduled&limit=200&country=SE");
+  assert.equal(reservationsPath({ params: [["country", "FR"]], denied: false }), "/admin/trips?kind=scheduled&limit=200&country=FR");
+  assert.equal(reservationsPath({ params: [["zoneId", "FR-PC"]], denied: false }), "/admin/trips?kind=scheduled&limit=200&zoneId=FR-PC");
+  assert.equal(decodeURIComponent(reservationsPath({ params: [["zoneIds", "Z001,Z002"]], denied: false })!), "/admin/trips?kind=scheduled&limit=200&zoneIds=Z001,Z002");
+  assert.equal(reservationsPath({ params: [], denied: false }), RESERVATIONS_PATH);
+  assert.equal(reservationsPath({ params: [], denied: true }), null);
 });
 
 test("state words and buttons follow the server status", () => {

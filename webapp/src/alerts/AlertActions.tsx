@@ -7,6 +7,8 @@ import { useSession } from "../auth/SessionContext";
 import { safetyAction } from "../safety/ops";
 import { CommandButton } from "../ui/CommandButton";
 import { useAlertsData } from "./AlertsContext";
+import { useAlertIncidents } from "./useOnDemand";
+import { alertRowReadsIncidents } from "./reads";
 import { ALERTS_KEY, doneAlert, followsIncident, muteKind, passAlert, snoozeAlert, takeAlert, type OpenAlert } from "./engine";
 import { OpenRideCheck } from "./OpenRideCheck";
 import { tr, trn, trx } from "../i18n";
@@ -43,10 +45,13 @@ export function AlertActions({ alert, compact = false, onDone }: { alert: OpenAl
   const at = new Date().toISOString();
   const extras = book.settings.extras;
   const say = (text: string) => onDone?.(text);
+  // Q132: the case behind an SOS / ride-check alert is read here, on demand, not by the alert bar on every page.
+  // SF-B: only for a role that may read cases (incidents.read); a dispatcher's ride-check row sends no refused read.
+  const incidents = useAlertIncidents(alertRowReadsIncidents(alert, Boolean(agent && can(agent.role, "incidents.read"))));
 
   if (followsIncident(alert.kind)) {
     if (!alert.incidentId) return null;
-    const incident = data.facts.incidents.find((row) => row.id === alert.incidentId);
+    const incident = incidents.find((row) => row.id === alert.incidentId);
     if (!incident) return null;
     const row = { id: incident.id, name: incident.who, phone: "", zoneId: incident.zoneId, status: incident.status } as DemoRecord;
     const canSafety = Boolean(agent && can(agent.role, "safety.edit"));

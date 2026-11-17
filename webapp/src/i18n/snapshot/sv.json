@@ -9298,4 +9298,15 @@
 ["There is no one-press undo: copy an earlier version into the editor (History) and publish it again as a new version.","Det finns ingen ångra med ett tryck: kopiera en tidigare version till redigeraren (Historik) och publicera den igen som en ny version."],
 ["Only after you publish the draft.","Först när du har publicerat utkastet."],
 ["At once, on this page only.","Direkt, bara på den här sidan."],
-["At once: it is saved when you confirm and applies from then on.","Direkt: det sparas när du bekräftar och gäller från och med då."]]
+["At once: it is saved when you confirm and applies from then on.","Direkt: det sparas när du bekräftar och gäller från och med då."],
+["Pickup entrance chips","Ingångsval vid upphämtning"],
+["When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.","När kunden väljer upphämtning föreslår kundappen Huvudentré, Sidoentré och Parkering runt nålen, märkta som ungefärliga. Använd tidigare och Nära hemmet finns alltid kvar. Kundappen läser detta."],
+["Pickup entrance chips (approximate)","Ingångsval vid upphämtning (ungefärliga)"],
+["Off: no entrance chips; the pickup is the address only. Usual value: on.","Av: inga ingångsval; upphämtningen är bara adressen. Vanligt värde: på."],
+["Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.","Ingångsval vid upphämtning kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen."],
+["Share trip link","Länk för att dela resan"],
+["During a trip the rider can send a live link to someone they trust. The page shows the car, the plate and the arrival time. The car’s position shows only while the rider is in the car, and never near the pickup, a stop or the drop-off. The link stops at drop-off.","Under en resa kan resenären skicka en livelänk till någon den litar på. Sidan visar bilen, registreringsnumret och ankomsttiden. Bilens position visas bara när resenären sitter i bilen, och aldrig nära upphämtningen, ett stopp eller avlämningen. Länken slutar fungera vid avlämningen."],
+["Riders can share a live trip link","Resenärer kan dela en livelänk till resan"],
+["Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.","Av: resenärsappen döljer Dela resan och alla livelänkar i zonen slutar fungera. Vanligt värde: på."],
+["{0}: set per zone in Dispatch › Safety. {1}","{0}: ställs in per zon i Trafikledning › Säkerhet. {1}"],
+["Share trip could not be read from the server for this zone. Reload the page and try again.","Dela resan kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen."]]

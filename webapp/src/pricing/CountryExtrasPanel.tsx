@@ -40,6 +40,7 @@ import { EmergencyNumbersEditor } from "./EmergencyNumbersEditor";
 import { ChatSettingsCard } from "./ChatSettingsCard";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 /** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
 export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls", "chat", "dont-match"] as const;
@@ -56,17 +57,19 @@ type ListProps = {
   country: MarketId;
   canEdit: boolean;
   onChange: (list: AmountOption[]) => void;
+  /** The id of the list's text for the small "i" by its title (ui/SettingInfo.ts). */
+  info?: string;
 };
 
 /** A list of amounts: change one, add one, or switch one off (it stays in the list, so it can come back). */
-function AmountList({ title, help, item, prefix, plus, list, saved, max, country, canEdit, onChange }: ListProps) {
+function AmountList({ title, help, item, prefix, plus, list, saved, max, country, canEdit, onChange, info }: ListProps) {
   const symbol = currencySymbol(country);
   const active = list.filter((entry) => entry.enabled);
   const set = (id: string, patch: Partial<AmountOption>) => onChange(list.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
   return (
     <div className="fee-card cx-list" role="group" aria-label={title}>
       <div>
-        <strong>{trx(title)}</strong>
+        <strong>{trx(title)}{info ? <SettingInfo id={info} label={trx(title)} /> : null}</strong>
         <small>{trn("{0} Up to {1} amounts, each at most {2}.", help, MAX_AMOUNTS, money(max, country))}</small>
       </div>
       <ul className="cx-amounts">
@@ -75,8 +78,10 @@ function AmountList({ title, help, item, prefix, plus, list, saved, max, country
           return (
             <li key={entry.id} className={entry.enabled ? undefined : "off"}>
               <span className="cx-index" aria-hidden="true">{index + 1}</span>
+              {/* info-skip: one amount of the list; the list's i explains it */}
               <NumberField label={`${trx(item)} ${index + 1}`} value={entry.amount} unit={symbol} step={moneyStep(country)} max={max} disabled={!canEdit} changed={!before || before.amount !== entry.amount} onChange={(amount) => set(entry.id, { amount })} />
               <label className="mini-switch">
+                {/* info-skip: one amount of the list; the list's i explains it */}
                 <input type="checkbox" aria-label={tr("{0} {1} active", [trx(item), index + 1])} checked={entry.enabled} disabled={!canEdit} onChange={(event) => set(entry.id, { enabled: event.target.checked })} />
                 <span aria-hidden="true"><i /></span>
                 {entry.enabled ? tr("Active") : tr("Off")}
@@ -192,23 +197,23 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
         </div>
         <div className="fee-grid">
           <div id="extras-tips" className="cx-anchor">
-            <AmountList title={tr("Tips")} help={tr("Buttons the rider sees after the ride.")} item="Tip" prefix="tip" list={shown.tips} saved={saved.tips} max={tipMax(country)} country={country} canEdit={canEdit} onChange={(tips) => edit({ tips })} />
+            <AmountList info="tips.tips" title={tr("Tips")} help={tr("Buttons the rider sees after the ride.")} item="Tip" prefix="tip" list={shown.tips} saved={saved.tips} max={tipMax(country)} country={country} canEdit={canEdit} onChange={(tips) => edit({ tips })} />
             <div className="fee-card" aria-label={tr("Tip rules")}>
               <p className="dx-note">{tr("The whole tip goes to the driver.")}</p>
-              <label className="check-row"><input type="checkbox" data-testid="tip-cashAfterTrip" checked={shown.tipRules.cashAfterTrip} ref={(node) => { if (node) node.indeterminate = Boolean(shown.mixedTipRules?.cashAfterTrip?.length); }} aria-checked={shown.mixedTipRules?.cashAfterTrip?.length ? "mixed" : undefined} aria-describedby={shown.mixedTipRules?.cashAfterTrip?.length ? "tip-mixed-cashAfterTrip" : undefined} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, cashAfterTrip: e.target.checked }, mixedTipRules: withoutTipFlag(shown.mixedTipRules, "cashAfterTrip") })} /> {tr("Allow cash tips after the trip")}</label>
+              <label className="check-row"><input type="checkbox" data-testid="tip-cashAfterTrip" checked={shown.tipRules.cashAfterTrip} ref={(node) => { if (node) node.indeterminate = Boolean(shown.mixedTipRules?.cashAfterTrip?.length); }} aria-checked={shown.mixedTipRules?.cashAfterTrip?.length ? "mixed" : undefined} aria-describedby={shown.mixedTipRules?.cashAfterTrip?.length ? "tip-mixed-cashAfterTrip" : undefined} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, cashAfterTrip: e.target.checked }, mixedTipRules: withoutTipFlag(shown.mixedTipRules, "cashAfterTrip") })} /><SettingInfo id="tips.cashAfterTrip" /> {tr("Allow cash tips after the trip")}</label>
               {shown.mixedTipRules?.cashAfterTrip?.length ? <small className="dx-note" id="tip-mixed-cashAfterTrip" data-testid="tip-mixed-cashAfterTrip">{tr("Off in: {0} — Save makes it the same in the chosen zones", [shown.mixedTipRules.cashAfterTrip.join(", ")])}</small> : null}
               {shown.tipRules.cashInCarMinutes === 0 && !shown.tipRules.cashAfterTrip && !shown.mixedCashInCar
                 ? <p className="dx-note" data-testid="tip-cashInCar-zero">{tr("0 minutes: riders cannot give a cash tip in the app once the trip has ended.")}</p>
                 : <p className="dx-note">{tr("Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.", [String(shown.tipRules.cashInCarMinutes)])}</p>}
               {/* v0.18.91 job C8 (owner "Anything admin can adjust becomes an admin setting"): RiderAppConfig.tipRules.cashInCarMinutes. */}
-              {!shown.tipRules.cashAfterTrip ? <div data-testid="tip-cashInCarMinutes"><NumberField label={tr("Cash tip time in the car")} value={shown.tipRules.cashInCarMinutes} unit="min" step={1} min={TIP_CASH_IN_CAR_MINUTES.min} max={TIP_CASH_IN_CAR_MINUTES.max} disabled={!canEdit} changed={shown.tipRules.cashInCarMinutes !== saved.tipRules.cashInCarMinutes} onChange={(cashInCarMinutes) => edit({ tipRules: { ...shown.tipRules, cashInCarMinutes: Math.round(cashInCarMinutes) }, mixedCashInCar: undefined })} />{shown.mixedCashInCar ? <small className="dx-note" data-testid="tip-mixed-cashInCarMinutes">{tr("Differs by zone: {0}. Save keeps each zone's time unless you change it.", [Object.entries(shown.mixedCashInCar).map(([zone, minutes]) => `${zone} ${minutes} min`).join(", ")])}</small> : null}</div> : null}
-              <label className="check-row"><input type="checkbox" data-testid="tip-customAmount" checked={shown.tipRules.customAmount} ref={(node) => { if (node) node.indeterminate = Boolean(shown.mixedTipRules?.customAmount?.length); }} aria-checked={shown.mixedTipRules?.customAmount?.length ? "mixed" : undefined} aria-describedby={shown.mixedTipRules?.customAmount?.length ? "tip-mixed-customAmount" : undefined} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, customAmount: e.target.checked }, mixedTipRules: withoutTipFlag(shown.mixedTipRules, "customAmount") })} /> {tr("Rider may type an amount")}</label>
+              {!shown.tipRules.cashAfterTrip ? <div data-testid="tip-cashInCarMinutes"><NumberField info="tips.cashInCarMinutes" label={tr("Cash tip time in the car")} value={shown.tipRules.cashInCarMinutes} unit="min" step={1} min={TIP_CASH_IN_CAR_MINUTES.min} max={TIP_CASH_IN_CAR_MINUTES.max} disabled={!canEdit} changed={shown.tipRules.cashInCarMinutes !== saved.tipRules.cashInCarMinutes} onChange={(cashInCarMinutes) => edit({ tipRules: { ...shown.tipRules, cashInCarMinutes: Math.round(cashInCarMinutes) }, mixedCashInCar: undefined })} />{shown.mixedCashInCar ? <small className="dx-note" data-testid="tip-mixed-cashInCarMinutes">{tr("Differs by zone: {0}. Save keeps each zone's time unless you change it.", [Object.entries(shown.mixedCashInCar).map(([zone, minutes]) => `${zone} ${minutes} min`).join(", ")])}</small> : null}</div> : null}
+              <label className="check-row"><input type="checkbox" data-testid="tip-customAmount" checked={shown.tipRules.customAmount} ref={(node) => { if (node) node.indeterminate = Boolean(shown.mixedTipRules?.customAmount?.length); }} aria-checked={shown.mixedTipRules?.customAmount?.length ? "mixed" : undefined} aria-describedby={shown.mixedTipRules?.customAmount?.length ? "tip-mixed-customAmount" : undefined} disabled={!canEdit} onChange={(e) => edit({ tipRules: { ...shown.tipRules, customAmount: e.target.checked }, mixedTipRules: withoutTipFlag(shown.mixedTipRules, "customAmount") })} /><SettingInfo id="tips.customAmount" /> {tr("Rider may type an amount")}</label>
               {shown.mixedTipRules?.customAmount?.length ? <small className="dx-note" id="tip-mixed-customAmount" data-testid="tip-mixed-customAmount">{tr("Off in: {0} — Save makes it the same in the chosen zones", [shown.mixedTipRules.customAmount.join(", ")])}</small> : null}
-              {shown.tipRules.customAmount ? <NumberField label={tr("Highest typed tip")} value={shown.tipRules.customMax} unit={symbol} step={moneyStep(country)} max={tipMax(country) * 10} disabled={!canEdit} changed={shown.tipRules.customMax !== saved.tipRules.customMax} onChange={(customMax) => edit({ tipRules: { ...shown.tipRules, customMax } })} /> : null}
+              {shown.tipRules.customAmount ? <NumberField info="tips.customMax" label={tr("Highest typed tip")} value={shown.tipRules.customMax} unit={symbol} step={moneyStep(country)} max={tipMax(country) * 10} disabled={!canEdit} changed={shown.tipRules.customMax !== saved.tipRules.customMax} onChange={(customMax) => edit({ tipRules: { ...shown.tipRules, customMax } })} /> : null}
             </div>
           </div>
           <div id="extras-raise-steps" className="cx-anchor">
-            <AmountList title={tr("Raise-offer quick steps")} help={tr("Quick “+” buttons while the rider waits for a driver.")} item="Raise step" prefix="raise" plus list={shown.raiseSteps} saved={saved.raiseSteps} max={raiseStepMax(country)} country={country} canEdit={canEdit} onChange={(raiseSteps) => edit({ raiseSteps })} />
+            <AmountList info="tips.raiseSteps" title={tr("Raise-offer quick steps")} help={tr("Quick “+” buttons while the rider waits for a driver.")} item="Raise step" prefix="raise" plus list={shown.raiseSteps} saved={saved.raiseSteps} max={raiseStepMax(country)} country={country} canEdit={canEdit} onChange={(raiseSteps) => edit({ raiseSteps })} />
           </div>
           <div id="extras-promo-cap" className="cx-anchor">
             <div className="fee-card">
@@ -217,10 +222,11 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <small>{trn("The highest promo discount on one ride, shown to the rider in {0}. At most {1}.", symbol, money(promoCapMax(country), country))}</small>
               </div>
               <label className="mini-switch big">
-                <input type="checkbox" aria-label={tr("Cap promo discounts")} checked={shown.promoCap !== null} disabled={!canEdit} onChange={(event) => edit({ promoCap: event.target.checked ? saved.promoCap ?? fromSek(100, country) : null })} />
+                <input type="checkbox" aria-label={tr("Cap promo discounts")} checked={shown.promoCap !== null} disabled={!canEdit} onChange={(event) => edit({ promoCap: event.target.checked ? saved.promoCap ?? fromSek(100, country) : null })} /><SettingInfo id="tips.promoCap" label={tr("Cap promo discounts")} />
                 <span aria-hidden="true"><i /></span>
                 {shown.promoCap === null ? tr("No cap") : tr("Capped")}
               </label>
+              {/* info-skip: the cap amount; the Cap promo discounts i explains it */}
               {shown.promoCap !== null ? <NumberField label={tr("Promo cap")} value={shown.promoCap} unit={symbol} step={moneyStep(country)} max={promoCapMax(country)} disabled={!canEdit} changed={shown.promoCap !== saved.promoCap} onChange={(promoCap) => edit({ promoCap })} /> : null}
             </div>
           </div>
@@ -230,13 +236,13 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <strong>{trn("{0} Driver bonus limit", <BadgeDollarSign size={14} aria-hidden="true" />)}</strong>
                 <small>{tr("The most an admin can add to one trip for the driver. Movera pays it; the rider never does. Above it the admin sees “adjust the limit in Pricing”.")}</small>
               </div>
-              <NumberField id={DRIVER_BONUS_LIMIT_INPUT_ID} label={tr("Driver bonus limit")} value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
-              <NumberField label={tr("Largest change of a driver's pay on one trip")} value={shown.driverPayChangeMax} unit={symbol} step={moneyStep(country)} max={hardMax * 10} disabled={!canEdit} changed={shown.driverPayChangeMax !== saved.driverPayChangeMax} onChange={(driverPayChangeMax) => edit({ driverPayChangeMax })} />
+              <NumberField info="tips.driverBonusLimit" id={DRIVER_BONUS_LIMIT_INPUT_ID} label={tr("Driver bonus limit")} value={shown.driverBonusLimit} unit={symbol} step={moneyStep(country)} max={hardMax} disabled={!canEdit} changed={shown.driverBonusLimit !== saved.driverBonusLimit} onChange={(driverBonusLimit) => edit({ driverBonusLimit })} />
+              <NumberField info="tips.driverPayChangeMax" label={tr("Largest change of a driver's pay on one trip")} value={shown.driverPayChangeMax} unit={symbol} step={moneyStep(country)} max={hardMax * 10} disabled={!canEdit} changed={shown.driverPayChangeMax !== saved.driverPayChangeMax} onChange={(driverPayChangeMax) => edit({ driverPayChangeMax })} />
               {/* Fix job 0 (owner A2-1 "Per country, in Pricing"): one limit per country, set on the country Standard; a zone shows it read-only. */}
-              <NumberField label={tr("Largest Add money to wallet at one time")} value={shown.walletCreditMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit || !onStandard} changed={shown.walletCreditMax !== saved.walletCreditMax} onChange={(walletCreditMax) => edit({ walletCreditMax })} />
+              <NumberField info="tips.walletCreditMax" label={tr("Largest Add money to wallet at one time")} value={shown.walletCreditMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit || !onStandard} changed={shown.walletCreditMax !== saved.walletCreditMax} onChange={(walletCreditMax) => edit({ walletCreditMax })} />
               {onStandard ? null : <small data-testid="wallet-credit-max-country">{tr("One limit per country: change it on the country Standard.")}</small>}
               {/* BQ-V44 (contract 0.18.110 CountryRules.bonusCampaignMax): the largest amount of one driver bonus campaign (Drivers › Bonuses). */}
-              <NumberField label={tr("Largest campaign bonus")} value={shown.bonusCampaignMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit} changed={shown.bonusCampaignMax !== saved.bonusCampaignMax} onChange={(bonusCampaignMax) => edit({ bonusCampaignMax })} />
+              <NumberField info="tips.bonusCampaignMax" label={tr("Largest campaign bonus")} value={shown.bonusCampaignMax} unit={symbol} step={moneyStep(country)} max={1000000} disabled={!canEdit} changed={shown.bonusCampaignMax !== saved.bonusCampaignMax} onChange={(bonusCampaignMax) => edit({ bonusCampaignMax })} />
               <small data-testid="bonus-campaign-max-help">{tr("The most one driver can earn from one bonus campaign in Drivers › Bonuses. Movera pays it with the next payout.")}</small>
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
@@ -247,8 +253,8 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <strong>{tr("Offers on a trip")}</strong>
                 <small>{tr("A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.")}</small>
               </div>
-              <NumberField label={tr("Offers on a trip from (% of the route to the drop-off)")} value={shown.onTripMinDonePct} step={1} max={100} disabled={!canEdit} changed={shown.onTripMinDonePct !== saved.onTripMinDonePct} onChange={(value) => edit({ onTripMinDonePct: value })} />
-              <NumberField label={tr("Rider of a next trip may cancel free after (min)")} value={shown.chainLateFreeCancelMin} step={1} max={120} disabled={!canEdit} changed={shown.chainLateFreeCancelMin !== saved.chainLateFreeCancelMin} onChange={(value) => edit({ chainLateFreeCancelMin: value })} />
+              <NumberField info="tips.onTripMinDonePct" label={tr("Offers on a trip from (% of the route to the drop-off)")} value={shown.onTripMinDonePct} step={1} max={100} disabled={!canEdit} changed={shown.onTripMinDonePct !== saved.onTripMinDonePct} onChange={(value) => edit({ onTripMinDonePct: value })} />
+              <NumberField info="tips.chainLateFreeCancelMin" label={tr("Rider of a next trip may cancel free after (min)")} value={shown.chainLateFreeCancelMin} step={1} max={120} disabled={!canEdit} changed={shown.chainLateFreeCancelMin !== saved.chainLateFreeCancelMin} onChange={(value) => edit({ chainLateFreeCancelMin: value })} />
             </div>
           </div>
           {/* v0.18.38 §62 (fix job 8, owner G15 "In-app calls only", "Both rider and driver"): CountryRules.calls. */}
@@ -259,7 +265,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <small>{tr("Rider and driver call each other in the app, during the trip and for this many minutes after the drop-off. Nobody sees a phone number. Calls are not recorded.")}</small>
               </div>
               <label className="mini-switch big">
-                <input type="checkbox" aria-label={tr("Calls on")} data-testid="calls-on" checked={shown.calls.on} disabled={!canEdit} onChange={(event) => edit({ calls: { ...shown.calls, on: event.target.checked } })} />
+                <input type="checkbox" aria-label={tr("Calls on")} data-testid="calls-on" checked={shown.calls.on} disabled={!canEdit} onChange={(event) => edit({ calls: { ...shown.calls, on: event.target.checked } })} /><SettingInfo id="tips.calls.on" label={tr("Calls on")} />
                 <span aria-hidden="true"><i /></span>
                 {shown.calls.on ? tr("On") : tr("Off")}
               </label>
@@ -267,11 +273,11 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <select data-testid="calls-mode" value={shown.calls.mode} disabled={!canEdit || !shown.calls.on} onChange={(event) => edit({ calls: { ...shown.calls, mode: event.target.value === "phone" ? "phone" : "in_app" } })}>
                   <option value="in_app">{callModeText("in_app")}</option>
                   <option value="phone">{callModeText("phone")}</option>
-                </select>
+                </select><SettingInfo id="tips.calls.mode" />
               </label>
               <small className="dx-note">{tr("In the app: free internet calls. Phone mode needs a phone company; until one is chosen calls stay in the app.")}</small>
               {CALL_FIELDS.map((field) => (
-                <label key={field.key} className="field"><span>{tr(field.label)}</span><NumberField label={tr(field.label)} value={shown.calls[field.key]} step={1} min={CALL_RANGES[field.key][0]} max={CALL_RANGES[field.key][1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls[field.key] !== saved.calls[field.key]} onChange={(value) => edit({ calls: { ...shown.calls, [field.key]: value } })} /></label>
+                <label key={field.key} className="field"><span>{tr(field.label)}</span><NumberField info={`tips.calls.${field.key}`} label={tr(field.label)} value={shown.calls[field.key]} step={1} min={CALL_RANGES[field.key][0]} max={CALL_RANGES[field.key][1]} disabled={!canEdit || !shown.calls.on} changed={shown.calls[field.key] !== saved.calls[field.key]} onChange={(value) => edit({ calls: { ...shown.calls, [field.key]: value } })} /></label>
               ))}
             </div>
           </div>
@@ -285,14 +291,14 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <small>{tr("On a low rating the rider and the driver can tick \"Don't match me again\". They are never matched again. Neither side is ever told. Only Support can undo a block.")}</small>
               </div>
               <label className="mini-switch big">
-                <input type="checkbox" aria-label={tr("Don't match again")} data-testid="dont-match-on" checked={shown.dontMatchAgain.on} disabled={!canEdit} onChange={(event) => edit({ dontMatchAgain: { ...shown.dontMatchAgain, on: event.target.checked } })} />
+                <input type="checkbox" aria-label={tr("Don't match again")} data-testid="dont-match-on" checked={shown.dontMatchAgain.on} disabled={!canEdit} onChange={(event) => edit({ dontMatchAgain: { ...shown.dontMatchAgain, on: event.target.checked } })} /><SettingInfo id="tips.dontMatch.on" label={tr("Don't match again")} />
                 <span aria-hidden="true"><i /></span>
                 {shown.dontMatchAgain.on ? tr("On") : tr("Off")}
               </label>
               <label className="check-row">{tr("Offer the tick at")}{" "}
                 <select data-testid="dont-match-stars" value={shown.dontMatchAgain.atStars} disabled={!canEdit || !shown.dontMatchAgain.on} onChange={(event) => edit({ dontMatchAgain: { ...shown.dontMatchAgain, atStars: Number(event.target.value) } })}>
                   {DONT_MATCH_STARS.map((n) => <option key={n} value={n}>{dontMatchStarsText(n)}</option>)}
-                </select>
+                </select><SettingInfo id="tips.dontMatch.atStars" />
               </label>
             </div>
           </div>
@@ -306,8 +312,8 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <strong>{tr("Limits per person")}</strong>
                 <small>{tr("Per person, in this country: how many saved places one rider can keep, and how many emergency contacts one rider or one driver can keep. Keeps the server traffic small.")}</small>
               </div>
-              <NumberField label={tr("Saved places per person")} value={shown.personLimits.savedPlacesPerPerson} step={1} max={500} disabled={!canEdit} changed={shown.personLimits.savedPlacesPerPerson !== saved.personLimits.savedPlacesPerPerson} onChange={(value) => edit({ personLimits: { ...shown.personLimits, savedPlacesPerPerson: value } })} />
-              <NumberField label={tr("Emergency contacts per person")} value={shown.personLimits.emergencyContactsPerPerson} step={1} max={50} disabled={!canEdit} changed={shown.personLimits.emergencyContactsPerPerson !== saved.personLimits.emergencyContactsPerPerson} onChange={(value) => edit({ personLimits: { ...shown.personLimits, emergencyContactsPerPerson: value } })} />
+              <NumberField info="tips.savedPlacesPerPerson" label={tr("Saved places per person")} value={shown.personLimits.savedPlacesPerPerson} step={1} max={500} disabled={!canEdit} changed={shown.personLimits.savedPlacesPerPerson !== saved.personLimits.savedPlacesPerPerson} onChange={(value) => edit({ personLimits: { ...shown.personLimits, savedPlacesPerPerson: value } })} />
+              <NumberField info="tips.emergencyContactsPerPerson" label={tr("Emergency contacts per person")} value={shown.personLimits.emergencyContactsPerPerson} step={1} max={50} disabled={!canEdit} changed={shown.personLimits.emergencyContactsPerPerson !== saved.personLimits.emergencyContactsPerPerson} onChange={(value) => edit({ personLimits: { ...shown.personLimits, emergencyContactsPerPerson: value } })} />
             </div>
           </div>
         </div>

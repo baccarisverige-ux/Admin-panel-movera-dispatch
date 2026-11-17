@@ -32,6 +32,7 @@ import {
   type LegalLanguage,
   type LegalVersion,
 } from "./legal";
+import { SettingInfo } from "../ui/SettingInfo";
 
 const LANGUAGE_NAME: Record<LegalLanguage, string> = { sv: "Svenska", fr: "Français", en: "English" };
 const DOCUMENT_NAME: Record<LegalDocumentId, "Terms of use" | "Privacy policy"> = { terms: "Terms of use", privacy: "Privacy policy" };
@@ -132,8 +133,8 @@ function LiveLegal({ country, onCountry, onNotice }: { country: LegalCountry; on
           {LEGAL_DOCUMENTS.map((id) => (
             <div key={id} className="legal-doc" data-document={id}>
               <h4>{tr(DOCUMENT_NAME[id])} · {LANGUAGE_NAME[language]}</h4>
-              <label>{tr("Title")}<input lang={language} value={draft[id].title[language]} maxLength={TITLE_MAX} onChange={(event) => patchDoc(id, "title", event.target.value)} aria-label={tr("{0} title ({1})", [tr(DOCUMENT_NAME[id]), LANGUAGE_NAME[language]])} /></label>
-              <label>{tr("Text")}<textarea lang={language} rows={16} value={draft[id].text[language]} maxLength={TEXT_MAX} onChange={(event) => patchDoc(id, "text", event.target.value)} aria-label={tr("{0} text ({1})", [tr(DOCUMENT_NAME[id]), LANGUAGE_NAME[language]])} /></label>
+              <label>{tr("Title")}<SettingInfo id="content.legal.title" label={tr("Title")} /><input lang={language} value={draft[id].title[language]} maxLength={TITLE_MAX} onChange={(event) => patchDoc(id, "title", event.target.value)} aria-label={tr("{0} title ({1})", [tr(DOCUMENT_NAME[id]), LANGUAGE_NAME[language]])} /></label>
+              <label>{tr("Text")}<SettingInfo id="content.legal.text" label={tr("Text")} /><textarea lang={language} rows={16} value={draft[id].text[language]} maxLength={TEXT_MAX} onChange={(event) => patchDoc(id, "text", event.target.value)} aria-label={tr("{0} text ({1})", [tr(DOCUMENT_NAME[id]), LANGUAGE_NAME[language]])} /></label>
               <PlaceholderChips text={draft[id].text[language]} />
               <small className="gr-help">{tr("{0} of {1} characters. A blank line starts a new paragraph.", [draft[id].text[language].length, TEXT_MAX])}</small>
             </div>
@@ -144,7 +145,7 @@ function LiveLegal({ country, onCountry, onNotice }: { country: LegalCountry; on
         <p className="gr-help">{trn("The texts use {0}. In the apps each one is replaced by the value below; a paragraph whose value is empty is left out, so nothing empty is shown.", <code>{LEGAL_PLACEHOLDERS.map((name) => `{${name}}`).join(" ")}</code>)}</p>
         <div className="legal-company">
           {LEGAL_PLACEHOLDERS.map((field) => (
-            <label key={field}>{tr(COMPANY_LABEL[field])}
+            <label key={field}>{tr(COMPANY_LABEL[field])}<SettingInfo id={`content.legal.company.${field}`} label={tr(COMPANY_LABEL[field])} />
               <input value={draft.company[field]} type={field === "supportEmail" ? "email" : field === "supportPhone" ? "tel" : "text"} placeholder={field === "supportPhone" ? "+46 8 123 456 78" : undefined} onChange={(event) => patchCompany(field, event.target.value)} data-company={field} />
             </label>
           ))}
@@ -152,7 +153,7 @@ function LiveLegal({ country, onCountry, onNotice }: { country: LegalCountry; on
 
         <label className="legal-reaccept">
           <input type="checkbox" checked={draft.reaccept} onChange={(event) => setDraft({ ...draft, reaccept: event.target.checked })} data-testid="legal-reaccept" />
-          {" "}{tr("Ask everyone to accept again")}
+          {" "}{tr("Ask everyone to accept again")}<SettingInfo id="content.legal.reaccept" label={tr("Ask everyone to accept again")} />
         </label>
         <p className="gr-help">{tr("At the next app start (never during a trip) riders and drivers in {0} see the new texts with \"I accept\". Until then a rider cannot book and a driver cannot go online.", [countryName])}</p>
       </fieldset>

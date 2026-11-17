@@ -7,7 +7,7 @@ const assert = (ok: unknown, message: string) => {
 // The old content/book.ts checks (author cannot publish, rollback) moved to studio.test.ts (C-21); the phone preview is checked in e2e/content.spec.ts.
 
 // Q30: driver app texts. The keys and defaults are the driver app's; empty means the app's default.
-assert(DRIVER_TEXT_KEYS.length === 67 && new Set(DRIVER_TEXT_KEYS.map((key) => key.id)).size === 67, "67 keys from the driver app, each once");
+assert(DRIVER_TEXT_KEYS.length === 68 && new Set(DRIVER_TEXT_KEYS.map((key) => key.id)).size === 68, "68 keys from the driver app, each once (G18 added trip.finishTrip)");
 assert(textKey("island.leaveNow")?.english === "Leave now for {time} pickup" && textKey("trip.collectCash")?.english === "Collect cash" && textKey("offer.yourShare")?.area === "offer", "the app's keys and English defaults");
 assert(["island", "offer", "trip"].every((area) => DRIVER_TEXT_KEYS.some((key) => key.area === area)) && DRIVER_TEXT_KEYS.some((key) => key.group === "scheduled"), "island, offer, trip and scheduled ride texts");
 const svTexts = { ...emptyTexts(), sv: { "island.online": "Radar på", "island.leaveNow": "Åk nu till {time}" } };

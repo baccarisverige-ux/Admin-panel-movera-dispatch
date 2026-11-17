@@ -250,10 +250,46 @@ export { SECONDS_DEFAULT, rulesOfDispatch, reservationOfDriverDoc } from "./disp
 
 /** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
 export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
-  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck"] },
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons", "shareTrip"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck"] },
   settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
   content: { rider: [], driver: ["texts", "notices"] },
 };
+
+/** The parts of the rider and driver documents one publish writes; `riderServerKeeps` (dotted paths inside them) stay the server's. */
+export type OwnedParts = { rider: string[]; driver: string[]; riderServerKeeps?: string[] };
+
+/**
+ * BQ-S10 round 2 (supervisor SF-A1): the parts a Dispatch publish of one zone writes. The Share trip switch (S10) and
+ * the pickup entrance chips switch (V21, booking.pickupSpots) live in the rider document; when that read failed
+ * (`riderRead` false) the page only shows the browser's own values, so `shareTrip` is left out and
+ * `booking.pickupSpots` stays the server's (the rest of `booking` is still written): a zone switched off cannot come
+ * back on. (S10 admin rebase over V21: before, pickupSpots was still published after a failed read.)
+ */
+export function dispatchOwnedFor(riderRead: boolean): OwnedParts {
+  return riderRead ? OWNED.dispatch : { ...OWNED.dispatch, rider: OWNED.dispatch.rider.filter((key) => key !== "shareTrip"), riderServerKeeps: ["booking.pickupSpots"] };
+}
+
+/**
+ * `after` with each dotted path in `paths` set back to its value in `before` (removed when `before` has none or is
+ * null), so a publish built from them leaves those paths as the server has them.
+ */
+export function keepPaths(after: Doc, before: Doc | null, paths: readonly string[]): Doc {
+  const next: Doc = structuredClone(after);
+  for (const path of paths) {
+    const parts = path.split(".");
+    const last = parts.pop()!;
+    let into: unknown = next;
+    let from: unknown = before;
+    for (const part of parts) {
+      into = isPlain(into) ? into[part] : undefined;
+      from = isPlain(from) ? from[part] : undefined;
+    }
+    if (!isPlain(into)) continue;
+    if (isPlain(from) && last in from) into[last] = structuredClone(from[last]);
+    else delete into[last];
+  }
+  return next;
+}
 
 /** `server` with `keys` taken from `built` (the admin exporter's full document). The waiting money stays the server's (pricing keeps it, §6.2). */
 export function withOwned(server: Doc, built: Doc, keys: readonly string[]): Doc {
@@ -381,23 +417,61 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean };
 
-/** CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). */
-export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null): Doc {
+/**
+ * F1 (MONEY, Rules audits/impact/f1-tips-save-payout-mode.md): the keys of a country_rules document the Tips & limits
+ * panel writes. countryRulesOf writes each of these from the panel's values exactly as before (a key the panel leaves
+ * out is not sent); every OTHER key of the stored document is kept as it is. Before, the document was rebuilt from a
+ * fixed list and the server stores what it is sent, so Finance › Payouts settings' payoutMode and payoutSchedule (same
+ * document) were dropped by every Tips & limits Save: a manual country went back to automatic, Monday 08:00.
+ */
+export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "currency", "tips", "raiseSteps", "driverBonus", "driverPayChangeMax", "onTripOffers", "limits", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms"] as const;
+
+/**
+ * Kept from the stored document on a country Standard only. A zone's base can be its Standard's document (a zone
+ * that uses the Standard gets its own here), and these are the Standard's: the server reads the payout keys from the
+ * Standard only (contract payoutSchedule "read from the country standard only"; J9 v0.18.84 maxRiderDebt and
+ * driverOwesLimit: "the country standard only; a zone's own value is ignored") and refuses the SOS / emergency keys
+ * on a zone (400 *_country_only). The panel's own Standard-only keys (walletCreditMax, emergencyNumbers,
+ * sosContactsSms) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
+ */
+export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"] as const;
+
+/** Never stored in a document: the server's marks on a read. */
+const COUNTRY_RULES_READ_MARKS = ["usesStandard", "zoneId"] as const;
+
+/**
+ * CountryRules (CONTRACT.md §6.5) from the Tips & limits panel's values (major units). `standard`: the document is the
+ * country Standard's (false for a zone's own rules).
+ */
+export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null, { standard = true }: { standard?: boolean } = {}): Doc {
   const option = (amount: number) => ({ amount: toMinor(amount, currency), enabled: true });
+  const drop = new Set<string>([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_READ_MARKS, ...(standard ? [] : COUNTRY_RULES_STANDARD_ONLY_KEPT)]);
+  const kept = structuredClone(Object.fromEntries(Object.entries(base ?? {}).filter(([key]) => !drop.has(key)))) as Doc;
+  // U2 (Rules audits/impact/safe-config-saves.md, SAFETY): a block the panel writes starts from the stored block, so a
+  // key the panel does not show (calls.adminCallRoles, calls.phoneProvider, ...) is kept; the panel's own keys win.
+  const plain = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  const stored = (key: string) => { const value = base?.[key]; return plain(value) ? structuredClone(value) : {}; };
+  // SF-2: two levels for a block with objects inside (chat.autoArrived, chat.quickReplies): an object the panel writes
+  // starts from the stored object of the same key, so a stored key inside it is kept too; lists and values are the panel's.
+  const storedDeep = (key: string, panel: Record<string, unknown>) => {
+    const kept = stored(key);
+    return { ...kept, ...Object.fromEntries(Object.entries(panel).map(([name, value]) => { const inner = kept[name]; return [name, plain(value) && plain(inner) ? { ...inner, ...value } : value]; })) };
+  };
   return {
+    ...kept,
     version: (base?.["version"] as number | undefined) ?? 1,
     publishedAt: (base?.["publishedAt"] as string | undefined) ?? new Date(0).toISOString(),
     country,
     currency,
     tips: input.tips.map(option),
     raiseSteps: input.raiseSteps.map(option),
-    driverBonus: { defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
+    driverBonus: { ...stored("driverBonus"), defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
     // v0.18.10 checker: the largest single change of a driver's pay (Change pay on the trip page).
     ...(input.driverPayChangeMax !== undefined ? { driverPayChangeMax: toMinor(input.driverPayChangeMax, currency) } : {}),
     // v0.18.26: the country's other limits (sign-in codes, uploads) are kept; the per-person ones come from the panel.
     // v0.18.33 (owner 2026-11-05): Exclusives to a driver on a trip only after this % of his route.
     ...(input.onTripMinDonePct !== undefined || input.chainLateFreeCancelMin !== undefined
-      ? { onTripOffers: { minRouteDonePct: input.onTripMinDonePct ?? 70, lateFreeCancelMin: input.chainLateFreeCancelMin ?? 10 } }
+      ? { onTripOffers: { ...stored("onTripOffers"), minRouteDonePct: input.onTripMinDonePct ?? 70, lateFreeCancelMin: input.chainLateFreeCancelMin ?? 10 } }
       : {}),
     ...(base?.["limits"] || input.personLimits ? { limits: { ...((base?.["limits"] as Record<string, unknown> | undefined) ?? {}), ...(input.personLimits ?? {}) } } : {}),
     // v0.18.29 A2 (fix job 0) (owner G12 Q-D): the largest single Add money to wallet.
@@ -405,11 +479,11 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     // v0.18.110 BQ-V44: the largest driver bonus campaign (per country standard or zone; the server refuses above it).
     ...(input.bonusCampaignMax !== undefined ? { bonusCampaignMax: toMinor(input.bonusCampaignMax, currency) } : base?.["bonusCampaignMax"] ? { bonusCampaignMax: base["bonusCampaignMax"] } : {}),
     // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.
-    ...(input.calls ? { calls: { ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
+    ...(input.calls ? { calls: { ...stored("calls"), ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
     // v0.18.56 §78 (G9 part 2): Tips & limits › Chat; a save without it keeps the stored block.
-    ...(input.chat ? { chat: JSON.parse(JSON.stringify(input.chat)) as ChatSettings } : base?.["chat"] ? { chat: base["chat"] } : {}),
+    ...(input.chat ? { chat: storedDeep("chat", JSON.parse(JSON.stringify(input.chat)) as ChatSettings) } : base?.["chat"] ? { chat: base["chat"] } : {}),
     // v0.18.43 §64 (fix job 10): Tips & limits › Don't match again; a save without it keeps the stored block.
-    ...(input.dontMatchAgain ? { dontMatchAgain: { ...input.dontMatchAgain } } : base?.["dontMatchAgain"] ? { dontMatchAgain: base["dontMatchAgain"] } : {}),
+    ...(input.dontMatchAgain ? { dontMatchAgain: { ...stored("dontMatchAgain"), ...input.dontMatchAgain } } : base?.["dontMatchAgain"] ? { dontMatchAgain: base["dontMatchAgain"] } : {}),
     // v0.18.57 §79: Tips & limits › Emergency numbers, on the country standard only (a zone's own rules never carry it).
     ...(input.emergencyNumbers ? { emergencyNumbers: input.emergencyNumbers.map((row) => ({ kind: row.kind, number: row.number, label: { ...row.label } })) } : {}),
     // v0.18.101 §92 (BQ-V34): the SMS to the driver's emergency contacts on SOS, on the country standard only (a zone's own rules → 400 sos_sms_country_only).

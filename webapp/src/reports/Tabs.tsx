@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { BarChart3, Bell, Car, Clock, CreditCard, Layers, MapPin, Radar, Tags, Trophy, UserRound, Users, Wallet } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
 import { useAlertsMaybe } from "../alerts/AlertsContext";
+import { useAlertIncidents } from "../alerts/useOnDemand";
 import { agentName } from "../alerts/AlertActions";
 import { solvedHistory } from "../alerts/history";
 import { EarningsChart } from "../dashboard/EarningsChart";
@@ -246,7 +247,9 @@ export function DispatchTab({ zones, window, compare, fmt, onCsv }: TabProps) {
 
 export function AlertsTab({ window, compare, fmt, onCsv }: TabProps) {
   const shared = useAlertsMaybe();
-  const history = useMemo(() => (shared ? solvedHistory(shared.book, shared.safety.value, (id) => shared.facts.incidents.find((row) => row.id === id)?.zoneId ?? null, (id) => shared.facts.incidents.find((row) => row.id === id)?.kind === "ride_check") : []), [shared?.book, shared?.safety.value, shared?.facts.incidents]);
+  // Q132: the cases behind the solved SOS / ride-check alerts, read on this tab only (not by the alert bar).
+  const incidents = useAlertIncidents(Boolean(shared));
+  const history = useMemo(() => (shared ? solvedHistory(shared.book, shared.safety.value, (id) => incidents.find((row) => row.id === id)?.zoneId ?? null, (id) => incidents.find((row) => row.id === id)?.kind === "ride_check") : []), [shared?.book, shared?.safety.value, incidents]);
   const data = alertsData(history, window, shared?.counts ?? { critical: 0, important: 0, info: 0 });
   useCsv(onCsv, { name: "alerts", head: ["Alert", "Level", "Taken by", "Solved by", "Solved at", "Minutes to solve", "Note"], rows: data.rows.map((row) => [row.title, row.level, agentName(row.takenBy), agentName(row.solvedBy), row.doneAt, row.solveMin, row.note]) });
   return (

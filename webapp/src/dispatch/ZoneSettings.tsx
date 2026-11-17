@@ -27,6 +27,7 @@ import {
   type CountryDispatch, type DriverGroup, type ExtraId, type TabId, type WaitKind, type WaitStep, type ZoneDispatch,
 } from "./rules";
 import { tr, trn, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 const EXTRA_ICON: Record<ExtraId, ReactNode> = {
   child_seat: <Baby size={15} />, pet: <PawPrint size={15} />, wheelchair: <Accessibility size={15} />, luggage: <Luggage size={15} />, long_trip: <Route size={15} />,
@@ -99,12 +100,12 @@ function Modes({ zone, onChange, busy, disabled }: Props) {
       <RaiseLimitCard zone={zone} onChange={onChange} disabled={disabled} />
 
       <Card title={tr("Which mode runs")} tone="green" icon={<Gauge size={18} />} help={tr("Let the system choose by how busy the zone is, or choose yourself.")}>
-        <Row label={tr("How to choose")}>
+        <Row info="dispatch.zone.howToChoose" label={tr("How to choose")}>
           <Choice label={tr("How the mode is chosen")} value={choose.how} disabled={disabled} onChange={(how) => set({ choose: { ...choose, how } })} options={[{ id: "auto", label: tr("Automatic") }, { id: "manual", label: tr("By hand") }]} />
         </Row>
         {choose.how === "auto" ? (
           <>
-            <Row label={tr("Use Radar when busy")} help={tr("Busy = waiting requests ÷ free drivers. Below this level, Exclusive is used.")}>
+            <Row info="dispatch.zone.useRadarWhenBusy" label={tr("Use Radar when busy")} help={tr("Busy = waiting requests ÷ free drivers. Below this level, Exclusive is used.")}>
               <Num label={tr("Busy level for Radar")} value={choose.radarAbove} unit="per driver" step={0.1} min={0.1} max={10} disabled={disabled} onChange={(radarAbove) => set({ choose: { ...choose, radarAbove } })} />
             </Row>
             <div className="dx-meter" aria-label={tr("Busy now")}>
@@ -117,19 +118,23 @@ function Modes({ zone, onChange, busy, disabled }: Props) {
         ) : (
           <>
             {/* v0.18.9: Backup mode removed (the server never used it; If nobody accepts on each mode decides). */}
-            <Row label={tr("Main mode")}><Choice label={tr("Main mode")} value={choose.main} disabled={disabled} onChange={(main) => set({ choose: { ...choose, main } })} options={[{ id: "radar", label: tr("Radar") }, { id: "exclusive", label: tr("Exclusive") }]} /></Row>
+            <Row info="dispatch.zone.mainMode" label={tr("Main mode")}><Choice label={tr("Main mode")} value={choose.main} disabled={disabled} onChange={(main) => set({ choose: { ...choose, main } })} options={[{ id: "radar", label: tr("Radar") }, { id: "exclusive", label: tr("Exclusive") }]} /></Row>
           </>
         )}
         <div className="dx-sub">
-          <b>{trn("{0} By time of day", <Clock size={13} aria-hidden="true" />)}</b>
+          <b>{trn("{0} By time of day", <Clock size={13} aria-hidden="true" />)}<SettingInfo id="dispatch.zone.timeRules" label={tr("Time rules")} /></b>
           <small>{tr("A time rule wins over the choice above while it runs.")}</small>
           <ul className="dx-time-rules" aria-label={tr("Time rules")}>
             {choose.times.map((rule, index) => (
               <li key={rule.id} className={rule.on ? undefined : "off"}>
+                {/* info-at: dispatch.zone.timeRules */}
                 <Switch label={tr("Time rule {0}", [index + 1])} on={rule.on} disabled={disabled} onChange={(on) => set({ choose: { ...choose, times: choose.times.map((item) => (item.id === rule.id ? { ...item, on } : item)) } })} />
+                {/* info-at: dispatch.zone.timeRules */}
                 <input type="time" aria-label={tr("Time rule {0} from", [index + 1])} value={rule.from} disabled={disabled} onChange={(event) => set({ choose: { ...choose, times: choose.times.map((item) => (item.id === rule.id ? { ...item, from: event.target.value } : item)) } })} />
                 <span>{tr("to")}</span>
+                {/* info-at: dispatch.zone.timeRules */}
                 <input type="time" aria-label={tr("Time rule {0} to", [index + 1])} value={rule.to} disabled={disabled} onChange={(event) => set({ choose: { ...choose, times: choose.times.map((item) => (item.id === rule.id ? { ...item, to: event.target.value } : item)) } })} />
+                {/* info-at: dispatch.zone.timeRules */}
                 <Choice label={tr("Time rule {0} mode", [index + 1])} value={rule.mode} disabled={disabled} onChange={(mode) => set({ choose: { ...choose, times: choose.times.map((item) => (item.id === rule.id ? { ...item, mode } : item)) } })} options={[{ id: "radar", label: tr("Radar") }, { id: "exclusive", label: tr("Exclusive") }]} />
                 <button data-command="admin.dispatch.edit" type="button" className="icon-ghost" aria-label={tr("Remove time rule {0}", [index + 1])} disabled={disabled} onClick={() => set({ choose: { ...choose, times: choose.times.filter((item) => item.id !== rule.id) } })}><Trash2 size={14} aria-hidden="true" /></button>
               </li>
@@ -140,7 +145,7 @@ function Modes({ zone, onChange, busy, disabled }: Props) {
       </Card>
 
       <Card title={tr("Whose rules")} tone="pink" icon={<Scale size={18} />} help={tr("A rider and a driver can be in different zones. Drivers are matched across zone borders.")}>
-        <Row label={tr("Rules come from")}>
+        <Row info="dispatch.zone.rulesComeFrom" label={tr("Rules come from")}>
           <Choice label={tr("Whose rules")} value={zone.rulesFrom} disabled={disabled} onChange={(rulesFrom) => set({ rulesFrom })} options={[{ id: "driver", label: tr("The driver's zone") }, { id: "pickup", label: tr("The pickup zone") }]} />
         </Row>
       </Card>
@@ -161,7 +166,7 @@ function Best({ zone, onChange, disabled, otherZones }: Props) {
         {zone.factors.map((factor) => {
           const info = FACTORS.find((item) => item.id === factor.id)!;
           return (
-            <Row key={factor.id} label={trx(info.label)} help={trx(info.help)} on={factor.on} disabled={disabled} onToggle={(on) => set({ factors: zone.factors.map((item) => (item.id === factor.id ? { ...item, on } : item)) })}>
+            <Row key={factor.id} info={`dispatch.zone.factor.${factor.id}`} label={trx(info.label)} help={trx(info.help)} on={factor.on} disabled={disabled} onToggle={(on) => set({ factors: zone.factors.map((item) => (item.id === factor.id ? { ...item, on } : item)) })}>
               <input className="dx-range" type="range" min={0} max={100} step={5} aria-label={tr("{0} weight", [trx(info.label)])} value={factor.weight} disabled={disabled} onChange={(event) => set({ factors: zone.factors.map((item) => (item.id === factor.id ? { ...item, weight: Number(event.target.value) } : item)) })} />
               <b className="dx-share">{Math.round((factor.weight / total) * 100)}%</b>
             </Row>
@@ -171,71 +176,73 @@ function Best({ zone, onChange, disabled, otherZones }: Props) {
 
       <Card title={tr("Search distance")} tone="blue" icon={<Layers size={18} />} help={tr("The search grows step by step when nobody accepts.")}>
         <div className="dx-steps" role="group" aria-label={tr("Search distance steps")}>
+          <SettingInfo id="dispatch.zone.searchSteps" label={tr("Search distance steps")} />
           {steps.map((km, index) => (
             <span key={index} className="dx-step">
               <small>{trn("Step {0}", index + 1)}</small>
+              {/* info-at: dispatch.zone.searchSteps */}
               <Num label={tr("Search step {0}", [index + 1])} value={km} unit="km" step={0.5} min={0.5} max={50} disabled={disabled} onChange={(next) => set({ radius: { ...zone.radius, steps: steps.map((item, at) => (at === index ? next : item)) } })} />
               {steps.length > 1 ? <button data-command="admin.dispatch.edit" type="button" className="icon-ghost" aria-label={tr("Remove search step {0}", [index + 1])} disabled={disabled} onClick={() => set({ radius: { ...zone.radius, steps: steps.filter((_, at) => at !== index) } })}><Trash2 size={13} aria-hidden="true" /></button> : null}
             </span>
           ))}
           {steps.length < 5 ? <button data-command="admin.dispatch.edit" type="button" className="dash-btn small ghost" disabled={disabled} onClick={() => set({ radius: { ...zone.radius, steps: [...steps, Math.min(50, (steps[steps.length - 1] ?? 3) + 3)] } })}>{trn("{0} Add a step", <Plus size={13} aria-hidden="true" />)}</button> : null}
         </div>
-        <Row label={tr("Longest search")} help={tr("Booked rides: after this the search starts again. Live rides keep searching until the rider cancels.")}>
+        <Row info="dispatch.zone.longestSearch" label={tr("Longest search")} help={tr("Booked rides: after this the search starts again. Live rides keep searching until the rider cancels.")}>
           <Num label={tr("Longest search")} value={zone.radius.maxWaitMin} unit="min" min={1} max={30} disabled={disabled} onChange={(maxWaitMin) => set({ radius: { ...zone.radius, maxWaitMin } })} />
         </Row>
       </Card>
 
       <Card title={tr("Pickup limits")} tone="blue" icon={<MapPin size={18} />} help={tr("No offer goes to a driver farther away or longer away than this, in Radar and Exclusive.")}>
-        <Row label={tr("Farthest pickup")} help={tr("0 = the widest search distance step ({0} km). A larger value has no effect: the widest step is always the limit.", [String(Math.max(...steps, ...(zone.radar.steps ?? []), ...(zone.exclusive.steps ?? [])))])}>
+        <Row info="dispatch.zone.farthestPickup" label={tr("Farthest pickup")} help={tr("0 = the widest search distance step ({0} km). A larger value has no effect: the widest step is always the limit.", [String(Math.max(...steps, ...(zone.radar.steps ?? []), ...(zone.exclusive.steps ?? [])))])}>
           <Num label={tr("Farthest pickup")} value={zone.limits.maxPickupKm} unit="km" step={0.5} min={0} max={50} disabled={disabled} onChange={(maxPickupKm) => set({ limits: { ...zone.limits, maxPickupKm } })} />
         </Row>
-        <Row label={tr("Longest pickup time")} help={tr("Minutes for the driver to reach the pickup, estimated from the distance at 24 km/h (not the live route). 0 = no limit.")}>
+        <Row info="dispatch.zone.longestPickupTime" label={tr("Longest pickup time")} help={tr("Minutes for the driver to reach the pickup, estimated from the distance at 24 km/h (not the live route). 0 = no limit.")}>
           <Num label={tr("Longest pickup time")} value={zone.limits.maxPickupEtaMin} unit="min" min={0} max={60} disabled={disabled} onChange={(maxPickupEtaMin) => set({ limits: { ...zone.limits, maxPickupEtaMin: Math.round(maxPickupEtaMin) } })} />
         </Row>
-        <Row label={tr("Far reach")} help={tr("When nobody new is free inside the widest step, the search tries one more step this far. The widest step or less = off.")}>
+        <Row info="dispatch.zone.farReach" label={tr("Far reach")} help={tr("When nobody new is free inside the widest step, the search tries one more step this far. The widest step or less = off.")}>
           <Num label={tr("Far reach")} value={zone.limits.farReachKm} unit="km" step={0.5} min={0.5} max={50} disabled={disabled} onChange={(farReachKm) => set({ limits: { ...zone.limits, farReachKm } })} />
         </Row>
-        <Row label={tr("Ask one driver at most")} help={tr("A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.")}>
+        <Row info="dispatch.zone.askOneDriverAtMost" label={tr("Ask one driver at most")} help={tr("A driver who declined or let this many offers of the same ride run out is not asked again for it. Default 2.")}>
           <Num label={tr("Ask one driver at most, offers")} value={zone.reaskLimit} unit="offers" min={1} max={5} disabled={disabled} onChange={(reaskLimit) => set({ reaskLimit: Math.round(reaskLimit) })} />
         </Row>
       </Card>
 
-      <Card title={tr("No driver nearby")} tone="blue" icon={<MapPin size={18} />} help={tr("A live ride with no driver after this time: the rider sees the message once, with Keep waiting and Cancel free. The search goes on until the rider cancels. Admins get an alert at the same moment.")} off={!zone.noDriverNearby.on} aside={<Switch label={tr("No driver nearby")} on={zone.noDriverNearby.on} disabled={disabled} onChange={(on) => set({ noDriverNearby: { ...zone.noDriverNearby, on } })} />}>
-        <Row label={tr("Show after")}>
+      <Card title={tr("No driver nearby")} info="dispatch.zone.noDriverNearby" tone="blue" icon={<MapPin size={18} />} help={tr("A live ride with no driver after this time: the rider sees the message once, with Keep waiting and Cancel free. The search goes on until the rider cancels. Admins get an alert at the same moment.")} off={!zone.noDriverNearby.on} aside={<Switch label={tr("No driver nearby")} on={zone.noDriverNearby.on} disabled={disabled} onChange={(on) => set({ noDriverNearby: { ...zone.noDriverNearby, on } })} />}>
+        <Row info="dispatch.zone.showAfter" label={tr("Show after")}>
           <Num label={tr("Show 'No driver nearby' after")} value={Math.round(zone.noDriverNearby.afterSec / 60)} unit="min" min={1} max={30} disabled={disabled || !zone.noDriverNearby.on} onChange={(minutes) => set({ noDriverNearby: { ...zone.noDriverNearby, afterSec: Math.round(minutes) * 60 } })} />
         </Row>
-        <Row label={tr("Message")} help={tr("The rider app shows it in the rider's language; this text is the fallback.")}>
+        <Row info="dispatch.zone.message" label={tr("Message")} help={tr("The rider app shows it in the rider's language; this text is the fallback.")}>
           <input className="dx-text" aria-label={tr("'No driver nearby' message")} value={zone.noDriverNearby.message} maxLength={300} disabled={disabled || !zone.noDriverNearby.on} onChange={(event) => set({ noDriverNearby: { ...zone.noDriverNearby, message: event.target.value } })} />
         </Row>
       </Card>
 
-      <Card title={tr("Neighbour zones")} tone="blue" icon={<Move size={18} />} help={tr("When nobody in this zone accepts, drivers of the chosen zones nearby can get the ride too. Only zones in the same country and currency.")} off={!zone.neighbours.on} aside={<Switch label={tr("Neighbour zones")} on={zone.neighbours.on} disabled={disabled} onChange={(on) => set({ neighbours: { ...zone.neighbours, on } })} />}>
-        <Row label={tr("Zones")}>
+      <Card title={tr("Neighbour zones")} info="dispatch.zone.neighbourZones" tone="blue" icon={<Move size={18} />} help={tr("When nobody in this zone accepts, drivers of the chosen zones nearby can get the ride too. Only zones in the same country and currency.")} off={!zone.neighbours.on} aside={<Switch label={tr("Neighbour zones")} on={zone.neighbours.on} disabled={disabled} onChange={(on) => set({ neighbours: { ...zone.neighbours, on } })} />}>
+        <Row info="dispatch.zone.zones" label={tr("Zones")}>
           <div className="dx-chips" role="group" aria-label={tr("Neighbour zones")}>
             {otherZones.length ? otherZones.map((other) => (
               <Check key={other.id} label={other.name} on={zone.neighbours.zoneIds.includes(other.id)} disabled={disabled || !zone.neighbours.on} onChange={(on) => set({ neighbours: { ...zone.neighbours, zoneIds: on ? [...zone.neighbours.zoneIds, other.id] : zone.neighbours.zoneIds.filter((id) => id !== other.id) } })} />
             )) : <small className="as-help">{tr("No other zone in this country.")}</small>}
           </div>
         </Row>
-        <Row label={tr("From search step")} help={tr("0 = the last step.")}>
+        <Row info="dispatch.zone.fromSearchStep" label={tr("From search step")} help={tr("0 = the last step.")}>
           <Num label={tr("Neighbours from search step")} value={zone.neighbours.afterStep} min={0} max={5} disabled={disabled || !zone.neighbours.on} onChange={(afterStep) => set({ neighbours: { ...zone.neighbours, afterStep: Math.round(afterStep) } })} />
         </Row>
       </Card>
 
-      <Card title={tr("Smart waiting")} tone="green" icon={<Zap size={18} />} help={tr("When busy, collect requests for a few seconds and match them together for the best fit.")} off={!zone.batching.on} aside={<Switch label={tr("Smart waiting")} on={zone.batching.on} disabled={disabled} onChange={(on) => set({ batching: { ...zone.batching, on } })} />}>
-        <Row label={tr("Collect for")}><Num label={tr("Smart waiting seconds")} value={zone.batching.seconds} unit="s" min={1} max={10} disabled={disabled || !zone.batching.on} onChange={(seconds) => set({ batching: { ...zone.batching, seconds } })} /></Row>
-        <Row label={tr("Starts when busy level is at least")}><Num label={tr("Smart waiting from busy level")} value={zone.batching.fromRatio} unit="per driver" step={0.1} min={0.1} max={10} disabled={disabled || !zone.batching.on} onChange={(fromRatio) => set({ batching: { ...zone.batching, fromRatio } })} /></Row>
+      <Card title={tr("Smart waiting")} info="dispatch.zone.smartWaiting" tone="green" icon={<Zap size={18} />} help={tr("When busy, collect requests for a few seconds and match them together for the best fit.")} off={!zone.batching.on} aside={<Switch label={tr("Smart waiting")} on={zone.batching.on} disabled={disabled} onChange={(on) => set({ batching: { ...zone.batching, on } })} />}>
+        <Row info="dispatch.zone.collectFor" label={tr("Collect for")}><Num label={tr("Smart waiting seconds")} value={zone.batching.seconds} unit="s" min={1} max={10} disabled={disabled || !zone.batching.on} onChange={(seconds) => set({ batching: { ...zone.batching, seconds } })} /></Row>
+        <Row info="dispatch.zone.startsWhenBusyLevelIsAt" label={tr("Starts when busy level is at least")}><Num label={tr("Smart waiting from busy level")} value={zone.batching.fromRatio} unit="per driver" step={0.1} min={0.1} max={10} disabled={disabled || !zone.batching.on} onChange={(fromRatio) => set({ batching: { ...zone.batching, fromRatio } })} /></Row>
       </Card>
 
       <Card title={tr("Drivers finishing a ride")} tone="orange" icon={<Route size={18} />} help={tr("A driver about to drop off a rider can get the next request, as an Exclusive offer only. Never Radar during a trip.")}>
-        <Row label={tr("On Exclusive")} help={tr("Uses Exclusive while driving in Modes.")} on={zone.finishing.exclusive} disabled={disabled} onToggle={(exclusive) => set({ finishing: { ...zone.finishing, exclusive } })} />
-        <Row label={tr("Finishes within")}><Num label={tr("Finishing within minutes")} value={zone.finishing.withinMin} unit="min" min={1} max={15} disabled={disabled} onChange={(withinMin) => set({ finishing: { ...zone.finishing, withinMin } })} /></Row>
-        <Row label={tr("Drop-off within")}><Num label={tr("Finishing within km")} value={zone.finishing.withinKm} unit="km of the pickup" step={0.5} min={0.5} max={10} disabled={disabled} onChange={(withinKm) => set({ finishing: { ...zone.finishing, withinKm } })} /></Row>
+        <Row info="dispatch.zone.onExclusive" label={tr("On Exclusive")} help={tr("Uses Exclusive while driving in Modes.")} on={zone.finishing.exclusive} disabled={disabled} onToggle={(exclusive) => set({ finishing: { ...zone.finishing, exclusive } })} />
+        <Row info="dispatch.zone.finishesWithin" label={tr("Finishes within")}><Num label={tr("Finishing within minutes")} value={zone.finishing.withinMin} unit="min" min={1} max={15} disabled={disabled} onChange={(withinMin) => set({ finishing: { ...zone.finishing, withinMin } })} /></Row>
+        <Row info="dispatch.zone.dropOffWithin" label={tr("Drop-off within")}><Num label={tr("Finishing within km")} value={zone.finishing.withinKm} unit="km of the pickup" step={0.5} min={0.5} max={10} disabled={disabled} onChange={(withinKm) => set({ finishing: { ...zone.finishing, withinKm } })} /></Row>
       </Card>
 
-      <Card title={tr("Favourite drivers")} tone="pink" icon={<Heart size={18} />} help={tr("Riders can mark a driver as a favourite. That driver gets the request first.")} off={!zone.favourite.on} aside={<Switch label={tr("Favourite drivers")} on={zone.favourite.on} disabled={disabled} onChange={(on) => set({ favourite: { ...zone.favourite, on } })} />}>
-        <Row label={tr("Up to")}><Num label={tr("Favourite max distance")} value={zone.favourite.maxKm} unit="km away" step={0.5} min={0.5} max={20} disabled={disabled || !zone.favourite.on} onChange={(maxKm) => set({ favourite: { ...zone.favourite, maxKm } })} /></Row>
-        <Row label={tr("Wait for them")}><Num label={tr("Wait for favourite")} value={zone.favourite.waitSec} unit="s" min={5} max={60} disabled={disabled || !zone.favourite.on} onChange={(waitSec) => set({ favourite: { ...zone.favourite, waitSec } })} /></Row>
+      <Card title={tr("Favourite drivers")} info="dispatch.zone.favouriteDrivers" tone="pink" icon={<Heart size={18} />} help={tr("Riders can mark a driver as a favourite. That driver gets the request first.")} off={!zone.favourite.on} aside={<Switch label={tr("Favourite drivers")} on={zone.favourite.on} disabled={disabled} onChange={(on) => set({ favourite: { ...zone.favourite, on } })} />}>
+        <Row info="dispatch.zone.upTo" label={tr("Up to")}><Num label={tr("Favourite max distance")} value={zone.favourite.maxKm} unit="km away" step={0.5} min={0.5} max={20} disabled={disabled || !zone.favourite.on} onChange={(maxKm) => set({ favourite: { ...zone.favourite, maxKm } })} /></Row>
+        <Row info="dispatch.zone.waitForThem" label={tr("Wait for them")}><Num label={tr("Wait for favourite")} value={zone.favourite.waitSec} unit="s" min={5} max={60} disabled={disabled || !zone.favourite.on} onChange={(waitSec) => set({ favourite: { ...zone.favourite, waitSec } })} /></Row>
       </Card>
     </div>
   );
@@ -269,14 +276,18 @@ function Waiting({ zone, onChange, disabled }: Props) {
                 <span className="dx-wait-icon" aria-hidden="true">{WAIT_ICON[step.kind]}</span>
                 <span className="dx-wait-main">
                   <span className="dx-wait-top">
-                    <b>{trx(info.label)}</b>
+                    <b>{trx(info.label)}<SettingInfo id={`dispatch.zone.wait.${step.kind}`} label={trx(info.label)} /></b>
+                    {/* info-at: dispatch.zone.wait.* */}
                     <Num label={tr("{0} after", [trx(info.label)])} before="after" value={step.afterMin} unit="min" step={0.5} min={0} max={30} disabled={disabled} onChange={(afterMin) => setSteps(steps.map((item) => (item.id === step.id ? { ...item, afterMin } : item)))} />
+                    {/* info-at: dispatch.zone.wait.* */}
                     {step.kind === "keep_waiting" ? <Num label={tr("Extra minutes to wait")} before="wait" value={step.extraMin ?? 3} unit="more min" min={1} max={15} disabled={disabled} onChange={(extraMin) => setSteps(steps.map((item) => (item.id === step.id ? { ...item, extraMin } : item)))} /> : null}
                   </span>
                   <small>{trx(info.help)}{step.kind === "raise_price" ? <>{" "}{trn("Price steps are set in {0}.", <Link to="/pricing">{tr("Pricing")}</Link>)}</> : null}</small>
+                  {/* info-at: dispatch.zone.wait.* */}
                   <textarea aria-label={tr("{0} message", [trx(info.label)])} rows={2} maxLength={160} value={step.message} disabled={disabled} onChange={(event) => setSteps(steps.map((item) => (item.id === step.id ? { ...item, message: event.target.value } : item)))} />
                 </span>
                 <span className="dx-wait-tools">
+                  {/* info-at: dispatch.zone.wait.* */}
                   <Switch label={trx(info.label)} on={step.on} disabled={disabled} onChange={(on) => setSteps(steps.map((item) => (item.id === step.id ? { ...item, on } : item)))} />
                   <span>
                     <button data-command="admin.dispatch.edit" type="button" className="icon-ghost" aria-label={tr("Move {0} up", [trx(info.label)])} disabled={disabled || index === 0} onClick={() => move(index, -1)}><ArrowUp size={14} aria-hidden="true" /></button>
@@ -310,7 +321,7 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         {zone.extras.map((extra) => {
           const info = EXTRAS.find((item) => item.id === extra.id)!;
           return (
-            <Row key={extra.id} label={trx(info.label)} on={extra.on} disabled={disabled} onToggle={(on) => set({ extras: zone.extras.map((item) => (item.id === extra.id ? { ...item, on } : item)) })}>
+            <Row key={extra.id} info={`dispatch.zone.extra.${extra.id}`} label={trx(info.label)} on={extra.on} disabled={disabled} onToggle={(on) => set({ extras: zone.extras.map((item) => (item.id === extra.id ? { ...item, on } : item)) })}>
               <span className="dx-extra-icon" aria-hidden="true">{EXTRA_ICON[extra.id]}</span>
               <Check label={tr("Badge")} on={extra.badge} disabled={disabled} onChange={(badge) => set({ extras: zone.extras.map((item) => (item.id === extra.id ? { ...item, badge } : item)) })} />
               {extra.id === "long_trip" ? <Num label={tr("Long trip from")} before="from" value={zone.longTripKm} unit="km" min={10} max={500} disabled={disabled} onChange={(longTripKm) => set({ longTripKm })} /> : null}
@@ -319,75 +330,80 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         })}
       </Card>
 
-      <Card title={tr("Stops")} tone="blue" icon={<MapPin size={18} />} help={tr("Riders can add stops. The driver sees every stop before accepting.")} off={!zone.stops.on} aside={<Switch label={tr("Stops")} on={zone.stops.on} disabled={disabled} onChange={(on) => set({ stops: { ...zone.stops, on } })} />}>
-        <Row label={tr("Max stops")}><Num label={tr("Max stops")} value={zone.stops.max} unit="stops" min={1} max={5} disabled={disabled || !zone.stops.on} onChange={(max) => set({ stops: { ...zone.stops, max } })} /></Row>
+      <Card title={tr("Stops")} info="dispatch.zone.stops" tone="blue" icon={<MapPin size={18} />} help={tr("Riders can add stops. The driver sees every stop before accepting.")} off={!zone.stops.on} aside={<Switch label={tr("Stops")} on={zone.stops.on} disabled={disabled} onChange={(on) => set({ stops: { ...zone.stops, on } })} />}>
+        <Row info="dispatch.zone.maxStops" label={tr("Max stops")}><Num label={tr("Max stops")} value={zone.stops.max} unit="stops" min={1} max={5} disabled={disabled || !zone.stops.on} onChange={(max) => set({ stops: { ...zone.stops, max } })} /></Row>
         {/* v0.18.108 (job C9b, owner "At the pickup AND at stops", contract.json#autoArrive.stops.distances): no new setting,
             the zone's "Auto arrived within" / "Waiting stops beyond" from Waiting at pickup also apply at stops. */}
-        <Row label={tr("Arrived and waiting away at stops")} help={tr("The same distances as Waiting at pickup: the server marks the stop arrived within {0} m, and the waiting at the stop stops while the driver is more than {1} m away.", [zone.pickupWait.autoArriveMeters, zone.pickupWait.leaveMeters])}><span data-testid="stops-auto-arrive">{zone.pickupWait.autoArriveMeters} m · {zone.pickupWait.leaveMeters} m</span></Row>
-        <Row label={tr("Free wait at each stop")} help={tr("Waiting at a stop is charged only after these minutes. The server charges by this number.")}><Num label={tr("Free wait per stop")} value={zone.stops.freeWaitMin} unit="min" min={0} max={20} disabled={disabled || !zone.stops.on} onChange={(freeWaitMin) => set({ stops: { ...zone.stops, freeWaitMin } })} /></Row>
+        <Row info="dispatch.zone.arrivedAndWaitingAwayAtStops" label={tr("Arrived and waiting away at stops")} help={tr("The same distances as Waiting at pickup: the server marks the stop arrived within {0} m, and the waiting at the stop stops while the driver is more than {1} m away.", [zone.pickupWait.autoArriveMeters, zone.pickupWait.leaveMeters])}><span data-testid="stops-auto-arrive">{zone.pickupWait.autoArriveMeters} m · {zone.pickupWait.leaveMeters} m</span></Row>
+        <Row info="dispatch.zone.freeWaitAtEachStop" label={tr("Free wait at each stop")} help={tr("Waiting at a stop is charged only after these minutes. The server charges by this number.")}><Num label={tr("Free wait per stop")} value={zone.stops.freeWaitMin} unit="min" min={0} max={20} disabled={disabled || !zone.stops.on} onChange={(freeWaitMin) => set({ stops: { ...zone.stops, freeWaitMin } })} /></Row>
         {/* v0.18.9 (G7 decision 4): the price per minute at a stop is Pricing's stopWaitPerMin (one price, set there). */}
-        <Row label={tr("Then, per minute")} help={tr("Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee.")}><Link className="dx-limit-link" to="/pricing" data-testid="stop-price-link">{stopPriceText(waitBases, money, market(countryId).minorUnits)}</Link></Row>
-        <Row label={tr("Extra fee per stop")} help={tr("0 means no fee.")}><Num label={tr("Fee per stop")} value={zone.stops.perStop} unit={symbol} step={0.5} min={0} max={500} disabled={disabled || !zone.stops.on} onChange={(perStop) => set({ stops: { ...zone.stops, perStop } })} /></Row>
+        <Row info="dispatch.zone.thenPerMinute" label={tr("Then, per minute")} help={tr("Set in Pricing for each car type. The driver gets this price; the rider pays it with the app fee.")}><Link className="dx-limit-link" to="/pricing" data-testid="stop-price-link">{stopPriceText(waitBases, money, market(countryId).minorUnits)}</Link></Row>
+        <Row info="dispatch.zone.extraFeePerStop" label={tr("Extra fee per stop")} help={tr("0 means no fee.")}><Num label={tr("Fee per stop")} value={zone.stops.perStop} unit={symbol} step={0.5} min={0} max={500} disabled={disabled || !zone.stops.on} onChange={(perStop) => set({ stops: { ...zone.stops, perStop } })} /></Row>
         {/* v0.18.9 (G7 decision 3 + owner rule 16): DriverAppConfig.routeChange, read live by the server per zone. */}
-        <Row label={tr("Rider can change the destination or add a stop during the trip")} on={zone.stops.changeDuring} disabled={disabled || !zone.stops.on} onToggle={(changeDuring) => set({ stops: { ...zone.stops, changeDuring } })} />
-        <Row label={tr("Driver can accept or refuse the change")} help={tr("Off: the change applies at once and the driver is told.")} on={zone.stops.driverCanRefuse} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} onToggle={(driverCanRefuse) => set({ stops: { ...zone.stops, driverCanRefuse } })} />
-        <Row label={tr("Driver's time to answer")} help={tr("15 to 300 s. No answer keeps the old route.")}><Num label={tr("Driver's time to answer")} value={zone.stops.answerSeconds} unit="s" step={5} min={15} max={300} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring || !zone.stops.driverCanRefuse} onChange={(answerSeconds) => set({ stops: { ...zone.stops, answerSeconds: Math.round(answerSeconds) } })} /></Row>
-        <Row label={tr("Also before pickup")} help={tr("On: the rider can change the route while the driver is on the way. Off: only once in the car.")} on={zone.stops.beforePickup} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} onToggle={(beforePickup) => set({ stops: { ...zone.stops, beforePickup } })} />
-        <Row label={tr("Fixed-price trips")} help={tr("What happens when a trip with a fixed price changes its route.")}>
+        <Row info="dispatch.zone.riderCanChangeTheDestinationOr" label={tr("Rider can change the destination or add a stop during the trip")} on={zone.stops.changeDuring} disabled={disabled || !zone.stops.on} onToggle={(changeDuring) => set({ stops: { ...zone.stops, changeDuring } })} />
+        <Row info="dispatch.zone.driverCanAcceptOrRefuseThe" label={tr("Driver can accept or refuse the change")} help={tr("Off: the change applies at once and the driver is told.")} on={zone.stops.driverCanRefuse} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} onToggle={(driverCanRefuse) => set({ stops: { ...zone.stops, driverCanRefuse } })} />
+        <Row info="dispatch.zone.driverSTimeToAnswer" label={tr("Driver's time to answer")} help={tr("15 to 300 s. No answer keeps the old route.")}><Num label={tr("Driver's time to answer")} value={zone.stops.answerSeconds} unit="s" step={5} min={15} max={300} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring || !zone.stops.driverCanRefuse} onChange={(answerSeconds) => set({ stops: { ...zone.stops, answerSeconds: Math.round(answerSeconds) } })} /></Row>
+        <Row info="dispatch.zone.alsoBeforePickup" label={tr("Also before pickup")} help={tr("On: the rider can change the route while the driver is on the way. Off: only once in the car.")} on={zone.stops.beforePickup} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} onToggle={(beforePickup) => set({ stops: { ...zone.stops, beforePickup } })} />
+        <Row info="dispatch.zone.fixedPriceTrips" label={tr("Fixed-price trips")} help={tr("What happens when a trip with a fixed price changes its route.")}>
           <Choice label={tr("Fixed-price trips")} value={zone.stops.fixedPriceTrips} disabled={disabled || !zone.stops.on || !zone.stops.changeDuring} options={[{ id: "block", label: tr("Cannot change") }, { id: "switch_to_normal", label: tr("Change at the normal price") }]} onChange={(fixedPriceTrips) => set({ stops: { ...zone.stops, fixedPriceTrips } })} />
         </Row>
       </Card>
 
       <Card title={tr("Pickup move after accept")} tone="purple" icon={<Move size={18} />} help={tr("After a driver accepts, the rider can move the pickup point a little. A bigger move means cancel and book again. The driver is told about every move. The rider and driver apps read this.")}>
         {/* v0.18.7 (G5 item 4): default 200 m (was 500), range 0–2000 from the contract; the server refuses a bigger move. */}
-        <Row label={tr("Rider can move the pickup up to")} help={tr("0 means the pickup cannot move after accept. At most {0} m. Usual value {1} m; the server refuses a bigger move from the booked pickup.", [PICKUP_MOVE_MAX_METERS, PICKUP_MOVE_DEFAULT])}>
+        <Row info="dispatch.zone.riderCanMoveThePickupUp" label={tr("Rider can move the pickup up to")} help={tr("0 means the pickup cannot move after accept. At most {0} m. Usual value {1} m; the server refuses a bigger move from the booked pickup.", [PICKUP_MOVE_MAX_METERS, PICKUP_MOVE_DEFAULT])}>
           <Num label={tr("Pickup move limit")} before="up to" value={zone.pickupMove.maxMeters} unit="m" step={pickupMoveField().step} min={pickupMoveField().min} max={pickupMoveField().max} disabled={disabled} onChange={(maxMeters) => set({ pickupMove: { maxMeters: Math.round(maxMeters) } })} />
         </Row>
       </Card>
 
       <Card title={tr("Shortest ride")} tone="purple" icon={<Move size={18} />} help={tr("When pickup and drop-off are this close, the rider app warns the rider. The rider can still book. The server and the rider app read this.")}>
         {/* FIX JOB 7 (owner Q9 "Warn him but can accept booking", contract v0.18.30): default 100 m, 0 = never warn. */}
-        <Row label={tr("Shortest ride (m)")} help={tr("0 means never warn. At most {0} m. Usual value {1} m.", [SAME_POINT_RANGE[1], CONFIG_DEFAULTS.samePointWarnMeters])}>
+        <Row info="dispatch.zone.shortestRideM" label={tr("Shortest ride (m)")} help={tr("0 means never warn. At most {0} m. Usual value {1} m.", [SAME_POINT_RANGE[1], CONFIG_DEFAULTS.samePointWarnMeters])}>
           <Num label={tr("Shortest ride (m)")} value={zone.samePoint?.warnMeters ?? CONFIG_DEFAULTS.samePointWarnMeters} unit="m" step={10} min={SAME_POINT_RANGE[0]} max={SAME_POINT_RANGE[1]} disabled={disabled} onChange={(warnMeters) => set({ samePoint: { warnMeters: Math.round(warnMeters) } })} />
         </Row>
       </Card>
 
-      <Card title={tr("Driver cancels after accepting")} tone="orange" icon={<UserX size={18} />} help={tr("It only counts in the driver's cancel rate, and the ride searches again.")} off={!zone.driverCancel.on} aside={<Switch label={tr("Search again")} on={zone.driverCancel.on} disabled={disabled} onChange={(on) => set({ driverCancel: { ...zone.driverCancel, on } })} />}>
-        <Row label={tr("Lower Movera's commission on that ride")} help={tr("The rider pays the same. The next driver earns more, so it is taken faster.")}>
+      <Card title={tr("Pickup entrance chips")} tone="purple" icon={<MapPin size={18} />} help={tr("When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.")}>
+        {/* BQ-V21 (owner full-audit Q6 "Keep as 'approximate'" => admin on/off per zone, default on; contract v0.18.115). */}
+        <Row info="dispatch.zone.pickupEntranceChipsApproximate" label={tr("Pickup entrance chips (approximate)")} help={tr("Off: no entrance chips; the pickup is the address only. Usual value: on.")} on={zone.pickupSpots?.on ?? CONFIG_DEFAULTS.pickupSpotsOn} disabled={disabled} onToggle={(on) => set({ pickupSpots: { on } })} />
+      </Card>
+
+      <Card title={tr("Driver cancels after accepting")} info="dispatch.zone.driverCancelsAfterAccepting" tone="orange" icon={<UserX size={18} />} help={tr("It only counts in the driver's cancel rate, and the ride searches again.")} off={!zone.driverCancel.on} aside={<Switch label={tr("Search again")} on={zone.driverCancel.on} disabled={disabled} onChange={(on) => set({ driverCancel: { ...zone.driverCancel, on } })} />}>
+        <Row info="dispatch.zone.lowerMoveraSCommissionOnThat" label={tr("Lower Movera's commission on that ride")} help={tr("The rider pays the same. The next driver earns more, so it is taken faster.")}>
           <Num label={tr("Lower commission after a driver cancel")} value={zone.driverCancel.commissionCutPct} unit="% lower" min={0} max={30} disabled={disabled || !zone.driverCancel.on} onChange={(commissionCutPct) => set({ driverCancel: { ...zone.driverCancel, commissionCutPct } })} />
         </Row>
       </Card>
 
-      <Card title={tr("Rider cancels: smart check")} tone="green" icon={<Shield size={18} />} help={tr("Checked every 30 s from accept until arrival: is the driver coming at least {0}% as close as the road allows? Not heading for {1} min in a row = the rider cancels for free.", [zone.riderCancel.headingPct, zone.riderCancel.notHeadingMinutes])} off={!zone.riderCancel.on} aside={<Switch label={tr("Smart cancel check")} on={zone.riderCancel.on} disabled={disabled} onChange={(on) => set({ riderCancel: { ...zone.riderCancel, on } })} />}>
+      <Card title={tr("Rider cancels: smart check")} info="dispatch.zone.riderCancelsSmartCheck" tone="green" icon={<Shield size={18} />} help={tr("Checked every 30 s from accept until arrival: is the driver coming at least {0}% as close as the road allows? Not heading for {1} min in a row = the rider cancels for free.", [zone.riderCancel.headingPct, zone.riderCancel.notHeadingMinutes])} off={!zone.riderCancel.on} aside={<Switch label={tr("Smart cancel check")} on={zone.riderCancel.on} disabled={disabled} onChange={(on) => set({ riderCancel: { ...zone.riderCancel, on } })} />}>
         <p className="dx-note">{trn("{0} Free minutes and fees per car type: see Rider cancel fees ↓", <Coins size={13} aria-hidden="true" />)}</p>
         {/* BQ-V22 (owner G5-8, decisions/driver-g5.md:9,16 "80 % default, admin can change"; "thresholds per zone"): DriverAppConfig.headingCheck. */}
-        <Row label={tr("Heading to the pickup = at least")} help={tr("Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.", [CONFIG_DEFAULTS.headingCheck.headingPct])}>
+        <Row info="dispatch.zone.headingToThePickupAtLeast" label={tr("Heading to the pickup = at least")} help={tr("Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.", [CONFIG_DEFAULTS.headingCheck.headingPct])}>
           <Num label={tr("Heading to the pickup (%)")} value={zone.riderCancel.headingPct} unit="%" min={HEADING_RANGE.headingPct[0]} max={HEADING_RANGE.headingPct[1]} disabled={disabled} onChange={(headingPct) => set({ riderCancel: { ...zone.riderCancel, headingPct: Math.round(headingPct) } })} />
         </Row>
-        <Row label={tr("Free cancel when not heading for")} help={tr("Not heading to the pickup this many minutes in a row: the rider cancels for free and the driver gets the notice. Usual value {0} min.", [CONFIG_DEFAULTS.headingCheck.notHeadingMinutes])}>
+        <Row info="dispatch.zone.freeCancelWhenNotHeadingFor" label={tr("Free cancel when not heading for")} help={tr("Not heading to the pickup this many minutes in a row: the rider cancels for free and the driver gets the notice. Usual value {0} min.", [CONFIG_DEFAULTS.headingCheck.notHeadingMinutes])}>
           <Num label={tr("Not heading minutes")} value={zone.riderCancel.notHeadingMinutes} unit="min" min={HEADING_RANGE.notHeadingMinutes[0]} max={HEADING_RANGE.notHeadingMinutes[1]} disabled={disabled} onChange={(notHeadingMinutes) => set({ riderCancel: { ...zone.riderCancel, notHeadingMinutes: Math.round(notHeadingMinutes) } })} />
         </Row>
-        <Row label={tr("Driver gets the next nearby request first")} on={zone.riderCancel.priority} disabled={disabled || !zone.riderCancel.on} onToggle={(priority) => set({ riderCancel: { ...zone.riderCancel, priority } })}>
+        <Row info="dispatch.zone.driverGetsTheNextNearbyRequest" label={tr("Driver gets the next nearby request first")} on={zone.riderCancel.priority} disabled={disabled || !zone.riderCancel.on} onToggle={(priority) => set({ riderCancel: { ...zone.riderCancel, priority } })}>
           <Num label={tr("Priority minutes")} value={zone.riderCancel.priorityMin} unit="min" min={1} max={60} disabled={disabled} onChange={(priorityMin) => set({ riderCancel: { ...zone.riderCancel, priorityMin } })} />
         </Row>
         <p className="dx-note">{trn("{0} Every decision is saved with the driver's route, so you can check it by hand in Cancel checks.", <UserCheck size={13} aria-hidden="true" />)}</p>
-        <Row label={tr("Driver's share of the cancel fee")} help={tr("What the driver gets of a rider's cancel fee in this zone. Movera keeps the rest. Booked rides keep the share they were booked with.")}><Num label={tr("Driver's share of the cancel fee")} value={zone.riderCancel.driverSharePct ?? 100} unit="%" min={0} max={100} disabled={disabled} onChange={(driverSharePct) => set({ riderCancel: { ...zone.riderCancel, driverSharePct } })} /></Row>
+        <Row info="dispatch.zone.driverSShareOfTheCancel" label={tr("Driver's share of the cancel fee")} help={tr("What the driver gets of a rider's cancel fee in this zone. Movera keeps the rest. Booked rides keep the share they were booked with.")}><Num label={tr("Driver's share of the cancel fee")} value={zone.riderCancel.driverSharePct ?? 100} unit="%" min={0} max={100} disabled={disabled} onChange={(driverSharePct) => set({ riderCancel: { ...zone.riderCancel, driverSharePct } })} /></Row>
       </Card>
 
       <Card title={tr("Driver ends the trip early")} tone="green" icon={<Shield size={18} />} help={tr("When the driver finishes or cancels with the rider on board before the drop-off, the paid stop waiting is always kept. The price is worked out again only when the trip is shorter than booked by more than these numbers; otherwise the booked price stands.")}>
-        <Row label={tr("New price only when BOTH shorter by more than (km)")} help={tr("Default 2 km.")}><Num label={tr("New price only when BOTH shorter by more than (km)")} value={zone.riderCancel.earlyEnd?.repriceOverKm ?? 2} unit="km" min={0} max={50} disabled={disabled} onChange={(repriceOverKm) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? EARLY_END_DEFAULT), repriceOverKm } } })} /></Row>
-        <Row label={tr("… and shorter by more than (minutes)")} help={tr("Default 10 minutes. Both must be passed for a new price.")}><Num label={tr("… and shorter by more than (minutes)")} value={zone.riderCancel.earlyEnd?.repriceOverMin ?? EARLY_END_DEFAULT.repriceOverMin} unit="min" min={0} max={120} disabled={disabled} onChange={(repriceOverMin) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? EARLY_END_DEFAULT), repriceOverMin } } })} /></Row>
-        <Row label={tr("Counts as arrived within (m)")} help={tr("Default 300 m. Closer than this to the drop-off, the driver's finish is a normal finish, not ended early.")}><Num label={tr("Counts as arrived within (m)")} value={zone.riderCancel.earlyEnd?.arrivedWithinMeters ?? EARLY_END_DEFAULT.arrivedWithinMeters} unit="m" min={50} max={2000} disabled={disabled} onChange={(arrivedWithinMeters) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...EARLY_END_DEFAULT, ...zone.riderCancel.earlyEnd, arrivedWithinMeters } } })} /></Row>
-        <Row label={tr("At an airport: counts as arrived within (m)")} help={tr("Default 1000 m. Used when the drop-off is in an airport zone. Never below the normal distance.")}><Num label={tr("At an airport: counts as arrived within (m)")} value={zone.riderCancel.earlyEnd?.airportArrivedWithinMeters ?? EARLY_END_DEFAULT.airportArrivedWithinMeters} unit="m" min={100} max={3000} disabled={disabled} onChange={(airportArrivedWithinMeters) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...EARLY_END_DEFAULT, ...zone.riderCancel.earlyEnd, airportArrivedWithinMeters } } })} /></Row>
+        <Row info="dispatch.zone.newPriceOnlyWhenBothShorter" label={tr("New price only when BOTH shorter by more than (km)")} help={tr("Default 2 km.")}><Num label={tr("New price only when BOTH shorter by more than (km)")} value={zone.riderCancel.earlyEnd?.repriceOverKm ?? 2} unit="km" min={0} max={50} disabled={disabled} onChange={(repriceOverKm) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? EARLY_END_DEFAULT), repriceOverKm } } })} /></Row>
+        <Row info="dispatch.zone.andShorterByMoreThanMinutes" label={tr("… and shorter by more than (minutes)")} help={tr("Default 10 minutes. Both must be passed for a new price.")}><Num label={tr("… and shorter by more than (minutes)")} value={zone.riderCancel.earlyEnd?.repriceOverMin ?? EARLY_END_DEFAULT.repriceOverMin} unit="min" min={0} max={120} disabled={disabled} onChange={(repriceOverMin) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...(zone.riderCancel.earlyEnd ?? EARLY_END_DEFAULT), repriceOverMin } } })} /></Row>
+        <Row info="dispatch.zone.countsAsArrivedWithinM" label={tr("Counts as arrived within (m)")} help={tr("Default 300 m. Closer than this to the drop-off, the driver's finish is a normal finish, not ended early.")}><Num label={tr("Counts as arrived within (m)")} value={zone.riderCancel.earlyEnd?.arrivedWithinMeters ?? EARLY_END_DEFAULT.arrivedWithinMeters} unit="m" min={50} max={2000} disabled={disabled} onChange={(arrivedWithinMeters) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...EARLY_END_DEFAULT, ...zone.riderCancel.earlyEnd, arrivedWithinMeters } } })} /></Row>
+        <Row info="dispatch.zone.atAnAirportCountsAsArrived" label={tr("At an airport: counts as arrived within (m)")} help={tr("Default 1000 m. Used when the drop-off is in an airport zone. Never below the normal distance.")}><Num label={tr("At an airport: counts as arrived within (m)")} value={zone.riderCancel.earlyEnd?.airportArrivedWithinMeters ?? EARLY_END_DEFAULT.airportArrivedWithinMeters} unit="m" min={100} max={3000} disabled={disabled} onChange={(airportArrivedWithinMeters) => set({ riderCancel: { ...zone.riderCancel, earlyEnd: { ...EARLY_END_DEFAULT, ...zone.riderCancel.earlyEnd, airportArrivedWithinMeters } } })} /></Row>
       </Card>
 
       <RiderCancelFeesCard zone={zone} onChange={onChange} disabled={disabled} symbol={symbol} money={money} countryId={countryId} otherZones={otherZones} onCopyCancelFees={onCopyCancelFees} categories={feeCategories} tab={feeTab} onTab={onFeeTab} />
 
-      <Card title={tr("Airport queue")} tone="pink" icon={<Plane size={18} />} help={airport ? tr("Drivers wait in a queue at the airport.") : tr("Use this when the zone has a waiting area, like an airport or a station.")} off={!zone.airport.on} aside={<Switch label={tr("Airport queue")} on={zone.airport.on} disabled={disabled} onChange={(on) => set({ airport: { ...zone.airport, on } })} />}>
-        <Row label={tr("Who gets the ride")}>
+      <Card title={tr("Airport queue")} info="dispatch.zone.airportQueue" tone="pink" icon={<Plane size={18} />} help={airport ? tr("Drivers wait in a queue at the airport.") : tr("Use this when the zone has a waiting area, like an airport or a station.")} off={!zone.airport.on} aside={<Switch label={tr("Airport queue")} on={zone.airport.on} disabled={disabled} onChange={(on) => set({ airport: { ...zone.airport, on } })} />}>
+        <Row info="dispatch.zone.whoGetsTheRide" label={tr("Who gets the ride")}>
           <Choice label={tr("Airport order")} value={zone.airport.order} disabled={disabled || !zone.airport.on} onChange={(order) => set({ airport: { ...zone.airport, order } })} options={[{ id: "fifo", label: tr("First in the queue") }, { id: "best", label: tr("Best driver by the rules") }]} />
         </Row>
-        <Row label={tr("Longest time in the queue")}><Num label={tr("Longest time in queue")} value={zone.airport.maxQueueMin} unit="min" min={10} max={480} disabled={disabled || !zone.airport.on} onChange={(maxQueueMin) => set({ airport: { ...zone.airport, maxQueueMin } })} /></Row>
+        <Row info="dispatch.zone.longestTimeInTheQueue" label={tr("Longest time in the queue")}><Num label={tr("Longest time in queue")} value={zone.airport.maxQueueMin} unit="min" min={10} max={480} disabled={disabled || !zone.airport.on} onChange={(maxQueueMin) => set({ airport: { ...zone.airport, maxQueueMin } })} /></Row>
         {zone.airport.on ? (
           <div className="dx-sub">
             <b>{trn("{0} Queue area on the map", <MapPin size={13} aria-hidden="true" />)}</b>
@@ -404,50 +420,50 @@ function Drivers({ zone, onChange, disabled, country, onCountry, countryName }: 
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   return (
     <div className="dx-cards">
-      <Card title={tr("Going home")} tone="green" icon={<Home size={18} />} help={tr("Drivers can ask for rides only towards their destination.")} off={!zone.goingHome.on} aside={<Switch label={tr("Going home")} on={zone.goingHome.on} disabled={disabled} onChange={(on) => set({ goingHome: { ...zone.goingHome, on } })} />}>
-        <Row label={tr("Times per day")}><Num label={tr("Going home per day")} value={zone.goingHome.perDay} unit="times" min={1} max={10} disabled={disabled || !zone.goingHome.on} onChange={(perDay) => set({ goingHome: { ...zone.goingHome, perDay } })} /></Row>
-        <Row label={tr("How far off the direction is OK")}><Num label={tr("Going home direction")} value={zone.goingHome.maxOffDeg} unit="degrees" min={10} max={90} disabled={disabled || !zone.goingHome.on} onChange={(maxOffDeg) => set({ goingHome: { ...zone.goingHome, maxOffDeg } })} /></Row>
+      <Card title={tr("Going home")} info="dispatch.zone.goingHome" tone="green" icon={<Home size={18} />} help={tr("Drivers can ask for rides only towards their destination.")} off={!zone.goingHome.on} aside={<Switch label={tr("Going home")} on={zone.goingHome.on} disabled={disabled} onChange={(on) => set({ goingHome: { ...zone.goingHome, on } })} />}>
+        <Row info="dispatch.zone.timesPerDay" label={tr("Times per day")}><Num label={tr("Going home per day")} value={zone.goingHome.perDay} unit="times" min={1} max={10} disabled={disabled || !zone.goingHome.on} onChange={(perDay) => set({ goingHome: { ...zone.goingHome, perDay } })} /></Row>
+        <Row info="dispatch.zone.howFarOffTheDirectionIs" label={tr("How far off the direction is OK")}><Num label={tr("Going home direction")} value={zone.goingHome.maxOffDeg} unit="degrees" min={10} max={90} disabled={disabled || !zone.goingHome.on} onChange={(maxOffDeg) => set({ goingHome: { ...zone.goingHome, maxOffDeg } })} /></Row>
       </Card>
 
       <Card title={tr("Fairness")} tone="blue" icon={<Users size={18} />} help={tr("Stop the same drivers from getting all the rides.")}>
-        <Row label={tr("Boost drivers who waited 20+ min without a ride")} on={zone.fairness.idleBoost} disabled={disabled} onToggle={(idleBoost) => set({ fairness: { ...zone.fairness, idleBoost } })}>
+        <Row info="dispatch.zone.boostDriversWhoWaited20Min" label={tr("Boost drivers who waited 20+ min without a ride")} on={zone.fairness.idleBoost} disabled={disabled} onToggle={(idleBoost) => set({ fairness: { ...zone.fairness, idleBoost } })}>
           <Num label={tr("Boost points")} value={zone.fairness.idlePoints} unit="points" min={1} max={50} disabled={disabled} onChange={(idlePoints) => set({ fairness: { ...zone.fairness, idlePoints } })} />
         </Row>
-        <Row label={tr("Cap rides per hour for one driver")} on={zone.fairness.hourCap} disabled={disabled} onToggle={(hourCap) => set({ fairness: { ...zone.fairness, hourCap } })}>
+        <Row info="dispatch.zone.capRidesPerHourForOne" label={tr("Cap rides per hour for one driver")} on={zone.fairness.hourCap} disabled={disabled} onToggle={(hourCap) => set({ fairness: { ...zone.fairness, hourCap } })}>
           <Num label={tr("Rides per hour")} value={zone.fairness.hourRides} unit="rides" min={1} max={12} disabled={disabled} onChange={(hourRides) => set({ fairness: { ...zone.fairness, hourRides } })} />
         </Row>
-        <Row label={tr("Short pause after skipping offers")} on={zone.fairness.skipPause} disabled={disabled} onToggle={(skipPause) => set({ fairness: { ...zone.fairness, skipPause } })}>
+        <Row info="dispatch.zone.shortPauseAfterSkippingOffers" label={tr("Short pause after skipping offers")} on={zone.fairness.skipPause} disabled={disabled} onToggle={(skipPause) => set({ fairness: { ...zone.fairness, skipPause } })}>
           <Num label={tr("Skips in a row")} value={zone.fairness.skips} unit="skips" min={1} max={10} disabled={disabled} onChange={(skips) => set({ fairness: { ...zone.fairness, skips } })} />
           <Num label={tr("Skip pause minutes")} value={zone.fairness.pauseMin} unit="min" min={1} max={60} disabled={disabled} onChange={(pauseMin) => set({ fairness: { ...zone.fairness, pauseMin } })} />
         </Row>
       </Card>
 
-      <Card title={tr("Saying no")} tone="orange" icon={<UserX size={18} />} help={tr("When a driver declines or ignores an offer.")} off={!zone.decline.on} aside={<Switch label={tr("Saying no rules")} on={zone.decline.on} disabled={disabled} onChange={(on) => set({ decline: { ...zone.decline, on } })} />}>
-        <Row label={tr("It lowers the acceptance rate")} help={tr("The acceptance rate counts only Exclusive and other one-driver offers. Radar trips never count.")} on={zone.decline.countsAcceptance} disabled={disabled || !zone.decline.on} onToggle={(countsAcceptance) => set({ decline: { ...zone.decline, countsAcceptance } })} />
-        <Row label={tr("Pause after no's in a row")}>
+      <Card title={tr("Saying no")} info="dispatch.zone.sayingNo" tone="orange" icon={<UserX size={18} />} help={tr("When a driver declines or ignores an offer.")} off={!zone.decline.on} aside={<Switch label={tr("Saying no rules")} on={zone.decline.on} disabled={disabled} onChange={(on) => set({ decline: { ...zone.decline, on } })} />}>
+        <Row info="dispatch.zone.itLowersTheAcceptanceRate" label={tr("It lowers the acceptance rate")} help={tr("The acceptance rate counts only Exclusive and other one-driver offers. Radar trips never count.")} on={zone.decline.countsAcceptance} disabled={disabled || !zone.decline.on} onToggle={(countsAcceptance) => set({ decline: { ...zone.decline, countsAcceptance } })} />
+        <Row info="dispatch.zone.pauseAfterNoSInA" label={tr("Pause after no's in a row")}>
           <Num label={tr("Pause after no's")} value={zone.decline.pauseAfter} unit="no's" min={1} max={10} disabled={disabled || !zone.decline.on} onChange={(pauseAfter) => set({ decline: { ...zone.decline, pauseAfter } })} />
           <Num label={tr("No pause minutes")} value={zone.decline.pauseMin} unit="min" min={1} max={60} disabled={disabled || !zone.decline.on} onChange={(pauseMin) => set({ decline: { ...zone.decline, pauseMin } })} />
         </Row>
-        <Row label={tr("Saying no to a long trip does not count")} on={zone.decline.longTripFree} disabled={disabled || !zone.decline.on} onToggle={(longTripFree) => set({ decline: { ...zone.decline, longTripFree } })} />
-        <Row label={tr("Saying no to a far pickup does not count")} on={zone.decline.farPickupFree} disabled={disabled || !zone.decline.on} onToggle={(farPickupFree) => set({ decline: { ...zone.decline, farPickupFree } })}>
+        <Row info="dispatch.zone.sayingNoToALongTrip" label={tr("Saying no to a long trip does not count")} on={zone.decline.longTripFree} disabled={disabled || !zone.decline.on} onToggle={(longTripFree) => set({ decline: { ...zone.decline, longTripFree } })} />
+        <Row info="dispatch.zone.sayingNoToAFarPickup" label={tr("Saying no to a far pickup does not count")} on={zone.decline.farPickupFree} disabled={disabled || !zone.decline.on} onToggle={(farPickupFree) => set({ decline: { ...zone.decline, farPickupFree } })}>
           <Num label={tr("Far pickup from")} before="from" value={zone.decline.farPickupKm} unit="km" step={0.5} min={1} max={30} disabled={disabled} onChange={(farPickupKm) => set({ decline: { ...zone.decline, farPickupKm } })} />
         </Row>
       </Card>
 
       <MovedCard what="Go offline automatically" testId="dx-moved-auto-offline" links={[{ label: "Radar rules", to: offersLink("radar", zone.zoneId, "Go offline automatically") }]} />
 
-      <Card title={tr("Rest after long work · all of {0}", [countryName])} tone="purple" icon={<Timer size={18} />} help={tr("After this many hours of work, a driver cannot go online until the rest is done. This is a country rule.")} off={!country.rest.on} aside={<Switch label={tr("Rest after long work")} on={country.rest.on} disabled={disabled} onChange={(on) => onCountry({ ...country, rest: { ...country.rest, on } })} />}>
+      <Card title={tr("Rest after long work · all of {0}", [countryName])} info="dispatch.zone.restAfterLongWorkAllOf" tone="purple" icon={<Timer size={18} />} help={tr("After this many hours of work, a driver cannot go online until the rest is done. This is a country rule.")} off={!country.rest.on} aside={<Switch label={tr("Rest after long work")} on={country.rest.on} disabled={disabled} onChange={(on) => onCountry({ ...country, rest: { ...country.rest, on } })} />}>
         {/* BQ-V21 (decisions/driving-time-limits.md:2-4): the server counts only driving (to the pickup + on trip) and resets after the rest offline. */}
-        <Row label={tr("Work hours")} help={tr("Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.")}><Num label={tr("Work hours before rest")} value={country.rest.workHours} unit="h" min={0} max={24} disabled={disabled || !country.rest.on} onChange={(workHours) => onCountry({ ...country, rest: { ...country.rest, workHours } })} /></Row>
+        <Row info="dispatch.zone.workHours" label={tr("Work hours")} help={tr("Only driving counts: to the pickup and on trip. Online waiting does not count. 0 = no limit.")}><Num label={tr("Work hours before rest")} value={country.rest.workHours} unit="h" min={0} max={24} disabled={disabled || !country.rest.on} onChange={(workHours) => onCountry({ ...country, rest: { ...country.rest, workHours } })} /></Row>
         {/* SV: decisions/driving-time-limits.md:4 "6 hours offline so reset all time" (DriverAppConfig.drivingLimits.resetAfterOfflineHours, 1-24). */}
-        <Row label={tr("Offline hours that reset the driving time")} help={tr("{0} hours offline in a row reset all the driving time. The server uses this number.", [country.rest.resetAfterOfflineHours])}><Num label={tr("Offline hours that reset the driving time")} value={country.rest.resetAfterOfflineHours} unit="h" min={1} max={24} disabled={disabled || !country.rest.on} onChange={(resetAfterOfflineHours) => onCountry({ ...country, rest: { ...country.rest, resetAfterOfflineHours: Math.round(resetAfterOfflineHours) } })} /></Row>
+        <Row info="dispatch.zone.offlineHoursThatResetTheDriving" label={tr("Offline hours that reset the driving time")} help={tr("{0} hours offline in a row reset all the driving time. The server uses this number.", [country.rest.resetAfterOfflineHours])}><Num label={tr("Offline hours that reset the driving time")} value={country.rest.resetAfterOfflineHours} unit="h" min={1} max={24} disabled={disabled || !country.rest.on} onChange={(resetAfterOfflineHours) => onCountry({ ...country, rest: { ...country.rest, resetAfterOfflineHours: Math.round(resetAfterOfflineHours) } })} /></Row>
         {/* SV: contract drivingLimits.restMinutes = the break length the app shows (default 30, not enforced by the server). */}
-        <Row label={tr("Break length shown in the app")} help={tr("Only shown to the driver; the server does not enforce it.")}><Num label={tr("Break length shown in the app")} value={country.rest.restMinutes} unit="min" min={0} max={1440} disabled={disabled || !country.rest.on} onChange={(restMinutes) => onCountry({ ...country, rest: { ...country.rest, restMinutes: Math.round(restMinutes) } })} /></Row>
-        <Row label={tr("Warnings before the limit")} help={tr("On the island and in the app, with the time left.")}>
+        <Row info="dispatch.zone.breakLengthShownInTheApp" label={tr("Break length shown in the app")} help={tr("Only shown to the driver; the server does not enforce it.")}><Num label={tr("Break length shown in the app")} value={country.rest.restMinutes} unit="min" min={0} max={1440} disabled={disabled || !country.rest.on} onChange={(restMinutes) => onCountry({ ...country, rest: { ...country.rest, restMinutes: Math.round(restMinutes) } })} /></Row>
+        <Row info="dispatch.zone.warningsBeforeTheLimit" label={tr("Warnings before the limit")} help={tr("On the island and in the app, with the time left.")}>
           <Num label={tr("First driving limit warning")} value={country.rest.warnFirstMin} unit="min left" min={1} max={120} disabled={disabled || !country.rest.on} onChange={(warnFirstMin) => onCountry({ ...country, rest: { ...country.rest, warnFirstMin } })} />
           <Num label={tr("Second driving limit warning")} before="and" value={country.rest.warnLastMin} unit="min left" min={1} max={120} disabled={disabled || !country.rest.on} onChange={(warnLastMin) => onCountry({ ...country, rest: { ...country.rest, warnLastMin } })} />
         </Row>
-        <Row label={tr("Block going online at the limit")} help={tr("The driver sees “Rest until 04:30” and can go online again after {0} h of rest.", [country.rest.resetAfterOfflineHours])} on={country.rest.blockOnline} disabled={disabled || !country.rest.on} onToggle={(blockOnline) => onCountry({ ...country, rest: { ...country.rest, blockOnline } })} />
+        <Row info="dispatch.zone.blockGoingOnlineAtTheLimit" label={tr("Block going online at the limit")} help={tr("The driver sees “Rest until 04:30” and can go online again after {0} h of rest.", [country.rest.resetAfterOfflineHours])} on={country.rest.blockOnline} disabled={disabled || !country.rest.on} onToggle={(blockOnline) => onCountry({ ...country, rest: { ...country.rest, blockOnline } })} />
       </Card>
 
       <CancelRateCard country={country} onCountry={onCountry} countryName={countryName} disabled={disabled} />
@@ -461,23 +477,27 @@ function Safety({ zone, onChange, disabled, country, countryName }: Props) {
   return (
     <div className="dx-cards">
       <Card title={tr("Checks before a driver gets a request")} tone="red" icon={<ShieldAlert size={18} />} help={tr("Drivers whose account is not active cannot go online at all. That is checked in Drivers.")}>
-        <Row label={tr("Lowest rating")} help={tr("Drivers under this rating get no requests.")} on={safety.minRating} disabled={disabled} onToggle={(minRating) => set({ minRating })}>
+        <Row info="dispatch.zone.lowestRating" label={tr("Lowest rating")} help={tr("Drivers under this rating get no requests.")} on={safety.minRating} disabled={disabled} onToggle={(minRating) => set({ minRating })}>
           <Num label={tr("Lowest rating")} value={safety.ratingBelow} unit="stars" step={0.1} min={1} max={5} disabled={disabled} onChange={(ratingBelow) => set({ ratingBelow })} />
         </Row>
-        <Row label={tr("Over the cancel rate limit")} help={tr("Drivers over the cancel rate limit get no requests in this zone.")} on={safety.maxCancel} disabled={disabled} onToggle={(maxCancel) => set({ maxCancel })}>
+        <Row info="dispatch.zone.overTheCancelRateLimit" label={tr("Over the cancel rate limit")} help={tr("Drivers over the cancel rate limit get no requests in this zone.")} on={safety.maxCancel} disabled={disabled} onToggle={(maxCancel) => set({ maxCancel })}>
           <span className="dx-limit-link" data-testid="safety-cancel-limit">{trn("Over {0}% · {1}", country.cancelRateLimitPct, <Link to={`/dispatch?zone=${zone.zoneId}&tab=drivers`}>{trn("Cancel rate limit for all of {0}", countryName)}</Link>)}</span>
         </Row>
-        <Row label={tr("Do not match list")} help={tr("A rider and a driver who reported each other never meet again.")} on={safety.doNotMatch} disabled={disabled} onToggle={(doNotMatch) => set({ doNotMatch })} />
-        <Row label={tr("Women-only rides")} help={tr("A female rider can ask for a female driver.")} on={safety.womenOnly} disabled={disabled} onToggle={(womenOnly) => set({ womenOnly })} />
+        <Row info="dispatch.zone.doNotMatchList" label={tr("Do not match list")} help={tr("A rider and a driver who reported each other never meet again.")} on={safety.doNotMatch} disabled={disabled} onToggle={(doNotMatch) => set({ doNotMatch })} />
+        <Row info="dispatch.zone.womenOnlyRides" label={tr("Women-only rides")} help={tr("A female rider can ask for a female driver.")} on={safety.womenOnly} disabled={disabled} onToggle={(womenOnly) => set({ womenOnly })} />
       </Card>
       {/* v0.18.8 (G6, contract.json#arrivedWaiting.pin): DriverAppConfig.pickupPin, kept on the trip at booking. */}
-      <Card title={tr("Rider PIN before Start")} tone="purple" icon={<KeyRound size={18} />} help={tr("The driver must enter the rider’s 4-digit code before the trip starts.")} off={!zone.pickupPin.required} aside={<Switch label={tr("Rider PIN before Start")} on={zone.pickupPin.required} disabled={disabled} onChange={(required) => onChange({ ...zone, pickupPin: { ...zone.pickupPin, required } })} />}>
+      <Card title={tr("Rider PIN before Start")} info="dispatch.zone.riderPinBeforeStart" tone="purple" icon={<KeyRound size={18} />} help={tr("The driver must enter the rider’s 4-digit code before the trip starts.")} off={!zone.pickupPin.required} aside={<Switch label={tr("Rider PIN before Start")} on={zone.pickupPin.required} disabled={disabled} onChange={(required) => onChange({ ...zone, pickupPin: { ...zone.pickupPin, required } })} />}>
         <p className="fd-banner amber" data-testid="pickup-pin-compat">{tr("Only trips whose driver uses the new driver app ask for the PIN.")}</p>
-        <Row label={tr("Wrong tries before lock")} help={tr("1 to 10. After this many wrong codes in a row the driver must wait.")}><Num label={tr("Wrong tries before lock")} value={zone.pickupPin.maxAttempts} unit="" min={1} max={10} disabled={disabled || !zone.pickupPin.required} onChange={(maxAttempts) => onChange({ ...zone, pickupPin: { ...zone.pickupPin, maxAttempts: Math.round(maxAttempts) } })} /></Row>
-        <Row label={tr("Lock minutes")} help={tr("1 to 60. How long the driver waits after too many wrong codes.")}><Num label={tr("Lock minutes")} value={zone.pickupPin.lockMinutes} unit="min" min={1} max={60} disabled={disabled || !zone.pickupPin.required} onChange={(lockMinutes) => onChange({ ...zone, pickupPin: { ...zone.pickupPin, lockMinutes: Math.round(lockMinutes) } })} /></Row>
+        <Row info="dispatch.zone.wrongTriesBeforeLock" label={tr("Wrong tries before lock")} help={tr("1 to 10. After this many wrong codes in a row the driver must wait.")}><Num label={tr("Wrong tries before lock")} value={zone.pickupPin.maxAttempts} unit="" min={1} max={10} disabled={disabled || !zone.pickupPin.required} onChange={(maxAttempts) => onChange({ ...zone, pickupPin: { ...zone.pickupPin, maxAttempts: Math.round(maxAttempts) } })} /></Row>
+        <Row info="dispatch.zone.lockMinutes" label={tr("Lock minutes")} help={tr("1 to 60. How long the driver waits after too many wrong codes.")}><Num label={tr("Lock minutes")} value={zone.pickupPin.lockMinutes} unit="min" min={1} max={60} disabled={disabled || !zone.pickupPin.required} onChange={(lockMinutes) => onChange({ ...zone, pickupPin: { ...zone.pickupPin, lockMinutes: Math.round(lockMinutes) } })} /></Row>
         <p className="op-help">{tr("Riders see the code in their app. Admins see it on the trip page. The driver never gets it.")}</p>
       </Card>
       <RideCheckCard zone={zone} onChange={onChange} disabled={disabled} />
+      {/* BQ-S10 (owner Q1 "admin on/off per zone", S10 Q6 default on; contract v0.18.116 contract.json#shareTrip): the rider document's shareTrip { on }. */}
+      <Card title={tr("Share trip link")} tone="green" icon={<Shield size={18} />} help={tr("During a trip the rider can send a live link to someone they trust. The page shows the car, the plate and the arrival time. The car’s position shows only while the rider is in the car, and never near the pickup, a stop or the drop-off. The link stops at drop-off.")}>
+        <Row info="dispatch.zone.ridersCanShareALiveTripLink" label={tr("Riders can share a live trip link")} help={tr("Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.")} on={zone.shareTrip?.on ?? CONFIG_DEFAULTS.shareTripOn} disabled={disabled} onToggle={(on) => onChange({ ...zone, shareTrip: { on } })} />
+      </Card>
     </div>
   );
 }
@@ -490,7 +510,7 @@ function Alerts({ zone, onChange, disabled }: Props) {
           const info = ALERTS.find((item) => item.id === alert.id)!;
           const set = (patch: Partial<typeof alert>) => onChange({ ...zone, alerts: zone.alerts.map((item) => (item.id === alert.id ? { ...item, ...patch } : item)) });
           return (
-            <Row key={alert.id} label={trx(info.label)} help={trx(info.help)} on={alert.on} disabled={disabled} onToggle={(on) => set({ on })}>
+            <Row key={alert.id} info={`dispatch.zone.alert.${alert.id}`} label={trx(info.label)} help={trx(info.help)} on={alert.on} disabled={disabled} onToggle={(on) => set({ on })}>
               <Num label={tr("{0} limit", [trx(info.label)])} value={alert.limit} unit={info.unit} min={1} max={60} disabled={disabled} onChange={(limit) => set({ limit })} />
               <span className="dx-channels" role="group" aria-label={tr("{0} shows in", [trx(info.label)])}>
                 <Check label={tr("Panel")} on={alert.panel} disabled={disabled} onChange={(panel) => set({ panel })} />

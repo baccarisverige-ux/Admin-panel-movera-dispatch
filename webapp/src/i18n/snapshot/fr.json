@@ -9298,4 +9298,15 @@
 ["There is no one-press undo: copy an earlier version into the editor (History) and publish it again as a new version.","Pas d'annulation en un clic : copiez une version précédente dans l'éditeur (Historique) et publiez-la à nouveau comme nouvelle version."],
 ["Only after you publish the draft.","Seulement après la publication du brouillon."],
 ["At once, on this page only.","Tout de suite, sur cette page seulement."],
-["At once: it is saved when you confirm and applies from then on.","Tout de suite : c'est enregistré quand vous confirmez et s'applique à partir de ce moment."]]
+["At once: it is saved when you confirm and applies from then on.","Tout de suite : c'est enregistré quand vous confirmez et s'applique à partir de ce moment."],
+["Pickup entrance chips","Points d’accès de prise en charge"],
+["When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.","Quand le client choisit le lieu de prise en charge, l’appli client propose Entrée principale, Entrée latérale et Parking autour de l’épingle, marqués comme approximatifs. Déjà utilisé et Près du domicile restent toujours. L’appli client lit ce réglage."],
+["Pickup entrance chips (approximate)","Points d’accès de prise en charge (approximatifs)"],
+["Off: no entrance chips; the pickup is the address only. Usual value: on.","Désactivé : aucun point d’accès ; la prise en charge est seulement l’adresse. Valeur habituelle : activé."],
+["Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.","Les points d’accès de prise en charge n’ont pas pu être lus sur le serveur pour cette zone. Rechargez la page et réessayez."],
+["Share trip link","Lien de partage du trajet"],
+["During a trip the rider can send a live link to someone they trust. The page shows the car, the plate and the arrival time. The car’s position shows only while the rider is in the car, and never near the pickup, a stop or the drop-off. The link stops at drop-off.","Pendant un trajet, le passager peut envoyer un lien en direct à une personne de confiance. La page montre la voiture, la plaque et l’heure d’arrivée. La position de la voiture n’apparaît que lorsque le passager est à bord, et jamais près de la prise en charge, d’un arrêt ou de la destination. Le lien cesse de fonctionner à l’arrivée."],
+["Riders can share a live trip link","Les passagers peuvent partager un lien de trajet en direct"],
+["Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.","Désactivé : l’appli passager masque Partager le trajet et tous les liens en direct de la zone s’arrêtent. Valeur habituelle : activé."],
+["{0}: set per zone in Dispatch › Safety. {1}","{0} : réglé par zone dans Répartition › Sécurité. {1}"],
+["Share trip could not be read from the server for this zone. Reload the page and try again.","Le partage du trajet n’a pas pu être lu sur le serveur pour cette zone. Rechargez la page et réessayez."]]

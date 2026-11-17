@@ -1,6 +1,6 @@
 import { matchRider } from "../riders/match";
 import { isLiveData } from "../live/realData";
-import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi";
+import { RIDE_CHECK_ALERTS_LIST } from "../live/listNames";
 import { INCIDENT_BY_ID_LIST, OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { caseToRead, pickCase } from "../safety/caseLink";
 import { listQueryOf, setListQuery, subscribeLists } from "../live/liveLists";
@@ -200,7 +200,7 @@ export function SafetyPage() {
           </div>
           {isLiveData() ? (
             <label className="field" data-testid="incident-settings-country">{tr("Country")}
-              <select aria-label={tr("Settings for country")} value={scope.market.id} onChange={(event) => { const country = event.target.value; setParams((current) => { const next = new URLSearchParams(current); next.set("country", country); next.delete("scope"); return next; }); }}>
+              {/* info-skip: picks the country shown, not a setting */}<select aria-label={tr("Settings for country")} value={scope.market.id} onChange={(event) => { const country = event.target.value; setParams((current) => { const next = new URLSearchParams(current); next.set("country", country); next.delete("scope"); return next; }); }}>
                 {MARKETS.map((item) => <option key={item.id} value={item.id}>{trx(item.name)}</option>)}
               </select>
             </label>
@@ -268,10 +268,10 @@ export function SafetyPage() {
         <aside className="op-case-list" aria-label={tr("Cases")}>
           <div className="dx-choice" role="radiogroup" aria-label={tr("Show")}>
             {(["all", "open", "solved"] as const).map((id) => (
-              <label key={id} className={show === id ? "on" : undefined}><input type="radio" name="incident-show" checked={show === id} onChange={() => set({ show: id === "all" ? null : id, case: null })} />{id === "all" ? tr("All") : id === "open" ? tr("Open") : tr("Solved")}</label>
+              <label key={id} className={show === id ? "on" : undefined}>{/* info-skip: list filter, not a setting */}<input type="radio" name="incident-show" checked={show === id} onChange={() => set({ show: id === "all" ? null : id, case: null })} />{id === "all" ? tr("All") : id === "open" ? tr("Open") : tr("Solved")}</label>
             ))}
           </div>
-          <select aria-label={tr("Level")} value={levelFilter} onChange={(event) => set({ level: event.target.value, case: null })}>
+          {/* info-skip: list filter, not a setting */}<select aria-label={tr("Level")} value={levelFilter} onChange={(event) => set({ level: event.target.value, case: null })}>
             <option value="">{tr("Every level")}</option>
             {LEVELS.map((level) => <option key={level.id} value={level.id}>{trx(level.label)}</option>)}
           </select>
@@ -503,7 +503,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
       ) : null}
 
       <section className="op-case-actions" aria-label={tr("Work on the case")}>
-        <label className="op-field"><span>{tr("Contact or outcome")}</span><textarea aria-label={tr("Contact or outcome")} rows={2} value={text} placeholder={tr("Who you called, what they said, what you did")} onChange={(event) => setText(event.target.value)} /></label>
+        <label className="op-field"><span>{tr("Contact or outcome")}</span>{/* info-skip: note on one safety case, not a setting */}<textarea aria-label={tr("Contact or outcome")} rows={2} value={text} placeholder={tr("Who you called, what they said, what you did")} onChange={(event) => setText(event.target.value)} /></label>
         <div className="op-inline wrap">
           {(["take", "contact", "resolve", "dismiss"] as const).map((kind) => {
             const prepared = safetyAction(store, record, me, kind, kind === "take" ? "Responder accepted incident" : text);
@@ -518,7 +518,7 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
 
       <section className="op-level-pick" aria-label={tr("Level")}>
         <span className="dx-choice" role="radiogroup" aria-label={tr("Case level")}>
-          {LEVELS.map((row) => <label key={row.id} className={level === row.id ? `on ${row.id}` : undefined} title={trx(row.help)}><input type="radio" name={`level-${item.id}`} checked={level === row.id} disabled={!editable} onChange={() => setLevelDraft(row.id)} />{trx(row.label)}</label>)}
+          {LEVELS.map((row) => <label key={row.id} className={level === row.id ? `on ${row.id}` : undefined} title={trx(row.help)}>{/* info-skip: level of one safety case, not a setting */}<input type="radio" name={`level-${item.id}`} checked={level === row.id} disabled={!editable} onChange={() => setLevelDraft(row.id)} />{trx(row.label)}</label>)}
         </span>
         <CommandButton command="admin.incident.level" className="dash-btn small ghost" sliceKey={INCIDENT_OPS_KEY} value={setLevel(ops, item.id, level, me, "", new Date().toISOString())} expectedSliceRev={ops.draftRev} targetId={item.id} scope={item.zoneId} confirmTarget={false} before={item.level} after={level} disabled={!editable || level === item.level} onDone={() => setNotice(tr("Level changed to {0}.", [trx(LEVELS.find((row) => row.id === level)?.label)]))}>{tr("Change level")}</CommandButton>
         <small className="op-help">{trx(LEVELS.find((row) => row.id === level)?.help)} {tr("Take within {0} min, solve within {1} min.", [settings.limits[level].takeMin, settings.limits[level].solveMin])}</small>

@@ -53,14 +53,14 @@ export function ActivityView({ timeZone }: { timeZone: string }) {
       <h3>{seeAll ? tr("Activity of every admin") : tr("My activity")}</h3>
       <p className="pl-help">{trn("{0}, in this session and earlier ones, with the result and full details. The last {1} days are shown; older entries are archived{2}.", seeAll ? tr("Everything admins did") : tr("Everything you did"), ACTIVITY_VISIBLE_DAYS, seeAll ? tr(" and can be exported") : "")}</p>
       <div className="pl-filters">
-        <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label={tr("Search activity")} placeholder={tr("Action, record, reason or value")} value={text} onChange={(event) => { setText(event.target.value); setLimit(PAGE); }} /></label>
+        <label className="pl-search"><Search size={14} aria-hidden="true" />{/* info-skip: list filter, not a setting */}<input aria-label={tr("Search activity")} placeholder={tr("Action, record, reason or value")} value={text} onChange={(event) => { setText(event.target.value); setLimit(PAGE); }} /></label>
         {seeAll ? (
-          <select aria-label={tr("Admin")} value={actorId} onChange={(event) => { setActorId(event.target.value); setLimit(PAGE); }}>
+          /* info-skip: list filter, not a setting */ <select aria-label={tr("Admin")} value={actorId} onChange={(event) => { setActorId(event.target.value); setLimit(PAGE); }}>
             <option value="">{tr("Every admin")}</option>
             {actors.map((id) => <option key={id} value={id}>{nameOf(id)}</option>)}
           </select>
         ) : null}
-        <select aria-label={tr("Status")} value={status} onChange={(event) => { setStatus(event.target.value as ActivityStatus | ""); setLimit(PAGE); }}>
+        {/* info-skip: list filter, not a setting */}<select aria-label={tr("Status")} value={status} onChange={(event) => { setStatus(event.target.value as ActivityStatus | ""); setLimit(PAGE); }}>
           <option value="">{tr("Any status")}</option>
           {(Object.keys(STATUS_LABEL) as ActivityStatus[]).map((id) => <option key={id} value={id}>{trx(STATUS_LABEL[id])}</option>)}
         </select>
