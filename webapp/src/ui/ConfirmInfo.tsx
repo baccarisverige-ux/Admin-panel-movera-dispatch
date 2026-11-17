@@ -36,7 +36,7 @@ export function ConfirmInfo(props: ConfirmInfoProps) {
   const [open, setOpen] = useState(false);
   return (
     <div className="confirm-info">
-      <button type="button" data-command="admin.confirm.info" className="confirm-info-btn" aria-expanded={open} aria-label={tr("What will happen")} title={tr("What will happen? Open the explanation")} onPointerEnter={() => void loadBody()} onFocus={() => void loadBody()} onClick={() => setOpen((value) => !value)}>
+      <button type="button" data-command="admin.confirm.info" data-skip-initial-focus className="confirm-info-btn" aria-expanded={open} aria-label={tr("What will happen")} title={tr("What will happen? Open the explanation")} onPointerEnter={() => void loadBody()} onFocus={() => void loadBody()} onClick={() => setOpen((value) => !value)}>
         <svg className="confirm-info-icon" width="20" height="18" viewBox="0 0 20 18" aria-hidden="true" data-testid="confirm-info-icon">
           <path d="M10 1 19 17H1Z" fill={INFO_ORANGE} stroke={INFO_ORANGE} strokeWidth="2" strokeLinejoin="round" />
           <path d="M10 6.2v5.2" stroke={INFO_MARK} strokeWidth="2.2" strokeLinecap="round" />
