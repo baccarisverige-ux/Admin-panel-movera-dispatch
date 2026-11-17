@@ -112,13 +112,6 @@ function RefundForm({ open, trip, onClose, onSend }: { open: boolean; trip: Trip
         }}
       >
         <p>{tr("The money goes back to the rider. The reason is written in the audit.")}</p>
-        <ConfirmInfo
-          what={tr("The money goes back to the rider. The reason is written in the audit.")}
-          where={tr("This trip only.")}
-          who={tr("The people whose money this is: the rider, driver or fleet named here. Nobody else.")}
-          undo={tr("Money that was sent cannot be taken back from the panel. Check the amount and the person before you confirm.")}
-          command="admin.server.tripRefund"
-        />
         <label>
           {tr("Amount ({0})", [symbol])}
           <input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} aria-invalid={Boolean(amountError)} />
@@ -129,6 +122,13 @@ function RefundForm({ open, trip, onClose, onSend }: { open: boolean; trip: Trip
           <textarea value={reason} maxLength={1000} rows={3} onChange={(event) => setReason(event.target.value)} />
         </label>
         {error ? <ErrorLine error={error} /> : null}
+        <ConfirmInfo
+          what={tr("The money goes back to the rider. The reason is written in the audit.")}
+          where={tr("This trip only.")}
+          who={tr("The people whose money this is: the rider, driver or fleet named here. Nobody else.")}
+          undo={tr("Money that was sent cannot be taken back from the panel. Check the amount and the person before you confirm.")}
+          command="admin.server.tripRefund"
+        />
         <div className="actions">
           <button data-command="admin.server.dialogConfirm" type="submit" className="primary-btn" disabled={invalid || busy}>
             {busy ? tr("Sending.") : tr("Refund")}

@@ -159,7 +159,6 @@ function ConfirmDialogCard({ record, reasons, typed, command, money, onConfirm, 
       <form className="modal-card" role="dialog" aria-modal="true" aria-label={tr("Confirm")} onSubmit={submit}>
         <h3>{tr("Confirm")}</h3>
         <p>{trn("This acts on {0}.", record)}</p>
-        <ConfirmInfo what={trn("This acts on {0}.", record)} where={record} command={command} money={money} />
         <label>{trn("Reason{0}", <select value={reason} onChange={(event) => setReason(event.target.value)}>
             {reasons.map((item) => (
               <option key={item}>{item}</option>
@@ -168,6 +167,7 @@ function ConfirmDialogCard({ record, reasons, typed, command, money, onConfirm, 
         {typed ? (
           <label>{trn("Type {0} to confirm{1}", typed, <input value={text} onChange={(event) => setText(event.target.value)} />)}</label>
         ) : null}
+        <ConfirmInfo what={trn("This acts on {0}.", record)} where={record} command={command} money={money} />
         <CommandButton command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!confirmed}>{tr("Confirm")}</CommandButton>
         <CommandButton command="admin.confirm.cancel" className="secondary-btn" type="button" onDone={onClose}>{tr("Cancel")}</CommandButton>
       </form>
