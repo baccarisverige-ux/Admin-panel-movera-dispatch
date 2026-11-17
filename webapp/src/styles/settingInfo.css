@@ -8,7 +8,7 @@
 .setting-info-card { position: absolute; z-index: 60; inset-block-start: calc(100% + 6px); inset-inline-start: -8px; inline-size: min(320px, calc(100vw - 32px)); padding: 10px 12px; border: 1px solid #c7d2fe; border-radius: 10px; background: #fff; color: #111827; box-shadow: 0 8px 24px rgb(15 23 42 / 18%); font-size: 13px; font-weight: 400; line-height: 1.4; text-align: start; white-space: normal; }
 .setting-info-card:focus { outline: none; }
 .setting-info-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-block-end: 4px; }
-.setting-info-close { border: 0; background: transparent; font-size: 18px; line-height: 1; cursor: pointer; color: #374151; min-inline-size: 28px; min-block-size: 28px; }
+.setting-info-close { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; font-size: 18px; line-height: 1; cursor: pointer; color: #374151; min-inline-size: 28px; min-block-size: 28px; }
 .setting-info-card dl { margin: 0; }
 .setting-info-card dt { margin-block-start: 6px; color: #1d4ed8; font-weight: 600; font-size: 12px; }
 .setting-info-card dd { margin: 0; }
@@ -16,3 +16,8 @@
   .setting-info-card { position: fixed; inset: auto 0 0 0; inline-size: auto; max-block-size: 70vh; overflow: auto; border-radius: 14px 14px 0 0; padding: 14px 16px 20px; }
 }
 .setting-info-line { display: inline-flex; align-items: center; gap: 2px; }
+/* PR #345 CI: a row of label text + a select + the "i" never pushes the page wider (sv / fr /pricing?tab=extras at
+   1280 px scrolled sideways by 16-24 px): the row wraps, and a long select may shrink. */
+.check-row:has(> .setting-info) { flex-wrap: wrap; min-inline-size: 0; }
+.check-row:has(> .setting-info) > select { min-inline-size: 0; max-inline-size: 100%; }
+.setting-info { flex-shrink: 0; }

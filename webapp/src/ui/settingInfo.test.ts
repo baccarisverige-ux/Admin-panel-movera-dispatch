@@ -180,9 +180,10 @@ test("English completeness: no text is left without a field that uses it", () =>
 /** Files outside the scan that show an "i" with a fixed id (components that pass the id on). */
 const EXTRA_USERS: readonly string[] = [];
 
-test("the i renders: a button with a white i inside a blue circle, named Info: <setting>", () => {
+test("the i renders: a button with a white i inside a blue circle, named Info (never the setting label), described Info: <setting>", () => {
   const html = renderToStaticMarkup(createElement(SettingInfo, { id: "dispatch.zone.longestSearch", label: "Longest search" }));
-  assert.match(html, /<button type="button" class="setting-info-btn" aria-label="Info: Longest search" aria-expanded="false"/);
+  assert.match(html, /<span role="button" tabindex="0" class="setting-info-btn" aria-label="Info" aria-expanded="false" title="Info: Longest search"/);
+  assert.doesNotMatch(html, /aria-label="[^"]*Longest search/, "the field label is never in an accessible name (getByLabel finds only the field)");
   assert.match(html, /<span class="setting-info-dot" aria-hidden="true">i<\/span>/);
   assert.doesNotMatch(html, /role="dialog"/);
   const css = read("styles/settingInfo.css");
@@ -202,7 +203,7 @@ test("the i opens and closes: tap toggles, Escape / outside tap / close button c
   await loadSettingInfoTexts();
   const open = renderToStaticMarkup(createElement(SettingInfo, { id: "dispatch.zone.longestSearch", label: "Longest search", defaultOpen: true }));
   assert.match(open, /aria-expanded="true"/);
-  assert.match(open, /role="dialog"[^>]*aria-label="Info: Longest search"/);
+  assert.match(open, /role="dialog"[^>]*aria-label="Info"[^>]*title="Info: Longest search"/);
   for (const part of SETTING_INFO_PARTS) assert.ok(open.includes(`<dt>${part.title}</dt>`), `${part.title} in ${open}`);
   assert.ok(open.includes(SETTING_INFO["dispatch.zone.longestSearch"].what));
   assert.match(open, /aria-label="Close"/);
