@@ -26,6 +26,14 @@ export async function readOwingDrivers(client: LiveClient, zoneParams: readonly 
   return { items: Array.isArray(page?.items) ? page.items : [], nextCursor: page?.nextCursor ?? null, ...(typeof page?.total === "number" && Number.isSafeInteger(page.total) && page.total >= 0 ? { total: page.total } : {}) };
 }
 
+/**
+ * The reads to refresh after "Driver paid Movera" (J9 r2, server J8b live): the owing list, and the payouts, because the
+ * server settles the open payouts below 0 oldest first and marks one it covers in full as paid.
+ */
+export function afterPaidMoveraKeys(zoneQuery: string): readonly (readonly unknown[])[] {
+  return [["live", "drivers-owing", zoneQuery], ["live", "payouts"]];
+}
+
 /** What stops the "Driver paid Movera" form before any call; null = it can be sent. */
 export function paidMoveraProblem(owedMinor: number, amountMinor: number | null, reason: string): string | null {
   if (amountMinor === null || !Number.isSafeInteger(amountMinor)) return tr("Type the amount the driver paid.");

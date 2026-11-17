@@ -8,7 +8,7 @@ import { Modal } from "../ui/Modal";
 import { useLiveSession } from "./LiveSessionContext";
 import { errorText, liveMoney, parseMinor } from "./format";
 import { listCountText } from "./listPages";
-import { PAID_MOVERA_REASON_MAX, paidMoveraProblem, payMovera, readOwingDrivers, type OwingDriver } from "./owingDrivers";
+import { afterPaidMoveraKeys, PAID_MOVERA_REASON_MAX, paidMoveraProblem, payMovera, readOwingDrivers, type OwingDriver } from "./owingDrivers";
 import { DateText, ErrorLine, LoadMore } from "./ui";
 import { zoneFilterOf } from "./zoneFilter";
 
@@ -79,7 +79,7 @@ export function LiveOwingDrivers() {
       {total !== undefined && items.length ? <small className="live-list-count" data-testid="owing-count">{listCountText(items.length, total)}</small> : null}
       {moreError ? <ErrorLine error={moreError} /> : null}
       <LoadMore hasMore={Boolean(cursor) && !first.isLoading} loading={loadingMore} onClick={() => void loadMore()} />
-      {paying ? <PaidMoveraDialog row={paying} onClose={() => setPaying(null)} onDone={(text) => { setPaying(null); setNotice(text); reload(); }} /> : null}
+      {paying ? <PaidMoveraDialog row={paying} onClose={() => setPaying(null)} onDone={(text) => { setPaying(null); setNotice(text); setMore(null); for (const queryKey of afterPaidMoveraKeys(zoneQuery)) void queryClient.invalidateQueries({ queryKey }); }} /> : null}
     </section>
   );
 }
