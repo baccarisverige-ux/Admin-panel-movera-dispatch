@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { tr } from "../i18n";
 import { zoneById } from "../markets/markets";
 import { useMarketScope } from "../markets/useMarketScope";
+import { ConfirmInfo } from "../ui/ConfirmInfo";
 import { Modal } from "../ui/Modal";
 import { useLiveSession } from "./LiveSessionContext";
 import { errorText, liveMoney, parseMinor } from "./format";
@@ -95,6 +96,7 @@ function PaidMoveraDialog({ row: start, onClose, onDone }: { row: OwingDriver; o
   const minor = parseMinor(amount, row.owed.currency);
   const problem = paidMoveraProblem(row.owed.amountMinor, minor, reason);
   const name = row.driverName ?? row.driverId;
+  const paidText = minor !== null ? liveMoney({ amountMinor: minor, currency: row.owed.currency }) : tr("the amount you write");
 
   async function send() {
     if (problem || minor === null || busy) return;
@@ -122,6 +124,16 @@ function PaidMoveraDialog({ row: start, onClose, onDone }: { row: OwingDriver; o
         <p>{tr("{0} owes Movera {1}. Write what he paid Movera another way (Swish, bank).", [name, liveMoney(row.owed)])}</p>
         <label className="field"><span>{tr("Amount")} ({row.owed.currency})</span><input aria-label={tr("Amount paid to Movera")} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
         <label className="field"><span>{tr("Why")}</span><textarea aria-label={tr("Reason")} maxLength={PAID_MOVERA_REASON_MAX} value={reason} onChange={(event) => setReason(event.target.value)} /></label>
+        <ConfirmInfo
+          what={tr("{0} paid Movera {1} another way (Swish, bank). The server writes a correction entry \"Paid to Movera\" with your reason, in the audit log; past entries never change.", [name, paidText])}
+          change={minor !== null && !problem ? tr("Owes Movera: {0} → {1}", [liveMoney(row.owed), liveMoney({ amountMinor: row.owed.amountMinor - minor, currency: row.owed.currency })]) : tr("Owes Movera: {0} → {0} minus the amount you write", [liveMoney(row.owed)])}
+          where={tr("Only this driver: {0} ({1}). The server settles his open payouts below 0 oldest first and marks one it covers in full as paid. No other driver, zone or country changes.", [name, row.zoneId ? zoneById(row.zoneId)?.name ?? row.zoneId : "—"])}
+          who={tr("Admins with Finance: in this list, in Payouts and in the audit log. The driver: the \"Paid to Movera\" line on his payout.")}
+          when={tr("At once: it is saved when you confirm and applies from then on.")}
+          money={tr("No money moves through Movera now: it records that the driver already paid Movera {0} by hand. What he owes goes down by that amount; under the country's owes-limit he gets cash trips again.", [paidText])}
+          undo={tr("There is no undo in the panel: the correction entry stays (past entries never change). Check the amount and the driver before you save.")}
+          command="admin.server.driverPaidMovera"
+        />
         {message ? <p className="state-line live-error" role="alert">{message}</p> : problem && (amount || reason) ? <small className="fine">{problem}</small> : null}
         <div className="actions">
           <button type="submit" className="primary-btn" data-command="admin.server.driverPaidMovera" disabled={busy || Boolean(problem)} title={problem ?? undefined}>{busy ? tr("Saving.") : tr("Save")}</button>

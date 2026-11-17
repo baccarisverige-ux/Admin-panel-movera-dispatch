@@ -68,4 +68,12 @@ export const enC39ConfirmDetails = {
   "Only after you publish the draft.": "Only after you publish the draft.",
   "At once, on this page only.": "At once, on this page only.",
   "At once: it is saved when you confirm and applies from then on.": "At once: it is saved when you confirm and applies from then on.",
+  "{0} paid Movera {1} another way (Swish, bank). The server writes a correction entry \"Paid to Movera\" with your reason, in the audit log; past entries never change.": "{0} paid Movera {1} another way (Swish, bank). The server writes a correction entry \"Paid to Movera\" with your reason, in the audit log; past entries never change.",
+  "Owes Movera: {0} → {1}": "Owes Movera: {0} → {1}",
+  "Owes Movera: {0} → {0} minus the amount you write": "Owes Movera: {0} → {0} minus the amount you write",
+  "Only this driver: {0} ({1}). The server settles his open payouts below 0 oldest first and marks one it covers in full as paid. No other driver, zone or country changes.": "Only this driver: {0} ({1}). The server settles his open payouts below 0 oldest first and marks one it covers in full as paid. No other driver, zone or country changes.",
+  "Admins with Finance: in this list, in Payouts and in the audit log. The driver: the \"Paid to Movera\" line on his payout.": "Admins with Finance: in this list, in Payouts and in the audit log. The driver: the \"Paid to Movera\" line on his payout.",
+  "No money moves through Movera now: it records that the driver already paid Movera {0} by hand. What he owes goes down by that amount; under the country's owes-limit he gets cash trips again.": "No money moves through Movera now: it records that the driver already paid Movera {0} by hand. What he owes goes down by that amount; under the country's owes-limit he gets cash trips again.",
+  "There is no undo in the panel: the correction entry stays (past entries never change). Check the amount and the driver before you save.": "There is no undo in the panel: the correction entry stays (past entries never change). Check the amount and the driver before you save.",
+  "the amount you write": "the amount you write",
 };

@@ -36,6 +36,7 @@ const CONFIRM_DIALOGS = [
   "live/LiveBonusCampaigns.tsx", // End campaign
   "trips/ReverseNoShow.tsx", // Reverse no-show
   "drivers/OnboardingSettingsEditor.tsx", // Turn on the e-mail check?
+  "live/LiveOwingDrivers.tsx", // Driver paid Movera (J9, money)
   "live/LiveReservations.tsx", // the inline Confirm of a booked ride's action (cancel, no-show, raise, assign, …): SF-R2-4 found it
 ];
 /** They confirm through DecisionDialog (live/ui.tsx), which holds the info. */
