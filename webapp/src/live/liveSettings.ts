@@ -11,7 +11,7 @@ import { sosContactsSmsOf } from "../config/sosContactsSms.ts";
 import { MARKETS, hasLiveMarketZones, marketOfZone, standardZoneId, zoneById, type Market, type MarketId } from "../markets/markets.ts";
 import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
-import { DISPATCH_KEY, draftRules, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
+import { DISPATCH_KEY, draftRules, zoneDefault, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
 import { COUNTRY_SETTINGS_KEY, personLimitsOf, TIP_CASH_IN_CAR_MINUTES, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, walletFirstChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
@@ -634,7 +634,10 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const current = await draft("dispatch", id, true);
       const built = dispatchDocumentOf(draftRules(book, id), id, current?.document ?? null);
       // U1 (safe config saves): start from the stored document, like publishDispatch; only what the panel changed is written.
-      const document = current ? patchChanged(current.document, dispatchDocumentOf(rulesOfDispatch(current.document, null, draftRules(book, id)), id, current.document), built) : built;
+      // The "before" falls back to the zone default (never the edited rules), so an edit of a key the stored document lacks is sent.
+      const document = current ? patchChanged(current.document, dispatchDocumentOf(rulesOfDispatch(current.document, null, zoneDefault(id)), id, current.document), built) : built;
+      // A block the stored document lacks is written whole (not only the edited leaf), as before U1.
+      if (current) for (const part of Object.keys(document)) if (!(part in current.document) && part in built) document[part] = built[part];
       await saveDraftOnly(http, "dispatch", id, current, document);
       drafts.delete(key("dispatch", id));
     }

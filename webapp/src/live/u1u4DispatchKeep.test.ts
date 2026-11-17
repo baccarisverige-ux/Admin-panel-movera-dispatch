@@ -45,8 +45,9 @@ function stored(): Doc {
   return { ...doc, version: 5 };
 }
 
-async function saveDraft(change: (zone: ReturnType<typeof liveRules>) => ReturnType<typeof liveRules>) {
-  const fake = server(stored());
+type Zone = ReturnType<typeof liveRules>;
+async function saveDraft(change: (zone: Zone) => Zone, document: Doc = stored()) {
+  const fake = server(document);
   const settings = createLiveSettings(fake.http, () => "2026-11-17T10:00:00Z");
   const book = (await settings.readSlice("dispatchRules", null)) as ReturnType<typeof emptyDispatchBook>;
   await settings.command("admin.dispatch.saveDraft", { targetId: "dispatch draft", value: { ...book, draft: { Z001: change(liveRules(book, "Z001")) } } });
@@ -69,6 +70,29 @@ test("U1: panel edits still win in Save draft (a switch off, an emptied list)", 
   assert.equal((sent["radar"] as Doc)["on"], !liveRules(emptyDispatchBook(), "Z001").radar.on);
   assert.equal((sent["exclusive"] as Doc)["reaskAfterSeconds"], 45);
 });
+
+// Supervisor M1 (round 2): a key the stored document lacks (older documents) must still be written when the panel edits it.
+const EDITS: Record<string, (zone: Zone) => Zone> = {
+  bookedNext: (zone) => ({ ...zone, bookedNext: { ...zone.bookedNext, on: !zone.bookedNext.on } }),
+  finishing: (zone) => ({ ...zone, finishing: { ...zone.finishing, withinMin: zone.finishing.withinMin + 3 } }),
+  favourite: (zone) => ({ ...zone, favourite: { ...zone.favourite, maxKm: zone.favourite.maxKm + 3 } }),
+  exclusiveWhileDriving: (zone) => ({ ...zone, exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, on: !(zone.exclusiveWhileDriving as { on: boolean }).on } }),
+  choose: (zone) => ({ ...zone, choose: { ...zone.choose, main: zone.choose.main === "radar" ? "exclusive" : "radar" } }),
+  radius: (zone) => ({ ...zone, radius: { ...zone.radius, maxWaitMin: zone.radius.maxWaitMin + 3 } }),
+  factors: (zone) => ({ ...zone, factors: zone.factors.slice(1) }),
+  raisePrice: (zone) => ({ ...zone, raisePrice: { maxFactor: zone.raisePrice.maxFactor === 3 ? 2.5 : 3 } }),
+  rulesFrom: (zone) => ({ ...zone, rulesFrom: zone.rulesFrom === "driver" ? "pickup" : "driver" }),
+};
+for (const [key, edit] of Object.entries(EDITS)) {
+  test(`U1 M1: a stored draft without ${key}: the panel's edit of it is still sent by Save draft`, async () => {
+    const document = stored();
+    delete document[key];
+    const sent = await saveDraft(edit, document);
+    assert.ok(key in sent, `${key} missing in the sent draft`);
+    assert.deepEqual(sent[key], dispatchDocumentOf(edit(liveRules(emptyDispatchBook(), "Z001")), "Z001", null)[key]);
+    assert.equal((sent["exclusive"] as Doc)["reaskAfterSeconds"], 45);
+  });
+}
 
 const none = { presets: [], groups: [], radarZones: [], radarZoneRules: [], events: [] };
 
