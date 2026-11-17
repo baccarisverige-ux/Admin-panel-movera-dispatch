@@ -24,7 +24,7 @@ export const svC2ServerAlerts = {
   "Booked ride late": "Bokad resa sen",
   "The pickup time passed and the booked ride still has no driver.": "Upphämtningstiden har passerat och den bokade resan har fortfarande ingen förare.",
   "Booked ride not started": "Bokad resa inte påbörjad",
-  "The driver holds the booked ride, the leave time passed and the ride has not started.": "Föraren har den bokade resan, hens avgångstid har passerat och hen har inte startat den.",
+  "The driver holds the booked ride, the leave time passed and the ride has not started.": "Föraren har den bokade resan, förarens avgångstid har passerat och föraren har inte startat den.",
   "Limit {0}": "Gräns {0}",
   "Asked for help": "Bad om hjälp",
   "{0}'s booked ride: pickup time {1} passed, no driver": "{0}s bokade resa: upphämtningstiden {1} har passerat, ingen förare",

@@ -574,7 +574,7 @@ export const svC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Reason (required){0}": "Anledning (krävs){0}",
   "{0} Take back the driver’s share": "{0} Ta tillbaka förarens andel",
   "The rider pays nothing for this trip: an owed fee is waived, a paid fee goes back to the rider's wallet. The trip stays a no-show.": "Resenären betalar inget för resan: en obetald avgift efterskänks, en betald avgift går tillbaka till resenärens plånbok. Resan förblir en utebliven kund.",
-  "The driver's share of the no-show fee is taken from their earnings.": "Förarens andel av avgiften för utebliven kund dras från hens intäkter.",
+  "The driver's share of the no-show fee is taken from their earnings.": "Förarens andel av avgiften för utebliven kund dras från förarens intäkter.",
   "The driver keeps their share of the no-show fee. Movera pays it.": "Föraren behåller sin andel av avgiften för utebliven kund. Movera betalar den.",
   "Reversed {0} by {1}: {2}": "Ångrad {0} av {1}: {2}",
   "driver's share taken back": "förarens andel tillbakatagen",

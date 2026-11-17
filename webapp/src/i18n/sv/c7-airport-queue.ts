@@ -15,6 +15,6 @@ export const svC7AirportQueue: Record<keyof typeof enC7AirportQueue, string> = {
   "Time to answer a queue offer": "Tid att svara på ett kö-erbjudande",
   "Queue offers before the nearest driver": "Kö-erbjudanden före närmaste förare",
   "A driver who declines keeps their place": "En förare som tackar nej behåller sin plats",
-  "Off: the driver goes to the back of the queue.": "Av: hen hamnar sist i kön.",
+  "Off: the driver goes to the back of the queue.": "Av: föraren hamnar sist i kön.",
   "Save queue area": "Spara kö-område",
 };

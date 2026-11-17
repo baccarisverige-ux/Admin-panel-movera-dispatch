@@ -2,7 +2,7 @@
 export const svC22SosContactsSms = {
   "SMS to the driver's emergency contacts on SOS": "Sms till förarens nödkontakter vid SOS",
   "{0} SMS to the driver's emergency contacts on SOS": "{0} Sms till förarens nödkontakter vid SOS",
-  "When a driver presses SOS during a trip, each of their emergency contacts gets one SMS with their position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.": "När en förare trycker på SOS under en resa får var och en av hens nödkontakter ett sms med hens position. Av: inget sms; samtalet och Movera-larmet finns kvar. Skickas först när ett sms-företag är anslutet.",
+  "When a driver presses SOS during a trip, each of their emergency contacts gets one SMS with their position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.": "När en förare trycker på SOS under en resa får var och en av förarens nödkontakter ett sms med förarens position. Av: inget sms; samtalet och Movera-larmet finns kvar. Skickas först när ett sms-företag är anslutet.",
   "SMS to the driver's emergency contacts on SOS: {0}": "Sms till förarens nödkontakter vid SOS: {0}",
   "SMS to emergency contacts: off": "Sms till nödkontakter: av",
   "SMS to emergency contacts: the driver has none": "Sms till nödkontakter: föraren har inga",
