@@ -34,6 +34,10 @@ export const CONFIG_DEFAULTS = {
   maxPickupMoveMeters: 200,
   /** v0.18.30 (owner Q9): pickup ≈ drop-off warning under this many metres (contract configDefaults.samePointWarnMeters). */
   samePointWarnMeters: 100,
+  /** v0.18.115 BQ-V21 (owner: default on): the rider's approximate pickup entrance chips (contract configDefaults.pickupSpotsOn). */
+  pickupSpotsOn: true,
+  /** v0.18.116 BQ-S10 (owner S10 Q6: default on): riders can share a live trip link (contract configDefaults.shareTripOn). */
+  shareTripOn: true,
   freeWaitMin: { default: 5, xl: 3 },
   waitingDriverSharePct: 100,
   noShowDriverSharePct: 80,

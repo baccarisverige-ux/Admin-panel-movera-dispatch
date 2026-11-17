@@ -44,30 +44,39 @@ export function TestRide({ zoneName, currency, categories, book, liveSurge, draf
         <button data-command="admin.pricing.testRide" type="button" className="icon-ghost" aria-label={tr("Close test a ride")} onClick={onClose}><X size={16} aria-hidden="true" /></button>
       </div>
       <div className="test-ride-body">
+        {/* info-skip: test-ride input, not a setting */}
         <label className="field">{trn("Category{0}", <select aria-label={tr("Quote category")} value={input.categoryId} onChange={(event) => set({ categoryId: event.target.value, fixedRouteId: null })}>
             {categories.map((category) => <option key={category.id} value={category.id} disabled={!book.prices[category.id]?.enabled}>{trx(category.label)}{book.prices[category.id]?.enabled ? "" : tr(" (off)")}</option>)}
           </select>)}</label>
         {routes.length ? (
+          /* info-skip: test-ride input, not a setting */
           <label className="field">{trn("Fixed route{0}", <select aria-label={tr("Quote fixed route")} value={input.fixedRouteId ?? ""} onChange={(event) => set({ fixedRouteId: event.target.value || null })}>
               <option value="">{tr("By km and min")}</option>
               {routes.map((route) => <option key={route.id} value={route.id}>{route.from} → {route.to}</option>)}
             </select>)}</label>
         ) : null}
         <div className="test-ride-grid">
+          {/* info-skip: test-ride input, not a setting */}
           <label className="field">{trn("Distance{0}", <NumberField label={tr("Quote km")} value={input.km} unit="km" onChange={(km) => set({ km })} />)}</label>
+          {/* info-skip: test-ride input, not a setting */}
           <label className="field">{trn("Time{0}", <NumberField label={tr("Quote minutes")} value={input.minutes} unit="min" onChange={(minutes) => set({ minutes })} />)}</label>
+          {/* info-skip: test-ride input, not a setting */}
           <label className="field">{trn("Waiting at pickup{0}", <NumberField label={tr("Quote waiting minutes")} value={input.waitMin} unit="min" onChange={(waitMin) => set({ waitMin })} />)}</label>
+          {/* info-skip: test-ride input, not a setting */}
           <label className="field">{trn("Extra stops{0}", <NumberField label={tr("Quote stops")} value={input.stops} max={5} onChange={(stops) => set({ stops: Math.round(stops) })} />)}</label>
+          {/* info-skip: test-ride input, not a setting */}
           <label className="field">{trn("Waiting at stops{0}", <NumberField label={tr("Quote stop waiting")} value={input.stopWaitMin} unit="min" onChange={(stopWaitMin) => set({ stopWaitMin })} />)}</label>
         </div>
         <div className="check-chips">
           {([["airportPickup", "Airport pickup"], ["airportDropoff", "Airport drop-off"], ["reservation", "Reservation"]] as const).map(([key, label]) => (
             <label key={key} className={input[key] ? "check-chip on" : "check-chip"}>
+              {/* info-skip: test-ride input, not a setting */}
               <input type="checkbox" aria-label={tr("Quote {0}", [label])} checked={input[key]} onChange={(event) => set({ [key]: event.target.checked })} />
               {trx(label)}
             </label>
           ))}
         </div>
+        {/* info-skip: test-ride input, not a setting */}
         <SurgeSlider compact label={tr("Quote surge")} value={input.surge} onChange={(surge) => set({ surge })} />
       </div>
       {quote.error ? <p className="state-line">{trSentences(quote.error)}</p> : (

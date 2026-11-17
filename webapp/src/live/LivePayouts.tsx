@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { tr } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { readUncounted } from "./listTotalParam";
+import { PAYOUT_LINE_LABEL, payoutLineLabel } from "./payoutLines";
 import { liveMoney } from "./format";
 import { ErrorLine } from "./ui";
 import type { Driver, LiveMoney, Page } from "./types";
@@ -51,20 +52,8 @@ function SummaryLines({ lines, testId }: { lines: SummaryLine[]; testId: string 
 }
 type RefundToSend = { refundId: string; tripId?: string; amount: LiveMoney; reason?: string; createdAt?: string; riderName: string; riderPhone: string; payoutTo?: unknown };
 
-export const PAYOUT_LINE_LABEL: Record<string, string> = {
-  trips: "Trips",
-  waiting: "Waiting",
-  pickup_pay: "Pickup pay",
-  bonus: "Bonus",
-  tips: "Tips",
-  cash_collected: "Cash collected",
-  fees: "Cancel and no-show fees",
-};
-
-export function payoutLineLabel(code: string): string {
-  const label = PAYOUT_LINE_LABEL[code];
-  return label ? tr(label as Parameters<typeof tr>[0]) : code;
-}
+// S5 J9: the line words moved to payoutLines.ts (+ paid_to_movera "Paid to Movera"); kept exported from here.
+export { PAYOUT_LINE_LABEL, payoutLineLabel };
 
 const day = (iso: string) => iso.slice(0, 10);
 

@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { can } from "../auth/permissions";
 import { BonusesView } from "../drivers/BonusesView";
 import type { BonusDriver } from "../drivers/BonusBuilder";
-import { AlertTriangle, CalendarClock, Car, Flame, PauseCircle, UserCheck, Users } from "lucide-react";
+import { AlertTriangle, CalendarClock, Car, Flame, HandCoins, PauseCircle, UserCheck, Users } from "lucide-react";
 import { useRecords, useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { periodWindow } from "../dashboard/period";
@@ -28,6 +28,10 @@ import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { liveDriverMonth, liveJoinedDays, orDash } from "../live/driverFacts";
 import { liveDriverDocs } from "../fleet/liveOwner";
 import { categoryName } from "../riders/profile";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
+
+// S5 J9 (v0.18.84 debtModel.driverOwes, owner Q-S5-1a "Both"): the list of drivers who owe Movera, loaded only when its tab opens.
+const LiveOwingDrivers = lazy(() => import("../live/LiveOwingDrivers").then((module) => ({ default: module.LiveOwingDrivers })));
 import { CAMPAIGN_COMMANDS } from "../drivers/campaigns";
 
 // BQ-V44 (contract 0.18.110): the server's bonus campaigns on live, loaded only when the tab opens.
@@ -53,7 +57,10 @@ export function DriversPage() {
   // bonus campaigns (/admin/bonuses); the demo builder stays demo-only (Rule 21).
   const live = isLiveData();
   const bonusesHidden = useCommandHidden(live ? CAMPAIGN_COMMANDS.create : "admin.drivers.bonusCreate");
-  const tab = params.get("view") === "bonuses" && !bonusesHidden ? "bonuses" : "drivers";
+  // S5 J9: live, an admin with finance.read also sees "Owe Movera".
+  const session = useLiveSessionMaybe();
+  const owingShown = Boolean(session?.can("finance.read"));
+  const tab = params.get("view") === "bonuses" && !bonusesHidden ? "bonuses" : params.get("view") === "owing" && owingShown ? "owing" : "drivers";
   const { agent } = useSession();
   const scope = useMarketScope();
   const drivers = useRecords("drivers", null);
@@ -133,9 +140,9 @@ export function DriversPage() {
       };
     }), [enriched, store.value, scope.country, scope.market.center, live, now]);
 
-  function go(next: "drivers" | "bonuses") {
+  function go(next: "drivers" | "bonuses" | "owing") {
     const copy = new URLSearchParams(params);
-    if (next === "bonuses") copy.set("view", "bonuses");
+    if (next !== "drivers") copy.set("view", next);
     else copy.delete("view");
     setParams(copy, { replace: true });
   }
@@ -144,8 +151,26 @@ export function DriversPage() {
     <div className="dash-tabs" role="tablist" aria-label={tr("Drivers sections")}>
       <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "drivers"} className={tab === "drivers" ? "active" : undefined} onClick={() => go("drivers")}>{trn("{0} Drivers", <Users size={15} aria-hidden="true" />)}</button>
       {bonusesHidden ? null : <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "bonuses"} className={tab === "bonuses" ? "active" : undefined} onClick={() => go("bonuses")}>{trn("{0} Bonuses", <Flame size={15} aria-hidden="true" />)}</button>}
+      {owingShown ? <button data-command="admin.drivers.view" type="button" role="tab" aria-selected={tab === "owing"} className={tab === "owing" ? "active" : undefined} onClick={() => go("owing")}>{trn("{0} Owe Movera", <HandCoins size={15} aria-hidden="true" />)}</button> : null}
     </div>
   );
+
+  if (tab === "owing") {
+    return (
+      <div className="fd-page">
+        <div className="fd-head">
+          <div>
+            <h2>{tr("Drivers")}</h2>
+            <p>{tr("Drivers who owe Movera, largest first, in the zones picked at the top.")}</p>
+          </div>
+        </div>
+        {tabs}
+        <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>
+          <LiveOwingDrivers />
+        </Suspense>
+      </div>
+    );
+  }
 
   if (tab === "bonuses") {
     return (

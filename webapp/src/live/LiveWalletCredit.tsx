@@ -26,7 +26,8 @@ export function LiveWalletCredit({ riderId, version, walletMinor, currency }: { 
   const problem = problemKey ? tr(problemKey) : null;
   const symbol = currency ? SYMBOL[currency] ?? currency : "";
   // GM item 13: the currency's own decimals ("200,00 kr", "12.500 DT"), with the one formatter (C-23).
-  const balance = walletMinor === null || currency === null ? "—" : liveMoney({ amountMinor: walletMinor, currency });
+  // S5 J9 (v0.18.84 debtModel.riderWallet): a balance below 0 is what the rider owes (unpaid fees), "Owes 50,00 kr".
+  const balance = walletMinor === null || currency === null ? "—" : walletMinor < 0 ? tr("Owes {0}", [liveMoney({ amountMinor: -walletMinor, currency })]) : liveMoney({ amountMinor: walletMinor, currency });
   return (
     <section className="fd-box rd-wallet" data-testid="live-wallet-credit">
       <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>

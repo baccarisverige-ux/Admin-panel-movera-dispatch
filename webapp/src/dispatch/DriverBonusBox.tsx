@@ -158,14 +158,14 @@ export function DriverBonusBox({ trip, view, canAct, onDone, compact = false, dr
         ) : null;
       })()}
       <div className="as-bonus-row">
-        <label>{trn("Amount ({0}){1}", place.currency, <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={draft.amount} disabled={!canAct || !open} onChange={(event) => set({ amount: event.target.value })} placeholder={limitsKnown ? (left > 0 ? tr("Up to {0}", [money(left)]) : tr("Limit reached")) : undefined} />)}</label>
+        <label>{trn("Amount ({0}){1}", place.currency, /* info-skip: input of one bonus action on one trip, not a setting */ <input aria-label={tr("Money for the driver")} type="number" min="0" step={1 / place.minorUnits} value={draft.amount} disabled={!canAct || !open} onChange={(event) => set({ amount: event.target.value })} placeholder={limitsKnown ? (left > 0 ? tr("Up to {0}", [money(left)]) : tr("Limit reached")) : undefined} />)}</label>
         <div className="as-chips" role="group" aria-label={tr("Apply to")} data-testid="driver-bonus-scope">
           <span className="as-chips-label">{tr("Apply to")}</span>
           {BONUS_SCOPES.map((scope) => (
             <button key={scope} data-command="admin.dispatch.view" type="button" className={draft.scope === scope ? "as-chip active" : "as-chip"} aria-pressed={draft.scope === scope} disabled={!canAct || !open} onClick={() => set({ scope })}>{trx(SCOPE_LABEL[scope])}</button>
           ))}
         </div>
-        <label className="check-row">{trn("{0} Priority badge", <input type="checkbox" checked={draft.priority} disabled={!canAct || !open} onChange={(event) => set({ priority: event.target.checked })} />)}</label>
+        <label className="check-row">{trn("{0} Priority badge", /* info-skip: input of one bonus action on one trip, not a setting */ <input type="checkbox" checked={draft.priority} disabled={!canAct || !open} onChange={(event) => set({ priority: event.target.checked })} />)}</label>
         <CommandButton
           command="admin.trip.driverBonus"
           className="dash-btn small ghost"

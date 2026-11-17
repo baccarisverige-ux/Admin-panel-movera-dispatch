@@ -57,8 +57,11 @@ import { enC23PayoutRunGuard } from "./en/c23-payout-run-guard.ts";
 import { enC27StopAutoArrive } from "./en/c27-stop-auto-arrive.ts";
 import { enC24FleetCountry } from "./en/c24-fleet-country.ts";
 import { enC28OfflineReasons } from "./en/c28-offline-reasons.ts";
+import { enC19DebtModel } from "./en/c19-debt-model.ts";
 import { enC25BonusCampaigns } from "./en/c25-bonus-campaigns.ts";
 import { enC29SupportOrder } from "./en/c29-support-order.ts";
+import { enC31PickupSpots } from "./en/c31-pickup-spots.ts";
+import { enC32ShareTrip } from "./en/c32-share-trip.ts";
 import { enC37AutoOfflineOutage } from "./en/c37-auto-offline-outage.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
@@ -123,8 +126,11 @@ export const en = {
   ...enC27StopAutoArrive,
   ...enC24FleetCountry,
   ...enC28OfflineReasons,
+  ...enC19DebtModel,
   ...enC25BonusCampaigns,
   ...enC29SupportOrder,
+  ...enC31PickupSpots,
+  ...enC32ShareTrip,
   ...enC37AutoOfflineOutage,
 } as const;
 

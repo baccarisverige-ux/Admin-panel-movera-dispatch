@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
-import { performanceFacts } from "./liveAdminApi";
+import { performanceFacts } from "./docState";
 import type { Driver } from "./types";
 
 /**

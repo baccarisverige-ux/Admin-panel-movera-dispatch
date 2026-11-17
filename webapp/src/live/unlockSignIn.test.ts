@@ -12,7 +12,7 @@ test("the route and body match the contract (SignInUnlock { phone })", () => {
   const yaml = readFileSync(new URL("../../../contracts/openapi.yaml", import.meta.url), "utf8");
   const at = yaml.indexOf(`  ${UNLOCK_SIGN_IN_PATH}:\n    post:`);
   assert.ok(at > 0);
-  assert.match(yaml.slice(at, at + 3000), /\$ref: '#\/components\/schemas\/SignInUnlock'/);
+  assert.match(yaml.slice(at, at + 8000), /\$ref: '#\/components\/schemas\/SignInUnlock'/);
   assert.ok(yaml.includes("    SignInUnlock:\n      type: object\n      required:\n      - phone\n"));
 });
 

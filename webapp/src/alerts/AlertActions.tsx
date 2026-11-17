@@ -8,6 +8,7 @@ import { safetyAction } from "../safety/ops";
 import { CommandButton } from "../ui/CommandButton";
 import { useAlertsData } from "./AlertsContext";
 import { useAlertIncidents } from "./useOnDemand";
+import { alertRowReadsIncidents } from "./reads";
 import { ALERTS_KEY, doneAlert, followsIncident, muteKind, passAlert, snoozeAlert, takeAlert, type OpenAlert } from "./engine";
 import { OpenRideCheck } from "./OpenRideCheck";
 import { tr, trn, trx } from "../i18n";
@@ -45,7 +46,8 @@ export function AlertActions({ alert, compact = false, onDone }: { alert: OpenAl
   const extras = book.settings.extras;
   const say = (text: string) => onDone?.(text);
   // Q132: the case behind an SOS / ride-check alert is read here, on demand, not by the alert bar on every page.
-  const incidents = useAlertIncidents(followsIncident(alert.kind) && Boolean(alert.incidentId));
+  // SF-B: only for a role that may read cases (incidents.read); a dispatcher's ride-check row sends no refused read.
+  const incidents = useAlertIncidents(alertRowReadsIncidents(alert, Boolean(agent && can(agent.role, "incidents.read"))));
 
   if (followsIncident(alert.kind)) {
     if (!alert.incidentId) return null;

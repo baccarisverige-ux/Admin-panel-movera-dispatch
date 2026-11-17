@@ -16,7 +16,7 @@ export function AllFeaturesView({ zoneId }: { zoneId: string }) {
       <h3>{tr("All features")}</h3>
       <p className="pl-help">{tr("Every setting and feature, in one list. Click one to open its section.")}</p>
       <div className="pl-filters">
-        <label className="pl-search"><Search size={14} aria-hidden="true" /><input aria-label={tr("Find a setting")} placeholder={tr("For example stops, surge, refund")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <label className="pl-search"><Search size={14} aria-hidden="true" />{/* info-skip: search box, not a setting */}<input aria-label={tr("Find a setting")} placeholder={tr("For example stops, surge, refund")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         <small className="pl-help">{trn("{0} of {1}", shown.length, FEATURE_INDEX.length)}</small>
       </div>
       {shown.length ? (
