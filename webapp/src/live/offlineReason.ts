@@ -27,7 +27,7 @@ export function offlineReasonText(reason: string, extra: OfflineReasonExtra = {}
     case "account_status": return tr("Account on hold, suspended or back to pending");
     case "admin": return tr("Set offline by Movera");
     case "documents_expired": return tr("A required document has expired");
-    case "after_trip": return tr("Went offline after his trip (asked during the trip)");
+    case "after_trip": return tr("Went offline after their trip (asked during the trip)");
     default: return tr("Set offline by the server ({0})", [reason]);
   }
 }

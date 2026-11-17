@@ -136,7 +136,7 @@ function Money({ tripId }: { tripId: string }) {
           <input aria-label={tr("Why")} value={refundWhy} placeholder={tr("Why?")} onChange={(e) => setRefundWhy(e.target.value)} disabled={!paid} />
           <label className="check-row"><input type="checkbox" checked={fromDriver} onChange={(e) => setFromDriver(e.target.checked)} disabled={!paid || !t.driverId} /> {tr("Take it from the driver's share")}</label>
           {/* v0.18.91 job A7 (contract.json#finish.refund.driverNotice): the driver is told how much and why. */}
-          {fromDriver ? <p className="op-help" data-testid="refund-driver-notice">{tr("The driver gets a notice with the amount taken from his pay and this reason.")}</p> : null}
+          {fromDriver ? <p className="op-help" data-testid="refund-driver-notice">{tr("The driver gets a notice with the amount taken from their pay and this reason.")}</p> : null}
           <button type="button" className="dash-btn small" data-command="admin.trip.partRefund" disabled={busy || !paid || !refundMinor || !refundWhy.trim()} title={!paid ? tr("Only a paid, finished trip can be refunded.") : undefined}
             onClick={() => void run(async () => {
               await client.post(`${path}/refund`, { expectedVersion: t.version, amount: { amountMinor: refundMinor!, currency }, reason: refundWhy.trim(), ...(fromDriver ? { fromDriver: true } : {}) });

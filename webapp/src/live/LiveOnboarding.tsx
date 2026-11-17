@@ -56,7 +56,7 @@ export function LiveOnboarding() {
       {steps ? <button data-command="admin.onboarding.view" type="button" className="dash-btn ghost dx-back" onClick={() => view(null)}><ArrowLeft size={16} aria-hidden="true" />{" "}{tr("Back")}</button> : null}
       <div className="dx-head-text">
         <h2>{steps ? tr("Onboarding steps for {0}", [trx(COUNTRY_LABEL[country])]) : tr("Onboarding queue")}</h2>
-        <p>{steps ? tr("The steps new drivers go through, the papers they need, how long each step may take and the reminders they get.") : trn("{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs his own documents, a fleet owner also the company's. No car is needed.", queue.filter((item) => item.facts.accountStatus !== "active").length, trx(COUNTRY_LABEL[country]))}</p>
+        <p>{steps ? tr("The steps new drivers go through, the papers they need, how long each step may take and the reminders they get.") : trn("{0} accounts not active yet in {1}. An account is activated when every required document is approved: a driver in a fleet needs their own documents, a fleet owner also the company's. No car is needed.", queue.filter((item) => item.facts.accountStatus !== "active").length, trx(COUNTRY_LABEL[country]))}</p>
         {!steps && renewals > 0 ? <p data-testid="queue-renewals">{tr("Renewals to review: {0}. The current documents stay valid until you decide.", [renewals])}</p> : null}
       </div>
       {!steps ? <button data-command="admin.onboarding.view" type="button" className="dash-btn small ghost" onClick={() => view("steps")}><Settings2 size={14} aria-hidden="true" />{" "}{tr("Steps and papers")}</button> : null}

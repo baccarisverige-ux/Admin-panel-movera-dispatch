@@ -151,7 +151,7 @@ export const svB8DriverMoneySupplyDemand: Record<keyof typeof enB8DriverMoneySup
   "Accept is possible once that number has signed up.": "Det går att acceptera när numret har registrerat sig.",
   "Cancel invitation": "Avbryt inbjudan",
   "Accept invitation": "Acceptera inbjudan",
-  "Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of his closes.": "Acceptera {0} i {1}. Föraren kopplas, får betalt via åkeriet och alla hans andra väntande inbjudningar stängs.",
+  "Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of that driver closes.": "Acceptera {0} i {1}. Föraren kopplas, får betalt via åkeriet och alla hens andra väntande inbjudningar stängs.",
   "Withdraw the invitation for {0}. Nothing links; the other side is told.": "Dra tillbaka inbjudan för {0}. Inget kopplas; den andra sidan meddelas.",
   "This invitation has expired.": "Den här inbjudan har gått ut.",
   "This invitation was already answered or withdrawn.": "Den här inbjudan har redan besvarats eller dragits tillbaka.",

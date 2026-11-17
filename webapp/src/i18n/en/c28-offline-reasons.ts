@@ -9,7 +9,7 @@ export const enC28OfflineReasons = {
   "Account on hold, suspended or back to pending": "Account on hold, suspended or back to pending",
   "Set offline by Movera": "Set offline by Movera",
   "A required document has expired": "A required document has expired",
-  "Went offline after his trip (asked during the trip)": "Went offline after his trip (asked during the trip)",
+  "Went offline after their trip (asked during the trip)": "Went offline after their trip (asked during the trip)",
   "Set offline by the server ({0})": "Set offline by the server ({0})",
   "Offline reason": "Offline reason",
   "Set offline {0}": "Set offline {0}",

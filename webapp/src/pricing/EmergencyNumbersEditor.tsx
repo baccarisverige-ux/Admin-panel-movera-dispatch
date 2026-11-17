@@ -58,7 +58,7 @@ export function EmergencyNumbersEditor({ rows, canEdit, onStandard, onChange, so
       ) : null}
       <div>
         <strong>{trn("{0} SMS to the driver's emergency contacts on SOS", <MessageSquareText size={14} aria-hidden="true" />)}</strong>
-        <small>{tr("When a driver presses SOS during a trip, each of his emergency contacts gets one SMS with his position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.")}</small>
+        <small>{tr("When a driver presses SOS during a trip, each of their emergency contacts gets one SMS with their position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.")}</small>
       </div>
       <label className="mini-switch big">
         <input type="checkbox" aria-label={tr("SMS to the driver's emergency contacts on SOS")} data-testid="sos-contacts-sms" checked={sosSms} disabled={!editable} onChange={(event) => onSosSms(event.target.checked)} /><SettingInfo id="tips.sosContactsSms" label={tr("SMS to the driver's emergency contacts on SOS")} />

@@ -151,7 +151,7 @@ export const frB8DriverMoneySupplyDemand: Record<keyof typeof enB8DriverMoneySup
   "Accept is possible once that number has signed up.": "Accepter sera possible une fois ce numéro inscrit.",
   "Cancel invitation": "Annuler l’invitation",
   "Accept invitation": "Accepter l’invitation",
-  "Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of his closes.": "Accepter {0} dans {1}. Le chauffeur est lié, payé via la flotte, et toutes ses autres invitations en attente se ferment.",
+  "Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of that driver closes.": "Accepter {0} dans {1}. Le chauffeur est lié, payé via la flotte, et toutes ses autres invitations en attente se ferment.",
   "Withdraw the invitation for {0}. Nothing links; the other side is told.": "Retirer l’invitation pour {0}. Rien n’est lié ; l’autre partie est informée.",
   "This invitation has expired.": "Cette invitation a expiré.",
   "This invitation was already answered or withdrawn.": "Cette invitation a déjà reçu une réponse ou a été retirée.",
