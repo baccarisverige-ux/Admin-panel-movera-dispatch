@@ -411,6 +411,9 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
   const option = (amount: number) => ({ amount: toMinor(amount, currency), enabled: true });
   const drop = new Set<string>([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_READ_MARKS, ...(standard ? [] : COUNTRY_RULES_STANDARD_ONLY_KEPT)]);
   const kept = structuredClone(Object.fromEntries(Object.entries(base ?? {}).filter(([key]) => !drop.has(key)))) as Doc;
+  // U2 (Rules audits/impact/safe-config-saves.md, SAFETY): a block the panel writes starts from the stored block, so a
+  // key the panel does not show (calls.adminCallRoles, calls.phoneProvider, ...) is kept; the panel's own keys win.
+  const stored = (key: string) => { const value = base?.[key]; return value && typeof value === "object" && !Array.isArray(value) ? (structuredClone(value) as Record<string, unknown>) : {}; };
   return {
     ...kept,
     version: (base?.["version"] as number | undefined) ?? 1,
@@ -419,13 +422,13 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     currency,
     tips: input.tips.map(option),
     raiseSteps: input.raiseSteps.map(option),
-    driverBonus: { defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
+    driverBonus: { ...stored("driverBonus"), defaultLimit: toMinor(input.driverBonus.defaultLimit, currency), hardMax: toMinor(input.driverBonus.hardMax, currency) },
     // v0.18.10 checker: the largest single change of a driver's pay (Change pay on the trip page).
     ...(input.driverPayChangeMax !== undefined ? { driverPayChangeMax: toMinor(input.driverPayChangeMax, currency) } : {}),
     // v0.18.26: the country's other limits (sign-in codes, uploads) are kept; the per-person ones come from the panel.
     // v0.18.33 (owner 2026-11-05): Exclusives to a driver on a trip only after this % of his route.
     ...(input.onTripMinDonePct !== undefined || input.chainLateFreeCancelMin !== undefined
-      ? { onTripOffers: { minRouteDonePct: input.onTripMinDonePct ?? 70, lateFreeCancelMin: input.chainLateFreeCancelMin ?? 10 } }
+      ? { onTripOffers: { ...stored("onTripOffers"), minRouteDonePct: input.onTripMinDonePct ?? 70, lateFreeCancelMin: input.chainLateFreeCancelMin ?? 10 } }
       : {}),
     ...(base?.["limits"] || input.personLimits ? { limits: { ...((base?.["limits"] as Record<string, unknown> | undefined) ?? {}), ...(input.personLimits ?? {}) } } : {}),
     // v0.18.29 A2 (fix job 0) (owner G12 Q-D): the largest single Add money to wallet.
@@ -433,11 +436,11 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     // v0.18.110 BQ-V44: the largest driver bonus campaign (per country standard or zone; the server refuses above it).
     ...(input.bonusCampaignMax !== undefined ? { bonusCampaignMax: toMinor(input.bonusCampaignMax, currency) } : base?.["bonusCampaignMax"] ? { bonusCampaignMax: base["bonusCampaignMax"] } : {}),
     // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.
-    ...(input.calls ? { calls: { ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
+    ...(input.calls ? { calls: { ...stored("calls"), ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
     // v0.18.56 §78 (G9 part 2): Tips & limits › Chat; a save without it keeps the stored block.
-    ...(input.chat ? { chat: JSON.parse(JSON.stringify(input.chat)) as ChatSettings } : base?.["chat"] ? { chat: base["chat"] } : {}),
+    ...(input.chat ? { chat: { ...stored("chat"), ...(JSON.parse(JSON.stringify(input.chat)) as ChatSettings) } } : base?.["chat"] ? { chat: base["chat"] } : {}),
     // v0.18.43 §64 (fix job 10): Tips & limits › Don't match again; a save without it keeps the stored block.
-    ...(input.dontMatchAgain ? { dontMatchAgain: { ...input.dontMatchAgain } } : base?.["dontMatchAgain"] ? { dontMatchAgain: base["dontMatchAgain"] } : {}),
+    ...(input.dontMatchAgain ? { dontMatchAgain: { ...stored("dontMatchAgain"), ...input.dontMatchAgain } } : base?.["dontMatchAgain"] ? { dontMatchAgain: base["dontMatchAgain"] } : {}),
     // v0.18.57 §79: Tips & limits › Emergency numbers, on the country standard only (a zone's own rules never carry it).
     ...(input.emergencyNumbers ? { emergencyNumbers: input.emergencyNumbers.map((row) => ({ kind: row.kind, number: row.number, label: { ...row.label } })) } : {}),
     // v0.18.101 §92 (BQ-V34): the SMS to the driver's emergency contacts on SOS, on the country standard only (a zone's own rules → 400 sos_sms_country_only).
