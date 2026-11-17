@@ -504,6 +504,12 @@ export type ZoneDispatch = {
    * Optional so rules saved before it still load (on then).
    */
   shareTrip?: { on: boolean };
+  /**
+   * L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)"; contract v0.18.122 contract.json#driverOneStream): the driver
+   * app opens one live connection (GET /driver/stream) instead of two. Dispatch › Drivers. Sent as the driver document's
+   * realtime.oneStream. Optional so rules saved before it still load (off then).
+   */
+  oneStream?: { on: boolean };
   airport: { on: boolean; order: "fifo" | "best"; maxQueueMin: number; queueAreas: { id: string; name: string; ring: [number, number][] }[] };
   goingHome: { on: boolean; perDay: number; maxOffDeg: number };
   /** R13-9: Destination mode, each part on or off with its own number. */
