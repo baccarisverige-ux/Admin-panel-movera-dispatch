@@ -1,6 +1,6 @@
 import { matchRider } from "../riders/match";
 import { isLiveData } from "../live/realData";
-import { RIDE_CHECK_ALERTS_LIST } from "../live/liveAdminApi";
+import { RIDE_CHECK_ALERTS_LIST } from "../live/listNames";
 import { INCIDENT_BY_ID_LIST, OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { caseToRead, pickCase } from "../safety/caseLink";
 import { listQueryOf, setListQuery, subscribeLists } from "../live/liveLists";

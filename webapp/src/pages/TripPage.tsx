@@ -85,7 +85,7 @@ import { canAssign as canAssignTrip, isLocked } from "../dispatch/assign";
 import { StatusDot } from "../ui/kit";
 import { currentLanguage, tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { isLiveData, liveTripOf } from "../live/realData";
-import { RIDE_CHECKS_OF_TRIP_LIST } from "../live/liveAdminApi";
+import { RIDE_CHECKS_OF_TRIP_LIST } from "../live/listNames";
 import { INCIDENTS_OF_TRIP_LIST } from "../live/incidents";
 import { useOpenTrip } from "../live/useOpenTrip";
 import { approachOf, canWaiveFee, driverPointOf, etaIsStale, etaLine, etaMinutes, feeKindOf, feeStatusOf, formatDistance, isLiveWithDriver, reasonLine, tripMoney } from "../live/tripLive";
