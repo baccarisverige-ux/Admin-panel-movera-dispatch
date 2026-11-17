@@ -117,6 +117,7 @@ function RefundForm({ open, trip, onClose, onSend }: { open: boolean; trip: Trip
           where={tr("This trip only.")}
           who={tr("The people whose money this is: the rider, driver or fleet named here. Nobody else.")}
           undo={tr("Money that was sent cannot be taken back from the panel. Check the amount and the person before you confirm.")}
+          command="admin.server.tripRefund"
         />
         <label>
           {tr("Amount ({0})", [symbol])}

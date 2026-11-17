@@ -20,8 +20,10 @@ export const INFO_MARK = "#FFFFFF";
  * `command`: who it affects and how to undo it come from the command (ui/confirmInfo.ts) when not given.
  * `changeOf`: the values of the "From → to" line, written in the admin's language by ui/fromTo.ts (cfgundo SF-R4-3);
  * `change` (already translated) wins over it.
+ * Round 2 (supervisor MF-1): `money` and `when` are the dialog's own words for those parts; they win over the command's.
+ * A dialog gives its command or its own money words (ui/confirmDetails.test.ts fails otherwise).
  */
-export type ConfirmInfoProps = { what: ReactNode; where?: ReactNode; change?: ReactNode; changeOf?: ChangeOf; who?: ReactNode; undo?: ReactNode; command?: string };
+export type ConfirmInfoProps = { what: ReactNode; where?: ReactNode; change?: ReactNode; changeOf?: ChangeOf; who?: ReactNode; when?: ReactNode; money?: ReactNode; undo?: ReactNode; command?: string };
 
 /**
  * The words are loaded when the "!" is first pressed (audit bundle budget, scripts/check-bundle.mjs): the explanation

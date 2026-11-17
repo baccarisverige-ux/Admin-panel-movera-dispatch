@@ -132,6 +132,9 @@ type ConfirmDialogProps = {
   record: string;
   reasons: string[];
   typed: string;
+  /** Round 2 (supervisor MF-1): the command of the action, or the dialog's own money words, for the "!" (ui/confirmDetails.ts). */
+  command?: string;
+  money?: ReactNode;
   onConfirm: (reason: string) => void;
   onClose: () => void;
 };
@@ -141,7 +144,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
   return props.open ? <ConfirmDialogCard {...props} /> : null;
 }
 
-function ConfirmDialogCard({ record, reasons, typed, onConfirm, onClose }: ConfirmDialogProps) {
+function ConfirmDialogCard({ record, reasons, typed, command, money, onConfirm, onClose }: ConfirmDialogProps) {
   const [reason, setReason] = useState(reasons[0] ?? "Other");
   const [text, setText] = useState("");
   const root = useDialogFocus(true, onClose);
@@ -156,7 +159,7 @@ function ConfirmDialogCard({ record, reasons, typed, onConfirm, onClose }: Confi
       <form className="modal-card" role="dialog" aria-modal="true" aria-label={tr("Confirm")} onSubmit={submit}>
         <h3>{tr("Confirm")}</h3>
         <p>{trn("This acts on {0}.", record)}</p>
-        <ConfirmInfo what={trn("This acts on {0}.", record)} where={record} />
+        <ConfirmInfo what={trn("This acts on {0}.", record)} where={record} command={command} money={money} />
         <label>{trn("Reason{0}", <select value={reason} onChange={(event) => setReason(event.target.value)}>
             {reasons.map((item) => (
               <option key={item}>{item}</option>

@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { confirmParts, whereFallbackFor } from "./confirmDetails.ts";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { COMMANDS } from "../commands/registry.ts";
 import { en } from "../i18n/en.ts";
@@ -7,7 +8,7 @@ import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
 import { market } from "../markets/markets.ts";
 import { canConfirm, initialTicks, type WhereLoad } from "./confirmGate.ts";
-import { landing, noOtherZoneChange, pricingWhere, undoFor, watchedIds, whereText, whoFor } from "./confirmInfo.ts";
+import { isSettingsCommand, landing, noOtherZoneChange, pricingWhere, undoFor, watchedIds, whereText, whoFor } from "./confirmInfo.ts";
 
 /**
  * Owner 2026-11-16: "It's only last step when confirm ! When confirm anything u add info ? When clic understand
@@ -231,11 +232,27 @@ test("MF-R2-1: the dialog listens to the marks of every zone of the country, not
 
 test("SF-R2-2: the default \"Where\" and \"Who\" promise nothing; the commands that reach more name it", () => {
   const body = textOf("ui/ConfirmInfoBody.tsx");
-  // Owner 2026-11-16 "Add info details in i and !": the default Where of a setting comes from ui/confirmDetails.ts.
+  // Owner 2026-11-16 "Add info details in i and !": the five parts come from ui/confirmDetails.ts (confirmParts).
+  // Round 2 (supervisor MF-5): the broad guard is back. The default says nothing: no command, an unknown command and
+  // every settings command get "See the details above", and no default line of the "!" claims "no other zone",
+  // "nobody else" or "no zone or country setting changes" outside the hand-listed record actions
+  // (ui/confirmDetails.test.ts "MF-5" holds that list and fails for any command outside it).
   const details = readFileSync(new URL("./confirmDetails.ts", import.meta.url), "utf8");
-  assert.ok(body.includes("whereFallbackFor(command)"));
-  assert.ok(details.includes('"See the details above for what this changes."'));
-  assert.equal(/No other zone|Nobody else/.test(body + details), false);
+  const nothing = "See the details above for what this changes.";
+  assert.ok(body.includes("confirmParts<ReactNode>("));
+  assert.equal(/whereFallbackFor|moneyFor|whenFor|undoFor|whoFor/.test(body), false, "the body has no default of its own");
+  assert.equal(/No other zone|Nobody else|no zone or country|No money moves/.test(body), false, body);
+  assert.equal(/No other zone|Nobody else/.test(details), false);
+  assert.equal(whereFallbackFor(""), nothing);
+  assert.equal(confirmParts({}).where, nothing);
+  assert.equal(confirmParts({ command: "admin.notACommand.save" }).where, nothing);
+  assert.equal(confirmParts({}).who, "See the details above for who this reaches.");
+  for (const { id } of COMMANDS.filter((item) => isSettingsCommand(item.id) || /\.(settings|rules|save[A-Z]?\w*|publish\w*|limits|security|schedule)$/.test(item.id))) {
+    if (/^admin\.(ui|table|card|modal|tabs|doc|confirm|design|shell|panel|errors|profile|auditLog|alarm)\./.test(id)) continue;
+    // Actions on one booked ride or one driver are not settings (hand-listed in ui/confirmDetails.test.ts).
+    if (/^admin\.(reservation\.(assign|offer|unassign|contact|return|answer|raise|cancel|noShow|dispatchNow)|driver\.payoutHold)$/.test(id)) continue;
+    assert.equal(whereFallbackFor(id), nothing, id);
+  }
   // Undo / Restore of a pricing revision with a Standard: every zone on it gets it too.
   assert.match(pricingWhere(["standard-SE", "Z001"]), /Standard Sweden.*Norrmalm.*Every zone of Sweden that uses the Standard/);
   assert.match(pricingWhere(["Z001"]), /only in: Norrmalm\. No other zone changes\./);
@@ -254,7 +271,7 @@ test("SF-R2-2: the default \"Where\" and \"Who\" promise nothing; the commands t
   assert.match(info("live/StandardBar.tsx", "admin.config.useStandard"), /info=\{\{ where: tr\("\{0\} only: it follows/);
   // The shell passes the command; the body says who and how to undo from it.
   assert.ok(textOf("ui/CommandButton.tsx").includes("command={command}"));
-  assert.ok(body.includes("whoFor(command)") && body.includes("undoFor(command"));
+  assert.ok(details.includes("whoFor(command)") && details.includes("undoFor(command)"));
 });
 
 test("bundle: the words of the \"!\" and the zone pick load on demand, not in the first download", () => {

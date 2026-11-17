@@ -87,7 +87,9 @@ test("the confirm dialog no longer shows the English audit text as From → to, 
   for (const file of ["./CommandButton.tsx", "./ConfirmInfo.tsx", "../pricing/CountryExtrasPanel.tsx", "../config/CountryAppsPanel.tsx"]) {
     assert.doesNotMatch(readFileSync(new URL(file, import.meta.url), "utf8"), /import \{[^}]*\} from "(\.\.\/ui\/|\.\/)fromTo"/, file);
   }
-  assert.match(readFileSync(new URL("./ConfirmInfoBody.tsx", import.meta.url), "utf8"), /from "\.\/fromTo"/);
+  // Info details round 2: the lazy body reads every part from confirmParts (ui/confirmDetails.ts), which writes the lines with fromTo.
+  assert.match(readFileSync(new URL("./ConfirmInfoBody.tsx", import.meta.url), "utf8"), /from "\.\/confirmDetails"/);
+  assert.match(readFileSync(new URL("./confirmDetails.ts", import.meta.url), "utf8"), /import \{ fromToLines[^}]*\} from "\.\/fromTo\.ts"/);
   const extras = readFileSync(new URL("../pricing/CountryExtrasPanel.tsx", import.meta.url), "utf8");
   assert.match(extras, /changeOf: \{ kind: "tipsLimits"/);
   assert.match(readFileSync(new URL("../config/CountryAppsPanel.tsx", import.meta.url), "utf8"), /changeOf: \{ kind: "countryApps"/);

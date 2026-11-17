@@ -141,12 +141,20 @@ export type DecisionDialogProps = {
   where?: ReactNode;
   who?: ReactNode;
   undo?: ReactNode;
+  /**
+   * Round 2 (supervisor MF-1): the command this dialog sends (commands/registry.ts): its Money, Where, when and undo
+   * lines come from it (ui/confirmDetails.ts). Required, so no decision dialog can show a default it cannot know.
+   */
+  command: string;
+  /** The dialog's own words for the Money and the when parts; they win over the command's. */
+  money?: ReactNode;
+  when?: ReactNode;
   onClose: () => void;
   onConfirm: (input: { note: string; expiresAt?: string; issuedAt?: string }) => Promise<void>;
 };
 
 /** One dialog for every live decision: a summary, a note when the contract needs one, Confirm and Cancel. */
-export function DecisionDialog({ open, title, summary, confirmLabel, note, noteLabel, expiry = false, expiryRequired = false, validMonths, danger = false, where, who, undo, onClose, onConfirm }: DecisionDialogProps) {
+export function DecisionDialog({ open, title, summary, confirmLabel, note, noteLabel, expiry = false, expiryRequired = false, validMonths, danger = false, where, who, undo, command, money, when, onClose, onConfirm }: DecisionDialogProps) {
   const [text, setText] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [issuedAt, setIssuedAt] = useState("");
@@ -194,7 +202,7 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         }}
       >
         <p>{summary}</p>
-        <ConfirmInfo what={<>{title}: {summary}</>} who={who} undo={undo} where={where} />
+        <ConfirmInfo what={<>{title}: {summary}</>} who={who} undo={undo} where={where} command={command} money={money} when={when} />
         {note !== "none" ? (
           <label>
             {noteLabel ?? (note === "required" ? tr("Note (required)") : tr("Note (optional)"))}

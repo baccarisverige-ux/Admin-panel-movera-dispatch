@@ -186,6 +186,10 @@ function LiveLegal({ country, onCountry, onNotice }: { country: LegalCountry; on
 
       <DecisionDialog
         open={confirm}
+        command="admin.server.legalPublish"
+        where={tr("The whole country: every rider and driver of {0}, in every zone.", [countryName])}
+        who={tr("Every rider and driver of {0}.", [countryName])}
+        undo={tr("There is no one-press undo: copy an earlier version into the editor (History) and publish it again as a new version.")}
         title={tr("Publish terms and privacy")}
         summary={<>{tr("Version {0} for {1} goes live in the rider and driver apps at their next start.", [String(current.version + 1), countryName])}{draft.reaccept ? <> {tr("Everyone is asked to accept it again.")}</> : askedBefore !== null ? <> <span data-testid="legal-still-asked">{tr("People who have not accepted version {0} yet will still be asked to accept the new texts.", [String(askedBefore)])}</span></> : null}</>}
         confirmLabel={tr("Publish")}

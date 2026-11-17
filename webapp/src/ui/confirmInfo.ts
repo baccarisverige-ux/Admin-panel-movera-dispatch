@@ -18,6 +18,10 @@ export const PRICING_WHO = "Riders and drivers in the places named under Where: 
 /** Who the action touches, in plain words. */
 export function whoFor(command: string) {
   const domain = domainOf(command);
+  // Supervisor S-c4: the payout schedule is a setting of a country (live/LivePayoutSettings.tsx), not one person's money.
+  if (/^admin\.payout\.(settings|schedule)$/.test(command)) return "Drivers and fleets of this country who get payouts: their next payout runs follow the new settings." as const;
+  // Rules of a country or of the whole panel, not one person's money: nothing is said that is not known.
+  if (/^admin\.(payment\.(rules|savePolicy)|refundPolicy\.save)$/.test(command)) return "See the details above for who this reaches." as const;
   if (/^admin\.(payout|refund|payment)\.|^admin\.trip\.(refund|adjust|waiveFee|driverBonus)$|^admin\.rider\.(walletCredit|feeMarkPaid)$/.test(command)) return "The people whose money this is: the rider, driver or fleet named here. Nobody else." as const;
   // Supervisor SF-R3-5: the reservation policy is one for every zone (dispatch/BookingPolicy.tsx), not one booking.
   if (command === "admin.reservation.savePolicy") return "Riders and drivers of rides booked from now on, in every zone. Rides already booked keep the policy they were booked with." as const;
@@ -32,13 +36,16 @@ export function whoFor(command: string) {
   if (command === "admin.incident.settings") return "Every admin who handles safety cases in this country: time limits, call buttons and case tools. Riders and drivers are not affected." as const;
   if (command === "admin.review.rules") return "Riders and drivers of this country whose average falls under a line: they get the warning or are listed for an admin review. New comments with a listed word are hidden." as const;
   if (["safety", "incident", "alerts", "support", "review", "approval", "inbox"].includes(domain)) return "The case named here and the people in it. Other admins see the change at once." as const;
-  if (["team", "auth", "server"].includes(domain)) return "The account named here." as const;
+  // Round 2: admin.server.* are the live screens' own requests (documents, fleets, legal texts, campaigns), not one account.
+  if (["team", "auth"].includes(domain)) return "The account named here." as const;
   return "See the details above for who this reaches." as const;
 }
 
 /**
  * How the action is taken back, in plain words. Never promises an undo that does not exist (supervisor SF-R2-3: each
- * line was checked against the button that really takes it back).
+ * line was checked against the button that really takes it back). Round 2 (supervisor MF-4): the old last line said
+ * "do the opposite action on the same page" for every command, also where no opposite exists (a cancelled or completed
+ * trip, a refund, an approval). Now: the real path where one exists, else "This cannot be undone with a button."
  */
 export function undoFor(command: string) {
   const domain = domainOf(command);
@@ -69,8 +76,24 @@ export function undoFor(command: string) {
   // The demo zone screens (pages/ZonesPage.tsx, ZoneDetailPage.tsx): Undo last publish and a zone's History › Restore version.
   if (domain === "zone") return "Zones: Undo last publish takes back the newest publish, and a zone's History has Restore version for each earlier version." as const;
   if (domain === "studio" || domain === "content") return "Content › History: roll back to the version before." as const;
-  if (/^admin\.(payout|refund|payment)\.|^admin\.trip\.(refund|adjust|waiveFee|driverBonus)$|^admin\.rider\.(walletCredit|feeMarkPaid)$/.test(command)) return "Money that was sent cannot be taken back from the panel. Check the amount and the person before you confirm." as const;
-  return "There is no one-press undo. The action is written in the Audit log with your name and your reason; do the opposite action on the same page to take it back." as const;
+  // Supervisor S-c4: a schedule save sends no money.
+  if (/^admin\.(payout\.(settings|schedule)|payment\.(rules|savePolicy)|refundPolicy\.save)$/.test(command)) return "There is no one-press undo: set the earlier values again and save. The save is written in the Audit log." as const;
+  // live/LivePayoutHold.tsx: one button, "Pause payouts" or "Release payouts".
+  if (command === "admin.driver.payoutHold") return "Press Release payouts (or Pause payouts) on the same driver to turn it back." as const;
+  if (/^admin\.(payout|refund|payment)\.|refund|^admin\.trip\.(adjust|waiveFee|driverBonus|pay)$|^admin\.rider\.(walletCredit|feeMarkPaid|markPaid)$/i.test(command)) return "Money that was sent cannot be taken back from the panel. Check the amount and the person before you confirm." as const;
+  // Server src/admin/trips.ts adminCancel / adminComplete: both are end states (contracts/CONTRACT.md "terminal").
+  if (command === "admin.trip.cancel") return "This cannot be undone with a button: a cancelled trip stays cancelled. The rider books a new ride." as const;
+  if (command === "admin.trip.complete") return "This cannot be undone with a button: a completed trip stays completed. A wrong amount is corrected with a refund on the same trip." as const;
+  // trips/ReverseNoShow.tsx: the button "Reverse no-show" on a no-show trip.
+  if (command === "admin.trip.noShow") return "The trip stays a no-show, but Reverse no-show on the same trip takes the fee off the rider again." as const;
+  // Server adminReverseNoShow: "Again on a reversed trip: the trip as it is, nothing changes."
+  if (command === "admin.trip.reverseNoShow") return "This cannot be undone with a button: a reversed no-show cannot be charged again." as const;
+  if (command === "admin.trip.waiting") return "Save the earlier waiting minutes again on the same trip, while the trip is still running." as const;
+  if (command === "admin.approval.approve") return "This cannot be undone with a button: the approved action is carried out at once, and money that was sent cannot be taken back from the panel." as const;
+  if (command === "admin.approval.reject") return "This cannot be undone with a button: the requester has to ask again." as const;
+  // Pairs of buttons that exist on the same page (ui/confirmDetails.test.ts checks both ids are on the page).
+  if (/^admin\.(driver\.(suspend|reactivate)|rider\.(block|unblock)|vehicle\.(hold|activate)|fleetOwner\.(onHold|activate)|team\.(deactivate|reactivate))$/.test(command)) return "There is no one-press undo, but the other button of the pair on the same page turns it back (for example Reactivate after Suspend, Unblock after Block)." as const;
+  return "This cannot be undone with a button. The action is written in the Audit log with your name and your reason." as const;
 }
 
 export const isSettingsCommand = (command: string): boolean => SETTINGS.has(domainOf(command));

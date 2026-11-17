@@ -102,7 +102,7 @@ export const frA5MN: Record<keyof typeof enA5MN, string> = {
   "Moderate review": "Modérer l’avis",
   "Modes": "Modes",
   "money": "montant",
-  "Money": "Montant",
+  "Money": "Argent",
   "Money added for the driver": "Argent ajouté pour le chauffeur",
   "Money added for the driver (paid by Movera)": "Argent ajouté pour le chauffeur (payé par Movera)",
   "Money by method": "Montants par moyen",

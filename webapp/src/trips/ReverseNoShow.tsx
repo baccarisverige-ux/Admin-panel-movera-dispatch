@@ -42,6 +42,7 @@ export function ReverseNoShowButton({ tripId, zoneId, onDone }: { tripId: string
               where={tr("Trip {0} only.", [tripId])}
               who={takeBack ? tr("The rider of this trip, and its driver: his share of the no-show fee is taken from his earnings.") : tr("The rider of this trip. The driver keeps his share; Movera pays it.")}
               undo={tr("Money that was sent cannot be taken back from the panel. Check the amount and the person before you confirm.")}
+              command="admin.trip.reverseNoShow"
             />
             <label>{trn("Reason (required){0}", <textarea aria-label={tr("Reason (required)")} value={reason} maxLength={1000} required rows={3} onChange={(event) => setReason(event.target.value)} />)}</label>
             <label className="check-row">{trn("{0} Take back the driver’s share", <input type="checkbox" checked={takeBack} onChange={(event) => setTakeBack(event.target.checked)} data-testid="reverse-take-back" />)}</label>

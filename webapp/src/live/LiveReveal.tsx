@@ -63,6 +63,8 @@ export function RevealSensitive({ kind, id, onRevealed, className = "dash-btn sm
               where={tr("This page only. Nothing is changed on the account.")}
               who={tr("The person whose data it is. Your name and your reason are saved in the Audit log.")}
               undo={tr("Nothing is changed, so there is nothing to undo. The reveal stays in the Audit log.")}
+              when={tr("At once, on this page only.")}
+              money={tr("No money moves.")}
             />
             <label>
               {tr("Why do you need the full value?")}

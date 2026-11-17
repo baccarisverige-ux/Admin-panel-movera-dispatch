@@ -215,6 +215,8 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
               where={tr("In the draft of this country's onboarding settings. Nothing is live until you publish.")}
               who={tr("New drivers of this country, after you publish.")}
               undo={tr("Switch it off again in the same list, before or after you publish.")}
+              when={tr("Only after you publish the draft.")}
+              money={tr("No money moves.")}
             />
             <div className="actions">
               <button data-command="admin.onboarding.editTypes" type="button" className="primary-btn" onClick={() => { patch({ emailVerifiedForApproval: true }); setAskEmailCheck(false); }}>{tr("Turn on")}</button>

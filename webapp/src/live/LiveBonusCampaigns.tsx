@@ -308,6 +308,7 @@ function CampaignDetail({ bonusId, canWrite, zoneLabel, onBack }: { bonusId: str
             where={zoneLabel(campaign.zoneId)}
             who={tr("Every driver in this campaign. Bonuses already earned stay paid.")}
             undo={tr("It cannot be undone: an ended campaign cannot start again. Create a new campaign instead.")}
+            command="admin.server.bonusCampaignEnd"
           />
           <button data-command="admin.server.dialogConfirm" type="button" className="dash-btn small" disabled={busy} onClick={() => void command(campaign, "end", tr("Campaign ended."))}>{tr("End campaign")}</button>
           <button data-command="admin.server.dialogCancel" type="button" className="dash-btn small ghost" onClick={() => setConfirmEnd(false)}>{tr("Cancel")}</button>
