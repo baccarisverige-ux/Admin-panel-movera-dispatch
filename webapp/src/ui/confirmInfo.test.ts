@@ -126,7 +126,7 @@ test("the button is a white \"!\" in an orange triangle, dark enough to read (ow
   assert.ok(source.includes('d="M10 1 19 17H1Z"') && source.includes("fill={INFO_ORANGE}"), "a triangle, filled orange");
   assert.ok(source.includes('aria-label={tr("What will happen")}'));
   assert.equal(source.includes("CircleHelp"), false, "not a question mark");
-  for (const part of ['tr("What happens")', 'tr("Where")', 'tr("From → to")', 'tr("Who it affects")', 'tr("How to undo")']) assert.ok(source.includes(part), part);
+  for (const part of ['tr("What happens")', 'tr("Where")', 'tr("From → to")', 'tr("Who sees it, and when")', 'tr("Money")', 'tr("How to undo")']) assert.ok(source.includes(part), part);
 });
 
 test("every command has who-it-affects and how-to-undo words, in sv / fr / en", () => {
@@ -231,8 +231,11 @@ test("MF-R2-1: the dialog listens to the marks of every zone of the country, not
 
 test("SF-R2-2: the default \"Where\" and \"Who\" promise nothing; the commands that reach more name it", () => {
   const body = textOf("ui/ConfirmInfoBody.tsx");
-  assert.ok(body.includes('tr("See the details above for what this changes.")'));
-  assert.equal(/No other zone|Nobody else/.test(body), false, body);
+  // Owner 2026-11-16 "Add info details in i and !": the default Where of a setting comes from ui/confirmDetails.ts.
+  const details = readFileSync(new URL("./confirmDetails.ts", import.meta.url), "utf8");
+  assert.ok(body.includes("whereFallbackFor(command)"));
+  assert.ok(details.includes('"See the details above for what this changes."'));
+  assert.equal(/No other zone|Nobody else/.test(body + details), false);
   // Undo / Restore of a pricing revision with a Standard: every zone on it gets it too.
   assert.match(pricingWhere(["standard-SE", "Z001"]), /Standard Sweden.*Norrmalm.*Every zone of Sweden that uses the Standard/);
   assert.match(pricingWhere(["Z001"]), /only in: Norrmalm\. No other zone changes\./);

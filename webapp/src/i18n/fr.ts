@@ -63,6 +63,7 @@ import { frC29SupportOrder } from "./fr/c29-support-order.ts";
 import { frC33TipsLimitsUndo } from "./fr/c33-tips-limits-undo.ts";
 import { frC35WhereItLands } from "./fr/c35-where-it-lands.ts";
 import { frC38FromTo } from "./fr/c38-from-to.ts";
+import { frC39ConfirmDetails } from "./fr/c39-confirm-details.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -131,4 +132,5 @@ export const fr: Record<MessageKey, string> = {
   ...frC33TipsLimitsUndo,
   ...frC35WhereItLands,
   ...frC38FromTo,
+  ...frC39ConfirmDetails,
 };

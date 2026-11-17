@@ -62,6 +62,7 @@ import { enC29SupportOrder } from "./en/c29-support-order.ts";
 import { enC33TipsLimitsUndo } from "./en/c33-tips-limits-undo.ts";
 import { enC35WhereItLands } from "./en/c35-where-it-lands.ts";
 import { enC38FromTo } from "./en/c38-from-to.ts";
+import { enC39ConfirmDetails } from "./en/c39-confirm-details.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -130,6 +131,7 @@ export const en = {
   ...enC33TipsLimitsUndo,
   ...enC35WhereItLands,
   ...enC38FromTo,
+  ...enC39ConfirmDetails,
 } as const;
 
 export type MessageKey = keyof typeof en;
