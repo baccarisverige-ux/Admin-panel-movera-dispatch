@@ -109,6 +109,22 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "2 000 kr: a campaign paying 2 500 kr cannot be saved.",
     "0: no campaign can pay anything; 1 000 000 is in practice no limit, so check each campaign's amount.",
   ),
+  "tips.maxRiderDebt": t(
+    "The most a rider can owe Movera (cancel fees, unpaid trips). At or above it he cannot book a trip paid in the car.",
+    `${STANDARD_ONLY} Rider app at booking; admins see "Owes" on a rider's wallet.`,
+    "Money above 0; any amount (no upper limit).",
+    "300 kr, 30 €, 84 DT.",
+    "300 kr: a rider who owes 300 kr can only book with card or wallet until he pays.",
+    "A very small amount blocks cash booking after one fee; a very large one lets a debt grow with no stop.",
+  ),
+  "tips.driverOwesLimit": t(
+    "When on: a driver who owes Movera this much or more (commission and rider debt he kept in cash) gets no cash trips. He can still go online.",
+    `${STANDARD_ONLY} Driver app (Home line and Accept), dispatch, and Drivers › Owe Movera.`,
+    "On or off; when on, money above 0.",
+    "Off everywhere (Tunisia keeps 150 DT stored).",
+    "On, 500 kr: a driver who owes 520 kr is not offered cash trips until he pays Movera.",
+    "Off: a driver's debt is never checked at Accept; a very small amount stops cash trips after one trip.",
+  ),
   "tips.onTripMinDonePct": t(
     "A driver on a trip gets offers (Exclusive only) only after he has driven this share of his route to the drop-off.",
     `${COUNTRY} Driver app and dispatch.`,
