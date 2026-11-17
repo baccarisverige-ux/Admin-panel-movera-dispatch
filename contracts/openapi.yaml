@@ -1,11 +1,11 @@
-# Movera API v0.18.116 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.118 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.116
+  version: 0.18.118
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.116 in this folder; this file must agree with them.
+    v0.18.118 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.116
+  version: 0.18.118
   source: contract.json
 paths:
   /auth/otp/request:
@@ -2583,13 +2583,35 @@ paths:
       summary: Upload a batch of GPS fixes
       description: 'Fixes are fanned out as kind=location on the active trip''s stream; they never change the projection version.
         v0.18.52 (§74): a batch from a driver who is offline or suspended with no active trip is not stored: 200 with accepted
-        0 (contract.json#driverHome.offlineLocation).'
+        0 (contract.json#driverHome.offlineLocation). v0.18.117 (driverHome.locationSend): On a trip, a batch writes one location
+        event (kind=location, the batch''s newest fix) only when that fix is new: measured after the driver''s stored fix,
+        or the first one. The same fix sent again (same measuredAt) is still taken and refreshes the driver''s last-seen time
+        (lastFixAt), but writes no location event. A batch older than the stored fix only fills the trip trace: no location
+        event, the stored position is kept. On a trip, every batch with at least one fix taken books the server''s ride-check
+        scan (onTrip.rideCheck, at most once per scanEverySeconds), also the same fix sent again and an older batch, so standing
+        fixes that arrive late are looked at for a long stop. v0.18.118 (contract chain supervisor 2026-11-16 SF2, Rules audits/impact/contract-chain-supervisor-2026-11-16.md;
+        server src/safety/rideCheckServer.ts ONBOARD): "On a trip" = with the rider on board (rider_onboard, in_trip or approaching_dropoff,
+        onTrip.rideCheck.detection.when); in other statuses no scan is booked. The time the same fix keeps being sent counts
+        as standing time for long_stop, unless the fix said the car was moving (onTrip.rideCheck.detection.long_stop). The
+        Idempotency-Key header is checked as on every mutation (missing or not 16-128 characters: 400) but is never stored:
+        a repeat with the same key runs again; it is never replayed and never 409, also with another body. A resent batch
+        is safe: a fix that is not new writes no location event and the trip trace keeps one row per fix time.'
       tags:
       - Driver · Session
       x-actor:
       - driver
       parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
+      - name: Idempotency-Key
+        in: header
+        required: true
+        description: 'v0.18.117 (driverHome.locationSend.idempotencyKey): The Idempotency-Key header is checked as on every
+          mutation (missing or not 16-128 characters: 400) but is never stored: a repeat with the same key runs again; it
+          is never replayed and never 409, also with another body. A resent batch is safe: a fix that is not new writes no
+          location event and the trip trace keeps one row per fix time.'
+        schema:
+          type: string
+          minLength: 16
+          maxLength: 128
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
       requestBody:
@@ -2624,6 +2646,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+      x-idempotency: checked, not stored
   /driver/offers:
     get:
       operationId: listDriverOffers
@@ -5081,9 +5104,12 @@ paths:
         lists the oldest-waiting ticket first. Order: first the waiting tickets (waitingSince set), waitingSince oldest first,
         ties by ticketId; then every other ticket, updatedAt newest first, ties by ticketId (the order before v0.18.112).
         The filters (status, priority, assignedTo, q, zones, ...) and total work as before. GET /support/tickets (the rider''s
-        or driver''s own list) keeps newest change first. Cursor paging as before (limit, nextCursor; nextCursor null = the
-        last page). One cursor carries the place in both parts of the order; the panel sends it back unchanged with the same
-        filters. A cursor made before v0.18.112 continues in the second part (updatedAt newest first), never 400.'
+        or driver''s own list) keeps newest change first. v0.18.118 (A04 supervisor SF-A2, Rules audits/impact/a04-s13-v21-supervisor.md;
+        server branch claude/rules-email-key-browserstack-f5y0p3-a04s-r2 a961de3 src/support/tickets.ts:229, :234): the ticketId
+        tie-break follows each part''s direction: ascending in the first part (waitingSince oldest first), descending in the
+        second (updatedAt newest first). Cursor paging as before (limit, nextCursor; nextCursor null = the last page). One
+        cursor carries the place in both parts of the order; the panel sends it back unchanged with the same filters. A cursor
+        made before v0.18.112 continues in the second part (updatedAt newest first), never 400.'
       tags:
       - Admin · Lists
       x-actor:
@@ -6955,7 +6981,14 @@ paths:
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
         the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
         the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
-        may see (same filter as records).'
+        may see (same filter as records). v0.18.117 (alertDesk.serverDetection.liveList): AlertBookState.alerts: Every open
+        alert of the admin''s zones and kind groups is sent: no limit, never cut. After the open ones, at most solvedCap (1000)
+        solved alerts: per kind the 1000 newest by solvedAt, then, over all kinds, the first 1000 with the safety kinds first
+        and then the newest solvedAt. Open before solved. Open: the safety kinds first (kindGroups group safety: sos, car_lost,
+        ride_check, sos_slow), then level critical, important, info, then the newest since, then alertId. Solved: the safety
+        kinds first, then the newest solvedAt (an alert without solvedAt last), then alertId. Not built yet: past solvedCap
+        the older solved alerts are left out and nothing in the answer says so (no ''more'' marker, no count). A marker and
+        a limit for open non-safety alerts are a later job (MF3).'
       tags:
       - Admin · Alerts
       x-actor:
@@ -11843,7 +11876,12 @@ paths:
       operationId: adminConfigHistory
       summary: Published versions of a config document, newest first
       description: 'v0.7.1. GET /admin/config/{doc}/history?zoneId&cursor&limit (settings.read): newest first, ConfigHistoryEntry
-        { version, publishedAt, publishedBy, note?, action: publish | restore, restoredFrom?, document }'
+        { version, publishedAt, publishedBy, note?, action: publish | restore, restoredFrom?, document } v0.18.118 (Rules
+        audits/impact/country-undo.md; server branch claude/rules-email-key-browserstack-f5y0p3-cfgundo fad59d5 src/config/scope.ts
+        scopeKey, src/pricing/routes.ts HistoryQuery / RestoreBody, src/config/service.ts configHistory): History names exactly
+        one of zoneId or country (ISO alpha-2: the country''s standard), as GET, PUT and publish (configDocs.scope: both or
+        neither → 400 invalid_request, reason scope_required; a country the admin has no zone in → 403 zone_out_of_scope;
+        a country with no zone → 404 country_not_found). An entry of a country''s standard carries country instead of zoneId.'
       tags:
       - Admin · Config
       x-actor:
@@ -11851,11 +11889,8 @@ paths:
       x-permission: settings.read
       parameters:
       - $ref: '#/components/parameters/ConfigDoc'
-      - name: zoneId
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/ConfigZoneId'
+      - $ref: '#/components/parameters/ConfigCountry'
       - $ref: '#/components/parameters/Cursor'
       - $ref: '#/components/parameters/Limit'
       - $ref: '#/components/parameters/RequestId'
@@ -11891,9 +11926,12 @@ paths:
       description: 'v0.7.1. POST /admin/config/{doc}/restore { zoneId, version, expectedVersion, note? } (the publish permission):
         publishes that version''s document again as the next version (action restore, restoredFrom), with every effect of
         a publish (§6.2 app documents for pricing). Undo last publish = restore the version before the live one. A version
-        not in the history: 404; the live version: 409 invalid_transition (already_live). one audit row per pricing publish
-        or restore: action config.publish, details { doc, zoneId, version, restoredFrom?, appDocuments: [{ doc, version }]
-        } (the app documents the publish rewrote)'
+        not in the history: 404; the live version: 409 invalid_transition (already_live). v0.18.118 (Rules audits/impact/country-undo.md;
+        server branch claude/rules-email-key-browserstack-f5y0p3-cfgundo fad59d5 src/config/scope.ts scopeKey, src/pricing/routes.ts
+        HistoryQuery / RestoreBody, src/config/service.ts configHistory): { zoneId | country, version, expectedVersion, note?
+        }: exactly one of zoneId or country (configDocs.scope, the same reasons as History), so a country''s standard is restored
+        (Undo last publish) like a zone''s own document. one audit row per pricing publish or restore: action config.publish,
+        details { doc, zoneId, version, restoredFrom?, appDocuments: [{ doc, version }] } (the app documents the publish rewrote)'
       tags:
       - Admin · Config
       x-actor:
@@ -18367,24 +18405,45 @@ paths:
       operationId: adminDriverPaidMovera
       summary: Driver paid Movera
       description: 'v0.18.84 (owner Q-S5-1a ''Both''): POST /admin/drivers/{driverId}/paid-movera { expectedOwed, amount,
-        reason } (finance.edit, Idempotency-Key, audit driver.paid_movera with amount, owedBefore, owedAfter and reason):
-        money the driver paid Movera another way (Swish, bank). amount > 0 in the currency of expectedOwed (= the owed the
-        admin saw); writes earnings entries kind paid_to_movera (+amount), never an edit of past entries. v0.18.97 (Rules
-        audits/impact/j8-rebase-money-fix-supervisor.md §6; server J8 supervisor round 1 must-fix 2; owner Q-M3 "Next payout"
-        + Q-S5-7 "Carry over") the money settles the carried rest first, under the driver row lock: the driver''s open payouts
-        below 0 in that currency (status pending or pending_approval, Payout.amount < 0), oldest first (period start, then
-        payoutId), each locked; for each, its rest = −Payout.amount − the paid_to_movera entries already linked to it; an
-        entry of min(money left, rest) is LINKED to that payout (so no later payout run takes it and pays it back to him);
-        a payout whose rest it covers in full is closed as paid (status paid, paid by the admin, note "Driver paid Movera",
-        audit payout.paid with the reason) and its Payout.summary is frozen in the same step (priceDisplay.payoutSummary.frozenWhenPaid);
-        one covered only in part stays open with less rest. Any amount left over becomes one UNLINKED entry, counted in the
-        next payout''s amount and lines (payout line paid_to_movera, +amount). A linked entry never changes the amount of
-        the payout it is linked to. No entry is ever in Payout.summary (priceDisplay.payoutSummary.paidToMovera). Stale expectedOwed
-        → 409 conflict, reason owed_changed with the fresh OwingDriver (a second click adds nothing, owner 106 rule); amount
-        above the owed now → 400 invalid_request, reason paid_above_owed; reason 1..300 characters (else 400 reason_required).
-        v0.18.106 (wording only, J8 supervisor W1, Rules audits/impact/j8-rebase-money-fix-supervisor.md; server src/admin/driversOwing.ts):
-        an amount ≤ 0 → 400 invalid_request, reason invalid_amount; an amount in another currency than expectedOwed → 400
-        invalid_request, reason currency_mismatch. Answer: the fresh OwingDriver. v0.18.97 (priceDisplay.payoutSummary.frozenWhenPaid,
+        reason } (finance.edit, Idempotency-Key, audit driver.paid_movera with amount, owedBefore, owedAfter, reason and entries
+        (entries [{ entryId, amountMinor, payoutId }]: the entries this payment wrote; payoutId null = unlinked)): money the
+        driver paid Movera another way (Swish, bank). amount > 0 in the currency of expectedOwed (= the owed the admin saw);
+        writes earnings entries kind paid_to_movera (+amount), never an edit of past entries. v0.18.97 (Rules audits/impact/j8-rebase-money-fix-supervisor.md
+        §6; server J8 supervisor round 1 must-fix 2; owner Q-M3 "Next payout" + Q-S5-7 "Carry over") the money settles the
+        carried rest first, under the driver row lock: the driver''s open payouts below 0 in that currency (status pending
+        or pending_approval, Payout.amount < 0), oldest first (period start, then payoutId), each locked; for each, its rest
+        = −Payout.amount − the paid_to_movera entries already linked to it; an entry of min(money left, rest) is LINKED to
+        that payout (so no later payout run takes it and pays it back to him); a payout whose rest it covers in full is closed
+        as paid (status paid, paid by the admin, note "Driver paid Movera", audit payout.paid with the reason) and its Payout.summary
+        is frozen in the same step (priceDisplay.payoutSummary.frozenWhenPaid); one covered only in part stays open with less
+        rest. Any amount left over becomes one UNLINKED entry, counted in the next payout''s amount and lines (payout line
+        paid_to_movera, +amount). A linked entry never changes the amount of the payout it is linked to. No entry is ever
+        in Payout.summary (priceDisplay.payoutSummary.paidToMovera). Stale expectedOwed → 409 conflict, reason owed_changed
+        with the fresh OwingDriver (a second click adds nothing, owner 106 rule); amount above the owed now → 400 invalid_request,
+        reason paid_above_owed; reason 1..300 characters (else 400 reason_required). v0.18.106 (wording only, J8 supervisor
+        W1, Rules audits/impact/j8-rebase-money-fix-supervisor.md; server src/admin/driversOwing.ts): an amount ≤ 0 → 400
+        invalid_request, reason invalid_amount; an amount in another currency than expectedOwed → 400 invalid_request, reason
+        currency_mismatch. v0.18.118 (wording only; J8b supervisor gate C1 and Round 2 R2.4, Rules audits/impact/j8b-supervisor.md
+        and j8b-paid-movera.md; server branch claude/rules-email-key-browserstack-f5y0p3-j8b 3591e8a (round 2; this reference
+        becomes the server merge commit at ship time) src/drivers/owes.ts PAID_AFTER_PAYOUT, src/admin/driversOwing.ts, src/admin/payouts.ts
+        makePayouts / paidAfterPeriod): (1) "the paid_to_movera entries already linked to it" = the money linked to that payout
+        AFTER it was made: its paid_to_movera entries less its own paid_to_movera line (that line is already inside Payout.amount,
+        so no payment counts twice); owed and the owing list use the same rest. (2) The unlinked entry is taken by the next
+        payout MADE for him (the hourly payout step, the first run after a payoutHold release, or Create payout by hand),
+        which can be the payout of the period that had already ended when he paid: a payout that comes out below 0 also takes
+        his unlinked paid_to_movera entries dated at or after its period end, oldest first (time, then entry id), up to what
+        brings it to 0 (its paid_to_movera line, +amount taken). So money paid between a period''s end and its payout row
+        (made up to an hour after the period ends, never while his payouts are held) settles that period and is never paid
+        back to him by a later payout. A payout of 0 or above takes none. (3) Such an entry may be split in two: the part
+        this payout takes becomes a new paid_to_movera entry linked to it, with the same time; the rest stays in the first
+        entry, unlinked, for a later payout (whole minor units, same total, same kind; no trip, tip, bonus or fee entry and
+        no entry already in a payout is touched). Each split is audited: driver.paid_movera_split, target the driver, actor
+        the admin for Create payout and the system for the scheduled run, detail { entryId (the payment''s entry, found in
+        one driver.paid_movera entries list), currency, amountBeforeMinor, amountTakenMinor, amountLeftMinor, partEntryId,
+        payoutId, source weekly | manual }; amountBefore = amountTaken + amountLeft. The payout step, Create payout, Mark
+        as paid (POST /admin/payouts/{payoutId}/paid) and this command take the driver''s row lock first (order driver → payouts),
+        so none of them runs at the same moment as this command for the same driver: a Mark as paid that lost gets invalid_transition
+        already_paid, a click that lost gets 409 owed_changed. Answer: the fresh OwingDriver. v0.18.97 (priceDisplay.payoutSummary.frozenWhenPaid,
         paidToMovera): a payout below 0 whose carried rest this money covers in full is closed as paid (note "Driver paid
         Movera", audit payout.paid) and its Payout.summary is frozen in the same step; the paid_to_movera entry is never in
         driverGets or moveraGets.'
@@ -20947,7 +21006,11 @@ components:
             past ride in History) the ''Call rider'' / ''Call driver'' button shows while now ≤ callOpenUntil and hides by
             itself when it passes; absent → no call button. The call itself is unchanged (in-app, never a phone number). Chat
             stays closed after the drop-off (no change). Admin: no new setting — Pricing › Tips & limits › Calls › Call window
-            after the trip (min), 0–240, default 60, per country standard or zone. X-Api-Version stays 0.5; additive; no migration.'
+            after the trip (min), 0–240, default 60, per country standard or zone. X-Api-Version stays 0.5; additive; no migration.
+            v0.18.118 (S13 supervisor SF-S1, Rules audits/impact/a04-s13-v21-supervisor.md; server branch claude/rules-email-key-browserstack-f5y0p3-s13s-r2
+            64e7ad1 src/calls/openUntil.ts:10-13, :21-22): "an early end" above is the rider''s early end (POST /trips/{tripId}/end-early,
+            status cancelled_by_rider): no callOpenUntil. A driver''s end before the drop-off is a completed trip (finish.endedEarly
+            true) and carries callOpenUntil like any completed trip.'
     DriverSilentAlert:
       type: object
       description: 'v0.7.0: documents the server''s alert of 2026-10-26: no position for 30 min with the rider on board; the
@@ -23028,7 +23091,14 @@ components:
         included). records holds the open ones and those done in the last 30 days. country: SE | FR | TN; an admin outside
         the country -> 403 zone_out_of_scope. v0.18.23: AlertBookState also carries alerts [LiveAlert] (serverDetection):
         the alerts the server found, open or solved by itself, of the admin''s zones in that country and the groups the admin
-        may see (same filter as records).'
+        may see (same filter as records). v0.18.117 (alertDesk.serverDetection.liveList): AlertBookState.alerts: Every open
+        alert of the admin''s zones and kind groups is sent: no limit, never cut. After the open ones, at most solvedCap (1000)
+        solved alerts: per kind the 1000 newest by solvedAt, then, over all kinds, the first 1000 with the safety kinds first
+        and then the newest solvedAt. Open before solved. Open: the safety kinds first (kindGroups group safety: sos, car_lost,
+        ride_check, sos_slow), then level critical, important, info, then the newest since, then alertId. Solved: the safety
+        kinds first, then the newest solvedAt (an alert without solvedAt last), then alertId. Not built yet: past solvedCap
+        the older solved alerts are left out and nothing in the answer says so (no ''more'' marker, no count). A marker and
+        a limit for open non-safety alerts are a later job (MF3).'
       required:
       - country
       - rev
@@ -24832,7 +24902,9 @@ components:
           type: number
           minimum: 0
           description: 'v0.18.9: Long stop: the car stood still (every fix within 50 m) this many minutes with the rider on
-            board (default 2; 1–30).'
+            board (default 2; 1–30). v0.18.118 (owner 2026-11-16 "Keep, note at setting (Rec.)"): A stop seen only as one
+            repeated fix is found only when stopMinutes is below about 10 (a fix can be sent again for at most 10 minutes
+            after it was measured; detection.long_stop).'
           default: 2
         offRouteKm:
           type: number
@@ -32429,10 +32501,10 @@ components:
             projection): the app takes it as done.'
     ConfigHistoryEntry:
       type: object
-      description: 'v0.7.1: one published version (contract.json#pricingHistory).'
+      description: 'v0.7.1: one published version (contract.json#pricingHistory). v0.18.118 (pricingHistory.list): zoneId
+        for a zone''s document, country for a country''s standard; exactly one of the two.'
       required:
       - doc
-      - zoneId
       - version
       - publishedAt
       - action
@@ -32461,6 +32533,8 @@ components:
           minimum: 1
         document:
           type: object
+        country:
+          $ref: '#/components/schemas/CountryCode'
     ConfigHistoryEntryPage:
       allOf:
       - $ref: '#/components/schemas/Page'
@@ -32474,7 +32548,6 @@ components:
       type: object
       required:
       - expectedVersion
-      - zoneId
       - version
       properties:
         expectedVersion:
@@ -32490,6 +32563,9 @@ components:
         note:
           type: string
           maxLength: 1000
+        country:
+          $ref: '#/components/schemas/CountryCode'
+      description: 'v0.18.118 (pricingHistory.restore, configDocs.scope): exactly one of zoneId or country.'
     CategoryDef:
       type: object
       description: 'v0.7.1: CategoryDef { id, label, line: { sv, fr, en } (the sub-line under the name, e.g. ''Up to 6 seats''),
@@ -37577,7 +37653,12 @@ components:
             trips, Q-M3) minus his earnings Movera holds for him, plus anything still owed from earlier weeks — owed = −min(0,
             his next payout worked out now (payouts.lines of his unpaid entries) + the rest carried from earlier payouts below
             0 (Q-M3, Q-S5-7a)). A ''Driver paid Movera'' entry raises that sum. Driver.country''s currency is the one compared
-            with the limit; 0 when nothing is owed.'
+            with the limit; 0 when nothing is owed. v0.18.118 (J8b, Rules audits/impact/j8b-supervisor.md gate C1; server
+            branch claude/rules-email-key-browserstack-f5y0p3-j8b 3591e8a (becomes the server merge commit at ship time) src/drivers/owes.ts:34,
+            :72-80): the rest carried from an open payout below 0 (status pending or pending_approval) = Payout.amount + the
+            paid_to_movera entries linked to it after it was made (its paid_to_movera entries less its own paid_to_movera
+            line, which is already inside Payout.amount). The owing list (GET /admin/drivers-owing) and the paid-movera click
+            use the same expression.'
         limit:
           oneOf:
           - $ref: '#/components/schemas/Money'
