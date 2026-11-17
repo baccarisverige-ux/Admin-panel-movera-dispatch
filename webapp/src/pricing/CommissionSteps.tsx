@@ -5,6 +5,7 @@ import { NumberField } from "./NumberField";
 import { currencySymbol, money } from "./zonePricing";
 import { addStep, removeStep, resultLines, setStepKind, stepWarnings, validateSteps, STEPS_CONTRACT, type CommissionStep, type StepProblem } from "./commissionSteps";
 import { tr, trx, type MessageKey } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 /**
  * J5b (contract v0.18.86, contract.json#commissionSteps.adminPlacement / warn / adminCalculator; owner 2026-11-13
@@ -85,7 +86,7 @@ export function CommissionSteps({ currency, categoryLabel, pct, steps, canEdit, 
                     ? <span>{tr("Above {amount}", { amount: show(previous) })}</span>
                     : withSlot(tr("Trip price up to {amount}", { amount: "{amount}" }), "amount", (
                       <span data-testid="step-up-to">
-                        <NumberField label={`${name} · ${tr("Trip price up to {amount}", { amount: "" }).trim()} ${index + 1}`} value={step.upToMinor / unit} unit={symbol} step={1 / unit} disabled={!canEdit} invalid={bad} onChange={(value) => set(index, { ...step, upToMinor: Math.round(value * unit) })} />
+                        <NumberField info="pricing.commissionSteps.upTo" label={`${name} · ${tr("Trip price up to {amount}", { amount: "" }).trim()} ${index + 1}`} value={step.upToMinor / unit} unit={symbol} step={1 / unit} disabled={!canEdit} invalid={bad} onChange={(value) => set(index, { ...step, upToMinor: Math.round(value * unit) })} />
                       </span>
                     ))}
                 </div>
@@ -93,11 +94,11 @@ export function CommissionSteps({ currency, categoryLabel, pct, steps, canEdit, 
                   <select data-testid="step-kind" aria-label={`${name} · ${tr("Commission steps")} ${index + 1}`} value={kind} disabled={!canEdit} onChange={(event) => set(index, setStepKind(step, event.target.value as "pct" | "amount", pct))}>
                     <option value="pct">{tr("Percent (%)")}</option>
                     <option value="amount">{tr("Fixed amount")}</option>
-                  </select>
+                  </select><SettingInfo id="pricing.commissionSteps.kind" />
                   <span data-testid="step-value">
                     {kind === "pct"
-                      ? <NumberField label={`${name} · ${tr("Percent (%)")} ${index + 1}`} value={step.pct ?? 0} unit="%" max={STEPS_CONTRACT.validation.pctMax} step={0.1} disabled={!canEdit} invalid={bad} onChange={(value) => set(index, { upToMinor: step.upToMinor, pct: value })} />
-                      : <NumberField label={`${name} · ${tr("Fixed amount")} ${index + 1}`} value={(step.amountMinor ?? 0) / unit} unit={symbol} step={1 / unit} disabled={!canEdit} invalid={bad} onChange={(value) => set(index, { upToMinor: step.upToMinor, amountMinor: Math.round(value * unit) })} />}
+                      ? <NumberField info="pricing.commissionSteps.value" label={`${name} · ${tr("Percent (%)")} ${index + 1}`} value={step.pct ?? 0} unit="%" max={STEPS_CONTRACT.validation.pctMax} step={0.1} disabled={!canEdit} invalid={bad} onChange={(value) => set(index, { upToMinor: step.upToMinor, pct: value })} />
+                      : <NumberField info="pricing.commissionSteps.value" label={`${name} · ${tr("Fixed amount")} ${index + 1}`} value={(step.amountMinor ?? 0) / unit} unit={symbol} step={1 / unit} disabled={!canEdit} invalid={bad} onChange={(value) => set(index, { upToMinor: step.upToMinor, amountMinor: Math.round(value * unit) })} />}
                   </span>
                   {canEdit ? <button data-command="admin.pricing.edit" type="button" className="icon-ghost danger" aria-label={`${tr("Remove step")} ${index + 1}`} title={tr("Remove step")} onClick={() => onSteps(removeStep(steps, index))}><Trash2 size={14} aria-hidden="true" /></button> : null}
                 </div>
@@ -126,6 +127,7 @@ function CommissionCalculator({ currency, name, pct, steps, decimals, examplePri
       <strong className="cs-calc-title"><Calculator size={14} aria-hidden="true" /> {tr("Commission calculator")}</strong>
       <label className="cs-calc-price" data-testid="calc-price">
         <span>{tr("Trip price (without waiting)")}</span>
+        {/* info-skip: calculator input, not a setting */}
         <NumberField label={`${name} · ${tr("Trip price (without waiting)")}`} value={price} unit={currencySymbol(currency)} step={10 ** -decimals} onChange={(value) => setPrice(Number(value.toFixed(decimals)))} />
       </label>
       {result.ok ? (

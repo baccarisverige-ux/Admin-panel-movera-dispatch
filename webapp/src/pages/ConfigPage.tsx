@@ -46,6 +46,7 @@ const RequestLimitsPanel = lazy(() => import("../config/RequestLimitsPanel"));
 import { can } from "../auth/permissions";
 import { tr, trn, trx, trSentences } from "../i18n";
 import { LanguageQuickSwitch } from "../i18n/LanguageQuickSwitch";
+import { SettingInfo } from "../ui/SettingInfo";
 
 const LEVELS: OverrideLevel[] = ["market", "zone", "category", "app", "platform", "appVersion", "cohort"];
 
@@ -109,6 +110,7 @@ function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: 
     <label className="check-row">
       <input type="checkbox" checked={item.on} onChange={(event) => onChange(event.target.checked)} />
       {trx(item.label)}
+      <SettingInfo id={`config.switch.${item.id}`} label={trx(item.label)} />
     </label>
   );
 }
@@ -276,8 +278,8 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
         {/* G16-5 (owner: "One place"): app versions are set only in Content › App versions; no copy here. */}
         <p className="state-line" data-testid="app-versions-elsewhere"><Link to="/content">{tr("App versions are set in Content › App versions.")}</Link></p>
         <div className="field-grid">
-          <label>{trn("Publish schedule{0}", <input
-              aria-label={tr("Publish schedule")}
+          <label><SettingInfo id="config.publishSchedule" label={tr("Publish schedule")} />{trn("Publish schedule{0}", <input
+                            aria-label={tr("Publish schedule")}
               type="datetime-local"
               value={localFromIso(book.draft.scheduleAt)}
               onChange={(event) => {
@@ -286,7 +288,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
                 edit((current) => setSchedule(current, scheduleAt, agent.id));
               }}
             />)}{liveSession ? <NotConnected control /> : null}</label>
-          <label>{trn("Expiry{0}", <input
+          <label><SettingInfo id="config.expiry" label={tr("Configuration expiry")} />{trn("Expiry{0}", <input
               aria-label={tr("Configuration expiry")}
               type="datetime-local"
               value={localFromIso(book.draft.expiresAt)}
@@ -303,21 +305,21 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
         <h3>{tr("Advanced precedence overrides")}{liveSession ? <NotConnected control /> : null}</h3>
         <p className="state-line">{tr("Winning order: global → market → zone → category → app → platform → app version → cohort.")}</p>
         <div className="field-grid">
-          <label>{trn("Feature{0}", <select aria-label={tr("Override feature")} value={featureKey} onChange={(event) => setFeatureKey(event.target.value as FeatureKey)}>
+          <label><SettingInfo id="config.override.feature" label={tr("Override feature")} />{trn("Feature{0}", <select aria-label={tr("Override feature")} value={featureKey} onChange={(event) => setFeatureKey(event.target.value as FeatureKey)}>
               <option value="wallet">{tr("Wallet")}</option>
             </select>)}</label>
-          <label>{trn("Level{0}", <select aria-label={tr("Override level")} value={level} onChange={(event) => changeLevel(event.target.value as OverrideLevel)}>
+          <label><SettingInfo id="config.override.level" label={tr("Override level")} />{trn("Level{0}", <select aria-label={tr("Override level")} value={level} onChange={(event) => changeLevel(event.target.value as OverrideLevel)}>
               {LEVELS.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>)}</label>
-          <label>{trn("Target{0}{1}", <input aria-label={tr("Override target")} list="override-target-options" value={target} onChange={(event) => setTarget(event.target.value)} />, <datalist id="override-target-options">
+          <label><SettingInfo id="config.override.target" label={tr("Override target")} />{trn("Target{0}{1}", <input aria-label={tr("Override target")} list="override-target-options" value={target} onChange={(event) => setTarget(event.target.value)} />, <datalist id="override-target-options">
               {options.map((item) => <option key={item.value} value={item.value}>{trx(item.label)}</option>)}
             </datalist>)}</label>
-          <label>{trn("Value{0}", <select aria-label={tr("Override value")} value={overrideValue ? "on" : "off"} onChange={(event) => setOverrideValue(event.target.value === "on")}>
+          <label><SettingInfo id="config.override.value" label={tr("Override value")} />{trn("Value{0}", <select aria-label={tr("Override value")} value={overrideValue ? "on" : "off"} onChange={(event) => setOverrideValue(event.target.value === "on")}>
               <option value="on">{tr("On")}</option>
               <option value="off">{tr("Off")}</option>
             </select>)}</label>
-          <label>{trn("Starts at{0}", <input aria-label={tr("Override starts at")} type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} />)}</label>
-          <label>{trn("Expires at{0}", <input aria-label={tr("Override expires at")} type="datetime-local" value={ruleExpiresAt} onChange={(event) => setRuleExpiresAt(event.target.value)} />)}</label>
+          <label><SettingInfo id="config.override.times" label={tr("Override starts at")} />{trn("Starts at{0}", <input aria-label={tr("Override starts at")} type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} />)}</label>
+          <label>{/* info-at: config.override.times */}{trn("Expires at{0}", <input aria-label={tr("Override expires at")} type="datetime-local" value={ruleExpiresAt} onChange={(event) => setRuleExpiresAt(event.target.value)} />)}</label>
         </div>
 
         <button
@@ -369,23 +371,23 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
       <article className="panel">
         <h3>{tr("Effective value viewer")}</h3>
         <div className="field-grid">
-          <label>{trn("Preview market{0}", <input value={context.market ?? ""} onChange={(event) => setContext((current) => ({ ...current, market: event.target.value }))} />)}</label>
-          <label>{trn("Preview zone{0}", <select value={context.zoneId ?? ""} onChange={(event) => setContext((current) => ({ ...current, zoneId: event.target.value }))}>
+          <label>{/* info-skip: preview input of the effective value viewer, not a setting */}{trn("Preview market{0}", <input value={context.market ?? ""} onChange={(event) => setContext((current) => ({ ...current, market: event.target.value }))} />)}</label>
+          <label>{/* info-skip: preview input of the effective value viewer, not a setting */}{trn("Preview zone{0}", <select value={context.zoneId ?? ""} onChange={(event) => setContext((current) => ({ ...current, zoneId: event.target.value }))}>
               {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
             </select>)}</label>
-          <label>{trn("Preview category{0}", <select value={context.category ?? "economy"} onChange={(event) => setContext((current) => ({ ...current, category: event.target.value }))}>
+          <label>{/* info-skip: preview input of the effective value viewer, not a setting */}{trn("Preview category{0}", <select value={context.category ?? "economy"} onChange={(event) => setContext((current) => ({ ...current, category: event.target.value }))}>
               {CATEGORIES.map((item) => <option key={item.id} value={item.id}>{trx(item.label)}</option>)}
             </select>)}</label>
-          <label>{trn("Preview app{0}", <select aria-label={tr("Preview app")} value={context.app ?? "rider"} onChange={(event) => setContext((current) => ({ ...current, app: event.target.value as "rider" | "driver" }))}>
+          <label>{/* info-skip: preview input of the effective value viewer, not a setting */}{trn("Preview app{0}", <select aria-label={tr("Preview app")} value={context.app ?? "rider"} onChange={(event) => setContext((current) => ({ ...current, app: event.target.value as "rider" | "driver" }))}>
               <option value="rider">{tr("Rider")}</option>
               <option value="driver">{tr("Driver")}</option>
             </select>)}</label>
-          <label>{trn("Preview platform{0}", <select value={context.platform ?? "ios"} onChange={(event) => setContext((current) => ({ ...current, platform: event.target.value as "ios" | "android" }))}>
+          <label>{/* info-skip: preview input of the effective value viewer, not a setting */}{trn("Preview platform{0}", <select value={context.platform ?? "ios"} onChange={(event) => setContext((current) => ({ ...current, platform: event.target.value as "ios" | "android" }))}>
               <option value="ios">{tr("iOS")}</option>
               <option value="android">{tr("Android")}</option>
             </select>)}</label>
-          <label>{trn("Preview app version{0}", <input value={context.appVersion ?? ""} onChange={(event) => setContext((current) => ({ ...current, appVersion: event.target.value }))} />)}</label>
-          <label>{trn("Preview cohort{0}", <input value={context.cohort ?? ""} onChange={(event) => setContext((current) => ({ ...current, cohort: event.target.value }))} />)}</label>
+          <label>{/* info-skip: preview input of the effective value viewer, not a setting */}{trn("Preview app version{0}", <input value={context.appVersion ?? ""} onChange={(event) => setContext((current) => ({ ...current, appVersion: event.target.value }))} />)}</label>
+          <label>{/* info-skip: preview input of the effective value viewer, not a setting */}{trn("Preview cohort{0}", <input value={context.cohort ?? ""} onChange={(event) => setContext((current) => ({ ...current, cohort: event.target.value }))} />)}</label>
         </div>
         <p className="state-line" data-effective={reservations.level}>{trn("Effective reservations: {0}. Winning level: {1}. {2}", reservations.value, reservations.level, reservations.chain.join(" · "))}</p>
         <p className="state-line" data-testid="effective-precedence" data-effective-wallet={wallet.level}>{trn("Effective wallet: {0}. Winning level: {1}. {2}", wallet.value, wallet.level, wallet.chain.join(" · "))}</p>
@@ -393,7 +395,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
 
       <article className="panel">
         <h3>{tr("Legacy per-zone feature switches")}</h3>
-        <label>{trn("Zone override{0}", <select
+        <label><SettingInfo id="config.zoneOverride" label={tr("Zone override")} />{trn("Zone override{0}", <select
             aria-label={tr("Zone override")}
             value={zoneId}
             onChange={(event) => {
@@ -405,7 +407,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
           </select>)}</label>
         {/* Q26 / X18: scheduled rides are set per zone in Dispatch; shown here read-only. */}
         <p className="op-help" data-testid="config-reservations-moved">{trn("Reservations per zone: set in Dispatch. {0}", <Link to="/dispatch?tab=reservations">{tr("Edit in Dispatch")}</Link>)}</p>
-        <label className="check-row">{trn("{0}Wallet in this zone", <input
+        <label className="check-row"><SettingInfo id="config.zoneWallet" label={tr("Wallet")} />{trn("{0}Wallet in this zone", <input
             type="checkbox"
             checked={legacyOverride.wallet ?? book.draft.features.wallet}
             onChange={(event) => agent && edit(
@@ -424,10 +426,10 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
               <summary>{trx(group.label)}{editable ? "" : tr(" (read-only, edit in Dispatch)")}</summary>
               {book.draft.reasons.filter((reason) => reason.group === group.id).map((reason) => editable ? (
                 <div className="field-grid" key={reason.id}>
-                  <label>{trn("{0} Swedish{1}", reason.id, <input value={reason.sv} onChange={(event) => agent && edit(
+                  <label><SettingInfo id="config.reasonText" label={reason.id} />{trn("{0} Swedish{1}", reason.id, <input value={reason.sv} onChange={(event) => agent && edit(
                       (current) => setReason(current, reason.id, "sv", event.target.value, agent.id),
                     )} />)}</label>
-                  <label>{trn("{0} English{1}", reason.id, <input value={reason.en} onChange={(event) => agent && edit(
+                  <label>{/* info-at: config.reasonText */}{trn("{0} English{1}", reason.id, <input value={reason.en} onChange={(event) => agent && edit(
                       (current) => setReason(current, reason.id, "en", event.target.value, agent.id),
                     )} />)}</label>
                 </div>
@@ -454,6 +456,7 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
           ["demoHint", "Preview hint (test only)"],
         ] as const).map(([key, label]) => (
           <label className="check-row" key={key}>
+            <SettingInfo id={`config.environment.${key}`} label={trx(label)} />
             <input
               type="checkbox"
               checked={book.draft.environment[key]}

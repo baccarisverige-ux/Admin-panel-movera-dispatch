@@ -23,6 +23,7 @@ import { AcceptanceTable, type Acceptance } from "../live/AcceptanceTable";
 import { publishTargets } from "../markets/scope";
 import { RealAppPreview } from "../ui/RealAppPreview";
 import { zoneById } from "../markets/markets";
+import { SettingInfo } from "../ui/SettingInfo";
 
 /** ContentItem of contract v0.10.0 §19 (as the server sends it). */
 type ContentItem = { slot: string; zoneId: string; version: number; publishedAt: string; publishedBy?: string; title: string; text: { sv: string; fr: string; en: string }; image?: string; expiresAt?: string; reaccept?: boolean; versions?: { rider: { min: string; recommended: string }; driver: { min: string; recommended: string } } };
@@ -133,30 +134,30 @@ export function ContentPage() {
         </nav>
 
         <div className="gr-content-main">
-          <label className="gr-field gr-slot-pick">{tr("Content slot")}<select value={id} onChange={(e) => choose(e.target.value)}>{STUDIO_SLOTS.map((x) => <option key={x}>{x}</option>)}</select></label>
+          <label className="gr-field gr-slot-pick">{tr("Content slot")}{/* info-skip: picks which slot is edited, not a setting */}<select value={id} onChange={(e) => choose(e.target.value)}>{STUDIO_SLOTS.map((x) => <option key={x}>{x}</option>)}</select></label>
           <article className="panel gr-panel">
             <h3>{tr("{0} · published version {1}", [slotLabel(id), String((live ? liveHistory[0]?.version : slot.history.at(-1)?.version) ?? tr("none"))])}</h3>
             {expired ? <p className="gr-warn"><TriangleAlert size={13} aria-hidden="true" /> {tr("This content has ended and is no longer shown.")}</p> : null}
             <fieldset disabled={!editable || store.loading}>
               <div className="field-grid">
-                <label>{tr("Title")}<input value={text.title} onChange={(e) => patch({ title: e.target.value })} /></label>
-                <label>{tr("Swedish content")}<textarea value={text.sv} onChange={(e) => patch({ sv: e.target.value })} /></label>
-                <label>{tr("French content")}<textarea value={text.fr} onChange={(e) => patch({ fr: e.target.value })} /></label>
-                <label>{tr("English content")}<textarea value={text.en} onChange={(e) => patch({ en: e.target.value })} /></label>
-                <label>{tr("Image URL")}<input value={text.image} onChange={(e) => patch({ image: e.target.value })} /></label>
-                <label>{tr("Content expiry")}<input type="datetime-local" value={text.expiresAt} onChange={(e) => patch({ expiresAt: e.target.value })} /></label>
+                <label>{tr("Title")}<SettingInfo id="content.studio.title" label={tr("Title")} /><input value={text.title} onChange={(e) => patch({ title: e.target.value })} /></label>
+                <label>{tr("Swedish content")}<SettingInfo id="content.studio.text" label={tr("Swedish content")} /><textarea value={text.sv} onChange={(e) => patch({ sv: e.target.value })} /></label>
+                <label>{tr("French content")}<SettingInfo id="content.studio.text" label={tr("French content")} /><textarea value={text.fr} onChange={(e) => patch({ fr: e.target.value })} /></label>
+                <label>{tr("English content")}<SettingInfo id="content.studio.text" label={tr("English content")} /><textarea value={text.en} onChange={(e) => patch({ en: e.target.value })} /></label>
+                <label>{tr("Image URL")}<SettingInfo id="content.studio.imageUrl" label={tr("Image URL")} /><input value={text.image} onChange={(e) => patch({ image: e.target.value })} /></label>
+                <label>{tr("Content expiry")}<SettingInfo id="content.studio.expiry" label={tr("Content expiry")} /><input type="datetime-local" value={text.expiresAt} onChange={(e) => patch({ expiresAt: e.target.value })} /></label>
                 {id === "app-versions" ? (
                   <>
-                    <label>{tr("Rider app minimum version")}<input value={text.riderMin} placeholder="1.2.3" onChange={(e) => patch({ riderMin: e.target.value })} /></label>
-                    <label>{tr("Rider app recommended version")}<input value={text.riderRecommended} placeholder="1.2.3" onChange={(e) => patch({ riderRecommended: e.target.value })} /></label>
-                    <label>{tr("Driver app minimum version")}<input value={text.driverMin} placeholder="1.2.3" onChange={(e) => patch({ driverMin: e.target.value })} /></label>
-                    <label>{tr("Driver app recommended version")}<input value={text.driverRecommended} placeholder="1.2.3" onChange={(e) => patch({ driverRecommended: e.target.value })} /></label>
+                    <label>{tr("Rider app minimum version")}<SettingInfo id="content.studio.riderMin" label={tr("Rider app minimum version")} /><input value={text.riderMin} placeholder="1.2.3" onChange={(e) => patch({ riderMin: e.target.value })} /></label>
+                    <label>{tr("Rider app recommended version")}<SettingInfo id="content.studio.riderRecommended" label={tr("Rider app recommended version")} /><input value={text.riderRecommended} placeholder="1.2.3" onChange={(e) => patch({ riderRecommended: e.target.value })} /></label>
+                    <label>{tr("Driver app minimum version")}<SettingInfo id="content.studio.driverMin" label={tr("Driver app minimum version")} /><input value={text.driverMin} placeholder="1.2.3" onChange={(e) => patch({ driverMin: e.target.value })} /></label>
+                    <label>{tr("Driver app recommended version")}<SettingInfo id="content.studio.driverRecommended" label={tr("Driver app recommended version")} /><input value={text.driverRecommended} placeholder="1.2.3" onChange={(e) => patch({ driverRecommended: e.target.value })} /></label>
                     <p className="gr-help">{tr("Below the minimum the app shows \"Update the app\" and is blocked (after a trip; SOS always works). Below the recommended version a message the user can close.")}</p>
                   </>
                 ) : null}
                 {id === "legal" && live ? <p className="gr-warn" data-testid="legacy-legal-note">{tr("Only older app builds read this zone text. Terms and privacy per country are edited in Content › Legal.")}</p> : null}
                 {id === "legal" ? (
-                  <Row label={tr("Users must accept again")} help={tr("At the next app start (never during a trip) riders and drivers see the new terms with \"I accept\". Until then the rider cannot book and the driver cannot go online.")}>
+                  <Row info="content.studio.usersMustAcceptAgain" label={tr("Users must accept again")} help={tr("At the next app start (never during a trip) riders and drivers see the new terms with \"I accept\". Until then the rider cannot book and the driver cannot go online.")}>
                     <Switch label={tr("Users must accept again")} on={text.reaccept} disabled={!editable} onChange={(reaccept) => patch({ reaccept })} />
                   </Row>
                 ) : null}
@@ -178,25 +179,25 @@ export function ContentPage() {
           </article>
 
           {live ? null : <Card title={tr("Image, places and app update")} icon={<ImagePlus size={15} />} tone="purple" help={tr("Saved apart from the text. Applies when the content is shown.")}>
-            <Row label={tr("Image")} help={tr("Upload a picture. Fill covers the whole space and may cut the edges; fit shows the whole picture.")}>
+            <Row info="content.studio.image" label={tr("Image")} help={tr("Upload a picture. Fill covers the whole space and may cut the edges; fit shows the whole picture.")}>
               <span className="gr-image-row">
                 <label className="dash-btn small ghost gr-upload">{tr("Upload image")}<input type="file" accept="image/*" aria-label={tr("Upload image")} disabled={!editable} onChange={(e) => upload(e.target.files?.[0])} /></label>
                 {extra.image ? <><small>{extra.image.name}</small><button data-command="admin.content.view" type="button" className="dash-btn small ghost" disabled={!editable} onClick={() => patchExtra({ image: null })}>{tr("Remove image")}</button></> : <small>{tr("No image uploaded")}</small>}
               </span>
             </Row>
-            <Row label={tr("How the image fits")}>
+            <Row info="content.studio.howTheImageFits" label={tr("How the image fits")}>
               <Choice label={tr("Image fit")} value={extra.image?.fit ?? "fill"} disabled={!editable || !extra.image} options={[{ id: "fill", label: "Fill" }, { id: "fit", label: "Fit" }]} onChange={(fit) => extra.image && patchExtra({ image: { ...extra.image, fit } })} />
             </Row>
-            <Row label={tr("Countries")} help={tr("The content shows only in these countries.")}>
+            <Row info="content.studio.countries" label={tr("Countries")} help={tr("The content shows only in these countries.")}>
               <span className="gr-checks">{MARKETS.map((item) => <Check key={item.id} label={item.name} on={extra.countries.includes(item.id)} disabled={!editable} onChange={(on) => patchExtra({ countries: on ? [...extra.countries, item.id] : extra.countries.filter((x) => x !== item.id), zones: on ? extra.zones : extra.zones.filter((zone) => !item.zones.some((z) => z.id === zone)) })} />)}</span>
             </Row>
-            <Row label={tr("Only some zones")} help={tr("Leave empty to show it in every zone of the chosen countries.")} on={extra.zones.length > 0}>
+            <Row info="content.studio.onlySomeZones" label={tr("Only some zones")} help={tr("Leave empty to show it in every zone of the chosen countries.")} on={extra.zones.length > 0}>
               <span className="gr-checks gr-zones" aria-label={tr("Zones")}><MapPin size={12} aria-hidden="true" />{zonesHere.map((zone) => <Check key={zone.id} label={zone.name} on={extra.zones.includes(zone.id)} disabled={!editable} onChange={(on) => patchExtra({ zones: on ? [...extra.zones, zone.id] : extra.zones.filter((x) => x !== zone.id) })} />)}</span>
             </Row>
             {id === "app-versions" ? (
               <>
-                <Row label={tr("Force update on iPhone")} help={tr("People below the minimum version must update before they can book.")}><Switch label={tr("Force update on iPhone")} on={extra.forceUpdate.ios} disabled={!editable} onChange={(ios) => patchExtra({ forceUpdate: { ...extra.forceUpdate, ios } })} /></Row>
-                <Row label={tr("Force update on Android")}><Switch label={tr("Force update on Android")} on={extra.forceUpdate.android} disabled={!editable} onChange={(android) => patchExtra({ forceUpdate: { ...extra.forceUpdate, android } })} /></Row>
+                <Row info="content.studio.forceUpdateOnIphone" label={tr("Force update on iPhone")} help={tr("People below the minimum version must update before they can book.")}><Switch label={tr("Force update on iPhone")} on={extra.forceUpdate.ios} disabled={!editable} onChange={(ios) => patchExtra({ forceUpdate: { ...extra.forceUpdate, ios } })} /></Row>
+                <Row info="content.studio.forceUpdateOnAndroid" label={tr("Force update on Android")}><Switch label={tr("Force update on Android")} on={extra.forceUpdate.android} disabled={!editable} onChange={(android) => patchExtra({ forceUpdate: { ...extra.forceUpdate, android } })} /></Row>
               </>
             ) : null}
             {errorExtra ? <p role="alert" className="gr-warn">{errorExtra}</p> : null}
@@ -209,7 +210,7 @@ export function ContentPage() {
           {live ? (
             <Card title={tr("History from the server")} icon={<History size={15} />} tone="blue" help={tr("Every published version in the zone. Roll back publishes an earlier version again as the next version.")}>
               <label className="gr-field"><span>{tr("Zone")}</span>
-                <select aria-label={tr("History zone")} value={historyZone} onChange={(e) => setHistoryZone(e.target.value)}>{targets.map((zone) => <option key={zone} value={zone}>{zoneById(zone)?.name ?? zone}</option>)}</select>
+                {/* info-skip: picks the history shown, not a setting */}<select aria-label={tr("History zone")} value={historyZone} onChange={(e) => setHistoryZone(e.target.value)}>{targets.map((zone) => <option key={zone} value={zone}>{zoneById(zone)?.name ?? zone}</option>)}</select>
               </label>
               {history.isLoading ? <p className="state-line">{tr("Loading.")}</p> : history.error ? <ErrorLine error={history.error} onRetry={() => void history.refetch()} /> : liveHistory.length === 0 ? <p className="dx-calm">{tr("Nothing published yet in this zone.")}</p> : (
                 <ol aria-label={tr("Content history")} className="gr-events" data-testid="live-content-history">
@@ -233,7 +234,7 @@ export function ContentPage() {
 
           {live ? null : <Card title={tr("Compare versions")} icon={<GitCompare size={15} />} tone="blue" help={tr("What the draft changes, field by field.")}>
             <label className="gr-field"><span>{tr("Compare the draft with")}</span>
-              <select aria-label={tr("Compare with")} value={against ?? ""} onChange={(e) => setAgainst(e.target.value ? Number(e.target.value) : null)}>
+              {/* info-skip: picks the version to compare, not a setting */}<select aria-label={tr("Compare with")} value={against ?? ""} onChange={(e) => setAgainst(e.target.value ? Number(e.target.value) : null)}>
                 <option value="">{tr("What is live now")}</option>
                 {slot.history.map((h) => <option key={h.version} value={h.version}>v{h.version} · {h.action} · {h.actor}</option>)}
               </select>
