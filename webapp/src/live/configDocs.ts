@@ -449,7 +449,14 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
   const kept = structuredClone(Object.fromEntries(Object.entries(base ?? {}).filter(([key]) => !drop.has(key)))) as Doc;
   // U2 (Rules audits/impact/safe-config-saves.md, SAFETY): a block the panel writes starts from the stored block, so a
   // key the panel does not show (calls.adminCallRoles, calls.phoneProvider, ...) is kept; the panel's own keys win.
-  const stored = (key: string) => { const value = base?.[key]; return value && typeof value === "object" && !Array.isArray(value) ? (structuredClone(value) as Record<string, unknown>) : {}; };
+  const plain = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  const stored = (key: string) => { const value = base?.[key]; return plain(value) ? structuredClone(value) : {}; };
+  // SF-2: two levels for a block with objects inside (chat.autoArrived, chat.quickReplies): an object the panel writes
+  // starts from the stored object of the same key, so a stored key inside it is kept too; lists and values are the panel's.
+  const storedDeep = (key: string, panel: Record<string, unknown>) => {
+    const kept = stored(key);
+    return { ...kept, ...Object.fromEntries(Object.entries(panel).map(([name, value]) => { const inner = kept[name]; return [name, plain(value) && plain(inner) ? { ...inner, ...value } : value]; })) };
+  };
   return {
     ...kept,
     version: (base?.["version"] as number | undefined) ?? 1,
@@ -474,7 +481,7 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.
     ...(input.calls ? { calls: { ...stored("calls"), ...input.calls } } : base?.["calls"] ? { calls: base["calls"] } : {}),
     // v0.18.56 §78 (G9 part 2): Tips & limits › Chat; a save without it keeps the stored block.
-    ...(input.chat ? { chat: { ...stored("chat"), ...(JSON.parse(JSON.stringify(input.chat)) as ChatSettings) } } : base?.["chat"] ? { chat: base["chat"] } : {}),
+    ...(input.chat ? { chat: storedDeep("chat", JSON.parse(JSON.stringify(input.chat)) as ChatSettings) } : base?.["chat"] ? { chat: base["chat"] } : {}),
     // v0.18.43 §64 (fix job 10): Tips & limits › Don't match again; a save without it keeps the stored block.
     ...(input.dontMatchAgain ? { dontMatchAgain: { ...stored("dontMatchAgain"), ...input.dontMatchAgain } } : base?.["dontMatchAgain"] ? { dontMatchAgain: base["dontMatchAgain"] } : {}),
     // v0.18.57 §79: Tips & limits › Emergency numbers, on the country standard only (a zone's own rules never carry it).
