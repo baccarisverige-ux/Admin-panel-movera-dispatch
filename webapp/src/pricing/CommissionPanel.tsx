@@ -39,11 +39,11 @@ export function CommissionPanel({ currency, categories, book, published, problem
           <div key={category.id} className={book.prices[category.id]?.enabled ? "commission-card" : "commission-card off"}>
             <div className="commission-head">
               <strong>{trx(category.label)}</strong>
-              <NumberField label={tr("{0} commission", [trx(category.label)])} value={pct} unit="%" max={100} disabled={!canEdit} changed={pct !== published.commission[category.id]} invalid={bad.has(`commission.${category.id}`)} onChange={(value) => onCommission(category.id, value)} />
+              <NumberField info="pricing.commission" label={tr("{0} commission", [trx(category.label)])} value={pct} unit="%" max={100} disabled={!canEdit} changed={pct !== published.commission[category.id]} invalid={bad.has(`commission.${category.id}`)} onChange={(value) => onCommission(category.id, value)} />
             </div>
             <div className="commission-head commission-fee" data-testid="card-app-fee">
               <span>{tr("App fee")}</span>
-              <NumberField label={tr("{0} app fee", [trx(category.label)])} value={appFee} unit="%" max={APP_FEE_MAX_PCT} step={0.1} disabled={!canEdit} changed={appFee !== published.prices[category.id]?.appFeePct} invalid={bad.has(`prices.${category.id}.appFeePct`)} onChange={(value) => onAppFee(category.id, value)} />
+              <NumberField info="pricing.price.appFeePct" label={tr("{0} app fee", [trx(category.label)])} value={appFee} unit="%" max={APP_FEE_MAX_PCT} step={0.1} disabled={!canEdit} changed={appFee !== published.prices[category.id]?.appFeePct} invalid={bad.has(`prices.${category.id}.appFeePct`)} onChange={(value) => onAppFee(category.id, value)} />
             </div>
             <div className="split-bar" aria-hidden="true">
               <i className="driver" style={{ width: `${100 - moveraShare}%` }} />

@@ -6,6 +6,7 @@ import { NumberField } from "./NumberField";
 import { PICKUP_OFFERS, addPickupRange, cheaperFartherRanges, maxReachedAtKm, pickupPayFor, pickupSplit, rangeLabel, removePickupRange, riderPickupFee, updatePickupRange, type PickupPay, type PickupRange, type PickupRate } from "./pickupPay";
 import { currencySymbol, fromSek, inputStep, money, quoteRide, type CategoryDef, type Problem, type ZoneBook } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = {
   zoneName: string;
@@ -26,12 +27,16 @@ const SAMPLE_TRIP = { km: 8, minutes: 18 };
 /** The maximum per ride a category starts with when its switch is turned on, in kronor. */
 const DEFAULT_MAX_SEK = 100;
 
-function Switch({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled?: boolean; onChange: (value: boolean) => void }) {
+function Switch({ label, checked, disabled, onChange, info }: { label: string; checked: boolean; disabled?: boolean; onChange: (value: boolean) => void; info?: string }) {
   return (
-    <label className="mini-switch big">
-      <input type="checkbox" role="switch" aria-label={label} checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
-      <span aria-hidden="true"><i /></span>
-    </label>
+    <>
+      <label className="mini-switch big">
+        {/* info-skip: the switch itself; each use below passes its info id */}
+        <input type="checkbox" role="switch" aria-label={label} checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
+        <span aria-hidden="true"><i /></span>
+      </label>
+      {info ? <SettingInfo id={info} label={label} /> : null}
+    </>
   );
 }
 
@@ -57,7 +62,7 @@ function PickupRanges({ categoryLabel, rate, old, symbol, step, locked, bad, pat
   return (
     <div className="pp-ranges" role="group" aria-label={tr("{0} pickup ranges", [categoryLabel])}>
       <div className="pp-range head" aria-hidden="true">
-        <span>{tr("From")}</span><span>{tr("To")}</span><span>{tr("Per km")}</span><span>{tr("Per minute")}</span><span />
+        <span>{tr("From")}<SettingInfo id="pricing.pickup.ranges" label={tr("Pickup pay")} /></span><span>{tr("To")}</span><span>{tr("Per km")}</span><span>{tr("Per minute")}</span><span />
       </div>
       {ranges.map((range, index) => {
         const was = old?.ranges?.[index];
@@ -72,14 +77,14 @@ function PickupRanges({ categoryLabel, rate, old, symbol, step, locked, bad, pat
               {range.toKm === null ? (
                 <span className="pp-range-open">{tr("and above")}</span>
               ) : (
-                <NumberField label={tr("{0} to km", [name])} value={range.toKm} unit="km" step={0.1} disabled={locked} changed={range.toKm !== was?.toKm} invalid={bad.has(`${at}.toKm`)} onChange={(toKm) => onChange(updatePickupRange(ranges, index, { toKm }))} />
+                /* info-at: pricing.pickup.ranges */ <NumberField label={tr("{0} to km", [name])} value={range.toKm} unit="km" step={0.1} disabled={locked} changed={range.toKm !== was?.toKm} invalid={bad.has(`${at}.toKm`)} onChange={(toKm) => onChange(updatePickupRange(ranges, index, { toKm }))} />
               )}
               {last ? (
-                <label className="pp-range-above">{trn("{0}and above", <input type="checkbox" aria-label={tr("{0} and above", [name])} checked={range.toKm === null} disabled={locked} onChange={(event) => onChange(updatePickupRange(ranges, index, { toKm: event.target.checked ? null : range.fromKm + 10 }))} />)}</label>
+                <label className="pp-range-above">{trn("{0}and above", /* info-at: pricing.pickup.ranges */ <input type="checkbox" aria-label={tr("{0} and above", [name])} checked={range.toKm === null} disabled={locked} onChange={(event) => onChange(updatePickupRange(ranges, index, { toKm: event.target.checked ? null : range.fromKm + 10 }))} />)}</label>
               ) : null}
             </span>
-            <NumberField className="pp-unit" label={tr("{0} per km", [name])} value={range.krPerKm} unit={`${symbol}/km`} step={step} disabled={locked} changed={range.krPerKm !== was?.krPerKm} invalid={bad.has(`${at}.krPerKm`)} onChange={(krPerKm) => onChange(updatePickupRange(ranges, index, { krPerKm }))} />
-            <NumberField className="pp-unit" label={tr("{0} per minute", [name])} value={range.krPerMinute} unit={`${symbol}/min`} step={step} disabled={locked} changed={range.krPerMinute !== was?.krPerMinute} invalid={bad.has(`${at}.krPerMinute`)} onChange={(krPerMinute) => onChange(updatePickupRange(ranges, index, { krPerMinute }))} />
+            {/* info-at: pricing.pickup.ranges */}<NumberField className="pp-unit" label={tr("{0} per km", [name])} value={range.krPerKm} unit={`${symbol}/km`} step={step} disabled={locked} changed={range.krPerKm !== was?.krPerKm} invalid={bad.has(`${at}.krPerKm`)} onChange={(krPerKm) => onChange(updatePickupRange(ranges, index, { krPerKm }))} />
+            {/* info-at: pricing.pickup.ranges */}<NumberField className="pp-unit" label={tr("{0} per minute", [name])} value={range.krPerMinute} unit={`${symbol}/min`} step={step} disabled={locked} changed={range.krPerMinute !== was?.krPerMinute} invalid={bad.has(`${at}.krPerMinute`)} onChange={(krPerMinute) => onChange(updatePickupRange(ranges, index, { krPerMinute }))} />
             <span className="pp-range-end">
               {free ? <span className="pp-free-tag">{tr("Free")}</span> : null}
               <button data-command="admin.pricing.edit" type="button" className="icon-ghost danger" aria-label={tr("Delete {0} ({1})", [name, rangeLabel(range)])} disabled={locked || ranges.length <= 1} title={ranges.length <= 1 ? tr("A category keeps at least one range.") : undefined} onClick={() => onChange(removePickupRange(ranges, index))}><Trash2 size={14} aria-hidden="true" /></button>
@@ -157,14 +162,14 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
                 return (
                   <article key={category.id} className={off ? "pp-cat off" : "pp-cat"} aria-label={label} data-testid={`pickup-cat-${category.id}`}>
                     <div className="pp-cat-head">
-                      <Switch label={tr("{0} pickup pay", [label])} checked={item.enabled} disabled={!canEdit} onChange={(enabled) => setRate(category.id, { enabled })} />
+                      <Switch info="pricing.pickup.on" label={tr("{0} pickup pay", [label])} checked={item.enabled} disabled={!canEdit} onChange={(enabled) => setRate(category.id, { enabled })} />
                       <h5>{label}</h5>
                       <span className={off ? "pp-cat-state" : "pp-cat-state on"}>{off ? tr("Off") : tr("Paid by Movera")}</span>
                       <div className="pp-max">
-                        <Switch label={tr("{0} maximum per ride", [label])} checked={maxOn} disabled={locked} onChange={(on) => setRate(category.id, { maxPerRide: on ? fromSek(DEFAULT_MAX_SEK, currency) : null })} />
+                        <Switch info="pricing.pickup.max" label={tr("{0} maximum per ride", [label])} checked={maxOn} disabled={locked} onChange={(on) => setRate(category.id, { maxPerRide: on ? fromSek(DEFAULT_MAX_SEK, currency) : null })} />
                         <span className="pp-max-label">{tr("Maximum per ride")}</span>
                         {maxOn ? (
-                          <NumberField className="pp-unit" label={tr("{0} maximum pickup pay per ride", [label])} value={item.maxPerRide ?? 0} unit={symbol} step={step} disabled={locked} changed={item.maxPerRide !== old?.maxPerRide} invalid={bad.has(`pickup.${category.id}.maxPerRide`)} onChange={(maxPerRide) => setRate(category.id, { maxPerRide })} />
+                          /* info-at: pricing.pickup.max */ <NumberField className="pp-unit" label={tr("{0} maximum pickup pay per ride", [label])} value={item.maxPerRide ?? 0} unit={symbol} step={step} disabled={locked} changed={item.maxPerRide !== old?.maxPerRide} invalid={bad.has(`pickup.${category.id}.maxPerRide`)} onChange={(maxPerRide) => setRate(category.id, { maxPerRide })} />
                         ) : <span className="pp-muted">{tr("No maximum")}</span>}
                       </div>
                     </div>
@@ -176,9 +181,9 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
                         const was = old?.riderFee?.[side];
                         return (
                           <span key={side} className="pp-rider-fee">
-                            <Switch label={tr("{0} rider pickup fee for {1}", [label, sideLabel])} checked={fee.on} disabled={!canEdit} onChange={(on) => setFee(category.id, side, { on })} />
+                            <Switch info="pricing.pickup.riderFee" label={tr("{0} rider pickup fee for {1}", [label, sideLabel])} checked={fee.on} disabled={!canEdit} onChange={(on) => setFee(category.id, side, { on })} />
                             <span className={fee.on ? "pp-rider-label" : "pp-rider-label off"}>{sideLabel}</span>
-                            <NumberField className="pp-unit" label={tr("{0} rider pickup fee amount for {1}", [label, sideLabel])} value={fee.amount} unit={symbol} step={step} disabled={!canEdit || !fee.on} changed={fee.amount !== was?.amount || fee.on !== was?.on} invalid={bad.has(`pickup.${category.id}.riderFee.${side}`)} onChange={(amount) => setFee(category.id, side, { amount })} />
+                            {/* info-at: pricing.pickup.riderFee */}<NumberField className="pp-unit" label={tr("{0} rider pickup fee amount for {1}", [label, sideLabel])} value={fee.amount} unit={symbol} step={step} disabled={!canEdit || !fee.on} changed={fee.amount !== was?.amount || fee.on !== was?.on} invalid={bad.has(`pickup.${category.id}.riderFee.${side}`)} onChange={(amount) => setFee(category.id, side, { amount })} />
                           </span>
                         );
                       })}
@@ -200,7 +205,7 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
                     <strong>{trx(item.label)}</strong>
                     <small>{trx(item.hint)}</small>
                   </div>
-                  <Switch label={tr("Pickup pay for {0}", [trx(item.label)])} checked={pay.offers[item.kind]} disabled={!canEdit} onChange={(value) => onChange({ ...pay, offers: { ...pay.offers, [item.kind]: value } })} />
+                  <Switch info={`pricing.pickup.offer.${item.kind}`} label={tr("Pickup pay for {0}", [trx(item.label)])} checked={pay.offers[item.kind]} disabled={!canEdit} onChange={(value) => onChange({ ...pay, offers: { ...pay.offers, [item.kind]: value } })} />
                 </li>
               ))}
               <li className="pp-never" aria-disabled="true">
@@ -208,7 +213,7 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
                   <strong>{tr("Normal reservations taken from Scheduled rides")}</strong>
                   <small>{tr("Never paid. This cannot be changed.")}</small>
                 </div>
-                <Switch label={tr("Pickup pay for normal reservations from Scheduled rides")} checked={false} disabled onChange={() => undefined} />
+                <Switch info="pricing.pickup.scheduledNever" label={tr("Pickup pay for normal reservations from Scheduled rides")} checked={false} disabled onChange={() => undefined} />
               </li>
             </ul>
             <p className="pp-note">{trn("{0} Reservations taken from the Scheduled rides list never get driver pickup pay. The rider's reservation pickup fee, when on, is paid either way.", <Info size={15} aria-hidden="true" />)}</p>
@@ -228,10 +233,13 @@ export function PickupPayPanel({ zoneName, currency, categories, book, published
           </header>
           <div className="pp-section">
             <div className="pp-example-inputs">
+              {/* info-skip: example input, not a setting */}
               <label className="field">{trn("Category{0}", <select aria-label={tr("Example category")} value={exampleCategory?.id ?? ""} onChange={(event) => setExampleId(event.target.value)}>
                   {categories.map((category) => <option key={category.id} value={category.id}>{trx(category.label)}{pay.rates[category.id]?.enabled ? "" : tr(" (pickup pay off)")}</option>)}
                 </select>)}</label>
+              {/* info-skip: example input, not a setting */}
               <label className="field">{trn("To pickup{0}", <NumberField label={tr("Example pickup km")} value={exampleKm} unit="km" step={0.1} onChange={setExampleKm} />)}</label>
+              {/* info-skip: example input, not a setting */}
               <label className="field">{trn("Time{0}", <NumberField label={tr("Example pickup minutes")} value={exampleMin} unit="min" onChange={setExampleMin} />)}</label>
             </div>
             <div className="segmented pp-segmented" role="radiogroup" aria-label={tr("Example ride kind")}>

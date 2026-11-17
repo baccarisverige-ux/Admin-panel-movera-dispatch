@@ -4,6 +4,7 @@ import type { Market } from "../markets/markets";
 import { CommandButton } from "../ui/CommandButton";
 import { DISPATCH_KEY, type DispatchBook, type DriverGroup } from "./rules";
 import { tr, trn } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type Props = {
   book: DispatchBook;
@@ -42,11 +43,13 @@ export function DriverGroupsCard({ book, market, drivers, canEdit, onNotice }: P
       )}
       {group ? (
         <div className="dx-group-edit" aria-label={tr("Group")}>
-          <label className="field">{trn("Group name{0}", <input aria-label={tr("Group name")} maxLength={40} value={group.name} onChange={(event) => setGroup({ ...group, name: event.target.value })} placeholder={tr("For example Night drivers")} />)}</label>
-          <label className="field">{trn("Find drivers{0}", <input aria-label={tr("Find drivers for the group")} value={search} onChange={(event) => setSearch(event.target.value)} placeholder={tr("Name or zone")} />)}</label>
+          <label className="field"><SettingInfo id="dispatch.groups.name" label={tr("Group name")} />{trn("Group name{0}", <input aria-label={tr("Group name")} maxLength={40} value={group.name} onChange={(event) => setGroup({ ...group, name: event.target.value })} placeholder={tr("For example Night drivers")} />)}</label>
+          <label className="field">{trn("Find drivers{0}", /* info-skip: search box, not a setting */ <input aria-label={tr("Find drivers for the group")} value={search} onChange={(event) => setSearch(event.target.value)} placeholder={tr("Name or zone")} />)}</label>
           <div className="dx-group-pick" role="group" aria-label={tr("Drivers in the group")}>
+            <SettingInfo id="dispatch.groups.drivers" label={tr("Drivers in the group")} />
             {drivers.filter((row) => !search.trim() || `${row.name} ${row.zoneName}`.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 40).map((row) => (
               <label key={row.id} className={group.driverIds.includes(row.id) ? "check-chip on" : "check-chip"}>
+                {/* info-at: dispatch.groups.drivers */}
                 <input type="checkbox" checked={group.driverIds.includes(row.id)} onChange={() => setGroup({ ...group, driverIds: group.driverIds.includes(row.id) ? group.driverIds.filter((id) => id !== row.id) : [...group.driverIds, row.id] })} />{row.name} · {row.zoneName}
               </label>
             ))}

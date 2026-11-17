@@ -11,6 +11,7 @@ import {
 } from "./driverTexts";
 import { tr, trn, trx } from "../i18n";
 import { PlaceholderChips } from "../ui/PlaceholderChips";
+import { SettingInfo } from "../ui/SettingInfo";
 
 type AreaPick = TextArea | "all";
 
@@ -47,10 +48,10 @@ export function DriverTextsView({ editable, onNotice }: { editable: boolean; onN
       <div className="dt-main">
         <p className="dx-note dx-resv-tie"><Type size={13} aria-hidden="true" /> <span>{trn("Every text the driver app shows on the island, the offer cards and the main trip button. Empty means the app's default text. Values in braces, like {0}, are filled in by the app.", "{time}")}</span></p>
         <div className="dt-filters">
-          <Choice<TextLang> label={tr("Text language")} value={lang} onChange={setLang} options={TEXT_LANGS.map((item) => ({ id: item.id, label: ownCount(texts, item.id) ? `${trx(item.label)} · ${ownCount(texts, item.id)}` : item.label }))} />
-          <Choice<AreaPick> label={tr("Where in the app")} value={area} onChange={setArea} options={[...TEXT_AREAS.map((item) => ({ id: item.id as AreaPick, label: item.label, hint: item.help })), { id: "all", label: "All" }]} />
-          <label className="gr-search dt-search"><Search size={14} aria-hidden="true" /><input aria-label={tr("Find a text")} placeholder={tr("Find a text")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-          <Check label={tr("Only changed texts")} on={onlyOwn} onChange={setOnlyOwn} />
+          {/* info-skip: picks the language shown, not a setting */}<Choice<TextLang> label={tr("Text language")} value={lang} onChange={setLang} options={TEXT_LANGS.map((item) => ({ id: item.id, label: ownCount(texts, item.id) ? `${trx(item.label)} · ${ownCount(texts, item.id)}` : item.label }))} />
+          {/* info-skip: list filter, not a setting */}<Choice<AreaPick> label={tr("Where in the app")} value={area} onChange={setArea} options={[...TEXT_AREAS.map((item) => ({ id: item.id as AreaPick, label: item.label, hint: item.help })), { id: "all", label: "All" }]} />
+          <label className="gr-search dt-search"><Search size={14} aria-hidden="true" />{/* info-skip: search box, not a setting */}<input aria-label={tr("Find a text")} placeholder={tr("Find a text")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+          {/* info-skip: list filter, not a setting */}<Check label={tr("Only changed texts")} on={onlyOwn} onChange={setOnlyOwn} />
         </div>
 
         {groups.length ? groups.map((group) => (
@@ -63,8 +64,9 @@ export function DriverTextsView({ editable, onNotice }: { editable: boolean; onN
                 const values = valuesIn(key.english);
                 return (
                   <li key={key.id} className={key.id === focus ? "focus" : undefined}>
-                    <span className="dt-key"><b>{key.english}</b><small>{key.id}</small>{values.length ? <PlaceholderChips text={key.english} /> : null}</span>
+                    <span className="dt-key"><b>{key.english}<SettingInfo id="content.driverText" label={key.english} /></b><small>{key.id}</small>{values.length ? <PlaceholderChips text={key.english} /> : null}</span>
                     <span className="dt-input">
+                      {/* info-at: content.driverText */}
                       <input
                         aria-label={tr("{0} in {1}", [key.english, langName])}
                         aria-invalid={issue ? true : undefined}
