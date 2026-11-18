@@ -27,7 +27,7 @@ const ADMIN_ONLY = new Set(["alerts", "incident", "team", "auth", "audit", "audi
 const NO_MONEY_DOMAINS = new Set(["ui", "table", "card", "modal", "tabs", "doc", "confirm", "design", "shell", "panel", "errors", "profile", "auditLog", "alarm", "live", "auth", "alerts", "inbox", "handover", "gateA", "shift", "report", "reports", "waitlist"]);
 const NO_MONEY_SERVER = /^admin\.server\.(signIn|setupPassword|reload|loadMore|openRecord|dialogConfirm|dialogCancel|documentOpen|documentReview|documentCheck|fleetReview|fleetCode|copyCode|invitationCancel|legalPublish|tripChat|riderSavedPlaces|driverPreferences|emergencyContacts|revealRider|revealDriver|revealFleet|revealIncidentContacts|bonusCampaignOpen)$/;
 const REFUND = "Money goes back to the rider: the amount shown in this dialog, at once or after a second admin approves it. It shows on the rider's receipt and in Payments." as const;
-const BONUS_RULES = "No money moves now. Movera pays a driver the bonus when he earns it under these rules, added to his payout; riders never pay it." as const;
+const BONUS_RULES = "No money moves now. Movera pays a driver the bonus when they earn it under these rules, added to their payout; riders never pay it." as const;
 const PROMO_RULES = "No money moves now. It changes the discount or reward riders get on later rides; that cost comes out of Movera's promotion budget." as const;
 
 /**
@@ -50,9 +50,9 @@ export function moneyFor(command: string) {
   if (command === "admin.trip.driverBonus") return "Movera pays the driver the bonus shown, up to the country's driver bonus limit (Pricing › Tips & limits); the rider never pays it." as const;
   if (command === "admin.reservation.raise") return "The driver's fare on this booked ride goes up by the amount shown, paid from Movera's commission; the rider pays the same." as const;
   // src/trips/ride/cancel.ts:44-68 markNoShow: the fee of the trip's rules (a booked ride: its booking fee), the driver's share.
-  if (command === "admin.trip.noShow" || command === "admin.reservation.noShow") return "The rider is charged the no-show fee of this trip's rules (a booked ride: its booking fee); the driver gets his share of it (Dispatch › Waiting at pickup)." as const;
+  if (command === "admin.trip.noShow" || command === "admin.reservation.noShow") return "The rider is charged the no-show fee of this trip's rules (a booked ride: its booking fee); the driver gets their share of it (Dispatch › Waiting at pickup)." as const;
   // src/admin/trips.ts:387-424 adminReverseNoShow.
-  if (command === "admin.trip.reverseNoShow") return "The rider pays nothing for this trip: an owed no-show fee is waived, a paid one goes back to the rider's wallet. The driver keeps his share (Movera pays it) unless you tick Take back the driver's share." as const;
+  if (command === "admin.trip.reverseNoShow") return "The rider pays nothing for this trip: an owed no-show fee is waived, a paid one goes back to the rider's wallet. The driver keeps their share (Movera pays it) unless you tick Take back the driver's share." as const;
   // MF-2. src/admin/trips.ts:161-174 adminCancel: fee null (owner decision 33); the only money is the lost-driver payment.
   if (command === "admin.trip.cancel" || command === "admin.reservation.cancel") return "The rider pays nothing: an admin cancel never charges a cancel fee. The only money that can move is a lost-driver payment to the driver who lost the trip, and Movera pays it." as const;
   // MF-3. src/admin/trips.ts:433-453 adminComplete → src/trips/ride/finish.ts:179-225 completeTrip.
@@ -62,7 +62,7 @@ export function moneyFor(command: string) {
   // src/admin/trips.ts:498-505 and contracts/contract.json moneyBase.adminFare.
   if (command === "admin.trip.adjust") return "Only the driver's pay changes, to the amount you type; Movera pays the difference. The rider pays the same." as const;
   // src/admin/trips.ts:468-479 waiveCancelFee.
-  if (command === "admin.trip.waiveFee") return "The rider's owed cancel or no-show fee is waived: the rider owes nothing more for it. The driver keeps the share he already got." as const;
+  if (command === "admin.trip.waiveFee") return "The rider's owed cancel or no-show fee is waived: the rider owes nothing more for it. The driver keeps the share they already got." as const;
   if (command === "admin.trip.pay") return "The driver's pay on this trip goes up by the amount shown; Movera pays it. The rider's price does not change." as const;
   if (command === "admin.trip.decide") return "If you approve, the waiting refund or pay change is made for the amount shown; if you decline, no money moves." as const;
   // src/admin/trips.ts:512 (trip.adjust) and :614 (trip.refund) run when the request is approved.

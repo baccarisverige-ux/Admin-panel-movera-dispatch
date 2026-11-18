@@ -48,10 +48,10 @@ const MONEY_TABLE: readonly (readonly [command: string, route: string, says: Reg
   ["admin.trip.driverBonus", "POST /admin/trips/{tripId}/driver-bonus", /Movera pays the driver the bonus/],
   ["admin.reservation.raise", "POST /admin/trips/{tripId}/driver-bonus", /Movera's commission.*rider pays the same/],
   // src/trips/ride/cancel.ts:44-68 markNoShow: chargeRiderFee + the driver's fee_share.
-  ["admin.trip.noShow", "POST /admin/trips/{tripId}/no-show", /rider is charged the no-show fee.*driver gets his share/],
-  ["admin.reservation.noShow", "POST /admin/trips/{tripId}/no-show", /rider is charged the no-show fee.*driver gets his share/],
+  ["admin.trip.noShow", "POST /admin/trips/{tripId}/no-show", /rider is charged the no-show fee.*driver gets their share/],
+  ["admin.reservation.noShow", "POST /admin/trips/{tripId}/no-show", /rider is charged the no-show fee.*driver gets their share/],
   // src/admin/trips.ts:387-424 adminReverseNoShow: owed → waived, paid → wallet; the share only with takeBackDriverShare.
-  ["admin.trip.reverseNoShow", "POST /admin/trips/{tripId}/reverse-no-show", /rider pays nothing.*waived.*wallet.*driver keeps his share.*unless/],
+  ["admin.trip.reverseNoShow", "POST /admin/trips/{tripId}/reverse-no-show", /rider pays nothing.*waived.*wallet.*driver keeps their share.*unless/],
   // src/admin/approvals.ts registerApprovalHandler; src/admin/trips.ts:512 (trip.adjust) and :614 (trip.refund) run on approve.
   ["admin.approval.approve", "POST /admin/approvals/{id}/approve", /refund or a change of a driver's pay.*money moves now/],
   // src/riders/walletCredit.ts creditRiderWallet (route src/admin/tripRoutes.ts:229).
