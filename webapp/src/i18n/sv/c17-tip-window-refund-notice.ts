@@ -1,4 +1,4 @@
-/** Swedish dictionary, area c17-tip-window-refund-notice: jobs C8 (contract v0.18.91 finish.tips.cashInCarAdmin: the cash-tip time in the car is an admin setting) and A7 (finish.refund.driverNotice: the driver is told about a refund taken from him). Add new keys at the end of this file. Merged in ../sv.ts in this order. */
+/** Swedish dictionary, area c17-tip-window-refund-notice: jobs C8 (contract v0.18.91 finish.tips.cashInCarAdmin: the cash-tip time in the car is an admin setting) and A7 (finish.refund.driverNotice: the driver is told about a refund taken from them). Add new keys at the end of this file. Merged in ../sv.ts in this order. */
 export const svC17TipWindowRefundNotice = {
   "Cash tip time in the car": "Tid för kontant dricks i bilen",
   "Cash tip time in the car: {0} min": "Tid för kontant dricks i bilen: {0} min",

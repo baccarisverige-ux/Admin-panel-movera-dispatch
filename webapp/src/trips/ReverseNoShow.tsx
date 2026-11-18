@@ -40,7 +40,7 @@ export function ReverseNoShowButton({ tripId, zoneId, onDone }: { tripId: string
             <ConfirmInfo
               what={tr("The rider pays nothing for this trip: an owed fee is waived, a paid fee goes back to the rider's wallet. The trip stays a no-show.")}
               where={tr("Trip {0} only.", [tripId])}
-              who={takeBack ? tr("The rider of this trip, and its driver: his share of the no-show fee is taken from his earnings.") : tr("The rider of this trip. The driver keeps his share; Movera pays it.")}
+              who={takeBack ? tr("The rider of this trip, and its driver: the driver's share of the no-show fee is taken from their earnings.") : tr("The rider of this trip. The driver keeps their share; Movera pays it.")}
               undo={tr("Money that was sent cannot be taken back from the panel. Check the amount and the person before you confirm.")}
               command="admin.trip.reverseNoShow"
             />
