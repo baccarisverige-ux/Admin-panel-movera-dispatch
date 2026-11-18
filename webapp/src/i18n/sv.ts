@@ -70,6 +70,7 @@ import { svC39ParkedGeofence } from "./sv/c39-parked-geofence.ts";
 import { svC32ShareTrip } from "./sv/c32-share-trip.ts";
 import { svC37AutoOfflineOutage } from "./sv/c37-auto-offline-outage.ts";
 import { svC40OneStream } from "./sv/c40-one-stream.ts";
+import { svC41LaneLate } from "./sv/c41-lane-late.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -145,4 +146,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC32ShareTrip,
   ...svC37AutoOfflineOutage,
   ...svC40OneStream,
+  ...svC41LaneLate,
 };

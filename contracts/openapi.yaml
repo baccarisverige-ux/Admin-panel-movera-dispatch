@@ -1,11 +1,11 @@
-# Movera API v0.18.122 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.125 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.122
+  version: 0.18.125
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.122 in this folder; this file must agree with them.
+    v0.18.125 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.122
+  version: 0.18.125
   source: contract.json
 paths:
   /auth/otp/request:
@@ -7491,8 +7491,14 @@ paths:
     put:
       operationId: adminAlertSettings
       summary: Save the alert settings
-      description: v0.18.15. PUT /admin/alerts/settings { country, expectedRev, settings } (alerts.manage; an admin with a
-        zone in that country or a Super admin) -> rev + 1; stale -> 409 version_mismatch.
+      description: 'v0.18.15. PUT /admin/alerts/settings { country, expectedRev, settings } (alerts.manage; an admin with
+        a zone in that country or a Super admin) -> rev + 1; stale -> 409 version_mismatch. v0.18.123 (alertDesk.commands.settingsKeepKinds):
+        v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17 Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2
+        "No, keep current (Rec.)", Rules audits/impact/safe-config-saves.md §3, decisions/session-2026-11-06.md) (job 6):
+        PUT /admin/alerts/settings keeps every entry of settings.kinds that the stored settings have and the sent settings
+        lack (a stale admin tab that does not know a kind); the sent entries are saved as sent, and a sent settings without
+        a kinds object keeps the stored kinds. The save is never refused for it. The audit line alert.settings lists the kept
+        kinds (detail.keptKinds) when any was kept.'
       tags:
       - Admin · Alerts
       x-actor:
@@ -9341,7 +9347,21 @@ paths:
         v0.5.1). x-permission-by-doc: the admin panel saves dispatch rules with dispatch.edit. v0.18.86 (J5b, contract.json#commissionSteps.validation):
         pricing with invalid CategoryPricing.commissionSteps → invalid_request, reason commission_steps_invalid, details ["step:<index>",
         "problem:<code>"] (not_a_list, too_many_steps, pct_or_amount, up_to_missing, pct_out_of_range, amount_out_of_range,
-        above_not_last, last_not_above, up_to_out_of_range, up_to_not_increasing); nothing is saved.'
+        above_not_last, last_not_above, up_to_out_of_range, up_to_not_increasing); nothing is saved. v0.18.123 (configDocs.keptKeys;
+        country_rules: payoutMode, payoutSchedule, maxRiderDebt, driverOwesLimit, calls.adminCallRoles, calls.phoneProvider;
+        dispatch: radar.reaskAfterSeconds, exclusive.reaskAfterSeconds): v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17
+        Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules audits/impact/safe-config-saves.md
+        §3, decisions/session-2026-11-06.md): PUT /admin/config/{doc} replaces the draft, except the kept keys of the document
+        listed here (dotted paths). A kept key that the stored document (the scope''s draft, else the scope''s own live document)
+        has and the sent document leaves out is kept by the server: its stored value is copied into the draft, the rest is
+        saved as sent. The save is never refused for a missing kept key. A key the request names in removeKeys is really removed
+        (left out as sent). A scope with no own document (a zone on the standard, a first save) has no stored document and
+        keeps nothing, so a Standard-only key never gets into a zone document. The answer (ConfigDraft.keptKeys) and the audit
+        line config.draft (details.kept) list the paths the server kept; both are absent when nothing was kept. Publish is
+        unchanged (the draft is already whole). Rule for later: a field that no whole-document admin screen owns goes on this
+        list in the same contract version that adds it. ConfigDraftUpdate.removeKeys (optional, array of dotted paths): each
+        must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details ["key:<path>"], nothing
+        saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep).'
       tags:
       - Admin · Config
       x-actor:
@@ -12007,7 +12027,16 @@ paths:
         HistoryQuery / RestoreBody, src/config/service.ts configHistory): { zoneId | country, version, expectedVersion, note?
         }: exactly one of zoneId or country (configDocs.scope, the same reasons as History), so a country''s standard is restored
         (Undo last publish) like a zone''s own document. one audit row per pricing publish or restore: action config.publish,
-        details { doc, zoneId, version, restoredFrom?, appDocuments: [{ doc, version }] } (the app documents the publish rewrote)'
+        details { doc, zoneId, version, restoredFrom?, appDocuments: [{ doc, version }] } (the app documents the publish rewrote)
+        v0.18.123 (pricingHistory.restoreKeeps): v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17 Q-SCS-1 "Keep values,
+        save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules audits/impact/safe-config-saves.md §3, decisions/session-2026-11-06.md):
+        a Restore or Undo last publish of country_rules does not bring back the old payoutMode, payoutSchedule, maxRiderDebt
+        or driverOwesLimit (MONEY), nor the old calls.adminCallRoles or calls.phoneProvider (owner 2026-11-17: Undo/Restore
+        keeps the current call settings, the same rule as payout/debt): each takes the value the scope''s live document has
+        now, and one the live document lacks is left out of the restored document (calls.on and the other calls fields are
+        restored as before). The four payout/debt keys are changed in Finance › Payouts settings only. Every other field,
+        and every other document, is restored as before. The restored document is saved through the same draft path, so configDocs.keptKeys
+        applies to it too.'
       tags:
       - Admin · Config
       x-actor:
@@ -19419,6 +19448,83 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /driver/trips:
+    get:
+      operationId: listDriverTrips
+      summary: The driver's own ended trips (ride history)
+      description: 'v0.18.124 (contract.json#driverTripHistory): v0.18.124 (C10 / S21 / D18 empty driver history; owner G11
+        Q10 "Load from server (Recommended)" and full-audit Q9 "Yes, on the server (Recommended)", Rules decisions/driver-g11.md,
+        audits/impact/findings-g18-g23-2026-11-17.md): the driver app''s ride history is read from the server, so a reinstall
+        or a new phone shows the same trips; the phone copy is only for offline. Additive; X-Api-Version stays 0.5; no migration;
+        no admin setting; rider app and admin panel unchanged. GET /driver/trips?cursor&limit&status&from&to (driver bearer
+        token): the caller''s own ended trips, newest first (createdAt, then tripId), paged with the opaque nextCursor (null
+        on the last page). limit 1-50, default 20 (above 50: 400 invalid_request). from / to (RFC 3339) bound createdAt, any
+        past month; no lower limit on how far back. Only trips whose driver is the caller and whose status is one of statuses
+        are listed (completed, cancelled, no-show; owner Q10). status (repeatable) narrows to some of them; any other value
+        is 400 invalid_request, reason invalid_status. A trip the driver gave back (another driver took it) is not his trip
+        and is not listed; its fee entries still count in GET /driver/earnings. Rule 33: one bounded read per page from the
+        database (the trips_driver_last index on driver_id), nothing kept in a server copy, so it is the same on every copy.
+        Counted in the normal read limit (rateLimit); never shed for repeat timers (it is not one). Driver app: History loads
+        page by page from GET /driver/trips (Load more), shows the server''s earned as the trip''s money, and keeps the rows
+        on the phone only to show them offline; on a server answer the server rows win (by tripId). Texts sv / fr / en.'
+      tags:
+      - Driver · Trip
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - completed
+            - cancelled_by_rider
+            - cancelled_by_driver
+            - cancelled_by_admin
+            - cancelled_by_system
+            - no_show
+        style: form
+        explode: true
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverTripHistoryPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 components:
   securitySchemes:
     bearerAuth:
@@ -24653,6 +24759,12 @@ components:
           $ref: '#/components/schemas/Timestamp'
         updatedBy:
           $ref: '#/components/schemas/Id'
+        keptKeys:
+          type: array
+          items:
+            type: string
+          description: 'v0.18.123 PUT answer only: the kept keys the server copied from the stored document into this draft
+            (configDocs.keptKeys); absent when none.'
     ConfigPublication:
       type: object
       required:
@@ -31131,6 +31243,23 @@ components:
           - $ref: '#/components/schemas/DispatchDocument'
           - $ref: '#/components/schemas/CountryRules'
           - $ref: '#/components/schemas/OnboardingSettings'
+        removeKeys:
+          type: array
+          items:
+            type: string
+            enum:
+            - calls.adminCallRoles
+            - calls.phoneProvider
+            - driverOwesLimit
+            - exclusive.reaskAfterSeconds
+            - maxRiderDebt
+            - payoutMode
+            - payoutSchedule
+            - radar.reaskAfterSeconds
+          maxItems: 8
+          description: 'v0.18.123 (configDocs.keptKeys.removeKeys): ConfigDraftUpdate.removeKeys (optional, array of dotted
+            paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details ["key:<path>"],
+            nothing saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep).'
     ConfigPublishCommand:
       type: object
       description: Exactly one of zoneId or country (v0.8.0).
@@ -38796,3 +38925,49 @@ components:
           enum:
           - 20
       additionalProperties: false
+    DriverTripHistoryItem:
+      allOf:
+      - $ref: '#/components/schemas/TripProjection'
+      - type: object
+        required:
+        - earned
+        properties:
+          earned:
+            allOf:
+            - $ref: '#/components/schemas/Money'
+            description: 'v0.18.124 earned (Money): what the trip earned the driver, the sum of the trip''s own earnings entries
+              of the kinds trip, pickup_pay, fee_share, tip, adjustment and bonus, in their currency: the same entries and
+              sum GET /driver/earnings puts in net and the admin sees, so the list, the totals and the admin always agree.
+              A cancelled or no-show trip shows the fee he earned (0 when none). Never the rider''s fare.'
+          cashCollected:
+            allOf:
+            - $ref: '#/components/schemas/Money'
+            description: 'v0.18.124 cashCollected (Money, optional): the cash taken in the car on this trip (cash of the trip
+              and tip entries); absent when none.'
+          endedAt:
+            allOf:
+            - $ref: '#/components/schemas/Timestamp'
+            description: v0.18.124 When the trip ended (the History day and time); absent when not recorded.
+          distanceMeters:
+            type: integer
+            minimum: 0
+            description: v0.18.124 The driven distance in metres, when known.
+      description: 'v0.18.124 DriverTripHistoryItem = the TripProjection the driver gets from GET /trips/{tripId} (driver
+        view: no rider phone, rider first name only), plus earned, cashCollected, endedAt (when the trip ended; the History
+        day and time) and distanceMeters (the driven distance, when known).'
+    DriverTripHistoryPage:
+      type: object
+      description: v0.18.124 Page of GET /driver/trips.
+      required:
+      - items
+      - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverTripHistoryItem'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque; null on the last page.
