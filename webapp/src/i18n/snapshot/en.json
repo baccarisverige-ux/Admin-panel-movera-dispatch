@@ -9348,6 +9348,10 @@
 ["Pickup entrance chips (approximate)","Pickup entrance chips (approximate)"],
 ["Off: no entrance chips; the pickup is the address only. Usual value: on.","Off: no entrance chips; the pickup is the address only. Usual value: on."],
 ["Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.","Pickup entrance chips could not be read from the server for this zone. Reload the page and try again."],
+["Automatic arrival check (pickup, waiting clock, stops)","Automatic arrival check (pickup, waiting clock, stops)"],
+["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work.","{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work."],
+["Live arrival time (ETA) update","Live arrival time (ETA) update"],
+["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. Meanwhile the apps show an estimated time, and the rider's \"almost there\" message and the late check of booked rides wait.","{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. Meanwhile the apps show an estimated time, and the rider's \"almost there\" message and the late check of booked rides wait."],
 ["Share trip link","Share trip link"],
 ["During a trip the rider can send a live link to someone they trust. The page shows the car, the plate and the arrival time. The car’s position shows only while the rider is in the car, and never near the pickup, a stop or the drop-off. The link stops at drop-off.","During a trip the rider can send a live link to someone they trust. The page shows the car, the plate and the arrival time. The car’s position shows only while the rider is in the car, and never near the pickup, a stop or the drop-off. The link stops at drop-off."],
 ["Riders can share a live trip link","Riders can share a live trip link"],
@@ -9359,9 +9363,4 @@
 ["Let Exclusive offers run out in a row","Let Exclusive offers run out in a row"],
 ["After Exclusive offers ignored in a row","After Exclusive offers ignored in a row"],
 ["A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts.","A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts."],
-["Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.","Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count."],
-["Heading to the pickup = at least","Heading to the pickup = at least"],
-["Automatic arrival check (pickup, waiting clock, stops)","Automatic arrival check (pickup, waiting clock, stops)"],
-["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work.","{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work."],
-["Live arrival time (ETA) update","Live arrival time (ETA) update"],
-["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. Meanwhile the apps show an estimated time, and the rider's \"almost there\" message and the late check of booked rides wait.","{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. Meanwhile the apps show an estimated time, and the rider's \"almost there\" message and the late check of booked rides wait."]]
+["Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.","Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count."]]

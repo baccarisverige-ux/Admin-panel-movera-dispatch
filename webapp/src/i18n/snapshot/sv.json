@@ -9348,6 +9348,10 @@
 ["Pickup entrance chips (approximate)","Ingångsval vid upphämtning (ungefärliga)"],
 ["Off: no entrance chips; the pickup is the address only. Usual value: on.","Av: inga ingångsval; upphämtningen är bara adressen. Vanligt värde: på."],
 ["Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.","Ingångsval vid upphämtning kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen."],
+["Automatic arrival check (pickup, waiting clock, stops)","Automatisk ankomstkontroll (upphämtning, väntetidsklocka, stopp)"],
+["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work.","{0} stoppade på servern för {1}. Den körs en gång till av sig själv efter 1 min; misslyckas den igen förblir den stoppad. Förarens egna tryck fungerar fortfarande."],
+["Live arrival time (ETA) update","Uppdatering av ankomsttid (ETA)"],
+["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. Meanwhile the apps show an estimated time, and the rider's \"almost there\" message and the late check of booked rides wait.","{0} stoppade på servern för {1}. Den körs en gång till av sig själv efter 1 min; misslyckas den igen förblir den stoppad. Under tiden visar apparna en uppskattad tid, och resenärens meddelande ”nästan framme” och förseningskontrollen för bokade resor väntar."],
 ["Share trip link","Länk för att dela resan"],
 ["During a trip the rider can send a live link to someone they trust. The page shows the car, the plate and the arrival time. The car’s position shows only while the rider is in the car, and never near the pickup, a stop or the drop-off. The link stops at drop-off.","Under en resa kan resenären skicka en livelänk till någon den litar på. Sidan visar bilen, registreringsnumret och ankomsttiden. Bilens position visas bara när resenären sitter i bilen, och aldrig nära upphämtningen, ett stopp eller avlämningen. Länken slutar fungera vid avlämningen."],
 ["Riders can share a live trip link","Resenärer kan dela en livelänk till resan"],
@@ -9359,9 +9363,4 @@
 ["Let Exclusive offers run out in a row","Lät Exklusiva erbjudanden gå ut i rad"],
 ["After Exclusive offers ignored in a row","Efter ignorerade Exklusiva erbjudanden i rad"],
 ["A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts.","En förare som låter Exklusiva erbjudanden gå ut sätts offline, så att resenärer inte får vänta. Att neka ett erbjudande räknas aldrig."],
-["Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.","Exklusiva erbjudanden som föraren lät gå ut i rad. Nekade erbjudanden och Radar-erbjudanden räknas inte."],
-["Heading to the pickup = at least","Kör mot upphämtningen = minst"],
-["Automatic arrival check (pickup, waiting clock, stops)","Automatisk ankomstkontroll (upphämtning, väntetidsklocka, stopp)"],
-["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. The driver's own taps still work.","{0} stoppade på servern för {1}. Den körs en gång till av sig själv efter 1 min; misslyckas den igen förblir den stoppad. Förarens egna tryck fungerar fortfarande."],
-["Live arrival time (ETA) update","Uppdatering av ankomsttid (ETA)"],
-["{0} stopped on the server for {1}. It runs once more by itself after 1 min; if it fails again it stays stopped. Meanwhile the apps show an estimated time, and the rider's \"almost there\" message and the late check of booked rides wait.","{0} stoppade på servern för {1}. Den körs en gång till av sig själv efter 1 min; misslyckas den igen förblir den stoppad. Under tiden visar apparna en uppskattad tid, och resenärens meddelande ”nästan framme” och förseningskontrollen för bokade resor väntar."]]
+["Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.","Exklusiva erbjudanden som föraren lät gå ut i rad. Nekade erbjudanden och Radar-erbjudanden räknas inte."]]
