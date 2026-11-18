@@ -254,7 +254,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                   {tr("Driver owes-limit")}<SettingInfo id="tips.driverOwesLimit" />
                 </label>
                 <NumberField info="tips.driverOwesLimit" label={tr("Driver owes-limit")} value={shown.driverOwesLimit.max ?? 0} unit={symbol} step={moneyStep(country)} disabled={!canEdit || !onStandard} invalid={shown.driverOwesLimit.enabled && !(shown.driverOwesLimit.max && shown.driverOwesLimit.max > 0)} changed={JSON.stringify(shown.driverOwesLimit) !== JSON.stringify(saved.driverOwesLimit)} onChange={(max) => edit({ driverOwesLimit: { ...shown.driverOwesLimit, max: max > 0 ? max : null } })} />
-                <small>{tr("Over the limit the driver gets no cash trips; he can still go online.")}</small>
+                <small>{tr("Over the limit the driver gets no cash trips; they can still go online.")}</small>
               </div>
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
@@ -263,7 +263,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
             <div className="fee-card" data-testid="on-trip-offers">
               <div>
                 <strong>{tr("Offers on a trip")}</strong>
-                <small>{tr("A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after he has driven this share of his route to the drop-off.")}</small>
+                <small>{tr("A driver on a trip gets only Exclusive offers (a ride now or a booked ride), and only after they have driven this share of their route to the drop-off.")}</small>
               </div>
               <NumberField info="tips.onTripMinDonePct" label={tr("Offers on a trip from (% of the route to the drop-off)")} value={shown.onTripMinDonePct} step={1} max={100} disabled={!canEdit} changed={shown.onTripMinDonePct !== saved.onTripMinDonePct} onChange={(value) => edit({ onTripMinDonePct: value })} />
               <NumberField info="tips.chainLateFreeCancelMin" label={tr("Rider of a next trip may cancel free after (min)")} value={shown.chainLateFreeCancelMin} step={1} max={120} disabled={!canEdit} changed={shown.chainLateFreeCancelMin !== saved.chainLateFreeCancelMin} onChange={(value) => edit({ chainLateFreeCancelMin: value })} />

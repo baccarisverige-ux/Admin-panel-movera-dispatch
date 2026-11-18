@@ -94,7 +94,7 @@ export const svB4RadarExclusiveReservations: Record<keyof typeof enB4RadarExclus
   // v0.18.81 B1.34: Dispatch › Reservations › Booking, open booked rides per rider.
   "Open booked rides per rider": "Öppna bokade resor per resenär",
   "Open booked rides per rider, at most": "Öppna bokade resor per resenär, högst",
-  "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.": "Exempel: vid 3 måste en resenär med 3 bokade resor som inte är klara avboka en innan hen bokar en ny. Direktresor räknas inte.",
+  "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.": "Exempel: vid 3 måste en resenär med 3 bokade resor som inte är klara avboka en innan resenären bokar en ny. Direktresor räknas inte.",
   // BQ-V21 + BQ-V22 (SAFETY): Dispatch › Drivers › Rest after long work; Dispatch › Rides › Rider cancels: smart check.
   "Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.": "Kontrolleras var 30:e sekund från accept tills föraren är framme: föraren ska komma minst så här stor del så mycket närmare upphämtningen som normal hastighet på vägen tillåter. Vanligt värde {0} %.",
   "Heading to the pickup (%)": "Kör mot upphämtningen (%)",

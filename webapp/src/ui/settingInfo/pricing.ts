@@ -414,12 +414,12 @@ export const PRICING_INFO: Readonly<Record<string, SettingInfoText>> = {
     "Off: the rider pays nothing for the pickup; a high amount is added to every live ride or reservation.",
   ),
   "pricing.pickup.offer.radar": t(
-    "Whether Radar trips get pickup pay. Each driver who sees the card gets his own amount, from where he is.",
+    "Whether Radar trips get pickup pay. Each driver who sees the card gets their own amount, from where they are.",
     "Pricing › Pickup pay, for the zone picked at the top (or the country Standard). Drivers see it in the driver app.",
     "On or off.",
     "On.",
     "On: two drivers see the same Radar trip with different totals.",
-    "Off: Radar cards show no pickup pay; On: each driver sees his own amount.",
+    "Off: Radar cards show no pickup pay; On: each driver sees their own amount.",
   ),
   "pricing.pickup.offer.exclusive": t(
     "Whether Exclusive offers get pickup pay, for the one driver who gets the offer.",

@@ -24,7 +24,7 @@ export const enC2ServerAlerts = {
   "Booked ride late": "Booked ride late",
   "The pickup time passed and the booked ride still has no driver.": "The pickup time passed and the booked ride still has no driver.",
   "Booked ride not started": "Booked ride not started",
-  "The driver holds the booked ride, his leave time passed and he has not started it.": "The driver holds the booked ride, his leave time passed and he has not started it.",
+  "The driver holds the booked ride, the leave time passed and the ride has not started.": "The driver holds the booked ride, the leave time passed and the ride has not started.",
   "Limit {0}": "Limit {0}",
   "Asked for help": "Asked for help",
   "{0}'s booked ride: pickup time {1} passed, no driver": "{0}'s booked ride: pickup time {1} passed, no driver",

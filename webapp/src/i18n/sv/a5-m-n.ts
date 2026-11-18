@@ -168,7 +168,7 @@ export const svA5MN: Record<keyof typeof enA5MN, string> = {
   "Name the filter.": "Namnge filtret.",
   "Name, e.g. Concert": "Namn, t.ex. Konsert",
   "Name, phone, email, rider code or trip": "Namn, telefon, e-post, resenärskod eller resa",
-  "Name, photo and car as soon as a driver accepts. If the driver changes, the rider sees the new one. Off: the rider sees the driver when they head to the pickup.": "Namn, foto och bil så snart en förare accepterar. Om föraren byts ser resenären den nya. Av: resenären ser föraren när hen kör mot upphämtningen.",
+  "Name, photo and car as soon as a driver accepts. If the driver changes, the rider sees the new one. Off: the rider sees the driver when they head to the pickup.": "Namn, foto och bil så snart en förare accepterar. Om föraren byts ser resenären den nya. Av: resenären ser föraren när föraren kör mot upphämtningen.",
   "Name{0}": "Namn{0}",
   "Near pickup now": "Nära upphämtningen nu",
   "Nearby drivers": "Förare i närheten",

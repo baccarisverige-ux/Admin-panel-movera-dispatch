@@ -216,7 +216,7 @@ function Panel({ fleetId }: { fleetId: string }) {
         title={deciding?.action === "accept" ? tr("Accept invitation") : tr("Cancel invitation")}
         summary={deciding ? (
           deciding.action === "accept"
-            ? trn("Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of his closes.", <strong>{deciding.invitation.driverName || deciding.invitation.driverId || deciding.invitation.phone}</strong>, <strong>{fleet.name}</strong>)
+            ? trn("Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of that driver closes.", <strong>{deciding.invitation.driverName || deciding.invitation.driverId || deciding.invitation.phone}</strong>, <strong>{fleet.name}</strong>)
             : trn("Withdraw the invitation for {0}. Nothing links; the other side is told.", <strong>{deciding.invitation.driverName || deciding.invitation.phone || deciding.invitation.driverId}</strong>)
         ) : null}
         confirmLabel={deciding?.action === "accept" ? tr("Accept") : tr("Cancel invitation")}

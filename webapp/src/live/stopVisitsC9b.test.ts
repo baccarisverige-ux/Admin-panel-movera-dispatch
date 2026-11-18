@@ -62,7 +62,7 @@ test("C9b: 'Stopped in all' shows the server's paused seconds in whole minutes r
 });
 
 const KEYS = [
-  "At the pickup and at stops: the server marks the driver arrived when he is this close; he can still tap Arrived. While he is farther than the second distance before the rider is in the car (pickup) or before the stop is done, the waiting time stops (nothing charged; at the pickup no free minutes used and no no-show) and goes on when he is back.",
+  "At the pickup and at stops: the server marks the driver arrived when they are this close; they can still tap Arrived. While they are farther than the second distance before the rider is in the car (pickup) or before the stop is done, the waiting time stops (nothing charged; at the pickup no free minutes used and no no-show) and goes on when they are back.",
   "Arrived and waiting away at stops",
   "The same distances as Waiting at pickup: the server marks the stop arrived within {0} m, and the waiting at the stop stops while the driver is more than {1} m away.",
   "Arrived {0}",

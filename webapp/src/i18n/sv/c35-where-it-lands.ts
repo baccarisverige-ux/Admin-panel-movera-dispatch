@@ -40,7 +40,7 @@ export const svC35WhereItLands = {
   "These zones use the Standard and got it through the Standard, with no copy of their own: {0}.": "De här zonerna använder Standard och fick det via Standard, utan egen kopia: {0}.",
   "Each document listed goes from the version that save published back to the version before it.": "Varje dokument i listan går från versionen som sparningen publicerade tillbaka till versionen före.",
   "Trip {0} only.": "Bara resa {0}.",
-  "The rider of this trip, and its driver: his share of the no-show fee is taken from his earnings.": "Resenären på den här resan, och föraren: hans del av uteblivandeavgiften dras från hans intäkter.",
+  "The rider of this trip, and its driver: his share of the no-show fee is taken from his earnings.": "Resenären på den här resan, och föraren: förarens del av uteblivandeavgiften dras från förarens intäkter.",
   "The rider of this trip. The driver keeps his share; Movera pays it.": "Resenären på den här resan. Föraren behåller sin del; Movera betalar den.",
   "This page only. Nothing is changed on the account.": "Bara den här sidan. Inget ändras på kontot.",
   "The person whose data it is. Your name and your reason are saved in the Audit log.": "Personen som uppgifterna gäller. Ditt namn och din orsak sparas i granskningsloggen.",

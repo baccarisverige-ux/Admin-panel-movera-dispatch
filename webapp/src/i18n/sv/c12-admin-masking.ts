@@ -21,7 +21,7 @@ export const svC12AdminMasking: Record<keyof typeof enC12AdminMasking, string> =
   "Unlock sign-in": "Lås upp inloggning",
   "Sign-in lock": "Inloggningsspärr",
   "After too many wrong codes the number is locked for up to 24 hours.": "Efter för många fel koder är numret spärrat i upp till 24 timmar.",
-  "Lift the wrong-code lock on this person's phone number so they can get a sign-in code again.": "Ta bort spärren för fel koder på personens telefonnummer så att hen kan få en inloggningskod igen.",
+  "Lift the wrong-code lock on this person's phone number so they can get a sign-in code again.": "Ta bort spärren för fel koder på personens telefonnummer så att personen kan få en inloggningskod igen.",
   "Sign-in unlocked: the number can get codes again.": "Inloggningen är upplåst: numret kan få koder igen.",
   "This number had no sign-in lock.": "Numret hade ingen inloggningsspärr.",
   "There is no phone number on this account.": "Det finns inget telefonnummer på kontot.",

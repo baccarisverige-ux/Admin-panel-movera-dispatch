@@ -58,7 +58,7 @@ export function LiveOwingDrivers() {
   return (
     <section className="panel fn-panel" aria-label={tr("Drivers who owe Movera")} data-testid="live-owing-drivers">
       <h3>{tr("Drivers who owe Movera")}</h3>
-      <p className="op-help">{tr("What each driver owes Movera now: the commission and rider debt he kept in cash, minus what Movera holds for him, plus what is left from earlier payouts. Over the country's owes-limit he gets no cash trips; he can still go online.")}</p>
+      <p className="op-help">{tr("What each driver owes Movera now: the commission and rider debt they kept in cash, minus what Movera holds for them, plus what is left from earlier payouts. Over the country's owes-limit they get no cash trips; they can still go online.")}</p>
       {notice ? <p role="status">{notice}</p> : null}
       {first.isLoading ? <p className="state-line">{tr("Loading.")}</p> : first.error ? <ErrorLine error={first.error} onRetry={reload} /> : items.length === 0 ? <p className="dx-calm">{tr("No driver owes Movera.")}</p> : (
         <table className="data-table" data-testid="live-owing-list">
@@ -105,7 +105,7 @@ function PaidMoveraDialog({ row: start, onClose, onDone }: { row: OwingDriver; o
     try {
       const answer = await payMovera(client, row, minor, reason);
       if (answer.ok) {
-        onDone(tr("Saved: {0} paid Movera {1}. He now owes {2}.", [name, liveMoney({ amountMinor: minor, currency: row.owed.currency }), liveMoney(answer.row.owed)]));
+        onDone(tr("Saved: {0} paid Movera {1}. Now owes {2}.", [name, liveMoney({ amountMinor: minor, currency: row.owed.currency }), liveMoney(answer.row.owed)]));
         return;
       }
       // Nothing was written: what he owes changed since the list was read; the admin checks the new amount.
@@ -121,7 +121,7 @@ function PaidMoveraDialog({ row: start, onClose, onDone }: { row: OwingDriver; o
   return (
     <Modal open title={tr("Driver paid Movera")} onClose={onClose}>
       <form className="live-form" data-testid="paid-movera-dialog" onSubmit={(event) => { event.preventDefault(); void send(); }}>
-        <p>{tr("{0} owes Movera {1}. Write what he paid Movera another way (Swish, bank).", [name, liveMoney(row.owed)])}</p>
+        <p>{tr("{0} owes Movera {1}. Write what they paid Movera another way (Swish, bank).", [name, liveMoney(row.owed)])}</p>
         <label className="field"><span>{tr("Amount")} ({row.owed.currency})</span><input aria-label={tr("Amount paid to Movera")} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
         <label className="field"><span>{tr("Why")}</span><textarea aria-label={tr("Reason")} maxLength={PAID_MOVERA_REASON_MAX} value={reason} onChange={(event) => setReason(event.target.value)} /></label>
         <ConfirmInfo

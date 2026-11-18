@@ -14,7 +14,7 @@ export const frC7AirportQueue: Record<keyof typeof enC7AirportQueue, string> = {
   "Leave the queue after (outside the area)": "Quitte la file après (hors de la zone)",
   "Time to answer a queue offer": "Temps pour répondre à une offre de file",
   "Queue offers before the nearest driver": "Offres de file avant le chauffeur le plus proche",
-  "A driver who declines keeps his place": "Un chauffeur qui refuse garde sa place",
-  "Off: he goes to the back of the queue.": "Désactivé : il passe en fin de file.",
+  "A driver who declines keeps their place": "Un chauffeur qui refuse garde sa place",
+  "Off: the driver goes to the back of the queue.": "Désactivé : le chauffeur passe en fin de file.",
   "Save queue area": "Enregistrer la zone de file",
 };
